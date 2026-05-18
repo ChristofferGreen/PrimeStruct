@@ -967,8 +967,8 @@ InlineCallDispatchResult tryEmitInlineCallDispatchWithLocals(
       isVectorCapacityCallFn(expr, localsIn)) {
     return InlineCallDispatchResult::NotHandled;
   }
-  const auto inferCallMapTargetInfo = [&](const Expr &targetExpr,
-                                          MapAccessTargetInfo &targetInfoOut) {
+  const auto inferCallKeyValueTargetInfo = [&](const Expr &targetExpr,
+                                          KeyValueAccessTargetInfo &targetInfoOut) {
     targetInfoOut = {};
     const Definition *callee = resolveDefinitionCallFn(targetExpr);
     if (callee == nullptr) {
@@ -979,10 +979,10 @@ InlineCallDispatchResult tryEmitInlineCallDispatchWithLocals(
     if (!inferDeclaredReturnCollection(*callee, collectionName, collectionArgs) ||
         collectionName != "map" ||
         collectionArgs.size() != 2) {
-      return inferForwardedMapAccessTargetInfo(
+      return inferForwardedKeyValueAccessTargetInfo(
           targetExpr, *callee, localsIn, {}, targetInfoOut);
     }
-    targetInfoOut.isMapTarget = true;
+    targetInfoOut.isKeyValueTarget = true;
     targetInfoOut.keyValueKeyKind = valueKindFromTypeName(collectionArgs.front());
     targetInfoOut.keyValueValueKind = valueKindFromTypeName(collectionArgs.back());
     return targetInfoOut.keyValueKeyKind != LocalInfo::ValueKind::Unknown &&
@@ -1180,9 +1180,9 @@ InlineCallDispatchResult tryEmitInlineCallDispatchWithLocals(
         isCanonicalPublishedInlineMapHelperPath(rawPath);
     if (isCanonicalStdMapHelperCall && !expr.args.empty()) {
       const auto targetInfo =
-          resolveMapAccessTargetInfo(expr.args.front(),
+          resolveKeyValueAccessTargetInfo(expr.args.front(),
                                      localsIn,
-                                     inferCallMapTargetInfo,
+                                     inferCallKeyValueTargetInfo,
                                      semanticProgram,
                                      semanticIndexPtr);
       std::string directHelperName = rawPath;
@@ -1191,7 +1191,7 @@ InlineCallDispatchResult tryEmitInlineCallDispatchWithLocals(
         directHelperName = directHelperName.substr(lastSlash + 1);
       }
       directHelperName = canonicalInlineMapHelperName(std::move(directHelperName));
-      if (targetInfo.isMapTarget &&
+      if (targetInfo.isKeyValueTarget &&
           (directHelperName == "count" || directHelperName == "contains" ||
            directHelperName == "tryAt" || directHelperName == "at" ||
            directHelperName == "at_unsafe")) {
@@ -1203,16 +1203,16 @@ InlineCallDispatchResult tryEmitInlineCallDispatchWithLocals(
         }
         return InlineCallDispatchResult::NotHandled;
       }
-      if (!targetInfo.isMapTarget && expr.args.size() >= 2 &&
+      if (!targetInfo.isKeyValueTarget && expr.args.size() >= 2 &&
           (directHelperName == "contains" || directHelperName == "tryAt" ||
            directHelperName == "at" || directHelperName == "at_unsafe")) {
         const auto alternateTargetInfo =
-            resolveMapAccessTargetInfo(expr.args[1],
+            resolveKeyValueAccessTargetInfo(expr.args[1],
                                        localsIn,
-                                       inferCallMapTargetInfo,
+                                       inferCallKeyValueTargetInfo,
                                        semanticProgram,
                                        semanticIndexPtr);
-        if (alternateTargetInfo.isMapTarget) {
+        if (alternateTargetInfo.isKeyValueTarget) {
           const LocalInfo::ValueKind keyKind =
               inferExprKind ? inferExprKind(expr.args.front(), localsIn)
                             : LocalInfo::ValueKind::Unknown;
@@ -1234,10 +1234,10 @@ InlineCallDispatchResult tryEmitInlineCallDispatchWithLocals(
         (resolveMapHelperAliasName(expr, mapHelperName) ||
          (getBuiltinArrayAccessName(expr, mapHelperName) && expr.args.size() == 2))) {
       mapHelperName = canonicalInlineMapHelperName(std::move(mapHelperName));
-      const auto mapTargetInfo =
-          resolveMapAccessTargetInfo(expr.args.front(),
+      const auto keyValueTargetInfo =
+          resolveKeyValueAccessTargetInfo(expr.args.front(),
                                      localsIn,
-                                     inferCallMapTargetInfo,
+                                     inferCallKeyValueTargetInfo,
                                      semanticProgram,
                                      semanticIndexPtr);
       auto isRewrittenSlashMethodMapAccess = [&]() {
@@ -1301,7 +1301,7 @@ InlineCallDispatchResult tryEmitInlineCallDispatchWithLocals(
         return queryType == "string" || queryType == "/string" ||
                bindingType == "string" || bindingType == "/string";
       };
-      if (mapTargetInfo.isMapTarget && !isCanonicalStdMapHelperCall &&
+      if (keyValueTargetInfo.isKeyValueTarget && !isCanonicalStdMapHelperCall &&
           (expr.sourceIsMethodCall || isRewrittenSlashMethodMapAccess() ||
            expr.name.find('/') == std::string::npos) &&
           (mapHelperName == "at" || mapHelperName == "at_unsafe")) {
@@ -1321,7 +1321,7 @@ InlineCallDispatchResult tryEmitInlineCallDispatchWithLocals(
                      : InlineCallDispatchResult::Error;
         }
       }
-      if (mapTargetInfo.isMapTarget &&
+      if (keyValueTargetInfo.isKeyValueTarget &&
           !isCanonicalStdMapHelperCall &&
           resolveDefinitionCallFn(expr) == nullptr) {
         return InlineCallDispatchResult::NotHandled;
@@ -1557,12 +1557,12 @@ InlineCallDispatchResult tryEmitInlineCallDispatchWithLocals(
           return true;
         }
         if (receiverExpr.kind == Expr::Kind::Name) {
-          if (resolveMapAccessTargetInfo(receiverExpr,
+          if (resolveKeyValueAccessTargetInfo(receiverExpr,
                                          localsIn,
-                                         inferCallMapTargetInfo,
+                                         inferCallKeyValueTargetInfo,
                                          semanticProgram,
                                          semanticIndexPtr)
-                  .isMapTarget) {
+                  .isKeyValueTarget) {
             return true;
           }
           const InlineCollectionAccessTargetFact semanticFact =
@@ -1616,12 +1616,12 @@ InlineCallDispatchResult tryEmitInlineCallDispatchWithLocals(
             receiverExpr.args.size() == 2) {
           return false;
         }
-        if (resolveMapAccessTargetInfo(receiverExpr,
+        if (resolveKeyValueAccessTargetInfo(receiverExpr,
                                        localsIn,
-                                       inferCallMapTargetInfo,
+                                       inferCallKeyValueTargetInfo,
                                        semanticProgram,
                                        semanticIndexPtr)
-                .isMapTarget) {
+                .isKeyValueTarget) {
           return true;
         }
         const InlineCollectionAccessTargetFact semanticFact =

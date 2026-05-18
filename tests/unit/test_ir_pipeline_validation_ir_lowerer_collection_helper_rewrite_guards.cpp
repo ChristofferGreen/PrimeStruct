@@ -493,10 +493,10 @@ TEST_CASE("ir lowerer materialized collection receivers prefer semantic target f
   const size_t semanticIndexPos =
       source.find("lateCollectionSemanticIndex", rewritePos);
   const size_t semanticMapResolverPos = source.find(
-      "ir_lowerer::resolveMapAccessTargetInfo(\n"
+      "ir_lowerer::resolveKeyValueAccessTargetInfo(\n"
       "                    *receiverExpr,\n"
       "                    localsIn,\n"
-      "                    inferCallMapTargetInfo,\n"
+      "                    inferCallKeyValueTargetInfo,\n"
       "                    lateCollectionSemanticProgram,\n"
       "                    lateCollectionSemanticIndex)",
       rewritePos);
@@ -509,7 +509,7 @@ TEST_CASE("ir lowerer materialized collection receivers prefer semantic target f
       "                    lateCollectionSemanticIndex)",
       rewritePos);
   const size_t wrappedMapGatePos = source.find(
-      "if (mapTargetInfo.isMapTarget && arrayVectorTargetInfo.isWrappedMapTarget)",
+      "if (keyValueTargetInfo.isKeyValueTarget && arrayVectorTargetInfo.isWrappedKeyValueTarget)",
       rewritePos);
   const size_t emitReceiverValuePos =
       source.find("auto emitCollectionReceiverValue =", rewritePos);
@@ -1024,11 +1024,11 @@ TEST_CASE("ir lowerer skips builtin map insert rewrite for direct experimental m
   const std::string statementSource = readText(statementCallPath);
   const std::string tailDispatchSource = readText(tailDispatchPath);
 
-  CHECK(statementSource.find("if (targetInfo.isWrappedMapTarget ||") !=
+  CHECK(statementSource.find("if (targetInfo.isWrappedKeyValueTarget ||") !=
         std::string::npos);
   CHECK(statementSource.find("isExperimentalMapStructPath(targetInfo.structTypeName)) {") !=
         std::string::npos);
-  CHECK(tailDispatchSource.find("if (targetInfo.isWrappedMapTarget ||") !=
+  CHECK(tailDispatchSource.find("if (targetInfo.isWrappedKeyValueTarget ||") !=
         std::string::npos);
   CHECK(tailDispatchSource.find("ir_lowerer::isExperimentalMapStructTypePath(targetInfo.structTypeName)) {") !=
         std::string::npos);
@@ -1088,14 +1088,14 @@ TEST_CASE("ir lowerer statement map insert rewrite uses semantic product receive
       "tryPopulateFromSemanticReceiverFact(\n"
       "            *canonicalReceiverExpr, targetInfoOut, hasSemanticMapReceiverFact)");
   const size_t canonicalResolver = statementSource.find(
-      "resolveMapAccessTargetInfo(*canonicalReceiverExpr,\n"
+      "resolveKeyValueAccessTargetInfo(*canonicalReceiverExpr,\n"
       "                                   localsIn,\n"
       "                                   {},\n"
       "                                   semanticProgram,\n"
       "                                   semanticIndex)",
       semanticReceiverGate);
   const size_t mapTargetGate =
-      statementSource.find("if (canonicalTargetInfo.isMapTarget &&",
+      statementSource.find("if (canonicalTargetInfo.isKeyValueTarget &&",
                            semanticReceiverGate);
   REQUIRE(semanticReceiverGate != std::string::npos);
   REQUIRE(canonicalResolver != std::string::npos);
@@ -1320,7 +1320,7 @@ TEST_CASE("ir lowerer inline dispatch map helper deferral uses semantic receiver
         std::string::npos);
   CHECK(inlineDispatchSource.find("tryPopulateMapTargetInfoFromSemanticFacts(") ==
         std::string::npos);
-  CHECK(inlineDispatchSource.find("resolveMapAccessTargetInfo(receiverExpr,") !=
+  CHECK(inlineDispatchSource.find("resolveKeyValueAccessTargetInfo(receiverExpr,") !=
         std::string::npos);
   CHECK(tailDispatchSource.find("error,\n"
                                 "            semanticProgram);") !=
@@ -1530,14 +1530,14 @@ TEST_CASE("ir lowerer inline dispatch collection access fallback uses semantic r
       "                                               semanticIndexPtr)",
       semanticFactUse);
   const size_t nameSemanticMapFallback =
-      source.find("resolveMapAccessTargetInfo(receiverExpr,",
+      source.find("resolveKeyValueAccessTargetInfo(receiverExpr,",
                   nameReceiverBranch);
   const size_t callReceiverBranch =
       source.find("if (receiverExpr.kind != Expr::Kind::Call || receiverExpr.isBinding) {",
                   semanticFactUse);
   REQUIRE(callReceiverBranch != std::string::npos);
   const size_t callSemanticMapFallback =
-      source.find("resolveMapAccessTargetInfo(receiverExpr,",
+      source.find("resolveKeyValueAccessTargetInfo(receiverExpr,",
                   callReceiverBranch);
   const size_t callSemanticFactUse =
       source.find("const InlineCollectionAccessTargetFact semanticFact =\n"
@@ -1556,7 +1556,7 @@ TEST_CASE("ir lowerer inline dispatch collection access fallback uses semantic r
   CHECK(callSemanticMapFallback < callSemanticFactUse);
   CHECK(semanticArrayVectorFallback < builtinCollectionFallback);
   CHECK(callSemanticMapFallback < builtinCollectionFallback);
-  CHECK(source.find("resolveMapAccessTargetInfo(receiverExpr, localsIn, inferCallMapTargetInfo).isMapTarget") ==
+  CHECK(source.find("resolveKeyValueAccessTargetInfo(receiverExpr, localsIn, inferCallKeyValueTargetInfo).isKeyValueTarget") ==
         std::string::npos);
 }
 
@@ -1590,10 +1590,10 @@ TEST_CASE("ir lowerer tail map insert rewrite uses semantic receiver facts first
   CHECK(tailDispatchSource.find("resolveSpecializedExperimentalMapStructPathForBindingType(\n"
                                 "                      typeText, structPath)") !=
         std::string::npos);
-  CHECK(tailDispatchSource.find("resolveMapAccessTargetInfo(\n"
+  CHECK(tailDispatchSource.find("resolveKeyValueAccessTargetInfo(\n"
                                 "                  callExpr.args[receiverIndex],\n"
                                 "                  localsIn,\n"
-                                "                  inferCallMapTargetInfo,\n"
+                                "                  inferCallKeyValueTargetInfo,\n"
                                 "                  semanticProgram,\n"
                                 "                  tailDispatchMapSemanticIndexPtr)") !=
         std::string::npos);
@@ -1636,10 +1636,10 @@ TEST_CASE("ir lowerer tail explicit map helper rewrite uses semantic receiver fa
   const size_t semanticIndexPos =
       tailDispatchSource.find("explicitMapHelperSemanticIndex", rewritePos);
   const size_t semanticMapResolverPos = tailDispatchSource.find(
-      "ir_lowerer::resolveMapAccessTargetInfo(\n"
+      "ir_lowerer::resolveKeyValueAccessTargetInfo(\n"
       "                  callExpr.args.front(),\n"
       "                  localsIn,\n"
-      "                  inferCallMapTargetInfo,\n"
+      "                  inferCallKeyValueTargetInfo,\n"
       "                  semanticProgram,\n"
       "                  explicitMapHelperSemanticIndexPtr)",
       rewritePos);
@@ -1652,7 +1652,7 @@ TEST_CASE("ir lowerer tail explicit map helper rewrite uses semantic receiver fa
       "                  explicitMapHelperSemanticIndexPtr)",
       rewritePos);
   const size_t staleLocalGatePos =
-      tailDispatchSource.find("if (!mapTargetInfo.isMapTarget) {", rewritePos);
+      tailDispatchSource.find("if (!keyValueTargetInfo.isKeyValueTarget) {", rewritePos);
   const size_t argsPackGatePos =
       tailDispatchSource.find("receiverTargetInfo.isArgsPackTarget", rewritePos);
 
@@ -1699,10 +1699,10 @@ TEST_CASE("ir lowerer tail canonical experimental map helper rewrite uses semant
       tailDispatchSource.find("auto it = localsIn.find(receiverExpr.name);",
                               rewritePos);
   const size_t semanticMapResolverPos = tailDispatchSource.find(
-      "ir_lowerer::resolveMapAccessTargetInfo(\n"
+      "ir_lowerer::resolveKeyValueAccessTargetInfo(\n"
       "                    receiverExpr,\n"
       "                    localsIn,\n"
-      "                    inferCallMapTargetInfo,\n"
+      "                    inferCallKeyValueTargetInfo,\n"
       "                    semanticProgram,\n"
       "                    canonicalMapHelperSemanticIndexPtr)",
       rewritePos);
@@ -1753,15 +1753,15 @@ TEST_CASE("ir lowerer tail borrowed map receiver rewrite uses semantic receiver 
   const size_t semanticIndexPos =
       tailDispatchSource.find("borrowedMapReceiverSemanticIndex", rewritePos);
   const size_t semanticMapResolverPos = tailDispatchSource.find(
-      "ir_lowerer::resolveMapAccessTargetInfo(\n"
+      "ir_lowerer::resolveKeyValueAccessTargetInfo(\n"
       "                    receiverExpr,\n"
       "                    localsIn,\n"
-      "                    inferCallMapTargetInfo,\n"
+      "                    inferCallKeyValueTargetInfo,\n"
       "                    semanticProgram,\n"
       "                    borrowedMapReceiverSemanticIndexPtr)",
       rewritePos);
   const size_t wrappedMapGatePos = tailDispatchSource.find(
-      "return mapTargetInfo.isMapTarget && mapTargetInfo.isWrappedMapTarget;",
+      "return keyValueTargetInfo.isKeyValueTarget && keyValueTargetInfo.isWrappedKeyValueTarget;",
       rewritePos);
   const size_t rewriteEndPos =
       tailDispatchSource.find("Expr rewrittenExplicitMapHelperExpr;", rewritePos);
@@ -1808,16 +1808,16 @@ TEST_CASE("ir lowerer native tail map access inference uses semantic receiver fa
   REQUIRE(std::filesystem::exists(tailDispatchPath));
   const std::string tailDispatchSource = readText(tailDispatchPath);
 
-  CHECK(tailDispatchSource.find("resolveMapAccessTargetInfo(\n"
+  CHECK(tailDispatchSource.find("resolveKeyValueAccessTargetInfo(\n"
                                 "                  targetCallExpr,\n"
                                 "                  localsIn,\n"
-                                "                  inferCallMapTargetInfo,\n"
+                                "                  inferCallKeyValueTargetInfo,\n"
                                 "                  semanticProgram,\n"
                                 "                  tailDispatchMapSemanticIndexPtr)") !=
         std::string::npos);
   CHECK(tailDispatchSource.find("populateTailDispatchMapStructPathFromKinds(targetInfoOut);") !=
         std::string::npos);
-  CHECK(tailDispatchSource.find("return targetInfoOut.isMapTarget;") !=
+  CHECK(tailDispatchSource.find("return targetInfoOut.isKeyValueTarget;") !=
         std::string::npos);
   CHECK(tailDispatchSource.find("inferNativeTailMapKindsFromTypeText =") ==
         std::string::npos);
@@ -2099,7 +2099,7 @@ TEST_CASE("ir lowerer late expression canonical map helpers use path-family gate
   REQUIRE(builtinDeferral != std::string::npos);
   CHECK(canonicalMapGate < explicitAccessGate);
   CHECK(explicitAccessGate < builtinDeferral);
-  CHECK(source.find("resolveMapAccessTargetInfo(expr.args.front(), localsIn)") ==
+  CHECK(source.find("resolveKeyValueAccessTargetInfo(expr.args.front(), localsIn)") ==
         std::string::npos);
 }
 

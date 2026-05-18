@@ -985,7 +985,7 @@ bool resolveResultExprInfoFromLocals(const Expr &expr,
     out.errorType = local.resultErrorType;
     return true;
   };
-  auto inferCallMapTargetInfo = [&](const Expr &targetExpr, MapAccessTargetInfo &targetInfoOut) {
+  auto inferCallKeyValueTargetInfo = [&](const Expr &targetExpr, KeyValueAccessTargetInfo &targetInfoOut) {
     targetInfoOut = {};
     const Definition *callee = resolveDefinitionCallFn(targetExpr);
     if (callee == nullptr) {
@@ -995,10 +995,10 @@ bool resolveResultExprInfoFromLocals(const Expr &expr,
     std::vector<std::string> collectionArgs;
     if (!inferDeclaredReturnCollection(*callee, collectionName, collectionArgs) ||
         collectionName != "map" || collectionArgs.size() != 2) {
-      return inferForwardedMapAccessTargetInfo(
+      return inferForwardedKeyValueAccessTargetInfo(
           targetExpr, *callee, localsIn, {}, targetInfoOut);
     }
-    targetInfoOut.isMapTarget = true;
+    targetInfoOut.isKeyValueTarget = true;
     targetInfoOut.keyValueKeyKind = valueKindFromTypeName(collectionArgs[0]);
     targetInfoOut.keyValueValueKind = valueKindFromTypeName(collectionArgs[1]);
     return true;
@@ -1369,8 +1369,8 @@ bool resolveResultExprInfoFromLocals(const Expr &expr,
       out.errorType = "ContainerError";
       return true;
     };
-    const auto methodTargetInfo = resolveMapAccessTargetInfo(expr.args.front(), localsIn, inferCallMapTargetInfo);
-    if (methodTargetInfo.isMapTarget && assignTryAtMapResultInfo(methodTargetInfo.keyValueValueKind)) {
+    const auto methodTargetInfo = resolveKeyValueAccessTargetInfo(expr.args.front(), localsIn, inferCallKeyValueTargetInfo);
+    if (methodTargetInfo.isKeyValueTarget && assignTryAtMapResultInfo(methodTargetInfo.keyValueValueKind)) {
       return true;
     }
     if (expr.args.front().kind == Expr::Kind::Call) {
@@ -1403,8 +1403,8 @@ bool resolveResultExprInfoFromLocals(const Expr &expr,
     }
   }
   if (expr.kind == Expr::Kind::Call && !expr.args.empty() && isMapTryAtCallName(expr)) {
-    const auto targetInfo = resolveMapAccessTargetInfo(expr.args.front(), localsIn, inferCallMapTargetInfo);
-    if (targetInfo.isMapTarget && targetInfo.keyValueValueKind != LocalInfo::ValueKind::Unknown) {
+    const auto targetInfo = resolveKeyValueAccessTargetInfo(expr.args.front(), localsIn, inferCallKeyValueTargetInfo);
+    if (targetInfo.isKeyValueTarget && targetInfo.keyValueValueKind != LocalInfo::ValueKind::Unknown) {
       out.isResult = true;
       out.hasValue = true;
       out.valueKind = targetInfo.keyValueValueKind;

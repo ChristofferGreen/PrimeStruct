@@ -133,14 +133,14 @@ bool isExplicitDirectMapCountContainsTryAtCall(const SemanticProgram *semanticPr
 bool shouldPreserveExplicitDirectMapHelperCall(
     const SemanticProgram *semanticProgram,
     const Expr &expr,
-    const MapAccessTargetInfo &mapTargetInfo) {
+    const KeyValueAccessTargetInfo &keyValueTargetInfo) {
   if (!isExplicitDirectMapCountContainsTryAtCall(semanticProgram, expr)) {
     return false;
   }
   return expr.args.empty() ||
          expr.args.front().kind != Expr::Kind::Call ||
-         !mapTargetInfo.isMapTarget ||
-         mapTargetInfo.isWrappedMapTarget;
+         !keyValueTargetInfo.isKeyValueTarget ||
+         keyValueTargetInfo.isWrappedKeyValueTarget;
 }
 
 bool isMapReadHelperName(std::string_view helperName) {
@@ -394,7 +394,7 @@ MapAccessLookupEmitResult tryEmitMapContainsLookup(
     const std::function<int32_t()> &allocTempLocal,
     const std::function<bool(const Expr &, const LocalMap &)> &emitExpr,
     const std::function<bool(const Expr &, const LocalMap &, int32_t &, size_t &)> &resolveStringTableTarget,
-    const ResolveCallMapAccessTargetInfoFn &resolveCallMapAccessTargetInfo,
+    const ResolveCallKeyValueAccessTargetInfoFn &resolveCallKeyValueAccessTargetInfo,
     const std::function<LocalInfo::ValueKind(const Expr &, const LocalMap &)> &inferExprKind,
     const std::function<size_t()> &instructionCount,
     const std::function<void(IrOpcode, uint64_t)> &emitInstruction,
@@ -679,7 +679,7 @@ NativeCallTailDispatchResult tryEmitNativeCallTailDispatch(
     const std::function<bool(const Expr &, const LocalMap &, int32_t &, size_t &)> &resolveStringTableTarget,
     size_t stringTableCount,
     const std::function<bool(const Expr &, const LocalMap &)> &emitExpr,
-    const ResolveCallMapAccessTargetInfoFn &resolveCallMapAccessTargetInfo,
+    const ResolveCallKeyValueAccessTargetInfoFn &resolveCallKeyValueAccessTargetInfo,
     const ResolveCallArrayVectorAccessTargetInfoFn &resolveCallArrayVectorAccessTargetInfo,
     const std::function<bool(const Expr &, std::string &)> &tryGetPrintBuiltinName,
     const std::function<LocalInfo::ValueKind(const Expr &, const LocalMap &)> &inferExprKind,
@@ -726,7 +726,7 @@ NativeCallTailDispatchResult tryEmitNativeCallTailDispatch(
       isStringCountCall,
       isEntryArgsName,
       [&](const Expr &targetExpr, const LocalMap &targetLocals) {
-        if (resolveMapAccessTargetInfo(targetExpr, targetLocals, resolveCallMapAccessTargetInfo).isMapTarget) {
+        if (resolveKeyValueAccessTargetInfo(targetExpr, targetLocals, resolveCallKeyValueAccessTargetInfo).isKeyValueTarget) {
           return true;
         }
         return resolveArrayVectorAccessTargetInfo(
@@ -777,9 +777,9 @@ NativeCallTailDispatchResult tryEmitNativeCallTailDispatch(
       error = "contains requires exactly two arguments";
       return NativeCallTailDispatchResult::Error;
     }
-    const auto mapTargetInfo = resolveMapAccessTargetInfo(
-        expr.args.front(), localsIn, resolveCallMapAccessTargetInfo);
-    if (expr.args.front().kind == Expr::Kind::Call && !mapTargetInfo.isMapTarget) {
+    const auto keyValueTargetInfo = resolveKeyValueAccessTargetInfo(
+        expr.args.front(), localsIn, resolveCallKeyValueAccessTargetInfo);
+    if (expr.args.front().kind == Expr::Kind::Call && !keyValueTargetInfo.isKeyValueTarget) {
       return NativeCallTailDispatchResult::NotHandled;
     }
     const auto containsResult = tryEmitMapContainsLookup(
@@ -789,7 +789,7 @@ NativeCallTailDispatchResult tryEmitNativeCallTailDispatch(
         allocTempLocal,
         emitExpr,
         resolveStringTableTarget,
-        resolveCallMapAccessTargetInfo,
+        resolveCallKeyValueAccessTargetInfo,
         inferExprKind,
         instructionCount,
         emitInstruction,
@@ -810,13 +810,13 @@ NativeCallTailDispatchResult tryEmitNativeCallTailDispatch(
       error = "contains requires exactly two arguments";
       return NativeCallTailDispatchResult::Error;
     }
-    const auto mapTargetInfo = resolveMapAccessTargetInfo(
-        expr.args.front(), localsIn, resolveCallMapAccessTargetInfo);
-    if (shouldPreserveExplicitDirectMapHelperCall(semanticProgram, expr, mapTargetInfo)) {
+    const auto keyValueTargetInfo = resolveKeyValueAccessTargetInfo(
+        expr.args.front(), localsIn, resolveCallKeyValueAccessTargetInfo);
+    if (shouldPreserveExplicitDirectMapHelperCall(semanticProgram, expr, keyValueTargetInfo)) {
       return NativeCallTailDispatchResult::NotHandled;
     }
     if (expr.args.front().kind == Expr::Kind::Call &&
-        (!mapTargetInfo.isMapTarget || mapTargetInfo.isWrappedMapTarget)) {
+        (!keyValueTargetInfo.isKeyValueTarget || keyValueTargetInfo.isWrappedKeyValueTarget)) {
       return NativeCallTailDispatchResult::NotHandled;
     }
     const auto containsResult = tryEmitMapContainsLookup(
@@ -826,7 +826,7 @@ NativeCallTailDispatchResult tryEmitNativeCallTailDispatch(
         allocTempLocal,
         emitExpr,
         resolveStringTableTarget,
-        resolveCallMapAccessTargetInfo,
+        resolveCallKeyValueAccessTargetInfo,
         inferExprKind,
         instructionCount,
         emitInstruction,
@@ -847,21 +847,21 @@ NativeCallTailDispatchResult tryEmitNativeCallTailDispatch(
       error = "tryAt requires exactly two arguments";
       return NativeCallTailDispatchResult::Error;
     }
-    const auto mapTargetInfo = resolveMapAccessTargetInfo(
-        expr.args.front(), localsIn, resolveCallMapAccessTargetInfo);
-    if (expr.args.front().kind == Expr::Kind::Call && !mapTargetInfo.isMapTarget) {
+    const auto keyValueTargetInfo = resolveKeyValueAccessTargetInfo(
+        expr.args.front(), localsIn, resolveCallKeyValueAccessTargetInfo);
+    if (expr.args.front().kind == Expr::Kind::Call && !keyValueTargetInfo.isKeyValueTarget) {
       return NativeCallTailDispatchResult::NotHandled;
     }
-    if (!mapTargetInfo.isMapTarget) {
+    if (!keyValueTargetInfo.isKeyValueTarget) {
       error = "tryAt requires map target";
       return NativeCallTailDispatchResult::Error;
     }
-    if (!validateMapAccessTargetInfo(mapTargetInfo, "tryAt", error)) {
+    if (!validateKeyValueAccessTargetInfo(keyValueTargetInfo, "tryAt", error)) {
       return NativeCallTailDispatchResult::Error;
     }
     if (!emitMapLookupTryAt(
-            mapTargetInfo.keyValueKeyKind,
-            mapTargetInfo.structTypeName,
+            keyValueTargetInfo.keyValueKeyKind,
+            keyValueTargetInfo.structTypeName,
             expr.args.front(),
             expr.args[1],
             localsIn,
@@ -883,25 +883,25 @@ NativeCallTailDispatchResult tryEmitNativeCallTailDispatch(
       error = "tryAt requires exactly two arguments";
       return NativeCallTailDispatchResult::Error;
     }
-    const auto mapTargetInfo = resolveMapAccessTargetInfo(
-        expr.args.front(), localsIn, resolveCallMapAccessTargetInfo);
-    if (shouldPreserveExplicitDirectMapHelperCall(semanticProgram, expr, mapTargetInfo)) {
+    const auto keyValueTargetInfo = resolveKeyValueAccessTargetInfo(
+        expr.args.front(), localsIn, resolveCallKeyValueAccessTargetInfo);
+    if (shouldPreserveExplicitDirectMapHelperCall(semanticProgram, expr, keyValueTargetInfo)) {
       return NativeCallTailDispatchResult::NotHandled;
     }
     if (expr.args.front().kind == Expr::Kind::Call &&
-        (!mapTargetInfo.isMapTarget || mapTargetInfo.isWrappedMapTarget)) {
+        (!keyValueTargetInfo.isKeyValueTarget || keyValueTargetInfo.isWrappedKeyValueTarget)) {
       return NativeCallTailDispatchResult::NotHandled;
     }
-    if (!mapTargetInfo.isMapTarget) {
+    if (!keyValueTargetInfo.isKeyValueTarget) {
       error = "tryAt requires map target";
       return NativeCallTailDispatchResult::Error;
     }
-    if (!validateMapAccessTargetInfo(mapTargetInfo, "tryAt", error)) {
+    if (!validateKeyValueAccessTargetInfo(keyValueTargetInfo, "tryAt", error)) {
       return NativeCallTailDispatchResult::Error;
     }
     if (!emitMapLookupTryAt(
-            mapTargetInfo.keyValueKeyKind,
-            mapTargetInfo.structTypeName,
+            keyValueTargetInfo.keyValueKeyKind,
+            keyValueTargetInfo.structTypeName,
             expr.args.front(),
             expr.args[1],
             localsIn,
@@ -927,7 +927,7 @@ NativeCallTailDispatchResult tryEmitNativeCallTailDispatch(
   std::string accessName;
   if (isExplicitDirectMapCountContainsTryAtCall(semanticProgram, expr) &&
       !expr.args.empty() &&
-      resolveMapAccessTargetInfo(expr.args.front(), localsIn, resolveCallMapAccessTargetInfo).isMapTarget) {
+      resolveKeyValueAccessTargetInfo(expr.args.front(), localsIn, resolveCallKeyValueAccessTargetInfo).isKeyValueTarget) {
     return NativeCallTailDispatchResult::NotHandled;
   }
   const bool hasBuiltinArrayAccessName =
@@ -954,9 +954,9 @@ NativeCallTailDispatchResult tryEmitNativeCallTailDispatch(
         (accessName == "at" || accessName == "at_unsafe");
     const bool isMapMethodTempReceiver =
         isMethodCallTempReceiver &&
-        resolveMapAccessTargetInfo(
-            expr.args.front(), localsIn, resolveCallMapAccessTargetInfo)
-            .isMapTarget;
+        resolveKeyValueAccessTargetInfo(
+            expr.args.front(), localsIn, resolveCallKeyValueAccessTargetInfo)
+            .isKeyValueTarget;
     if (isMethodCallTempReceiver && !isMapMethodTempReceiver) {
       return NativeCallTailDispatchResult::NotHandled;
     }
@@ -1027,25 +1027,25 @@ NativeCallTailDispatchResult tryEmitNativeCallTailDispatch(
         const auto accessTargetInfo = resolveArrayVectorAccessTargetInfo(
             candidate, localsIn, resolveCallArrayVectorAccessTargetInfo);
         return accessTargetInfo.isArgsPackTarget &&
-               (accessTargetInfo.isMapTarget ||
-                accessTargetInfo.isWrappedMapTarget);
+               (accessTargetInfo.isKeyValueTarget ||
+                accessTargetInfo.isWrappedKeyValueTarget);
       };
       return isMapArgsPackAccessReceiverImpl(receiver,
                                              isMapArgsPackAccessReceiverImpl);
     };
     if (isExplicitMapAccessCall && !expr.args.empty() &&
         expr.args.front().kind == Expr::Kind::Call) {
-      const auto mapTargetInfo = resolveMapAccessTargetInfo(
-          expr.args.front(), localsIn, resolveCallMapAccessTargetInfo);
-      if (!mapTargetInfo.isMapTarget ||
+      const auto keyValueTargetInfo = resolveKeyValueAccessTargetInfo(
+          expr.args.front(), localsIn, resolveCallKeyValueAccessTargetInfo);
+      if (!keyValueTargetInfo.isKeyValueTarget ||
           !isMapArgsPackAccessReceiver(expr.args.front())) {
         return NativeCallTailDispatchResult::NotHandled;
       }
     }
     if (isExplicitMapAccessCall && !expr.args.empty()) {
-      const auto mapTargetInfo = resolveMapAccessTargetInfo(
-          expr.args.front(), localsIn, resolveCallMapAccessTargetInfo);
-      if (mapTargetInfo.isMapTarget &&
+      const auto keyValueTargetInfo = resolveKeyValueAccessTargetInfo(
+          expr.args.front(), localsIn, resolveCallKeyValueAccessTargetInfo);
+      if (keyValueTargetInfo.isKeyValueTarget &&
           (expr.args.front().kind != Expr::Kind::Call ||
            !isMapArgsPackAccessReceiver(expr.args.front()))) {
         return NativeCallTailDispatchResult::NotHandled;
@@ -1060,18 +1060,18 @@ NativeCallTailDispatchResult tryEmitNativeCallTailDispatch(
         (expr.name == "at" || expr.name == "at_unsafe") &&
         !isExplicitMapAccessCall &&
         !hasSemanticMapAccessHelperDefinition(semanticProgram, accessName)) {
-      const auto mapTargetInfo = resolveMapAccessTargetInfo(
-          expr.args.front(), localsIn, resolveCallMapAccessTargetInfo);
-      if (mapTargetInfo.isMapTarget) {
+      const auto keyValueTargetInfo = resolveKeyValueAccessTargetInfo(
+          expr.args.front(), localsIn, resolveCallKeyValueAccessTargetInfo);
+      if (keyValueTargetInfo.isKeyValueTarget) {
         const std::string helperPath = nativeTailMapHelperPath(accessName);
         error = "unknown call target: " + helperPath;
         return NativeCallTailDispatchResult::Error;
       }
     }
     if (!expr.isMethodCall && !expr.args.empty()) {
-      const auto mapTargetInfo = resolveMapAccessTargetInfo(
-          expr.args.front(), localsIn, resolveCallMapAccessTargetInfo);
-      if (mapTargetInfo.isMapTarget &&
+      const auto keyValueTargetInfo = resolveKeyValueAccessTargetInfo(
+          expr.args.front(), localsIn, resolveCallKeyValueAccessTargetInfo);
+      if (keyValueTargetInfo.isKeyValueTarget &&
           (isStringReturningMapAccessAlias(
                semanticProgram, semanticIndexPtr, expr) ||
            (expr.name.find('/') == std::string::npos &&
@@ -1087,7 +1087,7 @@ NativeCallTailDispatchResult tryEmitNativeCallTailDispatch(
                                 localsIn,
                                 resolveStringTableTarget,
                                 stringTableCount,
-                                resolveCallMapAccessTargetInfo,
+                                resolveCallKeyValueAccessTargetInfo,
                                 resolveCallArrayVectorAccessTargetInfo,
                                 inferExprKind,
                                 isEntryArgsName,
@@ -1121,7 +1121,7 @@ NativeCallTailDispatchResult tryEmitNativeCallTailDispatch(
     const std::function<bool(const Expr &, const LocalMap &)> &isEntryArgsName,
     const std::function<bool(const Expr &, const LocalMap &, int32_t &, size_t &)> &resolveStringTableTarget,
     const std::function<bool(const Expr &, const LocalMap &)> &emitExpr,
-    const ResolveCallMapAccessTargetInfoFn &resolveCallMapAccessTargetInfo,
+    const ResolveCallKeyValueAccessTargetInfoFn &resolveCallKeyValueAccessTargetInfo,
     const ResolveCallArrayVectorAccessTargetInfoFn &resolveCallArrayVectorAccessTargetInfo,
     const std::function<bool(const Expr &, std::string &)> &tryGetPrintBuiltinName,
     const std::function<LocalInfo::ValueKind(const Expr &, const LocalMap &)> &inferExprKind,
@@ -1146,7 +1146,7 @@ NativeCallTailDispatchResult tryEmitNativeCallTailDispatch(
       resolveStringTableTarget,
       0,
       emitExpr,
-      resolveCallMapAccessTargetInfo,
+      resolveCallKeyValueAccessTargetInfo,
       resolveCallArrayVectorAccessTargetInfo,
       tryGetPrintBuiltinName,
       inferExprKind,
@@ -1270,7 +1270,7 @@ NativeCallTailDispatchResult tryEmitNativeCallTailDispatchWithLocals(
     const std::function<bool(const Expr &, const LocalMap &, int32_t &, size_t &)> &resolveStringTableTarget,
     size_t stringTableCount,
     const std::function<bool(const Expr &, const LocalMap &)> &emitExpr,
-    const ResolveCallMapAccessTargetInfoFn &resolveCallMapAccessTargetInfo,
+    const ResolveCallKeyValueAccessTargetInfoFn &resolveCallKeyValueAccessTargetInfo,
     const ResolveCallArrayVectorAccessTargetInfoFn &resolveCallArrayVectorAccessTargetInfo,
     const std::function<bool(const Expr &, std::string &)> &tryGetPrintBuiltinName,
     const std::function<LocalInfo::ValueKind(const Expr &, const LocalMap &)> &inferExprKind,
@@ -1295,7 +1295,7 @@ NativeCallTailDispatchResult tryEmitNativeCallTailDispatchWithLocals(
       resolveStringTableTarget,
       stringTableCount,
       emitExpr,
-      resolveCallMapAccessTargetInfo,
+      resolveCallKeyValueAccessTargetInfo,
       resolveCallArrayVectorAccessTargetInfo,
       tryGetPrintBuiltinName,
       inferExprKind,
@@ -1321,7 +1321,7 @@ NativeCallTailDispatchResult tryEmitNativeCallTailDispatchWithLocals(
     const std::function<bool(const Expr &, const LocalMap &)> &isEntryArgsName,
     const std::function<bool(const Expr &, const LocalMap &, int32_t &, size_t &)> &resolveStringTableTarget,
     const std::function<bool(const Expr &, const LocalMap &)> &emitExpr,
-    const ResolveCallMapAccessTargetInfoFn &resolveCallMapAccessTargetInfo,
+    const ResolveCallKeyValueAccessTargetInfoFn &resolveCallKeyValueAccessTargetInfo,
     const ResolveCallArrayVectorAccessTargetInfoFn &resolveCallArrayVectorAccessTargetInfo,
     const std::function<bool(const Expr &, std::string &)> &tryGetPrintBuiltinName,
     const std::function<LocalInfo::ValueKind(const Expr &, const LocalMap &)> &inferExprKind,
@@ -1346,7 +1346,7 @@ NativeCallTailDispatchResult tryEmitNativeCallTailDispatchWithLocals(
       resolveStringTableTarget,
       0,
       emitExpr,
-      resolveCallMapAccessTargetInfo,
+      resolveCallKeyValueAccessTargetInfo,
       resolveCallArrayVectorAccessTargetInfo,
       tryGetPrintBuiltinName,
       inferExprKind,

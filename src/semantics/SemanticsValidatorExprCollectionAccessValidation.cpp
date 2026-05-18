@@ -505,7 +505,7 @@ bool SemanticsValidator::validateExprCollectionAccessFallbacks(
     };
     std::string mapKeyType;
     std::string mapValueType;
-    auto isMapTarget = [&](const Expr &candidate, std::string &mapKeyTypeOut) {
+    auto isKeyValueTarget = [&](const Expr &candidate, std::string &mapKeyTypeOut) {
       if (context.resolveMapKeyType != nullptr &&
           context.resolveMapKeyType(candidate, mapKeyTypeOut)) {
         return true;
@@ -525,7 +525,7 @@ bool SemanticsValidator::validateExprCollectionAccessFallbacks(
           resolveArgsPackElementTypeForExpr(expr.args.front(), params, locals,
                                             elemType);
     }
-    bool isMap = isMapTarget(expr.args.front(), mapKeyType);
+    bool isMap = isKeyValueTarget(expr.args.front(), mapKeyType);
     bool isExperimentalMap =
         context.resolveExperimentalMapTarget != nullptr &&
         context.resolveExperimentalMapTarget(expr.args.front(), mapKeyType,
@@ -548,7 +548,7 @@ bool SemanticsValidator::validateExprCollectionAccessFallbacks(
           !reorderedArrayOrString &&
           resolveArgsPackElementTypeForExpr(expr.args[1], params, locals,
                                             reorderedElemType);
-      const bool reorderedMap = isMapTarget(expr.args[1], reorderedMapKeyType);
+      const bool reorderedMap = isKeyValueTarget(expr.args[1], reorderedMapKeyType);
       const bool reorderedExperimentalMap =
           context.resolveExperimentalMapTarget != nullptr &&
           context.resolveExperimentalMapTarget(expr.args[1], reorderedMapKeyType,

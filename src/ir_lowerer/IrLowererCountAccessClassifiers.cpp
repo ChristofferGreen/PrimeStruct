@@ -282,11 +282,11 @@ bool isDereferencedCollectionCountTarget(const Expr &, const Expr &target, const
     const bool isBufferTarget =
         (kind == LocalInfo::Kind::Reference && info.referenceToBuffer) ||
         (kind == LocalInfo::Kind::Pointer && info.pointerToBuffer);
-    const bool isMapTarget =
+    const bool isKeyValueTarget =
         (kind == LocalInfo::Kind::Reference && info.referenceToKeyValueCollection) ||
         (kind == LocalInfo::Kind::Pointer && info.pointerToKeyValueCollection) ||
         hasInferredTypedWrappedMap(info, kind);
-    if (!isArrayTarget && !isVectorTarget && !isSoaVectorTarget && !isBufferTarget && !isMapTarget) {
+    if (!isArrayTarget && !isVectorTarget && !isSoaVectorTarget && !isBufferTarget && !isKeyValueTarget) {
       return false;
     }
     return true;

@@ -699,22 +699,22 @@ bool resolveMethodReceiverTarget(const Expr &receiverExpr,
       }
       std::string accessName;
       return getBuiltinArrayAccessName(candidateExpr, accessName) &&
-             resolveMapAccessTargetInfo(candidateExpr.args.front(),
+             resolveKeyValueAccessTargetInfo(candidateExpr.args.front(),
                                         localsIn,
                                         {},
                                         semanticProgram,
                                         semanticIndex)
-                 .isMapTarget;
+                 .isKeyValueTarget;
     };
     auto isBareMapTryAtReceiverProbeExpr = [&](const Expr &candidateExpr) {
       return candidateExpr.kind == Expr::Kind::Call && candidateExpr.args.size() == 2 &&
              isSimpleCallName(candidateExpr, "tryAt") &&
-             resolveMapAccessTargetInfo(candidateExpr.args.front(),
+             resolveKeyValueAccessTargetInfo(candidateExpr.args.front(),
                                         localsIn,
                                         {},
                                         semanticProgram,
                                         semanticIndex)
-                 .isMapTarget;
+                 .isKeyValueTarget;
     };
     const bool blocksExplicitMapReceiverProbeKindFallback =
         isExplicitMapReceiverProbeHelperExpr(receiverExpr);

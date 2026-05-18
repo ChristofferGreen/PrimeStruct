@@ -469,8 +469,8 @@
             if (isMapAccessValueCall(*receiverExpr)) {
               return std::nullopt;
             }
-            const auto inferCallMapTargetInfo =
-                [&](const Expr &targetExpr, ir_lowerer::MapAccessTargetInfo &out) {
+            const auto inferCallKeyValueTargetInfo =
+                [&](const Expr &targetExpr, ir_lowerer::KeyValueAccessTargetInfo &out) {
                   out = {};
                   const Definition *callee =
                       resolveCollectionExprDirectDefinition(targetExpr);
@@ -483,10 +483,10 @@
                           *callee, inferredCollectionName, inferredCollectionArgs) ||
                       inferredCollectionName != "map" ||
                       inferredCollectionArgs.size() != 2) {
-                    return ir_lowerer::inferForwardedMapAccessTargetInfo(
+                    return ir_lowerer::inferForwardedKeyValueAccessTargetInfo(
                         targetExpr, *callee, localsIn, {}, out);
                   }
-                  out.isMapTarget = true;
+                  out.isKeyValueTarget = true;
                   out.keyValueKeyKind =
                       ir_lowerer::valueKindFromTypeName(inferredCollectionArgs.front());
                   out.keyValueValueKind =
@@ -494,11 +494,11 @@
                   return out.keyValueKeyKind != ir_lowerer::LocalInfo::ValueKind::Unknown &&
                          out.keyValueValueKind != ir_lowerer::LocalInfo::ValueKind::Unknown;
                 };
-            const auto mapTargetInfo =
-                ir_lowerer::resolveMapAccessTargetInfo(
+            const auto keyValueTargetInfo =
+                ir_lowerer::resolveKeyValueAccessTargetInfo(
                     *receiverExpr,
                     localsIn,
-                    inferCallMapTargetInfo,
+                    inferCallKeyValueTargetInfo,
                     lateCollectionSemanticProgram,
                     lateCollectionSemanticIndex);
             const auto arrayVectorTargetInfo =
@@ -508,21 +508,21 @@
                     {},
                     lateCollectionSemanticProgram,
                     lateCollectionSemanticIndex);
-            if (mapTargetInfo.isMapTarget && arrayVectorTargetInfo.isWrappedMapTarget) {
+            if (keyValueTargetInfo.isKeyValueTarget && arrayVectorTargetInfo.isWrappedKeyValueTarget) {
               materializedWrappedMapReceiver = true;
               materializedMapReceiverKind = arrayVectorTargetInfo.argsPackElementKind;
             }
-            if (mapTargetInfo.isMapTarget) {
+            if (keyValueTargetInfo.isKeyValueTarget) {
               collectionName = "map";
-              if (mapTargetInfo.keyValueKeyKind != ir_lowerer::LocalInfo::ValueKind::Unknown &&
-                  mapTargetInfo.keyValueValueKind != ir_lowerer::LocalInfo::ValueKind::Unknown) {
+              if (keyValueTargetInfo.keyValueKeyKind != ir_lowerer::LocalInfo::ValueKind::Unknown &&
+                  keyValueTargetInfo.keyValueValueKind != ir_lowerer::LocalInfo::ValueKind::Unknown) {
                 collectionArgs = {
-                    ir_lowerer::typeNameForValueKind(mapTargetInfo.keyValueKeyKind),
-                    ir_lowerer::typeNameForValueKind(mapTargetInfo.keyValueValueKind),
+                    ir_lowerer::typeNameForValueKind(keyValueTargetInfo.keyValueKeyKind),
+                    ir_lowerer::typeNameForValueKind(keyValueTargetInfo.keyValueValueKind),
                 };
               }
-              collectionStructPath = !mapTargetInfo.structTypeName.empty()
-                                         ? mapTargetInfo.structTypeName
+              collectionStructPath = !keyValueTargetInfo.structTypeName.empty()
+                                         ? keyValueTargetInfo.structTypeName
                                          : arrayVectorTargetInfo.structTypeName;
             } else if (arrayVectorTargetInfo.isArrayOrVectorTarget) {
               collectionName = arrayVectorTargetInfo.isVectorTarget ? "vector" : "array";
@@ -571,12 +571,12 @@
                   !targetInfo.isVectorTarget &&
                   !targetInfo.structTypeName.empty() &&
                   targetInfo.elemSlotCount > 0 &&
-                  !targetInfo.isMapTarget &&
-                  !targetInfo.isWrappedMapTarget;
+                  !targetInfo.isKeyValueTarget &&
+                  !targetInfo.isWrappedKeyValueTarget;
               const bool isDirectMapArgsPackAccess =
                   targetInfo.isArgsPackTarget &&
-                  targetInfo.isMapTarget &&
-                  !targetInfo.isWrappedMapTarget &&
+                  targetInfo.isKeyValueTarget &&
+                  !targetInfo.isWrappedKeyValueTarget &&
                   targetInfo.elemSlotCount > 0;
               if (isStructArgsPackAccess || isDirectMapArgsPackAccess) {
                 return ir_lowerer::emitArrayVectorIndexedAccess(
@@ -1123,7 +1123,7 @@
           if (resolveDefinitionCall(callExpr) != nullptr) {
             return false;
           }
-          ir_lowerer::MapAccessTargetInfo targetInfoOut;
+          ir_lowerer::KeyValueAccessTargetInfo targetInfoOut;
           const Definition *callee =
               resolveCollectionExprDirectDefinition(callExpr.args.front());
           if (callee == nullptr) {

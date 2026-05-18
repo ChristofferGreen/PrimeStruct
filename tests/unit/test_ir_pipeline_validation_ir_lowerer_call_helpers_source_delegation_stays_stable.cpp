@@ -187,9 +187,9 @@ TEST_CASE("ir lowerer call helpers source delegation stays stable") {
         std::string::npos);
   CHECK(callHelpersSource.find("NativeCallTailDispatchResult tryEmitNativeCallTailDispatchWithLocals(") ==
         std::string::npos);
-  CHECK(callHelpersSource.find("MapAccessTargetInfo resolveMapAccessTargetInfo(") ==
+  CHECK(callHelpersSource.find("KeyValueAccessTargetInfo resolveKeyValueAccessTargetInfo(") ==
         std::string::npos);
-  CHECK(callHelpersSource.find("bool validateMapAccessTargetInfo(const MapAccessTargetInfo &targetInfo,") ==
+  CHECK(callHelpersSource.find("bool validateKeyValueAccessTargetInfo(const KeyValueAccessTargetInfo &targetInfo,") ==
         std::string::npos);
   CHECK(callHelpersSource.find("NonLiteralStringAccessTargetResult validateNonLiteralStringAccessTarget(") ==
         std::string::npos);
@@ -251,9 +251,9 @@ TEST_CASE("ir lowerer call helpers source delegation stays stable") {
   CHECK(callHelpersSource.find("bool validateMapLookupKeyKind(") ==
         std::string::npos);
 
-  CHECK(accessTargetResolutionSource.find("MapAccessTargetInfo resolveMapAccessTargetInfo(") !=
+  CHECK(accessTargetResolutionSource.find("KeyValueAccessTargetInfo resolveKeyValueAccessTargetInfo(") !=
         std::string::npos);
-  CHECK(accessTargetResolutionSource.find("bool validateMapAccessTargetInfo(const MapAccessTargetInfo &targetInfo,") !=
+  CHECK(accessTargetResolutionSource.find("bool validateKeyValueAccessTargetInfo(const KeyValueAccessTargetInfo &targetInfo,") !=
         std::string::npos);
   CHECK(accessTargetResolutionSource.find("NonLiteralStringAccessTargetResult validateNonLiteralStringAccessTarget(") !=
         std::string::npos);

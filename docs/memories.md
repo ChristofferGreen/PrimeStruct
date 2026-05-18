@@ -56,13 +56,15 @@ This file stores durable session-derived facts that are useful in later work. Ke
 - Tags: ir, lowerer, collections
 - Fact: Lowerer locals classify map-shaped collection values with
   `LocalInfo::Kind::KeyValueCollection`; `LocalInfo::Kind::Map` is retired.
-  Temporary key/value collection metadata fields carry backing details until
-  later TODO-4464 slices remove the remaining C++ map substrate.
+  Temporary key/value collection metadata and access-target helpers carry
+  backing details until later TODO-4464 slices remove the remaining C++ map
+  substrate.
 - Evidence: The release `PrimeStruct_backend_ir_tests` target rebuilt after
-  the kind and field renames, focused backend IR windows passed, and direct
-  `rg` scans over `include`, `src`, and `tests` found no remaining
-  `LocalInfo::Kind::Map`, `mapKeyKind`, `mapValueKind`, `referenceToMap`, or
-  `pointerToMap`.
+  the kind, field, and target-info renames, focused backend IR windows passed,
+  and direct `rg` scans over `include`, `src`, and `tests` found no remaining
+  `LocalInfo::Kind::Map`, `mapKeyKind`, `mapValueKind`, `referenceToMap`,
+  `pointerToMap`, `MapAccessTargetInfo`, `isMapTarget`, or
+  `resolveMapAccessTargetInfo`.
 
 ### map-compatibility-aliases-require-source-definitions
 - Updated: 2026-05-18

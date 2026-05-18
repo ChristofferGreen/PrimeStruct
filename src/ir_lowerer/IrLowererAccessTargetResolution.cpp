@@ -254,7 +254,7 @@ bool classifySemanticArrayVectorAccessTypeText(const std::string &typeText,
 }
 
 bool classifySemanticMapAccessTypeText(const std::string &typeText,
-                                       MapAccessTargetInfo &targetInfoOut) {
+                                       KeyValueAccessTargetInfo &targetInfoOut) {
   std::string base;
   std::string argText;
   if (!splitTemplateTypeName(trimTemplateTypeText(typeText), base, argText)) {
@@ -283,10 +283,10 @@ bool classifySemanticMapAccessTypeText(const std::string &typeText,
   }
 
   targetInfoOut = {};
-  targetInfoOut.isMapTarget = true;
+  targetInfoOut.isKeyValueTarget = true;
   targetInfoOut.keyValueKeyKind = valueKindFromTypeName(trimTemplateTypeText(mapArgs.front()));
   targetInfoOut.keyValueValueKind = valueKindFromTypeName(trimTemplateTypeText(mapArgs.back()));
-  targetInfoOut.isWrappedMapTarget = isWrappedMap;
+  targetInfoOut.isWrappedKeyValueTarget = isWrappedMap;
   targetInfoOut.structTypeName =
       inferExperimentalMapStructPathFromKinds(targetInfoOut.keyValueKeyKind,
                                               targetInfoOut.keyValueValueKind);
@@ -370,11 +370,11 @@ bool resolveSemanticArrayVectorAccessTargetInfo(
   return false;
 }
 
-bool resolveSemanticMapAccessTargetInfo(
+bool resolveSemanticKeyValueAccessTargetInfo(
     const Expr &targetExpr,
     const SemanticProgram *semanticProgram,
     const SemanticProductIndex *semanticIndex,
-    MapAccessTargetInfo &targetInfoOut,
+    KeyValueAccessTargetInfo &targetInfoOut,
     bool &hasSemanticFactOut) {
   hasSemanticFactOut = false;
   if (semanticProgram == nullptr || semanticIndex == nullptr || targetExpr.semanticNodeId == 0) {
@@ -400,12 +400,12 @@ bool resolveSemanticMapAccessTargetInfo(
       return false;
     }
     targetInfoOut = {};
-    targetInfoOut.isMapTarget = true;
+    targetInfoOut.isKeyValueTarget = true;
     targetInfoOut.keyValueKeyKind = valueKindFromTypeName(resolveAccessSemanticTypeText(
         semanticProgram, collectionFact->keyTypeText, collectionFact->keyTypeTextId));
     targetInfoOut.keyValueValueKind = valueKindFromTypeName(resolveAccessSemanticTypeText(
         semanticProgram, collectionFact->valueTypeText, collectionFact->valueTypeTextId));
-    targetInfoOut.isWrappedMapTarget = collectionFact->isReference || collectionFact->isPointer;
+    targetInfoOut.isWrappedKeyValueTarget = collectionFact->isReference || collectionFact->isPointer;
     targetInfoOut.structTypeName =
         inferExperimentalMapStructPathFromKinds(targetInfoOut.keyValueKeyKind,
                                                 targetInfoOut.keyValueValueKind);
@@ -541,7 +541,7 @@ bool isForwardedMapNewConstructor(const Expr &expr) {
          constructorName == forwardedEmptyMapConstructorMemberName();
 }
 
-bool inferDirectMapConstructorTargetInfo(const Expr &target, MapAccessTargetInfo &info) {
+bool inferDirectMapConstructorTargetInfo(const Expr &target, KeyValueAccessTargetInfo &info) {
   info = {};
   if (target.kind != Expr::Kind::Call || target.isBinding || target.isMethodCall) {
     return false;
@@ -584,7 +584,7 @@ bool inferDirectMapConstructorTargetInfo(const Expr &target, MapAccessTargetInfo
   }
 
   if (target.templateArgs.size() == 2) {
-    info.isMapTarget = true;
+    info.isKeyValueTarget = true;
     info.keyValueKeyKind = valueKindFromTypeName(target.templateArgs[0]);
     info.keyValueValueKind = valueKindFromTypeName(target.templateArgs[1]);
     info.structTypeName =
@@ -596,7 +596,7 @@ bool inferDirectMapConstructorTargetInfo(const Expr &target, MapAccessTargetInfo
     return false;
   }
 
-  info.isMapTarget = true;
+  info.isKeyValueTarget = true;
   LocalInfo::ValueKind keyKind = LocalInfo::ValueKind::Unknown;
   LocalInfo::ValueKind valueKind = LocalInfo::ValueKind::Unknown;
   for (size_t i = 0; i < target.args.size(); i += 2) {
@@ -680,13 +680,13 @@ SemanticStringAccessTargetKind classifyAccessTargetSemanticStringKind(
   return SemanticStringAccessTargetKind::Unknown;
 }
 
-MapAccessTargetInfo resolveMapAccessTargetInfo(
+KeyValueAccessTargetInfo resolveKeyValueAccessTargetInfo(
     const Expr &target,
     const LocalMap &localsIn,
-    const ResolveCallMapAccessTargetInfoFn &resolveCallMapAccessTargetInfo,
+    const ResolveCallKeyValueAccessTargetInfoFn &resolveCallKeyValueAccessTargetInfo,
     const SemanticProgram *semanticProgram,
     const SemanticProductIndex *semanticIndex) {
-  MapAccessTargetInfo info;
+  KeyValueAccessTargetInfo info;
   const auto peelLocationWrappers = [&](const Expr &expr) {
     const Expr *current = &expr;
     while (current->kind == Expr::Kind::Call &&
@@ -728,22 +728,22 @@ MapAccessTargetInfo resolveMapAccessTargetInfo(
       }
       return structTypeName;
     };
-    info.isMapTarget = true;
+    info.isKeyValueTarget = true;
     info.keyValueKeyKind = localInfo.keyValueKeyKind;
     info.keyValueValueKind = localInfo.keyValueValueKind;
     const bool isWrappedMap =
         (localInfo.kind == LocalInfo::Kind::Reference && localInfo.referenceToKeyValueCollection) ||
         (localInfo.kind == LocalInfo::Kind::Pointer && localInfo.pointerToKeyValueCollection) ||
         inferredWrappedMap;
-    info.isWrappedMapTarget = isWrappedMap && !dereferenced;
+    info.isWrappedKeyValueTarget = isWrappedMap && !dereferenced;
     const bool isDirectMapStorage = localInfo.kind == LocalInfo::Kind::KeyValueCollection;
     const std::string resolvedStructTypeName =
         resolvedExperimentalMapStructPath(localInfo.structTypeName);
     const bool preserveDirectExperimentalMapStruct =
         isDirectMapStorage && isExperimentalMapStructTypePath(resolvedStructTypeName);
-    if (((!info.isWrappedMapTarget || dereferenced) &&
+    if (((!info.isWrappedKeyValueTarget || dereferenced) &&
          (!isDirectMapStorage || preserveDirectExperimentalMapStruct)) ||
-        (info.isWrappedMapTarget && isExperimentalMapStructTypePath(resolvedStructTypeName))) {
+        (info.isWrappedKeyValueTarget && isExperimentalMapStructTypePath(resolvedStructTypeName))) {
       info.structTypeName = resolvedStructTypeName;
     }
     return true;
@@ -786,19 +786,19 @@ MapAccessTargetInfo resolveMapAccessTargetInfo(
     if (!isDirectMap && !isWrappedMap) {
       return false;
     }
-    info.isMapTarget = true;
+    info.isKeyValueTarget = true;
     info.keyValueKeyKind = localInfo.keyValueKeyKind;
     info.keyValueValueKind = localInfo.keyValueValueKind;
-    info.isWrappedMapTarget = isWrappedMap && !dereferenced;
+    info.isWrappedKeyValueTarget = isWrappedMap && !dereferenced;
     const bool isDirectMapStorage =
         localInfo.argsPackElementKind == LocalInfo::Kind::KeyValueCollection;
     const std::string resolvedStructTypeName =
         resolvedExperimentalMapStructPath(localInfo.structTypeName);
     const bool preserveDirectExperimentalMapStruct =
         isDirectMapStorage && isExperimentalMapStructTypePath(resolvedStructTypeName);
-    if (((!info.isWrappedMapTarget || dereferenced) &&
+    if (((!info.isWrappedKeyValueTarget || dereferenced) &&
          (!isDirectMapStorage || preserveDirectExperimentalMapStruct)) ||
-        (info.isWrappedMapTarget && isExperimentalMapStructTypePath(resolvedStructTypeName))) {
+        (info.isWrappedKeyValueTarget && isExperimentalMapStructTypePath(resolvedStructTypeName))) {
       info.structTypeName = resolvedStructTypeName;
     }
     return true;
@@ -816,7 +816,7 @@ MapAccessTargetInfo resolveMapAccessTargetInfo(
     if (accessReceiver->kind == Expr::Kind::Name) {
       auto it = localsIn.find(accessReceiver->name);
       if (it != localsIn.end() && populateFromArgsPackElement(it->second, false)) {
-        info.isWrappedMapTarget = info.isWrappedMapTarget && !receiverDereferenced;
+        info.isWrappedKeyValueTarget = info.isWrappedKeyValueTarget && !receiverDereferenced;
         return true;
       }
     }
@@ -850,7 +850,7 @@ MapAccessTargetInfo resolveMapAccessTargetInfo(
   }
 
   bool hasSemanticTargetFact = false;
-  if (resolveSemanticMapAccessTargetInfo(
+  if (resolveSemanticKeyValueAccessTargetInfo(
           target, semanticProgram, semanticIndex, info, hasSemanticTargetFact)) {
     return info;
   }
@@ -858,9 +858,9 @@ MapAccessTargetInfo resolveMapAccessTargetInfo(
     return {};
   }
   if (target.kind == Expr::Kind::Name) {
-    if (target.semanticNodeId != 0 && resolveCallMapAccessTargetInfo) {
-      MapAccessTargetInfo inferred;
-      if (resolveCallMapAccessTargetInfo(target, inferred)) {
+    if (target.semanticNodeId != 0 && resolveCallKeyValueAccessTargetInfo) {
+      KeyValueAccessTargetInfo inferred;
+      if (resolveCallKeyValueAccessTargetInfo(target, inferred)) {
         return inferred;
       }
     }
@@ -868,9 +868,9 @@ MapAccessTargetInfo resolveMapAccessTargetInfo(
     if (it != localsIn.end()) {
       populateFromDirectLocal(it->second, false);
     }
-    if (!info.isMapTarget && resolveCallMapAccessTargetInfo) {
-      MapAccessTargetInfo inferred;
-      if (resolveCallMapAccessTargetInfo(target, inferred)) {
+    if (!info.isKeyValueTarget && resolveCallKeyValueAccessTargetInfo) {
+      KeyValueAccessTargetInfo inferred;
+      if (resolveCallKeyValueAccessTargetInfo(target, inferred)) {
         return inferred;
       }
     }
@@ -912,20 +912,20 @@ MapAccessTargetInfo resolveMapAccessTargetInfo(
       }
     }
     std::string collection;
-    if (resolveCallMapAccessTargetInfo) {
-      MapAccessTargetInfo inferred;
-      if (resolveCallMapAccessTargetInfo(target, inferred)) {
+    if (resolveCallKeyValueAccessTargetInfo) {
+      KeyValueAccessTargetInfo inferred;
+      if (resolveCallKeyValueAccessTargetInfo(target, inferred)) {
         return inferred;
       }
     }
-    MapAccessTargetInfo directConstructorInfo;
+    KeyValueAccessTargetInfo directConstructorInfo;
     const bool hasDirectConstructorInfo = inferDirectMapConstructorTargetInfo(target, directConstructorInfo);
     if (hasDirectConstructorInfo) {
       return directConstructorInfo;
     }
     if (getBuiltinCollectionName(target, collection) && collection == "map" &&
         target.templateArgs.size() == 2) {
-      info.isMapTarget = true;
+      info.isKeyValueTarget = true;
       info.keyValueKeyKind = valueKindFromTypeName(target.templateArgs[0]);
       info.keyValueValueKind = valueKindFromTypeName(target.templateArgs[1]);
       return info;
@@ -934,24 +934,24 @@ MapAccessTargetInfo resolveMapAccessTargetInfo(
   return info;
 }
 
-MapAccessTargetInfo resolveMapAccessTargetInfo(
+KeyValueAccessTargetInfo resolveKeyValueAccessTargetInfo(
     const Expr &target,
     const LocalMap &localsIn,
-    const ResolveCallMapAccessTargetInfoFn &resolveCallMapAccessTargetInfo) {
-  return resolveMapAccessTargetInfo(
-      target, localsIn, resolveCallMapAccessTargetInfo, nullptr, nullptr);
+    const ResolveCallKeyValueAccessTargetInfoFn &resolveCallKeyValueAccessTargetInfo) {
+  return resolveKeyValueAccessTargetInfo(
+      target, localsIn, resolveCallKeyValueAccessTargetInfo, nullptr, nullptr);
 }
 
-MapAccessTargetInfo resolveMapAccessTargetInfo(const Expr &target, const LocalMap &localsIn) {
-  return resolveMapAccessTargetInfo(target, localsIn, {}, nullptr, nullptr);
+KeyValueAccessTargetInfo resolveKeyValueAccessTargetInfo(const Expr &target, const LocalMap &localsIn) {
+  return resolveKeyValueAccessTargetInfo(target, localsIn, {}, nullptr, nullptr);
 }
 
-bool inferForwardedMapAccessTargetInfo(
+bool inferForwardedKeyValueAccessTargetInfo(
     const Expr &target,
     const Definition &callee,
     const LocalMap &localsIn,
-    const ResolveCallMapAccessTargetInfoFn &resolveCallMapAccessTargetInfo,
-    MapAccessTargetInfo &targetInfoOut) {
+    const ResolveCallKeyValueAccessTargetInfoFn &resolveCallKeyValueAccessTargetInfo,
+    KeyValueAccessTargetInfo &targetInfoOut) {
   targetInfoOut = {};
   if (target.kind != Expr::Kind::Call || target.isMethodCall || target.isBinding) {
     return false;
@@ -970,20 +970,20 @@ bool inferForwardedMapAccessTargetInfo(
     return false;
   }
 
-  MapAccessTargetInfo forwardedInfo =
-      resolveMapAccessTargetInfo(
-          *forwardedArg, localsIn, resolveCallMapAccessTargetInfo, nullptr, nullptr);
-  if (!forwardedInfo.isMapTarget) {
+  KeyValueAccessTargetInfo forwardedInfo =
+      resolveKeyValueAccessTargetInfo(
+          *forwardedArg, localsIn, resolveCallKeyValueAccessTargetInfo, nullptr, nullptr);
+  if (!forwardedInfo.isKeyValueTarget) {
     return false;
   }
   targetInfoOut = std::move(forwardedInfo);
   return true;
 }
 
-bool validateMapAccessTargetInfo(const MapAccessTargetInfo &targetInfo,
+bool validateKeyValueAccessTargetInfo(const KeyValueAccessTargetInfo &targetInfo,
                                  const std::string &accessName,
                                  std::string &error) {
-  if (!targetInfo.isMapTarget) {
+  if (!targetInfo.isKeyValueTarget) {
     return true;
   }
   if (targetInfo.keyValueKeyKind == LocalInfo::ValueKind::Unknown ||
@@ -1107,8 +1107,8 @@ ArrayVectorAccessTargetInfo resolveArrayVectorAccessTargetInfo(
     info.argsPackElementKind = localInfo.argsPackElementKind;
     info.elemSlotCount = elementSlotCountForLocal(localInfo);
     info.structTypeName = localInfo.structTypeName;
-    info.isMapTarget = false;
-    info.isWrappedMapTarget = false;
+    info.isKeyValueTarget = false;
+    info.isWrappedKeyValueTarget = false;
 
     if (localInfo.argsPackElementKind == LocalInfo::Kind::Array ||
         localInfo.argsPackElementKind == LocalInfo::Kind::Buffer ||
@@ -1121,7 +1121,7 @@ ArrayVectorAccessTargetInfo resolveArrayVectorAccessTargetInfo(
     if (localInfo.argsPackElementKind == LocalInfo::Kind::KeyValueCollection) {
       info.isArrayOrVectorTarget = true;
       info.isVectorTarget = false;
-      info.isMapTarget = true;
+      info.isKeyValueTarget = true;
       return true;
     }
     if (localInfo.argsPackElementKind == LocalInfo::Kind::Value &&
@@ -1154,8 +1154,8 @@ ArrayVectorAccessTargetInfo resolveArrayVectorAccessTargetInfo(
          localInfo.referenceToKeyValueCollection || !localInfo.structTypeName.empty())) {
       info.isArrayOrVectorTarget = true;
       info.isVectorTarget = localInfo.referenceToVector;
-      info.isMapTarget = localInfo.referenceToKeyValueCollection && dereferenced;
-      info.isWrappedMapTarget = localInfo.referenceToKeyValueCollection && !dereferenced;
+      info.isKeyValueTarget = localInfo.referenceToKeyValueCollection && dereferenced;
+      info.isWrappedKeyValueTarget = localInfo.referenceToKeyValueCollection && !dereferenced;
       if (localInfo.referenceToKeyValueCollection && dereferenced) {
         info.structTypeName = localInfo.structTypeName;
       }
@@ -1172,8 +1172,8 @@ ArrayVectorAccessTargetInfo resolveArrayVectorAccessTargetInfo(
          localInfo.pointerToKeyValueCollection || !localInfo.structTypeName.empty())) {
       info.isArrayOrVectorTarget = true;
       info.isVectorTarget = localInfo.pointerToVector;
-      info.isMapTarget = localInfo.pointerToKeyValueCollection && dereferenced;
-      info.isWrappedMapTarget = localInfo.pointerToKeyValueCollection && !dereferenced;
+      info.isKeyValueTarget = localInfo.pointerToKeyValueCollection && dereferenced;
+      info.isWrappedKeyValueTarget = localInfo.pointerToKeyValueCollection && !dereferenced;
       if (localInfo.pointerToKeyValueCollection && dereferenced) {
         info.structTypeName = localInfo.structTypeName;
       }

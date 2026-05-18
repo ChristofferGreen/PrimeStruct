@@ -1,17 +1,17 @@
 struct SemanticProductIndex;
 struct SemanticProductTargetAdapter;
 
-MapAccessTargetInfo resolveMapAccessTargetInfo(const Expr &target,
+KeyValueAccessTargetInfo resolveKeyValueAccessTargetInfo(const Expr &target,
                                                const LocalMap &localsIn,
-                                               const ResolveCallMapAccessTargetInfoFn &resolveCallMapAccessTargetInfo);
-MapAccessTargetInfo resolveMapAccessTargetInfo(const Expr &target, const LocalMap &localsIn);
-bool inferForwardedMapAccessTargetInfo(
+                                               const ResolveCallKeyValueAccessTargetInfoFn &resolveCallKeyValueAccessTargetInfo);
+KeyValueAccessTargetInfo resolveKeyValueAccessTargetInfo(const Expr &target, const LocalMap &localsIn);
+bool inferForwardedKeyValueAccessTargetInfo(
     const Expr &target,
     const Definition &callee,
     const LocalMap &localsIn,
-    const ResolveCallMapAccessTargetInfoFn &resolveCallMapAccessTargetInfo,
-    MapAccessTargetInfo &targetInfoOut);
-bool validateMapAccessTargetInfo(const MapAccessTargetInfo &targetInfo,
+    const ResolveCallKeyValueAccessTargetInfoFn &resolveCallKeyValueAccessTargetInfo,
+    KeyValueAccessTargetInfo &targetInfoOut);
+bool validateKeyValueAccessTargetInfo(const KeyValueAccessTargetInfo &targetInfo,
                                  const std::string &accessName,
                                  std::string &error);
 SemanticStringAccessTargetKind classifyAccessTargetSemanticStringKind(
@@ -33,7 +33,7 @@ MapAccessLookupEmitResult tryEmitMapAccessLookup(
     const std::function<int32_t()> &allocTempLocal,
     const std::function<bool(const Expr &, const LocalMap &)> &emitExpr,
     const std::function<bool(const Expr &, const LocalMap &, int32_t &, size_t &)> &resolveStringTableTarget,
-    const ResolveCallMapAccessTargetInfoFn &resolveCallMapAccessTargetInfo,
+    const ResolveCallKeyValueAccessTargetInfoFn &resolveCallKeyValueAccessTargetInfo,
     const std::function<LocalInfo::ValueKind(const Expr &, const LocalMap &)> &inferExprKind,
     const std::function<void()> &emitMapKeyNotFound,
     const std::function<size_t()> &instructionCount,
@@ -106,7 +106,7 @@ bool emitBuiltinArrayAccess(
     const LocalMap &localsIn,
     const std::function<bool(const Expr &, const LocalMap &, int32_t &, size_t &)> &resolveStringTableTarget,
     size_t stringTableCount,
-    const ResolveCallMapAccessTargetInfoFn &resolveCallMapAccessTargetInfo,
+    const ResolveCallKeyValueAccessTargetInfoFn &resolveCallKeyValueAccessTargetInfo,
     const ResolveCallArrayVectorAccessTargetInfoFn &resolveCallArrayVectorAccessTargetInfo,
     const std::function<LocalInfo::ValueKind(const Expr &, const LocalMap &)> &inferExprKind,
     const std::function<bool(const Expr &, const LocalMap &)> &isEntryArgsName,
@@ -127,7 +127,7 @@ bool emitBuiltinArrayAccess(
     const Expr &indexExpr,
     const LocalMap &localsIn,
     const std::function<bool(const Expr &, const LocalMap &, int32_t &, size_t &)> &resolveStringTableTarget,
-    const ResolveCallMapAccessTargetInfoFn &resolveCallMapAccessTargetInfo,
+    const ResolveCallKeyValueAccessTargetInfoFn &resolveCallKeyValueAccessTargetInfo,
     const ResolveCallArrayVectorAccessTargetInfoFn &resolveCallArrayVectorAccessTargetInfo,
     const std::function<LocalInfo::ValueKind(const Expr &, const LocalMap &)> &inferExprKind,
     const std::function<bool(const Expr &, const LocalMap &)> &isEntryArgsName,

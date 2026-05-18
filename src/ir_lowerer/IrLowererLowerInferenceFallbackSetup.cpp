@@ -174,9 +174,9 @@ bool runLowerInferenceExprKindCallFallbackSetup(const LowerInferenceExprKindCall
           }
 
           if (receiver.kind == Expr::Kind::Call) {
-            const auto mapTargetInfo = resolveMapAccessTargetInfo(receiver, candidateLocals);
-            if (mapTargetInfo.isMapTarget && mapTargetInfo.keyValueValueKind != LocalInfo::ValueKind::Unknown) {
-              kindOut = mapTargetInfo.keyValueValueKind;
+            const auto keyValueTargetInfo = resolveKeyValueAccessTargetInfo(receiver, candidateLocals);
+            if (keyValueTargetInfo.isKeyValueTarget && keyValueTargetInfo.keyValueValueKind != LocalInfo::ValueKind::Unknown) {
+              kindOut = keyValueTargetInfo.keyValueValueKind;
               return true;
             }
 

@@ -1017,8 +1017,8 @@ bool inferMapTryAtResultValueKind(const Expr &expr,
     return false;
   }
   const auto targetInfo =
-      resolveMapAccessTargetInfo(expr.args.front(), localsIn, {}, semanticProgram, semanticIndex);
-  if (!targetInfo.isMapTarget || targetInfo.keyValueValueKind == LocalInfo::ValueKind::Unknown) {
+      resolveKeyValueAccessTargetInfo(expr.args.front(), localsIn, {}, semanticProgram, semanticIndex);
+  if (!targetInfo.isKeyValueTarget || targetInfo.keyValueValueKind == LocalInfo::ValueKind::Unknown) {
     return false;
   }
   kindOut = targetInfo.keyValueValueKind;
@@ -1035,8 +1035,8 @@ bool inferMapContainsResultKind(const Expr &expr,
     return false;
   }
   const auto targetInfo =
-      resolveMapAccessTargetInfo(expr.args.front(), localsIn, {}, semanticProgram, semanticIndex);
-  if (!targetInfo.isMapTarget) {
+      resolveKeyValueAccessTargetInfo(expr.args.front(), localsIn, {}, semanticProgram, semanticIndex);
+  if (!targetInfo.isKeyValueTarget) {
     return false;
   }
   kindOut = LocalInfo::ValueKind::Bool;

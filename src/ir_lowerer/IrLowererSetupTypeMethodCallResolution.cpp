@@ -472,12 +472,12 @@ const Definition *resolveMethodCallDefinitionFromExpr(
     };
     if (!mapHelperName.empty() &&
         (receiverHasMapLocalInfo() ||
-         resolveMapAccessTargetInfo(callExpr.args.front(),
+         resolveKeyValueAccessTargetInfo(callExpr.args.front(),
                                     localsIn,
                                     {},
                                     semanticProgram,
                                     semanticIndexPtr)
-             .isMapTarget)) {
+             .isKeyValueTarget)) {
       const std::string canonicalMapHelper =
           collectionMemberPath("map", mapHelperName);
       if (const Definition *canonicalDef =
@@ -1056,22 +1056,22 @@ const Definition *resolveMethodCallDefinitionFromExpr(
         }
         std::string accessName;
         return getBuiltinArrayAccessName(candidateExpr, accessName) &&
-               resolveMapAccessTargetInfo(candidateExpr.args.front(),
+               resolveKeyValueAccessTargetInfo(candidateExpr.args.front(),
                                           localsIn,
                                           {},
                                           semanticProgram,
                                           semanticIndexPtr)
-                   .isMapTarget;
+                   .isKeyValueTarget;
       };
       auto isBareMapTryAtReceiverProbeExpr = [&](const Expr &candidateExpr) {
         return candidateExpr.kind == Expr::Kind::Call && candidateExpr.args.size() == 2 &&
                isSimpleCallName(candidateExpr, "tryAt") &&
-               resolveMapAccessTargetInfo(candidateExpr.args.front(),
+               resolveKeyValueAccessTargetInfo(candidateExpr.args.front(),
                                           localsIn,
                                           {},
                                           semanticProgram,
                                           semanticIndexPtr)
-                   .isMapTarget;
+                   .isKeyValueTarget;
       };
       const bool blocksExplicitMapReceiverProbeKindFallback =
           isExplicitMapReceiverProbeHelperExpr(*receiver);

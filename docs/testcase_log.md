@@ -220,8 +220,28 @@
   still has stale alias access fallback expectations; on 2026-05-17 the
   alias `at` and `at_unsafe` checks still resolved compatibility defs instead
   of `nullptr`.
+- `PrimeStruct_backend_ir_tests --test-case="ir lowerer call helpers dispatch buffer and native tail wrappers" --no-skip`
+  has a stale experimental-vector native-tail expectation. On 2026-05-18 the
+  case still expected the experimental-vector method `at` tail path to emit
+  instructions, but the current lowerer returned `NotHandled` and emitted no
+  instructions; adjacent key/value target metadata validation cases passed.
 
 ## Recent Test Runs
+- 2026-05-18 16:44 CEST | pass | mode: release | command:
+  `git diff --check`;
+  `rg -n 'MapAccessTargetInfo|ResolveCallMapAccessTargetInfoFn|resolveMapAccessTargetInfo|validateMapAccessTargetInfo|inferCallMapTargetInfo|resolveCallMapAccessTargetInfo|mapTargetInfo|isMapTarget|isWrappedMapTarget' include src tests`;
+  `cmake --build build-release --target PrimeStruct_backend_ir_tests`;
+  `cd build-release && ./PrimeStruct_backend_ir_tests --test-case="ir lowerer binding type helpers prefer semantic collection specialization facts,ir lowerer inline param helper aliases pure map variadic forwarding,ir lowerer count access helpers emit count access calls,ir lowerer result helpers resolve file handle result payload metadata" --no-skip`
+  | failures: none | notes: Lowerer target-info metadata now uses
+  key/value names instead of map-specific target-info names, and the direct
+  source scan found no remaining old target-info identifiers in `include`,
+  `src`, or `tests`.
+- 2026-05-18 16:43 CEST | fail | mode: release | command:
+  `cd build-release && ./PrimeStruct_backend_ir_tests --test-case="ir lowerer call helpers dispatch buffer and native tail wrappers,ir lowerer inline param helper aliases pure map variadic forwarding,ir lowerer count access helpers emit count access calls,ir lowerer result helpers resolve file handle result payload metadata" --no-skip`
+  | failures: `ir lowerer call helpers dispatch buffer and native tail
+  wrappers` | notes: The failure was the stale experimental-vector native-tail
+  expectation logged above; the inline-param, count-access, and Result metadata
+  cases in the same run passed.
 - 2026-05-18 16:08 CEST | pass | mode: release | command:
   `git diff --check`;
   `rg -n 'mapKeyKind|mapValueKind|referenceToMap|pointerToMap' include src tests`;

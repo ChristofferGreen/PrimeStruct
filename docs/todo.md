@@ -2170,6 +2170,11 @@ Task template:
       `keyValueValueKind`, `referenceToKeyValueCollection`, and
       `pointerToKeyValueCollection`) until later slices remove the remaining
       C++ key/value collection substrate.
+    - 2026-05-18: Lowerer access-target metadata no longer exposes
+      map-named target-info types, flags, callback aliases, or local variable
+      names. `MapAccessTargetInfo` and related `isMapTarget`/
+      `isWrappedMapTarget`/`resolveMapAccessTargetInfo` identifiers are now
+      key/value target metadata names.
     - 2026-05-16: Map literal lowering no longer hard-codes the empty
       inferred-map backing path as `/std/collections/experimental_map/Map`;
       it now uses the shared `experimentalCollectionTypePath("map", "Map")`

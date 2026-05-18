@@ -185,7 +185,7 @@
         const SemanticProductIndex *const tailDispatchMapSemanticIndexPtr =
             semanticProgram == nullptr ? nullptr : &tailDispatchMapSemanticIndex;
         auto populateTailDispatchMapStructPathFromKinds =
-            [&](ir_lowerer::MapAccessTargetInfo &targetInfo) {
+            [&](ir_lowerer::KeyValueAccessTargetInfo &targetInfo) {
               if (!targetInfo.structTypeName.empty() ||
                   targetInfo.keyValueKeyKind == LocalInfo::ValueKind::Unknown ||
                   targetInfo.keyValueValueKind == LocalInfo::ValueKind::Unknown) {
@@ -203,7 +203,7 @@
                 targetInfo.structTypeName = std::move(structPath);
               }
             };
-        const auto inferCallMapTargetInfo = [&](const Expr &targetExpr, ir_lowerer::MapAccessTargetInfo &out) {
+        const auto inferCallKeyValueTargetInfo = [&](const Expr &targetExpr, ir_lowerer::KeyValueAccessTargetInfo &out) {
           out = {};
           const Definition *callee =
               resolveTailDispatchDirectHelperDefinition(targetExpr);
@@ -215,10 +215,10 @@
           if (!ir_lowerer::inferDeclaredReturnCollection(*callee, collectionName, collectionArgs) ||
               collectionName != "map" ||
               collectionArgs.size() != 2) {
-            return ir_lowerer::inferForwardedMapAccessTargetInfo(
+            return ir_lowerer::inferForwardedKeyValueAccessTargetInfo(
                 targetExpr, *callee, localsIn, {}, out);
           }
-          out.isMapTarget = true;
+          out.isKeyValueTarget = true;
           out.keyValueKeyKind = ir_lowerer::valueKindFromTypeName(collectionArgs.front());
           out.keyValueValueKind = ir_lowerer::valueKindFromTypeName(collectionArgs.back());
           const bool resolvedKinds =
@@ -302,17 +302,17 @@
             return false;
           }
           const auto targetInfo =
-              ir_lowerer::resolveMapAccessTargetInfo(
+              ir_lowerer::resolveKeyValueAccessTargetInfo(
                   callExpr.args[receiverIndex],
                   localsIn,
-                  inferCallMapTargetInfo,
+                  inferCallKeyValueTargetInfo,
                   semanticProgram,
                   tailDispatchMapSemanticIndexPtr);
-          if (!targetInfo.isMapTarget &&
+          if (!targetInfo.isKeyValueTarget &&
               !matchesPublishedMapInsertPath(callExpr)) {
             return false;
           }
-          if (targetInfo.isWrappedMapTarget ||
+          if (targetInfo.isWrappedKeyValueTarget ||
               ir_lowerer::isExperimentalMapStructTypePath(targetInfo.structTypeName)) {
             return false;
           }
@@ -384,26 +384,26 @@
                         semanticProgram, *canonicalMapHelperSemanticIndexPtr, receiverExpr) != nullptr);
           };
           const auto receiverMapTargetInfo =
-              ir_lowerer::resolveMapAccessTargetInfo(
+              ir_lowerer::resolveKeyValueAccessTargetInfo(
                   callExpr.args.front(),
                   localsIn,
-                  inferCallMapTargetInfo,
+                  inferCallKeyValueTargetInfo,
                   semanticProgram,
                   canonicalMapHelperSemanticIndexPtr);
-          if (receiverMapTargetInfo.isWrappedMapTarget) {
+          if (receiverMapTargetInfo.isWrappedKeyValueTarget) {
             return false;
           }
 
           auto inferExperimentalMapStructPath = [&](const Expr &receiverExpr) {
-            const auto mapTargetInfo =
-                ir_lowerer::resolveMapAccessTargetInfo(
+            const auto keyValueTargetInfo =
+                ir_lowerer::resolveKeyValueAccessTargetInfo(
                     receiverExpr,
                     localsIn,
-                    inferCallMapTargetInfo,
+                    inferCallKeyValueTargetInfo,
                     semanticProgram,
                     canonicalMapHelperSemanticIndexPtr);
-            if (isSpecializedExperimentalMapStructPath(mapTargetInfo.structTypeName)) {
-              return mapTargetInfo.structTypeName;
+            if (isSpecializedExperimentalMapStructPath(keyValueTargetInfo.structTypeName)) {
+              return keyValueTargetInfo.structTypeName;
             }
             if (hasCanonicalMapHelperSemanticReceiverFact(receiverExpr)) {
               return std::string{};
@@ -425,9 +425,9 @@
                     {},
                     semanticProgram,
                     canonicalMapHelperSemanticIndexPtr);
-            if (accessTargetInfo.isWrappedMapTarget) {
-              if (isSpecializedExperimentalMapStructPath(mapTargetInfo.structTypeName)) {
-                return mapTargetInfo.structTypeName;
+            if (accessTargetInfo.isWrappedKeyValueTarget) {
+              if (isSpecializedExperimentalMapStructPath(keyValueTargetInfo.structTypeName)) {
+                return keyValueTargetInfo.structTypeName;
               }
               return std::string{};
             }
@@ -540,11 +540,11 @@
               ir_lowerer::buildSemanticProductIndex(semanticProgram);
           const SemanticProductIndex *const explicitMapHelperSemanticIndexPtr =
               semanticProgram == nullptr ? nullptr : &explicitMapHelperSemanticIndex;
-          const auto mapTargetInfo =
-              ir_lowerer::resolveMapAccessTargetInfo(
+          const auto keyValueTargetInfo =
+              ir_lowerer::resolveKeyValueAccessTargetInfo(
                   callExpr.args.front(),
                   localsIn,
-                  inferCallMapTargetInfo,
+                  inferCallKeyValueTargetInfo,
                   semanticProgram,
                   explicitMapHelperSemanticIndexPtr);
           const auto receiverTargetInfo =
@@ -609,7 +609,7 @@
               !receiverIsIndexedArgsPackElement) {
             return false;
           }
-          if (!mapTargetInfo.isMapTarget) {
+          if (!keyValueTargetInfo.isKeyValueTarget) {
             return false;
           }
           rewrittenExpr = callExpr;
@@ -684,14 +684,14 @@
               ir_lowerer::buildSemanticProductIndex(semanticProgram);
           const SemanticProductIndex *const canonicalMapHelperSemanticIndexPtr =
               semanticProgram == nullptr ? nullptr : &canonicalMapHelperSemanticIndex;
-          const auto mapTargetInfo =
-              ir_lowerer::resolveMapAccessTargetInfo(
+          const auto keyValueTargetInfo =
+              ir_lowerer::resolveKeyValueAccessTargetInfo(
                   callExpr.args.front(),
                   localsIn,
-                  inferCallMapTargetInfo,
+                  inferCallKeyValueTargetInfo,
                   semanticProgram,
                   canonicalMapHelperSemanticIndexPtr);
-          if (!mapTargetInfo.isMapTarget) {
+          if (!keyValueTargetInfo.isKeyValueTarget) {
             return false;
           }
           Expr candidate = callExpr;
@@ -857,10 +857,10 @@
               semanticProgram == nullptr ? nullptr : &borrowedMapReceiverSemanticIndex;
           auto resolveBorrowedMapReceiverInfo =
               [&](const Expr &receiverExpr) {
-                return ir_lowerer::resolveMapAccessTargetInfo(
+                return ir_lowerer::resolveKeyValueAccessTargetInfo(
                     receiverExpr,
                     localsIn,
-                    inferCallMapTargetInfo,
+                    inferCallKeyValueTargetInfo,
                     semanticProgram,
                     borrowedMapReceiverSemanticIndexPtr);
               };
@@ -869,8 +869,8 @@
                 receiverExpr.args.size() == 1) {
               return false;
             }
-            const auto mapTargetInfo = resolveBorrowedMapReceiverInfo(receiverExpr);
-            return mapTargetInfo.isMapTarget && mapTargetInfo.isWrappedMapTarget;
+            const auto keyValueTargetInfo = resolveBorrowedMapReceiverInfo(receiverExpr);
+            return keyValueTargetInfo.isKeyValueTarget && keyValueTargetInfo.isWrappedKeyValueTarget;
           };
 
           auto shouldRewriteReceiver = [&](const Expr &candidate) {
@@ -887,7 +887,7 @@
                 (candidate.name == "count" || candidate.name == "contains" ||
                  candidate.name == "tryAt" || candidate.name == "at" ||
                  candidate.name == "at_unsafe")) {
-              return resolveBorrowedMapReceiverInfo(candidate.args.front()).isMapTarget;
+              return resolveBorrowedMapReceiverInfo(candidate.args.front()).isKeyValueTarget;
             }
             std::string helperName;
             return resolveBuiltinMapHelperName(candidate, false, helperName) &&
@@ -1073,17 +1073,17 @@
             [&](const Expr &valueExpr, const ir_lowerer::LocalMap &localMap) {
               return emitExpr(valueExpr, localMap);
             },
-            [&](const Expr &targetCallExpr, ir_lowerer::MapAccessTargetInfo &targetInfoOut) {
-              targetInfoOut = ir_lowerer::resolveMapAccessTargetInfo(
+            [&](const Expr &targetCallExpr, ir_lowerer::KeyValueAccessTargetInfo &targetInfoOut) {
+              targetInfoOut = ir_lowerer::resolveKeyValueAccessTargetInfo(
                   targetCallExpr,
                   localsIn,
-                  inferCallMapTargetInfo,
+                  inferCallKeyValueTargetInfo,
                   semanticProgram,
                   tailDispatchMapSemanticIndexPtr);
-              if (targetInfoOut.isMapTarget) {
+              if (targetInfoOut.isKeyValueTarget) {
                 populateTailDispatchMapStructPathFromKinds(targetInfoOut);
               }
-              return targetInfoOut.isMapTarget;
+              return targetInfoOut.isKeyValueTarget;
             },
             [&](const Expr &targetCallExpr, ir_lowerer::ArrayVectorAccessTargetInfo &targetInfoOut) {
               targetInfoOut = {};
