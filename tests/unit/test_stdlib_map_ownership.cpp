@@ -1269,9 +1269,21 @@ TEST_CASE("canonical map surface owns standalone stdlib implementation") {
   CHECK(emitterReturnInferenceCollectionsSource.find("rawMethodName.rfind(\"std/collections/map/\", 0)") ==
         std::string::npos);
   CHECK(emitterReturnInferenceCollectionsSource.find("surfaceHelperPathForRawMethodName(\n"
-                                                     "                  MapHelperSurfaceBridgeKey") !=
+                                                     "                  KeyValueHelperSurfaceBridgeKey") !=
         std::string::npos);
-  CHECK(emitterReturnInferenceCollectionsSource.find("return {mapHelperPath(methodName)}") !=
+  CHECK(emitterReturnInferenceCollectionsSource.find("MapHelperSurfaceBridgeKey") ==
+        std::string::npos);
+  CHECK(emitterReturnInferenceCollectionsSource.find("return {keyValueHelperPath(methodName)}") !=
+        std::string::npos);
+  CHECK(emitterReturnInferenceCollectionsSource.find("return {mapHelperPath(methodName)}") ==
+        std::string::npos);
+  CHECK(emitterReturnInferenceCollectionsSource.find("keyValueMemberName") !=
+        std::string::npos);
+  CHECK(emitterReturnInferenceCollectionsSource.find("mapMemberName") ==
+        std::string::npos);
+  CHECK(emitterReturnInferenceCollectionsSource.find("isKeyValueHelperMethod") !=
+        std::string::npos);
+  CHECK(emitterReturnInferenceCollectionsSource.find("isMapHelperMethod") ==
         std::string::npos);
   CHECK(emitterCollectionTypeHelpersSource.find("eraseCandidate(\"/map/\" + suffix)") ==
         std::string::npos);

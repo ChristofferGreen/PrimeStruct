@@ -4,7 +4,7 @@
            suffix != "remove_at" && suffix != "remove_swap";
   };
   constexpr std::string_view VectorHelperSurfaceBridgeKey = "collections.vector_helpers";
-  constexpr std::string_view MapHelperSurfaceBridgeKey = "collections.map_helpers";
+  constexpr std::string_view KeyValueHelperSurfaceBridgeKey = "collections.map_helpers";
   auto vectorHelperPath = [&](std::string_view helperName) {
     const auto *metadata =
         findPublishedCollectionHelperSurfaceMetadataByBridgeKey(
@@ -14,9 +14,9 @@
     }
     return std::string(metadata->canonicalPath) + "/" + std::string(helperName);
   };
-  auto mapHelperPath = [&](std::string_view helperName) {
+  auto keyValueHelperPath = [&](std::string_view helperName) {
     return publishedCollectionSurfaceHelperPath(
-        MapHelperSurfaceBridgeKey,
+        KeyValueHelperSurfaceBridgeKey,
         helperName);
   };
   auto surfaceHelperPathForRawMethodName = [&](std::string_view bridgeKey,
@@ -107,13 +107,13 @@
       }
     }
     if (isMapReceiverStruct(receiverStruct)) {
-      std::string mapMemberName;
+      std::string keyValueMemberName;
       if (resolvePublishedCollectionSurfacePathMemberName(
               methodName,
-              MapHelperSurfaceBridgeKey,
+              KeyValueHelperSurfaceBridgeKey,
               true,
-              mapMemberName)) {
-        return mapMemberName;
+              keyValueMemberName)) {
+        return keyValueMemberName;
       }
     }
     return methodName;
@@ -143,17 +143,17 @@
     if (isMapReceiverStruct(receiverStruct)) {
       if (const std::string explicitMapPath =
               surfaceHelperPathForRawMethodName(
-                  MapHelperSurfaceBridgeKey,
+                  KeyValueHelperSurfaceBridgeKey,
                   rawMethodName);
           !explicitMapPath.empty()) {
         return {explicitMapPath};
       }
-      const bool isMapHelperMethod = isCanonicalMapHelperName(methodName);
-      if (isMapHelperMethod) {
-        return {mapHelperPath(methodName)};
+      const bool isKeyValueHelperMethod = isCanonicalMapHelperName(methodName);
+      if (isKeyValueHelperMethod) {
+        return {keyValueHelperPath(methodName)};
       }
       std::vector<std::string> candidates = {
-          mapHelperPath(methodName),
+          keyValueHelperPath(methodName),
       };
       return candidates;
     }
