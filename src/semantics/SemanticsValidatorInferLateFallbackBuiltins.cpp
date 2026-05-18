@@ -159,7 +159,8 @@ ReturnKind SemanticsValidator::inferLateFallbackReturnKind(
     (void)failExprDiagnostic(expr, std::move(message));
     return finish(ReturnKind::Unknown);
   };
-  auto isCanonicalMapAccessHelperName = [&](const std::string &helperName) {
+  auto isCanonicalKeyValueAccessHelperName =
+      [&](const std::string &helperName) {
     return helperName == "at" || helperName == "at_ref" ||
            helperName == "at_unsafe" || helperName == "at_unsafe_ref";
   };
@@ -455,7 +456,7 @@ ReturnKind SemanticsValidator::inferLateFallbackReturnKind(
          !inferCollectionDispatchSetup.shouldInferBuiltinBareMapContainsCall) ||
         (isSimpleCallName(expr, "tryAt") &&
          !inferCollectionDispatchSetup.shouldInferBuiltinBareMapTryAtCall) ||
-        (isCanonicalMapAccessHelperName(builtinAccessName) &&
+        (isCanonicalKeyValueAccessHelperName(builtinAccessName) &&
          !inferCollectionDispatchSetup.shouldInferBuiltinBareMapAccessCall)) {
       Expr rewrittenKeyValueHelperCall;
       if (tryRewriteBareMapHelperCall(

@@ -1422,6 +1422,9 @@ TEST_CASE("canonical map surface owns standalone stdlib implementation") {
             "isLateFallbackMapAccessHelperName(") ==
         std::string::npos);
   CHECK(inferLateFallbackBuiltinsSource.find(
+            "isCanonicalMapAccessHelperName(") ==
+        std::string::npos);
+  CHECK(inferLateFallbackBuiltinsSource.find(
             "isMapImportAliasAccessHelperPath(") ==
         std::string::npos);
   CHECK(inferLateFallbackBuiltinsSource.find("rewrittenMapHelperCall") ==
@@ -1449,6 +1452,9 @@ TEST_CASE("canonical map surface owns standalone stdlib implementation") {
         std::string::npos);
   CHECK(inferLateFallbackBuiltinsSource.find(
             "isLateFallbackKeyValueAccessHelperName(") !=
+        std::string::npos);
+  CHECK(inferLateFallbackBuiltinsSource.find(
+            "isCanonicalKeyValueAccessHelperName(") !=
         std::string::npos);
   CHECK(inferLateFallbackBuiltinsSource.find(
             "isKeyValueImportAliasAccessHelperPath(methodResolved)") !=
