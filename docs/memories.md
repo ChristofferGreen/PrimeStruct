@@ -755,7 +755,8 @@ This file stores durable session-derived facts that are useful in later work. Ke
   around map helper metadata; template monomorph wrapper-to-experimental helper
   path wrappers should use key/value naming around map helper metadata; vector
   count wrapper target diagnostics should use key/value naming around map
-  helper metadata.
+  helper metadata; preferred experimental helper target selectors should use
+  key/value naming around map helper metadata.
 - Evidence: Field-bound `Map<K, V>` compatibility triage showed generated
   map helper specializations could mask missing `/map/count` aliases unless
   removed-alias checks ignored generated-only definition paths; later

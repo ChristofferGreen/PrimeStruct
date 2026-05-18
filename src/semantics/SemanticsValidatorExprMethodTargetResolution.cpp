@@ -2015,7 +2015,7 @@ bool SemanticsValidator::resolveMethodTarget(const std::vector<ParameterInfo> &p
       if (hasDeclaredDefinitionPath(canonical) || hasImportedDefinitionPath(canonical)) {
         return canonical;
       }
-      return this->preferredCanonicalExperimentalMapHelperTarget(resolvedHelperName);
+      return this->preferredCanonicalExperimentalKeyValueHelperTarget(resolvedHelperName);
     }
     std::string explicitCanonicalKeyValueHelperName;
     if (resolveCanonicalKeyValueHelperNameFromSpelling(
@@ -2686,7 +2686,7 @@ bool SemanticsValidator::resolveMethodTarget(const std::vector<ParameterInfo> &p
     if (resolveExperimentalMapTarget(receiver, keyType, valueType)) {
       return failMethodTargetResolutionDiagnostic(
           "unknown call target: " +
-          this->preferredCanonicalExperimentalMapHelperTarget(
+          this->preferredCanonicalExperimentalKeyValueHelperTarget(
               normalizedMethodName));
     }
     return setPreferredKeyValueMethodTarget(receiver, normalizedMethodName);
@@ -3421,7 +3421,7 @@ bool SemanticsValidator::resolveMethodTarget(const std::vector<ParameterInfo> &p
     std::string valueType;
     if (resolveExperimentalMapTarget(receiver, keyType, valueType)) {
       resolvedOut =
-          this->preferredCanonicalExperimentalMapHelperTarget(
+          this->preferredCanonicalExperimentalKeyValueHelperTarget(
               normalizedMethodName);
       isBuiltinOut = false;
       return true;

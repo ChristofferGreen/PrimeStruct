@@ -230,7 +230,8 @@ std::string SemanticsValidator::specializedExperimentalMapHelperTarget(
     return normalizedType;
   };
 
-  const std::string basePath = preferredCanonicalExperimentalMapHelperTarget(helperName);
+  const std::string basePath =
+      preferredCanonicalExperimentalKeyValueHelperTarget(helperName);
   std::ostringstream specializedPath;
   specializedPath << basePath
                   << "__t"

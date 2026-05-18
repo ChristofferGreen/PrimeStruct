@@ -551,7 +551,7 @@ std::string SemanticsValidator::preferredMapMethodTargetForCall(
         (hasDefinitionPath(canonical) || hasImportedDefinitionPath(canonical))) {
       return canonical;
     }
-    return preferredCanonicalExperimentalMapHelperTarget(selectedHelperName);
+    return preferredCanonicalExperimentalKeyValueHelperTarget(selectedHelperName);
   }
   if (!canonical.empty() &&
       (hasDefinitionPath(canonical) || hasImportedDefinitionPath(canonical))) {
@@ -560,7 +560,7 @@ std::string SemanticsValidator::preferredMapMethodTargetForCall(
   if (!canonical.empty()) {
     return canonical;
   }
-  return preferredCanonicalExperimentalMapHelperTarget(selectedHelperName);
+  return preferredCanonicalExperimentalKeyValueHelperTarget(selectedHelperName);
 }
 
 std::string SemanticsValidator::preferredBufferMethodTargetForCall(

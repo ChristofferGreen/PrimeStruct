@@ -57,8 +57,10 @@
       const std::unordered_map<std::string, BindingInfo> &locals,
       const Expr &receiverExpr,
       const std::string &helperName);
-  std::string preferredExperimentalMapHelperTarget(std::string_view helperName) const;
-  std::string preferredCanonicalExperimentalMapHelperTarget(std::string_view helperName) const;
+  std::string preferredExperimentalKeyValueHelperTarget(
+      std::string_view helperName) const;
+  std::string preferredCanonicalExperimentalKeyValueHelperTarget(
+      std::string_view helperName) const;
   bool canonicalExperimentalMapHelperPath(const std::string &resolvedPath,
                                           std::string &canonicalPathOut,
                                           std::string &helperNameOut) const;

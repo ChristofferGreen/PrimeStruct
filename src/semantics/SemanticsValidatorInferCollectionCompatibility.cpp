@@ -294,7 +294,8 @@ bool SemanticsValidator::hasDefinitionPath(const std::string &path) const {
   return false;
 }
 
-std::string SemanticsValidator::preferredExperimentalMapHelperTarget(std::string_view helperName) const {
+std::string SemanticsValidator::preferredExperimentalKeyValueHelperTarget(
+    std::string_view helperName) const {
   const std::string prefix = experimentalCollectionConstructorRootLocal("map");
   const StdlibSurfaceMetadata *metadata = mapHelperSurfaceMetadataLocal();
   if (metadata == nullptr) {
@@ -309,7 +310,8 @@ std::string SemanticsValidator::preferredExperimentalMapHelperTarget(std::string
   return experimentalPath;
 }
 
-std::string SemanticsValidator::preferredCanonicalExperimentalMapHelperTarget(std::string_view helperName) const {
+std::string SemanticsValidator::preferredCanonicalExperimentalKeyValueHelperTarget(
+    std::string_view helperName) const {
   const StdlibSurfaceMetadata *metadata = mapHelperSurfaceMetadataLocal();
   if (metadata == nullptr) {
     return experimentalCollectionConstructorPathLocal("map", helperName);
