@@ -81,14 +81,14 @@ void appendSurfaceExactHelperFallbacks(std::vector<std::string> &out,
   appendFrom(metadata.loweringSpellings);
 }
 
-const StdlibSurfaceMetadata *mapHelperSurfaceMetadataForInferMethodResolution() {
+const StdlibSurfaceMetadata *keyValueHelperSurfaceMetadataForInferMethodResolution() {
   return findStdlibSurfaceMetadataByBridgeKey("collections.map_helpers");
 }
 
-std::string canonicalMapHelperPathForInferMethodResolution(
+std::string canonicalKeyValueHelperPathForInferMethodResolution(
     std::string_view helperName) {
   const StdlibSurfaceMetadata *metadata =
-      mapHelperSurfaceMetadataForInferMethodResolution();
+      keyValueHelperSurfaceMetadataForInferMethodResolution();
   if (metadata == nullptr) {
     return {};
   }
@@ -545,7 +545,7 @@ std::string SemanticsValidator::preferredMapMethodTargetForCall(
   std::string keyType;
   std::string valueType;
   const std::string canonical =
-      canonicalMapHelperPathForInferMethodResolution(selectedHelperName);
+      canonicalKeyValueHelperPathForInferMethodResolution(selectedHelperName);
   if (resolveInferExperimentalMapTarget(params, locals, receiverExpr, keyType, valueType)) {
     if (!canonical.empty() &&
         (hasDefinitionPath(canonical) || hasImportedDefinitionPath(canonical))) {

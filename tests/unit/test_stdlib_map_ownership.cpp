@@ -975,6 +975,18 @@ TEST_CASE("canonical map surface owns standalone stdlib implementation") {
   CHECK(inferMethodResolutionHelpersSource.find(
             "findStdlibSurfaceMetadataByBridgeKey(\"collections.map_helpers\")") !=
         std::string::npos);
+  CHECK(inferMethodResolutionHelpersSource.find(
+            "mapHelperSurfaceMetadataForInferMethodResolution") ==
+        std::string::npos);
+  CHECK(inferMethodResolutionHelpersSource.find(
+            "canonicalMapHelperPathForInferMethodResolution") ==
+        std::string::npos);
+  CHECK(inferMethodResolutionHelpersSource.find(
+            "keyValueHelperSurfaceMetadataForInferMethodResolution") !=
+        std::string::npos);
+  CHECK(inferMethodResolutionHelpersSource.find(
+            "canonicalKeyValueHelperPathForInferMethodResolution") !=
+        std::string::npos);
   CHECK(inferPreDispatchCallsSource.find("std/collections/map/") ==
         std::string::npos);
   CHECK(inferPreDispatchCallsSource.find(
