@@ -2563,6 +2563,11 @@ Task template:
       `collections.map_constructors` bridge key, and the
       `src/ir_lowerer/IrLowererResultMetadataHelpers.cpp` map-surface
       inventory allowance dropped from 8 traces to 7.
+    - 2026-05-18: Direct targeted scans confirmed no map-surface traces in
+      lowerer try-expression helpers, packed Result helpers, Result metadata
+      helpers, struct-layout helpers, or struct-type helpers. Their inventory
+      allowances are now zero, and the obsolete backing-trace source-lock
+      allowances for those files were removed.
     - 2026-05-17: Lowerer builtin-name and shared helper map-helper lookups no
       longer name the map helper surface ID directly; they now obtain helper
       metadata through the `collections.map_helpers` bridge key, and the

@@ -803,6 +803,17 @@ This file stores durable session-derived facts that are useful in later work. Ke
   source lock rejects direct `alias == "map"` and `rawName == "map"` checks in
   that file, and the file's map-surface inventory allowance is zero.
 
+### map-low-count-lowerer-caps-are-stale
+- Updated: 2026-05-18
+- Tags: ir, collections, audit
+- Fact: Some lowerer map-surface inventory caps can be retired by direct
+  source scan without code changes when earlier slices already removed the
+  traces.
+- Evidence: Direct scans found no map-surface traces in lowerer try-expression
+  helpers, packed Result helpers, Result metadata helpers, struct-layout
+  helpers, or struct-type helpers; their inventory caps are now zero and the
+  obsolete backing-trace ownership allowlist entries were removed.
+
 ### mapvalue-public-insert-uses-stdlib
 - Updated: 2026-05-16
 - Tags: ir, collections, native

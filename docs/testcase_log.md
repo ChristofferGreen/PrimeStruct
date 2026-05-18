@@ -196,6 +196,14 @@
   of `nullptr`.
 
 ## Recent Test Runs
+- 2026-05-18 12:18 CEST | pass | mode: release | command:
+  `rg --pcre2 -n '/?std/collections/map(?:/|")|/?std/collections/experimental_map(?:/|")|(?<![A-Za-z0-9_/])/?map/|\bmap(?:At|AtUnsafe|Contains|Count|Double|Empty|FromEntries|Insert|New|Oct|Pair|Quad|Quint|Sept|Sext|Single|Triple|TryAt)(?:Ref)?\b|\bMap__|\bEntry__|\bCollectionsMap[A-Za-z0-9_]*\b|\bMap<' src/ir_lowerer/IrLowererLowerEmitExprTryHelpers.h src/ir_lowerer/IrLowererStructLayoutHelpers.cpp src/ir_lowerer/IrLowererStructTypeHelpers.cpp src/ir_lowerer/IrLowererPackedResultHelpers.cpp src/ir_lowerer/IrLowererResultMetadataHelpers.cpp || true`;
+  `cmake --build build-release --target PrimeStruct_misc_tests`;
+  `cd build-release && ./PrimeStruct_misc_tests --test-suite=primestruct.stdlib.map_ownership --no-skip`;
+  `git diff --check` | failures: none | notes:
+  Five low-count lowerer files returned no targeted map-surface matches, so
+  their stale inventory caps and obsolete backing-trace source-lock allowances
+  were lowered to zero. The Python inventory script was intentionally not run.
 - 2026-05-18 12:15 CEST | pass | mode: release | command:
   `rg -n 'alias == "map"|rawName == "map"|std/collections/map|experimental_map|CollectionsMap|Map__|Entry__|Map<' src/ir_lowerer/IrLowererBuiltinNameHelpers.cpp || true`;
   `cmake --build build-release --target PrimeStruct_misc_tests`;
