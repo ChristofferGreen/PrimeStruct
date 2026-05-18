@@ -192,6 +192,14 @@ std::string SemanticsValidator::resolveCalleePath(const Expr &expr) const {
     return std::string(insertIt->second);
   };
   auto rewriteCanonicalCollectionHelperPath = [&](const std::string &resolvedPath) -> std::string {
+    auto mapHelperCanonicalMemberRootPath = []() -> std::string {
+      const primec::StdlibSurfaceMetadata *metadata =
+          mapHelperSurfaceMetadataLocal();
+      if (metadata == nullptr) {
+        return {};
+      }
+      return std::string(metadata->canonicalPath) + "/";
+    };
     auto canonicalMapHelperAliasPath = [&](std::string_view) -> std::string {
       return {};
     };
@@ -215,7 +223,11 @@ std::string SemanticsValidator::resolveCalleePath(const Expr &expr) const {
       }
       return resolvedPath;
     };
-    return rewriteCanonicalHelper("/std/collections/map/", canonicalMapHelperAliasPath, false);
+    const std::string mapHelperRoot = mapHelperCanonicalMemberRootPath();
+    if (mapHelperRoot.empty()) {
+      return resolvedPath;
+    }
+    return rewriteCanonicalHelper(mapHelperRoot, canonicalMapHelperAliasPath, false);
   };
 
   auto preferredImageErrorHelperTarget = [&](std::string_view helperName) -> std::string {
@@ -259,7 +271,10 @@ std::string SemanticsValidator::resolveCalleePath(const Expr &expr) const {
     if (expr.isMethodCall) {
       return rewriteCanonicalCollectionHelperPath(resolvedPath);
     }
-    if (resolvedPath == "/std/collections/map/map" &&
+    const primec::StdlibSurfaceMetadata *mapConstructorMetadata =
+        mapConstructorSurfaceMetadataLocal();
+    if (mapConstructorMetadata != nullptr &&
+        resolvedPath == mapConstructorMetadata->canonicalPath &&
         hasDefinitionFamilyPath(resolvedPath) &&
         !hasImportedDefinitionPath(resolvedPath)) {
       return resolvedPath;
@@ -284,6 +299,17 @@ std::string SemanticsValidator::resolveCalleePath(const Expr &expr) const {
   const bool stdlibScopedOwner =
       (activeDefinition != nullptr && isStdlibOwnedPath(activeDefinition->fullPath)) ||
       (activeExecution != nullptr && isStdlibOwnedPath(activeExecution->fullPath));
+  auto isMapHelperNamespacePrefix = [](std::string_view prefix) {
+    const primec::StdlibSurfaceMetadata *metadata =
+        mapHelperSurfaceMetadataLocal();
+    if (metadata == nullptr) {
+      return false;
+    }
+    const std::string_view root = metadata->canonicalPath;
+    return prefix == root ||
+           (prefix.size() > root.size() && prefix.rfind(root, 0) == 0 &&
+            prefix[root.size()] == '/');
+  };
   auto lookupScopedImportAlias = [&](std::string_view name) -> const std::string * {
     const std::string key(name);
     if (auto it = directImportAliases_.find(key); it != directImportAliases_.end()) {
@@ -378,7 +404,7 @@ std::string SemanticsValidator::resolveCalleePath(const Expr &expr) const {
         isRemovedVectorCompatibilityHelper(expr.name)) {
       return normalizedPrefix + "/" + expr.name;
     }
-    if (normalizedPrefix.rfind("/std/collections/map", 0) == 0 &&
+    if (isMapHelperNamespacePrefix(normalizedPrefix) &&
         isRemovedMapCompatibilityHelper(expr.name)) {
       return normalizedPrefix + "/" + expr.name;
     }

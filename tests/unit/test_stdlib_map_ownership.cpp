@@ -180,6 +180,9 @@ TEST_CASE("canonical map surface owns standalone stdlib implementation") {
   const std::string buildParametersSource =
       readText(repoRoot() / "src" / "semantics" /
                "SemanticsValidatorBuildParameters.cpp");
+  const std::string buildCallResolutionSource =
+      readText(repoRoot() / "src" / "semantics" /
+               "SemanticsValidatorBuildCallResolution.cpp");
   const std::string buildReturnKindsSource =
       readText(repoRoot() / "src" / "semantics" /
                "SemanticsValidatorBuildReturnKinds.cpp");
@@ -340,6 +343,7 @@ TEST_CASE("canonical map surface owns standalone stdlib implementation") {
   REQUIRE(!collectionHelperRewritesSource.empty());
   REQUIRE(!effectFreeCollectionsSource.empty());
   REQUIRE(!buildParametersSource.empty());
+  REQUIRE(!buildCallResolutionSource.empty());
   REQUIRE(!buildReturnKindsSource.empty());
   REQUIRE(!buildInitializerInferenceSource.empty());
   REQUIRE(!inferCollectionDispatchSource.empty());
@@ -592,6 +596,16 @@ TEST_CASE("canonical map surface owns standalone stdlib implementation") {
   CHECK(buildParametersSource.find("normalizedType == \"std/collections/map\"") ==
         std::string::npos);
   CHECK(buildParametersSource.find("isMapCollectionTypeName(normalizedType)") !=
+        std::string::npos);
+  CHECK(buildCallResolutionSource.find("\"/std/collections/map/\"") ==
+        std::string::npos);
+  CHECK(buildCallResolutionSource.find("\"/std/collections/map/map\"") ==
+        std::string::npos);
+  CHECK(buildCallResolutionSource.find("mapHelperSurfaceMetadataLocal()") !=
+        std::string::npos);
+  CHECK(buildCallResolutionSource.find("mapConstructorSurfaceMetadataLocal()") !=
+        std::string::npos);
+  CHECK(buildCallResolutionSource.find("isMapHelperNamespacePrefix") !=
         std::string::npos);
   CHECK(buildReturnKindsSource.find("return \"/map\"") == std::string::npos);
   CHECK(buildReturnKindsSource.find(

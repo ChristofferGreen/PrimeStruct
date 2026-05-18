@@ -126,7 +126,7 @@ ALLOWED_MAX_FILE_COUNTS: dict[str, int] = {
     "src/semantics/SemanticsCallPathHelpers.cpp": 4,
     "src/semantics/SemanticsValidate.cpp": 34,
     "src/semantics/SemanticsValidator.cpp": 6,
-    "src/semantics/SemanticsValidatorBuildCallResolution.cpp": 3,
+    "src/semantics/SemanticsValidatorBuildCallResolution.cpp": 0,
     "src/semantics/SemanticsValidatorBuildInitializerInferenceCalls.cpp": 4,
     "src/semantics/SemanticsValidatorBuildParameters.cpp": 0,
     "src/semantics/SemanticsValidatorCollectionHelperRewrites.cpp": 10,

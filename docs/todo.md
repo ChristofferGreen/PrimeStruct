@@ -2097,6 +2097,10 @@ Task template:
       removed explicit map access helpers or canonical stdlib map helper
       paths; it now routes those checks through local
       `collections.map_helpers` metadata wrappers.
+    - 2026-05-18: Semantic build call resolution no longer spells the
+      canonical map helper root, public map constructor path, or canonical map
+      helper namespace prefix directly; it derives those paths from stdlib
+      surface metadata.
     - 2026-05-16: Map literal lowering no longer hard-codes the empty
       inferred-map backing path as `/std/collections/experimental_map/Map`;
       it now uses the shared `experimentalCollectionTypePath("map", "Map")`
