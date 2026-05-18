@@ -8,15 +8,15 @@
 namespace primec::semantics {
 namespace {
 
-const StdlibSurfaceMetadata *lateFallbackMapHelperSurfaceMetadata() {
+const StdlibSurfaceMetadata *lateFallbackKeyValueHelperSurfaceMetadata() {
   return findStdlibSurfaceMetadataByBridgeKey("collections.map_helpers");
 }
 
-bool resolveLateFallbackMapHelperName(std::string path,
-                                      std::string &helperNameOut) {
+bool resolveLateFallbackKeyValueHelperName(std::string path,
+                                           std::string &helperNameOut) {
   helperNameOut.clear();
   const StdlibSurfaceMetadata *metadata =
-      lateFallbackMapHelperSurfaceMetadata();
+      lateFallbackKeyValueHelperSurfaceMetadata();
   if (metadata == nullptr || path.empty()) {
     return false;
   }
@@ -39,25 +39,27 @@ bool resolveLateFallbackMapHelperName(std::string path,
   return true;
 }
 
-std::string lateFallbackCanonicalMapHelperPath(std::string_view helperName) {
+std::string lateFallbackCanonicalKeyValueHelperPath(
+    std::string_view helperName) {
   std::string resolvedHelperName;
-  if (!resolveLateFallbackMapHelperName(std::string(helperName),
-                                        resolvedHelperName)) {
+  if (!resolveLateFallbackKeyValueHelperName(std::string(helperName),
+                                             resolvedHelperName)) {
     return {};
   }
   const StdlibSurfaceMetadata *metadata =
-      lateFallbackMapHelperSurfaceMetadata();
+      lateFallbackKeyValueHelperSurfaceMetadata();
   if (metadata == nullptr) {
     return {};
   }
   return std::string(metadata->canonicalPath) + "/" + resolvedHelperName;
 }
 
-bool resolveLateFallbackCanonicalMapHelperName(std::string path,
-                                               std::string &helperNameOut) {
+bool resolveLateFallbackCanonicalKeyValueHelperName(
+    std::string path,
+    std::string &helperNameOut) {
   helperNameOut.clear();
   const StdlibSurfaceMetadata *metadata =
-      lateFallbackMapHelperSurfaceMetadata();
+      lateFallbackKeyValueHelperSurfaceMetadata();
   if (metadata == nullptr || path.empty()) {
     return false;
   }
@@ -69,36 +71,36 @@ bool resolveLateFallbackCanonicalMapHelperName(std::string path,
   if (path.rfind(canonicalPrefix, 0) != 0) {
     return false;
   }
-  return resolveLateFallbackMapHelperName(std::move(path), helperNameOut);
+  return resolveLateFallbackKeyValueHelperName(std::move(path), helperNameOut);
 }
 
-bool isCanonicalMapContainsHelperPath(const std::string &path) {
+bool isCanonicalKeyValueContainsHelperPath(const std::string &path) {
   std::string helperName;
-  return resolveLateFallbackCanonicalMapHelperName(path, helperName) &&
+  return resolveLateFallbackCanonicalKeyValueHelperName(path, helperName) &&
          (helperName == "contains" || helperName == "contains_ref");
 }
 
-bool isCanonicalMapTryAtHelperPath(const std::string &path) {
+bool isCanonicalKeyValueTryAtHelperPath(const std::string &path) {
   std::string helperName;
-  return resolveLateFallbackCanonicalMapHelperName(path, helperName) &&
+  return resolveLateFallbackCanonicalKeyValueHelperName(path, helperName) &&
          (helperName == "tryAt" || helperName == "tryAt_ref");
 }
 
-bool isCanonicalMapAccessHelperPath(const std::string &path) {
+bool isCanonicalKeyValueAccessHelperPath(const std::string &path) {
   std::string helperName;
-  return resolveLateFallbackCanonicalMapHelperName(path, helperName) &&
+  return resolveLateFallbackCanonicalKeyValueHelperName(path, helperName) &&
          (helperName == "at" || helperName == "at_ref" ||
           helperName == "at_unsafe" || helperName == "at_unsafe_ref");
 }
 
-bool isLateFallbackMapAccessHelperName(std::string_view helperName) {
+bool isLateFallbackKeyValueAccessHelperName(std::string_view helperName) {
   return helperName == "at" || helperName == "at_ref" ||
          helperName == "at_unsafe" || helperName == "at_unsafe_ref";
 }
 
-bool isMapImportAliasAccessHelperPath(std::string path) {
+bool isKeyValueImportAliasAccessHelperPath(std::string path) {
   const StdlibSurfaceMetadata *metadata =
-      lateFallbackMapHelperSurfaceMetadata();
+      lateFallbackKeyValueHelperSurfaceMetadata();
   if (metadata == nullptr || path.empty()) {
     return false;
   }
@@ -106,8 +108,8 @@ bool isMapImportAliasAccessHelperPath(std::string path) {
     path.insert(path.begin(), '/');
   }
   std::string helperName;
-  if (!resolveLateFallbackMapHelperName(path, helperName) ||
-      !isLateFallbackMapAccessHelperName(helperName)) {
+  if (!resolveLateFallbackKeyValueHelperName(path, helperName) ||
+      !isLateFallbackKeyValueAccessHelperName(helperName)) {
     return false;
   }
   for (std::string_view alias : metadata->importAliasSpellings) {
@@ -253,10 +255,10 @@ ReturnKind SemanticsValidator::inferLateFallbackReturnKind(
         methodResolved = "/string/" + helperName;
       } else if (resolveMapTarget != nullptr &&
                  resolveMapTarget(receiverCandidate, keyType, valueType)) {
-        methodResolved = lateFallbackCanonicalMapHelperPath(helperName);
+        methodResolved = lateFallbackCanonicalKeyValueHelperPath(helperName);
       } else if (resolveExperimentalMapTarget != nullptr &&
                  resolveExperimentalMapTarget(receiverCandidate, keyType, valueType)) {
-        methodResolved = lateFallbackCanonicalMapHelperPath(helperName);
+        methodResolved = lateFallbackCanonicalKeyValueHelperPath(helperName);
       } else {
         return false;
       }
@@ -455,7 +457,7 @@ ReturnKind SemanticsValidator::inferLateFallbackReturnKind(
          !inferCollectionDispatchSetup.shouldInferBuiltinBareMapTryAtCall) ||
         (isCanonicalMapAccessHelperName(builtinAccessName) &&
          !inferCollectionDispatchSetup.shouldInferBuiltinBareMapAccessCall)) {
-      Expr rewrittenMapHelperCall;
+      Expr rewrittenKeyValueHelperCall;
       if (tryRewriteBareMapHelperCall(
               expr,
               isSimpleCallName(expr, "contains")
@@ -463,8 +465,9 @@ ReturnKind SemanticsValidator::inferLateFallbackReturnKind(
                   : (isSimpleCallName(expr, "tryAt") ? "tryAt"
                                                      : builtinAccessName),
               builtinCollectionDispatchResolvers,
-              rewrittenMapHelperCall)) {
-        return finish(inferExprReturnKind(rewrittenMapHelperCall, params, locals));
+              rewrittenKeyValueHelperCall)) {
+        return finish(
+            inferExprReturnKind(rewrittenKeyValueHelperCall, params, locals));
       }
     }
     std::string keyType;
@@ -479,7 +482,7 @@ ReturnKind SemanticsValidator::inferLateFallbackReturnKind(
       std::string methodResolved;
       if (context.resolveMethodCallPath != nullptr &&
           context.resolveMethodCallPath(expr.name, methodResolved)) {
-        if (isCanonicalMapContainsHelperPath(methodResolved) &&
+        if (isCanonicalKeyValueContainsHelperPath(methodResolved) &&
             !inferCollectionDispatchSetup.shouldInferBuiltinBareMapContainsCall &&
             !inferCollectionDispatchSetup.isIndexedArgsPackMapReceiverTarget(
                 receiverExpr) &&
@@ -488,7 +491,7 @@ ReturnKind SemanticsValidator::inferLateFallbackReturnKind(
           return failInferLateFallbackDiagnostic(
               "unknown call target: " + methodResolved);
         }
-        if (isCanonicalMapTryAtHelperPath(methodResolved) &&
+        if (isCanonicalKeyValueTryAtHelperPath(methodResolved) &&
             !inferCollectionDispatchSetup.shouldInferBuiltinBareMapTryAtCall &&
             !inferCollectionDispatchSetup.isIndexedArgsPackMapReceiverTarget(
                 receiverExpr) &&
@@ -500,12 +503,12 @@ ReturnKind SemanticsValidator::inferLateFallbackReturnKind(
               "unknown call target: " + methodResolved);
         }
         const bool isCanonicalAccessPath =
-            isCanonicalMapAccessHelperPath(methodResolved);
+            isCanonicalKeyValueAccessHelperPath(methodResolved);
         const std::string canonicalAccessPath =
             isCanonicalAccessPath
                 ? methodResolved
-                : lateFallbackCanonicalMapHelperPath(builtinAccessName);
-        if ((isMapImportAliasAccessHelperPath(methodResolved) ||
+                : lateFallbackCanonicalKeyValueHelperPath(builtinAccessName);
+        if ((isKeyValueImportAliasAccessHelperPath(methodResolved) ||
              isCanonicalAccessPath) &&
             !inferCollectionDispatchSetup.shouldInferBuiltinBareMapAccessCall &&
             !inferCollectionDispatchSetup.isIndexedArgsPackMapReceiverTarget(

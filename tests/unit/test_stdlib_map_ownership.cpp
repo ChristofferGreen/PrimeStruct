@@ -1352,7 +1352,62 @@ TEST_CASE("canonical map surface owns standalone stdlib implementation") {
   CHECK(inferLateFallbackBuiltinsSource.find("path == \"/map/at_unsafe_ref\"") ==
         std::string::npos);
   CHECK(inferLateFallbackBuiltinsSource.find(
-            "isMapImportAliasAccessHelperPath(methodResolved)") !=
+            "lateFallbackMapHelperSurfaceMetadata(") ==
+        std::string::npos);
+  CHECK(inferLateFallbackBuiltinsSource.find(
+            "resolveLateFallbackMapHelperName(") ==
+        std::string::npos);
+  CHECK(inferLateFallbackBuiltinsSource.find(
+            "lateFallbackCanonicalMapHelperPath(") ==
+        std::string::npos);
+  CHECK(inferLateFallbackBuiltinsSource.find(
+            "resolveLateFallbackCanonicalMapHelperName(") ==
+        std::string::npos);
+  CHECK(inferLateFallbackBuiltinsSource.find(
+            "isCanonicalMapContainsHelperPath(") ==
+        std::string::npos);
+  CHECK(inferLateFallbackBuiltinsSource.find(
+            "isCanonicalMapTryAtHelperPath(") ==
+        std::string::npos);
+  CHECK(inferLateFallbackBuiltinsSource.find(
+            "isCanonicalMapAccessHelperPath(") ==
+        std::string::npos);
+  CHECK(inferLateFallbackBuiltinsSource.find(
+            "isLateFallbackMapAccessHelperName(") ==
+        std::string::npos);
+  CHECK(inferLateFallbackBuiltinsSource.find(
+            "isMapImportAliasAccessHelperPath(") ==
+        std::string::npos);
+  CHECK(inferLateFallbackBuiltinsSource.find("rewrittenMapHelperCall") ==
+        std::string::npos);
+  CHECK(inferLateFallbackBuiltinsSource.find(
+            "lateFallbackKeyValueHelperSurfaceMetadata(") !=
+        std::string::npos);
+  CHECK(inferLateFallbackBuiltinsSource.find(
+            "resolveLateFallbackKeyValueHelperName(") !=
+        std::string::npos);
+  CHECK(inferLateFallbackBuiltinsSource.find(
+            "lateFallbackCanonicalKeyValueHelperPath(") !=
+        std::string::npos);
+  CHECK(inferLateFallbackBuiltinsSource.find(
+            "resolveLateFallbackCanonicalKeyValueHelperName(") !=
+        std::string::npos);
+  CHECK(inferLateFallbackBuiltinsSource.find(
+            "isCanonicalKeyValueContainsHelperPath(") !=
+        std::string::npos);
+  CHECK(inferLateFallbackBuiltinsSource.find(
+            "isCanonicalKeyValueTryAtHelperPath(") !=
+        std::string::npos);
+  CHECK(inferLateFallbackBuiltinsSource.find(
+            "isCanonicalKeyValueAccessHelperPath(") !=
+        std::string::npos);
+  CHECK(inferLateFallbackBuiltinsSource.find(
+            "isLateFallbackKeyValueAccessHelperName(") !=
+        std::string::npos);
+  CHECK(inferLateFallbackBuiltinsSource.find(
+            "isKeyValueImportAliasAccessHelperPath(methodResolved)") !=
+        std::string::npos);
+  CHECK(inferLateFallbackBuiltinsSource.find("rewrittenKeyValueHelperCall") !=
         std::string::npos);
   CHECK(inferLateFallbackBuiltinsSource.find(
             "metadata->importAliasSpellings") !=
