@@ -26,18 +26,18 @@ bool isSpecializedExperimentalMapStructPath(const std::string &typeText) {
          normalized.find("__") != std::string::npos;
 }
 
-const StdlibSurfaceMetadata *mapHelperSurfaceMetadataForUninitializedStructs() {
+const StdlibSurfaceMetadata *keyValueHelperSurfaceMetadataForUninitializedStructs() {
   return findStdlibSurfaceMetadataByBridgeKey("collections.map_helpers");
 }
 
 const StdlibSurfaceMetadata *
-mapConstructorSurfaceMetadataForUninitializedStructs() {
+keyValueConstructorSurfaceMetadataForUninitializedStructs() {
   return findStdlibSurfaceMetadataByBridgeKey("collections.map_constructors");
 }
 
-std::string forwardedEmptyMapConstructorMemberName() {
+std::string forwardedEmptyKeyValueConstructorMemberName() {
   const StdlibSurfaceMetadata *metadata =
-      mapConstructorSurfaceMetadataForUninitializedStructs();
+      keyValueConstructorSurfaceMetadataForUninitializedStructs();
   if (metadata != nullptr) {
     const std::string_view memberName =
         resolveStdlibSurfaceMemberName(*metadata, metadata->canonicalPath);
@@ -160,16 +160,16 @@ const Expr *resolveCallArgumentForParameter(const Expr &callExpr,
   return nullptr;
 }
 
-bool isForwardedMapNewConstructor(const Expr &expr) {
+bool isForwardedKeyValueNewConstructor(const Expr &expr) {
   std::string constructorName;
   const StdlibSurfaceMetadata *metadata =
-      mapConstructorSurfaceMetadataForUninitializedStructs();
+      keyValueConstructorSurfaceMetadataForUninitializedStructs();
   if (metadata == nullptr) {
     return false;
   }
   return resolvePublishedStdlibSurfaceConstructorExprMemberName(
              expr, metadata->id, constructorName) &&
-         constructorName == forwardedEmptyMapConstructorMemberName();
+         constructorName == forwardedEmptyKeyValueConstructorMemberName();
 }
 
 std::string normalizeUninitializedVectorStructPath(const std::string &typeName) {
@@ -851,20 +851,20 @@ std::string inferStructExprPathFromDefinitionMapByCallTargetWithFieldIndex(
         }
       }
       std::string accessName;
-      std::string publishedMapHelperName;
-      const StdlibSurfaceMetadata *mapHelperMetadata =
-          mapHelperSurfaceMetadataForUninitializedStructs();
-      const bool isExplicitMapArgsPackAt =
+      std::string publishedKeyValueHelperName;
+      const StdlibSurfaceMetadata *keyValueHelperMetadata =
+          keyValueHelperSurfaceMetadataForUninitializedStructs();
+      const bool isExplicitKeyValueArgsPackAt =
           !exprIn.isMethodCall &&
-          mapHelperMetadata != nullptr &&
+          keyValueHelperMetadata != nullptr &&
           resolvePublishedStdlibSurfaceExprMemberName(
               exprIn,
-              mapHelperMetadata->id,
-              publishedMapHelperName) &&
-          publishedMapHelperName == "at" &&
+              keyValueHelperMetadata->id,
+              publishedKeyValueHelperName) &&
+          publishedKeyValueHelperName == "at" &&
           exprIn.args.size() == 2;
       if ((getBuiltinArrayAccessName(exprIn, accessName) && exprIn.args.size() == 2) ||
-          isExplicitMapArgsPackAt) {
+          isExplicitKeyValueArgsPackAt) {
         const Expr &accessReceiver = exprIn.args.front();
         if (accessReceiver.kind == Expr::Kind::Name) {
           auto receiverIt = localsInExpr.find(accessReceiver.name);
@@ -885,18 +885,18 @@ std::string inferStructExprPathFromDefinitionMapByCallTargetWithFieldIndex(
         const std::string rawCallPath = resolveScopedCallPath(exprIn);
         const std::string slashPrefixedRawCallPath =
             (!rawCallPath.empty() && rawCallPath.front() != '/') ? "/" + rawCallPath : rawCallPath;
-        auto inferPublishedMapConstructorStruct = [&](const std::string &candidatePath) {
-          const std::string publishedMapStruct =
+        auto inferPublishedKeyValueConstructorStruct = [&](const std::string &candidatePath) {
+          const std::string publishedKeyValueStruct =
               inferPublishedExperimentalMapStructPathFromConstructorPath(candidatePath);
-          if (!publishedMapStruct.empty()) {
-            return publishedMapStruct;
+          if (!publishedKeyValueStruct.empty()) {
+            return publishedKeyValueStruct;
           }
           return std::string{};
         };
         if (exprIn.templateArgs.size() == 2 &&
             [&]() {
               const StdlibSurfaceMetadata *metadata =
-                  mapConstructorSurfaceMetadataForUninitializedStructs();
+                  keyValueConstructorSurfaceMetadataForUninitializedStructs();
               return metadata != nullptr &&
                      isPublishedStdlibSurfaceConstructorExpr(exprIn,
                                                              metadata->id);
@@ -910,12 +910,12 @@ std::string inferStructExprPathFromDefinitionMapByCallTargetWithFieldIndex(
             return templateStruct;
           }
         }
-        if (const std::string publishedStruct = inferPublishedMapConstructorStruct(resolvedPath);
+        if (const std::string publishedStruct = inferPublishedKeyValueConstructorStruct(resolvedPath);
             !publishedStruct.empty()) {
           return publishedStruct;
         }
         if (rawCallPath != resolvedPath) {
-          if (const std::string publishedStruct = inferPublishedMapConstructorStruct(rawCallPath);
+          if (const std::string publishedStruct = inferPublishedKeyValueConstructorStruct(rawCallPath);
               !publishedStruct.empty()) {
             return publishedStruct;
           }
@@ -923,7 +923,7 @@ std::string inferStructExprPathFromDefinitionMapByCallTargetWithFieldIndex(
         if (slashPrefixedRawCallPath != resolvedPath &&
             slashPrefixedRawCallPath != rawCallPath) {
           if (const std::string publishedStruct =
-                  inferPublishedMapConstructorStruct(slashPrefixedRawCallPath);
+                  inferPublishedKeyValueConstructorStruct(slashPrefixedRawCallPath);
               !publishedStruct.empty()) {
             return publishedStruct;
           }
@@ -985,7 +985,7 @@ std::string inferStructExprPathFromDefinitionMapByCallTargetWithFieldIndex(
             const Expr *forwardedArg =
                 resolveCallArgumentForParameter(exprIn, def, forwardedParamName);
             if (forwardedArg == nullptr ||
-                isForwardedMapNewConstructor(*forwardedArg)) {
+                isForwardedKeyValueNewConstructor(*forwardedArg)) {
               return "";
             }
             return inferStructExprPath(*forwardedArg, localsInExpr);
