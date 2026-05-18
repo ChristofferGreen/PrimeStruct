@@ -740,7 +740,15 @@ TEST_CASE("canonical map surface owns standalone stdlib implementation") {
         std::string::npos);
   CHECK(inferCollectionDispatchSetupSource.find("expr.namespacePrefix == \"map\"") ==
         std::string::npos);
+  CHECK(inferCollectionDispatchSetupSource.find("StdlibSurfaceId::CollectionsMapHelpers") ==
+        std::string::npos);
+  CHECK(inferCollectionDispatchSetupSource.find(
+            "findStdlibSurfaceMetadataByBridgeKey(\"collections.map_helpers\")") !=
+        std::string::npos);
   CHECK(inferCollectionDispatchSetupSource.find("resolveRootMapHelperAliasPath(path, helperName)") !=
+        std::string::npos);
+  CHECK(inferCollectionDispatchSetupSource.find(
+            "resolveDispatchSetupMapHelperPath(resolvedPath,") !=
         std::string::npos);
   CHECK(inferCollectionReturnInferenceSource.find(
             "\"/std/collections/map/\" + builtinAccessName") ==

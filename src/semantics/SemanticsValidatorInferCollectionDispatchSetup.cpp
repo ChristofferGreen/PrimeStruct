@@ -10,11 +10,25 @@ bool isCanonicalMapAccessHelperName(const std::string &helperName) {
          helperName == "at_unsafe" || helperName == "at_unsafe_ref";
 }
 
+const StdlibSurfaceMetadata *dispatchSetupMapHelperSurfaceMetadata() {
+  return findStdlibSurfaceMetadataByBridgeKey("collections.map_helpers");
+}
+
+bool resolveDispatchSetupMapHelperPath(std::string_view path,
+                                       std::string &helperNameOut) {
+  helperNameOut.clear();
+  const StdlibSurfaceMetadata *metadata =
+      dispatchSetupMapHelperSurfaceMetadata();
+  return metadata != nullptr &&
+         resolvePublishedCollectionHelperResolvedPath(path, metadata->id,
+                                                      helperNameOut);
+}
+
 bool resolveRootMapHelperAliasPath(std::string_view rawPath,
                                    std::string &helperNameOut) {
   helperNameOut.clear();
   const StdlibSurfaceMetadata *metadata =
-      findStdlibSurfaceMetadata(StdlibSurfaceId::CollectionsMapHelpers);
+      dispatchSetupMapHelperSurfaceMetadata();
   if (metadata == nullptr) {
     return false;
   }
@@ -33,10 +47,8 @@ bool resolveRootMapHelperAliasPath(std::string_view rawPath,
   if (!matchesRootAlias) {
     return false;
   }
-  return resolvePublishedCollectionHelperResolvedPath(
-      "/" + std::string(path),
-      StdlibSurfaceId::CollectionsMapHelpers,
-      helperNameOut);
+  return resolveDispatchSetupMapHelperPath("/" + std::string(path),
+                                           helperNameOut);
 }
 
 bool isMapAccessCompatibilityPath(const std::string &path) {
@@ -47,14 +59,13 @@ bool isMapAccessCompatibilityPath(const std::string &path) {
 
 bool isStdNamespacedCanonicalMapAccessPath(const std::string &path) {
   std::string helperName;
-  return resolvePublishedCollectionHelperResolvedPath(
-             path, StdlibSurfaceId::CollectionsMapHelpers, helperName) &&
+  return resolveDispatchSetupMapHelperPath(path, helperName) &&
          isCanonicalMapAccessHelperName(helperName);
 }
 
 std::string canonicalMapHelperNamespace() {
   const StdlibSurfaceMetadata *metadata =
-      findStdlibSurfaceMetadata(StdlibSurfaceId::CollectionsMapHelpers);
+      dispatchSetupMapHelperSurfaceMetadata();
   if (metadata == nullptr) {
     return "";
   }
@@ -124,10 +135,8 @@ void SemanticsValidator::prepareInferCollectionDispatchSetup(
         }
         const std::string resolvedPath = resolveCalleePath(candidate);
         std::string resolvedMapHelperName;
-        if (resolvePublishedCollectionHelperResolvedPath(
-                resolvedPath,
-                StdlibSurfaceId::CollectionsMapHelpers,
-                resolvedMapHelperName) &&
+        if (resolveDispatchSetupMapHelperPath(resolvedPath,
+                                              resolvedMapHelperName) &&
             (resolvedMapHelperName == "at_ref" ||
              resolvedMapHelperName == "at_unsafe_ref")) {
           helperNameOut = resolvedMapHelperName;

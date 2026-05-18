@@ -348,7 +348,10 @@ Task template:
   import-alias metadata instead of a direct `/map/at*` path table, and
   template monomorph core collection-base/import coverage plus map entry and
   constructor overload checks now derive roots and member paths through stdlib
-  surface metadata instead of direct map path literals. The
+  surface metadata instead of direct map path literals, and infer collection
+  dispatch setup now derives map helper metadata through the bridge key before
+  resolving rooted aliases, canonical access helpers, and namespace checks
+  instead of directly naming the map helper surface ID. The
   remaining production
   lowerer/emitter
   experimental-map traces

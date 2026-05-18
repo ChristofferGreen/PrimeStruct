@@ -680,7 +680,10 @@ This file stores durable session-derived facts that are useful in later work. Ke
   instead of a direct `/map/at*` path table; template monomorph core
   collection-base/import coverage plus map entry and constructor overload
   checks should derive roots and member paths through stdlib surface metadata
-  instead of direct map path literals.
+  instead of direct map path literals; infer collection dispatch setup should
+  derive map helper metadata through the bridge key before resolving rooted
+  aliases, canonical access helpers, and namespace checks instead of directly
+  naming the map helper surface ID.
   The stale
   rooted-alias struct-return semantic fixture now expects `values.at()` to use
   the canonical map helper return type instead of a user-defined `/map/at`
