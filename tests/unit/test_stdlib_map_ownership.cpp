@@ -1148,7 +1148,23 @@ TEST_CASE("canonical map surface owns standalone stdlib implementation") {
   CHECK(inferCollectionDispatchSource.find("StdlibSurfaceId::CollectionsMapHelpers") ==
         std::string::npos);
   CHECK(inferCollectionDispatchSource.find(
+            "mapHelperSurfaceMetadataForInferCollectionDispatch(") ==
+        std::string::npos);
+  CHECK(inferCollectionDispatchSource.find(
+            "resolveMapHelperResolvedPathForInferCollectionDispatch(") ==
+        std::string::npos);
+  CHECK(inferCollectionDispatchSource.find("resolvedMapHelperName") ==
+        std::string::npos);
+  CHECK(inferCollectionDispatchSource.find(
             "findStdlibSurfaceMetadataByBridgeKey(\"collections.map_helpers\")") !=
+        std::string::npos);
+  CHECK(inferCollectionDispatchSource.find(
+            "keyValueHelperSurfaceMetadataForInferCollectionDispatch(") !=
+        std::string::npos);
+  CHECK(inferCollectionDispatchSource.find(
+            "resolveKeyValueHelperResolvedPathForInferCollectionDispatch(") !=
+        std::string::npos);
+  CHECK(inferCollectionDispatchSource.find("resolvedKeyValueHelperName") !=
         std::string::npos);
   CHECK(inferCollectionCompatibilitySource.find("const std::string alias = \"/map/\" + std::string(helperName)") ==
         std::string::npos);

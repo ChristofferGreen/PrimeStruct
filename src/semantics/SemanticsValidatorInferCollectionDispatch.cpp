@@ -4,19 +4,20 @@
 namespace primec::semantics {
 namespace {
 
-const StdlibSurfaceMetadata *mapHelperSurfaceMetadataForInferCollectionDispatch() {
+const StdlibSurfaceMetadata *
+keyValueHelperSurfaceMetadataForInferCollectionDispatch() {
   return findStdlibSurfaceMetadataByBridgeKey("collections.map_helpers");
 }
 
-bool resolveMapHelperResolvedPathForInferCollectionDispatch(
+bool resolveKeyValueHelperResolvedPathForInferCollectionDispatch(
     const std::string &resolvedPath,
-    std::string &resolvedMapHelperNameOut) {
-  resolvedMapHelperNameOut.clear();
+    std::string &resolvedKeyValueHelperNameOut) {
+  resolvedKeyValueHelperNameOut.clear();
   const StdlibSurfaceMetadata *metadata =
-      mapHelperSurfaceMetadataForInferCollectionDispatch();
+      keyValueHelperSurfaceMetadataForInferCollectionDispatch();
   return metadata != nullptr &&
          resolvePublishedCollectionHelperResolvedPath(
-             resolvedPath, metadata->id, resolvedMapHelperNameOut);
+             resolvedPath, metadata->id, resolvedKeyValueHelperNameOut);
 }
 
 } // namespace
@@ -26,9 +27,9 @@ bool SemanticsValidator::resolveBuiltinCollectionMethodReturnKind(
     const Expr &receiverExpr,
     const BuiltinCollectionDispatchResolvers &resolvers,
     ReturnKind &kindOut) const {
-  std::string resolvedMapHelperName;
-  if (resolveMapHelperResolvedPathForInferCollectionDispatch(
-          resolvedPath, resolvedMapHelperName)) {
+  std::string resolvedKeyValueHelperName;
+  if (resolveKeyValueHelperResolvedPathForInferCollectionDispatch(
+          resolvedPath, resolvedKeyValueHelperName)) {
     auto declaredReturnKind = [](const Definition &definition,
                                  ReturnKind &declaredKindOut) {
       for (const Transform &transform : definition.transforms) {
@@ -84,8 +85,8 @@ bool SemanticsValidator::resolveBuiltinCollectionMethodReturnKind(
     kindOut = ReturnKind::Int;
     return true;
   }
-  if (resolvedMapHelperName == "contains" ||
-      resolvedMapHelperName == "contains_ref") {
+  if (resolvedKeyValueHelperName == "contains" ||
+      resolvedKeyValueHelperName == "contains_ref") {
     kindOut = ReturnKind::Bool;
     return true;
   }
@@ -139,10 +140,10 @@ bool SemanticsValidator::resolveBuiltinCollectionMethodReturnKind(
     }
     return false;
   }
-  if (resolvedMapHelperName == "at" ||
-      resolvedMapHelperName == "at_unsafe" ||
-      resolvedMapHelperName == "at_ref" ||
-      resolvedMapHelperName == "at_unsafe_ref") {
+  if (resolvedKeyValueHelperName == "at" ||
+      resolvedKeyValueHelperName == "at_unsafe" ||
+      resolvedKeyValueHelperName == "at_ref" ||
+      resolvedKeyValueHelperName == "at_unsafe_ref") {
     std::string keyType;
     std::string valueType;
     if ((resolvers.resolveMapTarget != nullptr &&
@@ -171,14 +172,14 @@ bool SemanticsValidator::resolveBuiltinCollectionAccessCallReturnKind(
   std::string builtinName;
   if (!getBuiltinArrayAccessName(callExpr, builtinName)) {
     const std::string resolvedPath = resolveCalleePath(callExpr);
-    std::string resolvedMapHelperName;
-    if (!resolveMapHelperResolvedPathForInferCollectionDispatch(
-            resolvedPath, resolvedMapHelperName)) {
+    std::string resolvedKeyValueHelperName;
+    if (!resolveKeyValueHelperResolvedPathForInferCollectionDispatch(
+            resolvedPath, resolvedKeyValueHelperName)) {
       return false;
     }
-    if (resolvedMapHelperName == "at_ref") {
+    if (resolvedKeyValueHelperName == "at_ref") {
       builtinName = "at_ref";
-    } else if (resolvedMapHelperName == "at_unsafe_ref") {
+    } else if (resolvedKeyValueHelperName == "at_unsafe_ref") {
       builtinName = "at_unsafe_ref";
     } else {
       return false;
