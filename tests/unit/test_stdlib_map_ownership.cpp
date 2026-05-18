@@ -759,6 +759,10 @@ TEST_CASE("canonical map surface owns standalone stdlib implementation") {
   CHECK(templateReceiverSource.find(
             "isTemplateMonomorphMapImportAliasHelperPath(path)") !=
         std::string::npos);
+  CHECK(templateReceiverSource.find("templateMonomorphMapHelperSurfaceMetadata") ==
+        std::string::npos);
+  CHECK(templateReceiverSource.find("templateMonomorphKeyValueHelperSurfaceMetadata") !=
+        std::string::npos);
   CHECK(templateExpressionRewriteSource.find(
             "resolvedPath == \"/std/collections/map/count\" || resolvedPath == \"/map/count\"") ==
         std::string::npos);

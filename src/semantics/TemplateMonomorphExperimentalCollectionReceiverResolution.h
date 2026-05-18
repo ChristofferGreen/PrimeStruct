@@ -514,7 +514,7 @@ bool resolvesExperimentalVectorValueReceiver(const Expr *receiverExpr,
   return resolvesExperimentalVectorValueTypeText(inferredReceiverType);
 }
 
-const StdlibSurfaceMetadata *templateMonomorphMapHelperSurfaceMetadata() {
+const StdlibSurfaceMetadata *templateMonomorphKeyValueHelperSurfaceMetadata() {
   return primec::findStdlibSurfaceMetadataByBridgeKey("collections.map_helpers");
 }
 
@@ -522,7 +522,7 @@ bool resolveTemplateMonomorphMapHelperName(std::string path,
                                            std::string &helperNameOut) {
   helperNameOut.clear();
   const StdlibSurfaceMetadata *metadata =
-      templateMonomorphMapHelperSurfaceMetadata();
+      templateMonomorphKeyValueHelperSurfaceMetadata();
   if (metadata == nullptr || path.empty()) {
     return false;
   }
@@ -547,7 +547,7 @@ bool resolveTemplateMonomorphMapHelperName(std::string path,
 
 bool isTemplateMonomorphMapImportAliasHelperPath(std::string_view path) {
   const StdlibSurfaceMetadata *metadata =
-      templateMonomorphMapHelperSurfaceMetadata();
+      templateMonomorphKeyValueHelperSurfaceMetadata();
   if (metadata == nullptr || path.empty() || path.front() != '/') {
     return false;
   }
@@ -574,7 +574,7 @@ std::string templateMonomorphCanonicalMapHelperPath(std::string_view spelling) {
     return {};
   }
   const StdlibSurfaceMetadata *metadata =
-      templateMonomorphMapHelperSurfaceMetadata();
+      templateMonomorphKeyValueHelperSurfaceMetadata();
   if (metadata == nullptr) {
     return {};
   }
@@ -586,7 +586,7 @@ bool resolveTemplateMonomorphCanonicalMapHelperName(
     std::string &helperNameOut) {
   helperNameOut.clear();
   const StdlibSurfaceMetadata *metadata =
-      templateMonomorphMapHelperSurfaceMetadata();
+      templateMonomorphKeyValueHelperSurfaceMetadata();
   if (metadata == nullptr || path.empty()) {
     return false;
   }
@@ -629,7 +629,7 @@ std::string templateMonomorphPreferredMapHelperSpellingForMember(
     return {};
   }
   const StdlibSurfaceMetadata *metadata =
-      templateMonomorphMapHelperSurfaceMetadata();
+      templateMonomorphKeyValueHelperSurfaceMetadata();
   if (metadata == nullptr) {
     return {};
   }
