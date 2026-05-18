@@ -196,6 +196,15 @@
   of `nullptr`.
 
 ## Recent Test Runs
+- 2026-05-18 12:03 CEST | pass | mode: release | command:
+  `cmake --build build-release --target PrimeStruct_misc_tests`;
+  `cd build-release && ./PrimeStruct_misc_tests --test-suite=primestruct.stdlib.map_ownership --no-skip`;
+  `rg --pcre2 -n '/?std/collections/map(?:/|")|/?std/collections/experimental_map(?:/|")|(?<![A-Za-z0-9_/])/?map/|\bmap(?:At|AtUnsafe|Contains|Count|Double|Empty|FromEntries|Insert|New|Oct|Pair|Quad|Quint|Sept|Sext|Single|Triple|TryAt)(?:Ref)?\b|\bMap__|\bEntry__|\bCollectionsMap[A-Za-z0-9_]*\b|\bMap<' src/semantics/TemplateMonomorphBindingCallInference.h`;
+  `git diff --check` | failures: none | notes:
+  `TemplateMonomorphBindingCallInference.h` had no direct map-surface scan
+  matches, so its stale inventory cap is now zero and the ownership test
+  source-locks that state. The Python inventory script was intentionally not
+  run.
 - 2026-05-18 11:59 CEST | pass | mode: release | command:
   `cmake --build build-release --target PrimeStruct_misc_tests`;
   `cd build-release && ./PrimeStruct_misc_tests --test-suite=primestruct.stdlib.map_ownership --no-skip`;

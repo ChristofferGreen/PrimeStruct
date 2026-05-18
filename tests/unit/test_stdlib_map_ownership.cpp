@@ -165,6 +165,9 @@ TEST_CASE("canonical map surface owns standalone stdlib implementation") {
   const std::string templateCollectionCompatibilitySource =
       readText(repoRoot() / "src" / "semantics" /
                "TemplateMonomorphCollectionCompatibilityPaths.h");
+  const std::string templateBindingCallInferenceSource =
+      readText(repoRoot() / "src" / "semantics" /
+               "TemplateMonomorphBindingCallInference.h");
   const std::string templateConstructorRewriteSource =
       readText(repoRoot() / "src" / "semantics" /
                "TemplateMonomorphExperimentalCollectionConstructorRewrites.h");
@@ -373,6 +376,7 @@ TEST_CASE("canonical map surface owns standalone stdlib implementation") {
   REQUIRE(!templateCoreSource.empty());
   REQUIRE(!templateReceiverSource.empty());
   REQUIRE(!templateExpressionRewriteSource.empty());
+  REQUIRE(!templateBindingCallInferenceSource.empty());
   REQUIRE(!templateConstructorRewriteSource.empty());
   REQUIRE(!mapConstructorHelpersSource.empty());
   REQUIRE(!semanticBindingTypeHelpersSource.empty());
@@ -703,6 +707,15 @@ TEST_CASE("canonical map surface owns standalone stdlib implementation") {
         std::string::npos);
   CHECK(templateCollectionCompatibilitySource.find(
             "mapHelperSurfaceMetadataLocal()") !=
+        std::string::npos);
+  CHECK(templateBindingCallInferenceSource.find("std/collections/map") ==
+        std::string::npos);
+  CHECK(templateBindingCallInferenceSource.find("experimental_map") ==
+        std::string::npos);
+  CHECK(templateBindingCallInferenceSource.find("CollectionsMap") ==
+        std::string::npos);
+  CHECK(templateBindingCallInferenceSource.find(
+            "isExperimentalCollectionBackingTypeName(\"map\"") ==
         std::string::npos);
   CHECK(templateConstructorRewriteSource.find("originalPath == \"/map\"") ==
         std::string::npos);
