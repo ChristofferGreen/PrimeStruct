@@ -140,13 +140,13 @@ bool SemanticsValidator::bareMapHelperOperandIndices(
 }
 
 std::string SemanticsValidator::preferredBareMapHelperTarget(std::string_view helperName) const {
-  auto hasVisibleMapHelperFamily = [&](const std::string &path) {
+  auto hasVisibleKeyValueHelperFamily = [&](const std::string &path) {
     return hasDeclaredDefinitionPath(path) ||
            hasImportedDefinitionPath(path) ||
            hasDefinitionFamilyPath(path);
   };
   const std::string canonical = canonicalKeyValueHelperPathForRewrite(helperName);
-  if (hasVisibleMapHelperFamily(canonical)) {
+  if (hasVisibleKeyValueHelperFamily(canonical)) {
     return canonical;
   }
   if (isPublishedKeyValueBaseHelperName(helperName) ||
