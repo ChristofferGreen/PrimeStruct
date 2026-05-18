@@ -39,8 +39,8 @@ bool isUnspecializedExperimentalMapBackingBaseForPrintability(std::string base) 
   return leaf == "Map" && isExperimentalCollectionBackingTypeName("map", "Map", base);
 }
 
-bool isCanonicalMapHelperResolvedPath(const std::string &path,
-                                      std::string_view helperName) {
+bool isCanonicalKeyValueHelperResolvedPath(const std::string &path,
+                                           std::string_view helperName) {
   const StdlibSurfaceMetadata *metadata = mapHelperSurfaceMetadataLocal();
   if (metadata == nullptr) {
     return false;
@@ -267,8 +267,8 @@ bool SemanticsValidator::isStringStatementExpr(const Expr &arg,
           isStdNamespacedVectorCompatibilityHelperPath(resolvedPath, "at") ||
           isStdNamespacedVectorCompatibilityHelperPath(resolvedPath,
                                                        "at_unsafe") ||
-          isCanonicalMapHelperResolvedPath(resolvedPath, "at") ||
-          isCanonicalMapHelperResolvedPath(resolvedPath, "at_unsafe");
+          isCanonicalKeyValueHelperResolvedPath(resolvedPath, "at") ||
+          isCanonicalKeyValueHelperResolvedPath(resolvedPath, "at_unsafe");
       std::string accessName;
       if (treatAsBuiltinAccess &&
           getBuiltinArrayAccessName(candidate, accessName) &&
