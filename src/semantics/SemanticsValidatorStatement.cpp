@@ -5,6 +5,7 @@
 #include <cctype>
 #include <functional>
 #include <optional>
+#include <string_view>
 
 namespace primec::semantics {
 
@@ -50,8 +51,20 @@ bool isSpecializedExperimentalMapBackingPath(std::string typeName) {
   if (!typeName.empty() && typeName.front() == '/') {
     typeName.erase(typeName.begin());
   }
-  return isExperimentalCollectionBackingTypeName("map", "Map", typeName) &&
-         typeName.find("__") != std::string::npos;
+  return isQualifiedExperimentalMapBackingTypeName(typeName);
+}
+
+std::string mapCollectionAliasTokenForStatementValidation() {
+  const auto *metadata = mapConstructorSurfaceMetadataLocal();
+  if (metadata == nullptr) {
+    return {};
+  }
+  for (std::string_view alias : metadata->importAliasSpellings) {
+    if (!alias.empty() && alias.find('/') == std::string_view::npos) {
+      return std::string(alias);
+    }
+  }
+  return {};
 }
 
 } // namespace
@@ -143,9 +156,14 @@ bool SemanticsValidator::validateStatement(const std::vector<ParameterInfo> &par
         }
         return text.substr(start, end - start);
       };
-      auto isBuiltinTemplateBase = [](const std::string &base) -> bool {
-        return base == "array" || base == "vector" || base == "map" || base == "Result" || base == "Pointer" ||
-               base == "Reference" || base == "Buffer" || base == "uninitialized";
+      const std::string mapCollectionAlias =
+          mapCollectionAliasTokenForStatementValidation();
+      auto isBuiltinTemplateBase = [&](const std::string &base) -> bool {
+        return base == "array" || base == "vector" ||
+               (!mapCollectionAlias.empty() && base == mapCollectionAlias) ||
+               base == "Result" ||
+               base == "Pointer" || base == "Reference" ||
+               base == "Buffer" || base == "uninitialized";
       };
       std::function<bool(const std::string &, const std::string &)> typesMatch;
       typesMatch = [&](const std::string &expected, const std::string &actual) -> bool {

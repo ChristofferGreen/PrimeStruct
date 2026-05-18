@@ -2756,6 +2756,10 @@ Task template:
       constructor arguments by resolving the `entry` member through stdlib
       surface metadata instead of carrying a direct experimental-map entry
       fallback; its inventory cap is zero.
+    - 2026-05-18: `SemanticsValidatorStatement.cpp` now uses the shared
+      experimental map backing classifier and derives the public map
+      collection alias from constructor metadata for init type matching; its
+      inventory cap is zero.
     - Tighten or replace the TODO-4473 and TODO-4472 allowed-count
       inventories as traces are deleted; the final TODO-4464 state is zero
       tolerance for all PrimeStruct-map-specific production C++ traces, not a

@@ -254,6 +254,9 @@ TEST_CASE("canonical map surface owns standalone stdlib implementation") {
   const std::string scalarPointerMemorySource =
       readText(repoRoot() / "src" / "semantics" /
                "SemanticsValidatorExprScalarPointerMemory.cpp");
+  const std::string statementSource =
+      readText(repoRoot() / "src" / "semantics" /
+               "SemanticsValidatorStatement.cpp");
   const std::string argumentValidationSource =
       readText(repoRoot() / "src" / "semantics" /
                "SemanticsValidatorExprArgumentValidation.cpp");
@@ -398,6 +401,7 @@ TEST_CASE("canonical map surface owns standalone stdlib implementation") {
   REQUIRE(!pointerLikeSource.empty());
   REQUIRE(!statementPrintabilitySource.empty());
   REQUIRE(!scalarPointerMemorySource.empty());
+  REQUIRE(!statementSource.empty());
   REQUIRE(!argumentValidationSource.empty());
   REQUIRE(!argumentValidationCollectionsSource.empty());
   REQUIRE(!collectionAccessValidationSource.empty());
@@ -1071,6 +1075,16 @@ TEST_CASE("canonical map surface owns standalone stdlib implementation") {
   CHECK(scalarPointerMemorySource.find("collectionName == \"map\"") ==
         std::string::npos);
   CHECK(scalarPointerMemorySource.find("isMapCollectionTypeName(collectionName)") !=
+        std::string::npos);
+  CHECK(statementSource.find(
+            "isExperimentalCollectionBackingTypeName(\"map\", \"Map\", typeName)") ==
+        std::string::npos);
+  CHECK(statementSource.find("base == \"map\"") == std::string::npos);
+  CHECK(statementSource.find("isQualifiedExperimentalMapBackingTypeName(typeName)") !=
+        std::string::npos);
+  CHECK(statementSource.find("mapCollectionAliasTokenForStatementValidation()") !=
+        std::string::npos);
+  CHECK(statementSource.find("base == mapCollectionAlias") !=
         std::string::npos);
   CHECK(argumentValidationSource.find("normalizedBase == \"std/collections/map\"") ==
         std::string::npos);

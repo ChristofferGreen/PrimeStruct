@@ -196,6 +196,23 @@
   of `nullptr`.
 
 ## Recent Test Runs
+- 2026-05-18 11:41 CEST | pass | mode: release | command:
+  `cmake --build build-release --target PrimeStruct_misc_tests`;
+  `cd build-release && ./PrimeStruct_misc_tests --test-suite=primestruct.stdlib.map_ownership --no-skip`;
+  `cmake --build build-release --target PrimeStruct_semantics_tests`;
+  `cd build-release && ./PrimeStruct_semantics_tests --test-case="helper-wrapped map constructor uninitialized storage keeps mismatch diagnostics" --no-skip`;
+  `rg --pcre2 -n '/?std/collections/map(?:/|")|/?std/collections/experimental_map(?:/|")|(?<![A-Za-z0-9_/])/?map/|\bmap(?:At|AtUnsafe|Contains|Count|Double|Empty|FromEntries|Insert|New|Oct|Pair|Quad|Quint|Sept|Sext|Single|Triple|TryAt)(?:Ref)?\b|\bMap__|\bEntry__|\bCollectionsMap[A-Za-z0-9_]*\b|\bMap<' src/semantics/SemanticsValidatorStatement.cpp`;
+  `git diff --check` | failures: none | notes:
+  `SemanticsValidatorStatement.cpp` now uses shared map backing
+  classification and metadata-derived map alias lookup for init type matching.
+  The targeted direct scan returned no matches. The Python inventory script
+  was intentionally not run.
+- 2026-05-18 11:38 CEST | fail | mode: release | command:
+  `cd build-release && ./PrimeStruct_semantics_tests --test-case="helper-wrapped map constructors accept canonical map uninitialized storage" --no-skip` |
+  failures: helper-wrapped map constructors accept canonical map uninitialized
+  storage | notes: same stale failure already tracked lower in this log; it
+  still reports `init value type mismatch`, so it was not used as the gate for
+  this metadata cleanup.
 - 2026-05-18 11:31 CEST | pass | mode: release | command:
   `cmake --build build-release --target PrimeStruct_misc_tests`;
   `cd build-release && ./PrimeStruct_misc_tests --test-suite=primestruct.stdlib.map_ownership --no-skip`;

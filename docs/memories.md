@@ -541,7 +541,10 @@ This file stores durable session-derived facts that are useful in later work. Ke
   map alias token instead of direct map collection strings; concrete call
   resolution should classify map entry constructor arguments by resolving the
   `entry` member through map helper stdlib surface metadata instead of
-  carrying a direct experimental-map entry fallback.
+  carrying a direct experimental-map entry fallback; statement init type
+  matching should classify generated experimental map backing paths through
+  shared map backing helpers and derive the public map collection alias from
+  constructor metadata instead of direct map strings.
 - Evidence: Field-bound `Map<K, V>` compatibility triage showed generated
   map helper specializations could mask missing `/map/count` aliases unless
   removed-alias checks ignored generated-only definition paths; later
