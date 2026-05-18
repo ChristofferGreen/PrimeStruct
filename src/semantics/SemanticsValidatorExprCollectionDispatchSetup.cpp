@@ -5,7 +5,7 @@ namespace primec::semantics {
 
 namespace {
 
-bool isCanonicalMapAccessHelperName(const std::string &helperName) {
+bool isCanonicalKeyValueAccessHelperName(const std::string &helperName) {
   return helperName == "at" || helperName == "at_ref" ||
          helperName == "at_unsafe" || helperName == "at_unsafe_ref";
 }
@@ -18,7 +18,7 @@ bool isStdNamespacedCanonicalMapAccessPath(const std::string &path) {
   std::string helperName;
   return resolvePublishedCollectionHelperResolvedPath(
              path, metadata->id, helperName) &&
-         isCanonicalMapAccessHelperName(helperName);
+         isCanonicalKeyValueAccessHelperName(helperName);
 }
 
 } // namespace
@@ -215,10 +215,11 @@ bool SemanticsValidator::prepareExprCollectionDispatchSetup(
       (isSimpleCallName(expr, "at") || isSimpleCallName(expr, "at_ref") ||
        isSimpleCallName(expr, "at_unsafe") ||
        isSimpleCallName(expr, "at_unsafe_ref")) &&
-      isCanonicalMapAccessHelperName(expr.name) &&
+      isCanonicalKeyValueAccessHelperName(expr.name) &&
       defMap_.find("/" + expr.name) == defMap_.end()) {
     std::string shadowedReceiverPath;
-    if (this->resolveDirectCallTemporaryAccessReceiverPath(expr.args.front(), expr.name, shadowedReceiverPath) ||
+    if (this->resolveDirectCallTemporaryAccessReceiverPath(
+            expr.args.front(), expr.name, shadowedReceiverPath) ||
         this->resolveLeadingNonCollectionAccessReceiverPath(
             params,
             locals,
@@ -226,7 +227,8 @@ bool SemanticsValidator::prepareExprCollectionDispatchSetup(
             expr.name,
             dispatchResolvers,
             shadowedReceiverPath)) {
-      return failCollectionDispatchDiagnostic("unknown method: " + shadowedReceiverPath);
+      return failCollectionDispatchDiagnostic("unknown method: " +
+                                              shadowedReceiverPath);
     }
   }
 
