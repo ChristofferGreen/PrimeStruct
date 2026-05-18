@@ -813,9 +813,10 @@ This file stores durable session-derived facts that are useful in later work. Ke
   helpers, packed Result helpers, Result metadata helpers, struct-layout
   helpers, struct-type helpers, inference fallback setup, statement-binding
   helpers, operator collection mutation helpers, count-access helpers,
-  statement-binding type metadata, or struct-field binding helpers; their
-  inventory caps are now zero and the obsolete backing-trace ownership
-  allowlist entries were removed.
+  statement-binding type metadata, struct-field binding helpers, binding-type
+  helpers, inference base-kind helpers, statement-binding helpers, or
+  struct-return path helpers; their inventory caps are now zero and the
+  obsolete backing-trace ownership allowlist entries were removed.
 
 ### mapvalue-public-insert-uses-stdlib
 - Updated: 2026-05-16
