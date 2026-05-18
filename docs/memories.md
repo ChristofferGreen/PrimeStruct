@@ -529,7 +529,9 @@ This file stores durable session-derived facts that are useful in later work. Ke
   direct rooted/canonical map helper prefixes; collection buffer/map resolver
   inference should derive rooted map alias checks and map collection alias
   tokens from `collections.map_constructors` metadata instead of direct `/map`
-  strings.
+  strings; scalar pointer/memory builtin validation should classify map-like
+  builtin collection calls through the shared collection type classifier
+  instead of a direct `map` collection token.
 - Evidence: Field-bound `Map<K, V>` compatibility triage showed generated
   map helper specializations could mask missing `/map/count` aliases unless
   removed-alias checks ignored generated-only definition paths; later

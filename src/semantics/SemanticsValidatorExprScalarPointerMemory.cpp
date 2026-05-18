@@ -245,7 +245,8 @@ bool SemanticsValidator::validateExprScalarPointerMemoryBuiltins(
     }
     std::string collectionName;
     if (getBuiltinCollectionName(candidate, collectionName) &&
-        collectionName == "map" && candidate.templateArgs.size() == 2) {
+        isMapCollectionTypeName(collectionName) &&
+        candidate.templateArgs.size() == 2) {
       return true;
     }
     auto defIt = defMap_.find(resolveCalleePath(candidate));

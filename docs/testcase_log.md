@@ -184,6 +184,17 @@
   of `nullptr`.
 
 ## Recent Test Runs
+- 2026-05-18 10:37 CEST | pass | mode: release | command:
+  `cmake --build build-release --target PrimeStruct_semantics_tests`;
+  `cd build-release && ./PrimeStruct_semantics_tests --test-case="memory at validates checked pointer access,memory at rejects non-pointer target,memory at rejects mismatched index and count kinds,canonical stdlib map returns are allowed,canonical map borrowed helper calls validate ownership-sensitive values through ref helpers" --no-skip`;
+  `cmake --build build-release --target PrimeStruct_misc_tests`;
+  `cd build-release && ./PrimeStruct_misc_tests --test-suite=primestruct.stdlib.map_ownership --no-skip`;
+  `rg -n 'collectionName == "map"|"/map"|/map|std/collections/map|experimental_map|CollectionsMap|\bMap__|\bEntry__|\bMap<' src/semantics/SemanticsValidatorExprScalarPointerMemory.cpp`;
+  `rg --pcre2 -n '/?std/collections/map(?:/|")|/?std/collections/experimental_map(?:/|")|(?<![A-Za-z0-9_/])/?map/|\bmap(?:At|AtUnsafe|Contains|Count|Double|Empty|FromEntries|Insert|New|Oct|Pair|Quad|Quint|Sept|Sext|Single|Triple|TryAt)(?:Ref)?\b|\bMap__|\bEntry__|\bCollectionsMap[A-Za-z0-9_]*\b|\bMap<' src/semantics/SemanticsValidatorExprScalarPointerMemory.cpp`;
+  `git diff --check` | failures: none | notes: scalar pointer/memory
+  builtin validation now classifies map-like builtin collection calls through
+  the shared collection type classifier. Both direct residue scans returned no
+  matches. The Python inventory script was intentionally not run.
 - 2026-05-18 10:29 CEST | pass | mode: release | command:
   `cmake --build build-release --target PrimeStruct_semantics_tests`;
   `cd build-release && ./PrimeStruct_semantics_tests --test-case="canonical stdlib map returns are allowed,canonical map borrowed helper calls validate ownership-sensitive values through ref helpers,canonical namespaced map helpers keep builtin key diagnostics for borrowed canonical map receivers,canonical namespaced map _ref helpers include builtin map key rejects for borrowed canonical map receivers,stdlib namespaced map constructor accepts explicit experimental map returns,stdlib namespaced map constructor keeps mismatch diagnostics on explicit experimental map returns" --no-skip`;

@@ -2733,6 +2733,11 @@ Task template:
       `SemanticsValidatorInferCollectionBufferAndMapResolvers.cpp` derives
       rooted map alias checks and map collection alias tokens from
       `collections.map_constructors` metadata; its inventory cap is zero.
+    - 2026-05-18:
+      `SemanticsValidatorExprScalarPointerMemory.cpp` derives map-like
+      builtin collection matching through the shared collection type
+      classifier instead of a direct `map` collection token; its inventory cap
+      is zero.
     - Tighten or replace the TODO-4473 and TODO-4472 allowed-count
       inventories as traces are deleted; the final TODO-4464 state is zero
       tolerance for all PrimeStruct-map-specific production C++ traces, not a
