@@ -2348,6 +2348,12 @@ Task template:
       string-prefix checks; it now derives those decisions from
       `collections.map_helpers` metadata, with the file inventory cap reduced
       to zero.
+    - 2026-05-18: Shared semantic collection-compatibility helpers no longer
+      name the map helper surface ID directly, compare literal map helper
+      namespaces, or return a hard-coded rooted map helper path; they now
+      resolve helper tokens, unrooted paths, direct-import diagnostics, and
+      removed-helper paths through `collections.map_helpers` metadata, with the
+      file inventory cap reduced to zero.
     - 2026-05-16: Inline native map helper recognition no longer names
       `StdlibSurfaceId::CollectionsMapHelpers` directly; it now resolves the
       helper family through `collections.map_helpers` metadata.

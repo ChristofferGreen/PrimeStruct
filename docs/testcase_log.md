@@ -184,6 +184,20 @@
   of `nullptr`.
 
 ## Recent Test Runs
+- 2026-05-18 09:45 CEST | pass | mode: release | command:
+  `cmake --build build-release --target PrimeStruct_semantics_tests`;
+  `cd build-release && ./PrimeStruct_semantics_tests --test-case="experimental map direct-import shim stays retired,map compatibility count call requires explicit alias definition,map compatibility contains call rejects visible canonical definition,map compatibility tryAt call rejects visible canonical definition,map namespaced at method now validates through slash-path routing,map namespaced tryAt method validates through slash-path routing" --no-skip`;
+  `cmake --build build-release --target PrimeStruct_misc_tests`;
+  `cd build-release && ./PrimeStruct_misc_tests --test-suite=primestruct.stdlib.map_ownership --no-skip`;
+  `cmake --build build-release --target PrimeStruct_backend_ir_tests`;
+  `rg -n 'std/collections/map|experimental_map|/map/|CollectionsMap|map(?:At|AtUnsafe|Contains|Count|Double|Empty|FromEntries|Insert|New|Oct|Pair|Quad|Quint|Sept|Sext|Single|Triple|TryAt)(?:Ref)?\b|\bMap__|\bEntry__|\bMap<' src/semantics/SemanticsValidatorInferCollectionCompatibilityInternal.h`;
+  `rg --pcre2 -n '/?std/collections/map(?:/|")|/?std/collections/experimental_map(?:/|")|(?<![A-Za-z0-9_/])/?map/|\bmap(?:At|AtUnsafe|Contains|Count|Double|Empty|FromEntries|Insert|New|Oct|Pair|Quad|Quint|Sept|Sext|Single|Triple|TryAt)(?:Ref)?\b|\bMap__|\bEntry__|\bCollectionsMap[A-Za-z0-9_]*\b|\bMap<' src/semantics/SemanticsValidatorInferCollectionCompatibilityInternal.h` |
+  failures: none | notes: shared semantic collection-compatibility helpers now
+  derive map helper namespace, unrooted-path, diagnostic, and removed-helper
+  path handling from `collections.map_helpers` metadata; the edited header has
+  zero targeted map-surface matches. The backend IR test binary was build-only
+  because the touched source-lock case still has unrelated stale SoA assertions.
+  The Python inventory scripts were intentionally not run in this pass.
 - 2026-05-18 09:31 CEST | pass | mode: release | command:
   `cmake --build build-release --target PrimeStruct_semantics_tests`;
   `cd build-release && ./PrimeStruct_semantics_tests --test-case="map method calls resolve to definitions,imported map size method calls resolve to local definitions,rooted map helper aliases use ordinary explicit path diagnostics,map namespaced count method expression body arguments validate through stdlib helper target,map namespaced at method expression body arguments validate through slash-path target" --no-skip`;

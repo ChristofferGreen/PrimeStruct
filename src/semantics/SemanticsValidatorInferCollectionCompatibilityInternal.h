@@ -275,6 +275,14 @@ enum class RemovedCollectionHelperFamily {
   return "/std/collections/" + std::string("vector");
 }
 
+[[maybe_unused]] std::string canonicalMapCompatibilityPrefixOrFallback() {
+  const StdlibSurfaceMetadata *metadata = mapHelperSurfaceMetadataLocal();
+  if (metadata != nullptr) {
+    return std::string(metadata->canonicalPath);
+  }
+  return "/std/collections/" + std::string("map");
+}
+
 [[maybe_unused]] std::string
 unrootedCanonicalVectorCompatibilityPrefixOrFallback() {
   std::string prefix = canonicalVectorCompatibilityPrefixOrFallback();
@@ -282,6 +290,89 @@ unrootedCanonicalVectorCompatibilityPrefixOrFallback() {
     prefix.erase(prefix.begin());
   }
   return prefix;
+}
+
+[[maybe_unused]] std::string
+unrootedCanonicalMapCompatibilityPrefixOrFallback() {
+  std::string prefix = canonicalMapCompatibilityPrefixOrFallback();
+  if (!prefix.empty() && prefix.front() == '/') {
+    prefix.erase(prefix.begin());
+  }
+  return prefix;
+}
+
+[[maybe_unused]] bool isMapHelperImportAliasNamespace(
+    std::string_view namespacePrefix) {
+  const StdlibSurfaceMetadata *metadata = mapHelperSurfaceMetadataLocal();
+  if (metadata == nullptr) {
+    return false;
+  }
+  namespacePrefix = trimLeadingSlash(namespacePrefix);
+  for (std::string_view alias : metadata->importAliasSpellings) {
+    if (alias.empty() || alias.find('/') != std::string_view::npos) {
+      continue;
+    }
+    if (namespacePrefix == alias) {
+      return true;
+    }
+  }
+  return false;
+}
+
+[[maybe_unused]] bool isCanonicalMapCompatibilityNamespace(
+    std::string_view namespacePrefix) {
+  return trimLeadingSlash(namespacePrefix) ==
+         unrootedCanonicalMapCompatibilityPrefixOrFallback();
+}
+
+[[maybe_unused]] bool resolveMapCompatibilityMemberToken(
+    std::string_view memberToken,
+    std::string &helperNameOut) {
+  helperNameOut.clear();
+  const StdlibSurfaceMetadata *metadata = mapHelperSurfaceMetadataLocal();
+  if (metadata == nullptr) {
+    return false;
+  }
+  return resolvePublishedCollectionHelperMemberToken(
+      memberToken, metadata->id, helperNameOut);
+}
+
+[[maybe_unused]] bool resolveMapCompatibilityResolvedPath(
+    std::string_view resolvedPath,
+    std::string &helperNameOut) {
+  helperNameOut.clear();
+  const StdlibSurfaceMetadata *metadata = mapHelperSurfaceMetadataLocal();
+  if (metadata == nullptr) {
+    return false;
+  }
+  return resolvePublishedCollectionHelperResolvedPath(
+      resolvedPath, metadata->id, helperNameOut);
+}
+
+[[maybe_unused]] bool resolveMapCompatibilityUnrootedPath(
+    std::string_view rawMethodName,
+    std::string &helperNameOut) {
+  std::string rootedPath(trimLeadingSlash(rawMethodName));
+  if (rootedPath.empty()) {
+    return false;
+  }
+  rootedPath.insert(rootedPath.begin(), '/');
+  return resolveMapCompatibilityResolvedPath(rootedPath, helperNameOut);
+}
+
+[[maybe_unused]] std::string rootedMapCompatibilityHelperPath(
+    std::string_view helperName) {
+  const StdlibSurfaceMetadata *metadata = mapHelperSurfaceMetadataLocal();
+  if (metadata == nullptr || helperName.empty()) {
+    return "";
+  }
+  for (std::string_view alias : metadata->importAliasSpellings) {
+    if (alias.empty() || alias.find('/') != std::string_view::npos) {
+      continue;
+    }
+    return "/" + std::string(alias) + "/" + std::string(helperName);
+  }
+  return "";
 }
 
 [[maybe_unused]] bool isCanonicalVectorCompatibilityNamespace(
@@ -455,8 +546,7 @@ legacyExperimentalVectorCompatibilityShorthandTypeText(
       resolvedPath.rfind(experimentalCollectionConstructorRootLocal("map"), 0) == 0) {
     return false;
   }
-  if (!resolvePublishedCollectionHelperResolvedPath(
-          resolvedPath, StdlibSurfaceId::CollectionsMapHelpers, helperNameOut)) {
+  if (!resolveMapCompatibilityResolvedPath(resolvedPath, helperNameOut)) {
     return false;
   }
   return isPublishedMapBaseHelperName(helperNameOut) ||
@@ -561,8 +651,10 @@ legacyExperimentalVectorCompatibilityShorthandTypeText(
 }
 
 [[maybe_unused]] std::string directExperimentalMapImportDiagnostic() {
+  const std::string canonicalRoot =
+      canonicalMapCompatibilityPrefixOrFallback() + "/";
   return "direct import of " + legacyExperimentalMapCompatibilityPrefix() +
-         "* is not supported; use /std/collections/map/*";
+         "* is not supported; use " + canonicalRoot + "*";
 }
 
 [[maybe_unused]] bool isDirectRemovedSoaCompatibilityImportPath(
@@ -592,21 +684,14 @@ legacyExperimentalVectorCompatibilityShorthandTypeText(
   rawMethodName = trimLeadingSlash(rawMethodName);
   namespacePrefix = trimLeadingSlash(namespacePrefix);
 
-  if (namespacePrefix == "map" || namespacePrefix == "std/collections/map") {
-    if (!resolvePublishedCollectionHelperMemberToken(
-            rawMethodName, StdlibSurfaceId::CollectionsMapHelpers, helperNameOut)) {
+  if (isMapHelperImportAliasNamespace(namespacePrefix) ||
+      isCanonicalMapCompatibilityNamespace(namespacePrefix)) {
+    if (!resolveMapCompatibilityMemberToken(rawMethodName, helperNameOut)) {
       return false;
     }
-  } else if (rawMethodName.rfind("map/", 0) == 0 ||
-             rawMethodName.rfind("std/collections/map/", 0) == 0) {
-    if (!resolvePublishedCollectionHelperResolvedPath(
-            "/" + std::string(rawMethodName),
-            StdlibSurfaceId::CollectionsMapHelpers,
-            helperNameOut)) {
+  } else if (!resolveMapCompatibilityUnrootedPath(rawMethodName,
+                                                  helperNameOut)) {
       return false;
-    }
-  } else {
-    return false;
   }
 
   return isPublishedMapBaseHelperName(helperNameOut) ||
@@ -651,7 +736,8 @@ legacyExperimentalVectorCompatibilityShorthandTypeText(
   if (namespacePrefix == vectorCanonicalPath) {
     return setVectorLike(rawMethodName, false);
   }
-  if (namespacePrefix == "map" || namespacePrefix == "std/collections/map") {
+  if (isMapHelperImportAliasNamespace(namespacePrefix) ||
+      isCanonicalMapCompatibilityNamespace(namespacePrefix)) {
     return setMap(rawMethodName);
   }
   if (rawMethodName.rfind("array/", 0) == 0) {
@@ -668,15 +754,8 @@ legacyExperimentalVectorCompatibilityShorthandTypeText(
         rawMethodName.substr(vectorCanonicalPrefix.size()),
         false);
   }
-  if (rawMethodName.rfind("map/", 0) == 0 ||
-      rawMethodName.rfind("std/collections/map/", 0) == 0) {
-    std::string helperName;
-    if (!resolvePublishedCollectionHelperResolvedPath(
-            "/" + std::string(rawMethodName),
-            StdlibSurfaceId::CollectionsMapHelpers,
-            helperName)) {
-      return false;
-    }
+  std::string helperName;
+  if (resolveMapCompatibilityUnrootedPath(rawMethodName, helperName)) {
     return setMap(helperName);
   }
   return false;
@@ -701,7 +780,7 @@ legacyExperimentalVectorCompatibilityShorthandTypeText(
   if (!isPublishedMapBaseHelperName(helperName)) {
     return "";
   }
-  return "/map/" + std::string(helperName);
+  return rootedMapCompatibilityHelperPath(helperName);
 }
 
 } // namespace

@@ -2547,6 +2547,21 @@ main() {
             "resolveCanonicalCompatibilityMapHelperNameFromResolvedPath(") !=
         std::string::npos);
   CHECK(collectionCompatibilityInternalSource.find(
+            "StdlibSurfaceId::CollectionsMapHelpers") ==
+        std::string::npos);
+  CHECK(collectionCompatibilityInternalSource.find(
+            "namespacePrefix == \"map\"") ==
+        std::string::npos);
+  CHECK(collectionCompatibilityInternalSource.find(
+            "rawMethodName.rfind(\"map/\", 0)") ==
+        std::string::npos);
+  CHECK(collectionCompatibilityInternalSource.find(
+            "resolveMapCompatibilityUnrootedPath(") !=
+        std::string::npos);
+  CHECK(collectionCompatibilityInternalSource.find(
+            "rootedMapCompatibilityHelperPath(") !=
+        std::string::npos);
+  CHECK(collectionCompatibilityInternalSource.find(
             "StdlibSurfaceId::CollectionsVectorHelperSurface") ==
         std::string::npos);
   CHECK(collectionCompatibilityInternalSource.find(

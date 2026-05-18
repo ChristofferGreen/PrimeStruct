@@ -212,6 +212,9 @@ TEST_CASE("canonical map surface owns standalone stdlib implementation") {
   const std::string inferCollectionCompatibilitySource =
       readText(repoRoot() / "src" / "semantics" /
                "SemanticsValidatorInferCollectionCompatibility.cpp");
+  const std::string inferCollectionCompatibilityInternalSource =
+      readText(repoRoot() / "src" / "semantics" /
+               "SemanticsValidatorInferCollectionCompatibilityInternal.h");
   const std::string inferCollectionDispatchSetupSource =
       readText(repoRoot() / "src" / "semantics" /
                "SemanticsValidatorInferCollectionDispatchSetup.cpp");
@@ -817,6 +820,20 @@ TEST_CASE("canonical map surface owns standalone stdlib implementation") {
             "findStdlibSurfaceMetadataByBridgeKey(\"collections.map_helpers\")") !=
         std::string::npos);
   CHECK(inferCollectionCompatibilitySource.find("const std::string alias = \"/map/\" + std::string(helperName)") ==
+        std::string::npos);
+  CHECK(inferCollectionCompatibilityInternalSource.find("StdlibSurfaceId::CollectionsMapHelpers") ==
+        std::string::npos);
+  CHECK(inferCollectionCompatibilityInternalSource.find("namespacePrefix == \"map\"") ==
+        std::string::npos);
+  CHECK(inferCollectionCompatibilityInternalSource.find("rawMethodName.rfind(\"map/\", 0)") ==
+        std::string::npos);
+  CHECK(inferCollectionCompatibilityInternalSource.find("use /std/collections/map/*") ==
+        std::string::npos);
+  CHECK(inferCollectionCompatibilityInternalSource.find("resolveMapCompatibilityUnrootedPath(") !=
+        std::string::npos);
+  CHECK(inferCollectionCompatibilityInternalSource.find("rootedMapCompatibilityHelperPath(") !=
+        std::string::npos);
+  CHECK(inferCollectionCompatibilityInternalSource.find("mapHelperSurfaceMetadataLocal()") !=
         std::string::npos);
   CHECK(inferCollectionDispatchSetupSource.find("resolvedPath == \"/map/at_ref\"") ==
         std::string::npos);

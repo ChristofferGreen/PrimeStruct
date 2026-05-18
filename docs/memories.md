@@ -721,7 +721,12 @@ This file stores durable session-derived facts that are useful in later work. Ke
   resolution should derive canonical map helper IDs, root-alias helper paths,
   direct-call compatibility helper names, and explicit rooted-helper detection
   from `collections.map_helpers` metadata instead of direct map surface IDs,
-  literal rooted helper tables, or raw rooted path-prefix checks.
+  literal rooted helper tables, or raw rooted path-prefix checks; shared
+  semantic collection-compatibility helpers should resolve map helper tokens,
+  unrooted helper paths, direct-import diagnostics, and removed-helper rooted
+  paths from `collections.map_helpers` metadata instead of direct map helper
+  surface IDs, literal namespace comparisons, or hard-coded rooted path
+  construction.
   The stale
   rooted-alias struct-return semantic fixture now expects `values.at()` to use
   the canonical map helper return type instead of a user-defined `/map/at`
