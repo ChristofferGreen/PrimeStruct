@@ -730,6 +730,10 @@ This file stores durable session-derived facts that are useful in later work. Ke
   canonical map type-root checks, import matching, explicit helper-name routing,
   removed-helper path construction, and explicit rooted-alias detection from
   `collections.map_helpers` metadata rather than literal map path strings.
+  Semantic validation builtin map insert/read rewrites should also derive
+  insert/read member names, canonical helper paths, constructor detection, and
+  removed rooted access alias paths from `collections.map_helpers` and map
+  constructor metadata instead of direct map surface IDs or path strings.
   The stale
   rooted-alias struct-return semantic fixture now expects `values.at()` to use
   the canonical map helper return type instead of a user-defined `/map/at`

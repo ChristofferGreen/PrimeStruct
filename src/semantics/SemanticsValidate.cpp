@@ -5595,7 +5595,7 @@ std::optional<semantics::BindingInfo> extractDefinitionReturnBinding(const Defin
 
 std::string_view resolveBuiltinMapInsertSurfaceMemberName(std::string_view name) {
   const StdlibSurfaceMetadata *metadata =
-      findStdlibSurfaceMetadata(StdlibSurfaceId::CollectionsMapHelpers);
+      mapHelperSurfaceMetadataLocal();
   if (metadata == nullptr) {
     return {};
   }
@@ -5617,8 +5617,12 @@ std::string_view resolveBuiltinMapInsertSurfaceMemberName(std::string_view name)
 }
 
 std::string canonicalBuiltinMapInsertSurfacePath(bool receiverIsReference) {
+  const StdlibSurfaceMetadata *metadata = mapHelperSurfaceMetadataLocal();
+  if (metadata == nullptr) {
+    return {};
+  }
   return stdlibSurfaceCanonicalHelperPath(
-      StdlibSurfaceId::CollectionsMapHelpers,
+      metadata->id,
       receiverIsReference ? "insert_ref" : "insert");
 }
 
@@ -5627,27 +5631,21 @@ std::string resolveBuiltinMapReadSurfaceMemberName(std::string_view name) {
   if (!normalizedName.empty() && normalizedName.front() == '/') {
     normalizedName.erase(normalizedName.begin());
   }
-  constexpr std::string_view canonicalPrefix = "std/collections/map/";
-  constexpr std::string_view aliasPrefix = "map/";
-  if (normalizedName.rfind(canonicalPrefix, 0) == 0) {
-    normalizedName.erase(0, canonicalPrefix.size());
-    name = normalizedName;
-  } else if (normalizedName.rfind(aliasPrefix, 0) == 0) {
-    normalizedName.erase(0, aliasPrefix.size());
-    name = normalizedName;
-  }
-  normalizedName = std::string(name);
   const size_t generatedSuffix = normalizedName.find("__t");
   if (generatedSuffix != std::string::npos) {
     normalizedName.erase(generatedSuffix);
-    name = normalizedName;
   }
-  if (name == "count" || name == "count_ref" || name == "size" ||
-      name == "contains" || name == "contains_ref" ||
-      name == "tryAt" || name == "tryAt_ref" ||
-      name == "at" || name == "at_ref" ||
-      name == "at_unsafe" || name == "at_unsafe_ref") {
-    return name == "size" ? std::string("count") : std::string(name);
+  if (normalizedName == "size") {
+    return "count";
+  }
+  const std::string memberName =
+      metadataBackedMapHelperMethodName(normalizedName);
+  if (memberName == "count" || memberName == "count_ref" ||
+      memberName == "contains" || memberName == "contains_ref" ||
+      memberName == "tryAt" || memberName == "tryAt_ref" ||
+      memberName == "at" || memberName == "at_ref" ||
+      memberName == "at_unsafe" || memberName == "at_unsafe_ref") {
+    return memberName;
   }
   return {};
 }
@@ -5687,16 +5685,17 @@ bool isBuiltinCanonicalMapConstructorExpr(
     if (specializationSuffix != std::string::npos) {
       path.erase(specializationSuffix);
     }
-    if (!path.empty() && path.front() != '/') {
-      return path == "map";
-    }
-    return path == "/std/collections/map/map";
+    return isResolvedMapConstructorPath(path);
   };
   if (expr.name == "map" || isCanonicalConstructorPath(expr.name)) {
     return true;
   }
-  if (expr.namespacePrefix == "/std/collections/map" &&
-      (expr.name == "map" || expr.name.rfind("map__", 0) == 0)) {
+  const std::string namespacedConstructorPath =
+      !expr.namespacePrefix.empty() && expr.name.find('/') == std::string::npos
+          ? expr.namespacePrefix + "/" + expr.name
+          : std::string{};
+  if (!namespacedConstructorPath.empty() &&
+      isCanonicalConstructorPath(namespacedConstructorPath)) {
     return true;
   }
   for (const std::string &candidatePath :
@@ -5860,19 +5859,26 @@ void rewriteBuiltinMapInsertExpr(
            rootName == "ContainerError" || rootName == "GfxError";
   };
   auto explicitRemovedMapCompatibilityReadPath = [&]() -> std::string {
-    std::string normalized = scopedExprName;
-    if (!normalized.empty() && normalized.front() != '/') {
-      normalized.insert(normalized.begin(), '/');
-    }
-    if (normalized.rfind("/map/", 0) != 0) {
+    const std::string helperName =
+        metadataBackedMapHelperRootAliasMethodName(scopedExprName);
+    if (helperName.empty()) {
       return {};
     }
-    const std::string helperName = normalized.substr(std::string("/map/").size());
     if (helperName != "at" && helperName != "at_unsafe" &&
         helperName != "at_ref" && helperName != "at_unsafe_ref") {
       return {};
     }
-    return "/map/" + helperName;
+    const StdlibSurfaceMetadata *metadata = mapHelperSurfaceMetadataLocal();
+    if (metadata == nullptr) {
+      return {};
+    }
+    for (std::string_view alias : metadata->importAliasSpellings) {
+      if (alias.empty() || alias.find('/') != std::string_view::npos) {
+        continue;
+      }
+      return "/" + std::string(alias) + "/" + helperName;
+    }
+    return {};
   }();
   if (matchesBuiltinAccessCall &&
       !explicitRemovedMapCompatibilityReadPath.empty() &&
@@ -5924,10 +5930,13 @@ void rewriteBuiltinMapInsertExpr(
       helperName += "_ref";
     }
     if (matchesBuiltinReadMethod && isCanonicalMapReadHelper) {
-      helperName = "/std/collections/map/" + helperName;
+      helperName = metadataBackedCanonicalMapHelperPath(helperName);
     }
     if (matchesBuiltinAccessCall) {
-      helperName = "/std/collections/map/" + helperName;
+      helperName = metadataBackedCanonicalMapHelperPath(helperName);
+    }
+    if (helperName.empty()) {
+      return;
     }
     expr.name = helperName;
     expr.namespacePrefix.clear();

@@ -2719,6 +2719,11 @@ Task template:
       access-target preservation, so
       `src/ir_lowerer/IrLowererAccessTargetResolution.cpp` should keep using
       the shared lowerer map backing predicate for preservation checks.
+    - 2026-05-18: `SemanticsValidate.cpp` builtin map insert/read rewrite now
+      derives map helper insert/read members, canonical helper paths,
+      constructor detection, and removed rooted access alias paths from
+      `collections.map_helpers` / map constructor metadata; its inventory cap
+      is zero.
     - Tighten or replace the TODO-4473 and TODO-4472 allowed-count
       inventories as traces are deleted; the final TODO-4464 state is zero
       tolerance for all PrimeStruct-map-specific production C++ traces, not a

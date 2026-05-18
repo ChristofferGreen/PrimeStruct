@@ -184,6 +184,19 @@
   of `nullptr`.
 
 ## Recent Test Runs
+- 2026-05-18 10:04 CEST | pass | mode: release | command:
+  `cmake --build build-release --target PrimeStruct_semantics_tests`;
+  `cd build-release && ./PrimeStruct_semantics_tests --test-case="canonical map borrowed helper calls validate ownership-sensitive values through ref helpers" --no-skip`;
+  `cd build-release && ./PrimeStruct_semantics_tests --test-case="builtin canonical map insert method sugar validates before lowering ownership-sensitive values,constructor-backed builtin map insert method sugar avoids insert builtin rewrite,canonical map insert helpers validate on value and borrowed mutation surfaces,canonical map borrowed helper calls validate ownership-sensitive values through ref helpers,map compatibility at call requires explicit alias definition,stdlib-owned map compatibility at call falls back to canonical helper,map namespaced at method now validates through slash-path routing" --no-skip`;
+  `cmake --build build-release --target PrimeStruct_misc_tests`;
+  `cd build-release && ./PrimeStruct_misc_tests --test-suite=primestruct.stdlib.map_ownership --no-skip`;
+  `rg -n 'std/collections/map|experimental_map|/map/|CollectionsMap|map(?:At|AtUnsafe|Contains|Count|Double|Empty|FromEntries|Insert|New|Oct|Pair|Quad|Quint|Sept|Sext|Single|Triple|TryAt)(?:Ref)?\b|\bMap__|\bEntry__|\bMap<' src/semantics/SemanticsValidate.cpp`;
+  `rg --pcre2 -n '/?std/collections/map(?:/|")|/?std/collections/experimental_map(?:/|")|(?<![A-Za-z0-9_/])/?map/|\bmap(?:At|AtUnsafe|Contains|Count|Double|Empty|FromEntries|Insert|New|Oct|Pair|Quad|Quint|Sept|Sext|Single|Triple|TryAt)(?:Ref)?\b|\bMap__|\bEntry__|\bCollectionsMap[A-Za-z0-9_]*\b|\bMap<' src/semantics/SemanticsValidate.cpp` |
+  failures: none after stabilizing the focused borrowed-helper case | notes:
+  the first single-case rerun failed with `unsupported return type on
+  /borrowMap`; allowing resolvable struct types inside collection return
+  arguments fixed it. `SemanticsValidate.cpp` now has zero targeted
+  map-surface matches. The Python inventory script was intentionally not run.
 - 2026-05-18 09:51 CEST | pass | mode: release | command:
   `cmake --build build-release --target PrimeStruct_semantics_tests`
   initially failed on an unused `unrootedCanonicalMapHelperRootPathLocal`

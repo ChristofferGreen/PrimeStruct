@@ -503,7 +503,29 @@ TEST_CASE("canonical map surface owns standalone stdlib implementation") {
   CHECK(semanticsSource.find("kBuiltinCanonicalMapInsertBuiltinPath") == std::string::npos);
   CHECK(semanticsSource.find("\"/std/collections/map/insert_builtin\"") == std::string::npos);
   CHECK(semanticsSource.find("isCanonicalBuiltinMapReadHelperName") != std::string::npos);
-  CHECK(semanticsSource.find("helperName = \"/std/collections/map/\" + helperName") !=
+  CHECK(semanticsSource.find(
+            "StdlibSurfaceId::CollectionsMapHelpers") == std::string::npos);
+  CHECK(semanticsSource.find(
+            "canonicalPrefix = \"std/collections/map/\"") == std::string::npos);
+  CHECK(semanticsSource.find("aliasPrefix = \"map/\"") ==
+        std::string::npos);
+  CHECK(semanticsSource.find("path == \"/std/collections/map/map\"") ==
+        std::string::npos);
+  CHECK(semanticsSource.find(
+            "expr.namespacePrefix == \"/std/collections/map\"") ==
+        std::string::npos);
+  CHECK(semanticsSource.find("normalized.rfind(\"/map/\", 0)") ==
+        std::string::npos);
+  CHECK(semanticsSource.find(
+            "\"/std/collections/map/\" + helperName") ==
+        std::string::npos);
+  CHECK(semanticsSource.find(
+            "metadataBackedMapHelperMethodName(normalizedName)") !=
+        std::string::npos);
+  CHECK(semanticsSource.find(
+            "metadataBackedCanonicalMapHelperPath(helperName)") !=
+        std::string::npos);
+  CHECK(semanticsSource.find("isResolvedMapConstructorPath(path)") !=
         std::string::npos);
   CHECK(validatorSource.find("name.rfind(\"map/\", 0)") ==
         std::string::npos);

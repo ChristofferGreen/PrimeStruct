@@ -116,6 +116,13 @@ ReturnKind getReturnKind(const Definition &def,
           return true;
         }
       }
+      if (!resolveStructTypePath(normalizedArg, def.namespacePrefix, structNames).empty()) {
+        return true;
+      }
+      auto importIt = importAliases.find(normalizedArg);
+      if (importIt != importAliases.end() && structNames.count(importIt->second) > 0) {
+        return true;
+      }
       return false;
     };
     std::function<ReturnKind(const std::string &)> resolveReturnTypeKind =
