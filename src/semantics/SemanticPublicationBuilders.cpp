@@ -471,6 +471,32 @@ std::string experimentalCollectionTypeForPublication(std::string_view collection
   return root;
 }
 
+bool matchesStdlibSurfaceRootForPublication(std::string_view typeName,
+                                            const StdlibSurfaceMetadata *metadata) {
+  if (metadata == nullptr) {
+    return false;
+  }
+  const std::string normalizedType = normalizeBindingTypeName(std::string(typeName));
+  auto matches = [&](std::string_view spelling) {
+    if (spelling.empty()) {
+      return false;
+    }
+    std::string rootedSpelling(spelling);
+    if (rootedSpelling.front() != '/') {
+      rootedSpelling.insert(rootedSpelling.begin(), '/');
+    }
+    std::string unrootedSpelling = rootedSpelling;
+    unrootedSpelling.erase(unrootedSpelling.begin());
+    return normalizedType == rootedSpelling || normalizedType == unrootedSpelling;
+  };
+  if (matches(metadata->canonicalPath)) {
+    return true;
+  }
+  return std::any_of(metadata->importAliasSpellings.begin(),
+                     metadata->importAliasSpellings.end(),
+                     matches);
+}
+
 bool isUnspecializedExperimentalMapBackingTypeForPublication(std::string typeName) {
   typeName = normalizeBindingTypeName(std::move(typeName));
   if (!typeName.empty() && typeName.front() == '/') {
@@ -493,9 +519,8 @@ std::string normalizeCollectionSpecializationTypeName(std::string typeName) {
       typeName == experimentalCollectionTypeForPublication("vector", "Vector", true)) {
     return "vector";
   }
-  if (typeName == "/map" || typeName == "std/collections/map" ||
-      typeName == "/std/collections/map" || typeName == "Map" ||
-      typeName == "/Map" ||
+  if (matchesStdlibSurfaceRootForPublication(typeName,
+                                             mapHelperSurfaceMetadataLocal()) ||
       isUnspecializedExperimentalMapBackingTypeForPublication(typeName)) {
     return "map";
   }
@@ -599,8 +624,14 @@ void publishCollectionSpecializationForBinding(
     entry.helperSurfaceId = StdlibSurfaceId::CollectionsColumnarHelpers;
     entry.constructorSurfaceId = StdlibSurfaceId::CollectionsColumnarConstructors;
   } else if (entry.collectionFamily == "map") {
-    entry.helperSurfaceId = StdlibSurfaceId::CollectionsMapHelpers;
-    entry.constructorSurfaceId = StdlibSurfaceId::CollectionsMapConstructors;
+    if (const auto *helperMetadata = mapHelperSurfaceMetadataLocal();
+        helperMetadata != nullptr) {
+      entry.helperSurfaceId = helperMetadata->id;
+    }
+    if (const auto *constructorMetadata = mapConstructorSurfaceMetadataLocal();
+        constructorMetadata != nullptr) {
+      entry.constructorSurfaceId = constructorMetadata->id;
+    }
   }
 
   entry.scopePathId = semanticProgramInternCallTargetString(state.semanticProgram, entry.scopePath);

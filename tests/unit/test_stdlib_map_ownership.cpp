@@ -127,6 +127,9 @@ TEST_CASE("canonical map surface owns standalone stdlib implementation") {
   const std::string internalSource = readText(collectionsFile("internal_map.prime"));
   const std::string surfacesSource = readText(collectionsFile("surfaces.psmeta"));
   const std::string registrySource = readText(repoRoot() / "src" / "StdlibSurfaceRegistry.cpp");
+  const std::string publicationBuildersSource =
+      readText(repoRoot() / "src" / "semantics" /
+               "SemanticPublicationBuilders.cpp");
   const std::string semanticsSource = readText(repoRoot() / "src" / "semantics" / "SemanticsValidate.cpp");
   const std::string validatorSource =
       readText(repoRoot() / "src" / "semantics" / "SemanticsValidator.cpp");
@@ -331,6 +334,7 @@ TEST_CASE("canonical map surface owns standalone stdlib implementation") {
   REQUIRE(!internalSource.empty());
   REQUIRE(!surfacesSource.empty());
   REQUIRE(!registrySource.empty());
+  REQUIRE(!publicationBuildersSource.empty());
   REQUIRE(!semanticsSource.empty());
   REQUIRE(!validatorSource.empty());
   REQUIRE(!callResolutionSource.empty());
@@ -454,6 +458,20 @@ TEST_CASE("canonical map surface owns standalone stdlib implementation") {
   CHECK(registrySource.find("CollectionsMapConstructorMembers") == std::string::npos);
   CHECK(registrySource.find("resolveCollectionsMapHelperMemberName") == std::string::npos);
   CHECK(registrySource.find("\"/std/collections/map/insert\"") == std::string::npos);
+  CHECK(publicationBuildersSource.find("typeName == \"/map\"") ==
+        std::string::npos);
+  CHECK(publicationBuildersSource.find("typeName == \"std/collections/map\"") ==
+        std::string::npos);
+  CHECK(publicationBuildersSource.find(
+            "StdlibSurfaceId::CollectionsMapHelpers") ==
+        std::string::npos);
+  CHECK(publicationBuildersSource.find(
+            "StdlibSurfaceId::CollectionsMapConstructors") ==
+        std::string::npos);
+  CHECK(publicationBuildersSource.find("mapHelperSurfaceMetadataLocal()") !=
+        std::string::npos);
+  CHECK(publicationBuildersSource.find("mapConstructorSurfaceMetadataLocal()") !=
+        std::string::npos);
 
   CHECK(semanticsSource.find("path == \"mapSingle\"") == std::string::npos);
   CHECK(semanticsSource.find("path == \"/std/collections/mapSingle\"") ==

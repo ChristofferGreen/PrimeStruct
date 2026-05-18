@@ -664,7 +664,10 @@ This file stores durable session-derived facts that are useful in later work. Ke
   stdlib surface metadata instead of direct map path literals; semantic vector
   helper method-target normalization should derive map helper member names
   through stdlib surface metadata instead of direct rooted/canonical map helper
-  prefix stripping.
+  prefix stripping; semantic-product collection specialization publication
+  should derive map type-root recognition and helper/constructor surface ids
+  through stdlib surface metadata instead of direct map paths and map surface
+  enum constants.
   The stale
   rooted-alias struct-return semantic fixture now expects `values.at()` to use
   the canonical map helper return type instead of a user-defined `/map/at`
