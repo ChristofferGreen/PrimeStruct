@@ -1639,6 +1639,11 @@ TEST_CASE("canonical map surface owns standalone stdlib implementation") {
   CHECK(argumentValidationCollectionsSource.find("resolvedMapHelperName") ==
         std::string::npos);
   CHECK(argumentValidationCollectionsSource.find(
+            "methodMapAccessDefinitionReturnsString") ==
+        std::string::npos);
+  CHECK(argumentValidationCollectionsSource.find("isExplicitMapAccessPath") ==
+        std::string::npos);
+  CHECK(argumentValidationCollectionsSource.find(
             "findStdlibSurfaceMetadataByBridgeKey(\"collections.map_helpers\")") !=
         std::string::npos);
   CHECK(argumentValidationCollectionsSource.find(
@@ -1657,6 +1662,11 @@ TEST_CASE("canonical map surface owns standalone stdlib implementation") {
             "getCanonicalKeyValueAccessBuiltinName(") !=
         std::string::npos);
   CHECK(argumentValidationCollectionsSource.find("resolvedKeyValueHelperName") !=
+        std::string::npos);
+  CHECK(argumentValidationCollectionsSource.find(
+            "methodKeyValueAccessDefinitionReturnsString") !=
+        std::string::npos);
+  CHECK(argumentValidationCollectionsSource.find("isExplicitKeyValueAccessPath") !=
         std::string::npos);
   CHECK(collectionAccessValidationSource.find("path == \"/map/at\"") ==
         std::string::npos);

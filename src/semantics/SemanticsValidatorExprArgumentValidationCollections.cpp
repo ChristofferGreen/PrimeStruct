@@ -172,7 +172,7 @@ bool SemanticsValidator::isStringExprForArgumentValidation(
   if (arg.kind == Expr::Kind::Call) {
     const std::string resolvedPath = resolveCalleePath(arg);
     const std::string resolvedBasePath = stripGeneratedHelperSuffix(resolvedPath);
-    auto methodMapAccessDefinitionReturnsString = [&]() {
+    auto methodKeyValueAccessDefinitionReturnsString = [&]() {
       if (arg.args.size() != 2) {
         return false;
       }
@@ -229,7 +229,7 @@ bool SemanticsValidator::isStringExprForArgumentValidation(
       return definitionReturnTypeTextForArgumentValidation(*defIt->second, returnTypeText) &&
              normalizeBindingTypeName(returnTypeText) == "string";
     };
-    if (methodMapAccessDefinitionReturnsString()) {
+    if (methodKeyValueAccessDefinitionReturnsString()) {
       return true;
     }
     auto methodVectorAccessDefinitionReturnsString = [&]() {
@@ -267,9 +267,9 @@ bool SemanticsValidator::isStringExprForArgumentValidation(
     if (methodVectorAccessDefinitionReturnsString()) {
       return true;
     }
-    const bool isExplicitMapAccessPath =
+    const bool isExplicitKeyValueAccessPath =
         isCanonicalKeyValueAccessResolvedPath(resolvedBasePath);
-    if (isExplicitMapAccessPath) {
+    if (isExplicitKeyValueAccessPath) {
       auto defIt = defMap_.find(resolvedPath);
       if (defIt == defMap_.end()) {
         defIt = defMap_.find(resolvedBasePath);
@@ -286,7 +286,7 @@ bool SemanticsValidator::isStringExprForArgumentValidation(
         defMap_.find(resolvedPath) == defMap_.end() ||
         isStdNamespacedVectorCompatibilityHelperPath(resolvedPath, "at") ||
         isStdNamespacedVectorCompatibilityHelperPath(resolvedPath, "at_unsafe") ||
-        isExplicitMapAccessPath;
+        isExplicitKeyValueAccessPath;
     std::string accessName;
     if (treatAsBuiltinAccess &&
         getCanonicalKeyValueAccessBuiltinName(arg, accessName) &&
