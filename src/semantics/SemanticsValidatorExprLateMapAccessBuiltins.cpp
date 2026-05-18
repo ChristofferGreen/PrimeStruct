@@ -57,7 +57,7 @@ bool isCanonicalKeyValueHelperResolvedPath(const std::string &path,
          resolvedHelperName == helperName;
 }
 
-bool isCanonicalMapAccessHelperPath(const std::string &path) {
+bool isCanonicalKeyValueAccessHelperPath(const std::string &path) {
   std::string resolvedHelperName;
   if (!resolveCanonicalKeyValueHelperNameFromSpelling(path, resolvedHelperName)) {
     return false;
@@ -67,8 +67,8 @@ bool isCanonicalMapAccessHelperPath(const std::string &path) {
          resolvedHelperName == "at_unsafe_ref";
 }
 
-bool getCanonicalMapAccessBuiltinName(const Expr &candidate,
-                                      std::string &helperOut) {
+bool getCanonicalKeyValueAccessBuiltinName(const Expr &candidate,
+                                           std::string &helperOut) {
   helperOut.clear();
   if (candidate.kind != Expr::Kind::Call || candidate.isMethodCall ||
       candidate.name.empty() || candidate.args.size() != 2) {
@@ -157,10 +157,10 @@ bool isExperimentalMapTypeText(const std::string &typeText) {
   }
 }
 
-bool isSourceSpelledCanonicalMapAccessCall(const Expr &expr) {
+bool isSourceSpelledCanonicalKeyValueAccessCall(const Expr &expr) {
   const std::string &sourceName =
       expr.sourceName.empty() ? expr.name : expr.sourceName;
-  return isCanonicalMapAccessHelperPath(sourceName);
+  return isCanonicalKeyValueAccessHelperPath(sourceName);
 }
 
 } // namespace
@@ -187,11 +187,11 @@ bool SemanticsValidator::validateExprLateMapAccessBuiltins(
     const bool receiverIsExperimentalMap =
         inferQueryExprTypeText(receiverExpr, params, locals, receiverTypeText) &&
         isExperimentalMapTypeText(receiverTypeText);
-    const bool canonicalMapAccessDiagnostic =
-        isSourceSpelledCanonicalMapAccessCall(expr) ||
+    const bool canonicalKeyValueAccessDiagnostic =
+        isSourceSpelledCanonicalKeyValueAccessCall(expr) ||
         expr.sourceIsMethodCall ||
         (receiverIsExperimentalMap && expr.isMethodCall);
-    if (canonicalMapAccessDiagnostic) {
+    if (canonicalKeyValueAccessDiagnostic) {
       return failLateMapAccessBuiltinDiagnostic(
           "argument type mismatch for " +
           canonicalKeyValueHelperPathLocal(helperName) +
@@ -282,14 +282,15 @@ bool SemanticsValidator::validateExprLateMapAccessBuiltins(
   }
 
   if (!expr.isMethodCall &&
-      getCanonicalMapAccessBuiltinName(expr, builtinName) &&
+      getCanonicalKeyValueAccessBuiltinName(expr, builtinName) &&
       expr.args.size() == 2 && !hasNamedArguments(expr.argNames)) {
     if (!isMapLikeReceiver(expr.args.front()) &&
         isMapLikeReceiver(expr.args[1])) {
-      Expr rewrittenMapAccessCall = expr;
-      std::swap(rewrittenMapAccessCall.args[0], rewrittenMapAccessCall.args[1]);
+      Expr rewrittenKeyValueAccessCall = expr;
+      std::swap(rewrittenKeyValueAccessCall.args[0],
+                rewrittenKeyValueAccessCall.args[1]);
       handledOut = true;
-      return validateExpr(params, locals, rewrittenMapAccessCall);
+      return validateExpr(params, locals, rewrittenKeyValueAccessCall);
     }
   }
 
@@ -324,7 +325,7 @@ bool SemanticsValidator::validateExprLateMapAccessBuiltins(
   }
 
   if (!expr.isMethodCall &&
-      getCanonicalMapAccessBuiltinName(expr, builtinName) &&
+      getCanonicalKeyValueAccessBuiltinName(expr, builtinName) &&
       !context.shouldBuiltinValidateBareMapAccessCall) {
     Expr rewrittenKeyValueHelperCall;
     if (this->tryRewriteBareMapHelperCall(expr, builtinName,
@@ -494,7 +495,7 @@ bool SemanticsValidator::validateExprLateMapAccessBuiltins(
   };
   std::string ignoredRootMapKeyType;
   if (!expr.isMethodCall &&
-      getCanonicalMapAccessBuiltinName(expr, builtinName) &&
+      getCanonicalKeyValueAccessBuiltinName(expr, builtinName) &&
       expr.args.size() == 2 &&
       !hasResolvedDefinition(resolved) &&
       (context.shouldBuiltinValidateBareMapAccessCall ||
@@ -515,7 +516,7 @@ bool SemanticsValidator::validateExprLateMapAccessBuiltins(
         hasBareMapOperands ? expr.args[receiverIndex] : expr.args.front();
     const Expr &keyExpr =
         hasBareMapOperands ? expr.args[keyIndex] : expr.args[1];
-    if (isCanonicalMapAccessHelperPath(expr.name) &&
+    if (isCanonicalKeyValueAccessHelperPath(expr.name) &&
         !hasVisibleStdlibMapBuiltinDefinition(builtinName)) {
       return failLateMapAccessBuiltinDiagnostic(
           "unknown call target: " + canonicalKeyValueHelperPathLocal(builtinName));
@@ -553,7 +554,7 @@ bool SemanticsValidator::validateExprLateMapAccessBuiltins(
   }
 
   if (!expr.isMethodCall &&
-      getCanonicalMapAccessBuiltinName(expr, builtinName) &&
+      getCanonicalKeyValueAccessBuiltinName(expr, builtinName) &&
       expr.args.size() == 2 && !hasResolvedDefinition(resolved) &&
       hasVisibleStdlibMapBuiltinDefinition(builtinName)) {
     size_t receiverIndex = 0;

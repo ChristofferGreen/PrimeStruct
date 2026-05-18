@@ -1479,6 +1479,17 @@ TEST_CASE("canonical map surface owns standalone stdlib implementation") {
         std::string::npos);
   CHECK(lateMapAccessBuiltinsSource.find("isCanonicalMapHelperResolvedPath(") ==
         std::string::npos);
+  CHECK(lateMapAccessBuiltinsSource.find("isCanonicalMapAccessHelperPath(") ==
+        std::string::npos);
+  CHECK(lateMapAccessBuiltinsSource.find("getCanonicalMapAccessBuiltinName(") ==
+        std::string::npos);
+  CHECK(lateMapAccessBuiltinsSource.find(
+            "isSourceSpelledCanonicalMapAccessCall(") ==
+        std::string::npos);
+  CHECK(lateMapAccessBuiltinsSource.find("canonicalMapAccessDiagnostic") ==
+        std::string::npos);
+  CHECK(lateMapAccessBuiltinsSource.find("rewrittenMapAccessCall") ==
+        std::string::npos);
   CHECK(lateMapAccessBuiltinsSource.find("rewrittenMapHelperCall") ==
         std::string::npos);
   CHECK(lateMapAccessBuiltinsSource.find(
@@ -1491,6 +1502,19 @@ TEST_CASE("canonical map surface owns standalone stdlib implementation") {
         std::string::npos);
   CHECK(lateMapAccessBuiltinsSource.find(
             "isCanonicalKeyValueHelperResolvedPath(") !=
+        std::string::npos);
+  CHECK(lateMapAccessBuiltinsSource.find(
+            "isCanonicalKeyValueAccessHelperPath(") !=
+        std::string::npos);
+  CHECK(lateMapAccessBuiltinsSource.find(
+            "getCanonicalKeyValueAccessBuiltinName(") !=
+        std::string::npos);
+  CHECK(lateMapAccessBuiltinsSource.find(
+            "isSourceSpelledCanonicalKeyValueAccessCall(") !=
+        std::string::npos);
+  CHECK(lateMapAccessBuiltinsSource.find("canonicalKeyValueAccessDiagnostic") !=
+        std::string::npos);
+  CHECK(lateMapAccessBuiltinsSource.find("rewrittenKeyValueAccessCall") !=
         std::string::npos);
   CHECK(lateMapAccessBuiltinsSource.find("rewrittenKeyValueHelperCall") !=
         std::string::npos);
