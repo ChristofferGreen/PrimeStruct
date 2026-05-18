@@ -656,6 +656,8 @@ This file stores durable session-derived facts that are useful in later work. Ke
   helper-root, alias-path, constructor-metadata, and namespace-prefix probes
   should use key/value naming around map metadata; semantic infer-struct-return
   collection marker, helper-prefix, and backing-root locals should use
+  key/value naming around map metadata; semantic return-statement collection
+  marker, borrowed-access diagnostic, and backing-root locals should use
   key/value naming around map metadata.
 - Evidence: Field-bound `Map<K, V>` compatibility triage showed generated
   map helper specializations could mask missing `/map/count` aliases unless

@@ -1835,9 +1835,26 @@ TEST_CASE("canonical map surface owns standalone stdlib implementation") {
         std::string::npos);
   CHECK(statementReturnsSource.find("mapConstructorSurfaceMetadataLocal()") !=
         std::string::npos);
-  CHECK(statementReturnsSource.find("mapCollectionMarkerPathLocal()") !=
+  CHECK(statementReturnsSource.find("mapCollectionMarkerPathLocal()") ==
         std::string::npos);
-  CHECK(statementReturnsSource.find("AccessHelpers") != std::string::npos);
+  CHECK(statementReturnsSource.find("isUnknownBorrowedMapAccessMethodDiagnostic") ==
+        std::string::npos);
+  CHECK(statementReturnsSource.find("std::array<std::string_view, 4> AccessHelpers") ==
+        std::string::npos);
+  CHECK(statementReturnsSource.find("mapCollectionMarker") ==
+        std::string::npos);
+  CHECK(statementReturnsSource.find("canonicalMapValueRoot") ==
+        std::string::npos);
+  CHECK(statementReturnsSource.find("keyValueCollectionMarkerPathLocal()") !=
+        std::string::npos);
+  CHECK(statementReturnsSource.find("isUnknownBorrowedKeyValueAccessMethodDiagnostic") !=
+        std::string::npos);
+  CHECK(statementReturnsSource.find("KeyValueAccessHelpers") !=
+        std::string::npos);
+  CHECK(statementReturnsSource.find("keyValueCollectionMarker") !=
+        std::string::npos);
+  CHECK(statementReturnsSource.find("canonicalKeyValueBackingRoot") !=
+        std::string::npos);
   CHECK(inlineCallContextSource.find("collectionMemberRoot(\"map\") + \"map__\"") !=
         std::string::npos);
   CHECK(inlineCallContextSource.find("\"/std/collections/map/map__\"") ==
