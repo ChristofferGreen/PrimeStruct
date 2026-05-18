@@ -628,7 +628,9 @@ This file stores durable session-derived facts that are useful in later work. Ke
   helpers should use key/value naming around map constructor metadata; inline
   packed-args constructor metadata and rewrite helpers should use key/value
   naming around map constructor metadata; inline parameter constructor rewrite
-  helpers should use the same key/value naming.
+  helpers should use the same key/value naming; packed Result constructor
+  metadata and rewrite helpers should use key/value naming around map
+  constructor metadata.
 - Evidence: Field-bound `Map<K, V>` compatibility triage showed generated
   map helper specializations could mask missing `/map/count` aliases unless
   removed-alias checks ignored generated-only definition paths; later

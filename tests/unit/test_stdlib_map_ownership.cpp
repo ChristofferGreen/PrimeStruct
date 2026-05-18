@@ -1951,6 +1951,22 @@ TEST_CASE("canonical map surface owns standalone stdlib implementation") {
   CHECK(packedResultSource.find(
             "findStdlibSurfaceMetadataByBridgeKey(\"collections.map_constructors\")") !=
         std::string::npos);
+  CHECK(packedResultSource.find("keyValueConstructorSurfaceMetadataLocal()") !=
+        std::string::npos);
+  CHECK(packedResultSource.find("mapConstructorSurfaceMetadataLocal()") ==
+        std::string::npos);
+  CHECK(packedResultSource.find("rewritePackedResultKeyValueConstructorExpr(") !=
+        std::string::npos);
+  CHECK(packedResultSource.find("rewritePackedResultMapConstructorExpr(") ==
+        std::string::npos);
+  CHECK(packedResultSource.find("rewrittenDirectKeyValueExpr") !=
+        std::string::npos);
+  CHECK(packedResultSource.find("rewrittenDirectMapExpr") ==
+        std::string::npos);
+  CHECK(packedResultSource.find("rewrittenKeyValueExpr") !=
+        std::string::npos);
+  CHECK(packedResultSource.find("rewrittenMapExpr") ==
+        std::string::npos);
   CHECK(packedResultSource.find("rewrittenExpr.name = collectionMemberPath(\"map\", \"map\")") !=
         std::string::npos);
 }

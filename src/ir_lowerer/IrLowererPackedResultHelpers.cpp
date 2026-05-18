@@ -76,7 +76,7 @@ bool resultErrorTypesMatch(std::string left, std::string right) {
   return !right.empty() && right.front() != '/' && left == "/" + right;
 }
 
-const StdlibSurfaceMetadata *mapConstructorSurfaceMetadataLocal() {
+const StdlibSurfaceMetadata *keyValueConstructorSurfaceMetadataLocal() {
   return findStdlibSurfaceMetadataByBridgeKey("collections.map_constructors");
 }
 
@@ -175,7 +175,7 @@ bool resolveSemanticProductResultOkPayloadInfo(
   return true;
 }
 
-bool rewritePackedResultMapConstructorExpr(const Expr &callExpr,
+bool rewritePackedResultKeyValueConstructorExpr(const Expr &callExpr,
                                            LocalInfo::ValueKind fallbackKeyKind,
                                            LocalInfo::ValueKind fallbackValueKind,
                                            const ResolveCallDefinitionFn &resolveDefinitionCall,
@@ -184,7 +184,7 @@ bool rewritePackedResultMapConstructorExpr(const Expr &callExpr,
     return false;
   }
   const Definition *callee = resolveDefinitionCall ? resolveDefinitionCall(callExpr) : nullptr;
-  const StdlibSurfaceMetadata *metadata = mapConstructorSurfaceMetadataLocal();
+  const StdlibSurfaceMetadata *metadata = keyValueConstructorSurfaceMetadataLocal();
   if (callee == nullptr ||
       metadata == nullptr ||
       !isResolvedCanonicalPublishedStdlibSurfaceConstructorPath(
@@ -539,14 +539,14 @@ ResultOkMethodCallEmitResult tryEmitResultOkCall(
             payloadExpr.name;
     return ResultOkMethodCallEmitResult::Error;
   }
-  Expr rewrittenDirectMapExpr;
+  Expr rewrittenDirectKeyValueExpr;
   if (!hasSemanticPayloadInfo &&
-      rewritePackedResultMapConstructorExpr(payloadExpr,
+      rewritePackedResultKeyValueConstructorExpr(payloadExpr,
                                            LocalInfo::ValueKind::Unknown,
                                            LocalInfo::ValueKind::Unknown,
                                            resolveDefinitionCall,
-                                           rewrittenDirectMapExpr)) {
-    if (!emitExpr(rewrittenDirectMapExpr, localsIn)) {
+                                           rewrittenDirectKeyValueExpr)) {
+    if (!emitExpr(rewrittenDirectKeyValueExpr, localsIn)) {
       return ResultOkMethodCallEmitResult::Error;
     }
     return ResultOkMethodCallEmitResult::Emitted;
@@ -595,15 +595,15 @@ ResultOkMethodCallEmitResult tryEmitResultOkCall(
   if (hasCollectionPayload &&
       isSupportedPackedResultCollectionKind(collectionKind)) {
     const Expr *collectionPayloadExpr = &payloadExpr;
-    Expr rewrittenMapExpr;
+    Expr rewrittenKeyValueExpr;
     if (collectionKind == LocalInfo::Kind::KeyValueCollection &&
-        rewritePackedResultMapConstructorExpr(
+        rewritePackedResultKeyValueConstructorExpr(
             *collectionPayloadExpr,
             collectionMapKeyKind,
             collectionValueKind,
             resolveDefinitionCall,
-            rewrittenMapExpr)) {
-      collectionPayloadExpr = &rewrittenMapExpr;
+            rewrittenKeyValueExpr)) {
+      collectionPayloadExpr = &rewrittenKeyValueExpr;
     }
     if (!emitExpr(*collectionPayloadExpr, localsIn)) {
       return ResultOkMethodCallEmitResult::Error;
