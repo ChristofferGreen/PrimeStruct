@@ -1351,7 +1351,13 @@ TEST_CASE("canonical map surface owns standalone stdlib implementation") {
   CHECK(emitterMethodResolutionSource.find("const std::string canonicalPath = \"/std/collections/map/\" + normalizedMethodName") ==
         std::string::npos);
   CHECK(emitterMethodResolutionSource.find("publishedSurfaceHelperPathForRawMethodName(\n"
-                                           "            MapHelperSurfaceBridgeKey") !=
+                                           "            KeyValueHelperSurfaceBridgeKey") !=
+        std::string::npos);
+  CHECK(emitterMethodResolutionSource.find("MapHelperSurfaceBridgeKey") ==
+        std::string::npos);
+  CHECK(emitterMethodResolutionSource.find("isKeyValueHelperMethod") !=
+        std::string::npos);
+  CHECK(emitterMethodResolutionSource.find("isMapHelperMethod") ==
         std::string::npos);
   CHECK(emitterMethodTypeInferenceSource.find("pruneMapAccessStructReturnCompatibilityCandidates") ==
         std::string::npos);

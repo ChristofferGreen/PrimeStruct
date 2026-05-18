@@ -11,7 +11,7 @@ using BindingInfo = Emitter::BindingInfo;
 namespace {
 
 constexpr std::string_view VectorHelperSurfaceBridgeKey = "collections.vector_helpers";
-constexpr std::string_view MapHelperSurfaceBridgeKey = "collections.map_helpers";
+constexpr std::string_view KeyValueHelperSurfaceBridgeKey = "collections.map_helpers";
 
 std::string publishedSurfaceHelperPathForRawMethodName(std::string_view bridgeKey,
                                                        std::string_view rawMethodName) {
@@ -267,7 +267,7 @@ bool resolveMethodCallPath(const Expr &call,
   const bool isExplicitMapMethod =
       resolvePublishedCollectionSurfacePathMemberName(
           normalizedMethodName,
-          MapHelperSurfaceBridgeKey,
+          KeyValueHelperSurfaceBridgeKey,
           true,
           explicitMapMethodName);
   const bool isExplicitStdlibSoaMethod =
@@ -663,18 +663,18 @@ bool resolveMethodCallPath(const Expr &call,
   if (normalizeBindingTypeName(resolvedType) == "map") {
     const std::string explicitMapPath =
         publishedSurfaceHelperPathForRawMethodName(
-            MapHelperSurfaceBridgeKey,
+            KeyValueHelperSurfaceBridgeKey,
             call.name);
     const std::string canonicalPath =
         publishedCollectionSurfaceHelperPath(
-            MapHelperSurfaceBridgeKey,
+            KeyValueHelperSurfaceBridgeKey,
             normalizedMethodName);
-    const bool isMapHelperMethod = isCanonicalMapHelperName(normalizedMethodName);
+    const bool isKeyValueHelperMethod = isCanonicalMapHelperName(normalizedMethodName);
     const bool isRemovedMapSlashMethod =
         isRemovedMapSlashMethodMetadataHelperName(normalizedMethodName);
     const bool hasCanonicalHelperDefinition =
         hasDefinitionOrMetadata(metadataView, canonicalPath);
-    if (isMapHelperMethod) {
+    if (isKeyValueHelperMethod) {
       if (isRemovedMapSlashMethod && isExplicitMapMethod) {
         return false;
       }
