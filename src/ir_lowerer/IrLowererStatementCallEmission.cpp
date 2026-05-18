@@ -46,7 +46,7 @@ const StdlibSurfaceMetadata *statementVectorHelperMetadata() {
   return findStdlibSurfaceMetadataByBridgeKey("collections.vector_helpers");
 }
 
-const StdlibSurfaceMetadata *statementMapHelperMetadata() {
+const StdlibSurfaceMetadata *statementKeyValueHelperMetadata() {
   return findStdlibSurfaceMetadataByBridgeKey("collections.map_helpers");
 }
 
@@ -139,17 +139,17 @@ bool isPublishedCanonicalStatementVectorHelperPath(std::string_view resolvedPath
          matchesRegistrySpellingSet(metadata->loweringSpellings, resolvedPath);
 }
 
-std::string canonicalStatementMapHelperName(std::string helperName) {
+std::string canonicalStatementKeyValueHelperName(std::string helperName) {
   helperName = stripGeneratedHelperSuffix(std::move(helperName));
   return helperName;
 }
 
-bool resolvePublishedStatementMapHelperName(std::string_view resolvedPath,
+bool resolvePublishedStatementKeyValueHelperName(std::string_view resolvedPath,
                                             std::string &helperNameOut) {
   const auto *metadata = findStdlibSurfaceMetadataByResolvedPath(resolvedPath);
-  const auto *mapMetadata = statementMapHelperMetadata();
-  if (metadata == nullptr || mapMetadata == nullptr ||
-      metadata->id != mapMetadata->id) {
+  const auto *keyValueMetadata = statementKeyValueHelperMetadata();
+  if (metadata == nullptr || keyValueMetadata == nullptr ||
+      metadata->id != keyValueMetadata->id) {
     return false;
   }
   const size_t slash = resolvedPath.find_last_of('/');
@@ -157,12 +157,12 @@ bool resolvePublishedStatementMapHelperName(std::string_view resolvedPath,
     return false;
   }
   helperNameOut =
-      canonicalStatementMapHelperName(std::string(resolvedPath.substr(slash + 1)));
+      canonicalStatementKeyValueHelperName(std::string(resolvedPath.substr(slash + 1)));
   return !helperNameOut.empty();
 }
 
-std::string canonicalStatementMapHelperPath(std::string_view helperName) {
-  const auto *metadata = statementMapHelperMetadata();
+std::string canonicalStatementKeyValueHelperPath(std::string_view helperName) {
+  const auto *metadata = statementKeyValueHelperMetadata();
   if (metadata == nullptr) {
     return {};
   }
@@ -689,7 +689,7 @@ static std::optional<LocalInfo::ValueKind> resolveStatementValueKindFromSemantic
   return std::nullopt;
 }
 
-static bool rewriteMapInsertHelperStatementToCanonical(
+static bool rewriteKeyValueInsertHelperStatementToCanonical(
     const Expr &stmt,
     const LocalMap &localsIn,
     const std::function<const Definition *(const Expr &, const LocalMap &)> &resolveMethodCallDefinition,
@@ -701,7 +701,7 @@ static bool rewriteMapInsertHelperStatementToCanonical(
     return false;
   }
 
-  auto isPrimeMapInsertBody = [](const Definition *callee) {
+  auto isPrimeKeyValueInsertBody = [](const Definition *callee) {
     if (callee == nullptr) {
       return false;
     }
@@ -711,16 +711,16 @@ static bool rewriteMapInsertHelperStatementToCanonical(
            callee->fullPath.rfind("/std/collections/internal_map/insertRefImpl__", 0) == 0;
   };
   if (stmt.isMethodCall) {
-    if (isPrimeMapInsertBody(resolveMethodCallDefinition(stmt, localsIn))) {
+    if (isPrimeKeyValueInsertBody(resolveMethodCallDefinition(stmt, localsIn))) {
       return false;
     }
   } else {
-    if (isPrimeMapInsertBody(resolveDefinitionCall(stmt))) {
+    if (isPrimeKeyValueInsertBody(resolveDefinitionCall(stmt))) {
       return false;
     }
   }
 
-  auto isDirectBareMapInsertHelperStem = [&](const Expr &callExpr) {
+  auto isDirectBareKeyValueInsertHelperStem = [&](const Expr &callExpr) {
     if (callExpr.isMethodCall || callExpr.name.empty()) {
       return false;
     }
@@ -736,9 +736,9 @@ static bool rewriteMapInsertHelperStatementToCanonical(
     return helperName == "insert" || helperName == "insert_ref" ||
            helperName == "Insert" || helperName == "InsertRef";
   };
-  auto isPublishedMapInsertHelperCall = [](const Expr &callExpr) {
+  auto isPublishedKeyValueInsertHelperCall = [](const Expr &callExpr) {
     std::string helperName;
-    return resolvePublishedStatementMapHelperName(
+    return resolvePublishedStatementKeyValueHelperName(
                resolveStatementCallPathWithoutFallbackProbes(callExpr),
                helperName) &&
            (helperName == "insert" || helperName == "insert_ref");
@@ -765,8 +765,8 @@ static bool rewriteMapInsertHelperStatementToCanonical(
   } else {
     std::string helperName;
     if ((!resolveKeyValueHelperAliasName(stmt, helperName) || helperName != "insert") &&
-        !isPublishedMapInsertHelperCall(stmt) &&
-        !isDirectBareMapInsertHelperStem(stmt)) {
+        !isPublishedKeyValueInsertHelperCall(stmt) &&
+        !isDirectBareKeyValueInsertHelperStem(stmt)) {
       return false;
     }
     if (hasNamedArguments(stmt.argNames)) {
@@ -795,9 +795,9 @@ static bool rewriteMapInsertHelperStatementToCanonical(
       }
       return stripGeneratedHelperSuffix(std::move(helperName));
     };
-    auto isMapInsertLikeCallee = [&](const Definition &callee) {
+    auto isKeyValueInsertLikeCallee = [&](const Definition &callee) {
       std::string publishedHelperName;
-      if (resolvePublishedStatementMapHelperName(callee.fullPath, publishedHelperName) &&
+      if (resolvePublishedStatementKeyValueHelperName(callee.fullPath, publishedHelperName) &&
           (publishedHelperName == "insert" || publishedHelperName == "insert_ref")) {
         return true;
       }
@@ -813,8 +813,8 @@ static bool rewriteMapInsertHelperStatementToCanonical(
       return resolveKeyValueHelperAliasName(calleeExpr, helperName) && helperName == "insert";
     };
     std::function<bool(const std::string &, LocalInfo::ValueKind &, LocalInfo::ValueKind &)>
-        inferMapKindsFromTypeText;
-    inferMapKindsFromTypeText = [&](const std::string &typeText,
+        inferKeyValueKindsFromTypeText;
+    inferKeyValueKindsFromTypeText = [&](const std::string &typeText,
                                     LocalInfo::ValueKind &keyKindOut,
                                     LocalInfo::ValueKind &valueKindOut) {
       keyKindOut = LocalInfo::ValueKind::Unknown;
@@ -828,7 +828,7 @@ static bool rewriteMapInsertHelperStatementToCanonical(
 
       const std::string normalizedBase = trimTemplateTypeText(base);
       if (normalizedBase == "Reference" || normalizedBase == "Pointer") {
-        return inferMapKindsFromTypeText(argText, keyKindOut, valueKindOut);
+        return inferKeyValueKindsFromTypeText(argText, keyKindOut, valueKindOut);
       }
 
       const bool isMapBase =
@@ -870,7 +870,7 @@ static bool rewriteMapInsertHelperStatementToCanonical(
       }
       return std::string{};
     };
-    auto inferMapKindsFromArgsPackTypeText = [&](const std::string &typeText,
+    auto inferKeyValueKindsFromArgsPackTypeText = [&](const std::string &typeText,
                                                  LocalInfo::ValueKind &keyKindOut,
                                                  LocalInfo::ValueKind &valueKindOut) {
       keyKindOut = LocalInfo::ValueKind::Unknown;
@@ -889,7 +889,7 @@ static bool rewriteMapInsertHelperStatementToCanonical(
       if (!isArgsPackBase) {
         return false;
       }
-      return inferMapKindsFromTypeText(argText, keyKindOut, valueKindOut);
+      return inferKeyValueKindsFromTypeText(argText, keyKindOut, valueKindOut);
     };
     auto extractParameterTypeName = [&](const Expr &paramExpr) {
       for (const auto &transform : paramExpr.transforms) {
@@ -925,7 +925,7 @@ static bool rewriteMapInsertHelperStatementToCanonical(
       if (resolvedTypeText.empty()) {
         return false;
       }
-      if (!inferMapKindsFromTypeText(resolvedTypeText,
+      if (!inferKeyValueKindsFromTypeText(resolvedTypeText,
                                      targetInfoOut.keyValueKeyKind,
                                      targetInfoOut.keyValueValueKind)) {
         return false;
@@ -1043,11 +1043,11 @@ static bool rewriteMapInsertHelperStatementToCanonical(
       }
       return current;
     };
-    auto isMapArgsPackAccessCall = [&](const Expr &expr) {
+    auto isKeyValueArgsPackAccessCall = [&](const Expr &expr) {
       if (expr.kind != Expr::Kind::Call || expr.args.size() != 2) {
         return false;
       }
-      auto isDirectMapArgsPackStem = [&](const char *stem) {
+      auto isDirectKeyValueArgsPackStem = [&](const char *stem) {
         if (stem == nullptr || expr.isMethodCall || expr.name.empty()) {
           return false;
         }
@@ -1060,7 +1060,7 @@ static bool rewriteMapInsertHelperStatementToCanonical(
         }
         return stripGeneratedHelperSuffix(std::move(directName)) == stem;
       };
-      auto isMapArgsPackMethodStem = [&](const char *stem) {
+      auto isKeyValueArgsPackMethodStem = [&](const char *stem) {
         if (isSimpleCallName(expr, stem)) {
           return true;
         }
@@ -1077,21 +1077,21 @@ static bool rewriteMapInsertHelperStatementToCanonical(
         return stripGeneratedHelperSuffix(std::move(methodName)) == stem;
       };
       if (expr.isMethodCall) {
-        if (isMapArgsPackMethodStem("at") || isMapArgsPackMethodStem("at_unsafe") ||
-            isMapArgsPackMethodStem("at_ref") || isMapArgsPackMethodStem("at_unsafe_ref") ||
-            isMapArgsPackMethodStem("At") || isMapArgsPackMethodStem("AtUnsafe") ||
-            isMapArgsPackMethodStem("AtRef") || isMapArgsPackMethodStem("AtUnsafeRef")) {
+        if (isKeyValueArgsPackMethodStem("at") || isKeyValueArgsPackMethodStem("at_unsafe") ||
+            isKeyValueArgsPackMethodStem("at_ref") || isKeyValueArgsPackMethodStem("at_unsafe_ref") ||
+            isKeyValueArgsPackMethodStem("At") || isKeyValueArgsPackMethodStem("AtUnsafe") ||
+            isKeyValueArgsPackMethodStem("AtRef") || isKeyValueArgsPackMethodStem("AtUnsafeRef")) {
           return true;
         }
       }
-      if (isDirectMapArgsPackStem("at") || isDirectMapArgsPackStem("at_unsafe") ||
-          isDirectMapArgsPackStem("at_ref") || isDirectMapArgsPackStem("at_unsafe_ref") ||
-          isDirectMapArgsPackStem("At") || isDirectMapArgsPackStem("AtUnsafe") ||
-          isDirectMapArgsPackStem("AtRef") || isDirectMapArgsPackStem("AtUnsafeRef")) {
+      if (isDirectKeyValueArgsPackStem("at") || isDirectKeyValueArgsPackStem("at_unsafe") ||
+          isDirectKeyValueArgsPackStem("at_ref") || isDirectKeyValueArgsPackStem("at_unsafe_ref") ||
+          isDirectKeyValueArgsPackStem("At") || isDirectKeyValueArgsPackStem("AtUnsafe") ||
+          isDirectKeyValueArgsPackStem("AtRef") || isDirectKeyValueArgsPackStem("AtUnsafeRef")) {
         return true;
       }
       std::string publishedHelperName;
-      const auto *metadata = statementMapHelperMetadata();
+      const auto *metadata = statementKeyValueHelperMetadata();
       if (metadata != nullptr &&
           resolvePublishedStdlibSurfaceExprMemberName(
               expr,
@@ -1199,14 +1199,14 @@ static bool rewriteMapInsertHelperStatementToCanonical(
       return true;
     }
 
-    if (isMapArgsPackAccessCall(*canonicalReceiverExpr) &&
+    if (isKeyValueArgsPackAccessCall(*canonicalReceiverExpr) &&
         canonicalReceiverExpr->args.front().kind != Expr::Kind::Name) {
-      const Definition *mapAccessCallee = resolveDefinitionCall(*canonicalReceiverExpr);
-      if (mapAccessCallee != nullptr &&
-          !mapAccessCallee->parameters.empty()) {
+      const Definition *keyValueAccessCallee = resolveDefinitionCall(*canonicalReceiverExpr);
+      if (keyValueAccessCallee != nullptr &&
+          !keyValueAccessCallee->parameters.empty()) {
         const std::string receiverTypeText =
-            extractParameterTypeName(mapAccessCallee->parameters.front());
-        if (inferMapKindsFromArgsPackTypeText(receiverTypeText,
+            extractParameterTypeName(keyValueAccessCallee->parameters.front());
+        if (inferKeyValueKindsFromArgsPackTypeText(receiverTypeText,
                                               targetInfoOut.keyValueKeyKind,
                                               targetInfoOut.keyValueValueKind)) {
           targetInfoOut.isKeyValueTarget = true;
@@ -1232,10 +1232,10 @@ static bool rewriteMapInsertHelperStatementToCanonical(
         nonLocalFieldReceiver != nullptr) {
       const Definition *directCallee = resolveDefinitionCall(stmt);
       if (directCallee != nullptr &&
-          isMapInsertLikeCallee(*directCallee) &&
+          isKeyValueInsertLikeCallee(*directCallee) &&
           !directCallee->parameters.empty()) {
         const std::string receiverTypeText = extractParameterTypeName(directCallee->parameters.front());
-        if (inferMapKindsFromTypeText(receiverTypeText,
+        if (inferKeyValueKindsFromTypeText(receiverTypeText,
                                       targetInfoOut.keyValueKeyKind,
                                       targetInfoOut.keyValueValueKind)) {
           targetInfoOut.isKeyValueTarget = true;
@@ -1261,10 +1261,10 @@ static bool rewriteMapInsertHelperStatementToCanonical(
         nonLocalFieldReceiver != nullptr) {
       const Definition *methodCallee = resolveMethodCallDefinition(stmt, localsIn);
       if (methodCallee != nullptr &&
-          isMapInsertLikeCallee(*methodCallee) &&
+          isKeyValueInsertLikeCallee(*methodCallee) &&
           !methodCallee->parameters.empty()) {
         const std::string receiverTypeText = extractParameterTypeName(methodCallee->parameters.front());
-        if (inferMapKindsFromTypeText(receiverTypeText,
+        if (inferKeyValueKindsFromTypeText(receiverTypeText,
                                      targetInfoOut.keyValueKeyKind,
                                      targetInfoOut.keyValueValueKind)) {
           targetInfoOut.isKeyValueTarget = true;
@@ -1307,7 +1307,7 @@ static bool rewriteMapInsertHelperStatementToCanonical(
   }
 
   rewrittenStmt = stmt;
-  rewrittenStmt.name = canonicalStatementMapHelperPath("insert");
+  rewrittenStmt.name = canonicalStatementKeyValueHelperPath("insert");
   if (rewrittenStmt.name.empty()) {
     return false;
   }
@@ -1834,16 +1834,16 @@ DirectCallStatementEmitResult tryEmitDirectCallStatement(
     return true;
   };
   Expr directStmt = stmt;
-  Expr rewrittenMapInsertStmt;
-  if (rewriteMapInsertHelperStatementToCanonical(
+  Expr rewrittenKeyValueInsertStmt;
+  if (rewriteKeyValueInsertHelperStatementToCanonical(
           stmt,
           localsIn,
           resolveMethodCallDefinition,
           resolveDefinitionCall,
           semanticProgram,
           semanticIndex,
-          rewrittenMapInsertStmt)) {
-    directStmt = rewrittenMapInsertStmt;
+          rewrittenKeyValueInsertStmt)) {
+    directStmt = rewrittenKeyValueInsertStmt;
   }
   bool rewrittenExplicitVectorMutatorToBuiltinCall = false;
   bool rewrittenBareVectorMutatorToBuiltinCall = false;

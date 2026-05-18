@@ -1315,8 +1315,10 @@ TEST_CASE("canonical map surface owns standalone stdlib implementation") {
         std::string::npos);
   CHECK(emitterMethodTypeInferenceSource.find("pruneMapAccessStructReturnCompatibilityCandidates") ==
         std::string::npos);
-  CHECK(statementLowererSource.find("isPrimeMapInsertBody") != std::string::npos);
-  CHECK(statementLowererSource.find("rewriteMapInsertHelperStatementToCanonical") != std::string::npos);
+  CHECK(statementLowererSource.find("isPrimeKeyValueInsertBody") != std::string::npos);
+  CHECK(statementLowererSource.find("rewriteKeyValueInsertHelperStatementToCanonical") != std::string::npos);
+  CHECK(statementLowererSource.find("isPrimeMapInsertBody") == std::string::npos);
+  CHECK(statementLowererSource.find("rewriteMapInsertHelperStatementToCanonical") == std::string::npos);
   CHECK(statementLowererSource.find("rewriteMapInsertHelperStatementToBuiltin") == std::string::npos);
   CHECK(statementLowererSource.find("/map/at(argsPack") == std::string::npos);
   CHECK(uninitializedStructInferenceSource.find("scopedCallPath == \"/map/at\"") ==
@@ -1330,16 +1332,16 @@ TEST_CASE("canonical map surface owns standalone stdlib implementation") {
         std::string::npos);
   CHECK(uninitializedStructInferenceSource.find("constructorName == \"mapNew\"") ==
         std::string::npos);
-  CHECK(uninitializedStructInferenceSource.find("publishedMapHelperName == \"at\"") !=
+  CHECK(uninitializedStructInferenceSource.find("publishedKeyValueHelperName == \"at\"") !=
         std::string::npos);
   CHECK(uninitializedStructInferenceSource.find(
-            "mapHelperSurfaceMetadataForUninitializedStructs()") !=
+            "keyValueHelperSurfaceMetadataForUninitializedStructs()") !=
         std::string::npos);
   CHECK(uninitializedStructInferenceSource.find(
-            "mapConstructorSurfaceMetadataForUninitializedStructs()") !=
+            "keyValueConstructorSurfaceMetadataForUninitializedStructs()") !=
         std::string::npos);
   CHECK(uninitializedStructInferenceSource.find(
-            "forwardedEmptyMapConstructorMemberName()") !=
+            "forwardedEmptyKeyValueConstructorMemberName()") !=
         std::string::npos);
   CHECK(structSlotLayoutSource.find("isBuiltinCollectionTypeName(typeName, \"map\")") !=
         std::string::npos);
@@ -1537,7 +1539,9 @@ TEST_CASE("canonical map surface owns standalone stdlib implementation") {
         std::string::npos);
   CHECK(statementLowererSource.find("callee->fullPath.rfind(\"/std/collections/internal_map/insertImpl__\", 0)") !=
         std::string::npos);
-  CHECK(statementLowererSource.find("canonicalStatementMapHelperPath(\"insert\")") !=
+  CHECK(statementLowererSource.find("canonicalStatementKeyValueHelperPath(\"insert\")") !=
+        std::string::npos);
+  CHECK(statementLowererSource.find("canonicalStatementMapHelperPath(\"insert\")") ==
         std::string::npos);
   CHECK(statementLowererSource.find("rewrittenStmt.name = \"/std/collections/map/insert\"") ==
         std::string::npos);
@@ -1557,11 +1561,11 @@ TEST_CASE("canonical map surface owns standalone stdlib implementation") {
   CHECK(inlineNativeSource.find("rawPath == \"map/at_unsafe_ref\"") == std::string::npos);
   CHECK(inlineNativeSource.find("StdlibSurfaceId::CollectionsMapHelpers") ==
         std::string::npos);
-  CHECK(inlineNativeSource.find("inlineMapHelperMetadata()") !=
+  CHECK(inlineNativeSource.find("inlineKeyValueHelperMetadata()") !=
         std::string::npos);
-  CHECK(inlineNativeSource.find("resolvePublishedInlineMapSurfaceMemberName") !=
+  CHECK(inlineNativeSource.find("resolvePublishedInlineKeyValueSurfaceMemberName") !=
         std::string::npos);
-  CHECK(inlineNativeSource.find("isCanonicalPublishedInlineMapHelperPath") !=
+  CHECK(inlineNativeSource.find("isCanonicalPublishedInlineKeyValueHelperPath") !=
         std::string::npos);
   CHECK(inlineNativeSource.find("emitCanonicalInlineDefinitionCall(expr, *callee)") != std::string::npos);
   CHECK(emitterMethodResolutionSource.find("!hasAliasHelperDefinition && !hasCanonicalHelperDefinition") ==
@@ -1590,8 +1594,8 @@ TEST_CASE("canonical map surface owns standalone stdlib implementation") {
         std::string::npos);
   CHECK(emitterHelpersTypesSource.find("name.rfind(\"/std/collections/map<\"") ==
         std::string::npos);
-  CHECK(nativeTailSource.find("hasSemanticMapReadHelperDefinition") != std::string::npos);
-  CHECK(nativeTailSource.find("isMapReadHelperName(directMapReadHelperName)") != std::string::npos);
+  CHECK(nativeTailSource.find("hasSemanticKeyValueReadHelperDefinition") != std::string::npos);
+  CHECK(nativeTailSource.find("isKeyValueReadHelperName(directKeyValueReadHelperName)") != std::string::npos);
   CHECK(lowerStatementsExprSource.find("Keep direct canonical map access helpers") == std::string::npos);
   CHECK(lowerStatementsExprSource.find("keepsBuiltinCanonicalMapHelperReturn") == std::string::npos);
   CHECK(lowerStatementsBindingsSource.find("resolvePublishedStdlibSurfaceMemberName(\n"
@@ -1611,11 +1615,11 @@ TEST_CASE("canonical map surface owns standalone stdlib implementation") {
         std::string::npos);
   CHECK(tailDispatchSource.find("StdlibSurfaceId::CollectionsMapHelpers") ==
         std::string::npos);
-  CHECK(tailDispatchSource.find("tailDispatchMapHelperSurfaceId()") !=
+  CHECK(tailDispatchSource.find("tailDispatchKeyValueHelperSurfaceId()") !=
         std::string::npos);
   CHECK(tailDispatchSource.find("collections.map_helpers") !=
         std::string::npos);
-  CHECK(tailDispatchSource.find("isTailDispatchMapImportAliasHelperPath(rawPath, helperName)") !=
+  CHECK(tailDispatchSource.find("isTailDispatchKeyValueImportAliasHelperPath(rawPath, helperName)") !=
         std::string::npos);
   CHECK(tailDispatchSource.find("rawPath.rfind(\"/\" + std::string(\"map\") + \"/\", 0)") ==
         std::string::npos);
@@ -1650,12 +1654,12 @@ TEST_CASE("canonical map surface owns standalone stdlib implementation") {
   CHECK(builtinNameHelpersSource.find(
             "findStdlibSurfaceMetadataByBridgeKey(\"collections.map_constructors\")") !=
         std::string::npos);
-  CHECK(builtinNameHelpersSource.find("mapConstructorAliasToken()") !=
+  CHECK(builtinNameHelpersSource.find("keyValueConstructorAliasToken()") !=
         std::string::npos);
   CHECK(builtinNameHelpersSource.find(
             "findStdlibSurfaceMetadataByBridgeKey(\"collections.map_helpers\")") !=
         std::string::npos);
-  CHECK(builtinNameHelpersSource.find("resolvesMapHelperSurfacePath(scopedName)") !=
+  CHECK(builtinNameHelpersSource.find("resolvesKeyValueHelperSurfacePath(scopedName)") !=
         std::string::npos);
   CHECK(lowererHelpersSource.find("candidate.rfind(\"map/\", 0)") ==
         std::string::npos);

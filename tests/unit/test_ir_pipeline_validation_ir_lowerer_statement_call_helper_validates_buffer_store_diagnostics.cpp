@@ -6945,7 +6945,9 @@ TEST_CASE("ir lowerer statement call emission source delegation stays stable") {
         std::string::npos);
   CHECK(source.find("resolveStatementCallPathWithoutFallbackProbes(") !=
         std::string::npos);
-  CHECK(source.find("resolvePublishedStatementMapHelperName(") !=
+  CHECK(source.find("resolvePublishedStatementKeyValueHelperName(") !=
+        std::string::npos);
+  CHECK(source.find("resolvePublishedStatementMapHelperName(") ==
         std::string::npos);
   CHECK(source.find("resolvePublishedStdlibSurfaceExprMemberName(") !=
         std::string::npos);
@@ -6963,9 +6965,9 @@ TEST_CASE("ir lowerer statement call emission source delegation stays stable") {
         std::string::npos);
   CHECK(source.find("metadata->id != vectorMetadata->id") !=
         std::string::npos);
-  CHECK(source.find("const auto *mapMetadata = statementMapHelperMetadata();") !=
+  CHECK(source.find("const auto *keyValueMetadata = statementKeyValueHelperMetadata();") !=
         std::string::npos);
-  CHECK(source.find("metadata->id != mapMetadata->id") !=
+  CHECK(source.find("metadata->id != keyValueMetadata->id") !=
         std::string::npos);
   CHECK(source.find("matchesRegistrySpellingSet(metadata->loweringSpellings, resolvedPath)") !=
         std::string::npos);
