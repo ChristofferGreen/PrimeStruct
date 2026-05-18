@@ -1372,6 +1372,40 @@ TEST_CASE("canonical map surface owns standalone stdlib implementation") {
   CHECK(inferenceDispatchSetupSource.find(
             "\"/std/collections/map/\" + accessNameForCanonicalMapOverride") ==
         std::string::npos);
+  CHECK(inferenceDispatchSetupSource.find("accessNameForCanonicalKeyValueOverride") !=
+        std::string::npos);
+  CHECK(inferenceDispatchSetupSource.find("accessNameForCanonicalMapOverride") ==
+        std::string::npos);
+  CHECK(inferenceDispatchSetupSource.find(
+            "keyValueHelperSurfaceMetadataForDispatchSetup()") !=
+        std::string::npos);
+  CHECK(inferenceDispatchSetupSource.find(
+            "mapHelperSurfaceMetadataForDispatchSetup()") ==
+        std::string::npos);
+  CHECK(inferenceDispatchSetupSource.find(
+            "canonicalKeyValueHelperPathForDispatchSetup(") !=
+        std::string::npos);
+  CHECK(inferenceDispatchSetupSource.find(
+            "canonicalMapHelperPathForDispatchSetup(") ==
+        std::string::npos);
+  CHECK(inferenceDispatchSetupSource.find(
+            "inferDispatchSetupKeyValueKindsFromTypeText(") !=
+        std::string::npos);
+  CHECK(inferenceDispatchSetupSource.find(
+            "inferDispatchSetupMapKindsFromTypeText(") ==
+        std::string::npos);
+  CHECK(inferenceDispatchSetupSource.find(
+            "inferDispatchSetupSemanticKeyValueReceiverKind(") !=
+        std::string::npos);
+  CHECK(inferenceDispatchSetupSource.find(
+            "inferDispatchSetupSemanticMapReceiverKind(") ==
+        std::string::npos);
+  CHECK(inferenceDispatchSetupSource.find(
+            "isDispatchSetupKeyValueFamilyText(") !=
+        std::string::npos);
+  CHECK(inferenceDispatchSetupSource.find(
+            "isDispatchSetupMapFamilyText(") ==
+        std::string::npos);
   CHECK(inferenceDispatchSetupSource.find(
             "findStdlibSurfaceMetadataByBridgeKey(\"collections.map_helpers\")") !=
         std::string::npos);

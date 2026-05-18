@@ -152,19 +152,19 @@ bool resolveDispatchSetupSemanticReceiverTypeText(const Expr &receiver,
                                                   const SemanticProductIndex *semanticIndex,
                                                   std::string &typeTextOut);
 
-const StdlibSurfaceMetadata *mapHelperSurfaceMetadataForDispatchSetup() {
+const StdlibSurfaceMetadata *keyValueHelperSurfaceMetadataForDispatchSetup() {
   return findStdlibSurfaceMetadataByBridgeKey("collections.map_helpers");
 }
 
-std::string canonicalMapHelperPathForDispatchSetup(std::string_view helperName) {
-  const StdlibSurfaceMetadata *metadata = mapHelperSurfaceMetadataForDispatchSetup();
+std::string canonicalKeyValueHelperPathForDispatchSetup(std::string_view helperName) {
+  const StdlibSurfaceMetadata *metadata = keyValueHelperSurfaceMetadataForDispatchSetup();
   if (metadata == nullptr) {
     return {};
   }
   return stdlibSurfaceCanonicalHelperPath(metadata->id, helperName);
 }
 
-bool isDispatchSetupMapFamilyText(const std::string &familyText) {
+bool isDispatchSetupKeyValueFamilyText(const std::string &familyText) {
   std::string normalized = trimTemplateTypeText(familyText);
   if (!normalized.empty() && normalized.front() == '/') {
     normalized.erase(normalized.begin());
@@ -173,15 +173,15 @@ bool isDispatchSetupMapFamilyText(const std::string &familyText) {
          isExperimentalCollectionTypeName(normalized, "map", "Map");
 }
 
-bool inferDispatchSetupMapKindsFromTypeText(const std::string &typeText,
-                                            LocalInfo::ValueKind &keyKindOut,
-                                            LocalInfo::ValueKind &valueKindOut) {
+bool inferDispatchSetupKeyValueKindsFromTypeText(const std::string &typeText,
+                                                 LocalInfo::ValueKind &keyKindOut,
+                                                 LocalInfo::ValueKind &valueKindOut) {
   keyKindOut = LocalInfo::ValueKind::Unknown;
   valueKindOut = LocalInfo::ValueKind::Unknown;
   std::string base;
   std::string argText;
   if (!splitTemplateTypeName(trimTemplateTypeText(typeText), base, argText) ||
-      !isDispatchSetupMapFamilyText(base)) {
+      !isDispatchSetupKeyValueFamilyText(base)) {
     return false;
   }
   std::vector<std::string> args;
@@ -217,19 +217,19 @@ bool inferDispatchSetupSemanticCountAccessKind(const Expr &accessExpr,
   }
   LocalInfo::ValueKind keyKind = LocalInfo::ValueKind::Unknown;
   LocalInfo::ValueKind valueKind = LocalInfo::ValueKind::Unknown;
-  if (inferDispatchSetupMapKindsFromTypeText(targetType, keyKind, valueKind) &&
+  if (inferDispatchSetupKeyValueKindsFromTypeText(targetType, keyKind, valueKind) &&
       valueKind == LocalInfo::ValueKind::String) {
     kindOut = LocalInfo::ValueKind::Int32;
   }
   return true;
 }
 
-bool inferDispatchSetupSemanticMapReceiverKind(const Expr &receiver,
-                                               bool containsResult,
-                                               const SemanticProgram *semanticProgram,
-                                               const SemanticProductIndex *semanticIndex,
-                                               LocalInfo::ValueKind &kindOut,
-                                               bool &hasSemanticReceiverOut) {
+bool inferDispatchSetupSemanticKeyValueReceiverKind(const Expr &receiver,
+                                                    bool containsResult,
+                                                    const SemanticProgram *semanticProgram,
+                                                    const SemanticProductIndex *semanticIndex,
+                                                    LocalInfo::ValueKind &kindOut,
+                                                    bool &hasSemanticReceiverOut) {
   kindOut = LocalInfo::ValueKind::Unknown;
   hasSemanticReceiverOut = false;
   if (semanticProgram == nullptr || semanticIndex == nullptr ||
@@ -243,7 +243,7 @@ bool inferDispatchSetupSemanticMapReceiverKind(const Expr &receiver,
         *semanticProgram,
         collectionFact->collectionFamily,
         collectionFact->collectionFamilyId);
-    if (!isDispatchSetupMapFamilyText(familyText)) {
+    if (!isDispatchSetupKeyValueFamilyText(familyText)) {
       return false;
     }
     const LocalInfo::ValueKind keyKind = valueKindFromTypeName(
@@ -271,7 +271,7 @@ bool inferDispatchSetupSemanticMapReceiverKind(const Expr &receiver,
   hasSemanticReceiverOut = true;
   LocalInfo::ValueKind keyKind = LocalInfo::ValueKind::Unknown;
   LocalInfo::ValueKind valueKind = LocalInfo::ValueKind::Unknown;
-  if (!inferDispatchSetupMapKindsFromTypeText(receiverType, keyKind, valueKind)) {
+  if (!inferDispatchSetupKeyValueKindsFromTypeText(receiverType, keyKind, valueKind)) {
     return false;
   }
   kindOut = containsResult ? LocalInfo::ValueKind::Bool : valueKind;
@@ -648,11 +648,11 @@ bool runLowerInferenceExprKindDispatchSetup(const LowerInferenceExprKindDispatch
     if (!expr.isMethodCall && expr.kind == Expr::Kind::Call && !expr.args.empty()) {
       std::string canonicalKeyValueHelperName;
       std::string borrowedKeyValueHelperName;
-      const bool hasBorrowedMapHelperAlias =
+      const bool hasBorrowedKeyValueHelperAlias =
           resolveBorrowedKeyValueHelperAliasName(expr, borrowedKeyValueHelperName);
       if (resolveKeyValueHelperAliasName(expr, canonicalKeyValueHelperName) &&
           (!stateInOut.resolveDefinitionCall || stateInOut.resolveDefinitionCall(expr) == nullptr) &&
-          !hasBorrowedMapHelperAlias &&
+          !hasBorrowedKeyValueHelperAlias &&
           (canonicalKeyValueHelperName == "count" || canonicalKeyValueHelperName == "contains" ||
            canonicalKeyValueHelperName == "tryAt" || canonicalKeyValueHelperName == "at" ||
            canonicalKeyValueHelperName == "at_unsafe" ||
@@ -933,16 +933,16 @@ bool runLowerInferenceExprKindDispatchSetup(const LowerInferenceExprKindDispatch
       const bool resultIsMapTryAtCall = isMapTryAtCallName(resultExpr);
       if ((resultIsMapContainsCall || resultIsMapTryAtCall) &&
           !resultExpr.args.empty()) {
-        bool hasSemanticMapReceiver = false;
-        if (inferDispatchSetupSemanticMapReceiverKind(resultExpr.args.front(),
-                                                     resultIsMapContainsCall,
-                                                     semanticProgram,
-                                                     semanticIndex,
-                                                     kindOut,
-                                                     hasSemanticMapReceiver)) {
+        bool hasSemanticKeyValueReceiver = false;
+        if (inferDispatchSetupSemanticKeyValueReceiverKind(resultExpr.args.front(),
+                                                           resultIsMapContainsCall,
+                                                           semanticProgram,
+                                                           semanticIndex,
+                                                           kindOut,
+                                                           hasSemanticKeyValueReceiver)) {
           return true;
         }
-        if (hasSemanticMapReceiver) {
+        if (hasSemanticKeyValueReceiver) {
           return true;
         }
       }
@@ -1129,33 +1129,33 @@ bool runLowerInferenceExprKindDispatchSetup(const LowerInferenceExprKindDispatch
           return getNamespacedCollectionHelperName(candidate, collectionName, helperName) && helperName == "count";
         };
 
-        std::string accessNameForCanonicalMapOverride;
-        if (getBuiltinArrayAccessName(expr, accessNameForCanonicalMapOverride) &&
+        std::string accessNameForCanonicalKeyValueOverride;
+        if (getBuiltinArrayAccessName(expr, accessNameForCanonicalKeyValueOverride) &&
             expr.args.size() == 2 &&
-            (accessNameForCanonicalMapOverride == "at" ||
-             accessNameForCanonicalMapOverride == "at_unsafe")) {
+            (accessNameForCanonicalKeyValueOverride == "at" ||
+             accessNameForCanonicalKeyValueOverride == "at_unsafe")) {
           LocalInfo::ValueKind keyValueValueKind = LocalInfo::ValueKind::Unknown;
           ReturnInfo accessReturnInfo;
-          auto resolveAccessReceiverMapValueKind =
+          auto resolveAccessReceiverKeyValueValueKind =
               [&](const Expr &receiverExpr,
-                  LocalInfo::ValueKind &receiverMapValueKindOut) {
-                receiverMapValueKindOut = LocalInfo::ValueKind::Unknown;
+                  LocalInfo::ValueKind &receiverKeyValueValueKindOut) {
+                receiverKeyValueValueKindOut = LocalInfo::ValueKind::Unknown;
                 std::string semanticReceiverTypeText;
-                LocalInfo::ValueKind semanticMapKeyKind =
+                LocalInfo::ValueKind semanticKeyValueKeyKind =
                     LocalInfo::ValueKind::Unknown;
-                LocalInfo::ValueKind semanticMapValueKind =
+                LocalInfo::ValueKind semanticKeyValueValueKind =
                     LocalInfo::ValueKind::Unknown;
                 if (resolveDispatchSetupSemanticReceiverTypeText(
                         receiverExpr,
                         semanticProgram,
                         semanticIndex,
                         semanticReceiverTypeText) &&
-                    inferDispatchSetupMapKindsFromTypeText(
+                    inferDispatchSetupKeyValueKindsFromTypeText(
                         semanticReceiverTypeText,
-                        semanticMapKeyKind,
-                        semanticMapValueKind)) {
-                  receiverMapValueKindOut = semanticMapValueKind;
-                  return receiverMapValueKindOut !=
+                        semanticKeyValueKeyKind,
+                        semanticKeyValueValueKind)) {
+                  receiverKeyValueValueKindOut = semanticKeyValueValueKind;
+                  return receiverKeyValueValueKindOut !=
                          LocalInfo::ValueKind::Unknown;
                 }
                 if (receiverExpr.kind == Expr::Kind::Name) {
@@ -1166,8 +1166,8 @@ bool runLowerInferenceExprKindDispatchSetup(const LowerInferenceExprKindDispatch
                          localIt->second.kind == LocalInfo::Kind::Pointer) &&
                         (localIt->second.referenceToKeyValueCollection ||
                          localIt->second.pointerToKeyValueCollection)))) {
-                    receiverMapValueKindOut = localIt->second.keyValueValueKind;
-                    return receiverMapValueKindOut !=
+                    receiverKeyValueValueKindOut = localIt->second.keyValueValueKind;
+                    return receiverKeyValueValueKindOut !=
                            LocalInfo::ValueKind::Unknown;
                   }
                 }
@@ -1177,8 +1177,8 @@ bool runLowerInferenceExprKindDispatchSetup(const LowerInferenceExprKindDispatch
                   if (stateInOut.getReturnInfo(resolveExprPath(receiverExpr),
                                                receiverReturnInfo) &&
                       receiverReturnInfo.returnsArray) {
-                    receiverMapValueKindOut = receiverReturnInfo.kind;
-                    return receiverMapValueKindOut !=
+                    receiverKeyValueValueKindOut = receiverReturnInfo.kind;
+                    return receiverKeyValueValueKindOut !=
                            LocalInfo::ValueKind::Unknown;
                   }
                 }
@@ -1204,12 +1204,12 @@ bool runLowerInferenceExprKindDispatchSetup(const LowerInferenceExprKindDispatch
             }
             return trimTemplateTypeText(returnKind) == "string";
           };
-          if (resolveAccessReceiverMapValueKind(expr.args.front(),
-                                                keyValueValueKind) &&
+          if (resolveAccessReceiverKeyValueValueKind(expr.args.front(),
+                                                     keyValueValueKind) &&
               keyValueValueKind != LocalInfo::ValueKind::String) {
             const std::string canonicalAccessPath =
-                canonicalMapHelperPathForDispatchSetup(
-                    accessNameForCanonicalMapOverride);
+                canonicalKeyValueHelperPathForDispatchSetup(
+                    accessNameForCanonicalKeyValueOverride);
             if (!canonicalAccessPath.empty() &&
                 ((stateInOut.getReturnInfo &&
                   stateInOut.getReturnInfo(canonicalAccessPath,
