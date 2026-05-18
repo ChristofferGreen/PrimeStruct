@@ -115,7 +115,7 @@ std::string SemanticsValidator::preferredCollectionHelperResolvedPath(
     normalizedPrefix.erase(normalizedPrefix.begin());
   }
 
-  auto explicitStdMapHelperName = [&]() -> std::string {
+  auto explicitStdKeyValueHelperName = [&]() -> std::string {
     const StdlibSurfaceMetadata *metadata = mapHelperSurfaceMetadataLocal();
     if (metadata == nullptr) {
       return {};
@@ -178,7 +178,7 @@ std::string SemanticsValidator::preferredCollectionHelperResolvedPath(
     return {};
   };
 
-  if (const std::string helperName = explicitStdMapHelperName();
+  if (const std::string helperName = explicitStdKeyValueHelperName();
       !helperName.empty()) {
     const std::string canonical =
         metadataBackedCanonicalMapHelperPath(helperName);
