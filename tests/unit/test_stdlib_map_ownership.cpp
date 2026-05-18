@@ -1622,6 +1622,23 @@ TEST_CASE("canonical map surface owns standalone stdlib implementation") {
   CHECK(resultMetadataSource.find(
             "findStdlibSurfaceMetadataByBridgeKey(\"collections.map_constructors\")") !=
         std::string::npos);
+  CHECK(resultMetadataSource.find(
+            "keyValueConstructorSurfaceMetadataForResultMetadata()") !=
+        std::string::npos);
+  CHECK(resultMetadataSource.find("mapConstructorSurfaceMetadataLocal()") ==
+        std::string::npos);
+  CHECK(resultMetadataSource.find("matchesDirectKeyValueConstructor") !=
+        std::string::npos);
+  CHECK(resultMetadataSource.find("matchesDirectMapConstructor") ==
+        std::string::npos);
+  CHECK(resultMetadataSource.find("sourceKeyValueKeyKind") !=
+        std::string::npos);
+  CHECK(resultMetadataSource.find("sourceMapKeyKind") ==
+        std::string::npos);
+  CHECK(resultMetadataSource.find("collectionKeyValueKeyKind") !=
+        std::string::npos);
+  CHECK(resultMetadataSource.find("collectionMapKeyKind") ==
+        std::string::npos);
   CHECK(resultMetadataSource.find("\"/std/collections/map/map\"") ==
         std::string::npos);
   CHECK(resultMetadataSource.find("\"/std/collections/map/map__\"") ==

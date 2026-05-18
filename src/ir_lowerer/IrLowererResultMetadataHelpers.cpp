@@ -30,7 +30,7 @@ std::string resolveScopedCallPath(const Expr &expr) {
   return expr.namespacePrefix + "/" + expr.name;
 }
 
-const StdlibSurfaceMetadata *mapConstructorSurfaceMetadataLocal() {
+const StdlibSurfaceMetadata *keyValueConstructorSurfaceMetadataForResultMetadata() {
   return findStdlibSurfaceMetadataByBridgeKey("collections.map_constructors");
 }
 
@@ -711,30 +711,30 @@ bool inferDirectResultValueCollectionInfo(const Expr &expr,
     return assignCollection(LocalInfo::Kind::Buffer, expr.templateArgs.front());
   }
   if (!expr.isMethodCall) {
-    auto matchesDirectMapConstructor = [&](const Expr &candidate) {
+    auto matchesDirectKeyValueConstructor = [&](const Expr &candidate) {
       const std::string scopedPath = resolveScopedCallPath(candidate);
-      const std::string rootedMapConstructor =
+      const std::string rootedKeyValueConstructor =
           collectionMemberPath("map", "map");
-      const std::string unrootedMapConstructor =
+      const std::string unrootedKeyValueConstructor =
           collectionMemberPath("map", "map", false);
       const StdlibSurfaceMetadata *metadata =
-          mapConstructorSurfaceMetadataLocal();
+          keyValueConstructorSurfaceMetadataForResultMetadata();
       return (metadata != nullptr &&
               isPublishedStdlibSurfaceConstructorExpr(
                   candidate,
                   metadata->id)) ||
-             scopedPath == rootedMapConstructor ||
-             scopedPath.rfind(rootedMapConstructor + "__", 0) == 0 ||
-             scopedPath == unrootedMapConstructor ||
-             scopedPath.rfind(unrootedMapConstructor + "__", 0) == 0;
+             scopedPath == rootedKeyValueConstructor ||
+             scopedPath.rfind(rootedKeyValueConstructor + "__", 0) == 0 ||
+             scopedPath == unrootedKeyValueConstructor ||
+             scopedPath.rfind(unrootedKeyValueConstructor + "__", 0) == 0;
     };
-    if (matchesDirectMapConstructor(expr) && expr.templateArgs.size() == 2) {
+    if (matchesDirectKeyValueConstructor(expr) && expr.templateArgs.size() == 2) {
       return assignCollection(
           LocalInfo::Kind::KeyValueCollection,
           expr.templateArgs.back(),
           valueKindFromTypeName(trimTemplateTypeText(expr.templateArgs.front())));
     }
-    if (matchesDirectMapConstructor(expr) && expr.args.size() % 2 == 0) {
+    if (matchesDirectKeyValueConstructor(expr) && expr.args.size() % 2 == 0) {
       auto inferLiteralType = [&](const Expr &value, std::string &typeOut) {
         typeOut.clear();
         if (value.kind == Expr::Kind::Literal) {
@@ -816,13 +816,13 @@ bool inferDirectResultValueCollectionInfo(const Expr &expr,
       if (expr.args.size() == 1) {
         LocalInfo::Kind sourceCollectionKind = LocalInfo::Kind::Value;
         LocalInfo::ValueKind sourceValueKind = LocalInfo::ValueKind::Unknown;
-        LocalInfo::ValueKind sourceMapKeyKind = LocalInfo::ValueKind::Unknown;
+        LocalInfo::ValueKind sourceKeyValueKeyKind = LocalInfo::ValueKind::Unknown;
         if (inferDirectResultValueCollectionInfo(expr.args.front(),
                                                  localsIn,
                                                  resolveDefinitionCall,
                                                  sourceCollectionKind,
                                                  sourceValueKind,
-                                                 sourceMapKeyKind,
+                                                 sourceKeyValueKeyKind,
                                                  suppressCallDefinitionFallback)) {
           collectionKindOut = LocalInfo::Kind::Buffer;
           valueKindOut = sourceValueKind;
@@ -898,13 +898,13 @@ bool inferDirectResultValueCollectionInfo(const Expr &expr,
       expr.args.size() == 1) {
     LocalInfo::Kind sourceCollectionKind = LocalInfo::Kind::Value;
     LocalInfo::ValueKind sourceValueKind = LocalInfo::ValueKind::Unknown;
-    LocalInfo::ValueKind sourceMapKeyKind = LocalInfo::ValueKind::Unknown;
+    LocalInfo::ValueKind sourceKeyValueKeyKind = LocalInfo::ValueKind::Unknown;
     if (inferDirectResultValueCollectionInfo(expr.args.front(),
                                              localsIn,
                                              resolveDefinitionCall,
                                              sourceCollectionKind,
                                              sourceValueKind,
-                                             sourceMapKeyKind,
+                                             sourceKeyValueKeyKind,
                                              suppressCallDefinitionFallback)) {
       valueKindOut = sourceValueKind;
     }
@@ -1023,7 +1023,7 @@ void applyDirectResultValueMetadata(const Expr &valueExpr,
   }
   LocalInfo::Kind valueCollectionKind = LocalInfo::Kind::Value;
   LocalInfo::ValueKind collectionValueKind = LocalInfo::ValueKind::Unknown;
-  LocalInfo::ValueKind collectionMapKeyKind = LocalInfo::ValueKind::Unknown;
+  LocalInfo::ValueKind collectionKeyValueKeyKind = LocalInfo::ValueKind::Unknown;
   const bool suppressSemanticCallDefinitionFallback =
       hasSemanticProductValueFactContext && valueExpr.kind == Expr::Kind::Call;
   if (inferDirectResultValueCollectionInfo(
@@ -1032,11 +1032,11 @@ void applyDirectResultValueMetadata(const Expr &valueExpr,
           resolveDefinitionCall,
           valueCollectionKind,
           collectionValueKind,
-          collectionMapKeyKind,
+          collectionKeyValueKeyKind,
           suppressSemanticCallDefinitionFallback)) {
     out.valueCollectionKind = valueCollectionKind;
     out.valueKind = collectionValueKind;
-    out.valueMapKeyKind = collectionMapKeyKind;
+    out.valueMapKeyKind = collectionKeyValueKeyKind;
     out.valueStructType.clear();
     out.valueIsFileHandle = false;
     return;
