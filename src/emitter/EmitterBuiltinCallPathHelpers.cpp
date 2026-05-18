@@ -9,20 +9,20 @@
 namespace primec::emitter {
 
 namespace {
-constexpr std::string_view MapHelperSurfaceBridgeKey = "collections.map_helpers";
-constexpr std::string_view MapConstructorSurfaceBridgeKey =
+constexpr std::string_view KeyValueHelperSurfaceBridgeKey = "collections.map_helpers";
+constexpr std::string_view KeyValueConstructorSurfaceBridgeKey =
     "collections.map_constructors";
 
-const StdlibSurfaceMetadata *mapHelperSurfaceMetadataLocal() {
-  return findStdlibSurfaceMetadataByBridgeKey(MapHelperSurfaceBridgeKey);
+const StdlibSurfaceMetadata *keyValueHelperSurfaceMetadataLocal() {
+  return findStdlibSurfaceMetadataByBridgeKey(KeyValueHelperSurfaceBridgeKey);
 }
 
-const StdlibSurfaceMetadata *mapConstructorSurfaceMetadataLocal() {
-  return findStdlibSurfaceMetadataByBridgeKey(MapConstructorSurfaceBridgeKey);
+const StdlibSurfaceMetadata *keyValueConstructorSurfaceMetadataLocal() {
+  return findStdlibSurfaceMetadataByBridgeKey(KeyValueConstructorSurfaceBridgeKey);
 }
 
-std::string mapConstructorAliasToken() {
-  const auto *metadata = mapConstructorSurfaceMetadataLocal();
+std::string keyValueConstructorAliasToken() {
+  const auto *metadata = keyValueConstructorSurfaceMetadataLocal();
   if (metadata == nullptr) {
     return {};
   }
@@ -42,7 +42,7 @@ bool isScopedBuiltinControlAlias(const std::string &name) {
 }
 
 bool isNamespacedStdlibBuiltinAlias(const std::string &alias) {
-  const std::string mapAlias = mapConstructorAliasToken();
+  const std::string keyValueAlias = keyValueConstructorAliasToken();
   return alias == "assign" || alias == "if" || alias == "while" ||
          alias == "take" || alias == "borrow" || alias == "init" ||
          alias == "drop" || alias == "increment" ||
@@ -65,7 +65,7 @@ bool isNamespacedStdlibBuiltinAlias(const std::string &alias) {
          alias == "get" || alias == "get_ref" || alias == "ref" ||
          alias == "ref_ref" || alias == "at" ||
          alias == "at_unsafe" || alias == "array" ||
-         alias == "vector" || (!mapAlias.empty() && alias == mapAlias) ||
+         alias == "vector" || (!keyValueAlias.empty() && alias == keyValueAlias) ||
          alias == "soa" "_vector" || alias == "convert" ||
          alias == "clamp" || alias == "min" || alias == "max" ||
          alias == "lerp" || alias == "fma" || alias == "hypot" ||
@@ -124,7 +124,7 @@ std::string preferredFileMethodTargetLocal(
 
 bool isMapCollectionTypeNameLocal(const std::string &name) {
   const std::string normalized = normalizeBindingTypeName(name);
-  const auto *metadata = mapConstructorSurfaceMetadataLocal();
+  const auto *metadata = keyValueConstructorSurfaceMetadataLocal();
   bool matchesMapImportAlias = false;
   if (metadata != nullptr) {
     for (std::string_view alias : metadata->importAliasSpellings) {
@@ -135,7 +135,7 @@ bool isMapCollectionTypeNameLocal(const std::string &name) {
     }
   }
   const std::string experimentalMapType =
-      experimentalCollectionMemberRootLocal(mapConstructorAliasToken()) + "Map";
+      experimentalCollectionMemberRootLocal(keyValueConstructorAliasToken()) + "Map";
   return matchesMapImportAlias || normalized == "Map" ||
          normalized == experimentalMapType;
 }
@@ -264,7 +264,7 @@ bool resolveStdlibSurfaceExprMemberNameLocal(const Expr &expr,
     memberNameOut.assign(memberName);
     return true;
   }
-  if (metadata.bridgeKey == MapHelperSurfaceBridgeKey &&
+  if (metadata.bridgeKey == KeyValueHelperSurfaceBridgeKey &&
       normalizedPath.rfind("/std/collections/Map", 0) == 0) {
     const std::string memberToken =
         normalizedPath.substr(std::string("/std/collections/Map").size());
@@ -280,7 +280,7 @@ bool resolveStdlibSurfaceExprMemberNameLocal(const Expr &expr,
 
 bool resolveCanonicalMapHelperExprMemberName(const Expr &expr,
                                              std::string &memberNameOut) {
-  const auto *metadata = mapHelperSurfaceMetadataLocal();
+  const auto *metadata = keyValueHelperSurfaceMetadataLocal();
   return metadata != nullptr &&
          resolveStdlibSurfaceExprMemberNameLocal(
              expr, *metadata, true, memberNameOut);
@@ -288,7 +288,7 @@ bool resolveCanonicalMapHelperExprMemberName(const Expr &expr,
 
 bool resolvePublishedMapHelperExprMemberName(const Expr &expr,
                                              std::string &memberNameOut) {
-  const auto *metadata = mapHelperSurfaceMetadataLocal();
+  const auto *metadata = keyValueHelperSurfaceMetadataLocal();
   return metadata != nullptr &&
          resolveStdlibSurfaceExprMemberNameLocal(
              expr, *metadata, false, memberNameOut);
@@ -296,7 +296,7 @@ bool resolvePublishedMapHelperExprMemberName(const Expr &expr,
 
 bool resolveCanonicalMapConstructorExprMemberName(const Expr &expr,
                                                   std::string &memberNameOut) {
-  const auto *metadata = mapConstructorSurfaceMetadataLocal();
+  const auto *metadata = keyValueConstructorSurfaceMetadataLocal();
   return metadata != nullptr &&
          resolveStdlibSurfaceExprMemberNameLocal(
              expr, *metadata, true, memberNameOut);
@@ -304,7 +304,7 @@ bool resolveCanonicalMapConstructorExprMemberName(const Expr &expr,
 
 bool resolvePublishedMapConstructorExprMemberName(const Expr &expr,
                                                   std::string &memberNameOut) {
-  const auto *metadata = mapConstructorSurfaceMetadataLocal();
+  const auto *metadata = keyValueConstructorSurfaceMetadataLocal();
   return metadata != nullptr &&
          resolveStdlibSurfaceExprMemberNameLocal(
              expr, *metadata, false, memberNameOut);
@@ -959,9 +959,9 @@ bool getBuiltinCollectionName(const Expr &expr, std::string &out) {
   if (rawName.find('/') != std::string::npos) {
     return false;
   }
-  const std::string mapAlias = mapConstructorAliasToken();
+  const std::string keyValueAlias = keyValueConstructorAliasToken();
   if (rawName == "array" || rawName == "vector" ||
-      (!mapAlias.empty() && rawName == mapAlias) ||
+      (!keyValueAlias.empty() && rawName == keyValueAlias) ||
       rawName == "soa" "_vector" || rawName == "soa") {
     out = rawName == "soa" ? "soa" "_vector" : rawName;
     return true;

@@ -1219,9 +1219,25 @@ TEST_CASE("canonical map surface owns standalone stdlib implementation") {
         std::string::npos);
   CHECK(emitterCallPathHelpersSource.find("StdlibSurfaceId::CollectionsMapConstructors") ==
         std::string::npos);
-  CHECK(emitterCallPathHelpersSource.find("MapHelperSurfaceBridgeKey") !=
+  CHECK(emitterCallPathHelpersSource.find("KeyValueHelperSurfaceBridgeKey") !=
         std::string::npos);
-  CHECK(emitterCallPathHelpersSource.find("MapConstructorSurfaceBridgeKey") !=
+  CHECK(emitterCallPathHelpersSource.find("MapHelperSurfaceBridgeKey") ==
+        std::string::npos);
+  CHECK(emitterCallPathHelpersSource.find("KeyValueConstructorSurfaceBridgeKey") !=
+        std::string::npos);
+  CHECK(emitterCallPathHelpersSource.find("MapConstructorSurfaceBridgeKey") ==
+        std::string::npos);
+  CHECK(emitterCallPathHelpersSource.find("keyValueHelperSurfaceMetadataLocal()") !=
+        std::string::npos);
+  CHECK(emitterCallPathHelpersSource.find("mapHelperSurfaceMetadataLocal()") ==
+        std::string::npos);
+  CHECK(emitterCallPathHelpersSource.find("keyValueConstructorSurfaceMetadataLocal()") !=
+        std::string::npos);
+  CHECK(emitterCallPathHelpersSource.find("mapConstructorSurfaceMetadataLocal()") ==
+        std::string::npos);
+  CHECK(emitterCallPathHelpersSource.find("keyValueConstructorAliasToken()") !=
+        std::string::npos);
+  CHECK(emitterCallPathHelpersSource.find("mapConstructorAliasToken()") ==
         std::string::npos);
   CHECK(emitterCallPathHelpersSource.find("resolveCanonicalMapHelperExprMemberName") !=
         std::string::npos);

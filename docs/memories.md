@@ -634,7 +634,9 @@ This file stores durable session-derived facts that are useful in later work. Ke
   key-kind temporaries should use key/value naming around map constructor
   metadata; declared collection inference direct constructor probes should use
   key/value naming around map constructor metadata; generic lowerer helper
-  surface probes should use key/value naming around map helper metadata.
+  surface probes should use key/value naming around map helper metadata;
+  emitter call-path local bridge constants, metadata lookups, and constructor
+  alias token helpers should use key/value naming around map metadata.
 - Evidence: Field-bound `Map<K, V>` compatibility triage showed generated
   map helper specializations could mask missing `/map/count` aliases unless
   removed-alias checks ignored generated-only definition paths; later
