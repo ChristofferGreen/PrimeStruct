@@ -710,7 +710,11 @@ This file stores durable session-derived facts that are useful in later work. Ke
   semantic collection-helper rewrites should derive canonical helper paths,
   explicit helper-path recognition, member-token resolution, and lowering
   spelling preference through `collections.map_helpers` metadata instead of
-  direct map surface IDs or rooted/canonical helper path concatenation.
+  direct map surface IDs or rooted/canonical helper path concatenation;
+  semantic collection-access resolution should not carry rooted `/map/at*` or
+  `/map/contains*` compatibility branches, and should only recognize canonical
+  map helper spellings through stdlib surface metadata so removed aliases fall
+  through as ordinary unresolved calls.
   The stale
   rooted-alias struct-return semantic fixture now expects `values.at()` to use
   the canonical map helper return type instead of a user-defined `/map/at`

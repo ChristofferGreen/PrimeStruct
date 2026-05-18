@@ -29,19 +29,22 @@ bool isSoaReceiverStructPath(const std::string &structPath) {
          structPath.rfind("/std/collections/experimental" "_soa" "_vector/Soa" "Vector" "__", 0) == 0;
 }
 
-bool isMapCanonicalAccessPath(const std::string &path) {
-  return path == "/map/at" || path == "/map/at_ref" ||
-         path == "/map/at_unsafe" || path == "/map/at_unsafe_ref";
+const StdlibSurfaceMetadata *collectionAccessMapHelperMetadata() {
+  return findStdlibSurfaceMetadataByBridgeKey("collections.map_helpers");
 }
 
 std::string canonicalMapHelperPathLocal(std::string_view helperName) {
-  return canonicalCollectionHelperPath(StdlibSurfaceId::CollectionsMapHelpers,
-                                       helperName);
+  const StdlibSurfaceMetadata *metadata =
+      collectionAccessMapHelperMetadata();
+  if (metadata == nullptr) {
+    return {};
+  }
+  return canonicalCollectionHelperPath(metadata->id, helperName);
 }
 
 std::string canonicalMapHelperNamespaceLocal() {
   const StdlibSurfaceMetadata *metadata =
-      findStdlibSurfaceMetadata(StdlibSurfaceId::CollectionsMapHelpers);
+      collectionAccessMapHelperMetadata();
   if (metadata == nullptr) {
     return "";
   }
@@ -55,11 +58,28 @@ std::string canonicalMapHelperNamespaceLocal() {
 bool resolveCanonicalMapHelperNameFromSpelling(std::string path,
                                                std::string &helperNameOut) {
   helperNameOut.clear();
-  if (!path.empty() && path.front() != '/') {
-    path.insert(path.begin(), '/');
+  const StdlibSurfaceMetadata *metadata =
+      collectionAccessMapHelperMetadata();
+  if (metadata == nullptr || path.empty()) {
+    return false;
   }
-  return resolvePublishedCollectionHelperResolvedPath(
-      path, StdlibSurfaceId::CollectionsMapHelpers, helperNameOut);
+  if (path.find('/') != std::string::npos) {
+    if (path.front() != '/') {
+      path.insert(path.begin(), '/');
+    }
+    const std::string canonicalPrefix =
+        std::string(metadata->canonicalPath) + "/";
+    if (path.rfind(canonicalPrefix, 0) != 0) {
+      return false;
+    }
+  }
+  const std::string_view memberName =
+      resolveStdlibSurfaceMemberName(*metadata, path);
+  if (memberName.empty()) {
+    return false;
+  }
+  helperNameOut.assign(memberName);
+  return true;
 }
 
 std::string canonicalStdlibMapAccessPathForHelper(
@@ -90,9 +110,7 @@ std::string canonicalStdlibMapContainsPathForResolvedMethod(
       (helperName == "contains" || helperName == "contains_ref")) {
     return canonicalMapHelperPathLocal(helperName);
   }
-  return methodResolved == "/map/contains_ref"
-             ? canonicalMapHelperPathLocal("contains_ref")
-             : canonicalMapHelperPathLocal("contains");
+  return canonicalMapHelperPathLocal("contains");
 }
 
 } // namespace
@@ -178,10 +196,13 @@ bool SemanticsValidator::resolveExprCollectionAccessTarget(
         if (!namespacePrefix.empty() && namespacePrefix.front() == '/') {
           namespacePrefix.erase(namespacePrefix.begin());
         }
-        if (namespacePrefix == canonicalMapHelperNamespaceLocal() &&
-            isCanonicalMapAccessHelperName(candidate.name)) {
-          helperNameOut = candidate.name;
-          return true;
+        if (!namespacePrefix.empty()) {
+          if (namespacePrefix == canonicalMapHelperNamespaceLocal() &&
+              isCanonicalMapAccessHelperName(candidate.name)) {
+            helperNameOut = candidate.name;
+            return true;
+          }
+          return false;
         }
         if (candidate.name.find('/') == std::string::npos &&
             isCanonicalMapAccessHelperName(candidate.name)) {
@@ -198,53 +219,9 @@ bool SemanticsValidator::resolveExprCollectionAccessTarget(
       isValueSurfaceAccessHelperName(accessHelperName) &&
       isStdNamespacedVectorCompatibilityHelperPath(resolveCalleePath(expr),
                                                    accessHelperName);
-  auto isMapNamespacedAccessCompatibilityCall = [&](const Expr &candidate) -> bool {
-    if (candidate.kind != Expr::Kind::Call || candidate.name.empty()) {
-      return false;
-    }
-    std::string normalized = candidate.name;
-    if (!normalized.empty() && normalized.front() == '/') {
-      normalized.erase(normalized.begin());
-    }
-    if (normalized != "map/at" && normalized != "map/at_ref" &&
-        normalized != "map/at_unsafe" &&
-        normalized != "map/at_unsafe_ref") {
-      std::string namespacePrefix = candidate.namespacePrefix;
-      if (!namespacePrefix.empty() && namespacePrefix.front() == '/') {
-        namespacePrefix.erase(namespacePrefix.begin());
-      }
-      if (namespacePrefix == "map" &&
-          isCanonicalMapAccessHelperName(normalized)) {
-        normalized = "map/" + normalized;
-      }
-    }
-    if (normalized != "map/at" && normalized != "map/at_ref" &&
-        normalized != "map/at_unsafe" &&
-        normalized != "map/at_unsafe_ref") {
-      const std::string resolvedPath = resolveCalleePath(candidate);
-      if (resolvedPath == "/map/at" || resolvedPath == "/map/at_ref" ||
-          resolvedPath == "/map/at_unsafe" ||
-          resolvedPath == "/map/at_unsafe_ref") {
-        normalized = resolvedPath.substr(1);
-      } else {
-        return false;
-      }
-    }
-    return defMap_.find("/" + normalized) == defMap_.end();
-  };
-  if (!expr.isMethodCall && isMapNamespacedAccessCompatibilityCall(expr)) {
-    const std::string removedPath = explicitCallPath(expr);
-    return failCollectionAccessTargetDiagnostic(
-        "unknown call target: " +
-        (removedPath.empty() ? std::string("/map/") + context.namespacedHelper : removedPath));
-  }
-  const bool isResolvedMapAccessCall =
-      !expr.isMethodCall && isMapCanonicalAccessPath(resolved) &&
-      !isMapNamespacedAccessCompatibilityCall(expr);
   const bool isBuiltinAccessName =
       hasBuiltinAccessSpelling &&
-      !isStdNamespacedVectorAccessCall &&
-      !isResolvedMapAccessCall;
+      !isStdNamespacedVectorAccessCall;
   const bool isNamespacedVectorAccessCall =
       !isStdNamespacedVectorAccessCall && isBuiltinAccessName &&
       context.isNamespacedVectorHelperCall &&
@@ -858,11 +835,9 @@ bool SemanticsValidator::resolveExprCollectionAccessTarget(
           resolveCanonicalMapHelperNameFromSpelling(
               methodResolved, canonicalMapMethodHelperName);
       if (expr.name == "contains" &&
-          (methodResolved == "/map/contains" ||
-           methodResolved == "/map/contains_ref" ||
-           (resolvedCanonicalMapHelper &&
-            (canonicalMapMethodHelperName == "contains" ||
-             canonicalMapMethodHelperName == "contains_ref"))) &&
+          resolvedCanonicalMapHelper &&
+          (canonicalMapMethodHelperName == "contains" ||
+           canonicalMapMethodHelperName == "contains_ref") &&
           !hasImportedDefinitionPath("/contains") &&
           !hasDeclaredDefinitionPath("/contains") &&
           !hasImportedDefinitionPath(
@@ -903,29 +878,13 @@ bool SemanticsValidator::resolveExprCollectionAccessTarget(
           return failCollectionAccessTargetDiagnostic(
               "unknown call target: " + methodResolved);
         }
-        if ((methodResolved == "/map/at" || methodResolved == "/map/at_unsafe" ||
-             methodResolved == "/map/at_ref" ||
-             methodResolved == "/map/at_unsafe_ref" ||
-             isCanonicalMapAccessResolvedPath(methodResolved)) &&
+        if (isCanonicalMapAccessResolvedPath(methodResolved) &&
             !context.shouldBuiltinValidateBareMapAccessCall &&
             !context.isIndexedArgsPackMapReceiverTarget(receiverCandidate) &&
-            !hasImportedDefinitionPath(
-                isCanonicalMapAccessResolvedPath(methodResolved)
-                    ? methodResolved
-                    : canonicalStdlibMapAccessPathForHelper(
-                          methodResolved.substr(std::string("/map/").size()))) &&
-            !hasDeclaredDefinitionPath(
-                isCanonicalMapAccessResolvedPath(methodResolved)
-                    ? methodResolved
-                    : canonicalStdlibMapAccessPathForHelper(
-                          methodResolved.substr(std::string("/map/").size())))) {
+            !hasImportedDefinitionPath(methodResolved) &&
+            !hasDeclaredDefinitionPath(methodResolved)) {
           return failCollectionAccessTargetDiagnostic(
-              "unknown call target: " +
-              std::string(isCanonicalMapAccessResolvedPath(methodResolved)
-                              ? methodResolved
-                              : canonicalStdlibMapAccessPathForHelper(
-                                    methodResolved.substr(
-                                        std::string("/map/").size()))));
+              "unknown call target: " + methodResolved);
         }
       } else if (defMap_.find(methodResolved) == defMap_.end() &&
                  !context.hasResolvableMapHelperPath(methodResolved)) {

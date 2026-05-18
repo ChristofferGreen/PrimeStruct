@@ -964,6 +964,23 @@ TEST_CASE("canonical map surface owns standalone stdlib implementation") {
         std::string::npos);
   CHECK(collectionAccessSource.find("resolved = \"/map/\" +") ==
         std::string::npos);
+  CHECK(collectionAccessSource.find("StdlibSurfaceId::CollectionsMapHelpers") ==
+        std::string::npos);
+  CHECK(collectionAccessSource.find("path == \"/map/at\"") ==
+        std::string::npos);
+  CHECK(collectionAccessSource.find("methodResolved == \"/map/") ==
+        std::string::npos);
+  CHECK(collectionAccessSource.find("std::string(\"/map/\")") ==
+        std::string::npos);
+  CHECK(collectionAccessSource.find("auto isMapNamespacedAccessCompatibilityCall") ==
+        std::string::npos);
+  CHECK(collectionAccessSource.find("isMapCanonicalAccessPath(") ==
+        std::string::npos);
+  CHECK(collectionAccessSource.find("collectionAccessMapHelperMetadata()") !=
+        std::string::npos);
+  CHECK(collectionAccessSource.find(
+            "findStdlibSurfaceMetadataByBridgeKey(\"collections.map_helpers\")") !=
+        std::string::npos);
   CHECK(countCapacityMapBuiltinSource.find("/std/collections/map/count") ==
         std::string::npos);
   CHECK(countCapacityMapBuiltinSource.find("/std/collections/map/at") ==

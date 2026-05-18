@@ -2332,6 +2332,11 @@ Task template:
       helper paths, member tokens, and preferred lowering spellings through
       `collections.map_helpers` metadata, with the file inventory cap reduced
       to zero.
+    - 2026-05-18: Semantic collection-access resolution no longer carries
+      rooted `/map/at*` or `/map/contains*` compatibility branches; it now
+      treats those removed aliases like ordinary unresolved calls and only
+      recognizes canonical map helper spellings through stdlib surface
+      metadata, with the file inventory cap reduced to zero.
     - 2026-05-16: Inline native map helper recognition no longer names
       `StdlibSurfaceId::CollectionsMapHelpers` directly; it now resolves the
       helper family through `collections.map_helpers` metadata.
