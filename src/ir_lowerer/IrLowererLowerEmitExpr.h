@@ -430,17 +430,17 @@
           return true;
         }
         if (!expr.isMethodCall && !expr.args.empty()) {
-          std::string canonicalMapHelperName;
-          if (resolveMapHelperAliasName(expr, canonicalMapHelperName) &&
+          std::string canonicalKeyValueHelperName;
+          if (resolveKeyValueHelperAliasName(expr, canonicalKeyValueHelperName) &&
               resolveDefinitionCall(expr) == nullptr &&
-              (canonicalMapHelperName == "count" || canonicalMapHelperName == "contains" ||
-               canonicalMapHelperName == "tryAt" ||
-               canonicalMapHelperName == "insert" ||
-               canonicalMapHelperName == "insert_ref") &&
+              (canonicalKeyValueHelperName == "count" || canonicalKeyValueHelperName == "contains" ||
+               canonicalKeyValueHelperName == "tryAt" ||
+               canonicalKeyValueHelperName == "insert" ||
+               canonicalKeyValueHelperName == "insert_ref") &&
               ((expr.name.find('/') != std::string::npos) || !expr.namespacePrefix.empty() ||
                !expr.templateArgs.empty())) {
             Expr rewrittenExpr = expr;
-            rewrittenExpr.name = canonicalMapHelperName;
+            rewrittenExpr.name = canonicalKeyValueHelperName;
             rewrittenExpr.namespacePrefix.clear();
             rewrittenExpr.templateArgs.clear();
             return emitExpr(rewrittenExpr, localsIn);

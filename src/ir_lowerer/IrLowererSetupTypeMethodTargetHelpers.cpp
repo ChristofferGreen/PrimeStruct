@@ -11,9 +11,9 @@ const Definition *resolveMethodDefinitionFromReceiverTarget(
     const std::unordered_map<std::string, const Definition *> &defMap,
     std::string &errorOut) {
   const bool isExplicitRemovedVectorMethodAlias = isExplicitRemovedVectorMethodAliasPath(methodName);
-  const bool isExplicitMapMethodAlias = isExplicitMapMethodAliasPath(methodName);
-  const bool isExplicitMapContainsOrTryAtMethod =
-      isExplicitMapContainsOrTryAtMethodPath(methodName);
+  const bool isExplicitKeyValueMethodAlias = isExplicitKeyValueMethodAliasPath(methodName);
+  const bool isExplicitKeyValueContainsOrTryAtMethod =
+      isExplicitKeyValueContainsOrTryAtMethodPath(methodName);
   std::string normalizedMethodName = methodName;
   if (!normalizedMethodName.empty() && normalizedMethodName.front() == '/') {
     normalizedMethodName.erase(normalizedMethodName.begin());
@@ -47,10 +47,10 @@ const Definition *resolveMethodDefinitionFromReceiverTarget(
   const bool isExplicitCanonicalMapMethodAlias =
       normalizedOriginalMethodName.rfind(canonicalMapPrefix, 0) == 0;
   const bool isExplicitCompatibilityMapMethodAlias =
-      isExplicitMapMethodAlias && !isExplicitCanonicalMapMethodAlias;
+      isExplicitKeyValueMethodAlias && !isExplicitCanonicalMapMethodAlias;
   const bool isExplicitMapContainsOrTryAtCompatibilityMethodAlias =
       normalizedOriginalMethodName.rfind(rootedMapPrefix, 0) == 0 &&
-      isExplicitMapContainsOrTryAtMethod;
+      isExplicitKeyValueContainsOrTryAtMethod;
   const bool isExplicitVectorAliasMethod =
       normalizedOriginalMethodName.rfind(rootedVectorPrefix, 0) == 0;
   const bool isExplicitCanonicalVectorMethod =
@@ -298,7 +298,7 @@ const Definition *resolveMethodDefinitionFromReceiverTarget(
       errorOut = "unknown method: " + resolved;
       return nullptr;
     }
-    if ((isExplicitMapMethodAlias || isExplicitMapContainsOrTryAtMethod) &&
+    if ((isExplicitKeyValueMethodAlias || isExplicitKeyValueContainsOrTryAtMethod) &&
         isMapReceiverTarget(resolvedTypeWithoutSlash)) {
       errorOut = "unknown method: " + resolved;
       return nullptr;
@@ -310,7 +310,7 @@ const Definition *resolveMethodDefinitionFromReceiverTarget(
     }
     if (resolvedDef == nullptr) {
       if (!isExplicitCanonicalMapMethodAlias && !isExplicitCompatibilityMapMethodAlias &&
-          !isExplicitMapContainsOrTryAtMethod &&
+          !isExplicitKeyValueContainsOrTryAtMethod &&
           isMapReceiverTarget(resolvedTypeWithoutSlash) &&
           (normalizedMethodName == "contains" || normalizedMethodName == "tryAt" ||
            normalizedMethodName == "insert")) {
@@ -367,7 +367,7 @@ const Definition *resolveMethodDefinitionFromReceiverTarget(
     errorOut = "unknown method: " + resolved;
     return nullptr;
   }
-  if ((isExplicitMapMethodAlias || isExplicitMapContainsOrTryAtMethod) &&
+  if ((isExplicitKeyValueMethodAlias || isExplicitKeyValueContainsOrTryAtMethod) &&
       isMapReceiverTarget(normalizedTypeName)) {
     errorOut = "unknown method: " + resolved;
     return nullptr;
@@ -379,7 +379,7 @@ const Definition *resolveMethodDefinitionFromReceiverTarget(
   }
   if (resolvedDef == nullptr) {
     if (!isExplicitCanonicalMapMethodAlias && !isExplicitCompatibilityMapMethodAlias &&
-        !isExplicitMapContainsOrTryAtMethod &&
+        !isExplicitKeyValueContainsOrTryAtMethod &&
         isMapReceiverTarget(normalizedTypeName) &&
         (normalizedMethodName == "contains" || normalizedMethodName == "tryAt" ||
          normalizedMethodName == "insert")) {

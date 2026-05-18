@@ -32,8 +32,8 @@ std::string preferredGfxErrorHelperTarget(
 
 bool isRemovedVectorCompatibilityHelper(const std::string &helperName);
 bool resolveVectorHelperAliasName(const Expr &expr, std::string &helperNameOut);
-bool resolveMapHelperAliasName(const Expr &expr, std::string &helperNameOut);
-bool resolveBorrowedMapHelperAliasName(const Expr &expr, std::string &helperNameOut);
+bool resolveKeyValueHelperAliasName(const Expr &expr, std::string &helperNameOut);
+bool resolveBorrowedKeyValueHelperAliasName(const Expr &expr, std::string &helperNameOut);
 
 std::string stdCollectionsRoot(bool leadingSlash = true);
 std::string collectionTypePath(std::string_view collectionName,
@@ -63,12 +63,12 @@ std::string normalizeExperimentalCollectionTypePath(std::string_view typeName,
 
 std::string normalizeCollectionHelperPath(const std::string &path);
 bool isExplicitRemovedVectorMethodAliasPath(const std::string &methodName);
-bool isExplicitMapMethodAliasPath(const std::string &methodName);
-bool isExplicitMapContainsOrTryAtMethodPath(const std::string &methodName);
+bool isExplicitKeyValueMethodAliasPath(const std::string &methodName);
+bool isExplicitKeyValueContainsOrTryAtMethodPath(const std::string &methodName);
 bool isVectorBuiltinName(const Expr &expr, const char *name);
-bool isMapBuiltinName(const Expr &expr, const char *name);
-bool isExplicitMapHelperFallbackPath(const Expr &expr);
-bool isExplicitMapReceiverProbeHelperExpr(const Expr &expr);
+bool isKeyValueBuiltinName(const Expr &expr, const char *name);
+bool isExplicitKeyValueHelperFallbackPath(const Expr &expr);
+bool isExplicitKeyValueReceiverProbeHelperExpr(const Expr &expr);
 bool isExplicitVectorAccessHelperPath(const std::string &path);
 bool isExplicitVectorAccessHelperExpr(const Expr &expr);
 bool isExplicitVectorReceiverProbeHelperExpr(const Expr &expr);

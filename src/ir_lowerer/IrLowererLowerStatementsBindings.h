@@ -43,7 +43,7 @@
             return;
           }
           std::string helperName;
-          if (!resolveMapHelperAliasName(exprIn, helperName) ||
+          if (!resolveKeyValueHelperAliasName(exprIn, helperName) ||
               (helperName != "count" && helperName != "contains" &&
                helperName != "tryAt")) {
             return;

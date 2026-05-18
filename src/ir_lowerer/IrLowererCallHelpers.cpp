@@ -228,13 +228,13 @@ CountMethodFallbackResult tryEmitNonMethodCountFallback(
     }
   }
   std::string normalizedVectorHelperName;
-  std::string normalizedMapHelperName;
+  std::string normalizedKeyValueHelperName;
   const bool hasVectorHelperAlias = resolveVectorHelperAliasName(expr, normalizedVectorHelperName);
-  const bool hasMapHelperAlias = resolveMapHelperAliasName(expr, normalizedMapHelperName);
+  const bool hasKeyValueHelperAlias = resolveKeyValueHelperAliasName(expr, normalizedKeyValueHelperName);
   const bool isCountCall = isVectorBuiltinName(expr, "count") ||
-                           isMapBuiltinName(expr, "count") ||
+                           isKeyValueBuiltinName(expr, "count") ||
                            (hasVectorHelperAlias && normalizedVectorHelperName == "count") ||
-                           (hasMapHelperAlias && normalizedMapHelperName == "count");
+                           (hasKeyValueHelperAlias && normalizedKeyValueHelperName == "count");
   const bool isCapacityCall = isVectorBuiltinName(expr, "capacity") ||
                               (hasVectorHelperAlias &&
                                normalizedVectorHelperName == "capacity");
@@ -287,10 +287,10 @@ CountMethodFallbackResult tryEmitNonMethodCountFallback(
     methodExpr.semanticNodeId = 0;
     if (hasVectorHelperAlias) {
       methodExpr.name = normalizedVectorHelperName;
-    } else if (std::string borrowedMapHelperName; resolveBorrowedMapHelperAliasName(methodExpr, borrowedMapHelperName)) {
-      methodExpr.name = borrowedMapHelperName;
-    } else if (hasMapHelperAlias) {
-      methodExpr.name = normalizedMapHelperName;
+    } else if (std::string borrowedKeyValueHelperName; resolveBorrowedKeyValueHelperAliasName(methodExpr, borrowedKeyValueHelperName)) {
+      methodExpr.name = borrowedKeyValueHelperName;
+    } else if (hasKeyValueHelperAlias) {
+      methodExpr.name = normalizedKeyValueHelperName;
     }
     if (receiverIndex != 0 && receiverIndex < methodExpr.args.size()) {
       std::swap(methodExpr.args[0], methodExpr.args[receiverIndex]);

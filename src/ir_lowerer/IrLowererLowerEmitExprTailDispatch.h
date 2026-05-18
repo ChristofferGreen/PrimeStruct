@@ -175,7 +175,7 @@
               if (callExpr.isMethodCall) {
                 return false;
               }
-              if (ir_lowerer::resolveMapHelperAliasName(callExpr, helperNameOut)) {
+              if (ir_lowerer::resolveKeyValueHelperAliasName(callExpr, helperNameOut)) {
                 return true;
               }
               return resolvePublishedTailDispatchMapHelperName(callExpr, helperNameOut);
@@ -282,7 +282,7 @@
             }
           } else {
             std::string helperName;
-            if ((!ir_lowerer::resolveMapHelperAliasName(callExpr, helperName) ||
+            if ((!ir_lowerer::resolveKeyValueHelperAliasName(callExpr, helperName) ||
                  (helperName != "insert" && helperName != "insert_ref")) &&
                 !isDirectBareMapInsertHelperStem(callExpr)) {
               return false;

@@ -426,7 +426,7 @@ const Definition *resolveMethodCallDefinitionFromExpr(
     }
     return {};
   };
-  if (isExplicitMapMethodAliasPath(explicitMethodPath)) {
+  if (isExplicitKeyValueMethodAliasPath(explicitMethodPath)) {
     errorOut = "unknown method: " + explicitMethodPath;
     return nullptr;
   }
@@ -636,7 +636,7 @@ const Definition *resolveMethodCallDefinitionFromExpr(
           !explicitVectorCountBridgePath.empty()
               ? explicitVectorCountBridgePath
               : resolvedPath;
-      if (isExplicitMapMethodAliasPath(explicitMethodPath) &&
+      if (isExplicitKeyValueMethodAliasPath(explicitMethodPath) &&
           preferredResolvedPath == explicitMethodPath) {
         errorOut =
             "semantic-product method-call target missing lowered definition: " +
@@ -684,7 +684,7 @@ const Definition *resolveMethodCallDefinitionFromExpr(
   std::string accessName;
   const bool isBuiltinAccessCall = getBuiltinArrayAccessName(callExpr, accessName) && callExpr.args.size() == 2;
   const bool isBuiltinCountOrCapacityCall =
-      isVectorBuiltinName(callExpr, "count") || isMapBuiltinName(callExpr, "count") ||
+      isVectorBuiltinName(callExpr, "count") || isKeyValueBuiltinName(callExpr, "count") ||
       isVectorBuiltinName(callExpr, "capacity");
   const bool isBuiltinBareVectorCapacityMethod =
       isVectorBuiltinName(callExpr, "capacity") &&
@@ -716,16 +716,16 @@ const Definition *resolveMethodCallDefinitionFromExpr(
       isVectorBuiltinName(callExpr, "remove_at") || isVectorBuiltinName(callExpr, "remove_swap");
   const bool isExplicitRemovedVectorMethodAlias =
       isExplicitRemovedVectorMethodAliasPath(explicitMethodPath);
-  const bool isExplicitMapMethodAlias =
-      isExplicitMapMethodAliasPath(explicitMethodPath);
-  const bool isExplicitMapContainsOrTryAtMethod =
-      isExplicitMapContainsOrTryAtMethodPath(explicitMethodPath);
+  const bool isExplicitKeyValueMethodAlias =
+      isExplicitKeyValueMethodAliasPath(explicitMethodPath);
+  const bool isExplicitKeyValueContainsOrTryAtMethod =
+      isExplicitKeyValueContainsOrTryAtMethodPath(explicitMethodPath);
   const bool isBuiltinMapContainsOrTryAtCall =
       isSimpleCallName(callExpr, "contains") || isSimpleCallName(callExpr, "tryAt") ||
       isSimpleCallName(callExpr, "insert");
   const bool allowBuiltinFallback =
-      !isExplicitRemovedVectorMethodAlias && !isExplicitMapMethodAlias &&
-      !isExplicitMapContainsOrTryAtMethod &&
+      !isExplicitRemovedVectorMethodAlias && !isExplicitKeyValueMethodAlias &&
+      !isExplicitKeyValueContainsOrTryAtMethod &&
       !isBuiltinBareVectorCapacityMethod && !isBuiltinBareVectorAccessMethod &&
       !isBuiltinBareVectorMutatorMethod &&
       (isBuiltinCountOrCapacityCall || isBuiltinVectorMutatorCall ||
@@ -1074,7 +1074,7 @@ const Definition *resolveMethodCallDefinitionFromExpr(
                    .isKeyValueTarget;
       };
       const bool blocksExplicitMapReceiverProbeKindFallback =
-          isExplicitMapReceiverProbeHelperExpr(*receiver);
+          isExplicitKeyValueReceiverProbeHelperExpr(*receiver);
       const bool blocksBareMapAccessReceiverProbeKindFallback =
           isBareMapAccessReceiverProbeExpr(*receiver);
       const bool blocksBareMapTryAtReceiverProbeKindFallback =

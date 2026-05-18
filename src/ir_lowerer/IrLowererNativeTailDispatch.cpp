@@ -618,7 +618,7 @@ UnsupportedNativeCallResult emitUnsupportedNativeCallDiagnosticImpl(
     return UnsupportedNativeCallResult::NotHandled;
   }
   if (!expr.isMethodCall &&
-      (count_access_detail::isVectorBuiltinName(expr, "count") || isMapBuiltinName(expr, "count"))) {
+      (count_access_detail::isVectorBuiltinName(expr, "count") || isKeyValueBuiltinName(expr, "count"))) {
     if (expr.name == "/count" && expr.namespacePrefix.empty() &&
         expr.args.size() == 1 && expr.args.front().kind != Expr::Kind::Call &&
         !isDiagnosticVectorTarget(expr.args.front())) {

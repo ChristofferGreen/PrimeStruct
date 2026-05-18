@@ -646,25 +646,25 @@ bool runLowerInferenceExprKindDispatchSetup(const LowerInferenceExprKindDispatch
   stateInOut.inferExprKind = [defMap, resolveExprPath, inferenceError, semanticProgram, semanticIndex, &stateInOut](
                                  const Expr &expr, const LocalMap &localsIn) -> LocalInfo::ValueKind {
     if (!expr.isMethodCall && expr.kind == Expr::Kind::Call && !expr.args.empty()) {
-      std::string canonicalMapHelperName;
-      std::string borrowedMapHelperName;
+      std::string canonicalKeyValueHelperName;
+      std::string borrowedKeyValueHelperName;
       const bool hasBorrowedMapHelperAlias =
-          resolveBorrowedMapHelperAliasName(expr, borrowedMapHelperName);
-      if (resolveMapHelperAliasName(expr, canonicalMapHelperName) &&
+          resolveBorrowedKeyValueHelperAliasName(expr, borrowedKeyValueHelperName);
+      if (resolveKeyValueHelperAliasName(expr, canonicalKeyValueHelperName) &&
           (!stateInOut.resolveDefinitionCall || stateInOut.resolveDefinitionCall(expr) == nullptr) &&
           !hasBorrowedMapHelperAlias &&
-          (canonicalMapHelperName == "count" || canonicalMapHelperName == "contains" ||
-           canonicalMapHelperName == "tryAt" || canonicalMapHelperName == "at" ||
-           canonicalMapHelperName == "at_unsafe" ||
-           canonicalMapHelperName == "insert" ||
-           canonicalMapHelperName == "insert_ref") &&
-          !(isExplicitMapHelperFallbackPath(expr) &&
-            (canonicalMapHelperName == "at" || canonicalMapHelperName == "at_unsafe" ||
-             canonicalMapHelperName == "tryAt")) &&
+          (canonicalKeyValueHelperName == "count" || canonicalKeyValueHelperName == "contains" ||
+           canonicalKeyValueHelperName == "tryAt" || canonicalKeyValueHelperName == "at" ||
+           canonicalKeyValueHelperName == "at_unsafe" ||
+           canonicalKeyValueHelperName == "insert" ||
+           canonicalKeyValueHelperName == "insert_ref") &&
+          !(isExplicitKeyValueHelperFallbackPath(expr) &&
+            (canonicalKeyValueHelperName == "at" || canonicalKeyValueHelperName == "at_unsafe" ||
+             canonicalKeyValueHelperName == "tryAt")) &&
           ((expr.name.find('/') != std::string::npos) || !expr.namespacePrefix.empty() ||
            !expr.templateArgs.empty())) {
         Expr rewrittenExpr = expr;
-        rewrittenExpr.name = canonicalMapHelperName;
+        rewrittenExpr.name = canonicalKeyValueHelperName;
         rewrittenExpr.namespacePrefix.clear();
         rewrittenExpr.semanticNodeId = 0;
         rewrittenExpr.templateArgs.clear();

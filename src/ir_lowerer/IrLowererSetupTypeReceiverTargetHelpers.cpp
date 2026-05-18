@@ -157,7 +157,7 @@ bool resolveMethodCallReceiverExpr(const Expr &callExpr,
   std::string accessName;
   const bool isBuiltinAccessCall = getBuiltinArrayAccessName(callExpr, accessName) && callExpr.args.size() == 2;
   const bool isBuiltinCountOrCapacityCall =
-      isVectorBuiltinName(callExpr, "count") || isMapBuiltinName(callExpr, "count") ||
+      isVectorBuiltinName(callExpr, "count") || isKeyValueBuiltinName(callExpr, "count") ||
       isVectorBuiltinName(callExpr, "capacity");
   const bool isBuiltinBareVectorCapacityMethod =
       isSimpleCallName(callExpr, "capacity") &&
@@ -168,15 +168,15 @@ bool resolveMethodCallReceiverExpr(const Expr &callExpr,
       isVectorBuiltinName(callExpr, "remove_at") || isVectorBuiltinName(callExpr, "remove_swap");
   const std::string scopedMethodPath = resolveScopedMethodPath(callExpr);
   const bool isExplicitRemovedVectorMethodAlias = isExplicitRemovedVectorMethodAliasPath(scopedMethodPath);
-  const bool isExplicitMapMethodAlias = isExplicitMapMethodAliasPath(scopedMethodPath);
-  const bool isExplicitMapContainsOrTryAtMethod =
-      isExplicitMapContainsOrTryAtMethodPath(scopedMethodPath);
+  const bool isExplicitKeyValueMethodAlias = isExplicitKeyValueMethodAliasPath(scopedMethodPath);
+  const bool isExplicitKeyValueContainsOrTryAtMethod =
+      isExplicitKeyValueContainsOrTryAtMethodPath(scopedMethodPath);
   const bool isBuiltinMapContainsOrTryAtCall =
       isSimpleCallName(callExpr, "contains") || isSimpleCallName(callExpr, "tryAt") ||
       isSimpleCallName(callExpr, "insert");
   const bool allowBuiltinFallback =
-      !isExplicitRemovedVectorMethodAlias && !isExplicitMapMethodAlias &&
-      !isExplicitMapContainsOrTryAtMethod &&
+      !isExplicitRemovedVectorMethodAlias && !isExplicitKeyValueMethodAlias &&
+      !isExplicitKeyValueContainsOrTryAtMethod &&
       !isBuiltinBareVectorCapacityMethod &&
       (isBuiltinCountOrCapacityCall || isBuiltinVectorMutatorCall ||
        isBuiltinMapContainsOrTryAtCall ||
@@ -329,9 +329,9 @@ bool inferBuiltinAccessReceiverResultKind(const Expr &receiverCallExpr,
   kindOut = LocalInfo::ValueKind::Unknown;
   const std::string scopedReceiverMethodPath = resolveScopedMethodPath(receiverCallExpr);
   if ((receiverCallExpr.isMethodCall &&
-       (isExplicitMapMethodAliasPath(scopedReceiverMethodPath) ||
-        isExplicitMapContainsOrTryAtMethodPath(scopedReceiverMethodPath))) ||
-      isExplicitMapHelperFallbackPath(receiverCallExpr) ||
+       (isExplicitKeyValueMethodAliasPath(scopedReceiverMethodPath) ||
+        isExplicitKeyValueContainsOrTryAtMethodPath(scopedReceiverMethodPath))) ||
+      isExplicitKeyValueHelperFallbackPath(receiverCallExpr) ||
       blocksExplicitVectorReceiverProbeKindFallbackExpr(receiverCallExpr)) {
     return false;
   }
@@ -717,7 +717,7 @@ bool resolveMethodReceiverTarget(const Expr &receiverExpr,
                  .isKeyValueTarget;
     };
     const bool blocksExplicitMapReceiverProbeKindFallback =
-        isExplicitMapReceiverProbeHelperExpr(receiverExpr);
+        isExplicitKeyValueReceiverProbeHelperExpr(receiverExpr);
     const bool blocksBareMapAccessReceiverProbeKindFallback =
         isBareMapAccessReceiverProbeExpr(receiverExpr);
     const bool blocksBareMapTryAtReceiverProbeKindFallback =

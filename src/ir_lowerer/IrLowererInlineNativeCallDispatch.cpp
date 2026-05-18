@@ -154,7 +154,7 @@ bool isDirectKeyValueAccessHelperCall(const Expr &expr) {
     return false;
   }
   std::string helperName;
-  return resolveMapHelperAliasName(expr, helperName) &&
+  return resolveKeyValueHelperAliasName(expr, helperName) &&
          (helperName == "at" || helperName == "at_unsafe");
 }
 
@@ -321,7 +321,7 @@ bool isKeyValueContainsHelperName(const Expr &expr) {
     return true;
   }
   std::string aliasName;
-  return resolveMapHelperAliasName(expr, aliasName) && aliasName == "contains";
+  return resolveKeyValueHelperAliasName(expr, aliasName) && aliasName == "contains";
 }
 
 bool isKeyValueTryAtHelperName(const Expr &expr) {
@@ -329,7 +329,7 @@ bool isKeyValueTryAtHelperName(const Expr &expr) {
     return true;
   }
   std::string aliasName;
-  return resolveMapHelperAliasName(expr, aliasName) && aliasName == "tryAt";
+  return resolveKeyValueHelperAliasName(expr, aliasName) && aliasName == "tryAt";
 }
 
 bool isSoaVectorTarget(const Expr &expr, const LocalMap &localsIn);
@@ -1233,7 +1233,7 @@ InlineCallDispatchResult tryEmitInlineCallDispatchWithLocals(
       }
     }
     if (!expr.args.empty() &&
-        (resolveMapHelperAliasName(expr, keyValueHelperName) ||
+        (resolveKeyValueHelperAliasName(expr, keyValueHelperName) ||
          (getBuiltinArrayAccessName(expr, keyValueHelperName) && expr.args.size() == 2))) {
       keyValueHelperName = canonicalInlineKeyValueHelperName(std::move(keyValueHelperName));
       const auto keyValueTargetInfo =
@@ -1612,7 +1612,7 @@ InlineCallDispatchResult tryEmitInlineCallDispatchWithLocals(
           return false;
         }
         std::string keyValueHelperName;
-        if (resolveMapHelperAliasName(receiverExpr, keyValueHelperName) &&
+        if (resolveKeyValueHelperAliasName(receiverExpr, keyValueHelperName) &&
             (keyValueHelperName == "at" || keyValueHelperName == "at_unsafe" ||
              keyValueHelperName == "tryAt" || keyValueHelperName == "contains") &&
             receiverExpr.args.size() == 2) {

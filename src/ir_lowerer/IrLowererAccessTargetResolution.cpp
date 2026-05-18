@@ -831,11 +831,11 @@ KeyValueAccessTargetInfo resolveKeyValueAccessTargetInfo(
   }
   if (target.kind == Expr::Kind::Call) {
     std::string preSemanticAccessName;
-    std::string preSemanticHelperName;
+    std::string preSemanticKeyValueHelperName;
     const std::string preSemanticScopedPath = resolveScopedCallPath(target);
     const bool preSemanticAliasKeyValueAccess =
-        resolveMapHelperAliasName(target, preSemanticHelperName) &&
-        isKeyValueAccessHelperName(preSemanticHelperName);
+        resolveKeyValueHelperAliasName(target, preSemanticKeyValueHelperName) &&
+        isKeyValueAccessHelperName(preSemanticKeyValueHelperName);
     const bool preSemanticExplicitKeyValueAccess =
         !target.isMethodCall &&
         (isExplicitKeyValueAccessHelperPath(preSemanticScopedPath) ||
@@ -905,7 +905,7 @@ KeyValueAccessTargetInfo resolveKeyValueAccessTargetInfo(
     std::string helperName;
     const std::string scopedTargetPath = resolveScopedCallPath(target);
     const bool isAliasKeyValueArgsPackAccess =
-        resolveMapHelperAliasName(target, helperName) &&
+        resolveKeyValueHelperAliasName(target, helperName) &&
         isKeyValueAccessHelperName(helperName);
     const bool isExplicitKeyValueArgsPackAccess =
         !target.isMethodCall &&
@@ -1402,7 +1402,7 @@ ArrayVectorAccessTargetInfo resolveArrayVectorAccessTargetInfo(
     std::string helperName;
     const std::string scopedTargetPath = resolveScopedCallPath(target);
     const bool isAliasKeyValueArgsPackAccess =
-        resolveMapHelperAliasName(target, helperName) &&
+        resolveKeyValueHelperAliasName(target, helperName) &&
         isKeyValueAccessHelperName(helperName);
     const bool isExplicitKeyValueArgsPackAccess =
         !target.isMethodCall &&

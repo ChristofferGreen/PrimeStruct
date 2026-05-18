@@ -37,7 +37,7 @@ bool prefersExactDirectMapCountLikeReturnPath(const Expr &callExpr) {
     return false;
   }
   std::string helperName;
-  return resolveMapHelperAliasName(callExpr, helperName) &&
+  return resolveKeyValueHelperAliasName(callExpr, helperName) &&
          (helperName == "count" || helperName == "count_ref" || helperName == "contains" ||
           helperName == "tryAt");
 }
@@ -668,7 +668,7 @@ bool resolveCountMethodCallReturnKind(const Expr &callExpr,
   if (isExplicitRemovedVectorMethodAliasPath(scopedCallPath)) {
     return false;
   }
-  if (isExplicitMapHelperFallbackPath(callExpr)) {
+  if (isExplicitKeyValueHelperFallbackPath(callExpr)) {
     std::string explicitAccessName;
     if (!getBuiltinArrayAccessName(callExpr, explicitAccessName) ||
         (explicitAccessName != "at" && explicitAccessName != "at_ref" &&
@@ -873,9 +873,9 @@ bool resolveCountMethodCallReturnKind(const Expr &callExpr,
     std::string normalizedHelperName;
     if (resolveVectorHelperAliasName(methodExpr, normalizedHelperName)) {
       methodExpr.name = normalizedHelperName;
-    } else if (resolveBorrowedMapHelperAliasName(methodExpr, normalizedHelperName)) {
+    } else if (resolveBorrowedKeyValueHelperAliasName(methodExpr, normalizedHelperName)) {
       methodExpr.name = normalizedHelperName;
-    } else if (resolveMapHelperAliasName(methodExpr, normalizedHelperName)) {
+    } else if (resolveKeyValueHelperAliasName(methodExpr, normalizedHelperName)) {
       methodExpr.name = normalizedHelperName;
     }
     if (receiverIndex != 0 && receiverIndex < methodExpr.args.size()) {
@@ -962,7 +962,7 @@ bool resolveCountMethodCallReturnKind(const Expr &callExpr,
                isKnownCollectionAccessReceiverExpr(callExpr.args[index]);
       });
   const bool preferDeclaredAccessReturnKind =
-      isAccessCall && isExplicitMapHelperFallbackPath(callExpr);
+      isAccessCall && isExplicitKeyValueHelperFallbackPath(callExpr);
   if (preferDeclaredAccessReturnKind) {
     std::vector<std::string> candidatePaths = {scopedCallPath};
     for (const auto &candidatePath : candidatePaths) {

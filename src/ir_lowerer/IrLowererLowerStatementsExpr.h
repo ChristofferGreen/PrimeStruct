@@ -741,8 +741,8 @@
               return true;
             }
             std::string helperName;
-            const bool hasMapHelperAlias = resolveMapHelperAliasName(expr, helperName);
-            if (!hasMapHelperAlias) {
+            const bool hasKeyValueHelperAlias = resolveKeyValueHelperAliasName(expr, helperName);
+            if (!hasKeyValueHelperAlias) {
               const size_t leafStart = rawPath.find_last_of('/');
               std::string helperLeaf =
                   leafStart == std::string::npos ? rawPath : rawPath.substr(leafStart + 1);
@@ -773,16 +773,16 @@
               }
             }
             std::string accessName;
-            std::string explicitMapAccessHelperName;
+            std::string explicitKeyValueAccessHelperName;
             const bool isExplicitCanonicalMapAccess =
                 (getBuiltinArrayAccessName(expr, accessName) &&
                  expr.args.size() == 2 &&
                  isCanonicalMapHelperFamilyPath(rawPath)) ||
-                (resolveMapHelperAliasName(expr, explicitMapAccessHelperName) &&
-                 (explicitMapAccessHelperName == "at" ||
-                  explicitMapAccessHelperName == "at_ref" ||
-                  explicitMapAccessHelperName == "at_unsafe" ||
-                  explicitMapAccessHelperName == "at_unsafe_ref") &&
+                (resolveKeyValueHelperAliasName(expr, explicitKeyValueAccessHelperName) &&
+                 (explicitKeyValueAccessHelperName == "at" ||
+                  explicitKeyValueAccessHelperName == "at_ref" ||
+                  explicitKeyValueAccessHelperName == "at_unsafe" ||
+                  explicitKeyValueAccessHelperName == "at_unsafe_ref") &&
                  expr.args.size() == 2 &&
                  isCanonicalMapHelperFamilyPath(rawPath));
             if (isExplicitCanonicalMapAccess &&

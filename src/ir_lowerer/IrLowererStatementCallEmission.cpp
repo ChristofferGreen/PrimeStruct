@@ -764,7 +764,7 @@ static bool rewriteMapInsertHelperStatementToCanonical(
     }
   } else {
     std::string helperName;
-    if ((!resolveMapHelperAliasName(stmt, helperName) || helperName != "insert") &&
+    if ((!resolveKeyValueHelperAliasName(stmt, helperName) || helperName != "insert") &&
         !isPublishedMapInsertHelperCall(stmt) &&
         !isDirectBareMapInsertHelperStem(stmt)) {
       return false;
@@ -810,7 +810,7 @@ static bool rewriteMapInsertHelperStatementToCanonical(
       calleeExpr.kind = Expr::Kind::Call;
       calleeExpr.name = callee.fullPath;
       std::string helperName;
-      return resolveMapHelperAliasName(calleeExpr, helperName) && helperName == "insert";
+      return resolveKeyValueHelperAliasName(calleeExpr, helperName) && helperName == "insert";
     };
     std::function<bool(const std::string &, LocalInfo::ValueKind &, LocalInfo::ValueKind &)>
         inferMapKindsFromTypeText;
@@ -1107,7 +1107,7 @@ static bool rewriteMapInsertHelperStatementToCanonical(
         return true;
       }
       std::string helperName;
-      return resolveMapHelperAliasName(expr, helperName) &&
+      return resolveKeyValueHelperAliasName(expr, helperName) &&
              (helperName == "at" || helperName == "at_ref" ||
               helperName == "at_unsafe" || helperName == "at_unsafe_ref");
     };

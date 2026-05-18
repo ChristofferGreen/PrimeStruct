@@ -421,13 +421,13 @@ bool resolveVectorHelperAliasName(const Expr &expr, std::string &helperNameOut) 
   return false;
 }
 
-bool resolveMapHelperAliasName(const Expr &expr, std::string &helperNameOut) {
+bool resolveKeyValueHelperAliasName(const Expr &expr, std::string &helperNameOut) {
   (void)expr;
   helperNameOut.clear();
   return false;
 }
 
-bool resolveBorrowedMapHelperAliasName(const Expr &expr, std::string &helperNameOut) {
+bool resolveBorrowedKeyValueHelperAliasName(const Expr &expr, std::string &helperNameOut) {
   (void)expr;
   helperNameOut.clear();
   return false;
@@ -579,7 +579,7 @@ bool isExplicitRemovedVectorMethodAliasPath(const std::string &methodName) {
   return false;
 }
 
-bool isExplicitMapMethodAliasPath(const std::string &methodName) {
+bool isExplicitKeyValueMethodAliasPath(const std::string &methodName) {
   if (methodName.empty()) {
     return false;
   }
@@ -607,7 +607,7 @@ bool isExplicitMapMethodAliasPath(const std::string &methodName) {
   return false;
 }
 
-bool isExplicitMapContainsOrTryAtMethodPath(const std::string &methodName) {
+bool isExplicitKeyValueContainsOrTryAtMethodPath(const std::string &methodName) {
   if (methodName.empty()) {
     return false;
   }
@@ -641,15 +641,15 @@ bool isVectorBuiltinName(const Expr &expr, const char *name) {
   return resolveVectorHelperAliasName(expr, aliasName) && aliasName == name;
 }
 
-bool isMapBuiltinName(const Expr &expr, const char *name) {
+bool isKeyValueBuiltinName(const Expr &expr, const char *name) {
   if (isSimpleCallName(expr, name)) {
     return true;
   }
   std::string aliasName;
-  return resolveMapHelperAliasName(expr, aliasName) && aliasName == name;
+  return resolveKeyValueHelperAliasName(expr, aliasName) && aliasName == name;
 }
 
-bool isExplicitMapHelperFallbackPath(const Expr &expr) {
+bool isExplicitKeyValueHelperFallbackPath(const Expr &expr) {
   if (expr.kind != Expr::Kind::Call || expr.name.empty() || expr.isMethodCall) {
     return false;
   }
@@ -657,18 +657,18 @@ bool isExplicitMapHelperFallbackPath(const Expr &expr) {
     return false;
   }
   std::string helperName;
-  return resolveMapHelperAliasName(expr, helperName) &&
+  return resolveKeyValueHelperAliasName(expr, helperName) &&
          (helperName == "count" || helperName == "contains" ||
           helperName == "tryAt" || helperName == "at" ||
           helperName == "at_unsafe" || helperName == "insert");
 }
 
-bool isExplicitMapReceiverProbeHelperExpr(const Expr &expr) {
+bool isExplicitKeyValueReceiverProbeHelperExpr(const Expr &expr) {
   if (expr.kind != Expr::Kind::Call || expr.name.empty()) {
     return false;
   }
   std::string helperName;
-  return resolveMapHelperAliasName(expr, helperName) &&
+  return resolveKeyValueHelperAliasName(expr, helperName) &&
          (helperName == "count" || helperName == "contains" ||
           helperName == "at" || helperName == "at_unsafe" ||
           helperName == "tryAt" || helperName == "insert");
@@ -721,7 +721,7 @@ bool blocksExplicitVectorReceiverProbeKindFallbackExpr(const Expr &expr) {
 }
 
 bool isAllowedResolvedMapDirectCallPath(const std::string &callPath, const std::string &resolvedPath) {
-  if (!isExplicitMapMethodAliasPath(callPath)) {
+  if (!isExplicitKeyValueMethodAliasPath(callPath)) {
     return true;
   }
 
@@ -1017,7 +1017,7 @@ bool getNamespacedCollectionHelperName(const Expr &expr, std::string &collection
     collectionOut = "vector";
     return true;
   }
-  if (resolveMapHelperAliasName(expr, helperOut)) {
+  if (resolveKeyValueHelperAliasName(expr, helperOut)) {
     collectionOut = "map";
     return true;
   }

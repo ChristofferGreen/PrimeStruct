@@ -223,7 +223,7 @@
                    normalizeCollectionHelperPath(resolvedPath);
           };
           std::string helperName;
-          if ((!resolveMapHelperAliasName(callExpr, helperName) &&
+          if ((!resolveKeyValueHelperAliasName(callExpr, helperName) &&
                !resolvePublishedLateMapMemberName(callExpr, helperName)) ||
               (helperName != "count" && helperName != "contains" &&
                helperName != "tryAt" && helperName != "insert")) {
@@ -363,7 +363,7 @@
                   helperNameOut = "capacity";
                   return true;
                 }
-                if (resolveMapHelperAliasName(candidate, helperNameOut)) {
+                if (resolveKeyValueHelperAliasName(candidate, helperNameOut)) {
                   return true;
                 }
                 return resolvePublishedLateMapMemberName(candidate,
@@ -459,12 +459,12 @@
               if (candidateExpr.kind != Expr::Kind::Call || candidateExpr.isMethodCall) {
                 return false;
               }
-              std::string helperAlias;
-              if (!resolveMapHelperAliasName(candidateExpr, helperAlias)) {
+              std::string keyValueHelperAlias;
+              if (!resolveKeyValueHelperAliasName(candidateExpr, keyValueHelperAlias)) {
                 return false;
               }
-              return helperAlias == "at" || helperAlias == "at_unsafe" ||
-                     helperAlias == "tryAt" || helperAlias == "contains";
+              return keyValueHelperAlias == "at" || keyValueHelperAlias == "at_unsafe" ||
+                     keyValueHelperAlias == "tryAt" || keyValueHelperAlias == "contains";
             };
             if (isMapAccessValueCall(*receiverExpr)) {
               return std::nullopt;

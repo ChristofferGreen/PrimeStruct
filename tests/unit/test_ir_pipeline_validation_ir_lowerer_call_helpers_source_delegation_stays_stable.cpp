@@ -1124,6 +1124,14 @@ TEST_CASE("ir lowerer vector type layout traces use generic collection helpers")
       readText(lowererRoot / "IrLowererSetupTypeCollectionHelpers.h");
   const std::string setupCollectionSource =
       readText(lowererRoot / "IrLowererSetupTypeCollectionHelpers.cpp");
+  CHECK(setupCollectionHeader.find("resolveKeyValueHelperAliasName(") !=
+        std::string::npos);
+  CHECK(setupCollectionSource.find("bool resolveKeyValueHelperAliasName(") !=
+        std::string::npos);
+  CHECK(setupCollectionHeader.find("resolveMapHelperAliasName(") ==
+        std::string::npos);
+  CHECK(setupCollectionSource.find("bool resolveMapHelperAliasName(") ==
+        std::string::npos);
   const std::string accessTargetSource =
       readText(lowererRoot / "IrLowererAccessTargetResolution.cpp");
   const std::string bindingTypeSource =
