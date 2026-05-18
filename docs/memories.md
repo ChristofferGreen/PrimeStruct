@@ -792,6 +792,17 @@ This file stores durable session-derived facts that are useful in later work. Ke
   semantics and VM smoke tests passing while the map ownership source lock now
   rejects the retired rooted rewrite.
 
+### map-constructor-aliases-come-from-metadata
+- Updated: 2026-05-18
+- Tags: ir, collections, stdlib
+- Fact: Lowerer builtin-name classification must derive the public map
+  constructor alias from `collections.map_constructors` metadata instead of
+  comparing against a literal `map` token.
+- Evidence: `IrLowererBuiltinNameHelpers.cpp` now reads the slashless
+  constructor import alias from the stdlib surface registry, the map ownership
+  source lock rejects direct `alias == "map"` and `rawName == "map"` checks in
+  that file, and the file's map-surface inventory allowance is zero.
+
 ### mapvalue-public-insert-uses-stdlib
 - Updated: 2026-05-16
 - Tags: ir, collections, native

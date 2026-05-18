@@ -2569,6 +2569,11 @@ Task template:
       `src/ir_lowerer/IrLowererBuiltinNameHelpers.cpp` plus
       `src/ir_lowerer/IrLowererHelpers.cpp` map-surface inventory allowances
       dropped by 2 traces in total.
+    - 2026-05-18: Lowerer builtin-name collection classification no longer
+      compares against a literal `map` constructor alias. It derives the
+      slashless alias token from `collections.map_constructors` metadata, and
+      `src/ir_lowerer/IrLowererBuiltinNameHelpers.cpp` now has a zero
+      map-surface inventory allowance.
     - 2026-05-17: Setup-type method-call bridge path filtering no longer names
       the map constructor surface ID directly; it now obtains constructor
       metadata through the `collections.map_constructors` bridge key, and the

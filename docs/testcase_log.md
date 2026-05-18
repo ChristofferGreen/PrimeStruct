@@ -196,6 +196,15 @@
   of `nullptr`.
 
 ## Recent Test Runs
+- 2026-05-18 12:15 CEST | pass | mode: release | command:
+  `rg -n 'alias == "map"|rawName == "map"|std/collections/map|experimental_map|CollectionsMap|Map__|Entry__|Map<' src/ir_lowerer/IrLowererBuiltinNameHelpers.cpp || true`;
+  `cmake --build build-release --target PrimeStruct_misc_tests`;
+  `cd build-release && ./PrimeStruct_misc_tests --test-suite=primestruct.stdlib.map_ownership --no-skip`;
+  `git diff --check` | failures: none | notes:
+  `IrLowererBuiltinNameHelpers.cpp` now derives the slashless map constructor
+  alias from `collections.map_constructors` metadata and has a zero
+  map-surface inventory allowance. The targeted direct scan returned no
+  matches. The Python inventory script was intentionally not run.
 - 2026-05-18 12:09 CEST | pass | mode: release | command:
   `cmake --build build-release --target PrimeStruct_misc_tests`;
   `cd build-release && ./PrimeStruct_misc_tests --test-suite=primestruct.stdlib.map_ownership --no-skip`;

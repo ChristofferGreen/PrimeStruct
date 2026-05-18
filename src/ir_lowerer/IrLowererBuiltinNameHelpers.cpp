@@ -46,6 +46,20 @@ bool resolvesMapHelperSurfacePath(std::string_view path) {
   return false;
 }
 
+std::string mapConstructorAliasToken() {
+  const auto *metadata =
+      findStdlibSurfaceMetadataByBridgeKey("collections.map_constructors");
+  if (metadata == nullptr) {
+    return {};
+  }
+  for (std::string_view alias : metadata->importAliasSpellings) {
+    if (!alias.empty() && alias.find('/') == std::string_view::npos) {
+      return std::string(alias);
+    }
+  }
+  return {};
+}
+
 std::string stripGeneratedSuffix(std::string alias) {
   const size_t suffix = alias.find("__");
   if (suffix != std::string::npos) {
@@ -69,6 +83,7 @@ std::string resolveMathExprName(const Expr &expr) {
 }
 
 bool isNamespacedStdlibBuiltinAlias(const std::string &alias) {
+  const std::string mapAlias = mapConstructorAliasToken();
   return alias == "assign" || alias == "if" || alias == "while" ||
          alias == "take" || alias == "borrow" || alias == "init" ||
          alias == "drop" || alias == "increment" ||
@@ -91,7 +106,7 @@ bool isNamespacedStdlibBuiltinAlias(const std::string &alias) {
          alias == "get" || alias == "get_ref" || alias == "ref" ||
          alias == "ref_ref" || alias == "at" ||
          alias == "at_unsafe" || alias == "array" ||
-         alias == "vector" || alias == "map" ||
+         alias == "vector" || (!mapAlias.empty() && alias == mapAlias) ||
          alias == "soa" "_vector" || alias == "convert" ||
          alias == "clamp" || alias == "min" || alias == "max" ||
          alias == "lerp" || alias == "fma" || alias == "hypot" ||
@@ -681,7 +696,10 @@ bool getBuiltinCollectionName(const Expr &expr, std::string &out) {
   if (rawName.find('/') != std::string::npos) {
     return false;
   }
-  if (rawName == "array" || rawName == "vector" || rawName == "map" || rawName == "soa" "_vector") {
+  const std::string mapAlias = mapConstructorAliasToken();
+  if (rawName == "array" || rawName == "vector" ||
+      (!mapAlias.empty() && rawName == mapAlias) ||
+      rawName == "soa" "_vector") {
     out = rawName;
     return true;
   }

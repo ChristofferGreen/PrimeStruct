@@ -1662,6 +1662,15 @@ TEST_CASE("canonical map surface owns standalone stdlib implementation") {
         std::string::npos);
   CHECK(builtinNameHelpersSource.find("StdlibSurfaceId::CollectionsMapHelpers") ==
         std::string::npos);
+  CHECK(builtinNameHelpersSource.find("alias == \"map\"") ==
+        std::string::npos);
+  CHECK(builtinNameHelpersSource.find("rawName == \"map\"") ==
+        std::string::npos);
+  CHECK(builtinNameHelpersSource.find(
+            "findStdlibSurfaceMetadataByBridgeKey(\"collections.map_constructors\")") !=
+        std::string::npos);
+  CHECK(builtinNameHelpersSource.find("mapConstructorAliasToken()") !=
+        std::string::npos);
   CHECK(builtinNameHelpersSource.find(
             "findStdlibSurfaceMetadataByBridgeKey(\"collections.map_helpers\")") !=
         std::string::npos);
