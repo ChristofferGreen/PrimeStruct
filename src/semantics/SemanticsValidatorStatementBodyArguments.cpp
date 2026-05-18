@@ -18,7 +18,7 @@ bool isRemovedVectorCompatibilityHelper(std::string_view helperName) {
          helperName == "remove_swap";
 }
 
-bool isRemovedMapCompatibilityHelper(std::string_view helperName) {
+bool isRemovedKeyValueCompatibilityHelper(std::string_view helperName) {
   return helperName == "count" || helperName == "count_ref" ||
          helperName == "size" ||
          helperName == "contains" || helperName == "contains_ref" ||
@@ -28,12 +28,13 @@ bool isRemovedMapCompatibilityHelper(std::string_view helperName) {
          helperName == "insert" || helperName == "insert_ref";
 }
 
-const StdlibSurfaceMetadata *mapHelperSurfaceMetadata() {
+const StdlibSurfaceMetadata *keyValueHelperSurfaceMetadataForBodyArguments() {
   return findStdlibSurfaceMetadataByBridgeKey("collections.map_helpers");
 }
 
-std::string_view resolveMapHelperPathMemberName(std::string_view path) {
-  const StdlibSurfaceMetadata *metadata = mapHelperSurfaceMetadata();
+std::string_view resolveKeyValueHelperPathMemberName(std::string_view path) {
+  const StdlibSurfaceMetadata *metadata =
+      keyValueHelperSurfaceMetadataForBodyArguments();
   if (metadata == nullptr) {
     return {};
   }
@@ -51,19 +52,22 @@ std::string_view resolveMapHelperPathMemberName(std::string_view path) {
       *metadata, path.substr(legacyAliasPrefix.size()));
 }
 
-bool isRemovedMapCompatibilityHelperPath(std::string_view path) {
-  return isRemovedMapCompatibilityHelper(resolveMapHelperPathMemberName(path));
+bool isRemovedKeyValueCompatibilityHelperPath(std::string_view path) {
+  return isRemovedKeyValueCompatibilityHelper(
+      resolveKeyValueHelperPathMemberName(path));
 }
 
-std::string canonicalMapHelperPath(std::string_view helperName) {
-  const StdlibSurfaceMetadata *metadata = mapHelperSurfaceMetadata();
+std::string
+canonicalKeyValueHelperPathForBodyArguments(std::string_view helperName) {
+  const StdlibSurfaceMetadata *metadata =
+      keyValueHelperSurfaceMetadataForBodyArguments();
   if (metadata == nullptr) {
     return {};
   }
   return stdlibSurfaceCanonicalHelperPath(metadata->id, helperName);
 }
 
-std::string legacyMapHelperPath(std::string_view helperName) {
+std::string legacyKeyValueHelperAliasPath(std::string_view helperName) {
   return std::string("/") + "map" + "/" + std::string(helperName);
 }
 
@@ -111,7 +115,7 @@ bool SemanticsValidator::validateStatementBodyArguments(const std::vector<Parame
       return isRemovedVectorCompatibilityHelper(helper);
     }
 
-    return isRemovedMapCompatibilityHelperPath(path);
+    return isRemovedKeyValueCompatibilityHelperPath(path);
   };
 
   auto normalizeBodyArgumentTarget = [&](const std::string &path) {
@@ -121,10 +125,11 @@ bool SemanticsValidator::validateStatementBodyArguments(const std::vector<Parame
     return preferVectorStdlibHelperPath(path);
   };
 
-  auto preferredMapBodyArgumentTarget = [&](const std::string &helperName) {
-    const std::string canonical = canonicalMapHelperPath(helperName);
-    const std::string alias = legacyMapHelperPath(helperName);
-    if (isRemovedMapCompatibilityHelper(helperName)) {
+  auto preferredKeyValueBodyArgumentTarget = [&](const std::string &helperName) {
+    const std::string canonical =
+        canonicalKeyValueHelperPathForBodyArguments(helperName);
+    const std::string alias = legacyKeyValueHelperAliasPath(helperName);
+    if (isRemovedKeyValueCompatibilityHelper(helperName)) {
       return canonical;
     }
     if (defMap_.count(canonical) > 0) {
@@ -136,7 +141,7 @@ bool SemanticsValidator::validateStatementBodyArguments(const std::vector<Parame
     return canonical;
   };
 
-  auto isMapReceiverExpr = [&](const Expr &target) {
+  auto isKeyValueReceiverExpr = [&](const Expr &target) {
     if (target.kind == Expr::Kind::Name) {
       if (const BindingInfo *paramBinding = findParamBinding(params, target.name)) {
         std::string keyType;
@@ -175,7 +180,7 @@ bool SemanticsValidator::validateStatementBodyArguments(const std::vector<Parame
   };
 
   auto resolveBodyArgumentTarget = [&](const Expr &callExpr, std::string &resolvedOut) {
-    auto resolveBareMapCallBodyArgumentTarget = [&](const Expr &candidate) -> bool {
+    auto resolveBareKeyValueCallBodyArgumentTarget = [&](const Expr &candidate) -> bool {
       if (candidate.kind != Expr::Kind::Call || candidate.isMethodCall || candidate.name.empty()) {
         return false;
       }
@@ -215,8 +220,8 @@ bool SemanticsValidator::validateStatementBodyArguments(const std::vector<Parame
           if (i < candidate.argNames.size() && candidate.argNames[i].has_value() &&
               *candidate.argNames[i] == "values") {
             foundValues = true;
-            if (isMapReceiverExpr(candidate.args[i])) {
-              resolvedOut = preferredMapBodyArgumentTarget(helperName);
+            if (isKeyValueReceiverExpr(candidate.args[i])) {
+              resolvedOut = preferredKeyValueBodyArgumentTarget(helperName);
               return true;
             }
             break;
@@ -224,16 +229,16 @@ bool SemanticsValidator::validateStatementBodyArguments(const std::vector<Parame
         }
         if (!foundValues) {
           for (size_t i = 0; i < candidate.args.size(); ++i) {
-            if (isMapReceiverExpr(candidate.args[i])) {
-              resolvedOut = preferredMapBodyArgumentTarget(helperName);
+            if (isKeyValueReceiverExpr(candidate.args[i])) {
+              resolvedOut = preferredKeyValueBodyArgumentTarget(helperName);
               return true;
             }
           }
         }
       } else {
         for (size_t i = 0; i < candidate.args.size(); ++i) {
-          if (isMapReceiverExpr(candidate.args[i])) {
-            resolvedOut = preferredMapBodyArgumentTarget(helperName);
+          if (isKeyValueReceiverExpr(candidate.args[i])) {
+            resolvedOut = preferredKeyValueBodyArgumentTarget(helperName);
             return true;
           }
         }
@@ -242,7 +247,7 @@ bool SemanticsValidator::validateStatementBodyArguments(const std::vector<Parame
     };
 
     if (!callExpr.isMethodCall) {
-      if (resolveBareMapCallBodyArgumentTarget(callExpr)) {
+      if (resolveBareKeyValueCallBodyArgumentTarget(callExpr)) {
         return;
       }
       resolvedOut = normalizeBodyArgumentTarget(resolveCalleePath(callExpr));
@@ -275,12 +280,12 @@ bool SemanticsValidator::validateStatementBodyArguments(const std::vector<Parame
         return;
       }
       if (!isExplicitMethodPath &&
-          isRemovedMapCompatibilityHelper(methodName) &&
-          isMapReceiverExpr(receiver)) {
+          isRemovedKeyValueCompatibilityHelper(methodName) &&
+          isKeyValueReceiverExpr(receiver)) {
         resolvedOut =
             preferredMapMethodTargetForCall(params, locals, receiver, methodName);
         if (resolvedOut.empty()) {
-          resolvedOut = preferredMapBodyArgumentTarget(methodName);
+          resolvedOut = preferredKeyValueBodyArgumentTarget(methodName);
         }
         return;
       }
@@ -318,11 +323,12 @@ bool SemanticsValidator::validateStatementBodyArguments(const std::vector<Parame
       }
     }
 
-    auto shouldPreferCanonicalMapBodyArgumentTarget = [&](const std::string &candidateType) {
+    auto shouldPreferCanonicalKeyValueBodyArgumentTarget =
+        [&](const std::string &candidateType) {
       if (isExplicitMethodPath) {
         return false;
       }
-      if (!isRemovedMapCompatibilityHelper(methodName)) {
+      if (!isRemovedKeyValueCompatibilityHelper(methodName)) {
         return false;
       }
       std::string normalized = normalizeBindingTypeName(candidateType);
@@ -342,12 +348,12 @@ bool SemanticsValidator::validateStatementBodyArguments(const std::vector<Parame
 
     if (typeName == "Pointer" || typeName == "Reference") {
       if (!isExplicitMethodPath &&
-          isRemovedMapCompatibilityHelper(methodName) &&
-          isMapReceiverExpr(receiver)) {
+          isRemovedKeyValueCompatibilityHelper(methodName) &&
+          isKeyValueReceiverExpr(receiver)) {
         resolvedOut =
             preferredMapMethodTargetForCall(params, locals, receiver, methodName);
         if (resolvedOut.empty()) {
-          resolvedOut = preferredMapBodyArgumentTarget(methodName);
+          resolvedOut = preferredKeyValueBodyArgumentTarget(methodName);
         }
         return;
       }
@@ -373,11 +379,11 @@ bool SemanticsValidator::validateStatementBodyArguments(const std::vector<Parame
       }
     }
 
-    if (shouldPreferCanonicalMapBodyArgumentTarget(resolvedType.empty() ? typeName : resolvedType)) {
+    if (shouldPreferCanonicalKeyValueBodyArgumentTarget(resolvedType.empty() ? typeName : resolvedType)) {
       resolvedOut =
           preferredMapMethodTargetForCall(params, locals, receiver, methodName);
       if (resolvedOut.empty()) {
-        resolvedOut = preferredMapBodyArgumentTarget(methodName);
+        resolvedOut = preferredKeyValueBodyArgumentTarget(methodName);
       }
       return;
     }

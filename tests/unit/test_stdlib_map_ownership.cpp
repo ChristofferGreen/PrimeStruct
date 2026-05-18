@@ -231,6 +231,9 @@ TEST_CASE("canonical map surface owns standalone stdlib implementation") {
   const std::string statementPrintabilitySource =
       readText(repoRoot() / "src" / "semantics" /
                "SemanticsValidatorStatementPrintability.cpp");
+  const std::string statementBodyArgumentsSource =
+      readText(repoRoot() / "src" / "semantics" /
+               "SemanticsValidatorStatementBodyArguments.cpp");
   const std::string scalarPointerMemorySource =
       readText(repoRoot() / "src" / "semantics" /
                "SemanticsValidatorExprScalarPointerMemory.cpp");
@@ -386,6 +389,7 @@ TEST_CASE("canonical map surface owns standalone stdlib implementation") {
   REQUIRE(!exprTrySource.empty());
   REQUIRE(!pointerLikeSource.empty());
   REQUIRE(!statementPrintabilitySource.empty());
+  REQUIRE(!statementBodyArgumentsSource.empty());
   REQUIRE(!scalarPointerMemorySource.empty());
   REQUIRE(!statementSource.empty());
   REQUIRE(!argumentValidationSource.empty());
@@ -1518,6 +1522,38 @@ TEST_CASE("canonical map surface owns standalone stdlib implementation") {
   CHECK(statementPrintabilitySource.find("isCanonicalMapHelperResolvedPath(") ==
         std::string::npos);
   CHECK(statementPrintabilitySource.find("isCanonicalKeyValueHelperResolvedPath(") !=
+        std::string::npos);
+  CHECK(statementBodyArgumentsSource.find("isRemovedMapCompatibilityHelper(") ==
+        std::string::npos);
+  CHECK(statementBodyArgumentsSource.find("mapHelperSurfaceMetadata(") ==
+        std::string::npos);
+  CHECK(statementBodyArgumentsSource.find("resolveMapHelperPathMemberName(") ==
+        std::string::npos);
+  CHECK(statementBodyArgumentsSource.find("canonicalMapHelperPath(") ==
+        std::string::npos);
+  CHECK(statementBodyArgumentsSource.find("legacyMapHelperPath(") ==
+        std::string::npos);
+  CHECK(statementBodyArgumentsSource.find("preferredMapBodyArgumentTarget") ==
+        std::string::npos);
+  CHECK(statementBodyArgumentsSource.find("isMapReceiverExpr") ==
+        std::string::npos);
+  CHECK(statementBodyArgumentsSource.find(
+            "isRemovedKeyValueCompatibilityHelper(") !=
+        std::string::npos);
+  CHECK(statementBodyArgumentsSource.find(
+            "keyValueHelperSurfaceMetadataForBodyArguments(") !=
+        std::string::npos);
+  CHECK(statementBodyArgumentsSource.find(
+            "resolveKeyValueHelperPathMemberName(") !=
+        std::string::npos);
+  CHECK(statementBodyArgumentsSource.find(
+            "canonicalKeyValueHelperPathForBodyArguments(") !=
+        std::string::npos);
+  CHECK(statementBodyArgumentsSource.find("legacyKeyValueHelperAliasPath(") !=
+        std::string::npos);
+  CHECK(statementBodyArgumentsSource.find("preferredKeyValueBodyArgumentTarget") !=
+        std::string::npos);
+  CHECK(statementBodyArgumentsSource.find("isKeyValueReceiverExpr") !=
         std::string::npos);
   CHECK(scalarPointerMemorySource.find("isExplicitMapAccessHelperPath") ==
         std::string::npos);
