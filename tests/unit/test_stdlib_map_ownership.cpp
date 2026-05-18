@@ -2322,8 +2322,13 @@ TEST_CASE("canonical map surface owns standalone stdlib implementation") {
         std::string::npos);
   CHECK(emitterHelpersTypesSource.find("name.rfind(\"/std/collections/map<\"") ==
         std::string::npos);
-  CHECK(nativeTailSource.find("hasSemanticKeyValueReadHelperDefinition") != std::string::npos);
-  CHECK(nativeTailSource.find("isKeyValueReadHelperName(directKeyValueReadHelperName)") != std::string::npos);
+  CHECK(nativeTailSource.find("hasSemanticKeyValueReadHelperDefinition") !=
+        std::string::npos);
+  CHECK(nativeTailSource.find(
+            "isKeyValueReadHelperName(directKeyValueReadHelperName)") !=
+        std::string::npos);
+  CHECK(nativeTailSource.find("importsMapHelpers") == std::string::npos);
+  CHECK(nativeTailSource.find("importsKeyValueHelpers") != std::string::npos);
   CHECK(lowerStatementsExprSource.find("Keep direct canonical map access helpers") == std::string::npos);
   CHECK(lowerStatementsExprSource.find("keepsBuiltinCanonicalMapHelperReturn") == std::string::npos);
   CHECK(lowerStatementsExprSource.find("keyValueHelperMetadata") != std::string::npos);

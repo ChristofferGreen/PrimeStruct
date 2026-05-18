@@ -227,8 +227,9 @@ bool isExplicitDirectSoaAccessCall(const Expr &expr) {
          rawPath == "/std/collections/" "soa/get_ref";
 }
 
-bool hasSemanticKeyValueAccessHelperDefinition(const SemanticProgram *semanticProgram,
-                                          std::string_view accessName) {
+bool hasSemanticKeyValueAccessHelperDefinition(
+    const SemanticProgram *semanticProgram,
+    std::string_view accessName) {
   if (semanticProgram == nullptr ||
       (accessName != "at" && accessName != "at_unsafe")) {
     return false;
@@ -239,7 +240,7 @@ bool hasSemanticKeyValueAccessHelperDefinition(const SemanticProgram *semanticPr
   if (canonicalPath.empty() || canonicalRefPath.empty()) {
     return false;
   }
-  auto importsMapHelpers = [&](const std::vector<std::string> &imports) {
+  auto importsKeyValueHelpers = [&](const std::vector<std::string> &imports) {
     for (const std::string &importPath : imports) {
       if (importPathCoversNativeTailTarget(importPath, canonicalPath) ||
           importPathCoversNativeTailTarget(importPath, canonicalRefPath)) {
@@ -248,8 +249,8 @@ bool hasSemanticKeyValueAccessHelperDefinition(const SemanticProgram *semanticPr
     }
     return false;
   };
-  if (importsMapHelpers(semanticProgram->sourceImports) ||
-      importsMapHelpers(semanticProgram->imports)) {
+  if (importsKeyValueHelpers(semanticProgram->sourceImports) ||
+      importsKeyValueHelpers(semanticProgram->imports)) {
     return true;
   }
   for (const auto &definition : semanticProgram->definitions) {
