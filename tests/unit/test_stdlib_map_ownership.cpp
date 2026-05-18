@@ -1673,7 +1673,28 @@ TEST_CASE("canonical map surface owns standalone stdlib implementation") {
   CHECK(accessTargetResolutionSource.find("constructorName == \"mapNew\"") ==
         std::string::npos);
   CHECK(accessTargetResolutionSource.find(
-            "forwardedEmptyMapConstructorMemberName()") !=
+            "forwardedEmptyKeyValueConstructorMemberName()") !=
+        std::string::npos);
+  CHECK(accessTargetResolutionSource.find(
+            "forwardedEmptyMapConstructorMemberName()") ==
+        std::string::npos);
+  CHECK(accessTargetResolutionSource.find(
+            "resolveKeyValueConstructorPathMemberName(") !=
+        std::string::npos);
+  CHECK(accessTargetResolutionSource.find(
+            "resolveMapConstructorPathMemberName(") ==
+        std::string::npos);
+  CHECK(accessTargetResolutionSource.find("isPublishedKeyValueConstructorExpr(") !=
+        std::string::npos);
+  CHECK(accessTargetResolutionSource.find("isPublishedMapConstructorExpr(") ==
+        std::string::npos);
+  CHECK(accessTargetResolutionSource.find("inferDirectKeyValueConstructorTargetInfo(") !=
+        std::string::npos);
+  CHECK(accessTargetResolutionSource.find("inferDirectMapConstructorTargetInfo(") ==
+        std::string::npos);
+  CHECK(accessTargetResolutionSource.find("isForwardedKeyValueNewConstructor(") !=
+        std::string::npos);
+  CHECK(accessTargetResolutionSource.find("isForwardedMapNewConstructor(") ==
         std::string::npos);
   CHECK(accessTargetResolutionSource.find(
             "resolveStdlibSurfaceMemberName(*metadata, metadata->canonicalPath)") !=

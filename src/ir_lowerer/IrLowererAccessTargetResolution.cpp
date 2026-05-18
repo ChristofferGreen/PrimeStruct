@@ -107,7 +107,7 @@ bool isExplicitKeyValueAccessHelperPath(std::string_view path) {
 }
 
 bool resolveKeyValueConstructorExprMemberName(const Expr &expr,
-                                         std::string &constructorNameOut) {
+                                              std::string &constructorNameOut) {
   constructorNameOut.clear();
   const auto *metadata = keyValueConstructorSurfaceMetadataForAccessTargets();
   return metadata != nullptr &&
@@ -115,8 +115,8 @@ bool resolveKeyValueConstructorExprMemberName(const Expr &expr,
              expr, metadata->id, constructorNameOut);
 }
 
-bool resolveMapConstructorPathMemberName(std::string_view path,
-                                         std::string &constructorNameOut) {
+bool resolveKeyValueConstructorPathMemberName(std::string_view path,
+                                              std::string &constructorNameOut) {
   constructorNameOut.clear();
   const auto *metadata = keyValueConstructorSurfaceMetadataForAccessTargets();
   return metadata != nullptr &&
@@ -124,12 +124,12 @@ bool resolveMapConstructorPathMemberName(std::string_view path,
              path, metadata->id, constructorNameOut);
 }
 
-bool isPublishedMapConstructorExpr(const Expr &expr) {
+bool isPublishedKeyValueConstructorExpr(const Expr &expr) {
   std::string constructorName;
   return resolveKeyValueConstructorExprMemberName(expr, constructorName);
 }
 
-std::string forwardedEmptyMapConstructorMemberName() {
+std::string forwardedEmptyKeyValueConstructorMemberName() {
   const auto *metadata = keyValueConstructorSurfaceMetadataForAccessTargets();
   if (metadata != nullptr) {
     const std::string_view memberName =
@@ -535,13 +535,13 @@ const Expr *resolveCallArgumentForParameter(const Expr &target,
   return nullptr;
 }
 
-bool isForwardedMapNewConstructor(const Expr &expr) {
+bool isForwardedKeyValueNewConstructor(const Expr &expr) {
   std::string constructorName;
   return resolveKeyValueConstructorExprMemberName(expr, constructorName) &&
-         constructorName == forwardedEmptyMapConstructorMemberName();
+         constructorName == forwardedEmptyKeyValueConstructorMemberName();
 }
 
-bool inferDirectMapConstructorTargetInfo(const Expr &target, KeyValueAccessTargetInfo &info) {
+bool inferDirectKeyValueConstructorTargetInfo(const Expr &target, KeyValueAccessTargetInfo &info) {
   info = {};
   if (target.kind != Expr::Kind::Call || target.isBinding || target.isMethodCall) {
     return false;
@@ -551,10 +551,10 @@ bool inferDirectMapConstructorTargetInfo(const Expr &target, KeyValueAccessTarge
   if (!normalizedName.empty() && normalizedName.front() == '/') {
     normalizedName.erase(normalizedName.begin());
   }
-  auto isDirectMapConstructor = [&]() {
+  auto isDirectKeyValueConstructor = [&]() {
     std::string constructorName;
-    return resolveMapConstructorPathMemberName(normalizedName, constructorName) ||
-           isPublishedMapConstructorExpr(target);
+    return resolveKeyValueConstructorPathMemberName(normalizedName, constructorName) ||
+           isPublishedKeyValueConstructorExpr(target);
   };
   auto inferLiteralKind = [&](const Expr &valueExpr, LocalInfo::ValueKind &kindOut) {
     kindOut = LocalInfo::ValueKind::Unknown;
@@ -579,7 +579,7 @@ bool inferDirectMapConstructorTargetInfo(const Expr &target, KeyValueAccessTarge
     return false;
   };
 
-  if (!isDirectMapConstructor()) {
+  if (!isDirectKeyValueConstructor()) {
     return false;
   }
 
@@ -926,7 +926,8 @@ KeyValueAccessTargetInfo resolveKeyValueAccessTargetInfo(
       }
     }
     KeyValueAccessTargetInfo directConstructorInfo;
-    const bool hasDirectConstructorInfo = inferDirectMapConstructorTargetInfo(target, directConstructorInfo);
+    const bool hasDirectConstructorInfo =
+        inferDirectKeyValueConstructorTargetInfo(target, directConstructorInfo);
     if (hasDirectConstructorInfo) {
       return directConstructorInfo;
     }
@@ -973,7 +974,7 @@ bool inferForwardedKeyValueAccessTargetInfo(
   if (forwardedArg == nullptr) {
     return false;
   }
-  if (isForwardedMapNewConstructor(*forwardedArg)) {
+  if (isForwardedKeyValueNewConstructor(*forwardedArg)) {
     return false;
   }
 

@@ -623,7 +623,9 @@ This file stores durable session-derived facts that are useful in later work. Ke
   metadata/classifier helpers should use key/value naming for canonical map
   helper and constructor paths; method-call resolution constructor bridge
   choice and bare receiver probe locals should use key/value naming around
-  map constructor metadata.
+  map constructor metadata; access-target resolution constructor path,
+  published-constructor, forwarded-empty-constructor, and direct-constructor
+  helpers should use key/value naming around map constructor metadata.
 - Evidence: Field-bound `Map<K, V>` compatibility triage showed generated
   map helper specializations could mask missing `/map/count` aliases unless
   removed-alias checks ignored generated-only definition paths; later
