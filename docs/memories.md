@@ -619,7 +619,9 @@ This file stores durable session-derived facts that are useful in later work. Ke
   target fallback and receiver-probe block names should use key/value naming
   for map-shaped access helpers; setup-type collection helper surface ID and
   surface member token helpers should use key/value naming around the current
-  map helper and constructor bridge metadata.
+  map helper and constructor bridge metadata; statement-expression lowering
+  metadata/classifier helpers should use key/value naming for canonical map
+  helper and constructor paths.
 - Evidence: Field-bound `Map<K, V>` compatibility triage showed generated
   map helper specializations could mask missing `/map/count` aliases unless
   removed-alias checks ignored generated-only definition paths; later

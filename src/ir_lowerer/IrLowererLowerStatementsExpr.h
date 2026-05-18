@@ -132,16 +132,16 @@
           }
           return helperPath;
         };
-        auto mapHelperMetadata = []() {
+        auto keyValueHelperMetadata = []() {
           return findStdlibSurfaceMetadataByBridgeKey("collections.map_helpers");
         };
-        auto mapConstructorMetadata = []() {
+        auto keyValueConstructorMetadata = []() {
           return findStdlibSurfaceMetadataByBridgeKey("collections.map_constructors");
         };
-        auto resolveMapHelperMemberName = [&](std::string path,
-                                              std::string &helperNameOut) {
+        auto resolveKeyValueHelperMemberName = [&](std::string path,
+                                                   std::string &helperNameOut) {
           helperNameOut.clear();
-          const auto *metadata = mapHelperMetadata();
+          const auto *metadata = keyValueHelperMetadata();
           if (metadata == nullptr) {
             return false;
           }
@@ -149,20 +149,20 @@
           return resolvePublishedStdlibSurfaceMemberName(
               path, metadata->id, helperNameOut);
         };
-        auto isCanonicalMapHelperFamilyPath = [&](const std::string &path) {
-          const auto *metadata = mapHelperMetadata();
+        auto isCanonicalKeyValueHelperFamilyPath = [&](const std::string &path) {
+          const auto *metadata = keyValueHelperMetadata();
           return metadata != nullptr &&
                  isCanonicalPublishedStdlibSurfaceHelperPath(
                      normalizeCollectionHelperPath(path), metadata->id);
         };
-        auto isMapHelperMemberPath = [&](const std::string &path,
-                                         std::string_view expectedName) {
+        auto isKeyValueHelperMemberPath = [&](const std::string &path,
+                                              std::string_view expectedName) {
           std::string helperName;
-          return resolveMapHelperMemberName(path, helperName) &&
+          return resolveKeyValueHelperMemberName(path, helperName) &&
                  helperName == std::string(expectedName);
         };
-        auto isCanonicalMapConstructorPath = [&](const std::string &path) {
-          const auto *metadata = mapConstructorMetadata();
+        auto isCanonicalKeyValueConstructorPath = [&](const std::string &path) {
+          const auto *metadata = keyValueConstructorMetadata();
           if (metadata == nullptr) {
             return false;
           }
@@ -177,10 +177,10 @@
           return path.rfind("/array/", 0) == 0 ||
                  path.rfind(collectionMemberRoot("vector"), 0) == 0 ||
                  path.rfind(experimentalCollectionMemberRoot("vector"), 0) == 0 ||
-                 isCanonicalMapHelperFamilyPath(path);
+                 isCanonicalKeyValueHelperFamilyPath(path);
         };
-        auto hasMapEntryCtorArgs = [&](const Expr &callExpr) {
-          auto isMapEntryCallExpr = [&](const Expr &candidate) {
+        auto hasKeyValueEntryCtorArgs = [&](const Expr &callExpr) {
+          auto isKeyValueEntryCallExpr = [&](const Expr &candidate) {
             if (candidate.kind != Expr::Kind::Call || candidate.name.empty()) {
               return false;
             }
@@ -200,10 +200,10 @@
             if (generatedSuffix != std::string::npos) {
               normalizedName.erase(generatedSuffix);
             }
-            return isMapHelperMemberPath(normalizedName, "entry");
+            return isKeyValueHelperMemberPath(normalizedName, "entry");
           };
           for (const auto &arg : callExpr.args) {
-            if (isMapEntryCallExpr(arg)) {
+            if (isKeyValueEntryCallExpr(arg)) {
               return true;
             }
           }
@@ -309,12 +309,12 @@
           }
           return nullptr;
         };
-        auto findDirectEntryMapConstructorDefinition = [&](const Expr &callExpr)
+        auto findDirectEntryKeyValueConstructorDefinition = [&](const Expr &callExpr)
             -> const Definition * {
           const std::string rawPath = resolveDirectHelperPath(callExpr);
           const std::string normalizedRawPath =
               normalizeCollectionHelperPath(rawPath);
-          if (!isCanonicalMapConstructorPath(normalizedRawPath)) {
+          if (!isCanonicalKeyValueConstructorPath(normalizedRawPath)) {
             return nullptr;
           }
           for (const auto &[path, def] : defMap) {
@@ -506,9 +506,9 @@
             }
           }
           if (directCallee == nullptr &&
-              hasMapEntryCtorArgs(expr) &&
-              isCanonicalMapHelperFamilyPath(rawPath)) {
-            directCallee = findDirectEntryMapConstructorDefinition(expr);
+              hasKeyValueEntryCtorArgs(expr) &&
+              isCanonicalKeyValueHelperFamilyPath(rawPath)) {
+            directCallee = findDirectEntryKeyValueConstructorDefinition(expr);
           }
           if (directCallee == nullptr &&
               isInternalSoaHelperFamilyPath(rawPath)) {
@@ -729,11 +729,11 @@
                 return true;
               }
             }
-            if (hasMapEntryCtorArgs(expr) &&
+            if (hasKeyValueEntryCtorArgs(expr) &&
                 extractHelperTail(normalizeCollectionHelperPath(directCallee->fullPath)) ==
                     "map" &&
-                (isCanonicalMapHelperFamilyPath(rawPath) ||
-                 isCanonicalMapHelperFamilyPath(resolvedExprPath)) &&
+                (isCanonicalKeyValueHelperFamilyPath(rawPath) ||
+                 isCanonicalKeyValueHelperFamilyPath(resolvedExprPath)) &&
                 isDirectHelperDefinitionFamily(expr, *directCallee)) {
               if (!emitInlineDefinitionCall(expr, *directCallee, localsIn, true)) {
                 return false;
@@ -763,8 +763,8 @@
                  helperName == "tryAt" || helperName == "at" ||
                  helperName == "at_unsafe" || helperName == "insert" ||
                  helperName == "insert_ref") &&
-                (isCanonicalMapHelperFamilyPath(rawPath) ||
-                 isCanonicalMapHelperFamilyPath(directCallee->fullPath)) &&
+                (isCanonicalKeyValueHelperFamilyPath(rawPath) ||
+                 isCanonicalKeyValueHelperFamilyPath(directCallee->fullPath)) &&
                 isDirectHelperDefinitionFamily(expr, *directCallee)) {
               if (!emitInlineDefinitionCall(expr, *directCallee, localsIn, true)) {
                 return false;
@@ -774,18 +774,18 @@
             }
             std::string accessName;
             std::string explicitKeyValueAccessHelperName;
-            const bool isExplicitCanonicalMapAccess =
+            const bool isExplicitCanonicalKeyValueAccess =
                 (getBuiltinArrayAccessName(expr, accessName) &&
                  expr.args.size() == 2 &&
-                 isCanonicalMapHelperFamilyPath(rawPath)) ||
+                 isCanonicalKeyValueHelperFamilyPath(rawPath)) ||
                 (resolveKeyValueHelperAliasName(expr, explicitKeyValueAccessHelperName) &&
                  (explicitKeyValueAccessHelperName == "at" ||
                   explicitKeyValueAccessHelperName == "at_ref" ||
                   explicitKeyValueAccessHelperName == "at_unsafe" ||
                   explicitKeyValueAccessHelperName == "at_unsafe_ref") &&
                  expr.args.size() == 2 &&
-                 isCanonicalMapHelperFamilyPath(rawPath));
-            if (isExplicitCanonicalMapAccess &&
+                 isCanonicalKeyValueHelperFamilyPath(rawPath));
+            if (isExplicitCanonicalKeyValueAccess &&
                 isDirectHelperDefinitionFamily(expr, *directCallee)) {
               error =
                   "native backend only supports arithmetic/comparison/clamp/min/max/abs/sign/saturate/convert/pointer/assign/increment/decrement calls in expressions (call=" +
@@ -1081,8 +1081,8 @@
           }
           error = priorError;
         }
-        if (!expr.isMethodCall && hasMapEntryCtorArgs(expr) &&
-            isCanonicalMapConstructorPath(resolveExprPath(expr))) {
+        if (!expr.isMethodCall && hasKeyValueEntryCtorArgs(expr) &&
+            isCanonicalKeyValueConstructorPath(resolveExprPath(expr))) {
           error = "native backend does not support variadic entry map constructors";
           return false;
         }
@@ -1116,13 +1116,13 @@
             return true;
           }
         }
-        std::string resolvedMapInsertHelperName;
+        std::string resolvedKeyValueInsertHelperName;
         const std::string exprPath = resolveExprPath(expr);
         if (!expr.isMethodCall &&
-            ((isCanonicalMapHelperFamilyPath(exprPath) &&
-              resolveMapHelperMemberName(exprPath, resolvedMapInsertHelperName) &&
-              (resolvedMapInsertHelperName == "insert" ||
-               resolvedMapInsertHelperName == "insert_ref")) ||
+            ((isCanonicalKeyValueHelperFamilyPath(exprPath) &&
+              resolveKeyValueHelperMemberName(exprPath, resolvedKeyValueInsertHelperName) &&
+              (resolvedKeyValueInsertHelperName == "insert" ||
+               resolvedKeyValueInsertHelperName == "insert_ref")) ||
              exprPath.rfind("/std/collections/internal_map/insert", 0) == 0)) {
           if (const Definition *directCallee = resolveDirectHelperDefinition(expr);
               directCallee != nullptr) {

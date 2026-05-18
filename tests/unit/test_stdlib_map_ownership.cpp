@@ -1715,6 +1715,30 @@ TEST_CASE("canonical map surface owns standalone stdlib implementation") {
   CHECK(nativeTailSource.find("isKeyValueReadHelperName(directKeyValueReadHelperName)") != std::string::npos);
   CHECK(lowerStatementsExprSource.find("Keep direct canonical map access helpers") == std::string::npos);
   CHECK(lowerStatementsExprSource.find("keepsBuiltinCanonicalMapHelperReturn") == std::string::npos);
+  CHECK(lowerStatementsExprSource.find("keyValueHelperMetadata") != std::string::npos);
+  CHECK(lowerStatementsExprSource.find("mapHelperMetadata") == std::string::npos);
+  CHECK(lowerStatementsExprSource.find("keyValueConstructorMetadata") != std::string::npos);
+  CHECK(lowerStatementsExprSource.find("mapConstructorMetadata") == std::string::npos);
+  CHECK(lowerStatementsExprSource.find("isCanonicalKeyValueHelperFamilyPath(") !=
+        std::string::npos);
+  CHECK(lowerStatementsExprSource.find("isCanonicalMapHelperFamilyPath(") ==
+        std::string::npos);
+  CHECK(lowerStatementsExprSource.find("isCanonicalKeyValueConstructorPath(") !=
+        std::string::npos);
+  CHECK(lowerStatementsExprSource.find("isCanonicalMapConstructorPath(") ==
+        std::string::npos);
+  CHECK(lowerStatementsExprSource.find("findDirectEntryKeyValueConstructorDefinition(") !=
+        std::string::npos);
+  CHECK(lowerStatementsExprSource.find("findDirectEntryMapConstructorDefinition(") ==
+        std::string::npos);
+  CHECK(lowerStatementsExprSource.find("isExplicitCanonicalKeyValueAccess") !=
+        std::string::npos);
+  CHECK(lowerStatementsExprSource.find("isExplicitCanonicalMapAccess") ==
+        std::string::npos);
+  CHECK(lowerStatementsExprSource.find("resolvedKeyValueInsertHelperName") !=
+        std::string::npos);
+  CHECK(lowerStatementsExprSource.find("resolvedMapInsertHelperName") ==
+        std::string::npos);
   CHECK(lowerStatementsBindingsSource.find("resolvePublishedStdlibSurfaceMemberName(\n"
                                            "                  rawPath,\n"
                                            "                  metadata->id") !=
