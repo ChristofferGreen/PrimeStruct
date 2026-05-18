@@ -648,7 +648,9 @@ This file stores durable session-derived facts that are useful in later work. Ke
   instead of spelling the canonical map root directly; template monomorph
   receiver map helper lowering should use `collections.map_helpers` metadata
   to detect rooted import-alias helper paths instead of spelling that rooted
-  helper prefix directly.
+  helper prefix directly; late map access builtin helper lookup should use the
+  same bridge-key metadata lookup instead of directly naming the map helper
+  surface ID.
   The stale
   rooted-alias struct-return semantic fixture now expects `values.at()` to use
   the canonical map helper return type instead of a user-defined `/map/at`

@@ -179,6 +179,17 @@
   of `nullptr`.
 
 ## Recent Test Runs
+- 2026-05-18 06:38 CEST | pass | mode: release | command:
+  `cmake --build build-release --target PrimeStruct_semantics_tests`;
+  `cd build-release && ./PrimeStruct_semantics_tests --test-case="explicit canonical map access helpers accept canonical map values" --no-skip`;
+  `cmake --build build-release --target PrimeStruct_misc_tests`;
+  `cd build-release && ./PrimeStruct_misc_tests --test-suite=primestruct.stdlib.map_ownership --no-skip`;
+  `rg -n 'std/collections/map|experimental_map|/map/|CollectionsMap|map(?:At|AtUnsafe|Contains|Count|Double|Empty|FromEntries|Insert|New|Oct|Pair|Quad|Quint|Sept|Sext|Single|Triple|TryAt)(?:Ref)?\b|\bMap__|\bEntry__|\bMap<' src/semantics/SemanticsValidatorExprLateMapAccessBuiltins.cpp` |
+  failures: none | notes: late map access builtin helper lookup now
+  obtains `collections.map_helpers` metadata through the bridge key instead
+  of directly naming the map helper surface ID; the edited file has zero
+  targeted map-surface matches. The Python inventory scripts were
+  intentionally not run in this pass.
 - 2026-05-18 06:34 CEST | pass | mode: release | command:
   `cmake --build build-release --target PrimeStruct_semantics_tests`;
   `cd build-release && ./PrimeStruct_semantics_tests --test-case="canonical map borrowed method-call sugar rejects missing ref template inference" --no-skip`;

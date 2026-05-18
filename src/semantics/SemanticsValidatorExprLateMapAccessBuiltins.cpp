@@ -10,14 +10,22 @@ namespace primec::semantics {
 
 namespace {
 
+const StdlibSurfaceMetadata *mapHelperSurfaceMetadataForLateMapAccess() {
+  return findStdlibSurfaceMetadataByBridgeKey("collections.map_helpers");
+}
+
 std::string canonicalMapHelperPathLocal(std::string_view helperName) {
-  return canonicalCollectionHelperPath(StdlibSurfaceId::CollectionsMapHelpers,
-                                       helperName);
+  const StdlibSurfaceMetadata *metadata =
+      mapHelperSurfaceMetadataForLateMapAccess();
+  if (metadata == nullptr) {
+    return "";
+  }
+  return canonicalCollectionHelperPath(metadata->id, helperName);
 }
 
 std::string canonicalMapHelperNamespaceLocal() {
   const StdlibSurfaceMetadata *metadata =
-      findStdlibSurfaceMetadata(StdlibSurfaceId::CollectionsMapHelpers);
+      mapHelperSurfaceMetadataForLateMapAccess();
   if (metadata == nullptr) {
     return "";
   }
@@ -34,8 +42,11 @@ bool resolveCanonicalMapHelperNameFromSpelling(std::string path,
   if (!path.empty() && path.front() != '/') {
     path.insert(path.begin(), '/');
   }
-  return resolvePublishedCollectionHelperResolvedPath(
-      path, StdlibSurfaceId::CollectionsMapHelpers, helperNameOut);
+  const StdlibSurfaceMetadata *metadata =
+      mapHelperSurfaceMetadataForLateMapAccess();
+  return metadata != nullptr &&
+         resolvePublishedCollectionHelperResolvedPath(path, metadata->id,
+                                                      helperNameOut);
 }
 
 bool isCanonicalMapHelperResolvedPath(const std::string &path,
