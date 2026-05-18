@@ -632,7 +632,8 @@ This file stores durable session-derived facts that are useful in later work. Ke
   metadata and rewrite helpers should use key/value naming around map
   constructor metadata; Result metadata direct constructor detection and local
   key-kind temporaries should use key/value naming around map constructor
-  metadata.
+  metadata; declared collection inference direct constructor probes should use
+  key/value naming around map constructor metadata.
 - Evidence: Field-bound `Map<K, V>` compatibility triage showed generated
   map helper specializations could mask missing `/map/count` aliases unless
   removed-alias checks ignored generated-only definition paths; later

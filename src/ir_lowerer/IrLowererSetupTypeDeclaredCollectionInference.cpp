@@ -11,7 +11,7 @@ namespace primec::ir_lowerer {
 
 namespace {
 
-const StdlibSurfaceMetadata *mapConstructorSurfaceMetadataLocal() {
+const StdlibSurfaceMetadata *keyValueConstructorSurfaceMetadataForDeclaredInference() {
   return findStdlibSurfaceMetadataByBridgeKey("collections.map_constructors");
 }
 
@@ -166,8 +166,9 @@ bool inferDeclaredReturnCollection(const Definition &definition,
     if (!normalizedName.empty() && normalizedName.front() == '/') {
       normalizedName.erase(normalizedName.begin());
     }
-    auto isDirectMapConstructor = [&]() {
-      const StdlibSurfaceMetadata *metadata = mapConstructorSurfaceMetadataLocal();
+    auto isDirectKeyValueConstructor = [&]() {
+      const StdlibSurfaceMetadata *metadata =
+          keyValueConstructorSurfaceMetadataForDeclaredInference();
       if (metadata == nullptr) {
         return false;
       }
@@ -184,12 +185,14 @@ bool inferDeclaredReturnCollection(const Definition &definition,
                  candidate,
                  primec::StdlibSurfaceId::CollectionsVectorConstructors);
     };
-    if (isDirectMapConstructor() && candidate.templateArgs.size() == 2) {
+    if (isDirectKeyValueConstructor() && candidate.templateArgs.size() == 2) {
       nameOut = "map";
       argsOut = candidate.templateArgs;
       return true;
     }
-    if (isDirectMapConstructor() && candidate.args.size() % 2 == 0 && !candidate.args.empty()) {
+    if (isDirectKeyValueConstructor() &&
+        candidate.args.size() % 2 == 0 &&
+        !candidate.args.empty()) {
       std::string keyType;
       std::string valueType;
       for (size_t i = 0; i < candidate.args.size(); i += 2) {
