@@ -901,15 +901,25 @@ TEST_CASE("canonical map surface owns standalone stdlib implementation") {
         std::string::npos);
   CHECK(collectionHelperRewritesSource.find("\"/map/\" + std::string(helperName)") ==
         std::string::npos);
-  CHECK(collectionHelperRewritesSource.find("collectionRewriteMapHelperMetadata()") !=
+  CHECK(collectionHelperRewritesSource.find("collectionRewriteMapHelperMetadata()") ==
         std::string::npos);
-  CHECK(collectionHelperRewritesSource.find("canonicalMapHelperPathForRewrite(") !=
+  CHECK(collectionHelperRewritesSource.find("canonicalMapHelperPathForRewrite(") ==
         std::string::npos);
-  CHECK(collectionHelperRewritesSource.find("resolveMapHelperMemberTokenForRewrite(") !=
+  CHECK(collectionHelperRewritesSource.find("resolveMapHelperMemberTokenForRewrite(") ==
         std::string::npos);
-  CHECK(collectionHelperRewritesSource.find("resolveExplicitMapHelperPathForRewrite(") !=
+  CHECK(collectionHelperRewritesSource.find("resolveExplicitMapHelperPathForRewrite(") ==
         std::string::npos);
-  CHECK(collectionHelperRewritesSource.find("preferredMapHelperLoweringPathForRewrite(") !=
+  CHECK(collectionHelperRewritesSource.find("preferredMapHelperLoweringPathForRewrite(") ==
+        std::string::npos);
+  CHECK(collectionHelperRewritesSource.find("collectionRewriteKeyValueHelperMetadata()") !=
+        std::string::npos);
+  CHECK(collectionHelperRewritesSource.find("canonicalKeyValueHelperPathForRewrite(") !=
+        std::string::npos);
+  CHECK(collectionHelperRewritesSource.find("resolveKeyValueHelperMemberTokenForRewrite(") !=
+        std::string::npos);
+  CHECK(collectionHelperRewritesSource.find("resolveExplicitKeyValueHelperPathForRewrite(") !=
+        std::string::npos);
+  CHECK(collectionHelperRewritesSource.find("preferredKeyValueHelperLoweringPathForRewrite(") !=
         std::string::npos);
   CHECK(effectFreeCollectionsSource.find("StdlibSurfaceId::CollectionsMapHelpers") ==
         std::string::npos);
