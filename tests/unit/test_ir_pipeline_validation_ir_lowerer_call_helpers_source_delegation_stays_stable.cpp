@@ -1375,14 +1375,18 @@ TEST_CASE("native tail and late collection helper metadata dispatch stays source
         std::string::npos);
   CHECK(tailDispatchSource.find("resolvePublishedSemanticStdlibSurfaceMemberName(") !=
         std::string::npos);
-  CHECK(tailDispatchSource.find("findSemanticProductDirectCallStdlibSurfaceId(semanticProgram, callExpr)") !=
+  CHECK(tailDispatchSource.find("tailDispatchMapHelperSurfaceId()") !=
+        std::string::npos);
+  CHECK(tailDispatchSource.find("findStdlibSurfaceMetadataByBridgeKey(\n"
+                                "              \"collections.map_helpers\")") !=
         std::string::npos);
   CHECK(tailDispatchSource.find("hasPublishedSemanticMapSurface(callExpr)") !=
         std::string::npos);
-  CHECK(tailDispatchSource.find(
-            "helperName == \"tryAt\" || helperName == \"at\" ||\n"
-            "               helperName == \"at_unsafe\") &&\n"
-            "              rawPath.rfind(\"/\" + std::string(\"map\") + \"/\", 0) == 0") !=
+  CHECK(tailDispatchSource.find("isTailDispatchMapImportAliasHelperPath(rawPath, helperName)") !=
+        std::string::npos);
+  CHECK(tailDispatchSource.find("StdlibSurfaceId::CollectionsMapHelpers") ==
+        std::string::npos);
+  CHECK(tailDispatchSource.find("rawPath.rfind(\"/\" + std::string(\"map\") + \"/\", 0)") ==
         std::string::npos);
   CHECK(tailDispatchSource.find(
             "helperName == \"tryAt\" || helperName == \"at\" ||\n"

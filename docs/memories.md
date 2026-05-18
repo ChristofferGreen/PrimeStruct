@@ -714,7 +714,10 @@ This file stores durable session-derived facts that are useful in later work. Ke
   semantic collection-access resolution should not carry rooted `/map/at*` or
   `/map/contains*` compatibility branches, and should only recognize canonical
   map helper spellings through stdlib surface metadata so removed aliases fall
-  through as ordinary unresolved calls.
+  through as ordinary unresolved calls; lower emit-expression tail dispatch
+  should derive map helper surface IDs and import-alias helper checks through
+  `collections.map_helpers` metadata instead of direct map surface enum
+  constants or raw rooted alias string checks.
   The stale
   rooted-alias struct-return semantic fixture now expects `values.at()` to use
   the canonical map helper return type instead of a user-defined `/map/at`

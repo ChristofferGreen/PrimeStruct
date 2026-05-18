@@ -1391,6 +1391,16 @@ TEST_CASE("canonical map surface owns standalone stdlib implementation") {
         std::string::npos);
   CHECK(tailDispatchSource.find("rewrittenExpr.name = ir_lowerer::collectionMemberPath(\"map\", \"insert\")") !=
         std::string::npos);
+  CHECK(tailDispatchSource.find("StdlibSurfaceId::CollectionsMapHelpers") ==
+        std::string::npos);
+  CHECK(tailDispatchSource.find("tailDispatchMapHelperSurfaceId()") !=
+        std::string::npos);
+  CHECK(tailDispatchSource.find("collections.map_helpers") !=
+        std::string::npos);
+  CHECK(tailDispatchSource.find("isTailDispatchMapImportAliasHelperPath(rawPath, helperName)") !=
+        std::string::npos);
+  CHECK(tailDispatchSource.find("rawPath.rfind(\"/\" + std::string(\"map\") + \"/\", 0)") ==
+        std::string::npos);
   CHECK(lowerEmitExprCollectionSource.find("StdlibSurfaceId::CollectionsMapHelpers") ==
         std::string::npos);
   CHECK(lowerEmitExprCollectionSource.find("StdlibSurfaceId::CollectionsMapConstructors") ==
