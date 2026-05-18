@@ -2588,6 +2588,12 @@ Task template:
       dispatch, or struct-slot layout helpers. Their inventory allowances are
       now zero, and obsolete backing-trace source-lock allowances plus the
       generated experimental-map inline-call context exception were removed.
+    - 2026-05-18: Direct targeted scans confirmed no map-surface traces in
+      lowerer call helpers, call resolution, lower-statement expression
+      helpers, setup-type method-call resolution, or statement-call emission.
+      Their inventory allowances are now zero, and the obsolete backing-trace
+      source-lock allowances plus the setup-method-call experimental-map
+      exception were removed.
     - 2026-05-17: Lowerer builtin-name and shared helper map-helper lookups no
       longer name the map helper surface ID directly; they now obtain helper
       metadata through the `collections.map_helpers` bridge key, and the
