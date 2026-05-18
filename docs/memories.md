@@ -52,7 +52,7 @@ This file stores durable session-derived facts that are useful in later work. Ke
 - Evidence: The retained `struct_transforms_11_20` shard failed because `[thing] a{thing{}}` reached block validation as a final binding; `Parser::finalizeBindingInitializer` now rewrites that matching shape and focused parser/semantic regressions cover it.
 
 ### map-compatibility-aliases-require-source-definitions
-- Updated: 2026-05-17
+- Updated: 2026-05-18
 - Tags: semantics, collections, compatibility
 - Fact: Removed map aliases such as `/map/count` should count as
   available only when an explicit source definition family exists, not when
@@ -517,7 +517,10 @@ This file stores durable session-derived facts that are useful in later work. Ke
   inference should derive map helper and constructor surface IDs and the
   forwarded empty constructor member name from stdlib surface metadata; IR
   lower emit-expression collection helper late dispatch should also derive map
-  helper and constructor surface IDs from stdlib metadata wrappers.
+  helper and constructor surface IDs from stdlib metadata wrappers; template
+  expression rewriting should derive forwarded empty constructor paths from
+  `collections.map_constructors` metadata and removed rooted-alias helper
+  matching from `collections.map_helpers` import-alias metadata.
 - Evidence: Field-bound `Map<K, V>` compatibility triage showed generated
   map helper specializations could mask missing `/map/count` aliases unless
   removed-alias checks ignored generated-only definition paths; later

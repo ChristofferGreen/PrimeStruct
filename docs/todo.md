@@ -2040,6 +2040,12 @@ Task template:
     - 2026-05-16: Template expression rewriting no longer probes visible
       rooted `/map/<helper>` definitions to report explicit-template
       diagnostics for bare map receiver calls.
+    - 2026-05-18: Template expression rewriting now derives the forwarded
+      empty map constructor path from `collections.map_constructors` metadata
+      and derives removed rooted-alias helper matching from
+      `collections.map_helpers` import-alias metadata. The
+      `src/semantics/TemplateMonomorphExpressionRewrite.h` map-surface
+      inventory allowance is now zero.
     - 2026-05-16: Template-monomorph map helper rewrite and
       receiver-resolution no longer hard-code canonical map helper paths,
       helper classification, preferred lowering spellings, or unknown-target

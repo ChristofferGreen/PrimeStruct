@@ -1072,7 +1072,23 @@ bool rewriteExpr(Expr &expr,
     if (!expr.templateArgs.empty()) {
       return false;
     }
-    if (path == experimentalCollectionConstructorPathLocal("map", "mapNew") &&
+    auto forwardedEmptyConstructorPath = [] {
+      const primec::StdlibSurfaceMetadata *metadata =
+          mapConstructorSurfaceMetadataLocal();
+      if (metadata == nullptr) {
+        return std::string{};
+      }
+      const std::string_view memberName =
+          primec::resolveStdlibSurfaceMemberName(*metadata,
+                                                 metadata->canonicalPath);
+      if (memberName.empty()) {
+        return std::string{};
+      }
+      return experimentalCollectionConstructorPathLocal(
+          "map", std::string(memberName) + "New");
+    };
+    const std::string emptyConstructorPath = forwardedEmptyConstructorPath();
+    if (!emptyConstructorPath.empty() && path == emptyConstructorPath &&
         ctx.templateDefs.count(path) > 0) {
       return true;
     }
@@ -1485,13 +1501,31 @@ bool rewriteExpr(Expr &expr,
     };
     const std::string removedMapCompatibilityPath =
         stripGeneratedSuffix(resolvedPath);
+    auto removedMapCompatibilityHelperFromPath =
+        [](std::string_view path) -> std::string {
+      const primec::StdlibSurfaceMetadata *metadata =
+          mapHelperSurfaceMetadataLocal();
+      if (metadata == nullptr) {
+        return {};
+      }
+      std::string helperName;
+      for (const std::string_view alias : metadata->importAliasSpellings) {
+        if (alias.find('/') != std::string_view::npos) {
+          continue;
+        }
+        if (stripStdlibSurfaceRootedMemberName(path, alias, helperName)) {
+          return helperName;
+        }
+      }
+      return {};
+    };
     const std::string removedMapCompatibilityHelper =
-        removedMapCompatibilityPath.rfind("/map/", 0) == 0
-            ? removedMapCompatibilityPath.substr(std::string("/map/").size())
-            : std::string{};
+        removedMapCompatibilityHelperFromPath(removedMapCompatibilityPath);
+    const bool isRemovedMapCompatibilityPath =
+        !removedMapCompatibilityHelper.empty();
     const std::string_view removedMapCompatibilityHelperBase =
         mapCompatibilityHelperBase(removedMapCompatibilityHelper);
-    if (removedMapCompatibilityPath.rfind("/map/", 0) == 0 &&
+    if (isRemovedMapCompatibilityPath &&
         isRemovedMapCompatibilityHelper(removedMapCompatibilityHelperBase) &&
         (removedMapCompatibilityHelperBase == "count" ||
          removedMapCompatibilityHelperBase == "count_ref" ||
@@ -1525,7 +1559,7 @@ bool rewriteExpr(Expr &expr,
       error = "unknown call target: " + removedMapCompatibilityPath;
       return false;
     }
-    if (removedMapCompatibilityPath.rfind("/map/", 0) == 0 &&
+    if (isRemovedMapCompatibilityPath &&
         removedMapCompatibilityPath != resolvedPath &&
         ctx.templateDefs.count(removedMapCompatibilityPath) > 0) {
       resolvedPath = removedMapCompatibilityPath;

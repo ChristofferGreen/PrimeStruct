@@ -584,9 +584,23 @@ TEST_CASE("canonical map surface owns standalone stdlib implementation") {
   CHECK(templateExpressionRewriteSource.find(
             "resolvedPath == \"/std/collections/map/count\" || resolvedPath == \"/map/count\"") ==
         std::string::npos);
+  CHECK(templateExpressionRewriteSource.find(
+            "experimentalCollectionConstructorPathLocal(\"map\", \"mapNew\")") ==
+        std::string::npos);
   CHECK(templateExpressionRewriteSource.find("const std::string compatibilityPath = \"/map/\" +") ==
         std::string::npos);
   CHECK(templateExpressionRewriteSource.find("resolvedPath.rfind(\"/map/\", 0) == 0) &&") ==
+        std::string::npos);
+  CHECK(templateExpressionRewriteSource.find(
+            "removedMapCompatibilityPath.rfind(\"/map/\"") ==
+        std::string::npos);
+  CHECK(templateExpressionRewriteSource.find("mapConstructorSurfaceMetadataLocal()") !=
+        std::string::npos);
+  CHECK(templateExpressionRewriteSource.find("mapHelperSurfaceMetadataLocal()") !=
+        std::string::npos);
+  CHECK(templateExpressionRewriteSource.find("forwardedEmptyConstructorPath") !=
+        std::string::npos);
+  CHECK(templateExpressionRewriteSource.find("removedMapCompatibilityHelperFromPath") !=
         std::string::npos);
   CHECK(templateCollectionCompatibilitySource.find("rawMethodName.rfind(\"map/\", 0)") ==
         std::string::npos);

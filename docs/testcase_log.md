@@ -184,6 +184,18 @@
   of `nullptr`.
 
 ## Recent Test Runs
+- 2026-05-18 08:44 CEST | pass | mode: release | command:
+  `cmake --build build-release --target PrimeStruct_semantics_tests`;
+  `cd build-release && ./PrimeStruct_semantics_tests --test-case="map stdlib namespaced count expression ignores templated alias helper fallback,map compatibility explicit-template count call keeps alias precedence with canonical templated helper,stdlib canonical map helpers resolve in method-call sugar" --no-skip`;
+  `cmake --build build-release --target PrimeStruct_misc_tests`;
+  `cd build-release && ./PrimeStruct_misc_tests --test-suite=primestruct.stdlib.map_ownership --no-skip`;
+  `rg -n 'std/collections/map|experimental_map|/map/|CollectionsMap|map(?:At|AtUnsafe|Contains|Count|Double|Empty|FromEntries|Insert|New|Oct|Pair|Quad|Quint|Sept|Sext|Single|Triple|TryAt)(?:Ref)?\b|\bMap__|\bEntry__|\bMap<' src/semantics/TemplateMonomorphExpressionRewrite.h`;
+  `rg --pcre2 -n '/?std/collections/map(?:/|")|/?std/collections/experimental_map(?:/|")|(?<![A-Za-z0-9_/])/?map/|\bmap(?:At|AtUnsafe|Contains|Count|Double|Empty|FromEntries|Insert|New|Oct|Pair|Quad|Quint|Sept|Sext|Single|Triple|TryAt)(?:Ref)?\b|\bMap__|\bEntry__|\bCollectionsMap[A-Za-z0-9_]*\b|\bMap<' src/semantics/TemplateMonomorphExpressionRewrite.h` |
+  failures: none | notes: template expression rewriting now derives the
+  forwarded empty map constructor path from constructor metadata and derives
+  removed rooted-alias helper matching from map helper import-alias metadata;
+  the edited header has zero targeted map-surface matches. The Python
+  inventory scripts were intentionally not run in this pass.
 - 2026-05-18 08:15 CEST | pass | mode: release | command:
   `cmake --build build-release --target PrimeStruct_backend_ir_tests`;
   `cd build-release && ./PrimeStruct_backend_ir_tests --test-case="ir lowerer collection helper rewrite guards explicit map defs,ir lowerer materialized collection receivers use published helper queries,ir lowerer late collection constructor guards use published constructor queries" --no-skip`;
