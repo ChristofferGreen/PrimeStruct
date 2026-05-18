@@ -1030,6 +1030,8 @@ TEST_CASE("canonical map surface owns standalone stdlib implementation") {
         std::string::npos);
   CHECK(collectionHelperRewritesSource.find("preferredMapHelperLoweringPathForRewrite(") ==
         std::string::npos);
+  CHECK(collectionHelperRewritesSource.find("directExperimentalMapHelperSpelling") ==
+        std::string::npos);
   CHECK(collectionHelperRewritesSource.find("collectionRewriteKeyValueHelperMetadata()") !=
         std::string::npos);
   CHECK(collectionHelperRewritesSource.find("canonicalKeyValueHelperPathForRewrite(") !=
@@ -1039,6 +1041,8 @@ TEST_CASE("canonical map surface owns standalone stdlib implementation") {
   CHECK(collectionHelperRewritesSource.find("resolveExplicitKeyValueHelperPathForRewrite(") !=
         std::string::npos);
   CHECK(collectionHelperRewritesSource.find("preferredKeyValueHelperLoweringPathForRewrite(") !=
+        std::string::npos);
+  CHECK(collectionHelperRewritesSource.find("directExperimentalKeyValueHelperSpelling") !=
         std::string::npos);
   CHECK(effectFreeCollectionsSource.find("StdlibSurfaceId::CollectionsMapHelpers") ==
         std::string::npos);

@@ -582,7 +582,7 @@ bool SemanticsValidator::tryRewriteCanonicalExperimentalMapHelperCall(
   std::string canonicalPath;
   std::string helperName;
   Expr canonicalCandidate = candidate;
-  bool directExperimentalMapHelperSpelling = false;
+  bool directExperimentalKeyValueHelperSpelling = false;
   if (candidate.isMethodCall) {
     std::string normalizedMethod = candidate.name;
     if (!normalizedMethod.empty() && normalizedMethod.front() == '/') {
@@ -642,7 +642,7 @@ bool SemanticsValidator::tryRewriteCanonicalExperimentalMapHelperCall(
       }
       return explicitTarget;
     }();
-    directExperimentalMapHelperSpelling =
+    directExperimentalKeyValueHelperSpelling =
         explicitTarget.rfind(experimentalCollectionConstructorRootLocal("map"), 0) == 0;
     if (!canonicalExperimentalMapHelperPath(resolvedOrExplicitPath, canonicalPath, helperName)) {
       return false;
@@ -650,7 +650,7 @@ bool SemanticsValidator::tryRewriteCanonicalExperimentalMapHelperCall(
     const bool alreadyCanonicalDirectCall =
         (resolvedOrExplicitPath == canonicalPath ||
          resolvedOrExplicitPath.rfind(canonicalPath + "__t", 0) == 0) &&
-        !directExperimentalMapHelperSpelling;
+        !directExperimentalKeyValueHelperSpelling;
     if (alreadyCanonicalDirectCall) {
       return false;
     }
@@ -682,7 +682,7 @@ bool SemanticsValidator::tryRewriteCanonicalExperimentalMapHelperCall(
     }
     return isResolvedMapConstructorPath(normalizedName);
   };
-  if (!candidate.isMethodCall && !directExperimentalMapHelperSpelling &&
+  if (!candidate.isMethodCall && !directExperimentalKeyValueHelperSpelling &&
       isBareMapAccessHelperName(helperName) &&
       !isPublishedMapConstructorReceiver(receiverExpr)) {
     return false;

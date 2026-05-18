@@ -688,7 +688,9 @@ This file stores durable session-derived facts that are useful in later work. Ke
   import-alias, canonical-resolver, and explicit-member helper APIs should use
   key/value naming around map helper metadata; semantic pre-dispatch
   direct-call canonicalized target, rewritten-call, and borrowed-path locals
-  should use key/value naming around map helper metadata.
+  should use key/value naming around map helper metadata; semantic
+  collection-rewrite direct experimental spelling locals should use key/value
+  naming around map helper metadata.
 - Evidence: Field-bound `Map<K, V>` compatibility triage showed generated
   map helper specializations could mask missing `/map/count` aliases unless
   removed-alias checks ignored generated-only definition paths; later
