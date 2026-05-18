@@ -535,13 +535,13 @@ bool SemanticsValidator::validateExprPreDispatchDirectCalls(
     return isExperimentalMapTypeText(inferredTypeText);
   };
 
-  std::string canonicalExperimentalMapHelperResolved;
+  std::string canonicalExperimentalKeyValueHelperResolved;
   if (!expr.isMethodCall &&
       (defMap_.count(resolvedOut) == 0 ||
        this->shouldLogicalCanonicalizeDefinedExperimentalMapHelperPath(resolvedOut)) &&
       this->canonicalizeExperimentalMapHelperResolvedPath(
-          resolvedOut, canonicalExperimentalMapHelperResolved)) {
-    resolvedOut = canonicalExperimentalMapHelperResolved;
+          resolvedOut, canonicalExperimentalKeyValueHelperResolved)) {
+    resolvedOut = canonicalExperimentalKeyValueHelperResolved;
   }
 
   Expr rewrittenCanonicalExperimentalVectorHelperCall;
@@ -552,21 +552,22 @@ bool SemanticsValidator::validateExprPreDispatchDirectCalls(
     return true;
   }
 
-  Expr rewrittenCanonicalExperimentalMapHelperCall;
+  Expr rewrittenCanonicalExperimentalKeyValueHelperCall;
   if (this->tryRewriteCanonicalExperimentalMapHelperCall(
           expr, dispatchBootstrap.dispatchResolvers,
-          rewrittenCanonicalExperimentalMapHelperCall)) {
-    rewrittenExprOut = rewrittenCanonicalExperimentalMapHelperCall;
+          rewrittenCanonicalExperimentalKeyValueHelperCall)) {
+    rewrittenExprOut = rewrittenCanonicalExperimentalKeyValueHelperCall;
     return true;
   }
 
-  std::string borrowedCanonicalExperimentalMapHelperPath;
+  std::string borrowedCanonicalExperimentalKeyValueHelperPath;
   if (!expr.isMethodCall &&
       this->explicitCanonicalExperimentalMapBorrowedHelperPath(
           expr, dispatchBootstrap.dispatchResolvers,
-          borrowedCanonicalExperimentalMapHelperPath)) {
+          borrowedCanonicalExperimentalKeyValueHelperPath)) {
     return failPreDispatchDirectCallDiagnostic(
-        "unknown call target: " + borrowedCanonicalExperimentalMapHelperPath);
+        "unknown call target: " +
+        borrowedCanonicalExperimentalKeyValueHelperPath);
   }
 
   std::string resolvedCanonicalKeyValueHelperName;

@@ -985,6 +985,24 @@ TEST_CASE("canonical map surface owns standalone stdlib implementation") {
         std::string::npos);
   CHECK(exprPreDispatchDirectCallsSource.find("sourceMethodMapHelperName") ==
         std::string::npos);
+  CHECK(exprPreDispatchDirectCallsSource.find(
+            "canonicalExperimentalMapHelperResolved") ==
+        std::string::npos);
+  CHECK(exprPreDispatchDirectCallsSource.find(
+            "rewrittenCanonicalExperimentalMapHelperCall") ==
+        std::string::npos);
+  CHECK(exprPreDispatchDirectCallsSource.find(
+            "borrowedCanonicalExperimentalMapHelperPath") ==
+        std::string::npos);
+  CHECK(exprPreDispatchDirectCallsSource.find(
+            "canonicalExperimentalKeyValueHelperResolved") !=
+        std::string::npos);
+  CHECK(exprPreDispatchDirectCallsSource.find(
+            "rewrittenCanonicalExperimentalKeyValueHelperCall") !=
+        std::string::npos);
+  CHECK(exprPreDispatchDirectCallsSource.find(
+            "borrowedCanonicalExperimentalKeyValueHelperPath") !=
+        std::string::npos);
   CHECK(exprPreDispatchDirectCallsSource.find("rootedMapAliasHelperPath(") !=
         std::string::npos);
   CHECK(exprVectorHelpersSource.find("std/collections/map/") ==
