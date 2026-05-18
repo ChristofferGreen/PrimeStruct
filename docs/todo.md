@@ -2600,6 +2600,13 @@ Task template:
       collection helpers, emitter collection-type helpers, or emitter helper
       type parsing. Their inventory allowances are now zero, and the obsolete
       emitter helper-type backing-trace source-lock allowance was removed.
+    - 2026-05-18: Emitter builtin call-path helpers no longer name map helper
+      or constructor surface IDs directly, no longer compare builtin
+      collection aliases against a literal `map` token, and no longer spell
+      canonical map import roots for map type parsing. The file now derives
+      those checks through `collections.map_helpers` and
+      `collections.map_constructors` metadata, and its inventory allowance is
+      zero.
     - 2026-05-17: Lowerer builtin-name and shared helper map-helper lookups no
       longer name the map helper surface ID directly; they now obtain helper
       metadata through the `collections.map_helpers` bridge key, and the

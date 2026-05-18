@@ -57,7 +57,6 @@ std::vector<std::filesystem::path> productionMapTraceFiles() {
 
 bool isAllowedMapBackingFile(const std::string &relativePath) {
   static const std::vector<std::string> files = {
-      "src/emitter/EmitterBuiltinCallPathHelpers.cpp",
       "src/ir_lowerer/IrLowererAccessTargetResolution.cpp",
       "src/ir_lowerer/IrLowererInlinePackedArgs.cpp",
       "src/ir_lowerer/IrLowererInlineParamHelpers.cpp",
@@ -1213,8 +1212,15 @@ TEST_CASE("canonical map surface owns standalone stdlib implementation") {
         std::string::npos);
   CHECK(emitterCallPathHelpersSource.find("scopedName.rfind(\"map/\", 0)") ==
         std::string::npos);
-  CHECK(emitterCallPathHelpersSource.find("resolveCanonicalStdlibSurfaceExprMemberName(\n"
-                                          "          expr, StdlibSurfaceId::CollectionsMapHelpers") !=
+  CHECK(emitterCallPathHelpersSource.find("StdlibSurfaceId::CollectionsMapHelpers") ==
+        std::string::npos);
+  CHECK(emitterCallPathHelpersSource.find("StdlibSurfaceId::CollectionsMapConstructors") ==
+        std::string::npos);
+  CHECK(emitterCallPathHelpersSource.find("MapHelperSurfaceBridgeKey") !=
+        std::string::npos);
+  CHECK(emitterCallPathHelpersSource.find("MapConstructorSurfaceBridgeKey") !=
+        std::string::npos);
+  CHECK(emitterCallPathHelpersSource.find("resolveCanonicalMapHelperExprMemberName") !=
         std::string::npos);
   CHECK(emitterReturnInferenceCollectionsSource.find("const std::string mapAlias = \"/map/\" + suffix") ==
         std::string::npos);

@@ -75,7 +75,7 @@ ALLOWED_MAX_FILE_COUNTS: dict[str, int] = {
     "include/primec/StdlibSurfaceRegistry.h": 2,
     "src/IrPrinterHelpers.cpp": 0,
     "src/StdlibSurfaceRegistry.cpp": 12,
-    "src/emitter/EmitterBuiltinCallPathHelpers.cpp": 23,
+    "src/emitter/EmitterBuiltinCallPathHelpers.cpp": 0,
     "src/emitter/EmitterBuiltinMethodResolutionHelpers.cpp": 0,
     "src/emitter/EmitterBuiltinMethodResolutionMetadataHelpers.cpp": 0,
     "src/emitter/EmitterBuiltinMethodResolutionTypeInferenceHelpers.cpp": 0,

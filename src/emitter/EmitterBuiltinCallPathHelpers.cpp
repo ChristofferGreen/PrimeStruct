@@ -9,6 +9,30 @@
 namespace primec::emitter {
 
 namespace {
+constexpr std::string_view MapHelperSurfaceBridgeKey = "collections.map_helpers";
+constexpr std::string_view MapConstructorSurfaceBridgeKey =
+    "collections.map_constructors";
+
+const StdlibSurfaceMetadata *mapHelperSurfaceMetadataLocal() {
+  return findStdlibSurfaceMetadataByBridgeKey(MapHelperSurfaceBridgeKey);
+}
+
+const StdlibSurfaceMetadata *mapConstructorSurfaceMetadataLocal() {
+  return findStdlibSurfaceMetadataByBridgeKey(MapConstructorSurfaceBridgeKey);
+}
+
+std::string mapConstructorAliasToken() {
+  const auto *metadata = mapConstructorSurfaceMetadataLocal();
+  if (metadata == nullptr) {
+    return {};
+  }
+  for (std::string_view alias : metadata->importAliasSpellings) {
+    if (!alias.empty() && alias.find('/') == std::string_view::npos) {
+      return std::string(alias);
+    }
+  }
+  return {};
+}
 
 bool isScopedBuiltinControlAlias(const std::string &name) {
   return name == "return" || name == "then" || name == "else" ||
@@ -18,6 +42,7 @@ bool isScopedBuiltinControlAlias(const std::string &name) {
 }
 
 bool isNamespacedStdlibBuiltinAlias(const std::string &alias) {
+  const std::string mapAlias = mapConstructorAliasToken();
   return alias == "assign" || alias == "if" || alias == "while" ||
          alias == "take" || alias == "borrow" || alias == "init" ||
          alias == "drop" || alias == "increment" ||
@@ -40,7 +65,7 @@ bool isNamespacedStdlibBuiltinAlias(const std::string &alias) {
          alias == "get" || alias == "get_ref" || alias == "ref" ||
          alias == "ref_ref" || alias == "at" ||
          alias == "at_unsafe" || alias == "array" ||
-         alias == "vector" || alias == "map" ||
+         alias == "vector" || (!mapAlias.empty() && alias == mapAlias) ||
          alias == "soa" "_vector" || alias == "convert" ||
          alias == "clamp" || alias == "min" || alias == "max" ||
          alias == "lerp" || alias == "fma" || alias == "hypot" ||
@@ -99,9 +124,19 @@ std::string preferredFileMethodTargetLocal(
 
 bool isMapCollectionTypeNameLocal(const std::string &name) {
   const std::string normalized = normalizeBindingTypeName(name);
+  const auto *metadata = mapConstructorSurfaceMetadataLocal();
+  bool matchesMapImportAlias = false;
+  if (metadata != nullptr) {
+    for (std::string_view alias : metadata->importAliasSpellings) {
+      if (normalizeBindingTypeName(std::string(alias)) == normalized) {
+        matchesMapImportAlias = true;
+        break;
+      }
+    }
+  }
   const std::string experimentalMapType =
-      experimentalCollectionMemberRootLocal("map") + "Map";
-  return normalized == "map" || normalized == "std/collections/map" || normalized == "Map" ||
+      experimentalCollectionMemberRootLocal(mapConstructorAliasToken()) + "Map";
+  return matchesMapImportAlias || normalized == "Map" ||
          normalized == experimentalMapType;
 }
 
@@ -190,6 +225,17 @@ bool isCanonicalStdlibSurfaceExprPath(const Expr &expr, StdlibSurfaceId surfaceI
   return path.rfind(prefix, 0) == 0;
 }
 
+bool isCanonicalStdlibSurfaceExprPath(const Expr &expr,
+                                      const StdlibSurfaceMetadata &metadata) {
+  const std::string path = normalizedExprPath(expr);
+  if (metadata.shape == StdlibSurfaceShape::ConstructorFamily) {
+    return path == metadata.canonicalPath ||
+           path.rfind(std::string(metadata.canonicalPath) + "__", 0) == 0;
+  }
+  const std::string prefix = std::string(metadata.canonicalPath) + "/";
+  return path.rfind(prefix, 0) == 0;
+}
+
 bool resolveCanonicalStdlibSurfaceExprMemberName(const Expr &expr,
                                                  StdlibSurfaceId surfaceId,
                                                  std::string &memberNameOut) {
@@ -198,6 +244,70 @@ bool resolveCanonicalStdlibSurfaceExprMemberName(const Expr &expr,
   }
   return resolvePublishedCollectionSurfaceExprMemberName(
       expr, surfaceId, memberNameOut);
+}
+
+bool resolveStdlibSurfaceExprMemberNameLocal(const Expr &expr,
+                                             const StdlibSurfaceMetadata &metadata,
+                                             bool canonicalOnly,
+                                             std::string &memberNameOut) {
+  memberNameOut.clear();
+  if (expr.kind != Expr::Kind::Call || expr.name.empty()) {
+    return false;
+  }
+  if (canonicalOnly && !isCanonicalStdlibSurfaceExprPath(expr, metadata)) {
+    return false;
+  }
+  const std::string normalizedPath = normalizedExprPath(expr);
+  if (const std::string_view memberName =
+          resolveStdlibSurfaceMemberName(metadata, normalizedPath);
+      !memberName.empty()) {
+    memberNameOut.assign(memberName);
+    return true;
+  }
+  if (metadata.bridgeKey == MapHelperSurfaceBridgeKey &&
+      normalizedPath.rfind("/std/collections/Map", 0) == 0) {
+    const std::string memberToken =
+        normalizedPath.substr(std::string("/std/collections/Map").size());
+    if (const std::string_view memberName =
+            resolveStdlibSurfaceMemberName(metadata, memberToken);
+        !memberName.empty()) {
+      memberNameOut.assign(memberName);
+      return true;
+    }
+  }
+  return false;
+}
+
+bool resolveCanonicalMapHelperExprMemberName(const Expr &expr,
+                                             std::string &memberNameOut) {
+  const auto *metadata = mapHelperSurfaceMetadataLocal();
+  return metadata != nullptr &&
+         resolveStdlibSurfaceExprMemberNameLocal(
+             expr, *metadata, true, memberNameOut);
+}
+
+bool resolvePublishedMapHelperExprMemberName(const Expr &expr,
+                                             std::string &memberNameOut) {
+  const auto *metadata = mapHelperSurfaceMetadataLocal();
+  return metadata != nullptr &&
+         resolveStdlibSurfaceExprMemberNameLocal(
+             expr, *metadata, false, memberNameOut);
+}
+
+bool resolveCanonicalMapConstructorExprMemberName(const Expr &expr,
+                                                  std::string &memberNameOut) {
+  const auto *metadata = mapConstructorSurfaceMetadataLocal();
+  return metadata != nullptr &&
+         resolveStdlibSurfaceExprMemberNameLocal(
+             expr, *metadata, true, memberNameOut);
+}
+
+bool resolvePublishedMapConstructorExprMemberName(const Expr &expr,
+                                                  std::string &memberNameOut) {
+  const auto *metadata = mapConstructorSurfaceMetadataLocal();
+  return metadata != nullptr &&
+         resolveStdlibSurfaceExprMemberNameLocal(
+             expr, *metadata, false, memberNameOut);
 }
 
 bool resolvePublishedVectorHelperExprMemberName(const Expr &expr,
@@ -342,8 +452,7 @@ bool getBuiltinArrayAccessNameLocal(const Expr &expr, std::string &out) {
   if (resolvePublishedVectorHelperExprMemberName(expr, out)) {
     return out == "at" || out == "at_unsafe";
   }
-  if (resolveCanonicalStdlibSurfaceExprMemberName(
-          expr, StdlibSurfaceId::CollectionsMapHelpers, out)) {
+  if (resolveCanonicalMapHelperExprMemberName(expr, out)) {
     return isCanonicalMapAccessHelperName(out);
   }
   std::string scopedName = resolvedPath;
@@ -519,14 +628,12 @@ bool isSimpleCallName(const Expr &expr, const char *nameToMatch) {
   if (resolvePublishedVectorHelperExprMemberName(expr, helperName)) {
     return helperName == targetName;
   }
-  if (resolveCanonicalStdlibSurfaceExprMemberName(
-          expr, StdlibSurfaceId::CollectionsMapHelpers, helperName)) {
+  if (resolveCanonicalMapHelperExprMemberName(expr, helperName)) {
     return (helperName == "count" || helperName == "at" ||
             helperName == "at_unsafe") &&
            helperName == targetName;
   }
-  if (resolveCanonicalStdlibSurfaceExprMemberName(
-          expr, StdlibSurfaceId::CollectionsMapConstructors, helperName)) {
+  if (resolveCanonicalMapConstructorExprMemberName(expr, helperName)) {
     return helperName == targetName;
   }
   const std::string internalSoaAlias =
@@ -802,10 +909,7 @@ bool getBuiltinCollectionName(const Expr &expr, std::string &out) {
       return false;
     }
     std::string helperName;
-    return resolveCanonicalStdlibSurfaceExprMemberName(
-               candidate,
-               StdlibSurfaceId::CollectionsMapHelpers,
-               helperName) &&
+    return resolveCanonicalMapHelperExprMemberName(candidate, helperName) &&
            helperName == "entry";
   };
   const bool hasEntryCtorArgs = [&]() {
@@ -818,8 +922,7 @@ bool getBuiltinCollectionName(const Expr &expr, std::string &out) {
   }();
   std::string helperName;
   const std::string resolvedPath = resolveExprPath(expr);
-  if (resolvePublishedCollectionSurfaceExprMemberName(
-          expr, StdlibSurfaceId::CollectionsMapConstructors, helperName) &&
+  if (resolvePublishedMapConstructorExprMemberName(expr, helperName) &&
       helperName == "map") {
     if (hasEntryCtorArgs) {
       return false;
@@ -839,8 +942,7 @@ bool getBuiltinCollectionName(const Expr &expr, std::string &out) {
       resolvePublishedVectorConstructorExprMemberName(expr, helperName)) {
     return false;
   }
-  if (resolveCanonicalStdlibSurfaceExprMemberName(
-          expr, StdlibSurfaceId::CollectionsMapHelpers, helperName)) {
+  if (resolveCanonicalMapHelperExprMemberName(expr, helperName)) {
     return false;
   }
   if (scopedName.rfind("std/collections/internal_soa_storage/", 0) == 0) {
@@ -851,14 +953,15 @@ bool getBuiltinCollectionName(const Expr &expr, std::string &out) {
     }
     return false;
   }
-  if (resolvePublishedCollectionSurfaceExprMemberName(
-          expr, StdlibSurfaceId::CollectionsMapHelpers, helperName)) {
+  if (resolvePublishedMapHelperExprMemberName(expr, helperName)) {
     return false;
   }
   if (rawName.find('/') != std::string::npos) {
     return false;
   }
-  if (rawName == "array" || rawName == "vector" || rawName == "map" ||
+  const std::string mapAlias = mapConstructorAliasToken();
+  if (rawName == "array" || rawName == "vector" ||
+      (!mapAlias.empty() && rawName == mapAlias) ||
       rawName == "soa" "_vector" || rawName == "soa") {
     out = rawName == "soa" ? "soa" "_vector" : rawName;
     return true;

@@ -821,8 +821,9 @@ This file stores durable session-derived facts that are useful in later work. Ke
   resolution, statement-call emission, IR printer helpers, emitter
   method-resolution helpers, emitter method-resolution type inference helpers,
   emitter setup-return inference collection helpers, emitter collection-type
-  helpers, or emitter helper type parsing; their inventory caps are now zero
-  and the obsolete backing-trace ownership allowlist entries were removed.
+  helpers, emitter helper type parsing, or emitter builtin call-path helpers;
+  their inventory caps are now zero and the obsolete backing-trace ownership
+  allowlist entries were removed.
 
 ### mapvalue-public-insert-uses-stdlib
 - Updated: 2026-05-16

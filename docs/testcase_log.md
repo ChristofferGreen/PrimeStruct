@@ -196,6 +196,17 @@
   of `nullptr`.
 
 ## Recent Test Runs
+- 2026-05-18 13:00 CEST | pass | mode: release | command:
+  `rg --pcre2 -n '/?std/collections/map(?:/|")|/?std/collections/experimental_map(?:/|")|(?<![A-Za-z0-9_/])/?map/|\bmap(?:At|AtUnsafe|Contains|Count|Double|Empty|FromEntries|Insert|New|Oct|Pair|Quad|Quint|Sept|Sext|Single|Triple|TryAt)(?:Ref)?\b|\bMap__|\bEntry__|\bCollectionsMap[A-Za-z0-9_]*\b|\bMap<' src/emitter/EmitterBuiltinCallPathHelpers.cpp || true`;
+  `cmake --build build-release --target PrimeStruct_compile_run_tests`;
+  `cmake --build build-release --target PrimeStruct_misc_tests`;
+  `cd build-release && ./PrimeStruct_misc_tests --test-suite=primestruct.stdlib.map_ownership --no-skip`;
+  `git diff --check` | failures: none | notes:
+  `EmitterBuiltinCallPathHelpers.cpp` now derives map helper and constructor
+  matching from `collections.map_helpers` and `collections.map_constructors`
+  metadata, with a zero map-surface inventory allowance. The targeted direct
+  scan returned no matches; only stdlib registry metadata remains nonzero in
+  the inventory. The Python inventory script was intentionally not run.
 - 2026-05-18 12:52 CEST | pass | mode: release | command:
   `rg --pcre2 -n '/?std/collections/map(?:/|")|/?std/collections/experimental_map(?:/|")|(?<![A-Za-z0-9_/])/?map/|\bmap(?:At|AtUnsafe|Contains|Count|Double|Empty|FromEntries|Insert|New|Oct|Pair|Quad|Quint|Sept|Sext|Single|Triple|TryAt)(?:Ref)?\b|\bMap__|\bEntry__|\bCollectionsMap[A-Za-z0-9_]*\b|\bMap<' src/IrPrinterHelpers.cpp src/emitter/EmitterBuiltinMethodResolutionHelpers.cpp src/emitter/EmitterBuiltinMethodResolutionTypeInferenceHelpers.cpp src/emitter/EmitterEmitSetupReturnInferenceCollections.h src/emitter/EmitterExprCollectionTypeHelpers.h src/emitter/EmitterHelpersTypes.cpp || true`;
   `cmake --build build-release --target PrimeStruct_misc_tests`;
