@@ -1963,6 +1963,11 @@ Task template:
       constructor aliasing is limited to the explicit `/std/collections/map/map`
       surface alias rewrite plus the still-separate experimental-map entry-args
       path.
+    - 2026-05-18: Map constructor helper path classification no longer names
+      the map constructor surface ID directly; it reuses
+      `resolveMapConstructorMemberPath(...)`, and
+      `src/semantics/MapConstructorHelpers.h` is removed from the
+      map-surface trace inventory allowlist.
     - 2026-05-16: Inline parameter, variadic packed-argument, and packed
       `Result.ok` map constructor normalization no longer retargets canonical
       stdlib map constructors to the retired rooted `/map/map` builtin path.

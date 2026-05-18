@@ -157,6 +157,8 @@ TEST_CASE("canonical map surface owns standalone stdlib implementation") {
   const std::string templateConstructorRewriteSource =
       readText(repoRoot() / "src" / "semantics" /
                "TemplateMonomorphExperimentalCollectionConstructorRewrites.h");
+  const std::string mapConstructorHelpersSource =
+      readText(repoRoot() / "src" / "semantics" / "MapConstructorHelpers.h");
   const std::string inferStructReturnSource =
       readText(repoRoot() / "src" / "semantics" /
                "SemanticsValidatorInferStructReturn.cpp");
@@ -330,6 +332,7 @@ TEST_CASE("canonical map surface owns standalone stdlib implementation") {
   REQUIRE(!templateReceiverSource.empty());
   REQUIRE(!templateExpressionRewriteSource.empty());
   REQUIRE(!templateConstructorRewriteSource.empty());
+  REQUIRE(!mapConstructorHelpersSource.empty());
   REQUIRE(!inferStructReturnSource.empty());
   REQUIRE(!inferStructReturnHelpersSource.empty());
   REQUIRE(!inferMethodResolutionSource.empty());
@@ -465,6 +468,12 @@ TEST_CASE("canonical map surface owns standalone stdlib implementation") {
   CHECK(callResolutionSource.find("mapHelperSurfaceMetadataLocal()") !=
         std::string::npos);
   CHECK(callResolutionSource.find("mapConstructorSurfaceMetadataLocal()") !=
+        std::string::npos);
+  CHECK(mapConstructorHelpersSource.find(
+            "StdlibSurfaceId::CollectionsMapConstructors") ==
+        std::string::npos);
+  CHECK(mapConstructorHelpersSource.find(
+            "resolveMapConstructorMemberPath(normalizedPath, memberName)") !=
         std::string::npos);
   CHECK(callPathHelpersSource.find("name.rfind(\"map/\", 0)") ==
         std::string::npos);

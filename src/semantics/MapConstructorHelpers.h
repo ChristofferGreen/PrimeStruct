@@ -232,9 +232,7 @@ inline bool isResolvedCanonicalMapConstructorPath(const std::string &rawPath) {
     return false;
   }
   std::string memberName;
-  return resolveCollectionConstructorMemberPath(
-      primec::StdlibSurfaceId::CollectionsMapConstructors, normalizedPath,
-      memberName);
+  return resolveMapConstructorMemberPath(normalizedPath, memberName);
 }
 
 inline bool isResolvedPublishedMapConstructorPath(const std::string &rawPath) {
@@ -243,9 +241,7 @@ inline bool isResolvedPublishedMapConstructorPath(const std::string &rawPath) {
     return false;
   }
   std::string memberName;
-  if (!resolveCollectionConstructorMemberPath(
-          primec::StdlibSurfaceId::CollectionsMapConstructors, normalizedPath,
-          memberName)) {
+  if (!resolveMapConstructorMemberPath(normalizedPath, memberName)) {
     return false;
   }
   return !(memberName == "map" &&
@@ -255,9 +251,7 @@ inline bool isResolvedPublishedMapConstructorPath(const std::string &rawPath) {
 inline bool isResolvedMapConstructorPath(const std::string &rawPath) {
   const std::string normalizedPath = stripCollectionConstructorSuffixes(rawPath);
   std::string memberName;
-  if (!resolveCollectionConstructorMemberPath(
-          primec::StdlibSurfaceId::CollectionsMapConstructors, normalizedPath,
-          memberName)) {
+  if (!resolveMapConstructorMemberPath(normalizedPath, memberName)) {
     return false;
   }
   return !(memberName == "map" &&

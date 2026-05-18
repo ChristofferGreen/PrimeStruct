@@ -119,7 +119,7 @@ ALLOWED_MAX_FILE_COUNTS: dict[str, int] = {
     "src/ir_lowerer/IrLowererStructSlotLayoutHelpers.cpp": 16,
     "src/ir_lowerer/IrLowererStructTypeHelpers.cpp": 2,
     "src/ir_lowerer/IrLowererUninitializedStructInference.cpp": 9,
-    "src/semantics/MapConstructorHelpers.h": 27,
+    "src/semantics/MapConstructorHelpers.h": 0,
     "src/semantics/SemanticPublicationBuilders.cpp": 6,
     "src/semantics/SemanticsBindingTypeHelpers.cpp": 14,
     "src/semantics/SemanticsBuiltinPathHelpers.cpp": 14,

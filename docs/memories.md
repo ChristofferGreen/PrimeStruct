@@ -727,14 +727,17 @@ This file stores durable session-derived facts that are useful in later work. Ke
 - Evidence: `precomputeSemanticProductReturnInfoCache(...)` now fails closed for raw callable summaries without the map, and inference get-return-info setup tests pin both mapped and raw-only paths.
 
 ### retired-public-map-constructors-not-canonical
-- Updated: 2026-05-16
+- Updated: 2026-05-18
 - Tags: semantics, ir, collections
 - Fact: Rooted retired public map constructor aliases such as
   `/std/collections/mapSingle`, `/std/collections/mapPair`, and
   `/map/entry` must not be treated as canonical map constructors; unqualified
   names remain separate legacy/internal compatibility surfaces, and
   metadata-backed constructor rewrites must not synthesize fixed-arity
-  replacements for them or keep no-op map rewrite shims alive.
+  replacements for them or keep no-op map rewrite shims alive. Map
+  constructor helper path classification should reuse
+  `resolveMapConstructorMemberPath(...)` instead of naming the map constructor
+  surface ID directly.
 - Evidence: `isBuiltinCanonicalMapConstructorExpr(...)` and
   `isMapConstructorDirectTargetPath(...)` now only accept the public rooted
   `/std/collections/map/map` constructor path, while `MapConstructorHelpers.h`
@@ -745,7 +748,9 @@ This file stores durable session-derived facts that are useful in later work. Ke
   constructors; lowerer assignment/init/packed-Result paths no longer rewrite
   public map constructors to experimental-map fixed-arity helpers; semantic
   call resolution and template-monomorph overload selection no longer
-  classify rooted `/map/entry` spellings as map entry constructors.
+  classify rooted `/map/entry` spellings as map entry constructors; map
+  constructor helper path checks now route through the local metadata wrapper
+  and have zero targeted map-surface trace matches.
 
 ### semantic-memory-policy-uses-runner-headroom
 - Updated: 2026-05-14
