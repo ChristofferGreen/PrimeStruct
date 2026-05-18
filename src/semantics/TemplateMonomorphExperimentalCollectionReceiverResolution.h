@@ -545,6 +545,28 @@ bool resolveTemplateMonomorphMapHelperName(std::string path,
   return true;
 }
 
+bool isTemplateMonomorphMapImportAliasHelperPath(std::string_view path) {
+  const StdlibSurfaceMetadata *metadata =
+      templateMonomorphMapHelperSurfaceMetadata();
+  if (metadata == nullptr || path.empty() || path.front() != '/') {
+    return false;
+  }
+  for (const std::string_view spelling : metadata->importAliasSpellings) {
+    if (spelling.empty() || spelling == metadata->canonicalPath) {
+      continue;
+    }
+    std::string rootedSpelling(spelling);
+    if (rootedSpelling.front() != '/') {
+      rootedSpelling.insert(rootedSpelling.begin(), '/');
+    }
+    rootedSpelling.push_back('/');
+    if (path.rfind(rootedSpelling, 0) == 0) {
+      return true;
+    }
+  }
+  return false;
+}
+
 std::string templateMonomorphCanonicalMapHelperPath(std::string_view spelling) {
   std::string helperName;
   if (!resolveTemplateMonomorphMapHelperName(std::string(spelling),
@@ -687,7 +709,7 @@ bool resolveExperimentalMapValueReceiverTemplateArgs(const Expr *receiverExpr,
 }
 
 std::string experimentalMapHelperPathForCanonicalHelper(const std::string &path) {
-  if (path.rfind("/map/", 0) == 0) {
+  if (isTemplateMonomorphMapImportAliasHelperPath(path)) {
     return {};
   }
   return templateMonomorphPreferredMapHelperSpellingForMember(
@@ -801,7 +823,7 @@ bool hasVisibleStdCollectionsImportForPath(const Context &ctx, const std::string
 }
 
 std::string experimentalMapHelperPathForWrapperHelper(const std::string &path) {
-  if (path.rfind("/map/", 0) == 0) {
+  if (isTemplateMonomorphMapImportAliasHelperPath(path)) {
     return {};
   }
   return templateMonomorphPreferredMapHelperSpellingForMember(

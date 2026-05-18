@@ -645,7 +645,10 @@ This file stores durable session-derived facts that are useful in later work. Ke
   concatenating canonical map helper paths; lowerer dispatch setup should do
   the same for semantic-product map access helper return-kind checks; lowerer
   setup-type method-target resolution should use `collectionTypePath("map")`
-  instead of spelling the canonical map root directly.
+  instead of spelling the canonical map root directly; template monomorph
+  receiver map helper lowering should use `collections.map_helpers` metadata
+  to detect rooted import-alias helper paths instead of spelling that rooted
+  helper prefix directly.
   The stale
   rooted-alias struct-return semantic fixture now expects `values.at()` to use
   the canonical map helper return type instead of a user-defined `/map/at`

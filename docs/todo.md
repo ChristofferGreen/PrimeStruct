@@ -2517,6 +2517,12 @@ Task template:
       helper targets; it derives that root through `collectionTypePath("map")`,
       and `src/ir_lowerer/IrLowererSetupTypeMethodTargetHelpers.cpp` is
       removed from the map-surface trace inventory allowlist.
+    - 2026-05-18: Template monomorph receiver map helper lowering no longer
+      spells the rooted map helper prefix directly while refusing to rewrite
+      removed map aliases; it derives rooted import-alias helper detection
+      from `collections.map_helpers` metadata, and
+      `src/semantics/TemplateMonomorphExperimentalCollectionReceiverResolution.h`
+      is removed from the map-surface trace inventory allowlist.
     - 2026-05-16: Collection access target resolution no longer hard-codes
       canonical map access/contains helper paths, namespace checks, or
       missing-definition diagnostics; it now resolves them through stdlib

@@ -179,6 +179,17 @@
   of `nullptr`.
 
 ## Recent Test Runs
+- 2026-05-18 06:34 CEST | pass | mode: release | command:
+  `cmake --build build-release --target PrimeStruct_semantics_tests`;
+  `cd build-release && ./PrimeStruct_semantics_tests --test-case="canonical map borrowed method-call sugar rejects missing ref template inference" --no-skip`;
+  `cmake --build build-release --target PrimeStruct_misc_tests`;
+  `cd build-release && ./PrimeStruct_misc_tests --test-suite=primestruct.stdlib.map_ownership --no-skip`;
+  `rg -n 'std/collections/map|experimental_map|/map/|CollectionsMap|map(?:At|AtUnsafe|Contains|Count|Double|Empty|FromEntries|Insert|New|Oct|Pair|Quad|Quint|Sept|Sext|Single|Triple|TryAt)(?:Ref)?\b|\bMap__|\bEntry__|\bMap<' src/semantics/TemplateMonomorphExperimentalCollectionReceiverResolution.h` |
+  failures: none | notes: template monomorph receiver map helper lowering
+  now derives rooted map import-alias helper detection from
+  `collections.map_helpers` metadata instead of spelling the rooted helper
+  prefix directly; the edited header has zero targeted map-surface matches.
+  The Python inventory scripts were intentionally not run in this pass.
 - 2026-05-17 10:47 CEST | pass | mode: release | command:
   `cmake --build build-release --target PrimeStruct_backend_ir_tests`;
   `cd build-release && ./PrimeStruct_backend_ir_tests --test-case="ir lowerer setup type helper rejects explicit slash-method map access return kinds" --no-skip`;
