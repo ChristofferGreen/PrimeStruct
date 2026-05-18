@@ -767,6 +767,8 @@ TEST_CASE("canonical map surface owns standalone stdlib implementation") {
         std::string::npos);
   CHECK(templateReceiverSource.find("resolveTemplateMonomorphCanonicalMapHelperName") ==
         std::string::npos);
+  CHECK(templateReceiverSource.find("isTemplateMonomorphCanonicalMapHelperPath") ==
+        std::string::npos);
   CHECK(templateReceiverSource.find("templateMonomorphKeyValueHelperSurfaceMetadata") !=
         std::string::npos);
   CHECK(templateReceiverSource.find("resolveTemplateMonomorphKeyValueHelperName") !=
@@ -775,9 +777,15 @@ TEST_CASE("canonical map surface owns standalone stdlib implementation") {
         std::string::npos);
   CHECK(templateReceiverSource.find("resolveTemplateMonomorphCanonicalKeyValueHelperName") !=
         std::string::npos);
+  CHECK(templateReceiverSource.find("isTemplateMonomorphCanonicalKeyValueHelperPath") !=
+        std::string::npos);
   CHECK(templateExpressionRewriteSource.find("templateMonomorphCanonicalMapHelperPath") ==
         std::string::npos);
+  CHECK(templateExpressionRewriteSource.find("isTemplateMonomorphCanonicalMapHelperPath") ==
+        std::string::npos);
   CHECK(templateExpressionRewriteSource.find("templateMonomorphCanonicalKeyValueHelperPath") !=
+        std::string::npos);
+  CHECK(templateExpressionRewriteSource.find("isTemplateMonomorphCanonicalKeyValueHelperPath") !=
         std::string::npos);
   CHECK(templateExpressionRewriteSource.find(
             "resolvedPath == \"/std/collections/map/count\" || resolvedPath == \"/map/count\"") ==

@@ -603,7 +603,7 @@ bool resolveTemplateMonomorphCanonicalKeyValueHelperName(
                                                     helperNameOut);
 }
 
-bool isTemplateMonomorphCanonicalMapHelperPath(const std::string &path) {
+bool isTemplateMonomorphCanonicalKeyValueHelperPath(const std::string &path) {
   std::string helperName;
   return resolveTemplateMonomorphCanonicalKeyValueHelperName(path, helperName) &&
          helperName != "map" && helperName != "entry";

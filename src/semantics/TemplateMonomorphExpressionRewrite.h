@@ -233,7 +233,7 @@ bool rewriteExpr(Expr &expr,
   }
 
   auto isCanonicalBuiltinMapHelperPath = [](const std::string &path) {
-    return isTemplateMonomorphCanonicalMapHelperPath(path);
+    return isTemplateMonomorphCanonicalKeyValueHelperPath(path);
   };
   auto isCanonicalStdlibCollectionHelperPath = [&](const std::string &path) {
     if (isCanonicalBuiltinMapHelperPath(path)) {
@@ -1145,7 +1145,7 @@ bool rewriteExpr(Expr &expr,
               mapHelperReceiverExpr(expr), params, locals, allowMathBare, namespacePrefix, ctx)) {
         return true;
       }
-      if (isTemplateMonomorphCanonicalMapHelperPath(path)) {
+      if (isTemplateMonomorphCanonicalKeyValueHelperPath(path)) {
         return true;
       }
       return false;
@@ -1683,7 +1683,7 @@ bool rewriteExpr(Expr &expr,
       }
     }
     if (expr.templateArgs.empty() &&
-        isTemplateMonomorphCanonicalMapHelperPath(resolvedPath) &&
+        isTemplateMonomorphCanonicalKeyValueHelperPath(resolvedPath) &&
         hasVisibleStdCollectionsImportForPath(
             ctx,
             resolvedPath)) {
@@ -1745,7 +1745,7 @@ bool rewriteExpr(Expr &expr,
       expr.templateArgs.clear();
     }
     if (inferredCanonicalMapReceiverTemplateArgs &&
-        isTemplateMonomorphCanonicalMapHelperPath(resolvedPath) &&
+        isTemplateMonomorphCanonicalKeyValueHelperPath(resolvedPath) &&
         resolvedPath.find("__t") != std::string::npos) {
       expr.templateArgs.clear();
     }
@@ -2194,7 +2194,7 @@ bool rewriteExpr(Expr &expr,
         }
       }
       if (expr.templateArgs.empty() &&
-          isTemplateMonomorphCanonicalMapHelperPath(methodPath) &&
+          isTemplateMonomorphCanonicalKeyValueHelperPath(methodPath) &&
           hasVisibleStdCollectionsImportForPath(ctx, methodPath)) {
         std::vector<std::string> receiverTemplateArgs;
         if (resolveExperimentalMapValueReceiverTemplateArgs(
