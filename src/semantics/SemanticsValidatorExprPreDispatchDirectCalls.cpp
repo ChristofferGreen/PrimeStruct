@@ -126,7 +126,7 @@ bool resolvePreDispatchKeyValueHelperMemberToken(std::string_view memberToken,
       normalizedToken, metadata->id, helperNameOut);
 }
 
-bool isCanonicalMapAccessReturnStructHelperName(std::string_view helperName) {
+bool isCanonicalKeyValueAccessReturnStructHelperName(std::string_view helperName) {
   return helperName == "at" || helperName == "at_unsafe" ||
          helperName == "at_ref" || helperName == "at_unsafe_ref";
 }
@@ -135,7 +135,7 @@ bool isCanonicalMapBuiltinPreDispatchHelperName(std::string_view helperName) {
   return helperName == "count" || helperName == "count_ref" ||
          helperName == "contains" || helperName == "contains_ref" ||
          helperName == "tryAt" || helperName == "tryAt_ref" ||
-         isCanonicalMapAccessReturnStructHelperName(helperName) ||
+         isCanonicalKeyValueAccessReturnStructHelperName(helperName) ||
          helperName == "insert" || helperName == "insert_ref";
 }
 
@@ -145,7 +145,7 @@ bool isRemovedKeyValueCompatibilityPreDispatchHelperName(
          isCanonicalMapBuiltinPreDispatchHelperName(helperName);
 }
 
-bool isSourceSpelledCanonicalMapAccessCall(const Expr &expr) {
+bool isSourceSpelledCanonicalKeyValueAccessCall(const Expr &expr) {
   const std::string &sourceName =
       expr.sourceName.empty() ? expr.name : expr.sourceName;
   std::string helperName;
@@ -381,7 +381,7 @@ bool SemanticsValidator::validateExprPreDispatchDirectCalls(
     handledOut = true;
     const std::string removedPath = removedAliasPath;
     auto canonicalHelperReturnsStruct = [&]() {
-      if (!isCanonicalMapAccessReturnStructHelperName(
+      if (!isCanonicalKeyValueAccessReturnStructHelperName(
               removedKeyValueCompatibilityHelper)) {
         return false;
       }
@@ -445,12 +445,12 @@ bool SemanticsValidator::validateExprPreDispatchDirectCalls(
         const bool receiverIsExperimentalMap =
             inferQueryExprTypeText(receiverExpr, params, locals, receiverTypeText) &&
             isExperimentalMapTypeText(receiverTypeText);
-        const bool canonicalMapAccessDiagnostic =
-            isSourceSpelledCanonicalMapAccessCall(expr) ||
+        const bool canonicalKeyValueAccessDiagnostic =
+            isSourceSpelledCanonicalKeyValueAccessCall(expr) ||
             expr.sourceIsMethodCall ||
             (receiverIsExperimentalMap &&
              expr.isMethodCall);
-        if (canonicalMapAccessDiagnostic) {
+        if (canonicalKeyValueAccessDiagnostic) {
           return failPreDispatchDirectCallDiagnostic(
               "argument type mismatch for " + canonicalPath +
               " parameter key");
@@ -627,11 +627,11 @@ bool SemanticsValidator::validateExprPreDispatchDirectCalls(
 
   if (!expr.isMethodCall && expr.args.size() == 2) {
     std::string builtinAccessName;
-    auto hasVisibleStdlibMapAccessDefinition = [&](const std::string &helperName) {
+    auto hasVisibleStdlibKeyValueAccessDefinition = [&](const std::string &helperName) {
       const std::string path = canonicalKeyValueHelperPathLocal(helperName);
       return hasImportedDefinitionPath(path) || hasDeclaredDefinitionPath(path);
     };
-    const bool isBareMapAccessBuiltinSurface =
+    const bool isBareKeyValueAccessBuiltinSurface =
         getBuiltinArrayAccessName(expr, builtinAccessName) &&
         isUnqualifiedCollectionAccessCall(expr, builtinAccessName);
     const std::string builtinAccessPath =
@@ -640,8 +640,8 @@ bool SemanticsValidator::validateExprPreDispatchDirectCalls(
         rootedKeyValueAliasHelperPath(builtinAccessName);
     if (!builtinAccessName.empty() &&
         !rootedBuiltinAccessAlias.empty() &&
-        hasVisibleStdlibMapAccessDefinition(builtinAccessName) &&
-        (isBareMapAccessBuiltinSurface ||
+        hasVisibleStdlibKeyValueAccessDefinition(builtinAccessName) &&
+        (isBareKeyValueAccessBuiltinSurface ||
          defMap_.find(builtinAccessPath) == defMap_.end()) &&
         !hasDeclaredDefinitionPath(rootedBuiltinAccessAlias)) {
       size_t receiverIndex = 0;

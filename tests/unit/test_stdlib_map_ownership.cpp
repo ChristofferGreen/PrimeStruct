@@ -1389,6 +1389,32 @@ TEST_CASE("canonical map surface owns standalone stdlib implementation") {
   CHECK(exprPreDispatchDirectCallsSource.find("sourceMethodMapHelperName") ==
         std::string::npos);
   CHECK(exprPreDispatchDirectCallsSource.find(
+            "isCanonicalMapAccessReturnStructHelperName") ==
+        std::string::npos);
+  CHECK(exprPreDispatchDirectCallsSource.find(
+            "isSourceSpelledCanonicalMapAccessCall") ==
+        std::string::npos);
+  CHECK(exprPreDispatchDirectCallsSource.find("canonicalMapAccessDiagnostic") ==
+        std::string::npos);
+  CHECK(exprPreDispatchDirectCallsSource.find(
+            "hasVisibleStdlibMapAccessDefinition") ==
+        std::string::npos);
+  CHECK(exprPreDispatchDirectCallsSource.find("isBareMapAccessBuiltinSurface") ==
+        std::string::npos);
+  CHECK(exprPreDispatchDirectCallsSource.find(
+            "isCanonicalKeyValueAccessReturnStructHelperName") !=
+        std::string::npos);
+  CHECK(exprPreDispatchDirectCallsSource.find(
+            "isSourceSpelledCanonicalKeyValueAccessCall") !=
+        std::string::npos);
+  CHECK(exprPreDispatchDirectCallsSource.find("canonicalKeyValueAccessDiagnostic") !=
+        std::string::npos);
+  CHECK(exprPreDispatchDirectCallsSource.find(
+            "hasVisibleStdlibKeyValueAccessDefinition") !=
+        std::string::npos);
+  CHECK(exprPreDispatchDirectCallsSource.find("isBareKeyValueAccessBuiltinSurface") !=
+        std::string::npos);
+  CHECK(exprPreDispatchDirectCallsSource.find(
             "canonicalExperimentalMapHelperResolved") ==
         std::string::npos);
   CHECK(exprPreDispatchDirectCallsSource.find(
