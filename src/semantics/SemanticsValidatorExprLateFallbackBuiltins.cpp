@@ -49,10 +49,11 @@ bool SemanticsValidator::validateExprLateFallbackBuiltins(
                                            *context.dispatchResolvers) &&
         this->isMapLikeBareAccessReceiver(expr.args[1], params, locals,
                                           *context.dispatchResolvers)) {
-      Expr rewrittenMapAccessCall = expr;
-      std::swap(rewrittenMapAccessCall.args[0], rewrittenMapAccessCall.args[1]);
+      Expr rewrittenKeyValueAccessCall = expr;
+      std::swap(rewrittenKeyValueAccessCall.args[0],
+                rewrittenKeyValueAccessCall.args[1]);
       handledOut = true;
-      return validateExpr(params, locals, rewrittenMapAccessCall);
+      return validateExpr(params, locals, rewrittenKeyValueAccessCall);
     }
   }
 

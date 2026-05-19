@@ -52,10 +52,10 @@ This file stores durable session-derived facts that are useful in later work. Ke
   compatibility predicates use key/value names; collection type inference
   receiver/probe helpers, method type-inference access helpers, and packed-args
   dereferenced access detection also use key/value access names; semantic late
-  access validation local diagnostics, visible-helper checks, and operand flags
-  should also use key/value access names, with the stdlib ownership source lock
-  rejecting the old map-helper, map-count, map-access, and removed map
-  compatibility names.
+  access validation local diagnostics, visible-helper checks, operand flags, and
+  late-fallback rewritten access temporaries should also use key/value access
+  names, with the stdlib ownership source lock rejecting the old map-helper,
+  map-count, map-access, and removed map compatibility names.
 
 ### exact-stdlib-vector-import-covers-helper-surface
 - Updated: 2026-04-19

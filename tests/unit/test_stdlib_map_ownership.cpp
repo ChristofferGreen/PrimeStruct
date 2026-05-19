@@ -234,6 +234,9 @@ TEST_CASE("canonical map surface owns standalone stdlib implementation") {
   const std::string inferLateFallbackBuiltinsSource =
       readText(repoRoot() / "src" / "semantics" /
                "SemanticsValidatorInferLateFallbackBuiltins.cpp");
+  const std::string exprLateFallbackBuiltinsSource =
+      readText(repoRoot() / "src" / "semantics" /
+               "SemanticsValidatorExprLateFallbackBuiltins.cpp");
   const std::string lateMapAccessBuiltinsSource =
       readText(repoRoot() / "src" / "semantics" /
                "SemanticsValidatorExprLateMapAccessBuiltins.cpp");
@@ -405,6 +408,7 @@ TEST_CASE("canonical map surface owns standalone stdlib implementation") {
   REQUIRE(!inferCollectionBufferAndMapResolversSource.empty());
   REQUIRE(!inferDefinitionSource.empty());
   REQUIRE(!inferLateFallbackBuiltinsSource.empty());
+  REQUIRE(!exprLateFallbackBuiltinsSource.empty());
   REQUIRE(!lateMapAccessBuiltinsSource.empty());
   REQUIRE(!exprTrySource.empty());
   REQUIRE(!pointerLikeSource.empty());
@@ -1935,6 +1939,8 @@ TEST_CASE("canonical map surface owns standalone stdlib implementation") {
         std::string::npos);
   CHECK(inferLateFallbackBuiltinsSource.find("rewrittenMapHelperCall") ==
         std::string::npos);
+  CHECK(inferLateFallbackBuiltinsSource.find("rewrittenMapAccessCall") ==
+        std::string::npos);
   CHECK(inferLateFallbackBuiltinsSource.find(
             "lateFallbackKeyValueHelperSurfaceMetadata(") !=
         std::string::npos);
@@ -1969,6 +1975,10 @@ TEST_CASE("canonical map surface owns standalone stdlib implementation") {
         std::string::npos);
   CHECK(inferLateFallbackBuiltinsSource.find(
             "metadata->importAliasSpellings") !=
+        std::string::npos);
+  CHECK(exprLateFallbackBuiltinsSource.find("rewrittenMapAccessCall") ==
+        std::string::npos);
+  CHECK(exprLateFallbackBuiltinsSource.find("rewrittenKeyValueAccessCall") !=
         std::string::npos);
   CHECK(lateMapAccessBuiltinsSource.find("normalizedName == \"map/at_ref\"") ==
         std::string::npos);
