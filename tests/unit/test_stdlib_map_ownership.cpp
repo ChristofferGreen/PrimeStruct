@@ -3801,6 +3801,36 @@ TEST_CASE("canonical map surface owns standalone stdlib implementation") {
   CHECK(statementLowererSource.find("rewriteMapInsertHelperStatementToCanonical") == std::string::npos);
   CHECK(statementLowererSource.find("rewriteMapInsertHelperStatementToBuiltin") == std::string::npos);
   CHECK(statementLowererSource.find("/map/at(argsPack") == std::string::npos);
+  CHECK(statementLowererSource.find("isMapBase") == std::string::npos);
+  CHECK(statementLowererSource.find("mapArgs") == std::string::npos);
+  CHECK(statementLowererSource.find("inferMapStructPathFromTypeText") ==
+        std::string::npos);
+  CHECK(statementLowererSource.find("experimentalMapType") ==
+        std::string::npos);
+  CHECK(statementLowererSource.find("slashlessExperimentalMapType") ==
+        std::string::npos);
+  CHECK(statementLowererSource.find("hasSemanticMapReceiverFact") ==
+        std::string::npos);
+  CHECK(statementLowererSource.find("directMap") == std::string::npos);
+  CHECK(statementLowererSource.find("wrappedMap") == std::string::npos);
+  CHECK(statementLowererSource.find("argsPackMap") == std::string::npos);
+  CHECK(statementLowererSource.find("isExperimentalMapStructPath") ==
+        std::string::npos);
+  CHECK(statementLowererSource.find("isKeyValueBase") != std::string::npos);
+  CHECK(statementLowererSource.find("keyValueArgs") != std::string::npos);
+  CHECK(statementLowererSource.find("inferKeyValueStructPathFromTypeText") !=
+        std::string::npos);
+  CHECK(statementLowererSource.find("experimentalKeyValueType") !=
+        std::string::npos);
+  CHECK(statementLowererSource.find("slashlessExperimentalKeyValueType") !=
+        std::string::npos);
+  CHECK(statementLowererSource.find("hasSemanticKeyValueReceiverFact") !=
+        std::string::npos);
+  CHECK(statementLowererSource.find("directKeyValue") != std::string::npos);
+  CHECK(statementLowererSource.find("wrappedKeyValue") != std::string::npos);
+  CHECK(statementLowererSource.find("argsPackKeyValue") != std::string::npos);
+  CHECK(statementLowererSource.find("isExperimentalKeyValueStructPath") !=
+        std::string::npos);
   CHECK(uninitializedStructInferenceSource.find("scopedCallPath == \"/map/at\"") ==
         std::string::npos);
   CHECK(uninitializedStructInferenceSource.find("scopedCallPath == \"/std/collections/map/at\"") ==

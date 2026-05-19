@@ -831,24 +831,24 @@ static bool rewriteKeyValueInsertHelperStatementToCanonical(
         return inferKeyValueKindsFromTypeText(argText, keyKindOut, valueKindOut);
       }
 
-      const bool isMapBase =
+      const bool isKeyValueBase =
           isBuiltinCollectionTypeName(normalizedBase, "map") ||
           isExperimentalCollectionTypeName(normalizedBase, "map", "Map");
-      if (!isMapBase) {
+      if (!isKeyValueBase) {
         return false;
       }
 
-      std::vector<std::string> mapArgs;
-      if (!splitTemplateArgs(argText, mapArgs) || mapArgs.size() != 2) {
+      std::vector<std::string> keyValueArgs;
+      if (!splitTemplateArgs(argText, keyValueArgs) || keyValueArgs.size() != 2) {
         return false;
       }
-      keyKindOut = valueKindFromTypeName(trimTemplateTypeText(mapArgs.front()));
-      valueKindOut = valueKindFromTypeName(trimTemplateTypeText(mapArgs.back()));
+      keyKindOut = valueKindFromTypeName(trimTemplateTypeText(keyValueArgs.front()));
+      valueKindOut = valueKindFromTypeName(trimTemplateTypeText(keyValueArgs.back()));
       return keyKindOut != LocalInfo::ValueKind::Unknown &&
              valueKindOut != LocalInfo::ValueKind::Unknown;
     };
-    std::function<std::string(const std::string &)> inferMapStructPathFromTypeText;
-    inferMapStructPathFromTypeText = [&](const std::string &typeText) {
+    std::function<std::string(const std::string &)> inferKeyValueStructPathFromTypeText;
+    inferKeyValueStructPathFromTypeText = [&](const std::string &typeText) {
       std::string base;
       std::string argText;
       if (!splitTemplateTypeName(trimTemplateTypeText(typeText), base, argText)) {
@@ -857,16 +857,16 @@ static bool rewriteKeyValueInsertHelperStatementToCanonical(
 
       const std::string normalizedBase = trimTemplateTypeText(base);
       if (normalizedBase == "Reference" || normalizedBase == "Pointer") {
-        return inferMapStructPathFromTypeText(argText);
+        return inferKeyValueStructPathFromTypeText(argText);
       }
 
-      const std::string experimentalMapType =
+      const std::string experimentalKeyValueType =
           experimentalCollectionTypePath("map", "Map");
-      const std::string slashlessExperimentalMapType =
-          experimentalMapType.substr(1);
-      if (normalizedBase == slashlessExperimentalMapType ||
-          normalizedBase == experimentalMapType) {
-        return experimentalMapType;
+      const std::string slashlessExperimentalKeyValueType =
+          experimentalKeyValueType.substr(1);
+      if (normalizedBase == slashlessExperimentalKeyValueType ||
+          normalizedBase == experimentalKeyValueType) {
+        return experimentalKeyValueType;
       }
       return std::string{};
     };
@@ -931,7 +931,7 @@ static bool rewriteKeyValueInsertHelperStatementToCanonical(
         return false;
       }
       targetInfoOut.isKeyValueTarget = true;
-      targetInfoOut.structTypeName = inferMapStructPathFromTypeText(resolvedTypeText);
+      targetInfoOut.structTypeName = inferKeyValueStructPathFromTypeText(resolvedTypeText);
       return true;
     };
     auto tryPopulateFromSemanticCollectionSpecialization =
@@ -1115,12 +1115,12 @@ static bool rewriteKeyValueInsertHelperStatementToCanonical(
     const Expr *canonicalReceiverExpr = peelReceiverWrappers(targetExpr);
 
     targetInfoOut = {};
-    bool hasSemanticMapReceiverFact = false;
+    bool hasSemanticKeyValueReceiverFact = false;
     if (tryPopulateFromSemanticReceiverFact(
-            *canonicalReceiverExpr, targetInfoOut, hasSemanticMapReceiverFact)) {
+            *canonicalReceiverExpr, targetInfoOut, hasSemanticKeyValueReceiverFact)) {
       return true;
     }
-    if (hasSemanticMapReceiverFact) {
+    if (hasSemanticKeyValueReceiverFact) {
       return false;
     }
 
@@ -1155,16 +1155,16 @@ static bool rewriteKeyValueInsertHelperStatementToCanonical(
       auto localIt = localsIn.find(canonicalReceiverExpr->name);
       if (localIt != localsIn.end()) {
         const LocalInfo &localInfo = localIt->second;
-        const bool directMap = localInfo.kind == LocalInfo::Kind::KeyValueCollection;
-        const bool wrappedMap =
+        const bool directKeyValue = localInfo.kind == LocalInfo::Kind::KeyValueCollection;
+        const bool wrappedKeyValue =
             (localInfo.kind == LocalInfo::Kind::Reference && localInfo.referenceToKeyValueCollection) ||
             (localInfo.kind == LocalInfo::Kind::Pointer && localInfo.pointerToKeyValueCollection);
-        const bool argsPackMap =
+        const bool argsPackKeyValue =
             localInfo.isArgsPack &&
             (localInfo.argsPackElementKind == LocalInfo::Kind::KeyValueCollection ||
              (localInfo.argsPackElementKind == LocalInfo::Kind::Reference && localInfo.referenceToKeyValueCollection) ||
              (localInfo.argsPackElementKind == LocalInfo::Kind::Pointer && localInfo.pointerToKeyValueCollection));
-        if (directMap || wrappedMap || argsPackMap) {
+        if (directKeyValue || wrappedKeyValue || argsPackKeyValue) {
           targetInfoOut.isKeyValueTarget = true;
           targetInfoOut.keyValueKeyKind = localInfo.keyValueKeyKind;
           targetInfoOut.keyValueValueKind = localInfo.keyValueValueKind;
@@ -1295,14 +1295,14 @@ static bool rewriteKeyValueInsertHelperStatementToCanonical(
   if (!targetInfo.isKeyValueTarget) {
     return false;
   }
-  auto isExperimentalMapStructPath = [](const std::string &structPath) {
-    const std::string experimentalMapType =
+  auto isExperimentalKeyValueStructPath = [](const std::string &structPath) {
+    const std::string experimentalKeyValueType =
         experimentalCollectionTypePath("map", "Map");
-    return structPath == experimentalMapType ||
-           structPath.rfind(experimentalMapType + "__", 0) == 0;
+    return structPath == experimentalKeyValueType ||
+           structPath.rfind(experimentalKeyValueType + "__", 0) == 0;
   };
   if (targetInfo.isWrappedKeyValueTarget ||
-      isExperimentalMapStructPath(targetInfo.structTypeName)) {
+      isExperimentalKeyValueStructPath(targetInfo.structTypeName)) {
     return false;
   }
 
