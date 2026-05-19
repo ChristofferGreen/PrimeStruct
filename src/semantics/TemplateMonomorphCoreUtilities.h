@@ -280,25 +280,25 @@ std::string selectHelperOverloadPath(const Expr &expr, const std::string &resolv
     }
     return prefix + "/" + callExpr.name;
   };
-  auto isMapEntryConstructorExpr = [&](const Expr &argExpr) {
+  auto isKeyValueEntryConstructorExpr = [&](const Expr &argExpr) {
     if (argExpr.kind != Expr::Kind::Call || argExpr.isMethodCall) {
       return false;
     }
     return isTemplateMonomorphMapEntryConstructorPath(explicitCallPath(argExpr));
   };
-  const bool preferMapEntryArgsPackOverload =
+  const bool preferKeyValueEntryArgsPackOverload =
       !expr.isMethodCall &&
       isTemplateMonomorphMapConstructorCallPath(resolvedPath) &&
       !expr.args.empty() &&
       ([&]() {
         for (const Expr &argExpr : expr.args) {
-          if (!isMapEntryConstructorExpr(argExpr)) {
+          if (!isKeyValueEntryConstructorExpr(argExpr)) {
             return false;
           }
         }
         return true;
       })();
-  if (preferMapEntryArgsPackOverload) {
+  if (preferKeyValueEntryArgsPackOverload) {
     for (const auto &entry : familyIt->second) {
       if (entry.parameterCount == 1) {
         return entry.internalPath;

@@ -989,6 +989,14 @@ TEST_CASE("canonical map surface owns standalone stdlib implementation") {
   CHECK(templateCoreSource.find(
             "isTemplateMonomorphMapConstructorCallPath(resolvedPath)") !=
         std::string::npos);
+  CHECK(templateCoreSource.find("isMapEntryConstructorExpr") ==
+        std::string::npos);
+  CHECK(templateCoreSource.find("isKeyValueEntryConstructorExpr") !=
+        std::string::npos);
+  CHECK(templateCoreSource.find("preferMapEntryArgsPackOverload") ==
+        std::string::npos);
+  CHECK(templateCoreSource.find("preferKeyValueEntryArgsPackOverload") !=
+        std::string::npos);
   CHECK(templateCoreSource.find("metadataBackedMapHelperMethodName(path)") !=
         std::string::npos);
   CHECK(templateReceiverSource.find("|| resolvedPath == \"/map/") ==
