@@ -2352,6 +2352,22 @@ TEST_CASE("canonical map surface owns standalone stdlib implementation") {
   CHECK(inferCollectionsSource.find(
             "isQualifiedExperimentalMapBackingTypeName(normalizedResolvedPath)") !=
         std::string::npos);
+  CHECK(inferCollectionsSource.find("extractExperimentalMapFieldTypes =") ==
+        std::string::npos);
+  CHECK(inferCollectionsSource.find("extractExperimentalKeyValueFieldTypes =") !=
+        std::string::npos);
+  CHECK(inferCollectionsSource.find("extractAnyMapKeyValueTypes") ==
+        std::string::npos);
+  CHECK(inferCollectionsSource.find("extractAnyKeyValueTypes") !=
+        std::string::npos);
+  CHECK(inferCollectionsSource.find("resolveMapBinding") ==
+        std::string::npos);
+  CHECK(inferCollectionsSource.find("resolveKeyValueBinding") !=
+        std::string::npos);
+  CHECK(inferCollectionsSource.find("isDirectMapConstructorCall") ==
+        std::string::npos);
+  CHECK(inferCollectionsSource.find("isDirectKeyValueConstructorCall") !=
+        std::string::npos);
   CHECK(inferCollectionReturnInferenceSource.find(
             "\"/std/collections/map/\" + builtinAccessName") ==
         std::string::npos);

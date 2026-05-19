@@ -57,9 +57,10 @@ SemanticsValidator::BuiltinCollectionDispatchResolvers SemanticsValidator::makeB
     elemTypeOut = args.front();
     return true;
   };
-  auto extractExperimentalMapFieldTypes = [this](const BindingInfo &binding,
-                                                 std::string &keyTypeOut,
-                                                 std::string &valueTypeOut) -> bool {
+  auto extractExperimentalKeyValueFieldTypes =
+      [this](const BindingInfo &binding,
+             std::string &keyTypeOut,
+             std::string &valueTypeOut) -> bool {
     auto extractFromTypeText = [&](std::string normalizedType) -> bool {
       while (true) {
         std::string base;
@@ -151,11 +152,13 @@ SemanticsValidator::BuiltinCollectionDispatchResolvers SemanticsValidator::makeB
     }
     return extractFromTypeText(normalizeBindingTypeName(binding.typeName + "<" + binding.typeTemplateArg + ">"));
   };
-  auto extractAnyMapKeyValueTypes = [extractExperimentalMapFieldTypes](const BindingInfo &binding,
-                                                                       std::string &keyTypeOut,
-                                                                       std::string &valueTypeOut) -> bool {
+  auto extractAnyKeyValueTypes =
+      [extractExperimentalKeyValueFieldTypes](
+          const BindingInfo &binding,
+          std::string &keyTypeOut,
+          std::string &valueTypeOut) -> bool {
     return extractMapKeyValueTypes(binding, keyTypeOut, valueTypeOut) ||
-           extractExperimentalMapFieldTypes(binding, keyTypeOut, valueTypeOut);
+           extractExperimentalKeyValueFieldTypes(binding, keyTypeOut, valueTypeOut);
   };
   auto resolveBindingTarget = [=, this](const Expr &target, BindingInfo &bindingOut) -> bool {
     if (target.kind == Expr::Kind::Name) {
@@ -307,12 +310,12 @@ SemanticsValidator::BuiltinCollectionDispatchResolvers SemanticsValidator::makeB
     elemTypeOut = binding.typeTemplateArg;
     return true;
   };
-  auto resolveMapBinding = [extractAnyMapKeyValueTypes](const BindingInfo &binding,
-                                                        std::string &keyTypeOut,
-                                                        std::string &valueTypeOut) -> bool {
-    return extractAnyMapKeyValueTypes(binding, keyTypeOut, valueTypeOut);
+  auto resolveKeyValueBinding = [extractAnyKeyValueTypes](const BindingInfo &binding,
+                                                          std::string &keyTypeOut,
+                                                          std::string &valueTypeOut) -> bool {
+    return extractAnyKeyValueTypes(binding, keyTypeOut, valueTypeOut);
   };
-  auto isDirectMapConstructorCall = [this](const Expr &candidate) {
+  auto isDirectKeyValueConstructorCall = [this](const Expr &candidate) {
     if (candidate.kind != Expr::Kind::Call || candidate.isBinding || candidate.isMethodCall) {
       return false;
     }
@@ -649,9 +652,9 @@ SemanticsValidator::BuiltinCollectionDispatchResolvers SemanticsValidator::makeB
       state,
       resolveBindingTarget,
       inferCallBinding,
-      resolveMapBinding,
-      extractExperimentalMapFieldTypes,
-      isDirectMapConstructorCall);
+      resolveKeyValueBinding,
+      extractExperimentalKeyValueFieldTypes,
+      isDirectKeyValueConstructorCall);
   const auto isDirectCanonicalVectorAccessCallOnBuiltinReceiver =
       [=](const Expr &candidate, size_t &receiverIndexOut) -> bool {
     const std::shared_ptr<BuiltinCollectionDispatchResolvers> lockedState = weakState.lock();
