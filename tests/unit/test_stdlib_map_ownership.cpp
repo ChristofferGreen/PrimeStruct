@@ -1472,6 +1472,10 @@ TEST_CASE("canonical map surface owns standalone stdlib implementation") {
         std::string::npos);
   CHECK(inferPreDispatchCallsSource.find("builtinMapValueType") ==
         std::string::npos);
+  CHECK(inferPreDispatchCallsSource.find("const auto &resolveMapTarget") ==
+        std::string::npos);
+  CHECK(inferPreDispatchCallsSource.find("const auto &resolveKeyValueTarget") !=
+        std::string::npos);
   CHECK(exprPreDispatchDirectCallsSource.find("std/collections/map/") ==
         std::string::npos);
   CHECK(exprPreDispatchDirectCallsSource.find("StdlibSurfaceId::CollectionsMapHelpers") ==

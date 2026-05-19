@@ -41,7 +41,8 @@ ReturnKind SemanticsValidator::inferPreDispatchCallReturnKind(
       builtinCollectionDispatchResolvers.resolveBufferTarget;
   const auto &resolveStringTarget =
       builtinCollectionDispatchResolvers.resolveStringTarget;
-  const auto &resolveMapTarget = builtinCollectionDispatchResolvers.resolveMapTarget;
+  const auto &resolveKeyValueTarget =
+      builtinCollectionDispatchResolvers.resolveMapTarget;
 
   auto finish = [&](ReturnKind kind) -> ReturnKind {
     handled = true;
@@ -499,7 +500,8 @@ ReturnKind SemanticsValidator::inferPreDispatchCallReturnKind(
       std::string builtinKeyValueValueType;
       if (isMissingStdlibMapMethodDefinition(logicalMethodResolved) &&
           !hasDefinitionPath(logicalMethodResolved) &&
-          !resolveMapTarget(expr.args.front(), builtinKeyValueKeyType, builtinKeyValueValueType)) {
+          !resolveKeyValueTarget(expr.args.front(), builtinKeyValueKeyType,
+                                 builtinKeyValueValueType)) {
         return failInferPreDispatchDiagnostic(
             soaUnavailableMethodDiagnostic(methodResolved));
       }
