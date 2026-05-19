@@ -1522,6 +1522,8 @@ TEST_CASE("canonical map surface owns standalone stdlib implementation") {
         std::string::npos);
   CHECK(buildCallResolutionSource.find("isMapHelperNamespacePrefix") ==
         std::string::npos);
+  CHECK(buildCallResolutionSource.find("isRemovedMapCompatibilityHelper(") ==
+        std::string::npos);
   CHECK(buildCallResolutionSource.find(
             "keyValueHelperCanonicalMemberRootPath") !=
         std::string::npos);
@@ -1530,6 +1532,8 @@ TEST_CASE("canonical map surface owns standalone stdlib implementation") {
   CHECK(buildCallResolutionSource.find("keyValueConstructorMetadata") !=
         std::string::npos);
   CHECK(buildCallResolutionSource.find("isKeyValueHelperNamespacePrefix") !=
+        std::string::npos);
+  CHECK(buildCallResolutionSource.find("isRemovedKeyValueCompatibilityHelper(") !=
         std::string::npos);
   CHECK(buildReturnKindsSource.find("return \"/map\"") == std::string::npos);
   CHECK(buildReturnKindsSource.find(

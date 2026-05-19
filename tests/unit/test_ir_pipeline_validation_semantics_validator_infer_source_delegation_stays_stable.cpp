@@ -2430,6 +2430,12 @@ main() {
             "metadataBackedCanonicalMapConstructorRewritePath(") ==
         std::string::npos);
   CHECK(buildCallResolutionSource.find(
+            "auto isRemovedMapCompatibilityHelper = [](std::string_view helperName) {") ==
+        std::string::npos);
+  CHECK(buildCallResolutionSource.find(
+            "auto isRemovedKeyValueCompatibilityHelper = [](std::string_view helperName) {") !=
+        std::string::npos);
+  CHECK(buildCallResolutionSource.find(
             "hasDefinitionFamilyPath(resolvedPath) &&\n"
             "        !hasImportedDefinitionPath(resolvedPath)") !=
         std::string::npos);

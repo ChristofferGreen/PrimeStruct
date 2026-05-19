@@ -350,7 +350,7 @@ std::string SemanticsValidator::resolveCalleePath(const Expr &expr) const {
              helperName == "reserve" || helperName == "clear" || helperName == "remove_at" ||
              helperName == "remove_swap";
     };
-    auto isRemovedMapCompatibilityHelper = [](std::string_view helperName) {
+    auto isRemovedKeyValueCompatibilityHelper = [](std::string_view helperName) {
       return helperName == "count" || helperName == "count_ref" ||
              helperName == "size" ||
              helperName == "contains" || helperName == "contains_ref" ||
@@ -407,7 +407,7 @@ std::string SemanticsValidator::resolveCalleePath(const Expr &expr) const {
       return normalizedPrefix + "/" + expr.name;
     }
     if (isKeyValueHelperNamespacePrefix(normalizedPrefix) &&
-        isRemovedMapCompatibilityHelper(expr.name)) {
+        isRemovedKeyValueCompatibilityHelper(expr.name)) {
       return normalizedPrefix + "/" + expr.name;
     }
     if (const std::string *importAlias = lookupScopedImportAlias(expr.name);
