@@ -193,22 +193,22 @@ bool SemanticsValidator::isStringExprForArgumentValidation(
       }
       std::string keyType;
       std::string valueType;
-      bool receiverIsMap =
+      bool receiverIsKeyValue =
           dispatchResolvers.resolveMapTarget != nullptr &&
           dispatchResolvers.resolveMapTarget(arg.args.front(), keyType, valueType);
-      if (!receiverIsMap && arg.args.front().kind == Expr::Kind::Call) {
+      if (!receiverIsKeyValue && arg.args.front().kind == Expr::Kind::Call) {
         const std::string receiverPath = resolveCalleePath(arg.args.front());
         auto receiverDefIt = defMap_.find(receiverPath);
         if (receiverDefIt != defMap_.end() && receiverDefIt->second != nullptr) {
           std::string receiverReturnType;
           if (definitionReturnTypeTextForArgumentValidation(*receiverDefIt->second,
                                                             receiverReturnType)) {
-            receiverIsMap =
+            receiverIsKeyValue =
                 extractMapKeyValueTypesFromTypeText(receiverReturnType, keyType, valueType);
           }
         }
       }
-      if (!receiverIsMap) {
+      if (!receiverIsKeyValue) {
         return false;
       }
       const std::string helperPath =
@@ -292,12 +292,12 @@ bool SemanticsValidator::isStringExprForArgumentValidation(
         getCanonicalKeyValueAccessBuiltinName(arg, accessName) &&
         arg.args.size() == 2) {
       std::string keyValueValueType;
-      std::string experimentalMapKeyType;
-      std::string experimentalMapValueType;
+      std::string experimentalKeyValueKeyType;
+      std::string experimentalKeyValueValueType;
       if (dispatchResolvers.resolveExperimentalMapTarget != nullptr &&
           dispatchResolvers.resolveExperimentalMapTarget(arg.args.front(),
-                                                         experimentalMapKeyType,
-                                                         experimentalMapValueType)) {
+                                                         experimentalKeyValueKeyType,
+                                                         experimentalKeyValueValueType)) {
         return false;
       }
       if (resolveMapValueType(arg.args.front(), dispatchResolvers, keyValueValueType) &&
