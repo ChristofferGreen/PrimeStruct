@@ -337,17 +337,18 @@ bool SemanticsValidator::validateExprLateMapAccessBuiltins(
   }
 
   auto resolveMapKeyTypeWithInference =
-      [&](const Expr &receiverExpr, std::string &mapKeyTypeOut) {
+      [&](const Expr &receiverExpr, std::string &keyValueKeyTypeOut) {
         if (this->resolveMapKeyType(receiverExpr, *context.dispatchResolvers,
-                                    mapKeyTypeOut)) {
+                                    keyValueKeyTypeOut)) {
           return true;
         }
         std::string receiverTypeText;
-        std::string mapValueType;
+        std::string keyValueValueType;
         return inferQueryExprTypeText(receiverExpr, params, locals,
                                       receiverTypeText) &&
                extractMapKeyValueTypesFromTypeText(receiverTypeText,
-                                                  mapKeyTypeOut, mapValueType);
+                                                  keyValueKeyTypeOut,
+                                                  keyValueValueType);
       };
 
   if (!expr.isMethodCall && isSimpleCallName(expr, "contains") &&
@@ -370,15 +371,15 @@ bool SemanticsValidator::validateExprLateMapAccessBuiltins(
         hasBareKeyValueOperands ? expr.args[receiverIndex] : expr.args.front();
     const Expr &keyExpr =
         hasBareKeyValueOperands ? expr.args[keyIndex] : expr.args[1];
-    std::string mapKeyType;
-    if (!resolveMapKeyTypeWithInference(receiverExpr, mapKeyType)) {
+    std::string keyValueKeyType;
+    if (!resolveMapKeyTypeWithInference(receiverExpr, keyValueKeyType)) {
       if (!validateExpr(params, locals, receiverExpr)) {
         return false;
       }
       return failLateKeyValueAccessDiagnostic("contains requires map target");
     }
-    if (!mapKeyType.empty()) {
-      if (normalizeBindingTypeName(mapKeyType) == "string") {
+    if (!keyValueKeyType.empty()) {
+      if (normalizeBindingTypeName(keyValueKeyType) == "string") {
         if (!this->isStringExprForArgumentValidation(keyExpr,
                                                      *context.dispatchResolvers)) {
           return failLateKeyValueAccessDiagnostic(
@@ -386,17 +387,17 @@ bool SemanticsValidator::validateExprLateMapAccessBuiltins(
         }
       } else {
         ReturnKind keyKind =
-            returnKindForTypeName(normalizeBindingTypeName(mapKeyType));
+            returnKindForTypeName(normalizeBindingTypeName(keyValueKeyType));
         if (keyKind != ReturnKind::Unknown) {
           if (context.dispatchResolvers->resolveStringTarget(keyExpr)) {
             return failLateKeyValueAccessDiagnostic(
-                "contains requires map key type " + mapKeyType);
+                "contains requires map key type " + keyValueKeyType);
           }
           ReturnKind candidateKind = inferExprReturnKind(keyExpr, params, locals);
           if (candidateKind != ReturnKind::Unknown &&
               candidateKind != keyKind) {
             return failLateKeyValueAccessDiagnostic(
-                "contains requires map key type " + mapKeyType);
+                "contains requires map key type " + keyValueKeyType);
           }
         }
       }
