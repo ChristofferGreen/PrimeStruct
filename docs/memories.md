@@ -113,7 +113,8 @@ This file stores durable session-derived facts that are useful in later work. Ke
   too; map/SoA contains-key validator locals should use key/value names too;
   statement printability value-type resolver locals should use key/value names
   too; collection predicate normalized element-type locals should use key/value
-  names too.
+  names too; expression late-builtin handled flags should use key/value names
+  too.
   The stdlib ownership source lock rejects the old map-helper, map-count,
   map-access, and removed map compatibility names.
 

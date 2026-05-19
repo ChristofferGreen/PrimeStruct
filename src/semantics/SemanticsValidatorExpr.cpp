@@ -1224,13 +1224,13 @@ bool SemanticsValidator::validateExpr(const std::vector<ParameterInfo> &params,
           shouldBuiltinValidateBareKeyValueContainsCall,
           dispatchBootstrap.dispatchResolvers,
           lateMapSoaBuiltinContext);
-      bool handledMapSoaBuiltin = false;
+      bool handledKeyValueSoaBuiltin = false;
       if (!validateExprLateMapSoaBuiltins(
               params, locals, expr, resolved, resolvedMethod,
-              lateMapSoaBuiltinContext, handledMapSoaBuiltin)) {
+              lateMapSoaBuiltinContext, handledKeyValueSoaBuiltin)) {
         return false;
       }
-      if (handledMapSoaBuiltin) {
+      if (handledKeyValueSoaBuiltin) {
         return true;
       }
       ExprLateFallbackBuiltinContext lateFallbackBuiltinContext;
@@ -1280,13 +1280,13 @@ bool SemanticsValidator::validateExpr(const std::vector<ParameterInfo> &params,
           shouldBuiltinValidateBareKeyValueTryAtCall,
           shouldBuiltinValidateBareKeyValueAccessCall,
           lateMapAccessBuiltinContext);
-      bool handledLateMapAccessBuiltin = false;
+      bool handledLateKeyValueAccessBuiltin = false;
       if (!validateExprLateMapAccessBuiltins(
               params, locals, expr, resolved, lateMapAccessBuiltinContext,
-              handledLateMapAccessBuiltin)) {
+              handledLateKeyValueAccessBuiltin)) {
         return false;
       }
-      if (handledLateMapAccessBuiltin) {
+      if (handledLateKeyValueAccessBuiltin) {
         return true;
       }
       ExprLateUnknownTargetFallbackContext lateUnknownTargetFallbackContext;

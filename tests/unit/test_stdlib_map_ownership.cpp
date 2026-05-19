@@ -2607,6 +2607,11 @@ TEST_CASE("canonical map surface owns standalone stdlib implementation") {
         std::string::npos);
   CHECK(exprSource.find("shouldBuiltinValidateBareMapContainsCall") ==
         std::string::npos);
+  CHECK(exprSource.find("handledMapSoaBuiltin") == std::string::npos);
+  CHECK(exprSource.find("handledKeyValueSoaBuiltin") != std::string::npos);
+  CHECK(exprSource.find("handledLateMapAccessBuiltin") == std::string::npos);
+  CHECK(exprSource.find("handledLateKeyValueAccessBuiltin") !=
+        std::string::npos);
   CHECK(builtinContextSetupSource.find(
             "shouldBuiltinValidateBareKeyValueAccessCall") != std::string::npos);
   CHECK(builtinContextSetupSource.find("shouldBuiltinValidateBareMapAccessCall") ==
