@@ -181,7 +181,7 @@ bool SemanticsValidator::validateExprLateMapAccessBuiltins(
     return failExprDiagnostic(expr, std::move(message));
   };
   auto failLateKeyValueAccessKeyMismatch = [&](const std::string &helperName,
-                                          const std::string &mapKeyType,
+                                          const std::string &keyValueKeyType,
                                           const Expr &receiverExpr) {
     std::string receiverTypeText;
     const bool receiverIsExperimentalMap =
@@ -197,13 +197,13 @@ bool SemanticsValidator::validateExprLateMapAccessBuiltins(
           canonicalKeyValueHelperPathLocal(helperName) +
           " parameter key");
     }
-    if (normalizeBindingTypeName(mapKeyType) == "string") {
+    if (normalizeBindingTypeName(keyValueKeyType) == "string") {
       return failLateKeyValueAccessDiagnostic(helperName +
                                                 " requires string map key");
     }
     return failLateKeyValueAccessDiagnostic(helperName +
                                               " requires map key type " +
-                                              mapKeyType);
+                                              keyValueKeyType);
   };
   auto hasBareKeyValueContainsDefinition = [&]() {
     return hasImportedDefinitionPath(canonicalKeyValueHelperPathLocal("contains")) ||
