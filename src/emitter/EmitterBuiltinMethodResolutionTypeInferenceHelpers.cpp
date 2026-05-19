@@ -266,7 +266,7 @@ std::string inferMethodResolutionPrimitiveTypeName(
     }
     return "";
   };
-  auto isBareMapAccessMethod = [&](const Expr &candidate) {
+  auto isBareKeyValueAccessMethod = [&](const Expr &candidate) {
     if (candidate.kind != Expr::Kind::Call || !candidate.isMethodCall || candidate.name.empty() ||
         candidate.args.empty()) {
       return false;
@@ -292,8 +292,8 @@ std::string inferMethodResolutionPrimitiveTypeName(
     }
     return false;
   };
-  auto resolveBareMapAccessMethodHelperPath = [&](const Expr &candidate) -> std::string {
-    if (!isBareMapAccessMethod(candidate)) {
+  auto resolveBareKeyValueAccessMethodHelperPath = [&](const Expr &candidate) -> std::string {
+    if (!isBareKeyValueAccessMethod(candidate)) {
       return "";
     }
     const std::string canonicalPath = keyValueHelperPath(candidate.name);
@@ -302,7 +302,7 @@ std::string inferMethodResolutionPrimitiveTypeName(
     }
     return "";
   };
-  auto isExplicitMapAccessCompatibilityCall = [&](const Expr &candidate) {
+  auto isExplicitKeyValueAccessCompatibilityCall = [&](const Expr &candidate) {
     if (candidate.kind != Expr::Kind::Call || candidate.isMethodCall || candidate.name.empty()) {
       return false;
     }
@@ -388,7 +388,7 @@ std::string inferMethodResolutionPrimitiveTypeName(
     }
     return "";
   };
-  auto inferExplicitMapAccessResolvedTypeName = [&](const Expr &candidate) -> std::string {
+  auto inferExplicitKeyValueAccessResolvedTypeName = [&](const Expr &candidate) -> std::string {
     if (candidate.kind != Expr::Kind::Call || candidate.name.empty()) {
       return "";
     }
@@ -422,7 +422,7 @@ std::string inferMethodResolutionPrimitiveTypeName(
     const std::string resolvedExprPath = resolveExprPath(candidate);
     return isVectorAccessHelperMemberName(vectorHelperMemberNameFromPath(resolvedExprPath));
   };
-  auto inferCanonicalMapAccessTypeName = [&](const Expr &candidate) -> std::string {
+  auto inferCanonicalKeyValueAccessTypeName = [&](const Expr &candidate) -> std::string {
     if (candidate.kind != Expr::Kind::Call || candidate.isMethodCall || candidate.name.empty()) {
       return "";
     }
@@ -499,10 +499,10 @@ std::string inferMethodResolutionPrimitiveTypeName(
           }
         }
         if (candidateExpr.isMethodCall) {
-          if (const std::string explicitMapAccessType =
-                  inferExplicitMapAccessResolvedTypeName(candidateExpr);
-              !explicitMapAccessType.empty()) {
-            return explicitMapAccessType;
+          if (const std::string explicitKeyValueAccessType =
+                  inferExplicitKeyValueAccessResolvedTypeName(candidateExpr);
+              !explicitKeyValueAccessType.empty()) {
+            return explicitKeyValueAccessType;
           }
           if (const std::string explicitVectorAccessType =
                   inferExplicitVectorAccessResolvedTypeName(candidateExpr);
@@ -534,10 +534,10 @@ std::string inferMethodResolutionPrimitiveTypeName(
               !explicitVectorAccessType.empty()) {
             return explicitVectorAccessType;
           }
-          if (const std::string explicitMapAccessType =
-                  inferExplicitMapAccessResolvedTypeName(candidateExpr);
-              !explicitMapAccessType.empty()) {
-            return explicitMapAccessType;
+          if (const std::string explicitKeyValueAccessType =
+                  inferExplicitKeyValueAccessResolvedTypeName(candidateExpr);
+              !explicitKeyValueAccessType.empty()) {
+            return explicitKeyValueAccessType;
           }
           if (isExplicitVectorAccessDirectCall(candidateExpr)) {
             return "";
@@ -547,13 +547,13 @@ std::string inferMethodResolutionPrimitiveTypeName(
               !explicitVectorAccessType.empty()) {
             return explicitVectorAccessType;
           }
-          if (isExplicitMapAccessCompatibilityCall(candidateExpr)) {
+          if (isExplicitKeyValueAccessCompatibilityCall(candidateExpr)) {
             return "";
           }
-          if (const std::string canonicalMapAccessType =
-                  inferCanonicalMapAccessTypeName(candidateExpr);
-              !canonicalMapAccessType.empty()) {
-            return canonicalMapAccessType;
+          if (const std::string canonicalKeyValueAccessType =
+                  inferCanonicalKeyValueAccessTypeName(candidateExpr);
+              !canonicalKeyValueAccessType.empty()) {
+            return canonicalKeyValueAccessType;
           }
           if (isRemovedKeyValueDirectCallResultCompatibility(candidateExpr)) {
             return "";
@@ -593,15 +593,15 @@ std::string inferMethodResolutionPrimitiveTypeName(
             isVectorCapacityCall(candidateExpr, localTypes)) {
           return "i32";
         }
-        if (const std::string bareMapAccessMethodPath =
-                resolveBareMapAccessMethodHelperPath(candidateExpr);
-            !bareMapAccessMethodPath.empty()) {
+        if (const std::string bareKeyValueAccessMethodPath =
+                resolveBareKeyValueAccessMethodHelperPath(candidateExpr);
+            !bareKeyValueAccessMethodPath.empty()) {
           if (const std::string inferredType =
-                  typeNameFromResolvedCandidates(view, {bareMapAccessMethodPath});
+                  typeNameFromResolvedCandidates(view, {bareKeyValueAccessMethodPath});
               !inferredType.empty()) {
             return inferredType;
           }
-        } else if (isBareMapAccessMethod(candidateExpr)) {
+        } else if (isBareKeyValueAccessMethod(candidateExpr)) {
           return "";
         }
         const std::string accessTypeName = inferAccessCallTypeName(

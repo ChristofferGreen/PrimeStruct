@@ -2607,6 +2607,38 @@ TEST_CASE("canonical map surface owns standalone stdlib implementation") {
         std::string::npos);
   CHECK(emitterMethodTypeInferenceSource.find("pruneMapAccessStructReturnCompatibilityCandidates") ==
         std::string::npos);
+  CHECK(emitterMethodTypeInferenceSource.find("isBareMapAccessMethod") ==
+        std::string::npos);
+  CHECK(emitterMethodTypeInferenceSource.find("isBareKeyValueAccessMethod") !=
+        std::string::npos);
+  CHECK(emitterMethodTypeInferenceSource.find("resolveBareMapAccessMethodHelperPath") ==
+        std::string::npos);
+  CHECK(emitterMethodTypeInferenceSource.find("resolveBareKeyValueAccessMethodHelperPath") !=
+        std::string::npos);
+  CHECK(emitterMethodTypeInferenceSource.find("isExplicitMapAccessCompatibilityCall") ==
+        std::string::npos);
+  CHECK(emitterMethodTypeInferenceSource.find("isExplicitKeyValueAccessCompatibilityCall") !=
+        std::string::npos);
+  CHECK(emitterMethodTypeInferenceSource.find("inferExplicitMapAccessResolvedTypeName") ==
+        std::string::npos);
+  CHECK(emitterMethodTypeInferenceSource.find("inferExplicitKeyValueAccessResolvedTypeName") !=
+        std::string::npos);
+  CHECK(emitterMethodTypeInferenceSource.find("inferCanonicalMapAccessTypeName") ==
+        std::string::npos);
+  CHECK(emitterMethodTypeInferenceSource.find("inferCanonicalKeyValueAccessTypeName") !=
+        std::string::npos);
+  CHECK(emitterMethodTypeInferenceSource.find("explicitMapAccessType") ==
+        std::string::npos);
+  CHECK(emitterMethodTypeInferenceSource.find("explicitKeyValueAccessType") !=
+        std::string::npos);
+  CHECK(emitterMethodTypeInferenceSource.find("canonicalMapAccessType") ==
+        std::string::npos);
+  CHECK(emitterMethodTypeInferenceSource.find("canonicalKeyValueAccessType") !=
+        std::string::npos);
+  CHECK(emitterMethodTypeInferenceSource.find("bareMapAccessMethodPath") ==
+        std::string::npos);
+  CHECK(emitterMethodTypeInferenceSource.find("bareKeyValueAccessMethodPath") !=
+        std::string::npos);
   CHECK(emitterMethodTypeInferenceSource.find(
             "isRemovedMapDirectCallResultCompatibility") ==
         std::string::npos);
