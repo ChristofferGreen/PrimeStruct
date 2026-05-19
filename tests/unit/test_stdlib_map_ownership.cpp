@@ -864,6 +864,10 @@ TEST_CASE("canonical map surface owns standalone stdlib implementation") {
         std::string::npos);
   CHECK(exprMethodResolutionSource.find("mapNamespacedMethodCompatibilityPath") ==
         std::string::npos);
+  CHECK(exprMethodResolutionSource.find("removedMapMethodPath") ==
+        std::string::npos);
+  CHECK(exprMethodResolutionSource.find("removedKeyValueMethodPath") !=
+        std::string::npos);
   CHECK(exprMethodResolutionSource.find("isCanonicalMapAccessMethodName") ==
         std::string::npos);
   CHECK(exprMethodResolutionSource.find("canonicalMapAccessReturnsString") ==
@@ -1385,6 +1389,18 @@ TEST_CASE("canonical map surface owns standalone stdlib implementation") {
         std::string::npos);
   CHECK(exprMethodResolutionSource.find("preferredMapMethodTargetForCall(") ==
         std::string::npos);
+  CHECK(exprMethodResolutionSource.find("resolveInferredMapMethodFallback") ==
+        std::string::npos);
+  CHECK(exprMethodResolutionSource.find(
+            "resolveInferredKeyValueMethodFallback") != std::string::npos);
+  CHECK(exprMethodResolutionSource.find("hasVisibleStdlibMapMethodDefinition") ==
+        std::string::npos);
+  CHECK(exprMethodResolutionSource.find(
+            "hasVisibleStdlibKeyValueMethodDefinition") != std::string::npos);
+  CHECK(exprMethodResolutionSource.find("isMissingStdlibMapMethodDefinition") ==
+        std::string::npos);
+  CHECK(exprMethodResolutionSource.find(
+            "isMissingStdlibKeyValueMethodDefinition") != std::string::npos);
   CHECK(exprMethodResolutionSource.find("resolveIndexedArgsPackMapMethod") ==
         std::string::npos);
   CHECK(exprMethodResolutionSource.find(

@@ -209,10 +209,10 @@ bool SemanticsValidator::validateExprMethodCallTarget(
     }
     return failMethodResolutionDiagnostic("argument type mismatch for /string/count parameter values: expected string");
   };
-  const std::string removedMapMethodPath =
+  const std::string removedKeyValueMethodPath =
       this->keyValueNamespacedMethodCompatibilityPath(expr, params, locals, dispatchResolverAdapters);
-  if (!removedMapMethodPath.empty()) {
-    return failMethodResolutionDiagnostic("unknown method: " + removedMapMethodPath);
+  if (!removedKeyValueMethodPath.empty()) {
+    return failMethodResolutionDiagnostic("unknown method: " + removedKeyValueMethodPath);
   }
   if (expr.args.empty()) {
     return failMethodResolutionDiagnostic("method call missing receiver");
@@ -471,7 +471,7 @@ bool SemanticsValidator::validateExprMethodCallTarget(
       isBuiltinMethod = false;
       return true;
     };
-    auto resolveInferredMapMethodFallback = [&]() -> bool {
+    auto resolveInferredKeyValueMethodFallback = [&]() -> bool {
       const std::string helperName = expr.name;
       const bool requestsExplicitVectorHelperNamespace =
           expr.namespacePrefix == "vector" || expr.namespacePrefix == "/vector" ||
@@ -508,7 +508,7 @@ bool SemanticsValidator::validateExprMethodCallTarget(
     };
     if (resolvedVisibleCollectionMethod) {
     } else if (promotedCapacityToBuiltinValidation) {
-    } else if (resolveInferredMapMethodFallback()) {
+    } else if (resolveInferredKeyValueMethodFallback()) {
     } else if (resolveNamespacedVectorBodyArgumentTarget()) {
     } else if (hasBlockArgs &&
                resolvePointerLikeMethodTarget(params, locals, expr.args.front(), expr.name, resolved)) {
@@ -636,16 +636,16 @@ bool SemanticsValidator::validateExprMethodCallTarget(
       }
     }
   }
-  auto hasVisibleStdlibMapMethodDefinition = [&](const std::string &path) {
+  auto hasVisibleStdlibKeyValueMethodDefinition = [&](const std::string &path) {
     return hasImportedDefinitionPath(path) || hasDeclaredDefinitionPath(path);
   };
-  auto isMissingStdlibMapMethodDefinition = [&](const std::string &path) {
+  auto isMissingStdlibKeyValueMethodDefinition = [&](const std::string &path) {
     std::string helperName;
     return resolveCanonicalCompatibilityKeyValueHelperNameFromResolvedPath(
                path, helperName) &&
-           !hasVisibleStdlibMapMethodDefinition(path);
+           !hasVisibleStdlibKeyValueMethodDefinition(path);
   };
-  if (isMissingStdlibMapMethodDefinition(resolved) &&
+  if (isMissingStdlibKeyValueMethodDefinition(resolved) &&
       !keepBuiltinIndexedArgsPackKeyValueMethod) {
     isBuiltinMethod = false;
   }
