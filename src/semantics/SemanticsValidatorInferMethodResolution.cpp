@@ -659,7 +659,7 @@ bool SemanticsValidator::resolveInferMethodCallPath(
                                                             "/soa" "_vector");
     return true;
   };
-  auto setIndexedArgsPackMapMethodTarget = [&](const Expr &receiverExpr, const std::string &helperName) -> bool {
+  auto setIndexedArgsPackKeyValueMethodTarget = [&](const Expr &receiverExpr, const std::string &helperName) -> bool {
     if (receiverExpr.kind != Expr::Kind::Call || receiverExpr.isBinding || receiverExpr.args.size() != 2) {
       return false;
     }
@@ -679,9 +679,9 @@ bool SemanticsValidator::resolveInferMethodCallPath(
     }
     const std::string unwrappedIndexedElemType =
         normalizeBindingTypeName(unwrapReferencePointerTypeText(indexedElemType));
-    const std::string indexedMapTypeText =
+    const std::string indexedKeyValueTypeText =
         unwrappedIndexedElemType.empty() ? indexedElemType : unwrappedIndexedElemType;
-    if (!extractMapKeyValueTypesFromTypeText(indexedMapTypeText, keyType, valueType)) {
+    if (!extractMapKeyValueTypesFromTypeText(indexedKeyValueTypeText, keyType, valueType)) {
       return false;
     }
     resolvedOut = preferredKeyValueMethodTargetForCall(params, locals, receiverExpr, helperName);
@@ -899,7 +899,7 @@ bool SemanticsValidator::resolveInferMethodCallPath(
         return true;
       }
       if (normalizedMethodName == "count" &&
-          setIndexedArgsPackMapMethodTarget(receiver, "count")) {
+          setIndexedArgsPackKeyValueMethodTarget(receiver, "count")) {
         return true;
       }
     }
@@ -924,7 +924,7 @@ bool SemanticsValidator::resolveInferMethodCallPath(
     }
     if ((normalizedMethodName == "contains" || normalizedMethodName == "tryAt" ||
          normalizedMethodName == "insert") &&
-        setIndexedArgsPackMapMethodTarget(receiver, normalizedMethodName)) {
+        setIndexedArgsPackKeyValueMethodTarget(receiver, normalizedMethodName)) {
       return true;
     }
     if (isValueSurfaceAccessMethodName(normalizedMethodName)) {
@@ -947,12 +947,12 @@ bool SemanticsValidator::resolveInferMethodCallPath(
         resolvedOut = "/string/" + normalizedMethodName;
         return true;
       }
-      if (setIndexedArgsPackMapMethodTarget(receiver, normalizedMethodName)) {
+      if (setIndexedArgsPackKeyValueMethodTarget(receiver, normalizedMethodName)) {
         return true;
       }
     }
     if (isCanonicalKeyValueAccessMethodName(normalizedMethodName) &&
-        setIndexedArgsPackMapMethodTarget(receiver, normalizedMethodName)) {
+        setIndexedArgsPackKeyValueMethodTarget(receiver, normalizedMethodName)) {
       return true;
     }
     if (isCanonicalKeyValueAccessMethodName(normalizedMethodName) &&
