@@ -1768,6 +1768,19 @@ TEST_CASE("canonical map surface owns standalone stdlib implementation") {
   CHECK(exprPreDispatchDirectCallsSource.find(
             "hasVisibleStdlibKeyValueAccessDefinition") !=
         std::string::npos);
+  CHECK(exprPreDispatchDirectCallsSource.find(
+            "failPreDispatchDirectCallMapKeyMismatch") == std::string::npos);
+  CHECK(exprPreDispatchDirectCallsSource.find(
+            "failPreDispatchDirectCallKeyValueKeyMismatch") !=
+        std::string::npos);
+  CHECK(exprPreDispatchDirectCallsSource.find(
+            "resolvesNonRootExperimentalMapValueTarget") == std::string::npos);
+  CHECK(exprPreDispatchDirectCallsSource.find(
+            "resolvesNonRootExperimentalKeyValueTarget") != std::string::npos);
+  CHECK(exprPreDispatchDirectCallsSource.find(
+            "isNonRootExperimentalMapReceiverExpr") == std::string::npos);
+  CHECK(exprPreDispatchDirectCallsSource.find(
+            "isNonRootExperimentalKeyValueReceiverExpr") != std::string::npos);
   CHECK(exprPreDispatchDirectCallsSource.find("isBareKeyValueAccessBuiltinSurface") !=
         std::string::npos);
   CHECK(exprPreDispatchDirectCallsSource.find(

@@ -435,7 +435,7 @@ bool SemanticsValidator::validateExprPreDispatchDirectCalls(
     return failPreDispatchDirectCallDiagnostic("unknown call target: " +
                                                removedPath);
   }
-  auto failPreDispatchDirectCallMapKeyMismatch =
+  auto failPreDispatchDirectCallKeyValueKeyMismatch =
       [&](const std::string &helperName,
           const std::string &keyValueKeyType,
           const Expr &receiverExpr) {
@@ -663,7 +663,7 @@ bool SemanticsValidator::validateExprPreDispatchDirectCalls(
           if (normalizeBindingTypeName(keyValueKeyType) == "string") {
             if (!this->isStringExprForArgumentValidation(
                     keyExpr, dispatchBootstrap.dispatchResolvers)) {
-              return failPreDispatchDirectCallMapKeyMismatch(
+              return failPreDispatchDirectCallKeyValueKeyMismatch(
                   builtinAccessName, keyValueKeyType, receiverExpr);
             }
           } else {
@@ -672,13 +672,13 @@ bool SemanticsValidator::validateExprPreDispatchDirectCalls(
             if (keyKind != ReturnKind::Unknown) {
               if (dispatchBootstrap.dispatchResolvers.resolveStringTarget(
                       keyExpr)) {
-                return failPreDispatchDirectCallMapKeyMismatch(
+                return failPreDispatchDirectCallKeyValueKeyMismatch(
                     builtinAccessName, keyValueKeyType, receiverExpr);
               }
               ReturnKind indexKind =
                   inferExprReturnKind(keyExpr, params, locals);
               if (indexKind != ReturnKind::Unknown && indexKind != keyKind) {
-                return failPreDispatchDirectCallMapKeyMismatch(
+                return failPreDispatchDirectCallKeyValueKeyMismatch(
                     builtinAccessName, keyValueKeyType, receiverExpr);
               }
             }
@@ -698,13 +698,13 @@ bool SemanticsValidator::validateExprPreDispatchDirectCalls(
     std::string builtinAccessName;
     std::string receiverTypeText;
     std::string borrowedHelperProbe;
-    auto resolvesNonRootExperimentalMapValueTarget =
+    auto resolvesNonRootExperimentalKeyValueTarget =
         [&](const Expr &candidate) {
           return !isRootMapConstructorExpr(candidate) &&
                  dispatchBootstrap.dispatchResolvers.resolveExperimentalMapValueTarget(
                      candidate, receiverTypeText, borrowedHelperProbe);
         };
-    auto isNonRootExperimentalMapReceiverExpr = [&](const Expr &candidate) {
+    auto isNonRootExperimentalKeyValueReceiverExpr = [&](const Expr &candidate) {
       return !isRootMapConstructorExpr(candidate) &&
              isExperimentalKeyValueReceiverExpr(candidate);
     };
@@ -713,10 +713,10 @@ bool SemanticsValidator::validateExprPreDispatchDirectCalls(
         expr.args.size() == 2 &&
         ((dispatchBootstrap.dispatchResolvers.resolveExperimentalMapValueTarget !=
           nullptr &&
-          (resolvesNonRootExperimentalMapValueTarget(expr.args.front()) ||
-           resolvesNonRootExperimentalMapValueTarget(expr.args[1]))) ||
-         isNonRootExperimentalMapReceiverExpr(expr.args.front()) ||
-         isNonRootExperimentalMapReceiverExpr(expr.args[1]))) {
+          (resolvesNonRootExperimentalKeyValueTarget(expr.args.front()) ||
+           resolvesNonRootExperimentalKeyValueTarget(expr.args[1]))) ||
+         isNonRootExperimentalKeyValueReceiverExpr(expr.args.front()) ||
+         isNonRootExperimentalKeyValueReceiverExpr(expr.args[1]))) {
       return failPreDispatchDirectCallDiagnostic(
           "unknown call target: " + canonicalKeyValueHelperPathLocal(builtinAccessName));
     }

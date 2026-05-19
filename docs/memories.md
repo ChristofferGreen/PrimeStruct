@@ -133,7 +133,8 @@ This file stores durable session-derived facts that are useful in later work. Ke
   too; try-builtin wrapper gate locals should use key/value names too; method
   target direct-constructor receiver locals should use key/value names too;
   method target resolver and wrapped-receiver locals should use key/value names
-  too.
+  too; pre-dispatch key-mismatch and non-root receiver locals should use
+  key/value names too.
   The stdlib ownership source lock rejects the old map-helper, map-count,
   map-access, and removed map compatibility names.
 
