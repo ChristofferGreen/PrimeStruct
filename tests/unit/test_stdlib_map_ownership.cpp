@@ -866,6 +866,10 @@ TEST_CASE("canonical map surface owns standalone stdlib implementation") {
         std::string::npos);
   CHECK(methodTargetResolutionSource.find("std::string mapValueType") ==
         std::string::npos);
+  CHECK(methodTargetResolutionSource.find("isDirectMapConstructorReceiverCall") ==
+        std::string::npos);
+  CHECK(methodTargetResolutionSource.find(
+            "isDirectKeyValueConstructorReceiverCall") != std::string::npos);
   CHECK(receiverPathsSource.find("resolvedReceiverPath == \"/map\"") ==
         std::string::npos);
   CHECK(receiverPathsSource.find(

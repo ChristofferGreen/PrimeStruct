@@ -2578,7 +2578,7 @@ bool SemanticsValidator::resolveMethodTarget(const std::vector<ParameterInfo> &p
     }
     return setPreferredKeyValueMethodTarget(receiverExpr, helperName);
   };
-  auto isDirectMapConstructorReceiverCall = [&](const Expr &receiverExpr) {
+  auto isDirectKeyValueConstructorReceiverCall = [&](const Expr &receiverExpr) {
     if (receiverExpr.kind != Expr::Kind::Call || receiverExpr.isBinding || receiverExpr.isMethodCall) {
       return false;
     }
@@ -2681,7 +2681,7 @@ bool SemanticsValidator::resolveMethodTarget(const std::vector<ParameterInfo> &p
        normalizedMethodName == "tryAt" || normalizedMethodName == "tryAt_ref" ||
        isCanonicalKeyValueAccessMethodName(normalizedMethodName) ||
        normalizedMethodName == "insert" || normalizedMethodName == "insert_ref") &&
-      isDirectMapConstructorReceiverCall(receiver)) {
+      isDirectKeyValueConstructorReceiverCall(receiver)) {
     std::string keyType;
     std::string valueType;
     if (resolveExperimentalKeyValueTarget(receiver, keyType, valueType)) {
