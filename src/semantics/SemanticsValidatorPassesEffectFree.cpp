@@ -661,9 +661,9 @@ bool SemanticsValidator::isOutsideEffectFreeExpr(const Expr &expr, EffectFreeCon
     return !def.templateArgs.empty() && def.templateArgs.size() == expr.templateArgs.size();
   };
   std::string resolvedPath = resolveCalleePath(expr);
-  const std::string bareMapCallPath = resolveEffectFreeBareMapCallPath(expr, ctx);
-  if (!bareMapCallPath.empty()) {
-    resolvedPath = bareMapCallPath;
+  const std::string bareKeyValueCallPath = resolveEffectFreeBareMapCallPath(expr, ctx);
+  if (!bareKeyValueCallPath.empty()) {
+    resolvedPath = bareKeyValueCallPath;
   }
   if (isExplicitRemovedCollectionCallAlias(resolvedPath)) {
     return false;

@@ -192,6 +192,9 @@ TEST_CASE("canonical map surface owns standalone stdlib implementation") {
   const std::string effectFreeCollectionsSource =
       readText(repoRoot() / "src" / "semantics" /
                "SemanticsValidatorEffectFreeCollections.cpp");
+  const std::string passesEffectFreeSource =
+      readText(repoRoot() / "src" / "semantics" /
+               "SemanticsValidatorPassesEffectFree.cpp");
   const std::string buildParametersSource =
       readText(repoRoot() / "src" / "semantics" /
                "SemanticsValidatorBuildParameters.cpp");
@@ -406,6 +409,7 @@ TEST_CASE("canonical map surface owns standalone stdlib implementation") {
   REQUIRE(!exprVectorHelpersSource.empty());
   REQUIRE(!collectionHelperRewritesSource.empty());
   REQUIRE(!effectFreeCollectionsSource.empty());
+  REQUIRE(!passesEffectFreeSource.empty());
   REQUIRE(!buildParametersSource.empty());
   REQUIRE(!buildCallResolutionSource.empty());
   REQUIRE(!buildReturnKindsSource.empty());
@@ -1615,6 +1619,9 @@ TEST_CASE("canonical map surface owns standalone stdlib implementation") {
         std::string::npos);
   CHECK(effectFreeCollectionsSource.find("stdKeyValueHelperPrefix") !=
         std::string::npos);
+  CHECK(passesEffectFreeSource.find("bareKeyValueCallPath") !=
+        std::string::npos);
+  CHECK(passesEffectFreeSource.find("bareMapCallPath") == std::string::npos);
   CHECK(buildParametersSource.find("normalizedType == \"std/collections/map\"") ==
         std::string::npos);
   CHECK(buildParametersSource.find("isMapCollectionTypeName(normalizedType)") !=
