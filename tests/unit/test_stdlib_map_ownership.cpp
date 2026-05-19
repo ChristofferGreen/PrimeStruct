@@ -1335,6 +1335,18 @@ TEST_CASE("canonical map surface owns standalone stdlib implementation") {
   CHECK(templateFallbackTypeInferenceSource.find(
             "isQualifiedExperimentalMapBackingTypeName(typeName)") !=
         std::string::npos);
+  CHECK(templateFallbackTypeInferenceSource.find(
+            "isUnspecializedExperimentalMapBackingTypeForFallbackInference") ==
+        std::string::npos);
+  CHECK(templateFallbackTypeInferenceSource.find(
+            "isSpecializedExperimentalMapBackingTypeForFallbackInference") ==
+        std::string::npos);
+  CHECK(templateFallbackTypeInferenceSource.find(
+            "isUnspecializedExperimentalKeyValueBackingTypeForFallbackInference") !=
+        std::string::npos);
+  CHECK(templateFallbackTypeInferenceSource.find(
+            "isSpecializedExperimentalKeyValueBackingTypeForFallbackInference") !=
+        std::string::npos);
   CHECK(templateFallbackTypeInferenceSource.find("mapCollectionAliasToken()") !=
         std::string::npos);
   CHECK(templateFallbackTypeInferenceSource.find(

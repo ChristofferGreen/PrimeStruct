@@ -162,13 +162,13 @@ std::string resolveStructLikeExprPathForTemplatedVectorFallback(const Expr &expr
   return {};
 }
 
-bool isUnspecializedExperimentalMapBackingTypeForFallbackInference(
+bool isUnspecializedExperimentalKeyValueBackingTypeForFallbackInference(
     std::string typeName) {
   typeName = normalizeBindingTypeName(std::move(typeName));
   return isUnspecializedExperimentalMapBackingTypeName(typeName);
 }
 
-bool isSpecializedExperimentalMapBackingTypeForFallbackInference(
+bool isSpecializedExperimentalKeyValueBackingTypeForFallbackInference(
     std::string typeName) {
   typeName = normalizeBindingTypeName(std::move(typeName));
   return isQualifiedExperimentalMapBackingTypeName(typeName);
@@ -190,7 +190,7 @@ bool resolvesExperimentalMapValueTypeText(const std::string &typeText,
     if (!normalizedInputBase.empty() && normalizedInputBase.front() == '/') {
       normalizedInputBase.erase(normalizedInputBase.begin());
     }
-    if (!isUnspecializedExperimentalMapBackingTypeForFallbackInference(
+    if (!isUnspecializedExperimentalKeyValueBackingTypeForFallbackInference(
             normalizedInputBase)) {
       return false;
     }
@@ -198,7 +198,7 @@ bool resolvesExperimentalMapValueTypeText(const std::string &typeText,
     if (!normalizedInput.empty() && normalizedInput.front() == '/') {
       normalizedInput.erase(normalizedInput.begin());
     }
-    if (!isSpecializedExperimentalMapBackingTypeForFallbackInference(
+    if (!isSpecializedExperimentalKeyValueBackingTypeForFallbackInference(
             normalizedInput)) {
       return false;
     }
@@ -216,7 +216,7 @@ bool resolvesExperimentalMapValueTypeText(const std::string &typeText,
     if (!normalizedBase.empty() && normalizedBase.front() == '/') {
       normalizedBase.erase(normalizedBase.begin());
     }
-    if (isUnspecializedExperimentalMapBackingTypeForFallbackInference(
+    if (isUnspecializedExperimentalKeyValueBackingTypeForFallbackInference(
             normalizedBase)) {
       std::vector<std::string> args;
       return splitTopLevelTemplateArgs(argText, args) && args.size() == 2;
@@ -225,7 +225,7 @@ bool resolvesExperimentalMapValueTypeText(const std::string &typeText,
   if (!normalized.empty() && normalized.front() == '/') {
     normalized.erase(normalized.begin());
   }
-  return isSpecializedExperimentalMapBackingTypeForFallbackInference(normalized);
+  return isSpecializedExperimentalKeyValueBackingTypeForFallbackInference(normalized);
 }
 
 struct TemplatedFallbackQueryStateAdapterData {
