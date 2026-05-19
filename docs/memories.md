@@ -86,7 +86,7 @@ This file stores durable session-derived facts that are useful in later work. Ke
   key/value names too; indexed args-pack receiver predicates should use
   key/value names too; bare access receiver predicates should use key/value
   names too; indexed args-pack method routing flags should use key/value names
-  too.
+  too; method-resolution value-type locals should use key/value names too.
   The stdlib ownership source lock rejects the old map-helper, map-count,
   map-access, and removed map compatibility names.
 

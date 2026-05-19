@@ -181,8 +181,8 @@ bool SemanticsValidator::validateExprMethodCallTarget(
     if (accessReceiver == nullptr) {
       return false;
     }
-    std::string mapValueType;
-    if (!this->resolveMapValueType(*accessReceiver, dispatchResolvers, mapValueType)) {
+    std::string keyValueValueType;
+    if (!this->resolveMapValueType(*accessReceiver, dispatchResolvers, keyValueValueType)) {
       if (accessReceiver->kind == Expr::Kind::Call) {
         const std::string receiverPath = resolveCalleePath(*accessReceiver);
         auto receiverDefIt = defMap_.find(receiverPath);
@@ -195,15 +195,15 @@ bool SemanticsValidator::validateExprMethodCallTarget(
                     : receiverReturn.typeName + "<" + receiverReturn.typeTemplateArg + ">";
             std::string keyType;
             (void)extractMapKeyValueTypesFromTypeText(
-                receiverReturnType, keyType, mapValueType);
+                receiverReturnType, keyType, keyValueValueType);
           }
         }
       }
-      if (mapValueType.empty()) {
+      if (keyValueValueType.empty()) {
         return false;
       }
     }
-    if (normalizeBindingTypeName(mapValueType) == "string") {
+    if (normalizeBindingTypeName(keyValueValueType) == "string") {
       return false;
     }
     return failMethodResolutionDiagnostic("argument type mismatch for /string/count parameter values: expected string");
