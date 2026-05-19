@@ -621,8 +621,8 @@ bool SemanticsValidator::validateArgumentTypeAgainstParam(
 
   std::string expectedMapKeyType;
   std::string expectedMapValueType;
-  std::string actualMapKeyType;
-  std::string actualMapValueType;
+  std::string actualKeyValueKeyType;
+  std::string actualKeyValueValueType;
   std::string actualMapBase;
   std::vector<std::string> actualMapTemplateArgs;
   std::string expectedExperimentalVectorElemType;
@@ -632,12 +632,12 @@ bool SemanticsValidator::validateArgumentTypeAgainstParam(
   const bool isCompatibleExperimentalMapReceiver =
       extractExperimentalMapFieldTypesFromStructPath(
           expectedStructPath, expectedMapKeyType, expectedMapValueType) &&
-      ((resolveMapKeyType(arg, dispatchResolvers, actualMapKeyType) &&
-        resolveMapValueType(arg, dispatchResolvers, actualMapValueType) &&
+      ((resolveMapKeyType(arg, dispatchResolvers, actualKeyValueKeyType) &&
+        resolveMapValueType(arg, dispatchResolvers, actualKeyValueValueType) &&
         normalizeBindingTypeName(expectedMapKeyType) ==
-            normalizeBindingTypeName(actualMapKeyType) &&
+            normalizeBindingTypeName(actualKeyValueKeyType) &&
         normalizeBindingTypeName(expectedMapValueType) ==
-            normalizeBindingTypeName(actualMapValueType)) ||
+            normalizeBindingTypeName(actualKeyValueValueType)) ||
        (inferCollectionBindingType(arg, actualMapBase, actualMapTemplateArgs) &&
         actualMapTemplateArgs.size() == 2 &&
         (isMapCollectionTypeName(normalizeBindingTypeName(actualMapBase)) ||
