@@ -27,8 +27,8 @@ bool SemanticsValidator::validateExprLateCollectionAccessFallbacks(
       context.isStdNamespacedMapAccessCall;
   collectionAccessValidationContext.hasStdNamespacedKeyValueAccessDefinition =
       context.hasStdNamespacedKeyValueAccessDefinition;
-  collectionAccessValidationContext.shouldBuiltinValidateBareMapAccessCall =
-      context.shouldBuiltinValidateBareMapAccessCall;
+  collectionAccessValidationContext.shouldBuiltinValidateBareKeyValueAccessCall =
+      context.shouldBuiltinValidateBareKeyValueAccessCall;
   collectionAccessValidationContext.resolveArgsPackAccessTarget =
       context.dispatchResolvers->resolveArgsPackAccessTarget;
   collectionAccessValidationContext.resolveVectorTarget =

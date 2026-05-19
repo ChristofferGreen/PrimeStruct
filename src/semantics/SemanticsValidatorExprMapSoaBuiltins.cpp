@@ -355,7 +355,7 @@ bool SemanticsValidator::validateExprMapSoaBuiltins(
   };
 
   if (!resolvedMethod && !expr.isMethodCall && isSimpleCallName(expr, "contains") &&
-      context.shouldBuiltinValidateBareMapContainsCall && resolvedMissing) {
+      context.shouldBuiltinValidateBareKeyValueContainsCall && resolvedMissing) {
     handledOut = true;
     if (!hasBareMapContainsBuiltinDefinition()) {
       return failMapSoaBuiltinDiagnostic(

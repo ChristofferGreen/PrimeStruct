@@ -661,11 +661,11 @@ bool SemanticsValidator::validateExpr(const std::vector<ParameterInfo> &params,
     }
     ExprDispatchBootstrap dispatchBootstrap;
     prepareExprDispatchBootstrap(params, locals, dispatchBootstrap);
-    const bool shouldBuiltinValidateBareMapContainsCall =
+    const bool shouldBuiltinValidateBareKeyValueContainsCall =
         shouldBuiltinValidateCurrentMapWrapperHelper("contains");
-    const bool shouldBuiltinValidateBareMapTryAtCall =
+    const bool shouldBuiltinValidateBareKeyValueTryAtCall =
         shouldBuiltinValidateCurrentMapWrapperHelper("tryAt");
-    const bool shouldBuiltinValidateBareMapAccessCall =
+    const bool shouldBuiltinValidateBareKeyValueAccessCall =
         shouldBuiltinValidateCurrentMapWrapperHelper("at") ||
         shouldBuiltinValidateCurrentMapWrapperHelper("at_ref") ||
         shouldBuiltinValidateCurrentMapWrapperHelper("at_unsafe") ||
@@ -1067,8 +1067,8 @@ bool SemanticsValidator::validateExpr(const std::vector<ParameterInfo> &params,
     ExprCollectionAccessDispatchContext collectionAccessDispatchContext;
     prepareExprCollectionAccessDispatchContext(
         collectionDispatchSetup,
-        shouldBuiltinValidateBareMapContainsCall,
-        shouldBuiltinValidateBareMapAccessCall,
+        shouldBuiltinValidateBareKeyValueContainsCall,
+        shouldBuiltinValidateBareKeyValueAccessCall,
         dispatchBootstrap.dispatchResolvers,
         dispatchBootstrap.resolveMapTarget,
         collectionAccessDispatchContext);
@@ -1221,7 +1221,7 @@ bool SemanticsValidator::validateExpr(const std::vector<ParameterInfo> &params,
         shouldLateValidateCanonicalSoaToAosRef) {
       ExprLateMapSoaBuiltinContext lateMapSoaBuiltinContext;
       prepareExprLateMapSoaBuiltinContext(
-          shouldBuiltinValidateBareMapContainsCall,
+          shouldBuiltinValidateBareKeyValueContainsCall,
           dispatchBootstrap.dispatchResolvers,
           lateMapSoaBuiltinContext);
       bool handledMapSoaBuiltin = false;
@@ -1240,7 +1240,7 @@ bool SemanticsValidator::validateExpr(const std::vector<ParameterInfo> &params,
           collectionDispatchSetup.hasStdNamespacedVectorAccessDefinition,
           collectionDispatchSetup.isStdNamespacedMapAccessCall,
           collectionDispatchSetup.hasStdNamespacedKeyValueAccessDefinition,
-          shouldBuiltinValidateBareMapAccessCall,
+          shouldBuiltinValidateBareKeyValueAccessCall,
           dispatchBootstrap.dispatchResolvers,
           lateFallbackBuiltinContext);
       bool handledLateFallbackBuiltin = false;
@@ -1276,9 +1276,9 @@ bool SemanticsValidator::validateExpr(const std::vector<ParameterInfo> &params,
       ExprLateMapAccessBuiltinContext lateMapAccessBuiltinContext;
       prepareExprLateMapAccessBuiltinContext(
           dispatchBootstrap.dispatchResolvers,
-          shouldBuiltinValidateBareMapContainsCall,
-          shouldBuiltinValidateBareMapTryAtCall,
-          shouldBuiltinValidateBareMapAccessCall,
+          shouldBuiltinValidateBareKeyValueContainsCall,
+          shouldBuiltinValidateBareKeyValueTryAtCall,
+          shouldBuiltinValidateBareKeyValueAccessCall,
           lateMapAccessBuiltinContext);
       bool handledLateMapAccessBuiltin = false;
       if (!validateExprLateMapAccessBuiltins(

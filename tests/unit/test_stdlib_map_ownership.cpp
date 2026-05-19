@@ -282,6 +282,17 @@ TEST_CASE("canonical map surface owns standalone stdlib implementation") {
   const std::string collectionAccessSource =
       readText(repoRoot() / "src" / "semantics" /
                "SemanticsValidatorExprCollectionAccess.cpp");
+  const std::string exprSource =
+      readText(repoRoot() / "src" / "semantics" / "SemanticsValidatorExpr.cpp");
+  const std::string builtinContextSetupSource =
+      readText(repoRoot() / "src" / "semantics" /
+               "SemanticsValidatorExprBuiltinContextSetup.cpp");
+  const std::string collectionAccessSetupSource =
+      readText(repoRoot() / "src" / "semantics" /
+               "SemanticsValidatorExprCollectionAccessSetup.cpp");
+  const std::string lateCollectionAccessFallbacksSource =
+      readText(repoRoot() / "src" / "semantics" /
+               "SemanticsValidatorExprLateCollectionAccessFallbacks.cpp");
   const std::string collectionDispatchSetupSource =
       readText(repoRoot() / "src" / "semantics" /
                "SemanticsValidatorExprCollectionDispatchSetup.cpp");
@@ -2229,6 +2240,53 @@ TEST_CASE("canonical map surface owns standalone stdlib implementation") {
             "hasVisibleStdlibKeyValueAccessDefinition") !=
         std::string::npos);
   CHECK(lateMapAccessBuiltinsSource.find("hasBareKeyValueOperands") !=
+        std::string::npos);
+  CHECK(privateExprValidationSource.find(
+            "shouldBuiltinValidateBareKeyValueContainsCall") !=
+        std::string::npos);
+  CHECK(privateExprValidationSource.find(
+            "shouldBuiltinValidateBareMapContainsCall") == std::string::npos);
+  CHECK(privateExprValidationSource.find(
+            "shouldBuiltinValidateBareKeyValueTryAtCall") != std::string::npos);
+  CHECK(privateExprValidationSource.find(
+            "shouldBuiltinValidateBareMapTryAtCall") == std::string::npos);
+  CHECK(privateExprValidationSource.find(
+            "shouldBuiltinValidateBareKeyValueAccessCall") != std::string::npos);
+  CHECK(privateExprValidationSource.find(
+            "shouldBuiltinValidateBareMapAccessCall") == std::string::npos);
+  CHECK(exprSource.find("shouldBuiltinValidateBareKeyValueContainsCall") !=
+        std::string::npos);
+  CHECK(exprSource.find("shouldBuiltinValidateBareMapContainsCall") ==
+        std::string::npos);
+  CHECK(builtinContextSetupSource.find(
+            "shouldBuiltinValidateBareKeyValueAccessCall") != std::string::npos);
+  CHECK(builtinContextSetupSource.find("shouldBuiltinValidateBareMapAccessCall") ==
+        std::string::npos);
+  CHECK(collectionAccessSetupSource.find(
+            "shouldBuiltinValidateBareKeyValueContainsCall") !=
+        std::string::npos);
+  CHECK(collectionAccessSetupSource.find(
+            "shouldBuiltinValidateBareMapContainsCall") == std::string::npos);
+  CHECK(collectionAccessSource.find("shouldBuiltinValidateBareKeyValueAccessCall") !=
+        std::string::npos);
+  CHECK(collectionAccessSource.find("shouldBuiltinValidateBareMapAccessCall") ==
+        std::string::npos);
+  CHECK(collectionAccessValidationSource.find(
+            "shouldBuiltinValidateBareKeyValueAccessCall") != std::string::npos);
+  CHECK(collectionAccessValidationSource.find(
+            "shouldBuiltinValidateBareMapAccessCall") == std::string::npos);
+  CHECK(lateCollectionAccessFallbacksSource.find(
+            "shouldBuiltinValidateBareKeyValueAccessCall") != std::string::npos);
+  CHECK(lateCollectionAccessFallbacksSource.find(
+            "shouldBuiltinValidateBareMapAccessCall") == std::string::npos);
+  CHECK(lateMapAccessBuiltinsSource.find(
+            "shouldBuiltinValidateBareKeyValueTryAtCall") != std::string::npos);
+  CHECK(lateMapAccessBuiltinsSource.find("shouldBuiltinValidateBareMapTryAtCall") ==
+        std::string::npos);
+  CHECK(mapSoaBuiltinsSource.find(
+            "shouldBuiltinValidateBareKeyValueContainsCall") !=
+        std::string::npos);
+  CHECK(mapSoaBuiltinsSource.find("shouldBuiltinValidateBareMapContainsCall") ==
         std::string::npos);
   CHECK(lateMapAccessBuiltinsSource.find("isExperimentalKeyValueReceiver") !=
         std::string::npos);

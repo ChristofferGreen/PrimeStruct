@@ -209,7 +209,7 @@
       const Expr &expr,
       bool &handledOut);
   struct ExprMapSoaBuiltinContext {
-    bool shouldBuiltinValidateBareMapContainsCall = false;
+    bool shouldBuiltinValidateBareKeyValueContainsCall = false;
     std::function<bool(const Expr &, std::string &)> resolveMapKeyType;
     std::function<bool(const Expr &, std::string &)> resolveVectorTarget;
     std::function<bool(const Expr &, std::string &)> resolveSoaVectorTarget;
@@ -227,7 +227,7 @@
                                   const ExprMapSoaBuiltinContext &context,
                                   bool &handledOut);
   struct ExprLateMapSoaBuiltinContext {
-    bool shouldBuiltinValidateBareMapContainsCall = false;
+    bool shouldBuiltinValidateBareKeyValueContainsCall = false;
     std::function<bool(const Expr &, std::string &)> resolveVectorTarget;
     std::function<bool(const Expr &, std::string &)> resolveSoaVectorTarget;
     const BuiltinCollectionDispatchResolvers *dispatchResolvers = nullptr;
@@ -241,7 +241,7 @@
       const ExprLateMapSoaBuiltinContext &context,
       bool &handledOut);
   void prepareExprLateMapSoaBuiltinContext(
-      bool shouldBuiltinValidateBareMapContainsCall,
+      bool shouldBuiltinValidateBareKeyValueContainsCall,
       const BuiltinCollectionDispatchResolvers &dispatchResolvers,
       ExprLateMapSoaBuiltinContext &contextOut);
   struct ExprLateCollectionAccessFallbackContext {
@@ -250,7 +250,7 @@
     bool hasStdNamespacedVectorAccessDefinition = false;
     bool isStdNamespacedMapAccessCall = false;
     bool hasStdNamespacedKeyValueAccessDefinition = false;
-    bool shouldBuiltinValidateBareMapAccessCall = false;
+    bool shouldBuiltinValidateBareKeyValueAccessCall = false;
     std::function<bool(const std::string &)> isNonCollectionStructAccessTarget;
     const BuiltinCollectionDispatchResolvers *dispatchResolvers = nullptr;
   };
@@ -280,7 +280,7 @@
       bool hasStdNamespacedVectorAccessDefinition,
       bool isStdNamespacedMapAccessCall,
       bool hasStdNamespacedKeyValueAccessDefinition,
-      bool shouldBuiltinValidateBareMapAccessCall,
+      bool shouldBuiltinValidateBareKeyValueAccessCall,
       const BuiltinCollectionDispatchResolvers &dispatchResolvers,
       ExprLateFallbackBuiltinContext &contextOut);
   bool validateExprMutationBorrowBuiltins(
@@ -321,15 +321,15 @@
   struct ExprArgumentValidationContext;
   struct ExprLateMapAccessBuiltinContext {
     const BuiltinCollectionDispatchResolvers *dispatchResolvers = nullptr;
-    bool shouldBuiltinValidateBareMapContainsCall = false;
-    bool shouldBuiltinValidateBareMapTryAtCall = false;
-    bool shouldBuiltinValidateBareMapAccessCall = false;
+    bool shouldBuiltinValidateBareKeyValueContainsCall = false;
+    bool shouldBuiltinValidateBareKeyValueTryAtCall = false;
+    bool shouldBuiltinValidateBareKeyValueAccessCall = false;
   };
   void prepareExprLateMapAccessBuiltinContext(
       const BuiltinCollectionDispatchResolvers &dispatchResolvers,
-      bool shouldBuiltinValidateBareMapContainsCall,
-      bool shouldBuiltinValidateBareMapTryAtCall,
-      bool shouldBuiltinValidateBareMapAccessCall,
+      bool shouldBuiltinValidateBareKeyValueContainsCall,
+      bool shouldBuiltinValidateBareKeyValueTryAtCall,
+      bool shouldBuiltinValidateBareKeyValueAccessCall,
       ExprLateMapAccessBuiltinContext &contextOut);
   bool validateExprLateMapAccessBuiltins(
       const std::vector<ParameterInfo> &params,
@@ -383,7 +383,7 @@
     bool hasStdNamespacedVectorAccessDefinition = false;
     bool isStdNamespacedMapAccessCall = false;
     bool hasStdNamespacedKeyValueAccessDefinition = false;
-    bool shouldBuiltinValidateBareMapAccessCall = false;
+    bool shouldBuiltinValidateBareKeyValueAccessCall = false;
     std::function<bool(const Expr &, std::string &)> resolveArgsPackAccessTarget;
     std::function<bool(const Expr &, std::string &)> resolveVectorTarget;
     std::function<bool(const Expr &, std::string &)> resolveExperimentalVectorValueTarget;
@@ -546,8 +546,8 @@
     bool isNamespacedVectorHelperCall = false;
     bool isNamespacedMapHelperCall = false;
     std::string namespacedHelper;
-    bool shouldBuiltinValidateBareMapContainsCall = false;
-    bool shouldBuiltinValidateBareMapAccessCall = false;
+    bool shouldBuiltinValidateBareKeyValueContainsCall = false;
+    bool shouldBuiltinValidateBareKeyValueAccessCall = false;
     std::function<bool(const Expr &, std::string &)> resolveArrayTarget;
     std::function<bool(const Expr &, std::string &)> resolveVectorTarget;
     std::function<bool(const Expr &, std::string &)> resolveSoaVectorTarget;
@@ -558,8 +558,8 @@
   };
   void prepareExprCollectionAccessDispatchContext(
       const ExprCollectionDispatchSetup &dispatchSetup,
-      bool shouldBuiltinValidateBareMapContainsCall,
-      bool shouldBuiltinValidateBareMapAccessCall,
+      bool shouldBuiltinValidateBareKeyValueContainsCall,
+      bool shouldBuiltinValidateBareKeyValueAccessCall,
       const BuiltinCollectionDispatchResolvers &dispatchResolvers,
       const std::function<bool(const Expr &)> &resolveMapTarget,
       ExprCollectionAccessDispatchContext &contextOut);

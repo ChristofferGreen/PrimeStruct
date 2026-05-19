@@ -386,7 +386,7 @@ bool SemanticsValidator::validateExprCollectionAccessFallbacks(
        context.hasStdNamespacedKeyValueAccessDefinition) &&
       !(context.isStdNamespacedVectorAccessCall &&
         hasNamedArguments(expr.argNames))) {
-    if (!context.shouldBuiltinValidateBareMapAccessCall) {
+    if (!context.shouldBuiltinValidateBareKeyValueAccessCall) {
       Expr rewrittenKeyValueHelperCall;
       if (context.tryRewriteBareKeyValueHelperCall != nullptr &&
           context.tryRewriteBareKeyValueHelperCall(expr, builtinName,
@@ -679,7 +679,7 @@ bool SemanticsValidator::validateExprCollectionAccessFallbacks(
           builtinName + " requires array, vector, map, or string target");
     }
     if ((isMap || isExperimentalMap) &&
-        !context.shouldBuiltinValidateBareMapAccessCall &&
+        !context.shouldBuiltinValidateBareKeyValueAccessCall &&
         !(context.isIndexedArgsPackMapReceiverTarget != nullptr &&
           context.isIndexedArgsPackMapReceiverTarget(expr.args.front())) &&
         !hasDeclaredDefinitionPath(rootedKeyValueHelperAliasPathLocal(builtinName)) &&

@@ -863,16 +863,16 @@ bool SemanticsValidator::resolveExprCollectionAccessTarget(
             isCanonicalKeyValueAccessHelperName(canonicalKeyValueMethodHelperName);
         if (resolvedDeclaredCanonicalKeyValueHelper &&
             !(resolvedCanonicalContainsHelper &&
-              context.shouldBuiltinValidateBareMapContainsCall) &&
+              context.shouldBuiltinValidateBareKeyValueContainsCall) &&
             !(resolvedCanonicalAccessHelper &&
-              context.shouldBuiltinValidateBareMapAccessCall) &&
+              context.shouldBuiltinValidateBareKeyValueAccessCall) &&
             !context.isIndexedArgsPackMapReceiverTarget(receiverCandidate)) {
           isBuiltinMethod = false;
         }
       }
       if (isBuiltinMethod) {
         if (isCanonicalKeyValueContainsResolvedPath(methodResolved) &&
-            !context.shouldBuiltinValidateBareMapContainsCall &&
+            !context.shouldBuiltinValidateBareKeyValueContainsCall &&
             !context.isIndexedArgsPackMapReceiverTarget(receiverCandidate) &&
             !hasImportedDefinitionPath(methodResolved) &&
             !hasDeclaredDefinitionPath(methodResolved)) {
@@ -880,7 +880,7 @@ bool SemanticsValidator::resolveExprCollectionAccessTarget(
               "unknown call target: " + methodResolved);
         }
         if (isCanonicalKeyValueAccessResolvedPath(methodResolved) &&
-            !context.shouldBuiltinValidateBareMapAccessCall &&
+            !context.shouldBuiltinValidateBareKeyValueAccessCall &&
             !context.isIndexedArgsPackMapReceiverTarget(receiverCandidate) &&
             !hasImportedDefinitionPath(methodResolved) &&
             !hasDeclaredDefinitionPath(methodResolved)) {

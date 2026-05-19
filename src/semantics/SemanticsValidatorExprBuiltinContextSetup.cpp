@@ -66,12 +66,12 @@ void SemanticsValidator::prepareExprNamedArgumentBuiltinContext(
 }
 
 void SemanticsValidator::prepareExprLateMapSoaBuiltinContext(
-    bool shouldBuiltinValidateBareMapContainsCall,
+    bool shouldBuiltinValidateBareKeyValueContainsCall,
     const BuiltinCollectionDispatchResolvers &dispatchResolvers,
     ExprLateMapSoaBuiltinContext &contextOut) {
   contextOut = {};
-  contextOut.shouldBuiltinValidateBareMapContainsCall =
-      shouldBuiltinValidateBareMapContainsCall;
+  contextOut.shouldBuiltinValidateBareKeyValueContainsCall =
+      shouldBuiltinValidateBareKeyValueContainsCall;
   contextOut.resolveVectorTarget =
       [&](const Expr &target, std::string &elemTypeOut) {
         return dispatchResolvers.resolveVectorTarget(target, elemTypeOut);
@@ -89,7 +89,7 @@ void SemanticsValidator::prepareExprLateFallbackBuiltinContext(
     bool hasStdNamespacedVectorAccessDefinition,
     bool isStdNamespacedMapAccessCall,
     bool hasStdNamespacedKeyValueAccessDefinition,
-    bool shouldBuiltinValidateBareMapAccessCall,
+    bool shouldBuiltinValidateBareKeyValueAccessCall,
     const BuiltinCollectionDispatchResolvers &dispatchResolvers,
     ExprLateFallbackBuiltinContext &contextOut) {
   contextOut = {};
@@ -104,8 +104,8 @@ void SemanticsValidator::prepareExprLateFallbackBuiltinContext(
       isStdNamespacedMapAccessCall;
   contextOut.collectionAccessFallbackContext.hasStdNamespacedKeyValueAccessDefinition =
       hasStdNamespacedKeyValueAccessDefinition;
-  contextOut.collectionAccessFallbackContext.shouldBuiltinValidateBareMapAccessCall =
-      shouldBuiltinValidateBareMapAccessCall;
+  contextOut.collectionAccessFallbackContext.shouldBuiltinValidateBareKeyValueAccessCall =
+      shouldBuiltinValidateBareKeyValueAccessCall;
   contextOut.collectionAccessFallbackContext.isNonCollectionStructAccessTarget =
       [this](const std::string &targetPath) {
         const size_t slash = targetPath.find_last_of('/');
@@ -135,18 +135,18 @@ void SemanticsValidator::prepareExprLateCallCompatibilityContext(
 
 void SemanticsValidator::prepareExprLateMapAccessBuiltinContext(
     const BuiltinCollectionDispatchResolvers &dispatchResolvers,
-    bool shouldBuiltinValidateBareMapContainsCall,
-    bool shouldBuiltinValidateBareMapTryAtCall,
-    bool shouldBuiltinValidateBareMapAccessCall,
+    bool shouldBuiltinValidateBareKeyValueContainsCall,
+    bool shouldBuiltinValidateBareKeyValueTryAtCall,
+    bool shouldBuiltinValidateBareKeyValueAccessCall,
     ExprLateMapAccessBuiltinContext &contextOut) {
   contextOut = {};
   contextOut.dispatchResolvers = &dispatchResolvers;
-  contextOut.shouldBuiltinValidateBareMapContainsCall =
-      shouldBuiltinValidateBareMapContainsCall;
-  contextOut.shouldBuiltinValidateBareMapTryAtCall =
-      shouldBuiltinValidateBareMapTryAtCall;
-  contextOut.shouldBuiltinValidateBareMapAccessCall =
-      shouldBuiltinValidateBareMapAccessCall;
+  contextOut.shouldBuiltinValidateBareKeyValueContainsCall =
+      shouldBuiltinValidateBareKeyValueContainsCall;
+  contextOut.shouldBuiltinValidateBareKeyValueTryAtCall =
+      shouldBuiltinValidateBareKeyValueTryAtCall;
+  contextOut.shouldBuiltinValidateBareKeyValueAccessCall =
+      shouldBuiltinValidateBareKeyValueAccessCall;
 }
 
 } // namespace primec::semantics

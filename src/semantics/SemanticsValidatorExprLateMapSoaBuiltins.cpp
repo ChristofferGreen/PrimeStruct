@@ -18,8 +18,8 @@ bool SemanticsValidator::validateExprLateMapSoaBuiltins(
   }
 
   ExprMapSoaBuiltinContext mapSoaBuiltinContext;
-  mapSoaBuiltinContext.shouldBuiltinValidateBareMapContainsCall =
-      context.shouldBuiltinValidateBareMapContainsCall;
+  mapSoaBuiltinContext.shouldBuiltinValidateBareKeyValueContainsCall =
+      context.shouldBuiltinValidateBareKeyValueContainsCall;
   mapSoaBuiltinContext.resolveMapKeyType =
       [&](const Expr &target, std::string &mapKeyTypeOut) {
         return this->resolveMapKeyType(target, *context.dispatchResolvers,

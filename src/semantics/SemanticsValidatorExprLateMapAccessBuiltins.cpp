@@ -295,7 +295,7 @@ bool SemanticsValidator::validateExprLateMapAccessBuiltins(
   }
 
   if (!expr.isMethodCall && isSimpleCallName(expr, "contains") &&
-      !context.shouldBuiltinValidateBareMapContainsCall) {
+      !context.shouldBuiltinValidateBareKeyValueContainsCall) {
     Expr rewrittenKeyValueHelperCall;
     if (this->tryRewriteBareKeyValueHelperCall(expr, "contains",
                                           *context.dispatchResolvers,
@@ -306,7 +306,7 @@ bool SemanticsValidator::validateExprLateMapAccessBuiltins(
   }
 
   if (!expr.isMethodCall && isSimpleCallName(expr, "tryAt") &&
-      !context.shouldBuiltinValidateBareMapTryAtCall) {
+      !context.shouldBuiltinValidateBareKeyValueTryAtCall) {
     Expr rewrittenKeyValueHelperCall;
     if (this->tryRewriteBareKeyValueHelperCall(expr, "tryAt",
                                           *context.dispatchResolvers,
@@ -326,7 +326,7 @@ bool SemanticsValidator::validateExprLateMapAccessBuiltins(
 
   if (!expr.isMethodCall &&
       getCanonicalKeyValueAccessBuiltinName(expr, builtinName) &&
-      !context.shouldBuiltinValidateBareMapAccessCall) {
+      !context.shouldBuiltinValidateBareKeyValueAccessCall) {
     Expr rewrittenKeyValueHelperCall;
     if (this->tryRewriteBareKeyValueHelperCall(expr, builtinName,
                                           *context.dispatchResolvers,
@@ -352,7 +352,7 @@ bool SemanticsValidator::validateExprLateMapAccessBuiltins(
 
   if (!expr.isMethodCall && isSimpleCallName(expr, "contains") &&
       expr.args.size() == 2 &&
-      (context.shouldBuiltinValidateBareMapContainsCall ||
+      (context.shouldBuiltinValidateBareKeyValueContainsCall ||
        isMapLikeReceiver(
            expr.args[this->keyValueHelperReceiverIndex(expr, *context.dispatchResolvers)]) ||
        this->isIndexedArgsPackMapReceiverTarget(
@@ -417,7 +417,7 @@ bool SemanticsValidator::validateExprLateMapAccessBuiltins(
          isCanonicalKeyValueHelperResolvedPath(resolved, "tryAt")))) &&
       expr.args.size() == 2 &&
       (expr.isMethodCall || !hasDeclaredDefinitionPath(resolved)) &&
-      (context.shouldBuiltinValidateBareMapTryAtCall ||
+      (context.shouldBuiltinValidateBareKeyValueTryAtCall ||
        isMapLikeReceiver(
            expr.args[this->keyValueHelperReceiverIndex(expr, *context.dispatchResolvers)]) ||
        this->isIndexedArgsPackMapReceiverTarget(
@@ -498,7 +498,7 @@ bool SemanticsValidator::validateExprLateMapAccessBuiltins(
       getCanonicalKeyValueAccessBuiltinName(expr, builtinName) &&
       expr.args.size() == 2 &&
       !hasResolvedDefinition(resolved) &&
-      (context.shouldBuiltinValidateBareMapAccessCall ||
+      (context.shouldBuiltinValidateBareKeyValueAccessCall ||
        isMapLikeReceiver(
            expr.args[this->keyValueHelperReceiverIndex(expr, *context.dispatchResolvers)]) ||
        rootMapConstructorKeyType(

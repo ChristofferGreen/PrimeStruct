@@ -4,8 +4,8 @@ namespace primec::semantics {
 
 void SemanticsValidator::prepareExprCollectionAccessDispatchContext(
     const ExprCollectionDispatchSetup &dispatchSetup,
-    bool shouldBuiltinValidateBareMapContainsCall,
-    bool shouldBuiltinValidateBareMapAccessCall,
+    bool shouldBuiltinValidateBareKeyValueContainsCall,
+    bool shouldBuiltinValidateBareKeyValueAccessCall,
     const BuiltinCollectionDispatchResolvers &dispatchResolvers,
     const std::function<bool(const Expr &)> &resolveMapTarget,
     ExprCollectionAccessDispatchContext &contextOut) {
@@ -15,10 +15,10 @@ void SemanticsValidator::prepareExprCollectionAccessDispatchContext(
   contextOut.isNamespacedMapHelperCall =
       dispatchSetup.isNamespacedMapHelperCall;
   contextOut.namespacedHelper = dispatchSetup.namespacedHelper;
-  contextOut.shouldBuiltinValidateBareMapContainsCall =
-      shouldBuiltinValidateBareMapContainsCall;
-  contextOut.shouldBuiltinValidateBareMapAccessCall =
-      shouldBuiltinValidateBareMapAccessCall;
+  contextOut.shouldBuiltinValidateBareKeyValueContainsCall =
+      shouldBuiltinValidateBareKeyValueContainsCall;
+  contextOut.shouldBuiltinValidateBareKeyValueAccessCall =
+      shouldBuiltinValidateBareKeyValueAccessCall;
   contextOut.resolveArrayTarget = dispatchResolvers.resolveArrayTarget;
   contextOut.resolveVectorTarget = dispatchResolvers.resolveVectorTarget;
   contextOut.resolveSoaVectorTarget = dispatchResolvers.resolveSoaVectorTarget;
