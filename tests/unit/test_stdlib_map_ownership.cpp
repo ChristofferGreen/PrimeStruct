@@ -731,6 +731,8 @@ TEST_CASE("canonical map surface owns standalone stdlib implementation") {
         std::string::npos);
   CHECK(exprMethodResolutionSource.find("resolvedMapHelperName") ==
         std::string::npos);
+  CHECK(exprMethodResolutionSource.find("mapNamespacedMethodCompatibilityPath") ==
+        std::string::npos);
   CHECK(exprMethodResolutionSource.find("isCanonicalMapAccessMethodName") ==
         std::string::npos);
   CHECK(exprMethodResolutionSource.find("canonicalMapAccessReturnsString") ==
@@ -741,6 +743,9 @@ TEST_CASE("canonical map surface owns standalone stdlib implementation") {
             "metadataBackedCanonicalMapHelperPath(helperName)") !=
         std::string::npos);
   CHECK(exprMethodResolutionSource.find("resolvedKeyValueHelperName") !=
+        std::string::npos);
+  CHECK(exprMethodResolutionSource.find(
+            "keyValueNamespacedMethodCompatibilityPath") !=
         std::string::npos);
   CHECK(exprMethodResolutionSource.find("isCanonicalKeyValueAccessMethodName") !=
         std::string::npos);
@@ -757,8 +762,18 @@ TEST_CASE("canonical map surface owns standalone stdlib implementation") {
   CHECK(exprCollectionDispatchSetupSource.find(
             "isDirectStdNamespacedVectorCountWrapperMapTarget") ==
         std::string::npos);
+  CHECK(exprCollectionDispatchSetupSource.find("directRemovedMapCompatibilityPath") ==
+        std::string::npos);
+  CHECK(exprCollectionDispatchSetupSource.find("directMapHelperCompatibilityPath") ==
+        std::string::npos);
   CHECK(exprCollectionDispatchSetupSource.find(
             "isDirectStdNamespacedVectorCountWrapperKeyValueTarget") !=
+        std::string::npos);
+  CHECK(exprCollectionDispatchSetupSource.find(
+            "directRemovedKeyValueCompatibilityPath") !=
+        std::string::npos);
+  CHECK(exprCollectionDispatchSetupSource.find(
+            "directKeyValueHelperCompatibilityPath") !=
         std::string::npos);
   CHECK(exprCollectionCountCapacitySource.find(
             "isDirectStdNamespacedVectorCountWrapperMapTarget") ==
@@ -789,6 +804,10 @@ TEST_CASE("canonical map surface owns standalone stdlib implementation") {
   CHECK(privateExprInferenceSource.find(
             "explicitCanonicalExperimentalMapBorrowedHelperPath") ==
         std::string::npos);
+  CHECK(privateExprInferenceSource.find("mapNamespacedMethodCompatibilityPath") ==
+        std::string::npos);
+  CHECK(privateExprInferenceSource.find("directMapHelperCompatibilityPath") ==
+        std::string::npos);
   CHECK(privateExprInferenceSource.find(
             "preferredExperimentalKeyValueHelperTarget") !=
         std::string::npos);
@@ -813,6 +832,11 @@ TEST_CASE("canonical map surface owns standalone stdlib implementation") {
         std::string::npos);
   CHECK(privateExprInferenceSource.find(
             "explicitCanonicalExperimentalKeyValueBorrowedHelperPath") !=
+        std::string::npos);
+  CHECK(privateExprInferenceSource.find(
+            "keyValueNamespacedMethodCompatibilityPath") !=
+        std::string::npos);
+  CHECK(privateExprInferenceSource.find("directKeyValueHelperCompatibilityPath") !=
         std::string::npos);
   CHECK(templateCoreSource.find("name == \"/map\"") == std::string::npos);
   CHECK(templateCoreSource.find("name == \"std/collections/map\"") ==
@@ -1174,6 +1198,8 @@ TEST_CASE("canonical map surface owns standalone stdlib implementation") {
         std::string::npos);
   CHECK(inferPreDispatchCallsSource.find("directRemovedMapCompatibilityPath") ==
         std::string::npos);
+  CHECK(inferPreDispatchCallsSource.find("directMapHelperCompatibilityPath") ==
+        std::string::npos);
   CHECK(inferPreDispatchCallsSource.find("isRemovedMapAccessCompatibilityPath") ==
         std::string::npos);
   CHECK(inferPreDispatchCallsSource.find(
@@ -1203,6 +1229,8 @@ TEST_CASE("canonical map surface owns standalone stdlib implementation") {
         std::string::npos);
   CHECK(inferPreDispatchCallsSource.find(
             "directRemovedKeyValueCompatibilityPath") != std::string::npos);
+  CHECK(inferPreDispatchCallsSource.find("directKeyValueHelperCompatibilityPath") !=
+        std::string::npos);
   CHECK(inferPreDispatchCallsSource.find(
             "isRemovedKeyValueAccessCompatibilityPath") !=
         std::string::npos);
@@ -1516,6 +1544,10 @@ TEST_CASE("canonical map surface owns standalone stdlib implementation") {
         std::string::npos);
   CHECK(inferCollectionCompatibilitySource.find("preferredRemovedMapHelperPath") ==
         std::string::npos);
+  CHECK(inferCollectionCompatibilitySource.find("mapNamespacedMethodCompatibilityPath") ==
+        std::string::npos);
+  CHECK(inferCollectionCompatibilitySource.find("directMapHelperCompatibilityPath") ==
+        std::string::npos);
   CHECK(inferCollectionCompatibilitySource.find("preferredExperimentalMapHelperTarget") ==
         std::string::npos);
   CHECK(inferCollectionCompatibilitySource.find(
@@ -1542,6 +1574,11 @@ TEST_CASE("canonical map surface owns standalone stdlib implementation") {
   CHECK(inferCollectionCompatibilitySource.find("resolvedBareKeyValueHelper") !=
         std::string::npos);
   CHECK(inferCollectionCompatibilitySource.find("preferredRemovedKeyValueHelperPath") !=
+        std::string::npos);
+  CHECK(inferCollectionCompatibilitySource.find(
+            "keyValueNamespacedMethodCompatibilityPath") !=
+        std::string::npos);
+  CHECK(inferCollectionCompatibilitySource.find("directKeyValueHelperCompatibilityPath") !=
         std::string::npos);
   CHECK(inferCollectionCompatibilitySource.find(
             "preferredExperimentalKeyValueHelperTarget") !=
@@ -1629,10 +1666,14 @@ TEST_CASE("canonical map surface owns standalone stdlib implementation") {
         std::string::npos);
   CHECK(inferCollectionDispatchSetupSource.find("resolveRootMapHelperAliasPath(") ==
         std::string::npos);
+  CHECK(inferCollectionDispatchSetupSource.find("resolveDispatchSetupMapHelperPath(") ==
+        std::string::npos);
+  CHECK(inferCollectionDispatchSetupSource.find("directMapHelperCompatibilityPath") ==
+        std::string::npos);
   CHECK(inferCollectionDispatchSetupSource.find(
             "resolveDispatchSetupKeyValueHelperPath(resolvedPath,") !=
         std::string::npos);
-  CHECK(inferCollectionDispatchSetupSource.find("resolveDispatchSetupMapHelperPath(") ==
+  CHECK(inferCollectionDispatchSetupSource.find("directKeyValueHelperCompatibilityPath") !=
         std::string::npos);
   CHECK(inferCollectionDispatchSetupSource.find(
             "isCanonicalKeyValueAccessHelperName(") !=

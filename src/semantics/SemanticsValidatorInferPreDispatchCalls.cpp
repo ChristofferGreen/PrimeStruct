@@ -292,7 +292,7 @@ ReturnKind SemanticsValidator::inferPreDispatchCallReturnKind(
   }
   const std::string directRemovedKeyValueCompatibilityPath =
       !expr.isMethodCall
-          ? directMapHelperCompatibilityPath(expr,
+          ? directKeyValueHelperCompatibilityPath(expr,
                                              params,
                                              locals,
                                              builtinCollectionDispatchResolverAdapters)

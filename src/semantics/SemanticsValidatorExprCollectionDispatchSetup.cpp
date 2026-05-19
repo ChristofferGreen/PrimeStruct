@@ -44,9 +44,9 @@ bool SemanticsValidator::prepareExprCollectionDispatchSetup(
       isNamespacedCollectionHelperCall && namespacedCollection == "vector";
   setupOut.isNamespacedMapHelperCall =
       isNamespacedCollectionHelperCall && namespacedCollection == "map";
-  const std::string directRemovedMapCompatibilityPath =
+  const std::string directRemovedKeyValueCompatibilityPath =
       !expr.isMethodCall
-          ? this->directMapHelperCompatibilityPath(expr, params, locals, dispatchResolverAdapters)
+          ? this->directKeyValueHelperCompatibilityPath(expr, params, locals, dispatchResolverAdapters)
           : std::string();
 
   auto resolveMapTarget = [&](const Expr &target) -> bool {

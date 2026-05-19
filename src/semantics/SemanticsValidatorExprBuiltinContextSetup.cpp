@@ -12,7 +12,7 @@ void SemanticsValidator::prepareExprLateBuiltinContext(
   contextOut = {};
   contextOut.tryBuiltinContext.getDirectMapHelperCompatibilityPath =
       [&](const Expr &target) {
-        return this->directMapHelperCompatibilityPath(
+        return this->directKeyValueHelperCompatibilityPath(
             target, params, locals, dispatchResolverAdapters);
       };
   contextOut.tryBuiltinContext.isIndexedArgsPackMapReceiverTarget =

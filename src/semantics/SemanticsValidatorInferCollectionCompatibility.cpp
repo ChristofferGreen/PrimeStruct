@@ -611,7 +611,7 @@ bool SemanticsValidator::shouldBuiltinValidateCurrentMapWrapperHelper(std::strin
   return false;
 }
 
-std::string SemanticsValidator::mapNamespacedMethodCompatibilityPath(
+std::string SemanticsValidator::keyValueNamespacedMethodCompatibilityPath(
     const Expr &candidate,
     const std::vector<ParameterInfo> &params,
     const std::unordered_map<std::string, BindingInfo> &locals,
@@ -646,7 +646,7 @@ std::string SemanticsValidator::mapNamespacedMethodCompatibilityPath(
   return removedPath;
 }
 
-std::string SemanticsValidator::directMapHelperCompatibilityPath(
+std::string SemanticsValidator::directKeyValueHelperCompatibilityPath(
     const Expr &candidate,
     const std::vector<ParameterInfo> &params,
     const std::unordered_map<std::string, BindingInfo> &locals,

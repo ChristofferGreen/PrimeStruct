@@ -71,12 +71,12 @@
   bool shouldLogicalCanonicalizeDefinedExperimentalKeyValueHelperPath(
       const std::string &resolvedPath) const;
   bool shouldBuiltinValidateCurrentMapWrapperHelper(std::string_view helperName) const;
-  std::string mapNamespacedMethodCompatibilityPath(
+  std::string keyValueNamespacedMethodCompatibilityPath(
       const Expr &candidate,
       const std::vector<ParameterInfo> &params,
       const std::unordered_map<std::string, BindingInfo> &locals,
       const BuiltinCollectionDispatchResolverAdapters &adapters = {});
-  std::string directMapHelperCompatibilityPath(
+  std::string directKeyValueHelperCompatibilityPath(
       const Expr &candidate,
       const std::vector<ParameterInfo> &params,
       const std::unordered_map<std::string, BindingInfo> &locals,

@@ -82,11 +82,11 @@ bool SemanticsValidator::prepareExprMethodCompatibilitySetup(
                                              compatibilityPath);
   }
   if (!expr.isMethodCall) {
-    const std::string removedMapCompatibilityPath = directMapHelperCompatibilityPath(
+    const std::string removedKeyValueCompatibilityPath = directKeyValueHelperCompatibilityPath(
         expr, params, locals, dispatchBootstrap.dispatchResolverAdapters);
-    if (!removedMapCompatibilityPath.empty()) {
+    if (!removedKeyValueCompatibilityPath.empty()) {
       return failMethodCompatibilityDiagnostic("unknown call target: " +
-                                               removedMapCompatibilityPath);
+                                               removedKeyValueCompatibilityPath);
     }
   }
 

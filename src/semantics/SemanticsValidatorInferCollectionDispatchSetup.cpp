@@ -118,7 +118,7 @@ void SemanticsValidator::prepareInferCollectionDispatchSetup(
       !isArrayNamespacedVectorCountCompatibilityCall(expr, builtinCollectionDispatchResolvers);
   const std::string directRemovedKeyValueCompatibilityPath =
       !expr.isMethodCall
-          ? directMapHelperCompatibilityPath(
+          ? directKeyValueHelperCompatibilityPath(
                 expr, params, locals, BuiltinCollectionDispatchResolverAdapters{})
           : std::string();
   const bool isKeyValueNamespacedAccessCompatibilityCall =
