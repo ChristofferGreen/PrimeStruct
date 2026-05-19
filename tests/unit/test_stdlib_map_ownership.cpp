@@ -3345,6 +3345,10 @@ TEST_CASE("canonical map surface owns standalone stdlib implementation") {
         std::string::npos);
   CHECK(collectionAccessValidationSource.find("isRootKeyValueAliasExpr") !=
         std::string::npos);
+  CHECK(collectionAccessValidationSource.find("isExperimentalMapTypeText") ==
+        std::string::npos);
+  CHECK(collectionAccessValidationSource.find("isExperimentalKeyValueTypeText") !=
+        std::string::npos);
   CHECK(collectionAccessValidationSource.find("isExperimentalMapTypeReceiver") ==
         std::string::npos);
   CHECK(collectionAccessValidationSource.find(

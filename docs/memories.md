@@ -160,7 +160,8 @@ This file stores durable session-derived facts that are useful in later work. Ke
   should use key/value names too; struct type helper key/value kind and
   struct-path helpers should use key/value names too; tail-dispatch
   specialized backing predicates should use key/value names too; result
-  metadata specialized backing helpers should use key/value names too.
+  metadata specialized backing helpers should use key/value names too; collection
+  access experimental type predicates should use key/value names too.
   The stdlib ownership source lock rejects the old map-helper, map-count,
   map-access, and removed map compatibility names.
 

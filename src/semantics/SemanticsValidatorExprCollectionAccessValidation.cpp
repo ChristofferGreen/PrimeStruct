@@ -136,7 +136,7 @@ bool getCanonicalCollectionAccessBuiltinName(const Expr &candidate,
   return false;
 }
 
-bool isExperimentalMapTypeText(const std::string &typeText) {
+bool isExperimentalKeyValueTypeText(const std::string &typeText) {
   std::string normalizedType = normalizeBindingTypeName(typeText);
   while (true) {
     std::string base;
@@ -465,7 +465,7 @@ bool SemanticsValidator::validateExprCollectionAccessFallbacks(
       }
       std::string receiverTypeText;
       return inferQueryExprTypeText(candidate, params, locals, receiverTypeText) &&
-             isExperimentalMapTypeText(receiverTypeText);
+             isExperimentalKeyValueTypeText(receiverTypeText);
     };
     if (isUnqualifiedAccessCall &&
         (isExperimentalKeyValueTypeReceiver(expr.args.front()) ||
@@ -597,7 +597,7 @@ bool SemanticsValidator::validateExprCollectionAccessFallbacks(
              isRootKeyValueAliasPath(explicitCallPath(receiverExpr)))) &&
           inferQueryExprTypeText(receiverExpr, params, locals, receiverTypeText) &&
           extractMapKeyValueTypesFromTypeText(receiverTypeText, keyValueKeyType, keyValueValueType)) {
-        const bool isExperimentalKeyValueType = isExperimentalMapTypeText(receiverTypeText);
+        const bool isExperimentalKeyValueType = isExperimentalKeyValueTypeText(receiverTypeText);
         if (isExperimentalKeyValueType) {
           isExperimentalKeyValue = true;
         } else {
