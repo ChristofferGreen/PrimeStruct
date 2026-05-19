@@ -633,7 +633,7 @@ std::string SemanticsValidator::keyValueNamespacedMethodCompatibilityPath(
     return dispatchResolvers.resolveMapTarget(target, keyType, valueType) ||
            dispatchResolvers.resolveExperimentalMapTarget(target, keyType, valueType);
   };
-  const std::string removedPath = rootedMapCompatibilityHelperPath(helperName);
+  const std::string removedPath = rootedKeyValueCompatibilityHelperPath(helperName);
   if (removedPath.empty()) {
     return "";
   }
@@ -707,7 +707,7 @@ std::string SemanticsValidator::directKeyValueHelperCompatibilityPath(
   if (resolvedCompatibilityHelper && spellsCurrentMapWrapperSurface) {
     return "";
   }
-  const std::string removedPath = rootedMapCompatibilityHelperPath(helperName);
+  const std::string removedPath = rootedKeyValueCompatibilityHelperPath(helperName);
   if (removedPath.empty()) {
     return "";
   }

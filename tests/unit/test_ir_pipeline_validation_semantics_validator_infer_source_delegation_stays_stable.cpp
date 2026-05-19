@@ -2558,10 +2558,16 @@ main() {
             "rawMethodName.rfind(\"map/\", 0)") ==
         std::string::npos);
   CHECK(collectionCompatibilityInternalSource.find(
-            "resolveMapCompatibilityUnrootedPath(") !=
+            "resolveMapCompatibilityUnrootedPath(") ==
         std::string::npos);
   CHECK(collectionCompatibilityInternalSource.find(
-            "rootedMapCompatibilityHelperPath(") !=
+            "rootedMapCompatibilityHelperPath(") ==
+        std::string::npos);
+  CHECK(collectionCompatibilityInternalSource.find(
+            "resolveKeyValueCompatibilityUnrootedPath(") !=
+        std::string::npos);
+  CHECK(collectionCompatibilityInternalSource.find(
+            "rootedKeyValueCompatibilityHelperPath(") !=
         std::string::npos);
   CHECK(collectionCompatibilityInternalSource.find(
             "StdlibSurfaceId::CollectionsVectorHelperSurface") ==
@@ -2616,7 +2622,10 @@ main() {
             "explicitPath.rfind(\"/map/\", 0)") ==
         std::string::npos);
   CHECK(collectionCompatibilitySource.find(
-            "rootedMapCompatibilityHelperPath(helperName)") !=
+            "rootedMapCompatibilityHelperPath(helperName)") ==
+        std::string::npos);
+  CHECK(collectionCompatibilitySource.find(
+            "rootedKeyValueCompatibilityHelperPath(helperName)") !=
         std::string::npos);
   CHECK(collectionCompatibilitySource.find(
             "normalizedType.rfind(\"/std/collections/experimental_soa_vector/SoaVector__\", 0) == 0") !=

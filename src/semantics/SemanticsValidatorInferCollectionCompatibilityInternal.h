@@ -363,7 +363,7 @@ unrootedCanonicalMapCompatibilityPrefixOrFallback() {
          unrootedCanonicalMapCompatibilityPrefixOrFallback();
 }
 
-[[maybe_unused]] bool resolveMapCompatibilityMemberToken(
+[[maybe_unused]] bool resolveKeyValueCompatibilityMemberToken(
     std::string_view memberToken,
     std::string &helperNameOut) {
   helperNameOut.clear();
@@ -375,7 +375,7 @@ unrootedCanonicalMapCompatibilityPrefixOrFallback() {
       memberToken, metadata->id, helperNameOut);
 }
 
-[[maybe_unused]] bool resolveMapCompatibilityResolvedPath(
+[[maybe_unused]] bool resolveKeyValueCompatibilityResolvedPath(
     std::string_view resolvedPath,
     std::string &helperNameOut) {
   helperNameOut.clear();
@@ -387,7 +387,7 @@ unrootedCanonicalMapCompatibilityPrefixOrFallback() {
       resolvedPath, metadata->id, helperNameOut);
 }
 
-[[maybe_unused]] bool resolveMapCompatibilityUnrootedPath(
+[[maybe_unused]] bool resolveKeyValueCompatibilityUnrootedPath(
     std::string_view rawMethodName,
     std::string &helperNameOut) {
   std::string rootedPath(trimLeadingSlash(rawMethodName));
@@ -395,10 +395,10 @@ unrootedCanonicalMapCompatibilityPrefixOrFallback() {
     return false;
   }
   rootedPath.insert(rootedPath.begin(), '/');
-  return resolveMapCompatibilityResolvedPath(rootedPath, helperNameOut);
+  return resolveKeyValueCompatibilityResolvedPath(rootedPath, helperNameOut);
 }
 
-[[maybe_unused]] std::string rootedMapCompatibilityHelperPath(
+[[maybe_unused]] std::string rootedKeyValueCompatibilityHelperPath(
     std::string_view helperName) {
   const StdlibSurfaceMetadata *metadata = mapHelperSurfaceMetadataLocal();
   if (metadata == nullptr || helperName.empty()) {
@@ -586,7 +586,7 @@ resolveCanonicalCompatibilityKeyValueHelperNameFromResolvedPath(
                          0) == 0) {
     return false;
   }
-  if (!resolveMapCompatibilityResolvedPath(resolvedPath, helperNameOut)) {
+  if (!resolveKeyValueCompatibilityResolvedPath(resolvedPath, helperNameOut)) {
     return false;
   }
   return isPublishedKeyValueBaseHelperName(helperNameOut) ||
@@ -727,10 +727,10 @@ resolveExplicitPublishedKeyValueHelperExprMemberName(
 
   if (isKeyValueHelperImportAliasNamespace(namespacePrefix) ||
       isCanonicalMapCompatibilityNamespace(namespacePrefix)) {
-    if (!resolveMapCompatibilityMemberToken(rawMethodName, helperNameOut)) {
+    if (!resolveKeyValueCompatibilityMemberToken(rawMethodName, helperNameOut)) {
       return false;
     }
-  } else if (!resolveMapCompatibilityUnrootedPath(rawMethodName,
+  } else if (!resolveKeyValueCompatibilityUnrootedPath(rawMethodName,
                                                   helperNameOut)) {
     return false;
   }
@@ -796,7 +796,7 @@ resolveExplicitPublishedKeyValueHelperExprMemberName(
         false);
   }
   std::string helperName;
-  if (resolveMapCompatibilityUnrootedPath(rawMethodName, helperName)) {
+  if (resolveKeyValueCompatibilityUnrootedPath(rawMethodName, helperName)) {
     return setMap(helperName);
   }
   return false;
@@ -821,7 +821,7 @@ resolveExplicitPublishedKeyValueHelperExprMemberName(
   if (!isPublishedKeyValueBaseHelperName(helperName)) {
     return "";
   }
-  return rootedMapCompatibilityHelperPath(helperName);
+  return rootedKeyValueCompatibilityHelperPath(helperName);
 }
 
 } // namespace

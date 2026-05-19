@@ -1653,7 +1653,9 @@ TEST_CASE("canonical map surface owns standalone stdlib implementation") {
         std::string::npos);
   CHECK(inferCollectionCompatibilitySource.find("isCanonicalMapCollectionTypeRootLocal(") !=
         std::string::npos);
-  CHECK(inferCollectionCompatibilitySource.find("rootedMapCompatibilityHelperPath(helperName)") !=
+  CHECK(inferCollectionCompatibilitySource.find("rootedMapCompatibilityHelperPath(") ==
+        std::string::npos);
+  CHECK(inferCollectionCompatibilitySource.find("rootedKeyValueCompatibilityHelperPath(helperName)") !=
         std::string::npos);
   CHECK(inferCollectionCompatibilitySource.find("metadataBackedMapHelperRootAliasMethodName(explicitPath)") !=
         std::string::npos);
@@ -1693,9 +1695,21 @@ TEST_CASE("canonical map surface owns standalone stdlib implementation") {
         std::string::npos);
   CHECK(inferCollectionCompatibilityInternalSource.find(
             "isDirectWrapperKeyValueTarget") != std::string::npos);
-  CHECK(inferCollectionCompatibilityInternalSource.find("resolveMapCompatibilityUnrootedPath(") !=
+  CHECK(inferCollectionCompatibilityInternalSource.find("resolveMapCompatibilityMemberToken(") ==
         std::string::npos);
-  CHECK(inferCollectionCompatibilityInternalSource.find("rootedMapCompatibilityHelperPath(") !=
+  CHECK(inferCollectionCompatibilityInternalSource.find("resolveMapCompatibilityResolvedPath(") ==
+        std::string::npos);
+  CHECK(inferCollectionCompatibilityInternalSource.find("resolveMapCompatibilityUnrootedPath(") ==
+        std::string::npos);
+  CHECK(inferCollectionCompatibilityInternalSource.find("rootedMapCompatibilityHelperPath(") ==
+        std::string::npos);
+  CHECK(inferCollectionCompatibilityInternalSource.find("resolveKeyValueCompatibilityMemberToken(") !=
+        std::string::npos);
+  CHECK(inferCollectionCompatibilityInternalSource.find("resolveKeyValueCompatibilityResolvedPath(") !=
+        std::string::npos);
+  CHECK(inferCollectionCompatibilityInternalSource.find("resolveKeyValueCompatibilityUnrootedPath(") !=
+        std::string::npos);
+  CHECK(inferCollectionCompatibilityInternalSource.find("rootedKeyValueCompatibilityHelperPath(") !=
         std::string::npos);
   CHECK(inferCollectionCompatibilityInternalSource.find("mapHelperSurfaceMetadataLocal()") !=
         std::string::npos);
