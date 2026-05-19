@@ -619,8 +619,8 @@ bool SemanticsValidator::validateExprMethodCallTarget(
       isBuiltinMethod = true;
     }
   }
-  bool keepBuiltinIndexedArgsPackMapMethod = false;
-  keepBuiltinIndexedArgsPackMapMethod = resolveMapTarget(expr.args.front());
+  bool keepBuiltinIndexedArgsPackKeyValueMethod = false;
+  keepBuiltinIndexedArgsPackKeyValueMethod = resolveMapTarget(expr.args.front());
   if (expr.args.front().kind == Expr::Kind::Call) {
     std::string accessName;
     if (getBuiltinArrayAccessName(expr.args.front(), accessName) && expr.args.front().args.size() == 2) {
@@ -628,8 +628,8 @@ bool SemanticsValidator::validateExprMethodCallTarget(
         std::string elemType;
         std::string keyType;
         std::string valueType;
-        keepBuiltinIndexedArgsPackMapMethod =
-            keepBuiltinIndexedArgsPackMapMethod ||
+        keepBuiltinIndexedArgsPackKeyValueMethod =
+            keepBuiltinIndexedArgsPackKeyValueMethod ||
             (resolveArgsPackElementTypeForExpr(*accessReceiver, params, locals, elemType) &&
              extractMapKeyValueTypesFromTypeText(elemType, keyType, valueType));
       }
@@ -645,7 +645,7 @@ bool SemanticsValidator::validateExprMethodCallTarget(
            !hasVisibleStdlibMapMethodDefinition(path);
   };
   if (isMissingStdlibMapMethodDefinition(resolved) &&
-      !keepBuiltinIndexedArgsPackMapMethod) {
+      !keepBuiltinIndexedArgsPackKeyValueMethod) {
     isBuiltinMethod = false;
   }
   if (expr.isMethodCall &&
