@@ -3099,6 +3099,10 @@ TEST_CASE("canonical map surface owns standalone stdlib implementation") {
   CHECK(statementSource.find("base == \"map\"") == std::string::npos);
   CHECK(statementSource.find("isQualifiedExperimentalMapBackingTypeName(typeName)") !=
         std::string::npos);
+  CHECK(statementSource.find("isSpecializedExperimentalMapBackingPath") ==
+        std::string::npos);
+  CHECK(statementSource.find("isSpecializedExperimentalKeyValueBackingPath") !=
+        std::string::npos);
   CHECK(statementSource.find("mapCollectionAliasTokenForStatementValidation()") !=
         std::string::npos);
   CHECK(statementSource.find("base == mapCollectionAlias") ==

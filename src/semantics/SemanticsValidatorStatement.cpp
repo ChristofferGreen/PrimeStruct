@@ -46,7 +46,7 @@ std::string initValueTypeMismatchDiagnostic(const std::string &expectedTypePath,
   return "init value type mismatch";
 }
 
-bool isSpecializedExperimentalMapBackingPath(std::string typeName) {
+bool isSpecializedExperimentalKeyValueBackingPath(std::string typeName) {
   typeName = normalizeBindingTypeName(typeName);
   if (!typeName.empty() && typeName.front() == '/') {
     typeName.erase(typeName.begin());
@@ -179,7 +179,7 @@ bool SemanticsValidator::validateStatement(const std::vector<ParameterInfo> &par
             return true;
           }
           std::string structPath = resolveStructTypePath(normalizedType, namespacePrefix, structNames_);
-          if (structPath.empty() && isSpecializedExperimentalMapBackingPath(normalizedType)) {
+          if (structPath.empty() && isSpecializedExperimentalKeyValueBackingPath(normalizedType)) {
             structPath = normalizedType;
             if (!structPath.empty() && structPath.front() != '/') {
               structPath.insert(structPath.begin(), '/');
