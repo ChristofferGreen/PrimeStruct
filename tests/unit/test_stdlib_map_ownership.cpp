@@ -4560,6 +4560,10 @@ TEST_CASE("canonical map surface owns standalone stdlib implementation") {
         std::string::npos);
   CHECK(tailDispatchSource.find("rawPath.rfind(\"/\" + std::string(\"map\") + \"/\", 0)") ==
         std::string::npos);
+  CHECK(tailDispatchSource.find("isSpecializedExperimentalMapStructPath") ==
+        std::string::npos);
+  CHECK(tailDispatchSource.find("isSpecializedExperimentalKeyValueStructPath") !=
+        std::string::npos);
   CHECK(lowerEmitExprCollectionSource.find("StdlibSurfaceId::CollectionsMapHelpers") ==
         std::string::npos);
   CHECK(lowerEmitExprCollectionSource.find("StdlibSurfaceId::CollectionsMapConstructors") ==

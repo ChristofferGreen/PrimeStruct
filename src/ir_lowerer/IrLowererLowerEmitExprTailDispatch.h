@@ -363,7 +363,7 @@
               ir_lowerer::buildSemanticProductIndex(semanticProgram);
           const SemanticProductIndex *const canonicalKeyValueHelperSemanticIndexPtr =
               semanticProgram == nullptr ? nullptr : &canonicalKeyValueHelperSemanticIndex;
-          auto isSpecializedExperimentalMapStructPath =
+          auto isSpecializedExperimentalKeyValueStructPath =
               [](const std::string &structPath) {
                 if (!ir_lowerer::isExperimentalMapStructTypePath(structPath)) {
                   return false;
@@ -402,7 +402,7 @@
                     inferCallKeyValueTargetInfo,
                     semanticProgram,
                     canonicalKeyValueHelperSemanticIndexPtr);
-            if (isSpecializedExperimentalMapStructPath(keyValueTargetInfo.structTypeName)) {
+            if (isSpecializedExperimentalKeyValueStructPath(keyValueTargetInfo.structTypeName)) {
               return keyValueTargetInfo.structTypeName;
             }
             if (hasCanonicalKeyValueHelperSemanticReceiverFact(receiverExpr)) {
@@ -414,7 +414,7 @@
                   !it->second.isArgsPack &&
                   it->second.kind != LocalInfo::Kind::Reference &&
                   it->second.kind != LocalInfo::Kind::Pointer &&
-                  isSpecializedExperimentalMapStructPath(it->second.structTypeName)) {
+                  isSpecializedExperimentalKeyValueStructPath(it->second.structTypeName)) {
                 return it->second.structTypeName;
               }
             }
@@ -426,12 +426,12 @@
                     semanticProgram,
                     canonicalKeyValueHelperSemanticIndexPtr);
             if (accessTargetInfo.isWrappedKeyValueTarget) {
-              if (isSpecializedExperimentalMapStructPath(keyValueTargetInfo.structTypeName)) {
+              if (isSpecializedExperimentalKeyValueStructPath(keyValueTargetInfo.structTypeName)) {
                 return keyValueTargetInfo.structTypeName;
               }
               return std::string{};
             }
-            if (isSpecializedExperimentalMapStructPath(accessTargetInfo.structTypeName)) {
+            if (isSpecializedExperimentalKeyValueStructPath(accessTargetInfo.structTypeName)) {
               return accessTargetInfo.structTypeName;
             }
             return std::string{};
@@ -451,7 +451,7 @@
             return false;
           }
           const bool isExperimentalKeyValueHelper =
-              isSpecializedExperimentalMapStructPath(callee->fullPath);
+              isSpecializedExperimentalKeyValueStructPath(callee->fullPath);
           if (!isExperimentalKeyValueHelper) {
             return false;
           }
