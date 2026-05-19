@@ -125,7 +125,7 @@ static std::string experimentalMapStorageBase(bool leadingSlash = true) {
   return base;
 }
 
-static bool isMapCompatibilityStorageBase(std::string_view base) {
+static bool isKeyValueCompatibilityStorageBase(std::string_view base) {
   const std::string normalized(base);
   const std::string rootedMapBase = experimentalMapStorageBase();
   const std::string slashlessMapBase = experimentalMapStorageBase(false);
@@ -626,7 +626,7 @@ ReturnKind returnKindForTypeName(const std::string &name) {
         ((base == "array" || base == "vector" || base == "soa" "_vector" || base == "Buffer" ||
           isVectorCompatibilityStorageBase(base)) &&
          args.size() == 1) ||
-        ((base == "map" || isMapCompatibilityStorageBase(base)) &&
+        ((base == "map" || isKeyValueCompatibilityStorageBase(base)) &&
          args.size() == 2);
     if (isCollectionLike) {
       return ReturnKind::Array;

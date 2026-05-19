@@ -3078,6 +3078,10 @@ TEST_CASE("canonical map surface owns standalone stdlib implementation") {
   CHECK(emitterHelpersTypesSource.find("base += \"map/Map\"") == std::string::npos);
   CHECK(emitterHelpersTypesSource.find("experimentalCollectionTypePathLocal(\"map\", \"Map\"") !=
         std::string::npos);
+  CHECK(emitterHelpersTypesSource.find("isMapCompatibilityStorageBase(") ==
+        std::string::npos);
+  CHECK(emitterHelpersTypesSource.find("isKeyValueCompatibilityStorageBase(") !=
+        std::string::npos);
   CHECK(emitterHelpersTypesSource.find("name == \"/map\"") == std::string::npos);
   CHECK(emitterHelpersTypesSource.find("name == \"std/collections/map\"") ==
         std::string::npos);
