@@ -493,17 +493,17 @@ std::string SemanticsValidator::inferStructReturnPathImpl(
       }
       std::string keyType;
       std::string valueType;
-      const bool isMapReceiver =
+      const bool isKeyValueReceiver =
           builtinCollectionDispatchResolvers.resolveMapTarget != nullptr &&
           builtinCollectionDispatchResolvers.resolveMapTarget(
               candidate.args[receiverIndex], keyType, valueType);
       keyType.clear();
       valueType.clear();
-      const bool isExperimentalMapReceiver =
+      const bool isExperimentalKeyValueReceiver =
           builtinCollectionDispatchResolvers.resolveExperimentalMapTarget != nullptr &&
           builtinCollectionDispatchResolvers.resolveExperimentalMapTarget(
               candidate.args[receiverIndex], keyType, valueType);
-      if (!isMapReceiver && !isExperimentalMapReceiver) {
+      if (!isKeyValueReceiver && !isExperimentalKeyValueReceiver) {
         return {};
       }
       return preferredBareKeyValueHelperTarget(helperName);

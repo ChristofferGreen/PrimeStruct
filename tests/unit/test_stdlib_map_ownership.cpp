@@ -1165,6 +1165,14 @@ TEST_CASE("canonical map surface owns standalone stdlib implementation") {
         std::string::npos);
   CHECK(inferStructReturnSource.find("sourceKeyValueHelperPath") !=
         std::string::npos);
+  CHECK(inferStructReturnSource.find("const bool isKeyValueReceiver") !=
+        std::string::npos);
+  CHECK(inferStructReturnSource.find("const bool isMapReceiver") ==
+        std::string::npos);
+  CHECK(inferStructReturnSource.find("const bool isExperimentalKeyValueReceiver") !=
+        std::string::npos);
+  CHECK(inferStructReturnSource.find("const bool isExperimentalMapReceiver") ==
+        std::string::npos);
   CHECK(inferStructReturnSource.find(
             "resolveExplicitPublishedKeyValueHelperExprMemberName(") !=
         std::string::npos);
@@ -1962,6 +1970,14 @@ TEST_CASE("canonical map surface owns standalone stdlib implementation") {
   CHECK(inferCollectionReturnInferenceSource.find(
             "metadataBackedCanonicalMapHelperPath(builtinAccessName)") !=
         std::string::npos);
+  CHECK(inferCollectionReturnInferenceSource.find("const bool isKeyValueReceiver") !=
+        std::string::npos);
+  CHECK(inferCollectionReturnInferenceSource.find("const bool isMapReceiver") ==
+        std::string::npos);
+  CHECK(inferCollectionReturnInferenceSource.find(
+            "const bool isExperimentalKeyValueReceiver") != std::string::npos);
+  CHECK(inferCollectionReturnInferenceSource.find(
+            "const bool isExperimentalMapReceiver") == std::string::npos);
   CHECK(inferCollectionBufferAndMapResolversSource.find(
             "hasVisibleDefinitionPathForCurrentImports(\"/std/collections/map/map\")") ==
         std::string::npos);

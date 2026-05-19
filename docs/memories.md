@@ -72,7 +72,9 @@ This file stores durable session-derived facts that are useful in later work. Ke
   names too; pre-dispatch source-method receiver locals should use key/value
   names too; pre-dispatch wrapper-helper locals should use key/value names too;
   infer collection compatibility receiver predicates should use key/value names
-  too; try-builtin bare tryAt fallback locals should use key/value names too.
+  too; try-builtin bare tryAt fallback locals should use key/value names too;
+  struct-return and collection-return receiver locals should use key/value
+  names too.
   The stdlib ownership source lock rejects the old map-helper, map-count,
   map-access, and removed map compatibility names.
 
