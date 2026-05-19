@@ -568,28 +568,28 @@ bool SemanticsValidator::validateExprLateMapAccessBuiltins(
     const Expr &keyExpr =
         hasBareKeyValueOperands ? expr.args[keyIndex] : expr.args[1];
     std::string receiverTypeText;
-    std::string mapKeyType;
-    std::string mapValueType;
-    if (rootMapConstructorKeyType(receiverExpr, mapKeyType) ||
+    std::string keyValueKeyType;
+    std::string keyValueValueType;
+    if (rootMapConstructorKeyType(receiverExpr, keyValueKeyType) ||
         (inferQueryExprTypeText(receiverExpr, params, locals, receiverTypeText) &&
-         extractMapKeyValueTypesFromTypeText(receiverTypeText, mapKeyType,
-                                            mapValueType))) {
-      if (!mapKeyType.empty()) {
-        if (normalizeBindingTypeName(mapKeyType) == "string") {
+         extractMapKeyValueTypesFromTypeText(receiverTypeText, keyValueKeyType,
+                                            keyValueValueType))) {
+      if (!keyValueKeyType.empty()) {
+        if (normalizeBindingTypeName(keyValueKeyType) == "string") {
           if (!this->isStringExprForArgumentValidation(keyExpr,
                                                        *context.dispatchResolvers)) {
-            return failLateKeyValueAccessKeyMismatch(builtinName, mapKeyType, receiverExpr);
+            return failLateKeyValueAccessKeyMismatch(builtinName, keyValueKeyType, receiverExpr);
           }
         } else {
           ReturnKind keyKind =
-              returnKindForTypeName(normalizeBindingTypeName(mapKeyType));
+              returnKindForTypeName(normalizeBindingTypeName(keyValueKeyType));
           if (keyKind != ReturnKind::Unknown) {
             if (context.dispatchResolvers->resolveStringTarget(keyExpr)) {
-              return failLateKeyValueAccessKeyMismatch(builtinName, mapKeyType, receiverExpr);
+              return failLateKeyValueAccessKeyMismatch(builtinName, keyValueKeyType, receiverExpr);
             }
             ReturnKind indexKind = inferExprReturnKind(keyExpr, params, locals);
             if (indexKind != ReturnKind::Unknown && indexKind != keyKind) {
-              return failLateKeyValueAccessKeyMismatch(builtinName, mapKeyType, receiverExpr);
+              return failLateKeyValueAccessKeyMismatch(builtinName, keyValueKeyType, receiverExpr);
             }
           }
         }

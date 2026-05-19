@@ -97,6 +97,7 @@ This file stores durable session-derived facts that are useful in later work. Ke
   too; pre-dispatch builtin key/value locals should use key/value names
   too; method target value locals should use key/value names
   too; late access contains key/value locals should use key/value names
+  too; late visible-access key/value locals should use key/value names
   too.
   The stdlib ownership source lock rejects the old map-helper, map-count,
   map-access, and removed map compatibility names.

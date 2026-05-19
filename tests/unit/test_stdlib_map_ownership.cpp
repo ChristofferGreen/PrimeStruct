@@ -2327,6 +2327,12 @@ TEST_CASE("canonical map surface owns standalone stdlib implementation") {
         std::string::npos);
   CHECK(lateMapAccessBuiltinsSource.find("std::string &mapKeyTypeOut") ==
         std::string::npos);
+  CHECK(lateMapAccessBuiltinsSource.find(
+            "extractMapKeyValueTypesFromTypeText(receiverTypeText, keyValueKeyType") !=
+        std::string::npos);
+  CHECK(lateMapAccessBuiltinsSource.find(
+            "failLateKeyValueAccessKeyMismatch(builtinName, keyValueKeyType") !=
+        std::string::npos);
   CHECK(privateExprValidationSource.find(
             "shouldBuiltinValidateBareKeyValueContainsCall") !=
         std::string::npos);
