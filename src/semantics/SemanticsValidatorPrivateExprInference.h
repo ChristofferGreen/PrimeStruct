@@ -280,7 +280,7 @@
       const std::unordered_map<std::string, BindingInfo> &locals,
       const std::function<bool(const Expr &, std::string &)> &resolveDirectReceiver,
       std::string &elemTypeOut);
-  bool extractExperimentalMapFieldTypesFromStructPath(const std::string &structPath,
+  bool extractExperimentalKeyValueFieldTypesFromStructPath(const std::string &structPath,
                                                       std::string &keyTypeOut,
                                                       std::string &valueTypeOut) const;
   bool validateArgumentTypeAgainstParam(const Expr &arg,

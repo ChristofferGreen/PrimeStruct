@@ -66,7 +66,7 @@ bool SemanticsValidator::extractInferExperimentalMapFieldTypes(const BindingInfo
       if (!resolvedPath.empty() && resolvedPath.front() != '/') {
         resolvedPath.insert(resolvedPath.begin(), '/');
       }
-      return extractExperimentalMapFieldTypesFromStructPath(resolvedPath, keyTypeOut, valueTypeOut);
+      return extractExperimentalKeyValueFieldTypesFromStructPath(resolvedPath, keyTypeOut, valueTypeOut);
     }
   };
 

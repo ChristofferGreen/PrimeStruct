@@ -185,7 +185,7 @@ bool SemanticsValidator::validateStatement(const std::vector<ParameterInfo> &par
               structPath.insert(structPath.begin(), '/');
             }
           }
-          return !structPath.empty() && extractExperimentalMapFieldTypesFromStructPath(structPath,
+          return !structPath.empty() && extractExperimentalKeyValueFieldTypesFromStructPath(structPath,
                                                                                        keyTypeOut,
                                                                                        valueTypeOut);
         };

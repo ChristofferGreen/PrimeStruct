@@ -309,7 +309,7 @@ bool SemanticsValidator::isStringExprForArgumentValidation(
   return false;
 }
 
-bool SemanticsValidator::extractExperimentalMapFieldTypesFromStructPath(
+bool SemanticsValidator::extractExperimentalKeyValueFieldTypesFromStructPath(
     const std::string &structPath,
     std::string &keyTypeOut,
     std::string &valueTypeOut) const {

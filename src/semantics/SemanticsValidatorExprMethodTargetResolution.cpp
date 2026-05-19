@@ -1502,7 +1502,7 @@ bool SemanticsValidator::resolveMethodTarget(const std::vector<ParameterInfo> &p
                 normalizedResolvedPath)) {
           return false;
         }
-        return extractExperimentalMapFieldTypesFromStructPath(resolvedPath, keyTypeOut, valueTypeOut);
+        return extractExperimentalKeyValueFieldTypesFromStructPath(resolvedPath, keyTypeOut, valueTypeOut);
       }
     };
 
