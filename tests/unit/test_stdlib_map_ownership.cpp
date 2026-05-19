@@ -2527,6 +2527,14 @@ TEST_CASE("canonical map surface owns standalone stdlib implementation") {
         std::string::npos);
   CHECK(statementSource.find("base == mapCollectionAlias") !=
         std::string::npos);
+  CHECK(statementSource.find("actualKeyValueKeyType") !=
+        std::string::npos);
+  CHECK(statementSource.find("actualKeyValueValueType") !=
+        std::string::npos);
+  CHECK(statementSource.find("actualMapKeyType") ==
+        std::string::npos);
+  CHECK(statementSource.find("actualMapValueType") ==
+        std::string::npos);
   CHECK(argumentValidationSource.find("normalizedBase == \"std/collections/map\"") ==
         std::string::npos);
   CHECK(argumentValidationSource.find("diagnosticResolved != \"/std/collections/map/at\"") ==

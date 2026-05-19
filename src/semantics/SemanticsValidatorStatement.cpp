@@ -191,12 +191,12 @@ bool SemanticsValidator::validateStatement(const std::vector<ParameterInfo> &par
         };
         std::string expectedMapKeyType;
         std::string expectedMapValueType;
-        std::string actualMapKeyType;
-        std::string actualMapValueType;
+        std::string actualKeyValueKeyType;
+        std::string actualKeyValueValueType;
         if (extractMapArgsFromAnyType(expectedTrim, expectedMapKeyType, expectedMapValueType) &&
-            extractMapArgsFromAnyType(actualTrim, actualMapKeyType, actualMapValueType)) {
-          return typesMatch(expectedMapKeyType, actualMapKeyType) &&
-                 typesMatch(expectedMapValueType, actualMapValueType);
+            extractMapArgsFromAnyType(actualTrim, actualKeyValueKeyType, actualKeyValueValueType)) {
+          return typesMatch(expectedMapKeyType, actualKeyValueKeyType) &&
+                 typesMatch(expectedMapValueType, actualKeyValueValueType);
         }
         std::string expectedBase;
         std::string expectedArg;
