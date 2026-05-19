@@ -152,7 +152,8 @@ This file stores durable session-derived facts that are useful in later work. Ke
   removed-compatibility remap locals, and collection-access validation
   non-root experimental target-probe locals plus vector-count diagnostic
   target-probe parameters and method-resolution experimental resolver
-  aliases plus infer pre-dispatch target aliases follow the same naming.
+  aliases plus infer pre-dispatch and infer method-resolution target aliases
+  follow the same naming.
 - Evidence: The release `PrimeStruct_backend_ir_tests` target rebuilt after
   the kind, field, target-info, lookup-helper, and setup-inference access
   renames, focused backend IR windows passed, and direct `rg` scans over
@@ -188,7 +189,7 @@ This file stores durable session-derived facts that are useful in later work. Ke
   removed-compatibility remap locals, and collection-access validation
   non-root experimental target-probe locals plus vector-count diagnostic
   target-probe parameters and method-resolution experimental resolver
-  aliases plus infer pre-dispatch target aliases.
+  aliases plus infer pre-dispatch and infer method-resolution target aliases.
 
 ### map-compatibility-aliases-require-source-definitions
 - Updated: 2026-05-18

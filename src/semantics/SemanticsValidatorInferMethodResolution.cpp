@@ -51,7 +51,8 @@ bool SemanticsValidator::resolveInferMethodCallPath(
   const auto &resolveSoaVectorTarget = builtinCollectionDispatchResolvers.resolveSoaVectorTarget;
   const auto &resolveBufferTarget = builtinCollectionDispatchResolvers.resolveBufferTarget;
   const auto &resolveStringTarget = builtinCollectionDispatchResolvers.resolveStringTarget;
-  const auto &resolveMapTarget = builtinCollectionDispatchResolvers.resolveMapTarget;
+  const auto &resolveKeyValueTarget =
+      builtinCollectionDispatchResolvers.resolveMapTarget;
 
   if (expr.args.empty()) {
     return false;
@@ -792,7 +793,7 @@ bool SemanticsValidator::resolveInferMethodCallPath(
     std::string keyType;
     std::string valueType;
     if (isCanonicalKeyValueAccessMethodName(receiverHelperName) &&
-        resolveMapTarget(receiver.args.front(), keyType, valueType)) {
+        resolveKeyValueTarget(receiver.args.front(), keyType, valueType)) {
       const std::string resolvedReceiver =
           preferredKeyValueMethodTargetForCall(params, locals, receiver, receiverHelperName);
       auto defIt = defMap_.find(resolvedReceiver);
@@ -909,15 +910,16 @@ bool SemanticsValidator::resolveInferMethodCallPath(
     }
     if ((normalizedMethodName == "count" || normalizedMethodName == "count_ref" ||
          normalizedMethodName == "size") &&
-        resolveMapTarget(receiver, keyType, valueType)) {
+        resolveKeyValueTarget(receiver, keyType, valueType)) {
       resolvedOut = preferredKeyValueMethodTargetForCall(params, locals, receiver,
-                                                    normalizedMethodName);
+                                                         normalizedMethodName);
       return true;
     }
     if ((normalizedMethodName == "contains" || normalizedMethodName == "tryAt" ||
          normalizedMethodName == "insert") &&
-        resolveMapTarget(receiver, keyType, valueType)) {
-      resolvedOut = preferredKeyValueMethodTargetForCall(params, locals, receiver, normalizedMethodName);
+        resolveKeyValueTarget(receiver, keyType, valueType)) {
+      resolvedOut = preferredKeyValueMethodTargetForCall(params, locals, receiver,
+                                                         normalizedMethodName);
       return true;
     }
     if ((normalizedMethodName == "contains" || normalizedMethodName == "tryAt" ||
@@ -954,8 +956,9 @@ bool SemanticsValidator::resolveInferMethodCallPath(
       return true;
     }
     if (isCanonicalKeyValueAccessMethodName(normalizedMethodName) &&
-        resolveMapTarget(receiver, keyType, valueType)) {
-      resolvedOut = preferredKeyValueMethodTargetForCall(params, locals, receiver, normalizedMethodName);
+        resolveKeyValueTarget(receiver, keyType, valueType)) {
+      resolvedOut = preferredKeyValueMethodTargetForCall(params, locals, receiver,
+                                                         normalizedMethodName);
       return true;
     }
     if ((normalizedMethodName == "count" || normalizedMethodName == "count_ref") &&
