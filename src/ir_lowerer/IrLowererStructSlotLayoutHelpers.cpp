@@ -55,19 +55,19 @@ bool isBuiltinMapTypeName(const std::string &typeName) {
 }
 
 bool isExperimentalMapTypeName(const std::string &typeName) {
-  const std::string experimentalMapType = experimentalCollectionTypePath("map", "Map", false);
-  const std::string rootedExperimentalMapType = experimentalCollectionTypePath("map", "Map");
-  const std::string mapValueRoot = collectionTypePath("map") + "/MapValue";
-  const std::string mapValueRootNoSlash =
-      !mapValueRoot.empty() && mapValueRoot.front() == '/' ? mapValueRoot.substr(1) : mapValueRoot;
-  return typeName == experimentalMapType ||
-         typeName == rootedExperimentalMapType ||
-         typeName.rfind(experimentalMapType + "__", 0) == 0 ||
-         typeName.rfind(rootedExperimentalMapType + "__", 0) == 0 ||
-         typeName == mapValueRootNoSlash ||
-         typeName == mapValueRoot ||
-         typeName.rfind(mapValueRootNoSlash + "__", 0) == 0 ||
-         typeName.rfind(mapValueRoot + "__", 0) == 0;
+  const std::string experimentalKeyValueType = experimentalCollectionTypePath("map", "Map", false);
+  const std::string rootedExperimentalKeyValueType = experimentalCollectionTypePath("map", "Map");
+  const std::string keyValueRoot = collectionTypePath("map") + "/MapValue";
+  const std::string keyValueRootNoSlash =
+      !keyValueRoot.empty() && keyValueRoot.front() == '/' ? keyValueRoot.substr(1) : keyValueRoot;
+  return typeName == experimentalKeyValueType ||
+         typeName == rootedExperimentalKeyValueType ||
+         typeName.rfind(experimentalKeyValueType + "__", 0) == 0 ||
+         typeName.rfind(rootedExperimentalKeyValueType + "__", 0) == 0 ||
+         typeName == keyValueRootNoSlash ||
+         typeName == keyValueRoot ||
+         typeName.rfind(keyValueRootNoSlash + "__", 0) == 0 ||
+         typeName.rfind(keyValueRoot + "__", 0) == 0;
 }
 
 bool isMapTypeName(const std::string &typeName) {
@@ -1208,10 +1208,10 @@ std::string inferStructPathFromCallTarget(
   if (!normalizedName.empty() && normalizedName.front() == '/') {
     normalizedName.erase(normalizedName.begin());
   }
-  auto resolveExperimentalMapConstructorStructPath = [&](const std::string &path) -> std::string {
+  auto resolveExperimentalKeyValueConstructorStructPath = [&](const std::string &path) -> std::string {
     return inferPublishedExperimentalMapStructPathFromConstructorPath(path);
   };
-  if (const std::string experimentalStructPath = resolveExperimentalMapConstructorStructPath(normalizedName);
+  if (const std::string experimentalStructPath = resolveExperimentalKeyValueConstructorStructPath(normalizedName);
       !experimentalStructPath.empty() && isKnownStructPath(experimentalStructPath)) {
     return experimentalStructPath;
   }

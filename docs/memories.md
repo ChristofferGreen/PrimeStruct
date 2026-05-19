@@ -152,7 +152,9 @@ This file stores durable session-derived facts that are useful in later work. Ke
   access-target classifier locals should use key/value names too; access-target
   struct-path inference helpers and storage classifier locals should use
   key/value names too; inline packed-argument expected-collection and explicit
-  experimental type predicates should use key/value names too.
+  experimental type predicates should use key/value names too; struct-slot
+  layout experimental type and key/value root locals should use key/value names
+  too.
   The stdlib ownership source lock rejects the old map-helper, map-count,
   map-access, and removed map compatibility names.
 

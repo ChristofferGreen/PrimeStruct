@@ -3863,6 +3863,22 @@ TEST_CASE("canonical map surface owns standalone stdlib implementation") {
         std::string::npos);
   CHECK(structSlotLayoutSource.find("isBuiltinCollectionTypeName(typeName, \"map\")") !=
         std::string::npos);
+  CHECK(structSlotLayoutSource.find("experimentalMapType") == std::string::npos);
+  CHECK(structSlotLayoutSource.find("rootedExperimentalMapType") ==
+        std::string::npos);
+  CHECK(structSlotLayoutSource.find("mapValueRoot") == std::string::npos);
+  CHECK(structSlotLayoutSource.find("mapValueRootNoSlash") == std::string::npos);
+  CHECK(structSlotLayoutSource.find("resolveExperimentalMapConstructorStructPath") ==
+        std::string::npos);
+  CHECK(structSlotLayoutSource.find("experimentalKeyValueType") !=
+        std::string::npos);
+  CHECK(structSlotLayoutSource.find("rootedExperimentalKeyValueType") !=
+        std::string::npos);
+  CHECK(structSlotLayoutSource.find("keyValueRoot") != std::string::npos);
+  CHECK(structSlotLayoutSource.find("keyValueRootNoSlash") !=
+        std::string::npos);
+  CHECK(structSlotLayoutSource.find(
+            "resolveExperimentalKeyValueConstructorStructPath") != std::string::npos);
   CHECK(lowererStructTypeHelpersSource.find("inferredMapStruct") ==
         std::string::npos);
   CHECK(lowererStructTypeHelpersSource.find("inferredKeyValueStruct") !=
