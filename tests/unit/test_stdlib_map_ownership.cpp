@@ -844,6 +844,21 @@ TEST_CASE("canonical map surface owns standalone stdlib implementation") {
         std::string::npos);
   CHECK(methodTargetResolutionSource.find("auto resolveExperimentalKeyValueTarget") !=
         std::string::npos);
+  CHECK(methodTargetResolutionSource.find("setIndexedArgsPackMapMethodTarget") ==
+        std::string::npos);
+  CHECK(methodTargetResolutionSource.find(
+            "setIndexedArgsPackKeyValueMethodTarget") != std::string::npos);
+  CHECK(methodTargetResolutionSource.find("isMapElementType") ==
+        std::string::npos);
+  CHECK(methodTargetResolutionSource.find("isKeyValueElementType") !=
+        std::string::npos);
+  CHECK(methodTargetResolutionSource.find("mapTypeText") == std::string::npos);
+  CHECK(methodTargetResolutionSource.find("keyValueTypeText") !=
+        std::string::npos);
+  CHECK(methodTargetResolutionSource.find("resolvedIndexedMapType") ==
+        std::string::npos);
+  CHECK(methodTargetResolutionSource.find("resolvedIndexedKeyValueType") !=
+        std::string::npos);
   CHECK(methodTargetResolutionSource.find(
             "metadataBackedMapHelperRootAliasMethodName(candidate)") !=
         std::string::npos);

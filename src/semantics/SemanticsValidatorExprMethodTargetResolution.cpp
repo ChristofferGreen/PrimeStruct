@@ -2544,25 +2544,25 @@ bool SemanticsValidator::resolveMethodTarget(const std::vector<ParameterInfo> &p
     }
     return false;
   };
-  auto setIndexedArgsPackMapMethodTarget = [&](const Expr &receiverExpr, const std::string &helperName) -> bool {
+  auto setIndexedArgsPackKeyValueMethodTarget = [&](const Expr &receiverExpr, const std::string &helperName) -> bool {
     if (receiverExpr.kind != Expr::Kind::Call || receiverExpr.isBinding || receiverExpr.args.size() != 2) {
       return false;
     }
     std::string indexedElemType;
     std::string keyType;
     std::string valueType;
-    auto isMapElementType = [&](const std::string &typeText) {
+    auto isKeyValueElementType = [&](const std::string &typeText) {
       const std::string unwrappedType =
           normalizeBindingTypeName(unwrapReferencePointerTypeText(typeText));
-      const std::string mapTypeText =
+      const std::string keyValueTypeText =
           unwrappedType.empty() ? typeText : unwrappedType;
-      return extractMapKeyValueTypesFromTypeText(mapTypeText, keyType, valueType);
+      return extractMapKeyValueTypesFromTypeText(keyValueTypeText, keyType, valueType);
     };
-    const bool resolvedIndexedMapType =
+    const bool resolvedIndexedKeyValueType =
         ((resolveIndexedArgsPackElementType(receiverExpr, indexedElemType) ||
           resolveWrappedIndexedArgsPackElementType(receiverExpr, indexedElemType) ||
           resolveDereferencedIndexedArgsPackElementType(receiverExpr, indexedElemType)) &&
-         isMapElementType(indexedElemType));
+         isKeyValueElementType(indexedElemType));
     const bool resolvedReceiverPackType = [&]() {
       std::string accessName;
       if (!getBuiltinArrayAccessName(receiverExpr, accessName)) {
@@ -2571,9 +2571,9 @@ bool SemanticsValidator::resolveMethodTarget(const std::vector<ParameterInfo> &p
       const Expr *accessReceiver = resolveBuiltinAccessReceiverExpr(receiverExpr);
       return accessReceiver != nullptr &&
              resolveArgsPackAccessTarget(*accessReceiver, indexedElemType) &&
-             isMapElementType(indexedElemType);
+             isKeyValueElementType(indexedElemType);
     }();
-    if (!resolvedIndexedMapType && !resolvedReceiverPackType) {
+    if (!resolvedIndexedKeyValueType && !resolvedReceiverPackType) {
       return false;
     }
     return setPreferredKeyValueMethodTarget(receiverExpr, helperName);
@@ -2590,7 +2590,7 @@ bool SemanticsValidator::resolveMethodTarget(const std::vector<ParameterInfo> &p
        normalizedMethodName == "tryAt" || normalizedMethodName == "tryAt_ref" ||
        isCanonicalKeyValueAccessMethodName(normalizedMethodName) ||
        normalizedMethodName == "insert" || normalizedMethodName == "insert_ref") &&
-      setIndexedArgsPackMapMethodTarget(receiver, normalizedMethodName)) {
+      setIndexedArgsPackKeyValueMethodTarget(receiver, normalizedMethodName)) {
     return true;
   }
   auto setMethodTargetFromTypeText =
@@ -2768,7 +2768,7 @@ bool SemanticsValidator::resolveMethodTarget(const std::vector<ParameterInfo> &p
       return setCollectionMethodTarget("/string/count");
     }
     if (normalizedMethodName == "count" &&
-        setIndexedArgsPackMapMethodTarget(receiver, "count")) {
+        setIndexedArgsPackKeyValueMethodTarget(receiver, "count")) {
       return true;
     }
     if (resolveKeyValueTarget(receiver)) {
@@ -2783,7 +2783,7 @@ bool SemanticsValidator::resolveMethodTarget(const std::vector<ParameterInfo> &p
   }
   if (normalizedMethodName == "contains" || normalizedMethodName == "tryAt" ||
       normalizedMethodName == "insert") {
-    if (setIndexedArgsPackMapMethodTarget(receiver, normalizedMethodName)) {
+    if (setIndexedArgsPackKeyValueMethodTarget(receiver, normalizedMethodName)) {
       return true;
     }
     if (normalizedMethodName != "insert" && resolveKeyValueTarget(receiver)) {
@@ -2826,7 +2826,7 @@ bool SemanticsValidator::resolveMethodTarget(const std::vector<ParameterInfo> &p
     }
   }
   if (isCanonicalKeyValueAccessMethodName(normalizedMethodName) &&
-      setIndexedArgsPackMapMethodTarget(receiver, normalizedMethodName)) {
+      setIndexedArgsPackKeyValueMethodTarget(receiver, normalizedMethodName)) {
     return true;
   }
   if (isCanonicalKeyValueAccessMethodName(normalizedMethodName) &&
@@ -3021,7 +3021,7 @@ bool SemanticsValidator::resolveMethodTarget(const std::vector<ParameterInfo> &p
               return setCollectionMethodTarget(preferredBufferMethodTarget(normalizedMethodName));
             }
             if (isMapCollectionTypeName(elemBase)) {
-              if (setIndexedArgsPackMapMethodTarget(receiver, normalizedMethodName)) {
+              if (setIndexedArgsPackKeyValueMethodTarget(receiver, normalizedMethodName)) {
                 return true;
               }
               return setPreferredKeyValueMethodTarget(receiver, normalizedMethodName);
