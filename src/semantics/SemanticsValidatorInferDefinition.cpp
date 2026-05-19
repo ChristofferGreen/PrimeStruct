@@ -103,8 +103,9 @@ bool SemanticsValidator::recordDefinitionInferredReturn(
     }
     return inferResolvedDirectCallBindingType(helperPath, bindingOut);
   };
-  auto containsDeferredMapAliasInference = [&](const Expr &candidate, auto &&containsDeferredMapAliasInferenceRef)
-      -> bool {
+  auto containsDeferredKeyValueAliasInference =
+      [&](const Expr &candidate,
+          auto &&containsDeferredKeyValueAliasInferenceRef) -> bool {
     std::string builtinAccessName;
     const std::string resolvedCandidatePath = resolveCalleePath(candidate);
     if (candidate.kind == Expr::Kind::Call && candidate.isMethodCall &&
@@ -118,12 +119,14 @@ bool SemanticsValidator::recordDefinitionInferredReturn(
       }
     }
     for (const auto &arg : candidate.args) {
-      if (containsDeferredMapAliasInferenceRef(arg, containsDeferredMapAliasInferenceRef)) {
+      if (containsDeferredKeyValueAliasInferenceRef(
+              arg, containsDeferredKeyValueAliasInferenceRef)) {
         return true;
       }
     }
     for (const auto &bodyExpr : candidate.bodyArguments) {
-      if (containsDeferredMapAliasInferenceRef(bodyExpr, containsDeferredMapAliasInferenceRef)) {
+      if (containsDeferredKeyValueAliasInferenceRef(
+              bodyExpr, containsDeferredKeyValueAliasInferenceRef)) {
         return true;
       }
     }
@@ -187,10 +190,11 @@ bool SemanticsValidator::recordDefinitionInferredReturn(
       }
     }
     if (deferUnknownReturnInferenceErrors_) {
-      const bool shouldDeferExplicitMapAliasDiagnostic =
+      const bool shouldDeferExplicitKeyValueAliasDiagnostic =
           valueExpr != nullptr &&
-          containsDeferredMapAliasInference(*valueExpr, containsDeferredMapAliasInference);
-      if (!error_.empty() && !shouldDeferExplicitMapAliasDiagnostic) {
+          containsDeferredKeyValueAliasInference(
+              *valueExpr, containsDeferredKeyValueAliasInference);
+      if (!error_.empty() && !shouldDeferExplicitKeyValueAliasDiagnostic) {
         return false;
       }
       state.sawUnresolvedReturnDependency = true;
