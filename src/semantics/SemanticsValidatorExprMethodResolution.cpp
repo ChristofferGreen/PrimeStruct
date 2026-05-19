@@ -279,7 +279,7 @@ bool SemanticsValidator::validateExprMethodCallTarget(
         helperName = "insert_ref";
       }
     }
-    resolved = preferredMapMethodTargetForCall(params, locals, receiverExpr,
+    resolved = preferredKeyValueMethodTargetForCall(params, locals, receiverExpr,
                                               helperName);
     std::string resolvedKeyValueHelperName;
     isBuiltinMethod =
@@ -490,7 +490,7 @@ bool SemanticsValidator::validateExprMethodCallTarget(
           !resolveMapTarget(expr.args.front())) {
         return false;
       }
-      resolved = preferredMapMethodTargetForCall(params, locals, expr.args.front(),
+      resolved = preferredKeyValueMethodTargetForCall(params, locals, expr.args.front(),
                                                 helperName);
       std::string canonicalKeyValueHelperName;
       if (resolveCanonicalCompatibilityKeyValueHelperNameFromResolvedPath(

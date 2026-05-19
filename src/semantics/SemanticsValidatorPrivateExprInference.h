@@ -47,7 +47,7 @@
   std::string preferredContainerErrorHelperTarget(std::string_view helperName) const;
   std::string preferredGfxErrorHelperTarget(std::string_view helperName,
                                             const std::string &resolvedStructPath) const;
-  std::string preferredMapMethodTargetForCall(
+  std::string preferredKeyValueMethodTargetForCall(
       const std::vector<ParameterInfo> &params,
       const std::unordered_map<std::string, BindingInfo> &locals,
       const Expr &receiverExpr,

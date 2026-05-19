@@ -81,7 +81,8 @@ This file stores durable session-derived facts that are useful in later work. Ke
   should use key/value names too; result-helper receiver type resolvers should
   use key/value names too; late unknown-target local method-helper utilities
   should use key/value names too; infer-method wrapped receiver predicates
-  should use key/value names too.
+  should use key/value names too; preferred method target routing helpers should
+  use key/value names too.
   The stdlib ownership source lock rejects the old map-helper, map-count,
   map-access, and removed map compatibility names.
 

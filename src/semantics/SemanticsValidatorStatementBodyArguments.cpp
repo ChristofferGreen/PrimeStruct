@@ -283,7 +283,7 @@ bool SemanticsValidator::validateStatementBodyArguments(const std::vector<Parame
           isRemovedKeyValueCompatibilityHelper(methodName) &&
           isKeyValueReceiverExpr(receiver)) {
         resolvedOut =
-            preferredMapMethodTargetForCall(params, locals, receiver, methodName);
+            preferredKeyValueMethodTargetForCall(params, locals, receiver, methodName);
         if (resolvedOut.empty()) {
           resolvedOut = preferredKeyValueBodyArgumentTarget(methodName);
         }
@@ -351,7 +351,7 @@ bool SemanticsValidator::validateStatementBodyArguments(const std::vector<Parame
           isRemovedKeyValueCompatibilityHelper(methodName) &&
           isKeyValueReceiverExpr(receiver)) {
         resolvedOut =
-            preferredMapMethodTargetForCall(params, locals, receiver, methodName);
+            preferredKeyValueMethodTargetForCall(params, locals, receiver, methodName);
         if (resolvedOut.empty()) {
           resolvedOut = preferredKeyValueBodyArgumentTarget(methodName);
         }
@@ -381,7 +381,7 @@ bool SemanticsValidator::validateStatementBodyArguments(const std::vector<Parame
 
     if (shouldPreferCanonicalKeyValueBodyArgumentTarget(resolvedType.empty() ? typeName : resolvedType)) {
       resolvedOut =
-          preferredMapMethodTargetForCall(params, locals, receiver, methodName);
+          preferredKeyValueMethodTargetForCall(params, locals, receiver, methodName);
       if (resolvedOut.empty()) {
         resolvedOut = preferredKeyValueBodyArgumentTarget(methodName);
       }

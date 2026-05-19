@@ -362,7 +362,7 @@ bool SemanticsValidator::resolveInferMethodCallPath(
       }
       if (collectionTypePath == "/map" &&
           (normalizedMethodName == "count" || normalizedMethodName == "count_ref")) {
-        resolvedOut = preferredMapMethodTargetForCall(params, locals, receiver,
+        resolvedOut = preferredKeyValueMethodTargetForCall(params, locals, receiver,
                                                       normalizedMethodName);
         return true;
       }
@@ -384,19 +384,19 @@ bool SemanticsValidator::resolveInferMethodCallPath(
       return !resolvedOut.empty();
     }
     if (normalizedMethodName == "contains" && collectionTypePath == "/map") {
-      resolvedOut = preferredMapMethodTargetForCall(params, locals, receiver, "contains");
+      resolvedOut = preferredKeyValueMethodTargetForCall(params, locals, receiver, "contains");
       return true;
     }
     if (normalizedMethodName == "tryAt" && collectionTypePath == "/map") {
-      resolvedOut = preferredMapMethodTargetForCall(params, locals, receiver, "tryAt");
+      resolvedOut = preferredKeyValueMethodTargetForCall(params, locals, receiver, "tryAt");
       return true;
     }
     if (normalizedMethodName == "insert" && collectionTypePath == "/map") {
-      resolvedOut = preferredMapMethodTargetForCall(params, locals, receiver, "insert");
+      resolvedOut = preferredKeyValueMethodTargetForCall(params, locals, receiver, "insert");
       return true;
     }
     if (normalizedMethodName == "size" && collectionTypePath == "/map") {
-      resolvedOut = preferredMapMethodTargetForCall(params, locals, receiver, "size");
+      resolvedOut = preferredKeyValueMethodTargetForCall(params, locals, receiver, "size");
       return true;
     }
     if (isValueSurfaceAccessMethodName(normalizedMethodName)) {
@@ -418,7 +418,7 @@ bool SemanticsValidator::resolveInferMethodCallPath(
     }
     if (isCanonicalKeyValueAccessMethodName(normalizedMethodName) &&
         collectionTypePath == "/map") {
-      resolvedOut = preferredMapMethodTargetForCall(params, locals, receiver, normalizedMethodName);
+      resolvedOut = preferredKeyValueMethodTargetForCall(params, locals, receiver, normalizedMethodName);
       return true;
     }
     if (normalizedMethodName == "empty" && collectionTypePath == "/Buffer") {
@@ -683,7 +683,7 @@ bool SemanticsValidator::resolveInferMethodCallPath(
     if (!extractMapKeyValueTypesFromTypeText(indexedMapTypeText, keyType, valueType)) {
       return false;
     }
-    resolvedOut = preferredMapMethodTargetForCall(params, locals, receiverExpr, helperName);
+    resolvedOut = preferredKeyValueMethodTargetForCall(params, locals, receiverExpr, helperName);
     return true;
   };
   auto shouldPreferStructReturnMethodTargetForCall = [&](const Expr &receiverExpr) {
@@ -794,7 +794,7 @@ bool SemanticsValidator::resolveInferMethodCallPath(
     if (isCanonicalKeyValueAccessMethodName(receiverHelperName) &&
         resolveMapTarget(receiver.args.front(), keyType, valueType)) {
       const std::string resolvedReceiver =
-          preferredMapMethodTargetForCall(params, locals, receiver, receiverHelperName);
+          preferredKeyValueMethodTargetForCall(params, locals, receiver, receiverHelperName);
       auto defIt = defMap_.find(resolvedReceiver);
       if (defIt != defMap_.end() && defIt->second != nullptr) {
         BindingInfo inferredReceiverBinding;
@@ -910,14 +910,14 @@ bool SemanticsValidator::resolveInferMethodCallPath(
     if ((normalizedMethodName == "count" || normalizedMethodName == "count_ref" ||
          normalizedMethodName == "size") &&
         resolveMapTarget(receiver, keyType, valueType)) {
-      resolvedOut = preferredMapMethodTargetForCall(params, locals, receiver,
+      resolvedOut = preferredKeyValueMethodTargetForCall(params, locals, receiver,
                                                     normalizedMethodName);
       return true;
     }
     if ((normalizedMethodName == "contains" || normalizedMethodName == "tryAt" ||
          normalizedMethodName == "insert") &&
         resolveMapTarget(receiver, keyType, valueType)) {
-      resolvedOut = preferredMapMethodTargetForCall(params, locals, receiver, normalizedMethodName);
+      resolvedOut = preferredKeyValueMethodTargetForCall(params, locals, receiver, normalizedMethodName);
       return true;
     }
     if ((normalizedMethodName == "contains" || normalizedMethodName == "tryAt" ||
@@ -955,7 +955,7 @@ bool SemanticsValidator::resolveInferMethodCallPath(
     }
     if (isCanonicalKeyValueAccessMethodName(normalizedMethodName) &&
         resolveMapTarget(receiver, keyType, valueType)) {
-      resolvedOut = preferredMapMethodTargetForCall(params, locals, receiver, normalizedMethodName);
+      resolvedOut = preferredKeyValueMethodTargetForCall(params, locals, receiver, normalizedMethodName);
       return true;
     }
     if ((normalizedMethodName == "count" || normalizedMethodName == "count_ref") &&
@@ -1227,7 +1227,7 @@ bool SemanticsValidator::resolveInferMethodCallPath(
     std::string keyType;
     std::string valueType;
     if (resolveInferExperimentalMapTarget(params, locals, receiver, keyType, valueType)) {
-      resolvedOut = preferredMapMethodTargetForCall(params, locals, receiver, normalizedMethodName);
+      resolvedOut = preferredKeyValueMethodTargetForCall(params, locals, receiver, normalizedMethodName);
       return returnWithMethodTargetMemo(!resolvedOut.empty());
     }
   }

@@ -1279,6 +1279,30 @@ TEST_CASE("canonical map surface owns standalone stdlib implementation") {
   CHECK(inferMethodResolutionHelpersSource.find(
             "canonicalKeyValueHelperPathForInferMethodResolution") !=
         std::string::npos);
+  CHECK(privateExprInferenceSource.find("preferredKeyValueMethodTargetForCall(") !=
+        std::string::npos);
+  CHECK(privateExprInferenceSource.find("preferredMapMethodTargetForCall(") ==
+        std::string::npos);
+  CHECK(inferMethodResolutionHelpersSource.find(
+            "preferredKeyValueMethodTargetForCall(") != std::string::npos);
+  CHECK(inferMethodResolutionHelpersSource.find("preferredMapMethodTargetForCall(") ==
+        std::string::npos);
+  CHECK(inferMethodResolutionSource.find("preferredKeyValueMethodTargetForCall(") !=
+        std::string::npos);
+  CHECK(inferMethodResolutionSource.find("preferredMapMethodTargetForCall(") ==
+        std::string::npos);
+  CHECK(exprMethodResolutionSource.find("preferredKeyValueMethodTargetForCall(") !=
+        std::string::npos);
+  CHECK(exprMethodResolutionSource.find("preferredMapMethodTargetForCall(") ==
+        std::string::npos);
+  CHECK(statementBodyArgumentsSource.find("preferredKeyValueMethodTargetForCall(") !=
+        std::string::npos);
+  CHECK(statementBodyArgumentsSource.find("preferredMapMethodTargetForCall(") ==
+        std::string::npos);
+  CHECK(exprLateUnknownTargetFallbacksSource.find(
+            "preferredKeyValueMethodTargetForCall(") != std::string::npos);
+  CHECK(exprLateUnknownTargetFallbacksSource.find("preferredMapMethodTargetForCall(") ==
+        std::string::npos);
   CHECK(inferMethodResolutionHelpersSource.find("isWrappedKeyValueTypeText") !=
         std::string::npos);
   CHECK(inferMethodResolutionHelpersSource.find("isWrappedMapTypeText") ==

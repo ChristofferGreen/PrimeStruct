@@ -121,7 +121,7 @@ bool SemanticsValidator::validateExprLateUnknownTargetFallbacks(
     Expr rewrittenKeyValueMethodCall = expr;
     rewrittenKeyValueMethodCall.isMethodCall = false;
     rewrittenKeyValueMethodCall.namespacePrefix.clear();
-    rewrittenKeyValueMethodCall.name = preferredMapMethodTargetForCall(
+    rewrittenKeyValueMethodCall.name = preferredKeyValueMethodTargetForCall(
         params, locals, expr.args.front(), normalizedMethodName);
     if (rewrittenKeyValueMethodCall.name.empty()) {
       rewrittenKeyValueMethodCall.name =

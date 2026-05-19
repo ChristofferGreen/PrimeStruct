@@ -439,7 +439,7 @@ std::string SemanticsValidator::preferredGfxErrorHelperTarget(
   });
 }
 
-std::string SemanticsValidator::preferredMapMethodTargetForCall(
+std::string SemanticsValidator::preferredKeyValueMethodTargetForCall(
     const std::vector<ParameterInfo> &params,
     const std::unordered_map<std::string, BindingInfo> &locals,
     const Expr &receiverExpr,
