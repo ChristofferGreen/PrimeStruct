@@ -187,16 +187,16 @@ bool SemanticsValidator::resolveVectorHelperMethodTarget(
     }
     return prefix + "/" + callExpr.name;
   };
-  auto isRootMapAliasPath = [](const std::string &path) {
+  auto isRootKeyValueAliasPath = [](const std::string &path) {
     return path == "/map" ||
            path.rfind("/map__", 0) == 0;
   };
-  auto isLocalRootMapAliasCall = [&](const Expr &candidate) {
+  auto isLocalRootKeyValueAliasCall = [&](const Expr &candidate) {
     if (candidate.kind != Expr::Kind::Call || candidate.isMethodCall) {
       return false;
     }
-    return isRootMapAliasPath(resolveCalleePath(candidate)) ||
-           isRootMapAliasPath(explicitCallPath(candidate));
+    return isRootKeyValueAliasPath(resolveCalleePath(candidate)) ||
+           isRootKeyValueAliasPath(explicitCallPath(candidate));
   };
   auto resolveExperimentalVectorReceiver = [&](const Expr &candidate,
                                                std::string &elemTypeOut) -> bool {
@@ -434,7 +434,7 @@ bool SemanticsValidator::resolveVectorHelperMethodTarget(
         return true;
       }
       if (collectionTypePath == "/map" &&
-          !isLocalRootMapAliasCall(receiver) &&
+          !isLocalRootKeyValueAliasCall(receiver) &&
           (normalizedHelperName == "contains" || normalizedHelperName == "contains_ref" ||
            normalizedHelperName == "tryAt" || normalizedHelperName == "tryAt_ref" ||
            normalizedHelperName == "at" || normalizedHelperName == "at_ref" ||

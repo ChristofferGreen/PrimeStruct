@@ -1671,6 +1671,13 @@ TEST_CASE("canonical map surface owns standalone stdlib implementation") {
   CHECK(exprVectorHelpersSource.find("mapHelperName") == std::string::npos);
   CHECK(exprVectorHelpersSource.find("preferredBareMapHelperTarget") ==
         std::string::npos);
+  CHECK(exprVectorHelpersSource.find("isRootMapAliasPath") == std::string::npos);
+  CHECK(exprVectorHelpersSource.find("isRootKeyValueAliasPath") !=
+        std::string::npos);
+  CHECK(exprVectorHelpersSource.find("isLocalRootMapAliasCall") ==
+        std::string::npos);
+  CHECK(exprVectorHelpersSource.find("isLocalRootKeyValueAliasCall") !=
+        std::string::npos);
   CHECK(exprVectorHelpersSource.find("keyValueHelperName") !=
         std::string::npos);
   CHECK(exprVectorHelpersSource.find("preferredBareKeyValueHelperTarget") !=

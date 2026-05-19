@@ -159,7 +159,8 @@ This file stores durable session-derived facts that are useful in later work. Ke
   booleans, uninitialized-struct inference constructor locals, and lowerer
   struct-type key/value locals, pre-dispatch receiver diagnostics, and late
   access receiver diagnostic locals plus late access receiver-classifier and
-  key-inference locals follow the same naming.
+  key-inference locals plus vector-helper root alias predicates follow the
+  same naming.
 - Evidence: The release `PrimeStruct_backend_ir_tests` target rebuilt after
   the kind, field, target-info, lookup-helper, and setup-inference access
   renames, focused backend IR windows passed, and direct `rg` scans over
@@ -202,7 +203,7 @@ This file stores durable session-derived facts that are useful in later work. Ke
   booleans, uninitialized-struct inference constructor locals, and lowerer
   struct-type key/value locals, pre-dispatch receiver diagnostics, and late
   access receiver diagnostic locals plus late access receiver-classifier and
-  key-inference locals.
+  key-inference locals plus vector-helper root alias predicates.
 
 ### map-compatibility-aliases-require-source-definitions
 - Updated: 2026-05-18
