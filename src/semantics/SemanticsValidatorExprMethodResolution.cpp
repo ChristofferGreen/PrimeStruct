@@ -68,14 +68,14 @@ bool SemanticsValidator::validateExprMethodCallTarget(
   };
 
   const auto &resolveVectorTarget = dispatchResolvers.resolveVectorTarget;
-  const auto &resolveMapTargetWithTypes = dispatchResolvers.resolveMapTarget;
+  const auto &resolveKeyValueTargetWithTypes = dispatchResolvers.resolveMapTarget;
   const auto &resolveExperimentalMapTarget = dispatchResolvers.resolveExperimentalMapTarget;
   const std::string normalizedMethodName =
       normalizeCollectionMethodName(expr.name);
-  auto resolveMapTarget = [&](const Expr &target) -> bool {
+  auto resolveKeyValueTarget = [&](const Expr &target) -> bool {
     std::string keyType;
     std::string valueType;
-    if (resolveMapTargetWithTypes(target, keyType, valueType) ||
+    if (resolveKeyValueTargetWithTypes(target, keyType, valueType) ||
         resolveExperimentalMapTarget(target, keyType, valueType)) {
       return true;
     }
@@ -487,7 +487,7 @@ bool SemanticsValidator::validateExprMethodCallTarget(
             helperName == "at" || helperName == "at_ref" ||
             helperName == "at_unsafe" || helperName == "at_unsafe_ref" ||
             helperName == "insert" || helperName == "insert_ref") ||
-          !resolveMapTarget(expr.args.front())) {
+          !resolveKeyValueTarget(expr.args.front())) {
         return false;
       }
       resolved = preferredKeyValueMethodTargetForCall(params, locals, expr.args.front(),
@@ -620,7 +620,7 @@ bool SemanticsValidator::validateExprMethodCallTarget(
     }
   }
   bool keepBuiltinIndexedArgsPackKeyValueMethod = false;
-  keepBuiltinIndexedArgsPackKeyValueMethod = resolveMapTarget(expr.args.front());
+  keepBuiltinIndexedArgsPackKeyValueMethod = resolveKeyValueTarget(expr.args.front());
   if (expr.args.front().kind == Expr::Kind::Call) {
     std::string accessName;
     if (getBuiltinArrayAccessName(expr.args.front(), accessName) && expr.args.front().args.size() == 2) {
