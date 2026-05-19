@@ -4266,6 +4266,11 @@ TEST_CASE("canonical map surface owns standalone stdlib implementation") {
         std::string::npos);
   CHECK(semanticsResultHelpersSource.find("resolveMapReceiverTypeText") ==
         std::string::npos);
+  CHECK(semanticsResultHelpersSource.find(
+            "isSpecializedExperimentalMapBackingPath") == std::string::npos);
+  CHECK(semanticsResultHelpersSource.find(
+            "isSpecializedExperimentalKeyValueBackingPath") !=
+        std::string::npos);
   CHECK(semanticsResultHelpersSource.find("mapValueRoot") ==
         std::string::npos);
   CHECK(semanticsResultHelpersSource.find("resolveBuiltinMapResultType") ==

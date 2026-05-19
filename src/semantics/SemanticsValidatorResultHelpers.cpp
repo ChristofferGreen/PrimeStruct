@@ -95,7 +95,7 @@ std::string canonicalMapValueIdentity(const std::string &typeText) {
   return out.str();
 }
 
-bool isSpecializedExperimentalMapBackingPath(std::string typeName) {
+bool isSpecializedExperimentalKeyValueBackingPath(std::string typeName) {
   typeName = normalizeBindingTypeName(typeName);
   if (!typeName.empty() && typeName.front() == '/') {
     typeName.erase(typeName.begin());
@@ -346,7 +346,7 @@ bool SemanticsValidator::resolveResultTypeForExpr(const Expr &expr,
     if (!resolvedPath.empty() && resolvedPath.front() != '/') {
       resolvedPath.insert(resolvedPath.begin(), '/');
     }
-    if (!isSpecializedExperimentalMapBackingPath(resolvedPath)) {
+    if (!isSpecializedExperimentalKeyValueBackingPath(resolvedPath)) {
       return false;
     }
     auto defIt = defMap_.find(resolvedPath);
