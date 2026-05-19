@@ -2510,6 +2510,22 @@ TEST_CASE("canonical map surface owns standalone stdlib implementation") {
         std::string::npos);
   CHECK(emitterCollectionTypeHelpersSource.find("isCollectionTypeMapAccessHelper(") ==
         std::string::npos);
+  CHECK(emitterCollectionTypeHelpersSource.find("builtinCanonicalMapAccessReceiverTypePath") ==
+        std::string::npos);
+  CHECK(emitterCollectionTypeHelpersSource.find("builtinCanonicalKeyValueAccessReceiverTypePath") !=
+        std::string::npos);
+  CHECK(emitterCollectionTypeHelpersSource.find("builtinMapAccessMethodReceiverTypePath") ==
+        std::string::npos);
+  CHECK(emitterCollectionTypeHelpersSource.find("builtinKeyValueAccessMethodReceiverTypePath") !=
+        std::string::npos);
+  CHECK(emitterCollectionTypeHelpersSource.find("isExplicitMapAccessMethod") ==
+        std::string::npos);
+  CHECK(emitterCollectionTypeHelpersSource.find("isExplicitKeyValueAccessMethod") !=
+        std::string::npos);
+  CHECK(emitterCollectionTypeHelpersSource.find("shouldProbeBuiltinMapAccessType") ==
+        std::string::npos);
+  CHECK(emitterCollectionTypeHelpersSource.find("shouldProbeBuiltinKeyValueAccessType") !=
+        std::string::npos);
   CHECK(emitterMethodMetadataSource.find("} else if (normalizedPath.rfind(\"/std/collections/map/\", 0) == 0) {\n"
                                          "    const std::string suffix =") ==
         std::string::npos);

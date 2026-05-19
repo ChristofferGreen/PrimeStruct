@@ -190,7 +190,7 @@
     }
     return "";
   };
-  auto builtinCanonicalMapAccessReceiverTypePath = [&](const Expr &candidate) -> std::string {
+  auto builtinCanonicalKeyValueAccessReceiverTypePath = [&](const Expr &candidate) -> std::string {
     if (candidate.kind != Expr::Kind::Call || candidate.isMethodCall || candidate.name.empty()) {
       return "";
     }
@@ -278,7 +278,7 @@
     }
     return "";
   };
-  auto builtinMapAccessMethodReceiverTypePath = [&](const Expr &candidate) -> std::string {
+  auto builtinKeyValueAccessMethodReceiverTypePath = [&](const Expr &candidate) -> std::string {
     if (candidate.kind != Expr::Kind::Call || !candidate.isMethodCall || candidate.name.empty() ||
         candidate.args.empty()) {
       return "";
@@ -306,7 +306,7 @@
     }
     return "";
   };
-  auto isExplicitMapAccessMethod = [&](const Expr &candidate) {
+  auto isExplicitKeyValueAccessMethod = [&](const Expr &candidate) {
     if (candidate.kind != Expr::Kind::Call || !candidate.isMethodCall || candidate.name.empty()) {
       return false;
     }
@@ -347,9 +347,9 @@
       const bool shouldProbeBuiltinVectorAccessType =
           !isExplicitVectorAccessDirectCall(targetExpr) &&
           !builtinCanonicalVectorAccessReceiverTypePath(targetExpr).empty();
-      const bool shouldProbeBuiltinMapAccessType =
-          !builtinCanonicalMapAccessReceiverTypePath(targetExpr).empty();
-      if (shouldProbeBuiltinVectorAccessType || shouldProbeBuiltinMapAccessType) {
+      const bool shouldProbeBuiltinKeyValueAccessType =
+          !builtinCanonicalKeyValueAccessReceiverTypePath(targetExpr).empty();
+      if (shouldProbeBuiltinVectorAccessType || shouldProbeBuiltinKeyValueAccessType) {
         const std::string probedTypePath = probedTypePathForTarget(targetExpr);
         if (probedTypePath == "/string" || probedTypePath == "/array" || probedTypePath == "/vector" ||
             probedTypePath == "/map") {
@@ -361,13 +361,13 @@
       }
       return resolvedTypePathForResolvedCall(resolveExprPath(targetExpr));
     }
-    if (isExplicitMapAccessMethod(targetExpr)) {
+    if (isExplicitKeyValueAccessMethod(targetExpr)) {
       const std::string probedTypePath = probedTypePathForTarget(targetExpr);
       if (!probedTypePath.empty()) {
         return probedTypePath;
       }
     }
-    if (!builtinMapAccessMethodReceiverTypePath(targetExpr).empty()) {
+    if (!builtinKeyValueAccessMethodReceiverTypePath(targetExpr).empty()) {
       const std::string probedTypePath = probedTypePathForTarget(targetExpr);
       if (probedTypePath == "/map" || probedTypePath == "/string") {
         return probedTypePath;
