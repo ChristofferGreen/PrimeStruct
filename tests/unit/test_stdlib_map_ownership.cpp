@@ -2049,6 +2049,14 @@ TEST_CASE("canonical map surface owns standalone stdlib implementation") {
         std::string::npos);
   CHECK(inferLateFallbackBuiltinsSource.find("rewrittenKeyValueHelperCall") !=
         std::string::npos);
+  CHECK(inferLateFallbackBuiltinsSource.find("hasBareKeyValueOperands") !=
+        std::string::npos);
+  CHECK(inferLateFallbackBuiltinsSource.find("hasBareMapOperands") ==
+        std::string::npos);
+  CHECK(inferLateFallbackBuiltinsSource.find("keyValueReceiverIndex") !=
+        std::string::npos);
+  CHECK(inferLateFallbackBuiltinsSource.find("mapReceiverIndex") ==
+        std::string::npos);
   CHECK(inferLateFallbackBuiltinsSource.find(
             "metadata->importAliasSpellings") !=
         std::string::npos);

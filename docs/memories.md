@@ -66,7 +66,8 @@ This file stores durable session-derived facts that are useful in later work. Ke
   diagnostics, and visible-definition checks should use key/value names too;
   shared inference dispatch context flags for std-namespaced access,
   bare-helper fallback, and deferred namespaced access should use key/value
-  names too.
+  names too; infer late-fallback key/value operand and receiver locals should
+  use key/value names too.
   The stdlib ownership source lock rejects the old map-helper, map-count,
   map-access, and removed map compatibility names.
 
