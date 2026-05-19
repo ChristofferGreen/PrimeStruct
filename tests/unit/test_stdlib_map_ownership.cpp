@@ -136,6 +136,9 @@ TEST_CASE("canonical map surface owns standalone stdlib implementation") {
   const std::string exprCollectionDispatchSetupSource =
       readText(repoRoot() / "src" / "semantics" /
                "SemanticsValidatorExprCollectionDispatchSetup.cpp");
+  const std::string exprDispatchBootstrapSource =
+      readText(repoRoot() / "src" / "semantics" /
+               "SemanticsValidatorExprDispatchBootstrap.cpp");
   const std::string exprCollectionPredicatesSource =
       readText(repoRoot() / "src" / "semantics" /
                "SemanticsValidatorExprCollectionPredicates.cpp");
@@ -432,6 +435,7 @@ TEST_CASE("canonical map surface owns standalone stdlib implementation") {
   REQUIRE(!inferPreDispatchCallsSource.empty());
   REQUIRE(!exprPreDispatchDirectCallsSource.empty());
   REQUIRE(!exprVectorHelpersSource.empty());
+  REQUIRE(!exprDispatchBootstrapSource.empty());
   REQUIRE(!collectionHelperRewritesSource.empty());
   REQUIRE(!effectFreeCollectionsSource.empty());
   REQUIRE(!exprCollectionPredicatesSource.empty());
@@ -1677,6 +1681,10 @@ TEST_CASE("canonical map surface owns standalone stdlib implementation") {
   CHECK(exprVectorHelpersSource.find("isLocalRootMapAliasCall") ==
         std::string::npos);
   CHECK(exprVectorHelpersSource.find("isLocalRootKeyValueAliasCall") !=
+        std::string::npos);
+  CHECK(exprDispatchBootstrapSource.find("isRootMapAliasPath") ==
+        std::string::npos);
+  CHECK(exprDispatchBootstrapSource.find("isRootKeyValueAliasPath") !=
         std::string::npos);
   CHECK(exprVectorHelpersSource.find("keyValueHelperName") !=
         std::string::npos);

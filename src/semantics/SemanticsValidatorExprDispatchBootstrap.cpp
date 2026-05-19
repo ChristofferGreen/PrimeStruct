@@ -183,7 +183,7 @@ void SemanticsValidator::prepareExprDispatchBootstrap(
            inferDefinitionReturnBinding(*defIt->second, inferredReturn) &&
            isPointerLikeBinding(inferredReturn);
   };
-  auto isRootMapAliasPath = [](const std::string &path) {
+  auto isRootKeyValueAliasPath = [](const std::string &path) {
     return path == "/map" || path.rfind("/map__", 0) == 0;
   };
   auto explicitCallPath = [&](const Expr &candidate) {
@@ -199,7 +199,7 @@ void SemanticsValidator::prepareExprDispatchBootstrap(
                                    paramsPtr,
                                    localsPtr,
                                    &bootstrapOut,
-                                   &isRootMapAliasPath,
+                                   &isRootKeyValueAliasPath,
                                    &explicitCallPath](const Expr &target) -> bool {
     std::string keyType;
     std::string valueType;
@@ -209,8 +209,8 @@ void SemanticsValidator::prepareExprDispatchBootstrap(
       return true;
     }
     if (target.kind == Expr::Kind::Call &&
-        (isRootMapAliasPath(resolveCalleePath(target)) ||
-         isRootMapAliasPath(explicitCallPath(target)))) {
+        (isRootKeyValueAliasPath(resolveCalleePath(target)) ||
+         isRootKeyValueAliasPath(explicitCallPath(target)))) {
       return false;
     }
     std::string inferredTypeText;
