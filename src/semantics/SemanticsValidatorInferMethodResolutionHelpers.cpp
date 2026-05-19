@@ -450,7 +450,7 @@ std::string SemanticsValidator::preferredMapMethodTargetForCall(
     }
     return binding.typeName + "<" + binding.typeTemplateArg + ">";
   };
-  auto isWrappedMapTypeText = [](const std::string &typeText) {
+  auto isWrappedKeyValueTypeText = [](const std::string &typeText) {
     std::string base;
     std::string argText;
     if (!splitTemplateTypeName(normalizeBindingTypeName(typeText), base,
@@ -469,8 +469,8 @@ std::string SemanticsValidator::preferredMapMethodTargetForCall(
     std::string valueType;
     return extractMapKeyValueTypesFromTypeText(args.front(), keyType, valueType);
   };
-  auto isWrappedMapBinding = [&](const BindingInfo &binding) {
-    return isWrappedMapTypeText(bindingTypeText(binding));
+  auto isWrappedKeyValueBinding = [&](const BindingInfo &binding) {
+    return isWrappedKeyValueTypeText(bindingTypeText(binding));
   };
   auto isWrappedArgsPackAccess = [&](const Expr &candidate) {
     if (candidate.kind != Expr::Kind::Call || candidate.isBinding ||
@@ -489,21 +489,21 @@ std::string SemanticsValidator::preferredMapMethodTargetForCall(
     if (const BindingInfo *paramBinding =
             findParamBinding(params, accessReceiver->name)) {
       return getArgsPackElementType(*paramBinding, elemType) &&
-             isWrappedMapTypeText(elemType);
+             isWrappedKeyValueTypeText(elemType);
     }
     auto localIt = locals.find(accessReceiver->name);
     return localIt != locals.end() &&
            getArgsPackElementType(localIt->second, elemType) &&
-           isWrappedMapTypeText(elemType);
+           isWrappedKeyValueTypeText(elemType);
   };
-  auto isWrappedMapReceiver = [&](const Expr &candidate) {
+  auto isWrappedKeyValueReceiver = [&](const Expr &candidate) {
     if (candidate.kind == Expr::Kind::Name) {
       if (const BindingInfo *paramBinding =
               findParamBinding(params, candidate.name)) {
-        return isWrappedMapBinding(*paramBinding);
+        return isWrappedKeyValueBinding(*paramBinding);
       }
       auto localIt = locals.find(candidate.name);
-      return localIt != locals.end() && isWrappedMapBinding(localIt->second);
+      return localIt != locals.end() && isWrappedKeyValueBinding(localIt->second);
     }
     if (isWrappedArgsPackAccess(candidate)) {
       return true;
@@ -515,10 +515,10 @@ std::string SemanticsValidator::preferredMapMethodTargetForCall(
         inferQueryExprTypeText(candidate, params, locals, inferredTypeText);
     error_.clear();
     error_ = previousError;
-    return inferred && isWrappedMapTypeText(inferredTypeText);
+    return inferred && isWrappedKeyValueTypeText(inferredTypeText);
   };
   auto borrowedHelperNameForReceiver = [&](std::string selectedHelperName) {
-    if (!isWrappedMapReceiver(receiverExpr)) {
+    if (!isWrappedKeyValueReceiver(receiverExpr)) {
       return selectedHelperName;
     }
     if (selectedHelperName == "count") {

@@ -1279,6 +1279,18 @@ TEST_CASE("canonical map surface owns standalone stdlib implementation") {
   CHECK(inferMethodResolutionHelpersSource.find(
             "canonicalKeyValueHelperPathForInferMethodResolution") !=
         std::string::npos);
+  CHECK(inferMethodResolutionHelpersSource.find("isWrappedKeyValueTypeText") !=
+        std::string::npos);
+  CHECK(inferMethodResolutionHelpersSource.find("isWrappedMapTypeText") ==
+        std::string::npos);
+  CHECK(inferMethodResolutionHelpersSource.find("isWrappedKeyValueBinding") !=
+        std::string::npos);
+  CHECK(inferMethodResolutionHelpersSource.find("isWrappedMapBinding") ==
+        std::string::npos);
+  CHECK(inferMethodResolutionHelpersSource.find("isWrappedKeyValueReceiver") !=
+        std::string::npos);
+  CHECK(inferMethodResolutionHelpersSource.find("isWrappedMapReceiver") ==
+        std::string::npos);
   CHECK(inferPreDispatchCallsSource.find("std/collections/map/") ==
         std::string::npos);
   CHECK(inferPreDispatchCallsSource.find(
