@@ -222,7 +222,7 @@ std::string SemanticsValidator::resolveExprConcreteCallPath(
       paths.push_back(path);
     }
   };
-  auto isMapEntryConstructorPath = [](const std::string &path) {
+  auto isKeyValueEntryConstructorPath = [](const std::string &path) {
     const auto *metadata = mapHelperSurfaceMetadataLocal();
     if (metadata == nullptr) {
       return false;
@@ -247,15 +247,15 @@ std::string SemanticsValidator::resolveExprConcreteCallPath(
     return prefix + "/" + callExpr.name;
   };
   const std::string directExplicitCallPath = explicitCallPath(expr);
-  auto isMapEntryConstructorExpr = [&](const Expr &argExpr) {
+  auto isKeyValueEntryConstructorExpr = [&](const Expr &argExpr) {
     if (argExpr.kind != Expr::Kind::Call || argExpr.isMethodCall) {
       return false;
     }
     const std::string resolvedArgPath = resolveCalleePath(argExpr);
-    if (isMapEntryConstructorPath(resolvedArgPath)) {
+    if (isKeyValueEntryConstructorPath(resolvedArgPath)) {
       return true;
     }
-    return isMapEntryConstructorPath(explicitCallPath(argExpr));
+    return isKeyValueEntryConstructorPath(explicitCallPath(argExpr));
   };
   auto fnv1a64 = [](const std::string &text) {
     uint64_t hash = 1469598103934665603ULL;
@@ -469,7 +469,7 @@ std::string SemanticsValidator::resolveExprConcreteCallPath(
       expr.args.front().kind == Expr::Kind::Name &&
       (findParamBinding(params, expr.args.front().name) != nullptr ||
        locals.count(expr.args.front().name) > 0);
-  const std::string mapConstructorBasePath = [&]() -> std::string {
+  const std::string keyValueConstructorBasePath = [&]() -> std::string {
     const auto *metadata = mapConstructorSurfaceMetadataLocal();
     if (metadata == nullptr) {
       return {};
@@ -491,18 +491,18 @@ std::string SemanticsValidator::resolveExprConcreteCallPath(
     }
     return {};
   }();
-  const bool preferDirectMapConstructorCandidate =
-      !mapConstructorBasePath.empty() &&
+  const bool preferDirectKeyValueConstructorCandidate =
+      !keyValueConstructorBasePath.empty() &&
       !expr.isMethodCall &&
       !expr.args.empty() &&
       std::all_of(expr.args.begin(), expr.args.end(), [&](const Expr &arg) {
-        return isMapEntryConstructorExpr(arg);
+        return isKeyValueEntryConstructorExpr(arg);
       });
   auto buildBaseCandidates = [&](auto &baseCandidates) {
     baseCandidates.clear();
-    if (preferDirectMapConstructorCandidate) {
-      appendIfMissing(baseCandidates, overloadCandidatePath(mapConstructorBasePath, 1));
-      appendIfMissing(baseCandidates, mapConstructorBasePath);
+    if (preferDirectKeyValueConstructorCandidate) {
+      appendIfMissing(baseCandidates, overloadCandidatePath(keyValueConstructorBasePath, 1));
+      appendIfMissing(baseCandidates, keyValueConstructorBasePath);
     }
     if (hasTemplateOverloads) {
       if (isTypeNamespaceCall && !expr.args.empty()) {

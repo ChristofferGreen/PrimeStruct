@@ -161,8 +161,8 @@ This file stores durable session-derived facts that are useful in later work. Ke
   access receiver diagnostic locals plus late access receiver-classifier and
   key-inference locals, vector-helper root alias predicates, and
   collection-access root alias predicates/type-receiver locals plus dispatch
-  bootstrap and infer-call-resolution root alias predicates follow the same
-  naming.
+  bootstrap and infer-call-resolution root alias predicates plus call-resolution
+  constructor-candidate locals follow the same naming.
 - Evidence: The release `PrimeStruct_backend_ir_tests` target rebuilt after
   the kind, field, target-info, lookup-helper, and setup-inference access
   renames, focused backend IR windows passed, and direct `rg` scans over
@@ -207,7 +207,8 @@ This file stores durable session-derived facts that are useful in later work. Ke
   access receiver diagnostic locals plus late access receiver-classifier and
   key-inference locals, vector-helper root alias predicates, and
   collection-access root alias predicates/type-receiver locals plus dispatch
-  bootstrap and infer-call-resolution root alias predicates.
+  bootstrap and infer-call-resolution root alias predicates plus
+  call-resolution constructor-candidate locals.
 
 ### map-compatibility-aliases-require-source-definitions
 - Updated: 2026-05-18
