@@ -328,11 +328,11 @@ bool isMapLikeStructTypeName(const std::string &structTypeName) {
   if (structTypeName.empty()) {
     return false;
   }
-  const std::string experimentalMapType =
+  const std::string experimentalKeyValueType =
       experimentalCollectionTypePath("map", "Map");
   return normalizeCollectionBindingTypeName(structTypeName) == "map" ||
-         structTypeName == experimentalMapType ||
-         structTypeName.rfind(experimentalMapType + "__", 0) == 0;
+         structTypeName == experimentalKeyValueType ||
+         structTypeName.rfind(experimentalKeyValueType + "__", 0) == 0;
 }
 
 bool shouldRewriteMapReferenceReceiverForParam(const LocalInfo &paramInfo) {

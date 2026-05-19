@@ -154,7 +154,8 @@ This file stores durable session-derived facts that are useful in later work. Ke
   key/value names too; inline packed-argument expected-collection and explicit
   experimental type predicates should use key/value names too; struct-slot
   layout experimental type and key/value root locals should use key/value names
-  too.
+  too; inline parameter helper experimental type locals should use key/value
+  names too.
   The stdlib ownership source lock rejects the old map-helper, map-count,
   map-access, and removed map compatibility names.
 
