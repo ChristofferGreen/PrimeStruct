@@ -275,29 +275,29 @@ bool rewritePackedResultKeyValueConstructorExpr(const Expr &callExpr,
     };
     LocalInfo::ValueKind inferredKeyKind = LocalInfo::ValueKind::Unknown;
     LocalInfo::ValueKind inferredValueKind = LocalInfo::ValueKind::Unknown;
-    bool validLiteralMap = true;
+    bool validLiteralKeyValue = true;
     for (size_t index = 0; index < callExpr.args.size(); index += 2) {
       const LocalInfo::ValueKind currentKeyKind = inferLiteralKind(callExpr.args[index]);
       const LocalInfo::ValueKind currentValueKind = inferLiteralKind(callExpr.args[index + 1]);
       if (currentKeyKind == LocalInfo::ValueKind::Unknown ||
           currentValueKind == LocalInfo::ValueKind::Unknown) {
-        validLiteralMap = false;
+        validLiteralKeyValue = false;
         break;
       }
       if (inferredKeyKind == LocalInfo::ValueKind::Unknown) {
         inferredKeyKind = currentKeyKind;
       } else if (inferredKeyKind != currentKeyKind) {
-        validLiteralMap = false;
+        validLiteralKeyValue = false;
         break;
       }
       if (inferredValueKind == LocalInfo::ValueKind::Unknown) {
         inferredValueKind = currentValueKind;
       } else if (inferredValueKind != currentValueKind) {
-        validLiteralMap = false;
+        validLiteralKeyValue = false;
         break;
       }
     }
-    if (validLiteralMap &&
+    if (validLiteralKeyValue &&
         inferredKeyKind != LocalInfo::ValueKind::Unknown &&
         inferredValueKind != LocalInfo::ValueKind::Unknown) {
       rewrittenExpr.templateArgs = {

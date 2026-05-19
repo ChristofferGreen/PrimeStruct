@@ -4607,6 +4607,10 @@ TEST_CASE("canonical map surface owns standalone stdlib implementation") {
         std::string::npos);
   CHECK(packedResultSource.find("rewrittenMapExpr") ==
         std::string::npos);
+  CHECK(packedResultSource.find("validLiteralMap") ==
+        std::string::npos);
+  CHECK(packedResultSource.find("validLiteralKeyValue") !=
+        std::string::npos);
   CHECK(packedResultSource.find("rewrittenExpr.name = collectionMemberPath(\"map\", \"map\")") !=
         std::string::npos);
 }
