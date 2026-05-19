@@ -496,17 +496,17 @@ bool SemanticsValidator::validateExprPreDispatchDirectCalls(
     if (receiverIndex < expr.args.size()) {
       std::string keyType;
       std::string valueType;
-      const bool isMapReceiver =
+      const bool isKeyValueReceiver =
           dispatchBootstrap.dispatchResolvers.resolveMapTarget != nullptr &&
           dispatchBootstrap.dispatchResolvers.resolveMapTarget(
               expr.args[receiverIndex], keyType, valueType);
       keyType.clear();
       valueType.clear();
-      const bool isExperimentalMapReceiver =
+      const bool isExperimentalKeyValueReceiver =
           dispatchBootstrap.dispatchResolvers.resolveExperimentalMapTarget != nullptr &&
           dispatchBootstrap.dispatchResolvers.resolveExperimentalMapTarget(
               expr.args[receiverIndex], keyType, valueType);
-      if (isMapReceiver || isExperimentalMapReceiver) {
+      if (isKeyValueReceiver || isExperimentalKeyValueReceiver) {
         resolvedOut = preferredBareKeyValueHelperTarget(helperName);
       }
     }
