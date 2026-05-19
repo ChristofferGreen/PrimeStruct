@@ -2277,6 +2277,15 @@ TEST_CASE("canonical map surface owns standalone stdlib implementation") {
         std::string::npos);
   CHECK(inferLateFallbackBuiltinsSource.find("mapReceiverIndex") ==
         std::string::npos);
+  CHECK(inferLateFallbackBuiltinsSource.find("const auto &resolveMapTarget") ==
+        std::string::npos);
+  CHECK(inferLateFallbackBuiltinsSource.find(
+            "const auto &resolveExperimentalMapTarget") == std::string::npos);
+  CHECK(inferLateFallbackBuiltinsSource.find("const auto &resolveKeyValueTarget") !=
+        std::string::npos);
+  CHECK(inferLateFallbackBuiltinsSource.find(
+            "const auto &resolveExperimentalKeyValueTarget") !=
+        std::string::npos);
   CHECK(inferLateFallbackBuiltinsSource.find(
             "isIndexedArgsPackKeyValueReceiverTarget") != std::string::npos);
   CHECK(inferLateFallbackBuiltinsSource.find(

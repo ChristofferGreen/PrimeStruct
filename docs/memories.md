@@ -150,10 +150,10 @@ This file stores durable session-derived facts that are useful in later work. Ke
   tail-dispatch rewrite locals, statement-call insert rewrite locals,
   collection-dispatch setup target-probe locals, body-argument
   removed-compatibility remap locals, and collection-access validation
-  non-root experimental target-probe locals plus vector-count diagnostic
-  target-probe parameters and method-resolution experimental resolver
-  aliases plus infer pre-dispatch and infer method-resolution target aliases
-  follow the same naming.
+  non-root experimental target-probe locals, vector-count diagnostic
+  target-probe parameters, method-resolution experimental resolver aliases,
+  and infer pre-dispatch, infer method-resolution, and infer late-fallback
+  target aliases follow the same naming.
 - Evidence: The release `PrimeStruct_backend_ir_tests` target rebuilt after
   the kind, field, target-info, lookup-helper, and setup-inference access
   renames, focused backend IR windows passed, and direct `rg` scans over
@@ -187,9 +187,10 @@ This file stores durable session-derived facts that are useful in later work. Ke
   insert rewrite, args-pack access, inferred-kind locals,
   collection-dispatch setup target-probe locals, body-argument
   removed-compatibility remap locals, and collection-access validation
-  non-root experimental target-probe locals plus vector-count diagnostic
-  target-probe parameters and method-resolution experimental resolver
-  aliases plus infer pre-dispatch and infer method-resolution target aliases.
+  non-root experimental target-probe locals, vector-count diagnostic
+  target-probe parameters, method-resolution experimental resolver aliases,
+  and infer pre-dispatch, infer method-resolution, and infer late-fallback
+  target aliases.
 
 ### map-compatibility-aliases-require-source-definitions
 - Updated: 2026-05-18

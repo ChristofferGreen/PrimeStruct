@@ -148,8 +148,9 @@ ReturnKind SemanticsValidator::inferLateFallbackReturnKind(
       builtinCollectionDispatchResolvers.resolveSoaVectorTarget;
   const auto &resolveBufferTarget = builtinCollectionDispatchResolvers.resolveBufferTarget;
   const auto &resolveStringTarget = builtinCollectionDispatchResolvers.resolveStringTarget;
-  const auto &resolveMapTarget = builtinCollectionDispatchResolvers.resolveMapTarget;
-  const auto &resolveExperimentalMapTarget =
+  const auto &resolveKeyValueTarget =
+      builtinCollectionDispatchResolvers.resolveMapTarget;
+  const auto &resolveExperimentalKeyValueTarget =
       builtinCollectionDispatchResolvers.resolveExperimentalMapTarget;
   auto finish = [&](ReturnKind kind) -> ReturnKind {
     handled = true;
@@ -220,10 +221,10 @@ ReturnKind SemanticsValidator::inferLateFallbackReturnKind(
              (resolveSoaVectorTarget != nullptr &&
               resolveSoaVectorTarget(candidate, elemType)) ||
              (resolveStringTarget != nullptr && resolveStringTarget(candidate)) ||
-             (resolveMapTarget != nullptr &&
-              resolveMapTarget(candidate, keyType, valueType)) ||
-             (resolveExperimentalMapTarget != nullptr &&
-              resolveExperimentalMapTarget(candidate, keyType, valueType));
+             (resolveKeyValueTarget != nullptr &&
+              resolveKeyValueTarget(candidate, keyType, valueType)) ||
+             (resolveExperimentalKeyValueTarget != nullptr &&
+              resolveExperimentalKeyValueTarget(candidate, keyType, valueType));
     };
     auto tryResolveReceiverIndex = [&](size_t index,
                                        bool skipResolvedResult,
@@ -254,11 +255,11 @@ ReturnKind SemanticsValidator::inferLateFallbackReturnKind(
       } else if (resolveStringTarget != nullptr &&
                  resolveStringTarget(receiverCandidate)) {
         methodResolved = "/string/" + helperName;
-      } else if (resolveMapTarget != nullptr &&
-                 resolveMapTarget(receiverCandidate, keyType, valueType)) {
+      } else if (resolveKeyValueTarget != nullptr &&
+                 resolveKeyValueTarget(receiverCandidate, keyType, valueType)) {
         methodResolved = lateFallbackCanonicalKeyValueHelperPath(helperName);
-      } else if (resolveExperimentalMapTarget != nullptr &&
-                 resolveExperimentalMapTarget(receiverCandidate, keyType, valueType)) {
+      } else if (resolveExperimentalKeyValueTarget != nullptr &&
+                 resolveExperimentalKeyValueTarget(receiverCandidate, keyType, valueType)) {
         methodResolved = lateFallbackCanonicalKeyValueHelperPath(helperName);
       } else {
         return false;
@@ -411,8 +412,8 @@ ReturnKind SemanticsValidator::inferLateFallbackReturnKind(
     }
     std::string keyType;
     std::string valueType;
-    if (resolveMapTarget != nullptr &&
-        resolveMapTarget(receiverExpr, keyType, valueType)) {
+    if (resolveKeyValueTarget != nullptr &&
+        resolveKeyValueTarget(receiverExpr, keyType, valueType)) {
       const ReturnKind kind =
           returnKindForTypeName(normalizeBindingTypeName(valueType));
       return finish(kind == ReturnKind::Unknown ? ReturnKind::Unknown : kind);
@@ -441,8 +442,8 @@ ReturnKind SemanticsValidator::inferLateFallbackReturnKind(
         hasBareKeyValueOperands ? expr.args[receiverIndex] : expr.args.front();
     std::string keyType;
     std::string valueType;
-    if (resolveMapTarget != nullptr &&
-        resolveMapTarget(receiverExpr, keyType, valueType)) {
+    if (resolveKeyValueTarget != nullptr &&
+        resolveKeyValueTarget(receiverExpr, keyType, valueType)) {
       return finish(ReturnKind::Bool);
     }
     return finish(ReturnKind::Unknown);
@@ -478,8 +479,8 @@ ReturnKind SemanticsValidator::inferLateFallbackReturnKind(
     const Expr &receiverExpr = keyValueReceiverIndex < expr.args.size()
                                    ? expr.args[keyValueReceiverIndex]
                                    : expr.args.front();
-    if (resolveMapTarget != nullptr &&
-        resolveMapTarget(receiverExpr, keyType, valueType)) {
+    if (resolveKeyValueTarget != nullptr &&
+        resolveKeyValueTarget(receiverExpr, keyType, valueType)) {
       std::string methodResolved;
       if (context.resolveMethodCallPath != nullptr &&
           context.resolveMethodCallPath(expr.name, methodResolved)) {
@@ -584,8 +585,8 @@ ReturnKind SemanticsValidator::inferLateFallbackReturnKind(
         hasBareKeyValueOperands ? expr.args[receiverIndex] : expr.args.front();
     std::string keyType;
     std::string valueType;
-    if (resolveMapTarget != nullptr &&
-        resolveMapTarget(receiverExpr, keyType, valueType)) {
+    if (resolveKeyValueTarget != nullptr &&
+        resolveKeyValueTarget(receiverExpr, keyType, valueType)) {
       return finish(ReturnKind::Bool);
     }
   }
@@ -618,8 +619,8 @@ ReturnKind SemanticsValidator::inferLateFallbackReturnKind(
         hasBareKeyValueOperands ? expr.args[receiverIndex] : expr.args.front();
     std::string keyType;
     std::string valueType;
-    if (resolveMapTarget != nullptr &&
-        resolveMapTarget(receiverExpr, keyType, valueType)) {
+    if (resolveKeyValueTarget != nullptr &&
+        resolveKeyValueTarget(receiverExpr, keyType, valueType)) {
       const ReturnKind kind =
           returnKindForTypeName(normalizeBindingTypeName(valueType));
       return finish(kind == ReturnKind::Unknown ? ReturnKind::Unknown : kind);
@@ -643,10 +644,10 @@ ReturnKind SemanticsValidator::inferLateFallbackReturnKind(
         (resolveArrayTarget != nullptr &&
          resolveArrayTarget(receiver, elemType)) ||
         (resolveStringTarget != nullptr && resolveStringTarget(receiver)) ||
-        (resolveMapTarget != nullptr &&
-         resolveMapTarget(receiver, keyType, valueType)) ||
-        (resolveExperimentalMapTarget != nullptr &&
-         resolveExperimentalMapTarget(receiver, keyType, valueType));
+        (resolveKeyValueTarget != nullptr &&
+         resolveKeyValueTarget(receiver, keyType, valueType)) ||
+        (resolveExperimentalKeyValueTarget != nullptr &&
+         resolveExperimentalKeyValueTarget(receiver, keyType, valueType));
       if (!hasCollectionReceiver) {
         std::string methodResolved;
         if (context.resolveMethodCallPath != nullptr &&
