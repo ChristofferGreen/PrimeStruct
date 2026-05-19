@@ -33,6 +33,17 @@ This file stores durable session-derived facts that are useful in later work. Ke
 - Fact: In the C++ emitter, imported stdlib vector mutators outrank rooted `/vector/*` shadows for direct and named calls, while positional `push(value, values)` shadow calls still reject during EXE lowering.
 - Evidence: `tests/unit/test_compile_run_emitters_lambda_mutator_resolution.cpp` now passes focused release reruns that return `0` for the full mutator matrix, `3` for the named-call case, and `push requires mutable vector binding` for the positional shadow reject.
 
+### emitter-key-value-helper-expr-resolution
+- Updated: 2026-05-19
+- Tags: emitter, collections, stdlib
+- Fact: Emitter expression member-name resolution for metadata-backed
+  map-helper surfaces should use key/value local helper names.
+- Evidence: `EmitterBuiltinCallPathHelpers.cpp` now resolves canonical and
+  published helper expression members through
+  `resolveCanonicalKeyValueHelperExprMemberName` and
+  `resolvePublishedKeyValueHelperExprMemberName`, with the stdlib ownership
+  source lock rejecting the old map-helper names.
+
 ### exact-stdlib-vector-import-covers-helper-surface
 - Updated: 2026-04-19
 - Tags: semantics, imports, collections

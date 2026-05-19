@@ -278,16 +278,18 @@ bool resolveStdlibSurfaceExprMemberNameLocal(const Expr &expr,
   return false;
 }
 
-bool resolveCanonicalMapHelperExprMemberName(const Expr &expr,
-                                             std::string &memberNameOut) {
+bool resolveCanonicalKeyValueHelperExprMemberName(
+    const Expr &expr,
+    std::string &memberNameOut) {
   const auto *metadata = keyValueHelperSurfaceMetadataLocal();
   return metadata != nullptr &&
          resolveStdlibSurfaceExprMemberNameLocal(
              expr, *metadata, true, memberNameOut);
 }
 
-bool resolvePublishedMapHelperExprMemberName(const Expr &expr,
-                                             std::string &memberNameOut) {
+bool resolvePublishedKeyValueHelperExprMemberName(
+    const Expr &expr,
+    std::string &memberNameOut) {
   const auto *metadata = keyValueHelperSurfaceMetadataLocal();
   return metadata != nullptr &&
          resolveStdlibSurfaceExprMemberNameLocal(
@@ -452,7 +454,7 @@ bool getBuiltinArrayAccessNameLocal(const Expr &expr, std::string &out) {
   if (resolvePublishedVectorHelperExprMemberName(expr, out)) {
     return out == "at" || out == "at_unsafe";
   }
-  if (resolveCanonicalMapHelperExprMemberName(expr, out)) {
+  if (resolveCanonicalKeyValueHelperExprMemberName(expr, out)) {
     return isCanonicalMapAccessHelperName(out);
   }
   std::string scopedName = resolvedPath;
@@ -628,7 +630,7 @@ bool isSimpleCallName(const Expr &expr, const char *nameToMatch) {
   if (resolvePublishedVectorHelperExprMemberName(expr, helperName)) {
     return helperName == targetName;
   }
-  if (resolveCanonicalMapHelperExprMemberName(expr, helperName)) {
+  if (resolveCanonicalKeyValueHelperExprMemberName(expr, helperName)) {
     return (helperName == "count" || helperName == "at" ||
             helperName == "at_unsafe") &&
            helperName == targetName;
@@ -909,7 +911,7 @@ bool getBuiltinCollectionName(const Expr &expr, std::string &out) {
       return false;
     }
     std::string helperName;
-    return resolveCanonicalMapHelperExprMemberName(candidate, helperName) &&
+    return resolveCanonicalKeyValueHelperExprMemberName(candidate, helperName) &&
            helperName == "entry";
   };
   const bool hasEntryCtorArgs = [&]() {
@@ -942,7 +944,7 @@ bool getBuiltinCollectionName(const Expr &expr, std::string &out) {
       resolvePublishedVectorConstructorExprMemberName(expr, helperName)) {
     return false;
   }
-  if (resolveCanonicalMapHelperExprMemberName(expr, helperName)) {
+  if (resolveCanonicalKeyValueHelperExprMemberName(expr, helperName)) {
     return false;
   }
   if (scopedName.rfind("std/collections/internal_soa_storage/", 0) == 0) {
@@ -953,7 +955,7 @@ bool getBuiltinCollectionName(const Expr &expr, std::string &out) {
     }
     return false;
   }
-  if (resolvePublishedMapHelperExprMemberName(expr, helperName)) {
+  if (resolvePublishedKeyValueHelperExprMemberName(expr, helperName)) {
     return false;
   }
   if (rawName.find('/') != std::string::npos) {

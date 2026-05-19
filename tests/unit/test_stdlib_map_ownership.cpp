@@ -2431,7 +2431,13 @@ TEST_CASE("canonical map surface owns standalone stdlib implementation") {
         std::string::npos);
   CHECK(emitterCallPathHelpersSource.find("mapConstructorAliasToken()") ==
         std::string::npos);
-  CHECK(emitterCallPathHelpersSource.find("resolveCanonicalMapHelperExprMemberName") !=
+  CHECK(emitterCallPathHelpersSource.find("resolveCanonicalMapHelperExprMemberName") ==
+        std::string::npos);
+  CHECK(emitterCallPathHelpersSource.find("resolvePublishedMapHelperExprMemberName") ==
+        std::string::npos);
+  CHECK(emitterCallPathHelpersSource.find("resolveCanonicalKeyValueHelperExprMemberName") !=
+        std::string::npos);
+  CHECK(emitterCallPathHelpersSource.find("resolvePublishedKeyValueHelperExprMemberName") !=
         std::string::npos);
   CHECK(emitterReturnInferenceCollectionsSource.find("const std::string mapAlias = \"/map/\" + suffix") ==
         std::string::npos);
