@@ -2416,6 +2416,26 @@ TEST_CASE("canonical map surface owns standalone stdlib implementation") {
         std::string::npos);
   CHECK(lateMapAccessBuiltinsSource.find("receiverIsExperimentalKeyValue") !=
         std::string::npos);
+  CHECK(lateMapAccessBuiltinsSource.find("isLocalRootMapAliasCall") ==
+        std::string::npos);
+  CHECK(lateMapAccessBuiltinsSource.find("isLocalRootKeyValueAliasCall") !=
+        std::string::npos);
+  CHECK(lateMapAccessBuiltinsSource.find("isMapLikeReceiver(") ==
+        std::string::npos);
+  CHECK(lateMapAccessBuiltinsSource.find("isKeyValueLikeReceiver(") !=
+        std::string::npos);
+  CHECK(lateMapAccessBuiltinsSource.find("rootMapConstructorKeyType") ==
+        std::string::npos);
+  CHECK(lateMapAccessBuiltinsSource.find("rootKeyValueConstructorKeyType") !=
+        std::string::npos);
+  CHECK(lateMapAccessBuiltinsSource.find("ignoredRootMapKeyType") ==
+        std::string::npos);
+  CHECK(lateMapAccessBuiltinsSource.find("ignoredRootKeyValueKeyType") !=
+        std::string::npos);
+  CHECK(lateMapAccessBuiltinsSource.find("resolveMapKeyTypeWithInference") ==
+        std::string::npos);
+  CHECK(lateMapAccessBuiltinsSource.find("resolveKeyValueKeyTypeWithInference") !=
+        std::string::npos);
   CHECK(lateMapAccessBuiltinsSource.find("failLateKeyValueAccessDiagnostic") !=
         std::string::npos);
   CHECK(lateMapAccessBuiltinsSource.find("failLateKeyValueAccessKeyMismatch") !=

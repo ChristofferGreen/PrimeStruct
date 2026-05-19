@@ -219,7 +219,7 @@ bool SemanticsValidator::validateExprLateMapAccessBuiltins(
     const std::string path = canonicalKeyValueHelperPathLocal(helperName);
     return hasImportedDefinitionPath(path) || hasDeclaredDefinitionPath(path);
   };
-  auto isLocalRootMapAliasCall = [&](const Expr &candidate) {
+  auto isLocalRootKeyValueAliasCall = [&](const Expr &candidate) {
     if (candidate.kind != Expr::Kind::Call || candidate.isMethodCall ||
         !hasDeclaredDefinitionPath("/map")) {
       return false;
@@ -228,13 +228,13 @@ bool SemanticsValidator::validateExprLateMapAccessBuiltins(
     return resolvedCandidate == "/map" ||
            resolvedCandidate.rfind("/map__", 0) == 0;
   };
-  auto isMapLikeReceiver = [&](const Expr &candidate) {
-    return !isLocalRootMapAliasCall(candidate) &&
+  auto isKeyValueLikeReceiver = [&](const Expr &candidate) {
+    return !isLocalRootKeyValueAliasCall(candidate) &&
            this->isMapLikeBareAccessReceiver(candidate, params, locals,
                                              *context.dispatchResolvers);
   };
-  auto rootMapConstructorKeyType = [&](const Expr &candidate,
-                                       std::string &keyTypeOut) {
+  auto rootKeyValueConstructorKeyType = [&](const Expr &candidate,
+                                            std::string &keyTypeOut) {
     keyTypeOut.clear();
     if (candidate.kind != Expr::Kind::Call || candidate.isMethodCall ||
         candidate.name.empty() || candidate.templateArgs.size() != 2) {
@@ -263,7 +263,7 @@ bool SemanticsValidator::validateExprLateMapAccessBuiltins(
   std::string builtinName;
   auto isExperimentalKeyValueReceiver = [&](const Expr &receiverExpr) {
     std::string ignoredKeyType;
-    if (rootMapConstructorKeyType(receiverExpr, ignoredKeyType)) {
+    if (rootKeyValueConstructorKeyType(receiverExpr, ignoredKeyType)) {
       return false;
     }
     std::string receiverTypeText;
@@ -284,8 +284,8 @@ bool SemanticsValidator::validateExprLateMapAccessBuiltins(
   if (!expr.isMethodCall &&
       getCanonicalKeyValueAccessBuiltinName(expr, builtinName) &&
       expr.args.size() == 2 && !hasNamedArguments(expr.argNames)) {
-    if (!isMapLikeReceiver(expr.args.front()) &&
-        isMapLikeReceiver(expr.args[1])) {
+    if (!isKeyValueLikeReceiver(expr.args.front()) &&
+        isKeyValueLikeReceiver(expr.args[1])) {
       Expr rewrittenKeyValueAccessCall = expr;
       std::swap(rewrittenKeyValueAccessCall.args[0],
                 rewrittenKeyValueAccessCall.args[1]);
@@ -336,7 +336,7 @@ bool SemanticsValidator::validateExprLateMapAccessBuiltins(
     }
   }
 
-  auto resolveMapKeyTypeWithInference =
+  auto resolveKeyValueKeyTypeWithInference =
       [&](const Expr &receiverExpr, std::string &keyValueKeyTypeOut) {
         if (this->resolveMapKeyType(receiverExpr, *context.dispatchResolvers,
                                     keyValueKeyTypeOut)) {
@@ -354,7 +354,7 @@ bool SemanticsValidator::validateExprLateMapAccessBuiltins(
   if (!expr.isMethodCall && isSimpleCallName(expr, "contains") &&
       expr.args.size() == 2 &&
       (context.shouldBuiltinValidateBareKeyValueContainsCall ||
-       isMapLikeReceiver(
+       isKeyValueLikeReceiver(
            expr.args[this->keyValueHelperReceiverIndex(expr, *context.dispatchResolvers)]) ||
        this->isIndexedArgsPackKeyValueReceiverTarget(
            expr.args.front(), *context.dispatchResolvers))) {
@@ -372,7 +372,7 @@ bool SemanticsValidator::validateExprLateMapAccessBuiltins(
     const Expr &keyExpr =
         hasBareKeyValueOperands ? expr.args[keyIndex] : expr.args[1];
     std::string keyValueKeyType;
-    if (!resolveMapKeyTypeWithInference(receiverExpr, keyValueKeyType)) {
+    if (!resolveKeyValueKeyTypeWithInference(receiverExpr, keyValueKeyType)) {
       if (!validateExpr(params, locals, receiverExpr)) {
         return false;
       }
@@ -419,7 +419,7 @@ bool SemanticsValidator::validateExprLateMapAccessBuiltins(
       expr.args.size() == 2 &&
       (expr.isMethodCall || !hasDeclaredDefinitionPath(resolved)) &&
       (context.shouldBuiltinValidateBareKeyValueTryAtCall ||
-       isMapLikeReceiver(
+       isKeyValueLikeReceiver(
            expr.args[this->keyValueHelperReceiverIndex(expr, *context.dispatchResolvers)]) ||
        this->isIndexedArgsPackKeyValueReceiverTarget(
            expr.args[this->keyValueHelperReceiverIndex(expr, *context.dispatchResolvers)],
@@ -452,7 +452,7 @@ bool SemanticsValidator::validateExprLateMapAccessBuiltins(
                                                        : "tryAt"));
     }
     std::string keyValueKeyType;
-    if (!resolveMapKeyTypeWithInference(receiverExpr, keyValueKeyType)) {
+    if (!resolveKeyValueKeyTypeWithInference(receiverExpr, keyValueKeyType)) {
       if (!validateExpr(params, locals, receiverExpr)) {
         return false;
       }
@@ -494,17 +494,17 @@ bool SemanticsValidator::validateExprLateMapAccessBuiltins(
     const auto it = defMap_.find(path);
     return it != defMap_.end() && it->second != nullptr;
   };
-  std::string ignoredRootMapKeyType;
+  std::string ignoredRootKeyValueKeyType;
   if (!expr.isMethodCall &&
       getCanonicalKeyValueAccessBuiltinName(expr, builtinName) &&
       expr.args.size() == 2 &&
       !hasResolvedDefinition(resolved) &&
       (context.shouldBuiltinValidateBareKeyValueAccessCall ||
-       isMapLikeReceiver(
+       isKeyValueLikeReceiver(
            expr.args[this->keyValueHelperReceiverIndex(expr, *context.dispatchResolvers)]) ||
-       rootMapConstructorKeyType(
+       rootKeyValueConstructorKeyType(
            expr.args[this->keyValueHelperReceiverIndex(expr, *context.dispatchResolvers)],
-           ignoredRootMapKeyType) ||
+           ignoredRootKeyValueKeyType) ||
        this->isIndexedArgsPackKeyValueReceiverTarget(
            expr.args[this->keyValueHelperReceiverIndex(expr, *context.dispatchResolvers)],
            *context.dispatchResolvers))) {
@@ -523,8 +523,8 @@ bool SemanticsValidator::validateExprLateMapAccessBuiltins(
           "unknown call target: " + canonicalKeyValueHelperPathLocal(builtinName));
     }
     std::string keyValueKeyType;
-    if (rootMapConstructorKeyType(receiverExpr, keyValueKeyType) ||
-        resolveMapKeyTypeWithInference(receiverExpr, keyValueKeyType)) {
+    if (rootKeyValueConstructorKeyType(receiverExpr, keyValueKeyType) ||
+        resolveKeyValueKeyTypeWithInference(receiverExpr, keyValueKeyType)) {
       if (!keyValueKeyType.empty()) {
         if (normalizeBindingTypeName(keyValueKeyType) == "string") {
           if (!this->isStringExprForArgumentValidation(keyExpr,
@@ -570,7 +570,7 @@ bool SemanticsValidator::validateExprLateMapAccessBuiltins(
     std::string receiverTypeText;
     std::string keyValueKeyType;
     std::string keyValueValueType;
-    if (rootMapConstructorKeyType(receiverExpr, keyValueKeyType) ||
+    if (rootKeyValueConstructorKeyType(receiverExpr, keyValueKeyType) ||
         (inferQueryExprTypeText(receiverExpr, params, locals, receiverTypeText) &&
          extractMapKeyValueTypesFromTypeText(receiverTypeText, keyValueKeyType,
                                             keyValueValueType))) {
