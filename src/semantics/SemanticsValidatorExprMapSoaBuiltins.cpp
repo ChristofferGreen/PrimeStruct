@@ -163,8 +163,8 @@ bool SemanticsValidator::validateExprMapSoaBuiltins(
     }
     return true;
   };
-  auto validateMapContainsKeyExpr = [&](const Expr &keyExpr,
-                                        const std::string &keyValueKeyType) -> bool {
+  auto validateKeyValueContainsKeyExpr = [&](const Expr &keyExpr,
+                                             const std::string &keyValueKeyType) -> bool {
     if (keyValueKeyType.empty()) {
       return true;
     }
@@ -344,7 +344,7 @@ bool SemanticsValidator::validateExprMapSoaBuiltins(
       }
       return failKeyValueSoaBuiltinDiagnostic(helperName + " requires map target");
     }
-    if (!validateMapContainsKeyExpr(keyExpr, keyValueKeyType)) {
+    if (!validateKeyValueContainsKeyExpr(keyExpr, keyValueKeyType)) {
       return false;
     }
     if (!validateExpr(params, locals, expr.args.front()) ||
