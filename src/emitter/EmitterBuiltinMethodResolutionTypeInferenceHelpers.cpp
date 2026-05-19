@@ -275,7 +275,7 @@ std::string inferMethodResolutionPrimitiveTypeName(
     if (!normalized.empty() && normalized.front() == '/') {
       normalized.erase(normalized.begin());
     }
-    if (!isCanonicalMapAccessHelperName(normalized)) {
+    if (!isCanonicalKeyValueAccessHelperName(normalized)) {
       return false;
     }
     if (normalized.find('/') != std::string::npos) {
@@ -309,7 +309,7 @@ std::string inferMethodResolutionPrimitiveTypeName(
     const std::string normalized = resolvedCollectionHelperName(candidate);
     std::string helperName;
     if (!isKeyValueImportAliasHelperMemberPath(normalized, helperName) ||
-        !isCanonicalMapAccessHelperName(helperName)) {
+        !isCanonicalKeyValueAccessHelperName(helperName)) {
       return false;
     }
     if (view.defMap.find(rootedHelperPath(normalized)) != view.defMap.end()) {
@@ -395,7 +395,7 @@ std::string inferMethodResolutionPrimitiveTypeName(
     const std::string normalized = resolvedCollectionHelperName(candidate);
     std::string helperName;
     if (!isCanonicalKeyValueHelperMemberPath(normalized, helperName) ||
-        !isCanonicalMapAccessHelperName(helperName)) {
+        !isCanonicalKeyValueAccessHelperName(helperName)) {
       return "";
     }
     const std::string resolvedExprPath = resolveExprPath(candidate);
@@ -429,7 +429,7 @@ std::string inferMethodResolutionPrimitiveTypeName(
     const std::string normalized = resolvedCollectionHelperName(candidate);
     std::string helperName;
     if (!isCanonicalKeyValueHelperMemberPath(normalized, helperName) ||
-        !isCanonicalMapAccessHelperName(helperName)) {
+        !isCanonicalKeyValueAccessHelperName(helperName)) {
       return "";
     }
     const size_t receiverIndex = getAccessCallReceiverIndex(candidate, localTypes);

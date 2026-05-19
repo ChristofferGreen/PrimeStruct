@@ -59,7 +59,7 @@
     return memberName;
   };
   auto isCollectionTypeKeyValueAccessHelper = [](std::string_view memberName) {
-    return isCanonicalMapAccessHelperName(memberName);
+    return isCanonicalKeyValueAccessHelperName(memberName);
   };
   auto explicitVectorAccessResolvedTypePath = [&](const Expr &candidate) -> std::string {
     if (candidate.kind != Expr::Kind::Call || candidate.isMethodCall || candidate.name.empty()) {
@@ -287,7 +287,7 @@
     if (!normalized.empty() && normalized.front() == '/') {
       normalized.erase(normalized.begin());
     }
-    if (!isCanonicalMapAccessHelperName(normalized)) {
+    if (!isCanonicalKeyValueAccessHelperName(normalized)) {
       return "";
     }
     const Expr &receiver = candidate.args.front();
@@ -314,7 +314,7 @@
     if (!normalized.empty() && normalized.front() == '/') {
       normalized.erase(normalized.begin());
     }
-    return isCanonicalMapAccessHelperPath(normalized);
+    return isCanonicalKeyValueAccessHelperPath(normalized);
   };
   auto resolvedTypePathForTarget = [&](const Expr &targetExpr) -> std::string {
     if (isStringValue(targetExpr, localTypes)) {

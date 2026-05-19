@@ -2441,6 +2441,10 @@ TEST_CASE("canonical map surface owns standalone stdlib implementation") {
         std::string::npos);
   CHECK(emitterCallPathHelpersSource.find("resolvePublishedKeyValueHelperExprMemberName") !=
         std::string::npos);
+  CHECK(emitterCallPathHelpersSource.find("isCanonicalMapAccessHelperName(") ==
+        std::string::npos);
+  CHECK(emitterCallPathHelpersSource.find("isCanonicalKeyValueAccessHelperName(") !=
+        std::string::npos);
   CHECK(emitterReturnInferenceCollectionsSource.find("const std::string mapAlias = \"/map/\" + suffix") ==
         std::string::npos);
   CHECK(emitterReturnInferenceCollectionsSource.find("preferred.rfind(\"/map/\", 0) == 0 && defMap.count(preferred) == 0") ==
@@ -3087,6 +3091,10 @@ TEST_CASE("canonical map surface owns standalone stdlib implementation") {
         std::string::npos);
   CHECK(emitterMethodTypeInferenceSource.find("mapHelperMemberNameFromPath(") ==
         std::string::npos);
+  CHECK(emitterMethodTypeInferenceSource.find("isCanonicalMapAccessHelperName(") ==
+        std::string::npos);
+  CHECK(emitterMethodTypeInferenceSource.find("isCanonicalKeyValueAccessHelperName(") !=
+        std::string::npos);
   CHECK(emitterHelpersSource.find("isCanonicalMapHelperName(") ==
         std::string::npos);
   CHECK(emitterHelpersSource.find("mapHelperNameFromPath(") ==
@@ -3098,6 +3106,14 @@ TEST_CASE("canonical map surface owns standalone stdlib implementation") {
   CHECK(emitterHelpersSource.find("keyValueHelperNameFromPath(") !=
         std::string::npos);
   CHECK(emitterHelpersSource.find("isCanonicalKeyValueHelperPath(") !=
+        std::string::npos);
+  CHECK(emitterHelpersSource.find("isCanonicalMapAccessHelperName(") ==
+        std::string::npos);
+  CHECK(emitterHelpersSource.find("isCanonicalMapAccessHelperPath(") ==
+        std::string::npos);
+  CHECK(emitterHelpersSource.find("isCanonicalKeyValueAccessHelperName(") !=
+        std::string::npos);
+  CHECK(emitterHelpersSource.find("isCanonicalKeyValueAccessHelperPath(") !=
         std::string::npos);
   CHECK(emitterHelpersTypesSource.find("base += \"map/Map\"") == std::string::npos);
   CHECK(emitterHelpersTypesSource.find("experimentalCollectionTypePathLocal(\"map\", \"Map\"") !=

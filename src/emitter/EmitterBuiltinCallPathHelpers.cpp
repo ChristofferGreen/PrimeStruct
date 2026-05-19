@@ -455,7 +455,7 @@ bool getBuiltinArrayAccessNameLocal(const Expr &expr, std::string &out) {
     return out == "at" || out == "at_unsafe";
   }
   if (resolveCanonicalKeyValueHelperExprMemberName(expr, out)) {
-    return isCanonicalMapAccessHelperName(out);
+    return isCanonicalKeyValueAccessHelperName(out);
   }
   std::string scopedName = resolvedPath;
   if (!scopedName.empty() && scopedName[0] == '/') {
@@ -489,7 +489,7 @@ bool getBuiltinArrayAccessNameLocal(const Expr &expr, std::string &out) {
     out.clear();
     return false;
   }
-  if (isCanonicalMapAccessHelperName(name)) {
+  if (isCanonicalKeyValueAccessHelperName(name)) {
     out = name;
     return true;
   }
