@@ -134,7 +134,7 @@ bool isCanonicalMapBuiltinMethodHelper(std::string_view helperName) {
          helperName == "insert";
 }
 
-std::string experimentalMapBackingLeafForMethodTargets(std::string typeName) {
+std::string experimentalKeyValueBackingLeafForMethodTargets(std::string typeName) {
   typeName = normalizeBindingTypeName(std::move(typeName));
   if (!typeName.empty() && typeName.front() == '/') {
     typeName.erase(typeName.begin());
@@ -143,21 +143,21 @@ std::string experimentalMapBackingLeafForMethodTargets(std::string typeName) {
   return leafStart == std::string::npos ? typeName : typeName.substr(leafStart + 1);
 }
 
-bool isUnspecializedExperimentalMapBackingTypeForMethodTargets(std::string typeName) {
+bool isUnspecializedExperimentalKeyValueBackingTypeForMethodTargets(std::string typeName) {
   typeName = normalizeBindingTypeName(std::move(typeName));
   if (!typeName.empty() && typeName.front() == '/') {
     typeName.erase(typeName.begin());
   }
-  return experimentalMapBackingLeafForMethodTargets(typeName) == "Map" &&
+  return experimentalKeyValueBackingLeafForMethodTargets(typeName) == "Map" &&
          isExperimentalCollectionBackingTypeName("map", "Map", typeName);
 }
 
-bool isSpecializedExperimentalMapBackingTypeForMethodTargets(std::string typeName) {
+bool isSpecializedExperimentalKeyValueBackingTypeForMethodTargets(std::string typeName) {
   typeName = normalizeBindingTypeName(std::move(typeName));
   if (!typeName.empty() && typeName.front() == '/') {
     typeName.erase(typeName.begin());
   }
-  return experimentalMapBackingLeafForMethodTargets(typeName) != "Map" &&
+  return experimentalKeyValueBackingLeafForMethodTargets(typeName) != "Map" &&
          isExperimentalCollectionBackingTypeName("map", "Map", typeName);
 }
 
@@ -1479,7 +1479,7 @@ bool SemanticsValidator::resolveMethodTarget(const std::vector<ParameterInfo> &p
             normalizedType = normalizeBindingTypeName(args.front());
             continue;
           }
-          if (isUnspecializedExperimentalMapBackingTypeForMethodTargets(base)) {
+          if (isUnspecializedExperimentalKeyValueBackingTypeForMethodTargets(base)) {
             std::vector<std::string> args;
             if (!splitTopLevelTemplateArgs(argText, args) || args.size() != 2) {
               return false;
@@ -1498,7 +1498,7 @@ bool SemanticsValidator::resolveMethodTarget(const std::vector<ParameterInfo> &p
         if (!normalizedResolvedPath.empty() && normalizedResolvedPath.front() == '/') {
           normalizedResolvedPath.erase(normalizedResolvedPath.begin());
         }
-        if (!isSpecializedExperimentalMapBackingTypeForMethodTargets(
+        if (!isSpecializedExperimentalKeyValueBackingTypeForMethodTargets(
                 normalizedResolvedPath)) {
           return false;
         }
@@ -3323,7 +3323,7 @@ bool SemanticsValidator::resolveMethodTarget(const std::vector<ParameterInfo> &p
         normalizedStruct.insert(normalizedStruct.begin(), '/');
       }
       if (normalizedStruct == "/map" ||
-          isSpecializedExperimentalMapBackingTypeForMethodTargets(normalizedStruct)) {
+          isSpecializedExperimentalKeyValueBackingTypeForMethodTargets(normalizedStruct)) {
         typeName = "/map";
       } else {
         typeName = inferredStruct;

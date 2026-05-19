@@ -887,6 +887,23 @@ TEST_CASE("canonical map surface owns standalone stdlib implementation") {
         std::string::npos);
   CHECK(methodTargetResolutionSource.find("extractAnyKeyValueTypes") !=
         std::string::npos);
+  CHECK(methodTargetResolutionSource.find(
+            "experimentalMapBackingLeafForMethodTargets") == std::string::npos);
+  CHECK(methodTargetResolutionSource.find(
+            "experimentalKeyValueBackingLeafForMethodTargets") !=
+        std::string::npos);
+  CHECK(methodTargetResolutionSource.find(
+            "isUnspecializedExperimentalMapBackingTypeForMethodTargets") ==
+        std::string::npos);
+  CHECK(methodTargetResolutionSource.find(
+            "isSpecializedExperimentalMapBackingTypeForMethodTargets") ==
+        std::string::npos);
+  CHECK(methodTargetResolutionSource.find(
+            "isUnspecializedExperimentalKeyValueBackingTypeForMethodTargets") !=
+        std::string::npos);
+  CHECK(methodTargetResolutionSource.find(
+            "isSpecializedExperimentalKeyValueBackingTypeForMethodTargets") !=
+        std::string::npos);
   CHECK(methodTargetResolutionSource.find("resolveMapValueType") ==
         std::string::npos);
   CHECK(methodTargetResolutionSource.find("resolveKeyValueValueType") !=
