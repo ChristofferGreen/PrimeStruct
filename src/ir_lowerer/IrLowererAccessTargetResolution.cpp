@@ -141,7 +141,7 @@ std::string forwardedEmptyKeyValueConstructorMemberName() {
   return std::string("map") + std::string("New");
 }
 
-std::string mapKindTypeName(LocalInfo::ValueKind kind) {
+std::string keyValueKindTypeName(LocalInfo::ValueKind kind) {
   switch (kind) {
   case LocalInfo::ValueKind::Int32:
     return "i32";
@@ -162,10 +162,10 @@ std::string mapKindTypeName(LocalInfo::ValueKind kind) {
   }
 }
 
-std::string inferExperimentalMapStructPathFromKinds(LocalInfo::ValueKind keyKind,
+std::string inferExperimentalKeyValueStructPathFromKinds(LocalInfo::ValueKind keyKind,
                                                     LocalInfo::ValueKind valueKind) {
-  const std::string keyType = mapKindTypeName(keyKind);
-  const std::string valueType = mapKindTypeName(valueKind);
+  const std::string keyType = keyValueKindTypeName(keyKind);
+  const std::string valueType = keyValueKindTypeName(valueKind);
   if (keyType.empty() || valueType.empty()) {
     return "";
   }
@@ -288,7 +288,7 @@ bool classifySemanticKeyValueAccessTypeText(const std::string &typeText,
   targetInfoOut.keyValueValueKind = valueKindFromTypeName(trimTemplateTypeText(keyValueArgs.back()));
   targetInfoOut.isWrappedKeyValueTarget = isWrappedKeyValue;
   targetInfoOut.structTypeName =
-      inferExperimentalMapStructPathFromKinds(targetInfoOut.keyValueKeyKind,
+      inferExperimentalKeyValueStructPathFromKinds(targetInfoOut.keyValueKeyKind,
                                               targetInfoOut.keyValueValueKind);
   return true;
 }
@@ -407,7 +407,7 @@ bool resolveSemanticKeyValueAccessTargetInfo(
         semanticProgram, collectionFact->valueTypeText, collectionFact->valueTypeTextId));
     targetInfoOut.isWrappedKeyValueTarget = collectionFact->isReference || collectionFact->isPointer;
     targetInfoOut.structTypeName =
-        inferExperimentalMapStructPathFromKinds(targetInfoOut.keyValueKeyKind,
+        inferExperimentalKeyValueStructPathFromKinds(targetInfoOut.keyValueKeyKind,
                                                 targetInfoOut.keyValueValueKind);
     return true;
   }
@@ -588,7 +588,7 @@ bool inferDirectKeyValueConstructorTargetInfo(const Expr &target, KeyValueAccess
     info.keyValueKeyKind = valueKindFromTypeName(target.templateArgs[0]);
     info.keyValueValueKind = valueKindFromTypeName(target.templateArgs[1]);
     info.structTypeName =
-        inferExperimentalMapStructPathFromKinds(info.keyValueKeyKind, info.keyValueValueKind);
+        inferExperimentalKeyValueStructPathFromKinds(info.keyValueKeyKind, info.keyValueValueKind);
     return true;
   }
 
@@ -621,7 +621,7 @@ bool inferDirectKeyValueConstructorTargetInfo(const Expr &target, KeyValueAccess
   info.keyValueKeyKind = keyKind;
   info.keyValueValueKind = valueKind;
   info.structTypeName =
-      inferExperimentalMapStructPathFromKinds(info.keyValueKeyKind, info.keyValueValueKind);
+      inferExperimentalKeyValueStructPathFromKinds(info.keyValueKeyKind, info.keyValueValueKind);
   return true;
 }
 
@@ -704,23 +704,23 @@ KeyValueAccessTargetInfo resolveKeyValueAccessTargetInfo(
         !inferredWrappedKeyValue) {
       return false;
     }
-    auto resolvedExperimentalMapStructPath = [&](const std::string &structTypeName) {
-      const std::string experimentalMapType =
+    auto resolvedExperimentalKeyValueStructPath = [&](const std::string &structTypeName) {
+      const std::string experimentalKeyValueType =
           experimentalCollectionTypePath("map", "Map", false);
-      const std::string rootedExperimentalMapType =
+      const std::string rootedExperimentalKeyValueType =
           experimentalCollectionTypePath("map", "Map");
       if (structTypeName.empty()) {
         const std::string specialized =
-            inferExperimentalMapStructPathFromKinds(localInfo.keyValueKeyKind,
+            inferExperimentalKeyValueStructPathFromKinds(localInfo.keyValueKeyKind,
                                                     localInfo.keyValueValueKind);
         if (!specialized.empty()) {
           return specialized;
         }
       }
-      if (structTypeName == experimentalMapType ||
-          structTypeName == rootedExperimentalMapType) {
+      if (structTypeName == experimentalKeyValueType ||
+          structTypeName == rootedExperimentalKeyValueType) {
         const std::string specialized =
-            inferExperimentalMapStructPathFromKinds(localInfo.keyValueKeyKind,
+            inferExperimentalKeyValueStructPathFromKinds(localInfo.keyValueKeyKind,
                                                     localInfo.keyValueValueKind);
         if (!specialized.empty()) {
           return specialized;
@@ -736,13 +736,13 @@ KeyValueAccessTargetInfo resolveKeyValueAccessTargetInfo(
         (localInfo.kind == LocalInfo::Kind::Pointer && localInfo.pointerToKeyValueCollection) ||
         inferredWrappedKeyValue;
     info.isWrappedKeyValueTarget = isWrappedKeyValue && !dereferenced;
-    const bool isDirectMapStorage = localInfo.kind == LocalInfo::Kind::KeyValueCollection;
+    const bool isDirectKeyValueStorage = localInfo.kind == LocalInfo::Kind::KeyValueCollection;
     const std::string resolvedStructTypeName =
-        resolvedExperimentalMapStructPath(localInfo.structTypeName);
-    const bool preserveDirectExperimentalMapStruct =
-        isDirectMapStorage && isExperimentalMapStructTypePath(resolvedStructTypeName);
+        resolvedExperimentalKeyValueStructPath(localInfo.structTypeName);
+    const bool preserveDirectExperimentalKeyValueStruct =
+        isDirectKeyValueStorage && isExperimentalMapStructTypePath(resolvedStructTypeName);
     if (((!info.isWrappedKeyValueTarget || dereferenced) &&
-         (!isDirectMapStorage || preserveDirectExperimentalMapStruct)) ||
+         (!isDirectKeyValueStorage || preserveDirectExperimentalKeyValueStruct)) ||
         (info.isWrappedKeyValueTarget && isExperimentalMapStructTypePath(resolvedStructTypeName))) {
       info.structTypeName = resolvedStructTypeName;
     }
@@ -752,23 +752,23 @@ KeyValueAccessTargetInfo resolveKeyValueAccessTargetInfo(
     if (!localInfo.isArgsPack) {
       return false;
     }
-    auto resolvedExperimentalMapStructPath = [&](const std::string &structTypeName) {
-      const std::string experimentalMapType =
+    auto resolvedExperimentalKeyValueStructPath = [&](const std::string &structTypeName) {
+      const std::string experimentalKeyValueType =
           experimentalCollectionTypePath("map", "Map", false);
-      const std::string rootedExperimentalMapType =
+      const std::string rootedExperimentalKeyValueType =
           experimentalCollectionTypePath("map", "Map");
       if (structTypeName.empty()) {
         const std::string specialized =
-            inferExperimentalMapStructPathFromKinds(localInfo.keyValueKeyKind,
+            inferExperimentalKeyValueStructPathFromKinds(localInfo.keyValueKeyKind,
                                                     localInfo.keyValueValueKind);
         if (!specialized.empty()) {
           return specialized;
         }
       }
-      if (structTypeName == experimentalMapType ||
-          structTypeName == rootedExperimentalMapType) {
+      if (structTypeName == experimentalKeyValueType ||
+          structTypeName == rootedExperimentalKeyValueType) {
         const std::string specialized =
-            inferExperimentalMapStructPathFromKinds(localInfo.keyValueKeyKind,
+            inferExperimentalKeyValueStructPathFromKinds(localInfo.keyValueKeyKind,
                                                     localInfo.keyValueValueKind);
         if (!specialized.empty()) {
           return specialized;
@@ -776,28 +776,28 @@ KeyValueAccessTargetInfo resolveKeyValueAccessTargetInfo(
       }
       return structTypeName;
     };
-    const bool isDirectMap = localInfo.argsPackElementKind == LocalInfo::Kind::KeyValueCollection;
+    const bool isDirectKeyValue = localInfo.argsPackElementKind == LocalInfo::Kind::KeyValueCollection;
     const bool inferredWrappedKeyValue =
         hasInferredTypedWrappedKeyValue(localInfo, localInfo.argsPackElementKind);
     const bool isWrappedKeyValue =
         (localInfo.argsPackElementKind == LocalInfo::Kind::Reference && localInfo.referenceToKeyValueCollection) ||
         (localInfo.argsPackElementKind == LocalInfo::Kind::Pointer && localInfo.pointerToKeyValueCollection) ||
         inferredWrappedKeyValue;
-    if (!isDirectMap && !isWrappedKeyValue) {
+    if (!isDirectKeyValue && !isWrappedKeyValue) {
       return false;
     }
     info.isKeyValueTarget = true;
     info.keyValueKeyKind = localInfo.keyValueKeyKind;
     info.keyValueValueKind = localInfo.keyValueValueKind;
     info.isWrappedKeyValueTarget = isWrappedKeyValue && !dereferenced;
-    const bool isDirectMapStorage =
+    const bool isDirectKeyValueStorage =
         localInfo.argsPackElementKind == LocalInfo::Kind::KeyValueCollection;
     const std::string resolvedStructTypeName =
-        resolvedExperimentalMapStructPath(localInfo.structTypeName);
-    const bool preserveDirectExperimentalMapStruct =
-        isDirectMapStorage && isExperimentalMapStructTypePath(resolvedStructTypeName);
+        resolvedExperimentalKeyValueStructPath(localInfo.structTypeName);
+    const bool preserveDirectExperimentalKeyValueStruct =
+        isDirectKeyValueStorage && isExperimentalMapStructTypePath(resolvedStructTypeName);
     if (((!info.isWrappedKeyValueTarget || dereferenced) &&
-         (!isDirectMapStorage || preserveDirectExperimentalMapStruct)) ||
+         (!isDirectKeyValueStorage || preserveDirectExperimentalKeyValueStruct)) ||
         (info.isWrappedKeyValueTarget && isExperimentalMapStructTypePath(resolvedStructTypeName))) {
       info.structTypeName = resolvedStructTypeName;
     }

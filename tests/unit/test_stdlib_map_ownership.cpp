@@ -4288,6 +4288,37 @@ TEST_CASE("canonical map surface owns standalone stdlib implementation") {
         std::string::npos);
   CHECK(accessTargetResolutionSource.find("isForwardedMapNewConstructor(") ==
         std::string::npos);
+  CHECK(accessTargetResolutionSource.find("mapKindTypeName") ==
+        std::string::npos);
+  CHECK(accessTargetResolutionSource.find("inferExperimentalMapStructPathFromKinds") ==
+        std::string::npos);
+  CHECK(accessTargetResolutionSource.find("resolvedExperimentalMapStructPath") ==
+        std::string::npos);
+  CHECK(accessTargetResolutionSource.find("experimentalMapType") ==
+        std::string::npos);
+  CHECK(accessTargetResolutionSource.find("rootedExperimentalMapType") ==
+        std::string::npos);
+  CHECK(accessTargetResolutionSource.find("isDirectMapStorage") ==
+        std::string::npos);
+  CHECK(accessTargetResolutionSource.find("preserveDirectExperimentalMapStruct") ==
+        std::string::npos);
+  CHECK(accessTargetResolutionSource.find("isDirectMap") == std::string::npos);
+  CHECK(accessTargetResolutionSource.find("keyValueKindTypeName") !=
+        std::string::npos);
+  CHECK(accessTargetResolutionSource.find(
+            "inferExperimentalKeyValueStructPathFromKinds") != std::string::npos);
+  CHECK(accessTargetResolutionSource.find(
+            "resolvedExperimentalKeyValueStructPath") != std::string::npos);
+  CHECK(accessTargetResolutionSource.find("experimentalKeyValueType") !=
+        std::string::npos);
+  CHECK(accessTargetResolutionSource.find("rootedExperimentalKeyValueType") !=
+        std::string::npos);
+  CHECK(accessTargetResolutionSource.find("isDirectKeyValueStorage") !=
+        std::string::npos);
+  CHECK(accessTargetResolutionSource.find(
+            "preserveDirectExperimentalKeyValueStruct") != std::string::npos);
+  CHECK(accessTargetResolutionSource.find("isDirectKeyValue") !=
+        std::string::npos);
   CHECK(accessTargetResolutionSource.find(
             "resolveStdlibSurfaceMemberName(*metadata, metadata->canonicalPath)") !=
         std::string::npos);
