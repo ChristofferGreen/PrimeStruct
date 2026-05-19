@@ -172,7 +172,9 @@ This file stores durable session-derived facts that are useful in later work. Ke
   backing predicates should use key/value names too; initializer inference
   specialized backing predicates should use key/value names too; initializer
   inference call specialized backing predicates should use key/value names too;
-  pre-dispatch experimental type-text predicates should use key/value names too.
+  pre-dispatch experimental type-text predicates should use key/value names too;
+  core semantics experimental type-text predicates should use key/value names
+  too.
   The stdlib ownership source lock rejects the old map-helper, map-count,
   map-access, and removed map compatibility names.
 

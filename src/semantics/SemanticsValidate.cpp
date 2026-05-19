@@ -167,7 +167,7 @@ bool runTypeResolutionSnapshot(
 
 namespace {
 
-bool isExperimentalMapTypeText(const std::string &typeText) {
+bool isExperimentalKeyValueTypeText(const std::string &typeText) {
   std::string keyType;
   std::string valueType;
   if (!semantics::extractMapKeyValueTypesFromTypeText(typeText, keyType, valueType)) {
@@ -192,7 +192,7 @@ std::optional<semantics::BindingInfo> extractBorrowedExperimentalMapBinding(cons
   for (const auto &transform : expr.transforms) {
     if (transform.name == "Reference" &&
         transform.templateArgs.size() == 1 &&
-        isExperimentalMapTypeText(transform.templateArgs.front())) {
+        isExperimentalKeyValueTypeText(transform.templateArgs.front())) {
       info.typeName = "Reference";
       info.typeTemplateArg = transform.templateArgs.front();
       return info;
@@ -216,7 +216,7 @@ bool isExperimentalMapValueBinding(const semantics::BindingInfo &binding) {
   if (normalizedType == "Reference" || normalizedType == "Pointer") {
     return false;
   }
-  return isExperimentalMapTypeText(bindingTypeText(binding));
+  return isExperimentalKeyValueTypeText(bindingTypeText(binding));
 }
 
 std::optional<semantics::BindingInfo> extractExperimentalMapBinding(const Expr &expr) {
@@ -237,7 +237,7 @@ std::optional<semantics::BindingInfo> extractExperimentalMapBinding(const Expr &
 
 bool isBorrowedExperimentalMapBinding(const semantics::BindingInfo &binding) {
   return semantics::normalizeBindingTypeName(binding.typeName) == "Reference" &&
-         isExperimentalMapTypeText(binding.typeTemplateArg);
+         isExperimentalKeyValueTypeText(binding.typeTemplateArg);
 }
 
 std::optional<semantics::BindingInfo> extractBorrowedExperimentalMapReturnBinding(
@@ -256,7 +256,7 @@ std::optional<semantics::BindingInfo> extractBorrowedExperimentalMapReturnBindin
     }
     std::vector<std::string> args;
     if (!semantics::splitTopLevelTemplateArgs(argText, args) || args.size() != 1 ||
-        !isExperimentalMapTypeText(args.front())) {
+        !isExperimentalKeyValueTypeText(args.front())) {
       continue;
     }
     semantics::BindingInfo info;
@@ -5552,7 +5552,7 @@ bool rewriteExperimentalMapValueMethods(Program &program, std::string &error) {
 }
 
 bool isBuiltinMapMutationBinding(const semantics::BindingInfo &binding) {
-  if (isExperimentalMapTypeText(bindingTypeText(binding))) {
+  if (isExperimentalKeyValueTypeText(bindingTypeText(binding))) {
     return false;
   }
   std::string keyType;
