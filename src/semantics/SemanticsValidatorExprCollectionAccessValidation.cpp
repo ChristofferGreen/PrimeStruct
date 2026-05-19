@@ -423,8 +423,8 @@ bool SemanticsValidator::validateExprCollectionAccessFallbacks(
       return failCollectionAccessDiagnostic("argument count mismatch for builtin " +
                                             builtinName);
     }
-    std::string experimentalMapKeyType;
-    std::string experimentalMapValueType;
+    std::string experimentalKeyValueKeyType;
+    std::string experimentalKeyValueValueType;
     auto isRootMapAliasPath = [](const std::string &path) {
       return path == "/map" || path.rfind("/map__", 0) == 0;
     };
@@ -442,19 +442,19 @@ bool SemanticsValidator::validateExprCollectionAccessFallbacks(
              (isRootMapAliasPath(resolveCalleePath(candidate)) ||
               isRootMapAliasPath(explicitCallPath(candidate)));
     };
-    auto resolvesNonRootExperimentalMapTarget =
+    auto resolvesNonRootExperimentalKeyValueTarget =
         [&](const Expr &candidate) {
           return !isRootMapAliasExpr(candidate) &&
                  context.resolveExperimentalMapTarget(
-                     candidate, experimentalMapKeyType,
-                     experimentalMapValueType);
+                     candidate, experimentalKeyValueKeyType,
+                     experimentalKeyValueValueType);
         };
     const bool isUnqualifiedAccessCall =
         isUnqualifiedCollectionAccessCall(expr, builtinName);
     if (isUnqualifiedAccessCall &&
         context.resolveExperimentalMapTarget != nullptr &&
-        (resolvesNonRootExperimentalMapTarget(expr.args.front()) ||
-         resolvesNonRootExperimentalMapTarget(expr.args[1]))) {
+        (resolvesNonRootExperimentalKeyValueTarget(expr.args.front()) ||
+         resolvesNonRootExperimentalKeyValueTarget(expr.args[1]))) {
       handledOut = true;
       return failCollectionAccessDiagnostic(
           "unknown call target: " + canonicalKeyValueHelperPathLocal(builtinName));
