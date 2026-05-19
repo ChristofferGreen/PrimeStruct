@@ -188,8 +188,8 @@ bool stripStdlibSurfaceRootedMemberNameLocal(std::string_view rawPath,
   return true;
 }
 
-bool resolveMapHelperMemberNameLocal(std::string rawPath,
-                                     std::string &memberNameOut) {
+bool resolveKeyValueHelperMemberNameLocal(std::string rawPath,
+                                          std::string &memberNameOut) {
   memberNameOut.clear();
   const primec::StdlibSurfaceMetadata *metadata =
       mapHelperSurfaceMetadataLocal();
@@ -629,8 +629,8 @@ bool isExplicitRemovedCollectionMethodAlias(const std::string &receiverPath, std
     return false;
   }
   std::string resolvedKeyValueHelperName;
-  if (resolveMapHelperMemberNameLocal(rawMethodName,
-                                      resolvedKeyValueHelperName)) {
+  if (resolveKeyValueHelperMemberNameLocal(rawMethodName,
+                                           resolvedKeyValueHelperName)) {
     helperName = resolvedKeyValueHelperName;
   }
   return !helperName.empty() && isRemovedKeyValueCompatibilityHelper(helperName);
@@ -816,7 +816,7 @@ bool getBuiltinCollectionName(const Expr &expr, std::string &out) {
     return false;
   }
   std::string resolvedKeyValueHelperName;
-  if (resolveMapHelperMemberNameLocal(name, resolvedKeyValueHelperName)) {
+  if (resolveKeyValueHelperMemberNameLocal(name, resolvedKeyValueHelperName)) {
     return false;
   }
   if (name.find('/') != std::string::npos) {
@@ -1213,7 +1213,7 @@ bool getBuiltinArrayAccessName(const Expr &expr, std::string &out) {
     return false;
   }
   std::string keyValueHelperName;
-  if (resolveMapHelperMemberNameLocal(name, keyValueHelperName)) {
+  if (resolveKeyValueHelperMemberNameLocal(name, keyValueHelperName)) {
     if (accessAliasFromMemberName(keyValueHelperName)) {
       return true;
     }
@@ -1270,7 +1270,7 @@ bool getNamespacedCollectionHelperName(const Expr &expr, std::string &collection
     return true;
   }
   std::string keyValueHelperName;
-  if (resolveMapHelperMemberNameLocal(normalized, keyValueHelperName)) {
+  if (resolveKeyValueHelperMemberNameLocal(normalized, keyValueHelperName)) {
     collectionOut = "map";
     helperOut = keyValueHelperName;
     return true;
