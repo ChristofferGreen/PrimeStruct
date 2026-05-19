@@ -2477,6 +2477,14 @@ TEST_CASE("canonical map surface owns standalone stdlib implementation") {
   CHECK(mapSoaBuiltinsSource.find("hasBareKeyValueOperands") !=
         std::string::npos);
   CHECK(mapSoaBuiltinsSource.find("hasBareMapOperands") == std::string::npos);
+  CHECK(mapSoaBuiltinsSource.find("failKeyValueSoaBuiltinDiagnostic") !=
+        std::string::npos);
+  CHECK(mapSoaBuiltinsSource.find("failMapSoaBuiltinDiagnostic") ==
+        std::string::npos);
+  CHECK(mapSoaBuiltinsSource.find("hasBareKeyValueContainsDefinition") !=
+        std::string::npos);
+  CHECK(mapSoaBuiltinsSource.find("hasBareMapContainsBuiltinDefinition") ==
+        std::string::npos);
   CHECK(mapSoaBuiltinsSource.find("canonicalKeyValueHelperPathLocal(") !=
         std::string::npos);
   CHECK(mapSoaBuiltinsSource.find("isCanonicalKeyValueHelperResolvedPath(") !=
