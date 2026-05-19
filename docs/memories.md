@@ -157,7 +157,8 @@ This file stores durable session-derived facts that are useful in later work. Ke
   locals, collection-helper rewrite resolution booleans, and
   collection-helper rewrite constructor-probe locals plus lowerer count-target
   booleans, uninitialized-struct inference constructor locals, and lowerer
-  struct-type key/value locals follow the same naming.
+  struct-type key/value locals plus pre-dispatch receiver diagnostics follow
+  the same naming.
 - Evidence: The release `PrimeStruct_backend_ir_tests` target rebuilt after
   the kind, field, target-info, lookup-helper, and setup-inference access
   renames, focused backend IR windows passed, and direct `rg` scans over
@@ -198,7 +199,7 @@ This file stores durable session-derived facts that are useful in later work. Ke
   locals, collection-helper rewrite resolution booleans, and
   collection-helper rewrite constructor-probe locals plus lowerer count-target
   booleans, uninitialized-struct inference constructor locals, and lowerer
-  struct-type key/value locals.
+  struct-type key/value locals plus pre-dispatch receiver diagnostics.
 
 ### map-compatibility-aliases-require-source-definitions
 - Updated: 2026-05-18

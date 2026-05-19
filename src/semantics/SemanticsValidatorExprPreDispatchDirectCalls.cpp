@@ -442,13 +442,13 @@ bool SemanticsValidator::validateExprPreDispatchDirectCalls(
         const std::string canonicalPath =
             canonicalKeyValueHelperPathLocal(helperName);
         std::string receiverTypeText;
-        const bool receiverIsExperimentalMap =
+        const bool receiverIsExperimentalKeyValue =
             inferQueryExprTypeText(receiverExpr, params, locals, receiverTypeText) &&
             isExperimentalMapTypeText(receiverTypeText);
         const bool canonicalKeyValueAccessDiagnostic =
             isSourceSpelledCanonicalKeyValueAccessCall(expr) ||
             expr.sourceIsMethodCall ||
-            (receiverIsExperimentalMap &&
+            (receiverIsExperimentalKeyValue &&
              expr.isMethodCall);
         if (canonicalKeyValueAccessDiagnostic) {
           return failPreDispatchDirectCallDiagnostic(
