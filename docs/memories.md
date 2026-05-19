@@ -185,7 +185,8 @@ This file stores durable session-derived facts that are useful in later work. Ke
   borrowed receiver helpers should use key/value names too; result helper
   identity functions should use key/value names too; template value rewrite
   helper functions should use key/value names too; template constructor and
-  definition rewrite entry points should use key/value names too.
+  definition rewrite entry points should use key/value names too; infer
+  struct-return specialized path helpers should use key/value names too.
   The stdlib ownership source lock rejects the old map-helper, map-count,
   map-access, and removed map compatibility names.
 

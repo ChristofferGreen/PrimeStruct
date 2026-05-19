@@ -1622,6 +1622,9 @@ TEST_CASE("canonical map surface owns standalone stdlib implementation") {
             "mapValueRootForInferStructReturn()") ==
         std::string::npos);
   CHECK(inferStructReturnHelpersSource.find(
+            "specializedExperimentalMapStructReturnPath") ==
+        std::string::npos);
+  CHECK(inferStructReturnHelpersSource.find(
             "unrootedMapPrefix") ==
         std::string::npos);
   CHECK(inferStructReturnHelpersSource.find(
@@ -1632,6 +1635,9 @@ TEST_CASE("canonical map surface owns standalone stdlib implementation") {
         std::string::npos);
   CHECK(inferStructReturnHelpersSource.find(
             "keyValueBackingRootForInferStructReturn()") !=
+        std::string::npos);
+  CHECK(inferStructReturnHelpersSource.find(
+            "specializedExperimentalKeyValueStructReturnPath") !=
         std::string::npos);
   CHECK(inferStructReturnHelpersSource.find(
             "unrootedKeyValuePrefix") !=

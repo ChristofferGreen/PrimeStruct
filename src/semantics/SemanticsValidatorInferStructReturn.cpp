@@ -641,7 +641,7 @@ std::string SemanticsValidator::inferStructReturnPathImpl(
         std::vector<std::string> collectionTemplateArgs;
         if (resolveCallCollectionTemplateArgs(expr, "map", params, locals, collectionTemplateArgs) &&
             collectionTemplateArgs.size() == 2) {
-          return specializedExperimentalMapStructReturnPath(collectionTemplateArgs);
+          return specializedExperimentalKeyValueStructReturnPath(collectionTemplateArgs);
         }
         auto defIt = defMap_.find(resolvedCollectionPath);
         if (defIt != defMap_.end() && defIt->second != nullptr) {
@@ -652,7 +652,7 @@ std::string SemanticsValidator::inferStructReturnPathImpl(
             std::string keyType;
             std::string valueType;
             if (extractMapKeyValueTypesFromTypeText(transform.templateArgs.front(), keyType, valueType)) {
-              return specializedExperimentalMapStructReturnPath({keyType, valueType});
+              return specializedExperimentalKeyValueStructReturnPath({keyType, valueType});
             }
           }
         }

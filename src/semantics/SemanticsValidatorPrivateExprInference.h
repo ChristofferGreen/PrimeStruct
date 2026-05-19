@@ -34,7 +34,7 @@
       const std::string &path,
       const BuiltinCollectionDispatchResolvers &dispatchResolvers,
       std::vector<std::string> &candidates) const;
-  std::string specializedExperimentalMapStructReturnPath(
+  std::string specializedExperimentalKeyValueStructReturnPath(
       const std::vector<std::string> &templateArgs) const;
   std::string inferMethodCollectionTypePathFromTypeText(const std::string &typeText) const;
   std::string resolveMethodStructTypePath(const std::string &typeName,

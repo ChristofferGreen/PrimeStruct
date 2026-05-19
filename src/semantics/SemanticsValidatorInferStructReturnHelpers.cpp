@@ -98,7 +98,7 @@ std::string SemanticsValidator::inferStructReturnCollectionPath(const std::strin
   if (isMapCollectionTypeName(normalizedTypeName) && !normalizedTypeTemplateArg.empty()) {
     std::vector<std::string> args;
     if (splitTopLevelTemplateArgs(normalizedTypeTemplateArg, args) && args.size() == 2) {
-      return specializedExperimentalMapStructReturnPath(args);
+      return specializedExperimentalKeyValueStructReturnPath(args);
     }
     return keyValueCollectionMarkerPathForInferStructReturn();
   }
@@ -112,7 +112,7 @@ std::string SemanticsValidator::inferStructReturnCollectionPath(const std::strin
         return "/" + base;
       }
       if (isMapCollectionTypeName(base) && args.size() == 2) {
-        return specializedExperimentalMapStructReturnPath(args);
+        return specializedExperimentalKeyValueStructReturnPath(args);
       }
     }
   }
@@ -334,7 +334,7 @@ void SemanticsValidator::pruneInferStructReturnBuiltinVectorAccessCandidates(
       candidates, canonicalVectorCompatibilityHelperPathOrFallback(suffix));
 }
 
-std::string SemanticsValidator::specializedExperimentalMapStructReturnPath(
+std::string SemanticsValidator::specializedExperimentalKeyValueStructReturnPath(
     const std::vector<std::string> &templateArgs) const {
   auto stripWhitespace = [](const std::string &text) {
     std::string result;
