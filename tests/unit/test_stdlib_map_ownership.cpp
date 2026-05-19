@@ -1173,6 +1173,18 @@ TEST_CASE("canonical map surface owns standalone stdlib implementation") {
         std::string::npos);
   CHECK(templateExpressionRewriteSource.find("isRemovedKeyValueCompatibilityPath") !=
         std::string::npos);
+  CHECK(templateExpressionRewriteSource.find("mapHelperReceiverExpr") ==
+        std::string::npos);
+  CHECK(templateExpressionRewriteSource.find("mutableMapHelperReceiverExpr") ==
+        std::string::npos);
+  CHECK(templateExpressionRewriteSource.find("resolvesBuiltinMapReceiver") ==
+        std::string::npos);
+  CHECK(templateExpressionRewriteSource.find("collectionHelperReceiverExpr") !=
+        std::string::npos);
+  CHECK(templateExpressionRewriteSource.find("mutableCollectionHelperReceiverExpr") !=
+        std::string::npos);
+  CHECK(templateExpressionRewriteSource.find("resolvesBuiltinKeyValueReceiver") !=
+        std::string::npos);
   CHECK(templateTypeResolutionSource.find("isExplicitRemovedMapCompatibilityPath") ==
         std::string::npos);
   CHECK(templateTypeResolutionSource.find("isExplicitRemovedKeyValueCompatibilityPath") !=

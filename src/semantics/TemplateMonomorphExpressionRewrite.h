@@ -298,7 +298,7 @@ bool rewriteExpr(Expr &expr,
            isExperimentalSoaGetLikeHelperPath(path) ||
            isExperimentalSoaRefLikeHelperPath(path);
   };
-  auto mapHelperReceiverExpr = [&](const Expr &candidate) -> const Expr * {
+  auto collectionHelperReceiverExpr = [&](const Expr &candidate) -> const Expr * {
     if (candidate.isMethodCall) {
       return candidate.args.empty() ? nullptr : &candidate.args.front();
     }
@@ -315,7 +315,7 @@ bool rewriteExpr(Expr &expr,
     }
     return &candidate.args.front();
   };
-  auto mutableMapHelperReceiverExpr = [&](Expr &candidate) -> Expr * {
+  auto mutableCollectionHelperReceiverExpr = [&](Expr &candidate) -> Expr * {
     if (candidate.isMethodCall) {
       return candidate.args.empty() ? nullptr : &candidate.args.front();
     }
@@ -332,7 +332,7 @@ bool rewriteExpr(Expr &expr,
     }
     return &candidate.args.front();
   };
-  auto resolvesBuiltinMapReceiver = [&](const Expr *receiverExpr) {
+  auto resolvesBuiltinKeyValueReceiver = [&](const Expr *receiverExpr) {
     if (receiverExpr == nullptr) {
       return false;
     }
@@ -844,7 +844,7 @@ bool rewriteExpr(Expr &expr,
     return std::string{};
   };
   auto preferCanonicalStdlibCollectionHelperPath = [&](const std::string &path) {
-    const Expr *receiverExpr = mapHelperReceiverExpr(expr);
+    const Expr *receiverExpr = collectionHelperReceiverExpr(expr);
     if (receiverExpr == nullptr) {
       return path;
     }
@@ -1098,7 +1098,7 @@ bool rewriteExpr(Expr &expr,
     if (!isCanonicalStdlibCollectionHelperPath(path)) {
       return false;
     }
-    const Expr *helperReceiverExpr = mapHelperReceiverExpr(expr);
+    const Expr *helperReceiverExpr = collectionHelperReceiverExpr(expr);
     const bool borrowedExperimentalSoaReceiver =
         resolvesBorrowedExperimentalSoaVectorReceiver(helperReceiverExpr);
     const bool isCanonicalNonBorrowedSoaHelperPath =
@@ -1140,9 +1140,9 @@ bool rewriteExpr(Expr &expr,
     }
     if (hasVisibleStdCollectionsImportForPath(ctx, path) && ctx.templateDefs.count(path) > 0) {
       if (isCanonicalVectorCompatibilityPath(path) &&
-          !resolvesBuiltinVectorReceiver(mapHelperReceiverExpr(expr)) &&
+          !resolvesBuiltinVectorReceiver(collectionHelperReceiverExpr(expr)) &&
           !resolvesExperimentalVectorValueReceiver(
-              mapHelperReceiverExpr(expr), params, locals, allowMathBare, namespacePrefix, ctx)) {
+              collectionHelperReceiverExpr(expr), params, locals, allowMathBare, namespacePrefix, ctx)) {
         return true;
       }
       if (isTemplateMonomorphCanonicalKeyValueHelperPath(path)) {
@@ -1151,7 +1151,7 @@ bool rewriteExpr(Expr &expr,
       return false;
     }
     if (isCanonicalBuiltinMapHelperPath(path)) {
-      return resolvesBuiltinMapReceiver(mapHelperReceiverExpr(expr)) && ctx.templateDefs.count(path) == 0;
+      return resolvesBuiltinKeyValueReceiver(collectionHelperReceiverExpr(expr)) && ctx.templateDefs.count(path) == 0;
     }
     return true;
   };
@@ -1381,7 +1381,7 @@ bool rewriteExpr(Expr &expr,
     return false;
   }
   if (!expr.isMethodCall && !expr.isBinding) {
-    if (Expr *receiverExpr = mutableMapHelperReceiverExpr(expr)) {
+    if (Expr *receiverExpr = mutableCollectionHelperReceiverExpr(expr)) {
       if (!isRootMapConstructorReceiverExpr(receiverExpr) &&
           !rewriteNestedExperimentalMapConstructorValue(*receiverExpr)) {
         return false;
@@ -1468,14 +1468,14 @@ bool rewriteExpr(Expr &expr,
         expr.name.find('/') == std::string::npos &&
         isLegacyOrCanonicalSoaHelperPath(resolvedPath, "count") &&
         !isTemplateMonomorphSoaReceiverType(
-            inferCollectionReceiverFamily(mapHelperReceiverExpr(expr)))) {
+            inferCollectionReceiverFamily(collectionHelperReceiverExpr(expr)))) {
       return true;
     }
     const std::string preferredBorrowedSoaPath =
         preferredBorrowedSoaWrapperPath(resolvedPath);
     if (!preferredBorrowedSoaPath.empty() &&
         resolvesBorrowedExperimentalSoaVectorReceiver(
-            mapHelperReceiverExpr(expr)) &&
+            collectionHelperReceiverExpr(expr)) &&
         (ctx.sourceDefs.count(preferredBorrowedSoaPath) > 0 ||
          ctx.helperOverloads.count(preferredBorrowedSoaPath) > 0 ||
          ctx.templateDefs.count(preferredBorrowedSoaPath) > 0)) {
@@ -1485,7 +1485,7 @@ bool rewriteExpr(Expr &expr,
     }
     const bool resolvesBorrowedExperimentalMapReceiver =
         resolvesExperimentalMapBorrowedReceiver(
-            mapHelperReceiverExpr(expr), params, locals, allowMathBare, mapping, allowedParams, namespacePrefix, ctx);
+            collectionHelperReceiverExpr(expr), params, locals, allowMathBare, mapping, allowedParams, namespacePrefix, ctx);
     const std::string borrowedCanonicalKeyValueUnknownTarget =
         canonicalKeyValueHelperUnknownTargetPath(resolvedPath);
     if (!borrowedCanonicalKeyValueUnknownTarget.empty() &&
@@ -1571,7 +1571,7 @@ bool rewriteExpr(Expr &expr,
     }
     const std::string experimentalMapPath =
         experimentalKeyValueHelperPathForCanonicalHelper(resolvedPath);
-    const Expr *experimentalMapReceiverExpr = mapHelperReceiverExpr(expr);
+    const Expr *experimentalMapReceiverExpr = collectionHelperReceiverExpr(expr);
     const bool receiverIsPublishedMapConstructor =
         isPublishedMapConstructorReceiverExpr(experimentalMapReceiverExpr,
                                               namespacePrefix,
@@ -1600,7 +1600,7 @@ bool rewriteExpr(Expr &expr,
           expr.templateArgs = std::move(receiverTemplateArgs);
         }
       }
-      if (Expr *receiverExpr = mutableMapHelperReceiverExpr(expr)) {
+      if (Expr *receiverExpr = mutableCollectionHelperReceiverExpr(expr)) {
         if (!rewriteNestedExperimentalMapConstructorValue(*receiverExpr)) {
           return false;
         }
@@ -1611,24 +1611,24 @@ bool rewriteExpr(Expr &expr,
     if (!experimentalWrapperKeyValuePath.empty() &&
         ctx.sourceDefs.count(experimentalWrapperKeyValuePath) > 0 &&
         resolvesExperimentalMapValueReceiver(
-            mapHelperReceiverExpr(expr), params, locals, allowMathBare, mapping, allowedParams, namespacePrefix, ctx)) {
+            collectionHelperReceiverExpr(expr), params, locals, allowMathBare, mapping, allowedParams, namespacePrefix, ctx)) {
       resolvedPath = experimentalWrapperKeyValuePath;
       expr.name = experimentalWrapperKeyValuePath;
       expr.namespacePrefix.clear();
       if (expr.templateArgs.empty()) {
         std::vector<std::string> receiverTemplateArgs;
         if (resolveExperimentalMapValueReceiverTemplateArgs(
-                mapHelperReceiverExpr(expr), params, locals, allowMathBare, namespacePrefix, ctx, receiverTemplateArgs)) {
+                collectionHelperReceiverExpr(expr), params, locals, allowMathBare, namespacePrefix, ctx, receiverTemplateArgs)) {
           expr.templateArgs = std::move(receiverTemplateArgs);
         }
       }
-      if (Expr *receiverExpr = mutableMapHelperReceiverExpr(expr)) {
+      if (Expr *receiverExpr = mutableCollectionHelperReceiverExpr(expr)) {
         if (!rewriteNestedExperimentalMapConstructorValue(*receiverExpr)) {
           return false;
         }
       }
     }
-    const Expr *experimentalVectorReceiverExpr = mapHelperReceiverExpr(expr);
+    const Expr *experimentalVectorReceiverExpr = collectionHelperReceiverExpr(expr);
     const bool canRewriteNamedExperimentalVectorTemporary =
         experimentalVectorReceiverExpr == nullptr ||
         experimentalVectorReceiverExpr->kind != Expr::Kind::Call ||
@@ -1645,11 +1645,11 @@ bool rewriteExpr(Expr &expr,
       if (expr.templateArgs.empty()) {
         std::vector<std::string> receiverTemplateArgs;
         if (resolveExperimentalVectorValueReceiverTemplateArgs(
-                mapHelperReceiverExpr(expr), params, locals, allowMathBare, namespacePrefix, ctx, receiverTemplateArgs)) {
+                collectionHelperReceiverExpr(expr), params, locals, allowMathBare, namespacePrefix, ctx, receiverTemplateArgs)) {
           expr.templateArgs = std::move(receiverTemplateArgs);
         }
       }
-      if (Expr *receiverExpr = mutableMapHelperReceiverExpr(expr)) {
+      if (Expr *receiverExpr = mutableCollectionHelperReceiverExpr(expr)) {
         if (!rewriteNestedExperimentalVectorConstructorValue(*receiverExpr)) {
           return false;
         }
@@ -1662,7 +1662,7 @@ bool rewriteExpr(Expr &expr,
         !isCanonicalSoaBorrowedWrapperHelper(resolvedPath) &&
         hasVisibleStdCollectionsImportForPath(ctx, resolvedPath) &&
         resolvesConcreteExperimentalSoaVectorReceiver(
-            mapHelperReceiverExpr(expr));
+            collectionHelperReceiverExpr(expr));
     if (shouldRewriteCanonicalSoaHelperToExperimental &&
         !experimentalSoaVectorPath.empty() &&
         ctx.sourceDefs.count(experimentalSoaVectorPath) > 0) {
@@ -1671,7 +1671,7 @@ bool rewriteExpr(Expr &expr,
       expr.namespacePrefix.clear();
       if (expr.templateArgs.empty()) {
         std::vector<std::string> receiverTemplateArgs;
-        if (resolveExperimentalSoaVectorReceiverTemplateArgs(mapHelperReceiverExpr(expr), receiverTemplateArgs)) {
+        if (resolveExperimentalSoaVectorReceiverTemplateArgs(collectionHelperReceiverExpr(expr), receiverTemplateArgs)) {
           expr.templateArgs = std::move(receiverTemplateArgs);
         }
       }
@@ -1680,10 +1680,10 @@ bool rewriteExpr(Expr &expr,
     if (expr.templateArgs.empty() &&
         resolvedPath.rfind(experimentalCollectionConstructorRootLocal("map"), 0) == 0 &&
         resolvesExperimentalMapValueReceiver(
-            mapHelperReceiverExpr(expr), params, locals, allowMathBare, mapping, allowedParams, namespacePrefix, ctx)) {
+            collectionHelperReceiverExpr(expr), params, locals, allowMathBare, mapping, allowedParams, namespacePrefix, ctx)) {
       std::vector<std::string> receiverTemplateArgs;
       if (resolveExperimentalMapValueReceiverTemplateArgs(
-              mapHelperReceiverExpr(expr), params, locals, allowMathBare, namespacePrefix, ctx, receiverTemplateArgs)) {
+              collectionHelperReceiverExpr(expr), params, locals, allowMathBare, namespacePrefix, ctx, receiverTemplateArgs)) {
         expr.templateArgs = std::move(receiverTemplateArgs);
       }
     }
@@ -1694,7 +1694,7 @@ bool rewriteExpr(Expr &expr,
             resolvedPath)) {
       std::vector<std::string> receiverTemplateArgs;
       if (resolveExperimentalMapValueReceiverTemplateArgs(
-              mapHelperReceiverExpr(expr),
+              collectionHelperReceiverExpr(expr),
               params,
               locals,
               allowMathBare,
@@ -1709,26 +1709,26 @@ bool rewriteExpr(Expr &expr,
     if (expr.templateArgs.empty() &&
         resolvedPath.rfind(legacyExperimentalVectorCompatibilityPrefix(), 0) == 0 &&
         resolvesExperimentalVectorValueReceiver(
-            mapHelperReceiverExpr(expr), params, locals, allowMathBare, namespacePrefix, ctx)) {
+            collectionHelperReceiverExpr(expr), params, locals, allowMathBare, namespacePrefix, ctx)) {
       std::vector<std::string> receiverTemplateArgs;
       if (resolveExperimentalVectorValueReceiverTemplateArgs(
-              mapHelperReceiverExpr(expr), params, locals, allowMathBare, namespacePrefix, ctx, receiverTemplateArgs)) {
+              collectionHelperReceiverExpr(expr), params, locals, allowMathBare, namespacePrefix, ctx, receiverTemplateArgs)) {
         expr.templateArgs = std::move(receiverTemplateArgs);
       }
     }
     if (expr.templateArgs.empty() &&
         isExperimentalSoaVectorPublicHelperPath(resolvedPath) &&
-        resolvesExperimentalSoaVectorReceiver(mapHelperReceiverExpr(expr))) {
+        resolvesExperimentalSoaVectorReceiver(collectionHelperReceiverExpr(expr))) {
       std::vector<std::string> receiverTemplateArgs;
-      if (resolveExperimentalSoaVectorReceiverTemplateArgs(mapHelperReceiverExpr(expr), receiverTemplateArgs)) {
+      if (resolveExperimentalSoaVectorReceiverTemplateArgs(collectionHelperReceiverExpr(expr), receiverTemplateArgs)) {
         expr.templateArgs = std::move(receiverTemplateArgs);
       }
     }
     if (expr.templateArgs.empty() &&
         isCanonicalSoaBorrowedWrapperHelper(resolvedPath) &&
-        resolvesBorrowedExperimentalSoaVectorReceiver(mapHelperReceiverExpr(expr))) {
+        resolvesBorrowedExperimentalSoaVectorReceiver(collectionHelperReceiverExpr(expr))) {
       std::vector<std::string> receiverTemplateArgs;
-      if (resolveExperimentalSoaVectorReceiverTemplateArgs(mapHelperReceiverExpr(expr), receiverTemplateArgs)) {
+      if (resolveExperimentalSoaVectorReceiverTemplateArgs(collectionHelperReceiverExpr(expr), receiverTemplateArgs)) {
         expr.templateArgs = std::move(receiverTemplateArgs);
         allConcrete = true;
       }
@@ -1826,7 +1826,7 @@ bool rewriteExpr(Expr &expr,
           ctx.templateDefs.count(samePath) > 0) {
         return std::string{};
       }
-      if (!resolvesExperimentalSoaVectorReceiver(mapHelperReceiverExpr(expr))) {
+      if (!resolvesExperimentalSoaVectorReceiver(collectionHelperReceiverExpr(expr))) {
         return std::string{};
       }
       return samePath;
@@ -1843,7 +1843,7 @@ bool rewriteExpr(Expr &expr,
       expr.name = resolvedPath;
       expr.namespacePrefix.clear();
     }
-    const Expr *resolvedReceiverExpr = mapHelperReceiverExpr(expr);
+    const Expr *resolvedReceiverExpr = collectionHelperReceiverExpr(expr);
     const std::string resolvedReceiverFamily =
         inferCollectionReceiverFamily(resolvedReceiverExpr);
     const bool isSyntheticSamePathSoaHelperTemplateCarry =
@@ -1950,7 +1950,7 @@ bool rewriteExpr(Expr &expr,
         expr.templateArgDetails.clear();
       }
     } else if (isKnownDef && !expr.templateArgs.empty()) {
-      const Expr *templateCarryReceiverExpr = mapHelperReceiverExpr(expr);
+      const Expr *templateCarryReceiverExpr = collectionHelperReceiverExpr(expr);
       const std::string templateCarryReceiverFamily =
           inferCollectionReceiverFamily(templateCarryReceiverExpr);
       if (isSyntheticSamePathSoaHelperTemplateCarryPath(resolvedPath) &&
@@ -2127,12 +2127,12 @@ bool rewriteExpr(Expr &expr,
           !experimentalVectorMethodPath.empty() &&
           ctx.sourceDefs.count(experimentalVectorMethodPath) > 0 &&
           resolvesExperimentalVectorValueReceiver(
-              mapHelperReceiverExpr(expr), params, locals, allowMathBare, namespacePrefix, ctx)) {
+              collectionHelperReceiverExpr(expr), params, locals, allowMathBare, namespacePrefix, ctx)) {
         methodPath = experimentalVectorMethodPath;
         if (expr.templateArgs.empty()) {
           std::vector<std::string> receiverTemplateArgs;
           if (resolveExperimentalVectorValueReceiverTemplateArgs(
-                  mapHelperReceiverExpr(expr),
+                  collectionHelperReceiverExpr(expr),
                   params,
                   locals,
                   allowMathBare,
@@ -2160,13 +2160,13 @@ bool rewriteExpr(Expr &expr,
           !isCanonicalSoaBorrowedWrapperHelper(methodPath) &&
           hasVisibleStdCollectionsImportForPath(ctx, methodPath) &&
           resolvesConcreteExperimentalSoaVectorReceiver(
-              mapHelperReceiverExpr(expr));
+              collectionHelperReceiverExpr(expr));
       if (shouldRewriteCanonicalSoaMethodToExperimental &&
           !experimentalSoaVectorMethodPath.empty()) {
         methodPath = experimentalSoaVectorMethodPath;
         if (expr.templateArgs.empty()) {
           std::vector<std::string> receiverTemplateArgs;
-          if (resolveExperimentalSoaVectorReceiverTemplateArgs(mapHelperReceiverExpr(expr), receiverTemplateArgs)) {
+          if (resolveExperimentalSoaVectorReceiverTemplateArgs(collectionHelperReceiverExpr(expr), receiverTemplateArgs)) {
             expr.templateArgs = std::move(receiverTemplateArgs);
             allConcrete = true;
           }
@@ -2175,10 +2175,10 @@ bool rewriteExpr(Expr &expr,
       if (expr.templateArgs.empty() &&
           isExperimentalVectorPublicHelperPath(methodPath) &&
           resolvesExperimentalVectorValueReceiver(
-              mapHelperReceiverExpr(expr), params, locals, allowMathBare, namespacePrefix, ctx)) {
+              collectionHelperReceiverExpr(expr), params, locals, allowMathBare, namespacePrefix, ctx)) {
         std::vector<std::string> receiverTemplateArgs;
         if (resolveExperimentalVectorValueReceiverTemplateArgs(
-                mapHelperReceiverExpr(expr),
+                collectionHelperReceiverExpr(expr),
                 params,
                 locals,
                 allowMathBare,
@@ -2191,9 +2191,9 @@ bool rewriteExpr(Expr &expr,
       }
       if (expr.templateArgs.empty() &&
           isExperimentalSoaVectorPublicHelperPath(methodPath) &&
-          resolvesExperimentalSoaVectorReceiver(mapHelperReceiverExpr(expr))) {
+          resolvesExperimentalSoaVectorReceiver(collectionHelperReceiverExpr(expr))) {
         std::vector<std::string> receiverTemplateArgs;
-        if (resolveExperimentalSoaVectorReceiverTemplateArgs(mapHelperReceiverExpr(expr), receiverTemplateArgs)) {
+        if (resolveExperimentalSoaVectorReceiverTemplateArgs(collectionHelperReceiverExpr(expr), receiverTemplateArgs)) {
           expr.templateArgs = std::move(receiverTemplateArgs);
           allConcrete = true;
         }
@@ -2203,7 +2203,7 @@ bool rewriteExpr(Expr &expr,
           hasVisibleStdCollectionsImportForPath(ctx, methodPath)) {
         std::vector<std::string> receiverTemplateArgs;
         if (resolveExperimentalMapValueReceiverTemplateArgs(
-                mapHelperReceiverExpr(expr),
+                collectionHelperReceiverExpr(expr),
                 params,
                 locals,
                 allowMathBare,
@@ -2216,9 +2216,9 @@ bool rewriteExpr(Expr &expr,
       }
       if (expr.templateArgs.empty() &&
           isCanonicalSoaBorrowedWrapperHelper(methodPath) &&
-          resolvesExperimentalSoaVectorReceiver(mapHelperReceiverExpr(expr))) {
+          resolvesExperimentalSoaVectorReceiver(collectionHelperReceiverExpr(expr))) {
         std::vector<std::string> receiverTemplateArgs;
-        if (resolveExperimentalSoaVectorReceiverTemplateArgs(mapHelperReceiverExpr(expr), receiverTemplateArgs)) {
+        if (resolveExperimentalSoaVectorReceiverTemplateArgs(collectionHelperReceiverExpr(expr), receiverTemplateArgs)) {
           expr.templateArgs = std::move(receiverTemplateArgs);
           allConcrete = true;
         }
@@ -2248,7 +2248,7 @@ bool rewriteExpr(Expr &expr,
         expr.name = methodPath;
         expr.namespacePrefix.clear();
       }
-      const Expr *resolvedReceiverExpr = mapHelperReceiverExpr(expr);
+      const Expr *resolvedReceiverExpr = collectionHelperReceiverExpr(expr);
       const std::string resolvedReceiverFamily =
           inferCollectionReceiverFamily(resolvedReceiverExpr);
       const bool isSyntheticSamePathSoaHelperTemplateCarry =
@@ -2275,7 +2275,7 @@ bool rewriteExpr(Expr &expr,
       }
       if (expr.templateArgs.empty() && ctx.templateDefs.count(methodPath) > 0) {
         auto defIt = ctx.sourceDefs.find(methodPath);
-        const Expr *receiverExpr = mapHelperReceiverExpr(expr);
+        const Expr *receiverExpr = collectionHelperReceiverExpr(expr);
         if (defIt != ctx.sourceDefs.end() && receiverExpr != nullptr &&
             !defIt->second.parameters.empty()) {
           BindingInfo receiverInfo;
@@ -2373,7 +2373,7 @@ bool rewriteExpr(Expr &expr,
           expr.isMethodCall = false;
         }
       } else if (isKnownDef && !expr.templateArgs.empty()) {
-        const Expr *templateCarryReceiverExpr = mapHelperReceiverExpr(expr);
+        const Expr *templateCarryReceiverExpr = collectionHelperReceiverExpr(expr);
         const std::string templateCarryReceiverFamily =
             inferCollectionReceiverFamily(templateCarryReceiverExpr);
         if (isSyntheticSamePathSoaHelperTemplateCarryPath(methodPath) &&
