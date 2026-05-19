@@ -107,6 +107,7 @@ This file stores durable session-derived facts that are useful in later work. Ke
   too; late adapter key output parameters should use key/value names
   too; map/SoA local helper names should use key/value terminology
   too; method resolution key/value target locals should use key/value names
+  too; late call compatibility receiver booleans should use key/value names
   too.
   The stdlib ownership source lock rejects the old map-helper, map-count,
   map-access, and removed map compatibility names.

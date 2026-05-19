@@ -89,7 +89,7 @@ bool SemanticsValidator::validateExprLateCallCompatibility(
         context.dispatchResolvers->resolveStringTarget(expr.args.front());
     std::string keyValueKeyType;
     std::string keyValueValueType;
-    const bool resolvesMap = context.dispatchResolvers->resolveMapTarget(
+    const bool resolvesKeyValue = context.dispatchResolvers->resolveMapTarget(
         expr.args.front(), keyValueKeyType, keyValueValueType);
     const bool resolvesNonVectorCountTarget =
         !resolvesVectorLikeCountTarget && !resolvesArray &&
@@ -98,13 +98,13 @@ bool SemanticsValidator::validateExprLateCallCompatibility(
       if (!validateExpr(params, locals, expr.args.front())) {
         return false;
       }
-      const bool resolvesMapAfterValidation =
-          resolvesMap ||
+      const bool resolvesKeyValueAfterValidation =
+          resolvesKeyValue ||
           context.dispatchResolvers->resolveMapTarget(expr.args.front(),
                                                       keyValueKeyType,
                                                       keyValueValueType);
       const std::string stdNamespacedVectorCountTargetDiagnosticMessage =
-          resolvesMapAfterValidation
+          resolvesKeyValueAfterValidation
               ? vectorCompatibilityUnknownCallTargetDiagnostic("count")
               : vectorCompatibilityRequiresVectorTargetDiagnostic("count");
       return failLateCallCompatibilityDiagnostic(

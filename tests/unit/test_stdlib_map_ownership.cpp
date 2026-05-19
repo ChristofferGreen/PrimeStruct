@@ -2256,6 +2256,14 @@ TEST_CASE("canonical map surface owns standalone stdlib implementation") {
         std::string::npos);
   CHECK(exprLateCallCompatibilitySource.find("keyValueValueType") !=
         std::string::npos);
+  CHECK(exprLateCallCompatibilitySource.find("resolvesKeyValue") !=
+        std::string::npos);
+  CHECK(exprLateCallCompatibilitySource.find("resolvesKeyValueAfterValidation") !=
+        std::string::npos);
+  CHECK(exprLateCallCompatibilitySource.find("resolvesMap") ==
+        std::string::npos);
+  CHECK(exprLateCallCompatibilitySource.find("resolvesMapAfterValidation") ==
+        std::string::npos);
   CHECK(exprLateCallCompatibilitySource.find("std::string mapKeyType") ==
         std::string::npos);
   CHECK(exprLateCallCompatibilitySource.find("std::string mapValueType") ==
