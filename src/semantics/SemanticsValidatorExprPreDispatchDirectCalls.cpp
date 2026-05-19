@@ -196,7 +196,7 @@ bool isPublishedMapConstructorExpr(const Expr &candidate) {
   return isResolvedMapConstructorPath(normalizedName);
 }
 
-std::string removedMapCompatibilityHelperFromPath(std::string path) {
+std::string removedKeyValueCompatibilityHelperFromPath(std::string path) {
   const StdlibSurfaceMetadata *metadata =
       preDispatchKeyValueHelperSurfaceMetadata();
   if (metadata == nullptr) {
@@ -229,7 +229,7 @@ std::string removedMapCompatibilityHelperFromPath(std::string path) {
   return {};
 }
 
-std::string rootedMapAliasHelperPath(std::string_view helperName) {
+std::string rootedKeyValueAliasHelperPath(std::string_view helperName) {
   const StdlibSurfaceMetadata *metadata =
       preDispatchKeyValueHelperSurfaceMetadata();
   if (metadata == nullptr) {
@@ -289,7 +289,7 @@ bool SemanticsValidator::validateExprPreDispatchDirectCalls(
       bareMapWrapperHelperPath(expr, bareMapWrapperHelperName);
   if (!normalizedBareMapWrapperHelperPath.empty()) {
     const std::string removedCompatibilityPath =
-        rootedMapAliasHelperPath(bareMapWrapperHelperName);
+        rootedKeyValueAliasHelperPath(bareMapWrapperHelperName);
     auto hasDefinitionFamilyPath = [&](const std::string &path) {
       if (defMap_.count(path) > 0 || paramsByDef_.count(path) > 0) {
         return true;
@@ -352,13 +352,13 @@ bool SemanticsValidator::validateExprPreDispatchDirectCalls(
     }
     return prefix.empty() ? "/" + expr.name : prefix + "/" + expr.name;
   }();
-  std::string removedMapCompatibilityHelper =
-      removedMapCompatibilityHelperFromPath(resolvedOut);
-  if (removedMapCompatibilityHelper.empty()) {
-    removedMapCompatibilityHelper =
-        removedMapCompatibilityHelperFromPath(explicitCallPath);
+  std::string removedKeyValueCompatibilityHelper =
+      removedKeyValueCompatibilityHelperFromPath(resolvedOut);
+  if (removedKeyValueCompatibilityHelper.empty()) {
+    removedKeyValueCompatibilityHelper =
+        removedKeyValueCompatibilityHelperFromPath(explicitCallPath);
   }
-  auto hasExactRemovedMapAliasDefinition = [&](const std::string &path) {
+  auto hasExactRemovedKeyValueAliasDefinition = [&](const std::string &path) {
     if (defMap_.count(path) > 0 || paramsByDef_.count(path) > 0) {
       return true;
     }
@@ -374,19 +374,19 @@ bool SemanticsValidator::validateExprPreDispatchDirectCalls(
     return false;
   };
   const std::string removedAliasPath =
-      rootedMapAliasHelperPath(removedMapCompatibilityHelper);
-  if (!expr.isMethodCall && !removedMapCompatibilityHelper.empty() &&
+      rootedKeyValueAliasHelperPath(removedKeyValueCompatibilityHelper);
+  if (!expr.isMethodCall && !removedKeyValueCompatibilityHelper.empty() &&
       !removedAliasPath.empty() &&
-      !hasExactRemovedMapAliasDefinition(removedAliasPath)) {
+      !hasExactRemovedKeyValueAliasDefinition(removedAliasPath)) {
     handledOut = true;
     const std::string removedPath = removedAliasPath;
     auto canonicalHelperReturnsStruct = [&]() {
       if (!isCanonicalMapAccessReturnStructHelperName(
-              removedMapCompatibilityHelper)) {
+              removedKeyValueCompatibilityHelper)) {
         return false;
       }
       const std::string canonicalPath =
-          canonicalKeyValueHelperPathLocal(removedMapCompatibilityHelper);
+          canonicalKeyValueHelperPathLocal(removedKeyValueCompatibilityHelper);
       auto defIt = defMap_.find(canonicalPath);
       if (defIt == defMap_.end() || defIt->second == nullptr) {
         return false;
@@ -414,18 +414,18 @@ bool SemanticsValidator::validateExprPreDispatchDirectCalls(
           "block arguments require a definition target: " + removedPath);
     }
     const size_t expectedArgCount =
-        (removedMapCompatibilityHelper == "count" ||
-         removedMapCompatibilityHelper == "count_ref" ||
-         removedMapCompatibilityHelper == "size")
+        (removedKeyValueCompatibilityHelper == "count" ||
+         removedKeyValueCompatibilityHelper == "count_ref" ||
+         removedKeyValueCompatibilityHelper == "size")
             ? 1
-            : ((removedMapCompatibilityHelper == "at" ||
-                removedMapCompatibilityHelper == "at_ref" ||
-                removedMapCompatibilityHelper == "at_unsafe" ||
-                removedMapCompatibilityHelper == "at_unsafe_ref" ||
-                removedMapCompatibilityHelper == "contains" ||
-                removedMapCompatibilityHelper == "contains_ref" ||
-                removedMapCompatibilityHelper == "tryAt" ||
-                removedMapCompatibilityHelper == "tryAt_ref")
+            : ((removedKeyValueCompatibilityHelper == "at" ||
+                removedKeyValueCompatibilityHelper == "at_ref" ||
+                removedKeyValueCompatibilityHelper == "at_unsafe" ||
+                removedKeyValueCompatibilityHelper == "at_unsafe_ref" ||
+                removedKeyValueCompatibilityHelper == "contains" ||
+                removedKeyValueCompatibilityHelper == "contains_ref" ||
+                removedKeyValueCompatibilityHelper == "tryAt" ||
+                removedKeyValueCompatibilityHelper == "tryAt_ref")
                    ? 2
                    : 3);
     if (expr.args.size() != expectedArgCount) {
@@ -637,7 +637,7 @@ bool SemanticsValidator::validateExprPreDispatchDirectCalls(
     const std::string builtinAccessPath =
         canonicalKeyValueHelperPathLocal(builtinAccessName);
     const std::string rootedBuiltinAccessAlias =
-        rootedMapAliasHelperPath(builtinAccessName);
+        rootedKeyValueAliasHelperPath(builtinAccessName);
     if (!builtinAccessName.empty() &&
         !rootedBuiltinAccessAlias.empty() &&
         hasVisibleStdlibMapAccessDefinition(builtinAccessName) &&

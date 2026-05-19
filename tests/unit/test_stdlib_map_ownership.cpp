@@ -1287,6 +1287,12 @@ TEST_CASE("canonical map surface owns standalone stdlib implementation") {
   CHECK(exprPreDispatchDirectCallsSource.find(
             "resolvePreDispatchMapHelperResolvedPath(") ==
         std::string::npos);
+  CHECK(exprPreDispatchDirectCallsSource.find("removedMapCompatibilityHelperFromPath") ==
+        std::string::npos);
+  CHECK(exprPreDispatchDirectCallsSource.find("removedMapCompatibilityHelper") ==
+        std::string::npos);
+  CHECK(exprPreDispatchDirectCallsSource.find("hasExactRemovedMapAliasDefinition") ==
+        std::string::npos);
   CHECK(exprPreDispatchDirectCallsSource.find("preDispatchKeyValueHelperSurfaceMetadata()") !=
         std::string::npos);
   CHECK(exprPreDispatchDirectCallsSource.find("preDispatchMapHelperSurfaceMetadata()") ==
@@ -1300,6 +1306,12 @@ TEST_CASE("canonical map surface owns standalone stdlib implementation") {
         std::string::npos);
   CHECK(exprPreDispatchDirectCallsSource.find(
             "resolveCanonicalMapHelperNameFromSpelling(") ==
+        std::string::npos);
+  CHECK(exprPreDispatchDirectCallsSource.find("removedKeyValueCompatibilityHelperFromPath") !=
+        std::string::npos);
+  CHECK(exprPreDispatchDirectCallsSource.find("removedKeyValueCompatibilityHelper") !=
+        std::string::npos);
+  CHECK(exprPreDispatchDirectCallsSource.find("hasExactRemovedKeyValueAliasDefinition") !=
         std::string::npos);
   CHECK(exprPreDispatchDirectCallsSource.find("sourceMethodKeyValueHelperName") !=
         std::string::npos);
@@ -1347,7 +1359,9 @@ TEST_CASE("canonical map surface owns standalone stdlib implementation") {
   CHECK(exprPreDispatchDirectCallsSource.find(
             "shouldLogicalCanonicalizeDefinedExperimentalKeyValueHelperPath") !=
         std::string::npos);
-  CHECK(exprPreDispatchDirectCallsSource.find("rootedMapAliasHelperPath(") !=
+  CHECK(exprPreDispatchDirectCallsSource.find("rootedMapAliasHelperPath(") ==
+        std::string::npos);
+  CHECK(exprPreDispatchDirectCallsSource.find("rootedKeyValueAliasHelperPath(") !=
         std::string::npos);
   CHECK(exprVectorHelpersSource.find("std/collections/map/") ==
         std::string::npos);
