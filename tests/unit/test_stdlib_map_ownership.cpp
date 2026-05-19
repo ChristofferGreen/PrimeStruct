@@ -1254,10 +1254,18 @@ TEST_CASE("canonical map surface owns standalone stdlib implementation") {
             "isRemovedMapCompatibilityHelper(") == std::string::npos);
   CHECK(templateCollectionCompatibilitySource.find(
             "mapCompatibilityHelperBase(") == std::string::npos);
+  CHECK(templateCollectionCompatibilitySource.find("mapBackingName") ==
+        std::string::npos);
+  CHECK(templateCollectionCompatibilitySource.find("bareGeneratedMapBacking") ==
+        std::string::npos);
   CHECK(templateCollectionCompatibilitySource.find(
             "isRemovedKeyValueCompatibilityHelper(") != std::string::npos);
   CHECK(templateCollectionCompatibilitySource.find(
             "keyValueCompatibilityHelperBase(") != std::string::npos);
+  CHECK(templateCollectionCompatibilitySource.find("keyValueBackingName") !=
+        std::string::npos);
+  CHECK(templateCollectionCompatibilitySource.find(
+            "bareGeneratedKeyValueBacking") != std::string::npos);
   CHECK(templateBindingCallInferenceSource.find("std/collections/map") ==
         std::string::npos);
   CHECK(templateBindingCallInferenceSource.find("experimental_map") ==

@@ -140,7 +140,8 @@ This file stores durable session-derived facts that are useful in later work. Ke
   should use collection/key-value names too; template expression rewrite
   key/value path, receiver, count, and constructor-binding locals should use
   key/value names too; template expression rewrite local helper predicates and
-  nested rewrite callbacks should use key/value names too.
+  nested rewrite callbacks should use key/value names too; template collection
+  compatibility backing-name locals should use key/value names too.
   The stdlib ownership source lock rejects the old map-helper, map-count,
   map-access, and removed map compatibility names.
 
