@@ -164,8 +164,8 @@ This file stores durable session-derived facts that are useful in later work. Ke
   bootstrap and infer-call-resolution root alias predicates plus call-resolution
   constructor-candidate locals, collection-access key validation helpers, and
   template-core entry overload locals, scalar pointer/memory collection
-  classifiers, and infer collection constructor-alias locals follow the same
-  naming.
+  classifiers, infer collection constructor-alias locals, and build-parameter
+  default-expression classifiers follow the same naming.
 - Evidence: The release `PrimeStruct_backend_ir_tests` target rebuilt after
   the kind, field, target-info, lookup-helper, and setup-inference access
   renames, focused backend IR windows passed, and direct `rg` scans over
@@ -213,8 +213,8 @@ This file stores durable session-derived facts that are useful in later work. Ke
   bootstrap and infer-call-resolution root alias predicates plus
   call-resolution constructor-candidate locals, collection-access key
   validation helpers, template-core entry overload locals, scalar
-  pointer/memory collection classifiers, and infer collection
-  constructor-alias locals.
+  pointer/memory collection classifiers, infer collection constructor-alias
+  locals, and build-parameter default-expression classifiers.
 
 ### map-compatibility-aliases-require-source-definitions
 - Updated: 2026-05-18

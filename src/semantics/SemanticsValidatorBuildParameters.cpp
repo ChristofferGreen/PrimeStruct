@@ -131,7 +131,7 @@ bool SemanticsValidator::buildParameters() {
     auto defaultResolvesToDefinition = [&](const Expr &candidate) -> bool {
       return candidate.kind == Expr::Kind::Call && defMap_.find(resolveCalleePath(candidate)) != defMap_.end();
     };
-    auto typeTextIsExperimentalMapValue = [](const std::string &typeText) {
+    auto typeTextIsExperimentalKeyValue = [](const std::string &typeText) {
       std::string normalizedType = normalizeBindingTypeName(typeText);
       std::string base;
       std::string argText;
@@ -144,17 +144,17 @@ bool SemanticsValidator::buildParameters() {
       return isMapCollectionTypeName(normalizedType) ||
              isExperimentalCollectionBackingTypeName("map", "Map", normalizedType);
     };
-    auto typeTextCarriesExperimentalMapValue = [&](const std::string &typeText) {
-      if (typeTextIsExperimentalMapValue(typeText)) {
+    auto typeTextCarriesExperimentalKeyValue = [&](const std::string &typeText) {
+      if (typeTextIsExperimentalKeyValue(typeText)) {
         return true;
       }
       ResultTypeInfo resultInfo;
       return resolveResultTypeFromTypeName(typeText, resultInfo) &&
              resultInfo.hasValue &&
-             typeTextIsExperimentalMapValue(resultInfo.valueType);
+             typeTextIsExperimentalKeyValue(resultInfo.valueType);
     };
-    auto bindingCarriesExperimentalMapValue = [&](const BindingInfo &binding) {
-      return typeTextCarriesExperimentalMapValue(bindingTypeText(binding));
+    auto bindingCarriesExperimentalKeyValue = [&](const BindingInfo &binding) {
+      return typeTextCarriesExperimentalKeyValue(bindingTypeText(binding));
     };
     std::string parentPath;
     std::string placement;
@@ -168,7 +168,7 @@ bool SemanticsValidator::buildParameters() {
     }
     const bool isStructHelper = isLifecycle || !helperParent.empty();
     const bool isStaticHelper = isStructHelper && !isLifecycle && hasStaticTransform(def);
-    auto isResolvedExperimentalMapConstructorPath = [](const std::string &resolvedPath) {
+    auto isResolvedExperimentalKeyValueConstructorPath = [](const std::string &resolvedPath) {
       std::string normalizedPath = resolvedPath;
       const size_t specializationSuffix = normalizedPath.find("__t");
       if (specializationSuffix != std::string::npos) {
@@ -188,7 +188,7 @@ bool SemanticsValidator::buildParameters() {
       const Expr &receiver = candidate.args.front();
       return receiver.kind == Expr::Kind::Name && normalizeBindingTypeName(receiver.name) == "Result";
     };
-    std::function<bool(const Expr &)> isAllowedExperimentalMapDefaultExpr = [&](const Expr &candidate) {
+    std::function<bool(const Expr &)> isAllowedExperimentalKeyValueDefaultExpr = [&](const Expr &candidate) {
       if (isDefaultExprAllowed(candidate, defaultResolvesToDefinition)) {
         return true;
       }
@@ -199,27 +199,27 @@ bool SemanticsValidator::buildParameters() {
         return false;
       }
       if (isBuiltinResultOkPayloadCall(candidate)) {
-        return isAllowedExperimentalMapDefaultExpr(candidate.args.back());
+        return isAllowedExperimentalKeyValueDefaultExpr(candidate.args.back());
       }
       const std::string resolvedPath = resolveCalleePath(candidate);
-      const bool isDirectExperimentalMapConstructor = isResolvedExperimentalMapConstructorPath(resolvedPath);
-      if (isDirectExperimentalMapConstructor) {
+      const bool isDirectExperimentalKeyValueConstructor = isResolvedExperimentalKeyValueConstructorPath(resolvedPath);
+      if (isDirectExperimentalKeyValueConstructor) {
         return true;
       }
-      if (!isDirectExperimentalMapConstructor) {
+      if (!isDirectExperimentalKeyValueConstructor) {
         for (const auto &arg : candidate.args) {
-          if (!isAllowedExperimentalMapDefaultExpr(arg)) {
+          if (!isAllowedExperimentalKeyValueDefaultExpr(arg)) {
             return false;
           }
         }
       }
-      if (!isDirectExperimentalMapConstructor && candidate.args.size() == 1) {
-        auto isMapConstructorExpr = [&](const Expr &expr) {
+      if (!isDirectExperimentalKeyValueConstructor && candidate.args.size() == 1) {
+        auto isKeyValueConstructorExpr = [&](const Expr &expr) {
           if (expr.kind != Expr::Kind::Call) {
             return false;
           }
           const std::string resolvedExprPath = resolveCalleePath(expr);
-          if (isResolvedExperimentalMapConstructorPath(resolvedExprPath)) {
+          if (isResolvedExperimentalKeyValueConstructorPath(resolvedExprPath)) {
             return true;
           }
           auto pathHasMember = [](std::string_view path, std::string_view member) {
@@ -236,17 +236,17 @@ bool SemanticsValidator::buildParameters() {
           }
           return false;
         };
-        auto argCarriesExperimentalMapValue = [&]() {
+        auto argCarriesExperimentalKeyValue = [&]() {
           const Expr &argExpr = candidate.args.front();
-          if (isMapConstructorExpr(argExpr)) {
+          if (isKeyValueConstructorExpr(argExpr)) {
             return true;
           }
           BindingInfo argBinding;
           return (inferBindingTypeFromInitializer(argExpr, {}, {}, argBinding) &&
-                  bindingCarriesExperimentalMapValue(argBinding)) ||
+                  bindingCarriesExperimentalKeyValue(argBinding)) ||
                  (tryInferBindingTypeFromInitializer(
                       argExpr, {}, {}, argBinding, hasAnyMathImport()) &&
-                  bindingCarriesExperimentalMapValue(argBinding));
+                  bindingCarriesExperimentalKeyValue(argBinding));
         };
         auto stripSpecialization = [](std::string path) {
           const size_t suffix = path.find("__t");
@@ -274,16 +274,16 @@ bool SemanticsValidator::buildParameters() {
         if (defIt == defMap_.end()) {
           defIt = findDefinitionForCallPath(candidate.name);
         }
-        const bool returnsExperimentalMapValue =
+        const bool returnsExperimentalKeyValue =
             defIt != defMap_.end() && defIt->second != nullptr &&
             std::any_of(defIt->second->transforms.begin(),
                         defIt->second->transforms.end(),
                         [&](const Transform &transform) {
                           return transform.name == "return" &&
                                  transform.templateArgs.size() == 1 &&
-                                 typeTextCarriesExperimentalMapValue(transform.templateArgs.front());
+                                 typeTextCarriesExperimentalKeyValue(transform.templateArgs.front());
                         });
-        if (returnsExperimentalMapValue && argCarriesExperimentalMapValue()) {
+        if (returnsExperimentalKeyValue && argCarriesExperimentalKeyValue()) {
           return true;
         }
         const bool returnsSingleParameterValue =
@@ -312,7 +312,7 @@ bool SemanticsValidator::buildParameters() {
                           return normalizeBindingTypeName(transform.templateArgs.front()) ==
                                  normalizeBindingTypeName(paramBinding.typeName);
                         });
-        if (returnsSingleParameterValue && argCarriesExperimentalMapValue()) {
+        if (returnsSingleParameterValue && argCarriesExperimentalKeyValue()) {
           return true;
         }
         const bool returnsTemplateParam =
@@ -324,16 +324,16 @@ bool SemanticsValidator::buildParameters() {
                                  transform.templateArgs.size() == 1 &&
                                  !transform.templateArgs.front().empty();
                         });
-        if (returnsTemplateParam && argCarriesExperimentalMapValue()) {
+        if (returnsTemplateParam && argCarriesExperimentalKeyValue()) {
           return true;
         }
       }
       BindingInfo inferredBinding;
       if (!inferBindingTypeFromInitializer(candidate, {}, {}, inferredBinding) ||
-          !bindingCarriesExperimentalMapValue(inferredBinding)) {
+          !bindingCarriesExperimentalKeyValue(inferredBinding)) {
         BindingInfo fallbackBinding;
         if (!tryInferBindingTypeFromInitializer(candidate, {}, {}, fallbackBinding, hasAnyMathImport()) ||
-            !bindingCarriesExperimentalMapValue(fallbackBinding)) {
+            !bindingCarriesExperimentalKeyValue(fallbackBinding)) {
           return false;
         }
         inferredBinding = std::move(fallbackBinding);
@@ -341,7 +341,7 @@ bool SemanticsValidator::buildParameters() {
       if (defMap_.find(resolvedPath) != defMap_.end()) {
         return true;
       }
-      if (!isDirectExperimentalMapConstructor) {
+      if (!isDirectExperimentalKeyValueConstructor) {
         return false;
       }
       return true;
@@ -378,7 +378,7 @@ bool SemanticsValidator::buildParameters() {
       }
       if (param.args.size() == 1 &&
           !isDefaultExprAllowed(param.args.front(), defaultResolvesToDefinition) &&
-          !isAllowedExperimentalMapDefaultExpr(param.args.front())) {
+          !isAllowedExperimentalKeyValueDefaultExpr(param.args.front())) {
         if (param.args.front().kind == Expr::Kind::Call && hasNamedArguments(param.args.front().argNames)) {
           return failParameterDiagnostic(
               "parameter default does not accept named arguments: " +

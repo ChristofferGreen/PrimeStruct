@@ -1865,6 +1865,43 @@ TEST_CASE("canonical map surface owns standalone stdlib implementation") {
         std::string::npos);
   CHECK(buildParametersSource.find("isMapCollectionTypeName(normalizedType)") !=
         std::string::npos);
+  CHECK(buildParametersSource.find("typeTextIsExperimentalMapValue") ==
+        std::string::npos);
+  CHECK(buildParametersSource.find("typeTextIsExperimentalKeyValue") !=
+        std::string::npos);
+  CHECK(buildParametersSource.find("typeTextCarriesExperimentalMapValue") ==
+        std::string::npos);
+  CHECK(buildParametersSource.find("typeTextCarriesExperimentalKeyValue") !=
+        std::string::npos);
+  CHECK(buildParametersSource.find("bindingCarriesExperimentalMapValue") ==
+        std::string::npos);
+  CHECK(buildParametersSource.find("bindingCarriesExperimentalKeyValue") !=
+        std::string::npos);
+  CHECK(buildParametersSource.find("isResolvedExperimentalMapConstructorPath") ==
+        std::string::npos);
+  CHECK(buildParametersSource.find(
+            "isResolvedExperimentalKeyValueConstructorPath") !=
+        std::string::npos);
+  CHECK(buildParametersSource.find("isAllowedExperimentalMapDefaultExpr") ==
+        std::string::npos);
+  CHECK(buildParametersSource.find("isAllowedExperimentalKeyValueDefaultExpr") !=
+        std::string::npos);
+  CHECK(buildParametersSource.find("isDirectExperimentalMapConstructor") ==
+        std::string::npos);
+  CHECK(buildParametersSource.find("isDirectExperimentalKeyValueConstructor") !=
+        std::string::npos);
+  CHECK(buildParametersSource.find("isMapConstructorExpr") ==
+        std::string::npos);
+  CHECK(buildParametersSource.find("isKeyValueConstructorExpr") !=
+        std::string::npos);
+  CHECK(buildParametersSource.find("argCarriesExperimentalMapValue") ==
+        std::string::npos);
+  CHECK(buildParametersSource.find("argCarriesExperimentalKeyValue") !=
+        std::string::npos);
+  CHECK(buildParametersSource.find("returnsExperimentalMapValue") ==
+        std::string::npos);
+  CHECK(buildParametersSource.find("returnsExperimentalKeyValue") !=
+        std::string::npos);
   CHECK(buildInitializerInferenceSource.find("explicitStdKeyValueHelperName") !=
         std::string::npos);
   CHECK(buildInitializerInferenceSource.find("explicitStdMapHelperName") ==
