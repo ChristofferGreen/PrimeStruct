@@ -8,7 +8,7 @@
 namespace primec::semantics {
 namespace {
 
-bool isExperimentalMapTypeText(const std::string &typeText) {
+bool isExperimentalKeyValueTypeText(const std::string &typeText) {
   std::string normalizedType = normalizeBindingTypeName(typeText);
   while (true) {
     std::string base;
@@ -444,7 +444,7 @@ bool SemanticsValidator::validateExprPreDispatchDirectCalls(
         std::string receiverTypeText;
         const bool receiverIsExperimentalKeyValue =
             inferQueryExprTypeText(receiverExpr, params, locals, receiverTypeText) &&
-            isExperimentalMapTypeText(receiverTypeText);
+            isExperimentalKeyValueTypeText(receiverTypeText);
         const bool canonicalKeyValueAccessDiagnostic =
             isSourceSpelledCanonicalKeyValueAccessCall(expr) ||
             expr.sourceIsMethodCall ||
@@ -514,7 +514,7 @@ bool SemanticsValidator::validateExprPreDispatchDirectCalls(
   auto isExperimentalKeyValueReceiverExpr = [&](const Expr &candidate) {
     std::string receiverTypeText;
     if (inferQueryExprTypeText(candidate, params, locals, receiverTypeText) &&
-        isExperimentalMapTypeText(receiverTypeText)) {
+        isExperimentalKeyValueTypeText(receiverTypeText)) {
       return true;
     }
     if (candidate.kind != Expr::Kind::Call) {
@@ -532,7 +532,7 @@ bool SemanticsValidator::validateExprPreDispatchDirectCalls(
         inferredReturn.typeTemplateArg.empty()
             ? inferredReturn.typeName
             : inferredReturn.typeName + "<" + inferredReturn.typeTemplateArg + ">";
-    return isExperimentalMapTypeText(inferredTypeText);
+    return isExperimentalKeyValueTypeText(inferredTypeText);
   };
 
   std::string canonicalExperimentalKeyValueHelperResolved;

@@ -1813,6 +1813,10 @@ TEST_CASE("canonical map surface owns standalone stdlib implementation") {
         std::string::npos);
   CHECK(exprPreDispatchDirectCallsSource.find("isExperimentalMapReceiverExpr") ==
         std::string::npos);
+  CHECK(exprPreDispatchDirectCallsSource.find("isExperimentalMapTypeText") ==
+        std::string::npos);
+  CHECK(exprPreDispatchDirectCallsSource.find("isExperimentalKeyValueTypeText") !=
+        std::string::npos);
   CHECK(exprPreDispatchDirectCallsSource.find("isBuiltinKeyValueTarget") !=
         std::string::npos);
   CHECK(exprPreDispatchDirectCallsSource.find("isExperimentalKeyValueTarget") !=
