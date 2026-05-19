@@ -22,7 +22,7 @@ bool isRemovedBorrowedSoaCompatibilityHelper(std::string_view helperName) {
          helperName == "ref_ref" || helperName == "to" "_aos_ref";
 }
 
-bool isRemovedMapCompatibilityHelper(std::string_view helperName) {
+bool isRemovedKeyValueCompatibilityHelper(std::string_view helperName) {
   return helperName == "count" || helperName == "count_ref" ||
          helperName == "size" ||
          helperName == "contains" || helperName == "contains_ref" ||
@@ -633,7 +633,7 @@ bool isExplicitRemovedCollectionMethodAlias(const std::string &receiverPath, std
                                       resolvedKeyValueHelperName)) {
     helperName = resolvedKeyValueHelperName;
   }
-  return !helperName.empty() && isRemovedMapCompatibilityHelper(helperName);
+  return !helperName.empty() && isRemovedKeyValueCompatibilityHelper(helperName);
 }
 
 bool isExplicitRemovedCollectionCallAlias(std::string rawPath) {
@@ -655,7 +655,7 @@ bool isExplicitRemovedCollectionCallAlias(std::string rawPath) {
   if (resolveRootMapAliasHelperMemberNameLocal(rawPath,
                                                rootMapAliasHelperName)) {
     helperName = rootMapAliasHelperName;
-    return !helperName.empty() && isRemovedMapCompatibilityHelper(helperName);
+    return !helperName.empty() && isRemovedKeyValueCompatibilityHelper(helperName);
   }
   return false;
 }
@@ -683,7 +683,7 @@ std::string removedRootMapMethodDiagnostic(const Expr &expr) {
   } else {
     return {};
   }
-  if (!isRemovedMapCompatibilityHelper(helperName)) {
+  if (!isRemovedKeyValueCompatibilityHelper(helperName)) {
     return {};
   }
   return "unknown method: /" + rootPrefix + helperName;

@@ -627,7 +627,11 @@ TEST_CASE("canonical map surface owns standalone stdlib implementation") {
         std::string::npos);
   CHECK(builtinPathHelpersSource.find("mapHelperName") ==
         std::string::npos);
+  CHECK(builtinPathHelpersSource.find("isRemovedMapCompatibilityHelper(") ==
+        std::string::npos);
   CHECK(builtinPathHelpersSource.find("mapHelperSurfaceMetadataLocal()") !=
+        std::string::npos);
+  CHECK(builtinPathHelpersSource.find("isRemovedKeyValueCompatibilityHelper(") !=
         std::string::npos);
   CHECK(builtinPathHelpersSource.find("resolveMapHelperMemberNameLocal(") !=
         std::string::npos);
