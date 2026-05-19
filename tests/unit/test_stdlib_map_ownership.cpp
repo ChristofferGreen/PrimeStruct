@@ -2257,6 +2257,26 @@ TEST_CASE("canonical map surface owns standalone stdlib implementation") {
         std::string::npos);
   CHECK(inferCollectionBufferAndMapResolversSource.find("isRootMapConstructorAliasPath(") !=
         std::string::npos);
+  CHECK(inferCollectionBufferAndMapResolversSource.find("inferMapConstructorArgTypes") ==
+        std::string::npos);
+  CHECK(inferCollectionBufferAndMapResolversSource.find(
+            "inferKeyValueConstructorArgTypes") != std::string::npos);
+  CHECK(inferCollectionBufferAndMapResolversSource.find("hasRootMapDefinitionFamily") ==
+        std::string::npos);
+  CHECK(inferCollectionBufferAndMapResolversSource.find(
+            "hasRootKeyValueDefinitionFamily") != std::string::npos);
+  CHECK(inferCollectionBufferAndMapResolversSource.find("skipRootMapAliasInference") ==
+        std::string::npos);
+  CHECK(inferCollectionBufferAndMapResolversSource.find(
+            "skipRootKeyValueAliasInference") != std::string::npos);
+  CHECK(inferCollectionBufferAndMapResolversSource.find(
+            "hasVisibleCanonicalMapConstructor") == std::string::npos);
+  CHECK(inferCollectionBufferAndMapResolversSource.find(
+            "hasVisibleCanonicalKeyValueConstructor") != std::string::npos);
+  CHECK(inferCollectionBufferAndMapResolversSource.find("allowRootMapConstructorAlias") ==
+        std::string::npos);
+  CHECK(inferCollectionBufferAndMapResolversSource.find(
+            "allowRootKeyValueConstructorAlias") != std::string::npos);
   CHECK(inferCollectionBufferAndMapResolversSource.find("path == \"/map\"") ==
         std::string::npos);
   CHECK(inferCollectionBufferAndMapResolversSource.find("path.rfind(\"/map__\", 0)") ==

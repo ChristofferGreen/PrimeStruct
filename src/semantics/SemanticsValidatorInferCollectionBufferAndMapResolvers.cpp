@@ -40,7 +40,7 @@ void SemanticsValidator::populateBuiltinCollectionDispatchBufferAndMapResolvers(
         &extractExperimentalMapFieldTypes,
     const std::function<bool(const Expr &)> &isDirectMapConstructorCall) {
   const std::weak_ptr<BuiltinCollectionDispatchResolvers> weakState = state;
-  auto inferMapConstructorArgTypes =
+  auto inferKeyValueConstructorArgTypes =
       [=, this](const Expr &target, std::string &keyTypeOut, std::string &valueTypeOut) -> bool {
     keyTypeOut.clear();
     valueTypeOut.clear();
@@ -225,7 +225,7 @@ void SemanticsValidator::populateBuiltinCollectionDispatchBufferAndMapResolvers(
       }
       return prefix + "/" + candidate.name;
     };
-    auto hasRootMapDefinitionFamily = [&]() {
+    auto hasRootKeyValueDefinitionFamily = [&]() {
       const std::string alias = mapCollectionAliasToken();
       if (alias.empty()) {
         return false;
@@ -269,7 +269,7 @@ void SemanticsValidator::populateBuiltinCollectionDispatchBufferAndMapResolvers(
                                      return resolveCalleePath(candidate);
                                    }) &&
         inferQueryExprTypeText(target, params, locals, inferredTypeText)) {
-      const bool skipRootMapAliasInference =
+      const bool skipRootKeyValueAliasInference =
           target.kind == Expr::Kind::Call &&
           ([&]() {
             const std::string resolvedPath = resolveCalleePath(target);
@@ -285,29 +285,29 @@ void SemanticsValidator::populateBuiltinCollectionDispatchBufferAndMapResolvers(
         binding.typeName = normalizedType;
         binding.typeTemplateArg.clear();
       }
-      if (!skipRootMapAliasInference &&
+      if (!skipRootKeyValueAliasInference &&
           resolveMapBinding(binding, keyTypeOut, valueTypeOut)) {
         return true;
       }
     }
     if (target.kind == Expr::Kind::Call) {
       const auto *mapConstructorMetadata = mapConstructorSurfaceMetadataLocal();
-      const bool hasVisibleCanonicalMapConstructor =
+      const bool hasVisibleCanonicalKeyValueConstructor =
           mapConstructorMetadata != nullptr &&
           hasVisibleDefinitionPathForCurrentImports(
               std::string(mapConstructorMetadata->canonicalPath));
-      const bool allowRootMapConstructorAlias =
-          hasVisibleCanonicalMapConstructor && !hasRootMapDefinitionFamily();
+      const bool allowRootKeyValueConstructorAlias =
+          hasVisibleCanonicalKeyValueConstructor && !hasRootKeyValueDefinitionFamily();
       const std::string resolvedTarget = resolveCalleePath(target);
       if (isDirectMapConstructorPath(resolvedTarget) &&
           target.templateArgs.size() == 2 &&
-          (!isRootMapConstructorAliasPath(resolvedTarget) || allowRootMapConstructorAlias)) {
+          (!isRootMapConstructorAliasPath(resolvedTarget) || allowRootKeyValueConstructorAlias)) {
         keyTypeOut = target.templateArgs[0];
         valueTypeOut = target.templateArgs[1];
         return true;
       }
       if (isDirectMapConstructorPath(resolvedTarget) &&
-          (!isRootMapConstructorAliasPath(resolvedTarget) || allowRootMapConstructorAlias)) {
+          (!isRootMapConstructorAliasPath(resolvedTarget) || allowRootKeyValueConstructorAlias)) {
         std::vector<std::string> args;
         const std::string collectionAlias = mapCollectionAliasToken();
         if (!collectionAlias.empty() &&
@@ -324,7 +324,7 @@ void SemanticsValidator::populateBuiltinCollectionDispatchBufferAndMapResolvers(
           !collectionAlias.empty() &&
           builtinCollectionName == collectionAlias &&
           target.templateArgs.size() == 2 &&
-          (!isRootMapConstructorAliasPath(resolvedTarget) || allowRootMapConstructorAlias)) {
+          (!isRootMapConstructorAliasPath(resolvedTarget) || allowRootKeyValueConstructorAlias)) {
         keyTypeOut = target.templateArgs[0];
         valueTypeOut = target.templateArgs[1];
         return true;
@@ -450,7 +450,7 @@ void SemanticsValidator::populateBuiltinCollectionDispatchBufferAndMapResolvers(
         valueTypeOut = args[1];
         return true;
       }
-      if (inferMapConstructorArgTypes(target, keyTypeOut, valueTypeOut)) {
+      if (inferKeyValueConstructorArgTypes(target, keyTypeOut, valueTypeOut)) {
         return true;
       }
     }
@@ -498,7 +498,7 @@ void SemanticsValidator::populateBuiltinCollectionDispatchBufferAndMapResolvers(
     }
     if (target.kind == Expr::Kind::Call &&
         isDirectMapConstructorCall(target) &&
-        inferMapConstructorArgTypes(target, keyTypeOut, valueTypeOut)) {
+        inferKeyValueConstructorArgTypes(target, keyTypeOut, valueTypeOut)) {
       return true;
     }
     std::string inferredTypeText;
