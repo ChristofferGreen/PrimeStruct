@@ -589,8 +589,8 @@ ReturnKind returnKindForTypeName(const std::string &name) {
     if (isVectorLike && args.size() == 1) {
       return ReturnKind::Array;
     }
-    const bool isMapLike = isQualifiedExperimentalMapBackingTypeName(base);
-    if (isMapLike && args.size() == 2) {
+    const bool isKeyValueLike = isQualifiedExperimentalMapBackingTypeName(base);
+    if (isKeyValueLike && args.size() == 2) {
       return ReturnKind::Array;
     }
   }

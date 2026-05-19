@@ -639,6 +639,10 @@ TEST_CASE("canonical map surface owns standalone stdlib implementation") {
   CHECK(semanticBindingTypeHelpersSource.find(
             "isQualifiedExperimentalMapBackingTypeName(base)") !=
         std::string::npos);
+  CHECK(semanticBindingTypeHelpersSource.find("const bool isMapLike") ==
+        std::string::npos);
+  CHECK(semanticBindingTypeHelpersSource.find("const bool isKeyValueLike") !=
+        std::string::npos);
   CHECK(validatorSource.find("name.rfind(\"map/\", 0)") ==
         std::string::npos);
   CHECK(validatorSource.find("name.rfind(\"std/collections/map/\", 0)") ==
