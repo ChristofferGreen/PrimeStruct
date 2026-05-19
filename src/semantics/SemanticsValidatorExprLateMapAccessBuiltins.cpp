@@ -451,15 +451,15 @@ bool SemanticsValidator::validateExprLateMapAccessBuiltins(
           canonicalKeyValueHelperPathLocal(resolvesTryAtRef ? "tryAt_ref"
                                                        : "tryAt"));
     }
-    std::string mapKeyType;
-    if (!resolveMapKeyTypeWithInference(receiverExpr, mapKeyType)) {
+    std::string keyValueKeyType;
+    if (!resolveMapKeyTypeWithInference(receiverExpr, keyValueKeyType)) {
       if (!validateExpr(params, locals, receiverExpr)) {
         return false;
       }
       return failLateKeyValueAccessDiagnostic("tryAt requires map target");
     }
-    if (!mapKeyType.empty()) {
-      if (normalizeBindingTypeName(mapKeyType) == "string") {
+    if (!keyValueKeyType.empty()) {
+      if (normalizeBindingTypeName(keyValueKeyType) == "string") {
         if (!this->isStringExprForArgumentValidation(keyExpr,
                                                      *context.dispatchResolvers)) {
           return failLateKeyValueAccessDiagnostic(
@@ -467,17 +467,17 @@ bool SemanticsValidator::validateExprLateMapAccessBuiltins(
         }
       } else {
         ReturnKind keyKind =
-            returnKindForTypeName(normalizeBindingTypeName(mapKeyType));
+            returnKindForTypeName(normalizeBindingTypeName(keyValueKeyType));
         if (keyKind != ReturnKind::Unknown) {
           if (context.dispatchResolvers->resolveStringTarget(keyExpr)) {
             return failLateKeyValueAccessDiagnostic(
-                "tryAt requires map key type " + mapKeyType);
+                "tryAt requires map key type " + keyValueKeyType);
           }
           ReturnKind candidateKind = inferExprReturnKind(keyExpr, params, locals);
           if (candidateKind != ReturnKind::Unknown &&
               candidateKind != keyKind) {
             return failLateKeyValueAccessDiagnostic(
-                "tryAt requires map key type " + mapKeyType);
+                "tryAt requires map key type " + keyValueKeyType);
           }
         }
       }
