@@ -547,6 +547,10 @@ TEST_CASE("canonical map surface owns standalone stdlib implementation") {
   CHECK(semanticsSource.find(
             "metadataBackedCanonicalMapHelperPath(helperName)") !=
         std::string::npos);
+  CHECK(semanticsSource.find("explicitRemovedMapCompatibilityReadPath") ==
+        std::string::npos);
+  CHECK(semanticsSource.find("explicitRemovedKeyValueCompatibilityReadPath") !=
+        std::string::npos);
   CHECK(semanticsSource.find("isResolvedMapConstructorPath(path)") !=
         std::string::npos);
   CHECK(semanticBindingTypeHelpersSource.find(

@@ -5858,7 +5858,7 @@ void rewriteBuiltinMapInsertExpr(
            rootName == "Buffer" || rootName == "ImageError" ||
            rootName == "ContainerError" || rootName == "GfxError";
   };
-  auto explicitRemovedMapCompatibilityReadPath = [&]() -> std::string {
+  auto explicitRemovedKeyValueCompatibilityReadPath = [&]() -> std::string {
     const std::string helperName =
         metadataBackedMapHelperRootAliasMethodName(scopedExprName);
     if (helperName.empty()) {
@@ -5881,9 +5881,9 @@ void rewriteBuiltinMapInsertExpr(
     return {};
   }();
   if (matchesBuiltinAccessCall &&
-      !explicitRemovedMapCompatibilityReadPath.empty() &&
+      !explicitRemovedKeyValueCompatibilityReadPath.empty() &&
       !isStdlibOwnedDefinitionNamespace(definitionNamespace) &&
-      definitionMap.count(explicitRemovedMapCompatibilityReadPath) == 0) {
+      definitionMap.count(explicitRemovedKeyValueCompatibilityReadPath) == 0) {
     return;
   }
   if (matchesBuiltinReadMethod || matchesBuiltinAccessCall) {
