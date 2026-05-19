@@ -680,8 +680,8 @@ bool SemanticsValidator::validateExprCollectionAccessFallbacks(
     }
     if ((isMap || isExperimentalMap) &&
         !context.shouldBuiltinValidateBareKeyValueAccessCall &&
-        !(context.isIndexedArgsPackMapReceiverTarget != nullptr &&
-          context.isIndexedArgsPackMapReceiverTarget(expr.args.front())) &&
+        !(context.isIndexedArgsPackKeyValueReceiverTarget != nullptr &&
+          context.isIndexedArgsPackKeyValueReceiverTarget(expr.args.front())) &&
         !hasDeclaredDefinitionPath(rootedKeyValueHelperAliasPathLocal(builtinName)) &&
         !hasImportedDefinitionPath(canonicalKeyValueHelperPathLocal(builtinName)) &&
         !hasDeclaredDefinitionPath(canonicalKeyValueHelperPathLocal(builtinName))) {

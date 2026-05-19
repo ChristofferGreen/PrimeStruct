@@ -743,7 +743,7 @@ bool SemanticsValidator::validateExpr(const std::vector<ParameterInfo> &params,
         methodCompatibilitySetup.unavailableMethodDiagnostic;
     const bool isIndexedArgsPackMapMethodReceiver = [&]() {
       if (!expr.isMethodCall || expr.args.empty() ||
-          !this->isIndexedArgsPackMapReceiverTarget(
+          !this->isIndexedArgsPackKeyValueReceiverTarget(
               expr.args.front(), dispatchBootstrap.dispatchResolvers)) {
         return false;
       }
@@ -1292,9 +1292,9 @@ bool SemanticsValidator::validateExpr(const std::vector<ParameterInfo> &params,
       ExprLateUnknownTargetFallbackContext lateUnknownTargetFallbackContext;
       lateUnknownTargetFallbackContext.resolveMapTarget =
           dispatchBootstrap.resolveMapTarget;
-      lateUnknownTargetFallbackContext.isIndexedArgsPackMapReceiverTarget =
+      lateUnknownTargetFallbackContext.isIndexedArgsPackKeyValueReceiverTarget =
           [&](const Expr &target) {
-            return this->isIndexedArgsPackMapReceiverTarget(
+            return this->isIndexedArgsPackKeyValueReceiverTarget(
                 target, dispatchBootstrap.dispatchResolvers);
           };
       bool handledLateUnknownTargetFallback = false;

@@ -136,6 +136,9 @@ TEST_CASE("canonical map surface owns standalone stdlib implementation") {
   const std::string exprCollectionDispatchSetupSource =
       readText(repoRoot() / "src" / "semantics" /
                "SemanticsValidatorExprCollectionDispatchSetup.cpp");
+  const std::string exprCollectionPredicatesSource =
+      readText(repoRoot() / "src" / "semantics" /
+               "SemanticsValidatorExprCollectionPredicates.cpp");
   const std::string exprCollectionCountCapacitySource =
       readText(repoRoot() / "src" / "semantics" /
                "SemanticsValidatorExprCollectionCountCapacity.cpp");
@@ -420,6 +423,7 @@ TEST_CASE("canonical map surface owns standalone stdlib implementation") {
   REQUIRE(!exprVectorHelpersSource.empty());
   REQUIRE(!collectionHelperRewritesSource.empty());
   REQUIRE(!effectFreeCollectionsSource.empty());
+  REQUIRE(!exprCollectionPredicatesSource.empty());
   REQUIRE(!passesEffectFreeSource.empty());
   REQUIRE(!buildParametersSource.empty());
   REQUIRE(!buildCallResolutionSource.empty());
@@ -1314,6 +1318,30 @@ TEST_CASE("canonical map surface owns standalone stdlib implementation") {
             "preferredKeyValueMethodTargetForCall(") != std::string::npos);
   CHECK(exprLateUnknownTargetFallbacksSource.find("preferredMapMethodTargetForCall(") ==
         std::string::npos);
+  CHECK(privateExprInferenceSource.find(
+            "isIndexedArgsPackKeyValueReceiverTarget(") != std::string::npos);
+  CHECK(privateExprInferenceSource.find("isIndexedArgsPackMapReceiverTarget(") ==
+        std::string::npos);
+  CHECK(privateExprValidationSource.find(
+            "isIndexedArgsPackKeyValueReceiverTarget") != std::string::npos);
+  CHECK(privateExprValidationSource.find("isIndexedArgsPackMapReceiverTarget") ==
+        std::string::npos);
+  CHECK(exprCollectionPredicatesSource.find(
+            "isIndexedArgsPackKeyValueReceiverTarget(") != std::string::npos);
+  CHECK(exprCollectionPredicatesSource.find("isIndexedArgsPackMapReceiverTarget(") ==
+        std::string::npos);
+  CHECK(exprSource.find("isIndexedArgsPackKeyValueReceiverTarget(") !=
+        std::string::npos);
+  CHECK(exprSource.find("isIndexedArgsPackMapReceiverTarget(") ==
+        std::string::npos);
+  CHECK(exprTrySource.find("isIndexedArgsPackKeyValueReceiverTarget") !=
+        std::string::npos);
+  CHECK(exprTrySource.find("isIndexedArgsPackMapReceiverTarget") ==
+        std::string::npos);
+  CHECK(exprLateUnknownTargetFallbacksSource.find(
+            "isIndexedArgsPackKeyValueReceiverTarget") != std::string::npos);
+  CHECK(exprLateUnknownTargetFallbacksSource.find(
+            "isIndexedArgsPackMapReceiverTarget") == std::string::npos);
   CHECK(inferMethodResolutionHelpersSource.find("isWrappedKeyValueTypeText") !=
         std::string::npos);
   CHECK(inferMethodResolutionHelpersSource.find("isWrappedMapTypeText") ==
@@ -1983,6 +2011,10 @@ TEST_CASE("canonical map surface owns standalone stdlib implementation") {
   CHECK(inferCollectionDispatchSetupSource.find("isStdNamespacedMapAccessSpelling") ==
         std::string::npos);
   CHECK(inferCollectionDispatchSetupSource.find(
+            "isIndexedArgsPackKeyValueReceiverTarget") != std::string::npos);
+  CHECK(inferCollectionDispatchSetupSource.find(
+            "isIndexedArgsPackMapReceiverTarget") == std::string::npos);
+  CHECK(inferCollectionDispatchSetupSource.find(
             "hasStdNamespacedKeyValueAccessDefinition") != std::string::npos);
   CHECK(inferCollectionDispatchSetupSource.find("hasStdNamespacedMapAccessDefinition") ==
         std::string::npos);
@@ -2164,6 +2196,10 @@ TEST_CASE("canonical map surface owns standalone stdlib implementation") {
   CHECK(inferLateFallbackBuiltinsSource.find("mapReceiverIndex") ==
         std::string::npos);
   CHECK(inferLateFallbackBuiltinsSource.find(
+            "isIndexedArgsPackKeyValueReceiverTarget") != std::string::npos);
+  CHECK(inferLateFallbackBuiltinsSource.find(
+            "isIndexedArgsPackMapReceiverTarget") == std::string::npos);
+  CHECK(inferLateFallbackBuiltinsSource.find(
             "metadata->importAliasSpellings") !=
         std::string::npos);
   CHECK(exprLateFallbackBuiltinsSource.find("rewrittenMapAccessCall") ==
@@ -2287,6 +2323,26 @@ TEST_CASE("canonical map surface owns standalone stdlib implementation") {
             "shouldBuiltinValidateBareKeyValueContainsCall") !=
         std::string::npos);
   CHECK(mapSoaBuiltinsSource.find("shouldBuiltinValidateBareMapContainsCall") ==
+        std::string::npos);
+  CHECK(collectionAccessSetupSource.find(
+            "isIndexedArgsPackKeyValueReceiverTarget") != std::string::npos);
+  CHECK(collectionAccessSetupSource.find("isIndexedArgsPackMapReceiverTarget") ==
+        std::string::npos);
+  CHECK(collectionAccessSource.find("isIndexedArgsPackKeyValueReceiverTarget") !=
+        std::string::npos);
+  CHECK(collectionAccessSource.find("isIndexedArgsPackMapReceiverTarget") ==
+        std::string::npos);
+  CHECK(collectionAccessValidationSource.find(
+            "isIndexedArgsPackKeyValueReceiverTarget") != std::string::npos);
+  CHECK(collectionAccessValidationSource.find("isIndexedArgsPackMapReceiverTarget") ==
+        std::string::npos);
+  CHECK(lateCollectionAccessFallbacksSource.find(
+            "isIndexedArgsPackKeyValueReceiverTarget") != std::string::npos);
+  CHECK(lateCollectionAccessFallbacksSource.find(
+            "isIndexedArgsPackMapReceiverTarget") == std::string::npos);
+  CHECK(lateMapAccessBuiltinsSource.find(
+            "isIndexedArgsPackKeyValueReceiverTarget(") != std::string::npos);
+  CHECK(lateMapAccessBuiltinsSource.find("isIndexedArgsPackMapReceiverTarget(") ==
         std::string::npos);
   CHECK(lateMapAccessBuiltinsSource.find("isExperimentalKeyValueReceiver") !=
         std::string::npos);

@@ -79,7 +79,7 @@ bool SemanticsValidator::validateExprMethodCallTarget(
         resolveExperimentalMapTarget(target, keyType, valueType)) {
       return true;
     }
-    if (isIndexedArgsPackMapReceiverTarget(target, dispatchResolvers)) {
+    if (isIndexedArgsPackKeyValueReceiverTarget(target, dispatchResolvers)) {
       return true;
     }
     std::string inferredTypeText;

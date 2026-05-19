@@ -485,7 +485,7 @@ ReturnKind SemanticsValidator::inferLateFallbackReturnKind(
           context.resolveMethodCallPath(expr.name, methodResolved)) {
         if (isCanonicalKeyValueContainsHelperPath(methodResolved) &&
             !inferCollectionDispatchSetup.shouldInferBuiltinBareKeyValueContainsCall &&
-            !inferCollectionDispatchSetup.isIndexedArgsPackMapReceiverTarget(
+            !inferCollectionDispatchSetup.isIndexedArgsPackKeyValueReceiverTarget(
                 receiverExpr) &&
             !hasImportedDefinitionPath(methodResolved) &&
             !hasDeclaredDefinitionPath(methodResolved)) {
@@ -494,7 +494,7 @@ ReturnKind SemanticsValidator::inferLateFallbackReturnKind(
         }
         if (isCanonicalKeyValueTryAtHelperPath(methodResolved) &&
             !inferCollectionDispatchSetup.shouldInferBuiltinBareKeyValueTryAtCall &&
-            !inferCollectionDispatchSetup.isIndexedArgsPackMapReceiverTarget(
+            !inferCollectionDispatchSetup.isIndexedArgsPackKeyValueReceiverTarget(
                 receiverExpr) &&
             !hasImportedDefinitionPath(methodResolved) &&
             !hasDeclaredDefinitionPath(methodResolved) &&
@@ -512,7 +512,7 @@ ReturnKind SemanticsValidator::inferLateFallbackReturnKind(
         if ((isKeyValueImportAliasAccessHelperPath(methodResolved) ||
              isCanonicalAccessPath) &&
             !inferCollectionDispatchSetup.shouldInferBuiltinBareKeyValueAccessCall &&
-            !inferCollectionDispatchSetup.isIndexedArgsPackMapReceiverTarget(
+            !inferCollectionDispatchSetup.isIndexedArgsPackKeyValueReceiverTarget(
                 receiverExpr) &&
             !hasImportedDefinitionPath(canonicalAccessPath) &&
             !hasDeclaredDefinitionPath(canonicalAccessPath)) {
@@ -593,7 +593,7 @@ ReturnKind SemanticsValidator::inferLateFallbackReturnKind(
   if (!expr.isMethodCall && isSimpleCallName(expr, "tryAt") &&
       expr.args.size() == 2 &&
       (inferCollectionDispatchSetup.shouldInferBuiltinBareKeyValueTryAtCall ||
-       inferCollectionDispatchSetup.isIndexedArgsPackMapReceiverTarget(
+       inferCollectionDispatchSetup.isIndexedArgsPackKeyValueReceiverTarget(
            expr.args[keyValueHelperReceiverIndex(expr, builtinCollectionDispatchResolvers)]))) {
     ResultTypeInfo argResult;
     if (resolveResultTypeForExpr(expr, params, locals, argResult) &&
@@ -606,7 +606,7 @@ ReturnKind SemanticsValidator::inferLateFallbackReturnKind(
       inferCollectionDispatchSetup.hasBuiltinAccessSpelling &&
       expr.args.size() == 2 &&
       (inferCollectionDispatchSetup.shouldInferBuiltinBareKeyValueAccessCall ||
-       inferCollectionDispatchSetup.isIndexedArgsPackMapReceiverTarget(
+       inferCollectionDispatchSetup.isIndexedArgsPackKeyValueReceiverTarget(
            expr.args[keyValueHelperReceiverIndex(expr,
                                             builtinCollectionDispatchResolvers)]))) {
     builtinAccessName = inferCollectionDispatchSetup.builtinAccessName;

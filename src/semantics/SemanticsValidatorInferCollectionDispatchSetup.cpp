@@ -256,7 +256,7 @@ void SemanticsValidator::prepareInferCollectionDispatchSetup(
   setupOut.shouldInferBuiltinBareKeyValueTryAtCall =
       shouldBuiltinValidateCurrentMapWrapperHelper("tryAt");
   setupOut.shouldInferBuiltinBareKeyValueAccessCall = true;
-  setupOut.isIndexedArgsPackMapReceiverTarget =
+  setupOut.isIndexedArgsPackKeyValueReceiverTarget =
       [&](const Expr &receiverExpr) -> bool {
     std::string elemType;
     std::string keyType;

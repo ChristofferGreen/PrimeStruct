@@ -140,7 +140,7 @@
                                       bool &handledOut);
   struct ExprTryBuiltinContext {
     std::function<std::string(const Expr &)> getDirectKeyValueHelperCompatibilityPath;
-    std::function<bool(const Expr &)> isIndexedArgsPackMapReceiverTarget;
+    std::function<bool(const Expr &)> isIndexedArgsPackKeyValueReceiverTarget;
   };
   bool validateExprTryBuiltin(const std::vector<ParameterInfo> &params,
                               const std::unordered_map<std::string, BindingInfo> &locals,
@@ -340,7 +340,7 @@
       bool &handledOut);
   struct ExprLateUnknownTargetFallbackContext {
     std::function<bool(const Expr &)> resolveMapTarget;
-    std::function<bool(const Expr &)> isIndexedArgsPackMapReceiverTarget;
+    std::function<bool(const Expr &)> isIndexedArgsPackKeyValueReceiverTarget;
   };
   bool validateExprLateUnknownTargetFallbacks(
       const std::vector<ParameterInfo> &params,
@@ -392,7 +392,7 @@
     std::function<bool(const Expr &, std::string &)> resolveMapKeyType;
     std::function<bool(const Expr &, std::string &, std::string &)>
         resolveExperimentalMapTarget;
-    std::function<bool(const Expr &)> isIndexedArgsPackMapReceiverTarget;
+    std::function<bool(const Expr &)> isIndexedArgsPackKeyValueReceiverTarget;
     std::function<bool(const Expr &)> isNamedArgsPackMethodAccessCall;
     std::function<bool(const Expr &)> isNamedArgsPackWrappedFileBuiltinAccessCall;
     std::function<bool(const Expr &)> isMapLikeBareAccessReceiverTarget;
@@ -554,7 +554,7 @@
     std::function<bool(const Expr &)> resolveStringTarget;
     std::function<bool(const Expr &)> resolveMapTarget;
     std::function<bool(const std::string &)> hasResolvableKeyValueHelperPath;
-    std::function<bool(const Expr &)> isIndexedArgsPackMapReceiverTarget;
+    std::function<bool(const Expr &)> isIndexedArgsPackKeyValueReceiverTarget;
   };
   void prepareExprCollectionAccessDispatchContext(
       const ExprCollectionDispatchSetup &dispatchSetup,

@@ -221,7 +221,7 @@ bool SemanticsValidator::isArrayNamespacedVectorAccessCompatibilityCall(
   return false;
 }
 
-bool SemanticsValidator::isIndexedArgsPackMapReceiverTarget(
+bool SemanticsValidator::isIndexedArgsPackKeyValueReceiverTarget(
     const Expr &receiverExpr,
     const BuiltinCollectionDispatchResolvers &dispatchResolvers) const {
   std::string elemType;

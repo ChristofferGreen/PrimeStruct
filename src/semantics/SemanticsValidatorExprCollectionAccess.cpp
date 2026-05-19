@@ -866,14 +866,14 @@ bool SemanticsValidator::resolveExprCollectionAccessTarget(
               context.shouldBuiltinValidateBareKeyValueContainsCall) &&
             !(resolvedCanonicalAccessHelper &&
               context.shouldBuiltinValidateBareKeyValueAccessCall) &&
-            !context.isIndexedArgsPackMapReceiverTarget(receiverCandidate)) {
+            !context.isIndexedArgsPackKeyValueReceiverTarget(receiverCandidate)) {
           isBuiltinMethod = false;
         }
       }
       if (isBuiltinMethod) {
         if (isCanonicalKeyValueContainsResolvedPath(methodResolved) &&
             !context.shouldBuiltinValidateBareKeyValueContainsCall &&
-            !context.isIndexedArgsPackMapReceiverTarget(receiverCandidate) &&
+            !context.isIndexedArgsPackKeyValueReceiverTarget(receiverCandidate) &&
             !hasImportedDefinitionPath(methodResolved) &&
             !hasDeclaredDefinitionPath(methodResolved)) {
           return failCollectionAccessTargetDiagnostic(
@@ -881,7 +881,7 @@ bool SemanticsValidator::resolveExprCollectionAccessTarget(
         }
         if (isCanonicalKeyValueAccessResolvedPath(methodResolved) &&
             !context.shouldBuiltinValidateBareKeyValueAccessCall &&
-            !context.isIndexedArgsPackMapReceiverTarget(receiverCandidate) &&
+            !context.isIndexedArgsPackKeyValueReceiverTarget(receiverCandidate) &&
             !hasImportedDefinitionPath(methodResolved) &&
             !hasDeclaredDefinitionPath(methodResolved)) {
           return failCollectionAccessTargetDiagnostic(

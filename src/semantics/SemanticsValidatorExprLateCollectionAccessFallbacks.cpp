@@ -46,9 +46,9 @@ bool SemanticsValidator::validateExprLateCollectionAccessFallbacks(
       };
   collectionAccessValidationContext.resolveExperimentalMapTarget =
       context.dispatchResolvers->resolveExperimentalMapTarget;
-  collectionAccessValidationContext.isIndexedArgsPackMapReceiverTarget =
+  collectionAccessValidationContext.isIndexedArgsPackKeyValueReceiverTarget =
       [&](const Expr &target) {
-        return this->isIndexedArgsPackMapReceiverTarget(target,
+        return this->isIndexedArgsPackKeyValueReceiverTarget(target,
                                                         *context.dispatchResolvers);
       };
   collectionAccessValidationContext.isNamedArgsPackMethodAccessCall =

@@ -116,8 +116,8 @@ bool SemanticsValidator::validateExprLateUnknownTargetFallbacks(
       !requestsExplicitVectorCompatibilityMethod &&
       isCanonicalKeyValueMethodHelper(normalizedMethodName) && !expr.args.empty() &&
       (context.resolveMapTarget(expr.args.front()) ||
-       (context.isIndexedArgsPackMapReceiverTarget != nullptr &&
-        context.isIndexedArgsPackMapReceiverTarget(expr.args.front())))) {
+       (context.isIndexedArgsPackKeyValueReceiverTarget != nullptr &&
+        context.isIndexedArgsPackKeyValueReceiverTarget(expr.args.front())))) {
     Expr rewrittenKeyValueMethodCall = expr;
     rewrittenKeyValueMethodCall.isMethodCall = false;
     rewrittenKeyValueMethodCall.namespacePrefix.clear();

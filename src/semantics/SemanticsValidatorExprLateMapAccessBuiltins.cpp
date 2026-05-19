@@ -355,7 +355,7 @@ bool SemanticsValidator::validateExprLateMapAccessBuiltins(
       (context.shouldBuiltinValidateBareKeyValueContainsCall ||
        isMapLikeReceiver(
            expr.args[this->keyValueHelperReceiverIndex(expr, *context.dispatchResolvers)]) ||
-       this->isIndexedArgsPackMapReceiverTarget(
+       this->isIndexedArgsPackKeyValueReceiverTarget(
            expr.args.front(), *context.dispatchResolvers))) {
     if (!hasBareKeyValueContainsDefinition()) {
       return failLateKeyValueAccessDiagnostic(
@@ -420,7 +420,7 @@ bool SemanticsValidator::validateExprLateMapAccessBuiltins(
       (context.shouldBuiltinValidateBareKeyValueTryAtCall ||
        isMapLikeReceiver(
            expr.args[this->keyValueHelperReceiverIndex(expr, *context.dispatchResolvers)]) ||
-       this->isIndexedArgsPackMapReceiverTarget(
+       this->isIndexedArgsPackKeyValueReceiverTarget(
            expr.args[this->keyValueHelperReceiverIndex(expr, *context.dispatchResolvers)],
            *context.dispatchResolvers))) {
     size_t receiverIndex = 0;
@@ -504,7 +504,7 @@ bool SemanticsValidator::validateExprLateMapAccessBuiltins(
        rootMapConstructorKeyType(
            expr.args[this->keyValueHelperReceiverIndex(expr, *context.dispatchResolvers)],
            ignoredRootMapKeyType) ||
-       this->isIndexedArgsPackMapReceiverTarget(
+       this->isIndexedArgsPackKeyValueReceiverTarget(
            expr.args[this->keyValueHelperReceiverIndex(expr, *context.dispatchResolvers)],
            *context.dispatchResolvers))) {
     size_t receiverIndex = 0;

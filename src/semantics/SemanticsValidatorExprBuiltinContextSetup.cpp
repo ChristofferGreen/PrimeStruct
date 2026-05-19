@@ -15,9 +15,9 @@ void SemanticsValidator::prepareExprLateBuiltinContext(
         return this->directKeyValueHelperCompatibilityPath(
             target, params, locals, dispatchResolverAdapters);
       };
-  contextOut.tryBuiltinContext.isIndexedArgsPackMapReceiverTarget =
+  contextOut.tryBuiltinContext.isIndexedArgsPackKeyValueReceiverTarget =
       [&](const Expr &target) {
-        return this->isIndexedArgsPackMapReceiverTarget(target,
+        return this->isIndexedArgsPackKeyValueReceiverTarget(target,
                                                         dispatchResolvers);
       };
   contextOut.resultFileBuiltinContext

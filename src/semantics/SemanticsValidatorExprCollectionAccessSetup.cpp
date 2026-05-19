@@ -27,8 +27,8 @@ void SemanticsValidator::prepareExprCollectionAccessDispatchContext(
   contextOut.hasResolvableKeyValueHelperPath = [&](const std::string &path) {
     return this->hasResolvableKeyValueHelperPath(path);
   };
-  contextOut.isIndexedArgsPackMapReceiverTarget = [&](const Expr &target) {
-    return this->isIndexedArgsPackMapReceiverTarget(target, dispatchResolvers);
+  contextOut.isIndexedArgsPackKeyValueReceiverTarget = [&](const Expr &target) {
+    return this->isIndexedArgsPackKeyValueReceiverTarget(target, dispatchResolvers);
   };
 }
 

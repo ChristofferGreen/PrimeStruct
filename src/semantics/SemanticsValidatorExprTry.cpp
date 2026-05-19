@@ -75,9 +75,9 @@ bool SemanticsValidator::validateExprTryBuiltin(
         !hasDeclaredDefinitionPath(canonicalTryAtDiagnosticPath) &&
         !hasImportedDefinitionPath("/tryAt") &&
         !hasDeclaredDefinitionPath("/tryAt") &&
-        !(context.isIndexedArgsPackMapReceiverTarget != nullptr &&
+        !(context.isIndexedArgsPackKeyValueReceiverTarget != nullptr &&
           !tryTargetExpr.args.empty() &&
-          context.isIndexedArgsPackMapReceiverTarget(tryTargetExpr.args.front()))) {
+          context.isIndexedArgsPackKeyValueReceiverTarget(tryTargetExpr.args.front()))) {
       return failTryDiagnostic(
           "unknown call target: " + canonicalTryAtDiagnosticPath);
     }

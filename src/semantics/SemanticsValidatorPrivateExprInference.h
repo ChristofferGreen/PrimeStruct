@@ -197,7 +197,7 @@
   bool isArrayNamespacedVectorAccessCompatibilityCall(
       const Expr &candidate,
       const BuiltinCollectionDispatchResolvers &dispatchResolvers) const;
-  bool isIndexedArgsPackMapReceiverTarget(
+  bool isIndexedArgsPackKeyValueReceiverTarget(
       const Expr &receiverExpr,
       const BuiltinCollectionDispatchResolvers &dispatchResolvers) const;
   bool validateCollectionElementType(
@@ -337,7 +337,7 @@
     bool shouldInferBuiltinBareKeyValueContainsCall = true;
     bool shouldInferBuiltinBareKeyValueTryAtCall = true;
     bool shouldInferBuiltinBareKeyValueAccessCall = true;
-    std::function<bool(const Expr &)> isIndexedArgsPackMapReceiverTarget;
+    std::function<bool(const Expr &)> isIndexedArgsPackKeyValueReceiverTarget;
     BuiltinCollectionCountCapacityDispatchContext builtinCollectionCountCapacityDispatchContext;
     BuiltinCollectionDirectCountCapacityContext builtinCollectionDirectCountCapacityContext;
   };
