@@ -131,7 +131,9 @@ This file stores durable session-derived facts that are useful in later work. Ke
   collection resolver locals should use key/value names too; argument
   validation constructor and key-diagnostic locals should use key/value names
   too; try-builtin wrapper gate locals should use key/value names too; method
-  target direct-constructor receiver locals should use key/value names too.
+  target direct-constructor receiver locals should use key/value names too;
+  method target resolver and wrapped-receiver locals should use key/value names
+  too.
   The stdlib ownership source lock rejects the old map-helper, map-count,
   map-access, and removed map compatibility names.
 

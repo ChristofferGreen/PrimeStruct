@@ -1462,9 +1462,9 @@ bool SemanticsValidator::resolveMethodTarget(const std::vector<ParameterInfo> &p
     }
     return false;
   };
-  auto extractExperimentalMapFieldTypes = [&](const BindingInfo &binding,
-                                              std::string &keyTypeOut,
-                                              std::string &valueTypeOut) -> bool {
+  auto extractExperimentalKeyValueFieldTypes = [&](const BindingInfo &binding,
+                                                   std::string &keyTypeOut,
+                                                   std::string &valueTypeOut) -> bool {
     auto extractFromTypeText = [&](std::string normalizedType) -> bool {
       while (true) {
         std::string base;
@@ -1514,11 +1514,11 @@ bool SemanticsValidator::resolveMethodTarget(const std::vector<ParameterInfo> &p
     return extractFromTypeText(
         normalizeBindingTypeName(binding.typeName + "<" + binding.typeTemplateArg + ">"));
   };
-  auto extractAnyMapKeyValueTypes = [&](const BindingInfo &binding,
-                                        std::string &keyTypeOut,
-                                        std::string &valueTypeOut) -> bool {
+  auto extractAnyKeyValueTypes = [&](const BindingInfo &binding,
+                                     std::string &keyTypeOut,
+                                     std::string &valueTypeOut) -> bool {
     return extractMapKeyValueTypes(binding, keyTypeOut, valueTypeOut) ||
-           extractExperimentalMapFieldTypes(binding, keyTypeOut, valueTypeOut);
+           extractExperimentalKeyValueFieldTypes(binding, keyTypeOut, valueTypeOut);
   };
   auto resolveExperimentalKeyValueTarget = [&](const Expr &target,
                                           std::string &keyTypeOut,
@@ -1527,15 +1527,15 @@ bool SemanticsValidator::resolveMethodTarget(const std::vector<ParameterInfo> &p
     valueTypeOut.clear();
     if (target.kind == Expr::Kind::Name) {
       if (const BindingInfo *paramBinding = findParamBinding(params, target.name)) {
-        return extractExperimentalMapFieldTypes(*paramBinding, keyTypeOut, valueTypeOut);
+        return extractExperimentalKeyValueFieldTypes(*paramBinding, keyTypeOut, valueTypeOut);
       }
       auto it = locals.find(target.name);
       return it != locals.end() &&
-             extractExperimentalMapFieldTypes(it->second, keyTypeOut, valueTypeOut);
+             extractExperimentalKeyValueFieldTypes(it->second, keyTypeOut, valueTypeOut);
     }
     BindingInfo fieldBinding;
     if (resolveFieldBindingTarget(target, fieldBinding)) {
-      return extractExperimentalMapFieldTypes(fieldBinding, keyTypeOut, valueTypeOut);
+      return extractExperimentalKeyValueFieldTypes(fieldBinding, keyTypeOut, valueTypeOut);
     }
     if (target.kind != Expr::Kind::Call) {
       return false;
@@ -1556,21 +1556,21 @@ bool SemanticsValidator::resolveMethodTarget(const std::vector<ParameterInfo> &p
     }
     BindingInfo inferredReturn;
     return inferDefinitionReturnBinding(*defIt->second, inferredReturn) &&
-           extractExperimentalMapFieldTypes(inferredReturn, keyTypeOut, valueTypeOut);
+           extractExperimentalKeyValueFieldTypes(inferredReturn, keyTypeOut, valueTypeOut);
   };
   auto resolveKeyValueTarget = [&](const Expr &target) -> bool {
     std::string keyType;
     std::string valueType;
     if (target.kind == Expr::Kind::Name) {
       if (const BindingInfo *paramBinding = findParamBinding(params, target.name)) {
-        return extractAnyMapKeyValueTypes(*paramBinding, keyType, valueType);
+        return extractAnyKeyValueTypes(*paramBinding, keyType, valueType);
       }
       auto it = locals.find(target.name);
-      return it != locals.end() && extractAnyMapKeyValueTypes(it->second, keyType, valueType);
+      return it != locals.end() && extractAnyKeyValueTypes(it->second, keyType, valueType);
     }
     BindingInfo fieldBinding;
     if (resolveFieldBindingTarget(target, fieldBinding)) {
-      return extractAnyMapKeyValueTypes(fieldBinding, keyType, valueType);
+      return extractAnyKeyValueTypes(fieldBinding, keyType, valueType);
     }
     if (target.kind == Expr::Kind::Call) {
       std::string elemType;
@@ -1611,7 +1611,7 @@ bool SemanticsValidator::resolveMethodTarget(const std::vector<ParameterInfo> &p
       }
       BindingInfo inferredReturn;
       if (inferDefinitionReturnBinding(*defIt->second, inferredReturn) &&
-          extractAnyMapKeyValueTypes(inferredReturn, keyType, valueType)) {
+          extractAnyKeyValueTypes(inferredReturn, keyType, valueType)) {
         return true;
       }
       for (const auto &transform : defIt->second->transforms) {
@@ -1622,19 +1622,19 @@ bool SemanticsValidator::resolveMethodTarget(const std::vector<ParameterInfo> &p
     }
     return false;
   };
-  auto resolveMapValueType = [&](const Expr &target, std::string &valueTypeOut) -> bool {
+  auto resolveKeyValueValueType = [&](const Expr &target, std::string &valueTypeOut) -> bool {
     valueTypeOut.clear();
     std::string keyType;
     if (target.kind == Expr::Kind::Name) {
       if (const BindingInfo *paramBinding = findParamBinding(params, target.name)) {
-        return extractAnyMapKeyValueTypes(*paramBinding, keyType, valueTypeOut);
+        return extractAnyKeyValueTypes(*paramBinding, keyType, valueTypeOut);
       }
       auto it = locals.find(target.name);
-      return it != locals.end() && extractAnyMapKeyValueTypes(it->second, keyType, valueTypeOut);
+      return it != locals.end() && extractAnyKeyValueTypes(it->second, keyType, valueTypeOut);
     }
     BindingInfo fieldBinding;
     if (resolveFieldBindingTarget(target, fieldBinding)) {
-      return extractAnyMapKeyValueTypes(fieldBinding, keyType, valueTypeOut);
+      return extractAnyKeyValueTypes(fieldBinding, keyType, valueTypeOut);
     }
     if (target.kind == Expr::Kind::Call) {
       std::string elemType;
@@ -1720,7 +1720,7 @@ bool SemanticsValidator::resolveMethodTarget(const std::vector<ParameterInfo> &p
               resolveVectorTarget(*accessReceiver, elemType)) {
             return normalizeBindingTypeName(elemType) == "string";
           }
-          if (resolveMapValueType(*accessReceiver, keyValueValueType)) {
+          if (resolveKeyValueValueType(*accessReceiver, keyValueValueType)) {
             return normalizeBindingTypeName(keyValueValueType) == "string";
           }
           if (resolveStringTarget(*accessReceiver)) {
@@ -1950,16 +1950,16 @@ bool SemanticsValidator::resolveMethodTarget(const std::vector<ParameterInfo> &p
     }
     return binding.typeName + "<" + binding.typeTemplateArg + ">";
   };
-  auto isWrappedMapTypeText = [&](const std::string &typeText) {
+  auto isWrappedKeyValueTypeText = [&](const std::string &typeText) {
     std::string pointeeType;
     std::string keyType;
     std::string valueType;
     return extractWrappedPointeeType(typeText, pointeeType) &&
            extractMapKeyValueTypesFromTypeText(pointeeType, keyType, valueType);
   };
-  auto isWrappedMapReceiver = [&](const Expr &receiverExpr) {
+  auto isWrappedKeyValueReceiver = [&](const Expr &receiverExpr) {
     auto isWrappedBinding = [&](const BindingInfo &binding) {
-      return isWrappedMapTypeText(bindingTypeText(binding));
+      return isWrappedKeyValueTypeText(bindingTypeText(binding));
     };
     if (receiverExpr.kind == Expr::Kind::Name) {
       if (const BindingInfo *paramBinding = findParamBinding(params, receiverExpr.name)) {
@@ -1975,13 +1975,13 @@ bool SemanticsValidator::resolveMethodTarget(const std::vector<ParameterInfo> &p
     if (receiverExpr.kind == Expr::Kind::Call) {
       std::string indexedElemType;
       return resolveIndexedArgsPackElementType(receiverExpr, indexedElemType) &&
-             isWrappedMapTypeText(indexedElemType);
+             isWrappedKeyValueTypeText(indexedElemType);
     }
     return false;
   };
   auto borrowedKeyValueHelperNameForReceiver = [&](const Expr &receiverExpr,
                                               const std::string &helperName) {
-    if (!isWrappedMapReceiver(receiverExpr)) {
+    if (!isWrappedKeyValueReceiver(receiverExpr)) {
       return helperName;
     }
     if (helperName == "count") {
@@ -3057,7 +3057,7 @@ bool SemanticsValidator::resolveMethodTarget(const std::vector<ParameterInfo> &p
           resolvedOut = "/i32/" + normalizedMethodName;
           return true;
         }
-        if (resolveMapValueType(accessReceiver, accessValueType)) {
+        if (resolveKeyValueValueType(accessReceiver, accessValueType)) {
           std::string normalizedAccessName = receiver.name;
           if (!normalizedAccessName.empty() &&
               normalizedAccessName.front() == '/') {
