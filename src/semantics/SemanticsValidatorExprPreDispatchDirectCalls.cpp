@@ -585,17 +585,17 @@ bool SemanticsValidator::validateExprPreDispatchDirectCalls(
       const Expr &receiverExpr = expr.args[receiverIndex];
       std::string keyType;
       std::string valueType;
-      const bool isExperimentalMapTarget =
+      const bool isExperimentalKeyValueTarget =
           dispatchBootstrap.dispatchResolvers.resolveExperimentalMapTarget != nullptr &&
           dispatchBootstrap.dispatchResolvers.resolveExperimentalMapTarget(
               receiverExpr, keyType, valueType);
       keyType.clear();
       valueType.clear();
-      const bool isBuiltinMapTarget =
+      const bool isBuiltinKeyValueTarget =
           dispatchBootstrap.dispatchResolvers.resolveMapTarget != nullptr &&
           dispatchBootstrap.dispatchResolvers.resolveMapTarget(
               receiverExpr, keyType, valueType);
-      if (isBuiltinMapTarget && !isExperimentalMapTarget &&
+      if (isBuiltinKeyValueTarget && !isExperimentalKeyValueTarget &&
           !isRootMapConstructorExpr(receiverExpr) &&
           !isPublishedMapConstructorExpr(receiverExpr)) {
         return failPreDispatchDirectCallDiagnostic("unknown call target: " +
