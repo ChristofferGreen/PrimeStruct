@@ -511,7 +511,7 @@ bool SemanticsValidator::validateExprPreDispatchDirectCalls(
       }
     }
   }
-  auto isExperimentalMapReceiverExpr = [&](const Expr &candidate) {
+  auto isExperimentalKeyValueReceiverExpr = [&](const Expr &candidate) {
     std::string receiverTypeText;
     if (inferQueryExprTypeText(candidate, params, locals, receiverTypeText) &&
         isExperimentalMapTypeText(receiverTypeText)) {
@@ -706,7 +706,7 @@ bool SemanticsValidator::validateExprPreDispatchDirectCalls(
         };
     auto isNonRootExperimentalMapReceiverExpr = [&](const Expr &candidate) {
       return !isRootMapConstructorExpr(candidate) &&
-             isExperimentalMapReceiverExpr(candidate);
+             isExperimentalKeyValueReceiverExpr(candidate);
     };
     if (getBuiltinArrayAccessName(expr, builtinAccessName) &&
         isUnqualifiedCollectionAccessCall(expr, builtinAccessName) &&
