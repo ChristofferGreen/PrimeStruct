@@ -237,9 +237,9 @@ bool SemanticsValidator::isIndexedArgsPackKeyValueReceiverTarget(
   }
   const std::string unwrappedElemType =
       normalizeBindingTypeName(unwrapReferencePointerTypeText(elemType));
-  const std::string mapElemType =
+  const std::string keyValueElemType =
       unwrappedElemType.empty() ? elemType : unwrappedElemType;
-  return extractMapKeyValueTypesFromTypeText(mapElemType, keyType, valueType);
+  return extractMapKeyValueTypesFromTypeText(keyValueElemType, keyType, valueType);
 }
 
 bool SemanticsValidator::validateCollectionElementType(

@@ -1425,6 +1425,10 @@ TEST_CASE("canonical map surface owns standalone stdlib implementation") {
             "isIndexedArgsPackKeyValueReceiverTarget(") != std::string::npos);
   CHECK(exprCollectionPredicatesSource.find("isIndexedArgsPackMapReceiverTarget(") ==
         std::string::npos);
+  CHECK(exprCollectionPredicatesSource.find("mapElemType") ==
+        std::string::npos);
+  CHECK(exprCollectionPredicatesSource.find("keyValueElemType") !=
+        std::string::npos);
   CHECK(exprSource.find("isIndexedArgsPackKeyValueReceiverTarget(") !=
         std::string::npos);
   CHECK(exprSource.find("isIndexedArgsPackMapReceiverTarget(") ==
