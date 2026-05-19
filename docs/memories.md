@@ -764,7 +764,8 @@ This file stores durable session-derived facts that are useful in later work. Ke
   removed-compatibility helper path resolvers should use key/value naming
   around map helper metadata; try-builtin and method-target compatibility
   callbacks should use direct key/value helper naming around map helper
-  metadata.
+  metadata; template-monomorph removed-compatibility locals should use
+  key/value naming around map helper metadata.
 - Evidence: Field-bound `Map<K, V>` compatibility triage showed generated
   map helper specializations could mask missing `/map/count` aliases unless
   removed-alias checks ignored generated-only definition paths; later

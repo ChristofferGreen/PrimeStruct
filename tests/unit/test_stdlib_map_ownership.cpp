@@ -962,13 +962,28 @@ TEST_CASE("canonical map surface owns standalone stdlib implementation") {
   CHECK(templateExpressionRewriteSource.find(
             "removedMapCompatibilityPath.rfind(\"/map/\"") ==
         std::string::npos);
+  CHECK(templateExpressionRewriteSource.find("removedMapCompatibilityHelperFromPath") ==
+        std::string::npos);
+  CHECK(templateExpressionRewriteSource.find("removedMapCompatibilityPath") ==
+        std::string::npos);
+  CHECK(templateExpressionRewriteSource.find(
+            "const std::string removedMapCompatibilityHelper =") ==
+        std::string::npos);
+  CHECK(templateExpressionRewriteSource.find("isRemovedMapCompatibilityPath") ==
+        std::string::npos);
   CHECK(templateExpressionRewriteSource.find("mapConstructorSurfaceMetadataLocal()") !=
         std::string::npos);
   CHECK(templateExpressionRewriteSource.find("mapHelperSurfaceMetadataLocal()") !=
         std::string::npos);
   CHECK(templateExpressionRewriteSource.find("forwardedEmptyConstructorPath") !=
         std::string::npos);
-  CHECK(templateExpressionRewriteSource.find("removedMapCompatibilityHelperFromPath") !=
+  CHECK(templateExpressionRewriteSource.find("removedKeyValueCompatibilityHelperFromPath") !=
+        std::string::npos);
+  CHECK(templateExpressionRewriteSource.find("removedKeyValueCompatibilityPath") !=
+        std::string::npos);
+  CHECK(templateExpressionRewriteSource.find("removedKeyValueCompatibilityHelper") !=
+        std::string::npos);
+  CHECK(templateExpressionRewriteSource.find("isRemovedKeyValueCompatibilityPath") !=
         std::string::npos);
   CHECK(templateExpressionRewriteSource.find("borrowedCanonicalMapUnknownTarget") ==
         std::string::npos);

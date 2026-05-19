@@ -1500,9 +1500,9 @@ bool rewriteExpr(Expr &expr,
       }
       return path;
     };
-    const std::string removedMapCompatibilityPath =
+    const std::string removedKeyValueCompatibilityPath =
         stripGeneratedSuffix(resolvedPath);
-    auto removedMapCompatibilityHelperFromPath =
+    auto removedKeyValueCompatibilityHelperFromPath =
         [](std::string_view path) -> std::string {
       const primec::StdlibSurfaceMetadata *metadata =
           mapHelperSurfaceMetadataLocal();
@@ -1520,24 +1520,25 @@ bool rewriteExpr(Expr &expr,
       }
       return {};
     };
-    const std::string removedMapCompatibilityHelper =
-        removedMapCompatibilityHelperFromPath(removedMapCompatibilityPath);
-    const bool isRemovedMapCompatibilityPath =
-        !removedMapCompatibilityHelper.empty();
-    const std::string_view removedMapCompatibilityHelperBase =
-        mapCompatibilityHelperBase(removedMapCompatibilityHelper);
-    if (isRemovedMapCompatibilityPath &&
-        isRemovedMapCompatibilityHelper(removedMapCompatibilityHelperBase) &&
-        (removedMapCompatibilityHelperBase == "count" ||
-         removedMapCompatibilityHelperBase == "count_ref" ||
-         removedMapCompatibilityHelperBase == "size") &&
-        ctx.sourceDefs.count(removedMapCompatibilityPath) == 0 &&
-        ctx.templateDefs.count(removedMapCompatibilityPath) == 0 &&
-        ctx.helperOverloads.count(removedMapCompatibilityPath) == 0) {
-      const std::string helperName(removedMapCompatibilityHelperBase);
+    const std::string removedKeyValueCompatibilityHelper =
+        removedKeyValueCompatibilityHelperFromPath(
+            removedKeyValueCompatibilityPath);
+    const bool isRemovedKeyValueCompatibilityPath =
+        !removedKeyValueCompatibilityHelper.empty();
+    const std::string_view removedKeyValueCompatibilityHelperBase =
+        mapCompatibilityHelperBase(removedKeyValueCompatibilityHelper);
+    if (isRemovedKeyValueCompatibilityPath &&
+        isRemovedMapCompatibilityHelper(removedKeyValueCompatibilityHelperBase) &&
+        (removedKeyValueCompatibilityHelperBase == "count" ||
+         removedKeyValueCompatibilityHelperBase == "count_ref" ||
+         removedKeyValueCompatibilityHelperBase == "size") &&
+        ctx.sourceDefs.count(removedKeyValueCompatibilityPath) == 0 &&
+        ctx.templateDefs.count(removedKeyValueCompatibilityPath) == 0 &&
+        ctx.helperOverloads.count(removedKeyValueCompatibilityPath) == 0) {
+      const std::string helperName(removedKeyValueCompatibilityHelperBase);
       if (expr.hasBodyArguments || !expr.bodyArguments.empty()) {
         error = "block arguments require a definition target: " +
-                removedMapCompatibilityPath;
+                removedKeyValueCompatibilityPath;
         return false;
       }
       const size_t expectedArgCount =
@@ -1554,20 +1555,22 @@ bool rewriteExpr(Expr &expr,
                      ? 2
                      : 3);
       if (expr.args.size() != expectedArgCount) {
-        error = "argument count mismatch for " + removedMapCompatibilityPath;
+        error =
+            "argument count mismatch for " + removedKeyValueCompatibilityPath;
         return false;
       }
-      error = "unknown call target: " + removedMapCompatibilityPath;
+      error = "unknown call target: " + removedKeyValueCompatibilityPath;
       return false;
     }
-    if (isRemovedMapCompatibilityPath &&
-        removedMapCompatibilityPath != resolvedPath &&
-        ctx.templateDefs.count(removedMapCompatibilityPath) > 0) {
-      resolvedPath = removedMapCompatibilityPath;
-      expr.name = removedMapCompatibilityPath;
+    if (isRemovedKeyValueCompatibilityPath &&
+        removedKeyValueCompatibilityPath != resolvedPath &&
+        ctx.templateDefs.count(removedKeyValueCompatibilityPath) > 0) {
+      resolvedPath = removedKeyValueCompatibilityPath;
+      expr.name = removedKeyValueCompatibilityPath;
       expr.namespacePrefix.clear();
     }
-    const std::string experimentalMapPath = experimentalKeyValueHelperPathForCanonicalHelper(resolvedPath);
+    const std::string experimentalMapPath =
+        experimentalKeyValueHelperPathForCanonicalHelper(resolvedPath);
     const Expr *experimentalMapReceiverExpr = mapHelperReceiverExpr(expr);
     const bool receiverIsPublishedMapConstructor =
         isPublishedMapConstructorReceiverExpr(experimentalMapReceiverExpr,
