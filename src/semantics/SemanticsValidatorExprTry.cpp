@@ -54,7 +54,7 @@ bool SemanticsValidator::validateExprTryBuiltin(
         }
       }
     }
-    const bool allowCurrentMapWrapperTryAt =
+    const bool allowCurrentKeyValueWrapperTryAt =
         shouldBuiltinValidateCurrentMapWrapperHelper("tryAt") ||
         shouldBuiltinValidateCurrentMapWrapperHelper("at") ||
         shouldBuiltinValidateCurrentMapWrapperHelper("at_ref") ||
@@ -70,7 +70,7 @@ bool SemanticsValidator::validateExprTryBuiltin(
         tryTargetPath == canonicalTryAtRefPath ? canonicalTryAtRefPath : canonicalTryAtPath;
     if ((isCanonicalTryAtTarget ||
          isBareKeyValueTryAtFallback) &&
-        !allowCurrentMapWrapperTryAt &&
+        !allowCurrentKeyValueWrapperTryAt &&
         !hasImportedDefinitionPath(canonicalTryAtDiagnosticPath) &&
         !hasDeclaredDefinitionPath(canonicalTryAtDiagnosticPath) &&
         !hasImportedDefinitionPath("/tryAt") &&
