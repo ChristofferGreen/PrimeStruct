@@ -28,7 +28,7 @@ ReturnKind returnKindForStatementBinding(const BindingInfo &binding) {
   return returnKindForTypeName(binding.typeName);
 }
 
-bool isUnspecializedExperimentalMapBackingBaseForPrintability(std::string base) {
+bool isUnspecializedExperimentalKeyValueBackingBaseForPrintability(std::string base) {
   base = normalizeBindingTypeName(std::move(base));
   if (!base.empty() && base.front() == '/') {
     base.erase(base.begin());
@@ -154,7 +154,7 @@ bool SemanticsValidator::isStringStatementExpr(const Expr &arg,
               return false;
             }
             const std::string normalizedBase = normalizeBindingTypeName(base);
-            if (isUnspecializedExperimentalMapBackingBaseForPrintability(normalizedBase)) {
+            if (isUnspecializedExperimentalKeyValueBackingBaseForPrintability(normalizedBase)) {
               return false;
             }
             if (isMapCollectionTypeName(normalizedBase)) {

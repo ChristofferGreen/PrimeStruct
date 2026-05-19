@@ -3150,6 +3150,12 @@ TEST_CASE("canonical map surface owns standalone stdlib implementation") {
         std::string::npos);
   CHECK(statementPrintabilitySource.find("isCanonicalKeyValueHelperResolvedPath(") !=
         std::string::npos);
+  CHECK(statementPrintabilitySource.find(
+            "isUnspecializedExperimentalMapBackingBaseForPrintability") ==
+        std::string::npos);
+  CHECK(statementPrintabilitySource.find(
+            "isUnspecializedExperimentalKeyValueBackingBaseForPrintability") !=
+        std::string::npos);
   CHECK(statementPrintabilitySource.find("keyValueValueType") !=
         std::string::npos);
   CHECK(statementPrintabilitySource.find("std::string mapValueType") ==
