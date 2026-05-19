@@ -7,7 +7,7 @@
 
 namespace primec::semantics {
 namespace {
-bool isSpecializedExperimentalMapBackingPath(std::string typeName) {
+bool isSpecializedExperimentalKeyValueBackingPath(std::string typeName) {
   return isQualifiedExperimentalMapBackingTypeName(
       normalizeBindingTypeName(std::move(typeName)));
 }
@@ -523,7 +523,7 @@ bool SemanticsValidator::inferCallInitializerBinding(const Expr &initializer,
       if (normalizedReturnType.empty() || normalizedReturnType == "auto") {
         return false;
       }
-      if (isSpecializedExperimentalMapBackingPath(normalizedReturnType)) {
+      if (isSpecializedExperimentalKeyValueBackingPath(normalizedReturnType)) {
         bindingOut.typeName = normalizedReturnType;
         if (!bindingOut.typeName.empty() && bindingOut.typeName.front() != '/') {
           bindingOut.typeName.insert(bindingOut.typeName.begin(), '/');
@@ -972,7 +972,7 @@ bool SemanticsValidator::inferCallInitializerBinding(const Expr &initializer,
         const bool keepExperimentalCollectionPath =
             isLegacyExperimentalVectorCompatibilityPath(inferredStruct) ||
             isLegacyExperimentalVectorCompatibilityTypePath(inferredStruct) ||
-            isSpecializedExperimentalMapBackingPath(inferredStruct);
+            isSpecializedExperimentalKeyValueBackingPath(inferredStruct);
         if (keepExperimentalCollectionPath) {
           bindingOut.typeName = inferredStruct;
           bindingOut.typeTemplateArg.clear();

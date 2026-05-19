@@ -2187,6 +2187,11 @@ TEST_CASE("canonical map surface owns standalone stdlib implementation") {
   CHECK(buildInitializerInferenceCallsSource.find(
             "isQualifiedExperimentalMapBackingTypeName(") !=
         std::string::npos);
+  CHECK(buildInitializerInferenceCallsSource.find("isSpecializedExperimentalMapBackingPath") ==
+        std::string::npos);
+  CHECK(buildInitializerInferenceCallsSource.find(
+            "isSpecializedExperimentalKeyValueBackingPath") !=
+        std::string::npos);
   CHECK(buildInitializerInferenceCallsSource.find("mapCollectionAliasToken()") !=
         std::string::npos);
   CHECK(buildInitializerInferenceCallsSource.find("const std::string mapAlias") ==
