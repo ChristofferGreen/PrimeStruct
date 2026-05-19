@@ -182,7 +182,7 @@ bool SemanticsValidator::validateArgumentTypeAgainstParam(
     std::string receiverKeyType;
     std::string receiverValueType;
     if (!resolveMapKeyType(callExpr.args[1], dispatchResolvers, receiverKeyType) ||
-        !resolveMapValueType(callExpr.args[1], dispatchResolvers,
+        !resolveKeyValueValueType(callExpr.args[1], dispatchResolvers,
                              receiverValueType) ||
         normalizeBindingTypeName(receiverKeyType) !=
             normalizeBindingTypeName(expectedTemplateArgs[0]) ||
@@ -195,7 +195,7 @@ bool SemanticsValidator::validateArgumentTypeAgainstParam(
     std::string misplacedReceiverValueType;
     if (resolveMapKeyType(callExpr.args[0], dispatchResolvers,
                           misplacedReceiverKeyType) &&
-        resolveMapValueType(callExpr.args[0], dispatchResolvers,
+        resolveKeyValueValueType(callExpr.args[0], dispatchResolvers,
                             misplacedReceiverValueType)) {
       return false;
     }
@@ -443,7 +443,7 @@ bool SemanticsValidator::validateArgumentTypeAgainstParam(
         std::string actualKeyType;
         std::string actualValueType;
         if (resolveMapKeyType(arg, dispatchResolvers, actualKeyType) &&
-            resolveMapValueType(arg, dispatchResolvers, actualValueType) &&
+            resolveKeyValueValueType(arg, dispatchResolvers, actualValueType) &&
             (normalizeBindingTypeName(expectedTemplateArgs[0]) !=
                  normalizeBindingTypeName(actualKeyType) ||
              normalizeBindingTypeName(expectedTemplateArgs[1]) !=
@@ -463,7 +463,7 @@ bool SemanticsValidator::validateArgumentTypeAgainstParam(
         std::string actualKeyType;
         std::string actualValueType;
         if (resolveMapKeyType(arg, dispatchResolvers, actualKeyType) &&
-            resolveMapValueType(arg, dispatchResolvers, actualValueType)) {
+            resolveKeyValueValueType(arg, dispatchResolvers, actualValueType)) {
           if (normalizeBindingTypeName(expectedTemplateArgs[0]) ==
                   normalizeBindingTypeName(actualKeyType) &&
               normalizeBindingTypeName(expectedTemplateArgs[1]) ==
@@ -633,7 +633,7 @@ bool SemanticsValidator::validateArgumentTypeAgainstParam(
       extractExperimentalMapFieldTypesFromStructPath(
           expectedStructPath, expectedKeyValueKeyType, expectedKeyValueValueType) &&
       ((resolveMapKeyType(arg, dispatchResolvers, actualKeyValueKeyType) &&
-        resolveMapValueType(arg, dispatchResolvers, actualKeyValueValueType) &&
+        resolveKeyValueValueType(arg, dispatchResolvers, actualKeyValueValueType) &&
         normalizeBindingTypeName(expectedKeyValueKeyType) ==
             normalizeBindingTypeName(actualKeyValueKeyType) &&
         normalizeBindingTypeName(expectedKeyValueValueType) ==

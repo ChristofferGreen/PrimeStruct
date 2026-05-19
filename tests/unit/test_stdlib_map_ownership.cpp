@@ -1704,6 +1704,10 @@ TEST_CASE("canonical map surface owns standalone stdlib implementation") {
         std::string::npos);
   CHECK(privateExprInferenceSource.find("preferredMapMethodTargetForCall(") ==
         std::string::npos);
+  CHECK(privateExprInferenceSource.find("resolveMapValueType(") ==
+        std::string::npos);
+  CHECK(privateExprInferenceSource.find("resolveKeyValueValueType(") !=
+        std::string::npos);
   CHECK(inferMethodResolutionHelpersSource.find(
             "preferredKeyValueMethodTargetForCall(") != std::string::npos);
   CHECK(inferMethodResolutionHelpersSource.find("preferredMapMethodTargetForCall(") ==
@@ -2205,6 +2209,8 @@ TEST_CASE("canonical map surface owns standalone stdlib implementation") {
         std::string::npos);
   CHECK(collectionHelperRewritesSource.find("resolvesExperimentalMapValue") ==
         std::string::npos);
+  CHECK(collectionHelperRewritesSource.find("resolveMapValueType(") ==
+        std::string::npos);
   CHECK(collectionHelperRewritesSource.find("resolvesExperimentalMap =") ==
         std::string::npos);
   CHECK(collectionHelperRewritesSource.find("resolvesCanonicalMap") ==
@@ -2253,6 +2259,8 @@ TEST_CASE("canonical map surface owns standalone stdlib implementation") {
   CHECK(collectionHelperRewritesSource.find("resolvesBorrowedExperimentalKeyValue") !=
         std::string::npos);
   CHECK(collectionHelperRewritesSource.find("resolvesExperimentalKeyValueValue") !=
+        std::string::npos);
+  CHECK(collectionHelperRewritesSource.find("resolveKeyValueValueType(") !=
         std::string::npos);
   CHECK(collectionHelperRewritesSource.find("resolvesExperimentalKeyValue") !=
         std::string::npos);
@@ -3416,6 +3424,10 @@ TEST_CASE("canonical map surface owns standalone stdlib implementation") {
         std::string::npos);
   CHECK(argumentValidationSource.find("expectedKeyValueValueType") !=
         std::string::npos);
+  CHECK(argumentValidationSource.find("resolveMapValueType(") ==
+        std::string::npos);
+  CHECK(argumentValidationSource.find("resolveKeyValueValueType(") !=
+        std::string::npos);
   CHECK(argumentValidationSource.find("actualMapBase") == std::string::npos);
   CHECK(argumentValidationSource.find("actualMapTemplateArgs") ==
         std::string::npos);
@@ -3487,6 +3499,10 @@ TEST_CASE("canonical map surface owns standalone stdlib implementation") {
   CHECK(argumentValidationCollectionsSource.find("experimentalKeyValueKeyType") !=
         std::string::npos);
   CHECK(argumentValidationCollectionsSource.find("experimentalKeyValueValueType") !=
+        std::string::npos);
+  CHECK(argumentValidationCollectionsSource.find("resolveMapValueType(") ==
+        std::string::npos);
+  CHECK(argumentValidationCollectionsSource.find("resolveKeyValueValueType(") !=
         std::string::npos);
   CHECK(argumentValidationCollectionsSource.find(
             "methodMapAccessDefinitionReturnsString") ==

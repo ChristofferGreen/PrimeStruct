@@ -183,7 +183,7 @@ bool SemanticsValidator::validateExprMethodCallTarget(
       return false;
     }
     std::string keyValueValueType;
-    if (!this->resolveMapValueType(*accessReceiver, dispatchResolvers, keyValueValueType)) {
+    if (!this->resolveKeyValueValueType(*accessReceiver, dispatchResolvers, keyValueValueType)) {
       if (accessReceiver->kind == Expr::Kind::Call) {
         const std::string receiverPath = resolveCalleePath(*accessReceiver);
         auto receiverDefIt = defMap_.find(receiverPath);

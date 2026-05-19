@@ -300,7 +300,7 @@ bool SemanticsValidator::isStringExprForArgumentValidation(
                                                          experimentalKeyValueValueType)) {
         return false;
       }
-      if (resolveMapValueType(arg.args.front(), dispatchResolvers, keyValueValueType) &&
+      if (resolveKeyValueValueType(arg.args.front(), dispatchResolvers, keyValueValueType) &&
           normalizeBindingTypeName(keyValueValueType) == "string") {
         return true;
       }

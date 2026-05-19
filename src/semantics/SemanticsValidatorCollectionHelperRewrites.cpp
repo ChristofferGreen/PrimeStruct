@@ -819,7 +819,7 @@ bool SemanticsValidator::resolveMapKeyType(
   return dispatchResolvers.resolveMapTarget(target, keyTypeOut, valueType);
 }
 
-bool SemanticsValidator::resolveMapValueType(
+bool SemanticsValidator::resolveKeyValueValueType(
     const Expr &target,
     const BuiltinCollectionDispatchResolvers &dispatchResolvers,
     std::string &valueTypeOut) const {

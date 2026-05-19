@@ -176,9 +176,9 @@
   bool resolveMapKeyType(const Expr &target,
                          const BuiltinCollectionDispatchResolvers &dispatchResolvers,
                          std::string &keyTypeOut) const;
-  bool resolveMapValueType(const Expr &target,
-                           const BuiltinCollectionDispatchResolvers &dispatchResolvers,
-                           std::string &valueTypeOut) const;
+  bool resolveKeyValueValueType(const Expr &target,
+                                const BuiltinCollectionDispatchResolvers &dispatchResolvers,
+                                std::string &valueTypeOut) const;
   const Expr *resolveBuiltinAccessReceiverExpr(const Expr &accessExpr) const;
   bool isNamedArgsPackMethodAccessCall(
       const Expr &target,
