@@ -1162,14 +1162,14 @@ bool rewriteExpr(Expr &expr,
   std::function<bool(const std::string &, Expr &)> rewriteVectorTargetValueForResolvedType;
 
   rewriteKeyValueTargetValueForResolvedType = [&](const std::string &typeText, Expr &valueExpr) -> bool {
-    return rewriteExperimentalMapTargetValueForType(typeText,
-                                                    valueExpr,
-                                                    mapping,
-                                                    allowedParams,
-                                                    namespacePrefix,
-                                                    ctx,
-                                                    rewriteNestedExperimentalKeyValueConstructorValue,
-                                                    rewriteNestedExperimentalKeyValueResultOkPayloadValue);
+    return rewriteExperimentalKeyValueTargetValueForType(typeText,
+                                                         valueExpr,
+                                                         mapping,
+                                                         allowedParams,
+                                                         namespacePrefix,
+                                                         ctx,
+                                                         rewriteNestedExperimentalKeyValueConstructorValue,
+                                                         rewriteNestedExperimentalKeyValueResultOkPayloadValue);
   };
   rewriteVectorTargetValueForResolvedType = [&](const std::string &typeText, Expr &valueExpr) -> bool {
     return rewriteExperimentalVectorTargetValueForType(typeText,
@@ -1221,7 +1221,7 @@ bool rewriteExpr(Expr &expr,
   };
 
   rewriteNestedExperimentalKeyValueResultOkPayloadValue = [&](Expr &candidate) -> bool {
-    return rewriteExperimentalMapResultOkPayloadTree(candidate, rewriteNestedExperimentalKeyValueConstructorValue);
+    return rewriteExperimentalKeyValueResultOkPayloadTree(candidate, rewriteNestedExperimentalKeyValueConstructorValue);
   };
   rewriteNestedExperimentalVectorConstructorValue = [&](Expr &candidate) -> bool {
     return rewriteExperimentalConstructorValueTree(candidate, [&](Expr &current) {

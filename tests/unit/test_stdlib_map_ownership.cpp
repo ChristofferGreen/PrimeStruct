@@ -175,6 +175,9 @@ TEST_CASE("canonical map surface owns standalone stdlib implementation") {
   const std::string templateConstructorRewriteSource =
       readText(repoRoot() / "src" / "semantics" /
                "TemplateMonomorphExperimentalCollectionConstructorRewrites.h");
+  const std::string templateValueRewriteSource =
+      readText(repoRoot() / "src" / "semantics" /
+               "TemplateMonomorphExperimentalCollectionValueRewrites.h");
   const std::string mapConstructorHelpersSource =
       readText(repoRoot() / "src" / "semantics" / "MapConstructorHelpers.h");
   const std::string inferStructReturnSource =
@@ -440,6 +443,7 @@ TEST_CASE("canonical map surface owns standalone stdlib implementation") {
   REQUIRE(!templateCoreSource.empty());
   REQUIRE(!templateReceiverSource.empty());
   REQUIRE(!templateExpressionRewriteSource.empty());
+  REQUIRE(!templateValueRewriteSource.empty());
   REQUIRE(!templateFallbackTypeInferenceSource.empty());
   REQUIRE(!templateReturnSetupSource.empty());
   REQUIRE(!templateReturnOrchestrationSource.empty());
@@ -1337,6 +1341,42 @@ TEST_CASE("canonical map surface owns standalone stdlib implementation") {
   CHECK(templateExpressionRewriteSource.find("rewriteNestedExperimentalKeyValueResultOkPayloadValue") !=
         std::string::npos);
   CHECK(templateExpressionRewriteSource.find("rewriteKeyValueTargetValueForResolvedType") !=
+        std::string::npos);
+  CHECK(templateExpressionRewriteSource.find(
+            "rewriteExperimentalMapTargetValueForType") ==
+        std::string::npos);
+  CHECK(templateExpressionRewriteSource.find(
+            "rewriteExperimentalMapResultOkPayloadTree") ==
+        std::string::npos);
+  CHECK(templateExpressionRewriteSource.find(
+            "rewriteExperimentalKeyValueTargetValueForType") !=
+        std::string::npos);
+  CHECK(templateExpressionRewriteSource.find(
+            "rewriteExperimentalKeyValueResultOkPayloadTree") !=
+        std::string::npos);
+  CHECK(templateValueRewriteSource.find("RewriteMapValueFn") ==
+        std::string::npos);
+  CHECK(templateValueRewriteSource.find("RewriteNestedMapValueFn") ==
+        std::string::npos);
+  CHECK(templateValueRewriteSource.find("RewriteMapPayloadFn") ==
+        std::string::npos);
+  CHECK(templateValueRewriteSource.find(
+            "rewriteExperimentalMapTargetValueForType") ==
+        std::string::npos);
+  CHECK(templateValueRewriteSource.find(
+            "rewriteExperimentalMapResultOkPayloadTree") ==
+        std::string::npos);
+  CHECK(templateValueRewriteSource.find("RewriteKeyValueValueFn") !=
+        std::string::npos);
+  CHECK(templateValueRewriteSource.find("RewriteNestedKeyValueValueFn") !=
+        std::string::npos);
+  CHECK(templateValueRewriteSource.find("RewriteKeyValuePayloadFn") !=
+        std::string::npos);
+  CHECK(templateValueRewriteSource.find(
+            "rewriteExperimentalKeyValueTargetValueForType") !=
+        std::string::npos);
+  CHECK(templateValueRewriteSource.find(
+            "rewriteExperimentalKeyValueResultOkPayloadTree") !=
         std::string::npos);
   CHECK(templateTypeResolutionSource.find("isExplicitRemovedMapCompatibilityPath") ==
         std::string::npos);

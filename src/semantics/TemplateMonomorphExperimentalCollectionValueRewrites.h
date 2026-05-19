@@ -33,39 +33,39 @@ bool rewriteExperimentalConstructorValueTree(Expr &candidate, RewriteCurrentFn &
   return true;
 }
 
-template <typename RewriteMapValueFn>
-bool rewriteExperimentalMapResultOkPayloadTree(Expr &candidate, RewriteMapValueFn &&rewriteMapValue) {
+template <typename RewriteKeyValueValueFn>
+bool rewriteExperimentalKeyValueResultOkPayloadTree(Expr &candidate, RewriteKeyValueValueFn &&rewriteKeyValueValue) {
   if (candidate.isBinding && candidate.args.size() == 1) {
-    return rewriteExperimentalMapResultOkPayloadTree(candidate.args.front(), rewriteMapValue);
+    return rewriteExperimentalKeyValueResultOkPayloadTree(candidate.args.front(), rewriteKeyValueValue);
   }
   if (candidate.kind != Expr::Kind::Call) {
     return true;
   }
   if (isBuiltinResultOkPayloadCall(candidate)) {
-    return rewriteMapValue(candidate.args.back());
+    return rewriteKeyValueValue(candidate.args.back());
   }
   for (auto &arg : candidate.args) {
-    if (!rewriteExperimentalMapResultOkPayloadTree(arg, rewriteMapValue)) {
+    if (!rewriteExperimentalKeyValueResultOkPayloadTree(arg, rewriteKeyValueValue)) {
       return false;
     }
   }
   for (auto &bodyArg : candidate.bodyArguments) {
-    if (!rewriteExperimentalMapResultOkPayloadTree(bodyArg, rewriteMapValue)) {
+    if (!rewriteExperimentalKeyValueResultOkPayloadTree(bodyArg, rewriteKeyValueValue)) {
       return false;
     }
   }
   return true;
 }
 
-template <typename RewriteNestedMapValueFn, typename RewriteMapPayloadFn>
-bool rewriteExperimentalMapTargetValueForType(const std::string &typeText,
-                                              Expr &valueExpr,
-                                              const SubstMap &mapping,
-                                              const std::unordered_set<std::string> &allowedParams,
-                                              const std::string &namespacePrefix,
-                                              Context &ctx,
-                                              RewriteNestedMapValueFn &&rewriteNestedMapValue,
-                                              RewriteMapPayloadFn &&rewriteMapPayload) {
+template <typename RewriteNestedKeyValueValueFn, typename RewriteKeyValuePayloadFn>
+bool rewriteExperimentalKeyValueTargetValueForType(const std::string &typeText,
+                                                   Expr &valueExpr,
+                                                   const SubstMap &mapping,
+                                                   const std::unordered_set<std::string> &allowedParams,
+                                                   const std::string &namespacePrefix,
+                                                   Context &ctx,
+                                                   RewriteNestedKeyValueValueFn &&rewriteNestedKeyValueValue,
+                                                   RewriteKeyValuePayloadFn &&rewriteKeyValuePayload) {
   std::string base;
   std::string argText;
   if (splitTemplateTypeName(typeText, base, argText) && normalizeBindingTypeName(base) == "uninitialized") {
@@ -73,17 +73,17 @@ bool rewriteExperimentalMapTargetValueForType(const std::string &typeText,
     if (!splitTopLevelTemplateArgs(argText, storageArgs) || storageArgs.size() != 1) {
       return true;
     }
-    return rewriteExperimentalMapTargetValueForType(trimWhitespace(storageArgs.front()),
-                                                    valueExpr,
-                                                    mapping,
-                                                    allowedParams,
-                                                    namespacePrefix,
-                                                    ctx,
-                                                    rewriteNestedMapValue,
-                                                    rewriteMapPayload);
+    return rewriteExperimentalKeyValueTargetValueForType(trimWhitespace(storageArgs.front()),
+                                                         valueExpr,
+                                                         mapping,
+                                                         allowedParams,
+                                                         namespacePrefix,
+                                                         ctx,
+                                                         rewriteNestedKeyValueValue,
+                                                         rewriteKeyValuePayload);
   }
   if (resolvesExperimentalKeyValueTypeText(typeText, mapping, allowedParams, namespacePrefix, ctx)) {
-    return rewriteNestedMapValue(valueExpr);
+    return rewriteNestedKeyValueValue(valueExpr);
   }
   if (!splitTemplateTypeName(typeText, base, argText) || normalizeBindingTypeName(base) != "Result") {
     return true;
@@ -99,7 +99,7 @@ bool rewriteExperimentalMapTargetValueForType(const std::string &typeText,
                                             ctx)) {
     return true;
   }
-  return rewriteMapPayload(valueExpr);
+  return rewriteKeyValuePayload(valueExpr);
 }
 
 template <typename RewriteNestedVectorValueFn>
