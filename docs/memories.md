@@ -59,8 +59,10 @@ This file stores durable session-derived facts that are useful in later work. Ke
   filtering should use key/value helper names too; semantic pass-diagnostic
   visible access-builtin filtering should use key/value helper names too, with
   collection-helper rewrite bare-access predicates also using key/value helper
-  names. The stdlib ownership source lock rejects the old map-helper,
-  map-count, map-access, and removed map compatibility names.
+  names; semantic method-resolution string-count shadow checks should use
+  key/value access receiver names too. The stdlib ownership source lock rejects
+  the old map-helper, map-count, map-access, and removed map compatibility
+  names.
 
 ### exact-stdlib-vector-import-covers-helper-surface
 - Updated: 2026-04-19

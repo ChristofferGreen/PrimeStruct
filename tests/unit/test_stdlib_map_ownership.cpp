@@ -782,6 +782,9 @@ TEST_CASE("canonical map surface owns standalone stdlib implementation") {
         std::string::npos);
   CHECK(exprMethodResolutionSource.find("canonicalMapAccessReturnsString") ==
         std::string::npos);
+  CHECK(exprMethodResolutionSource.find(
+            "rejectBuiltinStringCountShadowOnMapAccessReceiver") ==
+        std::string::npos);
   CHECK(exprMethodResolutionSource.find("canonicalMapHelperName") ==
         std::string::npos);
   CHECK(exprMethodResolutionSource.find(
@@ -795,6 +798,9 @@ TEST_CASE("canonical map surface owns standalone stdlib implementation") {
   CHECK(exprMethodResolutionSource.find("isCanonicalKeyValueAccessMethodName") !=
         std::string::npos);
   CHECK(exprMethodResolutionSource.find("canonicalKeyValueAccessReturnsString") !=
+        std::string::npos);
+  CHECK(exprMethodResolutionSource.find(
+            "rejectBuiltinStringCountShadowOnKeyValueAccessReceiver") !=
         std::string::npos);
   CHECK(exprMethodResolutionSource.find("canonicalKeyValueHelperName") !=
         std::string::npos);

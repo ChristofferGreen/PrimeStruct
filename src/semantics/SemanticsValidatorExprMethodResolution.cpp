@@ -142,7 +142,7 @@ bool SemanticsValidator::validateExprMethodCallTarget(
       }
     }
   }
-  auto rejectBuiltinStringCountShadowOnMapAccessReceiver = [&](const std::string &resolvedPath) -> bool {
+  auto rejectBuiltinStringCountShadowOnKeyValueAccessReceiver = [&](const std::string &resolvedPath) -> bool {
     if (resolvedPath != "/string/count" || expr.args.empty()) {
       return false;
     }
@@ -515,7 +515,7 @@ bool SemanticsValidator::validateExprMethodCallTarget(
     } else {
       return false;
     }
-  } else if (rejectBuiltinStringCountShadowOnMapAccessReceiver(resolved)) {
+  } else if (rejectBuiltinStringCountShadowOnKeyValueAccessReceiver(resolved)) {
     return failMethodResolutionDiagnostic(error_);
   } else if (hasBlockArgs) {
     std::string namespacedCollection;
