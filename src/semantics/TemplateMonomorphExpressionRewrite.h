@@ -1176,7 +1176,7 @@ bool rewriteExpr(Expr &expr,
                                                        valueExpr,
                                                        rewriteNestedExperimentalVectorConstructorValue);
   };
-  auto rewriteCanonicalExperimentalMapConstructorBinding = [&](Expr &bindingExpr) -> bool {
+  auto rewriteCanonicalKeyValueConstructorBinding = [&](Expr &bindingExpr) -> bool {
     return rewriteExperimentalConstructorBinding(
         bindingExpr,
         params,
@@ -1241,7 +1241,7 @@ bool rewriteExpr(Expr &expr,
     if (!rewriteCanonicalExperimentalVectorConstructorBinding(expr)) {
       return false;
     }
-    if (!rewriteCanonicalExperimentalMapConstructorBinding(expr)) {
+    if (!rewriteCanonicalKeyValueConstructorBinding(expr)) {
       return false;
     }
   }
@@ -1483,13 +1483,13 @@ bool rewriteExpr(Expr &expr,
       expr.name = preferredBorrowedSoaPath;
       expr.namespacePrefix.clear();
     }
-    const bool resolvesBorrowedExperimentalMapReceiver =
+    const bool resolvesBorrowedExperimentalKeyValueReceiver =
         resolvesExperimentalMapBorrowedReceiver(
             collectionHelperReceiverExpr(expr), params, locals, allowMathBare, mapping, allowedParams, namespacePrefix, ctx);
     const std::string borrowedCanonicalKeyValueUnknownTarget =
         canonicalKeyValueHelperUnknownTargetPath(resolvedPath);
     if (!borrowedCanonicalKeyValueUnknownTarget.empty() &&
-        resolvesBorrowedExperimentalMapReceiver) {
+        resolvesBorrowedExperimentalKeyValueReceiver) {
       error = "unknown call target: " + borrowedCanonicalKeyValueUnknownTarget;
       return false;
     }
@@ -1569,34 +1569,34 @@ bool rewriteExpr(Expr &expr,
       expr.name = removedKeyValueCompatibilityPath;
       expr.namespacePrefix.clear();
     }
-    const std::string experimentalMapPath =
+    const std::string experimentalKeyValuePath =
         experimentalKeyValueHelperPathForCanonicalHelper(resolvedPath);
-    const Expr *experimentalMapReceiverExpr = collectionHelperReceiverExpr(expr);
-    const bool receiverIsPublishedMapConstructor =
-        isPublishedMapConstructorReceiverExpr(experimentalMapReceiverExpr,
+    const Expr *experimentalKeyValueReceiverExpr = collectionHelperReceiverExpr(expr);
+    const bool receiverIsPublishedKeyValueConstructor =
+        isPublishedMapConstructorReceiverExpr(experimentalKeyValueReceiverExpr,
                                               namespacePrefix,
                                               ctx);
-    const bool rejectsWrapperReturnedExperimentalMapAccess =
-        experimentalMapReceiverExpr != nullptr &&
-        experimentalMapReceiverExpr->kind == Expr::Kind::Call &&
-        !experimentalMapReceiverExpr->isFieldAccess &&
-        !receiverIsPublishedMapConstructor &&
+    const bool rejectsWrapperReturnedKeyValueAccess =
+        experimentalKeyValueReceiverExpr != nullptr &&
+        experimentalKeyValueReceiverExpr->kind == Expr::Kind::Call &&
+        !experimentalKeyValueReceiverExpr->isFieldAccess &&
+        !receiverIsPublishedKeyValueConstructor &&
         isTemplateMonomorphCanonicalKeyValueAccessPath(
             borrowedCanonicalKeyValueUnknownTarget);
-    if (!experimentalMapPath.empty() && ctx.sourceDefs.count(experimentalMapPath) > 0 &&
+    if (!experimentalKeyValuePath.empty() && ctx.sourceDefs.count(experimentalKeyValuePath) > 0 &&
         resolvesExperimentalMapValueReceiver(
-            experimentalMapReceiverExpr, params, locals, allowMathBare, mapping, allowedParams, namespacePrefix, ctx)) {
-      if (rejectsWrapperReturnedExperimentalMapAccess) {
+            experimentalKeyValueReceiverExpr, params, locals, allowMathBare, mapping, allowedParams, namespacePrefix, ctx)) {
+      if (rejectsWrapperReturnedKeyValueAccess) {
         error = "unknown call target: " + borrowedCanonicalKeyValueUnknownTarget;
         return false;
       }
-      resolvedPath = experimentalMapPath;
-      expr.name = experimentalMapPath;
+      resolvedPath = experimentalKeyValuePath;
+      expr.name = experimentalKeyValuePath;
       expr.namespacePrefix.clear();
       if (expr.templateArgs.empty()) {
         std::vector<std::string> receiverTemplateArgs;
         if (resolveExperimentalMapValueReceiverTemplateArgs(
-                experimentalMapReceiverExpr, params, locals, allowMathBare, namespacePrefix, ctx, receiverTemplateArgs)) {
+                experimentalKeyValueReceiverExpr, params, locals, allowMathBare, namespacePrefix, ctx, receiverTemplateArgs)) {
           expr.templateArgs = std::move(receiverTemplateArgs);
         }
       }
@@ -1676,7 +1676,7 @@ bool rewriteExpr(Expr &expr,
         }
       }
     }
-    bool inferredCanonicalMapReceiverTemplateArgs = false;
+    bool inferredCanonicalKeyValueReceiverTemplateArgs = false;
     if (expr.templateArgs.empty() &&
         resolvedPath.rfind(experimentalCollectionConstructorRootLocal("map"), 0) == 0 &&
         resolvesExperimentalMapValueReceiver(
@@ -1703,7 +1703,7 @@ bool rewriteExpr(Expr &expr,
               receiverTemplateArgs)) {
         expr.templateArgs = std::move(receiverTemplateArgs);
         allConcrete = true;
-        inferredCanonicalMapReceiverTemplateArgs = true;
+        inferredCanonicalKeyValueReceiverTemplateArgs = true;
       }
     }
     if (expr.templateArgs.empty() &&
@@ -1749,7 +1749,7 @@ bool rewriteExpr(Expr &expr,
         resolvedPath.find("__t") != std::string::npos) {
       expr.templateArgs.clear();
     }
-    if (inferredCanonicalMapReceiverTemplateArgs &&
+    if (inferredCanonicalKeyValueReceiverTemplateArgs &&
         isTemplateMonomorphCanonicalKeyValueHelperPath(resolvedPath) &&
         resolvedPath.find("__t") != std::string::npos) {
       expr.templateArgs.clear();
@@ -1764,10 +1764,10 @@ bool rewriteExpr(Expr &expr,
         expr.templateArgs.empty() && isExplicitCollectionCompatibilityAliasPath(originalResolvedPath) &&
         preferredPath != originalResolvedPath && ctx.templateDefs.count(preferredPath) > 0;
     const bool resolvedWasTemplate = ctx.templateDefs.count(resolvedPath) > 0;
-    const bool isBuiltinMapCountPath =
+    const bool isBuiltinKeyValueCountPath =
         isTemplateMonomorphCanonicalKeyValueCountPath(resolvedPath);
     const bool isKnownDef = ctx.sourceDefs.count(resolvedPath) > 0;
-    if (!expr.templateArgs.empty() && !resolvedWasTemplate && !isKnownDef && isBuiltinMapCountPath) {
+    if (!expr.templateArgs.empty() && !resolvedWasTemplate && !isKnownDef && isBuiltinKeyValueCountPath) {
       error = "count does not accept template arguments";
       return false;
     }

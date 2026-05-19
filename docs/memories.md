@@ -137,7 +137,9 @@ This file stores durable session-derived facts that are useful in later work. Ke
   key/value names too; infer compatibility wrapper-surface locals should use
   key/value names too; initializer inference constructor predicates should use
   key/value names too; template expression rewrite helper-receiver locals
-  should use collection/key-value names too.
+  should use collection/key-value names too; template expression rewrite
+  key/value path, receiver, count, and constructor-binding locals should use
+  key/value names too.
   The stdlib ownership source lock rejects the old map-helper, map-count,
   map-access, and removed map compatibility names.
 

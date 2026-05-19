@@ -1179,11 +1179,39 @@ TEST_CASE("canonical map surface owns standalone stdlib implementation") {
         std::string::npos);
   CHECK(templateExpressionRewriteSource.find("resolvesBuiltinMapReceiver") ==
         std::string::npos);
+  CHECK(templateExpressionRewriteSource.find("rewriteCanonicalExperimentalMapConstructorBinding") ==
+        std::string::npos);
+  CHECK(templateExpressionRewriteSource.find("resolvesBorrowedExperimentalMapReceiver") ==
+        std::string::npos);
+  CHECK(templateExpressionRewriteSource.find("experimentalMapPath") ==
+        std::string::npos);
+  CHECK(templateExpressionRewriteSource.find("experimentalMapReceiverExpr") ==
+        std::string::npos);
+  CHECK(templateExpressionRewriteSource.find("rejectsWrapperReturnedExperimentalMapAccess") ==
+        std::string::npos);
+  CHECK(templateExpressionRewriteSource.find("inferredCanonicalMapReceiverTemplateArgs") ==
+        std::string::npos);
+  CHECK(templateExpressionRewriteSource.find("isBuiltinMapCountPath") ==
+        std::string::npos);
   CHECK(templateExpressionRewriteSource.find("collectionHelperReceiverExpr") !=
         std::string::npos);
   CHECK(templateExpressionRewriteSource.find("mutableCollectionHelperReceiverExpr") !=
         std::string::npos);
   CHECK(templateExpressionRewriteSource.find("resolvesBuiltinKeyValueReceiver") !=
+        std::string::npos);
+  CHECK(templateExpressionRewriteSource.find("rewriteCanonicalKeyValueConstructorBinding") !=
+        std::string::npos);
+  CHECK(templateExpressionRewriteSource.find("resolvesBorrowedExperimentalKeyValueReceiver") !=
+        std::string::npos);
+  CHECK(templateExpressionRewriteSource.find("experimentalKeyValuePath") !=
+        std::string::npos);
+  CHECK(templateExpressionRewriteSource.find("experimentalKeyValueReceiverExpr") !=
+        std::string::npos);
+  CHECK(templateExpressionRewriteSource.find("rejectsWrapperReturnedKeyValueAccess") !=
+        std::string::npos);
+  CHECK(templateExpressionRewriteSource.find("inferredCanonicalKeyValueReceiverTemplateArgs") !=
+        std::string::npos);
+  CHECK(templateExpressionRewriteSource.find("isBuiltinKeyValueCountPath") !=
         std::string::npos);
   CHECK(templateTypeResolutionSource.find("isExplicitRemovedMapCompatibilityPath") ==
         std::string::npos);
