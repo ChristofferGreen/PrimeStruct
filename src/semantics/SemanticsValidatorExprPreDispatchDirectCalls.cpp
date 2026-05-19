@@ -139,7 +139,7 @@ bool isCanonicalMapBuiltinPreDispatchHelperName(std::string_view helperName) {
          helperName == "insert" || helperName == "insert_ref";
 }
 
-bool isRemovedMapCompatibilityPreDispatchHelperName(
+bool isRemovedKeyValueCompatibilityPreDispatchHelperName(
     std::string_view helperName) {
   return helperName == "size" ||
          isCanonicalMapBuiltinPreDispatchHelperName(helperName);
@@ -222,7 +222,7 @@ std::string removedKeyValueCompatibilityHelperFromPath(std::string path) {
       continue;
     }
     const std::string helper = path.substr(root.size() + 1);
-    if (isRemovedMapCompatibilityPreDispatchHelperName(helper)) {
+    if (isRemovedKeyValueCompatibilityPreDispatchHelperName(helper)) {
       return helper;
     }
   }

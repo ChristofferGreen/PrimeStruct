@@ -1311,6 +1311,8 @@ TEST_CASE("canonical map surface owns standalone stdlib implementation") {
         std::string::npos);
   CHECK(exprPreDispatchDirectCallsSource.find("removedMapCompatibilityHelper") ==
         std::string::npos);
+  CHECK(exprPreDispatchDirectCallsSource.find("isRemovedMapCompatibilityPreDispatchHelperName(") ==
+        std::string::npos);
   CHECK(exprPreDispatchDirectCallsSource.find("hasExactRemovedMapAliasDefinition") ==
         std::string::npos);
   CHECK(exprPreDispatchDirectCallsSource.find("preDispatchKeyValueHelperSurfaceMetadata()") !=
@@ -1330,6 +1332,8 @@ TEST_CASE("canonical map surface owns standalone stdlib implementation") {
   CHECK(exprPreDispatchDirectCallsSource.find("removedKeyValueCompatibilityHelperFromPath") !=
         std::string::npos);
   CHECK(exprPreDispatchDirectCallsSource.find("removedKeyValueCompatibilityHelper") !=
+        std::string::npos);
+  CHECK(exprPreDispatchDirectCallsSource.find("isRemovedKeyValueCompatibilityPreDispatchHelperName(") !=
         std::string::npos);
   CHECK(exprPreDispatchDirectCallsSource.find("hasExactRemovedKeyValueAliasDefinition") !=
         std::string::npos);
