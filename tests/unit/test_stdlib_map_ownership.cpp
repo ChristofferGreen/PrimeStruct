@@ -1114,6 +1114,24 @@ TEST_CASE("canonical map surface owns standalone stdlib implementation") {
         std::string::npos);
   CHECK(templateReceiverSource.find("experimentalMapHelperPathForWrapperHelper") ==
         std::string::npos);
+  CHECK(templateReceiverSource.find(
+            "experimentalMapBackingLeafForReceiverResolution") ==
+        std::string::npos);
+  CHECK(templateReceiverSource.find(
+            "experimentalKeyValueBackingLeafForReceiverResolution") !=
+        std::string::npos);
+  CHECK(templateReceiverSource.find(
+            "isUnspecializedExperimentalMapBackingTypeForReceiverResolution") ==
+        std::string::npos);
+  CHECK(templateReceiverSource.find(
+            "isSpecializedExperimentalMapBackingTypeForReceiverResolution") ==
+        std::string::npos);
+  CHECK(templateReceiverSource.find(
+            "isUnspecializedExperimentalKeyValueBackingTypeForReceiverResolution") !=
+        std::string::npos);
+  CHECK(templateReceiverSource.find(
+            "isSpecializedExperimentalKeyValueBackingTypeForReceiverResolution") !=
+        std::string::npos);
   CHECK(templateReceiverSource.find("templateMonomorphKeyValueHelperSurfaceMetadata") !=
         std::string::npos);
   CHECK(templateReceiverSource.find("resolveTemplateMonomorphKeyValueHelperName") !=

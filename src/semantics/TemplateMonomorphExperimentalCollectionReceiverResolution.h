@@ -16,7 +16,7 @@ std::string experimentalCollectionBorrowedBindingTypeText(const BindingInfo &bin
   return binding.typeTemplateArg;
 }
 
-std::string experimentalMapBackingLeafForReceiverResolution(std::string typeName) {
+std::string experimentalKeyValueBackingLeafForReceiverResolution(std::string typeName) {
   typeName = normalizeBindingTypeName(std::move(typeName));
   if (!typeName.empty() && typeName.front() == '/') {
     typeName.erase(typeName.begin());
@@ -25,23 +25,23 @@ std::string experimentalMapBackingLeafForReceiverResolution(std::string typeName
   return leafStart == std::string::npos ? typeName : typeName.substr(leafStart + 1);
 }
 
-bool isUnspecializedExperimentalMapBackingTypeForReceiverResolution(
+bool isUnspecializedExperimentalKeyValueBackingTypeForReceiverResolution(
     std::string typeName) {
   typeName = normalizeBindingTypeName(std::move(typeName));
   if (!typeName.empty() && typeName.front() == '/') {
     typeName.erase(typeName.begin());
   }
-  return experimentalMapBackingLeafForReceiverResolution(typeName) == "Map" &&
+  return experimentalKeyValueBackingLeafForReceiverResolution(typeName) == "Map" &&
          isExperimentalCollectionBackingTypeName("map", "Map", typeName);
 }
 
-bool isSpecializedExperimentalMapBackingTypeForReceiverResolution(
+bool isSpecializedExperimentalKeyValueBackingTypeForReceiverResolution(
     std::string typeName) {
   typeName = normalizeBindingTypeName(std::move(typeName));
   if (!typeName.empty() && typeName.front() == '/') {
     typeName.erase(typeName.begin());
   }
-  return experimentalMapBackingLeafForReceiverResolution(typeName) != "Map" &&
+  return experimentalKeyValueBackingLeafForReceiverResolution(typeName) != "Map" &&
          isExperimentalCollectionBackingTypeName("map", "Map", typeName);
 }
 
@@ -225,7 +225,7 @@ bool extractExperimentalMapValueReceiverTemplateArgsFromTypeText(const std::stri
       normalizedType = normalizeBindingTypeName(args.front());
       continue;
     }
-    if (isUnspecializedExperimentalMapBackingTypeForReceiverResolution(
+    if (isUnspecializedExperimentalKeyValueBackingTypeForReceiverResolution(
             normalizedBase)) {
       return splitTopLevelTemplateArgs(argText, templateArgsOut) && templateArgsOut.size() == 2;
     }
@@ -239,7 +239,7 @@ bool extractExperimentalMapValueReceiverTemplateArgsFromTypeText(const std::stri
   if (!normalizedResolvedPath.empty() && normalizedResolvedPath.front() == '/') {
     normalizedResolvedPath.erase(normalizedResolvedPath.begin());
   }
-  if (!isSpecializedExperimentalMapBackingTypeForReceiverResolution(
+  if (!isSpecializedExperimentalKeyValueBackingTypeForReceiverResolution(
           normalizedResolvedPath)) {
     return false;
   }
