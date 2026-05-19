@@ -313,8 +313,8 @@ bool SemanticsValidator::validateExprCollectionAccessFallbacks(
       return false;
     }
     std::string keyValueKeyType;
-    if (!(context.resolveMapKeyType != nullptr &&
-          context.resolveMapKeyType(expr.args.front(), keyValueKeyType))) {
+    if (!(context.resolveKeyValueKeyType != nullptr &&
+          context.resolveKeyValueKeyType(expr.args.front(), keyValueKeyType))) {
       return failCollectionAccessDiagnostic(helperName + " requires map target");
     }
     if (!validateKeyValueKeyExpr(helperName, expr.args[1], keyValueKeyType)) {
@@ -508,8 +508,8 @@ bool SemanticsValidator::validateExprCollectionAccessFallbacks(
     std::string keyValueKeyType;
     std::string keyValueValueType;
     auto isKeyValueTarget = [&](const Expr &candidate, std::string &keyValueKeyTypeOut) {
-      if (context.resolveMapKeyType != nullptr &&
-          context.resolveMapKeyType(candidate, keyValueKeyTypeOut)) {
+      if (context.resolveKeyValueKeyType != nullptr &&
+          context.resolveKeyValueKeyType(candidate, keyValueKeyTypeOut)) {
         return true;
       }
       std::string builtinCollection;

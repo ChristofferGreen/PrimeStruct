@@ -807,7 +807,7 @@ bool SemanticsValidator::hasResolvableKeyValueHelperPath(const std::string &path
   return hasDeclaredDefinitionPath(path) || hasImportedDefinitionPath(path);
 }
 
-bool SemanticsValidator::resolveMapKeyType(
+bool SemanticsValidator::resolveKeyValueKeyType(
     const Expr &target,
     const BuiltinCollectionDispatchResolvers &dispatchResolvers,
     std::string &keyTypeOut) const {

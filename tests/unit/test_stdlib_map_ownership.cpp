@@ -1708,6 +1708,14 @@ TEST_CASE("canonical map surface owns standalone stdlib implementation") {
         std::string::npos);
   CHECK(privateExprInferenceSource.find("resolveKeyValueValueType(") !=
         std::string::npos);
+  CHECK(privateExprInferenceSource.find("resolveMapKeyType(") ==
+        std::string::npos);
+  CHECK(privateExprInferenceSource.find("resolveKeyValueKeyType(") !=
+        std::string::npos);
+  CHECK(privateExprValidationSource.find("resolveMapKeyType") ==
+        std::string::npos);
+  CHECK(privateExprValidationSource.find("resolveKeyValueKeyType") !=
+        std::string::npos);
   CHECK(inferMethodResolutionHelpersSource.find(
             "preferredKeyValueMethodTargetForCall(") != std::string::npos);
   CHECK(inferMethodResolutionHelpersSource.find("preferredMapMethodTargetForCall(") ==
@@ -2211,6 +2219,8 @@ TEST_CASE("canonical map surface owns standalone stdlib implementation") {
         std::string::npos);
   CHECK(collectionHelperRewritesSource.find("resolveMapValueType(") ==
         std::string::npos);
+  CHECK(collectionHelperRewritesSource.find("resolveMapKeyType(") ==
+        std::string::npos);
   CHECK(collectionHelperRewritesSource.find("resolvesExperimentalMap =") ==
         std::string::npos);
   CHECK(collectionHelperRewritesSource.find("resolvesCanonicalMap") ==
@@ -2261,6 +2271,8 @@ TEST_CASE("canonical map surface owns standalone stdlib implementation") {
   CHECK(collectionHelperRewritesSource.find("resolvesExperimentalKeyValueValue") !=
         std::string::npos);
   CHECK(collectionHelperRewritesSource.find("resolveKeyValueValueType(") !=
+        std::string::npos);
+  CHECK(collectionHelperRewritesSource.find("resolveKeyValueKeyType(") !=
         std::string::npos);
   CHECK(collectionHelperRewritesSource.find("resolvesExperimentalKeyValue") !=
         std::string::npos);
@@ -3427,6 +3439,10 @@ TEST_CASE("canonical map surface owns standalone stdlib implementation") {
   CHECK(argumentValidationSource.find("resolveMapValueType(") ==
         std::string::npos);
   CHECK(argumentValidationSource.find("resolveKeyValueValueType(") !=
+        std::string::npos);
+  CHECK(argumentValidationSource.find("resolveMapKeyType(") ==
+        std::string::npos);
+  CHECK(argumentValidationSource.find("resolveKeyValueKeyType(") !=
         std::string::npos);
   CHECK(argumentValidationSource.find("actualMapBase") == std::string::npos);
   CHECK(argumentValidationSource.find("actualMapTemplateArgs") ==

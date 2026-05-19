@@ -338,7 +338,7 @@ bool SemanticsValidator::validateExprLateMapAccessBuiltins(
 
   auto resolveKeyValueKeyTypeWithInference =
       [&](const Expr &receiverExpr, std::string &keyValueKeyTypeOut) {
-        if (this->resolveMapKeyType(receiverExpr, *context.dispatchResolvers,
+        if (this->resolveKeyValueKeyType(receiverExpr, *context.dispatchResolvers,
                                     keyValueKeyTypeOut)) {
           return true;
         }

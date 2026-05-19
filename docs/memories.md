@@ -187,7 +187,8 @@ This file stores durable session-derived facts that are useful in later work. Ke
   helper functions should use key/value names too; template constructor and
   definition rewrite entry points should use key/value names too; infer
   struct-return specialized path helpers should use key/value names too;
-  shared value-type resolver helpers should use key/value names too.
+  shared value-type resolver helpers should use key/value names too; shared
+  key-type resolver helpers should use key/value names too.
   The stdlib ownership source lock rejects the old map-helper, map-count,
   map-access, and removed map compatibility names.
 

@@ -39,9 +39,9 @@ bool SemanticsValidator::validateExprLateCollectionAccessFallbacks(
       context.dispatchResolvers->resolveArrayTarget;
   collectionAccessValidationContext.resolveStringTarget =
       context.dispatchResolvers->resolveStringTarget;
-  collectionAccessValidationContext.resolveMapKeyType =
+  collectionAccessValidationContext.resolveKeyValueKeyType =
       [&](const Expr &target, std::string &keyValueKeyTypeOut) {
-        return this->resolveMapKeyType(target, *context.dispatchResolvers,
+        return this->resolveKeyValueKeyType(target, *context.dispatchResolvers,
                                        keyValueKeyTypeOut);
       };
   collectionAccessValidationContext.resolveExperimentalMapTarget =

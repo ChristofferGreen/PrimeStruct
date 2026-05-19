@@ -173,7 +173,7 @@
       const BuiltinCollectionDispatchResolvers &dispatchResolvers,
       std::string &resolvedPathOut) const;
   bool hasResolvableKeyValueHelperPath(const std::string &path) const;
-  bool resolveMapKeyType(const Expr &target,
+  bool resolveKeyValueKeyType(const Expr &target,
                          const BuiltinCollectionDispatchResolvers &dispatchResolvers,
                          std::string &keyTypeOut) const;
   bool resolveKeyValueValueType(const Expr &target,

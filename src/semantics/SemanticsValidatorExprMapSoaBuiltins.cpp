@@ -337,8 +337,8 @@ bool SemanticsValidator::validateExprMapSoaBuiltins(
     const Expr &keyExpr =
         hasBareKeyValueOperands ? expr.args[keyIndex] : expr.args[1];
     std::string keyValueKeyType;
-    if (!(context.resolveMapKeyType != nullptr &&
-          context.resolveMapKeyType(receiverExpr, keyValueKeyType))) {
+    if (!(context.resolveKeyValueKeyType != nullptr &&
+          context.resolveKeyValueKeyType(receiverExpr, keyValueKeyType))) {
       if (!validateExpr(params, locals, receiverExpr)) {
         return false;
       }

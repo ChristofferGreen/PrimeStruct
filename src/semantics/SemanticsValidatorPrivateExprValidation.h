@@ -210,7 +210,7 @@
       bool &handledOut);
   struct ExprMapSoaBuiltinContext {
     bool shouldBuiltinValidateBareKeyValueContainsCall = false;
-    std::function<bool(const Expr &, std::string &)> resolveMapKeyType;
+    std::function<bool(const Expr &, std::string &)> resolveKeyValueKeyType;
     std::function<bool(const Expr &, std::string &)> resolveVectorTarget;
     std::function<bool(const Expr &, std::string &)> resolveSoaVectorTarget;
     std::function<bool(const Expr &)> resolveStringTarget;
@@ -389,7 +389,7 @@
     std::function<bool(const Expr &, std::string &)> resolveExperimentalVectorValueTarget;
     std::function<bool(const Expr &, std::string &)> resolveArrayTarget;
     std::function<bool(const Expr &)> resolveStringTarget;
-    std::function<bool(const Expr &, std::string &)> resolveMapKeyType;
+    std::function<bool(const Expr &, std::string &)> resolveKeyValueKeyType;
     std::function<bool(const Expr &, std::string &, std::string &)>
         resolveExperimentalMapTarget;
     std::function<bool(const Expr &)> isIndexedArgsPackKeyValueReceiverTarget;
