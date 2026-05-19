@@ -4213,6 +4213,18 @@ TEST_CASE("canonical map surface owns standalone stdlib implementation") {
         std::string::npos);
   CHECK(resultMetadataSource.find("collectionMapKeyKind") ==
         std::string::npos);
+  CHECK(resultMetadataSource.find("isSpecializedExperimentalMapTypeText") ==
+        std::string::npos);
+  CHECK(resultMetadataSource.find("resolveSpecializedExperimentalMapFieldKinds") ==
+        std::string::npos);
+  CHECK(resultMetadataSource.find("resolveSpecializedExperimentalMapTypeKinds") ==
+        std::string::npos);
+  CHECK(resultMetadataSource.find("isSpecializedExperimentalKeyValueTypeText") !=
+        std::string::npos);
+  CHECK(resultMetadataSource.find(
+            "resolveSpecializedExperimentalKeyValueFieldKinds") != std::string::npos);
+  CHECK(resultMetadataSource.find(
+            "resolveSpecializedExperimentalKeyValueTypeKinds") != std::string::npos);
   CHECK(resultMetadataSource.find("\"/std/collections/map/map\"") ==
         std::string::npos);
   CHECK(resultMetadataSource.find("\"/std/collections/map/map__\"") ==

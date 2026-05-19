@@ -66,7 +66,7 @@ bool extractResultValueTypeText(const std::string &typeText, std::string &valueT
   return true;
 }
 
-bool isSpecializedExperimentalMapTypeText(const std::string &typeText) {
+bool isSpecializedExperimentalKeyValueTypeText(const std::string &typeText) {
   std::string normalized = trimTemplateTypeText(typeText);
   if (!normalized.empty() && normalized.front() != '/') {
     normalized.insert(normalized.begin(), '/');
@@ -120,7 +120,7 @@ bool resolveSpecializedExperimentalVectorElementKind(const std::string &typeText
   return false;
 }
 
-bool resolveSpecializedExperimentalMapFieldKinds(const Definition &structDef,
+bool resolveSpecializedExperimentalKeyValueFieldKinds(const Definition &structDef,
                                                  const ResolveCallDefinitionFn &resolveDefinitionCall,
                                                  LocalInfo::ValueKind &keyKindOut,
                                                  LocalInfo::ValueKind &valueKindOut) {
@@ -155,13 +155,13 @@ bool resolveSpecializedExperimentalMapFieldKinds(const Definition &structDef,
          valueKindOut != LocalInfo::ValueKind::Unknown;
 }
 
-bool resolveSpecializedExperimentalMapTypeKinds(const std::string &typeText,
+bool resolveSpecializedExperimentalKeyValueTypeKinds(const std::string &typeText,
                                                 const ResolveCallDefinitionFn &resolveDefinitionCall,
                                                 LocalInfo::ValueKind &keyKindOut,
                                                 LocalInfo::ValueKind &valueKindOut) {
   keyKindOut = LocalInfo::ValueKind::Unknown;
   valueKindOut = LocalInfo::ValueKind::Unknown;
-  if (!isSpecializedExperimentalMapTypeText(typeText) || !resolveDefinitionCall) {
+  if (!isSpecializedExperimentalKeyValueTypeText(typeText) || !resolveDefinitionCall) {
     return false;
   }
   Expr syntheticExpr;
@@ -174,7 +174,7 @@ bool resolveSpecializedExperimentalMapTypeKinds(const std::string &typeText,
   if (structDef == nullptr || !isStructDefinition(*structDef)) {
     return false;
   }
-  return resolveSpecializedExperimentalMapFieldKinds(*structDef, resolveDefinitionCall, keyKindOut, valueKindOut);
+  return resolveSpecializedExperimentalKeyValueFieldKinds(*structDef, resolveDefinitionCall, keyKindOut, valueKindOut);
 }
 
 void assignDeclaredResultCollectionInfo(const std::string &typeText,
@@ -664,7 +664,7 @@ bool inferDirectResultValueCollectionInfo(const Expr &expr,
       return false;
     }
     if (!isSupportedPackedResultCollectionKind(localIt->second.kind) &&
-        resolveSpecializedExperimentalMapTypeKinds(
+        resolveSpecializedExperimentalKeyValueTypeKinds(
             localIt->second.structTypeName, resolveDefinitionCall, keyValueKeyKindOut, valueKindOut)) {
       collectionKindOut = LocalInfo::Kind::KeyValueCollection;
       return true;
@@ -845,7 +845,7 @@ bool inferDirectResultValueCollectionInfo(const Expr &expr,
     if (transform.name != "return" || transform.templateArgs.size() != 1) {
       continue;
     }
-    if (resolveSpecializedExperimentalMapTypeKinds(
+    if (resolveSpecializedExperimentalKeyValueTypeKinds(
             transform.templateArgs.front(), resolveDefinitionCall, keyValueKeyKindOut, valueKindOut)) {
       collectionKindOut = LocalInfo::Kind::KeyValueCollection;
       return true;
