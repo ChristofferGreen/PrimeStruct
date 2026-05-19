@@ -1336,6 +1336,10 @@ TEST_CASE("canonical map surface owns standalone stdlib implementation") {
         std::string::npos);
   CHECK(exprMethodResolutionSource.find("resolveKeyValueTargetWithTypes") !=
         std::string::npos);
+  CHECK(exprMethodResolutionSource.find("resolveExperimentalKeyValueTarget") !=
+        std::string::npos);
+  CHECK(exprMethodResolutionSource.find("const auto &resolveExperimentalMapTarget") ==
+        std::string::npos);
   CHECK(exprMethodResolutionSource.find("resolveKeyValueTarget") !=
         std::string::npos);
   CHECK(exprMethodResolutionSource.find("resolveMapTargetWithTypes") ==

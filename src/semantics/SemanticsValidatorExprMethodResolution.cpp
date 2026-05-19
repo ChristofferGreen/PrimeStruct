@@ -69,14 +69,15 @@ bool SemanticsValidator::validateExprMethodCallTarget(
 
   const auto &resolveVectorTarget = dispatchResolvers.resolveVectorTarget;
   const auto &resolveKeyValueTargetWithTypes = dispatchResolvers.resolveMapTarget;
-  const auto &resolveExperimentalMapTarget = dispatchResolvers.resolveExperimentalMapTarget;
+  const auto &resolveExperimentalKeyValueTarget =
+      dispatchResolvers.resolveExperimentalMapTarget;
   const std::string normalizedMethodName =
       normalizeCollectionMethodName(expr.name);
   auto resolveKeyValueTarget = [&](const Expr &target) -> bool {
     std::string keyType;
     std::string valueType;
     if (resolveKeyValueTargetWithTypes(target, keyType, valueType) ||
-        resolveExperimentalMapTarget(target, keyType, valueType)) {
+        resolveExperimentalKeyValueTarget(target, keyType, valueType)) {
       return true;
     }
     if (isIndexedArgsPackKeyValueReceiverTarget(target, dispatchResolvers)) {
