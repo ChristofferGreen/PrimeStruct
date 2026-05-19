@@ -136,7 +136,7 @@ bool isCanonicalMapCollectionTypeRootLocal(std::string_view typeName) {
          trimLeadingSlash(typeName) == trimLeadingSlash(metadata->canonicalPath);
 }
 
-bool isSpecializedExperimentalMapBackingPath(std::string typeName) {
+bool isSpecializedExperimentalKeyValueBackingPath(std::string typeName) {
   typeName = normalizeBindingTypeName(typeName);
   if (!typeName.empty() && typeName.front() == '/') {
     typeName.erase(typeName.begin());
@@ -208,7 +208,7 @@ std::string SemanticsValidator::normalizeCollectionTypePath(const std::string &t
       isCanonicalMapCollectionTypeRootLocal(normalizedType)) {
     return "/map";
   }
-  if (isSpecializedExperimentalMapBackingPath(normalizedType)) {
+  if (isSpecializedExperimentalKeyValueBackingPath(normalizedType)) {
     return "/map";
   }
   if (normalizedType == "/string" || normalizedType == "string") {

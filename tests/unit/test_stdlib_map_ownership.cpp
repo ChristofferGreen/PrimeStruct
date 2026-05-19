@@ -2314,6 +2314,11 @@ TEST_CASE("canonical map surface owns standalone stdlib implementation") {
         std::string::npos);
   CHECK(inferCollectionCompatibilitySource.find("isCanonicalMapCollectionTypeRootLocal(") !=
         std::string::npos);
+  CHECK(inferCollectionCompatibilitySource.find(
+            "isSpecializedExperimentalMapBackingPath") == std::string::npos);
+  CHECK(inferCollectionCompatibilitySource.find(
+            "isSpecializedExperimentalKeyValueBackingPath") !=
+        std::string::npos);
   CHECK(inferCollectionCompatibilitySource.find("rootedMapCompatibilityHelperPath(") ==
         std::string::npos);
   CHECK(inferCollectionCompatibilitySource.find("rootedKeyValueCompatibilityHelperPath(helperName)") !=
