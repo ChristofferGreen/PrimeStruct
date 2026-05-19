@@ -128,7 +128,7 @@ bool SemanticsValidator::isStringStatementExpr(const Expr &arg,
     }
     return false;
   };
-  auto resolveMapValueType = [&](const Expr &target, std::string &valueTypeOut) -> bool {
+  auto resolveKeyValueValueType = [&](const Expr &target, std::string &valueTypeOut) -> bool {
     valueTypeOut.clear();
     if (target.kind == Expr::Kind::Name) {
       if (const BindingInfo *paramBinding = findParamBinding(params, target.name)) {
@@ -145,7 +145,7 @@ bool SemanticsValidator::isStringStatementExpr(const Expr &arg,
     if (target.kind == Expr::Kind::Call) {
       auto defIt = defMap_.find(resolveCalleePath(target));
       if (defIt != defMap_.end() && defIt->second) {
-        auto extractMapValueTypeFromReturn = [&](const std::string &typeName) -> bool {
+        auto extractKeyValueValueTypeFromReturn = [&](const std::string &typeName) -> bool {
           std::string normalizedType = normalizeBindingTypeName(typeName);
           while (true) {
             std::string base;
@@ -180,7 +180,7 @@ bool SemanticsValidator::isStringStatementExpr(const Expr &arg,
           if (transform.name != "return" || transform.templateArgs.size() != 1) {
             continue;
           }
-          return extractMapValueTypeFromReturn(transform.templateArgs.front());
+          return extractKeyValueValueTypeFromReturn(transform.templateArgs.front());
         }
         return false;
       }
@@ -279,7 +279,7 @@ bool SemanticsValidator::isStringStatementExpr(const Expr &arg,
           return true;
         }
         std::string keyValueValueType;
-        if (resolveMapValueType(candidate.args.front(), keyValueValueType) &&
+        if (resolveKeyValueValueType(candidate.args.front(), keyValueValueType) &&
             normalizeBindingTypeName(keyValueValueType) == "string") {
           return true;
         }
