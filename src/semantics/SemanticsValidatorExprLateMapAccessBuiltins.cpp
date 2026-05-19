@@ -106,7 +106,7 @@ bool getCanonicalKeyValueAccessBuiltinName(const Expr &candidate,
   return false;
 }
 
-bool isSpecializedExperimentalMapBackingPath(std::string typeName) {
+bool isSpecializedExperimentalKeyValueBackingPath(std::string typeName) {
   typeName = normalizeBindingTypeName(typeName);
   if (!typeName.empty() && typeName.front() == '/') {
     typeName.erase(typeName.begin());
@@ -115,14 +115,14 @@ bool isSpecializedExperimentalMapBackingPath(std::string typeName) {
          typeName.find("__") != std::string::npos;
 }
 
-bool isExperimentalMapTypeText(const std::string &typeText) {
+bool isExperimentalKeyValueTypeText(const std::string &typeText) {
   std::string normalizedType = normalizeBindingTypeName(typeText);
   while (true) {
     std::string normalizedPath = normalizedType;
     if (!normalizedPath.empty() && normalizedPath.front() == '/') {
       normalizedPath.erase(normalizedPath.begin());
     }
-    if (isSpecializedExperimentalMapBackingPath(normalizedPath)) {
+    if (isSpecializedExperimentalKeyValueBackingPath(normalizedPath)) {
       return true;
     }
     std::string base;
@@ -186,7 +186,7 @@ bool SemanticsValidator::validateExprLateMapAccessBuiltins(
     std::string receiverTypeText;
     const bool receiverIsExperimentalKeyValue =
         inferQueryExprTypeText(receiverExpr, params, locals, receiverTypeText) &&
-        isExperimentalMapTypeText(receiverTypeText);
+        isExperimentalKeyValueTypeText(receiverTypeText);
     const bool canonicalKeyValueAccessDiagnostic =
         isSourceSpelledCanonicalKeyValueAccessCall(expr) ||
         expr.sourceIsMethodCall ||
@@ -268,7 +268,7 @@ bool SemanticsValidator::validateExprLateMapAccessBuiltins(
     }
     std::string receiverTypeText;
     return inferQueryExprTypeText(receiverExpr, params, locals, receiverTypeText) &&
-           isExperimentalMapTypeText(receiverTypeText);
+           isExperimentalKeyValueTypeText(receiverTypeText);
   };
 
   if (!expr.isMethodCall &&

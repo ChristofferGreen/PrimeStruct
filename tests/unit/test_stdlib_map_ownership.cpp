@@ -2741,6 +2741,15 @@ TEST_CASE("canonical map surface owns standalone stdlib implementation") {
         std::string::npos);
   CHECK(lateMapAccessBuiltinsSource.find("canonicalMapAccessDiagnostic") ==
         std::string::npos);
+  CHECK(lateMapAccessBuiltinsSource.find("isSpecializedExperimentalMapBackingPath") ==
+        std::string::npos);
+  CHECK(lateMapAccessBuiltinsSource.find(
+            "isSpecializedExperimentalKeyValueBackingPath") !=
+        std::string::npos);
+  CHECK(lateMapAccessBuiltinsSource.find("isExperimentalMapTypeText") ==
+        std::string::npos);
+  CHECK(lateMapAccessBuiltinsSource.find("isExperimentalKeyValueTypeText") !=
+        std::string::npos);
   CHECK(lateMapAccessBuiltinsSource.find("failLateMapAccessBuiltinDiagnostic") ==
         std::string::npos);
   CHECK(lateMapAccessBuiltinsSource.find("failLateMapAccessKeyMismatch") ==

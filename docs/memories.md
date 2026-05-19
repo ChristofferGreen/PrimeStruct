@@ -166,7 +166,8 @@ This file stores durable session-derived facts that are useful in later work. Ke
   too; statement validation specialized backing predicates should use key/value
   names too; return-statement validation specialized backing predicates should
   use key/value names too; result-helper specialized backing predicates should
-  use key/value names too.
+  use key/value names too; late access specialized backing and type-text
+  predicates should use key/value names too.
   The stdlib ownership source lock rejects the old map-helper, map-count,
   map-access, and removed map compatibility names.
 
