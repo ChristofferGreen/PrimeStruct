@@ -151,6 +151,9 @@ TEST_CASE("canonical map surface owns standalone stdlib implementation") {
   const std::string templateFallbackTypeInferenceSource =
       readText(repoRoot() / "src" / "semantics" /
                "TemplateMonomorphFallbackTypeInference.h");
+  const std::string templateTypeResolutionSource =
+      readText(repoRoot() / "src" / "semantics" /
+               "TemplateMonomorphTypeResolution.h");
   const std::string templateCollectionCompatibilitySource =
       readText(repoRoot() / "src" / "semantics" /
                "TemplateMonomorphCollectionCompatibilityPaths.h");
@@ -373,6 +376,7 @@ TEST_CASE("canonical map surface owns standalone stdlib implementation") {
   REQUIRE(!templateReceiverSource.empty());
   REQUIRE(!templateExpressionRewriteSource.empty());
   REQUIRE(!templateFallbackTypeInferenceSource.empty());
+  REQUIRE(!templateTypeResolutionSource.empty());
   REQUIRE(!templateBindingCallInferenceSource.empty());
   REQUIRE(!templateConstructorRewriteSource.empty());
   REQUIRE(!mapConstructorHelpersSource.empty());
@@ -996,6 +1000,10 @@ TEST_CASE("canonical map surface owns standalone stdlib implementation") {
   CHECK(templateExpressionRewriteSource.find("removedKeyValueCompatibilityHelper") !=
         std::string::npos);
   CHECK(templateExpressionRewriteSource.find("isRemovedKeyValueCompatibilityPath") !=
+        std::string::npos);
+  CHECK(templateTypeResolutionSource.find("isExplicitRemovedMapCompatibilityPath") ==
+        std::string::npos);
+  CHECK(templateTypeResolutionSource.find("isExplicitRemovedKeyValueCompatibilityPath") !=
         std::string::npos);
   CHECK(templateExpressionRewriteSource.find("borrowedCanonicalMapUnknownTarget") ==
         std::string::npos);

@@ -580,7 +580,7 @@ std::string resolveCalleePath(const Expr &expr, const std::string &namespacePref
   if (expr.name.empty()) {
     return "";
   }
-  auto isExplicitRemovedMapCompatibilityPath = [&](std::string_view path) -> bool {
+  auto isExplicitRemovedKeyValueCompatibilityPath = [&](std::string_view path) -> bool {
     const std::string helperName =
         metadataBackedMapHelperRootAliasMethodName(path);
     return !helperName.empty() &&
@@ -595,7 +595,7 @@ std::string resolveCalleePath(const Expr &expr, const std::string &namespacePref
   }
   if (!expr.name.empty() && expr.name[0] == '/') {
     if (!usesStdlibScopedImportAliases(namespacePrefix, ctx) &&
-        isExplicitRemovedMapCompatibilityPath(expr.name)) {
+        isExplicitRemovedKeyValueCompatibilityPath(expr.name)) {
       return finalizeResolvedPath(expr.name);
     }
     if (std::string stdlibSurfacePath =
@@ -608,7 +608,7 @@ std::string resolveCalleePath(const Expr &expr, const std::string &namespacePref
   if (expr.name.find('/') != std::string::npos) {
     const std::string rootedPath = "/" + expr.name;
     if (!usesStdlibScopedImportAliases(namespacePrefix, ctx) &&
-        isExplicitRemovedMapCompatibilityPath(rootedPath)) {
+        isExplicitRemovedKeyValueCompatibilityPath(rootedPath)) {
       return finalizeResolvedPath(rootedPath);
     }
     if (std::string stdlibSurfacePath =
