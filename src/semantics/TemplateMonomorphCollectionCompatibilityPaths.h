@@ -11,7 +11,7 @@ bool isRemovedBorrowedSoaCompatibilityHelper(std::string_view helperName) {
          helperName == "ref_ref" || helperName == "to" "_aos_ref";
 }
 
-bool isRemovedMapCompatibilityHelper(std::string_view helperName) {
+bool isRemovedKeyValueCompatibilityHelper(std::string_view helperName) {
   return helperName == "count" || helperName == "count_ref" ||
          helperName == "size" ||
          helperName == "contains" || helperName == "contains_ref" ||
@@ -21,7 +21,7 @@ bool isRemovedMapCompatibilityHelper(std::string_view helperName) {
          helperName == "insert" || helperName == "insert_ref";
 }
 
-std::string_view mapCompatibilityHelperBase(std::string_view helperName) {
+std::string_view keyValueCompatibilityHelperBase(std::string_view helperName) {
   const size_t specializationSuffix = helperName.find("__");
   if (specializationSuffix != std::string_view::npos) {
     helperName.remove_suffix(helperName.size() - specializationSuffix);
@@ -88,7 +88,7 @@ bool isExplicitRemovedCollectionMethodAlias(const std::string &receiverTypeName,
     helperName = helperNameString;
   }
   return !helperName.empty() &&
-         isRemovedMapCompatibilityHelper(mapCompatibilityHelperBase(helperName));
+         isRemovedKeyValueCompatibilityHelper(keyValueCompatibilityHelperBase(helperName));
 }
 
 std::string preferVectorStdlibHelperPath(const std::string &path,

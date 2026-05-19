@@ -971,6 +971,10 @@ TEST_CASE("canonical map surface owns standalone stdlib implementation") {
         std::string::npos);
   CHECK(templateExpressionRewriteSource.find("isRemovedMapCompatibilityPath") ==
         std::string::npos);
+  CHECK(templateExpressionRewriteSource.find("mapCompatibilityHelperBase(") ==
+        std::string::npos);
+  CHECK(templateExpressionRewriteSource.find("keyValueCompatibilityHelperBase(") !=
+        std::string::npos);
   CHECK(templateExpressionRewriteSource.find("mapConstructorSurfaceMetadataLocal()") !=
         std::string::npos);
   CHECK(templateExpressionRewriteSource.find("mapHelperSurfaceMetadataLocal()") !=
@@ -1002,6 +1006,14 @@ TEST_CASE("canonical map surface owns standalone stdlib implementation") {
   CHECK(templateCollectionCompatibilitySource.find(
             "mapHelperSurfaceMetadataLocal()") !=
         std::string::npos);
+  CHECK(templateCollectionCompatibilitySource.find(
+            "isRemovedMapCompatibilityHelper(") == std::string::npos);
+  CHECK(templateCollectionCompatibilitySource.find(
+            "mapCompatibilityHelperBase(") == std::string::npos);
+  CHECK(templateCollectionCompatibilitySource.find(
+            "isRemovedKeyValueCompatibilityHelper(") != std::string::npos);
+  CHECK(templateCollectionCompatibilitySource.find(
+            "keyValueCompatibilityHelperBase(") != std::string::npos);
   CHECK(templateBindingCallInferenceSource.find("std/collections/map") ==
         std::string::npos);
   CHECK(templateBindingCallInferenceSource.find("experimental_map") ==

@@ -1526,9 +1526,9 @@ bool rewriteExpr(Expr &expr,
     const bool isRemovedKeyValueCompatibilityPath =
         !removedKeyValueCompatibilityHelper.empty();
     const std::string_view removedKeyValueCompatibilityHelperBase =
-        mapCompatibilityHelperBase(removedKeyValueCompatibilityHelper);
+        keyValueCompatibilityHelperBase(removedKeyValueCompatibilityHelper);
     if (isRemovedKeyValueCompatibilityPath &&
-        isRemovedMapCompatibilityHelper(removedKeyValueCompatibilityHelperBase) &&
+        isRemovedKeyValueCompatibilityHelper(removedKeyValueCompatibilityHelperBase) &&
         (removedKeyValueCompatibilityHelperBase == "count" ||
          removedKeyValueCompatibilityHelperBase == "count_ref" ||
          removedKeyValueCompatibilityHelperBase == "size") &&

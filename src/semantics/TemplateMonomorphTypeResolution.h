@@ -584,8 +584,8 @@ std::string resolveCalleePath(const Expr &expr, const std::string &namespacePref
     const std::string helperName =
         metadataBackedMapHelperRootAliasMethodName(path);
     return !helperName.empty() &&
-           isRemovedMapCompatibilityHelper(
-               mapCompatibilityHelperBase(helperName));
+           isRemovedKeyValueCompatibilityHelper(
+               keyValueCompatibilityHelperBase(helperName));
   };
   std::string builtinCollection;
   if (!expr.isMethodCall &&
