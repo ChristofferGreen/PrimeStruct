@@ -451,7 +451,7 @@ bool SemanticsValidator::inferCallInitializerBinding(const Expr &initializer,
                                                      const Expr *bindingExpr) {
   if (initializer.kind != Expr::Kind::Call) return false;
   const Expr *initializerExprForInference = &initializer;
-  auto isResolvedMapConstructorPath = [](std::string resolvedPath) {
+  auto isResolvedKeyValueConstructorPath = [](std::string resolvedPath) {
     return ::isResolvedPublishedMapConstructorPath(std::move(resolvedPath));
   };
   auto substituteCallTemplateArgsInBinding =
@@ -887,7 +887,7 @@ bool SemanticsValidator::inferCallInitializerBinding(const Expr &initializer,
       inferQueryExprTypeText(*initializerExprForInference, params, locals, inferredTypeText) &&
       assignBindingTypeFromText(inferredTypeText)) {
     std::string resolvedInferencePath = preferredResolvedInferencePath;
-    if (isResolvedMapConstructorPath(resolvedInferencePath)) {
+    if (isResolvedKeyValueConstructorPath(resolvedInferencePath)) {
       BindingInfo resolvedCallBinding;
       if (inferResolvedCallBinding(resolvedInferencePath, resolvedCallBinding)) {
         bindingOut = std::move(resolvedCallBinding);
