@@ -156,7 +156,8 @@ This file stores durable session-derived facts that are useful in later work. Ke
   infer late-fallback target aliases, method-target resolution target-probe
   locals, collection-helper rewrite resolution booleans, and
   collection-helper rewrite constructor-probe locals plus lowerer count-target
-  booleans follow the same naming.
+  booleans and uninitialized-struct inference constructor locals follow the
+  same naming.
 - Evidence: The release `PrimeStruct_backend_ir_tests` target rebuilt after
   the kind, field, target-info, lookup-helper, and setup-inference access
   renames, focused backend IR windows passed, and direct `rg` scans over
@@ -196,7 +197,7 @@ This file stores durable session-derived facts that are useful in later work. Ke
   infer late-fallback target aliases, method-target resolution target-probe
   locals, collection-helper rewrite resolution booleans, and
   collection-helper rewrite constructor-probe locals plus lowerer count-target
-  booleans.
+  booleans and uninitialized-struct inference constructor locals.
 
 ### map-compatibility-aliases-require-source-definitions
 - Updated: 2026-05-18

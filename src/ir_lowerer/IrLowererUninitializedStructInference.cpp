@@ -801,12 +801,14 @@ std::string inferStructExprPathFromDefinitionMapByCallTargetWithFieldIndex(
       if (!exprIn.isMethodCall && exprIn.templateArgs.size() == 2) {
         std::string collectionName;
         if (getBuiltinCollectionName(exprIn, collectionName) && collectionName == "map") {
-          const std::string mapType = "map<" + trimTemplateTypeText(exprIn.templateArgs.front()) + ", " +
-                                      trimTemplateTypeText(exprIn.templateArgs.back()) + ">";
-          const std::string inferredMapStruct =
-              inferUninitializedTargetStructPath(mapType, exprIn.namespacePrefix, resolveStructTypeName);
-          if (!inferredMapStruct.empty()) {
-            return inferredMapStruct;
+          const std::string keyValueType =
+              "map<" + trimTemplateTypeText(exprIn.templateArgs.front()) + ", " +
+              trimTemplateTypeText(exprIn.templateArgs.back()) + ">";
+          const std::string inferredKeyValueStruct =
+              inferUninitializedTargetStructPath(keyValueType, exprIn.namespacePrefix,
+                                                 resolveStructTypeName);
+          if (!inferredKeyValueStruct.empty()) {
+            return inferredKeyValueStruct;
           }
         }
       }
@@ -901,11 +903,12 @@ std::string inferStructExprPathFromDefinitionMapByCallTargetWithFieldIndex(
                      isPublishedStdlibSurfaceConstructorExpr(exprIn,
                                                              metadata->id);
             }()) {
-          const std::string mapType =
+          const std::string keyValueType =
               "map<" + trimTemplateTypeText(exprIn.templateArgs.front()) + ", " +
               trimTemplateTypeText(exprIn.templateArgs.back()) + ">";
           const std::string templateStruct =
-              inferUninitializedTargetStructPath(mapType, exprIn.namespacePrefix, resolveStructTypeName);
+              inferUninitializedTargetStructPath(keyValueType, exprIn.namespacePrefix,
+                                                 resolveStructTypeName);
           if (!templateStruct.empty()) {
             return templateStruct;
           }

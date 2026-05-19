@@ -3318,6 +3318,14 @@ TEST_CASE("canonical map surface owns standalone stdlib implementation") {
   CHECK(uninitializedStructInferenceSource.find(
             "forwardedEmptyKeyValueConstructorMemberName()") !=
         std::string::npos);
+  CHECK(uninitializedStructInferenceSource.find("const std::string mapType") ==
+        std::string::npos);
+  CHECK(uninitializedStructInferenceSource.find("inferredMapStruct") ==
+        std::string::npos);
+  CHECK(uninitializedStructInferenceSource.find("const std::string keyValueType") !=
+        std::string::npos);
+  CHECK(uninitializedStructInferenceSource.find("inferredKeyValueStruct") !=
+        std::string::npos);
   CHECK(structSlotLayoutSource.find("isBuiltinCollectionTypeName(typeName, \"map\")") !=
         std::string::npos);
   CHECK(structSlotLayoutSource.find("typeName == \"std/collections/map\"") ==
