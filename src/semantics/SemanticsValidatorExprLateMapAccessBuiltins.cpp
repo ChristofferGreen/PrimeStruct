@@ -177,10 +177,10 @@ bool SemanticsValidator::validateExprLateMapAccessBuiltins(
     return true;
   }
 
-  auto failLateMapAccessBuiltinDiagnostic = [&](std::string message) -> bool {
+  auto failLateKeyValueAccessDiagnostic = [&](std::string message) -> bool {
     return failExprDiagnostic(expr, std::move(message));
   };
-  auto failLateMapAccessKeyMismatch = [&](const std::string &helperName,
+  auto failLateKeyValueAccessKeyMismatch = [&](const std::string &helperName,
                                           const std::string &mapKeyType,
                                           const Expr &receiverExpr) {
     std::string receiverTypeText;
@@ -192,20 +192,20 @@ bool SemanticsValidator::validateExprLateMapAccessBuiltins(
         expr.sourceIsMethodCall ||
         (receiverIsExperimentalMap && expr.isMethodCall);
     if (canonicalKeyValueAccessDiagnostic) {
-      return failLateMapAccessBuiltinDiagnostic(
+      return failLateKeyValueAccessDiagnostic(
           "argument type mismatch for " +
           canonicalKeyValueHelperPathLocal(helperName) +
           " parameter key");
     }
     if (normalizeBindingTypeName(mapKeyType) == "string") {
-      return failLateMapAccessBuiltinDiagnostic(helperName +
+      return failLateKeyValueAccessDiagnostic(helperName +
                                                 " requires string map key");
     }
-    return failLateMapAccessBuiltinDiagnostic(helperName +
+    return failLateKeyValueAccessDiagnostic(helperName +
                                               " requires map key type " +
                                               mapKeyType);
   };
-  auto hasBareMapContainsBuiltinDefinition = [&]() {
+  auto hasBareKeyValueContainsDefinition = [&]() {
     return hasImportedDefinitionPath(canonicalKeyValueHelperPathLocal("contains")) ||
            hasDeclaredDefinitionPath(canonicalKeyValueHelperPathLocal("contains")) ||
            hasImportedDefinitionPath(
@@ -215,7 +215,7 @@ bool SemanticsValidator::validateExprLateMapAccessBuiltins(
            hasImportedDefinitionPath("/contains") ||
            hasDeclaredDefinitionPath("/contains");
   };
-  auto hasVisibleStdlibMapBuiltinDefinition = [&](const std::string &helperName) {
+  auto hasVisibleStdlibKeyValueAccessDefinition = [&](const std::string &helperName) {
     const std::string path = canonicalKeyValueHelperPathLocal(helperName);
     return hasImportedDefinitionPath(path) || hasDeclaredDefinitionPath(path);
   };
@@ -276,7 +276,7 @@ bool SemanticsValidator::validateExprLateMapAccessBuiltins(
       expr.args.size() == 2 && !hasNamedArguments(expr.argNames)) {
     const Expr &receiverExpr = expr.args.front();
     if (isExperimentalMapReceiver(receiverExpr)) {
-      return failLateMapAccessBuiltinDiagnostic(
+      return failLateKeyValueAccessDiagnostic(
           "unknown call target: " + canonicalKeyValueHelperPathLocal(builtinName));
     }
   }
@@ -313,10 +313,10 @@ bool SemanticsValidator::validateExprLateMapAccessBuiltins(
                                           rewrittenKeyValueHelperCall)) {
       if (isCanonicalKeyValueHelperResolvedPath(
               rewrittenKeyValueHelperCall.name, "tryAt") &&
-          !hasVisibleStdlibMapBuiltinDefinition("tryAt") &&
+          !hasVisibleStdlibKeyValueAccessDefinition("tryAt") &&
           !hasImportedDefinitionPath("/tryAt") &&
           !hasDeclaredDefinitionPath("/tryAt")) {
-        return failLateMapAccessBuiltinDiagnostic(
+        return failLateKeyValueAccessDiagnostic(
             "unknown call target: " + canonicalKeyValueHelperPathLocal("tryAt"));
       }
       handledOut = true;
@@ -357,31 +357,31 @@ bool SemanticsValidator::validateExprLateMapAccessBuiltins(
            expr.args[this->keyValueHelperReceiverIndex(expr, *context.dispatchResolvers)]) ||
        this->isIndexedArgsPackMapReceiverTarget(
            expr.args.front(), *context.dispatchResolvers))) {
-    if (!hasBareMapContainsBuiltinDefinition()) {
-      return failLateMapAccessBuiltinDiagnostic(
+    if (!hasBareKeyValueContainsDefinition()) {
+      return failLateKeyValueAccessDiagnostic(
           "unknown call target: " + canonicalKeyValueHelperPathLocal("contains"));
     }
     size_t receiverIndex = 0;
     size_t keyIndex = 1;
-    const bool hasBareMapOperands =
+    const bool hasBareKeyValueOperands =
         this->bareKeyValueHelperOperandIndices(expr, *context.dispatchResolvers,
                                           receiverIndex, keyIndex);
     const Expr &receiverExpr =
-        hasBareMapOperands ? expr.args[receiverIndex] : expr.args.front();
+        hasBareKeyValueOperands ? expr.args[receiverIndex] : expr.args.front();
     const Expr &keyExpr =
-        hasBareMapOperands ? expr.args[keyIndex] : expr.args[1];
+        hasBareKeyValueOperands ? expr.args[keyIndex] : expr.args[1];
     std::string mapKeyType;
     if (!resolveMapKeyTypeWithInference(receiverExpr, mapKeyType)) {
       if (!validateExpr(params, locals, receiverExpr)) {
         return false;
       }
-      return failLateMapAccessBuiltinDiagnostic("contains requires map target");
+      return failLateKeyValueAccessDiagnostic("contains requires map target");
     }
     if (!mapKeyType.empty()) {
       if (normalizeBindingTypeName(mapKeyType) == "string") {
         if (!this->isStringExprForArgumentValidation(keyExpr,
                                                      *context.dispatchResolvers)) {
-          return failLateMapAccessBuiltinDiagnostic(
+          return failLateKeyValueAccessDiagnostic(
               "contains requires string map key");
         }
       } else {
@@ -389,13 +389,13 @@ bool SemanticsValidator::validateExprLateMapAccessBuiltins(
             returnKindForTypeName(normalizeBindingTypeName(mapKeyType));
         if (keyKind != ReturnKind::Unknown) {
           if (context.dispatchResolvers->resolveStringTarget(keyExpr)) {
-            return failLateMapAccessBuiltinDiagnostic(
+            return failLateKeyValueAccessDiagnostic(
                 "contains requires map key type " + mapKeyType);
           }
           ReturnKind candidateKind = inferExprReturnKind(keyExpr, params, locals);
           if (candidateKind != ReturnKind::Unknown &&
               candidateKind != keyKind) {
-            return failLateMapAccessBuiltinDiagnostic(
+            return failLateKeyValueAccessDiagnostic(
                 "contains requires map key type " + mapKeyType);
           }
         }
@@ -425,13 +425,13 @@ bool SemanticsValidator::validateExprLateMapAccessBuiltins(
            *context.dispatchResolvers))) {
     size_t receiverIndex = 0;
     size_t keyIndex = 1;
-    const bool hasBareMapOperands =
+    const bool hasBareKeyValueOperands =
         this->bareKeyValueHelperOperandIndices(expr, *context.dispatchResolvers,
                                           receiverIndex, keyIndex);
     const Expr &receiverExpr =
-        hasBareMapOperands ? expr.args[receiverIndex] : expr.args.front();
+        hasBareKeyValueOperands ? expr.args[receiverIndex] : expr.args.front();
     const Expr &keyExpr =
-        hasBareMapOperands ? expr.args[keyIndex] : expr.args[1];
+        hasBareKeyValueOperands ? expr.args[keyIndex] : expr.args[1];
     const bool resolvesTryAtRef =
         isCanonicalKeyValueHelperResolvedPath(resolved, "tryAt_ref");
     const bool resolvesCanonicalTryAt =
@@ -445,7 +445,7 @@ bool SemanticsValidator::validateExprLateMapAccessBuiltins(
                                                          : "tryAt")) &&
         !hasImportedDefinitionPath("/tryAt") &&
         !hasDeclaredDefinitionPath("/tryAt")) {
-      return failLateMapAccessBuiltinDiagnostic(
+      return failLateKeyValueAccessDiagnostic(
           "unknown call target: " +
           canonicalKeyValueHelperPathLocal(resolvesTryAtRef ? "tryAt_ref"
                                                        : "tryAt"));
@@ -455,13 +455,13 @@ bool SemanticsValidator::validateExprLateMapAccessBuiltins(
       if (!validateExpr(params, locals, receiverExpr)) {
         return false;
       }
-      return failLateMapAccessBuiltinDiagnostic("tryAt requires map target");
+      return failLateKeyValueAccessDiagnostic("tryAt requires map target");
     }
     if (!mapKeyType.empty()) {
       if (normalizeBindingTypeName(mapKeyType) == "string") {
         if (!this->isStringExprForArgumentValidation(keyExpr,
                                                      *context.dispatchResolvers)) {
-          return failLateMapAccessBuiltinDiagnostic(
+          return failLateKeyValueAccessDiagnostic(
               "tryAt requires string map key");
         }
       } else {
@@ -469,13 +469,13 @@ bool SemanticsValidator::validateExprLateMapAccessBuiltins(
             returnKindForTypeName(normalizeBindingTypeName(mapKeyType));
         if (keyKind != ReturnKind::Unknown) {
           if (context.dispatchResolvers->resolveStringTarget(keyExpr)) {
-            return failLateMapAccessBuiltinDiagnostic(
+            return failLateKeyValueAccessDiagnostic(
                 "tryAt requires map key type " + mapKeyType);
           }
           ReturnKind candidateKind = inferExprReturnKind(keyExpr, params, locals);
           if (candidateKind != ReturnKind::Unknown &&
               candidateKind != keyKind) {
-            return failLateMapAccessBuiltinDiagnostic(
+            return failLateKeyValueAccessDiagnostic(
                 "tryAt requires map key type " + mapKeyType);
           }
         }
@@ -509,16 +509,16 @@ bool SemanticsValidator::validateExprLateMapAccessBuiltins(
            *context.dispatchResolvers))) {
     size_t receiverIndex = 0;
     size_t keyIndex = 1;
-    const bool hasBareMapOperands =
+    const bool hasBareKeyValueOperands =
         this->bareKeyValueHelperOperandIndices(expr, *context.dispatchResolvers,
                                           receiverIndex, keyIndex);
     const Expr &receiverExpr =
-        hasBareMapOperands ? expr.args[receiverIndex] : expr.args.front();
+        hasBareKeyValueOperands ? expr.args[receiverIndex] : expr.args.front();
     const Expr &keyExpr =
-        hasBareMapOperands ? expr.args[keyIndex] : expr.args[1];
+        hasBareKeyValueOperands ? expr.args[keyIndex] : expr.args[1];
     if (isCanonicalKeyValueAccessHelperPath(expr.name) &&
-        !hasVisibleStdlibMapBuiltinDefinition(builtinName)) {
-      return failLateMapAccessBuiltinDiagnostic(
+        !hasVisibleStdlibKeyValueAccessDefinition(builtinName)) {
+      return failLateKeyValueAccessDiagnostic(
           "unknown call target: " + canonicalKeyValueHelperPathLocal(builtinName));
     }
     std::string mapKeyType;
@@ -528,18 +528,18 @@ bool SemanticsValidator::validateExprLateMapAccessBuiltins(
         if (normalizeBindingTypeName(mapKeyType) == "string") {
           if (!this->isStringExprForArgumentValidation(keyExpr,
                                                        *context.dispatchResolvers)) {
-            return failLateMapAccessKeyMismatch(builtinName, mapKeyType, receiverExpr);
+            return failLateKeyValueAccessKeyMismatch(builtinName, mapKeyType, receiverExpr);
           }
         } else {
           ReturnKind keyKind =
               returnKindForTypeName(normalizeBindingTypeName(mapKeyType));
           if (keyKind != ReturnKind::Unknown) {
             if (context.dispatchResolvers->resolveStringTarget(keyExpr)) {
-              return failLateMapAccessKeyMismatch(builtinName, mapKeyType, receiverExpr);
+              return failLateKeyValueAccessKeyMismatch(builtinName, mapKeyType, receiverExpr);
             }
             ReturnKind indexKind = inferExprReturnKind(keyExpr, params, locals);
             if (indexKind != ReturnKind::Unknown && indexKind != keyKind) {
-              return failLateMapAccessKeyMismatch(builtinName, mapKeyType, receiverExpr);
+              return failLateKeyValueAccessKeyMismatch(builtinName, mapKeyType, receiverExpr);
             }
           }
         }
@@ -556,16 +556,16 @@ bool SemanticsValidator::validateExprLateMapAccessBuiltins(
   if (!expr.isMethodCall &&
       getCanonicalKeyValueAccessBuiltinName(expr, builtinName) &&
       expr.args.size() == 2 && !hasResolvedDefinition(resolved) &&
-      hasVisibleStdlibMapBuiltinDefinition(builtinName)) {
+      hasVisibleStdlibKeyValueAccessDefinition(builtinName)) {
     size_t receiverIndex = 0;
     size_t keyIndex = 1;
-    const bool hasBareMapOperands =
+    const bool hasBareKeyValueOperands =
         this->bareKeyValueHelperOperandIndices(expr, *context.dispatchResolvers,
                                           receiverIndex, keyIndex);
     const Expr &receiverExpr =
-        hasBareMapOperands ? expr.args[receiverIndex] : expr.args.front();
+        hasBareKeyValueOperands ? expr.args[receiverIndex] : expr.args.front();
     const Expr &keyExpr =
-        hasBareMapOperands ? expr.args[keyIndex] : expr.args[1];
+        hasBareKeyValueOperands ? expr.args[keyIndex] : expr.args[1];
     std::string receiverTypeText;
     std::string mapKeyType;
     std::string mapValueType;
@@ -577,18 +577,18 @@ bool SemanticsValidator::validateExprLateMapAccessBuiltins(
         if (normalizeBindingTypeName(mapKeyType) == "string") {
           if (!this->isStringExprForArgumentValidation(keyExpr,
                                                        *context.dispatchResolvers)) {
-            return failLateMapAccessKeyMismatch(builtinName, mapKeyType, receiverExpr);
+            return failLateKeyValueAccessKeyMismatch(builtinName, mapKeyType, receiverExpr);
           }
         } else {
           ReturnKind keyKind =
               returnKindForTypeName(normalizeBindingTypeName(mapKeyType));
           if (keyKind != ReturnKind::Unknown) {
             if (context.dispatchResolvers->resolveStringTarget(keyExpr)) {
-              return failLateMapAccessKeyMismatch(builtinName, mapKeyType, receiverExpr);
+              return failLateKeyValueAccessKeyMismatch(builtinName, mapKeyType, receiverExpr);
             }
             ReturnKind indexKind = inferExprReturnKind(keyExpr, params, locals);
             if (indexKind != ReturnKind::Unknown && indexKind != keyKind) {
-              return failLateMapAccessKeyMismatch(builtinName, mapKeyType, receiverExpr);
+              return failLateKeyValueAccessKeyMismatch(builtinName, mapKeyType, receiverExpr);
             }
           }
         }
