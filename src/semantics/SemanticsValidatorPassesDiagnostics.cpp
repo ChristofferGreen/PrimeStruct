@@ -43,7 +43,7 @@ bool isLoopBlockEnvelope(const Expr &candidate) {
   return true;
 }
 
-bool isCanonicalMapAccessHelperPath(std::string_view path) {
+bool isCanonicalKeyValueAccessHelperPath(std::string_view path) {
   std::string normalizedPath(path);
   if (const size_t suffix = normalizedPath.find("__");
       suffix != std::string::npos) {
@@ -116,8 +116,8 @@ void SemanticsValidator::collectDefinitionIntraBodyCallDiagnostics(
     std::string namespacedHelper;
     const bool isNamespacedCollectionHelper =
         getNamespacedCollectionHelperName(expr, namespacedCollection, namespacedHelper);
-    const bool isVisibleCanonicalMapAccessBuiltin =
-        isCanonicalMapAccessHelperPath(resolved) &&
+    const bool isVisibleCanonicalKeyValueAccessBuiltin =
+        isCanonicalKeyValueAccessHelperPath(resolved) &&
         (hasDefinitionPath(resolved) || hasDeclaredDefinitionPath(resolved) ||
          hasImportedDefinitionPath(resolved));
     const bool isCollectionHelperBuiltin =
@@ -139,7 +139,7 @@ void SemanticsValidator::collectDefinitionIntraBodyCallDiagnostics(
         (isNamespacedCollectionHelper &&
          namespacedCollection != "map" &&
          isBuiltinCollectionHelperName(namespacedHelper)) ||
-        isVisibleCanonicalMapAccessBuiltin;
+        isVisibleCanonicalKeyValueAccessBuiltin;
     const bool isCollectionBuiltin = defMap_.count(resolved) == 0 && getBuiltinCollectionName(expr, builtinName);
     const bool isDirectFileErrorBuiltin = resolved == "/file_error/why";
     return getBuiltinOperatorName(expr, builtinName) || getBuiltinComparisonName(expr, builtinName) ||

@@ -56,9 +56,10 @@ This file stores durable session-derived facts that are useful in later work. Ke
   late-fallback rewritten access temporaries should also use key/value access
   names; semantic named-argument access-path filtering should use key/value
   helper names too; semantic collection-dispatch std-namespaced access-path
-  filtering should use key/value helper names too, with the stdlib ownership
-  source lock rejecting the old map-helper, map-count, map-access, and removed
-  map compatibility names.
+  filtering should use key/value helper names too; semantic pass-diagnostic
+  visible access-builtin filtering should use key/value helper names too, with
+  the stdlib ownership source lock rejecting the old map-helper, map-count,
+  map-access, and removed map compatibility names.
 
 ### exact-stdlib-vector-import-covers-helper-surface
 - Updated: 2026-04-19

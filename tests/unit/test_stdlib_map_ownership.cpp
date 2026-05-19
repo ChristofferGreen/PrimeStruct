@@ -240,6 +240,9 @@ TEST_CASE("canonical map surface owns standalone stdlib implementation") {
   const std::string lateMapAccessBuiltinsSource =
       readText(repoRoot() / "src" / "semantics" /
                "SemanticsValidatorExprLateMapAccessBuiltins.cpp");
+  const std::string passesDiagnosticsSource =
+      readText(repoRoot() / "src" / "semantics" /
+               "SemanticsValidatorPassesDiagnostics.cpp");
   const std::string exprTrySource =
       readText(repoRoot() / "src" / "semantics" /
                "SemanticsValidatorExprTry.cpp");
@@ -413,6 +416,7 @@ TEST_CASE("canonical map surface owns standalone stdlib implementation") {
   REQUIRE(!inferLateFallbackBuiltinsSource.empty());
   REQUIRE(!exprLateFallbackBuiltinsSource.empty());
   REQUIRE(!lateMapAccessBuiltinsSource.empty());
+  REQUIRE(!passesDiagnosticsSource.empty());
   REQUIRE(!exprTrySource.empty());
   REQUIRE(!pointerLikeSource.empty());
   REQUIRE(!statementPrintabilitySource.empty());
@@ -2226,6 +2230,14 @@ TEST_CASE("canonical map surface owns standalone stdlib implementation") {
         std::string::npos);
   CHECK(namedArgumentBuiltinsSource.find(
             "isCanonicalKeyValueAccessHelperResolvedPath(") !=
+        std::string::npos);
+  CHECK(passesDiagnosticsSource.find("isCanonicalMapAccessHelperPath(") ==
+        std::string::npos);
+  CHECK(passesDiagnosticsSource.find("isVisibleCanonicalMapAccessBuiltin") ==
+        std::string::npos);
+  CHECK(passesDiagnosticsSource.find("isCanonicalKeyValueAccessHelperPath(") !=
+        std::string::npos);
+  CHECK(passesDiagnosticsSource.find("isVisibleCanonicalKeyValueAccessBuiltin") !=
         std::string::npos);
   CHECK(argumentValidationCollectionsSource.find(
             "findStdlibSurfaceMetadataByBridgeKey(\"collections.map_helpers\")") !=
