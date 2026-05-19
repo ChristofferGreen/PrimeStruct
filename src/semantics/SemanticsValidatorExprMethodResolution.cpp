@@ -221,7 +221,7 @@ bool SemanticsValidator::validateExprMethodCallTarget(
   hasMethodReceiverIndex = true;
   methodReceiverIndex = 0;
   bool isBuiltinMethod = false;
-  auto resolveIndexedArgsPackMapMethod = [&]() -> bool {
+  auto resolveIndexedArgsPackKeyValueMethod = [&]() -> bool {
     if (!(normalizedMethodName == "count" ||
           normalizedMethodName == "count_ref" ||
           normalizedMethodName == "size" ||
@@ -259,9 +259,9 @@ bool SemanticsValidator::validateExprMethodCallTarget(
     std::string valueType;
     const std::string unwrappedElemType =
         normalizeBindingTypeName(unwrapReferencePointerTypeText(elemType));
-    const std::string mapElemType =
+    const std::string keyValueElemType =
         unwrappedElemType.empty() ? elemType : unwrappedElemType;
-    if (!extractMapKeyValueTypesFromTypeText(mapElemType, keyType, valueType)) {
+    if (!extractMapKeyValueTypesFromTypeText(keyValueElemType, keyType, valueType)) {
       return false;
     }
     std::string helperName = normalizedMethodName;
@@ -291,10 +291,10 @@ bool SemanticsValidator::validateExprMethodCallTarget(
          hasImportedDefinitionPath(resolved));
     return true;
   };
-  const bool hasIndexedArgsPackMapMethodTarget =
-      resolveIndexedArgsPackMapMethod();
+  const bool hasIndexedArgsPackKeyValueMethodTarget =
+      resolveIndexedArgsPackKeyValueMethod();
   if (context.hasVectorHelperCallResolution &&
-      !hasIndexedArgsPackMapMethodTarget) {
+      !hasIndexedArgsPackKeyValueMethodTarget) {
     resolvedMethod = false;
     return true;
   }
@@ -309,7 +309,7 @@ bool SemanticsValidator::validateExprMethodCallTarget(
   };
   std::string vectorMethodTarget;
   bool resolvedCanonicalVectorCompatibilityMethod = false;
-  if (hasIndexedArgsPackMapMethodTarget) {
+  if (hasIndexedArgsPackKeyValueMethodTarget) {
   } else if (isVectorCompatibilityMethod &&
       expr.namespacePrefix != "vector" &&
       expr.namespacePrefix != "/vector" &&

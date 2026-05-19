@@ -1385,6 +1385,17 @@ TEST_CASE("canonical map surface owns standalone stdlib implementation") {
         std::string::npos);
   CHECK(exprMethodResolutionSource.find("preferredMapMethodTargetForCall(") ==
         std::string::npos);
+  CHECK(exprMethodResolutionSource.find("resolveIndexedArgsPackMapMethod") ==
+        std::string::npos);
+  CHECK(exprMethodResolutionSource.find(
+            "resolveIndexedArgsPackKeyValueMethod") != std::string::npos);
+  CHECK(exprMethodResolutionSource.find("hasIndexedArgsPackMapMethodTarget") ==
+        std::string::npos);
+  CHECK(exprMethodResolutionSource.find(
+            "hasIndexedArgsPackKeyValueMethodTarget") != std::string::npos);
+  CHECK(exprMethodResolutionSource.find("mapElemType") == std::string::npos);
+  CHECK(exprMethodResolutionSource.find("keyValueElemType") !=
+        std::string::npos);
   CHECK(exprMethodResolutionSource.find(
             "keepBuiltinIndexedArgsPackKeyValueMethod") != std::string::npos);
   CHECK(exprMethodResolutionSource.find("keepBuiltinIndexedArgsPackMapMethod") ==
