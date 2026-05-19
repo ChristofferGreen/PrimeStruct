@@ -49,7 +49,7 @@ bool SemanticsValidator::prepareExprCollectionDispatchSetup(
           ? this->directKeyValueHelperCompatibilityPath(expr, params, locals, dispatchResolverAdapters)
           : std::string();
 
-  auto resolveMapTarget = [&](const Expr &target) -> bool {
+  auto resolveKeyValueTarget = [&](const Expr &target) -> bool {
     std::string keyType;
     std::string valueType;
     if (dispatchResolvers.resolveMapTarget(target, keyType, valueType) ||
@@ -181,7 +181,7 @@ bool SemanticsValidator::prepareExprCollectionDispatchSetup(
       isStdNamespacedVectorCompatibilityDirectCall(
           expr.isMethodCall, resolveCalleePath(expr), "count") &&
       expr.args.size() == 1 && expr.args.front().kind == Expr::Kind::Call &&
-      resolveMapTarget(expr.args.front());
+      resolveKeyValueTarget(expr.args.front());
   const bool probesNamedStdNamespacedVectorUserReceiver =
       !expr.isMethodCall && hasNamedArguments(expr.argNames) && expr.args.size() == 1 &&
       setupOut.isNamespacedVectorHelperCall &&

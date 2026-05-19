@@ -860,6 +860,10 @@ TEST_CASE("canonical map surface owns standalone stdlib implementation") {
         std::string::npos);
   CHECK(exprCollectionDispatchSetupSource.find("directMapHelperCompatibilityPath") ==
         std::string::npos);
+  CHECK(exprCollectionDispatchSetupSource.find("resolveKeyValueTarget") !=
+        std::string::npos);
+  CHECK(exprCollectionDispatchSetupSource.find("auto resolveMapTarget") ==
+        std::string::npos);
   CHECK(exprCollectionDispatchSetupSource.find(
             "isDirectStdNamespacedVectorCountWrapperKeyValueTarget") !=
         std::string::npos);
