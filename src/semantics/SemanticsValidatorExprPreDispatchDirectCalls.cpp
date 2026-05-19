@@ -266,7 +266,7 @@ bool SemanticsValidator::validateExprPreDispatchDirectCalls(
   rewrittenExprOut.reset();
   handledOut = false;
   resolvedOut = resolveCalleePath(expr);
-  auto bareMapWrapperHelperPath = [&](const Expr &candidate,
+  auto bareKeyValueWrapperHelperPath = [&](const Expr &candidate,
                                       std::string &helperNameOut) {
     helperNameOut.clear();
     if (candidate.kind != Expr::Kind::Call || candidate.isMethodCall ||
@@ -284,12 +284,12 @@ bool SemanticsValidator::validateExprPreDispatchDirectCalls(
     }
     return canonicalKeyValueHelperPathLocal(helperNameOut);
   };
-  std::string bareMapWrapperHelperName;
-  const std::string normalizedBareMapWrapperHelperPath =
-      bareMapWrapperHelperPath(expr, bareMapWrapperHelperName);
-  if (!normalizedBareMapWrapperHelperPath.empty()) {
+  std::string bareKeyValueWrapperHelperName;
+  const std::string normalizedBareKeyValueWrapperHelperPath =
+      bareKeyValueWrapperHelperPath(expr, bareKeyValueWrapperHelperName);
+  if (!normalizedBareKeyValueWrapperHelperPath.empty()) {
     const std::string removedCompatibilityPath =
-        rootedKeyValueAliasHelperPath(bareMapWrapperHelperName);
+        rootedKeyValueAliasHelperPath(bareKeyValueWrapperHelperName);
     auto hasDefinitionFamilyPath = [&](const std::string &path) {
       if (defMap_.count(path) > 0 || paramsByDef_.count(path) > 0) {
         return true;
@@ -320,10 +320,10 @@ bool SemanticsValidator::validateExprPreDispatchDirectCalls(
     if (!removedCompatibilityPath.empty() &&
         (resolvedOut.empty() || resolvesRemovedCompatibilityPath) &&
         !hasDefinitionFamilyPath(removedCompatibilityPath) &&
-        (hasImportedDefinitionPath(normalizedBareMapWrapperHelperPath) ||
-         hasDeclaredDefinitionPath(normalizedBareMapWrapperHelperPath) ||
-         defMap_.count(normalizedBareMapWrapperHelperPath) > 0)) {
-      resolvedOut = normalizedBareMapWrapperHelperPath;
+        (hasImportedDefinitionPath(normalizedBareKeyValueWrapperHelperPath) ||
+         hasDeclaredDefinitionPath(normalizedBareKeyValueWrapperHelperPath) ||
+         defMap_.count(normalizedBareKeyValueWrapperHelperPath) > 0)) {
+      resolvedOut = normalizedBareKeyValueWrapperHelperPath;
     }
   }
   auto failPreDispatchDirectCallDiagnostic = [&](std::string message) -> bool {

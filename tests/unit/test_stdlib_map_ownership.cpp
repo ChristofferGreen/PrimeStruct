@@ -1348,6 +1348,14 @@ TEST_CASE("canonical map surface owns standalone stdlib implementation") {
   CHECK(exprPreDispatchDirectCallsSource.find(
             "resolvePreDispatchMapHelperMemberToken(") ==
         std::string::npos);
+  CHECK(exprPreDispatchDirectCallsSource.find("bareKeyValueWrapperHelperPath") !=
+        std::string::npos);
+  CHECK(exprPreDispatchDirectCallsSource.find("bareMapWrapperHelperPath") ==
+        std::string::npos);
+  CHECK(exprPreDispatchDirectCallsSource.find(
+            "normalizedBareKeyValueWrapperHelperPath") != std::string::npos);
+  CHECK(exprPreDispatchDirectCallsSource.find(
+            "normalizedBareMapWrapperHelperPath") == std::string::npos);
   CHECK(exprPreDispatchDirectCallsSource.find(
             "resolvePreDispatchKeyValueHelperResolvedPath(") !=
         std::string::npos);
