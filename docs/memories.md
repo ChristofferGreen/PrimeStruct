@@ -38,7 +38,7 @@ This file stores durable session-derived facts that are useful in later work. Ke
 - Tags: emitter, collections, stdlib
 - Fact: Emitter expression member-name resolution for metadata-backed
   map-helper surfaces should use key/value local helper names, including
-  shared helper-name, helper-path, and access-helper utilities.
+  shared helper-name, helper-path, count-helper, and access-helper utilities.
 - Evidence: `EmitterBuiltinCallPathHelpers.cpp` now resolves canonical and
   published helper expression members through
   `resolveCanonicalKeyValueHelperExprMemberName` and
@@ -46,8 +46,9 @@ This file stores durable session-derived facts that are useful in later work. Ke
   `isCanonicalKeyValueHelperName`, `keyValueHelperNameFromPath`, and
   `isCanonicalKeyValueHelperPath`, and its access-helper predicates are named
   `isCanonicalKeyValueAccessHelperName` and
-  `isCanonicalKeyValueAccessHelperPath`, with the stdlib ownership source lock
-  rejecting the old map-helper and map-access names.
+  `isCanonicalKeyValueAccessHelperPath`; count-helper checks use
+  `isCanonicalKeyValueCountHelperName`, with the stdlib ownership source lock
+  rejecting the old map-helper, map-count, and map-access names.
 
 ### exact-stdlib-vector-import-covers-helper-surface
 - Updated: 2026-04-19

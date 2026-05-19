@@ -317,7 +317,7 @@ bool removedCollectionAliasNeedsDefinitionPath(std::string_view rawMethodName) {
   std::string vectorHelperName;
   const auto *vectorMetadata = findVectorHelperSurfaceMetadata();
   return (!keyValueHelperName.empty() &&
-          isCanonicalMapCountHelperName(keyValueHelperName)) ||
+          isCanonicalKeyValueCountHelperName(keyValueHelperName)) ||
          normalizedPath == "/array/count" ||
          normalizedPath == "/array/capacity" ||
          (vectorMetadata != nullptr &&

@@ -32,7 +32,7 @@ inline bool isCanonicalKeyValueHelperName(std::string_view helperName) {
          helperName == "insert" || helperName == "insert_ref";
 }
 
-inline bool isCanonicalMapCountHelperName(std::string_view helperName) {
+inline bool isCanonicalKeyValueCountHelperName(std::string_view helperName) {
   return helperName == "count" || helperName == "count_ref";
 }
 

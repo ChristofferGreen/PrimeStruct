@@ -2556,6 +2556,10 @@ TEST_CASE("canonical map surface owns standalone stdlib implementation") {
         std::string::npos);
   CHECK(emitterMethodMetadataSource.find("const std::string_view keyValueHelperName") !=
         std::string::npos);
+  CHECK(emitterMethodMetadataSource.find("isCanonicalMapCountHelperName(") ==
+        std::string::npos);
+  CHECK(emitterMethodMetadataSource.find("isCanonicalKeyValueCountHelperName(") !=
+        std::string::npos);
   CHECK(emitterMethodMetadataSource.find("normalizeMapImportAliasPath") ==
         std::string::npos);
   CHECK(emitterMethodMetadataSource.find("path.rfind(\"/map/\", 0) == 0 || path.rfind(\"/std/collections/map/\", 0) == 0") ==
@@ -3102,6 +3106,10 @@ TEST_CASE("canonical map surface owns standalone stdlib implementation") {
   CHECK(emitterHelpersSource.find("isCanonicalMapHelperPath(") ==
         std::string::npos);
   CHECK(emitterHelpersSource.find("isCanonicalKeyValueHelperName(") !=
+        std::string::npos);
+  CHECK(emitterHelpersSource.find("isCanonicalMapCountHelperName(") ==
+        std::string::npos);
+  CHECK(emitterHelpersSource.find("isCanonicalKeyValueCountHelperName(") !=
         std::string::npos);
   CHECK(emitterHelpersSource.find("keyValueHelperNameFromPath(") !=
         std::string::npos);
