@@ -61,7 +61,7 @@ bool SemanticsValidator::validateExprLateCollectionAccessFallbacks(
         return this->isNamedArgsPackWrappedFileBuiltinAccessCall(
             target, *context.dispatchResolvers);
       };
-  collectionAccessValidationContext.isMapLikeBareAccessReceiverTarget =
+  collectionAccessValidationContext.isKeyValueLikeBareAccessReceiverTarget =
       [&](const Expr &target) {
         return this->isMapLikeBareAccessReceiver(target, params, locals,
                                                  *context.dispatchResolvers);

@@ -475,9 +475,9 @@ bool SemanticsValidator::validateExprCollectionAccessFallbacks(
           "unknown call target: " + canonicalKeyValueHelperPathLocal(builtinName));
     }
     if (!expr.isMethodCall &&
-        context.isMapLikeBareAccessReceiverTarget != nullptr &&
-        (context.isMapLikeBareAccessReceiverTarget(expr.args.front()) ||
-         context.isMapLikeBareAccessReceiverTarget(expr.args[1]))) {
+        context.isKeyValueLikeBareAccessReceiverTarget != nullptr &&
+        (context.isKeyValueLikeBareAccessReceiverTarget(expr.args.front()) ||
+         context.isKeyValueLikeBareAccessReceiverTarget(expr.args[1]))) {
       return true;
     }
 

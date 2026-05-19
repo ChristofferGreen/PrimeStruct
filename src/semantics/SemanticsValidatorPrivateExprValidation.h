@@ -395,7 +395,7 @@
     std::function<bool(const Expr &)> isIndexedArgsPackKeyValueReceiverTarget;
     std::function<bool(const Expr &)> isNamedArgsPackMethodAccessCall;
     std::function<bool(const Expr &)> isNamedArgsPackWrappedFileBuiltinAccessCall;
-    std::function<bool(const Expr &)> isMapLikeBareAccessReceiverTarget;
+    std::function<bool(const Expr &)> isKeyValueLikeBareAccessReceiverTarget;
     std::function<bool(const std::string &)> isNonCollectionStructAccessTarget;
     std::function<bool(const Expr &, const std::string &, Expr &)> tryRewriteBareKeyValueHelperCall;
   };

@@ -2336,10 +2336,22 @@ TEST_CASE("canonical map surface owns standalone stdlib implementation") {
             "isIndexedArgsPackKeyValueReceiverTarget") != std::string::npos);
   CHECK(collectionAccessValidationSource.find("isIndexedArgsPackMapReceiverTarget") ==
         std::string::npos);
+  CHECK(privateExprValidationSource.find(
+            "isKeyValueLikeBareAccessReceiverTarget") != std::string::npos);
+  CHECK(privateExprValidationSource.find("isMapLikeBareAccessReceiverTarget") ==
+        std::string::npos);
+  CHECK(collectionAccessValidationSource.find(
+            "isKeyValueLikeBareAccessReceiverTarget") != std::string::npos);
+  CHECK(collectionAccessValidationSource.find("isMapLikeBareAccessReceiverTarget") ==
+        std::string::npos);
   CHECK(lateCollectionAccessFallbacksSource.find(
             "isIndexedArgsPackKeyValueReceiverTarget") != std::string::npos);
   CHECK(lateCollectionAccessFallbacksSource.find(
             "isIndexedArgsPackMapReceiverTarget") == std::string::npos);
+  CHECK(lateCollectionAccessFallbacksSource.find(
+            "isKeyValueLikeBareAccessReceiverTarget") != std::string::npos);
+  CHECK(lateCollectionAccessFallbacksSource.find(
+            "isMapLikeBareAccessReceiverTarget") == std::string::npos);
   CHECK(lateMapAccessBuiltinsSource.find(
             "isIndexedArgsPackKeyValueReceiverTarget(") != std::string::npos);
   CHECK(lateMapAccessBuiltinsSource.find("isIndexedArgsPackMapReceiverTarget(") ==
