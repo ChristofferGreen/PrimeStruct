@@ -577,6 +577,12 @@ TEST_CASE("canonical map surface owns standalone stdlib implementation") {
   CHECK(publicationBuildersSource.find(
             "StdlibSurfaceId::CollectionsMapConstructors") ==
         std::string::npos);
+  CHECK(publicationBuildersSource.find(
+            "isUnspecializedExperimentalMapBackingTypeForPublication") ==
+        std::string::npos);
+  CHECK(publicationBuildersSource.find(
+            "isUnspecializedExperimentalKeyValueBackingTypeForPublication") !=
+        std::string::npos);
   CHECK(publicationBuildersSource.find("mapHelperSurfaceMetadataLocal()") !=
         std::string::npos);
   CHECK(publicationBuildersSource.find("mapConstructorSurfaceMetadataLocal()") !=

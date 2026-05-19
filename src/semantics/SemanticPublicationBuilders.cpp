@@ -497,7 +497,7 @@ bool matchesStdlibSurfaceRootForPublication(std::string_view typeName,
                      matches);
 }
 
-bool isUnspecializedExperimentalMapBackingTypeForPublication(std::string typeName) {
+bool isUnspecializedExperimentalKeyValueBackingTypeForPublication(std::string typeName) {
   typeName = normalizeBindingTypeName(std::move(typeName));
   if (!typeName.empty() && typeName.front() == '/') {
     typeName.erase(typeName.begin());
@@ -521,7 +521,7 @@ std::string normalizeCollectionSpecializationTypeName(std::string typeName) {
   }
   if (matchesStdlibSurfaceRootForPublication(typeName,
                                              mapHelperSurfaceMetadataLocal()) ||
-      isUnspecializedExperimentalMapBackingTypeForPublication(typeName)) {
+      isUnspecializedExperimentalKeyValueBackingTypeForPublication(typeName)) {
     return "map";
   }
   if (typeName == "/soa" "_vector" || typeName == "std/collections/" "soa" "_vector" ||
