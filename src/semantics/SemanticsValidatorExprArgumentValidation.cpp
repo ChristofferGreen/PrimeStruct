@@ -169,7 +169,7 @@ bool SemanticsValidator::validateArgumentTypeAgainstParam(
     baseOut = normalizeBindingTypeName(baseOut);
     return splitTopLevelTemplateArgs(argText, argsOut);
   };
-  auto maybePreferExplicitCanonicalMapKeyDiagnostic =
+  auto maybePreferExplicitCanonicalKeyValueKeyDiagnostic =
       [&](const std::vector<std::string> &expectedTemplateArgs) -> bool {
     std::string canonicalKeyValueAccessHelperName;
     if (param.name != "values" || callExpr.isMethodCall ||
@@ -454,7 +454,7 @@ bool SemanticsValidator::validateArgumentTypeAgainstParam(
                   ": expected " + expectedTypeText + " got map<" + actualKeyType + ", " +
                   actualValueType + ">");
         }
-        if (maybePreferExplicitCanonicalMapKeyDiagnostic(expectedTemplateArgs)) {
+        if (maybePreferExplicitCanonicalKeyValueKeyDiagnostic(expectedTemplateArgs)) {
           return false;
         }
       } else if (isExperimentalMapBackingTemplateBaseForArgumentValidation(
@@ -583,10 +583,10 @@ bool SemanticsValidator::validateArgumentTypeAgainstParam(
     if (actualKind == ReturnKind::Array && isBuiltinCollectionLiteralExpr(arg)) {
       return true;
     }
-    const bool mapConstructorCall =
+    const bool keyValueConstructorCall =
         isResolvedMapConstructorPath(diagnosticResolved) ||
         isResolvedMapConstructorPath(resolved);
-    if (mapConstructorCall && actualKind == ReturnKind::Bool &&
+    if (keyValueConstructorCall && actualKind == ReturnKind::Bool &&
         expectedKind != ReturnKind::Bool) {
       return failArgumentValidation(
           arg,

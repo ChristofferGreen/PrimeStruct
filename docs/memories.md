@@ -128,7 +128,9 @@ This file stores durable session-derived facts that are useful in later work. Ke
   key/value and receiver compatibility locals should use key/value names too;
   collection access root-alias receiver locals should use key/value names too;
   infer-definition deferred-alias locals should use key/value names too; infer
-  collection resolver locals should use key/value names too.
+  collection resolver locals should use key/value names too; argument
+  validation constructor and key-diagnostic locals should use key/value names
+  too.
   The stdlib ownership source lock rejects the old map-helper, map-count,
   map-access, and removed map compatibility names.
 
