@@ -87,10 +87,10 @@ bool SemanticsValidator::validateExprLateCallCompatibility(
                                                       arrayElemType);
     const bool resolvesString =
         context.dispatchResolvers->resolveStringTarget(expr.args.front());
-    std::string mapKeyType;
-    std::string mapValueType;
+    std::string keyValueKeyType;
+    std::string keyValueValueType;
     const bool resolvesMap = context.dispatchResolvers->resolveMapTarget(
-        expr.args.front(), mapKeyType, mapValueType);
+        expr.args.front(), keyValueKeyType, keyValueValueType);
     const bool resolvesNonVectorCountTarget =
         !resolvesVectorLikeCountTarget && !resolvesArray &&
         !resolvesString;
@@ -101,8 +101,8 @@ bool SemanticsValidator::validateExprLateCallCompatibility(
       const bool resolvesMapAfterValidation =
           resolvesMap ||
           context.dispatchResolvers->resolveMapTarget(expr.args.front(),
-                                                      mapKeyType,
-                                                      mapValueType);
+                                                      keyValueKeyType,
+                                                      keyValueValueType);
       const std::string stdNamespacedVectorCountTargetDiagnosticMessage =
           resolvesMapAfterValidation
               ? vectorCompatibilityUnknownCallTargetDiagnostic("count")
@@ -133,14 +133,14 @@ bool SemanticsValidator::validateExprLateCallCompatibility(
       if (!validateExpr(params, locals, expr.args.front())) {
         return false;
       }
-      std::string mapKeyType;
-      std::string mapValueType;
+      std::string keyValueKeyType;
+      std::string keyValueValueType;
       const bool resolvesNonVectorCollectionLikeTarget =
           context.dispatchResolvers->resolveArrayTarget(expr.args.front(),
                                                        elemType) ||
           context.dispatchResolvers->resolveMapTarget(expr.args.front(),
-                                                     mapKeyType,
-                                                     mapValueType);
+                                                     keyValueKeyType,
+                                                     keyValueValueType);
       if (resolvesNonVectorCollectionLikeTarget) {
         return failLateCallCompatibilityDiagnostic(
             vectorCompatibilityUnknownCallTargetDiagnostic("capacity"));
