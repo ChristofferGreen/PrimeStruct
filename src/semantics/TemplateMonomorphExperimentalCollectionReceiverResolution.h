@@ -441,14 +441,14 @@ bool resolvesExperimentalKeyValueReceiver(const Expr *receiverExpr,
   return resolvesExperimentalKeyValueTypeText(inferredReceiverType, mapping, allowedParams, namespacePrefix, ctx);
 }
 
-bool resolvesExperimentalMapBorrowedReceiver(const Expr *receiverExpr,
-                                             const std::vector<ParameterInfo> &params,
-                                             const LocalTypeMap &locals,
-                                             bool allowMathBare,
-                                             const SubstMap &mapping,
-                                             const std::unordered_set<std::string> &allowedParams,
-                                             const std::string &namespacePrefix,
-                                             Context &ctx) {
+bool resolvesExperimentalKeyValueBorrowedReceiver(const Expr *receiverExpr,
+                                                  const std::vector<ParameterInfo> &params,
+                                                  const LocalTypeMap &locals,
+                                                  bool allowMathBare,
+                                                  const SubstMap &mapping,
+                                                  const std::unordered_set<std::string> &allowedParams,
+                                                  const std::string &namespacePrefix,
+                                                  Context &ctx) {
   if (receiverExpr == nullptr) {
     return false;
   }

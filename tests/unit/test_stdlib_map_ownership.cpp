@@ -1178,6 +1178,10 @@ TEST_CASE("canonical map surface owns standalone stdlib implementation") {
         std::string::npos);
   CHECK(templateReceiverSource.find("resolvesExperimentalKeyValueReceiver") !=
         std::string::npos);
+  CHECK(templateReceiverSource.find("resolvesExperimentalMapBorrowedReceiver") ==
+        std::string::npos);
+  CHECK(templateReceiverSource.find("resolvesExperimentalKeyValueBorrowedReceiver") !=
+        std::string::npos);
   CHECK(templateReceiverSource.find(
             "resolveExperimentalMapValueReceiverTemplateArgs") ==
         std::string::npos);
@@ -1225,6 +1229,10 @@ TEST_CASE("canonical map surface owns standalone stdlib implementation") {
   CHECK(templateExpressionRewriteSource.find("resolvesExperimentalMapValueReceiver") ==
         std::string::npos);
   CHECK(templateExpressionRewriteSource.find("resolvesExperimentalKeyValueReceiver") !=
+        std::string::npos);
+  CHECK(templateExpressionRewriteSource.find("resolvesExperimentalMapBorrowedReceiver") ==
+        std::string::npos);
+  CHECK(templateExpressionRewriteSource.find("resolvesExperimentalKeyValueBorrowedReceiver") !=
         std::string::npos);
   CHECK(templateExpressionRewriteSource.find(
             "resolveExperimentalMapValueReceiverTemplateArgs") ==
@@ -1281,6 +1289,8 @@ TEST_CASE("canonical map surface owns standalone stdlib implementation") {
   CHECK(templateExpressionRewriteSource.find("rewriteCanonicalExperimentalMapConstructorBinding") ==
         std::string::npos);
   CHECK(templateExpressionRewriteSource.find("resolvesBorrowedExperimentalMapReceiver") ==
+        std::string::npos);
+  CHECK(templateExpressionRewriteSource.find("resolvesExperimentalMapBorrowedReceiver") ==
         std::string::npos);
   CHECK(templateExpressionRewriteSource.find("experimentalMapPath") ==
         std::string::npos);

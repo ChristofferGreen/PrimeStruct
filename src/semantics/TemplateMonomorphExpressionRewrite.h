@@ -1484,7 +1484,7 @@ bool rewriteExpr(Expr &expr,
       expr.namespacePrefix.clear();
     }
     const bool resolvesBorrowedExperimentalKeyValueReceiver =
-        resolvesExperimentalMapBorrowedReceiver(
+        resolvesExperimentalKeyValueBorrowedReceiver(
             collectionHelperReceiverExpr(expr), params, locals, allowMathBare, mapping, allowedParams, namespacePrefix, ctx);
     const std::string borrowedCanonicalKeyValueUnknownTarget =
         canonicalKeyValueHelperUnknownTargetPath(resolvedPath);
