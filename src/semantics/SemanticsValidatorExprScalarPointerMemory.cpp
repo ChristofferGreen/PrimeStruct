@@ -229,7 +229,7 @@ bool SemanticsValidator::validateExprScalarPointerMemoryBuiltins(
   };
 
   std::string builtinName;
-  auto isMapLikeCollectionExpr = [&](const Expr &candidate) -> bool {
+  auto isKeyValueLikeCollectionExpr = [&](const Expr &candidate) -> bool {
     std::string keyType;
     std::string valueType;
     if (candidate.kind == Expr::Kind::Name) {
@@ -326,8 +326,8 @@ bool SemanticsValidator::validateExprScalarPointerMemoryBuiltins(
     if ((builtinName == "at" || builtinName == "at_unsafe") &&
         expr.args.size() == 2 &&
         (expr.templateArgs.size() == 2 ||
-         isMapLikeCollectionExpr(expr.args.front()) ||
-         isMapLikeCollectionExpr(expr.args[1]))) {
+         isKeyValueLikeCollectionExpr(expr.args.front()) ||
+         isKeyValueLikeCollectionExpr(expr.args[1]))) {
       return true;
     }
     handledOut = true;
