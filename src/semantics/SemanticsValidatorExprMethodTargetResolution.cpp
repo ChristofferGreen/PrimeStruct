@@ -1714,14 +1714,14 @@ bool SemanticsValidator::resolveMethodTarget(const std::vector<ParameterInfo> &p
       if (getBuiltinArrayAccessName(target, builtinName) && target.args.size() == 2) {
         if (const Expr *accessReceiver = resolveBuiltinAccessReceiverExpr(target)) {
           std::string elemType;
-          std::string mapValueType;
+          std::string keyValueValueType;
           if (resolveArgsPackAccessTarget(*accessReceiver, elemType) ||
               resolveArrayTarget(*accessReceiver, elemType) ||
               resolveVectorTarget(*accessReceiver, elemType)) {
             return normalizeBindingTypeName(elemType) == "string";
           }
-          if (resolveMapValueType(*accessReceiver, mapValueType)) {
-            return normalizeBindingTypeName(mapValueType) == "string";
+          if (resolveMapValueType(*accessReceiver, keyValueValueType)) {
+            return normalizeBindingTypeName(keyValueValueType) == "string";
           }
           if (resolveStringTarget(*accessReceiver)) {
             return false;
