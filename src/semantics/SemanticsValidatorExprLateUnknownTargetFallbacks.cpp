@@ -118,27 +118,27 @@ bool SemanticsValidator::validateExprLateUnknownTargetFallbacks(
       (context.resolveMapTarget(expr.args.front()) ||
        (context.isIndexedArgsPackMapReceiverTarget != nullptr &&
         context.isIndexedArgsPackMapReceiverTarget(expr.args.front())))) {
-    Expr rewrittenMapMethodCall = expr;
-    rewrittenMapMethodCall.isMethodCall = false;
-    rewrittenMapMethodCall.namespacePrefix.clear();
-    rewrittenMapMethodCall.name = preferredMapMethodTargetForCall(
+    Expr rewrittenKeyValueMethodCall = expr;
+    rewrittenKeyValueMethodCall.isMethodCall = false;
+    rewrittenKeyValueMethodCall.namespacePrefix.clear();
+    rewrittenKeyValueMethodCall.name = preferredMapMethodTargetForCall(
         params, locals, expr.args.front(), normalizedMethodName);
-    if (rewrittenMapMethodCall.name.empty()) {
-      rewrittenMapMethodCall.name =
+    if (rewrittenKeyValueMethodCall.name.empty()) {
+      rewrittenKeyValueMethodCall.name =
           canonicalMapMethodHelperTarget(normalizedMethodName);
     }
     handledOut = true;
-    return validateExpr(params, locals, rewrittenMapMethodCall);
+    return validateExpr(params, locals, rewrittenKeyValueMethodCall);
   }
   if (expr.isMethodCall &&
       !requestsExplicitVectorCompatibilityMethod &&
       isCanonicalVectorAccessMethodHelper(normalizedMethodName) &&
       !expr.args.empty()) {
     const Expr &receiverExpr = expr.args.front();
-    const bool isMapReceiver =
+    const bool isKeyValueReceiver =
         context.resolveMapTarget != nullptr &&
         context.resolveMapTarget(receiverExpr);
-    if (!isMapReceiver) {
+    if (!isKeyValueReceiver) {
       std::string vectorMethodTarget;
       if (resolveVectorHelperMethodTarget(params, locals, receiverExpr,
                                           normalizedMethodName,

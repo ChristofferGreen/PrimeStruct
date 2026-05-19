@@ -240,6 +240,9 @@ TEST_CASE("canonical map surface owns standalone stdlib implementation") {
   const std::string lateMapAccessBuiltinsSource =
       readText(repoRoot() / "src" / "semantics" /
                "SemanticsValidatorExprLateMapAccessBuiltins.cpp");
+  const std::string exprLateUnknownTargetFallbacksSource =
+      readText(repoRoot() / "src" / "semantics" /
+               "SemanticsValidatorExprLateUnknownTargetFallbacks.cpp");
   const std::string passesDiagnosticsSource =
       readText(repoRoot() / "src" / "semantics" /
                "SemanticsValidatorPassesDiagnostics.cpp");
@@ -416,6 +419,7 @@ TEST_CASE("canonical map surface owns standalone stdlib implementation") {
   REQUIRE(!inferLateFallbackBuiltinsSource.empty());
   REQUIRE(!exprLateFallbackBuiltinsSource.empty());
   REQUIRE(!lateMapAccessBuiltinsSource.empty());
+  REQUIRE(!exprLateUnknownTargetFallbacksSource.empty());
   REQUIRE(!passesDiagnosticsSource.empty());
   REQUIRE(!exprTrySource.empty());
   REQUIRE(!pointerLikeSource.empty());
@@ -2425,6 +2429,14 @@ TEST_CASE("canonical map surface owns standalone stdlib implementation") {
         std::string::npos);
   CHECK(collectionAccessValidationSource.find(
             "isSourceSpelledCanonicalKeyValueAccessCall(") !=
+        std::string::npos);
+  CHECK(exprLateUnknownTargetFallbacksSource.find("rewrittenKeyValueMethodCall") !=
+        std::string::npos);
+  CHECK(exprLateUnknownTargetFallbacksSource.find("rewrittenMapMethodCall") ==
+        std::string::npos);
+  CHECK(exprLateUnknownTargetFallbacksSource.find("const bool isKeyValueReceiver") !=
+        std::string::npos);
+  CHECK(exprLateUnknownTargetFallbacksSource.find("const bool isMapReceiver") ==
         std::string::npos);
   CHECK(collectionAccessValidationSource.find(
             "isExplicitCanonicalKeyValueAccessCall") !=
