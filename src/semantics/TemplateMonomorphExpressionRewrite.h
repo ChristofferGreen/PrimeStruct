@@ -232,11 +232,11 @@ bool rewriteExpr(Expr &expr,
     return true;
   }
 
-  auto isCanonicalBuiltinMapHelperPath = [](const std::string &path) {
+  auto isCanonicalBuiltinKeyValueHelperPath = [](const std::string &path) {
     return isTemplateMonomorphCanonicalKeyValueHelperPath(path);
   };
   auto isCanonicalStdlibCollectionHelperPath = [&](const std::string &path) {
-    if (isCanonicalBuiltinMapHelperPath(path)) {
+    if (isCanonicalBuiltinKeyValueHelperPath(path)) {
       return true;
     }
     auto canonicalizeSoaHelperPath = [](std::string canonicalPath) {
@@ -1150,26 +1150,26 @@ bool rewriteExpr(Expr &expr,
       }
       return false;
     }
-    if (isCanonicalBuiltinMapHelperPath(path)) {
+    if (isCanonicalBuiltinKeyValueHelperPath(path)) {
       return resolvesBuiltinKeyValueReceiver(collectionHelperReceiverExpr(expr)) && ctx.templateDefs.count(path) == 0;
     }
     return true;
   };
-  std::function<bool(Expr &)> rewriteNestedExperimentalMapConstructorValue;
-  std::function<bool(Expr &)> rewriteNestedExperimentalMapResultOkPayloadValue;
+  std::function<bool(Expr &)> rewriteNestedExperimentalKeyValueConstructorValue;
+  std::function<bool(Expr &)> rewriteNestedExperimentalKeyValueResultOkPayloadValue;
   std::function<bool(Expr &)> rewriteNestedExperimentalVectorConstructorValue;
-  std::function<bool(const std::string &, Expr &)> rewriteMapTargetValueForResolvedType;
+  std::function<bool(const std::string &, Expr &)> rewriteKeyValueTargetValueForResolvedType;
   std::function<bool(const std::string &, Expr &)> rewriteVectorTargetValueForResolvedType;
 
-  rewriteMapTargetValueForResolvedType = [&](const std::string &typeText, Expr &valueExpr) -> bool {
+  rewriteKeyValueTargetValueForResolvedType = [&](const std::string &typeText, Expr &valueExpr) -> bool {
     return rewriteExperimentalMapTargetValueForType(typeText,
                                                     valueExpr,
                                                     mapping,
                                                     allowedParams,
                                                     namespacePrefix,
                                                     ctx,
-                                                    rewriteNestedExperimentalMapConstructorValue,
-                                                    rewriteNestedExperimentalMapResultOkPayloadValue);
+                                                    rewriteNestedExperimentalKeyValueConstructorValue,
+                                                    rewriteNestedExperimentalKeyValueResultOkPayloadValue);
   };
   rewriteVectorTargetValueForResolvedType = [&](const std::string &typeText, Expr &valueExpr) -> bool {
     return rewriteExperimentalVectorTargetValueForType(typeText,
@@ -1191,7 +1191,7 @@ bool rewriteExpr(Expr &expr,
                                                       ctx);
         },
         "map",
-        rewriteMapTargetValueForResolvedType);
+        rewriteKeyValueTargetValueForResolvedType);
   };
   auto rewriteCanonicalExperimentalVectorConstructorBinding = [&](Expr &bindingExpr) -> bool {
     return rewriteExperimentalConstructorBinding(
@@ -1206,7 +1206,7 @@ bool rewriteExpr(Expr &expr,
         "vector",
         rewriteVectorTargetValueForResolvedType);
   };
-  rewriteNestedExperimentalMapConstructorValue = [&](Expr &candidate) -> bool {
+  rewriteNestedExperimentalKeyValueConstructorValue = [&](Expr &candidate) -> bool {
     return rewriteExperimentalConstructorValueTree(candidate, [&](Expr &current) {
       return rewriteCanonicalExperimentalMapConstructorExpr(current,
                                                             locals,
@@ -1220,8 +1220,8 @@ bool rewriteExpr(Expr &expr,
     });
   };
 
-  rewriteNestedExperimentalMapResultOkPayloadValue = [&](Expr &candidate) -> bool {
-    return rewriteExperimentalMapResultOkPayloadTree(candidate, rewriteNestedExperimentalMapConstructorValue);
+  rewriteNestedExperimentalKeyValueResultOkPayloadValue = [&](Expr &candidate) -> bool {
+    return rewriteExperimentalMapResultOkPayloadTree(candidate, rewriteNestedExperimentalKeyValueConstructorValue);
   };
   rewriteNestedExperimentalVectorConstructorValue = [&](Expr &candidate) -> bool {
     return rewriteExperimentalConstructorValueTree(candidate, [&](Expr &current) {
@@ -1383,7 +1383,7 @@ bool rewriteExpr(Expr &expr,
   if (!expr.isMethodCall && !expr.isBinding) {
     if (Expr *receiverExpr = mutableCollectionHelperReceiverExpr(expr)) {
       if (!isRootMapConstructorReceiverExpr(receiverExpr) &&
-          !rewriteNestedExperimentalMapConstructorValue(*receiverExpr)) {
+          !rewriteNestedExperimentalKeyValueConstructorValue(*receiverExpr)) {
         return false;
       }
       if (!rewriteNestedExperimentalVectorConstructorValue(*receiverExpr)) {
@@ -1601,7 +1601,7 @@ bool rewriteExpr(Expr &expr,
         }
       }
       if (Expr *receiverExpr = mutableCollectionHelperReceiverExpr(expr)) {
-        if (!rewriteNestedExperimentalMapConstructorValue(*receiverExpr)) {
+        if (!rewriteNestedExperimentalKeyValueConstructorValue(*receiverExpr)) {
           return false;
         }
       }
@@ -1623,7 +1623,7 @@ bool rewriteExpr(Expr &expr,
         }
       }
       if (Expr *receiverExpr = mutableCollectionHelperReceiverExpr(expr)) {
-        if (!rewriteNestedExperimentalMapConstructorValue(*receiverExpr)) {
+        if (!rewriteNestedExperimentalKeyValueConstructorValue(*receiverExpr)) {
           return false;
         }
       }
@@ -2039,7 +2039,7 @@ bool rewriteExpr(Expr &expr,
               allowMathBare,
               ctx,
               [&](const std::string &typeText, Expr &argExpr) {
-                return rewriteMapTargetValueForResolvedType(typeText, argExpr);
+                return rewriteKeyValueTargetValueForResolvedType(typeText, argExpr);
               })) {
         return false;
       }
@@ -2072,7 +2072,7 @@ bool rewriteExpr(Expr &expr,
         namespacePrefix,
         ctx,
         [&](const std::string &targetTypeText, Expr &valueExpr) {
-          return rewriteMapTargetValueForResolvedType(targetTypeText, valueExpr);
+          return rewriteKeyValueTargetValueForResolvedType(targetTypeText, valueExpr);
         });
     rewriteExperimentalInitTargetValue(
         expr,
@@ -2082,12 +2082,12 @@ bool rewriteExpr(Expr &expr,
         namespacePrefix,
         ctx,
         [&](const std::string &targetTypeText, Expr &valueExpr) {
-          return rewriteMapTargetValueForResolvedType(targetTypeText, valueExpr);
+          return rewriteKeyValueTargetValueForResolvedType(targetTypeText, valueExpr);
         });
   }
   if (expr.isMethodCall) {
     if (!expr.args.empty()) {
-      if (!rewriteNestedExperimentalMapConstructorValue(expr.args.front())) {
+      if (!rewriteNestedExperimentalKeyValueConstructorValue(expr.args.front())) {
         return false;
       }
       if (!rewriteNestedExperimentalVectorConstructorValue(expr.args.front())) {
@@ -2415,7 +2415,7 @@ bool rewriteExpr(Expr &expr,
                 allowMathBare,
                 ctx,
                 [&](const std::string &typeText, Expr &argExpr) {
-                  return rewriteMapTargetValueForResolvedType(typeText, argExpr);
+                  return rewriteKeyValueTargetValueForResolvedType(typeText, argExpr);
                 })) {
           return false;
         }

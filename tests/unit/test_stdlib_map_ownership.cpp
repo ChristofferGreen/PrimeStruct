@@ -1193,6 +1193,14 @@ TEST_CASE("canonical map surface owns standalone stdlib implementation") {
         std::string::npos);
   CHECK(templateExpressionRewriteSource.find("isBuiltinMapCountPath") ==
         std::string::npos);
+  CHECK(templateExpressionRewriteSource.find("isCanonicalBuiltinMapHelperPath") ==
+        std::string::npos);
+  CHECK(templateExpressionRewriteSource.find("rewriteNestedExperimentalMapConstructorValue") ==
+        std::string::npos);
+  CHECK(templateExpressionRewriteSource.find("rewriteNestedExperimentalMapResultOkPayloadValue") ==
+        std::string::npos);
+  CHECK(templateExpressionRewriteSource.find("rewriteMapTargetValueForResolvedType") ==
+        std::string::npos);
   CHECK(templateExpressionRewriteSource.find("collectionHelperReceiverExpr") !=
         std::string::npos);
   CHECK(templateExpressionRewriteSource.find("mutableCollectionHelperReceiverExpr") !=
@@ -1212,6 +1220,14 @@ TEST_CASE("canonical map surface owns standalone stdlib implementation") {
   CHECK(templateExpressionRewriteSource.find("inferredCanonicalKeyValueReceiverTemplateArgs") !=
         std::string::npos);
   CHECK(templateExpressionRewriteSource.find("isBuiltinKeyValueCountPath") !=
+        std::string::npos);
+  CHECK(templateExpressionRewriteSource.find("isCanonicalBuiltinKeyValueHelperPath") !=
+        std::string::npos);
+  CHECK(templateExpressionRewriteSource.find("rewriteNestedExperimentalKeyValueConstructorValue") !=
+        std::string::npos);
+  CHECK(templateExpressionRewriteSource.find("rewriteNestedExperimentalKeyValueResultOkPayloadValue") !=
+        std::string::npos);
+  CHECK(templateExpressionRewriteSource.find("rewriteKeyValueTargetValueForResolvedType") !=
         std::string::npos);
   CHECK(templateTypeResolutionSource.find("isExplicitRemovedMapCompatibilityPath") ==
         std::string::npos);
