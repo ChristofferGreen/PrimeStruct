@@ -546,7 +546,7 @@ std::string SemanticsValidator::preferredKeyValueMethodTargetForCall(
   std::string valueType;
   const std::string canonical =
       canonicalKeyValueHelperPathForInferMethodResolution(selectedHelperName);
-  if (resolveInferExperimentalMapTarget(params, locals, receiverExpr, keyType, valueType)) {
+  if (resolveInferExperimentalKeyValueTarget(params, locals, receiverExpr, keyType, valueType)) {
     if (!canonical.empty() &&
         (hasDefinitionPath(canonical) || hasImportedDefinitionPath(canonical))) {
       return canonical;

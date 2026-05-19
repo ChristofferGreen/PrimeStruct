@@ -258,7 +258,7 @@ bool SemanticsValidator::resolveCallCollectionTemplateArgs(const Expr &target,
       std::string keyType;
       std::string valueType;
       if (extractMapKeyValueTypes(binding, keyType, valueType) ||
-          extractInferExperimentalMapFieldTypes(binding, keyType, valueType)) {
+          extractInferExperimentalKeyValueFieldTypes(binding, keyType, valueType)) {
         argsOut = {keyType, valueType};
         return true;
       }

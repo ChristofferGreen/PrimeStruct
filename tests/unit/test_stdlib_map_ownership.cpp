@@ -133,6 +133,9 @@ TEST_CASE("canonical map surface owns standalone stdlib implementation") {
   const std::string privateExprInferenceSource =
       readText(repoRoot() / "src" / "semantics" /
                "SemanticsValidatorPrivateExprInference.h");
+  const std::string privateCoreSource =
+      readText(repoRoot() / "src" / "semantics" /
+               "SemanticsValidatorPrivateCore.h");
   const std::string exprCollectionDispatchSetupSource =
       readText(repoRoot() / "src" / "semantics" /
                "SemanticsValidatorExprCollectionDispatchSetup.cpp");
@@ -252,6 +255,9 @@ TEST_CASE("canonical map surface owns standalone stdlib implementation") {
   const std::string inferCollectionBufferAndMapResolversSource =
       readText(repoRoot() / "src" / "semantics" /
                "SemanticsValidatorInferCollectionBufferAndMapResolvers.cpp");
+  const std::string inferTargetResolutionSource =
+      readText(repoRoot() / "src" / "semantics" /
+               "SemanticsValidatorInferTargetResolution.cpp");
   const std::string inferDefinitionSource =
       readText(repoRoot() / "src" / "semantics" /
                "SemanticsValidatorInferDefinition.cpp");
@@ -443,6 +449,7 @@ TEST_CASE("canonical map surface owns standalone stdlib implementation") {
   REQUIRE(!callPathHelpersSource.empty());
   REQUIRE(!methodTargetResolutionSource.empty());
   REQUIRE(!receiverPathsSource.empty());
+  REQUIRE(!privateCoreSource.empty());
   REQUIRE(!templateCoreSource.empty());
   REQUIRE(!templateReceiverSource.empty());
   REQUIRE(!templateExpressionRewriteSource.empty());
@@ -478,6 +485,7 @@ TEST_CASE("canonical map surface owns standalone stdlib implementation") {
   REQUIRE(!inferCollectionDispatchSetupSource.empty());
   REQUIRE(!inferCollectionReturnInferenceSource.empty());
   REQUIRE(!inferCollectionBufferAndMapResolversSource.empty());
+  REQUIRE(!inferTargetResolutionSource.empty());
   REQUIRE(!inferDefinitionSource.empty());
   REQUIRE(!inferLateFallbackBuiltinsSource.empty());
   REQUIRE(!exprLateFallbackBuiltinsSource.empty());
@@ -1712,6 +1720,18 @@ TEST_CASE("canonical map surface owns standalone stdlib implementation") {
         std::string::npos);
   CHECK(privateExprInferenceSource.find("resolveKeyValueKeyType(") !=
         std::string::npos);
+  CHECK(privateExprInferenceSource.find("resolveMapBinding") ==
+        std::string::npos);
+  CHECK(privateExprInferenceSource.find("extractExperimentalMapFieldTypes") ==
+        std::string::npos);
+  CHECK(privateExprInferenceSource.find("isDirectMapConstructorCall") ==
+        std::string::npos);
+  CHECK(privateExprInferenceSource.find("resolveKeyValueBinding") !=
+        std::string::npos);
+  CHECK(privateExprInferenceSource.find("extractExperimentalKeyValueFieldTypes") !=
+        std::string::npos);
+  CHECK(privateExprInferenceSource.find("isDirectKeyValueConstructorCall") !=
+        std::string::npos);
   CHECK(privateExprInferenceSource.find(
             "extractExperimentalMapFieldTypesFromStructPath") ==
         std::string::npos);
@@ -2748,6 +2768,46 @@ TEST_CASE("canonical map surface owns standalone stdlib implementation") {
   CHECK(inferCollectionsSource.find("isDirectMapConstructorCall") ==
         std::string::npos);
   CHECK(inferCollectionsSource.find("isDirectKeyValueConstructorCall") !=
+        std::string::npos);
+  CHECK(privateCoreSource.find("extractInferExperimentalMapFieldTypes") ==
+        std::string::npos);
+  CHECK(privateCoreSource.find("resolveInferExperimentalMapTarget") ==
+        std::string::npos);
+  CHECK(privateCoreSource.find("resolveInferExperimentalMapValueTarget") ==
+        std::string::npos);
+  CHECK(privateCoreSource.find("extractInferExperimentalKeyValueFieldTypes") !=
+        std::string::npos);
+  CHECK(privateCoreSource.find("resolveInferExperimentalKeyValueTarget") !=
+        std::string::npos);
+  CHECK(privateCoreSource.find("resolveInferExperimentalKeyValueValueTarget") !=
+        std::string::npos);
+  CHECK(inferTargetResolutionSource.find("extractInferExperimentalMapFieldTypes") ==
+        std::string::npos);
+  CHECK(inferTargetResolutionSource.find("resolveInferExperimentalMapTarget") ==
+        std::string::npos);
+  CHECK(inferTargetResolutionSource.find("resolveInferExperimentalMapValueTarget") ==
+        std::string::npos);
+  CHECK(inferTargetResolutionSource.find("extractInferExperimentalKeyValueFieldTypes") !=
+        std::string::npos);
+  CHECK(inferTargetResolutionSource.find("resolveInferExperimentalKeyValueTarget") !=
+        std::string::npos);
+  CHECK(inferTargetResolutionSource.find("resolveInferExperimentalKeyValueValueTarget") !=
+        std::string::npos);
+  CHECK(inferCollectionCallResolutionSource.find("extractInferExperimentalMapFieldTypes") ==
+        std::string::npos);
+  CHECK(inferCollectionCallResolutionSource.find("extractInferExperimentalKeyValueFieldTypes") !=
+        std::string::npos);
+  CHECK(inferCollectionBufferAndMapResolversSource.find("resolveMapBinding") ==
+        std::string::npos);
+  CHECK(inferCollectionBufferAndMapResolversSource.find("extractExperimentalMapFieldTypes") ==
+        std::string::npos);
+  CHECK(inferCollectionBufferAndMapResolversSource.find("isDirectMapConstructorCall") ==
+        std::string::npos);
+  CHECK(inferCollectionBufferAndMapResolversSource.find("resolveKeyValueBinding") !=
+        std::string::npos);
+  CHECK(inferCollectionBufferAndMapResolversSource.find("extractExperimentalKeyValueFieldTypes") !=
+        std::string::npos);
+  CHECK(inferCollectionBufferAndMapResolversSource.find("isDirectKeyValueConstructorCall") !=
         std::string::npos);
   CHECK(inferCollectionReturnInferenceSource.find(
             "\"/std/collections/map/\" + builtinAccessName") ==

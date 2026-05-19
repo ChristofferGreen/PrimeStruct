@@ -1229,7 +1229,7 @@ bool SemanticsValidator::resolveInferMethodCallPath(
        normalizedMethodName == "at_unsafe" || normalizedMethodName == "insert")) {
     std::string keyType;
     std::string valueType;
-    if (resolveInferExperimentalMapTarget(params, locals, receiver, keyType, valueType)) {
+    if (resolveInferExperimentalKeyValueTarget(params, locals, receiver, keyType, valueType)) {
       resolvedOut = preferredKeyValueMethodTargetForCall(params, locals, receiver, normalizedMethodName);
       return returnWithMethodTargetMemo(!resolvedOut.empty());
     }

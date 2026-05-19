@@ -134,15 +134,15 @@
                                        const std::unordered_map<std::string, BindingInfo> &locals,
                                        const Expr &target,
                                        std::string &elemType) const;
-  bool extractInferExperimentalMapFieldTypes(const BindingInfo &binding,
+  bool extractInferExperimentalKeyValueFieldTypes(const BindingInfo &binding,
                                              std::string &keyTypeOut,
                                              std::string &valueTypeOut) const;
-  bool resolveInferExperimentalMapTarget(const std::vector<ParameterInfo> &params,
+  bool resolveInferExperimentalKeyValueTarget(const std::vector<ParameterInfo> &params,
                                          const std::unordered_map<std::string, BindingInfo> &locals,
                                          const Expr &target,
                                          std::string &keyTypeOut,
                                          std::string &valueTypeOut);
-  bool resolveInferExperimentalMapValueTarget(const std::vector<ParameterInfo> &params,
+  bool resolveInferExperimentalKeyValueValueTarget(const std::vector<ParameterInfo> &params,
                                               const std::unordered_map<std::string, BindingInfo> &locals,
                                               const Expr &target,
                                               std::string &keyTypeOut,

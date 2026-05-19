@@ -34,7 +34,7 @@ bool SemanticsValidator::resolveInferArgsPackCountTarget(
   return false;
 }
 
-bool SemanticsValidator::extractInferExperimentalMapFieldTypes(const BindingInfo &binding,
+bool SemanticsValidator::extractInferExperimentalKeyValueFieldTypes(const BindingInfo &binding,
                                                                std::string &keyTypeOut,
                                                                std::string &valueTypeOut) const {
   auto extractFromTypeText = [&](std::string normalizedType) -> bool {
@@ -78,7 +78,7 @@ bool SemanticsValidator::extractInferExperimentalMapFieldTypes(const BindingInfo
   return extractFromTypeText(normalizeBindingTypeName(binding.typeName + "<" + binding.typeTemplateArg + ">"));
 }
 
-bool SemanticsValidator::resolveInferExperimentalMapTarget(
+bool SemanticsValidator::resolveInferExperimentalKeyValueTarget(
     const std::vector<ParameterInfo> &params,
     const std::unordered_map<std::string, BindingInfo> &locals,
     const Expr &target,
@@ -89,11 +89,11 @@ bool SemanticsValidator::resolveInferExperimentalMapTarget(
 
   if (target.kind == Expr::Kind::Name) {
     if (const BindingInfo *paramBinding = findParamBinding(params, target.name)) {
-      return extractInferExperimentalMapFieldTypes(*paramBinding, keyTypeOut, valueTypeOut);
+      return extractInferExperimentalKeyValueFieldTypes(*paramBinding, keyTypeOut, valueTypeOut);
     }
     auto it = locals.find(target.name);
     return it != locals.end() &&
-           extractInferExperimentalMapFieldTypes(it->second, keyTypeOut, valueTypeOut);
+           extractInferExperimentalKeyValueFieldTypes(it->second, keyTypeOut, valueTypeOut);
   }
   if (target.kind != Expr::Kind::Call) {
     return false;
@@ -115,10 +115,10 @@ bool SemanticsValidator::resolveInferExperimentalMapTarget(
   }
   BindingInfo inferredReturn;
   return inferDefinitionReturnBinding(*defIt->second, inferredReturn) &&
-         extractInferExperimentalMapFieldTypes(inferredReturn, keyTypeOut, valueTypeOut);
+         extractInferExperimentalKeyValueFieldTypes(inferredReturn, keyTypeOut, valueTypeOut);
 }
 
-bool SemanticsValidator::resolveInferExperimentalMapValueTarget(
+bool SemanticsValidator::resolveInferExperimentalKeyValueValueTarget(
     const std::vector<ParameterInfo> &params,
     const std::unordered_map<std::string, BindingInfo> &locals,
     const Expr &target,
@@ -129,7 +129,7 @@ bool SemanticsValidator::resolveInferExperimentalMapValueTarget(
     if (normalizedType == "Reference" || normalizedType == "Pointer") {
       return false;
     }
-    return extractInferExperimentalMapFieldTypes(binding, keyTypeOut, valueTypeOut);
+    return extractInferExperimentalKeyValueFieldTypes(binding, keyTypeOut, valueTypeOut);
   };
 
   keyTypeOut.clear();

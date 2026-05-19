@@ -115,10 +115,10 @@
       const std::shared_ptr<BuiltinCollectionDispatchResolvers> &state,
       const std::function<bool(const Expr &, BindingInfo &)> &resolveBindingTarget,
       const std::function<bool(const Expr &, BindingInfo &)> &inferCallBinding,
-      const std::function<bool(const BindingInfo &, std::string &, std::string &)> &resolveMapBinding,
+      const std::function<bool(const BindingInfo &, std::string &, std::string &)> &resolveKeyValueBinding,
       const std::function<bool(const BindingInfo &, std::string &, std::string &)>
-          &extractExperimentalMapFieldTypes,
-      const std::function<bool(const Expr &)> &isDirectMapConstructorCall);
+          &extractExperimentalKeyValueFieldTypes,
+      const std::function<bool(const Expr &)> &isDirectKeyValueConstructorCall);
   void populateBuiltinCollectionDispatchStringResolver(
       const std::vector<ParameterInfo> &params,
       const std::unordered_map<std::string, BindingInfo> &locals,
