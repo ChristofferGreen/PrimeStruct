@@ -665,6 +665,8 @@ TEST_CASE("canonical map surface owns standalone stdlib implementation") {
         std::string::npos);
   CHECK(methodTargetResolutionSource.find("removedMapCompatibilityPath") ==
         std::string::npos);
+  CHECK(methodTargetResolutionSource.find("isRemovedMapCompatibilityHelper(") ==
+        std::string::npos);
   CHECK(methodTargetResolutionSource.find("resolveExplicitRootMapMethodPath") ==
         std::string::npos);
   CHECK(methodTargetResolutionSource.find("resolvedExplicitRootMapMethod") ==
@@ -682,6 +684,8 @@ TEST_CASE("canonical map surface owns standalone stdlib implementation") {
   CHECK(methodTargetResolutionSource.find("getDirectKeyValueHelperCompatibilityPath") !=
         std::string::npos);
   CHECK(methodTargetResolutionSource.find("removedKeyValueCompatibilityPath") !=
+        std::string::npos);
+  CHECK(methodTargetResolutionSource.find("isRemovedKeyValueCompatibilityHelper(") !=
         std::string::npos);
   CHECK(methodTargetResolutionSource.find("resolveExplicitRootKeyValueMethodPath") !=
         std::string::npos);

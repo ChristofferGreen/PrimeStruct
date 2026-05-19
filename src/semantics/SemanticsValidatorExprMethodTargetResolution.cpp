@@ -20,7 +20,7 @@ bool isRemovedVectorCompatibilityHelper(std::string_view helperName) {
          helperName == "remove_swap";
 }
 
-bool isRemovedMapCompatibilityHelper(std::string_view helperName) {
+bool isRemovedKeyValueCompatibilityHelper(std::string_view helperName) {
   return helperName == "count" || helperName == "count_ref" ||
          helperName == "size" ||
          helperName == "contains" || helperName == "contains_ref" ||
@@ -317,7 +317,7 @@ bool SemanticsValidator::resolveMethodTarget(const std::vector<ParameterInfo> &p
       if (isStdNamespacedKeyValueHelper) {
         return "";
       }
-      if (!isRemovedMapCompatibilityHelper(helperName)) {
+      if (!isRemovedKeyValueCompatibilityHelper(helperName)) {
         return "";
       }
       return rootedKeyValueHelperAliasPathForMethodTargets(helperName);
@@ -1738,7 +1738,7 @@ bool SemanticsValidator::resolveMethodTarget(const std::vector<ParameterInfo> &p
     std::string helperName;
     helperName = rootAliasKeyValueHelperNameForMethodTargets(
         candidate.name, candidate.namespacePrefix);
-    if (helperName.empty() || !isRemovedMapCompatibilityHelper(helperName)) {
+    if (helperName.empty() || !isRemovedKeyValueCompatibilityHelper(helperName)) {
       return "";
     }
     const std::string removedPath =
