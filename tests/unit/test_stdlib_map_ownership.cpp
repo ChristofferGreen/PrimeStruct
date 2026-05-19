@@ -285,6 +285,8 @@ TEST_CASE("canonical map surface owns standalone stdlib implementation") {
   const std::string emitterCollectionTypeHelpersSource =
       readText(repoRoot() / "src" / "emitter" /
                "EmitterExprCollectionTypeHelpers.h");
+  const std::string emitterHelpersSource =
+      readText(repoRoot() / "src" / "emitter" / "EmitterHelpers.h");
   const std::string emitterMethodMetadataSource =
       readText(repoRoot() / "src" / "emitter" /
                "EmitterBuiltinMethodResolutionMetadataHelpers.cpp");
@@ -3084,6 +3086,18 @@ TEST_CASE("canonical map surface owns standalone stdlib implementation") {
   CHECK(emitterMethodTypeInferenceSource.find("keyValueHelperMemberNameFromPath(") !=
         std::string::npos);
   CHECK(emitterMethodTypeInferenceSource.find("mapHelperMemberNameFromPath(") ==
+        std::string::npos);
+  CHECK(emitterHelpersSource.find("isCanonicalMapHelperName(") ==
+        std::string::npos);
+  CHECK(emitterHelpersSource.find("mapHelperNameFromPath(") ==
+        std::string::npos);
+  CHECK(emitterHelpersSource.find("isCanonicalMapHelperPath(") ==
+        std::string::npos);
+  CHECK(emitterHelpersSource.find("isCanonicalKeyValueHelperName(") !=
+        std::string::npos);
+  CHECK(emitterHelpersSource.find("keyValueHelperNameFromPath(") !=
+        std::string::npos);
+  CHECK(emitterHelpersSource.find("isCanonicalKeyValueHelperPath(") !=
         std::string::npos);
   CHECK(emitterHelpersTypesSource.find("base += \"map/Map\"") == std::string::npos);
   CHECK(emitterHelpersTypesSource.find("experimentalCollectionTypePathLocal(\"map\", \"Map\"") !=

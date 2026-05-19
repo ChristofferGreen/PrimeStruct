@@ -23,7 +23,7 @@ struct PrintBuiltin {
   std::string name;
 };
 
-inline bool isCanonicalMapHelperName(std::string_view helperName) {
+inline bool isCanonicalKeyValueHelperName(std::string_view helperName) {
   return helperName == "count" || helperName == "count_ref" ||
          helperName == "contains" || helperName == "contains_ref" ||
          helperName == "tryAt" || helperName == "tryAt_ref" ||
@@ -51,7 +51,7 @@ inline bool isRemovedMapDirectCallResultCompatibilityHelperName(std::string_view
          isCanonicalMapAccessHelperName(helperName);
 }
 
-inline std::string_view mapHelperNameFromPath(std::string_view path) {
+inline std::string_view keyValueHelperNameFromPath(std::string_view path) {
   const StdlibSurfaceMetadata *metadata =
       findStdlibSurfaceMetadataByBridgeKey("collections.map_helpers");
   if (metadata == nullptr) {
@@ -74,13 +74,13 @@ inline std::string_view mapHelperNameFromPath(std::string_view path) {
       *metadata, path.substr(canonicalPath.size() + 1));
 }
 
-inline bool isCanonicalMapHelperPath(std::string_view path) {
-  const std::string_view helperName = mapHelperNameFromPath(path);
-  return !helperName.empty() && isCanonicalMapHelperName(helperName);
+inline bool isCanonicalKeyValueHelperPath(std::string_view path) {
+  const std::string_view helperName = keyValueHelperNameFromPath(path);
+  return !helperName.empty() && isCanonicalKeyValueHelperName(helperName);
 }
 
 inline bool isCanonicalMapAccessHelperPath(std::string_view path) {
-  const std::string_view helperName = mapHelperNameFromPath(path);
+  const std::string_view helperName = keyValueHelperNameFromPath(path);
   return !helperName.empty() && isCanonicalMapAccessHelperName(helperName);
 }
 

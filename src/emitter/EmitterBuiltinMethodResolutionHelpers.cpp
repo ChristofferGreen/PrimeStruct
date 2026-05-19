@@ -669,7 +669,8 @@ bool resolveMethodCallPath(const Expr &call,
         publishedCollectionSurfaceHelperPath(
             KeyValueHelperSurfaceBridgeKey,
             normalizedMethodName);
-    const bool isKeyValueHelperMethod = isCanonicalMapHelperName(normalizedMethodName);
+    const bool isKeyValueHelperMethod =
+        isCanonicalKeyValueHelperName(normalizedMethodName);
     const bool isRemovedMapSlashMethod =
         isRemovedMapSlashMethodMetadataHelperName(normalizedMethodName);
     const bool hasCanonicalHelperDefinition =

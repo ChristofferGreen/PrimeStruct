@@ -64,7 +64,7 @@ std::string keyValueHelperPath(std::string_view memberName) {
 }
 
 std::string keyValueHelperMemberNameFromPath(std::string_view path) {
-  return std::string(mapHelperNameFromPath(path));
+  return std::string(keyValueHelperNameFromPath(path));
 }
 
 bool isCanonicalKeyValueHelperMemberPath(std::string_view path,

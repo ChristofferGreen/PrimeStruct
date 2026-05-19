@@ -148,7 +148,8 @@
           !explicitMapPath.empty()) {
         return {explicitMapPath};
       }
-      const bool isKeyValueHelperMethod = isCanonicalMapHelperName(methodName);
+      const bool isKeyValueHelperMethod =
+          isCanonicalKeyValueHelperName(methodName);
       if (isKeyValueHelperMethod) {
         return {keyValueHelperPath(methodName)};
       }

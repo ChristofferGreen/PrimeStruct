@@ -194,7 +194,7 @@ bool isRemovedExactPublishedKeyValueHelper(std::string_view helperName) {
   return metadata != nullptr &&
          resolveSurfaceMemberToken(*metadata, helperName, canonicalMemberName) &&
          canonicalMemberName == stripGeneratedHelperSuffix(std::string(helperName)) &&
-         isCanonicalMapHelperName(canonicalMemberName);
+         isCanonicalKeyValueHelperName(canonicalMemberName);
 }
 
 } // namespace
@@ -312,7 +312,8 @@ bool isRemovedCollectionMethodAliasPath(std::string_view rawMethodName) {
 
 bool removedCollectionAliasNeedsDefinitionPath(std::string_view rawMethodName) {
   const std::string normalizedPath = normalizeCollectionHelperPath(std::string(rawMethodName));
-  const std::string_view keyValueHelperName = mapHelperNameFromPath(normalizedPath);
+  const std::string_view keyValueHelperName =
+      keyValueHelperNameFromPath(normalizedPath);
   std::string vectorHelperName;
   const auto *vectorMetadata = findVectorHelperSurfaceMetadata();
   return (!keyValueHelperName.empty() &&
