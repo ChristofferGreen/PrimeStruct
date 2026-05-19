@@ -451,41 +451,41 @@ ReturnKind SemanticsValidator::inferPreDispatchCallReturnKind(
               methodResolved, canonicalMethodResolved)) {
         logicalMethodResolved = canonicalMethodResolved;
       }
-      auto hasVisibleStdlibMapMethodDefinition = [&](const std::string &path) {
+      auto hasVisibleStdlibKeyValueMethodDefinition = [&](const std::string &path) {
         return hasImportedDefinitionPath(path) || hasDeclaredDefinitionPath(path);
       };
-      auto resolveStdlibMapMethodHelperName = [&](const std::string &path,
-                                                  std::string &helperNameOut) {
+      auto resolveStdlibKeyValueMethodHelperName = [&](const std::string &path,
+                                                       std::string &helperNameOut) {
         return resolveCanonicalCompatibilityKeyValueHelperNameFromResolvedPath(
             path, helperNameOut);
       };
-      auto isMapMethodWithBuiltinReturn = [&](std::string_view helperName) {
+      auto isKeyValueMethodWithBuiltinReturn = [&](std::string_view helperName) {
         return helperName == "contains" || helperName == "contains_ref" ||
                helperName == "tryAt" || helperName == "tryAt_ref" ||
                helperName == "at" || helperName == "at_ref" ||
                helperName == "at_unsafe" || helperName == "at_unsafe_ref";
       };
-      auto isMapMethodNeedingVisibleDefinition = [&](std::string_view helperName) {
-        return isMapMethodWithBuiltinReturn(helperName) ||
+      auto isKeyValueMethodNeedingVisibleDefinition = [&](std::string_view helperName) {
+        return isKeyValueMethodWithBuiltinReturn(helperName) ||
                helperName == "insert" || helperName == "insert_ref";
       };
-      auto isVisibleStdlibMapMethodWithBuiltinReturn = [&](const std::string &path) {
+      auto isVisibleStdlibKeyValueMethodWithBuiltinReturn = [&](const std::string &path) {
         std::string helperName;
-        return resolveStdlibMapMethodHelperName(path, helperName) &&
-               isMapMethodWithBuiltinReturn(helperName) &&
-               hasVisibleStdlibMapMethodDefinition(path);
+        return resolveStdlibKeyValueMethodHelperName(path, helperName) &&
+               isKeyValueMethodWithBuiltinReturn(helperName) &&
+               hasVisibleStdlibKeyValueMethodDefinition(path);
       };
-      auto isMissingStdlibMapMethodDefinition = [&](const std::string &path) {
+      auto isMissingStdlibKeyValueMethodDefinition = [&](const std::string &path) {
         std::string helperName;
-        return resolveStdlibMapMethodHelperName(path, helperName) &&
-               isMapMethodNeedingVisibleDefinition(helperName) &&
-               !hasVisibleStdlibMapMethodDefinition(path);
+        return resolveStdlibKeyValueMethodHelperName(path, helperName) &&
+               isKeyValueMethodNeedingVisibleDefinition(helperName) &&
+               !hasVisibleStdlibKeyValueMethodDefinition(path);
       };
       if (logicalMethodResolved == "/file_error/why" ||
           logicalMethodResolved == "/FileError/why") {
         return finish(ReturnKind::String);
       }
-      if (isVisibleStdlibMapMethodWithBuiltinReturn(logicalMethodResolved) &&
+      if (isVisibleStdlibKeyValueMethodWithBuiltinReturn(logicalMethodResolved) &&
           !hasDefinitionPath(logicalMethodResolved)) {
         ReturnKind builtinMethodKind = ReturnKind::Unknown;
         if (resolveBuiltinCollectionMethodReturnKind(
@@ -498,7 +498,7 @@ ReturnKind SemanticsValidator::inferPreDispatchCallReturnKind(
       }
       std::string builtinKeyValueKeyType;
       std::string builtinKeyValueValueType;
-      if (isMissingStdlibMapMethodDefinition(logicalMethodResolved) &&
+      if (isMissingStdlibKeyValueMethodDefinition(logicalMethodResolved) &&
           !hasDefinitionPath(logicalMethodResolved) &&
           !resolveKeyValueTarget(expr.args.front(), builtinKeyValueKeyType,
                                  builtinKeyValueValueType)) {

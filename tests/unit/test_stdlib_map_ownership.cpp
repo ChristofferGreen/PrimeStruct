@@ -1566,6 +1566,31 @@ TEST_CASE("canonical map surface owns standalone stdlib implementation") {
         std::string::npos);
   CHECK(inferPreDispatchCallsSource.find("const auto &resolveKeyValueTarget") !=
         std::string::npos);
+  CHECK(inferPreDispatchCallsSource.find("hasVisibleStdlibMapMethodDefinition") ==
+        std::string::npos);
+  CHECK(inferPreDispatchCallsSource.find(
+            "hasVisibleStdlibKeyValueMethodDefinition") != std::string::npos);
+  CHECK(inferPreDispatchCallsSource.find("resolveStdlibMapMethodHelperName") ==
+        std::string::npos);
+  CHECK(inferPreDispatchCallsSource.find(
+            "resolveStdlibKeyValueMethodHelperName") != std::string::npos);
+  CHECK(inferPreDispatchCallsSource.find("isMapMethodWithBuiltinReturn") ==
+        std::string::npos);
+  CHECK(inferPreDispatchCallsSource.find("isKeyValueMethodWithBuiltinReturn") !=
+        std::string::npos);
+  CHECK(inferPreDispatchCallsSource.find("isMapMethodNeedingVisibleDefinition") ==
+        std::string::npos);
+  CHECK(inferPreDispatchCallsSource.find(
+            "isKeyValueMethodNeedingVisibleDefinition") != std::string::npos);
+  CHECK(inferPreDispatchCallsSource.find(
+            "isVisibleStdlibMapMethodWithBuiltinReturn") == std::string::npos);
+  CHECK(inferPreDispatchCallsSource.find(
+            "isVisibleStdlibKeyValueMethodWithBuiltinReturn") !=
+        std::string::npos);
+  CHECK(inferPreDispatchCallsSource.find("isMissingStdlibMapMethodDefinition") ==
+        std::string::npos);
+  CHECK(inferPreDispatchCallsSource.find(
+            "isMissingStdlibKeyValueMethodDefinition") != std::string::npos);
   CHECK(exprPreDispatchDirectCallsSource.find("std/collections/map/") ==
         std::string::npos);
   CHECK(exprPreDispatchDirectCallsSource.find("StdlibSurfaceId::CollectionsMapHelpers") ==
