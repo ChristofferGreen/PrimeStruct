@@ -153,8 +153,9 @@ This file stores durable session-derived facts that are useful in later work. Ke
   non-root experimental target-probe locals, vector-count diagnostic
   target-probe parameters, method-resolution experimental resolver aliases,
   infer pre-dispatch target aliases, infer method-resolution target aliases,
-  infer late-fallback target aliases, and method-target resolution target-probe
-  locals follow the same naming.
+  infer late-fallback target aliases, method-target resolution target-probe
+  locals, and collection-helper rewrite resolution booleans follow the same
+  naming.
 - Evidence: The release `PrimeStruct_backend_ir_tests` target rebuilt after
   the kind, field, target-info, lookup-helper, and setup-inference access
   renames, focused backend IR windows passed, and direct `rg` scans over
@@ -191,8 +192,8 @@ This file stores durable session-derived facts that are useful in later work. Ke
   non-root experimental target-probe locals, vector-count diagnostic
   target-probe parameters, method-resolution experimental resolver aliases,
   infer pre-dispatch target aliases, infer method-resolution target aliases,
-  infer late-fallback target aliases, and method-target resolution
-  target-probe locals.
+  infer late-fallback target aliases, method-target resolution target-probe
+  locals, and collection-helper rewrite resolution booleans.
 
 ### map-compatibility-aliases-require-source-definitions
 - Updated: 2026-05-18

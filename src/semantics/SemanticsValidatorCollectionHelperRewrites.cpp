@@ -603,10 +603,12 @@ bool SemanticsValidator::tryRewriteCanonicalExperimentalKeyValueHelperCall(
     if (helperName == "insert") {
       std::string keyType;
       std::string valueType;
-      const bool resolvesBorrowedExperimentalMap =
-          dispatchResolvers.resolveExperimentalMapTarget(candidate.args.front(), keyType, valueType) &&
-          !dispatchResolvers.resolveExperimentalMapValueTarget(candidate.args.front(), keyType, valueType);
-      if (!resolvesBorrowedExperimentalMap) {
+      const bool resolvesBorrowedExperimentalKeyValue =
+          dispatchResolvers.resolveExperimentalMapTarget(candidate.args.front(), keyType,
+                                                         valueType) &&
+          !dispatchResolvers.resolveExperimentalMapValueTarget(
+              candidate.args.front(), keyType, valueType);
+      if (!resolvesBorrowedExperimentalKeyValue) {
         return false;
       }
       rewrittenOut = candidate;
@@ -701,24 +703,24 @@ bool SemanticsValidator::tryRewriteCanonicalExperimentalKeyValueHelperCall(
 
   std::string keyType;
   std::string valueType;
-  const bool resolvesExperimentalMapValue =
+  const bool resolvesExperimentalKeyValueValue =
       dispatchResolvers.resolveExperimentalMapValueTarget(receiverExpr, keyType, valueType);
-  const bool resolvesExperimentalMap =
-      resolvesExperimentalMapValue ||
+  const bool resolvesExperimentalKeyValue =
+      resolvesExperimentalKeyValueValue ||
       dispatchResolvers.resolveExperimentalMapTarget(receiverExpr, keyType, valueType);
-  const bool resolvesCanonicalMap =
+  const bool resolvesCanonicalKeyValue =
       dispatchResolvers.resolveMapTarget != nullptr &&
       dispatchResolvers.resolveMapTarget(receiverExpr, keyType, valueType);
-  if (!resolvesExperimentalMap &&
-      !(candidate.isMethodCall && resolvesCanonicalMap)) {
+  if (!resolvesExperimentalKeyValue &&
+      !(candidate.isMethodCall && resolvesCanonicalKeyValue)) {
     return false;
   }
   const bool isBorrowedCanonicalHelper =
-      !resolvesExperimentalMapValue &&
+      !resolvesExperimentalKeyValueValue &&
       helperName.size() >= std::string_view("_ref").size() &&
       helperName.rfind("_ref") == helperName.size() - std::string_view("_ref").size();
-  if (!candidate.isMethodCall && resolvesExperimentalMap &&
-      !resolvesExperimentalMapValue && !isBorrowedCanonicalHelper) {
+  if (!candidate.isMethodCall && resolvesExperimentalKeyValue &&
+      !resolvesExperimentalKeyValueValue && !isBorrowedCanonicalHelper) {
     return false;
   }
   rewrittenOut = canonicalCandidate;

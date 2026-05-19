@@ -1715,6 +1715,14 @@ TEST_CASE("canonical map surface owns standalone stdlib implementation") {
         std::string::npos);
   CHECK(collectionHelperRewritesSource.find("hasVisibleMapHelperFamily") ==
         std::string::npos);
+  CHECK(collectionHelperRewritesSource.find("resolvesBorrowedExperimentalMap") ==
+        std::string::npos);
+  CHECK(collectionHelperRewritesSource.find("resolvesExperimentalMapValue") ==
+        std::string::npos);
+  CHECK(collectionHelperRewritesSource.find("resolvesExperimentalMap =") ==
+        std::string::npos);
+  CHECK(collectionHelperRewritesSource.find("resolvesCanonicalMap") ==
+        std::string::npos);
   CHECK(collectionHelperRewritesSource.find("collectionRewriteKeyValueHelperMetadata()") !=
         std::string::npos);
   CHECK(collectionHelperRewritesSource.find("canonicalKeyValueHelperPathForRewrite(") !=
@@ -1751,6 +1759,14 @@ TEST_CASE("canonical map surface owns standalone stdlib implementation") {
             "explicitCanonicalExperimentalKeyValueBorrowedHelperPath") !=
         std::string::npos);
   CHECK(collectionHelperRewritesSource.find("hasVisibleKeyValueHelperFamily") !=
+        std::string::npos);
+  CHECK(collectionHelperRewritesSource.find("resolvesBorrowedExperimentalKeyValue") !=
+        std::string::npos);
+  CHECK(collectionHelperRewritesSource.find("resolvesExperimentalKeyValueValue") !=
+        std::string::npos);
+  CHECK(collectionHelperRewritesSource.find("resolvesExperimentalKeyValue") !=
+        std::string::npos);
+  CHECK(collectionHelperRewritesSource.find("resolvesCanonicalKeyValue") !=
         std::string::npos);
   CHECK(effectFreeCollectionsSource.find("StdlibSurfaceId::CollectionsMapHelpers") ==
         std::string::npos);
