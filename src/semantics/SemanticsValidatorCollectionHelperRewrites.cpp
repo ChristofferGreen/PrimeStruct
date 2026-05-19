@@ -28,7 +28,7 @@ std::string explicitCallPathForCandidate(const Expr &candidate) {
   return namespacePrefix + "/" + candidate.name;
 }
 
-bool isBareMapAccessHelperName(std::string_view helperName) {
+bool isBareKeyValueAccessHelperName(std::string_view helperName) {
   return helperName == "at" || helperName == "at_ref" ||
          helperName == "at_unsafe" || helperName == "at_unsafe_ref";
 }
@@ -321,7 +321,7 @@ bool SemanticsValidator::tryRewriteBareKeyValueHelperCall(
   rewrittenOut = candidate;
   if (dispatchResolvers.resolveExperimentalMapTarget != nullptr &&
       dispatchResolvers.resolveExperimentalMapTarget(candidate.args[receiverIndex], keyType, valueType)) {
-    if (isBareMapAccessHelperName(helperName)) {
+    if (isBareKeyValueAccessHelperName(helperName)) {
       return false;
     }
     rewrittenOut.name =
@@ -596,7 +596,7 @@ bool SemanticsValidator::tryRewriteCanonicalExperimentalKeyValueHelperCall(
         !isPublishedKeyValueBaseHelperName(helperName)) {
       return false;
     }
-    if (isBareMapAccessHelperName(helperName) &&
+    if (isBareKeyValueAccessHelperName(helperName) &&
         candidate.args.front().kind == Expr::Kind::Call) {
       return false;
     }
@@ -687,7 +687,7 @@ bool SemanticsValidator::tryRewriteCanonicalExperimentalKeyValueHelperCall(
     return isResolvedMapConstructorPath(normalizedName);
   };
   if (!candidate.isMethodCall && !directExperimentalKeyValueHelperSpelling &&
-      isBareMapAccessHelperName(helperName) &&
+      isBareKeyValueAccessHelperName(helperName) &&
       !isPublishedMapConstructorReceiver(receiverExpr)) {
     return false;
   }
