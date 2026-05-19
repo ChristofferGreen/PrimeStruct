@@ -506,7 +506,7 @@ bool SemanticsValidator::validateExprCollectionAccessFallbacks(
       return false;
     };
     std::string keyValueKeyType;
-    std::string mapValueType;
+    std::string keyValueValueType;
     auto isKeyValueTarget = [&](const Expr &candidate, std::string &keyValueKeyTypeOut) {
       if (context.resolveMapKeyType != nullptr &&
           context.resolveMapKeyType(candidate, keyValueKeyTypeOut)) {
@@ -531,7 +531,7 @@ bool SemanticsValidator::validateExprCollectionAccessFallbacks(
     bool isExperimentalMap =
         context.resolveExperimentalMapTarget != nullptr &&
         context.resolveExperimentalMapTarget(expr.args.front(), keyValueKeyType,
-                                             mapValueType);
+                                             keyValueValueType);
     const bool shouldProbeReorderedReceiver =
         expr.args.size() == 2 &&
         (expr.args.front().kind == Expr::Kind::Literal ||
@@ -560,7 +560,7 @@ bool SemanticsValidator::validateExprCollectionAccessFallbacks(
         indexArgIndex = 0;
         elemType = reorderedElemType;
         keyValueKeyType = reorderedMapKeyType;
-        mapValueType = reorderedMapValueType;
+        keyValueValueType = reorderedMapValueType;
         isArrayOrString = reorderedArrayOrString || reorderedArgsPack;
         isMap = reorderedMap;
         isExperimentalMap = reorderedExperimentalMap;
@@ -580,7 +580,7 @@ bool SemanticsValidator::validateExprCollectionAccessFallbacks(
       if (receiverBuiltinCollection == "map" &&
           receiverExpr.templateArgs.size() == 2) {
         keyValueKeyType = receiverExpr.templateArgs[0];
-        mapValueType = receiverExpr.templateArgs[1];
+        keyValueValueType = receiverExpr.templateArgs[1];
         isMap = true;
         isExperimentalMap = false;
       } else if ((receiverBuiltinCollection == "array" ||
@@ -596,7 +596,7 @@ bool SemanticsValidator::validateExprCollectionAccessFallbacks(
             (isRootMapAliasPath(resolveCalleePath(receiverExpr)) ||
              isRootMapAliasPath(explicitCallPath(receiverExpr)))) &&
           inferQueryExprTypeText(receiverExpr, params, locals, receiverTypeText) &&
-          extractMapKeyValueTypesFromTypeText(receiverTypeText, keyValueKeyType, mapValueType)) {
+          extractMapKeyValueTypesFromTypeText(receiverTypeText, keyValueKeyType, keyValueValueType)) {
         const bool isExperimentalMapType = isExperimentalMapTypeText(receiverTypeText);
         if (isExperimentalMapType) {
           isExperimentalMap = true;
