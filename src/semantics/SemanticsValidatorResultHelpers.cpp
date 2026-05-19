@@ -390,8 +390,8 @@ bool SemanticsValidator::resolveResultTypeForExpr(const Expr &expr,
     out.errorType = "ContainerError";
     return true;
   };
-  std::function<bool(const Expr &, std::string &)> resolveMapReceiverTypeText;
-  resolveMapReceiverTypeText = [&](const Expr &receiverExpr, std::string &typeTextOut) -> bool {
+  std::function<bool(const Expr &, std::string &)> resolveKeyValueReceiverTypeText;
+  resolveKeyValueReceiverTypeText = [&](const Expr &receiverExpr, std::string &typeTextOut) -> bool {
     typeTextOut.clear();
     std::string accessName;
     if (receiverExpr.kind == Expr::Kind::Call && getBuiltinArrayAccessName(receiverExpr, accessName) &&
@@ -961,7 +961,7 @@ bool SemanticsValidator::resolveResultTypeForExpr(const Expr &expr,
     }
     if (expr.name == "tryAt" && !expr.args.empty()) {
       std::string receiverTypeText;
-      if (resolveMapReceiverTypeText(expr.args.front(), receiverTypeText) &&
+      if (resolveKeyValueReceiverTypeText(expr.args.front(), receiverTypeText) &&
           resolveBuiltinMapResultType(receiverTypeText)) {
         return true;
       }
@@ -985,7 +985,7 @@ bool SemanticsValidator::resolveResultTypeForExpr(const Expr &expr,
         }
       }
       std::string receiverTypeText;
-      if (resolveMapReceiverTypeText(*receiverExpr, receiverTypeText) &&
+      if (resolveKeyValueReceiverTypeText(*receiverExpr, receiverTypeText) &&
           resolveBuiltinMapResultType(receiverTypeText)) {
         return true;
       }

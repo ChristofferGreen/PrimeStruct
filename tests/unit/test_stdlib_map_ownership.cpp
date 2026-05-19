@@ -3226,6 +3226,10 @@ TEST_CASE("canonical map surface owns standalone stdlib implementation") {
   CHECK(semanticsResultHelpersSource.find(
             "metadataBackedMapHelperRootAliasMethodName(resolvedPath)") !=
         std::string::npos);
+  CHECK(semanticsResultHelpersSource.find("resolveKeyValueReceiverTypeText") !=
+        std::string::npos);
+  CHECK(semanticsResultHelpersSource.find("resolveMapReceiverTypeText") ==
+        std::string::npos);
   CHECK(statementReturnsSource.find("unknown method: /map/at") ==
         std::string::npos);
   CHECK(statementReturnsSource.find("unknown method: /map/at_ref") ==
