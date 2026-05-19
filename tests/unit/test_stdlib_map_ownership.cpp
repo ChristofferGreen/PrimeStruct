@@ -163,6 +163,9 @@ TEST_CASE("canonical map surface owns standalone stdlib implementation") {
   const std::string templateReturnOrchestrationSource =
       readText(repoRoot() / "src" / "semantics" /
                "TemplateMonomorphDefinitionReturnOrchestration.h");
+  const std::string templateDefinitionRewriteSource =
+      readText(repoRoot() / "src" / "semantics" /
+               "TemplateMonomorphDefinitionExperimentalCollectionRewrites.h");
   const std::string templateTypeResolutionSource =
       readText(repoRoot() / "src" / "semantics" /
                "TemplateMonomorphTypeResolution.h");
@@ -447,6 +450,7 @@ TEST_CASE("canonical map surface owns standalone stdlib implementation") {
   REQUIRE(!templateFallbackTypeInferenceSource.empty());
   REQUIRE(!templateReturnSetupSource.empty());
   REQUIRE(!templateReturnOrchestrationSource.empty());
+  REQUIRE(!templateDefinitionRewriteSource.empty());
   REQUIRE(!templateTypeResolutionSource.empty());
   REQUIRE(!templateBindingCallInferenceSource.empty());
   REQUIRE(!templateConstructorRewriteSource.empty());
@@ -1292,6 +1296,8 @@ TEST_CASE("canonical map surface owns standalone stdlib implementation") {
         std::string::npos);
   CHECK(templateExpressionRewriteSource.find("rewriteCanonicalExperimentalMapConstructorBinding") ==
         std::string::npos);
+  CHECK(templateExpressionRewriteSource.find("rewriteCanonicalExperimentalMapConstructorExpr") ==
+        std::string::npos);
   CHECK(templateExpressionRewriteSource.find("resolvesBorrowedExperimentalMapReceiver") ==
         std::string::npos);
   CHECK(templateExpressionRewriteSource.find("resolvesExperimentalMapBorrowedReceiver") ==
@@ -1321,6 +1327,8 @@ TEST_CASE("canonical map surface owns standalone stdlib implementation") {
   CHECK(templateExpressionRewriteSource.find("resolvesBuiltinKeyValueReceiver") !=
         std::string::npos);
   CHECK(templateExpressionRewriteSource.find("rewriteCanonicalKeyValueConstructorBinding") !=
+        std::string::npos);
+  CHECK(templateExpressionRewriteSource.find("rewriteCanonicalExperimentalKeyValueConstructorExpr") !=
         std::string::npos);
   CHECK(templateExpressionRewriteSource.find("resolvesBorrowedExperimentalKeyValueReceiver") !=
         std::string::npos);
@@ -1479,6 +1487,24 @@ TEST_CASE("canonical map surface owns standalone stdlib implementation") {
         std::string::npos);
   CHECK(templateReturnOrchestrationSource.find("expectedExperimentalKeyValueReturn") !=
         std::string::npos);
+  CHECK(templateDefinitionRewriteSource.find(
+            "rewriteDefinitionExperimentalMapConstructorValue") ==
+        std::string::npos);
+  CHECK(templateDefinitionRewriteSource.find(
+            "rewriteDefinitionExperimentalMapReturnConstructors") ==
+        std::string::npos);
+  CHECK(templateDefinitionRewriteSource.find(
+            "rewriteCanonicalExperimentalMapConstructorExpr") ==
+        std::string::npos);
+  CHECK(templateDefinitionRewriteSource.find(
+            "rewriteDefinitionExperimentalKeyValueConstructorValue") !=
+        std::string::npos);
+  CHECK(templateDefinitionRewriteSource.find(
+            "rewriteDefinitionExperimentalKeyValueReturnConstructors") !=
+        std::string::npos);
+  CHECK(templateDefinitionRewriteSource.find(
+            "rewriteCanonicalExperimentalKeyValueConstructorExpr") !=
+        std::string::npos);
   CHECK(templateFallbackTypeInferenceSource.find(
             "const std::string mapCollectionAlias") == std::string::npos);
   CHECK(templateFallbackTypeInferenceSource.find(
@@ -1506,6 +1532,12 @@ TEST_CASE("canonical map surface owns standalone stdlib implementation") {
         std::string::npos);
   CHECK(templateConstructorRewriteSource.find(
             "isCanonicalMapConstructorRewriteSourcePath(originalPath)") !=
+        std::string::npos);
+  CHECK(templateConstructorRewriteSource.find(
+            "rewriteCanonicalExperimentalMapConstructorExpr") ==
+        std::string::npos);
+  CHECK(templateConstructorRewriteSource.find(
+            "rewriteCanonicalExperimentalKeyValueConstructorExpr") !=
         std::string::npos);
   CHECK(templateConstructorRewriteSource.find(
             "mapConstructorSurfaceMetadataLocal()") !=

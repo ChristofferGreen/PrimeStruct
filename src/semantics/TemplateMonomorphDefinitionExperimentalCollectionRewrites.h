@@ -1,15 +1,15 @@
 #pragma once
 
-void rewriteDefinitionExperimentalMapConstructorValue(Expr &valueExpr,
-                                                      LocalTypeMap &locals,
-                                                      std::vector<ParameterInfo> &params,
-                                                      const SubstMap &mapping,
-                                                      const std::unordered_set<std::string> &allowedParams,
-                                                      const std::string &namespacePrefix,
-                                                      Context &ctx,
-                                                      bool allowMathBare,
-                                                      std::string &error) {
-  (void)rewriteCanonicalExperimentalMapConstructorExpr(
+void rewriteDefinitionExperimentalKeyValueConstructorValue(Expr &valueExpr,
+                                                           LocalTypeMap &locals,
+                                                           std::vector<ParameterInfo> &params,
+                                                           const SubstMap &mapping,
+                                                           const std::unordered_set<std::string> &allowedParams,
+                                                           const std::string &namespacePrefix,
+                                                           Context &ctx,
+                                                           bool allowMathBare,
+                                                           std::string &error) {
+  (void)rewriteCanonicalExperimentalKeyValueConstructorExpr(
       valueExpr, locals, params, mapping, allowedParams, namespacePrefix, ctx, allowMathBare, error);
 }
 
@@ -41,17 +41,17 @@ void rewriteDefinitionExperimentalVectorReturnConstructors(Expr &candidate,
   });
 }
 
-void rewriteDefinitionExperimentalMapReturnConstructors(Expr &candidate,
-                                                        LocalTypeMap &locals,
-                                                        std::vector<ParameterInfo> &params,
-                                                        const SubstMap &mapping,
-                                                        const std::unordered_set<std::string> &allowedParams,
-                                                        const std::string &namespacePrefix,
-                                                        Context &ctx,
-                                                        bool allowMathBare,
-                                                        std::string &error) {
+void rewriteDefinitionExperimentalKeyValueReturnConstructors(Expr &candidate,
+                                                             LocalTypeMap &locals,
+                                                             std::vector<ParameterInfo> &params,
+                                                             const SubstMap &mapping,
+                                                             const std::unordered_set<std::string> &allowedParams,
+                                                             const std::string &namespacePrefix,
+                                                             Context &ctx,
+                                                             bool allowMathBare,
+                                                             std::string &error) {
   rewriteExperimentalConstructorReturnTree(candidate, [&](Expr &valueExpr) {
-    rewriteDefinitionExperimentalMapConstructorValue(
+    rewriteDefinitionExperimentalKeyValueConstructorValue(
         valueExpr, locals, params, mapping, allowedParams, namespacePrefix, ctx, allowMathBare, error);
   });
 }
@@ -74,7 +74,7 @@ bool rewriteDefinitionExperimentalReturnConstructors(Expr &expr,
             candidate, locals, params, mapping, allowedParams, namespacePrefix, ctx, allowMathBare, error);
       },
       [&](Expr &candidate) {
-        rewriteDefinitionExperimentalMapReturnConstructors(
+        rewriteDefinitionExperimentalKeyValueReturnConstructors(
             candidate, locals, params, mapping, allowedParams, namespacePrefix, ctx, allowMathBare, error);
       },
       error);

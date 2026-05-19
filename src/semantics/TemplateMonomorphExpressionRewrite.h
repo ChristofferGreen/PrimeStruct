@@ -1208,15 +1208,15 @@ bool rewriteExpr(Expr &expr,
   };
   rewriteNestedExperimentalKeyValueConstructorValue = [&](Expr &candidate) -> bool {
     return rewriteExperimentalConstructorValueTree(candidate, [&](Expr &current) {
-      return rewriteCanonicalExperimentalMapConstructorExpr(current,
-                                                            locals,
-                                                            params,
-                                                            mapping,
-                                                            allowedParams,
-                                                            namespacePrefix,
-                                                            ctx,
-                                                            allowMathBare,
-                                                            error);
+      return rewriteCanonicalExperimentalKeyValueConstructorExpr(current,
+                                                                 locals,
+                                                                 params,
+                                                                 mapping,
+                                                                 allowedParams,
+                                                                 namespacePrefix,
+                                                                 ctx,
+                                                                 allowMathBare,
+                                                                 error);
     });
   };
 

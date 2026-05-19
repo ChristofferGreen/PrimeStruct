@@ -96,15 +96,15 @@ bool isCanonicalMapConstructorRewriteSourcePath(std::string_view originalPath) {
       });
 }
 
-bool rewriteCanonicalExperimentalMapConstructorExpr(Expr &valueExpr,
-                                                    const LocalTypeMap &locals,
-                                                    const std::vector<ParameterInfo> &params,
-                                                    const SubstMap &mapping,
-                                                    const std::unordered_set<std::string> &allowedParams,
-                                                    const std::string &namespacePrefix,
-                                                    Context &ctx,
-                                                    bool allowMathBare,
-                                                    std::string &error) {
+bool rewriteCanonicalExperimentalKeyValueConstructorExpr(Expr &valueExpr,
+                                                         const LocalTypeMap &locals,
+                                                         const std::vector<ParameterInfo> &params,
+                                                         const SubstMap &mapping,
+                                                         const std::unordered_set<std::string> &allowedParams,
+                                                         const std::string &namespacePrefix,
+                                                         Context &ctx,
+                                                         bool allowMathBare,
+                                                         std::string &error) {
   if (valueExpr.kind != Expr::Kind::Call || valueExpr.isBinding || valueExpr.isMethodCall) {
     return true;
   }
