@@ -41,7 +41,7 @@ bool SemanticsValidator::validateExprTryBuiltin(
       return failTryDiagnostic("unknown call target: " + removedKeyValueCompatibilityPath);
     }
     const std::string tryTargetPath = resolveCalleePath(tryTargetExpr);
-    bool isBareMapTryAtFallback = false;
+    bool isBareKeyValueTryAtFallback = false;
     if (isSimpleCallName(tryTargetExpr, "tryAt") &&
         defMap_.find("/tryAt") == defMap_.end() &&
         tryTargetExpr.args.size() == 2) {
@@ -49,7 +49,7 @@ bool SemanticsValidator::validateExprTryBuiltin(
         std::string inferredTypeText;
         if (inferQueryExprTypeText(tryArg, params, locals, inferredTypeText) &&
             returnsMapCollectionType(inferredTypeText)) {
-          isBareMapTryAtFallback = true;
+          isBareKeyValueTryAtFallback = true;
           break;
         }
       }
@@ -69,7 +69,7 @@ bool SemanticsValidator::validateExprTryBuiltin(
     const std::string canonicalTryAtDiagnosticPath =
         tryTargetPath == canonicalTryAtRefPath ? canonicalTryAtRefPath : canonicalTryAtPath;
     if ((isCanonicalTryAtTarget ||
-         isBareMapTryAtFallback) &&
+         isBareKeyValueTryAtFallback) &&
         !allowCurrentMapWrapperTryAt &&
         !hasImportedDefinitionPath(canonicalTryAtDiagnosticPath) &&
         !hasDeclaredDefinitionPath(canonicalTryAtDiagnosticPath) &&

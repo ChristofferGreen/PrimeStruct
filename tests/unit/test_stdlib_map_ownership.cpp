@@ -2177,6 +2177,9 @@ TEST_CASE("canonical map surface owns standalone stdlib implementation") {
         std::string::npos);
   CHECK(exprTrySource.find("removedKeyValueCompatibilityPath") !=
         std::string::npos);
+  CHECK(exprTrySource.find("isBareKeyValueTryAtFallback") !=
+        std::string::npos);
+  CHECK(exprTrySource.find("isBareMapTryAtFallback") == std::string::npos);
   CHECK(exprTrySource.find("metadataBackedCanonicalMapHelperPath(\"tryAt\")") !=
         std::string::npos);
   CHECK(exprTrySource.find(
