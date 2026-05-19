@@ -8,7 +8,7 @@
 namespace primec::semantics {
 
 namespace {
-bool isSpecializedExperimentalMapBackingPath(std::string typeName) {
+bool isSpecializedExperimentalKeyValueBackingPath(std::string typeName) {
   typeName = normalizeBindingTypeName(typeName);
   if (!typeName.empty() && typeName.front() == '/') {
     typeName.erase(typeName.begin());
@@ -1045,7 +1045,7 @@ bool SemanticsValidator::canonicalizeInferredCollectionBinding(
     return true;
   }
   if ((normalizedBindingType == "Map" && !bindingOut.typeTemplateArg.empty()) ||
-      isSpecializedExperimentalMapBackingPath(normalizedBindingType)) {
+      isSpecializedExperimentalKeyValueBackingPath(normalizedBindingType)) {
     return true;
   }
   const std::string normalizedCollectionType = normalizeCollectionTypePath(bindingTypeText(bindingOut));

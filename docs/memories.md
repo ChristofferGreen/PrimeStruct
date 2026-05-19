@@ -169,7 +169,8 @@ This file stores durable session-derived facts that are useful in later work. Ke
   use key/value names too; late access specialized backing and type-text
   predicates should use key/value names too; infer compatibility specialized
   backing predicates should use key/value names too; receiver-path specialized
-  backing predicates should use key/value names too.
+  backing predicates should use key/value names too; initializer inference
+  specialized backing predicates should use key/value names too.
   The stdlib ownership source lock rejects the old map-helper, map-count,
   map-access, and removed map compatibility names.
 
