@@ -8,7 +8,7 @@
 namespace primec::semantics {
 namespace {
 
-bool isCanonicalMapAccessHelperResolvedPath(std::string_view resolvedPath) {
+bool isCanonicalKeyValueAccessHelperResolvedPath(std::string_view resolvedPath) {
   const auto *metadata =
       findStdlibSurfaceMetadataByBridgeKey("collections.map_helpers");
   if (metadata == nullptr) {
@@ -179,7 +179,7 @@ bool SemanticsValidator::validateExprNamedArgumentBuiltins(
     const std::string resolvedPath = resolveCalleePath(expr);
     if (isStdNamespacedVectorCompatibilityHelperPath(resolvedPath, "at") ||
         isStdNamespacedVectorCompatibilityHelperPath(resolvedPath, "at_unsafe") ||
-        isCanonicalMapAccessHelperResolvedPath(resolvedPath)) {
+        isCanonicalKeyValueAccessHelperResolvedPath(resolvedPath)) {
       return false;
     }
     if (defMap_.find(resolved) == defMap_.end() && !expr.args.empty()) {
