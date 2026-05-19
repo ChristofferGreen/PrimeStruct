@@ -715,6 +715,14 @@ TEST_CASE("canonical map surface owns standalone stdlib implementation") {
         std::string::npos);
   CHECK(semanticsSource.find("rewriteExperimentalKeyValueValueMethods") !=
         std::string::npos);
+  CHECK(semanticsSource.find("isBuiltinMapMutationBinding") ==
+        std::string::npos);
+  CHECK(semanticsSource.find("isBuiltinMapReferenceBinding") ==
+        std::string::npos);
+  CHECK(semanticsSource.find("isBuiltinKeyValueMutationBinding") !=
+        std::string::npos);
+  CHECK(semanticsSource.find("isBuiltinKeyValueReferenceBinding") !=
+        std::string::npos);
   CHECK(semanticsSource.find("isResolvedMapConstructorPath(path)") !=
         std::string::npos);
   CHECK(semanticBindingTypeHelpersSource.find(

@@ -5551,7 +5551,7 @@ bool rewriteExperimentalKeyValueValueMethods(Program &program, std::string &erro
   return true;
 }
 
-bool isBuiltinMapMutationBinding(const semantics::BindingInfo &binding) {
+bool isBuiltinKeyValueMutationBinding(const semantics::BindingInfo &binding) {
   if (isExperimentalKeyValueTypeText(bindingTypeText(binding))) {
     return false;
   }
@@ -5561,8 +5561,8 @@ bool isBuiltinMapMutationBinding(const semantics::BindingInfo &binding) {
       bindingTypeText(binding), keyType, valueType);
 }
 
-bool isBuiltinMapReferenceBinding(const semantics::BindingInfo &binding) {
-  if (!isBuiltinMapMutationBinding(binding)) {
+bool isBuiltinKeyValueReferenceBinding(const semantics::BindingInfo &binding) {
+  if (!isBuiltinKeyValueMutationBinding(binding)) {
     return false;
   }
   const std::string normalizedType = semantics::normalizeBindingTypeName(binding.typeName);
@@ -5891,11 +5891,11 @@ void rewriteBuiltinMapInsertExpr(
     auto receiverBinding = resolveBuiltinMapInsertReceiverBinding(
         receiver, bindings, definitionMap, structPaths, definitionNamespace);
     if (!receiverBinding.has_value() ||
-        !isBuiltinMapMutationBinding(*receiverBinding)) {
+        !isBuiltinKeyValueMutationBinding(*receiverBinding)) {
       return;
     }
     const bool receiverIsReference =
-        isBuiltinMapReferenceBinding(*receiverBinding);
+        isBuiltinKeyValueReferenceBinding(*receiverBinding);
     std::string helperName(
         resolveBuiltinMapReadSurfaceMemberName(scopedExprName));
     if (helperName.empty()) {
@@ -5958,10 +5958,10 @@ void rewriteBuiltinMapInsertExpr(
   const Expr &receiver = expr.args.front();
   auto receiverBinding = resolveBuiltinMapInsertReceiverBinding(
       receiver, bindings, definitionMap, structPaths, definitionNamespace);
-  if (!receiverBinding.has_value() || !isBuiltinMapMutationBinding(*receiverBinding)) {
+  if (!receiverBinding.has_value() || !isBuiltinKeyValueMutationBinding(*receiverBinding)) {
     return;
   }
-  const bool receiverIsReference = isBuiltinMapReferenceBinding(*receiverBinding);
+  const bool receiverIsReference = isBuiltinKeyValueReferenceBinding(*receiverBinding);
   const bool expectsReferenceSurface =
       !expr.isMethodCall && isBuiltinMapInsertReferenceHelperName(expr.name);
   const bool expectsValueSurface =
@@ -6039,7 +6039,7 @@ void rewriteBuiltinMapInsertStatements(
           return false;
         };
         if (stmt.args.size() == 1 &&
-            isBuiltinMapMutationBinding(*binding) &&
+            isBuiltinKeyValueMutationBinding(*binding) &&
             isConstructorBackedMapInitializer(stmt.args.front())) {
           constructorBackedBuiltinMapBindings.insert(stmt.name);
         } else {
@@ -6097,7 +6097,7 @@ bool rewriteBuiltinMapInsertMethods(Program &program, std::string &error) {
         if (auto binding = extractParsedBindingInfo(stmt, &structPaths); binding.has_value()) {
           returnBindings[stmt.name] = *binding;
           if (stmt.args.size() == 1 &&
-              isBuiltinMapMutationBinding(*binding) &&
+              isBuiltinKeyValueMutationBinding(*binding) &&
               isBuiltinCanonicalMapConstructorExpr(
                   stmt.args.front(),
                   definitionMap,
