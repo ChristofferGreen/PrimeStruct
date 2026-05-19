@@ -522,25 +522,25 @@ bool SemanticsValidator::validateExprLateMapAccessBuiltins(
       return failLateKeyValueAccessDiagnostic(
           "unknown call target: " + canonicalKeyValueHelperPathLocal(builtinName));
     }
-    std::string mapKeyType;
-    if (rootMapConstructorKeyType(receiverExpr, mapKeyType) ||
-        resolveMapKeyTypeWithInference(receiverExpr, mapKeyType)) {
-      if (!mapKeyType.empty()) {
-        if (normalizeBindingTypeName(mapKeyType) == "string") {
+    std::string keyValueKeyType;
+    if (rootMapConstructorKeyType(receiverExpr, keyValueKeyType) ||
+        resolveMapKeyTypeWithInference(receiverExpr, keyValueKeyType)) {
+      if (!keyValueKeyType.empty()) {
+        if (normalizeBindingTypeName(keyValueKeyType) == "string") {
           if (!this->isStringExprForArgumentValidation(keyExpr,
                                                        *context.dispatchResolvers)) {
-            return failLateKeyValueAccessKeyMismatch(builtinName, mapKeyType, receiverExpr);
+            return failLateKeyValueAccessKeyMismatch(builtinName, keyValueKeyType, receiverExpr);
           }
         } else {
           ReturnKind keyKind =
-              returnKindForTypeName(normalizeBindingTypeName(mapKeyType));
+              returnKindForTypeName(normalizeBindingTypeName(keyValueKeyType));
           if (keyKind != ReturnKind::Unknown) {
             if (context.dispatchResolvers->resolveStringTarget(keyExpr)) {
-              return failLateKeyValueAccessKeyMismatch(builtinName, mapKeyType, receiverExpr);
+              return failLateKeyValueAccessKeyMismatch(builtinName, keyValueKeyType, receiverExpr);
             }
             ReturnKind indexKind = inferExprReturnKind(keyExpr, params, locals);
             if (indexKind != ReturnKind::Unknown && indexKind != keyKind) {
-              return failLateKeyValueAccessKeyMismatch(builtinName, mapKeyType, receiverExpr);
+              return failLateKeyValueAccessKeyMismatch(builtinName, keyValueKeyType, receiverExpr);
             }
           }
         }

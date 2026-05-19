@@ -99,6 +99,7 @@ This file stores durable session-derived facts that are useful in later work. Ke
   too; late access contains key/value locals should use key/value names
   too; late visible-access key/value locals should use key/value names
   too; late tryAt key locals should use key/value names
+  too; late bare access key locals should use key/value names
   too.
   The stdlib ownership source lock rejects the old map-helper, map-count,
   map-access, and removed map compatibility names.
