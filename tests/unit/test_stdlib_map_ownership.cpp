@@ -4168,6 +4168,18 @@ TEST_CASE("canonical map surface owns standalone stdlib implementation") {
         std::string::npos);
   CHECK(semanticsResultHelpersSource.find("resolveMapReceiverTypeText") ==
         std::string::npos);
+  CHECK(semanticsResultHelpersSource.find("mapValueRoot") ==
+        std::string::npos);
+  CHECK(semanticsResultHelpersSource.find("resolveBuiltinMapResultType") ==
+        std::string::npos);
+  CHECK(semanticsResultHelpersSource.find("leftMapValueIdentity") ==
+        std::string::npos);
+  CHECK(semanticsResultHelpersSource.find("keyValueRoot") !=
+        std::string::npos);
+  CHECK(semanticsResultHelpersSource.find("resolveBuiltinKeyValueResultType") !=
+        std::string::npos);
+  CHECK(semanticsResultHelpersSource.find("leftKeyValueIdentity") !=
+        std::string::npos);
   CHECK(statementReturnsSource.find("unknown method: /map/at") ==
         std::string::npos);
   CHECK(statementReturnsSource.find("unknown method: /map/at_ref") ==

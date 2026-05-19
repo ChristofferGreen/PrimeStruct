@@ -65,9 +65,9 @@ std::string canonicalMapValueIdentity(const std::string &typeText) {
   if (!normalized.empty() && normalized.front() != '/') {
     normalized.insert(normalized.begin(), '/');
   }
-  const std::string mapValueRoot = collectionTypePathLocal("map", "MapValue");
-  if (normalized == mapValueRoot ||
-      normalized.rfind(mapValueRoot + "__", 0) == 0) {
+  const std::string keyValueRoot = collectionTypePathLocal("map", "MapValue");
+  if (normalized == keyValueRoot ||
+      normalized.rfind(keyValueRoot + "__", 0) == 0) {
     return stripWhitespace(std::move(normalized));
   }
 
@@ -91,7 +91,7 @@ std::string canonicalMapValueIdentity(const std::string &typeText) {
   }
 
   std::ostringstream out;
-  out << mapValueRoot << "__t" << std::hex << fnv1a64(canonicalArgs.str());
+  out << keyValueRoot << "__t" << std::hex << fnv1a64(canonicalArgs.str());
   return out.str();
 }
 
@@ -326,7 +326,7 @@ bool SemanticsValidator::resolveResultTypeForExpr(const Expr &expr,
     }
     return false;
   };
-  auto resolveBuiltinMapResultType = [&](const std::string &typeText) -> bool {
+  auto resolveBuiltinKeyValueResultType = [&](const std::string &typeText) -> bool {
     const std::string normalizedTypeText = normalizeBindingTypeName(unwrapReferencePointerTypeText(typeText));
     std::string base;
     std::string argText;
@@ -962,7 +962,7 @@ bool SemanticsValidator::resolveResultTypeForExpr(const Expr &expr,
     if (expr.name == "tryAt" && !expr.args.empty()) {
       std::string receiverTypeText;
       if (resolveKeyValueReceiverTypeText(expr.args.front(), receiverTypeText) &&
-          resolveBuiltinMapResultType(receiverTypeText)) {
+          resolveBuiltinKeyValueResultType(receiverTypeText)) {
         return true;
       }
     }
@@ -986,7 +986,7 @@ bool SemanticsValidator::resolveResultTypeForExpr(const Expr &expr,
       }
       std::string receiverTypeText;
       if (resolveKeyValueReceiverTypeText(*receiverExpr, receiverTypeText) &&
-          resolveBuiltinMapResultType(receiverTypeText)) {
+          resolveBuiltinKeyValueResultType(receiverTypeText)) {
         return true;
       }
     }
@@ -1037,10 +1037,10 @@ bool SemanticsValidator::errorTypesMatch(const std::string &left,
   if (normalizedLeft == normalizedRight) {
     return true;
   }
-  const std::string leftMapValueIdentity =
+  const std::string leftKeyValueIdentity =
       canonicalMapValueIdentity(normalizedLeft);
-  if (!leftMapValueIdentity.empty() &&
-      leftMapValueIdentity == canonicalMapValueIdentity(normalizedRight)) {
+  if (!leftKeyValueIdentity.empty() &&
+      leftKeyValueIdentity == canonicalMapValueIdentity(normalizedRight)) {
     return true;
   }
   auto isUnresolvedRelativeRootMatch = [&](const std::string &rawRelative,
