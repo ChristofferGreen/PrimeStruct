@@ -495,11 +495,11 @@ ReturnKind SemanticsValidator::inferPreDispatchCallReturnKind(
           return finish(builtinMethodKind);
         }
       }
-      std::string builtinMapKeyType;
-      std::string builtinMapValueType;
+      std::string builtinKeyValueKeyType;
+      std::string builtinKeyValueValueType;
       if (isMissingStdlibMapMethodDefinition(logicalMethodResolved) &&
           !hasDefinitionPath(logicalMethodResolved) &&
-          !resolveMapTarget(expr.args.front(), builtinMapKeyType, builtinMapValueType)) {
+          !resolveMapTarget(expr.args.front(), builtinKeyValueKeyType, builtinKeyValueValueType)) {
         return failInferPreDispatchDiagnostic(
             soaUnavailableMethodDiagnostic(methodResolved));
       }
