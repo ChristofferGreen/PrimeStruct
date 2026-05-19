@@ -219,6 +219,9 @@ TEST_CASE("canonical map surface owns standalone stdlib implementation") {
   const std::string inferCollectionDispatchSource =
       readText(repoRoot() / "src" / "semantics" /
                "SemanticsValidatorInferCollectionDispatch.cpp");
+  const std::string inferCollectionCallResolutionSource =
+      readText(repoRoot() / "src" / "semantics" /
+               "SemanticsValidatorInferCollectionCallResolution.cpp");
   const std::string inferCollectionCompatibilitySource =
       readText(repoRoot() / "src" / "semantics" /
                "SemanticsValidatorInferCollectionCompatibility.cpp");
@@ -445,6 +448,7 @@ TEST_CASE("canonical map surface owns standalone stdlib implementation") {
   REQUIRE(!buildReturnKindsSource.empty());
   REQUIRE(!buildInitializerInferenceSource.empty());
   REQUIRE(!inferCollectionDispatchSource.empty());
+  REQUIRE(!inferCollectionCallResolutionSource.empty());
   REQUIRE(!inferCollectionCompatibilitySource.empty());
   REQUIRE(!inferCollectionDispatchSetupSource.empty());
   REQUIRE(!inferCollectionReturnInferenceSource.empty());
@@ -1685,6 +1689,14 @@ TEST_CASE("canonical map surface owns standalone stdlib implementation") {
   CHECK(exprDispatchBootstrapSource.find("isRootMapAliasPath") ==
         std::string::npos);
   CHECK(exprDispatchBootstrapSource.find("isRootKeyValueAliasPath") !=
+        std::string::npos);
+  CHECK(inferCollectionCallResolutionSource.find("isRootMapAliasPath") ==
+        std::string::npos);
+  CHECK(inferCollectionCallResolutionSource.find("isRootKeyValueAliasPath") !=
+        std::string::npos);
+  CHECK(inferCollectionCallResolutionSource.find("targetIsRootMapAlias") ==
+        std::string::npos);
+  CHECK(inferCollectionCallResolutionSource.find("targetIsRootKeyValueAlias") !=
         std::string::npos);
   CHECK(exprVectorHelpersSource.find("keyValueHelperName") !=
         std::string::npos);

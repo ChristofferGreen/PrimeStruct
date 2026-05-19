@@ -268,7 +268,7 @@ bool SemanticsValidator::resolveCallCollectionTemplateArgs(const Expr &target,
                                      : binding.typeName + "<" + binding.typeTemplateArg + ">";
     return extractCollectionArgsFromType(typeText, extractCollectionArgsFromType);
   };
-  auto isRootMapAliasPath = [](const std::string &path) {
+  auto isRootKeyValueAliasPath = [](const std::string &path) {
     return path == "/map" ||
            path.rfind("/map__t", 0) == 0 ||
            path.rfind("/map__ov", 0) == 0;
@@ -284,14 +284,15 @@ bool SemanticsValidator::resolveCallCollectionTemplateArgs(const Expr &target,
 
   const std::string resolvedTarget = resolvedCallPath(target);
   const std::string explicitTarget = explicitCallPath(target);
-  const bool targetIsRootMapAlias =
-      isRootMapAliasPath(resolvedTarget) || isRootMapAliasPath(explicitTarget);
+  const bool targetIsRootKeyValueAlias =
+      isRootKeyValueAliasPath(resolvedTarget) ||
+      isRootKeyValueAliasPath(explicitTarget);
   std::string collectionName;
   if (!inferredNonCollectionTargetType &&
       getBuiltinCollectionName(target, collectionName) && collectionName == expectedBase) {
     const size_t expectedArgCount = expectedBase == "map" ? 2u : 1u;
     if (target.templateArgs.size() == expectedArgCount &&
-        (expectedBase != "map" || !targetIsRootMapAlias)) {
+        (expectedBase != "map" || !targetIsRootKeyValueAlias)) {
       argsOut = target.templateArgs;
       return true;
     }
@@ -308,7 +309,7 @@ bool SemanticsValidator::resolveCallCollectionTemplateArgs(const Expr &target,
   }
 
   if (expectedBase == "map" &&
-      !targetIsRootMapAlias &&
+      !targetIsRootKeyValueAlias &&
       (isDirectMapConstructorPath(resolvedTarget) ||
        isDirectMapConstructorPath(explicitTarget)) &&
       target.templateArgs.size() == 2) {
@@ -316,7 +317,7 @@ bool SemanticsValidator::resolveCallCollectionTemplateArgs(const Expr &target,
     return true;
   }
   if (expectedBase == "map" &&
-      !targetIsRootMapAlias &&
+      !targetIsRootKeyValueAlias &&
       (isDirectMapConstructorPath(resolvedTarget) ||
        isDirectMapConstructorPath(explicitTarget)) &&
       target.templateArgs.empty() && !target.args.empty() &&
