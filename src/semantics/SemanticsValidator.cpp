@@ -29,7 +29,7 @@ namespace primec::semantics {
 
 namespace {
 
-bool isSlashlessMapHelperName(std::string_view name) {
+bool isSlashlessKeyValueHelperName(std::string_view name) {
   std::string normalizedName(name);
   if (!normalizedName.empty() && normalizedName.front() == '/') {
     normalizedName.erase(normalizedName.begin());
@@ -204,7 +204,7 @@ void SemanticsValidator::bumpLocalBindingMemoRevision(const void *localsIdentity
 }
 
 std::string SemanticsValidator::formatUnknownCallTarget(const Expr &expr) const {
-  if (!isSlashlessMapHelperName(expr.name)) {
+  if (!isSlashlessKeyValueHelperName(expr.name)) {
     return expr.name;
   }
   const std::string resolved = resolveCalleePath(expr);

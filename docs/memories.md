@@ -191,7 +191,8 @@ This file stores durable session-derived facts that are useful in later work. Ke
   key-type resolver helpers should use key/value names too; backing
   field-extractor helpers should use key/value names too; infer-time target
   resolver helpers should use key/value names too; borrowed and non-borrowed
-  semantic-validate value method helpers should use key/value names too.
+  semantic-validate value method helpers should use key/value names too;
+  slashless semantic diagnostic helpers should use key/value names too.
   The stdlib ownership source lock rejects the old map-helper, map-count,
   map-access, and removed map compatibility names.
 

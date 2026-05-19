@@ -751,6 +751,10 @@ TEST_CASE("canonical map surface owns standalone stdlib implementation") {
   CHECK(validatorSource.find(
             "metadataBackedMapHelperMethodName(normalizedName)") !=
         std::string::npos);
+  CHECK(validatorSource.find("isSlashlessMapHelperName") ==
+        std::string::npos);
+  CHECK(validatorSource.find("isSlashlessKeyValueHelperName") !=
+        std::string::npos);
   CHECK(validatorSource.find("const std::string mapHelperName") ==
         std::string::npos);
   CHECK(validatorSource.find("const std::string keyValueHelperName") !=
