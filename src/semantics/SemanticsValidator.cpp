@@ -216,13 +216,13 @@ std::string SemanticsValidator::diagnosticCallTargetPath(const std::string &path
     return path;
   }
   const std::string keyValueHelperName = metadataBackedMapHelperMethodName(path);
-  const size_t mapTemplateSuffix = keyValueHelperName.find("__t");
-  if (mapTemplateSuffix != std::string::npos &&
-      keyValueHelperName.substr(0, mapTemplateSuffix) == "count") {
-    const std::string canonicalMapCount =
+  const size_t keyValueTemplateSuffix = keyValueHelperName.find("__t");
+  if (keyValueTemplateSuffix != std::string::npos &&
+      keyValueHelperName.substr(0, keyValueTemplateSuffix) == "count") {
+    const std::string canonicalKeyValueCount =
         metadataBackedCanonicalMapHelperPath("count");
-    if (!canonicalMapCount.empty()) {
-      return canonicalMapCount;
+    if (!canonicalKeyValueCount.empty()) {
+      return canonicalKeyValueCount;
     }
   }
   const size_t lastSlash = path.find_last_of('/');
