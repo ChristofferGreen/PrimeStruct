@@ -893,13 +893,14 @@ bool SemanticsValidator::inferCallInitializerBinding(const Expr &initializer,
         bindingOut = std::move(resolvedCallBinding);
         return true;
       }
-      std::vector<std::string> mapArgs;
+      std::vector<std::string> keyValueArgs;
       const std::string keyValueAlias = mapCollectionAliasToken();
       if (!keyValueAlias.empty() &&
-          resolveCallCollectionTemplateArgs(*initializerExprForInference, keyValueAlias, params, locals, mapArgs) &&
-          mapArgs.size() == 2) {
+          resolveCallCollectionTemplateArgs(
+              *initializerExprForInference, keyValueAlias, params, locals, keyValueArgs) &&
+          keyValueArgs.size() == 2) {
         bindingOut.typeName = "Map";
-        bindingOut.typeTemplateArg = joinTemplateArgs(mapArgs);
+        bindingOut.typeTemplateArg = joinTemplateArgs(keyValueArgs);
         return true;
       }
     }
