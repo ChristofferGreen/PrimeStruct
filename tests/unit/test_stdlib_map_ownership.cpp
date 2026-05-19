@@ -2939,7 +2939,21 @@ TEST_CASE("canonical map surface owns standalone stdlib implementation") {
         std::string::npos);
   CHECK(statementSource.find("mapCollectionAliasTokenForStatementValidation()") !=
         std::string::npos);
-  CHECK(statementSource.find("base == mapCollectionAlias") !=
+  CHECK(statementSource.find("base == mapCollectionAlias") ==
+        std::string::npos);
+  CHECK(statementSource.find("base == keyValueCollectionAlias") !=
+        std::string::npos);
+  CHECK(statementSource.find("extractMapArgsFromAnyType") ==
+        std::string::npos);
+  CHECK(statementSource.find("extractKeyValueArgsFromAnyType") !=
+        std::string::npos);
+  CHECK(statementSource.find("expectedMapKeyType") ==
+        std::string::npos);
+  CHECK(statementSource.find("expectedMapValueType") ==
+        std::string::npos);
+  CHECK(statementSource.find("expectedKeyValueKeyType") !=
+        std::string::npos);
+  CHECK(statementSource.find("expectedKeyValueValueType") !=
         std::string::npos);
   CHECK(statementSource.find("actualKeyValueKeyType") !=
         std::string::npos);

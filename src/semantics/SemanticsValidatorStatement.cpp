@@ -156,11 +156,11 @@ bool SemanticsValidator::validateStatement(const std::vector<ParameterInfo> &par
         }
         return text.substr(start, end - start);
       };
-      const std::string mapCollectionAlias =
+      const std::string keyValueCollectionAlias =
           mapCollectionAliasTokenForStatementValidation();
       auto isBuiltinTemplateBase = [&](const std::string &base) -> bool {
         return base == "array" || base == "vector" ||
-               (!mapCollectionAlias.empty() && base == mapCollectionAlias) ||
+               (!keyValueCollectionAlias.empty() && base == keyValueCollectionAlias) ||
                base == "Result" ||
                base == "Pointer" || base == "Reference" ||
                base == "Buffer" || base == "uninitialized";
@@ -169,9 +169,9 @@ bool SemanticsValidator::validateStatement(const std::vector<ParameterInfo> &par
       typesMatch = [&](const std::string &expected, const std::string &actual) -> bool {
         std::string expectedTrim = trimType(expected);
         std::string actualTrim = trimType(actual);
-        auto extractMapArgsFromAnyType = [&](const std::string &typeText,
-                                             std::string &keyTypeOut,
-                                             std::string &valueTypeOut) -> bool {
+        auto extractKeyValueArgsFromAnyType = [&](const std::string &typeText,
+                                                  std::string &keyTypeOut,
+                                                  std::string &valueTypeOut) -> bool {
           keyTypeOut.clear();
           valueTypeOut.clear();
           const std::string normalizedType = normalizeBindingTypeName(typeText);
@@ -189,14 +189,14 @@ bool SemanticsValidator::validateStatement(const std::vector<ParameterInfo> &par
                                                                                        keyTypeOut,
                                                                                        valueTypeOut);
         };
-        std::string expectedMapKeyType;
-        std::string expectedMapValueType;
+        std::string expectedKeyValueKeyType;
+        std::string expectedKeyValueValueType;
         std::string actualKeyValueKeyType;
         std::string actualKeyValueValueType;
-        if (extractMapArgsFromAnyType(expectedTrim, expectedMapKeyType, expectedMapValueType) &&
-            extractMapArgsFromAnyType(actualTrim, actualKeyValueKeyType, actualKeyValueValueType)) {
-          return typesMatch(expectedMapKeyType, actualKeyValueKeyType) &&
-                 typesMatch(expectedMapValueType, actualKeyValueValueType);
+        if (extractKeyValueArgsFromAnyType(expectedTrim, expectedKeyValueKeyType, expectedKeyValueValueType) &&
+            extractKeyValueArgsFromAnyType(actualTrim, actualKeyValueKeyType, actualKeyValueValueType)) {
+          return typesMatch(expectedKeyValueKeyType, actualKeyValueKeyType) &&
+                 typesMatch(expectedKeyValueValueType, actualKeyValueValueType);
         }
         std::string expectedBase;
         std::string expectedArg;
