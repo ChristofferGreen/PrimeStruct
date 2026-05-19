@@ -425,7 +425,7 @@ bool SemanticsValidator::validateExprCollectionAccessFallbacks(
     }
     std::string experimentalKeyValueKeyType;
     std::string experimentalKeyValueValueType;
-    auto isRootMapAliasPath = [](const std::string &path) {
+    auto isRootKeyValueAliasPath = [](const std::string &path) {
       return path == "/map" || path.rfind("/map__", 0) == 0;
     };
     auto explicitCallPath = [](const Expr &candidate) {
@@ -437,14 +437,14 @@ bool SemanticsValidator::validateExprCollectionAccessFallbacks(
       }
       return candidate.namespacePrefix + "/" + candidate.name;
     };
-    auto isRootMapAliasExpr = [&](const Expr &candidate) {
+    auto isRootKeyValueAliasExpr = [&](const Expr &candidate) {
       return candidate.kind == Expr::Kind::Call &&
-             (isRootMapAliasPath(resolveCalleePath(candidate)) ||
-              isRootMapAliasPath(explicitCallPath(candidate)));
+             (isRootKeyValueAliasPath(resolveCalleePath(candidate)) ||
+              isRootKeyValueAliasPath(explicitCallPath(candidate)));
     };
     auto resolvesNonRootExperimentalKeyValueTarget =
         [&](const Expr &candidate) {
-          return !isRootMapAliasExpr(candidate) &&
+          return !isRootKeyValueAliasExpr(candidate) &&
                  context.resolveExperimentalMapTarget(
                      candidate, experimentalKeyValueKeyType,
                      experimentalKeyValueValueType);
@@ -459,8 +459,8 @@ bool SemanticsValidator::validateExprCollectionAccessFallbacks(
       return failCollectionAccessDiagnostic(
           "unknown call target: " + canonicalKeyValueHelperPathLocal(builtinName));
     }
-    auto isExperimentalMapTypeReceiver = [&](const Expr &candidate) {
-      if (isRootMapAliasExpr(candidate)) {
+    auto isExperimentalKeyValueTypeReceiver = [&](const Expr &candidate) {
+      if (isRootKeyValueAliasExpr(candidate)) {
         return false;
       }
       std::string receiverTypeText;
@@ -468,8 +468,8 @@ bool SemanticsValidator::validateExprCollectionAccessFallbacks(
              isExperimentalMapTypeText(receiverTypeText);
     };
     if (isUnqualifiedAccessCall &&
-        (isExperimentalMapTypeReceiver(expr.args.front()) ||
-         isExperimentalMapTypeReceiver(expr.args[1]))) {
+        (isExperimentalKeyValueTypeReceiver(expr.args.front()) ||
+         isExperimentalKeyValueTypeReceiver(expr.args[1]))) {
       handledOut = true;
       return failCollectionAccessDiagnostic(
           "unknown call target: " + canonicalKeyValueHelperPathLocal(builtinName));
@@ -593,8 +593,8 @@ bool SemanticsValidator::validateExprCollectionAccessFallbacks(
     if (!isKeyValue && !isExperimentalKeyValue) {
       std::string receiverTypeText;
       if (!(receiverExpr.kind == Expr::Kind::Call &&
-            (isRootMapAliasPath(resolveCalleePath(receiverExpr)) ||
-             isRootMapAliasPath(explicitCallPath(receiverExpr)))) &&
+            (isRootKeyValueAliasPath(resolveCalleePath(receiverExpr)) ||
+             isRootKeyValueAliasPath(explicitCallPath(receiverExpr)))) &&
           inferQueryExprTypeText(receiverExpr, params, locals, receiverTypeText) &&
           extractMapKeyValueTypesFromTypeText(receiverTypeText, keyValueKeyType, keyValueValueType)) {
         const bool isExperimentalKeyValueType = isExperimentalMapTypeText(receiverTypeText);
