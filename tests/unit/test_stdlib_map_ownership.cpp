@@ -3885,6 +3885,10 @@ TEST_CASE("canonical map surface owns standalone stdlib implementation") {
         std::string::npos);
   CHECK(lowerStatementsExprSource.find("isExplicitCanonicalMapAccess") ==
         std::string::npos);
+  CHECK(lowerStatementsExprSource.find("isExperimentalMapTarget") ==
+        std::string::npos);
+  CHECK(lowerStatementsExprSource.find("isExperimentalKeyValueTarget") !=
+        std::string::npos);
   CHECK(lowerStatementsExprSource.find("resolvedKeyValueInsertHelperName") !=
         std::string::npos);
   CHECK(lowerStatementsExprSource.find("resolvedMapInsertHelperName") ==

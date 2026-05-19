@@ -906,7 +906,7 @@
               const std::string structPath = inferStructExprPath(targetExpr, targetLocals);
               const bool isExperimentalVectorTarget =
                   isExperimentalVectorTypePath(structPath);
-              const bool isExperimentalMapTarget =
+              const bool isExperimentalKeyValueTarget =
                   structPath == experimentalCollectionTypePath("map", "Map") ||
                   matchesGeneratedSpecializedType(structPath, "map", "Map");
               const bool isExperimentalSoaVectorTarget =
@@ -915,7 +915,7 @@
               return targetInfo.isArrayOrVectorTarget || structPath == "/array" ||
                      structPath == "/vector" || structPath == "/Buffer" || structPath == "/map" ||
                      structPath == "/soa" "_vector" || isExperimentalVectorTarget ||
-                     isExperimentalMapTarget || isExperimentalSoaVectorTarget;
+                     isExperimentalKeyValueTarget || isExperimentalSoaVectorTarget;
             },
             [&](const Expr &targetExpr, const LocalMap &targetLocals) {
               const auto targetInfo =
