@@ -627,7 +627,7 @@ std::string SemanticsValidator::keyValueNamespacedMethodCompatibilityPath(
   }
   const BuiltinCollectionDispatchResolvers dispatchResolvers =
       makeBuiltinCollectionDispatchResolvers(params, locals, adapters);
-  auto resolveAnyMapTarget = [&](const Expr &target) {
+  auto resolveAnyKeyValueTarget = [&](const Expr &target) {
     std::string keyType;
     std::string valueType;
     return dispatchResolvers.resolveMapTarget(target, keyType, valueType) ||
@@ -640,7 +640,7 @@ std::string SemanticsValidator::keyValueNamespacedMethodCompatibilityPath(
   if (hasExplicitDefinitionFamilyPath(program_, defMap_, removedPath)) {
     return "";
   }
-  if (!resolveAnyMapTarget(candidate.args.front())) {
+  if (!resolveAnyKeyValueTarget(candidate.args.front())) {
     return "";
   }
   return removedPath;
@@ -656,7 +656,7 @@ std::string SemanticsValidator::directKeyValueHelperCompatibilityPath(
   }
   const BuiltinCollectionDispatchResolvers dispatchResolvers =
       makeBuiltinCollectionDispatchResolvers(params, locals, adapters);
-  auto resolveAnyMapTarget = [&](const Expr &target) {
+  auto resolveAnyKeyValueTarget = [&](const Expr &target) {
     std::string keyType;
     std::string valueType;
     return dispatchResolvers.resolveMapTarget(target, keyType, valueType) ||
@@ -764,7 +764,7 @@ std::string SemanticsValidator::directKeyValueHelperCompatibilityPath(
   auto hasKeyValueReceiver = [&]() {
     const size_t receiverIndex = resolveReceiverIndex();
     return receiverIndex < candidate.args.size() &&
-           resolveAnyMapTarget(candidate.args[receiverIndex]);
+           resolveAnyKeyValueTarget(candidate.args[receiverIndex]);
   };
   if (resolvedBareKeyValueHelper) {
     if (hasKeyValueReceiver() &&
@@ -778,7 +778,7 @@ std::string SemanticsValidator::directKeyValueHelperCompatibilityPath(
     return removedPath;
   }
   const size_t receiverIndex = resolveReceiverIndex();
-  if (receiverIndex >= candidate.args.size() || !resolveAnyMapTarget(candidate.args[receiverIndex])) {
+  if (receiverIndex >= candidate.args.size() || !resolveAnyKeyValueTarget(candidate.args[receiverIndex])) {
     return "";
   }
   return removedPath;
@@ -984,7 +984,7 @@ bool SemanticsValidator::isUnnamespacedMapCountBuiltinFallbackCall(
     const BuiltinCollectionDispatchResolverAdapters &adapters) {
   const BuiltinCollectionDispatchResolvers dispatchResolvers =
       makeBuiltinCollectionDispatchResolvers(params, locals, adapters);
-  auto resolveAnyMapTarget = [&](const Expr &target) {
+  auto resolveAnyKeyValueTarget = [&](const Expr &target) {
     std::string keyType;
     std::string valueType;
     return dispatchResolvers.resolveMapTarget(target, keyType, valueType) ||
@@ -1023,7 +1023,7 @@ bool SemanticsValidator::isUnnamespacedMapCountBuiltinFallbackCall(
   if (receiverIndex >= candidate.args.size()) {
     return false;
   }
-  return resolveAnyMapTarget(candidate.args[receiverIndex]);
+  return resolveAnyKeyValueTarget(candidate.args[receiverIndex]);
 }
 
 bool SemanticsValidator::resolveRemovedMapBodyArgumentTarget(const Expr &candidate,
@@ -1035,7 +1035,7 @@ bool SemanticsValidator::resolveRemovedMapBodyArgumentTarget(const Expr &candida
   targetPathOut.clear();
   const BuiltinCollectionDispatchResolvers dispatchResolvers =
       makeBuiltinCollectionDispatchResolvers(params, locals, adapters);
-  auto resolveAnyMapTarget = [&](const Expr &target) {
+  auto resolveAnyKeyValueTarget = [&](const Expr &target) {
     std::string keyType;
     std::string valueType;
     return dispatchResolvers.resolveMapTarget(target, keyType, valueType) ||
@@ -1067,7 +1067,7 @@ bool SemanticsValidator::resolveRemovedMapBodyArgumentTarget(const Expr &candida
       if (index >= candidate.args.size()) {
         return false;
       }
-      if (!resolveAnyMapTarget(candidate.args[index])) {
+      if (!resolveAnyKeyValueTarget(candidate.args[index])) {
         return false;
       }
       targetPathOut = preferredRemovedKeyValueHelperPath(helperName);
@@ -1137,7 +1137,7 @@ bool SemanticsValidator::resolveRemovedMapBodyArgumentTarget(const Expr &candida
     return false;
   };
 
-  if (!(resolveAnyMapTarget(candidate.args.front()) || isWrappedKeyValueReceiverCall(candidate.args.front()))) {
+  if (!(resolveAnyKeyValueTarget(candidate.args.front()) || isWrappedKeyValueReceiverCall(candidate.args.front()))) {
     return false;
   }
 
