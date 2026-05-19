@@ -157,6 +157,12 @@ TEST_CASE("canonical map surface owns standalone stdlib implementation") {
   const std::string templateFallbackTypeInferenceSource =
       readText(repoRoot() / "src" / "semantics" /
                "TemplateMonomorphFallbackTypeInference.h");
+  const std::string templateReturnSetupSource =
+      readText(repoRoot() / "src" / "semantics" /
+               "TemplateMonomorphExperimentalCollectionReturnSetup.h");
+  const std::string templateReturnOrchestrationSource =
+      readText(repoRoot() / "src" / "semantics" /
+               "TemplateMonomorphDefinitionReturnOrchestration.h");
   const std::string templateTypeResolutionSource =
       readText(repoRoot() / "src" / "semantics" /
                "TemplateMonomorphTypeResolution.h");
@@ -435,6 +441,8 @@ TEST_CASE("canonical map surface owns standalone stdlib implementation") {
   REQUIRE(!templateReceiverSource.empty());
   REQUIRE(!templateExpressionRewriteSource.empty());
   REQUIRE(!templateFallbackTypeInferenceSource.empty());
+  REQUIRE(!templateReturnSetupSource.empty());
+  REQUIRE(!templateReturnOrchestrationSource.empty());
   REQUIRE(!templateTypeResolutionSource.empty());
   REQUIRE(!templateBindingCallInferenceSource.empty());
   REQUIRE(!templateConstructorRewriteSource.empty());
@@ -1404,6 +1412,22 @@ TEST_CASE("canonical map surface owns standalone stdlib implementation") {
   CHECK(templateFallbackTypeInferenceSource.find(
             "resolvesExperimentalKeyValueTypeText") != std::string::npos);
   CHECK(templateFallbackTypeInferenceSource.find("mapCollectionAliasToken()") !=
+        std::string::npos);
+  CHECK(templateReturnSetupSource.find("expectedExperimentalMapReturn") ==
+        std::string::npos);
+  CHECK(templateReturnSetupSource.find("expectedExperimentalKeyValueReturn") !=
+        std::string::npos);
+  CHECK(templateReturnOrchestrationSource.find("RewriteMapFn") ==
+        std::string::npos);
+  CHECK(templateReturnOrchestrationSource.find("rewriteMapReturn") ==
+        std::string::npos);
+  CHECK(templateReturnOrchestrationSource.find("expectedExperimentalMapReturn") ==
+        std::string::npos);
+  CHECK(templateReturnOrchestrationSource.find("RewriteKeyValueFn") !=
+        std::string::npos);
+  CHECK(templateReturnOrchestrationSource.find("rewriteKeyValueReturn") !=
+        std::string::npos);
+  CHECK(templateReturnOrchestrationSource.find("expectedExperimentalKeyValueReturn") !=
         std::string::npos);
   CHECK(templateFallbackTypeInferenceSource.find(
             "const std::string mapCollectionAlias") == std::string::npos);

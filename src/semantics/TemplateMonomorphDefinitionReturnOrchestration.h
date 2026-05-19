@@ -6,11 +6,11 @@ bool isDefinitionReturnPathStatement(const Expr &stmt,
   return isReturnCall(stmt) || (!selection.sawExplicitReturn && stmtIndex == selection.implicitReturnStmtIndex);
 }
 
-template <typename RewriteVectorFn, typename RewriteMapFn>
+template <typename RewriteVectorFn, typename RewriteKeyValueFn>
 bool rewriteDefinitionReturnConstructors(Expr &expr,
                                          const ExperimentalCollectionReturnRewritePlan &plan,
                                          RewriteVectorFn &&rewriteVectorReturn,
-                                         RewriteMapFn &&rewriteMapReturn,
+                                         RewriteKeyValueFn &&rewriteKeyValueReturn,
                                          std::string &error) {
   if (plan.expectedExperimentalVectorReturn) {
     rewriteVectorReturn(expr);
@@ -18,8 +18,8 @@ bool rewriteDefinitionReturnConstructors(Expr &expr,
       return false;
     }
   }
-  if (plan.expectedExperimentalMapReturn) {
-    rewriteMapReturn(expr);
+  if (plan.expectedExperimentalKeyValueReturn) {
+    rewriteKeyValueReturn(expr);
     if (!error.empty()) {
       return false;
     }

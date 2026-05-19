@@ -3,7 +3,7 @@
 struct ExperimentalCollectionReturnRewritePlan {
   bool hasExplicitNonAutoReturn = false;
   bool expectedExperimentalVectorReturn = false;
-  bool expectedExperimentalMapReturn = false;
+  bool expectedExperimentalKeyValueReturn = false;
 };
 
 ExperimentalCollectionReturnRewritePlan inferExperimentalCollectionReturnRewritePlan(
@@ -25,11 +25,11 @@ ExperimentalCollectionReturnRewritePlan inferExperimentalCollectionReturnRewrite
     }
     if (resolvesExperimentalKeyValueTypeText(
             transform.templateArgs.front(), mapping, allowedParams, def.namespacePrefix, ctx)) {
-      plan.expectedExperimentalMapReturn = true;
+      plan.expectedExperimentalKeyValueReturn = true;
     }
   }
 
-  if (!plan.expectedExperimentalVectorReturn && !plan.expectedExperimentalMapReturn &&
+  if (!plan.expectedExperimentalVectorReturn && !plan.expectedExperimentalKeyValueReturn &&
       !plan.hasExplicitNonAutoReturn) {
     BindingInfo inferredReturnInfo;
     if (inferDefinitionReturnBindingForTemplatedFallback(def, allowMathBare, ctx, inferredReturnInfo)) {
@@ -38,7 +38,7 @@ ExperimentalCollectionReturnRewritePlan inferExperimentalCollectionReturnRewrite
         inferredReturnType += "<" + inferredReturnInfo.typeTemplateArg + ">";
       }
       plan.expectedExperimentalVectorReturn = resolvesExperimentalVectorValueTypeText(inferredReturnType);
-      plan.expectedExperimentalMapReturn = resolvesExperimentalKeyValueTypeText(
+      plan.expectedExperimentalKeyValueReturn = resolvesExperimentalKeyValueTypeText(
           inferredReturnType, mapping, allowedParams, def.namespacePrefix, ctx);
     }
   }
