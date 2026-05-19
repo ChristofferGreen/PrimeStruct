@@ -282,6 +282,12 @@ TEST_CASE("canonical map surface owns standalone stdlib implementation") {
   const std::string statementSource =
       readText(repoRoot() / "src" / "semantics" /
                "SemanticsValidatorStatement.cpp");
+  const std::string statementContainerHelpersSource =
+      readText(repoRoot() / "src" / "semantics" /
+               "SemanticsValidatorStatementContainerHelpers.cpp");
+  const std::string buildDirectCallBindingSource =
+      readText(repoRoot() / "src" / "semantics" /
+               "SemanticsValidatorBuildDirectCallBinding.cpp");
   const std::string argumentValidationSource =
       readText(repoRoot() / "src" / "semantics" /
                "SemanticsValidatorExprArgumentValidation.cpp");
@@ -471,6 +477,8 @@ TEST_CASE("canonical map surface owns standalone stdlib implementation") {
   REQUIRE(!exprBodyArgumentsSource.empty());
   REQUIRE(!scalarPointerMemorySource.empty());
   REQUIRE(!statementSource.empty());
+  REQUIRE(!statementContainerHelpersSource.empty());
+  REQUIRE(!buildDirectCallBindingSource.empty());
   REQUIRE(!argumentValidationSource.empty());
   REQUIRE(!resolvedCallArgumentsSource.empty());
   REQUIRE(!argumentValidationCollectionsSource.empty());
@@ -3254,6 +3262,14 @@ TEST_CASE("canonical map surface owns standalone stdlib implementation") {
         std::string::npos);
   CHECK(statementSource.find("actualMapValueType") ==
         std::string::npos);
+  CHECK(statementContainerHelpersSource.find("isExperimentalMapBackingStructPath") ==
+        std::string::npos);
+  CHECK(statementContainerHelpersSource.find(
+            "isExperimentalKeyValueBackingStructPath") != std::string::npos);
+  CHECK(buildDirectCallBindingSource.find("isExperimentalMapBackingReturnStruct") ==
+        std::string::npos);
+  CHECK(buildDirectCallBindingSource.find(
+            "isExperimentalKeyValueBackingReturnStruct") != std::string::npos);
   CHECK(argumentValidationSource.find("normalizedBase == \"std/collections/map\"") ==
         std::string::npos);
   CHECK(argumentValidationSource.find("diagnosticResolved != \"/std/collections/map/at\"") ==

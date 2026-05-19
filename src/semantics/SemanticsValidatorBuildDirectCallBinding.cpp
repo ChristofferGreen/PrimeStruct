@@ -6,7 +6,7 @@
 namespace primec::semantics {
 namespace {
 
-bool isExperimentalMapBackingReturnStruct(std::string_view typeName) {
+bool isExperimentalKeyValueBackingReturnStruct(std::string_view typeName) {
   std::string_view normalizedTypeName = typeName;
   if (!normalizedTypeName.empty() && normalizedTypeName.front() == '/') {
     normalizedTypeName.remove_prefix(1);
@@ -75,7 +75,7 @@ bool SemanticsValidator::inferResolvedDirectCallBindingType(const std::string &r
 
   const auto directStructIt = returnStructs_.find(resolvedPath);
   if (directStructIt != returnStructs_.end() && !directStructIt->second.empty()) {
-    if (isExperimentalMapBackingReturnStruct(directStructIt->second)) {
+    if (isExperimentalKeyValueBackingReturnStruct(directStructIt->second)) {
       bindingOut.typeName = directStructIt->second;
       bindingOut.typeTemplateArg.clear();
       return true;
