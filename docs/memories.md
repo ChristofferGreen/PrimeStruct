@@ -1033,14 +1033,18 @@ This file stores durable session-derived facts that are useful in later work. Ke
   that file, and the file's map-surface inventory allowance is zero.
 
 ### map-helper-classification-is-local
-- Updated: 2026-05-18
+- Updated: 2026-05-19
 - Tags: semantics, collections, stdlib
 - Fact: Map base/borrowed helper classification should be local to semantic
   compatibility code and derived from `collections.map_helpers` metadata,
-  not exposed as public map-specific stdlib registry APIs.
+  not exposed as public map-specific stdlib registry APIs; semantic simple-call
+  helper member resolution should also use key/value local names around that
+  metadata-backed map surface.
 - Evidence: `isStdlibMapBaseHelperName` and `isStdlibMapBorrowedHelperName`
   were removed from `StdlibSurfaceRegistry`; the semantic compatibility helper
-  now resolves member names through bridge-key metadata directly.
+  now resolves member names through bridge-key metadata directly, and
+  `SemanticsCallPathHelpers.cpp` resolves simple-call helper member names with
+  `resolveKeyValueHelperMemberName`.
 
 ### collection-manifest-loader-is-id-agnostic
 - Updated: 2026-05-18

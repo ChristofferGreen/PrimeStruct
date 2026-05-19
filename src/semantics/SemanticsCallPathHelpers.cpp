@@ -57,8 +57,8 @@ bool resolveCanonicalVectorHelperMemberName(std::string_view path,
   return true;
 }
 
-bool resolveMapHelperMemberName(std::string_view path,
-                                std::string &memberNameOut) {
+bool resolveKeyValueHelperMemberName(std::string_view path,
+                                     std::string &memberNameOut) {
   memberNameOut.clear();
   const StdlibSurfaceMetadata *metadata =
       findStdlibSurfaceMetadataByBridgeKey("collections.map_helpers");
@@ -107,7 +107,7 @@ bool isSimpleCallName(const Expr &expr, const char *nameToMatch) {
     return vectorHelperName == targetName;
   }
   std::string keyValueHelperName;
-  if (resolveMapHelperMemberName(name, keyValueHelperName)) {
+  if (resolveKeyValueHelperMemberName(name, keyValueHelperName)) {
     return keyValueHelperName == targetName;
   }
   if (name.find('/') != std::string::npos) {
