@@ -41,13 +41,13 @@ inline bool isCanonicalKeyValueAccessHelperName(std::string_view helperName) {
          helperName == "at_unsafe" || helperName == "at_unsafe_ref";
 }
 
-inline bool isRemovedMapSlashMethodMetadataHelperName(std::string_view helperName) {
+inline bool isRemovedKeyValueSlashMethodMetadataHelperName(std::string_view helperName) {
   return helperName == "contains" || helperName == "contains_ref" ||
          helperName == "tryAt" || helperName == "tryAt_ref";
 }
 
-inline bool isRemovedMapDirectCallResultCompatibilityHelperName(std::string_view helperName) {
-  return isRemovedMapSlashMethodMetadataHelperName(helperName) ||
+inline bool isRemovedKeyValueDirectCallResultCompatibilityHelperName(std::string_view helperName) {
+  return isRemovedKeyValueSlashMethodMetadataHelperName(helperName) ||
          isCanonicalKeyValueAccessHelperName(helperName);
 }
 

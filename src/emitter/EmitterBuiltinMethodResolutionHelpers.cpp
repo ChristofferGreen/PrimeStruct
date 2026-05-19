@@ -671,12 +671,12 @@ bool resolveMethodCallPath(const Expr &call,
             normalizedMethodName);
     const bool isKeyValueHelperMethod =
         isCanonicalKeyValueHelperName(normalizedMethodName);
-    const bool isRemovedMapSlashMethod =
-        isRemovedMapSlashMethodMetadataHelperName(normalizedMethodName);
+    const bool isRemovedKeyValueSlashMethod =
+        isRemovedKeyValueSlashMethodMetadataHelperName(normalizedMethodName);
     const bool hasCanonicalHelperDefinition =
         hasDefinitionOrMetadata(metadataView, canonicalPath);
     if (isKeyValueHelperMethod) {
-      if (isRemovedMapSlashMethod && isExplicitMapMethod) {
+      if (isRemovedKeyValueSlashMethod && isExplicitMapMethod) {
         return false;
       }
       if (isExplicitMapMethod) {

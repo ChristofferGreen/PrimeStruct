@@ -2585,7 +2585,17 @@ TEST_CASE("canonical map surface owns standalone stdlib implementation") {
         std::string::npos);
   CHECK(emitterMethodResolutionSource.find("isMapHelperMethod") ==
         std::string::npos);
+  CHECK(emitterMethodResolutionSource.find("isRemovedMapSlashMethod") ==
+        std::string::npos);
+  CHECK(emitterMethodResolutionSource.find("isRemovedKeyValueSlashMethod") !=
+        std::string::npos);
   CHECK(emitterMethodTypeInferenceSource.find("pruneMapAccessStructReturnCompatibilityCandidates") ==
+        std::string::npos);
+  CHECK(emitterMethodTypeInferenceSource.find(
+            "isRemovedMapDirectCallResultCompatibility") ==
+        std::string::npos);
+  CHECK(emitterMethodTypeInferenceSource.find(
+            "isRemovedKeyValueDirectCallResultCompatibility") !=
         std::string::npos);
   CHECK(statementLowererSource.find("isPrimeKeyValueInsertBody") != std::string::npos);
   CHECK(statementLowererSource.find("rewriteKeyValueInsertHelperStatementToCanonical") != std::string::npos);
@@ -3122,6 +3132,17 @@ TEST_CASE("canonical map surface owns standalone stdlib implementation") {
   CHECK(emitterHelpersSource.find("isCanonicalKeyValueAccessHelperName(") !=
         std::string::npos);
   CHECK(emitterHelpersSource.find("isCanonicalKeyValueAccessHelperPath(") !=
+        std::string::npos);
+  CHECK(emitterHelpersSource.find("isRemovedMapSlashMethodMetadataHelperName(") ==
+        std::string::npos);
+  CHECK(emitterHelpersSource.find(
+            "isRemovedMapDirectCallResultCompatibilityHelperName(") ==
+        std::string::npos);
+  CHECK(emitterHelpersSource.find(
+            "isRemovedKeyValueSlashMethodMetadataHelperName(") !=
+        std::string::npos);
+  CHECK(emitterHelpersSource.find(
+            "isRemovedKeyValueDirectCallResultCompatibilityHelperName(") !=
         std::string::npos);
   CHECK(emitterHelpersTypesSource.find("base += \"map/Map\"") == std::string::npos);
   CHECK(emitterHelpersTypesSource.find("experimentalCollectionTypePathLocal(\"map\", \"Map\"") !=

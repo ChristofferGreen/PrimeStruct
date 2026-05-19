@@ -446,7 +446,7 @@ std::string inferMethodResolutionPrimitiveTypeName(
     }
     return "";
   };
-  auto isRemovedMapDirectCallResultCompatibility = [&](const Expr &candidate) {
+  auto isRemovedKeyValueDirectCallResultCompatibility = [&](const Expr &candidate) {
     if (candidate.kind != Expr::Kind::Call || candidate.isMethodCall) {
       return false;
     }
@@ -455,7 +455,7 @@ std::string inferMethodResolutionPrimitiveTypeName(
     if (!isKeyValueImportAliasHelperMemberPath(resolvedExprPath, helperName)) {
       return false;
     }
-    return isRemovedMapDirectCallResultCompatibilityHelperName(helperName);
+    return isRemovedKeyValueDirectCallResultCompatibilityHelperName(helperName);
   };
 
   inferPrimitiveTypeName = [&](const Expr &candidateExpr) -> std::string {
@@ -555,7 +555,7 @@ std::string inferMethodResolutionPrimitiveTypeName(
               !canonicalMapAccessType.empty()) {
             return canonicalMapAccessType;
           }
-          if (isRemovedMapDirectCallResultCompatibility(candidateExpr)) {
+          if (isRemovedKeyValueDirectCallResultCompatibility(candidateExpr)) {
             return "";
           }
           std::string collectionReceiverType;
