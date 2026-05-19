@@ -487,7 +487,7 @@ std::string SemanticsValidator::inferStructReturnPathImpl(
         return {};
       }
       const size_t receiverIndex =
-          mapHelperReceiverIndex(candidate, builtinCollectionDispatchResolvers);
+          keyValueHelperReceiverIndex(candidate, builtinCollectionDispatchResolvers);
       if (receiverIndex >= candidate.args.size()) {
         return {};
       }

@@ -888,7 +888,7 @@ bool SemanticsValidator::resolveExprCollectionAccessTarget(
               "unknown call target: " + methodResolved);
         }
       } else if (defMap_.find(methodResolved) == defMap_.end() &&
-                 !context.hasResolvableMapHelperPath(methodResolved)) {
+                 !context.hasResolvableKeyValueHelperPath(methodResolved)) {
         return failCollectionAccessTargetDiagnostic("unknown method: " + methodResolved);
       }
       resolved = methodResolved;

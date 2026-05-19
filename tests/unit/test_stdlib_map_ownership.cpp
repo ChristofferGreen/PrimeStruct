@@ -1403,6 +1403,14 @@ TEST_CASE("canonical map surface owns standalone stdlib implementation") {
         std::string::npos);
   CHECK(collectionHelperRewritesSource.find("specializedExperimentalMapHelperTarget") ==
         std::string::npos);
+  CHECK(collectionHelperRewritesSource.find("mapHelperReceiverIndex") ==
+        std::string::npos);
+  CHECK(collectionHelperRewritesSource.find("bareMapHelperOperandIndices") ==
+        std::string::npos);
+  CHECK(collectionHelperRewritesSource.find("tryRewriteBareMapHelperCall") ==
+        std::string::npos);
+  CHECK(collectionHelperRewritesSource.find("hasResolvableMapHelperPath") ==
+        std::string::npos);
   CHECK(collectionHelperRewritesSource.find(
             "tryRewriteCanonicalExperimentalMapHelperCall") ==
         std::string::npos);
@@ -1429,6 +1437,14 @@ TEST_CASE("canonical map surface owns standalone stdlib implementation") {
         std::string::npos);
   CHECK(collectionHelperRewritesSource.find(
             "specializedExperimentalKeyValueHelperTarget") !=
+        std::string::npos);
+  CHECK(collectionHelperRewritesSource.find("keyValueHelperReceiverIndex") !=
+        std::string::npos);
+  CHECK(collectionHelperRewritesSource.find("bareKeyValueHelperOperandIndices") !=
+        std::string::npos);
+  CHECK(collectionHelperRewritesSource.find("tryRewriteBareKeyValueHelperCall") !=
+        std::string::npos);
+  CHECK(collectionHelperRewritesSource.find("hasResolvableKeyValueHelperPath") !=
         std::string::npos);
   CHECK(collectionHelperRewritesSource.find(
             "tryRewriteCanonicalExperimentalKeyValueHelperCall") !=

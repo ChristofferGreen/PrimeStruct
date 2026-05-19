@@ -89,7 +89,7 @@ std::string preferredKeyValueHelperLoweringPathForRewrite(
 
 } // namespace
 
-size_t SemanticsValidator::mapHelperReceiverIndex(
+size_t SemanticsValidator::keyValueHelperReceiverIndex(
     const Expr &candidate,
     const BuiltinCollectionDispatchResolvers &dispatchResolvers) const {
   if (hasNamedArguments(candidate.argNames)) {
@@ -115,7 +115,7 @@ size_t SemanticsValidator::mapHelperReceiverIndex(
   return 0;
 }
 
-bool SemanticsValidator::bareMapHelperOperandIndices(
+bool SemanticsValidator::bareKeyValueHelperOperandIndices(
     const Expr &candidate,
     const BuiltinCollectionDispatchResolvers &dispatchResolvers,
     size_t &receiverIndexOut,
@@ -126,7 +126,7 @@ bool SemanticsValidator::bareMapHelperOperandIndices(
       dispatchResolvers.resolveMapTarget == nullptr) {
     return false;
   }
-  receiverIndexOut = mapHelperReceiverIndex(candidate, dispatchResolvers);
+  receiverIndexOut = keyValueHelperReceiverIndex(candidate, dispatchResolvers);
   if (receiverIndexOut >= candidate.args.size()) {
     return false;
   }
@@ -294,7 +294,7 @@ std::string SemanticsValidator::preferredBareVectorHelperTarget(std::string_view
   return canonical;
 }
 
-bool SemanticsValidator::tryRewriteBareMapHelperCall(
+bool SemanticsValidator::tryRewriteBareKeyValueHelperCall(
     const Expr &candidate,
     std::string_view helperName,
     const BuiltinCollectionDispatchResolvers &dispatchResolvers,
@@ -309,7 +309,7 @@ bool SemanticsValidator::tryRewriteBareMapHelperCall(
       explicitHelperName == helperName) {
     return false;
   }
-  const size_t receiverIndex = mapHelperReceiverIndex(candidate, dispatchResolvers);
+  const size_t receiverIndex = keyValueHelperReceiverIndex(candidate, dispatchResolvers);
   if (receiverIndex >= candidate.args.size()) {
     return false;
   }
@@ -660,7 +660,7 @@ bool SemanticsValidator::tryRewriteCanonicalExperimentalKeyValueHelperCall(
     }
   }
   const size_t receiverIndex =
-      candidate.isMethodCall ? 0 : mapHelperReceiverIndex(canonicalCandidate, dispatchResolvers);
+      candidate.isMethodCall ? 0 : keyValueHelperReceiverIndex(canonicalCandidate, dispatchResolvers);
   if (receiverIndex >= canonicalCandidate.args.size()) {
     return false;
   }
@@ -767,7 +767,7 @@ bool SemanticsValidator::explicitCanonicalExperimentalKeyValueBorrowedHelperPath
     resolvedPathOut.clear();
     return false;
   }
-  const size_t receiverIndex = mapHelperReceiverIndex(candidate, dispatchResolvers);
+  const size_t receiverIndex = keyValueHelperReceiverIndex(candidate, dispatchResolvers);
   if (receiverIndex >= candidate.args.size()) {
     return false;
   }
@@ -801,7 +801,7 @@ bool SemanticsValidator::explicitCanonicalExperimentalKeyValueBorrowedHelperPath
          !dispatchResolvers.resolveExperimentalMapValueTarget(candidate.args[receiverIndex], keyType, valueType);
 }
 
-bool SemanticsValidator::hasResolvableMapHelperPath(const std::string &path) const {
+bool SemanticsValidator::hasResolvableKeyValueHelperPath(const std::string &path) const {
   return hasDeclaredDefinitionPath(path) || hasImportedDefinitionPath(path);
 }
 

@@ -4735,7 +4735,7 @@
             "      return std::nullopt;\n"
             "    }\n"
             "    Expr rewrittenMapHelperCall;\n"
-            "    if (!tryRewriteBareMapHelperCall(expr, \"count\", *dispatchResolvers,\n"
+            "    if (!tryRewriteBareKeyValueHelperCall(expr, \"count\", *dispatchResolvers,\n"
             "                                     rewrittenMapHelperCall)) {\n"
             "      return std::nullopt;\n"
             "    }\n"

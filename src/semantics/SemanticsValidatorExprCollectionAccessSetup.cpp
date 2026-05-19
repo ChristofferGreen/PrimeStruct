@@ -24,8 +24,8 @@ void SemanticsValidator::prepareExprCollectionAccessDispatchContext(
   contextOut.resolveSoaVectorTarget = dispatchResolvers.resolveSoaVectorTarget;
   contextOut.resolveStringTarget = dispatchResolvers.resolveStringTarget;
   contextOut.resolveMapTarget = resolveMapTarget;
-  contextOut.hasResolvableMapHelperPath = [&](const std::string &path) {
-    return this->hasResolvableMapHelperPath(path);
+  contextOut.hasResolvableKeyValueHelperPath = [&](const std::string &path) {
+    return this->hasResolvableKeyValueHelperPath(path);
   };
   contextOut.isIndexedArgsPackMapReceiverTarget = [&](const Expr &target) {
     return this->isIndexedArgsPackMapReceiverTarget(target, dispatchResolvers);

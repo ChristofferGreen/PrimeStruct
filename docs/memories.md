@@ -766,7 +766,9 @@ This file stores durable session-derived facts that are useful in later work. Ke
   callbacks should use direct key/value helper naming around map helper
   metadata; template-monomorph removed-compatibility locals should use
   key/value naming around map helper metadata; pre-dispatch removed alias
-  helper locals should use key/value naming around map helper metadata.
+  helper locals should use key/value naming around map helper metadata;
+  shared collection helper rewrite APIs should use key/value naming around
+  map helper metadata.
 - Evidence: Field-bound `Map<K, V>` compatibility triage showed generated
   map helper specializations could mask missing `/map/count` aliases unless
   removed-alias checks ignored generated-only definition paths; later

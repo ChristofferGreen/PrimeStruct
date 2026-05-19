@@ -215,7 +215,7 @@
     std::function<bool(const Expr &, std::string &)> resolveSoaVectorTarget;
     std::function<bool(const Expr &)> resolveStringTarget;
     std::function<bool(const Expr &, size_t &, size_t &)>
-        bareMapHelperOperandIndices;
+        bareKeyValueHelperOperandIndices;
     std::function<bool(const Expr &)> isNamedArgsPackMethodAccessCall;
     std::function<bool(const Expr &)> isNamedArgsPackWrappedFileBuiltinAccessCall;
   };
@@ -397,7 +397,7 @@
     std::function<bool(const Expr &)> isNamedArgsPackWrappedFileBuiltinAccessCall;
     std::function<bool(const Expr &)> isMapLikeBareAccessReceiverTarget;
     std::function<bool(const std::string &)> isNonCollectionStructAccessTarget;
-    std::function<bool(const Expr &, const std::string &, Expr &)> tryRewriteBareMapHelperCall;
+    std::function<bool(const Expr &, const std::string &, Expr &)> tryRewriteBareKeyValueHelperCall;
   };
   bool validateExprCollectionAccessFallbacks(
       const std::vector<ParameterInfo> &params,
@@ -553,7 +553,7 @@
     std::function<bool(const Expr &, std::string &)> resolveSoaVectorTarget;
     std::function<bool(const Expr &)> resolveStringTarget;
     std::function<bool(const Expr &)> resolveMapTarget;
-    std::function<bool(const std::string &)> hasResolvableMapHelperPath;
+    std::function<bool(const std::string &)> hasResolvableKeyValueHelperPath;
     std::function<bool(const Expr &)> isIndexedArgsPackMapReceiverTarget;
   };
   void prepareExprCollectionAccessDispatchContext(

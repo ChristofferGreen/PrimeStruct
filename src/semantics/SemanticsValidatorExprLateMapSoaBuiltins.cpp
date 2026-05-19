@@ -37,10 +37,10 @@ bool SemanticsValidator::validateExprLateMapSoaBuiltins(
     return this->isStringExprForArgumentValidation(target,
                                                    *context.dispatchResolvers);
   };
-  mapSoaBuiltinContext.bareMapHelperOperandIndices =
+  mapSoaBuiltinContext.bareKeyValueHelperOperandIndices =
       [&](const Expr &target, size_t &receiverIndexOut,
           size_t &keyIndexOut) {
-        return this->bareMapHelperOperandIndices(target,
+        return this->bareKeyValueHelperOperandIndices(target,
                                                  *context.dispatchResolvers,
                                                  receiverIndexOut,
                                                  keyIndexOut);

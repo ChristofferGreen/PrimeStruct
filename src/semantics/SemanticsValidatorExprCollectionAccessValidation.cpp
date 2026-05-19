@@ -388,8 +388,8 @@ bool SemanticsValidator::validateExprCollectionAccessFallbacks(
         hasNamedArguments(expr.argNames))) {
     if (!context.shouldBuiltinValidateBareMapAccessCall) {
       Expr rewrittenKeyValueHelperCall;
-      if (context.tryRewriteBareMapHelperCall != nullptr &&
-          context.tryRewriteBareMapHelperCall(expr, builtinName,
+      if (context.tryRewriteBareKeyValueHelperCall != nullptr &&
+          context.tryRewriteBareKeyValueHelperCall(expr, builtinName,
                                              rewrittenKeyValueHelperCall)) {
         return validateExpr(params, locals, rewrittenKeyValueHelperCall);
       }

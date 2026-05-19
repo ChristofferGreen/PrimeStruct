@@ -401,7 +401,7 @@ ReturnKind SemanticsValidator::inferLateFallbackReturnKind(
     builtinAccessName = inferCollectionDispatchSetup.builtinAccessName;
     size_t receiverIndex = 0;
     size_t keyIndex = 1;
-    const bool hasBareMapOperands = bareMapHelperOperandIndices(
+    const bool hasBareMapOperands = bareKeyValueHelperOperandIndices(
         expr, builtinCollectionDispatchResolvers, receiverIndex, keyIndex);
     const Expr &receiverExpr =
         hasBareMapOperands ? expr.args[receiverIndex] : expr.args.front();
@@ -435,7 +435,7 @@ ReturnKind SemanticsValidator::inferLateFallbackReturnKind(
       inferCollectionDispatchSetup.shouldInferBuiltinBareMapContainsCall) {
     size_t receiverIndex = 0;
     size_t keyIndex = 1;
-    const bool hasBareMapOperands = bareMapHelperOperandIndices(
+    const bool hasBareMapOperands = bareKeyValueHelperOperandIndices(
         expr, builtinCollectionDispatchResolvers, receiverIndex, keyIndex);
     const Expr &receiverExpr =
         hasBareMapOperands ? expr.args[receiverIndex] : expr.args.front();
@@ -459,7 +459,7 @@ ReturnKind SemanticsValidator::inferLateFallbackReturnKind(
         (isCanonicalKeyValueAccessHelperName(builtinAccessName) &&
          !inferCollectionDispatchSetup.shouldInferBuiltinBareMapAccessCall)) {
       Expr rewrittenKeyValueHelperCall;
-      if (tryRewriteBareMapHelperCall(
+      if (tryRewriteBareKeyValueHelperCall(
               expr,
               isSimpleCallName(expr, "contains")
                   ? "contains"
@@ -474,7 +474,7 @@ ReturnKind SemanticsValidator::inferLateFallbackReturnKind(
     std::string keyType;
     std::string valueType;
     const size_t mapReceiverIndex =
-        mapHelperReceiverIndex(expr, builtinCollectionDispatchResolvers);
+        keyValueHelperReceiverIndex(expr, builtinCollectionDispatchResolvers);
     const Expr &receiverExpr = mapReceiverIndex < expr.args.size()
                                    ? expr.args[mapReceiverIndex]
                                    : expr.args.front();
@@ -578,7 +578,7 @@ ReturnKind SemanticsValidator::inferLateFallbackReturnKind(
       expr.args.size() == 2) {
     size_t receiverIndex = 0;
     size_t keyIndex = 1;
-    const bool hasBareMapOperands = bareMapHelperOperandIndices(
+    const bool hasBareMapOperands = bareKeyValueHelperOperandIndices(
         expr, builtinCollectionDispatchResolvers, receiverIndex, keyIndex);
     const Expr &receiverExpr =
         hasBareMapOperands ? expr.args[receiverIndex] : expr.args.front();
@@ -594,7 +594,7 @@ ReturnKind SemanticsValidator::inferLateFallbackReturnKind(
       expr.args.size() == 2 &&
       (inferCollectionDispatchSetup.shouldInferBuiltinBareMapTryAtCall ||
        inferCollectionDispatchSetup.isIndexedArgsPackMapReceiverTarget(
-           expr.args[mapHelperReceiverIndex(expr, builtinCollectionDispatchResolvers)]))) {
+           expr.args[keyValueHelperReceiverIndex(expr, builtinCollectionDispatchResolvers)]))) {
     ResultTypeInfo argResult;
     if (resolveResultTypeForExpr(expr, params, locals, argResult) &&
         argResult.isResult) {
@@ -607,12 +607,12 @@ ReturnKind SemanticsValidator::inferLateFallbackReturnKind(
       expr.args.size() == 2 &&
       (inferCollectionDispatchSetup.shouldInferBuiltinBareMapAccessCall ||
        inferCollectionDispatchSetup.isIndexedArgsPackMapReceiverTarget(
-           expr.args[mapHelperReceiverIndex(expr,
+           expr.args[keyValueHelperReceiverIndex(expr,
                                             builtinCollectionDispatchResolvers)]))) {
     builtinAccessName = inferCollectionDispatchSetup.builtinAccessName;
     size_t receiverIndex = 0;
     size_t keyIndex = 1;
-    const bool hasBareMapOperands = bareMapHelperOperandIndices(
+    const bool hasBareMapOperands = bareKeyValueHelperOperandIndices(
         expr, builtinCollectionDispatchResolvers, receiverIndex, keyIndex);
     const Expr &receiverExpr =
         hasBareMapOperands ? expr.args[receiverIndex] : expr.args.front();
@@ -634,7 +634,7 @@ ReturnKind SemanticsValidator::inferLateFallbackReturnKind(
     std::string keyType;
     std::string valueType;
     const Expr &receiver =
-        expr.args[mapHelperReceiverIndex(expr, builtinCollectionDispatchResolvers)];
+        expr.args[keyValueHelperReceiverIndex(expr, builtinCollectionDispatchResolvers)];
     const bool hasCollectionReceiver =
         (resolveArgsPackAccessTarget != nullptr &&
          resolveArgsPackAccessTarget(receiver, elemType)) ||

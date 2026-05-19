@@ -297,7 +297,7 @@ bool SemanticsValidator::validateExprLateMapAccessBuiltins(
   if (!expr.isMethodCall && isSimpleCallName(expr, "contains") &&
       !context.shouldBuiltinValidateBareMapContainsCall) {
     Expr rewrittenKeyValueHelperCall;
-    if (this->tryRewriteBareMapHelperCall(expr, "contains",
+    if (this->tryRewriteBareKeyValueHelperCall(expr, "contains",
                                           *context.dispatchResolvers,
                                           rewrittenKeyValueHelperCall)) {
       handledOut = true;
@@ -308,7 +308,7 @@ bool SemanticsValidator::validateExprLateMapAccessBuiltins(
   if (!expr.isMethodCall && isSimpleCallName(expr, "tryAt") &&
       !context.shouldBuiltinValidateBareMapTryAtCall) {
     Expr rewrittenKeyValueHelperCall;
-    if (this->tryRewriteBareMapHelperCall(expr, "tryAt",
+    if (this->tryRewriteBareKeyValueHelperCall(expr, "tryAt",
                                           *context.dispatchResolvers,
                                           rewrittenKeyValueHelperCall)) {
       if (isCanonicalKeyValueHelperResolvedPath(
@@ -328,7 +328,7 @@ bool SemanticsValidator::validateExprLateMapAccessBuiltins(
       getCanonicalKeyValueAccessBuiltinName(expr, builtinName) &&
       !context.shouldBuiltinValidateBareMapAccessCall) {
     Expr rewrittenKeyValueHelperCall;
-    if (this->tryRewriteBareMapHelperCall(expr, builtinName,
+    if (this->tryRewriteBareKeyValueHelperCall(expr, builtinName,
                                           *context.dispatchResolvers,
                                           rewrittenKeyValueHelperCall)) {
       handledOut = true;
@@ -354,7 +354,7 @@ bool SemanticsValidator::validateExprLateMapAccessBuiltins(
       expr.args.size() == 2 &&
       (context.shouldBuiltinValidateBareMapContainsCall ||
        isMapLikeReceiver(
-           expr.args[this->mapHelperReceiverIndex(expr, *context.dispatchResolvers)]) ||
+           expr.args[this->keyValueHelperReceiverIndex(expr, *context.dispatchResolvers)]) ||
        this->isIndexedArgsPackMapReceiverTarget(
            expr.args.front(), *context.dispatchResolvers))) {
     if (!hasBareMapContainsBuiltinDefinition()) {
@@ -364,7 +364,7 @@ bool SemanticsValidator::validateExprLateMapAccessBuiltins(
     size_t receiverIndex = 0;
     size_t keyIndex = 1;
     const bool hasBareMapOperands =
-        this->bareMapHelperOperandIndices(expr, *context.dispatchResolvers,
+        this->bareKeyValueHelperOperandIndices(expr, *context.dispatchResolvers,
                                           receiverIndex, keyIndex);
     const Expr &receiverExpr =
         hasBareMapOperands ? expr.args[receiverIndex] : expr.args.front();
@@ -419,14 +419,14 @@ bool SemanticsValidator::validateExprLateMapAccessBuiltins(
       (expr.isMethodCall || !hasDeclaredDefinitionPath(resolved)) &&
       (context.shouldBuiltinValidateBareMapTryAtCall ||
        isMapLikeReceiver(
-           expr.args[this->mapHelperReceiverIndex(expr, *context.dispatchResolvers)]) ||
+           expr.args[this->keyValueHelperReceiverIndex(expr, *context.dispatchResolvers)]) ||
        this->isIndexedArgsPackMapReceiverTarget(
-           expr.args[this->mapHelperReceiverIndex(expr, *context.dispatchResolvers)],
+           expr.args[this->keyValueHelperReceiverIndex(expr, *context.dispatchResolvers)],
            *context.dispatchResolvers))) {
     size_t receiverIndex = 0;
     size_t keyIndex = 1;
     const bool hasBareMapOperands =
-        this->bareMapHelperOperandIndices(expr, *context.dispatchResolvers,
+        this->bareKeyValueHelperOperandIndices(expr, *context.dispatchResolvers,
                                           receiverIndex, keyIndex);
     const Expr &receiverExpr =
         hasBareMapOperands ? expr.args[receiverIndex] : expr.args.front();
@@ -500,17 +500,17 @@ bool SemanticsValidator::validateExprLateMapAccessBuiltins(
       !hasResolvedDefinition(resolved) &&
       (context.shouldBuiltinValidateBareMapAccessCall ||
        isMapLikeReceiver(
-           expr.args[this->mapHelperReceiverIndex(expr, *context.dispatchResolvers)]) ||
+           expr.args[this->keyValueHelperReceiverIndex(expr, *context.dispatchResolvers)]) ||
        rootMapConstructorKeyType(
-           expr.args[this->mapHelperReceiverIndex(expr, *context.dispatchResolvers)],
+           expr.args[this->keyValueHelperReceiverIndex(expr, *context.dispatchResolvers)],
            ignoredRootMapKeyType) ||
        this->isIndexedArgsPackMapReceiverTarget(
-           expr.args[this->mapHelperReceiverIndex(expr, *context.dispatchResolvers)],
+           expr.args[this->keyValueHelperReceiverIndex(expr, *context.dispatchResolvers)],
            *context.dispatchResolvers))) {
     size_t receiverIndex = 0;
     size_t keyIndex = 1;
     const bool hasBareMapOperands =
-        this->bareMapHelperOperandIndices(expr, *context.dispatchResolvers,
+        this->bareKeyValueHelperOperandIndices(expr, *context.dispatchResolvers,
                                           receiverIndex, keyIndex);
     const Expr &receiverExpr =
         hasBareMapOperands ? expr.args[receiverIndex] : expr.args.front();
@@ -560,7 +560,7 @@ bool SemanticsValidator::validateExprLateMapAccessBuiltins(
     size_t receiverIndex = 0;
     size_t keyIndex = 1;
     const bool hasBareMapOperands =
-        this->bareMapHelperOperandIndices(expr, *context.dispatchResolvers,
+        this->bareKeyValueHelperOperandIndices(expr, *context.dispatchResolvers,
                                           receiverIndex, keyIndex);
     const Expr &receiverExpr =
         hasBareMapOperands ? expr.args[receiverIndex] : expr.args.front();

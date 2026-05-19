@@ -1,7 +1,7 @@
   CHECK(semanticsExprLateMapSoaBuiltinsSource.find(
             "mapSoaBuiltinContext.shouldBuiltinValidateBareMapContainsCall =") !=
         std::string::npos);
-  CHECK(semanticsExprSource.find("mapSoaBuiltinContext.bareMapHelperOperandIndices =") ==
+  CHECK(semanticsExprSource.find("mapSoaBuiltinContext.bareKeyValueHelperOperandIndices =") ==
         std::string::npos);
   CHECK(semanticsExprSource.find("if (getBuiltinCollectionName(expr, builtinName)) {") ==
         std::string::npos);
@@ -209,9 +209,9 @@
   CHECK(semanticsExprSource.find("std::function<bool(const Expr &)> resolveStringTarget =") == std::string::npos);
   CHECK(semanticsExprSource.find("auto resolveMapValueTypeForStringTarget = [&](const Expr &target, std::string &valueTypeOut) -> bool {") ==
         std::string::npos);
-  CHECK(semanticsExprSource.find("auto mapHelperReceiverIndex = [&](const Expr &candidate) -> size_t {") ==
+  CHECK(semanticsExprSource.find("auto keyValueHelperReceiverIndex = [&](const Expr &candidate) -> size_t {") ==
         std::string::npos);
-  CHECK(semanticsExprSource.find("auto bareMapHelperOperandIndices = [&](const Expr &candidate,") ==
+  CHECK(semanticsExprSource.find("auto bareKeyValueHelperOperandIndices = [&](const Expr &candidate,") ==
         std::string::npos);
   CHECK(semanticsExprSource.find("auto preferredBareMapHelperTarget = [&](std::string_view helperName)") ==
         std::string::npos);
@@ -219,7 +219,7 @@
         std::string::npos);
   CHECK(semanticsExprSource.find("auto preferredBareVectorHelperTarget = [&](std::string_view helperName)") ==
         std::string::npos);
-  CHECK(semanticsExprSource.find("auto tryRewriteBareMapHelperCall = [&](const Expr &candidate,") ==
+  CHECK(semanticsExprSource.find("auto tryRewriteBareKeyValueHelperCall = [&](const Expr &candidate,") ==
         std::string::npos);
   CHECK(semanticsExprSource.find("auto tryRewriteBareVectorHelperCall = [&](const Expr &candidate,") ==
         std::string::npos);
@@ -512,7 +512,7 @@
         std::string::npos);
   CHECK(semanticsExprLateFallbackBuiltinsSource.find(
             "const size_t receiverIndex =\n"
-            "        this->mapHelperReceiverIndex(expr, *context.dispatchResolvers);") !=
+            "        this->keyValueHelperReceiverIndex(expr, *context.dispatchResolvers);") !=
         std::string::npos);
   CHECK(semanticsExprLateCallCompatibilitySource.find(
             "bool SemanticsValidator::validateExprLateCallCompatibility") !=
@@ -791,7 +791,7 @@
             "auto failMapSoaBuiltinDiagnostic = [&](std::string message) -> bool {") !=
         std::string::npos);
   CHECK(semanticsExprMapSoaBuiltinsSource.find(
-            "context.bareMapHelperOperandIndices != nullptr") !=
+            "context.bareKeyValueHelperOperandIndices != nullptr") !=
         std::string::npos);
   CHECK(semanticsExprMapSoaBuiltinsSource.find(
             "return failExprDiagnostic(expr, std::move(message));") !=
@@ -925,9 +925,13 @@
   CHECK(semanticsInferMethodResolutionSource.find(
             "hasDeclaredDefinitionPath(samePath) || hasImportedDefinitionPath(samePath)") ==
         std::string::npos);
-  CHECK(semanticsCollectionHelperRewritesSource.find("size_t SemanticsValidator::mapHelperReceiverIndex") !=
+  CHECK(semanticsCollectionHelperRewritesSource.find("size_t SemanticsValidator::keyValueHelperReceiverIndex") !=
         std::string::npos);
-  CHECK(semanticsCollectionHelperRewritesSource.find("bool SemanticsValidator::bareMapHelperOperandIndices") !=
+  CHECK(semanticsCollectionHelperRewritesSource.find("size_t SemanticsValidator::mapHelperReceiverIndex") ==
+        std::string::npos);
+  CHECK(semanticsCollectionHelperRewritesSource.find("bool SemanticsValidator::bareKeyValueHelperOperandIndices") !=
+        std::string::npos);
+  CHECK(semanticsCollectionHelperRewritesSource.find("bool SemanticsValidator::bareMapHelperOperandIndices") ==
         std::string::npos);
   CHECK(semanticsCollectionHelperRewritesSource.find(
             "#include \"SemanticsValidatorInferCollectionCompatibilityInternal.h\"") !=
@@ -955,7 +959,9 @@
   CHECK(semanticsCollectionHelperRewritesSource.find(
             "const std::string samePath = \"/vector/\" + std::string(helperName);") ==
         std::string::npos);
-  CHECK(semanticsCollectionHelperRewritesSource.find("bool SemanticsValidator::tryRewriteBareMapHelperCall") !=
+  CHECK(semanticsCollectionHelperRewritesSource.find("bool SemanticsValidator::tryRewriteBareKeyValueHelperCall") !=
+        std::string::npos);
+  CHECK(semanticsCollectionHelperRewritesSource.find("bool SemanticsValidator::tryRewriteBareMapHelperCall") ==
         std::string::npos);
   CHECK(semanticsCollectionHelperRewritesSource.find("bool SemanticsValidator::tryRewriteBareVectorHelperCall") !=
         std::string::npos);
@@ -1004,7 +1010,9 @@
         std::string::npos);
   CHECK(semanticsCollectionHelperRewritesSource.find("dispatchResolvers.resolveExperimentalMapValueTarget") !=
         std::string::npos);
-  CHECK(semanticsCollectionHelperRewritesSource.find("bool SemanticsValidator::hasResolvableMapHelperPath") !=
+  CHECK(semanticsCollectionHelperRewritesSource.find("bool SemanticsValidator::hasResolvableKeyValueHelperPath") !=
+        std::string::npos);
+  CHECK(semanticsCollectionHelperRewritesSource.find("bool SemanticsValidator::hasResolvableMapHelperPath") ==
         std::string::npos);
   CHECK(semanticsCollectionHelperRewritesSource.find("bool SemanticsValidator::resolveMapKeyType") !=
         std::string::npos);

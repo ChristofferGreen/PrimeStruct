@@ -330,8 +330,8 @@ bool SemanticsValidator::validateExprMapSoaBuiltins(
     size_t receiverIndex = 0;
     size_t keyIndex = 1;
     const bool hasBareMapOperands =
-        context.bareMapHelperOperandIndices != nullptr &&
-        context.bareMapHelperOperandIndices(expr, receiverIndex, keyIndex);
+        context.bareKeyValueHelperOperandIndices != nullptr &&
+        context.bareKeyValueHelperOperandIndices(expr, receiverIndex, keyIndex);
     const Expr &receiverExpr =
         hasBareMapOperands ? expr.args[receiverIndex] : expr.args.front();
     const Expr &keyExpr =

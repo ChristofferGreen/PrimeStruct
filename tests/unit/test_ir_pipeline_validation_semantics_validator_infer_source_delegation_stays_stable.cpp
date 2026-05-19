@@ -544,13 +544,13 @@ TEST_CASE("semantics validator infer source delegation stays stable") {
         std::string::npos);
   CHECK(semanticsInferSource.find("auto preferVectorStdlibHelperPathForCall = [&](const std::string &path)") ==
         std::string::npos);
-  CHECK(semanticsInferSource.find("auto mapHelperReceiverIndex = [&](const Expr &candidate) -> size_t {") ==
+  CHECK(semanticsInferSource.find("auto keyValueHelperReceiverIndex = [&](const Expr &candidate) -> size_t {") ==
         std::string::npos);
-  CHECK(semanticsInferSource.find("auto bareMapHelperOperandIndices = [&](const Expr &candidate,") ==
+  CHECK(semanticsInferSource.find("auto bareKeyValueHelperOperandIndices = [&](const Expr &candidate,") ==
         std::string::npos);
   CHECK(semanticsInferSource.find("auto preferredBareMapHelperTarget = [&](std::string_view helperName)") ==
         std::string::npos);
-  CHECK(semanticsInferSource.find("auto tryRewriteBareMapHelperCall = [&](const Expr &candidate,") ==
+  CHECK(semanticsInferSource.find("auto tryRewriteBareKeyValueHelperCall = [&](const Expr &candidate,") ==
         std::string::npos);
   CHECK(semanticsInferSource.find("auto explicitRemovedCollectionMethodPath = [&](const Expr &candidate) -> std::string {") ==
         std::string::npos);
@@ -979,7 +979,9 @@ TEST_CASE("semantics validator infer source delegation stays stable") {
         std::string::npos);
   CHECK(semanticsInferCollectionsSource.find("std::string SemanticsValidator::normalizeCollectionTypePath") !=
         std::string::npos);
-  CHECK(semanticsCollectionHelperRewritesSource.find("bool SemanticsValidator::tryRewriteBareMapHelperCall") !=
+  CHECK(semanticsCollectionHelperRewritesSource.find("bool SemanticsValidator::tryRewriteBareKeyValueHelperCall") !=
+        std::string::npos);
+  CHECK(semanticsCollectionHelperRewritesSource.find("bool SemanticsValidator::tryRewriteBareMapHelperCall") ==
         std::string::npos);
   CHECK(semanticsCollectionHelperRewritesSource.find(
             "#include \"SemanticsValidatorInferCollectionCompatibilityInternal.h\"") !=

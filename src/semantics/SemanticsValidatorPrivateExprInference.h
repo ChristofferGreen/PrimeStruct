@@ -126,9 +126,9 @@
       const std::function<bool(const Expr &, BindingInfo &)> &resolveBindingTarget,
       const std::function<bool(const Expr &, size_t &)>
           &isDirectCanonicalVectorAccessCallOnBuiltinReceiver);
-  size_t mapHelperReceiverIndex(const Expr &candidate,
+  size_t keyValueHelperReceiverIndex(const Expr &candidate,
                                 const BuiltinCollectionDispatchResolvers &dispatchResolvers) const;
-  bool bareMapHelperOperandIndices(const Expr &candidate,
+  bool bareKeyValueHelperOperandIndices(const Expr &candidate,
                                    const BuiltinCollectionDispatchResolvers &dispatchResolvers,
                                    size_t &receiverIndexOut,
                                    size_t &keyIndexOut) const;
@@ -152,7 +152,7 @@
                                              std::string &canonicalPathOut,
                                              std::string &helperNameOut) const;
   std::string preferredBareVectorHelperTarget(std::string_view helperName) const;
-  bool tryRewriteBareMapHelperCall(const Expr &candidate,
+  bool tryRewriteBareKeyValueHelperCall(const Expr &candidate,
                                    std::string_view helperName,
                                    const BuiltinCollectionDispatchResolvers &dispatchResolvers,
                                    Expr &rewrittenOut) const;
@@ -172,7 +172,7 @@
       const Expr &candidate,
       const BuiltinCollectionDispatchResolvers &dispatchResolvers,
       std::string &resolvedPathOut) const;
-  bool hasResolvableMapHelperPath(const std::string &path) const;
+  bool hasResolvableKeyValueHelperPath(const std::string &path) const;
   bool resolveMapKeyType(const Expr &target,
                          const BuiltinCollectionDispatchResolvers &dispatchResolvers,
                          std::string &keyTypeOut) const;

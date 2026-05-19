@@ -79,7 +79,7 @@ bool SemanticsValidator::validateExprLateFallbackBuiltins(
   if (!expr.isMethodCall && getBuiltinArrayAccessName(expr, builtinName) &&
       expr.args.size() == 2) {
     const size_t receiverIndex =
-        this->mapHelperReceiverIndex(expr, *context.dispatchResolvers);
+        this->keyValueHelperReceiverIndex(expr, *context.dispatchResolvers);
     if (receiverIndex < expr.args.size()) {
       const Expr &receiverExpr = expr.args[receiverIndex];
       std::string elemType;

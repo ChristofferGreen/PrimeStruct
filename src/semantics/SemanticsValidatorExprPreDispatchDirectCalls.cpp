@@ -492,7 +492,7 @@ bool SemanticsValidator::validateExprPreDispatchDirectCalls(
   if (const std::string helperName = sourceMethodKeyValueHelperName(expr);
       !helperName.empty() && !expr.args.empty()) {
     const size_t receiverIndex =
-        this->mapHelperReceiverIndex(expr, dispatchBootstrap.dispatchResolvers);
+        this->keyValueHelperReceiverIndex(expr, dispatchBootstrap.dispatchResolvers);
     if (receiverIndex < expr.args.size()) {
       std::string keyType;
       std::string valueType;
@@ -580,7 +580,7 @@ bool SemanticsValidator::validateExprPreDispatchDirectCalls(
       !hasImportedDefinitionPath(resolvedOut) &&
       !hasDeclaredDefinitionPath(resolvedOut)) {
     const size_t receiverIndex =
-        this->mapHelperReceiverIndex(expr, dispatchBootstrap.dispatchResolvers);
+        this->keyValueHelperReceiverIndex(expr, dispatchBootstrap.dispatchResolvers);
     if (receiverIndex < expr.args.size()) {
       const Expr &receiverExpr = expr.args[receiverIndex];
       std::string keyType;
@@ -646,7 +646,7 @@ bool SemanticsValidator::validateExprPreDispatchDirectCalls(
         !hasDeclaredDefinitionPath(rootedBuiltinAccessAlias)) {
       size_t receiverIndex = 0;
       size_t keyIndex = 1;
-      const bool hasBareMapOperands = this->bareMapHelperOperandIndices(
+      const bool hasBareMapOperands = this->bareKeyValueHelperOperandIndices(
           expr, dispatchBootstrap.dispatchResolvers, receiverIndex, keyIndex);
       const Expr &receiverExpr =
           hasBareMapOperands ? expr.args[receiverIndex] : expr.args.front();

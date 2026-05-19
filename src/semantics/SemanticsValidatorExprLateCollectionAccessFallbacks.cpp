@@ -68,10 +68,10 @@ bool SemanticsValidator::validateExprLateCollectionAccessFallbacks(
       };
   collectionAccessValidationContext.isNonCollectionStructAccessTarget =
       context.isNonCollectionStructAccessTarget;
-  collectionAccessValidationContext.tryRewriteBareMapHelperCall =
+  collectionAccessValidationContext.tryRewriteBareKeyValueHelperCall =
       [&](const Expr &target, const std::string &helperName,
           Expr &rewrittenOut) {
-        return this->tryRewriteBareMapHelperCall(target, helperName,
+        return this->tryRewriteBareKeyValueHelperCall(target, helperName,
                                                  *context.dispatchResolvers,
                                                  rewrittenOut);
       };
