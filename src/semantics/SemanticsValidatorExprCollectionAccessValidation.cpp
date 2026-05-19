@@ -187,8 +187,8 @@ bool SemanticsValidator::validateExprCollectionAccessFallbacks(
   auto failCollectionAccessDiagnostic = [&](std::string message) -> bool {
     return failExprDiagnostic(expr, std::move(message));
   };
-  auto failCollectionAccessMapKeyMismatch = [&](const std::string &helperName,
-                                                const std::string &keyValueKeyType) {
+  auto failCollectionAccessKeyValueKeyMismatch = [&](const std::string &helperName,
+                                                     const std::string &keyValueKeyType) {
     const bool hasSourceShape = !expr.sourceName.empty();
     const bool isExplicitCanonicalKeyValueAccessCall =
         expr.sourceIsMethodCall ||
@@ -267,15 +267,15 @@ bool SemanticsValidator::validateExprCollectionAccessFallbacks(
     ReturnKind kind = inferExprReturnKind(arg, params, locals);
     return kind == ReturnKind::String || arg.kind == Expr::Kind::StringLiteral;
   };
-  auto validateMapKeyExpr = [&](const std::string &helperName,
-                                const Expr &keyExpr,
-                                const std::string &keyValueKeyType) -> bool {
+  auto validateKeyValueKeyExpr = [&](const std::string &helperName,
+                                     const Expr &keyExpr,
+                                     const std::string &keyValueKeyType) -> bool {
     if (keyValueKeyType.empty()) {
       return true;
     }
     if (normalizeBindingTypeName(keyValueKeyType) == "string") {
       if (!isStringExpr(keyExpr)) {
-        return failCollectionAccessMapKeyMismatch(helperName, keyValueKeyType);
+        return failCollectionAccessKeyValueKeyMismatch(helperName, keyValueKeyType);
       }
       return true;
     }
@@ -285,11 +285,11 @@ bool SemanticsValidator::validateExprCollectionAccessFallbacks(
     }
     if (context.resolveStringTarget != nullptr &&
         context.resolveStringTarget(keyExpr)) {
-      return failCollectionAccessMapKeyMismatch(helperName, keyValueKeyType);
+      return failCollectionAccessKeyValueKeyMismatch(helperName, keyValueKeyType);
     }
     ReturnKind indexKind = inferExprReturnKind(keyExpr, params, locals);
     if (indexKind != ReturnKind::Unknown && indexKind != keyKind) {
-      return failCollectionAccessMapKeyMismatch(helperName, keyValueKeyType);
+      return failCollectionAccessKeyValueKeyMismatch(helperName, keyValueKeyType);
     }
     return true;
   };
@@ -317,7 +317,7 @@ bool SemanticsValidator::validateExprCollectionAccessFallbacks(
           context.resolveMapKeyType(expr.args.front(), keyValueKeyType))) {
       return failCollectionAccessDiagnostic(helperName + " requires map target");
     }
-    if (!validateMapKeyExpr(helperName, expr.args[1], keyValueKeyType)) {
+    if (!validateKeyValueKeyExpr(helperName, expr.args[1], keyValueKeyType)) {
       return false;
     }
     if (!validateExpr(params, locals, expr.args[1])) {
@@ -693,7 +693,7 @@ bool SemanticsValidator::validateExprCollectionAccessFallbacks(
         return failCollectionAccessDiagnostic(
             builtinName + " requires integer index [collection]");
       }
-    } else if (!validateMapKeyExpr(builtinName, expr.args[indexArgIndex], keyValueKeyType)) {
+    } else if (!validateKeyValueKeyExpr(builtinName, expr.args[indexArgIndex], keyValueKeyType)) {
       return false;
     }
 
