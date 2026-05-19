@@ -2203,6 +2203,10 @@ TEST_CASE("canonical map surface owns standalone stdlib implementation") {
         std::string::npos);
   CHECK(inferCollectionCompatibilitySource.find("resolvedBareKeyValueHelper") !=
         std::string::npos);
+  CHECK(inferCollectionCompatibilitySource.find("spellsCurrentMapWrapperSurface") ==
+        std::string::npos);
+  CHECK(inferCollectionCompatibilitySource.find(
+            "spellsCurrentKeyValueWrapperSurface") != std::string::npos);
   CHECK(inferCollectionCompatibilitySource.find("preferredRemovedKeyValueHelperPath") !=
         std::string::npos);
   CHECK(inferCollectionCompatibilitySource.find(

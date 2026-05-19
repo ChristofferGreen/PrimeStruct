@@ -676,7 +676,7 @@ std::string SemanticsValidator::directKeyValueHelperCompatibilityPath(
           resolvedPath, helperName);
   bool resolvedBareKeyValueHelper = false;
   std::string explicitSurfaceHelperName;
-  const bool spellsCurrentMapWrapperSurface =
+  const bool spellsCurrentKeyValueWrapperSurface =
       candidate.namespacePrefix.empty() &&
       resolvePublishedKeyValueHelperMemberTokenLocal(candidate.name,
                                                      explicitSurfaceHelperName) &&
@@ -704,7 +704,7 @@ std::string SemanticsValidator::directKeyValueHelperCompatibilityPath(
                                                       resolvedExperimentalHelperName)) {
     return "";
   }
-  if (resolvedCompatibilityHelper && spellsCurrentMapWrapperSurface) {
+  if (resolvedCompatibilityHelper && spellsCurrentKeyValueWrapperSurface) {
     return "";
   }
   const std::string removedPath = rootedKeyValueCompatibilityHelperPath(helperName);
