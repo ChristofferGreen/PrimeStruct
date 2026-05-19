@@ -120,7 +120,8 @@ This file stores durable session-derived facts that are useful in later work. Ke
   locals should use key/value names too; infer pre-dispatch method visibility
   locals should use key/value names too; infer method-resolution indexed
   args-pack target locals should use key/value names too; method-target indexed
-  args-pack locals should use key/value names too.
+  args-pack locals should use key/value names too; initializer inference alias
+  locals should use key/value names too.
   The stdlib ownership source lock rejects the old map-helper, map-count,
   map-access, and removed map compatibility names.
 

@@ -105,11 +105,11 @@ bool SemanticsValidator::inferCollectionBindingFromExpr(const Expr &expr,
       return true;
     }
     if (isMapCollectionTypeName(collection) && expr.templateArgs.size() == 2) {
-      const std::string mapAlias = mapCollectionAliasToken();
-      if (mapAlias.empty()) {
+      const std::string keyValueAlias = mapCollectionAliasToken();
+      if (keyValueAlias.empty()) {
         return false;
       }
-      bindingOut.typeName = mapAlias;
+      bindingOut.typeName = keyValueAlias;
       bindingOut.typeTemplateArg = joinTemplateArgs(expr.templateArgs);
       return true;
     }
@@ -894,9 +894,9 @@ bool SemanticsValidator::inferCallInitializerBinding(const Expr &initializer,
         return true;
       }
       std::vector<std::string> mapArgs;
-      const std::string mapAlias = mapCollectionAliasToken();
-      if (!mapAlias.empty() &&
-          resolveCallCollectionTemplateArgs(*initializerExprForInference, mapAlias, params, locals, mapArgs) &&
+      const std::string keyValueAlias = mapCollectionAliasToken();
+      if (!keyValueAlias.empty() &&
+          resolveCallCollectionTemplateArgs(*initializerExprForInference, keyValueAlias, params, locals, mapArgs) &&
           mapArgs.size() == 2) {
         bindingOut.typeName = "Map";
         bindingOut.typeTemplateArg = joinTemplateArgs(mapArgs);
@@ -1008,11 +1008,11 @@ bool SemanticsValidator::inferCallInitializerBinding(const Expr &initializer,
             bindingOut.typeTemplateArg = initializerExprForInference->templateArgs.front();
           } else if (isMapCollectionTypeName(collectionName) &&
                      initializerExprForInference->templateArgs.size() == 2) {
-            const std::string mapAlias = mapCollectionAliasToken();
-            if (mapAlias.empty()) {
+            const std::string keyValueAlias = mapCollectionAliasToken();
+            if (keyValueAlias.empty()) {
               return false;
             }
-            bindingOut.typeName = mapAlias;
+            bindingOut.typeName = keyValueAlias;
             bindingOut.typeTemplateArg = joinTemplateArgs(initializerExprForInference->templateArgs);
           }
         }

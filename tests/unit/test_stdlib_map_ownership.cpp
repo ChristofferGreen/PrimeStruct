@@ -2061,6 +2061,10 @@ TEST_CASE("canonical map surface owns standalone stdlib implementation") {
         std::string::npos);
   CHECK(buildInitializerInferenceCallsSource.find("mapCollectionAliasToken()") !=
         std::string::npos);
+  CHECK(buildInitializerInferenceCallsSource.find("const std::string mapAlias") ==
+        std::string::npos);
+  CHECK(buildInitializerInferenceCallsSource.find("const std::string keyValueAlias") !=
+        std::string::npos);
   CHECK(inferCollectionDispatchSource.find("resolvedPath.rfind(\"/map/\"") ==
         std::string::npos);
   CHECK(inferCollectionDispatchSource.find("resolvedPath == \"/map/at\"") ==
