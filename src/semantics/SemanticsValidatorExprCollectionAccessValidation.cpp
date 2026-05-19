@@ -527,8 +527,8 @@ bool SemanticsValidator::validateExprCollectionAccessFallbacks(
           resolveArgsPackElementTypeForExpr(expr.args.front(), params, locals,
                                             elemType);
     }
-    bool isMap = isKeyValueTarget(expr.args.front(), keyValueKeyType);
-    bool isExperimentalMap =
+    bool isKeyValue = isKeyValueTarget(expr.args.front(), keyValueKeyType);
+    bool isExperimentalKeyValue =
         context.resolveExperimentalMapTarget != nullptr &&
         context.resolveExperimentalMapTarget(expr.args.front(), keyValueKeyType,
                                              keyValueValueType);
@@ -539,8 +539,8 @@ bool SemanticsValidator::validateExprCollectionAccessFallbacks(
          expr.args.front().kind == Expr::Kind::FloatLiteral ||
          expr.args.front().kind == Expr::Kind::StringLiteral ||
          (expr.args.front().kind == Expr::Kind::Name && !isArrayOrString &&
-          !isMap && !isExperimentalMap));
-    if (!isArrayOrString && !isMap && !isExperimentalMap &&
+          !isKeyValue && !isExperimentalKeyValue));
+    if (!isArrayOrString && !isKeyValue && !isExperimentalKeyValue &&
         shouldProbeReorderedReceiver) {
       std::string reorderedElemType;
       std::string reorderedKeyValueKeyType;
@@ -551,19 +551,19 @@ bool SemanticsValidator::validateExprCollectionAccessFallbacks(
           resolveArgsPackElementTypeForExpr(expr.args[1], params, locals,
                                             reorderedElemType);
       const bool reorderedKeyValue = isKeyValueTarget(expr.args[1], reorderedKeyValueKeyType);
-      const bool reorderedExperimentalMap =
+      const bool reorderedExperimentalKeyValue =
           context.resolveExperimentalMapTarget != nullptr &&
           context.resolveExperimentalMapTarget(expr.args[1], reorderedKeyValueKeyType,
                                                reorderedKeyValueValueType);
       if (reorderedArrayOrString || reorderedArgsPack || reorderedKeyValue ||
-          reorderedExperimentalMap) {
+          reorderedExperimentalKeyValue) {
         indexArgIndex = 0;
         elemType = reorderedElemType;
         keyValueKeyType = reorderedKeyValueKeyType;
         keyValueValueType = reorderedKeyValueValueType;
         isArrayOrString = reorderedArrayOrString || reorderedArgsPack;
-        isMap = reorderedKeyValue;
-        isExperimentalMap = reorderedExperimentalMap;
+        isKeyValue = reorderedKeyValue;
+        isExperimentalKeyValue = reorderedExperimentalKeyValue;
       }
     }
     const Expr &receiverExpr = expr.args[indexArgIndex == 0 ? 1 : 0];
@@ -581,8 +581,8 @@ bool SemanticsValidator::validateExprCollectionAccessFallbacks(
           receiverExpr.templateArgs.size() == 2) {
         keyValueKeyType = receiverExpr.templateArgs[0];
         keyValueValueType = receiverExpr.templateArgs[1];
-        isMap = true;
-        isExperimentalMap = false;
+        isKeyValue = true;
+        isExperimentalKeyValue = false;
       } else if ((receiverBuiltinCollection == "array" ||
                   receiverBuiltinCollection == "vector") &&
                  receiverExpr.templateArgs.size() == 1) {
@@ -590,29 +590,29 @@ bool SemanticsValidator::validateExprCollectionAccessFallbacks(
         isArrayOrString = true;
       }
     }
-    if (!isMap && !isExperimentalMap) {
+    if (!isKeyValue && !isExperimentalKeyValue) {
       std::string receiverTypeText;
       if (!(receiverExpr.kind == Expr::Kind::Call &&
             (isRootMapAliasPath(resolveCalleePath(receiverExpr)) ||
              isRootMapAliasPath(explicitCallPath(receiverExpr)))) &&
           inferQueryExprTypeText(receiverExpr, params, locals, receiverTypeText) &&
           extractMapKeyValueTypesFromTypeText(receiverTypeText, keyValueKeyType, keyValueValueType)) {
-        const bool isExperimentalMapType = isExperimentalMapTypeText(receiverTypeText);
-        if (isExperimentalMapType) {
-          isExperimentalMap = true;
+        const bool isExperimentalKeyValueType = isExperimentalMapTypeText(receiverTypeText);
+        if (isExperimentalKeyValueType) {
+          isExperimentalKeyValue = true;
         } else {
-          isMap = true;
+          isKeyValue = true;
         }
       }
     }
     const bool isExplicitKeyValueAccessHelper =
         isCanonicalKeyValueAccessResolvedPath(resolved);
-    if (isExplicitKeyValueAccessHelper && !isMap && !isExperimentalMap) {
+    if (isExplicitKeyValueAccessHelper && !isKeyValue && !isExperimentalKeyValue) {
       handledOut = false;
       return true;
     }
     if (!expr.templateArgs.empty() &&
-        (isMap || isExperimentalMap || isExplicitKeyValueAccessHelper)) {
+        (isKeyValue || isExperimentalKeyValue || isExplicitKeyValueAccessHelper)) {
       return true;
     }
     handledOut = true;
@@ -632,7 +632,7 @@ bool SemanticsValidator::validateExprCollectionAccessFallbacks(
       return failCollectionAccessDiagnostic(
           "unknown call target: " + canonicalVectorAccessPath);
     }
-    if (!isArrayOrString && !isMap && !isExperimentalMap) {
+    if (!isArrayOrString && !isKeyValue && !isExperimentalKeyValue) {
       if (!validateExpr(params, locals, expr.args.front())) {
         return false;
       }
@@ -678,7 +678,7 @@ bool SemanticsValidator::validateExprCollectionAccessFallbacks(
       return failCollectionAccessDiagnostic(
           builtinName + " requires array, vector, map, or string target");
     }
-    if ((isMap || isExperimentalMap) &&
+    if ((isKeyValue || isExperimentalKeyValue) &&
         !context.shouldBuiltinValidateBareKeyValueAccessCall &&
         !(context.isIndexedArgsPackKeyValueReceiverTarget != nullptr &&
           context.isIndexedArgsPackKeyValueReceiverTarget(expr.args.front())) &&
@@ -688,7 +688,7 @@ bool SemanticsValidator::validateExprCollectionAccessFallbacks(
       return failCollectionAccessDiagnostic(
           "unknown call target: " + canonicalKeyValueHelperPathLocal(builtinName));
     }
-    if (!isMap && !isExperimentalMap) {
+    if (!isKeyValue && !isExperimentalKeyValue) {
       if (!isIntegerExpr(expr.args[indexArgIndex])) {
         return failCollectionAccessDiagnostic(
             builtinName + " requires integer index [collection]");

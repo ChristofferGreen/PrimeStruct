@@ -2700,11 +2700,21 @@ TEST_CASE("canonical map surface owns standalone stdlib implementation") {
         std::string::npos);
   CHECK(collectionAccessValidationSource.find("reorderedKeyValue") !=
         std::string::npos);
+  CHECK(collectionAccessValidationSource.find("isKeyValue") !=
+        std::string::npos);
+  CHECK(collectionAccessValidationSource.find("isExperimentalKeyValue") !=
+        std::string::npos);
   CHECK(collectionAccessValidationSource.find("reorderedMapKeyType") ==
         std::string::npos);
   CHECK(collectionAccessValidationSource.find("reorderedMapValueType") ==
         std::string::npos);
   CHECK(collectionAccessValidationSource.find("reorderedMap") ==
+        std::string::npos);
+  CHECK(collectionAccessValidationSource.find("reorderedExperimentalMap") ==
+        std::string::npos);
+  CHECK(collectionAccessValidationSource.find("bool isMap") ==
+        std::string::npos);
+  CHECK(collectionAccessValidationSource.find("bool isExperimentalMap =") ==
         std::string::npos);
   CHECK(collectionAccessValidationSource.find("std::string mapValueType") ==
         std::string::npos);
