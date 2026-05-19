@@ -1731,7 +1731,7 @@ bool SemanticsValidator::resolveMethodTarget(const std::vector<ParameterInfo> &p
     }
     return inferExprReturnKind(target, params, locals) == ReturnKind::String;
   };
-  auto getDirectMapHelperCompatibilityPath = [&](const Expr &candidate) -> std::string {
+  auto getDirectKeyValueHelperCompatibilityPath = [&](const Expr &candidate) -> std::string {
     if (candidate.kind != Expr::Kind::Call || candidate.isMethodCall || candidate.name.empty()) {
       return "";
     }
@@ -2933,10 +2933,11 @@ bool SemanticsValidator::resolveMethodTarget(const std::vector<ParameterInfo> &p
             : std::string();
     std::string accessHelperName;
     if (getBuiltinArrayAccessName(receiver, accessHelperName) && !receiver.args.empty()) {
-      const std::string removedMapCompatibilityPath = getDirectMapHelperCompatibilityPath(receiver);
-      if (!removedMapCompatibilityPath.empty()) {
+      const std::string removedKeyValueCompatibilityPath =
+          getDirectKeyValueHelperCompatibilityPath(receiver);
+      if (!removedKeyValueCompatibilityPath.empty()) {
         return failMethodTargetResolutionDiagnostic("unknown call target: " +
-                                                    removedMapCompatibilityPath);
+                                                    removedKeyValueCompatibilityPath);
       }
       size_t accessReceiverIndex = 0;
       if (!receiver.isMethodCall && hasNamedArguments(receiver.argNames)) {

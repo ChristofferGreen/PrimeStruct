@@ -139,7 +139,7 @@
                                       const ExprResultFileBuiltinContext &context,
                                       bool &handledOut);
   struct ExprTryBuiltinContext {
-    std::function<std::string(const Expr &)> getDirectMapHelperCompatibilityPath;
+    std::function<std::string(const Expr &)> getDirectKeyValueHelperCompatibilityPath;
     std::function<bool(const Expr &)> isIndexedArgsPackMapReceiverTarget;
   };
   bool validateExprTryBuiltin(const std::vector<ParameterInfo> &params,

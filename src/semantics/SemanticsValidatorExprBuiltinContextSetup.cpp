@@ -10,7 +10,7 @@ void SemanticsValidator::prepareExprLateBuiltinContext(
     const BuiltinCollectionDispatchResolvers &dispatchResolvers,
     ExprLateBuiltinContext &contextOut) {
   contextOut = {};
-  contextOut.tryBuiltinContext.getDirectMapHelperCompatibilityPath =
+  contextOut.tryBuiltinContext.getDirectKeyValueHelperCompatibilityPath =
       [&](const Expr &target) {
         return this->directKeyValueHelperCompatibilityPath(
             target, params, locals, dispatchResolverAdapters);

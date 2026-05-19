@@ -68,7 +68,10 @@
             "lateBuiltinContext.tryBuiltinContext.getDirectMapHelperCompatibilityPath =") ==
         std::string::npos);
   CHECK(validatorExpr.find(
-            "contextOut.tryBuiltinContext.getDirectMapHelperCompatibilityPath =") !=
+            "contextOut.tryBuiltinContext.getDirectMapHelperCompatibilityPath =") ==
+        std::string::npos);
+  CHECK(validatorExpr.find(
+            "contextOut.tryBuiltinContext.getDirectKeyValueHelperCompatibilityPath =") !=
         std::string::npos);
   CHECK(validatorExprMain.find("shouldBuiltinValidateStdNamespacedVectorCountCall") ==
         std::string::npos);

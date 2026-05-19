@@ -53,7 +53,12 @@
   CHECK(semanticsExprSource.find("const std::string removedMapCompatibilityPath =") ==
         std::string::npos);
   CHECK(semanticsExprMethodCompatibilitySetupSource.find(
-            "const std::string removedMapCompatibilityPath =") !=
+            "const std::string removedMapCompatibilityPath =") ==
+        std::string::npos);
+  CHECK(semanticsExprSource.find("const std::string removedKeyValueCompatibilityPath =") ==
+        std::string::npos);
+  CHECK(semanticsExprMethodCompatibilitySetupSource.find(
+            "const std::string removedKeyValueCompatibilityPath =") !=
         std::string::npos);
   CHECK(semanticsExprSource.find("auto isKnownCollectionTarget = [&](const Expr &targetExpr) -> bool {") ==
         std::string::npos);
@@ -113,6 +118,11 @@
   CHECK(semanticsExprSource.find("auto getMapNamespacedMethodCompatibilityPath = [&](const Expr &candidate) -> std::string {") ==
         std::string::npos);
   CHECK(semanticsExprSource.find("auto getDirectMapHelperCompatibilityPath = [&](const Expr &candidate) -> std::string {") ==
+        std::string::npos);
+  CHECK(semanticsExprMethodTargetResolutionSource.find("auto getDirectMapHelperCompatibilityPath = [&](const Expr &candidate) -> std::string {") ==
+        std::string::npos);
+  CHECK(semanticsExprMethodTargetResolutionSource.find(
+            "auto getDirectKeyValueHelperCompatibilityPath = [&](const Expr &candidate) -> std::string {") !=
         std::string::npos);
   CHECK(semanticsExprSource.find("auto isUnnamespacedMapCountBuiltinFallbackCall = [&](const Expr &candidate) -> bool {") ==
         std::string::npos);
@@ -247,7 +257,10 @@
             "lateBuiltinContext.tryBuiltinContext.getDirectMapHelperCompatibilityPath =") ==
         std::string::npos);
   CHECK(semanticsExprBuiltinContextSetupSource.find(
-            "contextOut.tryBuiltinContext.getDirectMapHelperCompatibilityPath =") !=
+            "contextOut.tryBuiltinContext.getDirectMapHelperCompatibilityPath =") ==
+        std::string::npos);
+  CHECK(semanticsExprBuiltinContextSetupSource.find(
+            "contextOut.tryBuiltinContext.getDirectKeyValueHelperCompatibilityPath =") !=
         std::string::npos);
   CHECK(semanticsExprSource.find(
             "countCapacityBuiltinContext.shouldBuiltinValidateStdNamespacedVectorCountCall =") ==

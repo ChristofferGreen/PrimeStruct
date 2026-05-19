@@ -657,6 +657,10 @@ TEST_CASE("canonical map surface owns standalone stdlib implementation") {
         std::string::npos);
   CHECK(methodTargetResolutionSource.find("preferredMapHelper") ==
         std::string::npos);
+  CHECK(methodTargetResolutionSource.find("getDirectMapHelperCompatibilityPath") ==
+        std::string::npos);
+  CHECK(methodTargetResolutionSource.find("removedMapCompatibilityPath") ==
+        std::string::npos);
   CHECK(methodTargetResolutionSource.find("resolveExplicitRootMapMethodPath") ==
         std::string::npos);
   CHECK(methodTargetResolutionSource.find("resolvedExplicitRootMapMethod") ==
@@ -670,6 +674,10 @@ TEST_CASE("canonical map surface owns standalone stdlib implementation") {
   CHECK(methodTargetResolutionSource.find("preferredKeyValueMethodTarget") !=
         std::string::npos);
   CHECK(methodTargetResolutionSource.find("preferredKeyValueHelper") !=
+        std::string::npos);
+  CHECK(methodTargetResolutionSource.find("getDirectKeyValueHelperCompatibilityPath") !=
+        std::string::npos);
+  CHECK(methodTargetResolutionSource.find("removedKeyValueCompatibilityPath") !=
         std::string::npos);
   CHECK(methodTargetResolutionSource.find("resolveExplicitRootKeyValueMethodPath") !=
         std::string::npos);
@@ -756,8 +764,12 @@ TEST_CASE("canonical map surface owns standalone stdlib implementation") {
   CHECK(privateExprValidationSource.find(
             "isDirectStdNamespacedVectorCountWrapperMapTarget") ==
         std::string::npos);
+  CHECK(privateExprValidationSource.find("getDirectMapHelperCompatibilityPath") ==
+        std::string::npos);
   CHECK(privateExprValidationSource.find(
             "isDirectStdNamespacedVectorCountWrapperKeyValueTarget") !=
+        std::string::npos);
+  CHECK(privateExprValidationSource.find("getDirectKeyValueHelperCompatibilityPath") !=
         std::string::npos);
   CHECK(exprCollectionDispatchSetupSource.find(
             "isDirectStdNamespacedVectorCountWrapperMapTarget") ==
@@ -1889,6 +1901,14 @@ TEST_CASE("canonical map surface owns standalone stdlib implementation") {
   CHECK(lateMapAccessBuiltinsSource.find("rewrittenKeyValueHelperCall") !=
         std::string::npos);
   CHECK(exprTrySource.find("StdlibSurfaceId::CollectionsMapHelpers") ==
+        std::string::npos);
+  CHECK(exprTrySource.find("getDirectMapHelperCompatibilityPath") ==
+        std::string::npos);
+  CHECK(exprTrySource.find("removedMapCompatibilityPath") ==
+        std::string::npos);
+  CHECK(exprTrySource.find("getDirectKeyValueHelperCompatibilityPath") !=
+        std::string::npos);
+  CHECK(exprTrySource.find("removedKeyValueCompatibilityPath") !=
         std::string::npos);
   CHECK(exprTrySource.find("metadataBackedCanonicalMapHelperPath(\"tryAt\")") !=
         std::string::npos);

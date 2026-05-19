@@ -33,12 +33,12 @@ bool SemanticsValidator::validateExprTryBuiltin(
   }
   if (expr.args.front().kind == Expr::Kind::Call) {
     const Expr &tryTargetExpr = expr.args.front();
-    const std::string removedMapCompatibilityPath =
-        context.getDirectMapHelperCompatibilityPath != nullptr
-            ? context.getDirectMapHelperCompatibilityPath(tryTargetExpr)
+    const std::string removedKeyValueCompatibilityPath =
+        context.getDirectKeyValueHelperCompatibilityPath != nullptr
+            ? context.getDirectKeyValueHelperCompatibilityPath(tryTargetExpr)
             : std::string{};
-    if (!removedMapCompatibilityPath.empty()) {
-      return failTryDiagnostic("unknown call target: " + removedMapCompatibilityPath);
+    if (!removedKeyValueCompatibilityPath.empty()) {
+      return failTryDiagnostic("unknown call target: " + removedKeyValueCompatibilityPath);
     }
     const std::string tryTargetPath = resolveCalleePath(tryTargetExpr);
     bool isBareMapTryAtFallback = false;
