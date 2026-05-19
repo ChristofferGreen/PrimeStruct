@@ -4069,6 +4069,14 @@ TEST_CASE("canonical map surface owns standalone stdlib implementation") {
   CHECK(setupTypeReceiverTargetSource.find(
             "blocksBareMapAccessReceiverProbeKindFallback") ==
         std::string::npos);
+  CHECK(setupTypeReceiverTargetSource.find("isReferenceMap") ==
+        std::string::npos);
+  CHECK(setupTypeReceiverTargetSource.find("isPointerMap") ==
+        std::string::npos);
+  CHECK(setupTypeReceiverTargetSource.find("isReferenceKeyValue") !=
+        std::string::npos);
+  CHECK(setupTypeReceiverTargetSource.find("isPointerKeyValue") !=
+        std::string::npos);
   CHECK(setupTypeCollectionSource.find("const std::string mapPrefix = \"map/\"") ==
         std::string::npos);
   CHECK(setupTypeCollectionSource.find("const std::string stdMapPrefix = \"std/collections/map/\"") ==

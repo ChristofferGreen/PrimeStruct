@@ -555,8 +555,8 @@ bool resolveMethodReceiverTarget(const Expr &receiverExpr,
         const bool isPointerArray = receiverKind == LocalInfo::Kind::Pointer && localInfo.pointerToArray;
         const bool isReferenceVector = receiverKind == LocalInfo::Kind::Reference && localInfo.referenceToVector;
         const bool isPointerVector = receiverKind == LocalInfo::Kind::Pointer && localInfo.pointerToVector;
-        const bool isReferenceMap = receiverKind == LocalInfo::Kind::Reference && localInfo.referenceToKeyValueCollection;
-        const bool isPointerMap = receiverKind == LocalInfo::Kind::Pointer && localInfo.pointerToKeyValueCollection;
+        const bool isReferenceKeyValue = receiverKind == LocalInfo::Kind::Reference && localInfo.referenceToKeyValueCollection;
+        const bool isPointerKeyValue = receiverKind == LocalInfo::Kind::Pointer && localInfo.pointerToKeyValueCollection;
         const bool isReferenceBuffer = receiverKind == LocalInfo::Kind::Reference && localInfo.referenceToBuffer;
         const bool isPointerBuffer = receiverKind == LocalInfo::Kind::Pointer && localInfo.pointerToBuffer;
         if (localInfo.isFileError &&
@@ -577,7 +577,7 @@ bool resolveMethodReceiverTarget(const Expr &receiverExpr,
           typeNameOut = localInfo.isSoaVector ? "soa" "_vector" : "vector";
           return true;
         }
-        if (isReferenceMap || isPointerMap) {
+        if (isReferenceKeyValue || isPointerKeyValue) {
           typeNameOut = "map";
           return true;
         }
