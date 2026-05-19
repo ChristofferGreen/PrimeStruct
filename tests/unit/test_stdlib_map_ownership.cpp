@@ -4290,6 +4290,11 @@ TEST_CASE("canonical map surface owns standalone stdlib implementation") {
   CHECK(statementReturnsSource.find("typePath == \"/map\"") == std::string::npos);
   CHECK(statementReturnsSource.find("expectedType == \"/map\"") ==
         std::string::npos);
+  CHECK(statementReturnsSource.find("isSpecializedExperimentalMapBackingPath") ==
+        std::string::npos);
+  CHECK(statementReturnsSource.find(
+            "isSpecializedExperimentalKeyValueBackingPath") !=
+        std::string::npos);
   CHECK(statementReturnsSource.find("mapHelperSurfaceMetadataLocal()") !=
         std::string::npos);
   CHECK(statementReturnsSource.find("mapConstructorSurfaceMetadataLocal()") !=

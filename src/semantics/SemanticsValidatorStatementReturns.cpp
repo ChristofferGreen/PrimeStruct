@@ -36,7 +36,7 @@ std::string collectionTypePathLocal(std::string_view collectionName,
   return path;
 }
 
-bool isSpecializedExperimentalMapBackingPath(std::string typeName) {
+bool isSpecializedExperimentalKeyValueBackingPath(std::string typeName) {
   typeName = normalizeBindingTypeName(typeName);
   if (!typeName.empty() && typeName.front() == '/') {
     typeName.erase(typeName.begin());
@@ -1006,7 +1006,7 @@ bool SemanticsValidator::validateReturnStatement(const std::vector<ParameterInfo
             if (!normalizedTypePath.empty() && normalizedTypePath.front() == '/') {
               normalizedTypePath.erase(normalizedTypePath.begin());
             }
-            if (isSpecializedExperimentalMapBackingPath(normalizedTypePath)) {
+            if (isSpecializedExperimentalKeyValueBackingPath(normalizedTypePath)) {
               return keyValueCollectionMarker;
             }
             const std::string canonicalKeyValueBackingRoot =
