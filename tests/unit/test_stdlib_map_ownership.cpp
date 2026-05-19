@@ -3861,10 +3861,14 @@ TEST_CASE("canonical map surface owns standalone stdlib implementation") {
         std::string::npos);
   CHECK(uninitializedStructInferenceSource.find("inferredMapStruct") ==
         std::string::npos);
+  CHECK(uninitializedStructInferenceSource.find(
+            "isSpecializedExperimentalMapStructPath") == std::string::npos);
   CHECK(uninitializedStructInferenceSource.find("const std::string keyValueType") !=
         std::string::npos);
   CHECK(uninitializedStructInferenceSource.find("inferredKeyValueStruct") !=
         std::string::npos);
+  CHECK(uninitializedStructInferenceSource.find(
+            "isSpecializedExperimentalKeyValueStructPath") != std::string::npos);
   CHECK(structSlotLayoutSource.find("isBuiltinCollectionTypeName(typeName, \"map\")") !=
         std::string::npos);
   CHECK(structSlotLayoutSource.find("experimentalMapType") == std::string::npos);

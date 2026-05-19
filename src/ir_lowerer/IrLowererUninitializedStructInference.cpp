@@ -17,7 +17,7 @@ namespace primec::ir_lowerer {
 
 namespace {
 
-bool isSpecializedExperimentalMapStructPath(const std::string &typeText) {
+bool isSpecializedExperimentalKeyValueStructPath(const std::string &typeText) {
   std::string normalized = trimTemplateTypeText(typeText);
   if (!normalized.empty() && normalized.front() != '/') {
     normalized.insert(normalized.begin(), '/');
@@ -336,7 +336,7 @@ std::string inferUninitializedTargetStructPath(const std::string &typeText,
     return specializedVectorStruct;
   }
 
-  if (isSpecializedExperimentalMapStructPath(normalized)) {
+  if (isSpecializedExperimentalKeyValueStructPath(normalized)) {
     if (normalized.front() != '/') {
       normalized.insert(normalized.begin(), '/');
     }
