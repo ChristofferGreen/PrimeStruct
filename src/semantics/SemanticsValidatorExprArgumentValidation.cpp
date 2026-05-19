@@ -619,33 +619,35 @@ bool SemanticsValidator::validateArgumentTypeAgainstParam(
     return true;
   }
 
-  std::string expectedMapKeyType;
-  std::string expectedMapValueType;
+  std::string expectedKeyValueKeyType;
+  std::string expectedKeyValueValueType;
   std::string actualKeyValueKeyType;
   std::string actualKeyValueValueType;
-  std::string actualMapBase;
-  std::vector<std::string> actualMapTemplateArgs;
+  std::string actualKeyValueBase;
+  std::vector<std::string> actualKeyValueTemplateArgs;
   std::string expectedExperimentalVectorElemType;
   std::string expectedExperimentalSoaVectorElemType;
   std::string actualVectorElemType;
   std::string actualSoaVectorElemType;
-  const bool isCompatibleExperimentalMapReceiver =
+  const bool isCompatibleExperimentalKeyValueReceiver =
       extractExperimentalMapFieldTypesFromStructPath(
-          expectedStructPath, expectedMapKeyType, expectedMapValueType) &&
+          expectedStructPath, expectedKeyValueKeyType, expectedKeyValueValueType) &&
       ((resolveMapKeyType(arg, dispatchResolvers, actualKeyValueKeyType) &&
         resolveMapValueType(arg, dispatchResolvers, actualKeyValueValueType) &&
-        normalizeBindingTypeName(expectedMapKeyType) ==
+        normalizeBindingTypeName(expectedKeyValueKeyType) ==
             normalizeBindingTypeName(actualKeyValueKeyType) &&
-        normalizeBindingTypeName(expectedMapValueType) ==
+        normalizeBindingTypeName(expectedKeyValueValueType) ==
             normalizeBindingTypeName(actualKeyValueValueType)) ||
-       (inferCollectionBindingType(arg, actualMapBase, actualMapTemplateArgs) &&
-        actualMapTemplateArgs.size() == 2 &&
-        (isMapCollectionTypeName(normalizeBindingTypeName(actualMapBase)) ||
-         isExperimentalMapBackingTemplateBaseForArgumentValidation(actualMapBase)) &&
-        normalizeBindingTypeName(expectedMapKeyType) ==
-            normalizeBindingTypeName(actualMapTemplateArgs[0]) &&
-        normalizeBindingTypeName(expectedMapValueType) ==
-            normalizeBindingTypeName(actualMapTemplateArgs[1])));
+       (inferCollectionBindingType(arg, actualKeyValueBase,
+                                   actualKeyValueTemplateArgs) &&
+        actualKeyValueTemplateArgs.size() == 2 &&
+        (isMapCollectionTypeName(normalizeBindingTypeName(actualKeyValueBase)) ||
+         isExperimentalMapBackingTemplateBaseForArgumentValidation(
+             actualKeyValueBase)) &&
+        normalizeBindingTypeName(expectedKeyValueKeyType) ==
+            normalizeBindingTypeName(actualKeyValueTemplateArgs[0]) &&
+        normalizeBindingTypeName(expectedKeyValueValueType) ==
+            normalizeBindingTypeName(actualKeyValueTemplateArgs[1])));
   const bool isCompatibleCanonicalVectorReceiver = [&] {
     if (!(extractExperimentalVectorElementType(param.binding, expectedExperimentalVectorElemType) ||
           extractExperimentalVectorElementTypeFromStructPath(
@@ -733,7 +735,7 @@ bool SemanticsValidator::validateArgumentTypeAgainstParam(
   }();
   const std::string actualStructPath = inferStructReturnPath(arg, params, locals);
   if (!actualStructPath.empty() && actualStructPath != expectedStructPath) {
-    if (isCompatibleExperimentalMapReceiver || isCompatibleCanonicalVectorReceiver ||
+    if (isCompatibleExperimentalKeyValueReceiver || isCompatibleCanonicalVectorReceiver ||
         isCompatibleExperimentalSoaVectorReceiver) {
       return true;
     }
@@ -743,7 +745,7 @@ bool SemanticsValidator::validateArgumentTypeAgainstParam(
             diagnosticResolved, param.name, expectedStructPath, actualStructPath));
   }
   if (actualStructPath.empty()) {
-    if (isCompatibleExperimentalMapReceiver || isCompatibleCanonicalVectorReceiver ||
+    if (isCompatibleExperimentalKeyValueReceiver || isCompatibleCanonicalVectorReceiver ||
         isCompatibleExperimentalSoaVectorReceiver) {
       return true;
     }

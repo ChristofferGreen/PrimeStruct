@@ -2994,6 +2994,25 @@ TEST_CASE("canonical map surface owns standalone stdlib implementation") {
         std::string::npos);
   CHECK(argumentValidationSource.find("actualMapValueType") ==
         std::string::npos);
+  CHECK(argumentValidationSource.find("expectedMapKeyType") ==
+        std::string::npos);
+  CHECK(argumentValidationSource.find("expectedMapValueType") ==
+        std::string::npos);
+  CHECK(argumentValidationSource.find("expectedKeyValueKeyType") !=
+        std::string::npos);
+  CHECK(argumentValidationSource.find("expectedKeyValueValueType") !=
+        std::string::npos);
+  CHECK(argumentValidationSource.find("actualMapBase") == std::string::npos);
+  CHECK(argumentValidationSource.find("actualMapTemplateArgs") ==
+        std::string::npos);
+  CHECK(argumentValidationSource.find("actualKeyValueBase") !=
+        std::string::npos);
+  CHECK(argumentValidationSource.find("actualKeyValueTemplateArgs") !=
+        std::string::npos);
+  CHECK(argumentValidationSource.find("isCompatibleExperimentalMapReceiver") ==
+        std::string::npos);
+  CHECK(argumentValidationSource.find(
+            "isCompatibleExperimentalKeyValueReceiver") != std::string::npos);
   CHECK(resolvedCallArgumentsSource.find("mapConstructorArgumentMatchesExactType") ==
         std::string::npos);
   CHECK(resolvedCallArgumentsSource.find(
