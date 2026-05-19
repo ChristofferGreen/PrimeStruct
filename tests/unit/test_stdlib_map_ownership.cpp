@@ -1703,6 +1703,14 @@ TEST_CASE("canonical map surface owns standalone stdlib implementation") {
         std::string::npos);
   CHECK(inferCollectionCompatibilityInternalSource.find("rootedMapCompatibilityHelperPath(") ==
         std::string::npos);
+  CHECK(inferCollectionCompatibilityInternalSource.find("canonicalMapCompatibilityPrefixOrFallback(") ==
+        std::string::npos);
+  CHECK(inferCollectionCompatibilityInternalSource.find("unrootedCanonicalMapCompatibilityPrefixOrFallback(") ==
+        std::string::npos);
+  CHECK(inferCollectionCompatibilityInternalSource.find("isCanonicalMapCompatibilityNamespace(") ==
+        std::string::npos);
+  CHECK(inferCollectionCompatibilityInternalSource.find("legacyExperimentalMapCompatibilityPrefix(") ==
+        std::string::npos);
   CHECK(inferCollectionCompatibilityInternalSource.find("resolveKeyValueCompatibilityMemberToken(") !=
         std::string::npos);
   CHECK(inferCollectionCompatibilityInternalSource.find("resolveKeyValueCompatibilityResolvedPath(") !=
@@ -1710,6 +1718,14 @@ TEST_CASE("canonical map surface owns standalone stdlib implementation") {
   CHECK(inferCollectionCompatibilityInternalSource.find("resolveKeyValueCompatibilityUnrootedPath(") !=
         std::string::npos);
   CHECK(inferCollectionCompatibilityInternalSource.find("rootedKeyValueCompatibilityHelperPath(") !=
+        std::string::npos);
+  CHECK(inferCollectionCompatibilityInternalSource.find("canonicalKeyValueCompatibilityPrefixOrFallback(") !=
+        std::string::npos);
+  CHECK(inferCollectionCompatibilityInternalSource.find("unrootedCanonicalKeyValueCompatibilityPrefixOrFallback(") !=
+        std::string::npos);
+  CHECK(inferCollectionCompatibilityInternalSource.find("isCanonicalKeyValueCompatibilityNamespace(") !=
+        std::string::npos);
+  CHECK(inferCollectionCompatibilityInternalSource.find("legacyExperimentalKeyValueCompatibilityPrefix(") !=
         std::string::npos);
   CHECK(inferCollectionCompatibilityInternalSource.find("mapHelperSurfaceMetadataLocal()") !=
         std::string::npos);

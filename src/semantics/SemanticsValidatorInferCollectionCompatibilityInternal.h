@@ -313,7 +313,7 @@ isPublishedBorrowedKeyValueHelperName(std::string_view helperName) {
   return "/std/collections/" + std::string("vector");
 }
 
-[[maybe_unused]] std::string canonicalMapCompatibilityPrefixOrFallback() {
+[[maybe_unused]] std::string canonicalKeyValueCompatibilityPrefixOrFallback() {
   const StdlibSurfaceMetadata *metadata = mapHelperSurfaceMetadataLocal();
   if (metadata != nullptr) {
     return std::string(metadata->canonicalPath);
@@ -331,8 +331,8 @@ unrootedCanonicalVectorCompatibilityPrefixOrFallback() {
 }
 
 [[maybe_unused]] std::string
-unrootedCanonicalMapCompatibilityPrefixOrFallback() {
-  std::string prefix = canonicalMapCompatibilityPrefixOrFallback();
+unrootedCanonicalKeyValueCompatibilityPrefixOrFallback() {
+  std::string prefix = canonicalKeyValueCompatibilityPrefixOrFallback();
   if (!prefix.empty() && prefix.front() == '/') {
     prefix.erase(prefix.begin());
   }
@@ -357,10 +357,10 @@ unrootedCanonicalMapCompatibilityPrefixOrFallback() {
   return false;
 }
 
-[[maybe_unused]] bool isCanonicalMapCompatibilityNamespace(
+[[maybe_unused]] bool isCanonicalKeyValueCompatibilityNamespace(
     std::string_view namespacePrefix) {
   return trimLeadingSlash(namespacePrefix) ==
-         unrootedCanonicalMapCompatibilityPrefixOrFallback();
+         unrootedCanonicalKeyValueCompatibilityPrefixOrFallback();
 }
 
 [[maybe_unused]] bool resolveKeyValueCompatibilityMemberToken(
@@ -449,7 +449,7 @@ stripUnrootedCanonicalVectorCompatibilityPrefix(std::string_view path) {
   return "/std/collections/experimental_" + std::string("vector") + "/";
 }
 
-[[maybe_unused]] std::string legacyExperimentalMapCompatibilityPrefix() {
+[[maybe_unused]] std::string legacyExperimentalKeyValueCompatibilityPrefix() {
   return "/std/collections/experimental_" + std::string("map") + "/";
 }
 
@@ -682,7 +682,7 @@ resolveCanonicalCompatibilityKeyValueHelperNameFromResolvedPath(
 
 [[maybe_unused]] bool isDirectExperimentalMapImportPath(
     std::string_view importPath) {
-  const std::string root = legacyExperimentalMapCompatibilityPrefix();
+  const std::string root = legacyExperimentalKeyValueCompatibilityPrefix();
   const std::string normalizedRoot = root.substr(0, root.size() - 1);
   return importPath == normalizedRoot || importPath == root + "*" ||
          (importPath.size() > normalizedRoot.size() &&
@@ -692,8 +692,8 @@ resolveCanonicalCompatibilityKeyValueHelperNameFromResolvedPath(
 
 [[maybe_unused]] std::string directExperimentalMapImportDiagnostic() {
   const std::string canonicalRoot =
-      canonicalMapCompatibilityPrefixOrFallback() + "/";
-  return "direct import of " + legacyExperimentalMapCompatibilityPrefix() +
+      canonicalKeyValueCompatibilityPrefixOrFallback() + "/";
+  return "direct import of " + legacyExperimentalKeyValueCompatibilityPrefix() +
          "* is not supported; use " + canonicalRoot + "*";
 }
 
@@ -726,7 +726,7 @@ resolveExplicitPublishedKeyValueHelperExprMemberName(
   namespacePrefix = trimLeadingSlash(namespacePrefix);
 
   if (isKeyValueHelperImportAliasNamespace(namespacePrefix) ||
-      isCanonicalMapCompatibilityNamespace(namespacePrefix)) {
+      isCanonicalKeyValueCompatibilityNamespace(namespacePrefix)) {
     if (!resolveKeyValueCompatibilityMemberToken(rawMethodName, helperNameOut)) {
       return false;
     }
@@ -778,7 +778,7 @@ resolveExplicitPublishedKeyValueHelperExprMemberName(
     return setVectorLike(rawMethodName, false);
   }
   if (isKeyValueHelperImportAliasNamespace(namespacePrefix) ||
-      isCanonicalMapCompatibilityNamespace(namespacePrefix)) {
+      isCanonicalKeyValueCompatibilityNamespace(namespacePrefix)) {
     return setMap(rawMethodName);
   }
   if (rawMethodName.rfind("array/", 0) == 0) {

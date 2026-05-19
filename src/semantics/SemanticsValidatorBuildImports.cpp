@@ -256,7 +256,7 @@ bool SemanticsValidator::buildImportAliases() {
         if (prefix != "/std/collections/internal_map") {
           return false;
         }
-        const std::string scopedPrefix = legacyExperimentalMapCompatibilityPrefix();
+        const std::string scopedPrefix = legacyExperimentalKeyValueCompatibilityPrefix();
         bool sawAlias = false;
         for (const std::string_view familyName : std::array<std::string_view, 2>{"Entry", "Map"}) {
           targetAliases[std::string(familyName)] =
@@ -319,7 +319,7 @@ bool SemanticsValidator::buildImportAliases() {
         if (prefix != "/std/collections/internal_map") {
           return false;
         }
-        return existingAliasPath == legacyExperimentalMapCompatibilityPrefix() + aliasName &&
+        return existingAliasPath == legacyExperimentalKeyValueCompatibilityPrefix() + aliasName &&
                candidatePath == "/std/collections/internal_map/" + aliasName;
       };
   auto isMetadataBackedWildcardAliasDefinition =

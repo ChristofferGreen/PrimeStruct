@@ -2564,10 +2564,34 @@ main() {
             "rootedMapCompatibilityHelperPath(") ==
         std::string::npos);
   CHECK(collectionCompatibilityInternalSource.find(
+            "canonicalMapCompatibilityPrefixOrFallback(") ==
+        std::string::npos);
+  CHECK(collectionCompatibilityInternalSource.find(
+            "unrootedCanonicalMapCompatibilityPrefixOrFallback(") ==
+        std::string::npos);
+  CHECK(collectionCompatibilityInternalSource.find(
+            "isCanonicalMapCompatibilityNamespace(") ==
+        std::string::npos);
+  CHECK(collectionCompatibilityInternalSource.find(
+            "legacyExperimentalMapCompatibilityPrefix(") ==
+        std::string::npos);
+  CHECK(collectionCompatibilityInternalSource.find(
             "resolveKeyValueCompatibilityUnrootedPath(") !=
         std::string::npos);
   CHECK(collectionCompatibilityInternalSource.find(
             "rootedKeyValueCompatibilityHelperPath(") !=
+        std::string::npos);
+  CHECK(collectionCompatibilityInternalSource.find(
+            "canonicalKeyValueCompatibilityPrefixOrFallback(") !=
+        std::string::npos);
+  CHECK(collectionCompatibilityInternalSource.find(
+            "unrootedCanonicalKeyValueCompatibilityPrefixOrFallback(") !=
+        std::string::npos);
+  CHECK(collectionCompatibilityInternalSource.find(
+            "isCanonicalKeyValueCompatibilityNamespace(") !=
+        std::string::npos);
+  CHECK(collectionCompatibilityInternalSource.find(
+            "legacyExperimentalKeyValueCompatibilityPrefix(") !=
         std::string::npos);
   CHECK(collectionCompatibilityInternalSource.find(
             "StdlibSurfaceId::CollectionsVectorHelperSurface") ==
