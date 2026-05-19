@@ -1978,6 +1978,8 @@ TEST_CASE("canonical map surface owns standalone stdlib implementation") {
         std::string::npos);
   CHECK(inferCollectionCompatibilityInternalSource.find(
             "isDirectWrapperMapTarget") == std::string::npos);
+  CHECK(inferCollectionCompatibilityInternalSource.find("resolvesMapTarget") ==
+        std::string::npos);
   CHECK(inferCollectionCompatibilityInternalSource.find(
             "isPublishedKeyValueBaseHelperName(") != std::string::npos);
   CHECK(inferCollectionCompatibilityInternalSource.find(
@@ -1992,6 +1994,8 @@ TEST_CASE("canonical map surface owns standalone stdlib implementation") {
         std::string::npos);
   CHECK(inferCollectionCompatibilityInternalSource.find(
             "isDirectWrapperKeyValueTarget") != std::string::npos);
+  CHECK(inferCollectionCompatibilityInternalSource.find("resolvesKeyValueTarget") !=
+        std::string::npos);
   CHECK(inferCollectionCompatibilityInternalSource.find("resolveMapCompatibilityMemberToken(") ==
         std::string::npos);
   CHECK(inferCollectionCompatibilityInternalSource.find("resolveMapCompatibilityResolvedPath(") ==

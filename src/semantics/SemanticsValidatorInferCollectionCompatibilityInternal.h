@@ -236,13 +236,13 @@ enum class RemovedCollectionHelperFamily {
     bool callsInvisibleHelper,
     bool isDirectWrapperKeyValueTarget,
     bool callsUndeclaredHelper,
-    bool resolvesMapTarget,
+    bool resolvesKeyValueTarget,
     bool callsUnresolvableHelper) {
   if (callsInvisibleHelper ||
       (isDirectWrapperKeyValueTarget && callsUndeclaredHelper)) {
     return vectorCompatibilityUnknownCallTargetDiagnostic("count");
   }
-  if (resolvesMapTarget && callsUnresolvableHelper) {
+  if (resolvesKeyValueTarget && callsUnresolvableHelper) {
     return vectorCompatibilityRequiresVectorTargetDiagnostic("count");
   }
   return "";
