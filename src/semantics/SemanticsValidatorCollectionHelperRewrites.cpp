@@ -667,7 +667,7 @@ bool SemanticsValidator::tryRewriteCanonicalExperimentalKeyValueHelperCall(
     return false;
   }
   const Expr &receiverExpr = canonicalCandidate.args[receiverIndex];
-  auto isPublishedMapConstructorReceiver = [](const Expr &candidateExpr) {
+  auto isPublishedKeyValueConstructorReceiver = [](const Expr &candidateExpr) {
     if (candidateExpr.kind != Expr::Kind::Call || candidateExpr.isMethodCall ||
         candidateExpr.name.empty()) {
       return false;
@@ -690,7 +690,7 @@ bool SemanticsValidator::tryRewriteCanonicalExperimentalKeyValueHelperCall(
   };
   if (!candidate.isMethodCall && !directExperimentalKeyValueHelperSpelling &&
       isBareKeyValueAccessHelperName(helperName) &&
-      !isPublishedMapConstructorReceiver(receiverExpr)) {
+      !isPublishedKeyValueConstructorReceiver(receiverExpr)) {
     return false;
   }
   if (!candidate.isMethodCall &&
@@ -773,7 +773,7 @@ bool SemanticsValidator::explicitCanonicalExperimentalKeyValueBorrowedHelperPath
   if (receiverIndex >= candidate.args.size()) {
     return false;
   }
-  auto isRootMapConstructorCandidate = [](const Expr &receiverExpr) {
+  auto isRootKeyValueConstructorCandidate = [](const Expr &receiverExpr) {
     if (receiverExpr.kind != Expr::Kind::Call || receiverExpr.isMethodCall ||
         receiverExpr.name.empty()) {
       return false;
@@ -794,7 +794,7 @@ bool SemanticsValidator::explicitCanonicalExperimentalKeyValueBorrowedHelperPath
     }
     return normalizedName == "map" || normalizedName.rfind("map__", 0) == 0;
   };
-  if (isRootMapConstructorCandidate(candidate.args[receiverIndex])) {
+  if (isRootKeyValueConstructorCandidate(candidate.args[receiverIndex])) {
     return false;
   }
   std::string keyType;

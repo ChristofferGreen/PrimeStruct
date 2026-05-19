@@ -1715,6 +1715,10 @@ TEST_CASE("canonical map surface owns standalone stdlib implementation") {
         std::string::npos);
   CHECK(collectionHelperRewritesSource.find("hasVisibleMapHelperFamily") ==
         std::string::npos);
+  CHECK(collectionHelperRewritesSource.find("isPublishedMapConstructorReceiver") ==
+        std::string::npos);
+  CHECK(collectionHelperRewritesSource.find("isRootMapConstructorCandidate") ==
+        std::string::npos);
   CHECK(collectionHelperRewritesSource.find("resolvesBorrowedExperimentalMap") ==
         std::string::npos);
   CHECK(collectionHelperRewritesSource.find("resolvesExperimentalMapValue") ==
@@ -1759,6 +1763,10 @@ TEST_CASE("canonical map surface owns standalone stdlib implementation") {
             "explicitCanonicalExperimentalKeyValueBorrowedHelperPath") !=
         std::string::npos);
   CHECK(collectionHelperRewritesSource.find("hasVisibleKeyValueHelperFamily") !=
+        std::string::npos);
+  CHECK(collectionHelperRewritesSource.find("isPublishedKeyValueConstructorReceiver") !=
+        std::string::npos);
+  CHECK(collectionHelperRewritesSource.find("isRootKeyValueConstructorCandidate") !=
         std::string::npos);
   CHECK(collectionHelperRewritesSource.find("resolvesBorrowedExperimentalKeyValue") !=
         std::string::npos);
