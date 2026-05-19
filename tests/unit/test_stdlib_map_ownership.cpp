@@ -1387,6 +1387,10 @@ TEST_CASE("canonical map surface owns standalone stdlib implementation") {
         std::string::npos);
   CHECK(inferStructReturnSource.find("const bool isExperimentalMapReceiver") ==
         std::string::npos);
+  CHECK(inferStructReturnSource.find("isSpecializedExperimentalMapBackingPath") ==
+        std::string::npos);
+  CHECK(inferStructReturnSource.find(
+            "isSpecializedExperimentalKeyValueBackingPath") != std::string::npos);
   CHECK(inferStructReturnSource.find(
             "resolveExplicitPublishedKeyValueHelperExprMemberName(") !=
         std::string::npos);
