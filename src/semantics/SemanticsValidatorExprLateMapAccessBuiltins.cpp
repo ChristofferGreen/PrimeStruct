@@ -261,7 +261,7 @@ bool SemanticsValidator::validateExprLateMapAccessBuiltins(
     return true;
   };
   std::string builtinName;
-  auto isExperimentalMapReceiver = [&](const Expr &receiverExpr) {
+  auto isExperimentalKeyValueReceiver = [&](const Expr &receiverExpr) {
     std::string ignoredKeyType;
     if (rootMapConstructorKeyType(receiverExpr, ignoredKeyType)) {
       return false;
@@ -275,7 +275,7 @@ bool SemanticsValidator::validateExprLateMapAccessBuiltins(
       getBuiltinArrayAccessName(expr, builtinName) &&
       expr.args.size() == 2 && !hasNamedArguments(expr.argNames)) {
     const Expr &receiverExpr = expr.args.front();
-    if (isExperimentalMapReceiver(receiverExpr)) {
+    if (isExperimentalKeyValueReceiver(receiverExpr)) {
       return failLateKeyValueAccessDiagnostic(
           "unknown call target: " + canonicalKeyValueHelperPathLocal(builtinName));
     }
