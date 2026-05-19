@@ -748,7 +748,7 @@ std::string experimentalSoaVectorHelperPathForCanonicalHelper(const std::string 
       isLegacyOrCanonicalSoaHelperPath(canonicalSoaRefPath, "ref_ref")) {
     return {};
   }
-  auto mapsToBorrowedSoaHelper = [](const std::string &candidatePath) {
+  auto resolvesToBorrowedSoaHelper = [](const std::string &candidatePath) {
     const std::string canonicalHelperPath = primec::stdlibSurfaceCanonicalHelperPath(
         primec::StdlibSurfaceId::CollectionsColumnarHelpers,
         candidatePath);
@@ -756,9 +756,9 @@ std::string experimentalSoaVectorHelperPathForCanonicalHelper(const std::string 
            canonicalHelperPath == compatibilitySoaHelperTargetPath("get_ref") ||
            canonicalHelperPath == compatibilitySoaHelperTargetPath("ref_ref");
   };
-  if (mapsToBorrowedSoaHelper(canonicalSoaCountPath) ||
-      mapsToBorrowedSoaHelper(canonicalSoaGetPath) ||
-      mapsToBorrowedSoaHelper(canonicalSoaRefPath)) {
+  if (resolvesToBorrowedSoaHelper(canonicalSoaCountPath) ||
+      resolvesToBorrowedSoaHelper(canonicalSoaGetPath) ||
+      resolvesToBorrowedSoaHelper(canonicalSoaRefPath)) {
     return {};
   }
   auto preferredExperimentalSoaHelper = [](const std::string &candidatePath) {

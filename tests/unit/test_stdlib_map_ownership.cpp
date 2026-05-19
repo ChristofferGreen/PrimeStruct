@@ -1105,6 +1105,10 @@ TEST_CASE("canonical map surface owns standalone stdlib implementation") {
         std::string::npos);
   CHECK(templateReceiverSource.find("experimentalKeyValueHelperPathForWrapperHelper") !=
         std::string::npos);
+  CHECK(templateReceiverSource.find("mapsToBorrowedSoaHelper") ==
+        std::string::npos);
+  CHECK(templateReceiverSource.find("resolvesToBorrowedSoaHelper") !=
+        std::string::npos);
   CHECK(templateExpressionRewriteSource.find("templateMonomorphCanonicalMapHelperPath") ==
         std::string::npos);
   CHECK(templateExpressionRewriteSource.find("isTemplateMonomorphCanonicalMapHelperPath") ==
