@@ -50,9 +50,10 @@ This file stores durable session-derived facts that are useful in later work. Ke
   `isCanonicalKeyValueAccessHelperPath`; count-helper checks use
   `isCanonicalKeyValueCountHelperName`; removed slash-method and direct-call
   compatibility predicates use key/value names; collection type inference
-  receiver/probe helpers and method type-inference access helpers also use
-  key/value access names, with the stdlib ownership source lock rejecting the
-  old map-helper, map-count, map-access, and removed map compatibility names.
+  receiver/probe helpers, method type-inference access helpers, and packed-args
+  dereferenced access detection also use key/value access names, with the stdlib
+  ownership source lock rejecting the old map-helper, map-count, map-access, and
+  removed map compatibility names.
 
 ### exact-stdlib-vector-import-covers-helper-surface
 - Updated: 2026-04-19

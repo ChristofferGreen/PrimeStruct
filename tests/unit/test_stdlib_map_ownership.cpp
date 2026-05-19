@@ -285,6 +285,8 @@ TEST_CASE("canonical map surface owns standalone stdlib implementation") {
   const std::string emitterCollectionTypeHelpersSource =
       readText(repoRoot() / "src" / "emitter" /
                "EmitterExprCollectionTypeHelpers.h");
+  const std::string emitterPackedArgsSource =
+      readText(repoRoot() / "src" / "emitter" / "EmitterExprPackedArgs.h");
   const std::string emitterHelpersSource =
       readText(repoRoot() / "src" / "emitter" / "EmitterHelpers.h");
   const std::string emitterMethodMetadataSource =
@@ -418,6 +420,7 @@ TEST_CASE("canonical map surface owns standalone stdlib implementation") {
   REQUIRE(!emitterCallPathHelpersSource.empty());
   REQUIRE(!emitterReturnInferenceCollectionsSource.empty());
   REQUIRE(!emitterCollectionTypeHelpersSource.empty());
+  REQUIRE(!emitterPackedArgsSource.empty());
   REQUIRE(!emitterMethodMetadataSource.empty());
   REQUIRE(!statementLowererSource.empty());
   REQUIRE(!lowererCallHelpersSource.empty());
@@ -2525,6 +2528,12 @@ TEST_CASE("canonical map surface owns standalone stdlib implementation") {
   CHECK(emitterCollectionTypeHelpersSource.find("shouldProbeBuiltinMapAccessType") ==
         std::string::npos);
   CHECK(emitterCollectionTypeHelpersSource.find("shouldProbeBuiltinKeyValueAccessType") !=
+        std::string::npos);
+  CHECK(emitterPackedArgsSource.find("isMapAccessName") == std::string::npos);
+  CHECK(emitterPackedArgsSource.find("isKeyValueAccessName") != std::string::npos);
+  CHECK(emitterPackedArgsSource.find("isCanonicalMapAccessHelperName(") ==
+        std::string::npos);
+  CHECK(emitterPackedArgsSource.find("isCanonicalKeyValueAccessHelperName(") !=
         std::string::npos);
   CHECK(emitterMethodMetadataSource.find("} else if (normalizedPath.rfind(\"/std/collections/map/\", 0) == 0) {\n"
                                          "    const std::string suffix =") ==

@@ -115,10 +115,10 @@
                      vectorAccessMemberName) &&
                  (vectorAccessMemberName == "at" ||
                   vectorAccessMemberName == "at_unsafe"));
-            const bool isMapAccessName =
+            const bool isKeyValueAccessName =
                 isCanonicalKeyValueAccessHelperName(normalizedName) ||
                 isCanonicalKeyValueAccessHelperPath(normalizedName);
-            if (!isVectorAccessName && !isMapAccessName) {
+            if (!isVectorAccessName && !isKeyValueAccessName) {
               return false;
             }
 
