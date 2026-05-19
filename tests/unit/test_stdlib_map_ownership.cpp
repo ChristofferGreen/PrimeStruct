@@ -1210,6 +1210,11 @@ TEST_CASE("canonical map surface owns standalone stdlib implementation") {
         std::string::npos);
   CHECK(templateFallbackTypeInferenceSource.find("mapCollectionAliasToken()") !=
         std::string::npos);
+  CHECK(templateFallbackTypeInferenceSource.find(
+            "const std::string mapCollectionAlias") == std::string::npos);
+  CHECK(templateFallbackTypeInferenceSource.find(
+            "const std::string keyValueCollectionAlias") !=
+        std::string::npos);
   CHECK(templateConstructorRewriteSource.find("originalPath == \"/map\"") ==
         std::string::npos);
   CHECK(templateConstructorRewriteSource.find(

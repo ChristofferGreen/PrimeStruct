@@ -363,15 +363,16 @@ std::string inferExprTypeTextForTemplatedVectorFallback(const Expr &expr,
   }
   std::string builtinCollection;
   if (getBuiltinCollectionName(expr, builtinCollection)) {
-    const std::string mapCollectionAlias = mapCollectionAliasToken();
+    const std::string keyValueCollectionAlias = mapCollectionAliasToken();
     if ((builtinCollection == "array" || builtinCollection == "vector" ||
          isTemplateMonomorphSoaReceiverType(builtinCollection)) &&
         expr.templateArgs.size() == 1) {
       return builtinCollection + "<" + expr.templateArgs.front() + ">";
     }
-    if (!mapCollectionAlias.empty() && builtinCollection == mapCollectionAlias &&
+    if (!keyValueCollectionAlias.empty() &&
+        builtinCollection == keyValueCollectionAlias &&
         expr.templateArgs.size() == 2) {
-      return mapCollectionAlias + "<" + expr.templateArgs.front() + ", " +
+      return keyValueCollectionAlias + "<" + expr.templateArgs.front() + ", " +
              expr.templateArgs[1] + ">";
     }
   }
@@ -465,10 +466,11 @@ bool shouldPreferTemplatedVectorFallbackForTypeMismatch(const Definition &def,
     }
     return false;
   };
-  const std::string mapCollectionAlias = mapCollectionAliasToken();
+  const std::string keyValueCollectionAlias = mapCollectionAliasToken();
   auto isCollectionEnvelopeBase = [&](const std::string &base) {
     return base == "array" || base == "vector" ||
-           (!mapCollectionAlias.empty() && base == mapCollectionAlias) ||
+           (!keyValueCollectionAlias.empty() &&
+            base == keyValueCollectionAlias) ||
            isTemplateMonomorphSoaReceiverType(base);
   };
   auto hasUnknownEnvelopeMismatch = [&](const std::string &normalizedExpected,
