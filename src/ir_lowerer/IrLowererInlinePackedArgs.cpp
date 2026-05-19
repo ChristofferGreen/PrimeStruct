@@ -76,7 +76,7 @@ bool extractArgsPackElementTypeName(const Expr &paramExpr, std::string &typeName
   return false;
 }
 
-bool namesExplicitExperimentalMapType(const std::string &typeText) {
+bool namesExplicitExperimentalKeyValueType(const std::string &typeText) {
   std::string base;
   std::string argList;
   if (splitTemplateTypeName(typeText, base, argList)) {
@@ -87,10 +87,10 @@ bool namesExplicitExperimentalMapType(const std::string &typeText) {
   if (!base.empty() && base.front() == '/') {
     base.erase(base.begin());
   }
-  const std::string experimentalMapType =
+  const std::string experimentalKeyValueType =
       experimentalCollectionTypePath("map", "Map", false);
-  return base == experimentalMapType ||
-         base.rfind(experimentalMapType + "__", 0) == 0;
+  return base == experimentalKeyValueType ||
+         base.rfind(experimentalKeyValueType + "__", 0) == 0;
 }
 
 bool rewritePublishedKeyValueConstructorExpr(const Expr &callExpr,
@@ -232,11 +232,11 @@ bool emitInlinePackedCallParameter(
         expectedKind == LocalInfo::Kind::Reference ? paramInfo.referenceToArray : paramInfo.pointerToArray;
     const bool expectsVector =
         expectedKind == LocalInfo::Kind::Reference ? paramInfo.referenceToVector : paramInfo.pointerToVector;
-    const bool expectsMap =
+    const bool expectsKeyValue =
         expectedKind == LocalInfo::Kind::Reference ? paramInfo.referenceToKeyValueCollection : paramInfo.pointerToKeyValueCollection;
     const bool expectsBuffer =
         expectedKind == LocalInfo::Kind::Reference ? paramInfo.referenceToBuffer : paramInfo.pointerToBuffer;
-    const bool expectsAggregate = expectsArray || expectsVector || expectsMap || expectsBuffer;
+    const bool expectsAggregate = expectsArray || expectsVector || expectsKeyValue || expectsBuffer;
     const auto matchesDirectStorageFlag = [&](const LocalInfo &info) {
       return info.isUninitializedStorage == paramInfo.targetsUninitializedStorage;
     };
@@ -253,7 +253,7 @@ bool emitInlinePackedCallParameter(
                targetInfo.structTypeName == paramInfo.structTypeName &&
                targetInfo.isSoaVector == paramInfo.isSoaVector;
       }
-      if (expectsMap) {
+      if (expectsKeyValue) {
         return targetInfo.referenceToKeyValueCollection &&
                targetInfo.keyValueKeyKind == paramInfo.keyValueKeyKind &&
                targetInfo.keyValueValueKind == paramInfo.keyValueValueKind;
@@ -288,7 +288,7 @@ bool emitInlinePackedCallParameter(
              targetInfo.structTypeName == paramInfo.structTypeName &&
              targetInfo.isSoaVector == paramInfo.isSoaVector;
     }
-    if (expectsMap) {
+    if (expectsKeyValue) {
       return targetInfo.kind == LocalInfo::Kind::KeyValueCollection &&
              matchesDirectStorageFlag(targetInfo) &&
              targetInfo.keyValueKeyKind == paramInfo.keyValueKeyKind &&
@@ -676,7 +676,7 @@ bool emitInlinePackedCallParameter(
     }
     std::string declaredElementType;
     if (!extractArgsPackElementTypeName(param, declaredElementType) ||
-        !namesExplicitExperimentalMapType(declaredElementType)) {
+        !namesExplicitExperimentalKeyValueType(declaredElementType)) {
       return true;
     }
 
