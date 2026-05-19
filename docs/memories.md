@@ -104,6 +104,7 @@ This file stores durable session-derived facts that are useful in later work. Ke
   too; collection access validation value locals should use key/value names
   too; reordered collection access key/value locals should use key/value names
   too; collection access receiver-state booleans should use key/value names
+  too; late adapter key output parameters should use key/value names
   too.
   The stdlib ownership source lock rejects the old map-helper, map-count,
   map-access, and removed map compatibility names.

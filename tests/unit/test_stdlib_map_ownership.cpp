@@ -305,6 +305,9 @@ TEST_CASE("canonical map surface owns standalone stdlib implementation") {
   const std::string mapSoaBuiltinsSource =
       readText(repoRoot() / "src" / "semantics" /
                "SemanticsValidatorExprMapSoaBuiltins.cpp");
+  const std::string lateMapSoaBuiltinsSource =
+      readText(repoRoot() / "src" / "semantics" /
+               "SemanticsValidatorExprLateMapSoaBuiltins.cpp");
   const std::string countCapacityMapBuiltinSource =
       readText(repoRoot() / "src" / "semantics" /
                "SemanticsValidatorExprCountCapacityBuiltins.cpp");
@@ -442,6 +445,7 @@ TEST_CASE("canonical map surface owns standalone stdlib implementation") {
   REQUIRE(!exprLateFallbackBuiltinsSource.empty());
   REQUIRE(!exprLateCallCompatibilitySource.empty());
   REQUIRE(!lateMapAccessBuiltinsSource.empty());
+  REQUIRE(!lateMapSoaBuiltinsSource.empty());
   REQUIRE(!exprLateUnknownTargetFallbacksSource.empty());
   REQUIRE(!passesDiagnosticsSource.empty());
   REQUIRE(!exprTrySource.empty());
@@ -2380,6 +2384,10 @@ TEST_CASE("canonical map surface owns standalone stdlib implementation") {
             "shouldBuiltinValidateBareKeyValueAccessCall") != std::string::npos);
   CHECK(lateCollectionAccessFallbacksSource.find(
             "shouldBuiltinValidateBareMapAccessCall") == std::string::npos);
+  CHECK(lateCollectionAccessFallbacksSource.find("keyValueKeyTypeOut") !=
+        std::string::npos);
+  CHECK(lateCollectionAccessFallbacksSource.find("mapKeyTypeOut") ==
+        std::string::npos);
   CHECK(lateMapAccessBuiltinsSource.find(
             "shouldBuiltinValidateBareKeyValueTryAtCall") != std::string::npos);
   CHECK(lateMapAccessBuiltinsSource.find("shouldBuiltinValidateBareMapTryAtCall") ==
@@ -2390,6 +2398,9 @@ TEST_CASE("canonical map surface owns standalone stdlib implementation") {
   CHECK(mapSoaBuiltinsSource.find("shouldBuiltinValidateBareMapContainsCall") ==
         std::string::npos);
   CHECK(mapSoaBuiltinsSource.find("keyValueKeyType") != std::string::npos);
+  CHECK(lateMapSoaBuiltinsSource.find("keyValueKeyTypeOut") !=
+        std::string::npos);
+  CHECK(lateMapSoaBuiltinsSource.find("mapKeyTypeOut") == std::string::npos);
   CHECK(mapSoaBuiltinsSource.find("std::string mapKeyType") ==
         std::string::npos);
   CHECK(mapSoaBuiltinsSource.find("const std::string &mapKeyType") ==
