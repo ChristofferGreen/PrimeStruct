@@ -847,7 +847,7 @@ bool SemanticsValidator::inferQueryExprTypeText(const Expr &expr,
       return true;
     }
     const std::string canonicalResolvedCandidate = canonicalizeResolvedPath(resolvedCandidate);
-    auto sourceMethodMapResolvedCandidate = [&]() -> std::string {
+    auto sourceMethodKeyValueResolvedCandidate = [&]() -> std::string {
       if (candidate.kind != Expr::Kind::Call || candidate.isMethodCall ||
           !candidate.sourceIsMethodCall || !candidate.namespacePrefix.empty() ||
           candidate.name.empty() || candidate.args.empty()) {
@@ -1052,12 +1052,12 @@ bool SemanticsValidator::inferQueryExprTypeText(const Expr &expr,
       return resolvedMethodTarget;
     };
     if (isDirectMapConstructorPath(resolvedCandidate)) {
-      const std::string mapAlias = mapCollectionAliasToken();
-      if (mapAlias.empty()) {
+      const std::string keyValueAlias = mapCollectionAliasToken();
+      if (keyValueAlias.empty()) {
         return false;
       }
       if (candidate.templateArgs.size() == 2) {
-        currentTypeTextOut = mapAlias + "<" + candidate.templateArgs[0] + ", " +
+        currentTypeTextOut = keyValueAlias + "<" + candidate.templateArgs[0] + ", " +
                              candidate.templateArgs[1] + ">";
         return true;
       }
@@ -1087,7 +1087,7 @@ bool SemanticsValidator::inferQueryExprTypeText(const Expr &expr,
       if (keyTypeText.empty() || valueTypeText.empty()) {
         return false;
       }
-      currentTypeTextOut = mapAlias + "<" + keyTypeText + ", " + valueTypeText + ">";
+      currentTypeTextOut = keyValueAlias + "<" + keyTypeText + ", " + valueTypeText + ">";
       return true;
     }
     std::string collectionMethodFallbackTypeText;
@@ -1132,7 +1132,7 @@ bool SemanticsValidator::inferQueryExprTypeText(const Expr &expr,
     };
     appendResolvedCandidate(resolvedCandidate);
     appendResolvedCandidate(canonicalResolvedCandidate);
-    appendResolvedCandidate(sourceMethodMapResolvedCandidate());
+    appendResolvedCandidate(sourceMethodKeyValueResolvedCandidate());
     appendResolvedCandidate(preferredResolvedCandidate());
     appendResolvedCandidate(resolvedMethodTargetCandidate());
     appendResolvedCandidate(methodResolvedCandidate());

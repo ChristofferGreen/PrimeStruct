@@ -2365,6 +2365,14 @@ TEST_CASE("canonical map surface owns standalone stdlib implementation") {
         std::string::npos);
   CHECK(inferCollectionReturnInferenceSource.find("mapCollectionAliasToken()") !=
         std::string::npos);
+  CHECK(inferCollectionReturnInferenceSource.find("const std::string mapAlias") ==
+        std::string::npos);
+  CHECK(inferCollectionReturnInferenceSource.find("const std::string keyValueAlias") !=
+        std::string::npos);
+  CHECK(inferCollectionReturnInferenceSource.find(
+            "sourceMethodMapResolvedCandidate") == std::string::npos);
+  CHECK(inferCollectionReturnInferenceSource.find(
+            "sourceMethodKeyValueResolvedCandidate") != std::string::npos);
   CHECK(inferCollectionReturnInferenceSource.find(
             "metadataBackedCanonicalMapHelperPath(builtinAccessName)") !=
         std::string::npos);
