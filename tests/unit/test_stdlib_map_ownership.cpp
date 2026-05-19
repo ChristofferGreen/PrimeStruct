@@ -2444,6 +2444,10 @@ TEST_CASE("canonical map surface owns standalone stdlib implementation") {
         std::string::npos);
   CHECK(statementPrintabilitySource.find("isCanonicalKeyValueHelperResolvedPath(") !=
         std::string::npos);
+  CHECK(statementPrintabilitySource.find("keyValueValueType") !=
+        std::string::npos);
+  CHECK(statementPrintabilitySource.find("std::string mapValueType") ==
+        std::string::npos);
   CHECK(statementBodyArgumentsSource.find("isRemovedMapCompatibilityHelper(") ==
         std::string::npos);
   CHECK(statementBodyArgumentsSource.find("mapHelperSurfaceMetadata(") ==

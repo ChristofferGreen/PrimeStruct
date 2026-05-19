@@ -278,9 +278,9 @@ bool SemanticsValidator::isStringStatementExpr(const Expr &arg,
             normalizeBindingTypeName(elemType) == "string") {
           return true;
         }
-        std::string mapValueType;
-        if (resolveMapValueType(candidate.args.front(), mapValueType) &&
-            normalizeBindingTypeName(mapValueType) == "string") {
+        std::string keyValueValueType;
+        if (resolveMapValueType(candidate.args.front(), keyValueValueType) &&
+            normalizeBindingTypeName(keyValueValueType) == "string") {
           return true;
         }
       }
