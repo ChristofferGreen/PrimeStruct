@@ -90,7 +90,8 @@ This file stores durable session-derived facts that are useful in later work. Ke
   key/value names too; statement printability value-type locals should use
   key/value names too; pre-dispatch access key/value locals should use
   key/value names too; late call compatibility key/value locals should use
-  key/value names too.
+  key/value names too; map/SoA validation key locals should use key/value
+  names too.
   The stdlib ownership source lock rejects the old map-helper, map-count,
   map-access, and removed map compatibility names.
 

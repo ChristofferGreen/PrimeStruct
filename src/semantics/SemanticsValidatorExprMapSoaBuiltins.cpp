@@ -164,30 +164,30 @@ bool SemanticsValidator::validateExprMapSoaBuiltins(
     return true;
   };
   auto validateMapContainsKeyExpr = [&](const Expr &keyExpr,
-                                        const std::string &mapKeyType) -> bool {
-    if (mapKeyType.empty()) {
+                                        const std::string &keyValueKeyType) -> bool {
+    if (keyValueKeyType.empty()) {
       return true;
     }
-    if (normalizeBindingTypeName(mapKeyType) == "string") {
+    if (normalizeBindingTypeName(keyValueKeyType) == "string") {
       if (!isStringExpr(keyExpr)) {
         return failMapSoaBuiltinDiagnostic("contains requires string map key");
       }
       return true;
     }
 
-    ReturnKind keyKind = returnKindForTypeName(normalizeBindingTypeName(mapKeyType));
+    ReturnKind keyKind = returnKindForTypeName(normalizeBindingTypeName(keyValueKeyType));
     if (keyKind == ReturnKind::Unknown) {
       return true;
     }
     if (context.resolveStringTarget != nullptr &&
         context.resolveStringTarget(keyExpr)) {
       return failMapSoaBuiltinDiagnostic("contains requires map key type " +
-                                        mapKeyType);
+                                        keyValueKeyType);
     }
     ReturnKind candidateKind = inferExprReturnKind(keyExpr, params, locals);
     if (candidateKind != ReturnKind::Unknown && candidateKind != keyKind) {
       return failMapSoaBuiltinDiagnostic("contains requires map key type " +
-                                        mapKeyType);
+                                        keyValueKeyType);
     }
     return true;
   };
@@ -336,15 +336,15 @@ bool SemanticsValidator::validateExprMapSoaBuiltins(
         hasBareKeyValueOperands ? expr.args[receiverIndex] : expr.args.front();
     const Expr &keyExpr =
         hasBareKeyValueOperands ? expr.args[keyIndex] : expr.args[1];
-    std::string mapKeyType;
+    std::string keyValueKeyType;
     if (!(context.resolveMapKeyType != nullptr &&
-          context.resolveMapKeyType(receiverExpr, mapKeyType))) {
+          context.resolveMapKeyType(receiverExpr, keyValueKeyType))) {
       if (!validateExpr(params, locals, receiverExpr)) {
         return false;
       }
       return failMapSoaBuiltinDiagnostic(helperName + " requires map target");
     }
-    if (!validateMapContainsKeyExpr(keyExpr, mapKeyType)) {
+    if (!validateMapContainsKeyExpr(keyExpr, keyValueKeyType)) {
       return false;
     }
     if (!validateExpr(params, locals, expr.args.front()) ||

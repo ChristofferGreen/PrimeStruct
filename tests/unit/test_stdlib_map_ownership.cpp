@@ -2354,6 +2354,11 @@ TEST_CASE("canonical map surface owns standalone stdlib implementation") {
         std::string::npos);
   CHECK(mapSoaBuiltinsSource.find("shouldBuiltinValidateBareMapContainsCall") ==
         std::string::npos);
+  CHECK(mapSoaBuiltinsSource.find("keyValueKeyType") != std::string::npos);
+  CHECK(mapSoaBuiltinsSource.find("std::string mapKeyType") ==
+        std::string::npos);
+  CHECK(mapSoaBuiltinsSource.find("const std::string &mapKeyType") ==
+        std::string::npos);
   CHECK(collectionAccessSetupSource.find(
             "isIndexedArgsPackKeyValueReceiverTarget") != std::string::npos);
   CHECK(collectionAccessSetupSource.find("isIndexedArgsPackMapReceiverTarget") ==
