@@ -182,7 +182,8 @@ This file stores durable session-derived facts that are useful in later work. Ke
   printability backing predicates should use key/value names too; direct-call
   and statement-container backing predicates should use key/value names too;
   template return rewrite planning should use key/value names too; template
-  borrowed receiver helpers should use key/value names too.
+  borrowed receiver helpers should use key/value names too; result helper
+  identity functions should use key/value names too.
   The stdlib ownership source lock rejects the old map-helper, map-count,
   map-access, and removed map compatibility names.
 

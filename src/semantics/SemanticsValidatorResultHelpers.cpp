@@ -60,7 +60,7 @@ std::string collectionTypePathLocal(std::string_view collectionName,
   return path;
 }
 
-std::string canonicalMapValueIdentity(const std::string &typeText) {
+std::string canonicalKeyValueIdentity(const std::string &typeText) {
   std::string normalized = normalizeBindingTypeName(trimText(typeText));
   if (!normalized.empty() && normalized.front() != '/') {
     normalized.insert(normalized.begin(), '/');
@@ -1038,9 +1038,9 @@ bool SemanticsValidator::errorTypesMatch(const std::string &left,
     return true;
   }
   const std::string leftKeyValueIdentity =
-      canonicalMapValueIdentity(normalizedLeft);
+      canonicalKeyValueIdentity(normalizedLeft);
   if (!leftKeyValueIdentity.empty() &&
-      leftKeyValueIdentity == canonicalMapValueIdentity(normalizedRight)) {
+      leftKeyValueIdentity == canonicalKeyValueIdentity(normalizedRight)) {
     return true;
   }
   auto isUnresolvedRelativeRootMatch = [&](const std::string &rawRelative,
