@@ -329,13 +329,13 @@ bool SemanticsValidator::validateExprMapSoaBuiltins(
     }
     size_t receiverIndex = 0;
     size_t keyIndex = 1;
-    const bool hasBareMapOperands =
+    const bool hasBareKeyValueOperands =
         context.bareKeyValueHelperOperandIndices != nullptr &&
         context.bareKeyValueHelperOperandIndices(expr, receiverIndex, keyIndex);
     const Expr &receiverExpr =
-        hasBareMapOperands ? expr.args[receiverIndex] : expr.args.front();
+        hasBareKeyValueOperands ? expr.args[receiverIndex] : expr.args.front();
     const Expr &keyExpr =
-        hasBareMapOperands ? expr.args[keyIndex] : expr.args[1];
+        hasBareKeyValueOperands ? expr.args[keyIndex] : expr.args[1];
     std::string mapKeyType;
     if (!(context.resolveMapKeyType != nullptr &&
           context.resolveMapKeyType(receiverExpr, mapKeyType))) {
