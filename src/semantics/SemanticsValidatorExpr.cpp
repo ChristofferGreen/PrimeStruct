@@ -741,7 +741,7 @@ bool SemanticsValidator::validateExpr(const std::vector<ParameterInfo> &params,
         methodCompatibilitySetup.promoteCapacityToBuiltinValidation;
     methodResolutionContext.unavailableMethodDiagnostic =
         methodCompatibilitySetup.unavailableMethodDiagnostic;
-    const bool isIndexedArgsPackMapMethodReceiver = [&]() {
+    const bool isIndexedArgsPackKeyValueMethodReceiver = [&]() {
       if (!expr.isMethodCall || expr.args.empty() ||
           !this->isIndexedArgsPackKeyValueReceiverTarget(
               expr.args.front(), dispatchBootstrap.dispatchResolvers)) {
@@ -761,7 +761,7 @@ bool SemanticsValidator::validateExpr(const std::vector<ParameterInfo> &params,
              methodName == "insert" || methodName == "insert_ref";
     }();
     if (expr.isMethodCall && !expr.args.empty() &&
-        !isIndexedArgsPackMapMethodReceiver &&
+        !isIndexedArgsPackKeyValueMethodReceiver &&
         expr.args.front().kind == Expr::Kind::Call) {
       if (!validateExpr(params, locals, expr.args.front())) {
         return false;
