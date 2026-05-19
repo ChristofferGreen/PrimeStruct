@@ -285,6 +285,9 @@ TEST_CASE("canonical map surface owns standalone stdlib implementation") {
   const std::string argumentValidationSource =
       readText(repoRoot() / "src" / "semantics" /
                "SemanticsValidatorExprArgumentValidation.cpp");
+  const std::string resolvedCallArgumentsSource =
+      readText(repoRoot() / "src" / "semantics" /
+               "SemanticsValidatorExprResolvedCallArguments.cpp");
   const std::string argumentValidationCollectionsSource =
       readText(repoRoot() / "src" / "semantics" /
                "SemanticsValidatorExprArgumentValidationCollections.cpp");
@@ -469,6 +472,7 @@ TEST_CASE("canonical map surface owns standalone stdlib implementation") {
   REQUIRE(!scalarPointerMemorySource.empty());
   REQUIRE(!statementSource.empty());
   REQUIRE(!argumentValidationSource.empty());
+  REQUIRE(!resolvedCallArgumentsSource.empty());
   REQUIRE(!argumentValidationCollectionsSource.empty());
   REQUIRE(!namedArgumentBuiltinsSource.empty());
   REQUIRE(!collectionAccessValidationSource.empty());
@@ -2858,6 +2862,19 @@ TEST_CASE("canonical map surface owns standalone stdlib implementation") {
   CHECK(argumentValidationSource.find("actualMapKeyType") ==
         std::string::npos);
   CHECK(argumentValidationSource.find("actualMapValueType") ==
+        std::string::npos);
+  CHECK(resolvedCallArgumentsSource.find("mapConstructorArgumentMatchesExactType") ==
+        std::string::npos);
+  CHECK(resolvedCallArgumentsSource.find(
+            "keyValueConstructorArgumentMatchesExactType") !=
+        std::string::npos);
+  CHECK(resolvedCallArgumentsSource.find(
+            "validateExplicitCanonicalMapConstructorArguments") ==
+        std::string::npos);
+  CHECK(resolvedCallArgumentsSource.find(
+            "validateExplicitCanonicalKeyValueConstructorArguments") !=
+        std::string::npos);
+  CHECK(resolvedCallArgumentsSource.find("isCanonicalMapConstructorResolvedPath(") !=
         std::string::npos);
   CHECK(argumentValidationCollectionsSource.find("normalizedName == \"map/at_ref\"") ==
         std::string::npos);

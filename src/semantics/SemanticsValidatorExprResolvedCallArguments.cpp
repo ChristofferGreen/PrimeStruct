@@ -400,7 +400,7 @@ bool SemanticsValidator::validateExprResolvedCallArguments(
     }
   }
 
-  auto mapConstructorArgumentMatchesExactType =
+  auto keyValueConstructorArgumentMatchesExactType =
       [&](const Expr &arg, const std::string &expectedTypeText,
           std::string &actualTypeTextOut) -> bool {
     actualTypeTextOut.clear();
@@ -448,7 +448,7 @@ bool SemanticsValidator::validateExprResolvedCallArguments(
     return true;
   };
 
-  auto validateExplicitCanonicalMapConstructorArguments = [&]() -> bool {
+  auto validateExplicitCanonicalKeyValueConstructorArguments = [&]() -> bool {
     if (context.resolvedDefinition == nullptr ||
         !isCanonicalMapConstructorResolvedPath(resolved) ||
         expr.templateArgs.size() != 2 || orderedArgs.empty() ||
@@ -464,8 +464,8 @@ bool SemanticsValidator::validateExprResolvedCallArguments(
       }
       const std::string &expectedTypeText = expr.templateArgs[argIndex % 2];
       std::string actualTypeText;
-      if (mapConstructorArgumentMatchesExactType(*arg, expectedTypeText,
-                                                 actualTypeText)) {
+      if (keyValueConstructorArgumentMatchesExactType(*arg, expectedTypeText,
+                                                      actualTypeText)) {
         continue;
       }
 
@@ -485,7 +485,7 @@ bool SemanticsValidator::validateExprResolvedCallArguments(
     return true;
   };
 
-  if (!validateExplicitCanonicalMapConstructorArguments()) {
+  if (!validateExplicitCanonicalKeyValueConstructorArguments()) {
     return false;
   }
 
