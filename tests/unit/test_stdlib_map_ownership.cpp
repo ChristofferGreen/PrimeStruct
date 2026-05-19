@@ -368,6 +368,8 @@ TEST_CASE("canonical map surface owns standalone stdlib implementation") {
       readText(repoRoot() / "src" / "ir_lowerer" / "IrLowererUninitializedStructInference.cpp");
   const std::string structSlotLayoutSource =
       readText(repoRoot() / "src" / "ir_lowerer" / "IrLowererStructSlotLayoutHelpers.cpp");
+  const std::string lowererStructTypeHelpersSource =
+      readText(repoRoot() / "src" / "ir_lowerer" / "IrLowererStructTypeHelpers.cpp");
   const std::string declaredCollectionInferenceSource =
       readText(repoRoot() / "src" / "ir_lowerer" / "IrLowererSetupTypeDeclaredCollectionInference.cpp");
   const std::string bindingTypeHelpersSource =
@@ -487,6 +489,7 @@ TEST_CASE("canonical map surface owns standalone stdlib implementation") {
   REQUIRE(!packedResultSource.empty());
   REQUIRE(!uninitializedStructInferenceSource.empty());
   REQUIRE(!structSlotLayoutSource.empty());
+  REQUIRE(!lowererStructTypeHelpersSource.empty());
   REQUIRE(!declaredCollectionInferenceSource.empty());
   REQUIRE(!bindingTypeHelpersSource.empty());
   REQUIRE(!inferenceDispatchSetupSource.empty());
@@ -3327,6 +3330,10 @@ TEST_CASE("canonical map surface owns standalone stdlib implementation") {
   CHECK(uninitializedStructInferenceSource.find("inferredKeyValueStruct") !=
         std::string::npos);
   CHECK(structSlotLayoutSource.find("isBuiltinCollectionTypeName(typeName, \"map\")") !=
+        std::string::npos);
+  CHECK(lowererStructTypeHelpersSource.find("inferredMapStruct") ==
+        std::string::npos);
+  CHECK(lowererStructTypeHelpersSource.find("inferredKeyValueStruct") !=
         std::string::npos);
   CHECK(structSlotLayoutSource.find("typeName == \"std/collections/map\"") ==
         std::string::npos);

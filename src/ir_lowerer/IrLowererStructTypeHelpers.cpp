@@ -672,10 +672,10 @@ std::string inferStructPathFromNameExpr(const Expr &expr, const LocalMap &locals
       ((localIt->second.kind == LocalInfo::Kind::Reference || localIt->second.kind == LocalInfo::Kind::Pointer) &&
        (localIt->second.referenceToKeyValueCollection || localIt->second.pointerToKeyValueCollection));
   if (isMapLikeLocal) {
-    const std::string inferredMapStruct =
+    const std::string inferredKeyValueStruct =
         inferExperimentalMapStructPathFromKinds(localIt->second.keyValueKeyKind, localIt->second.keyValueValueKind);
-    if (!inferredMapStruct.empty()) {
-      return inferredMapStruct;
+    if (!inferredKeyValueStruct.empty()) {
+      return inferredKeyValueStruct;
     }
   }
   return localIt->second.structTypeName;
