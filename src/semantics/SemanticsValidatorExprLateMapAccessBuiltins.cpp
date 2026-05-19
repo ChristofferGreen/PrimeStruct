@@ -184,13 +184,13 @@ bool SemanticsValidator::validateExprLateMapAccessBuiltins(
                                           const std::string &keyValueKeyType,
                                           const Expr &receiverExpr) {
     std::string receiverTypeText;
-    const bool receiverIsExperimentalMap =
+    const bool receiverIsExperimentalKeyValue =
         inferQueryExprTypeText(receiverExpr, params, locals, receiverTypeText) &&
         isExperimentalMapTypeText(receiverTypeText);
     const bool canonicalKeyValueAccessDiagnostic =
         isSourceSpelledCanonicalKeyValueAccessCall(expr) ||
         expr.sourceIsMethodCall ||
-        (receiverIsExperimentalMap && expr.isMethodCall);
+        (receiverIsExperimentalKeyValue && expr.isMethodCall);
     if (canonicalKeyValueAccessDiagnostic) {
       return failLateKeyValueAccessDiagnostic(
           "argument type mismatch for " +
