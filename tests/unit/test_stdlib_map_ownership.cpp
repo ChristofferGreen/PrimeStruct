@@ -1234,7 +1234,11 @@ TEST_CASE("canonical map surface owns standalone stdlib implementation") {
         std::string::npos);
   CHECK(inferMethodResolutionSource.find("const std::string mapHelperName") ==
         std::string::npos);
+  CHECK(inferMethodResolutionSource.find("isCanonicalMapAccessMethodName") ==
+        std::string::npos);
   CHECK(inferMethodResolutionSource.find("const std::string keyValueHelperName") !=
+        std::string::npos);
+  CHECK(inferMethodResolutionSource.find("isCanonicalKeyValueAccessMethodName") !=
         std::string::npos);
   CHECK(inferMethodResolutionHelpersSource.find("const std::string alias = \"/map/\" + selectedHelperName") ==
         std::string::npos);

@@ -231,7 +231,7 @@ bool SemanticsValidator::resolveInferMethodCallPath(
   const auto isValueSurfaceAccessMethodName = [](std::string_view helperName) {
     return helperName == "at" || helperName == "at_unsafe";
   };
-  const auto isCanonicalMapAccessMethodName = [&](std::string_view helperName) {
+  const auto isCanonicalKeyValueAccessMethodName = [&](std::string_view helperName) {
     return isValueSurfaceAccessMethodName(helperName) ||
            helperName == "size" ||
            helperName == "at_ref" || helperName == "at_unsafe_ref";
@@ -416,7 +416,7 @@ bool SemanticsValidator::resolveInferMethodCallPath(
         return true;
       }
     }
-    if (isCanonicalMapAccessMethodName(normalizedMethodName) &&
+    if (isCanonicalKeyValueAccessMethodName(normalizedMethodName) &&
         collectionTypePath == "/map") {
       resolvedOut = preferredMapMethodTargetForCall(params, locals, receiver, normalizedMethodName);
       return true;
@@ -791,7 +791,7 @@ bool SemanticsValidator::resolveInferMethodCallPath(
     }
     std::string keyType;
     std::string valueType;
-    if (isCanonicalMapAccessMethodName(receiverHelperName) &&
+    if (isCanonicalKeyValueAccessMethodName(receiverHelperName) &&
         resolveMapTarget(receiver.args.front(), keyType, valueType)) {
       const std::string resolvedReceiver =
           preferredMapMethodTargetForCall(params, locals, receiver, receiverHelperName);
@@ -949,11 +949,11 @@ bool SemanticsValidator::resolveInferMethodCallPath(
         return true;
       }
     }
-    if (isCanonicalMapAccessMethodName(normalizedMethodName) &&
+    if (isCanonicalKeyValueAccessMethodName(normalizedMethodName) &&
         setIndexedArgsPackMapMethodTarget(receiver, normalizedMethodName)) {
       return true;
     }
-    if (isCanonicalMapAccessMethodName(normalizedMethodName) &&
+    if (isCanonicalKeyValueAccessMethodName(normalizedMethodName) &&
         resolveMapTarget(receiver, keyType, valueType)) {
       resolvedOut = preferredMapMethodTargetForCall(params, locals, receiver, normalizedMethodName);
       return true;
