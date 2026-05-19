@@ -267,6 +267,9 @@ TEST_CASE("canonical map surface owns standalone stdlib implementation") {
   const std::string statementBodyArgumentsSource =
       readText(repoRoot() / "src" / "semantics" /
                "SemanticsValidatorStatementBodyArguments.cpp");
+  const std::string exprBodyArgumentsSource =
+      readText(repoRoot() / "src" / "semantics" /
+               "SemanticsValidatorExprBodyArguments.cpp");
   const std::string scalarPointerMemorySource =
       readText(repoRoot() / "src" / "semantics" /
                "SemanticsValidatorExprScalarPointerMemory.cpp");
@@ -452,6 +455,7 @@ TEST_CASE("canonical map surface owns standalone stdlib implementation") {
   REQUIRE(!pointerLikeSource.empty());
   REQUIRE(!statementPrintabilitySource.empty());
   REQUIRE(!statementBodyArgumentsSource.empty());
+  REQUIRE(!exprBodyArgumentsSource.empty());
   REQUIRE(!scalarPointerMemorySource.empty());
   REQUIRE(!statementSource.empty());
   REQUIRE(!argumentValidationSource.empty());
@@ -2574,6 +2578,10 @@ TEST_CASE("canonical map surface owns standalone stdlib implementation") {
   CHECK(statementBodyArgumentsSource.find("preferredMapBodyArgumentTarget") ==
         std::string::npos);
   CHECK(statementBodyArgumentsSource.find("isMapReceiverExpr") ==
+        std::string::npos);
+  CHECK(exprBodyArgumentsSource.find("remappedRemovedMapTarget") ==
+        std::string::npos);
+  CHECK(exprBodyArgumentsSource.find("remappedRemovedKeyValueTarget") !=
         std::string::npos);
   CHECK(statementBodyArgumentsSource.find(
             "isRemovedKeyValueCompatibilityHelper(") !=

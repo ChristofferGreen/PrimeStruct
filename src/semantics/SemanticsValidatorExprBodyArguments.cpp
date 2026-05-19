@@ -24,14 +24,14 @@ bool SemanticsValidator::validateExprBodyArguments(
     return true;
   }
 
-  std::string remappedRemovedMapBodyArgumentTarget;
-  const bool remappedRemovedMapTarget =
+  std::string remappedRemovedKeyValueBodyArgumentTarget;
+  const bool remappedRemovedKeyValueTarget =
       this->resolveRemovedMapBodyArgumentTarget(
           expr, resolved, params, locals,
           builtinCollectionDispatchResolverAdapters,
-          remappedRemovedMapBodyArgumentTarget);
-  if (remappedRemovedMapTarget) {
-    resolved = remappedRemovedMapBodyArgumentTarget;
+          remappedRemovedKeyValueBodyArgumentTarget);
+  if (remappedRemovedKeyValueTarget) {
+    resolved = remappedRemovedKeyValueBodyArgumentTarget;
     resolvedMethod = false;
   } else if (!resolvedMethod &&
              !this->shouldPreserveRemovedCollectionHelperPath(resolved)) {
