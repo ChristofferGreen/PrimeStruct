@@ -437,7 +437,7 @@ bool SemanticsValidator::validateExprPreDispatchDirectCalls(
   }
   auto failPreDispatchDirectCallMapKeyMismatch =
       [&](const std::string &helperName,
-          const std::string &mapKeyType,
+          const std::string &keyValueKeyType,
           const Expr &receiverExpr) {
         const std::string canonicalPath =
             canonicalKeyValueHelperPathLocal(helperName);
@@ -455,13 +455,13 @@ bool SemanticsValidator::validateExprPreDispatchDirectCalls(
               "argument type mismatch for " + canonicalPath +
               " parameter key");
         }
-        if (normalizeBindingTypeName(mapKeyType) == "string") {
+        if (normalizeBindingTypeName(keyValueKeyType) == "string") {
           return failPreDispatchDirectCallDiagnostic(helperName +
                                                      " requires string map key");
         }
         return failPreDispatchDirectCallDiagnostic(helperName +
                                                    " requires map key type " +
-                                                   mapKeyType);
+                                                   keyValueKeyType);
       };
   if (context.dispatchBootstrap == nullptr) {
     return true;
@@ -653,33 +653,33 @@ bool SemanticsValidator::validateExprPreDispatchDirectCalls(
       const Expr &keyExpr =
           hasBareKeyValueOperands ? expr.args[keyIndex] : expr.args[1];
       std::string receiverTypeText;
-      std::string mapKeyType;
-      std::string mapValueType;
+      std::string keyValueKeyType;
+      std::string keyValueValueType;
       if (inferQueryExprTypeText(receiverExpr, params, locals,
                                  receiverTypeText) &&
-          extractMapKeyValueTypesFromTypeText(receiverTypeText, mapKeyType,
-                                             mapValueType)) {
-        if (!mapKeyType.empty()) {
-          if (normalizeBindingTypeName(mapKeyType) == "string") {
+          extractMapKeyValueTypesFromTypeText(receiverTypeText, keyValueKeyType,
+                                             keyValueValueType)) {
+        if (!keyValueKeyType.empty()) {
+          if (normalizeBindingTypeName(keyValueKeyType) == "string") {
             if (!this->isStringExprForArgumentValidation(
                     keyExpr, dispatchBootstrap.dispatchResolvers)) {
               return failPreDispatchDirectCallMapKeyMismatch(
-                  builtinAccessName, mapKeyType, receiverExpr);
+                  builtinAccessName, keyValueKeyType, receiverExpr);
             }
           } else {
             ReturnKind keyKind =
-                returnKindForTypeName(normalizeBindingTypeName(mapKeyType));
+                returnKindForTypeName(normalizeBindingTypeName(keyValueKeyType));
             if (keyKind != ReturnKind::Unknown) {
               if (dispatchBootstrap.dispatchResolvers.resolveStringTarget(
                       keyExpr)) {
                 return failPreDispatchDirectCallMapKeyMismatch(
-                    builtinAccessName, mapKeyType, receiverExpr);
+                    builtinAccessName, keyValueKeyType, receiverExpr);
               }
               ReturnKind indexKind =
                   inferExprReturnKind(keyExpr, params, locals);
               if (indexKind != ReturnKind::Unknown && indexKind != keyKind) {
                 return failPreDispatchDirectCallMapKeyMismatch(
-                    builtinAccessName, mapKeyType, receiverExpr);
+                    builtinAccessName, keyValueKeyType, receiverExpr);
               }
             }
           }

@@ -1473,6 +1473,16 @@ TEST_CASE("canonical map surface owns standalone stdlib implementation") {
         std::string::npos);
   CHECK(exprPreDispatchDirectCallsSource.find("preDispatchMapHelperSurfaceMetadata()") ==
         std::string::npos);
+  CHECK(exprPreDispatchDirectCallsSource.find("keyValueKeyType") !=
+        std::string::npos);
+  CHECK(exprPreDispatchDirectCallsSource.find("keyValueValueType") !=
+        std::string::npos);
+  CHECK(exprPreDispatchDirectCallsSource.find("std::string mapKeyType") ==
+        std::string::npos);
+  CHECK(exprPreDispatchDirectCallsSource.find("std::string mapValueType") ==
+        std::string::npos);
+  CHECK(exprPreDispatchDirectCallsSource.find("const std::string &mapKeyType") ==
+        std::string::npos);
   CHECK(exprPreDispatchDirectCallsSource.find("canonicalKeyValueHelperPathLocal(") !=
         std::string::npos);
   CHECK(exprPreDispatchDirectCallsSource.find("canonicalMapHelperPathLocal(") ==
