@@ -919,7 +919,7 @@ bool SemanticsValidator::resolveMethodTarget(const std::vector<ParameterInfo> &p
   auto isValueSurfaceAccessMethodName = [](std::string_view helperName) {
     return helperName == "at" || helperName == "at_unsafe";
   };
-  auto isCanonicalMapAccessMethodName = [&](std::string_view helperName) {
+  auto isCanonicalKeyValueAccessMethodName = [&](std::string_view helperName) {
     return isValueSurfaceAccessMethodName(helperName) ||
            helperName == "size" ||
            helperName == "at_ref" || helperName == "at_unsafe_ref";
@@ -1749,7 +1749,7 @@ bool SemanticsValidator::resolveMethodTarget(const std::vector<ParameterInfo> &p
     if (defMap_.find(removedPath) != defMap_.end() || candidate.args.empty()) {
       return "";
     }
-    if (isCanonicalMapAccessMethodName(helperName)) {
+    if (isCanonicalKeyValueAccessMethodName(helperName)) {
       const std::string canonicalPath = canonicalKeyValueHelperPathLocal(helperName);
       auto defIt = defMap_.find(canonicalPath);
       if (defIt != defMap_.end() && defIt->second != nullptr) {
@@ -1771,7 +1771,7 @@ bool SemanticsValidator::resolveMethodTarget(const std::vector<ParameterInfo> &p
         }
       }
     }
-    if (isCanonicalMapAccessMethodName(helperName)) {
+    if (isCanonicalKeyValueAccessMethodName(helperName)) {
       return removedPath;
     }
     size_t receiverIndex = 0;
@@ -2430,7 +2430,7 @@ bool SemanticsValidator::resolveMethodTarget(const std::vector<ParameterInfo> &p
         return setCollectionMethodTarget("/string/" + normalizedMethodName);
       }
     }
-    if (isCanonicalMapAccessMethodName(normalizedMethodName) &&
+    if (isCanonicalKeyValueAccessMethodName(normalizedMethodName) &&
         collectionTypePath == "/map") {
       return setPreferredKeyValueMethodTarget(receiver, normalizedMethodName);
     }
@@ -2587,7 +2587,7 @@ bool SemanticsValidator::resolveMethodTarget(const std::vector<ParameterInfo> &p
        normalizedMethodName == "size" ||
        normalizedMethodName == "contains" || normalizedMethodName == "contains_ref" ||
        normalizedMethodName == "tryAt" || normalizedMethodName == "tryAt_ref" ||
-       isCanonicalMapAccessMethodName(normalizedMethodName) ||
+       isCanonicalKeyValueAccessMethodName(normalizedMethodName) ||
        normalizedMethodName == "insert" || normalizedMethodName == "insert_ref") &&
       setIndexedArgsPackMapMethodTarget(receiver, normalizedMethodName)) {
     return true;
@@ -2645,7 +2645,7 @@ bool SemanticsValidator::resolveMethodTarget(const std::vector<ParameterInfo> &p
           (normalizedMethodName == "count" || normalizedMethodName == "count_ref" ||
            normalizedMethodName == "contains" || normalizedMethodName == "contains_ref" ||
            normalizedMethodName == "tryAt" || normalizedMethodName == "tryAt_ref" ||
-           isCanonicalMapAccessMethodName(normalizedMethodName) ||
+           isCanonicalKeyValueAccessMethodName(normalizedMethodName) ||
            normalizedMethodName == "insert" || normalizedMethodName == "insert_ref")) {
         return setPreferredKeyValueMethodTarget(receiver, normalizedMethodName);
       }
@@ -2678,7 +2678,7 @@ bool SemanticsValidator::resolveMethodTarget(const std::vector<ParameterInfo> &p
        normalizedMethodName == "size" ||
        normalizedMethodName == "contains" || normalizedMethodName == "contains_ref" ||
        normalizedMethodName == "tryAt" || normalizedMethodName == "tryAt_ref" ||
-       isCanonicalMapAccessMethodName(normalizedMethodName) ||
+       isCanonicalKeyValueAccessMethodName(normalizedMethodName) ||
        normalizedMethodName == "insert" || normalizedMethodName == "insert_ref") &&
       isDirectMapConstructorReceiverCall(receiver)) {
     std::string keyType;
@@ -2824,11 +2824,11 @@ bool SemanticsValidator::resolveMethodTarget(const std::vector<ParameterInfo> &p
       return setCollectionMethodTarget("/string/" + normalizedMethodName);
     }
   }
-  if (isCanonicalMapAccessMethodName(normalizedMethodName) &&
+  if (isCanonicalKeyValueAccessMethodName(normalizedMethodName) &&
       setIndexedArgsPackMapMethodTarget(receiver, normalizedMethodName)) {
     return true;
   }
-  if (isCanonicalMapAccessMethodName(normalizedMethodName) &&
+  if (isCanonicalKeyValueAccessMethodName(normalizedMethodName) &&
       resolveMapTarget(receiver)) {
     return setPreferredKeyValueMethodTarget(receiver, normalizedMethodName);
   }
@@ -3398,7 +3398,7 @@ bool SemanticsValidator::resolveMethodTarget(const std::vector<ParameterInfo> &p
        normalizedMethodName == "size" ||
        normalizedMethodName == "contains" || normalizedMethodName == "contains_ref" ||
        normalizedMethodName == "tryAt" || normalizedMethodName == "tryAt_ref" ||
-       isCanonicalMapAccessMethodName(normalizedMethodName) ||
+       isCanonicalKeyValueAccessMethodName(normalizedMethodName) ||
        normalizedMethodName == "insert" || normalizedMethodName == "insert_ref")) {
     if (isRootedKeyValueHelperAliasPathForMethodTargets(explicitKeyValueHelperPath)) {
       return resolveExplicitRootKeyValueMethodPath();
@@ -3416,7 +3416,7 @@ bool SemanticsValidator::resolveMethodTarget(const std::vector<ParameterInfo> &p
       (normalizedMethodName == "count" || normalizedMethodName == "count_ref" ||
        normalizedMethodName == "contains" || normalizedMethodName == "contains_ref" ||
        normalizedMethodName == "tryAt" || normalizedMethodName == "tryAt_ref" ||
-       isCanonicalMapAccessMethodName(normalizedMethodName) ||
+       isCanonicalKeyValueAccessMethodName(normalizedMethodName) ||
        normalizedMethodName == "insert" || normalizedMethodName == "insert_ref")) {
     std::string keyType;
     std::string valueType;

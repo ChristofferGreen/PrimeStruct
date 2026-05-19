@@ -61,8 +61,9 @@ This file stores durable session-derived facts that are useful in later work. Ke
   collection-helper rewrite bare-access predicates also using key/value helper
   names; semantic method-resolution string-count shadow checks should use
   key/value access receiver names too; infer-method access predicates should
-  use key/value method names too. The stdlib ownership source lock rejects the
-  old map-helper, map-count, map-access, and removed map compatibility names.
+  use key/value method names too; method-target access predicates should use
+  key/value method names too. The stdlib ownership source lock rejects the old
+  map-helper, map-count, map-access, and removed map compatibility names.
 
 ### exact-stdlib-vector-import-covers-helper-surface
 - Updated: 2026-04-19
