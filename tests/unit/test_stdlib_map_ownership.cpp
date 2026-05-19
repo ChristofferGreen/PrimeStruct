@@ -2441,6 +2441,14 @@ TEST_CASE("canonical map surface owns standalone stdlib implementation") {
         std::string::npos);
   CHECK(exprLateUnknownTargetFallbacksSource.find("rewrittenMapMethodCall") ==
         std::string::npos);
+  CHECK(exprLateUnknownTargetFallbacksSource.find(
+            "isCanonicalKeyValueMethodHelper(") != std::string::npos);
+  CHECK(exprLateUnknownTargetFallbacksSource.find("isCanonicalMapMethodHelper(") ==
+        std::string::npos);
+  CHECK(exprLateUnknownTargetFallbacksSource.find(
+            "canonicalKeyValueMethodHelperTarget(") != std::string::npos);
+  CHECK(exprLateUnknownTargetFallbacksSource.find("canonicalMapMethodHelperTarget(") ==
+        std::string::npos);
   CHECK(exprLateUnknownTargetFallbacksSource.find("const bool isKeyValueReceiver") !=
         std::string::npos);
   CHECK(exprLateUnknownTargetFallbacksSource.find("const bool isMapReceiver") ==

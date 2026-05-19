@@ -10,7 +10,7 @@ namespace primec::semantics {
 
 namespace {
 
-bool isCanonicalMapMethodHelper(std::string_view helperName) {
+bool isCanonicalKeyValueMethodHelper(std::string_view helperName) {
   return helperName == "count" || helperName == "count_ref" ||
          helperName == "size" ||
          helperName == "contains" || helperName == "contains_ref" ||
@@ -20,7 +20,7 @@ bool isCanonicalMapMethodHelper(std::string_view helperName) {
          helperName == "insert" || helperName == "insert_ref";
 }
 
-std::string canonicalMapMethodHelperTarget(std::string_view helperName) {
+std::string canonicalKeyValueMethodHelperTarget(std::string_view helperName) {
   const StdlibSurfaceMetadata *metadata =
       findStdlibSurfaceMetadataByBridgeKey("collections.map_helpers");
   if (metadata == nullptr) {
@@ -114,7 +114,7 @@ bool SemanticsValidator::validateExprLateUnknownTargetFallbacks(
       isCanonicalVectorCompatibilityPath(expr.name);
   if (context.resolveMapTarget != nullptr && expr.isMethodCall &&
       !requestsExplicitVectorCompatibilityMethod &&
-      isCanonicalMapMethodHelper(normalizedMethodName) && !expr.args.empty() &&
+      isCanonicalKeyValueMethodHelper(normalizedMethodName) && !expr.args.empty() &&
       (context.resolveMapTarget(expr.args.front()) ||
        (context.isIndexedArgsPackMapReceiverTarget != nullptr &&
         context.isIndexedArgsPackMapReceiverTarget(expr.args.front())))) {
@@ -125,7 +125,7 @@ bool SemanticsValidator::validateExprLateUnknownTargetFallbacks(
         params, locals, expr.args.front(), normalizedMethodName);
     if (rewrittenKeyValueMethodCall.name.empty()) {
       rewrittenKeyValueMethodCall.name =
-          canonicalMapMethodHelperTarget(normalizedMethodName);
+          canonicalKeyValueMethodHelperTarget(normalizedMethodName);
     }
     handledOut = true;
     return validateExpr(params, locals, rewrittenKeyValueMethodCall);

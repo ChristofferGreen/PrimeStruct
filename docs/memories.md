@@ -79,7 +79,8 @@ This file stores durable session-derived facts that are useful in later work. Ke
   key/value names too; late unknown-target fallback temporaries and receiver
   locals should use key/value names too; effect-free pass bare-helper locals
   should use key/value names too; result-helper receiver type resolvers should
-  use key/value names too.
+  use key/value names too; late unknown-target local method-helper utilities
+  should use key/value names too.
   The stdlib ownership source lock rejects the old map-helper, map-count,
   map-access, and removed map compatibility names.
 
