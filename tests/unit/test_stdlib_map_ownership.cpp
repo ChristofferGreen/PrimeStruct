@@ -899,6 +899,11 @@ TEST_CASE("canonical map surface owns standalone stdlib implementation") {
   CHECK(receiverPathsSource.find(
             "isRootMapCollectionReceiverPath(resolvedReceiverPath)") !=
         std::string::npos);
+  CHECK(receiverPathsSource.find("isSpecializedExperimentalMapBackingPath") ==
+        std::string::npos);
+  CHECK(receiverPathsSource.find(
+            "isSpecializedExperimentalKeyValueBackingPath") !=
+        std::string::npos);
   CHECK(receiverPathsSource.find("mapHelperSurfaceMetadataLocal()") !=
         std::string::npos);
   CHECK(exprMethodResolutionSource.find("StdlibSurfaceId::CollectionsMapHelpers") ==

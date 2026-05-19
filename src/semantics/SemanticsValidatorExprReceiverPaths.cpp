@@ -7,7 +7,7 @@
 namespace primec::semantics {
 
 namespace {
-bool isSpecializedExperimentalMapBackingPath(std::string typeName) {
+bool isSpecializedExperimentalKeyValueBackingPath(std::string typeName) {
   typeName = normalizeBindingTypeName(typeName);
   if (!typeName.empty() && typeName.front() == '/') {
     typeName.erase(typeName.begin());
@@ -71,7 +71,7 @@ bool SemanticsValidator::resolveNonCollectionAccessHelperPathFromTypeText(
     resolvedType = resolveTypePath(resolvedLookupType, typeNamespace);
   }
   if (resolvedType.empty() ||
-      isSpecializedExperimentalMapBackingPath(resolvedType)) {
+      isSpecializedExperimentalKeyValueBackingPath(resolvedType)) {
     return false;
   }
   pathOut = resolvedType + "/" + std::string(helperName);
@@ -187,7 +187,7 @@ bool SemanticsValidator::resolveLeadingNonCollectionAccessReceiverPath(
   }
   const std::string structPath = inferStructReturnPath(receiverExpr, params, locals);
   if (structPath.empty() || !normalizeCollectionTypePath(structPath).empty() ||
-      isSpecializedExperimentalMapBackingPath(structPath)) {
+      isSpecializedExperimentalKeyValueBackingPath(structPath)) {
     return false;
   }
   pathOut = structPath + "/" + std::string(helperName);
