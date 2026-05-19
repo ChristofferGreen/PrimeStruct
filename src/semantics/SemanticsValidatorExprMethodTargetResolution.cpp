@@ -1520,7 +1520,7 @@ bool SemanticsValidator::resolveMethodTarget(const std::vector<ParameterInfo> &p
     return extractMapKeyValueTypes(binding, keyTypeOut, valueTypeOut) ||
            extractExperimentalMapFieldTypes(binding, keyTypeOut, valueTypeOut);
   };
-  auto resolveExperimentalMapTarget = [&](const Expr &target,
+  auto resolveExperimentalKeyValueTarget = [&](const Expr &target,
                                           std::string &keyTypeOut,
                                           std::string &valueTypeOut) -> bool {
     keyTypeOut.clear();
@@ -1558,7 +1558,7 @@ bool SemanticsValidator::resolveMethodTarget(const std::vector<ParameterInfo> &p
     return inferDefinitionReturnBinding(*defIt->second, inferredReturn) &&
            extractExperimentalMapFieldTypes(inferredReturn, keyTypeOut, valueTypeOut);
   };
-  auto resolveMapTarget = [&](const Expr &target) -> bool {
+  auto resolveKeyValueTarget = [&](const Expr &target) -> bool {
     std::string keyType;
     std::string valueType;
     if (target.kind == Expr::Kind::Name) {
@@ -1784,7 +1784,8 @@ bool SemanticsValidator::resolveMethodTarget(const std::vector<ParameterInfo> &p
         }
       }
     }
-    return receiverIndex < candidate.args.size() && resolveMapTarget(candidate.args[receiverIndex])
+    return receiverIndex < candidate.args.size() &&
+               resolveKeyValueTarget(candidate.args[receiverIndex])
                ? removedPath
                : "";
   };
@@ -1818,7 +1819,7 @@ bool SemanticsValidator::resolveMethodTarget(const std::vector<ParameterInfo> &p
           return false;
         }
         return resolveSoaVectorTarget(receiver, ignoredElemType) ||
-               resolveMapTarget(receiver);
+               resolveKeyValueTarget(receiver);
       }
       if (normalizedMethodName == "capacity") {
         if (isExplicitArrayCompatibilityPath) {
@@ -2011,7 +2012,7 @@ bool SemanticsValidator::resolveMethodTarget(const std::vector<ParameterInfo> &p
     std::string keyType;
     std::string valueType;
     const std::string canonical = canonicalKeyValueHelperPathLocal(resolvedHelperName);
-    if (resolveExperimentalMapTarget(receiverExpr, keyType, valueType)) {
+    if (resolveExperimentalKeyValueTarget(receiverExpr, keyType, valueType)) {
       if (hasDeclaredDefinitionPath(canonical) || hasImportedDefinitionPath(canonical)) {
         return canonical;
       }
@@ -2121,7 +2122,7 @@ bool SemanticsValidator::resolveMethodTarget(const std::vector<ParameterInfo> &p
     if (resolveStringTarget(receiverExpr)) {
       return "string";
     }
-    if (resolveMapTarget(receiverExpr)) {
+    if (resolveKeyValueTarget(receiverExpr)) {
       return "map";
     }
     return {};
@@ -2683,7 +2684,7 @@ bool SemanticsValidator::resolveMethodTarget(const std::vector<ParameterInfo> &p
       isDirectMapConstructorReceiverCall(receiver)) {
     std::string keyType;
     std::string valueType;
-    if (resolveExperimentalMapTarget(receiver, keyType, valueType)) {
+    if (resolveExperimentalKeyValueTarget(receiver, keyType, valueType)) {
       return failMethodTargetResolutionDiagnostic(
           "unknown call target: " +
           this->preferredCanonicalExperimentalKeyValueHelperTarget(
@@ -2770,7 +2771,7 @@ bool SemanticsValidator::resolveMethodTarget(const std::vector<ParameterInfo> &p
         setIndexedArgsPackMapMethodTarget(receiver, "count")) {
       return true;
     }
-    if (resolveMapTarget(receiver)) {
+    if (resolveKeyValueTarget(receiver)) {
       if (normalizedMethodName == "count") {
         if (auto explicitTarget = tryResolveExplicitCanonicalVectorCountMethodTarget(receiver);
             explicitTarget.has_value()) {
@@ -2785,12 +2786,12 @@ bool SemanticsValidator::resolveMethodTarget(const std::vector<ParameterInfo> &p
     if (setIndexedArgsPackMapMethodTarget(receiver, normalizedMethodName)) {
       return true;
     }
-    if (normalizedMethodName != "insert" && resolveMapTarget(receiver)) {
+    if (normalizedMethodName != "insert" && resolveKeyValueTarget(receiver)) {
       return setPreferredKeyValueMethodTarget(receiver, normalizedMethodName);
     }
   }
   if (normalizedMethodName == "insert") {
-    if (resolveMapTarget(receiver)) {
+    if (resolveKeyValueTarget(receiver)) {
       return setPreferredKeyValueMethodTarget(receiver, "insert");
     }
   }
@@ -2829,7 +2830,7 @@ bool SemanticsValidator::resolveMethodTarget(const std::vector<ParameterInfo> &p
     return true;
   }
   if (isCanonicalKeyValueAccessMethodName(normalizedMethodName) &&
-      resolveMapTarget(receiver)) {
+      resolveKeyValueTarget(receiver)) {
     return setPreferredKeyValueMethodTarget(receiver, normalizedMethodName);
   }
   if (normalizedMethodName == "get" || normalizedMethodName == "get_ref") {
@@ -3420,7 +3421,7 @@ bool SemanticsValidator::resolveMethodTarget(const std::vector<ParameterInfo> &p
        normalizedMethodName == "insert" || normalizedMethodName == "insert_ref")) {
     std::string keyType;
     std::string valueType;
-    if (resolveExperimentalMapTarget(receiver, keyType, valueType)) {
+    if (resolveExperimentalKeyValueTarget(receiver, keyType, valueType)) {
       resolvedOut =
           this->preferredCanonicalExperimentalKeyValueHelperTarget(
               normalizedMethodName);

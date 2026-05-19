@@ -801,6 +801,14 @@ TEST_CASE("canonical map surface owns standalone stdlib implementation") {
         std::string::npos);
   CHECK(methodTargetResolutionSource.find("isCanonicalKeyValueAccessMethodName") !=
         std::string::npos);
+  CHECK(methodTargetResolutionSource.find("auto resolveMapTarget") ==
+        std::string::npos);
+  CHECK(methodTargetResolutionSource.find("auto resolveExperimentalMapTarget") ==
+        std::string::npos);
+  CHECK(methodTargetResolutionSource.find("auto resolveKeyValueTarget") !=
+        std::string::npos);
+  CHECK(methodTargetResolutionSource.find("auto resolveExperimentalKeyValueTarget") !=
+        std::string::npos);
   CHECK(methodTargetResolutionSource.find(
             "metadataBackedMapHelperRootAliasMethodName(candidate)") !=
         std::string::npos);
