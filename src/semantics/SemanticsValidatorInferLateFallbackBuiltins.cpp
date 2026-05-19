@@ -204,7 +204,7 @@ ReturnKind SemanticsValidator::inferLateFallbackReturnKind(
         expr.args.size() == 2)) &&
       (resolvedIt == defMap_.end() ||
        inferCollectionDispatchSetup.shouldDeferNamespacedVectorAccessCall ||
-       inferCollectionDispatchSetup.shouldDeferNamespacedMapAccessCall)) {
+       inferCollectionDispatchSetup.shouldDeferNamespacedKeyValueAccessCall)) {
     const std::string helperName =
         inferCollectionDispatchSetup.isBuiltinAccess
             ? inferCollectionDispatchSetup.builtinAccessName
@@ -395,8 +395,8 @@ ReturnKind SemanticsValidator::inferLateFallbackReturnKind(
       inferCollectionDispatchSetup.hasBuiltinAccessSpelling &&
       (!inferCollectionDispatchSetup.isStdNamespacedVectorAccessSpelling ||
        inferCollectionDispatchSetup.shouldAllowStdAccessCompatibilityFallback) &&
-      (!inferCollectionDispatchSetup.isStdNamespacedMapAccessSpelling ||
-       inferCollectionDispatchSetup.hasStdNamespacedMapAccessDefinition) &&
+      (!inferCollectionDispatchSetup.isStdNamespacedKeyValueAccessSpelling ||
+       inferCollectionDispatchSetup.hasStdNamespacedKeyValueAccessDefinition) &&
       expr.args.size() == 2) {
     builtinAccessName = inferCollectionDispatchSetup.builtinAccessName;
     size_t receiverIndex = 0;
@@ -432,7 +432,7 @@ ReturnKind SemanticsValidator::inferLateFallbackReturnKind(
 
   if (resolvedIt == defMap_.end() && !expr.isMethodCall &&
       isSimpleCallName(expr, "contains") && expr.args.size() == 2 &&
-      inferCollectionDispatchSetup.shouldInferBuiltinBareMapContainsCall) {
+      inferCollectionDispatchSetup.shouldInferBuiltinBareKeyValueContainsCall) {
     size_t receiverIndex = 0;
     size_t keyIndex = 1;
     const bool hasBareMapOperands = bareKeyValueHelperOperandIndices(
@@ -453,11 +453,11 @@ ReturnKind SemanticsValidator::inferLateFallbackReturnKind(
        inferCollectionDispatchSetup.hasBuiltinAccessSpelling)) {
     builtinAccessName = inferCollectionDispatchSetup.builtinAccessName;
     if ((isSimpleCallName(expr, "contains") &&
-         !inferCollectionDispatchSetup.shouldInferBuiltinBareMapContainsCall) ||
+         !inferCollectionDispatchSetup.shouldInferBuiltinBareKeyValueContainsCall) ||
         (isSimpleCallName(expr, "tryAt") &&
-         !inferCollectionDispatchSetup.shouldInferBuiltinBareMapTryAtCall) ||
+         !inferCollectionDispatchSetup.shouldInferBuiltinBareKeyValueTryAtCall) ||
         (isCanonicalKeyValueAccessHelperName(builtinAccessName) &&
-         !inferCollectionDispatchSetup.shouldInferBuiltinBareMapAccessCall)) {
+         !inferCollectionDispatchSetup.shouldInferBuiltinBareKeyValueAccessCall)) {
       Expr rewrittenKeyValueHelperCall;
       if (tryRewriteBareKeyValueHelperCall(
               expr,
@@ -484,7 +484,7 @@ ReturnKind SemanticsValidator::inferLateFallbackReturnKind(
       if (context.resolveMethodCallPath != nullptr &&
           context.resolveMethodCallPath(expr.name, methodResolved)) {
         if (isCanonicalKeyValueContainsHelperPath(methodResolved) &&
-            !inferCollectionDispatchSetup.shouldInferBuiltinBareMapContainsCall &&
+            !inferCollectionDispatchSetup.shouldInferBuiltinBareKeyValueContainsCall &&
             !inferCollectionDispatchSetup.isIndexedArgsPackMapReceiverTarget(
                 receiverExpr) &&
             !hasImportedDefinitionPath(methodResolved) &&
@@ -493,7 +493,7 @@ ReturnKind SemanticsValidator::inferLateFallbackReturnKind(
               "unknown call target: " + methodResolved);
         }
         if (isCanonicalKeyValueTryAtHelperPath(methodResolved) &&
-            !inferCollectionDispatchSetup.shouldInferBuiltinBareMapTryAtCall &&
+            !inferCollectionDispatchSetup.shouldInferBuiltinBareKeyValueTryAtCall &&
             !inferCollectionDispatchSetup.isIndexedArgsPackMapReceiverTarget(
                 receiverExpr) &&
             !hasImportedDefinitionPath(methodResolved) &&
@@ -511,7 +511,7 @@ ReturnKind SemanticsValidator::inferLateFallbackReturnKind(
                 : lateFallbackCanonicalKeyValueHelperPath(builtinAccessName);
         if ((isKeyValueImportAliasAccessHelperPath(methodResolved) ||
              isCanonicalAccessPath) &&
-            !inferCollectionDispatchSetup.shouldInferBuiltinBareMapAccessCall &&
+            !inferCollectionDispatchSetup.shouldInferBuiltinBareKeyValueAccessCall &&
             !inferCollectionDispatchSetup.isIndexedArgsPackMapReceiverTarget(
                 receiverExpr) &&
             !hasImportedDefinitionPath(canonicalAccessPath) &&
@@ -574,7 +574,7 @@ ReturnKind SemanticsValidator::inferLateFallbackReturnKind(
   }
 
   if (!expr.isMethodCall && isSimpleCallName(expr, "contains") &&
-      inferCollectionDispatchSetup.shouldInferBuiltinBareMapContainsCall &&
+      inferCollectionDispatchSetup.shouldInferBuiltinBareKeyValueContainsCall &&
       expr.args.size() == 2) {
     size_t receiverIndex = 0;
     size_t keyIndex = 1;
@@ -592,7 +592,7 @@ ReturnKind SemanticsValidator::inferLateFallbackReturnKind(
 
   if (!expr.isMethodCall && isSimpleCallName(expr, "tryAt") &&
       expr.args.size() == 2 &&
-      (inferCollectionDispatchSetup.shouldInferBuiltinBareMapTryAtCall ||
+      (inferCollectionDispatchSetup.shouldInferBuiltinBareKeyValueTryAtCall ||
        inferCollectionDispatchSetup.isIndexedArgsPackMapReceiverTarget(
            expr.args[keyValueHelperReceiverIndex(expr, builtinCollectionDispatchResolvers)]))) {
     ResultTypeInfo argResult;
@@ -605,7 +605,7 @@ ReturnKind SemanticsValidator::inferLateFallbackReturnKind(
   if (!expr.isMethodCall &&
       inferCollectionDispatchSetup.hasBuiltinAccessSpelling &&
       expr.args.size() == 2 &&
-      (inferCollectionDispatchSetup.shouldInferBuiltinBareMapAccessCall ||
+      (inferCollectionDispatchSetup.shouldInferBuiltinBareKeyValueAccessCall ||
        inferCollectionDispatchSetup.isIndexedArgsPackMapReceiverTarget(
            expr.args[keyValueHelperReceiverIndex(expr,
                                             builtinCollectionDispatchResolvers)]))) {

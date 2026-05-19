@@ -249,7 +249,7 @@
     bool shouldAllowStdAccessCompatibilityFallback = false;
     bool hasStdNamespacedVectorAccessDefinition = false;
     bool isStdNamespacedMapAccessCall = false;
-    bool hasStdNamespacedMapAccessDefinition = false;
+    bool hasStdNamespacedKeyValueAccessDefinition = false;
     bool shouldBuiltinValidateBareMapAccessCall = false;
     std::function<bool(const std::string &)> isNonCollectionStructAccessTarget;
     const BuiltinCollectionDispatchResolvers *dispatchResolvers = nullptr;
@@ -279,7 +279,7 @@
       bool shouldAllowStdAccessCompatibilityFallback,
       bool hasStdNamespacedVectorAccessDefinition,
       bool isStdNamespacedMapAccessCall,
-      bool hasStdNamespacedMapAccessDefinition,
+      bool hasStdNamespacedKeyValueAccessDefinition,
       bool shouldBuiltinValidateBareMapAccessCall,
       const BuiltinCollectionDispatchResolvers &dispatchResolvers,
       ExprLateFallbackBuiltinContext &contextOut);
@@ -382,7 +382,7 @@
     bool shouldAllowStdAccessCompatibilityFallback = false;
     bool hasStdNamespacedVectorAccessDefinition = false;
     bool isStdNamespacedMapAccessCall = false;
-    bool hasStdNamespacedMapAccessDefinition = false;
+    bool hasStdNamespacedKeyValueAccessDefinition = false;
     bool shouldBuiltinValidateBareMapAccessCall = false;
     std::function<bool(const Expr &, std::string &)> resolveArgsPackAccessTarget;
     std::function<bool(const Expr &, std::string &)> resolveVectorTarget;
@@ -524,7 +524,7 @@
     bool isStdNamespacedVectorAccessCall = false;
     bool hasStdNamespacedVectorAccessDefinition = false;
     bool isStdNamespacedMapAccessCall = false;
-    bool hasStdNamespacedMapAccessDefinition = false;
+    bool hasStdNamespacedKeyValueAccessDefinition = false;
     bool shouldAllowStdAccessCompatibilityFallback = false;
   };
   bool prepareExprCollectionDispatchSetup(

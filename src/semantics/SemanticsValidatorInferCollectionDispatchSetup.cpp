@@ -193,11 +193,11 @@ void SemanticsValidator::prepareInferCollectionDispatchSetup(
       (hasImportedDefinitionPath(resolvedCalleePath) ||
        hasDeclaredDefinitionPath(resolvedCalleePath) ||
        isStdlibVectorAccessWrapperDefinition);
-  setupOut.isStdNamespacedMapAccessSpelling =
+  setupOut.isStdNamespacedKeyValueAccessSpelling =
       setupOut.hasBuiltinAccessSpelling && !expr.isMethodCall &&
       isStdNamespacedCanonicalKeyValueAccessPath(resolvedCalleePath);
-  setupOut.hasStdNamespacedMapAccessDefinition =
-      setupOut.isStdNamespacedMapAccessSpelling &&
+  setupOut.hasStdNamespacedKeyValueAccessDefinition =
+      setupOut.isStdNamespacedKeyValueAccessSpelling &&
       (hasImportedDefinitionPath(resolvedCalleePath) ||
        hasDeclaredDefinitionPath(resolvedCalleePath));
   const bool isResolvedKeyValueAccessCall =
@@ -242,7 +242,7 @@ void SemanticsValidator::prepareInferCollectionDispatchSetup(
       setupOut.hasBuiltinAccessSpelling &&
       (!setupOut.isStdNamespacedVectorAccessSpelling ||
        hasStdNamespacedVectorAccessDefinition) &&
-      !setupOut.isStdNamespacedMapAccessSpelling && !isResolvedKeyValueAccessCall;
+      !setupOut.isStdNamespacedKeyValueAccessSpelling && !isResolvedKeyValueAccessCall;
   const bool isNamespacedVectorAccessCall =
       !expr.isMethodCall && setupOut.isBuiltinAccess &&
       isNamespacedVectorHelperCall &&
@@ -251,11 +251,11 @@ void SemanticsValidator::prepareInferCollectionDispatchSetup(
       !expr.isMethodCall && setupOut.isBuiltinAccess && isNamespacedKeyValueHelperCall &&
       isCanonicalKeyValueAccessHelperName(namespacedHelper) &&
       !isKeyValueNamespacedAccessCompatibilityCall && !hasDefinitionPath(resolved);
-  setupOut.shouldInferBuiltinBareMapContainsCall =
+  setupOut.shouldInferBuiltinBareKeyValueContainsCall =
       shouldBuiltinValidateCurrentMapWrapperHelper("contains");
-  setupOut.shouldInferBuiltinBareMapTryAtCall =
+  setupOut.shouldInferBuiltinBareKeyValueTryAtCall =
       shouldBuiltinValidateCurrentMapWrapperHelper("tryAt");
-  setupOut.shouldInferBuiltinBareMapAccessCall = true;
+  setupOut.shouldInferBuiltinBareKeyValueAccessCall = true;
   setupOut.isIndexedArgsPackMapReceiverTarget =
       [&](const Expr &receiverExpr) -> bool {
     std::string elemType;
@@ -305,7 +305,7 @@ void SemanticsValidator::prepareInferCollectionDispatchSetup(
   setupOut.shouldDeferNamespacedVectorAccessCall =
       isNamespacedVectorAccessCall &&
       (!hasResolvedDefinition || setupOut.isStdNamespacedVectorAccessSpelling);
-  setupOut.shouldDeferNamespacedMapAccessCall =
+  setupOut.shouldDeferNamespacedKeyValueAccessCall =
       isNamespacedKeyValueAccessCall &&
       (!hasResolvedDefinition || isStdNamespacedKeyValueAccessPath);
   setupOut.hasPreferredBuiltinAccessKind =
@@ -316,7 +316,7 @@ void SemanticsValidator::prepareInferCollectionDispatchSetup(
   setupOut.shouldDeferResolvedNamespacedCollectionHelperReturn =
       isNamespacedVectorCountCall || isNamespacedVectorCapacityCall ||
       setupOut.shouldDeferNamespacedVectorAccessCall ||
-      setupOut.shouldDeferNamespacedMapAccessCall;
+      setupOut.shouldDeferNamespacedKeyValueAccessCall;
 
   const bool isDirectBuiltinCountCapacityCountCall =
       !expr.isMethodCall &&

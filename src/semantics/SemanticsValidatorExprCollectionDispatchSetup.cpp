@@ -139,7 +139,7 @@ bool SemanticsValidator::prepareExprCollectionDispatchSetup(
   setupOut.isStdNamespacedMapAccessCall =
       !expr.isMethodCall &&
       isStdNamespacedCanonicalKeyValueAccessPath(resolveCalleePath(expr));
-  setupOut.hasStdNamespacedMapAccessDefinition =
+  setupOut.hasStdNamespacedKeyValueAccessDefinition =
       setupOut.isStdNamespacedMapAccessCall &&
       (hasImportedDefinitionPath(resolveCalleePath(expr)) ||
        hasDeclaredDefinitionPath(resolveCalleePath(expr)));

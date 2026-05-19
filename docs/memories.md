@@ -63,7 +63,10 @@ This file stores durable session-derived facts that are useful in later work. Ke
   key/value access receiver names too; infer-method access predicates should
   use key/value method names too; method-target access predicates should use
   key/value method names too; pre-dispatch direct-call access predicates,
-  diagnostics, and visible-definition checks should use key/value names too.
+  diagnostics, and visible-definition checks should use key/value names too;
+  shared inference dispatch context flags for std-namespaced access,
+  bare-helper fallback, and deferred namespaced access should use key/value
+  names too.
   The stdlib ownership source lock rejects the old map-helper, map-count,
   map-access, and removed map compatibility names.
 

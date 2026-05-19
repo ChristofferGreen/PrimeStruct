@@ -383,7 +383,7 @@ bool SemanticsValidator::validateExprCollectionAccessFallbacks(
        context.shouldAllowStdAccessCompatibilityFallback ||
        context.hasStdNamespacedVectorAccessDefinition) &&
       (!context.isStdNamespacedMapAccessCall ||
-       context.hasStdNamespacedMapAccessDefinition) &&
+       context.hasStdNamespacedKeyValueAccessDefinition) &&
       !(context.isStdNamespacedVectorAccessCall &&
         hasNamedArguments(expr.argNames))) {
     if (!context.shouldBuiltinValidateBareMapAccessCall) {

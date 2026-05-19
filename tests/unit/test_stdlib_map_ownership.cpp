@@ -1880,6 +1880,30 @@ TEST_CASE("canonical map surface owns standalone stdlib implementation") {
         std::string::npos);
   CHECK(inferCollectionDispatchSetupSource.find("isNamespacedMapHelperCall") ==
         std::string::npos);
+  CHECK(inferCollectionDispatchSetupSource.find(
+            "isStdNamespacedKeyValueAccessSpelling") != std::string::npos);
+  CHECK(inferCollectionDispatchSetupSource.find("isStdNamespacedMapAccessSpelling") ==
+        std::string::npos);
+  CHECK(inferCollectionDispatchSetupSource.find(
+            "hasStdNamespacedKeyValueAccessDefinition") != std::string::npos);
+  CHECK(inferCollectionDispatchSetupSource.find("hasStdNamespacedMapAccessDefinition") ==
+        std::string::npos);
+  CHECK(inferCollectionDispatchSetupSource.find(
+            "shouldInferBuiltinBareKeyValueContainsCall") != std::string::npos);
+  CHECK(inferCollectionDispatchSetupSource.find(
+            "shouldInferBuiltinBareMapContainsCall") == std::string::npos);
+  CHECK(inferCollectionDispatchSetupSource.find(
+            "shouldInferBuiltinBareKeyValueTryAtCall") != std::string::npos);
+  CHECK(inferCollectionDispatchSetupSource.find("shouldInferBuiltinBareMapTryAtCall") ==
+        std::string::npos);
+  CHECK(inferCollectionDispatchSetupSource.find(
+            "shouldInferBuiltinBareKeyValueAccessCall") != std::string::npos);
+  CHECK(inferCollectionDispatchSetupSource.find("shouldInferBuiltinBareMapAccessCall") ==
+        std::string::npos);
+  CHECK(inferCollectionDispatchSetupSource.find(
+            "shouldDeferNamespacedKeyValueAccessCall") != std::string::npos);
+  CHECK(inferCollectionDispatchSetupSource.find("shouldDeferNamespacedMapAccessCall") ==
+        std::string::npos);
   CHECK(inferCollectionsSource.find(
             "isExperimentalCollectionBackingTypeName(\"map\"") ==
         std::string::npos);

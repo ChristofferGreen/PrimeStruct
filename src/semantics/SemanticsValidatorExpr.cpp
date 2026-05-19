@@ -1239,7 +1239,7 @@ bool SemanticsValidator::validateExpr(const std::vector<ParameterInfo> &params,
           collectionDispatchSetup.shouldAllowStdAccessCompatibilityFallback,
           collectionDispatchSetup.hasStdNamespacedVectorAccessDefinition,
           collectionDispatchSetup.isStdNamespacedMapAccessCall,
-          collectionDispatchSetup.hasStdNamespacedMapAccessDefinition,
+          collectionDispatchSetup.hasStdNamespacedKeyValueAccessDefinition,
           shouldBuiltinValidateBareMapAccessCall,
           dispatchBootstrap.dispatchResolvers,
           lateFallbackBuiltinContext);

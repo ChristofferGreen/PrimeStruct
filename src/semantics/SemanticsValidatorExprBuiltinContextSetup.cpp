@@ -88,7 +88,7 @@ void SemanticsValidator::prepareExprLateFallbackBuiltinContext(
     bool shouldAllowStdAccessCompatibilityFallback,
     bool hasStdNamespacedVectorAccessDefinition,
     bool isStdNamespacedMapAccessCall,
-    bool hasStdNamespacedMapAccessDefinition,
+    bool hasStdNamespacedKeyValueAccessDefinition,
     bool shouldBuiltinValidateBareMapAccessCall,
     const BuiltinCollectionDispatchResolvers &dispatchResolvers,
     ExprLateFallbackBuiltinContext &contextOut) {
@@ -102,8 +102,8 @@ void SemanticsValidator::prepareExprLateFallbackBuiltinContext(
       hasStdNamespacedVectorAccessDefinition;
   contextOut.collectionAccessFallbackContext.isStdNamespacedMapAccessCall =
       isStdNamespacedMapAccessCall;
-  contextOut.collectionAccessFallbackContext.hasStdNamespacedMapAccessDefinition =
-      hasStdNamespacedMapAccessDefinition;
+  contextOut.collectionAccessFallbackContext.hasStdNamespacedKeyValueAccessDefinition =
+      hasStdNamespacedKeyValueAccessDefinition;
   contextOut.collectionAccessFallbackContext.shouldBuiltinValidateBareMapAccessCall =
       shouldBuiltinValidateBareMapAccessCall;
   contextOut.collectionAccessFallbackContext.isNonCollectionStructAccessTarget =
