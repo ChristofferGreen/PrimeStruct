@@ -82,7 +82,7 @@ bool rewriteExperimentalMapTargetValueForType(const std::string &typeText,
                                                     rewriteNestedMapValue,
                                                     rewriteMapPayload);
   }
-  if (resolvesExperimentalMapValueTypeText(typeText, mapping, allowedParams, namespacePrefix, ctx)) {
+  if (resolvesExperimentalKeyValueTypeText(typeText, mapping, allowedParams, namespacePrefix, ctx)) {
     return rewriteNestedMapValue(valueExpr);
   }
   if (!splitTemplateTypeName(typeText, base, argText) || normalizeBindingTypeName(base) != "Result") {
@@ -92,7 +92,7 @@ bool rewriteExperimentalMapTargetValueForType(const std::string &typeText,
   if (!splitTopLevelTemplateArgs(argText, resultArgs) || resultArgs.size() != 2) {
     return true;
   }
-  if (!resolvesExperimentalMapValueTypeText(trimWhitespace(resultArgs.front()),
+  if (!resolvesExperimentalKeyValueTypeText(trimWhitespace(resultArgs.front()),
                                             mapping,
                                             allowedParams,
                                             namespacePrefix,

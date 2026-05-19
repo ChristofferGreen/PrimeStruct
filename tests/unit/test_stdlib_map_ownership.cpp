@@ -1158,6 +1158,22 @@ TEST_CASE("canonical map surface owns standalone stdlib implementation") {
         std::string::npos);
   CHECK(templateReceiverSource.find("resolvesToBorrowedSoaHelper") !=
         std::string::npos);
+  CHECK(templateReceiverSource.find("resolvesExperimentalMapValueReceiver") ==
+        std::string::npos);
+  CHECK(templateReceiverSource.find("resolvesExperimentalKeyValueReceiver") !=
+        std::string::npos);
+  CHECK(templateReceiverSource.find(
+            "resolveExperimentalMapValueReceiverTemplateArgs") ==
+        std::string::npos);
+  CHECK(templateReceiverSource.find(
+            "resolveExperimentalKeyValueReceiverTemplateArgs") !=
+        std::string::npos);
+  CHECK(templateReceiverSource.find(
+            "extractExperimentalMapValueReceiverTemplateArgsFromTypeText") ==
+        std::string::npos);
+  CHECK(templateReceiverSource.find(
+            "extractExperimentalKeyValueReceiverTemplateArgsFromTypeText") !=
+        std::string::npos);
   CHECK(templateExpressionRewriteSource.find("templateMonomorphCanonicalMapHelperPath") ==
         std::string::npos);
   CHECK(templateExpressionRewriteSource.find("isTemplateMonomorphCanonicalMapHelperPath") ==
@@ -1189,6 +1205,16 @@ TEST_CASE("canonical map surface owns standalone stdlib implementation") {
   CHECK(templateExpressionRewriteSource.find("experimentalKeyValueHelperPathForWrapperHelper") !=
         std::string::npos);
   CHECK(templateExpressionRewriteSource.find("experimentalWrapperKeyValuePath") !=
+        std::string::npos);
+  CHECK(templateExpressionRewriteSource.find("resolvesExperimentalMapValueReceiver") ==
+        std::string::npos);
+  CHECK(templateExpressionRewriteSource.find("resolvesExperimentalKeyValueReceiver") !=
+        std::string::npos);
+  CHECK(templateExpressionRewriteSource.find(
+            "resolveExperimentalMapValueReceiverTemplateArgs") ==
+        std::string::npos);
+  CHECK(templateExpressionRewriteSource.find(
+            "resolveExperimentalKeyValueReceiverTemplateArgs") !=
         std::string::npos);
   CHECK(templateExpressionRewriteSource.find(
             "resolvedPath == \"/std/collections/map/count\" || resolvedPath == \"/map/count\"") ==
@@ -1365,6 +1391,10 @@ TEST_CASE("canonical map surface owns standalone stdlib implementation") {
   CHECK(templateFallbackTypeInferenceSource.find(
             "isSpecializedExperimentalKeyValueBackingTypeForFallbackInference") !=
         std::string::npos);
+  CHECK(templateFallbackTypeInferenceSource.find(
+            "resolvesExperimentalMapValueTypeText") == std::string::npos);
+  CHECK(templateFallbackTypeInferenceSource.find(
+            "resolvesExperimentalKeyValueTypeText") != std::string::npos);
   CHECK(templateFallbackTypeInferenceSource.find("mapCollectionAliasToken()") !=
         std::string::npos);
   CHECK(templateFallbackTypeInferenceSource.find(

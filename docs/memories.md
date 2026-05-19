@@ -177,7 +177,8 @@ This file stores durable session-derived facts that are useful in later work. Ke
   too; publication backing predicates should use key/value names too; method
   target backing predicates should use key/value names too; template fallback
   backing predicates should use key/value names too; template receiver
-  backing predicates should use key/value names too.
+  backing predicates should use key/value names too; template map-value
+  receiver/type helper APIs should use key/value names too.
   The stdlib ownership source lock rejects the old map-helper, map-count,
   map-access, and removed map compatibility names.
 

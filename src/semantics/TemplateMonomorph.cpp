@@ -153,7 +153,7 @@ bool inferImplicitTemplateArgs(const Definition &def,
                                std::vector<std::string> &outArgs,
                                std::string &error);
 
-bool resolvesExperimentalMapValueTypeText(const std::string &typeText,
+bool resolvesExperimentalKeyValueTypeText(const std::string &typeText,
                                           const SubstMap &mapping,
                                           const std::unordered_set<std::string> &allowedParams,
                                           const std::string &namespacePrefix,
@@ -214,7 +214,7 @@ bool resolveFieldBindingTarget(const Expr &target,
                                Context &ctx,
                                BindingInfo &bindingOut);
 
-bool extractExperimentalMapValueReceiverTemplateArgsFromTypeText(const std::string &typeText,
+bool extractExperimentalKeyValueReceiverTemplateArgsFromTypeText(const std::string &typeText,
                                                                  const Context &ctx,
                                                                  std::vector<std::string> &templateArgsOut);
 

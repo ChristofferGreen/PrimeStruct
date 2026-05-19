@@ -1123,7 +1123,7 @@ bool inferImplicitTemplateArgs(const Definition &def,
           if (!extractExperimentalVectorValueReceiverTemplateArgsFromTypeText(argBaseType, ctx, argTemplateArgs) &&
               !extractExperimentalSoaVectorValueReceiverTemplateArgsFromTypeText(
                   argBaseType, ctx, argTemplateArgs) &&
-              !extractExperimentalMapValueReceiverTemplateArgsFromTypeText(argBaseType, ctx, argTemplateArgs) &&
+              !extractExperimentalKeyValueReceiverTemplateArgsFromTypeText(argBaseType, ctx, argTemplateArgs) &&
               !extractSpecializedSumTemplateArgsFromTypeText(argBaseType,
                                                              paramBaseType,
                                                              inferredParamNames,

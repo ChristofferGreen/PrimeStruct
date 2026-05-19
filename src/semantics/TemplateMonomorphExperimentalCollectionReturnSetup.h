@@ -23,7 +23,7 @@ ExperimentalCollectionReturnRewritePlan inferExperimentalCollectionReturnRewrite
     if (resolvesExperimentalVectorValueTypeText(transform.templateArgs.front())) {
       plan.expectedExperimentalVectorReturn = true;
     }
-    if (resolvesExperimentalMapValueTypeText(
+    if (resolvesExperimentalKeyValueTypeText(
             transform.templateArgs.front(), mapping, allowedParams, def.namespacePrefix, ctx)) {
       plan.expectedExperimentalMapReturn = true;
     }
@@ -38,7 +38,7 @@ ExperimentalCollectionReturnRewritePlan inferExperimentalCollectionReturnRewrite
         inferredReturnType += "<" + inferredReturnInfo.typeTemplateArg + ">";
       }
       plan.expectedExperimentalVectorReturn = resolvesExperimentalVectorValueTypeText(inferredReturnType);
-      plan.expectedExperimentalMapReturn = resolvesExperimentalMapValueTypeText(
+      plan.expectedExperimentalMapReturn = resolvesExperimentalKeyValueTypeText(
           inferredReturnType, mapping, allowedParams, def.namespacePrefix, ctx);
     }
   }

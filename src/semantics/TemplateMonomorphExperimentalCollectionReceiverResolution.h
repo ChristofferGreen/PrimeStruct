@@ -203,7 +203,7 @@ bool extractExperimentalVectorElementTypeFromTypeText(const std::string &typeTex
   }
 }
 
-bool extractExperimentalMapValueReceiverTemplateArgsFromTypeText(const std::string &typeText,
+bool extractExperimentalKeyValueReceiverTemplateArgsFromTypeText(const std::string &typeText,
                                                                  const Context &ctx,
                                                                  std::vector<std::string> &templateArgsOut) {
   std::string normalizedType = normalizeBindingTypeName(typeText);
@@ -403,7 +403,7 @@ bool extractExperimentalSoaVectorValueReceiverTemplateArgsFromTypeText(const std
   return false;
 }
 
-bool resolvesExperimentalMapValueReceiver(const Expr *receiverExpr,
+bool resolvesExperimentalKeyValueReceiver(const Expr *receiverExpr,
                                           const std::vector<ParameterInfo> &params,
                                           const LocalTypeMap &locals,
                                           bool allowMathBare,
@@ -429,7 +429,7 @@ bool resolvesExperimentalMapValueReceiver(const Expr *receiverExpr,
   }
   BindingInfo receiverInfo;
   if (inferBindingTypeForMonomorph(*receiverExpr, params, locals, allowMathBare, ctx, receiverInfo) &&
-      resolvesExperimentalMapValueTypeText(experimentalCollectionValueBindingTypeText(receiverInfo),
+      resolvesExperimentalKeyValueTypeText(experimentalCollectionValueBindingTypeText(receiverInfo),
                                            mapping,
                                            allowedParams,
                                            namespacePrefix,
@@ -438,7 +438,7 @@ bool resolvesExperimentalMapValueReceiver(const Expr *receiverExpr,
   }
   const std::string inferredReceiverType =
       inferExprTypeTextForTemplatedVectorFallback(*receiverExpr, locals, namespacePrefix, ctx, allowMathBare);
-  return resolvesExperimentalMapValueTypeText(inferredReceiverType, mapping, allowedParams, namespacePrefix, ctx);
+  return resolvesExperimentalKeyValueTypeText(inferredReceiverType, mapping, allowedParams, namespacePrefix, ctx);
 }
 
 bool resolvesExperimentalMapBorrowedReceiver(const Expr *receiverExpr,
@@ -457,7 +457,7 @@ bool resolvesExperimentalMapBorrowedReceiver(const Expr *receiverExpr,
   }
   BindingInfo receiverInfo;
   if (inferBindingTypeForMonomorph(*receiverExpr, params, locals, allowMathBare, ctx, receiverInfo) &&
-      resolvesExperimentalMapValueTypeText(experimentalCollectionBorrowedBindingTypeText(receiverInfo),
+      resolvesExperimentalKeyValueTypeText(experimentalCollectionBorrowedBindingTypeText(receiverInfo),
                                            mapping,
                                            allowedParams,
                                            namespacePrefix,
@@ -479,7 +479,7 @@ bool resolvesExperimentalMapBorrowedReceiver(const Expr *receiverExpr,
   if (!splitTopLevelTemplateArgs(argText, args) || args.size() != 1) {
     return false;
   }
-  return resolvesExperimentalMapValueTypeText(args.front(), mapping, allowedParams, namespacePrefix, ctx);
+  return resolvesExperimentalKeyValueTypeText(args.front(), mapping, allowedParams, namespacePrefix, ctx);
 }
 
 bool resolvesExperimentalVectorValueReceiver(const Expr *receiverExpr,
@@ -664,7 +664,7 @@ std::string canonicalKeyValueHelperUnknownTargetPath(const std::string &resolved
   return templateMonomorphCanonicalKeyValueHelperPath(helperName);
 }
 
-bool resolveExperimentalMapValueReceiverTemplateArgs(const Expr *receiverExpr,
+bool resolveExperimentalKeyValueReceiverTemplateArgs(const Expr *receiverExpr,
                                                      const std::vector<ParameterInfo> &params,
                                                      const LocalTypeMap &locals,
                                                      bool allowMathBare,
@@ -697,13 +697,13 @@ bool resolveExperimentalMapValueReceiverTemplateArgs(const Expr *receiverExpr,
       templateArgsOut = {keyType, valueType};
       return true;
     }
-    if (extractExperimentalMapValueReceiverTemplateArgsFromTypeText(bindingTypeToString(receiverInfo),
+    if (extractExperimentalKeyValueReceiverTemplateArgsFromTypeText(bindingTypeToString(receiverInfo),
                                                                     ctx,
                                                                     templateArgsOut)) {
       return true;
     }
   }
-  return extractExperimentalMapValueReceiverTemplateArgsFromTypeText(
+  return extractExperimentalKeyValueReceiverTemplateArgsFromTypeText(
       inferExprTypeTextForTemplatedVectorFallback(*receiverExpr, locals, namespacePrefix, ctx, allowMathBare),
       ctx,
       templateArgsOut);

@@ -174,7 +174,7 @@ bool isSpecializedExperimentalKeyValueBackingTypeForFallbackInference(
   return isQualifiedExperimentalMapBackingTypeName(typeName);
 }
 
-bool resolvesExperimentalMapValueTypeText(const std::string &typeText,
+bool resolvesExperimentalKeyValueTypeText(const std::string &typeText,
                                           const SubstMap &mapping,
                                           const std::unordered_set<std::string> &allowedParams,
                                           const std::string &namespacePrefix,

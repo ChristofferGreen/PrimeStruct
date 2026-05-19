@@ -1184,7 +1184,7 @@ bool rewriteExpr(Expr &expr,
         allowMathBare,
         ctx,
         [&](const std::string &bindingTypeText) {
-          return resolvesExperimentalMapValueTypeText(bindingTypeText,
+          return resolvesExperimentalKeyValueTypeText(bindingTypeText,
                                                       mapping,
                                                       allowedParams,
                                                       namespacePrefix,
@@ -1584,7 +1584,7 @@ bool rewriteExpr(Expr &expr,
         isTemplateMonomorphCanonicalKeyValueAccessPath(
             borrowedCanonicalKeyValueUnknownTarget);
     if (!experimentalKeyValuePath.empty() && ctx.sourceDefs.count(experimentalKeyValuePath) > 0 &&
-        resolvesExperimentalMapValueReceiver(
+        resolvesExperimentalKeyValueReceiver(
             experimentalKeyValueReceiverExpr, params, locals, allowMathBare, mapping, allowedParams, namespacePrefix, ctx)) {
       if (rejectsWrapperReturnedKeyValueAccess) {
         error = "unknown call target: " + borrowedCanonicalKeyValueUnknownTarget;
@@ -1595,7 +1595,7 @@ bool rewriteExpr(Expr &expr,
       expr.namespacePrefix.clear();
       if (expr.templateArgs.empty()) {
         std::vector<std::string> receiverTemplateArgs;
-        if (resolveExperimentalMapValueReceiverTemplateArgs(
+        if (resolveExperimentalKeyValueReceiverTemplateArgs(
                 experimentalKeyValueReceiverExpr, params, locals, allowMathBare, namespacePrefix, ctx, receiverTemplateArgs)) {
           expr.templateArgs = std::move(receiverTemplateArgs);
         }
@@ -1610,14 +1610,14 @@ bool rewriteExpr(Expr &expr,
         experimentalKeyValueHelperPathForWrapperHelper(resolvedPath);
     if (!experimentalWrapperKeyValuePath.empty() &&
         ctx.sourceDefs.count(experimentalWrapperKeyValuePath) > 0 &&
-        resolvesExperimentalMapValueReceiver(
+        resolvesExperimentalKeyValueReceiver(
             collectionHelperReceiverExpr(expr), params, locals, allowMathBare, mapping, allowedParams, namespacePrefix, ctx)) {
       resolvedPath = experimentalWrapperKeyValuePath;
       expr.name = experimentalWrapperKeyValuePath;
       expr.namespacePrefix.clear();
       if (expr.templateArgs.empty()) {
         std::vector<std::string> receiverTemplateArgs;
-        if (resolveExperimentalMapValueReceiverTemplateArgs(
+        if (resolveExperimentalKeyValueReceiverTemplateArgs(
                 collectionHelperReceiverExpr(expr), params, locals, allowMathBare, namespacePrefix, ctx, receiverTemplateArgs)) {
           expr.templateArgs = std::move(receiverTemplateArgs);
         }
@@ -1679,10 +1679,10 @@ bool rewriteExpr(Expr &expr,
     bool inferredCanonicalKeyValueReceiverTemplateArgs = false;
     if (expr.templateArgs.empty() &&
         resolvedPath.rfind(experimentalCollectionConstructorRootLocal("map"), 0) == 0 &&
-        resolvesExperimentalMapValueReceiver(
+        resolvesExperimentalKeyValueReceiver(
             collectionHelperReceiverExpr(expr), params, locals, allowMathBare, mapping, allowedParams, namespacePrefix, ctx)) {
       std::vector<std::string> receiverTemplateArgs;
-      if (resolveExperimentalMapValueReceiverTemplateArgs(
+      if (resolveExperimentalKeyValueReceiverTemplateArgs(
               collectionHelperReceiverExpr(expr), params, locals, allowMathBare, namespacePrefix, ctx, receiverTemplateArgs)) {
         expr.templateArgs = std::move(receiverTemplateArgs);
       }
@@ -1693,7 +1693,7 @@ bool rewriteExpr(Expr &expr,
             ctx,
             resolvedPath)) {
       std::vector<std::string> receiverTemplateArgs;
-      if (resolveExperimentalMapValueReceiverTemplateArgs(
+      if (resolveExperimentalKeyValueReceiverTemplateArgs(
               collectionHelperReceiverExpr(expr),
               params,
               locals,
@@ -2202,7 +2202,7 @@ bool rewriteExpr(Expr &expr,
           isTemplateMonomorphCanonicalKeyValueHelperPath(methodPath) &&
           hasVisibleStdCollectionsImportForPath(ctx, methodPath)) {
         std::vector<std::string> receiverTemplateArgs;
-        if (resolveExperimentalMapValueReceiverTemplateArgs(
+        if (resolveExperimentalKeyValueReceiverTemplateArgs(
                 collectionHelperReceiverExpr(expr),
                 params,
                 locals,
