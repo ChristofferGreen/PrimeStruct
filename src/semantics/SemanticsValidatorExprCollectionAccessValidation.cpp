@@ -188,7 +188,7 @@ bool SemanticsValidator::validateExprCollectionAccessFallbacks(
     return failExprDiagnostic(expr, std::move(message));
   };
   auto failCollectionAccessMapKeyMismatch = [&](const std::string &helperName,
-                                                const std::string &mapKeyType) {
+                                                const std::string &keyValueKeyType) {
     const bool hasSourceShape = !expr.sourceName.empty();
     const bool isExplicitCanonicalKeyValueAccessCall =
         expr.sourceIsMethodCall ||
@@ -203,13 +203,13 @@ bool SemanticsValidator::validateExprCollectionAccessFallbacks(
       return failCollectionAccessDiagnostic("argument type mismatch for " +
                                             resolved + " parameter key");
     }
-    if (normalizeBindingTypeName(mapKeyType) == "string") {
+    if (normalizeBindingTypeName(keyValueKeyType) == "string") {
       return failCollectionAccessDiagnostic(helperName +
                                             " requires string map key");
     }
     return failCollectionAccessDiagnostic(helperName +
                                           " requires map key type " +
-                                          mapKeyType);
+                                          keyValueKeyType);
   };
 
   auto returnKindForBinding = [](const BindingInfo &binding) -> ReturnKind {
@@ -269,27 +269,27 @@ bool SemanticsValidator::validateExprCollectionAccessFallbacks(
   };
   auto validateMapKeyExpr = [&](const std::string &helperName,
                                 const Expr &keyExpr,
-                                const std::string &mapKeyType) -> bool {
-    if (mapKeyType.empty()) {
+                                const std::string &keyValueKeyType) -> bool {
+    if (keyValueKeyType.empty()) {
       return true;
     }
-    if (normalizeBindingTypeName(mapKeyType) == "string") {
+    if (normalizeBindingTypeName(keyValueKeyType) == "string") {
       if (!isStringExpr(keyExpr)) {
-        return failCollectionAccessMapKeyMismatch(helperName, mapKeyType);
+        return failCollectionAccessMapKeyMismatch(helperName, keyValueKeyType);
       }
       return true;
     }
-    ReturnKind keyKind = returnKindForTypeName(normalizeBindingTypeName(mapKeyType));
+    ReturnKind keyKind = returnKindForTypeName(normalizeBindingTypeName(keyValueKeyType));
     if (keyKind == ReturnKind::Unknown) {
       return true;
     }
     if (context.resolveStringTarget != nullptr &&
         context.resolveStringTarget(keyExpr)) {
-      return failCollectionAccessMapKeyMismatch(helperName, mapKeyType);
+      return failCollectionAccessMapKeyMismatch(helperName, keyValueKeyType);
     }
     ReturnKind indexKind = inferExprReturnKind(keyExpr, params, locals);
     if (indexKind != ReturnKind::Unknown && indexKind != keyKind) {
-      return failCollectionAccessMapKeyMismatch(helperName, mapKeyType);
+      return failCollectionAccessMapKeyMismatch(helperName, keyValueKeyType);
     }
     return true;
   };
@@ -312,12 +312,12 @@ bool SemanticsValidator::validateExprCollectionAccessFallbacks(
     if (!validateExpr(params, locals, expr.args.front())) {
       return false;
     }
-    std::string mapKeyType;
+    std::string keyValueKeyType;
     if (!(context.resolveMapKeyType != nullptr &&
-          context.resolveMapKeyType(expr.args.front(), mapKeyType))) {
+          context.resolveMapKeyType(expr.args.front(), keyValueKeyType))) {
       return failCollectionAccessDiagnostic(helperName + " requires map target");
     }
-    if (!validateMapKeyExpr(helperName, expr.args[1], mapKeyType)) {
+    if (!validateMapKeyExpr(helperName, expr.args[1], keyValueKeyType)) {
       return false;
     }
     if (!validateExpr(params, locals, expr.args[1])) {
@@ -505,18 +505,18 @@ bool SemanticsValidator::validateExprCollectionAccessFallbacks(
       }
       return false;
     };
-    std::string mapKeyType;
+    std::string keyValueKeyType;
     std::string mapValueType;
-    auto isKeyValueTarget = [&](const Expr &candidate, std::string &mapKeyTypeOut) {
+    auto isKeyValueTarget = [&](const Expr &candidate, std::string &keyValueKeyTypeOut) {
       if (context.resolveMapKeyType != nullptr &&
-          context.resolveMapKeyType(candidate, mapKeyTypeOut)) {
+          context.resolveMapKeyType(candidate, keyValueKeyTypeOut)) {
         return true;
       }
       std::string builtinCollection;
       if (getBuiltinCollectionName(candidate, builtinCollection) &&
           builtinCollection == "map" &&
           candidate.templateArgs.size() == 2) {
-        mapKeyTypeOut = candidate.templateArgs.front();
+        keyValueKeyTypeOut = candidate.templateArgs.front();
         return true;
       }
       return false;
@@ -527,10 +527,10 @@ bool SemanticsValidator::validateExprCollectionAccessFallbacks(
           resolveArgsPackElementTypeForExpr(expr.args.front(), params, locals,
                                             elemType);
     }
-    bool isMap = isKeyValueTarget(expr.args.front(), mapKeyType);
+    bool isMap = isKeyValueTarget(expr.args.front(), keyValueKeyType);
     bool isExperimentalMap =
         context.resolveExperimentalMapTarget != nullptr &&
-        context.resolveExperimentalMapTarget(expr.args.front(), mapKeyType,
+        context.resolveExperimentalMapTarget(expr.args.front(), keyValueKeyType,
                                              mapValueType);
     const bool shouldProbeReorderedReceiver =
         expr.args.size() == 2 &&
@@ -559,7 +559,7 @@ bool SemanticsValidator::validateExprCollectionAccessFallbacks(
           reorderedExperimentalMap) {
         indexArgIndex = 0;
         elemType = reorderedElemType;
-        mapKeyType = reorderedMapKeyType;
+        keyValueKeyType = reorderedMapKeyType;
         mapValueType = reorderedMapValueType;
         isArrayOrString = reorderedArrayOrString || reorderedArgsPack;
         isMap = reorderedMap;
@@ -579,7 +579,7 @@ bool SemanticsValidator::validateExprCollectionAccessFallbacks(
     if (getBuiltinCollectionName(receiverExpr, receiverBuiltinCollection)) {
       if (receiverBuiltinCollection == "map" &&
           receiverExpr.templateArgs.size() == 2) {
-        mapKeyType = receiverExpr.templateArgs[0];
+        keyValueKeyType = receiverExpr.templateArgs[0];
         mapValueType = receiverExpr.templateArgs[1];
         isMap = true;
         isExperimentalMap = false;
@@ -596,7 +596,7 @@ bool SemanticsValidator::validateExprCollectionAccessFallbacks(
             (isRootMapAliasPath(resolveCalleePath(receiverExpr)) ||
              isRootMapAliasPath(explicitCallPath(receiverExpr)))) &&
           inferQueryExprTypeText(receiverExpr, params, locals, receiverTypeText) &&
-          extractMapKeyValueTypesFromTypeText(receiverTypeText, mapKeyType, mapValueType)) {
+          extractMapKeyValueTypesFromTypeText(receiverTypeText, keyValueKeyType, mapValueType)) {
         const bool isExperimentalMapType = isExperimentalMapTypeText(receiverTypeText);
         if (isExperimentalMapType) {
           isExperimentalMap = true;
@@ -693,7 +693,7 @@ bool SemanticsValidator::validateExprCollectionAccessFallbacks(
         return failCollectionAccessDiagnostic(
             builtinName + " requires integer index [collection]");
       }
-    } else if (!validateMapKeyExpr(builtinName, expr.args[indexArgIndex], mapKeyType)) {
+    } else if (!validateMapKeyExpr(builtinName, expr.args[indexArgIndex], keyValueKeyType)) {
       return false;
     }
 

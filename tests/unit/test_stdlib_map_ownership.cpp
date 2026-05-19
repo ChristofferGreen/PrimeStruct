@@ -2637,6 +2637,16 @@ TEST_CASE("canonical map surface owns standalone stdlib implementation") {
         std::string::npos);
   CHECK(collectionAccessValidationSource.find("isExplicitMapAccessHelper") ==
         std::string::npos);
+  CHECK(collectionAccessValidationSource.find("keyValueKeyType") !=
+        std::string::npos);
+  CHECK(collectionAccessValidationSource.find("keyValueKeyTypeOut") !=
+        std::string::npos);
+  CHECK(collectionAccessValidationSource.find("std::string mapKeyType") ==
+        std::string::npos);
+  CHECK(collectionAccessValidationSource.find("const std::string &mapKeyType") ==
+        std::string::npos);
+  CHECK(collectionAccessValidationSource.find("mapKeyTypeOut") ==
+        std::string::npos);
   CHECK(collectionAccessValidationSource.find("isCanonicalKeyValueAccessHelperName(") !=
         std::string::npos);
   CHECK(collectionAccessValidationSource.find(
