@@ -149,7 +149,7 @@ bool SemanticsValidator::resolveExprCollectionAccessTarget(
     }
     return prefix + "/" + candidate.name;
   };
-  auto isLocalRootMapAliasReceiverCall = [&](const Expr &candidate) {
+  auto isLocalRootKeyValueAliasReceiverCall = [&](const Expr &candidate) {
     if (candidate.kind != Expr::Kind::Call || candidate.isMethodCall) {
       return false;
     }
@@ -822,7 +822,7 @@ bool SemanticsValidator::resolveExprCollectionAccessTarget(
     handledOut = true;
     const Expr &receiverCandidate = expr.args.front();
     if (context.resolveMapTarget(receiverCandidate) &&
-        !isLocalRootMapAliasReceiverCall(receiverCandidate)) {
+        !isLocalRootKeyValueAliasReceiverCall(receiverCandidate)) {
       usedMethodTarget = true;
       bool isBuiltinMethod = false;
       std::string methodResolved;

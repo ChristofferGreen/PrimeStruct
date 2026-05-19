@@ -2758,6 +2758,10 @@ TEST_CASE("canonical map surface owns standalone stdlib implementation") {
         std::string::npos);
   CHECK(collectionAccessSource.find("isIndexedArgsPackMapReceiverTarget") ==
         std::string::npos);
+  CHECK(collectionAccessSource.find("isLocalRootMapAliasReceiverCall") ==
+        std::string::npos);
+  CHECK(collectionAccessSource.find("isLocalRootKeyValueAliasReceiverCall") !=
+        std::string::npos);
   CHECK(collectionAccessValidationSource.find(
             "isIndexedArgsPackKeyValueReceiverTarget") != std::string::npos);
   CHECK(collectionAccessValidationSource.find("isIndexedArgsPackMapReceiverTarget") ==
