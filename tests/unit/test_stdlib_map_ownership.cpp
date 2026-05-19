@@ -1724,6 +1724,14 @@ TEST_CASE("canonical map surface owns standalone stdlib implementation") {
         std::string::npos);
   CHECK(inferCollectionCompatibilitySource.find("resolvedBareMapHelper") ==
         std::string::npos);
+  CHECK(inferCollectionCompatibilitySource.find("hasKeyValueReceiver") !=
+        std::string::npos);
+  CHECK(inferCollectionCompatibilitySource.find("hasMapReceiver") ==
+        std::string::npos);
+  CHECK(inferCollectionCompatibilitySource.find("isWrappedKeyValueReceiverCall") !=
+        std::string::npos);
+  CHECK(inferCollectionCompatibilitySource.find("isWrappedMapReceiverCall") ==
+        std::string::npos);
   CHECK(inferCollectionCompatibilitySource.find("preferredRemovedMapHelperPath") ==
         std::string::npos);
   CHECK(inferCollectionCompatibilitySource.find("mapNamespacedMethodCompatibilityPath") ==

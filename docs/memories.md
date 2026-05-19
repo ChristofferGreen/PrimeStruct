@@ -70,7 +70,9 @@ This file stores durable session-derived facts that are useful in later work. Ke
   use key/value names too; pre-dispatch access operand locals should use
   key/value names too; map SoA validation operand locals should use key/value
   names too; pre-dispatch source-method receiver locals should use key/value
-  names too; pre-dispatch wrapper-helper locals should use key/value names too.
+  names too; pre-dispatch wrapper-helper locals should use key/value names too;
+  infer collection compatibility receiver predicates should use key/value names
+  too.
   The stdlib ownership source lock rejects the old map-helper, map-count,
   map-access, and removed map compatibility names.
 

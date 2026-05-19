@@ -761,13 +761,13 @@ std::string SemanticsValidator::directKeyValueHelperCompatibilityPath(
     }
     return 0;
   };
-  auto hasMapReceiver = [&]() {
+  auto hasKeyValueReceiver = [&]() {
     const size_t receiverIndex = resolveReceiverIndex();
     return receiverIndex < candidate.args.size() &&
            resolveAnyMapTarget(candidate.args[receiverIndex]);
   };
   if (resolvedBareKeyValueHelper) {
-    if (hasMapReceiver() &&
+    if (hasKeyValueReceiver() &&
         !hasDeclaredDefinitionPath(canonicalPath) &&
         !hasImportedDefinitionPath(canonicalPath)) {
       return canonicalPath;
@@ -1120,7 +1120,7 @@ bool SemanticsValidator::resolveRemovedMapBodyArgumentTarget(const Expr &candida
     return false;
   }
 
-  auto isWrappedMapReceiverCall = [&](const Expr &receiverExpr) {
+  auto isWrappedKeyValueReceiverCall = [&](const Expr &receiverExpr) {
     if (receiverExpr.kind != Expr::Kind::Call) {
       return false;
     }
@@ -1137,7 +1137,7 @@ bool SemanticsValidator::resolveRemovedMapBodyArgumentTarget(const Expr &candida
     return false;
   };
 
-  if (!(resolveAnyMapTarget(candidate.args.front()) || isWrappedMapReceiverCall(candidate.args.front()))) {
+  if (!(resolveAnyMapTarget(candidate.args.front()) || isWrappedKeyValueReceiverCall(candidate.args.front()))) {
     return false;
   }
 
