@@ -646,12 +646,12 @@ bool SemanticsValidator::validateExprPreDispatchDirectCalls(
         !hasDeclaredDefinitionPath(rootedBuiltinAccessAlias)) {
       size_t receiverIndex = 0;
       size_t keyIndex = 1;
-      const bool hasBareMapOperands = this->bareKeyValueHelperOperandIndices(
+      const bool hasBareKeyValueOperands = this->bareKeyValueHelperOperandIndices(
           expr, dispatchBootstrap.dispatchResolvers, receiverIndex, keyIndex);
       const Expr &receiverExpr =
-          hasBareMapOperands ? expr.args[receiverIndex] : expr.args.front();
+          hasBareKeyValueOperands ? expr.args[receiverIndex] : expr.args.front();
       const Expr &keyExpr =
-          hasBareMapOperands ? expr.args[keyIndex] : expr.args[1];
+          hasBareKeyValueOperands ? expr.args[keyIndex] : expr.args[1];
       std::string receiverTypeText;
       std::string mapKeyType;
       std::string mapValueType;

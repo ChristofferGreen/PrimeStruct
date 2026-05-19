@@ -1401,6 +1401,10 @@ TEST_CASE("canonical map surface owns standalone stdlib implementation") {
         std::string::npos);
   CHECK(exprPreDispatchDirectCallsSource.find("isBareMapAccessBuiltinSurface") ==
         std::string::npos);
+  CHECK(exprPreDispatchDirectCallsSource.find("hasBareKeyValueOperands") !=
+        std::string::npos);
+  CHECK(exprPreDispatchDirectCallsSource.find("hasBareMapOperands") ==
+        std::string::npos);
   CHECK(exprPreDispatchDirectCallsSource.find(
             "isCanonicalKeyValueAccessReturnStructHelperName") !=
         std::string::npos);
