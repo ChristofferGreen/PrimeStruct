@@ -659,6 +659,34 @@ TEST_CASE("canonical map surface owns standalone stdlib implementation") {
   CHECK(semanticsSource.find("isExperimentalMapTypeText") == std::string::npos);
   CHECK(semanticsSource.find("isExperimentalKeyValueTypeText") !=
         std::string::npos);
+  CHECK(semanticsSource.find("extractBorrowedExperimentalMapBinding") ==
+        std::string::npos);
+  CHECK(semanticsSource.find("isBorrowedExperimentalMapBinding") ==
+        std::string::npos);
+  CHECK(semanticsSource.find("extractBorrowedExperimentalMapReturnBinding") ==
+        std::string::npos);
+  CHECK(semanticsSource.find("borrowedExperimentalMapHelperName") ==
+        std::string::npos);
+  CHECK(semanticsSource.find("rewriteBorrowedExperimentalMapMethodExpr") ==
+        std::string::npos);
+  CHECK(semanticsSource.find("rewriteBorrowedExperimentalMapMethodStatements") ==
+        std::string::npos);
+  CHECK(semanticsSource.find("rewriteBorrowedExperimentalMapMethods") ==
+        std::string::npos);
+  CHECK(semanticsSource.find("extractBorrowedExperimentalKeyValueBinding") !=
+        std::string::npos);
+  CHECK(semanticsSource.find("isBorrowedExperimentalKeyValueBinding") !=
+        std::string::npos);
+  CHECK(semanticsSource.find("extractBorrowedExperimentalKeyValueReturnBinding") !=
+        std::string::npos);
+  CHECK(semanticsSource.find("borrowedExperimentalKeyValueHelperName") !=
+        std::string::npos);
+  CHECK(semanticsSource.find("rewriteBorrowedExperimentalKeyValueMethodExpr") !=
+        std::string::npos);
+  CHECK(semanticsSource.find("rewriteBorrowedExperimentalKeyValueMethodStatements") !=
+        std::string::npos);
+  CHECK(semanticsSource.find("rewriteBorrowedExperimentalKeyValueMethods") !=
+        std::string::npos);
   CHECK(semanticsSource.find("isExperimentalMapValueBinding") ==
         std::string::npos);
   CHECK(semanticsSource.find("extractExperimentalMapBinding") ==

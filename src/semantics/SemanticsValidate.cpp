@@ -187,7 +187,7 @@ bool isExperimentalKeyValueTypeText(const std::string &typeText) {
   return isExperimentalCollectionBackingTypeName("map", "Map", candidate);
 }
 
-std::optional<semantics::BindingInfo> extractBorrowedExperimentalMapBinding(const Expr &expr) {
+std::optional<semantics::BindingInfo> extractBorrowedExperimentalKeyValueBinding(const Expr &expr) {
   semantics::BindingInfo info;
   for (const auto &transform : expr.transforms) {
     if (transform.name == "Reference" &&
@@ -235,12 +235,12 @@ std::optional<semantics::BindingInfo> extractExperimentalKeyValueValueBinding(co
   return binding;
 }
 
-bool isBorrowedExperimentalMapBinding(const semantics::BindingInfo &binding) {
+bool isBorrowedExperimentalKeyValueBinding(const semantics::BindingInfo &binding) {
   return semantics::normalizeBindingTypeName(binding.typeName) == "Reference" &&
          isExperimentalKeyValueTypeText(binding.typeTemplateArg);
 }
 
-std::optional<semantics::BindingInfo> extractBorrowedExperimentalMapReturnBinding(
+std::optional<semantics::BindingInfo> extractBorrowedExperimentalKeyValueReturnBinding(
     const Definition &def) {
   for (const auto &transform : def.transforms) {
     if (transform.name != "return" || transform.templateArgs.size() != 1) {
@@ -294,7 +294,7 @@ std::optional<semantics::BindingInfo> extractExperimentalKeyValueValueReturnBind
   return std::nullopt;
 }
 
-std::string borrowedExperimentalMapHelperName(std::string_view methodName) {
+std::string borrowedExperimentalKeyValueHelperName(std::string_view methodName) {
   if (methodName == "count") {
     return "count_ref";
   }
@@ -5290,47 +5290,47 @@ bool rewriteExperimentalSoaFieldViewAssignTargets(Program &program,
   return true;
 }
 
-void rewriteBorrowedExperimentalMapMethodExpr(
+void rewriteBorrowedExperimentalKeyValueMethodExpr(
     Expr &expr,
     const std::unordered_map<std::string, semantics::BindingInfo> &bindings,
     const std::unordered_map<std::string, semantics::BindingInfo> &borrowedReturnDefinitions,
     const std::string &definitionNamespace);
 
-void rewriteBorrowedExperimentalMapMethodStatements(
+void rewriteBorrowedExperimentalKeyValueMethodStatements(
     std::vector<Expr> &statements,
     std::unordered_map<std::string, semantics::BindingInfo> bindings,
     const std::unordered_map<std::string, semantics::BindingInfo> &borrowedReturnDefinitions,
     const std::string &definitionNamespace) {
   for (Expr &stmt : statements) {
-    rewriteBorrowedExperimentalMapMethodExpr(
+    rewriteBorrowedExperimentalKeyValueMethodExpr(
         stmt, bindings, borrowedReturnDefinitions, definitionNamespace);
     if (!stmt.bodyArguments.empty()) {
       auto bodyBindings = bindings;
-      rewriteBorrowedExperimentalMapMethodStatements(
+      rewriteBorrowedExperimentalKeyValueMethodStatements(
           stmt.bodyArguments, bodyBindings, borrowedReturnDefinitions, definitionNamespace);
     }
     if (stmt.isBinding) {
-      if (auto binding = extractBorrowedExperimentalMapBinding(stmt); binding.has_value()) {
+      if (auto binding = extractBorrowedExperimentalKeyValueBinding(stmt); binding.has_value()) {
         bindings[stmt.name] = *binding;
       }
     }
   }
 }
 
-void rewriteBorrowedExperimentalMapMethodExpr(
+void rewriteBorrowedExperimentalKeyValueMethodExpr(
     Expr &expr,
     const std::unordered_map<std::string, semantics::BindingInfo> &bindings,
     const std::unordered_map<std::string, semantics::BindingInfo> &borrowedReturnDefinitions,
     const std::string &definitionNamespace) {
   for (Expr &arg : expr.args) {
-    rewriteBorrowedExperimentalMapMethodExpr(
+    rewriteBorrowedExperimentalKeyValueMethodExpr(
         arg, bindings, borrowedReturnDefinitions, definitionNamespace);
   }
   if (expr.kind != Expr::Kind::Call || !expr.isMethodCall || expr.args.empty() ||
       expr.args.front().kind == Expr::Kind::Literal) {
     return;
   }
-  const std::string helperName = borrowedExperimentalMapHelperName(expr.name);
+  const std::string helperName = borrowedExperimentalKeyValueHelperName(expr.name);
   if (helperName.empty()) {
     return;
   }
@@ -5342,7 +5342,7 @@ void rewriteBorrowedExperimentalMapMethodExpr(
   }
   if (receiver.kind == Expr::Kind::Name) {
     auto bindingIt = bindings.find(receiver.name);
-    if (bindingIt != bindings.end() && isBorrowedExperimentalMapBinding(bindingIt->second)) {
+    if (bindingIt != bindings.end() && isBorrowedExperimentalKeyValueBinding(bindingIt->second)) {
       receiverBinding = bindingIt->second;
     }
   } else if (receiver.kind == Expr::Kind::Call && !receiver.isBinding) {
@@ -5362,7 +5362,7 @@ void rewriteBorrowedExperimentalMapMethodExpr(
     for (const std::string &candidatePath : candidatePaths) {
       auto returnIt = borrowedReturnDefinitions.find(candidatePath);
       if (returnIt != borrowedReturnDefinitions.end() &&
-          isBorrowedExperimentalMapBinding(returnIt->second)) {
+          isBorrowedExperimentalKeyValueBinding(returnIt->second)) {
         receiverBinding = returnIt->second;
         break;
       }
@@ -5388,11 +5388,11 @@ void rewriteBorrowedExperimentalMapMethodExpr(
   expr.argNames.clear();
 }
 
-bool rewriteBorrowedExperimentalMapMethods(Program &program, std::string &error) {
+bool rewriteBorrowedExperimentalKeyValueMethods(Program &program, std::string &error) {
   error.clear();
   std::unordered_map<std::string, semantics::BindingInfo> borrowedReturnDefinitions;
   for (const Definition &def : program.definitions) {
-    if (auto binding = extractBorrowedExperimentalMapReturnBinding(def); binding.has_value()) {
+    if (auto binding = extractBorrowedExperimentalKeyValueReturnBinding(def); binding.has_value()) {
       borrowedReturnDefinitions[def.fullPath] = *binding;
       const size_t slash = def.fullPath.find_last_of('/');
       if (slash != std::string::npos && slash + 1 < def.fullPath.size()) {
@@ -5403,7 +5403,7 @@ bool rewriteBorrowedExperimentalMapMethods(Program &program, std::string &error)
   for (Definition &def : program.definitions) {
     std::unordered_map<std::string, semantics::BindingInfo> bindings;
     for (const Expr &param : def.parameters) {
-      if (auto binding = extractBorrowedExperimentalMapBinding(param); binding.has_value()) {
+      if (auto binding = extractBorrowedExperimentalKeyValueBinding(param); binding.has_value()) {
         bindings[param.name] = *binding;
       }
     }
@@ -5412,10 +5412,10 @@ bool rewriteBorrowedExperimentalMapMethods(Program &program, std::string &error)
     if (slash != std::string::npos && slash > 0) {
       definitionNamespace = def.fullPath.substr(0, slash);
     }
-    rewriteBorrowedExperimentalMapMethodStatements(
+    rewriteBorrowedExperimentalKeyValueMethodStatements(
         def.statements, bindings, borrowedReturnDefinitions, definitionNamespace);
     if (def.returnExpr.has_value()) {
-      rewriteBorrowedExperimentalMapMethodExpr(
+      rewriteBorrowedExperimentalKeyValueMethodExpr(
           *def.returnExpr, bindings, borrowedReturnDefinitions, definitionNamespace);
     }
   }
@@ -6391,7 +6391,7 @@ bool runSemanticValidationManifestAstPass(
     return rewriteExperimentalSoaFieldViewAssignTargets(program, error);
   }
   if (pass.name == "borrowed-experimental-map-methods") {
-    return rewriteBorrowedExperimentalMapMethods(program, error);
+    return rewriteBorrowedExperimentalKeyValueMethods(program, error);
   }
   if (pass.name == "experimental-map-value-methods") {
     return rewriteExperimentalKeyValueValueMethods(program, error);
