@@ -211,7 +211,7 @@ std::string bindingTypeText(const semantics::BindingInfo &binding) {
   return binding.typeName + "<" + binding.typeTemplateArg + ">";
 }
 
-bool isExperimentalMapValueBinding(const semantics::BindingInfo &binding) {
+bool isExperimentalKeyValueValueBinding(const semantics::BindingInfo &binding) {
   const std::string normalizedType = semantics::normalizeBindingTypeName(binding.typeName);
   if (normalizedType == "Reference" || normalizedType == "Pointer") {
     return false;
@@ -219,7 +219,7 @@ bool isExperimentalMapValueBinding(const semantics::BindingInfo &binding) {
   return isExperimentalKeyValueTypeText(bindingTypeText(binding));
 }
 
-std::optional<semantics::BindingInfo> extractExperimentalMapBinding(const Expr &expr) {
+std::optional<semantics::BindingInfo> extractExperimentalKeyValueValueBinding(const Expr &expr) {
   static const std::unordered_set<std::string> emptyStructTypes;
   static const std::unordered_map<std::string, std::string> emptyImportAliases;
   semantics::BindingInfo binding;
@@ -229,7 +229,7 @@ std::optional<semantics::BindingInfo> extractExperimentalMapBinding(const Expr &
           expr, expr.namespacePrefix, emptyStructTypes, emptyImportAliases, binding, restrictType, parseError)) {
     return std::nullopt;
   }
-  if (!isExperimentalMapValueBinding(binding)) {
+  if (!isExperimentalKeyValueValueBinding(binding)) {
     return std::nullopt;
   }
   return binding;
@@ -267,7 +267,7 @@ std::optional<semantics::BindingInfo> extractBorrowedExperimentalMapReturnBindin
   return std::nullopt;
 }
 
-std::optional<semantics::BindingInfo> extractExperimentalMapReturnBinding(const Definition &def) {
+std::optional<semantics::BindingInfo> extractExperimentalKeyValueValueReturnBinding(const Definition &def) {
   for (const auto &transform : def.transforms) {
     if (transform.name != "return" || transform.templateArgs.size() != 1) {
       continue;
@@ -287,7 +287,7 @@ std::optional<semantics::BindingInfo> extractExperimentalMapReturnBinding(const 
     } else {
       binding.typeName = normalizedReturnType;
     }
-    if (isExperimentalMapValueBinding(binding)) {
+    if (isExperimentalKeyValueValueBinding(binding)) {
       return binding;
     }
   }
@@ -316,7 +316,7 @@ std::string borrowedExperimentalMapHelperName(std::string_view methodName) {
   return {};
 }
 
-std::string experimentalMapValueHelperName(std::string_view methodName) {
+std::string experimentalKeyValueValueHelperName(std::string_view methodName) {
   if (methodName == "count") {
     return "count";
   }
@@ -5422,45 +5422,45 @@ bool rewriteBorrowedExperimentalMapMethods(Program &program, std::string &error)
   return true;
 }
 
-void rewriteExperimentalMapValueMethodExpr(
+void rewriteExperimentalKeyValueValueMethodExpr(
     Expr &expr,
     const std::unordered_map<std::string, semantics::BindingInfo> &bindings,
     const std::unordered_map<std::string, semantics::BindingInfo> &valueReturnDefinitions,
     const std::string &definitionNamespace);
 
-void rewriteExperimentalMapValueMethodStatements(
+void rewriteExperimentalKeyValueValueMethodStatements(
     std::vector<Expr> &statements,
     std::unordered_map<std::string, semantics::BindingInfo> bindings,
     const std::unordered_map<std::string, semantics::BindingInfo> &valueReturnDefinitions,
     const std::string &definitionNamespace) {
   for (Expr &stmt : statements) {
-    rewriteExperimentalMapValueMethodExpr(stmt, bindings, valueReturnDefinitions, definitionNamespace);
+    rewriteExperimentalKeyValueValueMethodExpr(stmt, bindings, valueReturnDefinitions, definitionNamespace);
     if (!stmt.bodyArguments.empty()) {
       auto bodyBindings = bindings;
-      rewriteExperimentalMapValueMethodStatements(
+      rewriteExperimentalKeyValueValueMethodStatements(
           stmt.bodyArguments, bodyBindings, valueReturnDefinitions, definitionNamespace);
     }
     if (stmt.isBinding) {
-      if (auto binding = extractExperimentalMapBinding(stmt); binding.has_value()) {
+      if (auto binding = extractExperimentalKeyValueValueBinding(stmt); binding.has_value()) {
         bindings[stmt.name] = *binding;
       }
     }
   }
 }
 
-void rewriteExperimentalMapValueMethodExpr(
+void rewriteExperimentalKeyValueValueMethodExpr(
     Expr &expr,
     const std::unordered_map<std::string, semantics::BindingInfo> &bindings,
     const std::unordered_map<std::string, semantics::BindingInfo> &valueReturnDefinitions,
     const std::string &definitionNamespace) {
   for (Expr &arg : expr.args) {
-    rewriteExperimentalMapValueMethodExpr(arg, bindings, valueReturnDefinitions, definitionNamespace);
+    rewriteExperimentalKeyValueValueMethodExpr(arg, bindings, valueReturnDefinitions, definitionNamespace);
   }
   if (expr.kind != Expr::Kind::Call || !expr.isMethodCall || expr.args.empty() ||
       expr.args.front().kind == Expr::Kind::Literal) {
     return;
   }
-  const std::string helperName = experimentalMapValueHelperName(expr.name);
+  const std::string helperName = experimentalKeyValueValueHelperName(expr.name);
   if (helperName.empty()) {
     return;
   }
@@ -5472,7 +5472,7 @@ void rewriteExperimentalMapValueMethodExpr(
   }
   if (receiver.kind == Expr::Kind::Name) {
     auto bindingIt = bindings.find(receiver.name);
-    if (bindingIt != bindings.end() && isExperimentalMapValueBinding(bindingIt->second)) {
+    if (bindingIt != bindings.end() && isExperimentalKeyValueValueBinding(bindingIt->second)) {
       receiverBinding = bindingIt->second;
     }
   } else if (receiver.kind == Expr::Kind::Call && !receiver.isBinding) {
@@ -5492,7 +5492,7 @@ void rewriteExperimentalMapValueMethodExpr(
     for (const std::string &candidatePath : candidatePaths) {
       auto returnIt = valueReturnDefinitions.find(candidatePath);
       if (returnIt != valueReturnDefinitions.end() &&
-          isExperimentalMapValueBinding(returnIt->second)) {
+          isExperimentalKeyValueValueBinding(returnIt->second)) {
         receiverBinding = returnIt->second;
         break;
       }
@@ -5517,11 +5517,11 @@ void rewriteExperimentalMapValueMethodExpr(
   expr.argNames.clear();
 }
 
-bool rewriteExperimentalMapValueMethods(Program &program, std::string &error) {
+bool rewriteExperimentalKeyValueValueMethods(Program &program, std::string &error) {
   error.clear();
   std::unordered_map<std::string, semantics::BindingInfo> valueReturnDefinitions;
   for (const Definition &def : program.definitions) {
-    if (auto binding = extractExperimentalMapReturnBinding(def); binding.has_value()) {
+    if (auto binding = extractExperimentalKeyValueValueReturnBinding(def); binding.has_value()) {
       valueReturnDefinitions[def.fullPath] = *binding;
       const size_t slash = def.fullPath.find_last_of('/');
       if (slash != std::string::npos && slash + 1 < def.fullPath.size()) {
@@ -5532,7 +5532,7 @@ bool rewriteExperimentalMapValueMethods(Program &program, std::string &error) {
   for (Definition &def : program.definitions) {
     std::unordered_map<std::string, semantics::BindingInfo> bindings;
     for (const Expr &param : def.parameters) {
-      if (auto binding = extractExperimentalMapBinding(param); binding.has_value()) {
+      if (auto binding = extractExperimentalKeyValueValueBinding(param); binding.has_value()) {
         bindings[param.name] = *binding;
       }
     }
@@ -5541,10 +5541,10 @@ bool rewriteExperimentalMapValueMethods(Program &program, std::string &error) {
     if (slash != std::string::npos && slash > 0) {
       definitionNamespace = def.fullPath.substr(0, slash);
     }
-    rewriteExperimentalMapValueMethodStatements(
+    rewriteExperimentalKeyValueValueMethodStatements(
         def.statements, bindings, valueReturnDefinitions, definitionNamespace);
     if (def.returnExpr.has_value()) {
-      rewriteExperimentalMapValueMethodExpr(
+      rewriteExperimentalKeyValueValueMethodExpr(
           *def.returnExpr, bindings, valueReturnDefinitions, definitionNamespace);
     }
   }
@@ -6394,7 +6394,7 @@ bool runSemanticValidationManifestAstPass(
     return rewriteBorrowedExperimentalMapMethods(program, error);
   }
   if (pass.name == "experimental-map-value-methods") {
-    return rewriteExperimentalMapValueMethods(program, error);
+    return rewriteExperimentalKeyValueValueMethods(program, error);
   }
   if (pass.name == "builtin-map-insert-methods") {
     return rewriteBuiltinMapInsertMethods(program, error);
