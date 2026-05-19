@@ -117,14 +117,14 @@ std::string inferVectorLikeStructPathFromLocalInfo(const LocalInfo &localInfo) {
   return specializedExperimentalVectorStructPathForElementType(elementType);
 }
 
-std::string mapKindTypeName(LocalInfo::ValueKind kind) {
+std::string keyValueKindTypeName(LocalInfo::ValueKind kind) {
   return scalarKindTypeName(kind);
 }
 
-std::string inferExperimentalMapStructPathFromKinds(LocalInfo::ValueKind keyKind,
+std::string inferExperimentalKeyValueStructPathFromKinds(LocalInfo::ValueKind keyKind,
                                                     LocalInfo::ValueKind valueKind) {
-  const std::string keyType = mapKindTypeName(keyKind);
-  const std::string valueType = mapKindTypeName(valueKind);
+  const std::string keyType = keyValueKindTypeName(keyKind);
+  const std::string valueType = keyValueKindTypeName(valueKind);
   if (keyType.empty() || valueType.empty()) {
     return "";
   }
@@ -673,7 +673,8 @@ std::string inferStructPathFromNameExpr(const Expr &expr, const LocalMap &locals
        (localIt->second.referenceToKeyValueCollection || localIt->second.pointerToKeyValueCollection));
   if (isMapLikeLocal) {
     const std::string inferredKeyValueStruct =
-        inferExperimentalMapStructPathFromKinds(localIt->second.keyValueKeyKind, localIt->second.keyValueValueKind);
+        inferExperimentalKeyValueStructPathFromKinds(localIt->second.keyValueKeyKind,
+                                                     localIt->second.keyValueValueKind);
     if (!inferredKeyValueStruct.empty()) {
       return inferredKeyValueStruct;
     }
