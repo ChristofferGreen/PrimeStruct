@@ -291,7 +291,7 @@ bool SemanticsValidator::isStringExprForArgumentValidation(
     if (treatAsBuiltinAccess &&
         getCanonicalKeyValueAccessBuiltinName(arg, accessName) &&
         arg.args.size() == 2) {
-      std::string mapValueType;
+      std::string keyValueValueType;
       std::string experimentalMapKeyType;
       std::string experimentalMapValueType;
       if (dispatchResolvers.resolveExperimentalMapTarget != nullptr &&
@@ -300,8 +300,8 @@ bool SemanticsValidator::isStringExprForArgumentValidation(
                                                          experimentalMapValueType)) {
         return false;
       }
-      if (resolveMapValueType(arg.args.front(), dispatchResolvers, mapValueType) &&
-          normalizeBindingTypeName(mapValueType) == "string") {
+      if (resolveMapValueType(arg.args.front(), dispatchResolvers, keyValueValueType) &&
+          normalizeBindingTypeName(keyValueValueType) == "string") {
         return true;
       }
     }

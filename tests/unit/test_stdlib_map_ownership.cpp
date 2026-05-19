@@ -2536,6 +2536,10 @@ TEST_CASE("canonical map surface owns standalone stdlib implementation") {
         std::string::npos);
   CHECK(argumentValidationCollectionsSource.find("resolvedMapHelperName") ==
         std::string::npos);
+  CHECK(argumentValidationCollectionsSource.find("keyValueValueType") !=
+        std::string::npos);
+  CHECK(argumentValidationCollectionsSource.find("std::string mapValueType") ==
+        std::string::npos);
   CHECK(argumentValidationCollectionsSource.find(
             "methodMapAccessDefinitionReturnsString") ==
         std::string::npos);
