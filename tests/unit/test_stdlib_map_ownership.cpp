@@ -2316,10 +2316,16 @@ TEST_CASE("canonical map surface owns standalone stdlib implementation") {
         std::string::npos);
   CHECK(collectionDispatchSetupSource.find("isCanonicalMapAccessHelperName(") ==
         std::string::npos);
+  CHECK(collectionDispatchSetupSource.find(
+            "isStdNamespacedCanonicalMapAccessPath(") ==
+        std::string::npos);
   CHECK(collectionDispatchSetupSource.find("mapHelperSurfaceMetadataLocal()") !=
         std::string::npos);
   CHECK(collectionDispatchSetupSource.find(
             "isCanonicalKeyValueAccessHelperName(") !=
+        std::string::npos);
+  CHECK(collectionDispatchSetupSource.find(
+            "isStdNamespacedCanonicalKeyValueAccessPath(") !=
         std::string::npos);
   CHECK(collectionAccessSource.find("resolvedPath == \"/map/at_ref\" ||\n"
                                     "            resolvedPath == \"/std/collections/map/at_ref\"") ==

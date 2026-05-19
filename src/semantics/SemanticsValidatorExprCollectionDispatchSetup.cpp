@@ -10,7 +10,7 @@ bool isCanonicalKeyValueAccessHelperName(const std::string &helperName) {
          helperName == "at_unsafe" || helperName == "at_unsafe_ref";
 }
 
-bool isStdNamespacedCanonicalMapAccessPath(const std::string &path) {
+bool isStdNamespacedCanonicalKeyValueAccessPath(const std::string &path) {
   const StdlibSurfaceMetadata *metadata = mapHelperSurfaceMetadataLocal();
   if (metadata == nullptr) {
     return false;
@@ -138,7 +138,7 @@ bool SemanticsValidator::prepareExprCollectionDispatchSetup(
        isStdlibVectorAccessWrapperDefinition);
   setupOut.isStdNamespacedMapAccessCall =
       !expr.isMethodCall &&
-      isStdNamespacedCanonicalMapAccessPath(resolveCalleePath(expr));
+      isStdNamespacedCanonicalKeyValueAccessPath(resolveCalleePath(expr));
   setupOut.hasStdNamespacedMapAccessDefinition =
       setupOut.isStdNamespacedMapAccessCall &&
       (hasImportedDefinitionPath(resolveCalleePath(expr)) ||
