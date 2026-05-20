@@ -149,6 +149,56 @@
           return resolvePublishedStdlibSurfaceMemberName(
               path, metadata->id, helperNameOut);
         };
+        auto keyValueHelperMethodSpelling = [&](std::string_view memberName) {
+          const auto *metadata = keyValueHelperMetadata();
+          if (metadata == nullptr) {
+            return std::string(memberName);
+          }
+          for (const StdlibSurfaceMemberAlias &alias : metadata->memberAliases) {
+            if (alias.memberName == memberName &&
+                alias.spelling.find('/') == std::string_view::npos) {
+              return std::string(alias.spelling);
+            }
+          }
+          return std::string(memberName);
+        };
+        auto pascalCaseHelperMember = [](std::string_view memberName) {
+          std::string result;
+          bool capitalizeNext = true;
+          for (const char ch : memberName) {
+            if (ch == '_') {
+              capitalizeNext = true;
+              continue;
+            }
+            if (capitalizeNext) {
+              result.push_back(static_cast<char>(
+                  std::toupper(static_cast<unsigned char>(ch))));
+              capitalizeNext = false;
+            } else {
+              result.push_back(ch);
+            }
+          }
+          return result;
+        };
+        auto keyValueImplementationMethodSpelling =
+            [&](const std::string &receiverStructPath,
+                std::string_view memberName) {
+          std::string receiverLeaf = extractHelperTail(receiverStructPath);
+          constexpr std::string_view ValueSuffix = "Value";
+          if (receiverLeaf.size() <= ValueSuffix.size() ||
+              receiverLeaf.compare(receiverLeaf.size() - ValueSuffix.size(),
+                                   ValueSuffix.size(),
+                                   ValueSuffix) != 0) {
+            return keyValueHelperMethodSpelling(memberName);
+          }
+          receiverLeaf.erase(receiverLeaf.size() - ValueSuffix.size());
+          if (receiverLeaf.empty()) {
+            return keyValueHelperMethodSpelling(memberName);
+          }
+          receiverLeaf.front() = static_cast<char>(
+              std::tolower(static_cast<unsigned char>(receiverLeaf.front())));
+          return receiverLeaf + pascalCaseHelperMember(memberName);
+        };
         auto isCanonicalKeyValueHelperFamilyPath = [&](const std::string &path) {
           const auto *metadata = keyValueHelperMetadata();
           return metadata != nullptr &&
@@ -265,6 +315,53 @@
                     *semanticProgram, collectionFact->collectionFamilyId)));
           }
           return trimTemplateTypeText(collectionFact->collectionFamily);
+        };
+        auto populateKeyValueInfoFromCollectionFact =
+            [&](const SemanticProgramCollectionSpecialization &collectionFact,
+                CollectionPairTypeInfo &targetInfoOut) {
+          const auto *metadata = keyValueHelperMetadata();
+          if (metadata == nullptr ||
+              !collectionFact.helperSurfaceId.has_value() ||
+              *collectionFact.helperSurfaceId != metadata->id) {
+            return false;
+          }
+          auto resolveSemanticText = [&](const std::string &text, SymbolId textId) {
+            if (semanticProgram != nullptr && textId != InvalidSymbolId) {
+              return std::string(
+                  semanticProgramResolveCallTargetString(*semanticProgram, textId));
+            }
+            return text;
+          };
+          targetInfoOut = {};
+          targetInfoOut.isKeyValueTarget = true;
+          targetInfoOut.keyValueKeyKind = valueKindFromTypeName(
+              resolveSemanticText(collectionFact.keyTypeText,
+                                  collectionFact.keyTypeTextId));
+          targetInfoOut.keyValueValueKind = valueKindFromTypeName(
+              resolveSemanticText(collectionFact.valueTypeText,
+                                  collectionFact.valueTypeTextId));
+          targetInfoOut.isWrappedKeyValueTarget =
+              collectionFact.isReference || collectionFact.isPointer;
+          targetInfoOut.structTypeName = resolveSemanticText(
+              collectionFact.structPath, collectionFact.structPathId);
+          return true;
+        };
+        auto resolveLocalNameKeyValueInfo =
+            [&](const Expr &receiverExpr, CollectionPairTypeInfo &targetInfoOut) {
+          if (semanticProgram == nullptr || receiverExpr.kind != Expr::Kind::Name) {
+            return false;
+          }
+          for (const auto &collectionFact :
+               semanticProgram->collectionSpecializations) {
+            if (collectionFact.name != receiverExpr.name) {
+              continue;
+            }
+            if (populateKeyValueInfoFromCollectionFact(
+                    collectionFact, targetInfoOut)) {
+              return true;
+            }
+          }
+          return false;
         };
         auto resolveSameFamilyKeyValueHelperMemberName =
             [&](const Expr &callExpr, const Expr &receiverExpr,
@@ -1329,26 +1426,53 @@
               (bareKeyValueAccessName = expr.name, true))) &&
             (bareKeyValueAccessName == "at" ||
              bareKeyValueAccessName == "at_unsafe")) {
-          const auto targetInfo =
-              ir_lowerer::resolveCollectionPairTypeInfo(
-                  expr.args.front(),
-                  localsIn,
-                  {},
-                  semanticProgram,
-                  &callResolutionAdapters.semanticProductTargets.semanticIndex);
+          auto resolveAccessTargetInfo = [&](const Expr &receiverExpr) {
+            auto resolvedInfo =
+                ir_lowerer::resolveCollectionPairTypeInfo(
+                    receiverExpr,
+                    localsIn,
+                    {},
+                    semanticProgram,
+                    &callResolutionAdapters.semanticProductTargets.semanticIndex);
+            if (!resolvedInfo.isKeyValueTarget) {
+              resolveLocalNameKeyValueInfo(receiverExpr, resolvedInfo);
+            }
+            return resolvedInfo;
+          };
+          auto targetInfo = resolveAccessTargetInfo(expr.args.front());
+          size_t receiverArgIndex = 0;
+          if (!targetInfo.isKeyValueTarget && expr.args.size() > 1) {
+            auto alternateTargetInfo = resolveAccessTargetInfo(expr.args[1]);
+            if (alternateTargetInfo.isKeyValueTarget) {
+              targetInfo = std::move(alternateTargetInfo);
+              receiverArgIndex = 1;
+            }
+          }
           if (targetInfo.isKeyValueTarget) {
-            Expr methodExpr = expr;
-            methodExpr.name =
-                bareKeyValueAccessName == "at" ? "mapAt" : "mapAtUnsafe";
+            Expr accessExpr = expr;
+            if (receiverArgIndex != 0 && accessExpr.args.size() > receiverArgIndex) {
+              std::swap(accessExpr.args[0], accessExpr.args[receiverArgIndex]);
+            }
+            const std::string priorError = error;
+            if (const Definition *directCallee =
+                    resolveDirectHelperDefinition(accessExpr);
+                directCallee != nullptr) {
+              error = priorError;
+              return emitInlineDefinitionCall(
+                  accessExpr, *directCallee, localsIn, true);
+            }
+            std::string receiverStructPath = targetInfo.structTypeName;
+            if (receiverStructPath.empty()) {
+              receiverStructPath =
+                  inferStructExprPath(accessExpr.args.front(), localsIn);
+            }
+            Expr methodExpr = accessExpr;
+            methodExpr.name = keyValueImplementationMethodSpelling(
+                receiverStructPath, bareKeyValueAccessName);
             methodExpr.namespacePrefix.clear();
             methodExpr.isMethodCall = true;
             methodExpr.semanticNodeId = 0;
-            const std::string priorError = error;
-            std::string receiverStructPath = targetInfo.structTypeName;
-            if (receiverStructPath.empty()) {
-              receiverStructPath = inferStructExprPath(expr.args.front(), localsIn);
-            }
-            auto emitMapAccessMethodCall =
+            auto emitAccessMethodCall =
                 [&](const Definition &methodCallee) -> bool {
               if (!receiverStructPath.empty() &&
                   methodCallee.parameters.size() + 1 == methodExpr.args.size()) {
@@ -1369,7 +1493,7 @@
                     resolveMethodCallDefinition(methodExpr, localsIn);
                 methodCallee != nullptr) {
               error = priorError;
-              return emitMapAccessMethodCall(*methodCallee);
+              return emitAccessMethodCall(*methodCallee);
             }
             if (!receiverStructPath.empty()) {
               Expr methodLookup;
@@ -1379,7 +1503,7 @@
                       resolveDefinitionCall(methodLookup);
                   methodCallee != nullptr) {
                 error = priorError;
-                return emitMapAccessMethodCall(*methodCallee);
+                return emitAccessMethodCall(*methodCallee);
               }
             }
             error = priorError;

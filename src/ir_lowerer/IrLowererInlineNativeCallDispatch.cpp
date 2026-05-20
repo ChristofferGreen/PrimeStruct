@@ -1568,6 +1568,29 @@ InlineCallDispatchResult tryEmitInlineCallDispatchWithLocals(
       return InlineCallDispatchResult::Error;
     }
   }
+  auto isPublishedKeyValueLocalName = [&](const Expr &receiverExpr) {
+    if (semanticProgram == nullptr || receiverExpr.kind != Expr::Kind::Name) {
+      return false;
+    }
+    const auto *metadata = inlineKeyValueHelperMetadata();
+    if (metadata == nullptr) {
+      return false;
+    }
+    return std::any_of(
+        semanticProgram->collectionSpecializations.begin(),
+        semanticProgram->collectionSpecializations.end(),
+        [&](const SemanticProgramCollectionSpecialization &collectionFact) {
+          return collectionFact.name == receiverExpr.name &&
+                 collectionFact.helperSurfaceId.has_value() &&
+                 *collectionFact.helperSurfaceId == metadata->id;
+        });
+  };
+  if (!expr.isMethodCall && expr.args.size() == 2 &&
+      (isSimpleCallName(expr, "at") || isSimpleCallName(expr, "at_unsafe")) &&
+      (isPublishedKeyValueLocalName(expr.args[0]) ||
+       isPublishedKeyValueLocalName(expr.args[1]))) {
+    return InlineCallDispatchResult::NotHandled;
+  }
   const auto inlineResult = tryEmitInlineCallWithCountFallbacksImpl(
       expr,
       [&](const Expr &callExpr) { return isArrayCountCallFn(callExpr, localsIn); },

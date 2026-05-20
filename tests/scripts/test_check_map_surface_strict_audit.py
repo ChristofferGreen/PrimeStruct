@@ -77,7 +77,7 @@ def main() -> int:
             print(f"Unexpected trace diagnostic: {failed.stderr!r}", file=sys.stderr)
             return 1
 
-    with tempfile.TemporaryDirectory(prefix="ps_map_surface_current_") as temp:
+    with tempfile.TemporaryDirectory(prefix="ps_map_surface_helper_bad_") as temp:
         scanned_root = Path(temp)
         current_path = scanned_root / "src" / "ir_lowerer"
         (scanned_root / "include").mkdir()
@@ -86,22 +86,19 @@ def main() -> int:
             'auto helperName = bareName == "at" ? "mapAt" : "mapAtUnsafe";\n',
             encoding="utf-8",
         )
-        allowed = run_checker(repo_root, scanned_root)
-        if allowed.returncode != 0:
-            print(allowed.stdout, end="")
-            print(allowed.stderr, end="", file=sys.stderr)
+        failed = run_checker(repo_root, scanned_root)
+        if failed.returncode == 0:
+            print("Checker accepted map helper symbol residue", file=sys.stderr)
+            print(failed.stdout, end="")
             return 1
-        if "2 production traces observed" not in allowed.stdout:
-            print(f"Unexpected current allowance output: {allowed.stdout!r}", file=sys.stderr)
+        if "pattern map-helper-symbol has 2 traces" not in failed.stderr:
+            print(f"Unexpected helper diagnostic: {failed.stderr!r}", file=sys.stderr)
             return 1
 
         zero = run_checker(repo_root, scanned_root, "--enforce-zero")
         if zero.returncode == 0:
-            print("Checker accepted current map bridge residue in zero mode", file=sys.stderr)
+            print("Checker accepted map helper residue in zero mode", file=sys.stderr)
             print(zero.stdout, end="")
-            return 1
-        if "pattern map-helper-symbol has 2 traces" not in zero.stderr:
-            print(f"Unexpected zero-mode diagnostic: {zero.stderr!r}", file=sys.stderr)
             return 1
 
     return 0

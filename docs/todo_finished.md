@@ -6,6 +6,41 @@ Legend:
 Finished items are periodically archived here from `docs/todo.md`; section headers record the archive date.
 
 **Todo Completion (May 20, 2026)**
+- [x] TODO-4464: Run final strict C++ map-surface audit
+  - owner: ai
+  - created_at: 2026-05-14
+  - finished_at: 2026-05-20
+  - phase: Map stdlib ownership cutover
+  - parallel_track: map-zero-audit
+  - depends_on: TODO-4538
+  - split_from: TODO-4304
+  - scope: Run and enforce the final zero-tolerance validation gate proving
+    the PrimeStruct map surface is absent from production C++ source.
+  - outcome:
+    - Removed the final production C++ `mapAt` / `mapAtUnsafe` helper trace
+      from expression lowering.
+    - Reworked unresolved key/value `at` lowering to recover published
+      collection specialization facts by local name, normalize receiver
+      argument order, and derive implementation method spellings from the
+      receiver struct name rather than map-specific literals.
+    - Taught inline native call dispatch to defer unresolved key/value `at`
+      calls backed by published collection facts to ordinary lowering.
+    - Switched `PrimeStruct_map_surface_strict_audit` to `--enforce-zero` and
+      removed the transitional allowance from the checker and self-test.
+    - Promoted TODO-4271 as the next Ready Now leaf.
+  - validation:
+    - `python3 scripts/check_map_surface_strict_audit.py --root .
+      --enforce-zero` passed.
+    - `cmake --build build-release --target primec` passed.
+    - `cmake --build build-release --target PrimeStruct_compile_run_tests`
+      passed.
+    - `cd build-release && ./PrimeStruct_compile_run_tests --test-case="compiles native bare map at_unsafe through canonical helper,compiles and runs native map at_unsafe helper,compiles and runs native builtin canonical map first-growth inserts" --no-skip`
+      passed.
+    - `cd build-release && ./PrimeStruct_compile_run_tests --test-case="compiles and runs native builtin canonical map repeated-growth inserts,compiles and runs native builtin canonical map insert overwrites,compiles native bare map at_unsafe through canonical helper,compiles and runs native map at_unsafe helper" --no-skip`
+      passed.
+    - `cd build-release && ctest --output-on-failure -R
+      '^PrimeStruct_map_surface_strict_audit(_self_test)?$'` passed.
+
 - [x] TODO-4538: Replace map inventory gate with fast strict audit
   - owner: ai
   - created_at: 2026-05-20

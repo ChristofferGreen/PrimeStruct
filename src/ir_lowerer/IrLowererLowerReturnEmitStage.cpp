@@ -39,6 +39,7 @@
 #include "IrLowererVectorRecordLayoutHelpers.h"
 
 #include <algorithm>
+#include <cctype>
 #include <cstring>
 #include <limits>
 #include <string_view>

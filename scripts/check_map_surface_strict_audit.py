@@ -78,21 +78,17 @@ TRACE_PATTERNS = [
 
 PATTERN_BY_ID = {pattern.id: pattern for pattern in TRACE_PATTERNS}
 
-# TODO-4464 removes the final statement-lowering bridge and switches this
-# audit to --enforce-zero. Counts are maxima, so deleting residue needs no
-# bookkeeping change.
-CURRENT_ALLOWED_COUNTS: dict[tuple[str, str], int] = {
-    ("src/ir_lowerer/IrLowererLowerStatementsExpr.h", "map-helper-symbol"): 2,
-}
+# Counts are maxima. The final map-surface gate allows no production C++ traces.
+CURRENT_ALLOWED_COUNTS: dict[tuple[str, str], int] = {}
 
 
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(
         description=(
             "Check tracked production C++ for PrimeStruct map surface traces. "
-            "The default mode allows only the current narrowly classified "
-            "bridge residue. --enforce-zero fails on every PrimeStruct-map "
-            "trace. Ordinary C++ std::map usage, generic mapping words, "
+            "The default and --enforce-zero modes both fail on every "
+            "PrimeStruct-map trace. Ordinary C++ std::map usage, generic "
+            "mapping words, "
             "tests, docs, stdlib .prime files, and generated source-lock "
             "fixtures are not matched or scanned."
         )
@@ -262,11 +258,9 @@ def main() -> int:
             f"{observed_total} production traces observed under zero tolerance."
         )
     else:
-        allowed_total = sum(CURRENT_ALLOWED_COUNTS.values())
         print(
             "Map surface strict audit passed. "
-            f"{observed_total} production traces observed "
-            f"within {allowed_total} allowed current traces."
+            f"{observed_total} production traces observed."
         )
     return 0
 

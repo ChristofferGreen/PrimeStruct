@@ -12,6 +12,16 @@
   compilation.
 
 ## Recent Test Runs
+- 2026-05-20 21:24 CEST | pass | mode: release | command:
+  `python3 scripts/check_map_surface_strict_audit.py --root . --enforce-zero`;
+  `cmake --build build-release --target primec`;
+  `cmake --build build-release --target PrimeStruct_compile_run_tests`;
+  `cd build-release && ./PrimeStruct_compile_run_tests --test-case="compiles native bare map at_unsafe through canonical helper,compiles and runs native map at_unsafe helper,compiles and runs native builtin canonical map first-growth inserts" --no-skip`;
+  `cd build-release && ./PrimeStruct_compile_run_tests --test-case="compiles and runs native builtin canonical map repeated-growth inserts,compiles and runs native builtin canonical map insert overwrites,compiles native bare map at_unsafe through canonical helper,compiles and runs native map at_unsafe helper" --no-skip`;
+  `cd build-release && ctest --output-on-failure -R '^PrimeStruct_map_surface_strict_audit(_self_test)?$'`
+  | failures: none | notes: TODO-4464 removed the final production C++
+  map helper-symbol trace, changed the routine audit CTest to zero tolerance,
+  and preserved focused native canonical map access/insert behavior.
 - 2026-05-20 20:56 CEST | pass | mode: release | command:
   `python3 scripts/check_map_surface_strict_audit.py --root .`;
   `python3 tests/scripts/test_check_map_surface_strict_audit.py --repo-root .`;
