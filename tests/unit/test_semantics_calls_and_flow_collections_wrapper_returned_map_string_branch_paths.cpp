@@ -607,6 +607,11 @@ TEST_CASE("wrapper-returned referenced canonical map access count call auto infe
   return("abc"utf8)
 }
 
+[return<string>]
+/std/collections/map/at_ref([Reference</std/collections/map<i32, string>>] values, [i32] key) {
+  return("abc"utf8)
+}
+
 [return<Reference</std/collections/map<i32, string>>>]
 borrowMap([Reference</std/collections/map<i32, string>>] values) {
   return(values)

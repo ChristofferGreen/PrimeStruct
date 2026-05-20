@@ -820,7 +820,7 @@ main() {
 )";
   std::string error;
   CHECK_FALSE(validateProgram(source, "/main", error));
-  CHECK(error.find("argument count mismatch for /map/count") != std::string::npos);
+  CHECK(error.find("unknown call target: /map/count") != std::string::npos);
 }
 
 TEST_CASE("map stdlib namespaced count expression ignores templated alias helper fallback") {

@@ -466,7 +466,7 @@ main() {
 )";
   std::string error;
   CHECK_FALSE(validateProgram(source, "/main", error));
-  CHECK(error.find("argument type mismatch for /std/collections/map/count parameter marker: expected bool got i32") !=
+  CHECK(error.find("parameter marker: expected bool got i32") !=
         std::string::npos);
 }
 

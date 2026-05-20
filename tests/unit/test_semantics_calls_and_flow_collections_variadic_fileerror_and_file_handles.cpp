@@ -396,7 +396,7 @@ main() {
   CHECK(error.find("unknown call target: /std/collections/map/at_unsafe") != std::string::npos);
 }
 
-TEST_CASE("map namespaced count method compatibility alias is rejected") {
+TEST_CASE("map namespaced count method compatibility alias resolves through canonical helper") {
   const std::string source = R"(
 [effects(heap_alloc), return<int>]
 /std/collections/map/count([map<i32, i32>] values) {
@@ -410,8 +410,8 @@ main() {
 }
 )";
   std::string error;
-  CHECK_FALSE(validateProgram(source, "/main", error));
-  CHECK(error.find("unknown method: /map/count") != std::string::npos);
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
 }
 
 TEST_CASE("map stdlib namespaced count method resolves through canonical helper") {

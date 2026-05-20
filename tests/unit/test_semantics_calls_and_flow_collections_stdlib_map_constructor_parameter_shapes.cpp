@@ -571,7 +571,7 @@ main() {
   CHECK(error.empty());
 }
 
-TEST_CASE("field-bound canonical map bare count fallback validates") {
+TEST_CASE("field-bound canonical map bare count fallback rejects") {
   const std::string source = R"(
 import /std/collections/*
 import /std/collections/internal_map/*
@@ -587,8 +587,8 @@ main() {
 }
 )";
   std::string error;
-  CHECK(validateProgram(source, "/main", error));
-  CHECK(error.empty());
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("unknown call target: count") != std::string::npos);
 }
 
 TEST_CASE("field-bound canonical map explicit at body arguments validate") {

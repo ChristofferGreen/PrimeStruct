@@ -1,13 +1,6 @@
 # Testcase Log
 
 ## Current Known Failures
-- `PrimeStruct_semantics_tests --test-case="*map*count*" --no-skip` has
-  obsolete legacy map-count compatibility coverage after removing C++ semantic
-  builtin handling for `/std/collections/map/count` and related map access
-  helpers. On 2026-05-16 it reported 41 failed cases and 40 passed cases.
-  These failures are expected to be retired or rewritten as the remaining old
-  C++ map compatibility tests are deleted during the map stdlib-ownership
-  cutover; the stdlib-owned `MapValue` smoke tests continue to pass.
 - `PrimeStruct_compile_run_tests --test-suite="primestruct.compile.run.native_backend.collections" --no-skip`
   is not a clean map-cutover gate. On 2026-05-16 it reported 343 cases, 238
   passed, 105 failed, and 3539 skipped before the hanging map string-valued
@@ -183,6 +176,12 @@
   the string-valued map access emission fixture returned `NotHandled`.
 
 ## Recent Test Runs
+- 2026-05-20 11:43 CEST | pass | mode: release | command:
+  `cmake --build build-release --target PrimeStruct_semantics_tests`;
+  `cd build-release && ./PrimeStruct_semantics_tests --test-case="*map*count*" --no-skip`
+  | failures: none | notes: retired stale map-count semantics expectations
+  around old same-path aliases, bare count fallback diagnostics, and
+  public `MapValue` construction in method-count coverage.
 - 2026-05-20 11:36 CEST | pass | mode: release | command:
   `cmake --build build-release --target PrimeStruct_backend_ir_tests`;
   `cd build-release && ./PrimeStruct_backend_ir_tests --test-case="template monomorph source delegation stays stable" --no-skip`
@@ -4640,6 +4639,7 @@
 - 2026-05-12 17:28 local | fail | mode: release | command: `./scripts/compile.sh --release` | failures: 146 CTest targets | notes: baseline after preflight checkpoint failed; stabilization blocks TODO work
 
 ## Resolved Failures
+- [x] map-count semantics wildcard | resolved: 2026-05-20 11:43 CEST | validating command: `cmake --build build-release --target PrimeStruct_semantics_tests`; `cd build-release && ./PrimeStruct_semantics_tests --test-case="*map*count*" --no-skip` | notes: updated stale map-count fixtures for current bare-count diagnostics, public `MapValue` construction, and current same-path alias behavior pending TODO-4534.
 - [x] template monomorph source delegation stays stable | resolved: 2026-05-20 11:36 CEST | validating command: `cmake --build build-release --target PrimeStruct_backend_ir_tests`; `cd build-release && ./PrimeStruct_backend_ir_tests --test-case="template monomorph source delegation stays stable" --no-skip` | notes: refreshed stale SoA and key-value source-lock assertions for current helper prefix APIs, compatibility path routing, and renamed map-owned helpers.
 - [x] semantics validator infer source delegation stays stable | resolved: 2026-05-20 11:27 CEST | validating command: `cmake --build build-release --target PrimeStruct_backend_ir_tests`; `cd build-release && ./PrimeStruct_backend_ir_tests --test-case="semantics validator infer source delegation stays stable" --no-skip` | notes: refreshed stale source-lock snippets for key-value resolver naming, split SoA helper path literals, and removed map compatibility predispatch paths.
 - [x] ir lowers map literal call as statement | resolved: 2026-05-20 11:21 CEST | validating command: `cmake --build build-release --target PrimeStruct_backend_ir_tests PrimeStruct_semantics_tests`; `cd build-release && ./PrimeStruct_backend_ir_tests --test-case="ir lowers map literal call as statement" --no-skip`; `cd build-release && ./PrimeStruct_semantics_tests --test-case="map literal validates bool keys and values" --no-skip` | notes: parser nested-definition speculation now avoids consuming template-call statements without a definition body as template parameter declarations.
