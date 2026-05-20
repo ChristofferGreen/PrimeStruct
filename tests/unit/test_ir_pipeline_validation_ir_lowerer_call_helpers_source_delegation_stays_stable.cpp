@@ -4482,9 +4482,11 @@ TEST_CASE("ir lowerer call helpers keep explicit map helper same-path defs") {
   CHECK(primec::ir_lowerer::resolveDefinitionCall(aliasAtUnsafeCall, defMap, resolveExprPath) ==
         &aliasMapAtUnsafeDef);
   CHECK(primec::ir_lowerer::resolveDefinitionCall(
-            aliasAtCall, defMap, resolveExprPathWithCanonicalAliasAccessFallback) == nullptr);
+            aliasAtCall, defMap, resolveExprPathWithCanonicalAliasAccessFallback) ==
+        &canonicalMapAtDef);
   CHECK(primec::ir_lowerer::resolveDefinitionCall(
-            aliasAtUnsafeCall, defMap, resolveExprPathWithCanonicalAliasAccessFallback) == nullptr);
+            aliasAtUnsafeCall, defMap, resolveExprPathWithCanonicalAliasAccessFallback) ==
+        &canonicalMapAtUnsafeDef);
 }
 
 TEST_CASE("ir lowerer call helpers keep bare semantic map sugar on canonical defs") {
