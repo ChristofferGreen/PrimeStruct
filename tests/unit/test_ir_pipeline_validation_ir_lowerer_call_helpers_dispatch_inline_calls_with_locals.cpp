@@ -460,7 +460,7 @@ TEST_CASE("ir lowerer call helpers dispatch inline calls with locals") {
             error) == Result::Emitted);
   CHECK(error == "stale");
   CHECK(explicitVectorCountLocalResolveMethodCalls == 0);
-  CHECK(explicitVectorCountLocalResolveDefinitionCalls == 1);
+  CHECK(explicitVectorCountLocalResolveDefinitionCalls == 2);
   CHECK(explicitVectorCountLocalEmitCalls == 1);
 
   primec::ir_lowerer::LocalInfo vectorInfo;

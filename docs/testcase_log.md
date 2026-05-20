@@ -10,12 +10,6 @@
   string-valued map runtime fixture has since been retargeted to compile-only
   coverage because native runtime string-valued maps still hang after
   compilation.
-- `PrimeStruct_backend_ir_tests --test-case="ir lowerer call helpers dispatch inline calls with locals"`
-  has stale assertion-count coverage around explicit vector-count resolver
-  calls. On 2026-05-16 it failed with
-  `explicitVectorCountLocalResolveDefinitionCalls == 1` seeing `2`, while
-  adjacent call-helper struct classifier and bundled entry setup coverage
-  still passes.
 - `PrimeStruct_backend_ir_tests --test-case="ir lowerer call helpers dispatch inline call with count fallbacks" --no-skip`
   has stale inline map-count/access fallback expectations after the map
   stdlib-ownership cutover. On 2026-05-18 it still expected a method
@@ -143,6 +137,11 @@
   the string-valued map access emission fixture returned `NotHandled`.
 
 ## Recent Test Runs
+- 2026-05-20 12:10 CEST | pass | mode: release | command:
+  `cmake --build build-release --target PrimeStruct_backend_ir_tests`;
+  `cd build-release && ./PrimeStruct_backend_ir_tests --test-case="ir lowerer call helpers dispatch inline calls with locals" --no-skip`
+  | failures: none | notes: explicit vector-count dispatch now locks the
+  current two definition-resolver probes before one inline emission.
 - 2026-05-20 12:08 CEST | pass | mode: release | command:
   `cmake --build build-release --target PrimeStruct_backend_ir_tests`;
   `cd build-release && ./PrimeStruct_backend_ir_tests --test-case="ir lowerer setup inference helper ignores unqualified array and map access kinds" --no-skip`
@@ -4642,6 +4641,7 @@
 - 2026-05-12 17:28 local | fail | mode: release | command: `./scripts/compile.sh --release` | failures: 146 CTest targets | notes: baseline after preflight checkpoint failed; stabilization blocks TODO work
 
 ## Resolved Failures
+- [x] ir lowerer call helpers dispatch inline calls with locals | resolved: 2026-05-20 12:10 CEST | validating command: `cmake --build build-release --target PrimeStruct_backend_ir_tests`; `cd build-release && ./PrimeStruct_backend_ir_tests --test-case="ir lowerer call helpers dispatch inline calls with locals" --no-skip` | notes: refreshed the stale explicit vector-count resolver probe count from one to two while preserving the single inline emission assertion.
 - [x] unqualified array and map access setup inference | resolved: 2026-05-20 12:08 CEST | validating command: `cmake --build build-release --target PrimeStruct_backend_ir_tests`; `cd build-release && ./PrimeStruct_backend_ir_tests --test-case="ir lowerer setup inference helper ignores unqualified array and map access kinds" --no-skip` | notes: retargeted stale direct `at`/`at_unsafe` setup-inference expectations to the current `NotMatched` behavior after map access left the old builtin helper path.
 - [x] wrapper-returned map access setup inference | resolved: 2026-05-20 12:05 CEST | validating command: `cmake --build build-release --target PrimeStruct_backend_ir_tests`; `cd build-release && ./PrimeStruct_backend_ir_tests --test-case="ir lowerer setup inference helper ignores wrapper-returned canonical map access string kinds,ir lowerer setup inference helper ignores wrapper-returned slash-method map access kinds,ir lowerer setup inference helper ignores wrapper-returned canonical map access int32 kinds" --no-skip` | notes: retargeted stale wrapper-returned map access fixtures from value-kind resolution to current `NotMatched` behavior for retired builtin map access classification.
 - [x] inferred experimental map receiver inline arguments | resolved: 2026-05-20 12:02 CEST | validating command: `cmake --build build-release --target PrimeStruct_backend_ir_tests`; `cd build-release && ./PrimeStruct_backend_ir_tests --test-case="ir lowerer call helpers leave inferred map receiver methods unresolved" --no-skip` | notes: replaced retired `mapPair` construction and locked that this lowerer helper no longer resolves inferred stdlib-owned map receiver methods through the old inline path.
