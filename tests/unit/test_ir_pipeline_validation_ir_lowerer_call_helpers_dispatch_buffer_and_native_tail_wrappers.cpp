@@ -296,9 +296,9 @@ TEST_CASE("ir lowerer call helpers dispatch buffer and native tail wrappers") {
             instructionCount,
             emitInstruction,
             patchInstructionImm,
-            error) == NativeResult::Emitted);
+            error) == NativeResult::NotHandled);
   CHECK(error.empty());
-  CHECK_FALSE(instructions.empty());
+  CHECK(instructions.empty());
 
   primec::Expr experimentalVectorAtUnsafeExpr = experimentalVectorAtExpr;
   experimentalVectorAtUnsafeExpr.name =

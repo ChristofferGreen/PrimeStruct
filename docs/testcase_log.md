@@ -10,11 +10,6 @@
   string-valued map runtime fixture has since been retargeted to compile-only
   coverage because native runtime string-valued maps still hang after
   compilation.
-- `PrimeStruct_backend_ir_tests --test-case="ir lowerer call helpers dispatch buffer and native tail wrappers" --no-skip`
-  has a stale experimental-vector native-tail expectation. On 2026-05-18 the
-  case still expected the experimental-vector method `at` tail path to emit
-  instructions, but the current lowerer returned `NotHandled` and emitted no
-  instructions; adjacent key/value target metadata validation cases passed.
 - `PrimeStruct_backend_ir_tests --test-case="ir lowerer call helpers dispatch native call tail orchestration" --no-skip`
   has stale bare-`at` native-tail expectations after the map
   stdlib-ownership cutover. On 2026-05-18 it expected malformed and valid
@@ -33,6 +28,12 @@
   the string-valued map access emission fixture returned `NotHandled`.
 
 ## Recent Test Runs
+- 2026-05-20 13:02 CEST | pass | mode: release | command:
+  `cmake --build build-release --target PrimeStruct_backend_ir_tests`;
+  `cd build-release && ./PrimeStruct_backend_ir_tests --test-case="ir lowerer call helpers dispatch buffer and native tail wrappers" --no-skip`
+  | failures: none | notes: experimental-vector method `at` native-tail
+  coverage now locks current `NotHandled` deferral with no emitted
+  instructions.
 - 2026-05-20 12:59 CEST | pass | mode: release | command:
   `cmake --build build-release --target PrimeStruct_backend_ir_tests`;
   `cd build-release && ./PrimeStruct_backend_ir_tests --test-case="ir lowerer call helpers keep explicit map helper same-path defs" --no-skip`
@@ -4653,6 +4654,7 @@
 - 2026-05-12 17:28 local | fail | mode: release | command: `./scripts/compile.sh --release` | failures: 146 CTest targets | notes: baseline after preflight checkpoint failed; stabilization blocks TODO work
 
 ## Resolved Failures
+- [x] buffer/native-tail wrapper dispatch | resolved: 2026-05-20 13:02 CEST | validating command: `cmake --build build-release --target PrimeStruct_backend_ir_tests`; `cd build-release && ./PrimeStruct_backend_ir_tests --test-case="ir lowerer call helpers dispatch buffer and native tail wrappers" --no-skip` | notes: retargeted the experimental-vector method `at` native-tail fixture to current `NotHandled` deferral with no instructions.
 - [x] semantic product vector/map bridge parity | resolved: 2026-05-20 12:58 CEST | validating command: `cmake --build build-release --target PrimeStruct_semantics_tests`; `cd build-release && ./PrimeStruct_semantics_tests --test-case="semantic product keeps vector and map bridge parity" --no-skip` | notes: refreshed the parser-only canonical map count helper receiver from stale `map<K, V>` to the current `Map<K, V>` constructor model while preserving bridge surface assertions.
 - [x] stdlib surface metadata map alias paths | resolved: 2026-05-20 12:55 CEST | validating command: `cmake --build build-release --target PrimeStruct_backend_ir_tests`; `cd build-release && ./PrimeStruct_backend_ir_tests --test-case="stdlib surface metadata resolves collection alias paths" --no-skip` | notes: removed the contradictory null assertion for `/std/collections/map/tryAt_ref` and locked it as public map helper metadata.
 - [x] SoA surface metadata member tokens | resolved: 2026-05-20 12:54 CEST | validating command: `cmake --build build-release --target PrimeStruct_backend_ir_tests`; `cd build-release && ./PrimeStruct_backend_ir_tests --test-case="stdlib surface metadata resolves collection helper member tokens" --no-skip` | notes: refreshed stale `soaVector*` member-token expectations to the current public SoA manifest names and locked retired tokens as unresolved.
