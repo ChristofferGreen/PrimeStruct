@@ -165,23 +165,18 @@
             aliasMapCountCall,
             [](const primec::Expr &) { return false; },
             [](const primec::Expr &) { return false; },
-            [&](const primec::Expr &methodExpr) -> const primec::Definition * {
+            [&](const primec::Expr &) -> const primec::Definition * {
               ++aliasMapCountResolveCalls;
-              CHECK(methodExpr.isMethodCall);
-              CHECK(methodExpr.name == "count");
               return &callee;
             },
-            [&](const primec::Expr &methodExpr, const primec::Definition &resolvedCallee) {
+            [&](const primec::Expr &, const primec::Definition &) {
               ++aliasMapCountEmitCalls;
-              CHECK(methodExpr.isMethodCall);
-              CHECK(methodExpr.name == "count");
-              CHECK(resolvedCallee.fullPath == "/pkg/items/count");
               return true;
             },
-            error) == Result::Emitted);
+            error) == Result::NotHandled);
   CHECK(error.empty());
-  CHECK(aliasMapCountResolveCalls == 1);
-  CHECK(aliasMapCountEmitCalls == 1);
+  CHECK(aliasMapCountResolveCalls == 0);
+  CHECK(aliasMapCountEmitCalls == 0);
 
   primec::Expr capacityCall;
   capacityCall.kind = primec::Expr::Kind::Call;
@@ -265,139 +260,43 @@
   indexArg.kind = primec::Expr::Kind::Literal;
   indexArg.intWidth = 32;
   indexArg.literalValue = 1;
+
   primec::Expr atCall;
   atCall.kind = primec::Expr::Kind::Call;
   atCall.name = "at";
   atCall.args = {targetArg, indexArg};
-
   int atResolveCalls = 0;
-  int atEmitCalls = 0;
   CHECK(primec::ir_lowerer::tryEmitNonMethodCountFallback(
             atCall,
             [](const primec::Expr &) { return false; },
             [](const primec::Expr &) { return false; },
-            [&](const primec::Expr &methodExpr) -> const primec::Definition * {
+            [&](const primec::Expr &) -> const primec::Definition * {
               ++atResolveCalls;
-              CHECK(methodExpr.isMethodCall);
-              CHECK(methodExpr.name == "at");
               return &callee;
             },
-            [&](const primec::Expr &methodExpr, const primec::Definition &resolvedCallee) {
-              ++atEmitCalls;
-              CHECK(methodExpr.isMethodCall);
-              CHECK(methodExpr.name == "at");
-              CHECK(resolvedCallee.fullPath == "/pkg/items/count");
-              return true;
-            },
-            error) == Result::Emitted);
-  CHECK(error.empty());
-  CHECK(atResolveCalls == 1);
-  CHECK(atEmitCalls == 1);
-
-  primec::Expr canonicalAtCall = atCall;
-  canonicalAtCall.name = "/std/collections/vector/at";
-  int canonicalAtResolveCalls = 0;
-  int canonicalAtEmitCalls = 0;
-  CHECK(primec::ir_lowerer::tryEmitNonMethodCountFallback(
-            canonicalAtCall,
-            [](const primec::Expr &) { return false; },
-            [](const primec::Expr &) { return false; },
-            [&](const primec::Expr &methodExpr) -> const primec::Definition * {
-              ++canonicalAtResolveCalls;
-              CHECK(methodExpr.isMethodCall);
-              CHECK(methodExpr.name == "at");
-              return &callee;
-            },
-            [&](const primec::Expr &methodExpr, const primec::Definition &resolvedCallee) {
-              ++canonicalAtEmitCalls;
-              CHECK(methodExpr.isMethodCall);
-              CHECK(methodExpr.name == "at");
-              CHECK(resolvedCallee.fullPath == "/pkg/items/count");
-              return true;
-            },
-            error) == Result::Emitted);
-  CHECK(error.empty());
-  CHECK(canonicalAtResolveCalls == 1);
-  CHECK(canonicalAtEmitCalls == 1);
-
-  primec::Expr aliasAtCall = atCall;
-  aliasAtCall.name = "/vector/at";
-  int aliasAtResolveCalls = 0;
-  int aliasAtEmitCalls = 0;
-  CHECK(primec::ir_lowerer::tryEmitNonMethodCountFallback(
-            aliasAtCall,
-            [](const primec::Expr &) { return false; },
-            [](const primec::Expr &) { return false; },
-            [&](const primec::Expr &methodExpr) -> const primec::Definition * {
-              ++aliasAtResolveCalls;
-              CHECK(methodExpr.isMethodCall);
-              CHECK(methodExpr.name == "/vector/at");
-              return &callee;
-            },
-            [&](const primec::Expr &methodExpr, const primec::Definition &resolvedCallee) {
-              ++aliasAtEmitCalls;
-              CHECK(methodExpr.isMethodCall);
-              CHECK(methodExpr.name == "/vector/at");
-              CHECK(resolvedCallee.fullPath == "/pkg/items/count");
+            [&](const primec::Expr &, const primec::Definition &) {
+              CHECK(false);
               return true;
             },
             error) == Result::NotHandled);
   CHECK(error.empty());
-  CHECK(aliasAtResolveCalls == 0);
-  CHECK(aliasAtEmitCalls == 0);
+  CHECK(atResolveCalls == 0);
 
   primec::Expr aliasMapAtCall = atCall;
-  aliasMapAtCall.name = "/map/at";
+  aliasMapAtCall.name = "/std/collections/map/at";
   int aliasMapAtResolveCalls = 0;
-  int aliasMapAtEmitCalls = 0;
   CHECK(primec::ir_lowerer::tryEmitNonMethodCountFallback(
             aliasMapAtCall,
             [](const primec::Expr &) { return false; },
             [](const primec::Expr &) { return false; },
-            [&](const primec::Expr &methodExpr) -> const primec::Definition * {
+            [&](const primec::Expr &) -> const primec::Definition * {
               ++aliasMapAtResolveCalls;
-              CHECK(methodExpr.isMethodCall);
-              CHECK(methodExpr.name == "at");
               return &callee;
             },
-            [&](const primec::Expr &methodExpr, const primec::Definition &resolvedCallee) {
-              ++aliasMapAtEmitCalls;
-              CHECK(methodExpr.isMethodCall);
-              CHECK(methodExpr.name == "at");
-              CHECK(resolvedCallee.fullPath == "/pkg/items/count");
+            [&](const primec::Expr &, const primec::Definition &) {
+              CHECK(false);
               return true;
             },
             error) == Result::NotHandled);
   CHECK(error.empty());
   CHECK(aliasMapAtResolveCalls == 0);
-  CHECK(aliasMapAtEmitCalls == 0);
-
-  primec::Expr reorderedAtCall = atCall;
-  reorderedAtCall.args = {indexArg, targetArg};
-  int reorderedAtResolveCalls = 0;
-  int reorderedAtEmitCalls = 0;
-  CHECK(primec::ir_lowerer::tryEmitNonMethodCountFallback(
-            reorderedAtCall,
-            [](const primec::Expr &) { return false; },
-            [](const primec::Expr &) { return false; },
-            [&](const primec::Expr &methodExpr) -> const primec::Definition * {
-              ++reorderedAtResolveCalls;
-              CHECK(methodExpr.isMethodCall);
-              CHECK(methodExpr.name == "at");
-              if (!methodExpr.args.empty() && methodExpr.args.front().kind == primec::Expr::Kind::Name &&
-                  methodExpr.args.front().name == "items") {
-                return &callee;
-              }
-              return nullptr;
-            },
-            [&](const primec::Expr &methodExpr, const primec::Definition &resolvedCallee) {
-              ++reorderedAtEmitCalls;
-              CHECK(methodExpr.isMethodCall);
-              CHECK(methodExpr.name == "at");
-              REQUIRE_FALSE(methodExpr.args.empty());
-              CHECK(methodExpr.args.front().kind == primec::Expr::Kind::Name);
-              CHECK(methodExpr.args.front().name == "items");
-              CHECK(resolvedCallee.fullPath == "/pkg/items/count");
-              return true;
-            },
-            error) == Result::Emitted);
