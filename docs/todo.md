@@ -195,9 +195,9 @@ Task template:
 | Compile-pipeline stage and publication-boundary contracts | none |
 | Compile-time macro hooks and AST transform ownership | none |
 | Stdlib surface-style alignment and public helper readability | TODO-4305 |
-| Stdlib bridge consolidation and collection/file/gfx surface authority | TODO-4430, TODO-4464, TODO-4524 |
-| Vector/map stdlib ownership cutover and collection surface authority | TODO-4430, TODO-4464 |
-| Stdlib de-experimentalization and public/internal namespace cleanup | TODO-4430, TODO-4464, TODO-4305, TODO-4524 |
+| Stdlib bridge consolidation and collection/file/gfx surface authority | TODO-4430, TODO-4534 through TODO-4538, TODO-4464, TODO-4524 |
+| Vector/map stdlib ownership cutover and collection surface authority | TODO-4430, TODO-4534 through TODO-4538, TODO-4464 |
+| Stdlib de-experimentalization and public/internal namespace cleanup | TODO-4430, TODO-4534 through TODO-4538, TODO-4464, TODO-4305, TODO-4524 |
 | SoA maturity and `soa` public-surface rename | TODO-4305, TODO-4306, TODO-4514, TODO-4524 |
 | Validator entrypoint and benchmark-plumbing split | none |
 | Semantic-product publication by module and fact family | none |
@@ -226,12 +226,12 @@ Task template:
 | Compile-pipeline stage handoff conformance | none |
 | Semantic-product publication parity and deterministic ordering | none |
 | Lowerer/source-composition contract coverage | none |
-| Vector/map bridge parity for imports, rewrites, and lowering | TODO-4430, TODO-4464 |
-| De-experimentalization surface and namespace parity | TODO-4430, TODO-4464, TODO-4305, TODO-4524 |
+| Vector/map bridge parity for imports, rewrites, and lowering | TODO-4430, TODO-4534 through TODO-4538, TODO-4464 |
+| De-experimentalization surface and namespace parity | TODO-4430, TODO-4534 through TODO-4538, TODO-4464, TODO-4305, TODO-4524 |
 | `soa` maturity and canonical surface parity | TODO-4305, TODO-4306, TODO-4514, TODO-4524 |
 | Focused backend rerun ergonomics and suite partitioning | none |
 | Architecture contract probe migration | none |
-| Emitter map-helper canonicalization parity | TODO-4464 |
+| Emitter map-helper canonicalization parity | TODO-4534 through TODO-4538, TODO-4464 |
 | VM debug-session argv lifetime coverage | none |
 | Debugger/source-map provenance parity | none |
 | Debug trace replay malformed-input coverage | none |
@@ -386,9 +386,9 @@ Task template:
   `test_stdlib_map_ownership.cpp`, and
   all production `src`/`include` experimental-map/`Map__*` backing traces are
   capped by the decaying `scripts/check_map_backing_traces.py` release gate.
-  The broader `scripts/check_map_surface_trace_inventory.py` release gate now
-  caps all current production map-surface trace classes until TODO-4464 deletes
-  or migrates them to reach the strict zero-trace state.
+  The old broad `scripts/check_map_surface_trace_inventory.py` inventory is
+  now historical input for TODO-4538, which replaces it with a fast strict
+  audit before TODO-4464 enforces the final zero-trace state.
 - Compatibility adapter inventory: map insert helper compatibility no longer
   lives in `StdlibSurfaceRegistry::CollectionsMapHelpers`; that metadata now
   recognizes only canonical `/std/collections/map/*` helper spellings.
@@ -1999,8 +1999,8 @@ Task template:
       production traces.
     - `scripts/check_map_surface_trace_inventory.py` is removed, retired, or
       narrowed so it cannot be the hanging routine gate.
-    - The release validation path uses the fast strict audit once TODO-4464
-      reaches zero tolerance.
+    - The release validation path is ready to use the fast strict audit when
+      TODO-4464 enforces zero tolerance.
   - stop_rule: Stop once the fast strict audit is available and wired for the
     final TODO-4464 zero-tolerance gate.
 
@@ -2017,22 +2017,24 @@ Task template:
   - implementation_notes:
     - This is the final acceptance gate, not the active deletion leaf. Use
       TODO-4534 through TODO-4538 for the larger subsystem-removal passes.
-    - Extend the validation-script model used by vector and the map adapter
-      trace check to scan production C++ under `src/` and `include/` for
-      PrimeStruct-map-specific traces such as `/map`,
-      `/std/collections/map`, `experimental_map`, `mapCount`, `mapContains`,
-      `mapTryAt`, `mapAt`, `mapInsert`, `Map<K`, map-specific diagnostics,
-      and map-specific parser/semantic/lowering branch names.
+    - Use the fast strict audit produced by TODO-4538 to scan production C++
+      under `src/` and `include/` for PrimeStruct-map-specific traces such as
+      `/map`, `/std/collections/map`, `experimental_map`, `mapCount`,
+      `mapContains`, `mapTryAt`, `mapAt`, `mapInsert`, `Map<K`, map-specific
+      diagnostics, and map-specific parser/semantic/lowering branch names.
     - The check must allow ordinary C++ library usage such as `std::map`,
       generic mapping variable names, source-map infrastructure, and test/docs
       files outside production `src/` and `include/`.
     - If generic collection code needs examples or fixtures, place them in
       tests/docs or stdlib-owned manifests rather than production C++ strings.
-    - Start from the TODO-4473 decaying full-trace inventory in
-      `scripts/check_map_surface_trace_inventory.py`, the TODO-4472
-      backing-trace inventory in `scripts/check_map_backing_traces.py`, and
-      the narrower TODO-4468 source-lock in
-      `tests/unit/test_stdlib_map_ownership.cpp`.
+    - Treat the TODO-4473 decaying full-trace inventory in
+      `scripts/check_map_surface_trace_inventory.py` and the TODO-4472
+      backing-trace inventory in `scripts/check_map_backing_traces.py` as
+      historical trace-class inputs only; do not keep or reintroduce the broad
+      decaying inventory as the routine final gate.
+    - Keep the narrower TODO-4468 source-lock coverage in
+      `tests/unit/test_stdlib_map_ownership.cpp` as behavior and boundary
+      coverage.
     - TODO-4474 removed frontend syntax normalization for slashless map helper
       import aliases, so `src/FrontendSyntax.cpp` should stay absent from the
       map-surface trace inventory.
@@ -2085,18 +2087,17 @@ Task template:
       support; canonical-constructor-to-backing-helper rewrites; generated
       `map__` constructor reentry; and broad backing fallback blockers in
       setup-type/later collection-expression lowering.
-    - 2026-05-16: `stdlib/std/collections/map2.prime` now exists as an
-      isolated replacement candidate with no imports or references to
-      `map.prime`, `internal_map.prime`, `experimental_map.prime`, `/map/*`,
-      `Map__*`, or `CollectionsMap*`. It deliberately uses unique helper
-      names such as `map2Get` and `map2Insert` while the old C++ map hooks
-      still reserve canonical `at`/`insert`/method-sugar behavior; the final
-      cutover should delete the legacy hooks first, then rename `map2` and
-      its helpers to the canonical map surface.
+    - Historical note: `stdlib/std/collections/map2.prime` was an isolated
+      replacement candidate while the old C++ map hooks still reserved
+      canonical `at`/`insert`/method-sugar behavior. Later 2026-05-16 work
+      moved the stdlib-owned `MapValue` implementation into
+      `stdlib/std/collections/map.prime`; the active path is now deleting the
+      remaining production C++ hooks around the current `map.prime`, not a new
+      `map2` rename plan.
     - 2026-05-16: Primitive key equality moved out of `internal_map.prime`
-      into `stdlib/std/collections/equality.prime`, so the isolated `map2`
-      candidate can support string-key lookup without importing the old map
-      implementation. The vector/SoA uninitialized-buffer frees now route
+      into `stdlib/std/collections/equality.prime`, so the stdlib-owned map
+      implementation can support string-key lookup without importing the old
+      map implementation. The vector/SoA uninitialized-buffer frees now route
       through `bufferFreeUninitialized<T>` to avoid parse-sensitive explicit
       nested template calls in statement position.
     - 2026-05-16: `stdlib/std/collections/map.prime` now carries a
