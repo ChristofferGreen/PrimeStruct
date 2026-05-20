@@ -5593,7 +5593,7 @@ std::optional<semantics::BindingInfo> extractDefinitionReturnBinding(const Defin
   return std::nullopt;
 }
 
-std::string_view resolveBuiltinMapInsertSurfaceMemberName(std::string_view name) {
+std::string_view resolveBuiltinKeyValueInsertSurfaceMemberName(std::string_view name) {
   const StdlibSurfaceMetadata *metadata =
       mapHelperSurfaceMetadataLocal();
   if (metadata == nullptr) {
@@ -5616,7 +5616,7 @@ std::string_view resolveBuiltinMapInsertSurfaceMemberName(std::string_view name)
   return {};
 }
 
-std::string canonicalBuiltinMapInsertSurfacePath(bool receiverIsReference) {
+std::string canonicalBuiltinKeyValueInsertSurfacePath(bool receiverIsReference) {
   const StdlibSurfaceMetadata *metadata = mapHelperSurfaceMetadataLocal();
   if (metadata == nullptr) {
     return {};
@@ -5626,7 +5626,7 @@ std::string canonicalBuiltinMapInsertSurfacePath(bool receiverIsReference) {
       receiverIsReference ? "insert_ref" : "insert");
 }
 
-std::string resolveBuiltinMapReadSurfaceMemberName(std::string_view name) {
+std::string resolveBuiltinKeyValueReadSurfaceMemberName(std::string_view name) {
   std::string normalizedName(name);
   if (!normalizedName.empty() && normalizedName.front() == '/') {
     normalizedName.erase(normalizedName.begin());
@@ -5650,27 +5650,27 @@ std::string resolveBuiltinMapReadSurfaceMemberName(std::string_view name) {
   return {};
 }
 
-bool isBuiltinMapReadHelperName(std::string_view name) {
-  return !resolveBuiltinMapReadSurfaceMemberName(name).empty();
+bool isBuiltinKeyValueReadHelperName(std::string_view name) {
+  return !resolveBuiltinKeyValueReadSurfaceMemberName(name).empty();
 }
 
-bool isCanonicalBuiltinMapReadHelperName(std::string_view name) {
+bool isCanonicalBuiltinKeyValueReadHelperName(std::string_view name) {
   return name == "count" || name == "count_ref" ||
          name == "contains" || name == "contains_ref" ||
          name == "tryAt" || name == "tryAt_ref";
 }
 
-bool isBuiltinMapInsertValueHelperName(std::string_view name) {
-  return resolveBuiltinMapInsertSurfaceMemberName(name) == "insert";
+bool isBuiltinKeyValueInsertValueHelperName(std::string_view name) {
+  return resolveBuiltinKeyValueInsertSurfaceMemberName(name) == "insert";
 }
 
-bool isBuiltinMapInsertReferenceHelperName(std::string_view name) {
-  return resolveBuiltinMapInsertSurfaceMemberName(name) == "insert_ref";
+bool isBuiltinKeyValueInsertReferenceHelperName(std::string_view name) {
+  return resolveBuiltinKeyValueInsertSurfaceMemberName(name) == "insert_ref";
 }
 
-bool isBuiltinMapInsertHelperName(std::string_view name) {
-  return isBuiltinMapInsertValueHelperName(name) ||
-         isBuiltinMapInsertReferenceHelperName(name);
+bool isBuiltinKeyValueInsertHelperName(std::string_view name) {
+  return isBuiltinKeyValueInsertValueHelperName(name) ||
+         isBuiltinKeyValueInsertReferenceHelperName(name);
 }
 
 bool isBuiltinCanonicalMapConstructorExpr(
@@ -5832,13 +5832,13 @@ void rewriteBuiltinMapInsertExpr(
   }
 
   const bool matchesBuiltinReadMethod =
-      expr.isMethodCall && isBuiltinMapReadHelperName(expr.name);
+      expr.isMethodCall && isBuiltinKeyValueReadHelperName(expr.name);
   const std::string scopedExprName =
       !expr.namespacePrefix.empty() && expr.name.find('/') == std::string::npos
           ? expr.namespacePrefix + "/" + expr.name
           : expr.name;
   const std::string directReadHelper =
-      !expr.isMethodCall ? resolveBuiltinMapReadSurfaceMemberName(scopedExprName)
+      !expr.isMethodCall ? resolveBuiltinKeyValueReadSurfaceMemberName(scopedExprName)
                          : std::string{};
   const bool matchesBuiltinAccessCall =
       directReadHelper == "at" || directReadHelper == "at_unsafe";
@@ -5897,12 +5897,12 @@ void rewriteBuiltinMapInsertExpr(
     const bool receiverIsReference =
         isBuiltinKeyValueReferenceBinding(*receiverBinding);
     std::string helperName(
-        resolveBuiltinMapReadSurfaceMemberName(scopedExprName));
+        resolveBuiltinKeyValueReadSurfaceMemberName(scopedExprName));
     if (helperName.empty()) {
       return;
     }
     const bool isCanonicalMapReadHelper =
-        isCanonicalBuiltinMapReadHelperName(helperName);
+        isCanonicalBuiltinKeyValueReadHelperName(helperName);
     if (helperName == "count_ref") {
       helperName = "count";
     } else if (helperName == "contains_ref") {
@@ -5948,9 +5948,9 @@ void rewriteBuiltinMapInsertExpr(
   }
 
   const bool matchesBuiltinInsertMethod =
-      expr.isMethodCall && isBuiltinMapInsertHelperName(expr.name);
+      expr.isMethodCall && isBuiltinKeyValueInsertHelperName(expr.name);
   const bool matchesBuiltinInsertCall =
-      !expr.isMethodCall && isBuiltinMapInsertHelperName(expr.name);
+      !expr.isMethodCall && isBuiltinKeyValueInsertHelperName(expr.name);
   if (!matchesBuiltinInsertMethod && !matchesBuiltinInsertCall) {
     return;
   }
@@ -5963,9 +5963,9 @@ void rewriteBuiltinMapInsertExpr(
   }
   const bool receiverIsReference = isBuiltinKeyValueReferenceBinding(*receiverBinding);
   const bool expectsReferenceSurface =
-      !expr.isMethodCall && isBuiltinMapInsertReferenceHelperName(expr.name);
+      !expr.isMethodCall && isBuiltinKeyValueInsertReferenceHelperName(expr.name);
   const bool expectsValueSurface =
-      !expr.isMethodCall && isBuiltinMapInsertValueHelperName(expr.name);
+      !expr.isMethodCall && isBuiltinKeyValueInsertValueHelperName(expr.name);
   if ((expectsReferenceSurface && !receiverIsReference) ||
       (expectsValueSurface && receiverIsReference)) {
     return;
@@ -5978,7 +5978,7 @@ void rewriteBuiltinMapInsertExpr(
     return;
   }
   const std::string canonicalInsertPath =
-      canonicalBuiltinMapInsertSurfacePath(receiverIsReference);
+      canonicalBuiltinKeyValueInsertSurfacePath(receiverIsReference);
   if (canonicalInsertPath.empty()) {
     return;
   }

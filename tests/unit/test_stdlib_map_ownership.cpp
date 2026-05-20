@@ -629,7 +629,38 @@ TEST_CASE("canonical map surface owns standalone stdlib implementation") {
         std::string::npos);
   CHECK(semanticsSource.find("kBuiltinCanonicalMapInsertBuiltinPath") == std::string::npos);
   CHECK(semanticsSource.find("\"/std/collections/map/insert_builtin\"") == std::string::npos);
-  CHECK(semanticsSource.find("isCanonicalBuiltinMapReadHelperName") != std::string::npos);
+  CHECK(semanticsSource.find("resolveBuiltinMapInsertSurfaceMemberName") ==
+        std::string::npos);
+  CHECK(semanticsSource.find("canonicalBuiltinMapInsertSurfacePath") ==
+        std::string::npos);
+  CHECK(semanticsSource.find("resolveBuiltinMapReadSurfaceMemberName") ==
+        std::string::npos);
+  CHECK(semanticsSource.find("isBuiltinMapReadHelperName") ==
+        std::string::npos);
+  CHECK(semanticsSource.find("isCanonicalBuiltinMapReadHelperName") ==
+        std::string::npos);
+  CHECK(semanticsSource.find("isBuiltinMapInsertValueHelperName") ==
+        std::string::npos);
+  CHECK(semanticsSource.find("isBuiltinMapInsertReferenceHelperName") ==
+        std::string::npos);
+  CHECK(semanticsSource.find("isBuiltinMapInsertHelperName") ==
+        std::string::npos);
+  CHECK(semanticsSource.find("resolveBuiltinKeyValueInsertSurfaceMemberName") !=
+        std::string::npos);
+  CHECK(semanticsSource.find("canonicalBuiltinKeyValueInsertSurfacePath") !=
+        std::string::npos);
+  CHECK(semanticsSource.find("resolveBuiltinKeyValueReadSurfaceMemberName") !=
+        std::string::npos);
+  CHECK(semanticsSource.find("isBuiltinKeyValueReadHelperName") !=
+        std::string::npos);
+  CHECK(semanticsSource.find("isCanonicalBuiltinKeyValueReadHelperName") !=
+        std::string::npos);
+  CHECK(semanticsSource.find("isBuiltinKeyValueInsertValueHelperName") !=
+        std::string::npos);
+  CHECK(semanticsSource.find("isBuiltinKeyValueInsertReferenceHelperName") !=
+        std::string::npos);
+  CHECK(semanticsSource.find("isBuiltinKeyValueInsertHelperName") !=
+        std::string::npos);
   CHECK(semanticsSource.find(
             "StdlibSurfaceId::CollectionsMapHelpers") == std::string::npos);
   CHECK(semanticsSource.find(

@@ -194,7 +194,8 @@ This file stores durable session-derived facts that are useful in later work. Ke
   semantic-validate value method helpers should use key/value names too;
   slashless semantic diagnostic helpers should use key/value names too;
   builtin semantic mutation/reference binding classifiers should use
-  key/value names too.
+  key/value names too; builtin semantic read/insert surface helpers should
+  use key/value names too.
   The stdlib ownership source lock rejects the old map-helper, map-count,
   map-access, and removed map compatibility names.
 
