@@ -405,8 +405,8 @@ TEST_CASE("ir lowerer call helpers dispatch native call tail orchestration") {
             instructionCount,
             emitInstruction,
             patchInstructionImm,
-            error) == Result::Error);
-  CHECK(error == "at requires exactly two arguments");
+            error) == Result::NotHandled);
+  CHECK(error.empty());
 
   primec::Expr accessCall;
   accessCall.kind = primec::Expr::Kind::Call;
@@ -441,9 +441,9 @@ TEST_CASE("ir lowerer call helpers dispatch native call tail orchestration") {
             instructionCount,
             emitInstruction,
             patchInstructionImm,
-            error) == Result::Emitted);
+            error) == Result::NotHandled);
   CHECK(error.empty());
-  CHECK_FALSE(instructions.empty());
+  CHECK(instructions.empty());
 
   primec::Expr plainCall;
   plainCall.kind = primec::Expr::Kind::Call;
