@@ -10,13 +10,16 @@
   string-valued map runtime fixture has since been retargeted to compile-only
   coverage because native runtime string-valued maps still hang after
   compilation.
-- `PrimeStruct_compile_run_tests --test-suite=primestruct.compile.run.native_backend.core --order-by=file --source-file="*test_compile_run_native_backend_core_*.cpp" --first=1 --last=10`
-  is not a clean gate as of 2026-05-20. The shard still contains stale native
-  variadic `args<T>` fixtures that expect expression-lowered `at`/`at_unsafe`
-  calls and scalar-pointer pack access to run on the native backend; focused
-  tuple TODO-4273 validation below does not depend on that shard.
 
 ## Recent Test Runs
+- 2026-05-21 00:31 CEST | pass | mode: release | command:
+  `cmake --build build-release --target PrimeStruct_compile_run_tests -j 1`;
+  `cd build-release && ./PrimeStruct_compile_run_tests --test-suite=primestruct.compile.run.native_backend.core --order-by=file --source-file="*test_compile_run_native_backend_core_*.cpp" --first=1 --last=10 --no-skip`
+  | failures: none | notes: Stabilized the logged native-core variadic
+  shard by retargeting stale positive `args<T>` native runtime fixtures to
+  deterministic negative coverage for unsupported expression `at`/`at_unsafe`,
+  retired SoA, native map constructor/count, and borrowed pointer-pack access
+  surfaces.
 - 2026-05-21 00:24 CEST | pass | mode: release | command:
   `cmake --build build-release --target PrimeStruct_parser_tests PrimeStruct_compile_run_tests -j 1`;
   `cd build-release && ./PrimeStruct_parser_tests --test-suite=primestruct.parser.templates --no-skip`;
@@ -4842,6 +4845,12 @@
 - 2026-05-12 17:28 local | fail | mode: release | command: `./scripts/compile.sh --release` | failures: 146 CTest targets | notes: baseline after preflight checkpoint failed; stabilization blocks TODO work
 
 ## Resolved Failures
+- [x] native-core variadic args first shard | resolved: 2026-05-21 00:31
+  CEST | validating command: `cmake --build build-release --target PrimeStruct_compile_run_tests -j 1`;
+  `cd build-release && ./PrimeStruct_compile_run_tests --test-suite=primestruct.compile.run.native_backend.core --order-by=file --source-file="*test_compile_run_native_backend_core_*.cpp" --first=1 --last=10 --no-skip`
+  | notes: stale positive native runtime fixtures now assert deterministic
+  rejects for unsupported expression `at`/`at_unsafe`, retired SoA, native map
+  constructor/count, and borrowed pointer-pack access surfaces.
 - [x] count/access classifier and string map emission | resolved: 2026-05-20 13:08 CEST | validating command: `cmake --build build-release --target PrimeStruct_backend_ir_tests`; `cd build-release && ./PrimeStruct_backend_ir_tests --test-case="ir lowerer count access classifiers prefer semantic indexed target facts,ir lowerer count access helpers defer string map access emission" --no-skip` | notes: retargeted syntax-only indexed target classification to false and string map access count emission to current deferral with no instructions.
 - [x] setup type bare access return kinds | resolved: 2026-05-20 13:05 CEST | validating command: `cmake --build build-release --target PrimeStruct_backend_ir_tests`; `cd build-release && ./PrimeStruct_backend_ir_tests --test-case="ir lowerer setup type helper defers bare access call method return kinds" --no-skip` | notes: retargeted stale bare `at`/`at_unsafe` direct return-kind expectations to current deferral with unknown kind and unresolved method facts.
 - [x] native call tail bare access orchestration | resolved: 2026-05-20 13:04 CEST | validating command: `cmake --build build-release --target PrimeStruct_backend_ir_tests`; `cd build-release && ./PrimeStruct_backend_ir_tests --test-case="ir lowerer call helpers dispatch native call tail orchestration" --no-skip` | notes: retargeted malformed and valid bare `at(...)` native-tail probes to current `NotHandled` deferral with empty diagnostics and no instructions.
