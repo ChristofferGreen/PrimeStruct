@@ -27,7 +27,7 @@ TEST_CASE("uninitialized not allowed as user template arg") {
         std::string::npos);
 }
 
-TEST_CASE("uninitialized canonical map template arg keeps map key value diagnostics") {
+TEST_CASE("uninitialized canonical map template arg validates as stdlib type") {
   primec::Program program;
   primec::Transform canonicalMapTransform;
   canonicalMapTransform.name = "/std/collections/map";
@@ -40,8 +40,8 @@ TEST_CASE("uninitialized canonical map template arg keeps map key value diagnost
                                                {makeTransform("return", std::string("void"))},
                                                {binding, makeCall("/return")}));
   std::string error;
-  CHECK_FALSE(validateProgram(program, "/main", error));
-  CHECK(error.find("uninitialized storage is not allowed in map key/value types") != std::string::npos);
+  CHECK(validateProgram(program, "/main", error));
+  CHECK(error.empty());
 }
 
 TEST_CASE("canonical map template arg without uninitialized validates") {
@@ -511,4 +511,3 @@ TEST_CASE("for condition binding requires bool in manual AST") {
   CHECK_FALSE(validateProgram(program, "/main", error));
   CHECK(error.find("for condition requires bool") != std::string::npos);
 }
-
