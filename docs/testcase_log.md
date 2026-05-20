@@ -10,11 +10,6 @@
   string-valued map runtime fixture has since been retargeted to compile-only
   coverage because native runtime string-valued maps still hang after
   compilation.
-- `PrimeStruct_semantics_tests --test-case="non-imported wrapper-returned canonical map reference access keeps primitive receiver diagnostics" --no-skip`
-  has a stale diagnostic expectation after the map stdlib-ownership cutover.
-  On 2026-05-17 the case still rejected the program, but no longer emitted
-  the old `unknown method: /i32/count` text; adjacent map access string-count
-  shadow and return-mismatch method-resolution coverage still passes.
 - `PrimeStruct_semantics_tests --test-case="map namespaced count method compatibility alias is rejected" --no-skip`
   is stale after the map stdlib-ownership cutover. On 2026-05-17 it
   validated `values./map/count()` successfully instead of rejecting with the
@@ -73,6 +68,12 @@
   the string-valued map access emission fixture returned `NotHandled`.
 
 ## Recent Test Runs
+- 2026-05-20 12:40 CEST | pass | mode: release | command:
+  `cmake --build build-release --target PrimeStruct_semantics_tests`;
+  `cd build-release && ./PrimeStruct_semantics_tests --test-case="non-imported wrapper-returned canonical map reference access rejects missing at_ref" --no-skip`
+  | failures: none | notes: non-imported wrapper-returned canonical map
+  reference access now locks the current missing `/std/collections/map/at_ref`
+  diagnostic before primitive receiver method typing.
 - 2026-05-20 12:37 CEST | pass | mode: release | command:
   `cmake --build build-release --target PrimeStruct_semantics_tests`;
   `cd build-release && ./PrimeStruct_semantics_tests --test-case="canonical map borrowed receiver rejects direct stdlib contains,canonical map borrowed receiver rejects direct stdlib contains before key diagnostics" --no-skip`
@@ -4640,6 +4641,7 @@
 - 2026-05-12 17:28 local | fail | mode: release | command: `./scripts/compile.sh --release` | failures: 146 CTest targets | notes: baseline after preflight checkpoint failed; stabilization blocks TODO work
 
 ## Resolved Failures
+- [x] non-imported wrapper map reference access diagnostic | resolved: 2026-05-20 12:40 CEST | validating command: `cmake --build build-release --target PrimeStruct_semantics_tests`; `cd build-release && ./PrimeStruct_semantics_tests --test-case="non-imported wrapper-returned canonical map reference access rejects missing at_ref" --no-skip` | notes: retargeted stale primitive receiver diagnostic text to the current missing `/std/collections/map/at_ref` call-target diagnostic.
 - [x] borrowed receiver direct map contains semantics | resolved: 2026-05-20 12:37 CEST | validating command: `cmake --build build-release --target PrimeStruct_semantics_tests`; `cd build-release && ./PrimeStruct_semantics_tests --test-case="canonical map borrowed receiver rejects direct stdlib contains,canonical map borrowed receiver rejects direct stdlib contains before key diagnostics" --no-skip` | notes: retargeted stale borrowed receiver direct `contains` validation to current unknown-call-target diagnostics for `/std/collections/map/contains`.
 - [x] helper-wrapped explicit map parameter fixture | resolved: 2026-05-20 12:35 CEST | validating command: `cmake --build build-release --target PrimeStruct_semantics_tests`; `cd build-release && ./PrimeStruct_semantics_tests --test-case="helper-wrapped map constructors reject explicit experimental map parameters" --no-skip` | notes: retargeted stale helper-wrapped canonical map constructor acceptance to the current explicit map parameter mismatch diagnostic.
 - [x] uninitialized canonical map template arg diagnostic | resolved: 2026-05-20 12:33 CEST | validating command: `cmake --build build-release --target PrimeStruct_misc_tests`; `cd build-release && ./PrimeStruct_misc_tests --test-case="uninitialized canonical map template arg validates as stdlib type" --no-skip` | notes: retargeted stale builtin map key/value diagnostics to current stdlib-owned canonical map type validation.

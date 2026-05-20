@@ -392,7 +392,7 @@ main() {
   [vector<i32>] values{vector<i32>(1i32)}
   return(count(/std/collections/vector/at_unsafe(values, 0i32)))
 }
-  )";
+)";
   std::string error;
   CHECK(validateProgram(source, "/main", error));
   CHECK(error.empty());
@@ -654,7 +654,7 @@ main() {
   CHECK(error.empty());
 }
 
-TEST_CASE("non-imported wrapper-returned canonical map reference access keeps primitive receiver diagnostics") {
+TEST_CASE("non-imported wrapper-returned canonical map reference access rejects missing at_ref") {
   const std::string source = R"(
 [return<Reference</std/collections/map<i32, i32>>>]
 borrowMap([Reference</std/collections/map<i32, i32>>] values) {
@@ -671,10 +671,13 @@ main() {
   [/std/collections/map<i32, i32>] values{map<i32, i32>(1i32, 4i32)}
   return(/std/collections/map/at(borrowMap(location(values)), 1i32).count())
 }
-)";
+  )";
   std::string error;
-  CHECK_FALSE(validateProgram(source, "/main", error));
-  CHECK(error.find("unknown method: /i32/count") != std::string::npos);
+  const bool validated = validateProgram(source, "/main", error);
+  INFO(error);
+  CHECK_FALSE(validated);
+  CHECK(error.find("unknown call target: /std/collections/map/at_ref") !=
+        std::string::npos);
 }
 
 TEST_CASE("wrapper-returned referenced canonical map access count call auto inference keeps string helper mismatch diagnostics") {
