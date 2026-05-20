@@ -17,6 +17,13 @@
   tuple TODO-4273 validation below does not depend on that shard.
 
 ## Recent Test Runs
+- 2026-05-20 23:57 CEST | pass | mode: release | command:
+  `cmake --build build-release --target primec PrimeStruct_compile_run_tests -j 1`;
+  `cd build-release && ./PrimeStruct_compile_run_tests --test-case="native destructures stdlib tuple values,native reports tuple destructuring diagnostics,native infers heterogeneous stdlib tuple make_tuple,native uses tuple bracket indexing sugar,native uses imported stdlib tuple get helpers,todo queue and skipped doctest debt stay source locked" --no-skip`
+  | failures: none | notes: TODO-4277 adds named-value tuple
+  destructuring, lowers it to ordinary `/std/tuple/get<I, Ts...>` helper
+  bindings, and covers mixed bracket entries, non-tuple operands, arity
+  mismatch, duplicate-name diagnostics, and borrowed tuple operand rejection.
 - 2026-05-20 23:46 CEST | pass | mode: release | command:
   `cmake --build build-release --target primec PrimeStruct_compile_run_tests`;
   `cd build-release && ./PrimeStruct_compile_run_tests --test-case="native infers heterogeneous stdlib tuple make_tuple,native reports stdlib tuple make_tuple diagnostics,native uses tuple bracket indexing sugar,native reports tuple bracket index diagnostics,native uses imported stdlib tuple get helpers,native reports stdlib tuple get index diagnostics,todo queue and skipped doctest debt stay source locked" --no-skip`

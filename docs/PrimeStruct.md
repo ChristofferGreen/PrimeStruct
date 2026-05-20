@@ -2194,7 +2194,7 @@ explicit `utf8`/`ascii` suffix.** `ascii` enforces 7-bit ASCII (the compiler rej
   - **Bracket-list name binding rule:** `[...]` is contextual. Entries already known in the current syntactic position
     keep their transform, type-envelope, modifier, or label meaning. When the grammar expects a binding pattern, fresh
     identifiers inside the bracket list introduce new names. This preserves existing forms such as `[i32] count{0i32}`
-    and `[mut] value{0i32}` while allowing future destructuring forms such as `[left right] pair`; mixed or ambiguous
+    and `[mut] value{0i32}` while allowing tuple destructuring forms such as `[left right] pair`; mixed or ambiguous
     lists must be diagnosed deterministically rather than silently reinterpreted.
   - `<...>` supplies compile-time envelopes/templates today and is the planned general compile-time argument channel.
     Future compile-time primitives such as `typeof<value>` use this same channel rather than pretending to be runtime
@@ -2324,13 +2324,17 @@ explicit `utf8`/`ascii` suffix.** `ascii` enforces 7-bit ASCII (the compiler rej
   `Ts...` pack from positional values and constructs the same ordinary
   `tuple<Ts...>` storage, including `make_tuple()` as `tuple<>`; named pack
   arguments and homogeneous `args<T>` spread forwarding are rejected.
+  Tuple destructuring, such as `[left right] pair`, is accepted for named
+  ordinary tuple values and lowers to the same `get<I, Ts...>` helper path in
+  tuple order. Destructuring rejects non-tuple operands, arity mismatches,
+  duplicate names, mixed type/modifier entries, and borrowed tuple operands.
   Imported `get_ref<I, Ts...>(location(value))` type-checks as
   `Reference<TI>` when borrowed field access is available, but direct native
   runtime dereference of returned tuple element references is still treated as
   a backend support boundary rather than a tuple-specific opcode. Tuple arity
   and element order are available through the same generated field/reflection
-  metadata used by pack-expanded structs. Tuple destructuring and multi-wait
-  integration remain follow-up sugar over this stdlib tuple surface.
+  metadata used by pack-expanded structs. Multi-wait integration remains
+  follow-up sugar over this stdlib tuple surface.
 - **Definitions vs executions:** definitions include a body (`{…}`) and optional transforms; executions are call-style
   (`execute_task<…>(args)`) with mandatory parentheses and no body, and map to an envelope with an implicit empty body.
   Calls always use `()`; the `name{...}` form is reserved for bindings so `execute_task{...}` is invalid.

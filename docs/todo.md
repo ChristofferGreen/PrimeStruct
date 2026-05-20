@@ -83,8 +83,8 @@ Task template:
 
 ### Ready Now (Parallel-Candidate Leaves; No Unmet TODO Dependencies)
 
-- TODO-4277: Add tuple destructuring sugar | track: tuple-type-packs |
-  primary surface: bind elements from ordinary stdlib tuple values
+- TODO-4278: Integrate multi-wait with stdlib tuple | track: tuple-type-packs |
+  primary surface: return ordinary stdlib tuple values from multi-wait
 
 ### Parallel Work Tracks (Current)
 
@@ -104,8 +104,8 @@ Task template:
 - `tuple-type-packs`: TODO-4276 completed helper/lifecycle pack
   expansion, TODO-4271 added compile-time pack indexing, TODO-4272 added
   the initial stdlib tuple surface, and TODO-4274 added tuple bracket
-  indexing, and TODO-4273 added heterogeneous `make_tuple` inference; ready
-  TODO-4277, then serial successor TODO-4278.
+  indexing, TODO-4273 added heterogeneous `make_tuple` inference, and
+  TODO-4277 added tuple destructuring; ready TODO-4278.
 - `procedural-genericity`: blocked by the tuple-type-packs successor chain
   before TODO-4331 can start.
 - `generic-requirements`: blocked by TODO-4331 and TODO-4334 before
@@ -113,7 +113,6 @@ Task template:
 
 ### Immediate Next 10 (Track Successors; Not Ready Until Dependencies Land)
 
-- TODO-4277: Add tuple destructuring sugar
 - TODO-4278: Integrate multi-wait with stdlib tuple
 
 ### Priority Lanes (Current)
@@ -131,8 +130,8 @@ Task template:
   template-monomorph residue; TODO-4533 removed lowerer call-resolution
   residual bridge traces; TODO-4528 removed lowerer count/access residue; and
   TODO-4529 replaced the residue inventory with a strict zero audit
-- Deferred generic tuple substrate: ready TODO-4277 after TODO-4273 added
-  heterogeneous `make_tuple` inference, followed by TODO-4278
+- Deferred generic tuple substrate: ready TODO-4278 after TODO-4277 added
+  tuple destructuring sugar over ordinary stdlib tuple values
 - Procedural compile-time genericity: TODO-4331 -> TODO-4332
   -> TODO-4333 -> TODO-4334 -> TODO-4335 -> TODO-4336 -> TODO-4337
   -> TODO-4338 -> TODO-4339 -> TODO-4340
@@ -144,7 +143,6 @@ Task template:
 
 ### Execution Queue (Recommended Track Order)
 
-- TODO-4277: Add tuple destructuring sugar
 - TODO-4278: Integrate multi-wait with stdlib tuple
 - TODO-4331: Implement compile-time argument channel model
 - TODO-4332: Add bare zero-arg execution syntax
@@ -753,43 +751,6 @@ Task template:
   skipped coverage is not a stable end state.
 
 ### Task Blocks
-
-- [ ] TODO-4277: Add tuple destructuring sugar
-  - owner: ai
-  - created_at: 2026-04-27
-  - phase: Deferred generic tuple substrate
-  - depends_on: TODO-4273
-  - scope: Add tuple destructuring binding sugar over ordinary `tuple<...>`
-    values without involving task spawning or multi-wait.
-  - implementation_notes:
-    - Start from parser binding forms, semantic validation, and tuple indexed
-      access from TODO-4272/TODO-4274.
-    - Follow the bracket-list name binding rule in `docs/PrimeStruct.md`, as
-      summarized by `docs/TuplePrototype.md`: known bracket entries keep their
-      existing transform/type/modifier meaning, while fresh identifiers in a
-      destructuring pattern introduce new bindings.
-    - Destructuring should lower to `get<I>` calls, bracket-index facts, or
-      equivalent semantic facts over ordinary tuple values; do not introduce a
-      separate product type.
-    - Keep mutable and borrowed destructuring narrow; split advanced patterns
-      into follow-ups if needed.
-  - acceptance:
-    - tuple destructuring accepts a documented binding form such as
-      `[left right] tupleValue` or the accepted final syntax and binds elements
-      in tuple order.
-    - Parser and semantic diagnostics distinguish destructuring patterns from
-      existing transform/type bracket lists, including cases where one bracket
-      entry is already known and another is fresh.
-    - Destructuring rejects arity mismatch, non-tuple operands, duplicate
-      binding names, and unsupported mutable/borrowed patterns with stable
-      diagnostics.
-    - Destructured element bindings have the precise element types and obey
-      normal move/copy/borrow rules.
-    - Docs and examples show destructuring as sugar over ordinary stdlib
-      `tuple`, not as a separate product type.
-    - `./scripts/compile.sh --release` passes.
-  - stop_rule: Stop once tuple destructuring works for ordinary tuple values;
-    leave multi-wait integration to TODO-4278.
 
 - [ ] TODO-4278: Integrate multi-wait with stdlib tuple
   - owner: ai

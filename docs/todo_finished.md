@@ -6,6 +6,34 @@ Legend:
 Finished items are periodically archived here from `docs/todo.md`; section headers record the archive date.
 
 **Todo Completion (May 20, 2026)**
+- [x] TODO-4277: Add tuple destructuring sugar
+  - owner: ai
+  - created_at: 2026-04-27
+  - finished_at: 2026-05-20
+  - phase: Deferred generic tuple substrate
+  - parallel_track: tuple-type-packs
+  - depends_on: TODO-4273
+  - scope: Add tuple destructuring binding sugar over ordinary `tuple<...>`
+    values without involving task spawning or multi-wait.
+  - outcome:
+    - Expanded `[left right] tupleValue` style statements during template
+      monomorphization into ordinary `[auto]` bindings initialized from
+      `/std/tuple/get<I, Ts...>(tupleValue)`.
+    - Kept destructuring tied to ordinary stdlib tuple values, with no
+      separate product type, tuple opcode, or backend tuple runtime object.
+    - Added stable diagnostics for mixed known/fresh bracket entries,
+      non-tuple operands, arity mismatches, duplicate destructured names, and
+      borrowed tuple operands.
+    - Documented destructuring as sugar over named tuple values and promoted
+      TODO-4278 as the next Ready Now tuple leaf.
+  - validation:
+    - `cmake --build build-release --target primec PrimeStruct_compile_run_tests -j 1`
+      passed.
+    - `cd build-release && ./PrimeStruct_compile_run_tests --test-case="native destructures stdlib tuple values,native reports tuple destructuring diagnostics,native infers heterogeneous stdlib tuple make_tuple,native uses tuple bracket indexing sugar,native uses imported stdlib tuple get helpers,todo queue and skipped doctest debt stay source locked" --no-skip`
+      passed.
+    - Full `./scripts/compile.sh --release` remains deferred by the lite
+      workflow.
+
 - [x] TODO-4273: Add heterogeneous value-pack inference
   - owner: ai
   - created_at: 2026-04-27

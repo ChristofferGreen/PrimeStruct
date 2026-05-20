@@ -1709,15 +1709,20 @@ This file stores durable session-derived facts that are useful in later work. Ke
   `make_tuple<Ts...>([Ts...] values)` for inferred heterogeneous construction.
   Tuple bracket access such as `pair[0]` is compile-time sugar that rewrites to
   the same stdlib `get` path during monomorphization; runtime tuple index
-  variables are rejected. There are no tuple-specific C++ opcodes, fixed-arity
-  tuple families, or backend tuple runtime objects in this slice.
+  variables are rejected. Tuple destructuring over named values, such as
+  `[left right] pair`, expands during monomorphization into ordinary `[auto]`
+  bindings initialized from `/std/tuple/get<I, Ts...>(pair)`. There are no
+  tuple-specific C++ opcodes, fixed-arity tuple families, or backend tuple
+  runtime objects in this slice.
 - Evidence: `stdlib/std/tuple/tuple.prime` defines the public surface; focused
   native compile-run coverage imports `/std/tuple/*`, constructs `tuple<T>`,
   `tuple<T0, T1>`, `tuple<>`, and inferred `make_tuple(11i32, "x", true)`,
   compile-checks borrowed `get_ref`, locks out-of-range `get` diagnostics
   through the ordinary pack-index path, and covers tuple bracket success,
   runtime-index rejection, named `make_tuple` rejection, and unsupported spread
-  forwarding diagnostics.
+  forwarding diagnostics. Additional TODO-4277 coverage locks successful
+  tuple destructuring plus mixed bracket-entry, non-tuple operand, arity
+  mismatch, duplicate-name, and borrowed operand diagnostics.
 
 ### variadic-borrowed-pointer-packs-are-supported
 - Updated: 2026-05-01

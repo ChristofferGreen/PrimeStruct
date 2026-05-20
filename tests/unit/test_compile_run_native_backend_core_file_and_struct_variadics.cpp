@@ -828,6 +828,110 @@ main() {
         std::string::npos);
 }
 
+TEST_CASE("native destructures stdlib tuple values") {
+  const std::string source = R"(
+import /std/tuple/*
+
+[return<i32>]
+main() {
+  [auto] values{make_tuple(11i32, true, 5i32)}
+  [left flag right] values
+  return(plus(left, right))
+}
+)";
+  const std::string srcPath =
+      writeTemp("compile_native_stdlib_tuple_destructure.prime", source);
+  const std::string exePath =
+      (testScratchPath("") / "primec_native_stdlib_tuple_destructure").string();
+
+  const std::string compileCmd =
+      "./primec --emit=native " + srcPath + " -o " + exePath + " --entry /main";
+  CHECK(runCommand(compileCmd) == 0);
+  CHECK(runCommand(exePath) == 16);
+}
+
+TEST_CASE("native reports tuple destructuring diagnostics") {
+  auto compileExpecting = [](const std::string &stem,
+                             const std::string &source,
+                             const std::string &expected) {
+    const std::string srcPath = writeTemp(stem + ".prime", source);
+    const std::string errPath =
+        (testScratchPath("") / (stem + ".err")).string();
+    const std::string exePath = (testScratchPath("") / stem).string();
+    const std::string compileCmd =
+        "./primec --emit=native " + srcPath + " -o " + exePath +
+        " --entry /main 2> " + errPath;
+    CHECK(runCommand(compileCmd) != 0);
+    CHECK(readFile(errPath).find(expected) != std::string::npos);
+  };
+
+  compileExpecting("compile_native_stdlib_tuple_destructure_arity",
+                   R"(
+import /std/tuple/*
+
+[return<i32>]
+main() {
+  [auto] values{make_tuple(11i32, true)}
+  [left] values
+  return(0i32)
+}
+)",
+                   "tuple destructuring arity mismatch");
+
+  compileExpecting("compile_native_stdlib_tuple_destructure_non_tuple",
+                   R"(
+import /std/tuple/*
+
+[return<i32>]
+main() {
+  [i32] values{11i32}
+  [left right] values
+  return(0i32)
+}
+)",
+                   "tuple destructuring operand must have tuple type");
+
+  compileExpecting("compile_native_stdlib_tuple_destructure_duplicate",
+                   R"(
+import /std/tuple/*
+
+[return<i32>]
+main() {
+  [auto] values{make_tuple(11i32, true)}
+  [left left] values
+  return(0i32)
+}
+)",
+                   "duplicate tuple destructuring binding name");
+
+  compileExpecting("compile_native_stdlib_tuple_destructure_mixed",
+                   R"(
+import /std/tuple/*
+
+[return<i32>]
+main() {
+  [auto] values{make_tuple(11i32, true)}
+  [i32 right] values
+  return(0i32)
+}
+)",
+                   "tuple destructuring pattern cannot mix binding names");
+
+  compileExpecting("compile_native_stdlib_tuple_destructure_borrowed",
+                   R"(
+import /std/tuple/*
+
+[return<i32>]
+main() {
+  [auto] values{make_tuple(11i32, true)}
+  [Reference<tuple<i32, bool>>] borrowed{location(values)}
+  [left right] borrowed
+  return(0i32)
+}
+)",
+                   "tuple destructuring does not support borrowed tuple operands yet");
+}
+
 TEST_CASE("native compiles empty and borrowed stdlib tuple access") {
   const std::string source = R"(
 import /std/tuple/*

@@ -111,6 +111,295 @@ void refreshMonomorphizedSumVariants(Definition &def) {
   }
 }
 
+bool isTupleDestructuringIdentifier(std::string_view name) {
+  if (name.empty()) {
+    return false;
+  }
+  const auto isStart = [](char c) {
+    const unsigned char uc = static_cast<unsigned char>(c);
+    return std::isalpha(uc) || c == '_';
+  };
+  const auto isBody = [](char c) {
+    const unsigned char uc = static_cast<unsigned char>(c);
+    return std::isalnum(uc) || c == '_';
+  };
+  if (!isStart(name.front())) {
+    return false;
+  }
+  return std::all_of(name.begin() + 1, name.end(), isBody);
+}
+
+bool isPrimitiveTupleDestructuringTypeName(const std::string &name) {
+  const std::string normalized = normalizeBindingTypeName(name);
+  return normalized == "auto" || normalized == "int" || normalized == "i32" ||
+         normalized == "i64" || normalized == "u64" || normalized == "bool" ||
+         normalized == "f32" || normalized == "f64" || normalized == "string";
+}
+
+bool isKnownTupleDestructuringBracketEntry(const Transform &transform,
+                                           const std::string &namespacePrefix,
+                                           const Context &ctx) {
+  if (!transform.arguments.empty() || !transform.templateArgs.empty() ||
+      isNonTypeTransformName(transform.name) ||
+      isBindingAuxTransformName(transform.name) ||
+      isPrimitiveTupleDestructuringTypeName(transform.name) ||
+      isBuiltinTemplateContainer(transform.name) ||
+      isRootBuiltinName(transform.name)) {
+    return true;
+  }
+  const std::string resolvedPath =
+      resolveNameToPath(transform.name,
+                        namespacePrefix,
+                        scopedImportAliasesForNamespace(namespacePrefix, ctx),
+                        ctx.sourceDefs);
+  return ctx.sourceDefs.count(resolvedPath) > 0;
+}
+
+bool isStdlibTupleMonomorphPath(std::string_view path) {
+  return path == "/std/tuple/tuple" ||
+         path.rfind("/std/tuple/tuple__t", 0) == 0;
+}
+
+std::string resolveTupleMonomorphBasePath(const std::string &base,
+                                          const std::string &namespacePrefix,
+                                          const Context &ctx) {
+  std::string normalizedBase = normalizeBindingTypeName(base);
+  if (normalizedBase.empty()) {
+    return {};
+  }
+  if (isStdlibTupleMonomorphPath(normalizedBase)) {
+    return normalizedBase;
+  }
+  if (!normalizedBase.empty() && normalizedBase.front() == '/') {
+    return {};
+  }
+  return resolveNameToPath(normalizedBase,
+                           namespacePrefix,
+                           scopedImportAliasesForNamespace(namespacePrefix, ctx),
+                           ctx.sourceDefs);
+}
+
+bool extractTupleDestructuringArgsFromTypeText(std::string typeText,
+                                               const std::string &namespacePrefix,
+                                               const Context &ctx,
+                                               bool &borrowedOut,
+                                               std::vector<std::string> &tupleArgsOut) {
+  borrowedOut = false;
+  tupleArgsOut.clear();
+  typeText = normalizeBindingTypeName(std::move(typeText));
+
+  while (true) {
+    std::string wrapperBase;
+    std::string wrapperArgText;
+    if (!splitTemplateTypeName(typeText, wrapperBase, wrapperArgText)) {
+      break;
+    }
+    wrapperBase = normalizeBindingTypeName(wrapperBase);
+    if (wrapperBase != "Reference" && wrapperBase != "Pointer") {
+      break;
+    }
+    std::vector<std::string> wrapperArgs;
+    if (!splitTopLevelTemplateArgs(wrapperArgText, wrapperArgs) ||
+        wrapperArgs.size() != 1) {
+      return false;
+    }
+    borrowedOut = true;
+    typeText = normalizeBindingTypeName(wrapperArgs.front());
+  }
+
+  std::string tupleBase;
+  std::string tupleArgText;
+  if (splitTemplateTypeName(typeText, tupleBase, tupleArgText)) {
+    if (!isStdlibTupleMonomorphPath(
+            resolveTupleMonomorphBasePath(tupleBase, namespacePrefix, ctx))) {
+      return false;
+    }
+    if (tupleArgText.empty()) {
+      return true;
+    }
+    return splitTopLevelTemplateArgs(tupleArgText, tupleArgsOut);
+  }
+
+  const std::string tuplePath =
+      resolveTupleMonomorphBasePath(typeText, namespacePrefix, ctx);
+  if (!isStdlibTupleMonomorphPath(tuplePath)) {
+    return false;
+  }
+  auto defIt = ctx.sourceDefs.find(tuplePath);
+  if (defIt == ctx.sourceDefs.end()) {
+    return false;
+  }
+  for (const TemplatePackBinding &packBinding : defIt->second.templatePackBindings) {
+    if (packBinding.parameterName == "Ts") {
+      tupleArgsOut = packBinding.arguments;
+      return true;
+    }
+  }
+  return false;
+}
+
+const BindingInfo *findTupleDestructuringOperandBinding(
+    std::string_view name,
+    const std::vector<ParameterInfo> &params,
+    const LocalTypeMap &locals) {
+  if (auto localIt = locals.find(std::string(name)); localIt != locals.end()) {
+    return &localIt->second;
+  }
+  for (const ParameterInfo &param : params) {
+    if (param.name == name) {
+      return &param.binding;
+    }
+  }
+  return nullptr;
+}
+
+bool isTupleDestructuringStatementCandidate(const Expr &stmt,
+                                            const std::vector<ParameterInfo> &params,
+                                            const LocalTypeMap &locals) {
+  return stmt.isBinding && stmt.args.empty() && !stmt.transforms.empty() &&
+         !stmt.name.empty() &&
+         findTupleDestructuringOperandBinding(stmt.name, params, locals) != nullptr;
+}
+
+Expr makeTupleDestructuringNameExpr(const std::string &name,
+                                    const Expr &source) {
+  Expr expr;
+  expr.kind = Expr::Kind::Name;
+  expr.name = name;
+  expr.sourceName = name;
+  expr.sourceLine = source.sourceLine;
+  expr.sourceColumn = source.sourceColumn;
+  return expr;
+}
+
+Expr makeTupleDestructuringGetExpr(const std::string &receiverName,
+                                   size_t index,
+                                   const std::vector<std::string> &tupleArgs,
+                                   const Expr &source) {
+  Expr get;
+  get.kind = Expr::Kind::Call;
+  get.name = "/std/tuple/get";
+  get.sourceName = get.name;
+  get.sourceLine = source.sourceLine;
+  get.sourceColumn = source.sourceColumn;
+  get.args.push_back(makeTupleDestructuringNameExpr(receiverName, source));
+  get.argNames.push_back(std::nullopt);
+  get.templateArgs.reserve(tupleArgs.size() + 1);
+  get.templateArgDetails.reserve(tupleArgs.size() + 1);
+  get.templateArgs.push_back(std::to_string(index));
+  get.templateArgDetails.push_back(
+      TemplateArgument::integer(get.templateArgs.front(), index));
+  for (const std::string &tupleArg : tupleArgs) {
+    get.templateArgs.push_back(tupleArg);
+    get.templateArgDetails.push_back(TemplateArgument::type(tupleArg));
+  }
+  return get;
+}
+
+Expr makeTupleDestructuringBindingExpr(const std::string &bindingName,
+                                       const std::string &receiverName,
+                                       size_t index,
+                                       const std::vector<std::string> &tupleArgs,
+                                       const Expr &source) {
+  Expr binding;
+  binding.kind = Expr::Kind::Call;
+  binding.name = bindingName;
+  binding.sourceName = bindingName;
+  binding.sourceLine = source.sourceLine;
+  binding.sourceColumn = source.sourceColumn;
+  binding.isBinding = true;
+  Transform autoTransform;
+  autoTransform.name = "auto";
+  binding.transforms.push_back(std::move(autoTransform));
+  binding.args.push_back(
+      makeTupleDestructuringGetExpr(receiverName, index, tupleArgs, source));
+  binding.argNames.push_back(std::nullopt);
+  return binding;
+}
+
+bool tryExpandTupleDestructuringStatement(const Expr &stmt,
+                                          const std::vector<ParameterInfo> &params,
+                                          const LocalTypeMap &locals,
+                                          const std::string &namespacePrefix,
+                                          Context &ctx,
+                                          std::string &error,
+                                          std::vector<Expr> &expandedOut) {
+  expandedOut.clear();
+  if (!isTupleDestructuringStatementCandidate(stmt, params, locals)) {
+    return true;
+  }
+
+  const BindingInfo *operandBinding =
+      findTupleDestructuringOperandBinding(stmt.name, params, locals);
+  if (operandBinding == nullptr) {
+    return true;
+  }
+
+  bool borrowedOperand = false;
+  std::vector<std::string> tupleArgs;
+  const bool isTupleOperand = extractTupleDestructuringArgsFromTypeText(
+      bindingTypeToString(*operandBinding),
+      namespacePrefix,
+      ctx,
+      borrowedOperand,
+      tupleArgs);
+  bool hasFreshEntry = false;
+  bool hasKnownEntry = false;
+  for (const Transform &transform : stmt.transforms) {
+    const bool knownEntry =
+        isKnownTupleDestructuringBracketEntry(transform, namespacePrefix, ctx);
+    hasKnownEntry = hasKnownEntry || knownEntry;
+    hasFreshEntry = hasFreshEntry || !knownEntry;
+  }
+
+  if (!hasFreshEntry) {
+    return true;
+  }
+  if (hasKnownEntry) {
+    error = "tuple destructuring pattern cannot mix binding names with type or modifier transforms";
+    return false;
+  }
+  if (!isTupleOperand) {
+    error = "tuple destructuring operand must have tuple type: " + stmt.name;
+    return false;
+  }
+  if (borrowedOperand) {
+    error = "tuple destructuring does not support borrowed tuple operands yet";
+    return false;
+  }
+  if (stmt.transforms.size() != tupleArgs.size()) {
+    error = "tuple destructuring arity mismatch: pattern has " +
+            std::to_string(stmt.transforms.size()) + " names but tuple has " +
+            std::to_string(tupleArgs.size()) + " elements";
+    return false;
+  }
+
+  std::unordered_set<std::string> names;
+  for (const Transform &transform : stmt.transforms) {
+    if (!isTupleDestructuringIdentifier(transform.name)) {
+      error = "tuple destructuring binding name must be an identifier: " +
+              transform.name;
+      return false;
+    }
+    if (!names.insert(transform.name).second) {
+      error = "duplicate tuple destructuring binding name: " + transform.name;
+      return false;
+    }
+    if (findTupleDestructuringOperandBinding(transform.name, params, locals) !=
+        nullptr) {
+      error = "duplicate binding name: " + transform.name;
+      return false;
+    }
+  }
+
+  expandedOut.reserve(stmt.transforms.size());
+  for (size_t index = 0; index < stmt.transforms.size(); ++index) {
+    expandedOut.push_back(makeTupleDestructuringBindingExpr(
+        stmt.transforms[index].name, stmt.name, index, tupleArgs, stmt));
+  }
+  return true;
+}
+
 bool hasTypePackExpansionTransform(const Expr &expr) {
   for (const Transform &transform : expr.transforms) {
     if (transform.isPackExpansion) {
@@ -328,9 +617,30 @@ bool rewriteDefinition(Definition &def,
   }
   for (size_t stmtIndex = 0; stmtIndex < def.statements.size(); ++stmtIndex) {
     auto &stmt = def.statements[stmtIndex];
+    std::vector<Expr> tupleDestructuringExpansion;
+    if (!isStructDefinition(def) &&
+        !tryExpandTupleDestructuringStatement(stmt,
+                                              params,
+                                              locals,
+                                              def.namespacePrefix,
+                                              ctx,
+                                              error,
+                                              tupleDestructuringExpansion)) {
+      restoreDefinitionPath();
+      return false;
+    }
+    if (!tupleDestructuringExpansion.empty()) {
+      def.statements.erase(def.statements.begin() + static_cast<std::ptrdiff_t>(stmtIndex));
+      def.statements.insert(def.statements.begin() + static_cast<std::ptrdiff_t>(stmtIndex),
+                            std::make_move_iterator(tupleDestructuringExpansion.begin()),
+                            std::make_move_iterator(tupleDestructuringExpansion.end()));
+      --stmtIndex;
+      continue;
+    }
+    auto &rewrittenStmt = def.statements[stmtIndex];
     const bool isReturnPathStmt = isDefinitionReturnPathStatement(stmt, stmtIndex, returnStatementSelection);
     if (isReturnPathStmt &&
-        !rewriteDefinitionExperimentalReturnConstructors(stmt,
+        !rewriteDefinitionExperimentalReturnConstructors(rewrittenStmt,
                                                          returnRewritePlan,
                                                          locals,
                                                          params,
@@ -343,12 +653,12 @@ bool rewriteDefinition(Definition &def,
       restoreDefinitionPath();
       return false;
     }
-    if (!rewriteExpr(stmt, mapping, allowedParams, def.namespacePrefix, ctx, error, locals, params, allowMathBare)) {
+    if (!rewriteExpr(rewrittenStmt, mapping, allowedParams, def.namespacePrefix, ctx, error, locals, params, allowMathBare)) {
       restoreDefinitionPath();
       return false;
     }
     if (isReturnPathStmt &&
-        !rewriteDefinitionExperimentalReturnConstructors(stmt,
+        !rewriteDefinitionExperimentalReturnConstructors(rewrittenStmt,
                                                          returnRewritePlan,
                                                          locals,
                                                          params,
@@ -361,7 +671,7 @@ bool rewriteDefinition(Definition &def,
       restoreDefinitionPath();
       return false;
     }
-    recordDefinitionStatementBindingLocal(stmt, params, locals, allowMathBare, ctx, locals);
+    recordDefinitionStatementBindingLocal(rewrittenStmt, params, locals, allowMathBare, ctx, locals);
   }
   if (def.returnExpr.has_value()) {
     if (!rewriteDefinitionExperimentalReturnConstructors(*def.returnExpr,

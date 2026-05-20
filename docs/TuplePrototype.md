@@ -2,8 +2,9 @@
 
 Status: partially implemented. The accepted `tuple<Ts...>` storage and
 `get<I, ...>` helper surface is now canonicalized in `docs/PrimeStruct.md`.
-Bracket indexing and heterogeneous `make_tuple(...)` inference are supported;
-destructuring and multi-wait integration remain prototype follow-ups.
+Bracket indexing, heterogeneous `make_tuple(...)` inference, and destructuring
+of named tuple values are supported; multi-wait integration remains a
+prototype follow-up.
 
 This document captures the proposed `tuple` design needed by future
 multi-value APIs such as multithreaded `wait(left, right)`. When the design is
@@ -89,7 +90,7 @@ heterogeneous type packs.
 
 Optional but useful follow-up substrate:
 
-- tuple destructuring sugar once tuple construction and `get<I>` are stable
+- borrowed tuple destructuring once reference projection is fully settled
 - type-returning compile-time helpers for a public `tuple_element`-style API
 
 ## Non-Goals For The First Slice
@@ -156,18 +157,19 @@ main() {
 }
 ```
 
-Later destructuring can be layered on top:
+Destructuring is available for named tuple values:
 
 ```prime
-[left_result right_result] wait(left, right)
+[left_result right_result] result
 ```
 
-That binding form should be sugar for extracting tuple elements in order. In
-this context, destructuring follows the bracket-list name binding rule in
-`docs/PrimeStruct.md`: known bracket entries keep their existing meaning, while
-fresh identifiers introduce names because the grammar expects a binding pattern.
-
-The tuple type does not require destructuring for the first implementation.
+That binding form is sugar for extracting tuple elements in order through the
+same `get<I, Ts...>` helper path. In this context, destructuring follows the
+bracket-list name binding rule in `docs/PrimeStruct.md`: known bracket entries
+keep their existing meaning, while fresh identifiers introduce names because
+the grammar expects a binding pattern. The current implementation keeps the
+scope narrow: the operand must be an existing named tuple value, and borrowed
+tuple destructuring remains a follow-up.
 
 ## Construction
 
@@ -359,6 +361,7 @@ The minimal first API:
 - `tuple<...>{...}` construction
 - `make_tuple(values...)` inferred construction
 - `get<I>(tuple)` indexed read
+- `[left right] tuple_value` destructuring over named tuple values
 - borrowed `get<I>` when reference projection is available
 - tuple arity/type metadata if the generic substrate supports it
 
@@ -384,8 +387,8 @@ That should be a normal stdlib tuple return. The task system should not invent a
 separate product type.
 
 For the first task implementation, only single-task `wait(Task<T>) -> T` is
-needed. When tuple support exists, multi-wait can return `tuple<...>` and
-destructuring can be added as sugar later.
+needed. Tuple support now has construction, indexed access, and named-value
+destructuring; multi-wait can build on that surface by returning `tuple<...>`.
 
 ## Diagnostics
 
@@ -419,6 +422,6 @@ When this prototype graduates into active implementation work:
 - add copy/move/destruction tests with non-trivial element types once lifecycle
   behavior is settled
 - add tuple destructuring and multi-wait integration only as later follow-ups,
-  tracked by TODO-4277 and TODO-4278
+  tracked by TODO-4277 (done) and TODO-4278
 - update `docs/PrimeStruct.md` and `docs/CodeExamples.md` only after the
   supported surface is implemented (done for the initial surface)
