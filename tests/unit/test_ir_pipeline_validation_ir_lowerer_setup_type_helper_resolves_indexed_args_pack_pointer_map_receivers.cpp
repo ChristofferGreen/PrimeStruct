@@ -2,7 +2,7 @@
 
 TEST_SUITE_BEGIN("primestruct.ir.pipeline.validation");
 
-TEST_CASE("ir lowerer setup type helper resolves indexed args-pack pointer map receivers") {
+TEST_CASE("ir lowerer setup type helper leaves indexed args-pack pointer map receivers unclassified") {
   using LocalInfo = primec::ir_lowerer::LocalInfo;
   using ValueKind = LocalInfo::ValueKind;
 
@@ -43,7 +43,7 @@ TEST_CASE("ir lowerer setup type helper resolves indexed args-pack pointer map r
                                                         typeName,
                                                         resolvedTypePath,
                                                         error));
-  CHECK(typeName == "map");
+  CHECK(typeName.empty());
   CHECK(resolvedTypePath.empty());
   CHECK(error.empty());
 }
