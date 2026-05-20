@@ -42,7 +42,7 @@ main() {
   [map<i32, i32>] values{map<i32, i32>(1i32, 2i32)}
   return(values.count<i32, i32>(true))
 }
-  )";
+)";
   std::string error;
   CHECK_FALSE(validateProgram(source, "/main", error));
   CHECK(error.find("return type mismatch: expected i32") != std::string::npos);
@@ -356,7 +356,7 @@ main() {
         std::string::npos);
 }
 
-TEST_CASE("canonical map borrowed receiver validates direct stdlib contains") {
+TEST_CASE("canonical map borrowed receiver rejects direct stdlib contains") {
   const std::string source = R"(
 import /std/collections/*
 
@@ -372,13 +372,15 @@ main() {
      then(){ return(1i32) },
      else(){ return(0i32) })
 }
-)";
+  )";
   std::string error;
-  CHECK(validateProgram(source, "/main", error));
-  CHECK(error.empty());
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  INFO(error);
+  CHECK(error.find("unknown call target: /std/collections/map/contains") !=
+        std::string::npos);
 }
 
-TEST_CASE("canonical map borrowed receiver keeps contains key diagnostics") {
+TEST_CASE("canonical map borrowed receiver rejects direct stdlib contains before key diagnostics") {
   const std::string source = R"(
 import /std/collections/*
 
@@ -396,8 +398,10 @@ main() {
 }
   )";
   std::string error;
-  CHECK(validateProgram(source, "/main", error));
-  CHECK(error.empty());
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  INFO(error);
+  CHECK(error.find("unknown call target: /std/collections/map/contains") !=
+        std::string::npos);
 }
 
 TEST_CASE("canonical map borrowed receiver validates direct stdlib tryAt") {

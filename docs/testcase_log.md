@@ -10,11 +10,6 @@
   string-valued map runtime fixture has since been retargeted to compile-only
   coverage because native runtime string-valued maps still hang after
   compilation.
-- `PrimeStruct_semantics_tests --test-case="canonical map borrowed receiver validates direct stdlib contains,canonical map borrowed receiver keeps contains key diagnostics" --no-skip`
-  is stale after the map stdlib-ownership cutover. On 2026-05-17 both cases
-  failed after semantic validation reached IR lowering with
-  `native backend only supports ... call=/std/collections/map/contains`;
-  direct bare/namespaced map contains semantic validation still passes.
 - `PrimeStruct_semantics_tests --test-case="non-imported wrapper-returned canonical map reference access keeps primitive receiver diagnostics" --no-skip`
   has a stale diagnostic expectation after the map stdlib-ownership cutover.
   On 2026-05-17 the case still rejected the program, but no longer emitted
@@ -78,6 +73,12 @@
   the string-valued map access emission fixture returned `NotHandled`.
 
 ## Recent Test Runs
+- 2026-05-20 12:37 CEST | pass | mode: release | command:
+  `cmake --build build-release --target PrimeStruct_semantics_tests`;
+  `cd build-release && ./PrimeStruct_semantics_tests --test-case="canonical map borrowed receiver rejects direct stdlib contains,canonical map borrowed receiver rejects direct stdlib contains before key diagnostics" --no-skip`
+  | failures: none | notes: borrowed receiver direct `contains` coverage now
+  locks current unknown-call-target diagnostics instead of expecting hidden
+  borrowed receiver coercion.
 - 2026-05-20 12:35 CEST | pass | mode: release | command:
   `cmake --build build-release --target PrimeStruct_semantics_tests`;
   `cd build-release && ./PrimeStruct_semantics_tests --test-case="helper-wrapped map constructors reject explicit experimental map parameters" --no-skip`
@@ -4639,6 +4640,7 @@
 - 2026-05-12 17:28 local | fail | mode: release | command: `./scripts/compile.sh --release` | failures: 146 CTest targets | notes: baseline after preflight checkpoint failed; stabilization blocks TODO work
 
 ## Resolved Failures
+- [x] borrowed receiver direct map contains semantics | resolved: 2026-05-20 12:37 CEST | validating command: `cmake --build build-release --target PrimeStruct_semantics_tests`; `cd build-release && ./PrimeStruct_semantics_tests --test-case="canonical map borrowed receiver rejects direct stdlib contains,canonical map borrowed receiver rejects direct stdlib contains before key diagnostics" --no-skip` | notes: retargeted stale borrowed receiver direct `contains` validation to current unknown-call-target diagnostics for `/std/collections/map/contains`.
 - [x] helper-wrapped explicit map parameter fixture | resolved: 2026-05-20 12:35 CEST | validating command: `cmake --build build-release --target PrimeStruct_semantics_tests`; `cd build-release && ./PrimeStruct_semantics_tests --test-case="helper-wrapped map constructors reject explicit experimental map parameters" --no-skip` | notes: retargeted stale helper-wrapped canonical map constructor acceptance to the current explicit map parameter mismatch diagnostic.
 - [x] uninitialized canonical map template arg diagnostic | resolved: 2026-05-20 12:33 CEST | validating command: `cmake --build build-release --target PrimeStruct_misc_tests`; `cd build-release && ./PrimeStruct_misc_tests --test-case="uninitialized canonical map template arg validates as stdlib type" --no-skip` | notes: retargeted stale builtin map key/value diagnostics to current stdlib-owned canonical map type validation.
 - [x] inferred map struct field semantics fixtures | resolved: 2026-05-20 12:30 CEST | validating command: `cmake --build build-release --target PrimeStruct_semantics_tests`; `cd build-release && ./PrimeStruct_semantics_tests --test-case="stdlib map constructors reject inferred canonical map struct field mismatch,helper-wrapped inferred canonical map struct fields validate,helper-wrapped map constructor assignments accept inferred canonical map struct fields,auto bindings inside inferred canonical map return blocks rewrite constructors,helper-wrapped map constructors reject canonical map uninitialized storage mismatch" --no-skip` | notes: preserved the still-valid helper-wrapped cases with explicit map access templates and retargeted stale inferred struct-field and uninitialized-storage acceptance cases to current mismatch diagnostics.
