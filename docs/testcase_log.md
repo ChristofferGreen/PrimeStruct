@@ -10,12 +10,6 @@
   string-valued map runtime fixture has since been retargeted to compile-only
   coverage because native runtime string-valued maps still hang after
   compilation.
-- `PrimeStruct_backend_ir_tests --test-case="ir lowerer call helpers lower explicit map access for args-pack receivers"`
-  is stale after the map stdlib-ownership cutover. On 2026-05-16 it failed
-  the expected native-tail dispatch and instruction-emission assertions after
-  map access-target path construction moved through shared experimental
-  collection path helpers; adjacent direct and forwarded map access target
-  resolution coverage still passes.
 - `PrimeStruct_backend_ir_tests --test-case="ir lowerer helper rejects parser-shaped canonical map entry constructors as builtin map"`
   is stale after the map stdlib-ownership cutover. On 2026-05-16 it still
   expects parser-shaped canonical map entry constructors to stay outside
@@ -110,6 +104,11 @@
   the string-valued map access emission fixture returned `NotHandled`.
 
 ## Recent Test Runs
+- 2026-05-20 12:22 CEST | pass | mode: release | command:
+  `cmake --build build-release --target PrimeStruct_backend_ir_tests`;
+  `cd build-release && ./PrimeStruct_backend_ir_tests --test-case="ir lowerer call helpers defer explicit map access for args-pack receivers" --no-skip`
+  | failures: none | notes: explicit map access over args-pack receiver
+  shapes now locks native-tail deferral with no emitted instructions.
 - 2026-05-20 12:21 CEST | pass | mode: release | command:
   `cmake --build build-release --target PrimeStruct_backend_ir_tests`;
   `cd build-release && ./PrimeStruct_backend_ir_tests --test-case="ir lowerer setup type helper leaves indexed args-pack pointer map receivers unclassified" --no-skip`
@@ -4642,6 +4641,7 @@
 - 2026-05-12 17:28 local | fail | mode: release | command: `./scripts/compile.sh --release` | failures: 146 CTest targets | notes: baseline after preflight checkpoint failed; stabilization blocks TODO work
 
 ## Resolved Failures
+- [x] explicit args-pack map access native tail | resolved: 2026-05-20 12:22 CEST | validating command: `cmake --build build-release --target PrimeStruct_backend_ir_tests`; `cd build-release && ./PrimeStruct_backend_ir_tests --test-case="ir lowerer call helpers defer explicit map access for args-pack receivers" --no-skip` | notes: retargeted stale explicit map access args-pack coverage from native instruction emission to the current `NotHandled` deferral path.
 - [x] indexed args-pack pointer map setup type | resolved: 2026-05-20 12:21 CEST | validating command: `cmake --build build-release --target PrimeStruct_backend_ir_tests`; `cd build-release && ./PrimeStruct_backend_ir_tests --test-case="ir lowerer setup type helper leaves indexed args-pack pointer map receivers unclassified" --no-skip` | notes: retargeted stale bare-`at` args-pack map receiver setup-type coverage to the current empty target type.
 - [x] reordered bare access setup inference | resolved: 2026-05-20 12:20 CEST | validating command: `cmake --build build-release --target PrimeStruct_backend_ir_tests`; `cd build-release && ./PrimeStruct_backend_ir_tests --test-case="ir lowerer setup inference helper ignores reordered bare access kinds" --no-skip` | notes: retargeted stale reordered named bare-`at` inference expectations to current `NotMatched` behavior after map access left generic builtin classification.
 - [x] binding type helper SoA source lock | resolved: 2026-05-20 12:18 CEST | validating command: `cmake --build build-release --target PrimeStruct_backend_ir_tests`; `cd build-release && ./PrimeStruct_backend_ir_tests --test-case="ir lowerer binding type helpers classify binding kind and string/fileerror types" --no-skip` | notes: retargeted stale exact experimental SoA vector source-string assertions to the shared SoA path helper and current split-string compatibility guards.

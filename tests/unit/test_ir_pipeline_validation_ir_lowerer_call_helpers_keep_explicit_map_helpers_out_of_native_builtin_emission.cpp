@@ -353,7 +353,7 @@ TEST_CASE("ir lowerer call helpers keep explicit map helpers out of native built
   CHECK(instructions.empty());
 }
 
-TEST_CASE("ir lowerer call helpers lower explicit map access for args-pack receivers") {
+TEST_CASE("ir lowerer call helpers defer explicit map access for args-pack receivers") {
   using Result = primec::ir_lowerer::NativeCallTailDispatchResult;
   using LocalInfo = primec::ir_lowerer::LocalInfo;
   using KeyValueAccessTargetInfo = primec::ir_lowerer::KeyValueAccessTargetInfo;
@@ -507,11 +507,11 @@ TEST_CASE("ir lowerer call helpers lower explicit map access for args-pack recei
     CHECK(instructions.empty() != expectInstructions);
   };
 
-  expectDispatch(makeIndexedReceiver(valuesName), Result::Emitted, true);
-  expectDispatch(makeIndexedReceiver(pointerValuesName), Result::Emitted, true);
-  expectDispatch(makeIndexedReceiver(referenceValuesName), Result::Emitted, true);
-  expectDispatch(makeDereferencedIndexedReceiver(pointerValuesName), Result::Emitted, true);
-  expectDispatch(makeDereferencedIndexedReceiver(referenceValuesName), Result::Emitted, true);
+  expectDispatch(makeIndexedReceiver(valuesName), Result::NotHandled, false);
+  expectDispatch(makeIndexedReceiver(pointerValuesName), Result::NotHandled, false);
+  expectDispatch(makeIndexedReceiver(referenceValuesName), Result::NotHandled, false);
+  expectDispatch(makeDereferencedIndexedReceiver(pointerValuesName), Result::NotHandled, false);
+  expectDispatch(makeDereferencedIndexedReceiver(referenceValuesName), Result::NotHandled, false);
 }
 
 TEST_CASE("ir lowerer call helpers defer vector metadata and emit safe at while deferring bare count") {
