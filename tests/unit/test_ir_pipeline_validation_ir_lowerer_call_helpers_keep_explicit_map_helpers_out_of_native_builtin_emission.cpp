@@ -198,7 +198,7 @@ TEST_CASE("ir lowerer call helpers keep explicit map helpers out of native built
   };
 
   expectDispatch("/map/count", {mapName}, Result::NotHandled, "stale");
-  expectDispatch("/std/collections/map/count", {mapName}, Result::Emitted, "stale");
+  expectDispatch("/std/collections/map/count", {mapName}, Result::NotHandled, "stale");
   expectDispatch("/map/contains", {mapName, keyName}, Result::NotHandled, "stale");
   expectDispatch("/std/collections/map/contains",
                  {mapName, keyName},
@@ -233,7 +233,7 @@ TEST_CASE("ir lowerer call helpers keep explicit map helpers out of native built
   expectNamespacedDispatch("/std/collections/map",
                            "count",
                            {mapName},
-                           Result::Emitted,
+                           Result::NotHandled,
                            "stale");
   expectNamespacedDispatch("/std/collections/map",
                            "contains",
