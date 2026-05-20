@@ -348,9 +348,9 @@ TEST_CASE("ir lowerer call helpers source delegation stays stable") {
   CHECK(accessLoadHelpersSource.find("lookupKeyKind != LocalInfo::ValueKind::String",
                                      keyValueLookupGraphKindPos) != std::string::npos);
 
-  CHECK(indexedAccessEmitSource.find("KeyValueAccessLookupEmitResult tryEmitKeyValueAccessLookup(") !=
+  CHECK(indexedAccessEmitSource.find("KeyValueAccessLookupEmitResult tryEmitKeyValueAccessLookup(") ==
         std::string::npos);
-  CHECK(indexedAccessEmitSource.find("KeyValueAccessLookupEmitResult tryEmitKeyValueContainsLookup(") !=
+  CHECK(indexedAccessEmitSource.find("KeyValueAccessLookupEmitResult tryEmitKeyValueContainsLookup(") ==
         std::string::npos);
   CHECK(indexedAccessEmitSource.find("StringTableAccessEmitResult tryEmitStringTableAccessLoad(") !=
         std::string::npos);
@@ -551,7 +551,7 @@ TEST_CASE("ir lowerer call helpers source delegation stays stable") {
         std::string::npos);
   CHECK(inlineDispatchSource.find("normalized = \"/map/\" +") ==
         std::string::npos);
-  CHECK(inlineDispatchSource.find("isExplicitSamePathKeyValueCountLikeDefinitionCall(") !=
+  CHECK(inlineDispatchSource.find("isExplicitSamePathKeyValueCountLikeDefinitionCall(") ==
         std::string::npos);
   CHECK(inlineDispatchSource.find("isExplicitMapContainsOrTryAtMethodPath(") ==
         std::string::npos);

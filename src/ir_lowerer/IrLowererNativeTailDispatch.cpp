@@ -130,19 +130,6 @@ bool isExplicitDirectKeyValueCountContainsTryAtCall(const SemanticProgram *seman
          (helperName == "count" || helperName == "contains" || helperName == "tryAt");
 }
 
-bool shouldPreserveExplicitDirectKeyValueHelperCall(
-    const SemanticProgram *semanticProgram,
-    const Expr &expr,
-    const KeyValueAccessTargetInfo &keyValueTargetInfo) {
-  if (!isExplicitDirectKeyValueCountContainsTryAtCall(semanticProgram, expr)) {
-    return false;
-  }
-  return expr.args.empty() ||
-         expr.args.front().kind != Expr::Kind::Call ||
-         !keyValueTargetInfo.isKeyValueTarget ||
-         keyValueTargetInfo.isWrappedKeyValueTarget;
-}
-
 bool isKeyValueReadHelperName(std::string_view helperName) {
   return helperName == "count" || helperName == "count_ref" ||
          helperName == "contains" || helperName == "contains_ref" ||
@@ -163,33 +150,6 @@ bool importPathCoversNativeTailTarget(const std::string &importPath,
     return targetPath == prefix || targetPath.rfind(prefix + "/", 0) == 0;
   }
   return false;
-}
-
-bool hasSemanticKeyValueReadHelperDefinition(const SemanticProgram *semanticProgram,
-                                             std::string_view helperName) {
-  if (semanticProgram == nullptr || !isKeyValueReadHelperName(helperName)) {
-    return false;
-  }
-  const std::string helperPath = nativeTailKeyValueHelperPath(helperName);
-  if (helperPath.empty()) {
-    return false;
-  }
-  for (const auto &definition : semanticProgram->definitions) {
-    if (definition.fullPath == helperPath ||
-        definition.fullPath.rfind(helperPath + "__", 0) == 0) {
-      return true;
-    }
-  }
-  auto importsKeyValueReadHelper = [&](const std::vector<std::string> &imports) {
-    for (const std::string &importPath : imports) {
-      if (importPathCoversNativeTailTarget(importPath, helperPath)) {
-        return true;
-      }
-    }
-    return false;
-  };
-  return importsKeyValueReadHelper(semanticProgram->sourceImports) ||
-         importsKeyValueReadHelper(semanticProgram->imports);
 }
 
 bool isExplicitDirectVectorCountCall(const SemanticProgram *semanticProgram,
@@ -388,33 +348,6 @@ bool isKeyValueContainsHelperName(const Expr &expr);
 bool isKeyValueTryAtHelperName(const Expr &expr);
 bool isVectorTarget(const Expr &expr, const LocalMap &localsIn);
 bool isSoaVectorTarget(const Expr &expr, const LocalMap &localsIn);
-KeyValueAccessLookupEmitResult tryEmitKeyValueContainsLookup(
-    const Expr &targetExpr,
-    const Expr &lookupKeyExpr,
-    const LocalMap &localsIn,
-    const std::function<int32_t()> &allocTempLocal,
-    const std::function<bool(const Expr &, const LocalMap &)> &emitExpr,
-    const std::function<bool(const Expr &, const LocalMap &, int32_t &, size_t &)> &resolveStringTableTarget,
-    const ResolveCallKeyValueAccessTargetInfoFn &resolveCallKeyValueAccessTargetInfo,
-    const std::function<LocalInfo::ValueKind(const Expr &, const LocalMap &)> &inferExprKind,
-    const std::function<size_t()> &instructionCount,
-    const std::function<void(IrOpcode, uint64_t)> &emitInstruction,
-    const std::function<void(size_t, uint64_t)> &patchInstructionImm,
-    std::string &error);
-bool emitKeyValueLookupTryAt(
-    LocalInfo::ValueKind keyValueKeyKind,
-    const std::string &mapStructTypeName,
-    const Expr &targetExpr,
-    const Expr &lookupKeyExpr,
-    const LocalMap &localsIn,
-    const std::function<int32_t()> &allocTempLocal,
-    const std::function<bool(const Expr &, const LocalMap &)> &emitExpr,
-    const std::function<bool(const Expr &, const LocalMap &, int32_t &, size_t &)> &resolveStringTableTarget,
-    const std::function<LocalInfo::ValueKind(const Expr &, const LocalMap &)> &inferExprKind,
-    const std::function<size_t()> &instructionCount,
-    const std::function<void(IrOpcode, uint64_t)> &emitInstruction,
-    const std::function<void(size_t, uint64_t)> &patchInstructionImm,
-    std::string &error);
 
 std::string resolveNativeTailSemanticText(const SemanticProgram &semanticProgram,
                                           SymbolId textId,
@@ -693,6 +626,7 @@ NativeCallTailDispatchResult tryEmitNativeCallTailDispatch(
     const std::function<void(size_t, uint64_t)> &patchInstructionImm,
     std::string &error,
     const SemanticProgram *semanticProgram) {
+  (void)emitMapKeyNotFound;
   const SemanticProductIndex semanticIndex = buildSemanticProductIndex(semanticProgram);
   const SemanticProductIndex *const semanticIndexPtr =
       semanticProgram == nullptr ? nullptr : &semanticIndex;
@@ -706,18 +640,8 @@ NativeCallTailDispatchResult tryEmitNativeCallTailDispatch(
   if (!expr.isMethodCall &&
       resolvePublishedNativeTailKeyValueHelperName(
           semanticProgram, expr, directKeyValueReadHelperName) &&
-      isKeyValueReadHelperName(directKeyValueReadHelperName) &&
-      hasSemanticKeyValueReadHelperDefinition(semanticProgram,
-                                              directKeyValueReadHelperName)) {
-    const bool keyValueCountAccessTarget =
-        directKeyValueReadHelperName == "count" &&
-        expr.args.size() == 1 &&
-        resolveKeyValueAccessTargetInfo(
-            expr.args.front(), localsIn, resolveCallKeyValueAccessTargetInfo)
-            .isKeyValueTarget;
-    if (!keyValueCountAccessTarget) {
-      return NativeCallTailDispatchResult::NotHandled;
-    }
+      isKeyValueReadHelperName(directKeyValueReadHelperName)) {
+    return NativeCallTailDispatchResult::NotHandled;
   }
   if (!isExplicitDirectVectorCountCall(semanticProgram, expr) &&
       !expr.isMethodCall && count_access_detail::isVectorBuiltinName(expr, "count") &&
@@ -781,152 +705,6 @@ NativeCallTailDispatchResult tryEmitNativeCallTailDispatch(
     }
   }
 
-  if (expr.isMethodCall && expr.name == "contains") {
-    if (expr.args.size() != 2) {
-      error = "contains requires exactly two arguments";
-      return NativeCallTailDispatchResult::Error;
-    }
-    const auto keyValueTargetInfo = resolveKeyValueAccessTargetInfo(
-        expr.args.front(), localsIn, resolveCallKeyValueAccessTargetInfo);
-    if (expr.args.front().kind == Expr::Kind::Call && !keyValueTargetInfo.isKeyValueTarget) {
-      return NativeCallTailDispatchResult::NotHandled;
-    }
-    const auto containsResult = tryEmitKeyValueContainsLookup(
-        expr.args.front(),
-        expr.args[1],
-        localsIn,
-        allocTempLocal,
-        emitExpr,
-        resolveStringTableTarget,
-        resolveCallKeyValueAccessTargetInfo,
-        inferExprKind,
-        instructionCount,
-        emitInstruction,
-        patchInstructionImm,
-        error);
-    if (containsResult == KeyValueAccessLookupEmitResult::Emitted) {
-      return NativeCallTailDispatchResult::Emitted;
-    }
-    if (containsResult == KeyValueAccessLookupEmitResult::Error) {
-      return NativeCallTailDispatchResult::Error;
-    }
-    error = "contains requires map target";
-    return NativeCallTailDispatchResult::Error;
-  }
-
-  if (!expr.isMethodCall && isKeyValueContainsHelperName(expr)) {
-    if (expr.args.size() != 2) {
-      error = "contains requires exactly two arguments";
-      return NativeCallTailDispatchResult::Error;
-    }
-    const auto keyValueTargetInfo = resolveKeyValueAccessTargetInfo(
-        expr.args.front(), localsIn, resolveCallKeyValueAccessTargetInfo);
-    if (shouldPreserveExplicitDirectKeyValueHelperCall(semanticProgram, expr, keyValueTargetInfo)) {
-      return NativeCallTailDispatchResult::NotHandled;
-    }
-    if (expr.args.front().kind == Expr::Kind::Call &&
-        (!keyValueTargetInfo.isKeyValueTarget || keyValueTargetInfo.isWrappedKeyValueTarget)) {
-      return NativeCallTailDispatchResult::NotHandled;
-    }
-    const auto containsResult = tryEmitKeyValueContainsLookup(
-        expr.args.front(),
-        expr.args[1],
-        localsIn,
-        allocTempLocal,
-        emitExpr,
-        resolveStringTableTarget,
-        resolveCallKeyValueAccessTargetInfo,
-        inferExprKind,
-        instructionCount,
-        emitInstruction,
-        patchInstructionImm,
-        error);
-    if (containsResult == KeyValueAccessLookupEmitResult::Emitted) {
-      return NativeCallTailDispatchResult::Emitted;
-    }
-    if (containsResult == KeyValueAccessLookupEmitResult::Error) {
-      return NativeCallTailDispatchResult::Error;
-    }
-    error = "contains requires map target";
-    return NativeCallTailDispatchResult::Error;
-  }
-
-  if (expr.isMethodCall && expr.name == "tryAt") {
-    if (expr.args.size() != 2) {
-      error = "tryAt requires exactly two arguments";
-      return NativeCallTailDispatchResult::Error;
-    }
-    const auto keyValueTargetInfo = resolveKeyValueAccessTargetInfo(
-        expr.args.front(), localsIn, resolveCallKeyValueAccessTargetInfo);
-    if (expr.args.front().kind == Expr::Kind::Call && !keyValueTargetInfo.isKeyValueTarget) {
-      return NativeCallTailDispatchResult::NotHandled;
-    }
-    if (!keyValueTargetInfo.isKeyValueTarget) {
-      error = "tryAt requires map target";
-      return NativeCallTailDispatchResult::Error;
-    }
-    if (!validateKeyValueAccessTargetInfo(keyValueTargetInfo, "tryAt", error)) {
-      return NativeCallTailDispatchResult::Error;
-    }
-    if (!emitKeyValueLookupTryAt(
-            keyValueTargetInfo.keyValueKeyKind,
-            keyValueTargetInfo.structTypeName,
-            expr.args.front(),
-            expr.args[1],
-            localsIn,
-            allocTempLocal,
-            emitExpr,
-            resolveStringTableTarget,
-            inferExprKind,
-            instructionCount,
-            emitInstruction,
-            patchInstructionImm,
-            error)) {
-      return NativeCallTailDispatchResult::Error;
-    }
-    return NativeCallTailDispatchResult::Emitted;
-  }
-
-  if (!expr.isMethodCall && isKeyValueTryAtHelperName(expr)) {
-    if (expr.args.size() != 2) {
-      error = "tryAt requires exactly two arguments";
-      return NativeCallTailDispatchResult::Error;
-    }
-    const auto keyValueTargetInfo = resolveKeyValueAccessTargetInfo(
-        expr.args.front(), localsIn, resolveCallKeyValueAccessTargetInfo);
-    if (shouldPreserveExplicitDirectKeyValueHelperCall(semanticProgram, expr, keyValueTargetInfo)) {
-      return NativeCallTailDispatchResult::NotHandled;
-    }
-    if (expr.args.front().kind == Expr::Kind::Call &&
-        (!keyValueTargetInfo.isKeyValueTarget || keyValueTargetInfo.isWrappedKeyValueTarget)) {
-      return NativeCallTailDispatchResult::NotHandled;
-    }
-    if (!keyValueTargetInfo.isKeyValueTarget) {
-      error = "tryAt requires map target";
-      return NativeCallTailDispatchResult::Error;
-    }
-    if (!validateKeyValueAccessTargetInfo(keyValueTargetInfo, "tryAt", error)) {
-      return NativeCallTailDispatchResult::Error;
-    }
-    if (!emitKeyValueLookupTryAt(
-            keyValueTargetInfo.keyValueKeyKind,
-            keyValueTargetInfo.structTypeName,
-            expr.args.front(),
-            expr.args[1],
-            localsIn,
-            allocTempLocal,
-            emitExpr,
-            resolveStringTableTarget,
-            inferExprKind,
-            instructionCount,
-            emitInstruction,
-            patchInstructionImm,
-            error)) {
-      return NativeCallTailDispatchResult::Error;
-    }
-    return NativeCallTailDispatchResult::Emitted;
-  }
-
   const auto unsupportedCallResult = emitUnsupportedNativeCallDiagnosticImpl(
       expr, localsIn, tryGetPrintBuiltinName, error, semanticProgram, semanticIndexPtr);
   if (unsupportedCallResult == UnsupportedNativeCallResult::Error) {
@@ -956,6 +734,15 @@ NativeCallTailDispatchResult tryEmitNativeCallTailDispatch(
     accessName = publishedVectorAccessName;
   }
   if (hasBuiltinArrayAccessName || hasPublishedVectorAccessName) {
+    const bool isKeyValueAccessName =
+        accessName == "at" || accessName == "at_ref" ||
+        accessName == "at_unsafe" || accessName == "at_unsafe_ref";
+    if (expr.isMethodCall && isKeyValueAccessName && !expr.args.empty() &&
+        resolveKeyValueAccessTargetInfo(
+            expr.args.front(), localsIn, resolveCallKeyValueAccessTargetInfo)
+            .isKeyValueTarget) {
+      return NativeCallTailDispatchResult::NotHandled;
+    }
     const bool isMethodCallTempReceiver =
         expr.isMethodCall &&
         !expr.args.empty() &&
@@ -1096,14 +883,12 @@ NativeCallTailDispatchResult tryEmitNativeCallTailDispatch(
                                 localsIn,
                                 resolveStringTableTarget,
                                 stringTableCount,
-                                resolveCallKeyValueAccessTargetInfo,
                                 resolveCallArrayVectorAccessTargetInfo,
                                 inferExprKind,
                                 isEntryArgsName,
                                 allocTempLocal,
                                 emitExpr,
                                 emitStringIndexOutOfBounds,
-                                emitMapKeyNotFound,
                                 emitArrayIndexOutOfBounds,
                                 instructionCount,
                                 emitInstruction,

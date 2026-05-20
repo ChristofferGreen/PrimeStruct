@@ -46,12 +46,6 @@ enum class BufferBuiltinDispatchResult {
   Error,
 };
 
-enum class KeyValueAccessLookupEmitResult {
-  NotHandled,
-  Emitted,
-  Error,
-};
-
 enum class StringTableAccessEmitResult {
   NotHandled,
   Emitted,

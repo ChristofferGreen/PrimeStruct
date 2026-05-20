@@ -1021,7 +1021,6 @@
                   localsIn,
                   resolveStringTableTarget,
                   0,
-                  {},
                   resolveHelperReturnedArrayVectorAccessTargetInfo,
                   inferExprKind,
                   isEntryArgsName,
@@ -1030,7 +1029,6 @@
                     return emitExpr(valueExpr, valueLocals);
                   },
                   emitStringIndexOutOfBounds,
-                  emitMapKeyNotFound,
                   emitArrayIndexOutOfBounds,
                   [&]() { return function.instructions.size(); },
                   [&](IrOpcode opcode, uint64_t imm) {

@@ -231,9 +231,9 @@ This file stores durable session-derived facts that are useful in later work. Ke
   `LocalInfo::Kind::KeyValueCollection` are both retired, and the
   `referenceToKeyValueCollection` / `pointerToKeyValueCollection` wrapper
   flags are gone. Temporary key/value scalar facts, access-target helpers,
-  lookup helper APIs, setup-inference access element-kind helpers, and
+  setup-inference access element-kind helpers, and
   inline/native-tail contains/tryAt predicates carry backing details until
-  later TODO-4541/TODO-4542/TODO-4464 slices remove the remaining C++ map
+  later TODO-4542/TODO-4543/TODO-4464 slices remove the remaining C++ map
   substrate; key comparison opcode selection plus inline native dispatch
   published-helper
   metadata wrappers, builtin-name helper-surface checks, and access-target
@@ -317,6 +317,19 @@ This file stores durable session-derived facts that are useful in later work. Ke
   metadata doctest slices passed after removing
   `LocalInfo::Kind::KeyValueCollection`,
   `referenceToKeyValueCollection`, and `pointerToKeyValueCollection`.
+
+### lowerer-key-value-lookup-emission-is-deferred
+- Updated: 2026-05-20
+- Tags: ir, lowerer, collections
+- Fact: Indexed access and native tail dispatch no longer expose the
+  `tryEmitKeyValueAccessLookup` / `tryEmitKeyValueContainsLookup` wrapper
+  surface or `KeyValueAccessLookupEmitResult`; published stdlib map
+  read/access helpers defer to ordinary helper lowering.
+- Evidence: TODO-4541 removed the wrappers from `IrLowererIndexedAccessEmit`,
+  production/testing helper headers, and CMake test registration; focused IR
+  source-lock, builtin-access, explicit-map-helper native-tail, and native-tail
+  orchestration tests passed, and `rg` found no deleted wrapper symbols in
+  `src/ir_lowerer`, `include/primec/testing`, or `CMakeLists.txt`.
 
 ### map-compatibility-aliases-require-source-definitions
 - Updated: 2026-05-18

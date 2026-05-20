@@ -21,129 +21,6 @@ bool usesBuiltinVectorValueStorage(const ArrayVectorAccessTargetInfo &targetInfo
 
 } // namespace
 
-KeyValueAccessLookupEmitResult tryEmitKeyValueAccessLookup(
-    const std::string &accessName,
-    const Expr &targetExpr,
-    const Expr &lookupKeyExpr,
-    const LocalMap &localsIn,
-    const std::function<int32_t()> &allocTempLocal,
-    const std::function<bool(const Expr &, const LocalMap &)> &emitExpr,
-    const std::function<bool(const Expr &, const LocalMap &, int32_t &, size_t &)> &resolveStringTableTarget,
-    const ResolveCallKeyValueAccessTargetInfoFn &resolveCallKeyValueAccessTargetInfo,
-    const std::function<LocalInfo::ValueKind(const Expr &, const LocalMap &)> &inferExprKind,
-    const std::function<void()> &emitMapKeyNotFound,
-    const std::function<size_t()> &instructionCount,
-    const std::function<void(IrOpcode, uint64_t)> &emitInstruction,
-    const std::function<void(size_t, uint64_t)> &patchInstructionImm,
-    std::string &error,
-    const SemanticProgram *semanticProgram,
-    const SemanticProductIndex *semanticIndex) {
-  const auto keyValueTargetInfo = resolveKeyValueAccessTargetInfo(
-      targetExpr,
-      localsIn,
-      resolveCallKeyValueAccessTargetInfo,
-      semanticProgram,
-      semanticIndex);
-  if (!keyValueTargetInfo.isKeyValueTarget) {
-    return KeyValueAccessLookupEmitResult::NotHandled;
-  }
-  if (!validateKeyValueAccessTargetInfo(keyValueTargetInfo, accessName, error)) {
-    return KeyValueAccessLookupEmitResult::Error;
-  }
-  if (!emitKeyValueLookupAccess(
-          accessName,
-          keyValueTargetInfo.keyValueKeyKind,
-          keyValueTargetInfo.structTypeName,
-          targetExpr,
-          lookupKeyExpr,
-          localsIn,
-          allocTempLocal,
-          emitExpr,
-          resolveStringTableTarget,
-          inferExprKind,
-          emitMapKeyNotFound,
-          instructionCount,
-          emitInstruction,
-          patchInstructionImm,
-          error)) {
-    return KeyValueAccessLookupEmitResult::Error;
-  }
-  return KeyValueAccessLookupEmitResult::Emitted;
-}
-
-KeyValueAccessLookupEmitResult tryEmitKeyValueAccessLookup(
-    const std::string &accessName,
-    const Expr &targetExpr,
-    const Expr &lookupKeyExpr,
-    const LocalMap &localsIn,
-    const std::function<int32_t()> &allocTempLocal,
-    const std::function<bool(const Expr &, const LocalMap &)> &emitExpr,
-    const std::function<bool(const Expr &, const LocalMap &, int32_t &, size_t &)> &resolveStringTableTarget,
-    const std::function<LocalInfo::ValueKind(const Expr &, const LocalMap &)> &inferExprKind,
-    const std::function<void()> &emitMapKeyNotFound,
-    const std::function<size_t()> &instructionCount,
-    const std::function<void(IrOpcode, uint64_t)> &emitInstruction,
-    const std::function<void(size_t, uint64_t)> &patchInstructionImm,
-    std::string &error) {
-  return tryEmitKeyValueAccessLookup(
-      accessName,
-      targetExpr,
-      lookupKeyExpr,
-      localsIn,
-      allocTempLocal,
-      emitExpr,
-      resolveStringTableTarget,
-      {},
-      inferExprKind,
-      emitMapKeyNotFound,
-      instructionCount,
-      emitInstruction,
-      patchInstructionImm,
-      error,
-      nullptr,
-      nullptr);
-}
-
-KeyValueAccessLookupEmitResult tryEmitKeyValueContainsLookup(
-    const Expr &targetExpr,
-    const Expr &lookupKeyExpr,
-    const LocalMap &localsIn,
-    const std::function<int32_t()> &allocTempLocal,
-    const std::function<bool(const Expr &, const LocalMap &)> &emitExpr,
-    const std::function<bool(const Expr &, const LocalMap &, int32_t &, size_t &)> &resolveStringTableTarget,
-    const ResolveCallKeyValueAccessTargetInfoFn &resolveCallKeyValueAccessTargetInfo,
-    const std::function<LocalInfo::ValueKind(const Expr &, const LocalMap &)> &inferExprKind,
-    const std::function<size_t()> &instructionCount,
-    const std::function<void(IrOpcode, uint64_t)> &emitInstruction,
-    const std::function<void(size_t, uint64_t)> &patchInstructionImm,
-    std::string &error) {
-  const auto keyValueTargetInfo = resolveKeyValueAccessTargetInfo(
-      targetExpr, localsIn, resolveCallKeyValueAccessTargetInfo);
-  if (!keyValueTargetInfo.isKeyValueTarget) {
-    return KeyValueAccessLookupEmitResult::NotHandled;
-  }
-  if (!validateKeyValueAccessTargetInfo(keyValueTargetInfo, "contains", error)) {
-    return KeyValueAccessLookupEmitResult::Error;
-  }
-  if (!emitKeyValueLookupContains(
-          keyValueTargetInfo.keyValueKeyKind,
-          keyValueTargetInfo.structTypeName,
-          targetExpr,
-          lookupKeyExpr,
-          localsIn,
-          allocTempLocal,
-          emitExpr,
-          resolveStringTableTarget,
-          inferExprKind,
-          instructionCount,
-          emitInstruction,
-          patchInstructionImm,
-          error)) {
-    return KeyValueAccessLookupEmitResult::Error;
-  }
-  return KeyValueAccessLookupEmitResult::Emitted;
-}
-
 StringTableAccessEmitResult tryEmitStringTableAccessLoad(
     const std::string &accessName,
     const Expr &targetExpr,
@@ -495,14 +372,12 @@ bool emitBuiltinArrayAccess(
     const LocalMap &localsIn,
     const std::function<bool(const Expr &, const LocalMap &, int32_t &, size_t &)> &resolveStringTableTarget,
     size_t stringTableCount,
-    const ResolveCallKeyValueAccessTargetInfoFn &resolveCallKeyValueAccessTargetInfo,
     const ResolveCallArrayVectorAccessTargetInfoFn &resolveCallArrayVectorAccessTargetInfo,
     const std::function<LocalInfo::ValueKind(const Expr &, const LocalMap &)> &inferExprKind,
     const std::function<bool(const Expr &, const LocalMap &)> &isEntryArgsName,
     const std::function<int32_t()> &allocTempLocal,
     const std::function<bool(const Expr &, const LocalMap &)> &emitExpr,
     const std::function<void()> &emitStringIndexOutOfBounds,
-    const std::function<void()> &emitMapKeyNotFound,
     const std::function<void()> &emitArrayIndexOutOfBounds,
     const std::function<size_t()> &instructionCount,
     const std::function<void(IrOpcode, uint64_t)> &emitInstruction,
@@ -539,19 +414,14 @@ bool emitBuiltinArrayAccess(
       resolveCallArrayVectorAccessTargetInfo,
       semanticProgram,
       semanticIndex);
-  const auto keyValueTargetInfo = resolveKeyValueAccessTargetInfo(
-      targetExpr,
-      localsIn,
-      resolveCallKeyValueAccessTargetInfo,
-      semanticProgram,
-      semanticIndex);
   std::string nestedAccessName;
   const bool isMapArgsPackElementTarget =
       arrayVectorTargetInfo.isArgsPackTarget &&
       targetExpr.kind == Expr::Kind::Call &&
       getBuiltinArrayAccessName(targetExpr, nestedAccessName) &&
       targetExpr.args.size() == 2 &&
-      keyValueTargetInfo.isKeyValueTarget;
+      (arrayVectorTargetInfo.isKeyValueTarget ||
+       arrayVectorTargetInfo.isWrappedKeyValueTarget);
   if (arrayVectorTargetInfo.isArgsPackTarget && !isMapArgsPackElementTarget) {
     return emitArrayVectorIndexedAccess(
         accessName,
@@ -569,30 +439,6 @@ bool emitBuiltinArrayAccess(
         error,
         semanticProgram,
         semanticIndex);
-  }
-
-  const auto keyValueLookupResult = tryEmitKeyValueAccessLookup(
-      accessName,
-      targetExpr,
-      indexExpr,
-      localsIn,
-      allocTempLocal,
-      emitExpr,
-      resolveStringTableTarget,
-      resolveCallKeyValueAccessTargetInfo,
-      inferExprKind,
-      emitMapKeyNotFound,
-      instructionCount,
-      emitInstruction,
-      patchInstructionImm,
-      error,
-      semanticProgram,
-      semanticIndex);
-  if (keyValueLookupResult == KeyValueAccessLookupEmitResult::Error) {
-    return false;
-  }
-  if (keyValueLookupResult == KeyValueAccessLookupEmitResult::Emitted) {
-    return true;
   }
 
   const auto dynamicStringAccessResult = tryEmitDynamicStringAccessLoad(
@@ -653,14 +499,12 @@ bool emitBuiltinArrayAccess(
     const Expr &indexExpr,
     const LocalMap &localsIn,
     const std::function<bool(const Expr &, const LocalMap &, int32_t &, size_t &)> &resolveStringTableTarget,
-    const ResolveCallKeyValueAccessTargetInfoFn &resolveCallKeyValueAccessTargetInfo,
     const ResolveCallArrayVectorAccessTargetInfoFn &resolveCallArrayVectorAccessTargetInfo,
     const std::function<LocalInfo::ValueKind(const Expr &, const LocalMap &)> &inferExprKind,
     const std::function<bool(const Expr &, const LocalMap &)> &isEntryArgsName,
     const std::function<int32_t()> &allocTempLocal,
     const std::function<bool(const Expr &, const LocalMap &)> &emitExpr,
     const std::function<void()> &emitStringIndexOutOfBounds,
-    const std::function<void()> &emitMapKeyNotFound,
     const std::function<void()> &emitArrayIndexOutOfBounds,
     const std::function<size_t()> &instructionCount,
     const std::function<void(IrOpcode, uint64_t)> &emitInstruction,
@@ -673,14 +517,12 @@ bool emitBuiltinArrayAccess(
       localsIn,
       resolveStringTableTarget,
       0,
-      resolveCallKeyValueAccessTargetInfo,
       resolveCallArrayVectorAccessTargetInfo,
       inferExprKind,
       isEntryArgsName,
       allocTempLocal,
       emitExpr,
       emitStringIndexOutOfBounds,
-      emitMapKeyNotFound,
       emitArrayIndexOutOfBounds,
       instructionCount,
       emitInstruction,
@@ -702,7 +544,6 @@ bool emitBuiltinArrayAccess(
     const std::function<int32_t()> &allocTempLocal,
     const std::function<bool(const Expr &, const LocalMap &)> &emitExpr,
     const std::function<void()> &emitStringIndexOutOfBounds,
-    const std::function<void()> &emitMapKeyNotFound,
     const std::function<void()> &emitArrayIndexOutOfBounds,
     const std::function<size_t()> &instructionCount,
     const std::function<void(IrOpcode, uint64_t)> &emitInstruction,
@@ -716,13 +557,11 @@ bool emitBuiltinArrayAccess(
       resolveStringTableTarget,
       stringTableCount,
       {},
-      {},
       inferExprKind,
       isEntryArgsName,
       allocTempLocal,
       emitExpr,
       emitStringIndexOutOfBounds,
-      emitMapKeyNotFound,
       emitArrayIndexOutOfBounds,
       instructionCount,
       emitInstruction,
@@ -743,7 +582,6 @@ bool emitBuiltinArrayAccess(
     const std::function<int32_t()> &allocTempLocal,
     const std::function<bool(const Expr &, const LocalMap &)> &emitExpr,
     const std::function<void()> &emitStringIndexOutOfBounds,
-    const std::function<void()> &emitMapKeyNotFound,
     const std::function<void()> &emitArrayIndexOutOfBounds,
     const std::function<size_t()> &instructionCount,
     const std::function<void(IrOpcode, uint64_t)> &emitInstruction,
@@ -757,13 +595,11 @@ bool emitBuiltinArrayAccess(
       resolveStringTableTarget,
       0,
       {},
-      {},
       inferExprKind,
       isEntryArgsName,
       allocTempLocal,
       emitExpr,
       emitStringIndexOutOfBounds,
-      emitMapKeyNotFound,
       emitArrayIndexOutOfBounds,
       instructionCount,
       emitInstruction,

@@ -83,9 +83,9 @@ Task template:
 
 ### Ready Now (Parallel-Candidate Leaves; No Unmet TODO Dependencies)
 
-- TODO-4541: Delete lowerer key/value access target emission |
+- TODO-4542: Retire native map-value backend gates |
   track: map-zero-audit |
-  primary surface: lowerer key/value access emission
+  primary surface: native backend map-value gates
 - TODO-4271: Add compile-time pack indexing | track: tuple-type-packs |
   primary surface: generic pack-index selection and diagnostics
 
@@ -96,9 +96,9 @@ Task template:
 - `map-zero-audit`: TODO-4537 split the broad lowerer substrate item into
   bounded leaves; TODO-4539 removed generated MapValue path synthesis, and
   TODO-4540 removed the lowerer key/value local kind plus ref/pointer flags.
-  Ready TODO-4541 now deletes key/value access target emission before
-  TODO-4542 -> TODO-4538 -> TODO-4464 for the final strict zero map-surface
-  audit.
+  TODO-4541 removed direct key/value access emission; ready TODO-4542 now
+  retires native map-value gates before TODO-4543 -> TODO-4538 -> TODO-4464
+  for the final strict zero map-surface audit.
 - `tuple-type-packs`: TODO-4276 completed helper/lifecycle pack
   expansion; ready TODO-4271, then serial successors TODO-4272
   -> TODO-4274 -> TODO-4273 -> TODO-4277 -> TODO-4278.
@@ -109,7 +109,7 @@ Task template:
 
 ### Immediate Next 10 (Track Successors; Not Ready Until Dependencies Land)
 
-- TODO-4542: Retire native map-value backend gates
+- TODO-4543: Retire key/value access target metadata
 - TODO-4538: Replace map inventory gate with fast strict audit
 - TODO-4464: Run final strict C++ map-surface audit
 - TODO-4272: Add stdlib `tuple<Ts...>`
@@ -123,7 +123,7 @@ Task template:
   must enter as bounded leaves only.
 - Deferred stdlib ADT migration: none active
 - Vector stdlib ownership cutover: none active
-- Map stdlib ownership cutover: ready TODO-4541, then TODO-4542
+- Map stdlib ownership cutover: ready TODO-4542, then TODO-4543
   -> TODO-4538 -> TODO-4464 for the final strict zero audit
 - SoA public surface rename and ownership cutover: TODO-4306 parent split;
   TODO-4526 removed semantic-validation inventory residue after TODO-4530
@@ -145,8 +145,8 @@ Task template:
 
 ### Execution Queue (Recommended Track Order)
 
-- TODO-4541: Delete lowerer key/value access target emission
 - TODO-4542: Retire native map-value backend gates
+- TODO-4543: Retire key/value access target metadata
 - TODO-4538: Replace map inventory gate with fast strict audit
 - TODO-4464: Run final strict C++ map-surface audit
 - TODO-4271: Add compile-time pack indexing
@@ -193,9 +193,9 @@ Task template:
 | Compile-pipeline stage and publication-boundary contracts | none |
 | Compile-time macro hooks and AST transform ownership | none |
 | Stdlib surface-style alignment and public helper readability | TODO-4305 |
-| Stdlib bridge consolidation and collection/file/gfx surface authority | TODO-4430, TODO-4534 through TODO-4538, TODO-4539 through TODO-4542, TODO-4464, TODO-4524 |
-| Vector/map stdlib ownership cutover and collection surface authority | TODO-4430, TODO-4534 through TODO-4538, TODO-4539 through TODO-4542, TODO-4464 |
-| Stdlib de-experimentalization and public/internal namespace cleanup | TODO-4430, TODO-4534 through TODO-4538, TODO-4539 through TODO-4542, TODO-4464, TODO-4305, TODO-4524 |
+| Stdlib bridge consolidation and collection/file/gfx surface authority | TODO-4430, TODO-4534 through TODO-4538, TODO-4539 through TODO-4543, TODO-4464, TODO-4524 |
+| Vector/map stdlib ownership cutover and collection surface authority | TODO-4430, TODO-4534 through TODO-4538, TODO-4539 through TODO-4543, TODO-4464 |
+| Stdlib de-experimentalization and public/internal namespace cleanup | TODO-4430, TODO-4534 through TODO-4538, TODO-4539 through TODO-4543, TODO-4464, TODO-4305, TODO-4524 |
 | SoA maturity and `soa` public-surface rename | TODO-4305, TODO-4306, TODO-4514, TODO-4524 |
 | Validator entrypoint and benchmark-plumbing split | none |
 | Semantic-product publication by module and fact family | none |
@@ -224,12 +224,12 @@ Task template:
 | Compile-pipeline stage handoff conformance | none |
 | Semantic-product publication parity and deterministic ordering | none |
 | Lowerer/source-composition contract coverage | none |
-| Vector/map bridge parity for imports, rewrites, and lowering | TODO-4430, TODO-4534 through TODO-4538, TODO-4539 through TODO-4542, TODO-4464 |
-| De-experimentalization surface and namespace parity | TODO-4430, TODO-4534 through TODO-4538, TODO-4539 through TODO-4542, TODO-4464, TODO-4305, TODO-4524 |
+| Vector/map bridge parity for imports, rewrites, and lowering | TODO-4430, TODO-4534 through TODO-4538, TODO-4539 through TODO-4543, TODO-4464 |
+| De-experimentalization surface and namespace parity | TODO-4430, TODO-4534 through TODO-4538, TODO-4539 through TODO-4543, TODO-4464, TODO-4305, TODO-4524 |
 | `soa` maturity and canonical surface parity | TODO-4305, TODO-4306, TODO-4514, TODO-4524 |
 | Focused backend rerun ergonomics and suite partitioning | none |
 | Architecture contract probe migration | none |
-| Emitter map-helper canonicalization parity | TODO-4534 through TODO-4538, TODO-4539 through TODO-4542, TODO-4464 |
+| Emitter map-helper canonicalization parity | TODO-4534 through TODO-4538, TODO-4539 through TODO-4543, TODO-4464 |
 | VM debug-session argv lifetime coverage | none |
 | Debugger/source-map provenance parity | none |
 | Debug trace replay malformed-input coverage | none |
@@ -1852,38 +1852,6 @@ Task template:
   - stop_rule: Stop once the generic design direction is documented through
     runnable examples rather than only prose.
 
-- [ ] TODO-4541: Delete lowerer key/value access target emission
-  - owner: ai
-  - created_at: 2026-05-20
-  - phase: Map stdlib ownership cutover
-  - parallel_track: map-zero-audit
-  - depends_on: TODO-4540
-  - split_from: TODO-4537
-  - scope: Remove `KeyValueAccessTargetInfo` and direct lowerer/backend
-    dispatch branches that identify stdlib map access, insert, or lookup as a
-    special native emission target instead of ordinary helper calls over
-    `.prime` struct values.
-  - implementation_notes:
-    - Start from `IrLowererAccessTargetResolution.cpp`,
-      `IrLowererStatementCallEmission.cpp`,
-      `IrLowererLowerEmitExprTailDispatch.h`,
-      `IrLowererLowerEmitExprCollectionHelpers.h`, and
-      `IrLowererAccessLoadHelpers.cpp`.
-    - Retain only true language/runtime primitives and document them in the
-      task outcome if any remain.
-    - If map access currently relies on a missing generic helper-call lowering
-      capability, create that non-map TODO and stop before preserving the
-      map-specific emission path.
-  - acceptance:
-    - Production lowerer code no longer exposes `KeyValueAccessTargetInfo` or
-      key/value access target resolver callbacks.
-    - Canonical map access/tryAt/insert tests compile or diagnose through
-      ordinary helper calls.
-    - Source-lock tests assert deleted access-emission hooks stay absent.
-  - stop_rule: Stop once direct key/value access target emission is gone and
-    focused map access/insert coverage passes or is blocked by a concrete
-    non-map generic lowering TODO.
-
 - [ ] TODO-4542: Retire native map-value backend gates
   - owner: ai
   - created_at: 2026-05-20
@@ -1915,12 +1883,48 @@ Task template:
     specially, or once any retained backend primitive limit is explicitly
     generic and documented.
 
-- [ ] TODO-4538: Replace map inventory gate with fast strict audit
+- [ ] TODO-4543: Retire key/value access target metadata
   - owner: ai
   - created_at: 2026-05-20
   - phase: Map stdlib ownership cutover
   - parallel_track: map-zero-audit
   - depends_on: TODO-4542
+  - split_from: TODO-4541
+  - scope: Remove the residual `KeyValueAccessTargetInfo` and
+    `ResolveCallKeyValueAccessTargetInfoFn` lowerer metadata surface now that
+    direct native map access emission is gone, replacing remaining access,
+    insert, setup-type, inline, and return-kind probes with generic collection
+    type facts or ordinary helper-call resolution.
+  - implementation_notes:
+    - Start from `IrLowererAccessTargetResolution.cpp`,
+      `IrLowererStatementCallEmission.cpp`,
+      `IrLowererLowerEmitExprTailDispatch.h`,
+      `IrLowererLowerEmitExprCollectionHelpers.h`,
+      `IrLowererSetupTypeReturnKindHelpers.cpp`, and
+      `IrLowererInlineNativeCallDispatch.cpp`.
+    - Preserve only non-stdlib runtime primitives; any retained key/value
+      scalar fact should be generic collection metadata rather than an
+      access-target resolver callback.
+    - If insert or setup-type helper resolution still needs a missing generic
+      helper-call capability, create that non-map TODO and stop before
+      reintroducing map-specific dispatch.
+  - acceptance:
+    - Production lowerer code no longer exposes `KeyValueAccessTargetInfo` or
+      key/value access target resolver callbacks.
+    - Canonical map access/tryAt/insert tests compile or diagnose through
+      ordinary helper calls.
+    - Source-lock tests assert residual access-target metadata hooks stay
+      absent from production lowerer code.
+  - stop_rule: Stop once residual key/value access-target metadata is gone and
+    focused map access/insert coverage passes or is blocked by a concrete
+    non-map generic lowering TODO.
+
+- [ ] TODO-4538: Replace map inventory gate with fast strict audit
+  - owner: ai
+  - created_at: 2026-05-20
+  - phase: Map stdlib ownership cutover
+  - parallel_track: map-zero-audit
+  - depends_on: TODO-4543
   - split_from: TODO-4464
   - scope: Replace the broad decaying map-surface inventory with a fast strict
     audit suitable for routine validation after the production map substrate is
@@ -1955,7 +1959,7 @@ Task template:
     production C++ source.
   - implementation_notes:
     - This is the final acceptance gate, not the active deletion leaf. Use
-      TODO-4534 through TODO-4538 plus TODO-4539 through TODO-4542 for the
+      TODO-4534 through TODO-4538 plus TODO-4539 through TODO-4543 for the
       larger subsystem-removal and audit-preparation passes.
     - Use the fast strict audit produced by TODO-4538 to scan production C++
       under `src/` and `include/` for PrimeStruct-map-specific traces such as

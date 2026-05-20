@@ -12,6 +12,13 @@
   compilation.
 
 ## Recent Test Runs
+- 2026-05-20 20:20 CEST | pass | mode: release | command:
+  `cmake --build build-release --target PrimeStruct_backend_ir_tests`;
+  `cd build-release && ./PrimeStruct_backend_ir_tests --test-case="ir lowerer call helpers source delegation stays stable,ir lowerer call helpers emit builtin array access,ir lowerer call helpers keep explicit map helpers out of native builtin emission,ir lowerer call helpers dispatch native call tail orchestration" --no-skip`;
+  `rg -n 'tryEmitKeyValueAccessLookup|tryEmitKeyValueContainsLookup|KeyValueAccessLookupEmitResult' src/ir_lowerer include/primec/testing CMakeLists.txt`
+  | failures: none | notes: TODO-4541 deleted the direct key/value access
+  lookup emission wrappers and native-tail map contains/tryAt/count emission
+  path while deferring residual access-target metadata removal to TODO-4543.
 - 2026-05-20 15:23 CEST | partial | mode: release | command:
   `cmake --build build-release --target PrimeStruct_semantics_tests`;
   `cd build-release && ./PrimeStruct_semantics_tests --test-case="map binding rejects unsupported builtin Comparable key contract,inferred map binding rejects unsupported builtin Comparable key contract,canonical map borrowed receiver validates direct stdlib tryAt,canonical map borrowed receiver keeps tryAt key diagnostics,canonical map insert helpers validate on value and borrowed mutation surfaces" --no-skip`;

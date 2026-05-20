@@ -20128,6 +20128,47 @@ Moved from `docs/todo.md` during unfinished-only cleanup:
     `PrimeStruct_compile_run_tests`; ran the new native and VM focused cases;
     and reran the backend source-delegation stability shard.
 
+- [x] TODO-4541: Delete lowerer key/value access target emission
+  - owner: ai
+  - created_at: 2026-05-20
+  - finished_at: 2026-05-20
+  - phase: Map stdlib ownership cutover
+  - parallel_track: map-zero-audit
+  - depends_on: TODO-4540
+  - split_from: TODO-4537
+  - scope: Remove direct lowerer/backend dispatch branches that emit stdlib
+    map access, contains, tryAt, or count as special native builtin lookup
+    targets instead of deferring to ordinary `.prime` helper calls.
+  - implementation_notes:
+    - Deleted `tryEmitKeyValueAccessLookup`,
+      `tryEmitKeyValueContainsLookup`, and
+      `KeyValueAccessLookupEmitResult` from production and testing helper
+      surfaces.
+    - Kept low-level key/value lookup-loop scaffolding as a tested runtime
+      helper surface for now; TODO-4543 owns retiring residual
+      `KeyValueAccessTargetInfo` metadata and access-target resolver
+      callbacks after native map-value gates are gone.
+  - acceptance:
+    - Indexed builtin access no longer calls through key/value lookup emission
+      wrappers.
+    - Native tail dispatch defers published stdlib map read/access helper
+      calls to ordinary helper lowering instead of emitting native map lookup
+      instructions.
+    - Source-lock tests assert the deleted access-emission wrappers stay
+      absent.
+  - stop_rule: Stop once direct key/value access emission is gone, focused
+    native-tail and indexed-access coverage passes, and remaining
+    access-target metadata work is split into TODO-4543.
+  - evidence: Removed the direct key/value access lookup wrappers from
+    `IrLowererIndexedAccessEmit.cpp`, the public/testing helper headers,
+    native-tail contains/tryAt emission paths, and the obsolete direct wrapper
+    test shard; updated source locks and builtin-access tests; built
+    `PrimeStruct_backend_ir_tests`; ran focused doctest coverage for source
+    delegation, builtin array access, explicit map helper native-tail
+    deferral, and native call tail orchestration; and confirmed `rg` finds no
+    `tryEmitKeyValueAccessLookup`, `tryEmitKeyValueContainsLookup`, or
+    `KeyValueAccessLookupEmitResult` in production/testing helper surfaces.
+
 - [x] TODO-4540: Collapse lowerer key/value local metadata
   - owner: ai
   - created_at: 2026-05-20

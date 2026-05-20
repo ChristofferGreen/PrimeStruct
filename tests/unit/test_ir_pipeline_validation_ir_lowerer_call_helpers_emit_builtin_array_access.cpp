@@ -29,7 +29,6 @@ TEST_CASE("ir lowerer call helpers emit builtin array access") {
       [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return true; },
       []() {},
       []() {},
-      []() {},
       [&]() { return instructions.size(); },
       [&](primec::IrOpcode op, uint64_t imm) { instructions.push_back({op, imm}); },
       [&](size_t instructionIndex, uint64_t imm) { instructions[instructionIndex].imm = imm; },
@@ -58,7 +57,6 @@ TEST_CASE("ir lowerer call helpers emit builtin array access") {
         instructions.push_back({primec::IrOpcode::PushI32, 1});
         return true;
       },
-      []() {},
       []() {},
       []() {},
       [&]() { return instructions.size(); },
@@ -95,7 +93,6 @@ TEST_CASE("ir lowerer call helpers emit builtin array access") {
       [](const primec::Expr &, const primec::ir_lowerer::LocalMap &, int32_t &, size_t &) { return false; },
       3,
       {},
-      {},
       [&](const primec::Expr &expr, const primec::ir_lowerer::LocalMap &) {
         if (expr.kind == primec::Expr::Kind::Name && expr.name == "idx") {
           return Kind::Int32;
@@ -114,7 +111,6 @@ TEST_CASE("ir lowerer call helpers emit builtin array access") {
         return true;
       },
       [&]() { ++stringIndexOutOfBoundsCalls; },
-      []() {},
       []() {},
       [&]() { return instructions.size(); },
       [&](primec::IrOpcode op, uint64_t imm) { instructions.push_back({op, imm}); },
@@ -162,12 +158,12 @@ TEST_CASE("ir lowerer call helpers emit builtin array access") {
       [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return true; },
       []() {},
       []() {},
-      []() {},
       [&]() { return instructions.size(); },
       [&](primec::IrOpcode op, uint64_t imm) { instructions.push_back({op, imm}); },
       [&](size_t instructionIndex, uint64_t imm) { instructions[instructionIndex].imm = imm; },
       error));
-  CHECK(error == "native backend requires typed map bindings for at");
+  CHECK(error.find("native backend only supports at() on numeric/bool/string arrays or vectors") !=
+        std::string::npos);
   CHECK(instructions.empty());
 
   instructions.clear();
@@ -208,7 +204,6 @@ TEST_CASE("ir lowerer call helpers emit builtin array access") {
       [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return false; },
       [&]() { return nextLocal++; },
       emitVectorAccessExpr,
-      []() {},
       []() {},
       [&]() { ++arrayIndexOutOfBoundsCalls; },
       [&]() { return instructions.size(); },
@@ -273,7 +268,6 @@ TEST_CASE("ir lowerer call helpers emit builtin array access") {
       [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return false; },
       [&]() { return nextLocal++; },
       emitVectorAccessExpr,
-      []() {},
       []() {},
       [&]() { ++arrayIndexOutOfBoundsCalls; },
       [&]() { return instructions.size(); },
@@ -346,7 +340,6 @@ TEST_CASE("ir lowerer call helpers emit builtin array access") {
         return true;
       },
       []() {},
-      []() {},
       [&]() { ++argsPackArrayIndexOutOfBoundsCalls; },
       [&]() { return instructions.size(); },
       [&](primec::IrOpcode op, uint64_t imm) { instructions.push_back({op, imm}); },
@@ -410,7 +403,6 @@ TEST_CASE("ir lowerer builtin array access prefers semantic target facts") {
       },
       0,
       {},
-      {},
       [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) {
         return Kind::Int32;
       },
@@ -425,7 +417,6 @@ TEST_CASE("ir lowerer builtin array access prefers semantic target facts") {
         instructions.push_back({primec::IrOpcode::PushI32, 1});
         return true;
       },
-      []() {},
       []() {},
       []() {},
       [&]() { return instructions.size(); },
@@ -464,7 +455,6 @@ TEST_CASE("ir lowerer builtin array access prefers semantic target facts") {
       },
       0,
       {},
-      {},
       [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) {
         return Kind::Int32;
       },
@@ -474,7 +464,6 @@ TEST_CASE("ir lowerer builtin array access prefers semantic target facts") {
         instructions.push_back({primec::IrOpcode::PushI64, 100});
         return true;
       },
-      []() {},
       []() {},
       []() {},
       [&]() { return instructions.size(); },
@@ -547,9 +536,8 @@ TEST_CASE("ir lowerer builtin map access prefers semantic target facts") {
   std::vector<primec::IrInstruction> instructions;
   int nextLocal = 50;
   int emitExprCalls = 0;
-  int mapKeyNotFoundCalls = 0;
   std::string error;
-  CHECK(primec::ir_lowerer::emitBuiltinArrayAccess(
+  CHECK_FALSE(primec::ir_lowerer::emitBuiltinArrayAccess(
       "at",
       semanticMapTarget,
       indexExpr,
@@ -558,7 +546,6 @@ TEST_CASE("ir lowerer builtin map access prefers semantic target facts") {
         return false;
       },
       0,
-      {},
       {},
       [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) {
         return Kind::Int32;
@@ -575,7 +562,6 @@ TEST_CASE("ir lowerer builtin map access prefers semantic target facts") {
         return true;
       },
       []() {},
-      [&]() { ++mapKeyNotFoundCalls; },
       []() {},
       [&]() { return instructions.size(); },
       [&](primec::IrOpcode op, uint64_t imm) { instructions.push_back({op, imm}); },
@@ -583,11 +569,10 @@ TEST_CASE("ir lowerer builtin map access prefers semantic target facts") {
       error,
       &semanticProgram,
       &semanticIndex));
-  CHECK(error.empty());
-  CHECK(emitExprCalls == 2);
-  CHECK(mapKeyNotFoundCalls == 1);
-  REQUIRE(!instructions.empty());
-  CHECK(instructions.front().op == primec::IrOpcode::PushI64);
+  CHECK(error.find("native backend only supports at() on numeric/bool/string arrays or vectors") !=
+        std::string::npos);
+  CHECK(emitExprCalls == 0);
+  CHECK(instructions.empty());
 
   primec::ir_lowerer::LocalInfo staleMapInfo;
   staleMapInfo.kind = primec::ir_lowerer::LocalInfo::Kind::Value;
@@ -605,7 +590,6 @@ TEST_CASE("ir lowerer builtin map access prefers semantic target facts") {
   error.clear();
   nextLocal = 60;
   emitExprCalls = 0;
-  mapKeyNotFoundCalls = 0;
   CHECK_FALSE(primec::ir_lowerer::emitBuiltinArrayAccess(
       "at",
       semanticScalarTarget,
@@ -615,7 +599,6 @@ TEST_CASE("ir lowerer builtin map access prefers semantic target facts") {
         return false;
       },
       0,
-      {},
       {},
       [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) {
         return Kind::Int32;
@@ -628,7 +611,6 @@ TEST_CASE("ir lowerer builtin map access prefers semantic target facts") {
         return true;
       },
       []() {},
-      [&]() { ++mapKeyNotFoundCalls; },
       []() {},
       [&]() { return instructions.size(); },
       [&](primec::IrOpcode op, uint64_t imm) { instructions.push_back({op, imm}); },
@@ -639,7 +621,6 @@ TEST_CASE("ir lowerer builtin map access prefers semantic target facts") {
   CHECK(error.find("native backend only supports at() on numeric/bool/string arrays or vectors") !=
         std::string::npos);
   CHECK(emitExprCalls == 0);
-  CHECK(mapKeyNotFoundCalls == 0);
   CHECK(instructions.empty());
 }
 
