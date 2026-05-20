@@ -723,7 +723,7 @@ main() {
   checkCanonicalMapConstructorMismatch(error);
 }
 
-TEST_CASE("helper-wrapped map constructors accept explicit experimental map parameters") {
+TEST_CASE("helper-wrapped map constructors reject explicit experimental map parameters") {
   const std::string source = R"(
 import /std/collections/*
 import /std/collections/internal_map/*
@@ -763,9 +763,12 @@ main() {
 }
 )";
   std::string error;
-  CHECK(validateProgram(source, "/main", error));
+  CHECK_FALSE(validateProgram(source, "/main", error));
   INFO(error);
-  CHECK(error.empty());
+  CHECK(error.find("argument type mismatch for /scoreValues parameter values") !=
+        std::string::npos);
+  CHECK(error.find("expected map<string, i32> got /std/collections/map/MapValue__") !=
+        std::string::npos);
 }
 
 TEST_SUITE_END();
