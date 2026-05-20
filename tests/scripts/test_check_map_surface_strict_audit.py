@@ -11,7 +11,7 @@ from pathlib import Path
 
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(
-        description="Self-test the map surface trace inventory checker."
+        description="Self-test the map surface strict audit checker."
     )
     parser.add_argument(
         "--repo-root",
@@ -22,10 +22,14 @@ def parse_args() -> argparse.Namespace:
     return parser.parse_args()
 
 
-def run_checker(repo_root: Path, scanned_root: Path) -> subprocess.CompletedProcess[str]:
-    checker = repo_root / "scripts" / "check_map_surface_trace_inventory.py"
+def run_checker(
+    repo_root: Path,
+    scanned_root: Path,
+    *extra_args: str,
+) -> subprocess.CompletedProcess[str]:
+    checker = repo_root / "scripts" / "check_map_surface_strict_audit.py"
     return subprocess.run(
-        [sys.executable, str(checker), "--root", str(scanned_root)],
+        [sys.executable, str(checker), "--root", str(scanned_root), *extra_args],
         text=True,
         capture_output=True,
         check=False,
@@ -66,11 +70,38 @@ def main() -> int:
             print("Checker accepted a production map surface trace", file=sys.stderr)
             print(failed.stdout, end="")
             return 1
-        if "Map surface trace inventory check failed" not in failed.stderr:
+        if "Map surface strict audit failed" not in failed.stderr:
             print(f"Unexpected failing checker stderr: {failed.stderr!r}", file=sys.stderr)
             return 1
-        if "src/BadTrace.cpp: has 1 map-surface traces" not in failed.stderr:
+        if "src/BadTrace.cpp: pattern canonical-map-path has 1 traces" not in failed.stderr:
             print(f"Unexpected trace diagnostic: {failed.stderr!r}", file=sys.stderr)
+            return 1
+
+    with tempfile.TemporaryDirectory(prefix="ps_map_surface_current_") as temp:
+        scanned_root = Path(temp)
+        current_path = scanned_root / "src" / "ir_lowerer"
+        (scanned_root / "include").mkdir()
+        current_path.mkdir(parents=True)
+        (current_path / "IrLowererLowerStatementsExpr.h").write_text(
+            'auto helperName = bareName == "at" ? "mapAt" : "mapAtUnsafe";\n',
+            encoding="utf-8",
+        )
+        allowed = run_checker(repo_root, scanned_root)
+        if allowed.returncode != 0:
+            print(allowed.stdout, end="")
+            print(allowed.stderr, end="", file=sys.stderr)
+            return 1
+        if "2 production traces observed" not in allowed.stdout:
+            print(f"Unexpected current allowance output: {allowed.stdout!r}", file=sys.stderr)
+            return 1
+
+        zero = run_checker(repo_root, scanned_root, "--enforce-zero")
+        if zero.returncode == 0:
+            print("Checker accepted current map bridge residue in zero mode", file=sys.stderr)
+            print(zero.stdout, end="")
+            return 1
+        if "pattern map-helper-symbol has 2 traces" not in zero.stderr:
+            print(f"Unexpected zero-mode diagnostic: {zero.stderr!r}", file=sys.stderr)
             return 1
 
     return 0

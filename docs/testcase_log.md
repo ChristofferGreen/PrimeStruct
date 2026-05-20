@@ -12,6 +12,15 @@
   compilation.
 
 ## Recent Test Runs
+- 2026-05-20 20:56 CEST | pass | mode: release | command:
+  `python3 scripts/check_map_surface_strict_audit.py --root .`;
+  `python3 tests/scripts/test_check_map_surface_strict_audit.py --repo-root .`;
+  `cmake -S . -B build-release -DCMAKE_BUILD_TYPE=Release -DPRIMESTRUCT_BUILD_TESTS=ON`;
+  `cd build-release && ctest --output-on-failure -R '^PrimeStruct_map_surface_strict_audit(_self_test)?$'`
+  | failures: none | notes: TODO-4538 replaced the old broad map surface
+  inventory with a tracked-file strict audit, kept the current two trace
+  statement-lowering bridge allowance, and wired the focused CTest gate plus
+  zero-tolerance mode for TODO-4464.
 - 2026-05-20 20:48 CEST | pass | mode: release | command:
   `cmake --build build-release --target primec`;
   direct native smoke for

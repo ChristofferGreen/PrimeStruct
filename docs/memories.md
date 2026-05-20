@@ -1408,6 +1408,16 @@ This file stores durable session-derived facts that are useful in later work. Ke
   `resolveSemanticKeyValueTargetInfo`, and focused release setup-type/source
   delegation tests passed after the rename.
 
+### map-surface-strict-audit-is-bounded
+- Updated: 2026-05-20
+- Tags: audit, collections, workflow
+- Fact: The routine map-surface audit is now a tracked-file production C++
+  scan with a two-trace current bridge allowance and a separate
+  `--enforce-zero` mode for the final map cutover gate.
+- Evidence: TODO-4538 replaced the old broad
+  `check_map_surface_trace_inventory.py` CTest gate with
+  `scripts/check_map_surface_strict_audit.py` and its self-test.
+
 ### mapvalue-public-insert-uses-stdlib
 - Updated: 2026-05-16
 - Tags: ir, collections, native

@@ -83,9 +83,9 @@ Task template:
 
 ### Ready Now (Parallel-Candidate Leaves; No Unmet TODO Dependencies)
 
-- TODO-4538: Replace map inventory gate with fast strict audit |
+- TODO-4464: Run final strict C++ map-surface audit |
   track: map-zero-audit |
-  primary surface: strict map-surface audit
+  primary surface: zero-tolerance map-surface audit
 - TODO-4271: Add compile-time pack indexing | track: tuple-type-packs |
   primary surface: generic pack-index selection and diagnostics
 
@@ -97,9 +97,10 @@ Task template:
   bounded leaves; TODO-4539 removed generated MapValue path synthesis, and
   TODO-4540 removed the lowerer key/value local kind plus ref/pointer flags.
   TODO-4541 removed direct key/value access emission, TODO-4542 retired
-  native map-value gates, and TODO-4543 moved residual access-target API
-  names to generic collection-pair type facts; ready TODO-4538 now prepares
-  the final strict zero map-surface audit before TODO-4464.
+  native map-value gates, TODO-4543 moved residual access-target API names
+  to generic collection-pair type facts, and TODO-4538 replaced the hanging
+  broad inventory with a fast strict audit; ready TODO-4464 now enforces the
+  final zero map-surface state.
 - `generic-helper-call-lowering`: TODO-4544 fixed statement-context
   generated `.prime` helper calls without restoring map-specific native
   insert dispatch; no generic helper-call leaf is ready.
@@ -113,7 +114,6 @@ Task template:
 
 ### Immediate Next 10 (Track Successors; Not Ready Until Dependencies Land)
 
-- TODO-4464: Run final strict C++ map-surface audit
 - TODO-4272: Add stdlib `tuple<Ts...>`
 - TODO-4274: Add tuple bracket indexing sugar
 - TODO-4273: Add heterogeneous value-pack inference
@@ -125,8 +125,8 @@ Task template:
   must enter as bounded leaves only.
 - Deferred stdlib ADT migration: none active
 - Vector stdlib ownership cutover: none active
-- Map stdlib ownership cutover: ready TODO-4538, then TODO-4464 for the final
-  strict zero audit
+- Map stdlib ownership cutover: ready TODO-4464 for the final strict zero
+  audit
 - Generic helper-call lowering: none active after TODO-4544
 - SoA public surface rename and ownership cutover: TODO-4306 parent split;
   TODO-4526 removed semantic-validation inventory residue after TODO-4530
@@ -148,7 +148,6 @@ Task template:
 
 ### Execution Queue (Recommended Track Order)
 
-- TODO-4538: Replace map inventory gate with fast strict audit
 - TODO-4464: Run final strict C++ map-surface audit
 - TODO-4271: Add compile-time pack indexing
 - TODO-4272: Add stdlib `tuple<Ts...>`
@@ -385,9 +384,11 @@ Task template:
   `test_stdlib_map_ownership.cpp`, and
   all production `src`/`include` experimental-map/`Map__*` backing traces are
   capped by the decaying `scripts/check_map_backing_traces.py` release gate.
-  The old broad `scripts/check_map_surface_trace_inventory.py` inventory is
-  now historical input for TODO-4538, which replaces it with a fast strict
-  audit before TODO-4464 enforces the final zero-trace state.
+  The old broad `scripts/check_map_surface_trace_inventory.py` inventory has
+  been replaced by the tracked-file
+  `scripts/check_map_surface_strict_audit.py` gate, whose normal mode allows
+  only the current statement-lowering bridge and whose `--enforce-zero` mode
+  is the TODO-4464 final zero-trace gate.
 - Compatibility adapter inventory: map insert helper compatibility no longer
   lives in `StdlibSurfaceRegistry::CollectionsMapHelpers`; that metadata now
   recognizes only canonical `/std/collections/map/*` helper spellings.
@@ -1853,34 +1854,6 @@ Task template:
   - stop_rule: Stop once the generic design direction is documented through
     runnable examples rather than only prose.
 
-- [ ] TODO-4538: Replace map inventory gate with fast strict audit
-  - owner: ai
-  - created_at: 2026-05-20
-  - phase: Map stdlib ownership cutover
-  - parallel_track: map-zero-audit
-  - depends_on: TODO-4543
-  - split_from: TODO-4464
-  - scope: Replace the broad decaying map-surface inventory with a fast strict
-    audit suitable for routine validation after the production map substrate is
-    gone.
-  - implementation_notes:
-    - Do not use the old broad scan in a way that can hang routine work. Prefer
-      `git ls-files` plus targeted `rg`-class checks, or a Python scanner over
-      the explicit tracked file list with bounded patterns.
-    - The strict audit should allow ordinary C++ `std::map`, source-map
-      infrastructure, generic mapping words, docs, tests, stdlib `.prime`
-      files, and generated source-lock fixtures.
-  - acceptance:
-    - The replacement audit runs quickly on the production `src/` and
-      `include/` file set and fails on newly introduced PrimeStruct-map
-      production traces.
-    - `scripts/check_map_surface_trace_inventory.py` is removed, retired, or
-      narrowed so it cannot be the hanging routine gate.
-    - The release validation path is ready to use the fast strict audit when
-      TODO-4464 enforces zero tolerance.
-  - stop_rule: Stop once the fast strict audit is available and wired for the
-    final TODO-4464 zero-tolerance gate.
-
 - [ ] TODO-4464: Run final strict C++ map-surface audit
   - owner: ai
   - created_at: 2026-05-14
@@ -1905,11 +1878,11 @@ Task template:
       files outside production `src/` and `include/`.
     - If generic collection code needs examples or fixtures, place them in
       tests/docs or stdlib-owned manifests rather than production C++ strings.
-    - Treat the TODO-4473 decaying full-trace inventory in
-      `scripts/check_map_surface_trace_inventory.py` and the TODO-4472
-      backing-trace inventory in `scripts/check_map_backing_traces.py` as
-      historical trace-class inputs only; do not keep or reintroduce the broad
-      decaying inventory as the routine final gate.
+    - Run `scripts/check_map_surface_strict_audit.py --enforce-zero` as the
+      final surface gate; treat the removed TODO-4473 broad inventory and the
+      TODO-4472 backing-trace inventory in
+      `scripts/check_map_backing_traces.py` as historical trace-class inputs
+      only.
     - Keep the narrower TODO-4468 source-lock coverage in
       `tests/unit/test_stdlib_map_ownership.cpp` as behavior and boundary
       coverage.

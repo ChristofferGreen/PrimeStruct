@@ -1475,18 +1475,18 @@ if(PRIMESTRUCT_BUILD_TESTS)
   set_tests_properties(PrimeStruct_map_backing_trace_checker_self_test PROPERTIES TIMEOUT 60)
 
   add_test(
-    NAME PrimeStruct_map_surface_trace_inventory
-    COMMAND ${Python3_EXECUTABLE} ${CMAKE_SOURCE_DIR}/scripts/check_map_surface_trace_inventory.py
+    NAME PrimeStruct_map_surface_strict_audit
+    COMMAND ${Python3_EXECUTABLE} ${CMAKE_SOURCE_DIR}/scripts/check_map_surface_strict_audit.py
             --root ${CMAKE_SOURCE_DIR}
   )
-  set_tests_properties(PrimeStruct_map_surface_trace_inventory PROPERTIES TIMEOUT 60)
+  set_tests_properties(PrimeStruct_map_surface_strict_audit PROPERTIES TIMEOUT 60)
 
   add_test(
-    NAME PrimeStruct_map_surface_trace_inventory_self_test
-    COMMAND ${Python3_EXECUTABLE} ${CMAKE_SOURCE_DIR}/tests/scripts/test_check_map_surface_trace_inventory.py
+    NAME PrimeStruct_map_surface_strict_audit_self_test
+    COMMAND ${Python3_EXECUTABLE} ${CMAKE_SOURCE_DIR}/tests/scripts/test_check_map_surface_strict_audit.py
             --repo-root ${CMAKE_SOURCE_DIR}
   )
-  set_tests_properties(PrimeStruct_map_surface_trace_inventory_self_test PROPERTIES TIMEOUT 60)
+  set_tests_properties(PrimeStruct_map_surface_strict_audit_self_test PROPERTIES TIMEOUT 60)
 
   add_test(
     NAME PrimeStruct_soa_surface_trace_zero_audit

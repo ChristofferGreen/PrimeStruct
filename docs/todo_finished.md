@@ -6,6 +6,39 @@ Legend:
 Finished items are periodically archived here from `docs/todo.md`; section headers record the archive date.
 
 **Todo Completion (May 20, 2026)**
+- [x] TODO-4538: Replace map inventory gate with fast strict audit
+  - owner: ai
+  - created_at: 2026-05-20
+  - finished_at: 2026-05-20
+  - phase: Map stdlib ownership cutover
+  - parallel_track: map-zero-audit
+  - depends_on: TODO-4543
+  - split_from: TODO-4464
+  - scope: Replace the broad decaying map-surface inventory with a fast strict
+    audit suitable for routine validation after the production map substrate is
+    gone.
+  - outcome:
+    - Removed the old broad
+      `scripts/check_map_surface_trace_inventory.py` routine gate.
+    - Added `scripts/check_map_surface_strict_audit.py`, which scans tracked
+      production C++ under `src/` and `include/` and ignores tests, docs,
+      stdlib `.prime` files, ordinary `std::map`, and generic mapping words.
+    - Kept a two-trace allowance for the current statement-lowering
+      `mapAt`/`mapAtUnsafe` bridge and added `--enforce-zero` for the final
+      TODO-4464 gate.
+    - Replaced the CTest wiring and self-test with
+      `PrimeStruct_map_surface_strict_audit` and
+      `PrimeStruct_map_surface_strict_audit_self_test`.
+    - Promoted TODO-4464 to Ready Now for the final zero-tolerance audit.
+  - validation:
+    - `python3 scripts/check_map_surface_strict_audit.py --root .` passed.
+    - `python3 tests/scripts/test_check_map_surface_strict_audit.py
+      --repo-root .` passed.
+    - `cmake -S . -B build-release -DCMAKE_BUILD_TYPE=Release
+      -DPRIMESTRUCT_BUILD_TESTS=ON` passed.
+    - `cd build-release && ctest --output-on-failure -R
+      '^PrimeStruct_map_surface_strict_audit(_self_test)?$'` passed.
+
 - [x] TODO-4544: Support void helper statements after stdlib rewrites
   - owner: ai
   - created_at: 2026-05-20
