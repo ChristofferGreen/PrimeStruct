@@ -603,7 +603,7 @@ TEST_CASE("ir lowerer setup type helper resolves count call method return kinds"
   CHECK(kindOut == primec::ir_lowerer::LocalInfo::ValueKind::Unknown);
 }
 
-TEST_CASE("ir lowerer setup type helper resolves access call method return kinds") {
+TEST_CASE("ir lowerer setup type helper defers bare access call method return kinds") {
   primec::Definition atDef;
   atDef.fullPath = "/array/at";
   primec::Definition atUnsafeDef;
@@ -641,7 +641,7 @@ TEST_CASE("ir lowerer setup type helper resolves access call method return kinds
 
   primec::ir_lowerer::LocalInfo::ValueKind kindOut = primec::ir_lowerer::LocalInfo::ValueKind::Unknown;
   bool methodResolved = false;
-  CHECK(primec::ir_lowerer::resolveCountMethodCallReturnKind(
+  CHECK_FALSE(primec::ir_lowerer::resolveCountMethodCallReturnKind(
       atCall,
       {},
       [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return false; },
@@ -651,14 +651,14 @@ TEST_CASE("ir lowerer setup type helper resolves access call method return kinds
       false,
       kindOut,
       &methodResolved));
-  CHECK(methodResolved);
-  CHECK(kindOut == primec::ir_lowerer::LocalInfo::ValueKind::Int64);
+  CHECK_FALSE(methodResolved);
+  CHECK(kindOut == primec::ir_lowerer::LocalInfo::ValueKind::Unknown);
 
   primec::Expr atUnsafeCall = atCall;
   atUnsafeCall.name = "at_unsafe";
   kindOut = primec::ir_lowerer::LocalInfo::ValueKind::Unknown;
   methodResolved = false;
-  CHECK(primec::ir_lowerer::resolveCountMethodCallReturnKind(
+  CHECK_FALSE(primec::ir_lowerer::resolveCountMethodCallReturnKind(
       atUnsafeCall,
       {},
       [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return false; },
@@ -668,8 +668,8 @@ TEST_CASE("ir lowerer setup type helper resolves access call method return kinds
       false,
       kindOut,
       &methodResolved));
-  CHECK(methodResolved);
-  CHECK(kindOut == primec::ir_lowerer::LocalInfo::ValueKind::Int64);
+  CHECK_FALSE(methodResolved);
+  CHECK(kindOut == primec::ir_lowerer::LocalInfo::ValueKind::Unknown);
 }
 
 TEST_SUITE_END();
