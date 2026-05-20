@@ -896,7 +896,7 @@ TEST_CASE("emitter helpers keep generated internal soa helper paths builtin") {
   CHECK(mutation == "increment");
 }
 
-TEST_CASE("ir lowerer helper rejects parser-shaped canonical map entry constructors as builtin map") {
+TEST_CASE("ir lowerer helper accepts parser-shaped canonical map entry constructors as builtin map") {
   primec::Expr entryCall;
   entryCall.kind = primec::Expr::Kind::Call;
   entryCall.name = "entry";
@@ -909,7 +909,9 @@ TEST_CASE("ir lowerer helper rejects parser-shaped canonical map entry construct
   canonicalMapCall.args = {entryCall};
 
   std::string builtin;
-  CHECK_FALSE(primec::ir_lowerer::getBuiltinCollectionName(canonicalMapCall, builtin));
+  CHECK(primec::ir_lowerer::getBuiltinCollectionName(canonicalMapCall, builtin));
+  CHECK(builtin == "map");
+  builtin.clear();
   CHECK_FALSE(primec::emitter::getBuiltinCollectionName(canonicalMapCall, builtin));
 
   primec::Expr experimentalEntryCall = entryCall;
