@@ -5714,7 +5714,7 @@ bool isBuiltinCanonicalMapConstructorExpr(
   return false;
 }
 
-std::optional<semantics::BindingInfo> resolveBuiltinMapInsertReceiverBinding(
+std::optional<semantics::BindingInfo> resolveBuiltinKeyValueInsertReceiverBinding(
     const Expr &expr,
     const std::unordered_map<std::string, semantics::BindingInfo> &bindings,
     const std::unordered_map<std::string, const Definition *> &definitionMap,
@@ -5729,7 +5729,7 @@ std::optional<semantics::BindingInfo> resolveBuiltinMapInsertReceiverBinding(
   }
 
   if (expr.isFieldAccess && expr.args.size() == 1) {
-    auto receiverBinding = resolveBuiltinMapInsertReceiverBinding(
+    auto receiverBinding = resolveBuiltinKeyValueInsertReceiverBinding(
         expr.args.front(), bindings, definitionMap, structPaths, definitionNamespace);
     if (!receiverBinding.has_value()) {
       return std::nullopt;
@@ -5755,7 +5755,7 @@ std::optional<semantics::BindingInfo> resolveBuiltinMapInsertReceiverBinding(
   }
 
   if (semantics::isSimpleCallName(expr, "location") && expr.args.size() == 1) {
-    auto pointeeBinding = resolveBuiltinMapInsertReceiverBinding(
+    auto pointeeBinding = resolveBuiltinKeyValueInsertReceiverBinding(
         expr.args.front(), bindings, definitionMap, structPaths, definitionNamespace);
     if (!pointeeBinding.has_value()) {
       return std::nullopt;
@@ -5767,7 +5767,7 @@ std::optional<semantics::BindingInfo> resolveBuiltinMapInsertReceiverBinding(
   }
 
   if (semantics::isSimpleCallName(expr, "dereference") && expr.args.size() == 1) {
-    auto borrowedBinding = resolveBuiltinMapInsertReceiverBinding(
+    auto borrowedBinding = resolveBuiltinKeyValueInsertReceiverBinding(
         expr.args.front(), bindings, definitionMap, structPaths, definitionNamespace);
     if (!borrowedBinding.has_value()) {
       return std::nullopt;
@@ -5888,7 +5888,7 @@ void rewriteBuiltinMapInsertExpr(
   }
   if (matchesBuiltinReadMethod || matchesBuiltinAccessCall) {
     const Expr &receiver = expr.args.front();
-    auto receiverBinding = resolveBuiltinMapInsertReceiverBinding(
+    auto receiverBinding = resolveBuiltinKeyValueInsertReceiverBinding(
         receiver, bindings, definitionMap, structPaths, definitionNamespace);
     if (!receiverBinding.has_value() ||
         !isBuiltinKeyValueMutationBinding(*receiverBinding)) {
@@ -5956,7 +5956,7 @@ void rewriteBuiltinMapInsertExpr(
   }
 
   const Expr &receiver = expr.args.front();
-  auto receiverBinding = resolveBuiltinMapInsertReceiverBinding(
+  auto receiverBinding = resolveBuiltinKeyValueInsertReceiverBinding(
       receiver, bindings, definitionMap, structPaths, definitionNamespace);
   if (!receiverBinding.has_value() || !isBuiltinKeyValueMutationBinding(*receiverBinding)) {
     return;
