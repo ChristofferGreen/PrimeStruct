@@ -12,6 +12,22 @@
   compilation.
 
 ## Recent Test Runs
+- 2026-05-20 15:23 CEST | partial | mode: release | command:
+  `cmake --build build-release --target PrimeStruct_semantics_tests`;
+  `cd build-release && ./PrimeStruct_semantics_tests --test-case="map binding rejects unsupported builtin Comparable key contract,inferred map binding rejects unsupported builtin Comparable key contract,canonical map borrowed receiver validates direct stdlib tryAt,canonical map borrowed receiver keeps tryAt key diagnostics,canonical map insert helpers validate on value and borrowed mutation surfaces" --no-skip`;
+  `cmake --build build-release --target PrimeStruct_backend_ir_tests`;
+  `cd build-release && ./PrimeStruct_backend_ir_tests --test-case="semantics validator expr source delegation stays stable" --no-skip`;
+  `cd build-release && ./PrimeStruct_backend_ir_tests --test-case="template monomorph source delegation stays stable" --no-skip`;
+  `cd build-release && ./PrimeStruct_backend_ir_tests --test-case="semantics validator infer source delegation stays stable" --no-skip`;
+  `cmake --build build-release --target PrimeStruct_backend_runtime_tests`;
+  `cd build-release && ./PrimeStruct_backend_runtime_tests --test-case="graph type resolver pilot is wired through options and semantics inference" --no-skip`;
+  `cd build-release && ./PrimeStruct_backend_runtime_tests --test-case="cmake splits primec library into subsystem targets" --no-skip`;
+  `rg -n 'LateMapAccess|prepareExprLateMapAccessBuiltinContext|validateExprLateMapAccessBuiltins|ExprLateMapAccessBuiltinContext|shouldBuiltinValidateBareKeyValueTryAtCall|handledLateKeyValueAccessBuiltin|SemanticsValidatorExprLateMapAccessBuiltins' src include CMakeLists.txt`
+  | failures: `cmake --build build-release --target PrimeStruct_misc_tests`
+  stalled twice on `test_stdlib_map_ownership.cpp.o` and was terminated
+  rather than left running indefinitely | notes: TODO-4536 deleted the late
+  semantic map access builtin boundary and retained `tryAt` key diagnostics
+  through generic key/value collection validation.
 - 2026-05-20 16:05 CEST | pass | mode: release | command:
   `cmake --build build-release --target PrimeStruct_semantics_tests`;
   `cmake --build build-release --target PrimeStruct_misc_tests`;

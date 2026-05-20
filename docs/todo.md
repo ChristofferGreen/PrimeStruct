@@ -83,8 +83,8 @@ Task template:
 
 ### Ready Now (Parallel-Candidate Leaves; No Unmet TODO Dependencies)
 
-- TODO-4536: Delete late map builtin validation boundary | track: map-zero-audit |
-  primary surface: late semantic map builtin dispatch and diagnostics
+- TODO-4537: Delete lowerer key/value collection substrate | track: map-zero-audit |
+  primary surface: lowerer map/key-value storage and access substrate
 - TODO-4271: Add compile-time pack indexing | track: tuple-type-packs |
   primary surface: generic pack-index selection and diagnostics
 
@@ -92,9 +92,9 @@ Task template:
 
 - `soa-zero-audit`: TODO-4529 replaced the residue inventory with a strict
   zero-production-trace audit; no SoA zero-audit leaf is ready.
-- `map-zero-audit`: TODO-4535 deleted the map collection type classifier API;
-  ready TODO-4536 deletes the late map builtin validation boundary, followed
-  by TODO-4537 -> TODO-4538 -> TODO-4464 for the final strict zero
+- `map-zero-audit`: TODO-4536 deleted the late map builtin validation
+  boundary; ready TODO-4537 deletes the lowerer key/value collection
+  substrate, followed by TODO-4538 -> TODO-4464 for the final strict zero
   map-surface audit.
 - `tuple-type-packs`: TODO-4276 completed helper/lifecycle pack
   expansion; ready TODO-4271, then serial successors TODO-4272
@@ -106,7 +106,6 @@ Task template:
 
 ### Immediate Next 10 (Track Successors; Not Ready Until Dependencies Land)
 
-- TODO-4537: Delete lowerer key/value collection substrate
 - TODO-4538: Replace map inventory gate with fast strict audit
 - TODO-4464: Run final strict C++ map-surface audit
 - TODO-4272: Add stdlib `tuple<Ts...>`
@@ -120,8 +119,8 @@ Task template:
   must enter as bounded leaves only.
 - Deferred stdlib ADT migration: none active
 - Vector stdlib ownership cutover: none active
-- Map stdlib ownership cutover: ready TODO-4536, then TODO-4537
-  -> TODO-4538 -> TODO-4464 for the final strict zero audit
+- Map stdlib ownership cutover: ready TODO-4537, then TODO-4538
+  -> TODO-4464 for the final strict zero audit
 - SoA public surface rename and ownership cutover: TODO-4306 parent split;
   TODO-4526 removed semantic-validation inventory residue after TODO-4530
   reduced the shared semantic builtin path helper boundary; TODO-4527 removed
@@ -142,7 +141,6 @@ Task template:
 
 ### Execution Queue (Recommended Track Order)
 
-- TODO-4536: Delete late map builtin validation boundary
 - TODO-4537: Delete lowerer key/value collection substrate
 - TODO-4538: Replace map inventory gate with fast strict audit
 - TODO-4464: Run final strict C++ map-surface audit
@@ -1848,39 +1846,6 @@ Task template:
     - `./scripts/compile.sh --release` passes.
   - stop_rule: Stop once the generic design direction is documented through
     runnable examples rather than only prose.
-
-- [ ] TODO-4536: Delete late map builtin validation boundary
-  - owner: ai
-  - created_at: 2026-05-20
-  - phase: Map stdlib ownership cutover
-  - parallel_track: map-zero-audit
-  - depends_on: TODO-4535
-  - split_from: TODO-4464
-  - scope: Remove the late semantic validation boundary that exists for map as
-    a named stdlib type. Target `SemanticsValidatorExprLateMapAccessBuiltins`,
-    map/SoA shared builtin contexts, `resolveMapTarget`-style dispatch hooks,
-    and diagnostics or fallback paths that recognize map helper calls outside
-    ordinary call/type checking.
-  - implementation_notes:
-    - Keep ordinary language features intact: method resolution, references,
-      templates, result handling, and struct access should carry map programs
-      because `map.prime` is normal included code.
-    - If SoA or vector behavior still depends on a shared map/SoA hook, split
-      the generic part out and delete the map-specific branch in this pass.
-    - If a valid map program still needs this boundary after ordinary call/type
-      checking is exhausted, record the missing generic semantic capability as
-      a separate non-map TODO.
-  - acceptance:
-    - Late semantic validation no longer has a map-specific file, context, or
-      dispatch hook.
-    - Existing map helper calls compile or diagnose through ordinary imported
-      function/method rules.
-    - Focused tests cover valid access, missing-key result behavior, and a
-      representative invalid map call diagnostic.
-  - stop_rule: Stop once the semantic late-builtin boundary is gone and
-    focused semantics/map ownership coverage passes. If the boundary exposes a
-    missing generic semantic feature, create a non-map capability TODO and
-    stop; leave lowerer storage and access metadata to TODO-4537.
 
 - [ ] TODO-4537: Delete lowerer key/value collection substrate
   - owner: ai

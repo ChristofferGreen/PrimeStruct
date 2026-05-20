@@ -30,6 +30,18 @@ bool resolveCanonicalArgumentValidationKeyValueAccessHelper(
   if (!normalizedPath.empty() && normalizedPath.front() != '/') {
     normalizedPath.insert(normalizedPath.begin(), '/');
   }
+  const size_t leafStart = normalizedPath.find_last_of('/');
+  const size_t suffixSearchStart =
+      leafStart == std::string::npos ? 0 : leafStart + 1;
+  if (const size_t templateSuffix =
+          normalizedPath.find("__t", suffixSearchStart);
+      templateSuffix != std::string::npos) {
+    normalizedPath.erase(templateSuffix);
+  } else if (const size_t overloadSuffix =
+                 normalizedPath.find("__ov", suffixSearchStart);
+             overloadSuffix != std::string::npos) {
+    normalizedPath.erase(overloadSuffix);
+  }
   const std::string canonicalRoot(metadata->canonicalPath);
   if (normalizedPath.size() <= canonicalRoot.size() ||
       normalizedPath.rfind(canonicalRoot + "/", 0) != 0) {
@@ -37,7 +49,8 @@ bool resolveCanonicalArgumentValidationKeyValueAccessHelper(
   }
   const std::string_view helperName =
       resolveStdlibSurfaceMemberName(*metadata, normalizedPath);
-  if (helperName != "at" && helperName != "at_ref" &&
+  if (helperName != "tryAt" && helperName != "tryAt_ref" &&
+      helperName != "at" && helperName != "at_ref" &&
       helperName != "at_unsafe" && helperName != "at_unsafe_ref") {
     return false;
   }
@@ -239,6 +252,61 @@ bool SemanticsValidator::validateArgumentTypeAgainstParam(
     return false;
   };
 
+  auto validateCanonicalKeyValueAccessKeyArgument = [&]() -> bool {
+    std::string canonicalKeyValueAccessHelperName;
+    if (param.name != "key" || hasNamedArguments(callExpr.argNames) ||
+        callExpr.args.size() != 2 ||
+        !resolveCanonicalArgumentValidationKeyValueAccessHelper(
+            diagnosticResolved, canonicalKeyValueAccessHelperName)) {
+      return true;
+    }
+    std::string receiverKeyType;
+    if (!resolveKeyValueKeyType(callExpr.args.front(),
+                                dispatchResolvers,
+                                receiverKeyType) ||
+        receiverKeyType.empty()) {
+      return true;
+    }
+    auto failKeyArgument = [&]() {
+      if (canonicalKeyValueAccessHelperName == "tryAt" ||
+          canonicalKeyValueAccessHelperName == "tryAt_ref") {
+        if (normalizeBindingTypeName(receiverKeyType) == "string") {
+          return failArgumentValidation(arg, "tryAt requires string map key");
+        }
+        return failArgumentValidation(arg,
+                                      "tryAt requires map key type " +
+                                          receiverKeyType);
+      }
+      return failArgumentValidation(
+          arg,
+          "argument type mismatch for " + diagnosticResolved +
+              " parameter key");
+    };
+    if (normalizeBindingTypeName(receiverKeyType) == "string") {
+      if (!isStringExprForArgumentValidation(arg, dispatchResolvers)) {
+        return failKeyArgument();
+      }
+      return true;
+    }
+    const ReturnKind receiverKeyKind =
+        returnKindForTypeName(normalizeBindingTypeName(receiverKeyType));
+    if (receiverKeyKind == ReturnKind::Unknown) {
+      return true;
+    }
+    if (isStringExprForArgumentValidation(arg, dispatchResolvers)) {
+      return failKeyArgument();
+    }
+    const ReturnKind actualKeyKind = inferExprReturnKind(arg, params, locals);
+    if (actualKeyKind != ReturnKind::Unknown &&
+        actualKeyKind != receiverKeyKind) {
+      return failKeyArgument();
+    }
+    return true;
+  };
+
+  if (!validateCanonicalKeyValueAccessKeyArgument()) {
+    return false;
+  }
   if (expectedTypeName.empty() || expectedTypeName == "auto") {
     return true;
   }

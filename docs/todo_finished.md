@@ -6,6 +6,43 @@ Legend:
 Finished items are periodically archived here from `docs/todo.md`; section headers record the archive date.
 
 **Todo Completion (May 20, 2026)**
+- [x] TODO-4536: Delete late map builtin validation boundary
+  - owner: ai
+  - created_at: 2026-05-20
+  - finished_at: 2026-05-20
+  - phase: Map stdlib ownership cutover
+  - parallel_track: map-zero-audit
+  - depends_on: TODO-4535
+  - split_from: TODO-4464
+  - outcome:
+    - Deleted `SemanticsValidatorExprLateMapAccessBuiltins.cpp` from the
+      production build and removed its private context/preparation/dispatch
+      API.
+    - Moved direct canonical key/value access key validation into generic
+      collection and argument validation paths while preserving the existing
+      `tryAt` key diagnostics.
+    - Updated source-lock coverage to assert the late map access boundary is
+      absent and that the retained checks live under generic key/value
+      collection validation.
+    - Promoted TODO-4537 as the next map zero-audit leaf for deleting the
+      lowerer key/value collection substrate.
+  - validation:
+    - `cmake --build build-release --target PrimeStruct_semantics_tests`
+      passed.
+    - `cd build-release && ./PrimeStruct_semantics_tests --test-case="map binding rejects unsupported builtin Comparable key contract,inferred map binding rejects unsupported builtin Comparable key contract,canonical map borrowed receiver validates direct stdlib tryAt,canonical map borrowed receiver keeps tryAt key diagnostics,canonical map insert helpers validate on value and borrowed mutation surfaces" --no-skip`
+      passed.
+    - `cmake --build build-release --target PrimeStruct_backend_ir_tests`
+      passed; focused source-lock cases for template monomorph, semantics
+      validator expression, and semantics validator infer delegation passed.
+    - `cmake --build build-release --target PrimeStruct_backend_runtime_tests`
+      passed; focused graph-pilot and CMake subsystem source-lock cases
+      passed.
+    - `rg` confirmed the deleted late map access production symbols are absent
+      from `src/`, `include/`, and `CMakeLists.txt`.
+    - Validation gap: rebuilding `PrimeStruct_misc_tests` stalled twice on
+      `test_stdlib_map_ownership.cpp.o`; both attempts were terminated rather
+      than left running indefinitely.
+
 - [x] TODO-4535: Delete map collection type classifier API
   - owner: ai
   - created_at: 2026-05-20

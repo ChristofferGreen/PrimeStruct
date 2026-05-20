@@ -10,7 +10,8 @@ namespace primec::semantics {
 namespace {
 
 bool isCanonicalKeyValueAccessHelperName(const std::string &helperName) {
-  return helperName == "at" || helperName == "at_ref" ||
+  return helperName == "tryAt" || helperName == "tryAt_ref" ||
+         helperName == "at" || helperName == "at_ref" ||
          helperName == "at_unsafe" || helperName == "at_unsafe_ref";
 }
 
@@ -114,8 +115,7 @@ bool getCanonicalCollectionAccessBuiltinName(const Expr &candidate,
   std::string resolvedKeyValueHelperName;
   if (resolveCanonicalKeyValueHelperNameFromSpelling(
           normalizedName, resolvedKeyValueHelperName) &&
-      (resolvedKeyValueHelperName == "at_ref" ||
-       resolvedKeyValueHelperName == "at_unsafe_ref")) {
+      isCanonicalKeyValueAccessHelperName(resolvedKeyValueHelperName)) {
     helperOut = resolvedKeyValueHelperName;
     return true;
   }
@@ -189,6 +189,15 @@ bool SemanticsValidator::validateExprCollectionAccessFallbacks(
   };
   auto failCollectionAccessKeyValueKeyMismatch = [&](const std::string &helperName,
                                                      const std::string &keyValueKeyType) {
+    const bool isTryAtHelper =
+        helperName == "tryAt" || helperName == "tryAt_ref";
+    if (isTryAtHelper) {
+      if (normalizeBindingTypeName(keyValueKeyType) == "string") {
+        return failCollectionAccessDiagnostic("tryAt requires string map key");
+      }
+      return failCollectionAccessDiagnostic("tryAt requires map key type " +
+                                            keyValueKeyType);
+    }
     const bool hasSourceShape = !expr.sourceName.empty();
     const bool isExplicitCanonicalKeyValueAccessCall =
         expr.sourceIsMethodCall ||
@@ -329,13 +338,11 @@ bool SemanticsValidator::validateExprCollectionAccessFallbacks(
   if (expr.isMethodCall && resolvedMethod &&
       isCanonicalKeyValueAccessResolvedPath(resolved)) {
     handledOut = true;
-    const std::string helperName =
-        resolved.find("unsafe_ref") != std::string::npos
-            ? "at_unsafe_ref"
-            : (resolved.find("unsafe") != std::string::npos
-                   ? "at_unsafe"
-                   : (resolved.find("at_ref") != std::string::npos ? "at_ref"
-                                                                   : "at"));
+    std::string helperName;
+    if (!resolveCanonicalKeyValueHelperNameFromSpelling(resolved,
+                                                        helperName)) {
+      helperName = "at";
+    }
     return validateMethodKeyValueAccessBuiltin(helperName);
   }
 
@@ -474,13 +481,6 @@ bool SemanticsValidator::validateExprCollectionAccessFallbacks(
       return failCollectionAccessDiagnostic(
           "unknown call target: " + canonicalKeyValueHelperPathLocal(builtinName));
     }
-    if (!expr.isMethodCall &&
-        context.isKeyValueLikeBareAccessReceiverTarget != nullptr &&
-        (context.isKeyValueLikeBareAccessReceiverTarget(expr.args.front()) ||
-         context.isKeyValueLikeBareAccessReceiverTarget(expr.args[1]))) {
-      return true;
-    }
-
     size_t indexArgIndex = 1;
     std::string elemType;
     auto isArrayOrStringTarget = [&](const Expr &candidate, std::string &elemTypeOut) {

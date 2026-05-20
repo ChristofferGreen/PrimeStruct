@@ -6,7 +6,8 @@ namespace primec::semantics {
 namespace {
 
 bool isCanonicalKeyValueAccessHelperName(const std::string &helperName) {
-  return helperName == "at" || helperName == "at_ref" ||
+  return helperName == "tryAt" || helperName == "tryAt_ref" ||
+         helperName == "at" || helperName == "at_ref" ||
          helperName == "at_unsafe" || helperName == "at_unsafe_ref";
 }
 

@@ -477,8 +477,8 @@ This file stores durable session-derived facts that are useful in later work. Ke
   helper for unspecialized and generated experimental map value types;
   template-monomorph experimental collection receiver resolution should use
   shared helpers for unspecialized and generated map receiver types;
-  late map-access validation should use the shared helper for unspecialized
-  experimental map type text;
+  the deleted late map-access validation boundary used the shared helper for
+  unspecialized experimental map type text before TODO-4536 removed it;
   declared collection map type normalization should derive unspecialized and
   generated experimental map backing bases through
   `experimentalCollectionTypePath`;
@@ -651,9 +651,9 @@ This file stores durable session-derived facts that are useful in later work. Ke
   semantic collection-access validation should resolve canonical map access
   helper names, namespace checks, and diagnostic paths through stdlib surface
   metadata instead of direct path text;
-  late map access builtin validation should resolve canonical map helper
-  names, namespace checks, and unknown-target diagnostics through stdlib
-  surface metadata instead of direct path text;
+  the deleted late map access builtin validation boundary resolved canonical
+  map helper names, namespace checks, and unknown-target diagnostics through
+  stdlib surface metadata before TODO-4536 removed it;
   map/SOA builtin validation should resolve canonical map contains helper
   paths and diagnostics through stdlib surface metadata instead of direct
   path text;
@@ -1279,6 +1279,18 @@ This file stores durable session-derived facts that are useful in later work. Ke
   now resolves member names through bridge-key metadata directly, and
   `SemanticsCallPathHelpers.cpp` and `SemanticsBuiltinPathHelpers.cpp` resolve
   helper member names with key/value local resolver names.
+
+### map-late-access-boundary-is-gone
+- Updated: 2026-05-20
+- Tags: semantics, collections, stdlib
+- Fact: Production C++ no longer builds or exposes the late map access builtin
+  validator; direct canonical map `tryAt` key checks now live in generic
+  key/value collection and argument validation.
+- Evidence: TODO-4536 deleted
+  `src/semantics/SemanticsValidatorExprLateMapAccessBuiltins.cpp` and removed
+  `ExprLateMapAccessBuiltinContext`, while focused semantics and source-lock
+  tests passed and `rg` found no deleted late-map-access symbols in
+  production `src/`, `include/`, or `CMakeLists.txt`.
 
 ### collection-manifest-loader-is-id-agnostic
 - Updated: 2026-05-18

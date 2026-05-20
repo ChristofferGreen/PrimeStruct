@@ -46,9 +46,9 @@
         std::string::npos);
   CHECK(validatorExpr.find("void SemanticsValidator::prepareExprLateCallCompatibilityContext(") !=
         std::string::npos);
-  CHECK(validatorExprMain.find("prepareExprLateMapAccessBuiltinContext(") !=
+  CHECK(validatorExprMain.find("prepareExprLateMapAccessBuiltinContext(") ==
         std::string::npos);
-  CHECK(validatorExpr.find("void SemanticsValidator::prepareExprLateMapAccessBuiltinContext(") !=
+  CHECK(validatorExpr.find("void SemanticsValidator::prepareExprLateMapAccessBuiltinContext(") ==
         std::string::npos);
   CHECK(validatorExprMain.find("collectionAccessDispatchContext.resolveArrayTarget =") ==
         std::string::npos);
@@ -85,7 +85,9 @@
             "lateMapAccessBuiltinContext.shouldBuiltinValidateBareKeyValueTryAtCall =") ==
         std::string::npos);
   CHECK(validatorExpr.find(
-            "contextOut.shouldBuiltinValidateBareKeyValueTryAtCall =") !=
+            "contextOut.shouldBuiltinValidateBareKeyValueTryAtCall =") ==
+        std::string::npos);
+  CHECK(validatorExpr.find("validateResolvedCanonicalKeyValueAccessKey") !=
         std::string::npos);
   CHECK(validatorExprMain.find("const ExprArgumentValidationContext argumentValidationContext{") ==
         std::string::npos);

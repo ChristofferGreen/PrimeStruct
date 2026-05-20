@@ -356,7 +356,7 @@
         std::string::npos);
   CHECK(validatorHeader.find("void prepareExprLateCallCompatibilityContext(") !=
         std::string::npos);
-  CHECK(validatorHeader.find("void prepareExprLateMapAccessBuiltinContext(") !=
+  CHECK(validatorHeader.find("void prepareExprLateMapAccessBuiltinContext(") ==
         std::string::npos);
   CHECK(validatorExprMain.find("const std::string directRemovedKeyValueCompatibilityPath =") ==
         std::string::npos);

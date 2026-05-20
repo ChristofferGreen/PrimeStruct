@@ -496,7 +496,7 @@ TEST_CASE("canonical map surface owns standalone stdlib implementation") {
   REQUIRE(!inferLateFallbackBuiltinsSource.empty());
   REQUIRE(!exprLateFallbackBuiltinsSource.empty());
   REQUIRE(!exprLateCallCompatibilitySource.empty());
-  REQUIRE(!lateMapAccessBuiltinsSource.empty());
+  REQUIRE(lateMapAccessBuiltinsSource.empty());
   REQUIRE(!lateMapSoaBuiltinsSource.empty());
   REQUIRE(!exprLateUnknownTargetFallbacksSource.empty());
   REQUIRE(!passesDiagnosticsSource.empty());
@@ -3184,132 +3184,55 @@ TEST_CASE("canonical map surface owns standalone stdlib implementation") {
         std::string::npos);
   CHECK(exprLateCallCompatibilitySource.find("std::string mapValueType") ==
         std::string::npos);
-  CHECK(lateMapAccessBuiltinsSource.find("normalizedName == \"map/at_ref\"") ==
+  CHECK(lateMapAccessBuiltinsSource.empty());
+  CHECK(exprSource.find("prepareExprLateMapAccessBuiltinContext") ==
         std::string::npos);
-  CHECK(lateMapAccessBuiltinsSource.find("namespacePrefix == \"map\"") ==
+  CHECK(exprSource.find("validateExprLateMapAccessBuiltins") == std::string::npos);
+  CHECK(privateExprValidationSource.find("ExprLateMapAccessBuiltinContext") ==
         std::string::npos);
-  CHECK(lateMapAccessBuiltinsSource.find("methodResolved = \"/map/\" + helperName") ==
+  CHECK(builtinContextSetupSource.find("prepareExprLateMapAccessBuiltinContext") ==
         std::string::npos);
-  CHECK(lateMapAccessBuiltinsSource.find("StdlibSurfaceId::CollectionsMapHelpers") ==
-        std::string::npos);
-  CHECK(lateMapAccessBuiltinsSource.find("canonicalMapHelperPathLocal(") ==
-        std::string::npos);
-  CHECK(lateMapAccessBuiltinsSource.find(
-            "resolveCanonicalMapHelperNameFromSpelling(") ==
-        std::string::npos);
-  CHECK(lateMapAccessBuiltinsSource.find("isCanonicalMapHelperResolvedPath(") ==
-        std::string::npos);
-  CHECK(lateMapAccessBuiltinsSource.find("isCanonicalMapAccessHelperPath(") ==
-        std::string::npos);
-  CHECK(lateMapAccessBuiltinsSource.find("getCanonicalMapAccessBuiltinName(") ==
-        std::string::npos);
-  CHECK(lateMapAccessBuiltinsSource.find(
-            "isSourceSpelledCanonicalMapAccessCall(") ==
-        std::string::npos);
-  CHECK(lateMapAccessBuiltinsSource.find("canonicalMapAccessDiagnostic") ==
-        std::string::npos);
-  CHECK(lateMapAccessBuiltinsSource.find("isSpecializedExperimentalMapBackingPath") ==
-        std::string::npos);
-  CHECK(lateMapAccessBuiltinsSource.find(
-            "isSpecializedExperimentalKeyValueBackingPath") !=
-        std::string::npos);
-  CHECK(lateMapAccessBuiltinsSource.find("isExperimentalMapTypeText") ==
-        std::string::npos);
-  CHECK(lateMapAccessBuiltinsSource.find("isExperimentalKeyValueTypeText") !=
-        std::string::npos);
-  CHECK(lateMapAccessBuiltinsSource.find("failLateMapAccessBuiltinDiagnostic") ==
-        std::string::npos);
-  CHECK(lateMapAccessBuiltinsSource.find("failLateMapAccessKeyMismatch") ==
-        std::string::npos);
-  CHECK(lateMapAccessBuiltinsSource.find("hasBareMapContainsBuiltinDefinition") ==
-        std::string::npos);
-  CHECK(lateMapAccessBuiltinsSource.find("hasVisibleStdlibMapBuiltinDefinition") ==
-        std::string::npos);
-  CHECK(lateMapAccessBuiltinsSource.find("hasBareMapOperands") ==
-        std::string::npos);
-  CHECK(lateMapAccessBuiltinsSource.find("rewrittenMapAccessCall") ==
-        std::string::npos);
-  CHECK(lateMapAccessBuiltinsSource.find("rewrittenMapHelperCall") ==
-        std::string::npos);
-  CHECK(lateMapAccessBuiltinsSource.find(
+  CHECK(collectionAccessValidationSource.find(
             "findStdlibSurfaceMetadataByBridgeKey(\"collections.map_helpers\")") !=
         std::string::npos);
-  CHECK(lateMapAccessBuiltinsSource.find("canonicalKeyValueHelperPathLocal(") !=
+  CHECK(collectionAccessValidationSource.find("canonicalKeyValueHelperPathLocal(") !=
         std::string::npos);
-  CHECK(lateMapAccessBuiltinsSource.find(
+  CHECK(collectionAccessValidationSource.find(
             "resolveCanonicalKeyValueHelperNameFromSpelling(") !=
         std::string::npos);
-  CHECK(lateMapAccessBuiltinsSource.find(
+  CHECK(collectionAccessValidationSource.find(
             "isCanonicalKeyValueHelperResolvedPath(") !=
         std::string::npos);
-  CHECK(lateMapAccessBuiltinsSource.find(
+  CHECK(collectionAccessValidationSource.find(
             "isCanonicalKeyValueAccessHelperPath(") !=
         std::string::npos);
-  CHECK(lateMapAccessBuiltinsSource.find(
-            "getCanonicalKeyValueAccessBuiltinName(") !=
+  CHECK(collectionAccessValidationSource.find(
+            "getCanonicalCollectionAccessBuiltinName(") !=
         std::string::npos);
-  CHECK(lateMapAccessBuiltinsSource.find(
-            "isSourceSpelledCanonicalKeyValueAccessCall(") !=
+  CHECK(collectionAccessValidationSource.find("canonicalKeyValueAccessDiagnostic") !=
         std::string::npos);
-  CHECK(lateMapAccessBuiltinsSource.find("canonicalKeyValueAccessDiagnostic") !=
+  CHECK(collectionAccessValidationSource.find("isKeyValueLikeReceiver(") !=
         std::string::npos);
-  CHECK(lateMapAccessBuiltinsSource.find("receiverIsExperimentalMap") ==
+  CHECK(collectionAccessValidationSource.find("resolveKeyValueKeyType(") !=
         std::string::npos);
-  CHECK(lateMapAccessBuiltinsSource.find("receiverIsExperimentalKeyValue") !=
+  CHECK(collectionAccessValidationSource.find("failCollectionAccessKeyValueKeyMismatch") !=
         std::string::npos);
-  CHECK(lateMapAccessBuiltinsSource.find("isLocalRootMapAliasCall") ==
-        std::string::npos);
-  CHECK(lateMapAccessBuiltinsSource.find("isLocalRootKeyValueAliasCall") !=
-        std::string::npos);
-  CHECK(lateMapAccessBuiltinsSource.find("isMapLikeReceiver(") ==
-        std::string::npos);
-  CHECK(lateMapAccessBuiltinsSource.find("isKeyValueLikeReceiver(") !=
-        std::string::npos);
-  CHECK(lateMapAccessBuiltinsSource.find("rootMapConstructorKeyType") ==
-        std::string::npos);
-  CHECK(lateMapAccessBuiltinsSource.find("rootKeyValueConstructorKeyType") !=
-        std::string::npos);
-  CHECK(lateMapAccessBuiltinsSource.find("ignoredRootMapKeyType") ==
-        std::string::npos);
-  CHECK(lateMapAccessBuiltinsSource.find("ignoredRootKeyValueKeyType") !=
-        std::string::npos);
-  CHECK(lateMapAccessBuiltinsSource.find("resolveMapKeyTypeWithInference") ==
-        std::string::npos);
-  CHECK(lateMapAccessBuiltinsSource.find("resolveKeyValueKeyTypeWithInference") !=
-        std::string::npos);
-  CHECK(lateMapAccessBuiltinsSource.find("failLateKeyValueAccessDiagnostic") !=
-        std::string::npos);
-  CHECK(lateMapAccessBuiltinsSource.find("failLateKeyValueAccessKeyMismatch") !=
-        std::string::npos);
-  CHECK(lateMapAccessBuiltinsSource.find("hasBareKeyValueContainsDefinition") !=
-        std::string::npos);
-  CHECK(lateMapAccessBuiltinsSource.find(
-            "hasVisibleStdlibKeyValueAccessDefinition") !=
-        std::string::npos);
-  CHECK(lateMapAccessBuiltinsSource.find("hasBareKeyValueOperands") !=
-        std::string::npos);
-  CHECK(lateMapAccessBuiltinsSource.find("std::string keyValueKeyType") !=
-        std::string::npos);
-  CHECK(lateMapAccessBuiltinsSource.find("std::string keyValueValueType") !=
-        std::string::npos);
-  CHECK(lateMapAccessBuiltinsSource.find("std::string &keyValueKeyTypeOut") !=
-        std::string::npos);
-  CHECK(lateMapAccessBuiltinsSource.find("std::string &mapKeyTypeOut") ==
-        std::string::npos);
-  CHECK(lateMapAccessBuiltinsSource.find("const std::string &keyValueKeyType") !=
-        std::string::npos);
-  CHECK(lateMapAccessBuiltinsSource.find("const std::string &mapKeyType") ==
-        std::string::npos);
-  CHECK(lateMapAccessBuiltinsSource.find(
-            "extractKeyValueCollectionTypesFromTypeText(receiverTypeText, keyValueKeyType") !=
-        std::string::npos);
-  CHECK(lateMapAccessBuiltinsSource.find(
-            "failLateKeyValueAccessKeyMismatch(builtinName, keyValueKeyType") !=
-        std::string::npos);
-  CHECK(lateMapAccessBuiltinsSource.find("std::string mapKeyType") ==
-        std::string::npos);
-  CHECK(lateMapAccessBuiltinsSource.find(
+  CHECK(collectionAccessValidationSource.find(
             "\"tryAt requires map key type \" + keyValueKeyType") !=
+        std::string::npos);
+  CHECK(argumentValidationSource.find("validateCanonicalKeyValueAccessKeyArgument") !=
+        std::string::npos);
+  CHECK(exprSource.find("validateResolvedCanonicalKeyValueAccessKey") !=
+        std::string::npos);
+  CHECK(collectionAccessValidationSource.find("canonicalMapHelperPathLocal(") ==
+        std::string::npos);
+  CHECK(collectionAccessValidationSource.find("isCanonicalMapHelperResolvedPath(") ==
+        std::string::npos);
+  CHECK(collectionAccessValidationSource.find("receiverIsExperimentalMap") ==
+        std::string::npos);
+  CHECK(collectionAccessValidationSource.find("isMapLikeReceiver(") ==
+        std::string::npos);
+  CHECK(collectionAccessValidationSource.find("resolveMapKeyTypeWithInference") ==
         std::string::npos);
   CHECK(privateExprValidationSource.find(
             "shouldBuiltinValidateBareKeyValueContainsCall") !=
@@ -3317,7 +3240,7 @@ TEST_CASE("canonical map surface owns standalone stdlib implementation") {
   CHECK(privateExprValidationSource.find(
             "shouldBuiltinValidateBareMapContainsCall") == std::string::npos);
   CHECK(privateExprValidationSource.find(
-            "shouldBuiltinValidateBareKeyValueTryAtCall") != std::string::npos);
+            "shouldBuiltinValidateBareKeyValueTryAtCall") == std::string::npos);
   CHECK(privateExprValidationSource.find(
             "shouldBuiltinValidateBareMapTryAtCall") == std::string::npos);
   CHECK(privateExprValidationSource.find(
@@ -3331,7 +3254,7 @@ TEST_CASE("canonical map surface owns standalone stdlib implementation") {
   CHECK(exprSource.find("handledMapSoaBuiltin") == std::string::npos);
   CHECK(exprSource.find("handledKeyValueSoaBuiltin") != std::string::npos);
   CHECK(exprSource.find("handledLateMapAccessBuiltin") == std::string::npos);
-  CHECK(exprSource.find("handledLateKeyValueAccessBuiltin") !=
+  CHECK(exprSource.find("handledLateKeyValueAccessBuiltin") ==
         std::string::npos);
   CHECK(builtinContextSetupSource.find(
             "shouldBuiltinValidateBareKeyValueAccessCall") != std::string::npos);
@@ -3359,7 +3282,7 @@ TEST_CASE("canonical map surface owns standalone stdlib implementation") {
   CHECK(lateCollectionAccessFallbacksSource.find("mapKeyTypeOut") ==
         std::string::npos);
   CHECK(lateMapAccessBuiltinsSource.find(
-            "shouldBuiltinValidateBareKeyValueTryAtCall") != std::string::npos);
+            "shouldBuiltinValidateBareKeyValueTryAtCall") == std::string::npos);
   CHECK(lateMapAccessBuiltinsSource.find("shouldBuiltinValidateBareMapTryAtCall") ==
         std::string::npos);
   CHECK(mapSoaBuiltinsSource.find(
@@ -3408,16 +3331,16 @@ TEST_CASE("canonical map surface owns standalone stdlib implementation") {
   CHECK(lateCollectionAccessFallbacksSource.find(
             "isMapLikeBareAccessReceiverTarget") == std::string::npos);
   CHECK(lateMapAccessBuiltinsSource.find(
-            "isIndexedArgsPackKeyValueReceiverTarget(") != std::string::npos);
+            "isIndexedArgsPackKeyValueReceiverTarget(") == std::string::npos);
   CHECK(lateMapAccessBuiltinsSource.find("isIndexedArgsPackMapReceiverTarget(") ==
         std::string::npos);
-  CHECK(lateMapAccessBuiltinsSource.find("isExperimentalKeyValueReceiver") !=
+  CHECK(lateMapAccessBuiltinsSource.find("isExperimentalKeyValueReceiver") ==
         std::string::npos);
   CHECK(lateMapAccessBuiltinsSource.find("isExperimentalMapReceiver") ==
         std::string::npos);
-  CHECK(lateMapAccessBuiltinsSource.find("rewrittenKeyValueAccessCall") !=
+  CHECK(lateMapAccessBuiltinsSource.find("rewrittenKeyValueAccessCall") ==
         std::string::npos);
-  CHECK(lateMapAccessBuiltinsSource.find("rewrittenKeyValueHelperCall") !=
+  CHECK(lateMapAccessBuiltinsSource.find("rewrittenKeyValueHelperCall") ==
         std::string::npos);
   CHECK(exprTrySource.find("StdlibSurfaceId::CollectionsMapHelpers") ==
         std::string::npos);

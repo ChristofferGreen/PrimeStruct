@@ -536,29 +536,24 @@
   CHECK(semanticsExprLateCallCompatibilitySource.find(
             "unknown call target: /std/collections/vector/capacity") !=
         std::string::npos);
-  CHECK(semanticsExprLateMapAccessBuiltinsSource.find(
-            "bool SemanticsValidator::validateExprLateMapAccessBuiltins") !=
+  CHECK(semanticsExprSource.find("validateExprLateMapAccessBuiltins") ==
         std::string::npos);
-  CHECK(semanticsExprLateMapAccessBuiltinsSource.find(
-            "auto resolveMapKeyTypeWithInference =") !=
+  CHECK(semanticsExprSource.find("validateResolvedCanonicalKeyValueAccessKey") !=
         std::string::npos);
-  CHECK(semanticsExprLateMapAccessBuiltinsSource.find(
-            "auto failLateMapAccessBuiltinDiagnostic = [&](std::string message) -> bool {") !=
+  CHECK(semanticsExprCollectionAccessValidationSource.find(
+            "failCollectionAccessKeyValueKeyMismatch") !=
         std::string::npos);
-  CHECK(semanticsExprLateMapAccessBuiltinsSource.find(
-            "auto failLateMapAccessKeyMismatch = [&](const std::string &helperName,") !=
+  CHECK(semanticsExprCollectionAccessValidationSource.find(
+            "\"tryAt requires map key type \" +") !=
         std::string::npos);
-  CHECK(semanticsExprLateMapAccessBuiltinsSource.find(
-            "isExplicitMapContainsOrTryAtAlias") !=
+  CHECK(semanticsExprCollectionAccessValidationSource.find(
+            "\"tryAt requires map key type \" + keyValueKeyType") !=
         std::string::npos);
-  CHECK(semanticsExprLateMapAccessBuiltinsSource.find(
+  CHECK(semanticsExprCollectionAccessValidationSource.find(
             "return failExprDiagnostic(expr, std::move(message));") !=
         std::string::npos);
-  CHECK(semanticsExprLateMapAccessBuiltinsSource.find(
-            "contains requires map target") !=
-        std::string::npos);
-  CHECK(semanticsExprLateMapAccessBuiltinsSource.find(
-            "tryAt requires map target") !=
+  CHECK(semanticsExprArgumentValidationSource.find(
+            "validateCanonicalKeyValueAccessKeyArgument") !=
         std::string::npos);
   CHECK(semanticsExprPreDispatchDirectCallsSource.find(
             "auto failPreDispatchDirectCallMapKeyMismatch =") !=

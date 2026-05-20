@@ -133,20 +133,4 @@ void SemanticsValidator::prepareExprLateCallCompatibilityContext(
   contextOut.dispatchResolvers = &dispatchResolvers;
 }
 
-void SemanticsValidator::prepareExprLateMapAccessBuiltinContext(
-    const BuiltinCollectionDispatchResolvers &dispatchResolvers,
-    bool shouldBuiltinValidateBareKeyValueContainsCall,
-    bool shouldBuiltinValidateBareKeyValueTryAtCall,
-    bool shouldBuiltinValidateBareKeyValueAccessCall,
-    ExprLateMapAccessBuiltinContext &contextOut) {
-  contextOut = {};
-  contextOut.dispatchResolvers = &dispatchResolvers;
-  contextOut.shouldBuiltinValidateBareKeyValueContainsCall =
-      shouldBuiltinValidateBareKeyValueContainsCall;
-  contextOut.shouldBuiltinValidateBareKeyValueTryAtCall =
-      shouldBuiltinValidateBareKeyValueTryAtCall;
-  contextOut.shouldBuiltinValidateBareKeyValueAccessCall =
-      shouldBuiltinValidateBareKeyValueAccessCall;
-}
-
 } // namespace primec::semantics

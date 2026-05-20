@@ -319,25 +319,6 @@
       bool &hasMethodReceiverIndex,
       size_t &methodReceiverIndex);
   struct ExprArgumentValidationContext;
-  struct ExprLateMapAccessBuiltinContext {
-    const BuiltinCollectionDispatchResolvers *dispatchResolvers = nullptr;
-    bool shouldBuiltinValidateBareKeyValueContainsCall = false;
-    bool shouldBuiltinValidateBareKeyValueTryAtCall = false;
-    bool shouldBuiltinValidateBareKeyValueAccessCall = false;
-  };
-  void prepareExprLateMapAccessBuiltinContext(
-      const BuiltinCollectionDispatchResolvers &dispatchResolvers,
-      bool shouldBuiltinValidateBareKeyValueContainsCall,
-      bool shouldBuiltinValidateBareKeyValueTryAtCall,
-      bool shouldBuiltinValidateBareKeyValueAccessCall,
-      ExprLateMapAccessBuiltinContext &contextOut);
-  bool validateExprLateMapAccessBuiltins(
-      const std::vector<ParameterInfo> &params,
-      const std::unordered_map<std::string, BindingInfo> &locals,
-      const Expr &expr,
-      const std::string &resolved,
-      const ExprLateMapAccessBuiltinContext &context,
-      bool &handledOut);
   struct ExprLateUnknownTargetFallbackContext {
     std::function<bool(const Expr &)> resolveMapTarget;
     std::function<bool(const Expr &)> isIndexedArgsPackKeyValueReceiverTarget;

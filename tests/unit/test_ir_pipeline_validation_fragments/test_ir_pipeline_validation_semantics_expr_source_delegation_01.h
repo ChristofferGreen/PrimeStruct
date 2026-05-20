@@ -79,8 +79,6 @@
       repoRoot / "src" / "semantics" / "SemanticsValidatorExprMethodResolution.cpp";
   const std::filesystem::path semanticsExprMethodTargetResolutionPath =
       repoRoot / "src" / "semantics" / "SemanticsValidatorExprMethodTargetResolution.cpp";
-  const std::filesystem::path semanticsExprLateMapAccessBuiltinsPath =
-      repoRoot / "src" / "semantics" / "SemanticsValidatorExprLateMapAccessBuiltins.cpp";
   const std::filesystem::path semanticsExprLateUnknownTargetFallbacksPath =
       repoRoot / "src" / "semantics" / "SemanticsValidatorExprLateUnknownTargetFallbacks.cpp";
   const std::filesystem::path semanticsExprMutationBorrowsPath =
@@ -149,7 +147,6 @@
   REQUIRE(std::filesystem::exists(semanticsInferMethodResolutionPath));
   REQUIRE(std::filesystem::exists(semanticsExprMethodResolutionPath));
   REQUIRE(std::filesystem::exists(semanticsExprMethodTargetResolutionPath));
-  REQUIRE(std::filesystem::exists(semanticsExprLateMapAccessBuiltinsPath));
   REQUIRE(std::filesystem::exists(semanticsExprLateUnknownTargetFallbacksPath));
   REQUIRE(std::filesystem::exists(semanticsExprMutationBorrowsPath));
   REQUIRE(std::filesystem::exists(semanticsExprNamedArgumentBuiltinsPath));
@@ -221,8 +218,6 @@
       readText(semanticsExprMethodResolutionPath);
   const std::string semanticsExprMethodTargetResolutionSource =
       readText(semanticsExprMethodTargetResolutionPath);
-  const std::string semanticsExprLateMapAccessBuiltinsSource =
-      readText(semanticsExprLateMapAccessBuiltinsPath);
   const std::string semanticsExprLateUnknownTargetFallbacksSource =
       readText(semanticsExprLateUnknownTargetFallbacksPath);
   const std::string semanticsExprMutationBorrowsSource =
@@ -5922,14 +5917,11 @@
             "          dispatchBootstrap.dispatchResolvers,\n"
             "          lateCallCompatibilityContext);") !=
         std::string::npos);
-  CHECK(semanticsExprSource.find(
-            "prepareExprLateMapAccessBuiltinContext(\n"
-            "          dispatchBootstrap.dispatchResolvers,\n"
-            "          shouldBuiltinValidateBareMapContainsCall,") !=
+  CHECK(semanticsExprSource.find("prepareExprLateMapAccessBuiltinContext(") ==
         std::string::npos);
-  CHECK(semanticsExprSource.find(
-            "validateExprLateMapAccessBuiltins(\n"
-            "              params, locals, expr, resolved,") !=
+  CHECK(semanticsExprSource.find("validateExprLateMapAccessBuiltins(") ==
+        std::string::npos);
+  CHECK(semanticsExprSource.find("validateResolvedCanonicalKeyValueAccessKey") !=
         std::string::npos);
   CHECK(semanticsExprSource.find(
             "validateExprLateUnknownTargetFallbacks(\n"

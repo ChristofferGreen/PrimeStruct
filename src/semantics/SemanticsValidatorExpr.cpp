@@ -663,8 +663,6 @@ bool SemanticsValidator::validateExpr(const std::vector<ParameterInfo> &params,
     prepareExprDispatchBootstrap(params, locals, dispatchBootstrap);
     const bool shouldBuiltinValidateBareKeyValueContainsCall =
         shouldBuiltinValidateCurrentMapWrapperHelper("contains");
-    const bool shouldBuiltinValidateBareKeyValueTryAtCall =
-        shouldBuiltinValidateCurrentMapWrapperHelper("tryAt");
     const bool shouldBuiltinValidateBareKeyValueAccessCall =
         shouldBuiltinValidateCurrentMapWrapperHelper("at") ||
         shouldBuiltinValidateCurrentMapWrapperHelper("at_ref") ||
@@ -1111,6 +1109,77 @@ bool SemanticsValidator::validateExpr(const std::vector<ParameterInfo> &params,
       }
       return false;
     }
+    auto validateResolvedCanonicalKeyValueAccessKey = [&]() -> bool {
+      if (expr.isMethodCall || expr.args.size() != 2) {
+        return true;
+      }
+      const StdlibSurfaceMetadata *metadata =
+          keyValueHelperSurfaceMetadataLocal();
+      std::string helperName;
+      if (metadata == nullptr ||
+          !resolvePublishedCollectionHelperResolvedPath(resolved,
+                                                        metadata->id,
+                                                        helperName)) {
+        return true;
+      }
+      if (helperName != "tryAt" && helperName != "tryAt_ref" &&
+          helperName != "at" && helperName != "at_ref" &&
+          helperName != "at_unsafe" && helperName != "at_unsafe_ref") {
+        return true;
+      }
+      std::string keyValueKeyType;
+      if (!resolveKeyValueKeyType(expr.args.front(),
+                                  dispatchBootstrap.dispatchResolvers,
+                                  keyValueKeyType)) {
+        std::string receiverTypeText;
+        std::string keyValueValueType;
+        if (!inferQueryExprTypeText(expr.args.front(), params, locals,
+                                    receiverTypeText) ||
+            !extractKeyValueCollectionTypesFromTypeText(receiverTypeText,
+                                                        keyValueKeyType,
+                                                        keyValueValueType)) {
+          return true;
+        }
+      }
+      auto failKeyValueKeyDiagnostic = [&]() {
+        if (helperName == "tryAt" || helperName == "tryAt_ref") {
+          if (normalizeBindingTypeName(keyValueKeyType) == "string") {
+            return failExprDiagnostic(expr.args[1],
+                                      "tryAt requires string map key");
+          }
+          return failExprDiagnostic(expr.args[1],
+                                    "tryAt requires map key type " +
+                                        keyValueKeyType);
+        }
+        return failExprDiagnostic(
+            expr.args[1],
+            "argument type mismatch for " + resolved + " parameter key");
+      };
+      if (normalizeBindingTypeName(keyValueKeyType) == "string") {
+        if (!isStringExprForArgumentValidation(
+                expr.args[1], dispatchBootstrap.dispatchResolvers)) {
+          return failKeyValueKeyDiagnostic();
+        }
+        return true;
+      }
+      const ReturnKind keyKind =
+          returnKindForTypeName(normalizeBindingTypeName(keyValueKeyType));
+      if (keyKind == ReturnKind::Unknown) {
+        return true;
+      }
+      if (dispatchBootstrap.dispatchResolvers.resolveStringTarget != nullptr &&
+          dispatchBootstrap.dispatchResolvers.resolveStringTarget(expr.args[1])) {
+        return failKeyValueKeyDiagnostic();
+      }
+      const ReturnKind argKind = inferExprReturnKind(expr.args[1], params, locals);
+      if (argKind != ReturnKind::Unknown && argKind != keyKind) {
+        return failKeyValueKeyDiagnostic();
+      }
+      return true;
+    };
+    if (!validateResolvedCanonicalKeyValueAccessKey()) {
+      return false;
+    }
     auto matchesResolvedFamilyPath = [&](std::string_view candidate,
                                         std::string_view familyPath) {
       const std::string templatedPrefix = std::string(familyPath) + "<";
@@ -1271,22 +1340,6 @@ bool SemanticsValidator::validateExpr(const std::vector<ParameterInfo> &params,
         return false;
       }
       if (handledLateCallCompatibility) {
-        return true;
-      }
-      ExprLateMapAccessBuiltinContext lateMapAccessBuiltinContext;
-      prepareExprLateMapAccessBuiltinContext(
-          dispatchBootstrap.dispatchResolvers,
-          shouldBuiltinValidateBareKeyValueContainsCall,
-          shouldBuiltinValidateBareKeyValueTryAtCall,
-          shouldBuiltinValidateBareKeyValueAccessCall,
-          lateMapAccessBuiltinContext);
-      bool handledLateKeyValueAccessBuiltin = false;
-      if (!validateExprLateMapAccessBuiltins(
-              params, locals, expr, resolved, lateMapAccessBuiltinContext,
-              handledLateKeyValueAccessBuiltin)) {
-        return false;
-      }
-      if (handledLateKeyValueAccessBuiltin) {
         return true;
       }
       ExprLateUnknownTargetFallbackContext lateUnknownTargetFallbackContext;

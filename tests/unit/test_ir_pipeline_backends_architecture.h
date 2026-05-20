@@ -606,7 +606,7 @@ TEST_CASE("cmake splits primec library into subsystem targets") {
   CHECK(cmake.find("src/semantics/SemanticsValidatorExprLateBuiltins.cpp") != std::string::npos);
   CHECK(cmake.find("src/semantics/SemanticsValidatorExprLateCallCompatibility.cpp") !=
         std::string::npos);
-  CHECK(cmake.find("src/semantics/SemanticsValidatorExprLateMapAccessBuiltins.cpp") !=
+  CHECK(cmake.find("src/semantics/SemanticsValidatorExprLateMapAccessBuiltins.cpp") ==
         std::string::npos);
   CHECK(cmake.find("src/semantics/SemanticsValidatorExprLateMapSoaBuiltins.cpp") !=
         std::string::npos);
