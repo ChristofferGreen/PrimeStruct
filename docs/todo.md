@@ -1868,11 +1868,17 @@ Task template:
     constructor/member path helpers, and direct call sites that only exist so
     production C++ can recognize the public map surface.
   - implementation_notes:
+    - This is a deletion-first task. If the main diff is mostly renaming
+      `map*` helpers to `keyValue*` while preserving the same shim boundary,
+      stop and rescope before committing.
     - Prefer deleting the map-named helper file outright. If a small helper is
       still needed, move it behind a collection- or key/value-generic name and
       prove it is not map-specific behavior.
     - Bundle related call-site updates in semantics/template/lowerer code in
       one pass; do not split this into standalone alias-renaming commits.
+    - If a retained branch is necessary because `.prime` code lacks an ordinary
+      language/compiler mechanism, split that missing capability into a new
+      non-map TODO instead of preserving a map exception.
     - Keep `tests/unit/test_stdlib_map_ownership.cpp` as C++ coverage for map
       behavior and source-locking, but production `src/`/`include` APIs should
       stop exposing map-specific shim names.
@@ -1886,8 +1892,10 @@ Task template:
       mechanism and does not grant special behavior to `map` as a named stdlib
       type.
   - stop_rule: Stop when the constructor/helper shim boundary is deleted or
-    converted as a whole and focused map ownership tests pass; if lowerer
-    substrate changes are needed, leave them to TODO-4537.
+    converted as a whole and focused map ownership tests pass. If the boundary
+    cannot be deleted because the compiler lacks a generic mechanism for
+    ordinary `.prime` code, create a new non-map capability TODO and stop; if
+    lowerer substrate changes are needed, leave them to TODO-4537.
 
 - [ ] TODO-4535: Delete map collection type classifier API
   - owner: ai
@@ -1908,6 +1916,10 @@ Task template:
       utilities.
     - Map key behavior should be validated through `.prime` map tests and
       ordinary diagnostics rather than a production C++ map-key whitelist.
+    - If removing a classifier reveals missing generic support for
+      user-defined keyed collections or template/type facts, split that as a
+      non-map language/compiler capability instead of weakening this deletion
+      task.
   - acceptance:
     - Production headers and sources no longer expose map-named type
       classifier or key-validation APIs.
@@ -1916,8 +1928,9 @@ Task template:
     - Any generic replacement is usable by other stdlib collection types
       without naming `map`.
   - stop_rule: Stop after the public/internal classifier API family is deleted
-    as one value-bearing pass; leave late builtin validation deletion to
-    TODO-4536.
+    as one value-bearing pass. If deletion needs a new generic compiler
+    mechanism, create that non-map TODO and stop; leave late builtin validation
+    deletion to TODO-4536.
 
 - [ ] TODO-4536: Delete late map builtin validation boundary
   - owner: ai
@@ -1937,6 +1950,9 @@ Task template:
       because `map.prime` is normal included code.
     - If SoA or vector behavior still depends on a shared map/SoA hook, split
       the generic part out and delete the map-specific branch in this pass.
+    - If a valid map program still needs this boundary after ordinary call/type
+      checking is exhausted, record the missing generic semantic capability as
+      a separate non-map TODO.
   - acceptance:
     - Late semantic validation no longer has a map-specific file, context, or
       dispatch hook.
@@ -1945,8 +1961,9 @@ Task template:
     - Focused tests cover valid access, missing-key result behavior, and a
       representative invalid map call diagnostic.
   - stop_rule: Stop once the semantic late-builtin boundary is gone and
-    focused semantics/map ownership coverage passes; leave lowerer storage and
-    access metadata to TODO-4537.
+    focused semantics/map ownership coverage passes. If the boundary exposes a
+    missing generic semantic feature, create a non-map capability TODO and
+    stop; leave lowerer storage and access metadata to TODO-4537.
 
 - [ ] TODO-4537: Delete lowerer key/value collection substrate
   - owner: ai
@@ -1966,6 +1983,9 @@ Task template:
       coherent lowering boundary rather than rename isolated local variables.
     - Keep C++ tests for map behavior; remove production branches that only
       exist to identify map storage or helper calls by name.
+    - If ordinary `.prime` structs/helpers cannot replace a lowerer branch,
+      split the missing generic lowering mechanism into a new non-map TODO
+      instead of keeping a map/key-value exception.
   - acceptance:
     - Lowerer production code no longer exposes map/key-value collection local
       kinds, access target structs, or layout facts for the stdlib map type.
@@ -1974,7 +1994,9 @@ Task template:
     - Any retained backend primitive is documented as a language/runtime
       primitive, not a `map` stdlib exception.
   - stop_rule: Stop when the remaining special lowerer substrate is removed as
-    one subsystem pass and focused native/VM map coverage still passes.
+    one subsystem pass and focused native/VM map coverage still passes. If
+    deletion needs a general lowering capability first, create that non-map TODO
+    and stop.
 
 - [ ] TODO-4538: Replace map inventory gate with fast strict audit
   - owner: ai

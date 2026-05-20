@@ -1626,6 +1626,13 @@ TEST_CASE("todo queue and skipped doctest debt stay source locked") {
                   "  TODO-4535 -> TODO-4536 -> TODO-4537 -> TODO-4538 -> TODO-4464 for the\n"
                   "  final strict zero map-surface audit.") !=
         std::string::npos);
+  CHECK(todo.find("This is a deletion-first task. If the main diff is mostly renaming\n"
+                  "      `map*` helpers to `keyValue*` while preserving the same shim boundary,\n"
+                  "      stop and rescope before committing.") !=
+        std::string::npos);
+  CHECK(todo.find("split that missing capability into a new\n"
+                  "      non-map TODO instead of preserving a map exception.") !=
+        std::string::npos);
   CHECK(todo.find("- `tuple-type-packs`: TODO-4276 completed helper/lifecycle pack\n"
                   "  expansion; ready TODO-4271, then serial successors TODO-4272") !=
         std::string::npos);
