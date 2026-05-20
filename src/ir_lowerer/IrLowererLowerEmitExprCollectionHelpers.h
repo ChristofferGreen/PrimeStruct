@@ -365,6 +365,7 @@
                   return true;
                 }
                 if (resolveKeyValueHelperAliasName(candidate, helperNameOut)) {
+                  normalizeLateCollectionHelperName(helperNameOut);
                   return true;
                 }
                 return resolvePublishedLateKeyValueMemberName(candidate,
@@ -557,8 +558,35 @@
           ir_lowerer::LocalInfo materializedInfo;
           auto emitCollectionReceiverValue = [&](const Expr &valueExpr) {
             std::string accessName;
+            auto getMaterializedArgsPackAccessName = [&](const Expr &candidate,
+                                                         std::string &accessNameOut) {
+              if (getBuiltinArrayAccessName(candidate, accessNameOut)) {
+                return true;
+              }
+              if (candidate.kind != Expr::Kind::Call || candidate.args.size() != 2 ||
+                  candidate.args.front().kind != Expr::Kind::Name ||
+                  !candidate.namespacePrefix.empty()) {
+                return false;
+              }
+              auto localIt = localsIn.find(candidate.args.front().name);
+              if (localIt == localsIn.end() || !localIt->second.isArgsPack) {
+                return false;
+              }
+              std::string rawName = candidate.name;
+              if (!rawName.empty() && rawName.front() == '/') {
+                rawName.erase(rawName.begin());
+              }
+              if (rawName.find('/') != std::string::npos) {
+                return false;
+              }
+              if (rawName == "at" || rawName == "at_unsafe") {
+                accessNameOut = rawName;
+                return true;
+              }
+              return false;
+            };
             if (valueExpr.kind == Expr::Kind::Call &&
-                getBuiltinArrayAccessName(valueExpr, accessName) &&
+                getMaterializedArgsPackAccessName(valueExpr, accessName) &&
                 valueExpr.args.size() == 2) {
               const auto targetInfo =
                   ir_lowerer::resolveArrayVectorAccessTargetInfo(
@@ -576,8 +604,8 @@
                   !targetInfo.isWrappedKeyValueTarget;
               const bool isDirectMapArgsPackAccess =
                   targetInfo.isArgsPackTarget &&
-                  targetInfo.isKeyValueTarget &&
-                  !targetInfo.isWrappedKeyValueTarget &&
+                  (targetInfo.isKeyValueTarget ||
+                   targetInfo.isWrappedKeyValueTarget) &&
                   targetInfo.elemSlotCount > 0;
               if (isStructArgsPackAccess || isDirectMapArgsPackAccess) {
                 return ir_lowerer::emitArrayVectorIndexedAccess(

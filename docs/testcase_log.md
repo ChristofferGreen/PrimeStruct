@@ -1,10 +1,6 @@
 # Testcase Log
 
 ## Current Known Failures
-- `PrimeStruct_backend_ir_tests --test-case="ir lowerer materializes variadic borrowed map packs with indexed count_ref helpers,ir lowerer materializes variadic pointer map packs with indexed count_ref helpers" --no-skip`
-  is stale after the map stdlib-ownership cutover. On 2026-05-17 both cases
-  still failed during lowering on retired `/at` expression calls before
-  variadic map constructor packed-argument rewriting was reached.
 - `PrimeStruct_semantics_tests --test-case="wrapper-returned slash-method map access count keeps primitive diagnostics" --no-skip`
   is stale after the map stdlib-ownership cutover. On 2026-05-17 it
   validated successfully instead of reporting `unknown method: /map/at`;
@@ -221,6 +217,12 @@
   the string-valued map access emission fixture returned `NotHandled`.
 
 ## Recent Test Runs
+- 2026-05-20 11:07 CEST | pass | mode: release | command:
+  `cmake --build build-release --target PrimeStruct_backend_ir_tests`;
+  `cd build-release && ./PrimeStruct_backend_ir_tests --test-case="ir lowerer materializes variadic borrowed map packs with indexed count_ref helpers,ir lowerer materializes variadic pointer map packs with indexed count_ref helpers" --no-skip`
+  | failures: none | notes: explicit `count_ref` map helpers now
+  materialize indexed args-pack reference/pointer map receivers before
+  lowering the helper call.
 - 2026-05-20 11:27 CEST | pass | mode: release | command:
   `cmake --build build-release --target PrimeStruct_semantics_tests`;
   `cd build-release && ./PrimeStruct_semantics_tests --test-case="graph type resolver answers map receiver queries through shared type-text helper,graph type resolver infers map value return kinds through shared infer helper" --no-skip`
@@ -4634,6 +4636,7 @@
 - 2026-05-12 17:28 local | fail | mode: release | command: `./scripts/compile.sh --release` | failures: 146 CTest targets | notes: baseline after preflight checkpoint failed; stabilization blocks TODO work
 
 ## Resolved Failures
+- [x] ir lowerer materializes variadic borrowed/pointer map packs with indexed count_ref helpers | resolved: 2026-05-20 11:07 CEST | validating command: `cmake --build build-release --target PrimeStruct_backend_ir_tests`; `cd build-release && ./PrimeStruct_backend_ir_tests --test-case="ir lowerer materializes variadic borrowed map packs with indexed count_ref helpers,ir lowerer materializes variadic pointer map packs with indexed count_ref helpers" --no-skip` | notes: collection receiver materialization now normalizes explicit `count_ref` aliases and treats wrapped key/value args-pack elements as materializable indexed map receivers.
 - [x] graph type resolver infers map value return kinds through shared infer helper | resolved: 2026-05-20 11:27 CEST | validating command: `cmake --build build-release --target PrimeStruct_semantics_tests`; `cd build-release && ./PrimeStruct_semantics_tests --test-case="graph type resolver answers map receiver queries through shared type-text helper,graph type resolver infers map value return kinds through shared infer helper" --no-skip` | notes: map return-solver fixtures now use canonical map construction in both auto-return branches without importing `internal_map` or calling the retired public `mapPair` bridge.
 - [x] ir lowerer result helpers resolve indexed args-pack Result expressions | resolved: 2026-05-20 11:18 CEST | validating command: `cmake --build build-release --target PrimeStruct_backend_ir_tests`; `cd build-release && ./PrimeStruct_backend_ir_tests --test-case="ir lowerer result helpers resolve indexed args-pack Result expressions" --no-skip`; `cd build-release && ./PrimeStruct_backend_ir_tests --test-case="ir lowerer result helpers use semantic indexed args-pack Result facts" --no-skip` | notes: Result metadata now has a receiver-scoped bare `at` fallback for locals already known to be Result args packs, without reintroducing generic map/access handling.
 - [x] semantic product validates direct return method-like borrowed helper-return experimental soa_vector reads | resolved: 2026-05-20 11:05 CEST | validating command: `cmake --build build-release --target PrimeStruct_semantics_tests`; `cd build-release && ./PrimeStruct_semantics_tests --test-case="semantic product validates direct return method-like borrowed helper-return experimental soa_vector reads" --no-skip` | notes: fixture now uses self-contained public `soa<Particle>` helper stubs and checks borrowed `count_ref`/`get_ref` semantic-product targets without depending on old `SoaVector<T>` imports.
