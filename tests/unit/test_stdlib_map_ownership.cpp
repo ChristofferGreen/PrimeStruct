@@ -877,6 +877,12 @@ TEST_CASE("canonical map surface owns standalone stdlib implementation") {
             "resolveMapConstructorMemberPath(normalizedPath, memberName)") !=
         std::string::npos);
   CHECK(mapConstructorHelpersSource.find(
+            "isResolvedCanonicalMapConstructorPath") ==
+        std::string::npos);
+  CHECK(mapConstructorHelpersSource.find(
+            "isResolvedCanonicalKeyValueConstructorPath") !=
+        std::string::npos);
+  CHECK(mapConstructorHelpersSource.find(
             "isResolvedPublishedMapConstructorPath") ==
         std::string::npos);
   CHECK(mapConstructorHelpersSource.find(

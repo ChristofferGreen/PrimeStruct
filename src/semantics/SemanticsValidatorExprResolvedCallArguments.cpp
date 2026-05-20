@@ -12,7 +12,7 @@ namespace primec::semantics {
 namespace {
 
 bool isCanonicalMapConstructorResolvedPath(const std::string &resolvedPath) {
-  return isResolvedCanonicalMapConstructorPath(resolvedPath);
+  return isResolvedCanonicalKeyValueConstructorPath(resolvedPath);
 }
 
 } // namespace

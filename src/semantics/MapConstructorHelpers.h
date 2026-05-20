@@ -279,7 +279,7 @@ inline bool resolveMapConstructorMemberPath(std::string_view rawPath,
   return resolveCollectionConstructorMemberPath(*metadata, rawPath, memberNameOut);
 }
 
-inline bool isResolvedCanonicalMapConstructorPath(const std::string &rawPath) {
+inline bool isResolvedCanonicalKeyValueConstructorPath(const std::string &rawPath) {
   const std::string normalizedPath = stripCollectionConstructorSuffixes(rawPath);
   if (normalizedPath.rfind("/std/collections/", 0) != 0 ||
       normalizedPath.rfind(experimentalCollectionConstructorRootLocal("map"), 0) == 0) {
