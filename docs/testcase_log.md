@@ -10,14 +10,26 @@
   string-valued map runtime fixture has since been retargeted to compile-only
   coverage because native runtime string-valued maps still hang after
   compilation.
-- `PrimeStruct_compile_run_tests --test-case="compiles and runs native builtin canonical map first-growth inserts" --no-skip`
-  currently fails after map-specific native dispatch removal with
-  `Native lowering error: void call not allowed in expression context:
-  /std/collections/map/insert__...`. TODO-4544 tracks the generic
-  statement-context void-helper lowering fix; do not restore a map-specific
-  native insert dispatch path for this failure.
 
 ## Recent Test Runs
+- 2026-05-20 20:48 CEST | pass | mode: release | command:
+  `cmake --build build-release --target primec`;
+  direct native smoke for
+  `map_builtin_canonical_insert_first_growth_native.prime` exited `8`;
+  `cmake --build build-release --target PrimeStruct_backend_ir_tests`;
+  `cd build-release && ./PrimeStruct_backend_ir_tests --test-case="ir lowerer statement call helper emits semantic direct void helpers as statements,ir lowerer inline call context helper reports setup diagnostics" --no-skip`;
+  `cmake --build build-release --target PrimeStruct_compile_run_tests`;
+  `cd build-release && ./PrimeStruct_compile_run_tests --test-case="compiles and runs native builtin canonical map first-growth inserts,compiles and runs native builtin canonical map repeated-growth inserts,compiles and runs native builtin canonical map insert overwrites" --no-skip`;
+  `cd build-release && ./PrimeStruct_compile_run_tests --test-case="compiles native bare map at_unsafe through canonical helper,compiles and runs native map at_unsafe helper" --no-skip`;
+  `cd build-release && ./PrimeStruct_compile_run_tests --test-case="rejects native canonical namespaced map inserts on explicit experimental map bindings,compiles and runs native experimental map inserts" --no-skip`;
+  `rg -n 'rewriteKeyValueInsertHelperStatementToCanonical|isPrimeKeyValueInsertBody|canonicalStatementKeyValueHelperPath\("insert"\)|callee->fullPath\.rfind\("/std/collections/internal_map/insertImpl__", 0\)' src/ir_lowerer tests/unit/test_stdlib_map_ownership.cpp`
+  | failures: none | notes: TODO-4544 fixed statement-context
+  generated void helper lowering and the native canonical map insert growth
+  cases now pass without restoring map-specific native insert dispatch.
+  `cmake --build build-release --target PrimeStruct_misc_tests` was
+  terminated after several minutes while GCC compiled
+  `test_stdlib_map_ownership.cpp.o`; source-lock expectations were verified
+  with the listed `rg` check instead.
 - 2026-05-20 19:51 CEST | partial | mode: release | command:
   `cmake --build build-release --target PrimeStruct_backend_ir_tests`;
   `cd build-release && ./PrimeStruct_backend_ir_tests --test-case="ir lowerer call helpers source delegation stays stable,ir lowerer collection helper rewrite guards explicit map defs,ir lowerer call helpers keep explicit map helpers out of native builtin emission" --no-skip`;

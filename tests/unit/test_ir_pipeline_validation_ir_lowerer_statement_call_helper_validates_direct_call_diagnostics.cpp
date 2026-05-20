@@ -141,6 +141,101 @@ TEST_CASE("ir lowerer statement call helper validates direct-call diagnostics") 
   CHECK(definitionResolutionCalls == 1);
 }
 
+TEST_CASE("ir lowerer statement call helper emits semantic direct void helpers as statements") {
+  using EmitResult = primec::ir_lowerer::DirectCallStatementEmitResult;
+
+  primec::Expr stmt;
+  stmt.kind = primec::Expr::Kind::Call;
+  stmt.name = "/pkg/do_work";
+  stmt.semanticNodeId = 42;
+
+  primec::Definition def;
+  def.fullPath = "/pkg/do_work__t_i32";
+
+  primec::SemanticProgram semanticProgram;
+  primec::SemanticProgramDefinition semanticDef;
+  semanticDef.fullPath = def.fullPath;
+  semanticProgram.definitions.push_back(semanticDef);
+
+  bool emittedInlineCall = false;
+  bool requiredValue = true;
+  std::vector<primec::IrInstruction> instructions;
+  std::string error = "preserve me";
+  CHECK(primec::ir_lowerer::tryEmitDirectCallStatement(
+            stmt,
+            {},
+            [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return false; },
+            [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return false; },
+            [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return false; },
+            [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) -> const primec::Definition * {
+              return nullptr;
+            },
+            [&](const primec::Expr &candidate) -> const primec::Definition * {
+              return candidate.name == def.fullPath ? &def : nullptr;
+            },
+            [](const std::string &, primec::ir_lowerer::ReturnInfo &info) {
+              info.returnsVoid = true;
+              return true;
+            },
+            [&](const primec::Expr &, const primec::Definition &callee,
+                const primec::ir_lowerer::LocalMap &, bool expectValue) {
+              emittedInlineCall = callee.fullPath == def.fullPath;
+              requiredValue = expectValue;
+              return true;
+            },
+            instructions,
+            error,
+            &semanticProgram) == EmitResult::Emitted);
+  CHECK(error == "preserve me");
+  CHECK(emittedInlineCall);
+  CHECK_FALSE(requiredValue);
+  CHECK(instructions.empty());
+
+  primec::Expr methodStmt;
+  methodStmt.kind = primec::Expr::Kind::Call;
+  methodStmt.name = "doWork";
+  methodStmt.isMethodCall = true;
+  methodStmt.semanticNodeId = 43;
+  const primec::SymbolId methodTargetId =
+      primec::semanticProgramInternCallTargetString(semanticProgram, "/pkg/do_work");
+  semanticProgram.publishedRoutingLookups.methodCallTargetIdsByExpr.emplace(
+      methodStmt.semanticNodeId, methodTargetId);
+
+  emittedInlineCall = false;
+  requiredValue = true;
+  instructions.clear();
+  error = "preserve me";
+  CHECK(primec::ir_lowerer::tryEmitDirectCallStatement(
+            methodStmt,
+            {},
+            [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return false; },
+            [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return false; },
+            [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return false; },
+            [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) -> const primec::Definition * {
+              return nullptr;
+            },
+            [&](const primec::Expr &candidate) -> const primec::Definition * {
+              return candidate.name == def.fullPath ? &def : nullptr;
+            },
+            [](const std::string &, primec::ir_lowerer::ReturnInfo &info) {
+              info.returnsVoid = true;
+              return true;
+            },
+            [&](const primec::Expr &, const primec::Definition &callee,
+                const primec::ir_lowerer::LocalMap &, bool expectValue) {
+              emittedInlineCall = callee.fullPath == def.fullPath;
+              requiredValue = expectValue;
+              return true;
+            },
+            instructions,
+            error,
+            &semanticProgram) == EmitResult::Emitted);
+  CHECK(error == "preserve me");
+  CHECK(emittedInlineCall);
+  CHECK_FALSE(requiredValue);
+  CHECK(instructions.empty());
+}
+
 TEST_CASE("ir lowerer statement call helper updates referenced soa metadata receivers") {
   using EmitResult = primec::ir_lowerer::DirectCallStatementEmitResult;
 

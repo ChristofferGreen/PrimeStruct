@@ -1318,6 +1318,74 @@
             return true;
           }
         }
+        std::string bareKeyValueAccessName;
+        if (!expr.isMethodCall &&
+            expr.args.size() == 2 &&
+            ((getBuiltinArrayAccessName(expr, bareKeyValueAccessName) &&
+              (bareKeyValueAccessName == "at" ||
+               bareKeyValueAccessName == "at_unsafe")) ||
+             ((isSimpleCallName(expr, "at") ||
+               isSimpleCallName(expr, "at_unsafe")) &&
+              (bareKeyValueAccessName = expr.name, true))) &&
+            (bareKeyValueAccessName == "at" ||
+             bareKeyValueAccessName == "at_unsafe")) {
+          const auto targetInfo =
+              ir_lowerer::resolveCollectionPairTypeInfo(
+                  expr.args.front(),
+                  localsIn,
+                  {},
+                  semanticProgram,
+                  &callResolutionAdapters.semanticProductTargets.semanticIndex);
+          if (targetInfo.isKeyValueTarget) {
+            Expr methodExpr = expr;
+            methodExpr.name =
+                bareKeyValueAccessName == "at" ? "mapAt" : "mapAtUnsafe";
+            methodExpr.namespacePrefix.clear();
+            methodExpr.isMethodCall = true;
+            methodExpr.semanticNodeId = 0;
+            const std::string priorError = error;
+            std::string receiverStructPath = targetInfo.structTypeName;
+            if (receiverStructPath.empty()) {
+              receiverStructPath = inferStructExprPath(expr.args.front(), localsIn);
+            }
+            auto emitMapAccessMethodCall =
+                [&](const Definition &methodCallee) -> bool {
+              if (!receiverStructPath.empty() &&
+                  methodCallee.parameters.size() + 1 == methodExpr.args.size()) {
+                Definition calleeWithThis = methodCallee;
+                calleeWithThis.isNested = false;
+                calleeWithThis.parameters.insert(
+                    calleeWithThis.parameters.begin(),
+                    ir_lowerer::makeStructHelperThisParam(
+                        receiverStructPath,
+                        definitionHasTransform(methodCallee, "mut")));
+                return emitInlineDefinitionCall(
+                    methodExpr, calleeWithThis, localsIn, true);
+              }
+              return emitInlineDefinitionCall(
+                  methodExpr, methodCallee, localsIn, true);
+            };
+            if (const Definition *methodCallee =
+                    resolveMethodCallDefinition(methodExpr, localsIn);
+                methodCallee != nullptr) {
+              error = priorError;
+              return emitMapAccessMethodCall(*methodCallee);
+            }
+            if (!receiverStructPath.empty()) {
+              Expr methodLookup;
+              methodLookup.kind = Expr::Kind::Call;
+              methodLookup.name = receiverStructPath + "/" + methodExpr.name;
+              if (const Definition *methodCallee =
+                      resolveDefinitionCall(methodLookup);
+                  methodCallee != nullptr) {
+                error = priorError;
+                return emitMapAccessMethodCall(*methodCallee);
+              }
+            }
+            error = priorError;
+            return emitExpr(methodExpr, localsIn);
+          }
+        }
         error =
             "native backend only supports arithmetic/comparison/clamp/min/max/abs/sign/saturate/convert/pointer/assign/increment/decrement calls in expressions (call=" +
             resolveExprPath(expr) + ", name=" + expr.name +

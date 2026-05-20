@@ -46,10 +46,6 @@ const StdlibSurfaceMetadata *statementVectorHelperMetadata() {
   return findStdlibSurfaceMetadataByBridgeKey("collections.vector_helpers");
 }
 
-const StdlibSurfaceMetadata *statementKeyValueHelperMetadata() {
-  return findStdlibSurfaceMetadataByBridgeKey("collections.map_helpers");
-}
-
 bool isExperimentalVectorTypePath(std::string_view path) {
   const std::string vectorTypePath = experimentalCollectionTypePath("vector", "Vector");
   return path == vectorTypePath || path.rfind(vectorTypePath + "__", 0) == 0;
@@ -137,36 +133,6 @@ bool isPublishedCanonicalStatementVectorHelperPath(std::string_view resolvedPath
          vectorMetadata != nullptr &&
          metadata->id == vectorMetadata->id &&
          matchesRegistrySpellingSet(metadata->loweringSpellings, resolvedPath);
-}
-
-std::string canonicalStatementKeyValueHelperName(std::string helperName) {
-  helperName = stripGeneratedHelperSuffix(std::move(helperName));
-  return helperName;
-}
-
-bool resolvePublishedStatementKeyValueHelperName(std::string_view resolvedPath,
-                                            std::string &helperNameOut) {
-  const auto *metadata = findStdlibSurfaceMetadataByResolvedPath(resolvedPath);
-  const auto *keyValueMetadata = statementKeyValueHelperMetadata();
-  if (metadata == nullptr || keyValueMetadata == nullptr ||
-      metadata->id != keyValueMetadata->id) {
-    return false;
-  }
-  const size_t slash = resolvedPath.find_last_of('/');
-  if (slash == std::string_view::npos || slash + 1 >= resolvedPath.size()) {
-    return false;
-  }
-  helperNameOut =
-      canonicalStatementKeyValueHelperName(std::string(resolvedPath.substr(slash + 1)));
-  return !helperNameOut.empty();
-}
-
-std::string canonicalStatementKeyValueHelperPath(std::string_view helperName) {
-  const auto *metadata = statementKeyValueHelperMetadata();
-  if (metadata == nullptr) {
-    return {};
-  }
-  return stdlibSurfaceCanonicalHelperPath(metadata->id, helperName);
 }
 
 bool isFreeMemoryIntrinsicCall(const Expr &expr) {
@@ -689,642 +655,6 @@ static std::optional<LocalInfo::ValueKind> resolveStatementValueKindFromSemantic
   return std::nullopt;
 }
 
-static bool rewriteKeyValueInsertHelperStatementToCanonical(
-    const Expr &stmt,
-    const LocalMap &localsIn,
-    const std::function<const Definition *(const Expr &, const LocalMap &)> &resolveMethodCallDefinition,
-    const std::function<const Definition *(const Expr &)> &resolveDefinitionCall,
-    const SemanticProgram *semanticProgram,
-    const SemanticProductIndex *semanticIndex,
-    Expr &rewrittenStmt) {
-  if (stmt.kind != Expr::Kind::Call || stmt.args.size() != 3) {
-    return false;
-  }
-
-  auto isPrimeKeyValueInsertBody = [](const Definition *callee) {
-    if (callee == nullptr) {
-      return false;
-    }
-    return callee->fullPath == "/std/collections/internal_map/insertImpl" ||
-           callee->fullPath.rfind("/std/collections/internal_map/insertImpl__", 0) == 0 ||
-           callee->fullPath == "/std/collections/internal_map/insertRefImpl" ||
-           callee->fullPath.rfind("/std/collections/internal_map/insertRefImpl__", 0) == 0;
-  };
-  if (stmt.isMethodCall) {
-    if (isPrimeKeyValueInsertBody(resolveMethodCallDefinition(stmt, localsIn))) {
-      return false;
-    }
-  } else {
-    if (isPrimeKeyValueInsertBody(resolveDefinitionCall(stmt))) {
-      return false;
-    }
-  }
-
-  auto isDirectBareKeyValueInsertHelperStem = [&](const Expr &callExpr) {
-    if (callExpr.isMethodCall || callExpr.name.empty()) {
-      return false;
-    }
-    std::string helperName =
-        resolveStatementCallPathWithoutFallbackProbes(callExpr);
-    if (!helperName.empty() && helperName.front() == '/') {
-      helperName.erase(helperName.begin());
-    }
-    if (helperName.find('/') != std::string::npos) {
-      return false;
-    }
-    helperName = stripGeneratedHelperSuffix(std::move(helperName));
-    return helperName == "insert" || helperName == "insert_ref" ||
-           helperName == "Insert" || helperName == "InsertRef";
-  };
-  auto isPublishedKeyValueInsertHelperCall = [](const Expr &callExpr) {
-    std::string helperName;
-    return resolvePublishedStatementKeyValueHelperName(
-               resolveStatementCallPathWithoutFallbackProbes(callExpr),
-               helperName) &&
-           (helperName == "insert" || helperName == "insert_ref");
-  };
-
-  size_t receiverIndex = 0;
-  if (stmt.isMethodCall) {
-    std::string normalizedName =
-        resolveStatementCallPathWithoutFallbackProbes(stmt);
-    if (!normalizedName.empty() && normalizedName.front() == '/') {
-      normalizedName.erase(normalizedName.begin());
-    }
-    const size_t lastSlash = normalizedName.find_last_of('/');
-    if (lastSlash != std::string::npos) {
-      normalizedName = normalizedName.substr(lastSlash + 1);
-    }
-    normalizedName = stripGeneratedHelperSuffix(std::move(normalizedName));
-    const bool isMethodInsertStem =
-        normalizedName == "insert" || normalizedName == "insert_ref" ||
-        normalizedName == "Insert" || normalizedName == "InsertRef";
-    if (!isMethodInsertStem) {
-      return false;
-    }
-  } else {
-    std::string helperName;
-    if ((!resolveKeyValueHelperAliasName(stmt, helperName) || helperName != "insert") &&
-        !isPublishedKeyValueInsertHelperCall(stmt) &&
-        !isDirectBareKeyValueInsertHelperStem(stmt)) {
-      return false;
-    }
-    if (hasNamedArguments(stmt.argNames)) {
-      for (size_t i = 0; i < stmt.args.size(); ++i) {
-        if (i < stmt.argNames.size() && stmt.argNames[i].has_value() &&
-            *stmt.argNames[i] == "values") {
-          receiverIndex = i;
-          break;
-        }
-      }
-    }
-  }
-
-  if (receiverIndex >= stmt.args.size()) {
-    return false;
-  }
-  const auto inferCallKeyValueTargetInfo = [&](const Expr &targetExpr, CollectionPairTypeInfo &targetInfoOut) {
-    auto normalizeInsertHelperStem = [&](const std::string &path) {
-      std::string helperName = path;
-      if (!helperName.empty() && helperName.front() == '/') {
-        helperName.erase(helperName.begin());
-      }
-      const size_t lastSlash = helperName.find_last_of('/');
-      if (lastSlash != std::string::npos) {
-        helperName = helperName.substr(lastSlash + 1);
-      }
-      return stripGeneratedHelperSuffix(std::move(helperName));
-    };
-    auto isKeyValueInsertLikeCallee = [&](const Definition &callee) {
-      std::string publishedHelperName;
-      if (resolvePublishedStatementKeyValueHelperName(callee.fullPath, publishedHelperName) &&
-          (publishedHelperName == "insert" || publishedHelperName == "insert_ref")) {
-        return true;
-      }
-      const std::string helperStem = normalizeInsertHelperStem(callee.fullPath);
-      if (helperStem == "insert" || helperStem == "insert_ref" ||
-          helperStem == "Insert" || helperStem == "InsertRef") {
-        return true;
-      }
-      Expr calleeExpr;
-      calleeExpr.kind = Expr::Kind::Call;
-      calleeExpr.name = callee.fullPath;
-      std::string helperName;
-      return resolveKeyValueHelperAliasName(calleeExpr, helperName) && helperName == "insert";
-    };
-    std::function<bool(const std::string &, LocalInfo::ValueKind &, LocalInfo::ValueKind &)>
-        inferKeyValueKindsFromTypeText;
-    inferKeyValueKindsFromTypeText = [&](const std::string &typeText,
-                                    LocalInfo::ValueKind &keyKindOut,
-                                    LocalInfo::ValueKind &valueKindOut) {
-      keyKindOut = LocalInfo::ValueKind::Unknown;
-      valueKindOut = LocalInfo::ValueKind::Unknown;
-
-      std::string base;
-      std::string argText;
-      if (!splitTemplateTypeName(trimTemplateTypeText(typeText), base, argText)) {
-        return false;
-      }
-
-      const std::string normalizedBase = trimTemplateTypeText(base);
-      if (normalizedBase == "Reference" || normalizedBase == "Pointer") {
-        return inferKeyValueKindsFromTypeText(argText, keyKindOut, valueKindOut);
-      }
-
-      const bool isKeyValueBase =
-          isBuiltinCollectionTypeName(normalizedBase, "map") ||
-          isExperimentalCollectionTypeName(normalizedBase, "map", "Map");
-      if (!isKeyValueBase) {
-        return false;
-      }
-
-      std::vector<std::string> keyValueArgs;
-      if (!splitTemplateArgs(argText, keyValueArgs) || keyValueArgs.size() != 2) {
-        return false;
-      }
-      keyKindOut = valueKindFromTypeName(trimTemplateTypeText(keyValueArgs.front()));
-      valueKindOut = valueKindFromTypeName(trimTemplateTypeText(keyValueArgs.back()));
-      return keyKindOut != LocalInfo::ValueKind::Unknown &&
-             valueKindOut != LocalInfo::ValueKind::Unknown;
-    };
-    std::function<std::string(const std::string &)> inferKeyValueStructPathFromTypeText;
-    inferKeyValueStructPathFromTypeText = [&](const std::string &typeText) {
-      std::string base;
-      std::string argText;
-      if (!splitTemplateTypeName(trimTemplateTypeText(typeText), base, argText)) {
-        return std::string{};
-      }
-
-      const std::string normalizedBase = trimTemplateTypeText(base);
-      if (normalizedBase == "Reference" || normalizedBase == "Pointer") {
-        return inferKeyValueStructPathFromTypeText(argText);
-      }
-
-      const std::string experimentalKeyValueType =
-          experimentalCollectionTypePath("map", "Map");
-      const std::string slashlessExperimentalKeyValueType =
-          experimentalKeyValueType.substr(1);
-      if (normalizedBase == slashlessExperimentalKeyValueType ||
-          normalizedBase == experimentalKeyValueType) {
-        return experimentalKeyValueType;
-      }
-      return std::string{};
-    };
-    auto inferKeyValueKindsFromArgsPackTypeText = [&](const std::string &typeText,
-                                                 LocalInfo::ValueKind &keyKindOut,
-                                                 LocalInfo::ValueKind &valueKindOut) {
-      keyKindOut = LocalInfo::ValueKind::Unknown;
-      valueKindOut = LocalInfo::ValueKind::Unknown;
-
-      std::string base;
-      std::string argText;
-      if (!splitTemplateTypeName(trimTemplateTypeText(typeText), base, argText)) {
-        return false;
-      }
-
-      const std::string normalizedBase = trimTemplateTypeText(base);
-      const bool isArgsPackBase =
-          normalizedBase == "args" || normalizedBase == "/args" ||
-          normalizedBase == "Args" || normalizedBase == "/Args";
-      if (!isArgsPackBase) {
-        return false;
-      }
-      return inferKeyValueKindsFromTypeText(argText, keyKindOut, valueKindOut);
-    };
-    auto extractParameterTypeName = [&](const Expr &paramExpr) {
-      for (const auto &transform : paramExpr.transforms) {
-        if (transform.name == "mut" || transform.name == "public" || transform.name == "private" ||
-            transform.name == "static" || transform.name == "shared" || transform.name == "placement" ||
-            transform.name == "align" || transform.name == "packed" || transform.name == "reflection" ||
-            transform.name == "effects" || transform.name == "capabilities") {
-          continue;
-        }
-        if (!transform.arguments.empty()) {
-          continue;
-        }
-        std::string typeName = transform.name;
-        if (!transform.templateArgs.empty()) {
-          typeName += "<";
-          for (size_t index = 0; index < transform.templateArgs.size(); ++index) {
-            if (index != 0) {
-              typeName += ", ";
-            }
-            typeName += trimTemplateTypeText(transform.templateArgs[index]);
-          }
-          typeName += ">";
-        }
-        return typeName;
-      }
-      return std::string{};
-    };
-    auto tryPopulateFromSemanticTypeText = [&](SymbolId typeTextId,
-                                               const std::string &typeText,
-                                               CollectionPairTypeInfo &targetInfoOut) {
-      const std::string resolvedTypeText =
-          resolveStatementCallSemanticTypeText(semanticProgram, typeTextId, typeText);
-      if (resolvedTypeText.empty()) {
-        return false;
-      }
-      if (!inferKeyValueKindsFromTypeText(resolvedTypeText,
-                                     targetInfoOut.keyValueKeyKind,
-                                     targetInfoOut.keyValueValueKind)) {
-        return false;
-      }
-      targetInfoOut.isKeyValueTarget = true;
-      targetInfoOut.structTypeName = inferKeyValueStructPathFromTypeText(resolvedTypeText);
-      return true;
-    };
-    auto tryPopulateFromSemanticCollectionSpecialization =
-        [&](const Expr &receiverExpr, CollectionPairTypeInfo &targetInfoOut, bool &hasSemanticMapFactOut) {
-      if (semanticIndex == nullptr || receiverExpr.semanticNodeId == 0) {
-        return false;
-      }
-      const auto *collectionFact =
-          findSemanticProductCollectionSpecialization(*semanticIndex, receiverExpr);
-      if (collectionFact == nullptr) {
-        return false;
-      }
-      hasSemanticMapFactOut = true;
-      const std::string collectionFamily = resolveStatementCallSemanticTypeText(
-          semanticProgram,
-          collectionFact->collectionFamilyId,
-          collectionFact->collectionFamily);
-      if (!isBuiltinCollectionTypeName(collectionFamily, "map")) {
-        return false;
-      }
-      const LocalInfo::ValueKind keyKind = valueKindFromTypeName(
-          resolveStatementCallSemanticTypeText(semanticProgram,
-                                               collectionFact->keyTypeTextId,
-                                               collectionFact->keyTypeText));
-      const LocalInfo::ValueKind valueKind = valueKindFromTypeName(
-          resolveStatementCallSemanticTypeText(semanticProgram,
-                                               collectionFact->valueTypeTextId,
-                                               collectionFact->valueTypeText));
-      if (keyKind == LocalInfo::ValueKind::Unknown ||
-          valueKind == LocalInfo::ValueKind::Unknown) {
-        return false;
-      }
-      targetInfoOut.isKeyValueTarget = true;
-      targetInfoOut.keyValueKeyKind = keyKind;
-      targetInfoOut.keyValueValueKind = valueKind;
-      return true;
-    };
-    auto tryPopulateFromSemanticReceiverFact =
-        [&](const Expr &receiverExpr,
-            CollectionPairTypeInfo &targetInfoOut,
-            bool &hasSemanticMapFactOut) {
-      hasSemanticMapFactOut = false;
-      if (semanticProgram == nullptr ||
-          semanticIndex == nullptr ||
-          receiverExpr.semanticNodeId == 0) {
-        return false;
-      }
-      if (tryPopulateFromSemanticCollectionSpecialization(
-              receiverExpr, targetInfoOut, hasSemanticMapFactOut)) {
-        return true;
-      }
-      if (const auto *queryFact =
-              findSemanticProductQueryFact(semanticProgram, *semanticIndex, receiverExpr);
-          queryFact != nullptr) {
-        hasSemanticMapFactOut = true;
-        if (tryPopulateFromSemanticTypeText(queryFact->bindingTypeTextId,
-                                            queryFact->bindingTypeText,
-                                            targetInfoOut) ||
-            tryPopulateFromSemanticTypeText(queryFact->queryTypeTextId,
-                                            queryFact->queryTypeText,
-                                            targetInfoOut) ||
-            tryPopulateFromSemanticTypeText(queryFact->receiverBindingTypeTextId,
-                                            queryFact->receiverBindingTypeText,
-                                            targetInfoOut)) {
-          return true;
-        }
-      }
-      if (const auto *bindingFact =
-              findSemanticProductBindingFact(*semanticIndex, receiverExpr);
-          bindingFact != nullptr) {
-        hasSemanticMapFactOut = true;
-        if (tryPopulateFromSemanticTypeText(bindingFact->bindingTypeTextId,
-                                            bindingFact->bindingTypeText,
-                                            targetInfoOut)) {
-          return true;
-        }
-      }
-      if (const auto *localAutoFact =
-              findSemanticProductLocalAutoFact(semanticProgram, *semanticIndex, receiverExpr);
-          localAutoFact != nullptr) {
-        hasSemanticMapFactOut = true;
-        if (tryPopulateFromSemanticTypeText(localAutoFact->bindingTypeTextId,
-                                            localAutoFact->bindingTypeText,
-                                            targetInfoOut)) {
-          return true;
-        }
-      }
-      return false;
-    };
-
-    auto peelLocationWrappers = [&](const Expr &expr) {
-      const Expr *current = &expr;
-      while (current->kind == Expr::Kind::Call &&
-             isSimpleCallName(*current, "location") &&
-             current->args.size() == 1) {
-        current = &current->args.front();
-      }
-      return current;
-    };
-
-    bool receiverWasDereferenced = false;
-    auto peelReceiverWrappers = [&](const Expr &expr) {
-      const Expr *current = peelLocationWrappers(expr);
-      while (current->kind == Expr::Kind::Call &&
-             isSimpleCallName(*current, "dereference") &&
-             current->args.size() == 1) {
-        receiverWasDereferenced = true;
-        current = peelLocationWrappers(current->args.front());
-      }
-      return current;
-    };
-    auto isKeyValueArgsPackAccessCall = [&](const Expr &expr) {
-      if (expr.kind != Expr::Kind::Call || expr.args.size() != 2) {
-        return false;
-      }
-      auto isDirectKeyValueArgsPackStem = [&](const char *stem) {
-        if (stem == nullptr || expr.isMethodCall || expr.name.empty()) {
-          return false;
-        }
-        std::string directName = resolveStatementCallPathWithoutFallbackProbes(expr);
-        if (!directName.empty() && directName.front() == '/') {
-          directName.erase(directName.begin());
-        }
-        if (directName.find('/') != std::string::npos) {
-          return false;
-        }
-        return stripGeneratedHelperSuffix(std::move(directName)) == stem;
-      };
-      auto isKeyValueArgsPackMethodStem = [&](const char *stem) {
-        if (isSimpleCallName(expr, stem)) {
-          return true;
-        }
-        if (!expr.isMethodCall || expr.name.empty()) {
-          return false;
-        }
-        std::string methodName = resolveStatementCallPathWithoutFallbackProbes(expr);
-        if (!methodName.empty() && methodName.front() == '/') {
-          methodName.erase(methodName.begin());
-        }
-        if (methodName.find('/') != std::string::npos) {
-          return false;
-        }
-        return stripGeneratedHelperSuffix(std::move(methodName)) == stem;
-      };
-      if (expr.isMethodCall) {
-        if (isKeyValueArgsPackMethodStem("at") || isKeyValueArgsPackMethodStem("at_unsafe") ||
-            isKeyValueArgsPackMethodStem("at_ref") || isKeyValueArgsPackMethodStem("at_unsafe_ref") ||
-            isKeyValueArgsPackMethodStem("At") || isKeyValueArgsPackMethodStem("AtUnsafe") ||
-            isKeyValueArgsPackMethodStem("AtRef") || isKeyValueArgsPackMethodStem("AtUnsafeRef")) {
-          return true;
-        }
-      }
-      if (isDirectKeyValueArgsPackStem("at") || isDirectKeyValueArgsPackStem("at_unsafe") ||
-          isDirectKeyValueArgsPackStem("at_ref") || isDirectKeyValueArgsPackStem("at_unsafe_ref") ||
-          isDirectKeyValueArgsPackStem("At") || isDirectKeyValueArgsPackStem("AtUnsafe") ||
-          isDirectKeyValueArgsPackStem("AtRef") || isDirectKeyValueArgsPackStem("AtUnsafeRef")) {
-        return true;
-      }
-      std::string publishedHelperName;
-      const auto *metadata = statementKeyValueHelperMetadata();
-      if (metadata != nullptr &&
-          resolvePublishedStdlibSurfaceExprMemberName(
-              expr,
-              metadata->id,
-              publishedHelperName) &&
-          (publishedHelperName == "at" || publishedHelperName == "at_ref" ||
-           publishedHelperName == "at_unsafe" ||
-           publishedHelperName == "at_unsafe_ref")) {
-        return true;
-      }
-      std::string accessName;
-      if (getBuiltinArrayAccessName(expr, accessName) && accessName == "map") {
-        return true;
-      }
-      std::string helperName;
-      return resolveKeyValueHelperAliasName(expr, helperName) &&
-             (helperName == "at" || helperName == "at_ref" ||
-              helperName == "at_unsafe" || helperName == "at_unsafe_ref");
-    };
-
-    const Expr *canonicalReceiverExpr = peelReceiverWrappers(targetExpr);
-
-    targetInfoOut = {};
-    bool hasSemanticKeyValueReceiverFact = false;
-    if (tryPopulateFromSemanticReceiverFact(
-            *canonicalReceiverExpr, targetInfoOut, hasSemanticKeyValueReceiverFact)) {
-      return true;
-    }
-    if (hasSemanticKeyValueReceiverFact) {
-      return false;
-    }
-
-    // Reuse the core access-target resolver on the peeled receiver shape so
-    // wrapped args-pack map-access forms can flow through the same typed
-    // map-target inference used by direct receivers.
-    auto canonicalTargetInfo =
-        resolveCollectionPairTypeInfo(*canonicalReceiverExpr,
-                                   localsIn,
-                                   {},
-                                   semanticProgram,
-                                   semanticIndex);
-    if (receiverWasDereferenced) {
-      canonicalTargetInfo.isWrappedKeyValueTarget = false;
-    }
-    if (canonicalTargetInfo.isKeyValueTarget &&
-        canonicalTargetInfo.keyValueKeyKind != LocalInfo::ValueKind::Unknown &&
-        canonicalTargetInfo.keyValueValueKind != LocalInfo::ValueKind::Unknown) {
-      targetInfoOut = canonicalTargetInfo;
-      return true;
-    }
-
-    const Expr *nonLocalFieldReceiver = nullptr;
-    if (canonicalReceiverExpr->kind == Expr::Kind::Call &&
-        canonicalReceiverExpr->isFieldAccess &&
-        canonicalReceiverExpr->args.size() == 1) {
-      nonLocalFieldReceiver = canonicalReceiverExpr;
-    }
-
-    targetInfoOut = {};
-    if (canonicalReceiverExpr->kind == Expr::Kind::Name) {
-      auto localIt = localsIn.find(canonicalReceiverExpr->name);
-      if (localIt != localsIn.end()) {
-        const LocalInfo &localInfo = localIt->second;
-        const bool directKeyValue =
-            localInfo.kind == LocalInfo::Kind::Value && hasKeyValueKinds(localInfo);
-        const bool wrappedKeyValue =
-            hasWrappedKeyValueKinds(localInfo, localInfo.kind);
-        const bool argsPackKeyValue =
-            localInfo.isArgsPack &&
-            ((localInfo.argsPackElementKind == LocalInfo::Kind::Value && hasKeyValueKinds(localInfo)) ||
-             hasWrappedKeyValueKinds(localInfo, localInfo.argsPackElementKind));
-        if (directKeyValue || wrappedKeyValue || argsPackKeyValue) {
-          targetInfoOut.isKeyValueTarget = true;
-          targetInfoOut.keyValueKeyKind = localInfo.keyValueKeyKind;
-          targetInfoOut.keyValueValueKind = localInfo.keyValueValueKind;
-          if (targetInfoOut.keyValueKeyKind != LocalInfo::ValueKind::Unknown &&
-              targetInfoOut.keyValueValueKind != LocalInfo::ValueKind::Unknown) {
-            return true;
-          }
-        }
-      }
-    }
-
-    auto tryPopulateFromResolvedCallee = [&](const Definition *resolvedCallee) {
-      if (resolvedCallee == nullptr) {
-        return false;
-      }
-      std::string collectionName;
-      std::vector<std::string> collectionArgs;
-      if (!inferDeclaredReturnCollection(*resolvedCallee, collectionName, collectionArgs) ||
-          collectionName != "map" ||
-          collectionArgs.size() != 2) {
-        return inferForwardedCollectionPairTypeInfo(
-            *canonicalReceiverExpr, *resolvedCallee, localsIn, {}, targetInfoOut);
-      }
-      targetInfoOut.isKeyValueTarget = true;
-      targetInfoOut.keyValueKeyKind = valueKindFromTypeName(collectionArgs.front());
-      targetInfoOut.keyValueValueKind = valueKindFromTypeName(collectionArgs.back());
-      return targetInfoOut.keyValueKeyKind != LocalInfo::ValueKind::Unknown &&
-             targetInfoOut.keyValueValueKind != LocalInfo::ValueKind::Unknown;
-    };
-
-    if (tryPopulateFromResolvedCallee(resolveDefinitionCall(*canonicalReceiverExpr))) {
-      return true;
-    }
-
-    if (isKeyValueArgsPackAccessCall(*canonicalReceiverExpr) &&
-        canonicalReceiverExpr->args.front().kind != Expr::Kind::Name) {
-      const Definition *keyValueAccessCallee = resolveDefinitionCall(*canonicalReceiverExpr);
-      if (keyValueAccessCallee != nullptr &&
-          !keyValueAccessCallee->parameters.empty()) {
-        const std::string receiverTypeText =
-            extractParameterTypeName(keyValueAccessCallee->parameters.front());
-        if (inferKeyValueKindsFromArgsPackTypeText(receiverTypeText,
-                                              targetInfoOut.keyValueKeyKind,
-                                              targetInfoOut.keyValueValueKind)) {
-          targetInfoOut.isKeyValueTarget = true;
-          return true;
-        }
-      }
-    }
-
-    // Direct canonical insert calls on non-local field receivers already carry
-    // explicit template arguments; use those to route the receiver through the
-    // builtin rewrite path even when the receiver does not resolve as a
-    // standalone call target (for example `holder.values`).
-    if (nonLocalFieldReceiver != nullptr &&
-        stmt.templateArgs.size() == 2) {
-      targetInfoOut.isKeyValueTarget = true;
-      targetInfoOut.keyValueKeyKind = valueKindFromTypeName(stmt.templateArgs.front());
-      targetInfoOut.keyValueValueKind = valueKindFromTypeName(stmt.templateArgs.back());
-      return targetInfoOut.keyValueKeyKind != LocalInfo::ValueKind::Unknown &&
-             targetInfoOut.keyValueValueKind != LocalInfo::ValueKind::Unknown;
-    }
-
-    if (!stmt.isMethodCall &&
-        nonLocalFieldReceiver != nullptr) {
-      const Definition *directCallee = resolveDefinitionCall(stmt);
-      if (directCallee != nullptr &&
-          isKeyValueInsertLikeCallee(*directCallee) &&
-          !directCallee->parameters.empty()) {
-        const std::string receiverTypeText = extractParameterTypeName(directCallee->parameters.front());
-        if (inferKeyValueKindsFromTypeText(receiverTypeText,
-                                      targetInfoOut.keyValueKeyKind,
-                                      targetInfoOut.keyValueValueKind)) {
-          targetInfoOut.isKeyValueTarget = true;
-          return true;
-        }
-        if (directCallee->parameters.size() >= 3) {
-          const std::string keyTypeText = extractParameterTypeName(directCallee->parameters[1]);
-          const std::string valueTypeText = extractParameterTypeName(directCallee->parameters[2]);
-          const LocalInfo::ValueKind keyKind = valueKindFromTypeName(trimTemplateTypeText(keyTypeText));
-          const LocalInfo::ValueKind valueKind = valueKindFromTypeName(trimTemplateTypeText(valueTypeText));
-          if (keyKind != LocalInfo::ValueKind::Unknown &&
-              valueKind != LocalInfo::ValueKind::Unknown) {
-            targetInfoOut.isKeyValueTarget = true;
-            targetInfoOut.keyValueKeyKind = keyKind;
-            targetInfoOut.keyValueValueKind = valueKind;
-            return true;
-          }
-        }
-      }
-    }
-
-    if (stmt.isMethodCall &&
-        nonLocalFieldReceiver != nullptr) {
-      const Definition *methodCallee = resolveMethodCallDefinition(stmt, localsIn);
-      if (methodCallee != nullptr &&
-          isKeyValueInsertLikeCallee(*methodCallee) &&
-          !methodCallee->parameters.empty()) {
-        const std::string receiverTypeText = extractParameterTypeName(methodCallee->parameters.front());
-        if (inferKeyValueKindsFromTypeText(receiverTypeText,
-                                     targetInfoOut.keyValueKeyKind,
-                                     targetInfoOut.keyValueValueKind)) {
-          targetInfoOut.isKeyValueTarget = true;
-          return true;
-        }
-        if (methodCallee->parameters.size() >= 3) {
-          const std::string keyTypeText = extractParameterTypeName(methodCallee->parameters[1]);
-          const std::string valueTypeText = extractParameterTypeName(methodCallee->parameters[2]);
-          const LocalInfo::ValueKind keyKind = valueKindFromTypeName(trimTemplateTypeText(keyTypeText));
-          const LocalInfo::ValueKind valueKind = valueKindFromTypeName(trimTemplateTypeText(valueTypeText));
-          if (keyKind != LocalInfo::ValueKind::Unknown &&
-              valueKind != LocalInfo::ValueKind::Unknown) {
-            targetInfoOut.isKeyValueTarget = true;
-            targetInfoOut.keyValueKeyKind = keyKind;
-            targetInfoOut.keyValueValueKind = valueKind;
-            return true;
-          }
-        }
-      }
-    }
-    return false;
-  };
-
-  CollectionPairTypeInfo targetInfo;
-  if (!inferCallKeyValueTargetInfo(stmt.args[receiverIndex], targetInfo)) {
-    return false;
-  }
-  if (!targetInfo.isKeyValueTarget) {
-    return false;
-  }
-  auto isExperimentalKeyValueStructPath = [](const std::string &structPath) {
-    const std::string experimentalKeyValueType =
-        experimentalCollectionTypePath("map", "Map");
-    return structPath == experimentalKeyValueType ||
-           structPath.rfind(experimentalKeyValueType + "__", 0) == 0;
-  };
-  if (targetInfo.isWrappedKeyValueTarget ||
-      isExperimentalKeyValueStructPath(targetInfo.structTypeName)) {
-    return false;
-  }
-
-  rewrittenStmt = stmt;
-  rewrittenStmt.name = canonicalStatementKeyValueHelperPath("insert");
-  if (rewrittenStmt.name.empty()) {
-    return false;
-  }
-  rewrittenStmt.namespacePrefix.clear();
-  rewrittenStmt.isMethodCall = false;
-  rewrittenStmt.isFieldAccess = false;
-  rewrittenStmt.semanticNodeId = 0;
-  if (rewrittenStmt.templateArgs.empty() &&
-      targetInfo.keyValueKeyKind != LocalInfo::ValueKind::Unknown &&
-      targetInfo.keyValueValueKind != LocalInfo::ValueKind::Unknown) {
-    rewrittenStmt.templateArgs = {
-        typeNameForValueKind(targetInfo.keyValueKeyKind),
-        typeNameForValueKind(targetInfo.keyValueValueKind),
-    };
-  }
-  return true;
-}
-
 static DirectCallStatementEmitResult tryEmitVectorHelperCallFormStatement(
     const Expr &stmt,
     const LocalMap &localsIn,
@@ -1702,6 +1032,84 @@ DirectCallStatementEmitResult tryEmitDirectCallStatement(
     return DirectCallStatementEmitResult::NotMatched;
   }
 
+  auto resolveDefinitionPathAsDirectCall = [&](const Expr &callExpr,
+                                               const std::string &path) -> const Definition * {
+    if (path.empty()) {
+      return nullptr;
+    }
+    Expr resolvedCall = callExpr;
+    resolvedCall.name = path;
+    resolvedCall.namespacePrefix.clear();
+    resolvedCall.templateArgs.clear();
+    resolvedCall.isMethodCall = false;
+    return resolveDefinitionCall(resolvedCall);
+  };
+  auto matchesGeneratedLeafDefinition = [](const std::string &candidatePath,
+                                           const std::string &basePath,
+                                           const char *marker,
+                                           size_t markerSize) {
+    return !basePath.empty() &&
+           candidatePath.rfind(basePath, 0) == 0 &&
+           candidatePath.compare(basePath.size(), markerSize, marker) == 0 &&
+           candidatePath.find('/', basePath.size() + markerSize) ==
+               std::string::npos;
+  };
+  auto resolveGeneratedDefinitionPath = [&](const Expr &callExpr,
+                                            const std::string &basePath) -> const Definition * {
+    if (const Definition *callee =
+            resolveDefinitionPathAsDirectCall(callExpr, basePath);
+        callee != nullptr) {
+      return callee;
+    }
+    if (semanticProgram == nullptr) {
+      return nullptr;
+    }
+    for (const auto &semanticDef : semanticProgram->definitions) {
+      const std::string &candidatePath = semanticDef.fullPath;
+      if (matchesGeneratedLeafDefinition(candidatePath, basePath, "__t", 3) ||
+          matchesGeneratedLeafDefinition(candidatePath, basePath, "__ov", 4) ||
+          matchesGeneratedLeafDefinition(candidatePath, basePath, "<", 1)) {
+        if (const Definition *callee =
+                resolveDefinitionPathAsDirectCall(callExpr, candidatePath);
+            callee != nullptr) {
+          return callee;
+        }
+      }
+    }
+    return nullptr;
+  };
+
+  auto resolveDirectStatementDefinition = [&](const Expr &callExpr) -> const Definition * {
+    if (const Definition *callee = resolveDefinitionCall(callExpr);
+        callee != nullptr) {
+      return callee;
+    }
+    const std::string rawPath =
+        resolveStatementCallPathWithoutFallbackProbes(callExpr);
+    if (const Definition *callee = resolveGeneratedDefinitionPath(callExpr, rawPath);
+        callee != nullptr) {
+      return callee;
+    }
+    const std::string resolvedTarget =
+        findSemanticProductDirectCallTarget(semanticProgram, callExpr);
+    if (resolvedTarget.empty()) {
+      return nullptr;
+    }
+    return resolveGeneratedDefinitionPath(callExpr, resolvedTarget);
+  };
+  auto resolveMethodStatementDefinition = [&](const Expr &callExpr) -> const Definition * {
+    if (const Definition *callee = resolveMethodCallDefinition(callExpr, localsIn);
+        callee != nullptr) {
+      return callee;
+    }
+    const std::string resolvedTarget =
+        findSemanticProductMethodCallTarget(semanticProgram, callExpr);
+    if (resolvedTarget.empty()) {
+      return nullptr;
+    }
+    return resolveGeneratedDefinitionPath(callExpr, resolvedTarget);
+  };
+
   bool explicitVectorMutatorHelperCall = isExplicitVectorMutatorHelperCall(stmt);
   auto explicitVectorHelperUsesBuiltinVectorReceiver = [&](const Expr &callExpr) {
     if (!explicitVectorMutatorHelperCall || callExpr.args.empty()) {
@@ -1833,17 +1241,6 @@ DirectCallStatementEmitResult tryEmitDirectCallStatement(
     return true;
   };
   Expr directStmt = stmt;
-  Expr rewrittenKeyValueInsertStmt;
-  if (rewriteKeyValueInsertHelperStatementToCanonical(
-          stmt,
-          localsIn,
-          resolveMethodCallDefinition,
-          resolveDefinitionCall,
-          semanticProgram,
-          semanticIndex,
-          rewrittenKeyValueInsertStmt)) {
-    directStmt = rewrittenKeyValueInsertStmt;
-  }
   bool rewrittenExplicitVectorMutatorToBuiltinCall = false;
   bool rewrittenBareVectorMutatorToBuiltinCall = false;
   Expr rewrittenBareVectorMethodStmt;
@@ -1990,7 +1387,7 @@ DirectCallStatementEmitResult tryEmitDirectCallStatement(
       return false;
     };
     const std::string priorError = error;
-    const Definition *callee = resolveMethodCallDefinition(directStmt, localsIn);
+    const Definition *callee = resolveMethodStatementDefinition(directStmt);
     if (callee != nullptr && isVectorMetadataSetterMethod &&
         isStructDefinitionCallee(*callee) &&
         !isInternalVectorMetadataSetterCallee(*callee) &&
@@ -2085,7 +1482,7 @@ DirectCallStatementEmitResult tryEmitDirectCallStatement(
   }
 
   const std::string priorError = error;
-  const Definition *callee = resolveDefinitionCall(directStmt);
+  const Definition *callee = resolveDirectStatementDefinition(directStmt);
   if (!callee) {
     return DirectCallStatementEmitResult::NotMatched;
   }

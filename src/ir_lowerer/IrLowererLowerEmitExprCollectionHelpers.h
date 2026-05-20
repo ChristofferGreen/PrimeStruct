@@ -1138,11 +1138,23 @@
               (accessName != "at" && accessName != "at_unsafe")) {
             return false;
           }
-          if (callExpr.args.front().kind != Expr::Kind::Call) {
-            return false;
-          }
           if (resolveDefinitionCall(callExpr) != nullptr) {
             return false;
+          }
+          if (callExpr.args.front().kind != Expr::Kind::Call) {
+            const auto targetInfo =
+                ir_lowerer::resolveCollectionPairTypeInfo(
+                    callExpr.args.front(),
+                    localsIn,
+                    {},
+                    semanticProgram,
+                    &callResolutionAdapters.semanticProductTargets.semanticIndex);
+            if (!targetInfo.isKeyValueTarget) {
+              return false;
+            }
+            rewrittenExpr = callExpr;
+            rewrittenExpr.isMethodCall = true;
+            return true;
           }
           ir_lowerer::CollectionPairTypeInfo targetInfoOut;
           const Definition *callee =

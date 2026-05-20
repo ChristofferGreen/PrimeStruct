@@ -1212,7 +1212,16 @@ std::string inferStructPathFromCallTarget(
     return resolved;
   }
 
-  return inferDefinitionStructReturnPath(resolved);
+  if (const std::string inferred = inferDefinitionStructReturnPath(resolved);
+      !inferred.empty()) {
+    return inferred;
+  }
+
+  const std::string scopedCallPath = resolveStructLayoutExprPathFromScope(expr, {}, {});
+  if (!scopedCallPath.empty() && scopedCallPath != resolved) {
+    return inferDefinitionStructReturnPath(scopedCallPath);
+  }
+  return "";
 }
 
 } // namespace primec::ir_lowerer

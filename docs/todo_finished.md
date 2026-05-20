@@ -6,6 +6,56 @@ Legend:
 Finished items are periodically archived here from `docs/todo.md`; section headers record the archive date.
 
 **Todo Completion (May 20, 2026)**
+- [x] TODO-4544: Support void helper statements after stdlib rewrites
+  - owner: ai
+  - created_at: 2026-05-20
+  - finished_at: 2026-05-20
+  - phase: Generic helper-call lowering
+  - parallel_track: generic-helper-call-lowering
+  - split_from: TODO-4543
+  - scope: Fix the native lowering path for ordinary `.prime` helper calls
+    that are rewritten or resolved from stdlib statement helpers and return
+    `void`, so statement-context calls such as canonical map `insert` do not
+    fail as value-expression calls after the map-specific native dispatch
+    path is removed.
+  - outcome:
+    - Direct statement-call lowering now resolves semantic direct and method
+      targets to generated helper definitions and emits void helpers without
+      requiring expression values.
+    - Removed the old native statement-call map insert canonicalization path
+      and source-locked its absence.
+    - Added a non-map regression for statement-context generated void helper
+      calls while preserving expression-context void-call rejection.
+    - Root-qualified map stdlib `less_than` calls so generated `MapValue`
+      member helpers do not resolve builtin comparisons as nested struct
+      constructors.
+    - Added generated-call fallback struct-return inference for cases where
+      semantic routing names the canonical template but the AST call already
+      carries the generated helper path.
+  - validation:
+    - `cmake --build build-release --target primec` passed.
+    - Direct native first-growth smoke compiled and exited `8`.
+    - `cmake --build build-release --target PrimeStruct_backend_ir_tests`
+      passed.
+    - `cd build-release && ./PrimeStruct_backend_ir_tests --test-case="ir lowerer statement call helper emits semantic direct void helpers as statements,ir lowerer inline call context helper reports setup diagnostics" --no-skip`
+      passed.
+    - `cmake --build build-release --target PrimeStruct_compile_run_tests`
+      passed.
+    - `cd build-release && ./PrimeStruct_compile_run_tests --test-case="compiles and runs native builtin canonical map first-growth inserts,compiles and runs native builtin canonical map repeated-growth inserts,compiles and runs native builtin canonical map insert overwrites" --no-skip`
+      passed.
+    - `cd build-release && ./PrimeStruct_compile_run_tests --test-case="compiles native bare map at_unsafe through canonical helper,compiles and runs native map at_unsafe helper" --no-skip`
+      passed.
+    - `cd build-release && ./PrimeStruct_compile_run_tests --test-case="rejects native canonical namespaced map inserts on explicit experimental map bindings,compiles and runs native experimental map inserts" --no-skip`
+      passed.
+    - Source `rg` checks confirmed `isPrimeKeyValueInsertBody`,
+      `rewriteKeyValueInsertHelperStatementToCanonical`, and the old
+      `canonicalStatementKeyValueHelperPath("insert")` statement rewrite
+      are absent from production lowerer code.
+    - Validation gap: `cmake --build build-release --target
+      PrimeStruct_misc_tests` was terminated after several minutes while GCC
+      compiled `test_stdlib_map_ownership.cpp.o`; the same source-lock
+      expectations were checked directly with `rg` instead.
+
 - [x] TODO-4539: Remove lowerer MapValue path synthesis
   - owner: ai
   - created_at: 2026-05-20

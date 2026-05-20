@@ -83,9 +83,6 @@ Task template:
 
 ### Ready Now (Parallel-Candidate Leaves; No Unmet TODO Dependencies)
 
-- TODO-4544: Support void helper statements after stdlib rewrites |
-  track: generic-helper-call-lowering |
-  primary surface: native helper statement lowering
 - TODO-4538: Replace map inventory gate with fast strict audit |
   track: map-zero-audit |
   primary surface: strict map-surface audit
@@ -103,11 +100,9 @@ Task template:
   native map-value gates, and TODO-4543 moved residual access-target API
   names to generic collection-pair type facts; ready TODO-4538 now prepares
   the final strict zero map-surface audit before TODO-4464.
-- `generic-helper-call-lowering`: TODO-4543 exposed that native canonical
-  map insert growth now diagnoses through ordinary `.prime` helper lowering
-  with `void call not allowed in expression context`; ready TODO-4544 fixes
-  that generic helper statement lowering gap instead of restoring a
-  map-specific dispatch path.
+- `generic-helper-call-lowering`: TODO-4544 fixed statement-context
+  generated `.prime` helper calls without restoring map-specific native
+  insert dispatch; no generic helper-call leaf is ready.
 - `tuple-type-packs`: TODO-4276 completed helper/lifecycle pack
   expansion; ready TODO-4271, then serial successors TODO-4272
   -> TODO-4274 -> TODO-4273 -> TODO-4277 -> TODO-4278.
@@ -132,8 +127,7 @@ Task template:
 - Vector stdlib ownership cutover: none active
 - Map stdlib ownership cutover: ready TODO-4538, then TODO-4464 for the final
   strict zero audit
-- Generic helper-call lowering: ready TODO-4544 to keep stdlib-owned
-  statement helpers from depending on map-specific native dispatch
+- Generic helper-call lowering: none active after TODO-4544
 - SoA public surface rename and ownership cutover: TODO-4306 parent split;
   TODO-4526 removed semantic-validation inventory residue after TODO-4530
   reduced the shared semantic builtin path helper boundary; TODO-4527 removed
@@ -154,7 +148,6 @@ Task template:
 
 ### Execution Queue (Recommended Track Order)
 
-- TODO-4544: Support void helper statements after stdlib rewrites
 - TODO-4538: Replace map inventory gate with fast strict audit
 - TODO-4464: Run final strict C++ map-surface audit
 - TODO-4271: Add compile-time pack indexing
@@ -1859,35 +1852,6 @@ Task template:
     - `./scripts/compile.sh --release` passes.
   - stop_rule: Stop once the generic design direction is documented through
     runnable examples rather than only prose.
-
-- [ ] TODO-4544: Support void helper statements after stdlib rewrites
-  - owner: ai
-  - created_at: 2026-05-20
-  - phase: Generic helper-call lowering
-  - parallel_track: generic-helper-call-lowering
-  - split_from: TODO-4543
-  - scope: Fix the native lowering path for ordinary `.prime` helper calls
-    that are rewritten or resolved from stdlib statement helpers and return
-    `void`, so statement-context calls such as canonical map `insert` do not
-    fail as value-expression calls after the map-specific native dispatch
-    path is removed.
-  - implementation_notes:
-    - Start from the native statement-call and expression-call lowering split,
-      not from map-specific insert dispatch.
-    - Use the existing failure from
-      `compiles and runs native builtin canonical map first-growth inserts`:
-      `void call not allowed in expression context:
-      /std/collections/map/insert__...`.
-    - Preserve expression-context rejection for true value-position void calls.
-  - acceptance:
-    - Native canonical map first-growth, repeated-growth, and overwrite insert
-      fixtures pass through ordinary helper lowering.
-    - A non-map regression locks that statement-context `void` helper calls
-      remain allowed while expression-context `void` helper calls still reject.
-    - No map-specific native insert dispatch path is reintroduced.
-  - stop_rule: Stop once statement-context void helper calls lower correctly
-    through the generic helper-call path and focused native insert coverage
-    passes.
 
 - [ ] TODO-4538: Replace map inventory gate with fast strict audit
   - owner: ai

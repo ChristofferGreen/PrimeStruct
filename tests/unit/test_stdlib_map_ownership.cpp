@@ -4242,8 +4242,8 @@ TEST_CASE("canonical map surface owns standalone stdlib implementation") {
   CHECK(emitterMethodTypeInferenceSource.find(
             "isRemovedKeyValueDirectCallResultCompatibility") !=
         std::string::npos);
-  CHECK(statementLowererSource.find("isPrimeKeyValueInsertBody") != std::string::npos);
-  CHECK(statementLowererSource.find("rewriteKeyValueInsertHelperStatementToCanonical") != std::string::npos);
+  CHECK(statementLowererSource.find("isPrimeKeyValueInsertBody") == std::string::npos);
+  CHECK(statementLowererSource.find("rewriteKeyValueInsertHelperStatementToCanonical") == std::string::npos);
   CHECK(statementLowererSource.find("isPrimeMapInsertBody") == std::string::npos);
   CHECK(statementLowererSource.find("rewriteMapInsertHelperStatementToCanonical") == std::string::npos);
   CHECK(statementLowererSource.find("rewriteMapInsertHelperStatementToBuiltin") == std::string::npos);
@@ -4823,9 +4823,9 @@ TEST_CASE("canonical map surface owns standalone stdlib implementation") {
   CHECK(accessTargetResolutionSource.find(
             "resolveStdlibSurfaceMemberName(*metadata, metadata->canonicalPath)") !=
         std::string::npos);
-  CHECK(statementLowererSource.find("callee->fullPath.rfind(\"/std/collections/internal_map/insertImpl__\", 0)") !=
+  CHECK(statementLowererSource.find("callee->fullPath.rfind(\"/std/collections/internal_map/insertImpl__\", 0)") ==
         std::string::npos);
-  CHECK(statementLowererSource.find("canonicalStatementKeyValueHelperPath(\"insert\")") !=
+  CHECK(statementLowererSource.find("canonicalStatementKeyValueHelperPath(\"insert\")") ==
         std::string::npos);
   CHECK(statementLowererSource.find("canonicalStatementMapHelperPath(\"insert\")") ==
         std::string::npos);

@@ -205,6 +205,17 @@ This file stores durable session-derived facts that are useful in later work. Ke
   The stdlib ownership source lock rejects the old map-helper, map-count,
   map-access, and removed map compatibility names.
 
+### generated-helper-statements-are-ordinary-calls
+- Updated: 2026-05-20
+- Tags: ir, native, stdlib
+- Fact: Generated `.prime` helper calls that return `void` should lower as
+  ordinary statement-context direct or method calls through semantic target
+  facts, not through map-specific native insert rewrites.
+- Evidence: TODO-4544 removed
+  `rewriteKeyValueInsertHelperStatementToCanonical`, added non-map void
+  helper statement coverage, and made the focused native canonical map insert
+  growth/overwrite fixtures pass through generated stdlib helper bodies.
+
 ### exact-stdlib-vector-import-covers-helper-surface
 - Updated: 2026-04-19
 - Tags: semantics, imports, collections
@@ -340,8 +351,8 @@ This file stores durable session-derived facts that are useful in later work. Ke
 - Evidence: TODO-4543 renamed the production/testing helper API to
   `CollectionPairTypeInfo`, `resolveCollectionPairTypeInfo`, and related
   functions, source-locked the retired names out of
-  `IrLowererAccessTargetResolution.cpp`, and kept canonical insert's
-  statement-context void-helper lowering failure split into TODO-4544.
+  `IrLowererAccessTargetResolution.cpp`; TODO-4544 then fixed canonical
+  insert's statement-context generated void-helper lowering path.
 
 ### map-compatibility-aliases-require-source-definitions
 - Updated: 2026-05-18
