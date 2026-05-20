@@ -17,6 +17,12 @@
   tuple TODO-4273 validation below does not depend on that shard.
 
 ## Recent Test Runs
+- 2026-05-20 23:59 CEST | pass | mode: release | command:
+  `cmake --build build-release --target PrimeStruct_compile_run_tests -j 1`;
+  `cd build-release && ./PrimeStruct_compile_run_tests --test-case="todo queue and skipped doctest debt stay source locked" --no-skip`
+  | failures: none | notes: Source-lock passed after splitting the
+  missing task-side prerequisite for blocked TODO-4278 into TODO-4545 and
+  promoting TODO-4331 to Ready Now.
 - 2026-05-20 23:57 CEST | pass | mode: release | command:
   `cmake --build build-release --target primec PrimeStruct_compile_run_tests -j 1`;
   `cd build-release && ./PrimeStruct_compile_run_tests --test-case="native destructures stdlib tuple values,native reports tuple destructuring diagnostics,native infers heterogeneous stdlib tuple make_tuple,native uses tuple bracket indexing sugar,native uses imported stdlib tuple get helpers,todo queue and skipped doctest debt stay source locked" --no-skip`
