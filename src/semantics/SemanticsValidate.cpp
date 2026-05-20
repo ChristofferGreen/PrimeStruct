@@ -5901,7 +5901,7 @@ void rewriteBuiltinKeyValueInsertExpr(
     if (helperName.empty()) {
       return;
     }
-    const bool isCanonicalMapReadHelper =
+    const bool isCanonicalKeyValueReadHelper =
         isCanonicalBuiltinKeyValueReadHelperName(helperName);
     if (helperName == "count_ref") {
       helperName = "count";
@@ -5922,14 +5922,14 @@ void rewriteBuiltinKeyValueInsertExpr(
     }
     expr.isMethodCall = false;
     expr.isFieldAccess = false;
-    if (matchesBuiltinReadMethod && isCanonicalMapReadHelper &&
+    if (matchesBuiltinReadMethod && isCanonicalKeyValueReadHelper &&
         receiverIsReference) {
       helperName += "_ref";
     }
     if (matchesBuiltinAccessCall && receiverIsReference) {
       helperName += "_ref";
     }
-    if (matchesBuiltinReadMethod && isCanonicalMapReadHelper) {
+    if (matchesBuiltinReadMethod && isCanonicalKeyValueReadHelper) {
       helperName = metadataBackedCanonicalMapHelperPath(helperName);
     }
     if (matchesBuiltinAccessCall) {
