@@ -123,7 +123,7 @@ bool isTemplateMonomorphMapConstructorCallPath(std::string_view path) {
   const std::string normalizedPath =
       stripCollectionConstructorSuffixes(std::string(path));
   std::string memberName;
-  if (resolveMapConstructorMemberPath(normalizedPath, memberName) &&
+  if (resolveKeyValueConstructorMemberPath(normalizedPath, memberName) &&
       memberName == "map") {
     return true;
   }

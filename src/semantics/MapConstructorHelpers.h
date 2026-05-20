@@ -268,7 +268,7 @@ inline bool resolveCollectionConstructorMemberPath(primec::StdlibSurfaceId surfa
   return resolveCollectionConstructorMemberPath(*metadata, rawPath, memberNameOut);
 }
 
-inline bool resolveMapConstructorMemberPath(std::string_view rawPath,
+inline bool resolveKeyValueConstructorMemberPath(std::string_view rawPath,
                                             std::string &memberNameOut) {
   memberNameOut.clear();
   const primec::StdlibSurfaceMetadata *metadata =
@@ -286,7 +286,7 @@ inline bool isResolvedCanonicalKeyValueConstructorPath(const std::string &rawPat
     return false;
   }
   std::string memberName;
-  return resolveMapConstructorMemberPath(normalizedPath, memberName);
+  return resolveKeyValueConstructorMemberPath(normalizedPath, memberName);
 }
 
 inline bool isResolvedPublishedKeyValueConstructorPath(const std::string &rawPath) {
@@ -295,7 +295,7 @@ inline bool isResolvedPublishedKeyValueConstructorPath(const std::string &rawPat
     return false;
   }
   std::string memberName;
-  if (!resolveMapConstructorMemberPath(normalizedPath, memberName)) {
+  if (!resolveKeyValueConstructorMemberPath(normalizedPath, memberName)) {
     return false;
   }
   return !(memberName == "map" &&
@@ -305,7 +305,7 @@ inline bool isResolvedPublishedKeyValueConstructorPath(const std::string &rawPat
 inline bool isResolvedKeyValueConstructorPath(const std::string &rawPath) {
   const std::string normalizedPath = stripCollectionConstructorSuffixes(rawPath);
   std::string memberName;
-  if (!resolveMapConstructorMemberPath(normalizedPath, memberName)) {
+  if (!resolveKeyValueConstructorMemberPath(normalizedPath, memberName)) {
     return false;
   }
   return !(memberName == "map" &&
