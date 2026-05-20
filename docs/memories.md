@@ -198,7 +198,8 @@ This file stores durable session-derived facts that are useful in later work. Ke
   use key/value names too; builtin semantic insert receiver binding helpers
   should use key/value names too; builtin semantic insert rewrite helpers
   should use key/value names too; builtin semantic constructor-backed insert
-  tracking locals should use key/value names too.
+  tracking locals should use key/value names too; builtin semantic canonical
+  constructor predicates should use key/value names too.
   The stdlib ownership source lock rejects the old map-helper, map-count,
   map-access, and removed map compatibility names.
 

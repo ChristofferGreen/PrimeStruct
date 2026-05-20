@@ -5673,7 +5673,7 @@ bool isBuiltinKeyValueInsertHelperName(std::string_view name) {
          isBuiltinKeyValueInsertReferenceHelperName(name);
 }
 
-bool isBuiltinCanonicalMapConstructorExpr(
+bool isBuiltinCanonicalKeyValueConstructorExpr(
     const Expr &expr,
     const std::unordered_map<std::string, const Definition *> &definitionMap,
     const std::string &definitionNamespace) {
@@ -6022,7 +6022,7 @@ void rewriteBuiltinKeyValueInsertStatements(
       if (auto binding = extractParsedBindingInfo(stmt, &structPaths); binding.has_value()) {
         bindings[stmt.name] = *binding;
         auto isConstructorBackedKeyValueInitializer = [&](const Expr &initializer) {
-          if (isBuiltinCanonicalMapConstructorExpr(
+          if (isBuiltinCanonicalKeyValueConstructorExpr(
                   initializer,
                   definitionMap,
                   definitionNamespace)) {
@@ -6098,7 +6098,7 @@ bool rewriteBuiltinKeyValueInsertMethods(Program &program, std::string &error) {
           returnBindings[stmt.name] = *binding;
           if (stmt.args.size() == 1 &&
               isBuiltinKeyValueMutationBinding(*binding) &&
-              isBuiltinCanonicalMapConstructorExpr(
+              isBuiltinCanonicalKeyValueConstructorExpr(
                   stmt.args.front(),
                   definitionMap,
                   definitionNamespace)) {
