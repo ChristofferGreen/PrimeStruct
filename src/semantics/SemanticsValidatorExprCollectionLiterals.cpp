@@ -151,7 +151,7 @@ bool SemanticsValidator::validateExprCollectionLiteralBuiltins(
     }
   }
   if (builtinName == "map" && expr.templateArgs.size() == 2) {
-    if (!validateBuiltinMapKeyType(expr.templateArgs.front(), nullptr, error_)) {
+    if (!validateBuiltinComparableKeyType(expr.templateArgs.front(), nullptr, error_)) {
       return false;
     }
     const std::vector<std::string> *definitionTemplateArgs = nullptr;

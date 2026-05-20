@@ -509,7 +509,7 @@ bool SemanticsValidator::resolveVectorHelperMethodTarget(
         tryResolveVectorReceiverSamePathSoaHelper(normalizedHelperName)) {
       return true;
     }
-    if ((resolvedType == "/map" || isMapCollectionTypeName(normalizedTypeName)) &&
+    if ((resolvedType == "/map" || isKeyValueCollectionTypeName(normalizedTypeName)) &&
         (normalizedHelperName == "count" || normalizedHelperName == "count_ref" ||
          normalizedHelperName == "size" ||
          normalizedHelperName == "contains" || normalizedHelperName == "contains_ref" ||
@@ -665,7 +665,7 @@ bool SemanticsValidator::resolveExprVectorHelperCall(const std::vector<Parameter
     if (extractExperimentalVectorElementType(receiverBinding, elemType)) {
       return legacyExperimentalVectorCompatibilityFamilyName();
     }
-    if (extractMapKeyValueTypes(receiverBinding, keyType, valueType)) {
+    if (extractKeyValueCollectionTypes(receiverBinding, keyType, valueType)) {
       return "map";
     }
     const std::string normalizedBase = normalizeBindingTypeName(receiverBinding.typeName);
@@ -696,7 +696,7 @@ bool SemanticsValidator::resolveExprVectorHelperCall(const std::vector<Parameter
       return receiverFamily ==
              legacyExperimentalVectorCompatibilityFamilyName();
     }
-    if (extractMapKeyValueTypes(binding, keyType, valueType)) {
+    if (extractKeyValueCollectionTypes(binding, keyType, valueType)) {
       return receiverFamily == "map";
     }
     const std::string normalizedBase = normalizeBindingTypeName(binding.typeName);

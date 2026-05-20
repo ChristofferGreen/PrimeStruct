@@ -131,7 +131,7 @@ bool SemanticsValidator::validateBindingStatement(const std::vector<ParameterInf
           return failBindingDiagnostic("restrict type does not match binding type");
         }
       }
-      if (!validateBuiltinMapKeyType(info, definitionTemplateArgs, error_)) {
+      if (!validateBuiltinComparableKeyType(info, definitionTemplateArgs, error_)) {
         return false;
       }
       insertLocalBinding(locals, stmt.name, std::move(info));
@@ -146,7 +146,7 @@ bool SemanticsValidator::validateBindingStatement(const std::vector<ParameterInf
         return failBindingDiagnostic("restrict type does not match binding type");
       }
     }
-    if (!validateBuiltinMapKeyType(info, definitionTemplateArgs, error_)) {
+    if (!validateBuiltinComparableKeyType(info, definitionTemplateArgs, error_)) {
       return false;
     }
     insertLocalBinding(locals, stmt.name, std::move(info));
@@ -197,7 +197,7 @@ bool SemanticsValidator::validateBindingStatement(const std::vector<ParameterInf
         return failBindingDiagnostic("restrict type does not match binding type");
       }
     }
-    if (!validateBuiltinMapKeyType(info, definitionTemplateArgs, error_)) {
+    if (!validateBuiltinComparableKeyType(info, definitionTemplateArgs, error_)) {
       return false;
     }
     insertLocalBinding(locals, stmt.name, std::move(info));
@@ -333,7 +333,7 @@ bool SemanticsValidator::validateBindingStatement(const std::vector<ParameterInf
         return failBindingDiagnostic("restrict type does not match binding type");
       }
     }
-    if (!validateBuiltinMapKeyType(info, definitionTemplateArgs, error_)) {
+    if (!validateBuiltinComparableKeyType(info, definitionTemplateArgs, error_)) {
       return false;
     }
     insertLocalBinding(locals, stmt.name, std::move(info));
@@ -436,7 +436,7 @@ bool SemanticsValidator::validateBindingStatement(const std::vector<ParameterInf
         return failBindingDiagnostic("restrict type does not match binding type");
       }
     }
-    if (!validateBuiltinMapKeyType(info, definitionTemplateArgs, error_)) {
+    if (!validateBuiltinComparableKeyType(info, definitionTemplateArgs, error_)) {
       return false;
     }
     insertLocalBinding(locals, stmt.name, std::move(info));
@@ -887,7 +887,7 @@ bool SemanticsValidator::validateBindingStatement(const std::vector<ParameterInf
     if (resolvePointerRoot(initializer, pointerRoot)) {
       info.referenceRoot = std::move(pointerRoot);
     }
-    if (!validateBuiltinMapKeyType(info, definitionTemplateArgs, error_)) {
+    if (!validateBuiltinComparableKeyType(info, definitionTemplateArgs, error_)) {
       return false;
     }
     insertLocalBinding(locals, stmt.name, std::move(info));
@@ -1494,7 +1494,7 @@ bool SemanticsValidator::validateBindingStatement(const std::vector<ParameterInf
         }
         info.referenceRoot = std::move(borrowRoot);
       }
-      if (!validateBuiltinMapKeyType(info, definitionTemplateArgs, error_)) {
+      if (!validateBuiltinComparableKeyType(info, definitionTemplateArgs, error_)) {
         return false;
       }
       insertLocalBinding(locals, stmt.name, std::move(info));
@@ -1513,7 +1513,7 @@ bool SemanticsValidator::validateBindingStatement(const std::vector<ParameterInf
         info.referenceRoot = std::move(borrowRoot);
       }
       info.isUnsafeReference = true;
-      if (!validateBuiltinMapKeyType(info, definitionTemplateArgs, error_)) {
+      if (!validateBuiltinComparableKeyType(info, definitionTemplateArgs, error_)) {
         return false;
       }
       insertLocalBinding(locals, stmt.name, std::move(info));
@@ -1862,7 +1862,7 @@ bool SemanticsValidator::validateBindingStatement(const std::vector<ParameterInf
     info.referenceRoot = std::move(borrowRoot);
   }
 
-  if (!validateBuiltinMapKeyType(info, definitionTemplateArgs, error_)) {
+  if (!validateBuiltinComparableKeyType(info, definitionTemplateArgs, error_)) {
     return false;
   }
   insertLocalBinding(locals, stmt.name, std::move(info));

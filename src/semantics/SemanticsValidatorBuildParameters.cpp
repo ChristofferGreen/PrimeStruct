@@ -141,7 +141,7 @@ bool SemanticsValidator::buildParameters() {
       if (!normalizedType.empty() && normalizedType.front() == '/') {
         normalizedType.erase(normalizedType.begin());
       }
-      return isMapCollectionTypeName(normalizedType) ||
+      return isKeyValueCollectionTypeName(normalizedType) ||
              isExperimentalCollectionBackingTypeName("map", "Map", normalizedType);
     };
     auto typeTextCarriesExperimentalKeyValue = [&](const std::string &typeText) {
@@ -402,7 +402,7 @@ bool SemanticsValidator::buildParameters() {
         binding.typeName = "Reference";
         binding.typeTemplateArg = parentPath;
       }
-      if (!validateBuiltinMapKeyType(binding, &def.templateArgs, error_)) {
+      if (!validateBuiltinComparableKeyType(binding, &def.templateArgs, error_)) {
         return failExprDiagnostic(param, error_);
       }
       std::string argsPackElementType;

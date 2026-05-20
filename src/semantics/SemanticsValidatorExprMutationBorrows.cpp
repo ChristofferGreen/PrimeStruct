@@ -998,7 +998,7 @@ bool SemanticsValidator::validateExprMutationBorrowBuiltins(
       }
       std::string keyType;
       std::string valueType;
-      if (!extractMapKeyValueTypes(*targetBinding, keyType, valueType)) {
+      if (!extractKeyValueCollectionTypes(*targetBinding, keyType, valueType)) {
         return true;
       }
       const std::array<std::string, 2> expectedTypes = {keyType, valueType};

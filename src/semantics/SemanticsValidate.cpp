@@ -170,7 +170,7 @@ namespace {
 bool isExperimentalKeyValueTypeText(const std::string &typeText) {
   std::string keyType;
   std::string valueType;
-  if (!semantics::extractMapKeyValueTypesFromTypeText(typeText, keyType, valueType)) {
+  if (!semantics::extractKeyValueCollectionTypesFromTypeText(typeText, keyType, valueType)) {
     return false;
   }
   const std::string normalizedInner = semantics::normalizeBindingTypeName(typeText);
@@ -5374,7 +5374,7 @@ void rewriteBorrowedExperimentalKeyValueMethodExpr(
   std::string keyType;
   std::string valueType;
   if (expr.templateArgs.empty() &&
-      !semantics::extractMapKeyValueTypesFromTypeText(
+      !semantics::extractKeyValueCollectionTypesFromTypeText(
           receiverBinding->typeTemplateArg, keyType, valueType)) {
     return;
   }
@@ -5504,7 +5504,7 @@ void rewriteExperimentalKeyValueValueMethodExpr(
   std::string keyType;
   std::string valueType;
   if (expr.templateArgs.empty() &&
-      !semantics::extractMapKeyValueTypesFromTypeText(bindingTypeText(*receiverBinding), keyType, valueType)) {
+      !semantics::extractKeyValueCollectionTypesFromTypeText(bindingTypeText(*receiverBinding), keyType, valueType)) {
     return;
   }
   expr.isMethodCall = false;
@@ -5557,7 +5557,7 @@ bool isBuiltinKeyValueMutationBinding(const semantics::BindingInfo &binding) {
   }
   std::string keyType;
   std::string valueType;
-  return semantics::extractMapKeyValueTypesFromTypeText(
+  return semantics::extractKeyValueCollectionTypesFromTypeText(
       bindingTypeText(binding), keyType, valueType);
 }
 
@@ -5916,7 +5916,7 @@ void rewriteBuiltinKeyValueInsertExpr(
     }
     std::string keyType;
     std::string valueType;
-    if (!semantics::extractMapKeyValueTypesFromTypeText(
+    if (!semantics::extractKeyValueCollectionTypesFromTypeText(
             bindingTypeText(*receiverBinding), keyType, valueType)) {
       return;
     }
@@ -5973,7 +5973,7 @@ void rewriteBuiltinKeyValueInsertExpr(
   std::string keyType;
   std::string valueType;
   if (expr.templateArgs.empty() &&
-      !semantics::extractMapKeyValueTypesFromTypeText(
+      !semantics::extractKeyValueCollectionTypesFromTypeText(
           bindingTypeText(*receiverBinding), keyType, valueType)) {
     return;
   }

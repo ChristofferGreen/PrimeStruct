@@ -73,13 +73,13 @@ bool SemanticsValidator::prepareExprCollectionDispatchSetup(
           inferredReturn.typeTemplateArg.empty()
               ? inferredReturn.typeName
               : inferredReturn.typeName + "<" + inferredReturn.typeTemplateArg + ">";
-      if (returnsMapCollectionType(inferredTypeText)) {
+      if (returnsKeyValueCollectionType(inferredTypeText)) {
         return true;
       }
     }
     for (const auto &transform : defIt->second->transforms) {
       if (transform.name == "return" && transform.templateArgs.size() == 1 &&
-          returnsMapCollectionType(transform.templateArgs.front())) {
+          returnsKeyValueCollectionType(transform.templateArgs.front())) {
         return true;
       }
     }

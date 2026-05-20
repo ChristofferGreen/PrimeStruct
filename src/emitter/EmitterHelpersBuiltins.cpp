@@ -143,7 +143,7 @@ std::vector<const Expr *> orderCallArguments(const Expr &expr,
   auto isCollectionBindingType = [](const std::string &typeName) {
     const std::string normalizedTypeName = normalizeBindingTypeName(typeName);
     return normalizedTypeName == "array" || normalizedTypeName == "vector" ||
-           isMapCollectionTypeNameLocal(normalizedTypeName) || normalizedTypeName == "string" ||
+           isKeyValueCollectionTypeNameLocal(normalizedTypeName) || normalizedTypeName == "string" ||
            normalizedTypeName == "soa" "_vector";
   };
   const size_t slicedArgCount = expr.args.size() >= callArgStart ? expr.args.size() - callArgStart : 0;

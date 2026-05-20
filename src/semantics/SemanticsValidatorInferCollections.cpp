@@ -157,7 +157,7 @@ SemanticsValidator::BuiltinCollectionDispatchResolvers SemanticsValidator::makeB
           const BindingInfo &binding,
           std::string &keyTypeOut,
           std::string &valueTypeOut) -> bool {
-    return extractMapKeyValueTypes(binding, keyTypeOut, valueTypeOut) ||
+    return extractKeyValueCollectionTypes(binding, keyTypeOut, valueTypeOut) ||
            extractExperimentalKeyValueFieldTypes(binding, keyTypeOut, valueTypeOut);
   };
   auto resolveBindingTarget = [=, this](const Expr &target, BindingInfo &bindingOut) -> bool {

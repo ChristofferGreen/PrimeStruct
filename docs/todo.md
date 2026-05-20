@@ -83,8 +83,8 @@ Task template:
 
 ### Ready Now (Parallel-Candidate Leaves; No Unmet TODO Dependencies)
 
-- TODO-4535: Delete map collection type classifier API | track: map-zero-audit |
-  primary surface: map type-text classifiers and key-validation APIs
+- TODO-4536: Delete late map builtin validation boundary | track: map-zero-audit |
+  primary surface: late semantic map builtin dispatch and diagnostics
 - TODO-4271: Add compile-time pack indexing | track: tuple-type-packs |
   primary surface: generic pack-index selection and diagnostics
 
@@ -92,10 +92,10 @@ Task template:
 
 - `soa-zero-audit`: TODO-4529 replaced the residue inventory with a strict
   zero-production-trace audit; no SoA zero-audit leaf is ready.
-- `map-zero-audit`: TODO-4534 deleted the map constructor/helper shim
-  boundary; ready TODO-4535 deletes the map collection type classifier API,
-  followed by TODO-4536 -> TODO-4537 -> TODO-4538 -> TODO-4464 for the final
-  strict zero map-surface audit.
+- `map-zero-audit`: TODO-4535 deleted the map collection type classifier API;
+  ready TODO-4536 deletes the late map builtin validation boundary, followed
+  by TODO-4537 -> TODO-4538 -> TODO-4464 for the final strict zero
+  map-surface audit.
 - `tuple-type-packs`: TODO-4276 completed helper/lifecycle pack
   expansion; ready TODO-4271, then serial successors TODO-4272
   -> TODO-4274 -> TODO-4273 -> TODO-4277 -> TODO-4278.
@@ -106,7 +106,6 @@ Task template:
 
 ### Immediate Next 10 (Track Successors; Not Ready Until Dependencies Land)
 
-- TODO-4536: Delete late map builtin validation boundary
 - TODO-4537: Delete lowerer key/value collection substrate
 - TODO-4538: Replace map inventory gate with fast strict audit
 - TODO-4464: Run final strict C++ map-surface audit
@@ -121,8 +120,8 @@ Task template:
   must enter as bounded leaves only.
 - Deferred stdlib ADT migration: none active
 - Vector stdlib ownership cutover: none active
-- Map stdlib ownership cutover: ready TODO-4535, then TODO-4536
-  -> TODO-4537 -> TODO-4538 -> TODO-4464 for the final strict zero audit
+- Map stdlib ownership cutover: ready TODO-4536, then TODO-4537
+  -> TODO-4538 -> TODO-4464 for the final strict zero audit
 - SoA public surface rename and ownership cutover: TODO-4306 parent split;
   TODO-4526 removed semantic-validation inventory residue after TODO-4530
   reduced the shared semantic builtin path helper boundary; TODO-4527 removed
@@ -143,7 +142,6 @@ Task template:
 
 ### Execution Queue (Recommended Track Order)
 
-- TODO-4535: Delete map collection type classifier API
 - TODO-4536: Delete late map builtin validation boundary
 - TODO-4537: Delete lowerer key/value collection substrate
 - TODO-4538: Replace map inventory gate with fast strict audit
@@ -1850,41 +1848,6 @@ Task template:
     - `./scripts/compile.sh --release` passes.
   - stop_rule: Stop once the generic design direction is documented through
     runnable examples rather than only prose.
-
-- [ ] TODO-4535: Delete map collection type classifier API
-  - owner: ai
-  - created_at: 2026-05-20
-  - phase: Map stdlib ownership cutover
-  - parallel_track: map-zero-audit
-  - depends_on: TODO-4534
-  - split_from: TODO-4464
-  - scope: Remove production C++ APIs whose main purpose is recognizing map
-    collection type text, map key validity, or map return envelopes. Target
-    `isMapCollectionTypeName`, `returnsMapCollectionType`,
-    `extractMapKeyValueTypes*`, `validateBuiltinMapKeyType`,
-    `isBuiltinMapComparableKeyTypeName`, and equivalent testing/public header
-    declarations.
-  - implementation_notes:
-    - Preserve generic type parsing and ordinary struct/template inference; the
-      deletion target is named stdlib-map recognition, not useful generic type
-      utilities.
-    - Map key behavior should be validated through `.prime` map tests and
-      ordinary diagnostics rather than a production C++ map-key whitelist.
-    - If removing a classifier reveals missing generic support for
-      user-defined keyed collections or template/type facts, split that as a
-      non-map language/compiler capability instead of weakening this deletion
-      task.
-  - acceptance:
-    - Production headers and sources no longer expose map-named type
-      classifier or key-validation APIs.
-    - Map positive and negative behavior remains covered by C++ tests that
-      compile or run `.prime` map programs.
-    - Any generic replacement is usable by other stdlib collection types
-      without naming `map`.
-  - stop_rule: Stop after the public/internal classifier API family is deleted
-    as one value-bearing pass. If deletion needs a new generic compiler
-    mechanism, create that non-map TODO and stop; leave late builtin validation
-    deletion to TODO-4536.
 
 - [ ] TODO-4536: Delete late map builtin validation boundary
   - owner: ai

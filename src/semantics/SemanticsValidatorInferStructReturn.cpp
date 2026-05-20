@@ -651,7 +651,7 @@ std::string SemanticsValidator::inferStructReturnPathImpl(
             }
             std::string keyType;
             std::string valueType;
-            if (extractMapKeyValueTypesFromTypeText(transform.templateArgs.front(), keyType, valueType)) {
+            if (extractKeyValueCollectionTypesFromTypeText(transform.templateArgs.front(), keyType, valueType)) {
               return specializedExperimentalKeyValueStructReturnPath({keyType, valueType});
             }
           }

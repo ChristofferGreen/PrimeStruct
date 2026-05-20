@@ -85,7 +85,7 @@ bool SemanticsValidator::validateExprMethodCallTarget(
     }
     std::string inferredTypeText;
     return inferQueryExprTypeText(target, params, locals, inferredTypeText) &&
-           returnsMapCollectionType(inferredTypeText);
+           returnsKeyValueCollectionType(inferredTypeText);
   };
   const bool isVectorCompatibilityMethod =
       isVectorCompatibilityHelperName(normalizedMethodName);
@@ -195,7 +195,7 @@ bool SemanticsValidator::validateExprMethodCallTarget(
                     ? receiverReturn.typeName
                     : receiverReturn.typeName + "<" + receiverReturn.typeTemplateArg + ">";
             std::string keyType;
-            (void)extractMapKeyValueTypesFromTypeText(
+            (void)extractKeyValueCollectionTypesFromTypeText(
                 receiverReturnType, keyType, keyValueValueType);
           }
         }
@@ -261,7 +261,7 @@ bool SemanticsValidator::validateExprMethodCallTarget(
         normalizeBindingTypeName(unwrapReferencePointerTypeText(elemType));
     const std::string keyValueElemType =
         unwrappedElemType.empty() ? elemType : unwrappedElemType;
-    if (!extractMapKeyValueTypesFromTypeText(keyValueElemType, keyType, valueType)) {
+    if (!extractKeyValueCollectionTypesFromTypeText(keyValueElemType, keyType, valueType)) {
       return false;
     }
     std::string helperName = normalizedMethodName;
@@ -632,7 +632,7 @@ bool SemanticsValidator::validateExprMethodCallTarget(
         keepBuiltinIndexedArgsPackKeyValueMethod =
             keepBuiltinIndexedArgsPackKeyValueMethod ||
             (resolveArgsPackElementTypeForExpr(*accessReceiver, params, locals, elemType) &&
-             extractMapKeyValueTypesFromTypeText(elemType, keyType, valueType));
+             extractKeyValueCollectionTypesFromTypeText(elemType, keyType, valueType));
       }
     }
   }

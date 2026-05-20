@@ -257,7 +257,7 @@ bool resolveMethodCallTemplateTarget(const Expr &expr,
     }
     std::string keyType;
     std::string valueType;
-    if (!extractMapKeyValueTypesFromTypeText(elemType, keyType, valueType)) {
+    if (!extractKeyValueCollectionTypesFromTypeText(elemType, keyType, valueType)) {
       return false;
     }
     std::string helperName = normalizeCollectionMethodName("map", methodName);

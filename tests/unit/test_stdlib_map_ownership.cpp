@@ -2484,7 +2484,7 @@ TEST_CASE("canonical map surface owns standalone stdlib implementation") {
   CHECK(passesEffectFreeSource.find("bareMapCallPath") == std::string::npos);
   CHECK(buildParametersSource.find("normalizedType == \"std/collections/map\"") ==
         std::string::npos);
-  CHECK(buildParametersSource.find("isMapCollectionTypeName(normalizedType)") !=
+  CHECK(buildParametersSource.find("isKeyValueCollectionTypeName(normalizedType)") !=
         std::string::npos);
   CHECK(buildParametersSource.find("typeTextIsExperimentalMapValue") ==
         std::string::npos);
@@ -3301,7 +3301,7 @@ TEST_CASE("canonical map surface owns standalone stdlib implementation") {
   CHECK(lateMapAccessBuiltinsSource.find("const std::string &mapKeyType") ==
         std::string::npos);
   CHECK(lateMapAccessBuiltinsSource.find(
-            "extractMapKeyValueTypesFromTypeText(receiverTypeText, keyValueKeyType") !=
+            "extractKeyValueCollectionTypesFromTypeText(receiverTypeText, keyValueKeyType") !=
         std::string::npos);
   CHECK(lateMapAccessBuiltinsSource.find(
             "failLateKeyValueAccessKeyMismatch(builtinName, keyValueKeyType") !=
@@ -3569,7 +3569,7 @@ TEST_CASE("canonical map surface owns standalone stdlib implementation") {
         std::string::npos);
   CHECK(scalarPointerMemorySource.find("collectionName == \"map\"") ==
         std::string::npos);
-  CHECK(scalarPointerMemorySource.find("isMapCollectionTypeName(collectionName)") !=
+  CHECK(scalarPointerMemorySource.find("isKeyValueCollectionTypeName(collectionName)") !=
         std::string::npos);
   CHECK(scalarPointerMemorySource.find("isMapLikeCollectionExpr") ==
         std::string::npos);

@@ -657,7 +657,7 @@ bool SemanticsValidator::validateExprPreDispatchDirectCalls(
       std::string keyValueValueType;
       if (inferQueryExprTypeText(receiverExpr, params, locals,
                                  receiverTypeText) &&
-          extractMapKeyValueTypesFromTypeText(receiverTypeText, keyValueKeyType,
+          extractKeyValueCollectionTypesFromTypeText(receiverTypeText, keyValueKeyType,
                                              keyValueValueType)) {
         if (!keyValueKeyType.empty()) {
           if (normalizeBindingTypeName(keyValueKeyType) == "string") {

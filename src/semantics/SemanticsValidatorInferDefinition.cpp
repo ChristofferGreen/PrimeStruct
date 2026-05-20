@@ -162,7 +162,7 @@ bool SemanticsValidator::recordDefinitionInferredReturn(
     if (exprKind == ReturnKind::Unknown && hasExprBinding) {
       const std::string normalizedTypeName = normalizeBindingTypeName(exprBinding.typeName);
       if ((normalizedTypeName == "array" || normalizedTypeName == "vector" ||
-           normalizedTypeName == "soa" "_vector" || isMapCollectionTypeName(normalizedTypeName)) &&
+           normalizedTypeName == "soa" "_vector" || isKeyValueCollectionTypeName(normalizedTypeName)) &&
           !exprBinding.typeTemplateArg.empty()) {
         exprKind = ReturnKind::Array;
       } else {

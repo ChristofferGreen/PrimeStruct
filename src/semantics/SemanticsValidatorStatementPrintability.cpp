@@ -133,14 +133,14 @@ bool SemanticsValidator::isStringStatementExpr(const Expr &arg,
     if (target.kind == Expr::Kind::Name) {
       if (const BindingInfo *paramBinding = findParamBinding(params, target.name)) {
         std::string ignoredKeyType;
-        return extractMapKeyValueTypes(*paramBinding, ignoredKeyType, valueTypeOut);
+        return extractKeyValueCollectionTypes(*paramBinding, ignoredKeyType, valueTypeOut);
       }
       auto it = locals.find(target.name);
       if (it == locals.end()) {
         return false;
       }
       std::string ignoredKeyType;
-      return extractMapKeyValueTypes(it->second, ignoredKeyType, valueTypeOut);
+      return extractKeyValueCollectionTypes(it->second, ignoredKeyType, valueTypeOut);
     }
     if (target.kind == Expr::Kind::Call) {
       auto defIt = defMap_.find(resolveCalleePath(target));
@@ -157,7 +157,7 @@ bool SemanticsValidator::isStringStatementExpr(const Expr &arg,
             if (isUnspecializedExperimentalKeyValueBackingBaseForPrintability(normalizedBase)) {
               return false;
             }
-            if (isMapCollectionTypeName(normalizedBase)) {
+            if (isKeyValueCollectionTypeName(normalizedBase)) {
               std::vector<std::string> args;
               if (!splitTopLevelTemplateArgs(arg, args) || args.size() != 2) {
                 return false;

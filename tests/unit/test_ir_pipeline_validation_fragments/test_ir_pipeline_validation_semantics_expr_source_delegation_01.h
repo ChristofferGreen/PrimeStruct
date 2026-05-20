@@ -591,12 +591,12 @@
   CHECK(semanticsExprMethodTargetResolutionSource.find(
             "(normalizedMethodName == \"count\" || normalizedMethodName == \"capacity\") &&\n"
             "      (normalizedTypeName == \"string\" || normalizedTypeName == \"array\" ||\n"
-            "       isMapCollectionTypeName(normalizedTypeName))") ==
+            "       isKeyValueCollectionTypeName(normalizedTypeName))") ==
         std::string::npos);
   CHECK(semanticsExprMethodTargetResolutionSource.find(
             "normalizedMethodName == \"count\" &&\n"
             "      (normalizedTypeName == \"string\" || normalizedTypeName == \"array\" ||\n"
-            "       isMapCollectionTypeName(normalizedTypeName))") ==
+            "       isKeyValueCollectionTypeName(normalizedTypeName))") ==
         std::string::npos);
   CHECK(semanticsExprMethodTargetResolutionSource.find(
             "if ((removedVectorMethodCompatibilityPath == \"/std/collections/vector/count\" ||\n"

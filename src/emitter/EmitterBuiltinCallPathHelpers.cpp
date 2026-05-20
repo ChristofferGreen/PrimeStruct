@@ -122,7 +122,7 @@ std::string preferredFileMethodTargetLocal(
   return "/file/" + methodName;
 }
 
-bool isMapCollectionTypeNameLocal(const std::string &name) {
+bool isKeyValueCollectionTypeNameLocal(const std::string &name) {
   const std::string normalized = normalizeBindingTypeName(name);
   const auto *metadata = keyValueConstructorSurfaceMetadataLocal();
   bool matchesMapImportAlias = false;
@@ -140,7 +140,7 @@ bool isMapCollectionTypeNameLocal(const std::string &name) {
          normalized == experimentalMapType;
 }
 
-bool extractMapKeyValueTypesFromTypeTextLocal(const std::string &typeText,
+bool extractKeyValueCollectionTypesFromTypeTextLocal(const std::string &typeText,
                                               std::string &keyTypeOut,
                                               std::string &valueTypeOut) {
   keyTypeOut.clear();
@@ -153,7 +153,7 @@ bool extractMapKeyValueTypesFromTypeTextLocal(const std::string &typeText,
       return false;
     }
     base = normalizeBindingTypeName(base);
-    if (isMapCollectionTypeNameLocal(base)) {
+    if (isKeyValueCollectionTypeNameLocal(base)) {
       std::vector<std::string> parts;
       if (!splitTopLevelTemplateArgs(argText, parts) || parts.size() != 2) {
         return false;
@@ -174,13 +174,13 @@ bool extractMapKeyValueTypesFromTypeTextLocal(const std::string &typeText,
   }
 }
 
-bool extractMapKeyValueTypesLocal(const BindingInfo &binding,
+bool extractKeyValueCollectionTypesLocal(const BindingInfo &binding,
                                   std::string &keyTypeOut,
                                   std::string &valueTypeOut) {
   if (binding.typeTemplateArg.empty()) {
-    return extractMapKeyValueTypesFromTypeTextLocal(binding.typeName, keyTypeOut, valueTypeOut);
+    return extractKeyValueCollectionTypesFromTypeTextLocal(binding.typeName, keyTypeOut, valueTypeOut);
   }
-  return extractMapKeyValueTypesFromTypeTextLocal(binding.typeName + "<" + binding.typeTemplateArg + ">",
+  return extractKeyValueCollectionTypesFromTypeTextLocal(binding.typeName + "<" + binding.typeTemplateArg + ">",
                                                   keyTypeOut,
                                                   valueTypeOut);
 }

@@ -232,13 +232,13 @@ std::string unwrapReferencePointerTypeText(const std::string &typeText) {
   }
 }
 
-bool isBuiltinMapComparableKeyTypeName(const std::string &name) {
+bool isBuiltinComparableKeyTypeName(const std::string &name) {
   const std::string normalized = normalizeBindingTypeName(name);
   return normalized == "i32" || normalized == "i64" || normalized == "u64" || normalized == "f32" ||
          normalized == "f64" || normalized == "bool" || normalized == "string";
 }
 
-bool validateBuiltinMapKeyType(const std::string &typeName,
+bool validateBuiltinComparableKeyType(const std::string &typeName,
                                const std::vector<std::string> *templateArgs,
                                std::string &error) {
   const std::string normalized = normalizeBindingTypeName(typeName);
@@ -249,25 +249,25 @@ bool validateBuiltinMapKeyType(const std::string &typeName,
       }
     }
   }
-  if (isBuiltinMapComparableKeyTypeName(normalized)) {
+  if (isBuiltinComparableKeyTypeName(normalized)) {
     return true;
   }
   error = "map requires builtin Comparable key type (i32, i64, u64, f32, f64, bool, or string): " + normalized;
   return false;
 }
 
-bool validateBuiltinMapKeyType(const BindingInfo &binding,
+bool validateBuiltinComparableKeyType(const BindingInfo &binding,
                                const std::vector<std::string> *templateArgs,
                                std::string &error) {
   std::string keyType;
   std::string valueType;
-  if (!extractMapKeyValueTypes(binding, keyType, valueType)) {
+  if (!extractKeyValueCollectionTypes(binding, keyType, valueType)) {
     return true;
   }
-  return validateBuiltinMapKeyType(keyType, templateArgs, error);
+  return validateBuiltinComparableKeyType(keyType, templateArgs, error);
 }
 
-bool isMapCollectionTypeName(const std::string &name) {
+bool isKeyValueCollectionTypeName(const std::string &name) {
   const std::string normalized = normalizeBindingTypeName(name);
   return matchesKeyValueCollectionRootMetadataLocal(normalized) ||
          matchesKeyValueBackingRootMetadataLocal(normalized) ||
@@ -275,16 +275,16 @@ bool isMapCollectionTypeName(const std::string &name) {
              normalized, "map", "Map");
 }
 
-bool returnsMapCollectionType(const std::string &typeText) {
+bool returnsKeyValueCollectionType(const std::string &typeText) {
   std::string normalizedType = normalizeBindingTypeName(typeText);
   while (true) {
     std::string base;
     std::string arg;
     if (!splitTemplateTypeName(normalizedType, base, arg)) {
-      return isMapCollectionTypeName(normalizedType);
+      return isKeyValueCollectionTypeName(normalizedType);
     }
     base = normalizeBindingTypeName(base);
-    if (isMapCollectionTypeName(base)) {
+    if (isKeyValueCollectionTypeName(base)) {
       std::vector<std::string> args;
       return splitTopLevelTemplateArgs(arg, args) && args.size() == 2;
     }
@@ -300,7 +300,7 @@ bool returnsMapCollectionType(const std::string &typeText) {
   }
 }
 
-bool extractMapKeyValueTypesFromTypeText(const std::string &typeText,
+bool extractKeyValueCollectionTypesFromTypeText(const std::string &typeText,
                                          std::string &keyTypeOut,
                                          std::string &valueTypeOut) {
   keyTypeOut.clear();
@@ -313,7 +313,7 @@ bool extractMapKeyValueTypesFromTypeText(const std::string &typeText,
       return false;
     }
     base = normalizeBindingTypeName(base);
-    if (isMapCollectionTypeName(base)) {
+    if (isKeyValueCollectionTypeName(base)) {
       std::vector<std::string> parts;
       if (!splitTopLevelTemplateArgs(argText, parts) || parts.size() != 2) {
         return false;
@@ -334,11 +334,11 @@ bool extractMapKeyValueTypesFromTypeText(const std::string &typeText,
   }
 }
 
-bool extractMapKeyValueTypes(const BindingInfo &binding, std::string &keyTypeOut, std::string &valueTypeOut) {
+bool extractKeyValueCollectionTypes(const BindingInfo &binding, std::string &keyTypeOut, std::string &valueTypeOut) {
   if (binding.typeTemplateArg.empty()) {
-    return extractMapKeyValueTypesFromTypeText(binding.typeName, keyTypeOut, valueTypeOut);
+    return extractKeyValueCollectionTypesFromTypeText(binding.typeName, keyTypeOut, valueTypeOut);
   }
-  return extractMapKeyValueTypesFromTypeText(binding.typeName + "<" + binding.typeTemplateArg + ">",
+  return extractKeyValueCollectionTypesFromTypeText(binding.typeName + "<" + binding.typeTemplateArg + ">",
                                              keyTypeOut,
                                              valueTypeOut);
 }

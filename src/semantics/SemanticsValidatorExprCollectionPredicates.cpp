@@ -10,7 +10,7 @@ namespace {
 bool hasMapKeyValueTypes(const std::string &typeText) {
   std::string keyType;
   std::string valueType;
-  return extractMapKeyValueTypesFromTypeText(typeText, keyType, valueType);
+  return extractKeyValueCollectionTypesFromTypeText(typeText, keyType, valueType);
 }
 
 } // namespace
@@ -239,7 +239,7 @@ bool SemanticsValidator::isIndexedArgsPackKeyValueReceiverTarget(
       normalizeBindingTypeName(unwrapReferencePointerTypeText(elemType));
   const std::string keyValueElemType =
       unwrappedElemType.empty() ? elemType : unwrappedElemType;
-  return extractMapKeyValueTypesFromTypeText(keyValueElemType, keyType, valueType);
+  return extractKeyValueCollectionTypesFromTypeText(keyValueElemType, keyType, valueType);
 }
 
 bool SemanticsValidator::validateCollectionElementType(

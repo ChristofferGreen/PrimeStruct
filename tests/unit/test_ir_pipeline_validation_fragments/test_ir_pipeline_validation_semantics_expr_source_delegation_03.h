@@ -485,7 +485,7 @@
   CHECK(semanticsExprCollectionLiteralsSource.find(
             "return failExprDiagnostic(expr, std::move(message));") !=
         std::string::npos);
-  CHECK(semanticsExprCollectionLiteralsSource.find("validateBuiltinMapKeyType(expr.templateArgs.front(), nullptr, error_)") !=
+  CHECK(semanticsExprCollectionLiteralsSource.find("validateBuiltinComparableKeyType(expr.templateArgs.front(), nullptr, error_)") !=
         std::string::npos);
   CHECK(semanticsExprCollectionLiteralsSource.find("this->validateCollectionElementType(") !=
         std::string::npos);

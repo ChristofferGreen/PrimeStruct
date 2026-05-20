@@ -322,7 +322,7 @@ bool SemanticsValidator::validatePathSpaceComputeBuiltinStatement(
       auto isStringMapBinding = [&](const BindingInfo &binding) -> bool {
         std::string keyType;
         std::string valueType;
-        if (!extractMapKeyValueTypes(binding, keyType, valueType)) {
+        if (!extractKeyValueCollectionTypes(binding, keyType, valueType)) {
           return false;
         }
         return isStringTypeName(valueType);

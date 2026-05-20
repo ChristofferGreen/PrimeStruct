@@ -171,7 +171,7 @@ std::string SemanticsValidator::inferMethodCollectionTypePathFromTypeText(
   if (isExperimentalSoaVectorTypePath(base) && args.size() == 1) {
     return "/soa" "_vector";
   }
-  if (isMapCollectionTypeName(base) && args.size() == 2) {
+  if (isKeyValueCollectionTypeName(base) && args.size() == 2) {
     return "/map";
   }
   return {};
@@ -467,7 +467,7 @@ std::string SemanticsValidator::preferredKeyValueMethodTargetForCall(
     }
     std::string keyType;
     std::string valueType;
-    return extractMapKeyValueTypesFromTypeText(args.front(), keyType, valueType);
+    return extractKeyValueCollectionTypesFromTypeText(args.front(), keyType, valueType);
   };
   auto isWrappedKeyValueBinding = [&](const BindingInfo &binding) {
     return isWrappedKeyValueTypeText(bindingTypeText(binding));

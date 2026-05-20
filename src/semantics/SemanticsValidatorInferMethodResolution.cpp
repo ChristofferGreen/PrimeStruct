@@ -681,7 +681,7 @@ bool SemanticsValidator::resolveInferMethodCallPath(
         normalizeBindingTypeName(unwrapReferencePointerTypeText(indexedElemType));
     const std::string indexedKeyValueTypeText =
         unwrappedIndexedElemType.empty() ? indexedElemType : unwrappedIndexedElemType;
-    if (!extractMapKeyValueTypesFromTypeText(indexedKeyValueTypeText, keyType, valueType)) {
+    if (!extractKeyValueCollectionTypesFromTypeText(indexedKeyValueTypeText, keyType, valueType)) {
       return false;
     }
     resolvedOut = preferredKeyValueMethodTargetForCall(params, locals, receiverExpr, helperName);

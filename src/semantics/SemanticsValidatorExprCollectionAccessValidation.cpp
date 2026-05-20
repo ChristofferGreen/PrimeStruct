@@ -596,7 +596,7 @@ bool SemanticsValidator::validateExprCollectionAccessFallbacks(
             (isRootKeyValueAliasPath(resolveCalleePath(receiverExpr)) ||
              isRootKeyValueAliasPath(explicitCallPath(receiverExpr)))) &&
           inferQueryExprTypeText(receiverExpr, params, locals, receiverTypeText) &&
-          extractMapKeyValueTypesFromTypeText(receiverTypeText, keyValueKeyType, keyValueValueType)) {
+          extractKeyValueCollectionTypesFromTypeText(receiverTypeText, keyValueKeyType, keyValueValueType)) {
         const bool isExperimentalKeyValueType = isExperimentalKeyValueTypeText(receiverTypeText);
         if (isExperimentalKeyValueType) {
           isExperimentalKeyValue = true;

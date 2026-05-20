@@ -234,18 +234,18 @@ bool SemanticsValidator::validateExprScalarPointerMemoryBuiltins(
     std::string valueType;
     if (candidate.kind == Expr::Kind::Name) {
       if (const BindingInfo *paramBinding = findParamBinding(params, candidate.name)) {
-        return extractMapKeyValueTypes(*paramBinding, keyType, valueType);
+        return extractKeyValueCollectionTypes(*paramBinding, keyType, valueType);
       }
       auto it = locals.find(candidate.name);
       return it != locals.end() &&
-             extractMapKeyValueTypes(it->second, keyType, valueType);
+             extractKeyValueCollectionTypes(it->second, keyType, valueType);
     }
     if (candidate.kind != Expr::Kind::Call) {
       return false;
     }
     std::string collectionName;
     if (getBuiltinCollectionName(candidate, collectionName) &&
-        isMapCollectionTypeName(collectionName) &&
+        isKeyValueCollectionTypeName(collectionName) &&
         candidate.templateArgs.size() == 2) {
       return true;
     }
@@ -253,13 +253,13 @@ bool SemanticsValidator::validateExprScalarPointerMemoryBuiltins(
     if (defIt != defMap_.end() && defIt->second != nullptr) {
       BindingInfo inferredReturn;
       if (inferDefinitionReturnBinding(*defIt->second, inferredReturn) &&
-          extractMapKeyValueTypes(inferredReturn, keyType, valueType)) {
+          extractKeyValueCollectionTypes(inferredReturn, keyType, valueType)) {
         return true;
       }
     }
     std::string inferredTypeText;
     return inferQueryExprTypeText(candidate, params, locals, inferredTypeText) &&
-           returnsMapCollectionType(inferredTypeText);
+           returnsKeyValueCollectionType(inferredTypeText);
   };
   if (getBuiltinConvertName(expr, builtinName)) {
     handledOut = true;

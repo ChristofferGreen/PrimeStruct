@@ -166,7 +166,7 @@ std::string SemanticsValidator::normalizeCollectionTypePath(const std::string &t
         splitTopLevelTemplateArgs(argText, args) && args.size() == 1) {
       return "/soa" "_vector";
     }
-    if ((base == "Map" || isMapCollectionTypeName(base) || base == "/map" ||
+    if ((base == "Map" || isKeyValueCollectionTypeName(base) || base == "/map" ||
          isCanonicalMapCollectionTypeRootLocal(base)) &&
         splitTopLevelTemplateArgs(argText, args) && args.size() == 2) {
       return "/map";
@@ -203,7 +203,7 @@ std::string SemanticsValidator::normalizeCollectionTypePath(const std::string &t
       normalizedType.rfind("std/collections/experimental" "_soa" "_vector/Soa" "Vector" "__", 0) == 0) {
     return "/soa" "_vector";
   }
-  if (normalizedType == "Map" || isMapCollectionTypeName(normalizedType) ||
+  if (normalizedType == "Map" || isKeyValueCollectionTypeName(normalizedType) ||
       normalizedType == "/map" ||
       isCanonicalMapCollectionTypeRootLocal(normalizedType)) {
     return "/map";
@@ -1132,7 +1132,7 @@ bool SemanticsValidator::resolveRemovedMapBodyArgumentTarget(const Expr &candida
       if (transform.name != "return" || transform.templateArgs.size() != 1) {
         continue;
       }
-      return returnsMapCollectionType(transform.templateArgs.front());
+      return returnsKeyValueCollectionType(transform.templateArgs.front());
     }
     return false;
   };

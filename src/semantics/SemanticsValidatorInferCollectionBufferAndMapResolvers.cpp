@@ -331,15 +331,15 @@ void SemanticsValidator::populateBuiltinCollectionDispatchBufferAndMapResolvers(
       }
       std::string elemType;
       if (lockedState->resolveIndexedArgsPackElementType(target, elemType) &&
-          extractMapKeyValueTypesFromTypeText(elemType, keyTypeOut, valueTypeOut)) {
+          extractKeyValueCollectionTypesFromTypeText(elemType, keyTypeOut, valueTypeOut)) {
         return true;
       }
       if (lockedState->resolveWrappedIndexedArgsPackElementType(target, elemType) &&
-          extractMapKeyValueTypesFromTypeText(elemType, keyTypeOut, valueTypeOut)) {
+          extractKeyValueCollectionTypesFromTypeText(elemType, keyTypeOut, valueTypeOut)) {
         return true;
       }
       if (lockedState->resolveDereferencedIndexedArgsPackElementType(target, elemType) &&
-          extractMapKeyValueTypesFromTypeText(elemType, keyTypeOut, valueTypeOut)) {
+          extractKeyValueCollectionTypesFromTypeText(elemType, keyTypeOut, valueTypeOut)) {
         return true;
       }
       std::string accessName;
@@ -349,7 +349,7 @@ void SemanticsValidator::populateBuiltinCollectionDispatchBufferAndMapResolvers(
           if (const BindingInfo *paramBinding = findParamBinding(params, accessReceiver->name)) {
             std::string packElemType;
             if (getArgsPackElementType(*paramBinding, packElemType) &&
-                extractMapKeyValueTypesFromTypeText(packElemType, keyTypeOut, valueTypeOut)) {
+                extractKeyValueCollectionTypesFromTypeText(packElemType, keyTypeOut, valueTypeOut)) {
               return true;
             }
           }
@@ -357,7 +357,7 @@ void SemanticsValidator::populateBuiltinCollectionDispatchBufferAndMapResolvers(
           if (it != locals.end()) {
             std::string packElemType;
             if (getArgsPackElementType(it->second, packElemType) &&
-                extractMapKeyValueTypesFromTypeText(packElemType, keyTypeOut, valueTypeOut)) {
+                extractKeyValueCollectionTypesFromTypeText(packElemType, keyTypeOut, valueTypeOut)) {
               return true;
             }
           }
@@ -389,7 +389,7 @@ void SemanticsValidator::populateBuiltinCollectionDispatchBufferAndMapResolvers(
         if (transform.name != "return" || transform.templateArgs.size() != 1) {
           continue;
         }
-        if (!returnsMapCollectionType(transform.templateArgs.front())) {
+        if (!returnsKeyValueCollectionType(transform.templateArgs.front())) {
           return false;
         }
         std::string base;

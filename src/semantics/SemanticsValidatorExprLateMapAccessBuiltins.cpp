@@ -346,7 +346,7 @@ bool SemanticsValidator::validateExprLateMapAccessBuiltins(
         std::string keyValueValueType;
         return inferQueryExprTypeText(receiverExpr, params, locals,
                                       receiverTypeText) &&
-               extractMapKeyValueTypesFromTypeText(receiverTypeText,
+               extractKeyValueCollectionTypesFromTypeText(receiverTypeText,
                                                   keyValueKeyTypeOut,
                                                   keyValueValueType);
       };
@@ -572,7 +572,7 @@ bool SemanticsValidator::validateExprLateMapAccessBuiltins(
     std::string keyValueValueType;
     if (rootKeyValueConstructorKeyType(receiverExpr, keyValueKeyType) ||
         (inferQueryExprTypeText(receiverExpr, params, locals, receiverTypeText) &&
-         extractMapKeyValueTypesFromTypeText(receiverTypeText, keyValueKeyType,
+         extractKeyValueCollectionTypesFromTypeText(receiverTypeText, keyValueKeyType,
                                             keyValueValueType))) {
       if (!keyValueKeyType.empty()) {
         if (normalizeBindingTypeName(keyValueKeyType) == "string") {

@@ -215,7 +215,7 @@ void SemanticsValidator::prepareExprDispatchBootstrap(
     }
     std::string inferredTypeText;
     return inferQueryExprTypeText(target, *paramsPtr, *localsPtr, inferredTypeText) &&
-           returnsMapCollectionType(inferredTypeText);
+           returnsKeyValueCollectionType(inferredTypeText);
   };
 }
 

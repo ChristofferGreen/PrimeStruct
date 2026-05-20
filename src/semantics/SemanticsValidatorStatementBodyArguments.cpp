@@ -146,7 +146,7 @@ bool SemanticsValidator::validateStatementBodyArguments(const std::vector<Parame
       if (const BindingInfo *paramBinding = findParamBinding(params, target.name)) {
         std::string keyType;
         std::string valueType;
-        return extractMapKeyValueTypes(*paramBinding, keyType, valueType);
+        return extractKeyValueCollectionTypes(*paramBinding, keyType, valueType);
       }
 
       auto it = locals.find(target.name);
@@ -155,7 +155,7 @@ bool SemanticsValidator::validateStatementBodyArguments(const std::vector<Parame
       }
       std::string keyType;
       std::string valueType;
-      return extractMapKeyValueTypes(it->second, keyType, valueType);
+      return extractKeyValueCollectionTypes(it->second, keyType, valueType);
     }
 
     if (target.kind != Expr::Kind::Call) {
@@ -168,7 +168,7 @@ bool SemanticsValidator::validateStatementBodyArguments(const std::vector<Parame
         if (transform.name != "return" || transform.templateArgs.size() != 1) {
           continue;
         }
-        return returnsMapCollectionType(transform.templateArgs.front());
+        return returnsKeyValueCollectionType(transform.templateArgs.front());
       }
       return false;
     }
@@ -335,7 +335,7 @@ bool SemanticsValidator::validateStatementBodyArguments(const std::vector<Parame
       if (!normalized.empty() && normalized.front() == '/') {
         normalized.erase(normalized.begin());
       }
-      return isMapCollectionTypeName(normalized);
+      return isKeyValueCollectionTypeName(normalized);
     };
 
     if (typeName.empty()) {

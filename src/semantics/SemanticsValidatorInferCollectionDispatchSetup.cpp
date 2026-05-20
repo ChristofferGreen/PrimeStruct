@@ -268,7 +268,7 @@ void SemanticsValidator::prepareInferCollectionDispatchSetup(
              builtinCollectionDispatchResolvers
                  .resolveDereferencedIndexedArgsPackElementType(receiverExpr,
                                                                 elemType)) &&
-            extractMapKeyValueTypesFromTypeText(elemType, keyType, valueType));
+            extractKeyValueCollectionTypesFromTypeText(elemType, keyType, valueType));
   };
 
   auto preferVectorStdlibHelperPathForDispatch =

@@ -175,7 +175,7 @@ bool SemanticsValidator::validateStatement(const std::vector<ParameterInfo> &par
           keyTypeOut.clear();
           valueTypeOut.clear();
           const std::string normalizedType = normalizeBindingTypeName(typeText);
-          if (extractMapKeyValueTypesFromTypeText(normalizedType, keyTypeOut, valueTypeOut)) {
+          if (extractKeyValueCollectionTypesFromTypeText(normalizedType, keyTypeOut, valueTypeOut)) {
             return true;
           }
           std::string structPath = resolveStructTypePath(normalizedType, namespacePrefix, structNames_);

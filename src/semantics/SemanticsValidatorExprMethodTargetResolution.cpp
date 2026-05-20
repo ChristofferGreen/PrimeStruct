@@ -1517,7 +1517,7 @@ bool SemanticsValidator::resolveMethodTarget(const std::vector<ParameterInfo> &p
   auto extractAnyKeyValueTypes = [&](const BindingInfo &binding,
                                      std::string &keyTypeOut,
                                      std::string &valueTypeOut) -> bool {
-    return extractMapKeyValueTypes(binding, keyTypeOut, valueTypeOut) ||
+    return extractKeyValueCollectionTypes(binding, keyTypeOut, valueTypeOut) ||
            extractExperimentalKeyValueFieldTypes(binding, keyTypeOut, valueTypeOut);
   };
   auto resolveExperimentalKeyValueTarget = [&](const Expr &target,
@@ -1577,14 +1577,14 @@ bool SemanticsValidator::resolveMethodTarget(const std::vector<ParameterInfo> &p
       if ((resolveIndexedArgsPackElementType(target, elemType) ||
            resolveDereferencedIndexedArgsPackElementType(target, elemType) ||
            resolveWrappedIndexedArgsPackElementType(target, elemType)) &&
-          extractMapKeyValueTypesFromTypeText(elemType, keyType, valueType)) {
+          extractKeyValueCollectionTypesFromTypeText(elemType, keyType, valueType)) {
         return true;
       }
       std::string accessName;
       if (getBuiltinArrayAccessName(target, accessName) && target.args.size() == 2) {
         if (const Expr *accessReceiver = resolveBuiltinAccessReceiverExpr(target)) {
           if (resolveArgsPackAccessTarget(*accessReceiver, elemType) &&
-              extractMapKeyValueTypesFromTypeText(elemType, keyType, valueType)) {
+              extractKeyValueCollectionTypesFromTypeText(elemType, keyType, valueType)) {
             return true;
           }
         }
@@ -1616,7 +1616,7 @@ bool SemanticsValidator::resolveMethodTarget(const std::vector<ParameterInfo> &p
       }
       for (const auto &transform : defIt->second->transforms) {
         if (transform.name == "return" && transform.templateArgs.size() == 1) {
-          return returnsMapCollectionType(transform.templateArgs.front());
+          return returnsKeyValueCollectionType(transform.templateArgs.front());
         }
       }
     }
@@ -1641,7 +1641,7 @@ bool SemanticsValidator::resolveMethodTarget(const std::vector<ParameterInfo> &p
       if ((resolveIndexedArgsPackElementType(target, elemType) ||
            resolveWrappedIndexedArgsPackElementType(target, elemType) ||
            resolveDereferencedIndexedArgsPackElementType(target, elemType)) &&
-          extractMapKeyValueTypesFromTypeText(elemType, keyType, valueTypeOut)) {
+          extractKeyValueCollectionTypesFromTypeText(elemType, keyType, valueTypeOut)) {
         return true;
       }
       std::string collectionTypePath;
@@ -1955,7 +1955,7 @@ bool SemanticsValidator::resolveMethodTarget(const std::vector<ParameterInfo> &p
     std::string keyType;
     std::string valueType;
     return extractWrappedPointeeType(typeText, pointeeType) &&
-           extractMapKeyValueTypesFromTypeText(pointeeType, keyType, valueType);
+           extractKeyValueCollectionTypesFromTypeText(pointeeType, keyType, valueType);
   };
   auto isWrappedKeyValueReceiver = [&](const Expr &receiverExpr) {
     auto isWrappedBinding = [&](const BindingInfo &binding) {
@@ -2142,7 +2142,7 @@ bool SemanticsValidator::resolveMethodTarget(const std::vector<ParameterInfo> &p
     if (extractExperimentalVectorElementType(binding, elemType)) {
       return legacyExperimentalVectorCompatibilityFamilyName();
     }
-    if (extractMapKeyValueTypes(binding, keyType, valueType)) {
+    if (extractKeyValueCollectionTypes(binding, keyType, valueType)) {
       return "map";
     }
     const std::string normalizedType = normalizeBindingTypeName(binding.typeName);
@@ -2520,7 +2520,7 @@ bool SemanticsValidator::resolveMethodTarget(const std::vector<ParameterInfo> &p
            normalizedMethodName == "load" || normalizedMethodName == "store")) {
         return setCollectionMethodTarget(preferredBufferMethodTarget(normalizedMethodName));
       }
-      if (isMapCollectionTypeName(elemBase)) {
+      if (isKeyValueCollectionTypeName(elemBase)) {
         return setPreferredKeyValueMethodTarget(receiverExpr, normalizedMethodName);
       }
       if (elemBase == "File" && isFileMethodName(normalizedMethodName)) {
@@ -2556,7 +2556,7 @@ bool SemanticsValidator::resolveMethodTarget(const std::vector<ParameterInfo> &p
           normalizeBindingTypeName(unwrapReferencePointerTypeText(typeText));
       const std::string keyValueTypeText =
           unwrappedType.empty() ? typeText : unwrappedType;
-      return extractMapKeyValueTypesFromTypeText(keyValueTypeText, keyType, valueType);
+      return extractKeyValueCollectionTypesFromTypeText(keyValueTypeText, keyType, valueType);
     };
     const bool resolvedIndexedKeyValueType =
         ((resolveIndexedArgsPackElementType(receiverExpr, indexedElemType) ||
@@ -2642,7 +2642,7 @@ bool SemanticsValidator::resolveMethodTarget(const std::vector<ParameterInfo> &p
            normalizedMethodName == "load" || normalizedMethodName == "store")) {
         return setCollectionMethodTarget(preferredBufferMethodTarget(normalizedMethodName));
       }
-      if (isMapCollectionTypeName(base) &&
+      if (isKeyValueCollectionTypeName(base) &&
           (normalizedMethodName == "count" || normalizedMethodName == "count_ref" ||
            normalizedMethodName == "contains" || normalizedMethodName == "contains_ref" ||
            normalizedMethodName == "tryAt" || normalizedMethodName == "tryAt_ref" ||
@@ -3020,7 +3020,7 @@ bool SemanticsValidator::resolveMethodTarget(const std::vector<ParameterInfo> &p
                  normalizedMethodName == "load" || normalizedMethodName == "store")) {
               return setCollectionMethodTarget(preferredBufferMethodTarget(normalizedMethodName));
             }
-            if (isMapCollectionTypeName(elemBase)) {
+            if (isKeyValueCollectionTypeName(elemBase)) {
               if (setIndexedArgsPackKeyValueMethodTarget(receiver, normalizedMethodName)) {
                 return true;
               }
@@ -3394,7 +3394,7 @@ bool SemanticsValidator::resolveMethodTarget(const std::vector<ParameterInfo> &p
                 ? internalSoaCollectionTypePath(true)
                 : "/vector"));
   }
-  if (isMapCollectionTypeName(normalizeBindingTypeName(typeName)) &&
+  if (isKeyValueCollectionTypeName(normalizeBindingTypeName(typeName)) &&
       (normalizedMethodName == "count" || normalizedMethodName == "count_ref" ||
        normalizedMethodName == "size" ||
        normalizedMethodName == "contains" || normalizedMethodName == "contains_ref" ||

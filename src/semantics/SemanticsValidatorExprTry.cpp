@@ -48,7 +48,7 @@ bool SemanticsValidator::validateExprTryBuiltin(
       for (const auto &tryArg : tryTargetExpr.args) {
         std::string inferredTypeText;
         if (inferQueryExprTypeText(tryArg, params, locals, inferredTypeText) &&
-            returnsMapCollectionType(inferredTypeText)) {
+            returnsKeyValueCollectionType(inferredTypeText)) {
           isBareKeyValueTryAtFallback = true;
           break;
         }

@@ -12,6 +12,19 @@
   compilation.
 
 ## Recent Test Runs
+- 2026-05-20 16:05 CEST | pass | mode: release | command:
+  `cmake --build build-release --target PrimeStruct_semantics_tests`;
+  `cmake --build build-release --target PrimeStruct_misc_tests`;
+  `cd build-release && ./PrimeStruct_misc_tests --test-suite=primestruct.stdlib.map_ownership --no-skip`;
+  `cmake --build build-release --target PrimeStruct_backend_ir_tests`;
+  `cd build-release && ./PrimeStruct_backend_ir_tests --test-case="template monomorph source delegation stays stable" --no-skip`;
+  `cd build-release && ./PrimeStruct_backend_ir_tests --test-case="semantics validator expr source delegation stays stable" --no-skip`;
+  `cd build-release && ./PrimeStruct_backend_ir_tests --test-case="semantics validator infer source delegation stays stable" --no-skip`;
+  `cd build-release && ./PrimeStruct_semantics_tests --test-case="map binding rejects unsupported builtin Comparable key contract,inferred map binding rejects unsupported builtin Comparable key contract,canonical map borrowed receiver validates direct stdlib tryAt,canonical map borrowed receiver keeps tryAt key diagnostics,canonical map insert helpers validate on value and borrowed mutation surfaces" --no-skip`;
+  `rg -n 'isMapCollectionTypeName|returnsMapCollectionType|extractMapKeyValueTypes|validateBuiltinMapKeyType|isBuiltinMapComparableKeyTypeName' src include tests`
+  | failures: none | notes: TODO-4535 deleted the map-named classifier and
+  key-validation API spellings from production/test helper boundaries while
+  preserving focused map behavior coverage.
 - 2026-05-20 15:25 CEST | pass | mode: release | command:
   `cmake --build build-release --target PrimeStruct_semantics_tests`;
   `cmake --build build-release --target PrimeStruct_misc_tests`;

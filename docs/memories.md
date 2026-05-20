@@ -1243,6 +1243,18 @@ This file stores durable session-derived facts that are useful in later work. Ke
   source lock rejects direct `alias == "map"` and `rawName == "map"` checks in
   that file, and the file's map-surface inventory allowance is zero.
 
+### map-classifier-api-is-key-value-named
+- Updated: 2026-05-20
+- Tags: semantics, collections, stdlib
+- Fact: Production C++ no longer exposes `isMapCollectionTypeName`,
+  `returnsMapCollectionType`, `extractMapKeyValueTypes*`,
+  `validateBuiltinMapKeyType`, or `isBuiltinMapComparableKeyTypeName`; retained
+  helpers use key/value and comparable-key names while user-facing map key
+  diagnostics remain map-specific.
+- Evidence: TODO-4535 renamed the remaining classifier/key-validation helper
+  surface and `rg` confirmed the old map-named API spellings are absent from
+  `src/`, `include/`, and `tests/`.
+
 ### map-constructor-helper-shim-is-gone
 - Updated: 2026-05-20
 - Tags: semantics, collections, stdlib

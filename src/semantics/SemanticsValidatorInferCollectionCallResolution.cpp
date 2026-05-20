@@ -76,7 +76,7 @@ bool SemanticsValidator::resolveCallCollectionTypePath(const Expr &target,
         args.size() == 1) {
       return "/vector";
     }
-    if (isMapCollectionTypeName(base) && args.size() == 2) {
+    if (isKeyValueCollectionTypeName(base) && args.size() == 2) {
       return "/map";
     }
     return {};
@@ -224,7 +224,7 @@ bool SemanticsValidator::resolveCallCollectionTemplateArgs(const Expr &target,
          (base == "Vector" ||
           isLegacyExperimentalVectorCompatibilityPath("/" + base))) ||
         (expectedBase == "soa" "_vector" && isExperimentalSoaVectorTypePath(base)) ||
-        (expectedBase == "map" && isMapCollectionTypeName(base))) {
+        (expectedBase == "map" && isKeyValueCollectionTypeName(base))) {
       return splitTopLevelTemplateArgs(arg, argsOut);
     }
     std::vector<std::string> args;
@@ -257,7 +257,7 @@ bool SemanticsValidator::resolveCallCollectionTemplateArgs(const Expr &target,
     if (expectedBase == "map") {
       std::string keyType;
       std::string valueType;
-      if (extractMapKeyValueTypes(binding, keyType, valueType) ||
+      if (extractKeyValueCollectionTypes(binding, keyType, valueType) ||
           extractInferExperimentalKeyValueFieldTypes(binding, keyType, valueType)) {
         argsOut = {keyType, valueType};
         return true;

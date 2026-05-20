@@ -104,7 +104,7 @@ bool SemanticsValidator::inferCollectionBindingFromExpr(const Expr &expr,
       bindingOut.typeTemplateArg = expr.templateArgs.front();
       return true;
     }
-    if (isMapCollectionTypeName(collection) && expr.templateArgs.size() == 2) {
+    if (isKeyValueCollectionTypeName(collection) && expr.templateArgs.size() == 2) {
       const std::string keyValueAlias = mapCollectionAliasToken();
       if (keyValueAlias.empty()) {
         return false;
@@ -138,7 +138,7 @@ bool SemanticsValidator::inferCollectionBindingFromExpr(const Expr &expr,
       bindingOut.typeTemplateArg = argText;
       return true;
     }
-    if (isMapCollectionTypeName(base) && args.size() == 2) {
+    if (isKeyValueCollectionTypeName(base) && args.size() == 2) {
       bindingOut.typeName = base;
       bindingOut.typeTemplateArg = argText;
       return true;
@@ -205,7 +205,7 @@ bool SemanticsValidator::inferBuiltinCollectionValueBinding(const Expr &expr,
     collectionBinding = bindingOut;
     std::string keyType;
     std::string valueType;
-    if (extractMapKeyValueTypes(collectionBinding, keyType, valueType)) {
+    if (extractKeyValueCollectionTypes(collectionBinding, keyType, valueType)) {
       bindingOut.typeName = normalizeBindingTypeName(valueType);
       bindingOut.typeTemplateArg.clear();
       return true;
@@ -256,7 +256,7 @@ bool SemanticsValidator::inferBuiltinCollectionValueBinding(const Expr &expr,
     }
     std::string keyType;
     std::string valueType;
-    if (extractMapKeyValueTypes(collectionBinding, keyType, valueType)) {
+    if (extractKeyValueCollectionTypes(collectionBinding, keyType, valueType)) {
       bindingOut.typeName = normalizeBindingTypeName(valueType);
       bindingOut.typeTemplateArg.clear();
       return true;
@@ -290,7 +290,7 @@ bool SemanticsValidator::inferBuiltinCollectionValueBinding(const Expr &expr,
   std::string keyType;
   std::string valueType;
   std::string elemType;
-  if (extractMapKeyValueTypes(collectionBinding, keyType, valueType) ||
+  if (extractKeyValueCollectionTypes(collectionBinding, keyType, valueType) ||
       inferArrayElementType(collectionBinding, elemType) ||
       collectionBinding.typeName == "string") {
     bindingOut.typeName = "i32";
@@ -909,7 +909,7 @@ bool SemanticsValidator::inferCallInitializerBinding(const Expr &initializer,
     }
     const std::string normalizedBindingType = normalizeBindingTypeName(bindingOut.typeName);
     const bool shouldPreferResolvedDirectCallBinding =
-        ((!bindingOut.typeTemplateArg.empty() && isMapCollectionTypeName(normalizedBindingType)) ||
+        ((!bindingOut.typeTemplateArg.empty() && isKeyValueCollectionTypeName(normalizedBindingType)) ||
          (bindingOut.typeTemplateArg.empty() &&
           !normalizedBindingType.empty() &&
           normalizedBindingType.front() != '/' &&
@@ -1007,7 +1007,7 @@ bool SemanticsValidator::inferCallInitializerBinding(const Expr &initializer,
               initializerExprForInference->templateArgs.size() == 1) {
             bindingOut.typeName = collectionName;
             bindingOut.typeTemplateArg = initializerExprForInference->templateArgs.front();
-          } else if (isMapCollectionTypeName(collectionName) &&
+          } else if (isKeyValueCollectionTypeName(collectionName) &&
                      initializerExprForInference->templateArgs.size() == 2) {
             const std::string keyValueAlias = mapCollectionAliasToken();
             if (keyValueAlias.empty()) {

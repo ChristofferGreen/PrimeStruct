@@ -74,19 +74,19 @@ bool isSoftwareNumericTypeName(const std::string &name);
 std::optional<std::string> findSoftwareNumericType(const std::string &typeName);
 std::string normalizeBindingTypeName(const std::string &name);
 std::string unwrapReferencePointerTypeText(const std::string &typeText);
-bool isBuiltinMapComparableKeyTypeName(const std::string &name);
-bool validateBuiltinMapKeyType(const std::string &typeName,
-                               const std::vector<std::string> *templateArgs,
-                               std::string &error);
-bool validateBuiltinMapKeyType(const BindingInfo &binding,
-                               const std::vector<std::string> *templateArgs,
-                               std::string &error);
-bool isMapCollectionTypeName(const std::string &name);
-bool returnsMapCollectionType(const std::string &typeText);
-bool extractMapKeyValueTypesFromTypeText(const std::string &typeText,
-                                         std::string &keyTypeOut,
-                                         std::string &valueTypeOut);
-bool extractMapKeyValueTypes(const BindingInfo &binding, std::string &keyTypeOut, std::string &valueTypeOut);
+bool isBuiltinComparableKeyTypeName(const std::string &name);
+bool validateBuiltinComparableKeyType(const std::string &typeName,
+                                      const std::vector<std::string> *templateArgs,
+                                      std::string &error);
+bool validateBuiltinComparableKeyType(const BindingInfo &binding,
+                                      const std::vector<std::string> *templateArgs,
+                                      std::string &error);
+bool isKeyValueCollectionTypeName(const std::string &name);
+bool returnsKeyValueCollectionType(const std::string &typeText);
+bool extractKeyValueCollectionTypesFromTypeText(const std::string &typeText,
+                                                std::string &keyTypeOut,
+                                                std::string &valueTypeOut);
+bool extractKeyValueCollectionTypes(const BindingInfo &binding, std::string &keyTypeOut, std::string &valueTypeOut);
 bool getArgsPackElementType(const BindingInfo &binding, std::string &elementTypeOut);
 bool isArgsPackBinding(const BindingInfo &binding);
 bool resolveArgsPackElementTypeForExpr(const Expr &expr,

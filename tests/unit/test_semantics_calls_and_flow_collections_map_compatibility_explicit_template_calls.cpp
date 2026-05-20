@@ -442,8 +442,8 @@ main() {
 }
   )";
   std::string error;
-  CHECK(validateProgram(source, "/main", error));
-  CHECK(error.empty());
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("tryAt requires map key type i32") != std::string::npos);
 }
 
 TEST_CASE("explicit canonical map binding keeps builtin helper validation") {

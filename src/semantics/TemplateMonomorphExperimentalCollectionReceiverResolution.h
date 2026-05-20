@@ -693,7 +693,7 @@ bool resolveExperimentalKeyValueReceiverTemplateArgs(const Expr *receiverExpr,
       normalizeBindingTypeName(receiverInfo.typeName) != "Pointer") {
     std::string keyType;
     std::string valueType;
-    if (extractMapKeyValueTypesFromTypeText(bindingTypeToString(receiverInfo), keyType, valueType)) {
+    if (extractKeyValueCollectionTypesFromTypeText(bindingTypeToString(receiverInfo), keyType, valueType)) {
       templateArgsOut = {keyType, valueType};
       return true;
     }

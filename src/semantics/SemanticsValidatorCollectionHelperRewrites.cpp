@@ -251,7 +251,7 @@ std::string SemanticsValidator::specializedExperimentalKeyValueHelperTarget(
     }
     std::string candidateKeyType;
     std::string candidateValueType;
-    if (!extractMapKeyValueTypes(params.front().binding, candidateKeyType, candidateValueType)) {
+    if (!extractKeyValueCollectionTypes(params.front().binding, candidateKeyType, candidateValueType)) {
       continue;
     }
     if (canonicalizeTypeText(candidateKeyType) == canonicalKeyType &&

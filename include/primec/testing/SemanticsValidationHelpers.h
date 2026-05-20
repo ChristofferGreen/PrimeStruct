@@ -12,9 +12,9 @@ namespace primec::semantics {
 
 bool isSimpleCallName(const Expr &expr, const char *nameToMatch);
 std::string resolveTypePath(const std::string &name, const std::string &namespacePrefix);
-bool validateBuiltinMapKeyType(const std::string &typeName,
-                               const std::vector<std::string> *templateArgs,
-                               std::string &error);
+bool validateBuiltinComparableKeyType(const std::string &typeName,
+                                      const std::vector<std::string> *templateArgs,
+                                      std::string &error);
 bool splitTopLevelTemplateArgs(const std::string &text, std::vector<std::string> &out);
 bool isRootBuiltinName(const std::string &name);
 bool getBuiltinCollectionName(const Expr &expr, std::string &out);

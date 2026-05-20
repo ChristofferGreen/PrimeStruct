@@ -18,7 +18,7 @@ bool SemanticsValidator::resolveStructFieldBinding(const Definition &structDef,
     return failStructFieldDiagnostic(std::move(parseError));
   }
   if (hasExplicitBindingTypeTransform(fieldStmt)) {
-    if (!validateBuiltinMapKeyType(bindingOut, &structDef.templateArgs, error_)) {
+    if (!validateBuiltinComparableKeyType(bindingOut, &structDef.templateArgs, error_)) {
       return failExprDiagnostic(fieldStmt, error_);
     }
     return true;
@@ -27,7 +27,7 @@ bool SemanticsValidator::resolveStructFieldBinding(const Definition &structDef,
   if (lookupGraphLocalAutoBinding(structDef.fullPath, fieldStmt, graphBinding) &&
       graphBindingIsUsable(graphBinding)) {
     bindingOut = std::move(graphBinding);
-    if (!validateBuiltinMapKeyType(bindingOut, &structDef.templateArgs, error_)) {
+    if (!validateBuiltinComparableKeyType(bindingOut, &structDef.templateArgs, error_)) {
       return failExprDiagnostic(fieldStmt, error_);
     }
     return true;
@@ -100,7 +100,7 @@ bool SemanticsValidator::resolveStructFieldBinding(const Definition &structDef,
   if (inferBindingTypeFromInitializer(fieldStmt.args.front(), noParams, noLocals, inferred)) {
     if (!(inferred.typeName == "array" && inferred.typeTemplateArg.empty())) {
       bindingOut = std::move(inferred);
-      if (!validateBuiltinMapKeyType(bindingOut, &structDef.templateArgs, error_)) {
+      if (!validateBuiltinComparableKeyType(bindingOut, &structDef.templateArgs, error_)) {
         return failExprDiagnostic(fieldStmt, error_);
       }
       return true;
@@ -110,7 +110,7 @@ bool SemanticsValidator::resolveStructFieldBinding(const Definition &structDef,
           fieldStmt.args.front(), noParams, noLocals, inferred, hasAnyMathImport())) {
     if (!(inferred.typeName == "array" && inferred.typeTemplateArg.empty())) {
       bindingOut = std::move(inferred);
-      if (!validateBuiltinMapKeyType(bindingOut, &structDef.templateArgs, error_)) {
+      if (!validateBuiltinComparableKeyType(bindingOut, &structDef.templateArgs, error_)) {
         return failExprDiagnostic(fieldStmt, error_);
       }
       return true;
@@ -119,7 +119,7 @@ bool SemanticsValidator::resolveStructFieldBinding(const Definition &structDef,
   if (inferIdentityWrappedInitializer(fieldStmt.args.front(), inferred)) {
     if (!(inferred.typeName == "array" && inferred.typeTemplateArg.empty())) {
       bindingOut = std::move(inferred);
-      if (!validateBuiltinMapKeyType(bindingOut, &structDef.templateArgs, error_)) {
+      if (!validateBuiltinComparableKeyType(bindingOut, &structDef.templateArgs, error_)) {
         return failExprDiagnostic(fieldStmt, error_);
       }
       return true;
@@ -130,7 +130,7 @@ bool SemanticsValidator::resolveStructFieldBinding(const Definition &structDef,
     if (!structPath.empty()) {
       bindingOut.typeName = std::move(structPath);
       bindingOut.typeTemplateArg.clear();
-      if (!validateBuiltinMapKeyType(bindingOut, &structDef.templateArgs, error_)) {
+      if (!validateBuiltinComparableKeyType(bindingOut, &structDef.templateArgs, error_)) {
         return failExprDiagnostic(fieldStmt, error_);
       }
       return true;

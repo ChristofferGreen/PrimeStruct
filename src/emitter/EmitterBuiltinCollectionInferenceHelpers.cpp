@@ -172,7 +172,7 @@ bool isMapValue(const Expr &target, const std::unordered_map<std::string, Bindin
     }
     std::string keyType;
     std::string valueType;
-    return extractMapKeyValueTypesLocal(it->second, keyType, valueType);
+    return extractKeyValueCollectionTypesLocal(it->second, keyType, valueType);
   }
   if (target.kind == Expr::Kind::Call) {
     std::string collection;
@@ -271,9 +271,9 @@ bool inferCollectionElementTypeNameFromBinding(const BindingInfo &binding, std::
     typeOut = normalizeBindingTypeName(templateArg);
     return true;
   }
-  if (isMapCollectionTypeNameLocal(typeName) && !templateArg.empty()) {
+  if (isKeyValueCollectionTypeNameLocal(typeName) && !templateArg.empty()) {
     std::string keyType;
-    if (extractMapKeyValueTypesLocal(binding, keyType, typeOut)) {
+    if (extractKeyValueCollectionTypesLocal(binding, keyType, typeOut)) {
       typeOut = normalizeBindingTypeName(typeOut);
       return true;
     }

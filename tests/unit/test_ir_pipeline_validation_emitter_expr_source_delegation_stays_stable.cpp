@@ -342,14 +342,14 @@ TEST_CASE("semantics validator expr source delegation stays stable") {
   CHECK(semanticsExprCollectionPredicatesSource.find("isCanonicalMapTypeText") ==
         std::string::npos);
   CHECK(semanticsExprCollectionPredicatesSource.find(
-            "extractMapKeyValueTypesFromTypeText(typeText, keyType, valueType)") !=
+            "extractKeyValueCollectionTypesFromTypeText(typeText, keyType, valueType)") !=
         std::string::npos);
   CHECK(semanticsExprCollectionPredicatesSource.find(
             "base == \"std/collections/map\"") == std::string::npos);
   CHECK(semanticsExprCollectionAccessValidationSource.find("isCanonicalMapTypeText") ==
         std::string::npos);
   CHECK(semanticsExprCollectionAccessValidationSource.find(
-            "extractMapKeyValueTypesFromTypeText(receiverTypeText, mapKeyType, mapValueType)") !=
+            "extractKeyValueCollectionTypesFromTypeText(receiverTypeText, keyValueKeyType, keyValueValueType)") !=
         std::string::npos);
   CHECK(semanticsExprCollectionAccessValidationSource.find(
             "base == \"std/collections/map\"") == std::string::npos);

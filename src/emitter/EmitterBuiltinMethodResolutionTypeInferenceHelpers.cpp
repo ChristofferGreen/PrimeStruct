@@ -132,7 +132,7 @@ std::string inferCollectionReceiverTypeFromTypeText(const std::string &typeText)
     if ((base == "array" || base == "vector") && args.size() == 1) {
       return borrowed ? "" : base;
     }
-    if (isMapCollectionTypeNameLocal(base) && args.size() == 2) {
+    if (isKeyValueCollectionTypeNameLocal(base) && args.size() == 2) {
       return borrowed ? "" : "map";
     }
     return "";

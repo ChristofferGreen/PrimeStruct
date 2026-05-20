@@ -204,7 +204,7 @@ bool SemanticsValidator::isStringExprForArgumentValidation(
           if (definitionReturnTypeTextForArgumentValidation(*receiverDefIt->second,
                                                             receiverReturnType)) {
             receiverIsKeyValue =
-                extractMapKeyValueTypesFromTypeText(receiverReturnType, keyType, valueType);
+                extractKeyValueCollectionTypesFromTypeText(receiverReturnType, keyType, valueType);
           }
         }
       }

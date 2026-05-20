@@ -6,6 +6,42 @@ Legend:
 Finished items are periodically archived here from `docs/todo.md`; section headers record the archive date.
 
 **Todo Completion (May 20, 2026)**
+- [x] TODO-4535: Delete map collection type classifier API
+  - owner: ai
+  - created_at: 2026-05-20
+  - finished_at: 2026-05-20
+  - phase: Map stdlib ownership cutover
+  - parallel_track: map-zero-audit
+  - depends_on: TODO-4534
+  - split_from: TODO-4464
+  - outcome:
+    - Removed the remaining production/test helper API spellings for
+      `isMapCollectionTypeName`, `returnsMapCollectionType`,
+      `extractMapKeyValueTypes*`, `validateBuiltinMapKeyType`, and
+      `isBuiltinMapComparableKeyTypeName`.
+    - Renamed the retained classifier path to key/value and comparable-key
+      terms so it is not exposed as a stdlib-map API boundary.
+    - Kept map behavior covered through stdlib map ownership tests, focused
+      semantic map tests, and source-lock tests that inspect the renamed
+      helper surface.
+    - Promoted TODO-4536 as the next map zero-audit leaf for deleting the late
+      semantic map builtin validation boundary.
+  - validation:
+    - `cmake --build build-release --target PrimeStruct_semantics_tests`
+      passed.
+    - `cmake --build build-release --target PrimeStruct_misc_tests` passed;
+      `cd build-release && ./PrimeStruct_misc_tests --test-suite=primestruct.stdlib.map_ownership --no-skip`
+      passed.
+    - `cmake --build build-release --target PrimeStruct_backend_ir_tests`
+      passed; focused source-lock test cases for template monomorph,
+      semantics validator expression, and semantics validator infer
+      delegation passed.
+    - The focused semantic map behavior window passed after updating the
+      stale `tryAt` key diagnostic expectation to the current validation
+      result.
+    - `rg` confirmed the old map-named classifier and key-validation API
+      names are absent from production `src/`, `include/`, and `tests/`.
+
 - [x] TODO-4534: Delete map constructor/helper shim boundary
   - owner: ai
   - created_at: 2026-05-20

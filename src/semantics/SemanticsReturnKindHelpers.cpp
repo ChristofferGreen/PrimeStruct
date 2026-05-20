@@ -139,9 +139,9 @@ ReturnKind getReturnKind(const Definition &def,
           base == "uninitialized") {
         return args.size() == 1 && isAllowedCollectionTypeArg(args.front());
       }
-      if (isMapCollectionTypeName(base)) {
+      if (isKeyValueCollectionTypeName(base)) {
         return args.size() == 2 &&
-               validateBuiltinMapKeyType(args.front(), &def.templateArgs, error) &&
+               validateBuiltinComparableKeyType(args.front(), &def.templateArgs, error) &&
                isAllowedCollectionTypeArg(args.back());
       }
       return false;
@@ -189,7 +189,7 @@ ReturnKind getReturnKind(const Definition &def,
           error = "map return type requires exactly two template arguments on " + def.fullPath;
           return ReturnKind::Unknown;
         }
-        if (!validateBuiltinMapKeyType(args.front(), &def.templateArgs, error)) {
+        if (!validateBuiltinComparableKeyType(args.front(), &def.templateArgs, error)) {
           return ReturnKind::Unknown;
         }
         if (!isAllowedCollectionTypeArg(args.front()) || !isAllowedCollectionTypeArg(args.back())) {

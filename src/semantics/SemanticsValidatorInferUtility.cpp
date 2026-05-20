@@ -69,7 +69,7 @@ ReturnKind SemanticsValidator::inferReferenceTargetKind(const std::string &templ
       return ReturnKind::Array;
     }
   }
-  if (splitTemplateTypeName(templateArg, base, arg) && isMapCollectionTypeName(base)) {
+  if (splitTemplateTypeName(templateArg, base, arg) && isKeyValueCollectionTypeName(base)) {
     std::vector<std::string> args;
     if (splitTopLevelTemplateArgs(arg, args) && args.size() == 2) {
       return ReturnKind::Array;
@@ -98,7 +98,7 @@ ReturnKind SemanticsValidator::inferUninitializedTargetKind(const std::string &t
       return ReturnKind::Array;
     }
   }
-  if (splitTemplateTypeName(templateArg, base, arg) && isMapCollectionTypeName(base)) {
+  if (splitTemplateTypeName(templateArg, base, arg) && isKeyValueCollectionTypeName(base)) {
     std::vector<std::string> args;
     if (splitTopLevelTemplateArgs(arg, args) && args.size() == 2) {
       return ReturnKind::Array;
