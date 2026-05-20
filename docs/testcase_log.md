@@ -1,11 +1,6 @@
 # Testcase Log
 
 ## Current Known Failures
-- `PrimeStruct_backend_ir_tests --test-case="ir lowerer result helpers resolve indexed args-pack Result expressions" --no-skip`
-  is stale after the map stdlib-ownership cutover. On 2026-05-18 it failed to
-  resolve `resolveResultExprInfoFromLocals` for the indexed args-pack Result
-  expression while the adjacent statement-binding args-pack lowerer probe
-  passed.
 - `PrimeStruct_semantics_tests --test-case="graph type resolver infers map value return kinds through shared infer helper" --no-skip`
   is stale after the map stdlib-ownership cutover. On 2026-05-17 it failed
   validation before return-kind assertions; the fixture still imports
@@ -231,6 +226,13 @@
   the string-valued map access emission fixture returned `NotHandled`.
 
 ## Recent Test Runs
+- 2026-05-20 11:18 CEST | pass | mode: release | command:
+  `cmake --build build-release --target PrimeStruct_backend_ir_tests`;
+  `cd build-release && ./PrimeStruct_backend_ir_tests --test-case="ir lowerer result helpers resolve indexed args-pack Result expressions" --no-skip`;
+  `cd build-release && ./PrimeStruct_backend_ir_tests --test-case="ir lowerer result helpers use semantic indexed args-pack Result facts" --no-skip`
+  | failures: none | notes: Result metadata now treats bare `at` as an
+  indexed access only when the receiver local is already a Result args pack,
+  preserving semantic-product query facts for indexed args-pack Results.
 - 2026-05-20 11:05 CEST | pass | mode: release | command:
   `cmake --build build-release --target PrimeStruct_semantics_tests`;
   `cd build-release && ./PrimeStruct_semantics_tests --test-case="semantic product validates direct return method-like borrowed helper-return experimental soa_vector reads" --no-skip`
@@ -4631,6 +4633,7 @@
 - 2026-05-12 17:28 local | fail | mode: release | command: `./scripts/compile.sh --release` | failures: 146 CTest targets | notes: baseline after preflight checkpoint failed; stabilization blocks TODO work
 
 ## Resolved Failures
+- [x] ir lowerer result helpers resolve indexed args-pack Result expressions | resolved: 2026-05-20 11:18 CEST | validating command: `cmake --build build-release --target PrimeStruct_backend_ir_tests`; `cd build-release && ./PrimeStruct_backend_ir_tests --test-case="ir lowerer result helpers resolve indexed args-pack Result expressions" --no-skip`; `cd build-release && ./PrimeStruct_backend_ir_tests --test-case="ir lowerer result helpers use semantic indexed args-pack Result facts" --no-skip` | notes: Result metadata now has a receiver-scoped bare `at` fallback for locals already known to be Result args packs, without reintroducing generic map/access handling.
 - [x] semantic product validates direct return method-like borrowed helper-return experimental soa_vector reads | resolved: 2026-05-20 11:05 CEST | validating command: `cmake --build build-release --target PrimeStruct_semantics_tests`; `cd build-release && ./PrimeStruct_semantics_tests --test-case="semantic product validates direct return method-like borrowed helper-return experimental soa_vector reads" --no-skip` | notes: fixture now uses self-contained public `soa<Particle>` helper stubs and checks borrowed `count_ref`/`get_ref` semantic-product targets without depending on old `SoaVector<T>` imports.
 - [x] implicit map constructors infer canonical auto locals and auto returns | resolved: 2026-05-20 10:34 CEST | validating command: `cmake --build build-release --target PrimeStruct_semantics_tests`; `cd build-release && ./PrimeStruct_semantics_tests --test-case="implicit map constructors infer canonical auto locals and auto returns" --no-skip` | notes: refreshed the stale fixture to materialize the `i32` payload before `Result.ok`; canonical map auto locals, auto returns, inserts, counts, and lookups still validate.
 - [x] ir lowerer call helpers source delegation stays stable | resolved: 2026-05-18 18:32 local | validating command: `cmake --build build-release --target PrimeStruct_backend_ir_tests`; `cd build-release && ./PrimeStruct_backend_ir_tests --test-case="ir lowerer call helpers emit map lookup loop search scaffold,ir lowerer call helpers try emit map access lookup,ir lowerer call helpers resolve map lookup string keys,ir lowerer call helpers source delegation stays stable" --no-skip` | notes: source lock now matches the current key/value lookup helper names, asserts removed map-specific call-resolution and inline-dispatch helpers are absent, and preserves the SoA split-string source checks.

@@ -1003,6 +1003,31 @@ bool resolveResultExprInfoFromLocals(const Expr &expr,
     targetInfoOut.keyValueValueKind = valueKindFromTypeName(collectionArgs[1]);
     return true;
   };
+  auto getResultArgsPackAccessName = [&](const Expr &candidate, std::string &accessNameOut) {
+    if (getBuiltinArrayAccessName(candidate, accessNameOut)) {
+      return true;
+    }
+    if (candidate.kind != Expr::Kind::Call || candidate.args.size() != 2 ||
+        candidate.args.front().kind != Expr::Kind::Name || !candidate.namespacePrefix.empty()) {
+      return false;
+    }
+    auto localIt = localsIn.find(candidate.args.front().name);
+    if (localIt == localsIn.end() || !localIt->second.isArgsPack || !localIt->second.isResult) {
+      return false;
+    }
+    std::string rawName = candidate.name;
+    if (!rawName.empty() && rawName.front() == '/') {
+      rawName.erase(rawName.begin());
+    }
+    if (rawName.find('/') != std::string::npos) {
+      return false;
+    }
+    if (rawName == "at" || rawName == "at_unsafe") {
+      accessNameOut = rawName;
+      return true;
+    }
+    return false;
+  };
   if (expr.kind == Expr::Kind::Call && expr.isMethodCall && !expr.args.empty() &&
       isIndexedArgsPackFileHandleReceiver(expr.args.front())) {
     if (expr.name == "write" || expr.name == "write_line" || expr.name == "write_byte" || expr.name == "read_byte" ||
@@ -1034,7 +1059,8 @@ bool resolveResultExprInfoFromLocals(const Expr &expr,
     }
   }
   std::string accessName;
-  if (getBuiltinArrayAccessName(expr, accessName) && expr.args.size() == 2 && expr.args.front().kind == Expr::Kind::Name) {
+  if (getResultArgsPackAccessName(expr, accessName) && expr.args.size() == 2 &&
+      expr.args.front().kind == Expr::Kind::Name) {
     bool hasSemanticQuery = false;
     if (resolveSemanticQueryResultInfoWithPresence(
             expr, semanticProgram, semanticIndex, errorOut, out, hasSemanticQuery)) {
@@ -1087,7 +1113,7 @@ bool resolveResultExprInfoFromLocals(const Expr &expr,
         return true;
       }
     }
-    if (targetExpr.kind == Expr::Kind::Call && getBuiltinArrayAccessName(targetExpr, accessName) &&
+    if (targetExpr.kind == Expr::Kind::Call && getResultArgsPackAccessName(targetExpr, accessName) &&
         targetExpr.args.size() == 2 && targetExpr.args.front().kind == Expr::Kind::Name) {
       bool hasSemanticTargetQuery = false;
       if (resolveSemanticQueryResultInfoWithPresence(targetExpr,
