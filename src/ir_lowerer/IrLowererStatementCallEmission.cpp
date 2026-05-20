@@ -783,7 +783,7 @@ static bool rewriteKeyValueInsertHelperStatementToCanonical(
   if (receiverIndex >= stmt.args.size()) {
     return false;
   }
-  const auto inferCallKeyValueTargetInfo = [&](const Expr &targetExpr, KeyValueAccessTargetInfo &targetInfoOut) {
+  const auto inferCallKeyValueTargetInfo = [&](const Expr &targetExpr, CollectionPairTypeInfo &targetInfoOut) {
     auto normalizeInsertHelperStem = [&](const std::string &path) {
       std::string helperName = path;
       if (!helperName.empty() && helperName.front() == '/') {
@@ -919,7 +919,7 @@ static bool rewriteKeyValueInsertHelperStatementToCanonical(
     };
     auto tryPopulateFromSemanticTypeText = [&](SymbolId typeTextId,
                                                const std::string &typeText,
-                                               KeyValueAccessTargetInfo &targetInfoOut) {
+                                               CollectionPairTypeInfo &targetInfoOut) {
       const std::string resolvedTypeText =
           resolveStatementCallSemanticTypeText(semanticProgram, typeTextId, typeText);
       if (resolvedTypeText.empty()) {
@@ -935,7 +935,7 @@ static bool rewriteKeyValueInsertHelperStatementToCanonical(
       return true;
     };
     auto tryPopulateFromSemanticCollectionSpecialization =
-        [&](const Expr &receiverExpr, KeyValueAccessTargetInfo &targetInfoOut, bool &hasSemanticMapFactOut) {
+        [&](const Expr &receiverExpr, CollectionPairTypeInfo &targetInfoOut, bool &hasSemanticMapFactOut) {
       if (semanticIndex == nullptr || receiverExpr.semanticNodeId == 0) {
         return false;
       }
@@ -971,7 +971,7 @@ static bool rewriteKeyValueInsertHelperStatementToCanonical(
     };
     auto tryPopulateFromSemanticReceiverFact =
         [&](const Expr &receiverExpr,
-            KeyValueAccessTargetInfo &targetInfoOut,
+            CollectionPairTypeInfo &targetInfoOut,
             bool &hasSemanticMapFactOut) {
       hasSemanticMapFactOut = false;
       if (semanticProgram == nullptr ||
@@ -1128,7 +1128,7 @@ static bool rewriteKeyValueInsertHelperStatementToCanonical(
     // wrapped args-pack map-access forms can flow through the same typed
     // map-target inference used by direct receivers.
     auto canonicalTargetInfo =
-        resolveKeyValueAccessTargetInfo(*canonicalReceiverExpr,
+        resolveCollectionPairTypeInfo(*canonicalReceiverExpr,
                                    localsIn,
                                    {},
                                    semanticProgram,
@@ -1184,7 +1184,7 @@ static bool rewriteKeyValueInsertHelperStatementToCanonical(
       if (!inferDeclaredReturnCollection(*resolvedCallee, collectionName, collectionArgs) ||
           collectionName != "map" ||
           collectionArgs.size() != 2) {
-        return inferForwardedKeyValueAccessTargetInfo(
+        return inferForwardedCollectionPairTypeInfo(
             *canonicalReceiverExpr, *resolvedCallee, localsIn, {}, targetInfoOut);
       }
       targetInfoOut.isKeyValueTarget = true;
@@ -1287,7 +1287,7 @@ static bool rewriteKeyValueInsertHelperStatementToCanonical(
     return false;
   };
 
-  KeyValueAccessTargetInfo targetInfo;
+  CollectionPairTypeInfo targetInfo;
   if (!inferCallKeyValueTargetInfo(stmt.args[receiverIndex], targetInfo)) {
     return false;
   }

@@ -230,10 +230,10 @@ This file stores durable session-derived facts that are useful in later work. Ke
   map or key/value local kind: `LocalInfo::Kind::Map` and
   `LocalInfo::Kind::KeyValueCollection` are both retired, and the
   `referenceToKeyValueCollection` / `pointerToKeyValueCollection` wrapper
-  flags are gone. Temporary key/value scalar facts, access-target helpers,
+  flags are gone. Temporary key/value scalar facts,
   setup-inference access element-kind helpers, and
   inline/native-tail contains/tryAt predicates carry backing details until
-  later TODO-4543/TODO-4464 slices remove the remaining C++ map
+  later TODO-4464 slices remove the remaining C++ map
   substrate; key comparison opcode selection plus inline native dispatch
   published-helper
   metadata wrappers, builtin-name helper-surface checks, and access-target
@@ -330,6 +330,18 @@ This file stores durable session-derived facts that are useful in later work. Ke
   source-lock, builtin-access, explicit-map-helper native-tail, and native-tail
   orchestration tests passed, and `rg` found no deleted wrapper symbols in
   `src/ir_lowerer`, `include/primec/testing`, or `CMakeLists.txt`.
+
+### lowerer-map-access-target-api-is-retired
+- Updated: 2026-05-20
+- Tags: ir, lowerer, collections
+- Fact: The lowerer no longer exposes `KeyValueAccessTargetInfo` or
+  `ResolveCallKeyValueAccessTargetInfoFn`; residual pair-collection receiver
+  facts flow through generic `CollectionPairTypeInfo` helper APIs instead.
+- Evidence: TODO-4543 renamed the production/testing helper API to
+  `CollectionPairTypeInfo`, `resolveCollectionPairTypeInfo`, and related
+  functions, source-locked the retired names out of
+  `IrLowererAccessTargetResolution.cpp`, and kept canonical insert's
+  statement-context void-helper lowering failure split into TODO-4544.
 
 ### map-compatibility-aliases-require-source-definitions
 - Updated: 2026-05-18

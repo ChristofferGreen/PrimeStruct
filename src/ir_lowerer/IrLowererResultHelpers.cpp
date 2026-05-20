@@ -985,7 +985,7 @@ bool resolveResultExprInfoFromLocals(const Expr &expr,
     out.errorType = local.resultErrorType;
     return true;
   };
-  auto inferCallKeyValueTargetInfo = [&](const Expr &targetExpr, KeyValueAccessTargetInfo &targetInfoOut) {
+  auto inferCallKeyValueTargetInfo = [&](const Expr &targetExpr, CollectionPairTypeInfo &targetInfoOut) {
     targetInfoOut = {};
     const Definition *callee = resolveDefinitionCallFn(targetExpr);
     if (callee == nullptr) {
@@ -995,7 +995,7 @@ bool resolveResultExprInfoFromLocals(const Expr &expr,
     std::vector<std::string> collectionArgs;
     if (!inferDeclaredReturnCollection(*callee, collectionName, collectionArgs) ||
         collectionName != "map" || collectionArgs.size() != 2) {
-      return inferForwardedKeyValueAccessTargetInfo(
+      return inferForwardedCollectionPairTypeInfo(
           targetExpr, *callee, localsIn, {}, targetInfoOut);
     }
     targetInfoOut.isKeyValueTarget = true;
@@ -1395,7 +1395,7 @@ bool resolveResultExprInfoFromLocals(const Expr &expr,
       out.errorType = "ContainerError";
       return true;
     };
-    const auto methodTargetInfo = resolveKeyValueAccessTargetInfo(expr.args.front(), localsIn, inferCallKeyValueTargetInfo);
+    const auto methodTargetInfo = resolveCollectionPairTypeInfo(expr.args.front(), localsIn, inferCallKeyValueTargetInfo);
     if (methodTargetInfo.isKeyValueTarget && assignTryAtMapResultInfo(methodTargetInfo.keyValueValueKind)) {
       return true;
     }
@@ -1429,7 +1429,7 @@ bool resolveResultExprInfoFromLocals(const Expr &expr,
     }
   }
   if (expr.kind == Expr::Kind::Call && !expr.args.empty() && isMapTryAtCallName(expr)) {
-    const auto targetInfo = resolveKeyValueAccessTargetInfo(expr.args.front(), localsIn, inferCallKeyValueTargetInfo);
+    const auto targetInfo = resolveCollectionPairTypeInfo(expr.args.front(), localsIn, inferCallKeyValueTargetInfo);
     if (targetInfo.isKeyValueTarget && targetInfo.keyValueValueKind != LocalInfo::ValueKind::Unknown) {
       out.isResult = true;
       out.hasValue = true;

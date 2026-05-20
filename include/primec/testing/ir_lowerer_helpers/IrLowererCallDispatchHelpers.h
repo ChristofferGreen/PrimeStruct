@@ -123,7 +123,7 @@ enum class SemanticStringAccessTargetKind {
   String,
   NonString,
 };
-struct KeyValueAccessTargetInfo {
+struct CollectionPairTypeInfo {
   bool isKeyValueTarget = false;
   LocalInfo::ValueKind keyValueKeyKind = LocalInfo::ValueKind::Unknown;
   LocalInfo::ValueKind keyValueValueKind = LocalInfo::ValueKind::Unknown;
@@ -142,7 +142,7 @@ struct ArrayVectorAccessTargetInfo {
   int32_t elemSlotCount = 0;
   std::string structTypeName;
 };
-using ResolveCallKeyValueAccessTargetInfoFn = std::function<bool(const Expr &, KeyValueAccessTargetInfo &)>;
+using ResolveCallCollectionPairTypeInfoFn = std::function<bool(const Expr &, CollectionPairTypeInfo &)>;
 using ResolveCallArrayVectorAccessTargetInfoFn =
     std::function<bool(const Expr &, ArrayVectorAccessTargetInfo &)>;
 struct KeyValueLookupLoopLocals {
@@ -225,7 +225,7 @@ NativeCallTailDispatchResult tryEmitNativeCallTailDispatch(
     const std::function<bool(const Expr &, const LocalMap &, int32_t &, size_t &)> &resolveStringTableTarget,
     size_t stringTableCount,
     const std::function<bool(const Expr &, const LocalMap &)> &emitExpr,
-    const ResolveCallKeyValueAccessTargetInfoFn &resolveCallKeyValueAccessTargetInfo,
+    const ResolveCallCollectionPairTypeInfoFn &resolveCallCollectionPairTypeInfo,
     const ResolveCallArrayVectorAccessTargetInfoFn &resolveCallArrayVectorAccessTargetInfo,
     const std::function<bool(const Expr &, std::string &)> &tryGetPrintBuiltinName,
     const std::function<LocalInfo::ValueKind(const Expr &, const LocalMap &)> &inferExprKind,
@@ -249,7 +249,7 @@ NativeCallTailDispatchResult tryEmitNativeCallTailDispatch(
     const std::function<bool(const Expr &, const LocalMap &)> &isEntryArgsName,
     const std::function<bool(const Expr &, const LocalMap &, int32_t &, size_t &)> &resolveStringTableTarget,
     const std::function<bool(const Expr &, const LocalMap &)> &emitExpr,
-    const ResolveCallKeyValueAccessTargetInfoFn &resolveCallKeyValueAccessTargetInfo,
+    const ResolveCallCollectionPairTypeInfoFn &resolveCallCollectionPairTypeInfo,
     const ResolveCallArrayVectorAccessTargetInfoFn &resolveCallArrayVectorAccessTargetInfo,
     const std::function<bool(const Expr &, std::string &)> &tryGetPrintBuiltinName,
     const std::function<LocalInfo::ValueKind(const Expr &, const LocalMap &)> &inferExprKind,
@@ -330,7 +330,7 @@ NativeCallTailDispatchResult tryEmitNativeCallTailDispatchWithLocals(
     const std::function<bool(const Expr &, const LocalMap &, int32_t &, size_t &)> &resolveStringTableTarget,
     size_t stringTableCount,
     const std::function<bool(const Expr &, const LocalMap &)> &emitExpr,
-    const ResolveCallKeyValueAccessTargetInfoFn &resolveCallKeyValueAccessTargetInfo,
+    const ResolveCallCollectionPairTypeInfoFn &resolveCallCollectionPairTypeInfo,
     const ResolveCallArrayVectorAccessTargetInfoFn &resolveCallArrayVectorAccessTargetInfo,
     const std::function<bool(const Expr &, std::string &)> &tryGetPrintBuiltinName,
     const std::function<LocalInfo::ValueKind(const Expr &, const LocalMap &)> &inferExprKind,
@@ -354,7 +354,7 @@ NativeCallTailDispatchResult tryEmitNativeCallTailDispatchWithLocals(
     const std::function<bool(const Expr &, const LocalMap &)> &isEntryArgsName,
     const std::function<bool(const Expr &, const LocalMap &, int32_t &, size_t &)> &resolveStringTableTarget,
     const std::function<bool(const Expr &, const LocalMap &)> &emitExpr,
-    const ResolveCallKeyValueAccessTargetInfoFn &resolveCallKeyValueAccessTargetInfo,
+    const ResolveCallCollectionPairTypeInfoFn &resolveCallCollectionPairTypeInfo,
     const ResolveCallArrayVectorAccessTargetInfoFn &resolveCallArrayVectorAccessTargetInfo,
     const std::function<bool(const Expr &, std::string &)> &tryGetPrintBuiltinName,
     const std::function<LocalInfo::ValueKind(const Expr &, const LocalMap &)> &inferExprKind,

@@ -472,7 +472,7 @@
               return std::nullopt;
             }
             const auto inferCallKeyValueTargetInfo =
-                [&](const Expr &targetExpr, ir_lowerer::KeyValueAccessTargetInfo &out) {
+                [&](const Expr &targetExpr, ir_lowerer::CollectionPairTypeInfo &out) {
                   out = {};
                   const Definition *callee =
                       resolveCollectionExprDirectDefinition(targetExpr);
@@ -485,7 +485,7 @@
                           *callee, inferredCollectionName, inferredCollectionArgs) ||
                       inferredCollectionName != "map" ||
                       inferredCollectionArgs.size() != 2) {
-                    return ir_lowerer::inferForwardedKeyValueAccessTargetInfo(
+                    return ir_lowerer::inferForwardedCollectionPairTypeInfo(
                         targetExpr, *callee, localsIn, {}, out);
                   }
                   out.isKeyValueTarget = true;
@@ -497,7 +497,7 @@
                          out.keyValueValueKind != ir_lowerer::LocalInfo::ValueKind::Unknown;
                 };
             const auto keyValueTargetInfo =
-                ir_lowerer::resolveKeyValueAccessTargetInfo(
+                ir_lowerer::resolveCollectionPairTypeInfo(
                     *receiverExpr,
                     localsIn,
                     inferCallKeyValueTargetInfo,
@@ -1144,7 +1144,7 @@
           if (resolveDefinitionCall(callExpr) != nullptr) {
             return false;
           }
-          ir_lowerer::KeyValueAccessTargetInfo targetInfoOut;
+          ir_lowerer::CollectionPairTypeInfo targetInfoOut;
           const Definition *callee =
               resolveCollectionExprDirectDefinition(callExpr.args.front());
           if (callee == nullptr) {

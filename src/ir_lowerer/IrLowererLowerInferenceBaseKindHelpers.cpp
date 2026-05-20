@@ -1017,7 +1017,7 @@ bool inferMapTryAtResultValueKind(const Expr &expr,
     return false;
   }
   const auto targetInfo =
-      resolveKeyValueAccessTargetInfo(expr.args.front(), localsIn, {}, semanticProgram, semanticIndex);
+      resolveCollectionPairTypeInfo(expr.args.front(), localsIn, {}, semanticProgram, semanticIndex);
   if (!targetInfo.isKeyValueTarget || targetInfo.keyValueValueKind == LocalInfo::ValueKind::Unknown) {
     return false;
   }
@@ -1035,7 +1035,7 @@ bool inferMapContainsResultKind(const Expr &expr,
     return false;
   }
   const auto targetInfo =
-      resolveKeyValueAccessTargetInfo(expr.args.front(), localsIn, {}, semanticProgram, semanticIndex);
+      resolveCollectionPairTypeInfo(expr.args.front(), localsIn, {}, semanticProgram, semanticIndex);
   if (!targetInfo.isKeyValueTarget) {
     return false;
   }

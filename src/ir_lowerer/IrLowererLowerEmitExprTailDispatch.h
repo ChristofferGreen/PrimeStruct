@@ -184,7 +184,7 @@
             ir_lowerer::buildSemanticProductIndex(semanticProgram);
         const SemanticProductIndex *const tailDispatchKeyValueSemanticIndexPtr =
             semanticProgram == nullptr ? nullptr : &tailDispatchKeyValueSemanticIndex;
-        const auto inferCallKeyValueTargetInfo = [&](const Expr &targetExpr, ir_lowerer::KeyValueAccessTargetInfo &out) {
+        const auto inferCallKeyValueTargetInfo = [&](const Expr &targetExpr, ir_lowerer::CollectionPairTypeInfo &out) {
           out = {};
           const Definition *callee =
               resolveTailDispatchDirectHelperDefinition(targetExpr);
@@ -196,7 +196,7 @@
           if (!ir_lowerer::inferDeclaredReturnCollection(*callee, collectionName, collectionArgs) ||
               collectionName != "map" ||
               collectionArgs.size() != 2) {
-            return ir_lowerer::inferForwardedKeyValueAccessTargetInfo(
+            return ir_lowerer::inferForwardedCollectionPairTypeInfo(
                 targetExpr, *callee, localsIn, {}, out);
           }
           out.isKeyValueTarget = true;
@@ -278,7 +278,7 @@
             return false;
           }
           const auto targetInfo =
-              ir_lowerer::resolveKeyValueAccessTargetInfo(
+              ir_lowerer::resolveCollectionPairTypeInfo(
                   callExpr.args[receiverIndex],
                   localsIn,
                   inferCallKeyValueTargetInfo,
@@ -360,7 +360,7 @@
                         semanticProgram, *canonicalKeyValueHelperSemanticIndexPtr, receiverExpr) != nullptr);
           };
           const auto receiverKeyValueTargetInfo =
-              ir_lowerer::resolveKeyValueAccessTargetInfo(
+              ir_lowerer::resolveCollectionPairTypeInfo(
                   callExpr.args.front(),
                   localsIn,
                   inferCallKeyValueTargetInfo,
@@ -372,7 +372,7 @@
 
           auto inferExperimentalKeyValueStructPath = [&](const Expr &receiverExpr) {
             const auto keyValueTargetInfo =
-                ir_lowerer::resolveKeyValueAccessTargetInfo(
+                ir_lowerer::resolveCollectionPairTypeInfo(
                     receiverExpr,
                     localsIn,
                     inferCallKeyValueTargetInfo,
@@ -517,7 +517,7 @@
           const SemanticProductIndex *const explicitKeyValueHelperSemanticIndexPtr =
               semanticProgram == nullptr ? nullptr : &explicitKeyValueHelperSemanticIndex;
           const auto keyValueTargetInfo =
-              ir_lowerer::resolveKeyValueAccessTargetInfo(
+              ir_lowerer::resolveCollectionPairTypeInfo(
                   callExpr.args.front(),
                   localsIn,
                   inferCallKeyValueTargetInfo,
@@ -646,7 +646,7 @@
           const SemanticProductIndex *const keyValueCountSemanticIndexPtr =
               semanticProgram == nullptr ? nullptr : &keyValueCountSemanticIndex;
           const auto keyValueTargetInfo =
-              ir_lowerer::resolveKeyValueAccessTargetInfo(
+              ir_lowerer::resolveCollectionPairTypeInfo(
                   callExpr.args.front(),
                   localsIn,
                   inferCallKeyValueTargetInfo,
@@ -773,7 +773,7 @@
           const SemanticProductIndex *const canonicalKeyValueHelperSemanticIndexPtr =
               semanticProgram == nullptr ? nullptr : &canonicalKeyValueHelperSemanticIndex;
           const auto keyValueTargetInfo =
-              ir_lowerer::resolveKeyValueAccessTargetInfo(
+              ir_lowerer::resolveCollectionPairTypeInfo(
                   callExpr.args.front(),
                   localsIn,
                   inferCallKeyValueTargetInfo,
@@ -945,7 +945,7 @@
               semanticProgram == nullptr ? nullptr : &borrowedKeyValueReceiverSemanticIndex;
           auto resolveBorrowedKeyValueReceiverInfo =
               [&](const Expr &receiverExpr) {
-                return ir_lowerer::resolveKeyValueAccessTargetInfo(
+                return ir_lowerer::resolveCollectionPairTypeInfo(
                     receiverExpr,
                     localsIn,
                     inferCallKeyValueTargetInfo,
@@ -1161,8 +1161,8 @@
             [&](const Expr &valueExpr, const ir_lowerer::LocalMap &localMap) {
               return emitExpr(valueExpr, localMap);
             },
-            [&](const Expr &targetCallExpr, ir_lowerer::KeyValueAccessTargetInfo &targetInfoOut) {
-              targetInfoOut = ir_lowerer::resolveKeyValueAccessTargetInfo(
+            [&](const Expr &targetCallExpr, ir_lowerer::CollectionPairTypeInfo &targetInfoOut) {
+              targetInfoOut = ir_lowerer::resolveCollectionPairTypeInfo(
                   targetCallExpr,
                   localsIn,
                   inferCallKeyValueTargetInfo,

@@ -223,7 +223,7 @@ bool classifySemanticArrayVectorAccessTypeText(const std::string &typeText,
 }
 
 bool classifySemanticKeyValueAccessTypeText(const std::string &typeText,
-                                       KeyValueAccessTargetInfo &targetInfoOut) {
+                                       CollectionPairTypeInfo &targetInfoOut) {
   std::string base;
   std::string argText;
   if (!splitTemplateTypeName(trimTemplateTypeText(typeText), base, argText)) {
@@ -336,11 +336,11 @@ bool resolveSemanticArrayVectorAccessTargetInfo(
   return false;
 }
 
-bool resolveSemanticKeyValueAccessTargetInfo(
+bool resolveSemanticCollectionPairTypeInfo(
     const Expr &targetExpr,
     const SemanticProgram *semanticProgram,
     const SemanticProductIndex *semanticIndex,
-    KeyValueAccessTargetInfo &targetInfoOut,
+    CollectionPairTypeInfo &targetInfoOut,
     bool &hasSemanticFactOut) {
   hasSemanticFactOut = false;
   if (semanticProgram == nullptr || semanticIndex == nullptr || targetExpr.semanticNodeId == 0) {
@@ -506,7 +506,7 @@ bool isForwardedKeyValueNewConstructor(const Expr &expr) {
          constructorName == forwardedEmptyKeyValueConstructorMemberName();
 }
 
-bool inferDirectKeyValueConstructorTargetInfo(const Expr &target, KeyValueAccessTargetInfo &info) {
+bool inferDirectKeyValueConstructorTargetInfo(const Expr &target, CollectionPairTypeInfo &info) {
   info = {};
   if (target.kind != Expr::Kind::Call || target.isBinding || target.isMethodCall) {
     return false;
@@ -641,13 +641,13 @@ SemanticStringAccessTargetKind classifyAccessTargetSemanticStringKind(
   return SemanticStringAccessTargetKind::Unknown;
 }
 
-KeyValueAccessTargetInfo resolveKeyValueAccessTargetInfo(
+CollectionPairTypeInfo resolveCollectionPairTypeInfo(
     const Expr &target,
     const LocalMap &localsIn,
-    const ResolveCallKeyValueAccessTargetInfoFn &resolveCallKeyValueAccessTargetInfo,
+    const ResolveCallCollectionPairTypeInfoFn &resolveCallCollectionPairTypeInfo,
     const SemanticProgram *semanticProgram,
     const SemanticProductIndex *semanticIndex) {
-  KeyValueAccessTargetInfo info;
+  CollectionPairTypeInfo info;
   const auto peelLocationWrappers = [&](const Expr &expr) {
     const Expr *current = &expr;
     while (current->kind == Expr::Kind::Call &&
@@ -756,7 +756,7 @@ KeyValueAccessTargetInfo resolveKeyValueAccessTargetInfo(
   }
 
   bool hasSemanticTargetFact = false;
-  if (resolveSemanticKeyValueAccessTargetInfo(
+  if (resolveSemanticCollectionPairTypeInfo(
           target, semanticProgram, semanticIndex, info, hasSemanticTargetFact)) {
     return info;
   }
@@ -764,9 +764,9 @@ KeyValueAccessTargetInfo resolveKeyValueAccessTargetInfo(
     return {};
   }
   if (target.kind == Expr::Kind::Name) {
-    if (target.semanticNodeId != 0 && resolveCallKeyValueAccessTargetInfo) {
-      KeyValueAccessTargetInfo inferred;
-      if (resolveCallKeyValueAccessTargetInfo(target, inferred)) {
+    if (target.semanticNodeId != 0 && resolveCallCollectionPairTypeInfo) {
+      CollectionPairTypeInfo inferred;
+      if (resolveCallCollectionPairTypeInfo(target, inferred)) {
         return inferred;
       }
     }
@@ -774,9 +774,9 @@ KeyValueAccessTargetInfo resolveKeyValueAccessTargetInfo(
     if (it != localsIn.end()) {
       populateFromDirectLocal(it->second, false);
     }
-    if (!info.isKeyValueTarget && resolveCallKeyValueAccessTargetInfo) {
-      KeyValueAccessTargetInfo inferred;
-      if (resolveCallKeyValueAccessTargetInfo(target, inferred)) {
+    if (!info.isKeyValueTarget && resolveCallCollectionPairTypeInfo) {
+      CollectionPairTypeInfo inferred;
+      if (resolveCallCollectionPairTypeInfo(target, inferred)) {
         return inferred;
       }
     }
@@ -825,13 +825,13 @@ KeyValueAccessTargetInfo resolveKeyValueAccessTargetInfo(
       }
     }
     std::string collection;
-    if (resolveCallKeyValueAccessTargetInfo) {
-      KeyValueAccessTargetInfo inferred;
-      if (resolveCallKeyValueAccessTargetInfo(target, inferred)) {
+    if (resolveCallCollectionPairTypeInfo) {
+      CollectionPairTypeInfo inferred;
+      if (resolveCallCollectionPairTypeInfo(target, inferred)) {
         return inferred;
       }
     }
-    KeyValueAccessTargetInfo directConstructorInfo;
+    CollectionPairTypeInfo directConstructorInfo;
     const bool hasDirectConstructorInfo =
         inferDirectKeyValueConstructorTargetInfo(target, directConstructorInfo);
     if (hasDirectConstructorInfo) {
@@ -848,24 +848,24 @@ KeyValueAccessTargetInfo resolveKeyValueAccessTargetInfo(
   return info;
 }
 
-KeyValueAccessTargetInfo resolveKeyValueAccessTargetInfo(
+CollectionPairTypeInfo resolveCollectionPairTypeInfo(
     const Expr &target,
     const LocalMap &localsIn,
-    const ResolveCallKeyValueAccessTargetInfoFn &resolveCallKeyValueAccessTargetInfo) {
-  return resolveKeyValueAccessTargetInfo(
-      target, localsIn, resolveCallKeyValueAccessTargetInfo, nullptr, nullptr);
+    const ResolveCallCollectionPairTypeInfoFn &resolveCallCollectionPairTypeInfo) {
+  return resolveCollectionPairTypeInfo(
+      target, localsIn, resolveCallCollectionPairTypeInfo, nullptr, nullptr);
 }
 
-KeyValueAccessTargetInfo resolveKeyValueAccessTargetInfo(const Expr &target, const LocalMap &localsIn) {
-  return resolveKeyValueAccessTargetInfo(target, localsIn, {}, nullptr, nullptr);
+CollectionPairTypeInfo resolveCollectionPairTypeInfo(const Expr &target, const LocalMap &localsIn) {
+  return resolveCollectionPairTypeInfo(target, localsIn, {}, nullptr, nullptr);
 }
 
-bool inferForwardedKeyValueAccessTargetInfo(
+bool inferForwardedCollectionPairTypeInfo(
     const Expr &target,
     const Definition &callee,
     const LocalMap &localsIn,
-    const ResolveCallKeyValueAccessTargetInfoFn &resolveCallKeyValueAccessTargetInfo,
-    KeyValueAccessTargetInfo &targetInfoOut) {
+    const ResolveCallCollectionPairTypeInfoFn &resolveCallCollectionPairTypeInfo,
+    CollectionPairTypeInfo &targetInfoOut) {
   targetInfoOut = {};
   if (target.kind != Expr::Kind::Call || target.isMethodCall || target.isBinding) {
     return false;
@@ -884,9 +884,9 @@ bool inferForwardedKeyValueAccessTargetInfo(
     return false;
   }
 
-  KeyValueAccessTargetInfo forwardedInfo =
-      resolveKeyValueAccessTargetInfo(
-          *forwardedArg, localsIn, resolveCallKeyValueAccessTargetInfo, nullptr, nullptr);
+  CollectionPairTypeInfo forwardedInfo =
+      resolveCollectionPairTypeInfo(
+          *forwardedArg, localsIn, resolveCallCollectionPairTypeInfo, nullptr, nullptr);
   if (!forwardedInfo.isKeyValueTarget) {
     return false;
   }
@@ -894,7 +894,7 @@ bool inferForwardedKeyValueAccessTargetInfo(
   return true;
 }
 
-bool validateKeyValueAccessTargetInfo(const KeyValueAccessTargetInfo &targetInfo,
+bool validateCollectionPairTypeInfo(const CollectionPairTypeInfo &targetInfo,
                                  const std::string &accessName,
                                  std::string &error) {
   if (!targetInfo.isKeyValueTarget) {

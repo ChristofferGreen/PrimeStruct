@@ -712,7 +712,7 @@ bool resolveMethodReceiverTarget(const Expr &receiverExpr,
       std::string accessName;
       return (getBuiltinArrayAccessName(candidateExpr, accessName) ||
               isSimpleCallName(candidateExpr, "at")) &&
-             resolveKeyValueAccessTargetInfo(candidateExpr.args.front(),
+             resolveCollectionPairTypeInfo(candidateExpr.args.front(),
                                         localsIn,
                                         {},
                                         semanticProgram,
@@ -726,7 +726,7 @@ bool resolveMethodReceiverTarget(const Expr &receiverExpr,
     auto isBareKeyValueTryAtReceiverProbeExpr = [&](const Expr &candidateExpr) {
       return candidateExpr.kind == Expr::Kind::Call && candidateExpr.args.size() == 2 &&
              isSimpleCallName(candidateExpr, "tryAt") &&
-             resolveKeyValueAccessTargetInfo(candidateExpr.args.front(),
+             resolveCollectionPairTypeInfo(candidateExpr.args.front(),
                                         localsIn,
                                         {},
                                         semanticProgram,

@@ -64,7 +64,7 @@ enum class SemanticStringAccessTargetKind {
   NonString,
 };
 
-struct KeyValueAccessTargetInfo {
+struct CollectionPairTypeInfo {
   bool isKeyValueTarget = false;
   LocalInfo::ValueKind keyValueKeyKind = LocalInfo::ValueKind::Unknown;
   LocalInfo::ValueKind keyValueValueKind = LocalInfo::ValueKind::Unknown;
@@ -85,7 +85,7 @@ struct ArrayVectorAccessTargetInfo {
   std::string structTypeName;
 };
 
-using ResolveCallKeyValueAccessTargetInfoFn = std::function<bool(const Expr &, KeyValueAccessTargetInfo &)>;
+using ResolveCallCollectionPairTypeInfoFn = std::function<bool(const Expr &, CollectionPairTypeInfo &)>;
 using ResolveCallArrayVectorAccessTargetInfoFn =
     std::function<bool(const Expr &, ArrayVectorAccessTargetInfo &)>;
 

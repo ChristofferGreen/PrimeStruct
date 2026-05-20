@@ -915,7 +915,7 @@
               const bool deferKeyValueCountToBuiltinEmitter =
                   helperName == "count" && expr.args.size() == 1 &&
                   hasSemanticKeyValueHelperDefinition(helperName) &&
-                  ir_lowerer::resolveKeyValueAccessTargetInfo(
+                  ir_lowerer::resolveCollectionPairTypeInfo(
                       expr.args.front(),
                       localsIn,
                       {},
@@ -1087,7 +1087,7 @@
                   structPath == experimentalCollectionTypePath("map", "Map") ||
                   matchesGeneratedSpecializedType(structPath, "map", "Map");
               const bool isSemanticKeyValueTarget =
-                  ir_lowerer::resolveKeyValueAccessTargetInfo(
+                  ir_lowerer::resolveCollectionPairTypeInfo(
                       targetExpr,
                       targetLocals,
                       {},

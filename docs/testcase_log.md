@@ -10,8 +10,29 @@
   string-valued map runtime fixture has since been retargeted to compile-only
   coverage because native runtime string-valued maps still hang after
   compilation.
+- `PrimeStruct_compile_run_tests --test-case="compiles and runs native builtin canonical map first-growth inserts" --no-skip`
+  currently fails after map-specific native dispatch removal with
+  `Native lowering error: void call not allowed in expression context:
+  /std/collections/map/insert__...`. TODO-4544 tracks the generic
+  statement-context void-helper lowering fix; do not restore a map-specific
+  native insert dispatch path for this failure.
 
 ## Recent Test Runs
+- 2026-05-20 19:51 CEST | partial | mode: release | command:
+  `cmake --build build-release --target PrimeStruct_backend_ir_tests`;
+  `cd build-release && ./PrimeStruct_backend_ir_tests --test-case="ir lowerer call helpers source delegation stays stable,ir lowerer collection helper rewrite guards explicit map defs,ir lowerer call helpers keep explicit map helpers out of native builtin emission" --no-skip`;
+  `cmake --build build-release --target PrimeStruct_compile_run_tests`;
+  `cd build-release && ./PrimeStruct_compile_run_tests --test-case="compiles native bare map at_unsafe through canonical helper,compiles and runs native map at_unsafe helper" --no-skip`;
+  `cd build-release && ./PrimeStruct_compile_run_tests --test-case="rejects native canonical namespaced map inserts on explicit experimental map bindings,compiles and runs native experimental map inserts" --no-skip`;
+  `cd build-release && ./PrimeStruct_compile_run_tests --test-case="compiles native bare map at_unsafe through canonical helper,compiles and runs native map at_unsafe helper,compiles and runs native builtin canonical map first-growth inserts" --no-skip`;
+  `git diff --check`;
+  `rg -n 'KeyValueAccessTargetInfo|ResolveCallKeyValueAccessTargetInfoFn|resolveKeyValueAccessTargetInfo|inferForwardedKeyValueAccessTargetInfo|validateKeyValueAccessTargetInfo|resolveCallKeyValueAccessTargetInfo' src/ir_lowerer include/primec/testing CMakeLists.txt`
+  | failures: `compiles and runs native builtin canonical map first-growth
+  inserts` fails with `void call not allowed in expression context` for the
+  stdlib map insert helper | notes: TODO-4543 retired the exposed
+  key/value access-target API names in favor of generic collection-pair type
+  facts; TODO-4544 owns the remaining generic statement-context void-helper
+  lowering failure.
 - 2026-05-20 19:28 CEST | pass | mode: release | command:
   `cmake --build build-release --target PrimeStruct_backend_ir_tests`;
   `cd build-release && ./PrimeStruct_backend_ir_tests --test-case="ir lowerer native effects leave map values to ordinary lowering,ir lowerer uninitialized type helpers report diagnostics" --no-skip`;

@@ -1,17 +1,17 @@
 struct SemanticProductIndex;
 struct SemanticProductTargetAdapter;
 
-KeyValueAccessTargetInfo resolveKeyValueAccessTargetInfo(const Expr &target,
+CollectionPairTypeInfo resolveCollectionPairTypeInfo(const Expr &target,
                                                const LocalMap &localsIn,
-                                               const ResolveCallKeyValueAccessTargetInfoFn &resolveCallKeyValueAccessTargetInfo);
-KeyValueAccessTargetInfo resolveKeyValueAccessTargetInfo(const Expr &target, const LocalMap &localsIn);
-bool inferForwardedKeyValueAccessTargetInfo(
+                                               const ResolveCallCollectionPairTypeInfoFn &resolveCallCollectionPairTypeInfo);
+CollectionPairTypeInfo resolveCollectionPairTypeInfo(const Expr &target, const LocalMap &localsIn);
+bool inferForwardedCollectionPairTypeInfo(
     const Expr &target,
     const Definition &callee,
     const LocalMap &localsIn,
-    const ResolveCallKeyValueAccessTargetInfoFn &resolveCallKeyValueAccessTargetInfo,
-    KeyValueAccessTargetInfo &targetInfoOut);
-bool validateKeyValueAccessTargetInfo(const KeyValueAccessTargetInfo &targetInfo,
+    const ResolveCallCollectionPairTypeInfoFn &resolveCallCollectionPairTypeInfo,
+    CollectionPairTypeInfo &targetInfoOut);
+bool validateCollectionPairTypeInfo(const CollectionPairTypeInfo &targetInfo,
                                  const std::string &accessName,
                                  std::string &error);
 SemanticStringAccessTargetKind classifyAccessTargetSemanticStringKind(

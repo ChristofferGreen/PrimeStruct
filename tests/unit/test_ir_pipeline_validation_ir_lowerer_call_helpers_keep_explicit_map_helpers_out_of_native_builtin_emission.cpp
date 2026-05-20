@@ -29,8 +29,8 @@ TEST_CASE("ir lowerer call helpers infer forwarded map access targets") {
   wrapCall.name = "wrapValues";
   wrapCall.args.push_back(mapPair);
 
-  primec::ir_lowerer::KeyValueAccessTargetInfo info;
-  CHECK(primec::ir_lowerer::inferForwardedKeyValueAccessTargetInfo(
+  primec::ir_lowerer::CollectionPairTypeInfo info;
+  CHECK(primec::ir_lowerer::inferForwardedCollectionPairTypeInfo(
       wrapCall, wrapDef, {}, {}, info));
   CHECK(info.isKeyValueTarget);
   CHECK(info.keyValueKeyKind == primec::ir_lowerer::LocalInfo::ValueKind::String);
@@ -41,7 +41,7 @@ TEST_CASE("ir lowerer call helpers infer forwarded map access targets") {
 TEST_CASE("ir lowerer call helpers keep explicit map helpers out of native builtin emission") {
   using Result = primec::ir_lowerer::NativeCallTailDispatchResult;
   using LocalInfo = primec::ir_lowerer::LocalInfo;
-  using KeyValueAccessTargetInfo = primec::ir_lowerer::KeyValueAccessTargetInfo;
+  using CollectionPairTypeInfo = primec::ir_lowerer::CollectionPairTypeInfo;
   using ArrayVectorAccessTargetInfo = primec::ir_lowerer::ArrayVectorAccessTargetInfo;
 
   primec::ir_lowerer::LocalMap locals;
@@ -94,8 +94,8 @@ TEST_CASE("ir lowerer call helpers keep explicit map helpers out of native built
     auto it = inferLocals.find(expr.name);
     return it == inferLocals.end() ? LocalInfo::ValueKind::Unknown : it->second.valueKind;
   };
-  auto resolveKeyValueAccessTargetInfo =
-      [&](const primec::Expr &targetExpr, KeyValueAccessTargetInfo &out) {
+  auto resolveCollectionPairTypeInfo =
+      [&](const primec::Expr &targetExpr, CollectionPairTypeInfo &out) {
         if (targetExpr.kind != primec::Expr::Kind::Name || targetExpr.name != "items") {
           return false;
         }
@@ -132,7 +132,7 @@ TEST_CASE("ir lowerer call helpers keep explicit map helpers out of native built
                 return false;
               },
               emitExpr,
-              resolveKeyValueAccessTargetInfo,
+              resolveCollectionPairTypeInfo,
               resolveArrayVectorAccessTargetInfo,
               [](const primec::Expr &, std::string &) { return false; },
               inferExprKind,
@@ -177,7 +177,7 @@ TEST_CASE("ir lowerer call helpers keep explicit map helpers out of native built
                 return false;
               },
               emitExpr,
-              resolveKeyValueAccessTargetInfo,
+              resolveCollectionPairTypeInfo,
               resolveArrayVectorAccessTargetInfo,
               [](const primec::Expr &, std::string &) { return false; },
               inferExprKind,
@@ -281,7 +281,7 @@ TEST_CASE("ir lowerer call helpers keep explicit map helpers out of native built
                     return false;
                   },
                   emitExpr,
-                  resolveKeyValueAccessTargetInfo,
+                  resolveCollectionPairTypeInfo,
                   resolveArrayVectorAccessTargetInfo,
                   [](const primec::Expr &, std::string &) { return false; },
                   inferExprKind,
@@ -336,7 +336,7 @@ TEST_CASE("ir lowerer call helpers keep explicit map helpers out of native built
               return false;
             },
             emitExpr,
-            resolveKeyValueAccessTargetInfo,
+            resolveCollectionPairTypeInfo,
             resolveArrayVectorAccessTargetInfo,
             [](const primec::Expr &, std::string &) { return false; },
             inferExprKind,
@@ -356,7 +356,7 @@ TEST_CASE("ir lowerer call helpers keep explicit map helpers out of native built
 TEST_CASE("ir lowerer call helpers defer explicit map access for args-pack receivers") {
   using Result = primec::ir_lowerer::NativeCallTailDispatchResult;
   using LocalInfo = primec::ir_lowerer::LocalInfo;
-  using KeyValueAccessTargetInfo = primec::ir_lowerer::KeyValueAccessTargetInfo;
+  using CollectionPairTypeInfo = primec::ir_lowerer::CollectionPairTypeInfo;
   using ArrayVectorAccessTargetInfo = primec::ir_lowerer::ArrayVectorAccessTargetInfo;
 
   primec::ir_lowerer::LocalMap locals;
@@ -461,7 +461,7 @@ TEST_CASE("ir lowerer call helpers defer explicit map access for args-pack recei
     auto it = inferLocals.find(expr.name);
     return it == inferLocals.end() ? LocalInfo::ValueKind::Unknown : it->second.valueKind;
   };
-  auto resolveKeyValueAccessTargetInfo = [](const primec::Expr &, KeyValueAccessTargetInfo &) {
+  auto resolveCollectionPairTypeInfo = [](const primec::Expr &, CollectionPairTypeInfo &) {
     return false;
   };
   auto resolveArrayVectorAccessTargetInfo =
@@ -489,7 +489,7 @@ TEST_CASE("ir lowerer call helpers defer explicit map access for args-pack recei
                 return false;
               },
               emitExpr,
-              resolveKeyValueAccessTargetInfo,
+              resolveCollectionPairTypeInfo,
               resolveArrayVectorAccessTargetInfo,
               [](const primec::Expr &, std::string &) { return false; },
               inferExprKind,
@@ -515,7 +515,7 @@ TEST_CASE("ir lowerer call helpers defer explicit map access for args-pack recei
 TEST_CASE("ir lowerer call helpers defer vector metadata and emit safe at while deferring bare count") {
   using Result = primec::ir_lowerer::NativeCallTailDispatchResult;
   using LocalInfo = primec::ir_lowerer::LocalInfo;
-  using KeyValueAccessTargetInfo = primec::ir_lowerer::KeyValueAccessTargetInfo;
+  using CollectionPairTypeInfo = primec::ir_lowerer::CollectionPairTypeInfo;
   using ArrayVectorAccessTargetInfo = primec::ir_lowerer::ArrayVectorAccessTargetInfo;
 
   primec::ir_lowerer::LocalMap locals;
@@ -556,7 +556,7 @@ TEST_CASE("ir lowerer call helpers defer vector metadata and emit safe at while 
     emitInstruction(primec::IrOpcode::LoadLocal, static_cast<uint64_t>(it->second.index));
     return true;
   };
-  auto resolveKeyValueAccessTargetInfo = [](const primec::Expr &, KeyValueAccessTargetInfo &) { return false; };
+  auto resolveCollectionPairTypeInfo = [](const primec::Expr &, CollectionPairTypeInfo &) { return false; };
   auto resolveArrayVectorAccessTargetInfo =
       [](const primec::Expr &targetExpr, ArrayVectorAccessTargetInfo &out) {
         if (targetExpr.kind != primec::Expr::Kind::Name || targetExpr.name != "values") {
@@ -593,7 +593,7 @@ TEST_CASE("ir lowerer call helpers defer vector metadata and emit safe at while 
                 return false;
               },
               emitExpr,
-              resolveKeyValueAccessTargetInfo,
+              resolveCollectionPairTypeInfo,
               resolveArrayVectorAccessTargetInfo,
               [](const primec::Expr &, std::string &) { return false; },
               [](const primec::Expr &expr, const primec::ir_lowerer::LocalMap &inferLocals) {
@@ -701,7 +701,7 @@ TEST_CASE("ir lowerer call helpers defer vector metadata and emit safe at while 
               return false;
             },
             emitExpr,
-            resolveKeyValueAccessTargetInfo,
+            resolveCollectionPairTypeInfo,
             resolveArrayVectorAccessTargetInfo,
             [](const primec::Expr &, std::string &) { return false; },
             [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) {
@@ -739,7 +739,7 @@ TEST_CASE("ir lowerer call helpers defer vector metadata and emit safe at while 
               return false;
             },
             emitExpr,
-            resolveKeyValueAccessTargetInfo,
+            resolveCollectionPairTypeInfo,
             resolveArrayVectorAccessTargetInfo,
             [](const primec::Expr &, std::string &) { return false; },
             [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) {

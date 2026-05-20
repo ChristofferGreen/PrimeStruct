@@ -613,7 +613,7 @@ NativeCallTailDispatchResult tryEmitNativeCallTailDispatch(
     const std::function<bool(const Expr &, const LocalMap &, int32_t &, size_t &)> &resolveStringTableTarget,
     size_t stringTableCount,
     const std::function<bool(const Expr &, const LocalMap &)> &emitExpr,
-    const ResolveCallKeyValueAccessTargetInfoFn &resolveCallKeyValueAccessTargetInfo,
+    const ResolveCallCollectionPairTypeInfoFn &resolveCallCollectionPairTypeInfo,
     const ResolveCallArrayVectorAccessTargetInfoFn &resolveCallArrayVectorAccessTargetInfo,
     const std::function<bool(const Expr &, std::string &)> &tryGetPrintBuiltinName,
     const std::function<LocalInfo::ValueKind(const Expr &, const LocalMap &)> &inferExprKind,
@@ -659,7 +659,7 @@ NativeCallTailDispatchResult tryEmitNativeCallTailDispatch(
       isStringCountCall,
       isEntryArgsName,
       [&](const Expr &targetExpr, const LocalMap &targetLocals) {
-        if (resolveKeyValueAccessTargetInfo(targetExpr, targetLocals, resolveCallKeyValueAccessTargetInfo).isKeyValueTarget) {
+        if (resolveCollectionPairTypeInfo(targetExpr, targetLocals, resolveCallCollectionPairTypeInfo).isKeyValueTarget) {
           return true;
         }
         return resolveArrayVectorAccessTargetInfo(
@@ -714,7 +714,7 @@ NativeCallTailDispatchResult tryEmitNativeCallTailDispatch(
   std::string accessName;
   if (isExplicitDirectKeyValueCountContainsTryAtCall(semanticProgram, expr) &&
       !expr.args.empty() &&
-      resolveKeyValueAccessTargetInfo(expr.args.front(), localsIn, resolveCallKeyValueAccessTargetInfo).isKeyValueTarget) {
+      resolveCollectionPairTypeInfo(expr.args.front(), localsIn, resolveCallCollectionPairTypeInfo).isKeyValueTarget) {
     return NativeCallTailDispatchResult::NotHandled;
   }
   const bool hasBuiltinArrayAccessName =
@@ -738,8 +738,8 @@ NativeCallTailDispatchResult tryEmitNativeCallTailDispatch(
         accessName == "at" || accessName == "at_ref" ||
         accessName == "at_unsafe" || accessName == "at_unsafe_ref";
     if (expr.isMethodCall && isKeyValueAccessName && !expr.args.empty() &&
-        resolveKeyValueAccessTargetInfo(
-            expr.args.front(), localsIn, resolveCallKeyValueAccessTargetInfo)
+        resolveCollectionPairTypeInfo(
+            expr.args.front(), localsIn, resolveCallCollectionPairTypeInfo)
             .isKeyValueTarget) {
       return NativeCallTailDispatchResult::NotHandled;
     }
@@ -750,8 +750,8 @@ NativeCallTailDispatchResult tryEmitNativeCallTailDispatch(
         (accessName == "at" || accessName == "at_unsafe");
     const bool isKeyValueMethodTempReceiver =
         isMethodCallTempReceiver &&
-        resolveKeyValueAccessTargetInfo(
-            expr.args.front(), localsIn, resolveCallKeyValueAccessTargetInfo)
+        resolveCollectionPairTypeInfo(
+            expr.args.front(), localsIn, resolveCallCollectionPairTypeInfo)
             .isKeyValueTarget;
     if (isMethodCallTempReceiver && !isKeyValueMethodTempReceiver) {
       return NativeCallTailDispatchResult::NotHandled;
@@ -831,16 +831,16 @@ NativeCallTailDispatchResult tryEmitNativeCallTailDispatch(
     };
     if (isExplicitKeyValueAccessCall && !expr.args.empty() &&
         expr.args.front().kind == Expr::Kind::Call) {
-      const auto keyValueTargetInfo = resolveKeyValueAccessTargetInfo(
-          expr.args.front(), localsIn, resolveCallKeyValueAccessTargetInfo);
+      const auto keyValueTargetInfo = resolveCollectionPairTypeInfo(
+          expr.args.front(), localsIn, resolveCallCollectionPairTypeInfo);
       if (!keyValueTargetInfo.isKeyValueTarget ||
           !isKeyValueArgsPackAccessReceiver(expr.args.front())) {
         return NativeCallTailDispatchResult::NotHandled;
       }
     }
     if (isExplicitKeyValueAccessCall && !expr.args.empty()) {
-      const auto keyValueTargetInfo = resolveKeyValueAccessTargetInfo(
-          expr.args.front(), localsIn, resolveCallKeyValueAccessTargetInfo);
+      const auto keyValueTargetInfo = resolveCollectionPairTypeInfo(
+          expr.args.front(), localsIn, resolveCallCollectionPairTypeInfo);
       if (keyValueTargetInfo.isKeyValueTarget &&
           (expr.args.front().kind != Expr::Kind::Call ||
            !isKeyValueArgsPackAccessReceiver(expr.args.front()))) {
@@ -856,8 +856,8 @@ NativeCallTailDispatchResult tryEmitNativeCallTailDispatch(
         (expr.name == "at" || expr.name == "at_unsafe") &&
         !isExplicitKeyValueAccessCall &&
         !hasSemanticKeyValueAccessHelperDefinition(semanticProgram, accessName)) {
-      const auto keyValueTargetInfo = resolveKeyValueAccessTargetInfo(
-          expr.args.front(), localsIn, resolveCallKeyValueAccessTargetInfo);
+      const auto keyValueTargetInfo = resolveCollectionPairTypeInfo(
+          expr.args.front(), localsIn, resolveCallCollectionPairTypeInfo);
       if (keyValueTargetInfo.isKeyValueTarget) {
         const std::string helperPath = nativeTailKeyValueHelperPath(accessName);
         error = "unknown call target: " + helperPath;
@@ -865,8 +865,8 @@ NativeCallTailDispatchResult tryEmitNativeCallTailDispatch(
       }
     }
     if (!expr.isMethodCall && !expr.args.empty()) {
-      const auto keyValueTargetInfo = resolveKeyValueAccessTargetInfo(
-          expr.args.front(), localsIn, resolveCallKeyValueAccessTargetInfo);
+      const auto keyValueTargetInfo = resolveCollectionPairTypeInfo(
+          expr.args.front(), localsIn, resolveCallCollectionPairTypeInfo);
       if (keyValueTargetInfo.isKeyValueTarget &&
           (isStringReturningKeyValueAccessAlias(
                semanticProgram, semanticIndexPtr, expr) ||
@@ -915,7 +915,7 @@ NativeCallTailDispatchResult tryEmitNativeCallTailDispatch(
     const std::function<bool(const Expr &, const LocalMap &)> &isEntryArgsName,
     const std::function<bool(const Expr &, const LocalMap &, int32_t &, size_t &)> &resolveStringTableTarget,
     const std::function<bool(const Expr &, const LocalMap &)> &emitExpr,
-    const ResolveCallKeyValueAccessTargetInfoFn &resolveCallKeyValueAccessTargetInfo,
+    const ResolveCallCollectionPairTypeInfoFn &resolveCallCollectionPairTypeInfo,
     const ResolveCallArrayVectorAccessTargetInfoFn &resolveCallArrayVectorAccessTargetInfo,
     const std::function<bool(const Expr &, std::string &)> &tryGetPrintBuiltinName,
     const std::function<LocalInfo::ValueKind(const Expr &, const LocalMap &)> &inferExprKind,
@@ -940,7 +940,7 @@ NativeCallTailDispatchResult tryEmitNativeCallTailDispatch(
       resolveStringTableTarget,
       0,
       emitExpr,
-      resolveCallKeyValueAccessTargetInfo,
+      resolveCallCollectionPairTypeInfo,
       resolveCallArrayVectorAccessTargetInfo,
       tryGetPrintBuiltinName,
       inferExprKind,
@@ -1064,7 +1064,7 @@ NativeCallTailDispatchResult tryEmitNativeCallTailDispatchWithLocals(
     const std::function<bool(const Expr &, const LocalMap &, int32_t &, size_t &)> &resolveStringTableTarget,
     size_t stringTableCount,
     const std::function<bool(const Expr &, const LocalMap &)> &emitExpr,
-    const ResolveCallKeyValueAccessTargetInfoFn &resolveCallKeyValueAccessTargetInfo,
+    const ResolveCallCollectionPairTypeInfoFn &resolveCallCollectionPairTypeInfo,
     const ResolveCallArrayVectorAccessTargetInfoFn &resolveCallArrayVectorAccessTargetInfo,
     const std::function<bool(const Expr &, std::string &)> &tryGetPrintBuiltinName,
     const std::function<LocalInfo::ValueKind(const Expr &, const LocalMap &)> &inferExprKind,
@@ -1089,7 +1089,7 @@ NativeCallTailDispatchResult tryEmitNativeCallTailDispatchWithLocals(
       resolveStringTableTarget,
       stringTableCount,
       emitExpr,
-      resolveCallKeyValueAccessTargetInfo,
+      resolveCallCollectionPairTypeInfo,
       resolveCallArrayVectorAccessTargetInfo,
       tryGetPrintBuiltinName,
       inferExprKind,
@@ -1115,7 +1115,7 @@ NativeCallTailDispatchResult tryEmitNativeCallTailDispatchWithLocals(
     const std::function<bool(const Expr &, const LocalMap &)> &isEntryArgsName,
     const std::function<bool(const Expr &, const LocalMap &, int32_t &, size_t &)> &resolveStringTableTarget,
     const std::function<bool(const Expr &, const LocalMap &)> &emitExpr,
-    const ResolveCallKeyValueAccessTargetInfoFn &resolveCallKeyValueAccessTargetInfo,
+    const ResolveCallCollectionPairTypeInfoFn &resolveCallCollectionPairTypeInfo,
     const ResolveCallArrayVectorAccessTargetInfoFn &resolveCallArrayVectorAccessTargetInfo,
     const std::function<bool(const Expr &, std::string &)> &tryGetPrintBuiltinName,
     const std::function<LocalInfo::ValueKind(const Expr &, const LocalMap &)> &inferExprKind,
@@ -1140,7 +1140,7 @@ NativeCallTailDispatchResult tryEmitNativeCallTailDispatchWithLocals(
       resolveStringTableTarget,
       0,
       emitExpr,
-      resolveCallKeyValueAccessTargetInfo,
+      resolveCallCollectionPairTypeInfo,
       resolveCallArrayVectorAccessTargetInfo,
       tryGetPrintBuiltinName,
       inferExprKind,

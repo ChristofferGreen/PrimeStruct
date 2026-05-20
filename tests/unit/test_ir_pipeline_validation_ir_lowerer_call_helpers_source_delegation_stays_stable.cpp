@@ -187,9 +187,9 @@ TEST_CASE("ir lowerer call helpers source delegation stays stable") {
         std::string::npos);
   CHECK(callHelpersSource.find("NativeCallTailDispatchResult tryEmitNativeCallTailDispatchWithLocals(") ==
         std::string::npos);
-  CHECK(callHelpersSource.find("KeyValueAccessTargetInfo resolveKeyValueAccessTargetInfo(") ==
+  CHECK(callHelpersSource.find("CollectionPairTypeInfo resolveCollectionPairTypeInfo(") ==
         std::string::npos);
-  CHECK(callHelpersSource.find("bool validateKeyValueAccessTargetInfo(const KeyValueAccessTargetInfo &targetInfo,") ==
+  CHECK(callHelpersSource.find("bool validateCollectionPairTypeInfo(const CollectionPairTypeInfo &targetInfo,") ==
         std::string::npos);
   CHECK(callHelpersSource.find("NonLiteralStringAccessTargetResult validateNonLiteralStringAccessTarget(") ==
         std::string::npos);
@@ -251,9 +251,19 @@ TEST_CASE("ir lowerer call helpers source delegation stays stable") {
   CHECK(callHelpersSource.find("bool validateKeyValueLookupKeyKind(") ==
         std::string::npos);
 
-  CHECK(accessTargetResolutionSource.find("KeyValueAccessTargetInfo resolveKeyValueAccessTargetInfo(") !=
+  CHECK(accessTargetResolutionSource.find("CollectionPairTypeInfo resolveCollectionPairTypeInfo(") !=
         std::string::npos);
-  CHECK(accessTargetResolutionSource.find("bool validateKeyValueAccessTargetInfo(const KeyValueAccessTargetInfo &targetInfo,") !=
+  CHECK(accessTargetResolutionSource.find("bool validateCollectionPairTypeInfo(const CollectionPairTypeInfo &targetInfo,") !=
+        std::string::npos);
+  CHECK(accessTargetResolutionSource.find("KeyValueAccessTargetInfo") ==
+        std::string::npos);
+  CHECK(accessTargetResolutionSource.find("ResolveCallKeyValueAccessTargetInfoFn") ==
+        std::string::npos);
+  CHECK(accessTargetResolutionSource.find("resolveKeyValueAccessTargetInfo") ==
+        std::string::npos);
+  CHECK(accessTargetResolutionSource.find("inferForwardedKeyValueAccessTargetInfo") ==
+        std::string::npos);
+  CHECK(accessTargetResolutionSource.find("validateKeyValueAccessTargetInfo") ==
         std::string::npos);
   CHECK(accessTargetResolutionSource.find("NonLiteralStringAccessTargetResult validateNonLiteralStringAccessTarget(") !=
         std::string::npos);

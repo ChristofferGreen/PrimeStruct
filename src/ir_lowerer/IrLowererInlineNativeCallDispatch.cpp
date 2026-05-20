@@ -987,7 +987,7 @@ InlineCallDispatchResult tryEmitInlineCallDispatchWithLocals(
     return InlineCallDispatchResult::NotHandled;
   }
   const auto inferCallKeyValueTargetInfo = [&](const Expr &targetExpr,
-                                          KeyValueAccessTargetInfo &targetInfoOut) {
+                                          CollectionPairTypeInfo &targetInfoOut) {
     targetInfoOut = {};
     const Definition *callee = resolveDefinitionCallFn(targetExpr);
     if (callee == nullptr) {
@@ -998,7 +998,7 @@ InlineCallDispatchResult tryEmitInlineCallDispatchWithLocals(
     if (!inferDeclaredReturnCollection(*callee, collectionName, collectionArgs) ||
         collectionName != "map" ||
         collectionArgs.size() != 2) {
-      return inferForwardedKeyValueAccessTargetInfo(
+      return inferForwardedCollectionPairTypeInfo(
           targetExpr, *callee, localsIn, {}, targetInfoOut);
     }
     targetInfoOut.isKeyValueTarget = true;
@@ -1199,7 +1199,7 @@ InlineCallDispatchResult tryEmitInlineCallDispatchWithLocals(
         isCanonicalPublishedInlineKeyValueHelperPath(rawPath);
     if (isCanonicalStdKeyValueHelperCall && !expr.args.empty()) {
       const auto targetInfo =
-          resolveKeyValueAccessTargetInfo(expr.args.front(),
+          resolveCollectionPairTypeInfo(expr.args.front(),
                                      localsIn,
                                      inferCallKeyValueTargetInfo,
                                      semanticProgram,
@@ -1229,7 +1229,7 @@ InlineCallDispatchResult tryEmitInlineCallDispatchWithLocals(
           (directHelperName == "contains" || directHelperName == "tryAt" ||
            directHelperName == "at" || directHelperName == "at_unsafe")) {
         const auto alternateTargetInfo =
-            resolveKeyValueAccessTargetInfo(expr.args[1],
+            resolveCollectionPairTypeInfo(expr.args[1],
                                        localsIn,
                                        inferCallKeyValueTargetInfo,
                                        semanticProgram,
@@ -1257,7 +1257,7 @@ InlineCallDispatchResult tryEmitInlineCallDispatchWithLocals(
          (getBuiltinArrayAccessName(expr, keyValueHelperName) && expr.args.size() == 2))) {
       keyValueHelperName = canonicalInlineKeyValueHelperName(std::move(keyValueHelperName));
       const auto keyValueTargetInfo =
-          resolveKeyValueAccessTargetInfo(expr.args.front(),
+          resolveCollectionPairTypeInfo(expr.args.front(),
                                      localsIn,
                                      inferCallKeyValueTargetInfo,
                                      semanticProgram,
@@ -1579,7 +1579,7 @@ InlineCallDispatchResult tryEmitInlineCallDispatchWithLocals(
           return true;
         }
         if (receiverExpr.kind == Expr::Kind::Name) {
-          if (resolveKeyValueAccessTargetInfo(receiverExpr,
+          if (resolveCollectionPairTypeInfo(receiverExpr,
                                          localsIn,
                                          inferCallKeyValueTargetInfo,
                                          semanticProgram,
@@ -1640,7 +1640,7 @@ InlineCallDispatchResult tryEmitInlineCallDispatchWithLocals(
             receiverExpr.args.size() == 2) {
           return false;
         }
-        if (resolveKeyValueAccessTargetInfo(receiverExpr,
+        if (resolveCollectionPairTypeInfo(receiverExpr,
                                        localsIn,
                                        inferCallKeyValueTargetInfo,
                                        semanticProgram,

@@ -20213,6 +20213,50 @@ Moved from `docs/todo.md` during unfinished-only cleanup:
     tests for unsupported key/value envelopes, `git diff --check`, and an
     `rg` scan for the retired native map-value symbols/messages.
 
+- [x] TODO-4543: Retire key/value access target metadata
+  - owner: ai
+  - created_at: 2026-05-20
+  - finished_at: 2026-05-20
+  - phase: Map stdlib ownership cutover
+  - parallel_track: map-zero-audit
+  - depends_on: TODO-4542
+  - split_from: TODO-4541
+  - scope: Remove the residual `KeyValueAccessTargetInfo` and
+    `ResolveCallKeyValueAccessTargetInfoFn` lowerer metadata surface now that
+    direct native map access emission is gone, replacing remaining access,
+    insert, setup-type, inline, and return-kind probes with generic collection
+    type facts or ordinary helper-call resolution.
+  - implementation_notes:
+    - Renamed the exposed key/value access-target type and callback surface to
+      generic `CollectionPairTypeInfo` /
+      `ResolveCallCollectionPairTypeInfoFn` APIs.
+    - Kept temporary lowerer `LocalInfo` key/value scalar facts for later
+      strict audit work; this slice removed the access-target API surface, not
+      every collection-pair scalar fact.
+    - Split the remaining native statement-context `void` helper-call failure
+      into TODO-4544 instead of restoring map-specific native insert dispatch.
+  - acceptance:
+    - Production lowerer code no longer exposes `KeyValueAccessTargetInfo` or
+      key/value access target resolver callbacks.
+    - Canonical map access/tryAt/insert tests compile or diagnose through
+      ordinary helper calls.
+    - Source-lock tests assert residual access-target metadata hooks stay
+      absent from production lowerer code.
+  - stop_rule: Stop once residual key/value access-target metadata is gone and
+    focused map access/insert coverage passes or is blocked by a concrete
+    non-map generic lowering TODO.
+  - evidence: Replaced the production/testing helper API spellings with
+    `CollectionPairTypeInfo`, `resolveCollectionPairTypeInfo`,
+    `inferForwardedCollectionPairTypeInfo`, and
+    `validateCollectionPairTypeInfo`; source-locked the absence of the retired
+    access-target names; rebuilt `PrimeStruct_backend_ir_tests` and
+    `PrimeStruct_compile_run_tests`; ran focused backend IR source-lock and
+    explicit-map-helper deferral tests; ran focused native map access tests
+    plus experimental insert tests. The canonical native map first-growth
+    insert fixture now reaches ordinary helper lowering and fails with the
+    generic `void call not allowed in expression context` diagnostic, tracked
+    separately by TODO-4544.
+
 - [x] TODO-4540: Collapse lowerer key/value local metadata
   - owner: ai
   - created_at: 2026-05-20

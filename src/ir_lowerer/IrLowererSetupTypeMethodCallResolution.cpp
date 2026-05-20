@@ -468,7 +468,7 @@ const Definition *resolveMethodCallDefinitionFromExpr(
     };
     if (!keyValueHelperName.empty() &&
         (receiverHasKeyValueLocalInfo() ||
-         resolveKeyValueAccessTargetInfo(callExpr.args.front(),
+         resolveCollectionPairTypeInfo(callExpr.args.front(),
                                     localsIn,
                                     {},
                                     semanticProgram,
@@ -1052,7 +1052,7 @@ const Definition *resolveMethodCallDefinitionFromExpr(
         }
         std::string accessName;
         return getBuiltinArrayAccessName(candidateExpr, accessName) &&
-               resolveKeyValueAccessTargetInfo(candidateExpr.args.front(),
+               resolveCollectionPairTypeInfo(candidateExpr.args.front(),
                                           localsIn,
                                           {},
                                           semanticProgram,
@@ -1062,7 +1062,7 @@ const Definition *resolveMethodCallDefinitionFromExpr(
       auto isBareKeyValueTryAtReceiverProbeExpr = [&](const Expr &candidateExpr) {
         return candidateExpr.kind == Expr::Kind::Call && candidateExpr.args.size() == 2 &&
                isSimpleCallName(candidateExpr, "tryAt") &&
-               resolveKeyValueAccessTargetInfo(candidateExpr.args.front(),
+               resolveCollectionPairTypeInfo(candidateExpr.args.front(),
                                           localsIn,
                                           {},
                                           semanticProgram,

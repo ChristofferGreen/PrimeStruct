@@ -53,7 +53,7 @@ std::string canonicalKeyValueHelperPathForSetupReturnKind(
 
 struct SemanticReturnKindTargetInfo {
   ArrayVectorAccessTargetInfo arrayVectorInfo{};
-  KeyValueAccessTargetInfo keyValueInfo{};
+  CollectionPairTypeInfo keyValueInfo{};
   LocalInfo::ValueKind valueKind{LocalInfo::ValueKind::Unknown};
 };
 
@@ -470,7 +470,7 @@ bool resolveMethodCallReturnKind(const Expr &methodCallExpr,
           builtinKindOut = arrayVectorTargetInfo.elemKind;
           return true;
         }
-        const auto keyValueTargetInfo = resolveKeyValueAccessTargetInfo(receiverExpr, localsIn);
+        const auto keyValueTargetInfo = resolveCollectionPairTypeInfo(receiverExpr, localsIn);
         if (keyValueTargetInfo.isKeyValueTarget && keyValueTargetInfo.keyValueValueKind != LocalInfo::ValueKind::Unknown) {
           builtinKindOut = keyValueTargetInfo.keyValueValueKind;
           return true;
@@ -492,7 +492,7 @@ bool resolveMethodCallReturnKind(const Expr &methodCallExpr,
           builtinKindOut = LocalInfo::ValueKind::Int32;
           return true;
         }
-        const auto keyValueTargetInfo = resolveKeyValueAccessTargetInfo(receiverExpr, localsIn);
+        const auto keyValueTargetInfo = resolveCollectionPairTypeInfo(receiverExpr, localsIn);
         if (keyValueTargetInfo.isKeyValueTarget) {
           builtinKindOut = LocalInfo::ValueKind::Int32;
           return true;
@@ -512,7 +512,7 @@ bool resolveMethodCallReturnKind(const Expr &methodCallExpr,
           }
           return false;
         }
-        const auto keyValueTargetInfo = resolveKeyValueAccessTargetInfo(receiverExpr, localsIn);
+        const auto keyValueTargetInfo = resolveCollectionPairTypeInfo(receiverExpr, localsIn);
         if (keyValueTargetInfo.isKeyValueTarget) {
           builtinKindOut = LocalInfo::ValueKind::Bool;
           return true;
@@ -533,7 +533,7 @@ bool resolveMethodCallReturnKind(const Expr &methodCallExpr,
           }
           return false;
         }
-        const auto keyValueTargetInfo = resolveKeyValueAccessTargetInfo(receiverExpr, localsIn);
+        const auto keyValueTargetInfo = resolveCollectionPairTypeInfo(receiverExpr, localsIn);
         if (keyValueTargetInfo.isKeyValueTarget && keyValueTargetInfo.keyValueValueKind != LocalInfo::ValueKind::Unknown) {
           builtinKindOut = keyValueTargetInfo.keyValueValueKind;
           return true;
@@ -731,7 +731,7 @@ bool resolveCountMethodCallReturnKind(const Expr &callExpr,
         return true;
       };
   auto resolveSemanticKeyValueTargetInfo =
-      [&](const Expr &candidate, KeyValueAccessTargetInfo &infoOut) {
+      [&](const Expr &candidate, CollectionPairTypeInfo &infoOut) {
         SemanticReturnKindTargetInfo semanticInfo;
         if (!resolveSemanticReturnKindTargetInfo(
                 candidate, semanticProgram, semanticIndex, semanticInfo)) {
@@ -745,7 +745,7 @@ bool resolveCountMethodCallReturnKind(const Expr &callExpr,
         candidate, localsIn, resolveSemanticArrayVectorTargetInfo);
   };
   auto keyValueTargetInfoFor = [&](const Expr &candidate) {
-    return resolveKeyValueAccessTargetInfo(
+    return resolveCollectionPairTypeInfo(
         candidate, localsIn, resolveSemanticKeyValueTargetInfo);
   };
 

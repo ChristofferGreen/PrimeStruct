@@ -177,7 +177,7 @@ bool runLowerInferenceExprKindCallFallbackSetup(const LowerInferenceExprKindCall
           }
 
           if (receiver.kind == Expr::Kind::Call) {
-            const auto keyValueTargetInfo = resolveKeyValueAccessTargetInfo(receiver, candidateLocals);
+            const auto keyValueTargetInfo = resolveCollectionPairTypeInfo(receiver, candidateLocals);
             if (keyValueTargetInfo.isKeyValueTarget && keyValueTargetInfo.keyValueValueKind != LocalInfo::ValueKind::Unknown) {
               kindOut = keyValueTargetInfo.keyValueValueKind;
               return true;
