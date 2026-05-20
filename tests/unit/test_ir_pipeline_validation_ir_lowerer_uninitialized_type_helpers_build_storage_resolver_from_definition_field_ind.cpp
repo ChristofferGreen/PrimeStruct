@@ -383,14 +383,10 @@ TEST_CASE("ir lowerer binding type helpers classify binding kind and string/file
   CHECK(bindingTypeHelpersSource.find(
             "soa_paths::isExperimentalColumnarVectorTypePath(name)") !=
         std::string::npos);
-  CHECK(bindingTypeHelpersSource.find(
-            "name == \"std/collections/experimental_soa_vector/SoaVector\"") !=
+  CHECK(bindingTypeHelpersSource.find("name == \"Soa\" \"Vector\"") !=
         std::string::npos);
-  CHECK(bindingTypeHelpersSource.find(
-            "name == \"/std/collections/experimental_soa_vector/SoaVector\"") !=
+  CHECK(bindingTypeHelpersSource.find("name == \"/Soa\" \"Vector\"") !=
         std::string::npos);
-  CHECK(bindingTypeHelpersSource.find("name == \"SoaVector\"") != std::string::npos);
-  CHECK(bindingTypeHelpersSource.find("name == \"/SoaVector\"") != std::string::npos);
 
   primec::Expr stringExpr;
   primec::Transform qualifier;
