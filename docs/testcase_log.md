@@ -10,11 +10,6 @@
   string-valued map runtime fixture has since been retargeted to compile-only
   coverage because native runtime string-valued maps still hang after
   compilation.
-- `PrimeStruct_backend_ir_tests --test-case="stdlib surface metadata resolves collection alias paths" --no-skip`
-  has a stale contradictory map helper lookup expectation after the map
-  stdlib-ownership cutover. On 2026-05-18 the case first required
-  `/std/collections/map/tryAt_ref` metadata to exist, then asserted the same
-  lookup was `nullptr`.
 - `PrimeStruct_semantics_tests --test-case="semantic product keeps vector and map bridge parity" --no-skip`
   is stale after the map stdlib-ownership cutover. On 2026-05-18 it failed
   during validation with a canonical map count helper parameter mismatch
@@ -47,6 +42,12 @@
   the string-valued map access emission fixture returned `NotHandled`.
 
 ## Recent Test Runs
+- 2026-05-20 12:55 CEST | pass | mode: release | command:
+  `cmake --build build-release --target PrimeStruct_backend_ir_tests`;
+  `cd build-release && ./PrimeStruct_backend_ir_tests --test-case="stdlib surface metadata resolves collection alias paths" --no-skip`
+  | failures: none | notes: map alias-path metadata now consistently locks
+  `/std/collections/map/tryAt_ref` as a resolved public map helper instead of
+  expecting the same lookup to be both present and absent.
 - 2026-05-20 12:54 CEST | pass | mode: release | command:
   `cmake --build build-release --target PrimeStruct_backend_ir_tests`;
   `cd build-release && ./PrimeStruct_backend_ir_tests --test-case="stdlib surface metadata resolves collection helper member tokens" --no-skip`
@@ -4650,6 +4651,7 @@
 - 2026-05-12 17:28 local | fail | mode: release | command: `./scripts/compile.sh --release` | failures: 146 CTest targets | notes: baseline after preflight checkpoint failed; stabilization blocks TODO work
 
 ## Resolved Failures
+- [x] stdlib surface metadata map alias paths | resolved: 2026-05-20 12:55 CEST | validating command: `cmake --build build-release --target PrimeStruct_backend_ir_tests`; `cd build-release && ./PrimeStruct_backend_ir_tests --test-case="stdlib surface metadata resolves collection alias paths" --no-skip` | notes: removed the contradictory null assertion for `/std/collections/map/tryAt_ref` and locked it as public map helper metadata.
 - [x] SoA surface metadata member tokens | resolved: 2026-05-20 12:54 CEST | validating command: `cmake --build build-release --target PrimeStruct_backend_ir_tests`; `cd build-release && ./PrimeStruct_backend_ir_tests --test-case="stdlib surface metadata resolves collection helper member tokens" --no-skip` | notes: refreshed stale `soaVector*` member-token expectations to the current public SoA manifest names and locked retired tokens as unresolved.
 - [x] direct map Result payload backend IR fixture | resolved: 2026-05-20 12:52 CEST | validating command: `cmake --build build-release --target PrimeStruct_backend_ir_tests`; `cd build-release && ./PrimeStruct_backend_ir_tests --test-case="retired direct map Result payload literal rejects before lowering" --no-skip` | notes: removed the stale zero-test known-failure name and kept the current retired direct-map Result payload rejection fixture as focused coverage.
 - [x] inferred canonical map default parameters | resolved: 2026-05-20 12:51 CEST | validating command: `cmake --build build-release --target PrimeStruct_semantics_tests`; `cd build-release && ./PrimeStruct_semantics_tests --test-case="stdlib map constructors accept inferred canonical map default parameters,helper-wrapped map constructors accept inferred canonical map default parameters,helper-wrapped inferred canonical map default parameters validate" --no-skip` | notes: refreshed stale implicit `at` helper inference expectations with explicit `<string, i32>` templates for current stdlib-owned map helper resolution.
