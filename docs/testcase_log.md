@@ -1,11 +1,6 @@
 # Testcase Log
 
 ## Current Known Failures
-- `PrimeStruct_semantics_tests --test-case="graph type resolver infers map value return kinds through shared infer helper" --no-skip`
-  is stale after the map stdlib-ownership cutover. On 2026-05-17 it failed
-  validation before return-kind assertions; the fixture still imports
-  `internal_map` and uses the retired `/std/collections/mapPair` constructor
-  path.
 - `PrimeStruct_backend_ir_tests --test-case="ir lowerer materializes variadic borrowed map packs with indexed count_ref helpers,ir lowerer materializes variadic pointer map packs with indexed count_ref helpers" --no-skip`
   is stale after the map stdlib-ownership cutover. On 2026-05-17 both cases
   still failed during lowering on retired `/at` expression calls before
@@ -226,6 +221,12 @@
   the string-valued map access emission fixture returned `NotHandled`.
 
 ## Recent Test Runs
+- 2026-05-20 11:27 CEST | pass | mode: release | command:
+  `cmake --build build-release --target PrimeStruct_semantics_tests`;
+  `cd build-release && ./PrimeStruct_semantics_tests --test-case="graph type resolver answers map receiver queries through shared type-text helper,graph type resolver infers map value return kinds through shared infer helper" --no-skip`
+  | failures: none | notes: return-solver map fixtures now use canonical
+  `/std/collections/map/map<string, i32>(...)` branches instead of retired
+  `internal_map` imports and `/std/collections/mapPair`.
 - 2026-05-20 11:18 CEST | pass | mode: release | command:
   `cmake --build build-release --target PrimeStruct_backend_ir_tests`;
   `cd build-release && ./PrimeStruct_backend_ir_tests --test-case="ir lowerer result helpers resolve indexed args-pack Result expressions" --no-skip`;
@@ -4633,6 +4634,7 @@
 - 2026-05-12 17:28 local | fail | mode: release | command: `./scripts/compile.sh --release` | failures: 146 CTest targets | notes: baseline after preflight checkpoint failed; stabilization blocks TODO work
 
 ## Resolved Failures
+- [x] graph type resolver infers map value return kinds through shared infer helper | resolved: 2026-05-20 11:27 CEST | validating command: `cmake --build build-release --target PrimeStruct_semantics_tests`; `cd build-release && ./PrimeStruct_semantics_tests --test-case="graph type resolver answers map receiver queries through shared type-text helper,graph type resolver infers map value return kinds through shared infer helper" --no-skip` | notes: map return-solver fixtures now use canonical map construction in both auto-return branches without importing `internal_map` or calling the retired public `mapPair` bridge.
 - [x] ir lowerer result helpers resolve indexed args-pack Result expressions | resolved: 2026-05-20 11:18 CEST | validating command: `cmake --build build-release --target PrimeStruct_backend_ir_tests`; `cd build-release && ./PrimeStruct_backend_ir_tests --test-case="ir lowerer result helpers resolve indexed args-pack Result expressions" --no-skip`; `cd build-release && ./PrimeStruct_backend_ir_tests --test-case="ir lowerer result helpers use semantic indexed args-pack Result facts" --no-skip` | notes: Result metadata now has a receiver-scoped bare `at` fallback for locals already known to be Result args packs, without reintroducing generic map/access handling.
 - [x] semantic product validates direct return method-like borrowed helper-return experimental soa_vector reads | resolved: 2026-05-20 11:05 CEST | validating command: `cmake --build build-release --target PrimeStruct_semantics_tests`; `cd build-release && ./PrimeStruct_semantics_tests --test-case="semantic product validates direct return method-like borrowed helper-return experimental soa_vector reads" --no-skip` | notes: fixture now uses self-contained public `soa<Particle>` helper stubs and checks borrowed `count_ref`/`get_ref` semantic-product targets without depending on old `SoaVector<T>` imports.
 - [x] implicit map constructors infer canonical auto locals and auto returns | resolved: 2026-05-20 10:34 CEST | validating command: `cmake --build build-release --target PrimeStruct_semantics_tests`; `cd build-release && ./PrimeStruct_semantics_tests --test-case="implicit map constructors infer canonical auto locals and auto returns" --no-skip` | notes: refreshed the stale fixture to materialize the `i32` payload before `Result.ok`; canonical map auto locals, auto returns, inserts, counts, and lookups still validate.

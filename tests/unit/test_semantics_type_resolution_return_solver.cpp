@@ -458,13 +458,12 @@ main() {
 TEST_CASE("graph type resolver answers map receiver queries through shared type-text helper") {
   const std::string source = R"(
 import /std/collections/*
-import /std/collections/internal_map/*
 
 [return<auto> effects(heap_alloc)]
 selectValues() {
   if(true,
     then(){ return(/std/collections/map/map("left"raw_utf8, 4i32, "right"raw_utf8, 7i32)) },
-    else(){ return(/std/collections/mapPair("left"raw_utf8, 4i32, "right"raw_utf8, 7i32)) })
+    else(){ return(/std/collections/map/map<string, i32>("left"raw_utf8, 4i32, "right"raw_utf8, 7i32)) })
 }
 
 [return<i32> effects(heap_alloc)]
@@ -480,13 +479,12 @@ main() {
 TEST_CASE("graph type resolver infers map value return kinds through shared infer helper") {
   const std::string source = R"(
 import /std/collections/*
-import /std/collections/internal_map/*
 
 [return<auto> effects(heap_alloc)]
 selectValues() {
   if(true,
     then(){ return(/std/collections/map/map("left"raw_utf8, 4i32, "right"raw_utf8, 7i32)) },
-    else(){ return(/std/collections/mapPair("left"raw_utf8, 4i32, "right"raw_utf8, 7i32)) })
+    else(){ return(/std/collections/map/map<string, i32>("left"raw_utf8, 4i32, "right"raw_utf8, 7i32)) })
 }
 
 [return<auto> effects(heap_alloc)]
