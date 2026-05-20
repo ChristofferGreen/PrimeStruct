@@ -129,7 +129,7 @@ main() {
   CHECK(runCommand(compileCmd) == 2);
 }
 
-TEST_CASE("rejects native templated stdlib map return envelope unsupported key arg") {
+TEST_CASE("rejects templated stdlib map return envelope unsupported key arg") {
   const std::string source = R"(
 import /std/collections/*
 
@@ -151,10 +151,11 @@ main() {
                                   .string();
   const std::string compileCmd = "./primec --emit=native " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
   CHECK(runCommand(compileCmd) == 2);
-  CHECK(readFile(errPath).find("native backend only supports numeric/bool map values") != std::string::npos);
+  CHECK(readFile(errPath).find("map requires builtin Comparable key type") !=
+        std::string::npos);
 }
 
-TEST_CASE("rejects native templated stdlib map return envelope unsupported value arg") {
+TEST_CASE("rejects templated stdlib map return envelope unsupported value arg") {
   const std::string source = R"(
 import /std/collections/*
 
@@ -176,7 +177,7 @@ main() {
                                   .string();
   const std::string compileCmd = "./primec --emit=native " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
   CHECK(runCommand(compileCmd) == 2);
-  CHECK(readFile(errPath).find("native backend does not support return type on /wrapMapUnknownValue") !=
+  CHECK(readFile(errPath).find("unsupported return type on /wrapMapUnknownValue") !=
         std::string::npos);
 }
 

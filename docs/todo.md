@@ -83,9 +83,9 @@ Task template:
 
 ### Ready Now (Parallel-Candidate Leaves; No Unmet TODO Dependencies)
 
-- TODO-4542: Retire native map-value backend gates |
+- TODO-4543: Retire key/value access target metadata |
   track: map-zero-audit |
-  primary surface: native backend map-value gates
+  primary surface: lowerer access target metadata
 - TODO-4271: Add compile-time pack indexing | track: tuple-type-packs |
   primary surface: generic pack-index selection and diagnostics
 
@@ -96,9 +96,10 @@ Task template:
 - `map-zero-audit`: TODO-4537 split the broad lowerer substrate item into
   bounded leaves; TODO-4539 removed generated MapValue path synthesis, and
   TODO-4540 removed the lowerer key/value local kind plus ref/pointer flags.
-  TODO-4541 removed direct key/value access emission; ready TODO-4542 now
-  retires native map-value gates before TODO-4543 -> TODO-4538 -> TODO-4464
-  for the final strict zero map-surface audit.
+  TODO-4541 removed direct key/value access emission, and TODO-4542 retired
+  native map-value gates; ready TODO-4543 now removes residual access target
+  metadata before TODO-4538 -> TODO-4464 for the final strict zero
+  map-surface audit.
 - `tuple-type-packs`: TODO-4276 completed helper/lifecycle pack
   expansion; ready TODO-4271, then serial successors TODO-4272
   -> TODO-4274 -> TODO-4273 -> TODO-4277 -> TODO-4278.
@@ -109,7 +110,6 @@ Task template:
 
 ### Immediate Next 10 (Track Successors; Not Ready Until Dependencies Land)
 
-- TODO-4543: Retire key/value access target metadata
 - TODO-4538: Replace map inventory gate with fast strict audit
 - TODO-4464: Run final strict C++ map-surface audit
 - TODO-4272: Add stdlib `tuple<Ts...>`
@@ -123,8 +123,8 @@ Task template:
   must enter as bounded leaves only.
 - Deferred stdlib ADT migration: none active
 - Vector stdlib ownership cutover: none active
-- Map stdlib ownership cutover: ready TODO-4542, then TODO-4543
-  -> TODO-4538 -> TODO-4464 for the final strict zero audit
+- Map stdlib ownership cutover: ready TODO-4543, then TODO-4538
+  -> TODO-4464 for the final strict zero audit
 - SoA public surface rename and ownership cutover: TODO-4306 parent split;
   TODO-4526 removed semantic-validation inventory residue after TODO-4530
   reduced the shared semantic builtin path helper boundary; TODO-4527 removed
@@ -145,7 +145,6 @@ Task template:
 
 ### Execution Queue (Recommended Track Order)
 
-- TODO-4542: Retire native map-value backend gates
 - TODO-4543: Retire key/value access target metadata
 - TODO-4538: Replace map inventory gate with fast strict audit
 - TODO-4464: Run final strict C++ map-surface audit
@@ -1851,37 +1850,6 @@ Task template:
     - `./scripts/compile.sh --release` passes.
   - stop_rule: Stop once the generic design direction is documented through
     runnable examples rather than only prose.
-
-- [ ] TODO-4542: Retire native map-value backend gates
-  - owner: ai
-  - created_at: 2026-05-20
-  - phase: Map stdlib ownership cutover
-  - parallel_track: map-zero-audit
-  - depends_on: TODO-4541
-  - split_from: TODO-4537
-  - scope: Remove or reclassify the remaining native backend checks that
-    reject values specifically because they are stdlib map values, including
-    `validateNativeMapValueKinds` and any uninitialized-storage or mutation
-    diagnostics that are map-specific rather than generic backend value
-    restrictions.
-  - implementation_notes:
-    - Start from `IrLowererNativeEffects.{h,cpp}`,
-      `IrLowererLowerEntrySetup.cpp`,
-      `IrLowererUninitializedTypeHelpers.cpp`, and
-      `IrLowererOperatorCollectionMutationHelpers.cpp`.
-    - If a retained restriction is truly a runtime/backend primitive limit,
-      rename and document it as a generic unsupported value/category gate.
-  - acceptance:
-    - Native backend validation no longer names stdlib map as a special value
-      kind unless the retained check is documented as a generic backend
-      primitive limit.
-    - Focused native/VM/C++ emitter map value tests either pass or have
-      diagnostics updated to generic backend value wording.
-    - Source-lock tests cover the absence of `validateNativeMapValueKinds` or
-      any replacement map-specific backend gate.
-  - stop_rule: Stop once native backend gates no longer classify stdlib map
-    specially, or once any retained backend primitive limit is explicitly
-    generic and documented.
 
 - [ ] TODO-4543: Retire key/value access target metadata
   - owner: ai

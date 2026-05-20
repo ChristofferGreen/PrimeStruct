@@ -140,7 +140,7 @@ TEST_CASE("ir lowerer uninitialized type helpers report diagnostics") {
   error.clear();
   CHECK_FALSE(primec::ir_lowerer::resolveUninitializedTypeInfo(
       "map<i32, string>", "/pkg", resolveStruct, info, error));
-  CHECK(error == "native backend only supports numeric/bool map values for uninitialized storage");
+  CHECK(error == "native backend only supports numeric/bool collection payloads for uninitialized storage");
 
   error.clear();
   CHECK_FALSE(primec::ir_lowerer::resolveUninitializedTypeInfo(

@@ -107,7 +107,7 @@ bool resolveUninitializedTypeInfo(const std::string &typeText,
       LocalInfo::ValueKind valueKind = valueKindFromTypeName(trimTemplateTypeText(args.back()));
       if (keyKind == LocalInfo::ValueKind::Unknown || valueKind == LocalInfo::ValueKind::Unknown ||
           valueKind == LocalInfo::ValueKind::String) {
-        error = "native backend only supports numeric/bool map values for uninitialized storage";
+        error = "native backend only supports numeric/bool collection payloads for uninitialized storage";
         return false;
       }
       out.kind = LocalInfo::Kind::Value;

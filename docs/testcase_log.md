@@ -12,6 +12,17 @@
   compilation.
 
 ## Recent Test Runs
+- 2026-05-20 19:28 CEST | pass | mode: release | command:
+  `cmake --build build-release --target PrimeStruct_backend_ir_tests`;
+  `cd build-release && ./PrimeStruct_backend_ir_tests --test-case="ir lowerer native effects leave map values to ordinary lowering,ir lowerer uninitialized type helpers report diagnostics" --no-skip`;
+  `cmake --build build-release --target PrimeStruct_compile_run_tests`;
+  `cd build-release && ./PrimeStruct_compile_run_tests --test-case="rejects templated stdlib map return envelope unsupported key arg,rejects templated stdlib map return envelope unsupported value arg" --no-skip`;
+  `git diff --check`;
+  `rg -n 'validateNativeMapValueKinds|only supports numeric/bool/string map values|only supports numeric/bool map values|requires map literal arguments to be numeric/bool values' src include tests docs`
+  | failures: none | notes: TODO-4542 removed the native map-value
+  preflight gate, left map key/value envelope failures to semantic validation
+  where applicable, and reworded retained native collection storage/literal
+  diagnostics as generic primitive-storage limits.
 - 2026-05-20 20:20 CEST | pass | mode: release | command:
   `cmake --build build-release --target PrimeStruct_backend_ir_tests`;
   `cd build-release && ./PrimeStruct_backend_ir_tests --test-case="ir lowerer call helpers source delegation stays stable,ir lowerer call helpers emit builtin array access,ir lowerer call helpers keep explicit map helpers out of native builtin emission,ir lowerer call helpers dispatch native call tail orchestration" --no-skip`;

@@ -10,7 +10,6 @@ namespace primec::ir_lowerer {
 
 bool validateNativeNoSoftwareNumericTypes(const SemanticProgram *semanticProgram, std::string &error);
 bool validateNativeNoRuntimeReflectionQueries(const SemanticProgram *semanticProgram, std::string &error);
-bool validateNativeMapValueKinds(const SemanticProgram *semanticProgram, std::string &error);
 
 bool validateNativeProgramEffects(const Program &program,
                                   const std::string &entryPath,

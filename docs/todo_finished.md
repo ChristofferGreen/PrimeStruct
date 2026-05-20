@@ -20169,6 +20169,50 @@ Moved from `docs/todo.md` during unfinished-only cleanup:
     `tryEmitKeyValueAccessLookup`, `tryEmitKeyValueContainsLookup`, or
     `KeyValueAccessLookupEmitResult` in production/testing helper surfaces.
 
+- [x] TODO-4542: Retire native map-value backend gates
+  - owner: ai
+  - created_at: 2026-05-20
+  - finished_at: 2026-05-20
+  - phase: Map stdlib ownership cutover
+  - parallel_track: map-zero-audit
+  - depends_on: TODO-4541
+  - split_from: TODO-4537
+  - scope: Remove or reclassify the remaining native backend checks that
+    reject values specifically because they are stdlib map values, including
+    `validateNativeMapValueKinds` and any uninitialized-storage or mutation
+    diagnostics that are map-specific rather than generic backend value
+    restrictions.
+  - implementation_notes:
+    - Removed `validateNativeMapValueKinds` from
+      `IrLowererNativeEffects.{h,cpp}` and stopped running it from lower-entry
+      setup.
+    - Reworded the remaining uninitialized-storage and collection literal
+      native restrictions as generic primitive-storage limits rather than
+      stdlib map-value checks.
+    - Kept residual `KeyValueAccessTargetInfo` and resolver metadata for
+      TODO-4543.
+  - acceptance:
+    - Native backend validation no longer names stdlib map as a special value
+      kind unless the retained check is documented as a generic backend
+      primitive limit.
+    - Focused native/VM/C++ emitter map value tests either pass or have
+      diagnostics updated to generic backend value wording.
+    - Source-lock tests cover the absence of `validateNativeMapValueKinds` or
+      any replacement map-specific backend gate.
+  - stop_rule: Stop once native backend gates no longer classify stdlib map
+    specially, or once any retained backend primitive limit is explicitly
+    generic and documented.
+  - evidence: Deleted the native map-value preflight validator and its lowerer
+    entry setup call, reworded retained collection storage/literal diagnostics
+    to generic primitive-storage wording, updated map rejection tests that now
+    fail earlier in semantic validation, and added a source-lock test that
+    keeps `validateNativeMapValueKinds` absent from native effects sources.
+    Built `PrimeStruct_backend_ir_tests` and
+    `PrimeStruct_compile_run_tests`; ran focused backend IR tests for native
+    effects and uninitialized diagnostics, focused compile-run map rejection
+    tests for unsupported key/value envelopes, `git diff --check`, and an
+    `rg` scan for the retired native map-value symbols/messages.
+
 - [x] TODO-4540: Collapse lowerer key/value local metadata
   - owner: ai
   - created_at: 2026-05-20

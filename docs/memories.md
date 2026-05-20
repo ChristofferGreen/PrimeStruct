@@ -233,7 +233,7 @@ This file stores durable session-derived facts that are useful in later work. Ke
   flags are gone. Temporary key/value scalar facts, access-target helpers,
   setup-inference access element-kind helpers, and
   inline/native-tail contains/tryAt predicates carry backing details until
-  later TODO-4542/TODO-4543/TODO-4464 slices remove the remaining C++ map
+  later TODO-4543/TODO-4464 slices remove the remaining C++ map
   substrate; key comparison opcode selection plus inline native dispatch
   published-helper
   metadata wrappers, builtin-name helper-surface checks, and access-target
@@ -1397,11 +1397,11 @@ This file stores durable session-derived facts that are useful in later work. Ke
   removed from `isGeneratedMapInsertHelper`, while field receiver cases still
   fail with `struct field type mismatch` without the retired map bridge.
 
-### native-map-values-must-be-scalars
-- Updated: 2026-05-15
+### native-map-value-preflight-is-retired
+- Updated: 2026-05-20
 - Tags: native, collections, lowering
-- Fact: Native map lowering only supports numeric, bool, and string value kinds, so map specializations with unknown semantic-product value kinds must reject before lowering.
-- Evidence: The ownership-sensitive experimental map value fixture compiled into a native crash until entry setup validated semantic-product map value kinds and rejected unsupported values before map lowering.
+- Fact: Native lowering no longer runs a stdlib map-value preflight gate; invalid `map<Unknown, ...>` envelopes now reject through ordinary semantic return or key validation, and retained native collection storage limits use generic primitive-storage diagnostics.
+- Evidence: TODO-4542 deleted `validateNativeMapValueKinds` and its lower-entry setup call, added a native-effects source lock for the removed symbol/message, and focused release tests showed unsupported map key/value envelopes now fail in semantic validation before backend lowering.
 
 ### maybe-method-helpers-use-rooted-families
 - Updated: 2026-05-01

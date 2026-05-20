@@ -531,7 +531,7 @@ bool emitConversionsAndCallsCollectionAndMutationExpr(
       if (keyKind == LocalInfo::ValueKind::Unknown ||
           valueKind == LocalInfo::ValueKind::Unknown) {
         error = hasExplicitTemplateArgs
-                    ? "native backend only supports numeric/bool map values"
+                    ? "native backend requires collection literal key/value types to be known primitive values"
                     : ("map literal requires exactly two template arguments"
                        " (name=" + expr.name +
                        ", template_args=" + std::to_string(expr.templateArgs.size()) +
@@ -656,7 +656,7 @@ bool emitConversionsAndCallsCollectionAndMutationExpr(
 
           if (argKind == LocalInfo::ValueKind::Unknown ||
               (expectedKind != LocalInfo::ValueKind::String && argKind == LocalInfo::ValueKind::String)) {
-            error = "native backend requires map literal arguments to be numeric/bool values";
+            error = "native backend requires collection literal arguments to match known primitive storage";
             return false;
           }
           if (argKind != expectedKind) {
@@ -759,7 +759,7 @@ bool emitConversionsAndCallsCollectionAndMutationExpr(
 
         LocalInfo::ValueKind argKind = inferExprKind(arg, localsIn);
         if (argKind == LocalInfo::ValueKind::Unknown || argKind == LocalInfo::ValueKind::String) {
-          error = "native backend requires map literal arguments to be numeric/bool values";
+          error = "native backend requires collection literal arguments to match known primitive storage";
           return false;
         }
         LocalInfo::ValueKind expectedKind = (i % 2 == 0) ? keyKind : valueKind;
