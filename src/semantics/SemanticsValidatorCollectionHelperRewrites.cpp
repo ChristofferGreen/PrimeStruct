@@ -686,7 +686,7 @@ bool SemanticsValidator::tryRewriteCanonicalExperimentalKeyValueHelperCall(
     if (!normalizedName.empty() && normalizedName.front() != '/') {
       normalizedName.insert(normalizedName.begin(), '/');
     }
-    return isResolvedMapConstructorPath(normalizedName);
+    return isResolvedKeyValueConstructorPath(normalizedName);
   };
   if (!candidate.isMethodCall && !directExperimentalKeyValueHelperSpelling &&
       isBareKeyValueAccessHelperName(helperName) &&

@@ -952,7 +952,7 @@ bool SemanticsValidator::canonicalizeInferredCollectionBinding(
         resolvedCandidate = concreteResolvedCandidate;
       }
     }
-    if (!isResolvedMapConstructorPath(resolvedCandidate)) {
+    if (!isResolvedKeyValueConstructorPath(resolvedCandidate)) {
       return false;
     }
     if (candidate.templateArgs.size() == 2) {

@@ -784,7 +784,9 @@ TEST_CASE("canonical map surface owns standalone stdlib implementation") {
         std::string::npos);
   CHECK(semanticsSource.find("isBuiltinCanonicalKeyValueConstructorExpr") !=
         std::string::npos);
-  CHECK(semanticsSource.find("isResolvedMapConstructorPath(path)") !=
+  CHECK(semanticsSource.find("isResolvedMapConstructorPath(path)") ==
+        std::string::npos);
+  CHECK(semanticsSource.find("isResolvedKeyValueConstructorPath(path)") !=
         std::string::npos);
   CHECK(semanticBindingTypeHelpersSource.find(
             "collectionTypePathLocal(\"map\")") == std::string::npos);

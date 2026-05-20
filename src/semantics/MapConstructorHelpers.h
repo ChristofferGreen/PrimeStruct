@@ -302,7 +302,7 @@ inline bool isResolvedPublishedMapConstructorPath(const std::string &rawPath) {
            normalizedPath == experimentalCollectionConstructorPathLocal("map", "map"));
 }
 
-inline bool isResolvedMapConstructorPath(const std::string &rawPath) {
+inline bool isResolvedKeyValueConstructorPath(const std::string &rawPath) {
   const std::string normalizedPath = stripCollectionConstructorSuffixes(rawPath);
   std::string memberName;
   if (!resolveMapConstructorMemberPath(normalizedPath, memberName)) {

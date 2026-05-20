@@ -23,7 +23,7 @@ enum class RemovedCollectionHelperFamily {
 }
 
 [[maybe_unused]] bool isDirectMapConstructorPath(std::string_view resolvedCandidate) {
-  return isResolvedMapConstructorPath(std::string(resolvedCandidate));
+  return isResolvedKeyValueConstructorPath(std::string(resolvedCandidate));
 }
 
 [[maybe_unused]] std::string mapCollectionAliasToken() {

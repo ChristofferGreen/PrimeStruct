@@ -200,7 +200,8 @@ This file stores durable session-derived facts that are useful in later work. Ke
   should use key/value names too; builtin semantic constructor-backed insert
   tracking locals should use key/value names too; builtin semantic canonical
   constructor predicates should use key/value names too; builtin semantic
-  canonical read helper locals should use key/value names too.
+  canonical read helper locals should use key/value names too; shared
+  resolved constructor path predicates should use key/value names too.
   The stdlib ownership source lock rejects the old map-helper, map-count,
   map-access, and removed map compatibility names.
 
@@ -1389,7 +1390,7 @@ This file stores durable session-derived facts that are useful in later work. Ke
   constructor helper path classification should reuse
   `resolveMapConstructorMemberPath(...)` instead of naming the map constructor
   surface ID directly.
-- Evidence: `isBuiltinCanonicalMapConstructorExpr(...)` and
+- Evidence: `isBuiltinCanonicalKeyValueConstructorExpr(...)` and
   `isMapConstructorDirectTargetPath(...)` now only accept the public rooted
   `/std/collections/map/map` constructor path, while `MapConstructorHelpers.h`
   no longer carries the fixed-arity map constructor rewrite table or the

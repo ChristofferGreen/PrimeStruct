@@ -193,7 +193,7 @@ bool isPublishedMapConstructorExpr(const Expr &candidate) {
   if (!normalizedName.empty() && normalizedName.front() != '/') {
     normalizedName.insert(normalizedName.begin(), '/');
   }
-  return isResolvedMapConstructorPath(normalizedName);
+  return isResolvedKeyValueConstructorPath(normalizedName);
 }
 
 std::string removedKeyValueCompatibilityHelperFromPath(std::string path) {

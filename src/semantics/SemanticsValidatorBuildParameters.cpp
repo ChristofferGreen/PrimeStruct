@@ -178,7 +178,7 @@ bool SemanticsValidator::buildParameters() {
       if (overloadSuffix != std::string::npos) {
         normalizedPath.erase(overloadSuffix);
       }
-      return isResolvedMapConstructorPath(normalizedPath);
+      return isResolvedKeyValueConstructorPath(normalizedPath);
     };
     auto isBuiltinResultOkPayloadCall = [](const Expr &candidate) {
       if (candidate.kind != Expr::Kind::Call || !candidate.isMethodCall || candidate.name != "ok" ||

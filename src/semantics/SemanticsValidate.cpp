@@ -5685,7 +5685,7 @@ bool isBuiltinCanonicalKeyValueConstructorExpr(
     if (specializationSuffix != std::string::npos) {
       path.erase(specializationSuffix);
     }
-    return isResolvedMapConstructorPath(path);
+    return isResolvedKeyValueConstructorPath(path);
   };
   if (expr.name == "map" || isCanonicalConstructorPath(expr.name)) {
     return true;

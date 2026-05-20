@@ -989,7 +989,7 @@ bool SemanticsValidator::validateExprMutationBorrowBuiltins(
       const std::string rhsPath = resolveCalleePath(expr.args[1]);
       std::string constructorPath = rhsPath;
       if (constructorPath.empty() ||
-          !isResolvedMapConstructorPath(constructorPath)) {
+          !isResolvedKeyValueConstructorPath(constructorPath)) {
         return true;
       }
       const BindingInfo *targetBinding = findNamedBinding(target.name);

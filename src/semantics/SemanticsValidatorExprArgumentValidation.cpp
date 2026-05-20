@@ -584,8 +584,8 @@ bool SemanticsValidator::validateArgumentTypeAgainstParam(
       return true;
     }
     const bool keyValueConstructorCall =
-        isResolvedMapConstructorPath(diagnosticResolved) ||
-        isResolvedMapConstructorPath(resolved);
+        isResolvedKeyValueConstructorPath(diagnosticResolved) ||
+        isResolvedKeyValueConstructorPath(resolved);
     if (keyValueConstructorCall && actualKind == ReturnKind::Bool &&
         expectedKind != ReturnKind::Bool) {
       return failArgumentValidation(
