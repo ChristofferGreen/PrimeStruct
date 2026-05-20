@@ -10,17 +10,6 @@
   string-valued map runtime fixture has since been retargeted to compile-only
   coverage because native runtime string-valued maps still hang after
   compilation.
-- `PrimeStruct_semantics_tests` inferred map-struct-field and
-  uninitialized-storage constructor fixtures are stale after the map
-  stdlib-ownership cutover. On 2026-05-16 the filters
-  `stdlib map constructors accept inferred canonical map struct fields`,
-  `helper-wrapped inferred canonical map struct fields validate`,
-  `helper-wrapped map constructor assignments accept inferred canonical map
-  struct fields`, `auto bindings inside inferred canonical map return blocks
-  rewrite constructors`, and `helper-wrapped map constructors accept canonical
-  map uninitialized storage` failed with missing canonical map access helper
-  or `init value type mismatch` diagnostics; adjacent explicit-target and
-  canonical constructor-return coverage passes.
 - `PrimeStruct_misc_tests --test-case="uninitialized canonical map template arg keeps map key value diagnostics"`
   is stale after the map stdlib-ownership cutover. On 2026-05-16 it
   validated successfully instead of reporting
@@ -99,6 +88,12 @@
   the string-valued map access emission fixture returned `NotHandled`.
 
 ## Recent Test Runs
+- 2026-05-20 12:30 CEST | pass | mode: release | command:
+  `cmake --build build-release --target PrimeStruct_semantics_tests`;
+  `cd build-release && ./PrimeStruct_semantics_tests --test-case="stdlib map constructors reject inferred canonical map struct field mismatch,helper-wrapped inferred canonical map struct fields validate,helper-wrapped map constructor assignments accept inferred canonical map struct fields,auto bindings inside inferred canonical map return blocks rewrite constructors,helper-wrapped map constructors reject canonical map uninitialized storage mismatch" --no-skip`
+  | failures: none | notes: inferred struct-field and uninitialized-storage
+  map constructor fixtures now use explicit access templates where validation
+  still applies and lock current mismatch diagnostics where inference is gone.
 - 2026-05-20 12:24 CEST | pass | mode: release | command:
   `cmake --build build-release --target PrimeStruct_backend_ir_tests`;
   `cd build-release && ./PrimeStruct_backend_ir_tests --test-case="ir lowerer helper accepts parser-shaped canonical map entry constructors as builtin map" --no-skip`
@@ -4642,6 +4637,7 @@
 - 2026-05-12 17:28 local | fail | mode: release | command: `./scripts/compile.sh --release` | failures: 146 CTest targets | notes: baseline after preflight checkpoint failed; stabilization blocks TODO work
 
 ## Resolved Failures
+- [x] inferred map struct field semantics fixtures | resolved: 2026-05-20 12:30 CEST | validating command: `cmake --build build-release --target PrimeStruct_semantics_tests`; `cd build-release && ./PrimeStruct_semantics_tests --test-case="stdlib map constructors reject inferred canonical map struct field mismatch,helper-wrapped inferred canonical map struct fields validate,helper-wrapped map constructor assignments accept inferred canonical map struct fields,auto bindings inside inferred canonical map return blocks rewrite constructors,helper-wrapped map constructors reject canonical map uninitialized storage mismatch" --no-skip` | notes: preserved the still-valid helper-wrapped cases with explicit map access templates and retargeted stale inferred struct-field and uninitialized-storage acceptance cases to current mismatch diagnostics.
 - [x] parser-shaped canonical map constructor classifier | resolved: 2026-05-20 12:24 CEST | validating command: `cmake --build build-release --target PrimeStruct_backend_ir_tests`; `cd build-release && ./PrimeStruct_backend_ir_tests --test-case="ir lowerer helper accepts parser-shaped canonical map entry constructors as builtin map" --no-skip` | notes: retargeted stale classifier expectations so lowerer recognizes parser-shaped canonical map constructors as `map` while emitter classification still rejects direct builtin emission.
 - [x] explicit args-pack map access native tail | resolved: 2026-05-20 12:22 CEST | validating command: `cmake --build build-release --target PrimeStruct_backend_ir_tests`; `cd build-release && ./PrimeStruct_backend_ir_tests --test-case="ir lowerer call helpers defer explicit map access for args-pack receivers" --no-skip` | notes: retargeted stale explicit map access args-pack coverage from native instruction emission to the current `NotHandled` deferral path.
 - [x] indexed args-pack pointer map setup type | resolved: 2026-05-20 12:21 CEST | validating command: `cmake --build build-release --target PrimeStruct_backend_ir_tests`; `cd build-release && ./PrimeStruct_backend_ir_tests --test-case="ir lowerer setup type helper leaves indexed args-pack pointer map receivers unclassified" --no-skip` | notes: retargeted stale bare-`at` args-pack map receiver setup-type coverage to the current empty target type.

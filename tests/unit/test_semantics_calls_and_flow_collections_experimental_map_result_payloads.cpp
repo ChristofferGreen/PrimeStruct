@@ -481,7 +481,7 @@ main() {
   checkMapPairTemplateConflict(error);
 }
 
-TEST_CASE("helper-wrapped map constructors accept canonical map uninitialized storage") {
+TEST_CASE("helper-wrapped map constructors reject canonical map uninitialized storage mismatch") {
   const std::string source = R"(
 import /std/collections/*
 import /std/collections/map/*
@@ -502,9 +502,9 @@ main() {
 }
 )";
   std::string error;
-  CHECK(validateProgram(source, "/main", error));
+  CHECK_FALSE(validateProgram(source, "/main", error));
   INFO(error);
-  CHECK(error.empty());
+  CHECK(error.find("init value type mismatch") != std::string::npos);
 }
 
 TEST_CASE("helper-wrapped map constructor uninitialized storage keeps mismatch diagnostics") {

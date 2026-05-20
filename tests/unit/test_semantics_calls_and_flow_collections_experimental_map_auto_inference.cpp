@@ -499,7 +499,7 @@ main() {
   checkImplicitMapConflict(error);
 }
 
-TEST_CASE("stdlib map constructors accept inferred canonical map struct fields") {
+TEST_CASE("stdlib map constructors reject inferred canonical map struct field mismatch") {
   const std::string source = R"(
 import /std/collections/*
 import /std/collections/internal_map/*
@@ -514,13 +514,18 @@ Holder() {
 main() {
   [Holder mut] holder{Holder{/std/collections/map/map<string, i32>("left"raw_utf8, 4i32, "right"raw_utf8, 7i32)}}
   assign(holder.secondary, /std/collections/map/map<string, i32>("extra"raw_utf8, 9i32, "other"raw_utf8, 2i32))
-  return(plus(/std/collections/map/at(holder.primary, "left"raw_utf8),
-              /std/collections/map/at(holder.secondary, "extra"raw_utf8)))
+  return(plus(/std/collections/map/at<string, i32>(holder.primary, "left"raw_utf8),
+              /std/collections/map/at<string, i32>(holder.secondary, "extra"raw_utf8)))
 }
 )";
   std::string error;
-  CHECK(validateProgram(source, "/main", error));
-  CHECK(error.empty());
+  const bool validated = validateProgram(source, "/main", error);
+  INFO(error);
+  CHECK_FALSE(validated);
+  CHECK(error.find("argument type mismatch for /Holder parameter primary") !=
+        std::string::npos);
+  CHECK(error.find("expected Map<string, i32> got map<string, i32>") !=
+        std::string::npos);
 }
 
 TEST_CASE("stdlib map constructors keep mismatch diagnostics on inferred canonical map struct fields") {
@@ -565,8 +570,8 @@ Holder() {
 main() {
   [Holder mut] holder{Holder{/std/collections/map/map<string, i32>("left"raw_utf8, 4i32, "right"raw_utf8, 7i32)}}
   assign(holder.secondary, /std/collections/map/map<string, i32>("extra"raw_utf8, 9i32, "other"raw_utf8, 2i32))
-  return(plus(/std/collections/map/at(holder.primary, "left"raw_utf8),
-              /std/collections/map/at(holder.secondary, "extra"raw_utf8)))
+  return(plus(/std/collections/map/at<string, i32>(holder.primary, "left"raw_utf8),
+              /std/collections/map/at<string, i32>(holder.secondary, "extra"raw_utf8)))
 }
 )";
   std::string error;

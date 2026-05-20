@@ -115,7 +115,7 @@ Holder() {
 main() {
   [Holder mut] holder{Holder()}
   assign(holder.values, wrapValues(/std/collections/map/map<string, i32>("left"raw_utf8, 4i32, "right"raw_utf8, 7i32)))
-  return(/std/collections/map/at(holder.values, "left"raw_utf8))
+  return(/std/collections/map/at<string, i32>(holder.values, "left"raw_utf8))
 }
 )";
   std::string error;
