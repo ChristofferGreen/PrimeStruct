@@ -10,10 +10,6 @@
   string-valued map runtime fixture has since been retargeted to compile-only
   coverage because native runtime string-valued maps still hang after
   compilation.
-- `PrimeStruct_backend_ir_tests --test-case="ir lowerer call helpers keep explicit map helper same-path defs" --no-skip`
-  still has stale alias access fallback expectations; on 2026-05-17 the
-  alias `at` and `at_unsafe` checks still resolved compatibility defs instead
-  of `nullptr`.
 - `PrimeStruct_backend_ir_tests --test-case="ir lowerer call helpers dispatch buffer and native tail wrappers" --no-skip`
   has a stale experimental-vector native-tail expectation. On 2026-05-18 the
   case still expected the experimental-vector method `at` tail path to emit
@@ -37,6 +33,11 @@
   the string-valued map access emission fixture returned `NotHandled`.
 
 ## Recent Test Runs
+- 2026-05-20 12:59 CEST | pass | mode: release | command:
+  `cmake --build build-release --target PrimeStruct_backend_ir_tests`;
+  `cd build-release && ./PrimeStruct_backend_ir_tests --test-case="ir lowerer call helpers keep explicit map helper same-path defs" --no-skip`
+  | failures: none | notes: confirmed the existing resolved fixture still
+  passes and removed its stale active known-failure entry.
 - 2026-05-20 12:58 CEST | pass | mode: release | command:
   `cmake --build build-release --target PrimeStruct_semantics_tests`;
   `cd build-release && ./PrimeStruct_semantics_tests --test-case="semantic product keeps vector and map bridge parity" --no-skip`
