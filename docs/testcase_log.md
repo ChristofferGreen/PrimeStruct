@@ -10,12 +10,6 @@
   string-valued map runtime fixture has since been retargeted to compile-only
   coverage because native runtime string-valued maps still hang after
   compilation.
-- `PrimeStruct_backend_ir_tests --test-case="ir lowerer supports direct map Result payloads,ir lowerer materializes variadic map packs with indexed count methods,ir lowerer materializes variadic map packs with indexed canonical count calls"`
-  is not a clean map-cutover gate after retiring rooted `/map/map` constructor
-  retargeting. The direct payload and unqualified-count cases still use stale
-  retired map literal/count compatibility, and the canonical-count variadic
-  case still expects `args<map<K, V>>` to carry the retired builtin map layout
-  instead of the stdlib-owned `MapValue` path.
 - `PrimeStruct_compile_run_tests --test-case="C++ emitter materializes variadic map value packs with indexed count methods" --no-skip`
   is stale after the map stdlib-ownership cutover; it still expects variadic
   `args<map<K, V>>` method-sugar count fallback to resolve through the retired
@@ -176,6 +170,12 @@
   the string-valued map access emission fixture returned `NotHandled`.
 
 ## Recent Test Runs
+- 2026-05-20 11:46 CEST | pass | mode: release | command:
+  `cmake --build build-release --target PrimeStruct_backend_ir_tests`;
+  `cd build-release && ./PrimeStruct_backend_ir_tests --test-case="retired direct map Result payload literal rejects before lowering,retired variadic map pack bare count rejects before lowering,retired variadic map pack canonical count no longer lowers as native map" --no-skip`
+  | failures: none | notes: retired three stale backend IR map fixtures that
+  still assumed old map literal/count compatibility or native map-pack
+  lowering.
 - 2026-05-20 11:43 CEST | pass | mode: release | command:
   `cmake --build build-release --target PrimeStruct_semantics_tests`;
   `cd build-release && ./PrimeStruct_semantics_tests --test-case="*map*count*" --no-skip`
@@ -4639,6 +4639,7 @@
 - 2026-05-12 17:28 local | fail | mode: release | command: `./scripts/compile.sh --release` | failures: 146 CTest targets | notes: baseline after preflight checkpoint failed; stabilization blocks TODO work
 
 ## Resolved Failures
+- [x] backend IR retired native-map fixtures | resolved: 2026-05-20 11:46 CEST | validating command: `cmake --build build-release --target PrimeStruct_backend_ir_tests`; `cd build-release && ./PrimeStruct_backend_ir_tests --test-case="retired direct map Result payload literal rejects before lowering,retired variadic map pack bare count rejects before lowering,retired variadic map pack canonical count no longer lowers as native map" --no-skip` | notes: converted stale map Result and variadic pack lowering coverage into explicit retirement locks for old map literals, bare count fallback, and native map-pack lowering.
 - [x] map-count semantics wildcard | resolved: 2026-05-20 11:43 CEST | validating command: `cmake --build build-release --target PrimeStruct_semantics_tests`; `cd build-release && ./PrimeStruct_semantics_tests --test-case="*map*count*" --no-skip` | notes: updated stale map-count fixtures for current bare-count diagnostics, public `MapValue` construction, and current same-path alias behavior pending TODO-4534.
 - [x] template monomorph source delegation stays stable | resolved: 2026-05-20 11:36 CEST | validating command: `cmake --build build-release --target PrimeStruct_backend_ir_tests`; `cd build-release && ./PrimeStruct_backend_ir_tests --test-case="template monomorph source delegation stays stable" --no-skip` | notes: refreshed stale SoA and key-value source-lock assertions for current helper prefix APIs, compatibility path routing, and renamed map-owned helpers.
 - [x] semantics validator infer source delegation stays stable | resolved: 2026-05-20 11:27 CEST | validating command: `cmake --build build-release --target PrimeStruct_backend_ir_tests`; `cd build-release && ./PrimeStruct_backend_ir_tests --test-case="semantics validator infer source delegation stays stable" --no-skip` | notes: refreshed stale source-lock snippets for key-value resolver naming, split SoA helper path literals, and removed map compatibility predispatch paths.

@@ -712,7 +712,7 @@ main() {
   CHECK(result == 4);
 }
 
-TEST_CASE("ir lowerer supports direct map Result payloads") {
+TEST_CASE("retired direct map Result payload literal rejects before lowering") {
   const std::string source = R"(
 import /std/file/*
 import /std/collections/*
@@ -740,19 +740,8 @@ main() {
   primec::Program program;
   primec::SemanticProgram semanticProgram;
   std::string error;
-  REQUIRE(parseAndValidate(source, program, semanticProgram, error));
-  CHECK(error.empty());
-
-  primec::IrLowerer lowerer;
-  primec::IrModule module;
-  REQUIRE(lowerer.lower(program, &semanticProgram, "/main", {}, {}, module, error));
-  CHECK(error.empty());
-
-  primec::Vm vm;
-  uint64_t result = 0;
-  REQUIRE(vm.execute(module, result, error));
-  CHECK(error.empty());
-  CHECK(result == 16);
+  CHECK_FALSE(parseAndValidate(source, program, semanticProgram, error));
+  CHECK(error.find("assign target must be a mutable binding") != std::string::npos);
 }
 
 TEST_CASE("ir lowerer supports Buffer Result payloads on IR-backed VM paths") {

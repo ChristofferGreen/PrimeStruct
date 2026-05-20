@@ -374,7 +374,7 @@ main() {
   CHECK(result == 27);
 }
 
-TEST_CASE("ir lowerer materializes variadic map packs with indexed count methods") {
+TEST_CASE("retired variadic map pack bare count rejects before lowering") {
   const std::string source = R"(
 import /std/collections/*
 
@@ -409,21 +409,8 @@ main() {
   primec::SemanticProgram semanticProgram;
   std::string error;
   INFO(error);
-  REQUIRE(parseAndValidate(source, program, semanticProgram, error));
-  CHECK(error.empty());
-
-  primec::IrLowerer lowerer;
-  primec::IrModule module;
-  INFO(error);
-  REQUIRE(lowerer.lower(program, &semanticProgram, "/main", {}, {}, module, error));
-  CHECK(error.empty());
-
-  primec::Vm vm;
-  uint64_t result = 0;
-  INFO(error);
-  REQUIRE(vm.execute(module, result, error));
-  CHECK(error.empty());
-  CHECK(result == 11);
+  CHECK_FALSE(parseAndValidate(source, program, semanticProgram, error));
+  CHECK(error.find("unknown call target: count") != std::string::npos);
 }
 
 TEST_CASE("ir lowerer materializes variadic map packs with indexed contains helpers") {
@@ -530,7 +517,7 @@ main() {
   CHECK(result == 60);
 }
 
-TEST_CASE("ir lowerer materializes variadic map packs with indexed canonical count calls") {
+TEST_CASE("retired variadic map pack canonical count no longer lowers as native map") {
   const std::string source = R"(
 import /std/collections/*
 import /std/collections/map/*
@@ -575,15 +562,8 @@ main() {
   primec::IrLowerer lowerer;
   primec::IrModule module;
   INFO(error);
-  REQUIRE(lowerer.lower(program, &semanticProgram, "/main", {}, {}, module, error));
-  CHECK(error.empty());
-
-  primec::Vm vm;
-  uint64_t result = 0;
-  INFO(error);
-  REQUIRE(vm.execute(module, result, error));
-  CHECK(error.empty());
-  CHECK(result == 11);
+  CHECK_FALSE(lowerer.lower(program, &semanticProgram, "/main", {}, {}, module, error));
+  CHECK(error.find("call=/at") != std::string::npos);
 }
 
 TEST_SUITE_END();
