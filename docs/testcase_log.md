@@ -10,12 +10,6 @@
   string-valued map runtime fixture has since been retargeted to compile-only
   coverage because native runtime string-valued maps still hang after
   compilation.
-- `PrimeStruct_backend_ir_tests --test-case="ir lowerer setup inference helper resolves reordered named access kinds"`
-  has stale bare-`at` helper expectations after the map stdlib-ownership
-  cutover. On 2026-05-18 the direct helper fixture returned `NotMatched`
-  before resolving the reordered vector receiver because slashless `at` is
-  now visible to the map helper surface rather than acting as a generic
-  collection builtin in that isolated test setup.
 - `PrimeStruct_backend_ir_tests --test-case="ir lowerer setup type helper resolves indexed args-pack pointer map receivers"`
   has stale bare-`at` helper expectations after the map stdlib-ownership
   cutover. On 2026-05-18 the indexed args-pack receiver fixture left the
@@ -121,6 +115,12 @@
   the string-valued map access emission fixture returned `NotHandled`.
 
 ## Recent Test Runs
+- 2026-05-20 12:20 CEST | pass | mode: release | command:
+  `cmake --build build-release --target PrimeStruct_backend_ir_tests`;
+  `cd build-release && ./PrimeStruct_backend_ir_tests --test-case="ir lowerer setup inference helper ignores reordered bare access kinds" --no-skip`
+  | failures: none | notes: reordered named bare-`at` inference coverage
+  now locks the current `NotMatched` behavior instead of the retired generic
+  collection access inference path.
 - 2026-05-20 12:18 CEST | pass | mode: release | command:
   `cmake --build build-release --target PrimeStruct_backend_ir_tests`;
   `cd build-release && ./PrimeStruct_backend_ir_tests --test-case="ir lowerer binding type helpers classify binding kind and string/fileerror types" --no-skip`
@@ -4642,6 +4642,7 @@
 - 2026-05-12 17:28 local | fail | mode: release | command: `./scripts/compile.sh --release` | failures: 146 CTest targets | notes: baseline after preflight checkpoint failed; stabilization blocks TODO work
 
 ## Resolved Failures
+- [x] reordered bare access setup inference | resolved: 2026-05-20 12:20 CEST | validating command: `cmake --build build-release --target PrimeStruct_backend_ir_tests`; `cd build-release && ./PrimeStruct_backend_ir_tests --test-case="ir lowerer setup inference helper ignores reordered bare access kinds" --no-skip` | notes: retargeted stale reordered named bare-`at` inference expectations to current `NotMatched` behavior after map access left generic builtin classification.
 - [x] binding type helper SoA source lock | resolved: 2026-05-20 12:18 CEST | validating command: `cmake --build build-release --target PrimeStruct_backend_ir_tests`; `cd build-release && ./PrimeStruct_backend_ir_tests --test-case="ir lowerer binding type helpers classify binding kind and string/fileerror types" --no-skip` | notes: retargeted stale exact experimental SoA vector source-string assertions to the shared SoA path helper and current split-string compatibility guards.
 - [x] explicit map helpers native builtin emission | resolved: 2026-05-20 12:16 CEST | validating command: `cmake --build build-release --target PrimeStruct_backend_ir_tests`; `cd build-release && ./PrimeStruct_backend_ir_tests --test-case="ir lowerer call helpers keep explicit map helpers out of native builtin emission" --no-skip` | notes: retargeted stale canonical map `count` native-tail expectations to `NotHandled`, preserving that explicit stdlib-owned map helpers do not emit native builtin instructions.
 - [x] inline count fallback map expectations | resolved: 2026-05-20 12:14 CEST | validating command: `cmake --build build-release --target PrimeStruct_backend_ir_tests`; `cd build-release && ./PrimeStruct_backend_ir_tests --test-case="ir lowerer call helpers dispatch inline call with count fallbacks" --no-skip` | notes: refreshed stale method-access and canonical map-count assertions so stdlib-owned map `count` remains a direct helper call instead of an old method-shaped builtin fallback.
