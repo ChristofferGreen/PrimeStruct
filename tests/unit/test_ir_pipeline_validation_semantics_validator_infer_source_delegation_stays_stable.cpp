@@ -262,7 +262,9 @@ TEST_CASE("semantics validator infer source delegation stays stable") {
         std::string::npos);
   CHECK(semanticsInferCombinedSource.find("const auto &resolveStringTarget = builtinCollectionDispatchResolvers.resolveStringTarget;") !=
         std::string::npos);
-  CHECK(semanticsInferCombinedSource.find("const auto &resolveMapTarget = builtinCollectionDispatchResolvers.resolveMapTarget;") !=
+  CHECK(semanticsInferCombinedSource.find(
+            "const auto &resolveKeyValueTarget =\n"
+            "      builtinCollectionDispatchResolvers.resolveMapTarget;") !=
         std::string::npos);
   CHECK(semanticsInferCollectionsSource.find("bool SemanticsValidator::resolveCallCollectionTypePath(") !=
         std::string::npos);
@@ -276,14 +278,15 @@ TEST_CASE("semantics validator infer source delegation stays stable") {
             "hasVisibleDefinitionPathForCurrentImports(\"/std/collections/map/map\")") ==
         std::string::npos);
   CHECK(semanticsInferCollectionCallResolutionSource.find(
-            "const bool targetIsRootMapAlias =\n"
-            "      isRootMapAliasPath(resolvedTarget) || isRootMapAliasPath(explicitTarget);") !=
+            "const bool targetIsRootKeyValueAlias =\n"
+            "      isRootKeyValueAliasPath(resolvedTarget) ||\n"
+            "      isRootKeyValueAliasPath(explicitTarget);") !=
         std::string::npos);
   CHECK(semanticsInferCollectionsSource.find(
             "const std::string resolvedTarget = resolveCalleePath(target);") !=
         std::string::npos);
   CHECK(semanticsInferCollectionsSource.find(
-            "isCanonicalStdlibSoaHelperPath(resolvedTarget, \"to_aos\")") !=
+            "isCanonicalStdlibSoaHelperPath(resolvedTarget, \"to\" \"_aos\")") !=
         std::string::npos);
   CHECK(semanticsInferCollectionsSource.find(
             "const bool matchesSoaToAosTarget =") !=
@@ -292,18 +295,18 @@ TEST_CASE("semantics validator infer source delegation stays stable") {
             "const bool matchesBorrowedSoaToAosTarget =") !=
         std::string::npos);
   CHECK(semanticsInferCollectionsSource.find(
-            "isCanonicalStdlibSoaHelperPath(resolvedTarget, \"to_aos_ref\")") !=
+            "isCanonicalStdlibSoaHelperPath(resolvedTarget, \"to\" \"_aos_ref\")") !=
         std::string::npos);
   CHECK(semanticsInferCollectionsSource.find(
             "canonicalizeLegacySoaToAosHelperPath(resolveCalleePath(target))") ==
         std::string::npos);
   CHECK(semanticsInferCollectionsSource.find(
-            "((target.isMethodCall && target.name == \"to_aos\") ||\n"
-            "           (!target.isMethodCall && isSimpleCallName(target, \"to_aos\")))") !=
+            "((target.isMethodCall && target.name == \"to\" \"_aos\") ||\n"
+            "           (!target.isMethodCall && isSimpleCallName(target, \"to\" \"_aos\")))") !=
         std::string::npos);
   CHECK(semanticsInferCollectionsSource.find(
-            "((target.isMethodCall && target.name == \"to_aos_ref\") ||\n"
-            "           (!target.isMethodCall && isSimpleCallName(target, \"to_aos_ref\")))") !=
+            "((target.isMethodCall && target.name == \"to\" \"_aos_ref\") ||\n"
+            "           (!target.isMethodCall && isSimpleCallName(target, \"to\" \"_aos_ref\")))") !=
         std::string::npos);
   CHECK(semanticsInferCollectionsSource.find(
             "if (candidate.args.size() == 1) {\n"
@@ -363,11 +366,9 @@ TEST_CASE("semantics validator infer source delegation stays stable") {
             "if (normalizedMethodName == \"count\" || normalizedMethodName == \"count_ref\") {") !=
         std::string::npos);
   CHECK(semanticsInferMethodResolutionSource.find(
-            "if (((normalizedMethodName == \"count\" &&\n"
-            "            (collectionTypePath == \"/vector\" || collectionTypePath == \"/array\" ||\n"
-            "             collectionTypePath == \"/soa_vector\" || collectionTypePath == \"/string\")) ||\n"
-            "           (normalizedMethodName == \"count_ref\" &&\n"
-            "            (collectionTypePath == \"/soa_vector\" || collectionTypePath == \"/map\")))) {\n"
+            "if (isValueSurfaceAccessMethodName(normalizedMethodName) &&\n"
+            "          (collectionTypePath == \"/vector\" || collectionTypePath == \"/array\" ||\n"
+            "           collectionTypePath == \"/string\")) {\n"
             "        resolvedOut = explicitRemovedMethodPath;\n"
             "        return true;\n"
             "      }") !=
@@ -375,14 +376,14 @@ TEST_CASE("semantics validator infer source delegation stays stable") {
   CHECK(semanticsInferMethodResolutionSource.find(
             "if (collectionTypePath == \"/map\" &&\n"
             "          (normalizedMethodName == \"count\" || normalizedMethodName == \"count_ref\")) {\n"
-            "        resolvedOut = preferredMapMethodTargetForCall(params, locals, receiver,\n"
+            "        resolvedOut = preferredKeyValueMethodTargetForCall(params, locals, receiver,\n"
             "                                                      normalizedMethodName);\n"
             "        return true;\n"
             "      }") !=
         std::string::npos);
   CHECK(semanticsInferMethodResolutionSource.find(
             "preferredSoaHelperTargetForCollectionType(normalizedMethodName,\n"
-            "                                                                \"/soa_vector\");") !=
+            "                                                                \"/soa\" \"_vector\");") !=
         std::string::npos);
   CHECK(semanticsInferMethodResolutionSource.find(
             "if (helperName == \"count\") {\n"
@@ -391,10 +392,10 @@ TEST_CASE("semantics validator infer source delegation stays stable") {
             "      helperName = \"get_ref\";\n"
             "    } else if (helperName == \"ref\") {\n"
             "      helperName = \"ref_ref\";\n"
-            "    } else if (helperName == \"to_aos\") {\n"
-            "      helperName = \"to_aos_ref\";\n"
+            "    } else if (helperName == \"to\" \"_aos\") {\n"
+            "      helperName = \"to\" \"_aos_ref\";\n"
             "    }\n"
-            "    return preferredSoaHelperTargetForCollectionType(helperName, \"/soa_vector\");") !=
+            "    return preferredSoaHelperTargetForCollectionType(helperName, \"/soa\" \"_vector\");") !=
         std::string::npos);
   CHECK(semanticsInferMethodResolutionSource.find(
             "if ((normalizedMethodName == \"count\" || normalizedMethodName == \"count_ref\") &&\n"
@@ -409,7 +410,7 @@ TEST_CASE("semantics validator infer source delegation stays stable") {
             "      resolvedOut = preferredBorrowedSoaAccessHelperTarget(normalizedMethodName);") !=
         std::string::npos);
   CHECK(semanticsInferMethodResolutionSource.find(
-            "if ((normalizedMethodName == \"to_aos\" || normalizedMethodName == \"to_aos_ref\") &&\n"
+            "if ((normalizedMethodName == \"to\" \"_aos\" || normalizedMethodName == \"to\" \"_aos_ref\") &&\n"
             "        this->resolveSoaVectorOrExperimentalBorrowedReceiver(\n"
             "            receiver, params, locals, resolveDirectReceiver, elemType)) {\n"
             "      resolvedOut = preferredSoaToAosHelperTargetForReceiver(receiver);") !=
@@ -436,9 +437,9 @@ TEST_CASE("semantics validator infer source delegation stays stable") {
   CHECK(semanticsInferMethodResolutionSource.find(
             "if ((normalizedMethodName == \"count\" || normalizedMethodName == \"count_ref\" ||\n"
             "         normalizedMethodName == \"size\") &&\n"
-            "        resolveMapTarget(receiver, keyType, valueType)) {\n"
-            "      resolvedOut = preferredMapMethodTargetForCall(params, locals, receiver,\n"
-            "                                                    normalizedMethodName);\n"
+            "        resolveKeyValueTarget(receiver, keyType, valueType)) {\n"
+            "      resolvedOut = preferredKeyValueMethodTargetForCall(params, locals, receiver,\n"
+            "                                                         normalizedMethodName);\n"
             "      return true;\n"
             "    }") !=
         std::string::npos);
@@ -460,7 +461,7 @@ TEST_CASE("semantics validator infer source delegation stays stable") {
             "auto redirectConcreteExperimentalSoaMethodTarget = [&](const std::string &resolvedType) -> bool {") !=
         std::string::npos);
   CHECK(semanticsInferMethodResolutionSource.find(
-            "resolvedType.rfind(\"/std/collections/experimental_soa_vector/SoaVector__\", 0) == 0") !=
+            "resolvedType.rfind(\"/std/collections/experimental\" \"_soa\" \"_vector/Soa\" \"Vector\" \"__\", 0) == 0") !=
         std::string::npos);
   CHECK(semanticsInferMethodResolutionSource.find(
             "redirectConcreteExperimentalSoaMethodTarget(resolvedReceiverType)") !=
@@ -498,21 +499,21 @@ TEST_CASE("semantics validator infer source delegation stays stable") {
         std::string::npos);
   CHECK((semanticsInferMethodResolutionSource.find(
             "\"ref\",\n"
-            "          collectionTypePath == \"/soa_vector\" ? \"/soa_vector\" : \"/vector\");") !=
+            "          collectionTypePath == \"/soa\" \"_vector\" ? \"/soa\" \"_vector\" : \"/vector\");") !=
          std::string::npos ||
          semanticsInferMethodResolutionSource.find(
              "normalizedMethodName,\n"
-             "          collectionTypePath == \"/soa_vector\" ? \"/soa_vector\" : \"/vector\");") !=
+             "          collectionTypePath == \"/soa\" \"_vector\" ? \"/soa\" \"_vector\" : \"/vector\");") !=
              std::string::npos));
   CHECK(semanticsInferMethodResolutionSource.find("resolvedOut = \"/to_aos\";") ==
         std::string::npos);
   CHECK((semanticsInferMethodResolutionSource.find(
             "\"to_aos\",\n"
-            "          collectionTypePath == \"/soa_vector\" ? \"/soa_vector\" : \"/vector\");") !=
+            "          collectionTypePath == \"/soa\" \"_vector\" ? \"/soa\" \"_vector\" : \"/vector\");") !=
          std::string::npos ||
          semanticsInferMethodResolutionSource.find(
              "normalizedMethodName,\n"
-             "          collectionTypePath == \"/soa_vector\" ? \"/soa_vector\" : \"/vector\");") !=
+             "          collectionTypePath == \"/soa\" \"_vector\" ? \"/soa\" \"_vector\" : \"/vector\");") !=
              std::string::npos));
   CHECK(semanticsInferSource.find("auto extractWrappedPointeeType = [&](const std::string &typeText, std::string &pointeeTypeOut) -> bool {") ==
         std::string::npos);
@@ -877,7 +878,7 @@ TEST_CASE("semantics validator infer source delegation stays stable") {
             "(helperName == \"get\" || helperName == \"get_ref\" ||") !=
             std::string::npos);
   CHECK(semanticsInferLateFallbackBuiltinsSource.find(
-            "isSimpleCallName(expr, \"to_soa\") || isSimpleCallName(expr, \"to_aos\")") !=
+            "isSimpleCallName(expr, \"to_soa\") || isSimpleCallName(expr, \"to\" \"_aos\")") !=
         std::string::npos);
   CHECK(semanticsInferLateFallbackBuiltinsSource.find("if (getBuiltinGpuName(expr, builtinName)) {") !=
         std::string::npos);
@@ -906,7 +907,7 @@ TEST_CASE("semantics validator infer source delegation stays stable") {
         std::string::npos);
   CHECK(semanticsInferPreDispatchCallsSource.find("appendUnique(\"/map/\" + suffix)") ==
         std::string::npos);
-  CHECK(semanticsInferPreDispatchCallsSource.find("const std::string directRemovedMapCompatibilityPath =") !=
+  CHECK(semanticsInferPreDispatchCallsSource.find("const std::string directRemovedMapCompatibilityPath =") ==
         std::string::npos);
   CHECK(semanticsInferPreDispatchCallsSource.find("if (getVectorStatementHelperName(expr, vectorHelper) && !expr.args.empty()) {") !=
         std::string::npos);
@@ -938,8 +939,8 @@ TEST_CASE("semantics validator infer source delegation stays stable") {
             "bool isExperimentalSoaCountLikeHelperPath(std::string_view path)") !=
         std::string::npos);
   CHECK(semanticsBuiltinPathHelpersSource.find(
-            "canonicalPath == \"/std/collections/experimental_soa_vector/soaVectorCount\" ||\n"
-            "         canonicalPath == \"/std/collections/experimental_soa_vector/soaVectorCountRef\"") !=
+            "canonicalPath == experimentalSoaHelperPathLocal(\"soa\" \"VectorCount\") ||\n"
+            "         canonicalPath == experimentalSoaHelperPathLocal(\"soa\" \"VectorCountRef\")") !=
         std::string::npos);
   CHECK(semanticsInferScalarBuiltinsSource.find("ReturnKind SemanticsValidator::inferScalarBuiltinReturnKind(") !=
         std::string::npos);
@@ -1034,11 +1035,11 @@ TEST_CASE("semantics validator infer source delegation stays stable") {
             "helperName == \"count\" || helperName == \"count_ref\" ||\n"
             "         helperName == \"get\" || helperName == \"get_ref\" ||\n"
             "         helperName == \"ref\" || helperName == \"ref_ref\" ||\n"
-            "         helperName == \"to_aos\" || helperName == \"to_aos_ref\" ||\n"
+            "         helperName == \"to\" \"_aos\" || helperName == \"to\" \"_aos_ref\" ||\n"
             "         helperName == \"push\" || helperName == \"reserve\";") !=
         std::string::npos);
   CHECK(semanticsInferCollectionsSource.find(
-            "normalizedPrefix == \"soa_vector\" &&\n"
+            "normalizedPrefix == \"soa\" \"_vector\" &&\n"
             "      isSoaSamePathHelperName(normalizedName)") !=
         std::string::npos);
   CHECK(semanticsInferCollectionsSource.find("std::string SemanticsValidator::getDirectVectorHelperCompatibilityPath") ==
@@ -1151,7 +1152,7 @@ TEST_CASE("semantics validator infer source delegation stays stable") {
         std::string::npos);
   CHECK(semanticsInferCollectionsSource.find("auto inferCallBinding = [") !=
         std::string::npos);
-  CHECK(semanticsInferCollectionsSource.find("auto isDirectMapConstructorCall = [") !=
+  CHECK(semanticsInferCollectionsSource.find("auto isDirectKeyValueConstructorCall = [") !=
         std::string::npos);
   CHECK(semanticsInferCollectionsSource.find(
             "this->resolveSoaVectorOrExperimentalBorrowedReceiver(\n"
