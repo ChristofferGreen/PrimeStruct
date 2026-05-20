@@ -21,6 +21,12 @@ This file stores durable session-derived facts that are useful in later work. Ke
 - Fact: Compile-run suites invoke `./primec` and `./primevm` from the active build directory, so focused reruns need fresh standalone tool binaries as well as the doctest binary.
 - Evidence: Stale `build-release/primec` made SoA helper-return compile-run reruns keep failing after the doctest binary was rebuilt; rebuilding `primec` with `PrimeStruct_compile_run_tests` made the same focused cases pass.
 
+### compile-time-argument-channel-is-typed
+- Updated: 2026-05-21
+- Tags: parser, semantics, templates
+- Fact: `<...>` is represented as a typed compile-time argument channel with type, integer, symbol, and unsupported/future categories, while current source compatibility still accepts type and integer forms.
+- Evidence: `TemplateArgumentKind` now includes `Symbol` and `Unsupported`, specialization mangling prefixes every category in `TemplateMonomorphSetupUtilities.h`, and parser diagnostics/tests describe invalid literals as compile-time argument channel errors.
+
 ### cpp-emitter-wrapper-map-direct-count-diagnostics
 - Updated: 2026-04-20
 - Tags: tests, emitters, collections

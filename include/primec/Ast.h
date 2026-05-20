@@ -11,7 +11,7 @@ namespace primec {
 
 enum class TransformPhase { Auto, Text, Semantic };
 
-enum class TemplateArgumentKind { Type, Integer };
+enum class TemplateArgumentKind { Type, Integer, Symbol, Unsupported };
 
 struct TemplateArgument {
   TemplateArgumentKind kind = TemplateArgumentKind::Type;
@@ -30,6 +30,20 @@ struct TemplateArgument {
     arg.kind = TemplateArgumentKind::Integer;
     arg.text = std::move(value);
     arg.integerValue = parsedValue;
+    return arg;
+  }
+
+  static TemplateArgument symbol(std::string value) {
+    TemplateArgument arg;
+    arg.kind = TemplateArgumentKind::Symbol;
+    arg.text = std::move(value);
+    return arg;
+  }
+
+  static TemplateArgument unsupported(std::string value) {
+    TemplateArgument arg;
+    arg.kind = TemplateArgumentKind::Unsupported;
+    arg.text = std::move(value);
     return arg;
   }
 };

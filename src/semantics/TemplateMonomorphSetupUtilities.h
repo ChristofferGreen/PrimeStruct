@@ -69,12 +69,25 @@ const std::vector<TemplateArgument> *matchingTemplateArgumentDetails(
 std::string joinMangledTemplateArgs(const std::vector<std::string> &args,
                                     const std::vector<TemplateArgument> *details = nullptr) {
   std::ostringstream out;
+  auto kindPrefix = [](TemplateArgumentKind kind) -> std::string_view {
+    switch (kind) {
+    case TemplateArgumentKind::Type:
+      return "type:";
+    case TemplateArgumentKind::Integer:
+      return "int:";
+    case TemplateArgumentKind::Symbol:
+      return "symbol:";
+    case TemplateArgumentKind::Unsupported:
+      return "unsupported:";
+    }
+    return "unsupported:";
+  };
   for (size_t i = 0; i < args.size(); ++i) {
     if (i > 0) {
       out << ",";
     }
     const TemplateArgument arg = normalizedTemplateArgumentAt(args, details, i);
-    out << (arg.kind == TemplateArgumentKind::Integer ? "int:" : "type:");
+    out << kindPrefix(arg.kind);
     out << stripWhitespace(args[i]);
   }
   return out.str();

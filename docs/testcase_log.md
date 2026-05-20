@@ -17,6 +17,15 @@
   tuple TODO-4273 validation below does not depend on that shard.
 
 ## Recent Test Runs
+- 2026-05-21 00:24 CEST | pass | mode: release | command:
+  `cmake --build build-release --target PrimeStruct_parser_tests PrimeStruct_compile_run_tests -j 1`;
+  `cd build-release && ./PrimeStruct_parser_tests --test-suite=primestruct.parser.templates --no-skip`;
+  `cd build-release && ./PrimeStruct_compile_run_tests --test-case="todo queue and skipped doctest debt stay source locked" --no-skip`
+  | failures: none | notes: TODO-4331 reserved typed compile-time
+  argument categories for type, integer, symbol, and unsupported/future
+  arguments, made specialization mangling category-aware, retitled invalid
+  parser diagnostics to the compile-time argument channel, and promoted
+  TODO-4332 to Ready Now.
 - 2026-05-20 23:59 CEST | pass | mode: release | command:
   `cmake --build build-release --target PrimeStruct_compile_run_tests -j 1`;
   `cd build-release && ./PrimeStruct_compile_run_tests --test-case="todo queue and skipped doctest debt stay source locked" --no-skip`

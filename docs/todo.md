@@ -83,8 +83,8 @@ Task template:
 
 ### Ready Now (Parallel-Candidate Leaves; No Unmet TODO Dependencies)
 
-- TODO-4331: Implement compile-time argument channel model | track: procedural-genericity |
-  primary surface: typed internal representation for `<...>` compile-time arguments
+- TODO-4332: Add bare zero-arg execution syntax | track: procedural-genericity |
+  primary surface: execute unique zero-arg definitions from bare names
 
 ### Parallel Work Tracks (Current)
 
@@ -110,14 +110,13 @@ Task template:
 - `multithreading-substrate`: TODO-4545 was split from TODO-4278 to capture
   the missing first structured task spawn/wait prerequisite; keep it out of
   Ready Now until the multithreading lane is selected or split further.
-- `procedural-genericity`: TODO-4331 is ready now that the tuple work no
-  longer blocks compile-time argument channel work.
-- `generic-requirements`: blocked by TODO-4331 and TODO-4334 before
-  TODO-4341 can start.
+- `procedural-genericity`: TODO-4331 completed the compile-time argument
+  channel model; ready TODO-4332.
+- `generic-requirements`: TODO-4331 is complete; still blocked by TODO-4334
+  before TODO-4341 can start.
 
 ### Immediate Next 10 (Track Successors; Not Ready Until Dependencies Land)
 
-- TODO-4331: Implement compile-time argument channel model
 - TODO-4332: Add bare zero-arg execution syntax
 - TODO-4545: Implement first structured task spawn/wait substrate
 - TODO-4278: Integrate multi-wait with stdlib tuple
@@ -142,8 +141,8 @@ Task template:
   stdlib tuple values
 - Multithreading substrate: TODO-4545 captures the first task spawn/wait
   prerequisite split out of TODO-4278
-- Procedural compile-time genericity: TODO-4331 -> TODO-4332
-  -> TODO-4333 -> TODO-4334 -> TODO-4335 -> TODO-4336 -> TODO-4337
+- Procedural compile-time genericity: TODO-4332 -> TODO-4333 -> TODO-4334
+  -> TODO-4335 -> TODO-4336 -> TODO-4337
   -> TODO-4338 -> TODO-4339 -> TODO-4340
 - Generic constraint and compile-time flow alignment: TODO-4341
   -> TODO-4342 -> TODO-4343 -> TODO-4344 -> TODO-4352 -> TODO-4353
@@ -153,7 +152,6 @@ Task template:
 
 ### Execution Queue (Recommended Track Order)
 
-- TODO-4331: Implement compile-time argument channel model
 - TODO-4332: Add bare zero-arg execution syntax
 - TODO-4333: Reject ambiguous value/execution names
 - TODO-4334: Add compile-time `[type]` local bindings
@@ -823,41 +821,11 @@ Task template:
   - stop_rule: Stop once multi-wait returns stdlib `tuple<...>` or the missing
     task-side prerequisite is split into an explicit multithreading TODO.
 
-- [ ] TODO-4331: Implement compile-time argument channel model
-  - owner: ai
-  - created_at: 2026-05-04
-  - phase: Procedural compile-time genericity
-  - parallel_track: procedural-genericity
-  - depends_on: TODO-4270
-  - scope: Rework parser, AST, AST printer, and semantic diagnostics so
-    `<...>` is represented as a typed compile-time argument channel while
-    preserving existing explicit-template source compatibility.
-  - implementation_notes:
-    - Start from `docs/PrimeStruct.md`,
-      `docs/PrimeStruct_SyntaxSpec.md`, `include/primec/Ast.h`,
-      `src/parser/ParserListsSignatures.cpp`, `src/AstPrinter.cpp`, and
-      `src/semantics/TemplateMonomorph*.h`.
-    - Build on the typed non-type argument representation from TODO-4270
-      rather than adding another string channel.
-    - Keep existing `name<T>(value)`, `array<i32>`, `return<T>`, and
-      transform template-argument behavior source-compatible.
-  - acceptance:
-    - The AST distinguishes type, integer, symbol, and future compile-time
-      argument categories without changing accepted existing template sources.
-    - AST/semantic dumps continue to print current template forms
-      deterministically.
-    - Invalid compile-time argument shapes produce stable diagnostics that
-      name the compile-time argument channel.
-    - Docs state that traditional templates are one use of `<...>`.
-    - `./scripts/compile.sh --release` passes.
-  - stop_rule: Stop once `<...>` has a typed internal representation and all
-    existing template tests still pass; leave bare zero-arg execution to
-    TODO-4332.
-
 - [ ] TODO-4332: Add bare zero-arg execution syntax
   - owner: ai
   - created_at: 2026-05-04
   - phase: Procedural compile-time genericity
+  - parallel_track: procedural-genericity
   - depends_on: TODO-4331
   - scope: Allow a bare form such as `name` to execute a visible zero-argument
     definition in command and value position when resolution is unique.

@@ -247,18 +247,18 @@ bool Parser::parseTemplateArgument(std::string &out, TemplateArgument *detailOut
                              uint64_t &valueOut,
                              std::string &errorOut) {
     if (text.empty()) {
-      errorOut = "template integer arguments must be unsigned integer literals";
+      errorOut = "integer compile-time arguments must be unsigned integer literals";
       return false;
     }
     if (text.front() == '-') {
-      errorOut = "negative integer template arguments are not supported";
+      errorOut = "negative integer compile-time arguments are not supported";
       return false;
     }
     if (text.find('.') != std::string::npos || text.find('e') != std::string::npos ||
         text.find('E') != std::string::npos || text.find('f') != std::string::npos ||
         text.find('F') != std::string::npos || text.find("i32") != std::string::npos ||
         text.find("i64") != std::string::npos || text.find("u64") != std::string::npos) {
-      errorOut = "template integer arguments must be unsigned integer literals";
+      errorOut = "integer compile-time arguments must be unsigned integer literals";
       return false;
     }
     std::string normalized;
@@ -281,11 +281,11 @@ bool Parser::parseTemplateArgument(std::string &out, TemplateArgument *detailOut
         } else if (c >= 'A' && c <= 'F') {
           digit = static_cast<uint64_t>(10 + c - 'A');
         } else {
-          errorOut = "template integer arguments must be unsigned integer literals";
+          errorOut = "integer compile-time arguments must be unsigned integer literals";
           return false;
         }
         if (value > (UINT64_MAX - digit) / 16) {
-          errorOut = "template integer argument is too large";
+          errorOut = "integer compile-time argument is too large";
           return false;
         }
         value = value * 16 + digit;
@@ -297,12 +297,12 @@ bool Parser::parseTemplateArgument(std::string &out, TemplateArgument *detailOut
     uint64_t value = 0;
     for (char c : normalized) {
       if (c < '0' || c > '9') {
-        errorOut = "template integer arguments must be unsigned integer literals";
+        errorOut = "integer compile-time arguments must be unsigned integer literals";
         return false;
       }
       const uint64_t digit = static_cast<uint64_t>(c - '0');
       if (value > (UINT64_MAX - digit) / 10) {
-        errorOut = "template integer argument is too large";
+        errorOut = "integer compile-time argument is too large";
         return false;
       }
       value = value * 10 + digit;
@@ -330,7 +330,7 @@ bool Parser::parseTemplateArgument(std::string &out, TemplateArgument *detailOut
     return true;
   }
   if (matchRaw(TokenKind::String)) {
-    return fail("template arguments do not accept string literals");
+    return fail("compile-time arguments do not accept string literals");
   }
 
   Token name = consumeRaw(TokenKind::Identifier, "expected template identifier");
@@ -338,7 +338,7 @@ bool Parser::parseTemplateArgument(std::string &out, TemplateArgument *detailOut
     return false;
   }
   if (name.text == "true" || name.text == "false") {
-    return fail("template arguments do not accept bool literals");
+    return fail("compile-time arguments do not accept bool literals");
   }
   std::string nameError;
   if (!validateIdentifierText(name.text, nameError)) {

@@ -32,12 +32,15 @@ argument lists may use `Ts...` to splice the bound pack into the concrete
 specialization. The homogeneous `args<T>` value-pack envelope is not a
 heterogeneous type-pack declaration.
 
-Call, method-call, transform, and nested type template argument lists accept
-type arguments and non-negative unsuffixed integer literal arguments. Integer
-template arguments are compile-time values, not type spellings, so `get<0>(x)`
-and `x.get<1>()` carry integer arguments while `vector<i32>` carries a type
-argument. Floats, strings, bools, negative integers, and arbitrary expressions
-are rejected in template argument lists.
+Call, method-call, transform, and nested type template argument lists are the
+current source spellings of the compile-time argument channel. They accept type
+arguments and non-negative unsuffixed integer literal arguments. Integer
+compile-time arguments are values, not type spellings, so `get<0>(x)` and
+`x.get<1>()` carry integer arguments while `vector<i32>` carries a type
+argument. The AST also reserves symbol and unsupported/future argument kinds
+for follow-up compile-time features. Floats, strings, bools, negative
+integers, and arbitrary expressions are rejected in compile-time argument
+lists.
 
 Executions are call-style forms with mandatory parentheses and no body. In the canonical AST they are envelopes with an
 implicit empty body. Executions model behavior, not value construction:

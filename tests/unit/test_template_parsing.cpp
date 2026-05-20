@@ -172,6 +172,30 @@ main() {
   CHECK(methodCall.templateArgDetails[0].integerValue == 1);
 }
 
+TEST_CASE("compile-time argument metadata reserves symbol and unsupported kinds") {
+  const auto typeArg = primec::TemplateArgument::type("i32");
+  CHECK(typeArg.kind == primec::TemplateArgumentKind::Type);
+  CHECK(typeArg.text == "i32");
+
+  const auto integerArg = primec::TemplateArgument::integer("7", 7);
+  CHECK(integerArg.kind == primec::TemplateArgumentKind::Integer);
+  CHECK(integerArg.text == "7");
+  CHECK(integerArg.integerValue == 7);
+
+  const auto symbolArg = primec::TemplateArgument::symbol("value");
+  CHECK(symbolArg.kind == primec::TemplateArgumentKind::Symbol);
+  CHECK(symbolArg.text == "value");
+
+  const auto unsupportedArg = primec::TemplateArgument::unsupported("future");
+  CHECK(unsupportedArg.kind == primec::TemplateArgumentKind::Unsupported);
+  CHECK(unsupportedArg.text == "future");
+
+  const std::vector<std::string> legacyTexts = {"T"};
+  const std::vector<primec::TemplateArgument> noDetails;
+  CHECK(primec::templateArgumentAt(legacyTexts, noDetails, 0).kind ==
+        primec::TemplateArgumentKind::Type);
+}
+
 TEST_CASE("parses empty template argument lists") {
   const std::string source = R"(
 [return<tuple<>>]
@@ -217,7 +241,7 @@ TEST_CASE("rejects invalid non-type template arguments") {
 main() {
   return(get<1.5>(0i32))
 }
-)").find("template integer arguments must be unsigned integer literals") !=
+)").find("integer compile-time arguments must be unsigned integer literals") !=
         std::string::npos);
 
   CHECK(parseError(R"(
@@ -225,7 +249,7 @@ main() {
 main() {
   return(get<-1>(0i32))
 }
-)").find("negative integer template arguments are not supported") !=
+)").find("negative integer compile-time arguments are not supported") !=
         std::string::npos);
 
   CHECK(parseError(R"(
@@ -233,7 +257,7 @@ main() {
 main() {
   return(get<"field">(0i32))
 }
-)").find("template arguments do not accept string literals") !=
+)").find("compile-time arguments do not accept string literals") !=
         std::string::npos);
 
   CHECK(parseError(R"(
@@ -241,7 +265,7 @@ main() {
 main() {
   return(get<true>(0i32))
 }
-)").find("template arguments do not accept bool literals") !=
+)").find("compile-time arguments do not accept bool literals") !=
         std::string::npos);
 }
 

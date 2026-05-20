@@ -6,6 +6,37 @@ Legend:
 Finished items are periodically archived here from `docs/todo.md`; section headers record the archive date.
 
 **Todo Completion (May 20, 2026)**
+- [x] TODO-4331: Implement compile-time argument channel model
+  - owner: ai
+  - created_at: 2026-05-04
+  - finished_at: 2026-05-20
+  - phase: Procedural compile-time genericity
+  - parallel_track: procedural-genericity
+  - depends_on: TODO-4270
+  - scope: Rework parser, AST, AST printer, and semantic diagnostics so
+    `<...>` is represented as a typed compile-time argument channel while
+    preserving existing explicit-template source compatibility.
+  - outcome:
+    - Extended `TemplateArgumentKind` with reserved `Symbol` and
+      `Unsupported` categories alongside the existing `Type` and `Integer`
+      categories.
+    - Kept existing source forms compatible while making template
+      specialization mangling category-aware for all compile-time argument
+      kinds.
+    - Renamed invalid parser diagnostics from template-only wording to
+      compile-time argument channel wording.
+    - Documented `<...>` as the compile-time argument channel and promoted
+      TODO-4332 as the next Ready Now procedural-genericity leaf.
+  - validation:
+    - `cmake --build build-release --target PrimeStruct_parser_tests PrimeStruct_compile_run_tests -j 1`
+      passed.
+    - `cd build-release && ./PrimeStruct_parser_tests --test-suite=primestruct.parser.templates --no-skip`
+      passed.
+    - `cd build-release && ./PrimeStruct_compile_run_tests --test-case="todo queue and skipped doctest debt stay source locked" --no-skip`
+      passed.
+    - Full `./scripts/compile.sh --release` remains deferred by the lite
+      workflow.
+
 - [x] TODO-4277: Add tuple destructuring sugar
   - owner: ai
   - created_at: 2026-04-27

@@ -2196,8 +2196,10 @@ explicit `utf8`/`ascii` suffix.** `ascii` enforces 7-bit ASCII (the compiler rej
     identifiers inside the bracket list introduce new names. This preserves existing forms such as `[i32] count{0i32}`
     and `[mut] value{0i32}` while allowing tuple destructuring forms such as `[left right] pair`; mixed or ambiguous
     lists must be diagnosed deterministically rather than silently reinterpreted.
-  - `<...>` supplies compile-time envelopes/templates today and is the planned general compile-time argument channel.
-    Future compile-time primitives such as `typeof<value>` use this same channel rather than pretending to be runtime
+  - `<...>` is the compile-time argument channel. Existing source forms use it
+    for type arguments and non-negative integer arguments; the AST preserves
+    typed argument metadata and reserves symbol/future categories for later
+    primitives such as `typeof<value>` rather than pretending those are runtime
     calls.
   - `(...)` lists runtime parameters; current calls always include `()` (even with no args), and `()` never appears on
     bindings. Planned bare zero-argument execution will allow `name` to execute a unique visible zero-argument

@@ -1613,8 +1613,8 @@ TEST_CASE("todo queue and skipped doctest debt stay source locked") {
   CHECK(todo.find("### Ready Now (Parallel-Candidate Leaves; No Unmet TODO Dependencies)") !=
         std::string::npos);
   CHECK(todo.find("### Ready Now (Parallel-Candidate Leaves; No Unmet TODO Dependencies)\n\n"
-                  "- TODO-4331: Implement compile-time argument channel model | track: procedural-genericity |\n"
-                  "  primary surface: typed internal representation for `<...>` compile-time arguments") !=
+                  "- TODO-4332: Add bare zero-arg execution syntax | track: procedural-genericity |\n"
+                  "  primary surface: execute unique zero-arg definitions from bare names") !=
         std::string::npos);
   CHECK(todo.find("- `soa-zero-audit`: TODO-4529 replaced the residue inventory with a strict\n"
                   "  zero-production-trace audit; no SoA zero-audit leaf is ready.") !=
@@ -1634,10 +1634,10 @@ TEST_CASE("todo queue and skipped doctest debt stay source locked") {
         std::string::npos);
   CHECK(todo.find("- `multithreading-substrate`: TODO-4545 was split from TODO-4278") !=
         std::string::npos);
-  CHECK(todo.find("- `procedural-genericity`: TODO-4331 is ready now") !=
+  CHECK(todo.find("- `procedural-genericity`: TODO-4331 completed the compile-time argument\n"
+                  "  channel model; ready TODO-4332.") !=
         std::string::npos);
   CHECK(todo.find("### Immediate Next 10 (Track Successors; Not Ready Until Dependencies Land)\n\n"
-                  "- TODO-4331: Implement compile-time argument channel model\n"
                   "- TODO-4332: Add bare zero-arg execution syntax\n"
                   "- TODO-4545: Implement first structured task spawn/wait substrate\n"
                   "- TODO-4278: Integrate multi-wait with stdlib tuple") !=
@@ -1656,10 +1656,12 @@ TEST_CASE("todo queue and skipped doctest debt stay source locked") {
   CHECK(todo.find("- Deferred SoA finish: TODO-4252") ==
         std::string::npos);
   CHECK(todo.find("### Execution Queue (Recommended Track Order)\n\n"
-                  "- TODO-4331: Implement compile-time argument channel model\n"
-                  "- TODO-4332: Add bare zero-arg execution syntax") !=
+                  "- TODO-4332: Add bare zero-arg execution syntax\n"
+                  "- TODO-4333: Reject ambiguous value/execution names") !=
         std::string::npos);
-  CHECK(todo.find("- TODO-4331: Implement compile-time argument channel model") !=
+  CHECK(todo.find("- [ ] TODO-4331: Implement compile-time argument channel model") ==
+        std::string::npos);
+  CHECK(todoFinished.find("TODO-4331: Implement compile-time argument channel model") !=
         std::string::npos);
   CHECK(todo.find("- [ ] TODO-4276: Expand type packs in helpers and lifecycle hooks") ==
         std::string::npos);
@@ -1716,7 +1718,7 @@ TEST_CASE("todo queue and skipped doctest debt stay source locked") {
   CHECK(todoFinished.find("TODO-4519: Delete `soa_vector` compatibility seams") !=
         std::string::npos);
   const std::vector<std::string> semanticPhaseQueue = {
-      "TODO-4331: Implement compile-time argument channel model",
+      "TODO-4332: Add bare zero-arg execution syntax",
   };
   for (const std::string &entry : semanticPhaseQueue) {
     CHECK(todo.find("- " + entry) != std::string::npos);
