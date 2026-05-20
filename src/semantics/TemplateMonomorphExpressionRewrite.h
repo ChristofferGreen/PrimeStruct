@@ -1370,8 +1370,11 @@ bool rewriteExpr(Expr &expr,
       return false;
     }
   }
+  const bool isPackAtIntrinsic =
+      !expr.isMethodCall && !expr.isBinding && expr.name == "pack_at";
   bool allConcrete = true;
-  if (!resolveTemplateArgumentList(expr.templateArgs,
+  if (!isPackAtIntrinsic &&
+      !resolveTemplateArgumentList(expr.templateArgs,
                                    mapping,
                                    allowedParams,
                                    namespacePrefix,
@@ -1379,6 +1382,70 @@ bool rewriteExpr(Expr &expr,
                                    error,
                                    allConcrete)) {
     return false;
+  }
+  if (isPackAtIntrinsic) {
+    if (expr.templateArgs.size() != 2) {
+      error = "pack_at requires integer index and field-stem template arguments";
+      return false;
+    }
+    if (expr.args.size() != 1 || hasNamedCallArguments(expr) ||
+        expr.hasBodyArguments || !expr.bodyArguments.empty()) {
+      error = "pack_at requires exactly one receiver argument";
+      return false;
+    }
+    uint64_t packIndex = 0;
+    if (!resolveTemplateIndexText(expr.templateArgs[0], mapping, packIndex)) {
+      error = "pack_at index must resolve to an integer template argument: " +
+              expr.templateArgs[0];
+      return false;
+    }
+    auto isPackAtFieldStem = [](const std::string &text) {
+      if (text.empty() ||
+          !(std::isalpha(static_cast<unsigned char>(text.front())) ||
+            text.front() == '_')) {
+        return false;
+      }
+      for (const char ch : text) {
+        if (!(std::isalnum(static_cast<unsigned char>(ch)) || ch == '_')) {
+          return false;
+        }
+      }
+      return true;
+    };
+    std::string fieldStem = trimWhitespace(expr.templateArgs[1]);
+    if (!isPackAtFieldStem(fieldStem)) {
+      error = "pack_at field stem must be an identifier: " + fieldStem;
+      return false;
+    }
+    if (ctx.currentRewriteDefinition != nullptr &&
+        ctx.currentRewriteDefinition->templatePackBindings.size() == 1 &&
+        packIndex >= ctx.currentRewriteDefinition->templatePackBindings.front().arguments.size()) {
+      error = "pack_at index out of range: " + fieldStem + "[" +
+              expr.templateArgs[0] + "] has " +
+              std::to_string(
+                  ctx.currentRewriteDefinition->templatePackBindings.front().arguments.size()) +
+              " elements";
+      return false;
+    }
+    if (!rewriteExpr(expr.args.front(),
+                     mapping,
+                     allowedParams,
+                     namespacePrefix,
+                     ctx,
+                     error,
+                     locals,
+                     params,
+                     allowMathBare)) {
+      return false;
+    }
+    expr.name = generatedPackFieldName(fieldStem, static_cast<size_t>(packIndex));
+    expr.sourceName = expr.name;
+    expr.templateArgs.clear();
+    expr.templateArgDetails.clear();
+    expr.isMethodCall = true;
+    expr.sourceIsMethodCall = true;
+    expr.isFieldAccess = true;
+    return true;
   }
   if (!expr.isMethodCall && !expr.isBinding) {
     if (Expr *receiverExpr = mutableCollectionHelperReceiverExpr(expr)) {

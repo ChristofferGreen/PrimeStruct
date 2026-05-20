@@ -219,6 +219,26 @@ main() {
   CHECK(program.definitions[0].returnExpr->templateArgs.size() == 2);
 }
 
+TEST_CASE("parses type-pack index template arguments") {
+  const std::string source = R"(
+[return<Ts[Index]>]
+pick<Index, Ts...>() {
+  return(pack_at<Index, values>(self))
+}
+)";
+  const auto program = parseProgram(source);
+  REQUIRE(program.definitions.size() == 1);
+  REQUIRE(program.definitions[0].transforms.size() == 1);
+  REQUIRE(program.definitions[0].transforms[0].templateArgs.size() == 1);
+  CHECK(program.definitions[0].transforms[0].templateArgs[0] == "Ts[Index]");
+  REQUIRE(program.definitions[0].statements.size() == 1);
+  REQUIRE(program.definitions[0].statements[0].args.size() == 1);
+  const auto &packAt = program.definitions[0].statements[0].args[0];
+  REQUIRE(packAt.templateArgs.size() == 2);
+  CHECK(packAt.templateArgs[0] == "Index");
+  CHECK(packAt.templateArgs[1] == "values");
+}
+
 TEST_CASE("parses comments as whitespace") {
   const std::string source = R"(
 [return<int> /* transform */]

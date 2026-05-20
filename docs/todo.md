@@ -83,8 +83,8 @@ Task template:
 
 ### Ready Now (Parallel-Candidate Leaves; No Unmet TODO Dependencies)
 
-- TODO-4271: Add compile-time pack indexing | track: tuple-type-packs |
-  primary surface: generic pack-index selection and diagnostics
+- TODO-4272: Add stdlib `tuple<Ts...>` | track: tuple-type-packs |
+  primary surface: public tuple type and minimal get surface
 
 ### Parallel Work Tracks (Current)
 
@@ -102,8 +102,8 @@ Task template:
   generated `.prime` helper calls without restoring map-specific native
   insert dispatch; no generic helper-call leaf is ready.
 - `tuple-type-packs`: TODO-4276 completed helper/lifecycle pack
-  expansion; ready TODO-4271, then serial successors TODO-4272
-  -> TODO-4274 -> TODO-4273 -> TODO-4277 -> TODO-4278.
+  expansion and TODO-4271 added compile-time pack indexing; ready TODO-4272,
+  then serial successors TODO-4274 -> TODO-4273 -> TODO-4277 -> TODO-4278.
 - `procedural-genericity`: blocked by the tuple-type-packs successor chain
   before TODO-4331 can start.
 - `generic-requirements`: blocked by TODO-4331 and TODO-4334 before
@@ -111,7 +111,6 @@ Task template:
 
 ### Immediate Next 10 (Track Successors; Not Ready Until Dependencies Land)
 
-- TODO-4272: Add stdlib `tuple<Ts...>`
 - TODO-4274: Add tuple bracket indexing sugar
 - TODO-4273: Add heterogeneous value-pack inference
 - TODO-4277: Add tuple destructuring sugar
@@ -131,9 +130,9 @@ Task template:
   template-monomorph residue; TODO-4533 removed lowerer call-resolution
   residual bridge traces; TODO-4528 removed lowerer count/access residue; and
   TODO-4529 replaced the residue inventory with a strict zero audit
-- Deferred generic tuple substrate: ready TODO-4271 after TODO-4276
-  completed helper/lifecycle pack expansion, followed by TODO-4272
-  -> TODO-4274 -> TODO-4273 -> TODO-4277 -> TODO-4278
+- Deferred generic tuple substrate: ready TODO-4272 after TODO-4271 added
+  compile-time pack indexing, followed by TODO-4274 -> TODO-4273
+  -> TODO-4277 -> TODO-4278
 - Procedural compile-time genericity: TODO-4331 -> TODO-4332
   -> TODO-4333 -> TODO-4334 -> TODO-4335 -> TODO-4336 -> TODO-4337
   -> TODO-4338 -> TODO-4339 -> TODO-4340
@@ -145,7 +144,6 @@ Task template:
 
 ### Execution Queue (Recommended Track Order)
 
-- TODO-4271: Add compile-time pack indexing
 - TODO-4272: Add stdlib `tuple<Ts...>`
 - TODO-4274: Add tuple bracket indexing sugar
 - TODO-4273: Add heterogeneous value-pack inference
@@ -206,7 +204,7 @@ Task template:
 | Test-suite audit follow-up and release-gate stability | none |
 | Algebraic sum types and brace-only construction | none |
 | Stdlib ADT migration for `Maybe` and `Result` | none |
-| Generic type packs and tuple stdlib surface | TODO-4271, TODO-4272, TODO-4274, TODO-4273, TODO-4277, TODO-4278 |
+| Generic type packs and tuple stdlib surface | TODO-4272, TODO-4274, TODO-4273, TODO-4277, TODO-4278 |
 | Procedural compile-time genericity and local type facts | TODO-4331, TODO-4332, TODO-4333, TODO-4334, TODO-4335, TODO-4336, TODO-4337, TODO-4338, TODO-4339, TODO-4340 |
 | Generic constraints and compile-time flow control | TODO-4341, TODO-4342, TODO-4343, TODO-4344, TODO-4352, TODO-4353, TODO-4354, TODO-4355, TODO-4356, TODO-4357, TODO-4345, TODO-4346, TODO-4358, TODO-4347, TODO-4351, TODO-4348, TODO-4359, TODO-4349, TODO-4350 |
 
@@ -233,7 +231,7 @@ Task template:
 | Release benchmark/example suite stability and doctest governance | none |
 | Sum-type and brace-construction conformance | none |
 | Maybe/Result sum migration conformance | none |
-| Generic type-pack and tuple conformance | TODO-4271, TODO-4272, TODO-4274, TODO-4273, TODO-4277, TODO-4278 |
+| Generic type-pack and tuple conformance | TODO-4272, TODO-4274, TODO-4273, TODO-4277, TODO-4278 |
 | Procedural compile-time genericity conformance | TODO-4331, TODO-4332, TODO-4333, TODO-4334, TODO-4335, TODO-4336, TODO-4337, TODO-4338, TODO-4339, TODO-4340 |
 | Generic constraint and compile-time flow conformance | TODO-4341, TODO-4342, TODO-4343, TODO-4344, TODO-4352, TODO-4353, TODO-4354, TODO-4355, TODO-4356, TODO-4357, TODO-4345, TODO-4346, TODO-4358, TODO-4347, TODO-4351, TODO-4348, TODO-4359, TODO-4349, TODO-4350 |
 
@@ -758,34 +756,6 @@ Task template:
   skipped coverage is not a stable end state.
 
 ### Task Blocks
-
-- [ ] TODO-4271: Add compile-time pack indexing
-  - owner: ai
-  - created_at: 2026-04-27
-  - phase: Deferred generic tuple substrate
-  - parallel_track: tuple-type-packs
-  - depends_on: TODO-4276, TODO-4270
-  - scope: Add generic compile-time pack indexing so helpers can resolve the
-    `I`th type and storage slot of a heterogeneous type pack.
-  - implementation_notes:
-    - Build on pack expansion from TODO-4276 and integer template arguments
-      from TODO-4270.
-    - The feature must be generic enough for `get<I>`, `tuple_element<I, T>`,
-      and future stdlib metaprogramming helpers.
-    - Publish enough semantic-product facts that lowerers do not need to
-      re-derive tuple field selection from source text.
-  - acceptance:
-    - A `.prime` helper can use an integer template argument to select the
-      corresponding expanded pack field and return that field's precise type.
-    - Borrowed and mutable borrowed pack-index access preserves
-      `Reference<TI>` behavior when ordinary field borrowing would allow it.
-    - Out-of-range indexes, non-pack operands, and non-integer indexes produce
-      stable diagnostics at semantic validation time.
-    - Semantic-product and IR-lowering tests verify that indexed pack lookup is
-      represented without tuple-specific AST/source fallbacks.
-    - `./scripts/compile.sh --release` passes.
-  - stop_rule: Stop once indexed pack lookup can power a generic `get<I>`-style
-    helper; leave the public tuple stdlib surface to TODO-4272.
 
 - [ ] TODO-4272: Add stdlib `tuple<Ts...>`
   - owner: ai

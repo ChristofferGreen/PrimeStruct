@@ -1669,20 +1669,33 @@ This file stores durable session-derived facts that are useful in later work. Ke
 - Evidence: Release reruns from `build-release/PrimeStruct_compile_run_tests --source-file=*test_compile_run_text_filters_diagnostics_c.cpp` plus direct `./primec --emit-diagnostics --collect-diagnostics` reproductions against the same sources emitted those messages.
 
 ### type-pack-declarations-bind-specialization-metadata
-- Updated: 2026-05-16
+- Updated: 2026-05-20
 - Tags: parser, semantics, generics, reflection
 - Fact: Heterogeneous type-pack declarations record final `Ts...` metadata,
   monomorphized specializations bind trailing type arguments into
   deterministic pack metadata, and concrete specialization rewrites expand
   struct fields, helper parameters, helper locals, nested type/call template
-  arguments, and generated reflection helpers from that pack metadata.
+  arguments, generated reflection helpers, `Ts[I]` type indexes, and
+  `pack_at<I, fieldStem>(receiver)` field accesses from that pack metadata.
 - Evidence: `Parser::parseTemplateParameterList` records `templateArgIsPack`,
   `bindTemplateArguments` captures trailing pack arguments in
   `TemplatePackBinding`, semantic-product formatting publishes
   `template_pack_bindings`, `expandTypePackBindingList` materializes concrete
-  bindings during template monomorphization, and
+  bindings during template monomorphization,
+  `resolveTypeStringImpl` resolves type-pack indexes, `rewriteExpr` rewrites
+  `pack_at` to generated field access, and
   `rewriteReflectionGeneratedHelpersForPackSpecializations` regenerates
   reflection helpers from expanded fields.
+
+### type-pack-template-definitions-need-canonical-compile-run
+- Updated: 2026-05-20
+- Tags: parser, text-filter, generics, tests
+- Fact: Compile-run sources that define helpers such as `get<Index, Ts...>(...)`
+  should use `--no-text-transforms` until the operator text filter stops
+  treating definition template lists as comparison syntax.
+- Evidence: The TODO-4271 native compile-run smoke initially rewrote
+  `get<Index, Ts...>` into `less_than(...)`/`greater_than(...)`; the same
+  source passed after compiling with `--no-text-transforms`.
 
 ### variadic-borrowed-pointer-packs-are-supported
 - Updated: 2026-05-01

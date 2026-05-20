@@ -6,6 +6,40 @@ Legend:
 Finished items are periodically archived here from `docs/todo.md`; section headers record the archive date.
 
 **Todo Completion (May 20, 2026)**
+- [x] TODO-4271: Add compile-time pack indexing
+  - owner: ai
+  - created_at: 2026-04-27
+  - finished_at: 2026-05-20
+  - phase: Deferred generic tuple substrate
+  - parallel_track: tuple-type-packs
+  - depends_on: TODO-4276, TODO-4270
+  - scope: Add generic compile-time pack indexing so helpers can resolve the
+    `I`th type and storage slot of a heterogeneous type pack.
+  - outcome:
+    - Added `Ts[I]` type-pack indexing in template/type positions, resolved
+      through integer template arguments and bound pack metadata.
+    - Added `pack_at<I, values>(receiver)` monomorphization to ordinary
+      generated field access, keeping lowering tuple-neutral.
+    - Preserved parameter-rooted reference returns for pack-index field access
+      on borrowed receivers.
+    - Documented the draft heterogeneous type-pack indexing substrate and
+      promoted TODO-4272 as the next ready tuple leaf.
+  - validation:
+    - `cmake --build build-release --target PrimeStruct_parser_tests` passed.
+    - `cd build-release && ./PrimeStruct_parser_tests --test-case="parses type-pack index template arguments" --no-skip`
+      passed.
+    - `cmake --build build-release --target PrimeStruct_semantics_tests`
+      passed.
+    - `cd build-release && ./PrimeStruct_semantics_tests --test-case="*type pack index*" --no-skip`
+      passed.
+    - `cmake --build build-release --target primec` passed.
+    - `cmake --build build-release --target PrimeStruct_compile_run_tests`
+      passed.
+    - `cd build-release && ./PrimeStruct_compile_run_tests --test-case="native lowers compile-time type pack index get helper" --no-skip`
+      passed.
+    - Full `./scripts/compile.sh --release` remains deferred by the lite
+      workflow.
+
 - [x] TODO-4464: Run final strict C++ map-surface audit
   - owner: ai
   - created_at: 2026-05-14

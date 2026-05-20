@@ -2298,6 +2298,17 @@ explicit `utf8`/`ascii` suffix.** `ascii` enforces 7-bit ASCII (the compiler rej
     arg-packs now preserves `write*()` / `flush()` receivers plus `readByte(...)` `?` inference across direct calls
     plus pure/mixed spread forwarding, while wrapped `FileError` free-builtin named access remains on the existing
     named-argument rejection path.
+- **Draft heterogeneous type packs:** generic definitions may declare a final
+  type-pack parameter such as `Tuple<Ts...>`. Monomorphized specializations
+  expand `[Ts...] values` into deterministic fields named
+  `__pack_values_0`, `__pack_values_1`, and so on. A specialized helper can
+  write `Ts[I]` in type positions to select the `I`th concrete type from the
+  bound pack, and `pack_at<I, values>(receiver)` rewrites during
+  monomorphization to the matching generated field access. `I` must resolve to
+  a non-negative integer template argument; out-of-range indexes and scalar
+  non-pack operands are semantic diagnostics. This substrate is intentionally
+  lowerer-neutral: after specialization, ordinary field access and field-borrow
+  paths carry the selected storage slot.
 - **Definitions vs executions:** definitions include a body (`{…}`) and optional transforms; executions are call-style
   (`execute_task<…>(args)`) with mandatory parentheses and no body, and map to an envelope with an implicit empty body.
   Calls always use `()`; the `name{...}` form is reserved for bindings so `execute_task{...}` is invalid.

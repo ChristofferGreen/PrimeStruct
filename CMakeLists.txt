@@ -975,6 +975,7 @@ if(PRIMESTRUCT_BUILD_TESTS)
     tests/unit/test_semantics_struct_helpers.cpp
     tests/unit/test_semantics_sum_types.cpp
     tests/unit/test_semantics_traits.cpp
+    tests/unit/test_semantics_type_packs.cpp
     tests/unit/test_semantics_type_resolution_graph.cpp
     tests/unit/test_semantics_type_resolution_graph_snapshots.cpp
     tests/unit/test_semantics_type_resolution_return_solver.cpp

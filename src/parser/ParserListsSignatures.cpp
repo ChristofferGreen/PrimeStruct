@@ -378,6 +378,19 @@ bool Parser::parseTemplateArgument(std::string &out, TemplateArgument *detailOut
     }
     out += ">";
   }
+  if (matchRaw(TokenKind::LBracket)) {
+    if (!expectRaw(TokenKind::LBracket, "expected '['")) {
+      return false;
+    }
+    std::string indexArg;
+    if (!parseTemplateArgument(indexArg, nullptr)) {
+      return false;
+    }
+    if (!expectRaw(TokenKind::RBracket, "expected ']'")) {
+      return false;
+    }
+    out += "[" + indexArg + "]";
+  }
   if (matchRaw(TokenKind::Ellipsis)) {
     if (!expectRaw(TokenKind::Ellipsis, "expected '...'")) {
       return false;

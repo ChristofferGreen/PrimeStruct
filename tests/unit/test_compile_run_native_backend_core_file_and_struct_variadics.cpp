@@ -631,6 +631,35 @@ main() {
   CHECK(runCommand(exePath) == 17);
 }
 
+TEST_CASE("native lowers compile-time type pack index get helper") {
+  const std::string source = R"(
+[struct]
+Tuple<Ts...> {
+  [Ts...] values
+}
+
+[return<Ts[Index]>]
+get<Index, Ts...>([Tuple<Ts...>] values) {
+  return(pack_at<Index, values>(values))
+}
+
+[return<i32>]
+main() {
+  [auto] tuple{Tuple<i32, bool>{11i32, true}}
+  return(get<0, i32, bool>(tuple))
+}
+)";
+  const std::string srcPath = writeTemp("compile_native_type_pack_index_get.prime", source);
+  const std::string exePath =
+      (testScratchPath("") / "primec_native_type_pack_index_get").string();
+
+  const std::string compileCmd =
+      "./primec --emit=native --no-text-transforms " + srcPath + " -o " +
+      exePath + " --entry /main";
+  CHECK(runCommand(compileCmd) == 0);
+  CHECK(runCommand(exePath) == 11);
+}
+
 
 TEST_SUITE_END();
 #endif

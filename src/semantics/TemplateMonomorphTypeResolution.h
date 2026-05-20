@@ -19,6 +19,94 @@ bool splitTypePackExpansionText(const std::string &input, std::string &packNameO
   return !packNameOut.empty();
 }
 
+bool splitTypePackIndexText(const std::string &input,
+                            std::string &packNameOut,
+                            std::string &indexTextOut) {
+  const std::string trimmed = trimWhitespace(input);
+  if (trimmed.size() < 4 || trimmed.back() != ']') {
+    return false;
+  }
+  int templateDepth = 0;
+  for (size_t i = 0; i < trimmed.size(); ++i) {
+    const char ch = trimmed[i];
+    if (ch == '<') {
+      ++templateDepth;
+      continue;
+    }
+    if (ch == '>' && templateDepth > 0) {
+      --templateDepth;
+      continue;
+    }
+    if (ch != '[' || templateDepth != 0) {
+      continue;
+    }
+    packNameOut = trimWhitespace(trimmed.substr(0, i));
+    indexTextOut = trimWhitespace(trimmed.substr(i + 1, trimmed.size() - i - 2));
+    return !packNameOut.empty() && !indexTextOut.empty() &&
+           indexTextOut.find('[') == std::string::npos &&
+           indexTextOut.find(']') == std::string::npos;
+  }
+  return false;
+}
+
+bool parseUnsignedTemplateIndex(std::string_view text, uint64_t &valueOut) {
+  if (!isUnsignedIntegerTemplateArgText(text)) {
+    return false;
+  }
+  uint64_t value = 0;
+  if (text.size() > 2 && text[0] == '0' &&
+      (text[1] == 'x' || text[1] == 'X')) {
+    for (size_t i = 2; i < text.size(); ++i) {
+      const char c = text[i];
+      if (c == ',') {
+        continue;
+      }
+      uint64_t digit = 0;
+      if (c >= '0' && c <= '9') {
+        digit = static_cast<uint64_t>(c - '0');
+      } else if (c >= 'a' && c <= 'f') {
+        digit = static_cast<uint64_t>(10 + c - 'a');
+      } else if (c >= 'A' && c <= 'F') {
+        digit = static_cast<uint64_t>(10 + c - 'A');
+      } else {
+        return false;
+      }
+      if (value > (UINT64_MAX - digit) / 16) {
+        return false;
+      }
+      value = value * 16 + digit;
+    }
+    valueOut = value;
+    return true;
+  }
+  for (char c : text) {
+    if (c == ',') {
+      continue;
+    }
+    if (c < '0' || c > '9') {
+      return false;
+    }
+    const uint64_t digit = static_cast<uint64_t>(c - '0');
+    if (value > (UINT64_MAX - digit) / 10) {
+      return false;
+    }
+    value = value * 10 + digit;
+  }
+  valueOut = value;
+  return true;
+}
+
+bool resolveTemplateIndexText(const std::string &indexText,
+                              const SubstMap &mapping,
+                              uint64_t &indexOut) {
+  std::string resolved = trimWhitespace(indexText);
+  const auto mappedIt = mapping.find(resolved);
+  if (mappedIt != mapping.end()) {
+    resolved = trimWhitespace(mappedIt->second);
+  }
+  return parseUnsignedTemplateIndex(resolved, indexOut);
+}
+
 const TemplatePackBinding *findTemplatePackBinding(const Definition &def,
                                                    const std::string &name) {
   for (const TemplatePackBinding &binding : def.templatePackBindings) {
@@ -131,6 +219,41 @@ ResolvedType resolveTypeStringImpl(std::string input,
     result.text = input;
     result.concrete = true;
     return result;
+  }
+  std::string packIndexName;
+  std::string packIndexText;
+  if (splitTypePackIndexText(trimmed, packIndexName, packIndexText)) {
+    const TemplatePackBinding *packBinding =
+        findTemplatePackBindingForCurrentDefinition(ctx, packIndexName);
+    if (packBinding == nullptr) {
+      error = "unknown type-pack parameter for type index: " + packIndexName;
+      result.text.clear();
+      result.concrete = false;
+      return result;
+    }
+    uint64_t packIndex = 0;
+    if (!resolveTemplateIndexText(packIndexText, mapping, packIndex)) {
+      error = "type-pack index must resolve to an integer template argument: " +
+              packIndexText;
+      result.text.clear();
+      result.concrete = false;
+      return result;
+    }
+    if (packIndex >= packBinding->arguments.size()) {
+      error = "type-pack index out of range: " + packIndexName + "[" +
+              packIndexText + "] has " +
+              std::to_string(packBinding->arguments.size()) + " elements";
+      result.text.clear();
+      result.concrete = false;
+      return result;
+    }
+    return resolveTypeStringImpl(packBinding->arguments[static_cast<size_t>(packIndex)],
+                                 mapping,
+                                 allowedParams,
+                                 namespacePrefix,
+                                 ctx,
+                                 error,
+                                 substitutionStack);
   }
   if (isUnsignedIntegerTemplateArgText(trimmed)) {
     result.text = trimmed;

@@ -12,6 +12,18 @@
   compilation.
 
 ## Recent Test Runs
+- 2026-05-20 22:12 CEST | pass | mode: release | command:
+  `cmake --build build-release --target PrimeStruct_parser_tests`;
+  `cd build-release && ./PrimeStruct_parser_tests --test-case="parses type-pack index template arguments" --no-skip`;
+  `cmake --build build-release --target PrimeStruct_semantics_tests`;
+  `cd build-release && ./PrimeStruct_semantics_tests --test-case="*type pack index*" --no-skip`;
+  `cmake --build build-release --target primec`;
+  `cmake --build build-release --target PrimeStruct_compile_run_tests`;
+  `cd build-release && ./PrimeStruct_compile_run_tests --test-case="native lowers compile-time type pack index get helper" --no-skip`
+  | failures: none | notes: TODO-4271 added `Ts[I]` type-pack indexing,
+  `pack_at<I, values>(receiver)` field-access rewriting, borrowed receiver
+  reference-return preservation, and native lowering coverage for a
+  `get<0>`-style helper.
 - 2026-05-20 21:24 CEST | pass | mode: release | command:
   `python3 scripts/check_map_surface_strict_audit.py --root . --enforce-zero`;
   `cmake --build build-release --target primec`;

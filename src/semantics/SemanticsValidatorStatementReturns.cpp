@@ -823,9 +823,37 @@ bool SemanticsValidator::validateReturnStatement(const std::vector<ParameterInfo
         }
         return false;
       };
+      auto resolveParameterOwnedFieldAccessTarget =
+          [&](const Expr &candidate, std::string &targetTypeOut) -> bool {
+        if (candidate.kind != Expr::Kind::Call || !candidate.isFieldAccess ||
+            candidate.args.size() != 1) {
+          return false;
+        }
+        std::string borrowRoot;
+        if (!resolveParameterOwnedStorageRoot(candidate.args.front(), borrowRoot) ||
+            borrowRoot.empty() || !parameterOwnedRoot(borrowRoot)) {
+          return false;
+        }
+        BindingInfo fieldBinding;
+        if (!resolveStructFieldBinding(
+                params, locals, candidate.args.front(), candidate.name, fieldBinding)) {
+          return false;
+        }
+        if (fieldBinding.typeName == "Reference" &&
+            !fieldBinding.typeTemplateArg.empty()) {
+          targetTypeOut = fieldBinding.typeTemplateArg;
+          return true;
+        }
+        targetTypeOut = bindingTypeText(fieldBinding);
+        return !targetTypeOut.empty();
+      };
 
       if (returnExpr.kind != Expr::Kind::Call || returnExpr.isMethodCall ||
           !isSimpleCallName(returnExpr, "borrow") || returnExpr.args.size() != 1) {
+        if (resolveParameterOwnedFieldAccessTarget(returnExpr, targetOut)) {
+          recognizedOut = true;
+          return true;
+        }
         if (resolveStandaloneSoaRefReturnTarget(returnExpr, targetOut)) {
           recognizedOut = true;
           return true;
