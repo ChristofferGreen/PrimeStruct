@@ -579,7 +579,7 @@ TEST_CASE("C++ emitter materializes variadic FileError value packs with indexed 
 #endif
 }
 
-TEST_CASE("C++ emitter materializes variadic map value packs with indexed count methods") {
+TEST_CASE("C++ emitter rejects retired variadic map value pack count methods") {
   const std::string source = R"(
 import /std/collections/*
 
@@ -613,10 +613,14 @@ main() {
   const std::string srcPath = writeTemp("compile_cpp_variadic_args_map_count.prime", source);
   const std::string exePath =
       (testScratchPath("") / "primec_cpp_variadic_args_map_count_exe").string();
+  const std::string outPath =
+      (testScratchPath("") / "primec_cpp_variadic_args_map_count_out.txt").string();
 
-  const std::string compileCmd = "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main";
-  CHECK(runCommand(compileCmd) == 0);
-  CHECK(runCommand(exePath) == 11);
+  const std::string compileCmd =
+      "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main > " + outPath + " 2>&1";
+  CHECK(runCommand(compileCmd) == 2);
+  CHECK(readFile(outPath).find("unknown call target: /std/collections/map/count") !=
+        std::string::npos);
 }
 
 TEST_CASE("C++ emitter materializes variadic Buffer value packs with indexed count helpers") {
