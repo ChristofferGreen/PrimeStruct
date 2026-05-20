@@ -625,7 +625,13 @@ TEST_CASE("canonical map surface owns standalone stdlib implementation") {
         std::string::npos);
   CHECK(semanticsSource.find("path == \"/std/collections/mapPair\"") ==
         std::string::npos);
-  CHECK(semanticsSource.find("constructorBackedBuiltinMapBindings.count(initializer.args.front().name)") !=
+  CHECK(semanticsSource.find("constructorBackedBuiltinMapBindings") ==
+        std::string::npos);
+  CHECK(semanticsSource.find("isConstructorBackedMapInitializer") ==
+        std::string::npos);
+  CHECK(semanticsSource.find("constructorBackedBuiltinKeyValueBindings") !=
+        std::string::npos);
+  CHECK(semanticsSource.find("isConstructorBackedKeyValueInitializer") !=
         std::string::npos);
   CHECK(semanticsSource.find("kBuiltinCanonicalMapInsertBuiltinPath") == std::string::npos);
   CHECK(semanticsSource.find("\"/std/collections/map/insert_builtin\"") == std::string::npos);

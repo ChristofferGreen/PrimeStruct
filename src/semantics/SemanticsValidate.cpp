@@ -5814,7 +5814,7 @@ std::optional<semantics::BindingInfo> resolveBuiltinKeyValueInsertReceiverBindin
 void rewriteBuiltinKeyValueInsertExpr(
     Expr &expr,
     const std::unordered_map<std::string, semantics::BindingInfo> &bindings,
-    const std::unordered_set<std::string> &constructorBackedBuiltinMapBindings,
+    const std::unordered_set<std::string> &constructorBackedBuiltinKeyValueBindings,
     const std::unordered_map<std::string, const Definition *> &definitionMap,
     const std::unordered_set<std::string> &structPaths,
     const std::string &definitionNamespace) {
@@ -5822,7 +5822,7 @@ void rewriteBuiltinKeyValueInsertExpr(
     rewriteBuiltinKeyValueInsertExpr(
         arg,
         bindings,
-        constructorBackedBuiltinMapBindings,
+        constructorBackedBuiltinKeyValueBindings,
         definitionMap,
         structPaths,
         definitionNamespace);
@@ -5995,7 +5995,7 @@ void rewriteBuiltinKeyValueInsertExpr(
 void rewriteBuiltinKeyValueInsertStatements(
     std::vector<Expr> &statements,
     std::unordered_map<std::string, semantics::BindingInfo> bindings,
-    std::unordered_set<std::string> constructorBackedBuiltinMapBindings,
+    std::unordered_set<std::string> constructorBackedBuiltinKeyValueBindings,
     const std::unordered_map<std::string, const Definition *> &definitionMap,
     const std::unordered_set<std::string> &structPaths,
     const std::string &definitionNamespace) {
@@ -6003,13 +6003,13 @@ void rewriteBuiltinKeyValueInsertStatements(
     rewriteBuiltinKeyValueInsertExpr(
         stmt,
         bindings,
-        constructorBackedBuiltinMapBindings,
+        constructorBackedBuiltinKeyValueBindings,
         definitionMap,
         structPaths,
         definitionNamespace);
     if (!stmt.bodyArguments.empty()) {
       auto bodyBindings = bindings;
-      auto bodyConstructorBackedBindings = constructorBackedBuiltinMapBindings;
+      auto bodyConstructorBackedBindings = constructorBackedBuiltinKeyValueBindings;
       rewriteBuiltinKeyValueInsertStatements(
           stmt.bodyArguments,
           bodyBindings,
@@ -6021,7 +6021,7 @@ void rewriteBuiltinKeyValueInsertStatements(
     if (stmt.isBinding) {
       if (auto binding = extractParsedBindingInfo(stmt, &structPaths); binding.has_value()) {
         bindings[stmt.name] = *binding;
-        auto isConstructorBackedMapInitializer = [&](const Expr &initializer) {
+        auto isConstructorBackedKeyValueInitializer = [&](const Expr &initializer) {
           if (isBuiltinCanonicalMapConstructorExpr(
                   initializer,
                   definitionMap,
@@ -6029,21 +6029,21 @@ void rewriteBuiltinKeyValueInsertStatements(
             return true;
           }
           if (initializer.kind == Expr::Kind::Name) {
-            return constructorBackedBuiltinMapBindings.count(initializer.name) != 0;
+            return constructorBackedBuiltinKeyValueBindings.count(initializer.name) != 0;
           }
           if (semantics::isSimpleCallName(initializer, "location") &&
               initializer.args.size() == 1 &&
               initializer.args.front().kind == Expr::Kind::Name) {
-            return constructorBackedBuiltinMapBindings.count(initializer.args.front().name) != 0;
+            return constructorBackedBuiltinKeyValueBindings.count(initializer.args.front().name) != 0;
           }
           return false;
         };
         if (stmt.args.size() == 1 &&
             isBuiltinKeyValueMutationBinding(*binding) &&
-            isConstructorBackedMapInitializer(stmt.args.front())) {
-          constructorBackedBuiltinMapBindings.insert(stmt.name);
+            isConstructorBackedKeyValueInitializer(stmt.args.front())) {
+          constructorBackedBuiltinKeyValueBindings.insert(stmt.name);
         } else {
-          constructorBackedBuiltinMapBindings.erase(stmt.name);
+          constructorBackedBuiltinKeyValueBindings.erase(stmt.name);
         }
       }
     }
@@ -6062,7 +6062,7 @@ bool rewriteBuiltinKeyValueInsertMethods(Program &program, std::string &error) {
   }
   for (Definition &def : program.definitions) {
     std::unordered_map<std::string, semantics::BindingInfo> bindings;
-    std::unordered_set<std::string> constructorBackedBuiltinMapBindings;
+    std::unordered_set<std::string> constructorBackedBuiltinKeyValueBindings;
     for (const Expr &param : def.parameters) {
       if (auto binding = extractParsedBindingInfo(param, &structPaths); binding.has_value()) {
         bindings[param.name] = *binding;
@@ -6086,13 +6086,13 @@ bool rewriteBuiltinKeyValueInsertMethods(Program &program, std::string &error) {
     rewriteBuiltinKeyValueInsertStatements(
         def.statements,
         bindings,
-        constructorBackedBuiltinMapBindings,
+        constructorBackedBuiltinKeyValueBindings,
         definitionMap,
         structPaths,
         definitionNamespace);
     if (def.returnExpr.has_value()) {
       auto returnBindings = bindings;
-      auto returnConstructorBackedBindings = constructorBackedBuiltinMapBindings;
+      auto returnConstructorBackedBindings = constructorBackedBuiltinKeyValueBindings;
       for (const Expr &stmt : def.statements) {
         if (auto binding = extractParsedBindingInfo(stmt, &structPaths); binding.has_value()) {
           returnBindings[stmt.name] = *binding;
