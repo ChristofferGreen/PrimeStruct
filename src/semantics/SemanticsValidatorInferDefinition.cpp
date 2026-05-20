@@ -1,12 +1,12 @@
 #include "SemanticsValidator.h"
-#include "MapConstructorHelpers.h"
+#include "StdlibCollectionSurfaceHelpers.h"
 
 namespace primec::semantics {
 
 namespace {
 
 bool isInferDefinitionCanonicalKeyValueAccessHelperPath(std::string_view path) {
-  const StdlibSurfaceMetadata *metadata = mapHelperSurfaceMetadataLocal();
+  const StdlibSurfaceMetadata *metadata = keyValueHelperSurfaceMetadataLocal();
   if (metadata == nullptr || path.empty()) {
     return false;
   }
@@ -112,7 +112,7 @@ bool SemanticsValidator::recordDefinitionInferredReturn(
         (getBuiltinArrayAccessName(candidate, builtinAccessName) ||
          isInferDefinitionCanonicalKeyValueAccessHelperPath(resolvedCandidatePath))) {
       if (builtinAccessName.empty()) {
-        builtinAccessName = metadataBackedMapHelperMethodName(resolvedCandidatePath);
+        builtinAccessName = metadataBackedKeyValueHelperMethodName(resolvedCandidatePath);
       }
       if (isInferDefinitionCanonicalKeyValueAccessHelperPath(resolvedCandidatePath)) {
         return true;

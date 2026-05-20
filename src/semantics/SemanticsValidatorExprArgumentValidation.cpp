@@ -1,5 +1,5 @@
 #include "SemanticsValidator.h"
-#include "MapConstructorHelpers.h"
+#include "StdlibCollectionSurfaceHelpers.h"
 #include "SemanticsValidatorInferCollectionCompatibilityInternal.h"
 
 #include <optional>
@@ -22,7 +22,7 @@ bool resolveCanonicalArgumentValidationKeyValueAccessHelper(
     std::string_view path,
     std::string &helperNameOut) {
   helperNameOut.clear();
-  const StdlibSurfaceMetadata *metadata = mapHelperSurfaceMetadataLocal();
+  const StdlibSurfaceMetadata *metadata = keyValueHelperSurfaceMetadataLocal();
   if (metadata == nullptr || path.empty()) {
     return false;
   }

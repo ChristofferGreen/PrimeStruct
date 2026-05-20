@@ -101,7 +101,7 @@ bool stripTemplateMonomorphSoaHelperPrefix(std::string_view path,
 
 bool isTemplateMonomorphMapImportAlias(std::string_view name) {
   const primec::StdlibSurfaceMetadata *metadata =
-      mapConstructorSurfaceMetadataLocal();
+      keyValueConstructorSurfaceMetadataLocal();
   if (metadata == nullptr) {
     return false;
   }
@@ -116,7 +116,7 @@ bool isTemplateMonomorphMapImportAlias(std::string_view name) {
 
 bool isTemplateMonomorphMapConstructorCallPath(std::string_view path) {
   const primec::StdlibSurfaceMetadata *metadata =
-      mapConstructorSurfaceMetadataLocal();
+      keyValueConstructorSurfaceMetadataLocal();
   if (metadata == nullptr) {
     return false;
   }
@@ -141,7 +141,7 @@ bool isTemplateMonomorphMapEntryConstructorPath(std::string path) {
   if (generatedSuffix != std::string::npos) {
     path.erase(generatedSuffix);
   }
-  return metadataBackedMapHelperMethodName(path) == "entry" ||
+  return metadataBackedKeyValueHelperMethodName(path) == "entry" ||
          isExperimentalCollectionConstructorPathLocal(path, "map", "entry");
 }
 

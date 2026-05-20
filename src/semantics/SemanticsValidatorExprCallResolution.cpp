@@ -1,5 +1,5 @@
 #include "SemanticsValidator.h"
-#include "MapConstructorHelpers.h"
+#include "StdlibCollectionSurfaceHelpers.h"
 
 #include <algorithm>
 #include <cctype>
@@ -223,7 +223,7 @@ std::string SemanticsValidator::resolveExprConcreteCallPath(
     }
   };
   auto isKeyValueEntryConstructorPath = [](const std::string &path) {
-    const auto *metadata = mapHelperSurfaceMetadataLocal();
+    const auto *metadata = keyValueHelperSurfaceMetadataLocal();
     if (metadata == nullptr) {
       return false;
     }
@@ -470,7 +470,7 @@ std::string SemanticsValidator::resolveExprConcreteCallPath(
       (findParamBinding(params, expr.args.front().name) != nullptr ||
        locals.count(expr.args.front().name) > 0);
   const std::string keyValueConstructorBasePath = [&]() -> std::string {
-    const auto *metadata = mapConstructorSurfaceMetadataLocal();
+    const auto *metadata = keyValueConstructorSurfaceMetadataLocal();
     if (metadata == nullptr) {
       return {};
     }

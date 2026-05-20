@@ -83,17 +83,17 @@ bool hasExplicitDefinitionFamilyPath(
   return false;
 }
 
-const StdlibSurfaceMetadata *mapHelperSurfaceMetadataLocal() {
+const StdlibSurfaceMetadata *keyValueHelperSurfaceMetadataLocal() {
   return findStdlibSurfaceMetadataByBridgeKey("collections.map_helpers");
 }
 
 std::string canonicalKeyValueHelperRootPathLocal() {
-  const StdlibSurfaceMetadata *metadata = mapHelperSurfaceMetadataLocal();
+  const StdlibSurfaceMetadata *metadata = keyValueHelperSurfaceMetadataLocal();
   return metadata == nullptr ? std::string{} : std::string(metadata->canonicalPath);
 }
 
 std::string canonicalKeyValueHelperPathLocal(std::string_view helperName) {
-  const StdlibSurfaceMetadata *metadata = mapHelperSurfaceMetadataLocal();
+  const StdlibSurfaceMetadata *metadata = keyValueHelperSurfaceMetadataLocal();
   if (metadata == nullptr) {
     return {};
   }
@@ -104,7 +104,7 @@ bool resolvePublishedKeyValueHelperMemberTokenLocal(
     std::string_view memberToken,
     std::string &memberNameOut) {
   memberNameOut.clear();
-  const StdlibSurfaceMetadata *metadata = mapHelperSurfaceMetadataLocal();
+  const StdlibSurfaceMetadata *metadata = keyValueHelperSurfaceMetadataLocal();
   return metadata != nullptr &&
          resolvePublishedCollectionHelperMemberToken(memberToken,
                                                      metadata->id,
@@ -115,7 +115,7 @@ bool resolvePublishedKeyValueHelperResolvedPathLocal(
     std::string_view resolvedPath,
     std::string &memberNameOut) {
   memberNameOut.clear();
-  const StdlibSurfaceMetadata *metadata = mapHelperSurfaceMetadataLocal();
+  const StdlibSurfaceMetadata *metadata = keyValueHelperSurfaceMetadataLocal();
   return metadata != nullptr &&
          resolvePublishedCollectionHelperResolvedPath(resolvedPath,
                                                       metadata->id,
@@ -131,7 +131,7 @@ bool isCanonicalKeyValueHelperResolvedPathLocal(std::string path) {
 }
 
 bool isCanonicalMapCollectionTypeRootLocal(std::string_view typeName) {
-  const StdlibSurfaceMetadata *metadata = mapHelperSurfaceMetadataLocal();
+  const StdlibSurfaceMetadata *metadata = keyValueHelperSurfaceMetadataLocal();
   return metadata != nullptr &&
          trimLeadingSlash(typeName) == trimLeadingSlash(metadata->canonicalPath);
 }
@@ -297,7 +297,7 @@ bool SemanticsValidator::hasDefinitionPath(const std::string &path) const {
 std::string SemanticsValidator::preferredExperimentalKeyValueHelperTarget(
     std::string_view helperName) const {
   const std::string prefix = experimentalCollectionConstructorRootLocal("map");
-  const StdlibSurfaceMetadata *metadata = mapHelperSurfaceMetadataLocal();
+  const StdlibSurfaceMetadata *metadata = keyValueHelperSurfaceMetadataLocal();
   if (metadata == nullptr) {
     return std::string(helperName);
   }
@@ -312,7 +312,7 @@ std::string SemanticsValidator::preferredExperimentalKeyValueHelperTarget(
 
 std::string SemanticsValidator::preferredCanonicalExperimentalKeyValueHelperTarget(
     std::string_view helperName) const {
-  const StdlibSurfaceMetadata *metadata = mapHelperSurfaceMetadataLocal();
+  const StdlibSurfaceMetadata *metadata = keyValueHelperSurfaceMetadataLocal();
   if (metadata == nullptr) {
     return experimentalCollectionConstructorPathLocal("map", helperName);
   }
@@ -682,7 +682,7 @@ std::string SemanticsValidator::directKeyValueHelperCompatibilityPath(
                                                      explicitSurfaceHelperName) &&
       explicitSurfaceHelperName == helperName &&
       trimLeadingSlash(candidate.name) != helperName &&
-      metadataBackedMapHelperRootAliasMethodName(explicitPath).empty() &&
+      metadataBackedKeyValueHelperRootAliasMethodName(explicitPath).empty() &&
       !isCanonicalKeyValueHelperResolvedPathLocal(explicitPath);
   if (!resolvedCompatibilityHelper &&
       !resolveExplicitPublishedKeyValueHelperExprMemberName(
@@ -715,7 +715,7 @@ std::string SemanticsValidator::directKeyValueHelperCompatibilityPath(
       candidate.args.empty()) {
     return "";
   }
-  if (!metadataBackedMapHelperRootAliasMethodName(explicitPath).empty()) {
+  if (!metadataBackedKeyValueHelperRootAliasMethodName(explicitPath).empty()) {
     return removedPath;
   }
   if (resolvedCompatibilityHelper &&

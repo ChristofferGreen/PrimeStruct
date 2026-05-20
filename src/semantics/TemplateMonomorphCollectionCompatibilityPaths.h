@@ -30,7 +30,7 @@ std::string_view keyValueCompatibilityHelperBase(std::string_view helperName) {
 }
 
 bool isTemplateMonomorphMapCollectionRoot(std::string_view value) {
-  const primec::StdlibSurfaceMetadata *metadata = mapHelperSurfaceMetadataLocal();
+  const primec::StdlibSurfaceMetadata *metadata = keyValueHelperSurfaceMetadataLocal();
   if (metadata == nullptr) {
     return false;
   }
@@ -83,7 +83,7 @@ bool isExplicitRemovedCollectionMethodAlias(const std::string &receiverTypeName,
   if (receiverTypeName != "map") {
     return false;
   }
-  helperNameString = metadataBackedMapHelperMethodName(rawMethodName);
+  helperNameString = metadataBackedKeyValueHelperMethodName(rawMethodName);
   if (helperNameString != rawMethodName) {
     helperName = helperNameString;
   }

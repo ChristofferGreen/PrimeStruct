@@ -10,7 +10,7 @@
 #include <unordered_set>
 #include <utility>
 
-#include "MapConstructorHelpers.h"
+#include "StdlibCollectionSurfaceHelpers.h"
 #include "SemanticsValidatorInferCollectionCompatibilityInternal.h"
 
 namespace primec::semantics {
@@ -75,7 +75,7 @@ SemanticsValidator::BuiltinCollectionDispatchResolvers SemanticsValidator::makeB
             normalizedType = normalizeBindingTypeName(args.front());
             continue;
           }
-          if (isUnspecializedExperimentalMapBackingTypeName(base)) {
+          if (isUnspecializedExperimentalKeyValueBackingTypeName(base)) {
             std::vector<std::string> args;
             if (!splitTopLevelTemplateArgs(argText, args) || args.size() != 2) {
               return false;
@@ -94,7 +94,7 @@ SemanticsValidator::BuiltinCollectionDispatchResolvers SemanticsValidator::makeB
         if (!normalizedResolvedPath.empty() && normalizedResolvedPath.front() == '/') {
           normalizedResolvedPath.erase(normalizedResolvedPath.begin());
         }
-        if (!isQualifiedExperimentalMapBackingTypeName(normalizedResolvedPath)) {
+        if (!isQualifiedExperimentalKeyValueBackingTypeName(normalizedResolvedPath)) {
           return false;
         }
         auto defIt = defMap_.find(resolvedPath);

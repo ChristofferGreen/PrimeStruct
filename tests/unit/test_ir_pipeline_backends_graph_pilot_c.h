@@ -82,10 +82,10 @@
             "contextOut.collectionAccessFallbackContext.isStdNamespacedVectorAccessCall =") !=
         std::string::npos);
   CHECK(validatorExprMain.find(
-            "lateMapAccessBuiltinContext.shouldBuiltinValidateBareMapTryAtCall =") ==
+            "lateMapAccessBuiltinContext.shouldBuiltinValidateBareKeyValueTryAtCall =") ==
         std::string::npos);
   CHECK(validatorExpr.find(
-            "contextOut.shouldBuiltinValidateBareMapTryAtCall =") !=
+            "contextOut.shouldBuiltinValidateBareKeyValueTryAtCall =") !=
         std::string::npos);
   CHECK(validatorExprMain.find("const ExprArgumentValidationContext argumentValidationContext{") ==
         std::string::npos);
@@ -99,9 +99,9 @@
         std::string::npos);
   CHECK(validatorExpr.find("contextOut.resolvedCallArgumentContext = {") !=
         std::string::npos);
-  CHECK(validatorExprMain.find("const std::string preferredMapHelper = preferredMapMethodTarget(receiverExpr, helperName);") ==
+  CHECK(validatorExprMain.find("const std::string preferredKeyValueHelper = preferredKeyValueMethodTarget(receiverExpr, helperName);") ==
         std::string::npos);
-  CHECK(validatorExpr.find("const std::string preferredMapHelper = preferredMapMethodTarget(receiverExpr, helperName);") !=
+  CHECK(validatorExpr.find("const std::string preferredKeyValueHelper = preferredKeyValueMethodTarget(receiverExpr, helperName);") !=
         std::string::npos);
   CHECK(validatorExprMain.find("return failLateUnknownTargetDiagnostic(\"unknown call target: \" +") ==
         std::string::npos);
@@ -109,11 +109,11 @@
         std::string::npos);
   CHECK(validatorExpr.find("return failLateUnknownTargetDiagnostic(\"unknown call target: \" +") !=
         std::string::npos);
-  CHECK(validatorExpr.find("if (resolveMapTargetWithTypes(target, keyType, valueType) ||") !=
+  CHECK(validatorExpr.find("if (resolveKeyValueTargetWithTypes(target, keyType, valueType) ||") !=
         std::string::npos);
   CHECK(validatorExpr.find("resolveExperimentalMapTarget(target, keyType, valueType)) {") !=
         std::string::npos);
-  CHECK(validatorExpr.find("auto resolveMapValueType = [&](const Expr &target, std::string &valueTypeOut) -> bool {") !=
+  CHECK(validatorExpr.find("auto resolveKeyValueValueType = [&](const Expr &target, std::string &valueTypeOut) -> bool {") !=
         std::string::npos);
   CHECK(validatorExprMain.find("auto resolveIndexedArgsPackElementType = [&](const Expr &target, std::string &elemTypeOut) -> bool {") ==
         std::string::npos);
@@ -134,7 +134,7 @@
   CHECK(validatorExprMain.find("auto resolveSoaVectorTarget = [&](const Expr &target, std::string &elemType) -> bool {") ==
         std::string::npos);
   CHECK(validatorExprMain.find("std::function<bool(const Expr &)> resolveStringTarget =") == std::string::npos);
-  CHECK(validatorExprMain.find("auto resolveMapValueTypeForStringTarget = [&](const Expr &target, std::string &valueTypeOut) -> bool {") ==
+  CHECK(validatorExprMain.find("auto resolveKeyValueValueTypeForStringTarget = [&](const Expr &target, std::string &valueTypeOut) -> bool {") ==
         std::string::npos);
   CHECK(validatorExprMain.find("auto extractExperimentalMapFieldTypes = [&](const BindingInfo &binding,") ==
         std::string::npos);
@@ -178,7 +178,7 @@
         std::string::npos);
   CHECK(validatorInfer.find("const auto &resolveStringTarget = builtinCollectionDispatchResolvers.resolveStringTarget;") !=
         std::string::npos);
-  CHECK(validatorInfer.find("const auto &resolveMapTarget = builtinCollectionDispatchResolvers.resolveMapTarget;") !=
+  CHECK(validatorInfer.find("const auto &resolveMapTarget = builtinCollectionDispatchResolvers.resolveMapTarget;") ==
         std::string::npos);
   CHECK(validatorInfer.find("prepareInferCollectionDispatchSetup(") != std::string::npos);
   CHECK(validatorInfer.find("InferCollectionDispatchSetup inferCollectionDispatchSetup;") !=
@@ -230,7 +230,7 @@
         std::string::npos);
   CHECK(validatorInferMain.find("std::function<ReturnKind(const Expr &)> pointerTargetKind =") ==
         std::string::npos);
-  CHECK(validatorInferMain.find("const std::string directRemovedMapCompatibilityPath =") ==
+  CHECK(validatorInferMain.find("const std::string directRemovedKeyValueCompatibilityPath =") ==
         std::string::npos);
   CHECK(validatorInferMain.find("if (getVectorStatementHelperName(expr, vectorHelper) && !expr.args.empty()) {") ==
         std::string::npos);
@@ -260,7 +260,7 @@
         std::string::npos);
   CHECK(validatorInfer.find("const bool isBuiltinGet = isSimpleCallName(expr, \"get\");") !=
         std::string::npos);
-  CHECK(validatorInfer.find("isSimpleCallName(expr, \"to_soa\") || isSimpleCallName(expr, \"to_aos\")") !=
+  CHECK(validatorInfer.find("isSimpleCallName(expr, \"to_soa\") || isSimpleCallName(expr, \"to\" \"_aos\")") !=
         std::string::npos);
   CHECK(validatorInfer.find("if (getBuiltinGpuName(expr, builtinName)) {") !=
         std::string::npos);
@@ -270,7 +270,7 @@
         std::string::npos);
   CHECK(validatorInfer.find("std::function<ReturnKind(const Expr &)> pointerTargetKind =") !=
         std::string::npos);
-  CHECK(validatorInfer.find("const std::string directRemovedMapCompatibilityPath =") !=
+  CHECK(validatorInfer.find("const std::string directRemovedKeyValueCompatibilityPath =") !=
         std::string::npos);
   CHECK(validatorInfer.find("if (getVectorStatementHelperName(expr, vectorHelper) && !expr.args.empty()) {") !=
         std::string::npos);

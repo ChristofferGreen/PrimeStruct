@@ -1,6 +1,6 @@
 #include "SemanticsHelpers.h"
 
-#include "MapConstructorHelpers.h"
+#include "StdlibCollectionSurfaceHelpers.h"
 
 #include <array>
 #include <cctype>
@@ -58,7 +58,7 @@ std::string stripLeadingSlashLocal(std::string_view text) {
 }
 
 bool matchesKeyValueCollectionRootMetadataLocal(std::string_view normalized) {
-  const primec::StdlibSurfaceMetadata *metadata = mapHelperSurfaceMetadataLocal();
+  const primec::StdlibSurfaceMetadata *metadata = keyValueHelperSurfaceMetadataLocal();
   if (metadata == nullptr) {
     return false;
   }
@@ -77,7 +77,7 @@ bool matchesKeyValueCollectionRootMetadataLocal(std::string_view normalized) {
 }
 
 bool matchesKeyValueBackingRootMetadataLocal(const std::string &normalized) {
-  const primec::StdlibSurfaceMetadata *metadata = mapHelperSurfaceMetadataLocal();
+  const primec::StdlibSurfaceMetadata *metadata = keyValueHelperSurfaceMetadataLocal();
   if (metadata == nullptr) {
     return false;
   }
@@ -589,7 +589,7 @@ ReturnKind returnKindForTypeName(const std::string &name) {
     if (isVectorLike && args.size() == 1) {
       return ReturnKind::Array;
     }
-    const bool isKeyValueLike = isQualifiedExperimentalMapBackingTypeName(base);
+    const bool isKeyValueLike = isQualifiedExperimentalKeyValueBackingTypeName(base);
     if (isKeyValueLike && args.size() == 2) {
       return ReturnKind::Array;
     }

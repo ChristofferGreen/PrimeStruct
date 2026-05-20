@@ -11,12 +11,12 @@ namespace primec::semantics {
 namespace {
 
 std::string canonicalKeyValueHelperPathLocal(std::string_view helperName) {
-  return metadataBackedCanonicalMapHelperPath(helperName);
+  return metadataBackedCanonicalKeyValueHelperPath(helperName);
 }
 
 bool isCanonicalKeyValueHelperResolvedPath(const std::string &path,
                                            std::string_view helperName) {
-  const StdlibSurfaceMetadata *metadata = mapHelperSurfaceMetadataLocal();
+  const StdlibSurfaceMetadata *metadata = keyValueHelperSurfaceMetadataLocal();
   if (metadata == nullptr) {
     return false;
   }

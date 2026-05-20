@@ -1,5 +1,5 @@
 #include "SemanticsValidator.h"
-#include "MapConstructorHelpers.h"
+#include "StdlibCollectionSurfaceHelpers.h"
 #include "SemanticsValidatorInferCollectionCompatibilityInternal.h"
 
 #include <functional>
@@ -8,7 +8,7 @@
 namespace primec::semantics {
 namespace {
 bool isSpecializedExperimentalKeyValueBackingPath(std::string typeName) {
-  return isQualifiedExperimentalMapBackingTypeName(
+  return isQualifiedExperimentalKeyValueBackingTypeName(
       normalizeBindingTypeName(std::move(typeName)));
 }
 

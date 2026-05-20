@@ -19,7 +19,7 @@ inline std::string stripCollectionConstructorSuffixes(std::string resolvedPath) 
   return resolvedPath;
 }
 
-inline std::string stripMapConstructorSuffixes(std::string resolvedPath) {
+inline std::string stripKeyValueConstructorSuffixes(std::string resolvedPath) {
   return stripCollectionConstructorSuffixes(std::move(resolvedPath));
 }
 
@@ -44,15 +44,15 @@ inline bool isExperimentalCollectionConstructorPathLocal(
   return path == expected || path.rfind(expected + "__", 0) == 0;
 }
 
-inline std::string experimentalMapConstructorMemberPathLocal(
+inline std::string experimentalKeyValueConstructorMemberPathLocal(
     std::string_view memberName) {
   return experimentalCollectionConstructorPathLocal("map", memberName);
 }
 
-inline bool isExperimentalMapConstructorMemberPathLocal(
+inline bool isExperimentalKeyValueConstructorMemberPathLocal(
     const std::string &path,
     std::string_view memberName) {
-  const std::string expected = experimentalMapConstructorMemberPathLocal(memberName);
+  const std::string expected = experimentalKeyValueConstructorMemberPathLocal(memberName);
   return path == expected || path.rfind(expected + "__", 0) == 0;
 }
 
@@ -72,7 +72,7 @@ inline bool isExperimentalCollectionBackingTypeName(
   return typeName == expected || typeName.rfind(specializedExpected, 0) == 0;
 }
 
-inline bool isExperimentalMapEntryBackingTypeName(std::string_view typeName) {
+inline bool isExperimentalKeyValueEntryBackingTypeName(std::string_view typeName) {
   std::string normalized(typeName);
   if (!normalized.empty() && normalized.front() == '/') {
     normalized.erase(normalized.begin());
@@ -80,7 +80,7 @@ inline bool isExperimentalMapEntryBackingTypeName(std::string_view typeName) {
   return isExperimentalCollectionBackingTypeName("map", "Entry", normalized);
 }
 
-inline std::string experimentalMapBackingLeafName(std::string typeName) {
+inline std::string experimentalKeyValueBackingLeafName(std::string typeName) {
   if (!typeName.empty() && typeName.front() == '/') {
     typeName.erase(typeName.begin());
   }
@@ -88,16 +88,16 @@ inline std::string experimentalMapBackingLeafName(std::string typeName) {
   return leafStart == std::string::npos ? typeName : typeName.substr(leafStart + 1);
 }
 
-inline bool isUnspecializedExperimentalMapBackingTypeName(std::string_view typeName) {
+inline bool isUnspecializedExperimentalKeyValueBackingTypeName(std::string_view typeName) {
   std::string normalized(typeName);
   if (!normalized.empty() && normalized.front() == '/') {
     normalized.erase(normalized.begin());
   }
-  return experimentalMapBackingLeafName(normalized) == "Map" &&
+  return experimentalKeyValueBackingLeafName(normalized) == "Map" &&
          isExperimentalCollectionBackingTypeName("map", "Map", normalized);
 }
 
-inline bool isBareExperimentalMapBackingTypeName(std::string_view typeName) {
+inline bool isBareExperimentalKeyValueBackingTypeName(std::string_view typeName) {
   std::string normalized(typeName);
   if (!normalized.empty() && normalized.front() == '/') {
     normalized.erase(normalized.begin());
@@ -105,20 +105,20 @@ inline bool isBareExperimentalMapBackingTypeName(std::string_view typeName) {
   return normalized == "Map";
 }
 
-inline bool isQualifiedExperimentalMapBackingTypeName(std::string_view typeName) {
+inline bool isQualifiedExperimentalKeyValueBackingTypeName(std::string_view typeName) {
   std::string normalized(typeName);
   if (!normalized.empty() && normalized.front() == '/') {
     normalized.erase(normalized.begin());
   }
-  return experimentalMapBackingLeafName(normalized) != "Map" &&
+  return experimentalKeyValueBackingLeafName(normalized) != "Map" &&
          isExperimentalCollectionBackingTypeName("map", "Map", normalized);
 }
 
-inline const primec::StdlibSurfaceMetadata *mapHelperSurfaceMetadataLocal() {
+inline const primec::StdlibSurfaceMetadata *keyValueHelperSurfaceMetadataLocal() {
   return primec::findStdlibSurfaceMetadataByBridgeKey("collections.map_helpers");
 }
 
-inline const primec::StdlibSurfaceMetadata *mapConstructorSurfaceMetadataLocal() {
+inline const primec::StdlibSurfaceMetadata *keyValueConstructorSurfaceMetadataLocal() {
   return primec::findStdlibSurfaceMetadataByBridgeKey(
       "collections.map_constructors");
 }
@@ -149,8 +149,8 @@ inline bool stripStdlibSurfaceRootedMemberName(std::string_view rawPath,
   return true;
 }
 
-inline std::string metadataBackedMapHelperMethodName(std::string_view methodName) {
-  const primec::StdlibSurfaceMetadata *metadata = mapHelperSurfaceMetadataLocal();
+inline std::string metadataBackedKeyValueHelperMethodName(std::string_view methodName) {
+  const primec::StdlibSurfaceMetadata *metadata = keyValueHelperSurfaceMetadataLocal();
   if (metadata == nullptr) {
     return std::string(methodName);
   }
@@ -186,9 +186,9 @@ inline std::string metadataBackedMapHelperMethodName(std::string_view methodName
   return std::string(methodName);
 }
 
-inline std::string metadataBackedMapHelperRootAliasMethodName(
+inline std::string metadataBackedKeyValueHelperRootAliasMethodName(
     std::string_view methodName) {
-  const primec::StdlibSurfaceMetadata *metadata = mapHelperSurfaceMetadataLocal();
+  const primec::StdlibSurfaceMetadata *metadata = keyValueHelperSurfaceMetadataLocal();
   if (metadata == nullptr) {
     return {};
   }
@@ -205,12 +205,12 @@ inline std::string metadataBackedMapHelperRootAliasMethodName(
   return {};
 }
 
-inline std::string metadataBackedCanonicalMapHelperPath(std::string_view helperName) {
-  const primec::StdlibSurfaceMetadata *metadata = mapHelperSurfaceMetadataLocal();
+inline std::string metadataBackedCanonicalKeyValueHelperPath(std::string_view helperName) {
+  const primec::StdlibSurfaceMetadata *metadata = keyValueHelperSurfaceMetadataLocal();
   if (metadata == nullptr) {
     return {};
   }
-  const std::string memberName = metadataBackedMapHelperMethodName(helperName);
+  const std::string memberName = metadataBackedKeyValueHelperMethodName(helperName);
   if (memberName.empty()) {
     return {};
   }
@@ -272,7 +272,7 @@ inline bool resolveKeyValueConstructorMemberPath(std::string_view rawPath,
                                             std::string &memberNameOut) {
   memberNameOut.clear();
   const primec::StdlibSurfaceMetadata *metadata =
-      mapConstructorSurfaceMetadataLocal();
+      keyValueConstructorSurfaceMetadataLocal();
   if (metadata == nullptr) {
     return false;
   }
@@ -361,10 +361,10 @@ inline std::string preferredCollectionConstructorSpelling(
   return fallback;
 }
 
-inline std::string metadataBackedMapConstructorAliasRewritePath(
+inline std::string metadataBackedKeyValueConstructorAliasRewritePath(
     std::string_view resolvedPath) {
   const primec::StdlibSurfaceMetadata *metadata =
-      mapConstructorSurfaceMetadataLocal();
+      keyValueConstructorSurfaceMetadataLocal();
   if (metadata == nullptr) {
     return {};
   }

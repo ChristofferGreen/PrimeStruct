@@ -157,7 +157,7 @@ std::string pathWithoutLeadingSlash(std::string path) {
   return path;
 }
 
-const primec::StdlibSurfaceMetadata *mapHelperSurfaceMetadataLocal() {
+const primec::StdlibSurfaceMetadata *keyValueHelperSurfaceMetadataLocal() {
   return primec::findStdlibSurfaceMetadataByBridgeKey("collections.map_helpers");
 }
 
@@ -192,7 +192,7 @@ bool resolveKeyValueHelperMemberNameLocal(std::string rawPath,
                                           std::string &memberNameOut) {
   memberNameOut.clear();
   const primec::StdlibSurfaceMetadata *metadata =
-      mapHelperSurfaceMetadataLocal();
+      keyValueHelperSurfaceMetadataLocal();
   if (metadata == nullptr || rawPath.empty()) {
     return false;
   }
@@ -222,7 +222,7 @@ bool resolveRootMapAliasHelperMemberNameLocal(std::string_view rawPath,
                                               std::string &memberNameOut) {
   memberNameOut.clear();
   const primec::StdlibSurfaceMetadata *metadata =
-      mapHelperSurfaceMetadataLocal();
+      keyValueHelperSurfaceMetadataLocal();
   if (metadata == nullptr) {
     return false;
   }

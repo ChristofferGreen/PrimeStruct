@@ -165,13 +165,13 @@ std::string resolveStructLikeExprPathForTemplatedVectorFallback(const Expr &expr
 bool isUnspecializedExperimentalKeyValueBackingTypeForFallbackInference(
     std::string typeName) {
   typeName = normalizeBindingTypeName(std::move(typeName));
-  return isUnspecializedExperimentalMapBackingTypeName(typeName);
+  return isUnspecializedExperimentalKeyValueBackingTypeName(typeName);
 }
 
 bool isSpecializedExperimentalKeyValueBackingTypeForFallbackInference(
     std::string typeName) {
   typeName = normalizeBindingTypeName(std::move(typeName));
-  return isQualifiedExperimentalMapBackingTypeName(typeName);
+  return isQualifiedExperimentalKeyValueBackingTypeName(typeName);
 }
 
 bool resolvesExperimentalKeyValueTypeText(const std::string &typeText,

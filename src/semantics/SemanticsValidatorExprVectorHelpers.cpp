@@ -166,7 +166,7 @@ bool SemanticsValidator::resolveVectorHelperMethodTarget(
                                        nullptr)) {
     normalizedHelperName = soaHelperName;
   } else if (const std::string keyValueHelperName =
-                 metadataBackedMapHelperMethodName(normalizedHelperName);
+                 metadataBackedKeyValueHelperMethodName(normalizedHelperName);
              keyValueHelperName != normalizedHelperName) {
     normalizedHelperName = keyValueHelperName;
   }

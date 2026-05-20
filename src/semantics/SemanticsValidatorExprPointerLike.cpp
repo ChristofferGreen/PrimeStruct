@@ -14,7 +14,7 @@ bool allowsArrayVectorCompatibilitySuffix(const std::string &suffix) {
 }
 
 std::string unrootedCanonicalKeyValueHelperPrefix() {
-  const StdlibSurfaceMetadata *metadata = mapHelperSurfaceMetadataLocal();
+  const StdlibSurfaceMetadata *metadata = keyValueHelperSurfaceMetadataLocal();
   if (metadata == nullptr) {
     return "";
   }
@@ -29,7 +29,7 @@ std::string unrootedCanonicalKeyValueHelperPrefix() {
 }
 
 std::string unrootedKeyValueImportAliasHelperPrefix() {
-  const StdlibSurfaceMetadata *metadata = mapHelperSurfaceMetadataLocal();
+  const StdlibSurfaceMetadata *metadata = keyValueHelperSurfaceMetadataLocal();
   if (metadata == nullptr) {
     return "";
   }

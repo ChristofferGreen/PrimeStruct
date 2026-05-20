@@ -291,7 +291,7 @@ void SemanticsValidator::populateBuiltinCollectionDispatchBufferAndMapResolvers(
       }
     }
     if (target.kind == Expr::Kind::Call) {
-      const auto *mapConstructorMetadata = mapConstructorSurfaceMetadataLocal();
+      const auto *mapConstructorMetadata = keyValueConstructorSurfaceMetadataLocal();
       const bool hasVisibleCanonicalKeyValueConstructor =
           mapConstructorMetadata != nullptr &&
           hasVisibleDefinitionPathForCurrentImports(

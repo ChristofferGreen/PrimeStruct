@@ -9,19 +9,19 @@
   CHECK(validatorHeader.find("bool inferDefinitionReturnBinding(const Definition &def, BindingInfo &bindingOut);") !=
         std::string::npos);
   CHECK(validatorHeader.find("bool inferQueryExprTypeText(const Expr &expr,") != std::string::npos);
-  CHECK(validatorHeader.find("std::string preferredExperimentalMapHelperTarget(std::string_view helperName) const;") !=
+  CHECK(validatorHeader.find("std::string preferredExperimentalKeyValueHelperTarget(") !=
         std::string::npos);
-  CHECK(validatorHeader.find("std::string preferredCanonicalExperimentalMapHelperTarget(std::string_view helperName) const;") !=
+  CHECK(validatorHeader.find("std::string preferredCanonicalExperimentalKeyValueHelperTarget(") !=
         std::string::npos);
-  CHECK(validatorHeader.find("bool canonicalExperimentalMapHelperPath(const std::string &resolvedPath,") !=
+  CHECK(validatorHeader.find("bool canonicalExperimentalKeyValueHelperPath(") !=
         std::string::npos);
-  CHECK(validatorHeader.find("bool canonicalizeExperimentalMapHelperResolvedPath(const std::string &resolvedPath,") !=
+  CHECK(validatorHeader.find("bool canonicalizeExperimentalKeyValueHelperResolvedPath(") !=
         std::string::npos);
   CHECK(validatorHeader.find("bool shouldBuiltinValidateCurrentMapWrapperHelper(std::string_view helperName) const;") !=
         std::string::npos);
-  CHECK(validatorHeader.find("std::string mapNamespacedMethodCompatibilityPath(") !=
+  CHECK(validatorHeader.find("std::string keyValueNamespacedMethodCompatibilityPath(") !=
         std::string::npos);
-  CHECK(validatorHeader.find("std::string directMapHelperCompatibilityPath(") !=
+  CHECK(validatorHeader.find("std::string directKeyValueHelperCompatibilityPath(") !=
         std::string::npos);
   CHECK(validatorHeader.find("std::string explicitRemovedCollectionMethodPath(std::string_view rawMethodName,") !=
         std::string::npos);
@@ -82,7 +82,7 @@
         std::string::npos);
   CHECK(validatorCollections.find("auto inferCallBinding = [") !=
         std::string::npos);
-  CHECK(validatorCollections.find("auto isDirectMapConstructorCall = [") !=
+  CHECK(validatorCollections.find("auto isDirectKeyValueConstructorCall = [") !=
         std::string::npos);
   CHECK(validatorCollections.find("state->resolveSoaVectorTarget = [") !=
         std::string::npos);
@@ -102,21 +102,21 @@
         std::string::npos);
   CHECK(validatorCollections.find("preferredPublishedCollectionLoweringPath(") !=
         std::string::npos);
-  CHECK(validatorCollections.find("resolveCanonicalCompatibilityMapHelperNameFromResolvedPath(") !=
+  CHECK(validatorCollections.find("resolveCanonicalCompatibilityKeyValueHelperNameFromResolvedPath(") !=
         std::string::npos);
-  CHECK(validatorCollections.find("std::string SemanticsValidator::preferredExperimentalMapHelperTarget(std::string_view helperName) const {") !=
+  CHECK(validatorCollections.find("std::string SemanticsValidator::preferredExperimentalKeyValueHelperTarget(") !=
         std::string::npos);
-  CHECK(validatorCollections.find("std::string SemanticsValidator::preferredCanonicalExperimentalMapHelperTarget(std::string_view helperName) const {") !=
+  CHECK(validatorCollections.find("std::string SemanticsValidator::preferredCanonicalExperimentalKeyValueHelperTarget(") !=
         std::string::npos);
-  CHECK(validatorCollections.find("bool SemanticsValidator::canonicalExperimentalMapHelperPath(const std::string &resolvedPath,") !=
+  CHECK(validatorCollections.find("bool SemanticsValidator::canonicalExperimentalKeyValueHelperPath(") !=
         std::string::npos);
-  CHECK(validatorCollections.find("bool SemanticsValidator::canonicalizeExperimentalMapHelperResolvedPath(const std::string &resolvedPath,") !=
+  CHECK(validatorCollections.find("bool SemanticsValidator::canonicalizeExperimentalKeyValueHelperResolvedPath(") !=
         std::string::npos);
   CHECK(validatorCollections.find("bool SemanticsValidator::shouldBuiltinValidateCurrentMapWrapperHelper(std::string_view helperName) const {") !=
         std::string::npos);
-  CHECK(validatorCollections.find("std::string SemanticsValidator::mapNamespacedMethodCompatibilityPath(") !=
+  CHECK(validatorCollections.find("std::string SemanticsValidator::keyValueNamespacedMethodCompatibilityPath(") !=
         std::string::npos);
-  CHECK(validatorCollections.find("std::string SemanticsValidator::directMapHelperCompatibilityPath(") !=
+  CHECK(validatorCollections.find("std::string SemanticsValidator::directKeyValueHelperCompatibilityPath(") !=
         std::string::npos);
   CHECK(validatorCollections.find("enum class RemovedCollectionHelperFamily {") != std::string::npos);
   CHECK(validatorCollections.find("std::string SemanticsValidator::explicitRemovedCollectionMethodPath(std::string_view rawMethodName,") !=
@@ -141,7 +141,7 @@
         std::string::npos);
   CHECK(validatorBuild.find("bool SemanticsValidator::inferResolvedDirectCallBindingType(") !=
         std::string::npos);
-  CHECK(validatorBuild.find("#include \"MapConstructorHelpers.h\"") !=
+  CHECK(validatorBuild.find("#include \"StdlibCollectionSurfaceHelpers.h\"") !=
         std::string::npos);
   CHECK(validatorBuild.find(
             "directStructIt->second.rfind(\"/std/collections/experimental_map/Map__\", 0)") ==
@@ -184,25 +184,25 @@
         std::string::npos);
   CHECK(validatorExpr.find("bool SemanticsValidator::prepareExprMethodCompatibilitySetup(") !=
         std::string::npos);
-  CHECK(validatorExprMain.find("std::string canonicalExperimentalMapHelperResolved;") ==
+  CHECK(validatorExprMain.find("std::string canonicalExperimentalKeyValueHelperResolved;") ==
         std::string::npos);
-  CHECK(validatorExpr.find("std::string canonicalExperimentalMapHelperResolved;") !=
+  CHECK(validatorExpr.find("std::string canonicalExperimentalKeyValueHelperResolved;") !=
         std::string::npos);
   CHECK(validatorExprMain.find("tryRewriteCanonicalExperimentalVectorHelperCall(") ==
         std::string::npos);
   CHECK(validatorExpr.find("tryRewriteCanonicalExperimentalVectorHelperCall(") !=
         std::string::npos);
-  CHECK(validatorExprMain.find("explicitCanonicalExperimentalMapBorrowedHelperPath(") ==
+  CHECK(validatorExprMain.find("explicitCanonicalExperimentalKeyValueBorrowedHelperPath(") ==
         std::string::npos);
-  CHECK(validatorExpr.find("explicitCanonicalExperimentalMapBorrowedHelperPath(") !=
+  CHECK(validatorExpr.find("explicitCanonicalExperimentalKeyValueBorrowedHelperPath(") !=
         std::string::npos);
   CHECK(validatorExprMain.find("auto setCanonicalMapKeyMismatch =") ==
         std::string::npos);
   CHECK(validatorExpr.find("auto setCanonicalMapKeyMismatch =") ==
         std::string::npos);
-  CHECK(validatorExprMain.find("auto isExperimentalMapReceiverExpr = [&](const Expr &candidate)") ==
+  CHECK(validatorExprMain.find("auto isExperimentalKeyValueReceiverExpr = [&](const Expr &candidate)") ==
         std::string::npos);
-  CHECK(validatorExpr.find("auto isExperimentalMapReceiverExpr = [&](const Expr &candidate)") !=
+  CHECK(validatorExpr.find("auto isExperimentalKeyValueReceiverExpr = [&](const Expr &candidate)") !=
         std::string::npos);
   CHECK(validatorExprMain.find("const std::string methodReflectionTarget =") ==
         std::string::npos);
@@ -212,9 +212,9 @@
         std::string::npos);
   CHECK(validatorExpr.find("const std::string removedVectorCompatibilityPath =") ==
         std::string::npos);
-  CHECK(validatorExprMain.find("const std::string removedMapCompatibilityPath =") ==
+  CHECK(validatorExprMain.find("const std::string removedKeyValueCompatibilityPath =") ==
         std::string::npos);
-  CHECK(validatorExpr.find("const std::string removedMapCompatibilityPath =") !=
+  CHECK(validatorExpr.find("const std::string removedKeyValueCompatibilityPath =") !=
         std::string::npos);
   CHECK(validatorExprMain.find("auto isKnownCollectionTarget = [&](const Expr &targetExpr) -> bool {") ==
         std::string::npos);
@@ -236,7 +236,7 @@
         std::string::npos);
   CHECK(validatorExprMain.find("const auto &resolveStringTarget = builtinCollectionDispatchResolvers.resolveStringTarget;") ==
         std::string::npos);
-  CHECK(validatorExprMain.find("const auto &resolveMapTargetWithTypes = builtinCollectionDispatchResolvers.resolveMapTarget;") ==
+  CHECK(validatorExprMain.find("const auto &resolveKeyValueTargetWithTypes = builtinCollectionDispatchResolvers.resolveMapTarget;") ==
         std::string::npos);
   CHECK(validatorExprMain.find("const auto &resolveExperimentalMapTarget =") == std::string::npos);
   CHECK(validatorExprMain.find("builtinCollectionDispatchResolvers.resolveExperimentalMapTarget;") ==
@@ -248,15 +248,15 @@
   CHECK(validatorExpr.find("dispatchResolvers.resolveExperimentalMapValueTarget == nullptr") != std::string::npos);
   CHECK(validatorExpr.find("dispatchResolvers.resolveExperimentalMapValueTarget(receiverExpr, keyType, valueType)") !=
         std::string::npos);
-  CHECK(validatorExprMain.find("auto preferredExperimentalMapHelperTarget = [&](std::string_view helperName) {") ==
+  CHECK(validatorExprMain.find("auto preferredExperimentalKeyValueHelperTarget = [&](std::string_view helperName) {") ==
         std::string::npos);
-  CHECK(validatorExprMain.find("auto preferredCanonicalExperimentalMapHelperTarget = [&](std::string_view helperName) {") ==
+  CHECK(validatorExprMain.find("auto preferredCanonicalExperimentalKeyValueHelperTarget = [&](std::string_view helperName) {") ==
         std::string::npos);
-  CHECK(validatorExprMain.find("auto preferredCanonicalExperimentalMapReferenceHelperTarget = [&](std::string_view helperName) {") ==
+  CHECK(validatorExprMain.find("auto preferredCanonicalExperimentalKeyValueReferenceHelperTarget = [&](std::string_view helperName) {") ==
         std::string::npos);
-  CHECK(validatorExprMain.find("auto canonicalExperimentalMapHelperPath = [&](const std::string &resolvedPath, std::string &canonicalPathOut, std::string &helperNameOut) {") ==
+  CHECK(validatorExprMain.find("auto canonicalExperimentalKeyValueHelperPath = [&](const std::string &resolvedPath, std::string &canonicalPathOut, std::string &helperNameOut) {") ==
         std::string::npos);
-  CHECK(validatorExprMain.find("auto canonicalizeExperimentalMapHelperResolvedPath = [&](const std::string &resolvedPath,") ==
+  CHECK(validatorExprMain.find("auto canonicalizeExperimentalKeyValueHelperResolvedPath = [&](const std::string &resolvedPath,") ==
         std::string::npos);
   CHECK(validatorExprMain.find("auto shouldBuiltinValidateCurrentMapWrapperHelper = [&](std::string_view helperName) {") ==
         std::string::npos);
@@ -278,19 +278,19 @@
         std::string::npos);
   CHECK(validatorExprMain.find("auto isRemovedMapCompatibilityHelper = [](std::string_view helperName) {") ==
         std::string::npos);
-  CHECK(validatorExpr.find("preferredCanonicalExperimentalMapHelperTarget(helperName)") != std::string::npos);
-  CHECK(validatorExpr.find("this->preferredCanonicalExperimentalMapHelperTarget(") !=
+  CHECK(validatorExpr.find("preferredCanonicalExperimentalKeyValueHelperTarget(helperName)") != std::string::npos);
+  CHECK(validatorExpr.find("this->preferredCanonicalExperimentalKeyValueHelperTarget(") !=
         std::string::npos);
-  CHECK(validatorExpr.find("canonicalExperimentalMapHelperPath(") != std::string::npos);
-  CHECK(validatorExpr.find("canonicalizeExperimentalMapHelperResolvedPath(") != std::string::npos);
+  CHECK(validatorExpr.find("canonicalExperimentalKeyValueHelperPath(") != std::string::npos);
+  CHECK(validatorExpr.find("canonicalizeExperimentalKeyValueHelperResolvedPath(") != std::string::npos);
   CHECK(validatorExpr.find("shouldBuiltinValidateCurrentMapWrapperHelper(") != std::string::npos);
   CHECK(validatorHeader.find("bool validateExprMethodCallTarget(") != std::string::npos);
   CHECK(validatorExprMain.find("ExprMethodResolutionContext methodResolutionContext;") !=
         std::string::npos);
   CHECK(validatorExprMain.find("validateExprMethodCallTarget(") != std::string::npos);
-  CHECK(validatorExprMain.find("mapNamespacedMethodCompatibilityPath(expr, params, locals, builtinCollectionDispatchResolverAdapters)") ==
+  CHECK(validatorExprMain.find("keyValueNamespacedMethodCompatibilityPath(expr, params, locals, builtinCollectionDispatchResolverAdapters)") ==
         std::string::npos);
-  CHECK(validatorExpr.find("mapNamespacedMethodCompatibilityPath(expr, params, locals, dispatchResolverAdapters)") !=
+  CHECK(validatorExpr.find("keyValueNamespacedMethodCompatibilityPath(expr, params, locals, dispatchResolverAdapters)") !=
         std::string::npos);
   CHECK(validatorExprMain.find("failMethodResolutionDiagnostic(\"method call missing receiver\")") ==
         std::string::npos);
@@ -298,11 +298,11 @@
         std::string::npos);
   CHECK(validatorExpr.find("failMethodResolutionDiagnostic(\"method call missing receiver\")") !=
         std::string::npos);
-  CHECK(validatorExprMain.find("auto resolveInferredMapMethodFallback = [&]() -> bool {") ==
+  CHECK(validatorExprMain.find("auto resolveInferredKeyValueMethodFallback = [&]() -> bool {") ==
         std::string::npos);
-  CHECK(validatorExpr.find("auto resolveInferredMapMethodFallback = [&]() -> bool {") !=
+  CHECK(validatorExpr.find("auto resolveInferredKeyValueMethodFallback = [&]() -> bool {") !=
         std::string::npos);
-  CHECK(validatorExpr.find("directMapHelperCompatibilityPath(") != std::string::npos);
+  CHECK(validatorExpr.find("directKeyValueHelperCompatibilityPath(") != std::string::npos);
   CHECK(validatorExpr.find("explicitRemovedCollectionMethodPath(methodName)") !=
         std::string::npos);
   CHECK(validatorExpr.find("shouldPreserveRemovedCollectionHelperPath(resolved)") ==
@@ -311,7 +311,7 @@
         std::string::npos);
   CHECK(validatorExprMain.find("isUnnamespacedMapCountBuiltinFallbackCall(expr, params, locals, dispatchBootstrap.dispatchResolverAdapters)") ==
         std::string::npos);
-  CHECK(validatorExpr.find("isUnnamespacedMapCountBuiltinFallbackCall(expr, params, locals, dispatchResolverAdapters)") !=
+  CHECK(validatorExpr.find("isUnnamespacedMapCountBuiltinFallbackCall(expr, params, locals, dispatchResolverAdapters)") ==
         std::string::npos);
   CHECK(validatorExpr.find("resolveRemovedMapBodyArgumentTarget(") ==
         std::string::npos);
@@ -358,8 +358,8 @@
         std::string::npos);
   CHECK(validatorHeader.find("void prepareExprLateMapAccessBuiltinContext(") !=
         std::string::npos);
-  CHECK(validatorExprMain.find("const std::string directRemovedMapCompatibilityPath =") ==
+  CHECK(validatorExprMain.find("const std::string directRemovedKeyValueCompatibilityPath =") ==
         std::string::npos);
-  CHECK(validatorExpr.find("const std::string directRemovedMapCompatibilityPath =") !=
+  CHECK(validatorExpr.find("const std::string directRemovedKeyValueCompatibilityPath =") !=
         std::string::npos);
   CHECK(validatorExprMain.find("prepareExprDispatchBootstrap(") != std::string::npos);

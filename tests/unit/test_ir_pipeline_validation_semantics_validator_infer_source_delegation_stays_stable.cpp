@@ -2508,7 +2508,7 @@ main() {
         std::string::npos);
 
   CHECK(collectionCompatibilityInternalSource.find(
-            "#include \"MapConstructorHelpers.h\"") !=
+            "#include \"StdlibCollectionSurfaceHelpers.h\"") !=
         std::string::npos);
   CHECK(collectionCompatibilityInternalSource.find(
             "#include \"primec/StdlibSurfaceRegistry.h\"") !=

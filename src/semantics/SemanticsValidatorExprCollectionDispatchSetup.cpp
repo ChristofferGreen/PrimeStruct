@@ -11,7 +11,7 @@ bool isCanonicalKeyValueAccessHelperName(const std::string &helperName) {
 }
 
 bool isStdNamespacedCanonicalKeyValueAccessPath(const std::string &path) {
-  const StdlibSurfaceMetadata *metadata = mapHelperSurfaceMetadataLocal();
+  const StdlibSurfaceMetadata *metadata = keyValueHelperSurfaceMetadataLocal();
   if (metadata == nullptr) {
     return false;
   }

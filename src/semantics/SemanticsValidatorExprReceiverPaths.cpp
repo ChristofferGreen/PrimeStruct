@@ -1,5 +1,5 @@
 #include "SemanticsValidator.h"
-#include "MapConstructorHelpers.h"
+#include "StdlibCollectionSurfaceHelpers.h"
 
 #include <string>
 #include <string_view>
@@ -17,7 +17,7 @@ bool isSpecializedExperimentalKeyValueBackingPath(std::string typeName) {
 }
 
 bool isRootMapCollectionReceiverPath(std::string_view path) {
-  const StdlibSurfaceMetadata *metadata = mapHelperSurfaceMetadataLocal();
+  const StdlibSurfaceMetadata *metadata = keyValueHelperSurfaceMetadataLocal();
   if (metadata == nullptr) {
     return false;
   }

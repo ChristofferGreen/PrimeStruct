@@ -165,7 +165,7 @@ bool SemanticsValidator::validateExprMethodCallTarget(
         return false;
       }
       const std::string helperPath =
-          metadataBackedCanonicalMapHelperPath(helperName);
+          metadataBackedCanonicalKeyValueHelperPath(helperName);
       auto defIt = defMap_.find(helperPath);
       if (defIt == defMap_.end() || defIt->second == nullptr) {
         return false;

@@ -367,7 +367,7 @@ std::string SemanticsValidator::inferStructReturnPathImpl(
         }
       } else if (receiverStruct == "/map") {
         if (!isExplicitKeyValueAccessStructReturnMethod) {
-          appendMethodCandidate(metadataBackedCanonicalMapHelperPath(methodName));
+          appendMethodCandidate(metadataBackedCanonicalKeyValueHelperPath(methodName));
         }
       } else {
         methodCandidates = {receiverStruct + "/" + methodName};

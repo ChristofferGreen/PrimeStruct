@@ -536,8 +536,10 @@ TEST_CASE("template monomorph source delegation stays stable") {
       repoRoot / "src" / "semantics" / "TemplateMonomorphExpressionRewrite.h";
   const std::filesystem::path templateMonomorphCollectionCompatibilityPathsPath =
       repoRoot / "src" / "semantics" / "TemplateMonomorphCollectionCompatibilityPaths.h";
-  const std::filesystem::path mapConstructorHelpersPath =
+  const std::filesystem::path oldMapConstructorHelpersPath =
       repoRoot / "src" / "semantics" / "MapConstructorHelpers.h";
+  const std::filesystem::path collectionSurfaceHelpersPath =
+      repoRoot / "src" / "semantics" / "StdlibCollectionSurfaceHelpers.h";
   const std::filesystem::path collectionTypeHelpersPath =
       repoRoot / "src" / "emitter" / "EmitterExprCollectionTypeHelpers.h";
   REQUIRE(std::filesystem::exists(templateMonomorphPath));
@@ -565,7 +567,8 @@ TEST_CASE("template monomorph source delegation stays stable") {
   REQUIRE(std::filesystem::exists(templateMonomorphImplicitTemplateInferencePath));
   REQUIRE(std::filesystem::exists(templateMonomorphExpressionRewritePath));
   REQUIRE(std::filesystem::exists(templateMonomorphCollectionCompatibilityPathsPath));
-  REQUIRE(std::filesystem::exists(mapConstructorHelpersPath));
+  CHECK_FALSE(std::filesystem::exists(oldMapConstructorHelpersPath));
+  REQUIRE(std::filesystem::exists(collectionSurfaceHelpersPath));
   REQUIRE(std::filesystem::exists(collectionTypeHelpersPath));
   const std::string templateMonomorphSource = readText(templateMonomorphPath);
   const std::string templateMonomorphFallbackSource = readText(templateMonomorphFallbackPath);
@@ -611,8 +614,8 @@ TEST_CASE("template monomorph source delegation stays stable") {
       readText(templateMonomorphExpressionRewritePath);
   const std::string templateMonomorphCollectionCompatibilityPathsSource =
       readText(templateMonomorphCollectionCompatibilityPathsPath);
-  const std::string mapConstructorHelpersSource =
-      readText(mapConstructorHelpersPath);
+  const std::string collectionSurfaceHelpersSource =
+      readText(collectionSurfaceHelpersPath);
   const std::string collectionTypeHelpersSource =
       readText(collectionTypeHelpersPath);
   CHECK(templateMonomorphSource.find("#include \"TemplateMonomorphFallbackTypeInference.h\"") !=
@@ -798,22 +801,22 @@ TEST_CASE("template monomorph source delegation stays stable") {
             "const std::string stdMapPrefix = \"std/collections/map/\";") ==
         std::string::npos);
   CHECK(templateMonomorphMethodTargetsSource.find(
-            "return metadataBackedMapHelperMethodName(candidate);") !=
+            "return metadataBackedKeyValueHelperMethodName(candidate);") !=
         std::string::npos);
   CHECK(templateMonomorphMethodTargetsSource.find(
-            "metadataBackedCanonicalMapHelperPath(helperName)") !=
+            "metadataBackedCanonicalKeyValueHelperPath(helperName)") !=
         std::string::npos);
-  CHECK(mapConstructorHelpersSource.find(
-            "std::string metadataBackedMapHelperMethodName(std::string_view methodName)") !=
+  CHECK(collectionSurfaceHelpersSource.find(
+            "std::string metadataBackedKeyValueHelperMethodName(std::string_view methodName)") !=
         std::string::npos);
-  CHECK(mapConstructorHelpersSource.find(
-            "std::string metadataBackedCanonicalMapHelperPath(std::string_view helperName)") !=
-        std::string::npos);
-  CHECK(templateMonomorphTypeResolutionSource.find(
-            "metadataBackedMapConstructorAliasRewritePath(resolvedPath)") !=
+  CHECK(collectionSurfaceHelpersSource.find(
+            "std::string metadataBackedCanonicalKeyValueHelperPath(std::string_view helperName)") !=
         std::string::npos);
   CHECK(templateMonomorphTypeResolutionSource.find(
-            "metadataBackedMapHelperRootAliasMethodName(path)") !=
+            "metadataBackedKeyValueConstructorAliasRewritePath(resolvedPath)") !=
+        std::string::npos);
+  CHECK(templateMonomorphTypeResolutionSource.find(
+            "metadataBackedKeyValueHelperRootAliasMethodName(path)") !=
         std::string::npos);
   CHECK(templateMonomorphTypeResolutionSource.find(
             "resolvedPath == \"/std/collections/map\"") ==
@@ -827,11 +830,11 @@ TEST_CASE("template monomorph source delegation stays stable") {
         std::string::npos);
   CHECK(templateMonomorphTypeResolutionSource.find(
             "path.rfind(\"/map/\", 0)") == std::string::npos);
-  CHECK(mapConstructorHelpersSource.find(
-            "std::string metadataBackedMapConstructorAliasRewritePath(") !=
+  CHECK(collectionSurfaceHelpersSource.find(
+            "std::string metadataBackedKeyValueConstructorAliasRewritePath(") !=
         std::string::npos);
-  CHECK(mapConstructorHelpersSource.find(
-            "std::string metadataBackedMapHelperRootAliasMethodName(") !=
+  CHECK(collectionSurfaceHelpersSource.find(
+            "std::string metadataBackedKeyValueHelperRootAliasMethodName(") !=
         std::string::npos);
   CHECK(templateMonomorphMethodTargetsSource.find(
             "auto normalizeFileErrorMethodName = [](std::string_view methodName)") !=
@@ -2476,7 +2479,7 @@ TEST_CASE("template monomorph source delegation stays stable") {
             "std::string resolveCalleePath(const Expr &expr, const std::string &namespacePrefix, const Context &ctx)") !=
         std::string::npos);
   CHECK(templateMonomorphTypeResolutionSource.find(
-            "#include \"MapConstructorHelpers.h\"") !=
+            "#include \"StdlibCollectionSurfaceHelpers.h\"") !=
         std::string::npos);
   CHECK(templateMonomorphTypeResolutionSource.find(
             "metadataBackedCanonicalMapConstructorRewritePath(") ==
@@ -2875,7 +2878,7 @@ TEST_CASE("template monomorph source delegation stays stable") {
   CHECK(templateMonomorphExperimentalCollectionReceiverResolutionSource.find(
             "soaVectorToAosRef") ==
         std::string::npos);
-  CHECK(mapConstructorHelpersSource.find(
+  CHECK(collectionSurfaceHelpersSource.find(
             "std::string experimentalMapConstructorHelperPath(size_t argumentCount)") ==
         std::string::npos);
   CHECK(templateMonomorphExperimentalCollectionConstructorPathsSource.find(
@@ -2885,7 +2888,7 @@ TEST_CASE("template monomorph source delegation stays stable") {
             "std::string experimentalVectorConstructorRewritePath(const std::string &resolvedPath, size_t argumentCount)") !=
         std::string::npos);
   CHECK(templateMonomorphExperimentalCollectionConstructorPathsSource.find(
-            "#include \"MapConstructorHelpers.h\"") !=
+            "#include \"StdlibCollectionSurfaceHelpers.h\"") !=
         std::string::npos);
   CHECK(templateMonomorphExperimentalCollectionConstructorPathsSource.find(
             "metadataBackedExperimentalMapConstructorRewritePath(") ==
@@ -2908,10 +2911,10 @@ TEST_CASE("template monomorph source delegation stays stable") {
   CHECK(templateMonomorphExperimentalCollectionTypeHelpersSource.find(
             "experimentalCollectionConstructorRootLocal(\"map\")") ==
         std::string::npos);
-  CHECK(mapConstructorHelpersSource.find(
+  CHECK(collectionSurfaceHelpersSource.find(
             "resolveCollectionConstructorMemberPath(const primec::StdlibSurfaceMetadata &metadata") !=
         std::string::npos);
-  CHECK(mapConstructorHelpersSource.find(
+  CHECK(collectionSurfaceHelpersSource.find(
             "resolveKeyValueConstructorMemberPath(std::string_view rawPath") !=
         std::string::npos);
   CHECK(templateMonomorphExperimentalCollectionTypeHelpersSource.find(

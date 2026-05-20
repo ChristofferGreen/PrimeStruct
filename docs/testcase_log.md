@@ -12,6 +12,19 @@
   compilation.
 
 ## Recent Test Runs
+- 2026-05-20 15:25 CEST | pass | mode: release | command:
+  `cmake --build build-release --target PrimeStruct_semantics_tests`;
+  `cmake --build build-release --target PrimeStruct_misc_tests`;
+  `cd build-release && ./PrimeStruct_misc_tests --test-suite=primestruct.stdlib.map_ownership --no-skip`;
+  `cmake --build build-release --target PrimeStruct_backend_ir_tests`;
+  `cd build-release && ./PrimeStruct_backend_ir_tests --test-case="template monomorph source delegation stays stable" --no-skip`;
+  `cd build-release && ./PrimeStruct_backend_ir_tests --test-case="semantics validator infer source delegation stays stable" --no-skip`;
+  `cmake --build build-release --target PrimeStruct_backend_runtime_tests`;
+  `cd build-release && ./PrimeStruct_backend_runtime_tests --test-case="graph type resolver pilot is wired through options and semantics inference" --no-skip`;
+  `rg -n 'MapConstructorHelpers|mapHelperSurfaceMetadataLocal|mapConstructorSurfaceMetadataLocal|metadataBackedMap' src include`
+  | failures: none | notes: TODO-4534 deleted the map-named constructor/helper
+  shim boundary from production code and moved retained helpers behind the
+  generic `StdlibCollectionSurfaceHelpers.h` key/value boundary.
 - 2026-05-20 13:08 CEST | pass | mode: release | command:
   `cmake --build build-release --target PrimeStruct_backend_ir_tests`;
   `cd build-release && ./PrimeStruct_backend_ir_tests --test-case="ir lowerer count access classifiers prefer semantic indexed target facts,ir lowerer count access helpers defer string map access emission" --no-skip`

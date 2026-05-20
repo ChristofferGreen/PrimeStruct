@@ -35,7 +35,7 @@ bool resolveMethodCallTemplateTarget(const Expr &expr,
       }
     }
     if (receiverTypeName == "map") {
-      return metadataBackedMapHelperMethodName(candidate);
+      return metadataBackedKeyValueHelperMethodName(candidate);
     }
     return candidate;
   };
@@ -284,7 +284,7 @@ bool resolveMethodCallTemplateTarget(const Expr &expr,
       }
     }
     pathOut = selectHelperOverloadPath(
-        expr, metadataBackedCanonicalMapHelperPath(helperName), ctx);
+        expr, metadataBackedCanonicalKeyValueHelperPath(helperName), ctx);
     return true;
   };
   bool isBorrowedSoaReceiver = false;

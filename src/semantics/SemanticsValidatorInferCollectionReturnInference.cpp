@@ -117,7 +117,7 @@ bool SemanticsValidator::inferDefinitionReturnBinding(const Definition &def, Bin
         base == "vector" || base == "soa" "_vector" || isMapCollectionTypeName(base) ||
         base == "Vector" ||
         isLegacyExperimentalVectorCompatibilityPath("/" + base) ||
-        isUnspecializedExperimentalMapBackingTypeName(base) ||
+        isUnspecializedExperimentalKeyValueBackingTypeName(base) ||
         !resolveStructTypePath(base, def.namespacePrefix, structNames_).empty()) {
       std::vector<std::string> args;
       if (!splitTopLevelTemplateArgs(argText, args) || args.empty()) {
@@ -785,7 +785,7 @@ bool SemanticsValidator::inferQueryExprTypeText(const Expr &expr,
             (builtinAccessName == "at" || builtinAccessName == "at_unsafe")) {
           std::string declaredReturnType;
           if (inferNonTemplateDefinitionReturnType(
-                  metadataBackedCanonicalMapHelperPath(builtinAccessName),
+                  metadataBackedCanonicalKeyValueHelperPath(builtinAccessName),
                   declaredReturnType)) {
             currentTypeTextOut = declaredReturnType;
             return true;
@@ -1104,9 +1104,9 @@ bool SemanticsValidator::inferQueryExprTypeText(const Expr &expr,
                   collectionMethodFallbackTypeText) ||
               isLegacyExperimentalVectorCompatibilityTypePath(
                   "/" + collectionMethodFallbackTypeText) ||
-              isBareExperimentalMapBackingTypeName(
+              isBareExperimentalKeyValueBackingTypeName(
                   collectionMethodFallbackTypeText) ||
-              isQualifiedExperimentalMapBackingTypeName(
+              isQualifiedExperimentalKeyValueBackingTypeName(
                   collectionMethodFallbackTypeText);
           if (!keepExperimentalCollectionPath) {
             collectionMethodFallbackTypeText = normalizedCollectionType.substr(1);

@@ -22,7 +22,7 @@ void eraseStructReturnCandidate(std::vector<std::string> &candidates, const std:
 }
 
 std::string keyValueCollectionMarkerPathForInferStructReturn() {
-  const StdlibSurfaceMetadata *metadata = mapConstructorSurfaceMetadataLocal();
+  const StdlibSurfaceMetadata *metadata = keyValueConstructorSurfaceMetadataLocal();
   if (metadata == nullptr) {
     return {};
   }

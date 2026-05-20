@@ -1,6 +1,6 @@
 #include "SemanticsValidator.h"
 
-#include "MapConstructorHelpers.h"
+#include "StdlibCollectionSurfaceHelpers.h"
 #include "SemanticsValidatorInferCollectionCompatibilityInternal.h"
 
 #include <algorithm>

@@ -10,7 +10,7 @@
 #include <unordered_set>
 #include <utility>
 
-#include "MapConstructorHelpers.h"
+#include "StdlibCollectionSurfaceHelpers.h"
 #include "SemanticsValidatorInferCollectionCompatibilityInternal.h"
 
 namespace primec::semantics {

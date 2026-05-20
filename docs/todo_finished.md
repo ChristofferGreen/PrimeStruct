@@ -5,6 +5,42 @@ Legend:
 
 Finished items are periodically archived here from `docs/todo.md`; section headers record the archive date.
 
+**Todo Completion (May 20, 2026)**
+- [x] TODO-4534: Delete map constructor/helper shim boundary
+  - owner: ai
+  - created_at: 2026-05-20
+  - finished_at: 2026-05-20
+  - phase: Map stdlib ownership cutover
+  - parallel_track: map-zero-audit
+  - depends_on: TODO-4506, TODO-4532
+  - split_from: TODO-4464
+  - outcome:
+    - Deleted the production `MapConstructorHelpers.h` boundary and moved the
+      retained constructor/member helpers behind
+      `StdlibCollectionSurfaceHelpers.h`.
+    - Replaced the map-named shim API surface with collection/key-value helper
+      names across semantics and template-monomorph call sites, including the
+      metadata-backed helper path and constructor alias helpers.
+    - Updated map ownership and source-lock coverage to assert the old
+      map-named APIs remain absent from production `src/` and `include/`.
+    - Reconciled the graph-pilot source locks with the already-renamed
+      key/value helper APIs they inspect.
+  - validation:
+    - `cmake --build build-release --target PrimeStruct_semantics_tests`
+      passed.
+    - `cmake --build build-release --target PrimeStruct_misc_tests` passed;
+      `cd build-release && ./PrimeStruct_misc_tests --test-suite=primestruct.stdlib.map_ownership --no-skip`
+      passed.
+    - `cmake --build build-release --target PrimeStruct_backend_ir_tests`
+      passed; focused source-lock test cases for template monomorph and
+      semantics validator infer delegation passed.
+    - `cmake --build build-release --target PrimeStruct_backend_runtime_tests`
+      passed; the graph type resolver pilot source-lock case passed.
+    - `rg` confirmed `MapConstructorHelpers`,
+      `mapHelperSurfaceMetadataLocal`, `mapConstructorSurfaceMetadataLocal`,
+      and `metadataBackedMap*` are absent from production `src/` and
+      `include/`.
+
 **Todo Completion (May 16, 2026)**
 - [x] TODO-4276: Expand type packs in helpers and lifecycle hooks
   - owner: ai

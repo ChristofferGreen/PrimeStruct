@@ -10,7 +10,7 @@
 #include "SemanticsValidateReflectionGeneratedHelpers.h"
 #include "SemanticsValidateReflectionMetadata.h"
 #include "SemanticsValidateTransforms.h"
-#include "MapConstructorHelpers.h"
+#include "StdlibCollectionSurfaceHelpers.h"
 #include "SemanticsHelpers.h"
 #include "SemanticsValidationBenchmarkOrchestration.h"
 #include "SemanticsValidationPublicationOrchestration.h"
@@ -5595,7 +5595,7 @@ std::optional<semantics::BindingInfo> extractDefinitionReturnBinding(const Defin
 
 std::string_view resolveBuiltinKeyValueInsertSurfaceMemberName(std::string_view name) {
   const StdlibSurfaceMetadata *metadata =
-      mapHelperSurfaceMetadataLocal();
+      keyValueHelperSurfaceMetadataLocal();
   if (metadata == nullptr) {
     return {};
   }
@@ -5617,7 +5617,7 @@ std::string_view resolveBuiltinKeyValueInsertSurfaceMemberName(std::string_view 
 }
 
 std::string canonicalBuiltinKeyValueInsertSurfacePath(bool receiverIsReference) {
-  const StdlibSurfaceMetadata *metadata = mapHelperSurfaceMetadataLocal();
+  const StdlibSurfaceMetadata *metadata = keyValueHelperSurfaceMetadataLocal();
   if (metadata == nullptr) {
     return {};
   }
@@ -5639,7 +5639,7 @@ std::string resolveBuiltinKeyValueReadSurfaceMemberName(std::string_view name) {
     return "count";
   }
   const std::string memberName =
-      metadataBackedMapHelperMethodName(normalizedName);
+      metadataBackedKeyValueHelperMethodName(normalizedName);
   if (memberName == "count" || memberName == "count_ref" ||
       memberName == "contains" || memberName == "contains_ref" ||
       memberName == "tryAt" || memberName == "tryAt_ref" ||
@@ -5860,7 +5860,7 @@ void rewriteBuiltinKeyValueInsertExpr(
   };
   auto explicitRemovedKeyValueCompatibilityReadPath = [&]() -> std::string {
     const std::string helperName =
-        metadataBackedMapHelperRootAliasMethodName(scopedExprName);
+        metadataBackedKeyValueHelperRootAliasMethodName(scopedExprName);
     if (helperName.empty()) {
       return {};
     }
@@ -5868,7 +5868,7 @@ void rewriteBuiltinKeyValueInsertExpr(
         helperName != "at_ref" && helperName != "at_unsafe_ref") {
       return {};
     }
-    const StdlibSurfaceMetadata *metadata = mapHelperSurfaceMetadataLocal();
+    const StdlibSurfaceMetadata *metadata = keyValueHelperSurfaceMetadataLocal();
     if (metadata == nullptr) {
       return {};
     }
@@ -5930,10 +5930,10 @@ void rewriteBuiltinKeyValueInsertExpr(
       helperName += "_ref";
     }
     if (matchesBuiltinReadMethod && isCanonicalKeyValueReadHelper) {
-      helperName = metadataBackedCanonicalMapHelperPath(helperName);
+      helperName = metadataBackedCanonicalKeyValueHelperPath(helperName);
     }
     if (matchesBuiltinAccessCall) {
-      helperName = metadataBackedCanonicalMapHelperPath(helperName);
+      helperName = metadataBackedCanonicalKeyValueHelperPath(helperName);
     }
     if (helperName.empty()) {
       return;

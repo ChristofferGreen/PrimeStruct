@@ -1,6 +1,6 @@
 #include "SemanticsValidator.h"
 
-#include "MapConstructorHelpers.h"
+#include "StdlibCollectionSurfaceHelpers.h"
 
 #include <string>
 #include <string_view>
@@ -10,7 +10,7 @@ namespace {
 
 const StdlibSurfaceMetadata *
 keyValueConstructorSurfaceMetadataForBuildReturnKinds() {
-  return mapConstructorSurfaceMetadataLocal();
+  return keyValueConstructorSurfaceMetadataLocal();
 }
 
 std::string keyValueCollectionMarkerPathForBuildReturnKinds() {

@@ -1074,7 +1074,7 @@ bool rewriteExpr(Expr &expr,
     }
     auto forwardedEmptyConstructorPath = [] {
       const primec::StdlibSurfaceMetadata *metadata =
-          mapConstructorSurfaceMetadataLocal();
+          keyValueConstructorSurfaceMetadataLocal();
       if (metadata == nullptr) {
         return std::string{};
       }
@@ -1505,7 +1505,7 @@ bool rewriteExpr(Expr &expr,
     auto removedKeyValueCompatibilityHelperFromPath =
         [](std::string_view path) -> std::string {
       const primec::StdlibSurfaceMetadata *metadata =
-          mapHelperSurfaceMetadataLocal();
+          keyValueHelperSurfaceMetadataLocal();
       if (metadata == nullptr) {
         return {};
       }

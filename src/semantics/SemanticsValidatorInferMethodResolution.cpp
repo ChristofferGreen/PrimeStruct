@@ -81,7 +81,7 @@ bool SemanticsValidator::resolveInferMethodCallPath(
           stripUnrootedCanonicalVectorCompatibilityPrefix(
               normalizedMethodName));
     } else if (const std::string keyValueHelperName =
-                   metadataBackedMapHelperMethodName(normalizedMethodName);
+                   metadataBackedKeyValueHelperMethodName(normalizedMethodName);
                keyValueHelperName != normalizedMethodName) {
       normalizedMethodName = keyValueHelperName;
     }
@@ -786,7 +786,7 @@ bool SemanticsValidator::resolveInferMethodCallPath(
       receiverHelperName.erase(receiverHelperName.begin());
     }
     if (const std::string keyValueHelperName =
-            metadataBackedMapHelperMethodName(receiverHelperName);
+            metadataBackedKeyValueHelperMethodName(receiverHelperName);
         keyValueHelperName != receiverHelperName) {
       receiverHelperName = keyValueHelperName;
     }

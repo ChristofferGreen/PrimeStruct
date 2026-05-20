@@ -1,6 +1,6 @@
 #include "SemanticPublicationBuilders.h"
 
-#include "MapConstructorHelpers.h"
+#include "StdlibCollectionSurfaceHelpers.h"
 #include "primec/StdlibSurfaceRegistry.h"
 
 #include <algorithm>
@@ -520,7 +520,7 @@ std::string normalizeCollectionSpecializationTypeName(std::string typeName) {
     return "vector";
   }
   if (matchesStdlibSurfaceRootForPublication(typeName,
-                                             mapHelperSurfaceMetadataLocal()) ||
+                                             keyValueHelperSurfaceMetadataLocal()) ||
       isUnspecializedExperimentalKeyValueBackingTypeForPublication(typeName)) {
     return "map";
   }
@@ -624,11 +624,11 @@ void publishCollectionSpecializationForBinding(
     entry.helperSurfaceId = StdlibSurfaceId::CollectionsColumnarHelpers;
     entry.constructorSurfaceId = StdlibSurfaceId::CollectionsColumnarConstructors;
   } else if (entry.collectionFamily == "map") {
-    if (const auto *helperMetadata = mapHelperSurfaceMetadataLocal();
+    if (const auto *helperMetadata = keyValueHelperSurfaceMetadataLocal();
         helperMetadata != nullptr) {
       entry.helperSurfaceId = helperMetadata->id;
     }
-    if (const auto *constructorMetadata = mapConstructorSurfaceMetadataLocal();
+    if (const auto *constructorMetadata = keyValueConstructorSurfaceMetadataLocal();
         constructorMetadata != nullptr) {
       entry.constructorSurfaceId = constructorMetadata->id;
     }

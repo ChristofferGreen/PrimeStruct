@@ -1,5 +1,5 @@
 #include "SemanticsValidator.h"
-#include "MapConstructorHelpers.h"
+#include "StdlibCollectionSurfaceHelpers.h"
 #include "SemanticsValidatorInferCollectionCompatibilityInternal.h"
 #include "primec/StdlibSurfaceRegistry.h"
 
@@ -31,7 +31,7 @@ bool isRemovedKeyValueCompatibilityHelper(std::string_view helperName) {
 }
 
 std::string canonicalKeyValueHelperPathLocal(std::string_view helperName) {
-  const StdlibSurfaceMetadata *metadata = mapHelperSurfaceMetadataLocal();
+  const StdlibSurfaceMetadata *metadata = keyValueHelperSurfaceMetadataLocal();
   if (metadata == nullptr) {
     return {};
   }
@@ -40,7 +40,7 @@ std::string canonicalKeyValueHelperPathLocal(std::string_view helperName) {
 
 std::string canonicalKeyValueHelperNamespaceLocal() {
   const StdlibSurfaceMetadata *metadata =
-      mapHelperSurfaceMetadataLocal();
+      keyValueHelperSurfaceMetadataLocal();
   if (metadata == nullptr) {
     return "";
   }
@@ -58,7 +58,7 @@ bool resolveCanonicalKeyValueHelperNameFromSpelling(
   if (!path.empty() && path.front() != '/') {
     path.insert(path.begin(), '/');
   }
-  const StdlibSurfaceMetadata *metadata = mapHelperSurfaceMetadataLocal();
+  const StdlibSurfaceMetadata *metadata = keyValueHelperSurfaceMetadataLocal();
   if (metadata == nullptr) {
     return false;
   }
@@ -68,7 +68,7 @@ bool resolveCanonicalKeyValueHelperNameFromSpelling(
 
 bool isKeyValueHelperImportAliasNamespaceForMethodTargets(
     std::string_view namespacePrefix) {
-  const StdlibSurfaceMetadata *metadata = mapHelperSurfaceMetadataLocal();
+  const StdlibSurfaceMetadata *metadata = keyValueHelperSurfaceMetadataLocal();
   if (metadata == nullptr) {
     return false;
   }
@@ -89,7 +89,7 @@ bool isKeyValueHelperImportAliasNamespaceForMethodTargets(
 
 std::string rootedKeyValueHelperAliasPathForMethodTargets(
     std::string_view helperName) {
-  const StdlibSurfaceMetadata *metadata = mapHelperSurfaceMetadataLocal();
+  const StdlibSurfaceMetadata *metadata = keyValueHelperSurfaceMetadataLocal();
   if (metadata == nullptr || helperName.empty()) {
     return {};
   }
@@ -105,14 +105,14 @@ std::string rootedKeyValueHelperAliasPathForMethodTargets(
 std::string rootAliasKeyValueHelperNameForMethodTargets(
     std::string_view rawPath,
     std::string_view namespacePrefix) {
-  std::string helperName = metadataBackedMapHelperRootAliasMethodName(rawPath);
+  std::string helperName = metadataBackedKeyValueHelperRootAliasMethodName(rawPath);
   if (!helperName.empty()) {
     return helperName;
   }
   if (!isKeyValueHelperImportAliasNamespaceForMethodTargets(namespacePrefix)) {
     return {};
   }
-  const StdlibSurfaceMetadata *metadata = mapHelperSurfaceMetadataLocal();
+  const StdlibSurfaceMetadata *metadata = keyValueHelperSurfaceMetadataLocal();
   if (metadata == nullptr) {
     return {};
   }
@@ -122,7 +122,7 @@ std::string rootAliasKeyValueHelperNameForMethodTargets(
 }
 
 bool isRootedKeyValueHelperAliasPathForMethodTargets(std::string_view rawPath) {
-  return !metadataBackedMapHelperRootAliasMethodName(rawPath).empty();
+  return !metadataBackedKeyValueHelperRootAliasMethodName(rawPath).empty();
 }
 
 bool isCanonicalMapBuiltinMethodHelper(std::string_view helperName) {
@@ -300,7 +300,7 @@ bool SemanticsValidator::resolveMethodTarget(const std::vector<ParameterInfo> &p
       isStdNamespacedVectorHelper = true;
       compatibilityCollection = "vector";
     } else if (const std::string rootAliasHelperName =
-                   metadataBackedMapHelperRootAliasMethodName(candidate);
+                   metadataBackedKeyValueHelperRootAliasMethodName(candidate);
                !rootAliasHelperName.empty()) {
       helperName = rootAliasHelperName;
       compatibilityCollection = "map";
@@ -376,7 +376,7 @@ bool SemanticsValidator::resolveMethodTarget(const std::vector<ParameterInfo> &p
     if (normalizedPrefix == canonicalKeyValueHelperNamespaceLocal()) {
       return canonicalKeyValueHelperPathLocal(candidate);
     }
-    if (!metadataBackedMapHelperRootAliasMethodName(candidate).empty()) {
+    if (!metadataBackedKeyValueHelperRootAliasMethodName(candidate).empty()) {
       return "/" + candidate;
     }
     std::string canonicalKeyValueHelperName;

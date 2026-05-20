@@ -1,5 +1,5 @@
 #include "SemanticsValidator.h"
-#include "MapConstructorHelpers.h"
+#include "StdlibCollectionSurfaceHelpers.h"
 #include "SemanticsValidatorInferCollectionCompatibilityInternal.h"
 
 #include <cctype>
@@ -194,7 +194,7 @@ std::string SemanticsValidator::resolveCalleePath(const Expr &expr) const {
   auto rewriteCanonicalCollectionHelperPath = [&](const std::string &resolvedPath) -> std::string {
     auto keyValueHelperCanonicalMemberRootPath = []() -> std::string {
       const primec::StdlibSurfaceMetadata *metadata =
-          mapHelperSurfaceMetadataLocal();
+          keyValueHelperSurfaceMetadataLocal();
       if (metadata == nullptr) {
         return {};
       }
@@ -274,7 +274,7 @@ std::string SemanticsValidator::resolveCalleePath(const Expr &expr) const {
       return rewriteCanonicalCollectionHelperPath(resolvedPath);
     }
     const primec::StdlibSurfaceMetadata *keyValueConstructorMetadata =
-        mapConstructorSurfaceMetadataLocal();
+        keyValueConstructorSurfaceMetadataLocal();
     if (keyValueConstructorMetadata != nullptr &&
         resolvedPath == keyValueConstructorMetadata->canonicalPath &&
         hasDefinitionFamilyPath(resolvedPath) &&
@@ -303,7 +303,7 @@ std::string SemanticsValidator::resolveCalleePath(const Expr &expr) const {
       (activeExecution != nullptr && isStdlibOwnedPath(activeExecution->fullPath));
   auto isKeyValueHelperNamespacePrefix = [](std::string_view prefix) {
     const primec::StdlibSurfaceMetadata *metadata =
-        mapHelperSurfaceMetadataLocal();
+        keyValueHelperSurfaceMetadataLocal();
     if (metadata == nullptr) {
       return false;
     }

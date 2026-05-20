@@ -1,6 +1,6 @@
 #pragma once
 
-#include "MapConstructorHelpers.h"
+#include "StdlibCollectionSurfaceHelpers.h"
 
 ResolvedType resolveTypeStringImpl(std::string input,
                                    const SubstMap &mapping,
@@ -475,7 +475,7 @@ std::string resolveCalleePath(const Expr &expr, const std::string &namespacePref
       return resolvedPath;
     }
     if (std::string constructorPath =
-            metadataBackedMapConstructorAliasRewritePath(resolvedPath);
+            metadataBackedKeyValueConstructorAliasRewritePath(resolvedPath);
         !constructorPath.empty()) {
       return constructorPath;
     }
@@ -485,7 +485,7 @@ std::string resolveCalleePath(const Expr &expr, const std::string &namespacePref
     if (expr.isMethodCall) {
       return resolvedPath;
     }
-    if (metadataBackedMapConstructorAliasRewritePath(resolvedPath) == resolvedPath &&
+    if (metadataBackedKeyValueConstructorAliasRewritePath(resolvedPath) == resolvedPath &&
         (ctx.sourceDefs.count(resolvedPath) > 0 || ctx.helperOverloads.count(resolvedPath) > 0)) {
       return resolvedPath;
     }
@@ -582,7 +582,7 @@ std::string resolveCalleePath(const Expr &expr, const std::string &namespacePref
   }
   auto isExplicitRemovedKeyValueCompatibilityPath = [&](std::string_view path) -> bool {
     const std::string helperName =
-        metadataBackedMapHelperRootAliasMethodName(path);
+        metadataBackedKeyValueHelperRootAliasMethodName(path);
     return !helperName.empty() &&
            isRemovedKeyValueCompatibilityHelper(
                keyValueCompatibilityHelperBase(helperName));

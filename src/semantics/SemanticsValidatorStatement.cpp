@@ -1,5 +1,5 @@
 #include "SemanticsValidator.h"
-#include "MapConstructorHelpers.h"
+#include "StdlibCollectionSurfaceHelpers.h"
 #include "SemanticsValidatorStatementLoopCountStep.h"
 
 #include <cctype>
@@ -51,11 +51,11 @@ bool isSpecializedExperimentalKeyValueBackingPath(std::string typeName) {
   if (!typeName.empty() && typeName.front() == '/') {
     typeName.erase(typeName.begin());
   }
-  return isQualifiedExperimentalMapBackingTypeName(typeName);
+  return isQualifiedExperimentalKeyValueBackingTypeName(typeName);
 }
 
 std::string mapCollectionAliasTokenForStatementValidation() {
-  const auto *metadata = mapConstructorSurfaceMetadataLocal();
+  const auto *metadata = keyValueConstructorSurfaceMetadataLocal();
   if (metadata == nullptr) {
     return {};
   }

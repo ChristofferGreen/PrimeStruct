@@ -1,5 +1,5 @@
 #include "SemanticsValidator.h"
-#include "MapConstructorHelpers.h"
+#include "StdlibCollectionSurfaceHelpers.h"
 #include "SemanticsValidatorExprCaptureSplitStep.h"
 
 #include "primec/Lexer.h"
@@ -34,7 +34,7 @@ bool isSlashlessKeyValueHelperName(std::string_view name) {
   if (!normalizedName.empty() && normalizedName.front() == '/') {
     normalizedName.erase(normalizedName.begin());
   }
-  return metadataBackedMapHelperMethodName(normalizedName) != normalizedName;
+  return metadataBackedKeyValueHelperMethodName(normalizedName) != normalizedName;
 }
 
 uint64_t captureCurrentResidentBytes() {
@@ -215,12 +215,12 @@ std::string SemanticsValidator::diagnosticCallTargetPath(const std::string &path
   if (path.empty()) {
     return path;
   }
-  const std::string keyValueHelperName = metadataBackedMapHelperMethodName(path);
+  const std::string keyValueHelperName = metadataBackedKeyValueHelperMethodName(path);
   const size_t keyValueTemplateSuffix = keyValueHelperName.find("__t");
   if (keyValueTemplateSuffix != std::string::npos &&
       keyValueHelperName.substr(0, keyValueTemplateSuffix) == "count") {
     const std::string canonicalKeyValueCount =
-        metadataBackedCanonicalMapHelperPath("count");
+        metadataBackedCanonicalKeyValueHelperPath("count");
     if (!canonicalKeyValueCount.empty()) {
       return canonicalKeyValueCount;
     }

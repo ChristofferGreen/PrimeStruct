@@ -15,11 +15,11 @@ bool isCanonicalKeyValueAccessHelperName(const std::string &helperName) {
 }
 
 std::string canonicalKeyValueHelperPathLocal(std::string_view helperName) {
-  return metadataBackedCanonicalMapHelperPath(helperName);
+  return metadataBackedCanonicalKeyValueHelperPath(helperName);
 }
 
 std::string canonicalKeyValueHelperNamespaceLocal() {
-  const StdlibSurfaceMetadata *metadata = mapHelperSurfaceMetadataLocal();
+  const StdlibSurfaceMetadata *metadata = keyValueHelperSurfaceMetadataLocal();
   if (metadata == nullptr) {
     return "";
   }
@@ -37,7 +37,7 @@ bool resolveCanonicalKeyValueHelperNameFromSpelling(
   if (!path.empty() && path.front() != '/') {
     path.insert(path.begin(), '/');
   }
-  const StdlibSurfaceMetadata *metadata = mapHelperSurfaceMetadataLocal();
+  const StdlibSurfaceMetadata *metadata = keyValueHelperSurfaceMetadataLocal();
   if (metadata == nullptr) {
     return false;
   }
@@ -46,7 +46,7 @@ bool resolveCanonicalKeyValueHelperNameFromSpelling(
 }
 
 std::string rootedKeyValueHelperAliasPathLocal(std::string_view helperName) {
-  const StdlibSurfaceMetadata *metadata = mapHelperSurfaceMetadataLocal();
+  const StdlibSurfaceMetadata *metadata = keyValueHelperSurfaceMetadataLocal();
   if (metadata == nullptr) {
     return {};
   }

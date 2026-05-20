@@ -41,7 +41,7 @@ bool isUnspecializedExperimentalKeyValueBackingBaseForPrintability(std::string b
 
 bool isCanonicalKeyValueHelperResolvedPath(const std::string &path,
                                            std::string_view helperName) {
-  const StdlibSurfaceMetadata *metadata = mapHelperSurfaceMetadataLocal();
+  const StdlibSurfaceMetadata *metadata = keyValueHelperSurfaceMetadataLocal();
   if (metadata == nullptr) {
     return false;
   }

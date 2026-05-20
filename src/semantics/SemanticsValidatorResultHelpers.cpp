@@ -1,5 +1,5 @@
 #include "SemanticsValidator.h"
-#include "MapConstructorHelpers.h"
+#include "StdlibCollectionSurfaceHelpers.h"
 #include "SemanticsValidatorExprCaptureSplitStep.h"
 
 #include <algorithm>
@@ -111,15 +111,15 @@ bool isMapTryAtResultHelperCall(std::string_view resolvedPath,
     return true;
   }
   const std::string canonicalTryAt =
-      metadataBackedCanonicalMapHelperPath("tryAt");
+      metadataBackedCanonicalKeyValueHelperPath("tryAt");
   const std::string canonicalTryAtRef =
-      metadataBackedCanonicalMapHelperPath("tryAt_ref");
+      metadataBackedCanonicalKeyValueHelperPath("tryAt_ref");
   if ((!canonicalTryAt.empty() && resolvedPath == canonicalTryAt) ||
       (!canonicalTryAtRef.empty() && resolvedPath == canonicalTryAtRef)) {
     return true;
   }
   const std::string rootAliasHelper =
-      metadataBackedMapHelperRootAliasMethodName(resolvedPath);
+      metadataBackedKeyValueHelperRootAliasMethodName(resolvedPath);
   return rootAliasHelper == "tryAt" || rootAliasHelper == "tryAt_ref";
 }
 

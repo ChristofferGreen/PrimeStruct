@@ -1,5 +1,5 @@
 #include "SemanticsValidator.h"
-#include "MapConstructorHelpers.h"
+#include "StdlibCollectionSurfaceHelpers.h"
 #include "SemanticsValidatorInferCollectionCompatibilityInternal.h"
 
 #include <algorithm>
@@ -116,7 +116,7 @@ std::string SemanticsValidator::preferredCollectionHelperResolvedPath(
   }
 
   auto explicitStdKeyValueHelperName = [&]() -> std::string {
-    const StdlibSurfaceMetadata *metadata = mapHelperSurfaceMetadataLocal();
+    const StdlibSurfaceMetadata *metadata = keyValueHelperSurfaceMetadataLocal();
     if (metadata == nullptr) {
       return {};
     }
@@ -181,7 +181,7 @@ std::string SemanticsValidator::preferredCollectionHelperResolvedPath(
   if (const std::string helperName = explicitStdKeyValueHelperName();
       !helperName.empty()) {
     const std::string canonical =
-        metadataBackedCanonicalMapHelperPath(helperName);
+        metadataBackedCanonicalKeyValueHelperPath(helperName);
     if (defMap_.count(canonical) > 0) {
       return canonical;
     }

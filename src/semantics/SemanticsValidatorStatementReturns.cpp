@@ -46,7 +46,7 @@ bool isSpecializedExperimentalKeyValueBackingPath(std::string typeName) {
 }
 
 std::string keyValueCollectionMarkerPathLocal() {
-  const StdlibSurfaceMetadata *metadata = mapConstructorSurfaceMetadataLocal();
+  const StdlibSurfaceMetadata *metadata = keyValueConstructorSurfaceMetadataLocal();
   if (metadata != nullptr) {
     for (std::string_view alias : metadata->importAliasSpellings) {
       if (alias.empty()) {
@@ -94,7 +94,7 @@ std::string returnTypeMismatchDiagnostic(const std::string &expectedTypePath,
 }
 
 bool isUnknownBorrowedKeyValueAccessMethodDiagnostic(const std::string &message) {
-  const StdlibSurfaceMetadata *metadata = mapHelperSurfaceMetadataLocal();
+  const StdlibSurfaceMetadata *metadata = keyValueHelperSurfaceMetadataLocal();
   if (metadata == nullptr) {
     return false;
   }

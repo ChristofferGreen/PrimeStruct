@@ -1243,6 +1243,17 @@ This file stores durable session-derived facts that are useful in later work. Ke
   source lock rejects direct `alias == "map"` and `rawName == "map"` checks in
   that file, and the file's map-surface inventory allowance is zero.
 
+### map-constructor-helper-shim-is-gone
+- Updated: 2026-05-20
+- Tags: semantics, collections, stdlib
+- Fact: Production C++ no longer exposes the `MapConstructorHelpers.h` shim or
+  the `map*SurfaceMetadataLocal` / `metadataBackedMap*` helper APIs; retained
+  constructor/helper utilities live behind `StdlibCollectionSurfaceHelpers.h`
+  with collection/key-value names.
+- Evidence: TODO-4534 completion renamed the production include boundary,
+  updated semantic and template-monomorph call sites, and `rg` confirmed those
+  old map-named APIs are absent from `src/` and `include/`.
+
 ### map-helper-classification-is-local
 - Updated: 2026-05-19
 - Tags: semantics, collections, stdlib

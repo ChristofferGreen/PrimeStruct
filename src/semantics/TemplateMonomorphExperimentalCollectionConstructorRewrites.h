@@ -1,7 +1,7 @@
 #pragma once
 
 std::string canonicalizeExperimentalCollectionResolvedPath(std::string path) {
-  return stripMapConstructorSuffixes(std::move(path));
+  return stripKeyValueConstructorSuffixes(std::move(path));
 }
 
 bool isExperimentalMapEntryArgument(const Expr &argExpr,
@@ -15,7 +15,7 @@ bool isExperimentalMapEntryArgument(const Expr &argExpr,
   }
   const std::string resolvedArgPath =
       canonicalizeExperimentalCollectionResolvedPath(resolveCalleePath(argExpr, namespacePrefix, ctx));
-  if (isExperimentalMapConstructorMemberPathLocal(resolvedArgPath, "entry")) {
+  if (isExperimentalKeyValueConstructorMemberPathLocal(resolvedArgPath, "entry")) {
     return true;
   }
   BindingInfo argInfo;
@@ -30,7 +30,7 @@ bool isExperimentalMapEntryArgument(const Expr &argExpr,
   if (!normalizedArgType.empty() && normalizedArgType.front() == '/') {
     normalizedArgType.erase(normalizedArgType.begin());
   }
-  return isExperimentalMapEntryBackingTypeName(normalizedArgType);
+  return isExperimentalKeyValueEntryBackingTypeName(normalizedArgType);
 }
 
 bool inferExperimentalCollectionConstructorTemplateArgs(const std::string &originalPath,
@@ -80,7 +80,7 @@ bool inferExperimentalCollectionConstructorTemplateArgs(const std::string &origi
 
 bool isCanonicalMapConstructorRewriteSourcePath(std::string_view originalPath) {
   const primec::StdlibSurfaceMetadata *metadata =
-      mapConstructorSurfaceMetadataLocal();
+      keyValueConstructorSurfaceMetadataLocal();
   if (metadata == nullptr) {
     return false;
   }
@@ -115,7 +115,7 @@ bool rewriteCanonicalExperimentalKeyValueConstructorExpr(Expr &valueExpr,
       return isExperimentalMapEntryArgument(argExpr, params, locals, allowMathBare, namespacePrefix, ctx);
     });
     if (usesEntryArgs) {
-      helperPath = experimentalMapConstructorMemberPathLocal("map");
+      helperPath = experimentalKeyValueConstructorMemberPathLocal("map");
     } else {
       helperPath.clear();
     }

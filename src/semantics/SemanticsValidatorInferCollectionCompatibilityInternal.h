@@ -1,6 +1,6 @@
 #pragma once
 
-#include "MapConstructorHelpers.h"
+#include "StdlibCollectionSurfaceHelpers.h"
 #include "primec/StdlibSurfaceRegistry.h"
 
 #include <algorithm>
@@ -27,7 +27,7 @@ enum class RemovedCollectionHelperFamily {
 }
 
 [[maybe_unused]] std::string mapCollectionAliasToken() {
-  const StdlibSurfaceMetadata *metadata = mapConstructorSurfaceMetadataLocal();
+  const StdlibSurfaceMetadata *metadata = keyValueConstructorSurfaceMetadataLocal();
   if (metadata == nullptr) {
     return {};
   }
@@ -250,7 +250,7 @@ enum class RemovedCollectionHelperFamily {
 
 [[maybe_unused]] bool
 isPublishedKeyValueBaseHelperName(std::string_view helperName) {
-  const StdlibSurfaceMetadata *metadata = mapHelperSurfaceMetadataLocal();
+  const StdlibSurfaceMetadata *metadata = keyValueHelperSurfaceMetadataLocal();
   if (metadata == nullptr) {
     return false;
   }
@@ -262,7 +262,7 @@ isPublishedKeyValueBaseHelperName(std::string_view helperName) {
 
 [[maybe_unused]] bool
 isPublishedBorrowedKeyValueHelperName(std::string_view helperName) {
-  const StdlibSurfaceMetadata *metadata = mapHelperSurfaceMetadataLocal();
+  const StdlibSurfaceMetadata *metadata = keyValueHelperSurfaceMetadataLocal();
   if (metadata == nullptr) {
     return false;
   }
@@ -314,7 +314,7 @@ isPublishedBorrowedKeyValueHelperName(std::string_view helperName) {
 }
 
 [[maybe_unused]] std::string canonicalKeyValueCompatibilityPrefixOrFallback() {
-  const StdlibSurfaceMetadata *metadata = mapHelperSurfaceMetadataLocal();
+  const StdlibSurfaceMetadata *metadata = keyValueHelperSurfaceMetadataLocal();
   if (metadata != nullptr) {
     return std::string(metadata->canonicalPath);
   }
@@ -341,7 +341,7 @@ unrootedCanonicalKeyValueCompatibilityPrefixOrFallback() {
 
 [[maybe_unused]] bool isKeyValueHelperImportAliasNamespace(
     std::string_view namespacePrefix) {
-  const StdlibSurfaceMetadata *metadata = mapHelperSurfaceMetadataLocal();
+  const StdlibSurfaceMetadata *metadata = keyValueHelperSurfaceMetadataLocal();
   if (metadata == nullptr) {
     return false;
   }
@@ -367,7 +367,7 @@ unrootedCanonicalKeyValueCompatibilityPrefixOrFallback() {
     std::string_view memberToken,
     std::string &helperNameOut) {
   helperNameOut.clear();
-  const StdlibSurfaceMetadata *metadata = mapHelperSurfaceMetadataLocal();
+  const StdlibSurfaceMetadata *metadata = keyValueHelperSurfaceMetadataLocal();
   if (metadata == nullptr) {
     return false;
   }
@@ -379,7 +379,7 @@ unrootedCanonicalKeyValueCompatibilityPrefixOrFallback() {
     std::string_view resolvedPath,
     std::string &helperNameOut) {
   helperNameOut.clear();
-  const StdlibSurfaceMetadata *metadata = mapHelperSurfaceMetadataLocal();
+  const StdlibSurfaceMetadata *metadata = keyValueHelperSurfaceMetadataLocal();
   if (metadata == nullptr) {
     return false;
   }
@@ -400,7 +400,7 @@ unrootedCanonicalKeyValueCompatibilityPrefixOrFallback() {
 
 [[maybe_unused]] std::string rootedKeyValueCompatibilityHelperPath(
     std::string_view helperName) {
-  const StdlibSurfaceMetadata *metadata = mapHelperSurfaceMetadataLocal();
+  const StdlibSurfaceMetadata *metadata = keyValueHelperSurfaceMetadataLocal();
   if (metadata == nullptr || helperName.empty()) {
     return "";
   }

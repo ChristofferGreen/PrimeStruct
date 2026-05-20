@@ -191,7 +191,7 @@ ReturnKind SemanticsValidator::inferPreDispatchCallReturnKind(
     };
     auto isUnrootedKeyValueHelperSurfacePath =
         [](std::string_view candidatePath) {
-      const StdlibSurfaceMetadata *metadata = mapHelperSurfaceMetadataLocal();
+      const StdlibSurfaceMetadata *metadata = keyValueHelperSurfaceMetadataLocal();
       if (metadata == nullptr) {
         return false;
       }
@@ -300,7 +300,7 @@ ReturnKind SemanticsValidator::inferPreDispatchCallReturnKind(
           : std::string();
   auto isRemovedKeyValueAccessCompatibilityPath = [](std::string_view path) {
     const std::string helperName =
-        metadataBackedMapHelperRootAliasMethodName(path);
+        metadataBackedKeyValueHelperRootAliasMethodName(path);
     return helperName == "at" || helperName == "at_unsafe";
   };
   const bool isKeyValueNamespacedAccessCompatibilityCall =
