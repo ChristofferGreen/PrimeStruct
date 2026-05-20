@@ -1391,7 +1391,7 @@ TEST_CASE("ir lowerer setup type helper resolves dereferenced indexed variadic m
   CHECK(error.empty());
 }
 
-TEST_CASE("ir lowerer setup inference helper resolves wrapper-returned slash-method map access kinds") {
+TEST_CASE("ir lowerer setup inference helper ignores wrapper-returned slash-method map access kinds") {
   using Resolution = primec::ir_lowerer::ArrayKeyValueAccessElementKindResolution;
 
   primec::Expr wrapMapCall;
@@ -1425,8 +1425,8 @@ TEST_CASE("ir lowerer setup inference helper resolves wrapper-returned slash-met
             {},
             [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return false; },
             kindOut,
-            resolveWrapMapKind) == Resolution::Resolved);
-  CHECK(kindOut == primec::ir_lowerer::LocalInfo::ValueKind::Int32);
+            resolveWrapMapKind) == Resolution::NotMatched);
+  CHECK(kindOut == primec::ir_lowerer::LocalInfo::ValueKind::Unknown);
 
   accessExpr.name = "/std/collections/map/at_unsafe";
   kindOut = primec::ir_lowerer::LocalInfo::ValueKind::Unknown;
@@ -1435,11 +1435,11 @@ TEST_CASE("ir lowerer setup inference helper resolves wrapper-returned slash-met
             {},
             [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return false; },
             kindOut,
-            resolveWrapMapKind) == Resolution::Resolved);
-  CHECK(kindOut == primec::ir_lowerer::LocalInfo::ValueKind::Int32);
+            resolveWrapMapKind) == Resolution::NotMatched);
+  CHECK(kindOut == primec::ir_lowerer::LocalInfo::ValueKind::Unknown);
 }
 
-TEST_CASE("ir lowerer setup inference helper resolves wrapper-returned canonical map access int32 kinds") {
+TEST_CASE("ir lowerer setup inference helper ignores wrapper-returned canonical map access int32 kinds") {
   using Resolution = primec::ir_lowerer::ArrayKeyValueAccessElementKindResolution;
 
   primec::Expr wrapMapCall;
@@ -1472,8 +1472,8 @@ TEST_CASE("ir lowerer setup inference helper resolves wrapper-returned canonical
             {},
             [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return false; },
             kindOut,
-            resolveWrapMapKind) == Resolution::Resolved);
-  CHECK(kindOut == primec::ir_lowerer::LocalInfo::ValueKind::Int32);
+            resolveWrapMapKind) == Resolution::NotMatched);
+  CHECK(kindOut == primec::ir_lowerer::LocalInfo::ValueKind::Unknown);
 
   accessExpr.name = "/std/collections/map/at_unsafe";
   kindOut = primec::ir_lowerer::LocalInfo::ValueKind::Unknown;
@@ -1482,8 +1482,8 @@ TEST_CASE("ir lowerer setup inference helper resolves wrapper-returned canonical
             {},
             [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return false; },
             kindOut,
-            resolveWrapMapKind) == Resolution::Resolved);
-  CHECK(kindOut == primec::ir_lowerer::LocalInfo::ValueKind::Int32);
+            resolveWrapMapKind) == Resolution::NotMatched);
+  CHECK(kindOut == primec::ir_lowerer::LocalInfo::ValueKind::Unknown);
 }
 
 TEST_SUITE_END();

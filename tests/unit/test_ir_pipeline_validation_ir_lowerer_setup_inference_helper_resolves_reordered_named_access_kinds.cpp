@@ -262,7 +262,7 @@ TEST_CASE("ir lowerer setup inference helper prefers graph facts for string acce
   CHECK(kindOut == ValueKind::Int32);
 }
 
-TEST_CASE("ir lowerer setup inference helper resolves wrapper-returned canonical map access string kinds") {
+TEST_CASE("ir lowerer setup inference helper ignores wrapper-returned canonical map access string kinds") {
   using Resolution = primec::ir_lowerer::ArrayKeyValueAccessElementKindResolution;
 
   primec::Expr wrapMapCall;
@@ -292,8 +292,8 @@ TEST_CASE("ir lowerer setup inference helper resolves wrapper-returned canonical
               }
               candidateKindOut = primec::ir_lowerer::LocalInfo::ValueKind::String;
               return true;
-            }) == Resolution::Resolved);
-  CHECK(kindOut == primec::ir_lowerer::LocalInfo::ValueKind::String);
+            }) == Resolution::NotMatched);
+  CHECK(kindOut == primec::ir_lowerer::LocalInfo::ValueKind::Unknown);
 
   accessExpr.isMethodCall = true;
   accessExpr.name = "at";
@@ -312,8 +312,8 @@ TEST_CASE("ir lowerer setup inference helper resolves wrapper-returned canonical
               }
               candidateKindOut = primec::ir_lowerer::LocalInfo::ValueKind::String;
               return true;
-            }) == Resolution::Resolved);
-  CHECK(kindOut == primec::ir_lowerer::LocalInfo::ValueKind::String);
+            }) == Resolution::NotMatched);
+  CHECK(kindOut == primec::ir_lowerer::LocalInfo::ValueKind::Unknown);
 
   accessExpr.name = "at_unsafe";
   kindOut = primec::ir_lowerer::LocalInfo::ValueKind::Unknown;
@@ -330,8 +330,8 @@ TEST_CASE("ir lowerer setup inference helper resolves wrapper-returned canonical
               }
               candidateKindOut = primec::ir_lowerer::LocalInfo::ValueKind::String;
               return true;
-            }) == Resolution::Resolved);
-  CHECK(kindOut == primec::ir_lowerer::LocalInfo::ValueKind::String);
+            }) == Resolution::NotMatched);
+  CHECK(kindOut == primec::ir_lowerer::LocalInfo::ValueKind::Unknown);
 }
 
 TEST_CASE("ir lowerer setup inference helper defers canonical vector access string kinds") {

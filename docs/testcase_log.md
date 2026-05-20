@@ -10,20 +10,10 @@
   string-valued map runtime fixture has since been retargeted to compile-only
   coverage because native runtime string-valued maps still hang after
   compilation.
-- `PrimeStruct_backend_ir_tests --test-case="ir lowerer setup inference helper resolves wrapper-returned canonical map access string kinds,ir lowerer setup inference helper resolves wrapper-returned slash-method map access kinds"`
-  is stale after the map stdlib-ownership cutover. On 2026-05-16 both
-  wrapper-returned setup-inference fixtures failed to resolve expected map
-  access element kinds, while adjacent local-map and string map-reference
-  lowerer setup-inference coverage still passes.
 - `PrimeStruct_backend_ir_tests --test-case="ir lowerer setup inference helper resolves array and map access kinds" --no-skip`
   is stale after the map stdlib-ownership cutover. On 2026-05-17 it
   returned `NotResolved` for the old direct array/map access helper
   expectations before exercising semantic-product helper return inference.
-- `PrimeStruct_backend_ir_tests --test-case="ir lowerer setup inference helper resolves wrapper-returned canonical map access int32 kinds" --no-skip`
-  is stale after the map stdlib-ownership cutover. On 2026-05-17 it
-  returned `NotResolved` for the old wrapper-returned canonical map access
-  expectations, matching the already-known wrapper-returned string/slash
-  setup-inference drift.
 - `PrimeStruct_backend_ir_tests --test-case="ir lowerer call helpers dispatch inline calls with locals"`
   has stale assertion-count coverage around explicit vector-count resolver
   calls. On 2026-05-16 it failed with
@@ -157,6 +147,12 @@
   the string-valued map access emission fixture returned `NotHandled`.
 
 ## Recent Test Runs
+- 2026-05-20 12:05 CEST | pass | mode: release | command:
+  `cmake --build build-release --target PrimeStruct_backend_ir_tests`;
+  `cd build-release && ./PrimeStruct_backend_ir_tests --test-case="ir lowerer setup inference helper ignores wrapper-returned canonical map access string kinds,ir lowerer setup inference helper ignores wrapper-returned slash-method map access kinds,ir lowerer setup inference helper ignores wrapper-returned canonical map access int32 kinds" --no-skip`
+  | failures: none | notes: wrapper-returned `/std/collections/map/at*`
+  setup-inference fixtures now lock the current `NotMatched` behavior after
+  map access left the old builtin array/key-value helper path.
 - 2026-05-20 12:02 CEST | pass | mode: release | command:
   `cmake --build build-release --target PrimeStruct_backend_ir_tests`;
   `cd build-release && ./PrimeStruct_backend_ir_tests --test-case="ir lowerer call helpers leave inferred map receiver methods unresolved" --no-skip`
@@ -4644,6 +4640,7 @@
 - 2026-05-12 17:28 local | fail | mode: release | command: `./scripts/compile.sh --release` | failures: 146 CTest targets | notes: baseline after preflight checkpoint failed; stabilization blocks TODO work
 
 ## Resolved Failures
+- [x] wrapper-returned map access setup inference | resolved: 2026-05-20 12:05 CEST | validating command: `cmake --build build-release --target PrimeStruct_backend_ir_tests`; `cd build-release && ./PrimeStruct_backend_ir_tests --test-case="ir lowerer setup inference helper ignores wrapper-returned canonical map access string kinds,ir lowerer setup inference helper ignores wrapper-returned slash-method map access kinds,ir lowerer setup inference helper ignores wrapper-returned canonical map access int32 kinds" --no-skip` | notes: retargeted stale wrapper-returned map access fixtures from value-kind resolution to current `NotMatched` behavior for retired builtin map access classification.
 - [x] inferred experimental map receiver inline arguments | resolved: 2026-05-20 12:02 CEST | validating command: `cmake --build build-release --target PrimeStruct_backend_ir_tests`; `cd build-release && ./PrimeStruct_backend_ir_tests --test-case="ir lowerer call helpers leave inferred map receiver methods unresolved" --no-skip` | notes: replaced retired `mapPair` construction and locked that this lowerer helper no longer resolves inferred stdlib-owned map receiver methods through the old inline path.
 - [x] helper-wrapped map constructors infer canonical auto locals | resolved: 2026-05-20 11:59 CEST | validating command: `cmake --build build-release --target PrimeStruct_semantics_tests`; `cd build-release && ./PrimeStruct_semantics_tests --test-case="helper-wrapped map constructors infer canonical auto locals" --no-skip` | notes: refreshed the stale fixture to keep wrapped auto-local coverage while using explicit canonical helper template arguments for current map `tryAt`/`count` calls.
 - [x] C++ emitter variadic map value pack count methods | resolved: 2026-05-20 11:56 CEST | validating command: `cmake --build build-release --target PrimeStruct_compile_run_tests`; `cd build-release && ./PrimeStruct_compile_run_tests --test-case="C++ emitter rejects retired variadic map value pack count methods" --no-skip` | notes: retargeted stale native map value-pack coverage to assert the current compile-time rejection of retired map count-method lowering.
