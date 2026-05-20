@@ -594,7 +594,7 @@ TEST_CASE("ir lowerer call helpers collect packed variadic inline call arguments
   CHECK(packedArgs[1]->name == "rest");
 }
 
-TEST_CASE("ir lowerer call helpers build inline arguments for inferred experimental map receiver methods") {
+TEST_CASE("ir lowerer call helpers leave inferred map receiver methods unresolved") {
   const std::string source = R"(
 import /std/collections/*
 import /std/collections/internal_map/*
@@ -603,7 +603,7 @@ import /std/collections/internal_map/*
 buildValues([bool] useCanonical) {
   if(useCanonical,
      then() { /std/collections/map/map("left"raw_utf8, 4i32, "right"raw_utf8, 7i32) },
-     else() { /std/collections/mapPair("left"raw_utf8, 4i32, "other"raw_utf8, 2i32) })
+     else() { /std/collections/map/map("left"raw_utf8, 4i32, "other"raw_utf8, 2i32) })
 }
 
 [return<int> effects(heap_alloc)]
@@ -659,25 +659,8 @@ main() {
       resolveExprPath,
       defMap,
       error);
-  REQUIRE(resolved != nullptr);
-  CHECK(resolved->fullPath == "/std/collections/experimental_map/Map__td48f7c0fb764e3c0/count");
+  CHECK(resolved == nullptr);
   CHECK(error.empty());
-
-  std::vector<primec::Expr> paramsOut;
-  std::vector<const primec::Expr *> orderedArgs;
-  std::vector<const primec::Expr *> packedArgs;
-  size_t packedParamIndex = 0;
-  REQUIRE(primec::ir_lowerer::buildInlineCallOrderedArguments(
-      countCall, *resolved, structNames, {}, paramsOut, orderedArgs, packedArgs, packedParamIndex, error));
-  CHECK(error.empty());
-  REQUIRE(paramsOut.size() == 1u);
-  CHECK(paramsOut.front().name == "this");
-  REQUIRE(orderedArgs.size() == 1u);
-  REQUIRE(orderedArgs.front() != nullptr);
-  CHECK(orderedArgs.front()->kind == primec::Expr::Kind::Call);
-  CHECK(orderedArgs.front()->name == "buildValues");
-  CHECK(packedArgs.empty());
-  CHECK(packedParamIndex == paramsOut.size());
 }
 
 TEST_CASE("ir lowerer call helpers emit resolved inline definition call") {

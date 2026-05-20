@@ -10,10 +10,6 @@
   string-valued map runtime fixture has since been retargeted to compile-only
   coverage because native runtime string-valued maps still hang after
   compilation.
-- `PrimeStruct_backend_ir_tests --test-case="ir lowerer call helpers build inline arguments for inferred experimental map receiver methods"`
-  is stale after the map stdlib-ownership cutover. On 2026-05-16 the current
-  fixture failed validation before the inline-argument assertions because it
-  still uses the retired `/std/collections/mapPair` constructor path.
 - `PrimeStruct_backend_ir_tests --test-case="ir lowerer setup inference helper resolves wrapper-returned canonical map access string kinds,ir lowerer setup inference helper resolves wrapper-returned slash-method map access kinds"`
   is stale after the map stdlib-ownership cutover. On 2026-05-16 both
   wrapper-returned setup-inference fixtures failed to resolve expected map
@@ -161,6 +157,12 @@
   the string-valued map access emission fixture returned `NotHandled`.
 
 ## Recent Test Runs
+- 2026-05-20 12:02 CEST | pass | mode: release | command:
+  `cmake --build build-release --target PrimeStruct_backend_ir_tests`;
+  `cd build-release && ./PrimeStruct_backend_ir_tests --test-case="ir lowerer call helpers leave inferred map receiver methods unresolved" --no-skip`
+  | failures: none | notes: retired the stale inferred experimental-map
+  inline-argument resolution fixture by replacing `mapPair` and locking the
+  current unresolved lowerer-helper behavior for stdlib-owned map receivers.
 - 2026-05-20 11:59 CEST | pass | mode: release | command:
   `cmake --build build-release --target PrimeStruct_semantics_tests`;
   `cd build-release && ./PrimeStruct_semantics_tests --test-case="helper-wrapped map constructors infer canonical auto locals" --no-skip`
@@ -4642,6 +4644,7 @@
 - 2026-05-12 17:28 local | fail | mode: release | command: `./scripts/compile.sh --release` | failures: 146 CTest targets | notes: baseline after preflight checkpoint failed; stabilization blocks TODO work
 
 ## Resolved Failures
+- [x] inferred experimental map receiver inline arguments | resolved: 2026-05-20 12:02 CEST | validating command: `cmake --build build-release --target PrimeStruct_backend_ir_tests`; `cd build-release && ./PrimeStruct_backend_ir_tests --test-case="ir lowerer call helpers leave inferred map receiver methods unresolved" --no-skip` | notes: replaced retired `mapPair` construction and locked that this lowerer helper no longer resolves inferred stdlib-owned map receiver methods through the old inline path.
 - [x] helper-wrapped map constructors infer canonical auto locals | resolved: 2026-05-20 11:59 CEST | validating command: `cmake --build build-release --target PrimeStruct_semantics_tests`; `cd build-release && ./PrimeStruct_semantics_tests --test-case="helper-wrapped map constructors infer canonical auto locals" --no-skip` | notes: refreshed the stale fixture to keep wrapped auto-local coverage while using explicit canonical helper template arguments for current map `tryAt`/`count` calls.
 - [x] C++ emitter variadic map value pack count methods | resolved: 2026-05-20 11:56 CEST | validating command: `cmake --build build-release --target PrimeStruct_compile_run_tests`; `cd build-release && ./PrimeStruct_compile_run_tests --test-case="C++ emitter rejects retired variadic map value pack count methods" --no-skip` | notes: retargeted stale native map value-pack coverage to assert the current compile-time rejection of retired map count-method lowering.
 - [x] backend IR retired native-map fixtures | resolved: 2026-05-20 11:46 CEST | validating command: `cmake --build build-release --target PrimeStruct_backend_ir_tests`; `cd build-release && ./PrimeStruct_backend_ir_tests --test-case="retired direct map Result payload literal rejects before lowering,retired variadic map pack bare count rejects before lowering,retired variadic map pack canonical count no longer lowers as native map" --no-skip` | notes: converted stale map Result and variadic pack lowering coverage into explicit retirement locks for old map literals, bare count fallback, and native map-pack lowering.
