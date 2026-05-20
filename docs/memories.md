@@ -1705,13 +1705,16 @@ This file stores durable session-derived facts that are useful in later work. Ke
 - Tags: stdlib, tuple, generics
 - Fact: `/std/tuple/*` exposes the initial stdlib-owned `tuple<Ts...>` surface
   from `.prime`: a single pack-expanded struct plus `get<I, Ts...>` and
-  `get_ref<I, Ts...>` helpers over generic `pack_at` rewriting. There are no
-  tuple-specific C++ opcodes, fixed-arity tuple families, or backend tuple
-  runtime objects in this slice.
+  `get_ref<I, Ts...>` helpers over generic `pack_at` rewriting. Tuple bracket
+  access such as `pair[0]` is compile-time sugar that rewrites to the same
+  stdlib `get` path during monomorphization; runtime tuple index variables
+  are rejected. There are no tuple-specific C++ opcodes, fixed-arity tuple
+  families, or backend tuple runtime objects in this slice.
 - Evidence: `stdlib/std/tuple/tuple.prime` defines the public surface; focused
   native compile-run coverage imports `/std/tuple/*`, constructs `tuple<T>`,
-  `tuple<T0, T1>`, compile-checks `tuple<>` plus borrowed `get_ref`, and locks
-  out-of-range `get` diagnostics through the ordinary pack-index path.
+  `tuple<T0, T1>`, compile-checks `tuple<>` plus borrowed `get_ref`, locks
+  out-of-range `get` diagnostics through the ordinary pack-index path, and
+  covers tuple bracket success plus runtime-index rejection.
 
 ### variadic-borrowed-pointer-packs-are-supported
 - Updated: 2026-05-01

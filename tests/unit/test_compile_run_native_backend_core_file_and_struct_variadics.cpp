@@ -681,6 +681,76 @@ main() {
   CHECK(runCommand(exePath) == 16);
 }
 
+TEST_CASE("native uses tuple bracket indexing sugar") {
+  const std::string source = R"(
+import /std/tuple/*
+
+[return<i32>]
+main() {
+  [auto] pair{tuple<i32, i32>{11i32, 13i32}}
+  return(plus(pair[0i32], pair[1i32]))
+}
+)";
+  const std::string srcPath =
+      writeTemp("compile_native_stdlib_tuple_index_sugar.prime", source);
+  const std::string exePath =
+      (testScratchPath("") / "primec_native_stdlib_tuple_index_sugar").string();
+
+  const std::string compileCmd =
+      "./primec --emit=native " + srcPath + " -o " + exePath + " --entry /main";
+  CHECK(runCommand(compileCmd) == 0);
+  CHECK(runCommand(exePath) == 24);
+}
+
+TEST_CASE("native reports tuple bracket index diagnostics") {
+  const std::string runtimeSource = R"(
+import /std/tuple/*
+
+[return<i32>]
+main() {
+  [auto] values{tuple<i32, bool>{11i32, true}}
+  [i32] index{0i32}
+  return(values[index])
+}
+)";
+  const std::string runtimeSrcPath =
+      writeTemp("compile_native_stdlib_tuple_runtime_index.prime", runtimeSource);
+  const std::string runtimeErrPath =
+      (testScratchPath("") / "primec_native_stdlib_tuple_runtime_index.err").string();
+  const std::string runtimeExePath =
+      (testScratchPath("") / "primec_native_stdlib_tuple_runtime_index").string();
+
+  const std::string runtimeCompileCmd =
+      "./primec --emit=native " + runtimeSrcPath + " -o " + runtimeExePath +
+      " --entry /main 2> " + runtimeErrPath;
+  CHECK(runCommand(runtimeCompileCmd) != 0);
+  CHECK(readFile(runtimeErrPath).find(
+            "tuple index must be a compile-time integer") != std::string::npos);
+
+  const std::string rangeSource = R"(
+import /std/tuple/*
+
+[return<i32>]
+main() {
+  [auto] values{tuple<i32, bool>{11i32, true}}
+  return(values[2i32])
+}
+)";
+  const std::string rangeSrcPath =
+      writeTemp("compile_native_stdlib_tuple_bad_index_sugar.prime", rangeSource);
+  const std::string rangeErrPath =
+      (testScratchPath("") / "primec_native_stdlib_tuple_bad_index_sugar.err").string();
+  const std::string rangeExePath =
+      (testScratchPath("") / "primec_native_stdlib_tuple_bad_index_sugar").string();
+
+  const std::string rangeCompileCmd =
+      "./primec --emit=native " + rangeSrcPath + " -o " + rangeExePath +
+      " --entry /main 2> " + rangeErrPath;
+  CHECK(runCommand(rangeCompileCmd) != 0);
+  CHECK(readFile(rangeErrPath).find("type-pack index out of range") !=
+        std::string::npos);
+}
+
 TEST_CASE("native compiles empty and borrowed stdlib tuple access") {
   const std::string source = R"(
 import /std/tuple/*

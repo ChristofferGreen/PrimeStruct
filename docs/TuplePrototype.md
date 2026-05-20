@@ -133,16 +133,16 @@ Preferred user-facing shape:
 ```prime
 pair{tuple<i32, string>{7, "left"}}
 
-number{get<0>(pair)}
-label{get<1>(pair)}
+number{pair[0]}
+label{pair[1]}
 ```
 
-Method sugar should be valid once template arguments on method calls are
-supported for this free stdlib helper shape:
+The explicit helper spelling remains valid when call sites need to make the
+compile-time index and element pack visible:
 
 ```prime
-number{pair.get<0>()}
-label{pair.get<1>()}
+number{get<0, i32, string>(pair)}
+label{get<1, i32, string>(pair)}
 ```
 
 For the multithreading design, multi-wait can then return a tuple:
@@ -417,10 +417,11 @@ When this prototype graduates into active implementation work:
   or hand-written fixed-arity family
 - add construction and indexed access tests, including negative diagnostics for
   arity mismatch, bad element type, non-constant index, and out-of-range index
+  (done for direct `get` and bracket indexing)
 - add copy/move/destruction tests with non-trivial element types once lifecycle
   behavior is settled
-- add tuple bracket indexing, heterogeneous value-pack inference, tuple
-  destructuring, and multi-wait integration only as later follow-ups, tracked
-  by TODO-4274, TODO-4273, TODO-4277, and TODO-4278
+- add heterogeneous value-pack inference, tuple destructuring, and multi-wait
+  integration only as later follow-ups, tracked by TODO-4273, TODO-4277, and
+  TODO-4278
 - update `docs/PrimeStruct.md` and `docs/CodeExamples.md` only after the
   supported surface is implemented (done for the initial surface)

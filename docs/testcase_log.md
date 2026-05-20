@@ -12,6 +12,15 @@
   compilation.
 
 ## Recent Test Runs
+- 2026-05-20 22:47 CEST | pass | mode: release | command:
+  `cmake --build build-release --target primec PrimeStruct_compile_run_tests`;
+  `cd build-release && ./PrimeStruct_compile_run_tests --test-case="native uses tuple bracket indexing sugar"`;
+  `cd build-release && ./PrimeStruct_compile_run_tests --test-case="native reports tuple bracket index diagnostics"`;
+  `cd build-release && ./PrimeStruct_compile_run_tests --test-case="native uses imported stdlib tuple get helpers"`;
+  `cd build-release && ./PrimeStruct_compile_run_tests --test-case="native reports stdlib tuple get index diagnostics"`
+  | failures: none | notes: TODO-4274 rewrites tuple bracket indexes to the
+  stdlib `get` helper path during monomorphization, rejects runtime tuple
+  index variables, and preserves explicit `get` helper behavior.
 - 2026-05-20 22:17 CEST | pass | mode: release | command:
   `cmake --build build-release --target PrimeStruct_text_filter_tests`;
   `cd build-release && ./PrimeStruct_text_filter_tests --test-case="operator rewrite preserves type-pack template syntax" --no-skip`;

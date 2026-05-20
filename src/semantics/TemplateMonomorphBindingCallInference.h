@@ -168,6 +168,11 @@ bool inferCallBindingTypeForMonomorph(const Expr &initializer,
   if (defIt == ctx.sourceDefs.end()) {
     return false;
   }
+  if (isStructDefinition(defIt->second)) {
+    infoOut.typeName = resolved;
+    infoOut.typeTemplateArg.clear();
+    return true;
+  }
 
   std::vector<std::string> effectiveTemplateArgs = initializer.templateArgs;
   if (effectiveTemplateArgs.empty() && !defIt->second.templateArgs.empty()) {

@@ -363,6 +363,18 @@ bool tryInferBindingTypeFromInitializer(const Expr &initializer,
         return true;
       }
     }
+    if (!initializer.isMethodCall && !initializer.isBinding &&
+        !initializer.hasBodyArguments && initializer.bodyArguments.empty() &&
+        !initializer.templateArgs.empty()) {
+      const std::string normalizedName = normalizeBindingTypeName(initializer.name);
+      if (normalizedName == "tuple" ||
+          normalizedName == "std/tuple/tuple" ||
+          normalizedName == "/std/tuple/tuple") {
+        bindingOut.typeName = initializer.name;
+        bindingOut.typeTemplateArg = joinTemplateArgs(initializer.templateArgs);
+        return true;
+      }
+    }
   }
   const auto typeNameForKind = [](ReturnKind kind) -> std::string {
     switch (kind) {

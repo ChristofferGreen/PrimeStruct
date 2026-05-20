@@ -167,6 +167,179 @@ bool rewriteExpr(Expr &expr,
     }
   };
 
+  {
+    auto isStdlibTuplePathEarly = [](const std::string &path) {
+      return path == "/std/tuple/tuple" ||
+             path.rfind("/std/tuple/tuple__t", 0) == 0;
+    };
+    auto resolveTupleBasePathEarly = [&](const std::string &base) -> std::string {
+      std::string normalizedBase = normalizeBindingTypeName(base);
+      if (normalizedBase.empty()) {
+        return {};
+      }
+      if (isStdlibTuplePathEarly(normalizedBase)) {
+        return normalizedBase;
+      }
+      if (!normalizedBase.empty() && normalizedBase.front() == '/') {
+        return {};
+      }
+      return resolveNameToPath(normalizedBase,
+                               namespacePrefix,
+                               scopedImportAliasesForNamespace(namespacePrefix, ctx),
+                               ctx.sourceDefs);
+    };
+    auto extractTupleReceiverTemplateArgsEarly =
+        [&](std::string typeText,
+            bool &borrowedOut,
+            std::vector<std::string> &tupleArgsOut) -> bool {
+      borrowedOut = false;
+      tupleArgsOut.clear();
+      typeText = normalizeBindingTypeName(std::move(typeText));
+      while (true) {
+        std::string wrapperBase;
+        std::string wrapperArgText;
+        if (!splitTemplateTypeName(typeText, wrapperBase, wrapperArgText)) {
+          break;
+        }
+        wrapperBase = normalizeBindingTypeName(wrapperBase);
+        if (wrapperBase != "Reference" && wrapperBase != "Pointer") {
+          break;
+        }
+        if (wrapperBase == "Pointer") {
+          return false;
+        }
+        std::vector<std::string> wrapperArgs;
+        if (!splitTopLevelTemplateArgs(wrapperArgText, wrapperArgs) ||
+            wrapperArgs.size() != 1) {
+          return false;
+        }
+        borrowedOut = true;
+        typeText = normalizeBindingTypeName(wrapperArgs.front());
+      }
+
+      std::string tupleBase;
+      std::string tupleArgText;
+      if (splitTemplateTypeName(typeText, tupleBase, tupleArgText)) {
+        if (!isStdlibTuplePathEarly(resolveTupleBasePathEarly(tupleBase))) {
+          return false;
+        }
+        if (tupleArgText.empty()) {
+          return true;
+        }
+        return splitTopLevelTemplateArgs(tupleArgText, tupleArgsOut);
+      }
+
+      const std::string tuplePath = resolveTupleBasePathEarly(typeText);
+      if (!isStdlibTuplePathEarly(tuplePath)) {
+        return false;
+      }
+      auto defIt = ctx.sourceDefs.find(tuplePath);
+      if (defIt == ctx.sourceDefs.end()) {
+        return false;
+      }
+      for (const TemplatePackBinding &packBinding : defIt->second.templatePackBindings) {
+        if (packBinding.parameterName == "Ts") {
+          tupleArgsOut = packBinding.arguments;
+          return true;
+        }
+      }
+      return false;
+    };
+    auto rewriteTupleIndexCandidate = [&](Expr &candidate,
+                                          const auto &self,
+                                          bool &handledOut) -> bool {
+      handledOut = false;
+      std::string builtinAccessName;
+      if (candidate.kind != Expr::Kind::Call) {
+        return true;
+      }
+      if (getBuiltinArrayAccessName(candidate, builtinAccessName) &&
+          candidate.args.size() == 2 && !hasNamedCallArguments(candidate) &&
+          !candidate.hasBodyArguments && candidate.bodyArguments.empty() &&
+          candidate.templateArgs.empty()) {
+        BindingInfo receiverInfo;
+        if (inferBindingTypeForMonomorph(candidate.args.front(),
+                                         params,
+                                         locals,
+                                         allowMathBare,
+                                         ctx,
+                                         receiverInfo)) {
+          bool borrowedReceiver = false;
+          std::vector<std::string> tupleArgs;
+          if (extractTupleReceiverTemplateArgsEarly(bindingTypeToString(receiverInfo),
+                                                   borrowedReceiver,
+                                                   tupleArgs)) {
+            const Expr &indexExpr = candidate.args[1];
+            if (indexExpr.kind != Expr::Kind::Literal ||
+                indexExpr.isUnsigned ||
+                (indexExpr.intWidth != 32 && indexExpr.intWidth != 64)) {
+              error = "tuple index must be a compile-time integer";
+              return false;
+            }
+
+            std::vector<std::string> templateArgs;
+            templateArgs.reserve(tupleArgs.size() + 1);
+            templateArgs.push_back(std::to_string(indexExpr.literalValue));
+            templateArgs.insert(templateArgs.end(), tupleArgs.begin(), tupleArgs.end());
+
+            std::vector<TemplateArgument> templateArgDetails;
+            templateArgDetails.reserve(templateArgs.size());
+            templateArgDetails.push_back(
+                TemplateArgument::integer(templateArgs.front(), indexExpr.literalValue));
+            for (size_t i = 1; i < templateArgs.size(); ++i) {
+              templateArgDetails.push_back(TemplateArgument::type(templateArgs[i]));
+            }
+
+            Expr receiver = candidate.args.front();
+            candidate.name = borrowedReceiver ? "/std/tuple/get_ref" : "/std/tuple/get";
+            candidate.sourceName = candidate.name;
+            candidate.sourceIsMethodCall = false;
+            candidate.namespacePrefix.clear();
+            candidate.args.clear();
+            candidate.args.push_back(std::move(receiver));
+            candidate.argNames.assign(1, std::nullopt);
+            candidate.templateArgs = std::move(templateArgs);
+            candidate.templateArgDetails = std::move(templateArgDetails);
+            candidate.isMethodCall = false;
+            candidate.isFieldAccess = false;
+            handledOut = true;
+            return rewriteExpr(candidate,
+                               mapping,
+                               allowedParams,
+                               namespacePrefix,
+                               ctx,
+                               error,
+                               locals,
+                               params,
+                               allowMathBare);
+          }
+        }
+      }
+      for (Expr &arg : candidate.args) {
+        bool childHandled = false;
+        if (!self(arg, self, childHandled)) {
+          return false;
+        }
+      }
+      for (Expr &arg : candidate.bodyArguments) {
+        bool childHandled = false;
+        if (!self(arg, self, childHandled)) {
+          return false;
+        }
+      }
+      return true;
+    };
+    bool handledTupleIndexAccess = false;
+    if (!rewriteTupleIndexCandidate(expr,
+                                    rewriteTupleIndexCandidate,
+                                    handledTupleIndexAccess)) {
+      return false;
+    }
+    if (handledTupleIndexAccess) {
+      return true;
+    }
+  }
+
   if (isPickCall(expr)) {
     for (auto &arg : expr.args) {
       if (!rewriteExpr(arg,

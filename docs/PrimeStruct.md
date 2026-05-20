@@ -2317,6 +2317,10 @@ explicit `utf8`/`ascii` suffix.** `ascii` enforces 7-bit ASCII (the compiler rej
   brace construction and field lifecycle rules. Imported
   `get<I, Ts...>(value)` returns the precise `I`th element type by rewriting
   through generic `pack_at<I, values>(value)` during monomorphization.
+  Tuple bracket indexing, such as `pair[0]`, is accepted as tuple-specific
+  compile-time sugar over the same stdlib `get<I, Ts...>` helper path; runtime
+  index variables still belong to ordinary collection indexing, not tuple
+  element selection.
   Imported `get_ref<I, Ts...>(location(value))` type-checks as
   `Reference<TI>` when borrowed field access is available, but direct native
   runtime dereference of returned tuple element references is still treated as

@@ -83,8 +83,8 @@ Task template:
 
 ### Ready Now (Parallel-Candidate Leaves; No Unmet TODO Dependencies)
 
-- TODO-4274: Add tuple bracket indexing sugar | track: tuple-type-packs |
-  primary surface: compile-time tuple index sugar over stdlib `get<I>`
+- TODO-4273: Add heterogeneous value-pack inference | track: tuple-type-packs |
+  primary surface: infer `Ts...` from heterogeneous tuple helper arguments
 
 ### Parallel Work Tracks (Current)
 
@@ -102,9 +102,9 @@ Task template:
   generated `.prime` helper calls without restoring map-specific native
   insert dispatch; no generic helper-call leaf is ready.
 - `tuple-type-packs`: TODO-4276 completed helper/lifecycle pack
-  expansion, TODO-4271 added compile-time pack indexing, and TODO-4272 added
-  the initial stdlib tuple surface; ready TODO-4274, then serial successors
-  TODO-4273 -> TODO-4277 -> TODO-4278.
+  expansion, TODO-4271 added compile-time pack indexing, TODO-4272 added
+  the initial stdlib tuple surface, and TODO-4274 added tuple bracket
+  indexing; ready TODO-4273, then serial successors TODO-4277 -> TODO-4278.
 - `procedural-genericity`: blocked by the tuple-type-packs successor chain
   before TODO-4331 can start.
 - `generic-requirements`: blocked by TODO-4331 and TODO-4334 before
@@ -112,7 +112,6 @@ Task template:
 
 ### Immediate Next 10 (Track Successors; Not Ready Until Dependencies Land)
 
-- TODO-4273: Add heterogeneous value-pack inference
 - TODO-4277: Add tuple destructuring sugar
 - TODO-4278: Integrate multi-wait with stdlib tuple
 
@@ -131,9 +130,8 @@ Task template:
   template-monomorph residue; TODO-4533 removed lowerer call-resolution
   residual bridge traces; TODO-4528 removed lowerer count/access residue; and
   TODO-4529 replaced the residue inventory with a strict zero audit
-- Deferred generic tuple substrate: ready TODO-4274 after TODO-4272 added
-  the initial stdlib tuple surface, followed by TODO-4273 -> TODO-4277
-  -> TODO-4278
+- Deferred generic tuple substrate: ready TODO-4273 after TODO-4274 added
+  tuple bracket indexing, followed by TODO-4277 -> TODO-4278
 - Procedural compile-time genericity: TODO-4331 -> TODO-4332
   -> TODO-4333 -> TODO-4334 -> TODO-4335 -> TODO-4336 -> TODO-4337
   -> TODO-4338 -> TODO-4339 -> TODO-4340
@@ -145,7 +143,6 @@ Task template:
 
 ### Execution Queue (Recommended Track Order)
 
-- TODO-4274: Add tuple bracket indexing sugar
 - TODO-4273: Add heterogeneous value-pack inference
 - TODO-4277: Add tuple destructuring sugar
 - TODO-4278: Integrate multi-wait with stdlib tuple
@@ -784,34 +781,6 @@ Task template:
     - `./scripts/compile.sh --release` passes.
   - stop_rule: Stop once heterogeneous value-pack inference is available for
     tuple helper construction and does not regress existing homogeneous packs.
-
-- [ ] TODO-4274: Add tuple bracket indexing sugar
-  - owner: ai
-  - created_at: 2026-04-27
-  - phase: Deferred generic tuple substrate
-  - depends_on: TODO-4272
-  - scope: Add `value[0]` style tuple element access as compile-time-indexed
-    sugar over `get<0>(value)`, distinct from runtime collection indexing.
-  - implementation_notes:
-    - Start from `docs/TuplePrototype.md`, parser/indexing forms, semantic
-      collection access validation, and tuple `get<I>` from TODO-4272.
-    - Tuple indexing must use a compile-time integer literal or equivalent
-      folded constant; it must not route through runtime `at(tuple, index)`.
-    - Preserve existing runtime indexing behavior for arrays, vectors, maps,
-      strings, and homogeneous `args<T>` packs.
-  - acceptance:
-    - `pair[0]` and `pair[1]` on `tuple<i32, string>` resolve to `i32` and
-      `string` respectively.
-    - Runtime index variables such as `pair[i]` reject with a diagnostic that
-      explains tuple indexes must be compile-time constants.
-    - Out-of-range tuple indexes reject with the same index provenance as
-      `get<I>`.
-    - Existing array/vector/map/string/indexed-pack tests keep their current
-      runtime-index behavior.
-    - `docs/TuplePrototype.md` records bracket indexing as accepted sugar.
-    - `./scripts/compile.sh --release` passes.
-  - stop_rule: Stop once bracket indexing is validated as tuple-specific
-    compile-time sugar and ordinary runtime indexing behavior is unchanged.
 
 - [ ] TODO-4277: Add tuple destructuring sugar
   - owner: ai

@@ -6,6 +6,40 @@ Legend:
 Finished items are periodically archived here from `docs/todo.md`; section headers record the archive date.
 
 **Todo Completion (May 20, 2026)**
+- [x] TODO-4274: Add tuple bracket indexing sugar
+  - owner: ai
+  - created_at: 2026-04-27
+  - finished_at: 2026-05-20
+  - phase: Deferred generic tuple substrate
+  - parallel_track: tuple-type-packs
+  - depends_on: TODO-4272
+  - scope: Add `value[0]` style tuple element access as compile-time-indexed
+    sugar over `get<0>(value)`, distinct from runtime collection indexing.
+  - outcome:
+    - Rewrote stdlib tuple bracket indexes during template
+      monomorphization to rooted `/std/tuple/get` or `get_ref` helper calls
+      with the receiver's concrete tuple element pack.
+    - Added tuple constructor binding inference so `auto` tuple locals retain
+      enough receiver type information for nested index sugar.
+    - Added native compile-run coverage for successful tuple bracket access,
+      runtime-index rejection, and out-of-range diagnostics while preserving
+      the existing explicit `get` helper tests.
+    - Documented bracket indexing as the accepted tuple access surface and
+      promoted TODO-4273 as the next Ready Now tuple leaf.
+  - validation:
+    - `cmake --build build-release --target primec PrimeStruct_compile_run_tests`
+      passed.
+    - `cd build-release && ./PrimeStruct_compile_run_tests --test-case="native uses tuple bracket indexing sugar"`
+      passed.
+    - `cd build-release && ./PrimeStruct_compile_run_tests --test-case="native reports tuple bracket index diagnostics"`
+      passed.
+    - `cd build-release && ./PrimeStruct_compile_run_tests --test-case="native uses imported stdlib tuple get helpers"`
+      passed.
+    - `cd build-release && ./PrimeStruct_compile_run_tests --test-case="native reports stdlib tuple get index diagnostics"`
+      passed.
+    - Full `./scripts/compile.sh --release` remains deferred by the lite
+      workflow.
+
 - [x] TODO-4272: Add stdlib `tuple<Ts...>`
   - owner: ai
   - created_at: 2026-04-27
