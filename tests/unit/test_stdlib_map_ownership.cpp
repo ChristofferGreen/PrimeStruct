@@ -665,6 +665,18 @@ TEST_CASE("canonical map surface owns standalone stdlib implementation") {
         std::string::npos);
   CHECK(semanticsSource.find("resolveBuiltinKeyValueInsertReceiverBinding") !=
         std::string::npos);
+  CHECK(semanticsSource.find("rewriteBuiltinMapInsertExpr") ==
+        std::string::npos);
+  CHECK(semanticsSource.find("rewriteBuiltinMapInsertStatements") ==
+        std::string::npos);
+  CHECK(semanticsSource.find("rewriteBuiltinMapInsertMethods") ==
+        std::string::npos);
+  CHECK(semanticsSource.find("rewriteBuiltinKeyValueInsertExpr") !=
+        std::string::npos);
+  CHECK(semanticsSource.find("rewriteBuiltinKeyValueInsertStatements") !=
+        std::string::npos);
+  CHECK(semanticsSource.find("rewriteBuiltinKeyValueInsertMethods") !=
+        std::string::npos);
   CHECK(semanticsSource.find(
             "StdlibSurfaceId::CollectionsMapHelpers") == std::string::npos);
   CHECK(semanticsSource.find(

@@ -5811,7 +5811,7 @@ std::optional<semantics::BindingInfo> resolveBuiltinKeyValueInsertReceiverBindin
   return std::nullopt;
 }
 
-void rewriteBuiltinMapInsertExpr(
+void rewriteBuiltinKeyValueInsertExpr(
     Expr &expr,
     const std::unordered_map<std::string, semantics::BindingInfo> &bindings,
     const std::unordered_set<std::string> &constructorBackedBuiltinMapBindings,
@@ -5819,7 +5819,7 @@ void rewriteBuiltinMapInsertExpr(
     const std::unordered_set<std::string> &structPaths,
     const std::string &definitionNamespace) {
   for (Expr &arg : expr.args) {
-    rewriteBuiltinMapInsertExpr(
+    rewriteBuiltinKeyValueInsertExpr(
         arg,
         bindings,
         constructorBackedBuiltinMapBindings,
@@ -5992,7 +5992,7 @@ void rewriteBuiltinMapInsertExpr(
   expr.argNames.clear();
 }
 
-void rewriteBuiltinMapInsertStatements(
+void rewriteBuiltinKeyValueInsertStatements(
     std::vector<Expr> &statements,
     std::unordered_map<std::string, semantics::BindingInfo> bindings,
     std::unordered_set<std::string> constructorBackedBuiltinMapBindings,
@@ -6000,7 +6000,7 @@ void rewriteBuiltinMapInsertStatements(
     const std::unordered_set<std::string> &structPaths,
     const std::string &definitionNamespace) {
   for (Expr &stmt : statements) {
-    rewriteBuiltinMapInsertExpr(
+    rewriteBuiltinKeyValueInsertExpr(
         stmt,
         bindings,
         constructorBackedBuiltinMapBindings,
@@ -6010,7 +6010,7 @@ void rewriteBuiltinMapInsertStatements(
     if (!stmt.bodyArguments.empty()) {
       auto bodyBindings = bindings;
       auto bodyConstructorBackedBindings = constructorBackedBuiltinMapBindings;
-      rewriteBuiltinMapInsertStatements(
+      rewriteBuiltinKeyValueInsertStatements(
           stmt.bodyArguments,
           bodyBindings,
           bodyConstructorBackedBindings,
@@ -6050,7 +6050,7 @@ void rewriteBuiltinMapInsertStatements(
   }
 }
 
-bool rewriteBuiltinMapInsertMethods(Program &program, std::string &error) {
+bool rewriteBuiltinKeyValueInsertMethods(Program &program, std::string &error) {
   error.clear();
   std::unordered_map<std::string, const Definition *> definitionMap;
   std::unordered_set<std::string> structPaths;
@@ -6083,7 +6083,7 @@ bool rewriteBuiltinMapInsertMethods(Program &program, std::string &error) {
     if (slash != std::string::npos && slash > 0) {
       definitionNamespace = def.fullPath.substr(0, slash);
     }
-    rewriteBuiltinMapInsertStatements(
+    rewriteBuiltinKeyValueInsertStatements(
         def.statements,
         bindings,
         constructorBackedBuiltinMapBindings,
@@ -6108,7 +6108,7 @@ bool rewriteBuiltinMapInsertMethods(Program &program, std::string &error) {
           }
         }
       }
-      rewriteBuiltinMapInsertExpr(
+      rewriteBuiltinKeyValueInsertExpr(
           *def.returnExpr,
           returnBindings,
           returnConstructorBackedBindings,
@@ -6397,7 +6397,7 @@ bool runSemanticValidationManifestAstPass(
     return rewriteExperimentalKeyValueValueMethods(program, error);
   }
   if (pass.name == "builtin-map-insert-methods") {
-    return rewriteBuiltinMapInsertMethods(program, error);
+    return rewriteBuiltinKeyValueInsertMethods(program, error);
   }
   if (pass.name == "template-monomorphization") {
     try {
