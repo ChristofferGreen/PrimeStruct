@@ -1,11 +1,6 @@
 # Testcase Log
 
 ## Current Known Failures
-- `PrimeStruct_backend_ir_tests --test-case="ir lowers map literal call as statement"`
-  is stale after parser/template cleanup. On 2026-05-16 it failed before IR
-  lowering with `Parse error: duplicate template parameter: i32` for the
-  old `map<i32, i32>(...)` statement fixture; nearby string-keyed map literal
-  lowerer coverage still passes.
 - `PrimeStruct_backend_ir_tests --test-case="semantics validator infer source delegation stays stable" --no-skip`
   has 15 stale SoA/experimental_soa_vector source-lock assertions after the
   SoA public-surface cleanup. The map-count inference assertions in that test
@@ -196,6 +191,13 @@
   the string-valued map access emission fixture returned `NotHandled`.
 
 ## Recent Test Runs
+- 2026-05-20 11:21 CEST | pass | mode: release | command:
+  `cmake --build build-release --target PrimeStruct_backend_ir_tests PrimeStruct_semantics_tests`;
+  `cd build-release && ./PrimeStruct_backend_ir_tests --test-case="ir lowers map literal call as statement" --no-skip`;
+  `cd build-release && ./PrimeStruct_semantics_tests --test-case="map literal validates bool keys and values" --no-skip`
+  | failures: none | notes: nested-definition probing now skips
+  template-prefixed call statements that cannot be definitions, so duplicate
+  explicit map key/value types parse as expression-call template arguments.
 - 2026-05-20 11:15 CEST | pass | mode: release | command:
   `cmake --build build-release --target PrimeStruct_backend_ir_tests`;
   `cd build-release && ./PrimeStruct_backend_ir_tests --test-case="ir lowerer call helpers keep explicit map helper same-path defs" --no-skip`
@@ -4634,6 +4636,7 @@
 - 2026-05-12 17:28 local | fail | mode: release | command: `./scripts/compile.sh --release` | failures: 146 CTest targets | notes: baseline after preflight checkpoint failed; stabilization blocks TODO work
 
 ## Resolved Failures
+- [x] ir lowers map literal call as statement | resolved: 2026-05-20 11:21 CEST | validating command: `cmake --build build-release --target PrimeStruct_backend_ir_tests PrimeStruct_semantics_tests`; `cd build-release && ./PrimeStruct_backend_ir_tests --test-case="ir lowers map literal call as statement" --no-skip`; `cd build-release && ./PrimeStruct_semantics_tests --test-case="map literal validates bool keys and values" --no-skip` | notes: parser nested-definition speculation now avoids consuming template-call statements without a definition body as template parameter declarations.
 - [x] ir lowerer call helpers keep explicit map helper same-path defs | resolved: 2026-05-20 11:15 CEST | validating command: `cmake --build build-release --target PrimeStruct_backend_ir_tests`; `cd build-release && ./PrimeStruct_backend_ir_tests --test-case="ir lowerer call helpers keep explicit map helper same-path defs" --no-skip` | notes: refreshed stale alias access expectations to preserve current canonical map helper definition resolution.
 - [x] ir lowerer call helpers handle non-method count fallback | resolved: 2026-05-20 11:13 CEST | validating command: `cmake --build build-release --target PrimeStruct_backend_ir_tests`; `cd build-release && ./PrimeStruct_backend_ir_tests --test-case="ir lowerer call helpers handle non-method count fallback" --no-skip` | notes: pruned stale map access/count fallback expectations now that stdlib-owned map helpers no longer route through the old generic count fallback path.
 - [x] wrapper-returned map method-alias diagnostics | resolved: 2026-05-20 11:10 CEST | validating command: `cmake --build build-release --target PrimeStruct_semantics_tests`; `cd build-release && ./PrimeStruct_semantics_tests --test-case="wrapper-returned slash-method map access count validates string result,map method alias access accepts matching receiver during inference,map method alias access rejects missing receiver method during inference,wrapper-returned map method alias access keeps explicit helper diagnostics during inference,wrapper-returned map method alias access keeps primitive argument diagnostics during inference" --no-skip` | notes: retired stale primitive `/map/at` and `/project` inference expectations; current coverage reflects stdlib-owned map helper routing and explicit helper diagnostics.

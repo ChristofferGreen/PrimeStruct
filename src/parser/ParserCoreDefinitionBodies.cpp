@@ -51,6 +51,62 @@ size_t skipDefinitionTailTransforms(const std::vector<Token> &tokens, size_t ind
   return skipCommentTokens(tokens, scan);
 }
 
+size_t skipBalancedTemplateList(const std::vector<Token> &tokens, size_t index) {
+  if (index >= tokens.size() || tokens[index].kind != TokenKind::LAngle) {
+    return index;
+  }
+  int depth = 0;
+  size_t scan = index;
+  while (scan < tokens.size()) {
+    const TokenKind kind = tokens[scan].kind;
+    if (kind == TokenKind::LAngle) {
+      ++depth;
+    } else if (kind == TokenKind::RAngle) {
+      --depth;
+      if (depth == 0) {
+        return scan + 1;
+      }
+    } else if (kind == TokenKind::End) {
+      return tokens.size();
+    }
+    ++scan;
+  }
+  return tokens.size();
+}
+
+bool templateCallCanBeNestedDefinition(const std::vector<Token> &tokens,
+                                       size_t index,
+                                       bool allowSurfaceSyntax) {
+  size_t scan = skipBalancedTemplateList(tokens, index);
+  scan = skipCommentTokens(tokens, scan);
+  if (scan >= tokens.size() || tokens[scan].kind != TokenKind::LParen) {
+    return false;
+  }
+
+  int depth = 0;
+  while (scan < tokens.size()) {
+    const TokenKind kind = tokens[scan].kind;
+    if (kind == TokenKind::LParen) {
+      ++depth;
+    } else if (kind == TokenKind::RParen) {
+      --depth;
+      if (depth == 0) {
+        ++scan;
+        break;
+      }
+    } else if (kind == TokenKind::End) {
+      return false;
+    }
+    ++scan;
+  }
+  if (depth != 0) {
+    return false;
+  }
+
+  scan = skipDefinitionTailTransforms(tokens, scan, allowSurfaceSyntax);
+  return scan < tokens.size() && tokens[scan].kind == TokenKind::LBrace;
+}
+
 bool isBindingParamBracket(const std::vector<Token> &tokens, size_t index) {
   if (index >= tokens.size() || tokens[index].kind != TokenKind::LBracket) {
     return false;
@@ -382,6 +438,10 @@ bool Parser::tryParseNestedDefinition(std::vector<Definition> &defs,
   std::vector<std::string> templateArgs;
   std::vector<bool> templateArgIsPack;
   if (match(TokenKind::LAngle)) {
+    if (!templateCallCanBeNestedDefinition(tokens_, pos_, allowSurfaceSyntax_)) {
+      pos_ = savedPos;
+      return true;
+    }
     if (!parseTemplateParameterList(templateArgs, templateArgIsPack)) {
       return false;
     }
