@@ -106,11 +106,12 @@
 
           LocalMap lambdaLocals = callLocals;
           LocalInfo paramInfo;
-          if (ir_lowerer::isSupportedPackedResultCollectionKind(sourceResultInfo.valueCollectionKind)) {
+          if (ir_lowerer::isSupportedPackedResultCollectionKind(sourceResultInfo.valueCollectionKind) ||
+              sourceResultInfo.valueMapKeyKind != LocalInfo::ValueKind::Unknown) {
             paramInfo.index = payloadLocal;
             paramInfo.kind = sourceResultInfo.valueCollectionKind;
             paramInfo.valueKind = sourceResultInfo.valueKind;
-            if (sourceResultInfo.valueCollectionKind == LocalInfo::Kind::KeyValueCollection) {
+            if (sourceResultInfo.valueMapKeyKind != LocalInfo::ValueKind::Unknown) {
               paramInfo.keyValueKeyKind = sourceResultInfo.valueMapKeyKind;
               paramInfo.keyValueValueKind = sourceResultInfo.valueKind;
             }
@@ -220,11 +221,12 @@
 
           LocalMap lambdaLocals = callLocals;
           LocalInfo paramInfo;
-          if (ir_lowerer::isSupportedPackedResultCollectionKind(sourceResultInfo.valueCollectionKind)) {
+          if (ir_lowerer::isSupportedPackedResultCollectionKind(sourceResultInfo.valueCollectionKind) ||
+              sourceResultInfo.valueMapKeyKind != LocalInfo::ValueKind::Unknown) {
             paramInfo.index = payloadLocal;
             paramInfo.kind = sourceResultInfo.valueCollectionKind;
             paramInfo.valueKind = sourceResultInfo.valueKind;
-            if (sourceResultInfo.valueCollectionKind == LocalInfo::Kind::KeyValueCollection) {
+            if (sourceResultInfo.valueMapKeyKind != LocalInfo::ValueKind::Unknown) {
               paramInfo.keyValueKeyKind = sourceResultInfo.valueMapKeyKind;
               paramInfo.keyValueValueKind = sourceResultInfo.valueKind;
             }
@@ -390,11 +392,12 @@
 
           LocalMap lambdaLocals = callLocals;
           LocalInfo leftParamInfo;
-          if (ir_lowerer::isSupportedPackedResultCollectionKind(leftResultInfo.valueCollectionKind)) {
+          if (ir_lowerer::isSupportedPackedResultCollectionKind(leftResultInfo.valueCollectionKind) ||
+              leftResultInfo.valueMapKeyKind != LocalInfo::ValueKind::Unknown) {
             leftParamInfo.index = leftPayloadLocal;
             leftParamInfo.kind = leftResultInfo.valueCollectionKind;
             leftParamInfo.valueKind = leftResultInfo.valueKind;
-            if (leftResultInfo.valueCollectionKind == LocalInfo::Kind::KeyValueCollection) {
+            if (leftResultInfo.valueMapKeyKind != LocalInfo::ValueKind::Unknown) {
               leftParamInfo.keyValueKeyKind = leftResultInfo.valueMapKeyKind;
               leftParamInfo.keyValueValueKind = leftResultInfo.valueKind;
             }
@@ -417,11 +420,12 @@
           lambdaLocals[lambdaExpr.args[0].name] = leftParamInfo;
 
           LocalInfo rightParamInfo;
-          if (ir_lowerer::isSupportedPackedResultCollectionKind(rightResultInfo.valueCollectionKind)) {
+          if (ir_lowerer::isSupportedPackedResultCollectionKind(rightResultInfo.valueCollectionKind) ||
+              rightResultInfo.valueMapKeyKind != LocalInfo::ValueKind::Unknown) {
             rightParamInfo.index = rightPayloadLocal;
             rightParamInfo.kind = rightResultInfo.valueCollectionKind;
             rightParamInfo.valueKind = rightResultInfo.valueKind;
-            if (rightResultInfo.valueCollectionKind == LocalInfo::Kind::KeyValueCollection) {
+            if (rightResultInfo.valueMapKeyKind != LocalInfo::ValueKind::Unknown) {
               rightParamInfo.keyValueKeyKind = rightResultInfo.valueMapKeyKind;
               rightParamInfo.keyValueValueKind = rightResultInfo.valueKind;
             }

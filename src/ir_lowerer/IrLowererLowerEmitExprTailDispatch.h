@@ -574,14 +574,16 @@
               callExpr.args.front().args.size() == 2;
           if (helperName == "at" &&
               receiverTargetInfo.isArgsPackTarget &&
-              receiverTargetInfo.argsPackElementKind == LocalInfo::Kind::KeyValueCollection) {
+              receiverTargetInfo.argsPackElementKind == LocalInfo::Kind::Value &&
+              receiverTargetInfo.isKeyValueTarget) {
             rewrittenExpr = callExpr;
             rewrittenExpr.name = "at";
             rewrittenExpr.namespacePrefix.clear();
             return true;
           }
           if (receiverTargetInfo.isArgsPackTarget &&
-              receiverTargetInfo.argsPackElementKind == LocalInfo::Kind::KeyValueCollection &&
+              receiverTargetInfo.argsPackElementKind == LocalInfo::Kind::Value &&
+              receiverTargetInfo.isKeyValueTarget &&
               !receiverIsIndexedArgsPackElement) {
             return false;
           }

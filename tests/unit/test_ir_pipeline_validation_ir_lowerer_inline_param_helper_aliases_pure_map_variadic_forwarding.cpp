@@ -21,7 +21,7 @@ TEST_CASE("ir lowerer inline param helper aliases pure map variadic forwarding")
   sourceInfo.keyValueKeyKind = primec::ir_lowerer::LocalInfo::ValueKind::Int32;
   sourceInfo.keyValueValueKind = primec::ir_lowerer::LocalInfo::ValueKind::Int32;
   sourceInfo.isArgsPack = true;
-  sourceInfo.argsPackElementKind = primec::ir_lowerer::LocalInfo::Kind::KeyValueCollection;
+  sourceInfo.argsPackElementKind = primec::ir_lowerer::LocalInfo::Kind::Value;
   sourceInfo.argsPackElementCount = 2;
   callerLocals.emplace("source", sourceInfo);
 
@@ -44,7 +44,7 @@ TEST_CASE("ir lowerer inline param helper aliases pure map variadic forwarding")
         infoOut.keyValueKeyKind = primec::ir_lowerer::LocalInfo::ValueKind::Int32;
         infoOut.keyValueValueKind = primec::ir_lowerer::LocalInfo::ValueKind::Int32;
         infoOut.isArgsPack = true;
-        infoOut.argsPackElementKind = primec::ir_lowerer::LocalInfo::Kind::KeyValueCollection;
+        infoOut.argsPackElementKind = primec::ir_lowerer::LocalInfo::Kind::Value;
         return true;
       },
       [](const primec::Expr &) { return false; },
@@ -68,7 +68,7 @@ TEST_CASE("ir lowerer inline param helper aliases pure map variadic forwarding")
   CHECK(error.empty());
   CHECK(nextLocal == 3);
   REQUIRE(calleeLocals.count("values") == 1u);
-  CHECK(calleeLocals.at("values").argsPackElementKind == primec::ir_lowerer::LocalInfo::Kind::KeyValueCollection);
+  CHECK(calleeLocals.at("values").argsPackElementKind == primec::ir_lowerer::LocalInfo::Kind::Value);
   CHECK(calleeLocals.at("values").keyValueKeyKind == primec::ir_lowerer::LocalInfo::ValueKind::Int32);
   CHECK(calleeLocals.at("values").keyValueValueKind == primec::ir_lowerer::LocalInfo::ValueKind::Int32);
   CHECK(calleeLocals.at("values").argsPackElementCount == 2);
@@ -98,7 +98,7 @@ TEST_CASE("ir lowerer inline param helper rejects map variadic alias type mismat
   sourceInfo.keyValueKeyKind = primec::ir_lowerer::LocalInfo::ValueKind::Int32;
   sourceInfo.keyValueValueKind = primec::ir_lowerer::LocalInfo::ValueKind::Int32;
   sourceInfo.isArgsPack = true;
-  sourceInfo.argsPackElementKind = primec::ir_lowerer::LocalInfo::Kind::KeyValueCollection;
+  sourceInfo.argsPackElementKind = primec::ir_lowerer::LocalInfo::Kind::Value;
   sourceInfo.argsPackElementCount = 2;
   callerLocals.emplace("source", sourceInfo);
 
@@ -121,7 +121,7 @@ TEST_CASE("ir lowerer inline param helper rejects map variadic alias type mismat
         infoOut.keyValueKeyKind = primec::ir_lowerer::LocalInfo::ValueKind::Int32;
         infoOut.keyValueValueKind = primec::ir_lowerer::LocalInfo::ValueKind::Int64;
         infoOut.isArgsPack = true;
-        infoOut.argsPackElementKind = primec::ir_lowerer::LocalInfo::Kind::KeyValueCollection;
+        infoOut.argsPackElementKind = primec::ir_lowerer::LocalInfo::Kind::Value;
         return true;
       },
       [](const primec::Expr &) { return false; },

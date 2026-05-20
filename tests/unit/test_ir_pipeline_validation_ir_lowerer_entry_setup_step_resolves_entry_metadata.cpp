@@ -881,7 +881,7 @@ TEST_CASE("ir lowerer inference array-kind setup uses semantic collection facts 
 
   primec::ir_lowerer::LocalMap staleLocals;
   staleLocals.emplace("values", makeLocal(primec::ir_lowerer::LocalInfo::Kind::Vector, Kind::String));
-  staleLocals.emplace("lookup", makeLocal(primec::ir_lowerer::LocalInfo::Kind::KeyValueCollection, Kind::String));
+  staleLocals.emplace("lookup", makeLocal(primec::ir_lowerer::LocalInfo::Kind::Value, Kind::String));
   staleLocals.emplace("autoValues", makeLocal(primec::ir_lowerer::LocalInfo::Kind::Vector, Kind::String));
   staleLocals.emplace("uploaded", makeLocal(primec::ir_lowerer::LocalInfo::Kind::Buffer, Kind::Int32));
   staleLocals.emplace("notCollection", makeLocal(primec::ir_lowerer::LocalInfo::Kind::Array, Kind::String));

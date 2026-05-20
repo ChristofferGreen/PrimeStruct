@@ -1155,15 +1155,14 @@ static bool rewriteKeyValueInsertHelperStatementToCanonical(
       auto localIt = localsIn.find(canonicalReceiverExpr->name);
       if (localIt != localsIn.end()) {
         const LocalInfo &localInfo = localIt->second;
-        const bool directKeyValue = localInfo.kind == LocalInfo::Kind::KeyValueCollection;
+        const bool directKeyValue =
+            localInfo.kind == LocalInfo::Kind::Value && hasKeyValueKinds(localInfo);
         const bool wrappedKeyValue =
-            (localInfo.kind == LocalInfo::Kind::Reference && localInfo.referenceToKeyValueCollection) ||
-            (localInfo.kind == LocalInfo::Kind::Pointer && localInfo.pointerToKeyValueCollection);
+            hasWrappedKeyValueKinds(localInfo, localInfo.kind);
         const bool argsPackKeyValue =
             localInfo.isArgsPack &&
-            (localInfo.argsPackElementKind == LocalInfo::Kind::KeyValueCollection ||
-             (localInfo.argsPackElementKind == LocalInfo::Kind::Reference && localInfo.referenceToKeyValueCollection) ||
-             (localInfo.argsPackElementKind == LocalInfo::Kind::Pointer && localInfo.pointerToKeyValueCollection));
+            ((localInfo.argsPackElementKind == LocalInfo::Kind::Value && hasKeyValueKinds(localInfo)) ||
+             hasWrappedKeyValueKinds(localInfo, localInfo.argsPackElementKind));
         if (directKeyValue || wrappedKeyValue || argsPackKeyValue) {
           targetInfoOut.isKeyValueTarget = true;
           targetInfoOut.keyValueKeyKind = localInfo.keyValueKeyKind;

@@ -321,7 +321,7 @@ bool isAggregatePointerLikeLocal(const LocalInfo &info, bool fromArgsPack) {
     return false;
   }
   return !info.structTypeName.empty() || info.referenceToArray || info.pointerToArray || info.referenceToVector ||
-         info.pointerToVector || info.referenceToKeyValueCollection || info.pointerToKeyValueCollection || info.referenceToBuffer ||
+         info.pointerToVector || hasKeyValueKinds(info) || info.referenceToBuffer ||
          info.pointerToBuffer;
 }
 
@@ -349,7 +349,7 @@ bool isAggregatePointerLikeExpr(const Expr &expr, const LocalMap &localsIn) {
     auto it = localsIn.find(target.name);
     return it != localsIn.end() &&
            (!it->second.structTypeName.empty() || it->second.kind == LocalInfo::Kind::Array ||
-            it->second.kind == LocalInfo::Kind::Vector || it->second.kind == LocalInfo::Kind::KeyValueCollection ||
+            it->second.kind == LocalInfo::Kind::Vector || hasKeyValueKinds(it->second) ||
             it->second.kind == LocalInfo::Kind::Buffer);
   }
 
@@ -846,7 +846,7 @@ bool emitConversionsAndCallsMemoryAndPointerExpr(
         if (it->second.kind == LocalInfo::Kind::Reference || !it->second.structTypeName.empty() ||
             it->second.kind == LocalInfo::Kind::Array || it->second.kind == LocalInfo::Kind::Vector ||
             it->second.isSoaVector ||
-            it->second.kind == LocalInfo::Kind::KeyValueCollection || it->second.kind == LocalInfo::Kind::Buffer) {
+            hasKeyValueKinds(it->second) || it->second.kind == LocalInfo::Kind::Buffer) {
           instructions.push_back({IrOpcode::LoadLocal, static_cast<uint64_t>(it->second.index)});
         } else {
           instructions.push_back({IrOpcode::AddressOfLocal, static_cast<uint64_t>(it->second.index)});

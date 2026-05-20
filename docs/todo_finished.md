@@ -20128,6 +20128,48 @@ Moved from `docs/todo.md` during unfinished-only cleanup:
     `PrimeStruct_compile_run_tests`; ran the new native and VM focused cases;
     and reran the backend source-delegation stability shard.
 
+- [x] TODO-4540: Collapse lowerer key/value local metadata
+  - owner: ai
+  - created_at: 2026-05-20
+  - finished_at: 2026-05-20
+  - phase: Map stdlib ownership cutover
+  - parallel_track: map-zero-audit
+  - depends_on: TODO-4539
+  - split_from: TODO-4537
+  - scope: Remove `LocalInfo::Kind::KeyValueCollection`,
+    `referenceToKeyValueCollection`, and `pointerToKeyValueCollection` from
+    the lowerer shared local model while preserving temporary key/value scalar
+    facts needed by the remaining access/emission deletion leaves.
+  - implementation_notes:
+    - Started from `src/ir_lowerer/IrLowererSharedTypes.h`,
+      `IrLowererStatementBindingHelpers.{h,cpp}`,
+      `IrLowererBindingTypeHelpers.cpp`, `IrLowererInlineParamHelpers.cpp`,
+      and `IrLowererInlinePackedArgs.cpp`.
+    - Kept arrays, vectors, buffers, strings, files, and Result metadata
+      intact; only the key/value collection local category and wrapper flags
+      were removed in this slice.
+    - Left key/value access target emission and native map-value backend gates
+      to TODO-4541 and TODO-4542.
+  - acceptance:
+    - The lowerer shared local model no longer exposes a key/value collection
+      local kind or key/value reference/pointer booleans.
+    - Inline parameter and args-pack forwarding use ordinary value,
+      reference, pointer, and args-pack kind metadata plus temporary key/value
+      scalar facts for map values.
+    - Focused lowerer source-lock, indexed args-pack receiver, and map
+      forwarding tests pass.
+  - stop_rule: Stop once the shared local metadata surface is map-agnostic;
+    leave access lookup/emission branches to TODO-4541.
+  - evidence: Removed `LocalInfo::Kind::KeyValueCollection`,
+    `referenceToKeyValueCollection`, and `pointerToKeyValueCollection` from
+    production and testing lowerer helper models; migrated map locals to
+    ordinary `Value`, `Reference`, or `Pointer` metadata with key/value scalar
+    facts; updated focused unit tests and source locks; built
+    `PrimeStruct_backend_ir_tests`; ran focused doctest slices for indexed
+    args-pack receivers and map variadic/borrowed-map metadata. A broad
+    `PrimeStruct_backend_ir_tests` run still fails outside this slice
+    (290/1726 cases), so broad cleanup remains deferred to later TODOs.
+
 - [x] TODO-4308: Move SoA surface metadata out of C++
   - owner: ai
   - created_at: 2026-04-28

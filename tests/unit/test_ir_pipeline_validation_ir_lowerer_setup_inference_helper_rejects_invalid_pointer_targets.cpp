@@ -562,7 +562,7 @@ TEST_CASE("ir lowerer setup inference helper ignores unqualified array and map a
 
   primec::ir_lowerer::LocalMap locals;
   primec::ir_lowerer::LocalInfo mapInfo;
-  mapInfo.kind = primec::ir_lowerer::LocalInfo::Kind::KeyValueCollection;
+  mapInfo.kind = primec::ir_lowerer::LocalInfo::Kind::Value;
   mapInfo.keyValueValueKind = primec::ir_lowerer::LocalInfo::ValueKind::UInt64;
   locals.emplace("scores", mapInfo);
 
@@ -625,7 +625,7 @@ TEST_CASE("ir lowerer setup inference helper rejects reordered bare key/value ac
 
   primec::ir_lowerer::LocalMap locals;
   primec::ir_lowerer::LocalInfo mapInfo;
-  mapInfo.kind = primec::ir_lowerer::LocalInfo::Kind::KeyValueCollection;
+  mapInfo.kind = primec::ir_lowerer::LocalInfo::Kind::Value;
   mapInfo.keyValueValueKind = primec::ir_lowerer::LocalInfo::ValueKind::UInt64;
   locals.emplace("values", mapInfo);
 
@@ -661,7 +661,6 @@ TEST_CASE("ir lowerer setup inference helper rejects bare key/value reference ac
   primec::ir_lowerer::LocalMap locals;
   primec::ir_lowerer::LocalInfo mapRefInfo;
   mapRefInfo.kind = primec::ir_lowerer::LocalInfo::Kind::Reference;
-  mapRefInfo.referenceToKeyValueCollection = true;
   mapRefInfo.keyValueValueKind = primec::ir_lowerer::LocalInfo::ValueKind::String;
   locals.emplace("values", mapRefInfo);
 

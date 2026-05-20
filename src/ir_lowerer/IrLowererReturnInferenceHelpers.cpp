@@ -445,8 +445,7 @@ bool inferReturnInferenceBindingIntoLocals(const Expr &bindingExpr,
     error = "variadic args<T> does not support string pointers or references";
     return false;
   }
-  if (isStringBinding(bindingExpr) && bindingInfo.kind != LocalInfo::Kind::Value &&
-      bindingInfo.kind != LocalInfo::Kind::KeyValueCollection) {
+  if (isStringBinding(bindingExpr) && bindingInfo.kind != LocalInfo::Kind::Value) {
     error = "native backend does not support string pointers or references";
     return false;
   }

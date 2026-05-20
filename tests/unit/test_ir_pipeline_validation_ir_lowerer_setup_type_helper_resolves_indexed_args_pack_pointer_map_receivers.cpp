@@ -2,7 +2,7 @@
 
 TEST_SUITE_BEGIN("primestruct.ir.pipeline.validation");
 
-TEST_CASE("ir lowerer setup type helper leaves indexed args-pack pointer map receivers unclassified") {
+TEST_CASE("ir lowerer setup type helper resolves indexed args-pack pointer map receivers") {
   using LocalInfo = primec::ir_lowerer::LocalInfo;
   using ValueKind = LocalInfo::ValueKind;
 
@@ -11,7 +11,6 @@ TEST_CASE("ir lowerer setup type helper leaves indexed args-pack pointer map rec
   valuesLocal.kind = LocalInfo::Kind::Array;
   valuesLocal.isArgsPack = true;
   valuesLocal.argsPackElementKind = LocalInfo::Kind::Pointer;
-  valuesLocal.pointerToKeyValueCollection = true;
   valuesLocal.keyValueKeyKind = ValueKind::Int32;
   valuesLocal.keyValueValueKind = ValueKind::Int32;
   valuesLocal.valueKind = ValueKind::Int32;
@@ -43,7 +42,7 @@ TEST_CASE("ir lowerer setup type helper leaves indexed args-pack pointer map rec
                                                         typeName,
                                                         resolvedTypePath,
                                                         error));
-  CHECK(typeName.empty());
+  CHECK(typeName == "map");
   CHECK(resolvedTypePath.empty());
   CHECK(error.empty());
 }
@@ -386,7 +385,6 @@ TEST_CASE("ir lowerer setup type helper resolves dereferenced indexed args-pack 
   valuesLocal.argsPackElementKind = LocalInfo::Kind::Reference;
   valuesLocal.referenceToArray = false;
   valuesLocal.referenceToVector = false;
-  valuesLocal.referenceToKeyValueCollection = false;
   valuesLocal.referenceToBuffer = false;
   valuesLocal.valueKind = ValueKind::Int64;
   valuesLocal.structTypeName = "/std/file/File<Read>";
@@ -439,7 +437,6 @@ TEST_CASE("ir lowerer setup type helper resolves dereferenced indexed args-pack 
   valuesLocal.argsPackElementKind = LocalInfo::Kind::Pointer;
   valuesLocal.pointerToArray = false;
   valuesLocal.pointerToVector = false;
-  valuesLocal.pointerToKeyValueCollection = false;
   valuesLocal.pointerToBuffer = false;
   valuesLocal.valueKind = ValueKind::Int64;
   valuesLocal.structTypeName = "/std/file/File<Write>";
@@ -557,7 +554,7 @@ TEST_CASE("ir lowerer setup type helper resolves indexed args-pack map receivers
   LocalInfo valuesLocal;
   valuesLocal.kind = LocalInfo::Kind::Array;
   valuesLocal.isArgsPack = true;
-  valuesLocal.argsPackElementKind = LocalInfo::Kind::KeyValueCollection;
+  valuesLocal.argsPackElementKind = LocalInfo::Kind::Value;
   valuesLocal.keyValueKeyKind = ValueKind::Int32;
   valuesLocal.keyValueValueKind = ValueKind::Int32;
   valuesLocal.valueKind = ValueKind::Int32;

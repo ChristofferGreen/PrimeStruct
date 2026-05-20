@@ -320,7 +320,7 @@ bool isSupportedPackedResultValueKind(LocalInfo::ValueKind kind) {
 
 bool isSupportedPackedResultCollectionKind(LocalInfo::Kind kind) {
   return kind == LocalInfo::Kind::Array || kind == LocalInfo::Kind::Vector ||
-         kind == LocalInfo::Kind::KeyValueCollection || kind == LocalInfo::Kind::Buffer;
+         kind == LocalInfo::Kind::Buffer;
 }
 
 bool resolveSupportedResultCollectionType(const std::string &typeText,
@@ -356,7 +356,7 @@ bool resolveSupportedResultCollectionType(const std::string &typeText,
     if (args.size() != 2) {
       return false;
     }
-    collectionKindOut = LocalInfo::Kind::KeyValueCollection;
+    collectionKindOut = LocalInfo::Kind::Value;
     const LocalInfo::ValueKind keyValueKeyKind = valueKindFromTypeName(trimTemplateTypeText(args.front()));
     if (keyValueKeyKind == LocalInfo::ValueKind::Unknown) {
       return false;
@@ -372,8 +372,8 @@ bool resolveSupportedResultCollectionType(const std::string &typeText,
   } else {
     return false;
   }
-  valueKindOut =
-      valueKindFromTypeName(trimTemplateTypeText(collectionKindOut == LocalInfo::Kind::KeyValueCollection ? args.back() : args.front()));
+  valueKindOut = valueKindFromTypeName(
+      trimTemplateTypeText(base == "map" ? args.back() : args.front()));
   return valueKindOut != LocalInfo::ValueKind::Unknown;
 }
 
@@ -575,10 +575,10 @@ ResultOkMethodCallEmitResult tryEmitResultOkCall(
       hasSemanticPayloadInfo ? semanticPayload.collectionMapKeyKind : LocalInfo::ValueKind::Unknown;
   const bool hasCompleteSemanticCollectionPayload =
       hasSemanticPayloadInfo &&
-      isSupportedPackedResultCollectionKind(collectionKind) &&
       collectionValueKind != LocalInfo::ValueKind::Unknown &&
-      (collectionKind != LocalInfo::Kind::KeyValueCollection ||
-       collectionMapKeyKind != LocalInfo::ValueKind::Unknown);
+      (isSupportedPackedResultCollectionKind(collectionKind) ||
+       (collectionKind == LocalInfo::Kind::Value &&
+        collectionMapKeyKind != LocalInfo::ValueKind::Unknown));
   bool hasCollectionPayload = hasCompleteSemanticCollectionPayload;
   if (!hasCollectionPayload) {
     collectionKind = LocalInfo::Kind::Value;
@@ -593,10 +593,11 @@ ResultOkMethodCallEmitResult tryEmitResultOkCall(
                                              collectionMapKeyKind);
   }
   if (hasCollectionPayload &&
-      isSupportedPackedResultCollectionKind(collectionKind)) {
+      (isSupportedPackedResultCollectionKind(collectionKind) ||
+       collectionMapKeyKind != LocalInfo::ValueKind::Unknown)) {
     const Expr *collectionPayloadExpr = &payloadExpr;
     Expr rewrittenKeyValueExpr;
-    if (collectionKind == LocalInfo::Kind::KeyValueCollection &&
+    if (collectionMapKeyKind != LocalInfo::ValueKind::Unknown &&
         rewritePackedResultKeyValueConstructorExpr(
             *collectionPayloadExpr,
             collectionMapKeyKind,

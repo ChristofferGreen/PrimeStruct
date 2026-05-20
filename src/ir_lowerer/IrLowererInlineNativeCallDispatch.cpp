@@ -1609,17 +1609,19 @@ InlineCallDispatchResult tryEmitInlineCallDispatchWithLocals(
             return false;
           }
           if (info.kind == LocalInfo::Kind::Array || info.kind == LocalInfo::Kind::Vector ||
-              info.kind == LocalInfo::Kind::KeyValueCollection ||
               (info.kind == LocalInfo::Kind::Value &&
-               isExperimentalVectorStructPath(info.structTypeName))) {
+               (isExperimentalVectorStructPath(info.structTypeName) ||
+                !info.structTypeName.empty()))) {
             return true;
           }
           if (info.kind == LocalInfo::Kind::Reference &&
-              (info.referenceToArray || info.referenceToVector || info.referenceToKeyValueCollection)) {
+              (info.referenceToArray || info.referenceToVector ||
+               !info.structTypeName.empty())) {
             return true;
           }
           if (info.kind == LocalInfo::Kind::Pointer &&
-              (info.pointerToArray || info.pointerToVector || info.pointerToKeyValueCollection ||
+              (info.pointerToArray || info.pointerToVector ||
+               !info.structTypeName.empty() ||
                info.pointerToBuffer)) {
             return true;
           }

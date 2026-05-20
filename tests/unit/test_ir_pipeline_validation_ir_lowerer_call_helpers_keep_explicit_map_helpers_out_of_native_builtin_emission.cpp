@@ -46,7 +46,7 @@ TEST_CASE("ir lowerer call helpers keep explicit map helpers out of native built
 
   primec::ir_lowerer::LocalMap locals;
   LocalInfo mapInfo;
-  mapInfo.kind = LocalInfo::Kind::KeyValueCollection;
+  mapInfo.kind = LocalInfo::Kind::Value;
   mapInfo.index = 7;
   mapInfo.keyValueKeyKind = LocalInfo::ValueKind::Int32;
   mapInfo.keyValueValueKind = LocalInfo::ValueKind::Int64;
@@ -363,7 +363,7 @@ TEST_CASE("ir lowerer call helpers defer explicit map access for args-pack recei
   LocalInfo valuesInfo;
   valuesInfo.index = 5;
   valuesInfo.isArgsPack = true;
-  valuesInfo.argsPackElementKind = LocalInfo::Kind::KeyValueCollection;
+  valuesInfo.argsPackElementKind = LocalInfo::Kind::Value;
   valuesInfo.keyValueKeyKind = LocalInfo::ValueKind::Int32;
   valuesInfo.keyValueValueKind = LocalInfo::ValueKind::Int64;
   locals.emplace("values", valuesInfo);
@@ -372,7 +372,6 @@ TEST_CASE("ir lowerer call helpers defer explicit map access for args-pack recei
   pointerValuesInfo.index = 7;
   pointerValuesInfo.isArgsPack = true;
   pointerValuesInfo.argsPackElementKind = LocalInfo::Kind::Pointer;
-  pointerValuesInfo.pointerToKeyValueCollection = true;
   pointerValuesInfo.keyValueKeyKind = LocalInfo::ValueKind::Int32;
   pointerValuesInfo.keyValueValueKind = LocalInfo::ValueKind::Int64;
   locals.emplace("pointerValues", pointerValuesInfo);
@@ -381,7 +380,6 @@ TEST_CASE("ir lowerer call helpers defer explicit map access for args-pack recei
   referenceValuesInfo.index = 8;
   referenceValuesInfo.isArgsPack = true;
   referenceValuesInfo.argsPackElementKind = LocalInfo::Kind::Reference;
-  referenceValuesInfo.referenceToKeyValueCollection = true;
   referenceValuesInfo.keyValueKeyKind = LocalInfo::ValueKind::Int32;
   referenceValuesInfo.keyValueValueKind = LocalInfo::ValueKind::Int64;
   locals.emplace("referenceValues", referenceValuesInfo);

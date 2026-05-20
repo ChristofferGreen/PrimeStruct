@@ -116,7 +116,7 @@
           const bool isAggregateReference =
               it->second.kind == LocalInfo::Kind::Reference &&
               (!it->second.structTypeName.empty() || it->second.referenceToArray ||
-               it->second.referenceToVector || it->second.referenceToKeyValueCollection || it->second.referenceToBuffer);
+               it->second.referenceToVector || hasKeyValueKinds(it->second) || it->second.referenceToBuffer);
           if (it->second.kind == LocalInfo::Kind::Reference && !isAggregateReference) {
             function.instructions.push_back({IrOpcode::LoadIndirect, 0});
           }
@@ -519,7 +519,8 @@
             if (valueExpr.kind == Expr::Kind::Name) {
               auto localIt = valueLocals.find(valueExpr.name);
               if (localIt == valueLocals.end() ||
-                  !ir_lowerer::isSupportedPackedResultCollectionKind(localIt->second.kind)) {
+                  (!ir_lowerer::isSupportedPackedResultCollectionKind(localIt->second.kind) &&
+                   !hasKeyValueKinds(localIt->second))) {
                 return false;
               }
               collectionKindOut = localIt->second.kind;
@@ -546,13 +547,13 @@
                     LocalInfo::ValueKind::Unknown) {
                   return false;
                 }
-                collectionKindOut = LocalInfo::Kind::KeyValueCollection;
+                collectionKindOut = LocalInfo::Kind::Value;
               } else {
                 return false;
               }
               collectionValueKindOut = valueKindFromTypeName(
-                  trimTemplateTypeText(collectionKindOut == LocalInfo::Kind::KeyValueCollection ? valueExpr.templateArgs.back()
-                                                                                : valueExpr.templateArgs.front()));
+                  trimTemplateTypeText(collectionName == "map" ? valueExpr.templateArgs.back()
+                                                               : valueExpr.templateArgs.front()));
               return collectionValueKindOut != LocalInfo::ValueKind::Unknown;
             }
             if (!valueExpr.isMethodCall && isBufferHandleCall(valueExpr) && valueExpr.templateArgs.size() == 1) {
@@ -645,7 +646,7 @@
                   LocalInfo::ValueKind::Unknown) {
                 return false;
               }
-              collectionKindOut = LocalInfo::Kind::KeyValueCollection;
+              collectionKindOut = LocalInfo::Kind::Value;
             } else if (declaredCollection == "Buffer") {
               if (declaredCollectionArgs.size() != 1) {
                 return false;
@@ -655,8 +656,8 @@
               return false;
             }
             collectionValueKindOut = valueKindFromTypeName(
-                trimTemplateTypeText(collectionKindOut == LocalInfo::Kind::KeyValueCollection ? declaredCollectionArgs.back()
-                                                                              : declaredCollectionArgs.front()));
+                trimTemplateTypeText(declaredCollection == "map" ? declaredCollectionArgs.back()
+                                                                 : declaredCollectionArgs.front()));
             return collectionValueKindOut != LocalInfo::ValueKind::Unknown;
           };
           auto describePackedResultPayload = [&](const Expr &payloadExpr) {
@@ -709,8 +710,8 @@
                                                                     semanticCollectionKind,
                                                                     payloadKindOut,
                                                                     &semanticMapKeyKind) &&
-                  ir_lowerer::isSupportedPackedResultCollectionKind(semanticCollectionKind)) {
-                (void)semanticMapKeyKind;
+                  (ir_lowerer::isSupportedPackedResultCollectionKind(semanticCollectionKind) ||
+                   semanticMapKeyKind != LocalInfo::ValueKind::Unknown)) {
                 return true;
               }
               std::string semanticTypeBase;
@@ -750,7 +751,8 @@
             LocalInfo::Kind collectionKind = LocalInfo::Kind::Value;
             LocalInfo::ValueKind collectionValueKind = LocalInfo::ValueKind::Unknown;
             if (resolveCollectionPayload(collectionKind, collectionValueKind) &&
-                ir_lowerer::isSupportedPackedResultCollectionKind(collectionKind)) {
+                (ir_lowerer::isSupportedPackedResultCollectionKind(collectionKind) ||
+                 collectionKind == LocalInfo::Kind::Value)) {
               packedKindOut = collectionValueKind;
               return true;
             }

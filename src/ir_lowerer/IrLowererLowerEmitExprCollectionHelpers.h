@@ -332,7 +332,7 @@
           std::string helperName;
           const Expr *receiverExpr = nullptr;
           bool materializedWrappedMapReceiver = false;
-          ir_lowerer::LocalInfo::Kind materializedMapReceiverKind = ir_lowerer::LocalInfo::Kind::KeyValueCollection;
+          ir_lowerer::LocalInfo::Kind materializedMapReceiverKind = ir_lowerer::LocalInfo::Kind::Value;
           auto resolveMaterializedCollectionHelperName =
               [&](const Expr &candidate, std::string &helperNameOut) {
                 helperNameOut.clear();
@@ -641,9 +641,7 @@
             const int32_t baseLocal = nextLocal;
             nextLocal += layout.totalSlots;
             materializedInfo.index = nextLocal++;
-            materializedInfo.kind = collectionName == "map"
-                                        ? ir_lowerer::LocalInfo::Kind::KeyValueCollection
-                                        : ir_lowerer::LocalInfo::Kind::Value;
+            materializedInfo.kind = ir_lowerer::LocalInfo::Kind::Value;
             materializedInfo.valueKind = ir_lowerer::LocalInfo::ValueKind::Int64;
             materializedInfo.structTypeName = collectionStructPath;
             materializedInfo.structSlotCount = layout.totalSlots;
@@ -679,16 +677,10 @@
             if (collectionArgs.size() == 2) {
               materializedInfo.kind = materializedWrappedMapReceiver
                                           ? materializedMapReceiverKind
-                                          : ir_lowerer::LocalInfo::Kind::KeyValueCollection;
+                                          : ir_lowerer::LocalInfo::Kind::Value;
               materializedInfo.keyValueKeyKind = ir_lowerer::valueKindFromTypeName(collectionArgs.front());
               materializedInfo.keyValueValueKind = ir_lowerer::valueKindFromTypeName(collectionArgs.back());
               materializedInfo.valueKind = materializedInfo.keyValueValueKind;
-              materializedInfo.referenceToKeyValueCollection =
-                  materializedWrappedMapReceiver &&
-                  materializedMapReceiverKind == ir_lowerer::LocalInfo::Kind::Reference;
-              materializedInfo.pointerToKeyValueCollection =
-                  materializedWrappedMapReceiver &&
-                  materializedMapReceiverKind == ir_lowerer::LocalInfo::Kind::Pointer;
               if (collectionStructPath.rfind(
                       experimentalCollectionTypePath("map", "Map") + "__",
                       0) == 0) {

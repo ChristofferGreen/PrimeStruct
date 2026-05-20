@@ -230,7 +230,7 @@ bool resolveMethodReceiverTypeFromLocalInfo(const LocalInfo &localInfo,
     typeNameOut = "vector";
     return true;
   }
-  if (localInfo.kind == LocalInfo::Kind::KeyValueCollection) {
+  if (localInfo.kind == LocalInfo::Kind::Value && hasKeyValueKinds(localInfo)) {
     typeNameOut = "map";
     return true;
   }
@@ -239,12 +239,12 @@ bool resolveMethodReceiverTypeFromLocalInfo(const LocalInfo &localInfo,
     return true;
   }
   if (localInfo.kind == LocalInfo::Kind::Reference &&
-      (localInfo.referenceToArray || localInfo.referenceToVector || localInfo.referenceToKeyValueCollection ||
+      (localInfo.referenceToArray || localInfo.referenceToVector || hasKeyValueKinds(localInfo) ||
        localInfo.referenceToBuffer)) {
     if (!localInfo.structTypeName.empty()) {
       resolvedTypePathOut = localInfo.structTypeName;
     } else {
-      typeNameOut = localInfo.referenceToKeyValueCollection ? "map"
+      typeNameOut = hasKeyValueKinds(localInfo) ? "map"
                                              : (localInfo.referenceToVector ? (localInfo.isSoaVector ? "soa" "_vector"
                                                                                                      : "vector")
                                                                             : (localInfo.referenceToBuffer ? "Buffer"
@@ -260,7 +260,7 @@ bool resolveMethodReceiverTypeFromLocalInfo(const LocalInfo &localInfo,
     typeNameOut = localInfo.isSoaVector ? "soa" "_vector" : "vector";
     return true;
   }
-  if (localInfo.kind == LocalInfo::Kind::Pointer && localInfo.pointerToKeyValueCollection) {
+  if (localInfo.kind == LocalInfo::Kind::Pointer && hasKeyValueKinds(localInfo)) {
     typeNameOut = "map";
     return true;
   }
@@ -337,7 +337,9 @@ bool inferBuiltinAccessReceiverResultKind(const Expr &receiverCallExpr,
   }
 
   std::string accessName;
-  if (!(receiverCallExpr.kind == Expr::Kind::Call && getBuiltinArrayAccessName(receiverCallExpr, accessName) &&
+  if (!(receiverCallExpr.kind == Expr::Kind::Call &&
+        (getBuiltinArrayAccessName(receiverCallExpr, accessName) ||
+         isSimpleCallName(receiverCallExpr, "at")) &&
         receiverCallExpr.args.size() == 2)) {
     return false;
   }
@@ -378,9 +380,10 @@ bool inferBuiltinAccessReceiverResultKind(const Expr &receiverCallExpr,
         (receiverInfo.kind == LocalInfo::Kind::Pointer && receiverInfo.pointerToVector)) {
       return assignKind(receiverInfo.valueKind);
     }
-    if (receiverInfo.kind == LocalInfo::Kind::KeyValueCollection ||
-        (receiverInfo.kind == LocalInfo::Kind::Reference && receiverInfo.referenceToKeyValueCollection) ||
-        (receiverInfo.kind == LocalInfo::Kind::Pointer && receiverInfo.pointerToKeyValueCollection)) {
+    if (((receiverInfo.kind == LocalInfo::Kind::Value) ||
+         (receiverInfo.kind == LocalInfo::Kind::Reference) ||
+         (receiverInfo.kind == LocalInfo::Kind::Pointer)) &&
+        hasKeyValueKinds(receiverInfo)) {
       return assignKind(receiverInfo.keyValueValueKind);
     }
     if (receiverInfo.kind == LocalInfo::Kind::Value && receiverInfo.valueKind == LocalInfo::ValueKind::String) {
@@ -555,8 +558,8 @@ bool resolveMethodReceiverTarget(const Expr &receiverExpr,
         const bool isPointerArray = receiverKind == LocalInfo::Kind::Pointer && localInfo.pointerToArray;
         const bool isReferenceVector = receiverKind == LocalInfo::Kind::Reference && localInfo.referenceToVector;
         const bool isPointerVector = receiverKind == LocalInfo::Kind::Pointer && localInfo.pointerToVector;
-        const bool isReferenceKeyValue = receiverKind == LocalInfo::Kind::Reference && localInfo.referenceToKeyValueCollection;
-        const bool isPointerKeyValue = receiverKind == LocalInfo::Kind::Pointer && localInfo.pointerToKeyValueCollection;
+        const bool isReferenceKeyValue = receiverKind == LocalInfo::Kind::Reference && hasKeyValueKinds(localInfo);
+        const bool isPointerKeyValue = receiverKind == LocalInfo::Kind::Pointer && hasKeyValueKinds(localInfo);
         const bool isReferenceBuffer = receiverKind == LocalInfo::Kind::Reference && localInfo.referenceToBuffer;
         const bool isPointerBuffer = receiverKind == LocalInfo::Kind::Pointer && localInfo.pointerToBuffer;
         if (localInfo.isFileError &&
@@ -577,6 +580,10 @@ bool resolveMethodReceiverTarget(const Expr &receiverExpr,
           typeNameOut = localInfo.isSoaVector ? "soa" "_vector" : "vector";
           return true;
         }
+        if (receiverKind == LocalInfo::Kind::Value && hasKeyValueKinds(localInfo)) {
+          typeNameOut = "map";
+          return true;
+        }
         if (isReferenceKeyValue || isPointerKeyValue) {
           typeNameOut = "map";
           return true;
@@ -594,7 +601,9 @@ bool resolveMethodReceiverTarget(const Expr &receiverExpr,
       }
 
       std::string derefAccessName;
-      if (targetExpr.kind == Expr::Kind::Call && getBuiltinArrayAccessName(targetExpr, derefAccessName) &&
+      if (targetExpr.kind == Expr::Kind::Call &&
+          (getBuiltinArrayAccessName(targetExpr, derefAccessName) ||
+           isSimpleCallName(targetExpr, "at")) &&
           targetExpr.args.size() == 2 && targetExpr.args.front().kind == Expr::Kind::Name) {
         auto localIt = localsIn.find(targetExpr.args.front().name);
         return localIt != localsIn.end() && localIt->second.isArgsPack &&
@@ -605,7 +614,9 @@ bool resolveMethodReceiverTarget(const Expr &receiverExpr,
     };
 
     std::string accessName;
-    if (getBuiltinArrayAccessName(receiverExpr, accessName) && receiverExpr.args.size() == 2) {
+    if ((getBuiltinArrayAccessName(receiverExpr, accessName) ||
+         isSimpleCallName(receiverExpr, "at")) &&
+        receiverExpr.args.size() == 2) {
       const Expr &accessReceiver = receiverExpr.args.front();
       if (accessReceiver.kind == Expr::Kind::Name) {
         auto localIt = localsIn.find(accessReceiver.name);
@@ -653,12 +664,12 @@ bool resolveMethodReceiverTarget(const Expr &receiverExpr,
             return true;
           }
           if (localIt->second.argsPackElementKind == LocalInfo::Kind::Reference &&
-              localIt->second.referenceToKeyValueCollection) {
+              hasKeyValueKinds(localIt->second)) {
             typeNameOut = "map";
             return true;
           }
           if (localIt->second.argsPackElementKind == LocalInfo::Kind::Pointer &&
-              localIt->second.pointerToKeyValueCollection) {
+              hasKeyValueKinds(localIt->second)) {
             typeNameOut = "map";
             return true;
           }
@@ -666,7 +677,8 @@ bool resolveMethodReceiverTarget(const Expr &receiverExpr,
             typeNameOut = "array";
             return true;
           }
-          if (localIt->second.argsPackElementKind == LocalInfo::Kind::KeyValueCollection) {
+          if (localIt->second.argsPackElementKind == LocalInfo::Kind::Value &&
+              hasKeyValueKinds(localIt->second)) {
             typeNameOut = "map";
             return true;
           }
@@ -698,7 +710,8 @@ bool resolveMethodReceiverTarget(const Expr &receiverExpr,
         return false;
       }
       std::string accessName;
-      return getBuiltinArrayAccessName(candidateExpr, accessName) &&
+      return (getBuiltinArrayAccessName(candidateExpr, accessName) ||
+              isSimpleCallName(candidateExpr, "at")) &&
              resolveKeyValueAccessTargetInfo(candidateExpr.args.front(),
                                         localsIn,
                                         {},
@@ -706,6 +719,10 @@ bool resolveMethodReceiverTarget(const Expr &receiverExpr,
                                         semanticIndex)
                  .isKeyValueTarget;
     };
+    if (isBareKeyValueAccessReceiverProbeExpr(receiverExpr)) {
+      typeNameOut = "map";
+      return true;
+    }
     auto isBareKeyValueTryAtReceiverProbeExpr = [&](const Expr &candidateExpr) {
       return candidateExpr.kind == Expr::Kind::Call && candidateExpr.args.size() == 2 &&
              isSimpleCallName(candidateExpr, "tryAt") &&

@@ -845,7 +845,7 @@ LocalInfo::ValueKind inferBaseSetupSimpleExprKind(const Expr &expr,
         return it->second.valueKind;
       }
       if (it->second.kind == LocalInfo::Kind::Reference && !it->second.referenceToArray &&
-          !it->second.referenceToVector && !it->second.referenceToKeyValueCollection) {
+          !it->second.referenceToVector && it->second.structTypeName.empty()) {
         return it->second.valueKind;
       }
       return LocalInfo::ValueKind::Unknown;
@@ -1150,7 +1150,8 @@ bool inferLiteralOrNameExprKindImpl(const Expr &expr,
         return true;
       }
       if (it->second.kind == LocalInfo::Kind::Reference) {
-        kindOut = (it->second.referenceToArray || it->second.referenceToVector || it->second.referenceToKeyValueCollection)
+        kindOut = (it->second.referenceToArray || it->second.referenceToVector ||
+                   !it->second.structTypeName.empty())
                       ? LocalInfo::ValueKind::Unknown
                       : it->second.valueKind;
         return true;

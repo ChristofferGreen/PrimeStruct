@@ -487,7 +487,7 @@
             if (!resolveSpecializedMapTypeKinds(valueResultInfo.valueStructType, keyKind, payloadKind)) {
               return;
             }
-            valueResultInfo.valueCollectionKind = LocalInfo::Kind::KeyValueCollection;
+            valueResultInfo.valueCollectionKind = LocalInfo::Kind::Value;
             valueResultInfo.valueMapKeyKind = keyKind;
             valueResultInfo.valueKind = payloadKind;
             valueResultInfo.valueStructType.clear();

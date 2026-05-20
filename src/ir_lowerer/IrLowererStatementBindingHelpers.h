@@ -90,8 +90,6 @@ struct StatementBindingTypeInfo {
   bool pointerToVector = false;
   bool referenceToBuffer = false;
   bool pointerToBuffer = false;
-  bool referenceToKeyValueCollection = false;
-  bool pointerToKeyValueCollection = false;
   bool isSoaVector = false;
   bool usesBuiltinCollectionLayout = false;
 };

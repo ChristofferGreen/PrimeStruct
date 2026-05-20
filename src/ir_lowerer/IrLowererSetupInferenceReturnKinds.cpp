@@ -21,7 +21,7 @@ bool inferDereferencePointerExprValueKind(const Expr &expr,
         it->second.kind != LocalInfo::Kind::Reference) {
       return false;
     }
-    if (it->second.pointerToKeyValueCollection || it->second.referenceToKeyValueCollection) {
+    if (hasKeyValueKinds(it->second)) {
       kindOut = it->second.keyValueValueKind;
     } else {
       kindOut = it->second.valueKind;
@@ -44,7 +44,7 @@ bool inferDereferencePointerExprValueKind(const Expr &expr,
     if (it == localsIn.end()) {
       return false;
     }
-    if (it->second.referenceToKeyValueCollection || it->second.pointerToKeyValueCollection) {
+    if (hasKeyValueKinds(it->second)) {
       kindOut = it->second.keyValueValueKind;
     } else {
       kindOut = it->second.valueKind;

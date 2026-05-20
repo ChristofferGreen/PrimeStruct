@@ -31,7 +31,7 @@ TEST_CASE("ir lowerer setup type helper keeps reject diagnostics for canonical m
 
   primec::ir_lowerer::LocalMap locals;
   primec::ir_lowerer::LocalInfo valuesLocal;
-  valuesLocal.kind = primec::ir_lowerer::LocalInfo::Kind::KeyValueCollection;
+  valuesLocal.kind = primec::ir_lowerer::LocalInfo::Kind::Value;
   valuesLocal.keyValueValueKind = primec::ir_lowerer::LocalInfo::ValueKind::Int32;
   locals.emplace("values", valuesLocal);
 
@@ -71,7 +71,7 @@ TEST_CASE("ir lowerer setup type helper rejects bare map access primitive receiv
 
   primec::ir_lowerer::LocalMap locals;
   primec::ir_lowerer::LocalInfo valuesLocal;
-  valuesLocal.kind = primec::ir_lowerer::LocalInfo::Kind::KeyValueCollection;
+  valuesLocal.kind = primec::ir_lowerer::LocalInfo::Kind::Value;
   valuesLocal.keyValueValueKind = primec::ir_lowerer::LocalInfo::ValueKind::Int32;
   locals.emplace("values", valuesLocal);
 
@@ -146,7 +146,7 @@ TEST_CASE("ir lowerer setup type helper rejects bare map tryAt receiver fallback
 
   primec::ir_lowerer::LocalMap locals;
   primec::ir_lowerer::LocalInfo valuesLocal;
-  valuesLocal.kind = primec::ir_lowerer::LocalInfo::Kind::KeyValueCollection;
+  valuesLocal.kind = primec::ir_lowerer::LocalInfo::Kind::Value;
   valuesLocal.keyValueValueKind = primec::ir_lowerer::LocalInfo::ValueKind::Int32;
   locals.emplace("values", valuesLocal);
 
@@ -258,7 +258,7 @@ TEST_CASE("ir lowerer setup type helper prefers semantic map receiver probe fact
 
   primec::ir_lowerer::LocalMap staleMapLocals;
   primec::ir_lowerer::LocalInfo staleMapInfo;
-  staleMapInfo.kind = primec::ir_lowerer::LocalInfo::Kind::KeyValueCollection;
+  staleMapInfo.kind = primec::ir_lowerer::LocalInfo::Kind::Value;
   staleMapInfo.keyValueKeyKind = primec::ir_lowerer::LocalInfo::ValueKind::Int32;
   staleMapInfo.keyValueValueKind = primec::ir_lowerer::LocalInfo::ValueKind::Int32;
   staleMapLocals.emplace("target", staleMapInfo);
@@ -364,7 +364,7 @@ TEST_CASE("ir lowerer setup type helper keeps namespaced canonical contains rece
 
   primec::ir_lowerer::LocalMap locals;
   primec::ir_lowerer::LocalInfo valuesLocal;
-  valuesLocal.kind = primec::ir_lowerer::LocalInfo::Kind::KeyValueCollection;
+  valuesLocal.kind = primec::ir_lowerer::LocalInfo::Kind::Value;
   valuesLocal.keyValueValueKind = primec::ir_lowerer::LocalInfo::ValueKind::Int32;
   locals.emplace("values", valuesLocal);
 

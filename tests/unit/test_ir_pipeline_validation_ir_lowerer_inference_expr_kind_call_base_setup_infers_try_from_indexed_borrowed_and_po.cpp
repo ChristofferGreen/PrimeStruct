@@ -2248,7 +2248,7 @@ TEST_CASE("ir lowerer inference expr-kind call-base setup uses semantic map rece
       primec::ir_lowerer::buildSemanticProductIndex(&semanticProgram);
 
   primec::ir_lowerer::LocalInfo staleMapInfo;
-  staleMapInfo.kind = primec::ir_lowerer::LocalInfo::Kind::KeyValueCollection;
+  staleMapInfo.kind = primec::ir_lowerer::LocalInfo::Kind::Value;
   staleMapInfo.keyValueKeyKind = ValueKind::Int32;
   staleMapInfo.keyValueValueKind = ValueKind::Int32;
 
@@ -2423,7 +2423,7 @@ TEST_CASE("ir lowerer inference expr-kind call-base setup validates dependencies
 TEST_CASE("ir lowerer inference base-kind helpers resolve parser-shaped canonical map result helpers") {
   primec::ir_lowerer::LocalMap locals;
   primec::ir_lowerer::LocalInfo mapInfo;
-  mapInfo.kind = primec::ir_lowerer::LocalInfo::Kind::KeyValueCollection;
+  mapInfo.kind = primec::ir_lowerer::LocalInfo::Kind::Value;
   mapInfo.keyValueKeyKind = primec::ir_lowerer::LocalInfo::ValueKind::Int32;
   mapInfo.keyValueValueKind = primec::ir_lowerer::LocalInfo::ValueKind::Int64;
   locals.emplace("values", mapInfo);

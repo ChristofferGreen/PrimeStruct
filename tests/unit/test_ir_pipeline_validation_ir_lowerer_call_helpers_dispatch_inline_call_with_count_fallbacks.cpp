@@ -916,7 +916,7 @@ TEST_CASE("ir lowerer call helpers dispatch bare semantic map sugar inline") {
 
   primec::ir_lowerer::LocalMap locals;
   LocalInfo mapInfo;
-  mapInfo.kind = LocalInfo::Kind::KeyValueCollection;
+  mapInfo.kind = LocalInfo::Kind::Value;
   mapInfo.keyValueKeyKind = LocalInfo::ValueKind::Int32;
   mapInfo.keyValueValueKind = LocalInfo::ValueKind::Int32;
   locals.emplace("values", mapInfo);
@@ -1071,7 +1071,7 @@ TEST_CASE("ir lowerer call helpers gate canonical map helpers with semantic targ
 
   primec::ir_lowerer::LocalMap staleMapLocals;
   LocalInfo staleMapInfo;
-  staleMapInfo.kind = LocalInfo::Kind::KeyValueCollection;
+  staleMapInfo.kind = LocalInfo::Kind::Value;
   staleMapInfo.keyValueKeyKind = LocalInfo::ValueKind::Int32;
   staleMapInfo.keyValueValueKind = LocalInfo::ValueKind::Int32;
   staleMapLocals.emplace("values", staleMapInfo);
@@ -1137,7 +1137,7 @@ TEST_CASE("ir lowerer call helpers prefer graph facts for inline map receiver pr
   keyInfo.valueKind = LocalInfo::ValueKind::String;
   locals.emplace("key", keyInfo);
   LocalInfo mapInfo;
-  mapInfo.kind = LocalInfo::Kind::KeyValueCollection;
+  mapInfo.kind = LocalInfo::Kind::Value;
   mapInfo.keyValueKeyKind = LocalInfo::ValueKind::Int32;
   mapInfo.keyValueValueKind = LocalInfo::ValueKind::Int64;
   locals.emplace("values", mapInfo);

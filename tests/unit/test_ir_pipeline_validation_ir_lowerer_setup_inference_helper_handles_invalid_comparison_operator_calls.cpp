@@ -656,7 +656,7 @@ TEST_CASE("ir lowerer statement binding helper inherits map metadata from named 
 
   primec::ir_lowerer::LocalMap locals;
   primec::ir_lowerer::LocalInfo sourceInfo;
-  sourceInfo.kind = primec::ir_lowerer::LocalInfo::Kind::KeyValueCollection;
+  sourceInfo.kind = primec::ir_lowerer::LocalInfo::Kind::Value;
   sourceInfo.keyValueKeyKind = primec::ir_lowerer::LocalInfo::ValueKind::Bool;
   sourceInfo.keyValueValueKind = primec::ir_lowerer::LocalInfo::ValueKind::Float64;
   locals.emplace("srcMap", sourceInfo);
@@ -674,7 +674,7 @@ TEST_CASE("ir lowerer statement binding helper inherits map metadata from named 
         return primec::ir_lowerer::LocalInfo::ValueKind::Unknown;
       });
 
-  CHECK(info.kind == primec::ir_lowerer::LocalInfo::Kind::KeyValueCollection);
+  CHECK(info.kind == primec::ir_lowerer::LocalInfo::Kind::Value);
   CHECK(info.keyValueKeyKind == primec::ir_lowerer::LocalInfo::ValueKind::Bool);
   CHECK(info.keyValueValueKind == primec::ir_lowerer::LocalInfo::ValueKind::Float64);
   CHECK(info.valueKind == primec::ir_lowerer::LocalInfo::ValueKind::Float64);

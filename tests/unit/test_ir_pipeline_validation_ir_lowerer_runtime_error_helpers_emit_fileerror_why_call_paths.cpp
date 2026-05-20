@@ -653,7 +653,7 @@ TEST_CASE("ir lowerer setup math helper keeps current bundled binding adapter ro
   mapTransform.name = "map";
   mapTransform.templateArgs = {"bool", "f64"};
   mapExpr.transforms.push_back(mapTransform);
-  CHECK(adapters.bindingTypeAdapters.bindingValueKind(mapExpr, primec::ir_lowerer::LocalInfo::Kind::KeyValueCollection) ==
+  CHECK(adapters.bindingTypeAdapters.bindingValueKind(mapExpr, primec::ir_lowerer::LocalInfo::Kind::Value) ==
         primec::ir_lowerer::LocalInfo::ValueKind::Float64);
 }
 

@@ -499,10 +499,10 @@ ReturnStatementEmitResult tryEmitReturnStatement(
           info.kind == LocalInfo::Kind::Pointer ||
           (declaredReturnIsReferenceHandle && info.kind == LocalInfo::Kind::Reference) ||
           info.kind == LocalInfo::Kind::Array || info.kind == LocalInfo::Kind::Vector ||
-          info.kind == LocalInfo::Kind::KeyValueCollection || info.kind == LocalInfo::Kind::Buffer ||
+          hasKeyValueKinds(info) || info.kind == LocalInfo::Kind::Buffer ||
           !info.structTypeName.empty() || info.referenceToArray || info.pointerToArray ||
           info.referenceToVector || info.pointerToVector || info.referenceToBuffer || info.pointerToBuffer ||
-          info.referenceToKeyValueCollection || info.pointerToKeyValueCollection || info.isFileHandle || info.isResult;
+          info.isFileHandle || info.isResult;
       if (!isOpaqueHandle) {
         return false;
       }
@@ -599,9 +599,9 @@ ReturnStatementEmitResult tryEmitReturnStatement(
         info.kind == LocalInfo::Kind::Pointer ||
         (declaredReturnIsReferenceHandle && info.kind == LocalInfo::Kind::Reference) ||
         info.kind == LocalInfo::Kind::Array || info.kind == LocalInfo::Kind::Vector ||
-        info.kind == LocalInfo::Kind::KeyValueCollection || info.kind == LocalInfo::Kind::Buffer || !info.structTypeName.empty() ||
+        hasKeyValueKinds(info) || info.kind == LocalInfo::Kind::Buffer || !info.structTypeName.empty() ||
         info.referenceToArray || info.pointerToArray || info.referenceToVector || info.pointerToVector ||
-        info.referenceToBuffer || info.pointerToBuffer || info.referenceToKeyValueCollection || info.pointerToKeyValueCollection ||
+        info.referenceToBuffer || info.pointerToBuffer ||
         info.isFileHandle || info.isResult;
     if (!isOpaqueHandle) {
       return false;

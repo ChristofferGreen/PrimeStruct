@@ -123,7 +123,9 @@ bool runLowerInferenceExprKindCallFallbackSetup(const LowerInferenceExprKindCall
                 kindOut = info.valueKind;
                 return kindOut != LocalInfo::ValueKind::Unknown;
               }
-              if (info.argsPackElementKind == LocalInfo::Kind::KeyValueCollection) {
+              if (info.argsPackElementKind == LocalInfo::Kind::Value &&
+                  info.keyValueKeyKind != LocalInfo::ValueKind::Unknown &&
+                  info.keyValueValueKind != LocalInfo::ValueKind::Unknown) {
                 kindOut = info.keyValueValueKind;
                 return kindOut != LocalInfo::ValueKind::Unknown;
               }
@@ -134,7 +136,8 @@ bool runLowerInferenceExprKindCallFallbackSetup(const LowerInferenceExprKindCall
                   kindOut = info.valueKind;
                   return kindOut != LocalInfo::ValueKind::Unknown;
                 }
-                if (info.referenceToKeyValueCollection || info.pointerToKeyValueCollection) {
+                if (info.keyValueKeyKind != LocalInfo::ValueKind::Unknown &&
+                    info.keyValueValueKind != LocalInfo::ValueKind::Unknown) {
                   kindOut = info.keyValueValueKind;
                   return kindOut != LocalInfo::ValueKind::Unknown;
                 }

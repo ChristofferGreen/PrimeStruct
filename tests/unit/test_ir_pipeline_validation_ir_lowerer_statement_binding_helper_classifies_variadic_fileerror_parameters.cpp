@@ -686,7 +686,7 @@ TEST_CASE("ir lowerer statement binding helper classifies variadic scalar refere
   CHECK(info.isArgsPack);
   CHECK(info.argsPackElementKind == primec::ir_lowerer::LocalInfo::Kind::Reference);
   CHECK_FALSE(info.referenceToArray);
-  CHECK_FALSE(info.referenceToKeyValueCollection);
+  CHECK_FALSE(primec::ir_lowerer::hasKeyValueKinds(info));
   CHECK(info.valueKind == primec::ir_lowerer::LocalInfo::ValueKind::Int32);
 }
 

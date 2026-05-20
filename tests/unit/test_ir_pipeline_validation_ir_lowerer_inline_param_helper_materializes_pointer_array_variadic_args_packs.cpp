@@ -266,7 +266,6 @@ TEST_CASE("ir lowerer inline param helper materializes borrowed map variadic arg
         infoOut.valueKind = primec::ir_lowerer::LocalInfo::ValueKind::Int32;
         infoOut.isArgsPack = true;
         infoOut.argsPackElementKind = primec::ir_lowerer::LocalInfo::Kind::Reference;
-        infoOut.referenceToKeyValueCollection = true;
         infoOut.keyValueKeyKind = primec::ir_lowerer::LocalInfo::ValueKind::Int32;
         infoOut.keyValueValueKind = primec::ir_lowerer::LocalInfo::ValueKind::Int32;
         return true;
@@ -298,7 +297,7 @@ TEST_CASE("ir lowerer inline param helper materializes borrowed map variadic arg
   REQUIRE(calleeLocals.count("values") == 1u);
   CHECK(calleeLocals.at("values").isArgsPack);
   CHECK(calleeLocals.at("values").argsPackElementKind == primec::ir_lowerer::LocalInfo::Kind::Reference);
-  CHECK(calleeLocals.at("values").referenceToKeyValueCollection);
+  CHECK(primec::ir_lowerer::hasKeyValueKinds(calleeLocals.at("values")));
   CHECK(calleeLocals.at("values").keyValueKeyKind == primec::ir_lowerer::LocalInfo::ValueKind::Int32);
   CHECK(calleeLocals.at("values").keyValueValueKind == primec::ir_lowerer::LocalInfo::ValueKind::Int32);
   CHECK(calleeLocals.at("values").argsPackElementCount == 2);
@@ -339,7 +338,6 @@ TEST_CASE("ir lowerer inline param helper aliases pure borrowed map variadic for
   sourceInfo.valueKind = primec::ir_lowerer::LocalInfo::ValueKind::Int32;
   sourceInfo.isArgsPack = true;
   sourceInfo.argsPackElementKind = primec::ir_lowerer::LocalInfo::Kind::Reference;
-  sourceInfo.referenceToKeyValueCollection = true;
   sourceInfo.keyValueKeyKind = primec::ir_lowerer::LocalInfo::ValueKind::Int32;
   sourceInfo.keyValueValueKind = primec::ir_lowerer::LocalInfo::ValueKind::Int32;
   sourceInfo.argsPackElementCount = 2;
@@ -363,7 +361,6 @@ TEST_CASE("ir lowerer inline param helper aliases pure borrowed map variadic for
         infoOut.valueKind = primec::ir_lowerer::LocalInfo::ValueKind::Int32;
         infoOut.isArgsPack = true;
         infoOut.argsPackElementKind = primec::ir_lowerer::LocalInfo::Kind::Reference;
-        infoOut.referenceToKeyValueCollection = true;
         infoOut.keyValueKeyKind = primec::ir_lowerer::LocalInfo::ValueKind::Int32;
         infoOut.keyValueValueKind = primec::ir_lowerer::LocalInfo::ValueKind::Int32;
         return true;
@@ -390,7 +387,7 @@ TEST_CASE("ir lowerer inline param helper aliases pure borrowed map variadic for
   CHECK(nextLocal == 3);
   REQUIRE(calleeLocals.count("values") == 1u);
   CHECK(calleeLocals.at("values").argsPackElementKind == primec::ir_lowerer::LocalInfo::Kind::Reference);
-  CHECK(calleeLocals.at("values").referenceToKeyValueCollection);
+  CHECK(primec::ir_lowerer::hasKeyValueKinds(calleeLocals.at("values")));
   CHECK(calleeLocals.at("values").keyValueKeyKind == primec::ir_lowerer::LocalInfo::ValueKind::Int32);
   CHECK(calleeLocals.at("values").keyValueValueKind == primec::ir_lowerer::LocalInfo::ValueKind::Int32);
   CHECK(calleeLocals.at("values").argsPackElementCount == 2);
@@ -418,7 +415,6 @@ TEST_CASE("ir lowerer inline param helper materializes pointer map variadic args
   primec::ir_lowerer::LocalInfo leftInfo;
   leftInfo.index = 21;
   leftInfo.kind = primec::ir_lowerer::LocalInfo::Kind::Pointer;
-  leftInfo.pointerToKeyValueCollection = true;
   leftInfo.keyValueKeyKind = primec::ir_lowerer::LocalInfo::ValueKind::Int32;
   leftInfo.keyValueValueKind = primec::ir_lowerer::LocalInfo::ValueKind::Int32;
   leftInfo.valueKind = primec::ir_lowerer::LocalInfo::ValueKind::Int32;
@@ -446,7 +442,6 @@ TEST_CASE("ir lowerer inline param helper materializes pointer map variadic args
         infoOut.valueKind = primec::ir_lowerer::LocalInfo::ValueKind::Int32;
         infoOut.isArgsPack = true;
         infoOut.argsPackElementKind = primec::ir_lowerer::LocalInfo::Kind::Pointer;
-        infoOut.pointerToKeyValueCollection = true;
         infoOut.keyValueKeyKind = primec::ir_lowerer::LocalInfo::ValueKind::Int32;
         infoOut.keyValueValueKind = primec::ir_lowerer::LocalInfo::ValueKind::Int32;
         return true;
@@ -474,7 +469,7 @@ TEST_CASE("ir lowerer inline param helper materializes pointer map variadic args
   REQUIRE(calleeLocals.count("values") == 1u);
   CHECK(calleeLocals.at("values").isArgsPack);
   CHECK(calleeLocals.at("values").argsPackElementKind == primec::ir_lowerer::LocalInfo::Kind::Pointer);
-  CHECK(calleeLocals.at("values").pointerToKeyValueCollection);
+  CHECK(primec::ir_lowerer::hasKeyValueKinds(calleeLocals.at("values")));
   CHECK(calleeLocals.at("values").keyValueKeyKind == primec::ir_lowerer::LocalInfo::ValueKind::Int32);
   CHECK(calleeLocals.at("values").keyValueValueKind == primec::ir_lowerer::LocalInfo::ValueKind::Int32);
   CHECK(calleeLocals.at("values").argsPackElementCount == 2);
@@ -573,7 +568,6 @@ TEST_CASE("ir lowerer inline param helper aliases pure pointer map variadic forw
   sourceInfo.valueKind = primec::ir_lowerer::LocalInfo::ValueKind::Int32;
   sourceInfo.isArgsPack = true;
   sourceInfo.argsPackElementKind = primec::ir_lowerer::LocalInfo::Kind::Pointer;
-  sourceInfo.pointerToKeyValueCollection = true;
   sourceInfo.keyValueKeyKind = primec::ir_lowerer::LocalInfo::ValueKind::Int32;
   sourceInfo.keyValueValueKind = primec::ir_lowerer::LocalInfo::ValueKind::Int32;
   sourceInfo.argsPackElementCount = 2;
@@ -597,7 +591,6 @@ TEST_CASE("ir lowerer inline param helper aliases pure pointer map variadic forw
         infoOut.valueKind = primec::ir_lowerer::LocalInfo::ValueKind::Int32;
         infoOut.isArgsPack = true;
         infoOut.argsPackElementKind = primec::ir_lowerer::LocalInfo::Kind::Pointer;
-        infoOut.pointerToKeyValueCollection = true;
         infoOut.keyValueKeyKind = primec::ir_lowerer::LocalInfo::ValueKind::Int32;
         infoOut.keyValueValueKind = primec::ir_lowerer::LocalInfo::ValueKind::Int32;
         return true;
@@ -624,7 +617,7 @@ TEST_CASE("ir lowerer inline param helper aliases pure pointer map variadic forw
   CHECK(nextLocal == 3);
   REQUIRE(calleeLocals.count("values") == 1u);
   CHECK(calleeLocals.at("values").argsPackElementKind == primec::ir_lowerer::LocalInfo::Kind::Pointer);
-  CHECK(calleeLocals.at("values").pointerToKeyValueCollection);
+  CHECK(primec::ir_lowerer::hasKeyValueKinds(calleeLocals.at("values")));
   CHECK(calleeLocals.at("values").keyValueKeyKind == primec::ir_lowerer::LocalInfo::ValueKind::Int32);
   CHECK(calleeLocals.at("values").keyValueValueKind == primec::ir_lowerer::LocalInfo::ValueKind::Int32);
   CHECK(calleeLocals.at("values").argsPackElementCount == 2);

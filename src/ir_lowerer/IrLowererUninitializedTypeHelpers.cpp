@@ -110,7 +110,7 @@ bool resolveUninitializedTypeInfo(const std::string &typeText,
         error = "native backend only supports numeric/bool map values for uninitialized storage";
         return false;
       }
-      out.kind = LocalInfo::Kind::KeyValueCollection;
+      out.kind = LocalInfo::Kind::Value;
       out.valueKind = valueKind;
       out.keyValueKeyKind = keyKind;
       out.keyValueValueKind = valueKind;
@@ -170,8 +170,8 @@ bool resolveUninitializedTypeInfoFromPointerTargetLocal(const LocalInfo &local, 
     out.kind = LocalInfo::Kind::Array;
   } else if (local.referenceToVector || local.pointerToVector) {
     out.kind = LocalInfo::Kind::Vector;
-  } else if (local.referenceToKeyValueCollection || local.pointerToKeyValueCollection) {
-    out.kind = LocalInfo::Kind::KeyValueCollection;
+  } else if (hasKeyValueKinds(local)) {
+    out.kind = LocalInfo::Kind::Value;
   } else if (local.referenceToBuffer || local.pointerToBuffer) {
     out.kind = LocalInfo::Kind::Buffer;
   }
@@ -195,8 +195,8 @@ bool resolveUninitializedTypeInfoFromArgsPackPointerTargetLocal(const LocalInfo 
     out.kind = LocalInfo::Kind::Array;
   } else if (local.referenceToVector || local.pointerToVector) {
     out.kind = LocalInfo::Kind::Vector;
-  } else if (local.referenceToKeyValueCollection || local.pointerToKeyValueCollection) {
-    out.kind = LocalInfo::Kind::KeyValueCollection;
+  } else if (hasKeyValueKinds(local)) {
+    out.kind = LocalInfo::Kind::Value;
   } else if (local.referenceToBuffer || local.pointerToBuffer) {
     out.kind = LocalInfo::Kind::Buffer;
   }

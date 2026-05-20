@@ -390,7 +390,6 @@ void applyArgsPackElementMetadata(const std::string &typeText, LocalInfo &infoOu
       if (!splitTemplateArgs(pointerArg, args) || args.size() != 2) {
         return;
       }
-      infoOut.pointerToKeyValueCollection = true;
       infoOut.keyValueKeyKind = valueKindFromTypeName(trimTemplateTypeText(args[0]));
       infoOut.keyValueValueKind = valueKindFromTypeName(trimTemplateTypeText(args[1]));
       infoOut.valueKind = infoOut.keyValueValueKind;
@@ -549,7 +548,6 @@ void applyArgsPackElementMetadata(const std::string &typeText, LocalInfo &infoOu
         return;
       }
       infoOut.argsPackElementKind = LocalInfo::Kind::Reference;
-      infoOut.referenceToKeyValueCollection = true;
       infoOut.keyValueKeyKind = valueKindFromTypeName(trimTemplateTypeText(args[0]));
       infoOut.keyValueValueKind = valueKindFromTypeName(trimTemplateTypeText(args[1]));
       infoOut.valueKind = infoOut.keyValueValueKind;
@@ -591,7 +589,7 @@ void applyArgsPackElementMetadata(const std::string &typeText, LocalInfo &infoOu
     if (!splitTemplateArgs(arg, args) || args.size() != 2) {
       return;
     }
-    infoOut.argsPackElementKind = LocalInfo::Kind::KeyValueCollection;
+    infoOut.argsPackElementKind = LocalInfo::Kind::Value;
     infoOut.keyValueKeyKind = valueKindFromTypeName(trimTemplateTypeText(args[0]));
     infoOut.keyValueValueKind = valueKindFromTypeName(trimTemplateTypeText(args[1]));
     infoOut.valueKind = infoOut.keyValueValueKind;

@@ -70,6 +70,11 @@ bool hasInferredTypedWrappedKeyValue(const LocalInfo &localInfo, LocalInfo::Kind
          localInfo.keyValueValueKind != LocalInfo::ValueKind::Unknown;
 }
 
+bool hasInferredTypedKeyValue(const LocalInfo &localInfo) {
+  return localInfo.keyValueKeyKind != LocalInfo::ValueKind::Unknown &&
+         localInfo.keyValueValueKind != LocalInfo::ValueKind::Unknown;
+}
+
 const StdlibSurfaceMetadata *keyValueHelperSurfaceMetadataForAccessTargets() {
   return findStdlibSurfaceMetadataByBridgeKey("collections.map_helpers");
 }
@@ -653,22 +658,18 @@ KeyValueAccessTargetInfo resolveKeyValueAccessTargetInfo(
     return current;
   };
   auto populateFromDirectLocal = [&](const LocalInfo &localInfo, bool dereferenced) {
-    const bool inferredWrappedKeyValue = hasInferredTypedWrappedKeyValue(localInfo, localInfo.kind);
-    if (localInfo.kind != LocalInfo::Kind::KeyValueCollection &&
-        !(localInfo.kind == LocalInfo::Kind::Reference && localInfo.referenceToKeyValueCollection) &&
-        !(localInfo.kind == LocalInfo::Kind::Pointer && localInfo.pointerToKeyValueCollection) &&
-        !inferredWrappedKeyValue) {
+    const bool inferredKeyValue = hasInferredTypedKeyValue(localInfo);
+    const bool inferredWrappedKeyValue =
+        hasInferredTypedWrappedKeyValue(localInfo, localInfo.kind);
+    if (!inferredKeyValue) {
       return false;
     }
     info.isKeyValueTarget = true;
     info.keyValueKeyKind = localInfo.keyValueKeyKind;
     info.keyValueValueKind = localInfo.keyValueValueKind;
-    const bool isWrappedKeyValue =
-        (localInfo.kind == LocalInfo::Kind::Reference && localInfo.referenceToKeyValueCollection) ||
-        (localInfo.kind == LocalInfo::Kind::Pointer && localInfo.pointerToKeyValueCollection) ||
-        inferredWrappedKeyValue;
+    const bool isWrappedKeyValue = inferredWrappedKeyValue;
     info.isWrappedKeyValueTarget = isWrappedKeyValue && !dereferenced;
-    const bool isDirectKeyValueStorage = localInfo.kind == LocalInfo::Kind::KeyValueCollection;
+    const bool isDirectKeyValueStorage = localInfo.kind == LocalInfo::Kind::Value;
     const std::string &resolvedStructTypeName = localInfo.structTypeName;
     const bool preserveDirectExperimentalKeyValueStruct =
         isDirectKeyValueStorage && isExperimentalMapStructTypePath(resolvedStructTypeName);
@@ -683,13 +684,12 @@ KeyValueAccessTargetInfo resolveKeyValueAccessTargetInfo(
     if (!localInfo.isArgsPack) {
       return false;
     }
-    const bool isDirectKeyValue = localInfo.argsPackElementKind == LocalInfo::Kind::KeyValueCollection;
+    const bool isDirectKeyValue =
+        localInfo.argsPackElementKind == LocalInfo::Kind::Value &&
+        hasInferredTypedKeyValue(localInfo);
     const bool inferredWrappedKeyValue =
         hasInferredTypedWrappedKeyValue(localInfo, localInfo.argsPackElementKind);
-    const bool isWrappedKeyValue =
-        (localInfo.argsPackElementKind == LocalInfo::Kind::Reference && localInfo.referenceToKeyValueCollection) ||
-        (localInfo.argsPackElementKind == LocalInfo::Kind::Pointer && localInfo.pointerToKeyValueCollection) ||
-        inferredWrappedKeyValue;
+    const bool isWrappedKeyValue = inferredWrappedKeyValue;
     if (!isDirectKeyValue && !isWrappedKeyValue) {
       return false;
     }
@@ -698,7 +698,7 @@ KeyValueAccessTargetInfo resolveKeyValueAccessTargetInfo(
     info.keyValueValueKind = localInfo.keyValueValueKind;
     info.isWrappedKeyValueTarget = isWrappedKeyValue && !dereferenced;
     const bool isDirectKeyValueStorage =
-        localInfo.argsPackElementKind == LocalInfo::Kind::KeyValueCollection;
+        localInfo.argsPackElementKind == LocalInfo::Kind::Value;
     const std::string &resolvedStructTypeName = localInfo.structTypeName;
     const bool preserveDirectExperimentalKeyValueStruct =
         isDirectKeyValueStorage && isExperimentalMapStructTypePath(resolvedStructTypeName);
@@ -1002,8 +1002,7 @@ ArrayVectorAccessTargetInfo resolveArrayVectorAccessTargetInfo(
   const auto elementSlotCountForLocal = [](const LocalInfo &localInfo) {
     if (localInfo.isArgsPack) {
       const bool isInlineStructPack =
-          (localInfo.argsPackElementKind == LocalInfo::Kind::Value ||
-           localInfo.argsPackElementKind == LocalInfo::Kind::KeyValueCollection) &&
+          localInfo.argsPackElementKind == LocalInfo::Kind::Value &&
           !localInfo.structTypeName.empty() &&
           localInfo.structSlotCount > 0;
       return isInlineStructPack ? localInfo.structSlotCount : 1;
@@ -1032,7 +1031,8 @@ ArrayVectorAccessTargetInfo resolveArrayVectorAccessTargetInfo(
           dereferenced && localInfo.argsPackElementKind == LocalInfo::Kind::Vector;
       return true;
     }
-    if (localInfo.argsPackElementKind == LocalInfo::Kind::KeyValueCollection) {
+    if (localInfo.argsPackElementKind == LocalInfo::Kind::Value &&
+        hasInferredTypedKeyValue(localInfo)) {
       info.isArrayOrVectorTarget = true;
       info.isVectorTarget = false;
       info.isKeyValueTarget = true;
@@ -1057,20 +1057,19 @@ ArrayVectorAccessTargetInfo resolveArrayVectorAccessTargetInfo(
       return true;
     }
     if (!localInfo.structTypeName.empty() &&
-        (localInfo.argsPackElementKind == LocalInfo::Kind::Value ||
-         localInfo.argsPackElementKind == LocalInfo::Kind::KeyValueCollection)) {
+        localInfo.argsPackElementKind == LocalInfo::Kind::Value) {
       info.isArrayOrVectorTarget = true;
       info.isVectorTarget = false;
       return true;
     }
     if (localInfo.argsPackElementKind == LocalInfo::Kind::Reference &&
         (localInfo.referenceToArray || localInfo.referenceToVector || localInfo.referenceToBuffer ||
-         localInfo.referenceToKeyValueCollection || !localInfo.structTypeName.empty())) {
+         !localInfo.structTypeName.empty())) {
       info.isArrayOrVectorTarget = true;
       info.isVectorTarget = localInfo.referenceToVector;
-      info.isKeyValueTarget = localInfo.referenceToKeyValueCollection && dereferenced;
-      info.isWrappedKeyValueTarget = localInfo.referenceToKeyValueCollection && !dereferenced;
-      if (localInfo.referenceToKeyValueCollection && dereferenced) {
+      info.isKeyValueTarget = hasInferredTypedKeyValue(localInfo) && dereferenced;
+      info.isWrappedKeyValueTarget = hasInferredTypedKeyValue(localInfo) && !dereferenced;
+      if (hasInferredTypedKeyValue(localInfo) && dereferenced) {
         info.structTypeName = localInfo.structTypeName;
       }
       return true;
@@ -1083,12 +1082,12 @@ ArrayVectorAccessTargetInfo resolveArrayVectorAccessTargetInfo(
     }
     if (localInfo.argsPackElementKind == LocalInfo::Kind::Pointer &&
         (localInfo.pointerToArray || localInfo.pointerToVector || localInfo.pointerToBuffer ||
-         localInfo.pointerToKeyValueCollection || !localInfo.structTypeName.empty())) {
+         !localInfo.structTypeName.empty())) {
       info.isArrayOrVectorTarget = true;
       info.isVectorTarget = localInfo.pointerToVector;
-      info.isKeyValueTarget = localInfo.pointerToKeyValueCollection && dereferenced;
-      info.isWrappedKeyValueTarget = localInfo.pointerToKeyValueCollection && !dereferenced;
-      if (localInfo.pointerToKeyValueCollection && dereferenced) {
+      info.isKeyValueTarget = hasInferredTypedKeyValue(localInfo) && dereferenced;
+      info.isWrappedKeyValueTarget = hasInferredTypedKeyValue(localInfo) && !dereferenced;
+      if (hasInferredTypedKeyValue(localInfo) && dereferenced) {
         info.structTypeName = localInfo.structTypeName;
       }
       return true;

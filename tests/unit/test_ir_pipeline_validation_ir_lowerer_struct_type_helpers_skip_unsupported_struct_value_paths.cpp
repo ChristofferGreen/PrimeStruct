@@ -81,14 +81,14 @@ TEST_CASE("ir lowerer uninitialized type helpers classify supported types") {
   CHECK(info.valueKind == primec::ir_lowerer::LocalInfo::ValueKind::Bool);
 
   REQUIRE(primec::ir_lowerer::resolveUninitializedTypeInfo("map<i32, f64>", "/pkg", resolveStruct, info, error));
-  CHECK(info.kind == primec::ir_lowerer::LocalInfo::Kind::KeyValueCollection);
+  CHECK(info.kind == primec::ir_lowerer::LocalInfo::Kind::Value);
   CHECK(info.keyValueKeyKind == primec::ir_lowerer::LocalInfo::ValueKind::Int32);
   CHECK(info.keyValueValueKind == primec::ir_lowerer::LocalInfo::ValueKind::Float64);
   CHECK(info.valueKind == primec::ir_lowerer::LocalInfo::ValueKind::Float64);
 
   REQUIRE(primec::ir_lowerer::resolveUninitializedTypeInfo(
       "/std/collections/map<i32, bool>", "/pkg", resolveStruct, info, error));
-  CHECK(info.kind == primec::ir_lowerer::LocalInfo::Kind::KeyValueCollection);
+  CHECK(info.kind == primec::ir_lowerer::LocalInfo::Kind::Value);
   CHECK(info.keyValueKeyKind == primec::ir_lowerer::LocalInfo::ValueKind::Int32);
   CHECK(info.keyValueValueKind == primec::ir_lowerer::LocalInfo::ValueKind::Bool);
   CHECK(info.valueKind == primec::ir_lowerer::LocalInfo::ValueKind::Bool);
@@ -156,7 +156,7 @@ TEST_CASE("ir lowerer uninitialized type helpers report diagnostics") {
 TEST_CASE("ir lowerer uninitialized type helpers resolve local storage metadata") {
   primec::ir_lowerer::LocalInfo local;
   local.isUninitializedStorage = true;
-  local.kind = primec::ir_lowerer::LocalInfo::Kind::KeyValueCollection;
+  local.kind = primec::ir_lowerer::LocalInfo::Kind::Value;
   local.valueKind = primec::ir_lowerer::LocalInfo::ValueKind::Int64;
   local.keyValueKeyKind = primec::ir_lowerer::LocalInfo::ValueKind::Int32;
   local.keyValueValueKind = primec::ir_lowerer::LocalInfo::ValueKind::Float64;
@@ -164,7 +164,7 @@ TEST_CASE("ir lowerer uninitialized type helpers resolve local storage metadata"
 
   primec::ir_lowerer::UninitializedTypeInfo out;
   REQUIRE(primec::ir_lowerer::resolveUninitializedTypeInfoFromLocalStorage(local, out));
-  CHECK(out.kind == primec::ir_lowerer::LocalInfo::Kind::KeyValueCollection);
+  CHECK(out.kind == primec::ir_lowerer::LocalInfo::Kind::Value);
   CHECK(out.valueKind == primec::ir_lowerer::LocalInfo::ValueKind::Int64);
   CHECK(out.keyValueKeyKind == primec::ir_lowerer::LocalInfo::ValueKind::Int32);
   CHECK(out.keyValueValueKind == primec::ir_lowerer::LocalInfo::ValueKind::Float64);

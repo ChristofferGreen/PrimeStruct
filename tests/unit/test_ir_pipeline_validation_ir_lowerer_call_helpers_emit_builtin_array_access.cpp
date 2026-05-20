@@ -145,7 +145,7 @@ TEST_CASE("ir lowerer call helpers emit builtin array access") {
   mapTarget.kind = primec::Expr::Kind::Name;
   mapTarget.name = "m";
   primec::ir_lowerer::LocalInfo mapInfo;
-  mapInfo.kind = primec::ir_lowerer::LocalInfo::Kind::KeyValueCollection;
+  mapInfo.kind = primec::ir_lowerer::LocalInfo::Kind::Value;
   mapInfo.keyValueKeyKind = Kind::Unknown;
   mapInfo.keyValueValueKind = Kind::Int32;
   locals.clear();
@@ -590,7 +590,7 @@ TEST_CASE("ir lowerer builtin map access prefers semantic target facts") {
   CHECK(instructions.front().op == primec::IrOpcode::PushI64);
 
   primec::ir_lowerer::LocalInfo staleMapInfo;
-  staleMapInfo.kind = primec::ir_lowerer::LocalInfo::Kind::KeyValueCollection;
+  staleMapInfo.kind = primec::ir_lowerer::LocalInfo::Kind::Value;
   staleMapInfo.keyValueKeyKind = Kind::Int32;
   staleMapInfo.keyValueValueKind = Kind::Int32;
   locals.clear();

@@ -98,7 +98,7 @@
       auto applySpecializedWrappedMapBindingInfo = [&](const Expr &bindingExpr, LocalInfo &bindingInfo) {
         if ((bindingInfo.kind != LocalInfo::Kind::Reference &&
              bindingInfo.kind != LocalInfo::Kind::Pointer) ||
-            bindingInfo.referenceToKeyValueCollection || bindingInfo.pointerToKeyValueCollection) {
+            hasKeyValueKinds(bindingInfo)) {
           return;
         }
         for (const auto &transform : bindingExpr.transforms) {
@@ -117,11 +117,6 @@
                   keyKind,
                   valueKind)) {
             continue;
-          }
-          if (bindingInfo.kind == LocalInfo::Kind::Reference) {
-            bindingInfo.referenceToKeyValueCollection = true;
-          } else {
-            bindingInfo.pointerToKeyValueCollection = true;
           }
           bindingInfo.keyValueKeyKind = keyKind;
           bindingInfo.keyValueValueKind = valueKind;

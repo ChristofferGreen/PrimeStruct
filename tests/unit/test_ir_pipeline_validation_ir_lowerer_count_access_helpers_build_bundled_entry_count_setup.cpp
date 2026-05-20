@@ -235,7 +235,7 @@ TEST_CASE("ir lowerer count access classifiers prefer semantic direct-name facts
   staleStringInfo.stringSource = primec::ir_lowerer::LocalInfo::StringSource::TableIndex;
   locals.emplace("values", staleStringInfo);
   primec::ir_lowerer::LocalInfo staleMapInfo;
-  staleMapInfo.kind = primec::ir_lowerer::LocalInfo::Kind::KeyValueCollection;
+  staleMapInfo.kind = primec::ir_lowerer::LocalInfo::Kind::Value;
   staleMapInfo.keyValueKeyKind = primec::ir_lowerer::LocalInfo::ValueKind::Int32;
   staleMapInfo.keyValueValueKind = primec::ir_lowerer::LocalInfo::ValueKind::Int32;
   locals.emplace("message", staleMapInfo);
@@ -362,7 +362,6 @@ TEST_CASE("ir lowerer count access classifiers prefer semantic dereferenced targ
   staleCollectionArgs.kind = primec::ir_lowerer::LocalInfo::Kind::Array;
   staleCollectionArgs.isArgsPack = true;
   staleCollectionArgs.argsPackElementKind = primec::ir_lowerer::LocalInfo::Kind::Reference;
-  staleCollectionArgs.referenceToKeyValueCollection = true;
   staleCollectionArgs.keyValueKeyKind = primec::ir_lowerer::LocalInfo::ValueKind::Int32;
   staleCollectionArgs.keyValueValueKind = primec::ir_lowerer::LocalInfo::ValueKind::String;
   locals.emplace("scalarArgs", staleCollectionArgs);

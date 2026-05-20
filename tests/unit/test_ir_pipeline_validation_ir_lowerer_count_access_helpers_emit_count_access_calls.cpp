@@ -1231,7 +1231,7 @@ TEST_CASE("ir lowerer count access helpers normalize parser-shaped canonical map
 
   primec::ir_lowerer::LocalMap staleStringMapLocals;
   primec::ir_lowerer::LocalInfo staleStringMapInfo;
-  staleStringMapInfo.kind = primec::ir_lowerer::LocalInfo::Kind::KeyValueCollection;
+  staleStringMapInfo.kind = primec::ir_lowerer::LocalInfo::Kind::Value;
   staleStringMapInfo.keyValueKeyKind = Kind::Int32;
   staleStringMapInfo.keyValueValueKind = Kind::String;
   staleStringMapLocals.emplace("values", staleStringMapInfo);
@@ -1432,7 +1432,7 @@ TEST_CASE("ir lowerer count access helpers defer string map access emission") {
 
   primec::ir_lowerer::LocalMap staleStringMapLocals;
   primec::ir_lowerer::LocalInfo staleStringMapInfo;
-  staleStringMapInfo.kind = primec::ir_lowerer::LocalInfo::Kind::KeyValueCollection;
+  staleStringMapInfo.kind = primec::ir_lowerer::LocalInfo::Kind::Value;
   staleStringMapInfo.keyValueKeyKind = Kind::Int32;
   staleStringMapInfo.keyValueValueKind = Kind::String;
   staleStringMapLocals.emplace("values", staleStringMapInfo);

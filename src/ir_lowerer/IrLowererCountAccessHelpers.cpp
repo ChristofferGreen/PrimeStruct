@@ -1150,17 +1150,18 @@ bool isArrayCountCall(const Expr &expr,
     }
     if (it->second.kind == LocalInfo::Kind::Reference) {
       return it->second.referenceToArray || it->second.referenceToVector ||
-             it->second.referenceToBuffer || it->second.referenceToKeyValueCollection ||
+             it->second.referenceToBuffer ||
              hasInferredTypedWrappedKeyValue(it->second, it->second.kind);
     }
     if (it->second.kind == LocalInfo::Kind::Pointer) {
       return it->second.pointerToArray || it->second.pointerToVector ||
-             it->second.pointerToBuffer || it->second.pointerToKeyValueCollection ||
+             it->second.pointerToBuffer ||
              hasInferredTypedWrappedKeyValue(it->second, it->second.kind);
     }
     return it->second.kind == LocalInfo::Kind::Array || it->second.kind == LocalInfo::Kind::Vector ||
            it->second.kind == LocalInfo::Kind::Buffer || it->second.isSoaVector ||
-           it->second.kind == LocalInfo::Kind::KeyValueCollection;
+           (it->second.keyValueKeyKind != LocalInfo::ValueKind::Unknown &&
+            it->second.keyValueValueKind != LocalInfo::ValueKind::Unknown);
   }
   if (target.kind == Expr::Kind::Call) {
     std::string keyValueHelperAlias;
@@ -1180,15 +1181,17 @@ bool isArrayCountCall(const Expr &expr,
           if (info.argsPackElementKind == LocalInfo::Kind::Array ||
               info.argsPackElementKind == LocalInfo::Kind::Vector ||
               info.argsPackElementKind == LocalInfo::Kind::Buffer ||
-              info.argsPackElementKind == LocalInfo::Kind::KeyValueCollection ||
+              (info.argsPackElementKind == LocalInfo::Kind::Value &&
+               info.keyValueKeyKind != LocalInfo::ValueKind::Unknown &&
+               info.keyValueValueKind != LocalInfo::ValueKind::Unknown) ||
               (info.argsPackElementKind == LocalInfo::Kind::Reference &&
-               (info.referenceToArray || info.referenceToVector || info.referenceToBuffer || info.referenceToKeyValueCollection ||
+               (info.referenceToArray || info.referenceToVector || info.referenceToBuffer ||
                 hasInferredTypedWrappedKeyValue(info, info.argsPackElementKind))) ||
               (info.argsPackElementKind == LocalInfo::Kind::Pointer && info.pointerToArray) ||
               (info.argsPackElementKind == LocalInfo::Kind::Pointer && info.pointerToVector) ||
               (info.argsPackElementKind == LocalInfo::Kind::Pointer && info.pointerToBuffer) ||
               (info.argsPackElementKind == LocalInfo::Kind::Pointer &&
-               (info.pointerToKeyValueCollection || hasInferredTypedWrappedKeyValue(info, info.argsPackElementKind))) ||
+               hasInferredTypedWrappedKeyValue(info, info.argsPackElementKind)) ||
               info.isSoaVector) {
             return true;
           }
@@ -1861,9 +1864,7 @@ CountAccessCallEmitResult tryEmitCountAccessCall(
         if (it != localsIn.end()) {
           const LocalInfo &info = it->second;
           stringKeyValueAccess =
-              ((info.kind == LocalInfo::Kind::KeyValueCollection) ||
-               (info.kind == LocalInfo::Kind::Reference && info.referenceToKeyValueCollection) ||
-               (info.kind == LocalInfo::Kind::Pointer && info.pointerToKeyValueCollection)) &&
+              info.keyValueKeyKind != LocalInfo::ValueKind::Unknown &&
               info.keyValueValueKind == LocalInfo::ValueKind::String;
         }
       } else if (accessTarget.kind == Expr::Kind::Call) {

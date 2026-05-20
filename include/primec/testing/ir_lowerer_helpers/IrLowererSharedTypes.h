@@ -4,7 +4,7 @@
 struct LocalInfo {
   int32_t index = 0;
   bool isMutable = false;
-  enum class Kind { Value, Pointer, Reference, Array, Vector, KeyValueCollection, Buffer } kind = Kind::Value;
+  enum class Kind { Value, Pointer, Reference, Array, Vector, Buffer } kind = Kind::Value;
   enum class ValueKind { Unknown, Int32, Int64, UInt64, Float32, Float64, Bool, String } valueKind = ValueKind::Unknown;
   std::string structTypeName;
   int32_t structFieldCount = 0;
@@ -35,13 +35,21 @@ struct LocalInfo {
   bool pointerToVector = false;
   bool referenceToBuffer = false;
   bool pointerToBuffer = false;
-  bool referenceToKeyValueCollection = false;
-  bool pointerToKeyValueCollection = false;
   bool isUninitializedStorage = false;
   bool targetsUninitializedStorage = false;
   bool isSoaVector = false;
   bool usesBuiltinCollectionLayout = false;
 };
+
+inline bool hasKeyValueKinds(const LocalInfo &info) {
+  return info.keyValueKeyKind != LocalInfo::ValueKind::Unknown &&
+         info.keyValueValueKind != LocalInfo::ValueKind::Unknown;
+}
+
+inline bool hasWrappedKeyValueKinds(const LocalInfo &info, LocalInfo::Kind kind) {
+  return (kind == LocalInfo::Kind::Reference || kind == LocalInfo::Kind::Pointer) &&
+         hasKeyValueKinds(info);
+}
 
 using LocalMap = std::unordered_map<std::string, LocalInfo>;
 

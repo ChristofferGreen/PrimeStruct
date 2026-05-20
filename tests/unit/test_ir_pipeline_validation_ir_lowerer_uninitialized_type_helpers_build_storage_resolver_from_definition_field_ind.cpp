@@ -326,7 +326,7 @@ TEST_CASE("ir lowerer binding type helpers classify binding kind and string/file
   canonicalMapTransform.name = "/std/collections/map";
   canonicalMapTransform.templateArgs = {"i32", "i64"};
   canonicalMapExpr.transforms.push_back(canonicalMapTransform);
-  CHECK(primec::ir_lowerer::bindingKindFromTransforms(canonicalMapExpr) == primec::ir_lowerer::LocalInfo::Kind::KeyValueCollection);
+  CHECK(primec::ir_lowerer::bindingKindFromTransforms(canonicalMapExpr) == primec::ir_lowerer::LocalInfo::Kind::Value);
 
   primec::Expr defaultExpr;
   CHECK(primec::ir_lowerer::bindingKindFromTransforms(defaultExpr) == primec::ir_lowerer::LocalInfo::Kind::Value);
@@ -437,7 +437,7 @@ TEST_CASE("ir lowerer binding type helpers resolve value kinds from transforms")
   mapTransform.name = "map";
   mapTransform.templateArgs = {"bool", "f64"};
   mapExpr.transforms.push_back(mapTransform);
-  CHECK(primec::ir_lowerer::bindingValueKindFromTransforms(mapExpr, primec::ir_lowerer::LocalInfo::Kind::KeyValueCollection) ==
+  CHECK(primec::ir_lowerer::bindingValueKindFromTransforms(mapExpr, primec::ir_lowerer::LocalInfo::Kind::Value) ==
         primec::ir_lowerer::LocalInfo::ValueKind::Float64);
 
   primec::Expr canonicalMapExpr;
@@ -445,7 +445,7 @@ TEST_CASE("ir lowerer binding type helpers resolve value kinds from transforms")
   canonicalMapTransform.name = "/std/collections/map";
   canonicalMapTransform.templateArgs = {"i32", "f64"};
   canonicalMapExpr.transforms.push_back(canonicalMapTransform);
-  CHECK(primec::ir_lowerer::bindingValueKindFromTransforms(canonicalMapExpr, primec::ir_lowerer::LocalInfo::Kind::KeyValueCollection) ==
+  CHECK(primec::ir_lowerer::bindingValueKindFromTransforms(canonicalMapExpr, primec::ir_lowerer::LocalInfo::Kind::Value) ==
         primec::ir_lowerer::LocalInfo::ValueKind::Float64);
 
   primec::Expr soaVectorValueExpr;
@@ -550,7 +550,7 @@ TEST_CASE("ir lowerer binding type helpers build bundled setup adapters") {
   mapTransform.name = "map";
   mapTransform.templateArgs = {"bool", "f64"};
   mapExpr.transforms.push_back(mapTransform);
-  CHECK(adapters.bindingValueKind(mapExpr, primec::ir_lowerer::LocalInfo::Kind::KeyValueCollection) ==
+  CHECK(adapters.bindingValueKind(mapExpr, primec::ir_lowerer::LocalInfo::Kind::Value) ==
         primec::ir_lowerer::LocalInfo::ValueKind::Float64);
 
   primec::ir_lowerer::LocalInfo info;
@@ -795,7 +795,7 @@ TEST_CASE("ir lowerer binding type helpers prefer semantic collection specializa
   info.kind = primec::ir_lowerer::LocalInfo::Kind::Reference;
   info.valueKind = primec::ir_lowerer::LocalInfo::ValueKind::Unknown;
   adapters.setReferenceArrayInfo(tempMapCall, info);
-  CHECK(info.referenceToKeyValueCollection);
+  CHECK(primec::ir_lowerer::hasKeyValueKinds(info));
   CHECK(info.keyValueKeyKind == primec::ir_lowerer::LocalInfo::ValueKind::Int32);
   CHECK(info.keyValueValueKind == primec::ir_lowerer::LocalInfo::ValueKind::Int64);
   CHECK(info.valueKind == primec::ir_lowerer::LocalInfo::ValueKind::Int64);
@@ -1110,7 +1110,6 @@ TEST_CASE("ir lowerer count access helpers classify entry args and count calls")
   mapRefArgs.kind = primec::ir_lowerer::LocalInfo::Kind::Array;
   mapRefArgs.isArgsPack = true;
   mapRefArgs.argsPackElementKind = primec::ir_lowerer::LocalInfo::Kind::Reference;
-  mapRefArgs.referenceToKeyValueCollection = true;
   mapRefArgs.keyValueKeyKind = primec::ir_lowerer::LocalInfo::ValueKind::Int32;
   mapRefArgs.keyValueValueKind = primec::ir_lowerer::LocalInfo::ValueKind::Int32;
   locals.emplace("mapRefs", mapRefArgs);
@@ -1137,7 +1136,6 @@ TEST_CASE("ir lowerer count access helpers classify entry args and count calls")
   mapPtrArgs.kind = primec::ir_lowerer::LocalInfo::Kind::Array;
   mapPtrArgs.isArgsPack = true;
   mapPtrArgs.argsPackElementKind = primec::ir_lowerer::LocalInfo::Kind::Pointer;
-  mapPtrArgs.pointerToKeyValueCollection = true;
   mapPtrArgs.keyValueKeyKind = primec::ir_lowerer::LocalInfo::ValueKind::Int32;
   mapPtrArgs.keyValueValueKind = primec::ir_lowerer::LocalInfo::ValueKind::Int32;
   locals.emplace("mapPtrs", mapPtrArgs);

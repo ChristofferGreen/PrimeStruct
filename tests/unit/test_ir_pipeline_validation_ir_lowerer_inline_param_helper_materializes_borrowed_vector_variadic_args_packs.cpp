@@ -758,7 +758,6 @@ TEST_CASE("ir lowerer inline param helper rejects borrowed map variadic alias ty
   sourceInfo.valueKind = primec::ir_lowerer::LocalInfo::ValueKind::Int32;
   sourceInfo.isArgsPack = true;
   sourceInfo.argsPackElementKind = primec::ir_lowerer::LocalInfo::Kind::Reference;
-  sourceInfo.referenceToKeyValueCollection = true;
   sourceInfo.keyValueKeyKind = primec::ir_lowerer::LocalInfo::ValueKind::Int32;
   sourceInfo.keyValueValueKind = primec::ir_lowerer::LocalInfo::ValueKind::Int32;
   sourceInfo.argsPackElementCount = 2;
@@ -782,7 +781,6 @@ TEST_CASE("ir lowerer inline param helper rejects borrowed map variadic alias ty
         infoOut.valueKind = primec::ir_lowerer::LocalInfo::ValueKind::Int32;
         infoOut.isArgsPack = true;
         infoOut.argsPackElementKind = primec::ir_lowerer::LocalInfo::Kind::Reference;
-        infoOut.referenceToKeyValueCollection = true;
         infoOut.keyValueKeyKind = primec::ir_lowerer::LocalInfo::ValueKind::Bool;
         infoOut.keyValueValueKind = primec::ir_lowerer::LocalInfo::ValueKind::Int32;
         return true;

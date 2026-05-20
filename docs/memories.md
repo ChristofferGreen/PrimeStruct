@@ -224,15 +224,18 @@ This file stores durable session-derived facts that are useful in later work. Ke
 - Evidence: The retained `struct_transforms_11_20` shard failed because `[thing] a{thing{}}` reached block validation as a final binding; `Parser::finalizeBindingInitializer` now rewrites that matching shape and focused parser/semantic regressions cover it.
 
 ### lowerer-key-value-collection-kind-is-map-agnostic
-- Updated: 2026-05-18
+- Updated: 2026-05-20
 - Tags: ir, lowerer, collections
-- Fact: Lowerer locals classify map-shaped collection values with
-  `LocalInfo::Kind::KeyValueCollection`; `LocalInfo::Kind::Map` is retired.
-  Temporary key/value collection metadata, access-target helpers, lookup
-  helper APIs, setup-inference access element-kind helpers, and
+- Fact: Lowerer locals no longer classify map-shaped values with a dedicated
+  map or key/value local kind: `LocalInfo::Kind::Map` and
+  `LocalInfo::Kind::KeyValueCollection` are both retired, and the
+  `referenceToKeyValueCollection` / `pointerToKeyValueCollection` wrapper
+  flags are gone. Temporary key/value scalar facts, access-target helpers,
+  lookup helper APIs, setup-inference access element-kind helpers, and
   inline/native-tail contains/tryAt predicates carry backing details until
-  later TODO-4464 slices remove the remaining C++ map substrate; key
-  comparison opcode selection plus inline native dispatch published-helper
+  later TODO-4541/TODO-4542/TODO-4464 slices remove the remaining C++ map
+  substrate; key comparison opcode selection plus inline native dispatch
+  published-helper
   metadata wrappers, builtin-name helper-surface checks, and access-target
   metadata/classifier helpers are also named in key/value terms; count-access
   local classifier wrappers, string-valued access helpers, native-tail
@@ -309,7 +312,11 @@ This file stores durable session-derived facts that are useful in later work. Ke
   pointer/memory collection classifiers, infer collection constructor-alias
   locals, build-parameter default-expression classifiers, validator
   count-diagnostic locals, argument-validation receiver locals, and
-  resolved-call constructor validators.
+  resolved-call constructor validators; the focused release backend IR target
+  rebuilt and focused indexed args-pack receiver plus map variadic/borrowed-map
+  metadata doctest slices passed after removing
+  `LocalInfo::Kind::KeyValueCollection`,
+  `referenceToKeyValueCollection`, and `pointerToKeyValueCollection`.
 
 ### map-compatibility-aliases-require-source-definitions
 - Updated: 2026-05-18

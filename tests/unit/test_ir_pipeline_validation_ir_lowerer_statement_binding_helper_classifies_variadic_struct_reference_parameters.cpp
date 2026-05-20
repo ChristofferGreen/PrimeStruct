@@ -253,7 +253,8 @@ TEST_CASE("ir lowerer statement binding helper classifies variadic borrowed map 
   CHECK(info.kind == primec::ir_lowerer::LocalInfo::Kind::Array);
   CHECK(info.isArgsPack);
   CHECK(info.argsPackElementKind == primec::ir_lowerer::LocalInfo::Kind::Reference);
-  CHECK(info.referenceToKeyValueCollection);
+  CHECK(info.keyValueKeyKind != primec::ir_lowerer::LocalInfo::ValueKind::Unknown);
+  CHECK(info.keyValueValueKind != primec::ir_lowerer::LocalInfo::ValueKind::Unknown);
   CHECK(info.keyValueKeyKind == primec::ir_lowerer::LocalInfo::ValueKind::Int32);
   CHECK(info.keyValueValueKind == primec::ir_lowerer::LocalInfo::ValueKind::Int32);
   CHECK(info.valueKind == primec::ir_lowerer::LocalInfo::ValueKind::Int32);
@@ -293,7 +294,7 @@ TEST_CASE("ir lowerer statement binding helper classifies variadic pointer map p
   CHECK(info.kind == primec::ir_lowerer::LocalInfo::Kind::Array);
   CHECK(info.isArgsPack);
   CHECK(info.argsPackElementKind == primec::ir_lowerer::LocalInfo::Kind::Pointer);
-  CHECK(info.pointerToKeyValueCollection);
+  CHECK(primec::ir_lowerer::hasKeyValueKinds(info));
   CHECK(info.keyValueKeyKind == primec::ir_lowerer::LocalInfo::ValueKind::Int32);
   CHECK(info.keyValueValueKind == primec::ir_lowerer::LocalInfo::ValueKind::Int32);
   CHECK(info.valueKind == primec::ir_lowerer::LocalInfo::ValueKind::Int32);
@@ -901,7 +902,8 @@ TEST_CASE("ir lowerer statement binding helper preserves inferred borrowed map r
           });
 
   CHECK(info.kind == primec::ir_lowerer::LocalInfo::Kind::Reference);
-  CHECK(info.referenceToKeyValueCollection);
+  CHECK(info.keyValueKeyKind != primec::ir_lowerer::LocalInfo::ValueKind::Unknown);
+  CHECK(info.keyValueValueKind != primec::ir_lowerer::LocalInfo::ValueKind::Unknown);
   CHECK(info.keyValueKeyKind == primec::ir_lowerer::LocalInfo::ValueKind::Int32);
   CHECK(info.keyValueValueKind == primec::ir_lowerer::LocalInfo::ValueKind::Bool);
   CHECK(info.valueKind == primec::ir_lowerer::LocalInfo::ValueKind::Bool);
@@ -1721,7 +1723,7 @@ TEST_CASE("ir lowerer statement binding helper classifies variadic map parameter
   CHECK(error.empty());
   CHECK(info.kind == primec::ir_lowerer::LocalInfo::Kind::Array);
   CHECK(info.isArgsPack);
-  CHECK(info.argsPackElementKind == primec::ir_lowerer::LocalInfo::Kind::KeyValueCollection);
+  CHECK(info.argsPackElementKind == primec::ir_lowerer::LocalInfo::Kind::Value);
   CHECK(info.keyValueKeyKind == primec::ir_lowerer::LocalInfo::ValueKind::Int32);
   CHECK(info.keyValueValueKind == primec::ir_lowerer::LocalInfo::ValueKind::Bool);
   CHECK(info.valueKind == primec::ir_lowerer::LocalInfo::ValueKind::Bool);
@@ -1794,7 +1796,7 @@ TEST_CASE("ir lowerer statement binding helper selects uninitialized zero opcode
   uint64_t mapZeroImm = 123;
   std::string error;
   REQUIRE(primec::ir_lowerer::selectUninitializedStorageZeroInstruction(
-      primec::ir_lowerer::LocalInfo::Kind::KeyValueCollection,
+      primec::ir_lowerer::LocalInfo::Kind::Value,
       primec::ir_lowerer::LocalInfo::ValueKind::Unknown,
       "mapStorage",
       mapZeroOp,

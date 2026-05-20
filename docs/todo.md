@@ -83,8 +83,9 @@ Task template:
 
 ### Ready Now (Parallel-Candidate Leaves; No Unmet TODO Dependencies)
 
-- TODO-4540: Collapse lowerer key/value local metadata | track: map-zero-audit |
-  primary surface: lowerer key/value local metadata
+- TODO-4541: Delete lowerer key/value access target emission |
+  track: map-zero-audit |
+  primary surface: lowerer key/value access emission
 - TODO-4271: Add compile-time pack indexing | track: tuple-type-packs |
   primary surface: generic pack-index selection and diagnostics
 
@@ -94,9 +95,10 @@ Task template:
   zero-production-trace audit; no SoA zero-audit leaf is ready.
 - `map-zero-audit`: TODO-4537 split the broad lowerer substrate item into
   bounded leaves; TODO-4539 removed generated MapValue path synthesis, and
-  ready TODO-4540 collapses lowerer key/value local metadata before
-  TODO-4541 -> TODO-4542 -> TODO-4538 -> TODO-4464 for the final strict zero
-  map-surface audit.
+  TODO-4540 removed the lowerer key/value local kind plus ref/pointer flags.
+  Ready TODO-4541 now deletes key/value access target emission before
+  TODO-4542 -> TODO-4538 -> TODO-4464 for the final strict zero map-surface
+  audit.
 - `tuple-type-packs`: TODO-4276 completed helper/lifecycle pack
   expansion; ready TODO-4271, then serial successors TODO-4272
   -> TODO-4274 -> TODO-4273 -> TODO-4277 -> TODO-4278.
@@ -107,7 +109,6 @@ Task template:
 
 ### Immediate Next 10 (Track Successors; Not Ready Until Dependencies Land)
 
-- TODO-4541: Delete lowerer key/value access target emission
 - TODO-4542: Retire native map-value backend gates
 - TODO-4538: Replace map inventory gate with fast strict audit
 - TODO-4464: Run final strict C++ map-surface audit
@@ -122,8 +123,8 @@ Task template:
   must enter as bounded leaves only.
 - Deferred stdlib ADT migration: none active
 - Vector stdlib ownership cutover: none active
-- Map stdlib ownership cutover: ready TODO-4540, then TODO-4541
-  -> TODO-4542 -> TODO-4538 -> TODO-4464 for the final strict zero audit
+- Map stdlib ownership cutover: ready TODO-4541, then TODO-4542
+  -> TODO-4538 -> TODO-4464 for the final strict zero audit
 - SoA public surface rename and ownership cutover: TODO-4306 parent split;
   TODO-4526 removed semantic-validation inventory residue after TODO-4530
   reduced the shared semantic builtin path helper boundary; TODO-4527 removed
@@ -144,7 +145,6 @@ Task template:
 
 ### Execution Queue (Recommended Track Order)
 
-- TODO-4540: Collapse lowerer key/value local metadata
 - TODO-4541: Delete lowerer key/value access target emission
 - TODO-4542: Retire native map-value backend gates
 - TODO-4538: Replace map inventory gate with fast strict audit
@@ -1851,37 +1851,6 @@ Task template:
     - `./scripts/compile.sh --release` passes.
   - stop_rule: Stop once the generic design direction is documented through
     runnable examples rather than only prose.
-
-- [ ] TODO-4540: Collapse lowerer key/value local metadata
-  - owner: ai
-  - created_at: 2026-05-20
-  - phase: Map stdlib ownership cutover
-  - parallel_track: map-zero-audit
-  - depends_on: TODO-4539
-  - split_from: TODO-4537
-  - scope: Remove `LocalInfo::Kind::KeyValueCollection`,
-    `referenceToKeyValueCollection`, `pointerToKeyValueCollection`, and
-    key/value-specific local/result metadata from the lowerer shared local
-    model where ordinary struct, reference, pointer, args-pack, and
-    semantic-product facts can carry the same information.
-  - implementation_notes:
-    - Start from `src/ir_lowerer/IrLowererSharedTypes.h`,
-      `IrLowererStatementBindingHelpers.{h,cpp}`,
-      `IrLowererBindingTypeHelpers.cpp`, `IrLowererInlineParamHelpers.cpp`,
-      and `IrLowererInlinePackedArgs.cpp`.
-    - Keep language/runtime primitives such as arrays, vectors, buffers,
-      strings, files, and Result metadata intact; this task is specifically
-      about stdlib map/key-value collection facts.
-    - If a remaining map behavior needs a generic struct/args-pack fact that
-      does not exist yet, split that as a non-map TODO and stop.
-  - acceptance:
-    - The lowerer shared local model no longer exposes key/value collection
-      local kind or reference/pointer booleans.
-    - Inline parameter and args-pack forwarding use ordinary struct/reference
-      metadata for map values.
-    - Focused lowerer source-lock and map forwarding tests pass.
-  - stop_rule: Stop once the shared local metadata surface is map-agnostic;
-    leave access lookup/emission branches to TODO-4541.
 
 - [ ] TODO-4541: Delete lowerer key/value access target emission
   - owner: ai

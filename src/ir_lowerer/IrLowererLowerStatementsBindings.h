@@ -395,8 +395,6 @@
       info.pointerToVector = bindingTypeInfo.pointerToVector;
       info.referenceToBuffer = bindingTypeInfo.referenceToBuffer;
       info.pointerToBuffer = bindingTypeInfo.pointerToBuffer;
-      info.referenceToKeyValueCollection = bindingTypeInfo.referenceToKeyValueCollection;
-      info.pointerToKeyValueCollection = bindingTypeInfo.pointerToKeyValueCollection;
       info.isSoaVector = bindingTypeInfo.isSoaVector;
       info.usesBuiltinCollectionLayout = bindingTypeInfo.usesBuiltinCollectionLayout;
       const bool semanticLocalAutoBinding = bindingTypeExpr != &stmt;
@@ -945,7 +943,7 @@
         return true;
       }
       if (valueKind == LocalInfo::ValueKind::Unknown &&
-          kind != LocalInfo::Kind::KeyValueCollection &&
+          !hasKeyValueKinds(info) &&
           kind != LocalInfo::Kind::Array &&
           kind != LocalInfo::Kind::Vector &&
           info.structTypeName.empty() &&

@@ -378,7 +378,7 @@ TEST_CASE("ir lowerer call helpers dispatch buffer and native tail wrappers") {
 TEST_CASE("ir lowerer call helpers resolve and validate map access targets") {
   primec::ir_lowerer::LocalMap locals;
   primec::ir_lowerer::LocalInfo mapInfo;
-  mapInfo.kind = primec::ir_lowerer::LocalInfo::Kind::KeyValueCollection;
+  mapInfo.kind = primec::ir_lowerer::LocalInfo::Kind::Value;
   mapInfo.keyValueKeyKind = primec::ir_lowerer::LocalInfo::ValueKind::Int64;
   mapInfo.keyValueValueKind = primec::ir_lowerer::LocalInfo::ValueKind::Float64;
   locals.emplace("items", mapInfo);
@@ -407,7 +407,7 @@ TEST_CASE("ir lowerer call helpers resolve and validate map access targets") {
   CHECK(resolved.structTypeName.empty());
 
   primec::ir_lowerer::LocalInfo experimentalMapInfo;
-  experimentalMapInfo.kind = primec::ir_lowerer::LocalInfo::Kind::KeyValueCollection;
+  experimentalMapInfo.kind = primec::ir_lowerer::LocalInfo::Kind::Value;
   experimentalMapInfo.keyValueKeyKind = primec::ir_lowerer::LocalInfo::ValueKind::String;
   experimentalMapInfo.keyValueValueKind = primec::ir_lowerer::LocalInfo::ValueKind::Int32;
   experimentalMapInfo.structTypeName = "/std/collections/experimental_map/Map";
@@ -423,7 +423,7 @@ TEST_CASE("ir lowerer call helpers resolve and validate map access targets") {
   primec::ir_lowerer::LocalInfo mapArgsInfo;
   mapArgsInfo.kind = primec::ir_lowerer::LocalInfo::Kind::Array;
   mapArgsInfo.isArgsPack = true;
-  mapArgsInfo.argsPackElementKind = primec::ir_lowerer::LocalInfo::Kind::KeyValueCollection;
+  mapArgsInfo.argsPackElementKind = primec::ir_lowerer::LocalInfo::Kind::Value;
   mapArgsInfo.keyValueKeyKind = primec::ir_lowerer::LocalInfo::ValueKind::Int32;
   mapArgsInfo.keyValueValueKind = primec::ir_lowerer::LocalInfo::ValueKind::Int64;
   mapArgsInfo.valueKind = primec::ir_lowerer::LocalInfo::ValueKind::Int64;
@@ -458,7 +458,6 @@ TEST_CASE("ir lowerer call helpers resolve and validate map access targets") {
 
   primec::ir_lowerer::LocalInfo mapPointerInfo;
   mapPointerInfo.kind = primec::ir_lowerer::LocalInfo::Kind::Pointer;
-  mapPointerInfo.pointerToKeyValueCollection = true;
   mapPointerInfo.keyValueKeyKind = primec::ir_lowerer::LocalInfo::ValueKind::Bool;
   mapPointerInfo.keyValueValueKind = primec::ir_lowerer::LocalInfo::ValueKind::Int32;
   mapPointerInfo.structTypeName = "/std/collections/experimental_map/Map";
@@ -487,7 +486,6 @@ TEST_CASE("ir lowerer call helpers resolve and validate map access targets") {
   mapPtrArgsInfo.kind = primec::ir_lowerer::LocalInfo::Kind::Array;
   mapPtrArgsInfo.isArgsPack = true;
   mapPtrArgsInfo.argsPackElementKind = primec::ir_lowerer::LocalInfo::Kind::Pointer;
-  mapPtrArgsInfo.pointerToKeyValueCollection = true;
   mapPtrArgsInfo.keyValueKeyKind = primec::ir_lowerer::LocalInfo::ValueKind::Int32;
   mapPtrArgsInfo.keyValueValueKind = primec::ir_lowerer::LocalInfo::ValueKind::Bool;
   mapPtrArgsInfo.valueKind = primec::ir_lowerer::LocalInfo::ValueKind::Bool;
@@ -554,7 +552,7 @@ TEST_CASE("ir lowerer call helpers resolve and validate map access targets") {
   CHECK(error == "stale");
 
   primec::ir_lowerer::LocalInfo staleMapInfo;
-  staleMapInfo.kind = primec::ir_lowerer::LocalInfo::Kind::KeyValueCollection;
+  staleMapInfo.kind = primec::ir_lowerer::LocalInfo::Kind::Value;
   staleMapInfo.keyValueKeyKind = primec::ir_lowerer::LocalInfo::ValueKind::Int32;
   staleMapInfo.keyValueValueKind = primec::ir_lowerer::LocalInfo::ValueKind::Int32;
   locals.emplace("staleSemanticMap", staleMapInfo);

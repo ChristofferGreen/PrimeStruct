@@ -152,7 +152,7 @@ TEST_CASE("ir lowerer struct type helpers infer name-expression struct paths") {
   fileInfo.structTypeName = "/std/file/File<Read>";
   locals.emplace("file", fileInfo);
   primec::ir_lowerer::LocalInfo mapInfo;
-  mapInfo.kind = primec::ir_lowerer::LocalInfo::Kind::KeyValueCollection;
+  mapInfo.kind = primec::ir_lowerer::LocalInfo::Kind::Value;
   mapInfo.keyValueKeyKind = primec::ir_lowerer::LocalInfo::ValueKind::String;
   mapInfo.keyValueValueKind = primec::ir_lowerer::LocalInfo::ValueKind::Int32;
   locals.emplace("lookup", mapInfo);

@@ -336,13 +336,14 @@ bool isMapLikeStructTypeName(const std::string &structTypeName) {
 }
 
 bool shouldRewriteMapReferenceReceiverForParam(const LocalInfo &paramInfo) {
+  const bool hasKeyValueKinds =
+      paramInfo.keyValueKeyKind != LocalInfo::ValueKind::Unknown &&
+      paramInfo.keyValueValueKind != LocalInfo::ValueKind::Unknown;
   if (paramInfo.structTypeName.empty()) {
-    return paramInfo.kind == LocalInfo::Kind::KeyValueCollection ||
-           ((paramInfo.kind == LocalInfo::Kind::Reference || paramInfo.kind == LocalInfo::Kind::Pointer) &&
-            (paramInfo.referenceToKeyValueCollection || paramInfo.pointerToKeyValueCollection));
-  }
-  if (paramInfo.kind == LocalInfo::Kind::KeyValueCollection) {
-    return true;
+    return hasKeyValueKinds &&
+           (paramInfo.kind == LocalInfo::Kind::Value ||
+            paramInfo.kind == LocalInfo::Kind::Reference ||
+            paramInfo.kind == LocalInfo::Kind::Pointer);
   }
   if (paramInfo.kind == LocalInfo::Kind::Value || paramInfo.kind == LocalInfo::Kind::Reference ||
       paramInfo.kind == LocalInfo::Kind::Pointer) {
@@ -415,7 +416,6 @@ void preservePointerTargetArgumentInfo(LocalInfo &paramInfo,
   paramInfo.pointerToArray = paramInfo.pointerToArray || argInfo.pointerToArray;
   paramInfo.pointerToVector = paramInfo.pointerToVector || argInfo.pointerToVector;
   paramInfo.pointerToBuffer = paramInfo.pointerToBuffer || argInfo.pointerToBuffer;
-  paramInfo.pointerToKeyValueCollection = paramInfo.pointerToKeyValueCollection || argInfo.pointerToKeyValueCollection;
   paramInfo.targetsUninitializedStorage =
       paramInfo.targetsUninitializedStorage || argInfo.targetsUninitializedStorage;
   paramInfo.isSoaVector = paramInfo.isSoaVector || argInfo.isSoaVector;
@@ -647,8 +647,9 @@ bool emitInlineDefinitionCallParameters(
         (paramInfo.isArgsPack || !packedArgs.empty() || orderedArg == nullptr);
     const bool reserveIndexEarly =
         isPackedParam ||
-        paramInfo.kind != LocalInfo::Kind::KeyValueCollection ||
-        !paramInfo.structTypeName.empty();
+        !paramInfo.structTypeName.empty() ||
+        paramInfo.keyValueKeyKind == LocalInfo::ValueKind::Unknown ||
+        paramInfo.keyValueValueKind == LocalInfo::ValueKind::Unknown;
     if (reserveIndexEarly) {
       paramInfo.index = nextLocal++;
     } else {
@@ -739,7 +740,7 @@ bool emitInlineDefinitionCallParameters(
               !it->second.isFileError && !it->second.isResult) {
             if (it->second.kind == LocalInfo::Kind::Reference &&
                 !it->second.referenceToArray && !it->second.referenceToVector &&
-                !it->second.referenceToKeyValueCollection && !it->second.referenceToBuffer) {
+                !it->second.referenceToBuffer) {
               emitInstruction(IrOpcode::LoadLocal, static_cast<uint64_t>(it->second.index));
               return true;
             }
@@ -764,16 +765,12 @@ bool emitInlineDefinitionCallParameters(
       }
       LocalInfo aliasedParamInfo = paramInfo;
       aliasedParamInfo.kind = LocalInfo::Kind::Reference;
-      if (paramInfo.kind == LocalInfo::Kind::KeyValueCollection) {
-        aliasedParamInfo.referenceToKeyValueCollection = true;
-      }
       calleeLocals.emplace(param.name, aliasedParamInfo);
       emitInstruction(IrOpcode::StoreLocal, static_cast<uint64_t>(aliasedParamInfo.index));
       continue;
     }
 
-    if ((paramInfo.kind == LocalInfo::Kind::Value ||
-         paramInfo.kind == LocalInfo::Kind::KeyValueCollection) &&
+    if (paramInfo.kind == LocalInfo::Kind::Value &&
         paramInfo.isMutable && !paramInfo.isFileHandle &&
         !paramInfo.structTypeName.empty()) {
       if (!orderedArg) {
@@ -804,8 +801,7 @@ bool emitInlineDefinitionCallParameters(
               emitInstruction(IrOpcode::LoadLocal, static_cast<uint64_t>(it->second.index));
               return true;
             }
-            if ((it->second.kind == LocalInfo::Kind::Value ||
-                 it->second.kind == LocalInfo::Kind::KeyValueCollection) &&
+            if (it->second.kind == LocalInfo::Kind::Value &&
                 !it->second.structTypeName.empty()) {
               emitInstruction(IrOpcode::LoadLocal, static_cast<uint64_t>(it->second.index));
               return true;
@@ -824,14 +820,13 @@ bool emitInlineDefinitionCallParameters(
       continue;
     }
 
-    if ((paramInfo.kind == LocalInfo::Kind::Value ||
-         paramInfo.kind == LocalInfo::Kind::KeyValueCollection) &&
+    if (paramInfo.kind == LocalInfo::Kind::Value &&
         !paramInfo.isMutable && !paramInfo.isFileHandle &&
         !paramInfo.structTypeName.empty() && orderedArg != nullptr &&
         orderedArg->kind == Expr::Kind::Name) {
       auto argIt = callerLocals.find(orderedArg->name);
       if (argIt != callerLocals.end() &&
-          argIt->second.kind == LocalInfo::Kind::KeyValueCollection &&
+          argIt->second.kind == LocalInfo::Kind::Value &&
           isStructParamMatch(calleePath, paramInfo.structTypeName, argIt->second.structTypeName) &&
           (paramInfo.keyValueKeyKind == LocalInfo::ValueKind::Unknown ||
            paramInfo.keyValueKeyKind == argIt->second.keyValueKeyKind) &&
@@ -844,8 +839,7 @@ bool emitInlineDefinitionCallParameters(
       }
     }
 
-    if ((paramInfo.kind == LocalInfo::Kind::Value ||
-         paramInfo.kind == LocalInfo::Kind::KeyValueCollection) &&
+    if (paramInfo.kind == LocalInfo::Kind::Value &&
         !paramInfo.isFileHandle && !paramInfo.structTypeName.empty()) {
       if (!orderedArg) {
         error = "argument count mismatch";
@@ -964,8 +958,7 @@ bool emitInlineDefinitionCallParameters(
               emitInstruction(IrOpcode::LoadLocal, static_cast<uint64_t>(it->second.index));
               return true;
             }
-            if ((it->second.kind == LocalInfo::Kind::Value ||
-                 it->second.kind == LocalInfo::Kind::KeyValueCollection) &&
+            if (it->second.kind == LocalInfo::Kind::Value &&
                 !it->second.structTypeName.empty()) {
               emitInstruction(IrOpcode::LoadLocal, static_cast<uint64_t>(it->second.index));
               return true;
@@ -986,7 +979,7 @@ bool emitInlineDefinitionCallParameters(
     if (paramInfo.kind == LocalInfo::Kind::Reference &&
         paramInfo.structTypeName.empty() &&
         !paramInfo.referenceToArray && !paramInfo.referenceToVector &&
-        !paramInfo.referenceToKeyValueCollection && !paramInfo.referenceToBuffer &&
+        !paramInfo.referenceToBuffer &&
         !paramInfo.isFileHandle && !paramInfo.isFileError && !paramInfo.isResult &&
         paramInfo.valueKind != LocalInfo::ValueKind::Unknown &&
         paramInfo.valueKind != LocalInfo::ValueKind::String) {
@@ -1003,7 +996,7 @@ bool emitInlineDefinitionCallParameters(
               !it->second.isFileError && !it->second.isResult) {
             if (it->second.kind == LocalInfo::Kind::Reference &&
                 !it->second.referenceToArray && !it->second.referenceToVector &&
-                !it->second.referenceToKeyValueCollection && !it->second.referenceToBuffer) {
+                !it->second.referenceToBuffer) {
               emitInstruction(IrOpcode::LoadLocal, static_cast<uint64_t>(it->second.index));
               return true;
             }
@@ -1065,7 +1058,9 @@ bool emitInlineDefinitionCallParameters(
     Expr rewrittenKeyValueArgExpr;
     const Expr *emittedArgExpr = orderedArg;
     Expr rewrittenMapReferenceArgExpr;
-    if (paramInfo.kind == LocalInfo::Kind::KeyValueCollection &&
+    if (paramInfo.kind == LocalInfo::Kind::Value &&
+        paramInfo.keyValueKeyKind != LocalInfo::ValueKind::Unknown &&
+        paramInfo.keyValueValueKind != LocalInfo::ValueKind::Unknown &&
         paramInfo.structTypeName.empty() &&
         orderedArg->kind == Expr::Kind::Call &&
         rewritePublishedKeyValueConstructorExpr(

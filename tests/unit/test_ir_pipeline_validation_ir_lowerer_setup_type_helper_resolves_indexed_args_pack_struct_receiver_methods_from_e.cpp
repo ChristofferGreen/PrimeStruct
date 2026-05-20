@@ -230,7 +230,7 @@ TEST_CASE("ir lowerer setup type helper rejects synthetic direct-call probes for
 
   primec::ir_lowerer::LocalMap locals;
   primec::ir_lowerer::LocalInfo valuesLocal;
-  valuesLocal.kind = primec::ir_lowerer::LocalInfo::Kind::KeyValueCollection;
+  valuesLocal.kind = primec::ir_lowerer::LocalInfo::Kind::Value;
   valuesLocal.keyValueKeyKind = primec::ir_lowerer::LocalInfo::ValueKind::Int32;
   valuesLocal.keyValueValueKind = primec::ir_lowerer::LocalInfo::ValueKind::Int32;
   locals.emplace("values", valuesLocal);
@@ -454,7 +454,7 @@ TEST_CASE("ir lowerer setup type helper rejects semantic-product method targets 
 
   primec::ir_lowerer::LocalMap locals;
   primec::ir_lowerer::LocalInfo valuesLocal;
-  valuesLocal.kind = primec::ir_lowerer::LocalInfo::Kind::KeyValueCollection;
+  valuesLocal.kind = primec::ir_lowerer::LocalInfo::Kind::Value;
   locals.emplace("values", valuesLocal);
 
   primec::SemanticProgram semanticProgram;
@@ -515,7 +515,7 @@ TEST_CASE("ir lowerer setup type helper does not reconstruct method targets from
 
   primec::ir_lowerer::LocalMap locals;
   primec::ir_lowerer::LocalInfo valuesLocal;
-  valuesLocal.kind = primec::ir_lowerer::LocalInfo::Kind::KeyValueCollection;
+  valuesLocal.kind = primec::ir_lowerer::LocalInfo::Kind::Value;
   locals.emplace("values", valuesLocal);
 
   primec::SemanticProgram semanticProgram;
@@ -870,7 +870,7 @@ TEST_CASE("ir lowerer setup type helper prefers canonical map method return stru
 
   primec::ir_lowerer::LocalMap locals;
   primec::ir_lowerer::LocalInfo valuesLocal;
-  valuesLocal.kind = primec::ir_lowerer::LocalInfo::Kind::KeyValueCollection;
+  valuesLocal.kind = primec::ir_lowerer::LocalInfo::Kind::Value;
   locals.emplace("values", valuesLocal);
 
   std::string error;
@@ -943,7 +943,7 @@ TEST_CASE("ir lowerer setup type helper keeps canonical map non-struct fallback 
 
   primec::ir_lowerer::LocalMap locals;
   primec::ir_lowerer::LocalInfo valuesLocal;
-  valuesLocal.kind = primec::ir_lowerer::LocalInfo::Kind::KeyValueCollection;
+  valuesLocal.kind = primec::ir_lowerer::LocalInfo::Kind::Value;
   locals.emplace("values", valuesLocal);
 
   std::string error;

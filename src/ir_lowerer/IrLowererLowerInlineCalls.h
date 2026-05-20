@@ -980,10 +980,7 @@
           return false;
         }
         auto isDirectMapStorageLocal = [](const LocalInfo &info) {
-          return info.kind == LocalInfo::Kind::KeyValueCollection ||
-                 (info.kind == LocalInfo::Kind::Value &&
-                  info.keyValueKeyKind != LocalInfo::ValueKind::Unknown &&
-                  info.keyValueValueKind != LocalInfo::ValueKind::Unknown);
+          return info.kind == LocalInfo::Kind::Value && hasKeyValueKinds(info);
         };
         int32_t valuesLocal =
             isDirectMapStorageLocal(valuesIt->second) ? valuesIt->second.index : -1;
@@ -995,10 +992,7 @@
             if (callerValuesIt != callerLocals.end()) {
               if (isDirectMapStorageLocal(callerValuesIt->second)) {
                 valuesLocal = callerValuesIt->second.index;
-              } else if ((callerValuesIt->second.kind == LocalInfo::Kind::Reference &&
-                          callerValuesIt->second.referenceToKeyValueCollection) ||
-                         (callerValuesIt->second.kind == LocalInfo::Kind::Pointer &&
-                          callerValuesIt->second.pointerToKeyValueCollection)) {
+              } else if (hasWrappedKeyValueKinds(callerValuesIt->second, callerValuesIt->second.kind)) {
                 valuesWrapperLocal = callerValuesIt->second.index;
               }
             }
@@ -1006,7 +1000,7 @@
         }
         if (valuesIt->second.kind == LocalInfo::Kind::Reference ||
             valuesIt->second.kind == LocalInfo::Kind::Pointer) {
-          if (valuesIt->second.referenceToKeyValueCollection || valuesIt->second.pointerToKeyValueCollection) {
+          if (hasKeyValueKinds(valuesIt->second)) {
             valuesWrapperLocal = valuesIt->second.index;
             ptrLocal = allocTempLocal();
             function.instructions.push_back({IrOpcode::LoadLocal, static_cast<uint64_t>(valuesIt->second.index)});

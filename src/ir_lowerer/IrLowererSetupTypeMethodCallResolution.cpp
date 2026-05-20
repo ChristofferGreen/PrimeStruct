@@ -464,11 +464,7 @@ const Definition *resolveMethodCallDefinitionFromExpr(
         return false;
       }
       const LocalInfo &info = localIt->second;
-      return info.kind == LocalInfo::Kind::KeyValueCollection ||
-             info.referenceToKeyValueCollection ||
-             info.pointerToKeyValueCollection ||
-             info.keyValueKeyKind != LocalInfo::ValueKind::Unknown ||
-             info.keyValueValueKind != LocalInfo::ValueKind::Unknown;
+      return hasKeyValueKinds(info);
     };
     if (!keyValueHelperName.empty() &&
         (receiverHasKeyValueLocalInfo() ||

@@ -3797,7 +3797,7 @@ TEST_CASE("ir lowerer statement binding helper consumes semantic-product index d
           &semanticProgram,
           &semanticIndex);
 
-  CHECK(info.kind == primec::ir_lowerer::LocalInfo::Kind::KeyValueCollection);
+  CHECK(info.kind == primec::ir_lowerer::LocalInfo::Kind::Value);
   CHECK(info.keyValueKeyKind == primec::ir_lowerer::LocalInfo::ValueKind::Int32);
   CHECK(info.keyValueValueKind == primec::ir_lowerer::LocalInfo::ValueKind::String);
 }
@@ -3835,7 +3835,7 @@ TEST_CASE("ir lowerer statement binding helper prefers semantic initializer bind
   initExpr.semanticNodeId = 7601;
 
   primec::ir_lowerer::LocalInfo staleLocalInfo;
-  staleLocalInfo.kind = primec::ir_lowerer::LocalInfo::Kind::KeyValueCollection;
+  staleLocalInfo.kind = primec::ir_lowerer::LocalInfo::Kind::Value;
   staleLocalInfo.keyValueKeyKind = primec::ir_lowerer::LocalInfo::ValueKind::Int64;
   staleLocalInfo.keyValueValueKind = primec::ir_lowerer::LocalInfo::ValueKind::Bool;
   staleLocalInfo.valueKind = primec::ir_lowerer::LocalInfo::ValueKind::Bool;
@@ -3861,7 +3861,7 @@ TEST_CASE("ir lowerer statement binding helper prefers semantic initializer bind
           &semanticProgram,
           &semanticIndex);
 
-  CHECK(info.kind == primec::ir_lowerer::LocalInfo::Kind::KeyValueCollection);
+  CHECK(info.kind == primec::ir_lowerer::LocalInfo::Kind::Value);
   CHECK(info.keyValueKeyKind == primec::ir_lowerer::LocalInfo::ValueKind::Int32);
   CHECK(info.keyValueValueKind == primec::ir_lowerer::LocalInfo::ValueKind::String);
   CHECK(info.valueKind == primec::ir_lowerer::LocalInfo::ValueKind::String);

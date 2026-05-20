@@ -228,7 +228,7 @@
             if (receiverExpr.kind == Expr::Kind::Name) {
               auto localIt = localsIn.find(receiverExpr.name);
               if (localIt != localsIn.end() &&
-                  localIt->second.kind == LocalInfo::Kind::KeyValueCollection) {
+                  hasKeyValueKinds(localIt->second)) {
                 return keyValueFamilyName();
               }
             }
@@ -253,7 +253,7 @@
             if (receiverExpr.kind == Expr::Kind::Name) {
               auto localIt = localsIn.find(receiverExpr.name);
               if (localIt != localsIn.end() &&
-                  localIt->second.kind == LocalInfo::Kind::KeyValueCollection) {
+                  hasKeyValueKinds(localIt->second)) {
                 return keyValueFamilyName();
               }
             }

@@ -601,7 +601,7 @@ TEST_CASE("ir lowerer result helpers resolve map Result payload metadata") {
   primec::ir_lowerer::LocalMap locals;
 
   primec::ir_lowerer::LocalInfo mapLocal;
-  mapLocal.kind = primec::ir_lowerer::LocalInfo::Kind::KeyValueCollection;
+  mapLocal.kind = primec::ir_lowerer::LocalInfo::Kind::Value;
   mapLocal.keyValueKeyKind = primec::ir_lowerer::LocalInfo::ValueKind::Int32;
   mapLocal.keyValueValueKind = primec::ir_lowerer::LocalInfo::ValueKind::Int32;
   mapLocal.valueKind = primec::ir_lowerer::LocalInfo::ValueKind::Int32;
@@ -611,7 +611,7 @@ TEST_CASE("ir lowerer result helpers resolve map Result payload metadata") {
   mapResult.isResult = true;
   mapResult.resultHasValue = true;
   mapResult.resultValueKind = primec::ir_lowerer::LocalInfo::ValueKind::Int32;
-  mapResult.resultValueCollectionKind = primec::ir_lowerer::LocalInfo::Kind::KeyValueCollection;
+  mapResult.resultValueCollectionKind = primec::ir_lowerer::LocalInfo::Kind::Value;
   mapResult.resultValueMapKeyKind = primec::ir_lowerer::LocalInfo::ValueKind::Int32;
   mapResult.resultErrorType = "FileError";
   locals.emplace("sourceMap", mapResult);
@@ -725,7 +725,7 @@ TEST_CASE("ir lowerer result helpers resolve map Result payload metadata") {
       okExpr, locals, resolveMethodCall, resolveDefinitionCall, lookupReturnInfo, inferExprKind, out));
   CHECK(out.isResult);
   CHECK(out.hasValue);
-  CHECK(out.valueCollectionKind == primec::ir_lowerer::LocalInfo::Kind::KeyValueCollection);
+  CHECK(out.valueCollectionKind == primec::ir_lowerer::LocalInfo::Kind::Value);
   CHECK(out.valueMapKeyKind == primec::ir_lowerer::LocalInfo::ValueKind::Int32);
   CHECK(out.valueKind == primec::ir_lowerer::LocalInfo::ValueKind::Int32);
 
@@ -734,7 +734,7 @@ TEST_CASE("ir lowerer result helpers resolve map Result payload metadata") {
       okCtorExpr, locals, resolveMethodCall, resolveDefinitionCall, lookupReturnInfo, inferExprKind, out));
   CHECK(out.isResult);
   CHECK(out.hasValue);
-  CHECK(out.valueCollectionKind == primec::ir_lowerer::LocalInfo::Kind::KeyValueCollection);
+  CHECK(out.valueCollectionKind == primec::ir_lowerer::LocalInfo::Kind::Value);
   CHECK(out.valueMapKeyKind == primec::ir_lowerer::LocalInfo::ValueKind::Int32);
   CHECK(out.valueKind == primec::ir_lowerer::LocalInfo::ValueKind::Int32);
 
@@ -743,7 +743,7 @@ TEST_CASE("ir lowerer result helpers resolve map Result payload metadata") {
       mapExpr, locals, resolveMethodCall, resolveDefinitionCall, lookupReturnInfo, inferExprKind, out));
   CHECK(out.isResult);
   CHECK(out.hasValue);
-  CHECK(out.valueCollectionKind == primec::ir_lowerer::LocalInfo::Kind::KeyValueCollection);
+  CHECK(out.valueCollectionKind == primec::ir_lowerer::LocalInfo::Kind::Value);
   CHECK(out.valueMapKeyKind == primec::ir_lowerer::LocalInfo::ValueKind::Int32);
   CHECK(out.valueKind == primec::ir_lowerer::LocalInfo::ValueKind::Int32);
 
@@ -752,7 +752,7 @@ TEST_CASE("ir lowerer result helpers resolve map Result payload metadata") {
       andThenExpr, locals, resolveMethodCall, resolveDefinitionCall, lookupReturnInfo, inferExprKind, out));
   CHECK(out.isResult);
   CHECK(out.hasValue);
-  CHECK(out.valueCollectionKind == primec::ir_lowerer::LocalInfo::Kind::KeyValueCollection);
+  CHECK(out.valueCollectionKind == primec::ir_lowerer::LocalInfo::Kind::Value);
   CHECK(out.valueMapKeyKind == primec::ir_lowerer::LocalInfo::ValueKind::Int32);
   CHECK(out.valueKind == primec::ir_lowerer::LocalInfo::ValueKind::Int32);
 
@@ -761,7 +761,7 @@ TEST_CASE("ir lowerer result helpers resolve map Result payload metadata") {
       map2Expr, locals, resolveMethodCall, resolveDefinitionCall, lookupReturnInfo, inferExprKind, out));
   CHECK(out.isResult);
   CHECK(out.hasValue);
-  CHECK(out.valueCollectionKind == primec::ir_lowerer::LocalInfo::Kind::KeyValueCollection);
+  CHECK(out.valueCollectionKind == primec::ir_lowerer::LocalInfo::Kind::Value);
   CHECK(out.valueMapKeyKind == primec::ir_lowerer::LocalInfo::ValueKind::Int32);
   CHECK(out.valueKind == primec::ir_lowerer::LocalInfo::ValueKind::Int32);
 }

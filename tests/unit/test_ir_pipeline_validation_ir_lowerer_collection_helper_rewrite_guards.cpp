@@ -952,7 +952,7 @@ TEST_CASE("ir lowerer inline map insert helper prefers semantic receiver facts")
         std::string::npos);
   CHECK(source.find("info.keyValueValueKind != LocalInfo::ValueKind::Unknown") !=
         std::string::npos);
-  CHECK(source.find("if (valuesIt->second.referenceToKeyValueCollection || valuesIt->second.pointerToKeyValueCollection) {") !=
+  CHECK(source.find("if (hasKeyValueKinds(valuesIt->second)) {") !=
         std::string::npos);
   CHECK(source.find("ptrLocal = valuesIt->second.index;") !=
         std::string::npos);
