@@ -1687,15 +1687,31 @@ This file stores durable session-derived facts that are useful in later work. Ke
   `rewriteReflectionGeneratedHelpersForPackSpecializations` regenerates
   reflection helpers from expanded fields.
 
-### type-pack-template-definitions-need-canonical-compile-run
+### text-filter-preserves-type-pack-template-lists
 - Updated: 2026-05-20
 - Tags: parser, text-filter, generics, tests
-- Fact: Compile-run sources that define helpers such as `get<Index, Ts...>(...)`
-  should use `--no-text-transforms` until the operator text filter stops
-  treating definition template lists as comparison syntax.
-- Evidence: The TODO-4271 native compile-run smoke initially rewrote
-  `get<Index, Ts...>` into `less_than(...)`/`greater_than(...)`; the same
-  source passed after compiling with `--no-text-transforms`.
+- Fact: Default text transforms now preserve type-pack template syntax,
+  including `Ts...`, `Ts[I]`, and integer template arguments such as
+  `get<0, i32>`, so compile-run tuple/type-pack sources no longer need
+  `--no-text-transforms` for that syntax alone.
+- Evidence: `TextFilterHelpers.cpp` accepts ellipsis and bracketed pack indexes
+  inside template lists, `TextFilterPipelinePass.cpp` skips recognized
+  template lists before implicit-i32 rewriting, and the focused
+  `operator rewrite preserves type-pack template syntax` release test covers
+  `tuple<Ts...>`, `return<Ts[Index]>`, `get<Index, Ts...>`, and `get<0, i32>`.
+
+### stdlib-tuple-is-prime-owned
+- Updated: 2026-05-20
+- Tags: stdlib, tuple, generics
+- Fact: `/std/tuple/*` exposes the initial stdlib-owned `tuple<Ts...>` surface
+  from `.prime`: a single pack-expanded struct plus `get<I, Ts...>` and
+  `get_ref<I, Ts...>` helpers over generic `pack_at` rewriting. There are no
+  tuple-specific C++ opcodes, fixed-arity tuple families, or backend tuple
+  runtime objects in this slice.
+- Evidence: `stdlib/std/tuple/tuple.prime` defines the public surface; focused
+  native compile-run coverage imports `/std/tuple/*`, constructs `tuple<T>`,
+  `tuple<T0, T1>`, compile-checks `tuple<>` plus borrowed `get_ref`, and locks
+  out-of-range `get` diagnostics through the ordinary pack-index path.
 
 ### variadic-borrowed-pointer-packs-are-supported
 - Updated: 2026-05-01

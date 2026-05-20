@@ -172,6 +172,25 @@ main() {
   CHECK(methodCall.templateArgDetails[0].integerValue == 1);
 }
 
+TEST_CASE("parses empty template argument lists") {
+  const std::string source = R"(
+[return<tuple<>>]
+empty_tuple() {
+  return(tuple<>{})
+}
+)";
+  const auto program = parseProgram(source);
+  REQUIRE(program.definitions.size() == 1);
+  const auto &def = program.definitions[0];
+  REQUIRE(def.transforms.size() == 1);
+  REQUIRE(def.transforms.front().templateArgs.size() == 1);
+  CHECK(def.transforms.front().templateArgs.front() == "tuple<>");
+  REQUIRE(def.returnExpr);
+  CHECK(def.returnExpr->name == "tuple");
+  CHECK(def.returnExpr->isBraceConstructor);
+  CHECK(def.returnExpr->templateArgs.empty());
+}
+
 TEST_CASE("parses nested template arguments on call") {
   const std::string source = R"(
 [return<int>]

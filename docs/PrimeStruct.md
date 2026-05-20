@@ -2309,6 +2309,22 @@ explicit `utf8`/`ascii` suffix.** `ascii` enforces 7-bit ASCII (the compiler rej
   non-pack operands are semantic diagnostics. This substrate is intentionally
   lowerer-neutral: after specialization, ordinary field access and field-borrow
   paths carry the selected storage slot.
+- **Stdlib tuple:** `/std/tuple/*` exposes the public lower-case
+  `tuple<Ts...>` type as a stdlib-owned heterogeneous product. The
+  implementation is a single `.prime` generic struct with `[Ts...] values`,
+  not a generated or hand-written fixed-arity tuple family. Imported
+  `tuple<>{}`, `tuple<T>{...}`, and `tuple<T0, T1, ...>{...}` use ordinary
+  brace construction and field lifecycle rules. Imported
+  `get<I, Ts...>(value)` returns the precise `I`th element type by rewriting
+  through generic `pack_at<I, values>(value)` during monomorphization.
+  Imported `get_ref<I, Ts...>(location(value))` type-checks as
+  `Reference<TI>` when borrowed field access is available, but direct native
+  runtime dereference of returned tuple element references is still treated as
+  a backend support boundary rather than a tuple-specific opcode. Tuple arity
+  and element order are available through the same generated field/reflection
+  metadata used by pack-expanded structs. Bracket indexing, heterogeneous
+  value-pack inference, tuple destructuring, and multi-wait integration remain
+  follow-up sugar over this stdlib tuple surface.
 - **Definitions vs executions:** definitions include a body (`{…}`) and optional transforms; executions are call-style
   (`execute_task<…>(args)`) with mandatory parentheses and no body, and map to an envelope with an implicit empty body.
   Calls always use `()`; the `name{...}` form is reserved for bindings so `execute_task{...}` is invalid.
@@ -3713,8 +3729,9 @@ sum_two_files([string] a, [string] b) {
 
 ### Type Grammar (canonical)
 - **Atomic:** `bool`, `i32`, `i64`, `u64`, `f32`, `f64`, `string`, `void`, `Self`.
-- **Composite:** `array<T>`, `vector<T>`, `map<K, V>`, `Pointer<T>`, `Reference<T>`, stdlib-owned `soa<T>`,
-  and draft math value types (`Mat2`, `Mat3`, `Mat4`, `Quat`).
+- **Composite:** `array<T>`, `vector<T>`, `map<K, V>`, `Pointer<T>`, `Reference<T>`,
+  stdlib-owned `soa<T>`, stdlib-owned `tuple<Ts...>`, and draft math value
+  types (`Mat2`, `Mat3`, `Mat4`, `Quat`).
 - **User types:** struct definitions and named aliases.
 - **Template applications:** `Name<T1, T2, ...>`.
 
@@ -3725,6 +3742,8 @@ sum_two_files([string] a, [string] b) {
   The public API is stdlib-owned on top of generic language/runtime SoA
   substrate rather than a compiler-owned collection contract. `soa_vector<T>`
   is a rejected compatibility spelling.
+- `tuple<Ts...>` for heterogeneous product values implemented in stdlib
+  `.prime` on top of generic type-pack storage and indexing substrate.
 - Draft extension: `Mat2`, `Mat3`, `Mat4`, and `Quat` with explicit conversion-only interaction rules (not yet portable
   across backends).
 - `Pointer<T>`, `Reference<T>` where `T` is primitive or a struct type.
@@ -3759,7 +3778,8 @@ language/runtime-owned, which remain hybrid, and which should move fully into st
   Migration stance: move public constructors, helper APIs, and error-domain behavior into stdlib
   `.prime` wherever practical, then delete the old compatibility paths once the bridge is empty.
 - `stdlib-owned`
-  Public types/surfaces: `Maybe<T>`, `vector<T>`, `map<K, V>`, `soa<T>`.
+  Public types/surfaces: `Maybe<T>`, `vector<T>`, `map<K, V>`, `soa<T>`,
+  `tuple<Ts...>`.
   Ownership rule: public API should live in stdlib `.prime` on top of minimal generic substrate.
   Migration stance: prefer slices that replace type-named compiler special cases with generic
   allocation/layout/drop substrate, then delete the old compatibility paths.
@@ -3769,6 +3789,9 @@ language/runtime-owned, which remain hybrid, and which should move fully into st
 - `soa<T>` is the promoted stdlib-owned public collection spelling over the
   current SoA backing identity. `soa_vector<T>` and direct experimental SoA
   imports are rejected compatibility spellings, not ordinary public API.
+- `tuple<Ts...>` is a stdlib-owned heterogeneous product type. It is not a
+  compiler-owned tuple envelope, fixed-arity family, opcode, or backend runtime
+  object.
 
 ### Stdlib Surface-Style Boundary
 This boundary is the scope reference for the stdlib surface-style cleanup lane in
@@ -3782,7 +3805,8 @@ flight.
   `stdlib/std/collections/vector.prime`,
   `stdlib/std/collections/map.prime`,
   `stdlib/std/collections/errors.prime`,
-  `stdlib/std/collections/soa.prime`, and
+  `stdlib/std/collections/soa.prime`,
+  `stdlib/std/tuple/tuple.prime`, and
   `stdlib/std/gfx/gfx.prime`.
 - **Internal implementation, bridge, or substrate code:** `stdlib/std/bench_non_math/*`,
   `stdlib/std/collections/collections.prime`,
@@ -4179,8 +4203,9 @@ Enum entry access uses static field syntax (`Colors.Blue`) and rewrites to brace
   template arguments may spell `Ts...` where specialization expands it into
   zero or more concrete template arguments. Generated reflection helpers such
   as `Clone` and `CopyFrom` consume the same expanded source-order field list,
-  so helper field order matches reflection metadata order. Generic pack
-  indexing is still deferred follow-up work.
+  so helper field order matches reflection metadata order. Generic `Ts[I]`
+  pack indexing and `pack_at<I, fieldStem>(receiver)` access are available to
+  `.prime` helpers after monomorphization.
 - **Field visibility:** stack-value declarations accept `[public]` or `[private]` transforms (default: public); they are
   mutually exclusive. The compiler records `visibility` metadata per field so tooling and backends enforce access rules
   consistently. Field visibility is in-language field-access metadata; it does not make a field a package-importable API

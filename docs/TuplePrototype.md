@@ -1,7 +1,9 @@
 # PrimeStruct Tuple Prototype
 
-Status: prototype design note, not implemented yet and not part of the
-canonical language spec.
+Status: partially implemented. The accepted `tuple<Ts...>` storage and
+`get<I, ...>` helper surface is now canonicalized in `docs/PrimeStruct.md`.
+Bracket indexing, heterogeneous value-pack inference, destructuring, and
+multi-wait integration remain prototype follow-ups.
 
 This document captures the proposed `tuple` design needed by future
 multi-value APIs such as multithreaded `wait(left, right)`. When the design is
@@ -79,8 +81,9 @@ and semantic-product metadata can record that `Ts` is a heterogeneous type
 pack, and monomorphized definitions record the trailing type arguments bound
 to that pack in source order. Expanding `Ts...` into struct fields,
 constructor initialization, helper parameters, helper locals, return envelopes,
-and generated reflection helper field order is covered by TODO-4275/TODO-4276;
-generic indexed access remains deferred to TODO-4271.
+and generated reflection helper field order is covered by the completed
+TODO-4275/TODO-4276 work; generic indexed access is covered by the completed
+TODO-4271 work.
 `args<T>` remains the homogeneous value-pack envelope and is not a spelling for
 heterogeneous type packs.
 
@@ -135,7 +138,7 @@ label{get<1>(pair)}
 ```
 
 Method sugar should be valid once template arguments on method calls are
-supported for this helper shape:
+supported for this free stdlib helper shape:
 
 ```prime
 number{pair.get<0>()}
@@ -204,7 +207,7 @@ namespace std {
   tuple<Ts...>() {
     // Expanded by generic type-pack substrate, not by tuple-specific compiler
     // logic.
-    [public Ts] item...
+    [Ts...] values
   }
   }
 }
@@ -293,8 +296,9 @@ semantic requirements are:
 - downstream generic code can constrain or specialize on tuple arity and
   element type without runtime reflection
 
-If type-returning helpers are not ready, first implementation can keep metadata
-internal to the tuple helper overloads and add the public metadata API later.
+The current implementation keeps arity and element metadata in the same
+pack-expanded struct/reflection metadata used by ordinary generated fields.
+Public type-returning helpers can be added later.
 
 ## Ownership And Lifetime
 
@@ -406,8 +410,9 @@ When this prototype graduates into active implementation work:
 
 - complete the remaining generic type-pack substrate tracked by TODO-4270
   through TODO-4271, including the split field/helper expansion work in
-  TODO-4275 and TODO-4276
+  TODO-4275 and TODO-4276 (done)
 - add `stdlib/std/tuple/tuple.prime` and a public import surface in TODO-4272
+  (done)
 - implement `tuple<Ts...>` as one generic `.prime` definition, not a generated
   or hand-written fixed-arity family
 - add construction and indexed access tests, including negative diagnostics for
@@ -418,4 +423,4 @@ When this prototype graduates into active implementation work:
   destructuring, and multi-wait integration only as later follow-ups, tracked
   by TODO-4274, TODO-4273, TODO-4277, and TODO-4278
 - update `docs/PrimeStruct.md` and `docs/CodeExamples.md` only after the
-  supported surface is implemented
+  supported surface is implemented (done for the initial surface)

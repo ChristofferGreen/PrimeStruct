@@ -12,6 +12,19 @@
   compilation.
 
 ## Recent Test Runs
+- 2026-05-20 22:17 CEST | pass | mode: release | command:
+  `cmake --build build-release --target PrimeStruct_text_filter_tests`;
+  `cd build-release && ./PrimeStruct_text_filter_tests --test-case="operator rewrite preserves type-pack template syntax" --no-skip`;
+  `cmake --build build-release --target PrimeStruct_parser_tests`;
+  `cd build-release && ./PrimeStruct_parser_tests --test-case="parses empty template argument lists" --no-skip`;
+  `cmake --build build-release --target primec`;
+  `cmake --build build-release --target PrimeStruct_compile_run_tests`;
+  `cd build-release && ./PrimeStruct_compile_run_tests --test-case="native uses imported stdlib tuple get helpers,native compiles empty and borrowed stdlib tuple access,native reports stdlib tuple get index diagnostics" --no-skip`;
+  `cd build-release && ./PrimeStruct_compile_run_tests --test-case="todo queue and skipped doctest debt stay source locked" --no-skip`
+  | failures: none | notes: TODO-4272 added the stdlib-owned
+  `/std/tuple/*` `tuple<Ts...>` surface, preserved type-pack template syntax
+  under default text transforms, added explicit empty-template parsing for
+  `tuple<>`, and covered imported tuple get/diagnostic behavior.
 - 2026-05-20 22:12 CEST | pass | mode: release | command:
   `cmake --build build-release --target PrimeStruct_parser_tests`;
   `cd build-release && ./PrimeStruct_parser_tests --test-case="parses type-pack index template arguments" --no-skip`;

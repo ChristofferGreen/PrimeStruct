@@ -173,7 +173,7 @@ bool Parser::parseTemplateList(std::vector<std::string> &out,
   }
   skipSeparators();
   if (matchRaw(TokenKind::RAngle)) {
-    return fail("expected template identifier");
+    return expectRaw(TokenKind::RAngle, "expected '>'");
   }
   while (true) {
     std::string argText;
@@ -350,7 +350,14 @@ bool Parser::parseTemplateArgument(std::string &out, TemplateArgument *detailOut
     out += "<";
     skipSeparators();
     if (matchRaw(TokenKind::RAngle)) {
-      return fail("expected template identifier");
+      if (!expectRaw(TokenKind::RAngle, "expected '>'")) {
+        return false;
+      }
+      out += ">";
+      if (detailOut != nullptr) {
+        *detailOut = TemplateArgument::type(out);
+      }
+      return true;
     }
     bool first = true;
     while (true) {
@@ -559,7 +566,11 @@ bool Parser::parseTypeName(std::string &out) {
     out += "<";
     skipSeparators();
     if (matchRaw(TokenKind::RAngle)) {
-      return fail("expected template identifier");
+      if (!expectRaw(TokenKind::RAngle, "expected '>'")) {
+        return false;
+      }
+      out += ">";
+      return true;
     }
     bool first = true;
     while (true) {

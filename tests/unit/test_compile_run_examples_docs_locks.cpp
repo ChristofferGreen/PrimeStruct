@@ -1613,36 +1613,30 @@ TEST_CASE("todo queue and skipped doctest debt stay source locked") {
   CHECK(todo.find("### Ready Now (Parallel-Candidate Leaves; No Unmet TODO Dependencies)") !=
         std::string::npos);
   CHECK(todo.find("### Ready Now (Parallel-Candidate Leaves; No Unmet TODO Dependencies)\n\n"
-                  "- TODO-4534: Delete map constructor/helper shim boundary | track: map-zero-audit |\n"
-                  "  primary surface: map constructor/helper metadata wrappers and call sites\n"
-                  "- TODO-4271: Add compile-time pack indexing | track: tuple-type-packs |\n"
-                  "  primary surface: generic pack-index selection and diagnostics") !=
+                  "- TODO-4274: Add tuple bracket indexing sugar | track: tuple-type-packs |\n"
+                  "  primary surface: compile-time tuple index sugar over stdlib `get<I>`") !=
         std::string::npos);
   CHECK(todo.find("- `soa-zero-audit`: TODO-4529 replaced the residue inventory with a strict\n"
                   "  zero-production-trace audit; no SoA zero-audit leaf is ready.") !=
         std::string::npos);
-  CHECK(todo.find("- `map-zero-audit`: TODO-4532 reduced the lowerer native-dispatch slice;\n"
-                  "  ready TODO-4534 deletes the constructor/helper shim boundary, followed by\n"
-                  "  TODO-4535 -> TODO-4536 -> TODO-4537 -> TODO-4538 -> TODO-4464 for the\n"
-                  "  final strict zero map-surface audit.") !=
+  CHECK(todo.find("- `map-zero-audit`: TODO-4537 split the broad lowerer substrate item into\n"
+                  "  bounded leaves; TODO-4539 removed generated MapValue path synthesis, and\n"
+                  "  TODO-4540 removed the lowerer key/value local kind plus ref/pointer flags.") !=
         std::string::npos);
-  CHECK(todo.find("This is a deletion-first task. If the main diff is mostly renaming\n"
-                  "      `map*` helpers to `keyValue*` while preserving the same shim boundary,\n"
-                  "      stop and rescope before committing.") !=
-        std::string::npos);
-  CHECK(todo.find("split that missing capability into a new\n"
-                  "      non-map TODO instead of preserving a map exception.") !=
+  CHECK(todo.find("no map zero-audit leaf is ready.") !=
         std::string::npos);
   CHECK(todo.find("- `tuple-type-packs`: TODO-4276 completed helper/lifecycle pack\n"
-                  "  expansion; ready TODO-4271, then serial successors TODO-4272") !=
+                  "  expansion, TODO-4271 added compile-time pack indexing, and TODO-4272 added\n"
+                  "  the initial stdlib tuple surface; ready TODO-4274") !=
         std::string::npos);
   CHECK(todo.find("### Immediate Next 10 (Track Successors; Not Ready Until Dependencies Land)\n\n"
-                  "- TODO-4535: Delete map collection type classifier API\n"
-                  "- TODO-4536: Delete late map builtin validation boundary") !=
+                  "- TODO-4273: Add heterogeneous value-pack inference\n"
+                  "- TODO-4277: Add tuple destructuring sugar\n"
+                  "- TODO-4278: Integrate multi-wait with stdlib tuple") !=
         std::string::npos);
-  CHECK(todo.find("- TODO-4464: Run final strict C++ map-surface audit\n"
-                  "- TODO-4272: Add stdlib `tuple<Ts...>`\n"
-                  "- TODO-4274: Add tuple bracket indexing sugar") !=
+  CHECK(todo.find("- TODO-4274: Add tuple bracket indexing sugar\n"
+                  "- TODO-4273: Add heterogeneous value-pack inference\n"
+                  "- TODO-4277: Add tuple destructuring sugar") !=
         std::string::npos);
   CHECK(todo.find("- [~] TODO-4305: Rename and style canonical `.prime` SoA surface") !=
         std::string::npos);
@@ -1656,17 +1650,20 @@ TEST_CASE("todo queue and skipped doctest debt stay source locked") {
   CHECK(todo.find("- Deferred SoA finish: TODO-4252") ==
         std::string::npos);
   CHECK(todo.find("### Execution Queue (Recommended Track Order)\n\n"
-                  "- TODO-4534: Delete map constructor/helper shim boundary\n"
-                  "- TODO-4535: Delete map collection type classifier API\n"
-                  "- TODO-4536: Delete late map builtin validation boundary") !=
+                  "- TODO-4274: Add tuple bracket indexing sugar\n"
+                  "- TODO-4273: Add heterogeneous value-pack inference\n"
+                  "- TODO-4277: Add tuple destructuring sugar") !=
         std::string::npos);
-  CHECK(todo.find("- TODO-4464: Run final strict C++ map-surface audit\n"
-                  "- TODO-4271: Add compile-time pack indexing\n"
-                  "- TODO-4272: Add stdlib `tuple<Ts...>`") !=
+  CHECK(todo.find("- TODO-4278: Integrate multi-wait with stdlib tuple\n"
+                  "- TODO-4331: Implement compile-time argument channel model") !=
         std::string::npos);
   CHECK(todo.find("- [ ] TODO-4276: Expand type packs in helpers and lifecycle hooks") ==
         std::string::npos);
   CHECK(todoFinished.find("TODO-4276: Expand type packs in helpers and lifecycle hooks") !=
+        std::string::npos);
+  CHECK(todoFinished.find("TODO-4272: Add stdlib `tuple<Ts...>`") !=
+        std::string::npos);
+  CHECK(todoFinished.find("TODO-4271: Add compile-time pack indexing") !=
         std::string::npos);
   CHECK(todoFinished.find("TODO-4275: Expand type packs into struct storage") !=
         std::string::npos);
@@ -1711,13 +1708,13 @@ TEST_CASE("todo queue and skipped doctest debt stay source locked") {
   CHECK(todoFinished.find("TODO-4519: Delete `soa_vector` compatibility seams") !=
         std::string::npos);
   const std::vector<std::string> semanticPhaseQueue = {
-      "TODO-4271: Add compile-time pack indexing",
+      "TODO-4274: Add tuple bracket indexing sugar",
   };
   for (const std::string &entry : semanticPhaseQueue) {
     CHECK(todo.find("- " + entry) != std::string::npos);
     CHECK(todo.find("- [ ] " + entry) != std::string::npos);
   }
-  CHECK(todo.find("  - parallel_track: tuple-type-packs") !=
+  CHECK(todo.find("| track: tuple-type-packs |") !=
         std::string::npos);
   CHECK(todoFinished.find("  - parallel_track: soa-zero-audit") !=
         std::string::npos);
@@ -2052,9 +2049,9 @@ TEST_CASE("todo queue and skipped doctest debt stay source locked") {
         std::string::npos);
   CHECK(todo.find("| Compile-time macro hooks and AST transform ownership | none |") !=
         std::string::npos);
-  CHECK(todo.find("| Stdlib bridge consolidation and collection/file/gfx surface authority | TODO-4430, TODO-4534 through TODO-4538, TODO-4464, TODO-4524 |") !=
+  CHECK(todo.find("| Stdlib bridge consolidation and collection/file/gfx surface authority | none |") !=
         std::string::npos);
-  CHECK(todo.find("| Vector/map stdlib ownership cutover and collection surface authority | TODO-4430, TODO-4534 through TODO-4538, TODO-4464 |") !=
+  CHECK(todo.find("| Vector/map stdlib ownership cutover and collection surface authority | none |") !=
         std::string::npos);
   CHECK(todo.find("| Release benchmark/example suite stability and doctest governance | none |") !=
         std::string::npos);
@@ -2062,11 +2059,11 @@ TEST_CASE("todo queue and skipped doctest debt stay source locked") {
         std::string::npos);
   CHECK(todo.find("| Test-suite audit follow-up and release-gate stability | none |") !=
         std::string::npos);
-  CHECK(todo.find("| Stdlib de-experimentalization and public/internal namespace cleanup | TODO-4430, TODO-4534 through TODO-4538, TODO-4464, TODO-4305, TODO-4524 |") !=
+  CHECK(todo.find("| Stdlib de-experimentalization and public/internal namespace cleanup | none |") !=
         std::string::npos);
   CHECK(todo.find("| SoA maturity and `soa` public-surface rename | TODO-4305, TODO-4306, TODO-4514, TODO-4524 |") !=
         std::string::npos);
-  CHECK(todo.find("| De-experimentalization surface and namespace parity | TODO-4430, TODO-4534 through TODO-4538, TODO-4464, TODO-4305, TODO-4524 |") !=
+  CHECK(todo.find("| De-experimentalization surface and namespace parity | none |") !=
         std::string::npos);
   CHECK(todo.find("| `soa` maturity and canonical surface parity | TODO-4305, TODO-4306, TODO-4514, TODO-4524 |") !=
         std::string::npos);
@@ -2092,7 +2089,7 @@ TEST_CASE("todo queue and skipped doctest debt stay source locked") {
         std::string::npos);
   CHECK(todo.find("| Lowerer/source-composition contract coverage | none |") !=
         std::string::npos);
-  CHECK(todo.find("| Vector/map bridge parity for imports, rewrites, and lowering | TODO-4430, TODO-4534 through TODO-4538, TODO-4464 |") !=
+  CHECK(todo.find("| Vector/map bridge parity for imports, rewrites, and lowering | none |") !=
         std::string::npos);
   CHECK(todo.find("### Skipped Doctest Debt Summary") != std::string::npos);
   CHECK(todo.find("Retained `doctest::skip(true)` coverage is currently absent from the active") !=

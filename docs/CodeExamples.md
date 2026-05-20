@@ -40,6 +40,7 @@ Style-aligned surface code:
 - `stdlib/std/collections/map.prime`
 - `stdlib/std/collections/errors.prime`
 - `stdlib/std/collections/soa.prime`
+- `stdlib/std/tuple/tuple.prime`
 - `stdlib/std/gfx/gfx.prime`
 
 These modules should converge on the readable surface forms in this document:
@@ -71,6 +72,11 @@ Retired SoA compatibility rule: direct imports of
 `/std/collections/soa_vector*` and `/std/collections/experimental_soa_vector*`
 are rejected compatibility spellings. Use `/std/collections/soa/*` and
 `soa<T>` for ordinary examples.
+
+Tuple public example rule: `tuple<Ts...>` is the stdlib-owned heterogeneous
+product spelling. Ordinary examples should import `/std/tuple/*`, construct
+with braces such as `tuple<i32, bool>{1, true}`, and read elements with
+`get<I, ...>(value)` until bracket indexing or shorter inference sugar lands.
 
 Mixed-directory rule:
 - `stdlib/std/collections` is intentionally mixed; follow the file-level list

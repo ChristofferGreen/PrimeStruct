@@ -518,6 +518,17 @@ bool applyPass(const std::string &input,
       return false;
     }
 
+    if (input[i] == '<' && looksLikeTemplateList(input, i)) {
+      size_t close = findMatchingClose(input, i, '<', '>');
+      if (close == std::string::npos) {
+        error = "unterminated template list";
+        return false;
+      }
+      output.append(input.substr(i, close - i + 1));
+      i = close;
+      continue;
+    }
+
     if (input[i] == '/' && (i == 0 || isSeparator(input[i - 1]))) {
       size_t leftIndex = i;
       while (leftIndex > 0 && std::isspace(static_cast<unsigned char>(input[leftIndex - 1]))) {

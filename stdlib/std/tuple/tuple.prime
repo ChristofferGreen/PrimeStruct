@@ -1,0 +1,18 @@
+namespace std {
+  namespace tuple {
+  [public struct]
+  tuple<Ts...>() {
+    [Ts...] values
+  }
+
+  [public return<Ts[Index]>]
+  get<Index, Ts...>([tuple<Ts...>] values) {
+    return(pack_at<Index, values>(values))
+  }
+
+  [public return<Reference<Ts[Index]>>]
+  get_ref<Index, Ts...>([Reference<tuple<Ts...>>] values) {
+    return(pack_at<Index, values>(values))
+  }
+  }
+}

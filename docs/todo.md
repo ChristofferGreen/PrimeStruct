@@ -83,8 +83,8 @@ Task template:
 
 ### Ready Now (Parallel-Candidate Leaves; No Unmet TODO Dependencies)
 
-- TODO-4272: Add stdlib `tuple<Ts...>` | track: tuple-type-packs |
-  primary surface: public tuple type and minimal get surface
+- TODO-4274: Add tuple bracket indexing sugar | track: tuple-type-packs |
+  primary surface: compile-time tuple index sugar over stdlib `get<I>`
 
 ### Parallel Work Tracks (Current)
 
@@ -102,8 +102,9 @@ Task template:
   generated `.prime` helper calls without restoring map-specific native
   insert dispatch; no generic helper-call leaf is ready.
 - `tuple-type-packs`: TODO-4276 completed helper/lifecycle pack
-  expansion and TODO-4271 added compile-time pack indexing; ready TODO-4272,
-  then serial successors TODO-4274 -> TODO-4273 -> TODO-4277 -> TODO-4278.
+  expansion, TODO-4271 added compile-time pack indexing, and TODO-4272 added
+  the initial stdlib tuple surface; ready TODO-4274, then serial successors
+  TODO-4273 -> TODO-4277 -> TODO-4278.
 - `procedural-genericity`: blocked by the tuple-type-packs successor chain
   before TODO-4331 can start.
 - `generic-requirements`: blocked by TODO-4331 and TODO-4334 before
@@ -111,9 +112,9 @@ Task template:
 
 ### Immediate Next 10 (Track Successors; Not Ready Until Dependencies Land)
 
-- TODO-4274: Add tuple bracket indexing sugar
 - TODO-4273: Add heterogeneous value-pack inference
 - TODO-4277: Add tuple destructuring sugar
+- TODO-4278: Integrate multi-wait with stdlib tuple
 
 ### Priority Lanes (Current)
 
@@ -130,9 +131,9 @@ Task template:
   template-monomorph residue; TODO-4533 removed lowerer call-resolution
   residual bridge traces; TODO-4528 removed lowerer count/access residue; and
   TODO-4529 replaced the residue inventory with a strict zero audit
-- Deferred generic tuple substrate: ready TODO-4272 after TODO-4271 added
-  compile-time pack indexing, followed by TODO-4274 -> TODO-4273
-  -> TODO-4277 -> TODO-4278
+- Deferred generic tuple substrate: ready TODO-4274 after TODO-4272 added
+  the initial stdlib tuple surface, followed by TODO-4273 -> TODO-4277
+  -> TODO-4278
 - Procedural compile-time genericity: TODO-4331 -> TODO-4332
   -> TODO-4333 -> TODO-4334 -> TODO-4335 -> TODO-4336 -> TODO-4337
   -> TODO-4338 -> TODO-4339 -> TODO-4340
@@ -144,7 +145,6 @@ Task template:
 
 ### Execution Queue (Recommended Track Order)
 
-- TODO-4272: Add stdlib `tuple<Ts...>`
 - TODO-4274: Add tuple bracket indexing sugar
 - TODO-4273: Add heterogeneous value-pack inference
 - TODO-4277: Add tuple destructuring sugar
@@ -204,7 +204,7 @@ Task template:
 | Test-suite audit follow-up and release-gate stability | none |
 | Algebraic sum types and brace-only construction | none |
 | Stdlib ADT migration for `Maybe` and `Result` | none |
-| Generic type packs and tuple stdlib surface | TODO-4272, TODO-4274, TODO-4273, TODO-4277, TODO-4278 |
+| Generic type packs and tuple stdlib surface | TODO-4274, TODO-4273, TODO-4277, TODO-4278 |
 | Procedural compile-time genericity and local type facts | TODO-4331, TODO-4332, TODO-4333, TODO-4334, TODO-4335, TODO-4336, TODO-4337, TODO-4338, TODO-4339, TODO-4340 |
 | Generic constraints and compile-time flow control | TODO-4341, TODO-4342, TODO-4343, TODO-4344, TODO-4352, TODO-4353, TODO-4354, TODO-4355, TODO-4356, TODO-4357, TODO-4345, TODO-4346, TODO-4358, TODO-4347, TODO-4351, TODO-4348, TODO-4359, TODO-4349, TODO-4350 |
 
@@ -231,7 +231,7 @@ Task template:
 | Release benchmark/example suite stability and doctest governance | none |
 | Sum-type and brace-construction conformance | none |
 | Maybe/Result sum migration conformance | none |
-| Generic type-pack and tuple conformance | TODO-4272, TODO-4274, TODO-4273, TODO-4277, TODO-4278 |
+| Generic type-pack and tuple conformance | TODO-4274, TODO-4273, TODO-4277, TODO-4278 |
 | Procedural compile-time genericity conformance | TODO-4331, TODO-4332, TODO-4333, TODO-4334, TODO-4335, TODO-4336, TODO-4337, TODO-4338, TODO-4339, TODO-4340 |
 | Generic constraint and compile-time flow conformance | TODO-4341, TODO-4342, TODO-4343, TODO-4344, TODO-4352, TODO-4353, TODO-4354, TODO-4355, TODO-4356, TODO-4357, TODO-4345, TODO-4346, TODO-4358, TODO-4347, TODO-4351, TODO-4348, TODO-4359, TODO-4349, TODO-4350 |
 
@@ -757,41 +757,11 @@ Task template:
 
 ### Task Blocks
 
-- [ ] TODO-4272: Add stdlib `tuple<Ts...>`
-  - owner: ai
-  - created_at: 2026-04-27
-  - phase: Deferred generic tuple substrate
-  - depends_on: TODO-4271
-  - scope: Implement the public `tuple<Ts...>` stdlib type and minimal helper
-    surface in `.prime` using the generic type-pack substrate.
-  - implementation_notes:
-    - Add files under `stdlib/std/tuple/` plus a public import surface aligned
-      with existing stdlib naming/import conventions.
-    - Do not add compiler/runtime tuple opcodes, special envelopes, generated
-      fixed-arity tuple families, or fixed helper names such as `get0`.
-    - Start with construction, `get<I>`, borrowed access where supported,
-      tuple arity metadata, and focused diagnostics.
-  - acceptance:
-    - `tuple<Ts...>{...}` constructs owned heterogeneous tuples of arbitrary
-      arity using `.prime` source and ordinary field lifecycle rules.
-    - `get<I>(tuple)` and method sugar where supported return the precise
-      element type for value and borrowed receivers.
-    - `tuple<>`, `tuple<T>`, and multi-element tuples are covered without
-      separate arity-specific implementations.
-    - Diagnostics cover initializer arity mismatch, bad element type,
-      out-of-range `get`, non-constant `get`, and unsupported element
-      lifecycle operations.
-    - Docs record `tuple` as stdlib-owned and explicitly reject fixed-arity
-      tuple families as implementation strategy.
-    - `./scripts/compile.sh --release` passes.
-  - stop_rule: Stop once the minimal tuple API is implemented in `.prime` and
-    validated; leave heterogeneous value-pack inference to TODO-4273.
-
 - [ ] TODO-4273: Add heterogeneous value-pack inference
   - owner: ai
   - created_at: 2026-04-27
   - phase: Deferred generic tuple substrate
-  - depends_on: TODO-4272
+  - depends_on: TODO-4274
   - scope: Add generic heterogeneous value-pack inference for helpers such as
     `make_tuple(values...)` without weakening the homogeneous `args<T>` model.
   - implementation_notes:

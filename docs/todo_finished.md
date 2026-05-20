@@ -6,6 +6,42 @@ Legend:
 Finished items are periodically archived here from `docs/todo.md`; section headers record the archive date.
 
 **Todo Completion (May 20, 2026)**
+- [x] TODO-4272: Add stdlib `tuple<Ts...>`
+  - owner: ai
+  - created_at: 2026-04-27
+  - finished_at: 2026-05-20
+  - phase: Deferred generic tuple substrate
+  - parallel_track: tuple-type-packs
+  - depends_on: TODO-4271
+  - scope: Implement the public `tuple<Ts...>` stdlib type and minimal helper
+    surface in `.prime` using the generic type-pack substrate.
+  - outcome:
+    - Added `stdlib/std/tuple/tuple.prime` with a single public
+      `tuple<Ts...>` struct and generic `get` / `get_ref` helpers.
+    - Kept tuple storage as ordinary pack-expanded `.prime` fields and avoided
+      tuple opcodes, fixed-arity families, generated helper names, and backend
+      tuple special cases.
+    - Fixed text filtering and parsing so normal compile-run sources preserve
+      `Ts...`, `Ts[I]`, integer template arguments, and explicit empty
+      `tuple<>` construction under default transforms.
+    - Documented tuple as stdlib-owned, aligned the style boundary, and
+      promoted TODO-4274 as the next Ready Now tuple leaf.
+  - validation:
+    - `cmake --build build-release --target PrimeStruct_text_filter_tests`
+      passed.
+    - `cd build-release && ./PrimeStruct_text_filter_tests --test-case="operator rewrite preserves type-pack template syntax" --no-skip`
+      passed.
+    - `cmake --build build-release --target PrimeStruct_parser_tests` passed.
+    - `cd build-release && ./PrimeStruct_parser_tests --test-case="parses empty template argument lists" --no-skip`
+      passed.
+    - `cmake --build build-release --target primec` passed.
+    - `cmake --build build-release --target PrimeStruct_compile_run_tests`
+      passed.
+    - `cd build-release && ./PrimeStruct_compile_run_tests --test-case="native uses imported stdlib tuple get helpers,native compiles empty and borrowed stdlib tuple access,native reports stdlib tuple get index diagnostics" --no-skip`
+      passed.
+    - Full `./scripts/compile.sh --release` remains deferred by the lite
+      workflow.
+
 - [x] TODO-4271: Add compile-time pack indexing
   - owner: ai
   - created_at: 2026-04-27

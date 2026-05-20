@@ -660,6 +660,72 @@ main() {
   CHECK(runCommand(exePath) == 11);
 }
 
+TEST_CASE("native uses imported stdlib tuple get helpers") {
+  const std::string source = R"(
+import /std/tuple/*
+
+[return<i32>]
+main() {
+  [auto] one{tuple<i32>{5i32}}
+  [auto] pair{tuple<i32, bool>{11i32, true}}
+  return(plus(get<0, i32>(one), get<0, i32, bool>(pair)))
+}
+)";
+  const std::string srcPath = writeTemp("compile_native_stdlib_tuple_get.prime", source);
+  const std::string exePath =
+      (testScratchPath("") / "primec_native_stdlib_tuple_get").string();
+
+  const std::string compileCmd =
+      "./primec --emit=native " + srcPath + " -o " + exePath + " --entry /main";
+  CHECK(runCommand(compileCmd) == 0);
+  CHECK(runCommand(exePath) == 16);
+}
+
+TEST_CASE("native compiles empty and borrowed stdlib tuple access") {
+  const std::string source = R"(
+import /std/tuple/*
+
+[return<i32>]
+main() {
+  [auto] empty{tuple<>{}}
+  [auto] pair{tuple<i32, bool>{11i32, true}}
+  [auto] borrowed{get_ref<0, i32, bool>(location(pair))}
+  return(0i32)
+}
+)";
+  const std::string srcPath =
+      writeTemp("compile_native_stdlib_tuple_empty_borrowed.prime", source);
+  const std::string exePath =
+      (testScratchPath("") / "primec_native_stdlib_tuple_empty_borrowed").string();
+
+  const std::string compileCmd =
+      "./primec --emit=native " + srcPath + " -o " + exePath + " --entry /main";
+  CHECK(runCommand(compileCmd) == 0);
+}
+
+TEST_CASE("native reports stdlib tuple get index diagnostics") {
+  const std::string source = R"(
+import /std/tuple/*
+
+[return<i32>]
+main() {
+  [auto] values{tuple<i32, bool>{11i32, true}}
+  return(get<2, i32, bool>(values))
+}
+)";
+  const std::string srcPath =
+      writeTemp("compile_native_stdlib_tuple_bad_get_index.prime", source);
+  const std::string errPath =
+      (testScratchPath("") / "primec_native_stdlib_tuple_bad_get_index.err").string();
+  const std::string exePath =
+      (testScratchPath("") / "primec_native_stdlib_tuple_bad_get_index").string();
+
+  const std::string compileCmd =
+      "./primec --emit=native " + srcPath + " -o " + exePath +
+      " --entry /main 2> " + errPath;
+  CHECK(runCommand(compileCmd) != 0);
+  CHECK(readFile(errPath).find("type-pack index out of range") != std::string::npos);
+}
 
 TEST_SUITE_END();
 #endif

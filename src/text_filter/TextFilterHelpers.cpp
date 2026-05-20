@@ -406,6 +406,26 @@ bool findTemplateListClose(const std::string &input, size_t index, size_t &close
       ++pos;
       continue;
     }
+    if (c == '[') {
+      if (expectToken) {
+        return false;
+      }
+      size_t close = findMatchingClose(input, pos, '[', ']');
+      if (close == std::string::npos) {
+        return false;
+      }
+      pos = close + 1;
+      expectToken = false;
+      continue;
+    }
+    if (pos + 2 < input.size() && input.compare(pos, 3, "...") == 0) {
+      if (expectToken) {
+        return false;
+      }
+      pos += 3;
+      expectToken = false;
+      continue;
+    }
     if (c == '<') {
       if (expectToken) {
         return false;

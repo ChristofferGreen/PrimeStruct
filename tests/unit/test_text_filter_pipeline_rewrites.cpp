@@ -159,6 +159,34 @@ TEST_CASE("operator rewrite keeps sum unit variant before payload envelope") {
   CHECK(output.find("none\n  [T] some") != std::string::npos);
 }
 
+TEST_CASE("operator rewrite preserves type-pack template syntax") {
+  const std::string source =
+      "[struct]\n"
+      "tuple<Ts...>() {\n"
+      "  [Ts...] values\n"
+      "}\n"
+      "[return<Ts[Index]>]\n"
+      "get<Index, Ts...>([tuple<Ts...>] values) {\n"
+      "  return(pack_at<Index, values>(values))\n"
+      "}\n";
+  const std::string calls =
+      "main(){ return(get<0, i32>(tuple<i32>{7})) }\n"
+      "main(){ return(a < b) }\n";
+  primec::TextFilterPipeline pipeline;
+  std::string output;
+  std::string error;
+  CHECK(pipeline.apply(source + calls, output, error));
+  CHECK(error.empty());
+  CHECK(output.find("tuple<Ts...>()") != std::string::npos);
+  CHECK(output.find("[return<Ts[Index]>]") != std::string::npos);
+  CHECK(output.find("get<Index, Ts...>([tuple<Ts...>] values)") != std::string::npos);
+  CHECK(output.find("get<0, i32>") != std::string::npos);
+  CHECK(output.find("tuple<i32>{") != std::string::npos);
+  CHECK(output.find("get<0i32") == std::string::npos);
+  CHECK(output.find("less_than(a, b)") != std::string::npos);
+  CHECK(output.find("greater_than") == std::string::npos);
+}
+
 TEST_CASE("rewrites plus operator with float literals") {
   const std::string source = "main(){ return(1.5f+2.5f) }\n";
   primec::TextFilterPipeline pipeline;
