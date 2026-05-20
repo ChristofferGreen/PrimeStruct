@@ -2,7 +2,7 @@
 
 TEST_SUITE_BEGIN("primestruct.semantics.calls_flow.collections");
 
-TEST_CASE("wrapper-returned slash-method map access count keeps primitive diagnostics") {
+TEST_CASE("wrapper-returned slash-method map access count validates string result") {
   const std::string source = R"(
 [return<int>]
 /string/count([string] values) {
@@ -30,8 +30,8 @@ main() {
 }
 )";
   std::string error;
-  CHECK_FALSE(validateProgram(source, "/main", error));
-  CHECK(error.find("unknown method: /map/at") != std::string::npos);
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
 }
 
 TEST_CASE("map stdlib namespaced count expression ignores templated alias fallback") {

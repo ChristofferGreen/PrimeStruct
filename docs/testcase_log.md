@@ -1,14 +1,6 @@
 # Testcase Log
 
 ## Current Known Failures
-- `PrimeStruct_semantics_tests --test-case="wrapper-returned slash-method map access count keeps primitive diagnostics" --no-skip`
-  is stale after the map stdlib-ownership cutover. On 2026-05-17 it
-  validated successfully instead of reporting `unknown method: /map/at`;
-  adjacent map method-alias receiver-path inference cases passed.
-- `PrimeStruct_semantics_tests --test-case="wrapper-returned map method alias access keeps primitive receiver diagnostics during inference" --no-skip`
-  is stale after the map stdlib-ownership cutover. On 2026-05-17 it no
-  longer reported `unable to infer return type on /project`, while adjacent
-  map method-alias receiver-path inference cases passed.
 - `PrimeStruct_backend_ir_tests --test-case="ir lowerer call helpers handle non-method count fallback"`
   has stale count-fallback expectations after the map stdlib-ownership
   cutover. On 2026-05-17 it still expected removed `/map/count` and
@@ -217,6 +209,13 @@
   the string-valued map access emission fixture returned `NotHandled`.
 
 ## Recent Test Runs
+- 2026-05-20 11:10 CEST | pass | mode: release | command:
+  `cmake --build build-release --target PrimeStruct_semantics_tests`;
+  `cd build-release && ./PrimeStruct_semantics_tests --test-case="wrapper-returned slash-method map access count validates string result,map method alias access accepts matching receiver during inference,map method alias access rejects missing receiver method during inference,wrapper-returned map method alias access keeps explicit helper diagnostics during inference,wrapper-returned map method alias access keeps primitive argument diagnostics during inference" --no-skip`
+  | failures: none | notes: refreshed two stale map method-alias diagnostics
+  after the stdlib-owned map cutover: wrapper returned slash-method count now
+  validates, and the missing helper case reports the explicit stdlib helper
+  target.
 - 2026-05-20 11:07 CEST | pass | mode: release | command:
   `cmake --build build-release --target PrimeStruct_backend_ir_tests`;
   `cd build-release && ./PrimeStruct_backend_ir_tests --test-case="ir lowerer materializes variadic borrowed map packs with indexed count_ref helpers,ir lowerer materializes variadic pointer map packs with indexed count_ref helpers" --no-skip`
@@ -4636,6 +4635,7 @@
 - 2026-05-12 17:28 local | fail | mode: release | command: `./scripts/compile.sh --release` | failures: 146 CTest targets | notes: baseline after preflight checkpoint failed; stabilization blocks TODO work
 
 ## Resolved Failures
+- [x] wrapper-returned map method-alias diagnostics | resolved: 2026-05-20 11:10 CEST | validating command: `cmake --build build-release --target PrimeStruct_semantics_tests`; `cd build-release && ./PrimeStruct_semantics_tests --test-case="wrapper-returned slash-method map access count validates string result,map method alias access accepts matching receiver during inference,map method alias access rejects missing receiver method during inference,wrapper-returned map method alias access keeps explicit helper diagnostics during inference,wrapper-returned map method alias access keeps primitive argument diagnostics during inference" --no-skip` | notes: retired stale primitive `/map/at` and `/project` inference expectations; current coverage reflects stdlib-owned map helper routing and explicit helper diagnostics.
 - [x] ir lowerer materializes variadic borrowed/pointer map packs with indexed count_ref helpers | resolved: 2026-05-20 11:07 CEST | validating command: `cmake --build build-release --target PrimeStruct_backend_ir_tests`; `cd build-release && ./PrimeStruct_backend_ir_tests --test-case="ir lowerer materializes variadic borrowed map packs with indexed count_ref helpers,ir lowerer materializes variadic pointer map packs with indexed count_ref helpers" --no-skip` | notes: collection receiver materialization now normalizes explicit `count_ref` aliases and treats wrapped key/value args-pack elements as materializable indexed map receivers.
 - [x] graph type resolver infers map value return kinds through shared infer helper | resolved: 2026-05-20 11:27 CEST | validating command: `cmake --build build-release --target PrimeStruct_semantics_tests`; `cd build-release && ./PrimeStruct_semantics_tests --test-case="graph type resolver answers map receiver queries through shared type-text helper,graph type resolver infers map value return kinds through shared infer helper" --no-skip` | notes: map return-solver fixtures now use canonical map construction in both auto-return branches without importing `internal_map` or calling the retired public `mapPair` bridge.
 - [x] ir lowerer result helpers resolve indexed args-pack Result expressions | resolved: 2026-05-20 11:18 CEST | validating command: `cmake --build build-release --target PrimeStruct_backend_ir_tests`; `cd build-release && ./PrimeStruct_backend_ir_tests --test-case="ir lowerer result helpers resolve indexed args-pack Result expressions" --no-skip`; `cd build-release && ./PrimeStruct_backend_ir_tests --test-case="ir lowerer result helpers use semantic indexed args-pack Result facts" --no-skip` | notes: Result metadata now has a receiver-scoped bare `at` fallback for locals already known to be Result args packs, without reintroducing generic map/access handling.

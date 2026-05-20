@@ -351,7 +351,7 @@ main() {
   CHECK(error.find("unknown method: /Marker/tag") != std::string::npos);
 }
 
-TEST_CASE("wrapper-returned map method alias access keeps primitive receiver diagnostics during inference") {
+TEST_CASE("wrapper-returned map method alias access keeps explicit helper diagnostics during inference") {
   const std::string source = R"(
 [effects(heap_alloc), return</std/collections/map<i32, i32>>]
 wrapMap() {
@@ -375,7 +375,7 @@ main() {
 )";
   std::string error;
   CHECK_FALSE(validateProgram(source, "/main", error));
-  CHECK(error.find("unable to infer return type on /project") != std::string::npos);
+  CHECK(error.find("unknown call target: /std/collections/map/at") != std::string::npos);
 }
 
 TEST_CASE("wrapper-returned map method alias access keeps primitive argument diagnostics during inference") {
