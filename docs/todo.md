@@ -83,6 +83,8 @@ Task template:
 
 ### Ready Now (Parallel-Candidate Leaves; No Unmet TODO Dependencies)
 
+- TODO-4534: Delete map constructor/helper shim boundary | track: map-zero-audit |
+  primary surface: map constructor/helper metadata wrappers and call sites
 - TODO-4271: Add compile-time pack indexing | track: tuple-type-packs |
   primary surface: generic pack-index selection and diagnostics
 
@@ -91,8 +93,9 @@ Task template:
 - `soa-zero-audit`: TODO-4529 replaced the residue inventory with a strict
   zero-production-trace audit; no SoA zero-audit leaf is ready.
 - `map-zero-audit`: TODO-4532 reduced the lowerer native-dispatch slice;
-  TODO-4464 remains the parent for future bounded trace-reduction splits
-  and the final strict zero map-surface audit.
+  ready TODO-4534 deletes the constructor/helper shim boundary, followed by
+  TODO-4535 -> TODO-4536 -> TODO-4537 -> TODO-4538 -> TODO-4464 for the
+  final strict zero map-surface audit.
 - `tuple-type-packs`: TODO-4276 completed helper/lifecycle pack
   expansion; ready TODO-4271, then serial successors TODO-4272
   -> TODO-4274 -> TODO-4273 -> TODO-4277 -> TODO-4278.
@@ -103,6 +106,11 @@ Task template:
 
 ### Immediate Next 10 (Track Successors; Not Ready Until Dependencies Land)
 
+- TODO-4535: Delete map collection type classifier API
+- TODO-4536: Delete late map builtin validation boundary
+- TODO-4537: Delete lowerer key/value collection substrate
+- TODO-4538: Replace map inventory gate with fast strict audit
+- TODO-4464: Run final strict C++ map-surface audit
 - TODO-4272: Add stdlib `tuple<Ts...>`
 - TODO-4274: Add tuple bracket indexing sugar
 - TODO-4273: Add heterogeneous value-pack inference
@@ -114,8 +122,9 @@ Task template:
   must enter as bounded leaves only.
 - Deferred stdlib ADT migration: none active
 - Vector stdlib ownership cutover: none active
-- Map stdlib ownership cutover: TODO-4464 remains in progress for future
-  bounded trace-reduction splits and the final strict zero audit
+- Map stdlib ownership cutover: ready TODO-4534, then TODO-4535
+  -> TODO-4536 -> TODO-4537 -> TODO-4538 -> TODO-4464 for the final strict
+  zero audit
 - SoA public surface rename and ownership cutover: TODO-4306 parent split;
   TODO-4526 removed semantic-validation inventory residue after TODO-4530
   reduced the shared semantic builtin path helper boundary; TODO-4527 removed
@@ -136,6 +145,12 @@ Task template:
 
 ### Execution Queue (Recommended Track Order)
 
+- TODO-4534: Delete map constructor/helper shim boundary
+- TODO-4535: Delete map collection type classifier API
+- TODO-4536: Delete late map builtin validation boundary
+- TODO-4537: Delete lowerer key/value collection substrate
+- TODO-4538: Replace map inventory gate with fast strict audit
+- TODO-4464: Run final strict C++ map-surface audit
 - TODO-4271: Add compile-time pack indexing
 - TODO-4272: Add stdlib `tuple<Ts...>`
 - TODO-4274: Add tuple bracket indexing sugar
@@ -1839,17 +1854,169 @@ Task template:
   - stop_rule: Stop once the generic design direction is documented through
     runnable examples rather than only prose.
 
-- [~] TODO-4464: Add full zero C++ map-surface audit
+- [ ] TODO-4534: Delete map constructor/helper shim boundary
+  - owner: ai
+  - created_at: 2026-05-20
+  - phase: Map stdlib ownership cutover
+  - parallel_track: map-zero-audit
+  - depends_on: TODO-4506, TODO-4532
+  - split_from: TODO-4464
+  - scope: Delete or generalize the dedicated C++ map constructor/helper shim
+    boundary instead of continuing single-identifier renames. Target
+    `src/semantics/MapConstructorHelpers.h`, its includes, the
+    `map*SurfaceMetadataLocal` accessors, `metadataBackedMap*` helpers,
+    constructor/member path helpers, and direct call sites that only exist so
+    production C++ can recognize the public map surface.
+  - implementation_notes:
+    - Prefer deleting the map-named helper file outright. If a small helper is
+      still needed, move it behind a collection- or key/value-generic name and
+      prove it is not map-specific behavior.
+    - Bundle related call-site updates in semantics/template/lowerer code in
+      one pass; do not split this into standalone alias-renaming commits.
+    - Keep `tests/unit/test_stdlib_map_ownership.cpp` as C++ coverage for map
+      behavior and source-locking, but production `src/`/`include` APIs should
+      stop exposing map-specific shim names.
+  - acceptance:
+    - Production C++ no longer exposes `MapConstructorHelpers.h`,
+      `mapHelperSurfaceMetadataLocal`, `mapConstructorSurfaceMetadataLocal`,
+      or `metadataBackedMap*` APIs.
+    - Canonical map construction, import, helper-call, lookup, insertion, and
+      miss-result focused coverage still passes through `.prime` map code.
+    - Any retained helper is named for a generic collection/key-value language
+      mechanism and does not grant special behavior to `map` as a named stdlib
+      type.
+  - stop_rule: Stop when the constructor/helper shim boundary is deleted or
+    converted as a whole and focused map ownership tests pass; if lowerer
+    substrate changes are needed, leave them to TODO-4537.
+
+- [ ] TODO-4535: Delete map collection type classifier API
+  - owner: ai
+  - created_at: 2026-05-20
+  - phase: Map stdlib ownership cutover
+  - parallel_track: map-zero-audit
+  - depends_on: TODO-4534
+  - split_from: TODO-4464
+  - scope: Remove production C++ APIs whose main purpose is recognizing map
+    collection type text, map key validity, or map return envelopes. Target
+    `isMapCollectionTypeName`, `returnsMapCollectionType`,
+    `extractMapKeyValueTypes*`, `validateBuiltinMapKeyType`,
+    `isBuiltinMapComparableKeyTypeName`, and equivalent testing/public header
+    declarations.
+  - implementation_notes:
+    - Preserve generic type parsing and ordinary struct/template inference; the
+      deletion target is named stdlib-map recognition, not useful generic type
+      utilities.
+    - Map key behavior should be validated through `.prime` map tests and
+      ordinary diagnostics rather than a production C++ map-key whitelist.
+  - acceptance:
+    - Production headers and sources no longer expose map-named type
+      classifier or key-validation APIs.
+    - Map positive and negative behavior remains covered by C++ tests that
+      compile or run `.prime` map programs.
+    - Any generic replacement is usable by other stdlib collection types
+      without naming `map`.
+  - stop_rule: Stop after the public/internal classifier API family is deleted
+    as one value-bearing pass; leave late builtin validation deletion to
+    TODO-4536.
+
+- [ ] TODO-4536: Delete late map builtin validation boundary
+  - owner: ai
+  - created_at: 2026-05-20
+  - phase: Map stdlib ownership cutover
+  - parallel_track: map-zero-audit
+  - depends_on: TODO-4535
+  - split_from: TODO-4464
+  - scope: Remove the late semantic validation boundary that exists for map as
+    a named stdlib type. Target `SemanticsValidatorExprLateMapAccessBuiltins`,
+    map/SoA shared builtin contexts, `resolveMapTarget`-style dispatch hooks,
+    and diagnostics or fallback paths that recognize map helper calls outside
+    ordinary call/type checking.
+  - implementation_notes:
+    - Keep ordinary language features intact: method resolution, references,
+      templates, result handling, and struct access should carry map programs
+      because `map.prime` is normal included code.
+    - If SoA or vector behavior still depends on a shared map/SoA hook, split
+      the generic part out and delete the map-specific branch in this pass.
+  - acceptance:
+    - Late semantic validation no longer has a map-specific file, context, or
+      dispatch hook.
+    - Existing map helper calls compile or diagnose through ordinary imported
+      function/method rules.
+    - Focused tests cover valid access, missing-key result behavior, and a
+      representative invalid map call diagnostic.
+  - stop_rule: Stop once the semantic late-builtin boundary is gone and
+    focused semantics/map ownership coverage passes; leave lowerer storage and
+    access metadata to TODO-4537.
+
+- [ ] TODO-4537: Delete lowerer key/value collection substrate
+  - owner: ai
+  - created_at: 2026-05-20
+  - phase: Map stdlib ownership cutover
+  - parallel_track: map-zero-audit
+  - depends_on: TODO-4536
+  - split_from: TODO-4464
+  - scope: Remove the remaining lowerer substrate that treats map/key-value
+    collection values as a special lowered kind rather than ordinary
+    `.prime` structs and helpers. Target `KeyValueCollection` local kinds,
+    key/value access metadata fields, map access target metadata, generated
+    map backing layout probes, and direct backend dispatch branches that are
+    not true language/runtime primitives.
+  - implementation_notes:
+    - This pass may touch several lowerer files, but it should delete one
+      coherent lowering boundary rather than rename isolated local variables.
+    - Keep C++ tests for map behavior; remove production branches that only
+      exist to identify map storage or helper calls by name.
+  - acceptance:
+    - Lowerer production code no longer exposes map/key-value collection local
+      kinds, access target structs, or layout facts for the stdlib map type.
+    - Canonical map construction/access/insertion still lower through ordinary
+      struct/helper call paths.
+    - Any retained backend primitive is documented as a language/runtime
+      primitive, not a `map` stdlib exception.
+  - stop_rule: Stop when the remaining special lowerer substrate is removed as
+    one subsystem pass and focused native/VM map coverage still passes.
+
+- [ ] TODO-4538: Replace map inventory gate with fast strict audit
+  - owner: ai
+  - created_at: 2026-05-20
+  - phase: Map stdlib ownership cutover
+  - parallel_track: map-zero-audit
+  - depends_on: TODO-4537
+  - split_from: TODO-4464
+  - scope: Replace the broad decaying map-surface inventory with a fast strict
+    audit suitable for routine validation after the production map substrate is
+    gone.
+  - implementation_notes:
+    - Do not use the old broad scan in a way that can hang routine work. Prefer
+      `git ls-files` plus targeted `rg`-class checks, or a Python scanner over
+      the explicit tracked file list with bounded patterns.
+    - The strict audit should allow ordinary C++ `std::map`, source-map
+      infrastructure, generic mapping words, docs, tests, stdlib `.prime`
+      files, and generated source-lock fixtures.
+  - acceptance:
+    - The replacement audit runs quickly on the production `src/` and
+      `include/` file set and fails on newly introduced PrimeStruct-map
+      production traces.
+    - `scripts/check_map_surface_trace_inventory.py` is removed, retired, or
+      narrowed so it cannot be the hanging routine gate.
+    - The release validation path uses the fast strict audit once TODO-4464
+      reaches zero tolerance.
+  - stop_rule: Stop once the fast strict audit is available and wired for the
+    final TODO-4464 zero-tolerance gate.
+
+- [ ] TODO-4464: Run final strict C++ map-surface audit
   - owner: ai
   - created_at: 2026-05-14
   - phase: Map stdlib ownership cutover
   - parallel_track: map-zero-audit
-  - depends_on: TODO-4506
+  - depends_on: TODO-4538
   - split_from: TODO-4304
-  - scope: Add a deterministic validation gate that proves the PrimeStruct map
-    surface is fully `.prime`/stdlib-owned and absent from production C++
-    source.
+  - scope: Run and enforce the final zero-tolerance validation gate proving
+    the PrimeStruct map surface is fully `.prime`/stdlib-owned and absent from
+    production C++ source.
   - implementation_notes:
+    - This is the final acceptance gate, not the active deletion leaf. Use
+      TODO-4534 through TODO-4538 for the larger subsystem-removal passes.
     - Extend the validation-script model used by vector and the map adapter
       trace check to scan production C++ under `src/` and `include/` for
       PrimeStruct-map-specific traces such as `/map`,
