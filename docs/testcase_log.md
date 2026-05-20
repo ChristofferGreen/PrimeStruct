@@ -10,11 +10,6 @@
   string-valued map runtime fixture has since been retargeted to compile-only
   coverage because native runtime string-valued maps still hang after
   compilation.
-- `PrimeStruct_semantics_tests --test-case="semantic product keeps vector and map bridge parity" --no-skip`
-  is stale after the map stdlib-ownership cutover. On 2026-05-18 it failed
-  during validation with a canonical map count helper parameter mismatch
-  (`expected map<i32, i32> got Map<i32, i32>`), while the adjacent collection
-  specialization surface-ID publication test passed.
 - `PrimeStruct_backend_ir_tests --test-case="ir lowerer call helpers keep explicit map helper same-path defs" --no-skip`
   still has stale alias access fallback expectations; on 2026-05-17 the
   alias `at` and `at_unsafe` checks still resolved compatibility defs instead
@@ -42,6 +37,12 @@
   the string-valued map access emission fixture returned `NotHandled`.
 
 ## Recent Test Runs
+- 2026-05-20 12:58 CEST | pass | mode: release | command:
+  `cmake --build build-release --target PrimeStruct_semantics_tests`;
+  `cd build-release && ./PrimeStruct_semantics_tests --test-case="semantic product keeps vector and map bridge parity" --no-skip`
+  | failures: none | notes: parser-only bridge parity fixture now declares
+  its local canonical map count helper over the current `Map<K, V>` constructor
+  model, preserving semantic-product bridge surface checks.
 - 2026-05-20 12:55 CEST | pass | mode: release | command:
   `cmake --build build-release --target PrimeStruct_backend_ir_tests`;
   `cd build-release && ./PrimeStruct_backend_ir_tests --test-case="stdlib surface metadata resolves collection alias paths" --no-skip`
@@ -4651,6 +4652,7 @@
 - 2026-05-12 17:28 local | fail | mode: release | command: `./scripts/compile.sh --release` | failures: 146 CTest targets | notes: baseline after preflight checkpoint failed; stabilization blocks TODO work
 
 ## Resolved Failures
+- [x] semantic product vector/map bridge parity | resolved: 2026-05-20 12:58 CEST | validating command: `cmake --build build-release --target PrimeStruct_semantics_tests`; `cd build-release && ./PrimeStruct_semantics_tests --test-case="semantic product keeps vector and map bridge parity" --no-skip` | notes: refreshed the parser-only canonical map count helper receiver from stale `map<K, V>` to the current `Map<K, V>` constructor model while preserving bridge surface assertions.
 - [x] stdlib surface metadata map alias paths | resolved: 2026-05-20 12:55 CEST | validating command: `cmake --build build-release --target PrimeStruct_backend_ir_tests`; `cd build-release && ./PrimeStruct_backend_ir_tests --test-case="stdlib surface metadata resolves collection alias paths" --no-skip` | notes: removed the contradictory null assertion for `/std/collections/map/tryAt_ref` and locked it as public map helper metadata.
 - [x] SoA surface metadata member tokens | resolved: 2026-05-20 12:54 CEST | validating command: `cmake --build build-release --target PrimeStruct_backend_ir_tests`; `cd build-release && ./PrimeStruct_backend_ir_tests --test-case="stdlib surface metadata resolves collection helper member tokens" --no-skip` | notes: refreshed stale `soaVector*` member-token expectations to the current public SoA manifest names and locked retired tokens as unresolved.
 - [x] direct map Result payload backend IR fixture | resolved: 2026-05-20 12:52 CEST | validating command: `cmake --build build-release --target PrimeStruct_backend_ir_tests`; `cd build-release && ./PrimeStruct_backend_ir_tests --test-case="retired direct map Result payload literal rejects before lowering" --no-skip` | notes: removed the stale zero-test known-failure name and kept the current retired direct-map Result payload rejection fixture as focused coverage.
