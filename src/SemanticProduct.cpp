@@ -1420,6 +1420,11 @@ std::string formatSemanticProgram(const SemanticProgram &semanticProgram) {
                                   " value_type_text=" +
                                   quoteSemanticString(specializationText(entry.valueTypeTextId,
                                                                          entry.valueTypeText)) +
+                                  (specializationText(entry.structPathId, entry.structPath).empty()
+                                       ? ""
+                                       : " struct_path=" +
+                                             quoteSemanticString(specializationText(entry.structPathId,
+                                                                                    entry.structPath))) +
                                   " is_reference=" +
                                   formatSemanticBool(entry.isReference) + " is_pointer=" +
                                   formatSemanticBool(entry.isPointer) +

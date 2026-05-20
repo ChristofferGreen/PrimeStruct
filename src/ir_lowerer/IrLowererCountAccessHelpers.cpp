@@ -19,6 +19,7 @@
 #include "IrLowererTemplateTypeParseHelpers.h"
 #include "primec/SemanticProduct.h"
 #include "primec/SoaPathHelpers.h"
+#include "primec/StdlibSurfaceRegistry.h"
 
 namespace primec::ir_lowerer {
 using count_access_detail::isDereferencedCollectionCountTarget;
@@ -28,6 +29,14 @@ using count_access_detail::resolveKeyValueHelperAliasName;
 using count_access_detail::resolveVectorHelperAliasName;
 using count_access_detail::isVectorBuiltinName;
 using count_access_detail::isVectorCountTarget;
+
+bool resolvePublishedSemanticStdlibSurfaceMemberName(const SemanticProgram *semanticProgram,
+                                                     const Expr &expr,
+                                                     StdlibSurfaceId surfaceId,
+                                                     std::string &memberNameOut);
+bool resolvePublishedStdlibSurfaceMemberName(std::string_view path,
+                                             StdlibSurfaceId surfaceId,
+                                             std::string &memberNameOut);
 
 namespace {
 
@@ -181,6 +190,27 @@ bool isExplicitPublishedVectorMetadataCall(const Expr &expr,
   const std::string normalizedPath =
       normalizeUnrootedHelperPath(resolveScopedCallPath(expr));
   return normalizedPath.rfind(canonicalCollectionMemberPrefix("vector"), 0) == 0;
+}
+
+bool isExplicitPublishedKeyValueMetadataCall(const Expr &expr,
+                                             const SemanticProgram *semanticProgram,
+                                             std::string_view helperName) {
+  if (expr.kind != Expr::Kind::Call || expr.isMethodCall) {
+    return false;
+  }
+  const auto *metadata =
+      findStdlibSurfaceMetadataByBridgeKey("collections.map_helpers");
+  if (metadata == nullptr) {
+    return false;
+  }
+  std::string resolvedHelperName;
+  if (resolvePublishedSemanticStdlibSurfaceMemberName(
+          semanticProgram, expr, metadata->id, resolvedHelperName) ||
+      resolvePublishedStdlibSurfaceMemberName(
+          resolveScopedCallPath(expr), metadata->id, resolvedHelperName)) {
+    return resolvedHelperName == helperName;
+  }
+  return false;
 }
 
 bool isSemanticVectorCountBridgeCall(const Expr &expr,
@@ -1379,6 +1409,8 @@ CountAccessCallEmitResult tryEmitCountAccessCall(
     const SemanticProductIndex *semanticIndex) {
   const bool explicitPublishedVectorCountCall =
       isExplicitPublishedVectorMetadataCall(expr, "count");
+  const bool explicitPublishedKeyValueCountCall =
+      isExplicitPublishedKeyValueMetadataCall(expr, semanticProgram, "count");
   const bool semanticVectorCountBridge =
       isSemanticVectorCountBridgeCall(expr, semanticProgram);
   const bool explicitPublishedVectorCapacityCall =
@@ -1386,7 +1418,8 @@ CountAccessCallEmitResult tryEmitCountAccessCall(
   const auto isCountLikeCall = [&]() {
     return (isVectorBuiltinName(expr, "count") ||
             isKeyValueBuiltinName(expr, "count") ||
-            explicitPublishedVectorCountCall) &&
+            explicitPublishedVectorCountCall ||
+            explicitPublishedKeyValueCountCall) &&
            expr.args.size() == 1;
   };
   const auto isBareSimpleCountLikeCall = [&](std::string_view helperName) {
@@ -1458,6 +1491,11 @@ CountAccessCallEmitResult tryEmitCountAccessCall(
         isDynamicCollectionCountTargetFn(expr.args.front(), localsIn)) ||
        (isDynamicVectorCountTargetFn != nullptr &&
         isDynamicVectorCountTargetFn(expr.args.front(), localsIn)));
+  const bool explicitPublishedKeyValueCountAccessTarget =
+      explicitPublishedKeyValueCountCall &&
+      expr.args.size() == 1 &&
+      isDynamicCollectionCountTargetFn != nullptr &&
+      isDynamicCollectionCountTargetFn(expr.args.front(), localsIn);
   if (explicitPublishedVectorCountCall &&
       !namedArgVectorTemporaryCountCall &&
       !semanticBridgeCountAccessTarget) {
@@ -1466,7 +1504,8 @@ CountAccessCallEmitResult tryEmitCountAccessCall(
   if (explicitPublishedVectorCapacityCall) {
     return CountAccessCallEmitResult::NotHandled;
   }
-  if (isExplicitRemovedCountLikeAliasCall(expr, "count") ||
+  if ((isExplicitRemovedCountLikeAliasCall(expr, "count") &&
+       !explicitPublishedKeyValueCountAccessTarget) ||
       isExplicitRemovedCountLikeAliasCall(expr, "capacity")) {
     return CountAccessCallEmitResult::NotHandled;
   }
@@ -1546,7 +1585,8 @@ CountAccessCallEmitResult tryEmitCountAccessCall(
   const bool namedArgVectorTemporaryCountTarget =
       (isVectorBuiltinName(expr, "count") ||
        isKeyValueBuiltinName(expr, "count") ||
-       explicitPublishedVectorCountCall) &&
+       explicitPublishedVectorCountCall ||
+       explicitPublishedKeyValueCountCall) &&
       expr.args.size() == 1 &&
       isNamedArgumentCollectionTemporary(expr.args.front(), "vector");
   if (namedArgVectorTemporaryCountTarget) {
@@ -1737,7 +1777,8 @@ CountAccessCallEmitResult tryEmitCountAccessCall(
 
   if ((isVectorBuiltinName(expr, "count") ||
        isKeyValueBuiltinName(expr, "count") ||
-       explicitPublishedVectorCountCall) && expr.args.size() == 1 &&
+       explicitPublishedVectorCountCall ||
+       explicitPublishedKeyValueCountCall) && expr.args.size() == 1 &&
       isDynamicCollectionCountTargetFn && isDynamicCollectionCountTargetFn(expr.args.front(), localsIn)) {
     if (inferExprKind &&
         inferExprKind(expr.args.front(), localsIn) == LocalInfo::ValueKind::String) {
@@ -1779,7 +1820,9 @@ CountAccessCallEmitResult tryEmitCountAccessCall(
     return CountAccessCallEmitResult::Emitted;
   }
 
-  if ((isVectorBuiltinName(expr, "count") || isKeyValueBuiltinName(expr, "count")) && expr.args.size() == 1 &&
+  if ((isVectorBuiltinName(expr, "count") ||
+       isKeyValueBuiltinName(expr, "count") ||
+       explicitPublishedKeyValueCountCall) && expr.args.size() == 1 &&
       expr.args.front().kind == Expr::Kind::Call) {
     std::string accessName;
     const Expr &target = expr.args.front();
@@ -1841,7 +1884,9 @@ CountAccessCallEmitResult tryEmitCountAccessCall(
     }
   }
 
-  if ((isVectorBuiltinName(expr, "count") || isKeyValueBuiltinName(expr, "count")) && expr.args.size() == 1 &&
+  if ((isVectorBuiltinName(expr, "count") ||
+       isKeyValueBuiltinName(expr, "count") ||
+       explicitPublishedKeyValueCountCall) && expr.args.size() == 1 &&
       inferExprKind) {
     const SemanticStringCountTargetResolution semanticStringTarget =
         classifySemanticStringCountTarget(expr.args.front(), semanticProgram, semanticIndex);

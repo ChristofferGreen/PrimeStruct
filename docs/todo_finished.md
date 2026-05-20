@@ -6,6 +6,70 @@ Legend:
 Finished items are periodically archived here from `docs/todo.md`; section headers record the archive date.
 
 **Todo Completion (May 20, 2026)**
+- [x] TODO-4539: Remove lowerer MapValue path synthesis
+  - owner: ai
+  - created_at: 2026-05-20
+  - finished_at: 2026-05-20
+  - phase: Map stdlib ownership cutover
+  - parallel_track: map-zero-audit
+  - depends_on: TODO-4536
+  - split_from: TODO-4537
+  - scope: Remove the lowerer helpers that synthesize generated
+    `/std/collections/map/MapValue__*` struct paths from `map<K, V>` type
+    text or scalar key/value kinds. Target the `collectionTypePath("map") +
+    "/MapValue"` construction sites in access target resolution,
+    statement-binding metadata, struct-slot layout helpers, and uninitialized
+    struct inference.
+  - outcome:
+    - Added a semantic-product `structPath`/`structPathId` field for
+      collection specializations and published the canonical map `MapValue`
+      backing path from semantic collection facts.
+    - Removed lowerer synthesis of generated `MapValue__t*` paths from
+      `map<K, V>` type text, scalar key/value kinds, tail-dispatch inference,
+      uninitialized struct inference, struct-slot layout, statement-binding
+      metadata, access-target resolution, and struct-type helpers.
+    - Updated focused source-lock tests to assert the production lowerer no
+      longer carries the generated map-value synthesis helpers.
+    - Promoted TODO-4540 as the next map zero-audit leaf for collapsing
+      lowerer key/value local metadata.
+  - validation:
+    - `cmake --build build-release --target primec PrimeStruct_compile_run_tests`
+      passed.
+    - `cd build-release && ./PrimeStruct_compile_run_tests --test-case="compiles and runs explicit map helper calls while canonical map access stays authoritative in C++ emitter"`
+      passed.
+    - `cd build-release && ./PrimeStruct_compile_run_tests --test-case="rejects bare map count method without imported canonical helper in C++ emitter"`
+      passed.
+    - `cd build-release && ./PrimeStruct_compile_run_tests --test-case="rejects bare map count without imported canonical helper in C++ emitter"`
+      passed.
+    - `cd build-release && ./PrimeStruct_compile_run_tests --test-case="rejects bare map count through compatibility alias when canonical helper is absent in C++ emitter"`
+      passed.
+    - `cd build-release && ./PrimeStruct_compile_run_tests --test-case="rejects map namespaced count compatibility alias in C++ emitter"`
+      passed.
+    - `cd build-release && ./PrimeStruct_compile_run_tests --test-case="rejects stdlib namespaced map count alias fallback without import in C++ emitter"`
+      passed.
+    - `cmake --build build-release --target PrimeStruct_backend_ir_tests`
+      passed.
+    - `cd build-release && ./PrimeStruct_backend_ir_tests --test-case="ir lowerer no longer synthesizes generated map value paths"`
+      passed.
+    - `cd build-release && ./PrimeStruct_backend_ir_tests --test-case="ir lowerer tail map insert rewrite uses semantic receiver facts first"`
+      passed.
+    - `cd build-release && ./PrimeStruct_backend_ir_tests --test-case="ir lowerer call helpers resolve and validate map access targets"`
+      passed.
+    - `cd build-release && ./PrimeStruct_backend_ir_tests --test-case="ir lowerer statement binding helper preserves inferred borrowed map return metadata"`
+      passed.
+    - `cmake --build build-release --target PrimeStruct_semantics_tests`
+      passed.
+    - `cd build-release && ./PrimeStruct_semantics_tests --test-case="semantic product publishes vector map and soa_vector collection specializations"`
+      passed.
+    - `rg` audit confirmed removed generated-map synthesis patterns are absent
+      from `src/` and `include/`.
+    - `git diff --check` passed.
+    - Validation gap: `cmake --build build-release --target
+      PrimeStruct_misc_tests` was run under a 180-second timeout and was
+      stopped while compiling `test_stdlib_map_ownership.cpp.o`; this matches
+      the known slow/stalled misc-test build behavior and was not retried
+      unbounded.
+
 - [x] TODO-4537: Delete lowerer key/value collection substrate
   - owner: ai
   - created_at: 2026-05-20

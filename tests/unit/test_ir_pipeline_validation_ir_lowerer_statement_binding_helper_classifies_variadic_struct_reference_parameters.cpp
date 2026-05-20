@@ -879,10 +879,6 @@ TEST_CASE("ir lowerer statement binding helper preserves inferred borrowed map r
   init.name = "pick_map";
   init.namespacePrefix = "/pkg";
 
-  std::string expectedStructPath;
-  REQUIRE(primec::ir_lowerer::resolveSpecializedExperimentalMapStructPathForBindingType(
-      "map<i32, bool>", expectedStructPath));
-
   const primec::ir_lowerer::StatementBindingTypeInfo info =
       primec::ir_lowerer::inferStatementBindingTypeInfo(
           stmt,
@@ -909,7 +905,7 @@ TEST_CASE("ir lowerer statement binding helper preserves inferred borrowed map r
   CHECK(info.keyValueKeyKind == primec::ir_lowerer::LocalInfo::ValueKind::Int32);
   CHECK(info.keyValueValueKind == primec::ir_lowerer::LocalInfo::ValueKind::Bool);
   CHECK(info.valueKind == primec::ir_lowerer::LocalInfo::ValueKind::Bool);
-  CHECK(info.structTypeName == expectedStructPath);
+  CHECK(info.structTypeName.empty());
 }
 
 TEST_CASE("ir lowerer statement binding helper classifies explicit soa_vector locals with specialized struct paths compatibility") {

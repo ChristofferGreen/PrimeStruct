@@ -183,6 +183,7 @@ struct SemanticProgramCollectionSpecialization {
   std::string elementTypeText = {};
   std::string keyTypeText = {};
   std::string valueTypeText = {};
+  std::string structPath = {};
   bool isReference = false;
   bool isPointer = false;
   int sourceLine = 0;
@@ -197,6 +198,7 @@ struct SemanticProgramCollectionSpecialization {
   SymbolId elementTypeTextId = InvalidSymbolId;
   SymbolId keyTypeTextId = InvalidSymbolId;
   SymbolId valueTypeTextId = InvalidSymbolId;
+  SymbolId structPathId = InvalidSymbolId;
   std::optional<StdlibSurfaceId> helperSurfaceId = std::nullopt;
   std::optional<StdlibSurfaceId> constructorSurfaceId = std::nullopt;
 };

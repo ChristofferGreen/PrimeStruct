@@ -161,6 +161,143 @@
           return resolveKeyValueHelperMemberName(path, helperName) &&
                  helperName == std::string(expectedName);
         };
+        auto importPathCoversPublishedTarget =
+            [](const std::string &importPath, const std::string &targetPath) {
+              if (importPath == targetPath) {
+                return true;
+              }
+              if (importPath.size() >= 2 &&
+                  importPath.compare(importPath.size() - 2, 2, "/*") == 0) {
+                const std::string prefix =
+                    importPath.substr(0, importPath.size() - 2);
+                return targetPath == prefix ||
+                       targetPath.rfind(prefix + "/", 0) == 0;
+              }
+              return false;
+            };
+        auto hasSemanticKeyValueHelperDefinition =
+            [&](std::string_view helperName) {
+              const auto *metadata = keyValueHelperMetadata();
+              if (semanticProgram == nullptr || metadata == nullptr) {
+                return false;
+              }
+              const std::string helperPath =
+                  stdlibSurfaceCanonicalHelperPath(metadata->id, helperName);
+              if (helperPath.empty()) {
+                return false;
+              }
+              if (findDirectHelperDefinition(helperPath) != nullptr) {
+                return true;
+              }
+              auto importsHelper = [&](const std::vector<std::string> &imports) {
+                return std::any_of(
+                    imports.begin(),
+                    imports.end(),
+                    [&](const std::string &importPath) {
+                      return importPathCoversPublishedTarget(importPath,
+                                                             helperPath);
+                    });
+              };
+              if (importsHelper(semanticProgram->sourceImports) ||
+                  importsHelper(semanticProgram->imports)) {
+                return true;
+              }
+              return std::any_of(
+                  semanticProgram->definitions.begin(),
+                  semanticProgram->definitions.end(),
+                  [&](const auto &definition) {
+                    return definition.fullPath == helperPath ||
+                           definition.fullPath.rfind(helperPath + "__", 0) == 0;
+                  });
+            };
+        auto semanticCollectionFamilyForExpr = [&](const Expr &receiverExpr) {
+          auto keyValueFamilyName = [&]() {
+            const auto *metadata = keyValueHelperMetadata();
+            if (metadata == nullptr || metadata->canonicalPath.empty()) {
+              return std::string{};
+            }
+            const std::string canonicalPath(metadata->canonicalPath);
+            const size_t slash = canonicalPath.find_last_of('/');
+            return slash == std::string::npos
+                       ? canonicalPath
+                       : canonicalPath.substr(slash + 1);
+          };
+          if (semanticProgram == nullptr ||
+              callResolutionAdapters.semanticProductTargets.semanticIndex
+                  .collectionSpecializationsByExpr.empty()) {
+            if (receiverExpr.kind == Expr::Kind::Name) {
+              auto localIt = localsIn.find(receiverExpr.name);
+              if (localIt != localsIn.end() &&
+                  localIt->second.kind == LocalInfo::Kind::KeyValueCollection) {
+                return keyValueFamilyName();
+              }
+            }
+            return std::string{};
+          }
+          const auto *collectionFact =
+              ir_lowerer::findSemanticProductCollectionSpecialization(
+                  callResolutionAdapters.semanticProductTargets.semanticIndex,
+                  receiverExpr);
+          if (collectionFact == nullptr && receiverExpr.sourceLine != 0 &&
+              receiverExpr.sourceColumn != 0) {
+            for (const auto &candidate :
+                 semanticProgram->collectionSpecializations) {
+              if (candidate.sourceLine == receiverExpr.sourceLine &&
+                  candidate.sourceColumn == receiverExpr.sourceColumn) {
+                collectionFact = &candidate;
+                break;
+              }
+            }
+          }
+          if (collectionFact == nullptr) {
+            if (receiverExpr.kind == Expr::Kind::Name) {
+              auto localIt = localsIn.find(receiverExpr.name);
+              if (localIt != localsIn.end() &&
+                  localIt->second.kind == LocalInfo::Kind::KeyValueCollection) {
+                return keyValueFamilyName();
+              }
+            }
+            return std::string{};
+          }
+          if (collectionFact->collectionFamilyId != InvalidSymbolId) {
+            return trimTemplateTypeText(std::string(
+                semanticProgramResolveCallTargetString(
+                    *semanticProgram, collectionFact->collectionFamilyId)));
+          }
+          return trimTemplateTypeText(collectionFact->collectionFamily);
+        };
+        auto resolveSameFamilyKeyValueHelperMemberName =
+            [&](const Expr &callExpr, const Expr &receiverExpr,
+                std::string &helperNameOut) {
+              helperNameOut.clear();
+              const auto *metadata = keyValueHelperMetadata();
+              if (metadata == nullptr) {
+                return false;
+              }
+              std::string rawPath =
+                  normalizeCollectionHelperPath(resolveDirectHelperPath(callExpr));
+              if (!rawPath.empty() && rawPath.front() == '/') {
+                rawPath.erase(rawPath.begin());
+              }
+              const size_t slash = rawPath.find('/');
+              if (slash == std::string::npos || slash == 0 ||
+                  slash + 1 >= rawPath.size()) {
+                return false;
+              }
+              const std::string family = semanticCollectionFamilyForExpr(receiverExpr);
+              if (family.empty() || rawPath.substr(0, slash) != family) {
+                return false;
+              }
+              const std::string memberPath = rawPath.substr(slash + 1);
+              const std::string memberLeaf = extractHelperTail(memberPath);
+              const std::string_view memberName =
+                  resolveStdlibSurfaceMemberName(*metadata, memberLeaf);
+              if (memberName.empty()) {
+                return false;
+              }
+              helperNameOut.assign(memberName);
+              return true;
+            };
         auto isCanonicalKeyValueConstructorPath = [&](const std::string &path) {
           const auto *metadata = keyValueConstructorMetadata();
           if (metadata == nullptr) {
@@ -742,6 +879,7 @@
             }
             std::string helperName;
             const bool hasKeyValueHelperAlias = resolveKeyValueHelperAliasName(expr, helperName);
+            bool hasSameFamilyKeyValueHelperAlias = false;
             if (!hasKeyValueHelperAlias) {
               const size_t leafStart = rawPath.find_last_of('/');
               std::string helperLeaf =
@@ -757,19 +895,39 @@
               } else if (helperLeaf == "at_unsafe" || helperLeaf == "at_unsafe_ref") {
                 helperName = "at_unsafe";
               }
+              if (helperName.empty() && !expr.args.empty()) {
+                hasSameFamilyKeyValueHelperAlias =
+                    resolveSameFamilyKeyValueHelperMemberName(
+                        expr, expr.args.front(), helperName);
+              }
             }
+            const bool hasCanonicalKeyValueHelperFamily =
+                isCanonicalKeyValueHelperFamilyPath(rawPath) ||
+                isCanonicalKeyValueHelperFamilyPath(directCallee->fullPath);
             if (!helperName.empty() &&
                 (helperName == "count" || helperName == "contains" ||
                  helperName == "tryAt" || helperName == "at" ||
                  helperName == "at_unsafe" || helperName == "insert" ||
                  helperName == "insert_ref") &&
-                (isCanonicalKeyValueHelperFamilyPath(rawPath) ||
-                 isCanonicalKeyValueHelperFamilyPath(directCallee->fullPath)) &&
+                (hasCanonicalKeyValueHelperFamily ||
+                 hasSameFamilyKeyValueHelperAlias) &&
                 isDirectHelperDefinitionFamily(expr, *directCallee)) {
-              if (!emitInlineDefinitionCall(expr, *directCallee, localsIn, true)) {
-                return false;
-              } else {
-                return true;
+              const bool deferKeyValueCountToBuiltinEmitter =
+                  helperName == "count" && expr.args.size() == 1 &&
+                  hasSemanticKeyValueHelperDefinition(helperName) &&
+                  ir_lowerer::resolveKeyValueAccessTargetInfo(
+                      expr.args.front(),
+                      localsIn,
+                      {},
+                      semanticProgram,
+                      &callResolutionAdapters.semanticProductTargets.semanticIndex)
+                      .isKeyValueTarget;
+              if (!deferKeyValueCountToBuiltinEmitter) {
+                if (!emitInlineDefinitionCall(expr, *directCallee, localsIn, true)) {
+                  return false;
+                } else {
+                  return true;
+                }
               }
             }
             std::string accessName;
@@ -890,8 +1048,29 @@
           }
         }
 
+        Expr countAccessExpr = expr;
+        if (!expr.isMethodCall && expr.args.size() == 1) {
+          std::string keyValueCountHelperName;
+          if (resolveSameFamilyKeyValueHelperMemberName(
+                  expr, expr.args.front(), keyValueCountHelperName) &&
+              keyValueCountHelperName == "count" &&
+              hasSemanticKeyValueHelperDefinition(keyValueCountHelperName)) {
+            if (const auto *metadata = keyValueHelperMetadata();
+                metadata != nullptr) {
+              const std::string canonicalCountPath =
+                  stdlibSurfaceCanonicalHelperPath(metadata->id,
+                                                   keyValueCountHelperName);
+              if (!canonicalCountPath.empty()) {
+                countAccessExpr.name = canonicalCountPath;
+                countAccessExpr.namespacePrefix.clear();
+                countAccessExpr.semanticNodeId = 0;
+              }
+            }
+          }
+        }
+
         const auto countAccessResult = tryEmitCountAccessCall(
-            expr,
+            countAccessExpr,
             localsIn,
             isArrayCountCall,
             isVectorCapacityCall,
@@ -909,13 +1088,22 @@
               const bool isExperimentalKeyValueTarget =
                   structPath == experimentalCollectionTypePath("map", "Map") ||
                   matchesGeneratedSpecializedType(structPath, "map", "Map");
+              const bool isSemanticKeyValueTarget =
+                  ir_lowerer::resolveKeyValueAccessTargetInfo(
+                      targetExpr,
+                      targetLocals,
+                      {},
+                      semanticProgram,
+                      &callResolutionAdapters.semanticProductTargets.semanticIndex)
+                      .isKeyValueTarget;
               const bool isExperimentalSoaVectorTarget =
                   structPath == "/std/collections/experimental" "_soa" "_vector/Soa" "Vector" ||
                   structPath.rfind("/std/collections/experimental" "_soa" "_vector/Soa" "Vector" "__", 0) == 0;
               return targetInfo.isArrayOrVectorTarget || structPath == "/array" ||
                      structPath == "/vector" || structPath == "/Buffer" || structPath == "/map" ||
                      structPath == "/soa" "_vector" || isExperimentalVectorTarget ||
-                     isExperimentalKeyValueTarget || isExperimentalSoaVectorTarget;
+                     isExperimentalKeyValueTarget || isSemanticKeyValueTarget ||
+                     isExperimentalSoaVectorTarget;
             },
             [&](const Expr &targetExpr, const LocalMap &targetLocals) {
               const auto targetInfo =

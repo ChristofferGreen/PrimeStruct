@@ -3,11 +3,11 @@
 #include <algorithm>
 #include <cctype>
 #include <functional>
-#include <sstream>
 #include <unordered_set>
 
 #include "IrLowererHelpers.h"
 #include "IrLowererBindingTransformHelpers.h"
+#include "IrLowererSemanticProductTargetAdapters.h"
 #include "IrLowererSetupTypeCollectionHelpers.h"
 #include "IrLowererStructFieldBindingHelpers.h"
 #include "IrLowererTemplateTypeParseHelpers.h"
@@ -366,19 +366,7 @@ std::string inferUninitializedTargetStructPath(const std::string &typeText,
   if (normalizedBase == "vector") {
     return normalizeUninitializedVectorStructPath(base);
   }
-  if (normalizedBase != "map") {
-    return "";
-  }
-
-  std::vector<std::string> templateArgs;
-  if (!splitTemplateArgs(argList, templateArgs) || templateArgs.size() != 2) {
-    return "";
-  }
-
-  std::ostringstream specializedPath;
-  specializedPath << collectionTypePath("map") << "/MapValue"
-                  << mangleTemplateTypeArgsSuffix(templateArgs);
-  return specializedPath.str();
+  return "";
 }
 
 std::string resolveSemanticUninitializedFactText(const SemanticProgram &semanticProgram,
@@ -425,6 +413,21 @@ std::string resolveSemanticExprStructPath(const Expr &expr,
   hasSemanticTypeFactOut = false;
   if (semanticProgram == nullptr || semanticIndex == nullptr || expr.semanticNodeId == 0) {
     return "";
+  }
+
+  if (const auto *collectionFact =
+          findSemanticProductCollectionSpecialization(*semanticIndex, expr)) {
+    hasSemanticTypeFactOut = true;
+    std::string structPath = collectionFact->structPath;
+    if (collectionFact->structPathId != InvalidSymbolId) {
+      structPath = std::string(
+          semanticProgramResolveCallTargetString(*semanticProgram,
+                                                 collectionFact->structPathId));
+    }
+    structPath = trimTemplateTypeText(structPath);
+    if (!structPath.empty()) {
+      return structPath;
+    }
   }
 
   std::string typeText;

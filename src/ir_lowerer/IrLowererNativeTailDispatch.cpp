@@ -709,7 +709,15 @@ NativeCallTailDispatchResult tryEmitNativeCallTailDispatch(
       isKeyValueReadHelperName(directKeyValueReadHelperName) &&
       hasSemanticKeyValueReadHelperDefinition(semanticProgram,
                                               directKeyValueReadHelperName)) {
-    return NativeCallTailDispatchResult::NotHandled;
+    const bool keyValueCountAccessTarget =
+        directKeyValueReadHelperName == "count" &&
+        expr.args.size() == 1 &&
+        resolveKeyValueAccessTargetInfo(
+            expr.args.front(), localsIn, resolveCallKeyValueAccessTargetInfo)
+            .isKeyValueTarget;
+    if (!keyValueCountAccessTarget) {
+      return NativeCallTailDispatchResult::NotHandled;
+    }
   }
   if (!isExplicitDirectVectorCountCall(semanticProgram, expr) &&
       !expr.isMethodCall && count_access_detail::isVectorBuiltinName(expr, "count") &&

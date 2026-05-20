@@ -505,10 +505,12 @@ bool isExperimentalCollectionTypeName(std::string_view typeName,
 
 bool isExperimentalMapStructTypePath(std::string_view path) {
   const std::string rooted = experimentalCollectionTypePath("map", "Map");
-  const std::string mapValueRoot = collectionTypePath("map") + "/MapValue";
+  const auto *metadata = findStdlibSurfaceMetadataByBridgeKey("collections.map_helpers");
+  const std::string mapValueRoot =
+      metadata == nullptr ? std::string{} : std::string(metadata->canonicalPath) + "/MapValue";
   return path == rooted || path.rfind(rooted + "__", 0) == 0 ||
-         path == mapValueRoot ||
-         path.rfind(mapValueRoot + "__", 0) == 0;
+         (!mapValueRoot.empty() &&
+          (path == mapValueRoot || path.rfind(mapValueRoot + "__", 0) == 0));
 }
 
 std::string normalizeBuiltinCollectionStructPath(std::string_view collectionName) {

@@ -308,6 +308,10 @@ void setReferenceCollectionInfoFromSpecialization(
     if (info.valueKind == LocalInfo::ValueKind::Unknown) {
       info.valueKind = info.keyValueValueKind;
     }
+    if (info.structTypeName.empty()) {
+      info.structTypeName = resolveSemanticCollectionSpecializationText(
+          semanticProgram, collectionFact.structPath, collectionFact.structPathId);
+    }
   }
 }
 
@@ -875,7 +879,14 @@ bool validateSemanticProductCollectionSpecializationCoverage(
                                               "value type",
                                               siteDescription,
                                               error,
-                                              false)) {
+                                              false) ||
+        !validateInternedSemanticTextMetadata(*semanticProgram,
+                                              collectionFact->structPathId,
+                                              collectionFact->structPath,
+                                              "collection specialization",
+                                              "struct path",
+                                              siteDescription,
+                                              error)) {
       return false;
     }
     if (!collectionSpecializationMatchesExpected(*collectionFact, expected)) {

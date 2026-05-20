@@ -2,7 +2,6 @@
 
 #include <algorithm>
 #include <cctype>
-#include <sstream>
 
 #include "IrLowererBindingTransformHelpers.h"
 #include "IrLowererBindingTypeHelpers.h"
@@ -76,33 +75,12 @@ bool resolveSpecializedExperimentalMapStructPath(const std::string &typeText, st
   if (!normalizedType.empty() && normalizedType.front() != '/') {
     normalizedType.insert(normalizedType.begin(), '/');
   }
-  const std::string experimentalMapPrefix =
-      experimentalCollectionTypePath("map", "Map") + "__";
-  if (normalizedType.rfind(experimentalMapPrefix, 0) == 0) {
+  if (isExperimentalMapStructTypePath(normalizedType) &&
+      normalizedType.find("__") != std::string::npos) {
     structPathOut = normalizedType;
     return true;
   }
-
-  if (!splitTemplateTypeName(typeText, base, argList) ||
-      normalizeCollectionBindingTypeName(base) != "map" ||
-      argList.empty()) {
-    if (!splitTemplateTypeName(normalizedType, base, argList) ||
-        normalizeCollectionBindingTypeName(base) != "map" ||
-        argList.empty()) {
-      return false;
-    }
-  }
-
-  std::vector<std::string> templateArgs;
-  if (!splitTemplateArgs(argList, templateArgs) || templateArgs.size() != 2) {
-    return false;
-  }
-
-  std::ostringstream specializedPath;
-  specializedPath << collectionTypePath("map") << "/MapValue"
-                  << mangleTemplateTypeArgsSuffix(templateArgs);
-  structPathOut = specializedPath.str();
-  return true;
+  return false;
 }
 
 bool resolveSpecializedExperimentalSoaVectorStructPath(const std::string &typeText,

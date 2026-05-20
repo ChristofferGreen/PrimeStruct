@@ -11,6 +11,7 @@
 #include "IrLowererHelpers.h"
 #include "IrLowererSetupTypeCollectionHelpers.h"
 #include "IrLowererSetupTypeHelpers.h"
+#include "primec/StdlibSurfaceRegistry.h"
 
 namespace primec::ir_lowerer {
 
@@ -30,11 +31,13 @@ bool isGeneratedStdlibCollectionStructPath(std::string_view path) {
       experimentalCollectionTypePath("vector", "Vector") + "__";
   const std::string experimentalMapTypePrefix =
       experimentalCollectionTypePath("map", "Map") + "__";
+  const auto *mapMetadata = findStdlibSurfaceMetadataByBridgeKey("collections.map_helpers");
   const std::string mapValueTypePrefix =
-      collectionTypePath("map") + "/MapValue__";
+      mapMetadata == nullptr ? std::string{} : std::string(mapMetadata->canonicalPath) + "/MapValue__";
   return isSinglePathSegmentWithPrefix(path, experimentalVectorTypePrefix) ||
          isSinglePathSegmentWithPrefix(path, experimentalMapTypePrefix) ||
-         isSinglePathSegmentWithPrefix(path, mapValueTypePrefix) ||
+         (!mapValueTypePrefix.empty() &&
+          isSinglePathSegmentWithPrefix(path, mapValueTypePrefix)) ||
          isSinglePathSegmentWithPrefix(path, "/std/collections/experimental" "_soa" "_vector/Soa" "Vector" "__") ||
          isSinglePathSegmentWithPrefix(path, "/std/collections/internal_soa_storage/SoaColumn__") ||
          isSinglePathSegmentWithPrefix(path, "/std/collections/internal_soa_storage/SoaFieldView__") ||

@@ -4009,6 +4009,11 @@ main() {
   CHECK(mapEntry->collectionFamily == "map");
   CHECK(mapEntry->keyTypeText == "i32");
   CHECK(mapEntry->valueTypeText == "i64");
+  CHECK(mapEntry->structPath.rfind("/std/collections/map/MapValue__", 0) == 0);
+  REQUIRE(mapEntry->structPathId != primec::InvalidSymbolId);
+  CHECK(primec::semanticProgramResolveCallTargetString(semanticProgram,
+                                                       mapEntry->structPathId) ==
+        mapEntry->structPath);
   CHECK(mapEntry->isReference);
   CHECK_FALSE(mapEntry->isPointer);
   REQUIRE(mapEntry->helperSurfaceId.has_value());
@@ -4044,6 +4049,8 @@ main() {
 
   const std::string formatted = primec::formatSemanticProgram(semanticProgram);
   CHECK(formatted.find("collection_specializations[") != std::string::npos);
+  CHECK(formatted.find("struct_path=\"/std/collections/map/MapValue__") !=
+        std::string::npos);
   CHECK(formatted.find("helper_surface_id=\"collections.map_helpers\"") != std::string::npos);
   CHECK(formatted.find("helper_surface_id=\"collections.soa_helpers\"") !=
         std::string::npos);

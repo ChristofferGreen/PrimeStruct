@@ -121,8 +121,11 @@ bool isSemanticBarePublishedKeyValueHelperCall(const Expr &expr,
   return getBuiltinArrayAccessName(expr, accessName) && accessName == helperName;
 }
 
-bool isExplicitSamePathKeyValueCountLikeDefinitionCall(const Expr &expr,
-                                                       const Definition &callee) {
+bool resolveExplicitSamePathKeyValueCountLikeDefinitionCall(
+    const Expr &expr,
+    const Definition &callee,
+    std::string &helperNameOut) {
+  helperNameOut.clear();
   if (expr.kind != Expr::Kind::Call || expr.isMethodCall) {
     return false;
   }
@@ -131,7 +134,7 @@ bool isExplicitSamePathKeyValueCountLikeDefinitionCall(const Expr &expr,
     return false;
   }
   std::string helperName;
-  if (!resolvePublishedInlineKeyValueHelperName(
+  if (!resolvePublishedInlineKeyValueSurfaceMemberName(
           normalizeCollectionHelperPath(callee.fullPath), helperName)) {
     return false;
   }
@@ -145,8 +148,12 @@ bool isExplicitSamePathKeyValueCountLikeDefinitionCall(const Expr &expr,
       helperName != "contains_ref" && helperName != "tryAt_ref") {
     return false;
   }
-  return normalizeCollectionHelperPath(rawPath) ==
-         normalizeCollectionHelperPath(callee.fullPath);
+  if (normalizeCollectionHelperPath(rawPath) !=
+      normalizeCollectionHelperPath(callee.fullPath)) {
+    return false;
+  }
+  helperNameOut = std::move(helperName);
+  return true;
 }
 
 bool isDirectKeyValueAccessHelperCall(const Expr &expr) {
@@ -622,10 +629,20 @@ InlineCallDispatchResult tryEmitInlineCallWithCountFallbacksImpl(
             expr, *directCallee, isArrayCountCall, isStringCountCall)) {
       return InlineCallDispatchResult::NotHandled;
     }
+    std::string samePathKeyValueHelperName;
+    const bool isSamePathKeyValueCountLikeCall =
+        directCallee != nullptr &&
+        resolveExplicitSamePathKeyValueCountLikeDefinitionCall(
+            expr, *directCallee, samePathKeyValueHelperName);
+    if (isSamePathKeyValueCountLikeCall &&
+        (samePathKeyValueHelperName == "count" ||
+         samePathKeyValueHelperName == "count_ref")) {
+      return InlineCallDispatchResult::NotHandled;
+    }
     if (directCallee != nullptr &&
         (isSemanticBarePreferredKeyValueHelperDefinitionCall(expr, *directCallee) ||
          isBareDirectWrapperKeyValueAccessDefinitionCall(expr) ||
-         isExplicitSamePathKeyValueCountLikeDefinitionCall(expr, *directCallee))) {
+         isSamePathKeyValueCountLikeCall)) {
       const auto emitResult = emitResolvedInlineDefinitionCall(
           expr, directCallee, emitInlineDefinitionCall, error);
       if (emitResult == ResolvedInlineCallResult::Emitted) {
@@ -1197,6 +1214,9 @@ InlineCallDispatchResult tryEmitInlineCallDispatchWithLocals(
           (directHelperName == "count" || directHelperName == "contains" ||
            directHelperName == "tryAt" || directHelperName == "at" ||
            directHelperName == "at_unsafe")) {
+        if (directHelperName == "count") {
+          return InlineCallDispatchResult::NotHandled;
+        }
         if (const Definition *callee = resolveDefinitionCallFn(expr);
             callee != nullptr) {
           return emitCanonicalInlineDefinitionCall(expr, *callee)

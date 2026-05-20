@@ -184,25 +184,6 @@
             ir_lowerer::buildSemanticProductIndex(semanticProgram);
         const SemanticProductIndex *const tailDispatchKeyValueSemanticIndexPtr =
             semanticProgram == nullptr ? nullptr : &tailDispatchKeyValueSemanticIndex;
-        auto populateTailDispatchKeyValueStructPathFromKinds =
-            [&](ir_lowerer::KeyValueAccessTargetInfo &targetInfo) {
-              if (!targetInfo.structTypeName.empty() ||
-                  targetInfo.keyValueKeyKind == LocalInfo::ValueKind::Unknown ||
-                  targetInfo.keyValueValueKind == LocalInfo::ValueKind::Unknown) {
-                return;
-              }
-              const std::string typeText =
-                  ir_lowerer::collectionTypePath("map", false) + "<" +
-                  ir_lowerer::typeNameForValueKind(targetInfo.keyValueKeyKind) +
-                  ", " +
-                  ir_lowerer::typeNameForValueKind(targetInfo.keyValueValueKind) +
-                  ">";
-              std::string structPath;
-              if (ir_lowerer::resolveSpecializedExperimentalMapStructPathForBindingType(
-                      typeText, structPath)) {
-                targetInfo.structTypeName = std::move(structPath);
-              }
-            };
         const auto inferCallKeyValueTargetInfo = [&](const Expr &targetExpr, ir_lowerer::KeyValueAccessTargetInfo &out) {
           out = {};
           const Definition *callee =
@@ -221,13 +202,8 @@
           out.isKeyValueTarget = true;
           out.keyValueKeyKind = ir_lowerer::valueKindFromTypeName(collectionArgs.front());
           out.keyValueValueKind = ir_lowerer::valueKindFromTypeName(collectionArgs.back());
-          const bool resolvedKinds =
-              out.keyValueKeyKind != ir_lowerer::LocalInfo::ValueKind::Unknown &&
-              out.keyValueValueKind != ir_lowerer::LocalInfo::ValueKind::Unknown;
-          if (resolvedKinds) {
-            populateTailDispatchKeyValueStructPathFromKinds(out);
-          }
-          return resolvedKinds;
+          return out.keyValueKeyKind != ir_lowerer::LocalInfo::ValueKind::Unknown &&
+                 out.keyValueValueKind != ir_lowerer::LocalInfo::ValueKind::Unknown;
         };
         auto rewriteBuiltinKeyValueInsertBuiltinExpr = [&](const Expr &callExpr, Expr &rewrittenExpr) {
           if (callExpr.kind != Expr::Kind::Call || callExpr.args.size() != 3) {
@@ -636,6 +612,116 @@
         Expr rewrittenBuiltinKeyValueInsertBuiltinExpr;
         if (rewriteBuiltinKeyValueInsertBuiltinExpr(expr, rewrittenBuiltinKeyValueInsertBuiltinExpr)) {
           inlineDispatchExpr = rewrittenBuiltinKeyValueInsertBuiltinExpr;
+        }
+        auto rewriteSameFamilyKeyValueCountExpr =
+            [&](const Expr &callExpr, Expr &rewrittenExpr) {
+          if (callExpr.kind != Expr::Kind::Call || callExpr.isMethodCall ||
+              callExpr.args.size() != 1) {
+            return false;
+          }
+          const auto *metadata = tailDispatchKeyValueHelperMetadata();
+          if (metadata == nullptr || metadata->canonicalPath.empty()) {
+            return false;
+          }
+          std::string rawPath =
+              normalizeCollectionHelperPath(
+                  resolveTailDispatchDirectHelperPath(callExpr));
+          if (!rawPath.empty() && rawPath.front() == '/') {
+            rawPath.erase(rawPath.begin());
+          }
+          const size_t slash = rawPath.find('/');
+          if (slash == std::string::npos || slash == 0 ||
+              slash + 1 >= rawPath.size()) {
+            return false;
+          }
+          const std::string memberLeaf =
+              rawPath.substr(rawPath.find_last_of('/') + 1);
+          if (resolveStdlibSurfaceMemberName(*metadata, memberLeaf) != "count") {
+            return false;
+          }
+          const SemanticProductIndex keyValueCountSemanticIndex =
+              ir_lowerer::buildSemanticProductIndex(semanticProgram);
+          const SemanticProductIndex *const keyValueCountSemanticIndexPtr =
+              semanticProgram == nullptr ? nullptr : &keyValueCountSemanticIndex;
+          const auto keyValueTargetInfo =
+              ir_lowerer::resolveKeyValueAccessTargetInfo(
+                  callExpr.args.front(),
+                  localsIn,
+                  inferCallKeyValueTargetInfo,
+                  semanticProgram,
+                  keyValueCountSemanticIndexPtr);
+          if (!keyValueTargetInfo.isKeyValueTarget) {
+            return false;
+          }
+          auto keyValueFamilyName = [&]() {
+            const std::string canonicalPath(metadata->canonicalPath);
+            const size_t familySlash = canonicalPath.find_last_of('/');
+            return familySlash == std::string::npos
+                       ? canonicalPath
+                       : canonicalPath.substr(familySlash + 1);
+          };
+          std::string family = keyValueFamilyName();
+          if (semanticProgram != nullptr && keyValueCountSemanticIndexPtr != nullptr) {
+            if (const auto *collectionFact =
+                    ir_lowerer::findSemanticProductCollectionSpecialization(
+                        *keyValueCountSemanticIndexPtr,
+                        callExpr.args.front());
+                collectionFact != nullptr) {
+              family = collectionFact->collectionFamilyId != InvalidSymbolId
+                           ? trimTemplateTypeText(std::string(
+                                 semanticProgramResolveCallTargetString(
+                                     *semanticProgram,
+                                     collectionFact->collectionFamilyId)))
+                           : trimTemplateTypeText(
+                                 collectionFact->collectionFamily);
+            }
+          }
+          if (family.empty() || rawPath.substr(0, slash) != family) {
+            return false;
+          }
+          const std::string canonicalCountPath =
+              stdlibSurfaceCanonicalHelperPath(metadata->id, "count");
+          if (canonicalCountPath.empty()) {
+            return false;
+          }
+          auto importsCanonicalCount = [&]() {
+            if (semanticProgram == nullptr) {
+              return false;
+            }
+            auto importsPath = [&](const std::vector<std::string> &imports) {
+              return std::any_of(
+                  imports.begin(),
+                  imports.end(),
+                  [&](const std::string &importPath) {
+                    if (importPath == canonicalCountPath) {
+                      return true;
+                    }
+                    if (importPath.size() >= 2 &&
+                        importPath.compare(importPath.size() - 2, 2, "/*") == 0) {
+                      const std::string prefix =
+                          importPath.substr(0, importPath.size() - 2);
+                      return canonicalCountPath == prefix ||
+                             canonicalCountPath.rfind(prefix + "/", 0) == 0;
+                    }
+                    return false;
+                  });
+            };
+            return importsPath(semanticProgram->sourceImports) ||
+                   importsPath(semanticProgram->imports);
+          };
+          if (!importsCanonicalCount()) {
+            return false;
+          }
+          rewrittenExpr = callExpr;
+          rewrittenExpr.name = canonicalCountPath;
+          rewrittenExpr.namespacePrefix.clear();
+          rewrittenExpr.semanticNodeId = 0;
+          return true;
+        };
+        Expr rewrittenSameFamilyKeyValueCountExpr;
+        if (rewriteSameFamilyKeyValueCountExpr(
+                inlineDispatchExpr, rewrittenSameFamilyKeyValueCountExpr)) {
+          inlineDispatchExpr = rewrittenSameFamilyKeyValueCountExpr;
         }
         Expr rewrittenCanonicalExperimentalKeyValueHelperExpr;
         if (rewriteCanonicalKeyValueHelperForExperimentalReceiverExpr(
@@ -1080,9 +1166,6 @@
                   inferCallKeyValueTargetInfo,
                   semanticProgram,
                   tailDispatchKeyValueSemanticIndexPtr);
-              if (targetInfoOut.isKeyValueTarget) {
-                populateTailDispatchKeyValueStructPathFromKinds(targetInfoOut);
-              }
               return targetInfoOut.isKeyValueTarget;
             },
             [&](const Expr &targetCallExpr, ir_lowerer::ArrayVectorAccessTargetInfo &targetInfoOut) {

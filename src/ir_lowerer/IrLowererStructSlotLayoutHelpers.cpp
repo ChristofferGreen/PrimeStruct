@@ -2,7 +2,6 @@
 
 #include <algorithm>
 #include <memory>
-#include <sstream>
 
 #include "IrLowererBindingTransformHelpers.h"
 #include "IrLowererBindingTypeHelpers.h"
@@ -12,6 +11,7 @@
 #include "IrLowererSetupTypeHelpers.h"
 #include "IrLowererTemplateTypeParseHelpers.h"
 #include "IrLowererUninitializedTypeHelpers.h"
+#include "primec/StdlibSurfaceRegistry.h"
 
 namespace primec::ir_lowerer {
 
@@ -57,17 +57,20 @@ bool isBuiltinMapTypeName(const std::string &typeName) {
 bool isExperimentalMapTypeName(const std::string &typeName) {
   const std::string experimentalKeyValueType = experimentalCollectionTypePath("map", "Map", false);
   const std::string rootedExperimentalKeyValueType = experimentalCollectionTypePath("map", "Map");
-  const std::string keyValueRoot = collectionTypePath("map") + "/MapValue";
+  const auto *metadata = findStdlibSurfaceMetadataByBridgeKey("collections.map_helpers");
+  const std::string keyValueRoot =
+      metadata == nullptr ? std::string{} : std::string(metadata->canonicalPath) + "/MapValue";
   const std::string keyValueRootNoSlash =
       !keyValueRoot.empty() && keyValueRoot.front() == '/' ? keyValueRoot.substr(1) : keyValueRoot;
   return typeName == experimentalKeyValueType ||
          typeName == rootedExperimentalKeyValueType ||
          typeName.rfind(experimentalKeyValueType + "__", 0) == 0 ||
          typeName.rfind(rootedExperimentalKeyValueType + "__", 0) == 0 ||
-         typeName == keyValueRootNoSlash ||
-         typeName == keyValueRoot ||
-         typeName.rfind(keyValueRootNoSlash + "__", 0) == 0 ||
-         typeName.rfind(keyValueRoot + "__", 0) == 0;
+         (!keyValueRoot.empty() &&
+          (typeName == keyValueRootNoSlash ||
+           typeName == keyValueRoot ||
+           typeName.rfind(keyValueRootNoSlash + "__", 0) == 0 ||
+           typeName.rfind(keyValueRoot + "__", 0) == 0));
 }
 
 bool isMapTypeName(const std::string &typeName) {
@@ -144,7 +147,7 @@ std::string buildTemplatedTypeName(const std::string &typeName, const std::strin
 }
 
 bool resolveSpecializedExperimentalMapStructPath(const std::string &typeName,
-                                                 const std::string &typeTemplateArg,
+                                                 const std::string &,
                                                  std::string &structPathOut) {
   structPathOut.clear();
   std::string normalizedType = trimTemplateTypeText(typeName);
@@ -155,19 +158,7 @@ bool resolveSpecializedExperimentalMapStructPath(const std::string &typeName,
     structPathOut = std::move(normalizedType);
     return true;
   }
-  if (!isMapTypeName(typeName) || typeTemplateArg.empty()) {
-    return false;
-  }
-  std::vector<std::string> templateArgs;
-  if (!splitTemplateArgs(typeTemplateArg, templateArgs) || templateArgs.size() != 2) {
-    return false;
-  }
-
-  std::ostringstream specializedPath;
-  specializedPath << collectionTypePath("map") << "/MapValue"
-                  << mangleTemplateTypeArgsSuffix(templateArgs);
-  structPathOut = specializedPath.str();
-  return true;
+  return false;
 }
 
 bool resolveSpecializedExperimentalSoaVectorStructPathFromTypeText(

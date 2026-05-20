@@ -4336,12 +4336,12 @@ TEST_CASE("canonical map surface owns standalone stdlib implementation") {
         std::string::npos);
   CHECK(lowererStructTypeHelpersSource.find(
             "inferExperimentalMapStructPathFromKinds") == std::string::npos);
-  CHECK(lowererStructTypeHelpersSource.find("inferredKeyValueStruct") !=
+  CHECK(lowererStructTypeHelpersSource.find("inferredKeyValueStruct") ==
         std::string::npos);
-  CHECK(lowererStructTypeHelpersSource.find("keyValueKindTypeName") !=
+  CHECK(lowererStructTypeHelpersSource.find("keyValueKindTypeName") ==
         std::string::npos);
   CHECK(lowererStructTypeHelpersSource.find(
-            "inferExperimentalKeyValueStructPathFromKinds") != std::string::npos);
+            "inferExperimentalKeyValueStructPathFromKinds") == std::string::npos);
   CHECK(structSlotLayoutSource.find("typeName == \"std/collections/map\"") ==
         std::string::npos);
   CHECK(declaredCollectionInferenceSource.find("isBuiltinCollectionTypeName(base, \"map\")") !=
@@ -4804,15 +4804,15 @@ TEST_CASE("canonical map surface owns standalone stdlib implementation") {
   CHECK(accessTargetResolutionSource.find("preserveDirectExperimentalMapStruct") ==
         std::string::npos);
   CHECK(accessTargetResolutionSource.find("isDirectMap") == std::string::npos);
-  CHECK(accessTargetResolutionSource.find("keyValueKindTypeName") !=
+  CHECK(accessTargetResolutionSource.find("keyValueKindTypeName") ==
         std::string::npos);
   CHECK(accessTargetResolutionSource.find(
-            "inferExperimentalKeyValueStructPathFromKinds") != std::string::npos);
+            "inferExperimentalKeyValueStructPathFromKinds") == std::string::npos);
   CHECK(accessTargetResolutionSource.find(
-            "resolvedExperimentalKeyValueStructPath") != std::string::npos);
-  CHECK(accessTargetResolutionSource.find("experimentalKeyValueType") !=
+            "resolvedExperimentalKeyValueStructPath") == std::string::npos);
+  CHECK(accessTargetResolutionSource.find("experimentalKeyValueType") ==
         std::string::npos);
-  CHECK(accessTargetResolutionSource.find("rootedExperimentalKeyValueType") !=
+  CHECK(accessTargetResolutionSource.find("rootedExperimentalKeyValueType") ==
         std::string::npos);
   CHECK(accessTargetResolutionSource.find("isDirectKeyValueStorage") !=
         std::string::npos);

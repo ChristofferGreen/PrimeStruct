@@ -117,24 +117,6 @@ std::string inferVectorLikeStructPathFromLocalInfo(const LocalInfo &localInfo) {
   return specializedExperimentalVectorStructPathForElementType(elementType);
 }
 
-std::string keyValueKindTypeName(LocalInfo::ValueKind kind) {
-  return scalarKindTypeName(kind);
-}
-
-std::string inferExperimentalKeyValueStructPathFromKinds(LocalInfo::ValueKind keyKind,
-                                                    LocalInfo::ValueKind valueKind) {
-  const std::string keyType = keyValueKindTypeName(keyKind);
-  const std::string valueType = keyValueKindTypeName(valueKind);
-  if (keyType.empty() || valueType.empty()) {
-    return "";
-  }
-
-  std::ostringstream specializedPath;
-  specializedPath << collectionTypePath("map") << "/MapValue"
-                  << mangleTemplateTypeArgsSuffix({keyType, valueType});
-  return specializedPath.str();
-}
-
 } // namespace
 
 std::string joinTemplateArgsText(const std::vector<std::string> &args) {
@@ -666,18 +648,6 @@ std::string inferStructPathFromNameExpr(const Expr &expr, const LocalMap &locals
   }
   if (!localIt->second.structTypeName.empty()) {
     return localIt->second.structTypeName;
-  }
-  const bool isMapLikeLocal =
-      localIt->second.kind == LocalInfo::Kind::KeyValueCollection ||
-      ((localIt->second.kind == LocalInfo::Kind::Reference || localIt->second.kind == LocalInfo::Kind::Pointer) &&
-       (localIt->second.referenceToKeyValueCollection || localIt->second.pointerToKeyValueCollection));
-  if (isMapLikeLocal) {
-    const std::string inferredKeyValueStruct =
-        inferExperimentalKeyValueStructPathFromKinds(localIt->second.keyValueKeyKind,
-                                                     localIt->second.keyValueValueKind);
-    if (!inferredKeyValueStruct.empty()) {
-      return inferredKeyValueStruct;
-    }
   }
   return localIt->second.structTypeName;
 }

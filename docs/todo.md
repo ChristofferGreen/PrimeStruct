@@ -83,8 +83,8 @@ Task template:
 
 ### Ready Now (Parallel-Candidate Leaves; No Unmet TODO Dependencies)
 
-- TODO-4539: Remove lowerer MapValue path synthesis | track: map-zero-audit |
-  primary surface: generated MapValue struct-path synthesis helpers
+- TODO-4540: Collapse lowerer key/value local metadata | track: map-zero-audit |
+  primary surface: lowerer key/value local metadata
 - TODO-4271: Add compile-time pack indexing | track: tuple-type-packs |
   primary surface: generic pack-index selection and diagnostics
 
@@ -93,9 +93,10 @@ Task template:
 - `soa-zero-audit`: TODO-4529 replaced the residue inventory with a strict
   zero-production-trace audit; no SoA zero-audit leaf is ready.
 - `map-zero-audit`: TODO-4537 split the broad lowerer substrate item into
-  bounded leaves; ready TODO-4539 removes generated MapValue path synthesis,
-  followed by TODO-4540 -> TODO-4541 -> TODO-4542 -> TODO-4538 -> TODO-4464
-  for the final strict zero map-surface audit.
+  bounded leaves; TODO-4539 removed generated MapValue path synthesis, and
+  ready TODO-4540 collapses lowerer key/value local metadata before
+  TODO-4541 -> TODO-4542 -> TODO-4538 -> TODO-4464 for the final strict zero
+  map-surface audit.
 - `tuple-type-packs`: TODO-4276 completed helper/lifecycle pack
   expansion; ready TODO-4271, then serial successors TODO-4272
   -> TODO-4274 -> TODO-4273 -> TODO-4277 -> TODO-4278.
@@ -106,7 +107,6 @@ Task template:
 
 ### Immediate Next 10 (Track Successors; Not Ready Until Dependencies Land)
 
-- TODO-4540: Collapse lowerer key/value local metadata
 - TODO-4541: Delete lowerer key/value access target emission
 - TODO-4542: Retire native map-value backend gates
 - TODO-4538: Replace map inventory gate with fast strict audit
@@ -122,9 +122,8 @@ Task template:
   must enter as bounded leaves only.
 - Deferred stdlib ADT migration: none active
 - Vector stdlib ownership cutover: none active
-- Map stdlib ownership cutover: ready TODO-4539, then TODO-4540
-  -> TODO-4541 -> TODO-4542 -> TODO-4538 -> TODO-4464 for the final strict
-  zero audit
+- Map stdlib ownership cutover: ready TODO-4540, then TODO-4541
+  -> TODO-4542 -> TODO-4538 -> TODO-4464 for the final strict zero audit
 - SoA public surface rename and ownership cutover: TODO-4306 parent split;
   TODO-4526 removed semantic-validation inventory residue after TODO-4530
   reduced the shared semantic builtin path helper boundary; TODO-4527 removed
@@ -145,7 +144,6 @@ Task template:
 
 ### Execution Queue (Recommended Track Order)
 
-- TODO-4539: Remove lowerer MapValue path synthesis
 - TODO-4540: Collapse lowerer key/value local metadata
 - TODO-4541: Delete lowerer key/value access target emission
 - TODO-4542: Retire native map-value backend gates
@@ -1853,39 +1851,6 @@ Task template:
     - `./scripts/compile.sh --release` passes.
   - stop_rule: Stop once the generic design direction is documented through
     runnable examples rather than only prose.
-
-- [ ] TODO-4539: Remove lowerer MapValue path synthesis
-  - owner: ai
-  - created_at: 2026-05-20
-  - phase: Map stdlib ownership cutover
-  - parallel_track: map-zero-audit
-  - depends_on: TODO-4536
-  - split_from: TODO-4537
-  - scope: Remove the lowerer helpers that synthesize generated
-    `/std/collections/map/MapValue__*` struct paths from `map<K, V>` type
-    text or scalar key/value kinds. Target the `collectionTypePath("map") +
-    "/MapValue"` construction sites in access target resolution,
-    statement-binding metadata, struct-slot layout helpers, and uninitialized
-    struct inference.
-  - implementation_notes:
-    - Prefer semantic-product struct paths and ordinary declared struct
-      metadata over reconstructing generated map backing names in the lowerer.
-    - Keep tests for map programs, but update source-lock tests so they assert
-      the generated `MapValue` synthesis helpers are gone from production
-      lowerer code.
-    - If a call path still needs synthesized backing paths, create a
-      non-map TODO for a generic struct-specialization lookup and stop before
-      preserving a map-specific synthesizer.
-  - acceptance:
-    - Production lowerer code no longer builds generated map backing struct
-      paths from `map<K, V>` type text or `keyValue*Kind` pairs.
-    - Focused source-lock tests cover the absence of those synthesis helpers.
-    - Focused semantic-product/lowerer map tests still compile through
-      declared or semantic-product struct paths.
-  - stop_rule: Stop once generated MapValue path synthesis is gone. If
-    ordinary struct metadata cannot replace one synthesis site, document the
-    missing generic lookup as a separate non-map TODO and leave remaining
-    lowerer local/access metadata to TODO-4540 and TODO-4541.
 
 - [ ] TODO-4540: Collapse lowerer key/value local metadata
   - owner: ai

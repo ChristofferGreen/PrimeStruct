@@ -5,7 +5,9 @@
 
 #include <algorithm>
 #include <cctype>
+#include <cstdint>
 #include <optional>
+#include <sstream>
 #include <string_view>
 #include <unordered_map>
 #include <utility>
@@ -589,6 +591,51 @@ bool classifyCollectionSpecialization(std::string typeText,
   }
 }
 
+std::string mangleSemanticTemplateArgsSuffix(const std::vector<std::string> &args) {
+  auto stripWhitespace = [](const std::string &text) {
+    std::string result;
+    result.reserve(text.size());
+    for (unsigned char ch : text) {
+      if (!std::isspace(ch)) {
+        result.push_back(static_cast<char>(ch));
+      }
+    }
+    return result;
+  };
+
+  std::ostringstream canonicalArgs;
+  for (size_t index = 0; index < args.size(); ++index) {
+    if (index != 0) {
+      canonicalArgs << ",";
+    }
+    canonicalArgs << "type:" << stripWhitespace(args[index]);
+  }
+
+  uint64_t hash = 1469598103934665603ULL;
+  const std::string canonicalText = canonicalArgs.str();
+  for (unsigned char ch : canonicalText) {
+    hash ^= static_cast<uint64_t>(ch);
+    hash *= 1099511628211ULL;
+  }
+
+  std::ostringstream suffix;
+  suffix << "__t" << std::hex << hash;
+  return suffix.str();
+}
+
+std::string collectionSpecializationStructPath(const CollectionSpecializationDraft &draft) {
+  if (draft.collectionFamily != "map" || draft.keyTypeText.empty() ||
+      draft.valueTypeText.empty()) {
+    return {};
+  }
+  const auto *metadata = keyValueHelperSurfaceMetadataLocal();
+  if (metadata == nullptr || metadata->canonicalPath.empty()) {
+    return {};
+  }
+  return std::string(metadata->canonicalPath) + "/MapValue" +
+         mangleSemanticTemplateArgsSuffix({draft.keyTypeText, draft.valueTypeText});
+}
+
 void publishCollectionSpecializationForBinding(
     SemanticPublicationBuilderState &state,
     const SemanticProgramBindingFact &bindingEntry,
@@ -607,6 +654,7 @@ void publishCollectionSpecializationForBinding(
   entry.elementTypeText = draft.elementTypeText;
   entry.keyTypeText = draft.keyTypeText;
   entry.valueTypeText = draft.valueTypeText;
+  entry.structPath = collectionSpecializationStructPath(draft);
   entry.isReference = draft.isReference;
   entry.isPointer = draft.isPointer;
   entry.sourceLine = bindingEntry.sourceLine;
@@ -646,6 +694,7 @@ void publishCollectionSpecializationForBinding(
   entry.keyTypeTextId = semanticProgramInternCallTargetString(state.semanticProgram, entry.keyTypeText);
   entry.valueTypeTextId =
       semanticProgramInternCallTargetString(state.semanticProgram, entry.valueTypeText);
+  entry.structPathId = semanticProgramInternCallTargetString(state.semanticProgram, entry.structPath);
 
   state.semanticProgram.collectionSpecializations.push_back(std::move(entry));
   const std::size_t entryIndex = state.semanticProgram.collectionSpecializations.size() - 1;

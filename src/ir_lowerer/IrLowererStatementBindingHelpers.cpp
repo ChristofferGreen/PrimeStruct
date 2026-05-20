@@ -2,7 +2,6 @@
 
 #include <algorithm>
 #include <cctype>
-#include <sstream>
 
 #include "IrLowererStatementBindingInternal.h"
 
@@ -53,6 +52,20 @@ std::string resolveSemanticBindingTypeText(const SemanticProgram *semanticProgra
     }
   }
   return trimTemplateTypeText(bindingFact.bindingTypeText);
+}
+
+std::string resolveSemanticCollectionSpecializationText(
+    const SemanticProgram *semanticProgram,
+    const std::string &fallback,
+    SymbolId textId) {
+  if (semanticProgram != nullptr && textId != InvalidSymbolId) {
+    std::string resolvedText = std::string(
+        semanticProgramResolveCallTargetString(*semanticProgram, textId));
+    if (!resolvedText.empty()) {
+      return trimTemplateTypeText(resolvedText);
+    }
+  }
+  return trimTemplateTypeText(fallback);
 }
 
 bool isSpecializedExperimentalVectorTypeText(const std::string &typeText) {
@@ -170,29 +183,12 @@ bool resolveSpecializedExperimentalMapStructPathFromTypeText(const std::string &
   if (!normalizedType.empty() && normalizedType.front() != '/') {
     normalizedType.insert(normalizedType.begin(), '/');
   }
-  if (normalizedType.rfind(experimentalCollectionTypePath("map", "Map") + "__", 0) == 0) {
+  if (isExperimentalMapStructTypePath(normalizedType) &&
+      normalizedType.find("__") != std::string::npos) {
     structPathOut = normalizedType;
     return true;
   }
-
-  std::string base;
-  std::string argList;
-  if (!splitTemplateTypeName(typeText, base, argList) ||
-      normalizeCollectionBindingTypeName(base) != "map" ||
-      argList.empty()) {
-    return false;
-  }
-
-  std::vector<std::string> templateArgs;
-  if (!splitTemplateArgs(argList, templateArgs) || templateArgs.size() != 2) {
-    return false;
-  }
-
-  std::ostringstream specializedPath;
-  specializedPath << collectionTypePath("map") << "/MapValue"
-                  << mangleTemplateTypeArgsSuffix(templateArgs);
-  structPathOut = specializedPath.str();
-  return true;
+  return false;
 }
 
 bool resolveSpecializedExperimentalSoaVectorStructPath(const std::string &typeText,
@@ -619,9 +615,42 @@ bool populateBindingTypeInfoFromSemanticBindingFact(
       bindingFact != nullptr
           ? resolveSemanticBindingTypeText(semanticProgram, *bindingFact)
           : std::string{};
-  return bindingFact != nullptr && !bindingTypeText.empty() &&
-         populateBindingTypeInfoFromTypeText(
-             bindingTypeText, resolveDefinitionCall, infoOut);
+  if (bindingFact == nullptr || bindingTypeText.empty() ||
+      !populateBindingTypeInfoFromTypeText(
+          bindingTypeText, resolveDefinitionCall, infoOut)) {
+    return false;
+  }
+
+  const auto *collectionFact =
+      findSemanticProductCollectionSpecialization(*semanticIndex, expr);
+  if (collectionFact == nullptr) {
+    return true;
+  }
+  const std::string collectionFamily = resolveSemanticCollectionSpecializationText(
+      semanticProgram, collectionFact->collectionFamily, collectionFact->collectionFamilyId);
+  if (collectionFamily != "map") {
+    return true;
+  }
+  if (collectionFact->isReference) {
+    infoOut.referenceToKeyValueCollection = true;
+  }
+  if (collectionFact->isPointer) {
+    infoOut.pointerToKeyValueCollection = true;
+  }
+  infoOut.keyValueKeyKind = valueKindFromTypeName(
+      resolveSemanticCollectionSpecializationText(
+          semanticProgram, collectionFact->keyTypeText, collectionFact->keyTypeTextId));
+  infoOut.keyValueValueKind = valueKindFromTypeName(
+      resolveSemanticCollectionSpecializationText(
+          semanticProgram, collectionFact->valueTypeText, collectionFact->valueTypeTextId));
+  if (infoOut.valueKind == LocalInfo::ValueKind::Unknown) {
+    infoOut.valueKind = infoOut.keyValueValueKind;
+  }
+  if (infoOut.structTypeName.empty()) {
+    infoOut.structTypeName = resolveSemanticCollectionSpecializationText(
+        semanticProgram, collectionFact->structPath, collectionFact->structPathId);
+  }
+  return true;
 }
 
 bool inferExprBindingTypeInfo(const Expr &expr,
