@@ -1284,12 +1284,15 @@ TEST_CASE("stdlib surface metadata resolves collection helper member tokens") {
         "count");
   CHECK(primec::resolveStdlibSurfaceMemberName(*soaMetadata, "/std/collections/soa/to_aos") ==
         "to_aos");
-  CHECK(primec::resolveStdlibSurfaceMemberName(*soaMetadata, "soaVectorCountRef") ==
+  CHECK(primec::resolveStdlibSurfaceMemberName(*soaMetadata, "count_ref") ==
         "count_ref");
-  CHECK(primec::resolveStdlibSurfaceMemberName(*soaMetadata, "soaVectorFieldView") ==
+  CHECK(primec::resolveStdlibSurfaceMemberName(*soaMetadata, "field_view") ==
         "field_view");
-  CHECK(primec::resolveStdlibSurfaceMemberName(*soaMetadata, "soaVectorToAos") ==
+  CHECK(primec::resolveStdlibSurfaceMemberName(*soaMetadata, "to_aos") ==
         "to_aos");
+  CHECK(primec::resolveStdlibSurfaceMemberName(*soaMetadata, "soaVectorCountRef").empty());
+  CHECK(primec::resolveStdlibSurfaceMemberName(*soaMetadata, "soaVectorFieldView").empty());
+  CHECK(primec::resolveStdlibSurfaceMemberName(*soaMetadata, "soaVectorToAos").empty());
 
   const auto *soaCtorMetadata =
       primec::findStdlibSurfaceMetadata(primec::StdlibSurfaceId::CollectionsColumnarConstructors);
