@@ -1,10 +1,6 @@
 # Testcase Log
 
 ## Current Known Failures
-- `PrimeStruct_backend_ir_tests --test-case="template monomorph source delegation stays stable"`
-  has 44 stale SoA/experimental_soa_vector source-lock assertions after the
-  SoA public-surface cleanup. The map-constructor helper assertion in that
-  test has been updated; the remaining failures are unrelated SoA lock drift.
 - `PrimeStruct_semantics_tests --test-case="*map*count*" --no-skip` has
   obsolete legacy map-count compatibility coverage after removing C++ semantic
   builtin handling for `/std/collections/map/count` and related map access
@@ -187,6 +183,12 @@
   the string-valued map access emission fixture returned `NotHandled`.
 
 ## Recent Test Runs
+- 2026-05-20 11:36 CEST | pass | mode: release | command:
+  `cmake --build build-release --target PrimeStruct_backend_ir_tests`;
+  `cd build-release && ./PrimeStruct_backend_ir_tests --test-case="template monomorph source delegation stays stable" --no-skip`
+  | failures: none | notes: source lock now matches current SoA helper
+  prefix functions, split compatibility/same-path helper routing, and
+  key-value helper naming after the public map cutover.
 - 2026-05-20 11:27 CEST | pass | mode: release | command:
   `cmake --build build-release --target PrimeStruct_backend_ir_tests`;
   `cd build-release && ./PrimeStruct_backend_ir_tests --test-case="semantics validator infer source delegation stays stable" --no-skip`
@@ -4638,6 +4640,7 @@
 - 2026-05-12 17:28 local | fail | mode: release | command: `./scripts/compile.sh --release` | failures: 146 CTest targets | notes: baseline after preflight checkpoint failed; stabilization blocks TODO work
 
 ## Resolved Failures
+- [x] template monomorph source delegation stays stable | resolved: 2026-05-20 11:36 CEST | validating command: `cmake --build build-release --target PrimeStruct_backend_ir_tests`; `cd build-release && ./PrimeStruct_backend_ir_tests --test-case="template monomorph source delegation stays stable" --no-skip` | notes: refreshed stale SoA and key-value source-lock assertions for current helper prefix APIs, compatibility path routing, and renamed map-owned helpers.
 - [x] semantics validator infer source delegation stays stable | resolved: 2026-05-20 11:27 CEST | validating command: `cmake --build build-release --target PrimeStruct_backend_ir_tests`; `cd build-release && ./PrimeStruct_backend_ir_tests --test-case="semantics validator infer source delegation stays stable" --no-skip` | notes: refreshed stale source-lock snippets for key-value resolver naming, split SoA helper path literals, and removed map compatibility predispatch paths.
 - [x] ir lowers map literal call as statement | resolved: 2026-05-20 11:21 CEST | validating command: `cmake --build build-release --target PrimeStruct_backend_ir_tests PrimeStruct_semantics_tests`; `cd build-release && ./PrimeStruct_backend_ir_tests --test-case="ir lowers map literal call as statement" --no-skip`; `cd build-release && ./PrimeStruct_semantics_tests --test-case="map literal validates bool keys and values" --no-skip` | notes: parser nested-definition speculation now avoids consuming template-call statements without a definition body as template parameter declarations.
 - [x] ir lowerer call helpers keep explicit map helper same-path defs | resolved: 2026-05-20 11:15 CEST | validating command: `cmake --build build-release --target PrimeStruct_backend_ir_tests`; `cd build-release && ./PrimeStruct_backend_ir_tests --test-case="ir lowerer call helpers keep explicit map helper same-path defs" --no-skip` | notes: refreshed stale alias access expectations to preserve current canonical map helper definition resolution.
