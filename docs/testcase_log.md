@@ -1,18 +1,13 @@
 # Testcase Log
 
 ## Current Known Failures
-- `PrimeStruct_semantics_tests --test-case="implicit map constructors infer canonical auto locals and auto returns" --no-skip`
-  is stale after the map stdlib-ownership cutover. On 2026-05-18 a selected
-  initializer-binding validation window still failed because
-  `Result.ok(plus(/std/collections/map/count(...), ...))` could not infer the
-  ok payload variant, while the adjacent direct map return and borrowed-helper
-  validation cases passed.
 - `PrimeStruct_semantics_tests --test-case="semantic product validates direct return method-like borrowed helper-return experimental soa_vector reads" --no-skip`
   is not a clean map-cutover gate. On 2026-05-18 a selected validation window
   for a map inference slice failed this unrelated SoA semantic product fixture
   at `semantics.validate(...)`; the adjacent map-focused validation window
   passed after removing direct map backing predicates from
-  `SemanticsValidatorInferCollections.cpp`.
+  `SemanticsValidatorInferCollections.cpp`. On 2026-05-20 it still failed at
+  the same `semantics.validate(...)` gate when rerun directly.
 - `PrimeStruct_backend_ir_tests --test-case="ir lowerer result helpers resolve indexed args-pack Result expressions" --no-skip`
   is stale after the map stdlib-ownership cutover. On 2026-05-18 it failed to
   resolve `resolveResultExprInfoFromLocals` for the indexed args-pack Result
@@ -243,6 +238,19 @@
   the string-valued map access emission fixture returned `NotHandled`.
 
 ## Recent Test Runs
+- 2026-05-20 10:34 CEST | fail | mode: release | command:
+  `cd build-release && ./PrimeStruct_semantics_tests --test-case="semantic product validates direct return method-like borrowed helper-return experimental soa_vector reads" --no-skip`
+  | failures: semantic product validates direct return method-like borrowed
+  helper-return experimental soa_vector reads | notes: still fails at
+  `semantics.validate(...)`; this is an unrelated stale SoA fixture and
+  remains in Current Known Failures.
+- 2026-05-20 10:34 CEST | pass | mode: release | command:
+  `cmake --build build-release --target PrimeStruct_semantics_tests`;
+  `cd build-release && ./PrimeStruct_semantics_tests --test-case="implicit map constructors infer canonical auto locals and auto returns" --no-skip`
+  | failures: none | notes: refreshed the stale map auto-inference fixture to
+  bind the computed `i32` payload before `Result.ok`, preserving canonical map
+  constructor/count/insert/lookup coverage without relying on nested Result
+  payload inference.
 - 2026-05-18 20:03 CEST | pass | mode: release | command:
   `git diff --check`;
   `rg -n 'hasInferredTypedWrappedMap|SemanticStringMapAccessResolution|StringMapAccess|NonStringMapAccess|classifySemanticStringMap|isSourceMethodStringMapAccessTarget|publishedMapAccessHelperReturnsString|hasExplicitStdMapSourceSpelling|mapHelperAlias|isNamespacedMapAccessCall|explicitMapAccessName|semanticStringMapAccess|stringMapAccess|isStringMapTarget|isStringMapOut|isMapBuiltinName|resolveMapHelperAliasName' src/ir_lowerer/IrLowererCountAccessHelpers.cpp src/ir_lowerer/IrLowererCountAccessClassifiers.cpp src/ir_lowerer/IrLowererCountAccessClassifiers.h`;
@@ -4624,6 +4632,7 @@
 - 2026-05-12 17:28 local | fail | mode: release | command: `./scripts/compile.sh --release` | failures: 146 CTest targets | notes: baseline after preflight checkpoint failed; stabilization blocks TODO work
 
 ## Resolved Failures
+- [x] implicit map constructors infer canonical auto locals and auto returns | resolved: 2026-05-20 10:34 CEST | validating command: `cmake --build build-release --target PrimeStruct_semantics_tests`; `cd build-release && ./PrimeStruct_semantics_tests --test-case="implicit map constructors infer canonical auto locals and auto returns" --no-skip` | notes: refreshed the stale fixture to materialize the `i32` payload before `Result.ok`; canonical map auto locals, auto returns, inserts, counts, and lookups still validate.
 - [x] ir lowerer call helpers source delegation stays stable | resolved: 2026-05-18 18:32 local | validating command: `cmake --build build-release --target PrimeStruct_backend_ir_tests`; `cd build-release && ./PrimeStruct_backend_ir_tests --test-case="ir lowerer call helpers emit map lookup loop search scaffold,ir lowerer call helpers try emit map access lookup,ir lowerer call helpers resolve map lookup string keys,ir lowerer call helpers source delegation stays stable" --no-skip` | notes: source lock now matches the current key/value lookup helper names, asserts removed map-specific call-resolution and inline-dispatch helpers are absent, and preserves the SoA split-string source checks.
 - [x] map method alias primitive argument stale diagnostic | resolved: 2026-05-16 19:13 local | validating command: `cmake --build build-release --target PrimeStruct_semantics_tests`; `cd build-release && ./PrimeStruct_semantics_tests --test-case="map method alias access accepts matching receiver during inference"`; `cd build-release && ./PrimeStruct_semantics_tests --test-case="map method alias access rejects missing receiver method during inference"` | notes: updated stale expectations so the matching `/Marker/tag` receiver path validates and the missing receiver method case expects `unknown method: /Marker/tag`.
 - [x] type pack storage expands into deterministic struct fields | resolved: 2026-05-15 21:07 local | validating command: `cd build-release && ./PrimeStruct_misc_tests --test-suite=primestruct.semantics.manual --test-case="type pack storage expands into deterministic struct fields,type pack storage rejects invalid placements and shapes,type pack specializations bind zero one and many arguments,type pack parameters cannot be used as scalar types before expansion"` | notes: parent-run rerun passed after replacing the parser-dependent source fixture with direct AST construction for the storage-expansion cases.

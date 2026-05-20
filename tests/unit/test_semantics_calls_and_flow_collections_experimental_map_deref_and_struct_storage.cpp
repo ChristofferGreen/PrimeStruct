@@ -742,11 +742,13 @@ main() {
   /std/collections/map/insert<string, i32>(built, "extra"raw_utf8, 9i32)
   [i32] left{/std/collections/map/at(values, "left"raw_utf8)}
   [i32] extra{/std/collections/map/at(built, "extra"raw_utf8)}
-  return(Result.ok(plus(plus(/std/collections/map/count(values), /std/collections/map/count(built)), plus(left, extra))))
+  [i32] total{plus(plus(/std/collections/map/count(values), /std/collections/map/count(built)), plus(left, extra))}
+  return(Result.ok(total))
 }
 )";
   std::string error;
   CHECK(validateProgram(source, "/main", error));
+  INFO(error);
   CHECK(error.empty());
 }
 
