@@ -82,6 +82,7 @@ bool inferImplicitTemplateArgs(const Definition &def,
   }
   std::unordered_map<std::string, std::string> inferred;
   inferred.reserve(def.templateArgs.size());
+  std::unordered_map<std::string, std::vector<std::string>> inferredTypePacks;
   std::unordered_set<std::string> wrappedTemplateInferenceParams;
   wrappedTemplateInferenceParams.reserve(def.templateArgs.size());
   if (!callExpr.templateArgs.empty()) {
@@ -461,6 +462,36 @@ bool inferImplicitTemplateArgs(const Definition &def,
     }
     callParams.push_back(std::move(param));
   }
+  auto isTypePackBindingParameter = [&](const Expr &param,
+                                        std::string &packNameOut) {
+    packNameOut.clear();
+    if (!param.isBinding || param.transforms.size() != 1) {
+      return false;
+    }
+    const Transform &transform = param.transforms.front();
+    if (!transform.isPackExpansion || !transform.templateArgs.empty() ||
+        !transform.templateArgDetails.empty() || !transform.arguments.empty()) {
+      return false;
+    }
+    for (size_t i = 0; i < def.templateArgs.size(); ++i) {
+      if (def.templateArgs[i] == transform.name &&
+          i < def.templateArgIsPack.size() && def.templateArgIsPack[i]) {
+        packNameOut = transform.name;
+        return true;
+      }
+    }
+    return false;
+  };
+  size_t typePackParamIndex = callParams.size();
+  std::string typePackParamName;
+  for (size_t i = 0; i < def.parameters.size(); ++i) {
+    std::string candidatePackName;
+    if (isTypePackBindingParameter(def.parameters[i], candidatePackName)) {
+      typePackParamIndex = i;
+      typePackParamName = std::move(candidatePackName);
+      break;
+    }
+  }
   std::vector<const Expr *> orderedArgs;
   std::vector<const Expr *> packedArgs;
   size_t packedParamIndex = callParams.size();
@@ -788,9 +819,82 @@ bool inferImplicitTemplateArgs(const Definition &def,
     orderedCallArgs = &reorderedArgs;
     orderedCallArgNames = &reorderedArgNames;
   }
-  if (!buildOrderedArguments(callParams, *orderedCallArgs, *orderedCallArgNames, orderedArgs, packedArgs,
-                             packedParamIndex, error)) {
-    if (error.find("argument count mismatch") != std::string::npos) {
+  auto buildTypePackOrderedArguments = [&]() {
+    orderedArgs.assign(callParams.size(), nullptr);
+    packedArgs.clear();
+    packedParamIndex = typePackParamIndex;
+    size_t positionalIndex = 0;
+    for (size_t i = 0; i < orderedCallArgs->size(); ++i) {
+      const Expr &arg = (*orderedCallArgs)[i];
+      if (i < orderedCallArgNames->size() && (*orderedCallArgNames)[i].has_value()) {
+        const std::string &name = *(*orderedCallArgNames)[i];
+        size_t namedIndex = callParams.size();
+        for (size_t paramIndex = 0; paramIndex < callParams.size(); ++paramIndex) {
+          if (callParams[paramIndex].name == name) {
+            namedIndex = paramIndex;
+            break;
+          }
+        }
+        if (namedIndex >= callParams.size()) {
+          error = "unknown named argument: " + name;
+          return false;
+        }
+        if (namedIndex == typePackParamIndex) {
+          error = "named arguments cannot bind heterogeneous value-pack parameter: " +
+                  name;
+          return false;
+        }
+        if (orderedArgs[namedIndex] != nullptr) {
+          error = "named argument duplicates parameter: " + name;
+          return false;
+        }
+        orderedArgs[namedIndex] = &arg;
+        continue;
+      }
+      if (arg.isSpread) {
+        error = "heterogeneous value-pack inference does not support spread forwarding on " +
+                def.fullPath;
+        return false;
+      }
+      while (positionalIndex < typePackParamIndex &&
+             orderedArgs[positionalIndex] != nullptr) {
+        ++positionalIndex;
+      }
+      if (positionalIndex >= typePackParamIndex) {
+        packedArgs.push_back(&arg);
+        continue;
+      }
+      orderedArgs[positionalIndex] = &arg;
+      ++positionalIndex;
+    }
+    for (size_t i = 0; i < typePackParamIndex; ++i) {
+      if (orderedArgs[i] != nullptr) {
+        continue;
+      }
+      if (callParams[i].defaultExpr != nullptr) {
+        orderedArgs[i] = callParams[i].defaultExpr;
+        continue;
+      }
+      error = "argument count mismatch for " + def.fullPath;
+      return false;
+    }
+    return true;
+  };
+  const bool hasTypePackValueParameter =
+      typePackParamIndex < callParams.size() &&
+      typePackParamIndex + 1 == callParams.size();
+  const bool orderedOk = hasTypePackValueParameter
+                             ? buildTypePackOrderedArguments()
+                             : buildOrderedArguments(callParams,
+                                                     *orderedCallArgs,
+                                                     *orderedCallArgNames,
+                                                     orderedArgs,
+                                                     packedArgs,
+                                                     packedParamIndex,
+                                                     error);
+  if (!orderedOk) {
+    if (error.find("argument count mismatch") != std::string::npos &&
+        error.find(def.fullPath) == std::string::npos) {
       error = "argument count mismatch for " + def.fullPath;
     }
     return false;
@@ -879,7 +983,8 @@ bool inferImplicitTemplateArgs(const Definition &def,
   if (canConsumeImplicitInferenceFact) {
     const auto factIt = ctx.implicitTemplateArgInferenceFacts.find(implicitInferenceFactKey);
     if (factIt != ctx.implicitTemplateArgInferenceFacts.end() &&
-        factIt->second.inferredArgs.size() == def.templateArgs.size()) {
+        (hasTypePackValueParameter ||
+         factIt->second.inferredArgs.size() == def.templateArgs.size())) {
       outArgs = factIt->second.inferredArgs;
       ++ctx.implicitTemplateArgInferenceFactHitsForTesting;
       if (ctx.collectImplicitTemplateArgFactsForTesting) {
@@ -912,10 +1017,15 @@ bool inferImplicitTemplateArgs(const Definition &def,
     const size_t callParamIndex = i - paramIndexOffset;
     const bool inferFromPackedArgs = callParamIndex == packedParamIndex && isArgsPackBinding(paramInfo) &&
                                      implicitSet.count(paramInfo.typeTemplateArg) > 0;
+    const bool inferFromTypePackArgs =
+        hasTypePackValueParameter && callParamIndex == packedParamIndex &&
+        !typePackParamName.empty() && implicitSet.count(typePackParamName) > 0;
     bool inferFromWrappedTemplateArgs = false;
     std::vector<std::string> inferredParamNames;
     if (inferFromPackedArgs) {
       inferredParamNames.push_back(paramInfo.typeTemplateArg);
+    } else if (inferFromTypePackArgs) {
+      inferredParamNames.push_back(typePackParamName);
     } else {
       if (implicitSet.count(paramInfo.typeName) == 0) {
         std::vector<std::string> wrappedTemplateArgs;
@@ -943,7 +1053,7 @@ bool inferImplicitTemplateArgs(const Definition &def,
       }
     }
     std::vector<const Expr *> argsToInfer;
-    if (inferFromPackedArgs) {
+    if (inferFromPackedArgs || inferFromTypePackArgs) {
       argsToInfer = packedArgs;
     } else {
       const Expr *argExpr = callParamIndex < orderedArgs.size() ? orderedArgs[callParamIndex] : nullptr;
@@ -966,6 +1076,10 @@ bool inferImplicitTemplateArgs(const Definition &def,
       return true;
     };
     if (argsToInfer.empty()) {
+      if (inferFromTypePackArgs) {
+        inferredTypePacks[typePackParamName] = {};
+        continue;
+      }
       if (inferFromWrappedTemplateArgs) {
         std::string paramBaseType = normalizeBindingTypeName(paramInfo.typeName);
         if (!paramBaseType.empty() && paramBaseType.front() != '/') {
@@ -1193,6 +1307,10 @@ bool inferImplicitTemplateArgs(const Definition &def,
         error = "implicit template arguments must be concrete on " + def.fullPath;
         return false;
       }
+      if (inferFromTypePackArgs) {
+        inferredTypePacks[inferredParamNames.front()].push_back(resolvedArg.text);
+        continue;
+      }
       auto it = inferred.find(inferredParamNames.front());
       if (it != inferred.end() && it->second != resolvedArg.text) {
         if (wrappedTemplateInferenceParams.count(inferredParamNames.front()) == 0) {
@@ -1207,7 +1325,17 @@ bool inferImplicitTemplateArgs(const Definition &def,
 
   outArgs.clear();
   outArgs.reserve(def.templateArgs.size());
-  for (const auto &paramName : def.templateArgs) {
+  for (size_t paramIndex = 0; paramIndex < def.templateArgs.size(); ++paramIndex) {
+    const auto &paramName = def.templateArgs[paramIndex];
+    if (paramIndex < def.templateArgIsPack.size() &&
+        def.templateArgIsPack[paramIndex]) {
+      auto packIt = inferredTypePacks.find(paramName);
+      if (packIt == inferredTypePacks.end()) {
+        return false;
+      }
+      outArgs.insert(outArgs.end(), packIt->second.begin(), packIt->second.end());
+      continue;
+    }
     auto it = inferred.find(paramName);
     if (it == inferred.end()) {
       // Leave error empty so deferred helper-template rewrite gates can decide

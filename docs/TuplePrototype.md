@@ -2,8 +2,8 @@
 
 Status: partially implemented. The accepted `tuple<Ts...>` storage and
 `get<I, ...>` helper surface is now canonicalized in `docs/PrimeStruct.md`.
-Bracket indexing, heterogeneous value-pack inference, destructuring, and
-multi-wait integration remain prototype follow-ups.
+Bracket indexing and heterogeneous `make_tuple(...)` inference are supported;
+destructuring and multi-wait integration remain prototype follow-ups.
 
 This document captures the proposed `tuple` design needed by future
 multi-value APIs such as multithreaded `wait(left, right)`. When the design is
@@ -89,7 +89,6 @@ heterogeneous type packs.
 
 Optional but useful follow-up substrate:
 
-- heterogeneous value-pack inference for helpers such as `make_tuple(values...)`
 - tuple destructuring sugar once tuple construction and `get<I>` are stable
 - type-returning compile-time helpers for a public `tuple_element`-style API
 
@@ -105,8 +104,6 @@ Out of scope initially:
 - named tuple fields
 - reflection over arbitrary tuple values beyond the explicit tuple API
 - `tie`, forwarding tuples, or borrowed view tuples
-- heterogeneous value-pack inference for `make_tuple(...)`, unless the generic
-  pack substrate already provides it
 - detached lifetime or aliasing behavior that bypasses normal field rules
 - ABI compatibility with C++ `std::tuple`
 
@@ -189,9 +186,10 @@ Context-typed construction can be a later convenience:
 [tuple<i32, bool>] value{1, true}
 ```
 
-`tuple(...)` or `make_tuple(...)` helper forms are optional convenience APIs,
-not the canonical construction model. If added, they should still be `.prime`
-helpers that return `tuple<...>`.
+`make_tuple(...)` is the convenience helper for inferred heterogeneous tuple
+construction. It infers one `Ts...` element type per positional argument,
+supports `make_tuple()` as `tuple<>`, rejects named arguments for the pack, and
+does not forward homogeneous `args<T>` spreads as heterogeneous packs.
 
 ## Representation
 
@@ -359,13 +357,13 @@ should be:
 The minimal first API:
 
 - `tuple<...>{...}` construction
+- `make_tuple(values...)` inferred construction
 - `get<I>(tuple)` indexed read
 - borrowed `get<I>` when reference projection is available
 - tuple arity/type metadata if the generic substrate supports it
 
 Likely follow-up APIs:
 
-- `make_tuple(values...)` once heterogeneous value-pack inference exists
 - `tuple_size<T>()` or equivalent compile-time arity helper
 - `tuple_element<I, T>()` or equivalent type helper
 - `equal(left, right)` when all elements are comparable
@@ -420,8 +418,7 @@ When this prototype graduates into active implementation work:
   (done for direct `get` and bracket indexing)
 - add copy/move/destruction tests with non-trivial element types once lifecycle
   behavior is settled
-- add heterogeneous value-pack inference, tuple destructuring, and multi-wait
-  integration only as later follow-ups, tracked by TODO-4273, TODO-4277, and
-  TODO-4278
+- add tuple destructuring and multi-wait integration only as later follow-ups,
+  tracked by TODO-4277 and TODO-4278
 - update `docs/PrimeStruct.md` and `docs/CodeExamples.md` only after the
   supported surface is implemented (done for the initial surface)

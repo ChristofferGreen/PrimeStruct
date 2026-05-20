@@ -10,8 +10,27 @@
   string-valued map runtime fixture has since been retargeted to compile-only
   coverage because native runtime string-valued maps still hang after
   compilation.
+- `PrimeStruct_compile_run_tests --test-suite=primestruct.compile.run.native_backend.core --order-by=file --source-file="*test_compile_run_native_backend_core_*.cpp" --first=1 --last=10`
+  is not a clean gate as of 2026-05-20. The shard still contains stale native
+  variadic `args<T>` fixtures that expect expression-lowered `at`/`at_unsafe`
+  calls and scalar-pointer pack access to run on the native backend; focused
+  tuple TODO-4273 validation below does not depend on that shard.
 
 ## Recent Test Runs
+- 2026-05-20 23:46 CEST | pass | mode: release | command:
+  `cmake --build build-release --target primec PrimeStruct_compile_run_tests`;
+  `cd build-release && ./PrimeStruct_compile_run_tests --test-case="native infers heterogeneous stdlib tuple make_tuple,native reports stdlib tuple make_tuple diagnostics,native uses tuple bracket indexing sugar,native reports tuple bracket index diagnostics,native uses imported stdlib tuple get helpers,native reports stdlib tuple get index diagnostics,todo queue and skipped doctest debt stay source locked" --no-skip`
+  | failures: none | notes: TODO-4273 adds stdlib `make_tuple` inference for
+  heterogeneous tuple values, supports empty inferred tuples, rejects named
+  pack arguments and spread forwarding into heterogeneous packs, and preserves
+  tuple bracket plus explicit `get` behavior.
+- 2026-05-20 23:35 CEST | fail | mode: release | command:
+  `cd build-release && ./PrimeStruct_compile_run_tests --test-case="native materializes variadic pointer vector packs with indexed dereference access helpers,native materializes variadic map packs with indexed count methods" --no-skip`;
+  `cd build-release && ./PrimeStruct_compile_run_tests --test-suite=primestruct.compile.run.native_backend.core --order-by=file --source-file="*test_compile_run_native_backend_core_*.cpp" --first=1 --last=10`
+  | failures: native variadic pointer/vector/map and first-shard native core
+  variadic `args<T>` fixtures | notes: optional compatibility probe exposed
+  existing stale native-core variadic coverage unrelated to TODO-4273; the
+  current known-failure entry above tracks the shard.
 - 2026-05-20 22:47 CEST | pass | mode: release | command:
   `cmake --build build-release --target primec PrimeStruct_compile_run_tests`;
   `cd build-release && ./PrimeStruct_compile_run_tests --test-case="native uses tuple bracket indexing sugar"`;

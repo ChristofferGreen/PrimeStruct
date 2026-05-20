@@ -1613,8 +1613,8 @@ TEST_CASE("todo queue and skipped doctest debt stay source locked") {
   CHECK(todo.find("### Ready Now (Parallel-Candidate Leaves; No Unmet TODO Dependencies)") !=
         std::string::npos);
   CHECK(todo.find("### Ready Now (Parallel-Candidate Leaves; No Unmet TODO Dependencies)\n\n"
-                  "- TODO-4273: Add heterogeneous value-pack inference | track: tuple-type-packs |\n"
-                  "  primary surface: infer `Ts...` from heterogeneous tuple helper arguments") !=
+                  "- TODO-4277: Add tuple destructuring sugar | track: tuple-type-packs |\n"
+                  "  primary surface: bind elements from ordinary stdlib tuple values") !=
         std::string::npos);
   CHECK(todo.find("- `soa-zero-audit`: TODO-4529 replaced the residue inventory with a strict\n"
                   "  zero-production-trace audit; no SoA zero-audit leaf is ready.") !=
@@ -1628,14 +1628,14 @@ TEST_CASE("todo queue and skipped doctest debt stay source locked") {
   CHECK(todo.find("- `tuple-type-packs`: TODO-4276 completed helper/lifecycle pack\n"
                   "  expansion, TODO-4271 added compile-time pack indexing, TODO-4272 added\n"
                   "  the initial stdlib tuple surface, and TODO-4274 added tuple bracket\n"
-                  "  indexing; ready TODO-4273") !=
+                  "  indexing, and TODO-4273 added heterogeneous `make_tuple` inference; ready\n"
+                  "  TODO-4277") !=
         std::string::npos);
   CHECK(todo.find("### Immediate Next 10 (Track Successors; Not Ready Until Dependencies Land)\n\n"
                   "- TODO-4277: Add tuple destructuring sugar\n"
                   "- TODO-4278: Integrate multi-wait with stdlib tuple") !=
         std::string::npos);
-  CHECK(todo.find("- TODO-4273: Add heterogeneous value-pack inference\n"
-                  "- TODO-4277: Add tuple destructuring sugar") !=
+  CHECK(todo.find("- TODO-4273: Add heterogeneous value-pack inference") ==
         std::string::npos);
   CHECK(todo.find("- [~] TODO-4305: Rename and style canonical `.prime` SoA surface") !=
         std::string::npos);
@@ -1649,15 +1649,16 @@ TEST_CASE("todo queue and skipped doctest debt stay source locked") {
   CHECK(todo.find("- Deferred SoA finish: TODO-4252") ==
         std::string::npos);
   CHECK(todo.find("### Execution Queue (Recommended Track Order)\n\n"
-                  "- TODO-4273: Add heterogeneous value-pack inference\n"
-                  "- TODO-4277: Add tuple destructuring sugar") !=
+                  "- TODO-4277: Add tuple destructuring sugar\n"
+                  "- TODO-4278: Integrate multi-wait with stdlib tuple") !=
         std::string::npos);
-  CHECK(todo.find("- TODO-4278: Integrate multi-wait with stdlib tuple\n"
-                  "- TODO-4331: Implement compile-time argument channel model") !=
+  CHECK(todo.find("- TODO-4331: Implement compile-time argument channel model") !=
         std::string::npos);
   CHECK(todo.find("- [ ] TODO-4276: Expand type packs in helpers and lifecycle hooks") ==
         std::string::npos);
   CHECK(todoFinished.find("TODO-4276: Expand type packs in helpers and lifecycle hooks") !=
+        std::string::npos);
+  CHECK(todoFinished.find("TODO-4273: Add heterogeneous value-pack inference") !=
         std::string::npos);
   CHECK(todoFinished.find("TODO-4272: Add stdlib `tuple<Ts...>`") !=
         std::string::npos);
@@ -1706,7 +1707,7 @@ TEST_CASE("todo queue and skipped doctest debt stay source locked") {
   CHECK(todoFinished.find("TODO-4519: Delete `soa_vector` compatibility seams") !=
         std::string::npos);
   const std::vector<std::string> semanticPhaseQueue = {
-      "TODO-4273: Add heterogeneous value-pack inference",
+      "TODO-4277: Add tuple destructuring sugar",
   };
   for (const std::string &entry : semanticPhaseQueue) {
     CHECK(todo.find("- " + entry) != std::string::npos);

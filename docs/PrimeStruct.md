@@ -2320,15 +2320,17 @@ explicit `utf8`/`ascii` suffix.** `ascii` enforces 7-bit ASCII (the compiler rej
   Tuple bracket indexing, such as `pair[0]`, is accepted as tuple-specific
   compile-time sugar over the same stdlib `get<I, Ts...>` helper path; runtime
   index variables still belong to ordinary collection indexing, not tuple
-  element selection.
+  element selection. Imported `make_tuple(...)` infers a heterogeneous
+  `Ts...` pack from positional values and constructs the same ordinary
+  `tuple<Ts...>` storage, including `make_tuple()` as `tuple<>`; named pack
+  arguments and homogeneous `args<T>` spread forwarding are rejected.
   Imported `get_ref<I, Ts...>(location(value))` type-checks as
   `Reference<TI>` when borrowed field access is available, but direct native
   runtime dereference of returned tuple element references is still treated as
   a backend support boundary rather than a tuple-specific opcode. Tuple arity
   and element order are available through the same generated field/reflection
-  metadata used by pack-expanded structs. Bracket indexing, heterogeneous
-  value-pack inference, tuple destructuring, and multi-wait integration remain
-  follow-up sugar over this stdlib tuple surface.
+  metadata used by pack-expanded structs. Tuple destructuring and multi-wait
+  integration remain follow-up sugar over this stdlib tuple surface.
 - **Definitions vs executions:** definitions include a body (`{…}`) and optional transforms; executions are call-style
   (`execute_task<…>(args)`) with mandatory parentheses and no body, and map to an envelope with an implicit empty body.
   Calls always use `()`; the `name{...}` form is reserved for bindings so `execute_task{...}` is invalid.

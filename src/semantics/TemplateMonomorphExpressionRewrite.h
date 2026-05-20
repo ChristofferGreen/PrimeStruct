@@ -340,6 +340,185 @@ bool rewriteExpr(Expr &expr,
     }
   }
 
+  auto expandCurrentTypePackSpreadArguments =
+      [&](std::vector<Expr> &arguments,
+          std::vector<std::optional<std::string>> &argumentNames) {
+        if (ctx.currentRewriteDefinition == nullptr ||
+            ctx.currentRewriteDefinition->templatePackBindings.empty() ||
+            arguments.empty()) {
+          return;
+        }
+        const TemplatePackBinding &packBinding =
+            ctx.currentRewriteDefinition->templatePackBindings.front();
+        std::vector<Expr> expanded;
+        std::vector<std::optional<std::string>> expandedNames;
+        expanded.reserve(arguments.size());
+        if (!argumentNames.empty()) {
+          expandedNames.reserve(argumentNames.size() + packBinding.arguments.size());
+        }
+        auto spreadSourceName = [](const Expr &arg) -> std::string {
+          if (arg.kind == Expr::Kind::Name) {
+            return arg.name;
+          }
+          if (arg.kind == Expr::Kind::Call && !arg.isBinding &&
+              !arg.isMethodCall && !arg.isFieldAccess && arg.args.empty() &&
+              arg.argNames.empty() && arg.bodyArguments.empty() &&
+              !arg.hasBodyArguments && arg.templateArgs.empty()) {
+            return arg.name;
+          }
+          return {};
+        };
+        bool changed = false;
+        for (size_t argIndex = 0; argIndex < arguments.size(); ++argIndex) {
+          Expr &arg = arguments[argIndex];
+          const bool hasArgName =
+              !argumentNames.empty() && argIndex < argumentNames.size();
+          const std::string spreadName = arg.isSpread ? spreadSourceName(arg)
+                                                      : std::string{};
+          if (!arg.isSpread || spreadName.empty()) {
+            expanded.push_back(std::move(arg));
+            if (!argumentNames.empty()) {
+              expandedNames.push_back(hasArgName ? argumentNames[argIndex]
+                                                 : std::nullopt);
+            }
+            continue;
+          }
+
+          bool allGeneratedBindingsVisible = true;
+          for (size_t packIndex = 0; packIndex < packBinding.arguments.size();
+               ++packIndex) {
+            if (findBinding(params,
+                            locals,
+                            generatedPackFieldName(spreadName, packIndex)) ==
+                nullptr) {
+              allGeneratedBindingsVisible = false;
+              break;
+            }
+          }
+          if (!allGeneratedBindingsVisible) {
+            expanded.push_back(std::move(arg));
+            if (!argumentNames.empty()) {
+              expandedNames.push_back(hasArgName ? argumentNames[argIndex]
+                                                 : std::nullopt);
+            }
+            continue;
+          }
+
+          changed = true;
+          for (size_t packIndex = 0; packIndex < packBinding.arguments.size();
+               ++packIndex) {
+            Expr expandedArg;
+            expandedArg.kind = Expr::Kind::Name;
+            expandedArg.name = generatedPackFieldName(spreadName, packIndex);
+            expandedArg.sourceName = expandedArg.name;
+            expandedArg.namespacePrefix = namespacePrefix;
+            expandedArg.sourceLine = arg.sourceLine;
+            expandedArg.sourceColumn = arg.sourceColumn;
+            expanded.push_back(std::move(expandedArg));
+            if (!argumentNames.empty()) {
+              expandedNames.push_back(std::nullopt);
+            }
+          }
+        }
+        (void)changed;
+        arguments = std::move(expanded);
+        if (!argumentNames.empty()) {
+          argumentNames = std::move(expandedNames);
+        }
+      };
+
+  expandCurrentTypePackSpreadArguments(expr.args, expr.argNames);
+  std::vector<std::optional<std::string>> bodyArgumentNames;
+  expandCurrentTypePackSpreadArguments(expr.bodyArguments, bodyArgumentNames);
+
+  if (!expr.isMethodCall && !expr.isBinding && expr.kind == Expr::Kind::Call &&
+      !expr.hasBodyArguments && expr.bodyArguments.empty() &&
+      resolveCalleePath(expr, namespacePrefix, ctx) == "/std/tuple/make_tuple") {
+    if (hasNamedCallArguments(expr)) {
+      error = "named arguments cannot bind heterogeneous value-pack parameter: values";
+      return false;
+    }
+    for (Expr &arg : expr.args) {
+      if (arg.isSpread) {
+        error = "heterogeneous value-pack inference does not support spread forwarding on /std/tuple/make_tuple";
+        return false;
+      }
+      if (!rewriteExpr(arg,
+                       mapping,
+                       allowedParams,
+                       namespacePrefix,
+                       ctx,
+                       error,
+                       locals,
+                       params,
+                       allowMathBare)) {
+        return false;
+      }
+    }
+    std::vector<std::string> tupleArgs = expr.templateArgs;
+    if (tupleArgs.empty()) {
+      tupleArgs.reserve(expr.args.size());
+      for (const Expr &arg : expr.args) {
+        BindingInfo argInfo;
+        if (!inferBindingTypeForMonomorph(arg,
+                                          params,
+                                          locals,
+                                          allowMathBare,
+                                          ctx,
+                                          argInfo)) {
+          error = "unable to infer implicit template arguments for /std/tuple/make_tuple";
+          return false;
+        }
+        const std::string argType = bindingTypeToString(argInfo);
+        if (argType.empty()) {
+          error = "unable to infer implicit template arguments for /std/tuple/make_tuple";
+          return false;
+        }
+        ResolvedType resolvedArg =
+            resolveTypeString(argType, mapping, allowedParams, namespacePrefix, ctx, error);
+        if (!error.empty()) {
+          return false;
+        }
+        if (!resolvedArg.concrete) {
+          error = "implicit template arguments must be concrete on /std/tuple/make_tuple";
+          return false;
+        }
+        tupleArgs.push_back(resolvedArg.text);
+      }
+    } else {
+      bool tupleArgsConcrete = true;
+      if (!resolveTemplateArgumentList(tupleArgs,
+                                       mapping,
+                                       allowedParams,
+                                       namespacePrefix,
+                                       ctx,
+                                       error,
+                                       tupleArgsConcrete)) {
+        return false;
+      }
+      if (!tupleArgsConcrete) {
+        error = "implicit template arguments must be concrete on /std/tuple/make_tuple";
+        return false;
+      }
+    }
+    std::string tuplePath;
+    if (!instantiateTemplate("/std/tuple/tuple",
+                             tupleArgs,
+                             nullptr,
+                             ctx,
+                             error,
+                             tuplePath)) {
+      return false;
+    }
+    expr.name = std::move(tuplePath);
+    expr.sourceName = expr.name;
+    expr.namespacePrefix.clear();
+    expr.templateArgs.clear();
+    expr.templateArgDetails.clear();
+    expr.isBraceConstructor = true;
+    return true;
+  }
+
   if (isPickCall(expr)) {
     for (auto &arg : expr.args) {
       if (!rewriteExpr(arg,

@@ -83,8 +83,8 @@ Task template:
 
 ### Ready Now (Parallel-Candidate Leaves; No Unmet TODO Dependencies)
 
-- TODO-4273: Add heterogeneous value-pack inference | track: tuple-type-packs |
-  primary surface: infer `Ts...` from heterogeneous tuple helper arguments
+- TODO-4277: Add tuple destructuring sugar | track: tuple-type-packs |
+  primary surface: bind elements from ordinary stdlib tuple values
 
 ### Parallel Work Tracks (Current)
 
@@ -104,7 +104,8 @@ Task template:
 - `tuple-type-packs`: TODO-4276 completed helper/lifecycle pack
   expansion, TODO-4271 added compile-time pack indexing, TODO-4272 added
   the initial stdlib tuple surface, and TODO-4274 added tuple bracket
-  indexing; ready TODO-4273, then serial successors TODO-4277 -> TODO-4278.
+  indexing, and TODO-4273 added heterogeneous `make_tuple` inference; ready
+  TODO-4277, then serial successor TODO-4278.
 - `procedural-genericity`: blocked by the tuple-type-packs successor chain
   before TODO-4331 can start.
 - `generic-requirements`: blocked by TODO-4331 and TODO-4334 before
@@ -130,8 +131,8 @@ Task template:
   template-monomorph residue; TODO-4533 removed lowerer call-resolution
   residual bridge traces; TODO-4528 removed lowerer count/access residue; and
   TODO-4529 replaced the residue inventory with a strict zero audit
-- Deferred generic tuple substrate: ready TODO-4273 after TODO-4274 added
-  tuple bracket indexing, followed by TODO-4277 -> TODO-4278
+- Deferred generic tuple substrate: ready TODO-4277 after TODO-4273 added
+  heterogeneous `make_tuple` inference, followed by TODO-4278
 - Procedural compile-time genericity: TODO-4331 -> TODO-4332
   -> TODO-4333 -> TODO-4334 -> TODO-4335 -> TODO-4336 -> TODO-4337
   -> TODO-4338 -> TODO-4339 -> TODO-4340
@@ -143,7 +144,6 @@ Task template:
 
 ### Execution Queue (Recommended Track Order)
 
-- TODO-4273: Add heterogeneous value-pack inference
 - TODO-4277: Add tuple destructuring sugar
 - TODO-4278: Integrate multi-wait with stdlib tuple
 - TODO-4331: Implement compile-time argument channel model
@@ -754,39 +754,11 @@ Task template:
 
 ### Task Blocks
 
-- [ ] TODO-4273: Add heterogeneous value-pack inference
-  - owner: ai
-  - created_at: 2026-04-27
-  - phase: Deferred generic tuple substrate
-  - depends_on: TODO-4274
-  - scope: Add generic heterogeneous value-pack inference for helpers such as
-    `make_tuple(values...)` without weakening the homogeneous `args<T>` model.
-  - implementation_notes:
-    - Keep `args<T>` homogeneous. Add a separate heterogeneous value-pack
-      inference path that binds one type per positional argument.
-    - Start from implicit-template inference, spread-argument validation, and
-      call binding; do not change vector/map variadic behavior unless covered
-      by explicit compatibility tests.
-    - Treat spread forwarding of heterogeneous packs as a separate documented
-      feature; split it out if it grows beyond this task.
-  - acceptance:
-    - A `.prime` helper can infer `Ts...` from heterogeneous positional values
-      and return `tuple<Ts...>`.
-    - `make_tuple(1, "x", true)` or the accepted stdlib spelling constructs
-      `tuple<i32, string, bool>` through ordinary tuple construction.
-    - Existing homogeneous `args<T>` diagnostics and vector/map constructors
-      remain unchanged.
-    - Negative tests cover conflicting inference, empty packs if unsupported,
-      named-argument interactions, and unsupported spread forwarding.
-    - `./scripts/compile.sh --release` passes.
-  - stop_rule: Stop once heterogeneous value-pack inference is available for
-    tuple helper construction and does not regress existing homogeneous packs.
-
 - [ ] TODO-4277: Add tuple destructuring sugar
   - owner: ai
   - created_at: 2026-04-27
   - phase: Deferred generic tuple substrate
-  - depends_on: TODO-4274
+  - depends_on: TODO-4273
   - scope: Add tuple destructuring binding sugar over ordinary `tuple<...>`
     values without involving task spawning or multi-wait.
   - implementation_notes:

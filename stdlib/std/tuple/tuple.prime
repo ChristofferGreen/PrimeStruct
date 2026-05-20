@@ -14,5 +14,10 @@ namespace std {
   get_ref<Index, Ts...>([Reference<tuple<Ts...>>] values) {
     return(pack_at<Index, values>(values))
   }
+
+  [public return<tuple<Ts...>>]
+  make_tuple<Ts...>([Ts...] values) {
+    return(/std/tuple/tuple<Ts...>{[spread] values})
+  }
   }
 }

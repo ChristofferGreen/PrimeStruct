@@ -6,6 +6,35 @@ Legend:
 Finished items are periodically archived here from `docs/todo.md`; section headers record the archive date.
 
 **Todo Completion (May 20, 2026)**
+- [x] TODO-4273: Add heterogeneous value-pack inference
+  - owner: ai
+  - created_at: 2026-04-27
+  - finished_at: 2026-05-20
+  - phase: Deferred generic tuple substrate
+  - parallel_track: tuple-type-packs
+  - depends_on: TODO-4274
+  - scope: Add heterogeneous value-pack inference for tuple helper
+    construction without weakening the homogeneous `args<T>` model.
+  - outcome:
+    - Added public `/std/tuple/make_tuple<Ts...>([Ts...] values)` in
+      `.prime` and monomorphization support that infers one concrete `Ts`
+      type per positional value.
+    - Rewrites `make_tuple(11i32, "x", true)` to ordinary specialized
+      `tuple<i32, string, bool>` construction and supports `make_tuple()` as
+      `tuple<>`.
+    - Preserved homogeneous `args<T>` spread behavior by rejecting spread
+      forwarding into heterogeneous `make_tuple` inference, and rejected named
+      arguments targeting the hetero pack with a stable diagnostic.
+    - Documented `make_tuple` as tuple convenience sugar and promoted
+      TODO-4277 as the next Ready Now tuple leaf.
+  - validation:
+    - `cmake --build build-release --target primec PrimeStruct_compile_run_tests`
+      passed.
+    - `cd build-release && ./PrimeStruct_compile_run_tests --test-case="native infers heterogeneous stdlib tuple make_tuple,native reports stdlib tuple make_tuple diagnostics,native uses tuple bracket indexing sugar,native reports tuple bracket index diagnostics,native uses imported stdlib tuple get helpers,native reports stdlib tuple get index diagnostics,todo queue and skipped doctest debt stay source locked" --no-skip`
+      passed.
+    - Full `./scripts/compile.sh --release` remains deferred by the lite
+      workflow.
+
 - [x] TODO-4274: Add tuple bracket indexing sugar
   - owner: ai
   - created_at: 2026-04-27

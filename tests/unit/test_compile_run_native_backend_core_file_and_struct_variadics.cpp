@@ -751,6 +751,83 @@ main() {
         std::string::npos);
 }
 
+TEST_CASE("native infers heterogeneous stdlib tuple make_tuple") {
+  const std::string source = R"(
+import /std/tuple/*
+
+[return<i32>]
+main() {
+  [auto] empty{make_tuple()}
+  [auto] values{make_tuple(11i32, "x", true)}
+  return(plus(values[0i32], 5i32))
+}
+)";
+  const std::string srcPath =
+      writeTemp("compile_native_stdlib_tuple_make_tuple.prime", source);
+  const std::string exePath =
+      (testScratchPath("") / "primec_native_stdlib_tuple_make_tuple").string();
+
+  const std::string compileCmd =
+      "./primec --emit=native " + srcPath + " -o " + exePath + " --entry /main";
+  CHECK(runCommand(compileCmd) == 0);
+  CHECK(runCommand(exePath) == 16);
+}
+
+TEST_CASE("native reports stdlib tuple make_tuple diagnostics") {
+  const std::string namedSource = R"(
+import /std/tuple/*
+
+[return<i32>]
+main() {
+  [auto] values{make_tuple([values] 11i32)}
+  return(0i32)
+}
+)";
+  const std::string namedSrcPath =
+      writeTemp("compile_native_stdlib_tuple_make_tuple_named.prime", namedSource);
+  const std::string namedErrPath =
+      (testScratchPath("") / "primec_native_stdlib_tuple_make_tuple_named.err").string();
+  const std::string namedExePath =
+      (testScratchPath("") / "primec_native_stdlib_tuple_make_tuple_named").string();
+
+  const std::string namedCompileCmd =
+      "./primec --emit=native " + namedSrcPath + " -o " + namedExePath +
+      " --entry /main 2> " + namedErrPath;
+  CHECK(runCommand(namedCompileCmd) != 0);
+  CHECK(readFile(namedErrPath).find(
+            "named arguments cannot bind heterogeneous value-pack parameter") !=
+        std::string::npos);
+
+  const std::string spreadSource = R"(
+import /std/tuple/*
+
+[return<i32>]
+collect([args<i32>] values) {
+  [auto] tupleValue{make_tuple([spread] values)}
+  return(0i32)
+}
+
+[return<i32>]
+main() {
+  return(collect(1i32, 2i32))
+}
+)";
+  const std::string spreadSrcPath =
+      writeTemp("compile_native_stdlib_tuple_make_tuple_spread.prime", spreadSource);
+  const std::string spreadErrPath =
+      (testScratchPath("") / "primec_native_stdlib_tuple_make_tuple_spread.err").string();
+  const std::string spreadExePath =
+      (testScratchPath("") / "primec_native_stdlib_tuple_make_tuple_spread").string();
+
+  const std::string spreadCompileCmd =
+      "./primec --emit=native " + spreadSrcPath + " -o " + spreadExePath +
+      " --entry /main 2> " + spreadErrPath;
+  CHECK(runCommand(spreadCompileCmd) != 0);
+  CHECK(readFile(spreadErrPath).find(
+            "heterogeneous value-pack inference does not support spread forwarding") !=
+        std::string::npos);
+}
+
 TEST_CASE("native compiles empty and borrowed stdlib tuple access") {
   const std::string source = R"(
 import /std/tuple/*
