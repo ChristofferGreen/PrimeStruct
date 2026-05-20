@@ -10,11 +10,6 @@
   string-valued map runtime fixture has since been retargeted to compile-only
   coverage because native runtime string-valued maps still hang after
   compilation.
-- `PrimeStruct_semantics_tests --test-case="stdlib map constructors accept inferred canonical map default parameters,helper-wrapped inferred canonical map default parameters validate" --no-skip`
-  has stale canonical default-parameter access expectations after the map
-  stdlib-ownership cutover. On 2026-05-17 both cases still failed, with the
-  helper-wrapped case reporting `unknown method: /std/collections/map/at`;
-  adjacent default-parameter mismatch and Result-wrapped map cases passed.
 - `PrimeStruct_backend_ir_tests --test-case="ir lowerer supports direct map Result payloads" --no-skip`
   still fails during parse/validate before reaching lowerer execution after
   the map stdlib-ownership cutover.
@@ -58,6 +53,12 @@
   the string-valued map access emission fixture returned `NotHandled`.
 
 ## Recent Test Runs
+- 2026-05-20 12:51 CEST | pass | mode: release | command:
+  `cmake --build build-release --target PrimeStruct_semantics_tests`;
+  `cd build-release && ./PrimeStruct_semantics_tests --test-case="stdlib map constructors accept inferred canonical map default parameters,helper-wrapped map constructors accept inferred canonical map default parameters,helper-wrapped inferred canonical map default parameters validate" --no-skip`
+  | failures: none | notes: inferred canonical map default-parameter
+  fixtures now use explicit `<string, i32>` templates for `at` helper calls,
+  matching the current stdlib-owned map helper resolution surface.
 - 2026-05-20 12:48 CEST | pass | mode: release | command:
   `cmake --build build-release --target PrimeStruct_semantics_tests`;
   `cd build-release && ./PrimeStruct_semantics_tests --test-case="map wrapper temporary public helper calls validate target classification" --no-skip`
@@ -4643,6 +4644,7 @@
 - 2026-05-12 17:28 local | fail | mode: release | command: `./scripts/compile.sh --release` | failures: 146 CTest targets | notes: baseline after preflight checkpoint failed; stabilization blocks TODO work
 
 ## Resolved Failures
+- [x] inferred canonical map default parameters | resolved: 2026-05-20 12:51 CEST | validating command: `cmake --build build-release --target PrimeStruct_semantics_tests`; `cd build-release && ./PrimeStruct_semantics_tests --test-case="stdlib map constructors accept inferred canonical map default parameters,helper-wrapped map constructors accept inferred canonical map default parameters,helper-wrapped inferred canonical map default parameters validate" --no-skip` | notes: refreshed stale implicit `at` helper inference expectations with explicit `<string, i32>` templates for current stdlib-owned map helper resolution.
 - [x] map wrapper temporary bare helper classification | resolved: 2026-05-20 12:48 CEST | validating command: `cmake --build build-release --target PrimeStruct_semantics_tests`; `cd build-release && ./PrimeStruct_semantics_tests --test-case="map wrapper temporary public helper calls validate target classification" --no-skip` | notes: refreshed the stale fixture away from `mapSingle<K, V>` and explicit `/map` returns; the current inferred wrapper return type validates through public map helpers.
 - [x] map namespaced count method compatibility alias | resolved: 2026-05-20 12:43 CEST | validating command: `cmake --build build-release --target PrimeStruct_semantics_tests`; `cd build-release && ./PrimeStruct_semantics_tests --test-case="map namespaced count method compatibility alias resolves through canonical helper" --no-skip` | notes: retired the stale rejection entry after confirming the current renamed coverage passes through canonical helper resolution.
 - [x] non-imported wrapper map reference access diagnostic | resolved: 2026-05-20 12:40 CEST | validating command: `cmake --build build-release --target PrimeStruct_semantics_tests`; `cd build-release && ./PrimeStruct_semantics_tests --test-case="non-imported wrapper-returned canonical map reference access rejects missing at_ref" --no-skip` | notes: retargeted stale primitive receiver diagnostic text to the current missing `/std/collections/map/at_ref` call-target diagnostic.
