@@ -557,7 +557,7 @@ TEST_CASE("ir lowerer setup inference helper handles unresolved call return kind
   CHECK(kindOut == primec::ir_lowerer::LocalInfo::ValueKind::Unknown);
 }
 
-TEST_CASE("ir lowerer setup inference helper resolves array and map access kinds") {
+TEST_CASE("ir lowerer setup inference helper ignores unqualified array and map access kinds") {
   using Resolution = primec::ir_lowerer::ArrayKeyValueAccessElementKindResolution;
 
   primec::ir_lowerer::LocalMap locals;
@@ -588,8 +588,8 @@ TEST_CASE("ir lowerer setup inference helper resolves array and map access kinds
             stringAccess,
             locals,
             [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return false; },
-            kindOut) == Resolution::Resolved);
-  CHECK(kindOut == primec::ir_lowerer::LocalInfo::ValueKind::Int32);
+            kindOut) == Resolution::NotMatched);
+  CHECK(kindOut == primec::ir_lowerer::LocalInfo::ValueKind::Unknown);
 
   primec::Expr mapTarget;
   mapTarget.kind = primec::Expr::Kind::Name;
@@ -602,8 +602,8 @@ TEST_CASE("ir lowerer setup inference helper resolves array and map access kinds
             mapAccess,
             locals,
             [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return false; },
-            kindOut) == Resolution::Resolved);
-  CHECK(kindOut == primec::ir_lowerer::LocalInfo::ValueKind::UInt64);
+            kindOut) == Resolution::NotMatched);
+  CHECK(kindOut == primec::ir_lowerer::LocalInfo::ValueKind::Unknown);
 
   primec::Expr arrayTarget;
   arrayTarget.kind = primec::Expr::Kind::Name;
@@ -616,8 +616,8 @@ TEST_CASE("ir lowerer setup inference helper resolves array and map access kinds
             arrayAccess,
             locals,
             [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return false; },
-            kindOut) == Resolution::Resolved);
-  CHECK(kindOut == primec::ir_lowerer::LocalInfo::ValueKind::Float32);
+            kindOut) == Resolution::NotMatched);
+  CHECK(kindOut == primec::ir_lowerer::LocalInfo::ValueKind::Unknown);
 }
 
 TEST_CASE("ir lowerer setup inference helper rejects reordered bare key/value access kinds") {

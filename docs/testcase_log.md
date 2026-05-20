@@ -10,10 +10,6 @@
   string-valued map runtime fixture has since been retargeted to compile-only
   coverage because native runtime string-valued maps still hang after
   compilation.
-- `PrimeStruct_backend_ir_tests --test-case="ir lowerer setup inference helper resolves array and map access kinds" --no-skip`
-  is stale after the map stdlib-ownership cutover. On 2026-05-17 it
-  returned `NotResolved` for the old direct array/map access helper
-  expectations before exercising semantic-product helper return inference.
 - `PrimeStruct_backend_ir_tests --test-case="ir lowerer call helpers dispatch inline calls with locals"`
   has stale assertion-count coverage around explicit vector-count resolver
   calls. On 2026-05-16 it failed with
@@ -147,6 +143,12 @@
   the string-valued map access emission fixture returned `NotHandled`.
 
 ## Recent Test Runs
+- 2026-05-20 12:08 CEST | pass | mode: release | command:
+  `cmake --build build-release --target PrimeStruct_backend_ir_tests`;
+  `cd build-release && ./PrimeStruct_backend_ir_tests --test-case="ir lowerer setup inference helper ignores unqualified array and map access kinds" --no-skip`
+  | failures: none | notes: unqualified `at`/`at_unsafe` setup-inference
+  coverage now locks the current `NotMatched` path instead of expecting
+  direct builtin array/map value-kind inference.
 - 2026-05-20 12:05 CEST | pass | mode: release | command:
   `cmake --build build-release --target PrimeStruct_backend_ir_tests`;
   `cd build-release && ./PrimeStruct_backend_ir_tests --test-case="ir lowerer setup inference helper ignores wrapper-returned canonical map access string kinds,ir lowerer setup inference helper ignores wrapper-returned slash-method map access kinds,ir lowerer setup inference helper ignores wrapper-returned canonical map access int32 kinds" --no-skip`
@@ -4640,6 +4642,7 @@
 - 2026-05-12 17:28 local | fail | mode: release | command: `./scripts/compile.sh --release` | failures: 146 CTest targets | notes: baseline after preflight checkpoint failed; stabilization blocks TODO work
 
 ## Resolved Failures
+- [x] unqualified array and map access setup inference | resolved: 2026-05-20 12:08 CEST | validating command: `cmake --build build-release --target PrimeStruct_backend_ir_tests`; `cd build-release && ./PrimeStruct_backend_ir_tests --test-case="ir lowerer setup inference helper ignores unqualified array and map access kinds" --no-skip` | notes: retargeted stale direct `at`/`at_unsafe` setup-inference expectations to the current `NotMatched` behavior after map access left the old builtin helper path.
 - [x] wrapper-returned map access setup inference | resolved: 2026-05-20 12:05 CEST | validating command: `cmake --build build-release --target PrimeStruct_backend_ir_tests`; `cd build-release && ./PrimeStruct_backend_ir_tests --test-case="ir lowerer setup inference helper ignores wrapper-returned canonical map access string kinds,ir lowerer setup inference helper ignores wrapper-returned slash-method map access kinds,ir lowerer setup inference helper ignores wrapper-returned canonical map access int32 kinds" --no-skip` | notes: retargeted stale wrapper-returned map access fixtures from value-kind resolution to current `NotMatched` behavior for retired builtin map access classification.
 - [x] inferred experimental map receiver inline arguments | resolved: 2026-05-20 12:02 CEST | validating command: `cmake --build build-release --target PrimeStruct_backend_ir_tests`; `cd build-release && ./PrimeStruct_backend_ir_tests --test-case="ir lowerer call helpers leave inferred map receiver methods unresolved" --no-skip` | notes: replaced retired `mapPair` construction and locked that this lowerer helper no longer resolves inferred stdlib-owned map receiver methods through the old inline path.
 - [x] helper-wrapped map constructors infer canonical auto locals | resolved: 2026-05-20 11:59 CEST | validating command: `cmake --build build-release --target PrimeStruct_semantics_tests`; `cd build-release && ./PrimeStruct_semantics_tests --test-case="helper-wrapped map constructors infer canonical auto locals" --no-skip` | notes: refreshed the stale fixture to keep wrapped auto-local coverage while using explicit canonical helper template arguments for current map `tryAt`/`count` calls.
