@@ -83,8 +83,8 @@ Task template:
 
 ### Ready Now (Parallel-Candidate Leaves; No Unmet TODO Dependencies)
 
-- TODO-4537: Delete lowerer key/value collection substrate | track: map-zero-audit |
-  primary surface: lowerer map/key-value storage and access substrate
+- TODO-4539: Remove lowerer MapValue path synthesis | track: map-zero-audit |
+  primary surface: generated MapValue struct-path synthesis helpers
 - TODO-4271: Add compile-time pack indexing | track: tuple-type-packs |
   primary surface: generic pack-index selection and diagnostics
 
@@ -92,10 +92,10 @@ Task template:
 
 - `soa-zero-audit`: TODO-4529 replaced the residue inventory with a strict
   zero-production-trace audit; no SoA zero-audit leaf is ready.
-- `map-zero-audit`: TODO-4536 deleted the late map builtin validation
-  boundary; ready TODO-4537 deletes the lowerer key/value collection
-  substrate, followed by TODO-4538 -> TODO-4464 for the final strict zero
-  map-surface audit.
+- `map-zero-audit`: TODO-4537 split the broad lowerer substrate item into
+  bounded leaves; ready TODO-4539 removes generated MapValue path synthesis,
+  followed by TODO-4540 -> TODO-4541 -> TODO-4542 -> TODO-4538 -> TODO-4464
+  for the final strict zero map-surface audit.
 - `tuple-type-packs`: TODO-4276 completed helper/lifecycle pack
   expansion; ready TODO-4271, then serial successors TODO-4272
   -> TODO-4274 -> TODO-4273 -> TODO-4277 -> TODO-4278.
@@ -106,6 +106,9 @@ Task template:
 
 ### Immediate Next 10 (Track Successors; Not Ready Until Dependencies Land)
 
+- TODO-4540: Collapse lowerer key/value local metadata
+- TODO-4541: Delete lowerer key/value access target emission
+- TODO-4542: Retire native map-value backend gates
 - TODO-4538: Replace map inventory gate with fast strict audit
 - TODO-4464: Run final strict C++ map-surface audit
 - TODO-4272: Add stdlib `tuple<Ts...>`
@@ -119,8 +122,9 @@ Task template:
   must enter as bounded leaves only.
 - Deferred stdlib ADT migration: none active
 - Vector stdlib ownership cutover: none active
-- Map stdlib ownership cutover: ready TODO-4537, then TODO-4538
-  -> TODO-4464 for the final strict zero audit
+- Map stdlib ownership cutover: ready TODO-4539, then TODO-4540
+  -> TODO-4541 -> TODO-4542 -> TODO-4538 -> TODO-4464 for the final strict
+  zero audit
 - SoA public surface rename and ownership cutover: TODO-4306 parent split;
   TODO-4526 removed semantic-validation inventory residue after TODO-4530
   reduced the shared semantic builtin path helper boundary; TODO-4527 removed
@@ -141,7 +145,10 @@ Task template:
 
 ### Execution Queue (Recommended Track Order)
 
-- TODO-4537: Delete lowerer key/value collection substrate
+- TODO-4539: Remove lowerer MapValue path synthesis
+- TODO-4540: Collapse lowerer key/value local metadata
+- TODO-4541: Delete lowerer key/value access target emission
+- TODO-4542: Retire native map-value backend gates
 - TODO-4538: Replace map inventory gate with fast strict audit
 - TODO-4464: Run final strict C++ map-surface audit
 - TODO-4271: Add compile-time pack indexing
@@ -188,9 +195,9 @@ Task template:
 | Compile-pipeline stage and publication-boundary contracts | none |
 | Compile-time macro hooks and AST transform ownership | none |
 | Stdlib surface-style alignment and public helper readability | TODO-4305 |
-| Stdlib bridge consolidation and collection/file/gfx surface authority | TODO-4430, TODO-4534 through TODO-4538, TODO-4464, TODO-4524 |
-| Vector/map stdlib ownership cutover and collection surface authority | TODO-4430, TODO-4534 through TODO-4538, TODO-4464 |
-| Stdlib de-experimentalization and public/internal namespace cleanup | TODO-4430, TODO-4534 through TODO-4538, TODO-4464, TODO-4305, TODO-4524 |
+| Stdlib bridge consolidation and collection/file/gfx surface authority | TODO-4430, TODO-4534 through TODO-4538, TODO-4539 through TODO-4542, TODO-4464, TODO-4524 |
+| Vector/map stdlib ownership cutover and collection surface authority | TODO-4430, TODO-4534 through TODO-4538, TODO-4539 through TODO-4542, TODO-4464 |
+| Stdlib de-experimentalization and public/internal namespace cleanup | TODO-4430, TODO-4534 through TODO-4538, TODO-4539 through TODO-4542, TODO-4464, TODO-4305, TODO-4524 |
 | SoA maturity and `soa` public-surface rename | TODO-4305, TODO-4306, TODO-4514, TODO-4524 |
 | Validator entrypoint and benchmark-plumbing split | none |
 | Semantic-product publication by module and fact family | none |
@@ -219,12 +226,12 @@ Task template:
 | Compile-pipeline stage handoff conformance | none |
 | Semantic-product publication parity and deterministic ordering | none |
 | Lowerer/source-composition contract coverage | none |
-| Vector/map bridge parity for imports, rewrites, and lowering | TODO-4430, TODO-4534 through TODO-4538, TODO-4464 |
-| De-experimentalization surface and namespace parity | TODO-4430, TODO-4534 through TODO-4538, TODO-4464, TODO-4305, TODO-4524 |
+| Vector/map bridge parity for imports, rewrites, and lowering | TODO-4430, TODO-4534 through TODO-4538, TODO-4539 through TODO-4542, TODO-4464 |
+| De-experimentalization surface and namespace parity | TODO-4430, TODO-4534 through TODO-4538, TODO-4539 through TODO-4542, TODO-4464, TODO-4305, TODO-4524 |
 | `soa` maturity and canonical surface parity | TODO-4305, TODO-4306, TODO-4514, TODO-4524 |
 | Focused backend rerun ergonomics and suite partitioning | none |
 | Architecture contract probe migration | none |
-| Emitter map-helper canonicalization parity | TODO-4534 through TODO-4538, TODO-4464 |
+| Emitter map-helper canonicalization parity | TODO-4534 through TODO-4538, TODO-4539 through TODO-4542, TODO-4464 |
 | VM debug-session argv lifetime coverage | none |
 | Debugger/source-map provenance parity | none |
 | Debug trace replay malformed-input coverage | none |
@@ -1847,45 +1854,139 @@ Task template:
   - stop_rule: Stop once the generic design direction is documented through
     runnable examples rather than only prose.
 
-- [ ] TODO-4537: Delete lowerer key/value collection substrate
+- [ ] TODO-4539: Remove lowerer MapValue path synthesis
   - owner: ai
   - created_at: 2026-05-20
   - phase: Map stdlib ownership cutover
   - parallel_track: map-zero-audit
   - depends_on: TODO-4536
-  - split_from: TODO-4464
-  - scope: Remove the remaining lowerer substrate that treats map/key-value
-    collection values as a special lowered kind rather than ordinary
-    `.prime` structs and helpers. Target `KeyValueCollection` local kinds,
-    key/value access metadata fields, map access target metadata, generated
-    map backing layout probes, and direct backend dispatch branches that are
-    not true language/runtime primitives.
+  - split_from: TODO-4537
+  - scope: Remove the lowerer helpers that synthesize generated
+    `/std/collections/map/MapValue__*` struct paths from `map<K, V>` type
+    text or scalar key/value kinds. Target the `collectionTypePath("map") +
+    "/MapValue"` construction sites in access target resolution,
+    statement-binding metadata, struct-slot layout helpers, and uninitialized
+    struct inference.
   - implementation_notes:
-    - This pass may touch several lowerer files, but it should delete one
-      coherent lowering boundary rather than rename isolated local variables.
-    - Keep C++ tests for map behavior; remove production branches that only
-      exist to identify map storage or helper calls by name.
-    - If ordinary `.prime` structs/helpers cannot replace a lowerer branch,
-      split the missing generic lowering mechanism into a new non-map TODO
-      instead of keeping a map/key-value exception.
+    - Prefer semantic-product struct paths and ordinary declared struct
+      metadata over reconstructing generated map backing names in the lowerer.
+    - Keep tests for map programs, but update source-lock tests so they assert
+      the generated `MapValue` synthesis helpers are gone from production
+      lowerer code.
+    - If a call path still needs synthesized backing paths, create a
+      non-map TODO for a generic struct-specialization lookup and stop before
+      preserving a map-specific synthesizer.
   - acceptance:
-    - Lowerer production code no longer exposes map/key-value collection local
-      kinds, access target structs, or layout facts for the stdlib map type.
-    - Canonical map construction/access/insertion still lower through ordinary
-      struct/helper call paths.
-    - Any retained backend primitive is documented as a language/runtime
-      primitive, not a `map` stdlib exception.
-  - stop_rule: Stop when the remaining special lowerer substrate is removed as
-    one subsystem pass and focused native/VM map coverage still passes. If
-    deletion needs a general lowering capability first, create that non-map TODO
-    and stop.
+    - Production lowerer code no longer builds generated map backing struct
+      paths from `map<K, V>` type text or `keyValue*Kind` pairs.
+    - Focused source-lock tests cover the absence of those synthesis helpers.
+    - Focused semantic-product/lowerer map tests still compile through
+      declared or semantic-product struct paths.
+  - stop_rule: Stop once generated MapValue path synthesis is gone. If
+    ordinary struct metadata cannot replace one synthesis site, document the
+    missing generic lookup as a separate non-map TODO and leave remaining
+    lowerer local/access metadata to TODO-4540 and TODO-4541.
+
+- [ ] TODO-4540: Collapse lowerer key/value local metadata
+  - owner: ai
+  - created_at: 2026-05-20
+  - phase: Map stdlib ownership cutover
+  - parallel_track: map-zero-audit
+  - depends_on: TODO-4539
+  - split_from: TODO-4537
+  - scope: Remove `LocalInfo::Kind::KeyValueCollection`,
+    `referenceToKeyValueCollection`, `pointerToKeyValueCollection`, and
+    key/value-specific local/result metadata from the lowerer shared local
+    model where ordinary struct, reference, pointer, args-pack, and
+    semantic-product facts can carry the same information.
+  - implementation_notes:
+    - Start from `src/ir_lowerer/IrLowererSharedTypes.h`,
+      `IrLowererStatementBindingHelpers.{h,cpp}`,
+      `IrLowererBindingTypeHelpers.cpp`, `IrLowererInlineParamHelpers.cpp`,
+      and `IrLowererInlinePackedArgs.cpp`.
+    - Keep language/runtime primitives such as arrays, vectors, buffers,
+      strings, files, and Result metadata intact; this task is specifically
+      about stdlib map/key-value collection facts.
+    - If a remaining map behavior needs a generic struct/args-pack fact that
+      does not exist yet, split that as a non-map TODO and stop.
+  - acceptance:
+    - The lowerer shared local model no longer exposes key/value collection
+      local kind or reference/pointer booleans.
+    - Inline parameter and args-pack forwarding use ordinary struct/reference
+      metadata for map values.
+    - Focused lowerer source-lock and map forwarding tests pass.
+  - stop_rule: Stop once the shared local metadata surface is map-agnostic;
+    leave access lookup/emission branches to TODO-4541.
+
+- [ ] TODO-4541: Delete lowerer key/value access target emission
+  - owner: ai
+  - created_at: 2026-05-20
+  - phase: Map stdlib ownership cutover
+  - parallel_track: map-zero-audit
+  - depends_on: TODO-4540
+  - split_from: TODO-4537
+  - scope: Remove `KeyValueAccessTargetInfo` and direct lowerer/backend
+    dispatch branches that identify stdlib map access, insert, or lookup as a
+    special native emission target instead of ordinary helper calls over
+    `.prime` struct values.
+  - implementation_notes:
+    - Start from `IrLowererAccessTargetResolution.cpp`,
+      `IrLowererStatementCallEmission.cpp`,
+      `IrLowererLowerEmitExprTailDispatch.h`,
+      `IrLowererLowerEmitExprCollectionHelpers.h`, and
+      `IrLowererAccessLoadHelpers.cpp`.
+    - Retain only true language/runtime primitives and document them in the
+      task outcome if any remain.
+    - If map access currently relies on a missing generic helper-call lowering
+      capability, create that non-map TODO and stop before preserving the
+      map-specific emission path.
+  - acceptance:
+    - Production lowerer code no longer exposes `KeyValueAccessTargetInfo` or
+      key/value access target resolver callbacks.
+    - Canonical map access/tryAt/insert tests compile or diagnose through
+      ordinary helper calls.
+    - Source-lock tests assert deleted access-emission hooks stay absent.
+  - stop_rule: Stop once direct key/value access target emission is gone and
+    focused map access/insert coverage passes or is blocked by a concrete
+    non-map generic lowering TODO.
+
+- [ ] TODO-4542: Retire native map-value backend gates
+  - owner: ai
+  - created_at: 2026-05-20
+  - phase: Map stdlib ownership cutover
+  - parallel_track: map-zero-audit
+  - depends_on: TODO-4541
+  - split_from: TODO-4537
+  - scope: Remove or reclassify the remaining native backend checks that
+    reject values specifically because they are stdlib map values, including
+    `validateNativeMapValueKinds` and any uninitialized-storage or mutation
+    diagnostics that are map-specific rather than generic backend value
+    restrictions.
+  - implementation_notes:
+    - Start from `IrLowererNativeEffects.{h,cpp}`,
+      `IrLowererLowerEntrySetup.cpp`,
+      `IrLowererUninitializedTypeHelpers.cpp`, and
+      `IrLowererOperatorCollectionMutationHelpers.cpp`.
+    - If a retained restriction is truly a runtime/backend primitive limit,
+      rename and document it as a generic unsupported value/category gate.
+  - acceptance:
+    - Native backend validation no longer names stdlib map as a special value
+      kind unless the retained check is documented as a generic backend
+      primitive limit.
+    - Focused native/VM/C++ emitter map value tests either pass or have
+      diagnostics updated to generic backend value wording.
+    - Source-lock tests cover the absence of `validateNativeMapValueKinds` or
+      any replacement map-specific backend gate.
+  - stop_rule: Stop once native backend gates no longer classify stdlib map
+    specially, or once any retained backend primitive limit is explicitly
+    generic and documented.
 
 - [ ] TODO-4538: Replace map inventory gate with fast strict audit
   - owner: ai
   - created_at: 2026-05-20
   - phase: Map stdlib ownership cutover
   - parallel_track: map-zero-audit
-  - depends_on: TODO-4537
+  - depends_on: TODO-4542
   - split_from: TODO-4464
   - scope: Replace the broad decaying map-surface inventory with a fast strict
     audit suitable for routine validation after the production map substrate is
@@ -1920,7 +2021,8 @@ Task template:
     production C++ source.
   - implementation_notes:
     - This is the final acceptance gate, not the active deletion leaf. Use
-      TODO-4534 through TODO-4538 for the larger subsystem-removal passes.
+      TODO-4534 through TODO-4538 plus TODO-4539 through TODO-4542 for the
+      larger subsystem-removal and audit-preparation passes.
     - Use the fast strict audit produced by TODO-4538 to scan production C++
       under `src/` and `include/` for PrimeStruct-map-specific traces such as
       `/map`, `/std/collections/map`, `experimental_map`, `mapCount`,

@@ -6,6 +6,25 @@ Legend:
 Finished items are periodically archived here from `docs/todo.md`; section headers record the archive date.
 
 **Todo Completion (May 20, 2026)**
+- [x] TODO-4537: Delete lowerer key/value collection substrate
+  - owner: ai
+  - created_at: 2026-05-20
+  - finished_at: 2026-05-20
+  - phase: Map stdlib ownership cutover
+  - parallel_track: map-zero-audit
+  - depends_on: TODO-4536
+  - split_from: TODO-4464
+  - outcome:
+    - Split the broad lowerer substrate deletion task into bounded leaves:
+      TODO-4539 for generated `MapValue` path synthesis, TODO-4540 for
+      lowerer local metadata, TODO-4541 for key/value access target emission,
+      and TODO-4542 for native backend map-value gates.
+    - Updated the ready queue, immediate successor list, priority lane, and
+      execution queue so each follow-up has explicit scope, acceptance, and a
+      stop rule.
+  - validation:
+    - Documentation-only split; no code validation required.
+
 - [x] TODO-4536: Delete late map builtin validation boundary
   - owner: ai
   - created_at: 2026-05-20
