@@ -33,9 +33,9 @@ main() {
   [auto mut] values{wrapValues(/std/collections/map/map("seed"raw_utf8, 1i32))}
   /std/collections/map/insert<string, i32>(values, "left"raw_utf8, 4i32)
   /std/collections/map/insert<string, i32>(values, "right"raw_utf8, 7i32)
-  [i32] left{try(/std/collections/map/tryAt(values, "left"raw_utf8))}
-  [i32] right{try(/std/collections/map/tryAt(values, "right"raw_utf8))}
-  return(Result.ok(plus(/std/collections/map/count(values), plus(left, right))))
+  [i32] left{try(/std/collections/map/tryAt<string, i32>(values, "left"raw_utf8))}
+  [i32] right{try(/std/collections/map/tryAt<string, i32>(values, "right"raw_utf8))}
+  return(Result.ok(plus(/std/collections/map/count<string, i32>(values), plus(left, right))))
 }
 )";
   std::string error;

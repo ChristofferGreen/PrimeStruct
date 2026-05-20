@@ -10,11 +10,6 @@
   string-valued map runtime fixture has since been retargeted to compile-only
   coverage because native runtime string-valued maps still hang after
   compilation.
-- `PrimeStruct_semantics_tests --test-case="helper-wrapped map constructors infer canonical auto locals"`
-  is stale after the map stdlib-ownership cutover; it still imports
-  `internal_map`-style map wrappers and now fails with
-  `unknown call target: /std/collections/map/tryAt` while current
-  `MapValue` surface constructor coverage passes.
 - `PrimeStruct_backend_ir_tests --test-case="ir lowerer call helpers build inline arguments for inferred experimental map receiver methods"`
   is stale after the map stdlib-ownership cutover. On 2026-05-16 the current
   fixture failed validation before the inline-argument assertions because it
@@ -166,6 +161,12 @@
   the string-valued map access emission fixture returned `NotHandled`.
 
 ## Recent Test Runs
+- 2026-05-20 11:59 CEST | pass | mode: release | command:
+  `cmake --build build-release --target PrimeStruct_semantics_tests`;
+  `cd build-release && ./PrimeStruct_semantics_tests --test-case="helper-wrapped map constructors infer canonical auto locals" --no-skip`
+  | failures: none | notes: helper-wrapped auto-local coverage now uses
+  explicit canonical map helper template arguments for `tryAt` and `count`,
+  matching adjacent current canonical map fixtures.
 - 2026-05-20 11:56 CEST | pass | mode: release | command:
   `cmake --build build-release --target PrimeStruct_compile_run_tests`;
   `cd build-release && ./PrimeStruct_compile_run_tests --test-case="C++ emitter rejects retired variadic map value pack count methods" --no-skip`
@@ -4641,6 +4642,7 @@
 - 2026-05-12 17:28 local | fail | mode: release | command: `./scripts/compile.sh --release` | failures: 146 CTest targets | notes: baseline after preflight checkpoint failed; stabilization blocks TODO work
 
 ## Resolved Failures
+- [x] helper-wrapped map constructors infer canonical auto locals | resolved: 2026-05-20 11:59 CEST | validating command: `cmake --build build-release --target PrimeStruct_semantics_tests`; `cd build-release && ./PrimeStruct_semantics_tests --test-case="helper-wrapped map constructors infer canonical auto locals" --no-skip` | notes: refreshed the stale fixture to keep wrapped auto-local coverage while using explicit canonical helper template arguments for current map `tryAt`/`count` calls.
 - [x] C++ emitter variadic map value pack count methods | resolved: 2026-05-20 11:56 CEST | validating command: `cmake --build build-release --target PrimeStruct_compile_run_tests`; `cd build-release && ./PrimeStruct_compile_run_tests --test-case="C++ emitter rejects retired variadic map value pack count methods" --no-skip` | notes: retargeted stale native map value-pack coverage to assert the current compile-time rejection of retired map count-method lowering.
 - [x] backend IR retired native-map fixtures | resolved: 2026-05-20 11:46 CEST | validating command: `cmake --build build-release --target PrimeStruct_backend_ir_tests`; `cd build-release && ./PrimeStruct_backend_ir_tests --test-case="retired direct map Result payload literal rejects before lowering,retired variadic map pack bare count rejects before lowering,retired variadic map pack canonical count no longer lowers as native map" --no-skip` | notes: converted stale map Result and variadic pack lowering coverage into explicit retirement locks for old map literals, bare count fallback, and native map-pack lowering.
 - [x] map-count semantics wildcard | resolved: 2026-05-20 11:43 CEST | validating command: `cmake --build build-release --target PrimeStruct_semantics_tests`; `cd build-release && ./PrimeStruct_semantics_tests --test-case="*map*count*" --no-skip` | notes: updated stale map-count fixtures for current bare-count diagnostics, public `MapValue` construction, and current same-path alias behavior pending TODO-4534.
