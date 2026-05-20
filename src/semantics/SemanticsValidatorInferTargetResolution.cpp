@@ -8,7 +8,7 @@ namespace primec::semantics {
 namespace {
 
 bool isDirectInferMapConstructorPath(std::string_view resolvedCandidate) {
-  return isResolvedPublishedMapConstructorPath(std::string(resolvedCandidate));
+  return isResolvedPublishedKeyValueConstructorPath(std::string(resolvedCandidate));
 }
 
 } // namespace

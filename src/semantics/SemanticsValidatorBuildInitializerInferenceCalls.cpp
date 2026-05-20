@@ -452,7 +452,7 @@ bool SemanticsValidator::inferCallInitializerBinding(const Expr &initializer,
   if (initializer.kind != Expr::Kind::Call) return false;
   const Expr *initializerExprForInference = &initializer;
   auto isResolvedKeyValueConstructorPath = [](std::string resolvedPath) {
-    return ::isResolvedPublishedMapConstructorPath(std::move(resolvedPath));
+    return ::isResolvedPublishedKeyValueConstructorPath(std::move(resolvedPath));
   };
   auto substituteCallTemplateArgsInBinding =
       [&](const std::string &resolvedPath, BindingInfo &binding) {

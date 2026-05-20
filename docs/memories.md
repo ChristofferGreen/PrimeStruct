@@ -1389,7 +1389,8 @@ This file stores durable session-derived facts that are useful in later work. Ke
   replacements for them or keep no-op map rewrite shims alive. Map
   constructor helper path classification should reuse
   `resolveMapConstructorMemberPath(...)` instead of naming the map constructor
-  surface ID directly.
+  surface ID directly, and published constructor predicates should use
+  key/value naming.
 - Evidence: `isBuiltinCanonicalKeyValueConstructorExpr(...)` and
   `isMapConstructorDirectTargetPath(...)` now only accept the public rooted
   `/std/collections/map/map` constructor path, while `MapConstructorHelpers.h`

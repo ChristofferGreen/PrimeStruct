@@ -319,7 +319,7 @@ SemanticsValidator::BuiltinCollectionDispatchResolvers SemanticsValidator::makeB
     if (candidate.kind != Expr::Kind::Call || candidate.isBinding || candidate.isMethodCall) {
       return false;
     }
-    return isResolvedPublishedMapConstructorPath(resolveCalleePath(candidate));
+    return isResolvedPublishedKeyValueConstructorPath(resolveCalleePath(candidate));
   };
 
   auto state = std::make_shared<BuiltinCollectionDispatchResolvers>();

@@ -1541,7 +1541,7 @@ bool SemanticsValidator::resolveMethodTarget(const std::vector<ParameterInfo> &p
       return false;
     }
     const std::string resolvedTarget = resolveCalleePath(target);
-    if (isResolvedPublishedMapConstructorPath(resolvedTarget)) {
+    if (isResolvedPublishedKeyValueConstructorPath(resolvedTarget)) {
       std::vector<std::string> args;
       if (resolveCallCollectionTemplateArgs(target, "map", params, locals, args) &&
           args.size() == 2) {
@@ -2582,7 +2582,7 @@ bool SemanticsValidator::resolveMethodTarget(const std::vector<ParameterInfo> &p
     if (receiverExpr.kind != Expr::Kind::Call || receiverExpr.isBinding || receiverExpr.isMethodCall) {
       return false;
     }
-    return isResolvedPublishedMapConstructorPath(resolveCalleePath(receiverExpr));
+    return isResolvedPublishedKeyValueConstructorPath(resolveCalleePath(receiverExpr));
   };
   if ((normalizedMethodName == "count" || normalizedMethodName == "count_ref" ||
        normalizedMethodName == "size" ||

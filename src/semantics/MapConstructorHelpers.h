@@ -289,7 +289,7 @@ inline bool isResolvedCanonicalMapConstructorPath(const std::string &rawPath) {
   return resolveMapConstructorMemberPath(normalizedPath, memberName);
 }
 
-inline bool isResolvedPublishedMapConstructorPath(const std::string &rawPath) {
+inline bool isResolvedPublishedKeyValueConstructorPath(const std::string &rawPath) {
   const std::string normalizedPath = stripCollectionConstructorSuffixes(rawPath);
   if (normalizedPath.rfind("/std/collections/", 0) != 0) {
     return false;

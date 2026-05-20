@@ -74,7 +74,7 @@ bool isPublishedMapConstructorReceiverExpr(const Expr *receiverExpr,
       receiverExpr->isMethodCall || receiverExpr->isBinding) {
     return false;
   }
-  return isResolvedPublishedMapConstructorPath(
+  return isResolvedPublishedKeyValueConstructorPath(
       resolveCalleePath(*receiverExpr, namespacePrefix, ctx));
 }
 
