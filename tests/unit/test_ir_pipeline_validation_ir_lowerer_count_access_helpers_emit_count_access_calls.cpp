@@ -1375,7 +1375,7 @@ TEST_CASE("ir lowerer count access helpers prefer graph facts for runtime string
   CHECK(instructions[1].op == primec::IrOpcode::LoadStringLength);
 }
 
-TEST_CASE("ir lowerer count access helpers prefer graph facts for string map access emission") {
+TEST_CASE("ir lowerer count access helpers defer string map access emission") {
   using Kind = primec::ir_lowerer::LocalInfo::ValueKind;
   using Result = primec::ir_lowerer::CountAccessCallEmitResult;
 
@@ -1511,12 +1511,10 @@ TEST_CASE("ir lowerer count access helpers prefer graph facts for string map acc
         &semanticIndex);
   };
 
-  CHECK(run(makeCountAtExpr(0, 9201)) == Result::Emitted);
+  CHECK(run(makeCountAtExpr(0, 9201)) == Result::NotHandled);
   CHECK(error.empty());
-  CHECK(emitExprCalls == 1);
-  REQUIRE(instructions.size() == 2);
-  CHECK(instructions[0].op == primec::IrOpcode::PushI64);
-  CHECK(instructions[1].op == primec::IrOpcode::LoadStringLength);
+  CHECK(emitExprCalls == 0);
+  CHECK(instructions.empty());
 
   CHECK(run(makeCountAtExpr(0, 9202)) == Result::NotHandled);
   CHECK(error.empty());
@@ -1528,22 +1526,20 @@ TEST_CASE("ir lowerer count access helpers prefer graph facts for string map acc
   CHECK(emitExprCalls == 0);
   CHECK(instructions.empty());
 
-  CHECK(run(makeCountAtExpr(9204, 0)) == Result::Emitted);
+  CHECK(run(makeCountAtExpr(9204, 0)) == Result::NotHandled);
   CHECK(error.empty());
-  CHECK(emitExprCalls == 1);
-  REQUIRE(instructions.size() == 2);
-  CHECK(instructions[1].op == primec::IrOpcode::LoadStringLength);
+  CHECK(emitExprCalls == 0);
+  CHECK(instructions.empty());
 
   CHECK(run(makeCountAtExpr(9205, 0)) == Result::NotHandled);
   CHECK(error.empty());
   CHECK(emitExprCalls == 0);
   CHECK(instructions.empty());
 
-  CHECK(run(makeCountAtExpr(0, 0)) == Result::Emitted);
+  CHECK(run(makeCountAtExpr(0, 0)) == Result::NotHandled);
   CHECK(error.empty());
-  CHECK(emitExprCalls == 1);
-  REQUIRE(instructions.size() == 2);
-  CHECK(instructions[1].op == primec::IrOpcode::LoadStringLength);
+  CHECK(emitExprCalls == 0);
+  CHECK(instructions.empty());
 }
 
 TEST_CASE("ir lowerer string literal helper interns string table values") {

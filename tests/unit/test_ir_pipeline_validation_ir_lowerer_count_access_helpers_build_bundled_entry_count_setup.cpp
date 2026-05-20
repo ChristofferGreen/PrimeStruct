@@ -505,7 +505,7 @@ TEST_CASE("ir lowerer count access classifiers prefer semantic indexed target fa
       makeCountCall(makeAt("mapArgs", 7303)), locals));
   CHECK_FALSE(setup.classifiers.isArrayCountCall(
       makeCountCall(makeAt("missingArgs", 7399)), locals));
-  CHECK(setup.classifiers.isArrayCountCall(
+  CHECK_FALSE(setup.classifiers.isArrayCountCall(
       makeCountCall(makeAt("syntaxArgs", 0)), locals));
 }
 

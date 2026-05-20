@@ -10,13 +10,14 @@
   string-valued map runtime fixture has since been retargeted to compile-only
   coverage because native runtime string-valued maps still hang after
   compilation.
-- `PrimeStruct_backend_ir_tests --test-case="ir lowerer count access classifiers prefer semantic indexed target facts,ir lowerer count access helpers prefer graph facts for string map access emission" --no-skip`
-  has stale count-access expectations after the map stdlib-ownership cutover.
-  On 2026-05-18 both cases still failed on the committed baseline before the
-  count-access naming slice: the syntax-only indexed target stayed false, and
-  the string-valued map access emission fixture returned `NotHandled`.
 
 ## Recent Test Runs
+- 2026-05-20 13:08 CEST | pass | mode: release | command:
+  `cmake --build build-release --target PrimeStruct_backend_ir_tests`;
+  `cd build-release && ./PrimeStruct_backend_ir_tests --test-case="ir lowerer count access classifiers prefer semantic indexed target facts,ir lowerer count access helpers defer string map access emission" --no-skip`
+  | failures: none | notes: count-access classifier coverage now locks
+  syntax-only indexed targets as false, and string map access count emission
+  as deferred with no emitted instructions.
 - 2026-05-20 13:05 CEST | pass | mode: release | command:
   `cmake --build build-release --target PrimeStruct_backend_ir_tests`;
   `cd build-release && ./PrimeStruct_backend_ir_tests --test-case="ir lowerer setup type helper defers bare access call method return kinds" --no-skip`
@@ -4654,6 +4655,7 @@
 - 2026-05-12 17:28 local | fail | mode: release | command: `./scripts/compile.sh --release` | failures: 146 CTest targets | notes: baseline after preflight checkpoint failed; stabilization blocks TODO work
 
 ## Resolved Failures
+- [x] count/access classifier and string map emission | resolved: 2026-05-20 13:08 CEST | validating command: `cmake --build build-release --target PrimeStruct_backend_ir_tests`; `cd build-release && ./PrimeStruct_backend_ir_tests --test-case="ir lowerer count access classifiers prefer semantic indexed target facts,ir lowerer count access helpers defer string map access emission" --no-skip` | notes: retargeted syntax-only indexed target classification to false and string map access count emission to current deferral with no instructions.
 - [x] setup type bare access return kinds | resolved: 2026-05-20 13:05 CEST | validating command: `cmake --build build-release --target PrimeStruct_backend_ir_tests`; `cd build-release && ./PrimeStruct_backend_ir_tests --test-case="ir lowerer setup type helper defers bare access call method return kinds" --no-skip` | notes: retargeted stale bare `at`/`at_unsafe` direct return-kind expectations to current deferral with unknown kind and unresolved method facts.
 - [x] native call tail bare access orchestration | resolved: 2026-05-20 13:04 CEST | validating command: `cmake --build build-release --target PrimeStruct_backend_ir_tests`; `cd build-release && ./PrimeStruct_backend_ir_tests --test-case="ir lowerer call helpers dispatch native call tail orchestration" --no-skip` | notes: retargeted malformed and valid bare `at(...)` native-tail probes to current `NotHandled` deferral with empty diagnostics and no instructions.
 - [x] buffer/native-tail wrapper dispatch | resolved: 2026-05-20 13:02 CEST | validating command: `cmake --build build-release --target PrimeStruct_backend_ir_tests`; `cd build-release && ./PrimeStruct_backend_ir_tests --test-case="ir lowerer call helpers dispatch buffer and native tail wrappers" --no-skip` | notes: retargeted the experimental-vector method `at` native-tail fixture to current `NotHandled` deferral with no instructions.
