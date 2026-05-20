@@ -233,26 +233,26 @@ main() {
         std::string::npos);
 }
 
-TEST_CASE("map wrapper temporary bare helper calls validate target classification") {
+TEST_CASE("map wrapper temporary public helper calls validate target classification") {
   const std::string source = R"(
 import /std/collections/*
 
-[return<map<K, V>>]
 wrapMap<K, V>([K] key, [V] value) {
-  [map<K, V>] values{mapSingle<K, V>(key, value)}
+  [map<K, V>] values{map<K, V>(key, value)}
   return(values)
 }
 
 [return<int>]
 main() {
-  [i32] first{/std/collections/map/at<string, i32>(wrapMap<string, i32>("only"raw_utf8, 4i32), "only"raw_utf8)}
-  [i32] second{/std/collections/map/at_unsafe<string, i32>(wrapMap<string, i32>("only"raw_utf8, 4i32), "only"raw_utf8)}
-  [i32] count{/std/collections/map/count<string, i32>(wrapMap<string, i32>("only"raw_utf8, 4i32))}
+  [i32] first{/std/collections/map/at(wrapMap<string, i32>("only"raw_utf8, 4i32), "only"raw_utf8)}
+  [i32] second{/std/collections/map/at_unsafe(wrapMap<string, i32>("only"raw_utf8, 4i32), "only"raw_utf8)}
+  [i32] count{/std/collections/map/count(wrapMap<string, i32>("only"raw_utf8, 4i32))}
   return(plus(plus(first, second), count))
 }
 )";
   std::string error;
-  CHECK(validateProgram(source, "/main", error));
+  INFO(error);
+  CHECK_MESSAGE(validateProgram(source, "/main", error), error);
   CHECK(error.empty());
 }
 

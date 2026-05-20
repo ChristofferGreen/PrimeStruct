@@ -10,11 +10,6 @@
   string-valued map runtime fixture has since been retargeted to compile-only
   coverage because native runtime string-valued maps still hang after
   compilation.
-- `PrimeStruct_semantics_tests --test-case="map wrapper temporary bare helper calls validate target classification" --no-skip`
-  is stale after the map stdlib-ownership cutover. On 2026-05-17 it failed
-  while the direct wrapper temporary canonical access cases passed; keep
-  using the direct canonical access fixtures as focused return-inference
-  coverage until the bare helper fixture is retired or refreshed.
 - `PrimeStruct_semantics_tests --test-case="stdlib map constructors accept inferred canonical map default parameters,helper-wrapped inferred canonical map default parameters validate" --no-skip`
   has stale canonical default-parameter access expectations after the map
   stdlib-ownership cutover. On 2026-05-17 both cases still failed, with the
@@ -63,6 +58,12 @@
   the string-valued map access emission fixture returned `NotHandled`.
 
 ## Recent Test Runs
+- 2026-05-20 12:48 CEST | pass | mode: release | command:
+  `cmake --build build-release --target PrimeStruct_semantics_tests`;
+  `cd build-release && ./PrimeStruct_semantics_tests --test-case="map wrapper temporary public helper calls validate target classification" --no-skip`
+  | failures: none | notes: wrapper temporary map helper coverage now uses
+  the current public map constructor with inferred wrapper return type instead
+  of the retired `mapSingle<K, V>` helper and explicit `/map` return envelope.
 - 2026-05-20 12:43 CEST | pass | mode: release | command:
   `cmake --build build-release --target PrimeStruct_semantics_tests`;
   `cd build-release && ./PrimeStruct_semantics_tests --test-case="map namespaced count method compatibility alias resolves through canonical helper" --no-skip`
@@ -4642,6 +4643,7 @@
 - 2026-05-12 17:28 local | fail | mode: release | command: `./scripts/compile.sh --release` | failures: 146 CTest targets | notes: baseline after preflight checkpoint failed; stabilization blocks TODO work
 
 ## Resolved Failures
+- [x] map wrapper temporary bare helper classification | resolved: 2026-05-20 12:48 CEST | validating command: `cmake --build build-release --target PrimeStruct_semantics_tests`; `cd build-release && ./PrimeStruct_semantics_tests --test-case="map wrapper temporary public helper calls validate target classification" --no-skip` | notes: refreshed the stale fixture away from `mapSingle<K, V>` and explicit `/map` returns; the current inferred wrapper return type validates through public map helpers.
 - [x] map namespaced count method compatibility alias | resolved: 2026-05-20 12:43 CEST | validating command: `cmake --build build-release --target PrimeStruct_semantics_tests`; `cd build-release && ./PrimeStruct_semantics_tests --test-case="map namespaced count method compatibility alias resolves through canonical helper" --no-skip` | notes: retired the stale rejection entry after confirming the current renamed coverage passes through canonical helper resolution.
 - [x] non-imported wrapper map reference access diagnostic | resolved: 2026-05-20 12:40 CEST | validating command: `cmake --build build-release --target PrimeStruct_semantics_tests`; `cd build-release && ./PrimeStruct_semantics_tests --test-case="non-imported wrapper-returned canonical map reference access rejects missing at_ref" --no-skip` | notes: retargeted stale primitive receiver diagnostic text to the current missing `/std/collections/map/at_ref` call-target diagnostic.
 - [x] borrowed receiver direct map contains semantics | resolved: 2026-05-20 12:37 CEST | validating command: `cmake --build build-release --target PrimeStruct_semantics_tests`; `cd build-release && ./PrimeStruct_semantics_tests --test-case="canonical map borrowed receiver rejects direct stdlib contains,canonical map borrowed receiver rejects direct stdlib contains before key diagnostics" --no-skip` | notes: retargeted stale borrowed receiver direct `contains` validation to current unknown-call-target diagnostics for `/std/collections/map/contains`.
