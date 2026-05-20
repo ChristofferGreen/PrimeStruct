@@ -99,8 +99,8 @@ TEST_CASE("ir lowerer call helpers dispatch inline call with count fallbacks") {
             [&](const primec::Expr &) -> const primec::Definition * { return nullptr; },
             [&](const primec::Expr &) -> const primec::Definition * { return nullptr; },
             [&](const primec::Expr &, const primec::Definition &) { return false; },
-            error) == Result::NotHandled);
-  CHECK(error.empty());
+            error) == Result::Error);
+  CHECK(error == "stale");
 
   primec::Expr directCall;
   directCall.kind = primec::Expr::Kind::Call;
@@ -147,12 +147,12 @@ TEST_CASE("ir lowerer call helpers dispatch inline call with count fallbacks") {
             },
             [&](const primec::Expr &callExpr, const primec::Definition &) {
               ++canonicalMapCountEmitCalls;
-              CHECK(callExpr.name == "count");
-              CHECK(callExpr.isMethodCall);
+              CHECK(callExpr.name == "/std/collections/map/count");
+              CHECK_FALSE(callExpr.isMethodCall);
               return true;
             },
             error) == Result::Emitted);
-  CHECK(canonicalMapCountResolveMethodCalls == 1);
+  CHECK(canonicalMapCountResolveMethodCalls == 0);
   CHECK(canonicalMapCountResolveDefinitionCalls == 1);
   CHECK(canonicalMapCountEmitCalls == 1);
 

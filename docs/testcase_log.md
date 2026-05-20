@@ -10,12 +10,6 @@
   string-valued map runtime fixture has since been retargeted to compile-only
   coverage because native runtime string-valued maps still hang after
   compilation.
-- `PrimeStruct_backend_ir_tests --test-case="ir lowerer call helpers dispatch inline call with count fallbacks" --no-skip`
-  has stale inline map-count/access fallback expectations after the map
-  stdlib-ownership cutover. On 2026-05-18 it still expected a method
-  `at(...)` probe to return `NotHandled` and a canonical map `count` call to
-  stay method-shaped, while current dispatch routes through canonical stdlib
-  helper paths; the adjacent source-delegation lock passed.
 - `PrimeStruct_backend_ir_tests --test-case="ir lowerer call helpers keep explicit map helpers out of native builtin emission" --no-skip`
   still has stale native-tail dispatch expectations after the map
   stdlib-ownership cutover. On 2026-05-18 it failed expected dispatch and
@@ -137,6 +131,12 @@
   the string-valued map access emission fixture returned `NotHandled`.
 
 ## Recent Test Runs
+- 2026-05-20 12:14 CEST | pass | mode: release | command:
+  `cmake --build build-release --target PrimeStruct_backend_ir_tests`;
+  `cd build-release && ./PrimeStruct_backend_ir_tests --test-case="ir lowerer call helpers dispatch inline call with count fallbacks" --no-skip`
+  | failures: none | notes: inline count/access fallback coverage now locks
+  method-shaped unresolved `at` as an error and canonical map `count` as a
+  direct stdlib helper emission.
 - 2026-05-20 12:10 CEST | pass | mode: release | command:
   `cmake --build build-release --target PrimeStruct_backend_ir_tests`;
   `cd build-release && ./PrimeStruct_backend_ir_tests --test-case="ir lowerer call helpers dispatch inline calls with locals" --no-skip`
@@ -4641,6 +4641,7 @@
 - 2026-05-12 17:28 local | fail | mode: release | command: `./scripts/compile.sh --release` | failures: 146 CTest targets | notes: baseline after preflight checkpoint failed; stabilization blocks TODO work
 
 ## Resolved Failures
+- [x] inline count fallback map expectations | resolved: 2026-05-20 12:14 CEST | validating command: `cmake --build build-release --target PrimeStruct_backend_ir_tests`; `cd build-release && ./PrimeStruct_backend_ir_tests --test-case="ir lowerer call helpers dispatch inline call with count fallbacks" --no-skip` | notes: refreshed stale method-access and canonical map-count assertions so stdlib-owned map `count` remains a direct helper call instead of an old method-shaped builtin fallback.
 - [x] ir lowerer call helpers dispatch inline calls with locals | resolved: 2026-05-20 12:10 CEST | validating command: `cmake --build build-release --target PrimeStruct_backend_ir_tests`; `cd build-release && ./PrimeStruct_backend_ir_tests --test-case="ir lowerer call helpers dispatch inline calls with locals" --no-skip` | notes: refreshed the stale explicit vector-count resolver probe count from one to two while preserving the single inline emission assertion.
 - [x] unqualified array and map access setup inference | resolved: 2026-05-20 12:08 CEST | validating command: `cmake --build build-release --target PrimeStruct_backend_ir_tests`; `cd build-release && ./PrimeStruct_backend_ir_tests --test-case="ir lowerer setup inference helper ignores unqualified array and map access kinds" --no-skip` | notes: retargeted stale direct `at`/`at_unsafe` setup-inference expectations to the current `NotMatched` behavior after map access left the old builtin helper path.
 - [x] wrapper-returned map access setup inference | resolved: 2026-05-20 12:05 CEST | validating command: `cmake --build build-release --target PrimeStruct_backend_ir_tests`; `cd build-release && ./PrimeStruct_backend_ir_tests --test-case="ir lowerer setup inference helper ignores wrapper-returned canonical map access string kinds,ir lowerer setup inference helper ignores wrapper-returned slash-method map access kinds,ir lowerer setup inference helper ignores wrapper-returned canonical map access int32 kinds" --no-skip` | notes: retargeted stale wrapper-returned map access fixtures from value-kind resolution to current `NotMatched` behavior for retired builtin map access classification.
