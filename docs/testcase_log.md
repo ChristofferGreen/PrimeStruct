@@ -665,9 +665,33 @@
   `at_ref`, and `at_unsafe_ref` helpers for borrowed map receivers. The
   calls-flow collections 621-630 shard was stabilized on 2026-05-21 19:02
   CEST by retargeting the fixture to those borrowed receiver helpers. Next
-  stop-on-failure blocker is not yet localized.
+  stop-on-failure blocker is
+  `PrimeStruct_primestruct_semantics_calls_flow_collections_calls_flow_collections_641_650`.
+  The calls-flow collections 641-650 shard is failing in the user-defined map
+  alias helper precedence fixture. The alias helper body still recursively
+  called bare `count(values)`, and current validation reports
+  `unknown call target: count` there before reaching the intended call-site
+  check that map count does not prefer `/map/count`. After making the alias
+  helper body inert, the call-site itself now reports `unknown call target:
+  count` for the bare count form rather than synthesizing
+  `/std/collections/map/count`. The calls-flow collections 641-650 shard was
+  stabilized on 2026-05-21 19:03 CEST by retargeting the fixture to that
+  current bare-count diagnostic. Next stop-on-failure blocker is not yet
+  localized.
 
 ## Recent Test Runs
+- 2026-05-21 19:03 CEST | pass | mode: release | command:
+  `cmake --build build-release --target PrimeStruct_semantics_tests -j 1`;
+  `cd build-release && ctest --output-on-failure -R '^PrimeStruct_primestruct_semantics_calls_flow_collections_calls_flow_collections_641_650$' --timeout 180`
+  | failures: none | notes: map alias helper precedence fixture now avoids
+  recursive helper-body failure and expects the current bare `count`
+  unknown-target diagnostic.
+- 2026-05-21 19:03 CEST | fail | mode: release | command:
+  `cd build-release && ctest --output-on-failure --stop-on-failure --timeout 180 -I 359,1599`
+  | failures:
+  `PrimeStruct_primestruct_semantics_calls_flow_collections_calls_flow_collections_641_650`
+  | notes: `631_640` passed first; map alias helper precedence fixture
+  failed on recursive bare `count(values)` inside the alias helper body.
 - 2026-05-21 19:02 CEST | pass | mode: release | command:
   `cmake --build build-release --target PrimeStruct_semantics_tests -j 1`;
   `cd build-release && ctest --output-on-failure -R '^PrimeStruct_primestruct_semantics_calls_flow_collections_calls_flow_collections_621_630$' --timeout 180`
