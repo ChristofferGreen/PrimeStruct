@@ -50,9 +50,28 @@
   validation cases 121-130 shard was stabilized on 2026-05-21 12:34 CEST by
   retargeting stale source locks to key/value metadata names and public
   `soa<T>` constructor metadata without bridge-path fallback expectations. Next
+  stop-on-failure blocker is
+  `PrimeStruct_primestruct_ir_pipeline_validation_cases_181_190`. The
+  validation cases 181-190 shard was stabilized on 2026-05-21 12:50 CEST by
+  retargeting stale `resolveDefinitionCall` tests to canonical helper
+  resolution when `resolveExprPath` supplies a concrete canonical target. Next
   stop-on-failure blocker is not yet localized.
 
 ## Recent Test Runs
+- 2026-05-21 12:50 CEST | pass | mode: release | command:
+  `cmake --build build-release --target PrimeStruct_backend_ir_tests -j 1`;
+  `cd build-release && ctest --output-on-failure -R '^PrimeStruct_primestruct_ir_pipeline_validation_cases_181_190$'`
+  | failures: none | notes: bare contains/tryAt and rooted map aliases now
+  assert canonical helper definition resolution when the path resolver returns
+  a canonical target.
+- 2026-05-21 12:48 CEST | fail | mode: release | command:
+  `cmake --build build-release -j 1`;
+  `cd build-release && ctest --output-on-failure --stop-on-failure`
+  | failures: `PrimeStruct_primestruct_ir_pipeline_validation_cases_181_190`
+  | notes: stop-on-failure progressed past validation cases 121-130; current
+  blocker is stale `resolveDefinitionCall` coverage expecting null for
+  non-semantic bare/alias map helpers even when `resolveExprPath` resolves a
+  concrete canonical helper definition.
 - 2026-05-21 12:34 CEST | pass | mode: release | command:
   `cmake --build build-release --target PrimeStruct_backend_ir_tests -j 1`;
   `cd build-release && ctest --output-on-failure -R '^PrimeStruct_primestruct_ir_pipeline_validation_cases_121_130$'`

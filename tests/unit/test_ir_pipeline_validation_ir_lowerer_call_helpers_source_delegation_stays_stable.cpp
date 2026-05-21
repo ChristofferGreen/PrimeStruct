@@ -4583,7 +4583,7 @@ TEST_CASE("ir lowerer call helpers keep bare semantic map sugar on canonical def
         &canonicalMapAtUnsafeDef);
 }
 
-TEST_CASE("ir lowerer call helpers keep bare non-semantic contains and tryAt on builtin dispatch") {
+TEST_CASE("ir lowerer call helpers resolve bare non-semantic contains and tryAt canonical defs") {
   primec::Definition canonicalMapContainsDef;
   canonicalMapContainsDef.fullPath = "/std/collections/map/contains";
   primec::Definition canonicalMapTryAtDef;
@@ -4619,12 +4619,12 @@ TEST_CASE("ir lowerer call helpers keep bare non-semantic contains and tryAt on 
   tryAtCall.name = "tryAt";
 
   CHECK(primec::ir_lowerer::resolveDefinitionCall(containsCall, defMap, resolveExprPath) ==
-        nullptr);
+        &canonicalMapContainsDef);
   CHECK(primec::ir_lowerer::resolveDefinitionCall(tryAtCall, defMap, resolveExprPath) ==
-        nullptr);
+        &canonicalMapTryAtDef);
 }
 
-TEST_CASE("ir lowerer call helpers reject rooted map alias defs behind canonical remaps") {
+TEST_CASE("ir lowerer call helpers prefer canonical remaps over rooted map alias defs") {
   primec::Definition canonicalMapCountDef;
   canonicalMapCountDef.fullPath = "/std/collections/map/count";
   primec::Definition canonicalMapContainsDef;
@@ -4680,11 +4680,11 @@ TEST_CASE("ir lowerer call helpers reject rooted map alias defs behind canonical
   aliasTryAtCall.name = "/map/tryAt";
 
   CHECK(primec::ir_lowerer::resolveDefinitionCall(aliasCountCall, defMap, resolveExprPath) ==
-        nullptr);
+        &canonicalMapCountDef);
   CHECK(primec::ir_lowerer::resolveDefinitionCall(aliasContainsCall, defMap, resolveExprPath) ==
-        nullptr);
+        &canonicalMapContainsDef);
   CHECK(primec::ir_lowerer::resolveDefinitionCall(aliasTryAtCall, defMap, resolveExprPath) ==
-        nullptr);
+        &canonicalMapTryAtDef);
 }
 
 TEST_CASE("ir lowerer call helpers reject rooted map alias def families") {
