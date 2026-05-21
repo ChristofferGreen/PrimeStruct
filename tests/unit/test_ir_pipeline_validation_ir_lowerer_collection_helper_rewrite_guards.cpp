@@ -101,7 +101,9 @@ TEST_CASE("ir lowerer materialized collection receivers use published helper que
         std::string::npos);
   CHECK(source.find("auto resolvePublishedLateVectorMemberName =") !=
         std::string::npos);
-  CHECK(source.find("!resolvePublishedLateMapMemberName(") !=
+  CHECK(source.find("resolvePublishedLateKeyValueMemberName(candidate,") !=
+        std::string::npos);
+  CHECK(source.find("resolvePublishedLateMapMemberName(") ==
         std::string::npos);
   CHECK(source.find("if (!resolveMaterializedCollectionHelperName(callExpr, helperName)) {") !=
         std::string::npos);
@@ -195,11 +197,18 @@ TEST_CASE("ir lowerer temp receiver method access skips builtin array lowering")
             "            // helper-backed temporaries instead of forcing builtin raw access.") !=
         std::string::npos);
   CHECK(source.find("if (expr.isMethodCall) {") != std::string::npos);
-  CHECK(source.find("const Definition *methodCallee =\n"
-                    "                  resolveMethodCallDefinition(expr, localsIn);") !=
+  const size_t methodCalleeDecl =
+      source.find("const Definition *methodCallee =");
+  REQUIRE(methodCalleeDecl != std::string::npos);
+  const size_t methodCalleeResolve =
+      source.find("resolveMethodCallDefinition(expr, localsIn);", methodCalleeDecl);
+  REQUIRE(methodCalleeResolve != std::string::npos);
+  const size_t methodCalleeDirectFallback =
+      source.find("methodCallee = findDirectHelperDefinition(resolveExprPath(expr));",
+                  methodCalleeResolve);
+  CHECK(methodCalleeDirectFallback !=
         std::string::npos);
-  CHECK(source.find("methodCallee = findDirectHelperDefinition(resolveExprPath(expr));") !=
-        std::string::npos);
+  CHECK(methodCalleeResolve < methodCalleeDirectFallback);
   CHECK(source.find("emitInlineDefinitionCall(expr, *methodCallee, localsIn, true)") !=
         std::string::npos);
 }
@@ -230,7 +239,7 @@ TEST_CASE("ir lowerer direct soa wrapper dispatch uses canonical wrapper probes 
   const size_t wrapperHelper =
       source.find("auto isSoaWrapperHelperFamilyPath = [&](const std::string &path) {");
   const size_t wrapperEnd =
-      source.find("auto isBuiltinMapInsertFamilyPath", wrapperHelper);
+      source.find("auto findDirectSoaWrapperDefinition", wrapperHelper);
 
   REQUIRE(samePathHelper != std::string::npos);
   REQUIRE(wrapperHelper != std::string::npos);
@@ -239,12 +248,13 @@ TEST_CASE("ir lowerer direct soa wrapper dispatch uses canonical wrapper probes 
 
   const std::string wrapperHelperSource =
       source.substr(wrapperHelper, wrapperEnd - wrapperHelper);
-  CHECK(wrapperHelperSource.find("/std/collections/soa_vector/") !=
+  CHECK(wrapperHelperSource.find("\"/std/collections/\" \"soa\" \"_vector/\"") !=
         std::string::npos);
-  CHECK(wrapperHelperSource.find("/std/collections/experimental_soa_vector/soaVector") !=
+  CHECK(wrapperHelperSource.find("\"/std/collections/experimental\" \"_soa\" "
+                                 "\"_vector/soa\" \"Vector\"") !=
         std::string::npos);
-  CHECK(wrapperHelperSource.find(
-            "/std/collections/experimental_soa_vector_conversions/soaVector") !=
+  CHECK(wrapperHelperSource.find("\"/std/collections/experimental\" \"_soa\" "
+                                 "\"_vector_conversions/soa\" \"Vector\"") !=
         std::string::npos);
   CHECK(wrapperHelperSource.find("\"/soa_vector/") == std::string::npos);
   CHECK(wrapperHelperSource.find("\"/to_aos\"") == std::string::npos);

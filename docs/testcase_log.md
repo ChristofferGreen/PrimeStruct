@@ -55,9 +55,32 @@
   validation cases 181-190 shard was stabilized on 2026-05-21 12:50 CEST by
   retargeting stale `resolveDefinitionCall` tests to canonical helper
   resolution when `resolveExprPath` supplies a concrete canonical target. Next
-  stop-on-failure blocker is not yet localized.
+  stop-on-failure blocker is
+  `PrimeStruct_primestruct_ir_pipeline_validation_cases_201_210`. The
+  validation cases 201-210 shard is failing on stale source-validation guards
+  for materialized collection helper queries, temp receiver method access, and
+  direct SoA wrapper dispatch source anchors after lowerer helper reshaping.
+  The validation cases 201-210 shard was stabilized on 2026-05-21 12:53 CEST
+  by retargeting those guards to the current generic key/value helper naming,
+  method-call fallback source shape, and SoA wrapper-family source boundary.
+  Next stop-on-failure blocker is not yet localized.
 
 ## Recent Test Runs
+- 2026-05-21 12:53 CEST | pass | mode: release | command:
+  `cmake --build build-release --target PrimeStruct_backend_ir_tests -j 1`;
+  `cd build-release && ctest --output-on-failure -R '^PrimeStruct_primestruct_ir_pipeline_validation_cases_201_210$'`
+  | failures: none | notes: collection helper rewrite guards now assert
+  generic key/value helper naming, the current method-call fallback source
+  shape, and the SoA wrapper-family lambda boundary.
+- 2026-05-21 12:53 CEST | fail | mode: release | command:
+  `cmake --build build-release -j 1`;
+  `cd build-release && ctest --output-on-failure --stop-on-failure`
+  | failures: `PrimeStruct_primestruct_ir_pipeline_validation_cases_201_210`
+  | notes: stop-on-failure progressed past validation cases 181-190; current
+  blocker is stale source-validation coverage looking for removed
+  `resolvePublishedLateMapMemberName`, an old temp receiver
+  `resolveMethodCallDefinition` line wrap, and a retired SoA wrapper
+  source-anchor before `isBuiltinMapInsertFamilyPath`.
 - 2026-05-21 12:50 CEST | pass | mode: release | command:
   `cmake --build build-release --target PrimeStruct_backend_ir_tests -j 1`;
   `cd build-release && ctest --output-on-failure -R '^PrimeStruct_primestruct_ir_pipeline_validation_cases_181_190$'`
