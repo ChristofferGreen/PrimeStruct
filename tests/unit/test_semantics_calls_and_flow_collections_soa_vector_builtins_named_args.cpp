@@ -6,6 +6,8 @@ namespace {
 
 const std::string RetiredSoaVectorDiagnostic =
     "soa_vector<T> is not supported; use soa<T>";
+const std::string NonTemplatedSoaVectorDiagnostic =
+    "template arguments are only supported on templated definitions: /soa_vector";
 
 } // namespace
 
@@ -348,19 +350,17 @@ TEST_CASE("soa_vector helper-return ref/ref_ref local bindings reject non-templa
     CHECK(error.find(expected) != std::string::npos);
   };
 
-  const std::string nonTemplatedSoaVector =
-      "template arguments are only supported on templated definitions: /soa_vector";
-  checkReject("auto", "ref(cloneValues(), 0i32)", nonTemplatedSoaVector);
-  checkReject("auto", "cloneValues().ref(0i32)", nonTemplatedSoaVector);
-  checkReject("Particle", "ref(cloneValues(), 0i32)", nonTemplatedSoaVector);
-  checkReject("Particle", "cloneValues().ref(0i32)", nonTemplatedSoaVector);
-  checkReject("auto", "ref_ref(cloneValues(), 0i32)", nonTemplatedSoaVector);
-  checkReject("auto", "cloneValues().ref_ref(0i32)", nonTemplatedSoaVector);
-  checkReject("Particle", "ref_ref(cloneValues(), 0i32)", nonTemplatedSoaVector);
-  checkReject("Particle", "cloneValues().ref_ref(0i32)", nonTemplatedSoaVector);
+  checkReject("auto", "ref(cloneValues(), 0i32)", NonTemplatedSoaVectorDiagnostic);
+  checkReject("auto", "cloneValues().ref(0i32)", NonTemplatedSoaVectorDiagnostic);
+  checkReject("Particle", "ref(cloneValues(), 0i32)", NonTemplatedSoaVectorDiagnostic);
+  checkReject("Particle", "cloneValues().ref(0i32)", NonTemplatedSoaVectorDiagnostic);
+  checkReject("auto", "ref_ref(cloneValues(), 0i32)", NonTemplatedSoaVectorDiagnostic);
+  checkReject("auto", "cloneValues().ref_ref(0i32)", NonTemplatedSoaVectorDiagnostic);
+  checkReject("Particle", "ref_ref(cloneValues(), 0i32)", NonTemplatedSoaVectorDiagnostic);
+  checkReject("Particle", "cloneValues().ref_ref(0i32)", NonTemplatedSoaVectorDiagnostic);
 }
 
-TEST_CASE("soa_vector ref helper binding keeps same-path user helper for auto inference") {
+TEST_CASE("soa_vector ref helper binding rejects retired spelling before user helper") {
   const std::string source = R"(
 Particle() {
   [i32] x{1i32}
@@ -380,8 +380,9 @@ main() {
 }
 )";
   std::string error;
-  CHECK_MESSAGE(validateProgram(source, "/main", error), error);
-  CHECK(error.empty());
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  INFO(error);
+  CHECK(error.find(RetiredSoaVectorDiagnostic) != std::string::npos);
 }
 
 TEST_CASE("soa_vector builtin ref call argument escapes use pending diagnostic") {
@@ -401,6 +402,8 @@ TEST_CASE("soa_vector builtin ref call argument escapes use pending diagnostic")
         "}\n";
     std::string error;
     CHECK_FALSE(validateProgram(source, "/main", error));
+    INFO(expr);
+    INFO(error);
     CHECK(error.find(expected) != std::string::npos);
   };
 
@@ -415,7 +418,7 @@ TEST_CASE("soa_vector builtin ref call argument escapes use pending diagnostic")
               "unknown method: /std/collections/soa_vector/ref_ref");
 }
 
-TEST_CASE("soa_vector helper-return ref/ref_ref call argument escapes use pending diagnostic") {
+TEST_CASE("soa_vector helper-return ref/ref_ref call argument escapes reject non-templated spelling") {
   const auto checkReject = [](const std::string &expr,
                               const std::string &expected) {
     const std::string source =
@@ -438,16 +441,16 @@ TEST_CASE("soa_vector helper-return ref/ref_ref call argument escapes use pendin
         "}\n";
     std::string error;
     CHECK_FALSE(validateProgram(source, "/main", error));
+    INFO(expr);
+    INFO(error);
     CHECK(error.find(expected) != std::string::npos);
   };
 
-  checkReject("ref(holder.cloneValues(), 0i32)",
-              "unknown method: /std/collections/soa_vector/ref");
-  checkReject("ref_ref(holder.cloneValues(), 0i32)",
-              "unknown method: /std/collections/soa_vector/ref_ref");
+  checkReject("ref(holder.cloneValues(), 0i32)", NonTemplatedSoaVectorDiagnostic);
+  checkReject("ref_ref(holder.cloneValues(), 0i32)", NonTemplatedSoaVectorDiagnostic);
 }
 
-TEST_CASE("soa_vector builtin ref/ref_ref return escapes use pending diagnostic") {
+TEST_CASE("soa_vector builtin ref/ref_ref return escapes reject retired spelling") {
   const auto checkReject = [](const std::string &expr,
                               const std::string &expected) {
     const std::string source =
@@ -466,22 +469,20 @@ TEST_CASE("soa_vector builtin ref/ref_ref return escapes use pending diagnostic"
         "}\n";
     std::string error;
     CHECK_FALSE(validateProgram(source, "/pick", error));
+    INFO(expr);
+    INFO(error);
     CHECK(error.find(expected) != std::string::npos);
   };
 
-  checkReject("ref(values, 0i32)", "unknown method: /std/collections/soa_vector/ref");
-  checkReject("values.ref(0i32)", "unknown method: /std/collections/soa_vector/ref");
-  checkReject("/soa_vector/ref(values, 0i32)",
-              "unknown method: /std/collections/soa_vector/ref");
-  checkReject("ref_ref(values, 0i32)",
-              "unknown method: /std/collections/soa_vector/ref_ref");
-  checkReject("values.ref_ref(0i32)",
-              "unknown method: /std/collections/soa_vector/ref_ref");
-  checkReject("/soa_vector/ref_ref(values, 0i32)",
-              "unknown method: /std/collections/soa_vector/ref_ref");
+  checkReject("ref(values, 0i32)", RetiredSoaVectorDiagnostic);
+  checkReject("values.ref(0i32)", RetiredSoaVectorDiagnostic);
+  checkReject("/soa_vector/ref(values, 0i32)", RetiredSoaVectorDiagnostic);
+  checkReject("ref_ref(values, 0i32)", RetiredSoaVectorDiagnostic);
+  checkReject("values.ref_ref(0i32)", RetiredSoaVectorDiagnostic);
+  checkReject("/soa_vector/ref_ref(values, 0i32)", RetiredSoaVectorDiagnostic);
 }
 
-TEST_CASE("soa_vector helper-return ref/ref_ref return escapes use pending diagnostic") {
+TEST_CASE("soa_vector helper-return ref/ref_ref return escapes reject non-templated spelling") {
   const auto checkReject = [](const std::string &expr,
                               const std::string &expected) {
     const std::string source =
@@ -505,16 +506,16 @@ TEST_CASE("soa_vector helper-return ref/ref_ref return escapes use pending diagn
         "}\n";
     std::string error;
     CHECK_FALSE(validateProgram(source, "/pick", error));
+    INFO(expr);
+    INFO(error);
     CHECK(error.find(expected) != std::string::npos);
   };
 
-  checkReject("ref(holder.cloneValues(), 0i32)",
-              "unknown method: /std/collections/soa_vector/ref");
-  checkReject("ref_ref(holder.cloneValues(), 0i32)",
-              "unknown method: /std/collections/soa_vector/ref_ref");
+  checkReject("ref(holder.cloneValues(), 0i32)", NonTemplatedSoaVectorDiagnostic);
+  checkReject("ref_ref(holder.cloneValues(), 0i32)", NonTemplatedSoaVectorDiagnostic);
 }
 
-TEST_CASE("soa_vector ref helper still accepts call and return escapes through same-path helper") {
+TEST_CASE("soa_vector ref helper rejects retired spelling before same-path helper escapes") {
   const std::string source = R"(
 [struct reflect]
 Particle() {
@@ -544,11 +545,12 @@ main() {
 }
 )";
   std::string error;
-  CHECK_MESSAGE(validateProgram(source, "/main", error), error);
-  CHECK(error.empty());
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  INFO(error);
+  CHECK(error.find(RetiredSoaVectorDiagnostic) != std::string::npos);
 }
 
-TEST_CASE("soa_vector ref_ref helper still accepts call and return escapes through same-path helper") {
+TEST_CASE("soa_vector ref_ref helper rejects retired spelling before same-path helper escapes") {
   const std::string source = R"(
 Particle() {
   [i32] x{1i32}
@@ -577,11 +579,12 @@ main() {
 }
 )";
   std::string error;
-  CHECK_MESSAGE(validateProgram(source, "/main", error), error);
-  CHECK(error.empty());
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  INFO(error);
+  CHECK(error.find(RetiredSoaVectorDiagnostic) != std::string::npos);
 }
 
-TEST_CASE("soa_vector helper-return bare ref keeps same-path helper across escapes") {
+TEST_CASE("soa_vector helper-return bare ref rejects non-templated spelling before helper escapes") {
   const std::string source = R"(
 Particle() {
   [i32] x{1i32}
@@ -615,11 +618,12 @@ main() {
 }
 )";
   std::string error;
-  CHECK_MESSAGE(validateProgram(source, "/main", error), error);
-  CHECK(error.empty());
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  INFO(error);
+  CHECK(error.find(NonTemplatedSoaVectorDiagnostic) != std::string::npos);
 }
 
-TEST_CASE("soa_vector helper-return bare ref_ref keeps same-path helper across escapes") {
+TEST_CASE("soa_vector helper-return bare ref_ref rejects non-templated spelling before helper escapes") {
   const std::string source = R"(
 Particle() {
   [i32] x{1i32}
@@ -653,11 +657,12 @@ main() {
 }
 )";
   std::string error;
-  CHECK_MESSAGE(validateProgram(source, "/main", error), error);
-  CHECK(error.empty());
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  INFO(error);
+  CHECK(error.find(NonTemplatedSoaVectorDiagnostic) != std::string::npos);
 }
 
-TEST_CASE("soa_vector helper-return bare get keeps same-path helper across escapes") {
+TEST_CASE("soa_vector helper-return bare get rejects non-templated spelling before helper escapes") {
   const std::string source = R"(
 Particle() {
   [i32] x{1i32}
@@ -690,8 +695,9 @@ main() {
 }
 )";
   std::string error;
-  CHECK(validateProgram(source, "/main", error));
-  CHECK(error.empty());
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  INFO(error);
+  CHECK(error.find(NonTemplatedSoaVectorDiagnostic) != std::string::npos);
 }
 
 TEST_CASE("soa_vector helper-return bare get_ref keeps same-path helper across escapes") {

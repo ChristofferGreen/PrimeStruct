@@ -592,9 +592,34 @@
   fixtures still reach the builtin validation diagnostics. The calls-flow
   collections 521-530 shard was stabilized on 2026-05-21 18:46 CEST by
   retargeting the stale old-surface SoA builtins block to those current
-  diagnostics. Next stop-on-failure blocker is not yet localized.
+  diagnostics. Next stop-on-failure blocker is
+  `PrimeStruct_primestruct_semantics_calls_flow_collections_calls_flow_collections_531_540`.
+  The calls-flow collections 531-540 shard is failing in the adjacent
+  same-path `soa_vector` helper escape block. Direct `soa_vector<Particle>`
+  parameters and locals now fail with the retired-spelling diagnostic before
+  same-path helper resolution for user-helper fixtures, direct builtin
+  ref/ref_ref escapes still reach the pending unknown-method diagnostics, and
+  lowercase `soa_vector<Particle>` helper returns report the non-templated
+  `/soa_vector` diagnostic. The calls-flow collections 531-540 shard was
+  stabilized on 2026-05-21 18:50 CEST by splitting those expectations. Next
+  stop-on-failure blocker is not yet localized.
 
 ## Recent Test Runs
+- 2026-05-21 18:50 CEST | pass | mode: release | command:
+  `cmake --build build-release --target PrimeStruct_semantics_tests -j 1`;
+  `cd build-release && ctest --output-on-failure -R '^PrimeStruct_primestruct_semantics_calls_flow_collections_calls_flow_collections_531_540$' --timeout 180`
+  | failures: none | notes: adjacent SoA helper escape fixtures now expect
+  retired type-spelling diagnostics for direct old-surface helper fixtures,
+  pending unknown-method diagnostics for direct builtin ref/ref_ref escapes,
+  and non-templated `/soa_vector` diagnostics for helper-return forms.
+- 2026-05-21 18:50 CEST | fail | mode: release | command:
+  `cd build-release && ctest --output-on-failure --stop-on-failure --timeout 180 -I 349,1599`
+  | failures:
+  `PrimeStruct_primestruct_semantics_calls_flow_collections_calls_flow_collections_531_540`
+  | notes: adjacent old-surface SoA helper escape fixtures still expected
+  user-helper or pending-method behavior after `soa_vector<Particle>`, but
+  current validation rejects those sources earlier on retired or non-templated
+  type spelling.
 - 2026-05-21 18:46 CEST | pass | mode: release | command:
   `cmake --build build-release --target PrimeStruct_semantics_tests -j 1`;
   `cd build-release && ctest --output-on-failure -R '^PrimeStruct_primestruct_semantics_calls_flow_collections_calls_flow_collections_521_530$' --timeout 180`
