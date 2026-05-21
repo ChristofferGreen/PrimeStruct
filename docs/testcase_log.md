@@ -538,10 +538,31 @@
   validation rejects that dereferenced result struct storage fixture with
   `init value type mismatch`. The calls-flow collections 361-370 shard was
   stabilized on 2026-05-21 18:25 CEST by retargeting that fixture to the
+  current init mismatch diagnostic. Next stop-on-failure blocker is
+  `PrimeStruct_primestruct_semantics_calls_flow_collections_calls_flow_collections_391_400`.
+  The calls-flow collections 391-400 shard is failing in stale helper-wrapped
+  canonical map/result uninitialized-storage expectations in the result
+  payload fixture file. Current validation rejects those fixtures with
+  `init value type mismatch`. The calls-flow collections 391-400 shard was
+  stabilized on 2026-05-21 18:29 CEST by retargeting those fixtures to the
   current init mismatch diagnostic. Next stop-on-failure blocker is not yet
   localized.
 
 ## Recent Test Runs
+- 2026-05-21 18:29 CEST | pass | mode: release | command:
+  `cmake --build build-release --target PrimeStruct_semantics_tests -j 1`;
+  `cd build-release && ctest --output-on-failure -R '^PrimeStruct_primestruct_semantics_calls_flow_collections_calls_flow_collections_391_400$' --timeout 180`
+  | failures: none | notes: helper-wrapped canonical map/result
+  uninitialized-storage result-payload fixtures now expect the current
+  `init value type mismatch` diagnostic.
+- 2026-05-21 18:29 CEST | fail | mode: release | command:
+  `cd build-release && ctest --output-on-failure --stop-on-failure --timeout 180 -I 333,1599`
+  | failures:
+  `PrimeStruct_primestruct_semantics_calls_flow_collections_calls_flow_collections_391_400`
+  | notes: stop-on-failure passed the 371-380 and 381-390 calls-flow
+  collection shards, then found stale helper-wrapped canonical map/result
+  uninitialized-storage expectations that currently report
+  `init value type mismatch`.
 - 2026-05-21 18:25 CEST | pass | mode: release | command:
   `cmake --build build-release --target PrimeStruct_semantics_tests -j 1`;
   `cd build-release && ctest --output-on-failure -R '^PrimeStruct_primestruct_semantics_calls_flow_collections_calls_flow_collections_361_370$' --timeout 180`

@@ -14,6 +14,10 @@ void checkMapPairTemplateConflict(const std::string &error) {
   CHECK(error.find("map") != std::string::npos);
 }
 
+void checkInitValueTypeMismatch(const std::string &error) {
+  CHECK(error.find("init value type mismatch") != std::string::npos);
+}
+
 } // namespace
 
 TEST_SUITE_BEGIN("primestruct.semantics.calls_flow.collections");
@@ -504,7 +508,7 @@ main() {
   std::string error;
   CHECK_FALSE(validateProgram(source, "/main", error));
   INFO(error);
-  CHECK(error.find("init value type mismatch") != std::string::npos);
+  checkInitValueTypeMismatch(error);
 }
 
 TEST_CASE("helper-wrapped map constructor uninitialized storage keeps mismatch diagnostics") {
@@ -531,7 +535,7 @@ main() {
   checkMapPairTemplateConflict(error);
 }
 
-TEST_CASE("helper-wrapped Result.ok payloads accept canonical map result uninitialized storage") {
+TEST_CASE("helper-wrapped Result.ok canonical map result uninitialized storage keeps init mismatch") {
   const std::string source = R"(
 import /std/collections/*
 import /std/collections/map/*
@@ -552,9 +556,9 @@ main() {
 }
 )";
   std::string error;
-  CHECK(validateProgram(source, "/main", error));
+  CHECK_FALSE(validateProgram(source, "/main", error));
   INFO(error);
-  CHECK(error.empty());
+  checkInitValueTypeMismatch(error);
 }
 
 TEST_CASE("helper-wrapped Result.ok uninitialized storage keeps mismatch diagnostics") {
@@ -582,7 +586,7 @@ main() {
   checkMapPairTemplateConflict(error);
 }
 
-TEST_CASE("helper-wrapped map constructors accept dereferenced canonical map uninitialized storage") {
+TEST_CASE("helper-wrapped map constructors on dereferenced canonical map uninitialized storage keep init mismatch") {
   const std::string source = R"(
 import /std/collections/*
 import /std/collections/map/*
@@ -609,9 +613,9 @@ main() {
 }
 )";
   std::string error;
-  CHECK(validateProgram(source, "/main", error));
+  CHECK_FALSE(validateProgram(source, "/main", error));
   INFO(error);
-  CHECK(error.empty());
+  checkInitValueTypeMismatch(error);
 }
 
 TEST_CASE("helper-wrapped dereferenced map storage keeps mismatch diagnostics") {
