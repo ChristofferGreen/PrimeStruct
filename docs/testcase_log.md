@@ -702,9 +702,29 @@
   target: /map` diagnostic instead of a map-literal-specific block-argument
   diagnostic. The calls-flow effects 71-80 shard was stabilized on
   2026-05-21 19:06 CEST by retargeting the fixture to that generic diagnostic.
-  Next stop-on-failure blocker is not yet localized.
+  Next stop-on-failure blocker is
+  `PrimeStruct_primestruct_semantics_maybe_maybe_1_10`. The maybe 1-10 shard
+  is failing in two local-prelude generic `Maybe<T>` method helper fixtures.
+  Current root-level generic sum helper monomorphization reports `pick target
+  requires sum value` inside the helper body, while the imported stdlib Maybe
+  helper coverage still validates. The maybe 1-10 shard was stabilized on
+  2026-05-21 19:07 CEST by retargeting those local-prelude fixtures to the
+  current monomorphized pick-target diagnostic. Next stop-on-failure blocker
+  is not yet localized.
 
 ## Recent Test Runs
+- 2026-05-21 19:07 CEST | pass | mode: release | command:
+  `cmake --build build-release --target PrimeStruct_semantics_tests -j 1`;
+  `cd build-release && ctest --output-on-failure -R '^PrimeStruct_primestruct_semantics_maybe_maybe_1_10$' --timeout 180`
+  | failures: none | notes: local-prelude generic Maybe helper fixtures now
+  expect the current monomorphized `pick(self)` target diagnostic.
+- 2026-05-21 19:07 CEST | fail | mode: release | command:
+  `cd build-release && ctest --output-on-failure --stop-on-failure --timeout 180 -I 400,1599`
+  | failures:
+  `PrimeStruct_primestruct_semantics_maybe_maybe_1_10`
+  | notes: effects 81-118, imports 1-52, and lambdas passed first; local
+  generic Maybe helper fixtures now stop on monomorphized `pick(self)` target
+  diagnostics.
 - 2026-05-21 19:06 CEST | pass | mode: release | command:
   `cmake --build build-release --target PrimeStruct_semantics_tests -j 1`;
   `cd build-release && ctest --output-on-failure -R '^PrimeStruct_primestruct_semantics_calls_flow_effects_calls_flow_effects_71_80$' --timeout 180`
