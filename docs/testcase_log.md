@@ -790,10 +790,18 @@
   text filtering treats `=` as ordinary assignment rewriting, so the map
   literal receives an odd argument count. The argv/CLI 4 shard was stabilized
   on 2026-05-21 22:28 CEST by preserving the assignment-value check in a
-  comma payload map constructor. Next stop-on-failure blocker is not yet
-  localized.
+  comma payload map constructor. Next stop-on-failure blocker is
+  `PrimeStruct_primestruct_compile_run_smoke_argv_and_cli_14_14`. The argv/CLI
+  14 shard is failing because VM argv printing still lowers `args[0i32]` in a
+  print argument through a direct `at` call path that falls into the VM
+  entry-argument count-only diagnostic instead of the argv print access path.
 
 ## Recent Test Runs
+- 2026-05-21 22:30 CEST | fail | mode: release | command:
+  `cd build-release && ctest --output-on-failure --stop-on-failure --timeout 180 -I 648,1599`
+  | failures: `PrimeStruct_primestruct_compile_run_smoke_argv_and_cli_14_14`
+  | notes: argv/CLI 5-13 passed first; VM argv printing still routes
+  `args[0i32]` through the unsupported direct `at` print path.
 - 2026-05-21 22:28 CEST | pass | mode: release | command:
   `cmake --build build-release --target PrimeStruct_compile_run_tests -j 1`;
   `cd build-release && ctest --output-on-failure -R '^PrimeStruct_primestruct_compile_run_smoke_argv_and_cli_4_4$' --timeout 180`
