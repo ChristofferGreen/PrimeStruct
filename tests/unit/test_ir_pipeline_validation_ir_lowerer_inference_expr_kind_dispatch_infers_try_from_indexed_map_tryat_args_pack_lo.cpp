@@ -138,7 +138,7 @@ TEST_CASE("ir lowerer inference expr-kind dispatch infers try from indexed map t
         primec::ir_lowerer::LocalInfo::ValueKind::Int32);
 }
 
-TEST_CASE("ir lowerer inference expr-kind dispatch prefers graph-backed indexed map value facts") {
+TEST_CASE("ir lowerer inference expr-kind dispatch rejects stale indexed map value facts") {
   using Kind = primec::ir_lowerer::LocalInfo::ValueKind;
 
   auto addQueryFact = [](primec::SemanticProgram &semanticProgram,
@@ -300,7 +300,7 @@ TEST_CASE("ir lowerer inference expr-kind dispatch prefers graph-backed indexed 
   countExpr.name = "count";
   countExpr.args = {accessExpr};
 
-  CHECK(state.inferExprKind(countExpr, locals) == Kind::Int32);
+  CHECK(state.inferExprKind(countExpr, locals) == Kind::Unknown);
 
   accessExpr.semanticNodeId = 7302;
   countExpr.args = {accessExpr};
@@ -308,12 +308,12 @@ TEST_CASE("ir lowerer inference expr-kind dispatch prefers graph-backed indexed 
 
   accessExpr.semanticNodeId = 0;
   countExpr.args = {accessExpr};
-  CHECK(state.inferExprKind(countExpr, locals) == Kind::Int32);
+  CHECK(state.inferExprKind(countExpr, locals) == Kind::Unknown);
 
   valuesName.semanticNodeId = 7303;
   accessExpr.args = {valuesName, keyExpr};
   countExpr.args = {accessExpr};
-  CHECK(state.inferExprKind(countExpr, locals) == Kind::Int32);
+  CHECK(state.inferExprKind(countExpr, locals) == Kind::Unknown);
 
   valuesName.semanticNodeId = 7304;
   accessExpr.args = {valuesName, keyExpr};
@@ -328,7 +328,7 @@ TEST_CASE("ir lowerer inference expr-kind dispatch prefers graph-backed indexed 
   valuesName.semanticNodeId = 0;
   accessExpr.args = {valuesName, keyExpr};
   countExpr.args = {accessExpr};
-  CHECK(state.inferExprKind(countExpr, locals) == Kind::Int32);
+  CHECK(state.inferExprKind(countExpr, locals) == Kind::Unknown);
 }
 
 TEST_CASE("ir lowerer inference expr-kind dispatch uses semantic map receiver facts") {
@@ -796,7 +796,7 @@ TEST_CASE("ir lowerer inference expr-kind dispatch uses semantic try operand Res
         Kind::Int64);
   CHECK(syntaxState.inferExprKind(
             makeTryExpr(makeDereferenceExpr(makeAtExpr("results", 0))),
-            staleLocals) == Kind::String);
+            staleLocals) == Kind::Unknown);
   CHECK(syntaxInferenceError.empty());
 }
 
@@ -1277,7 +1277,7 @@ TEST_CASE("ir lowerer inference expr-kind dispatch uses semantic method receiver
             makeTryExpr(makeMethodExpr(
                 "flush",
                 makeDereferenceExpr(makeAtExpr("files", 0)))),
-            staleLocals) == Kind::Int32);
+            staleLocals) == Kind::Unknown);
   CHECK(syntaxInferenceError.empty());
 }
 

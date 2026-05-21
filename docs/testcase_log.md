@@ -148,9 +148,30 @@
   classification. The validation cases 421-430 shard was stabilized on
   2026-05-21 13:53 CEST by retargeting bare borrowed access receiver
   call-base inference tests to current `Unknown`/not-inferred behavior. Next
-  stop-on-failure blocker is not yet localized.
+  stop-on-failure blocker is
+  `PrimeStruct_primestruct_ir_pipeline_validation_cases_441_450`. The
+  validation cases 441-450 shard is failing in stale expression-kind dispatch
+  expectations for graph-backed map `at(...)` value facts and syntax-only
+  dereferenced `at(...)` receiver facts after current access-helper
+  classification. The validation cases 441-450 shard was stabilized on
+  2026-05-21 13:56 CEST by retargeting those fallback dispatch expectations
+  to current `Unknown` behavior. Next stop-on-failure blocker is not yet
+  localized.
 
 ## Recent Test Runs
+- 2026-05-21 13:56 CEST | pass | mode: release | command:
+  `cmake --build build-release --target PrimeStruct_backend_ir_tests -j 1`;
+  `cd build-release && ctest --output-on-failure -R '^PrimeStruct_primestruct_ir_pipeline_validation_cases_441_450$' --timeout 180`
+  | failures: none | notes: map `at(...)` value-fact dispatch and
+  syntax-only dereferenced receiver fallbacks now assert current `Unknown`
+  behavior.
+- 2026-05-21 13:55 CEST | fail | mode: release | command:
+  `cmake --build build-release -j 1`;
+  `cd build-release && ctest --output-on-failure --stop-on-failure --timeout 180`
+  | failures: `PrimeStruct_primestruct_ir_pipeline_validation_cases_441_450`
+  | notes: stop-on-failure progressed past validation cases 421-430; current
+  blocker is stale dispatch inference expectations for map `at(...)` value
+  facts and syntax-only dereferenced `at(...)` receivers.
 - 2026-05-21 13:53 CEST | pass | mode: release | command:
   `cmake --build build-release --target PrimeStruct_backend_ir_tests -j 1`;
   `cd build-release && ctest --output-on-failure -R '^PrimeStruct_primestruct_ir_pipeline_validation_cases_421_430$' --timeout 180`
