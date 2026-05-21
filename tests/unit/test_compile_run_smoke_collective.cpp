@@ -386,7 +386,7 @@ TEST_CASE("compiles and runs binding inferring map type") {
   const std::string source = R"(
 [return<int>]
 main() {
-  [mut] values{map<i32, i32>{1i32=2i32, 3i32=4i32}}
+  [mut] values{map<i32, i32>{1i32, 2i32, 3i32, 4i32}}
   return(0i32)
 }
 )";

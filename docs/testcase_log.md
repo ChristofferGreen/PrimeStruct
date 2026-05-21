@@ -758,9 +758,28 @@
   so parsing rejects the template-list bracket form. The collective extended
   12 shard was stabilized on 2026-05-21 19:58 CEST by keeping the smoke case
   focused on array bracket sugar and removing the stale map bracket line. Next
+  stop-on-failure blocker is
+  `PrimeStruct_primestruct_compile_run_smoke_collective_paths_extended_14_14`.
+  The compile-run collective extended 14 shard is failing because a stale
+  inferred-map-binding smoke fixture still uses map `=` pair sugar. Current
+  text filtering treats `=` as ordinary assignment rewriting, so semantic
+  validation correctly rejects assignment to literal keys. The collective
+  extended 14 shard was stabilized on 2026-05-21 20:02 CEST by using the
+  current comma payload form for the inferred map binding smoke. Next
   stop-on-failure blocker is not yet localized.
 
 ## Recent Test Runs
+- 2026-05-21 20:02 CEST | pass | mode: release | command:
+  `cmake --build build-release --target PrimeStruct_compile_run_tests -j 1`;
+  `cd build-release && ctest --output-on-failure -R '^PrimeStruct_primestruct_compile_run_smoke_collective_paths_extended_14_14$' --timeout 180`
+  | failures: none | notes: inferred map binding smoke now uses comma payload
+  construction instead of removed map pair sugar.
+- 2026-05-21 20:02 CEST | fail | mode: release | command:
+  `cd build-release && ctest --output-on-failure --stop-on-failure --timeout 180 -I 634,1599`
+  | failures:
+  `PrimeStruct_primestruct_compile_run_smoke_collective_paths_extended_14_14`
+  | notes: collective extended 13 passed first; the map binding inference
+  smoke still expected C++ map pair-sugar rewriting.
 - 2026-05-21 19:58 CEST | pass | mode: release | command:
   `cmake --build build-release --target PrimeStruct_compile_run_tests -j 1`;
   `cd build-release && ctest --output-on-failure -R '^PrimeStruct_primestruct_compile_run_smoke_collective_paths_extended_12_12$' --timeout 180`
