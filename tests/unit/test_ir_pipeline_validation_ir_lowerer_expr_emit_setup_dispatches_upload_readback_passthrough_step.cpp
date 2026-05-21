@@ -508,7 +508,7 @@ TEST_CASE("emitter expr control call-path step rewrites non-method call names") 
           {},
           {{"Vec3", "std/collections/map/count"}});
   REQUIRE(slashlessCanonicalMapAliasPath.has_value());
-  CHECK(*slashlessCanonicalMapAliasPath == "/std/collections/map/count");
+  CHECK(*slashlessCanonicalMapAliasPath == "std/collections/map/count");
 
   const auto slashlessMapAliasPath = primec::emitter::runEmitterExprControlCallPathStep(
       bareExpr,
@@ -516,7 +516,7 @@ TEST_CASE("emitter expr control call-path step rewrites non-method call names") 
       {},
       {{"Vec3", "map/at"}});
   REQUIRE(slashlessMapAliasPath.has_value());
-  CHECK(*slashlessMapAliasPath == "/map/at");
+  CHECK(*slashlessMapAliasPath == "map/at");
 
   const auto slashlessNonMapAliasPath = primec::emitter::runEmitterExprControlCallPathStep(
       bareExpr,
@@ -638,27 +638,27 @@ TEST_CASE("emitter helpers expose source Result cpp bridge types") {
         primec::emitter::sourceResultCppType(true));
 }
 
-TEST_CASE("emitter helper path preference normalizes slashless map helper candidates") {
+TEST_CASE("emitter helper path preference preserves slashless map helper candidates") {
   const std::unordered_map<std::string, std::string> mapAliasOnlyNameMap = {
       {"/map/count", "ps_map_count"},
       {"/map/at", "ps_map_at"},
       {"/map/count_ref", "ps_map_count_ref"},
       {"/map/insert_ref", "ps_map_insert_ref"},
   };
-  CHECK(primec::emitter::preferVectorStdlibHelperPath("map/count", mapAliasOnlyNameMap) == "/map/count");
+  CHECK(primec::emitter::preferVectorStdlibHelperPath("map/count", mapAliasOnlyNameMap) == "map/count");
   CHECK(primec::emitter::preferVectorStdlibHelperPath("std/collections/map/at", mapAliasOnlyNameMap) ==
-        "/std/collections/map/at");
+        "std/collections/map/at");
   CHECK(primec::emitter::preferVectorStdlibHelperPath("map/count_ref", mapAliasOnlyNameMap) ==
-        "/map/count_ref");
+        "map/count_ref");
   CHECK(primec::emitter::preferVectorStdlibHelperPath("std/collections/map/insert_ref", mapAliasOnlyNameMap) ==
-        "/std/collections/map/insert_ref");
+        "std/collections/map/insert_ref");
 
   const std::unordered_map<std::string, std::string> mapStdlibOnlyNameMap = {
       {"/std/collections/map/count", "ps_std_map_count"},
       {"/std/collections/map/insert", "ps_std_map_insert"},
   };
-  CHECK(primec::emitter::preferVectorStdlibHelperPath("map/count", mapStdlibOnlyNameMap) == "/map/count");
-  CHECK(primec::emitter::preferVectorStdlibHelperPath("map/insert", mapStdlibOnlyNameMap) == "/map/insert");
+  CHECK(primec::emitter::preferVectorStdlibHelperPath("map/count", mapStdlibOnlyNameMap) == "map/count");
+  CHECK(primec::emitter::preferVectorStdlibHelperPath("map/insert", mapStdlibOnlyNameMap) == "map/insert");
 
   CHECK(primec::emitter::preferVectorStdlibHelperPath("pkg/Thing/tag", mapAliasOnlyNameMap) == "pkg/Thing/tag");
 }
