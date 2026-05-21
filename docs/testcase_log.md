@@ -554,10 +554,33 @@
   borrowed `tryAt`, `at`, and bracket access still preserve the collection
   template information. The calls-flow collections 431-440 shard was
   stabilized on 2026-05-21 18:33 CEST by retargeting that fixture to the
-  current borrowed access surface. Next stop-on-failure blocker is not yet
-  localized.
+  current borrowed access surface. Next stop-on-failure blocker is
+  `PrimeStruct_primestruct_semantics_calls_flow_collections_calls_flow_collections_441_450`.
+  The calls-flow collections 441-450 shard is failing in stale explicit
+  canonical map parameter fixtures that pass a `map<...>` constructor result
+  directly to a `/std/collections/map<...>` parameter. Current validation
+  reports an argument type mismatch at that call boundary; materializing the
+  constructor result into an explicit canonical binding first still validates.
+  The calls-flow collections 441-450 shard was stabilized on 2026-05-21 18:36
+  CEST by retargeting those fixtures to explicit canonical map locals. Next
+  stop-on-failure blocker is not yet localized.
 
 ## Recent Test Runs
+- 2026-05-21 18:36 CEST | pass | mode: release | command:
+  `cmake --build build-release --target PrimeStruct_semantics_tests -j 1`;
+  `cd build-release && ctest --output-on-failure -R '^PrimeStruct_primestruct_semantics_calls_flow_collections_calls_flow_collections_441_450$' --timeout 180`
+  | failures: none | notes: explicit canonical map parameter fixtures now
+  bind the constructor result to an explicit canonical map local before
+  calling the parameter helper.
+- 2026-05-21 18:36 CEST | fail | mode: release | command:
+  `cd build-release && ctest --output-on-failure --stop-on-failure --timeout 180 -I 340,1599`;
+  `build-release/primec --emit=ir --dump-stage ast-semantic --entry /main <same direct constructor parameter fixtures>`
+  | failures:
+  `PrimeStruct_primestruct_semantics_calls_flow_collections_calls_flow_collections_441_450`
+  | notes: direct constructor-to-canonical-map-parameter calls now report
+  `argument type mismatch ... expected /std/collections/map<...> got map<...>`;
+  representative CLI checks confirmed the same helpers validate when the
+  constructor result is first bound to an explicit canonical map local.
 - 2026-05-21 18:33 CEST | pass | mode: release | command:
   `cmake --build build-release --target PrimeStruct_semantics_tests -j 1`;
   `cd build-release && ctest --output-on-failure -R '^PrimeStruct_primestruct_semantics_calls_flow_collections_calls_flow_collections_431_440$' --timeout 180`

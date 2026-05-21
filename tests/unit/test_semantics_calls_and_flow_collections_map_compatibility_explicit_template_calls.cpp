@@ -477,11 +477,13 @@ sumValues([/std/collections/map<i32, i32>] values) {
 
 [effects(heap_alloc), return<int>]
 main() {
-  return(sumValues(map<i32, i32>(1i32, 4i32, 2i32, 5i32)))
+  [/std/collections/map<i32, i32>] values{map<i32, i32>(1i32, 4i32, 2i32, 5i32)}
+  return(sumValues(values))
 }
 )";
   std::string error;
   CHECK(validateProgram(source, "/main", error));
+  INFO(error);
   CHECK(error.empty());
 }
 
@@ -516,11 +518,13 @@ showValue([/std/collections/map<i32, string>] values) {
 
 [effects(io_out), return<int>]
 main() {
-  return(showValue(map<i32, string>(1i32, "hello"utf8)))
+  [/std/collections/map<i32, string>] values{map<i32, string>(1i32, "hello"utf8)}
+  return(showValue(values))
 }
 )";
   std::string error;
   CHECK(validateProgram(source, "/main", error));
+  INFO(error);
   CHECK(error.empty());
 }
 
