@@ -795,8 +795,26 @@
   14 shard is failing because VM argv printing still lowers `args[0i32]` in a
   print argument through a direct `at` call path that falls into the VM
   entry-argument count-only diagnostic instead of the argv print access path.
+  The argv/CLI 14-15 shards were stabilized on 2026-05-21 22:39 CEST by
+  recognizing semantic-product `array<string>` entry-parameter references in
+  the print access path; the first focused rerun after the code change still
+  failed until the `primec` executable was explicitly rebuilt alongside the
+  doctest binary.
 
 ## Recent Test Runs
+- 2026-05-21 22:39 CEST | pass | mode: release | command:
+  `cmake --build build-release --target primec PrimeStruct_compile_run_tests -j 1`;
+  `cd build-release && ctest --output-on-failure -R '^PrimeStruct_primestruct_compile_run_smoke_argv_and_cli_(14_14|15_15)$' --timeout 180`
+  | failures: none | notes: VM argv print and print-without-newline now route
+  semantic entry-parameter access through the argv print opcodes.
+- 2026-05-21 22:38 CEST | fail | mode: release | command:
+  `cmake --build build-release --target PrimeStruct_compile_run_tests -j 1`;
+  `cd build-release && ctest --output-on-failure -R '^PrimeStruct_primestruct_compile_run_smoke_argv_and_cli_(14_14|15_15)$' --timeout 180`
+  | failures:
+  `PrimeStruct_primestruct_compile_run_smoke_argv_and_cli_14_14`,
+  `PrimeStruct_primestruct_compile_run_smoke_argv_and_cli_15_15`
+  | notes: the code change had not reached the `primec` executable because
+  only the doctest binary was rebuilt.
 - 2026-05-21 22:30 CEST | fail | mode: release | command:
   `cd build-release && ctest --output-on-failure --stop-on-failure --timeout 180 -I 648,1599`
   | failures: `PrimeStruct_primestruct_compile_run_smoke_argv_and_cli_14_14`

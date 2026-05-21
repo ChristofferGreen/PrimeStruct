@@ -25,6 +25,7 @@
 #include "IrLowererOperatorPowAbsSignHelpers.h"
 #include "IrLowererOperatorSaturateRoundingRootsHelpers.h"
 #include "IrLowererReturnInferenceHelpers.h"
+#include "IrLowererSemanticProductTargetAdapters.h"
 #include "IrLowererSetupMathHelpers.h"
 #include "IrLowererSetupTypeCollectionHelpers.h"
 #include "IrLowererStatementBindingHelpers.h"

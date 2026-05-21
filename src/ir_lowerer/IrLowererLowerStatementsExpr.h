@@ -1534,6 +1534,24 @@
 
   emitPrintArg = [&](const Expr &arg, const LocalMap &localsIn, const PrintBuiltin &builtin) -> bool {
     uint64_t flags = encodePrintFlags(builtin.newline, builtin.target == PrintTarget::Err);
+    auto isEntryArgsPrintTarget = [&](const Expr &target) {
+      if (isEntryArgsName(target, localsIn)) {
+        return true;
+      }
+      if (!hasEntryArgs || semanticProgram == nullptr || target.kind != Expr::Kind::Name ||
+          target.name != entryArgsName) {
+        return false;
+      }
+      const auto *bindingFact = findSemanticProductBindingFact(
+          callResolutionAdapters.semanticProductTargets.semanticIndex, target);
+      if (bindingFact == nullptr) {
+        return false;
+      }
+      return bindingFact->name == entryArgsName &&
+             bindingFact->bindingTypeText == "array<string>" &&
+             (bindingFact->siteKind == "parameter" ||
+              bindingFact->siteKind == "parameter-reference");
+    };
     if (arg.kind == Expr::Kind::Call) {
       std::string accessName;
       const bool isBuiltinAccess =
@@ -1555,7 +1573,7 @@
           error = accessName + " requires exactly two arguments";
           return false;
         }
-        if (isEntryArgsName(arg.args.front(), localsIn)) {
+        if (isEntryArgsPrintTarget(arg.args.front())) {
           LocalInfo::ValueKind indexKind = LocalInfo::ValueKind::Unknown;
           if (!resolveValidatedAccessIndexKind(
                   arg.args[1],
