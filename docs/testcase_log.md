@@ -73,9 +73,29 @@
   by retargeting those source guards to current key/value surface metadata,
   collection-pair target facts, internal SoA receiver classification, and
   removal of the statement-call map insert rewrite. Next stop-on-failure
+  blocker is
+  `PrimeStruct_primestruct_ir_pipeline_validation_cases_221_230`. The
+  validation cases 221-230 shard is failing on stale source-validation guards
+  for removed statement-call map insert semantic receiver facts and renamed
+  inline SoA vector semantic target classification after helper migration.
+  The validation cases 221-230 shard was stabilized on 2026-05-21 13:02 CEST
+  by retargeting those guards to statement vector/SoA semantic receiver gates
+  and inline raw SoA vector semantic classification. Next stop-on-failure
   blocker is not yet localized.
 
 ## Recent Test Runs
+- 2026-05-21 13:02 CEST | pass | mode: release | command:
+  `cmake --build build-release --target PrimeStruct_backend_ir_tests -j 1`;
+  `cd build-release && ctest --output-on-failure -R '^PrimeStruct_primestruct_ir_pipeline_validation_cases_221_230$' --timeout 180`
+  | failures: none | notes: source guards now assert statement collection
+  receiver semantic facts and inline raw SoA vector semantic classification.
+- 2026-05-21 13:02 CEST | fail | mode: release | command:
+  `cmake --build build-release -j 1`;
+  `cd build-release && ctest --output-on-failure --stop-on-failure --timeout 180`
+  | failures: `PrimeStruct_primestruct_ir_pipeline_validation_cases_221_230`
+  | notes: stop-on-failure progressed past validation cases 211-220; current
+  blocker is stale source-validation coverage looking for statement-call map
+  insert receiver facts and the old inline SoA vector semantic classifier name.
 - 2026-05-21 12:57 CEST | pass | mode: release | command:
   `cmake --build build-release --target PrimeStruct_backend_ir_tests -j 1`;
   `cd build-release && ctest --output-on-failure -R '^PrimeStruct_primestruct_ir_pipeline_validation_cases_211_220$' --timeout 180`

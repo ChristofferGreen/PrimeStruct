@@ -1046,7 +1046,7 @@ TEST_CASE("ir lowerer skips builtin map insert rewrite for direct experimental m
         std::string::npos);
 }
 
-TEST_CASE("ir lowerer statement map insert rewrite uses semantic product receiver ids first") {
+TEST_CASE("ir lowerer statement collection receiver gates use semantic product ids first") {
   auto readText = [](const std::filesystem::path &path) {
     std::ifstream file(path);
     CHECK(file.is_open());
@@ -1077,9 +1077,13 @@ TEST_CASE("ir lowerer statement map insert rewrite uses semantic product receive
         std::string::npos);
   CHECK(statementSource.find("findSemanticProductCollectionSpecialization(*semanticIndex, receiverExpr)") !=
         std::string::npos);
-  CHECK(statementSource.find("collectionFact->keyTypeTextId") !=
+  CHECK(statementSource.find("collectionFact->collectionFamilyId") !=
         std::string::npos);
-  CHECK(statementSource.find("collectionFact->valueTypeTextId") !=
+  CHECK(statementSource.find("collectionFact->elementTypeTextId") !=
+        std::string::npos);
+  CHECK(statementSource.find("collectionFact->keyTypeTextId") ==
+        std::string::npos);
+  CHECK(statementSource.find("collectionFact->valueTypeTextId") ==
         std::string::npos);
   CHECK(statementSource.find("findSemanticProductQueryFact(semanticProgram, *semanticIndex, receiverExpr)") !=
         std::string::npos);
@@ -1087,27 +1091,21 @@ TEST_CASE("ir lowerer statement map insert rewrite uses semantic product receive
         statementSource.find("queryFact->bindingTypeText,"));
   CHECK(statementSource.find("queryFact->queryTypeTextId") <
         statementSource.find("queryFact->queryTypeText,"));
-  CHECK(statementSource.find("tryPopulateFromSemanticReceiverFact(\n"
-                             "            *canonicalReceiverExpr, targetInfoOut, hasSemanticMapReceiverFact)") !=
+  CHECK(statementSource.find("resolveStatementVectorReceiverTargetInfoFromSemanticFacts(") !=
         std::string::npos);
   const size_t semanticReceiverGate = statementSource.find(
-      "tryPopulateFromSemanticReceiverFact(\n"
-      "            *canonicalReceiverExpr, targetInfoOut, hasSemanticMapReceiverFact)");
+      "resolveStatementVectorReceiverTargetInfoFromSemanticFacts(");
   const size_t canonicalResolver = statementSource.find(
-      "resolveCollectionPairTypeInfo(*canonicalReceiverExpr,\n"
-      "                                   localsIn,\n"
-      "                                   {},\n"
-      "                                   semanticProgram,\n"
-      "                                   semanticIndex)",
+      "resolveArrayVectorAccessTargetInfo(callExpr.args[receiverIndex]",
       semanticReceiverGate);
   const size_t keyValueTargetGate =
-      statementSource.find("if (canonicalTargetInfo.isKeyValueTarget &&",
+      statementSource.find("if (hasSemanticVectorFact) {",
                            semanticReceiverGate);
   REQUIRE(semanticReceiverGate != std::string::npos);
   REQUIRE(canonicalResolver != std::string::npos);
   REQUIRE(keyValueTargetGate != std::string::npos);
-  CHECK(semanticReceiverGate < canonicalResolver);
-  CHECK(canonicalResolver < keyValueTargetGate);
+  CHECK(semanticReceiverGate < keyValueTargetGate);
+  CHECK(keyValueTargetGate < canonicalResolver);
   CHECK(callsStepSource.find("input.semanticProgram,\n"
                              "      input.semanticIndex);") !=
         std::string::npos);
@@ -1431,7 +1429,9 @@ TEST_CASE("ir lowerer inline dispatch SoA vector fallback uses semantic receiver
   REQUIRE(std::filesystem::exists(inlineDispatchPath));
   const std::string source = readText(inlineDispatchPath);
 
-  CHECK(source.find("auto classifyInlineSoaVectorTargetFromSemanticFacts =") !=
+  CHECK(source.find("auto isInlineRawBuiltinSoaVectorTypeText =") !=
+        std::string::npos);
+  CHECK(source.find("isRawBuiltinSoaVectorTarget = [&](const Expr &targetExpr)") !=
         std::string::npos);
   CHECK(source.find("findSemanticProductCollectionSpecialization(*semanticIndexPtr, targetExpr)") !=
         std::string::npos);
@@ -1446,20 +1446,24 @@ TEST_CASE("ir lowerer inline dispatch SoA vector fallback uses semantic receiver
   CHECK(source.find("findSemanticProductLocalAutoFact(semanticProgram, *semanticIndexPtr, targetExpr)") !=
         std::string::npos);
 
-  const size_t semanticGate =
-      source.find("return isSoaVectorTarget(targetExpr, localsIn);");
+  const size_t semanticGate = source.find(
+      "if (semanticProgram != nullptr && semanticIndexPtr != nullptr &&\n"
+      "        targetExpr.semanticNodeId != 0) {");
+  const size_t localFallback =
+      source.find("if (targetExpr.kind == Expr::Kind::Name)", semanticGate);
   const size_t fallbackCallback =
-      source.find("[&](const Expr &receiverExpr) { return isSemanticOrLegacySoaVectorTarget(receiverExpr); }");
+      source.find("[&](const Expr &receiverExpr) { return isRawBuiltinSoaVectorTarget(receiverExpr); }");
   REQUIRE(semanticGate != std::string::npos);
+  REQUIRE(localFallback != std::string::npos);
   REQUIRE(fallbackCallback != std::string::npos);
-  CHECK(semanticGate < fallbackCallback);
+  CHECK(semanticGate < localFallback);
+  CHECK(localFallback < fallbackCallback);
   CHECK(source.find("[&](const Expr &receiverExpr) { return isSoaVectorTarget(receiverExpr, localsIn); }") ==
         std::string::npos);
 
-  CHECK(source.find("if (semanticFact == InlineVectorTargetFact::NonVector) {\n"
-                    "      return false;\n"
-                    "    }\n"
-                    "    return isSoaVectorTarget(targetExpr, localsIn);") !=
+  CHECK(source.find("isInlineRawBuiltinSoaVectorTypeText(queryFact->bindingTypeTextId,") !=
+        std::string::npos);
+  CHECK(source.find("return isSoaVectorTarget(targetExpr, localsIn);") ==
         std::string::npos);
 }
 
