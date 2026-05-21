@@ -3,7 +3,7 @@
 ## Current Known Failures
 - [ ] release gate baseline | mode: release | command:
   `./scripts/compile.sh --release` | first_seen: 2026-05-21 07:37 CEST |
-  last_seen: 2026-05-21 07:37 CEST | next:
+  last_seen: 2026-05-21 09:14 CEST | next:
   `cmake --build build-release --target PrimeStruct_compile_run_tests -j 1`;
   `cd build-release && ./PrimeStruct_compile_run_tests --test-suite=primestruct.compile.run.emitters.cpp --source-file="*test_compile_run_emitters_canonical_map_helper_calls.cpp" --no-skip`
   | notes: full gate passed 77% with 365 failures out of 1599 tests.
@@ -14,6 +14,15 @@
   helpers, and source-lock tests still look for deleted map/SoA bridge strings.
 
 ## Recent Test Runs
+- 2026-05-21 09:14 CEST | fail | mode: release | command:
+  `cmake --build build-release --target PrimeStruct_compile_run_tests -j 1`;
+  `cd build-release && ./PrimeStruct_compile_run_tests --test-suite=primestruct.compile.run.emitters.cpp --source-file="*test_compile_run_emitters_canonical_map_helper_calls.cpp" --no-skip`
+  | failures: 12 cases in `test_compile_run_emitters_canonical_map_helper_calls.cpp`
+  | notes: repeated focused stabilization rerun still fails with the same
+  signatures: imported vector `at`/`at_unsafe` remain lowered as `/at` and
+  `/at_unsafe`, canonical map `count(true)` method sugar still reaches native
+  expression lowering as `/std/collections/map/count`, and several map helper
+  expectations are stale after canonical `.prime` helper precedence.
 - 2026-05-21 07:38 CEST | fail | mode: release | command:
   `cmake --build build-release --target PrimeStruct_compile_run_tests -j 1`;
   `cd build-release && ./PrimeStruct_compile_run_tests --test-suite=primestruct.compile.run.emitters.cpp --source-file="*test_compile_run_emitters_canonical_map_helper_calls.cpp" --no-skip`
