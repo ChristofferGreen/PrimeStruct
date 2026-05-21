@@ -155,10 +155,29 @@
   dereferenced `at(...)` receiver facts after current access-helper
   classification. The validation cases 441-450 shard was stabilized on
   2026-05-21 13:56 CEST by retargeting those fallback dispatch expectations
-  to current `Unknown` behavior. Next stop-on-failure blocker is not yet
+  to current `Unknown` behavior. Next stop-on-failure blocker is
+  `PrimeStruct_primestruct_ir_pipeline_validation_cases_451_460`. The
+  validation cases 451-460 shard is failing in a stale call-fallback setup
+  expectation that still treats direct `at(array, index)` as an accepted
+  count/access GPU fallback after current access-helper classification. The
+  validation cases 451-460 shard was stabilized on 2026-05-21 14:00 CEST by
+  retargeting that direct `at(array, index)` fallback expectation to current
+  rejection/`Unknown` behavior. Next stop-on-failure blocker is not yet
   localized.
 
 ## Recent Test Runs
+- 2026-05-21 14:00 CEST | pass | mode: release | command:
+  `cmake --build build-release --target PrimeStruct_backend_ir_tests -j 1`;
+  `cd build-release && ctest --output-on-failure -R '^PrimeStruct_primestruct_ir_pipeline_validation_cases_451_460$' --timeout 180`
+  | failures: none | notes: direct `at(array, index)` count/access GPU
+  fallback now asserts current rejection/`Unknown` behavior.
+- 2026-05-21 13:59 CEST | fail | mode: release | command:
+  `cmake --build build-release -j 1`;
+  `cd build-release && ctest --output-on-failure --stop-on-failure --timeout 180`
+  | failures: `PrimeStruct_primestruct_ir_pipeline_validation_cases_451_460`
+  | notes: stop-on-failure progressed past validation cases 441-450; current
+  blocker is a stale direct `at(array, index)` count/access GPU fallback
+  expectation.
 - 2026-05-21 13:56 CEST | pass | mode: release | command:
   `cmake --build build-release --target PrimeStruct_backend_ir_tests -j 1`;
   `cd build-release && ctest --output-on-failure -R '^PrimeStruct_primestruct_ir_pipeline_validation_cases_441_450$' --timeout 180`

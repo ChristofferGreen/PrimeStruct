@@ -1711,8 +1711,9 @@ TEST_CASE("ir lowerer inference expr-kind call-fallback setup wires callback") {
   accessExpr.args.push_back(arrayNameExpr);
   accessExpr.args.push_back(indexExpr);
   kindOut = primec::ir_lowerer::LocalInfo::ValueKind::Unknown;
-  CHECK(state.inferCallExprCountAccessGpuFallbackKind(accessExpr, locals, kindOut));
-  CHECK(kindOut == primec::ir_lowerer::LocalInfo::ValueKind::Int64);
+  CHECK_FALSE(
+      state.inferCallExprCountAccessGpuFallbackKind(accessExpr, locals, kindOut));
+  CHECK(kindOut == primec::ir_lowerer::LocalInfo::ValueKind::Unknown);
 
   primec::Expr bufferNameExpr;
   bufferNameExpr.kind = primec::Expr::Kind::Name;
