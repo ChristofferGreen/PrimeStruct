@@ -210,7 +210,7 @@ main() {
   CHECK(error.find("unknown call target: /std/collections/vector/capacity") != std::string::npos);
 }
 
-TEST_CASE("count helper validates on soa_vector binding") {
+TEST_CASE("count helper rejects retired soa_vector binding") {
   const std::string source = R"(
 Particle() {
   [i32] x{1i32}
@@ -223,8 +223,10 @@ main() {
 }
 )";
   std::string error;
-  CHECK(validateProgram(source, "/main", error));
-  CHECK(error.empty());
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  INFO(error);
+  CHECK(error.find("soa_vector<T> is not supported; use soa<T>") !=
+        std::string::npos);
 }
 
 TEST_CASE("count builtin validates on method calls") {
@@ -270,7 +272,7 @@ main() {
   CHECK(error.empty());
 }
 
-TEST_CASE("count method validates on soa_vector binding") {
+TEST_CASE("count method rejects retired soa_vector binding") {
   const std::string source = R"(
 Particle() {
   [i32] x{1i32}
@@ -283,11 +285,13 @@ main() {
 }
 )";
   std::string error;
-  CHECK(validateProgram(source, "/main", error));
-  CHECK(error.empty());
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  INFO(error);
+  CHECK(error.find("soa_vector<T> is not supported; use soa<T>") !=
+        std::string::npos);
 }
 
-TEST_CASE("imported count forms validate on builtin soa_vector binding") {
+TEST_CASE("imported count forms reject retired soa_vector binding") {
   const std::string source = R"(
 import /std/collections/*
 
@@ -305,11 +309,13 @@ main() {
 }
 )";
   std::string error;
-  CHECK(validateProgram(source, "/main", error));
-  CHECK(error.empty());
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  INFO(error);
+  CHECK(error.find("soa_vector<T> is not supported; use soa<T>") !=
+        std::string::npos);
 }
 
-TEST_CASE("explicit old-surface soa_vector count rejects as statement-only helper") {
+TEST_CASE("explicit old-surface soa_vector count rejects retired type spelling") {
   const std::string source = R"(
 Particle() {
   [i32] x{1i32}
@@ -323,7 +329,8 @@ main() {
   )";
   std::string error;
   CHECK_FALSE(validateProgram(source, "/main", error));
-  CHECK(error.find("count is only supported as a statement") !=
+  INFO(error);
+  CHECK(error.find("soa_vector<T> is not supported; use soa<T>") !=
         std::string::npos);
 }
 
