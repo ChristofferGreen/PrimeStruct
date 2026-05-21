@@ -81,9 +81,29 @@
   The validation cases 221-230 shard was stabilized on 2026-05-21 13:02 CEST
   by retargeting those guards to statement vector/SoA semantic receiver gates
   and inline raw SoA vector semantic classification. Next stop-on-failure
-  blocker is not yet localized.
+  blocker is
+  `PrimeStruct_primestruct_ir_pipeline_validation_cases_231_240`. The
+  validation cases 231-240 shard is failing on stale source-validation guards
+  for renamed borrowed key/value receiver rewrite paths and removed
+  map-specific late expression fallback anchors. The validation cases 231-240
+  shard was stabilized on 2026-05-21 13:09 CEST by retargeting those guards to
+  the renamed borrowed key/value receiver rewrite and generic key/value late
+  expression fallback gates. Next stop-on-failure blocker is not yet localized.
 
 ## Recent Test Runs
+- 2026-05-21 13:09 CEST | pass | mode: release | command:
+  `cmake --build build-release --target PrimeStruct_backend_ir_tests -j 1`;
+  `cd build-release && ctest --output-on-failure -R '^PrimeStruct_primestruct_ir_pipeline_validation_cases_231_240$' --timeout 180`
+  | failures: none | notes: source guards now assert borrowed key/value
+  receiver rewrite naming and generic key/value helper-family fallback paths.
+- 2026-05-21 13:06 CEST | fail | mode: release | command:
+  `cmake --build build-release -j 1`;
+  `cd build-release && ctest --output-on-failure --stop-on-failure --timeout 180`
+  | failures: `PrimeStruct_primestruct_ir_pipeline_validation_cases_231_240`
+  | notes: stop-on-failure progressed past validation cases 221-230; current
+  blocker is stale source-validation coverage looking for
+  `rewriteImplicitBorrowedMapReceiverExpr` and direct map-family fallback
+  source anchors that now use generic key/value collection helper gates.
 - 2026-05-21 13:02 CEST | pass | mode: release | command:
   `cmake --build build-release --target PrimeStruct_backend_ir_tests -j 1`;
   `cd build-release && ctest --output-on-failure -R '^PrimeStruct_primestruct_ir_pipeline_validation_cases_221_230$' --timeout 180`

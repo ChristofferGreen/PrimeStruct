@@ -1780,7 +1780,7 @@ TEST_CASE("ir lowerer tail canonical experimental map helper rewrite uses semant
   CHECK(localFallbackPos < semanticReceiverResolverPos);
 }
 
-TEST_CASE("ir lowerer tail borrowed map receiver rewrite uses semantic receiver facts first") {
+TEST_CASE("ir lowerer tail borrowed key/value receiver rewrite uses semantic receiver facts first") {
   auto readText = [](const std::filesystem::path &path) {
     std::ifstream file(path);
     CHECK(file.is_open());
@@ -1802,17 +1802,17 @@ TEST_CASE("ir lowerer tail borrowed map receiver rewrite uses semantic receiver 
   const std::string tailDispatchSource = readText(tailDispatchPath);
 
   const size_t rewritePos =
-      tailDispatchSource.find("auto rewriteImplicitBorrowedMapReceiverExpr =");
+      tailDispatchSource.find("auto rewriteImplicitBorrowedKeyValueReceiverExpr =");
   REQUIRE(rewritePos != std::string::npos);
   const size_t semanticIndexPos =
-      tailDispatchSource.find("borrowedMapReceiverSemanticIndex", rewritePos);
+      tailDispatchSource.find("borrowedKeyValueReceiverSemanticIndex", rewritePos);
   const size_t semanticMapResolverPos = tailDispatchSource.find(
       "ir_lowerer::resolveCollectionPairTypeInfo(\n"
       "                    receiverExpr,\n"
       "                    localsIn,\n"
       "                    inferCallKeyValueTargetInfo,\n"
       "                    semanticProgram,\n"
-      "                    borrowedMapReceiverSemanticIndexPtr)",
+      "                    borrowedKeyValueReceiverSemanticIndexPtr)",
       rewritePos);
   const size_t wrappedMapGatePos = tailDispatchSource.find(
       "return keyValueTargetInfo.isKeyValueTarget && keyValueTargetInfo.isWrappedKeyValueTarget;",
@@ -1831,14 +1831,14 @@ TEST_CASE("ir lowerer tail borrowed map receiver rewrite uses semantic receiver 
   REQUIRE(rewriteEndPos != std::string::npos);
   CHECK(semanticIndexPos < semanticMapResolverPos);
   CHECK(semanticMapResolverPos < wrappedMapGatePos);
-  const bool noOldNameLocalProbeInMapRewrite =
+  const bool noOldNameLocalProbeInKeyValueRewrite =
       oldNameLocalProbePos == std::string::npos ||
       oldNameLocalProbePos > rewriteEndPos;
-  const bool noOldArgsPackLocalProbeInMapRewrite =
+  const bool noOldArgsPackLocalProbeInKeyValueRewrite =
       oldArgsPackLocalProbePos == std::string::npos ||
       oldArgsPackLocalProbePos > rewriteEndPos;
-  CHECK(noOldNameLocalProbeInMapRewrite);
-  CHECK(noOldArgsPackLocalProbeInMapRewrite);
+  CHECK(noOldNameLocalProbeInKeyValueRewrite);
+  CHECK(noOldArgsPackLocalProbeInKeyValueRewrite);
 }
 
 TEST_CASE("ir lowerer native tail map access inference uses semantic receiver facts first") {
@@ -2081,7 +2081,7 @@ TEST_CASE("ir lowerer late expression fallback guards explicit map helper defs")
         std::string::npos);
   CHECK(source.find("directCallee = findDirectInternalSoaDefinition(rawPath);") !=
         std::string::npos);
-  CHECK(source.find("if (directCallee == nullptr) {") !=
+  CHECK(source.find("if (directCallee == nullptr && !expr.isMethodCall) {") !=
         std::string::npos);
   CHECK(source.find("directCallee = findDirectStructDefinition(expr);") !=
         std::string::npos);
@@ -2093,7 +2093,8 @@ TEST_CASE("ir lowerer late expression fallback guards explicit map helper defs")
         std::string::npos);
   CHECK(source.find("(helperName == \"count\" || helperName == \"contains\" ||") !=
         std::string::npos);
-  CHECK(source.find("helperName == \"tryAt\" || helperName == \"insert\" ||\n"
+  CHECK(source.find("helperName == \"tryAt\" || helperName == \"at\" ||\n"
+                    "                 helperName == \"at_unsafe\" || helperName == \"insert\" ||\n"
                     "                 helperName == \"insert_ref\") &&") !=
         std::string::npos);
   CHECK(source.find("const size_t generatedSuffix = helperPath.find(\"__\");") ==
@@ -2102,17 +2103,21 @@ TEST_CASE("ir lowerer late expression fallback guards explicit map helper defs")
         std::string::npos);
   CHECK(source.find("const std::string overloadPrefix = rawPath + \"__ov\";") ==
         std::string::npos);
-  CHECK(source.find("rawPath.rfind(\"/map/\", 0) == 0 ||") !=
+  CHECK(source.find("rawPath.rfind(\"/map/\", 0) == 0 ||") ==
         std::string::npos);
-  CHECK(source.find("rawPath.rfind(\"/std/collections/experimental_map/\", 0) == 0) &&") !=
+  CHECK(source.find("rawPath.rfind(\"/std/collections/experimental_map/\", 0) == 0) &&") ==
+        std::string::npos);
+  CHECK(source.find("isDirectCollectionHelperPath(rawPath)") !=
+        std::string::npos);
+  CHECK(source.find("isCanonicalKeyValueHelperFamilyPath(rawPath)") !=
         std::string::npos);
   CHECK(source.find("directCallee = findDirectHelperDefinition(rawPath);") !=
         std::string::npos);
-  CHECK(source.find("directCallee = findDirectHelperDefinition(resolveExprPath(expr));") !=
+  CHECK(source.find("directCallee = findDirectHelperDefinition(resolvedExprPath);") !=
         std::string::npos);
   CHECK(source.find("if (!emitInlineDefinitionCall(expr, *directCallee, localsIn, true)) {") !=
         std::string::npos);
-  CHECK(source.find("rawPath.rfind(\"/std/collections/map/\", 0) == 0 &&") !=
+  CHECK(source.find("rawPath.rfind(\"/std/collections/map/\", 0) == 0 &&") ==
         std::string::npos);
   CHECK(source.find("getBuiltinArrayAccessName(expr, accessName)") !=
         std::string::npos);
