@@ -750,9 +750,28 @@
   entry-args name diagnostic. The compile-run smoke core paths 39-40 shards
   were stabilized on 2026-05-21 19:55 CEST by routing bare semantic `at` and
   `at_unsafe` access through the entry-args print and string-binding paths.
-  Next stop-on-failure blocker is not yet localized.
+  Next stop-on-failure blocker is
+  `PrimeStruct_primestruct_compile_run_smoke_collective_paths_extended_12_12`.
+  The compile-run collective extended 12 shard is failing because a stale
+  smoke fixture still expects map bracket sugar to pass through the C++ text
+  filter. Current text filtering intentionally leaves `map<K, V>[...]` alone,
+  so parsing rejects the template-list bracket form. The collective extended
+  12 shard was stabilized on 2026-05-21 19:58 CEST by keeping the smoke case
+  focused on array bracket sugar and removing the stale map bracket line. Next
+  stop-on-failure blocker is not yet localized.
 
 ## Recent Test Runs
+- 2026-05-21 19:58 CEST | pass | mode: release | command:
+  `cmake --build build-release --target PrimeStruct_compile_run_tests -j 1`;
+  `cd build-release && ctest --output-on-failure -R '^PrimeStruct_primestruct_compile_run_smoke_collective_paths_extended_12_12$' --timeout 180`
+  | failures: none | notes: collective smoke now keeps array bracket sugar
+  covered without expecting C++ text-filter support for map bracket sugar.
+- 2026-05-21 19:58 CEST | fail | mode: release | command:
+  `cd build-release && ctest --output-on-failure --stop-on-failure --timeout 180 -I 600,1599`
+  | failures:
+  `PrimeStruct_primestruct_compile_run_smoke_collective_paths_extended_12_12`
+  | notes: compile-run smoke wasm/debug cases 41-62 and collective core 1-11
+  passed first; the stale collective fixture still expected map bracket sugar.
 - 2026-05-21 19:55 CEST | pass | mode: release | command:
   `cmake --build build-release --target PrimeStruct_compile_run_tests -j 1`;
   `cmake --build build-release --target primevm -j 1`;

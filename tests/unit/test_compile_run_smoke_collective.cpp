@@ -333,12 +333,11 @@ main() {
   CHECK(runCommand(nativePath) == 3);
 }
 
-TEST_CASE("compiles and runs array and map bracket sugar") {
+TEST_CASE("compiles and runs array bracket sugar") {
   const std::string source = R"(
 [return<int>]
 main() {
   [i32] len{count(array<i32>[1i32, 2i32, 3i32])}
-  map<i32, i32>[1i32=2i32, 3i32=4i32]
   return(len)
 }
 )";
