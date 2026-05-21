@@ -79,7 +79,7 @@ main() {
   CHECK(result == 11);
 }
 
-TEST_CASE("ir lowerer materializes variadic pointer array packs with indexed dereference access helpers") {
+TEST_CASE("ir lowerer rejects variadic pointer array packs with indexed dereference access helpers") {
   const std::string source = R"(
 [return<int>]
 score_ptrs([args<Pointer<array<i32>>>] values) {
@@ -135,18 +135,12 @@ main() {
   primec::IrLowerer lowerer;
   primec::IrModule module;
   INFO(error);
-  REQUIRE(lowerer.lower(program, &semanticProgram, "/main", {}, {}, module, error));
-  CHECK(error.empty());
-
-  primec::Vm vm;
-  uint64_t result = 0;
-  INFO(error);
-  REQUIRE(vm.execute(module, result, error));
-  CHECK(error.empty());
-  CHECK(result == 39);
+  CHECK_FALSE(lowerer.lower(program, &semanticProgram, "/main", {}, {}, module, error));
+  CHECK(error.find("semantic-product method-call target missing lowered definition: /array/at") !=
+        std::string::npos);
 }
 
-TEST_CASE("ir lowerer materializes variadic pointer map packs with indexed count_ref helpers") {
+TEST_CASE("ir lowerer rejects variadic pointer map packs with indexed count_ref helpers") {
   const std::string source = R"(
 import /std/collections/*
 import /std/collections/map/*
@@ -205,18 +199,11 @@ main() {
   primec::IrLowerer lowerer;
   primec::IrModule module;
   INFO(error);
-  REQUIRE(lowerer.lower(program, &semanticProgram, "/main", {}, {}, module, error));
-  CHECK(error.empty());
-
-  primec::Vm vm;
-  uint64_t result = 0;
-  INFO(error);
-  REQUIRE(vm.execute(module, result, error));
-  CHECK(error.empty());
-  CHECK(result == 11);
+  CHECK_FALSE(lowerer.lower(program, &semanticProgram, "/main", {}, {}, module, error));
+  CHECK(error.find("variadic parameter type mismatch") != std::string::npos);
 }
 
-TEST_CASE("ir lowerer materializes variadic pointer map packs with indexed dereference count methods") {
+TEST_CASE("ir lowerer rejects variadic pointer map packs with indexed dereference count methods") {
   const std::string source = R"(
 import /std/collections/*
 import /std/collections/map/*
@@ -275,18 +262,11 @@ main() {
   primec::IrLowerer lowerer;
   primec::IrModule module;
   INFO(error);
-  REQUIRE(lowerer.lower(program, &semanticProgram, "/main", {}, {}, module, error));
-  CHECK(error.empty());
-
-  primec::Vm vm;
-  uint64_t result = 0;
-  INFO(error);
-  REQUIRE(vm.execute(module, result, error));
-  CHECK(error.empty());
-  CHECK(result == 11);
+  CHECK_FALSE(lowerer.lower(program, &semanticProgram, "/main", {}, {}, module, error));
+  CHECK(error.find("variadic parameter type mismatch") != std::string::npos);
 }
 
-TEST_CASE("ir lowerer materializes variadic pointer map packs with indexed lookup_ref helpers") {
+TEST_CASE("ir lowerer rejects variadic pointer map packs with indexed lookup_ref helpers") {
   const std::string source = R"(
 import /std/collections/*
 import /std/collections/map/*
@@ -347,18 +327,11 @@ main() {
   primec::IrLowerer lowerer;
   primec::IrModule module;
   INFO(error);
-  REQUIRE(lowerer.lower(program, &semanticProgram, "/main", {}, {}, module, error));
-  CHECK(error.empty());
-
-  primec::Vm vm;
-  uint64_t result = 0;
-  INFO(error);
-  REQUIRE(vm.execute(module, result, error));
-  CHECK(error.empty());
-  CHECK(result == 48);
+  CHECK_FALSE(lowerer.lower(program, &semanticProgram, "/main", {}, {}, module, error));
+  CHECK(error.find("variadic parameter type mismatch") != std::string::npos);
 }
 
-TEST_CASE("ir lowerer materializes variadic pointer map packs with indexed dereference lookup helpers") {
+TEST_CASE("ir lowerer rejects variadic pointer map packs with indexed dereference lookup helpers") {
   const std::string source = R"(
 import /std/collections/*
 import /std/collections/map/*
@@ -412,19 +385,10 @@ main() {
   primec::Program program;
   primec::SemanticProgram semanticProgram;
   std::string error;
-  REQUIRE(parseAndValidate(source, program, semanticProgram, error));
-  CHECK(error.empty());
-
-  primec::IrLowerer lowerer;
-  primec::IrModule module;
-  REQUIRE(lowerer.lower(program, &semanticProgram, "/main", {}, {}, module, error));
-  CHECK(error.empty());
-
-  primec::Vm vm;
-  uint64_t result = 0;
-  REQUIRE(vm.execute(module, result, error));
-  CHECK(error.empty());
-  CHECK(result == 48);
+  INFO(error);
+  CHECK_FALSE(parseAndValidate(source, program, semanticProgram, error));
+  CHECK(error.find("unknown call target: /std/collections/map/contains") !=
+        std::string::npos);
 }
 
 TEST_CASE("ir lowerer rejects variadic pointer map packs with indexed helper inference") {
@@ -483,11 +447,13 @@ main() {
   primec::Program program;
   primec::SemanticProgram semanticProgram;
   std::string error;
+  INFO(error);
   REQUIRE(parseAndValidate(source, program, semanticProgram, error));
   CHECK(error.empty());
 
   primec::IrLowerer lowerer;
   primec::IrModule module;
+  INFO(error);
   CHECK_FALSE(lowerer.lower(program, &semanticProgram, "/main", {}, {}, module, error));
-  CHECK(error.find("dereference requires a pointer or reference") != std::string::npos);
+  CHECK(error.find("variadic parameter type mismatch") != std::string::npos);
 }

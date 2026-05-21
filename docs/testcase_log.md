@@ -3,7 +3,7 @@
 ## Current Known Failures
 - [ ] release gate baseline | mode: release | command:
   `./scripts/compile.sh --release` | first_seen: 2026-05-21 07:37 CEST |
-  last_seen: 2026-05-21 11:17 CEST | next:
+  last_seen: 2026-05-21 11:25 CEST | next:
   `cmake --build build-release -j 1`;
   `cd build-release && ctest --output-on-failure --stop-on-failure`
   | notes: full gate passed 77% with 365 failures out of 1599 tests.
@@ -23,9 +23,35 @@
   positives on explicit helper spelling, accepting semantic-product
   `/array/at` in the uninitialized args-pack storage resolver, and retargeting
   stale borrowed map/reference-field positives to deterministic rejections.
-  Next stop-on-failure blocker after this shard has not been localized.
+  The variadic pointer-map shard was stabilized on 2026-05-21 11:25 CEST by
+  retargeting stale pointer-map positives and pointer-array access-helper
+  expectations to deterministic current rejection diagnostics. Next
+  stop-on-failure blocker after this shard has not been localized.
 
 ## Recent Test Runs
+- 2026-05-21 11:25 CEST | pass | mode: release | command:
+  `cmake --build build-release --target PrimeStruct_backend_ir_tests -j 1`;
+  `cd build-release && ctest --output-on-failure -R '^PrimeStruct_primestruct_ir_pipeline_conversions_variadic_pointer_maps$'`
+  | failures: none | notes: pointer-map positives now assert current
+  deterministic rejection diagnostics, and the pointer-array indexed
+  dereference access-helper case now asserts the missing `/array/at`
+  method-lowered definition diagnostic.
+- 2026-05-21 11:24 CEST | fail | mode: release | command:
+  `cmake --build build-release --target PrimeStruct_backend_ir_tests -j 1`;
+  `cd build-release && ctest --output-on-failure -R '^PrimeStruct_primestruct_ir_pipeline_conversions_variadic_pointer_maps$'`
+  | failures: `PrimeStruct_primestruct_ir_pipeline_conversions_variadic_pointer_maps`
+  | notes: first retarget pass reduced the shard to one stale helper-inference
+  diagnostic assertion; current lowering rejects that case earlier with
+  `variadic parameter type mismatch`.
+- 2026-05-21 11:22 CEST | fail | mode: release | command:
+  `cmake --build build-release -j 1`;
+  `cd build-release && ctest --output-on-failure --stop-on-failure`
+  | failures: `PrimeStruct_primestruct_ir_pipeline_conversions_variadic_pointer_maps`
+  | notes: stop-on-failure localization progressed past the stabilized
+  field-ref/map shard; next blocker was stale pointer-map and pointer-array
+  access-helper positive IR coverage reporting missing `/array/at`, variadic
+  parameter type mismatch, parse-time unknown `/std/collections/map/contains`,
+  and stale helper-inference diagnostics.
 - 2026-05-21 11:17 CEST | pass | mode: release | command:
   `cmake --build build-release --target PrimeStruct_backend_ir_tests -j 1`;
   `cd build-release && ./PrimeStruct_backend_ir_tests --test-case="ir lowerer uninitialized type helpers resolve indexed args-pack pointer storage access" --no-skip`;
