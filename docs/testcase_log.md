@@ -88,9 +88,40 @@
   map-specific late expression fallback anchors. The validation cases 231-240
   shard was stabilized on 2026-05-21 13:09 CEST by retargeting those guards to
   the renamed borrowed key/value receiver rewrite and generic key/value late
-  expression fallback gates. Next stop-on-failure blocker is not yet localized.
+  expression fallback gates. Next stop-on-failure blocker is
+  `PrimeStruct_primestruct_ir_pipeline_validation_cases_241_250`. The
+  validation cases 241-250 shard is failing on a stale rooted map alias source
+  guard and an indexed assignment semantic collection-fact regression where a
+  semantic vector element assignment falls back to local/dereference assignment
+  validation. A focused rerun after the source-guard retarget still fails the
+  indexed assignment case because bare `at` access recognition does not yet
+  consume semantic vector helper alias facts before local/dereference fallback.
+  The validation cases 241-250 shard was stabilized on 2026-05-21 13:20 CEST
+  by retargeting the rooted rewrite source guard and adding a semantic-gated
+  bare `at`/`at_unsafe` indexed assignment fallback for proven array/vector
+  targets. Next stop-on-failure blocker is not yet localized.
 
 ## Recent Test Runs
+- 2026-05-21 13:20 CEST | pass | mode: release | command:
+  `cmake --build build-release --target PrimeStruct_backend_ir_tests -j 1`;
+  `cd build-release && ctest --output-on-failure -R '^PrimeStruct_primestruct_ir_pipeline_validation_cases_241_250$' --timeout 180`
+  | failures: none | notes: rooted rewrite source guard is current, and
+  semantic array/vector facts now allow bare indexed assignment access while
+  scalar semantic facts reject before stale vector locals.
+- 2026-05-21 13:14 CEST | fail | mode: release | command:
+  `cmake --build build-release --target PrimeStruct_backend_ir_tests -j 1`;
+  `cd build-release && ctest --output-on-failure -R '^PrimeStruct_primestruct_ir_pipeline_validation_cases_241_250$' --timeout 180`
+  | failures: `PrimeStruct_primestruct_ir_pipeline_validation_cases_241_250`
+  | notes: stale rooted map alias source guard is retargeted; indexed
+  assignment still rejects bare `at` before semantic vector helper alias facts
+  can classify the target.
+- 2026-05-21 13:12 CEST | fail | mode: release | command:
+  `cmake --build build-release -j 1`;
+  `cd build-release && ctest --output-on-failure --stop-on-failure --timeout 180`
+  | failures: `PrimeStruct_primestruct_ir_pipeline_validation_cases_241_250`
+  | notes: stop-on-failure progressed past validation cases 231-240; current
+  blocker is stale rooted map alias source coverage plus indexed assignment
+  failing to consume semantic collection facts before local/deref fallback.
 - 2026-05-21 13:09 CEST | pass | mode: release | command:
   `cmake --build build-release --target PrimeStruct_backend_ir_tests -j 1`;
   `cd build-release && ctest --output-on-failure -R '^PrimeStruct_primestruct_ir_pipeline_validation_cases_231_240$' --timeout 180`

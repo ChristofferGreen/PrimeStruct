@@ -2355,7 +2355,7 @@ TEST_CASE("ir lowerer packed result buffer helpers normalize scoped gfx calls") 
   CHECK(source.find("std::string normalized = valueExpr.name;") == std::string::npos);
 }
 
-TEST_CASE("ir lowerer rooted map alias definition fallback covers insert helpers") {
+TEST_CASE("ir lowerer rooted semantic rewrite fallback avoids helper allowlists") {
   auto readText = [](const std::filesystem::path &path) {
     std::ifstream file(path);
     CHECK(file.is_open());
@@ -2376,13 +2376,16 @@ TEST_CASE("ir lowerer rooted map alias definition fallback covers insert helpers
   REQUIRE(std::filesystem::exists(callResolutionPath));
   const std::string source = readText(callResolutionPath);
 
-  CHECK(source.find(
-            "return resolveKeyValueHelperAliasName(expr, helperName) &&\n"
-            "         (helperName == \"count\" || helperName == \"contains\" ||\n"
-            "          helperName == \"tryAt\" || helperName == \"at\" ||\n"
-            "          helperName == \"at_unsafe\" || helperName == \"insert\" ||\n"
-            "          helperName == \"insert_ref\");") !=
+  CHECK(source.find("const bool hasSemanticRootedRewrite =") !=
         std::string::npos);
+  CHECK(source.find("const bool hasGeneratedRootedRawPath =") !=
+        std::string::npos);
+  CHECK(source.find("rawPath != resolved &&\n"
+                    "      (!hasSemanticRootedRewrite || hasGeneratedRootedRawPath)") !=
+        std::string::npos);
+  CHECK(source.find("resolveKeyValueHelperAliasName(expr, helperName)") ==
+        std::string::npos);
+  CHECK(source.find("helperName == \"insert\"") == std::string::npos);
 }
 
 TEST_SUITE_END();

@@ -133,14 +133,14 @@ bool classifyArrayVectorTypeText(
   if (collectionType != "array" && collectionType != "vector") {
     return false;
   }
-  std::vector<std::string> elementArgs;
-  if (!splitTemplateArgs(elementType, elementArgs) || elementArgs.size() != 1) {
+  elementType = trimTemplateTypeText(elementType);
+  if (elementType.empty()) {
     return false;
   }
   targetInfoOut = {};
   targetInfoOut.isArrayOrVectorTarget = true;
   targetInfoOut.isVectorTarget = (collectionType == "vector");
-  targetInfoOut.elemKind = valueKindFromTypeName(trimTemplateTypeText(elementArgs.front()));
+  targetInfoOut.elemKind = valueKindFromTypeName(elementType);
   return true;
 }
 
@@ -168,6 +168,20 @@ bool resolveArrayVectorAssignmentAccessName(const Expr &expr,
     return false;
   }
   accessNameOut = vectorHelperName;
+  return true;
+}
+
+bool resolveSemanticBareArrayVectorAssignmentAccessName(
+    const Expr &expr,
+    std::string &accessNameOut) {
+  if (expr.kind != Expr::Kind::Call || !expr.namespacePrefix.empty() ||
+      expr.name.find('/') != std::string::npos) {
+    return false;
+  }
+  if (expr.name != "at" && expr.name != "at_unsafe") {
+    return false;
+  }
+  accessNameOut = expr.name;
   return true;
 }
 
@@ -1057,7 +1071,14 @@ bool emitConversionsAndCallsCollectionAndMutationExpr(
       return true;
     }
     std::string accessName;
-    if (resolveArrayVectorAssignmentAccessName(target, accessName) && target.args.size() == 2) {
+    const bool hasArrayVectorAssignmentAccess =
+        resolveArrayVectorAssignmentAccessName(target, accessName);
+    const bool hasSemanticBareArrayVectorAssignmentAccess =
+        !hasArrayVectorAssignmentAccess &&
+        resolveSemanticBareArrayVectorAssignmentAccessName(target, accessName);
+    if ((hasArrayVectorAssignmentAccess ||
+         hasSemanticBareArrayVectorAssignmentAccess) &&
+        target.args.size() == 2) {
       const Expr &collectionTarget = target.args.front();
       const Expr &indexExpr = target.args[1];
       ArrayVectorAccessTargetInfo targetInfo;
@@ -1070,6 +1091,13 @@ bool emitConversionsAndCallsCollectionAndMutationExpr(
         targetInfo = hasSemanticArrayVectorFact
                          ? ArrayVectorAccessTargetInfo{}
                          : resolveArrayVectorAccessTargetInfo(collectionTarget, localsIn);
+      }
+      if (hasSemanticBareArrayVectorAssignmentAccess &&
+          (!hasSemanticArrayVectorFact ||
+           !targetInfo.isArrayOrVectorTarget ||
+           targetInfo.isKeyValueTarget)) {
+        error = "native backend only supports assign to array/vector elements";
+        return false;
       }
       if (!targetInfo.isArrayOrVectorTarget && !hasSemanticArrayVectorFact) {
         const std::string collectionPath = inferStructExprPath(collectionTarget, localsIn);

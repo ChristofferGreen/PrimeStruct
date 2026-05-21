@@ -392,7 +392,8 @@ TEST_CASE("ir lowerer indexed assign consumes semantic collection facts before s
 
   std::vector<primec::IrInstruction> instructions;
   std::string error;
-  CHECK(emitIndexedAssign(makeIndexedAssign("values", 9301), instructions, error));
+  const primec::Expr bareAtAssign = makeIndexedAssign("values", 9301);
+  CHECK(emitIndexedAssign(bareAtAssign, instructions, error));
   CHECK(error.empty());
   CHECK(std::any_of(instructions.begin(), instructions.end(), [](const primec::IrInstruction &inst) {
     return inst.op == primec::IrOpcode::StoreIndirect;
