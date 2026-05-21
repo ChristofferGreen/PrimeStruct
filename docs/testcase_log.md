@@ -132,9 +132,29 @@
   to resolve direct return kinds before current access-helper classification.
   The validation cases 391-400 shard was stabilized on 2026-05-21 13:43 CEST
   by retargeting bare semantic access call-return tests to current
-  `NotResolved` behavior. Next stop-on-failure blocker is not yet localized.
+  `NotResolved` behavior. Next stop-on-failure blocker is
+  `PrimeStruct_primestruct_ir_pipeline_validation_cases_401_410`. The
+  validation cases 401-410 shard is failing in stale call-return setup
+  expectations that still require compatibility map count/access alias
+  fallback through method resolution or canonical-only definitions after map
+  helper compatibility removal. The validation cases 401-410 shard was
+  stabilized on 2026-05-21 13:48 CEST by retargeting rooted `/map/count`
+  alias call-return tests to current `NotResolved` behavior. Next
+  stop-on-failure blocker is not yet localized.
 
 ## Recent Test Runs
+- 2026-05-21 13:48 CEST | pass | mode: release | command:
+  `cmake --build build-release --target PrimeStruct_backend_ir_tests -j 1`;
+  `cd build-release && ctest --output-on-failure -R '^PrimeStruct_primestruct_ir_pipeline_validation_cases_401_410$' --timeout 180`
+  | failures: none | notes: rooted map count/access aliases now assert
+  current `NotResolved` behavior against missing or canonical-only defs.
+- 2026-05-21 13:46 CEST | fail | mode: release | command:
+  `cmake --build build-release -j 1`;
+  `cd build-release && ctest --output-on-failure --stop-on-failure --timeout 180`
+  | failures: `PrimeStruct_primestruct_ir_pipeline_validation_cases_401_410`
+  | notes: stop-on-failure progressed past validation cases 391-400; current
+  blocker is stale compatibility map count/access alias call-return
+  expectations after helper compatibility removal.
 - 2026-05-21 13:43 CEST | pass | mode: release | command:
   `cmake --build build-release --target PrimeStruct_backend_ir_tests -j 1`;
   `cd build-release && ctest --output-on-failure -R '^PrimeStruct_primestruct_ir_pipeline_validation_cases_391_400$' --timeout 180`
