@@ -515,7 +515,7 @@
   relocation until container move/reallocation semantics land. The calls-flow
   collections 311-320 shard was stabilized on 2026-05-21 18:18 CEST by
   retargeting those fixtures to the standalone stdlib map implementation and
-  current relocation diagnostic. Next stop-on-failure blocker is not yet
+  current relocation diagnostic. Next stop-on-failure blocker is
   `PrimeStruct_primestruct_semantics_calls_flow_collections_calls_flow_collections_321_330`.
   The calls-flow collections 321-330 shard is failing in stale canonical map
   key diagnostics. Current standalone stdlib map helpers now surface the
@@ -523,9 +523,31 @@
   `less_than(/Key, /Key) -> bool` instead of the retired builtin-key rejection
   on these helper and method paths. The calls-flow collections 321-330 shard
   was stabilized on 2026-05-21 18:20 CEST by retargeting those fixtures to the
-  current trait diagnostic. Next stop-on-failure blocker is not yet localized.
+  current trait diagnostic. Next stop-on-failure blocker is
+  `PrimeStruct_primestruct_semantics_calls_flow_collections_calls_flow_collections_351_360`.
+  The calls-flow collections 351-360 shard is failing in stale helper-wrapped
+  canonical map/result uninitialized-storage expectations. Current validation
+  still rejects those helper-wrapped storage fixtures with
+  `init value type mismatch`, matching the previously logged uninitialized
+  storage limitation. The calls-flow collections 351-360 shard was stabilized
+  on 2026-05-21 18:24 CEST by retargeting those fixtures to the current init
+  mismatch diagnostic. Next stop-on-failure blocker is not yet localized.
 
 ## Recent Test Runs
+- 2026-05-21 18:24 CEST | pass | mode: release | command:
+  `cmake --build build-release --target PrimeStruct_semantics_tests -j 1`;
+  `cd build-release && ctest --output-on-failure -R '^PrimeStruct_primestruct_semantics_calls_flow_collections_calls_flow_collections_351_360$' --timeout 180`
+  | failures: none | notes: stale helper-wrapped canonical map/result
+  uninitialized-storage fixtures now expect the current
+  `init value type mismatch` diagnostic.
+- 2026-05-21 18:24 CEST | fail | mode: release | command:
+  `cd build-release && ctest --output-on-failure --stop-on-failure --timeout 180 -I 329,1599`
+  | failures:
+  `PrimeStruct_primestruct_semantics_calls_flow_collections_calls_flow_collections_351_360`
+  | notes: stop-on-failure passed the 331-340 and 341-350 calls-flow
+  collection shards, then found stale helper-wrapped canonical map/result
+  uninitialized-storage expectations that currently report
+  `init value type mismatch`.
 - 2026-05-21 18:20 CEST | pass | mode: release | command:
   `cmake --build build-release --target PrimeStruct_semantics_tests -j 1`;
   `cd build-release && ctest --output-on-failure -R '^PrimeStruct_primestruct_semantics_calls_flow_collections_calls_flow_collections_321_330$' --timeout 180`

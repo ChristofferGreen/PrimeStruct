@@ -17,9 +17,13 @@ void checkCanonicalMapConstructorMismatch(const std::string &error) {
   CHECK(error.find("/std/collections/map/map") != std::string::npos);
 }
 
+void checkInitValueTypeMismatch(const std::string &error) {
+  CHECK(error.find("init value type mismatch") != std::string::npos);
+}
+
 } // namespace
 
-TEST_CASE("helper-wrapped Result.ok payloads accept dereferenced canonical result storage") {
+TEST_CASE("helper-wrapped Result.ok dereferenced canonical result storage keeps init mismatch") {
   const std::string source = R"(
 import /std/collections/*
 import /std/collections/internal_map/*
@@ -46,9 +50,9 @@ main() {
 }
 )";
   std::string error;
-  CHECK(validateProgram(source, "/main", error));
+  CHECK_FALSE(validateProgram(source, "/main", error));
   INFO(error);
-  CHECK(error.empty());
+  checkInitValueTypeMismatch(error);
 }
 
 TEST_CASE("map constructors keep arg-pack count when soa helpers are imported compatibility") {
@@ -131,7 +135,7 @@ main() {
   checkStdlibMapPairConstructorMismatch(error);
 }
 
-TEST_CASE("helper-wrapped map constructors accept canonical map struct storage fields") {
+TEST_CASE("helper-wrapped map constructors on canonical map struct storage keep init mismatch") {
   const std::string source = R"(
 import /std/collections/*
 import /std/collections/internal_map/*
@@ -156,9 +160,9 @@ main() {
 }
 )";
   std::string error;
-  CHECK(validateProgram(source, "/main", error));
+  CHECK_FALSE(validateProgram(source, "/main", error));
   INFO(error);
-  CHECK(error.empty());
+  checkInitValueTypeMismatch(error);
 }
 
 TEST_CASE("helper-wrapped map struct storage fields keep mismatch diagnostics") {
@@ -189,7 +193,7 @@ main() {
   checkStdlibMapPairConstructorMismatch(error);
 }
 
-TEST_CASE("helper-wrapped Result.ok payloads accept canonical result struct storage fields") {
+TEST_CASE("helper-wrapped Result.ok canonical result struct storage keeps init mismatch") {
   const std::string source = R"(
 import /std/collections/*
 import /std/collections/internal_map/*
@@ -214,9 +218,9 @@ main() {
 }
 )";
   std::string error;
-  CHECK(validateProgram(source, "/main", error));
+  CHECK_FALSE(validateProgram(source, "/main", error));
   INFO(error);
-  CHECK(error.empty());
+  checkInitValueTypeMismatch(error);
 }
 
 TEST_CASE("helper-wrapped Result.ok struct storage fields keep mismatch diagnostics") {
@@ -248,7 +252,7 @@ main() {
   checkStdlibMapPairConstructorMismatch(error);
 }
 
-TEST_CASE("helper-wrapped map constructors accept dereferenced canonical map struct storage fields") {
+TEST_CASE("helper-wrapped map constructors on dereferenced canonical map storage keep init mismatch") {
   const std::string source = R"(
 import /std/collections/*
 import /std/collections/internal_map/*
@@ -279,9 +283,9 @@ main() {
 }
 )";
   std::string error;
-  CHECK(validateProgram(source, "/main", error));
+  CHECK_FALSE(validateProgram(source, "/main", error));
   INFO(error);
-  CHECK(error.empty());
+  checkInitValueTypeMismatch(error);
 }
 
 TEST_CASE("helper-wrapped dereferenced map struct storage fields keep mismatch diagnostics") {
