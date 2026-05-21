@@ -741,7 +741,7 @@ TEST_CASE("ir lowerer inference get-return-info setup requires published callabl
   CHECK_FALSE(static_cast<bool>(getReturnInfo));
 }
 
-TEST_CASE("ir lowerer inference preserves map reference parameter info for canonical count auto wrappers") {
+TEST_CASE("ir lowerer inference rejects canonical count auto wrappers without semantic product") {
   primec::Program program;
   program.definitions.reserve(2);
   program.definitions.emplace_back();
@@ -787,7 +787,7 @@ TEST_CASE("ir lowerer inference preserves map reference parameter info for canon
 
   primec::ir_lowerer::LowerInferenceSetupBootstrapState state;
   std::string error;
-  CHECK(primec::ir_lowerer::runLowerInferenceSetup(
+  CHECK_FALSE(primec::ir_lowerer::runLowerInferenceSetup(
       {
           .program = &program,
           .defMap = &defMap,
@@ -848,13 +848,8 @@ TEST_CASE("ir lowerer inference preserves map reference parameter info for canon
       },
       state,
       error));
-  CHECK(error.empty());
-
-  primec::ir_lowerer::ReturnInfo returnInfo;
-  CHECK(state.getReturnInfo("/project", returnInfo));
-  CHECK_FALSE(returnInfo.returnsVoid);
-  CHECK_FALSE(returnInfo.returnsArray);
-  CHECK(returnInfo.kind == primec::ir_lowerer::LocalInfo::ValueKind::Int32);
+  CHECK(error == "unable to infer return type on /project");
+  CHECK_FALSE(static_cast<bool>(state.getReturnInfo));
 }
 
 TEST_CASE("ir lowerer inference expr-kind dispatch setup wires callback") {
@@ -1204,7 +1199,7 @@ TEST_CASE("ir lowerer inference expr-kind dispatch infers try from namespaced Fi
         primec::ir_lowerer::LocalInfo::ValueKind::Int64);
 }
 
-TEST_CASE("ir lowerer inference expr-kind dispatch infers try from indexed pointer Result args packs") {
+TEST_CASE("ir lowerer inference expr-kind dispatch rejects stale indexed pointer Result args packs") {
   primec::ir_lowerer::LowerInferenceSetupBootstrapState state;
   state.inferLiteralOrNameExprKind = [](const primec::Expr &expr,
                                         const primec::ir_lowerer::LocalMap &,
@@ -1308,7 +1303,7 @@ TEST_CASE("ir lowerer inference expr-kind dispatch infers try from indexed point
   tryExpr.name = "try";
   tryExpr.args.push_back(dereferenceExpr);
 
-  CHECK(state.inferExprKind(tryExpr, locals) == primec::ir_lowerer::LocalInfo::ValueKind::String);
+  CHECK(state.inferExprKind(tryExpr, locals) == primec::ir_lowerer::LocalInfo::ValueKind::Unknown);
 }
 
 TEST_SUITE_END();

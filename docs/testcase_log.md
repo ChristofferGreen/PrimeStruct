@@ -163,9 +163,38 @@
   validation cases 451-460 shard was stabilized on 2026-05-21 14:00 CEST by
   retargeting that direct `at(array, index)` fallback expectation to current
   rejection/`Unknown` behavior. Next stop-on-failure blocker is not yet
-  localized.
+  localized. Next stop-on-failure blocker is
+  `PrimeStruct_primestruct_ir_pipeline_validation_cases_471_480`. The
+  validation cases 471-480 shard is failing in stale inference expectations
+  for canonical map count auto-wrapper setup without semantic-product input
+  and syntax-only indexed pointer Result args-pack `try` inference. A focused
+  rerun after the first retarget reduced the shard to the current
+  `unable to infer return type on /project` setup diagnostic. The validation
+  cases 471-480 shard was stabilized on 2026-05-21 14:04 CEST by retargeting
+  the auto-wrapper setup to current inference failure and the indexed pointer
+  Result args-pack `try` path to `Unknown`. Next stop-on-failure blocker is
+  not yet localized.
 
 ## Recent Test Runs
+- 2026-05-21 14:04 CEST | pass | mode: release | command:
+  `cmake --build build-release --target PrimeStruct_backend_ir_tests -j 1`;
+  `cd build-release && ctest --output-on-failure -R '^PrimeStruct_primestruct_ir_pipeline_validation_cases_471_480$' --timeout 180`
+  | failures: none | notes: canonical map count auto-wrapper setup now
+  asserts current inference failure, and indexed pointer Result args-pack
+  `try` inference now asserts `Unknown`.
+- 2026-05-21 14:03 CEST | fail | mode: release | command:
+  `cmake --build build-release --target PrimeStruct_backend_ir_tests -j 1`;
+  `cd build-release && ctest --output-on-failure -R '^PrimeStruct_primestruct_ir_pipeline_validation_cases_471_480$' --timeout 180`
+  | failures: `PrimeStruct_primestruct_ir_pipeline_validation_cases_471_480`
+  | notes: focused rerun reduced the shard to the current
+  `unable to infer return type on /project` setup diagnostic.
+- 2026-05-21 14:02 CEST | fail | mode: release | command:
+  `cmake --build build-release -j 1`;
+  `cd build-release && ctest --output-on-failure --stop-on-failure --timeout 180`
+  | failures: `PrimeStruct_primestruct_ir_pipeline_validation_cases_471_480`
+  | notes: stop-on-failure progressed past validation cases 451-460; current
+  blocker is stale map count auto-wrapper setup and indexed pointer Result
+  args-pack `try` inference expectations.
 - 2026-05-21 14:00 CEST | pass | mode: release | command:
   `cmake --build build-release --target PrimeStruct_backend_ir_tests -j 1`;
   `cd build-release && ctest --output-on-failure -R '^PrimeStruct_primestruct_ir_pipeline_validation_cases_451_460$' --timeout 180`
