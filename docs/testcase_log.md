@@ -331,9 +331,31 @@
   over the current fail-closed `/std/collections/map/at` helper route. The
   calls-flow control 21-30 shard was stabilized on 2026-05-21 16:12 CEST by
   retargeting the bare map `at` branch fixture to the current unknown-target
-  diagnostic. Next stop-on-failure blocker is not yet localized.
+  diagnostic. Next stop-on-failure blocker is
+  `PrimeStruct_primestruct_semantics_calls_flow_collections_calls_flow_collections_1_10`.
+  The calls-flow collections 1-10 shard is failing in stale expression-body
+  bare map `count(...) { ... }` coverage that still expects canonical helper
+  fallback or canonical mismatch diagnostics; current expression call-form
+  validation rejects before canonical fallback because `/count` has no
+  definition target for block arguments. The calls-flow collections 1-10 shard
+  was stabilized on 2026-05-21 16:15 CEST by retargeting expression-body bare
+  map count call-form coverage to the current block-argument target diagnostic.
+  Next stop-on-failure blocker is not yet localized.
 
 ## Recent Test Runs
+- 2026-05-21 16:15 CEST | pass | mode: release | command:
+  `cmake --build build-release --target PrimeStruct_semantics_tests -j 1`;
+  `cd build-release && ctest --output-on-failure -R '^PrimeStruct_primestruct_semantics_calls_flow_collections_calls_flow_collections_1_10$' --timeout 180`
+  | failures: none | notes: expression-body bare map count call-form
+  coverage now expects the current block-argument target diagnostic.
+- 2026-05-21 16:14 CEST | fail | mode: release | command:
+  `cd build-release && ctest --output-on-failure --stop-on-failure --timeout 180 -I 288,1599`;
+  `cd build-release && ./primec --emit=ir --dump-stage ast-semantic --entry /main --default-effects io_out,io_err <same fixture sources>`
+  | failures:
+  `PrimeStruct_primestruct_semantics_calls_flow_collections_calls_flow_collections_1_10`
+  | notes: stop-on-failure progressed past remaining calls-flow control shards;
+  current blocker is stale expression-body bare map count call-form coverage,
+  and the CLI reports `block arguments require a definition target: /count`.
 - 2026-05-21 16:12 CEST | pass | mode: release | command:
   `cmake --build build-release --target PrimeStruct_semantics_tests -j 1`;
   `cd build-release && ctest --output-on-failure -R '^PrimeStruct_primestruct_semantics_calls_flow_control_calls_flow_control_21_30$' --timeout 180`

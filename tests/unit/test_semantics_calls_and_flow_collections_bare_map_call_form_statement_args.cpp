@@ -60,7 +60,7 @@ main() {
   CHECK(error.find("unknown call target: /std/collections/map/count") != std::string::npos);
 }
 
-TEST_CASE("bare map call form expression body arguments fall back to canonical helper target") {
+TEST_CASE("bare map call form expression body arguments reject unresolved count target") {
   const std::string source = R"(
 [return<int>]
 /std/collections/map/count([map<i32, i32>] values, [bool] marker) {
@@ -74,11 +74,12 @@ main() {
 }
 )";
   std::string error;
-  CHECK(validateProgram(source, "/main", error));
-  CHECK(error.empty());
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  INFO(error);
+  CHECK(error.find("block arguments require a definition target: /count") != std::string::npos);
 }
 
-TEST_CASE("bare map call form expression body arguments keep canonical mismatch diagnostics") {
+TEST_CASE("bare map call form expression body arguments reject before canonical mismatch") {
   const std::string source = R"(
 [return<int>]
 /std/collections/map/count([map<i32, i32>] values) {
@@ -93,7 +94,8 @@ main() {
 )";
   std::string error;
   CHECK_FALSE(validateProgram(source, "/main", error));
-  CHECK(error.find("argument count mismatch for /std/collections/map/count") != std::string::npos);
+  INFO(error);
+  CHECK(error.find("block arguments require a definition target: /count") != std::string::npos);
 }
 
 TEST_CASE("reference-wrapped map helper receiver expression body arguments fall back to canonical helper target") {
