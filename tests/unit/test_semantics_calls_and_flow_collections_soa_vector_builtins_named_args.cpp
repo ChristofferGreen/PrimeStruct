@@ -700,7 +700,7 @@ main() {
   CHECK(error.find(NonTemplatedSoaVectorDiagnostic) != std::string::npos);
 }
 
-TEST_CASE("soa_vector helper-return bare get_ref keeps same-path helper across escapes") {
+TEST_CASE("soa_vector helper-return bare get_ref rejects non-templated spelling before helper escapes") {
   const std::string source = R"(
 Particle() {
   [i32] x{1i32}
@@ -742,11 +742,12 @@ main() {
 }
 )";
   std::string error;
-  CHECK(validateProgram(source, "/main", error));
-  CHECK(error.empty());
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  INFO(error);
+  CHECK(error.find(NonTemplatedSoaVectorDiagnostic) != std::string::npos);
 }
 
-TEST_CASE("soa_vector builtin get_ref supports helper-return auto inference") {
+TEST_CASE("soa_vector builtin get_ref rejects non-templated helper-return spelling before auto inference") {
   const std::string source = R"(
 Particle() {
   [i32] x{1i32}
@@ -775,11 +776,12 @@ main() {
 }
 )";
   std::string error;
-  CHECK(validateProgram(source, "/main", error));
-  CHECK(error.empty());
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  INFO(error);
+  CHECK(error.find(NonTemplatedSoaVectorDiagnostic) != std::string::npos);
 }
 
-TEST_CASE("soa_vector builtin get supports helper-return field inference") {
+TEST_CASE("soa_vector builtin get rejects non-templated helper-return spelling before field inference") {
   const std::string source = R"(
 Particle() {
   [i32] x{1i32}
@@ -807,11 +809,12 @@ main() {
 }
 )";
   std::string error;
-  CHECK(validateProgram(source, "/main", error));
-  CHECK(error.empty());
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  INFO(error);
+  CHECK(error.find(NonTemplatedSoaVectorDiagnostic) != std::string::npos);
 }
 
-TEST_CASE("soa_vector builtin method get_ref supports helper-return field inference") {
+TEST_CASE("soa_vector builtin method get_ref rejects non-templated helper-return spelling before field inference") {
   const std::string source = R"(
 Particle() {
   [i32] x{1i32}
@@ -839,11 +842,12 @@ main() {
 }
 )";
   std::string error;
-  CHECK(validateProgram(source, "/main", error));
-  CHECK(error.empty());
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  INFO(error);
+  CHECK(error.find(NonTemplatedSoaVectorDiagnostic) != std::string::npos);
 }
 
-TEST_CASE("soa_vector helper-return bare count keeps same-path helper across escapes compatibility") {
+TEST_CASE("uppercase SoaVector helper-return count keeps current meta diagnostic") {
   const std::string source = R"(
 import /std/collections/soa/*
 import /std/collections/internal_soa_vector/*
@@ -880,8 +884,10 @@ main() {
 }
 )";
   std::string error;
-  CHECK(validateProgram(source, "/main", error));
-  CHECK(error.empty());
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  INFO(error);
+  CHECK(error.find("meta.field_count requires struct type argument: type:Particle") !=
+        std::string::npos);
 }
 
 TEST_CASE("vector-target count get get_ref and ref keep same-path soa helpers") {
@@ -990,7 +996,8 @@ main() {
 )";
   std::string error;
   CHECK_FALSE(validateProgram(source, "/main", error));
-  CHECK(error.find("meta.field_count requires reflect-enabled struct type argument: /Particle") !=
+  INFO(error);
+  CHECK(error.find(RetiredSoaVectorDiagnostic) !=
         std::string::npos);
 }
 

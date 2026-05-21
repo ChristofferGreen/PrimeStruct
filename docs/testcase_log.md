@@ -602,9 +602,34 @@
   lowercase `soa_vector<Particle>` helper returns report the non-templated
   `/soa_vector` diagnostic. The calls-flow collections 531-540 shard was
   stabilized on 2026-05-21 18:50 CEST by splitting those expectations. Next
-  stop-on-failure blocker is not yet localized.
+  stop-on-failure blocker is
+  `PrimeStruct_primestruct_semantics_calls_flow_collections_calls_flow_collections_541_550`.
+  The calls-flow collections 541-550 shard is failing in the next SoA helper
+  escape block. Lowercase `soa_vector<Particle>` helper-return get/get_ref
+  fixtures now report the non-templated `/soa_vector` diagnostic, the
+  uppercase `SoaVector` count compatibility fixture now reports the current
+  `meta.field_count` struct-type diagnostic, and raw canonical `to_aos`
+  bindings now reject retired `soa_vector<T>` spelling before the previous
+  experimental-vector contract diagnostic. The calls-flow collections 541-550
+  shard was stabilized on 2026-05-21 18:54 CEST by retargeting those fixtures
+  to current diagnostics. Next stop-on-failure blocker is not yet localized.
 
 ## Recent Test Runs
+- 2026-05-21 18:54 CEST | pass | mode: release | command:
+  `cmake --build build-release --target PrimeStruct_semantics_tests -j 1`;
+  `cd build-release && ctest --output-on-failure -R '^PrimeStruct_primestruct_semantics_calls_flow_collections_calls_flow_collections_541_550$' --timeout 180`
+  | failures: none | notes: helper-return SoA get/get_ref/count and raw
+  canonical to_aos fixtures now expect current non-templated `/soa_vector`,
+  `meta.field_count`, and retired type-spelling diagnostics.
+- 2026-05-21 18:54 CEST | fail | mode: release | command:
+  `cd build-release && ctest --output-on-failure --stop-on-failure --timeout 180 -I 350,1599`;
+  `build-release/primec --emit=ir --dump-stage ast-semantic --entry /main <same uppercase SoaVector count fixture>`
+  | failures:
+  `PrimeStruct_primestruct_semantics_calls_flow_collections_calls_flow_collections_541_550`
+  | notes: adjacent SoA helper-return and raw canonical to_aos fixtures still
+  expected old helper/contract behavior; current validation reaches
+  non-templated `/soa_vector`, `meta.field_count`, or retired spelling
+  diagnostics first.
 - 2026-05-21 18:50 CEST | pass | mode: release | command:
   `cmake --build build-release --target PrimeStruct_semantics_tests -j 1`;
   `cd build-release && ctest --output-on-failure -R '^PrimeStruct_primestruct_semantics_calls_flow_collections_calls_flow_collections_531_540$' --timeout 180`
