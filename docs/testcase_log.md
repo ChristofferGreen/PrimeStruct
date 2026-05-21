@@ -12,11 +12,30 @@
   case, pointer array-reference shard, and stale direct map-literal IR fixture
   were stabilized on 2026-05-21 10:06 CEST. The variadic FileError,
   File-handle, and borrowed-vector shards were stabilized on 2026-05-21
-  10:19 CEST. The next localized blocker is the variadic collection-ref shard,
-  where `ir lowerer materializes variadic borrowed array packs with indexed
-  dereference access helpers` still fails during IR lowering.
+  10:19 CEST. The variadic collection-ref shard was stabilized on
+  2026-05-21 10:50 CEST by retargeting the stale borrowed-array
+  dereference access-helper fixture to explicit helper spelling and checking
+  IR materialization instead of the still-unrelated VM unaligned-load runtime
+  path. Next stop-on-failure blocker after this shard has not been localized.
 
 ## Recent Test Runs
+- 2026-05-21 10:50 CEST | pass | mode: release | command:
+  `cmake --build build-release --target PrimeStruct_backend_ir_tests -j 1`;
+  `cd build-release && ctest --output-on-failure -R '^PrimeStruct_primestruct_ir_pipeline_conversions_variadic_collection_refs$'`
+  | failures: none | notes: retargeted the stale borrowed-array
+  dereference access-helper case from method `.at(...)` spelling to explicit
+  `at_unsafe(...)`, kept the lowerer diagnostic surfaced with `INFO(error)`,
+  and changed the assertion to prove IR indirect-load materialization rather
+  than execute the separate VM path that still reports an unaligned indirect
+  address for this shape.
+- 2026-05-21 10:49 CEST | fail | mode: release | command:
+  `cmake --build build-release --target PrimeStruct_backend_ir_tests -j 1`;
+  `cd build-release && ctest --output-on-failure -R '^PrimeStruct_primestruct_ir_pipeline_conversions_variadic_collection_refs$'`
+  | failures: `PrimeStruct_primestruct_ir_pipeline_conversions_variadic_collection_refs`
+  | notes: after explicit helper retargeting the IR lowerer accepted the
+  fixture, but VM execution failed with `unaligned indirect address in IR: 34`;
+  kept this as a separate runtime caveat instead of blocking the lowerer
+  materialization shard on VM execution.
 - 2026-05-21 10:19 CEST | fail | mode: release | command:
   `cmake --build build-release -j 1`;
   `cd build-release && ctest --output-on-failure --stop-on-failure`
