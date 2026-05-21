@@ -233,9 +233,29 @@
   The validation cases 781-790 shard was stabilized on 2026-05-21 14:42 CEST
   by retargeting bare vector method access and wrapper-returned method access
   expectations to current `NotMatched` / `Unknown` behavior. Next
-  stop-on-failure blocker is not yet localized.
+  stop-on-failure blocker is
+  `PrimeStruct_primestruct_ir_pipeline_validation_cases_791_800`. The
+  validation cases 791-800 shard is failing in a stale setup-type helper
+  expectation that still requires entry-args `at` / `at_unsafe` receiver
+  fallback to preserve a prior `"stale"` diagnostic instead of the current
+  unknown-method-target diagnostic.
+  The validation cases 791-800 shard was stabilized on 2026-05-21 14:47 CEST
+  by retargeting entry-args access receiver fallback diagnostics to current
+  `unknown method target` behavior. Next stop-on-failure blocker is not yet
+  localized.
 
 ## Recent Test Runs
+- 2026-05-21 14:47 CEST | pass | mode: release | command:
+  `cmake --build build-release --target PrimeStruct_backend_ir_tests -j 1`;
+  `cd build-release && ctest --output-on-failure -R '^PrimeStruct_primestruct_ir_pipeline_validation_cases_791_800$' --timeout 180`
+  | failures: none | notes: entry-args access receiver fallback now asserts
+  current `unknown method target` diagnostics.
+- 2026-05-21 14:46 CEST | fail | mode: release | command:
+  `cmake --build build-release -j 1`;
+  `cd build-release && ctest --output-on-failure --stop-on-failure --timeout 180`
+  | failures: `PrimeStruct_primestruct_ir_pipeline_validation_cases_791_800`
+  | notes: stop-on-failure progressed past validation cases 781-790; current
+  blocker is stale entry-args access receiver fallback diagnostic coverage.
 - 2026-05-21 14:42 CEST | pass | mode: release | command:
   `cmake --build build-release --target PrimeStruct_backend_ir_tests -j 1`;
   `cd build-release && ctest --output-on-failure -R '^PrimeStruct_primestruct_ir_pipeline_validation_cases_781_790$' --timeout 180`

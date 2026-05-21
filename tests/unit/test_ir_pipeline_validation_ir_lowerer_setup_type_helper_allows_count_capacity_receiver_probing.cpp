@@ -43,7 +43,7 @@ TEST_CASE("ir lowerer setup type helper allows count/capacity receiver probing")
   CHECK(error.empty());
 }
 
-TEST_CASE("ir lowerer setup type helper allows access receiver fallback probing") {
+TEST_CASE("ir lowerer setup type helper rejects access receiver fallback probing") {
   primec::Expr entryArgsReceiver;
   entryArgsReceiver.kind = primec::Expr::Kind::Name;
   entryArgsReceiver.name = "argv";
@@ -72,7 +72,7 @@ TEST_CASE("ir lowerer setup type helper allows access receiver fallback probing"
       receiverOut,
       error));
   CHECK(receiverOut == nullptr);
-  CHECK(error == "stale");
+  CHECK(error == "unknown method target for at");
 
   methodCall.name = "at_unsafe";
   receiverOut = &methodCall;
@@ -88,7 +88,7 @@ TEST_CASE("ir lowerer setup type helper allows access receiver fallback probing"
       receiverOut,
       error));
   CHECK(receiverOut == nullptr);
-  CHECK(error == "stale");
+  CHECK(error == "unknown method target for at_unsafe");
 }
 
 TEST_CASE("ir lowerer setup type helper resolves method call definitions from expressions") {
