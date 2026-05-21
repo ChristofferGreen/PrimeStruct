@@ -799,9 +799,22 @@
   recognizing semantic-product `array<string>` entry-parameter references in
   the print access path; the first focused rerun after the code change still
   failed until the `primec` executable was explicitly rebuilt alongside the
-  doctest binary.
+  doctest binary. Next stop-on-failure blocker is
+  `PrimeStruct_primestruct_compile_run_vm_outputs_ir_and_output_modes_basics_1_10_10_10`.
+  The VM outputs basics 10 shard is blocked in
+  `vm_image_read_p6_truncated.prime`: the truncated binary PPM read should
+  return `image_invalid_operation` with cleared outputs, but the VM run did
+  not return during the continuation and its child process had to be killed.
 
 ## Recent Test Runs
+- 2026-05-21 22:56 CEST | blocked | mode: release | command:
+  `cd build-release && ctest --output-on-failure --stop-on-failure --timeout 180 -I 659,1599`
+  | failures:
+  `PrimeStruct_primestruct_compile_run_vm_outputs_ir_and_output_modes_basics_1_10_10_10`
+  | notes: the continuation advanced through argv/CLI 16-25, VM core, VM
+  math, and into VM outputs before it stopped reporting; process inspection
+  showed the active child at `vm_image_read_p6_truncated.prime`, and the
+  ctest/test/primec processes were killed to avoid a runaway.
 - 2026-05-21 22:39 CEST | pass | mode: release | command:
   `cmake --build build-release --target primec PrimeStruct_compile_run_tests -j 1`;
   `cd build-release && ctest --output-on-failure -R '^PrimeStruct_primestruct_compile_run_smoke_argv_and_cli_(14_14|15_15)$' --timeout 180`
