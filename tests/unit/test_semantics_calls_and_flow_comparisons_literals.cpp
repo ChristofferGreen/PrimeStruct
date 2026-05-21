@@ -207,20 +207,20 @@ main() {
   CHECK(error.find("vector literal requires exactly one template argument") != std::string::npos);
 }
 
-TEST_CASE("soa_vector literal missing template arg fails") {
+TEST_CASE("soa literal missing template arg fails") {
   const std::string source = R"(
 [effects(heap_alloc), return<int>]
 main() {
-  soa_vector(1i32)
+  soa(1i32)
   return(1i32)
 }
 )";
   std::string error;
   CHECK_FALSE(validateProgram(source, "/main", error));
-  CHECK(error.find("unknown call target: soa_vector") != std::string::npos);
+  CHECK(error.find("soa literal requires exactly one template argument") != std::string::npos);
 }
 
-TEST_CASE("soa_vector literal validates when element type is soa-safe struct") {
+TEST_CASE("soa literal validates when element type is soa-safe struct") {
   const std::string source = R"(
 Particle() {
   [i32] x{1i32}
@@ -228,7 +228,7 @@ Particle() {
 
 [effects(heap_alloc), return<int>]
 main() {
-  soa_vector<Particle>(Particle(1i32))
+  soa<Particle>(Particle(1i32))
   return(1i32)
 }
 )";
@@ -237,20 +237,20 @@ main() {
   CHECK(error.empty());
 }
 
-TEST_CASE("soa_vector literal requires struct element type") {
+TEST_CASE("soa literal requires struct element type") {
   const std::string source = R"(
 [effects(heap_alloc), return<int>]
 main() {
-  soa_vector<i32>(1i32)
+  soa<i32>(1i32)
   return(1i32)
 }
 )";
   std::string error;
   CHECK_FALSE(validateProgram(source, "/main", error));
-  CHECK(error.find("unknown call target: soa_vector") != std::string::npos);
+  CHECK(error.find("soa literal requires struct element type") != std::string::npos);
 }
 
-TEST_CASE("soa_vector literal rejects string element field envelope") {
+TEST_CASE("soa literal rejects string element field envelope") {
   const std::string source = R"(
 Particle() {
   [string] name{"n"utf8}
@@ -258,7 +258,7 @@ Particle() {
 
 [effects(heap_alloc), return<int>]
 main() {
-  soa_vector<Particle>(Particle("a"utf8))
+  soa<Particle>(Particle("a"utf8))
   return(1i32)
 }
 )";
@@ -267,7 +267,7 @@ main() {
   CHECK(error.find("soa_vector field envelope is unsupported on /Particle/name: string") != std::string::npos);
 }
 
-TEST_CASE("soa_vector literal rejects nested template element field envelope") {
+TEST_CASE("soa literal rejects nested template element field envelope") {
   const std::string source = R"(
 Particle() {
   [array<i32>] values{array<i32>(1i32)}
@@ -275,7 +275,7 @@ Particle() {
 
 [effects(heap_alloc), return<int>]
 main() {
-  soa_vector<Particle>(Particle(array<i32>(2i32)))
+  soa<Particle>(Particle(array<i32>(2i32)))
   return(1i32)
 }
 )";
@@ -284,7 +284,7 @@ main() {
   CHECK(error.find("soa_vector field envelope is unsupported on /Particle/values: array<i32>") != std::string::npos);
 }
 
-TEST_CASE("soa_vector literal rejects nested struct disallowed envelope") {
+TEST_CASE("soa literal rejects nested struct disallowed envelope") {
   const std::string source = R"(
 Label() {
   [string] text{"tag"utf8}
@@ -296,7 +296,7 @@ Particle() {
 
 [effects(heap_alloc), return<int>]
 main() {
-  soa_vector<Particle>(Particle(Label("runtime"utf8)))
+  soa<Particle>(Particle(Label("runtime"utf8)))
   return(1i32)
 }
 )";
@@ -305,7 +305,7 @@ main() {
   CHECK(error.find("soa_vector field envelope is unsupported on /Particle/meta/text: string") != std::string::npos);
 }
 
-TEST_CASE("soa_vector literal accepts nested primitive struct fields") {
+TEST_CASE("soa literal accepts nested primitive struct fields") {
   const std::string source = R"(
 Meta() {
   [i32] id{1i32}
@@ -317,7 +317,7 @@ Particle() {
 
 [effects(heap_alloc), return<int>]
 main() {
-  soa_vector<Particle>(Particle(Meta(2i32)))
+  soa<Particle>(Particle(Meta(2i32)))
   return(1i32)
 }
 )";
@@ -326,7 +326,7 @@ main() {
   CHECK(error.empty());
 }
 
-TEST_CASE("soa_vector literal requires heap_alloc effect when non-empty") {
+TEST_CASE("soa literal requires heap_alloc effect when non-empty") {
   const std::string source = R"(
 Particle() {
   [i32] x{1i32}
@@ -334,13 +334,13 @@ Particle() {
 
 [return<int>]
 main() {
-  soa_vector<Particle>(Particle(2i32))
+  soa<Particle>(Particle(2i32))
   return(1i32)
 }
 )";
   std::string error;
   CHECK_FALSE(validateProgram(source, "/main", error));
-  CHECK(error.find("unknown call target: soa_vector") != std::string::npos);
+  CHECK(error.find("soa literal requires heap_alloc effect") != std::string::npos);
 }
 
 TEST_CASE("array literal type mismatch fails") {

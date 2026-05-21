@@ -684,9 +684,30 @@
   parameter mismatch for its `bool` key parameter when called with `i32`. The
   calls-flow collections 661-670 shard was stabilized on 2026-05-21 19:04
   CEST by retargeting the fixture to that ordinary helper mismatch. Next
-  stop-on-failure blocker is not yet localized.
+  stop-on-failure blocker is
+  `PrimeStruct_primestruct_semantics_calls_flow_comparisons_literals_calls_flow_comparisons_literals_11_20`.
+  The calls-flow comparisons/literals 11-20 shard is failing in stale
+  `soa_vector` literal fixtures. Current public literal spelling is `soa<T>`;
+  the retired `soa_vector` call form now reports `unknown call target:
+  soa_vector` before the element type, field-envelope, and effect checks that
+  the fixture intended to cover. The comparisons/literals 11-20 shard was
+  stabilized on 2026-05-21 19:05 CEST by migrating those literal fixtures to
+  `soa<T>` and current public literal diagnostics. Next stop-on-failure
+  blocker is not yet localized.
 
 ## Recent Test Runs
+- 2026-05-21 19:05 CEST | pass | mode: release | command:
+  `cmake --build build-release --target PrimeStruct_semantics_tests -j 1`;
+  `cd build-release && ctest --output-on-failure -R '^PrimeStruct_primestruct_semantics_calls_flow_comparisons_literals_calls_flow_comparisons_literals_11_20$' --timeout 180`
+  | failures: none | notes: SoA literal fixtures now use public `soa<T>`
+  spelling and current literal diagnostics.
+- 2026-05-21 19:05 CEST | fail | mode: release | command:
+  `cd build-release && ctest --output-on-failure --stop-on-failure --timeout 180 -I 363,1599`
+  | failures:
+  `PrimeStruct_primestruct_semantics_calls_flow_comparisons_literals_calls_flow_comparisons_literals_11_20`
+  | notes: collection shards 671-771, access, named-args, numeric builtins,
+  and comparisons/literals 1-10 passed first; SoA literal fixtures still used
+  retired `soa_vector` spelling for public literal behavior.
 - 2026-05-21 19:04 CEST | pass | mode: release | command:
   `cmake --build build-release --target PrimeStruct_semantics_tests -j 1`;
   `cd build-release && ctest --output-on-failure -R '^PrimeStruct_primestruct_semantics_calls_flow_collections_calls_flow_collections_661_670$' --timeout 180`
