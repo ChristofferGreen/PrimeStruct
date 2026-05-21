@@ -227,7 +227,7 @@ TEST_CASE("array bracket literal rewrite does not consume following indexing") {
   CHECK(output.find("array<i32>{1i32,2i32}[0i32]") != std::string::npos);
 }
 
-TEST_CASE("keeps map literal braces") {
+TEST_CASE("keeps map braces as ordinary call syntax") {
   const std::string source = "main(){ return(map<i32,i32>{1i32,2i32}) }\n";
   primec::TextFilterPipeline pipeline;
   std::string output;
@@ -237,14 +237,15 @@ TEST_CASE("keeps map literal braces") {
   CHECK(output.find("map<i32,i32>{1i32,2i32}") != std::string::npos);
 }
 
-TEST_CASE("rewrites map literal brackets to braces") {
+TEST_CASE("leaves map bracket syntax outside collection rewrites") {
   const std::string source = "main(){ return(map<i32,i32>[1i32,2i32]) }\n";
   primec::TextFilterPipeline pipeline;
   std::string output;
   std::string error;
   CHECK(pipeline.apply(source, output, error));
   CHECK(error.empty());
-  CHECK(output.find("map<i32,i32>{1i32,2i32}") != std::string::npos);
+  CHECK(output.find("map<i32,i32>[1i32,2i32]") != std::string::npos);
+  CHECK(output.find("map<i32,i32>{1i32,2i32}") == std::string::npos);
 }
 
 TEST_CASE("keeps vector literal braces") {
@@ -267,57 +268,60 @@ TEST_CASE("rewrites vector literal brackets to braces") {
   CHECK(output.find("vector<i32>{1i32,2i32}") != std::string::npos);
 }
 
-TEST_CASE("rewrites map literal brackets with equals pairs") {
+TEST_CASE("map bracket syntax only gets generic operator rewrites") {
   const std::string source = "main(){ return(map<i32, i32>[1i32=2i32, 3i32=4i32]) }\n";
   primec::TextFilterPipeline pipeline;
   std::string output;
   std::string error;
   CHECK(pipeline.apply(source, output, error));
   CHECK(error.empty());
-  CHECK(output.find("map<i32, i32>{1i32, 2i32, 3i32, 4i32}") != std::string::npos);
+  CHECK(output.find("map<i32, i32>[assign(1i32, 2i32), assign(3i32, 4i32)]") !=
+        std::string::npos);
 }
 
-TEST_CASE("rewrites map literal with equals pairs") {
+TEST_CASE("map brace equals uses generic assignment rewrite") {
   const std::string source = "main(){ return(map<i32,i32>{1i32=2i32,3i32=4i32}) }\n";
   primec::TextFilterPipeline pipeline;
   std::string output;
   std::string error;
   CHECK(pipeline.apply(source, output, error));
   CHECK(error.empty());
-  CHECK(output.find("map<i32,i32>{1i32, 2i32,3i32, 4i32}") != std::string::npos);
+  CHECK(output.find("map<i32,i32>{assign(1i32, 2i32),assign(3i32, 4i32)}") !=
+        std::string::npos);
 }
 
-TEST_CASE("rewrites map literal with semicolon pairs") {
+TEST_CASE("map brace semicolon keeps generic assignment rewrite") {
   const std::string source = "main(){ return(map<i32,i32>{1i32=2i32; 3i32=4i32}) }\n";
   primec::TextFilterPipeline pipeline;
   std::string output;
   std::string error;
   CHECK(pipeline.apply(source, output, error));
   CHECK(error.empty());
-  CHECK(output.find("map<i32,i32>{1i32, 2i32, 3i32, 4i32}") != std::string::npos);
+  CHECK(output.find("map<i32,i32>{assign(1i32, 2i32); assign(3i32, 4i32)}") !=
+        std::string::npos);
 }
 
-TEST_CASE("rewrites map literal with call key equals pairs") {
+TEST_CASE("map brace call key uses generic assignment rewrite") {
   const std::string source = "main(){ return(map<i32,i32>{hash(1i32)=2i32}) }\n";
   primec::TextFilterPipeline pipeline;
   std::string output;
   std::string error;
   CHECK(pipeline.apply(source, output, error));
   CHECK(error.empty());
-  CHECK(output.find("map<i32,i32>{hash(1i32), 2i32}") != std::string::npos);
+  CHECK(output.find("map<i32,i32>{assign(hash(1i32), 2i32)}") != std::string::npos);
 }
 
-TEST_CASE("rewrites map literal with whitespace pairs") {
+TEST_CASE("map whitespace payload is not pair-rewritten") {
   const std::string source = "main(){ return(map<i32,i32>{1i32 2i32 3i32 4i32}) }\n";
   primec::TextFilterPipeline pipeline;
   std::string output;
   std::string error;
   CHECK(pipeline.apply(source, output, error));
   CHECK(error.empty());
-  CHECK(output.find("map<i32,i32>{1i32, 2i32, 3i32, 4i32}") != std::string::npos);
+  CHECK(output.find("map<i32,i32>{1i32 2i32 3i32 4i32}") != std::string::npos);
 }
 
-TEST_CASE("map literal rewrite ignores line comments") {
+TEST_CASE("map generic operator rewrite preserves line comments") {
   const std::string source =
       "main(){\n"
       "  return(map<i32,i32>{1i32=2i32 // map-comment a=b\n"
@@ -329,9 +333,10 @@ TEST_CASE("map literal rewrite ignores line comments") {
   CHECK(pipeline.apply(source, output, error));
   CHECK(error.empty());
   CHECK(output.find("// map-comment a=b") != std::string::npos);
+  CHECK(output.find("assign(1i32, 2i32)") != std::string::npos);
 }
 
-TEST_CASE("map literal rewrite ignores block comments") {
+TEST_CASE("map generic operator rewrite preserves block comments") {
   const std::string source =
       "main(){ return(map<i32,i32>{1i32=2i32 /* map-comment a=b */ 3i32=4i32}) }\n";
   primec::TextFilterPipeline pipeline;
@@ -340,9 +345,10 @@ TEST_CASE("map literal rewrite ignores block comments") {
   CHECK(pipeline.apply(source, output, error));
   CHECK(error.empty());
   CHECK(output.find("/* map-comment a=b */") != std::string::npos);
+  CHECK(output.find("assign(1i32, 2i32)") != std::string::npos);
 }
 
-TEST_CASE("filter order affects map literal rewrites") {
+TEST_CASE("filter order does not make map collection-owned") {
   const std::string source = "main(){ return(map<i32,i32>{1i32=2i32}) }\n";
   primec::TextFilterPipeline pipeline;
   std::string output;
@@ -359,38 +365,39 @@ TEST_CASE("filter order affects map literal rewrites") {
   std::string output2;
   CHECK(pipeline.apply(source, output2, error, collectionsFirst));
   CHECK(error.empty());
-  CHECK(output2.find("map<i32,i32>{1i32, 2i32}") != std::string::npos);
+  CHECK(output2.find("map<i32,i32>{assign(1i32, 2i32)}") != std::string::npos);
 }
 
-TEST_CASE("default filters keep map literal pairs") {
+TEST_CASE("default filters use generic map assignment rewrite") {
   const std::string source = "main(){ return(map<i32,i32>{1i32=2i32}) }\n";
   primec::TextFilterPipeline pipeline;
   std::string output;
   std::string error;
   CHECK(pipeline.apply(source, output, error));
   CHECK(error.empty());
-  CHECK(output.find("map<i32,i32>{1i32, 2i32}") != std::string::npos);
-  CHECK(output.find("assign(") == std::string::npos);
+  CHECK(output.find("map<i32,i32>{assign(1i32, 2i32)}") != std::string::npos);
 }
 
-TEST_CASE("rewrites map literal equals pairs without commas") {
+TEST_CASE("map equals without commas uses generic assignment rewrite") {
   const std::string source = "main(){ return(map<i32,i32>{1i32=2i32 3i32=4i32}) }\n";
   primec::TextFilterPipeline pipeline;
   std::string output;
   std::string error;
   CHECK(pipeline.apply(source, output, error));
   CHECK(error.empty());
-  CHECK(output.find("map<i32,i32>{1i32, 2i32 3i32, 4i32}") != std::string::npos);
+  CHECK(output.find("map<i32,i32>{assign(1i32, 2i32) assign(3i32, 4i32)}") !=
+        std::string::npos);
 }
 
-TEST_CASE("rewrites map literal brackets with string keys") {
+TEST_CASE("map bracket string keys only get generic rewrites") {
   const std::string source = "main(){ return(map<string, i32>[\"a\"=1i32, \"b\"=2i32]) }\n";
   primec::TextFilterPipeline pipeline;
   std::string output;
   std::string error;
   CHECK(pipeline.apply(source, output, error));
   CHECK(error.empty());
-  CHECK(output.find("map<string, i32>{\"a\"utf8, 1i32, \"b\"utf8, 2i32}") != std::string::npos);
+  CHECK(output.find("map<string, i32>[assign(\"a\"utf8, 1i32), assign(\"b\"utf8, 2i32)]") !=
+        std::string::npos);
 }
 
 TEST_CASE("does not rewrite bracket collections without template list") {
@@ -403,38 +410,40 @@ TEST_CASE("does not rewrite bracket collections without template list") {
   CHECK(output == source);
 }
 
-TEST_CASE("map literal preserves assignment in values") {
+TEST_CASE("map assignment in values stays generic") {
   const std::string source = "main(){ return(map<i32,i32>{1i32=assign(a,2i32)}) }\n";
   primec::TextFilterPipeline pipeline;
   std::string output;
   std::string error;
   CHECK(pipeline.apply(source, output, error));
   CHECK(error.empty());
-  CHECK(output.find("map<i32,i32>{1i32, assign(a,2i32)}") != std::string::npos);
+  CHECK(output.find("map<i32,i32>{assign(1i32, assign(a,2i32))}") != std::string::npos);
 }
 
-TEST_CASE("rewrites map literal with string keys in return expression") {
+TEST_CASE("map string keys use generic assignment rewrite") {
   const std::string source = "main(){ return(map<i32,i32>{\"a\"=1i32,\"b\"=2i32}) }\n";
   primec::TextFilterPipeline pipeline;
   std::string output;
   std::string error;
   CHECK(pipeline.apply(source, output, error));
   CHECK(error.empty());
-  CHECK(output.find("map<i32,i32>{\"a\"utf8, 1i32,\"b\"utf8, 2i32}") != std::string::npos);
+  CHECK(output.find("map<i32,i32>{assign(\"a\"utf8, 1i32),assign(\"b\"utf8, 2i32)}") !=
+        std::string::npos);
 }
 
-TEST_CASE("map literal preserves equality and comparison operators in values") {
+TEST_CASE("map generic assignment preserves nested comparisons") {
   const std::string source = "main(){ return(map<i32,i32>{1i32=2i32==3i32,4i32=5i32>=6i32}) }\n";
   primec::TextFilterPipeline pipeline;
   std::string output;
   std::string error;
   CHECK(pipeline.apply(source, output, error));
   CHECK(error.empty());
-  CHECK(output.find("map<i32,i32>{1i32, equal(2i32, 3i32),4i32, greater_equal(5i32, 6i32)}") !=
+  CHECK(output.find("map<i32,i32>{assign(1i32, equal(2i32, 3i32)),"
+                    "assign(4i32, greater_equal(5i32, 6i32))}") !=
         std::string::npos);
 }
 
-TEST_CASE("map literal preserves named args in values") {
+TEST_CASE("map generic assignment preserves named args") {
   const std::string source =
       "main(){ return(map<i32,i32>{1i32=make_color([hue] 1i32, [value] 2i32)}) }\n";
   primec::TextFilterPipeline pipeline;
@@ -442,20 +451,22 @@ TEST_CASE("map literal preserves named args in values") {
   std::string error;
   CHECK(pipeline.apply(source, output, error));
   CHECK(error.empty());
-  CHECK(output.find("map<i32,i32>{1i32, make_color([hue] 1i32, [value] 2i32)}") != std::string::npos);
+  CHECK(output.find("map<i32,i32>{assign(1i32, make_color([hue] 1i32, [value] 2i32))}") !=
+        std::string::npos);
 }
 
-TEST_CASE("map literal rewrites nested map literals") {
+TEST_CASE("nested map syntax is not collection-pair rewritten") {
   const std::string source = "main(){ return(map<i32,i32>{1i32=map<i32,i32>{2i32=3i32}}) }\n";
   primec::TextFilterPipeline pipeline;
   std::string output;
   std::string error;
   CHECK(pipeline.apply(source, output, error));
   CHECK(error.empty());
-  CHECK(output.find("map<i32,i32>{1i32, map<i32,i32>{2i32, 3i32}}") != std::string::npos);
+  CHECK(output.find("map<i32,i32>{1i32, map<i32,i32>{2i32, 3i32}}") == std::string::npos);
+  CHECK(output.find("assign(2i32, 3i32)") != std::string::npos);
 }
 
-TEST_CASE("map literal rewrites whitespace-heavy pairs") {
+TEST_CASE("map whitespace-heavy assignments stay generic") {
   const std::string source =
       "main(){ return(map<i32,i32>{\n  1i32 = 2i32,\n  3i32 = 4i32\n}) }\n";
   primec::TextFilterPipeline pipeline;
@@ -463,7 +474,8 @@ TEST_CASE("map literal rewrites whitespace-heavy pairs") {
   std::string error;
   CHECK(pipeline.apply(source, output, error));
   CHECK(error.empty());
-  CHECK(output.find("map<i32,i32>{\n  1i32 ,  2i32,\n  3i32 ,  4i32\n}") != std::string::npos);
+  CHECK(output.find("map<i32,i32>{\n  assign(1i32, 2i32),\n  assign(3i32, 4i32)\n}") !=
+        std::string::npos);
 }
 
 TEST_CASE("rewrites plus operator with call operands") {

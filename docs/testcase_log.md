@@ -725,10 +725,31 @@
   `[return<>]` and `[return</* gap */>]` as a `return` transform with no
   template args. The parser errors transforms 11-20 shard was stabilized on
   2026-05-21 19:33 CEST by retargeting those fixtures to the accepted empty
-  template-argument AST shape. Next stop-on-failure blocker is not yet
-  localized.
+  template-argument AST shape. Next stop-on-failure blocker is
+  `PrimeStruct_primestruct_text_filters_pipeline_rewrites_cases_11_20`. The
+  text-filter rewrites 11-20 shard is failing in stale map literal rewrite
+  fixtures. Current collection filtering intentionally handles array, vector,
+  and public SoA literals but leaves `map` as ordinary PrimeStruct syntax, so
+  map brackets are not rewritten to braces and map `=` forms only receive the
+  generic operator/UTF-8 rewrites. The text-filter rewrites shards were
+  stabilized on 2026-05-21 19:34 CEST by retargeting map fixtures to generic
+  operator/UTF-8 behavior while keeping array/vector collection rewrites
+  covered. Next stop-on-failure blocker is not yet localized.
 
 ## Recent Test Runs
+- 2026-05-21 19:34 CEST | pass | mode: release | command:
+  `cmake --build build-release --target PrimeStruct_text_filter_tests -j 1`;
+  `cd build-release && ctest --output-on-failure -R '^PrimeStruct_primestruct_text_filters_pipeline_rewrites_cases_' --timeout 180`
+  | failures: none | notes: text-filter rewrite shards now lock that map is
+  outside the collection filter and only receives generic operator/UTF-8
+  rewrites.
+- 2026-05-21 19:34 CEST | fail | mode: release | command:
+  `cd build-release && ctest --output-on-failure --stop-on-failure --timeout 180 -I 537,1599`
+  | failures:
+  `PrimeStruct_primestruct_text_filters_pipeline_rewrites_cases_11_20`
+  | notes: parser transform cases 21-49 and text-filter basics passed first;
+  the first stale fixture still expected map bracket syntax to be rewritten by
+  the C++ collection text filter.
 - 2026-05-21 19:33 CEST | pass | mode: release | command:
   `cmake --build build-release --target PrimeStruct_parser_tests -j 1`;
   `cd build-release && ctest --output-on-failure -R '^PrimeStruct_primestruct_parser_errors_transforms_cases_11_20$' --timeout 180`
