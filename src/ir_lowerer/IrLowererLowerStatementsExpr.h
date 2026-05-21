@@ -1536,7 +1536,21 @@
     uint64_t flags = encodePrintFlags(builtin.newline, builtin.target == PrintTarget::Err);
     if (arg.kind == Expr::Kind::Call) {
       std::string accessName;
-      if (getBuiltinArrayAccessName(arg, accessName)) {
+      const bool isBuiltinAccess =
+          getBuiltinArrayAccessName(arg, accessName) ||
+          ([&]() {
+            const std::string resolvedAccessPath = resolveExprPath(arg);
+            if (resolvedAccessPath == "/at") {
+              accessName = "at";
+              return true;
+            }
+            if (resolvedAccessPath == "/at_unsafe") {
+              accessName = "at_unsafe";
+              return true;
+            }
+            return false;
+          })();
+      if (isBuiltinAccess) {
         if (arg.args.size() != 2) {
           error = accessName + " requires exactly two arguments";
           return false;

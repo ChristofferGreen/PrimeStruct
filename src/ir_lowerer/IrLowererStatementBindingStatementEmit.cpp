@@ -34,7 +34,20 @@ bool emitStringStatementBindingInitializer(const Expr &stmt,
           localsIn,
           internString,
           [&](IrOpcode op, uint64_t imm) { instructions.push_back({op, imm}); },
-          [&](const Expr &expr, std::string &accessName) { return getBuiltinArrayAccessName(expr, accessName); },
+          [&](const Expr &expr, std::string &accessName) {
+            if (getBuiltinArrayAccessName(expr, accessName)) {
+              return true;
+            }
+            if (expr.name == "at" || expr.name == "/at") {
+              accessName = "at";
+              return true;
+            }
+            if (expr.name == "at_unsafe" || expr.name == "/at_unsafe") {
+              accessName = "at_unsafe";
+              return true;
+            }
+            return false;
+          },
           [&](const Expr &expr) { return isEntryArgsName(expr, localsIn); },
           [&](const Expr &indexExpr, const std::string &accessName, StringIndexOps &ops, std::string &errorOut) {
             LocalInfo::ValueKind indexKind = normalizeIndexKind(inferExprKind(indexExpr, localsIn));

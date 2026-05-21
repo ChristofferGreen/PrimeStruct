@@ -75,7 +75,20 @@
         callerLocals,
         internString,
         [&](IrOpcode op, uint64_t imm) { function.instructions.push_back({op, imm}); },
-        [&](const Expr &callExpr, std::string &accessName) { return getBuiltinArrayAccessName(callExpr, accessName); },
+        [&](const Expr &callExpr, std::string &accessName) {
+          if (getBuiltinArrayAccessName(callExpr, accessName)) {
+            return true;
+          }
+          if (callExpr.name == "at" || callExpr.name == "/at") {
+            accessName = "at";
+            return true;
+          }
+          if (callExpr.name == "at_unsafe" || callExpr.name == "/at_unsafe") {
+            accessName = "at_unsafe";
+            return true;
+          }
+          return false;
+        },
         [&](const Expr &targetExpr) { return isEntryArgsName(targetExpr, callerLocals); },
         [&](const Expr &indexExpr,
             const std::string &accessName,

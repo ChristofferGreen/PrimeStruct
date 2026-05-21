@@ -267,7 +267,7 @@ TEST_CASE("primevm forwards entry args") {
 [return<int> effects(io_out)]
 main([array<string>] args) {
   print_line(args[1i32])
-  return(args.count())
+  return(count(args))
 }
 )";
   const std::string srcPath = writeTemp("vm_args.prime", source);
@@ -284,7 +284,7 @@ TEST_CASE("primevm supports argv string bindings") {
 main([array<string>] args) {
   [string] first{args[1i32]}
   print_line(first)
-  return(args.count())
+  return(count(args))
 }
 )";
   const std::string srcPath = writeTemp("primevm_args_binding.prime", source);

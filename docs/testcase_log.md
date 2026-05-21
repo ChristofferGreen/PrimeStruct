@@ -741,9 +741,31 @@
   map pair splitting instead of generic operator/UTF-8 rewriting. The
   text-filter collections shards were stabilized on 2026-05-21 19:35 CEST by
   retargeting dedicated map fixtures to the same ordinary-syntax behavior.
+  Next stop-on-failure blocker is
+  `PrimeStruct_primestruct_compile_run_smoke_core_paths_wasm_and_debug_39_39`.
+  The compile-run smoke core paths 39 shard is failing because VM entry-args
+  print and string-binding fixtures use semantically resolved bare `at`
+  access, while the VM string-print/string-binding lowerer still only routes
+  raw builtin access matches and falls through to the unsupported bare
+  entry-args name diagnostic. The compile-run smoke core paths 39-40 shards
+  were stabilized on 2026-05-21 19:55 CEST by routing bare semantic `at` and
+  `at_unsafe` access through the entry-args print and string-binding paths.
   Next stop-on-failure blocker is not yet localized.
 
 ## Recent Test Runs
+- 2026-05-21 19:55 CEST | pass | mode: release | command:
+  `cmake --build build-release --target PrimeStruct_compile_run_tests -j 1`;
+  `cmake --build build-release --target primevm -j 1`;
+  `cd build-release && ctest --output-on-failure -R '^PrimeStruct_primestruct_compile_run_smoke_core_paths_wasm_and_debug_(39_39|40_40)$' --timeout 180`
+  | failures: none | notes: primevm entry-args print and string-binding
+  smoke cases now lower semantically resolved bare `at` access.
+- 2026-05-21 19:36 CEST | fail | mode: release | command:
+  `cd build-release && ctest --output-on-failure --stop-on-failure --timeout 180 -I 557,1599`
+  | failures:
+  `PrimeStruct_primestruct_compile_run_smoke_core_paths_wasm_and_debug_39_39`
+  | notes: text-filter helpers and compile-run smoke core path cases 1-38
+  passed first; `primevm forwards entry args` stopped on the current VM
+  direct-count-only diagnostic.
 - 2026-05-21 19:35 CEST | pass | mode: release | command:
   `cmake --build build-release --target PrimeStruct_text_filter_tests -j 1`;
   `cd build-release && ctest --output-on-failure -R '^PrimeStruct_primestruct_text_filters_pipeline_collections_cases_' --timeout 180`
