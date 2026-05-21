@@ -2,28 +2,37 @@
 
 TEST_SUITE_BEGIN("primestruct.semantics.calls_flow.collections");
 
-TEST_CASE("to_soa and to_aos reject named arguments for builtin calls") {
-  const auto checkNamedArgs = [](const std::string &callExpr) {
+TEST_CASE("to_soa rejects named arguments while retired to_aos spelling rejects before named args") {
+  const auto checkReject = [](const std::string &setup,
+                              const std::string &callExpr,
+                              const std::string &expected) {
     const std::string source =
         "Particle() {\n"
         "  [i32] x{1i32}\n"
         "}\n\n"
         "[return<int>]\n"
         "main() {\n"
-        "  [vector<Particle>] values{vector<Particle>()}\n"
-        "  [soa_vector<Particle>] packed{soa_vector<Particle>()}\n"
+        + setup +
         "  " + callExpr + "\n"
         "  return(0i32)\n"
         "}\n";
     std::string error;
     CHECK_FALSE(validateProgram(source, "/main", error));
-    CHECK(error.find("named arguments not supported for builtin calls") != std::string::npos);
+    INFO(callExpr);
+    INFO(error);
+    CHECK(error.find(expected) != std::string::npos);
   };
 
-  checkNamedArgs("to_soa([values] values)");
-  checkNamedArgs("to_aos([values] packed)");
-  checkNamedArgs("values.to_soa([values] values)");
-  checkNamedArgs("packed.to_aos([values] packed)");
+  const std::string namedArgs = "named arguments not supported for builtin calls";
+  const std::string retiredSoaVector = "soa_vector<T> is not supported; use soa<T>";
+  checkReject("  [vector<Particle>] values{vector<Particle>()}\n",
+              "to_soa([values] values)", namedArgs);
+  checkReject("  [soa_vector<Particle>] packed{soa_vector<Particle>()}\n",
+              "to_aos([values] packed)", retiredSoaVector);
+  checkReject("  [vector<Particle>] values{vector<Particle>()}\n",
+              "values.to_soa([values] values)", namedArgs);
+  checkReject("  [soa_vector<Particle>] packed{soa_vector<Particle>()}\n",
+              "packed.to_aos([values] packed)", retiredSoaVector);
 }
 
 TEST_CASE("soa_vector get/get_ref/ref/ref_ref reject named arguments for builtin calls") {

@@ -573,9 +573,33 @@
   retired-spelling assumption. The calls-flow collections 491-500 shard was
   stabilized on 2026-05-21 18:38 CEST by retargeting those fixtures to the
   current retired type-spelling diagnostic. Next stop-on-failure blocker is
-  not yet localized.
+  `PrimeStruct_primestruct_semantics_calls_flow_collections_calls_flow_collections_511_520`.
+  The calls-flow collections 511-520 shard is failing in stale SoA conversion
+  named-argument expectations. Current `to_soa` fixtures still report
+  `named arguments not supported for builtin calls` when the fixture avoids
+  retired `soa_vector` declarations, while old-surface `to_aos` fixtures now
+  fail earlier with `soa_vector<T> is not supported; use soa<T>`. The
+  calls-flow collections 511-520 shard was stabilized on 2026-05-21 18:42
+  CEST by splitting those expectations. Next stop-on-failure blocker is not
+  yet localized.
 
 ## Recent Test Runs
+- 2026-05-21 18:42 CEST | pass | mode: release | command:
+  `cmake --build build-release --target PrimeStruct_semantics_tests -j 1`;
+  `cd build-release && ctest --output-on-failure -R '^PrimeStruct_primestruct_semantics_calls_flow_collections_calls_flow_collections_511_520$' --timeout 180`
+  | failures: none | notes: conversion named-argument coverage now keeps
+  `to_soa` named-argument diagnostics separate from retired `soa_vector`
+  `to_aos` spelling diagnostics.
+- 2026-05-21 18:42 CEST | fail | mode: release | command:
+  `cd build-release && ctest --output-on-failure --stop-on-failure --timeout 180 -I 346,1599`;
+  `build-release/primec --emit=ir --dump-stage ast-semantic --entry /main <same to_soa named-arg fixture variants>`
+  | failures:
+  `PrimeStruct_primestruct_semantics_calls_flow_collections_calls_flow_collections_511_520`
+  | notes: stop-on-failure passed the 501-510 calls-flow collection shard,
+  then found stale conversion named-argument coverage. Representative CLI
+  output confirms `to_soa([values] values)` still reaches the named-argument
+  diagnostic without a retired `soa_vector` local; fixtures that declare
+  `soa_vector<Particle>` fail earlier on the retired type spelling.
 - 2026-05-21 18:38 CEST | pass | mode: release | command:
   `cmake --build build-release --target PrimeStruct_semantics_tests -j 1`;
   `cd build-release && ctest --output-on-failure -R '^PrimeStruct_primestruct_semantics_calls_flow_collections_calls_flow_collections_491_500$' --timeout 180`
