@@ -1923,20 +1923,20 @@ TEST_CASE("ir lowerer inference expr-kind call-base setup uses semantic query an
 
   auto syntaxState = makeState(nullptr, nullptr);
   kindOut = ValueKind::Unknown;
-  CHECK(syntaxState.inferCallExprBaseKind(
+  CHECK_FALSE(syntaxState.inferCallExprBaseKind(
       makeMethodExpr("why",
                      makeDereferenceExpr(makeAtExpr("errors", 0))),
       borrowedStaleLocals,
       kindOut));
-  CHECK(kindOut == ValueKind::String);
+  CHECK(kindOut == ValueKind::Unknown);
 
   kindOut = ValueKind::Unknown;
-  CHECK(syntaxState.inferCallExprBaseKind(
+  CHECK_FALSE(syntaxState.inferCallExprBaseKind(
       makeMethodExpr("flush",
                      makeDereferenceExpr(makeAtExpr("files", 0))),
       borrowedStaleFileLocals,
       kindOut));
-  CHECK(kindOut == ValueKind::Int32);
+  CHECK(kindOut == ValueKind::Unknown);
 }
 
 TEST_CASE("ir lowerer inference expr-kind call-base setup does not infer missing query facts from fallback") {

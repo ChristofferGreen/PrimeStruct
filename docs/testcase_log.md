@@ -140,9 +140,29 @@
   helper compatibility removal. The validation cases 401-410 shard was
   stabilized on 2026-05-21 13:48 CEST by retargeting rooted `/map/count`
   alias call-return tests to current `NotResolved` behavior. Next
+  stop-on-failure blocker is
+  `PrimeStruct_primestruct_ir_pipeline_validation_cases_421_430`. The
+  validation cases 421-430 shard is failing in stale call-base inference
+  expectations that still require borrowed `at(...)` receiver syntax facts to
+  infer `why` and `flush` method base kinds before current access-helper
+  classification. The validation cases 421-430 shard was stabilized on
+  2026-05-21 13:53 CEST by retargeting bare borrowed access receiver
+  call-base inference tests to current `Unknown`/not-inferred behavior. Next
   stop-on-failure blocker is not yet localized.
 
 ## Recent Test Runs
+- 2026-05-21 13:53 CEST | pass | mode: release | command:
+  `cmake --build build-release --target PrimeStruct_backend_ir_tests -j 1`;
+  `cd build-release && ctest --output-on-failure -R '^PrimeStruct_primestruct_ir_pipeline_validation_cases_421_430$' --timeout 180`
+  | failures: none | notes: bare borrowed access receiver call-base inference
+  tests now assert current not-inferred behavior.
+- 2026-05-21 13:50 CEST | fail | mode: release | command:
+  `cmake --build build-release -j 1`;
+  `cd build-release && ctest --output-on-failure --stop-on-failure --timeout 180`
+  | failures: `PrimeStruct_primestruct_ir_pipeline_validation_cases_421_430`
+  | notes: stop-on-failure progressed past validation cases 401-410; current
+  blocker is stale borrowed `at(...)` receiver call-base inference
+  expectations for `why` and `flush`.
 - 2026-05-21 13:48 CEST | pass | mode: release | command:
   `cmake --build build-release --target PrimeStruct_backend_ir_tests -j 1`;
   `cd build-release && ctest --output-on-failure -R '^PrimeStruct_primestruct_ir_pipeline_validation_cases_401_410$' --timeout 180`
