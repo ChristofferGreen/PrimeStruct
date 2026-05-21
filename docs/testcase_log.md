@@ -415,9 +415,32 @@
   `meta.field_count requires struct type argument: type:Particle`. The
   calls-flow collections 161-170 shard was stabilized on 2026-05-21 17:46
   CEST by retargeting those fixtures to the current internal metadata
-  validation diagnostic. Next stop-on-failure blocker is not yet localized.
+  validation diagnostic. Next stop-on-failure blocker is
+  `PrimeStruct_primestruct_semantics_calls_flow_collections_calls_flow_collections_171_180`.
+  The calls-flow collections 171-180 shard is failing in stale experimental
+  SoA borrowed helper-return direct-return positives that still require
+  retired `soa_vector` reference count helpers. Current validation rejects
+  those fixtures with
+  `unknown method: /std/collections/soa_vector/count_ref`. The calls-flow
+  collections 171-180 shard was stabilized on 2026-05-21 17:49 CEST by
+  retargeting those fixtures to the current retired count-ref helper
+  diagnostic. Next stop-on-failure blocker is not yet localized.
 
 ## Recent Test Runs
+- 2026-05-21 17:49 CEST | pass | mode: release | command:
+  `cmake --build build-release --target PrimeStruct_semantics_tests -j 1`;
+  `cd build-release && ctest --output-on-failure -R '^PrimeStruct_primestruct_semantics_calls_flow_collections_calls_flow_collections_171_180$' --timeout 180`
+  | failures: none | notes: experimental SoA borrowed helper-return
+  direct-return coverage now expects the current retired count-ref helper
+  diagnostic.
+- 2026-05-21 17:48 CEST | fail | mode: release | command:
+  `cd build-release && ctest --output-on-failure --stop-on-failure --timeout 180 -I 313,1599`;
+  `build-release/primec --emit=ir --dump-stage ast-semantic --entry /main -I stdlib <same fixture sources>`
+  | failures:
+  `PrimeStruct_primestruct_semantics_calls_flow_collections_calls_flow_collections_171_180`
+  | notes: current blocker is stale experimental SoA borrowed helper-return
+  direct-return coverage; representative CLI repro reports
+  `unknown method: /std/collections/soa_vector/count_ref`.
 - 2026-05-21 17:46 CEST | pass | mode: release | command:
   `cmake --build build-release --target PrimeStruct_semantics_tests -j 1`;
   `cd build-release && ctest --output-on-failure -R '^PrimeStruct_primestruct_semantics_calls_flow_collections_calls_flow_collections_161_170$' --timeout 180`

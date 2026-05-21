@@ -2725,7 +2725,7 @@ main() {
   CHECK(error.empty());
 }
 
-TEST_CASE("experimental soa_vector stdlib direct return borrowed helper-return reads validate") {
+TEST_CASE("experimental soa_vector stdlib direct return borrowed helper-return reads reject retired count ref") {
   const std::string source = R"(
 import /std/collections/*
 import /std/collections/soa/*
@@ -2761,8 +2761,10 @@ main() {
 }
 )";
   std::string error;
-  CHECK(validateProgram(source, "/main", error));
-  CHECK(error.empty());
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  INFO(error);
+  CHECK(error.find("unknown method: /std/collections/soa_vector/count_ref") !=
+        std::string::npos);
 }
 
 TEST_CASE("experimental soa_vector stdlib reflected method-like borrowed helper-return index syntax validates") {
@@ -2845,7 +2847,7 @@ main() {
   CHECK(error.empty());
 }
 
-TEST_CASE("experimental soa_vector stdlib direct return inline location borrowed helper-return reads validate") {
+TEST_CASE("experimental soa_vector stdlib direct return inline location borrowed helper-return reads reject retired count ref") {
   const std::string source = R"(
 import /std/collections/*
 import /std/collections/soa/*
@@ -2881,8 +2883,10 @@ main() {
 }
 )";
   std::string error;
-  CHECK(validateProgram(source, "/main", error));
-  CHECK(error.empty());
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  INFO(error);
+  CHECK(error.find("unknown method: /std/collections/soa_vector/count_ref") !=
+        std::string::npos);
 }
 
 TEST_CASE("experimental soa storage helpers validate on explicit column bindings") {
