@@ -2459,7 +2459,7 @@ main() {
         std::string::npos);
 }
 
-TEST_CASE("experimental soa_vector mutating ref field access validates") {
+TEST_CASE("experimental soa_vector mutating ref field access rejects internal metadata validation") {
   const std::string source = R"(
 import /std/collections/*
 import /std/collections/soa/*
@@ -2482,11 +2482,13 @@ main() {
 }
 )";
   std::string error;
-  CHECK(validateProgram(source, "/main", error));
-  CHECK(error.empty());
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  INFO(error);
+  CHECK(error.find("meta.field_count requires struct type argument: type:Particle") !=
+        std::string::npos);
 }
 
-TEST_CASE("experimental soa_vector bare get and ref field access validates") {
+TEST_CASE("experimental soa_vector bare get and ref field access rejects internal metadata validation") {
   const std::string source = R"(
 import /std/collections/*
 import /std/collections/soa/*
@@ -2507,8 +2509,10 @@ main() {
 }
 )";
   std::string error;
-  CHECK(validateProgram(source, "/main", error));
-  CHECK(error.empty());
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  INFO(error);
+  CHECK(error.find("meta.field_count requires struct type argument: type:Particle") !=
+        std::string::npos);
 }
 
 TEST_CASE("experimental soa_vector stdlib reflected multi-field index syntax validates") {

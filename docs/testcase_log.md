@@ -407,9 +407,30 @@
   wildcard import boundary. The calls-flow collections 141-150 shard was
   stabilized on 2026-05-21 17:43 CEST by retargeting those fixtures to the
   current direct wildcard import rejection. Next stop-on-failure blocker is
-  not yet localized.
+  `PrimeStruct_primestruct_semantics_calls_flow_collections_calls_flow_collections_161_170`.
+  The calls-flow collections 161-170 shard is failing in stale experimental
+  SoA ref/get field-access positives that still require internal SoA vector
+  metadata validation to accept reflected element type handles. Current
+  validation rejects those fixtures with
+  `meta.field_count requires struct type argument: type:Particle`. The
+  calls-flow collections 161-170 shard was stabilized on 2026-05-21 17:46
+  CEST by retargeting those fixtures to the current internal metadata
+  validation diagnostic. Next stop-on-failure blocker is not yet localized.
 
 ## Recent Test Runs
+- 2026-05-21 17:46 CEST | pass | mode: release | command:
+  `cmake --build build-release --target PrimeStruct_semantics_tests -j 1`;
+  `cd build-release && ctest --output-on-failure -R '^PrimeStruct_primestruct_semantics_calls_flow_collections_calls_flow_collections_161_170$' --timeout 180`
+  | failures: none | notes: experimental SoA ref/get field-access coverage
+  now expects the current internal metadata validation diagnostic.
+- 2026-05-21 17:45 CEST | fail | mode: release | command:
+  `cd build-release && ctest --output-on-failure --stop-on-failure --timeout 180 -I 311,1599`;
+  `build-release/primec --emit=ir --dump-stage ast-semantic --entry /main -I stdlib <same fixture source>`
+  | failures:
+  `PrimeStruct_primestruct_semantics_calls_flow_collections_calls_flow_collections_161_170`
+  | notes: stop-on-failure passed shard 151-160, then found stale
+  experimental SoA ref/get field-access positives; representative CLI repro
+  reports `meta.field_count requires struct type argument: type:Particle`.
 - 2026-05-21 17:43 CEST | pass | mode: release | command:
   `cmake --build build-release --target PrimeStruct_semantics_tests -j 1`;
   `cd build-release && ctest --output-on-failure -R '^PrimeStruct_primestruct_semantics_calls_flow_collections_calls_flow_collections_141_150$' --timeout 180`
