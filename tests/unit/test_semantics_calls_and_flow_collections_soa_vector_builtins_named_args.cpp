@@ -2,6 +2,13 @@
 
 TEST_SUITE_BEGIN("primestruct.semantics.calls_flow.collections");
 
+namespace {
+
+const std::string RetiredSoaVectorDiagnostic =
+    "soa_vector<T> is not supported; use soa<T>";
+
+} // namespace
+
 TEST_CASE("to_soa rejects named arguments while retired to_aos spelling rejects before named args") {
   const auto checkReject = [](const std::string &setup,
                               const std::string &callExpr,
@@ -24,20 +31,18 @@ TEST_CASE("to_soa rejects named arguments while retired to_aos spelling rejects 
   };
 
   const std::string namedArgs = "named arguments not supported for builtin calls";
-  const std::string retiredSoaVector = "soa_vector<T> is not supported; use soa<T>";
   checkReject("  [vector<Particle>] values{vector<Particle>()}\n",
               "to_soa([values] values)", namedArgs);
   checkReject("  [soa_vector<Particle>] packed{soa_vector<Particle>()}\n",
-              "to_aos([values] packed)", retiredSoaVector);
+              "to_aos([values] packed)", RetiredSoaVectorDiagnostic);
   checkReject("  [vector<Particle>] values{vector<Particle>()}\n",
               "values.to_soa([values] values)", namedArgs);
   checkReject("  [soa_vector<Particle>] packed{soa_vector<Particle>()}\n",
-              "packed.to_aos([values] packed)", retiredSoaVector);
+              "packed.to_aos([values] packed)", RetiredSoaVectorDiagnostic);
 }
 
-TEST_CASE("soa_vector get/get_ref/ref/ref_ref reject named arguments for builtin calls") {
-  const auto checkReject = [](const std::string &callExpr,
-                              const std::string &expected) {
+TEST_CASE("retired soa_vector access forms reject before named arguments") {
+  const auto checkReject = [](const std::string &callExpr) {
     const std::string source =
         "Particle() {\n"
         "  [i32] x{1i32}\n"
@@ -50,27 +55,24 @@ TEST_CASE("soa_vector get/get_ref/ref/ref_ref reject named arguments for builtin
         "}\n";
     std::string error;
     CHECK_FALSE(validateProgram(source, "/main", error));
-    CHECK(error.find(expected) != std::string::npos);
+    INFO(callExpr);
+    INFO(error);
+    CHECK(error.find(RetiredSoaVectorDiagnostic) != std::string::npos);
   };
 
-  const std::string namedArgs = "named arguments not supported for builtin calls";
-  checkReject("get([index] 0i32, [values] values)", namedArgs);
-  checkReject("get_ref([index] 0i32, [values] location(values))", namedArgs);
-  checkReject("location(values).get_ref([index] 0i32)", namedArgs);
-  checkReject("ref([index] 0i32, [values] values)", namedArgs);
-  checkReject("ref_ref([index] 0i32, [values] values)", namedArgs);
-  checkReject("values.ref_ref([index] 0i32)", namedArgs);
-  checkReject("/soa_vector/get([index] 0i32, [values] values)",
-              "unknown method: /std/collections/soa_vector/get");
-  checkReject("/soa_vector/get_ref([index] 0i32, [values] location(values))",
-              "unknown method: /std/collections/soa_vector/get_ref");
-  checkReject("/soa_vector/ref([index] 0i32, [values] values)",
-              "unknown method: /std/collections/soa_vector/ref");
-  checkReject("/soa_vector/ref_ref([index] 0i32, [values] values)",
-              "unknown method: /std/collections/soa_vector/ref_ref");
+  checkReject("get([index] 0i32, [values] values)");
+  checkReject("get_ref([index] 0i32, [values] location(values))");
+  checkReject("location(values).get_ref([index] 0i32)");
+  checkReject("ref([index] 0i32, [values] values)");
+  checkReject("ref_ref([index] 0i32, [values] values)");
+  checkReject("values.ref_ref([index] 0i32)");
+  checkReject("/soa_vector/get([index] 0i32, [values] values)");
+  checkReject("/soa_vector/get_ref([index] 0i32, [values] location(values))");
+  checkReject("/soa_vector/ref([index] 0i32, [values] values)");
+  checkReject("/soa_vector/ref_ref([index] 0i32, [values] values)");
 }
 
-TEST_CASE("soa_vector builtin get/get_ref/ref/ref_ref require integer indices") {
+TEST_CASE("retired soa_vector index forms reject before integer index checks") {
   const auto checkIndexType = [](const std::string &callExpr) {
     const std::string source =
         "Particle() {\n"
@@ -84,7 +86,9 @@ TEST_CASE("soa_vector builtin get/get_ref/ref/ref_ref require integer indices") 
         "}\n";
     std::string error;
     CHECK_FALSE(validateProgram(source, "/main", error));
-    CHECK(error.find("requires integer index") != std::string::npos);
+    INFO(callExpr);
+    INFO(error);
+    CHECK(error.find(RetiredSoaVectorDiagnostic) != std::string::npos);
   };
 
   checkIndexType("get(values, true)");
@@ -94,7 +98,7 @@ TEST_CASE("soa_vector builtin get/get_ref/ref/ref_ref require integer indices") 
   checkIndexType("values.ref_ref(1.0f32)");
 }
 
-TEST_CASE("old-surface soa_vector access forms defer non-integer index rejection past semantics") {
+TEST_CASE("old-surface soa_vector access forms reject retired spelling before indices") {
   const auto checkValidate = [](const std::string &callExpr) {
     const std::string source =
         "Particle() {\n"
@@ -107,8 +111,10 @@ TEST_CASE("old-surface soa_vector access forms defer non-integer index rejection
         "  return(0i32)\n"
         "}\n";
     std::string error;
-    CHECK(validateProgram(source, "/main", error));
-    CHECK(error.empty());
+    CHECK_FALSE(validateProgram(source, "/main", error));
+    INFO(callExpr);
+    INFO(error);
+    CHECK(error.find(RetiredSoaVectorDiagnostic) != std::string::npos);
   };
 
   checkValidate("/soa_vector/get(values, true)");
@@ -139,28 +145,28 @@ TEST_CASE("soa_vector conversion and access builtins reject template arguments")
   checkReject("  [vector<Particle>] values{vector<Particle>()}\n", "to_soa<i32>(values)",
               "to_soa does not accept template arguments");
   checkReject("  [soa_vector<Particle>] values{soa_vector<Particle>()}\n", "to_aos<i32>(values)",
-              "to_aos does not accept template arguments");
+              RetiredSoaVectorDiagnostic);
   checkReject("  [vector<Particle>] values{vector<Particle>()}\n", "values.to_soa<i32>()",
               "to_soa does not accept template arguments");
   checkReject("  [soa_vector<Particle>] values{soa_vector<Particle>()}\n", "values.to_aos<i32>()",
-              "to_aos_ref does not accept template arguments");
+              RetiredSoaVectorDiagnostic);
   checkReject("  [soa_vector<Particle>] values{soa_vector<Particle>()}\n", "get<i32>(values, 0i32)",
-              "get does not accept template arguments");
+              RetiredSoaVectorDiagnostic);
   checkReject("  [soa_vector<Particle>] values{soa_vector<Particle>()}\n",
-              "get_ref<i32>(location(values), 0i32)", "get_ref does not accept template arguments");
+              "get_ref<i32>(location(values), 0i32)", RetiredSoaVectorDiagnostic);
   checkReject("  [soa_vector<Particle>] values{soa_vector<Particle>()}\n", "ref<i32>(values, 0i32)",
-              "ref does not accept template arguments");
+              RetiredSoaVectorDiagnostic);
   checkReject("  [soa_vector<Particle>] values{soa_vector<Particle>()}\n", "ref_ref<i32>(values, 0i32)",
-              "ref_ref does not accept template arguments");
+              RetiredSoaVectorDiagnostic);
   checkReject("  [soa_vector<Particle>] values{soa_vector<Particle>()}\n",
-              "/soa_vector/get<i32>(values, 0i32)", "get does not accept template arguments");
+              "/soa_vector/get<i32>(values, 0i32)", RetiredSoaVectorDiagnostic);
   checkReject("  [soa_vector<Particle>] values{soa_vector<Particle>()}\n",
-              "/soa_vector/ref<i32>(values, 0i32)", "ref does not accept template arguments");
+              "/soa_vector/ref<i32>(values, 0i32)", RetiredSoaVectorDiagnostic);
   checkReject("  [soa_vector<Particle>] values{soa_vector<Particle>()}\n",
-              "/soa_vector/ref_ref<i32>(values, 0i32)", "ref_ref does not accept template arguments");
+              "/soa_vector/ref_ref<i32>(values, 0i32)", RetiredSoaVectorDiagnostic);
 }
 
-TEST_CASE("soa_vector canonical get_ref rejects explicit element template argument in expressions") {
+TEST_CASE("soa_vector canonical get_ref rejects retired spelling before expression-only check") {
   const std::string source = R"(
 [struct reflect]
 Particle() {
@@ -176,8 +182,8 @@ main() {
   )";
   std::string error;
   CHECK_FALSE(validateProgram(source, "/main", error));
-  CHECK(error.find("get_ref is only supported as a statement") !=
-        std::string::npos);
+  INFO(error);
+  CHECK(error.find(RetiredSoaVectorDiagnostic) != std::string::npos);
 }
 
 TEST_CASE("soa_vector conversion and access builtins reject block arguments") {
@@ -194,6 +200,8 @@ TEST_CASE("soa_vector conversion and access builtins reject block arguments") {
         "}\n";
     std::string error;
     CHECK(validateProgram(source, "/main", error));
+    INFO(callExpr);
+    INFO(error);
     CHECK(error.empty());
   };
   const auto checkReject = [](const std::string &setup, const std::string &callExpr, const std::string &expected) {
@@ -209,20 +217,22 @@ TEST_CASE("soa_vector conversion and access builtins reject block arguments") {
         "}\n";
     std::string error;
     CHECK_FALSE(validateProgram(source, "/main", error));
+    INFO(callExpr);
+    INFO(error);
     CHECK(error.find(expected) != std::string::npos);
   };
 
   checkAccept("  [vector<Particle>] values{vector<Particle>()}\n", "to_soa(values) { return(values) }");
-  checkAccept("  [soa_vector<Particle>] values{soa_vector<Particle>()}\n",
-              "to_aos(values) { return(values) }");
   checkReject("  [vector<Particle>] values{vector<Particle>()}\n", "values.to_soa() { return(values) }",
               "block arguments require a definition target");
   checkReject("  [soa_vector<Particle>] values{soa_vector<Particle>()}\n",
-              "values.to_aos() { return(values) }", "block arguments require a definition target");
+              "to_aos(values) { return(values) }", RetiredSoaVectorDiagnostic);
   checkReject("  [soa_vector<Particle>] values{soa_vector<Particle>()}\n",
-              "get(values, 0i32) { return(values) }", "block arguments require a definition target");
+              "values.to_aos() { return(values) }", RetiredSoaVectorDiagnostic);
   checkReject("  [soa_vector<Particle>] values{soa_vector<Particle>()}\n",
-              "ref(values, 0i32) { return(values) }", "block arguments require a definition target");
+              "get(values, 0i32) { return(values) }", RetiredSoaVectorDiagnostic);
+  checkReject("  [soa_vector<Particle>] values{soa_vector<Particle>()}\n",
+              "ref(values, 0i32) { return(values) }", RetiredSoaVectorDiagnostic);
 }
 
 TEST_CASE("soa_vector conversion and access builtins enforce argument counts") {
@@ -239,33 +249,35 @@ TEST_CASE("soa_vector conversion and access builtins enforce argument counts") {
         "}\n";
     std::string error;
     CHECK_FALSE(validateProgram(source, "/main", error));
+    INFO(callExpr);
+    INFO(error);
     CHECK(error.find(expected) != std::string::npos);
   };
 
   checkReject("  [vector<Particle>] values{vector<Particle>()}\n", "to_soa()",
               "argument count mismatch for builtin to_soa");
   checkReject("  [soa_vector<Particle>] values{soa_vector<Particle>()}\n", "to_aos(values, values)",
-              "argument count mismatch for builtin to_aos");
+              RetiredSoaVectorDiagnostic);
   checkReject("  [vector<Particle>] values{vector<Particle>()}\n", "values.to_soa(values)",
               "argument count mismatch for builtin to_soa");
   checkReject("  [soa_vector<Particle>] values{soa_vector<Particle>()}\n", "values.to_aos(values)",
-              "argument count mismatch for builtin to_aos");
+              RetiredSoaVectorDiagnostic);
   checkReject("  [soa_vector<Particle>] values{soa_vector<Particle>()}\n", "get(values)",
-              "argument count mismatch for builtin get");
+              RetiredSoaVectorDiagnostic);
   checkReject("  [soa_vector<Particle>] values{soa_vector<Particle>()}\n", "get_ref(location(values))",
-              "argument count mismatch for builtin get_ref");
+              RetiredSoaVectorDiagnostic);
   checkReject("  [soa_vector<Particle>] values{soa_vector<Particle>()}\n",
               "get_ref(location(values), 0i32, 1i32)",
-              "argument count mismatch for builtin get_ref");
+              RetiredSoaVectorDiagnostic);
   checkReject("  [soa_vector<Particle>] values{soa_vector<Particle>()}\n", "ref(values, 0i32, 1i32)",
-              "argument count mismatch for builtin ref");
+              RetiredSoaVectorDiagnostic);
   checkReject("  [soa_vector<Particle>] values{soa_vector<Particle>()}\n", "ref_ref(values)",
-              "argument count mismatch for builtin ref_ref");
+              RetiredSoaVectorDiagnostic);
   checkReject("  [soa_vector<Particle>] values{soa_vector<Particle>()}\n", "ref_ref(values, 0i32, 1i32)",
-              "argument count mismatch for builtin ref_ref");
+              RetiredSoaVectorDiagnostic);
 }
 
-TEST_CASE("soa_vector builtin construction allows empty constructor and empty braces") {
+TEST_CASE("soa_vector builtin construction rejects retired spelling") {
   const std::string source = R"(
 [struct reflect]
 Particle() {
@@ -280,11 +292,12 @@ main() {
 }
 )";
   std::string error;
-  CHECK_MESSAGE(validateProgram(source, "/main", error), error);
-  CHECK(error.empty());
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  INFO(error);
+  CHECK(error.find(RetiredSoaVectorDiagnostic) != std::string::npos);
 }
 
-TEST_CASE("soa_vector builtin ref local bindings use pending diagnostic") {
+TEST_CASE("soa_vector builtin ref local bindings reject retired spelling") {
   const auto checkReject = [](const std::string &bindingType, const std::string &bindingInit) {
     const std::string source =
         "Particle() {\n"
@@ -298,7 +311,9 @@ TEST_CASE("soa_vector builtin ref local bindings use pending diagnostic") {
         "}\n";
     std::string error;
     CHECK_FALSE(validateProgram(source, "/main", error));
-    CHECK(error.find("unknown method: /std/collections/soa_vector/ref") != std::string::npos);
+    INFO(bindingInit);
+    INFO(error);
+    CHECK(error.find(RetiredSoaVectorDiagnostic) != std::string::npos);
   };
 
   checkReject("auto", "ref(values, 0i32)");
@@ -309,7 +324,7 @@ TEST_CASE("soa_vector builtin ref local bindings use pending diagnostic") {
   checkReject("Particle", "/soa_vector/ref(values, 0i32)");
 }
 
-TEST_CASE("soa_vector helper-return ref/ref_ref local bindings use pending diagnostic") {
+TEST_CASE("soa_vector helper-return ref/ref_ref local bindings reject non-templated spelling") {
   const auto checkReject = [](const std::string &bindingType,
                               const std::string &bindingInit,
                               const std::string &expected) {
@@ -328,21 +343,21 @@ TEST_CASE("soa_vector helper-return ref/ref_ref local bindings use pending diagn
         "}\n";
     std::string error;
     CHECK_FALSE(validateProgram(source, "/main", error));
+    INFO(bindingInit);
+    INFO(error);
     CHECK(error.find(expected) != std::string::npos);
   };
 
-  const std::string refPending =
-      "unknown method: /std/collections/soa_vector/ref";
-  const std::string refRefPending =
-      "unknown method: /std/collections/soa_vector/ref_ref";
-  checkReject("auto", "ref(cloneValues(), 0i32)", refPending);
-  checkReject("auto", "cloneValues().ref(0i32)", refPending);
-  checkReject("Particle", "ref(cloneValues(), 0i32)", refPending);
-  checkReject("Particle", "cloneValues().ref(0i32)", refPending);
-  checkReject("auto", "ref_ref(cloneValues(), 0i32)", refRefPending);
-  checkReject("auto", "cloneValues().ref_ref(0i32)", refRefPending);
-  checkReject("Particle", "ref_ref(cloneValues(), 0i32)", refRefPending);
-  checkReject("Particle", "cloneValues().ref_ref(0i32)", refRefPending);
+  const std::string nonTemplatedSoaVector =
+      "template arguments are only supported on templated definitions: /soa_vector";
+  checkReject("auto", "ref(cloneValues(), 0i32)", nonTemplatedSoaVector);
+  checkReject("auto", "cloneValues().ref(0i32)", nonTemplatedSoaVector);
+  checkReject("Particle", "ref(cloneValues(), 0i32)", nonTemplatedSoaVector);
+  checkReject("Particle", "cloneValues().ref(0i32)", nonTemplatedSoaVector);
+  checkReject("auto", "ref_ref(cloneValues(), 0i32)", nonTemplatedSoaVector);
+  checkReject("auto", "cloneValues().ref_ref(0i32)", nonTemplatedSoaVector);
+  checkReject("Particle", "ref_ref(cloneValues(), 0i32)", nonTemplatedSoaVector);
+  checkReject("Particle", "cloneValues().ref_ref(0i32)", nonTemplatedSoaVector);
 }
 
 TEST_CASE("soa_vector ref helper binding keeps same-path user helper for auto inference") {

@@ -581,9 +581,34 @@
   fail earlier with `soa_vector<T> is not supported; use soa<T>`. The
   calls-flow collections 511-520 shard was stabilized on 2026-05-21 18:42
   CEST by splitting those expectations. Next stop-on-failure blocker is not
-  yet localized.
+  `PrimeStruct_primestruct_semantics_calls_flow_collections_calls_flow_collections_521_530`.
+  The calls-flow collections 521-530 shard is failing in a concentrated stale
+  SoA old-surface block. Current validation rejects every fixture that
+  declares or returns `soa_vector<Particle>` with
+  `soa_vector<T> is not supported; use soa<T>` before named-argument,
+  template-argument, index, block-argument, arity, constructor, ref, or helper
+  pending diagnostics; helper returns through lowercase `soa_vector<Particle>`
+  report the non-templated `/soa_vector` diagnostic. Vector-only `to_soa`
+  fixtures still reach the builtin validation diagnostics. The calls-flow
+  collections 521-530 shard was stabilized on 2026-05-21 18:46 CEST by
+  retargeting the stale old-surface SoA builtins block to those current
+  diagnostics. Next stop-on-failure blocker is not yet localized.
 
 ## Recent Test Runs
+- 2026-05-21 18:46 CEST | pass | mode: release | command:
+  `cmake --build build-release --target PrimeStruct_semantics_tests -j 1`;
+  `cd build-release && ctest --output-on-failure -R '^PrimeStruct_primestruct_semantics_calls_flow_collections_calls_flow_collections_521_530$' --timeout 180`
+  | failures: none | notes: stale SoA old-surface builtins coverage now
+  expects retired `soa_vector<T>` spelling diagnostics, non-templated
+  `/soa_vector` helper-return diagnostics, and still keeps vector-only
+  `to_soa` builtin diagnostics where they remain reachable.
+- 2026-05-21 18:46 CEST | fail | mode: release | command:
+  `cd build-release && ctest --output-on-failure --stop-on-failure --timeout 180 -I 348,1599`
+  | failures:
+  `PrimeStruct_primestruct_semantics_calls_flow_collections_calls_flow_collections_521_530`
+  | notes: shard-local old-surface SoA builtins all failed on stale
+  expectations after retired `soa_vector<Particle>` declarations started
+  rejecting before later builtin-specific checks.
 - 2026-05-21 18:42 CEST | pass | mode: release | command:
   `cmake --build build-release --target PrimeStruct_semantics_tests -j 1`;
   `cd build-release && ctest --output-on-failure -R '^PrimeStruct_primestruct_semantics_calls_flow_collections_calls_flow_collections_511_520$' --timeout 180`
