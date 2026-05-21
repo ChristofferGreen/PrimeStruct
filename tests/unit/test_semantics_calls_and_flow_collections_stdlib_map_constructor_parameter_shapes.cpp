@@ -369,21 +369,22 @@ unexpectedWrappedCanonicalMapHelperReceiverError([ContainerError] err) {
 [return<Result<int, ContainerError>> effects(io_out, heap_alloc)
  on_error<ContainerError, /unexpectedWrappedCanonicalMapHelperReceiverError>]
 main() {
-  [i32] found{try(/std/collections/map/tryAt(wrapValues(/std/collections/map/map<string, i32>("left"raw_utf8, 4i32,
+  [i32] found{try(/std/collections/map/tryAt<string, i32>(wrapValues(/std/collections/map/map<string, i32>("left"raw_utf8, 4i32,
                                                                                   "right"raw_utf8, 7i32)),
                                             "left"raw_utf8))}
-  [i32 mut] total{plus(/std/collections/map/count(wrapValues(/std/collections/map/map<string, i32>("left"raw_utf8, 4i32,
+  [i32 mut] total{plus(/std/collections/map/count<string, i32>(wrapValues(/std/collections/map/map<string, i32>("left"raw_utf8, 4i32,
                                                                                       "right"raw_utf8, 7i32))),
                           found)}
-  assign(total, plus(total, /std/collections/map/at(wrapValues(/std/collections/map/map<string, i32>("extra"raw_utf8, 9i32,
+  assign(total, plus(total, /std/collections/map/at<string, i32>(wrapValues(/std/collections/map/map<string, i32>("extra"raw_utf8, 9i32,
                                                                                         "other"raw_utf8, 2i32)),
                                                     "extra"raw_utf8)))
-  assign(total, plus(total, /std/collections/map/at_unsafe(wrapValues(/std/collections/map/map<string, i32>("bonus"raw_utf8, 5i32,
+  assign(total, plus(total, /std/collections/map/at_unsafe<string, i32>(wrapValues(/std/collections/map/map<string, i32>("bonus"raw_utf8, 5i32,
                                                                                                "keep"raw_utf8, 1i32)),
                                                            "bonus"raw_utf8)))
-  if(/std/collections/map/contains(wrapValues(/std/collections/map/map<string, i32>("left"raw_utf8, 4i32,
-                                                                       "right"raw_utf8, 7i32)),
-                                   "right"raw_utf8),
+  if(/std/collections/map/contains<string, i32>(
+         wrapValues(/std/collections/map/map<string, i32>("left"raw_utf8, 4i32,
+                                             "right"raw_utf8, 7i32)),
+         "right"raw_utf8),
      then() { assign(total, plus(total, 1i32)) },
      else() { })
   return(Result.ok(total))
@@ -415,7 +416,7 @@ main() {
   checkMapPairTemplateConflict(error);
 }
 
-TEST_CASE("canonical map methods validate direct constructor receivers") {
+TEST_CASE("canonical map methods validate direct constructor receivers with explicit contains") {
   const std::string source = R"(
 import /std/collections/*
 import /std/collections/internal_map/*
@@ -432,7 +433,9 @@ main() {
   [i32 mut] total{plus(/std/collections/map/map<string, i32>("left"raw_utf8, 4i32, "right"raw_utf8, 7i32).count(), found)}
   assign(total, plus(total, /std/collections/map/map<string, i32>("extra"raw_utf8, 9i32, "other"raw_utf8, 2i32).at("extra"raw_utf8)))
   assign(total, plus(total, /std/collections/map/map<string, i32>("bonus"raw_utf8, 5i32, "keep"raw_utf8, 1i32).at_unsafe("bonus"raw_utf8)))
-  if(/std/collections/map/map<string, i32>("left"raw_utf8, 4i32, "right"raw_utf8, 7i32).contains("right"raw_utf8),
+  if(/std/collections/map/contains<string, i32>(
+         /std/collections/map/map<string, i32>("left"raw_utf8, 4i32, "right"raw_utf8, 7i32),
+         "right"raw_utf8),
      then() { assign(total, plus(total, 1i32)) },
      else() { })
   return(Result.ok(total))

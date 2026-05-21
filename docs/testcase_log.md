@@ -638,9 +638,33 @@
   argument mismatch before the previous chained-method inference expectation.
   The calls-flow collections 581-590 shard was stabilized on 2026-05-21
   18:59 CEST by retargeting that fixture to the current map storage mismatch.
-  Next stop-on-failure blocker is not yet localized.
+  Next stop-on-failure blocker is
+  `PrimeStruct_primestruct_semantics_calls_flow_collections_calls_flow_collections_591_600`.
+  The calls-flow collections 591-600 shard is failing in stale direct
+  constructor map receiver fixtures that still expected implicit map helper
+  template recovery through helper-wrapped constructors and method sugar.
+  Current `.prime` stdlib map validation preserves direct constructor method
+  calls except `contains`, but helper-wrapped direct constructor receivers
+  require explicit `tryAt`/`count`/`at`/`at_unsafe`/`contains<K, V>` helper
+  template arguments. The calls-flow collections 591-600 shard was stabilized
+  on 2026-05-21 19:00 CEST by adding those explicit stdlib map helper
+  templates to the stale fixtures. Next stop-on-failure blocker is not yet
+  localized.
 
 ## Recent Test Runs
+- 2026-05-21 19:00 CEST | pass | mode: release | command:
+  `cmake --build build-release --target PrimeStruct_semantics_tests -j 1`;
+  `cd build-release && ctest --output-on-failure -R '^PrimeStruct_primestruct_semantics_calls_flow_collections_calls_flow_collections_591_600$' --timeout 180`
+  | failures: none | notes: helper-wrapped direct constructor map receivers
+  now use explicit stdlib map helper templates, and the method fixture uses
+  explicit `contains<string, i32>`.
+- 2026-05-21 19:00 CEST | fail | mode: release | command:
+  `cd build-release && ctest --output-on-failure --stop-on-failure --timeout 180 -I 355,1599`
+  | failures:
+  `PrimeStruct_primestruct_semantics_calls_flow_collections_calls_flow_collections_591_600`
+  | notes: stale direct constructor map receiver fixtures still expected
+  implicit helper template recovery through helper-wrapped constructor
+  receivers and method-sugar `contains`.
 - 2026-05-21 18:59 CEST | pass | mode: release | command:
   `cmake --build build-release --target PrimeStruct_semantics_tests -j 1`;
   `cd build-release && ctest --output-on-failure -R '^PrimeStruct_primestruct_semantics_calls_flow_collections_calls_flow_collections_581_590$' --timeout 180`
