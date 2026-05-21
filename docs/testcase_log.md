@@ -241,10 +241,32 @@
   unknown-method-target diagnostic.
   The validation cases 791-800 shard was stabilized on 2026-05-21 14:47 CEST
   by retargeting entry-args access receiver fallback diagnostics to current
-  `unknown method target` behavior. Next stop-on-failure blocker is not yet
-  localized.
+  `unknown method target` behavior. Next stop-on-failure blocker is
+  `PrimeStruct_primestruct_ir_pipeline_validation_cases_801_810`. The
+  validation cases 801-810 shard is failing in stale setup-type helper
+  expectations for map `contains` / `tryAt` canonical fallback diagnostics and
+  SoA-vector wrapper mutator alias preference after current method-target
+  resolution.
+  The validation cases 801-810 shard was stabilized on 2026-05-21 15:11 CEST
+  by retargeting map `contains` / `tryAt` method resolution to current
+  explicit unknown-target and bare quiet-defer behavior, and SoA-vector
+  mutator wrapper resolution to the public canonical helper path. Next
+  stop-on-failure blocker is not yet localized.
 
 ## Recent Test Runs
+- 2026-05-21 15:11 CEST | pass | mode: release | command:
+  `cmake --build build-release --target PrimeStruct_backend_ir_tests -j 1`;
+  `cd build-release && ctest --output-on-failure -R '^PrimeStruct_primestruct_ir_pipeline_validation_cases_801_810$' --timeout 180`
+  | failures: none | notes: setup-type helper map `contains` / `tryAt`
+  fallback and SoA-vector wrapper mutator expectations now match current
+  method-target behavior.
+- 2026-05-21 15:08 CEST | fail | mode: release | command:
+  `cmake --build build-release -j 1`;
+  `cd build-release && ctest --output-on-failure --stop-on-failure --timeout 180`
+  | failures: `PrimeStruct_primestruct_ir_pipeline_validation_cases_801_810`
+  | notes: stop-on-failure progressed past validation cases 791-800; current
+  blocker is stale map `contains` / `tryAt` fallback and SoA-vector wrapper
+  mutator preference coverage.
 - 2026-05-21 14:47 CEST | pass | mode: release | command:
   `cmake --build build-release --target PrimeStruct_backend_ir_tests -j 1`;
   `cd build-release && ctest --output-on-failure -R '^PrimeStruct_primestruct_ir_pipeline_validation_cases_791_800$' --timeout 180`

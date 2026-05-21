@@ -618,14 +618,14 @@ TEST_CASE("ir lowerer setup type helper rejects slash-path map methods from expr
   expectUnknownMethod("/map/count", {receiverExpr}, "unknown method: /map/count");
   expectUnknownMethod(
       "/std/collections/map/count", {receiverExpr}, "unknown method: /std/collections/map/count");
-  expectUnknownMethod("/map/contains", {receiverExpr, keyExpr}, "unknown method: /map/contains");
+  expectUnknownMethod("/map/contains", {receiverExpr, keyExpr}, "unknown method target for contains");
   expectUnknownMethod("/std/collections/map/contains",
                       {receiverExpr, keyExpr},
-                      "unknown method: /std/collections/map/contains");
-  expectUnknownMethod("/map/tryAt", {receiverExpr, keyExpr}, "unknown method: /map/tryAt");
+                      "unknown method target for contains");
+  expectUnknownMethod("/map/tryAt", {receiverExpr, keyExpr}, "unknown method target for tryAt");
   expectUnknownMethod("/std/collections/map/tryAt",
                       {receiverExpr, keyExpr},
-                      "unknown method: /std/collections/map/tryAt");
+                      "unknown method target for tryAt");
   expectUnknownMethod("/map/at", {receiverExpr, keyExpr}, "unknown method: /map/at");
   expectUnknownMethod(
       "/std/collections/map/at", {receiverExpr, keyExpr}, "unknown method: /std/collections/map/at");
@@ -685,13 +685,13 @@ TEST_CASE("ir lowerer setup type helper rejects canonical fallback for explicit 
     CHECK(error == std::string(expectedError));
   };
 
-  expectUnknownMethod("/map/contains", "unknown method: /map/contains");
-  expectUnknownMethod("/map/tryAt", "unknown method: /map/tryAt");
-  expectUnknownMethod("/std/collections/map/contains", "unknown method: /std/collections/map/contains");
-  expectUnknownMethod("/std/collections/map/tryAt", "unknown method: /std/collections/map/tryAt");
+  expectUnknownMethod("/map/contains", "unknown method target for contains");
+  expectUnknownMethod("/map/tryAt", "unknown method target for tryAt");
+  expectUnknownMethod("/std/collections/map/contains", "unknown method target for contains");
+  expectUnknownMethod("/std/collections/map/tryAt", "unknown method target for tryAt");
 }
 
-TEST_CASE("ir lowerer setup type helper prefers canonical bare map contains and tryAt methods") {
+TEST_CASE("ir lowerer setup type helper rejects bare map contains and tryAt methods") {
   primec::Definition aliasContainsDef;
   aliasContainsDef.fullPath = "/map/contains";
   primec::Definition canonicalContainsDef;
@@ -721,7 +721,7 @@ TEST_CASE("ir lowerer setup type helper prefers canonical bare map contains and 
   valuesLocal.kind = primec::ir_lowerer::LocalInfo::Kind::Value;
   locals.emplace("values", valuesLocal);
 
-  auto expectResolvedMethod = [&](const char *methodName, const primec::Definition *expected) {
+  auto expectDeferredMethod = [&](const char *methodName) {
     primec::Expr methodCall;
     methodCall.kind = primec::Expr::Kind::Call;
     methodCall.name = methodName;
@@ -743,12 +743,12 @@ TEST_CASE("ir lowerer setup type helper prefers canonical bare map contains and 
         [](const primec::Expr &) { return std::string(); },
         defMap,
         error);
-    CHECK(resolved == expected);
+    CHECK(resolved == nullptr);
     CHECK(error.empty());
   };
 
-  expectResolvedMethod("contains", &canonicalContainsDef);
-  expectResolvedMethod("tryAt", &canonicalTryAtDef);
+  expectDeferredMethod("contains");
+  expectDeferredMethod("tryAt");
 }
 
 TEST_CASE("ir lowerer setup type helper rejects explicit map contains and tryAt slash methods even when definitions exist") {
@@ -807,10 +807,10 @@ TEST_CASE("ir lowerer setup type helper rejects explicit map contains and tryAt 
     CHECK(error == std::string(expectedError));
   };
 
-  expectUnknownMethod("/map/contains", "unknown method: /map/contains");
-  expectUnknownMethod("/map/tryAt", "unknown method: /map/tryAt");
-  expectUnknownMethod("/std/collections/map/contains", "unknown method: /std/collections/map/contains");
-  expectUnknownMethod("/std/collections/map/tryAt", "unknown method: /std/collections/map/tryAt");
+  expectUnknownMethod("/map/contains", "unknown method target for contains");
+  expectUnknownMethod("/map/tryAt", "unknown method target for tryAt");
+  expectUnknownMethod("/std/collections/map/contains", "unknown method target for contains");
+  expectUnknownMethod("/std/collections/map/tryAt", "unknown method target for tryAt");
 }
 
 TEST_CASE("ir lowerer setup type helper resolves declared receiver aliases through slashless map imports") {
@@ -1045,7 +1045,7 @@ TEST_CASE("ir lowerer setup type helper resolves canonical map methods from gene
   CHECK(error.empty());
 }
 
-TEST_CASE("ir lowerer setup type helper keeps direct helper-return soa_vector mutator shadows on wrapper paths") {
+TEST_CASE("ir lowerer setup type helper prefers direct helper-return soa_vector mutator wrappers") {
   primec::Definition cloneDef;
   cloneDef.fullPath = "/cloneValues";
   primec::Transform returnSoaVector;
@@ -1125,11 +1125,11 @@ TEST_CASE("ir lowerer setup type helper keeps direct helper-return soa_vector mu
     CHECK(error.empty());
   };
 
-  expectResolvedMethod("push", {cloneCall, valueExpr}, &aliasPushDef);
-  expectResolvedMethod("reserve", {cloneCall, capacityExpr}, &aliasReserveDef);
+  expectResolvedMethod("push", {cloneCall, valueExpr}, &canonicalPushDef);
+  expectResolvedMethod("reserve", {cloneCall, capacityExpr}, &canonicalReserveDef);
 }
 
-TEST_CASE("ir lowerer setup type helper keeps nested helper-return soa_vector mutator shadows on wrapper paths") {
+TEST_CASE("ir lowerer setup type helper prefers nested helper-return soa_vector mutator wrappers") {
   primec::Definition holderCloneDef;
   holderCloneDef.fullPath = "/Holder/cloneValues";
   primec::Transform returnSoaVector;
@@ -1223,8 +1223,8 @@ TEST_CASE("ir lowerer setup type helper keeps nested helper-return soa_vector mu
     CHECK(error.empty());
   };
 
-  expectResolvedMethod("push", {cloneCall, valueExpr}, &aliasPushDef);
-  expectResolvedMethod("reserve", {cloneCall, capacityExpr}, &aliasReserveDef);
+  expectResolvedMethod("push", {cloneCall, valueExpr}, &canonicalPushDef);
+  expectResolvedMethod("reserve", {cloneCall, capacityExpr}, &canonicalReserveDef);
 }
 
 TEST_CASE("ir lowerer setup type helper resolves struct receiver method definitions from expressions") {
