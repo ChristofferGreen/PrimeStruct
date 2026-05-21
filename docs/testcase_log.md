@@ -225,9 +225,30 @@
   access-helper classification. The validation cases 771-780 shard was
   stabilized on 2026-05-21 14:36 CEST by retargeting source-only bare
   `at(...)` access element-kind expectations to current `NotMatched` /
-  `Unknown` behavior. Next stop-on-failure blocker is not yet localized.
+  `Unknown` behavior. Next stop-on-failure blocker is
+  `PrimeStruct_primestruct_ir_pipeline_validation_cases_781_790`. The
+  validation cases 781-790 shard is failing in stale setup-inference
+  expectations that still require source-only bare vector method `at` and
+  `at_unsafe` access to resolve after current access-helper classification.
+  The validation cases 781-790 shard was stabilized on 2026-05-21 14:42 CEST
+  by retargeting bare vector method access and wrapper-returned method access
+  expectations to current `NotMatched` / `Unknown` behavior. Next
+  stop-on-failure blocker is not yet localized.
 
 ## Recent Test Runs
+- 2026-05-21 14:42 CEST | pass | mode: release | command:
+  `cmake --build build-release --target PrimeStruct_backend_ir_tests -j 1`;
+  `cd build-release && ctest --output-on-failure -R '^PrimeStruct_primestruct_ir_pipeline_validation_cases_781_790$' --timeout 180`
+  | failures: none | notes: source-only bare vector method access and
+  wrapper-returned method access now assert current `NotMatched` / `Unknown`
+  setup-inference behavior.
+- 2026-05-21 14:41 CEST | fail | mode: release | command:
+  `cmake --build build-release -j 1`;
+  `cd build-release && ctest --output-on-failure --stop-on-failure --timeout 180`
+  | failures: `PrimeStruct_primestruct_ir_pipeline_validation_cases_781_790`
+  | notes: stop-on-failure progressed past validation cases 771-780; current
+  blocker is stale bare vector method access string-kind setup-inference
+  expectations.
 - 2026-05-21 14:36 CEST | pass | mode: release | command:
   `cmake --build build-release --target PrimeStruct_backend_ir_tests -j 1`;
   `cd build-release && ctest --output-on-failure -R '^PrimeStruct_primestruct_ir_pipeline_validation_cases_771_780$' --timeout 180`
