@@ -442,7 +442,7 @@ main() {
   CHECK(error.find("unknown call target: /std/collections/map/at") != std::string::npos);
 }
 
-TEST_CASE("bare map at uses canonical helper as visibility gate only") {
+TEST_CASE("bare map at uses canonical helper signature for mismatch diagnostics") {
   const std::string source = R"(
 [return<int>]
 /std/collections/map/at([map<i32, i32>] values, [bool] key) {
@@ -456,8 +456,10 @@ main() {
 }
 )";
   std::string error;
-  CHECK(validateProgram(source, "/main", error));
-  CHECK(error.empty());
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  INFO(error);
+  CHECK(error.find("argument type mismatch for /std/collections/map/at parameter key") !=
+        std::string::npos);
 }
 
 TEST_CASE("at method requires canonical map helper even when alias helper exists") {
