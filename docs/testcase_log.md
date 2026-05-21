@@ -766,9 +766,26 @@
   validation correctly rejects assignment to literal keys. The collective
   extended 14 shard was stabilized on 2026-05-21 20:02 CEST by using the
   current comma payload form for the inferred map binding smoke. Next
+  stop-on-failure blocker is
+  `PrimeStruct_primestruct_compile_run_smoke_collective_paths_extended_15_15`.
+  The compile-run collective extended 15 shard is failing in the adjacent map
+  count smoke for the same stale `=` pair sugar, which now routes through
+  generic assignment rewriting and fails semantic validation on literal keys.
+  The collective extended 15 shard was stabilized on 2026-05-21 20:03 CEST by
+  switching the map count smoke to comma payload construction. Next
   stop-on-failure blocker is not yet localized.
 
 ## Recent Test Runs
+- 2026-05-21 20:03 CEST | pass | mode: release | command:
+  `cmake --build build-release --target PrimeStruct_compile_run_tests -j 1`;
+  `cd build-release && ctest --output-on-failure -R '^PrimeStruct_primestruct_compile_run_smoke_collective_paths_extended_15_15$' --timeout 180`
+  | failures: none | notes: map count smoke now uses current comma payload
+  construction instead of removed map pair sugar.
+- 2026-05-21 20:03 CEST | fail | mode: release | command:
+  `cd build-release && ctest --output-on-failure --stop-on-failure --timeout 180 -I 636,1599`
+  | failures:
+  `PrimeStruct_primestruct_compile_run_smoke_collective_paths_extended_15_15`
+  | notes: map count smoke still expected C++ map pair-sugar rewriting.
 - 2026-05-21 20:02 CEST | pass | mode: release | command:
   `cmake --build build-release --target PrimeStruct_compile_run_tests -j 1`;
   `cd build-release && ctest --output-on-failure -R '^PrimeStruct_primestruct_compile_run_smoke_collective_paths_extended_14_14$' --timeout 180`

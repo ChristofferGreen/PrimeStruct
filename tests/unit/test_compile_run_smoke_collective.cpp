@@ -415,7 +415,7 @@ TEST_CASE("compiles and runs map count") {
 
 [return<int>]
 main() {
-  [map<i32, i32>] values{map<i32, i32>{1i32=2i32, 3i32=4i32}}
+  [map<i32, i32>] values{map<i32, i32>{1i32, 2i32, 3i32, 4i32}}
   return(plus(count(values), values.count()))
 }
 )";
