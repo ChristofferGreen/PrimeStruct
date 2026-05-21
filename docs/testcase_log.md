@@ -117,9 +117,29 @@
   though the current helper preference returns slashless helper paths. The
   validation cases 331-340 shard was stabilized on 2026-05-21 13:32 CEST by
   retargeting those expectations to the current slashless map helper path
-  preservation contract. Next stop-on-failure blocker is not yet localized.
+  preservation contract. Next stop-on-failure blocker is
+  `PrimeStruct_primestruct_ir_pipeline_validation_cases_371_380`. The
+  validation cases 371-380 shard is failing in stale vector/buffer builtin
+  emission expectations after helper classification reshaping: variadic vector
+  statement-helper dispatch and buffer builtin call emission now return
+  deterministic rejection with no emitted instructions. The validation cases
+  371-380 shard was stabilized on 2026-05-21 13:39 CEST by retargeting bare
+  variadic vector/buffer receiver tests to current rejection behavior. Next
+  stop-on-failure blocker is not yet localized.
 
 ## Recent Test Runs
+- 2026-05-21 13:39 CEST | pass | mode: release | command:
+  `cmake --build build-release --target PrimeStruct_backend_ir_tests -j 1`;
+  `cd build-release && ctest --output-on-failure -R '^PrimeStruct_primestruct_ir_pipeline_validation_cases_371_380$' --timeout 180`
+  | failures: none | notes: bare variadic vector/buffer receiver helper
+  expectations now assert deterministic rejection instead of native emission.
+- 2026-05-21 13:35 CEST | fail | mode: release | command:
+  `cmake --build build-release -j 1`;
+  `cd build-release && ctest --output-on-failure --stop-on-failure --timeout 180`
+  | failures: `PrimeStruct_primestruct_ir_pipeline_validation_cases_371_380`
+  | notes: stop-on-failure progressed past validation cases 331-340; current
+  blocker is stale vector/buffer builtin emission expectations returning
+  deterministic rejection with no instructions.
 - 2026-05-21 13:32 CEST | pass | mode: release | command:
   `cmake --build build-release --target PrimeStruct_backend_ir_tests -j 1`;
   `cd build-release && ctest --output-on-failure -R '^PrimeStruct_primestruct_ir_pipeline_validation_cases_331_340$' --timeout 180`

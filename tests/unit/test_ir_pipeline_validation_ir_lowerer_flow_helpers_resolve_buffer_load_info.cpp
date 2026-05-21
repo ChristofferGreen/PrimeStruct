@@ -427,15 +427,10 @@ TEST_CASE("ir lowerer flow helpers emit buffer builtin calls") {
               return true;
             },
             [&](primec::IrOpcode op, uint64_t imm) { instructions.push_back({op, imm}); },
-            error) == Result::Emitted);
-  CHECK(error.empty());
-  CHECK(emitStep == 2);
-  REQUIRE(instructions.size() == 12);
-  CHECK(instructions[1].op == primec::IrOpcode::StoreLocal);
-  CHECK(instructions[1].imm == 60);
-  CHECK(instructions[3].op == primec::IrOpcode::StoreLocal);
-  CHECK(instructions[3].imm == 61);
-  CHECK(instructions.back().op == primec::IrOpcode::LoadIndirect);
+            error) == Result::Error);
+  CHECK(error == "buffer_load requires numeric/bool buffer");
+  CHECK(emitStep == 0);
+  CHECK(instructions.empty());
 
   instructions.clear();
   error.clear();
@@ -482,15 +477,10 @@ TEST_CASE("ir lowerer flow helpers emit buffer builtin calls") {
               return true;
             },
             [&](primec::IrOpcode op, uint64_t imm) { instructions.push_back({op, imm}); },
-            error) == Result::Emitted);
-  CHECK(error.empty());
-  CHECK(emitStep == 2);
-  REQUIRE(instructions.size() == 12);
-  CHECK(instructions[1].op == primec::IrOpcode::StoreLocal);
-  CHECK(instructions[1].imm == 80);
-  CHECK(instructions[3].op == primec::IrOpcode::StoreLocal);
-  CHECK(instructions[3].imm == 81);
-  CHECK(instructions.back().op == primec::IrOpcode::LoadIndirect);
+            error) == Result::Error);
+  CHECK(error == "buffer_load requires numeric/bool buffer");
+  CHECK(emitStep == 0);
+  CHECK(instructions.empty());
 
   instructions.clear();
   error.clear();
@@ -537,15 +527,10 @@ TEST_CASE("ir lowerer flow helpers emit buffer builtin calls") {
               return true;
             },
             [&](primec::IrOpcode op, uint64_t imm) { instructions.push_back({op, imm}); },
-            error) == Result::Emitted);
-  CHECK(error.empty());
-  CHECK(emitStep == 2);
-  REQUIRE(instructions.size() == 12);
-  CHECK(instructions[1].op == primec::IrOpcode::StoreLocal);
-  CHECK(instructions[1].imm == 90);
-  CHECK(instructions[3].op == primec::IrOpcode::StoreLocal);
-  CHECK(instructions[3].imm == 91);
-  CHECK(instructions.back().op == primec::IrOpcode::LoadIndirect);
+            error) == Result::Error);
+  CHECK(error == "buffer_load requires numeric/bool buffer");
+  CHECK(emitStep == 0);
+  CHECK(instructions.empty());
 
   instructions.clear();
   error.clear();

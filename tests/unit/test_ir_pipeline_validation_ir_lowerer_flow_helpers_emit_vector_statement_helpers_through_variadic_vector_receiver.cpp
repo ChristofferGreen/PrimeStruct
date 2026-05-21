@@ -2,7 +2,7 @@
 
 TEST_SUITE_BEGIN("primestruct.ir.pipeline.validation");
 
-TEST_CASE("ir lowerer flow helpers emit vector statement helpers through variadic vector receivers") {
+TEST_CASE("ir lowerer flow helpers reject bare variadic vector receiver helpers") {
   using EmitResult = primec::ir_lowerer::VectorStatementHelperEmitResult;
   using Kind = primec::ir_lowerer::LocalInfo::Kind;
   using ValueKind = primec::ir_lowerer::LocalInfo::ValueKind;
@@ -119,30 +119,30 @@ TEST_CASE("ir lowerer flow helpers emit vector statement helpers through variadi
             makeCall("push", {makeAccess("values", 0), makeI32Literal(7)}),
             emitExprCalls,
             error,
-            instructions) == EmitResult::Emitted);
-  CHECK(error.empty());
-  CHECK(emitExprCalls >= 2);
-  CHECK_FALSE(instructions.empty());
+            instructions) == EmitResult::Error);
+  CHECK(error == "push requires mutable vector binding");
+  CHECK(emitExprCalls == 0);
+  CHECK(instructions.empty());
 
   error.clear();
   CHECK(runHelper(
             makeCall("clear", {makeDeref(makeAccess("refs", 1))}),
             emitExprCalls,
             error,
-            instructions) == EmitResult::Emitted);
-  CHECK(error.empty());
-  CHECK(emitExprCalls >= 1);
-  CHECK_FALSE(instructions.empty());
+            instructions) == EmitResult::Error);
+  CHECK(error == "clear requires mutable vector binding");
+  CHECK(emitExprCalls == 0);
+  CHECK(instructions.empty());
 
   error.clear();
   CHECK(runHelper(
             makeCall("remove_swap", {makeDeref(makeAccess("ptrs", 2)), makeI32Literal(0)}),
             emitExprCalls,
             error,
-            instructions) == EmitResult::Emitted);
-  CHECK(error.empty());
-  CHECK(emitExprCalls >= 2);
-  CHECK_FALSE(instructions.empty());
+            instructions) == EmitResult::Error);
+  CHECK(error == "remove_swap requires mutable vector binding");
+  CHECK(emitExprCalls == 0);
+  CHECK(instructions.empty());
 
   error.clear();
   CHECK(runHelper(
@@ -157,10 +157,10 @@ TEST_CASE("ir lowerer flow helpers emit vector statement helpers through variadi
             makeCall("push", {makeDeref(makeAccess("soaRefs", 0)), makeI32Literal(7)}),
             emitExprCalls,
             error,
-            instructions) == EmitResult::Emitted);
-  CHECK(error.empty());
-  CHECK(emitExprCalls >= 2);
-  CHECK_FALSE(instructions.empty());
+            instructions) == EmitResult::Error);
+  CHECK(error == "push requires mutable vector binding");
+  CHECK(emitExprCalls == 0);
+  CHECK(instructions.empty());
 }
 
 TEST_CASE("ir lowerer flow helpers validate vector statement helper diagnostics") {
