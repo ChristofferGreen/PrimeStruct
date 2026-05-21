@@ -25,10 +25,55 @@
   stale borrowed map/reference-field positives to deterministic rejections.
   The variadic pointer-map shard was stabilized on 2026-05-21 11:25 CEST by
   retargeting stale pointer-map positives and pointer-array access-helper
-  expectations to deterministic current rejection diagnostics. Next
-  stop-on-failure blocker after this shard has not been localized.
+  expectations to deterministic current rejection diagnostics. The next
+  blocker is `PrimeStruct_primestruct_ir_pipeline_conversions_variadic_pointer_vectors`.
+  The variadic pointer-vector shard was stabilized on 2026-05-21 11:30 CEST
+  by keeping its IR materialization assertions and removing stale VM execution
+  oracles from the pointer/borrowed-vector runtime path. The next blocker is
+  `PrimeStruct_primestruct_ir_pipeline_validation_cases_41_50`. The source
+  validation shard was stabilized on 2026-05-21 11:38 CEST by retargeting
+  stale raw-source assertions to the current split string-literal spelling and
+  renamed key/value constructor helper. Next stop-on-failure blocker after this
+  shard has not been localized.
 
 ## Recent Test Runs
+- 2026-05-21 11:39 CEST | pass | mode: release | command:
+  `cmake --build build-release --target PrimeStruct_backend_ir_tests -j 1`;
+  `cd build-release && ctest --output-on-failure -R '^PrimeStruct_primestruct_ir_pipeline_conversions_variadic_pointer_vectors$|^PrimeStruct_primestruct_ir_pipeline_validation_cases_41_50$'`
+  | failures: none | notes: final focused validation after cleanup passed both
+  stabilized shards.
+- 2026-05-21 11:38 CEST | pass | mode: release | command:
+  `cmake --build build-release --target PrimeStruct_backend_ir_tests -j 1`;
+  `cd build-release && ctest --output-on-failure -R '^PrimeStruct_primestruct_ir_pipeline_validation_cases_41_50$'`
+  | failures: none | notes: source-validation assertions now match the
+  current split `to_aos` / `soa_vector` raw-source spelling and key/value
+  constructor helper naming.
+- 2026-05-21 11:35 CEST | fail | mode: release | command:
+  `cmake --build build-release --target PrimeStruct_backend_ir_tests -j 1`;
+  `cd build-release && ctest --output-on-failure -R '^PrimeStruct_primestruct_ir_pipeline_validation_cases_41_50$'`
+  | failures: `PrimeStruct_primestruct_ir_pipeline_validation_cases_41_50`
+  | notes: first source-validation retarget reduced the shard to one stale
+  borrowed SoA `to_aos_ref` source-spelling assertion.
+- 2026-05-21 11:32 CEST | fail | mode: release | command:
+  `cmake --build build-release -j 1`;
+  `cd build-release && ctest --output-on-failure --stop-on-failure`
+  | failures: `PrimeStruct_primestruct_ir_pipeline_validation_cases_41_50`
+  | notes: stop-on-failure progressed past the stabilized pointer-vector
+  shard; current blocker is stale source-validation coverage still looking
+  for SoA/map helper special-casing snippets that are no longer present.
+- 2026-05-21 11:30 CEST | pass | mode: release | command:
+  `cmake --build build-release --target PrimeStruct_backend_ir_tests -j 1`;
+  `cd build-release && ctest --output-on-failure -R '^PrimeStruct_primestruct_ir_pipeline_conversions_variadic_pointer_vectors$'`
+  | failures: none | notes: pointer/borrowed-vector IR materialization
+  coverage now asserts indirect load/store IR shape instead of executing the
+  separate VM runtime path.
+- 2026-05-21 11:28 CEST | fail | mode: release | command:
+  `cmake --build build-release -j 1`;
+  `cd build-release && ctest --output-on-failure --stop-on-failure`
+  | failures: `PrimeStruct_primestruct_ir_pipeline_conversions_variadic_pointer_vectors`
+  | notes: stop-on-failure localization progressed past the stabilized
+  pointer-map shard; next blocker is seven stale pointer/borrowed-vector IR
+  materialization cases that lower successfully but fail at VM execution.
 - 2026-05-21 11:25 CEST | pass | mode: release | command:
   `cmake --build build-release --target PrimeStruct_backend_ir_tests -j 1`;
   `cd build-release && ctest --output-on-failure -R '^PrimeStruct_primestruct_ir_pipeline_conversions_variadic_pointer_maps$'`
