@@ -441,7 +441,7 @@ main() {
   CHECK(foundUnknownTarget);
 }
 
-TEST_CASE("stdlib namespaced map helpers accept canonical map references") {
+TEST_CASE("stdlib namespaced map ref helpers accept canonical map references") {
   const std::string source = R"(
 import /std/collections/*
 
@@ -449,9 +449,9 @@ import /std/collections/*
 main() {
   [/std/collections/map<i32, i32>] values{map<i32, i32>(1i32, 4i32, 2i32, 5i32)}
   [Reference</std/collections/map<i32, i32>>] ref{location(values)}
-  [i32] c{/std/collections/map/count(ref)}
-  [i32] first{/std/collections/map/at(ref, 1i32)}
-  [i32] second{/std/collections/map/at_unsafe(ref, 2i32)}
+  [i32] c{/std/collections/map/count_ref<i32, i32>(ref)}
+  [i32] first{/std/collections/map/at_ref<i32, i32>(ref, 1i32)}
+  [i32] second{/std/collections/map/at_unsafe_ref<i32, i32>(ref, 2i32)}
   return(plus(c, plus(first, second)))
 }
 )";

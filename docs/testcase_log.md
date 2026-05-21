@@ -657,9 +657,28 @@
   so named-argument calls must use that public helper parameter name. The
   calls-flow collections 611-620 shard was stabilized on 2026-05-21 19:01
   CEST by updating those named-argument calls to `[entries]`. Next
+  stop-on-failure blocker is
+  `PrimeStruct_primestruct_semantics_calls_flow_collections_calls_flow_collections_621_630`.
+  The calls-flow collections 621-630 shard is failing in a stale canonical
+  map reference fixture that still passes a `Reference<map<...>>` receiver to
+  value helpers. Current `.prime` stdlib map exposes explicit `count_ref`,
+  `at_ref`, and `at_unsafe_ref` helpers for borrowed map receivers. The
+  calls-flow collections 621-630 shard was stabilized on 2026-05-21 19:02
+  CEST by retargeting the fixture to those borrowed receiver helpers. Next
   stop-on-failure blocker is not yet localized.
 
 ## Recent Test Runs
+- 2026-05-21 19:02 CEST | pass | mode: release | command:
+  `cmake --build build-release --target PrimeStruct_semantics_tests -j 1`;
+  `cd build-release && ctest --output-on-failure -R '^PrimeStruct_primestruct_semantics_calls_flow_collections_calls_flow_collections_621_630$' --timeout 180`
+  | failures: none | notes: canonical map reference fixture now uses
+  explicit `count_ref`, `at_ref`, and `at_unsafe_ref` helpers.
+- 2026-05-21 19:02 CEST | fail | mode: release | command:
+  `cd build-release && ctest --output-on-failure --stop-on-failure --timeout 180 -I 358,1599`
+  | failures:
+  `PrimeStruct_primestruct_semantics_calls_flow_collections_calls_flow_collections_621_630`
+  | notes: canonical map reference fixture still called value helpers with a
+  borrowed receiver instead of the current `_ref` helpers.
 - 2026-05-21 19:01 CEST | pass | mode: release | command:
   `cmake --build build-release --target PrimeStruct_semantics_tests -j 1`;
   `cd build-release && ctest --output-on-failure -R '^PrimeStruct_primestruct_semantics_calls_flow_collections_calls_flow_collections_611_620$' --timeout 180`
