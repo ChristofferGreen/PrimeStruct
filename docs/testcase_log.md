@@ -99,9 +99,39 @@
   The validation cases 241-250 shard was stabilized on 2026-05-21 13:20 CEST
   by retargeting the rooted rewrite source guard and adding a semantic-gated
   bare `at`/`at_unsafe` indexed assignment fallback for proven array/vector
-  targets. Next stop-on-failure blocker is not yet localized.
+  targets. Next stop-on-failure blocker is
+  `PrimeStruct_primestruct_ir_pipeline_validation_cases_271_280`. The
+  validation cases 271-280 shard is failing on count/capacity classifier
+  coverage: semantic dereferenced target facts are not being preferred for a
+  dereferenced `at(...)` receiver, and vector capacity aliases are no longer
+  recognized in three source shapes. A focused rerun after adding the bare
+  access fallback reduced the shard to an adjacent over-acceptance where
+  non-dereferenced `count(at(...))` accepted a syntax-only args-pack vector
+  target without semantic facts. The validation cases 271-280 shard was
+  stabilized on 2026-05-21 13:27 CEST by keeping bare access fallback limited
+  to dereferenced count and vector capacity classification. Next
+  stop-on-failure blocker is not yet localized.
 
 ## Recent Test Runs
+- 2026-05-21 13:27 CEST | pass | mode: release | command:
+  `cmake --build build-release --target PrimeStruct_backend_ir_tests -j 1`;
+  `cd build-release && ctest --output-on-failure -R '^PrimeStruct_primestruct_ir_pipeline_validation_cases_271_280$' --timeout 180`
+  | failures: none | notes: bare `at` access fallback is limited to
+  dereferenced count targets and vector capacity targets while syntax-only
+  non-dereferenced count access still rejects.
+- 2026-05-21 13:27 CEST | fail | mode: release | command:
+  `cmake --build build-release --target PrimeStruct_backend_ir_tests -j 1`;
+  `cd build-release && ctest --output-on-failure -R '^PrimeStruct_primestruct_ir_pipeline_validation_cases_271_280$' --timeout 180`
+  | failures: `PrimeStruct_primestruct_ir_pipeline_validation_cases_271_280`
+  | notes: original dereferenced count/capacity failures were fixed; remaining
+  failure was over-accepting syntax-only non-dereferenced `count(at(...))`.
+- 2026-05-21 13:23 CEST | fail | mode: release | command:
+  `cmake --build build-release -j 1`;
+  `cd build-release && ctest --output-on-failure --stop-on-failure --timeout 180`
+  | failures: `PrimeStruct_primestruct_ir_pipeline_validation_cases_271_280`
+  | notes: stop-on-failure progressed past validation cases 241-250; current
+  blocker is count/capacity classifier coverage for dereferenced semantic
+  array facts and vector capacity alias recognition.
 - 2026-05-21 13:20 CEST | pass | mode: release | command:
   `cmake --build build-release --target PrimeStruct_backend_ir_tests -j 1`;
   `cd build-release && ctest --output-on-failure -R '^PrimeStruct_primestruct_ir_pipeline_validation_cases_241_250$' --timeout 180`

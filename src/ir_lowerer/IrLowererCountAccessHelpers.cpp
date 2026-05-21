@@ -62,6 +62,23 @@ std::string resolveScopedCallPath(const Expr &expr) {
   return expr.namespacePrefix + "/" + expr.name;
 }
 
+bool getArrayVectorAccessClassifierName(const Expr &expr,
+                                        std::string &accessNameOut) {
+  if (getBuiltinArrayAccessName(expr, accessNameOut)) {
+    return true;
+  }
+  if (expr.kind != Expr::Kind::Call || expr.isMethodCall ||
+      !expr.namespacePrefix.empty() || expr.name.find('/') != std::string::npos ||
+      expr.args.size() != 2) {
+    return false;
+  }
+  if (expr.name != "at" && expr.name != "at_unsafe") {
+    return false;
+  }
+  accessNameOut = expr.name;
+  return true;
+}
+
 std::string collectionMemberPath(std::string_view collectionName,
                                  std::string_view memberName) {
   return std::string(collectionName) + "/" + std::string(memberName);
@@ -1284,7 +1301,7 @@ bool isVectorCapacityCall(const Expr &expr,
       }
 
       std::string accessName;
-      if (getBuiltinArrayAccessName(derefTarget, accessName) && derefTarget.args.size() == 2 &&
+      if (getArrayVectorAccessClassifierName(derefTarget, accessName) && derefTarget.args.size() == 2 &&
           derefTarget.args.front().kind == Expr::Kind::Name) {
         auto localIt = localsIn.find(derefTarget.args.front().name);
         return localIt != localsIn.end() && localIt->second.isArgsPack &&
@@ -1294,7 +1311,7 @@ bool isVectorCapacityCall(const Expr &expr,
     }
 
     std::string accessName;
-    if (getBuiltinArrayAccessName(target, accessName) && target.args.size() == 2 &&
+    if (getArrayVectorAccessClassifierName(target, accessName) && target.args.size() == 2 &&
         target.args.front().kind == Expr::Kind::Name) {
       auto localIt = localsIn.find(target.args.front().name);
       return localIt != localsIn.end() && localIt->second.isArgsPack &&

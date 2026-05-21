@@ -170,6 +170,23 @@ bool isExplicitCanonicalVectorReadHelperCall(const Expr &expr,
   return scopedPath == canonicalCollectionMemberPath("vector", helperName);
 }
 
+bool getArrayVectorAccessClassifierName(const Expr &expr,
+                                        std::string &accessNameOut) {
+  if (getBuiltinArrayAccessName(expr, accessNameOut)) {
+    return true;
+  }
+  if (expr.kind != Expr::Kind::Call || expr.isMethodCall ||
+      !expr.namespacePrefix.empty() || expr.name.find('/') != std::string::npos ||
+      expr.args.size() != 2) {
+    return false;
+  }
+  if (expr.name != "at" && expr.name != "at_unsafe") {
+    return false;
+  }
+  accessNameOut = expr.name;
+  return true;
+}
+
 bool isSoaVectorTargetImpl(const Expr &target, const LocalMap &localsIn) {
   auto isWrappedSoaVectorLocal = [&](const Expr &candidate, bool fromArgsPack) {
     if (candidate.kind != Expr::Kind::Name) {
@@ -202,7 +219,7 @@ bool isSoaVectorTargetImpl(const Expr &target, const LocalMap &localsIn) {
         return true;
       }
       std::string accessName;
-      if (getBuiltinArrayAccessName(derefTarget, accessName) &&
+      if (getArrayVectorAccessClassifierName(derefTarget, accessName) &&
           derefTarget.args.size() == 2 &&
           isWrappedSoaVectorLocal(derefTarget.args.front(), true)) {
         return true;
@@ -296,7 +313,8 @@ bool isDereferencedCollectionCountTarget(const Expr &, const Expr &target, const
   }
 
   std::string accessName;
-  if (derefTarget.kind == Expr::Kind::Call && getBuiltinArrayAccessName(derefTarget, accessName) &&
+  if (derefTarget.kind == Expr::Kind::Call &&
+      getArrayVectorAccessClassifierName(derefTarget, accessName) &&
       derefTarget.args.size() == 2 && derefTarget.args.front().kind == Expr::Kind::Name) {
     auto it = localsIn.find(derefTarget.args.front().name);
     return it != localsIn.end() && it->second.isArgsPack && isSupportedDereferenceTarget(it->second, true);
