@@ -7,9 +7,23 @@
 #include "test_compile_run_native_backend_collections_helpers.h"
 
 #if PRIMESTRUCT_NATIVE_COLLECTIONS_ENABLED
+namespace {
+
+void expectNativeCompileReject(const std::string &srcPath,
+                               const std::string &errName,
+                               const std::string &expected) {
+  const std::string errPath = (testScratchPath("") / errName).string();
+  const std::string compileCmd =
+      "./primec --emit=native " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
+  CHECK(runCommand(compileCmd) == 2);
+  CHECK(readFile(errPath).find(expected) != std::string::npos);
+}
+
+} // namespace
+
 TEST_SUITE_BEGIN("primestruct.compile.run.native_backend.collections");
 
-TEST_CASE("compiles and runs native stdlib collection shim map sept standalone") {
+TEST_CASE("rejects retired native stdlib collection shim map sept standalone") {
   const std::string source = R"(
 import /std/collections/*
 
@@ -22,16 +36,11 @@ main() {
 )";
   const std::string srcPath =
       writeTemp("compile_native_stdlib_collection_shim_map_sept_standalone.prime", source);
-  const std::string exePath = (testScratchPath("") /
-                               "primec_native_stdlib_collection_shim_map_sept_standalone_exe")
-                                  .string();
-
-  const std::string compileCmd = "./primec --emit=native " + srcPath + " -o " + exePath + " --entry /main";
-  CHECK(runCommand(compileCmd) == 0);
-  CHECK(runCommand(exePath) == 29);
+  expectNativeCompileReject(srcPath, "primec_native_stdlib_collection_shim_map_sept_standalone.err",
+                            "unknown call target: mapSept");
 }
 
-TEST_CASE("compiles and runs native stdlib collection shim map sept standalone string keys") {
+TEST_CASE("rejects retired native stdlib collection shim map sept standalone string keys") {
   const std::string source = R"(
 import /std/collections/*
 
@@ -47,13 +56,8 @@ main() {
 )";
   const std::string srcPath =
       writeTemp("compile_native_stdlib_collection_shim_map_sept_standalone_string_key.prime", source);
-  const std::string exePath = (testScratchPath("") /
-                               "primec_native_stdlib_collection_shim_map_sept_standalone_string_key_exe")
-                                  .string();
-
-  const std::string compileCmd = "./primec --emit=native " + srcPath + " -o " + exePath + " --entry /main";
-  CHECK(runCommand(compileCmd) == 0);
-  CHECK(runCommand(exePath) == 15);
+  expectNativeCompileReject(srcPath, "primec_native_stdlib_collection_shim_map_sept_standalone_string_key.err",
+                            "unknown call target: mapSept");
 }
 
 TEST_CASE("rejects native stdlib collection shim map sept standalone type mismatch") {
@@ -91,7 +95,7 @@ main() {
   CHECK(runCommand(compileCmd) == 2);
 }
 
-TEST_CASE("compiles and runs native stdlib collection shim map oct standalone") {
+TEST_CASE("rejects retired native stdlib collection shim map oct standalone") {
   const std::string source = R"(
 import /std/collections/*
 
@@ -105,16 +109,11 @@ main() {
 )";
   const std::string srcPath =
       writeTemp("compile_native_stdlib_collection_shim_map_oct_standalone.prime", source);
-  const std::string exePath = (testScratchPath("") /
-                               "primec_native_stdlib_collection_shim_map_oct_standalone_exe")
-                                  .string();
-
-  const std::string compileCmd = "./primec --emit=native " + srcPath + " -o " + exePath + " --entry /main";
-  CHECK(runCommand(compileCmd) == 0);
-  CHECK(runCommand(exePath) == 34);
+  expectNativeCompileReject(srcPath, "primec_native_stdlib_collection_shim_map_oct_standalone.err",
+                            "unknown call target: mapOct");
 }
 
-TEST_CASE("compiles and runs native stdlib collection shim map oct standalone string keys") {
+TEST_CASE("rejects retired native stdlib collection shim map oct standalone string keys") {
   const std::string source = R"(
 import /std/collections/*
 
@@ -130,13 +129,8 @@ main() {
 )";
   const std::string srcPath =
       writeTemp("compile_native_stdlib_collection_shim_map_oct_standalone_string_key.prime", source);
-  const std::string exePath = (testScratchPath("") /
-                               "primec_native_stdlib_collection_shim_map_oct_standalone_string_key_exe")
-                                  .string();
-
-  const std::string compileCmd = "./primec --emit=native " + srcPath + " -o " + exePath + " --entry /main";
-  CHECK(runCommand(compileCmd) == 0);
-  CHECK(runCommand(exePath) == 17);
+  expectNativeCompileReject(srcPath, "primec_native_stdlib_collection_shim_map_oct_standalone_string_key.err",
+                            "unknown call target: mapOct");
 }
 
 TEST_CASE("rejects native stdlib collection shim map oct standalone type mismatch") {
@@ -176,7 +170,7 @@ main() {
   CHECK(runCommand(compileCmd) == 2);
 }
 
-TEST_CASE("compiles and runs native stdlib collection shim map double") {
+TEST_CASE("rejects retired native stdlib collection shim map double") {
   const std::string source = R"(
 import /std/collections/*
 
@@ -188,12 +182,8 @@ main() {
 }
 )";
   const std::string srcPath = writeTemp("compile_native_stdlib_collection_shim_map_double.prime", source);
-  const std::string exePath =
-      (testScratchPath("") / "primec_native_stdlib_collection_shim_map_double_exe").string();
-
-  const std::string compileCmd = "./primec --emit=native " + srcPath + " -o " + exePath + " --entry /main";
-  CHECK(runCommand(compileCmd) == 0);
-  CHECK(runCommand(exePath) == 27);
+  expectNativeCompileReject(srcPath, "primec_native_stdlib_collection_shim_map_double.err",
+                            "unknown call target: mapDouble");
 }
 
 TEST_CASE("rejects native stdlib collection shim map double type mismatch") {
@@ -211,7 +201,7 @@ main() {
   CHECK(runCommand(compileCmd) == 2);
 }
 
-TEST_CASE("compiles and runs native stdlib collection shim map triple") {
+TEST_CASE("rejects retired native stdlib collection shim map triple") {
   const std::string source = R"(
 import /std/collections/*
 
@@ -224,12 +214,8 @@ main() {
 }
 )";
   const std::string srcPath = writeTemp("compile_native_stdlib_collection_shim_map_triple.prime", source);
-  const std::string exePath =
-      (testScratchPath("") / "primec_native_stdlib_collection_shim_map_triple_exe").string();
-
-  const std::string compileCmd = "./primec --emit=native " + srcPath + " -o " + exePath + " --entry /main";
-  CHECK(runCommand(compileCmd) == 0);
-  CHECK(runCommand(exePath) == 17);
+  expectNativeCompileReject(srcPath, "primec_native_stdlib_collection_shim_map_triple.err",
+                            "unknown call target: mapTriple");
 }
 
 TEST_CASE("rejects native stdlib collection shim map triple type mismatch") {
@@ -247,7 +233,7 @@ main() {
   CHECK(runCommand(compileCmd) == 2);
 }
 
-TEST_CASE("compiles and runs native stdlib collection shim extended constructors") {
+TEST_CASE("rejects retired native stdlib collection shim extended map constructor") {
   const std::string source = R"(
 import /std/collections/*
 
@@ -261,12 +247,8 @@ main() {
 }
 )";
   const std::string srcPath = writeTemp("compile_native_stdlib_collection_shim_extended_ctor.prime", source);
-  const std::string exePath =
-      (testScratchPath("") / "primec_native_stdlib_collection_shim_extended_ctor_exe").string();
-
-  const std::string compileCmd = "./primec --emit=native " + srcPath + " -o " + exePath + " --entry /main";
-  CHECK(runCommand(compileCmd) == 0);
-  CHECK(runCommand(exePath) == 59);
+  expectNativeCompileReject(srcPath, "primec_native_stdlib_collection_shim_extended_ctor.err",
+                            "unknown call target: mapTriple");
 }
 
 TEST_CASE("rejects native stdlib collection shim extended constructor type mismatch") {
@@ -424,7 +406,7 @@ main() {
   CHECK(runCommand(compileCmd) == 2);
 }
 
-TEST_CASE("compiles and runs native stdlib collection shim map pair string keys") {
+TEST_CASE("rejects retired native stdlib collection shim map pair string keys") {
   const std::string source = R"(
 import /std/collections/*
 
@@ -437,12 +419,8 @@ main() {
 }
 )";
   const std::string srcPath = writeTemp("compile_native_stdlib_collection_shim_map_pair_string_key.prime", source);
-  const std::string exePath =
-      (testScratchPath("") / "primec_native_stdlib_collection_shim_map_pair_string_key_exe").string();
-
-  const std::string compileCmd = "./primec --emit=native " + srcPath + " -o " + exePath + " --entry /main";
-  CHECK(runCommand(compileCmd) == 0);
-  CHECK(runCommand(exePath) == 34);
+  expectNativeCompileReject(srcPath, "primec_native_stdlib_collection_shim_map_pair_string_key.err",
+                            "unknown call target: mapPair");
 }
 
 TEST_CASE("rejects native stdlib collection shim map pair type mismatch") {
@@ -460,7 +438,7 @@ main() {
   CHECK(runCommand(compileCmd) == 2);
 }
 
-TEST_CASE("compiles and runs native stdlib collection shim map quad") {
+TEST_CASE("rejects retired native stdlib collection shim map quad") {
   const std::string source = R"(
 import /std/collections/*
 
@@ -473,12 +451,8 @@ main() {
 }
 )";
   const std::string srcPath = writeTemp("compile_native_stdlib_collection_shim_map_quad.prime", source);
-  const std::string exePath =
-      (testScratchPath("") / "primec_native_stdlib_collection_shim_map_quad_exe").string();
-
-  const std::string compileCmd = "./primec --emit=native " + srcPath + " -o " + exePath + " --entry /main";
-  CHECK(runCommand(compileCmd) == 0);
-  CHECK(runCommand(exePath) == 9);
+  expectNativeCompileReject(srcPath, "primec_native_stdlib_collection_shim_map_quad.err",
+                            "unknown call target: mapQuad");
 }
 
 TEST_CASE("rejects native stdlib collection shim map quad type mismatch") {
@@ -496,7 +470,7 @@ main() {
   CHECK(runCommand(compileCmd) == 2);
 }
 
-TEST_CASE("compiles and runs native stdlib collection shim map quint") {
+TEST_CASE("rejects retired native stdlib collection shim map quint") {
   const std::string source = R"(
 import /std/collections/*
 
@@ -510,12 +484,8 @@ main() {
 }
 )";
   const std::string srcPath = writeTemp("compile_native_stdlib_collection_shim_map_quint.prime", source);
-  const std::string exePath =
-      (testScratchPath("") / "primec_native_stdlib_collection_shim_map_quint_exe").string();
-
-  const std::string compileCmd = "./primec --emit=native " + srcPath + " -o " + exePath + " --entry /main";
-  CHECK(runCommand(compileCmd) == 0);
-  CHECK(runCommand(exePath) == 11);
+  expectNativeCompileReject(srcPath, "primec_native_stdlib_collection_shim_map_quint.err",
+                            "unknown call target: mapQuint");
 }
 
 TEST_CASE("rejects native stdlib collection shim map quint type mismatch") {
@@ -533,7 +503,7 @@ main() {
   CHECK(runCommand(compileCmd) == 2);
 }
 
-TEST_CASE("compiles and runs native stdlib collection shim map sext") {
+TEST_CASE("rejects retired native stdlib collection shim map sext") {
   const std::string source = R"(
 import /std/collections/*
 
@@ -548,12 +518,8 @@ main() {
 }
 )";
   const std::string srcPath = writeTemp("compile_native_stdlib_collection_shim_map_sext.prime", source);
-  const std::string exePath =
-      (testScratchPath("") / "primec_native_stdlib_collection_shim_map_sext_exe").string();
-
-  const std::string compileCmd = "./primec --emit=native " + srcPath + " -o " + exePath + " --entry /main";
-  CHECK(runCommand(compileCmd) == 0);
-  CHECK(runCommand(exePath) == 13);
+  expectNativeCompileReject(srcPath, "primec_native_stdlib_collection_shim_map_sext.err",
+                            "unknown call target: mapSext");
 }
 
 TEST_CASE("rejects native stdlib collection shim map sext type mismatch") {
@@ -572,7 +538,7 @@ main() {
   CHECK(runCommand(compileCmd) == 2);
 }
 
-TEST_CASE("compiles and runs native stdlib collection shim map sept") {
+TEST_CASE("rejects retired native stdlib collection shim map sept") {
   const std::string source = R"(
 import /std/collections/*
 
@@ -587,12 +553,8 @@ main() {
 }
 )";
   const std::string srcPath = writeTemp("compile_native_stdlib_collection_shim_map_sept.prime", source);
-  const std::string exePath =
-      (testScratchPath("") / "primec_native_stdlib_collection_shim_map_sept_exe").string();
-
-  const std::string compileCmd = "./primec --emit=native " + srcPath + " -o " + exePath + " --entry /main";
-  CHECK(runCommand(compileCmd) == 0);
-  CHECK(runCommand(exePath) == 15);
+  expectNativeCompileReject(srcPath, "primec_native_stdlib_collection_shim_map_sept.err",
+                            "unknown call target: mapSept");
 }
 
 TEST_CASE("rejects native stdlib collection shim map sept type mismatch") {
@@ -612,7 +574,7 @@ main() {
   CHECK(runCommand(compileCmd) == 2);
 }
 
-TEST_CASE("compiles and runs native stdlib collection shim map oct") {
+TEST_CASE("rejects retired native stdlib collection shim map oct") {
   const std::string source = R"(
 import /std/collections/*
 
@@ -627,12 +589,8 @@ main() {
 }
 )";
   const std::string srcPath = writeTemp("compile_native_stdlib_collection_shim_map_oct.prime", source);
-  const std::string exePath =
-      (testScratchPath("") / "primec_native_stdlib_collection_shim_map_oct_exe").string();
-
-  const std::string compileCmd = "./primec --emit=native " + srcPath + " -o " + exePath + " --entry /main";
-  CHECK(runCommand(compileCmd) == 0);
-  CHECK(runCommand(exePath) == 17);
+  expectNativeCompileReject(srcPath, "primec_native_stdlib_collection_shim_map_oct.err",
+                            "unknown call target: mapOct");
 }
 
 TEST_CASE("rejects native stdlib collection shim map oct type mismatch") {
