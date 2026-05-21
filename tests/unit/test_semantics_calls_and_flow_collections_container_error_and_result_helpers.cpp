@@ -863,7 +863,7 @@ main() {
   CHECK(error.find("meta.field_count requires reflect-enabled struct type argument: /Particle") != std::string::npos);
 }
 
-TEST_CASE("experimental soa_vector stdlib non-empty helper validates on reflect-enabled struct elements") {
+TEST_CASE("experimental soa_vector stdlib non-empty helper rejects direct soa wildcard import") {
   const std::string source = R"(
 import /std/collections/soa/*
 import /std/collections/internal_soa_vector/*
@@ -880,11 +880,13 @@ main() {
 }
 )";
   std::string error;
-  CHECK(validateProgram(source, "/main", error));
-  CHECK(error.empty());
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  INFO(error);
+  CHECK(error.find("unknown import path: /std/collections/soa/*") !=
+        std::string::npos);
 }
 
-TEST_CASE("experimental soa_vector stdlib wide reflect-enabled structs validate on pending width boundary") {
+TEST_CASE("experimental soa_vector stdlib wide reflect-enabled structs reject direct soa wildcard import") {
   const std::string source = R"(
 import /std/collections/soa/*
 import /std/collections/internal_soa_vector/*
@@ -917,8 +919,10 @@ main() {
 }
 )";
   std::string error;
-  CHECK(validateProgram(source, "/main", error));
-  CHECK(error.empty());
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  INFO(error);
+  CHECK(error.find("unknown import path: /std/collections/soa/*") !=
+        std::string::npos);
 }
 
 TEST_CASE("experimental soa_vector stdlib from-aos helper validates on reflect-enabled struct elements") {
@@ -1036,7 +1040,7 @@ main() {
   CHECK_FALSE(error.empty());
 }
 
-TEST_CASE("experimental soa_vector borrowed parameter read-only methods validate on wrapper state") {
+TEST_CASE("experimental soa_vector borrowed parameter read-only methods reject retired get_ref path") {
   const std::string source = R"(
 import /std/collections/*
 import /std/collections/soa/*
@@ -1074,8 +1078,10 @@ main() {
 }
   )";
   std::string error;
-  CHECK(validateProgram(source, "/main", error));
-  CHECK(error.empty());
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  INFO(error);
+  CHECK(error.find("unknown method: /std/collections/soa_vector/get_ref") !=
+        std::string::npos);
 }
 
 TEST_CASE("experimental soa_vector inline location read-only methods validate on wrapper state") {
