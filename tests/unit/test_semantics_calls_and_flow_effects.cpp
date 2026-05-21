@@ -1109,17 +1109,18 @@ main() {
   CHECK(error.find("array literal does not accept block arguments") != std::string::npos);
 }
 
-TEST_CASE("map literal rejects block arguments") {
+TEST_CASE("map literal block arguments require definition target") {
   const std::string source = R"(
-[return<int>]
+[effects(heap_alloc), return<int>]
 main() {
-  map<i32, i32>(1i32, 2i32) { 3i32 }
+  [auto] values{map<i32, i32>(1i32, 2i32) { 3i32 }}
   return(0i32)
 }
 )";
   std::string error;
   CHECK_FALSE(validateProgram(source, "/main", error));
-  CHECK(error.find("map literal does not accept block arguments") != std::string::npos);
+  CHECK(error.find("block arguments require a definition target: /map") !=
+        std::string::npos);
 }
 
 TEST_CASE("vector literal rejects block arguments") {

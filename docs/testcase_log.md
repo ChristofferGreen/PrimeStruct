@@ -693,9 +693,31 @@
   the fixture intended to cover. The comparisons/literals 11-20 shard was
   stabilized on 2026-05-21 19:05 CEST by migrating those literal fixtures to
   `soa<T>` and current public literal diagnostics. Next stop-on-failure
-  blocker is not yet localized.
+  blocker is
+  `PrimeStruct_primestruct_semantics_calls_flow_effects_calls_flow_effects_71_80`.
+  The calls-flow effects 71-80 shard is failing in a stale map literal block
+  argument fixture. In statement position the old `map<i32, i32>(...) { ... }`
+  source now parses as a generic definition shape; in expression context
+  current validation reports the generic `block arguments require a definition
+  target: /map` diagnostic instead of a map-literal-specific block-argument
+  diagnostic. The calls-flow effects 71-80 shard was stabilized on
+  2026-05-21 19:06 CEST by retargeting the fixture to that generic diagnostic.
+  Next stop-on-failure blocker is not yet localized.
 
 ## Recent Test Runs
+- 2026-05-21 19:06 CEST | pass | mode: release | command:
+  `cmake --build build-release --target PrimeStruct_semantics_tests -j 1`;
+  `cd build-release && ctest --output-on-failure -R '^PrimeStruct_primestruct_semantics_calls_flow_effects_calls_flow_effects_71_80$' --timeout 180`
+  | failures: none | notes: map literal block-argument fixture now uses an
+  expression-context source and expects the current generic `/map` definition
+  target diagnostic.
+- 2026-05-21 19:06 CEST | fail | mode: release | command:
+  `cd build-release && ctest --output-on-failure --stop-on-failure --timeout 180 -I 390,1599`
+  | failures:
+  `PrimeStruct_primestruct_semantics_calls_flow_effects_calls_flow_effects_71_80`
+  | notes: comparisons/literals 21-40 and effects 1-70 passed first; map
+  literal block-argument fixture still expected a map-specific diagnostic from
+  statement-position source.
 - 2026-05-21 19:05 CEST | pass | mode: release | command:
   `cmake --build build-release --target PrimeStruct_semantics_tests -j 1`;
   `cd build-release && ctest --output-on-failure -R '^PrimeStruct_primestruct_semantics_calls_flow_comparisons_literals_calls_flow_comparisons_literals_11_20$' --timeout 180`
