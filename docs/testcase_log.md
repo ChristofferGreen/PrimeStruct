@@ -276,9 +276,30 @@
   The validation cases 831-840 shard was stabilized on 2026-05-21 15:31 CEST
   by retargeting bare map access helper coverage to current fail-closed
   behavior with no fallback method-definition resolution. Next
-  stop-on-failure blocker is not yet localized.
+  stop-on-failure blocker is
+  `PrimeStruct_primestruct_ir_pipeline_validation_cases_851_860`. The
+  validation cases 851-860 shard is failing in a stale setup-type helper
+  expectation that still requires bare map `contains` / `tryAt` receiver calls
+  to synthesize canonical map receiver precedence for chained `.tag()`
+  resolution.
+  The validation cases 851-860 shard was stabilized on 2026-05-21 15:35 CEST
+  by retargeting bare map receiver precedence coverage to current
+  `unknown method target for tag` behavior. Next stop-on-failure blocker is
+  not yet localized.
 
 ## Recent Test Runs
+- 2026-05-21 15:35 CEST | pass | mode: release | command:
+  `cmake --build build-release --target PrimeStruct_backend_ir_tests -j 1`;
+  `cd build-release && ctest --output-on-failure -R '^PrimeStruct_primestruct_ir_pipeline_validation_cases_851_860$' --timeout 180`
+  | failures: none | notes: bare map `contains` / `tryAt` chained receiver
+  expectations now assert current unknown-target behavior.
+- 2026-05-21 15:34 CEST | fail | mode: release | command:
+  `cmake --build build-release -j 1`;
+  `cd build-release && ctest --output-on-failure --stop-on-failure --timeout 180`
+  | failures: `PrimeStruct_primestruct_ir_pipeline_validation_cases_851_860`
+  | notes: stop-on-failure progressed past validation cases 831-840 and
+  841-850; current blocker is stale bare map receiver canonical precedence
+  coverage.
 - 2026-05-21 15:31 CEST | pass | mode: release | command:
   `cmake --build build-release --target PrimeStruct_backend_ir_tests -j 1`;
   `cd build-release && ctest --output-on-failure -R '^PrimeStruct_primestruct_ir_pipeline_validation_cases_831_840$' --timeout 180`

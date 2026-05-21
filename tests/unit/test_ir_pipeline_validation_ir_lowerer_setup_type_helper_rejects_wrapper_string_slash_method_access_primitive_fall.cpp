@@ -1069,8 +1069,8 @@ TEST_CASE("ir lowerer setup type helper keeps explicit map count and contains re
   expectResolvedTag("/std/collections/map/contains", &canonicalContainsTagDef);
 }
 
-TEST_CASE("ir lowerer setup type helper keeps bare map method receiver canonical precedence") {
-  auto expectResolvedTag = [](const std::string &methodName) {
+TEST_CASE("ir lowerer setup type helper rejects bare map method receiver canonical fallback") {
+  auto expectReject = [](const std::string &methodName) {
     primec::Definition aliasDef;
     aliasDef.fullPath = "/map/" + methodName;
     aliasDef.namespacePrefix = "/map";
@@ -1140,12 +1140,12 @@ TEST_CASE("ir lowerer setup type helper keeps bare map method receiver canonical
         {},
         defMap,
         error);
-    CHECK(resolved == &canonicalTagDef);
-    CHECK(error.empty());
+    CHECK(resolved == nullptr);
+    CHECK(error == "unknown method target for tag");
   };
 
-  expectResolvedTag("contains");
-  expectResolvedTag("tryAt");
+  expectReject("contains");
+  expectReject("tryAt");
 }
 
 TEST_CASE("ir lowerer setup type helper rejects bare map method receiver alias fallback") {
