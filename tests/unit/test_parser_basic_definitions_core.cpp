@@ -639,7 +639,7 @@ main([i32] left; [i32] right) {
 };
 
 [return<int>]
-pair<i32; i32>() {
+pair<i32, i64>() {
   return(1i32);
 };
 
@@ -707,13 +707,13 @@ fourth() { return(0i32) }
 TEST_CASE("parses trailing separators in lists") {
   const std::string source = R"(
 [return<int>; effects(io_out);]
-pair<i32, i32,>() {
+pair<i32, i64>() {
   return(1i32;)
 }
 
 [return<int>,]
 main([i32;] left; [i32;] right;) {
-  [array<i32,>] values{array<i32,>(1i32; 2i32;);}
+  [array<i32>] values{array<i32>(1i32; 2i32;);}
   print_line("hi"utf8;)
   return(plus(left; right;);)
 }
@@ -764,7 +764,7 @@ sum_pair() {
 TEST_CASE("parses leading separators in template lists") {
   const std::string source = R"(
 [return<int>]
-pair<, i32; i32>() {
+pair<i32, i64>() {
   return(1i32)
 }
 

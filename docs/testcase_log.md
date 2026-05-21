@@ -710,9 +710,30 @@
   helper coverage still validates. The maybe 1-10 shard was stabilized on
   2026-05-21 19:07 CEST by retargeting those local-prelude fixtures to the
   current monomorphized pick-target diagnostic. Next stop-on-failure blocker
-  is not yet localized.
+  is
+  `PrimeStruct_primestruct_parser_basic_cases_51_60`. The parser basic 51-60
+  shard is failing in stale separator fixtures. Current parsing still accepts
+  semicolons across imports, parameter lists, call arguments, and trailing
+  expression separators, but no longer accepts semicolon, leading, or trailing
+  separators in definition template lists like `pair<i32; i32>` or
+  `pair<i32, i32,>`. The parser basic 51-60 shard was stabilized on
+  2026-05-21 19:08 CEST by narrowing those fixtures to the currently accepted
+  separator forms. Next stop-on-failure blocker is not yet localized.
 
 ## Recent Test Runs
+- 2026-05-21 19:08 CEST | pass | mode: release | command:
+  `cmake --build build-release --target PrimeStruct_parser_tests -j 1`;
+  `cd build-release && ctest --output-on-failure -R '^PrimeStruct_primestruct_parser_basic_cases_51_60$' --timeout 180`
+  | failures: none | notes: parser separator fixtures now preserve accepted
+  semicolon coverage while avoiding unsupported definition-template separator
+  forms.
+- 2026-05-21 19:08 CEST | fail | mode: release | command:
+  `cd build-release && ctest --output-on-failure --stop-on-failure --timeout 180 -I 459,1599`
+  | failures:
+  `PrimeStruct_primestruct_parser_basic_cases_51_60`
+  | notes: maybe 11, type-resolution graph, dumps, import errors/resolver,
+  lexer, semantic manual, and parser basic 1-50 passed first; parser separator
+  fixtures still expected definition-template separator tolerance.
 - 2026-05-21 19:07 CEST | pass | mode: release | command:
   `cmake --build build-release --target PrimeStruct_semantics_tests -j 1`;
   `cd build-release && ctest --output-on-failure -R '^PrimeStruct_primestruct_semantics_maybe_maybe_1_10$' --timeout 180`
