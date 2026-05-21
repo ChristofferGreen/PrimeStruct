@@ -5346,7 +5346,7 @@ main() {
         std::string::npos);
 }
 
-TEST_CASE("to_aos method fallback validates through struct helper return receivers compatibility") {
+TEST_CASE("to_aos method fallback through struct helper return receivers rejects removed canonical bridge") {
   const std::string source = R"(
 import /std/collections/*
 import /std/collections/soa/*
@@ -5372,8 +5372,10 @@ main() {
 }
 )";
   std::string error;
-  CHECK(validateProgram(source, "/main", error));
-  CHECK(error.empty());
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  INFO(error);
+  CHECK(error.find("unknown method: /std/collections/soa_vector/to_aos") !=
+        std::string::npos);
 }
 
 TEST_CASE("to_aos helper call-form falls back to user helper") {
@@ -5469,7 +5471,7 @@ main() {
   CHECK(error.empty());
 }
 
-TEST_CASE("to_aos helper method-form falls back to user helper") {
+TEST_CASE("to_aos helper method-form rejects retired soa_vector user-helper parameter") {
   const std::string source = R"(
 Particle() {
   [i32] x{1i32}
@@ -5487,11 +5489,13 @@ main() {
 }
 )";
   std::string error;
-  CHECK(validateProgram(source, "/main", error));
-  CHECK(error.empty());
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  INFO(error);
+  CHECK(error.find("soa_vector<T> is not supported; use soa<T>") !=
+        std::string::npos);
 }
 
-TEST_CASE("to_aos helper-return builtin soa_vector forms keep same-path helper shadow") {
+TEST_CASE("to_aos helper-return builtin soa_vector forms reject non-templated retired path") {
   const std::string source = R"(
 Particle() {
   [i32] x{1i32}
@@ -5521,11 +5525,12 @@ main() {
 )";
   std::string error;
   INFO(error);
-  CHECK(validateProgram(source, "/main", error));
-  CHECK(error.empty());
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("template arguments are only supported on templated definitions: /soa_vector") !=
+        std::string::npos);
 }
 
-TEST_CASE("builtin soa_vector global helper-return read helpers validate") {
+TEST_CASE("builtin soa_vector global helper-return read helpers reject non-templated retired path") {
   const std::string source = R"(
 Particle() {
   [i32] x{1i32}
@@ -5555,8 +5560,9 @@ main() {
   )";
   std::string error;
   INFO(error);
-  CHECK(validateProgram(source, "/main", error));
-  CHECK(error.empty());
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("template arguments are only supported on templated definitions: /soa_vector") !=
+        std::string::npos);
 }
 
 TEST_CASE("builtin soa_vector method-like helper-return read helpers reject primitive metadata first") {
@@ -5630,7 +5636,7 @@ main() {
         std::string::npos);
 }
 
-TEST_CASE("aos and soa containers do not implicitly convert") {
+TEST_CASE("aos and soa containers reject retired soa_vector parameter spelling") {
   const std::string source = R"(
 Particle() {
   [i32] x{1i32}
@@ -5649,8 +5655,9 @@ main() {
 )";
   std::string error;
   CHECK_FALSE(validateProgram(source, "/main", error));
-  CHECK(error.find("argument type mismatch") != std::string::npos);
-  CHECK(error.find("/consumeSoa") != std::string::npos);
+  INFO(error);
+  CHECK(error.find("soa_vector<T> is not supported; use soa<T>") !=
+        std::string::npos);
 }
 
 TEST_CASE("ecs style soa_vector update loop validates with deferred structural phase") {

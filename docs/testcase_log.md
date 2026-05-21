@@ -486,9 +486,37 @@
   collections 261-270 shard was stabilized on 2026-05-21 18:07 CEST by
   retargeting those fixtures to the current retired type-spelling,
   non-templated `/soa_vector`, and removed canonical `to_aos` diagnostics.
-  Next stop-on-failure blocker is not yet localized.
+  Next stop-on-failure blocker is
+  `PrimeStruct_primestruct_semantics_calls_flow_collections_calls_flow_collections_271_280`.
+  The calls-flow collections 271-280 shard is failing in stale old-surface
+  `soa_vector<T>` helper-return and AOS/SoA conversion expectations. Current
+  validation rejects uppercase helper-return `to_aos` through
+  `unknown method: /std/collections/soa_vector/to_aos`, lowercase
+  helper-return read helpers through the non-templated `/soa_vector`
+  diagnostic, and lowercase user-helper parameters with
+  `soa_vector<T> is not supported; use soa<T>`. The calls-flow collections
+  271-280 shard was stabilized on 2026-05-21 18:11 CEST by retargeting those
+  fixtures to the current removed canonical `to_aos`, non-templated
+  `/soa_vector`, and retired type-spelling diagnostics. Next stop-on-failure
+  blocker is not yet localized.
 
 ## Recent Test Runs
+- 2026-05-21 18:11 CEST | pass | mode: release | command:
+  `cmake --build build-release --target PrimeStruct_semantics_tests -j 1`;
+  `cd build-release && ctest --output-on-failure -R '^PrimeStruct_primestruct_semantics_calls_flow_collections_calls_flow_collections_271_280$' --timeout 180`
+  | failures: none | notes: old-surface `soa_vector<T>` helper-return and
+  conversion coverage now expects removed canonical `to_aos`, non-templated
+  `/soa_vector`, and retired type-spelling diagnostics.
+- 2026-05-21 18:10 CEST | fail | mode: release | command:
+  `cd build-release && ctest --output-on-failure --stop-on-failure --timeout 180 -I 323,1599`;
+  `build-release/primec --emit=ir --dump-stage ast-semantic --entry /main -I stdlib <same to_aos helper-return fixture>`;
+  `build-release/primec --emit=ir --dump-stage ast-semantic --entry /main <same user-helper and conversion fixtures>`
+  | failures:
+  `PrimeStruct_primestruct_semantics_calls_flow_collections_calls_flow_collections_271_280`
+  | notes: current blocker is stale old-surface `soa_vector<T>` helper-return
+  and conversion coverage; representative CLI repros report removed canonical
+  `to_aos`, non-templated `/soa_vector`, and retired type-spelling
+  diagnostics.
 - 2026-05-21 18:07 CEST | pass | mode: release | command:
   `cmake --build build-release --target PrimeStruct_semantics_tests -j 1`;
   `cd build-release && ctest --output-on-failure -R '^PrimeStruct_primestruct_semantics_calls_flow_collections_calls_flow_collections_261_270$' --timeout 180`
