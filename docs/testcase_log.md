@@ -773,9 +773,31 @@
   generic assignment rewriting and fails semantic validation on literal keys.
   The collective extended 15 shard was stabilized on 2026-05-21 20:03 CEST by
   switching the map count smoke to comma payload construction. Next
-  stop-on-failure blocker is not yet localized.
+  stop-on-failure blocker is
+  `PrimeStruct_primestruct_compile_run_smoke_collective_paths_extended_16_16`.
+  The compile-run collective extended 16 shard is failing in the adjacent map
+  indexing smoke cluster for the same stale `=` pair sugar, which should stay
+  outside C++ text-filter special casing. A focused rerun after the comma
+  payload retarget exposed the next stale assumption: numeric indexing smokes
+  also relied on inferred/direct map constructor targets, and string-keyed
+  indexing still expected the retired C++ map path. The collective extended
+  16-21 shards were stabilized on 2026-05-21 22:21 CEST by keeping numeric
+  map indexing on explicit typed map bindings and locking string-keyed
+  indexing to the current backend rejection. Next stop-on-failure blocker is
+  not yet localized.
 
 ## Recent Test Runs
+- 2026-05-21 22:21 CEST | pass | mode: release | command:
+  `cmake --build build-release --target PrimeStruct_compile_run_tests -j 1`;
+  `cd build-release && ctest --output-on-failure -R '^PrimeStruct_primestruct_compile_run_smoke_collective_paths_extended_(16_16|17_17|18_18|19_19|20_20|21_21)$' --timeout 180`
+  | failures: none | notes: numeric map indexing smokes now use explicit
+  typed map bindings, and string-keyed indexing smokes assert the current
+  backend rejection instead of old C++ map behavior.
+- 2026-05-21 22:20 CEST | fail | mode: release | command:
+  `cd build-release && ctest --output-on-failure --stop-on-failure --timeout 180 -I 637,1599`
+  | failures:
+  `PrimeStruct_primestruct_compile_run_smoke_collective_paths_extended_16_16`
+  | notes: map indexing smoke still expected C++ map pair-sugar rewriting.
 - 2026-05-21 20:03 CEST | pass | mode: release | command:
   `cmake --build build-release --target PrimeStruct_compile_run_tests -j 1`;
   `cd build-release && ctest --output-on-failure -R '^PrimeStruct_primestruct_compile_run_smoke_collective_paths_extended_15_15$' --timeout 180`

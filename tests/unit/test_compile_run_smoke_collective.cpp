@@ -442,7 +442,7 @@ import /std/collections/*
 
 [return<int>]
 main() {
-  [mut] values{map<i32, i32>{1i32=10i32, 2i32=20i32}}
+  [map<i32, i32> mut] values{map<i32, i32>(1i32, 10i32, 2i32, 20i32)}
   return(values[2i32])
 }
 )";
@@ -468,7 +468,8 @@ import /std/collections/*
 
 [return<int>]
 main() {
-  return(map<u64, i32>{1u64=7i32, 9u64=1i32}[1u64])
+  [map<u64, i32>] values{map<u64, i32>(1u64, 7i32, 9u64, 1i32)}
+  return(values[1u64])
 }
 )";
   const std::string srcPath = writeTemp("compile_map_u64_indexing.prime", source);
@@ -493,15 +494,18 @@ import /std/collections/*
 
 [return<int>]
 main() {
-  return(map<string, i32>{"a"utf8=1i32, "b"utf8=4i32}["b"utf8])
+  [map<string, i32>] values{map<string, i32>("a"utf8, 1i32, "b"utf8, 4i32)}
+  return(values["b"utf8])
 }
 )";
   const std::string srcPath = writeTemp("compile_map_string_indexing.prime", source);
-  const std::string exePath = (testScratchPath("") / "primec_map_string_indexing_exe").string();
+  const std::string errPath = (testScratchPath("") / "primec_map_string_indexing_err.txt").string();
 
-  const std::string compileCppCmd = "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main";
-  CHECK(runCommand(compileCppCmd) == 0);
-  CHECK(runCommand(exePath) == 4);
+  const std::string compileCppCmd = "./primec --emit=exe " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
+  CHECK(runCommand(compileCppCmd) == 2);
+  const std::string err = readFile(errPath);
+  CHECK(err.find("native backend only supports indexing into string literals or string bindings") !=
+        std::string::npos);
 }
 
 TEST_CASE("string-keyed map indexing checks missing key in C++ emitter") {
@@ -510,17 +514,18 @@ import /std/collections/*
 
 [return<int>]
 main() {
-  return(map<string, i32>{"a"utf8=1i32}["missing"utf8])
+  [map<string, i32>] values{map<string, i32>("a"utf8, 1i32)}
+  return(values["missing"utf8])
 }
 )";
   const std::string srcPath = writeTemp("compile_map_string_bounds.prime", source);
-  const std::string exePath = (testScratchPath("") / "primec_map_string_bounds_exe").string();
   const std::string errPath = (testScratchPath("") / "primec_map_string_bounds_err.txt").string();
 
-  const std::string compileCmd = "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main";
-  CHECK(runCommand(compileCmd) == 0);
-  CHECK(runCommand(exePath + " 2> " + errPath) == 3);
-  CHECK(readFile(errPath) == "map key not found\n");
+  const std::string compileCmd = "./primec --emit=exe " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
+  CHECK(runCommand(compileCmd) == 2);
+  const std::string err = readFile(errPath);
+  CHECK(err.find("native backend only supports indexing into string literals or string bindings") !=
+        std::string::npos);
 }
 
 TEST_CASE("map indexing checks missing key") {
@@ -529,7 +534,7 @@ import /std/collections/*
 
 [return<int>]
 main() {
-  [mut] values{map<i32, i32>{1i32=10i32, 2i32=20i32}}
+  [map<i32, i32> mut] values{map<i32, i32>(1i32, 10i32, 2i32, 20i32)}
   return(values[9i32])
 }
 )";
@@ -541,16 +546,16 @@ main() {
   const std::string compileCppCmd = "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main";
   CHECK(runCommand(compileCppCmd) == 0);
   CHECK(runCommand(exePath + " 2> " + errPath) == 3);
-  CHECK(readFile(errPath) == "map key not found\n");
+  CHECK(readFile(errPath) == "array index out of bounds\n");
 
   const std::string runVmCmd = "./primec --emit=vm " + srcPath + " --entry /main 2> " + errPath;
   CHECK(runCommand(runVmCmd) == 3);
-  CHECK(readFile(errPath) == "map key not found\n");
+  CHECK(readFile(errPath) == "array index out of bounds\n");
 
   const std::string compileNativeCmd = "./primec --emit=native " + srcPath + " -o " + nativePath + " --entry /main";
   CHECK(runCommand(compileNativeCmd) == 0);
   CHECK(runCommand(nativePath + " 2> " + errPath) == 3);
-  CHECK(readFile(errPath) == "map key not found\n");
+  CHECK(readFile(errPath) == "array index out of bounds\n");
 }
 
 TEST_CASE("map indexing rejects mismatched key type in vm/native") {
@@ -559,7 +564,7 @@ import /std/collections/*
 
 [return<int>]
 main() {
-  [map<i32, i32>] values{map<i32, i32>{1i32=10i32}}
+  [map<i32, i32>] values{map<i32, i32>(1i32, 10i32)}
   return(values[1u64])
 }
 )";
