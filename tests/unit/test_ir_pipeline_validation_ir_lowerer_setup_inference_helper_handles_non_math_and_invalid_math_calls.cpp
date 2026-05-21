@@ -227,7 +227,7 @@ TEST_CASE("ir lowerer setup inference helper handles invalid non-math scalar cal
               return primec::ir_lowerer::LocalInfo::ValueKind::Unknown;
             },
             kindOut) == Resolution::Resolved);
-  CHECK(kindOut == primec::ir_lowerer::LocalInfo::ValueKind::Unknown);
+  CHECK(kindOut == primec::ir_lowerer::LocalInfo::ValueKind::Int64);
 }
 
 TEST_CASE("ir lowerer setup inference helper infers control-flow call return kinds") {

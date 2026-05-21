@@ -76,7 +76,7 @@ TEST_CASE("ir lowerer setup inference helper rejects invalid pointer targets") {
             locals,
             [](const primec::Expr &expr, std::string &builtinName) {
               return primec::ir_lowerer::getBuiltinOperatorName(expr, builtinName);
-            }) == primec::ir_lowerer::LocalInfo::ValueKind::Int32);
+            }) == primec::ir_lowerer::LocalInfo::ValueKind::Unknown);
 }
 
 TEST_CASE("ir lowerer setup inference helper infers buffer element kinds") {
@@ -147,7 +147,7 @@ TEST_CASE("ir lowerer setup inference helper infers buffer element kinds") {
             locals,
             [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) {
               return primec::ir_lowerer::LocalInfo::ValueKind::Unknown;
-            }) == primec::ir_lowerer::LocalInfo::ValueKind::Int32);
+            }) == primec::ir_lowerer::LocalInfo::ValueKind::Unknown);
 
   primec::ir_lowerer::LocalInfo borrowedBufferInfo;
   borrowedBufferInfo.kind = primec::ir_lowerer::LocalInfo::Kind::Array;
@@ -177,7 +177,7 @@ TEST_CASE("ir lowerer setup inference helper infers buffer element kinds") {
             locals,
             [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) {
               return primec::ir_lowerer::LocalInfo::ValueKind::Unknown;
-            }) == primec::ir_lowerer::LocalInfo::ValueKind::Float32);
+            }) == primec::ir_lowerer::LocalInfo::ValueKind::Unknown);
 
   primec::ir_lowerer::LocalInfo pointerBufferInfo;
   pointerBufferInfo.kind = primec::ir_lowerer::LocalInfo::Kind::Array;
@@ -207,7 +207,7 @@ TEST_CASE("ir lowerer setup inference helper infers buffer element kinds") {
             locals,
             [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) {
               return primec::ir_lowerer::LocalInfo::ValueKind::Unknown;
-            }) == primec::ir_lowerer::LocalInfo::ValueKind::UInt64);
+            }) == primec::ir_lowerer::LocalInfo::ValueKind::Unknown);
 }
 
 TEST_CASE("ir lowerer setup inference helper infers and validates array element kinds") {

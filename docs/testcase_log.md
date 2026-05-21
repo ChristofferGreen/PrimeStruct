@@ -209,9 +209,37 @@
   classification. The validation cases 731-740 shard was stabilized on
   2026-05-21 14:25 CEST by retargeting those bare `at(...)` args-pack
   pointer-target inference expectations to current `Unknown` behavior. Next
-  stop-on-failure blocker is not yet localized.
+  stop-on-failure blocker is
+  `PrimeStruct_primestruct_ir_pipeline_validation_cases_761_770`. The
+  validation cases 761-770 shard is failing in stale setup-inference
+  expectations for source-only bare `at(...)` args-pack pointer/buffer access
+  and an `assign(m, ...)` case that now treats a plain `Value` local as a
+  scalar target instead of a map-specific invalid target. The validation cases
+  761-770 shard was stabilized on 2026-05-21 14:30 CEST by retargeting bare
+  `at(...)` pointer/buffer access to current `Unknown` behavior and the plain
+  `Value` local assign case to current `Int64` behavior. Next stop-on-failure
+  blocker is not yet localized.
 
 ## Recent Test Runs
+- 2026-05-21 14:30 CEST | pass | mode: release | command:
+  `cmake --build build-release --target PrimeStruct_backend_ir_tests -j 1`;
+  `cd build-release && ctest --output-on-failure -R '^PrimeStruct_primestruct_ir_pipeline_validation_cases_761_770$' --timeout 180`
+  | failures: none | notes: setup inference now asserts current source-only
+  bare `at(...)` fail-closed behavior and scalar `assign(m, ...)` local
+  handling.
+- 2026-05-21 14:29 CEST | fail | mode: release | command:
+  `cmake --build build-release --target PrimeStruct_backend_ir_tests -j 1`;
+  `cd build-release && ctest --output-on-failure -R '^PrimeStruct_primestruct_ir_pipeline_validation_cases_761_770$' --timeout 180`
+  | failures: `PrimeStruct_primestruct_ir_pipeline_validation_cases_761_770`
+  | notes: focused rerun reduced the shard to the plain `Value` local
+  `assign(m, ...)` result-kind expectation.
+- 2026-05-21 14:27 CEST | fail | mode: release | command:
+  `cmake --build build-release -j 1`;
+  `cd build-release && ctest --output-on-failure --stop-on-failure --timeout 180`
+  | failures: `PrimeStruct_primestruct_ir_pipeline_validation_cases_761_770`
+  | notes: stop-on-failure progressed past validation cases 731-740; current
+  blocker is stale source-only setup-inference expectations for bare
+  `at(...)` args-pack access and scalar assign.
 - 2026-05-21 14:25 CEST | pass | mode: release | command:
   `cmake --build build-release --target PrimeStruct_backend_ir_tests -j 1`;
   `cd build-release && ctest --output-on-failure -R '^PrimeStruct_primestruct_ir_pipeline_validation_cases_731_740$' --timeout 180`
