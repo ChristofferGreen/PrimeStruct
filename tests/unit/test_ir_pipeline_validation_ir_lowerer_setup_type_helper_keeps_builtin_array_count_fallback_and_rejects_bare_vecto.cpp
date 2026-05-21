@@ -169,7 +169,7 @@ TEST_CASE("ir lowerer setup type helper keeps builtin array count fallback and r
             [](const primec::Expr &) { return std::string(); },
             {},
             error) == nullptr);
-  CHECK(error == "stale");
+  CHECK(error == "unknown method: /array/at");
 
   primec::Expr entryArgsReceiver;
   entryArgsReceiver.kind = primec::Expr::Kind::Name;
@@ -193,7 +193,7 @@ TEST_CASE("ir lowerer setup type helper keeps builtin array count fallback and r
             [](const primec::Expr &) { return std::string(); },
             {},
             error) == nullptr);
-  CHECK(error == "stale");
+  CHECK(error == "unknown method target for at_unsafe");
 }
 
 TEST_CASE("ir lowerer setup type helper reports unknown vector mutators when no override definition exists") {

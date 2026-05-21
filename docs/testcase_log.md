@@ -251,9 +251,30 @@
   by retargeting map `contains` / `tryAt` method resolution to current
   explicit unknown-target and bare quiet-defer behavior, and SoA-vector
   mutator wrapper resolution to the public canonical helper path. Next
-  stop-on-failure blocker is not yet localized.
+  stop-on-failure blocker is
+  `PrimeStruct_primestruct_ir_pipeline_validation_cases_811_820`. The
+  validation cases 811-820 shard is failing in stale setup-type helper
+  expectations that still require array `at` and entry-args `at_unsafe` bare
+  method fallback to preserve a prior `"stale"` diagnostic instead of the
+  current unknown-method diagnostics.
+  The validation cases 811-820 shard was stabilized on 2026-05-21 15:16 CEST
+  by retargeting those bare method fallback checks to current `/array/at` and
+  `unknown method target for at_unsafe` diagnostics. Next stop-on-failure
+  blocker is not yet localized.
 
 ## Recent Test Runs
+- 2026-05-21 15:16 CEST | pass | mode: release | command:
+  `cmake --build build-release --target PrimeStruct_backend_ir_tests -j 1`;
+  `cd build-release && ctest --output-on-failure -R '^PrimeStruct_primestruct_ir_pipeline_validation_cases_811_820$' --timeout 180`
+  | failures: none | notes: array `at` and entry-args `at_unsafe` bare method
+  fallback diagnostics now match current setup-type behavior.
+- 2026-05-21 15:14 CEST | fail | mode: release | command:
+  `cmake --build build-release -j 1`;
+  `cd build-release && ctest --output-on-failure --stop-on-failure --timeout 180`
+  | failures: `PrimeStruct_primestruct_ir_pipeline_validation_cases_811_820`
+  | notes: stop-on-failure progressed past validation cases 801-810; current
+  blocker is stale array `at` and entry-args `at_unsafe` fallback diagnostic
+  coverage.
 - 2026-05-21 15:11 CEST | pass | mode: release | command:
   `cmake --build build-release --target PrimeStruct_backend_ir_tests -j 1`;
   `cd build-release && ctest --output-on-failure -R '^PrimeStruct_primestruct_ir_pipeline_validation_cases_801_810$' --timeout 180`
