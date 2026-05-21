@@ -630,9 +630,28 @@
   preference, named-argument, and fallback expectations. The calls-flow
   collections 561-570 shard was stabilized on 2026-05-21 18:58 CEST by
   retargeting those legacy helper and field-view fixtures to the retired
-  spelling diagnostic. Next stop-on-failure blocker is not yet localized.
+  spelling diagnostic. Next stop-on-failure blocker is
+  `PrimeStruct_primestruct_semantics_calls_flow_collections_calls_flow_collections_581_590`.
+  The calls-flow collections 581-590 shard is failing in the reordered map
+  access wrapper temporary fixture. Current `.prime` stdlib map lowering
+  rejects the old key-first `at_unsafe(key, map)` shape with a map storage
+  argument mismatch before the previous chained-method inference expectation.
+  The calls-flow collections 581-590 shard was stabilized on 2026-05-21
+  18:59 CEST by retargeting that fixture to the current map storage mismatch.
+  Next stop-on-failure blocker is not yet localized.
 
 ## Recent Test Runs
+- 2026-05-21 18:59 CEST | pass | mode: release | command:
+  `cmake --build build-release --target PrimeStruct_semantics_tests -j 1`;
+  `cd build-release && ctest --output-on-failure -R '^PrimeStruct_primestruct_semantics_calls_flow_collections_calls_flow_collections_581_590$' --timeout 180`
+  | failures: none | notes: reordered map access wrapper fixture now expects
+  the current `.prime` stdlib map storage mismatch for key-first access.
+- 2026-05-21 18:59 CEST | fail | mode: release | command:
+  `cd build-release && ctest --output-on-failure --stop-on-failure --timeout 180 -I 353,1599`
+  | failures:
+  `PrimeStruct_primestruct_semantics_calls_flow_collections_calls_flow_collections_581_590`
+  | notes: `571_580` passed first; reordered map access wrapper still expected
+  key-first compatibility behavior after `.prime` stdlib map lowering.
 - 2026-05-21 18:58 CEST | pass | mode: release | command:
   `cmake --build build-release --target PrimeStruct_semantics_tests -j 1`;
   `cd build-release && ctest --output-on-failure -R '^PrimeStruct_primestruct_semantics_calls_flow_collections_calls_flow_collections_561_570$' --timeout 180`

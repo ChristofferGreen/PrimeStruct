@@ -1796,7 +1796,7 @@ main() {
   CHECK(error.find("argument type mismatch for /std/collections/vector/at") != std::string::npos);
 }
 
-TEST_CASE("reordered access wrapper temporaries infer i32 for chained methods") {
+TEST_CASE("reordered map access wrapper temporaries reject map storage mismatch") {
   const std::string source = R"(
 import /std/collections/*
 
@@ -1822,8 +1822,10 @@ main() {
 }
 )";
   std::string error;
-  CHECK(validateProgram(source, "/main", error));
-  CHECK(error.empty());
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  INFO(error);
+  CHECK(error.find("argument type mismatch for /std/collections/map/at_unsafe") !=
+        std::string::npos);
 }
 
 TEST_CASE("access wrapper temporary chained method reports i32 path diagnostics") {
