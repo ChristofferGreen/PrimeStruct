@@ -498,9 +498,30 @@
   271-280 shard was stabilized on 2026-05-21 18:11 CEST by retargeting those
   fixtures to the current removed canonical `to_aos`, non-templated
   `/soa_vector`, and retired type-spelling diagnostics. Next stop-on-failure
-  blocker is not yet localized.
+  blocker is
+  `PrimeStruct_primestruct_semantics_calls_flow_collections_calls_flow_collections_281_290`.
+  The calls-flow collections 281-290 shard is failing in stale ECS-style
+  old-surface `soa_vector<T>` loop expectations that still expect validation
+  or AOS/SoA argument mismatch diagnostics. Current validation rejects those
+  fixtures earlier with `soa_vector<T> is not supported; use soa<T>`. The
+  calls-flow collections 281-290 shard was stabilized on 2026-05-21 18:14
+  CEST by retargeting those fixtures to the current retired type-spelling
+  diagnostic. Next stop-on-failure blocker is not yet localized.
 
 ## Recent Test Runs
+- 2026-05-21 18:14 CEST | pass | mode: release | command:
+  `cmake --build build-release --target PrimeStruct_semantics_tests -j 1`;
+  `cd build-release && ctest --output-on-failure -R '^PrimeStruct_primestruct_semantics_calls_flow_collections_calls_flow_collections_281_290$' --timeout 180`
+  | failures: none | notes: old-surface `soa_vector<T>` ECS-style loop
+  coverage now expects the current retired type-spelling diagnostic.
+- 2026-05-21 18:13 CEST | fail | mode: release | command:
+  `cd build-release && ctest --output-on-failure --stop-on-failure --timeout 180 -I 324,1599`;
+  `build-release/primec --emit=ir --dump-stage ast-semantic --entry /main <same ECS-style fixture sources>`
+  | failures:
+  `PrimeStruct_primestruct_semantics_calls_flow_collections_calls_flow_collections_281_290`
+  | notes: current blocker is stale old-surface `soa_vector<T>` ECS-style loop
+  coverage; representative CLI repros report the retired type-spelling
+  diagnostic before loop or conversion-mismatch validation.
 - 2026-05-21 18:11 CEST | pass | mode: release | command:
   `cmake --build build-release --target PrimeStruct_semantics_tests -j 1`;
   `cd build-release && ctest --output-on-failure -R '^PrimeStruct_primestruct_semantics_calls_flow_collections_calls_flow_collections_271_280$' --timeout 180`

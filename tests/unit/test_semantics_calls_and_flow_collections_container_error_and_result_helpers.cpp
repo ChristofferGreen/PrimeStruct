@@ -5660,7 +5660,7 @@ main() {
         std::string::npos);
 }
 
-TEST_CASE("ecs style soa_vector update loop validates with deferred structural phase") {
+TEST_CASE("ecs style soa_vector update loop rejects retired parameter spelling") {
   const std::string source = R"(
 Particle() {
   [i32] x{0i32}
@@ -5688,11 +5688,13 @@ main() {
 }
 )";
   std::string error;
-  CHECK(validateProgram(source, "/main", error));
-  CHECK(error.empty());
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  INFO(error);
+  CHECK(error.find("soa_vector<T> is not supported; use soa<T>") !=
+        std::string::npos);
 }
 
-TEST_CASE("ecs style update loop still requires explicit aos to soa conversion") {
+TEST_CASE("ecs style update loop rejects retired soa_vector parameter before conversion mismatch") {
   const std::string source = R"(
 Particle() {
   [i32] x{0i32}
@@ -5717,8 +5719,9 @@ main() {
 )";
   std::string error;
   CHECK_FALSE(validateProgram(source, "/main", error));
-  CHECK(error.find("argument type mismatch") != std::string::npos);
-  CHECK(error.find("/simulateStep") != std::string::npos);
+  INFO(error);
+  CHECK(error.find("soa_vector<T> is not supported; use soa<T>") !=
+        std::string::npos);
 }
 
 TEST_SUITE_END();
