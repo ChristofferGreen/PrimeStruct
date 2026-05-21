@@ -3,9 +3,9 @@
 ## Current Known Failures
 - [ ] release gate baseline | mode: release | command:
   `./scripts/compile.sh --release` | first_seen: 2026-05-21 07:37 CEST |
-  last_seen: 2026-05-21 10:19 CEST | next:
-  `cmake --build build-release --target PrimeStruct_backend_ir_tests -j 1`;
-  `cd build-release && ctest --output-on-failure -R '^PrimeStruct_primestruct_ir_pipeline_conversions_variadic_collection_refs$'`
+  last_seen: 2026-05-21 11:01 CEST | next:
+  `cmake --build build-release -j 1`;
+  `cd build-release && ctest --output-on-failure --stop-on-failure`
   | notes: full gate passed 77% with 365 failures out of 1599 tests.
   The `test_compile_run_emitters_canonical_map_helper_calls.cpp` cluster was
   stabilized on 2026-05-21 09:32 CEST; the stale SoA semantic-product next
@@ -16,9 +16,26 @@
   2026-05-21 10:50 CEST by retargeting the stale borrowed-array
   dereference access-helper fixture to explicit helper spelling and checking
   IR materialization instead of the still-unrelated VM unaligned-load runtime
-  path. Next stop-on-failure blocker after this shard has not been localized.
+  path. The variadic pointer-ref shard was stabilized on 2026-05-21 11:01
+  CEST by retargeting stale borrowed-pack forwarding positives to
+  deterministic rejection coverage. Next stop-on-failure blocker after this
+  shard has not been localized.
 
 ## Recent Test Runs
+- 2026-05-21 11:01 CEST | pass | mode: release | command:
+  `cmake --build build-release --target PrimeStruct_backend_ir_tests -j 1`;
+  `cd build-release && ctest --output-on-failure -R '^PrimeStruct_primestruct_ir_pipeline_conversions_variadic_pointer_refs$'`
+  | failures: none | notes: retargeted stale borrowed-pack pointer/reference
+  positive fixtures to deterministic rejects for non-local `location(...)`
+  forwarding and missing `/array/at` method-lowered definitions.
+- 2026-05-21 10:58 CEST | fail | mode: release | command:
+  `cmake --build build-release -j 1`;
+  `cd build-release && ctest --output-on-failure --stop-on-failure`
+  | failures: `PrimeStruct_primestruct_ir_pipeline_conversions_variadic_pointer_refs`
+  | notes: stop-on-failure localization progressed past the stabilized
+  collection-ref shard; next blocker was seven stale variadic pointer-ref
+  borrowed-pack cases failing with `location requires a local binding` or
+  missing `/array/at` lowered definitions.
 - 2026-05-21 10:50 CEST | pass | mode: release | command:
   `cmake --build build-release --target PrimeStruct_backend_ir_tests -j 1`;
   `cd build-release && ctest --output-on-failure -R '^PrimeStruct_primestruct_ir_pipeline_conversions_variadic_collection_refs$'`

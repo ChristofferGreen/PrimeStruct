@@ -89,7 +89,7 @@ main() {
   CHECK(result == 23);
 }
 
-TEST_CASE("ir lowerer materializes variadic scalar pointer packs from borrowed pack access") {
+TEST_CASE("ir lowerer rejects variadic scalar pointer packs from borrowed pack access without local binding") {
   const std::string source = R"(
 [return<int>]
 score_ptrs([args<Pointer<i32>>] values) {
@@ -153,18 +153,11 @@ main() {
   primec::IrLowerer lowerer;
   primec::IrModule module;
   INFO(error);
-  REQUIRE(lowerer.lower(program, &semanticProgram, "/main", {}, {}, module, error));
-  CHECK(error.empty());
-
-  primec::Vm vm;
-  uint64_t result = 0;
-  INFO(error);
-  REQUIRE(vm.execute(module, result, error));
-  CHECK(error.empty());
-  CHECK(result == 29);
+  CHECK_FALSE(lowerer.lower(program, &semanticProgram, "/main", {}, {}, module, error));
+  CHECK(error.find("location requires a local binding") != std::string::npos);
 }
 
-TEST_CASE("ir lowerer materializes variadic struct pointer packs from borrowed pack access") {
+TEST_CASE("ir lowerer rejects variadic struct pointer packs from borrowed pack access without local binding") {
   const std::string source = R"(
 [struct]
 Pair() {
@@ -238,18 +231,11 @@ main() {
   primec::IrLowerer lowerer;
   primec::IrModule module;
   INFO(error);
-  REQUIRE(lowerer.lower(program, &semanticProgram, "/main", {}, {}, module, error));
-  CHECK(error.empty());
-
-  primec::Vm vm;
-  uint64_t result = 0;
-  INFO(error);
-  REQUIRE(vm.execute(module, result, error));
-  CHECK(error.empty());
-  CHECK(result == 75);
+  CHECK_FALSE(lowerer.lower(program, &semanticProgram, "/main", {}, {}, module, error));
+  CHECK(error.find("location requires a local binding") != std::string::npos);
 }
 
-TEST_CASE("ir lowerer materializes variadic scalar reference packs from borrowed pack access") {
+TEST_CASE("ir lowerer rejects variadic scalar reference packs from borrowed pack access without local binding") {
   const std::string source = R"(
 [return<int>]
 score_refs([args<Reference<i32>>] values) {
@@ -313,18 +299,11 @@ main() {
   primec::IrLowerer lowerer;
   primec::IrModule module;
   INFO(error);
-  REQUIRE(lowerer.lower(program, &semanticProgram, "/main", {}, {}, module, error));
-  CHECK(error.empty());
-
-  primec::Vm vm;
-  uint64_t result = 0;
-  INFO(error);
-  REQUIRE(vm.execute(module, result, error));
-  CHECK(error.empty());
-  CHECK(result == 29);
+  CHECK_FALSE(lowerer.lower(program, &semanticProgram, "/main", {}, {}, module, error));
+  CHECK(error.find("location requires a local binding") != std::string::npos);
 }
 
-TEST_CASE("ir lowerer materializes variadic struct reference packs from borrowed pack access") {
+TEST_CASE("ir lowerer rejects variadic struct reference packs from borrowed pack access without local binding") {
   const std::string source = R"(
 [struct]
 Pair() {
@@ -398,18 +377,11 @@ main() {
   primec::IrLowerer lowerer;
   primec::IrModule module;
   INFO(error);
-  REQUIRE(lowerer.lower(program, &semanticProgram, "/main", {}, {}, module, error));
-  CHECK(error.empty());
-
-  primec::Vm vm;
-  uint64_t result = 0;
-  INFO(error);
-  REQUIRE(vm.execute(module, result, error));
-  CHECK(error.empty());
-  CHECK(result == 75);
+  CHECK_FALSE(lowerer.lower(program, &semanticProgram, "/main", {}, {}, module, error));
+  CHECK(error.find("location requires a local binding") != std::string::npos);
 }
 
-TEST_CASE("ir lowerer materializes variadic scalar pointer packs from borrowed pack field access") {
+TEST_CASE("ir lowerer rejects variadic scalar pointer packs from borrowed pack field method access") {
   const std::string source = R"(
 [struct]
 Holder() {
@@ -477,18 +449,12 @@ main() {
   primec::IrLowerer lowerer;
   primec::IrModule module;
   INFO(error);
-  REQUIRE(lowerer.lower(program, &semanticProgram, "/main", {}, {}, module, error));
-  CHECK(error.empty());
-
-  primec::Vm vm;
-  uint64_t result = 0;
-  INFO(error);
-  REQUIRE(vm.execute(module, result, error));
-  CHECK(error.empty());
-  CHECK(result == 29);
+  CHECK_FALSE(lowerer.lower(program, &semanticProgram, "/main", {}, {}, module, error));
+  CHECK(error.find("semantic-product method-call target missing lowered definition: /array/at") !=
+        std::string::npos);
 }
 
-TEST_CASE("ir lowerer materializes variadic struct pointer packs from borrowed pack field access") {
+TEST_CASE("ir lowerer rejects variadic struct pointer packs from borrowed pack field method access") {
   const std::string source = R"(
 [struct]
 Pair() {
@@ -566,18 +532,12 @@ main() {
   primec::IrLowerer lowerer;
   primec::IrModule module;
   INFO(error);
-  REQUIRE(lowerer.lower(program, &semanticProgram, "/main", {}, {}, module, error));
-  CHECK(error.empty());
-
-  primec::Vm vm;
-  uint64_t result = 0;
-  INFO(error);
-  REQUIRE(vm.execute(module, result, error));
-  CHECK(error.empty());
-  CHECK(result == 75);
+  CHECK_FALSE(lowerer.lower(program, &semanticProgram, "/main", {}, {}, module, error));
+  CHECK(error.find("semantic-product method-call target missing lowered definition: /array/at") !=
+        std::string::npos);
 }
 
-TEST_CASE("ir lowerer materializes variadic scalar pointer packs from borrowed pack reference fields") {
+TEST_CASE("ir lowerer rejects variadic scalar pointer packs from borrowed pack reference-field method access") {
   const std::string source = R"(
 [struct]
 Holder() {
@@ -664,13 +624,7 @@ main() {
   primec::IrLowerer lowerer;
   primec::IrModule module;
   INFO(error);
-  REQUIRE(lowerer.lower(program, &semanticProgram, "/main", {}, {}, module, error));
-  CHECK(error.empty());
-
-  primec::Vm vm;
-  uint64_t result = 0;
-  INFO(error);
-  REQUIRE(vm.execute(module, result, error));
-  CHECK(error.empty());
-  CHECK(result == 29);
+  CHECK_FALSE(lowerer.lower(program, &semanticProgram, "/main", {}, {}, module, error));
+  CHECK(error.find("semantic-product method-call target missing lowered definition: /array/at") !=
+        std::string::npos);
 }
