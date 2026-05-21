@@ -334,7 +334,7 @@ main() {
         std::string::npos);
 }
 
-TEST_CASE("explicit old-surface soa_vector count slash-method still validates semantically without same-path helper") {
+TEST_CASE("explicit old-surface soa_vector count slash-method rejects retired type spelling") {
   const std::string source = R"(
 Particle() {
   [i32] x{1i32}
@@ -347,8 +347,10 @@ main() {
 }
   )";
   std::string error;
-  CHECK(validateProgram(source, "/main", error));
-  CHECK(error.empty());
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  INFO(error);
+  CHECK(error.find("soa_vector<T> is not supported; use soa<T>") !=
+        std::string::npos);
 }
 
 TEST_CASE("explicit soa_vector count forms reject non-soa target") {
@@ -395,7 +397,7 @@ main() {
   CHECK(error.empty());
 }
 
-TEST_CASE("bare count helper validates through experimental soa helper return receivers") {
+TEST_CASE("bare count helper rejects internal soa helper return receivers with current metadata diagnostic") {
   const std::string source = R"(
 import /std/collections/*
 import /std/collections/soa/*
@@ -421,11 +423,13 @@ main() {
 }
 )";
   std::string error;
-  CHECK(validateProgram(source, "/main", error));
-  CHECK(error.empty());
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  INFO(error);
+  CHECK(error.find("meta.field_count requires struct type argument: type:Particle") !=
+        std::string::npos);
 }
 
-TEST_CASE("count method validates through experimental soa helper return receivers") {
+TEST_CASE("count method rejects internal soa helper return receivers through retired method path") {
   const std::string source = R"(
 import /std/collections/*
 import /std/collections/soa/*
@@ -451,8 +455,10 @@ main() {
 }
 )";
   std::string error;
-  CHECK(validateProgram(source, "/main", error));
-  CHECK(error.empty());
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  INFO(error);
+  CHECK(error.find("unknown method: /std/collections/soa_vector/count") !=
+        std::string::npos);
 }
 
 TEST_CASE("legacy soa_vector compatibility count helper shadow through public soa receivers") {
@@ -524,7 +530,7 @@ main() {
   CHECK(error.empty());
 }
 
-TEST_CASE("experimental soa_vector stdlib helpers validate on builtin soa_vector binding") {
+TEST_CASE("experimental soa_vector stdlib helpers reject direct soa wildcard import") {
   const std::string source = R"(
 import /std/collections/soa/*
 import /std/collections/internal_soa_vector/*
@@ -541,8 +547,10 @@ main() {
 }
 )";
   std::string error;
-  CHECK(validateProgram(source, "/main", error));
-  CHECK(error.empty());
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  INFO(error);
+  CHECK(error.find("unknown import path: /std/collections/soa/*") !=
+        std::string::npos);
 }
 
 TEST_CASE("public soa count helper validates on public wrapper bindings") {

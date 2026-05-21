@@ -349,9 +349,35 @@
   supported; use soa<T>`. The calls-flow collections 81-90 shard was
   stabilized on 2026-05-21 16:18 CEST by retargeting retired `soa_vector<T>`
   count-helper coverage to the current unsupported-type diagnostic. Next
-  stop-on-failure blocker is not yet localized.
+  stop-on-failure blocker is
+  `PrimeStruct_primestruct_semantics_calls_flow_collections_calls_flow_collections_91_100`.
+  The calls-flow collections 91-100 shard is failing in stale SoA
+  compatibility-helper expectations that still require raw `soa_vector<T>`,
+  internal `SoaVector<T>`, and direct `/std/collections/soa/*` compatibility
+  spellings to validate. Current validation rejects those sources through the
+  retired-type diagnostic, internal helper metadata validation, retired method
+  path resolution, or direct wildcard import rejection. The calls-flow
+  collections 91-100 shard was stabilized on 2026-05-21 16:24 CEST by
+  retargeting those old/internal SoA count-helper fixtures to the current
+  diagnostics. Next stop-on-failure blocker is not yet localized.
 
 ## Recent Test Runs
+- 2026-05-21 16:24 CEST | pass | mode: release | command:
+  `cmake --build build-release --target PrimeStruct_semantics_tests -j 1`;
+  `cd build-release && ctest --output-on-failure -R '^PrimeStruct_primestruct_semantics_calls_flow_collections_calls_flow_collections_91_100$' --timeout 180`
+  | failures: none | notes: old/internal SoA count-helper coverage now
+  expects the current retired-type, metadata, method-path, and import
+  diagnostics.
+- 2026-05-21 16:24 CEST | fail | mode: release | command:
+  `cd build-release && ctest --output-on-failure --stop-on-failure --timeout 180 -I 305,1599`;
+  `cd build-release && ./primec --emit=ir --dump-stage ast-semantic --entry /main -I stdlib <same fixture sources>`
+  | failures:
+  `PrimeStruct_primestruct_semantics_calls_flow_collections_calls_flow_collections_91_100`
+  | notes: current blocker is stale old/internal SoA count-helper coverage;
+  repro diagnostics include `soa_vector<T> is not supported; use soa<T>`,
+  `meta.field_count requires struct type argument: type:Particle`,
+  `unknown method: /std/collections/soa_vector/count`, and
+  `unknown import path: /std/collections/soa/*`.
 - 2026-05-21 16:18 CEST | pass | mode: release | command:
   `cmake --build build-release --target PrimeStruct_semantics_tests -j 1`;
   `cd build-release && ctest --output-on-failure -R '^PrimeStruct_primestruct_semantics_calls_flow_collections_calls_flow_collections_81_90$' --timeout 180`
