@@ -292,9 +292,30 @@
   The struct-transforms 41-50 shard was stabilized on 2026-05-21 15:41 CEST
   by retargeting explicit canonical map field layout coverage to the current
   `unknown struct type for layout: /std/collections/map` diagnostic. Next
-  stop-on-failure blocker is not yet localized.
+  stop-on-failure blocker is
+  `PrimeStruct_primestruct_semantics_bindings_core_bindings_core_11_20`. The
+  bindings core 11-20 shard is failing in stale `soa_vector<T>` compatibility
+  spelling expectations that still require validation and element-type
+  diagnostics instead of the current `soa_vector<T> is not supported; use
+  soa<T>` rejection.
+  The bindings core 11-20 shard was stabilized on 2026-05-21 15:46 CEST by
+  retargeting `soa_vector<T>` binding coverage to the current unsupported
+  compatibility-spelling diagnostic. Next stop-on-failure blocker is not yet
+  localized.
 
 ## Recent Test Runs
+- 2026-05-21 15:46 CEST | pass | mode: release | command:
+  `cmake --build build-release --target PrimeStruct_semantics_tests -j 1`;
+  `cd build-release && ctest --output-on-failure -R '^PrimeStruct_primestruct_semantics_bindings_core_bindings_core_11_20$' --timeout 180`
+  | failures: none | notes: `soa_vector<T>` binding expectations now match
+  the current unsupported compatibility-spelling diagnostic.
+- 2026-05-21 15:45 CEST | fail | mode: release | command:
+  `cd build-release && ctest --output-on-failure --stop-on-failure --timeout 180`
+  | failures:
+  `PrimeStruct_primestruct_semantics_bindings_core_bindings_core_11_20`
+  | notes: stop-on-failure progressed past backend IR validation and struct
+  layout semantics; current blocker is stale `soa_vector<T>` compatibility
+  spelling coverage.
 - 2026-05-21 15:41 CEST | pass | mode: release | command:
   `cmake --build build-release --target PrimeStruct_semantics_tests -j 1`;
   `cd build-release && ctest --output-on-failure -R '^PrimeStruct_primestruct_semantics_struct_transforms_struct_transforms_41_50$' --timeout 180`

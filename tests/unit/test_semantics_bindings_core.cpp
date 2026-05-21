@@ -263,7 +263,7 @@ main() {
   CHECK(error.find("unsupported convert target type: decimal") != std::string::npos);
 }
 
-TEST_CASE("soa_vector binding validates with soa-safe struct element type") {
+TEST_CASE("soa_vector binding rejects compatibility spelling") {
   const std::string source = R"(
 Particle() {
   [i32] x{1i32}
@@ -276,8 +276,8 @@ main() {
 }
 )";
   std::string error;
-  CHECK(validateProgram(source, "/main", error));
-  CHECK(error.empty());
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("soa_vector<T> is not supported; use soa<T>") != std::string::npos);
 }
 
 TEST_CASE("soa public spelling validates bindings returns references and pointers") {
@@ -317,7 +317,7 @@ main() {
   CHECK(error.empty());
 }
 
-TEST_CASE("soa_vector binding requires struct element type") {
+TEST_CASE("soa_vector binding rejects compatibility spelling before element checks") {
   const std::string source = R"(
 [effects(heap_alloc), return<int>]
 main() {
@@ -327,7 +327,7 @@ main() {
 )";
   std::string error;
   CHECK_FALSE(validateProgram(source, "/main", error));
-  CHECK(error.find("soa_vector requires struct element type") != std::string::npos);
+  CHECK(error.find("soa_vector<T> is not supported; use soa<T>") != std::string::npos);
 }
 
 TEST_CASE("soa public spelling requires struct element type") {
