@@ -1398,7 +1398,7 @@ main() {
   CHECK(error.find(RetiredSoaVectorDiagnostic) != std::string::npos);
 }
 
-TEST_CASE("soa_vector get helper call-form accepts labeled named receiver") {
+TEST_CASE("soa_vector get helper call-form rejects retired labeled receiver") {
   const std::string source = R"(
 Particle() {
   [i32] x{1i32}
@@ -1417,11 +1417,12 @@ main() {
 }
 )";
   std::string error;
-  CHECK(validateProgram(source, "/main", error));
-  CHECK(error.empty());
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  INFO(error);
+  CHECK(error.find(RetiredSoaVectorDiagnostic) != std::string::npos);
 }
 
-TEST_CASE("soa_vector get method-form prefers user helper over builtin") {
+TEST_CASE("soa_vector get method-form rejects retired spelling before helper preference") {
   const std::string source = R"(
 Particle() {
   [i32] x{1i32}
@@ -1440,11 +1441,12 @@ main() {
 }
 )";
   std::string error;
-  CHECK(validateProgram(source, "/main", error));
-  CHECK(error.empty());
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  INFO(error);
+  CHECK(error.find(RetiredSoaVectorDiagnostic) != std::string::npos);
 }
 
-TEST_CASE("soa_vector get helper call-form keeps visible helper with named arguments") {
+TEST_CASE("soa_vector get helper call-form rejects retired named-argument helper") {
   const std::string source = R"(
 Particle() {
   [i32] x{1i32}
@@ -1463,11 +1465,12 @@ main() {
 }
 )";
   std::string error;
-  CHECK(validateProgram(source, "/main", error));
-  CHECK(error.empty());
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  INFO(error);
+  CHECK(error.find(RetiredSoaVectorDiagnostic) != std::string::npos);
 }
 
-TEST_CASE("soa_vector ref method-form prefers user helper over builtin") {
+TEST_CASE("soa_vector ref method-form rejects retired spelling before helper preference") {
   const std::string source = R"(
 Particle() {
   [i32] x{1i32}
@@ -1486,11 +1489,12 @@ main() {
 }
 )";
   std::string error;
-  CHECK(validateProgram(source, "/main", error));
-  CHECK(error.empty());
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  INFO(error);
+  CHECK(error.find(RetiredSoaVectorDiagnostic) != std::string::npos);
 }
 
-TEST_CASE("soa_vector field-view method statement validates through helper substrate") {
+TEST_CASE("soa_vector field-view method statement rejects retired helper substrate") {
   const std::string source = R"(
 Particle() {
   [i32] x{1i32}
@@ -1504,11 +1508,12 @@ main() {
 }
 )";
   std::string error;
-  CHECK(validateProgram(source, "/main", error));
-  CHECK(error.empty());
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  INFO(error);
+  CHECK(error.find(RetiredSoaVectorDiagnostic) != std::string::npos);
 }
 
-TEST_CASE("soa_vector field-view call-form statement validates through helper substrate") {
+TEST_CASE("soa_vector field-view call-form statement rejects retired helper substrate") {
   const std::string source = R"(
 Particle() {
   [i32] x{1i32}
@@ -1522,11 +1527,12 @@ main() {
 }
 )";
   std::string error;
-  CHECK(validateProgram(source, "/main", error));
-  CHECK(error.empty());
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  INFO(error);
+  CHECK(error.find(RetiredSoaVectorDiagnostic) != std::string::npos);
 }
 
-TEST_CASE("soa_vector field-view index syntax validates through helper substrate") {
+TEST_CASE("soa_vector field-view index syntax rejects retired helper substrate") {
   const std::string source = R"(
 Particle() {
   [i32] x{1i32}
@@ -1539,11 +1545,12 @@ main() {
 }
 )";
   std::string error;
-  CHECK(validateProgram(source, "/main", error));
-  CHECK(error.empty());
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  INFO(error);
+  CHECK(error.find(RetiredSoaVectorDiagnostic) != std::string::npos);
 }
 
-TEST_CASE("soa_vector field-view builtin rejects named arguments") {
+TEST_CASE("soa_vector field-view builtin rejects retired spelling before named arguments") {
   const std::string source = R"(
 Particle() {
   [i32] x{1i32}
@@ -1558,10 +1565,11 @@ main() {
 )";
   std::string error;
   CHECK_FALSE(validateProgram(source, "/main", error));
-  CHECK(error.find("named arguments not supported for builtin calls") != std::string::npos);
+  INFO(error);
+  CHECK(error.find(RetiredSoaVectorDiagnostic) != std::string::npos);
 }
 
-TEST_CASE("soa_vector field-view call-form falls back to user helper") {
+TEST_CASE("soa_vector field-view call-form rejects retired spelling before user helper fallback") {
   const std::string source = R"(
 Particle() {
   [i32] x{1i32}
@@ -1579,11 +1587,12 @@ main() {
 }
 )";
   std::string error;
-  CHECK(validateProgram(source, "/main", error));
-  CHECK(error.empty());
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  INFO(error);
+  CHECK(error.find(RetiredSoaVectorDiagnostic) != std::string::npos);
 }
 
-TEST_CASE("soa_vector field-view method falls back to user helper") {
+TEST_CASE("soa_vector field-view method rejects retired spelling before user helper fallback") {
   const std::string source = R"(
 Particle() {
   [i32] x{1i32}
@@ -1601,8 +1610,9 @@ main() {
 }
 )";
   std::string error;
-  CHECK(validateProgram(source, "/main", error));
-  CHECK(error.empty());
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  INFO(error);
+  CHECK(error.find(RetiredSoaVectorDiagnostic) != std::string::npos);
 }
 
 TEST_CASE("count rejects vector named arguments") {
