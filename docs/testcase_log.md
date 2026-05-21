@@ -506,9 +506,32 @@
   fixtures earlier with `soa_vector<T> is not supported; use soa<T>`. The
   calls-flow collections 281-290 shard was stabilized on 2026-05-21 18:14
   CEST by retargeting those fixtures to the current retired type-spelling
-  diagnostic. Next stop-on-failure blocker is not yet localized.
+  diagnostic. Next stop-on-failure blocker is
+  `PrimeStruct_primestruct_semantics_calls_flow_collections_calls_flow_collections_311_320`.
+  The calls-flow collections 311-320 shard is failing in stale canonical map
+  wrapper expectations. Current `map.prime` is a standalone stdlib-owned
+  implementation over `internal_vector`, not a wrapper layer over
+  `internal_map`; current map literal validation also rejects nontrivial value
+  relocation until container move/reallocation semantics land. The calls-flow
+  collections 311-320 shard was stabilized on 2026-05-21 18:18 CEST by
+  retargeting those fixtures to the standalone stdlib map implementation and
+  current relocation diagnostic. Next stop-on-failure blocker is not yet
+  localized.
 
 ## Recent Test Runs
+- 2026-05-21 18:18 CEST | pass | mode: release | command:
+  `cmake --build build-release --target PrimeStruct_semantics_tests -j 1`;
+  `cd build-release && ctest --output-on-failure -R '^PrimeStruct_primestruct_semantics_calls_flow_collections_calls_flow_collections_311_320$' --timeout 180`
+  | failures: none | notes: stale canonical map wrapper coverage now checks
+  the standalone stdlib-owned map implementation and the current nontrivial
+  value relocation rejection.
+- 2026-05-21 18:18 CEST | fail | mode: release | command:
+  `cd build-release && ctest --output-on-failure --stop-on-failure --timeout 180 -I 325,1599`
+  | failures:
+  `PrimeStruct_primestruct_semantics_calls_flow_collections_calls_flow_collections_311_320`
+  | notes: stop-on-failure passed the 291-300 and 301-310 calls-flow
+  collection shards, then found stale map tests that still expected removed
+  `internal_map` wrapper source and nontrivial-value map construction success.
 - 2026-05-21 18:14 CEST | pass | mode: release | command:
   `cmake --build build-release --target PrimeStruct_semantics_tests -j 1`;
   `cd build-release && ctest --output-on-failure -R '^PrimeStruct_primestruct_semantics_calls_flow_collections_calls_flow_collections_281_290$' --timeout 180`

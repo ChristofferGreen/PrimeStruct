@@ -709,7 +709,7 @@ main() {
   CHECK(error.empty());
 }
 
-TEST_CASE("canonical map wrappers accept ownership-sensitive value growth") {
+TEST_CASE("canonical map construction rejects nontrivial value relocation until container move semantics land") {
   const std::string source = R"(
 import /std/collections/*
 
@@ -726,13 +726,16 @@ Owned() {
 
 [effects(heap_alloc), return<int>]
 main() {
-  [map<string, Owned>] values{mapPair<string, Owned>("left"raw_utf8, Owned{4i32}, "right"raw_utf8, Owned{7i32})}
+  [map<string, Owned>] values{map<string, Owned>("left"raw_utf8, Owned{4i32}, "right"raw_utf8, Owned{7i32})}
   return(/std/collections/map/count<string, Owned>(values))
 }
 )";
   std::string error;
-  CHECK(validateProgram(source, "/main", error));
-  CHECK(error.empty());
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  INFO(error);
+  CHECK(error.find("map literal requires relocation-trivial map value type") !=
+        std::string::npos);
+  CHECK(error.find("Owned") != std::string::npos);
 }
 
 TEST_CASE("canonical stdlib map wrappers resolve through explicit namespaced helpers") {
@@ -813,7 +816,7 @@ main() {
   }
 }
 
-TEST_CASE("canonical stdlib map slash helpers avoid wrapper recursion") {
+TEST_CASE("canonical stdlib map helpers use standalone stdlib implementation") {
   auto readText = [](const std::filesystem::path &path) {
     std::ifstream file(path);
     CHECK(file.is_open());
@@ -834,67 +837,28 @@ TEST_CASE("canonical stdlib map slash helpers avoid wrapper recursion") {
   REQUIRE(std::filesystem::exists(mapStdlibPath));
   const std::string source = readText(mapStdlibPath);
 
-  CHECK(source.find(
-            "/std/collections/map/count<K, V>([map<K, V>] values) {\n"
-            "  return(/std/collections/internal_map/countImpl<K, V>(values))") !=
+  CHECK(source.find("Standalone canonical stdlib-owned map implementation.") !=
         std::string::npos);
-  CHECK(source.find(
-            "/std/collections/map/count_ref<K, V>([Reference<map<K, V>>] values) {\n"
-            "  return(/std/collections/internal_map/countRefImpl<K, V>(values))") !=
+  CHECK(source.find("internal_map") == std::string::npos);
+  CHECK(source.find("[public struct]\n  MapValue<K, V>()") !=
         std::string::npos);
-  CHECK(source.find(
-            "/std/collections/map/contains<K, V>([map<K, V>] values, [K] key) {\n"
-            "  return(/std/collections/internal_map/containsImpl<K, V>(values, key))") !=
+  CHECK(source.find("mapCount<K, V>([MapValue<K, V>] entries)") !=
         std::string::npos);
-  CHECK(source.find("[public return<bool> Comparable<K>]\n/std/collections/map/contains<K, V>") !=
+  CHECK(source.find("count<K, V>([MapValue<K, V>] entries)") !=
         std::string::npos);
-  CHECK(source.find(
-            "/std/collections/map/contains_ref<K, V>([Reference<map<K, V>>] values, [K] key) {\n"
-            "  return(/std/collections/internal_map/containsRefImpl<K, V>(values, key))") !=
+  CHECK(source.find("return(/std/collections/map/mapCount<K, V>(entries))") !=
         std::string::npos);
-  CHECK(source.find("[public return<bool> Comparable<K>]\n/std/collections/map/contains_ref<K, V>") !=
+  CHECK(source.find("contains<K, V>([MapValue<K, V>] entries, [K] key)") !=
         std::string::npos);
-  CHECK(source.find(
-            "/std/collections/map/tryAt<K, V>([map<K, V>] values, [K] key) {\n"
-            "  return(/std/collections/internal_map/tryAtImpl<K, V>(values, key))") !=
+  CHECK(source.find("return(/std/collections/map/mapContains<K, V>(entries, key))") !=
         std::string::npos);
-  CHECK(source.find(
-            "[public return<Result<V, /std/collections/ContainerError>> Comparable<K>]\n"
-            "/std/collections/map/tryAt<K, V>") != std::string::npos);
-  CHECK(source.find(
-            "/std/collections/map/tryAt_ref<K, V>([Reference<map<K, V>>] values, [K] key) {\n"
-            "  return(/std/collections/internal_map/tryAtRefImpl<K, V>(values, key))") !=
+  CHECK(source.find("tryAt<K, V>([MapValue<K, V>] entries, [K] key)") !=
         std::string::npos);
-  CHECK(source.find(
-            "[public return<Result<V, /std/collections/ContainerError>> Comparable<K>]\n"
-            "/std/collections/map/tryAt_ref<K, V>") != std::string::npos);
-  CHECK(source.find(
-            "/std/collections/map/at<K, V>([map<K, V>] values, [K] key) {\n"
-            "  return(/std/collections/internal_map/atImpl<K, V>(values, key))") !=
+  CHECK(source.find("return(/std/collections/map/mapTryAt<K, V>(entries, key))") !=
         std::string::npos);
-  CHECK(source.find("[public return<V> Comparable<K>]\n/std/collections/map/at<K, V>") !=
+  CHECK(source.find("insert_ref<K, V>([Reference<MapValue<K, V>> mut] entries") !=
         std::string::npos);
-  CHECK(source.find(
-            "/std/collections/map/at_ref<K, V>([Reference<map<K, V>>] values, [K] key) {\n"
-            "  return(/std/collections/internal_map/atRefImpl<K, V>(values, key))") !=
-        std::string::npos);
-  CHECK(source.find("[public return<V> Comparable<K>]\n/std/collections/map/at_ref<K, V>") !=
-        std::string::npos);
-  CHECK(source.find(
-            "/std/collections/map/at_unsafe<K, V>([map<K, V>] values, [K] key) {\n"
-            "  return(/std/collections/internal_map/atUnsafeImpl<K, V>(values, key))") !=
-        std::string::npos);
-  CHECK(source.find("[public return<V> Comparable<K>]\n/std/collections/map/at_unsafe<K, V>") !=
-        std::string::npos);
-  CHECK(source.find(
-            "/std/collections/map/at_unsafe_ref<K, V>([Reference<map<K, V>>] values, [K] key) {\n"
-            "  return(/std/collections/internal_map/atUnsafeRefImpl<K, V>(values, key))") !=
-        std::string::npos);
-  CHECK(source.find("[public return<V> Comparable<K>]\n/std/collections/map/at_unsafe_ref<K, V>") !=
-        std::string::npos);
-  CHECK(source.find(
-            "/std/collections/map/insert_ref<K, V>([Reference<map<K, V>> mut] values, [K] key, [V] value) {\n"
-            "  /std/collections/internal_map/insertRefImpl<K, V>(values, key, value)") !=
+  CHECK(source.find("/std/collections/internal_vector/") !=
         std::string::npos);
 
   CHECK(source.find("return(/std/collections/map/count<K, V>(values))") ==
