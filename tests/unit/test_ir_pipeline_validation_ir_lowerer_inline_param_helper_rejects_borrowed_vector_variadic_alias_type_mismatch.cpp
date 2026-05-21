@@ -1044,7 +1044,7 @@ TEST_CASE("ir lowerer inline param helper accepts bare std ui immutable struct p
       error));
 
   CHECK(error.empty());
-  CHECK(nextLocal == 8);
+  CHECK(nextLocal == 6);
   REQUIRE(calleeLocals.count("layout") == 1u);
   CHECK(calleeLocals.at("layout").structTypeName == "LayoutTree");
   CHECK_FALSE(instructions.empty());

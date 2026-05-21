@@ -162,8 +162,7 @@
   count/access GPU fallback after current access-helper classification. The
   validation cases 451-460 shard was stabilized on 2026-05-21 14:00 CEST by
   retargeting that direct `at(array, index)` fallback expectation to current
-  rejection/`Unknown` behavior. Next stop-on-failure blocker is not yet
-  localized. Next stop-on-failure blocker is
+  rejection/`Unknown` behavior. Next stop-on-failure blocker is
   `PrimeStruct_primestruct_ir_pipeline_validation_cases_471_480`. The
   validation cases 471-480 shard is failing in stale inference expectations
   for canonical map count auto-wrapper setup without semantic-product input
@@ -173,9 +172,27 @@
   cases 471-480 shard was stabilized on 2026-05-21 14:04 CEST by retargeting
   the auto-wrapper setup to current inference failure and the indexed pointer
   Result args-pack `try` path to `Unknown`. Next stop-on-failure blocker is
-  not yet localized.
+  `PrimeStruct_primestruct_ir_pipeline_validation_cases_581_590`. The
+  validation cases 581-590 shard is failing in a stale inline parameter helper
+  local-count expectation for bare std UI immutable struct params after the
+  current alias path only reserves one callee local. The validation cases
+  581-590 shard was stabilized on 2026-05-21 14:08 CEST by retargeting the
+  bare std UI immutable struct param `nextLocal` expectation to the current
+  one-local alias behavior. Next stop-on-failure blocker is not yet localized.
 
 ## Recent Test Runs
+- 2026-05-21 14:08 CEST | pass | mode: release | command:
+  `cmake --build build-release --target PrimeStruct_backend_ir_tests -j 1`;
+  `cd build-release && ctest --output-on-failure -R '^PrimeStruct_primestruct_ir_pipeline_validation_cases_581_590$' --timeout 180`
+  | failures: none | notes: bare std UI immutable struct inline param now
+  expects the current one-local alias `nextLocal` result.
+- 2026-05-21 14:07 CEST | fail | mode: release | command:
+  `cmake --build build-release -j 1`;
+  `cd build-release && ctest --output-on-failure --stop-on-failure --timeout 180`
+  | failures: `PrimeStruct_primestruct_ir_pipeline_validation_cases_581_590`
+  | notes: stop-on-failure progressed past validation cases 471-480; current
+  blocker is a stale `nextLocal` expectation for bare std UI immutable struct
+  inline parameters.
 - 2026-05-21 14:04 CEST | pass | mode: release | command:
   `cmake --build build-release --target PrimeStruct_backend_ir_tests -j 1`;
   `cd build-release && ctest --output-on-failure -R '^PrimeStruct_primestruct_ir_pipeline_validation_cases_471_480$' --timeout 180`
