@@ -649,9 +649,28 @@
   template arguments. The calls-flow collections 591-600 shard was stabilized
   on 2026-05-21 19:00 CEST by adding those explicit stdlib map helper
   templates to the stale fixtures. Next stop-on-failure blocker is not yet
-  localized.
+  localized. Next stop-on-failure blocker is
+  `PrimeStruct_primestruct_semantics_calls_flow_collections_calls_flow_collections_611_620`.
+  The calls-flow collections 611-620 shard is failing in a stale stdlib map
+  named-argument fixture that still passes helper receivers as `[values]`.
+  Current `.prime` stdlib map helpers name the receiver parameter `[entries]`,
+  so named-argument calls must use that public helper parameter name. The
+  calls-flow collections 611-620 shard was stabilized on 2026-05-21 19:01
+  CEST by updating those named-argument calls to `[entries]`. Next
+  stop-on-failure blocker is not yet localized.
 
 ## Recent Test Runs
+- 2026-05-21 19:01 CEST | pass | mode: release | command:
+  `cmake --build build-release --target PrimeStruct_semantics_tests -j 1`;
+  `cd build-release && ctest --output-on-failure -R '^PrimeStruct_primestruct_semantics_calls_flow_collections_calls_flow_collections_611_620$' --timeout 180`
+  | failures: none | notes: stdlib map named-argument helper fixture now
+  uses `[entries]` for the receiver parameter.
+- 2026-05-21 19:01 CEST | fail | mode: release | command:
+  `cd build-release && ctest --output-on-failure --stop-on-failure --timeout 180 -I 356,1599`
+  | failures:
+  `PrimeStruct_primestruct_semantics_calls_flow_collections_calls_flow_collections_611_620`
+  | notes: `601_610` passed first; stdlib map named-argument helper fixture
+  still used the old `[values]` receiver name instead of current `[entries]`.
 - 2026-05-21 19:00 CEST | pass | mode: release | command:
   `cmake --build build-release --target PrimeStruct_semantics_tests -j 1`;
   `cd build-release && ctest --output-on-failure -R '^PrimeStruct_primestruct_semantics_calls_flow_collections_calls_flow_collections_591_600$' --timeout 180`

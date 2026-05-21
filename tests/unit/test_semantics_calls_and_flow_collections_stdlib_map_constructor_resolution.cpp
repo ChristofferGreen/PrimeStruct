@@ -79,11 +79,11 @@ unexpectedMapNamedArgsError([ContainerError] err) {
 main() {
   [map<string, i32>] values{/std/collections/map/map<string, i32>(
       [secondKey] "right"raw_utf8, [secondValue] 7i32, [firstKey] "left"raw_utf8, [firstValue] 4i32)}
-  [i32] found{try(/std/collections/map/tryAt<string, i32>([key] "left"raw_utf8, [values] values))}
-  [i32 mut] total{/std/collections/map/count<string, i32>([values] values)}
-  assign(total, plus(total, /std/collections/map/at<string, i32>([key] "right"raw_utf8, [values] values)))
-  assign(total, plus(total, /std/collections/map/at_unsafe<string, i32>([key] "left"raw_utf8, [values] values)))
-  if(/std/collections/map/contains<string, i32>([key] "right"raw_utf8, [values] values),
+  [i32] found{try(/std/collections/map/tryAt<string, i32>([key] "left"raw_utf8, [entries] values))}
+  [i32 mut] total{/std/collections/map/count<string, i32>([entries] values)}
+  assign(total, plus(total, /std/collections/map/at<string, i32>([key] "right"raw_utf8, [entries] values)))
+  assign(total, plus(total, /std/collections/map/at_unsafe<string, i32>([key] "left"raw_utf8, [entries] values)))
+  if(/std/collections/map/contains<string, i32>([key] "right"raw_utf8, [entries] values),
      then() { assign(total, plus(total, found)) },
      else() { })
   return(Result.ok(total))
