@@ -104,7 +104,7 @@ TEST_CASE("compiles and runs map literal preserving assignment value") {
 [return<int>]
 main() {
   [i32 mut] value{0i32}
-  map<i32, i32>{1i32=value=2i32}
+  map<i32, i32>{1i32, assign(value, 2i32)}
   return(value)
 }
 )";

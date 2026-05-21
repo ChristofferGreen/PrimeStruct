@@ -784,9 +784,26 @@
   16-21 shards were stabilized on 2026-05-21 22:21 CEST by keeping numeric
   map indexing on explicit typed map bindings and locking string-keyed
   indexing to the current backend rejection. Next stop-on-failure blocker is
-  not yet localized.
+  `PrimeStruct_primestruct_compile_run_smoke_argv_and_cli_4_4`. The argv/CLI
+  4 shard is failing because a stale map-assignment smoke still expects
+  `key=value` map pair syntax to preserve a nested assignment value. Current
+  text filtering treats `=` as ordinary assignment rewriting, so the map
+  literal receives an odd argument count. The argv/CLI 4 shard was stabilized
+  on 2026-05-21 22:28 CEST by preserving the assignment-value check in a
+  comma payload map constructor. Next stop-on-failure blocker is not yet
+  localized.
 
 ## Recent Test Runs
+- 2026-05-21 22:28 CEST | pass | mode: release | command:
+  `cmake --build build-release --target PrimeStruct_compile_run_tests -j 1`;
+  `cd build-release && ctest --output-on-failure -R '^PrimeStruct_primestruct_compile_run_smoke_argv_and_cli_4_4$' --timeout 180`
+  | failures: none | notes: assignment-value smoke now uses a comma payload
+  map constructor instead of removed map pair syntax.
+- 2026-05-21 22:27 CEST | fail | mode: release | command:
+  `cd build-release && ctest --output-on-failure --stop-on-failure --timeout 180 -I 643,1599`
+  | failures: `PrimeStruct_primestruct_compile_run_smoke_argv_and_cli_4_4`
+  | notes: collective extended 22 and argv/CLI 1-3 passed first; argv/CLI 4
+  still expected map pair syntax to preserve assignment-value behavior.
 - 2026-05-21 22:21 CEST | pass | mode: release | command:
   `cmake --build build-release --target PrimeStruct_compile_run_tests -j 1`;
   `cd build-release && ctest --output-on-failure -R '^PrimeStruct_primestruct_compile_run_smoke_collective_paths_extended_(16_16|17_17|18_18|19_19|20_20|21_21)$' --timeout 180`
