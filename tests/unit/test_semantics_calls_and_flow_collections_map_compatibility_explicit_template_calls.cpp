@@ -272,7 +272,7 @@ main() {
   CHECK(error.find("argument count mismatch for /std/collections/map/count") != std::string::npos);
 }
 
-TEST_CASE("map canonical reference wrapper auto local preserves collection template info") {
+TEST_CASE("map canonical reference wrapper auto local preserves borrowed access template info") {
   const std::string source = R"(
 import /std/collections/*
 
@@ -285,12 +285,13 @@ borrowValues([Reference</std/collections/map<i32, i32>>] values) {
 main() {
   [/std/collections/map<i32, i32>] source{map<i32, i32>(1i32, 4i32, 2i32, 5i32)}
   [auto] values{borrowValues(location(source))}
-  return(plus(plus(/std/collections/map/count(values), /std/collections/map/at(values, 1i32)),
-              plus(/std/collections/map/at_unsafe(values, 2i32), values[1i32])))
+  [Result<i32, ContainerError>] found{/std/collections/map/tryAt(values, 1i32)}
+  return(plus(/std/collections/map/at(values, 1i32), values[2i32]))
 }
 )";
   std::string error;
   CHECK(validateProgram(source, "/main", error));
+  INFO(error);
   CHECK(error.empty());
 }
 

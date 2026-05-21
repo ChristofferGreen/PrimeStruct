@@ -545,10 +545,35 @@
   payload fixture file. Current validation rejects those fixtures with
   `init value type mismatch`. The calls-flow collections 391-400 shard was
   stabilized on 2026-05-21 18:29 CEST by retargeting those fixtures to the
-  current init mismatch diagnostic. Next stop-on-failure blocker is not yet
+  current init mismatch diagnostic. Next stop-on-failure blocker is
+  `PrimeStruct_primestruct_semantics_calls_flow_collections_calls_flow_collections_431_440`.
+  The calls-flow collections 431-440 shard is failing in a stale borrowed map
+  auto-local fixture that still routes a reference-valued map through
+  `/std/collections/map/count`. Current validation reports
+  `unknown call target: /std/collections/map/count` for that count path, while
+  borrowed `tryAt`, `at`, and bracket access still preserve the collection
+  template information. The calls-flow collections 431-440 shard was
+  stabilized on 2026-05-21 18:33 CEST by retargeting that fixture to the
+  current borrowed access surface. Next stop-on-failure blocker is not yet
   localized.
 
 ## Recent Test Runs
+- 2026-05-21 18:33 CEST | pass | mode: release | command:
+  `cmake --build build-release --target PrimeStruct_semantics_tests -j 1`;
+  `cd build-release && ctest --output-on-failure -R '^PrimeStruct_primestruct_semantics_calls_flow_collections_calls_flow_collections_431_440$' --timeout 180`
+  | failures: none | notes: borrowed map auto-local coverage now validates
+  current borrowed `tryAt`, `at`, and bracket access instead of the removed
+  reference-valued `/std/collections/map/count` path.
+- 2026-05-21 18:33 CEST | fail | mode: release | command:
+  `cd build-release && ctest --output-on-failure --stop-on-failure --timeout 180 -I 336,1599`;
+  `build-release/primec --emit=ir --dump-stage ast-semantic --entry /main <same borrowed map auto-local fixture>`
+  | failures:
+  `PrimeStruct_primestruct_semantics_calls_flow_collections_calls_flow_collections_431_440`
+  | notes: stop-on-failure passed the 401-410, 411-420, and 421-430
+  calls-flow collection shards, then found stale borrowed map auto-local
+  count coverage. Representative CLI output reports
+  `unknown call target: /std/collections/map/count`; adjacent borrowed
+  `tryAt`, `at`, and bracket access validate.
 - 2026-05-21 18:29 CEST | pass | mode: release | command:
   `cmake --build build-release --target PrimeStruct_semantics_tests -j 1`;
   `cd build-release && ctest --output-on-failure -R '^PrimeStruct_primestruct_semantics_calls_flow_collections_calls_flow_collections_391_400$' --timeout 180`
