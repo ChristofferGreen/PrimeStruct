@@ -1083,7 +1083,7 @@ main() {
   CHECK_FALSE(error.empty());
 }
 
-TEST_CASE("canonical map missing comparable trait reports builtin key rejection") {
+TEST_CASE("canonical map missing ordering trait reports comparable less-than rejection") {
   const std::string source = R"(
 import /std/collections/*
 
@@ -1105,11 +1105,13 @@ main() {
 )";
   std::string error;
   CHECK_FALSE(validateProgram(source, "/main", error));
-  CHECK(error.find("map requires builtin Comparable key type (i32, i64, u64, f32, f64, bool, or string): Key") !=
+  INFO(error);
+  CHECK(error.find("trait constraint not satisfied") != std::string::npos);
+  CHECK(error.find("Comparable</Key> requires less_than(/Key, /Key) -> bool") !=
         std::string::npos);
 }
 
-TEST_CASE("canonical map methods include builtin key rejection") {
+TEST_CASE("canonical map methods include comparable less-than rejection") {
   const std::string source = R"(
 import /std/collections/*
 
@@ -1133,11 +1135,13 @@ main() {
 )";
   std::string error;
   CHECK_FALSE(validateProgram(source, "/main", error));
-  CHECK(error.find("map requires builtin Comparable key type (i32, i64, u64, f32, f64, bool, or string): Key") !=
+  INFO(error);
+  CHECK(error.find("trait constraint not satisfied") != std::string::npos);
+  CHECK(error.find("Comparable</Key> requires less_than(/Key, /Key) -> bool") !=
         std::string::npos);
 }
 
-TEST_CASE("canonical map Ref helper calls include builtin key rejection") {
+TEST_CASE("canonical map Ref helper calls include comparable less-than rejection") {
   const std::string source = R"(
 import /std/collections/*
 
@@ -1162,7 +1166,9 @@ main() {
 )";
   std::string error;
   CHECK_FALSE(validateProgram(source, "/main", error));
-  CHECK(error.find("map requires builtin Comparable key type (i32, i64, u64, f32, f64, bool, or string): Key") !=
+  INFO(error);
+  CHECK(error.find("trait constraint not satisfied") != std::string::npos);
+  CHECK(error.find("Comparable</Key> requires less_than(/Key, /Key) -> bool") !=
         std::string::npos);
 }
 
@@ -1200,7 +1206,7 @@ main() {
         std::string::npos);
 }
 
-TEST_CASE("canonical map insert helper calls include builtin key rejection") {
+TEST_CASE("canonical map insert helper calls include comparable less-than rejection") {
   const std::string source = R"(
 import /std/collections/*
 
@@ -1223,11 +1229,13 @@ main() {
 )";
   std::string error;
   CHECK_FALSE(validateProgram(source, "/main", error));
-  CHECK(error.find("map requires builtin Comparable key type (i32, i64, u64, f32, f64, bool, or string): Key") !=
+  INFO(error);
+  CHECK(error.find("trait constraint not satisfied") != std::string::npos);
+  CHECK(error.find("Comparable</Key> requires less_than(/Key, /Key) -> bool") !=
         std::string::npos);
 }
 
-TEST_CASE("canonical map borrowed insert methods include builtin key rejection") {
+TEST_CASE("canonical map borrowed insert methods include comparable less-than rejection") {
   const std::string source = R"(
 import /std/collections/*
 
@@ -1251,7 +1259,9 @@ main() {
 )";
   std::string error;
   CHECK_FALSE(validateProgram(source, "/main", error));
-  CHECK(error.find("map requires builtin Comparable key type (i32, i64, u64, f32, f64, bool, or string): Key") !=
+  INFO(error);
+  CHECK(error.find("trait constraint not satisfied") != std::string::npos);
+  CHECK(error.find("Comparable</Key> requires less_than(/Key, /Key) -> bool") !=
         std::string::npos);
 }
 

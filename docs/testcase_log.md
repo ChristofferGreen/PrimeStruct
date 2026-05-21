@@ -516,9 +516,31 @@
   collections 311-320 shard was stabilized on 2026-05-21 18:18 CEST by
   retargeting those fixtures to the standalone stdlib map implementation and
   current relocation diagnostic. Next stop-on-failure blocker is not yet
-  localized.
+  `PrimeStruct_primestruct_semantics_calls_flow_collections_calls_flow_collections_321_330`.
+  The calls-flow collections 321-330 shard is failing in stale canonical map
+  key diagnostics. Current standalone stdlib map helpers now surface the
+  `Comparable</Key>` trait failure that asks for
+  `less_than(/Key, /Key) -> bool` instead of the retired builtin-key rejection
+  on these helper and method paths. The calls-flow collections 321-330 shard
+  was stabilized on 2026-05-21 18:20 CEST by retargeting those fixtures to the
+  current trait diagnostic. Next stop-on-failure blocker is not yet localized.
 
 ## Recent Test Runs
+- 2026-05-21 18:20 CEST | pass | mode: release | command:
+  `cmake --build build-release --target PrimeStruct_semantics_tests -j 1`;
+  `cd build-release && ctest --output-on-failure -R '^PrimeStruct_primestruct_semantics_calls_flow_collections_calls_flow_collections_321_330$' --timeout 180`
+  | failures: none | notes: stale canonical map helper and method key tests
+  now expect the current `Comparable</Key>` missing `less_than` trait
+  diagnostic.
+- 2026-05-21 18:20 CEST | fail | mode: release | command:
+  `cd build-release && ctest --output-on-failure --stop-on-failure --timeout 180 -I 328,1599`;
+  `build-release/primec --emit=ir --dump-stage ast-semantic --entry /main <same map<Key, i32> fixture>`
+  | failures:
+  `PrimeStruct_primestruct_semantics_calls_flow_collections_calls_flow_collections_321_330`
+  | notes: stop-on-failure found stale canonical map key tests that still
+  expected builtin-key rejection text; representative CLI output reports
+  `trait constraint not satisfied` and
+  `Comparable</Key> requires less_than(/Key, /Key) -> bool`.
 - 2026-05-21 18:18 CEST | pass | mode: release | command:
   `cmake --build build-release --target PrimeStruct_semantics_tests -j 1`;
   `cd build-release && ctest --output-on-failure -R '^PrimeStruct_primestruct_semantics_calls_flow_collections_calls_flow_collections_311_320$' --timeout 180`
