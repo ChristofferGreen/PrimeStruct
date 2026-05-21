@@ -726,7 +726,7 @@ TEST_CASE("ir lowerer result helpers resolve map Result payload metadata") {
   CHECK(out.isResult);
   CHECK(out.hasValue);
   CHECK(out.valueCollectionKind == primec::ir_lowerer::LocalInfo::Kind::Value);
-  CHECK(out.valueMapKeyKind == primec::ir_lowerer::LocalInfo::ValueKind::Int32);
+  CHECK(out.valueMapKeyKind == primec::ir_lowerer::LocalInfo::ValueKind::Unknown);
   CHECK(out.valueKind == primec::ir_lowerer::LocalInfo::ValueKind::Int32);
 
   out = {};
@@ -744,7 +744,7 @@ TEST_CASE("ir lowerer result helpers resolve map Result payload metadata") {
   CHECK(out.isResult);
   CHECK(out.hasValue);
   CHECK(out.valueCollectionKind == primec::ir_lowerer::LocalInfo::Kind::Value);
-  CHECK(out.valueMapKeyKind == primec::ir_lowerer::LocalInfo::ValueKind::Int32);
+  CHECK(out.valueMapKeyKind == primec::ir_lowerer::LocalInfo::ValueKind::Unknown);
   CHECK(out.valueKind == primec::ir_lowerer::LocalInfo::ValueKind::Int32);
 
   out = {};
@@ -753,7 +753,7 @@ TEST_CASE("ir lowerer result helpers resolve map Result payload metadata") {
   CHECK(out.isResult);
   CHECK(out.hasValue);
   CHECK(out.valueCollectionKind == primec::ir_lowerer::LocalInfo::Kind::Value);
-  CHECK(out.valueMapKeyKind == primec::ir_lowerer::LocalInfo::ValueKind::Int32);
+  CHECK(out.valueMapKeyKind == primec::ir_lowerer::LocalInfo::ValueKind::Unknown);
   CHECK(out.valueKind == primec::ir_lowerer::LocalInfo::ValueKind::Int32);
 
   out = {};
@@ -762,7 +762,7 @@ TEST_CASE("ir lowerer result helpers resolve map Result payload metadata") {
   CHECK(out.isResult);
   CHECK(out.hasValue);
   CHECK(out.valueCollectionKind == primec::ir_lowerer::LocalInfo::Kind::Value);
-  CHECK(out.valueMapKeyKind == primec::ir_lowerer::LocalInfo::ValueKind::Int32);
+  CHECK(out.valueMapKeyKind == primec::ir_lowerer::LocalInfo::ValueKind::Unknown);
   CHECK(out.valueKind == primec::ir_lowerer::LocalInfo::ValueKind::Int32);
 }
 

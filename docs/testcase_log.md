@@ -186,9 +186,34 @@
   helper classification. The validation cases 641-650 shard was stabilized on
   2026-05-21 14:11 CEST by retargeting bare `at(...)` struct-copy source
   classification to current temporary-disarm behavior. Next stop-on-failure
-  blocker is not yet localized.
+  blocker is `PrimeStruct_primestruct_ir_pipeline_validation_cases_661_670`.
+  The validation cases 661-670 shard is failing in stale map `Result` payload
+  metadata expectations that still require key-kind propagation from generic
+  value-local and `Result` combinator paths after current map-specific C++
+  knowledge removal. The validation cases 661-670 shard was stabilized on
+  2026-05-21 14:16 CEST by keeping typed constructor key metadata while
+  retargeting generic value-local and combinator paths to current unknown
+  key-kind behavior. Next stop-on-failure blocker is not yet localized.
 
 ## Recent Test Runs
+- 2026-05-21 14:16 CEST | pass | mode: release | command:
+  `cmake --build build-release --target PrimeStruct_backend_ir_tests -j 1`;
+  `cd build-release && ctest --output-on-failure -R '^PrimeStruct_primestruct_ir_pipeline_validation_cases_661_670$' --timeout 180`
+  | failures: none | notes: typed map constructor metadata still preserves
+  key kind; generic value-local and combinator paths now assert current
+  unknown key-kind behavior.
+- 2026-05-21 14:16 CEST | fail | mode: release | command:
+  `cmake --build build-release --target PrimeStruct_backend_ir_tests -j 1`;
+  `cd build-release && ctest --output-on-failure -R '^PrimeStruct_primestruct_ir_pipeline_validation_cases_661_670$' --timeout 180`
+  | failures: `PrimeStruct_primestruct_ir_pipeline_validation_cases_661_670`
+  | notes: focused rerun confirmed direct typed map constructor metadata still
+  preserves the key kind, while the `map2` combinator path does not.
+- 2026-05-21 14:15 CEST | fail | mode: release | command:
+  `cmake --build build-release -j 1`;
+  `cd build-release && ctest --output-on-failure --stop-on-failure --timeout 180`
+  | failures: `PrimeStruct_primestruct_ir_pipeline_validation_cases_661_670`
+  | notes: stop-on-failure progressed past validation cases 641-650; current
+  blocker is stale map `Result` payload key-kind metadata expectations.
 - 2026-05-21 14:11 CEST | pass | mode: release | command:
   `cmake --build build-release --target PrimeStruct_backend_ir_tests -j 1`;
   `cd build-release && ctest --output-on-failure -R '^PrimeStruct_primestruct_ir_pipeline_validation_cases_641_650$' --timeout 180`
