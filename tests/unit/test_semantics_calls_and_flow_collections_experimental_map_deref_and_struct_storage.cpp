@@ -364,7 +364,7 @@ main() {
   checkStdlibMapPairConstructorMismatch(error);
 }
 
-TEST_CASE("helper-wrapped Result.ok payloads accept dereferenced result struct storage fields") {
+TEST_CASE("helper-wrapped Result.ok dereferenced result struct storage keeps init mismatch") {
   const std::string source = R"(
 import /std/collections/*
 import /std/collections/internal_map/*
@@ -395,9 +395,9 @@ main() {
 }
 )";
   std::string error;
-  CHECK(validateProgram(source, "/main", error));
+  CHECK_FALSE(validateProgram(source, "/main", error));
   INFO(error);
-  CHECK(error.empty());
+  checkInitValueTypeMismatch(error);
 }
 
 TEST_CASE("helper-wrapped dereferenced Result.ok struct storage fields keep mismatch diagnostics") {
