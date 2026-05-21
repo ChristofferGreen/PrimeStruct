@@ -734,9 +734,28 @@
   generic operator/UTF-8 rewrites. The text-filter rewrites shards were
   stabilized on 2026-05-21 19:34 CEST by retargeting map fixtures to generic
   operator/UTF-8 behavior while keeping array/vector collection rewrites
-  covered. Next stop-on-failure blocker is not yet localized.
+  covered. Next stop-on-failure blocker is
+  `PrimeStruct_primestruct_text_filters_pipeline_collections_cases_1_10`. The
+  text-filter collections 1-10 shard is failing in the same stale map
+  collection-rewrite contract: dedicated collection-filter tests still expect
+  map pair splitting instead of generic operator/UTF-8 rewriting. The
+  text-filter collections shards were stabilized on 2026-05-21 19:35 CEST by
+  retargeting dedicated map fixtures to the same ordinary-syntax behavior.
+  Next stop-on-failure blocker is not yet localized.
 
 ## Recent Test Runs
+- 2026-05-21 19:35 CEST | pass | mode: release | command:
+  `cmake --build build-release --target PrimeStruct_text_filter_tests -j 1`;
+  `cd build-release && ctest --output-on-failure -R '^PrimeStruct_primestruct_text_filters_pipeline_collections_cases_' --timeout 180`
+  | failures: none | notes: dedicated collection-filter tests now keep map
+  outside collection-owned pair rewriting while array and SoA coverage remains
+  intact.
+- 2026-05-21 19:35 CEST | fail | mode: release | command:
+  `cd build-release && ctest --output-on-failure --stop-on-failure --timeout 180 -I 547,1599`
+  | failures:
+  `PrimeStruct_primestruct_text_filters_pipeline_collections_cases_1_10`
+  | notes: text-filter implicit UTF-8 and implicit i32 shards passed first;
+  dedicated collection tests still expected C++ map pair rewriting.
 - 2026-05-21 19:34 CEST | pass | mode: release | command:
   `cmake --build build-release --target PrimeStruct_text_filter_tests -j 1`;
   `cd build-release && ctest --output-on-failure -R '^PrimeStruct_primestruct_text_filters_pipeline_rewrites_cases_' --timeout 180`
