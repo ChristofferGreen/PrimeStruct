@@ -63,9 +63,41 @@
   The validation cases 201-210 shard was stabilized on 2026-05-21 12:53 CEST
   by retargeting those guards to the current generic key/value helper naming,
   method-call fallback source shape, and SoA wrapper-family source boundary.
-  Next stop-on-failure blocker is not yet localized.
+  Next stop-on-failure blocker is
+  `PrimeStruct_primestruct_ir_pipeline_validation_cases_211_220`. The
+  validation cases 211-220 shard is failing on stale source-validation guards
+  for constructor-surface ordering, tail key/value helper rewrite naming,
+  internal SoA receiver semantic text lookup, inline insert receiver facts,
+  and direct experimental-map rewrite gates after lowerer helper reshaping.
+  The validation cases 211-220 shard was stabilized on 2026-05-21 12:57 CEST
+  by retargeting those source guards to current key/value surface metadata,
+  collection-pair target facts, internal SoA receiver classification, and
+  removal of the statement-call map insert rewrite. Next stop-on-failure
+  blocker is not yet localized.
 
 ## Recent Test Runs
+- 2026-05-21 12:57 CEST | pass | mode: release | command:
+  `cmake --build build-release --target PrimeStruct_backend_ir_tests -j 1`;
+  `cd build-release && ctest --output-on-failure -R '^PrimeStruct_primestruct_ir_pipeline_validation_cases_211_220$' --timeout 180`
+  | failures: none | notes: collection helper rewrite guards now assert
+  current key/value helper metadata, collection-pair target facts, internal SoA
+  receiver classification, and removed statement-call map insert rewrite.
+- 2026-05-21 12:57 CEST | fail | mode: release | command:
+  `cmake --build build-release --target PrimeStruct_backend_ir_tests -j 1`;
+  `cd build-release && ctest --output-on-failure -R '^PrimeStruct_primestruct_ir_pipeline_validation_cases_211_220$' --timeout 180`
+  | failures: `PrimeStruct_primestruct_ir_pipeline_validation_cases_211_220`
+  | notes: first retarget pass reduced the shard to one stale internal-SoA
+  assertion; tail dispatch still has a later local/native
+  `isInternalSoaMetadataReceiver` helper after the semantic pre-inline
+  classifier.
+- 2026-05-21 12:57 CEST | fail | mode: release | command:
+  `cmake --build build-release -j 1`;
+  `cd build-release && ctest --output-on-failure --stop-on-failure --timeout 180`
+  | failures: `PrimeStruct_primestruct_ir_pipeline_validation_cases_211_220`
+  | notes: stop-on-failure progressed past validation cases 201-210; current
+  blocker is stale source-validation coverage looking for old map-specific
+  constructor, tail dispatch, internal SoA metadata, inline insert, and direct
+  experimental-map source anchors.
 - 2026-05-21 12:53 CEST | pass | mode: release | command:
   `cmake --build build-release --target PrimeStruct_backend_ir_tests -j 1`;
   `cd build-release && ctest --output-on-failure -R '^PrimeStruct_primestruct_ir_pipeline_validation_cases_201_210$'`

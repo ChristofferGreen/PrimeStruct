@@ -568,9 +568,8 @@ TEST_CASE("ir lowerer map constructor rewrite checks constructor surface before 
   REQUIRE(std::filesystem::exists(collectionHelpersPath));
   const std::string source = readText(collectionHelpersPath);
 
-  const size_t constructorSurfaceCheck = source.find(
-      "if (!resolvePublishedLateKeyValueConstructorName(callExpr,\n"
-      "                                                      constructorName) ||");
+  const size_t constructorSurfaceCheck =
+      source.find("resolvePublishedLateKeyValueConstructorName(callExpr,");
   const size_t resolveDefinitionCallPos =
       source.find("resolveDefinitionCall(callExpr)", constructorSurfaceCheck);
 
@@ -691,13 +690,14 @@ TEST_CASE("ir lowerer tail dispatch rewrite guards explicit map defs") {
   CHECK(source.find(
             "auto rewriteExplicitKeyValueHelperBuiltinExpr = [&](const Expr &callExpr, Expr &rewrittenExpr) {") !=
         std::string::npos);
-  CHECK(source.find("auto hasPublishedSemanticMapSurface = [&](const Expr &callExpr) {") !=
+  CHECK(source.find("auto hasPublishedSemanticKeyValueSurface = [&](const Expr &callExpr) {") !=
         std::string::npos);
   CHECK(source.find("auto resolvePublishedTailDispatchKeyValueHelperName =") !=
         std::string::npos);
   CHECK(source.find("resolvePublishedSemanticStdlibSurfaceMemberName(") !=
         std::string::npos);
-  CHECK(source.find("findSemanticProductDirectCallStdlibSurfaceId(semanticProgram, callExpr)") !=
+  CHECK(source.find("findSemanticProductDirectCallStdlibSurfaceId(\n"
+                    "                         semanticProgram, callExpr)") !=
         std::string::npos);
   CHECK(source.find("if (resolvePublishedTailDispatchKeyValueHelperName(callExpr, helperNameOut)) {") !=
         std::string::npos);
@@ -733,7 +733,9 @@ TEST_CASE("ir lowerer tail dispatch rewrite guards explicit map defs") {
   CHECK(source.find("helperName == \"at_unsafe\" || helperName == \"insert\" ||\n"
                     "               helperName == \"insert_ref\") &&") !=
         std::string::npos);
-  CHECK(source.find("rawPath.rfind(\"/\" + std::string(\"map\") + \"/\", 0) == 0") !=
+  CHECK(source.find("isTailDispatchKeyValueImportAliasHelperPath(rawPath, helperName)") !=
+        std::string::npos);
+  CHECK(source.find("rawPath.rfind(\"/\" + std::string(\"map\") + \"/\", 0) == 0") ==
         std::string::npos);
   CHECK(source.find("resolveDefinitionCall(callExpr) != nullptr") != std::string::npos);
   CHECK(source.find("rewrittenExpr.name = helperName;") != std::string::npos);
@@ -834,9 +836,7 @@ TEST_CASE("ir lowerer internal soa metadata receivers resolve interned ids") {
   const size_t nativeReceiverPos =
       source.find("auto isInternalSoaMetadataReceiver", beforeInlineReceiverPos);
   const size_t nativeReceiverResolvePos =
-      source.find("resolveSemanticReceiverTypeText(\n"
-                  "              queryFact->receiverBindingTypeText,\n"
-                  "              queryFact->receiverBindingTypeTextId)",
+      source.find("resolveSemanticReceiverTypeText(",
                   nativeReceiverPos);
   const size_t nativeReceiverLocalFallbackPos =
       source.find("auto localIt = localsIn.find(receiverExpr.name);",
@@ -956,11 +956,7 @@ TEST_CASE("ir lowerer inline map insert helper prefers semantic receiver facts")
         std::string::npos);
   CHECK(source.find("tryPopulateMapKindsFromSemanticReceiver(*originalValuesArg, valuesIt->second)") <
         source.find("extractParameterTypeName(callee.parameters[1])"));
-  CHECK(source.find("info.kind == LocalInfo::Kind::Value &&") !=
-        std::string::npos);
-  CHECK(source.find("info.keyValueKeyKind != LocalInfo::ValueKind::Unknown &&") !=
-        std::string::npos);
-  CHECK(source.find("info.keyValueValueKind != LocalInfo::ValueKind::Unknown") !=
+  CHECK(source.find("return info.kind == LocalInfo::Kind::Value && hasKeyValueKinds(info);") !=
         std::string::npos);
   CHECK(source.find("if (hasKeyValueKinds(valuesIt->second)) {") !=
         std::string::npos);
@@ -1034,17 +1030,17 @@ TEST_CASE("ir lowerer skips builtin map insert rewrite for direct experimental m
   const std::string statementSource = readText(statementCallPath);
   const std::string tailDispatchSource = readText(tailDispatchPath);
 
-  CHECK(statementSource.find("if (targetInfo.isWrappedKeyValueTarget ||") !=
+  CHECK(statementSource.find("isExperimentalMapStructPath") ==
         std::string::npos);
-  CHECK(statementSource.find("isExperimentalMapStructPath(targetInfo.structTypeName)) {") !=
+  CHECK(statementSource.find("targetInfo.isWrappedKeyValueTarget") ==
         std::string::npos);
   CHECK(tailDispatchSource.find("if (targetInfo.isWrappedKeyValueTarget ||") !=
         std::string::npos);
   CHECK(tailDispatchSource.find("ir_lowerer::isExperimentalMapStructTypePath(targetInfo.structTypeName)) {") !=
         std::string::npos);
-  CHECK(statementSource.find("structPath.rfind(experimentalMapType + \"__\", 0) == 0;") !=
+  CHECK(statementSource.find("experimentalMapType") ==
         std::string::npos);
-  CHECK(tailDispatchSource.find("auto isSpecializedExperimentalMapStructPath =") !=
+  CHECK(tailDispatchSource.find("auto isSpecializedExperimentalKeyValueStructPath =") !=
         std::string::npos);
   CHECK(tailDispatchSource.find("ir_lowerer::isExperimentalMapStructTypePath(structPath)") !=
         std::string::npos);
