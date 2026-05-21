@@ -156,7 +156,7 @@ main() {
   CHECK(error.find("text transform arguments must be identifiers or literals") != std::string::npos);
 }
 
-TEST_CASE("transform template argument required") {
+TEST_CASE("empty transform template list parses") {
   const std::string source = R"(
 [return<>]
 main() {
@@ -167,11 +167,16 @@ main() {
   primec::Parser parser(lexer.tokenize());
   primec::Program program;
   std::string error;
-  CHECK_FALSE(parser.parse(program, error));
-  CHECK(error.find("expected template identifier") != std::string::npos);
+  CHECK(parser.parse(program, error));
+  CHECK(error.empty());
+  REQUIRE(program.definitions.size() == 1);
+  const auto &transforms = program.definitions[0].transforms;
+  REQUIRE(transforms.size() == 1);
+  CHECK(transforms[0].name == "return");
+  CHECK(transforms[0].templateArgs.empty());
 }
 
-TEST_CASE("transform template argument required with comments") {
+TEST_CASE("empty transform template list with comments parses") {
   const std::string source = R"(
 [return</* gap */>]
 main() {
@@ -182,8 +187,13 @@ main() {
   primec::Parser parser(lexer.tokenize());
   primec::Program program;
   std::string error;
-  CHECK_FALSE(parser.parse(program, error));
-  CHECK(error.find("expected template identifier") != std::string::npos);
+  CHECK(parser.parse(program, error));
+  CHECK(error.empty());
+  REQUIRE(program.definitions.size() == 1);
+  const auto &transforms = program.definitions[0].transforms;
+  REQUIRE(transforms.size() == 1);
+  CHECK(transforms[0].name == "return");
+  CHECK(transforms[0].templateArgs.empty());
 }
 
 TEST_CASE("binding without initializer parses as binding") {

@@ -718,9 +718,29 @@
   separators in definition template lists like `pair<i32; i32>` or
   `pair<i32, i32,>`. The parser basic 51-60 shard was stabilized on
   2026-05-21 19:08 CEST by narrowing those fixtures to the currently accepted
-  separator forms. Next stop-on-failure blocker is not yet localized.
+  separator forms. Next stop-on-failure blocker is
+  `PrimeStruct_primestruct_parser_errors_transforms_cases_11_20`. The parser
+  errors transforms 11-20 shard is failing because empty transform template
+  list fixtures still expect parser rejection, while current parsing accepts
+  `[return<>]` and `[return</* gap */>]` as a `return` transform with no
+  template args. The parser errors transforms 11-20 shard was stabilized on
+  2026-05-21 19:33 CEST by retargeting those fixtures to the accepted empty
+  template-argument AST shape. Next stop-on-failure blocker is not yet
+  localized.
 
 ## Recent Test Runs
+- 2026-05-21 19:33 CEST | pass | mode: release | command:
+  `cmake --build build-release --target PrimeStruct_parser_tests -j 1`;
+  `cd build-release && ctest --output-on-failure -R '^PrimeStruct_primestruct_parser_errors_transforms_cases_11_20$' --timeout 180`
+  | failures: none | notes: empty transform-template fixtures now assert the
+  accepted parser shape with a `return` transform and no template args.
+- 2026-05-21 19:33 CEST | fail | mode: release | command:
+  `cd build-release && ctest --output-on-failure --stop-on-failure --timeout 180 -I 498,1599`
+  | failures:
+  `PrimeStruct_primestruct_parser_errors_transforms_cases_11_20`
+  | notes: parser basic 61-305, parser error identifiers, punctuation,
+  literals, named-args, and transform cases 1-10 passed first; the empty
+  transform-template fixtures now parse successfully.
 - 2026-05-21 19:08 CEST | pass | mode: release | command:
   `cmake --build build-release --target PrimeStruct_parser_tests -j 1`;
   `cd build-release && ctest --output-on-failure -R '^PrimeStruct_primestruct_parser_basic_cases_51_60$' --timeout 180`
