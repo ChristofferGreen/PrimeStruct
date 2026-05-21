@@ -3,17 +3,55 @@
 ## Current Known Failures
 - [ ] release gate baseline | mode: release | command:
   `./scripts/compile.sh --release` | first_seen: 2026-05-21 07:37 CEST |
-  last_seen: 2026-05-21 09:14 CEST | next:
-  `cmake --build build-release --target PrimeStruct_semantics_tests -j 1`;
-  `cd build-release && ./PrimeStruct_semantics_tests --test-case="semantic product validates direct return method-like borrowed helper-return experimental soa_vector reads" --no-skip`
+  last_seen: 2026-05-21 10:06 CEST | next:
+  `cmake --build build-release --target PrimeStruct_backend_ir_tests -j 1`;
+  `cd build-release && ctest --output-on-failure -R '^PrimeStruct_primestruct_ir_pipeline_conversions_variadic_file_errors$'`
   | notes: full gate passed 77% with 365 failures out of 1599 tests.
   The `test_compile_run_emitters_canonical_map_helper_calls.cpp` cluster was
-  stabilized on 2026-05-21 09:32 CEST; remaining dominant signatures include
-  SoA helper-return public-surface fixtures, source-lock checks for deleted
-  bridge strings, and other stale collection helper expectations after the
-  stdlib cutovers.
+  stabilized on 2026-05-21 09:32 CEST; the stale SoA semantic-product next
+  case, pointer array-reference shard, and stale direct map-literal IR fixture
+  were stabilized on 2026-05-21 10:06 CEST. The next localized blocker is the
+  variadic FileError shard, where four indexed `why` helper materialization
+  cases still fail during IR lowering.
 
 ## Recent Test Runs
+- 2026-05-21 10:06 CEST | fail | mode: release | command:
+  `cmake --build build-release -j 1`;
+  `cd build-release && ctest --output-on-failure --stop-on-failure`
+  | failures: `PrimeStruct_primestruct_ir_pipeline_conversions_variadic_file_errors`
+  | notes: stop-on-failure localization progressed past the stabilized pointer
+  and conversions-core shards; next blocker is four failing FileError variadic
+  indexed `why` materialization cases.
+- 2026-05-21 10:05 CEST | pass | mode: release | command:
+  `cmake --build build-release --target PrimeStruct_backend_ir_tests -j 1`;
+  `cd build-release && ctest --output-on-failure -R '^PrimeStruct_primestruct_ir_pipeline_pointers_cases_4_6$|^PrimeStruct_primestruct_ir_pipeline_conversions_core_11_20$'`
+  | failures: none | notes: array-reference access now resolves rooted `/at`
+  as builtin indexed access, and the stale direct string-keyed map literal IR
+  fixture now rejects native map-literal lowering without trying to revive C++
+  map ownership.
+- 2026-05-21 10:04 CEST | pass | mode: release | command:
+  `cmake --build build-release --target primec PrimeStruct_compile_run_tests -j 1`;
+  `cd build-release && ./PrimeStruct_compile_run_tests --test-case="compiles and runs array reference helpers" --no-skip`
+  | failures: none | notes: user-facing compile-run coverage for
+  `count(ref)` plus `at(ref, index)` passed after relinking `primec`.
+- 2026-05-21 10:03 CEST | pass | mode: release | command:
+  `cmake --build build-release --target PrimeStruct_backend_ir_tests -j 1`;
+  `cd build-release && ./PrimeStruct_backend_ir_tests --test-case="ir lowers reference to array bindings,ir lowerer rejects direct string-keyed map literal lowering" --no-skip`
+  | failures: none | notes: focused doctest rerun passed after fixing rooted
+  builtin `at` recognition for array references and retargeting stale direct
+  map-literal IR coverage to deterministic rejection.
+- 2026-05-21 09:59 CEST | fail | mode: release | command:
+  `cmake --build build-release -j 1`;
+  `cd build-release && ctest --output-on-failure --stop-on-failure`
+  | failures: `PrimeStruct_primestruct_ir_pipeline_pointers_cases_4_6`
+  | notes: localization exposed `ir lowers reference to array bindings`
+  failing with unsupported rooted `/at` in return-position lowering.
+- 2026-05-21 09:55 CEST | pass | mode: release | command:
+  `cmake --build build-release --target PrimeStruct_semantics_tests -j 1`;
+  `cd build-release && ./PrimeStruct_semantics_tests --test-case="semantic product validates direct return method-like borrowed helper-return experimental soa_vector reads" --no-skip`
+  | failures: none | notes: the current known-failure next item was stale;
+  the SoA semantic-product direct return helper-read fixture already passes on
+  a freshly rebuilt release semantics binary.
 - 2026-05-21 09:32 CEST | pass | mode: release | command:
   `cmake --build build-release --target PrimeStruct_compile_run_tests -j 1`;
   `cd build-release && ./PrimeStruct_compile_run_tests --test-suite=primestruct.compile.run.emitters.cpp --source-file="*test_compile_run_emitters_canonical_map_helper_calls.cpp" --no-skip`
@@ -4912,6 +4950,25 @@
 - 2026-05-12 17:28 local | fail | mode: release | command: `./scripts/compile.sh --release` | failures: 146 CTest targets | notes: baseline after preflight checkpoint failed; stabilization blocks TODO work
 
 ## Resolved Failures
+- [x] semantic product validates direct return method-like borrowed
+  helper-return experimental soa_vector reads | resolved: 2026-05-21 09:55
+  CEST | validating command: `cmake --build build-release --target PrimeStruct_semantics_tests -j 1`;
+  `cd build-release && ./PrimeStruct_semantics_tests --test-case="semantic product validates direct return method-like borrowed helper-return experimental soa_vector reads" --no-skip`
+  | notes: current known-failure next item was stale and passed on a freshly
+  rebuilt release semantics binary.
+- [x] PrimeStruct_primestruct_ir_pipeline_pointers_cases_4_6 / ir lowers
+  reference to array bindings | resolved: 2026-05-21 10:05 CEST | validating
+  command: `cmake --build build-release --target PrimeStruct_backend_ir_tests -j 1`;
+  `cd build-release && ctest --output-on-failure -R '^PrimeStruct_primestruct_ir_pipeline_pointers_cases_4_6$|^PrimeStruct_primestruct_ir_pipeline_conversions_core_11_20$'`
+  | notes: rooted `/at` now resolves as builtin indexed array access in
+  return-position lowering; compile-run array reference helper coverage also
+  passed after relinking `primec`.
+- [x] PrimeStruct_primestruct_ir_pipeline_conversions_core_11_20 / direct
+  string-keyed map literal IR fixture | resolved: 2026-05-21 10:05 CEST |
+  validating command: `cmake --build build-release --target PrimeStruct_backend_ir_tests -j 1`;
+  `cd build-release && ctest --output-on-failure -R '^PrimeStruct_primestruct_ir_pipeline_pointers_cases_4_6$|^PrimeStruct_primestruct_ir_pipeline_conversions_core_11_20$'`
+  | notes: retargeted stale native map-literal expectation to deterministic
+  rejection without reintroducing C++ map ownership.
 - [x] canonical map helper-call emitter shard | resolved: 2026-05-21 09:32
   CEST | validating command: `cmake --build build-release --target PrimeStruct_compile_run_tests -j 1`;
   `cd build-release && ./PrimeStruct_compile_run_tests --test-suite=primestruct.compile.run.emitters.cpp --source-file="*test_compile_run_emitters_canonical_map_helper_calls.cpp" --no-skip`

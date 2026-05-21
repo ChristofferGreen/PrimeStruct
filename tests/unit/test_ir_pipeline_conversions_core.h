@@ -393,7 +393,7 @@ main() {
   CHECK(result == 1);
 }
 
-TEST_CASE("ir lowerer supports string-keyed map literals") {
+TEST_CASE("ir lowerer rejects direct string-keyed map literal lowering") {
   const std::string source = R"(
 import /std/collections/*
 
@@ -411,14 +411,10 @@ main() {
 
   primec::IrLowerer lowerer;
   primec::IrModule module;
-  REQUIRE(lowerer.lower(program, &semanticProgram, "/main", {}, {}, module, error));
-  CHECK(error.empty());
-
-  primec::Vm vm;
-  uint64_t result = 0;
-  REQUIRE(vm.execute(module, result, error));
-  CHECK(error.empty());
-  CHECK(result == 4);
+  const bool lowered = lowerer.lower(program, &semanticProgram, "/main", {}, {}, module, error);
+  CHECK_FALSE(lowered);
+  CHECK(error.find("native backend only supports indexing into string literals or string bindings") !=
+        std::string::npos);
 }
 
 TEST_CASE("ir lowerer supports math-qualified min/max") {

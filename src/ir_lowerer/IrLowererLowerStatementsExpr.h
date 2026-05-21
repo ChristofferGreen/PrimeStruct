@@ -587,6 +587,15 @@
           if (getBuiltinArrayAccessName(callExpr, accessNameOut)) {
             return true;
           }
+          const std::string resolvedAccessPath = resolveExprPath(callExpr);
+          if (resolvedAccessPath == "/at") {
+            accessNameOut = "at";
+            return true;
+          }
+          if (resolvedAccessPath == "/at_unsafe") {
+            accessNameOut = "at_unsafe";
+            return true;
+          }
           std::string vectorHelperName;
           if (resolveVectorHelperAliasName(callExpr, vectorHelperName) &&
               (vectorHelperName == "at" || vectorHelperName == "at_unsafe")) {

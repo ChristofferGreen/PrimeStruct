@@ -138,7 +138,9 @@ main() {
 )";
   std::string error;
   primec::IrModule module;
-  REQUIRE(parseValidateAndLower(source, module, error));
+  const bool ok = parseValidateAndLower(source, module, error);
+  INFO(error);
+  REQUIRE(ok);
   CHECK(error.empty());
 
   primec::Vm vm;
