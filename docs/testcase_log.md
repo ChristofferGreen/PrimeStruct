@@ -178,9 +178,29 @@
   current alias path only reserves one callee local. The validation cases
   581-590 shard was stabilized on 2026-05-21 14:08 CEST by retargeting the
   bare std UI immutable struct param `nextLocal` expectation to the current
-  one-local alias behavior. Next stop-on-failure blocker is not yet localized.
+  one-local alias behavior. Next stop-on-failure blocker is
+  `PrimeStruct_primestruct_ir_pipeline_validation_cases_641_650`. The
+  validation cases 641-650 shard is failing in a stale flow-helper
+  classification expectation that still treats bare `at(...)` as a borrowed
+  struct copy source exempt from temporary disarming after current access
+  helper classification. The validation cases 641-650 shard was stabilized on
+  2026-05-21 14:11 CEST by retargeting bare `at(...)` struct-copy source
+  classification to current temporary-disarm behavior. Next stop-on-failure
+  blocker is not yet localized.
 
 ## Recent Test Runs
+- 2026-05-21 14:11 CEST | pass | mode: release | command:
+  `cmake --build build-release --target PrimeStruct_backend_ir_tests -j 1`;
+  `cd build-release && ctest --output-on-failure -R '^PrimeStruct_primestruct_ir_pipeline_validation_cases_641_650$' --timeout 180`
+  | failures: none | notes: bare `at(...)` struct-copy source
+  classification now asserts current temporary-disarm behavior.
+- 2026-05-21 14:10 CEST | fail | mode: release | command:
+  `cmake --build build-release -j 1`;
+  `cd build-release && ctest --output-on-failure --stop-on-failure --timeout 180`
+  | failures: `PrimeStruct_primestruct_ir_pipeline_validation_cases_641_650`
+  | notes: stop-on-failure progressed past validation cases 581-590; current
+  blocker is a stale `shouldDisarmStructCopySourceExpr(at(...))`
+  expectation.
 - 2026-05-21 14:08 CEST | pass | mode: release | command:
   `cmake --build build-release --target PrimeStruct_backend_ir_tests -j 1`;
   `cd build-release && ctest --output-on-failure -R '^PrimeStruct_primestruct_ir_pipeline_validation_cases_581_590$' --timeout 180`

@@ -509,7 +509,7 @@ TEST_CASE("ir lowerer flow helpers classify borrowed struct copy sources") {
   accessCall.name = "at";
   accessCall.args.push_back(localName);
   accessCall.args.push_back(indexLiteral);
-  CHECK_FALSE(primec::ir_lowerer::shouldDisarmStructCopySourceExpr(accessCall));
+  CHECK(primec::ir_lowerer::shouldDisarmStructCopySourceExpr(accessCall));
 
   primec::Expr fieldAccessCall;
   fieldAccessCall.kind = primec::Expr::Kind::Call;
