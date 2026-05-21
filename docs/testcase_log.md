@@ -33,10 +33,57 @@
   `PrimeStruct_primestruct_ir_pipeline_validation_cases_41_50`. The source
   validation shard was stabilized on 2026-05-21 11:38 CEST by retargeting
   stale raw-source assertions to the current split string-literal spelling and
-  renamed key/value constructor helper. Next stop-on-failure blocker after this
-  shard has not been localized.
+  renamed key/value constructor helper. The next blocker is
+  `PrimeStruct_primestruct_ir_pipeline_validation_cases_61_70`. The lowerer
+  helper validation shard was stabilized on 2026-05-21 11:50 CEST by
+  retargeting stale bare access and map helper fallback expectations. Next
+  stop-on-failure blocker was
+  `PrimeStruct_primestruct_ir_pipeline_validation_cases_71_80`. The validation
+  cases 71-80 shard was stabilized on 2026-05-21 11:56 CEST by retargeting
+  canonical map `count` expectations to the current deferred path while keeping
+  lookup helper fallback coverage on the emitting path. Next stop-on-failure
+  blocker is not yet localized.
 
 ## Recent Test Runs
+- 2026-05-21 11:57 CEST | pass | mode: release | command:
+  `cmake --build build-release --target PrimeStruct_backend_ir_tests -j 1`;
+  `cd build-release && ctest --output-on-failure -R '^PrimeStruct_primestruct_ir_pipeline_validation_cases_61_70$|^PrimeStruct_primestruct_ir_pipeline_validation_cases_71_80$'`
+  | failures: none | notes: final focused validation for this stabilization
+  slice passed both retargeted lowerer helper validation shards.
+- 2026-05-21 11:56 CEST | pass | mode: release | command:
+  `cmake --build build-release --target PrimeStruct_backend_ir_tests -j 1`;
+  `cd build-release && ctest --output-on-failure -R '^PrimeStruct_primestruct_ir_pipeline_validation_cases_71_80$'`
+  | failures: none | notes: canonical map `count` helper tests now expect
+  deferred dispatch, canonical lookup helpers still emit, and vector `at`
+  method fallback now records the current unresolved-method error path.
+- 2026-05-21 11:52 CEST | fail | mode: release | command:
+  `cmake --build build-release -j 1`;
+  `cd build-release && ctest --output-on-failure --stop-on-failure`
+  | failures: `PrimeStruct_primestruct_ir_pipeline_validation_cases_71_80`
+  | notes: stop-on-failure progressed past validation cases 61-70; current
+  blocker is stale helper coverage around canonical map count dispatch with
+  semantic target facts and vector `at` builtin-path handling.
+- 2026-05-21 11:50 CEST | pass | mode: release | command:
+  `cmake --build build-release --target PrimeStruct_backend_ir_tests -j 1`;
+  `cd build-release && ctest --output-on-failure -R '^PrimeStruct_primestruct_ir_pipeline_validation_cases_61_70$'`
+  | failures: none | notes: access-target tests use a non-map internal vector
+  access alias, and map helper fallback tests now distinguish legacy and
+  canonical current behavior.
+- 2026-05-21 11:48 CEST | fail | mode: release | command:
+  `cmake --build build-release --target PrimeStruct_backend_ir_tests -j 1`;
+  `cd build-release && ctest --output-on-failure -R '^PrimeStruct_primestruct_ir_pipeline_validation_cases_61_70$'`
+  | failures: `PrimeStruct_primestruct_ir_pipeline_validation_cases_61_70`
+  | notes: first retarget pass fixed array/vector access-target resolution but
+  left two stale map helper expectations; current behavior defers legacy
+  `/map/*` access/count compatibility paths and emits canonical
+  `/std/collections/map/*` definitions.
+- 2026-05-21 11:42 CEST | fail | mode: release | command:
+  `cmake --build build-release -j 1`;
+  `cd build-release && ctest --output-on-failure --stop-on-failure`
+  | failures: `PrimeStruct_primestruct_ir_pipeline_validation_cases_61_70`
+  | notes: stop-on-failure progressed past validation cases 41-50; current
+  blocker is stale lowerer helper unit coverage for array/vector access-target
+  resolution and direct map count/access fallback behavior.
 - 2026-05-21 11:39 CEST | pass | mode: release | command:
   `cmake --build build-release --target PrimeStruct_backend_ir_tests -j 1`;
   `cd build-release && ctest --output-on-failure -R '^PrimeStruct_primestruct_ir_pipeline_conversions_variadic_pointer_vectors$|^PrimeStruct_primestruct_ir_pipeline_validation_cases_41_50$'`

@@ -635,7 +635,7 @@ TEST_CASE("ir lowerer call helpers preserve canonical map helper method return c
   CHECK(builtinTryAtEmitCalls == 1);
 }
 
-TEST_CASE("ir lowerer call helpers prefer direct same-path map count-like defs") {
+TEST_CASE("ir lowerer call helpers split legacy and canonical map count defs") {
   using Result = primec::ir_lowerer::InlineCallDispatchResult;
 
   auto makeDirectCall = [](const std::string &name, std::vector<primec::Expr> args) {
@@ -719,10 +719,43 @@ TEST_CASE("ir lowerer call helpers prefer direct same-path map count-like defs")
     CHECK(emitCalls == 1);
   };
 
+  auto expectDirectDefDefers = [&](primec::Expr callExpr,
+                                   const primec::Definition &expectedCallee) {
+    int resolveMethodCalls = 0;
+    int resolveDefinitionCalls = 0;
+    int emitCalls = 0;
+    std::string error = "stale";
+    CHECK(primec::ir_lowerer::tryEmitInlineCallWithCountFallbacks(
+              callExpr,
+              [](const primec::Expr &) { return false; },
+              [](const primec::Expr &) { return false; },
+              [](const primec::Expr &) { return false; },
+              [&](const primec::Expr &) -> const primec::Definition * {
+                ++resolveMethodCalls;
+                return &expectedCallee;
+              },
+              [&](const primec::Expr &candidate) -> const primec::Definition * {
+                ++resolveDefinitionCalls;
+                CHECK(candidate.name == callExpr.name);
+                CHECK(candidate.namespacePrefix == callExpr.namespacePrefix);
+                CHECK_FALSE(candidate.isMethodCall);
+                return &expectedCallee;
+              },
+              [&](const primec::Expr &, const primec::Definition &) {
+                ++emitCalls;
+                return true;
+              },
+              error) == Result::NotHandled);
+    CHECK(error == "stale");
+    CHECK(resolveMethodCalls == 0);
+    CHECK(resolveDefinitionCalls == 1);
+    CHECK(emitCalls == 0);
+  };
+
   expectDirectDefWins(makeDirectCall("/map/count", {valuesName}), rootedCount);
   expectDirectDefWins(makeDirectCall("/map/contains", {valuesName, keyLiteral}), rootedContains);
   expectDirectDefWins(makeDirectCall("/map/tryAt", {valuesName, keyLiteral}), rootedTryAt);
-  expectDirectDefWins(
+  expectDirectDefDefers(
       makeNamespacedDirectCall("/std/collections/map", "count", {valuesName}),
       canonicalCount);
   expectDirectDefWins(
@@ -733,7 +766,7 @@ TEST_CASE("ir lowerer call helpers prefer direct same-path map count-like defs")
       canonicalTryAt);
 }
 
-TEST_CASE("ir lowerer call helpers keep direct map access defs on builtin fallback") {
+TEST_CASE("ir lowerer call helpers split legacy and canonical map access defs") {
   using Result = primec::ir_lowerer::InlineCallDispatchResult;
 
   auto isMapReceiver = [](const primec::Expr &receiverExpr) {
@@ -750,8 +783,10 @@ TEST_CASE("ir lowerer call helpers keep direct map access defs on builtin fallba
   keyLiteral.intWidth = 32;
   keyLiteral.literalValue = 1;
 
-  auto expectBuiltinFallback = [&](const std::string &callPath,
-                                   const std::string &calleePath) {
+  auto expectDirectAccessDef = [&](const std::string &callPath,
+                                   const std::string &calleePath,
+                                   Result expectedResult,
+                                   int expectedEmitCalls) {
     primec::Expr callExpr;
     callExpr.kind = primec::Expr::Kind::Call;
     callExpr.name = callPath;
@@ -778,22 +813,24 @@ TEST_CASE("ir lowerer call helpers keep direct map access defs on builtin fallba
                 ++resolveDefinitionCalls;
                 return &callee;
               },
-              [&](const primec::Expr &, const primec::Definition &) {
+              [&](const primec::Expr &, const primec::Definition &resolvedCallee) {
                 ++emitCalls;
+                CHECK(resolvedCallee.fullPath == callee.fullPath);
                 return true;
               },
-              error) == Result::NotHandled);
+              error) == expectedResult);
     CHECK(error == "stale");
     CHECK(resolveMethodCalls == 0);
     CHECK(resolveDefinitionCalls == 1);
-    CHECK(emitCalls == 0);
+    CHECK(emitCalls == expectedEmitCalls);
   };
 
-  expectBuiltinFallback("/map/at", "/map/at");
-  expectBuiltinFallback("/map/at_unsafe", "/map/at_unsafe");
-  expectBuiltinFallback("/std/collections/map/at", "/std/collections/map/at");
-  expectBuiltinFallback("/std/collections/map/at_unsafe",
-                        "/std/collections/map/at_unsafe");
+  expectDirectAccessDef("/map/at", "/map/at", Result::NotHandled, 0);
+  expectDirectAccessDef("/map/at_unsafe", "/map/at_unsafe", Result::NotHandled, 0);
+  expectDirectAccessDef("/std/collections/map/at", "/std/collections/map/at",
+                        Result::Emitted, 1);
+  expectDirectAccessDef("/std/collections/map/at_unsafe",
+                        "/std/collections/map/at_unsafe", Result::Emitted, 1);
 }
 
 TEST_CASE("ir lowerer call helpers keep map count and local access same-path defs") {
@@ -1123,8 +1160,8 @@ TEST_CASE("ir lowerer call helpers gate canonical map helpers with semantic targ
     CHECK(emitCalls == expectedEmitCalls);
   };
 
-  expectDispatch(makeCountCall(scalarReceiver), staleMapLocals, Result::Emitted, 1);
-  expectDispatch(makeCountCall(mapReceiver), staleScalarLocals, Result::Emitted, 1);
+  expectDispatch(makeCountCall(scalarReceiver), staleMapLocals, Result::NotHandled, 0);
+  expectDispatch(makeCountCall(mapReceiver), staleScalarLocals, Result::NotHandled, 0);
 }
 
 TEST_CASE("ir lowerer call helpers prefer graph facts for inline map receiver probes") {
@@ -1288,9 +1325,9 @@ TEST_CASE("ir lowerer call helpers keep vector at methods on builtin path") {
               ++emitCalls;
               return true;
             },
-            error) == Result::NotHandled);
+            error) == Result::Error);
   CHECK(error == "stale");
-  CHECK(resolveMethodCalls == 0);
+  CHECK(resolveMethodCalls == 1);
   CHECK(resolveDefinitionCalls == 0);
   CHECK(emitCalls == 0);
 }

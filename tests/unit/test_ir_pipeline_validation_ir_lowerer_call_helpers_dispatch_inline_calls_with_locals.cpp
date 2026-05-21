@@ -642,7 +642,7 @@ TEST_CASE("ir lowerer call helpers leave direct experimental map helpers unadapt
   CHECK(error == "stale");
 }
 
-TEST_CASE("ir lowerer call helpers inline direct canonical map count-like helpers for map locals") {
+TEST_CASE("ir lowerer call helpers split canonical map count and lookup helpers for map locals") {
   using Result = primec::ir_lowerer::InlineCallDispatchResult;
   using LocalInfo = primec::ir_lowerer::LocalInfo;
 
@@ -677,7 +677,9 @@ TEST_CASE("ir lowerer call helpers inline direct canonical map count-like helper
   keyName.name = "key";
 
   auto expectBuiltinFallback = [&](const primec::Expr &callExpr,
-                                   const primec::Definition &resolvedCallee) {
+                                   const primec::Definition &resolvedCallee,
+                                   Result expectedResult,
+                                   int expectedEmitCalls) {
     std::string error = "stale";
     int emitCalls = 0;
     CHECK(primec::ir_lowerer::tryEmitInlineCallDispatchWithLocals(
@@ -700,9 +702,9 @@ TEST_CASE("ir lowerer call helpers inline direct canonical map count-like helper
                 ++emitCalls;
                 return true;
               },
-              error) == Result::Emitted);
+              error) == expectedResult);
     CHECK(error == "stale");
-    CHECK(emitCalls == 1);
+    CHECK(emitCalls == expectedEmitCalls);
   };
 
   primec::Expr countCall;
@@ -710,21 +712,21 @@ TEST_CASE("ir lowerer call helpers inline direct canonical map count-like helper
   countCall.namespacePrefix = "/std/collections/map";
   countCall.name = "count";
   countCall.args = {valuesName};
-  expectBuiltinFallback(countCall, canonicalCount);
+  expectBuiltinFallback(countCall, canonicalCount, Result::NotHandled, 0);
 
   primec::Expr containsCall;
   containsCall.kind = primec::Expr::Kind::Call;
   containsCall.namespacePrefix = "/std/collections/map";
   containsCall.name = "contains";
   containsCall.args = {valuesName, keyName};
-  expectBuiltinFallback(containsCall, canonicalContains);
+  expectBuiltinFallback(containsCall, canonicalContains, Result::Emitted, 1);
 
   primec::Expr tryAtCall;
   tryAtCall.kind = primec::Expr::Kind::Call;
   tryAtCall.namespacePrefix = "/std/collections/map";
   tryAtCall.name = "tryAt";
   tryAtCall.args = {valuesName, keyName};
-  expectBuiltinFallback(tryAtCall, canonicalTryAt);
+  expectBuiltinFallback(tryAtCall, canonicalTryAt, Result::Emitted, 1);
 }
 
 TEST_CASE("ir lowerer call helpers emit unsupported native call diagnostics for stdlib-only helpers") {
