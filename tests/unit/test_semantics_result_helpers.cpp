@@ -136,7 +136,7 @@ main() {
   CHECK(error.empty());
 }
 
-TEST_CASE("stdlib Result explicit constructors keep template arguments") {
+TEST_CASE("stdlib Result helper constructors keep template arguments") {
   const std::string source = R"(
 import /std/result/*
 
@@ -147,22 +147,23 @@ MyError() {
 
 [return<Result<i32, MyError>>]
 make_value_ok() {
-  return(Result<i32, MyError>{[ok] 7i32})
+  return(ok<i32, MyError>(7i32))
 }
 
 [return<Result<i32, MyError>>]
 make_value_error() {
-  return(Result<i32, MyError>{[error] MyError{[code] 4i32}})
+  return(error<i32, MyError>(MyError{[code] 4i32}))
 }
 
 [return<Result<MyError>>]
 make_status_ok() {
-  return(Result<MyError>{})
+  return(ok<MyError>())
 }
 
 [return<Result<MyError>>]
 make_status_error() {
-  return(Result<MyError>{[error] MyError{[code] 5i32}})
+  [Result<MyError>] result{[error] MyError{[code] 5i32}}
+  return(result)
 }
 
 [return<int>]
@@ -172,6 +173,7 @@ main() {
 )";
   std::string error;
   CHECK(validateProgram(source, "/main", error));
+  INFO(error);
   CHECK(error.empty());
 }
 

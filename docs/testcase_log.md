@@ -316,9 +316,32 @@
   route. The bindings struct-defaults 11-20 shard was stabilized on
   2026-05-21 16:01 CEST by retargeting the direct map count precedence fixture
   to the current builtin-count diagnostic before omitted-initializer
-  effectfulness checks. Next stop-on-failure blocker is not yet localized.
+  effectfulness checks. Next stop-on-failure blocker is
+  `PrimeStruct_primestruct_semantics_result_helpers_result_helpers_5_6`.
+  The result helpers 5-6 shard is failing in stale explicit
+  `Result<T, E>{...}` return-constructor coverage; current imported stdlib
+  value-result returns route through `ok<T, E>(...)` / `error<T, E>(...)`
+  helpers, and explicit status construction remains target-typed through a
+  local. The result helpers 5-6 shard was stabilized on 2026-05-21 16:07
+  CEST by retargeting the return-constructor coverage to current imported
+  stdlib Result helper construction. Next stop-on-failure blocker is not yet
+  localized.
 
 ## Recent Test Runs
+- 2026-05-21 16:07 CEST | pass | mode: release | command:
+  `cmake --build build-release --target PrimeStruct_semantics_tests -j 1`;
+  `cd build-release && ctest --output-on-failure -R '^PrimeStruct_primestruct_semantics_result_helpers_result_helpers_5_6$' --timeout 180`
+  | failures: none | notes: explicit stdlib Result return construction
+  coverage now uses current imported helper construction and target-typed
+  status construction.
+- 2026-05-21 16:05 CEST | fail | mode: release | command:
+  `cd build-release && ctest --output-on-failure --stop-on-failure --timeout 180 -I 246,1599`;
+  `cd build-release && ./primec --emit=ir --dump-stage ast-semantic --entry /main --default-effects io_out,io_err <same fixture source>`
+  | failures:
+  `PrimeStruct_primestruct_semantics_result_helpers_result_helpers_5_6`
+  | notes: stop-on-failure progressed past struct-defaults follow-ups;
+  current blocker is stale explicit stdlib Result return construction syntax,
+  and the CLI reports `unknown call target: Result`.
 - 2026-05-21 16:01 CEST | pass | mode: release | command:
   `cmake --build build-release --target PrimeStruct_semantics_tests -j 1`;
   `cd build-release && ctest --output-on-failure -R '^PrimeStruct_primestruct_semantics_bindings_struct_defaults_bindings_struct_defaults_11_20$' --timeout 180`
