@@ -201,9 +201,29 @@
   file-handle helper knowledge. The validation cases 671-680 shard was
   stabilized on 2026-05-21 14:21 CEST by retargeting indexed args-pack
   file-handle method `Result` expectations to current source-only fail-closed
-  behavior. Next stop-on-failure blocker is not yet localized.
+  behavior. Next stop-on-failure blocker is
+  `PrimeStruct_primestruct_ir_pipeline_validation_cases_731_740`. The
+  validation cases 731-740 shard is failing in stale pointer-target inference
+  expectations that still require source-only bare `at(...)` args-pack access
+  syntax to infer pointer target kinds after current access-helper
+  classification. The validation cases 731-740 shard was stabilized on
+  2026-05-21 14:25 CEST by retargeting those bare `at(...)` args-pack
+  pointer-target inference expectations to current `Unknown` behavior. Next
+  stop-on-failure blocker is not yet localized.
 
 ## Recent Test Runs
+- 2026-05-21 14:25 CEST | pass | mode: release | command:
+  `cmake --build build-release --target PrimeStruct_backend_ir_tests -j 1`;
+  `cd build-release && ctest --output-on-failure -R '^PrimeStruct_primestruct_ir_pipeline_validation_cases_731_740$' --timeout 180`
+  | failures: none | notes: source-only bare `at(...)` args-pack
+  pointer-target inference now asserts current `Unknown` behavior.
+- 2026-05-21 14:24 CEST | fail | mode: release | command:
+  `cmake --build build-release -j 1`;
+  `cd build-release && ctest --output-on-failure --stop-on-failure --timeout 180`
+  | failures: `PrimeStruct_primestruct_ir_pipeline_validation_cases_731_740`
+  | notes: stop-on-failure progressed past validation cases 671-680; current
+  blocker is stale source-only bare `at(...)` args-pack pointer-target
+  inference expectations.
 - 2026-05-21 14:21 CEST | pass | mode: release | command:
   `cmake --build build-release --target PrimeStruct_backend_ir_tests -j 1`;
   `cd build-release && ctest --output-on-failure -R '^PrimeStruct_primestruct_ir_pipeline_validation_cases_671_680$' --timeout 180`
