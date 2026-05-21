@@ -4,16 +4,37 @@
 - [ ] release gate baseline | mode: release | command:
   `./scripts/compile.sh --release` | first_seen: 2026-05-21 07:37 CEST |
   last_seen: 2026-05-21 09:14 CEST | next:
-  `cmake --build build-release --target PrimeStruct_compile_run_tests -j 1`;
-  `cd build-release && ./PrimeStruct_compile_run_tests --test-suite=primestruct.compile.run.emitters.cpp --source-file="*test_compile_run_emitters_canonical_map_helper_calls.cpp" --no-skip`
+  `cmake --build build-release --target PrimeStruct_semantics_tests -j 1`;
+  `cd build-release && ./PrimeStruct_semantics_tests --test-case="semantic product validates direct return method-like borrowed helper-return experimental soa_vector reads" --no-skip`
   | notes: full gate passed 77% with 365 failures out of 1599 tests.
-  Dominant signatures are stale collection helper expectations after the
-  stdlib cutovers: `/at` and `/at_unsafe` expression calls are no longer
-  lowered by VM/native backends, retained map compatibility reject fixtures now
-  compile, SoA helper-return public-surface fixtures still expect retired
-  helpers, and source-lock tests still look for deleted map/SoA bridge strings.
+  The `test_compile_run_emitters_canonical_map_helper_calls.cpp` cluster was
+  stabilized on 2026-05-21 09:32 CEST; remaining dominant signatures include
+  SoA helper-return public-surface fixtures, source-lock checks for deleted
+  bridge strings, and other stale collection helper expectations after the
+  stdlib cutovers.
 
 ## Recent Test Runs
+- 2026-05-21 09:32 CEST | pass | mode: release | command:
+  `cmake --build build-release --target PrimeStruct_compile_run_tests -j 1`;
+  `cd build-release && ./PrimeStruct_compile_run_tests --test-suite=primestruct.compile.run.emitters.cpp --source-file="*test_compile_run_emitters_canonical_map_helper_calls.cpp" --no-skip`
+  | failures: none | notes: Stabilized canonical map helper-call emitter
+  fixtures by retargeting stale builtin-authority and compatibility-reject
+  assertions to current `.prime` helper precedence, explicit vector helper
+  calls, and deterministic current count diagnostics.
+- 2026-05-21 09:29 CEST | fail | mode: release | command:
+  `cmake --build build-release --target PrimeStruct_compile_run_tests -j 1`;
+  `cd build-release && ./PrimeStruct_compile_run_tests --test-suite=primestruct.compile.run.emitters.cpp --source-file="*test_compile_run_emitters_canonical_map_helper_calls.cpp" --no-skip`
+  | failures: `C++ emitter resolves stdlib canonical map count helper in method-call sugar`
+  | notes: last remaining stale positive expectation still compiled to the
+  current native count diagnostic for `/std/collections/map/count` with two
+  arguments.
+- 2026-05-21 09:25 CEST | fail | mode: release | command:
+  `cmake --build build-release --target PrimeStruct_compile_run_tests -j 1`;
+  `cd build-release && ./PrimeStruct_compile_run_tests --test-suite=primestruct.compile.run.emitters.cpp --source-file="*test_compile_run_emitters_canonical_map_helper_calls.cpp" --no-skip`
+  | failures: 3 cases in `test_compile_run_emitters_canonical_map_helper_calls.cpp`
+  | notes: first retarget pass reduced the shard to stale compatibility
+  diagnostic text, builtin count-alias expectation drift, and the
+  extra-argument canonical map count method-call fixture.
 - 2026-05-21 09:14 CEST | fail | mode: release | command:
   `cmake --build build-release --target PrimeStruct_compile_run_tests -j 1`;
   `cd build-release && ./PrimeStruct_compile_run_tests --test-suite=primestruct.compile.run.emitters.cpp --source-file="*test_compile_run_emitters_canonical_map_helper_calls.cpp" --no-skip`
@@ -4891,6 +4912,13 @@
 - 2026-05-12 17:28 local | fail | mode: release | command: `./scripts/compile.sh --release` | failures: 146 CTest targets | notes: baseline after preflight checkpoint failed; stabilization blocks TODO work
 
 ## Resolved Failures
+- [x] canonical map helper-call emitter shard | resolved: 2026-05-21 09:32
+  CEST | validating command: `cmake --build build-release --target PrimeStruct_compile_run_tests -j 1`;
+  `cd build-release && ./PrimeStruct_compile_run_tests --test-suite=primestruct.compile.run.emitters.cpp --source-file="*test_compile_run_emitters_canonical_map_helper_calls.cpp" --no-skip`
+  | notes: stale builtin-authority and compatibility-reject expectations now
+  match current `.prime` helper precedence; explicit vector helper calls pass,
+  and extra-argument canonical map count method sugar is locked to the current
+  native diagnostic.
 - [x] native collections retired map shim constructors C slice | resolved:
   2026-05-21 06:44 CEST | validating command: `cmake --build build-release --target PrimeStruct_compile_run_tests -j 1`;
   `cd build-release && ./PrimeStruct_compile_run_tests --test-suite=primestruct.compile.run.native_backend.collections --source-file="*test_compile_run_native_backend_collections_shims_maps_c.cpp" --no-skip`
