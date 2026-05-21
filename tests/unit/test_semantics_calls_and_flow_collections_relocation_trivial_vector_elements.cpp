@@ -269,7 +269,7 @@ main() {
   CHECK(error.empty());
 }
 
-TEST_CASE("push validates on mutable soa_vector parameter") {
+TEST_CASE("push rejects retired mutable soa_vector parameter spelling") {
   const std::string source = R"(
 Particle() {
   [i32] x{1i32}
@@ -286,8 +286,10 @@ main() {
 }
 )";
   std::string error;
-  CHECK(validateProgram(source, "/main", error));
-  CHECK(error.empty());
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  INFO(error);
+  CHECK(error.find("soa_vector<T> is not supported; use soa<T>") !=
+        std::string::npos);
 }
 
 TEST_CASE("collection syntax parity validates for call and method forms") {
@@ -559,7 +561,7 @@ main() {
   CHECK(error.empty());
 }
 
-TEST_CASE("reserve validates on mutable soa_vector parameter") {
+TEST_CASE("reserve rejects retired mutable soa_vector parameter spelling") {
   const std::string source = R"(
 Particle() {
   [i32] x{1i32}
@@ -576,11 +578,13 @@ main() {
 }
 )";
   std::string error;
-  CHECK(validateProgram(source, "/main", error));
-  CHECK(error.empty());
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  INFO(error);
+  CHECK(error.find("soa_vector<T> is not supported; use soa<T>") !=
+        std::string::npos);
 }
 
-TEST_CASE("pop still rejects soa_vector helper target") {
+TEST_CASE("pop rejects retired soa_vector parameter spelling before helper target") {
   const std::string source = R"(
 Particle() {
   [i32] x{1i32}
@@ -598,7 +602,9 @@ main() {
 )";
   std::string error;
   CHECK_FALSE(validateProgram(source, "/main", error));
-  CHECK(error.find("pop requires vector binding") != std::string::npos);
+  INFO(error);
+  CHECK(error.find("soa_vector<T> is not supported; use soa<T>") !=
+        std::string::npos);
 }
 
 TEST_CASE("reserve call keeps user-defined vector helper precedence") {

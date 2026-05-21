@@ -563,9 +563,33 @@
   constructor result into an explicit canonical binding first still validates.
   The calls-flow collections 441-450 shard was stabilized on 2026-05-21 18:36
   CEST by retargeting those fixtures to explicit canonical map locals. Next
-  stop-on-failure blocker is not yet localized.
+  stop-on-failure blocker is
+  `PrimeStruct_primestruct_semantics_calls_flow_collections_calls_flow_collections_491_500`.
+  The calls-flow collections 491-500 shard is failing in a stale
+  `soa_vector<Particle>` parameter fixture that still expected mutable push
+  validation. Current validation rejects the retired type spelling with
+  `soa_vector<T> is not supported; use soa<T>` before helper resolution; the
+  adjacent reserve and pop fixtures in the same source file had the same stale
+  retired-spelling assumption. The calls-flow collections 491-500 shard was
+  stabilized on 2026-05-21 18:38 CEST by retargeting those fixtures to the
+  current retired type-spelling diagnostic. Next stop-on-failure blocker is
+  not yet localized.
 
 ## Recent Test Runs
+- 2026-05-21 18:38 CEST | pass | mode: release | command:
+  `cmake --build build-release --target PrimeStruct_semantics_tests -j 1`;
+  `cd build-release && ctest --output-on-failure -R '^PrimeStruct_primestruct_semantics_calls_flow_collections_calls_flow_collections_491_500$' --timeout 180`
+  | failures: none | notes: stale `soa_vector<Particle>` push/reserve/pop
+  parameter fixtures now expect the current retired type-spelling diagnostic.
+- 2026-05-21 18:38 CEST | fail | mode: release | command:
+  `cd build-release && ctest --output-on-failure --stop-on-failure --timeout 180 -I 341,1599`;
+  `build-release/primec --emit=ir --dump-stage ast-semantic --entry /main <same soa_vector parameter fixture>`
+  | failures:
+  `PrimeStruct_primestruct_semantics_calls_flow_collections_calls_flow_collections_491_500`
+  | notes: stop-on-failure passed the 451-460, 461-470, 471-480, and
+  481-490 calls-flow collection shards, then found stale
+  `soa_vector<Particle>` push validation. Representative CLI output reports
+  `soa_vector<T> is not supported; use soa<T>`.
 - 2026-05-21 18:36 CEST | pass | mode: release | command:
   `cmake --build build-release --target PrimeStruct_semantics_tests -j 1`;
   `cd build-release && ctest --output-on-failure -R '^PrimeStruct_primestruct_semantics_calls_flow_collections_calls_flow_collections_441_450$' --timeout 180`
