@@ -426,7 +426,7 @@ main() {
   CHECK(error.empty());
 }
 
-TEST_CASE("struct layout accepts explicit canonical map field") {
+TEST_CASE("struct layout rejects explicit canonical map field") {
   const std::string source = R"(
 [struct]
 Thing() {
@@ -440,11 +440,11 @@ main() {
 }
 )";
   std::string error;
-  CHECK(validateProgram(source, "/main", error));
-  CHECK(error.empty());
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("unknown struct type for layout: /std/collections/map") != std::string::npos);
 }
 
-TEST_CASE("no_padding keeps canonical map field padding diagnostics") {
+TEST_CASE("no_padding rejects explicit canonical map field before padding diagnostics") {
   const std::string source = R"(
 [no_padding]
 Thing() {
@@ -459,7 +459,7 @@ main() {
 )";
   std::string error;
   CHECK_FALSE(validateProgram(source, "/main", error));
-  CHECK(error.find("no_padding disallows alignment padding on field /Thing/values") != std::string::npos);
+  CHECK(error.find("unknown struct type for layout: /std/collections/map") != std::string::npos);
 }
 
 TEST_CASE("struct alignment rejects smaller field requirement") {

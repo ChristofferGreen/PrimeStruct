@@ -285,9 +285,27 @@
   The validation cases 851-860 shard was stabilized on 2026-05-21 15:35 CEST
   by retargeting bare map receiver precedence coverage to current
   `unknown method target for tag` behavior. Next stop-on-failure blocker is
-  not yet localized.
+  `PrimeStruct_primestruct_semantics_struct_transforms_struct_transforms_41_50`.
+  The struct-transforms 41-50 shard is failing in stale semantics layout
+  expectations that still require explicit canonical `/std/collections/map`
+  fields to behave like compiler-known struct layout targets.
+  The struct-transforms 41-50 shard was stabilized on 2026-05-21 15:41 CEST
+  by retargeting explicit canonical map field layout coverage to the current
+  `unknown struct type for layout: /std/collections/map` diagnostic. Next
+  stop-on-failure blocker is not yet localized.
 
 ## Recent Test Runs
+- 2026-05-21 15:41 CEST | pass | mode: release | command:
+  `cmake --build build-release --target PrimeStruct_semantics_tests -j 1`;
+  `cd build-release && ctest --output-on-failure -R '^PrimeStruct_primestruct_semantics_struct_transforms_struct_transforms_41_50$' --timeout 180`
+  | failures: none | notes: explicit canonical map field layout expectations
+  now match the current unknown-struct diagnostic.
+- 2026-05-21 15:40 CEST | fail | mode: release | command:
+  `cd build-release && ctest --output-on-failure --stop-on-failure --timeout 180`
+  | failures:
+  `PrimeStruct_primestruct_semantics_struct_transforms_struct_transforms_41_50`
+  | notes: stop-on-failure progressed past backend IR validation and into
+  semantics; current blocker is stale canonical map field layout coverage.
 - 2026-05-21 15:35 CEST | pass | mode: release | command:
   `cmake --build build-release --target PrimeStruct_backend_ir_tests -j 1`;
   `cd build-release && ctest --output-on-failure -R '^PrimeStruct_primestruct_ir_pipeline_validation_cases_851_860$' --timeout 180`
