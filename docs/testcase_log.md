@@ -1,18 +1,35 @@
 # Testcase Log
 
 ## Current Known Failures
-- `PrimeStruct_compile_run_tests --test-suite="primestruct.compile.run.native_backend.collections" --no-skip`
-  is not a clean map-cutover gate. On 2026-05-16 it reported 343 cases, 238
-  passed, 105 failed, and 3539 skipped before the hanging map string-valued
-  literal executable was interrupted. The failures are dominated by stale SoA
-  public-surface coverage and older map-literal/insert compatibility fixtures;
-  the focused native MapValue cutover cases listed below pass, and the
-  map-literal/string-key source-file slice was stabilized on 2026-05-21. The
-  old string-valued map runtime fixture has since been retargeted to
-  compile-only coverage because native runtime string-valued maps still hang
-  after compilation.
+- [ ] release gate baseline | mode: release | command:
+  `./scripts/compile.sh --release` | first_seen: 2026-05-21 07:37 CEST |
+  last_seen: 2026-05-21 07:37 CEST | next:
+  `cmake --build build-release --target PrimeStruct_compile_run_tests -j 1`;
+  `cd build-release && ./PrimeStruct_compile_run_tests --test-suite=primestruct.compile.run.emitters.cpp --source-file="*test_compile_run_emitters_canonical_map_helper_calls.cpp" --no-skip`
+  | notes: full gate passed 77% with 365 failures out of 1599 tests.
+  Dominant signatures are stale collection helper expectations after the
+  stdlib cutovers: `/at` and `/at_unsafe` expression calls are no longer
+  lowered by VM/native backends, retained map compatibility reject fixtures now
+  compile, SoA helper-return public-surface fixtures still expect retired
+  helpers, and source-lock tests still look for deleted map/SoA bridge strings.
 
 ## Recent Test Runs
+- 2026-05-21 07:38 CEST | fail | mode: release | command:
+  `cmake --build build-release --target PrimeStruct_compile_run_tests -j 1`;
+  `cd build-release && ./PrimeStruct_compile_run_tests --test-suite=primestruct.compile.run.emitters.cpp --source-file="*test_compile_run_emitters_canonical_map_helper_calls.cpp" --no-skip`
+  | failures: 12 cases in `test_compile_run_emitters_canonical_map_helper_calls.cpp`
+  | notes: focused emitter helper file shows stale map authority/compatibility
+  expectations plus real `/std/collections/vector/at(_unsafe)` lowering gaps
+  where imported stdlib vector helpers resolve to `/at` and `/at_unsafe` but
+  the backend still rejects those expression calls.
+- 2026-05-21 07:37 CEST | fail | mode: release | command:
+  `./scripts/compile.sh --release` | failures: 365 CTest failures |
+  notes: Release build completed, then CTest failed 365/1599 tests. Representative
+  failures include native/VM `/at` and `/at_unsafe` expression lowering errors,
+  stale map compatibility reject expectations in
+  `test_compile_run_emitters_canonical_map_helper_calls.cpp`, SoA helper-return
+  method remnants, variadic collection reference lowering failures, and
+  source-lock checks for deleted bridge code.
 - 2026-05-21 06:44 CEST | pass | mode: release | command:
   `cmake --build build-release --target PrimeStruct_compile_run_tests -j 1`;
   `cd build-release && ./PrimeStruct_compile_run_tests --test-suite=primestruct.compile.run.native_backend.collections --source-file="*test_compile_run_native_backend_collections_shims_maps_c.cpp" --no-skip`
