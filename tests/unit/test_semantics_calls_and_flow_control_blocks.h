@@ -305,7 +305,7 @@ main() {
   CHECK(error.find("if branches must return compatible types") != std::string::npos);
 }
 
-TEST_CASE("if uses user-defined at return type for branch compatibility") {
+TEST_CASE("if rejects bare map at before branch compatibility") {
   const std::string source = R"(
 [return<int>]
 at([map<i32, string>] values, [i32] key) {
@@ -319,8 +319,9 @@ main() {
 }
 )";
   std::string error;
-  CHECK(validateProgram(source, "/main", error));
-  CHECK(error.empty());
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  INFO(error);
+  CHECK(error.find("unknown call target: /std/collections/map/at") != std::string::npos);
 }
 
 TEST_CASE("labeled arguments accept bracket syntax") {

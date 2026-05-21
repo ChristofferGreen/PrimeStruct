@@ -324,10 +324,29 @@
   helpers, and explicit status construction remains target-typed through a
   local. The result helpers 5-6 shard was stabilized on 2026-05-21 16:07
   CEST by retargeting the return-constructor coverage to current imported
-  stdlib Result helper construction. Next stop-on-failure blocker is not yet
-  localized.
+  stdlib Result helper construction. Next stop-on-failure blocker is
+  `PrimeStruct_primestruct_semantics_calls_flow_control_calls_flow_control_21_30`.
+  The calls-flow control 21-30 shard is failing in stale branch-compatibility
+  coverage that still expects a user-defined bare `at(map, key)` helper to win
+  over the current fail-closed `/std/collections/map/at` helper route. The
+  calls-flow control 21-30 shard was stabilized on 2026-05-21 16:12 CEST by
+  retargeting the bare map `at` branch fixture to the current unknown-target
+  diagnostic. Next stop-on-failure blocker is not yet localized.
 
 ## Recent Test Runs
+- 2026-05-21 16:12 CEST | pass | mode: release | command:
+  `cmake --build build-release --target PrimeStruct_semantics_tests -j 1`;
+  `cd build-release && ctest --output-on-failure -R '^PrimeStruct_primestruct_semantics_calls_flow_control_calls_flow_control_21_30$' --timeout 180`
+  | failures: none | notes: bare map `at` branch compatibility coverage now
+  expects the current unknown-target diagnostic before branch compatibility.
+- 2026-05-21 16:10 CEST | fail | mode: release | command:
+  `cd build-release && ctest --output-on-failure --stop-on-failure --timeout 180 -I 250,1599`;
+  `cd build-release && ./primec --emit=ir --dump-stage ast-semantic --entry /main --default-effects io_out,io_err <same fixture source>`
+  | failures:
+  `PrimeStruct_primestruct_semantics_calls_flow_control_calls_flow_control_21_30`
+  | notes: stop-on-failure progressed through the remaining result-helper
+  shards; current blocker is stale user-defined bare `at` precedence coverage,
+  and the CLI reports `unknown call target: /std/collections/map/at`.
 - 2026-05-21 16:07 CEST | pass | mode: release | command:
   `cmake --build build-release --target PrimeStruct_semantics_tests -j 1`;
   `cd build-release && ctest --output-on-failure -R '^PrimeStruct_primestruct_semantics_result_helpers_result_helpers_5_6$' --timeout 180`
