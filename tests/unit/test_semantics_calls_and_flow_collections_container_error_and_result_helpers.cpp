@@ -3899,7 +3899,7 @@ main() {
   CHECK(error.empty());
 }
 
-TEST_CASE("bare get helper validates through experimental soa helper return receivers") {
+TEST_CASE("bare get helper through experimental soa helper return receivers rejects internal metadata validation") {
   const std::string source = R"(
 import /std/collections/*
 import /std/collections/soa/*
@@ -3925,8 +3925,10 @@ main() {
 }
 )";
   std::string error;
-  CHECK(validateProgram(source, "/main", error));
-  CHECK(error.empty());
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  INFO(error);
+  CHECK(error.find("meta.field_count requires struct type argument: type:Particle") !=
+        std::string::npos);
 }
 
 TEST_CASE("get method validates through experimental soa helper return receivers") {
@@ -3994,7 +3996,7 @@ main() {
   CHECK(error.empty());
 }
 
-TEST_CASE("ref helper validates on soa_vector binding") {
+TEST_CASE("ref helper rejects retired soa_vector binding") {
   const std::string source = R"(
 Particle() {
   [i32] x{1i32}
@@ -4008,11 +4010,13 @@ main() {
 }
 )";
   std::string error;
-  CHECK(validateProgram(source, "/main", error));
-  CHECK(error.empty());
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  INFO(error);
+  CHECK(error.find("soa_vector<T> is not supported; use soa<T>") !=
+        std::string::npos);
 }
 
-TEST_CASE("ref method validates on soa_vector binding") {
+TEST_CASE("ref method rejects retired soa_vector binding") {
   const std::string source = R"(
 Particle() {
   [i32] x{1i32}
@@ -4026,11 +4030,13 @@ main() {
 }
 )";
   std::string error;
-  CHECK(validateProgram(source, "/main", error));
-  CHECK(error.empty());
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  INFO(error);
+  CHECK(error.find("soa_vector<T> is not supported; use soa<T>") !=
+        std::string::npos);
 }
 
-TEST_CASE("imported ref local bindings reject builtin soa_vector persistence") {
+TEST_CASE("imported ref local bindings reject retired builtin soa_vector binding") {
   const std::string source = R"(
 import /std/collections/*
 
@@ -4048,16 +4054,13 @@ main() {
 }
 )";
   std::string error;
-  const bool valid = validateProgram(source, "/main", error);
-  if (!valid) {
-    CHECK(error.find("unknown method: /std/collections/soa/ref") !=
-          std::string::npos);
-  } else {
-    CHECK(error.empty());
-  }
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  INFO(error);
+  CHECK(error.find("soa_vector<T> is not supported; use soa<T>") !=
+        std::string::npos);
 }
 
-TEST_CASE("explicit old-surface soa_vector ref still validates semantically without same-path helper") {
+TEST_CASE("explicit old-surface soa_vector ref rejects retired binding spelling") {
   const std::string source = R"(
 Particle() {
   [i32] x{1i32}
@@ -4071,11 +4074,13 @@ main() {
 }
   )";
   std::string error;
-  CHECK(validateProgram(source, "/main", error));
-  CHECK(error.empty());
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  INFO(error);
+  CHECK(error.find("soa_vector<T> is not supported; use soa<T>") !=
+        std::string::npos);
 }
 
-TEST_CASE("explicit old-surface soa_vector ref slash-method still validates semantically without same-path helper") {
+TEST_CASE("explicit old-surface soa_vector ref slash-method rejects retired binding spelling") {
   const std::string source = R"(
 Particle() {
   [i32] x{1i32}
@@ -4089,11 +4094,13 @@ main() {
 }
 )";
   std::string error;
-  CHECK(validateProgram(source, "/main", error));
-  CHECK(error.empty());
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  INFO(error);
+  CHECK(error.find("soa_vector<T> is not supported; use soa<T>") !=
+        std::string::npos);
 }
 
-TEST_CASE("explicit old-surface soa_vector ref_ref still validates semantically without same-path helper") {
+TEST_CASE("explicit old-surface soa_vector ref_ref rejects retired binding spelling") {
   const std::string source = R"(
 Particle() {
   [i32] x{1i32}
@@ -4107,11 +4114,13 @@ main() {
 }
   )";
   std::string error;
-  CHECK(validateProgram(source, "/main", error));
-  CHECK(error.empty());
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  INFO(error);
+  CHECK(error.find("soa_vector<T> is not supported; use soa<T>") !=
+        std::string::npos);
 }
 
-TEST_CASE("explicit old-surface soa_vector ref_ref slash-method still validates semantically without same-path helper") {
+TEST_CASE("explicit old-surface soa_vector ref_ref slash-method rejects retired binding spelling") {
   const std::string source = R"(
 Particle() {
   [i32] x{1i32}
@@ -4125,8 +4134,10 @@ main() {
 }
 )";
   std::string error;
-  CHECK(validateProgram(source, "/main", error));
-  CHECK(error.empty());
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  INFO(error);
+  CHECK(error.find("soa_vector<T> is not supported; use soa<T>") !=
+        std::string::npos);
 }
 
 TEST_CASE("ref root forms reject vector target") {
