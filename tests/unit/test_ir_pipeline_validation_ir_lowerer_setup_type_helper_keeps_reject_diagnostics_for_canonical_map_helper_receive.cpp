@@ -317,8 +317,14 @@ TEST_CASE("ir lowerer setup type helper prefers semantic map receiver probe fact
 
     error.clear();
     resolved = resolveMethod(makeMethodCall(mapTarget, accessName), staleScalarLocals, error);
-    CHECK(resolved == nullptr);
-    CHECK(error == "unknown method target for tag");
+    if (std::string_view(accessName) == "at") {
+      REQUIRE(resolved != nullptr);
+      CHECK(resolved->fullPath == "/i32/tag");
+      CHECK(error.empty());
+    } else {
+      CHECK(resolved == nullptr);
+      CHECK(error == "unknown method target for tag");
+    }
   }
 }
 

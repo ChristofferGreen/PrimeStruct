@@ -260,9 +260,29 @@
   The validation cases 811-820 shard was stabilized on 2026-05-21 15:16 CEST
   by retargeting those bare method fallback checks to current `/array/at` and
   `unknown method target for at_unsafe` diagnostics. Next stop-on-failure
-  blocker is not yet localized.
+  blocker is
+  `PrimeStruct_primestruct_ir_pipeline_validation_cases_821_830`. The
+  validation cases 821-830 shard is failing in a stale semantic map receiver
+  probe expectation that still requires map receiver semantic facts to lose to
+  stale scalar locals for `tag` method resolution.
+  The validation cases 821-830 shard was stabilized on 2026-05-21 15:22 CEST
+  by retargeting semantic map receiver `at(...).tag()` coverage to current
+  semantic-fact-preferred resolution while keeping `tryAt(...).tag()` on the
+  current unknown-target path. Next stop-on-failure blocker is not yet
+  localized.
 
 ## Recent Test Runs
+- 2026-05-21 15:22 CEST | pass | mode: release | command:
+  `cmake --build build-release --target PrimeStruct_backend_ir_tests -j 1`;
+  `cd build-release && ctest --output-on-failure -R '^PrimeStruct_primestruct_ir_pipeline_validation_cases_821_830$' --timeout 180`
+  | failures: none | notes: semantic map receiver probe expectations now
+  distinguish current `at` resolution from `tryAt` unknown-target behavior.
+- 2026-05-21 15:20 CEST | fail | mode: release | command:
+  `cmake --build build-release -j 1`;
+  `cd build-release && ctest --output-on-failure --stop-on-failure --timeout 180`
+  | failures: `PrimeStruct_primestruct_ir_pipeline_validation_cases_821_830`
+  | notes: stop-on-failure progressed past validation cases 811-820; current
+  blocker is stale semantic map receiver probe precedence coverage.
 - 2026-05-21 15:16 CEST | pass | mode: release | command:
   `cmake --build build-release --target PrimeStruct_backend_ir_tests -j 1`;
   `cd build-release && ctest --output-on-failure -R '^PrimeStruct_primestruct_ir_pipeline_validation_cases_811_820$' --timeout 180`
