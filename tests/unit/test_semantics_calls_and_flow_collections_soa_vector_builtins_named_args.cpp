@@ -1212,7 +1212,7 @@ TEST_CASE("soa_vector builtin field view call argument escapes report escape dia
   checkReject("values.x()");
 }
 
-TEST_CASE("soa_vector builtin field view return escapes report escape diagnostics") {
+TEST_CASE("soa_vector builtin field view return escapes reject retired spelling") {
   const auto checkReject = [](const std::string &expr) {
     const std::string source =
         "Particle() {\n"
@@ -1230,14 +1230,16 @@ TEST_CASE("soa_vector builtin field view return escapes report escape diagnostic
         "}\n";
     std::string error;
     CHECK_MESSAGE(!validateProgram(source, "/pick", error), error);
-    CHECK(error.find("field-view escapes via return") != std::string::npos);
+    INFO(expr);
+    INFO(error);
+    CHECK(error.find(RetiredSoaVectorDiagnostic) != std::string::npos);
   };
 
   checkReject("x(values)");
   checkReject("values.x()");
 }
 
-TEST_CASE("legacy soa_vector builtin field-view bindings track compatibility borrow roots") {
+TEST_CASE("legacy soa_vector builtin field-view bindings reject retired spelling") {
   const std::string source = R"(
 Particle() {
   [i32] x{1i32}
@@ -1252,8 +1254,9 @@ main() {
 }
 )";
   std::string error;
-  CHECK(validateProgram(source, "/main", error));
-  CHECK(error.empty());
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  INFO(error);
+  CHECK(error.find(RetiredSoaVectorDiagnostic) != std::string::npos);
 }
 
 TEST_CASE("canonical soa field-view bindings track borrow roots") {
@@ -1304,7 +1307,7 @@ main() {
   CHECK(error.find("borrowed binding: values") != std::string::npos);
 }
 
-TEST_CASE("legacy soa_vector field-view binding blocks structural mutation while live") {
+TEST_CASE("legacy soa_vector field-view binding rejects retired spelling before mutation borrow check") {
   const std::string source = R"(
 Particle() {
   [i32] x{1i32}
@@ -1325,10 +1328,10 @@ main() {
 )";
   std::string error;
   CHECK_MESSAGE(!validateProgram(source, "/main", error), error);
-  CHECK(error.find("borrowed binding: values") != std::string::npos);
+  CHECK(error.find(RetiredSoaVectorDiagnostic) != std::string::npos);
 }
 
-TEST_CASE("legacy soa_vector field-view bindings resolve helper-return borrow roots") {
+TEST_CASE("legacy soa_vector field-view bindings reject non-templated helper-return spelling") {
   const std::string source = R"(
 Particle() {
   [i32] x{1i32}
@@ -1352,11 +1355,12 @@ main() {
 }
 )";
   std::string error;
-  CHECK(validateProgram(source, "/main", error));
-  CHECK(error.empty());
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  INFO(error);
+  CHECK(error.find(NonTemplatedSoaVectorDiagnostic) != std::string::npos);
 }
 
-TEST_CASE("soa_vector field-view helper rejects returned field-view arithmetic") {
+TEST_CASE("soa_vector field-view helper rejects retired spelling before returned field-view arithmetic") {
   const std::string source = R"(
 Particle() {
   [i32] x{1i32}
@@ -1390,7 +1394,8 @@ main() {
 )";
   std::string error;
   CHECK_FALSE(validateProgram(source, "/main", error));
-  CHECK(error.find("unknown method: /std/collections/soa/field_view/pick") != std::string::npos);
+  INFO(error);
+  CHECK(error.find(RetiredSoaVectorDiagnostic) != std::string::npos);
 }
 
 TEST_CASE("soa_vector get helper call-form accepts labeled named receiver") {

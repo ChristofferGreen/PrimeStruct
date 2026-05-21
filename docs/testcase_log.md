@@ -612,9 +612,32 @@
   bindings now reject retired `soa_vector<T>` spelling before the previous
   experimental-vector contract diagnostic. The calls-flow collections 541-550
   shard was stabilized on 2026-05-21 18:54 CEST by retargeting those fixtures
-  to current diagnostics. Next stop-on-failure blocker is not yet localized.
+  to current diagnostics. Next stop-on-failure blocker is
+  `PrimeStruct_primestruct_semantics_calls_flow_collections_calls_flow_collections_551_560`.
+  The calls-flow collections 551-560 shard is failing in legacy
+  `soa_vector` field-view fixtures. Canonical `soa<Particle>` field-view
+  coverage still validates, while old-surface `soa_vector` return escapes,
+  borrow-root, mutation, and field-view helper fixtures now stop on retired
+  type spelling or non-templated `/soa_vector` diagnostics before the previous
+  field-view/borrow diagnostics. The calls-flow collections 551-560 shard was
+  stabilized on 2026-05-21 18:57 CEST by retargeting the legacy field-view
+  fixtures to those current diagnostics. Next stop-on-failure blocker is not
+  yet localized.
 
 ## Recent Test Runs
+- 2026-05-21 18:57 CEST | pass | mode: release | command:
+  `cmake --build build-release --target PrimeStruct_semantics_tests -j 1`;
+  `cd build-release && ctest --output-on-failure -R '^PrimeStruct_primestruct_semantics_calls_flow_collections_calls_flow_collections_551_560$' --timeout 180`
+  | failures: none | notes: legacy SoA field-view coverage now expects
+  retired spelling or non-templated `/soa_vector` diagnostics where current
+  validation reaches those before escape/borrow checks.
+- 2026-05-21 18:57 CEST | fail | mode: release | command:
+  `cd build-release && ctest --output-on-failure --stop-on-failure --timeout 180 -I 351,1599`
+  | failures:
+  `PrimeStruct_primestruct_semantics_calls_flow_collections_calls_flow_collections_551_560`
+  | notes: legacy SoA field-view fixtures still expected escape/borrow-root
+  behavior after old `soa_vector` spelling, but current validation rejects
+  those sources earlier.
 - 2026-05-21 18:54 CEST | pass | mode: release | command:
   `cmake --build build-release --target PrimeStruct_semantics_tests -j 1`;
   `cd build-release && ctest --output-on-failure -R '^PrimeStruct_primestruct_semantics_calls_flow_collections_calls_flow_collections_541_550$' --timeout 180`
