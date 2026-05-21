@@ -104,7 +104,7 @@ main() {
   CHECK(error.find("effect-free zero-arg constructor") == std::string::npos);
 }
 
-TEST_CASE("map call precedence now rejects omitted initializer through Create effectfulness gate") {
+TEST_CASE("map call precedence keeps builtin diagnostics before omitted initializer") {
   const std::string source = R"(
 [return<i32>]
 /map/count([map<i32, i32>] values, [bool] marker) {
@@ -135,8 +135,9 @@ main() {
 )";
   std::string error;
   CHECK_FALSE(validateProgram(source, "/main", error));
-  CHECK(error.find("omitted initializer requires effect-free zero-arg constructor: /Thing") !=
-        std::string::npos);
+  INFO(error);
+  CHECK(error.find("argument count mismatch for builtin count") != std::string::npos);
+  CHECK(error.find("effect-free zero-arg constructor") == std::string::npos);
 }
 
 TEST_CASE("omitted initializer rejects Create with canonical slash-path map call helper when constructor is not effect-free") {

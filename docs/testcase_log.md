@@ -308,9 +308,31 @@
   The bindings pointers 21-30 shard was stabilized on 2026-05-21 15:55 CEST
   by retargeting canonical stdlib map binding coverage to ordinary stdlib-code
   behavior while keeping bare `map<i32>` arity coverage intact. Next
-  stop-on-failure blocker is not yet localized.
+  stop-on-failure blocker is
+  `PrimeStruct_primestruct_semantics_bindings_struct_defaults_bindings_struct_defaults_11_20`.
+  The bindings struct-defaults 11-20 shard is failing in a stale direct map
+  `count(items, true)` precedence expectation that still expects omitted
+  initializer effectfulness diagnostics before the current builtin-count
+  route. The bindings struct-defaults 11-20 shard was stabilized on
+  2026-05-21 16:01 CEST by retargeting the direct map count precedence fixture
+  to the current builtin-count diagnostic before omitted-initializer
+  effectfulness checks. Next stop-on-failure blocker is not yet localized.
 
 ## Recent Test Runs
+- 2026-05-21 16:01 CEST | pass | mode: release | command:
+  `cmake --build build-release --target PrimeStruct_semantics_tests -j 1`;
+  `cd build-release && ctest --output-on-failure -R '^PrimeStruct_primestruct_semantics_bindings_struct_defaults_bindings_struct_defaults_11_20$' --timeout 180`
+  | failures: none | notes: direct map count precedence coverage now expects
+  the current builtin-count diagnostic before omitted-initializer effect checks.
+- 2026-05-21 16:00 CEST | fail | mode: release | command:
+  `cd build-release && ctest --output-on-failure --stop-on-failure --timeout 180 -I 232,1599`;
+  `cd build-release && ./PrimeStruct_semantics_tests --test-case="map call precedence now rejects omitted initializer through Create effectfulness gate" -s`;
+  `cd build-release && ./primec --emit=ir --dump-stage ast-semantic --entry /main --default-effects io_out,io_err <same fixture source>`
+  | failures:
+  `PrimeStruct_primestruct_semantics_bindings_struct_defaults_bindings_struct_defaults_11_20`
+  | notes: stop-on-failure progressed past pointer binding shards; current
+  blocker is stale direct map count precedence coverage, and the CLI reports
+  `argument count mismatch for builtin count`.
 - 2026-05-21 15:55 CEST | pass | mode: release | command:
   `cmake --build build-release --target PrimeStruct_semantics_tests -j 1`;
   `cd build-release && ctest --output-on-failure -R '^PrimeStruct_primestruct_semantics_bindings_pointers_bindings_pointers_21_30$' --timeout 180`
