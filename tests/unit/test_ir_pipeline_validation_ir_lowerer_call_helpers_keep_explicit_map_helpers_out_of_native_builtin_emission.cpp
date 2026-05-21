@@ -2,7 +2,7 @@
 
 TEST_SUITE_BEGIN("primestruct.ir.pipeline.validation");
 
-TEST_CASE("ir lowerer call helpers infer forwarded map access targets") {
+TEST_CASE("ir lowerer call helpers infer forwarded collection pair scalar facts") {
   primec::Definition wrapDef;
   wrapDef.fullPath = "/pkg/wrapValues";
   primec::Expr param;
@@ -35,7 +35,7 @@ TEST_CASE("ir lowerer call helpers infer forwarded map access targets") {
   CHECK(info.isKeyValueTarget);
   CHECK(info.keyValueKeyKind == primec::ir_lowerer::LocalInfo::ValueKind::String);
   CHECK(info.keyValueValueKind == primec::ir_lowerer::LocalInfo::ValueKind::Int32);
-  CHECK(info.structTypeName.rfind("/std/collections/map/MapValue__", 0) == 0);
+  CHECK(info.structTypeName.empty());
 }
 
 TEST_CASE("ir lowerer call helpers keep explicit map helpers out of native builtin emission") {

@@ -42,9 +42,27 @@
   cases 71-80 shard was stabilized on 2026-05-21 11:56 CEST by retargeting
   canonical map `count` expectations to the current deferred path while keeping
   lookup helper fallback coverage on the emitting path. Next stop-on-failure
-  blocker is not yet localized.
+  blocker was `PrimeStruct_primestruct_ir_pipeline_validation_cases_111_120`.
+  The validation cases 111-120 shard was stabilized on 2026-05-21 12:02 CEST
+  by retargeting forwarded collection-pair coverage away from generated
+  map-value struct path synthesis. Next stop-on-failure blocker is not yet
+  localized.
 
 ## Recent Test Runs
+- 2026-05-21 12:02 CEST | pass | mode: release | command:
+  `cmake --build build-release --target PrimeStruct_backend_ir_tests -j 1`;
+  `cd build-release && ctest --output-on-failure -R '^PrimeStruct_primestruct_ir_pipeline_validation_cases_111_120$'`
+  | failures: none | notes: forwarded collection-pair target inference now
+  asserts key/value scalar facts without reviving generated map-value struct
+  path synthesis.
+- 2026-05-21 12:01 CEST | fail | mode: release | command:
+  `cmake --build build-release -j 1`;
+  `cd build-release && ctest --output-on-failure --stop-on-failure`
+  | failures: `PrimeStruct_primestruct_ir_pipeline_validation_cases_111_120`
+  | notes: stop-on-failure progressed past validation cases 71-80; current
+  blocker is stale forwarded map access target coverage expecting generated
+  `/std/collections/map/MapValue__*` struct names after the map path synthesis
+  removal.
 - 2026-05-21 11:57 CEST | pass | mode: release | command:
   `cmake --build build-release --target PrimeStruct_backend_ir_tests -j 1`;
   `cd build-release && ctest --output-on-failure -R '^PrimeStruct_primestruct_ir_pipeline_validation_cases_61_70$|^PrimeStruct_primestruct_ir_pipeline_validation_cases_71_80$'`
