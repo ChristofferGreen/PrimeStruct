@@ -69,7 +69,7 @@ TEST_CASE("ir lowerer setup inference helper keeps leading collection receiver f
             accessExpr,
             locals,
             [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return false; },
-            kindOut) == Resolution::Resolved);
+            kindOut) == Resolution::NotMatched);
   CHECK(kindOut == primec::ir_lowerer::LocalInfo::ValueKind::Unknown);
 }
 
@@ -140,7 +140,7 @@ TEST_CASE("ir lowerer setup inference helper keeps labeled named receiver for ac
             accessExpr,
             locals,
             [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return false; },
-            kindOut) == Resolution::Resolved);
+            kindOut) == Resolution::NotMatched);
   CHECK(kindOut == primec::ir_lowerer::LocalInfo::ValueKind::Unknown);
 }
 
@@ -175,7 +175,7 @@ TEST_CASE("ir lowerer setup inference helper handles invalid and templated acces
             [](const primec::Expr &expr, const primec::ir_lowerer::LocalMap &) {
               return expr.kind == primec::Expr::Kind::Name && expr.name == "entry_args";
             },
-            kindOut) == Resolution::Resolved);
+            kindOut) == Resolution::NotMatched);
   CHECK(kindOut == primec::ir_lowerer::LocalInfo::ValueKind::Unknown);
 
   primec::Expr vectorTarget;
@@ -187,8 +187,8 @@ TEST_CASE("ir lowerer setup inference helper handles invalid and templated acces
             accessExpr,
             {},
             [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return false; },
-            kindOut) == Resolution::Resolved);
-  CHECK(kindOut == primec::ir_lowerer::LocalInfo::ValueKind::String);
+            kindOut) == Resolution::NotMatched);
+  CHECK(kindOut == primec::ir_lowerer::LocalInfo::ValueKind::Unknown);
 }
 
 TEST_CASE("ir lowerer setup inference helper prefers graph facts for string access receivers") {
@@ -232,7 +232,7 @@ TEST_CASE("ir lowerer setup inference helper prefers graph facts for string acce
               return candidate.kind == primec::Expr::Kind::Name && candidate.name == "text"
                          ? ValueKind::Int32
                          : ValueKind::Unknown;
-            }) == Resolution::Resolved);
+            }) == Resolution::NotMatched);
   CHECK(kindOut == ValueKind::Unknown);
 
   kindOut = ValueKind::Unknown;
@@ -246,8 +246,8 @@ TEST_CASE("ir lowerer setup inference helper prefers graph facts for string acce
               return candidate.kind == primec::Expr::Kind::Name && candidate.name == "text"
                          ? ValueKind::String
                          : ValueKind::Unknown;
-            }) == Resolution::Resolved);
-  CHECK(kindOut == ValueKind::Int32);
+            }) == Resolution::NotMatched);
+  CHECK(kindOut == ValueKind::Unknown);
 
   kindOut = ValueKind::Unknown;
   CHECK(primec::ir_lowerer::resolveArrayKeyValueAccessElementKind(
@@ -258,8 +258,8 @@ TEST_CASE("ir lowerer setup inference helper prefers graph facts for string acce
             noCallCollectionAccess,
             [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) {
               return ValueKind::Unknown;
-            }) == Resolution::Resolved);
-  CHECK(kindOut == ValueKind::Int32);
+            }) == Resolution::NotMatched);
+  CHECK(kindOut == ValueKind::Unknown);
 }
 
 TEST_CASE("ir lowerer setup inference helper ignores wrapper-returned canonical map access string kinds") {

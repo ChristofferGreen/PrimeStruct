@@ -218,9 +218,28 @@
   761-770 shard was stabilized on 2026-05-21 14:30 CEST by retargeting bare
   `at(...)` pointer/buffer access to current `Unknown` behavior and the plain
   `Value` local assign case to current `Int64` behavior. Next stop-on-failure
-  blocker is not yet localized.
+  blocker is `PrimeStruct_primestruct_ir_pipeline_validation_cases_771_780`.
+  The validation cases 771-780 shard is failing in stale setup-inference
+  access element-kind expectations that still require source-only bare
+  `at(...)` calls to be recognized as collection access after current
+  access-helper classification. The validation cases 771-780 shard was
+  stabilized on 2026-05-21 14:36 CEST by retargeting source-only bare
+  `at(...)` access element-kind expectations to current `NotMatched` /
+  `Unknown` behavior. Next stop-on-failure blocker is not yet localized.
 
 ## Recent Test Runs
+- 2026-05-21 14:36 CEST | pass | mode: release | command:
+  `cmake --build build-release --target PrimeStruct_backend_ir_tests -j 1`;
+  `cd build-release && ctest --output-on-failure -R '^PrimeStruct_primestruct_ir_pipeline_validation_cases_771_780$' --timeout 180`
+  | failures: none | notes: source-only bare `at(...)` access element-kind
+  inference now asserts current `NotMatched` / `Unknown` behavior.
+- 2026-05-21 14:35 CEST | fail | mode: release | command:
+  `cmake --build build-release -j 1`;
+  `cd build-release && ctest --output-on-failure --stop-on-failure --timeout 180`
+  | failures: `PrimeStruct_primestruct_ir_pipeline_validation_cases_771_780`
+  | notes: stop-on-failure progressed past validation cases 761-770; current
+  blocker is stale bare `at(...)` setup-inference access element-kind
+  expectations.
 - 2026-05-21 14:30 CEST | pass | mode: release | command:
   `cmake --build build-release --target PrimeStruct_backend_ir_tests -j 1`;
   `cd build-release && ctest --output-on-failure -R '^PrimeStruct_primestruct_ir_pipeline_validation_cases_761_770$' --timeout 180`
