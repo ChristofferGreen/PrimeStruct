@@ -353,6 +353,19 @@ TEST_CASE("ir lowerer uninitialized type helpers resolve indexed args-pack point
   CHECK(out.pointerExpr->kind == primec::Expr::Kind::Call);
   CHECK(out.pointerExpr->name == "at");
   CHECK(out.typeInfo.valueKind == primec::ir_lowerer::LocalInfo::ValueKind::Int32);
+
+  derefExpr.args.front().name = "/array/at";
+  out = {};
+  resolved = false;
+  REQUIRE(primec::ir_lowerer::resolveUninitializedStorageAccess(
+      derefExpr, locals, findField, resolveNamespacePrefix, resolveTypeInfo, resolveSlot, out, resolved, error));
+  CHECK(resolved);
+  CHECK(out.location == primec::ir_lowerer::UninitializedStorageAccessInfo::Location::Indirect);
+  CHECK(out.pointer == &valuesIt->second);
+  REQUIRE(out.pointerExpr != nullptr);
+  CHECK(out.pointerExpr->kind == primec::Expr::Kind::Call);
+  CHECK(out.pointerExpr->name == "/array/at");
+  CHECK(out.typeInfo.valueKind == primec::ir_lowerer::LocalInfo::ValueKind::Int32);
 }
 
 TEST_CASE("ir lowerer uninitialized type helpers resolve pointer helper storage access") {

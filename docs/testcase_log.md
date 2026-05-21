@@ -3,7 +3,7 @@
 ## Current Known Failures
 - [ ] release gate baseline | mode: release | command:
   `./scripts/compile.sh --release` | first_seen: 2026-05-21 07:37 CEST |
-  last_seen: 2026-05-21 11:01 CEST | next:
+  last_seen: 2026-05-21 11:17 CEST | next:
   `cmake --build build-release -j 1`;
   `cd build-release && ctest --output-on-failure --stop-on-failure`
   | notes: full gate passed 77% with 365 failures out of 1599 tests.
@@ -18,10 +18,45 @@
   IR materialization instead of the still-unrelated VM unaligned-load runtime
   path. The variadic pointer-ref shard was stabilized on 2026-05-21 11:01
   CEST by retargeting stale borrowed-pack forwarding positives to
-  deterministic rejection coverage. Next stop-on-failure blocker after this
-  shard has not been localized.
+  deterministic rejection coverage. The variadic field-ref/map shard was
+  stabilized on 2026-05-21 11:17 CEST by keeping uninitialized pack storage
+  positives on explicit helper spelling, accepting semantic-product
+  `/array/at` in the uninitialized args-pack storage resolver, and retargeting
+  stale borrowed map/reference-field positives to deterministic rejections.
+  Next stop-on-failure blocker after this shard has not been localized.
 
 ## Recent Test Runs
+- 2026-05-21 11:17 CEST | pass | mode: release | command:
+  `cmake --build build-release --target PrimeStruct_backend_ir_tests -j 1`;
+  `cd build-release && ./PrimeStruct_backend_ir_tests --test-case="ir lowerer uninitialized type helpers resolve indexed args-pack pointer storage access" --no-skip`;
+  `cd build-release && ctest --output-on-failure -R '^PrimeStruct_primestruct_ir_pipeline_conversions_variadic_field_refs_and_maps$'`
+  | failures: none | notes: uninitialized args-pack storage resolution now
+  accepts semantic-product `/array/at` access spelling, the uninitialized
+  positive fixtures use explicit `at_unsafe(values, index)` helper spelling,
+  and stale borrowed map/reference-field positives now assert current
+  deterministic rejection diagnostics.
+- 2026-05-21 11:16 CEST | fail | mode: release | command:
+  `cmake --build build-release --target PrimeStruct_backend_ir_tests -j 1`;
+  `cd build-release && ./PrimeStruct_backend_ir_tests --test-case="ir lowerer rejects variadic borrowed map packs with indexed dereference lookup helpers,ir lowerer rejects variadic borrowed map packs with indexed helper inference" --no-skip`
+  | failures: two retargeted map rejection cases | notes: intentional
+  diagnostic probe pinned current errors as unknown `/std/collections/map/contains`
+  and unsupported `/std/collections/map/at_unsafe_ref` expression lowering.
+- 2026-05-21 11:15 CEST | fail | mode: release | command:
+  `cmake --build build-release --target PrimeStruct_backend_ir_tests -j 1`;
+  `cd build-release && ctest --output-on-failure -R '^PrimeStruct_primestruct_ir_pipeline_conversions_variadic_field_refs_and_maps$'`
+  | failures: `PrimeStruct_primestruct_ir_pipeline_conversions_variadic_field_refs_and_maps`
+  | notes: first retarget pass fixed stale map/reference-field expectations but
+  left two uninitialized pack positives failing on `init requires
+  uninitialized storage`, then on missing `/array/at` method-lowered
+  definitions.
+- 2026-05-21 11:11 CEST | fail | mode: release | command:
+  `cmake --build build-release -j 1`;
+  `cd build-release && ctest --output-on-failure --stop-on-failure`
+  | failures: `PrimeStruct_primestruct_ir_pipeline_conversions_variadic_field_refs_and_maps`
+  | notes: stop-on-failure localization progressed past the stabilized
+  pointer-ref shard; next blocker was seven stale field-ref/map cases covering
+  missing `/array/at`, uninitialized-pack storage metadata, retired
+  map/count_ref expression lowering, and stale helper-inference diagnostics.
 - 2026-05-21 11:01 CEST | pass | mode: release | command:
   `cmake --build build-release --target PrimeStruct_backend_ir_tests -j 1`;
   `cd build-release && ctest --output-on-failure -R '^PrimeStruct_primestruct_ir_pipeline_conversions_variadic_pointer_refs$'`

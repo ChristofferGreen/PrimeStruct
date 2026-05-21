@@ -57,6 +57,18 @@ bool isPointerRootPreservingStorageCall(const std::string &name) {
          leafName == "bufferReinterpretFromBytes";
 }
 
+bool isIndexedArgsPackAccessCall(const Expr &expr) {
+  if (expr.kind != Expr::Kind::Call || expr.args.size() != 2) {
+    return false;
+  }
+  std::string accessName;
+  if (getBuiltinArrayAccessName(expr, accessName)) {
+    return true;
+  }
+  const std::string leafName = normalizedLeafCallName(resolveScopedCallPath(expr));
+  return leafName == "at" || leafName == "at_unsafe";
+}
+
 } // namespace
 
 const Definition *resolveUninitializedReceiverHelperDefinition(
@@ -603,9 +615,8 @@ bool resolveUninitializedStorageAccessWithDefinitions(
             return true;
           }
 
-          std::string accessName;
-          if (getBuiltinArrayAccessName(candidate, accessName) &&
-              candidate.args.size() == 2 && candidate.args.front().kind == Expr::Kind::Name) {
+          if (isIndexedArgsPackAccessCall(candidate) &&
+              candidate.args.front().kind == Expr::Kind::Name) {
             auto pointerIt = localsIn.find(candidate.args.front().name);
             if (pointerIt != localsIn.end() &&
                 resolveUninitializedTypeInfoFromArgsPackPointerTargetLocal(pointerIt->second, typeInfoOut)) {
