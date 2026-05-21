@@ -186,7 +186,7 @@ TEST_CASE("ir lowerer setup type helper rejects explicit map access aliases thro
   CHECK(aliasAtUnsafeResolveCalls == 0);
 }
 
-TEST_CASE("ir lowerer setup type helper resolves reordered positional access call method return kinds") {
+TEST_CASE("ir lowerer setup type helper defers reordered positional bare access calls") {
   primec::Definition atUnsafeDef;
   atUnsafeDef.fullPath = "/map/at_unsafe";
 
@@ -226,7 +226,7 @@ TEST_CASE("ir lowerer setup type helper resolves reordered positional access cal
   int resolveCalls = 0;
   primec::ir_lowerer::LocalInfo::ValueKind kindOut = primec::ir_lowerer::LocalInfo::ValueKind::Unknown;
   bool methodResolved = false;
-  CHECK(primec::ir_lowerer::resolveCountMethodCallReturnKind(
+  CHECK_FALSE(primec::ir_lowerer::resolveCountMethodCallReturnKind(
       atUnsafeCall,
       locals,
       [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return false; },
@@ -245,12 +245,12 @@ TEST_CASE("ir lowerer setup type helper resolves reordered positional access cal
       false,
       kindOut,
       &methodResolved));
-  CHECK(methodResolved);
-  CHECK(kindOut == primec::ir_lowerer::LocalInfo::ValueKind::Int32);
-  CHECK(resolveCalls == 1);
+  CHECK_FALSE(methodResolved);
+  CHECK(kindOut == primec::ir_lowerer::LocalInfo::ValueKind::Unknown);
+  CHECK(resolveCalls == 0);
 }
 
-TEST_CASE("ir lowerer setup type helper prefers graph facts for reordered access return kinds") {
+TEST_CASE("ir lowerer setup type helper defers reordered bare access graph facts") {
   using ValueKind = primec::ir_lowerer::LocalInfo::ValueKind;
 
   primec::Definition atUnsafeDef;
@@ -300,7 +300,7 @@ TEST_CASE("ir lowerer setup type helper prefers graph facts for reordered access
   int resolveCalls = 0;
   ValueKind kindOut = ValueKind::Unknown;
   bool methodResolved = false;
-  CHECK(primec::ir_lowerer::resolveCountMethodCallReturnKind(
+  CHECK_FALSE(primec::ir_lowerer::resolveCountMethodCallReturnKind(
       atUnsafeCall,
       staleLocals,
       noCountClassifier,
@@ -325,13 +325,13 @@ TEST_CASE("ir lowerer setup type helper prefers graph facts for reordered access
                    ? ValueKind::Int64
                    : ValueKind::Unknown;
       }));
-  CHECK(methodResolved);
-  CHECK(kindOut == ValueKind::Int64);
-  CHECK(resolveCalls == 1);
+  CHECK_FALSE(methodResolved);
+  CHECK(kindOut == ValueKind::Unknown);
+  CHECK(resolveCalls == 0);
 
   kindOut = ValueKind::Unknown;
   methodResolved = false;
-  CHECK(primec::ir_lowerer::resolveCountMethodCallReturnKind(
+  CHECK_FALSE(primec::ir_lowerer::resolveCountMethodCallReturnKind(
       atUnsafeCall,
       staleLocals,
       noCountClassifier,
@@ -348,8 +348,8 @@ TEST_CASE("ir lowerer setup type helper prefers graph facts for reordered access
                    ? ValueKind::String
                    : ValueKind::Unknown;
       }));
-  CHECK(methodResolved);
-  CHECK(kindOut == ValueKind::Int32);
+  CHECK_FALSE(methodResolved);
+  CHECK(kindOut == ValueKind::Unknown);
 
   kindOut = ValueKind::Unknown;
   methodResolved = false;
@@ -372,7 +372,7 @@ TEST_CASE("ir lowerer setup type helper prefers graph facts for reordered access
   CHECK(kindOut == ValueKind::Unknown);
 }
 
-TEST_CASE("ir lowerer setup type helper keeps leading collection receiver for positional access calls") {
+TEST_CASE("ir lowerer setup type helper defers positional bare access calls") {
   primec::Definition atDef;
   atDef.fullPath = "/map/at";
 
@@ -435,10 +435,10 @@ TEST_CASE("ir lowerer setup type helper keeps leading collection receiver for po
       &methodResolved));
   CHECK_FALSE(methodResolved);
   CHECK(kindOut == primec::ir_lowerer::LocalInfo::ValueKind::Unknown);
-  CHECK(resolveCalls == 1);
+  CHECK(resolveCalls == 0);
 }
 
-TEST_CASE("ir lowerer setup type helper resolves reordered named access call method return kinds") {
+TEST_CASE("ir lowerer setup type helper defers reordered named bare access calls") {
   primec::Definition atUnsafeDef;
   atUnsafeDef.fullPath = "/map/at_unsafe";
 
@@ -479,7 +479,7 @@ TEST_CASE("ir lowerer setup type helper resolves reordered named access call met
   int resolveCalls = 0;
   primec::ir_lowerer::LocalInfo::ValueKind kindOut = primec::ir_lowerer::LocalInfo::ValueKind::Unknown;
   bool methodResolved = false;
-  CHECK(primec::ir_lowerer::resolveCountMethodCallReturnKind(
+  CHECK_FALSE(primec::ir_lowerer::resolveCountMethodCallReturnKind(
       atUnsafeCall,
       locals,
       [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return false; },
@@ -498,12 +498,12 @@ TEST_CASE("ir lowerer setup type helper resolves reordered named access call met
       false,
       kindOut,
       &methodResolved));
-  CHECK(methodResolved);
-  CHECK(kindOut == primec::ir_lowerer::LocalInfo::ValueKind::Int32);
-  CHECK(resolveCalls == 1);
+  CHECK_FALSE(methodResolved);
+  CHECK(kindOut == primec::ir_lowerer::LocalInfo::ValueKind::Unknown);
+  CHECK(resolveCalls == 0);
 }
 
-TEST_CASE("ir lowerer setup type helper keeps labeled named access receiver leading") {
+TEST_CASE("ir lowerer setup type helper defers labeled named bare access calls") {
   primec::Definition atDef;
   atDef.fullPath = "/map/at";
 
@@ -572,7 +572,7 @@ TEST_CASE("ir lowerer setup type helper keeps labeled named access receiver lead
       &methodResolved));
   CHECK_FALSE(methodResolved);
   CHECK(kindOut == primec::ir_lowerer::LocalInfo::ValueKind::Unknown);
-  CHECK(resolveCalls == 1);
+  CHECK(resolveCalls == 0);
 }
 
 TEST_CASE("ir lowerer setup type helper resolves canonical soa get/ref call method return kinds") {

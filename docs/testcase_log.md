@@ -268,10 +268,28 @@
   The validation cases 821-830 shard was stabilized on 2026-05-21 15:22 CEST
   by retargeting semantic map receiver `at(...).tag()` coverage to current
   semantic-fact-preferred resolution while keeping `tryAt(...).tag()` on the
-  current unknown-target path. Next stop-on-failure blocker is not yet
-  localized.
+  current unknown-target path. Next stop-on-failure blocker is
+  `PrimeStruct_primestruct_ir_pipeline_validation_cases_831_840`. The
+  validation cases 831-840 shard is failing in stale setup-type helper
+  expectations that still require bare map `at` / `at_unsafe` access calls to
+  route through map fallback method-definition resolution.
+  The validation cases 831-840 shard was stabilized on 2026-05-21 15:31 CEST
+  by retargeting bare map access helper coverage to current fail-closed
+  behavior with no fallback method-definition resolution. Next
+  stop-on-failure blocker is not yet localized.
 
 ## Recent Test Runs
+- 2026-05-21 15:31 CEST | pass | mode: release | command:
+  `cmake --build build-release --target PrimeStruct_backend_ir_tests -j 1`;
+  `cd build-release && ctest --output-on-failure -R '^PrimeStruct_primestruct_ir_pipeline_validation_cases_831_840$' --timeout 180`
+  | failures: none | notes: bare map `at` / `at_unsafe` return-kind fallback
+  expectations now assert current fail-closed behavior.
+- 2026-05-21 15:30 CEST | fail | mode: release | command:
+  `cmake --build build-release -j 1`;
+  `cd build-release && ctest --output-on-failure --stop-on-failure --timeout 180`
+  | failures: `PrimeStruct_primestruct_ir_pipeline_validation_cases_831_840`
+  | notes: stop-on-failure progressed past validation cases 821-830; current
+  blocker is stale bare map access fallback method-resolution coverage.
 - 2026-05-21 15:22 CEST | pass | mode: release | command:
   `cmake --build build-release --target PrimeStruct_backend_ir_tests -j 1`;
   `cd build-release && ctest --output-on-failure -R '^PrimeStruct_primestruct_ir_pipeline_validation_cases_821_830$' --timeout 180`
