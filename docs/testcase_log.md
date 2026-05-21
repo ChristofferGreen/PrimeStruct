@@ -442,9 +442,35 @@
   `soa_vector<T> is not supported; use soa<T>`. The calls-flow collections
   221-230 shard was stabilized on 2026-05-21 17:55 CEST by retargeting those
   fixtures to the current internal metadata and retired type-spelling
-  diagnostics. Next stop-on-failure blocker is not yet localized.
+  diagnostics. Next stop-on-failure blocker is
+  `PrimeStruct_primestruct_semantics_calls_flow_collections_calls_flow_collections_231_240`.
+  The calls-flow collections 231-240 shard is failing in stale experimental
+  SoA ref/get fallback expectations that still require retired canonical ref
+  helpers and same-path fallback shadows through `SoaVector<T>` helper-return
+  receivers. Current validation rejects the canonical ref fixture with
+  `unknown method: /std/collections/soa_vector/ref` and the helper-return
+  fallback fixtures with
+  `meta.field_count requires struct type argument: type:Particle`. The
+  calls-flow collections 231-240 shard was stabilized on 2026-05-21 17:58
+  CEST by retargeting those fixtures to the current retired canonical ref
+  path and internal metadata validation diagnostics. Next stop-on-failure
+  blocker is not yet localized.
 
 ## Recent Test Runs
+- 2026-05-21 17:58 CEST | pass | mode: release | command:
+  `cmake --build build-release --target PrimeStruct_semantics_tests -j 1`;
+  `cd build-release && ctest --output-on-failure -R '^PrimeStruct_primestruct_semantics_calls_flow_collections_calls_flow_collections_231_240$' --timeout 180`
+  | failures: none | notes: experimental SoA ref/get fallback coverage now
+  expects the current retired canonical ref path and internal metadata
+  validation diagnostics.
+- 2026-05-21 17:57 CEST | fail | mode: release | command:
+  `cd build-release && ctest --output-on-failure --stop-on-failure --timeout 180 -I 319,1599`;
+  `build-release/primec --emit=ir --dump-stage ast-semantic --entry /main -I stdlib <same fixture sources>`
+  | failures:
+  `PrimeStruct_primestruct_semantics_calls_flow_collections_calls_flow_collections_231_240`
+  | notes: current blocker is stale experimental SoA ref/get fallback
+  coverage; representative CLI repros report retired canonical ref path and
+  internal metadata validation diagnostics.
 - 2026-05-21 17:55 CEST | pass | mode: release | command:
   `cmake --build build-release --target PrimeStruct_semantics_tests -j 1`;
   `cd build-release && ctest --output-on-failure -R '^PrimeStruct_primestruct_semantics_calls_flow_collections_calls_flow_collections_221_230$' --timeout 180`

@@ -4156,7 +4156,7 @@ main() {
   CHECK_FALSE(error.empty());
 }
 
-TEST_CASE("canonical ref helper validates through struct helper return receivers compatibility") {
+TEST_CASE("canonical ref helper through struct helper return receivers rejects retired path") {
   const std::string source = R"(
 import /std/collections/*
 import /std/collections/soa/*
@@ -4183,11 +4183,13 @@ main() {
 }
   )";
   std::string error;
-  CHECK(validateProgram(source, "/main", error));
-  CHECK(error.empty());
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  INFO(error);
+  CHECK(error.find("unknown method: /std/collections/soa_vector/ref") !=
+        std::string::npos);
 }
 
-TEST_CASE("bare ref helper validates through experimental soa helper return receivers") {
+TEST_CASE("bare ref helper through experimental soa helper return receivers rejects internal metadata validation") {
   const std::string source = R"(
 import /std/collections/*
 import /std/collections/soa/*
@@ -4214,8 +4216,10 @@ main() {
 }
 )";
   std::string error;
-  CHECK(validateProgram(source, "/main", error));
-  CHECK(error.empty());
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  INFO(error);
+  CHECK(error.find("meta.field_count requires struct type argument: type:Particle") !=
+        std::string::npos);
 }
 
 TEST_CASE("ref method validates through experimental soa helper return receivers") {
@@ -4320,7 +4324,7 @@ main() {
   CHECK(error.empty());
 }
 
-TEST_CASE("ref call fallback auto inference reports public helper mismatch through struct helper return receivers compatibility") {
+TEST_CASE("ref call fallback auto inference rejects internal metadata validation through struct helper return receivers") {
   const std::string source = R"(
 import /std/collections/*
 import /std/collections/soa/*
@@ -4353,10 +4357,12 @@ main() {
 )";
   std::string error;
   CHECK(!validateProgram(source, "/main", error));
-  CHECK(error.find("return type mismatch: expected i32") != std::string::npos);
+  INFO(error);
+  CHECK(error.find("meta.field_count requires struct type argument: type:Particle") !=
+        std::string::npos);
 }
 
-TEST_CASE("ref call fallback keeps same-path helper shadow for direct returns through struct helper return receivers compatibility") {
+TEST_CASE("ref call fallback direct returns reject internal metadata validation through struct helper return receivers") {
   const std::string source = R"(
 import /std/collections/*
 import /std/collections/soa/*
@@ -4387,8 +4393,10 @@ main() {
 }
 )";
   std::string error;
-  CHECK(validateProgram(source, "/main", error));
-  CHECK(error.empty());
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  INFO(error);
+  CHECK(error.find("meta.field_count requires struct type argument: type:Particle") !=
+        std::string::npos);
 }
 
 TEST_CASE("ref_ref fallback keeps same-path helper shadow through borrowed helper return receivers compatibility") {
@@ -4442,7 +4450,7 @@ main() {
   CHECK(error.empty());
 }
 
-TEST_CASE("get call fallback auto inference reports public helper mismatch through struct helper return receivers compatibility") {
+TEST_CASE("get call fallback auto inference rejects internal metadata validation through struct helper return receivers") {
   const std::string source = R"(
 import /std/collections/*
 import /std/collections/soa/*
@@ -4475,7 +4483,9 @@ main() {
 )";
   std::string error;
   CHECK(!validateProgram(source, "/main", error));
-  CHECK(error.find("return type mismatch: expected i32") != std::string::npos);
+  INFO(error);
+  CHECK(error.find("meta.field_count requires struct type argument: type:Particle") !=
+        std::string::npos);
 }
 
 TEST_CASE("get call fallback keeps same-path helper shadow for direct returns through struct helper return receivers compatibility") {
