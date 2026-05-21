@@ -399,9 +399,29 @@
   wildcard import boundary. The calls-flow collections 131-140 shard was
   stabilized on 2026-05-21 16:42 CEST by retargeting those fixtures to the
   current direct wildcard import rejection. Next stop-on-failure blocker is
+  `PrimeStruct_primestruct_semantics_calls_flow_collections_calls_flow_collections_141_150`.
+  The calls-flow collections 141-150 shard is failing in stale experimental
+  SoA inline borrow and push/reserve expectations that still require direct
+  `/std/collections/soa/*` imports to validate or reach borrow-lifetime
+  diagnostics. Current validation rejects those fixtures at the direct
+  wildcard import boundary. The calls-flow collections 141-150 shard was
+  stabilized on 2026-05-21 17:43 CEST by retargeting those fixtures to the
+  current direct wildcard import rejection. Next stop-on-failure blocker is
   not yet localized.
 
 ## Recent Test Runs
+- 2026-05-21 17:43 CEST | pass | mode: release | command:
+  `cmake --build build-release --target PrimeStruct_semantics_tests -j 1`;
+  `cd build-release && ctest --output-on-failure -R '^PrimeStruct_primestruct_semantics_calls_flow_collections_calls_flow_collections_141_150$' --timeout 180`
+  | failures: none | notes: experimental SoA inline-borrow and push/reserve
+  coverage now expects the current direct wildcard import rejection.
+- 2026-05-21 16:44 CEST | fail | mode: release | command:
+  `cd build-release && ctest --output-on-failure --stop-on-failure --timeout 180 -I 310,1599`
+  | failures:
+  `PrimeStruct_primestruct_semantics_calls_flow_collections_calls_flow_collections_141_150`
+  | notes: current blocker is stale experimental SoA inline-borrow and
+  push/reserve coverage that now rejects at direct wildcard import
+  resolution.
 - 2026-05-21 16:42 CEST | pass | mode: release | command:
   `cmake --build build-release --target PrimeStruct_semantics_tests -j 1`;
   `cd build-release && ctest --output-on-failure -R '^PrimeStruct_primestruct_semantics_calls_flow_collections_calls_flow_collections_131_140$' --timeout 180`

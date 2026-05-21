@@ -1874,7 +1874,7 @@ main() {
         std::string::npos);
 }
 
-TEST_CASE("experimental soa_vector inline location borrowed helper-return ref blocks later push while live") {
+TEST_CASE("experimental soa_vector inline location borrowed helper-return ref rejects direct soa wildcard import") {
   const std::string source = R"(
 import /std/collections/soa/*
 import /std/collections/internal_soa_vector/*
@@ -1901,10 +1901,12 @@ main() {
 )";
   std::string error;
   CHECK_FALSE(validateProgram(source, "/main", error));
-  CHECK(error.find("borrowed binding: values") != std::string::npos);
+  INFO(error);
+  CHECK(error.find("unknown import path: /std/collections/soa/*") !=
+        std::string::npos);
 }
 
-TEST_CASE("experimental soa_vector stdlib push and reserve helpers validate on reflect-enabled struct elements") {
+TEST_CASE("experimental soa_vector stdlib push and reserve helpers reject direct soa wildcard import") {
   const std::string source = R"(
 import /std/collections/soa/*
 import /std/collections/internal_soa_vector/*
@@ -1924,11 +1926,13 @@ main() {
 }
 )";
   std::string error;
-  CHECK(validateProgram(source, "/main", error));
-  CHECK(error.empty());
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  INFO(error);
+  CHECK(error.find("unknown import path: /std/collections/soa/*") !=
+        std::string::npos);
 }
 
-TEST_CASE("experimental soa_vector stdlib push and reserve methods validate on reflect-enabled struct elements") {
+TEST_CASE("experimental soa_vector stdlib push and reserve methods reject direct soa wildcard import") {
   const std::string source = R"(
 import /std/collections/soa/*
 import /std/collections/internal_soa_vector/*
@@ -1948,8 +1952,10 @@ main() {
 }
 )";
   std::string error;
-  CHECK(validateProgram(source, "/main", error));
-  CHECK(error.empty());
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  INFO(error);
+  CHECK(error.find("unknown import path: /std/collections/soa/*") !=
+        std::string::npos);
 }
 
 TEST_CASE("experimental soa_vector stdlib single-field index syntax validates") {
