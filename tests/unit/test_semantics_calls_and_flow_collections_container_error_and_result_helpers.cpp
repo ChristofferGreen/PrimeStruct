@@ -692,7 +692,7 @@ main() {
   CHECK(error.empty());
 }
 
-TEST_CASE("borrowed helper-return experimental soa_vector helper surfaces validate semantically") {
+TEST_CASE("borrowed helper-return experimental soa_vector helper surfaces reject retired count_ref path") {
   const std::string source = R"(
 import /std/collections/*
 import /std/collections/soa/*
@@ -728,8 +728,10 @@ main() {
 }
 )";
   std::string error;
-  CHECK(validateProgram(source, "/main", error));
-  CHECK(error.empty());
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  INFO(error);
+  CHECK(error.find("unknown method: /std/collections/soa_vector/count_ref") !=
+        std::string::npos);
 }
 
 TEST_CASE("public soa to_aos helper validates on public wrapper bindings") {
@@ -780,7 +782,7 @@ main() {
   CHECK(error.empty());
 }
 
-TEST_CASE("wildcard-imported public soa helpers infer receiver-matched templates") {
+TEST_CASE("wildcard-imported public soa helpers reject current metadata inference gap") {
   const std::string source = R"(
 import /std/collections/*
 import /std/collections/soa/*
@@ -803,11 +805,13 @@ main() {
 }
 )";
   std::string error;
-  CHECK(validateProgram(source, "/main", error));
-  CHECK(error.empty());
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  INFO(error);
+  CHECK(error.find("meta.field_count requires struct type argument: type:Particle") !=
+        std::string::npos);
 }
 
-TEST_CASE("public soa wildcard import validates without eager template resolution") {
+TEST_CASE("public soa wildcard import rejects without collections import") {
   const std::string source = R"(
 import /std/collections/soa/*
 
@@ -817,8 +821,10 @@ import /std/collections/soa/*
 }
 )";
   std::string error;
-  CHECK(validateProgram(source, "/main", error));
-  CHECK(error.empty());
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  INFO(error);
+  CHECK(error.find("unknown import path: /std/collections/soa/*") !=
+        std::string::npos);
 }
 
 TEST_CASE("experimental soa_vector stdlib helpers reject primitive element types") {

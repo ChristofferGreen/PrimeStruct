@@ -359,9 +359,35 @@
   path resolution, or direct wildcard import rejection. The calls-flow
   collections 91-100 shard was stabilized on 2026-05-21 16:24 CEST by
   retargeting those old/internal SoA count-helper fixtures to the current
-  diagnostics. Next stop-on-failure blocker is not yet localized.
+  diagnostics. Next stop-on-failure blocker is
+  `PrimeStruct_primestruct_semantics_calls_flow_collections_calls_flow_collections_101_110`.
+  The calls-flow collections 101-110 shard is failing in stale borrowed and
+  wildcard SoA helper expectations that still require internal `SoaVector<T>`
+  and public `/std/collections/soa/*` wildcard imports to validate. Current
+  validation rejects those sources with retired `/std/collections/soa_vector`
+  method resolution, internal helper metadata validation, or direct wildcard
+  import rejection. The calls-flow collections 101-110 shard was stabilized
+  on 2026-05-21 16:27 CEST by retargeting borrowed/internal and wildcard SoA
+  helper fixtures to the current diagnostics. Next stop-on-failure blocker is
+  not yet localized.
 
 ## Recent Test Runs
+- 2026-05-21 16:27 CEST | pass | mode: release | command:
+  `cmake --build build-release --target PrimeStruct_semantics_tests -j 1`;
+  `cd build-release && ctest --output-on-failure -R '^PrimeStruct_primestruct_semantics_calls_flow_collections_calls_flow_collections_101_110$' --timeout 180`
+  | failures: none | notes: borrowed/internal and wildcard SoA helper
+  coverage now expects the current retired-method, metadata, and import
+  diagnostics.
+- 2026-05-21 16:27 CEST | fail | mode: release | command:
+  `cd build-release && ctest --output-on-failure --stop-on-failure --timeout 180 -I 306,1599`;
+  `cd build-release && ./primec --emit=ir --dump-stage ast-semantic --entry /main -I stdlib <same fixture sources>`
+  | failures:
+  `PrimeStruct_primestruct_semantics_calls_flow_collections_calls_flow_collections_101_110`
+  | notes: current blocker is stale borrowed/internal and wildcard SoA helper
+  coverage; repro diagnostics include
+  `unknown method: /std/collections/soa_vector/count_ref`,
+  `meta.field_count requires struct type argument: type:Particle`, and
+  `unknown import path: /std/collections/soa/*`.
 - 2026-05-21 16:24 CEST | pass | mode: release | command:
   `cmake --build build-release --target PrimeStruct_semantics_tests -j 1`;
   `cd build-release && ctest --output-on-failure -R '^PrimeStruct_primestruct_semantics_calls_flow_collections_calls_flow_collections_91_100$' --timeout 180`
