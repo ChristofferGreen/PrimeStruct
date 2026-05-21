@@ -4965,7 +4965,7 @@ main() {
   CHECK(error.find("/std/collections/soa_vector/push") != std::string::npos);
 }
 
-TEST_CASE("push helper call-form falls back to user helper on soa_vector binding") {
+TEST_CASE("push helper call-form rejects retired soa_vector user-helper parameter") {
   const std::string source = R"(
 Particle() {
   [i32] x{1i32}
@@ -4984,7 +4984,9 @@ main() {
 )";
   std::string error;
   CHECK_FALSE(validateProgram(source, "/main", error));
-  CHECK(error.find("argument type mismatch for /push parameter value") != std::string::npos);
+  INFO(error);
+  CHECK(error.find("soa_vector<T> is not supported; use soa<T>") !=
+        std::string::npos);
 }
 
 TEST_CASE("to_soa helper validates on vector binding") {
@@ -5041,7 +5043,7 @@ main() {
   CHECK(error.empty());
 }
 
-TEST_CASE("to_aos helper validates on soa_vector binding") {
+TEST_CASE("to_aos helper rejects retired soa_vector binding") {
   const std::string source = R"(
 Particle() {
   [i32] x{1i32}
@@ -5055,11 +5057,13 @@ main() {
 }
 )";
   std::string error;
-  CHECK(validateProgram(source, "/main", error));
-  CHECK(error.empty());
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  INFO(error);
+  CHECK(error.find("soa_vector<T> is not supported; use soa<T>") !=
+        std::string::npos);
 }
 
-TEST_CASE("explicit old-surface to_aos direct call rejects without same-path helper") {
+TEST_CASE("explicit old-surface to_aos direct call rejects retired soa_vector binding") {
   const std::string source = R"(
 Particle() {
   [i32] x{1i32}
@@ -5074,11 +5078,12 @@ main() {
 )";
   std::string error;
   CHECK_FALSE(validateProgram(source, "/main", error));
-  CHECK(error.find("unknown method: /to_aos") !=
+  INFO(error);
+  CHECK(error.find("soa_vector<T> is not supported; use soa<T>") !=
         std::string::npos);
 }
 
-TEST_CASE("to_aos method validates on soa_vector binding") {
+TEST_CASE("to_aos method rejects retired soa_vector binding") {
   const std::string source = R"(
 Particle() {
   [i32] x{1i32}
@@ -5092,11 +5097,13 @@ main() {
 }
 )";
   std::string error;
-  CHECK(validateProgram(source, "/main", error));
-  CHECK(error.empty());
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  INFO(error);
+  CHECK(error.find("soa_vector<T> is not supported; use soa<T>") !=
+        std::string::npos);
 }
 
-TEST_CASE("imported non-root to_aos forms validate on soa_vector binding") {
+TEST_CASE("imported non-root to_aos forms reject retired soa_vector binding") {
   const std::string source = R"(
 import /std/collections/*
 
@@ -5114,8 +5121,10 @@ main() {
 }
 )";
   std::string error;
-  CHECK(validateProgram(source, "/main", error));
-  CHECK(error.empty());
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  INFO(error);
+  CHECK(error.find("soa_vector<T> is not supported; use soa<T>") !=
+        std::string::npos);
 }
 
 TEST_CASE("vector return accepts local builtin vector binding") {
