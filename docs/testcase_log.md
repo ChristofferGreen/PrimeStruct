@@ -424,9 +424,31 @@
   `unknown method: /std/collections/soa_vector/count_ref`. The calls-flow
   collections 171-180 shard was stabilized on 2026-05-21 17:49 CEST by
   retargeting those fixtures to the current retired count-ref helper
-  diagnostic. Next stop-on-failure blocker is not yet localized.
+  diagnostic. Next stop-on-failure blocker is
+  `PrimeStruct_primestruct_semantics_calls_flow_collections_calls_flow_collections_211_220`.
+  The calls-flow collections 211-220 shard is failing in stale old-surface
+  `soa_vector<T>` get/get_ref positives that still expect the retired type
+  spelling to validate. Current validation rejects those fixtures with
+  `soa_vector<T> is not supported; use soa<T>`. The calls-flow collections
+  211-220 shard was stabilized on 2026-05-21 17:52 CEST by retargeting those
+  fixtures to the current retired type-spelling diagnostic. Next
+  stop-on-failure blocker is not yet localized.
 
 ## Recent Test Runs
+- 2026-05-21 17:52 CEST | pass | mode: release | command:
+  `cmake --build build-release --target PrimeStruct_semantics_tests -j 1`;
+  `cd build-release && ctest --output-on-failure -R '^PrimeStruct_primestruct_semantics_calls_flow_collections_calls_flow_collections_211_220$' --timeout 180`
+  | failures: none | notes: old-surface `soa_vector<T>` get/get_ref
+  coverage now expects the current retired type-spelling diagnostic.
+- 2026-05-21 17:51 CEST | fail | mode: release | command:
+  `cd build-release && ctest --output-on-failure --stop-on-failure --timeout 180 -I 314,1599`;
+  `build-release/primec --emit=ir --dump-stage ast-semantic --entry /main <same fixture sources>`;
+  `build-release/primec --emit=ir --dump-stage ast-semantic --entry /main -I stdlib <same imported fixture source>`
+  | failures:
+  `PrimeStruct_primestruct_semantics_calls_flow_collections_calls_flow_collections_211_220`
+  | notes: stop-on-failure passed shards 181-210, then found stale
+  old-surface `soa_vector<T>` get/get_ref positives; representative CLI
+  repros report `soa_vector<T> is not supported; use soa<T>`.
 - 2026-05-21 17:49 CEST | pass | mode: release | command:
   `cmake --build build-release --target PrimeStruct_semantics_tests -j 1`;
   `cd build-release && ctest --output-on-failure -R '^PrimeStruct_primestruct_semantics_calls_flow_collections_calls_flow_collections_171_180$' --timeout 180`
