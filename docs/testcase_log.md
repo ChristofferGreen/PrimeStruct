@@ -13,6 +13,12 @@
   after compilation.
 
 ## Recent Test Runs
+- 2026-05-21 06:41 CEST | pass | mode: release | command:
+  `cmake --build build-release --target PrimeStruct_compile_run_tests -j 1`;
+  `cd build-release && ./PrimeStruct_compile_run_tests --test-suite=primestruct.compile.run.native_backend.collections --source-file="*test_compile_run_native_backend_collections_shims_maps_b.cpp" --no-skip`
+  | failures: none | notes: Retargeted stale native `mapSingle` through
+  `mapSext` stdlib collection shim positive fixtures to deterministic
+  retired-helper rejection coverage.
 - 2026-05-21 06:38 CEST | pass | mode: release | command:
   `cmake --build build-release --target PrimeStruct_compile_run_tests -j 1`;
   `cd build-release && ./PrimeStruct_compile_run_tests --test-suite=primestruct.compile.run.native_backend.collections --source-file="*test_compile_run_native_backend_collections_map_literals_and_string_keys.cpp" --no-skip`
@@ -4852,6 +4858,12 @@
 - 2026-05-12 17:28 local | fail | mode: release | command: `./scripts/compile.sh --release` | failures: 146 CTest targets | notes: baseline after preflight checkpoint failed; stabilization blocks TODO work
 
 ## Resolved Failures
+- [x] native collections retired map shim constructors B slice | resolved:
+  2026-05-21 06:41 CEST | validating command: `cmake --build build-release --target PrimeStruct_compile_run_tests -j 1`;
+  `cd build-release && ./PrimeStruct_compile_run_tests --test-suite=primestruct.compile.run.native_backend.collections --source-file="*test_compile_run_native_backend_collections_shims_maps_b.cpp" --no-skip`
+  | notes: stale positive `mapSingle`/`mapPair`/`mapDouble`/`mapTriple`/
+  `mapQuad`/`mapQuint`/`mapSext` constructor fixtures now assert retired
+  unknown-target diagnostics.
 - [x] native collections map literal/string-key source-file slice | resolved:
   2026-05-21 06:38 CEST | validating command: `cmake --build build-release --target PrimeStruct_compile_run_tests -j 1`;
   `cd build-release && ./PrimeStruct_compile_run_tests --test-suite=primestruct.compile.run.native_backend.collections --source-file="*test_compile_run_native_backend_collections_map_literals_and_string_keys.cpp" --no-skip`
