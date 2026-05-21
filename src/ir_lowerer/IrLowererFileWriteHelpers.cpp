@@ -15,6 +15,22 @@ std::string resolveScopedExprPath(const Expr &expr) {
   return expr.name;
 }
 
+bool resolveBuiltinAccessName(const Expr &expr, std::string &accessNameOut) {
+  if (getBuiltinArrayAccessName(expr, accessNameOut)) {
+    return true;
+  }
+  std::string resolvedPath = resolveScopedExprPath(expr);
+  if (resolvedPath == "/at" || resolvedPath == "at") {
+    accessNameOut = "at";
+    return true;
+  }
+  if (resolvedPath == "/at_unsafe" || resolvedPath == "at_unsafe") {
+    accessNameOut = "at_unsafe";
+    return true;
+  }
+  return false;
+}
+
 } // namespace
 
 bool resolveFileOpenModeOpcode(const std::string &mode, IrOpcode &opcodeOut) {
@@ -487,7 +503,7 @@ FileHandleMethodCallEmitResult tryEmitFileHandleMethodCall(
           it->second.isFileHandle;
     } else if (targetExpr.kind == Expr::Kind::Call) {
       std::string accessName;
-      if (getBuiltinArrayAccessName(targetExpr, accessName) && targetExpr.args.size() == 2 &&
+      if (resolveBuiltinAccessName(targetExpr, accessName) && targetExpr.args.size() == 2 &&
           targetExpr.args.front().kind == Expr::Kind::Name) {
         auto it = localsIn.find(targetExpr.args.front().name);
         isIndirectFileHandle =
@@ -506,7 +522,7 @@ FileHandleMethodCallEmitResult tryEmitFileHandleMethodCall(
     emitInstruction(IrOpcode::StoreLocal, static_cast<uint64_t>(handleIndex));
   } else if (receiverExpr.kind == Expr::Kind::Call) {
     std::string accessName;
-    if (!getBuiltinArrayAccessName(receiverExpr, accessName) || receiverExpr.args.size() != 2 ||
+    if (!resolveBuiltinAccessName(receiverExpr, accessName) || receiverExpr.args.size() != 2 ||
         receiverExpr.args.front().kind != Expr::Kind::Name) {
       return FileHandleMethodCallEmitResult::NotMatched;
     }

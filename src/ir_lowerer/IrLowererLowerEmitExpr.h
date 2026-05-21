@@ -919,6 +919,28 @@
         if (resultWhyDispatchResult == ir_lowerer::ResultWhyDispatchEmitResult::Error) {
           return false;
         }
+        std::function<void(int32_t)> emitFileErrorWhyThunk;
+        if (emitFileErrorWhy) {
+          emitFileErrorWhyThunk = [&](int32_t errorLocal) {
+            (void)emitFileErrorWhy(errorLocal);
+          };
+        }
+        const auto fileErrorWhyCallResult = ir_lowerer::tryEmitFileErrorWhyCall(
+            expr,
+            localsIn,
+            [&](const Expr &valueExpr, const LocalMap &valueLocals) {
+              return emitExpr(valueExpr, valueLocals);
+            },
+            [&]() { return allocTempLocal(); },
+            [&](IrOpcode op, uint64_t imm) { function.instructions.push_back({op, imm}); },
+            emitFileErrorWhyThunk,
+            error);
+        if (fileErrorWhyCallResult == ir_lowerer::FileErrorWhyCallEmitResult::Emitted) {
+          return true;
+        }
+        if (fileErrorWhyCallResult == ir_lowerer::FileErrorWhyCallEmitResult::Error) {
+          return false;
+        }
         const auto fileConstructorResult = ir_lowerer::tryEmitFileConstructorCall(
             expr,
             localsIn,

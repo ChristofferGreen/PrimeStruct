@@ -87,7 +87,9 @@ TEST_CASE("ir lowerer materializes variadic File handle packs with indexed file 
 
   primec::IrLowerer lowerer;
   primec::IrModule module;
-  REQUIRE(lowerer.lower(program, &semanticProgram, "/main", {}, {}, module, error));
+  const bool lowered = lowerer.lower(program, &semanticProgram, "/main", {}, {}, module, error);
+  INFO(error);
+  REQUIRE(lowered);
   CHECK(error.empty());
 
   primec::Vm vm;

@@ -313,6 +313,22 @@ FileErrorWhyCallEmitResult tryEmitFileErrorWhyCall(
     }
     return candidate.name;
   };
+  auto resolveBuiltinAccessName = [&](const Expr &candidate,
+                                      std::string &accessNameOut) {
+    if (getBuiltinArrayAccessName(candidate, accessNameOut)) {
+      return true;
+    }
+    const std::string resolvedPath = resolveScopedExprPath(candidate);
+    if (resolvedPath == "/at" || resolvedPath == "at") {
+      accessNameOut = "at";
+      return true;
+    }
+    if (resolvedPath == "/at_unsafe" || resolvedPath == "at_unsafe") {
+      accessNameOut = "at_unsafe";
+      return true;
+    }
+    return false;
+  };
   auto requireFileErrorWhyEmitter = [&]() {
     if (emitFileErrorWhyFn) {
       return true;
@@ -383,7 +399,7 @@ FileErrorWhyCallEmitResult tryEmitFileErrorWhyCall(
       expr.args.front().kind == Expr::Kind::Call) {
     const Expr &receiver = expr.args.front();
     std::string accessName;
-    if (getBuiltinArrayAccessName(receiver, accessName) && receiver.args.size() == 2 &&
+    if (resolveBuiltinAccessName(receiver, accessName) && receiver.args.size() == 2 &&
         receiver.args.front().kind == Expr::Kind::Name) {
       auto it = localsIn.find(receiver.args.front().name);
       if (it != localsIn.end() && it->second.isArgsPack && it->second.isFileError &&
@@ -411,7 +427,7 @@ FileErrorWhyCallEmitResult tryEmitFileErrorWhyCall(
     }
     if (isSimpleCallName(receiver, "dereference") && receiver.args.size() == 1) {
       const Expr &target = receiver.args.front();
-      if (target.kind == Expr::Kind::Call && getBuiltinArrayAccessName(target, accessName) && target.args.size() == 2 &&
+      if (target.kind == Expr::Kind::Call && resolveBuiltinAccessName(target, accessName) && target.args.size() == 2 &&
           target.args.front().kind == Expr::Kind::Name) {
         auto it = localsIn.find(target.args.front().name);
         if (it != localsIn.end() && it->second.isArgsPack && it->second.isFileError &&

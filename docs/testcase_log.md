@@ -3,18 +3,43 @@
 ## Current Known Failures
 - [ ] release gate baseline | mode: release | command:
   `./scripts/compile.sh --release` | first_seen: 2026-05-21 07:37 CEST |
-  last_seen: 2026-05-21 10:06 CEST | next:
+  last_seen: 2026-05-21 10:19 CEST | next:
   `cmake --build build-release --target PrimeStruct_backend_ir_tests -j 1`;
-  `cd build-release && ctest --output-on-failure -R '^PrimeStruct_primestruct_ir_pipeline_conversions_variadic_file_errors$'`
+  `cd build-release && ctest --output-on-failure -R '^PrimeStruct_primestruct_ir_pipeline_conversions_variadic_collection_refs$'`
   | notes: full gate passed 77% with 365 failures out of 1599 tests.
   The `test_compile_run_emitters_canonical_map_helper_calls.cpp` cluster was
   stabilized on 2026-05-21 09:32 CEST; the stale SoA semantic-product next
   case, pointer array-reference shard, and stale direct map-literal IR fixture
-  were stabilized on 2026-05-21 10:06 CEST. The next localized blocker is the
-  variadic FileError shard, where four indexed `why` helper materialization
-  cases still fail during IR lowering.
+  were stabilized on 2026-05-21 10:06 CEST. The variadic FileError,
+  File-handle, and borrowed-vector shards were stabilized on 2026-05-21
+  10:19 CEST. The next localized blocker is the variadic collection-ref shard,
+  where `ir lowerer materializes variadic borrowed array packs with indexed
+  dereference access helpers` still fails during IR lowering.
 
 ## Recent Test Runs
+- 2026-05-21 10:19 CEST | fail | mode: release | command:
+  `cmake --build build-release -j 1`;
+  `cd build-release && ctest --output-on-failure --stop-on-failure`
+  | failures: `PrimeStruct_primestruct_ir_pipeline_conversions_variadic_collection_refs`
+  | notes: stop-on-failure localization progressed past the FileError,
+  File-handle, and borrowed-vector shards; next blocker is the borrowed array
+  pack indexed dereference access-helper case.
+- 2026-05-21 10:18 CEST | pass | mode: release | command:
+  `cmake --build build-release --target PrimeStruct_backend_ir_tests -j 1`;
+  `cd build-release && ctest --output-on-failure -R '^PrimeStruct_primestruct_ir_pipeline_conversions_variadic_borrowed_vectors$'`
+  | failures: none | notes: retargeted stale borrowed-vector/SoA/map
+  positive IR fixtures to current deterministic retired-surface behavior.
+- 2026-05-21 10:15 CEST | pass | mode: release | command:
+  `cmake --build build-release --target PrimeStruct_backend_ir_tests -j 1`;
+  `cd build-release && ctest --output-on-failure -R '^PrimeStruct_primestruct_ir_pipeline_conversions_variadic_file_handles$'`
+  | failures: none | notes: File handle method emission now recognizes rooted
+  `/at` and `/at_unsafe` indexed args-pack receivers.
+- 2026-05-21 10:13 CEST | pass | mode: release | command:
+  `cmake --build build-release --target PrimeStruct_backend_ir_tests -j 1`;
+  `cd build-release && ctest --output-on-failure -R '^PrimeStruct_primestruct_ir_pipeline_conversions_variadic_file_errors$'`
+  | failures: none | notes: expression emission now handles direct
+  `FileError.why` calls before generic semantic-product method lookup, and the
+  FileError helper recognizes rooted indexed args-pack access spelling.
 - 2026-05-21 10:06 CEST | fail | mode: release | command:
   `cmake --build build-release -j 1`;
   `cd build-release && ctest --output-on-failure --stop-on-failure`
@@ -4950,6 +4975,26 @@
 - 2026-05-12 17:28 local | fail | mode: release | command: `./scripts/compile.sh --release` | failures: 146 CTest targets | notes: baseline after preflight checkpoint failed; stabilization blocks TODO work
 
 ## Resolved Failures
+- [x] PrimeStruct_primestruct_ir_pipeline_conversions_variadic_file_errors |
+  resolved: 2026-05-21 10:13 CEST | validating command:
+  `cmake --build build-release --target PrimeStruct_backend_ir_tests -j 1`;
+  `cd build-release && ctest --output-on-failure -R '^PrimeStruct_primestruct_ir_pipeline_conversions_variadic_file_errors$'`
+  | notes: direct `FileError.why` expression emission now runs before generic
+  semantic-product method lookup, and rooted indexed args-pack access is
+  recognized by the FileError helper.
+- [x] PrimeStruct_primestruct_ir_pipeline_conversions_variadic_file_handles |
+  resolved: 2026-05-21 10:15 CEST | validating command:
+  `cmake --build build-release --target PrimeStruct_backend_ir_tests -j 1`;
+  `cd build-release && ctest --output-on-failure -R '^PrimeStruct_primestruct_ir_pipeline_conversions_variadic_file_handles$'`
+  | notes: File handle method emission now recognizes rooted `/at` and
+  `/at_unsafe` indexed args-pack receivers.
+- [x] PrimeStruct_primestruct_ir_pipeline_conversions_variadic_borrowed_vectors
+  | resolved: 2026-05-21 10:18 CEST | validating command:
+  `cmake --build build-release --target PrimeStruct_backend_ir_tests -j 1`;
+  `cd build-release && ctest --output-on-failure -R '^PrimeStruct_primestruct_ir_pipeline_conversions_variadic_borrowed_vectors$'`
+  | notes: stale positive borrowed-vector, SoA, and native-map IR fixtures now
+  lock current retired-surface rejection behavior instead of expecting C++
+  lowerer ownership.
 - [x] semantic product validates direct return method-like borrowed
   helper-return experimental soa_vector reads | resolved: 2026-05-21 09:55
   CEST | validating command: `cmake --build build-release --target PrimeStruct_semantics_tests -j 1`;

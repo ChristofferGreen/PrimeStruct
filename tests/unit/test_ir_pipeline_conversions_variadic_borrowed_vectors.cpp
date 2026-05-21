@@ -13,7 +13,7 @@
 
 TEST_SUITE_BEGIN("primestruct.ir.pipeline.conversions");
 
-TEST_CASE("ir lowerer materializes variadic borrowed vector packs with indexed dereference statement mutators") {
+TEST_CASE("retired variadic borrowed vector pack statement mutators no longer run as native vector") {
   const std::string source = R"(
 import /std/collections/*
 
@@ -87,12 +87,11 @@ main() {
   primec::Vm vm;
   uint64_t result = 0;
   INFO(error);
-  REQUIRE(vm.execute(module, result, error));
-  CHECK(error.empty());
-  CHECK(result == 25);
+  CHECK_FALSE(vm.execute(module, result, error));
+  CHECK(error.find("unaligned indirect address in IR") != std::string::npos);
 }
 
-TEST_CASE("ir lowerer materializes variadic borrowed soa_vector packs with indexed count methods compatibility") {
+TEST_CASE("retired variadic borrowed soa_vector count template compatibility rejects before lowering") {
   const std::string source = R"(
 import /std/collections/*
 import /std/collections/soa/*
@@ -172,24 +171,11 @@ main() {
   primec::SemanticProgram semanticProgram;
   std::string error;
   INFO(error);
-  REQUIRE(parseAndValidate(source, program, semanticProgram, error));
-  CHECK(error.empty());
-
-  primec::IrLowerer lowerer;
-  primec::IrModule module;
-  INFO(error);
-  REQUIRE(lowerer.lower(program, &semanticProgram, "/main", {}, {}, module, error));
-  CHECK(error.empty());
-
-  primec::Vm vm;
-  uint64_t result = 0;
-  INFO(error);
-  REQUIRE(vm.execute(module, result, error));
-  CHECK(error.empty());
-  CHECK(result == 27);
+  CHECK_FALSE(parseAndValidate(source, program, semanticProgram, error));
+  CHECK(error.find("count does not accept template arguments") != std::string::npos);
 }
 
-TEST_CASE("ir lowerer materializes variadic pointer soa_vector packs with indexed count methods compatibility") {
+TEST_CASE("retired variadic pointer soa_vector count template compatibility rejects before lowering") {
   const std::string source = R"(
 import /std/collections/*
 import /std/collections/soa/*
@@ -269,24 +255,11 @@ main() {
   primec::SemanticProgram semanticProgram;
   std::string error;
   INFO(error);
-  REQUIRE(parseAndValidate(source, program, semanticProgram, error));
-  CHECK(error.empty());
-
-  primec::IrLowerer lowerer;
-  primec::IrModule module;
-  INFO(error);
-  REQUIRE(lowerer.lower(program, &semanticProgram, "/main", {}, {}, module, error));
-  CHECK(error.empty());
-
-  primec::Vm vm;
-  uint64_t result = 0;
-  INFO(error);
-  REQUIRE(vm.execute(module, result, error));
-  CHECK(error.empty());
-  CHECK(result == 27);
+  CHECK_FALSE(parseAndValidate(source, program, semanticProgram, error));
+  CHECK(error.find("count does not accept template arguments") != std::string::npos);
 }
 
-TEST_CASE("ir lowerer materializes variadic soa_vector packs with indexed count methods compatibility") {
+TEST_CASE("retired variadic soa_vector count template compatibility rejects before lowering") {
   const std::string source = R"(
 import /std/collections/*
 import /std/collections/soa/*
@@ -357,21 +330,8 @@ main() {
   primec::SemanticProgram semanticProgram;
   std::string error;
   INFO(error);
-  REQUIRE(parseAndValidate(source, program, semanticProgram, error));
-  CHECK(error.empty());
-
-  primec::IrLowerer lowerer;
-  primec::IrModule module;
-  INFO(error);
-  REQUIRE(lowerer.lower(program, &semanticProgram, "/main", {}, {}, module, error));
-  CHECK(error.empty());
-
-  primec::Vm vm;
-  uint64_t result = 0;
-  INFO(error);
-  REQUIRE(vm.execute(module, result, error));
-  CHECK(error.empty());
-  CHECK(result == 27);
+  CHECK_FALSE(parseAndValidate(source, program, semanticProgram, error));
+  CHECK(error.find("count does not accept template arguments") != std::string::npos);
 }
 
 TEST_CASE("retired variadic map pack bare count rejects before lowering") {
@@ -413,7 +373,7 @@ main() {
   CHECK(error.find("unknown call target: count") != std::string::npos);
 }
 
-TEST_CASE("ir lowerer materializes variadic map packs with indexed contains helpers") {
+TEST_CASE("retired variadic map pack indexed contains helpers no longer lower as native map") {
   const std::string source = R"(
 import /std/collections/*
 
@@ -450,18 +410,11 @@ main() {
   primec::IrLowerer lowerer;
   primec::IrModule module;
   INFO(error);
-  REQUIRE(lowerer.lower(program, &semanticProgram, "/main", {}, {}, module, error));
-  CHECK(error.empty());
-
-  primec::Vm vm;
-  uint64_t result = 0;
-  INFO(error);
-  REQUIRE(vm.execute(module, result, error));
-  CHECK(error.empty());
-  CHECK(result == 52);
+  CHECK_FALSE(lowerer.lower(program, &semanticProgram, "/main", {}, {}, module, error));
+  CHECK(error.find("call=/std/collections/map/map") != std::string::npos);
 }
 
-TEST_CASE("ir lowerer materializes variadic map packs with indexed tryAt inference") {
+TEST_CASE("retired variadic map pack indexed tryAt inference no longer lowers as native map") {
   const std::string source = R"(
 import /std/collections/*
 
@@ -506,15 +459,8 @@ main() {
   primec::IrLowerer lowerer;
   primec::IrModule module;
   INFO(error);
-  REQUIRE(lowerer.lower(program, &semanticProgram, "/main", {}, {}, module, error));
-  CHECK(error.empty());
-
-  primec::Vm vm;
-  uint64_t result = 0;
-  INFO(error);
-  REQUIRE(vm.execute(module, result, error));
-  CHECK(error.empty());
-  CHECK(result == 60);
+  CHECK_FALSE(lowerer.lower(program, &semanticProgram, "/main", {}, {}, module, error));
+  CHECK(error.find("call=/std/collections/map/map") != std::string::npos);
 }
 
 TEST_CASE("retired variadic map pack canonical count no longer lowers as native map") {
@@ -563,7 +509,7 @@ main() {
   primec::IrModule module;
   INFO(error);
   CHECK_FALSE(lowerer.lower(program, &semanticProgram, "/main", {}, {}, module, error));
-  CHECK(error.find("call=/at") != std::string::npos);
+  CHECK(error.find("call=/std/collections/map/map") != std::string::npos);
 }
 
 TEST_SUITE_END();

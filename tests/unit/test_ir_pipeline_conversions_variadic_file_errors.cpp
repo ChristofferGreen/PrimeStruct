@@ -55,7 +55,9 @@ TEST_CASE("ir lowerer materializes variadic FileError packs with indexed why met
 
   primec::IrLowerer lowerer;
   primec::IrModule module;
-  REQUIRE(lowerer.lower(program, &semanticProgram, "/main", {}, {}, module, error));
+  const bool lowered = lowerer.lower(program, &semanticProgram, "/main", {}, {}, module, error);
+  INFO(error);
+  REQUIRE(lowered);
   CHECK(error.empty());
 
   primec::Vm vm;
@@ -114,7 +116,9 @@ TEST_CASE("ir lowerer materializes variadic borrowed FileError packs with indexe
 
   primec::IrLowerer lowerer;
   primec::IrModule module;
-  REQUIRE(lowerer.lower(program, &semanticProgram, "/main", {}, {}, module, error));
+  const bool lowered = lowerer.lower(program, &semanticProgram, "/main", {}, {}, module, error);
+  INFO(error);
+  REQUIRE(lowered);
   CHECK(error.empty());
 
   primec::Vm vm;
@@ -221,7 +225,9 @@ TEST_CASE("ir lowerer materializes variadic pointer FileError packs with indexed
 
   primec::IrLowerer lowerer;
   primec::IrModule module;
-  REQUIRE(lowerer.lower(program, &semanticProgram, "/main", {}, {}, module, error));
+  const bool lowered = lowerer.lower(program, &semanticProgram, "/main", {}, {}, module, error);
+  INFO(error);
+  REQUIRE(lowered);
   CHECK(error.empty());
 
   primec::Vm vm;
@@ -318,7 +324,9 @@ TEST_CASE("ir lowerer materializes variadic wrapped FileError packs with named f
 
   primec::IrLowerer lowerer;
   primec::IrModule module;
-  REQUIRE(lowerer.lower(program, &semanticProgram, "/main", {}, {}, module, error));
+  const bool lowered = lowerer.lower(program, &semanticProgram, "/main", {}, {}, module, error);
+  INFO(error);
+  REQUIRE(lowered);
   CHECK(error.empty());
 
   primec::Vm vm;
