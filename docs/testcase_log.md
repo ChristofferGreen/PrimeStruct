@@ -300,10 +300,28 @@
   soa<T>` rejection.
   The bindings core 11-20 shard was stabilized on 2026-05-21 15:46 CEST by
   retargeting `soa_vector<T>` binding coverage to the current unsupported
-  compatibility-spelling diagnostic. Next stop-on-failure blocker is not yet
-  localized.
+  compatibility-spelling diagnostic. Next stop-on-failure blocker is
+  `PrimeStruct_primestruct_semantics_bindings_pointers_bindings_pointers_21_30`.
+  The bindings pointers 21-30 shard is failing in stale canonical
+  `/std/collections/map<i32>` binding arity coverage that still expects C++
+  semantics to treat the public stdlib map path as compiler-owned map syntax.
+  The bindings pointers 21-30 shard was stabilized on 2026-05-21 15:55 CEST
+  by retargeting canonical stdlib map binding coverage to ordinary stdlib-code
+  behavior while keeping bare `map<i32>` arity coverage intact. Next
+  stop-on-failure blocker is not yet localized.
 
 ## Recent Test Runs
+- 2026-05-21 15:55 CEST | pass | mode: release | command:
+  `cmake --build build-release --target PrimeStruct_semantics_tests -j 1`;
+  `cd build-release && ctest --output-on-failure -R '^PrimeStruct_primestruct_semantics_bindings_pointers_bindings_pointers_21_30$' --timeout 180`
+  | failures: none | notes: canonical stdlib map binding coverage now locks
+  ordinary stdlib-code behavior while bare `map<i32>` arity coverage remains.
+- 2026-05-21 15:50 CEST | fail | mode: release | command:
+  `cd build-release && ctest --output-on-failure --stop-on-failure --timeout 180`
+  | failures:
+  `PrimeStruct_primestruct_semantics_bindings_pointers_bindings_pointers_21_30`
+  | notes: stop-on-failure progressed past the previous SoA binding blocker;
+  current blocker is stale canonical stdlib map arity coverage.
 - 2026-05-21 15:46 CEST | pass | mode: release | command:
   `cmake --build build-release --target PrimeStruct_semantics_tests -j 1`;
   `cd build-release && ctest --output-on-failure -R '^PrimeStruct_primestruct_semantics_bindings_core_bindings_core_11_20$' --timeout 180`

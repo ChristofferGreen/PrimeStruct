@@ -393,7 +393,7 @@ main() {
   CHECK(error.find("map requires exactly two template arguments") != std::string::npos);
 }
 
-TEST_CASE("binding canonical map type requires two template arguments") {
+TEST_CASE("binding canonical map type stays ordinary stdlib code") {
   const std::string source = R"(
 [return<int>]
 main() {
@@ -402,8 +402,8 @@ main() {
 }
 )";
   std::string error;
-  CHECK_FALSE(validateProgram(source, "/main", error));
-  CHECK(error.find("map requires exactly two template arguments") != std::string::npos);
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
 }
 
 TEST_CASE("pointer bindings require template arguments") {
