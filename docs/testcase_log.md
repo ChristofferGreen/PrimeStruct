@@ -454,9 +454,37 @@
   calls-flow collections 231-240 shard was stabilized on 2026-05-21 17:58
   CEST by retargeting those fixtures to the current retired canonical ref
   path and internal metadata validation diagnostics. Next stop-on-failure
-  blocker is not yet localized.
+  blocker is
+  `PrimeStruct_primestruct_semantics_calls_flow_collections_calls_flow_collections_241_250`.
+  The calls-flow collections 241-250 shard is failing in stale experimental
+  SoA helper-shadow and mutator expectations. Current validation rejects
+  helper-return fallback and direct `SoaVector<T>` mutator fixtures with
+  `meta.field_count requires struct type argument: type:Particle`, rejects
+  lowercase `soa_vector<T>` mutator fixtures with
+  `soa_vector<T> is not supported; use soa<T>`, and now accepts the
+  method-like same-path helper-shadow fixture without the old duplicate
+  canonical reserve diagnostic. The calls-flow collections 241-250 shard was
+  stabilized on 2026-05-21 18:01 CEST by retargeting those fixtures to the
+  current metadata, retired type-spelling, and accepted helper-shadow
+  behavior. Next stop-on-failure blocker is not yet localized.
 
 ## Recent Test Runs
+- 2026-05-21 18:01 CEST | pass | mode: release | command:
+  `cmake --build build-release --target PrimeStruct_semantics_tests -j 1`;
+  `cd build-release && ctest --output-on-failure -R '^PrimeStruct_primestruct_semantics_calls_flow_collections_calls_flow_collections_241_250$' --timeout 180`
+  | failures: none | notes: experimental SoA helper-shadow and mutator
+  coverage now expects the current metadata, retired type-spelling, and
+  accepted helper-shadow behavior.
+- 2026-05-21 18:00 CEST | fail | mode: release | command:
+  `cd build-release && ctest --output-on-failure --stop-on-failure --timeout 180 -I 320,1599`;
+  `build-release/primec --emit=ir --dump-stage ast-semantic --entry /main -I stdlib <same helper-shadow and direct mutator fixtures>`;
+  `build-release/primec --emit=ir --dump-stage ast-semantic --entry /main <same retired mutator fixture>`
+  | failures:
+  `PrimeStruct_primestruct_semantics_calls_flow_collections_calls_flow_collections_241_250`
+  | notes: current blocker is stale experimental SoA helper-shadow and
+  mutator coverage; representative CLI repros report internal metadata
+  validation and retired type-spelling diagnostics, while the duplicate
+  reserve diagnostic no longer fires.
 - 2026-05-21 17:58 CEST | pass | mode: release | command:
   `cmake --build build-release --target PrimeStruct_semantics_tests -j 1`;
   `cd build-release && ctest --output-on-failure -R '^PrimeStruct_primestruct_semantics_calls_flow_collections_calls_flow_collections_231_240$' --timeout 180`

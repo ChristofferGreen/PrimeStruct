@@ -4488,7 +4488,7 @@ main() {
         std::string::npos);
 }
 
-TEST_CASE("get call fallback keeps same-path helper shadow for direct returns through struct helper return receivers compatibility") {
+TEST_CASE("get call fallback direct returns reject internal metadata validation through struct helper return receivers") {
   const std::string source = R"(
 import /std/collections/*
 import /std/collections/soa/*
@@ -4519,11 +4519,13 @@ main() {
 }
 )";
   std::string error;
-  CHECK(validateProgram(source, "/main", error));
-  CHECK(error.empty());
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  INFO(error);
+  CHECK(error.find("meta.field_count requires struct type argument: type:Particle") !=
+        std::string::npos);
 }
 
-TEST_CASE("count call fallback keeps same-path helper shadow for auto inference through struct helper return receivers compatibility") {
+TEST_CASE("count call fallback auto inference rejects internal metadata validation through struct helper return receivers") {
   const std::string source = R"(
 import /std/collections/*
 import /std/collections/soa/*
@@ -4555,11 +4557,13 @@ main() {
 }
 )";
   std::string error;
-  CHECK(validateProgram(source, "/main", error));
-  CHECK(error.empty());
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  INFO(error);
+  CHECK(error.find("meta.field_count requires struct type argument: type:Particle") !=
+        std::string::npos);
 }
 
-TEST_CASE("count call fallback keeps same-path helper shadow for direct returns through struct helper return receivers compatibility") {
+TEST_CASE("count call fallback direct returns reject internal metadata validation through struct helper return receivers") {
   const std::string source = R"(
 import /std/collections/*
 import /std/collections/soa/*
@@ -4590,11 +4594,13 @@ main() {
 }
 )";
   std::string error;
-  CHECK(validateProgram(source, "/main", error));
-  CHECK(error.empty());
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  INFO(error);
+  CHECK(error.find("meta.field_count requires struct type argument: type:Particle") !=
+        std::string::npos);
 }
 
-TEST_CASE("push helper shadow works for helper-return bare and method expressions compatibility") {
+TEST_CASE("push helper shadow through helper-return expressions rejects internal metadata validation") {
   const std::string source = R"(
 import /std/collections/*
 import /std/collections/soa/*
@@ -4626,11 +4632,13 @@ main() {
 }
 )";
   std::string error;
-  CHECK(validateProgram(source, "/main", error));
-  CHECK(error.empty());
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  INFO(error);
+  CHECK(error.find("meta.field_count requires struct type argument: type:Particle") !=
+        std::string::npos);
 }
 
-TEST_CASE("reserve helper shadow works for helper-return bare and method expressions compatibility") {
+TEST_CASE("reserve helper shadow through helper-return expressions rejects internal metadata validation") {
   const std::string source = R"(
 import /std/collections/*
 import /std/collections/soa/*
@@ -4661,8 +4669,10 @@ main() {
 }
 )";
   std::string error;
-  CHECK(validateProgram(source, "/main", error));
-  CHECK(error.empty());
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  INFO(error);
+  CHECK(error.find("meta.field_count requires struct type argument: type:Particle") !=
+        std::string::npos);
 }
 
 TEST_CASE("explicit same-path soa_vector helper shadows work for helper-return direct calls compatibility") {
@@ -4731,7 +4741,7 @@ main() {
   CHECK(error.empty());
 }
 
-TEST_CASE("method-like same-path soa_vector helper shadows reject duplicate canonical reserve definitions compatibility") {
+TEST_CASE("method-like same-path soa_vector helper shadows validate without duplicate canonical reserve diagnostics") {
   const std::string source = R"(
 import /std/collections/*
 import /std/collections/soa/*
@@ -4846,12 +4856,11 @@ main() {
   }
 )";
   std::string error;
-  CHECK_FALSE(validateProgram(source, "/main", error));
-  CHECK(error.find("duplicate definition: /std/collections/soa_vector/reserve") !=
-        std::string::npos);
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
 }
 
-TEST_CASE("push and reserve bare and method forms validate on experimental soa_vector bindings") {
+TEST_CASE("push and reserve bare and method forms reject internal metadata validation on experimental soa_vector bindings") {
   const std::string source = R"(
 import /std/collections/*
 import /std/collections/soa/*
@@ -4873,11 +4882,13 @@ main() {
 }
 )";
   std::string error;
-  CHECK(validateProgram(source, "/main", error));
-  CHECK(error.empty());
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  INFO(error);
+  CHECK(error.find("meta.field_count requires struct type argument: type:Particle") !=
+        std::string::npos);
 }
 
-TEST_CASE("explicit soa_vector mutators validate on builtin soa_vector binding") {
+TEST_CASE("explicit soa_vector mutators reject retired builtin soa_vector binding") {
   const std::string source = R"(
 [struct reflect]
 Particle() {
@@ -4894,11 +4905,13 @@ main() {
 }
 )";
   std::string error;
-  CHECK(validateProgram(source, "/main", error));
-  CHECK(error.empty());
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  INFO(error);
+  CHECK(error.find("soa_vector<T> is not supported; use soa<T>") !=
+        std::string::npos);
 }
 
-TEST_CASE("imported soa_vector mutators validate on builtin soa_vector binding") {
+TEST_CASE("imported soa_vector mutators reject retired builtin soa_vector binding") {
   const std::string source = R"(
 import /std/collections/*
 
@@ -4918,8 +4931,10 @@ main() {
 }
 )";
   std::string error;
-  CHECK(validateProgram(source, "/main", error));
-  CHECK(error.empty());
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  INFO(error);
+  CHECK(error.find("soa_vector<T> is not supported; use soa<T>") !=
+        std::string::npos);
 }
 
 TEST_CASE("explicit soa_vector reserve keeps canonical reject on vector target") {
