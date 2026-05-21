@@ -6,12 +6,19 @@
   passed, 105 failed, and 3539 skipped before the hanging map string-valued
   literal executable was interrupted. The failures are dominated by stale SoA
   public-surface coverage and older map-literal/insert compatibility fixtures;
-  the focused native MapValue cutover cases listed below pass. The old
-  string-valued map runtime fixture has since been retargeted to compile-only
-  coverage because native runtime string-valued maps still hang after
-  compilation.
+  the focused native MapValue cutover cases listed below pass, and the
+  map-literal/string-key source-file slice was stabilized on 2026-05-21. The
+  old string-valued map runtime fixture has since been retargeted to
+  compile-only coverage because native runtime string-valued maps still hang
+  after compilation.
 
 ## Recent Test Runs
+- 2026-05-21 06:38 CEST | pass | mode: release | command:
+  `cmake --build build-release --target PrimeStruct_compile_run_tests -j 1`;
+  `cd build-release && ./PrimeStruct_compile_run_tests --test-suite=primestruct.compile.run.native_backend.collections --source-file="*test_compile_run_native_backend_collections_map_literals_and_string_keys.cpp" --no-skip`
+  | failures: none | notes: Retargeted stale positive native map
+  constructor/indexing expression fixtures in the map-literal and string-key
+  source file to deterministic native reject coverage.
 - 2026-05-21 00:31 CEST | pass | mode: release | command:
   `cmake --build build-release --target PrimeStruct_compile_run_tests -j 1`;
   `cd build-release && ./PrimeStruct_compile_run_tests --test-suite=primestruct.compile.run.native_backend.core --order-by=file --source-file="*test_compile_run_native_backend_core_*.cpp" --first=1 --last=10 --no-skip`
@@ -4845,6 +4852,13 @@
 - 2026-05-12 17:28 local | fail | mode: release | command: `./scripts/compile.sh --release` | failures: 146 CTest targets | notes: baseline after preflight checkpoint failed; stabilization blocks TODO work
 
 ## Resolved Failures
+- [x] native collections map literal/string-key source-file slice | resolved:
+  2026-05-21 06:38 CEST | validating command: `cmake --build build-release --target PrimeStruct_compile_run_tests -j 1`;
+  `cd build-release && ./PrimeStruct_compile_run_tests --test-suite=primestruct.compile.run.native_backend.collections --source-file="*test_compile_run_native_backend_collections_map_literals_and_string_keys.cpp" --no-skip`
+  | notes: stale positive native map constructor/indexing expression fixtures
+  now assert deterministic native rejects while the non-expression map helper,
+  typed binding, diagnostic, and compile-only string-valued map cases still
+  pass.
 - [x] native-core variadic args first shard | resolved: 2026-05-21 00:31
   CEST | validating command: `cmake --build build-release --target PrimeStruct_compile_run_tests -j 1`;
   `cd build-release && ./PrimeStruct_compile_run_tests --test-suite=primestruct.compile.run.native_backend.core --order-by=file --source-file="*test_compile_run_native_backend_core_*.cpp" --first=1 --last=10 --no-skip`

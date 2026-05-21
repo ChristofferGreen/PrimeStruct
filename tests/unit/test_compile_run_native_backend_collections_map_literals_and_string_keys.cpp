@@ -7,9 +7,28 @@
 #include "test_compile_run_native_backend_collections_helpers.h"
 
 #if PRIMESTRUCT_NATIVE_COLLECTIONS_ENABLED
+namespace {
+
+void expectNativeCompileReject(const std::string &srcPath,
+                               const std::string &errName,
+                               const std::string &expected,
+                               const std::string &alsoExpected = "") {
+  const std::string errPath = (testScratchPath("") / errName).string();
+  const std::string compileCmd =
+      "./primec --emit=native " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
+  CHECK(runCommand(compileCmd) == 2);
+  const std::string err = readFile(errPath);
+  CHECK(err.find(expected) != std::string::npos);
+  if (!alsoExpected.empty()) {
+    CHECK(err.find(alsoExpected) != std::string::npos);
+  }
+}
+
+} // namespace
+
 TEST_SUITE_BEGIN("primestruct.compile.run.native_backend.collections");
 
-TEST_CASE("compiles and runs native collection syntax parity for call and method forms") {
+TEST_CASE("rejects native collection syntax parity expression access forms") {
   const std::string source = R"(
 import /std/collections/*
 
@@ -29,12 +48,8 @@ main() {
 }
 )";
   const std::string srcPath = writeTemp("compile_native_collection_syntax_parity.prime", source);
-  const std::string exePath =
-      (testScratchPath("") / "primec_native_collection_syntax_parity_exe").string();
-
-  const std::string compileCmd = "./primec --emit=native " + srcPath + " -o " + exePath + " --entry /main";
-  CHECK(runCommand(compileCmd) == 0);
-  CHECK(runCommand(exePath) == 166);
+  expectNativeCompileReject(srcPath, "primec_native_collection_syntax_parity.err",
+                            "native backend only supports arithmetic/comparison", "call=/at");
 }
 
 TEST_CASE("compiles and runs native vector literal count helper") {
@@ -55,7 +70,7 @@ main() {
   CHECK(runCommand(exePath) == 3);
 }
 
-TEST_CASE("compiles and runs native collection constructor parity") {
+TEST_CASE("rejects native collection constructor parity expression access") {
   const std::string source = R"(
 import /std/collections/*
 
@@ -68,15 +83,11 @@ main() {
 }
 )";
   const std::string srcPath = writeTemp("compile_native_collection_brackets.prime", source);
-  const std::string exePath =
-      (testScratchPath("") / "primec_native_collection_brackets_exe").string();
-
-  const std::string compileCmd = "./primec --emit=native " + srcPath + " -o " + exePath + " --entry /main";
-  CHECK(runCommand(compileCmd) == 0);
-  CHECK(runCommand(exePath) == 12);
+  expectNativeCompileReject(srcPath, "primec_native_collection_brackets.err",
+                            "native backend only supports arithmetic/comparison", "call=/at");
 }
 
-TEST_CASE("compiles and runs native map constructor calls") {
+TEST_CASE("rejects native map constructor call access expressions") {
   const std::string source = R"(
 import /std/collections/*
 
@@ -86,11 +97,8 @@ main() {
 }
 )";
   const std::string srcPath = writeTemp("compile_native_map_literal.prime", source);
-  const std::string exePath = (testScratchPath("") / "primec_native_map_literal_exe").string();
-
-  const std::string compileCmd = "./primec --emit=native " + srcPath + " -o " + exePath + " --entry /main";
-  CHECK(runCommand(compileCmd) == 0);
-  CHECK(runCommand(exePath) == 4);
+  expectNativeCompileReject(srcPath, "primec_native_map_literal.err",
+                            "missing semantic-product method-call target: at");
 }
 
 TEST_CASE("compiles and runs native map count helper") {
@@ -322,7 +330,7 @@ main() {
   CHECK(readFile(outPath).empty());
 }
 
-TEST_CASE("compiles and runs native string-keyed map literals") {
+TEST_CASE("rejects native string-keyed map literal access expressions") {
   const std::string source = R"(
 import /std/collections/*
 
@@ -335,15 +343,11 @@ main() {
 }
 )";
   const std::string srcPath = writeTemp("compile_native_map_literal_string_key.prime", source);
-  const std::string exePath =
-      (testScratchPath("") / "primec_native_map_literal_string_key_exe").string();
-
-  const std::string compileCmd = "./primec --emit=native " + srcPath + " -o " + exePath + " --entry /main";
-  CHECK(runCommand(compileCmd) == 0);
-  CHECK(runCommand(exePath) == 5);
+  expectNativeCompileReject(srcPath, "primec_native_map_literal_string_key.err",
+                            "native backend only supports arithmetic/comparison", "call=/at");
 }
 
-TEST_CASE("compiles and runs native map literal string binding key") {
+TEST_CASE("rejects native map literal string binding key access expressions") {
   const std::string source = R"(
 import /std/collections/*
 
@@ -355,15 +359,11 @@ main() {
 }
 )";
   const std::string srcPath = writeTemp("compile_native_map_literal_string_binding_key.prime", source);
-  const std::string exePath =
-      (testScratchPath("") / "primec_native_map_literal_string_binding_key_exe").string();
-
-  const std::string compileCmd = "./primec --emit=native " + srcPath + " -o " + exePath + " --entry /main";
-  CHECK(runCommand(compileCmd) == 0);
-  CHECK(runCommand(exePath) == 2);
+  expectNativeCompileReject(srcPath, "primec_native_map_literal_string_binding_key.err",
+                            "native backend only supports arithmetic/comparison", "call=/at");
 }
 
-TEST_CASE("compiles and runs native string-keyed map indexing sugar") {
+TEST_CASE("rejects native string-keyed map indexing sugar") {
   const std::string source = R"(
 import /std/collections/*
 
@@ -374,15 +374,11 @@ main() {
 }
 )";
   const std::string srcPath = writeTemp("compile_native_map_indexing_string_key.prime", source);
-  const std::string exePath =
-      (testScratchPath("") / "primec_native_map_indexing_string_key_exe").string();
-
-  const std::string compileCmd = "./primec --emit=native " + srcPath + " -o " + exePath + " --entry /main";
-  CHECK(runCommand(compileCmd) == 0);
-  CHECK(runCommand(exePath) == 2);
+  expectNativeCompileReject(srcPath, "primec_native_map_indexing_string_key.err",
+                            "native backend only supports arithmetic/comparison", "call=/at");
 }
 
-TEST_CASE("compiles and runs native string-keyed map indexing binding key") {
+TEST_CASE("rejects native string-keyed map indexing binding key") {
   const std::string source = R"(
 import /std/collections/*
 
@@ -394,12 +390,8 @@ main() {
 }
 )";
   const std::string srcPath = writeTemp("compile_native_map_indexing_string_binding.prime", source);
-  const std::string exePath =
-      (testScratchPath("") / "primec_native_map_indexing_string_binding_exe").string();
-
-  const std::string compileCmd = "./primec --emit=native " + srcPath + " -o " + exePath + " --entry /main";
-  CHECK(runCommand(compileCmd) == 0);
-  CHECK(runCommand(exePath) == 2);
+  expectNativeCompileReject(srcPath, "primec_native_map_indexing_string_binding.err",
+                            "native backend only supports arithmetic/comparison", "call=/at");
 }
 
 TEST_CASE("rejects native map indexing with argv key") {
@@ -426,7 +418,7 @@ main([array<string>] args) {
   CHECK(err.find("^") != std::string::npos);
 }
 
-TEST_CASE("compiles and runs native string-keyed map binding lookup") {
+TEST_CASE("rejects native string-keyed map binding lookup") {
   const std::string source = R"(
 import /std/collections/*
 
@@ -438,12 +430,8 @@ main() {
 }
 )";
   const std::string srcPath = writeTemp("compile_native_map_literal_string_binding.prime", source);
-  const std::string exePath =
-      (testScratchPath("") / "primec_native_map_literal_string_binding_exe").string();
-
-  const std::string compileCmd = "./primec --emit=native " + srcPath + " -o " + exePath + " --entry /main";
-  CHECK(runCommand(compileCmd) == 0);
-  CHECK(runCommand(exePath) == 4);
+  expectNativeCompileReject(srcPath, "primec_native_map_literal_string_binding.err",
+                            "native backend only supports arithmetic/comparison", "call=/at");
 }
 
 TEST_CASE("rejects native map lookup with argv string key") {
