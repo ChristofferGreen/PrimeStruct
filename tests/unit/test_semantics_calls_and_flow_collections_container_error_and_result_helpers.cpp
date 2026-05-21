@@ -5153,7 +5153,7 @@ main() {
   CHECK(error.empty());
 }
 
-TEST_CASE("explicit old-surface to_aos slash-method rejects without same-path helper") {
+TEST_CASE("explicit old-surface to_aos slash-method rejects retired soa_vector binding") {
   const std::string source = R"(
 Particle() {
   [i32] x{1i32}
@@ -5168,11 +5168,12 @@ main() {
 )";
   std::string error;
   CHECK_FALSE(validateProgram(source, "/main", error));
-  CHECK(error.find("unknown method: /to_aos") !=
+  INFO(error);
+  CHECK(error.find("soa_vector<T> is not supported; use soa<T>") !=
         std::string::npos);
 }
 
-TEST_CASE("to_aos validates on borrowed indexed soa_vector receiver") {
+TEST_CASE("to_aos rejects borrowed indexed retired soa_vector receiver") {
   const std::string source = R"(
 import /std/collections/*
 
@@ -5192,11 +5193,13 @@ main() {
 }
 )";
   std::string error;
-  CHECK(validateProgram(source, "/main", error));
-  CHECK(error.empty());
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  INFO(error);
+  CHECK(error.find("template arguments are only supported on templated definitions: /soa_vector") !=
+        std::string::npos);
 }
 
-TEST_CASE("to_soa and to_aos helpers compose for explicit conversion") {
+TEST_CASE("to_soa and to_aos helpers reject removed canonical soa_vector to_aos bridge") {
   const std::string source = R"(
 import /std/collections/*
 
@@ -5212,11 +5215,13 @@ main() {
 }
   )";
   std::string error;
-  CHECK(validateProgram(source, "/main", error));
-  CHECK(error.empty());
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  INFO(error);
+  CHECK(error.find("unknown method: /std/collections/soa_vector/to_aos") !=
+        std::string::npos);
 }
 
-TEST_CASE("to_soa helper rejects non-vector target") {
+TEST_CASE("to_soa helper rejects retired soa_vector non-vector target") {
   const std::string source = R"(
 Particle() {
   [i32] x{1i32}
@@ -5231,10 +5236,12 @@ main() {
 )";
   std::string error;
   CHECK_FALSE(validateProgram(source, "/main", error));
-  CHECK(error.find("to_soa requires vector target") != std::string::npos);
+  INFO(error);
+  CHECK(error.find("soa_vector<T> is not supported; use soa<T>") !=
+        std::string::npos);
 }
 
-TEST_CASE("to_soa helper call-form falls back to user helper") {
+TEST_CASE("to_soa helper call-form rejects retired soa_vector user-helper parameter") {
   const std::string source = R"(
 Particle() {
   [i32] x{1i32}
@@ -5252,8 +5259,10 @@ main() {
 }
 )";
   std::string error;
-  CHECK(validateProgram(source, "/main", error));
-  CHECK(error.empty());
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  INFO(error);
+  CHECK(error.find("soa_vector<T> is not supported; use soa<T>") !=
+        std::string::npos);
 }
 
 TEST_CASE("to_soa helper method-form falls back to user helper") {
@@ -5297,7 +5306,7 @@ main() {
   CHECK(error.find("/std/collections/soa_vector/to_aos") != std::string::npos);
 }
 
-TEST_CASE("explicit old-surface to_aos_ref direct call rejects without same-path helper") {
+TEST_CASE("explicit old-surface to_aos_ref direct call rejects retired soa_vector binding") {
   const std::string source = R"(
 Particle() {
   [i32] x{1i32}
@@ -5312,11 +5321,12 @@ main() {
   )";
   std::string error;
   CHECK_FALSE(validateProgram(source, "/main", error));
-  CHECK(error.find("unknown method: /to_aos_ref") !=
+  INFO(error);
+  CHECK(error.find("soa_vector<T> is not supported; use soa<T>") !=
         std::string::npos);
 }
 
-TEST_CASE("explicit old-surface to_aos_ref slash-method rejects without same-path helper") {
+TEST_CASE("explicit old-surface to_aos_ref slash-method rejects retired soa_vector binding") {
   const std::string source = R"(
 Particle() {
   [i32] x{1i32}
@@ -5331,7 +5341,8 @@ main() {
 )";
   std::string error;
   CHECK_FALSE(validateProgram(source, "/main", error));
-  CHECK(error.find("unknown method: /to_aos_ref") !=
+  INFO(error);
+  CHECK(error.find("soa_vector<T> is not supported; use soa<T>") !=
         std::string::npos);
 }
 
