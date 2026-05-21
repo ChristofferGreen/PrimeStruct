@@ -1274,21 +1274,21 @@ TEST_CASE("ir lowerer result helpers resolve indexed args-pack file handle metho
   const primec::ir_lowerer::InferExprKindWithLocalsFn inferExprKind = {};
 
   primec::ir_lowerer::ResultExprInfo out;
-  CHECK(primec::ir_lowerer::resolveResultExprInfoFromLocals(
+  CHECK_FALSE(primec::ir_lowerer::resolveResultExprInfoFromLocals(
       writeExpr, locals, resolveMethodCall, resolveDefinitionCall, lookupReturnInfo, inferExprKind, out));
-  CHECK(out.isResult);
+  CHECK_FALSE(out.isResult);
   CHECK_FALSE(out.hasValue);
-  CHECK(out.errorType == "FileError");
+  CHECK(out.errorType.empty());
 
   primec::Expr wrappedWriteExpr = writeExpr;
   wrappedWriteExpr.args = {accessExpr, lineExpr};
 
   primec::ir_lowerer::ResultExprInfo wrappedOut;
-  CHECK(primec::ir_lowerer::resolveResultExprInfoFromLocals(
+  CHECK_FALSE(primec::ir_lowerer::resolveResultExprInfoFromLocals(
       wrappedWriteExpr, locals, resolveMethodCall, resolveDefinitionCall, lookupReturnInfo, inferExprKind, wrappedOut));
-  CHECK(wrappedOut.isResult);
+  CHECK_FALSE(wrappedOut.isResult);
   CHECK_FALSE(wrappedOut.hasValue);
-  CHECK(wrappedOut.errorType == "FileError");
+  CHECK(wrappedOut.errorType.empty());
 }
 
 TEST_CASE("ir lowerer result helpers resolve indexed borrowed args-pack file handle method results") {
@@ -1339,21 +1339,21 @@ TEST_CASE("ir lowerer result helpers resolve indexed borrowed args-pack file han
   const primec::ir_lowerer::InferExprKindWithLocalsFn inferExprKind = {};
 
   primec::ir_lowerer::ResultExprInfo out;
-  CHECK(primec::ir_lowerer::resolveResultExprInfoFromLocals(
+  CHECK_FALSE(primec::ir_lowerer::resolveResultExprInfoFromLocals(
       writeExpr, locals, resolveMethodCall, resolveDefinitionCall, lookupReturnInfo, inferExprKind, out));
-  CHECK(out.isResult);
+  CHECK_FALSE(out.isResult);
   CHECK_FALSE(out.hasValue);
-  CHECK(out.errorType == "FileError");
+  CHECK(out.errorType.empty());
 
   primec::Expr wrappedWriteExpr = writeExpr;
   wrappedWriteExpr.args = {accessExpr, lineExpr};
 
   primec::ir_lowerer::ResultExprInfo wrappedOut;
-  CHECK(primec::ir_lowerer::resolveResultExprInfoFromLocals(
+  CHECK_FALSE(primec::ir_lowerer::resolveResultExprInfoFromLocals(
       wrappedWriteExpr, locals, resolveMethodCall, resolveDefinitionCall, lookupReturnInfo, inferExprKind, wrappedOut));
-  CHECK(wrappedOut.isResult);
+  CHECK_FALSE(wrappedOut.isResult);
   CHECK_FALSE(wrappedOut.hasValue);
-  CHECK(wrappedOut.errorType == "FileError");
+  CHECK(wrappedOut.errorType.empty());
 }
 
 TEST_CASE("ir lowerer result helpers resolve indexed pointer args-pack file handle method results") {
@@ -1404,11 +1404,11 @@ TEST_CASE("ir lowerer result helpers resolve indexed pointer args-pack file hand
   const primec::ir_lowerer::InferExprKindWithLocalsFn inferExprKind = {};
 
   primec::ir_lowerer::ResultExprInfo out;
-  CHECK(primec::ir_lowerer::resolveResultExprInfoFromLocals(
+  CHECK_FALSE(primec::ir_lowerer::resolveResultExprInfoFromLocals(
       writeExpr, locals, resolveMethodCall, resolveDefinitionCall, lookupReturnInfo, inferExprKind, out));
-  CHECK(out.isResult);
+  CHECK_FALSE(out.isResult);
   CHECK_FALSE(out.hasValue);
-  CHECK(out.errorType == "FileError");
+  CHECK(out.errorType.empty());
 }
 
 

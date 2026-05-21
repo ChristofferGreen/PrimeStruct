@@ -193,9 +193,29 @@
   knowledge removal. The validation cases 661-670 shard was stabilized on
   2026-05-21 14:16 CEST by keeping typed constructor key metadata while
   retargeting generic value-local and combinator paths to current unknown
-  key-kind behavior. Next stop-on-failure blocker is not yet localized.
+  key-kind behavior. Next stop-on-failure blocker is
+  `PrimeStruct_primestruct_ir_pipeline_validation_cases_671_680`. The
+  validation cases 671-680 shard is failing in stale indexed args-pack
+  file-handle method `Result` expectations that still require source-only
+  `at(...)`/`dereference(at(...))` syntax to resolve through deleted C++
+  file-handle helper knowledge. The validation cases 671-680 shard was
+  stabilized on 2026-05-21 14:21 CEST by retargeting indexed args-pack
+  file-handle method `Result` expectations to current source-only fail-closed
+  behavior. Next stop-on-failure blocker is not yet localized.
 
 ## Recent Test Runs
+- 2026-05-21 14:21 CEST | pass | mode: release | command:
+  `cmake --build build-release --target PrimeStruct_backend_ir_tests -j 1`;
+  `cd build-release && ctest --output-on-failure -R '^PrimeStruct_primestruct_ir_pipeline_validation_cases_671_680$' --timeout 180`
+  | failures: none | notes: indexed args-pack file-handle method `Result`
+  helper tests now assert current source-only fail-closed behavior.
+- 2026-05-21 14:20 CEST | fail | mode: release | command:
+  `cmake --build build-release -j 1`;
+  `cd build-release && ctest --output-on-failure --stop-on-failure --timeout 180`
+  | failures: `PrimeStruct_primestruct_ir_pipeline_validation_cases_671_680`
+  | notes: stop-on-failure progressed past validation cases 661-670; current
+  blocker is stale indexed args-pack file-handle method `Result` inference
+  expectations.
 - 2026-05-21 14:16 CEST | pass | mode: release | command:
   `cmake --build build-release --target PrimeStruct_backend_ir_tests -j 1`;
   `cd build-release && ctest --output-on-failure -R '^PrimeStruct_primestruct_ir_pipeline_validation_cases_661_670$' --timeout 180`
