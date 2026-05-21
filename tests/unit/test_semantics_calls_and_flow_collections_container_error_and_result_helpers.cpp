@@ -1593,7 +1593,7 @@ main() {
         std::string::npos);
 }
 
-TEST_CASE("experimental soa_vector stdlib get method validates on reflect-enabled struct elements") {
+TEST_CASE("experimental soa_vector stdlib get method rejects direct soa wildcard import") {
   const std::string source = R"(
 import /std/collections/soa/*
 import /std/collections/internal_soa_vector/*
@@ -1610,11 +1610,13 @@ main() {
 }
 )";
   std::string error;
-  CHECK(validateProgram(source, "/main", error));
-  CHECK(error.empty());
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  INFO(error);
+  CHECK(error.find("unknown import path: /std/collections/soa/*") !=
+        std::string::npos);
 }
 
-TEST_CASE("experimental soa_vector stdlib ref helper validates on reflect-enabled struct elements") {
+TEST_CASE("experimental soa_vector stdlib ref helper rejects direct soa wildcard import") {
   const std::string source = R"(
 import /std/collections/soa/*
 import /std/collections/internal_soa_vector/*
@@ -1632,11 +1634,13 @@ main() {
 }
 )";
   std::string error;
-  CHECK(validateProgram(source, "/main", error));
-  CHECK(error.empty());
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  INFO(error);
+  CHECK(error.find("unknown import path: /std/collections/soa/*") !=
+        std::string::npos);
 }
 
-TEST_CASE("experimental soa_vector stdlib ref method validates on reflect-enabled struct elements") {
+TEST_CASE("experimental soa_vector stdlib ref method rejects direct soa wildcard import") {
   const std::string source = R"(
 import /std/collections/soa/*
 import /std/collections/internal_soa_vector/*
@@ -1653,11 +1657,13 @@ main() {
 }
 )";
   std::string error;
-  CHECK(validateProgram(source, "/main", error));
-  CHECK(error.empty());
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  INFO(error);
+  CHECK(error.find("unknown import path: /std/collections/soa/*") !=
+        std::string::npos);
 }
 
-TEST_CASE("experimental soa_vector stdlib ref method preserves reference pass-through and return") {
+TEST_CASE("experimental soa_vector stdlib ref method pass-through rejects direct soa wildcard import") {
   const std::string source = R"(
 import /std/collections/soa/*
 import /std/collections/internal_soa_vector/*
@@ -1685,11 +1691,13 @@ main() {
 }
 )";
   std::string error;
-  CHECK(validateProgram(source, "/main", error));
-  CHECK(error.empty());
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  INFO(error);
+  CHECK(error.find("unknown import path: /std/collections/soa/*") !=
+        std::string::npos);
 }
 
-TEST_CASE("experimental soa_vector standalone ref method expires before later push when unused") {
+TEST_CASE("experimental soa_vector standalone ref method rejects direct soa wildcard import") {
   const std::string source = R"(
 import /std/collections/soa/*
 import /std/collections/internal_soa_vector/*
@@ -1708,11 +1716,13 @@ main() {
 }
 )";
   std::string error;
-  CHECK(validateProgram(source, "/main", error));
-  CHECK(error.empty());
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  INFO(error);
+  CHECK(error.find("unknown import path: /std/collections/soa/*") !=
+        std::string::npos);
 }
 
-TEST_CASE("experimental soa_vector standalone ref method blocks later push while live") {
+TEST_CASE("experimental soa_vector standalone ref method push conflict rejects direct soa wildcard import") {
   const std::string source = R"(
 import /std/collections/soa/*
 import /std/collections/internal_soa_vector/*
@@ -1732,10 +1742,12 @@ main() {
 )";
   std::string error;
   CHECK_FALSE(validateProgram(source, "/main", error));
-  CHECK(error.find("borrowed binding: values") != std::string::npos);
+  INFO(error);
+  CHECK(error.find("unknown import path: /std/collections/soa/*") !=
+        std::string::npos);
 }
 
-TEST_CASE("experimental soa_vector standalone ref helper blocks later reserve while live") {
+TEST_CASE("experimental soa_vector standalone ref helper reserve conflict rejects direct soa wildcard import") {
   const std::string source = R"(
 import /std/collections/soa/*
 import /std/collections/internal_soa_vector/*
@@ -1755,10 +1767,12 @@ main() {
 )";
   std::string error;
   CHECK_FALSE(validateProgram(source, "/main", error));
-  CHECK(error.find("borrowed binding: values") != std::string::npos);
+  INFO(error);
+  CHECK(error.find("unknown import path: /std/collections/soa/*") !=
+        std::string::npos);
 }
 
-TEST_CASE("experimental soa_vector helper-return ref method expires before later push when unused") {
+TEST_CASE("experimental soa_vector helper-return ref method rejects direct soa wildcard import") {
   const std::string source = R"(
 import /std/collections/soa/*
 import /std/collections/internal_soa_vector/*
@@ -1787,11 +1801,13 @@ main() {
 }
 )";
   std::string error;
-  CHECK(validateProgram(source, "/main", error));
-  CHECK(error.empty());
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  INFO(error);
+  CHECK(error.find("unknown import path: /std/collections/soa/*") !=
+        std::string::npos);
 }
 
-TEST_CASE("experimental soa_vector helper-return ref method blocks later push while live") {
+TEST_CASE("experimental soa_vector helper-return ref method push conflict rejects direct soa wildcard import") {
   const std::string source = R"(
 import /std/collections/soa/*
 import /std/collections/internal_soa_vector/*
@@ -1821,10 +1837,12 @@ main() {
 )";
   std::string error;
   CHECK_FALSE(validateProgram(source, "/main", error));
-  CHECK(error.find("borrowed binding: values") != std::string::npos);
+  INFO(error);
+  CHECK(error.find("unknown import path: /std/collections/soa/*") !=
+        std::string::npos);
 }
 
-TEST_CASE("experimental soa_vector borrowed helper-return ref method blocks later reserve while live") {
+TEST_CASE("experimental soa_vector borrowed helper-return ref method rejects direct soa wildcard import") {
   const std::string source = R"(
 import /std/collections/soa/*
 import /std/collections/internal_soa_vector/*
@@ -1851,7 +1869,9 @@ main() {
 )";
   std::string error;
   CHECK_FALSE(validateProgram(source, "/main", error));
-  CHECK(error.find("borrowed binding: values") != std::string::npos);
+  INFO(error);
+  CHECK(error.find("unknown import path: /std/collections/soa/*") !=
+        std::string::npos);
 }
 
 TEST_CASE("experimental soa_vector inline location borrowed helper-return ref blocks later push while live") {

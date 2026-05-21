@@ -390,9 +390,31 @@
   The calls-flow collections 121-130 shard was stabilized on 2026-05-21
   16:36 CEST by retargeting those experimental SoA helper fixtures to the
   current diagnostics and accepted helper-shadow behavior. Next
-  stop-on-failure blocker is not yet localized.
+  stop-on-failure blocker is
+  `PrimeStruct_primestruct_semantics_calls_flow_collections_calls_flow_collections_131_140`.
+  The calls-flow collections 131-140 shard is failing in stale experimental
+  SoA ref/get helper expectations that still require direct
+  `/std/collections/soa/*` imports to validate or reach borrow-lifetime
+  diagnostics. Current validation rejects those fixtures at the direct
+  wildcard import boundary. The calls-flow collections 131-140 shard was
+  stabilized on 2026-05-21 16:42 CEST by retargeting those fixtures to the
+  current direct wildcard import rejection. Next stop-on-failure blocker is
+  not yet localized.
 
 ## Recent Test Runs
+- 2026-05-21 16:42 CEST | pass | mode: release | command:
+  `cmake --build build-release --target PrimeStruct_semantics_tests -j 1`;
+  `cd build-release && ctest --output-on-failure -R '^PrimeStruct_primestruct_semantics_calls_flow_collections_calls_flow_collections_131_140$' --timeout 180`
+  | failures: none | notes: experimental SoA ref/get coverage now expects the
+  current direct wildcard import rejection instead of old borrow and method
+  behavior.
+- 2026-05-21 16:41 CEST | fail | mode: release | command:
+  `cd build-release && ctest --output-on-failure --stop-on-failure --timeout 180 -I 309,1599`
+  | failures:
+  `PrimeStruct_primestruct_semantics_calls_flow_collections_calls_flow_collections_131_140`
+  | notes: current blocker is stale experimental SoA ref/get coverage; a
+  representative CLI repro reports
+  `unknown import path: /std/collections/soa/*`.
 - 2026-05-21 16:36 CEST | pass | mode: release | command:
   `cmake --build build-release --target PrimeStruct_semantics_tests -j 1`;
   `cd build-release && ctest --output-on-failure -R '^PrimeStruct_primestruct_semantics_calls_flow_collections_calls_flow_collections_121_130$' --timeout 180`
