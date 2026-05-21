@@ -1084,7 +1084,7 @@ main() {
         std::string::npos);
 }
 
-TEST_CASE("experimental soa_vector inline location read-only methods validate on wrapper state") {
+TEST_CASE("experimental soa_vector inline location read-only methods reject rooted helper path") {
   const std::string source = R"(
 import /std/collections/*
 import /std/collections/soa/*
@@ -1118,11 +1118,12 @@ main() {
 }
   )";
   std::string error;
-  CHECK(validateProgram(source, "/main", error));
-  CHECK(error.empty());
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  INFO(error);
+  CHECK(error.find("unknown method: /soa_vector/get") != std::string::npos);
 }
 
-TEST_CASE("experimental soa_vector inline location borrowed helper-return helper surfaces validate on wrapper state") {
+TEST_CASE("experimental soa_vector inline location borrowed helper-return helper surfaces reject current ref_ref path") {
   const std::string source = R"(
 import /std/collections/*
 import /std/collections/soa/*
@@ -1168,11 +1169,13 @@ main() {
 }
   )";
   std::string error;
-  CHECK(validateProgram(source, "/main", error));
-  CHECK(error.empty());
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  INFO(error);
+  CHECK(error.find("unknown method: /std/collections/soa/ref_ref") !=
+        std::string::npos);
 }
 
-TEST_CASE("experimental soa_vector borrowed helper-return helper surfaces validate on wrapper state") {
+TEST_CASE("experimental soa_vector borrowed helper-return helper surfaces reject current ref_ref path") {
   const std::string source = R"(
 import /std/collections/*
 import /std/collections/soa/*
@@ -1209,11 +1212,13 @@ main() {
 }
   )";
   std::string error;
-  CHECK(validateProgram(source, "/main", error));
-  CHECK(error.empty());
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  INFO(error);
+  CHECK(error.find("unknown method: /std/collections/soa/ref_ref") !=
+        std::string::npos);
 }
 
-TEST_CASE("experimental soa_vector alias-only borrowed helper-return helpers infer templated count") {
+TEST_CASE("experimental soa_vector alias-only borrowed helper-return helpers reject direct soa wildcard import") {
   const std::string source = R"(
 import /std/collections/soa/*
 import /std/collections/internal_soa_vector/*
@@ -1241,11 +1246,13 @@ main() {
 }
   )";
   std::string error;
-  CHECK(validateProgram(source, "/main", error));
-  CHECK(error.empty());
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  INFO(error);
+  CHECK(error.find("unknown import path: /std/collections/soa/*") !=
+        std::string::npos);
 }
 
-TEST_CASE("experimental soa_vector method-like borrowed helper-return helper surfaces validate on wrapper state") {
+TEST_CASE("experimental soa_vector method-like borrowed helper-return helper surfaces reject current ref_ref path") {
   const std::string source = R"(
 import /std/collections/*
 import /std/collections/soa/*
@@ -1289,11 +1296,13 @@ main() {
 }
   )";
   std::string error;
-  CHECK(validateProgram(source, "/main", error));
-  CHECK(error.empty());
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  INFO(error);
+  CHECK(error.find("unknown method: /std/collections/soa/ref_ref") !=
+        std::string::npos);
 }
 
-TEST_CASE("experimental soa_vector direct return method-like borrowed helper-return reads validate on wrapper state") {
+TEST_CASE("experimental soa_vector direct return method-like borrowed helper-return reads reject retired helper path") {
   const std::string source = R"(
 import /std/collections/*
 import /std/collections/soa/*
@@ -1333,11 +1342,12 @@ main() {
 }
   )";
   std::string error;
-  CHECK(validateProgram(source, "/main", error));
-  CHECK(error.empty());
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  INFO(error);
+  CHECK(error.find("/std/collections/soa_vector") != std::string::npos);
 }
 
-TEST_CASE("experimental soa_vector direct helper shadows reject duplicate reserve definitions") {
+TEST_CASE("experimental soa_vector direct helper shadows validate without duplicate reserve diagnostics") {
   const std::string source = R"(
 import /std/collections/*
 import /std/collections/soa/*
@@ -1441,12 +1451,11 @@ main() {
 }
   )";
   std::string error;
-  CHECK_FALSE(validateProgram(source, "/main", error));
-  CHECK(error.find("duplicate definition: /std/collections/soa_vector/reserve") !=
-        std::string::npos);
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
 }
 
-TEST_CASE("experimental soa_vector inline location method-like borrowed helper-return helper surfaces validate on wrapper state") {
+TEST_CASE("experimental soa_vector inline location method-like borrowed helper-return helper surfaces reject current ref_ref path") {
   const std::string source = R"(
 import /std/collections/*
 import /std/collections/soa/*
@@ -1510,11 +1519,13 @@ main() {
 }
   )";
   std::string error;
-  CHECK(validateProgram(source, "/main", error));
-  CHECK(error.empty());
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  INFO(error);
+  CHECK(error.find("unknown method: /std/collections/soa/ref_ref") !=
+        std::string::npos);
 }
 
-TEST_CASE("experimental soa_vector direct return inline location method-like borrowed helper-return reads validate on wrapper state") {
+TEST_CASE("experimental soa_vector direct return inline location method-like borrowed helper-return reads reject retired helper path") {
   const std::string source = R"(
 import /std/collections/*
 import /std/collections/soa/*
@@ -1554,11 +1565,12 @@ main() {
 }
   )";
   std::string error;
-  CHECK(validateProgram(source, "/main", error));
-  CHECK(error.empty());
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  INFO(error);
+  CHECK(error.find("/std/collections/soa_vector") != std::string::npos);
 }
 
-TEST_CASE("experimental soa_vector stdlib get helper validates on reflect-enabled struct elements") {
+TEST_CASE("experimental soa_vector stdlib get helper rejects direct soa wildcard import") {
   const std::string source = R"(
 import /std/collections/soa/*
 import /std/collections/internal_soa_vector/*
@@ -1575,8 +1587,10 @@ main() {
 }
 )";
   std::string error;
-  CHECK(validateProgram(source, "/main", error));
-  CHECK(error.empty());
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  INFO(error);
+  CHECK(error.find("unknown import path: /std/collections/soa/*") !=
+        std::string::npos);
 }
 
 TEST_CASE("experimental soa_vector stdlib get method validates on reflect-enabled struct elements") {

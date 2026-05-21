@@ -377,9 +377,34 @@
   retired `/std/collections/soa_vector/get_ref` method resolution. The
   calls-flow collections 111-120 shard was stabilized on 2026-05-21 16:33
   CEST by retargeting those experimental SoA helper fixtures to the current
-  diagnostics. Next stop-on-failure blocker is not yet localized.
+  diagnostics. Next stop-on-failure blocker is
+  `PrimeStruct_primestruct_semantics_calls_flow_collections_calls_flow_collections_121_130`.
+  The calls-flow collections 121-130 shard is failing in stale experimental
+  SoA helper expectations that still require retired `soa_vector` helper
+  paths to validate or require duplicate reserve diagnostics. Current
+  validation rejects most sources through `/std/collections/soa_vector`
+  method resolution or direct `/std/collections/soa/*` import rejection, while
+  the direct helper-shadow fixture now validates without duplicate reserve
+  diagnostics. A focused rerun showed the current failures include rooted
+  `/soa_vector/get` and `/std/collections/soa/ref_ref` method diagnostics.
+  The calls-flow collections 121-130 shard was stabilized on 2026-05-21
+  16:36 CEST by retargeting those experimental SoA helper fixtures to the
+  current diagnostics and accepted helper-shadow behavior. Next
+  stop-on-failure blocker is not yet localized.
 
 ## Recent Test Runs
+- 2026-05-21 16:36 CEST | pass | mode: release | command:
+  `cmake --build build-release --target PrimeStruct_semantics_tests -j 1`;
+  `cd build-release && ctest --output-on-failure -R '^PrimeStruct_primestruct_semantics_calls_flow_collections_calls_flow_collections_121_130$' --timeout 180`
+  | failures: none | notes: experimental SoA helper coverage now expects the
+  current rooted-helper, ref_ref, wildcard-import, and helper-shadow behavior.
+- 2026-05-21 16:36 CEST | fail | mode: release | command:
+  `cd build-release && ctest --output-on-failure --stop-on-failure --timeout 180 -I 308,1599`
+  | failures:
+  `PrimeStruct_primestruct_semantics_calls_flow_collections_calls_flow_collections_121_130`
+  | notes: current blocker is stale experimental SoA helper coverage across
+  inline-location, borrowed helper-return, direct helper-shadow, and get-helper
+  fixtures.
 - 2026-05-21 16:33 CEST | pass | mode: release | command:
   `cmake --build build-release --target PrimeStruct_semantics_tests -j 1`;
   `cd build-release && ctest --output-on-failure -R '^PrimeStruct_primestruct_semantics_calls_flow_collections_calls_flow_collections_111_120$' --timeout 180`
