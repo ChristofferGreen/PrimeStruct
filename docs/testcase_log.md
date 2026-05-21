@@ -125,9 +125,28 @@
   deterministic rejection with no emitted instructions. The validation cases
   371-380 shard was stabilized on 2026-05-21 13:39 CEST by retargeting bare
   variadic vector/buffer receiver tests to current rejection behavior. Next
-  stop-on-failure blocker is not yet localized.
+  stop-on-failure blocker is
+  `PrimeStruct_primestruct_ir_pipeline_validation_cases_391_400`. The
+  validation cases 391-400 shard is failing in stale call-return setup
+  expectations that still require semantic access receiver/reorder/stale facts
+  to resolve direct return kinds before current access-helper classification.
+  The validation cases 391-400 shard was stabilized on 2026-05-21 13:43 CEST
+  by retargeting bare semantic access call-return tests to current
+  `NotResolved` behavior. Next stop-on-failure blocker is not yet localized.
 
 ## Recent Test Runs
+- 2026-05-21 13:43 CEST | pass | mode: release | command:
+  `cmake --build build-release --target PrimeStruct_backend_ir_tests -j 1`;
+  `cd build-release && ctest --output-on-failure -R '^PrimeStruct_primestruct_ir_pipeline_validation_cases_391_400$' --timeout 180`
+  | failures: none | notes: bare semantic access call-return tests now assert
+  current `NotResolved` behavior.
+- 2026-05-21 13:42 CEST | fail | mode: release | command:
+  `cmake --build build-release -j 1`;
+  `cd build-release && ctest --output-on-failure --stop-on-failure --timeout 180`
+  | failures: `PrimeStruct_primestruct_ir_pipeline_validation_cases_391_400`
+  | notes: stop-on-failure progressed past validation cases 371-380; current
+  blocker is stale direct return-kind expectations for semantic access
+  receiver/reorder/stale fact coverage.
 - 2026-05-21 13:39 CEST | pass | mode: release | command:
   `cmake --build build-release --target PrimeStruct_backend_ir_tests -j 1`;
   `cd build-release && ctest --output-on-failure -R '^PrimeStruct_primestruct_ir_pipeline_validation_cases_371_380$' --timeout 180`

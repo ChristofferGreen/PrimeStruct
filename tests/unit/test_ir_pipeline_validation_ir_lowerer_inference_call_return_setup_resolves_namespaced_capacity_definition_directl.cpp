@@ -150,7 +150,7 @@ TEST_CASE("ir lowerer inference call-return setup resolves namespaced access def
   CHECK(resolveMethodCalls == 0);
 }
 
-TEST_CASE("ir lowerer inference call-return setup uses semantic access receiver facts before stale locals") {
+TEST_CASE("ir lowerer inference call-return setup rejects bare semantic access receiver facts") {
   std::unordered_map<std::string, const primec::Definition *> defMap;
 
   primec::SemanticProgram semanticProgram;
@@ -212,11 +212,11 @@ TEST_CASE("ir lowerer inference call-return setup uses semantic access receiver 
   primec::ir_lowerer::LocalInfo::ValueKind kindOut =
       primec::ir_lowerer::LocalInfo::ValueKind::Unknown;
   CHECK(state.inferCallExprDirectReturnKind(callExpr, locals, kindOut) ==
-        primec::ir_lowerer::CallExpressionReturnKindResolution::Resolved);
-  CHECK(kindOut == primec::ir_lowerer::LocalInfo::ValueKind::Float32);
+        primec::ir_lowerer::CallExpressionReturnKindResolution::NotResolved);
+  CHECK(kindOut == primec::ir_lowerer::LocalInfo::ValueKind::Unknown);
 }
 
-TEST_CASE("ir lowerer inference call-return setup uses semantic access reorder facts before local metadata") {
+TEST_CASE("ir lowerer inference call-return setup rejects bare semantic access reorder facts") {
   std::unordered_map<std::string, const primec::Definition *> defMap;
 
   primec::SemanticProgram semanticProgram;
@@ -282,8 +282,8 @@ TEST_CASE("ir lowerer inference call-return setup uses semantic access reorder f
   primec::ir_lowerer::LocalInfo::ValueKind kindOut =
       primec::ir_lowerer::LocalInfo::ValueKind::Unknown;
   CHECK(state.inferCallExprDirectReturnKind(atExpr, {}, kindOut) ==
-        primec::ir_lowerer::CallExpressionReturnKindResolution::Resolved);
-  CHECK(kindOut == primec::ir_lowerer::LocalInfo::ValueKind::Float32);
+        primec::ir_lowerer::CallExpressionReturnKindResolution::NotResolved);
+  CHECK(kindOut == primec::ir_lowerer::LocalInfo::ValueKind::Unknown);
 
   primec::Expr keyExpr;
   keyExpr.kind = primec::Expr::Kind::Literal;
@@ -297,7 +297,7 @@ TEST_CASE("ir lowerer inference call-return setup uses semantic access reorder f
   CHECK(kindOut == primec::ir_lowerer::LocalInfo::ValueKind::Unknown);
 }
 
-TEST_CASE("ir lowerer inference call-return setup uses semantic access stale facts before local metadata") {
+TEST_CASE("ir lowerer inference call-return setup rejects bare semantic access stale facts") {
   primec::Definition staleAtDef;
   staleAtDef.fullPath = "/map/at";
   std::unordered_map<std::string, const primec::Definition *> defMap;
@@ -413,8 +413,8 @@ TEST_CASE("ir lowerer inference call-return setup uses semantic access stale fac
 
   kindOut = primec::ir_lowerer::LocalInfo::ValueKind::Unknown;
   CHECK(state.inferCallExprDirectReturnKind(atExpr, locals, kindOut) ==
-        primec::ir_lowerer::CallExpressionReturnKindResolution::Resolved);
-  CHECK(kindOut == primec::ir_lowerer::LocalInfo::ValueKind::Int32);
+        primec::ir_lowerer::CallExpressionReturnKindResolution::NotResolved);
+  CHECK(kindOut == primec::ir_lowerer::LocalInfo::ValueKind::Unknown);
   CHECK(staleMapResolutions == 0);
 }
 
