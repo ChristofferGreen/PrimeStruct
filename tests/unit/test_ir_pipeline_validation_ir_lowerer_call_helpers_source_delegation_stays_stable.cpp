@@ -1210,7 +1210,7 @@ TEST_CASE("ir lowerer vector type layout traces use generic collection helpers")
   CHECK(methodCallSource.find(
             "normalizeBuiltinCollectionStructPath(\"vector\") + \"/count\"") !=
         std::string::npos);
-  CHECK(methodCallSource.find("\"/std/collections/map/map\"") !=
+  CHECK(methodCallSource.find("collectionMemberPath(\"map\", \"map\")") !=
         std::string::npos);
   CHECK(methodCallSource.find("path == \"/std/collections/experimental_map/map") ==
         std::string::npos);
@@ -1368,7 +1368,7 @@ TEST_CASE("native tail and late collection helper metadata dispatch stays source
         std::string::npos);
   CHECK(collectionHelpersSource.find("callResolutionAdapters.semanticProgram") !=
         std::string::npos);
-  CHECK(collectionHelpersSource.find("mapConstructorSurfaceMetadataForLowerEmitExpr()") !=
+  CHECK(collectionHelpersSource.find("keyValueConstructorSurfaceMetadataForLowerEmitExpr()") !=
         std::string::npos);
   CHECK(collectionHelpersSource.find("primec::StdlibSurfaceId::CollectionsVectorConstructors") !=
         std::string::npos);
@@ -1573,7 +1573,7 @@ main() {
   CHECK(summary->returnKind == "i32");
 }
 
-TEST_CASE("ir lowerer call helpers publish root soa_vector constructor bridge choices") {
+TEST_CASE("ir lowerer call helpers publish root soa constructor metadata without bridge choices") {
   const std::string source = R"(
 [struct reflect]
 Particle() {
@@ -1582,7 +1582,7 @@ Particle() {
 
 [effects(heap_alloc), return<int>]
 main() {
-  [soa_vector<Particle>] values{soa_vector<Particle>(Particle(7i32), Particle(9i32))}
+  [soa<Particle>] values{soa<Particle>(Particle{7i32}, Particle{9i32})}
   return(count(values))
 }
 )";
@@ -1593,14 +1593,16 @@ main() {
   REQUIRE(parseAndValidate(source, program, semanticProgram, error, {"io_out", "io_err"}));
   CHECK(error.empty());
 
-  const auto *bridgeEntry = findLowererSemanticEntry(
-      primec::semanticProgramBridgePathChoiceView(semanticProgram),
-      [&semanticProgram](const primec::SemanticProgramBridgePathChoice &entry) {
-        return entry.scopePath == "/main" && entry.collectionFamily == "soa_vector" &&
-               primec::semanticProgramBridgePathChoiceHelperName(semanticProgram, entry) ==
-                   "soa_vector";
+  const auto *collectionEntry = findLowererSemanticEntry(
+      primec::semanticProgramCollectionSpecializationView(semanticProgram),
+      [](const primec::SemanticProgramCollectionSpecialization &entry) {
+        return entry.scopePath == "/main" && entry.name == "values" &&
+               entry.collectionFamily == "soa_vector";
       });
-  REQUIRE(bridgeEntry != nullptr);
+  REQUIRE(collectionEntry != nullptr);
+  REQUIRE(collectionEntry->constructorSurfaceId.has_value());
+  CHECK(*collectionEntry->constructorSurfaceId ==
+        primec::StdlibSurfaceId::CollectionsColumnarConstructors);
 
   const auto adapter = primec::ir_lowerer::buildSemanticProductTargetAdapter(&semanticProgram);
   primec::Definition *mainDef = findLowererDefinitionByPathMutable(program, "/main");
@@ -1609,14 +1611,13 @@ main() {
       *mainDef,
       [](const primec::Expr &expr) {
         return expr.kind == primec::Expr::Kind::Call && !expr.isMethodCall &&
-               expr.name == "soa_vector";
+               expr.name == "soa";
       });
   REQUIRE(constructorExpr != nullptr);
-  CHECK(constructorExpr->semanticNodeId == bridgeEntry->semanticNodeId);
   CHECK(semanticProgram.publishedRoutingLookups.bridgePathChoiceIdsByExpr.count(
-            constructorExpr->semanticNodeId) == 1);
-  CHECK_FALSE(primec::ir_lowerer::findSemanticProductBridgePathChoice(adapter, *constructorExpr)
-                  .empty());
+            constructorExpr->semanticNodeId) == 0);
+  CHECK(primec::ir_lowerer::findSemanticProductBridgePathChoice(adapter, *constructorExpr)
+            .empty());
 }
 
 TEST_CASE("ir lowerer call helpers keep exact-import vector and map bridge parity") {

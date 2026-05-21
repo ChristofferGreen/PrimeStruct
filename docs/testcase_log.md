@@ -45,10 +45,43 @@
   blocker was `PrimeStruct_primestruct_ir_pipeline_validation_cases_111_120`.
   The validation cases 111-120 shard was stabilized on 2026-05-21 12:02 CEST
   by retargeting forwarded collection-pair coverage away from generated
-  map-value struct path synthesis. Next stop-on-failure blocker is not yet
-  localized.
+  map-value struct path synthesis. Next stop-on-failure blocker was
+  `PrimeStruct_primestruct_ir_pipeline_validation_cases_121_130`. The
+  validation cases 121-130 shard was stabilized on 2026-05-21 12:34 CEST by
+  retargeting stale source locks to key/value metadata names and public
+  `soa<T>` constructor metadata without bridge-path fallback expectations. Next
+  stop-on-failure blocker is not yet localized.
 
 ## Recent Test Runs
+- 2026-05-21 12:34 CEST | pass | mode: release | command:
+  `cmake --build build-release --target PrimeStruct_backend_ir_tests -j 1`;
+  `cd build-release && ctest --output-on-failure -R '^PrimeStruct_primestruct_ir_pipeline_validation_cases_121_130$'`
+  | failures: none | notes: source locks now use `collectionMemberPath` and
+  key/value constructor metadata names; root `soa<T>` constructor coverage
+  asserts collection-specialization constructor metadata without bridge-path
+  fallback routing.
+- 2026-05-21 12:33 CEST | fail | mode: release | command:
+  `cmake --build build-release --target PrimeStruct_backend_ir_tests -j 1`;
+  `cd build-release && ctest --output-on-failure -R '^PrimeStruct_primestruct_ir_pipeline_validation_cases_121_130$'`
+  | failures: `PrimeStruct_primestruct_ir_pipeline_validation_cases_121_130`
+  | notes: public `soa<T>` constructor fixture validates, but the stale test
+  still expected a bridge-path entry; current metadata is carried by the
+  collection specialization constructor surface instead.
+- 2026-05-21 12:31 CEST | fail | mode: release | command:
+  `cmake --build build-release --target PrimeStruct_backend_ir_tests -j 1`;
+  `cd build-release && ctest --output-on-failure -R '^PrimeStruct_primestruct_ir_pipeline_validation_cases_121_130$'`
+  | failures: `PrimeStruct_primestruct_ir_pipeline_validation_cases_121_130`
+  | notes: source-lock retargets passed; remaining fixture rejects
+  `soa_vector<T>` with `soa_vector<T> is not supported; use soa<T>`, so the
+  root constructor bridge coverage must use public `soa<T>` spelling.
+- 2026-05-21 12:05 CEST | fail | mode: release | command:
+  `cmake --build build-release -j 1`;
+  `cd build-release && ctest --output-on-failure --stop-on-failure`
+  | failures: `PrimeStruct_primestruct_ir_pipeline_validation_cases_121_130`
+  | notes: stop-on-failure progressed past validation cases 111-120; current
+  blocker is stale source-lock coverage for removed map constructor metadata
+  helper spellings plus a root `soa_vector` bridge fixture that no longer
+  parses with call-syntax struct values.
 - 2026-05-21 12:02 CEST | pass | mode: release | command:
   `cmake --build build-release --target PrimeStruct_backend_ir_tests -j 1`;
   `cd build-release && ctest --output-on-failure -R '^PrimeStruct_primestruct_ir_pipeline_validation_cases_111_120$'`
