@@ -1613,8 +1613,10 @@ TEST_CASE("todo queue and skipped doctest debt stay source locked") {
   CHECK(todo.find("### Ready Now (Parallel-Candidate Leaves; No Unmet TODO Dependencies)") !=
         std::string::npos);
   CHECK(todo.find("### Ready Now (Parallel-Candidate Leaves; No Unmet TODO Dependencies)\n\n"
-                  "- TODO-4340: Add procedural generic examples and conformance | track: procedural-genericity |\n"
-                  "  primary surface: user-facing examples and conformance for procedural facts") !=
+                  "- TODO-4340: Add procedural generic docs and examples | track: procedural-genericity-docs |\n"
+                  "  primary surface: user-facing docs and positive examples for procedural facts\n"
+                  "- TODO-4546: Add procedural generic negative conformance | track: procedural-genericity-negatives |\n"
+                  "  primary surface: semantic diagnostics for procedural generic misuse") !=
         std::string::npos);
   CHECK(todo.find("- `soa-zero-audit`: TODO-4529 replaced the residue inventory with a strict\n"
                   "  zero-production-trace audit; no SoA zero-audit leaf is ready.") !=
@@ -1638,11 +1640,15 @@ TEST_CASE("todo queue and skipped doctest debt stay source locked") {
                   "  struct-field envelopes, and TODO-4337 added non-escaping local generated\n"
                   "  structs, TODO-4338 stabilized deterministic generated identity and\n"
                   "  provenance, and TODO-4339 lowered procedural facts through semantic-product\n"
-                  "  direct-call and layout metadata; ready TODO-4340.") !=
+                  "  direct-call and layout metadata; ready TODO-4340 and TODO-4546.") !=
+        std::string::npos);
+  CHECK(todo.find("- `generic-requirements`: TODO-4331 and TODO-4334 are complete; TODO-4341\n"
+                  "  remains queued behind the procedural-genericity docs and conformance leaves.") !=
         std::string::npos);
   CHECK(todo.find("### Immediate Next 10 (Track Successors; Not Ready Until Dependencies Land)\n\n"
                   "- TODO-4545: Implement first structured task spawn/wait substrate\n"
-                  "- TODO-4278: Integrate multi-wait with stdlib tuple") !=
+                  "- TODO-4278: Integrate multi-wait with stdlib tuple\n"
+                  "- TODO-4341: Define generic requirement predicate surface") !=
         std::string::npos);
   CHECK(todo.find("- TODO-4273: Add heterogeneous value-pack inference") ==
         std::string::npos);
@@ -1658,7 +1664,9 @@ TEST_CASE("todo queue and skipped doctest debt stay source locked") {
   CHECK(todo.find("- Deferred SoA finish: TODO-4252") ==
         std::string::npos);
   CHECK(todo.find("### Execution Queue (Recommended Track Order)\n\n"
-                  "- TODO-4340: Add procedural generic examples and conformance") !=
+                  "- TODO-4340: Add procedural generic docs and examples\n"
+                  "- TODO-4546: Add procedural generic negative conformance\n"
+                  "- TODO-4341: Define generic requirement predicate surface") !=
         std::string::npos);
   CHECK(todo.find("- [ ] TODO-4331: Implement compile-time argument channel model") ==
         std::string::npos);
@@ -1719,13 +1727,16 @@ TEST_CASE("todo queue and skipped doctest debt stay source locked") {
   CHECK(todoFinished.find("TODO-4519: Delete `soa_vector` compatibility seams") !=
         std::string::npos);
   const std::vector<std::string> semanticPhaseQueue = {
-      "TODO-4340: Add procedural generic examples and conformance",
+      "TODO-4340: Add procedural generic docs and examples",
+      "TODO-4546: Add procedural generic negative conformance",
   };
   for (const std::string &entry : semanticPhaseQueue) {
     CHECK(todo.find("- " + entry) != std::string::npos);
     CHECK(todo.find("- [ ] " + entry) != std::string::npos);
   }
-  CHECK(todo.find("| track: procedural-genericity |") !=
+  CHECK(todo.find("| track: procedural-genericity-docs |") !=
+        std::string::npos);
+  CHECK(todo.find("| track: procedural-genericity-negatives |") !=
         std::string::npos);
   CHECK(todo.find("TODO-4337: Add local generated nominal structs") ==
         std::string::npos);
@@ -1752,6 +1763,8 @@ TEST_CASE("todo queue and skipped doctest debt stay source locked") {
   CHECK(todo.find("TODO-4545: Implement first structured task spawn/wait substrate") !=
         std::string::npos);
   CHECK(todo.find("  - depends_on: TODO-4277, TODO-4545") !=
+        std::string::npos);
+  CHECK(todo.find("  - depends_on: TODO-4331, TODO-4334, TODO-4340, TODO-4546") !=
         std::string::npos);
   CHECK(todoFinished.find("  - parallel_track: soa-zero-audit") !=
         std::string::npos);
