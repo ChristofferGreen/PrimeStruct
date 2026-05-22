@@ -900,8 +900,16 @@
   CEST without code changes after rebuilding the release compile-run test
   binary. Next continuation point is
   `PrimeStruct_primestruct_compile_run_vm_collections_growth_limits_and_syntax_352_352`.
+  The growth limits and syntax 352-352 shard passed on 2026-05-23 00:52
+  CEST without code changes after rebuilding the release compile-run test
+  binary. Next continuation point is
+  `PrimeStruct_primestruct_compile_run_emitters_cpp_lambda_and_mutator_resolution_1_1`.
 
 ## Recent Test Runs
+- 2026-05-23 00:52 CEST | pass | mode: release | command:
+  `cd build-release && ctest --output-on-failure -R '^PrimeStruct_primestruct_compile_run_vm_collections_growth_limits_and_syntax_352_352$' --timeout 120`
+  | failures: none | notes: final VM collections continuation shard passed;
+  current known-failure pointer advanced to the first emitters C++ shard.
 - 2026-05-23 00:00 CEST | pass | mode: release | command:
   `cmake --build build-release --target PrimeStruct_misc_tests -j 1`;
   `cd build-release && ./PrimeStruct_misc_tests --test-case="local generated structs reject escapes and shadowing,local generated struct escape diagnostic uses specialized path,typeof symbol rejects missing and runtime argument forms,typeof symbol rejects unsupported callable and ambiguity,type local envelopes reject forward and runtime value use,top-level type local rejects as binding syntax" --no-skip`
