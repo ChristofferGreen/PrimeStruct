@@ -7645,3 +7645,8 @@
   same-path helper body instead of builtin count fallback; validating command:
   `timeout 300s bash -lc 'cd build-release && ctest --output-on-failure --stop-on-failure --timeout 120 -I 875,879'`
   on 2026-05-22 08:35 CEST.
+- C++ emitter canonical map helper shard 882 now passes after namespaced
+  `values./map/count()` expects the visible canonical count helper body instead
+  of builtin count fallback; validating command:
+  `timeout 300s bash -lc 'cd build-release && ctest --output-on-failure --stop-on-failure --timeout 120 -I 880,884'`
+  on 2026-05-22 08:37 CEST.

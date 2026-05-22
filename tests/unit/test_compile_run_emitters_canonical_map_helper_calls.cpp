@@ -870,7 +870,7 @@ main() {
   CHECK(readFile(outPath).empty());
 }
 
-TEST_CASE("compiles namespaced map count method alias through builtin count in C++ emitter") {
+TEST_CASE("compiles namespaced map count method through canonical helper in C++ emitter") {
   const std::string source = R"(
 [effects(heap_alloc), return<int>]
 /std/collections/map/count([map<i32, i32>] values) {
@@ -884,16 +884,16 @@ main() {
 }
 )";
   const std::string srcPath =
-      writeTemp("compile_cpp_map_namespaced_count_method_compatibility_alias_reject.prime", source);
+      writeTemp("compile_cpp_map_namespaced_count_method_canonical_helper.prime", source);
   const std::string exePath =
       (testScratchPath("") /
-       "primec_cpp_map_namespaced_count_method_compatibility_alias_exe")
+       "primec_cpp_map_namespaced_count_method_canonical_helper_exe")
           .string();
 
   const std::string compileCmd =
       "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main";
   CHECK(runCommand(compileCmd) == 0);
-  CHECK(runCommand(exePath) == 1);
+  CHECK(runCommand(exePath) == 17);
 }
 
 TEST_CASE("rejects bare map count method without imported canonical helper in C++ emitter") {
