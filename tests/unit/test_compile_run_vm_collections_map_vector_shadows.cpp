@@ -448,7 +448,7 @@ main() {
   CHECK(runCommand(runCmd) == 9);
 }
 
-TEST_CASE("runs vm with builtin map constructor over user shadow") {
+TEST_CASE("runs vm with user map constructor shadow") {
   const std::string source = R"(
 [return<int>]
 map([i32] key, [i32] value) {
@@ -462,7 +462,7 @@ main() {
   )";
   const std::string srcPath = writeTemp("vm_user_map_constructor_shadow.prime", source);
   const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main";
-  CHECK(runCommand(runCmd) == 0);
+  CHECK(runCommand(runCmd) == 10);
 }
 
 TEST_CASE("rejects vm builtin vector constructor named arguments") {
