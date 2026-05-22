@@ -5,6 +5,37 @@ Legend:
 
 Finished items are periodically archived here from `docs/todo.md`; section headers record the archive date.
 
+**Todo Completion (May 23, 2026)**
+- [x] TODO-4340: Add procedural generic docs and examples
+  - owner: ai
+  - created_at: 2026-05-04
+  - finished_at: 2026-05-23
+  - phase: Procedural compile-time genericity
+  - parallel_track: procedural-genericity-docs
+  - depends_on: TODO-4339
+  - scope: Add user-facing syntax docs and positive examples for procedural
+    compile-time genericity.
+  - outcome:
+    - Updated `docs/PrimeStruct_SyntaxSpec.md` and `docs/PrimeStruct.md` to
+      describe the implemented procedural genericity surface instead of
+      leaving local generated types as planned syntax.
+    - Added `docs/CodeExamples.md` guidance for ordinary left-to-right
+      procedural generic local storage with `[type]`, `typeof<...>`, local
+      `[struct]`, brace construction, and a caller-known returned value.
+    - Added `examples/2.Inference/procedural_generic_box.prime` as the
+      checked-in positive example and source-locked the docs/example snippets.
+    - Kept negative procedural generic diagnostics and conformance coverage in
+      TODO-4546.
+  - validation:
+    - `PrimeStruct_compile_run_tests` passed `procedural generic docs example
+      runs in VM and native`.
+    - `PrimeStruct_compile_run_tests` passed `compiles template and inference
+      examples to IR`.
+    - `PrimeStruct_compile_run_tests` passed `todo queue and skipped doctest
+      debt stay source locked`.
+    - Full `./scripts/compile.sh --release` remains deferred by the lite
+      workflow.
+
 **Todo Completion (May 22, 2026)**
 - [x] TODO-4339: Lower procedural generic facts through semantics
   - owner: ai

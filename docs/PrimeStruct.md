@@ -63,17 +63,16 @@ PrimeStruct is organized into four language levels. Each higher level desugars i
 - **3.Surface:** surface syntax and text transforms (operator sugar, collection literals, indexing sugar, `if(...) {}`
   blocks, and `name() [transforms] { ... }` definition sugar) that rewrite into canonical forms.
 
-Planned procedural compile-time genericity extends this ladder without changing
-the lowering contract: `<...>` becomes the compile-time argument channel,
-`(...)` remains the runtime argument channel, and type-level work can be
-written as ordinary left-to-right commands over named compile-time facts. For
-example, a generic pair helper can bind `[type] LeftT { typeof<left> }`, bind
-`[type] RightT { typeof<right> }`, define a local `[struct] PairT { ... }`,
-use `PairT` as internal temporary storage, and return a caller-known value such
-as `pair.first`. Returning the local generated type itself is rejected because
-the caller has no stable source name for that type. These forms must still
-canonicalize before IR lowering so backends see only concrete definitions,
-calls, and types.
+Procedural compile-time genericity extends this ladder without changing the
+lowering contract: `<...>` is the compile-time argument channel, `(...)`
+remains the runtime argument channel, and type-level work can be written as
+ordinary left-to-right commands over named compile-time facts. For example, a
+generic helper can bind `[type] ValueT { typeof<value> }`, define a local
+`[struct] BoxT { ... }`, use `BoxT` as internal temporary storage, and return a
+caller-known value such as `box.value`. Returning the local generated type
+itself is rejected because the caller has no stable source name for that type.
+These forms canonicalize before IR lowering so backends see only concrete
+definitions, calls, and types.
 
 ### Compilation model (v1)
 - **Whole-program by default:** `import` expansion produces a single compilation unit, and semantic resolution runs over
@@ -1009,10 +1008,10 @@ Planned omitted-envelope and local-`auto` expansion contract:
 - This work remains downstream of template migration because widening local/omitted inference before template
   dependencies are graph-backed would create new pilot-only islands around template-dependent call routing.
 
-Planned procedural compile-time genericity contract:
+Procedural compile-time genericity contract:
 - Existing template syntax remains source-compatible, but its architectural
-  interpretation should move toward "`<...>` is the compile-time argument
-  channel" rather than "templates are a separate language inside the language."
+  interpretation is "`<...>` is the compile-time argument channel" rather than
+  "templates are a separate language inside the language."
 - Bare zero-argument execution, compile-time type locals, `typeof<symbol>`,
   and local generated type definitions must all reuse ordinary name resolution
   and produce deterministic ambiguity diagnostics instead of inventing a second

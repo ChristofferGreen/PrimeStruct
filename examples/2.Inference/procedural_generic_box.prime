@@ -1,0 +1,16 @@
+[return<T>]
+remember_first<T>([T] first, [T] second) {
+  [type] ValueT { typeof<first> }
+
+  [struct] BoxT {
+    [ValueT] value{0i32}
+  }
+
+  [BoxT] box{BoxT{first}}
+  return(box.value)
+}
+
+[return<int>]
+main() {
+  return(remember_first<i32>(23i32, 41i32))
+}

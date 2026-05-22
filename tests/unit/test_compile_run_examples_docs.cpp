@@ -67,6 +67,57 @@ TEST_CASE("checked-in ast transform example runs in VM") {
   CHECK(runCommand(runCmd) == 42);
 }
 
+TEST_CASE("procedural generic docs example runs in VM and native") {
+  auto resolveRepoPath = [](const std::string &name) -> std::filesystem::path {
+    std::filesystem::path path = std::filesystem::path("..") / name;
+    if (!std::filesystem::exists(path)) {
+      path = std::filesystem::current_path() / name;
+    }
+    return path;
+  };
+
+  const std::filesystem::path examplePath =
+      resolveRepoPath("examples/2.Inference/procedural_generic_box.prime");
+  const std::filesystem::path syntaxSpecPath =
+      resolveRepoPath("docs/PrimeStruct_SyntaxSpec.md");
+  const std::filesystem::path codeExamplesPath =
+      resolveRepoPath("docs/CodeExamples.md");
+  REQUIRE(std::filesystem::exists(examplePath));
+  REQUIRE(std::filesystem::exists(syntaxSpecPath));
+  REQUIRE(std::filesystem::exists(codeExamplesPath));
+
+  const std::string syntaxSpec = readFile(syntaxSpecPath.string());
+  const std::string codeExamples = readFile(codeExamplesPath.string());
+  const std::vector<std::string> requiredSnippets = {
+      "[type] ValueT { typeof<first> }",
+      "[struct] BoxT",
+      "[BoxT] box{BoxT{first}}",
+      "return(remember_first<i32>(23i32, 41i32))"};
+  for (const std::string &snippet : requiredSnippets) {
+    CAPTURE(snippet);
+    CHECK(codeExamples.find(snippet) != std::string::npos);
+  }
+  CHECK(syntaxSpec.find("Procedural Compile-Time Genericity") !=
+        std::string::npos);
+  CHECK(syntaxSpec.find("`typeof<symbol>` is a compile-time primitive") !=
+        std::string::npos);
+  CHECK(syntaxSpec.find("Local generated types cannot escape") !=
+        std::string::npos);
+
+  const std::string nativePath =
+      (testScratchPath("") / "primec_procedural_generic_docs_native").string();
+  const std::string runVmCmd =
+      "./primec --emit=vm " + quoteShellArg(examplePath.string()) +
+      " --entry /main";
+  CHECK(runCommand(runVmCmd) == 23);
+
+  const std::string compileNativeCmd =
+      "./primec --emit=native " + quoteShellArg(examplePath.string()) +
+      " -o " + quoteShellArg(nativePath) + " --entry /main";
+  CHECK(runCommand(compileNativeCmd) == 0);
+  CHECK(runCommand(quoteShellArg(nativePath)) == 23);
+}
+
 TEST_CASE("collection docs snippets stay code-examples style and executable") {
   auto resolveDocPath = [](const std::string &name) -> std::filesystem::path {
     std::filesystem::path path = std::filesystem::path("..") / "docs" / name;

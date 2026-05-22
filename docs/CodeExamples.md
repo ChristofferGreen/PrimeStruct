@@ -334,7 +334,40 @@ show_pair_metadata() {
 Why this is good:
 - The example shows exactly what `reflect` unlocks on the type.
 - The metadata queries stay concrete and readable instead of feeling abstract.
-- Field visibility is visible in the output, so the example teaches more than just field count.
+- Field visibility is visible in the output, so the example teaches more than
+  just field count.
+
+### Procedural Generic Local Storage
+
+When generic code needs a temporary shape that callers do not have to name,
+bind type facts first, then define a local generated struct from those facts.
+Return a caller-known field or computed value instead of returning the local
+type itself.
+
+```prime
+[return<T>]
+remember_first<T>([T] first, [T] second) {
+  [type] ValueT { typeof<first> }
+
+  [struct] BoxT {
+    [ValueT] value{0i32}
+  }
+
+  [BoxT] box{BoxT{first}}
+  return(box.value)
+}
+
+[return<int>]
+main() {
+  return(remember_first<i32>(23i32, 41i32))
+}
+```
+
+Why this is good:
+- The compile-time facts are introduced in ordinary source order.
+- `BoxT` is implementation-local, so callers only observe the returned value.
+- The construction uses ordinary braces instead of a separate metaprogramming
+  form.
 
 ### Reflected Equality Prefers the Operator Surface
 

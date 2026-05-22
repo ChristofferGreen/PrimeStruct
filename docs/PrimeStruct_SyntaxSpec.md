@@ -694,16 +694,19 @@ execute_task([count] 2i32)
 - Executions may be prefixed with a transform list (e.g., `[effects(io_out)] log()`).
 - Executions are parsed and validated but not emitted by the current C++ emitter.
 
-### 6.3 Planned Procedural Compile-Time Genericity
+### 6.3 Procedural Compile-Time Genericity
 
-This section records the intended direction for making type-level programming
-feel like ordinary PrimeStruct execution. It is not fully implemented yet; open
-TODOs track the parser, semantic-product, monomorphization, and lowering work.
+Procedural compile-time genericity makes type-level work read like ordinary
+PrimeStruct execution. The implemented local generated-type surface lets a
+generic definition bind compile-time type facts, define an implementation-local
+struct from those facts, construct that struct with braces, and return a value
+whose type is still known to the caller.
 
-The planned source model for local generated types is:
+The source model for local generated types is:
 
 ```prime
-left_from_pair(left, right) {
+[return<T>]
+left_from_pair<T>([T] left, [T] right) {
   [type] LeftT { typeof<left> }
   [type] RightT { typeof<right> }
 
@@ -719,8 +722,8 @@ left_from_pair(left, right) {
 
 Rules:
 - `<...>` is the compile-time argument channel. Existing explicit templates are
-  compile-time arguments to definitions and calls; future compile-time
-  primitives such as `typeof<left>` use the same channel.
+  compile-time arguments to definitions and calls; compile-time primitives such
+  as `typeof<left>` use the same channel.
 - Definition and struct declarations may reserve one heterogeneous type-pack
   parameter using final `Ts...` syntax, such as `tuple<T, Ts...>`. Pack
   parameters are distinct from ordinary template parameters in AST and
@@ -748,16 +751,16 @@ Rules:
   definitions share the same local namespace for bare-name resolution. A
   function, stack value, type local, or generated type cannot reuse a name that
   is already visible in that namespace.
-- `[type] Name { expr }` is a planned compile-time local binding whose value is
-  a type fact. Type locals may be used in later type-envelope positions in the
-  same scope, including fields of generated local struct definitions.
-- `typeof<symbol>` is a planned compile-time primitive that resolves `symbol`
-  through the same lexical/semantic name-resolution rules as ordinary forms
-  and produces the concrete type of the selected value or parameter.
-- Local generated type definitions such as `[struct] PairT { ... }` are planned
-  nominal types scoped to the enclosing definition specialization. Their
-  generated paths must be deterministic so diagnostics, semantic-product dumps,
-  and IR names stay stable across repeated builds and import order.
+- `[type] Name { expr }` is a compile-time local binding whose value is a type
+  fact. Type locals may be used in later type-envelope positions in the same
+  scope, including fields of generated local struct definitions.
+- `typeof<symbol>` is a compile-time primitive that resolves `symbol` through
+  the same lexical/semantic name-resolution rules as ordinary forms and
+  produces the concrete type of the selected value or parameter.
+- Local generated type definitions such as `[struct] PairT { ... }` are nominal
+  types scoped to the enclosing definition specialization. Their generated
+  paths must be deterministic so diagnostics, semantic-product dumps, and IR
+  names stay stable across repeated builds and import order.
 - Local generated types cannot escape as the public return or parameter type of
   the enclosing function because callers cannot name them. A function may
   construct and use a local generated type internally, then return a value whose
@@ -771,7 +774,7 @@ Rules:
   compile-time type locals, or unspecialized generated types.
 
 This model intentionally keeps ordinary templates source-compatible while
-letting future generic code express type computation as a sequence of named
+letting generic code express type computation as a sequence of named
 compile-time facts.
 
 A returnable pair helper should use a caller-visible generic shape:
