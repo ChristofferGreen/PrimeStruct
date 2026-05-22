@@ -604,7 +604,7 @@ main() {
   CHECK(runCommand(runCmd) == 2);
 }
 
-TEST_CASE("runs vm templated stdlib map return envelope unknown key spelling") {
+TEST_CASE("rejects vm templated stdlib map return envelope unknown key spelling") {
   const std::string source = R"(
 import /std/collections/*
 
@@ -624,8 +624,9 @@ main() {
                                "primec_vm_stdlib_collection_shim_templated_return_map_bad_key_err.txt")
                                   .string();
   const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main 2> " + errPath;
-  CHECK(runCommand(runCmd) == 1);
-  CHECK(readFile(errPath).empty());
+  CHECK(runCommand(runCmd) == 2);
+  CHECK(readFile(errPath).find("map requires builtin Comparable key type") !=
+        std::string::npos);
 }
 
 TEST_CASE("rejects vm templated stdlib map return envelope unsupported value arg") {
@@ -649,7 +650,8 @@ main() {
                                   .string();
   const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main 2> " + errPath;
   CHECK(runCommand(runCmd) == 2);
-  CHECK(readFile(errPath).find("vm backend does not support return type on /wrapMapUnknownValue") != std::string::npos);
+  CHECK(readFile(errPath).find("unsupported return type on /wrapMapUnknownValue") !=
+        std::string::npos);
 }
 
 TEST_CASE("rejects vm templated stdlib vector return envelope nested arg") {
@@ -697,8 +699,7 @@ main() {
                                   .string();
   const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main 2> " + errPath;
   CHECK(runCommand(runCmd) == 2);
-  CHECK(readFile(errPath).find("vm backend does not support return type on /wrapMapNestedValue") !=
-        std::string::npos);
+  CHECK(readFile(errPath).find("unknown call target: mapSingle") != std::string::npos);
 }
 
 TEST_CASE("rejects vm templated stdlib vector return envelope wrong arity") {

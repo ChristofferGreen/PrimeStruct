@@ -866,8 +866,41 @@
   wrapper-returned canonical map slash-method struct receiver fallback to the
   current VM lowering rejection. Next continuation point is
   `PrimeStruct_primestruct_compile_run_vm_collections_stdlib_collection_shims_169_178`.
+  The stdlib collection shims 169-178 shard was stabilized on 2026-05-22
+  07:32 CEST by retargeting stale map envelope expectations to current
+  semantic diagnostics, and the 179-188 shard then passed. The stdlib
+  collection shims 189-248 shards were stabilized by 2026-05-22 07:42 CEST
+  by retargeting old bare `mapSingle`/`mapPair`/`mapDouble` and wider
+  constructor shim expectations to current unknown-target rejections. Next
+  continuation point is
+  `PrimeStruct_primestruct_compile_run_vm_collections_stdlib_collection_shims_249_254`.
 
 ## Recent Test Runs
+- 2026-05-22 07:42 CEST | pass | mode: release | command:
+  `cmake --build build-release --target PrimeStruct_compile_run_tests -j 1`;
+  `cd build-release && ctest --output-on-failure -R '^PrimeStruct_primestruct_compile_run_vm_collections_stdlib_collection_shims_229_238$' --timeout 120`;
+  `cd build-release && ctest --output-on-failure -R '^PrimeStruct_primestruct_compile_run_vm_collections_stdlib_collection_shims_239_248$' --timeout 120`
+  | failures: none | notes: completed old bare map shim retargeting through
+  shard 239-248.
+- 2026-05-22 07:36 CEST | pass | mode: release | command:
+  `cmake --build build-release --target PrimeStruct_compile_run_tests -j 1`;
+  `cd build-release && ctest --output-on-failure -R '^PrimeStruct_primestruct_compile_run_vm_collections_stdlib_collection_shims_189_198$' --timeout 120`;
+  `cd build-release && ctest --output-on-failure -R '^PrimeStruct_primestruct_compile_run_vm_collections_stdlib_collection_shims_199_208$' --timeout 120`;
+  `cd build-release && ctest --output-on-failure -R '^PrimeStruct_primestruct_compile_run_vm_collections_stdlib_collection_shims_209_218$' --timeout 120`;
+  `cd build-release && ctest --output-on-failure -R '^PrimeStruct_primestruct_compile_run_vm_collections_stdlib_collection_shims_219_228$' --timeout 120`
+  | failures: none | notes: retargeted old bare map constructor shim blocks
+  to current unknown-target diagnostics.
+- 2026-05-22 07:31 CEST | pass | mode: release | command:
+  `cmake --build build-release --target PrimeStruct_compile_run_tests -j 1`;
+  `cd build-release && ctest --output-on-failure -R '^PrimeStruct_primestruct_compile_run_vm_collections_stdlib_collection_shims_169_178$' --timeout 120`
+  | failures: none | notes: retargeted stale map envelope expectations to
+  current semantic diagnostics.
+- 2026-05-22 07:30 CEST | fail | mode: release | command:
+  `cd build-release && ctest --output-on-failure --stop-on-failure --timeout 120 -I 833,840`
+  | failures:
+  `PrimeStruct_primestruct_compile_run_vm_collections_stdlib_collection_shims_169_178`
+  | notes: stale map envelope expectations still targeted old VM-layer
+  behavior.
 - 2026-05-22 07:29 CEST | pass | mode: release | command:
   `cmake --build build-release --target PrimeStruct_compile_run_tests -j 1`;
   `cd build-release && ctest --output-on-failure -R '^PrimeStruct_primestruct_compile_run_vm_collections_stdlib_collection_shims_159_168$' --timeout 120`
