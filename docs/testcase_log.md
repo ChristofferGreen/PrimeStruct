@@ -857,8 +857,34 @@
   map receiver to the current VM lowering rejection. Next continuation point
   is
   `PrimeStruct_primestruct_compile_run_vm_collections_templated_wrapper_parity_121_130`.
+  The templated wrapper parity 121-130 and 131-138 shards passed on
+  2026-05-22 07:27 CEST, and the stdlib collection shims 139-148 shard
+  passed on 2026-05-22 07:28 CEST. Next stop-on-failure blocker was
+  `PrimeStruct_primestruct_compile_run_vm_collections_stdlib_collection_shims_159_168`.
+  The stdlib collection shims 159-168 shard was stabilized on 2026-05-22
+  07:29 CEST by retargeting the stale empty-diagnostic assertion for
+  wrapper-returned canonical map slash-method struct receiver fallback to the
+  current VM lowering rejection. Next continuation point is
+  `PrimeStruct_primestruct_compile_run_vm_collections_stdlib_collection_shims_169_178`.
 
 ## Recent Test Runs
+- 2026-05-22 07:29 CEST | pass | mode: release | command:
+  `cmake --build build-release --target PrimeStruct_compile_run_tests -j 1`;
+  `cd build-release && ctest --output-on-failure -R '^PrimeStruct_primestruct_compile_run_vm_collections_stdlib_collection_shims_159_168$' --timeout 120`
+  | failures: none | notes: retargeted stale empty-diagnostic assertion to
+  current VM lowering rejection.
+- 2026-05-22 07:28 CEST | fail | mode: release | command:
+  `cd build-release && ctest --output-on-failure --stop-on-failure --timeout 120 -I 831,840`
+  | failures:
+  `PrimeStruct_primestruct_compile_run_vm_collections_stdlib_collection_shims_159_168`
+  | notes: stdlib collection shims 149-158 passed first.
+- 2026-05-22 07:27 CEST | pass | mode: release | command:
+  `cmake --build build-release --target PrimeStruct_compile_run_tests -j 1`;
+  `cd build-release && ctest --output-on-failure -R '^PrimeStruct_primestruct_compile_run_vm_collections_templated_wrapper_parity_121_130$' --timeout 120`;
+  `cd build-release && ctest --output-on-failure -R '^PrimeStruct_primestruct_compile_run_vm_collections_templated_wrapper_parity_131_138$' --timeout 120`;
+  `cd build-release && ctest --output-on-failure -R '^PrimeStruct_primestruct_compile_run_vm_collections_stdlib_collection_shims_139_148$' --timeout 120`
+  | failures: none | notes: no changes needed for these continuation
+  shards.
 - 2026-05-22 07:26 CEST | pass | mode: release | command:
   `cmake --build build-release --target PrimeStruct_compile_run_tests -j 1`;
   `cd build-release && ctest --output-on-failure -R '^PrimeStruct_primestruct_compile_run_vm_collections_templated_wrapper_parity_111_120$' --timeout 120`

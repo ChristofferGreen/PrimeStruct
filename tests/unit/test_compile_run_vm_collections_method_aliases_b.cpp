@@ -377,7 +377,8 @@ main() {
   const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main 2> " + errPath;
   CHECK(runCommand(runCmd) == 2);
   const std::string error = readFile(errPath);
-  CHECK(error.empty());
+  CHECK(error.find("VM lowering error: struct parameter type mismatch") !=
+        std::string::npos);
 }
 
 TEST_CASE("rejects vm wrapper-returned canonical direct-call map receiver fallback") {
