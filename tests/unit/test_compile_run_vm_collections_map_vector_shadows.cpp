@@ -8,7 +8,7 @@
 
 TEST_SUITE_BEGIN("primestruct.compile.run.vm.collections");
 
-TEST_CASE("runs vm with user map at string positional call shadow") {
+TEST_CASE("rejects vm user map at string positional call shadow during semantics") {
   const std::string source = R"(
 [return<int>]
 /map/at([map<string, i32>] values, [string] key) {
@@ -27,7 +27,8 @@ main() {
           .string();
   const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main 2> " + errPath;
   CHECK(runCommand(runCmd) == 2);
-  CHECK(readFile(errPath).find("vm backend requires integer indices for at") != std::string::npos);
+  CHECK(readFile(errPath).find("unknown call target: /std/collections/map/at") !=
+        std::string::npos);
 }
 
 TEST_CASE("runs vm with map access preferring later map receiver over string") {
@@ -56,7 +57,7 @@ main() {
   CHECK(readFile(errPath).find("vm backend requires integer indices for at") != std::string::npos);
 }
 
-TEST_CASE("runs vm with user map at_unsafe string positional call shadow") {
+TEST_CASE("rejects vm user map at_unsafe string positional call shadow during semantics") {
   const std::string source = R"(
 [return<int>]
 /map/at_unsafe([map<string, i32>] values, [string] key) {
@@ -75,7 +76,8 @@ main() {
                                   .string();
   const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main 2> " + errPath;
   CHECK(runCommand(runCmd) == 2);
-  CHECK(readFile(errPath).find("vm backend requires integer indices for at_unsafe") != std::string::npos);
+  CHECK(readFile(errPath).find("unknown call target: /std/collections/map/at_unsafe") !=
+        std::string::npos);
 }
 
 TEST_CASE("runs vm with user map at method shadow") {

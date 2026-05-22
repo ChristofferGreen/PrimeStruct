@@ -832,8 +832,18 @@
   current mixed count/access precedence and current VM wrapper-return
   access-helper lowering rejection. Next continuation point is
   `PrimeStruct_primestruct_compile_run_vm_collections_templated_wrapper_parity_61_70`.
+  The templated wrapper parity 61-70 shard was stabilized on 2026-05-22
+  07:19 CEST by retargeting stale map `at`/`at_unsafe` shadow expectations to
+  current explicit canonical-helper and unknown-target diagnostics. Next
+  continuation point is
+  `PrimeStruct_primestruct_compile_run_vm_collections_templated_wrapper_parity_71_80`.
 
 ## Recent Test Runs
+- 2026-05-22 07:19 CEST | pass | mode: release | command:
+  `cmake --build build-release --target PrimeStruct_compile_run_tests -j 1`;
+  `cd build-release && ctest --output-on-failure -R '^PrimeStruct_primestruct_compile_run_vm_collections_templated_wrapper_parity_61_70$' --timeout 120`
+  | failures: none | notes: retargeted stale bare map access and map
+  positional shadow diagnostics.
 - 2026-05-22 07:17 CEST | pass | mode: release | command:
   `cmake --build build-release --target PrimeStruct_compile_run_tests -j 1`;
   `cd build-release && ctest --output-on-failure -R '^PrimeStruct_primestruct_compile_run_vm_collections_alias_and_basics_51_60$' --timeout 120`

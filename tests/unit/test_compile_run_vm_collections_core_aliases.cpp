@@ -826,7 +826,7 @@ main() {
   CHECK(readFile(outPath).find("unknown call target: /std/collections/map/count") != std::string::npos);
 }
 
-TEST_CASE("keeps vm bare map at builtin even with canonical helper present") {
+TEST_CASE("runs vm bare map at through explicit canonical helper") {
   const std::string source = R"(
 [effects(heap_alloc), return<int>]
 /std/collections/map/at([map<i32, i32>] values, [i32] index) {
@@ -844,7 +844,7 @@ main() {
       (std::filesystem::temp_directory_path() / "primec_vm_bare_map_at_with_canonical_helper_out.txt")
           .string();
   const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main > " + outPath + " 2>&1";
-  CHECK(runCommand(runCmd) == 4);
+  CHECK(runCommand(runCmd) == 17);
   CHECK(readFile(outPath).empty());
 }
 
