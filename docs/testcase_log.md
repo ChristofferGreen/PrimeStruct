@@ -888,8 +888,22 @@
   constructor/access-helper expectations in `shim_maps_c` to unknown-target
   rejections. Next continuation point is
   `PrimeStruct_primestruct_compile_run_vm_collections_user_shadow_and_receiver_precedence_275_284`.
+  The user shadow and receiver precedence 275-331 shards passed on
+  2026-05-22 21:54 CEST without code changes after rebuilding the release
+  compile-run test binary. Next continuation point is
+  `PrimeStruct_primestruct_compile_run_vm_collections_growth_limits_and_syntax_332_341`.
 
 ## Recent Test Runs
+- 2026-05-22 21:54 CEST | pass | mode: release | command:
+  `cmake --build build-release --target PrimeStruct_compile_run_tests -j 1`;
+  `cd build-release && ctest --output-on-failure -R '^PrimeStruct_primestruct_compile_run_vm_collections_user_shadow_and_receiver_precedence_275_284$' --timeout 120`;
+  `cd build-release && ctest --output-on-failure -R '^PrimeStruct_primestruct_compile_run_vm_collections_user_shadow_and_receiver_precedence_285_294$' --timeout 120`;
+  `cd build-release && ctest --output-on-failure -R '^PrimeStruct_primestruct_compile_run_vm_collections_user_shadow_and_receiver_precedence_295_304$' --timeout 120`;
+  `cd build-release && ctest --output-on-failure -R '^PrimeStruct_primestruct_compile_run_vm_collections_user_shadow_and_receiver_precedence_305_314$' --timeout 120`;
+  `cd build-release && ctest --output-on-failure -R '^PrimeStruct_primestruct_compile_run_vm_collections_user_shadow_and_receiver_precedence_315_324$' --timeout 120`;
+  `cd build-release && ctest --output-on-failure -R '^PrimeStruct_primestruct_compile_run_vm_collections_user_shadow_and_receiver_precedence_325_331$' --timeout 120`
+  | failures: none | notes: current known-failure pointer advanced to the
+  next narrow VM collection continuation shard.
 - 2026-05-22 07:50 CEST | pass | mode: release | command:
   `cmake --build build-release --target PrimeStruct_compile_run_tests -j 1`;
   `cd build-release && ctest --output-on-failure -R '^PrimeStruct_primestruct_compile_run_vm_collections_user_shadow_and_receiver_precedence_265_274$' --timeout 120`
