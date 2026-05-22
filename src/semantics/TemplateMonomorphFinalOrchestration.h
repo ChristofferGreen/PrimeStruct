@@ -9,6 +9,10 @@ void buildImportAliases(Context &ctx) {
   ctx.transitiveImportAliases.clear();
   ctx.stdlibScopedImportAliases.clear();
   ctx.importAliases.clear();
+  ctx.directImportAliasTargets.clear();
+  ctx.transitiveImportAliasTargets.clear();
+  ctx.stdlibScopedImportAliasTargets.clear();
+  ctx.importAliasTargets.clear();
   const std::string InternalVectorTypePath =
       legacyExperimentalVectorCompatibilityPrefix() + "Vector";
   const auto &directImportPaths = ctx.program.sourceImports.empty()
@@ -84,19 +88,40 @@ void buildImportAliases(Context &ctx) {
                 aliasName == templateMonomorphSoaToAosHelperName() ||
                 aliasName == templateMonomorphSoaToAosHelperName(true));
       };
+  auto recordAliasTarget =
+      [](std::unordered_map<std::string, std::vector<std::string>> &targetAliasTargets,
+         const std::string &aliasName,
+         const std::string &targetPath) {
+    auto &targets = targetAliasTargets[aliasName];
+    if (std::find(targets.begin(), targets.end(), targetPath) == targets.end()) {
+      targets.push_back(targetPath);
+    }
+  };
+  auto targetsForAliasMap =
+      [&](std::unordered_map<std::string, std::string> &targetAliases)
+      -> std::unordered_map<std::string, std::vector<std::string>> & {
+    if (&targetAliases == &ctx.directImportAliases) {
+      return ctx.directImportAliasTargets;
+    }
+    return ctx.transitiveImportAliasTargets;
+  };
   auto registerAlias = [&](std::unordered_map<std::string, std::string> &targetAliases,
                            const std::string &aliasName,
                            const std::string &targetPath) {
+    recordAliasTarget(targetsForAliasMap(targetAliases), aliasName, targetPath);
     targetAliases.emplace(aliasName, targetPath);
     if (!shouldKeepSoaHelperTargetOutOfImportAliases(aliasName, targetPath)) {
+      recordAliasTarget(ctx.importAliasTargets, aliasName, targetPath);
       ctx.importAliases.emplace(aliasName, targetPath);
     }
   };
   auto registerDefinitionAlias = [&](std::unordered_map<std::string, std::string> &targetAliases,
                                      const std::string &aliasName,
                                      const std::string &targetPath) {
+    recordAliasTarget(targetsForAliasMap(targetAliases), aliasName, targetPath);
     targetAliases[aliasName] = targetPath;
     if (!shouldKeepSoaHelperTargetOutOfImportAliases(aliasName, targetPath)) {
+      recordAliasTarget(ctx.importAliasTargets, aliasName, targetPath);
       ctx.importAliases[aliasName] = targetPath;
     }
   };
@@ -328,6 +353,12 @@ void buildImportAliases(Context &ctx) {
   ctx.stdlibScopedImportAliases = ctx.transitiveImportAliases;
   for (const auto &[aliasName, targetPath] : ctx.directImportAliases) {
     ctx.stdlibScopedImportAliases[aliasName] = targetPath;
+  }
+  ctx.stdlibScopedImportAliasTargets = ctx.transitiveImportAliasTargets;
+  for (const auto &[aliasName, targetPaths] : ctx.directImportAliasTargets) {
+    for (const std::string &targetPath : targetPaths) {
+      recordAliasTarget(ctx.stdlibScopedImportAliasTargets, aliasName, targetPath);
+    }
   }
 }
 

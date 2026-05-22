@@ -72,6 +72,10 @@ struct Context {
   std::unordered_map<std::string, std::string> transitiveImportAliases;
   std::unordered_map<std::string, std::string> stdlibScopedImportAliases;
   std::unordered_map<std::string, std::string> importAliases;
+  std::unordered_map<std::string, std::vector<std::string>> directImportAliasTargets;
+  std::unordered_map<std::string, std::vector<std::string>> transitiveImportAliasTargets;
+  std::unordered_map<std::string, std::vector<std::string>> stdlibScopedImportAliasTargets;
+  std::unordered_map<std::string, std::vector<std::string>> importAliasTargets;
   std::unordered_map<std::string, std::vector<HelperOverloadEntry>> helperOverloads;
   std::unordered_map<std::string, std::string> helperOverloadInternalToPublic;
   std::unordered_map<std::string, std::vector<GenericTypeOverloadEntry>> genericTypeOverloads;
@@ -281,6 +285,15 @@ const std::unordered_map<std::string, std::string> &scopedImportAliasesForNamesp
     return ctx.stdlibScopedImportAliases;
   }
   return ctx.importAliases;
+}
+
+const std::unordered_map<std::string, std::vector<std::string>> &scopedImportAliasTargetsForNamespace(
+    const std::string &namespacePrefix,
+    const Context &ctx) {
+  if (usesStdlibScopedImportAliases(namespacePrefix, ctx)) {
+    return ctx.stdlibScopedImportAliasTargets;
+  }
+  return ctx.importAliasTargets;
 }
 
 const std::string *lookupScopedImportAliasForNamespace(std::string_view name,

@@ -1613,8 +1613,8 @@ TEST_CASE("todo queue and skipped doctest debt stay source locked") {
   CHECK(todo.find("### Ready Now (Parallel-Candidate Leaves; No Unmet TODO Dependencies)") !=
         std::string::npos);
   CHECK(todo.find("### Ready Now (Parallel-Candidate Leaves; No Unmet TODO Dependencies)\n\n"
-                  "- TODO-4333: Reject ambiguous value/execution names | track: procedural-genericity |\n"
-                  "  primary surface: deterministic diagnostics for ambiguous bare names") !=
+                  "- TODO-4334: Add compile-time `[type]` local bindings | track: procedural-genericity |\n"
+                  "  primary surface: compile-time type facts in local binding syntax") !=
         std::string::npos);
   CHECK(todo.find("- `soa-zero-audit`: TODO-4529 replaced the residue inventory with a strict\n"
                   "  zero-production-trace audit; no SoA zero-audit leaf is ready.") !=
@@ -1634,11 +1634,11 @@ TEST_CASE("todo queue and skipped doctest debt stay source locked") {
         std::string::npos);
   CHECK(todo.find("- `multithreading-substrate`: TODO-4545 was split from TODO-4278") !=
         std::string::npos);
-  CHECK(todo.find("- `procedural-genericity`: TODO-4332 completed bare zero-arg execution\n"
-                  "  syntax; ready TODO-4333.") !=
+  CHECK(todo.find("- `procedural-genericity`: TODO-4333 completed deterministic bare-name\n"
+                  "  ambiguity diagnostics; ready TODO-4334.") !=
         std::string::npos);
   CHECK(todo.find("### Immediate Next 10 (Track Successors; Not Ready Until Dependencies Land)\n\n"
-                  "- TODO-4333: Reject ambiguous value/execution names\n"
+                  "- TODO-4334: Add compile-time `[type]` local bindings\n"
                   "- TODO-4545: Implement first structured task spawn/wait substrate\n"
                   "- TODO-4278: Integrate multi-wait with stdlib tuple") !=
         std::string::npos);
@@ -1656,8 +1656,8 @@ TEST_CASE("todo queue and skipped doctest debt stay source locked") {
   CHECK(todo.find("- Deferred SoA finish: TODO-4252") ==
         std::string::npos);
   CHECK(todo.find("### Execution Queue (Recommended Track Order)\n\n"
-                  "- TODO-4333: Reject ambiguous value/execution names\n"
-                  "- TODO-4334: Add compile-time `[type]` local bindings") !=
+                  "- TODO-4334: Add compile-time `[type]` local bindings\n"
+                  "- TODO-4335: Add `typeof<symbol>` compile-time primitive") !=
         std::string::npos);
   CHECK(todo.find("- [ ] TODO-4331: Implement compile-time argument channel model") ==
         std::string::npos);
@@ -1718,7 +1718,7 @@ TEST_CASE("todo queue and skipped doctest debt stay source locked") {
   CHECK(todoFinished.find("TODO-4519: Delete `soa_vector` compatibility seams") !=
         std::string::npos);
   const std::vector<std::string> semanticPhaseQueue = {
-      "TODO-4333: Reject ambiguous value/execution names",
+      "TODO-4334: Add compile-time `[type]` local bindings",
   };
   for (const std::string &entry : semanticPhaseQueue) {
     CHECK(todo.find("- " + entry) != std::string::npos);
@@ -1727,6 +1727,8 @@ TEST_CASE("todo queue and skipped doctest debt stay source locked") {
   CHECK(todo.find("| track: procedural-genericity |") !=
         std::string::npos);
   CHECK(todoFinished.find("TODO-4332: Add bare zero-arg execution syntax") !=
+        std::string::npos);
+  CHECK(todoFinished.find("TODO-4333: Reject ambiguous value/execution names") !=
         std::string::npos);
   CHECK(todo.find("TODO-4545: Implement first structured task spawn/wait substrate") !=
         std::string::npos);

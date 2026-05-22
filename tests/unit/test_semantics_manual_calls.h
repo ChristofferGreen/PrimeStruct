@@ -97,13 +97,28 @@ main() {
   CHECK(mainIt->statements.front().args.empty());
 }
 
-TEST_CASE("local binding shadows bare zero-arg expression") {
+TEST_CASE("local binding conflicts with bare zero-arg expression") {
   const std::string source = R"(
 [return<int>]
 answer() {
   return(7i32)
 }
 
+[return<int>]
+main() {
+  answer{3i32}
+  return(answer)
+}
+)";
+  std::string error;
+  CHECK_FALSE(validateSourceProgram(source, "/main", error));
+  CHECK(error.find("ambiguous bare name: answer") != std::string::npos);
+  CHECK(error.find("local value") != std::string::npos);
+  CHECK(error.find("/answer") != std::string::npos);
+}
+
+TEST_CASE("unique local binding still reads as value") {
+  const std::string source = R"(
 [return<int>]
 main() {
   answer{3i32}
@@ -126,6 +141,57 @@ main() {
   REQUIRE(mainIt->returnExpr.has_value());
   CHECK(mainIt->returnExpr->kind == primec::Expr::Kind::Name);
   CHECK(mainIt->returnExpr->name == "answer");
+}
+
+TEST_CASE("bare zero-arg import alias ambiguity rejects deterministically") {
+  const std::string source = R"(
+import /alpha/*
+import /beta/*
+namespace beta {
+  [public return<int>]
+  answer() {
+    return(2i32)
+  }
+}
+namespace alpha {
+  [public return<int>]
+  answer() {
+    return(1i32)
+  }
+}
+[return<int>]
+main() {
+  return(answer)
+}
+)";
+  std::string error;
+  CHECK_FALSE(validateSourceProgram(source, "/main", error));
+  CHECK(error.find("ambiguous bare name: answer") != std::string::npos);
+  const std::size_t alphaPos = error.find("/alpha/answer");
+  const std::size_t betaPos = error.find("/beta/answer");
+  CHECK(alphaPos != std::string::npos);
+  CHECK(betaPos != std::string::npos);
+  CHECK(alphaPos < betaPos);
+}
+
+TEST_CASE("bare zero-arg statement conflicts with local binding") {
+  const std::string source = R"(
+[return<void>]
+tick() {
+}
+
+[return<int>]
+main() {
+  tick{0i32}
+  tick
+  return(4i32)
+}
+)";
+  std::string error;
+  CHECK_FALSE(validateSourceProgram(source, "/main", error));
+  CHECK(error.find("ambiguous bare name: tick") != std::string::npos);
+  CHECK(error.find("local value") != std::string::npos);
+  CHECK(error.find("/tick") != std::string::npos);
 }
 
 TEST_CASE("non-zero-arg callable bare name stays diagnostic") {

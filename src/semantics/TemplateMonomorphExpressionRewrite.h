@@ -20,30 +20,27 @@ bool rewriteExpr(Expr &expr,
       }
       return false;
     };
-    auto visibleZeroArgDefinitionPath = [&]() -> std::string {
-      if (expr.name.empty() || expr.name.find('/') != std::string::npos ||
-          isRuntimeParameter() || locals.count(expr.name) > 0) {
-        return {};
+    auto appendUniquePath = [](std::vector<std::string> &paths,
+                               const std::string &path) {
+      if (!path.empty() && std::find(paths.begin(), paths.end(), path) == paths.end()) {
+        paths.push_back(path);
       }
-      const std::string resolvedPath =
-          resolveNameToPath(expr.name,
-                            namespacePrefix,
-                            scopedImportAliasesForNamespace(namespacePrefix, ctx),
-                            ctx.sourceDefs);
-      auto sourceIt = ctx.sourceDefs.find(resolvedPath);
+    };
+    auto appendZeroArgCallablePathsForTarget =
+        [&](const std::string &targetPath, std::vector<std::string> &paths) {
+      auto sourceIt = ctx.sourceDefs.find(targetPath);
       if (sourceIt != ctx.sourceDefs.end()) {
         if (sourceIt->second.parameters.empty() &&
             sourceIt->second.templateArgs.empty() &&
             !isStructDefinition(sourceIt->second)) {
-          return resolvedPath;
+          appendUniquePath(paths, targetPath);
         }
-        return {};
+        return;
       }
-      auto overloadIt = ctx.helperOverloads.find(resolvedPath);
+      auto overloadIt = ctx.helperOverloads.find(targetPath);
       if (overloadIt == ctx.helperOverloads.end()) {
-        return {};
+        return;
       }
-      std::string zeroArgPath;
       for (const HelperOverloadEntry &entry : overloadIt->second) {
         if (entry.parameterCount != 0 || entry.isVariadic) {
           continue;
@@ -54,15 +51,58 @@ bool rewriteExpr(Expr &expr,
             isStructDefinition(overloadDefIt->second)) {
           continue;
         }
-        if (!zeroArgPath.empty()) {
-          return {};
-        }
-        zeroArgPath = entry.internalPath;
+        appendUniquePath(paths, entry.internalPath);
       }
-      return zeroArgPath;
     };
-    if (const std::string zeroArgPath = visibleZeroArgDefinitionPath();
-        !zeroArgPath.empty()) {
+    auto visibleZeroArgDefinitionPaths = [&]() -> std::vector<std::string> {
+      std::vector<std::string> paths;
+      if (expr.name.empty() || expr.name.find('/') != std::string::npos) {
+        return paths;
+      }
+      const std::string resolvedPath =
+          resolveNameToPath(expr.name,
+                            namespacePrefix,
+                            scopedImportAliasesForNamespace(namespacePrefix, ctx),
+                            ctx.sourceDefs);
+      appendZeroArgCallablePathsForTarget(resolvedPath, paths);
+      const auto &aliasTargets =
+          scopedImportAliasTargetsForNamespace(namespacePrefix, ctx);
+      auto aliasIt = aliasTargets.find(expr.name);
+      if (aliasIt != aliasTargets.end()) {
+        for (const std::string &targetPath : aliasIt->second) {
+          appendZeroArgCallablePathsForTarget(targetPath, paths);
+        }
+      }
+      std::sort(paths.begin(), paths.end());
+      paths.erase(std::unique(paths.begin(), paths.end()), paths.end());
+      return paths;
+    };
+    auto appendPathList = [](std::string &message,
+                             const std::vector<std::string> &paths) {
+      for (size_t index = 0; index < paths.size(); ++index) {
+        if (index == 0) {
+          message += paths[index];
+        } else if (index + 1 == paths.size()) {
+          message += " and " + paths[index];
+        } else {
+          message += ", " + paths[index];
+        }
+      }
+    };
+    std::vector<std::string> zeroArgPaths = visibleZeroArgDefinitionPaths();
+    const bool hasLocalValue = isRuntimeParameter() || locals.count(expr.name) > 0;
+    if (hasLocalValue && !zeroArgPaths.empty()) {
+      error = "ambiguous bare name: " + expr.name +
+              " could refer to a local value or ";
+      appendPathList(error, zeroArgPaths);
+      return false;
+    }
+    if (zeroArgPaths.size() > 1) {
+      error = "ambiguous bare name: " + expr.name + " could refer to ";
+      appendPathList(error, zeroArgPaths);
+      return false;
+    }
+    if (zeroArgPaths.size() == 1) {
       Expr callExpr;
       callExpr.kind = Expr::Kind::Call;
       callExpr.name = expr.name;

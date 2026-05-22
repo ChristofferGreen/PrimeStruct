@@ -2203,7 +2203,7 @@ explicit `utf8`/`ascii` suffix.** `ascii` enforces 7-bit ASCII (the compiler rej
     calls.
   - `(...)` lists runtime parameters; explicit calls always include `()` (even with no args), and `()` never appears on
     bindings. Bare zero-argument execution allows `name` to execute a unique visible zero-argument definition in
-    command/value position when no stack value or other visible entity makes the name ambiguous.
+    command/value position when no stack value, import alias, or other visible callable makes the name ambiguous.
   - **Parameters:** use the same binding envelope as locals: `main([array<string>] args, [i32] limit{10i32})`.
     Qualifiers like `mut`/`copy` apply here as well; defaults are optional and currently limited to literal/pure forms
     (no name references).

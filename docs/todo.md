@@ -83,8 +83,8 @@ Task template:
 
 ### Ready Now (Parallel-Candidate Leaves; No Unmet TODO Dependencies)
 
-- TODO-4333: Reject ambiguous value/execution names | track: procedural-genericity |
-  primary surface: deterministic diagnostics for ambiguous bare names
+- TODO-4334: Add compile-time `[type]` local bindings | track: procedural-genericity |
+  primary surface: compile-time type facts in local binding syntax
 
 ### Parallel Work Tracks (Current)
 
@@ -110,14 +110,14 @@ Task template:
 - `multithreading-substrate`: TODO-4545 was split from TODO-4278 to capture
   the missing first structured task spawn/wait prerequisite; keep it out of
   Ready Now until the multithreading lane is selected or split further.
-- `procedural-genericity`: TODO-4332 completed bare zero-arg execution
-  syntax; ready TODO-4333.
-- `generic-requirements`: TODO-4331 is complete; still blocked by TODO-4334
-  before TODO-4341 can start.
+- `procedural-genericity`: TODO-4333 completed deterministic bare-name
+  ambiguity diagnostics; ready TODO-4334.
+- `generic-requirements`: TODO-4331 is complete; TODO-4341 remains blocked
+  by TODO-4334.
 
 ### Immediate Next 10 (Track Successors; Not Ready Until Dependencies Land)
 
-- TODO-4333: Reject ambiguous value/execution names
+- TODO-4334: Add compile-time `[type]` local bindings
 - TODO-4545: Implement first structured task spawn/wait substrate
 - TODO-4278: Integrate multi-wait with stdlib tuple
 
@@ -141,8 +141,8 @@ Task template:
   stdlib tuple values
 - Multithreading substrate: TODO-4545 captures the first task spawn/wait
   prerequisite split out of TODO-4278
-- Procedural compile-time genericity: TODO-4333 -> TODO-4334
-  -> TODO-4335 -> TODO-4336 -> TODO-4337
+- Procedural compile-time genericity: TODO-4334 -> TODO-4335 -> TODO-4336
+  -> TODO-4337
   -> TODO-4338 -> TODO-4339 -> TODO-4340
 - Generic constraint and compile-time flow alignment: TODO-4341
   -> TODO-4342 -> TODO-4343 -> TODO-4344 -> TODO-4352 -> TODO-4353
@@ -152,7 +152,6 @@ Task template:
 
 ### Execution Queue (Recommended Track Order)
 
-- TODO-4333: Reject ambiguous value/execution names
 - TODO-4334: Add compile-time `[type]` local bindings
 - TODO-4335: Add `typeof<symbol>` compile-time primitive
 - TODO-4336: Allow type locals in envelope positions
@@ -208,7 +207,7 @@ Task template:
 | Algebraic sum types and brace-only construction | none |
 | Stdlib ADT migration for `Maybe` and `Result` | none |
 | Generic type packs and tuple stdlib surface | TODO-4274, TODO-4273, TODO-4277, TODO-4278 |
-| Procedural compile-time genericity and local type facts | TODO-4333, TODO-4334, TODO-4335, TODO-4336, TODO-4337, TODO-4338, TODO-4339, TODO-4340 |
+| Procedural compile-time genericity and local type facts | TODO-4334, TODO-4335, TODO-4336, TODO-4337, TODO-4338, TODO-4339, TODO-4340 |
 | Generic constraints and compile-time flow control | TODO-4341, TODO-4342, TODO-4343, TODO-4344, TODO-4352, TODO-4353, TODO-4354, TODO-4355, TODO-4356, TODO-4357, TODO-4345, TODO-4346, TODO-4358, TODO-4347, TODO-4351, TODO-4348, TODO-4359, TODO-4349, TODO-4350 |
 
 ### Validation Coverage Snapshot
@@ -235,7 +234,7 @@ Task template:
 | Sum-type and brace-construction conformance | none |
 | Maybe/Result sum migration conformance | none |
 | Generic type-pack and tuple conformance | TODO-4274, TODO-4273, TODO-4277, TODO-4278 |
-| Procedural compile-time genericity conformance | TODO-4333, TODO-4334, TODO-4335, TODO-4336, TODO-4337, TODO-4338, TODO-4339, TODO-4340 |
+| Procedural compile-time genericity conformance | TODO-4334, TODO-4335, TODO-4336, TODO-4337, TODO-4338, TODO-4339, TODO-4340 |
 | Generic constraint and compile-time flow conformance | TODO-4341, TODO-4342, TODO-4343, TODO-4344, TODO-4352, TODO-4353, TODO-4354, TODO-4355, TODO-4356, TODO-4357, TODO-4345, TODO-4346, TODO-4358, TODO-4347, TODO-4351, TODO-4348, TODO-4359, TODO-4349, TODO-4350 |
 
 ### Vector/Map Bridge Contract Summary
@@ -819,34 +818,6 @@ Task template:
     - `./scripts/compile.sh --release` passes.
   - stop_rule: Stop once multi-wait returns stdlib `tuple<...>` or the missing
     task-side prerequisite is split into an explicit multithreading TODO.
-
-- [ ] TODO-4333: Reject ambiguous value/execution names
-  - owner: ai
-  - created_at: 2026-05-04
-  - phase: Procedural compile-time genericity
-  - depends_on: TODO-4332
-  - scope: Add deterministic diagnostics for scopes where a bare name could
-    mean both a stack value and a visible zero-argument callable, or where
-    multiple callable/import candidates make the name non-unique.
-  - implementation_notes:
-    - Start from semantic name resolution, import alias resolution, local
-      binding maps, and helper/call target diagnostics.
-    - Prefer fail-closed behavior: if the compiler cannot prove one entity,
-      reject instead of guessing.
-  - acceptance:
-    - A local binding and visible zero-arg definition with the same bare name
-      reject before lowering.
-    - Import aliases that make a bare zero-arg execution ambiguous reject with
-      stable related-path diagnostics.
-    - A unique local binding still reads as a value; a unique zero-arg
-      callable still executes.
-    - Runtime locals, compile-time type locals, generated type names, and
-      visible zero-arg definitions share one bare-name namespace; duplicate
-      names in that namespace reject deterministically.
-    - Diagnostics are deterministic across import order and repeated builds.
-    - `./scripts/compile.sh --release` passes.
-  - stop_rule: Stop once bare-name ambiguity is rejected consistently across
-    local, definition, and import-alias scopes.
 
 - [ ] TODO-4334: Add compile-time `[type]` local bindings
   - owner: ai

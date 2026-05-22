@@ -6,6 +6,38 @@ Legend:
 Finished items are periodically archived here from `docs/todo.md`; section headers record the archive date.
 
 **Todo Completion (May 22, 2026)**
+- [x] TODO-4333: Reject ambiguous value/execution names
+  - owner: ai
+  - created_at: 2026-05-04
+  - finished_at: 2026-05-22
+  - phase: Procedural compile-time genericity
+  - parallel_track: procedural-genericity
+  - depends_on: TODO-4332
+  - scope: Add deterministic diagnostics for scopes where a bare name could
+    mean both a stack value and a visible zero-argument callable, or where
+    multiple callable/import candidates make the name non-unique.
+  - outcome:
+    - Recorded all import-alias targets during template monomorphization so
+      ambiguity checks no longer depend on which alias map entry wins.
+    - Rejected bare zero-argument execution when a runtime local or parameter
+      shares the bare name with a visible zero-argument callable.
+    - Rejected duplicate imported zero-argument callable candidates with
+      sorted related-path diagnostics while preserving unique local reads and
+      unique zero-argument callable execution.
+    - Documented the ambiguity rule and promoted TODO-4334 as the next Ready
+      Now procedural-genericity leaf.
+  - validation:
+    - `cmake --build build-release --target PrimeStruct_misc_tests -j 1`
+      passed.
+    - `cd build-release && ./PrimeStruct_misc_tests --test-case="bare zero-arg expression rewrites to call,bare zero-arg statement rewrites to call,local binding conflicts with bare zero-arg expression,unique local binding still reads as value,bare zero-arg import alias ambiguity rejects deterministically,bare zero-arg statement conflicts with local binding,non-zero-arg callable bare name stays diagnostic" --no-skip`
+      passed.
+    - `cmake --build build-release --target PrimeStruct_compile_run_tests -j 1`
+      passed.
+    - `cd build-release && ./PrimeStruct_compile_run_tests --test-case="todo queue and skipped doctest debt stay source locked" --no-skip`
+      passed.
+    - Full `./scripts/compile.sh --release` remains deferred by the lite
+      workflow.
+
 - [x] TODO-4332: Add bare zero-arg execution syntax
   - owner: ai
   - created_at: 2026-05-04
