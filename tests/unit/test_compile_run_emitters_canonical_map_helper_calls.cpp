@@ -1134,7 +1134,7 @@ main() {
   CHECK(runCommand(exePath) == 17);
 }
 
-TEST_CASE("C++ emitter rejects extra-argument stdlib canonical map count method-call sugar") {
+TEST_CASE("C++ emitter runs extra-argument stdlib canonical map count method-call sugar") {
   const std::string source = R"(
 [return<int>]
 /std/collections/map/count([map<i32, i32>] values, [bool] marker) {
@@ -1148,13 +1148,13 @@ main() {
 }
 )";
   const std::string srcPath = writeTemp("compile_cpp_stdlib_canonical_map_count_method_sugar.prime", source);
-  const std::string errPath =
-      (testScratchPath("") / "primec_cpp_stdlib_canonical_map_count_method_sugar.err").string();
+  const std::string exePath =
+      (testScratchPath("") / "primec_cpp_stdlib_canonical_map_count_method_sugar_exe").string();
 
   const std::string compileCmd =
-      "./primec --emit=exe " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
-  CHECK(runCommand(compileCmd) == 2);
-  CHECK(readFile(errPath).find("call=/std/collections/map/count") != std::string::npos);
+      "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main";
+  CHECK(runCommand(compileCmd) == 0);
+  CHECK(runCommand(exePath) == 91);
 }
 
 TEST_SUITE_END();

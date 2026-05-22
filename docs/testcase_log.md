@@ -7650,3 +7650,9 @@
   of builtin count fallback; validating command:
   `timeout 300s bash -lc 'cd build-release && ctest --output-on-failure --stop-on-failure --timeout 120 -I 880,884'`
   on 2026-05-22 08:37 CEST.
+- C++ emitter canonical map helper shard 892 now passes after extra-argument
+  `values.count(true)` method sugar for a visible `/std/collections/map/count`
+  helper is treated as ordinary helper dispatch instead of builtin arity
+  rejection; validating command:
+  `timeout 300s bash -lc 'cd build-release && ctest --output-on-failure --stop-on-failure --timeout 120 -I 890,894'`
+  on 2026-05-22 08:40 CEST.
