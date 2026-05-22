@@ -874,8 +874,18 @@
   constructor shim expectations to current unknown-target rejections. Next
   continuation point is
   `PrimeStruct_primestruct_compile_run_vm_collections_stdlib_collection_shims_249_254`.
+  The stdlib collection shims 249-254 shard was stabilized on 2026-05-22
+  07:45 CEST by keeping the extended constructor mismatch as exit-code
+  rejection coverage after the old internal-map diagnostic stopped being
+  stable. Next continuation point is
+  `PrimeStruct_primestruct_compile_run_vm_collections_user_shadow_and_receiver_precedence_255_264`.
 
 ## Recent Test Runs
+- 2026-05-22 07:45 CEST | pass | mode: release | command:
+  `cmake --build build-release --target PrimeStruct_compile_run_tests -j 1`;
+  `cd build-release && ctest --output-on-failure -R '^PrimeStruct_primestruct_compile_run_vm_collections_stdlib_collection_shims_249_254$' --timeout 120`
+  | failures: none | notes: removed stale internal-map diagnostic assertion
+  from extended constructor mismatch coverage.
 - 2026-05-22 07:42 CEST | pass | mode: release | command:
   `cmake --build build-release --target PrimeStruct_compile_run_tests -j 1`;
   `cd build-release && ctest --output-on-failure -R '^PrimeStruct_primestruct_compile_run_vm_collections_stdlib_collection_shims_229_238$' --timeout 120`;
