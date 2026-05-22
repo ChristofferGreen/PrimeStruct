@@ -20,11 +20,21 @@ void expectNativeCompileReject(const std::string &srcPath,
   }
 }
 
+void expectNativeCompileRun(const std::string &srcPath,
+                            const std::string &exeName,
+                            int expectedExitCode) {
+  const std::string exePath = (testScratchPath("") / exeName).string();
+  const std::string compileCmd =
+      "./primec --emit=native " + srcPath + " -o " + exePath + " --entry /main";
+  CHECK(runCommand(compileCmd) == 0);
+  CHECK(runCommand(exePath) == expectedExitCode);
+}
+
 } // namespace
 
 TEST_SUITE_BEGIN("primestruct.compile.run.native_backend.core");
 
-TEST_CASE("native rejects variadic array packs with indexed count methods") {
+TEST_CASE("native materializes variadic array packs with indexed count methods") {
   const std::string source = R"(
 [return<int>]
 score_arrays([args<array<i32>>] values) {
@@ -49,11 +59,10 @@ main() {
 }
 )";
   const std::string srcPath = writeTemp("compile_native_variadic_args_array.prime", source);
-  expectNativeCompileReject(srcPath, "primec_native_variadic_args_array.err",
-                            "native backend only supports arithmetic/comparison", "call=/at");
+  expectNativeCompileRun(srcPath, "primec_native_variadic_args_array_exe", 11);
 }
 
-TEST_CASE("native rejects variadic borrowed array packs with indexed count methods") {
+TEST_CASE("native materializes variadic borrowed array packs with indexed count methods") {
   const std::string source = R"(
 [return<int>]
 score_refs([args<Reference<array<i32>>>] values) {
@@ -99,8 +108,7 @@ main() {
 }
 )";
   const std::string srcPath = writeTemp("compile_native_variadic_args_borrowed_array.prime", source);
-  expectNativeCompileReject(srcPath, "primec_native_variadic_args_borrowed_array.err",
-                            "native backend only supports arithmetic/comparison", "call=/at");
+  expectNativeCompileRun(srcPath, "primec_native_variadic_args_borrowed_array_exe", 11);
 }
 
 TEST_CASE("native rejects variadic borrowed array packs with indexed dereference access helpers") {
@@ -151,10 +159,10 @@ main() {
 )";
   const std::string srcPath = writeTemp("compile_native_variadic_args_borrowed_array_deref_access.prime", source);
   expectNativeCompileReject(srcPath, "primec_native_variadic_args_borrowed_array_deref_access.err",
-                            "native backend only supports arithmetic/comparison", "call=/at");
+                            "semantic-product method-call target missing lowered definition", "/array/at");
 }
 
-TEST_CASE("native rejects variadic pointer array packs with indexed count methods") {
+TEST_CASE("native materializes variadic pointer array packs with indexed count methods") {
   const std::string source = R"(
 [return<int>]
 score_ptrs([args<Pointer<array<i32>>>] values) {
@@ -200,8 +208,7 @@ main() {
 }
 )";
   const std::string srcPath = writeTemp("compile_native_variadic_args_pointer_array.prime", source);
-  expectNativeCompileReject(srcPath, "primec_native_variadic_args_pointer_array.err",
-                            "native backend only supports arithmetic/comparison", "call=/at");
+  expectNativeCompileRun(srcPath, "primec_native_variadic_args_pointer_array_exe", 11);
 }
 
 TEST_CASE("native rejects variadic pointer array packs with indexed dereference access helpers") {

@@ -7674,3 +7674,9 @@
   parameter type mismatch`); validating command:
   `timeout 300s bash -lc 'cd build-release && ctest --output-on-failure --stop-on-failure --timeout 120 -I 930,934'`
   on 2026-05-22 08:54 CEST.
+- Native core variadic array shard 936-939 now passes after value, borrowed,
+  and pointer array-pack indexed count methods were retargeted to active native
+  materialization coverage, while borrowed dereference access keeps current
+  `/array/at` missing-lowered-definition rejection coverage; validating command:
+  `timeout 300s bash -lc 'cd build-release && ctest --output-on-failure --stop-on-failure --timeout 120 -I 935,939'`
+  on 2026-05-22 09:01 CEST.
