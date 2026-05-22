@@ -7687,3 +7687,9 @@
   coverage; validating command:
   `timeout 300s bash -lc 'cd build-release && ctest --output-on-failure --stop-on-failure --timeout 120 -I 940,944'`
   on 2026-05-22 09:09 CEST.
+- Native core continuation reached shard 947 on 2026-05-22 09:13 CEST:
+  `PrimeStruct_primestruct_compile_run_native_backend_core_core_12_12`
+  currently compiles the `Reference<Buffer>` variadic-pack fixture but the
+  generated native executable segfaults before returning the expected 35.
+  Direct reproducer:
+  `timeout 300s bash -lc 'cd build-release && ctest --output-on-failure --stop-on-failure --timeout 120 -I 945,949'`.
