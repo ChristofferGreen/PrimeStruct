@@ -416,7 +416,7 @@ bool SemanticsValidator::resolveStructFieldBinding(const std::vector<ParameterIn
         return failFieldResolutionDiagnostic(
             receiver, "struct definitions may only contain field bindings: " + def.fullPath);
       }
-      if (stmt.name != bindingFieldName) {
+      if (isCompileTimeTypeBinding(stmt) || stmt.name != bindingFieldName) {
         continue;
       }
       if (isStaticField(stmt) && !allowStatic) {
@@ -480,7 +480,8 @@ bool SemanticsValidator::resolveStructFieldBinding(const std::vector<ParameterIn
       return false;
     };
     for (const auto &stmt : defIt->second->statements) {
-      if (!stmt.isBinding || !isStaticField(stmt) || stmt.name != fieldName) {
+      if (!stmt.isBinding || isCompileTimeTypeBinding(stmt) ||
+          !isStaticField(stmt) || stmt.name != fieldName) {
         continue;
       }
       return SemanticsValidator::resolveStructFieldBinding(*defIt->second, stmt, bindingOut);

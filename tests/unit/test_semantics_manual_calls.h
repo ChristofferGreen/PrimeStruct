@@ -319,6 +319,93 @@ main() {
   CHECK(error.empty());
 }
 
+TEST_CASE("type locals annotate later local and struct field envelopes") {
+  const std::string source = R"(
+[struct]
+Holder() {
+  [i32] seed{1i32}
+  [type] ValueT { typeof<seed> }
+  [ValueT] copy{2i32}
+}
+
+[return<int>]
+main() {
+  [i32] value{5i32}
+  [type] ValueT { typeof<value> }
+  [ValueT] copy{value}
+  [Holder] holder{Holder{}}
+  return(plus(copy, holder.copy))
+}
+)";
+  primec::Lexer lexer(source);
+  primec::Parser parser(lexer.tokenize());
+  primec::Program program;
+  std::string error;
+  REQUIRE(parser.parse(program, error));
+  primec::Semantics semantics;
+  primec::SemanticProgram semanticProgram;
+  const std::vector<std::string> defaults = {"io_out", "io_err"};
+  CHECK(semantics.validate(program,
+                           "/main",
+                           error,
+                           defaults,
+                           defaults,
+                           {},
+                           nullptr,
+                           false,
+                           &semanticProgram));
+  CHECK(error.empty());
+  bool sawCopyField = false;
+  bool sawTypeLocalField = false;
+  for (const auto &entry : semanticProgram.structFieldMetadata) {
+    if (entry.structPath != "/Holder") {
+      continue;
+    }
+    if (entry.fieldName == "copy") {
+      sawCopyField = true;
+      CHECK(entry.bindingTypeText == "i32");
+    }
+    if (entry.fieldName == "ValueT") {
+      sawTypeLocalField = true;
+    }
+  }
+  CHECK(sawCopyField);
+  CHECK_FALSE(sawTypeLocalField);
+  CHECK(std::none_of(semanticProgram.bindingFacts.begin(),
+                     semanticProgram.bindingFacts.end(),
+                     [](const primec::SemanticProgramBindingFact &fact) {
+                       return fact.name == "ValueT";
+                     }));
+}
+
+TEST_CASE("type local envelopes reject forward and runtime value use") {
+  const std::string forward = R"(
+[return<int>]
+main() {
+  [ValueT] copy{1i32}
+  [type] ValueT { i32 }
+  return(copy)
+}
+)";
+  std::string forwardError;
+  CHECK_FALSE(validateSourceProgram(forward, "/main", forwardError));
+  CHECK(forwardError.find("unsupported binding type: ValueT") !=
+        std::string::npos);
+
+  const std::string runtimeUse = R"(
+[return<int>]
+main() {
+  [i32] value{1i32}
+  [type] ValueT { typeof<value> }
+  return(ValueT)
+}
+)";
+  std::string runtimeError;
+  CHECK_FALSE(validateSourceProgram(runtimeUse, "/main", runtimeError));
+  CHECK(runtimeError.find("type local is not a runtime value: ValueT") !=
+        std::string::npos);
+}
+
 TEST_CASE("typeof symbol rejects missing and runtime argument forms") {
   const std::string missing = R"(
 [return<int>]

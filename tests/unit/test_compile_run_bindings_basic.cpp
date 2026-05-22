@@ -62,27 +62,37 @@ main() {
 
 TEST_CASE("compiles and runs typeof type locals") {
   const std::string source = R"(
+[struct]
+Holder() {
+  [i32] seed{2i32}
+  [type] ValueT { typeof<seed> }
+  [ValueT] copy{3i32}
+}
+
 [return<int>]
 id([i32] value) {
   [type] ValueT { typeof<value> }
-  return(value)
+  [ValueT] copy{value}
+  return(copy)
 }
 
 [return<int>]
 main() {
   [i32] value{7i32}
   [type] LocalT { typeof<value> }
-  return(id(value))
+  [LocalT] copy{value}
+  [Holder] holder{Holder{}}
+  return(plus(id(copy), holder.copy))
 }
 )";
   const std::string srcPath = writeTemp("compile_typeof_type_locals.prime", source);
   const std::string exePath = (testScratchPath("") / "primec_typeof_type_locals_exe").string();
 
   const std::string vmCmd = "./primec --emit=vm " + srcPath + " --entry /main";
-  CHECK(runCommand(vmCmd) == 7);
+  CHECK(runCommand(vmCmd) == 10);
   const std::string compileCmd = "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main";
   CHECK(runCommand(compileCmd) == 0);
-  CHECK(runCommand(exePath) == 7);
+  CHECK(runCommand(exePath) == 10);
 }
 
 TEST_CASE("compiles with struct definition") {

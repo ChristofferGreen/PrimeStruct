@@ -185,7 +185,8 @@ std::string SemanticsValidator::inferStructReturnPointerTargetTypeText(
       return {};
     }
     for (const auto &stmt : defIt->second->statements) {
-      if (!stmt.isBinding || stmt.name != target.name) {
+      if (!stmt.isBinding || isCompileTimeTypeBinding(stmt) ||
+          stmt.name != target.name) {
         continue;
       }
       BindingInfo fieldBinding;

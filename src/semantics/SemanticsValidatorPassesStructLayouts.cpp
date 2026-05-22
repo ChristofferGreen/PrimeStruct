@@ -240,7 +240,7 @@ bool SemanticsValidator::validateStructLayouts() {
     }
     uint32_t offset = 0;
     for (const auto &stmt : def.statements) {
-      if (!stmt.isBinding) {
+      if (!stmt.isBinding || isCompileTimeTypeBinding(stmt)) {
         continue;
       }
       const bool fieldIsStatic = isStaticField(stmt);

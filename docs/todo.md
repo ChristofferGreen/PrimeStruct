@@ -83,8 +83,8 @@ Task template:
 
 ### Ready Now (Parallel-Candidate Leaves; No Unmet TODO Dependencies)
 
-- TODO-4336: Allow type locals in envelope positions | track: procedural-genericity |
-  primary surface: consume local type facts in later concrete type positions
+- TODO-4337: Add local generated nominal structs | track: procedural-genericity |
+  primary surface: define local nominal types that consume type-local facts
 
 ### Parallel Work Tracks (Current)
 
@@ -110,8 +110,8 @@ Task template:
 - `multithreading-substrate`: TODO-4545 was split from TODO-4278 to capture
   the missing first structured task spawn/wait prerequisite; keep it out of
   Ready Now until the multithreading lane is selected or split further.
-- `procedural-genericity`: TODO-4335 added `typeof<symbol>` type-local
-  facts; ready TODO-4336.
+- `procedural-genericity`: TODO-4336 allowed type locals in local binding and
+  struct-field envelopes; ready TODO-4337.
 - `generic-requirements`: TODO-4331 and TODO-4334 are complete; TODO-4341
   remains queued behind the procedural-genericity leaf chain.
 
@@ -140,8 +140,8 @@ Task template:
   stdlib tuple values
 - Multithreading substrate: TODO-4545 captures the first task spawn/wait
   prerequisite split out of TODO-4278
-- Procedural compile-time genericity: TODO-4336 -> TODO-4337 ->
-  TODO-4338 -> TODO-4339 -> TODO-4340
+- Procedural compile-time genericity: TODO-4337 -> TODO-4338 ->
+  TODO-4339 -> TODO-4340
 - Generic constraint and compile-time flow alignment: TODO-4341
   -> TODO-4342 -> TODO-4343 -> TODO-4344 -> TODO-4352 -> TODO-4353
   -> TODO-4354 -> TODO-4355 -> TODO-4356 -> TODO-4357 -> TODO-4345
@@ -150,7 +150,6 @@ Task template:
 
 ### Execution Queue (Recommended Track Order)
 
-- TODO-4336: Allow type locals in envelope positions
 - TODO-4337: Add local generated nominal structs
 - TODO-4338: Stabilize generated type identity and mangling
 - TODO-4339: Lower procedural generic facts through semantics
@@ -203,7 +202,7 @@ Task template:
 | Algebraic sum types and brace-only construction | none |
 | Stdlib ADT migration for `Maybe` and `Result` | none |
 | Generic type packs and tuple stdlib surface | TODO-4274, TODO-4273, TODO-4277, TODO-4278 |
-| Procedural compile-time genericity and local type facts | TODO-4336, TODO-4337, TODO-4338, TODO-4339, TODO-4340 |
+| Procedural compile-time genericity and local type facts | TODO-4337, TODO-4338, TODO-4339, TODO-4340 |
 | Generic constraints and compile-time flow control | TODO-4341, TODO-4342, TODO-4343, TODO-4344, TODO-4352, TODO-4353, TODO-4354, TODO-4355, TODO-4356, TODO-4357, TODO-4345, TODO-4346, TODO-4358, TODO-4347, TODO-4351, TODO-4348, TODO-4359, TODO-4349, TODO-4350 |
 
 ### Validation Coverage Snapshot
@@ -230,7 +229,7 @@ Task template:
 | Sum-type and brace-construction conformance | none |
 | Maybe/Result sum migration conformance | none |
 | Generic type-pack and tuple conformance | TODO-4274, TODO-4273, TODO-4277, TODO-4278 |
-| Procedural compile-time genericity conformance | TODO-4336, TODO-4337, TODO-4338, TODO-4339, TODO-4340 |
+| Procedural compile-time genericity conformance | TODO-4337, TODO-4338, TODO-4339, TODO-4340 |
 | Generic constraint and compile-time flow conformance | TODO-4341, TODO-4342, TODO-4343, TODO-4344, TODO-4352, TODO-4353, TODO-4354, TODO-4355, TODO-4356, TODO-4357, TODO-4345, TODO-4346, TODO-4358, TODO-4347, TODO-4351, TODO-4348, TODO-4359, TODO-4349, TODO-4350 |
 
 ### Vector/Map Bridge Contract Summary
@@ -814,37 +813,6 @@ Task template:
     - `./scripts/compile.sh --release` passes.
   - stop_rule: Stop once multi-wait returns stdlib `tuple<...>` or the missing
     task-side prerequisite is split into an explicit multithreading TODO.
-
-- [ ] TODO-4336: Allow type locals in envelope positions
-  - owner: ai
-  - created_at: 2026-05-04
-  - phase: Procedural compile-time genericity
-  - depends_on: TODO-4335
-  - scope: Let compile-time type locals appear in local binding and
-    struct-field envelope positions where concrete types are required.
-  - implementation_notes:
-    - Start from template type resolution, binding transform validation,
-      struct layout validation, and semantic-product type metadata.
-    - Leave public parameter/return envelope use of type locals to a later
-      task once generated-type escape and caller-visible naming are settled.
-    - Type locals must resolve before layout and lowering; unresolved type
-      locals must fail before IR.
-  - acceptance:
-    - A type local produced by `typeof<value>` can annotate a later local or
-      struct field in the same definition specialization.
-    - Type locals in public parameter or return envelopes reject with a stable
-      diagnostic unless another completed task has defined their
-      caller-visible naming/export behavior.
-    - Type locals cannot escape their valid scope except through generated
-      concrete types or ordinary return values.
-    - Cycles, forward references where unsupported, and runtime value use of a
-      type local reject deterministically.
-    - Semantic-product/lowering tests verify no backend re-derives type-local
-      facts from source text.
-    - `./scripts/compile.sh --release` passes.
-  - stop_rule: Stop once type locals are usable in later local-binding and
-    struct-field envelopes; leave generated local structs to TODO-4337 and
-    public parameter/return envelopes to a future caller-visible naming task.
 
 - [ ] TODO-4337: Add local generated nominal structs
   - owner: ai

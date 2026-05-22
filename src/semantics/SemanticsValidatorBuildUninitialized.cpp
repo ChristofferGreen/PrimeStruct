@@ -197,7 +197,8 @@ bool SemanticsValidator::resolveUninitializedStorageBinding(const std::vector<Pa
     return false;
   };
   for (const auto &stmt : defIt->second->statements) {
-    if (!stmt.isBinding || isStaticField(stmt)) {
+    if (!stmt.isBinding || isStaticField(stmt) ||
+        isCompileTimeTypeBinding(stmt)) {
       continue;
     }
     if (stmt.name != storage.name) {

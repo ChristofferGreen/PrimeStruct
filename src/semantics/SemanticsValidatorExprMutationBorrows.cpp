@@ -635,7 +635,8 @@ bool SemanticsValidator::validateExprMutationBorrowBuiltins(
                 break;
               }
             }
-            if (!fieldStmt.isBinding || isStaticField) {
+            if (!fieldStmt.isBinding || isCompileTimeTypeBinding(fieldStmt) ||
+                isStaticField) {
               continue;
             }
             if (currentFieldIndex == fieldIndex) {

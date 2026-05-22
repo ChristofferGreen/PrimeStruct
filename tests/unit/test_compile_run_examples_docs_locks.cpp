@@ -1613,8 +1613,8 @@ TEST_CASE("todo queue and skipped doctest debt stay source locked") {
   CHECK(todo.find("### Ready Now (Parallel-Candidate Leaves; No Unmet TODO Dependencies)") !=
         std::string::npos);
   CHECK(todo.find("### Ready Now (Parallel-Candidate Leaves; No Unmet TODO Dependencies)\n\n"
-                  "- TODO-4336: Allow type locals in envelope positions | track: procedural-genericity |\n"
-                  "  primary surface: consume local type facts in later concrete type positions") !=
+                  "- TODO-4337: Add local generated nominal structs | track: procedural-genericity |\n"
+                  "  primary surface: define local nominal types that consume type-local facts") !=
         std::string::npos);
   CHECK(todo.find("- `soa-zero-audit`: TODO-4529 replaced the residue inventory with a strict\n"
                   "  zero-production-trace audit; no SoA zero-audit leaf is ready.") !=
@@ -1634,8 +1634,8 @@ TEST_CASE("todo queue and skipped doctest debt stay source locked") {
         std::string::npos);
   CHECK(todo.find("- `multithreading-substrate`: TODO-4545 was split from TODO-4278") !=
         std::string::npos);
-  CHECK(todo.find("- `procedural-genericity`: TODO-4335 added `typeof<symbol>` type-local\n"
-                  "  facts; ready TODO-4336.") !=
+  CHECK(todo.find("- `procedural-genericity`: TODO-4336 allowed type locals in local binding and\n"
+                  "  struct-field envelopes; ready TODO-4337.") !=
         std::string::npos);
   CHECK(todo.find("### Immediate Next 10 (Track Successors; Not Ready Until Dependencies Land)\n\n"
                   "- TODO-4545: Implement first structured task spawn/wait substrate\n"
@@ -1655,8 +1655,8 @@ TEST_CASE("todo queue and skipped doctest debt stay source locked") {
   CHECK(todo.find("- Deferred SoA finish: TODO-4252") ==
         std::string::npos);
   CHECK(todo.find("### Execution Queue (Recommended Track Order)\n\n"
-                  "- TODO-4336: Allow type locals in envelope positions\n"
-                  "- TODO-4337: Add local generated nominal structs") !=
+                  "- TODO-4337: Add local generated nominal structs\n"
+                  "- TODO-4338: Stabilize generated type identity and mangling") !=
         std::string::npos);
   CHECK(todo.find("- [ ] TODO-4331: Implement compile-time argument channel model") ==
         std::string::npos);
@@ -1717,7 +1717,7 @@ TEST_CASE("todo queue and skipped doctest debt stay source locked") {
   CHECK(todoFinished.find("TODO-4519: Delete `soa_vector` compatibility seams") !=
         std::string::npos);
   const std::vector<std::string> semanticPhaseQueue = {
-      "TODO-4336: Allow type locals in envelope positions",
+      "TODO-4337: Add local generated nominal structs",
   };
   for (const std::string &entry : semanticPhaseQueue) {
     CHECK(todo.find("- " + entry) != std::string::npos);
@@ -1732,6 +1732,8 @@ TEST_CASE("todo queue and skipped doctest debt stay source locked") {
   CHECK(todoFinished.find("TODO-4334: Add compile-time `[type]` local bindings") !=
         std::string::npos);
   CHECK(todoFinished.find("TODO-4335: Add `typeof<symbol>` compile-time primitive") !=
+        std::string::npos);
+  CHECK(todoFinished.find("TODO-4336: Allow type locals in envelope positions") !=
         std::string::npos);
   CHECK(todo.find("TODO-4545: Implement first structured task spawn/wait substrate") !=
         std::string::npos);

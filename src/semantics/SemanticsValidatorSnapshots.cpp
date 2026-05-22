@@ -1586,7 +1586,8 @@ SemanticsValidator::typeMetadataSnapshotForSemanticProduct() const {
       fieldCount = def.sumVariants.size();
     } else {
       for (const auto &stmt : def.statements) {
-        if (stmt.isBinding && !isStaticFieldStatement(stmt)) {
+        if (stmt.isBinding && !isCompileTimeTypeBinding(stmt) &&
+            !isStaticFieldStatement(stmt)) {
           ++fieldCount;
         }
       }
@@ -1638,7 +1639,8 @@ SemanticsValidator::structFieldMetadataSnapshotForSemanticProduct() {
 
     size_t fieldIndex = 0;
     for (const auto &stmt : def.statements) {
-      if (!stmt.isBinding || isStaticFieldStatement(stmt)) {
+      if (!stmt.isBinding || isStaticFieldStatement(stmt) ||
+          isCompileTimeTypeBinding(stmt)) {
         continue;
       }
 

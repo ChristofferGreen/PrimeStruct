@@ -85,6 +85,9 @@ bool SemanticsValidator::validateExprResolvedStructConstructorCall(
       return failStructConstructorDiagnostic(
           "struct definitions may only contain field bindings: " + resolved);
     }
+    if (isCompileTimeTypeBinding(stmt)) {
+      continue;
+    }
     if (isStaticField(stmt)) {
       continue;
     }

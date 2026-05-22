@@ -278,7 +278,8 @@ std::string SemanticsValidator::inferStructReturnPathImpl(
           findParamBinding(params, expr.args.front().name) == nullptr &&
           locals.find(expr.args.front().name) == locals.end();
       for (const auto &stmt : defIt->second->statements) {
-        if (!stmt.isBinding || stmt.name != expr.name) {
+        if (!stmt.isBinding || isCompileTimeTypeBinding(stmt) ||
+            stmt.name != expr.name) {
           continue;
         }
         if (isTypeReceiver ? !isStaticField(stmt) : isStaticField(stmt)) {

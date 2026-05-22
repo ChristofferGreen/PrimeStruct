@@ -134,12 +134,57 @@ bool parseBindingInfo(const Expr &expr,
                       BindingInfo &info,
                       std::optional<std::string> &restrictTypeOut,
                       std::string &error,
-                      const std::unordered_set<std::string> *additionalNominalTypes) {
+                      const std::unordered_set<std::string> *additionalNominalTypes,
+                      const std::unordered_map<std::string, std::string> *compileTimeTypeLocals) {
   std::string typeName;
   bool typeHasTemplate = false;
   std::optional<std::string> restrictType;
   std::optional<std::string> visibilityTransform;
   bool sawStatic = false;
+  auto resolveTypeLocalText = [&](const std::string &text,
+                                  std::string &resolvedOut) -> bool {
+    if (compileTimeTypeLocals == nullptr) {
+      return false;
+    }
+    const auto it = compileTimeTypeLocals->find(text);
+    if (it == compileTimeTypeLocals->end()) {
+      return false;
+    }
+    resolvedOut = it->second;
+    return true;
+  };
+  auto resolveTemplateArgs = [&](const std::vector<std::string> &args) {
+    std::vector<std::string> resolved;
+    resolved.reserve(args.size());
+    for (const std::string &arg : args) {
+      std::string resolvedArg;
+      if (resolveTypeLocalText(arg, resolvedArg)) {
+        resolved.push_back(std::move(resolvedArg));
+      } else {
+        resolved.push_back(arg);
+      }
+    }
+    return resolved;
+  };
+  auto splitResolvedTypeText = [&](const std::string &typeText,
+                                   std::string &nameOut,
+                                   std::vector<std::string> &templateArgsOut) {
+    const std::string normalized = normalizeBindingTypeName(typeText);
+    std::string base;
+    std::string argText;
+    if (!splitTemplateTypeName(normalized, base, argText)) {
+      nameOut = normalized;
+      templateArgsOut.clear();
+      return true;
+    }
+    templateArgsOut.clear();
+    if (!splitTopLevelTemplateArgs(argText, templateArgsOut)) {
+      error = "invalid type local expansion: " + typeText;
+      return false;
+    }
+    nameOut = normalizeBindingTypeName(base);
+    return true;
+  };
   for (const auto &transform : expr.transforms) {
     if (transform.name == "effects" || transform.name == "capabilities") {
       error = "binding does not accept " + transform.name + " transform";
@@ -244,8 +289,28 @@ bool parseBindingInfo(const Expr &expr,
       }
       continue;
     }
-    if (isPrimitiveBindingTypeName(transform.name)) {
+    std::string transformName = transform.name;
+    std::vector<std::string> transformTemplateArgs =
+        resolveTemplateArgs(transform.templateArgs);
+    std::string resolvedTypeLocalText;
+    if (resolveTypeLocalText(transform.name, resolvedTypeLocalText)) {
       if (!transform.templateArgs.empty()) {
+        error = "type local does not accept template arguments: " +
+                transform.name;
+        return false;
+      }
+      if (!transform.arguments.empty()) {
+        error = "binding transforms do not take arguments";
+        return false;
+      }
+      if (!splitResolvedTypeText(resolvedTypeLocalText,
+                                 transformName,
+                                 transformTemplateArgs)) {
+        return false;
+      }
+    }
+    if (isPrimitiveBindingTypeName(transformName)) {
+      if (!transformTemplateArgs.empty()) {
         error = "binding transforms do not take template arguments";
         return false;
       }
@@ -254,8 +319,8 @@ bool parseBindingInfo(const Expr &expr,
         return false;
       }
     }
-    if (transform.name == "Pointer") {
-      if (transform.templateArgs.size() != 1) {
+    if (transformName == "Pointer") {
+      if (transformTemplateArgs.size() != 1) {
         error = "Pointer requires a template argument";
         return false;
       }
@@ -267,13 +332,13 @@ bool parseBindingInfo(const Expr &expr,
         error = "binding requires exactly one type";
         return false;
       }
-      typeName = transform.name;
+      typeName = transformName;
       typeHasTemplate = true;
-      info.typeTemplateArg = transform.templateArgs.front();
+      info.typeTemplateArg = transformTemplateArgs.front();
       continue;
     }
-    if (transform.name == "Reference") {
-      if (transform.templateArgs.size() != 1) {
+    if (transformName == "Reference") {
+      if (transformTemplateArgs.size() != 1) {
         error = "Reference requires a template argument";
         return false;
       }
@@ -285,12 +350,12 @@ bool parseBindingInfo(const Expr &expr,
         error = "binding requires exactly one type";
         return false;
       }
-      typeName = transform.name;
+      typeName = transformName;
       typeHasTemplate = true;
-      info.typeTemplateArg = transform.templateArgs.front();
+      info.typeTemplateArg = transformTemplateArgs.front();
       continue;
     }
-    if (!transform.templateArgs.empty()) {
+    if (!transformTemplateArgs.empty()) {
       if (!transform.arguments.empty()) {
         error = "binding transforms do not take arguments";
         return false;
@@ -299,52 +364,52 @@ bool parseBindingInfo(const Expr &expr,
         error = "binding requires exactly one type";
         return false;
       }
-      if (transform.name == "soa" "_vector" || transform.name == "/soa" "_vector" ||
-          transform.name == "std/collections/" "soa" "_vector" ||
-          transform.name == "/std/collections/" "soa" "_vector") {
+      if (transformName == "soa" "_vector" || transformName == "/soa" "_vector" ||
+          transformName == "std/collections/" "soa" "_vector" ||
+          transformName == "/std/collections/" "soa" "_vector") {
         error = "soa" "_vector<T> is not supported; use soa<T>";
         return false;
       }
-      const std::string normalizedTypeName = normalizeBindingTypeName(transform.name);
+      const std::string normalizedTypeName = normalizeBindingTypeName(transformName);
       if ((normalizedTypeName == "array" || normalizedTypeName == "vector" || normalizedTypeName == "Buffer") &&
-          transform.templateArgs.size() != 1) {
-        if (normalizedTypeName == "array" && transform.templateArgs.size() > 1) {
+          transformTemplateArgs.size() != 1) {
+        if (normalizedTypeName == "array" && transformTemplateArgs.size() > 1) {
           error = "array<T, N> is unsupported; use array<T> (runtime-count array)";
           return false;
         }
         error = normalizedTypeName + " requires exactly one template argument";
         return false;
       }
-      if (normalizedTypeName == "map" && transform.templateArgs.size() != 2) {
+      if (normalizedTypeName == "map" && transformTemplateArgs.size() != 2) {
         error = "map requires exactly two template arguments";
         return false;
       }
       if (normalizedTypeName == "soa" "_vector") {
         const bool isPublicSoaSpelling =
-            transform.name == "soa" || transform.name == "/soa" ||
-            transform.name == "std/collections/" "soa" ||
-            transform.name == "/std/collections/" "soa";
+            transformName == "soa" || transformName == "/soa" ||
+            transformName == "std/collections/" "soa" ||
+            transformName == "/std/collections/" "soa";
         const std::string displayType = isPublicSoaSpelling ? "soa" : "soa" "_vector";
-        if (transform.templateArgs.size() != 1) {
+        if (transformTemplateArgs.size() != 1) {
           error = displayType + " requires exactly one template argument";
           return false;
         }
-        if (!isSoaVectorStructElementType(transform.templateArgs.front(), namespacePrefix, structTypes, importAliases)) {
+        if (!isSoaVectorStructElementType(transformTemplateArgs.front(), namespacePrefix, structTypes, importAliases)) {
           error = displayType + " requires struct element type";
           return false;
         }
         typeName = normalizedTypeName;
         typeHasTemplate = true;
-        info.typeTemplateArg = joinTemplateArgs(transform.templateArgs);
+        info.typeTemplateArg = joinTemplateArgs(transformTemplateArgs);
         continue;
       }
-      if (transform.name == "uninitialized" && transform.templateArgs.size() != 1) {
+      if (transformName == "uninitialized" && transformTemplateArgs.size() != 1) {
         error = "uninitialized requires exactly one template argument";
         return false;
       }
-      typeName = transform.name;
+      typeName = transformName;
       typeHasTemplate = true;
-      info.typeTemplateArg = joinTemplateArgs(transform.templateArgs);
+      info.typeTemplateArg = joinTemplateArgs(transformTemplateArgs);
       continue;
     }
     if (!transform.arguments.empty()) {
@@ -355,7 +420,7 @@ bool parseBindingInfo(const Expr &expr,
       error = "binding requires exactly one type";
       return false;
     }
-    typeName = transform.name;
+    typeName = transformName;
   }
   if (typeName.empty()) {
     typeName = "int";

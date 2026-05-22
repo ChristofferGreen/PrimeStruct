@@ -68,7 +68,8 @@ void SemanticsValidator::prepareExprDispatchBootstrap(
           break;
         }
       }
-      if (!fieldStmt.isBinding || isStaticField || fieldStmt.name != target.name) {
+      if (!fieldStmt.isBinding || isCompileTimeTypeBinding(fieldStmt) ||
+          isStaticField || fieldStmt.name != target.name) {
         continue;
       }
       return resolveStructFieldBinding(*defIt->second, fieldStmt, bindingOut);

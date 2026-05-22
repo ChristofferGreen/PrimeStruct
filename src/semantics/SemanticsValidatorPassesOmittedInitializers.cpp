@@ -82,7 +82,8 @@ bool SemanticsValidator::hasStructZeroArgConstructor(const std::string &structPa
   const Definition &def = *defIt->second;
   std::unordered_set<std::string> missingFields;
   for (const auto &stmt : def.statements) {
-    if (!stmt.isBinding || isStaticField(stmt)) {
+    if (!stmt.isBinding || isCompileTimeTypeBinding(stmt) ||
+        isStaticField(stmt)) {
       continue;
     }
     if (stmt.args.empty()) {

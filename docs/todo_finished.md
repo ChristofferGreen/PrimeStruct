@@ -6,6 +6,43 @@ Legend:
 Finished items are periodically archived here from `docs/todo.md`; section headers record the archive date.
 
 **Todo Completion (May 22, 2026)**
+- [x] TODO-4336: Allow type locals in envelope positions
+  - owner: ai
+  - created_at: 2026-05-04
+  - finished_at: 2026-05-22
+  - phase: Procedural compile-time genericity
+  - parallel_track: procedural-genericity
+  - depends_on: TODO-4335
+  - scope: Let compile-time type locals appear in local binding and
+    struct-field envelope positions where concrete types are required.
+  - outcome:
+    - Allowed earlier `[type]` locals to annotate later local binding and
+      struct-field envelopes, including facts produced by `typeof<value>`.
+    - Rewrote consumed type-local envelopes to concrete type text before
+      erasing `[type]` facts so semantic-product metadata and IR lowering
+      consume normal binding facts instead of source-text reconstruction.
+    - Skipped erased type-local facts when struct layout, omitted
+      initializer, field metadata, and field-index helpers enumerate runtime
+      fields.
+    - Kept forward references and runtime value use of type locals rejected
+      with deterministic diagnostics.
+    - Documented the implemented envelope boundary and promoted TODO-4337 as
+      the next Ready Now procedural-genericity leaf.
+  - validation:
+    - `cmake --build build-release --target PrimeStruct_misc_tests
+      PrimeStruct_compile_run_tests primec -j 1` passed.
+    - `cd build-release && ./PrimeStruct_misc_tests
+      --test-case="type locals annotate later local and struct field
+      envelopes,type local envelopes reject forward and runtime value
+      use,typeof symbol accepts parameter and earlier type local" --no-skip`
+      passed: 3 test cases, 13 assertions.
+    - `cd build-release && ./PrimeStruct_compile_run_tests
+      --test-case="compiles and runs typeof type locals,todo queue and
+      skipped doctest debt stay source locked" --no-skip` passed: 2 test
+      cases, 367 assertions.
+    - Full `./scripts/compile.sh --release` remains deferred by the lite
+      workflow.
+
 - [x] TODO-4335: Add `typeof<symbol>` compile-time primitive
   - owner: ai
   - created_at: 2026-05-04

@@ -11,10 +11,128 @@ bool SemanticsValidator::resolveStructFieldBinding(const Definition &structDef,
   auto failStructFieldDiagnostic = [&](std::string message) -> bool {
     return failExprDiagnostic(fieldStmt, std::move(message));
   };
+  if (isCompileTimeTypeBinding(fieldStmt)) {
+    return failStructFieldDiagnostic("type binding is not a struct field: " +
+                                     structDef.fullPath + "/" +
+                                     fieldStmt.name);
+  }
+  auto bindingTypeText = [](const BindingInfo &binding) {
+    if (binding.typeTemplateArg.empty()) {
+      return binding.typeName;
+    }
+    return binding.typeName + "<" + binding.typeTemplateArg + ">";
+  };
+  auto isStaticFieldLocal = [](const Expr &stmt) {
+    for (const auto &transform : stmt.transforms) {
+      if (transform.name == "static") {
+        return true;
+      }
+    }
+    return false;
+  };
+  std::unordered_map<std::string, BindingInfo> priorFieldLocals;
+  std::unordered_map<std::string, std::string> priorTypeLocals;
+  auto resolveNamedConcreteType = [&](const Expr &namedType,
+                                      std::string &resolvedTypeOut) -> bool {
+    if (namedType.kind != Expr::Kind::Name || namedType.name == "auto") {
+      return false;
+    }
+    if (auto typeLocalIt = priorTypeLocals.find(namedType.name);
+        typeLocalIt != priorTypeLocals.end()) {
+      resolvedTypeOut = typeLocalIt->second;
+      return true;
+    }
+    if (isPrimitiveBindingTypeName(namedType.name)) {
+      resolvedTypeOut = normalizeBindingTypeName(namedType.name);
+      return true;
+    }
+    resolvedTypeOut = resolveStructTypePath(namedType.name,
+                                            structDef.namespacePrefix,
+                                            structNames_);
+    if (resolvedTypeOut.empty()) {
+      auto importIt = importAliases_.find(namedType.name);
+      if (importIt != importAliases_.end() &&
+          (structNames_.count(importIt->second) > 0 ||
+           sumNames_.count(importIt->second) > 0)) {
+        resolvedTypeOut = importIt->second;
+      }
+    }
+    if (resolvedTypeOut.empty() && sumNames_.count(namedType.name) > 0) {
+      resolvedTypeOut = namedType.name;
+    }
+    if (resolvedTypeOut.empty() && !namedType.name.empty() &&
+        namedType.name.front() == '/' &&
+        (structNames_.count(namedType.name) > 0 ||
+         sumNames_.count(namedType.name) > 0)) {
+      resolvedTypeOut = namedType.name;
+    }
+    return !resolvedTypeOut.empty();
+  };
+  auto resolveTypeofSymbol = [&](const Expr &typeofExpr,
+                                 std::string &resolvedTypeOut) -> bool {
+    if (typeofExpr.templateArgs.size() != 1 ||
+        typeofExpr.templateArgDetails.size() != 1 ||
+        typeofExpr.templateArgDetails.front().kind !=
+            TemplateArgumentKind::Symbol) {
+      return false;
+    }
+    const std::string &symbol = typeofExpr.templateArgs.front();
+    auto fieldIt = priorFieldLocals.find(symbol);
+    if (fieldIt != priorFieldLocals.end()) {
+      resolvedTypeOut = bindingTypeText(fieldIt->second);
+      return true;
+    }
+    auto typeLocalIt = priorTypeLocals.find(symbol);
+    if (typeLocalIt != priorTypeLocals.end()) {
+      resolvedTypeOut = typeLocalIt->second;
+      return true;
+    }
+    return false;
+  };
+  auto resolveTypeBindingInitializer = [&](const Expr &typeStmt,
+                                           std::string &resolvedTypeOut) -> bool {
+    if (typeStmt.args.size() != 1) {
+      return false;
+    }
+    const Expr *typeExpr = &typeStmt.args.front();
+    const Expr &initializer = typeStmt.args.front();
+    if (initializer.kind == Expr::Kind::Call &&
+        initializer.name == "block" && initializer.hasBodyArguments &&
+        initializer.args.empty() && initializer.templateArgs.empty() &&
+        !hasNamedArguments(initializer.argNames)) {
+      if (initializer.bodyArguments.size() != 1) {
+        return false;
+      }
+      typeExpr = &initializer.bodyArguments.front();
+    }
+    if (typeExpr->kind == Expr::Kind::Call && typeExpr->name == "typeof") {
+      return resolveTypeofSymbol(*typeExpr, resolvedTypeOut);
+    }
+    return resolveNamedConcreteType(*typeExpr, resolvedTypeOut);
+  };
+  for (const Expr &stmt : structDef.statements) {
+    if (&stmt == &fieldStmt) {
+      break;
+    }
+    if (!stmt.isBinding || isStaticFieldLocal(stmt)) {
+      continue;
+    }
+    if (isCompileTimeTypeBinding(stmt)) {
+      std::string resolvedType;
+      if (resolveTypeBindingInitializer(stmt, resolvedType)) {
+        priorTypeLocals[stmt.name] = std::move(resolvedType);
+      }
+      continue;
+    }
+    BindingInfo previousBinding;
+    if (resolveStructFieldBinding(structDef, stmt, previousBinding)) {
+      priorFieldLocals[stmt.name] = std::move(previousBinding);
+    }
+  }
   std::optional<std::string> restrictType;
   std::string parseError;
   if (!parseBindingInfo(fieldStmt, structDef.namespacePrefix, structNames_, importAliases_, bindingOut,
-                        restrictType, parseError, &sumNames_)) {
+                        restrictType, parseError, &sumNames_, &priorTypeLocals)) {
     return failStructFieldDiagnostic(std::move(parseError));
   }
   if (hasExplicitBindingTypeTransform(fieldStmt)) {
@@ -177,7 +295,8 @@ bool SemanticsValidator::validateSoaVectorElementFieldEnvelopes(const std::strin
       return true;
     }
     for (const auto &fieldStmt : structDef.statements) {
-      if (!fieldStmt.isBinding || hasStaticTransform(fieldStmt)) {
+      if (!fieldStmt.isBinding || hasStaticTransform(fieldStmt) ||
+          isCompileTimeTypeBinding(fieldStmt)) {
         continue;
       }
       auto failSoaFieldEnvelopeDiagnostic = [&](std::string message) -> bool {

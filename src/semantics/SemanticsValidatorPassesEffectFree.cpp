@@ -163,7 +163,8 @@ bool SemanticsValidator::isOutsideEffectFreeStructConstructor(const std::string 
   ctx.params = &emptyParams;
   bool writesThis = false;
   for (const auto &field : defIt->second->statements) {
-    if (!field.isBinding || isStaticField(field)) {
+    if (!field.isBinding || isCompileTimeTypeBinding(field) ||
+        isStaticField(field)) {
       continue;
     }
     if (field.args.empty()) {

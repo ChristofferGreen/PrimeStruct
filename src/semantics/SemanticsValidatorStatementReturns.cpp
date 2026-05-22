@@ -395,7 +395,8 @@ bool SemanticsValidator::validateReturnStatement(const std::vector<ParameterInfo
             break;
           }
         }
-        if (!fieldStmt.isBinding || isStaticField) {
+        if (!fieldStmt.isBinding || isCompileTimeTypeBinding(fieldStmt) ||
+            isStaticField) {
           continue;
         }
         if (currentFieldIndex == fieldIndex) {

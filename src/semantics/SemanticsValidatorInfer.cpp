@@ -260,7 +260,7 @@ ReturnKind SemanticsValidator::inferExprReturnKindImpl(const Expr &expr,
 
         ReturnKind inferredFieldKind = ReturnKind::Unknown;
         for (const auto &stmt : structDefinition->statements) {
-          if (!stmt.isBinding) {
+          if (!stmt.isBinding || isCompileTimeTypeBinding(stmt)) {
             continue;
           }
           if (isTypeReceiver ? !isStaticField(stmt) : isStaticField(stmt)) {

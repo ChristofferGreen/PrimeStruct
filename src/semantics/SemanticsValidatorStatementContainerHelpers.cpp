@@ -107,7 +107,7 @@ bool SemanticsValidator::isDropTrivialContainerElementType(const std::string &ty
   }
 
   for (const auto &fieldStmt : structDef->statements) {
-    if (!fieldStmt.isBinding) {
+    if (!fieldStmt.isBinding || isCompileTimeTypeBinding(fieldStmt)) {
       continue;
     }
     BindingInfo fieldBinding;
@@ -199,7 +199,7 @@ bool SemanticsValidator::isRelocationTrivialContainerElementType(const std::stri
   }
 
   for (const auto &fieldStmt : structDef->statements) {
-    if (!fieldStmt.isBinding) {
+    if (!fieldStmt.isBinding || isCompileTimeTypeBinding(fieldStmt)) {
       continue;
     }
     BindingInfo fieldBinding;

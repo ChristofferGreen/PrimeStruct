@@ -217,7 +217,8 @@ bool parseBindingInfo(const Expr &expr,
                       BindingInfo &info,
                       std::optional<std::string> &restrictTypeOut,
                       std::string &error,
-                      const std::unordered_set<std::string> *additionalNominalTypes = nullptr);
+                      const std::unordered_set<std::string> *additionalNominalTypes = nullptr,
+                      const std::unordered_map<std::string, std::string> *compileTimeTypeLocals = nullptr);
 bool isEffectName(const std::string &text);
 bool validateEffectsTransform(const Transform &transform, const std::string &context, std::string &error);
 bool validateCapabilitiesTransform(const Transform &transform, const std::string &context, std::string &error);

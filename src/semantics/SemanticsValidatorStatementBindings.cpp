@@ -322,8 +322,15 @@ bool SemanticsValidator::validateBindingStatement(const std::vector<ParameterInf
 
   BindingInfo info;
   std::optional<std::string> restrictType;
-  if (!parseBindingInfo(stmt, namespacePrefix, structNames_, importAliases_, info, restrictType, error_,
-                        &sumNames_)) {
+  if (!parseBindingInfo(stmt,
+                        namespacePrefix,
+                        structNames_,
+                        importAliases_,
+                        info,
+                        restrictType,
+                        error_,
+                        &sumNames_,
+                        &currentValidationState_.compileTimeTypeLocals)) {
     return false;
   }
 

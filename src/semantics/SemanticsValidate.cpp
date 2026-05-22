@@ -6338,9 +6338,158 @@ namespace {
 
 void eraseCompileTimeTypeBindingsFromExpr(Expr &expr);
 
-void eraseCompileTimeTypeBindingsFromExprs(std::vector<Expr> &exprs) {
+std::string joinTypeLocalTemplateArgs(const std::vector<std::string> &args) {
+  std::string text;
+  for (size_t index = 0; index < args.size(); ++index) {
+    if (index != 0) {
+      text += ", ";
+    }
+    text += args[index];
+  }
+  return text;
+}
+
+bool splitTypeLocalTypeText(const std::string &typeText,
+                            std::string &baseOut,
+                            std::vector<std::string> &argsOut) {
+  std::string base;
+  std::string argText;
+  if (!semantics::splitTemplateTypeName(typeText, base, argText)) {
+    baseOut = semantics::normalizeBindingTypeName(typeText);
+    argsOut.clear();
+    return !baseOut.empty();
+  }
+  argsOut.clear();
+  if (!semantics::splitTopLevelTemplateArgs(argText, argsOut)) {
+    return false;
+  }
+  baseOut = semantics::normalizeBindingTypeName(base);
+  return !baseOut.empty();
+}
+
+void applyTypeLocalFactsToBindingEnvelope(
+    Expr &expr,
+    const std::unordered_map<std::string, std::string> &typeFacts) {
+  if (!expr.isBinding || semantics::isCompileTimeTypeBinding(expr)) {
+    return;
+  }
+  for (Transform &transform : expr.transforms) {
+    if (transform.name == "effects" || transform.name == "capabilities" ||
+        transform.name == "return" ||
+        semantics::isBindingAuxTransformName(transform.name)) {
+      continue;
+    }
+    for (std::string &templateArg : transform.templateArgs) {
+      auto argIt = typeFacts.find(templateArg);
+      if (argIt != typeFacts.end()) {
+        templateArg = argIt->second;
+      }
+    }
+    auto typeIt = typeFacts.find(transform.name);
+    if (typeIt == typeFacts.end()) {
+      continue;
+    }
+    std::string base;
+    std::vector<std::string> args;
+    if (splitTypeLocalTypeText(typeIt->second, base, args)) {
+      transform.name = std::move(base);
+      transform.templateArgs = std::move(args);
+    }
+  }
+}
+
+bool bindingEnvelopeTypeText(const Expr &expr, std::string &typeTextOut) {
+  if (!expr.isBinding || !semantics::hasExplicitBindingTypeTransform(expr)) {
+    return false;
+  }
+  for (const Transform &transform : expr.transforms) {
+    if (transform.name == "effects" || transform.name == "capabilities" ||
+        transform.name == "return" ||
+        semantics::isBindingAuxTransformName(transform.name)) {
+      continue;
+    }
+    if (!transform.arguments.empty()) {
+      continue;
+    }
+    typeTextOut = semantics::normalizeBindingTypeName(transform.name);
+    if (!transform.templateArgs.empty()) {
+      typeTextOut += "<" + joinTypeLocalTemplateArgs(transform.templateArgs) + ">";
+    }
+    return true;
+  }
+  return false;
+}
+
+bool resolveTypeLocalInitializer(
+    const Expr &expr,
+    const std::unordered_map<std::string, std::string> &valueFacts,
+    const std::unordered_map<std::string, std::string> &typeFacts,
+    std::string &typeTextOut) {
+  if (!semantics::isCompileTimeTypeBinding(expr) || expr.args.size() != 1) {
+    return false;
+  }
+  const Expr *typeExpr = &expr.args.front();
+  const Expr &initializer = expr.args.front();
+  if (initializer.kind == Expr::Kind::Call && initializer.name == "block" &&
+      initializer.hasBodyArguments && initializer.args.empty() &&
+      initializer.templateArgs.empty() &&
+      !semantics::hasNamedArguments(initializer.argNames)) {
+    if (initializer.bodyArguments.size() != 1) {
+      return false;
+    }
+    typeExpr = &initializer.bodyArguments.front();
+  }
+  if (typeExpr->kind == Expr::Kind::Name) {
+    auto typeIt = typeFacts.find(typeExpr->name);
+    if (typeIt != typeFacts.end()) {
+      typeTextOut = typeIt->second;
+      return true;
+    }
+    if (!typeExpr->name.empty() && typeExpr->name != "auto") {
+      typeTextOut = semantics::normalizeBindingTypeName(typeExpr->name);
+      return true;
+    }
+    return false;
+  }
+  if (typeExpr->kind != Expr::Kind::Call || typeExpr->name != "typeof" ||
+      typeExpr->templateArgs.size() != 1 ||
+      typeExpr->templateArgDetails.size() != 1 ||
+      typeExpr->templateArgDetails.front().kind !=
+          TemplateArgumentKind::Symbol) {
+    return false;
+  }
+  const std::string &symbol = typeExpr->templateArgs.front();
+  auto valueIt = valueFacts.find(symbol);
+  if (valueIt != valueFacts.end()) {
+    typeTextOut = valueIt->second;
+    return true;
+  }
+  auto typeIt = typeFacts.find(symbol);
+  if (typeIt != typeFacts.end()) {
+    typeTextOut = typeIt->second;
+    return true;
+  }
+  return false;
+}
+
+void eraseCompileTimeTypeBindingsFromExprs(
+    std::vector<Expr> &exprs,
+    std::unordered_map<std::string, std::string> valueFacts = {}) {
+  std::unordered_map<std::string, std::string> typeFacts;
   for (Expr &expr : exprs) {
+    if (semantics::isCompileTimeTypeBinding(expr)) {
+      std::string typeText;
+      if (resolveTypeLocalInitializer(expr, valueFacts, typeFacts, typeText)) {
+        typeFacts[expr.name] = std::move(typeText);
+      }
+      continue;
+    }
+    applyTypeLocalFactsToBindingEnvelope(expr, typeFacts);
     eraseCompileTimeTypeBindingsFromExpr(expr);
+    std::string valueType;
+    if (bindingEnvelopeTypeText(expr, valueType)) {
+      valueFacts[expr.name] = std::move(valueType);
+    }
   }
   exprs.erase(std::remove_if(exprs.begin(), exprs.end(), [](const Expr &expr) {
                 return semantics::isCompileTimeTypeBinding(expr);
@@ -6356,7 +6505,15 @@ void eraseCompileTimeTypeBindingsFromExpr(Expr &expr) {
 void eraseCompileTimeTypeBindings(Program &program) {
   for (Definition &def : program.definitions) {
     eraseCompileTimeTypeBindingsFromExprs(def.parameters);
-    eraseCompileTimeTypeBindingsFromExprs(def.statements);
+    std::unordered_map<std::string, std::string> parameterValueFacts;
+    for (const Expr &param : def.parameters) {
+      std::string valueType;
+      if (bindingEnvelopeTypeText(param, valueType)) {
+        parameterValueFacts[param.name] = std::move(valueType);
+      }
+    }
+    eraseCompileTimeTypeBindingsFromExprs(def.statements,
+                                          std::move(parameterValueFacts));
     if (def.returnExpr.has_value()) {
       eraseCompileTimeTypeBindingsFromExpr(*def.returnExpr);
     }
