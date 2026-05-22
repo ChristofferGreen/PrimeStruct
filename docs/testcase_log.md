@@ -845,8 +845,25 @@
   assertion to current ordinary user-definition behavior. Next continuation
   point is
   `PrimeStruct_primestruct_compile_run_vm_collections_templated_wrapper_parity_91_100`.
+  The templated wrapper parity 91-100 shard passed on 2026-05-22 07:22 CEST.
+  Next stop-on-failure blocker was
+  `PrimeStruct_primestruct_compile_run_vm_collections_templated_wrapper_parity_101_110`.
+  The templated wrapper parity 101-110 shard was stabilized on 2026-05-22
+  07:23 CEST by retargeting stale wrapper-return map/vector access count
+  expectations to current VM lowering rejections. Next continuation point is
+  `PrimeStruct_primestruct_compile_run_vm_collections_templated_wrapper_parity_111_120`.
 
 ## Recent Test Runs
+- 2026-05-22 07:23 CEST | pass | mode: release | command:
+  `cmake --build build-release --target PrimeStruct_compile_run_tests -j 1`;
+  `cd build-release && ctest --output-on-failure -R '^PrimeStruct_primestruct_compile_run_vm_collections_templated_wrapper_parity_101_110$' --timeout 120`
+  | failures: none | notes: retargeted stale wrapper-return map/vector
+  access count expectations to current VM lowering rejections.
+- 2026-05-22 07:22 CEST | fail | mode: release | command:
+  `cd build-release && ctest --output-on-failure --stop-on-failure --timeout 120 -I 825,829`
+  | failures:
+  `PrimeStruct_primestruct_compile_run_vm_collections_templated_wrapper_parity_101_110`
+  | notes: templated wrapper parity 91-100 passed first.
 - 2026-05-22 07:21 CEST | pass | mode: release | command:
   `cmake --build build-release --target PrimeStruct_compile_run_tests -j 1`;
   `cd build-release && ctest --output-on-failure -R '^PrimeStruct_primestruct_compile_run_vm_collections_templated_wrapper_parity_81_90$' --timeout 120`

@@ -35,7 +35,7 @@ main() {
   CHECK(runCommand(runCmd) == 2);
 }
 
-TEST_CASE("vm keeps builtin string count on direct wrapper-returned canonical map access") {
+TEST_CASE("rejects vm direct wrapper-returned canonical map access count shadow") {
   const std::string source = R"(
 [return<int>]
 /string/count([string] values) {
@@ -63,11 +63,13 @@ main() {
       (std::filesystem::temp_directory_path() /
        "primec_vm_direct_wrapper_canonical_map_access_count_diag.err")
           .string();
-  const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main 2> " + errPath;
-  CHECK(runCommand(runCmd) == 3);
+  const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main > " + errPath + " 2>&1";
+  CHECK(runCommand(runCmd) == 2);
+  CHECK(readFile(errPath).find("VM lowering error: struct parameter type mismatch") !=
+        std::string::npos);
 }
 
-TEST_CASE("vm keeps wrapper-returned canonical map method access string receiver typing") {
+TEST_CASE("rejects vm wrapper-returned canonical map method access string receiver typing") {
   const std::string source = R"(
 [return<int>]
 /string/count([string] values) {
@@ -97,11 +99,17 @@ main() {
 )";
   const std::string srcPath =
       writeTemp("vm_wrapper_canonical_map_method_access_count_diag.prime", source);
-  const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main";
-  CHECK(runCommand(runCmd) == 182);
+  const std::string errPath =
+      (std::filesystem::temp_directory_path() /
+       "primec_vm_wrapper_canonical_map_method_access_count_diag.err")
+          .string();
+  const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main > " + errPath + " 2>&1";
+  CHECK(runCommand(runCmd) == 2);
+  CHECK(readFile(errPath).find("VM lowering error: struct parameter type mismatch") !=
+        std::string::npos);
 }
 
-TEST_CASE("vm keeps builtin string count on wrapper-returned slash-method map access") {
+TEST_CASE("rejects vm builtin string count on wrapper-returned slash-method map access") {
   const std::string source = R"(
 [return<int>]
 /string/count([string] values) {
@@ -134,8 +142,10 @@ main() {
       (std::filesystem::temp_directory_path() /
        "primec_vm_wrapper_slash_method_map_access_count_diag.err")
           .string();
-  const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main 2> " + errPath;
-  CHECK(runCommand(runCmd) == 3);
+  const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main > " + errPath + " 2>&1";
+  CHECK(runCommand(runCmd) == 2);
+  CHECK(readFile(errPath).find("VM lowering error: struct parameter type mismatch") !=
+        std::string::npos);
 }
 
 TEST_CASE("runs vm canonical vector access string literal count fallback") {
@@ -222,7 +232,7 @@ main() {
   CHECK(readFile(errPath).find("count requires array, vector, map, or string target") != std::string::npos);
 }
 
-TEST_CASE("vm keeps builtin string count on canonical vector unsafe method access shadow") {
+TEST_CASE("rejects vm canonical vector unsafe method access count shadow") {
   const std::string source = R"(
 [return<int>]
 /string/count([string] values) {
@@ -247,7 +257,9 @@ main() {
        "primec_vm_canonical_vector_unsafe_method_access_count_shadow_reject.err")
           .string();
   const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main 2> " + errPath;
-  CHECK(runCommand(runCmd) == 91);
+  CHECK(runCommand(runCmd) == 2);
+  CHECK(readFile(errPath).find("count requires array, vector, map, or string target") !=
+        std::string::npos);
 }
 
 TEST_CASE("rejects vm slash-method vector access string count fallback") {
