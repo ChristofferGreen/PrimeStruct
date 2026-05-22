@@ -83,8 +83,8 @@ Task template:
 
 ### Ready Now (Parallel-Candidate Leaves; No Unmet TODO Dependencies)
 
-- TODO-4332: Add bare zero-arg execution syntax | track: procedural-genericity |
-  primary surface: execute unique zero-arg definitions from bare names
+- TODO-4333: Reject ambiguous value/execution names | track: procedural-genericity |
+  primary surface: deterministic diagnostics for ambiguous bare names
 
 ### Parallel Work Tracks (Current)
 
@@ -110,14 +110,14 @@ Task template:
 - `multithreading-substrate`: TODO-4545 was split from TODO-4278 to capture
   the missing first structured task spawn/wait prerequisite; keep it out of
   Ready Now until the multithreading lane is selected or split further.
-- `procedural-genericity`: TODO-4331 completed the compile-time argument
-  channel model; ready TODO-4332.
+- `procedural-genericity`: TODO-4332 completed bare zero-arg execution
+  syntax; ready TODO-4333.
 - `generic-requirements`: TODO-4331 is complete; still blocked by TODO-4334
   before TODO-4341 can start.
 
 ### Immediate Next 10 (Track Successors; Not Ready Until Dependencies Land)
 
-- TODO-4332: Add bare zero-arg execution syntax
+- TODO-4333: Reject ambiguous value/execution names
 - TODO-4545: Implement first structured task spawn/wait substrate
 - TODO-4278: Integrate multi-wait with stdlib tuple
 
@@ -141,7 +141,7 @@ Task template:
   stdlib tuple values
 - Multithreading substrate: TODO-4545 captures the first task spawn/wait
   prerequisite split out of TODO-4278
-- Procedural compile-time genericity: TODO-4332 -> TODO-4333 -> TODO-4334
+- Procedural compile-time genericity: TODO-4333 -> TODO-4334
   -> TODO-4335 -> TODO-4336 -> TODO-4337
   -> TODO-4338 -> TODO-4339 -> TODO-4340
 - Generic constraint and compile-time flow alignment: TODO-4341
@@ -152,7 +152,6 @@ Task template:
 
 ### Execution Queue (Recommended Track Order)
 
-- TODO-4332: Add bare zero-arg execution syntax
 - TODO-4333: Reject ambiguous value/execution names
 - TODO-4334: Add compile-time `[type]` local bindings
 - TODO-4335: Add `typeof<symbol>` compile-time primitive
@@ -820,32 +819,6 @@ Task template:
     - `./scripts/compile.sh --release` passes.
   - stop_rule: Stop once multi-wait returns stdlib `tuple<...>` or the missing
     task-side prerequisite is split into an explicit multithreading TODO.
-
-- [ ] TODO-4332: Add bare zero-arg execution syntax
-  - owner: ai
-  - created_at: 2026-05-04
-  - phase: Procedural compile-time genericity
-  - parallel_track: procedural-genericity
-  - depends_on: TODO-4331
-  - scope: Allow a bare form such as `name` to execute a visible zero-argument
-    definition in command and value position when resolution is unique.
-  - implementation_notes:
-    - Start from parser expression/name handling under `src/parser/`,
-      semantic call resolution, return-expression validation, and existing
-      tests that distinguish names from calls.
-    - Preserve current binding reads and field-access behavior; do not make
-      every name eagerly callable before semantic resolution.
-  - acceptance:
-    - `foo { return(1) }` and `bar { return(foo) }` execute `foo` and return
-      its result after transforms/literal inference.
-    - Statement-position `foo` executes a zero-arg definition exactly as
-      `foo()` would.
-    - Runtime argument calls and explicit `foo()` continue to work unchanged.
-    - Unknown bare names and non-zero-arg callable bare names produce stable
-      diagnostics.
-    - `./scripts/compile.sh --release` passes.
-  - stop_rule: Stop once unique zero-arg definitions can be executed by bare
-    name; leave ambiguous-name rejection to TODO-4333.
 
 - [ ] TODO-4333: Reject ambiguous value/execution names
   - owner: ai

@@ -11,6 +11,69 @@ bool rewriteExpr(Expr &expr,
   if (!rewriteTransforms(expr.transforms, mapping, allowedParams, namespacePrefix, ctx, error)) {
     return false;
   }
+  if (expr.kind == Expr::Kind::Name) {
+    auto isRuntimeParameter = [&]() {
+      for (const ParameterInfo &param : params) {
+        if (param.name == expr.name) {
+          return true;
+        }
+      }
+      return false;
+    };
+    auto visibleZeroArgDefinitionPath = [&]() -> std::string {
+      if (expr.name.empty() || expr.name.find('/') != std::string::npos ||
+          isRuntimeParameter() || locals.count(expr.name) > 0) {
+        return {};
+      }
+      const std::string resolvedPath =
+          resolveNameToPath(expr.name,
+                            namespacePrefix,
+                            scopedImportAliasesForNamespace(namespacePrefix, ctx),
+                            ctx.sourceDefs);
+      auto sourceIt = ctx.sourceDefs.find(resolvedPath);
+      if (sourceIt != ctx.sourceDefs.end()) {
+        if (sourceIt->second.parameters.empty() &&
+            sourceIt->second.templateArgs.empty() &&
+            !isStructDefinition(sourceIt->second)) {
+          return resolvedPath;
+        }
+        return {};
+      }
+      auto overloadIt = ctx.helperOverloads.find(resolvedPath);
+      if (overloadIt == ctx.helperOverloads.end()) {
+        return {};
+      }
+      std::string zeroArgPath;
+      for (const HelperOverloadEntry &entry : overloadIt->second) {
+        if (entry.parameterCount != 0 || entry.isVariadic) {
+          continue;
+        }
+        auto overloadDefIt = ctx.sourceDefs.find(entry.internalPath);
+        if (overloadDefIt == ctx.sourceDefs.end() ||
+            !overloadDefIt->second.templateArgs.empty() ||
+            isStructDefinition(overloadDefIt->second)) {
+          continue;
+        }
+        if (!zeroArgPath.empty()) {
+          return {};
+        }
+        zeroArgPath = entry.internalPath;
+      }
+      return zeroArgPath;
+    };
+    if (const std::string zeroArgPath = visibleZeroArgDefinitionPath();
+        !zeroArgPath.empty()) {
+      Expr callExpr;
+      callExpr.kind = Expr::Kind::Call;
+      callExpr.name = expr.name;
+      callExpr.sourceName = expr.sourceName.empty() ? expr.name : expr.sourceName;
+      callExpr.namespacePrefix = expr.namespacePrefix;
+      callExpr.sourceLine = expr.sourceLine;
+      callExpr.sourceColumn = expr.sourceColumn;
+      callExpr.semanticNodeId = expr.semanticNodeId;
+      expr = std::move(callExpr);
+    }
+  }
   if (expr.kind != Expr::Kind::Call) {
     return true;
   }

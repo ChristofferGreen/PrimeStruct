@@ -5,6 +5,40 @@ Legend:
 
 Finished items are periodically archived here from `docs/todo.md`; section headers record the archive date.
 
+**Todo Completion (May 22, 2026)**
+- [x] TODO-4332: Add bare zero-arg execution syntax
+  - owner: ai
+  - created_at: 2026-05-04
+  - finished_at: 2026-05-22
+  - phase: Procedural compile-time genericity
+  - parallel_track: procedural-genericity
+  - depends_on: TODO-4331
+  - scope: Allow a bare form such as `name` to execute a visible zero-argument
+    definition in command and value position when resolution is unique.
+  - outcome:
+    - Rewrote unresolved bare name expressions and statements to zero-argument
+      calls during template monomorphization when a unique visible zero-arg
+      definition exists.
+    - Preserved ordinary parameter and local binding reads so a local named
+      `foo` still reads the value instead of eagerly calling `foo()`.
+    - Kept explicit `foo()` and runtime argument calls on the existing call
+      path, and left ambiguous value/execution rejection to TODO-4333.
+    - Documented the implemented syntax and promoted TODO-4333 as the next
+      Ready Now procedural-genericity leaf.
+  - validation:
+    - `cmake --build build-release --target PrimeStruct_semantics_tests PrimeStruct_compile_run_tests -j 1`
+      passed.
+    - `cmake --build build-release --target PrimeStruct_misc_tests -j 1`
+      passed.
+    - `cd build-release && ./PrimeStruct_misc_tests --test-case="bare zero-arg expression rewrites to call,bare zero-arg statement rewrites to call,local binding shadows bare zero-arg expression,non-zero-arg callable bare name stays diagnostic" --no-skip`
+      passed.
+    - `cmake --build build-release --target primec -j 1` passed after the
+      first compile-run focused invocation reported missing `./primec`.
+    - `cd build-release && ./PrimeStruct_compile_run_tests --test-case="compiles and runs bare zero-arg calls,todo queue and skipped doctest debt stay source locked" --no-skip`
+      passed.
+    - Full `./scripts/compile.sh --release` remains deferred by the lite
+      workflow.
+
 **Todo Completion (May 20, 2026)**
 - [x] TODO-4331: Implement compile-time argument channel model
   - owner: ai

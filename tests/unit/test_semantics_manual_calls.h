@@ -35,6 +35,116 @@ main() {
   CHECK(error.find("/main") != std::string::npos);
 }
 
+TEST_CASE("bare zero-arg expression rewrites to call") {
+  const std::string source = R"(
+[return<int>]
+answer() {
+  return(7i32)
+}
+
+[return<int>]
+main() {
+  return(answer)
+}
+)";
+  primec::Lexer lexer(source);
+  primec::Parser parser(lexer.tokenize());
+  primec::Program program;
+  std::string error;
+  REQUIRE(parser.parse(program, error));
+  CHECK(validateProgram(program, "/main", error));
+  REQUIRE(error.empty());
+  auto mainIt = std::find_if(program.definitions.begin(),
+                             program.definitions.end(),
+                             [](const primec::Definition &def) {
+                               return def.fullPath == "/main";
+                             });
+  REQUIRE(mainIt != program.definitions.end());
+  REQUIRE(mainIt->returnExpr.has_value());
+  CHECK(mainIt->returnExpr->kind == primec::Expr::Kind::Call);
+  CHECK(mainIt->returnExpr->name == "answer");
+  CHECK(mainIt->returnExpr->args.empty());
+}
+
+TEST_CASE("bare zero-arg statement rewrites to call") {
+  const std::string source = R"(
+[return<void>]
+tick() {
+}
+
+[return<int>]
+main() {
+  tick
+  return(4i32)
+}
+)";
+  primec::Lexer lexer(source);
+  primec::Parser parser(lexer.tokenize());
+  primec::Program program;
+  std::string error;
+  REQUIRE(parser.parse(program, error));
+  CHECK(validateProgram(program, "/main", error));
+  REQUIRE(error.empty());
+  auto mainIt = std::find_if(program.definitions.begin(),
+                             program.definitions.end(),
+                             [](const primec::Definition &def) {
+                               return def.fullPath == "/main";
+                             });
+  REQUIRE(mainIt != program.definitions.end());
+  REQUIRE(mainIt->statements.size() >= 2);
+  CHECK(mainIt->statements.front().kind == primec::Expr::Kind::Call);
+  CHECK(mainIt->statements.front().name == "tick");
+  CHECK(mainIt->statements.front().args.empty());
+}
+
+TEST_CASE("local binding shadows bare zero-arg expression") {
+  const std::string source = R"(
+[return<int>]
+answer() {
+  return(7i32)
+}
+
+[return<int>]
+main() {
+  answer{3i32}
+  return(answer)
+}
+)";
+  primec::Lexer lexer(source);
+  primec::Parser parser(lexer.tokenize());
+  primec::Program program;
+  std::string error;
+  REQUIRE(parser.parse(program, error));
+  CHECK(validateProgram(program, "/main", error));
+  REQUIRE(error.empty());
+  auto mainIt = std::find_if(program.definitions.begin(),
+                             program.definitions.end(),
+                             [](const primec::Definition &def) {
+                               return def.fullPath == "/main";
+                             });
+  REQUIRE(mainIt != program.definitions.end());
+  REQUIRE(mainIt->returnExpr.has_value());
+  CHECK(mainIt->returnExpr->kind == primec::Expr::Kind::Name);
+  CHECK(mainIt->returnExpr->name == "answer");
+}
+
+TEST_CASE("non-zero-arg callable bare name stays diagnostic") {
+  const std::string source = R"(
+[return<int>]
+needs_value([i32] value) {
+  return(value)
+}
+
+[return<int>]
+main() {
+  return(needs_value)
+}
+)";
+  std::string error;
+  CHECK_FALSE(validateSourceProgram(source, "/main", error));
+  CHECK(error.find("unknown identifier: needs_value") != std::string::npos);
+}
+
 TEST_CASE("named arguments not allowed on builtin calls in manual AST") {
   primec::Program program;
   primec::Expr plusCall = makeCall("plus", {makeLiteral(1), makeLiteral(2)},
@@ -270,4 +380,3 @@ TEST_CASE("execution arguments accept collection literals") {
   CHECK(validateProgram(program, "/main", error));
   CHECK(error.empty());
 }
-

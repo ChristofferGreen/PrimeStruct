@@ -7369,6 +7369,13 @@
 - 2026-05-12 17:28 local | fail | mode: release | command: `./scripts/compile.sh --release` | failures: 146 CTest targets | notes: baseline after preflight checkpoint failed; stabilization blocks TODO work
 
 ## Resolved Failures
+- [x] PrimeStruct_compile_run_tests bare zero-arg focused run missing primec
+  | resolved: 2026-05-22 local | validating command:
+  `cmake --build build-release --target primec -j 1`;
+  `cd build-release && ./PrimeStruct_compile_run_tests --test-case="compiles and runs bare zero-arg calls,todo queue and skipped doctest debt stay source locked" --no-skip`
+  | notes: initial focused compile-run rerun failed with `./primec: No such
+  file or directory`; rebuilding the release `primec` executable fixed the
+  harness prerequisite, and the same focused filter then passed.
 - [x] PrimeStruct_primestruct_ir_pipeline_conversions_variadic_file_errors |
   resolved: 2026-05-21 10:13 CEST | validating command:
   `cmake --build build-release --target PrimeStruct_backend_ir_tests -j 1`;

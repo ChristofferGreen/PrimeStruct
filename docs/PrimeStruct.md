@@ -2201,9 +2201,9 @@ explicit `utf8`/`ascii` suffix.** `ascii` enforces 7-bit ASCII (the compiler rej
     typed argument metadata and reserves symbol/future categories for later
     primitives such as `typeof<value>` rather than pretending those are runtime
     calls.
-  - `(...)` lists runtime parameters; current calls always include `()` (even with no args), and `()` never appears on
-    bindings. Planned bare zero-argument execution will allow `name` to execute a unique visible zero-argument
-    definition in command/value position when no stack value or other visible entity makes the name ambiguous.
+  - `(...)` lists runtime parameters; explicit calls always include `()` (even with no args), and `()` never appears on
+    bindings. Bare zero-argument execution allows `name` to execute a unique visible zero-argument definition in
+    command/value position when no stack value or other visible entity makes the name ambiguous.
   - **Parameters:** use the same binding envelope as locals: `main([array<string>] args, [i32] limit{10i32})`.
     Qualifiers like `mut`/`copy` apply here as well; defaults are optional and currently limited to literal/pure forms
     (no name references).

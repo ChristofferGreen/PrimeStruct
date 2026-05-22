@@ -32,6 +32,34 @@ main() {
   CHECK(runCommand(exePath) == 5);
 }
 
+TEST_CASE("compiles and runs bare zero-arg calls") {
+  const std::string source = R"(
+[return<int>]
+forty() {
+  return(40i32)
+}
+
+[return<int>]
+one() {
+  return(1i32)
+}
+
+[return<int>]
+main() {
+  forty
+  return(plus(forty, one))
+}
+)";
+  const std::string srcPath = writeTemp("compile_bare_zero_arg_calls.prime", source);
+  const std::string exePath = (testScratchPath("") / "primec_bare_zero_arg_calls_exe").string();
+
+  const std::string vmCmd = "./primec --emit=vm " + srcPath + " --entry /main";
+  CHECK(runCommand(vmCmd) == 41);
+  const std::string compileCmd = "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main";
+  CHECK(runCommand(compileCmd) == 0);
+  CHECK(runCommand(exePath) == 41);
+}
+
 TEST_CASE("compiles with struct definition") {
   const std::string source = R"(
 [struct]
