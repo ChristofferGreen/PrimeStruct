@@ -7640,3 +7640,8 @@
   `.prime` helper body instead of builtin count fallback; validating command:
   `timeout 300s bash -lc 'cd build-release && ctest --output-on-failure --stop-on-failure --timeout 120 -I 850,854'`
   on 2026-05-22 08:31 CEST.
+- C++ emitter canonical map helper shard 875 now passes after explicit
+  canonical count calls through `/std/collections/map/count` expect the
+  same-path helper body instead of builtin count fallback; validating command:
+  `timeout 300s bash -lc 'cd build-release && ctest --output-on-failure --stop-on-failure --timeout 120 -I 875,879'`
+  on 2026-05-22 08:35 CEST.
