@@ -723,7 +723,7 @@ main() {
   CHECK(runCommand(runCmd) == 2);
 }
 
-TEST_CASE("runs vm with stdlib collection shim map pair string keys") {
+TEST_CASE("rejects vm bare stdlib collection shim map pair string keys") {
   const std::string source = R"(
 import /std/collections/*
 
@@ -736,8 +736,12 @@ main() {
 }
 )";
   const std::string srcPath = writeTemp("vm_stdlib_collection_shim_map_pair_string_key.prime", source);
-  const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main";
-  CHECK(runCommand(runCmd) == 34);
+  const std::string errPath =
+      (std::filesystem::temp_directory_path() / "primec_vm_stdlib_collection_shim_map_pair_string_key.err")
+          .string();
+  const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main 2> " + errPath;
+  CHECK(runCommand(runCmd) == 2);
+  CHECK(readFile(errPath).find("unknown call target: mapPair") != std::string::npos);
 }
 
 TEST_CASE("rejects vm stdlib collection shim map pair type mismatch") {
@@ -758,12 +762,10 @@ main() {
   const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main 2> " + errPath;
   CHECK(runCommand(runCmd) == 2);
   const std::string error = readFile(errPath);
-  CHECK(error.find("argument type mismatch for /std/collections/internal_map/mapPair__") !=
-        std::string::npos);
-  CHECK(error.find("parameter secondValue: expected i32") != std::string::npos);
+  CHECK(error.find("unknown call target: mapPair") != std::string::npos);
 }
 
-TEST_CASE("runs vm with stdlib collection shim map quad") {
+TEST_CASE("rejects vm bare stdlib collection shim map quad") {
   const std::string source = R"(
 import /std/collections/*
 
@@ -776,8 +778,12 @@ main() {
 }
 )";
   const std::string srcPath = writeTemp("vm_stdlib_collection_shim_map_quad.prime", source);
-  const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main";
-  CHECK(runCommand(runCmd) == 9);
+  const std::string errPath =
+      (std::filesystem::temp_directory_path() / "primec_vm_stdlib_collection_shim_map_quad.err")
+          .string();
+  const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main 2> " + errPath;
+  CHECK(runCommand(runCmd) == 2);
+  CHECK(readFile(errPath).find("unknown call target: mapQuad") != std::string::npos);
 }
 
 TEST_CASE("rejects vm stdlib collection shim map quad type mismatch") {
@@ -799,9 +805,7 @@ main() {
   const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main 2> " + errPath;
   CHECK(runCommand(runCmd) == 2);
   const std::string error = readFile(errPath);
-  CHECK(error.find("argument type mismatch for /std/collections/internal_map/mapQuad__") !=
-        std::string::npos);
-  CHECK(error.find("parameter fourthValue: expected i32") != std::string::npos);
+  CHECK(error.find("unknown call target: mapQuad") != std::string::npos);
 }
 
 

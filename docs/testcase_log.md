@@ -879,8 +879,22 @@
   rejection coverage after the old internal-map diagnostic stopped being
   stable. Next continuation point is
   `PrimeStruct_primestruct_compile_run_vm_collections_user_shadow_and_receiver_precedence_255_264`.
+  The user shadow and receiver precedence 255-264 shard was stabilized on
+  2026-05-22 07:48 CEST by retargeting another old bare map shim constructor
+  block to current unknown-target rejections. Next continuation point is
+  `PrimeStruct_primestruct_compile_run_vm_collections_user_shadow_and_receiver_precedence_265_274`.
 
 ## Recent Test Runs
+- 2026-05-22 07:48 CEST | pass | mode: release | command:
+  `cmake --build build-release --target PrimeStruct_compile_run_tests -j 1`;
+  `cd build-release && ctest --output-on-failure -R '^PrimeStruct_primestruct_compile_run_vm_collections_user_shadow_and_receiver_precedence_255_264$' --timeout 120`
+  | failures: none | notes: retargeted old bare map shim constructors in
+  the receiver-precedence shard.
+- 2026-05-22 07:46 CEST | fail | mode: release | command:
+  `cd build-release && ctest --output-on-failure -R '^PrimeStruct_primestruct_compile_run_vm_collections_user_shadow_and_receiver_precedence_255_264$' --timeout 120`
+  | failures:
+  `PrimeStruct_primestruct_compile_run_vm_collections_user_shadow_and_receiver_precedence_255_264`
+  | notes: stale bare map pair/quad/quint/sext constructor expectations.
 - 2026-05-22 07:45 CEST | pass | mode: release | command:
   `cmake --build build-release --target PrimeStruct_compile_run_tests -j 1`;
   `cd build-release && ctest --output-on-failure -R '^PrimeStruct_primestruct_compile_run_vm_collections_stdlib_collection_shims_249_254$' --timeout 120`

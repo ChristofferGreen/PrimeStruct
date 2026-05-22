@@ -8,7 +8,7 @@
 
 TEST_SUITE_BEGIN("primestruct.compile.run.vm.collections");
 
-TEST_CASE("runs vm with stdlib collection shim map quint") {
+TEST_CASE("rejects vm bare stdlib collection shim map quint") {
   const std::string source = R"(
 import /std/collections/*
 
@@ -22,8 +22,12 @@ main() {
 }
 )";
   const std::string srcPath = writeTemp("vm_stdlib_collection_shim_map_quint.prime", source);
-  const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main";
-  CHECK(runCommand(runCmd) == 11);
+  const std::string errPath =
+      (std::filesystem::temp_directory_path() / "primec_vm_stdlib_collection_shim_map_quint.err")
+          .string();
+  const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main 2> " + errPath;
+  CHECK(runCommand(runCmd) == 2);
+  CHECK(readFile(errPath).find("unknown call target: mapQuint") != std::string::npos);
 }
 
 TEST_CASE("rejects vm stdlib collection shim map quint type mismatch") {
@@ -44,12 +48,10 @@ main() {
   const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main 2> " + errPath;
   CHECK(runCommand(runCmd) == 2);
   const std::string error = readFile(errPath);
-  CHECK(error.find("argument type mismatch for /std/collections/internal_map/mapQuint__") !=
-        std::string::npos);
-  CHECK(error.find("parameter fifthValue: expected i32") != std::string::npos);
+  CHECK(error.find("unknown call target: mapQuint") != std::string::npos);
 }
 
-TEST_CASE("runs vm with stdlib collection shim map sext") {
+TEST_CASE("rejects vm bare stdlib collection shim map sext") {
   const std::string source = R"(
 import /std/collections/*
 
@@ -64,8 +66,12 @@ main() {
 }
 )";
   const std::string srcPath = writeTemp("vm_stdlib_collection_shim_map_sext.prime", source);
-  const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main";
-  CHECK(runCommand(runCmd) == 13);
+  const std::string errPath =
+      (std::filesystem::temp_directory_path() / "primec_vm_stdlib_collection_shim_map_sext.err")
+          .string();
+  const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main 2> " + errPath;
+  CHECK(runCommand(runCmd) == 2);
+  CHECK(readFile(errPath).find("unknown call target: mapSext") != std::string::npos);
 }
 
 TEST_CASE("rejects vm stdlib collection shim map sext type mismatch") {
