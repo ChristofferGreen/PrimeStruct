@@ -805,8 +805,37 @@
   `vm_image_read_p6_truncated.prime`: the truncated binary PPM read should
   return `image_invalid_operation` with cleared outputs, but the VM run did
   not return during the continuation and its child process had to be killed.
+  Focused bounded reruns on 2026-05-22 showed the shard itself passes, and
+  VM output shards through argv arrays 87-88 were localized as passing. Next
+  stop-on-failure blocker is
+  `PrimeStruct_primestruct_compile_run_vm_collections_alias_and_basics_1_10`.
+  The collection alias/basics 1-10 shard was stabilized on 2026-05-22 07:11
+  CEST by retargeting stale VM map-shadow locks to the current bare
+  `count` diagnostic and current helper-precedence return value. Next
+  continuation point is
+  `PrimeStruct_primestruct_compile_run_vm_collections_alias_and_basics_11_20`.
 
 ## Recent Test Runs
+- 2026-05-22 07:11 CEST | pass | mode: release | command:
+  `cmake --build build-release --target primec PrimeStruct_compile_run_tests -j 1`;
+  `cd build-release && ctest --output-on-failure -R '^PrimeStruct_primestruct_compile_run_vm_collections_alias_and_basics_1_10$' --timeout 120`
+  | failures: none | notes: retargeted stale VM map count shadow and
+  canonical map sugar precedence assertions to current behavior.
+- 2026-05-22 07:05 CEST | fail | mode: release | command:
+  `cd build-release && ctest --output-on-failure --stop-on-failure --timeout 120 -I 816,821`
+  | failures:
+  `PrimeStruct_primestruct_compile_run_vm_collections_alias_and_basics_1_10`
+  | notes: VM outputs through argv arrays 87-88 passed before this point; the
+  collection shard had stale assertions for the bare `count` diagnostic and
+  map helper-shadow return value.
+- 2026-05-22 07:02 CEST | pass | mode: release | command:
+  focused bounded `ctest` reruns covering
+  `PrimeStruct_primestruct_compile_run_vm_outputs_ir_and_output_modes_basics_1_10_10_10`
+  through
+  `PrimeStruct_primestruct_compile_run_vm_outputs_ir_and_output_modes_argv_arrays_87_88`
+  | failures: none | notes: the prior broad continuation hang did not
+  reproduce in the focused PPM shard; several VM image/output shards were slow
+  but completed under outer timeouts.
 - 2026-05-21 22:56 CEST | blocked | mode: release | command:
   `cd build-release && ctest --output-on-failure --stop-on-failure --timeout 180 -I 659,1599`
   | failures:

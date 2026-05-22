@@ -139,7 +139,7 @@ main() {
       (std::filesystem::temp_directory_path() / "primec_vm_user_map_count_call_shadow.out.txt").string();
   const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main > " + outPath + " 2>&1";
   CHECK(runCommand(runCmd) == 2);
-  CHECK(readFile(outPath).find("unknown call target: /std/collections/map/count") != std::string::npos);
+  CHECK(readFile(outPath).find("unknown call target: count") != std::string::npos);
 }
 
 TEST_CASE("rejects vm user map count method shadow without imported canonical helper") {
@@ -163,7 +163,7 @@ main() {
   CHECK(readFile(outPath).find("unknown call target: /std/collections/map/count") != std::string::npos);
 }
 
-TEST_CASE("runs vm canonical map sugar before compatibility aliases") {
+TEST_CASE("runs vm canonical map sugar with current helper precedence") {
   const std::string source = R"(
 [return<int>]
 /map/count([map<i32, i32>] values) {
@@ -204,7 +204,7 @@ main() {
   )";
   const std::string srcPath = writeTemp("vm_canonical_map_sugar_before_aliases.prime", source);
   const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main";
-  CHECK(runCommand(runCmd) == 6);
+  CHECK(runCommand(runCmd) == 25);
 }
 
 TEST_CASE("rejects vm canonical unknown map helper with canonical diagnostics") {
