@@ -896,8 +896,17 @@
   CEST without code changes after rebuilding the release compile-run test
   binary. Next continuation point is
   `PrimeStruct_primestruct_compile_run_vm_collections_growth_limits_and_syntax_342_351`.
+  The growth limits and syntax 342-351 shard passed on 2026-05-22 23:40
+  CEST without code changes after rebuilding the release compile-run test
+  binary. Next continuation point is
+  `PrimeStruct_primestruct_compile_run_vm_collections_growth_limits_and_syntax_352_352`.
 
 ## Recent Test Runs
+- 2026-05-22 23:40 CEST | pass | mode: release | command:
+  `cmake --build build-release --target PrimeStruct_compile_run_tests -j 1`;
+  `cd build-release && ctest --output-on-failure -R '^PrimeStruct_primestruct_compile_run_vm_collections_growth_limits_and_syntax_342_351$' --timeout 120`
+  | failures: none | notes: current known-failure pointer advanced to the
+  final narrow VM collections continuation shard.
 - 2026-05-22 23:36 CEST | pass | mode: release | command:
   `cd build-release && timeout 300s ./PrimeStruct_compile_run_tests --test-case="todo queue and skipped doctest debt stay source locked" --no-skip`
   | failures: none | notes: TODO-4339 completion bookkeeping and queue locks
