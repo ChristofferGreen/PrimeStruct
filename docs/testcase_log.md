@@ -852,8 +852,24 @@
   07:23 CEST by retargeting stale wrapper-return map/vector access count
   expectations to current VM lowering rejections. Next continuation point is
   `PrimeStruct_primestruct_compile_run_vm_collections_templated_wrapper_parity_111_120`.
+  The templated wrapper parity 111-120 shard was stabilized on 2026-05-22
+  07:26 CEST by retargeting the stale same-path vector count helper on a
+  map receiver to the current VM lowering rejection. Next continuation point
+  is
+  `PrimeStruct_primestruct_compile_run_vm_collections_templated_wrapper_parity_121_130`.
 
 ## Recent Test Runs
+- 2026-05-22 07:26 CEST | pass | mode: release | command:
+  `cmake --build build-release --target PrimeStruct_compile_run_tests -j 1`;
+  `cd build-release && ctest --output-on-failure -R '^PrimeStruct_primestruct_compile_run_vm_collections_templated_wrapper_parity_111_120$' --timeout 120`
+  | failures: none | notes: retargeted stale same-path vector count helper
+  on a map receiver to current VM lowering rejection.
+- 2026-05-22 07:25 CEST | fail | mode: release | command:
+  `cd build-release && ctest --output-on-failure -R '^PrimeStruct_primestruct_compile_run_vm_collections_templated_wrapper_parity_111_120$' --timeout 120`
+  | failures:
+  `PrimeStruct_primestruct_compile_run_vm_collections_templated_wrapper_parity_111_120`
+  | notes: stale same-path vector count helper on map receiver expected VM
+  runtime exit 87, current lowering rejects with exit 2.
 - 2026-05-22 07:23 CEST | pass | mode: release | command:
   `cmake --build build-release --target PrimeStruct_compile_run_tests -j 1`;
   `cd build-release && ctest --output-on-failure -R '^PrimeStruct_primestruct_compile_run_vm_collections_templated_wrapper_parity_101_110$' --timeout 120`

@@ -424,7 +424,7 @@ main() {
   CHECK(runCommand(runCmd) == 2);
 }
 
-TEST_CASE("runs vm canonical slash vector count same-path helper on map receiver") {
+TEST_CASE("rejects vm canonical slash vector count same-path helper on map receiver") {
   const std::string source = R"(
 [return<map<i32, i32>>]
 wrapMap() {
@@ -449,8 +449,9 @@ main() {
           .string();
   const std::string runCmd =
       "./primec --emit=vm " + srcPath + " --entry /main > " + outPath + " 2>&1";
-  CHECK(runCommand(runCmd) == 87);
-  CHECK(readFile(outPath).empty());
+  CHECK(runCommand(runCmd) == 2);
+  CHECK(readFile(outPath).find("VM lowering error: struct parameter type mismatch") !=
+        std::string::npos);
 }
 
 TEST_CASE("rejects vm wrapper-returned canonical vector count slash-method on map receiver") {
