@@ -820,8 +820,25 @@
   diagnostics, and the current VM expression-lowering rejection for a
   synthetic canonical map count helper call. Next continuation point is
   `PrimeStruct_primestruct_compile_run_vm_collections_alias_and_basics_21_30`.
+  The collection alias/basics 21-30 and 31-40 shards passed on 2026-05-22
+  07:15 CEST. Next stop-on-failure blocker was
+  `PrimeStruct_primestruct_compile_run_vm_collections_alias_and_basics_41_50`.
+  The collection alias/basics 41-50 shard was stabilized by retargeting the
+  stale namespaced `tryAt` compatibility assertion to the current
+  `unknown call target: /map/tryAt` diagnostic. Next continuation point is
+  `PrimeStruct_primestruct_compile_run_vm_collections_alias_and_basics_51_60`.
 
 ## Recent Test Runs
+- 2026-05-22 07:15 CEST | pass | mode: release | command:
+  `cmake --build build-release --target PrimeStruct_compile_run_tests -j 1`;
+  `cd build-release && ctest --output-on-failure -R '^PrimeStruct_primestruct_compile_run_vm_collections_alias_and_basics_41_50$' --timeout 120`
+  | failures: none | notes: retargeted stale `/map/tryAt` compatibility
+  diagnostics to the current unknown-target behavior.
+- 2026-05-22 07:14 CEST | fail | mode: release | command:
+  `cd build-release && ctest --output-on-failure --stop-on-failure --timeout 120 -I 818,821`
+  | failures:
+  `PrimeStruct_primestruct_compile_run_vm_collections_alias_and_basics_41_50`
+  | notes: collection alias/basics 21-30 and 31-40 passed first.
 - 2026-05-22 07:13 CEST | pass | mode: release | command:
   `cmake --build build-release --target PrimeStruct_compile_run_tests -j 1`;
   `cd build-release && ctest --output-on-failure -R '^PrimeStruct_primestruct_compile_run_vm_collections_alias_and_basics_11_20$' --timeout 120`

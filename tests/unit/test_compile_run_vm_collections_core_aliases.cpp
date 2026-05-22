@@ -384,7 +384,7 @@ main() {
           .string();
   const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main > " + outPath + " 2>&1";
   CHECK(runCommand(runCmd) == 2);
-  CHECK(readFile(outPath).find("missing on_error for ? usage") != std::string::npos);
+  CHECK(readFile(outPath).find("unknown call target: /map/tryAt") != std::string::npos);
 }
 
 TEST_CASE("runs vm unchecked pointer conformance harness for imported .prime helpers") {
