@@ -60,6 +60,31 @@ main() {
   CHECK(runCommand(exePath) == 41);
 }
 
+TEST_CASE("compiles and runs typeof type locals") {
+  const std::string source = R"(
+[return<int>]
+id([i32] value) {
+  [type] ValueT { typeof<value> }
+  return(value)
+}
+
+[return<int>]
+main() {
+  [i32] value{7i32}
+  [type] LocalT { typeof<value> }
+  return(id(value))
+}
+)";
+  const std::string srcPath = writeTemp("compile_typeof_type_locals.prime", source);
+  const std::string exePath = (testScratchPath("") / "primec_typeof_type_locals_exe").string();
+
+  const std::string vmCmd = "./primec --emit=vm " + srcPath + " --entry /main";
+  CHECK(runCommand(vmCmd) == 7);
+  const std::string compileCmd = "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main";
+  CHECK(runCommand(compileCmd) == 0);
+  CHECK(runCommand(exePath) == 7);
+}
+
 TEST_CASE("compiles with struct definition") {
   const std::string source = R"(
 [struct]

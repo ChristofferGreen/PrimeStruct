@@ -83,8 +83,8 @@ Task template:
 
 ### Ready Now (Parallel-Candidate Leaves; No Unmet TODO Dependencies)
 
-- TODO-4335: Add `typeof<symbol>` compile-time primitive | track: procedural-genericity |
-  primary surface: compile-time type queries for local type facts
+- TODO-4336: Allow type locals in envelope positions | track: procedural-genericity |
+  primary surface: consume local type facts in later concrete type positions
 
 ### Parallel Work Tracks (Current)
 
@@ -110,8 +110,8 @@ Task template:
 - `multithreading-substrate`: TODO-4545 was split from TODO-4278 to capture
   the missing first structured task spawn/wait prerequisite; keep it out of
   Ready Now until the multithreading lane is selected or split further.
-- `procedural-genericity`: TODO-4334 added compile-time `[type]` local
-  bindings; ready TODO-4335.
+- `procedural-genericity`: TODO-4335 added `typeof<symbol>` type-local
+  facts; ready TODO-4336.
 - `generic-requirements`: TODO-4331 and TODO-4334 are complete; TODO-4341
   remains queued behind the procedural-genericity leaf chain.
 
@@ -140,8 +140,8 @@ Task template:
   stdlib tuple values
 - Multithreading substrate: TODO-4545 captures the first task spawn/wait
   prerequisite split out of TODO-4278
-- Procedural compile-time genericity: TODO-4335 -> TODO-4336 -> TODO-4337
-  -> TODO-4338 -> TODO-4339 -> TODO-4340
+- Procedural compile-time genericity: TODO-4336 -> TODO-4337 ->
+  TODO-4338 -> TODO-4339 -> TODO-4340
 - Generic constraint and compile-time flow alignment: TODO-4341
   -> TODO-4342 -> TODO-4343 -> TODO-4344 -> TODO-4352 -> TODO-4353
   -> TODO-4354 -> TODO-4355 -> TODO-4356 -> TODO-4357 -> TODO-4345
@@ -150,7 +150,6 @@ Task template:
 
 ### Execution Queue (Recommended Track Order)
 
-- TODO-4335: Add `typeof<symbol>` compile-time primitive
 - TODO-4336: Allow type locals in envelope positions
 - TODO-4337: Add local generated nominal structs
 - TODO-4338: Stabilize generated type identity and mangling
@@ -204,7 +203,7 @@ Task template:
 | Algebraic sum types and brace-only construction | none |
 | Stdlib ADT migration for `Maybe` and `Result` | none |
 | Generic type packs and tuple stdlib surface | TODO-4274, TODO-4273, TODO-4277, TODO-4278 |
-| Procedural compile-time genericity and local type facts | TODO-4335, TODO-4336, TODO-4337, TODO-4338, TODO-4339, TODO-4340 |
+| Procedural compile-time genericity and local type facts | TODO-4336, TODO-4337, TODO-4338, TODO-4339, TODO-4340 |
 | Generic constraints and compile-time flow control | TODO-4341, TODO-4342, TODO-4343, TODO-4344, TODO-4352, TODO-4353, TODO-4354, TODO-4355, TODO-4356, TODO-4357, TODO-4345, TODO-4346, TODO-4358, TODO-4347, TODO-4351, TODO-4348, TODO-4359, TODO-4349, TODO-4350 |
 
 ### Validation Coverage Snapshot
@@ -231,7 +230,7 @@ Task template:
 | Sum-type and brace-construction conformance | none |
 | Maybe/Result sum migration conformance | none |
 | Generic type-pack and tuple conformance | TODO-4274, TODO-4273, TODO-4277, TODO-4278 |
-| Procedural compile-time genericity conformance | TODO-4335, TODO-4336, TODO-4337, TODO-4338, TODO-4339, TODO-4340 |
+| Procedural compile-time genericity conformance | TODO-4336, TODO-4337, TODO-4338, TODO-4339, TODO-4340 |
 | Generic constraint and compile-time flow conformance | TODO-4341, TODO-4342, TODO-4343, TODO-4344, TODO-4352, TODO-4353, TODO-4354, TODO-4355, TODO-4356, TODO-4357, TODO-4345, TODO-4346, TODO-4358, TODO-4347, TODO-4351, TODO-4348, TODO-4359, TODO-4349, TODO-4350 |
 
 ### Vector/Map Bridge Contract Summary
@@ -815,31 +814,6 @@ Task template:
     - `./scripts/compile.sh --release` passes.
   - stop_rule: Stop once multi-wait returns stdlib `tuple<...>` or the missing
     task-side prerequisite is split into an explicit multithreading TODO.
-
-- [ ] TODO-4335: Add `typeof<symbol>` compile-time primitive
-  - owner: ai
-  - created_at: 2026-05-04
-  - phase: Procedural compile-time genericity
-  - depends_on: TODO-4334
-  - scope: Add the compile-time primitive `typeof<symbol>` so type locals can
-    bind the concrete type of a parameter, local value, or other supported
-    visible entity.
-  - implementation_notes:
-    - Reuse the compile-time argument channel from TODO-4331 and the
-      ambiguity diagnostics from TODO-4333.
-    - Do not accept `typeof(value)` as this primitive; parentheses remain the
-      runtime argument channel.
-  - acceptance:
-    - `[type] T { typeof<value> }` binds the concrete type of an unambiguous
-      value or parameter.
-    - `typeof<missing>`, ambiguous symbols, unsupported symbol kinds, and
-      runtime-argument forms reject with stable diagnostics.
-    - The primitive works in generic definitions after monomorphization and
-      produces deterministic facts for repeated call sites.
-    - Docs and tests show why `typeof<value>` differs from a runtime call.
-    - `./scripts/compile.sh --release` passes.
-  - stop_rule: Stop once `typeof<symbol>` can feed `[type]` locals; leave
-    later envelope consumption to TODO-4336.
 
 - [ ] TODO-4336: Allow type locals in envelope positions
   - owner: ai

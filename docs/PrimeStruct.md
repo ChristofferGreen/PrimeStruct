@@ -1019,16 +1019,22 @@ Planned procedural compile-time genericity contract:
   lookup model.
 - Compile-time locals, runtime locals, and visible definitions share the same
   local namespace for bare names; duplicate or ambiguous names are errors.
-- `[type]` locals are semantic compile-time facts. They may be consumed by
-  later type-envelope positions and generated type declarations, but they must
+- `[type]` locals are semantic compile-time facts. They may be bound from a
+  concrete type name or from `typeof<symbol>`, and later tasks may consume
+  them in type-envelope positions and generated type declarations. They must
   not survive into backend-facing IR.
+- `typeof<symbol>` uses the compile-time argument channel. It resolves an
+  unambiguous parameter, local value, or earlier `[type]` local in the current
+  definition specialization and binds the concrete type fact for a `[type]`
+  local. Runtime-call spelling such as `typeof(value)` is deliberately not the
+  primitive, because parentheses remain the runtime argument channel.
 - Current implementation boundary: direct definition-body
-  `[type] Name { ConcreteType }` statements validate as semantic-only type
-  facts, share the local duplicate-name namespace, and are erased before
-  semantic-product publication and IR lowering. The semantic-product dump
-  therefore documents a temporary adapter boundary rather than exposing a
-  dedicated type-local fact family until the later procedural-genericity
-  publication work lands.
+  `[type] Name { ConcreteType }` and `[type] Name { typeof<value> }`
+  statements validate as semantic-only type facts, share the local
+  duplicate-name namespace, and are erased before semantic-product
+  publication and IR lowering. The semantic-product dump therefore documents a
+  temporary adapter boundary rather than exposing a dedicated type-local fact
+  family until the later procedural-genericity publication work lands.
 - Local generated types are nominal per enclosing definition specialization.
   Their generated paths, semantic-product provenance, and IR names must be
   stable across repeated builds and import order, but the types cannot escape

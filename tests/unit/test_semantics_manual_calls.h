@@ -255,6 +255,137 @@ main() {
                      }));
 }
 
+TEST_CASE("typeof symbol type local validates and is erased") {
+  const std::string source = R"(
+[return<int>]
+main() {
+  [i32] value{5i32}
+  [type] ValueT { typeof<value> }
+  return(value)
+}
+)";
+  primec::Lexer lexer(source);
+  primec::Parser parser(lexer.tokenize());
+  primec::Program program;
+  std::string error;
+  REQUIRE(parser.parse(program, error));
+  primec::Semantics semantics;
+  const std::vector<std::string> defaults = {"io_out", "io_err"};
+  primec::SemanticProgram semanticProgram;
+  CHECK(semantics.validate(program,
+                           "/main",
+                           error,
+                           defaults,
+                           defaults,
+                           {},
+                           nullptr,
+                           false,
+                           &semanticProgram));
+  REQUIRE(error.empty());
+  auto mainIt = std::find_if(program.definitions.begin(),
+                             program.definitions.end(),
+                             [](const primec::Definition &def) {
+                               return def.fullPath == "/main";
+                             });
+  REQUIRE(mainIt != program.definitions.end());
+  CHECK(std::none_of(mainIt->statements.begin(),
+                     mainIt->statements.end(),
+                     [](const primec::Expr &stmt) {
+                       return stmt.isBinding && stmt.name == "ValueT";
+                     }));
+  CHECK(std::none_of(semanticProgram.bindingFacts.begin(),
+                     semanticProgram.bindingFacts.end(),
+                     [](const primec::SemanticProgramBindingFact &fact) {
+                       return fact.name == "ValueT";
+                     }));
+}
+
+TEST_CASE("typeof symbol accepts parameter and earlier type local") {
+  const std::string source = R"(
+[return<int>]
+id([i64] value) {
+  [type] ValueT { typeof<value> }
+  [type] AgainT { typeof<ValueT> }
+  return(1i32)
+}
+
+[return<int>]
+main() {
+  return(id(9i64))
+}
+)";
+  std::string error;
+  CHECK(validateSourceProgram(source, "/main", error));
+  CHECK(error.empty());
+}
+
+TEST_CASE("typeof symbol rejects missing and runtime argument forms") {
+  const std::string missing = R"(
+[return<int>]
+main() {
+  [type] ValueT { typeof<missing> }
+  return(1i32)
+}
+)";
+  std::string missingError;
+  CHECK_FALSE(validateSourceProgram(missing, "/main", missingError));
+  CHECK(missingError.find("unknown typeof symbol: missing") !=
+        std::string::npos);
+
+  const std::string runtime = R"(
+[return<int>]
+main() {
+  [i32] value{1i32}
+  [type] ValueT { typeof(value) }
+  return(value)
+}
+)";
+  std::string runtimeError;
+  CHECK_FALSE(validateSourceProgram(runtime, "/main", runtimeError));
+  CHECK(runtimeError.find(
+            "typeof requires compile-time symbol syntax: typeof<symbol>") !=
+        std::string::npos);
+}
+
+TEST_CASE("typeof symbol rejects unsupported callable and ambiguity") {
+  const std::string callable = R"(
+[return<int>]
+answer() {
+  return(1i32)
+}
+
+[return<int>]
+main() {
+  [type] ValueT { typeof<answer> }
+  return(1i32)
+}
+)";
+  std::string callableError;
+  CHECK_FALSE(validateSourceProgram(callable, "/main", callableError));
+  CHECK(callableError.find("typeof symbol is not a value: answer") !=
+        std::string::npos);
+
+  const std::string ambiguous = R"(
+[return<int>]
+answer() {
+  return(1i32)
+}
+
+[return<int>]
+main([i32] answer) {
+  [type] ValueT { typeof<answer> }
+  return(1i32)
+}
+)";
+  std::string ambiguousError;
+  CHECK_FALSE(validateSourceProgram(ambiguous, "/main", ambiguousError));
+  INFO(ambiguousError);
+  CHECK(ambiguousError.find("ambiguous typeof symbol: answer") !=
+        std::string::npos);
+  CHECK(ambiguousError.find("local value") != std::string::npos);
+  CHECK(ambiguousError.find("/answer") != std::string::npos);
+}
+
 TEST_CASE("type local is not a runtime value") {
   const std::string source = R"(
 [return<int>]

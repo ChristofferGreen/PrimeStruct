@@ -2,6 +2,7 @@
 
 #include "SemanticsValidatorInferCollectionCompatibilityInternal.h"
 
+#include <algorithm>
 #include <functional>
 #include <optional>
 
@@ -44,6 +45,27 @@ std::string referenceRootForBorrowBinding(const std::string &bindingName, const 
     return binding.referenceRoot;
   }
   return bindingName;
+}
+
+std::string bindingTypeTextForTypeof(const BindingInfo &binding) {
+  if (binding.typeTemplateArg.empty()) {
+    return binding.typeName;
+  }
+  return binding.typeName + "<" + binding.typeTemplateArg + ">";
+}
+
+std::string formatPathListForTypeof(const std::vector<std::string> &paths) {
+  std::string out;
+  for (size_t index = 0; index < paths.size(); ++index) {
+    if (index == 0) {
+      out += paths[index];
+    } else if (index + 1 == paths.size()) {
+      out += " and " + paths[index];
+    } else {
+      out += ", " + paths[index];
+    }
+  }
+  return out;
 }
 
 } // namespace
@@ -120,29 +142,145 @@ bool SemanticsValidator::validateBindingStatement(const std::vector<ParameterInf
                hasNamedArguments(stmt.argNames)) {
       return failBindingDiagnostic("type binding initializer must be a single type expression");
     }
-    if (typeExpr->kind != Expr::Kind::Name || typeExpr->name == "auto") {
-      return failBindingDiagnostic("type binding initializer requires a concrete type");
-    }
-    std::string resolvedType = typeExpr->name;
-    if (!isPrimitiveBindingTypeName(typeExpr->name)) {
-      resolvedType = resolveStructTypePath(typeExpr->name, namespacePrefix, structNames_);
-      if (resolvedType.empty()) {
-        auto importIt = importAliases_.find(typeExpr->name);
+    auto resolveNamedConcreteType = [&](const Expr &namedType,
+                                        std::string &resolvedTypeOut) -> bool {
+      if (namedType.kind != Expr::Kind::Name || namedType.name == "auto") {
+        return false;
+      }
+      if (isPrimitiveBindingTypeName(namedType.name)) {
+        resolvedTypeOut = normalizeBindingTypeName(namedType.name);
+        return true;
+      }
+      resolvedTypeOut =
+          resolveStructTypePath(namedType.name, namespacePrefix, structNames_);
+      if (resolvedTypeOut.empty()) {
+        auto importIt = importAliases_.find(namedType.name);
         if (importIt != importAliases_.end() &&
-            (structNames_.count(importIt->second) > 0 || sumNames_.count(importIt->second) > 0)) {
-          resolvedType = importIt->second;
+            (structNames_.count(importIt->second) > 0 ||
+             sumNames_.count(importIt->second) > 0)) {
+          resolvedTypeOut = importIt->second;
         }
       }
-      if (resolvedType.empty() && sumNames_.count(typeExpr->name) > 0) {
-        resolvedType = typeExpr->name;
+      if (resolvedTypeOut.empty() && sumNames_.count(namedType.name) > 0) {
+        resolvedTypeOut = namedType.name;
       }
-      if (resolvedType.empty() && !typeExpr->name.empty() && typeExpr->name.front() == '/' &&
-          (structNames_.count(typeExpr->name) > 0 || sumNames_.count(typeExpr->name) > 0)) {
-        resolvedType = typeExpr->name;
+      if (resolvedTypeOut.empty() && !namedType.name.empty() &&
+          namedType.name.front() == '/' &&
+          (structNames_.count(namedType.name) > 0 ||
+           sumNames_.count(namedType.name) > 0)) {
+        resolvedTypeOut = namedType.name;
       }
-      if (resolvedType.empty()) {
-        return failBindingDiagnostic("type binding initializer requires a concrete type");
+      return !resolvedTypeOut.empty();
+    };
+    auto appendZeroArgCallablePath = [&](const std::string &path,
+                                         std::vector<std::string> &paths) {
+      if (path.empty() || std::find(paths.begin(), paths.end(), path) != paths.end()) {
+        return;
       }
+      auto defIt = defMap_.find(path);
+      if (defIt == defMap_.end() || defIt->second == nullptr ||
+          !defIt->second->parameters.empty() ||
+          !defIt->second->templateArgs.empty() ||
+          structNames_.count(defIt->second->fullPath) > 0 ||
+          isSumDefinition(*defIt->second)) {
+        return;
+      }
+      paths.push_back(path);
+    };
+    auto visibleZeroArgCallablePaths = [&](const std::string &symbol) {
+      std::vector<std::string> paths;
+      if (symbol.empty() || symbol.find('/') != std::string::npos) {
+        return paths;
+      }
+      Expr lookup;
+      lookup.kind = Expr::Kind::Call;
+      lookup.name = symbol;
+      lookup.namespacePrefix = namespacePrefix;
+      appendZeroArgCallablePath(resolveCalleePath(lookup), paths);
+      if (auto importIt = directImportAliases_.find(symbol);
+          importIt != directImportAliases_.end()) {
+        appendZeroArgCallablePath(importIt->second, paths);
+      }
+      if (auto importIt = transitiveImportAliases_.find(symbol);
+          importIt != transitiveImportAliases_.end()) {
+        appendZeroArgCallablePath(importIt->second, paths);
+      }
+      if (auto importIt = importAliases_.find(symbol);
+          importIt != importAliases_.end()) {
+        appendZeroArgCallablePath(importIt->second, paths);
+      }
+      std::sort(paths.begin(), paths.end());
+      paths.erase(std::unique(paths.begin(), paths.end()), paths.end());
+      return paths;
+    };
+    auto resolveTypeofSymbol = [&](const Expr &typeofExpr,
+                                   std::string &resolvedTypeOut) -> bool {
+      if (typeofExpr.isMethodCall || typeofExpr.isFieldAccess ||
+          typeofExpr.isBinding || !typeofExpr.args.empty() ||
+          typeofExpr.hasBodyArguments || !typeofExpr.bodyArguments.empty() ||
+          hasNamedArguments(typeofExpr.argNames)) {
+        return failBindingDiagnostic(
+            "typeof requires compile-time symbol syntax: typeof<symbol>");
+      }
+      if (typeofExpr.templateArgs.size() != 1 ||
+          typeofExpr.templateArgDetails.size() != 1 ||
+          typeofExpr.templateArgDetails.front().text !=
+              typeofExpr.templateArgs.front()) {
+        return failBindingDiagnostic(
+            "typeof requires exactly one compile-time symbol argument");
+      }
+      if (typeofExpr.templateArgDetails.front().kind !=
+          TemplateArgumentKind::Symbol) {
+        return failBindingDiagnostic("typeof requires a symbol argument");
+      }
+      const std::string &symbol = typeofExpr.templateArgs.front();
+      const BindingInfo *paramBinding = findParamBinding(params, symbol);
+      const auto localIt = locals.find(symbol);
+      const auto typeLocalIt =
+          currentValidationState_.compileTimeTypeLocals.find(symbol);
+      const std::vector<std::string> zeroArgPaths =
+          visibleZeroArgCallablePaths(symbol);
+      const bool hasValueOrTypeFact =
+          paramBinding != nullptr || localIt != locals.end() ||
+          typeLocalIt != currentValidationState_.compileTimeTypeLocals.end();
+      if (hasValueOrTypeFact && !zeroArgPaths.empty()) {
+        return failBindingDiagnostic(
+            "ambiguous typeof symbol: " + symbol +
+            " could refer to a local value or " +
+            formatPathListForTypeof(zeroArgPaths));
+      }
+      if (zeroArgPaths.size() > 1) {
+        return failBindingDiagnostic(
+            "ambiguous typeof symbol: " + symbol + " could refer to " +
+            formatPathListForTypeof(zeroArgPaths));
+      }
+      if (paramBinding != nullptr) {
+        resolvedTypeOut = bindingTypeTextForTypeof(*paramBinding);
+      } else if (localIt != locals.end()) {
+        resolvedTypeOut = bindingTypeTextForTypeof(localIt->second);
+      } else if (typeLocalIt !=
+                 currentValidationState_.compileTimeTypeLocals.end()) {
+        resolvedTypeOut = typeLocalIt->second;
+      } else if (!zeroArgPaths.empty()) {
+        return failBindingDiagnostic("typeof symbol is not a value: " + symbol);
+      } else {
+        return failBindingDiagnostic("unknown typeof symbol: " + symbol);
+      }
+      if (resolvedTypeOut.empty() ||
+          normalizeBindingTypeName(resolvedTypeOut) == "auto") {
+        return failBindingDiagnostic("typeof requires a concrete value type: " +
+                                     symbol);
+      }
+      return true;
+    };
+    std::string resolvedType;
+    if (typeExpr->kind == Expr::Kind::Call && typeExpr->name == "typeof") {
+      if (!resolveTypeofSymbol(*typeExpr, resolvedType)) {
+        return false;
+      }
+    } else if (!resolveNamedConcreteType(*typeExpr, resolvedType)) {
+      return failBindingDiagnostic(
+          "type binding initializer requires a concrete type");
     }
     currentValidationState_.compileTimeTypeLocals.emplace(stmt.name, std::move(resolvedType));
     return true;

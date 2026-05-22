@@ -53,6 +53,20 @@ std::string stripNumericSeparators(const std::string &text) {
   }
   return cleaned;
 }
+
+void markBareTypeofTemplateArgAsSymbol(Expr &call) {
+  if (call.name != "typeof" || call.templateArgs.size() != 1 ||
+      call.templateArgDetails.size() != 1 ||
+      call.templateArgDetails.front().text != call.templateArgs.front()) {
+    return;
+  }
+  std::string ignoredError;
+  if (!validateIdentifierText(call.templateArgs.front(), ignoredError)) {
+    return;
+  }
+  call.templateArgDetails.front() =
+      TemplateArgument::symbol(call.templateArgs.front());
+}
 } // namespace
 
 bool Parser::parseExpr(Expr &expr, const std::string &namespacePrefix) {
@@ -551,6 +565,11 @@ bool Parser::parseExpr(Expr &expr, const std::string &namespacePrefix) {
         return true;
       }
       if (!call.templateArgs.empty()) {
+        if (call.name == "typeof") {
+          markBareTypeofTemplateArgAsSymbol(call);
+          out = std::move(call);
+          return true;
+        }
         return fail("template arguments require a call");
       }
       out.kind = Expr::Kind::Name;

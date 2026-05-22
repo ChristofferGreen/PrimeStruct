@@ -18,6 +18,34 @@ TEST_CASE("monomorphizes template definition bindings") {
   CHECK(validateProgram(program, "/main", error));
 }
 
+TEST_CASE("typeof symbol works after template monomorphization") {
+  primec::Expr typeOfValue;
+  typeOfValue.kind = primec::Expr::Kind::Call;
+  typeOfValue.name = "typeof";
+  typeOfValue.templateArgs = {"value"};
+  typeOfValue.templateArgDetails = {primec::TemplateArgument::symbol("value")};
+
+  primec::Definition identity =
+      makeDefinition("/identity", {makeTransform("return", std::string("T"))},
+                     {makeBinding("ValueT", {makeTransform("type")}, {typeOfValue}),
+                      makeCall("/return", {makeName("value")})},
+                     {makeBinding("value", {makeTransform("T")}, {})});
+  identity.templateArgs = {"T"};
+
+  primec::Program program;
+  program.definitions.push_back(identity);
+
+  primec::Expr call = makeCall("/identity", {makeLiteral(1)});
+  call.templateArgs = {"i32"};
+  program.definitions.push_back(
+      makeDefinition("/main", {makeTransform("return", std::string("int"))},
+                     {makeCall("/return", {call})}));
+
+  std::string error;
+  CHECK(validateProgram(program, "/main", error));
+  CHECK(error.empty());
+}
+
 TEST_CASE("template argument count mismatch fails") {
   primec::Program program;
   primec::Definition wrap = makeDefinition("/wrap",

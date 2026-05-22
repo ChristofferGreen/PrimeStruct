@@ -1827,8 +1827,10 @@ bool rewriteExpr(Expr &expr,
   }
   const bool isPackAtIntrinsic =
       !expr.isMethodCall && !expr.isBinding && expr.name == "pack_at";
+  const bool isTypeofSymbolIntrinsic =
+      !expr.isMethodCall && !expr.isBinding && expr.name == "typeof";
   bool allConcrete = true;
-  if (!isPackAtIntrinsic &&
+  if (!isPackAtIntrinsic && !isTypeofSymbolIntrinsic &&
       !resolveTemplateArgumentList(expr.templateArgs,
                                    mapping,
                                    allowedParams,

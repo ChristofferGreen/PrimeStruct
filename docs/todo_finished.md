@@ -6,6 +6,45 @@ Legend:
 Finished items are periodically archived here from `docs/todo.md`; section headers record the archive date.
 
 **Todo Completion (May 22, 2026)**
+- [x] TODO-4335: Add `typeof<symbol>` compile-time primitive
+  - owner: ai
+  - created_at: 2026-05-04
+  - finished_at: 2026-05-22
+  - phase: Procedural compile-time genericity
+  - parallel_track: procedural-genericity
+  - depends_on: TODO-4334
+  - scope: Add the compile-time primitive `typeof<symbol>` so type locals can
+    bind the concrete type of a parameter, local value, or other supported
+    visible entity.
+  - outcome:
+    - Parsed bare `typeof<value>` as a compile-time symbol intrinsic without
+      accepting `typeof(value)` as the same primitive.
+    - Allowed `[type] T { typeof<value> }` to bind concrete type facts from
+      parameters, local values, and earlier type locals in the same definition
+      specialization.
+    - Rejected missing symbols, runtime-argument forms, unsupported callable
+      symbols, and local/callable ambiguity with deterministic diagnostics.
+    - Preserved `typeof<symbol>` through template monomorphization so generic
+      definitions resolve facts after specialization.
+    - Documented the runtime-vs-compile-time argument distinction and promoted
+      TODO-4336 as the next Ready Now procedural-genericity leaf.
+  - validation:
+    - `cmake --build build-release --target PrimeStruct_misc_tests
+      PrimeStruct_compile_run_tests primec -j 1` passed.
+    - `cd build-release && ./PrimeStruct_misc_tests
+      --test-case="parses bare typeof symbol as compile-time
+      intrinsic,typeof symbol type local validates and is erased,typeof symbol
+      accepts parameter and earlier type local,typeof symbol rejects missing
+      and runtime argument forms,typeof symbol rejects unsupported callable
+      and ambiguity,typeof symbol works after template monomorphization"
+      --no-skip` passed: 5 test cases, 20 assertions.
+    - `cd build-release && ./PrimeStruct_compile_run_tests
+      --test-case="compiles and runs typeof type locals,todo queue and skipped
+      doctest debt stay source locked" --no-skip` passed: 2 test cases, 367
+      assertions.
+    - Full `./scripts/compile.sh --release` remains deferred by the lite
+      workflow.
+
 - [x] TODO-4334: Add compile-time `[type]` local bindings
   - owner: ai
   - created_at: 2026-05-04

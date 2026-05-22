@@ -196,6 +196,32 @@ TEST_CASE("compile-time argument metadata reserves symbol and unsupported kinds"
         primec::TemplateArgumentKind::Type);
 }
 
+TEST_CASE("parses bare typeof symbol as compile-time intrinsic") {
+  const std::string source = R"(
+[return<i32>]
+main() {
+  [i32] value{1i32}
+  [type] ValueT { typeof<value> }
+  return(value)
+}
+)";
+  const auto program = parseProgram(source);
+  REQUIRE(program.definitions.size() == 1);
+  const auto &mainDef = program.definitions[0];
+  REQUIRE(mainDef.statements.size() == 3);
+  const auto &typeBinding = mainDef.statements[1];
+  REQUIRE(typeBinding.args.size() == 1);
+  const auto &typeOfExpr = typeBinding.args.front();
+  CHECK(typeOfExpr.kind == primec::Expr::Kind::Call);
+  CHECK(typeOfExpr.name == "typeof");
+  CHECK(typeOfExpr.args.empty());
+  REQUIRE(typeOfExpr.templateArgs.size() == 1);
+  CHECK(typeOfExpr.templateArgs[0] == "value");
+  REQUIRE(typeOfExpr.templateArgDetails.size() == 1);
+  CHECK(typeOfExpr.templateArgDetails[0].kind ==
+        primec::TemplateArgumentKind::Symbol);
+}
+
 TEST_CASE("parses empty template argument lists") {
   const std::string source = R"(
 [return<tuple<>>]
