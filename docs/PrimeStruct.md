@@ -1033,9 +1033,10 @@ Planned procedural compile-time genericity contract:
   statements validate as semantic-only type facts, share the local
   duplicate-name namespace, can annotate later local binding and struct-field
   envelopes, and are erased before semantic-product publication and IR
-  lowering. The semantic-product dump therefore documents a temporary adapter
-  boundary rather than exposing a dedicated type-local fact family until the
-  later procedural-genericity publication work lands.
+  lowering. Consumed type-local facts publish as concrete binding, direct-call,
+  type, and struct-field facts in the semantic product; lowerers must consume
+  those facts instead of reconstructing local generated type paths from source
+  spelling.
 - Local generated structs may be defined inside a function body with
   field-only struct syntax such as `[struct] PairT { [LeftT] first ... }`.
   They are nominal per enclosing definition specialization, may consume

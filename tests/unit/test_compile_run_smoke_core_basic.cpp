@@ -144,6 +144,52 @@ main() {
   CHECK(runCommand(nativePath) == 43);
 }
 
+TEST_CASE("procedural generic local generated struct lowers across backends") {
+  const std::string source = R"(
+[return<T>]
+choose_left<T>([T] left, [T] right) {
+  [type] ValueT { typeof<left> }
+  [struct] BoxT {
+    [ValueT] value{0i32}
+  }
+  [BoxT] box{BoxT{left}}
+  return(box.value)
+}
+
+[return<int>]
+main() {
+  return(choose_left<i32>(17i32, 99i32))
+}
+)";
+  const std::string srcPath =
+      writeTemp("compile_procedural_generic_local_generated_struct.prime",
+                source);
+  const std::string exePath =
+      (testScratchPath("") /
+       "primec_procedural_generic_local_generated_struct_exe")
+          .string();
+  const std::string nativePath =
+      (testScratchPath("") /
+       "primec_procedural_generic_local_generated_struct_native")
+          .string();
+
+  const std::string compileCmd =
+      "./primec --emit=exe " + srcPath + " -o " + exePath +
+      " --entry /main";
+  CHECK(runCommand(compileCmd) == 0);
+  CHECK(runCommand(exePath) == 17);
+
+  const std::string runVmCmd =
+      "./primec --emit=vm " + srcPath + " --entry /main";
+  CHECK(runCommand(runVmCmd) == 17);
+
+  const std::string compileNativeCmd =
+      "./primec --emit=native " + srcPath + " -o " + nativePath +
+      " --entry /main";
+  CHECK(runCommand(compileNativeCmd) == 0);
+  CHECK(runCommand(nativePath) == 17);
+}
+
 TEST_CASE("unit sum construction and pick lower across backends") {
   const std::string source = R"(
 [sum]

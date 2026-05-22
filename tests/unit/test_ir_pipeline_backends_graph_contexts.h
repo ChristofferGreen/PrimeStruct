@@ -1580,7 +1580,8 @@ TEST_CASE("semantic snapshot shared traversal keeps direct and bridge ordering k
   CHECK(collectBody.find(
             "        std::string canonicalResolvedPath = resolvedPath;\n"
             "        if (const size_t suffix = canonicalResolvedPath.find(\"__t\");\n"
-            "            suffix != std::string::npos) {\n"
+            "            suffix != std::string::npos &&\n"
+            "            canonicalResolvedPath.find('/', suffix) == std::string::npos) {\n"
             "          canonicalResolvedPath.erase(suffix);\n"
             "        }\n"
             "        canonicalResolvedPath =\n"
@@ -1652,17 +1653,35 @@ TEST_CASE("semantic snapshot shared traversal keeps direct and bridge ordering k
   CHECK(takeSurfaceBody.find("surface.callableSummaries = std::exchange(collectedCallableSummaries_, {});") !=
         std::string::npos);
   CHECK(takeSurfaceBody.find("invalidatePilotRoutingSemanticCollectors();") != std::string::npos);
-  CHECK(takeSurfaceBody.find("surface.bindingFacts = bindingFactSnapshotForSemanticProduct();") !=
+  CHECK(takeSurfaceBody.find(
+            "    surface.bindingFacts = useMergedWorkerPublicationFacts\n"
+            "                               ? mergedWorkerPublicationFacts_.bindingFacts\n"
+            "                               : bindingFactSnapshotForSemanticProduct();") !=
         std::string::npos);
-  CHECK(takeSurfaceBody.find("surface.returnFacts = returnFactSnapshotForSemanticProduct();") !=
+  CHECK(takeSurfaceBody.find(
+            "    surface.returnFacts = useMergedWorkerPublicationFacts\n"
+            "                              ? mergedWorkerPublicationFacts_.returnFacts\n"
+            "                              : returnFactSnapshotForSemanticProduct();") !=
         std::string::npos);
-  CHECK(takeSurfaceBody.find("surface.localAutoFacts = localAutoFactSnapshotForSemanticProduct();") !=
+  CHECK(takeSurfaceBody.find(
+            "    surface.localAutoFacts = useMergedWorkerPublicationFacts\n"
+            "                                 ? mergedWorkerPublicationFacts_.localAutoFacts\n"
+            "                                 : localAutoFactSnapshotForSemanticProduct();") !=
         std::string::npos);
-  CHECK(takeSurfaceBody.find("surface.queryFacts = queryFactSnapshotForSemanticProduct();") !=
+  CHECK(takeSurfaceBody.find(
+            "    surface.queryFacts = useMergedWorkerPublicationFacts\n"
+            "                             ? mergedWorkerPublicationFacts_.queryFacts\n"
+            "                             : queryFactSnapshotForSemanticProduct();") !=
         std::string::npos);
-  CHECK(takeSurfaceBody.find("surface.tryFacts = tryFactSnapshotForSemanticProduct();") !=
+  CHECK(takeSurfaceBody.find(
+            "    surface.tryFacts = useMergedWorkerPublicationFacts\n"
+            "                           ? mergedWorkerPublicationFacts_.tryFacts\n"
+            "                           : tryFactSnapshotForSemanticProduct();") !=
         std::string::npos);
-  CHECK(takeSurfaceBody.find("surface.onErrorFacts = onErrorFactSnapshotForSemanticProduct();") !=
+  CHECK(takeSurfaceBody.find(
+            "    surface.onErrorFacts = useMergedWorkerPublicationFacts\n"
+            "                               ? mergedWorkerPublicationFacts_.onErrorFacts\n"
+            "                               : onErrorFactSnapshotForSemanticProduct();") !=
         std::string::npos);
   CHECK(takeSurfaceBody.find("releaseTransientSnapshotCaches();") != std::string::npos);
 
@@ -2171,7 +2190,8 @@ TEST_CASE("semantic snapshot locals concrete-call canonicalization stays stable"
 
   CHECK(semanticsSnapshotLocals.find(
             "  out.resolvedPath = preferredCollectionHelperResolvedPath(expr);\n"
-            "  if (out.resolvedPath.empty()) {\n"
+            "  if (out.resolvedPath.empty() &&\n"
+            "      !(expr.kind == Expr::Kind::Call && expr.isMethodCall)) {\n"
             "    out.resolvedPath = resolveCalleePath(expr);\n"
             "  }\n") !=
         std::string::npos);
@@ -2184,7 +2204,8 @@ TEST_CASE("semantic snapshot locals concrete-call canonicalization stays stable"
             "    }\n"
             "    std::string canonicalResolvedPath = out.resolvedPath;\n"
             "    if (const size_t suffix = canonicalResolvedPath.find(\"__t\");\n"
-            "        suffix != std::string::npos) {\n"
+            "        suffix != std::string::npos &&\n"
+            "        canonicalResolvedPath.find('/', suffix) == std::string::npos) {\n"
             "      canonicalResolvedPath.erase(suffix);\n"
             "    }\n"
             "    canonicalResolvedPath =\n"

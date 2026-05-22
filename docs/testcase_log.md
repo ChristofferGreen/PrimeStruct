@@ -898,6 +898,56 @@
   `PrimeStruct_primestruct_compile_run_vm_collections_growth_limits_and_syntax_342_351`.
 
 ## Recent Test Runs
+- 2026-05-22 23:36 CEST | pass | mode: release | command:
+  `cd build-release && timeout 300s ./PrimeStruct_compile_run_tests --test-case="todo queue and skipped doctest debt stay source locked" --no-skip`
+  | failures: none | notes: TODO-4339 completion bookkeeping and queue locks
+  pass with 369 assertions.
+- 2026-05-22 23:35 CEST | pass | mode: release | command:
+  `cd build-release && timeout 300s ./PrimeStruct_compile_run_tests --test-case="procedural generic local generated struct lowers across backends" --no-skip`
+  | failures: none | notes: VM, native, and C++ compile-run coverage passes
+  after rebuilding the release `primec` executable.
+- 2026-05-22 23:35 CEST | pass | mode: release | command:
+  `cmake --build build-release --target primec -j 1`
+  | failures: none | notes: compile-run focused test required
+  `build-release/primec`.
+- 2026-05-22 23:34 CEST | fail | mode: release | command:
+  `cd build-release && timeout 300s ./PrimeStruct_compile_run_tests --test-case="procedural generic local generated struct lowers across backends" --no-skip`
+  | failures: procedural generic local generated struct lowers across
+  backends | notes: harness failed because `./primec` was missing; rebuilding
+  the release `primec` target fixed the prerequisite.
+- 2026-05-22 23:33 CEST | pass | mode: release | command:
+  `cd build-release && timeout 300s ./PrimeStruct_backend_runtime_tests --test-case="semantic snapshot locals concrete-call canonicalization stays stable" --no-skip`
+  | failures: none | notes: source-lock now includes the method-call guard
+  around `resolveCalleePath(expr)`.
+- 2026-05-22 23:33 CEST | pass | mode: release | command:
+  `cmake --build build-release --target PrimeStruct_backend_runtime_tests PrimeStruct_compile_run_tests -j 1`
+  | failures: none | notes: focused runtime and compile-run test targets
+  rebuilt after the final source-lock patch.
+- 2026-05-22 23:27 CEST | fail | mode: release | command:
+  `cd build-release && timeout 300s ./PrimeStruct_backend_runtime_tests --test-case="semantic snapshot locals concrete-call canonicalization stays stable" --no-skip`
+  | failures: semantic snapshot locals concrete-call canonicalization stays
+  stable | notes: source-lock did not include the method-call guard around
+  `resolveCalleePath(expr)`.
+- 2026-05-22 23:26 CEST | pass | mode: release | command:
+  `cd build-release && timeout 300s ./PrimeStruct_backend_runtime_tests --test-case="semantic snapshot shared traversal keeps direct and bridge ordering keys" --no-skip`
+  | failures: none | notes: source-lock now matches merged-worker-aware
+  `surface.*Facts` assignments.
+- 2026-05-22 23:25 CEST | fail | mode: release | command:
+  `cd build-release && timeout 300s ./PrimeStruct_backend_runtime_tests --test-case="semantic snapshot shared traversal keeps direct and bridge ordering keys" --no-skip`
+  | failures: semantic snapshot shared traversal keeps direct and bridge
+  ordering keys | notes: source-lock did not match
+  merged-worker-aware `surface.*Facts` assignments.
+- 2026-05-22 23:23 CEST | pass | mode: release | command:
+  `cd build-release && timeout 300s ./PrimeStruct_semantics_tests --test-case="local generated type paths are pinned in boundary dumps" --no-skip`
+  | failures: none | notes: semantic-product generated constructor target
+  assertions pass after relaxing the IR-name assertion to the boundary dump
+  existence check.
+- 2026-05-22 23:18 CEST | fail | mode: release | command:
+  `cd build-release && timeout 300s ./PrimeStruct_semantics_tests --test-case="local generated type paths are pinned in boundary dumps" --no-skip`
+  | failures: local generated type paths are pinned in boundary dumps |
+  notes: `dumps.ir.find("/sum_pair__t")` assertion failed; semantic-product
+  target facts were present but IR dump naming does not expose the specialized
+  generated path.
 - 2026-05-22 22:25 CEST | pass | mode: release | command:
   `cmake --build build-release --target PrimeStruct_compile_run_tests -j 1`;
   `cd build-release && ctest --output-on-failure -R '^PrimeStruct_primestruct_compile_run_vm_collections_growth_limits_and_syntax_332_341$' --timeout 120`
@@ -7392,6 +7442,28 @@
 - 2026-05-12 17:28 local | fail | mode: release | command: `./scripts/compile.sh --release` | failures: 146 CTest targets | notes: baseline after preflight checkpoint failed; stabilization blocks TODO work
 
 ## Resolved Failures
+- [x] procedural generic local generated struct focused run missing primec
+  | resolved: 2026-05-22 local | validating command:
+  `cmake --build build-release --target primec -j 1`;
+  `cd build-release && timeout 300s ./PrimeStruct_compile_run_tests --test-case="procedural generic local generated struct lowers across backends" --no-skip`
+  | notes: initial focused compile-run failed because `./primec` was missing;
+  rebuilding the release `primec` target fixed the harness prerequisite.
+- [x] semantic snapshot locals concrete-call canonicalization source lock
+  | resolved: 2026-05-22 local | validating command:
+  `cd build-release && timeout 300s ./PrimeStruct_backend_runtime_tests --test-case="semantic snapshot locals concrete-call canonicalization stays stable" --no-skip`
+  | notes: source lock now preserves preferred collection helper routing while
+  matching the method-call guard before `resolveCalleePath(expr)`.
+- [x] semantic snapshot direct/bridge publication source lock
+  | resolved: 2026-05-22 local | validating command:
+  `cd build-release && timeout 300s ./PrimeStruct_backend_runtime_tests --test-case="semantic snapshot shared traversal keeps direct and bridge ordering keys" --no-skip`
+  | notes: source lock now matches the merged-worker-aware publication
+  `surface.*Facts` selection path.
+- [x] local generated type boundary dump IR path assertion
+  | resolved: 2026-05-22 local | validating command:
+  `cd build-release && timeout 300s ./PrimeStruct_semantics_tests --test-case="local generated type paths are pinned in boundary dumps" --no-skip`
+  | notes: semantic-product generated constructor target assertions remain,
+  while the IR assertion now checks dump production rather than specialized path
+  spelling.
 - [x] PrimeStruct_compile_run_tests bare zero-arg focused run missing primec
   | resolved: 2026-05-22 local | validating command:
   `cmake --build build-release --target primec -j 1`;

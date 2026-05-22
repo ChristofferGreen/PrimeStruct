@@ -4675,8 +4675,8 @@ TEST_CASE("local generated type semantic ids ignore unrelated definition order")
 
 TEST_CASE("local generated type paths are pinned in boundary dumps") {
   const std::string source =
-      "[return<i32>]\n"
-      "sum_pair([i32] left, [i32] right) {\n"
+      "[return<T>]\n"
+      "sum_pair<T>([T] left, [T] right) {\n"
       "  [type] LeftT { typeof<left> }\n"
       "  [type] RightT { typeof<right> }\n"
       "  [struct] PairT {\n"
@@ -4689,7 +4689,7 @@ TEST_CASE("local generated type paths are pinned in boundary dumps") {
       "\n"
       "[return<i32>]\n"
       "main() {\n"
-      "  return(sum_pair(1i32, 2i32))\n"
+      "  return(sum_pair<i32>(1i32, 2i32))\n"
       "}\n";
 
   primec::testing::CompilePipelineBoundaryDumps dumps;
@@ -4697,12 +4697,20 @@ TEST_CASE("local generated type paths are pinned in boundary dumps") {
   REQUIRE(primec::testing::captureSemanticBoundaryDumpsForTesting(
       source, "/main", dumps, error));
   CHECK(error.empty());
-  CHECK(dumps.astSemantic.find("/sum_pair/PairT") != std::string::npos);
-  CHECK(dumps.semanticProduct.find("full_path=\"/sum_pair/PairT\"") !=
+  CHECK(dumps.astSemantic.find("/sum_pair__t") != std::string::npos);
+  CHECK(dumps.astSemantic.find("/PairT") != std::string::npos);
+  CHECK(dumps.semanticProduct.find("full_path=\"/sum_pair__t") !=
         std::string::npos);
-  CHECK(dumps.semanticProduct.find("struct_path=\"/sum_pair/PairT\"") !=
+  CHECK(dumps.semanticProduct.find("struct_path=\"/sum_pair__t") !=
         std::string::npos);
-  CHECK(dumps.ir.find("/sum_pair") != std::string::npos);
+  const size_t generatedConstructorTarget =
+      dumps.semanticProduct.find("resolved_path=\"/sum_pair__t");
+  REQUIRE(generatedConstructorTarget != std::string::npos);
+  CHECK(dumps.semanticProduct.find("/PairT\"", generatedConstructorTarget) !=
+        std::string::npos);
+  CHECK(dumps.semanticProduct.find("LeftT") == std::string::npos);
+  CHECK(dumps.semanticProduct.find("RightT") == std::string::npos);
+  CHECK(dumps.ir.find("module {") != std::string::npos);
 }
 
 TEST_CASE("semantic product ownership surfaces keep deterministic source order") {

@@ -6,6 +6,43 @@ Legend:
 Finished items are periodically archived here from `docs/todo.md`; section headers record the archive date.
 
 **Todo Completion (May 22, 2026)**
+- [x] TODO-4339: Lower procedural generic facts through semantics
+  - owner: ai
+  - created_at: 2026-05-04
+  - finished_at: 2026-05-22
+  - phase: Procedural compile-time genericity
+  - parallel_track: procedural-genericity
+  - depends_on: TODO-4338, TODO-4269
+  - scope: Route type locals, `typeof<symbol>` facts, and local generated
+    types through template monomorphization, semantic-product publication, and
+    IR lowering without backend-specific source reconstruction.
+  - outcome:
+    - Preserved nested local generated type constructor targets such as
+      `/sum_pair__t.../PairT` when publishing semantic-product direct-call
+      facts, while still canonicalizing terminal callable template
+      specializations.
+    - Pinned semantic-product boundary dumps so generated struct metadata and
+      constructor targets contain concrete specialized paths and no unresolved
+      `LeftT`/`RightT` type-local names.
+    - Added VM, native, and C++ compile-run coverage for a generic helper that
+      constructs a local generated struct internally and returns a caller-known
+      field value.
+    - Kept missing semantic-product struct layout facts on the existing
+      fail-closed lowerer diagnostics path.
+    - Promoted TODO-4340 as the next Ready Now procedural-genericity leaf for
+      examples and conformance polish.
+  - validation:
+    - `PrimeStruct_semantics_tests` passed
+      `local generated type paths are pinned in boundary dumps`.
+    - `PrimeStruct_backend_runtime_tests` passed
+      `semantic snapshot shared traversal keeps direct and bridge ordering keys`
+      and `semantic snapshot locals concrete-call canonicalization stays stable`.
+    - `PrimeStruct_compile_run_tests` passed
+      `procedural generic local generated struct lowers across backends` and
+      `todo queue and skipped doctest debt stay source locked`.
+    - Full `./scripts/compile.sh --release` remains deferred by the lite
+      workflow.
+
 - [x] TODO-4336: Allow type locals in envelope positions
   - owner: ai
   - created_at: 2026-05-04
