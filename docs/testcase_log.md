@@ -883,8 +883,23 @@
   2026-05-22 07:48 CEST by retargeting another old bare map shim constructor
   block to current unknown-target rejections. Next continuation point is
   `PrimeStruct_primestruct_compile_run_vm_collections_user_shadow_and_receiver_precedence_265_274`.
+  The user shadow and receiver precedence 265-274 shard was stabilized on
+  2026-05-22 07:50 CEST by retargeting the remaining bare map shim
+  constructor/access-helper expectations in `shim_maps_c` to unknown-target
+  rejections. Next continuation point is
+  `PrimeStruct_primestruct_compile_run_vm_collections_user_shadow_and_receiver_precedence_275_284`.
 
 ## Recent Test Runs
+- 2026-05-22 07:50 CEST | pass | mode: release | command:
+  `cmake --build build-release --target PrimeStruct_compile_run_tests -j 1`;
+  `cd build-release && ctest --output-on-failure -R '^PrimeStruct_primestruct_compile_run_vm_collections_user_shadow_and_receiver_precedence_265_274$' --timeout 120`
+  | failures: none | notes: retargeted remaining bare map shim expectations
+  in `shim_maps_c`.
+- 2026-05-22 07:49 CEST | fail | mode: release | command:
+  `cd build-release && ctest --output-on-failure -R '^PrimeStruct_primestruct_compile_run_vm_collections_user_shadow_and_receiver_precedence_265_274$' --timeout 120`
+  | failures:
+  `PrimeStruct_primestruct_compile_run_vm_collections_user_shadow_and_receiver_precedence_265_274`
+  | notes: stale bare map sept/oct/access-helper expectations.
 - 2026-05-22 07:48 CEST | pass | mode: release | command:
   `cmake --build build-release --target PrimeStruct_compile_run_tests -j 1`;
   `cd build-release && ctest --output-on-failure -R '^PrimeStruct_primestruct_compile_run_vm_collections_user_shadow_and_receiver_precedence_255_264$' --timeout 120`

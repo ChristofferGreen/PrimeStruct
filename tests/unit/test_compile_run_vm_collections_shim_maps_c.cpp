@@ -93,12 +93,10 @@ main() {
   const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main 2> " + errPath;
   CHECK(runCommand(runCmd) == 2);
   const std::string error = readFile(errPath);
-  CHECK(error.find("argument type mismatch for /std/collections/internal_map/mapSext__") !=
-        std::string::npos);
-  CHECK(error.find("parameter sixthValue: expected i32") != std::string::npos);
+  CHECK(error.find("unknown call target: mapSext") != std::string::npos);
 }
 
-TEST_CASE("runs vm with stdlib collection shim map sept") {
+TEST_CASE("rejects vm bare stdlib collection shim map sept") {
   const std::string source = R"(
 import /std/collections/*
 
@@ -113,8 +111,12 @@ main() {
 }
 )";
   const std::string srcPath = writeTemp("vm_stdlib_collection_shim_map_sept.prime", source);
-  const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main";
-  CHECK(runCommand(runCmd) == 15);
+  const std::string errPath =
+      (std::filesystem::temp_directory_path() / "primec_vm_stdlib_collection_shim_map_sept.err")
+          .string();
+  const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main 2> " + errPath;
+  CHECK(runCommand(runCmd) == 2);
+  CHECK(readFile(errPath).find("unknown call target: mapSept") != std::string::npos);
 }
 
 TEST_CASE("rejects vm stdlib collection shim map sept type mismatch") {
@@ -137,12 +139,10 @@ main() {
   const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main 2> " + errPath;
   CHECK(runCommand(runCmd) == 2);
   const std::string error = readFile(errPath);
-  CHECK(error.find("argument type mismatch for /std/collections/internal_map/mapSept__") !=
-        std::string::npos);
-  CHECK(error.find("parameter seventhValue: expected i32") != std::string::npos);
+  CHECK(error.find("unknown call target: mapSept") != std::string::npos);
 }
 
-TEST_CASE("runs vm with stdlib collection shim map oct") {
+TEST_CASE("rejects vm bare stdlib collection shim map oct") {
   const std::string source = R"(
 import /std/collections/*
 
@@ -157,8 +157,12 @@ main() {
 }
 )";
   const std::string srcPath = writeTemp("vm_stdlib_collection_shim_map_oct.prime", source);
-  const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main";
-  CHECK(runCommand(runCmd) == 17);
+  const std::string errPath =
+      (std::filesystem::temp_directory_path() / "primec_vm_stdlib_collection_shim_map_oct.err")
+          .string();
+  const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main 2> " + errPath;
+  CHECK(runCommand(runCmd) == 2);
+  CHECK(readFile(errPath).find("unknown call target: mapOct") != std::string::npos);
 }
 
 TEST_CASE("rejects vm stdlib collection shim map oct type mismatch") {
@@ -181,12 +185,10 @@ main() {
   const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main 2> " + errPath;
   CHECK(runCommand(runCmd) == 2);
   const std::string error = readFile(errPath);
-  CHECK(error.find("argument type mismatch for /std/collections/internal_map/mapOct__") !=
-        std::string::npos);
-  CHECK(error.find("parameter eighthValue: expected i32") != std::string::npos);
+  CHECK(error.find("unknown call target: mapOct") != std::string::npos);
 }
 
-TEST_CASE("runs vm with stdlib collection shim access helpers") {
+TEST_CASE("rejects vm bare stdlib collection shim access helper map source") {
   const std::string source = R"(
 import /std/collections/*
 
@@ -202,8 +204,12 @@ main() {
 }
 )";
   const std::string srcPath = writeTemp("vm_stdlib_collection_shim_access.prime", source);
-  const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main";
-  CHECK(runCommand(runCmd) == 32);
+  const std::string errPath =
+      (std::filesystem::temp_directory_path() / "primec_vm_stdlib_collection_shim_access.err")
+          .string();
+  const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main 2> " + errPath;
+  CHECK(runCommand(runCmd) == 2);
+  CHECK(readFile(errPath).find("unknown call target: mapSingle") != std::string::npos);
 }
 
 TEST_CASE("runs vm with stdlib collection shim capacity helper") {
