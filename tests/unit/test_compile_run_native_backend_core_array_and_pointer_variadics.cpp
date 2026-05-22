@@ -259,10 +259,10 @@ main() {
 )";
   const std::string srcPath = writeTemp("compile_native_variadic_args_pointer_array_deref_access.prime", source);
   expectNativeCompileReject(srcPath, "primec_native_variadic_args_pointer_array_deref_access.err",
-                            "native backend only supports arithmetic/comparison", "call=/at");
+                            "semantic-product method-call target missing lowered definition", "/array/at");
 }
 
-TEST_CASE("native rejects variadic scalar reference packs with indexed dereference") {
+TEST_CASE("native materializes variadic scalar reference packs with indexed dereference") {
   const std::string source = R"(
 [return<Reference<i32>>]
 borrow_ref([Reference<i32>] value) {
@@ -318,11 +318,10 @@ main() {
 }
 )";
   const std::string srcPath = writeTemp("compile_native_variadic_args_scalar_reference.prime", source);
-  expectNativeCompileReject(srcPath, "primec_native_variadic_args_scalar_reference.err",
-                            "native backend only supports arithmetic/comparison", "call=/at");
+  expectNativeCompileRun(srcPath, "primec_native_variadic_args_scalar_reference_exe", 23);
 }
 
-TEST_CASE("native rejects variadic struct reference packs with indexed field and helper access") {
+TEST_CASE("native materializes variadic struct reference packs with indexed field and helper access") {
   const std::string source = R"(
 [struct]
 Pair() {
@@ -388,11 +387,10 @@ main() {
 }
 )";
   const std::string srcPath = writeTemp("compile_native_variadic_args_struct_reference.prime", source);
-  expectNativeCompileReject(srcPath, "primec_native_variadic_args_struct_reference.err",
-                            "native backend only supports arithmetic/comparison", "call=/at");
+  expectNativeCompileRun(srcPath, "primec_native_variadic_args_struct_reference_exe", 65);
 }
 
-TEST_CASE("native rejects variadic struct pointer packs with indexed field and helper access") {
+TEST_CASE("native materializes variadic struct pointer packs with indexed field and helper access") {
   const std::string source = R"(
 [struct]
 Pair() {
@@ -458,11 +456,10 @@ main() {
 }
 )";
   const std::string srcPath = writeTemp("compile_native_variadic_args_struct_pointer.prime", source);
-  expectNativeCompileReject(srcPath, "primec_native_variadic_args_struct_pointer.err",
-                            "native backend only supports arithmetic/comparison", "call=/at");
+  expectNativeCompileRun(srcPath, "primec_native_variadic_args_struct_pointer_exe", 65);
 }
 
-TEST_CASE("native rejects variadic scalar pointer packs with indexed dereference") {
+TEST_CASE("native materializes variadic scalar pointer packs with indexed dereference") {
   const std::string source = R"(
 [return<Reference<i32>>]
 borrow_ref([Reference<i32>] value) {
@@ -518,8 +515,7 @@ main() {
 }
 )";
   const std::string srcPath = writeTemp("compile_native_variadic_args_scalar_pointer.prime", source);
-  expectNativeCompileReject(srcPath, "primec_native_variadic_args_scalar_pointer.err",
-                            "native backend only supports arithmetic/comparison", "call=/at");
+  expectNativeCompileRun(srcPath, "primec_native_variadic_args_scalar_pointer_exe", 23);
 }
 
 TEST_CASE("native rejects variadic scalar pointer packs from borrowed pack access") {

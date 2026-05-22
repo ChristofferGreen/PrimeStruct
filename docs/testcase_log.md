@@ -7680,3 +7680,10 @@
   `/array/at` missing-lowered-definition rejection coverage; validating command:
   `timeout 300s bash -lc 'cd build-release && ctest --output-on-failure --stop-on-failure --timeout 120 -I 935,939'`
   on 2026-05-22 09:01 CEST.
+- Native core variadic pointer/reference shard 940-944 now passes after pointer
+  array dereference access was aligned to the same `/array/at`
+  missing-lowered-definition rejection and scalar/struct reference and pointer
+  pack indexed accesses were retargeted to active native materialization
+  coverage; validating command:
+  `timeout 300s bash -lc 'cd build-release && ctest --output-on-failure --stop-on-failure --timeout 120 -I 940,944'`
+  on 2026-05-22 09:09 CEST.
