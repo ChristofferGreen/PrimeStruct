@@ -608,8 +608,7 @@ main() {
       "./primec --emit=cpp " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
   CHECK(runCommand(compileCmd) == 2);
   const std::string err = readFile(errPath);
-  CHECK(err.find("native backend only supports") != std::string::npos);
-  CHECK(err.find("name=/std/collections/vector/count") != std::string::npos);
+  CHECK(err.find("unknown method: /std/collections/vector/count") != std::string::npos);
 }
 
 TEST_CASE("rejects vector namespaced count capacity slash methods without same-path helper in C++ emitter") {
@@ -655,8 +654,7 @@ main() {
       "./primec --emit=exe " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
   CHECK(runCommand(compileCmd) == 2);
   const std::string err = readFile(errPath);
-  CHECK(err.find("native backend only supports") != std::string::npos);
-  CHECK(err.find("name=/std/collections/vector/count") != std::string::npos);
+  CHECK(err.find("unknown method: /std/collections/vector/count") != std::string::npos);
 }
 
 TEST_CASE("C++ emitter rejects cross-path vector count capacity slash methods before builtin fallback") {

@@ -7662,3 +7662,9 @@
   error: struct parameter type mismatch`); validating command:
   `timeout 300s bash -lc 'cd build-release && ctest --output-on-failure --stop-on-failure --timeout 120 -I 895,899'`
   on 2026-05-22 08:43 CEST.
+- C++ emitter vector count/capacity helper shard 928 now passes after stdlib
+  namespaced vector slash-method rejection coverage was aligned with the
+  current semantic `unknown method: /std/collections/vector/count` diagnostic;
+  validating command:
+  `timeout 300s bash -lc 'cd build-release && ctest --output-on-failure --stop-on-failure --timeout 120 -I 925,929'`
+  on 2026-05-22 08:52 CEST.
