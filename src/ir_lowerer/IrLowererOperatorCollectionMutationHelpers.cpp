@@ -110,6 +110,35 @@ bool areCompatibleStructPaths(const std::string &lhs, const std::string &rhs) {
          areCompatibleInternalSoaStoragePaths(lhs, rhs);
 }
 
+bool isMapLiteralAssignPair(const Expr &arg) {
+  return arg.kind == Expr::Kind::Call && !arg.isMethodCall &&
+         !arg.isFieldAccess && arg.name == "assign" &&
+         arg.namespacePrefix.empty() && arg.templateArgs.empty() &&
+         arg.args.size() == 2;
+}
+
+std::vector<const Expr *> collectMapLiteralEntries(const std::vector<Expr> &args) {
+  std::vector<const Expr *> entries;
+  entries.reserve(args.size() * 2);
+  bool allAssignPairs = !args.empty();
+  for (const auto &arg : args) {
+    if (!isMapLiteralAssignPair(arg)) {
+      allAssignPairs = false;
+      break;
+    }
+  }
+  const bool flattenAssignPairs = allAssignPairs || (args.size() % 2 != 0);
+  for (const auto &arg : args) {
+    if (flattenAssignPairs && isMapLiteralAssignPair(arg)) {
+      entries.push_back(&arg.args[0]);
+      entries.push_back(&arg.args[1]);
+    } else {
+      entries.push_back(&arg);
+    }
+  }
+  return entries;
+}
+
 bool classifyArrayVectorTypeText(
     const std::string &typeText,
     const ConversionsAndCallsValueKindFromTypeNameFn &valueKindFromTypeName,
@@ -500,7 +529,9 @@ bool emitConversionsAndCallsCollectionAndMutationExpr(
       return true;
     }
     if (builtin == "map") {
-      if (expr.args.size() % 2 != 0) {
+      const std::vector<const Expr *> mapLiteralEntries =
+          collectMapLiteralEntries(expr.args);
+      if (mapLiteralEntries.size() % 2 != 0) {
         error = "map literal requires an even number of arguments";
         return false;
       }
@@ -512,11 +543,11 @@ bool emitConversionsAndCallsCollectionAndMutationExpr(
         keyKind = valueKindFromTypeName(expr.templateArgs[0]);
         valueKind = valueKindFromTypeName(expr.templateArgs[1]);
       } else if (expr.templateArgs.empty()) {
-        for (size_t i = 0; i + 1 < expr.args.size(); i += 2) {
+        for (size_t i = 0; i + 1 < mapLiteralEntries.size(); i += 2) {
           const LocalInfo::ValueKind inferredKeyKind =
-              inferExprKind(expr.args[i], localsIn);
+              inferExprKind(*mapLiteralEntries[i], localsIn);
           const LocalInfo::ValueKind inferredValueKind =
-              inferExprKind(expr.args[i + 1], localsIn);
+              inferExprKind(*mapLiteralEntries[i + 1], localsIn);
           if (inferredKeyKind == LocalInfo::ValueKind::Unknown ||
               inferredValueKind == LocalInfo::ValueKind::Unknown) {
             keyKind = LocalInfo::ValueKind::Unknown;
@@ -549,11 +580,12 @@ bool emitConversionsAndCallsCollectionAndMutationExpr(
                     : ("map literal requires exactly two template arguments"
                        " (name=" + expr.name +
                        ", template_args=" + std::to_string(expr.templateArgs.size()) +
-                       ", args=" + std::to_string(expr.args.size()) + ")");
+                       ", args=" + std::to_string(mapLiteralEntries.size()) + ")");
         return false;
       }
 
-      if (expr.args.size() > static_cast<size_t>(std::numeric_limits<int32_t>::max())) {
+      if (mapLiteralEntries.size() >
+          static_cast<size_t>(std::numeric_limits<int32_t>::max())) {
         error = "map literal too large for native backend";
         return false;
       }
@@ -568,7 +600,8 @@ bool emitConversionsAndCallsCollectionAndMutationExpr(
         }
         const int32_t baseLocal = nextLocal;
 
-        const int32_t pairCount = static_cast<int32_t>(expr.args.size() / 2);
+        const int32_t pairCount =
+            static_cast<int32_t>(mapLiteralEntries.size() / 2);
         auto resolveMapVectorField =
             [&](const char *fieldName,
                 int32_t &slotOffset,
@@ -694,11 +727,12 @@ bool emitConversionsAndCallsCollectionAndMutationExpr(
         emitMapVectorHeaderFromLayout(baseLocal + keysSlotOffset, keysVectorSlots);
         emitMapVectorHeaderFromLayout(baseLocal + payloadsSlotOffset, payloadsVectorSlots);
 
-        for (size_t pairIndex = 0; pairIndex < expr.args.size() / 2; ++pairIndex) {
+        for (size_t pairIndex = 0; pairIndex < mapLiteralEntries.size() / 2;
+             ++pairIndex) {
           if (!emitExperimentalVectorElementStore(
                   baseLocal + keysSlotOffset + keysVectorSlots.data,
                   pairIndex,
-                  expr.args[pairIndex * 2],
+                  *mapLiteralEntries[pairIndex * 2],
                   keyKind,
                   "map literal key type mismatch")) {
             return false;
@@ -706,7 +740,7 @@ bool emitConversionsAndCallsCollectionAndMutationExpr(
           if (!emitExperimentalVectorElementStore(
                   baseLocal + payloadsSlotOffset + payloadsVectorSlots.data,
                   pairIndex,
-                  expr.args[pairIndex * 2 + 1],
+                  *mapLiteralEntries[pairIndex * 2 + 1],
                   valueKind,
                   "map literal value type mismatch")) {
             return false;
@@ -718,14 +752,15 @@ bool emitConversionsAndCallsCollectionAndMutationExpr(
       }
 
       const int32_t baseLocal = nextLocal;
-      nextLocal += static_cast<int32_t>(1 + expr.args.size());
+      nextLocal += static_cast<int32_t>(1 + mapLiteralEntries.size());
 
-      const int32_t pairCount = static_cast<int32_t>(expr.args.size() / 2);
+      const int32_t pairCount =
+          static_cast<int32_t>(mapLiteralEntries.size() / 2);
       instructions.push_back({IrOpcode::PushI32, static_cast<uint64_t>(pairCount)});
       instructions.push_back({IrOpcode::StoreLocal, static_cast<uint64_t>(baseLocal)});
 
-      for (size_t i = 0; i < expr.args.size(); ++i) {
-        const Expr &arg = expr.args[i];
+      for (size_t i = 0; i < mapLiteralEntries.size(); ++i) {
+        const Expr &arg = *mapLiteralEntries[i];
         const int32_t slot = baseLocal + 1 + static_cast<int32_t>(i);
         if (i % 2 == 0 && keyKind == LocalInfo::ValueKind::String) {
           const LocalInfo::ValueKind keyArgKind = inferExprKind(arg, localsIn);

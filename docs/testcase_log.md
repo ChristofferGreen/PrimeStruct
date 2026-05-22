@@ -7634,3 +7634,9 @@
   canonical map count slash methods inline the visible `.prime` helper instead
   of falling through to builtin count; adjacent shards 315-331 and focused
   lowerer helper checks also pass.
+- VM collections growth/syntax and adjacent C++ emitter shards 850-854 now pass
+  after map brace literals accept text-filtered `assign(key, value)` entry
+  pairs again and the C++ bare map count test expects the visible canonical
+  `.prime` helper body instead of builtin count fallback; validating command:
+  `timeout 300s bash -lc 'cd build-release && ctest --output-on-failure --stop-on-failure --timeout 120 -I 850,854'`
+  on 2026-05-22 08:31 CEST.

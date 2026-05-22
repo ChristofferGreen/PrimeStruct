@@ -29,7 +29,7 @@ main() {
   CHECK(errors.find("unknown call target: /std/collections/map/at") != std::string::npos);
 }
 
-TEST_CASE("compiles and runs bare map count while builtin count stays authoritative in C++ emitter") {
+TEST_CASE("compiles and runs bare map count through canonical helper in C++ emitter") {
   const std::string source = R"(
 [effects(heap_alloc), return<int>]
 /std/collections/map/count([map<i32, i32>] values) {
@@ -43,12 +43,12 @@ main() {
 }
 )";
   const std::string srcPath =
-      writeTemp("compile_cpp_map_unnamespaced_count_builtin_fallback_reject.prime", source);
+      writeTemp("compile_cpp_map_unnamespaced_count_canonical_helper.prime", source);
   const std::string exePath =
-      (testScratchPath("") / "primec_cpp_map_unnamespaced_count_builtin_fallback_exe").string();
+      (testScratchPath("") / "primec_cpp_map_unnamespaced_count_canonical_helper_exe").string();
   const std::string compileCmd = "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main";
   CHECK(runCommand(compileCmd) == 0);
-  CHECK(runCommand(exePath) == 1);
+  CHECK(runCommand(exePath) == 17);
 }
 
 TEST_CASE("rejects bare map count without imported canonical helper in C++ emitter") {
