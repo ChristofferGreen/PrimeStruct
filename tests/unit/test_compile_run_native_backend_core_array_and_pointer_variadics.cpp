@@ -574,7 +574,8 @@ main() {
 )";
   const std::string srcPath = writeTemp("compile_native_variadic_args_scalar_pointer_pack_access.prime", source);
   expectNativeCompileReject(srcPath, "primec_native_variadic_args_scalar_pointer_pack_access.err",
-                            "location requires a local binding");
+                            "semantic-product method-call target missing lowered definition",
+                            "/array/at");
 }
 
 

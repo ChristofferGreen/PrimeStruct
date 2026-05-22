@@ -325,6 +325,23 @@ bool isAggregatePointerLikeLocal(const LocalInfo &info, bool fromArgsPack) {
          info.pointerToBuffer;
 }
 
+bool resolveArgsPackAccessReceiver(const Expr &expr, const Expr *&receiverOut) {
+  receiverOut = nullptr;
+  if (expr.kind != Expr::Kind::Call || expr.args.size() != 2) {
+    return false;
+  }
+  std::string accessName;
+  const bool isAccessCall =
+      getBuiltinArrayAccessName(expr, accessName) ||
+      isSimpleCallName(expr, "at") ||
+      isSimpleCallName(expr, "at_unsafe");
+  if (!isAccessCall) {
+    return false;
+  }
+  receiverOut = &expr.args.front();
+  return receiverOut->kind == Expr::Kind::Name;
+}
+
 bool isAggregatePointerLikeExpr(const Expr &expr, const LocalMap &localsIn) {
   if (expr.kind == Expr::Kind::Name) {
     auto it = localsIn.find(expr.name);
@@ -334,9 +351,9 @@ bool isAggregatePointerLikeExpr(const Expr &expr, const LocalMap &localsIn) {
     return false;
   }
 
-  std::string accessName;
-  if (getBuiltinArrayAccessName(expr, accessName) && expr.args.size() == 2 && expr.args.front().kind == Expr::Kind::Name) {
-    auto it = localsIn.find(expr.args.front().name);
+  const Expr *accessReceiver = nullptr;
+  if (resolveArgsPackAccessReceiver(expr, accessReceiver)) {
+    auto it = localsIn.find(accessReceiver->name);
     return it != localsIn.end() && it->second.isArgsPack && isAggregatePointerLikeLocal(it->second, true);
   }
 
@@ -823,12 +840,7 @@ bool emitConversionsAndCallsMemoryAndPointerExpr(
       const Expr &target = expr.args.front();
       auto isBorrowedArgsPackAccessTarget = [&](const Expr &candidate) {
         const Expr *receiver = nullptr;
-        std::string accessName;
-        if (getBuiltinArrayAccessName(candidate, accessName) &&
-            candidate.args.size() == 2 &&
-            (accessName == "at" || accessName == "at_unsafe")) {
-          receiver = &candidate.args.front();
-        }
+        resolveArgsPackAccessReceiver(candidate, receiver);
         if (receiver == nullptr || receiver->kind != Expr::Kind::Name) {
           return false;
         }
