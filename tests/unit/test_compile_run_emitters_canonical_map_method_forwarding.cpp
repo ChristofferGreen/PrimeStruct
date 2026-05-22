@@ -83,7 +83,7 @@ main() {
         std::string::npos);
 }
 
-TEST_CASE("compiles wrapper-returned canonical map slash-method struct helper receiver forwarding in C++ emitter") {
+TEST_CASE("rejects wrapper-returned canonical map slash-method struct helper receiver forwarding in C++ emitter") {
   const std::string source = R"(
 Marker {
   [i32] value
@@ -111,20 +111,16 @@ main() {
 )";
   const std::string srcPath =
       writeTemp("compile_cpp_wrapper_map_method_alias_struct_receiver_forwarding.prime", source);
-  const std::string exePath =
+  const std::string errPath =
       (testScratchPath("") /
-       "primec_cpp_wrapper_map_method_alias_struct_receiver_forwarding_exe")
-          .string();
-  const std::string outPath =
-      (testScratchPath("") /
-       "primec_cpp_wrapper_map_method_alias_struct_receiver_forwarding.out")
+       "primec_cpp_wrapper_map_method_alias_struct_receiver_forwarding.err")
           .string();
 
   const std::string compileCmd =
-      "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main";
-  CHECK(runCommand(compileCmd) == 0);
-  CHECK(runCommand(exePath + " > " + outPath + " 2>&1") == 2);
-  CHECK(readFile(outPath).empty());
+      "./primec --emit=exe " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
+  CHECK(runCommand(compileCmd) == 2);
+  CHECK(readFile(errPath).find("EXE IR lowering error: struct parameter type mismatch") !=
+        std::string::npos);
 }
 
 TEST_CASE("rejects std-namespaced vector method alias access struct helper receiver mismatch in C++ emitter") {

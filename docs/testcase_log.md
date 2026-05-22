@@ -7656,3 +7656,9 @@
   rejection; validating command:
   `timeout 300s bash -lc 'cd build-release && ctest --output-on-failure --stop-on-failure --timeout 120 -I 890,894'`
   on 2026-05-22 08:40 CEST.
+- C++ emitter canonical map method-forwarding shard 895 now passes after the
+  wrapper-returned canonical map slash-method struct receiver case was aligned
+  with the current returned-map materialization rejection (`EXE IR lowering
+  error: struct parameter type mismatch`); validating command:
+  `timeout 300s bash -lc 'cd build-release && ctest --output-on-failure --stop-on-failure --timeout 120 -I 895,899'`
+  on 2026-05-22 08:43 CEST.
