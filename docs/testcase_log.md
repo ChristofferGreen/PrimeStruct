@@ -902,6 +902,20 @@
   `PrimeStruct_primestruct_compile_run_vm_collections_growth_limits_and_syntax_352_352`.
 
 ## Recent Test Runs
+- 2026-05-23 00:00 CEST | pass | mode: release | command:
+  `cmake --build build-release --target PrimeStruct_misc_tests -j 1`;
+  `cd build-release && ./PrimeStruct_misc_tests --test-case="local generated structs reject escapes and shadowing,local generated struct escape diagnostic uses specialized path,typeof symbol rejects missing and runtime argument forms,typeof symbol rejects unsupported callable and ambiguity,type local envelopes reject forward and runtime value use,top-level type local rejects as binding syntax" --no-skip`
+  | failures: none | notes: TODO-4546 focused manual negative diagnostics
+  passed with 6 cases and 33 assertions after source-column and `typeof<1>`
+  retargeting.
+- 2026-05-23 00:00 CEST | pass | mode: release | command:
+  `cd build-release && ./PrimeStruct_semantics_tests --test-case="local generated type paths are pinned in boundary dumps" --no-skip`
+  | failures: none | notes: TODO-4546 semantic-product boundary failure
+  conformance passed with 1 case and 19 assertions.
+- 2026-05-23 00:00 CEST | pass | mode: release | command:
+  `cd build-release && ./PrimeStruct_compile_run_tests --test-case="todo queue and skipped doctest debt stay source locked" --no-skip`
+  | failures: none | notes: TODO-4546 bookkeeping/source lock passed with
+  1 case and 374 assertions.
 - 2026-05-22 23:40 CEST | pass | mode: release | command:
   `cmake --build build-release --target PrimeStruct_compile_run_tests -j 1`;
   `cd build-release && ctest --output-on-failure -R '^PrimeStruct_primestruct_compile_run_vm_collections_growth_limits_and_syntax_342_351$' --timeout 120`
@@ -7451,6 +7465,12 @@
 - 2026-05-12 17:28 local | fail | mode: release | command: `./scripts/compile.sh --release` | failures: 146 CTest targets | notes: baseline after preflight checkpoint failed; stabilization blocks TODO work
 
 ## Resolved Failures
+- [x] TODO-4546 focused manual negative diagnostics | resolved: 2026-05-23
+  00:00 CEST | validating command:
+  `cmake --build build-release --target PrimeStruct_misc_tests -j 1`;
+  `cd build-release && ./PrimeStruct_misc_tests --test-case="local generated structs reject escapes and shadowing,local generated struct escape diagnostic uses specialized path,typeof symbol rejects missing and runtime argument forms,typeof symbol rejects unsupported callable and ambiguity,type local envelopes reject forward and runtime value use,top-level type local rejects as binding syntax" --no-skip`
+  | notes: source-column expectations now match type/typeof token columns,
+  and `typeof<1>` reaches the semantic non-symbol diagnostic branch.
 - [x] procedural generic local generated struct focused run missing primec
   | resolved: 2026-05-22 local | validating command:
   `cmake --build build-release --target primec -j 1`;

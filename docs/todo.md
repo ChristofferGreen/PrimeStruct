@@ -83,8 +83,8 @@ Task template:
 
 ### Ready Now (Parallel-Candidate Leaves; No Unmet TODO Dependencies)
 
-- TODO-4546: Add procedural generic negative conformance | track: procedural-genericity-negatives |
-  primary surface: semantic diagnostics for procedural generic misuse
+- TODO-4341: Define generic requirement predicate surface | track: generic-requirements |
+  primary surface: user-facing requirement predicate syntax and docs
 
 ### Parallel Work Tracks (Current)
 
@@ -115,15 +115,16 @@ Task template:
   structs, TODO-4338 stabilized deterministic generated identity and
   provenance, TODO-4339 lowered procedural facts through semantic-product
   direct-call and layout metadata, and TODO-4340 added docs and positive
-  examples; ready TODO-4546.
+  examples, and TODO-4546 added negative conformance; no procedural-genericity
+  leaf is ready.
 - `generic-requirements`: TODO-4331 and TODO-4334 are complete; TODO-4341
-  remains queued behind the procedural-genericity conformance leaf.
+  is ready after the procedural-genericity docs and conformance leaves.
 
 ### Immediate Next 10 (Track Successors; Not Ready Until Dependencies Land)
 
 - TODO-4545: Implement first structured task spawn/wait substrate
 - TODO-4278: Integrate multi-wait with stdlib tuple
-- TODO-4341: Define generic requirement predicate surface
+- TODO-4342: Represent requirement predicates as semantic facts
 
 ### Priority Lanes (Current)
 
@@ -145,7 +146,8 @@ Task template:
   stdlib tuple values
 - Multithreading substrate: TODO-4545 captures the first task spawn/wait
   prerequisite split out of TODO-4278
-- Procedural compile-time genericity: TODO-4546
+- Procedural compile-time genericity: none active after TODO-4340 and
+  TODO-4546
 - Generic constraint and compile-time flow alignment: TODO-4341
   -> TODO-4342 -> TODO-4343 -> TODO-4344 -> TODO-4352 -> TODO-4353
   -> TODO-4354 -> TODO-4355 -> TODO-4356 -> TODO-4357 -> TODO-4345
@@ -154,7 +156,6 @@ Task template:
 
 ### Execution Queue (Recommended Track Order)
 
-- TODO-4546: Add procedural generic negative conformance
 - TODO-4341: Define generic requirement predicate surface
 - TODO-4342: Represent requirement predicates as semantic facts
 - TODO-4343: Add builtin type relation predicates
@@ -203,7 +204,7 @@ Task template:
 | Algebraic sum types and brace-only construction | none |
 | Stdlib ADT migration for `Maybe` and `Result` | none |
 | Generic type packs and tuple stdlib surface | TODO-4274, TODO-4273, TODO-4277, TODO-4278 |
-| Procedural compile-time genericity and local type facts | TODO-4546 |
+| Procedural compile-time genericity and local type facts | none |
 | Generic constraints and compile-time flow control | TODO-4341, TODO-4342, TODO-4343, TODO-4344, TODO-4352, TODO-4353, TODO-4354, TODO-4355, TODO-4356, TODO-4357, TODO-4345, TODO-4346, TODO-4358, TODO-4347, TODO-4351, TODO-4348, TODO-4359, TODO-4349, TODO-4350 |
 
 ### Validation Coverage Snapshot
@@ -230,7 +231,7 @@ Task template:
 | Sum-type and brace-construction conformance | none |
 | Maybe/Result sum migration conformance | none |
 | Generic type-pack and tuple conformance | TODO-4274, TODO-4273, TODO-4277, TODO-4278 |
-| Procedural compile-time genericity conformance | TODO-4546 |
+| Procedural compile-time genericity conformance | none |
 | Generic constraint and compile-time flow conformance | TODO-4341, TODO-4342, TODO-4343, TODO-4344, TODO-4352, TODO-4353, TODO-4354, TODO-4355, TODO-4356, TODO-4357, TODO-4345, TODO-4346, TODO-4358, TODO-4347, TODO-4351, TODO-4348, TODO-4359, TODO-4349, TODO-4350 |
 
 ### Vector/Map Bridge Contract Summary
@@ -814,35 +815,6 @@ Task template:
     - `./scripts/compile.sh --release` passes.
   - stop_rule: Stop once multi-wait returns stdlib `tuple<...>` or the missing
     task-side prerequisite is split into an explicit multithreading TODO.
-
-- [ ] TODO-4546: Add procedural generic negative conformance
-  - owner: ai
-  - created_at: 2026-05-22
-  - phase: Procedural compile-time genericity
-  - parallel_track: procedural-genericity-negatives
-  - depends_on: TODO-4339
-  - scope: Add negative parser/semantic conformance for procedural generic
-    misuse without changing the user-facing docs/examples surface.
-  - implementation_notes:
-    - Start from parser and semantic diagnostics tests, compile-pipeline dump
-      tests, and the existing type-local/local-generated tests in
-      `tests/unit/test_semantics_manual_calls.h` and
-      `tests/unit/test_semantics_type_resolution_graph_snapshots.cpp`.
-    - Keep this leaf independent from TODO-4340 by focusing on diagnostics and
-      conformance source locks rather than docs prose or examples.
-  - acceptance:
-    - Negative conformance covers ambiguous bare names, bad `typeof` targets,
-      invalid type-local use, generated-type escape rejection, and
-      generated-type identity diagnostics.
-    - Diagnostics include stable source locations or provenance handles where
-      the current diagnostic harness supports them.
-    - Compile-pipeline or semantic-product dump tests prove failed procedural
-      generic facts do not leak unresolved type locals to lowering.
-    - Source-lock tests are updated if the conformance inventory changes.
-    - `./scripts/compile.sh --release` passes.
-  - stop_rule: Stop once misuse cases are covered by deterministic negative
-    diagnostics and no unresolved procedural type facts reach the backend
-    boundary.
 
 - [ ] TODO-4341: Define generic requirement predicate surface
   - owner: ai

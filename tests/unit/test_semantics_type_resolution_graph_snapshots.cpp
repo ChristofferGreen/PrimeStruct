@@ -1,5 +1,7 @@
 #include <algorithm>
 #include <cstdint>
+#include <filesystem>
+#include <fstream>
 #include <string_view>
 
 #include "primec/IrLowerer.h"
@@ -4711,6 +4713,55 @@ TEST_CASE("local generated type paths are pinned in boundary dumps") {
   CHECK(dumps.semanticProduct.find("LeftT") == std::string::npos);
   CHECK(dumps.semanticProduct.find("RightT") == std::string::npos);
   CHECK(dumps.ir.find("module {") != std::string::npos);
+
+  const std::string invalidSource =
+      "[return<auto>]\n"
+      "make_pair<T>([T] value) {\n"
+      "  [type] ValueT { typeof<value> }\n"
+      "  [struct] PairT {\n"
+      "    [ValueT] first{0i32}\n"
+      "  }\n"
+      "  [PairT] pair{PairT{value}}\n"
+      "  return(pair)\n"
+      "}\n"
+      "\n"
+      "[return<i32>]\n"
+      "main() {\n"
+      "  return(make_pair<i32>(1i32))\n"
+      "}\n";
+  const std::filesystem::path invalidPath =
+      primec::testing::detail::makeCompilePipelineDumpSourcePath();
+  {
+    std::ofstream file(invalidPath);
+    REQUIRE(file.good());
+    file << invalidSource;
+  }
+  primec::Options options;
+  options.inputPath = invalidPath.string();
+  options.entryPath = "/main";
+  options.emitKind = "native";
+  options.wasmProfile = "wasi";
+  options.dumpStage = "semantic-product";
+  options.defaultEffects = primec::testing::detail::defaultCompilePipelineTestingEffects();
+  options.entryDefaultEffects = options.defaultEffects;
+  primec::addDefaultStdlibInclude(options.inputPath, options.importPaths);
+
+  primec::CompilePipelineOutput output;
+  primec::CompilePipelineErrorStage errorStage =
+      primec::CompilePipelineErrorStage::None;
+  std::string invalidError;
+  CHECK_FALSE(primec::runCompilePipeline(options, output, errorStage, invalidError));
+
+  std::error_code ec;
+  std::filesystem::remove(invalidPath, ec);
+
+  CHECK(errorStage == primec::CompilePipelineErrorStage::Semantic);
+  CHECK(invalidError.find("local generated struct cannot escape return type: "
+                          "/make_pair__t") != std::string::npos);
+  CHECK_FALSE(output.hasDumpOutput);
+  CHECK_FALSE(output.hasSemanticProgram);
+  CHECK(output.dumpOutput.find("ValueT") == std::string::npos);
+  CHECK(output.dumpOutput.find("PairT") == std::string::npos);
 }
 
 TEST_CASE("semantic product ownership surfaces keep deterministic source order") {

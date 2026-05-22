@@ -37,6 +37,41 @@ Finished items are periodically archived here from `docs/todo.md`; section heade
       workflow.
 
 **Todo Completion (May 22, 2026)**
+- [x] TODO-4546: Add procedural generic negative conformance
+  - owner: ai
+  - created_at: 2026-05-22
+  - finished_at: 2026-05-22
+  - phase: Procedural compile-time genericity
+  - parallel_track: procedural-genericity-negatives
+  - depends_on: TODO-4339
+  - scope: Add negative parser/semantic conformance for procedural generic
+    misuse without changing the user-facing docs/examples surface.
+  - outcome:
+    - Kept ambiguous bare-name and `typeof<symbol>` diagnostics covered by
+      deterministic semantic tests, including local/callable ambiguity and
+      sorted import-alias ambiguity.
+    - Extended bad `typeof` target coverage to reject non-symbol compile-time
+      arguments, alongside missing symbols, runtime call syntax, unsupported
+      callable symbols, and ambiguous symbols.
+    - Source-locked local generated type escape diagnostics to the generated
+      type definition location and referenced type-local fact locations.
+    - Pinned compile-pipeline failure behavior so rejected generated-type
+      escapes stop at the semantic stage without producing semantic-product or
+      IR dump output containing unresolved procedural type facts.
+    - Left TODO-4340 as the remaining Ready Now procedural-genericity leaf for
+      user-facing docs and positive examples.
+  - validation:
+    - `cmake --build build-release --target PrimeStruct_misc_tests -j 1`
+      passed.
+    - `PrimeStruct_misc_tests` passed the focused procedural negative
+      diagnostics filter with 6 cases and 33 assertions.
+    - `PrimeStruct_semantics_tests` passed `local generated type paths are
+      pinned in boundary dumps` with 1 case and 19 assertions.
+    - `PrimeStruct_compile_run_tests` passed `todo queue and skipped doctest
+      debt stay source locked` with 1 case and 374 assertions.
+    - Full `./scripts/compile.sh --release` remains deferred by the lite
+      workflow.
+
 - [x] TODO-4339: Lower procedural generic facts through semantics
   - owner: ai
   - created_at: 2026-05-04

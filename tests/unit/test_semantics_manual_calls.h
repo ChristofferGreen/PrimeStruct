@@ -541,8 +541,8 @@ make_pair() {
   INFO(explicitError);
   CHECK(explicitError.find("local generated struct cannot escape return type: /make_pair/PairT") !=
         std::string::npos);
-  CHECK(explicitError.find("local type defined at") != std::string::npos);
-  CHECK(explicitError.find("type facts: ValueT at") != std::string::npos);
+  CHECK(explicitError.find("local type defined at 6:12") != std::string::npos);
+  CHECK(explicitError.find("type facts: ValueT at 5:10") != std::string::npos);
 
   const std::string autoReturn = R"(
 [return<auto>]
@@ -561,8 +561,8 @@ make_pair() {
   INFO(autoError);
   CHECK(autoError.find("local generated struct cannot escape return type: /make_pair/PairT") !=
         std::string::npos);
-  CHECK(autoError.find("local type defined at") != std::string::npos);
-  CHECK(autoError.find("type facts: ValueT at") != std::string::npos);
+  CHECK(autoError.find("local type defined at 6:12") != std::string::npos);
+  CHECK(autoError.find("type facts: ValueT at 5:10") != std::string::npos);
 
   const std::string shadowLocal = R"(
 [return<int>]
@@ -606,8 +606,8 @@ make_pair<T>([T] value) {
         std::string::npos);
   CHECK(error.find("/PairT") !=
         std::string::npos);
-  CHECK(error.find("local type defined at") != std::string::npos);
-  CHECK(error.find("type facts: ValueT at") != std::string::npos);
+  CHECK(error.find("local type defined at 10:12") != std::string::npos);
+  CHECK(error.find("type facts: ValueT at 9:10") != std::string::npos);
 }
 
 TEST_CASE("local generated structs reject forward facts and recursive storage") {
@@ -697,6 +697,18 @@ main() {
   CHECK_FALSE(validateSourceProgram(runtime, "/main", runtimeError));
   CHECK(runtimeError.find(
             "typeof requires compile-time symbol syntax: typeof<symbol>") !=
+        std::string::npos);
+
+  const std::string literalTarget = R"(
+[return<int>]
+main() {
+  [type] ValueT { typeof<1> }
+  return(1i32)
+}
+)";
+  std::string literalTargetError;
+  CHECK_FALSE(validateSourceProgram(literalTarget, "/main", literalTargetError));
+  CHECK(literalTargetError.find("typeof requires a symbol argument") !=
         std::string::npos);
 }
 
