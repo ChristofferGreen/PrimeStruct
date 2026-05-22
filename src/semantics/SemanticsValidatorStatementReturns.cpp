@@ -194,6 +194,52 @@ bool SemanticsValidator::validateReturnStatement(const std::vector<ParameterInfo
           currentValidationState_.context.definitionPath;
       return parentPath(definitionPath);
     };
+    auto localGeneratedStructReturnPath = [&](const BindingInfo &binding) {
+      const std::string &definitionPath =
+          currentValidationState_.context.definitionPath;
+      if (definitionPath.empty() || structNames_.count(definitionPath) > 0) {
+        return std::string{};
+      }
+      std::string typeText = binding.typeName;
+      if (!binding.typeTemplateArg.empty()) {
+        typeText += "<" + binding.typeTemplateArg + ">";
+      }
+      std::string resolved =
+          resolveStructTypePath(typeText, definitionPath, structNames_);
+      if (resolved.empty()) {
+        resolved =
+            resolveStructTypePath(binding.typeName, definitionPath, structNames_);
+      }
+      const std::string localPrefix = definitionPath + "/";
+      if (!resolved.empty() && resolved.rfind(localPrefix, 0) == 0) {
+        return resolved;
+      }
+      return std::string{};
+    };
+    auto rejectLocalGeneratedStructReturn = [&]() -> bool {
+      BindingInfo binding;
+      if (!inferBindingTypeFromInitializer(stmt.args.front(), params, locals, binding)) {
+        const Expr &returnExpr = stmt.args.front();
+        if (returnExpr.kind != Expr::Kind::Name) {
+          return true;
+        }
+        auto localIt = locals.find(returnExpr.name);
+        if (localIt == locals.end()) {
+          return true;
+        }
+        binding = localIt->second;
+      }
+      const std::string localStructPath = localGeneratedStructReturnPath(binding);
+      if (localStructPath.empty()) {
+        return true;
+      }
+      return failReturnDiagnostic(
+          "local generated struct cannot escape return type: " +
+          localStructPath);
+    };
+    if (!rejectLocalGeneratedStructReturn()) {
+      return false;
+    }
     auto resultOkPayloadIndex = [&](const Expr &expr) -> std::optional<size_t> {
       if (expr.kind != Expr::Kind::Call || expr.hasBodyArguments ||
           !expr.bodyArguments.empty() || !expr.templateArgs.empty()) {

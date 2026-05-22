@@ -131,6 +131,14 @@ std::string SemanticsValidator::resolveStructReturnPathForBuild(const std::strin
 }
 
 bool SemanticsValidator::buildDefinitionReturnKinds(const std::unordered_set<std::string> &explicitStructs) {
+  auto isLocalGeneratedStructReturn = [&](const Definition &def,
+                                          const std::string &structPath) {
+    if (structPath.empty() || structNames_.count(def.fullPath) > 0) {
+      return false;
+    }
+    const std::string localPrefix = def.fullPath + "/";
+    return structPath.rfind(localPrefix, 0) == 0;
+  };
   for (const auto &def : program_.definitions) {
     DefinitionContextScope definitionScope(*this, def);
     if (structNames_.count(def.fullPath) > 0) {
@@ -199,16 +207,24 @@ bool SemanticsValidator::buildDefinitionReturnKinds(const std::unordered_set<std
       kind = ReturnKind::Array;
     } else {
       bool hasExplicitSumReturn = false;
+      std::string returnKindError;
       for (const auto &transform : def.transforms) {
         if (transform.name != "return" || transform.templateArgs.size() != 1) {
           continue;
+        }
+        if (const std::string localStructPath =
+                resolveStructReturnPathForBuild(transform.templateArgs.front(),
+                                                def.namespacePrefix);
+            isLocalGeneratedStructReturn(def, localStructPath)) {
+          returnKindError = "local generated struct cannot escape return type: " +
+                            localStructPath;
+          break;
         }
         hasExplicitSumReturn =
             resolveSumDefinitionForTypeText(transform.templateArgs.front(),
                                             def.namespacePrefix) != nullptr;
         break;
       }
-      std::string returnKindError;
       if (!hasExplicitSumReturn) {
         for (const auto &transform : def.transforms) {
           if (transform.name != "return" || transform.templateArgs.size() != 1) {

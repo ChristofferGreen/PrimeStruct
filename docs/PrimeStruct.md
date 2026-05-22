@@ -1036,11 +1036,15 @@ Planned procedural compile-time genericity contract:
   lowering. The semantic-product dump therefore documents a temporary adapter
   boundary rather than exposing a dedicated type-local fact family until the
   later procedural-genericity publication work lands.
-- Local generated types are nominal per enclosing definition specialization.
-  Their generated paths, semantic-product provenance, and IR names must be
-  stable across repeated builds and import order, but the types cannot escape
-  as externally named return or parameter types unless a later feature defines
-  an explicit export/name mechanism.
+- Local generated structs may be defined inside a function body with
+  field-only struct syntax such as `[struct] PairT { [LeftT] first ... }`.
+  They are nominal per enclosing definition specialization, may consume
+  earlier enclosing `[type]` facts in field envelopes, publish ordinary struct
+  and field metadata for lowering, and are implementation-local. Their
+  generated paths, semantic-product provenance, and IR names must be stable
+  across repeated builds and import order, but the types cannot escape as
+  externally named return or parameter types unless a later feature defines an
+  explicit export/name mechanism.
 - A returnable pair helper should instead return a caller-visible generic type
   such as `Pair<LeftT, RightT>` or another explicitly named public shape.
   Function-local generated types are for implementation-local storage.

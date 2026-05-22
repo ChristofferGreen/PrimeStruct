@@ -20864,3 +20864,42 @@ Moved from `docs/todo.md` during unfinished-only cleanup:
     wording, reduced the checked-in semantic inventory cap, refreshed affected
     semantic/compile-run/source-lock expectations, and promoted TODO-4522 as
     the next Ready Now leaf.
+
+- [x] TODO-4337: Add local generated nominal structs
+  - owner: ai
+  - created_at: 2026-05-04
+  - finished_at: 2026-05-22
+  - phase: Procedural compile-time genericity
+  - depends_on: TODO-4336
+  - scope: Support function-local generated struct definitions such as
+    `[struct] PairT { [LeftT] first [RightT] second }` whose fields can use
+    type locals.
+  - implementation_notes:
+    - Started from nested definition parsing, AST ordering rules, struct
+      layout validation, template monomorphization family cloning, and
+      semantic-product type/field metadata.
+    - Generated structs are nominal per enclosing definition specialization,
+      not structural aliases.
+  - acceptance:
+    - A local generated struct can be constructed and used inside the
+      enclosing definition specialization.
+    - The struct's fields may use type locals that resolve from parameters or
+      earlier compile-time facts.
+    - Directly returning a local generated type rejects unless a later feature
+      has defined an explicit caller-visible naming/export mechanism.
+    - Tests or docs show that a returnable pair-like API must use a
+      caller-visible generic type such as `Pair<LeftT, RightT>`, not a
+      function-local generated struct.
+    - Name shadowing, recursive generated storage, invalid field envelopes,
+      and escaping unsupported type locals reject deterministically.
+    - Struct metadata and field metadata are published for lowering without
+      source-text reconstruction.
+    - `./scripts/compile.sh --release` passes.
+  - stop_rule: Stop once local generated structs are validated, usable inside
+    the enclosing specialization, and rejected when they escape without an
+    explicit caller-visible name; leave path/mangling hardening to TODO-4338.
+  - evidence: Added parser support for transform-marked field-only local
+    structs, resolved parent type-local facts into their field envelopes,
+    propagated those facts through type-local erasure for lowering, rejected
+    local generated return escapes and shadowing, documented the non-escaping
+    boundary, and validated the focused semantic and compile-run slices.

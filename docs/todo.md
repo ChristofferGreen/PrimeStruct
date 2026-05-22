@@ -83,8 +83,8 @@ Task template:
 
 ### Ready Now (Parallel-Candidate Leaves; No Unmet TODO Dependencies)
 
-- TODO-4337: Add local generated nominal structs | track: procedural-genericity |
-  primary surface: define local nominal types that consume type-local facts
+- TODO-4338: Stabilize generated type identity and mangling | track: procedural-genericity |
+  primary surface: deterministic local generated type paths/provenance
 
 ### Parallel Work Tracks (Current)
 
@@ -111,7 +111,8 @@ Task template:
   the missing first structured task spawn/wait prerequisite; keep it out of
   Ready Now until the multithreading lane is selected or split further.
 - `procedural-genericity`: TODO-4336 allowed type locals in local binding and
-  struct-field envelopes; ready TODO-4337.
+  struct-field envelopes, and TODO-4337 added non-escaping local generated
+  structs; ready TODO-4338.
 - `generic-requirements`: TODO-4331 and TODO-4334 are complete; TODO-4341
   remains queued behind the procedural-genericity leaf chain.
 
@@ -140,8 +141,7 @@ Task template:
   stdlib tuple values
 - Multithreading substrate: TODO-4545 captures the first task spawn/wait
   prerequisite split out of TODO-4278
-- Procedural compile-time genericity: TODO-4337 -> TODO-4338 ->
-  TODO-4339 -> TODO-4340
+- Procedural compile-time genericity: TODO-4338 -> TODO-4339 -> TODO-4340
 - Generic constraint and compile-time flow alignment: TODO-4341
   -> TODO-4342 -> TODO-4343 -> TODO-4344 -> TODO-4352 -> TODO-4353
   -> TODO-4354 -> TODO-4355 -> TODO-4356 -> TODO-4357 -> TODO-4345
@@ -150,7 +150,6 @@ Task template:
 
 ### Execution Queue (Recommended Track Order)
 
-- TODO-4337: Add local generated nominal structs
 - TODO-4338: Stabilize generated type identity and mangling
 - TODO-4339: Lower procedural generic facts through semantics
 - TODO-4340: Add procedural generic examples and conformance
@@ -202,7 +201,7 @@ Task template:
 | Algebraic sum types and brace-only construction | none |
 | Stdlib ADT migration for `Maybe` and `Result` | none |
 | Generic type packs and tuple stdlib surface | TODO-4274, TODO-4273, TODO-4277, TODO-4278 |
-| Procedural compile-time genericity and local type facts | TODO-4337, TODO-4338, TODO-4339, TODO-4340 |
+| Procedural compile-time genericity and local type facts | TODO-4338, TODO-4339, TODO-4340 |
 | Generic constraints and compile-time flow control | TODO-4341, TODO-4342, TODO-4343, TODO-4344, TODO-4352, TODO-4353, TODO-4354, TODO-4355, TODO-4356, TODO-4357, TODO-4345, TODO-4346, TODO-4358, TODO-4347, TODO-4351, TODO-4348, TODO-4359, TODO-4349, TODO-4350 |
 
 ### Validation Coverage Snapshot
@@ -229,7 +228,7 @@ Task template:
 | Sum-type and brace-construction conformance | none |
 | Maybe/Result sum migration conformance | none |
 | Generic type-pack and tuple conformance | TODO-4274, TODO-4273, TODO-4277, TODO-4278 |
-| Procedural compile-time genericity conformance | TODO-4337, TODO-4338, TODO-4339, TODO-4340 |
+| Procedural compile-time genericity conformance | TODO-4338, TODO-4339, TODO-4340 |
 | Generic constraint and compile-time flow conformance | TODO-4341, TODO-4342, TODO-4343, TODO-4344, TODO-4352, TODO-4353, TODO-4354, TODO-4355, TODO-4356, TODO-4357, TODO-4345, TODO-4346, TODO-4358, TODO-4347, TODO-4351, TODO-4348, TODO-4359, TODO-4349, TODO-4350 |
 
 ### Vector/Map Bridge Contract Summary
@@ -813,39 +812,6 @@ Task template:
     - `./scripts/compile.sh --release` passes.
   - stop_rule: Stop once multi-wait returns stdlib `tuple<...>` or the missing
     task-side prerequisite is split into an explicit multithreading TODO.
-
-- [ ] TODO-4337: Add local generated nominal structs
-  - owner: ai
-  - created_at: 2026-05-04
-  - phase: Procedural compile-time genericity
-  - depends_on: TODO-4336
-  - scope: Support function-local generated struct definitions such as
-    `[struct] PairT { [LeftT] first [RightT] second }` whose fields can use
-    type locals.
-  - implementation_notes:
-    - Start from nested definition parsing, AST ordering rules, struct layout
-      validation, template monomorphization family cloning, and semantic
-      product type/field metadata.
-    - Generated structs are nominal per enclosing definition specialization,
-      not structural aliases.
-  - acceptance:
-    - A local generated struct can be constructed and used inside the
-      enclosing definition specialization.
-    - The struct's fields may use type locals that resolve from parameters or
-      earlier compile-time facts.
-    - Directly returning a local generated type rejects unless a later feature
-      has defined an explicit caller-visible naming/export mechanism.
-    - Tests or docs show that a returnable pair-like API must use a
-      caller-visible generic type such as `Pair<LeftT, RightT>`, not a
-      function-local generated struct.
-    - Name shadowing, recursive generated storage, invalid field envelopes,
-      and escaping unsupported type locals reject deterministically.
-    - Struct metadata and field metadata are published for lowering without
-      source-text reconstruction.
-    - `./scripts/compile.sh --release` passes.
-  - stop_rule: Stop once local generated structs are validated, usable inside
-    the enclosing specialization, and rejected when they escape without an
-    explicit caller-visible name; leave path/mangling hardening to TODO-4338.
 
 - [ ] TODO-4338: Stabilize generated type identity and mangling
   - owner: ai

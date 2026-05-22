@@ -72,8 +72,8 @@ bool SemanticsValidator::resolveStructFieldBinding(const Definition &structDef,
                                  std::string &resolvedTypeOut) -> bool {
     if (typeofExpr.templateArgs.size() != 1 ||
         typeofExpr.templateArgDetails.size() != 1 ||
-        typeofExpr.templateArgDetails.front().kind !=
-            TemplateArgumentKind::Symbol) {
+        typeofExpr.templateArgDetails.front().text !=
+            typeofExpr.templateArgs.front()) {
       return false;
     }
     const std::string &symbol = typeofExpr.templateArgs.front();
@@ -110,6 +110,84 @@ bool SemanticsValidator::resolveStructFieldBinding(const Definition &structDef,
     }
     return resolveNamedConcreteType(*typeExpr, resolvedTypeOut);
   };
+  auto sourceComesBeforeStruct = [&](int line, int column) {
+    if (structDef.sourceLine <= 0 || line <= 0) {
+      return false;
+    }
+    if (line != structDef.sourceLine) {
+      return line < structDef.sourceLine;
+    }
+    return column > 0 && column < structDef.sourceColumn;
+  };
+  auto seedEnclosingDefinitionTypeFacts = [&]() {
+    if (!structDef.isNested || structNames_.count(structDef.fullPath) == 0) {
+      return;
+    }
+    const size_t slash = structDef.fullPath.find_last_of('/');
+    if (slash == std::string::npos || slash == 0) {
+      return;
+    }
+    const std::string parentPath = structDef.fullPath.substr(0, slash);
+    if (structNames_.count(parentPath) > 0) {
+      return;
+    }
+    const Definition *parentDef = nullptr;
+    auto parentIt = defMap_.find(parentPath);
+    if (parentIt != defMap_.end() && parentIt->second != nullptr) {
+      parentDef = parentIt->second;
+    } else {
+      auto programParentIt =
+          std::find_if(program_.definitions.begin(),
+                       program_.definitions.end(),
+                       [&](const Definition &candidate) {
+                         return candidate.fullPath == parentPath;
+                       });
+      if (programParentIt != program_.definitions.end()) {
+        parentDef = &*programParentIt;
+      }
+    }
+    if (parentDef == nullptr) {
+      return;
+    }
+    const Definition &parent = *parentDef;
+    for (const Expr &param : parent.parameters) {
+      if (!param.isBinding || isCompileTimeTypeBinding(param)) {
+        continue;
+      }
+      BindingInfo binding;
+      std::optional<std::string> restrictType;
+      std::string parseError;
+      if (parseBindingInfo(param, parent.namespacePrefix, structNames_, importAliases_,
+                           binding, restrictType, parseError, &sumNames_)) {
+        priorFieldLocals[param.name] = std::move(binding);
+      }
+    }
+    for (const Expr &stmt : parent.statements) {
+      if (stmt.sourceLine > 0 &&
+          !sourceComesBeforeStruct(stmt.sourceLine, stmt.sourceColumn)) {
+        continue;
+      }
+      if (!stmt.isBinding) {
+        continue;
+      }
+      if (isCompileTimeTypeBinding(stmt)) {
+        std::string resolvedType;
+        if (resolveTypeBindingInitializer(stmt, resolvedType)) {
+          priorTypeLocals[stmt.name] = std::move(resolvedType);
+        }
+        continue;
+      }
+      BindingInfo binding;
+      std::optional<std::string> restrictType;
+      std::string parseError;
+      if (parseBindingInfo(stmt, parent.namespacePrefix, structNames_, importAliases_,
+                           binding, restrictType, parseError, &sumNames_,
+                           &priorTypeLocals)) {
+        priorFieldLocals[stmt.name] = std::move(binding);
+      }
+    }
+  };
+  seedEnclosingDefinitionTypeFacts();
   for (const Expr &stmt : structDef.statements) {
     if (&stmt == &fieldStmt) {
       break;

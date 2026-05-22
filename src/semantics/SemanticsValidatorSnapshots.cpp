@@ -1795,7 +1795,7 @@ SemanticsValidator::bindingFactSnapshotForSemanticProduct() {
                                    const Expr &bindingExpr,
                                    BindingInfo &bindingOut) {
     const std::string namespacePrefix =
-        bindingExpr.namespacePrefix.empty() ? def.namespacePrefix : bindingExpr.namespacePrefix;
+        bindingExpr.namespacePrefix.empty() ? def.fullPath : bindingExpr.namespacePrefix;
     std::optional<std::string> restrictType;
     if (!withPreservedError([&]() {
           return parseBindingInfo(
@@ -1813,6 +1813,13 @@ SemanticsValidator::bindingFactSnapshotForSemanticProduct() {
                 bindingExpr.args.front(), defParams, activeLocals, inferred, &bindingExpr);
           })) {
         bindingOut = std::move(inferred);
+      }
+    }
+    if (bindingOut.typeTemplateArg.empty()) {
+      const std::string resolvedStructType =
+          resolveStructTypePath(bindingOut.typeName, namespacePrefix, structNames_);
+      if (!resolvedStructType.empty()) {
+        bindingOut.typeName = resolvedStructType;
       }
     }
     if (!restrictType.has_value()) {

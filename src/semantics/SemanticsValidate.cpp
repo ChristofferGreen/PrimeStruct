@@ -6502,7 +6502,65 @@ void eraseCompileTimeTypeBindingsFromExpr(Expr &expr) {
   eraseCompileTimeTypeBindingsFromExprs(expr.bodyArguments);
 }
 
+void applyEnclosingTypeLocalsToNestedStructs(Program &program) {
+  std::unordered_map<std::string, Definition *> definitionsByPath;
+  definitionsByPath.reserve(program.definitions.size());
+  for (Definition &def : program.definitions) {
+    definitionsByPath[def.fullPath] = &def;
+  }
+
+  auto sourceComesBefore = [](const Expr &expr, const Definition &def) {
+    if (expr.sourceLine <= 0 || def.sourceLine <= 0) {
+      return false;
+    }
+    if (expr.sourceLine != def.sourceLine) {
+      return expr.sourceLine < def.sourceLine;
+    }
+    return expr.sourceColumn > 0 && expr.sourceColumn < def.sourceColumn;
+  };
+
+  for (Definition &nestedDef : program.definitions) {
+    if (!nestedDef.isNested || !isStructLikeDefinition(nestedDef)) {
+      continue;
+    }
+    auto parentIt = definitionsByPath.find(nestedDef.namespacePrefix);
+    if (parentIt == definitionsByPath.end() || parentIt->second == nullptr ||
+        isStructLikeDefinition(*parentIt->second)) {
+      continue;
+    }
+    const Definition &parent = *parentIt->second;
+    std::unordered_map<std::string, std::string> valueFacts;
+    std::unordered_map<std::string, std::string> typeFacts;
+    for (const Expr &param : parent.parameters) {
+      std::string valueType;
+      if (bindingEnvelopeTypeText(param, valueType)) {
+        valueFacts[param.name] = std::move(valueType);
+      }
+    }
+    for (const Expr &stmt : parent.statements) {
+      if (!sourceComesBefore(stmt, nestedDef)) {
+        continue;
+      }
+      if (semantics::isCompileTimeTypeBinding(stmt)) {
+        std::string typeText;
+        if (resolveTypeLocalInitializer(stmt, valueFacts, typeFacts, typeText)) {
+          typeFacts[stmt.name] = std::move(typeText);
+        }
+        continue;
+      }
+      std::string valueType;
+      if (bindingEnvelopeTypeText(stmt, valueType)) {
+        valueFacts[stmt.name] = std::move(valueType);
+      }
+    }
+    for (Expr &field : nestedDef.statements) {
+      applyTypeLocalFactsToBindingEnvelope(field, typeFacts);
+    }
+  }
+}
+
 void eraseCompileTimeTypeBindings(Program &program) {
+  applyEnclosingTypeLocalsToNestedStructs(program);
   for (Definition &def : program.definitions) {
     eraseCompileTimeTypeBindingsFromExprs(def.parameters);
     std::unordered_map<std::string, std::string> parameterValueFacts;

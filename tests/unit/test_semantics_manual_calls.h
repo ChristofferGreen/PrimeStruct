@@ -354,6 +354,7 @@ main() {
                            nullptr,
                            false,
                            &semanticProgram));
+  INFO(error);
   CHECK(error.empty());
   bool sawCopyField = false;
   bool sawTypeLocalField = false;
@@ -376,6 +377,170 @@ main() {
                      [](const primec::SemanticProgramBindingFact &fact) {
                        return fact.name == "ValueT";
                      }));
+}
+
+TEST_CASE("local generated structs consume enclosing type locals") {
+  const std::string source = R"(
+[return<int>]
+main() {
+  [i32] left{3i32}
+  [i32] right{4i32}
+  [type] LeftT { typeof<left> }
+  [type] RightT { typeof<right> }
+  [struct] PairT {
+    [LeftT] first{0i32}
+    [RightT] second{0i32}
+  }
+  [PairT] pair{PairT{left, right}}
+  return(plus(pair.first, pair.second))
+}
+)";
+  primec::Lexer lexer(source);
+  primec::Parser parser(lexer.tokenize());
+  primec::Program program;
+  std::string error;
+  REQUIRE(parser.parse(program, error));
+  primec::Semantics semantics;
+  primec::SemanticProgram semanticProgram;
+  const std::vector<std::string> defaults = {"io_out", "io_err"};
+  CHECK(semantics.validate(program,
+                           "/main",
+                           error,
+                           defaults,
+                           defaults,
+                           {},
+                           nullptr,
+                           false,
+                           &semanticProgram));
+  INFO(error);
+  CHECK(error.empty());
+  auto generatedStructIt =
+      std::find_if(program.definitions.begin(),
+                   program.definitions.end(),
+                   [](const primec::Definition &def) {
+                     return def.fullPath == "/main/PairT";
+                   });
+  REQUIRE(generatedStructIt != program.definitions.end());
+  CHECK(generatedStructIt->isNested);
+  CHECK(generatedStructIt->namespacePrefix == "/main");
+
+  bool sawGeneratedStructMetadata = false;
+  for (const auto &entry : semanticProgram.typeMetadata) {
+    if (entry.fullPath == "/main/PairT") {
+      sawGeneratedStructMetadata = true;
+      CHECK(entry.category == "struct");
+      CHECK(entry.fieldCount == 2);
+    }
+  }
+  CHECK(sawGeneratedStructMetadata);
+
+  bool sawFirstField = false;
+  bool sawSecondField = false;
+  for (const auto &entry : semanticProgram.structFieldMetadata) {
+    if (entry.structPath != "/main/PairT") {
+      continue;
+    }
+    if (entry.fieldName == "first") {
+      sawFirstField = true;
+      CHECK(entry.fieldIndex == 0);
+      CHECK(entry.bindingTypeText == "i32");
+    }
+    if (entry.fieldName == "second") {
+      sawSecondField = true;
+      CHECK(entry.fieldIndex == 1);
+      CHECK(entry.bindingTypeText == "i32");
+    }
+  }
+  CHECK(sawFirstField);
+  CHECK(sawSecondField);
+}
+
+TEST_CASE("local generated structs reject escapes and shadowing") {
+  const std::string explicitReturn = R"(
+[return<PairT>]
+make_pair() {
+  [i32] value{1i32}
+  [type] ValueT { typeof<value> }
+  [struct] PairT {
+    [ValueT] first{0i32}
+  }
+  [PairT] pair{PairT{value}}
+  return(pair)
+}
+)";
+  std::string explicitError;
+  CHECK_FALSE(validateSourceProgram(explicitReturn, "/make_pair", explicitError));
+  INFO(explicitError);
+  CHECK(explicitError.find("local generated struct cannot escape return type: /make_pair/PairT") !=
+        std::string::npos);
+
+  const std::string autoReturn = R"(
+[return<auto>]
+make_pair() {
+  [i32] value{1i32}
+  [type] ValueT { typeof<value> }
+  [struct] PairT {
+    [ValueT] first{0i32}
+  }
+  [PairT] pair{PairT{value}}
+  return(pair)
+}
+)";
+  std::string autoError;
+  CHECK_FALSE(validateSourceProgram(autoReturn, "/make_pair", autoError));
+  INFO(autoError);
+  CHECK(autoError.find("local generated struct cannot escape return type: /make_pair/PairT") !=
+        std::string::npos);
+
+  const std::string shadowLocal = R"(
+[return<int>]
+main() {
+  [struct] PairT {
+    [i32] first{0i32}
+  }
+  [i32] PairT{1i32}
+  return(PairT)
+}
+)";
+  std::string shadowError;
+  CHECK_FALSE(validateSourceProgram(shadowLocal, "/main", shadowError));
+  INFO(shadowError);
+  CHECK(shadowError.find("local generated struct name shadows local binding: PairT") !=
+        std::string::npos);
+}
+
+TEST_CASE("local generated structs reject forward facts and recursive storage") {
+  const std::string forwardFact = R"(
+[return<int>]
+main() {
+  [struct] PairT {
+    [ValueT] first{0i32}
+  }
+  [type] ValueT { i32 }
+  [PairT] pair{PairT{1i32}}
+  return(pair.first)
+}
+)";
+  std::string forwardError;
+  CHECK_FALSE(validateSourceProgram(forwardFact, "/main", forwardError));
+  INFO(forwardError);
+  CHECK(forwardError.find("unsupported binding type: ValueT") !=
+        std::string::npos);
+
+  const std::string recursiveStorage = R"(
+[return<int>]
+main() {
+  [struct] NodeT {
+    [NodeT] next{NodeT{}}
+  }
+  return(0i32)
+}
+)";
+  std::string recursiveError;
+  CHECK_FALSE(validateSourceProgram(recursiveStorage, "/main", recursiveError));
+  INFO(recursiveError);
+  CHECK(recursiveError.find("recursive struct layout not supported: /main/NodeT") !=
+        std::string::npos);
 }
 
 TEST_CASE("type local envelopes reject forward and runtime value use") {

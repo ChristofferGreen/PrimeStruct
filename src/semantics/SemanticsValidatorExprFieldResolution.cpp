@@ -51,15 +51,10 @@ bool SemanticsValidator::resolveStructFieldReceiverPath(const std::vector<Parame
                                                         const Expr &receiverExpr,
                                                         std::string &structPathOut) {
   const std::string currentDefinitionNamespace = [&]() -> std::string {
-    auto currentDefIt = defMap_.find(currentValidationState_.context.definitionPath);
-    if (currentDefIt != defMap_.end() && currentDefIt->second != nullptr) {
-      return currentDefIt->second->namespacePrefix;
+    if (!currentValidationState_.context.definitionPath.empty()) {
+      return currentValidationState_.context.definitionPath;
     }
-    const size_t slash = currentValidationState_.context.definitionPath.find_last_of('/');
-    if (slash == std::string::npos || slash == 0) {
-      return std::string{};
-    }
-    return currentValidationState_.context.definitionPath.substr(0, slash);
+    return std::string{};
   }();
   auto resolveFieldBindingTarget = [&](const Expr &target, BindingInfo &bindingOut) -> bool {
     if (!(target.kind == Expr::Kind::Call && target.isFieldAccess && target.args.size() == 1)) {

@@ -157,6 +157,22 @@ bool SemanticsValidator::recordDefinitionInferredReturn(
     if (!hasExprBinding) {
       hasExprBinding = inferVisibleSoaFieldViewHelperBinding(*valueExpr, exprBinding);
     }
+    if (hasExprBinding && structNames_.count(def.fullPath) == 0) {
+      std::string typeText = exprBinding.typeName;
+      if (!exprBinding.typeTemplateArg.empty()) {
+        typeText += "<" + exprBinding.typeTemplateArg + ">";
+      }
+      std::string localStructPath = resolveStructTypePath(typeText, def.fullPath, structNames_);
+      if (localStructPath.empty()) {
+        localStructPath = resolveStructTypePath(exprBinding.typeName, def.fullPath, structNames_);
+      }
+      const std::string localPrefix = def.fullPath + "/";
+      if (!localStructPath.empty() && localStructPath.rfind(localPrefix, 0) == 0) {
+        return failInferDefinitionDiagnostic(
+            "local generated struct cannot escape return type: " +
+            localStructPath);
+      }
+    }
     error_.clear();
     error_ = previousError;
     if (exprKind == ReturnKind::Unknown && hasExprBinding) {
@@ -259,7 +275,16 @@ bool SemanticsValidator::inferDefinitionStatementReturns(
     }
     BindingInfo info;
     std::optional<std::string> restrictType;
-    if (!parseBindingInfo(stmt, def.namespacePrefix, structNames_, importAliases_, info, restrictType, error_,
+    if (structNames_.count(def.fullPath) > 0) {
+      if (!resolveStructFieldBinding(def, stmt, info)) {
+        return false;
+      }
+      insertLocalBinding(activeLocals, stmt.name, std::move(info));
+      return true;
+    }
+    const std::string bindingLookupNamespace =
+        !def.fullPath.empty() ? def.fullPath : def.namespacePrefix;
+    if (!parseBindingInfo(stmt, bindingLookupNamespace, structNames_, importAliases_, info, restrictType, error_,
                           &sumNames_)) {
       return false;
     }
@@ -270,7 +295,11 @@ bool SemanticsValidator::inferDefinitionStatementReturns(
     }
     if (restrictType.has_value()) {
       const bool hasTemplate = !info.typeTemplateArg.empty();
-      if (!restrictMatchesBinding(*restrictType, info.typeName, info.typeTemplateArg, hasTemplate, def.namespacePrefix)) {
+      if (!restrictMatchesBinding(*restrictType,
+                                  info.typeName,
+                                  info.typeTemplateArg,
+                                  hasTemplate,
+                                  bindingLookupNamespace)) {
         return failInferDefinitionStatementDiagnostic(
             "restrict type does not match binding type");
       }

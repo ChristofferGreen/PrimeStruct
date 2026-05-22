@@ -458,6 +458,28 @@ bool Parser::tryParseNestedDefinition(std::vector<Definition> &defs,
     }
   }
 
+  if (hasNoReturnDefinitionTransform && match(TokenKind::LBrace)) {
+    if (!allowSurfaceSyntax_ && !hasReturnTransform) {
+      return fail("definition requires explicit return transform in canonical mode");
+    }
+    Definition def;
+    def.name = name.text;
+    def.namespacePrefix = parentPath;
+    def.fullPath = makeFullPath(def.name, def.namespacePrefix);
+    def.sourceLine = name.line;
+    def.sourceColumn = name.column;
+    def.transforms = transforms;
+    def.templateArgs = std::move(templateArgs);
+    def.templateArgIsPack = std::move(templateArgIsPack);
+    def.isNested = true;
+    if (!parseDefinitionBody(def, hasNoReturnDefinitionTransform, defs)) {
+      return false;
+    }
+    defs.push_back(std::move(def));
+    parsed = true;
+    return true;
+  }
+
   if (name.text == "repeat" && !hasReturnTransform && !hasNoReturnDefinitionTransform) {
     pos_ = savedPos;
     return true;

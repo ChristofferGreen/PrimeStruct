@@ -193,6 +193,41 @@ bool SemanticsValidator::validateDefinitionsFromStableIndexResolver(
       return true;
     }
     const auto &defParams = *definitionContext.params;
+    if (structNames_.count(def.fullPath) == 0) {
+      std::vector<const Definition *> localGeneratedStructs;
+      for (const Definition &candidate : program_.definitions) {
+        if (candidate.isNested && candidate.namespacePrefix == def.fullPath &&
+            structNames_.count(candidate.fullPath) > 0) {
+          localGeneratedStructs.push_back(&candidate);
+        }
+      }
+      if (!localGeneratedStructs.empty()) {
+        auto shadowsLocalGeneratedStruct = [&](const std::string &name) {
+          return std::any_of(localGeneratedStructs.begin(),
+                             localGeneratedStructs.end(),
+                             [&](const Definition *candidate) {
+                               return candidate != nullptr &&
+                                      candidate->name == name;
+                             });
+        };
+        for (const auto &param : defParams) {
+          if (shadowsLocalGeneratedStruct(param.name)) {
+            return failPassesDefinitionsDiagnostic(
+                nullptr,
+                "local generated struct name shadows parameter: " +
+                    param.name);
+          }
+        }
+        for (const Expr &stmt : def.statements) {
+          if (stmt.isBinding && shadowsLocalGeneratedStruct(stmt.name)) {
+            return failPassesDefinitionsDiagnostic(
+                &stmt,
+                "local generated struct name shadows local binding: " +
+                    stmt.name);
+          }
+        }
+      }
+    }
     observeLocalMapSize(definitionContext.locals.size());
     for (const auto &param : defParams) {
       if (param.defaultExpr == nullptr) {

@@ -224,6 +224,8 @@ bool Parser::parseDefinitionBody(Definition &def, bool allowNoReturn, std::vecto
       callExpr.name = name.text;
       callExpr.sourceName = name.text;
       callExpr.namespacePrefix = def.namespacePrefix;
+      callExpr.sourceLine = name.line;
+      callExpr.sourceColumn = name.column;
       callExpr.transforms = std::move(statementTransforms);
       bool hasCallSyntax = false;
       bool sawParen = false;

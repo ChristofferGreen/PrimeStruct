@@ -91,6 +91,10 @@ bool SemanticsValidator::validateBindingStatement(const std::vector<ParameterInf
   if (currentDefIt != defMap_.end() && currentDefIt->second != nullptr) {
     definitionTemplateArgs = &currentDefIt->second->templateArgs;
   }
+  const std::string bindingLookupNamespace =
+      !currentValidationState_.context.definitionPath.empty()
+          ? currentValidationState_.context.definitionPath
+          : namespacePrefix;
 
   if (!allowBindings) {
     return failBindingDiagnostic("binding not allowed in execution body");
@@ -152,7 +156,7 @@ bool SemanticsValidator::validateBindingStatement(const std::vector<ParameterInf
         return true;
       }
       resolvedTypeOut =
-          resolveStructTypePath(namedType.name, namespacePrefix, structNames_);
+          resolveStructTypePath(namedType.name, bindingLookupNamespace, structNames_);
       if (resolvedTypeOut.empty()) {
         auto importIt = importAliases_.find(namedType.name);
         if (importIt != importAliases_.end() &&
@@ -322,8 +326,19 @@ bool SemanticsValidator::validateBindingStatement(const std::vector<ParameterInf
 
   BindingInfo info;
   std::optional<std::string> restrictType;
+  if (currentDefIt != defMap_.end() && currentDefIt->second != nullptr &&
+      structNames_.count(currentValidationState_.context.definitionPath) > 0) {
+    if (!resolveStructFieldBinding(*currentDefIt->second, stmt, info)) {
+      return false;
+    }
+    if (!validateBuiltinComparableKeyType(info, definitionTemplateArgs, error_)) {
+      return false;
+    }
+    insertLocalBinding(locals, stmt.name, std::move(info));
+    return true;
+  }
   if (!parseBindingInfo(stmt,
-                        namespacePrefix,
+                        bindingLookupNamespace,
                         structNames_,
                         importAliases_,
                         info,

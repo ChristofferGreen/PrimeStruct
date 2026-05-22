@@ -342,6 +342,13 @@ std::string SemanticsValidator::resolveCalleePath(const Expr &expr) const {
   if (getBuiltinPointerName(expr, pointerBuiltinName)) {
     return "/" + pointerBuiltinName;
   }
+  if (activeDefinition != nullptr && !activeDefinition->fullPath.empty()) {
+    const std::string localDefinitionPath =
+        joinedPath(activeDefinition->fullPath, expr.name);
+    if (hasDefinitionFamilyPath(localDefinitionPath)) {
+      return rewriteCanonicalCollectionConstructorPath(localDefinitionPath);
+    }
+  }
   if (!expr.namespacePrefix.empty()) {
     const std::string normalizedPrefix = normalizedPrefixPath(expr.namespacePrefix);
     auto isRemovedVectorCompatibilityHelper = [](std::string_view helperName) {

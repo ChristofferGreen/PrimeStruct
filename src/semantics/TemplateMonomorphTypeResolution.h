@@ -741,6 +741,13 @@ std::string resolveCalleePath(const Expr &expr, const std::string &namespacePref
     }
     return finalizeResolvedPath(rootedPath);
   }
+  if (namespacePrefix.empty() && !ctx.currentDefinitionPath.empty()) {
+    const std::string localDefinitionPath = ctx.currentDefinitionPath + "/" + expr.name;
+    if (ctx.sourceDefs.count(localDefinitionPath) > 0 ||
+        ctx.helperOverloads.count(localDefinitionPath) > 0) {
+      return finalizeResolvedPath(localDefinitionPath);
+    }
+  }
   if (!namespacePrefix.empty()) {
     const size_t lastSlash = namespacePrefix.find_last_of('/');
     const std::string_view suffix = lastSlash == std::string::npos

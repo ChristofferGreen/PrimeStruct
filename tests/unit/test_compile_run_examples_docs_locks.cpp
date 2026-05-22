@@ -1613,8 +1613,8 @@ TEST_CASE("todo queue and skipped doctest debt stay source locked") {
   CHECK(todo.find("### Ready Now (Parallel-Candidate Leaves; No Unmet TODO Dependencies)") !=
         std::string::npos);
   CHECK(todo.find("### Ready Now (Parallel-Candidate Leaves; No Unmet TODO Dependencies)\n\n"
-                  "- TODO-4337: Add local generated nominal structs | track: procedural-genericity |\n"
-                  "  primary surface: define local nominal types that consume type-local facts") !=
+                  "- TODO-4338: Stabilize generated type identity and mangling | track: procedural-genericity |\n"
+                  "  primary surface: deterministic local generated type paths/provenance") !=
         std::string::npos);
   CHECK(todo.find("- `soa-zero-audit`: TODO-4529 replaced the residue inventory with a strict\n"
                   "  zero-production-trace audit; no SoA zero-audit leaf is ready.") !=
@@ -1635,7 +1635,8 @@ TEST_CASE("todo queue and skipped doctest debt stay source locked") {
   CHECK(todo.find("- `multithreading-substrate`: TODO-4545 was split from TODO-4278") !=
         std::string::npos);
   CHECK(todo.find("- `procedural-genericity`: TODO-4336 allowed type locals in local binding and\n"
-                  "  struct-field envelopes; ready TODO-4337.") !=
+                  "  struct-field envelopes, and TODO-4337 added non-escaping local generated\n"
+                  "  structs; ready TODO-4338.") !=
         std::string::npos);
   CHECK(todo.find("### Immediate Next 10 (Track Successors; Not Ready Until Dependencies Land)\n\n"
                   "- TODO-4545: Implement first structured task spawn/wait substrate\n"
@@ -1655,8 +1656,8 @@ TEST_CASE("todo queue and skipped doctest debt stay source locked") {
   CHECK(todo.find("- Deferred SoA finish: TODO-4252") ==
         std::string::npos);
   CHECK(todo.find("### Execution Queue (Recommended Track Order)\n\n"
-                  "- TODO-4337: Add local generated nominal structs\n"
-                  "- TODO-4338: Stabilize generated type identity and mangling") !=
+                  "- TODO-4338: Stabilize generated type identity and mangling\n"
+                  "- TODO-4339: Lower procedural generic facts through semantics") !=
         std::string::npos);
   CHECK(todo.find("- [ ] TODO-4331: Implement compile-time argument channel model") ==
         std::string::npos);
@@ -1717,13 +1718,17 @@ TEST_CASE("todo queue and skipped doctest debt stay source locked") {
   CHECK(todoFinished.find("TODO-4519: Delete `soa_vector` compatibility seams") !=
         std::string::npos);
   const std::vector<std::string> semanticPhaseQueue = {
-      "TODO-4337: Add local generated nominal structs",
+      "TODO-4338: Stabilize generated type identity and mangling",
   };
   for (const std::string &entry : semanticPhaseQueue) {
     CHECK(todo.find("- " + entry) != std::string::npos);
     CHECK(todo.find("- [ ] " + entry) != std::string::npos);
   }
   CHECK(todo.find("| track: procedural-genericity |") !=
+        std::string::npos);
+  CHECK(todo.find("TODO-4337: Add local generated nominal structs") ==
+        std::string::npos);
+  CHECK(todoFinished.find("TODO-4337: Add local generated nominal structs") !=
         std::string::npos);
   CHECK(todoFinished.find("TODO-4332: Add bare zero-arg execution syntax") !=
         std::string::npos);

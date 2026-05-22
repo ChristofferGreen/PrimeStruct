@@ -16,6 +16,12 @@ std::optional<std::string> SemanticsValidator::validateUninitializedDefiniteStat
   auto isUninitializedBinding = [](const BindingInfo &binding) -> bool {
     return binding.typeName == "uninitialized" && !binding.typeTemplateArg.empty();
   };
+  auto effectiveBindingNamespace = [&](const Expr &stmt) -> std::string {
+    if (!stmt.namespacePrefix.empty()) {
+      return stmt.namespacePrefix;
+    }
+    return currentValidationState_.context.definitionPath;
+  };
 
   auto firstNonUninitialized = [&](const StateMap &states) -> std::optional<std::string> {
     std::vector<std::string> names;
@@ -129,7 +135,7 @@ std::optional<std::string> SemanticsValidator::validateUninitializedDefiniteStat
         std::optional<std::string> restrictType;
         std::string error;
         if (!parseBindingInfo(stmt,
-                              stmt.namespacePrefix,
+                              effectiveBindingNamespace(stmt),
                               structNames_,
                               importAliases_,
                               info,
@@ -359,7 +365,7 @@ std::optional<std::string> SemanticsValidator::validateUninitializedDefiniteStat
         std::optional<std::string> restrictType;
         std::string error;
         if (!parseBindingInfo(stmt,
-                              stmt.namespacePrefix,
+                              effectiveBindingNamespace(stmt),
                               structNames_,
                               importAliases_,
                               info,
@@ -491,7 +497,7 @@ std::optional<std::string> SemanticsValidator::validateUninitializedDefiniteStat
       std::optional<std::string> restrictType;
       std::string error;
       if (!parseBindingInfo(stmt,
-                            stmt.namespacePrefix,
+                            effectiveBindingNamespace(stmt),
                             structNames_,
                             importAliases_,
                             info,

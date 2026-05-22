@@ -95,6 +95,35 @@ main() {
   CHECK(runCommand(exePath) == 10);
 }
 
+TEST_CASE("compiles and runs local generated struct") {
+  const std::string source = R"(
+[return<int>]
+sum_pair([i32] left, [i32] right) {
+  [type] LeftT { typeof<left> }
+  [type] RightT { typeof<right> }
+  [struct] PairT {
+    [LeftT] first{0i32}
+    [RightT] second{0i32}
+  }
+  [PairT] pair{PairT{left, right}}
+  return(plus(pair.first, pair.second))
+}
+
+[return<int>]
+main() {
+  return(sum_pair(4i32, 5i32))
+}
+)";
+  const std::string srcPath = writeTemp("compile_local_generated_struct.prime", source);
+  const std::string exePath = (testScratchPath("") / "primec_local_generated_struct_exe").string();
+
+  const std::string vmCmd = "./primec --emit=vm " + srcPath + " --entry /main";
+  CHECK(runCommand(vmCmd) == 9);
+  const std::string compileCmd = "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main";
+  CHECK(runCommand(compileCmd) == 0);
+  CHECK(runCommand(exePath) == 9);
+}
+
 TEST_CASE("compiles with struct definition") {
   const std::string source = R"(
 [struct]
