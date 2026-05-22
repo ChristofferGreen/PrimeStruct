@@ -1048,24 +1048,46 @@ Procedural compile-time genericity contract:
 - A returnable pair helper should instead return a caller-visible generic type
   such as `Pair<LeftT, RightT>` or another explicitly named public shape.
   Function-local generated types are for implementation-local storage.
+- Requirements are definition transforms, not body statements or standalone
+  compile-time commands. Keeping them in transform position makes them part of
+  the callable signature, lets overload filtering inspect them before the body
+  is type-checked for a specialization, and reuses the `<...>` compile-time
+  argument channel for type facts and constants.
 - Requirement transforms should use a single readable transform with a
   comma-separated predicate list, for example
-  `[require(typeof<left> == i32, typeof<right> == i32)]`. The readable
-  expression form rewrites into builtin compile-time predicates, such as
-  `equals<left, i32>`, before semantic validation publishes requirement facts.
+  `[require(typeof<left> == i32, typeof<right> == i32)]`. Repeated
+  `[require(...)]` transforms are rejected with
+  `duplicate require transform; combine predicates into one require(...)`.
+  The readable expression form rewrites into builtin compile-time predicates,
+  such as `/std/meta/type_equals<typeof<left>, i32>()`, before semantic
+  validation publishes requirement facts. `typeof<left>` is a compile-time
+  query because it uses the compile-time argument channel; `typeof(left)`
+  remains an ordinary runtime call shape and is never requirement syntax.
 - The v1 requirement expression grammar should stay intentionally small:
   equality, inequality, comma-separated conjunction through `require(...)`,
   builtin predicates, user-defined compile-time predicates, and simple
   comparisons over compile-time values such as `N > 0`. Avoid arbitrary
   boolean algebra until the semantic-product representation is proven stable.
-- Requirement and compile-time helper defaults should take inspiration from
-  C++'s practical generic toolbox while keeping PrimeStruct facts typed and
-  deterministic: type equality, kind checks, constructibility, lifecycle
-  availability, operation/trait support, field/member presence, and
-  compile-time integer/value relations are the expected starting set.
+- The initial builtin predicate families are:
+  - `/std/meta/type_equals<A, B>()` and
+    `/std/meta/type_not_equals<A, B>()` for type equality and inequality.
+  - `/std/meta/has_trait<T>(Trait)` and
+    `/std/meta/supports_call<Args..., ResultT>(name)` for trait and named
+    operation/capability support.
+  - `/std/meta/can_construct<T, Args...>()`, `/std/meta/can_copy<T>()`, and
+    `/std/meta/can_move<T>()` for construction and lifecycle availability.
+  - `/std/meta/has_field<T>(name)`, `/std/meta/field_type_equals<T, name, U>()`,
+    and `/std/meta/has_member<T>(name)` for field/member queries.
+  - `/std/meta/value_equals<A, B>()`, `/std/meta/value_not_equals<A, B>()`,
+    `/std/meta/value_less<A, B>()`, `/std/meta/value_less_equal<A, B>()`,
+    `/std/meta/value_greater<A, B>()`, and
+    `/std/meta/value_greater_equal<A, B>()` for compile-time integer/value
+    relations such as `N > 0`.
 - Builtin requirement predicates live under `/std/meta/*`; readable predicate
   syntax may rewrite to these builtin helpers or compiler-recognized facts, but
-  user helpers should not collide with the builtin namespace.
+  user helpers should not collide with the builtin namespace. Public
+  user-authored predicates should use project or package namespaces outside
+  `/std/meta/*`.
 - Reflection predicates such as field/member queries obey normal visibility by
   default. Private fields are not visible to external requirements unless a
   future privileged reflection mode explicitly says otherwise.
@@ -1100,6 +1122,9 @@ Procedural compile-time genericity contract:
 - Compile-time cache keys include the predicate/helper identity, compile-time
   arguments, visible imports and semantic facts, active compile-time effects,
   and the language/semantic-product version.
+- Failed requirements on direct calls are diagnostics, not C++-style
+  substitution failure by accident. Overload filtering may reject non-viable
+  candidates only when it also preserves failed-requirement diagnostics.
 - Requirement-constrained overloads are only automatically selected when
   exactly one candidate is viable. Requirements should not rank candidates by
   specificity; ambiguous viable candidates require clearer names or imports.
@@ -4141,6 +4166,13 @@ sum([i32] left, [i32] right) {
   return(plus(left, right))
 }
 ```
+
+Existing transform-style trait constraints such as `[Additive<i32>]` remain
+source-compatible compatibility vocabulary. New procedural generic code should
+prefer the requirement predicate vocabulary, for example
+`[require(meta.has_trait<typeof<value>>(Additive))]`, so trait checks compose
+with type equality, construction, lifecycle, field/member, and compile-time
+value predicates in one `require(...)` transform.
 
 ### Parametric Types
 - Type parameters are explicit in signatures or implicit via `auto` in signatures.

@@ -803,25 +803,52 @@ add(left, right) {
 }
 ```
 
+Capability and trait checks use the same single transform:
+
+```prime
+[require(typeof<left> == typeof<right>, meta.has_trait<typeof<left>>(Additive))]
+add_same(left, right) {
+  return(left + right)
+}
+```
+
 Requirement rules:
+- Requirements are definition transforms, not body statements or standalone
+  compile-time commands. They live with the callable signature, run during
+  semantic validation before final IR lowering, and do not create runtime
+  values visible to the function body.
 - A definition has at most one `require(...)` transform. Multiple requirements
   are written as comma-separated predicates inside that transform, not as
-  repeated `[require(...)]` transforms.
+  repeated `[require(...)]` transforms. A repeated transform is rejected with
+  `duplicate require transform; combine predicates into one require(...)`.
 - The source predicate language favors readable expressions. During
   canonicalization, readable type predicates rewrite into builtin compile-time
   predicates; for example `typeof<left> == i32` rewrites to a form such as
-  `equals<left, i32>` before semantic validation.
+  `/std/meta/type_equals<typeof<left>, i32>()` before semantic validation.
+  `typeof<left>` is the compile-time type query because it uses the
+  compile-time argument channel. `typeof(left)` remains an ordinary runtime
+  call-shaped expression and is not a requirement primitive.
 - The v1 predicate grammar is deliberately narrow: equality, inequality,
   comma-separated conjunction through `require(...)`, builtin predicate calls,
   user-defined compile-time predicates, and simple comparisons over
   compile-time values such as `N > 0`. General boolean expression algebra is
   deferred until the semantic-product fact model is stable.
-- Builtin predicates should cover the practical generic toolbox first: type
-  equality, kind checks, constructibility, lifecycle availability,
-  operation/trait support, field/member presence, and compile-time
-  integer/value relations. User-defined requirement predicates use the same
-  compile-time execution model and return ordinary `bool` at the source level;
-  semantic validation wraps `true` and `false` into typed requirement facts.
+- Builtin predicate family names start under `/std/meta/*`:
+  - `/std/meta/type_equals<A, B>()` and
+    `/std/meta/type_not_equals<A, B>()`.
+  - `/std/meta/has_trait<T>(Trait)` and
+    `/std/meta/supports_call<Args..., ResultT>(name)`.
+  - `/std/meta/can_construct<T, Args...>()`, `/std/meta/can_copy<T>()`, and
+    `/std/meta/can_move<T>()`.
+  - `/std/meta/has_field<T>(name)`, `/std/meta/field_type_equals<T, name, U>()`,
+    and `/std/meta/has_member<T>(name)`.
+  - `/std/meta/value_equals<A, B>()`, `/std/meta/value_not_equals<A, B>()`,
+    `/std/meta/value_less<A, B>()`, `/std/meta/value_less_equal<A, B>()`,
+    `/std/meta/value_greater<A, B>()`, and
+    `/std/meta/value_greater_equal<A, B>()`.
+  User-defined requirement predicates use the same compile-time execution model
+  and return ordinary `bool` at the source level; semantic validation wraps
+  `true` and `false` into typed requirement facts.
 - Builtin predicates live under `/std/meta/*`. Readable requirement syntax may
   canonicalize to those helpers or compiler-recognized facts, but user code
   should not define public helpers that collide with `/std/meta/*` names.
@@ -844,10 +871,11 @@ Requirement rules:
 - Compile-time value results are typed facts, not raw runtime slots. The
   initial value set should include `bool`, integer constants, string literals,
   type facts, symbols, and requirement results.
-- Failed requirements on a direct call are diagnostics. During overload
-  selection, failed requirements make a candidate non-viable; if no candidate
-  remains, diagnostics summarize the relevant failed requirements rather than
-  silently behaving like C++ substitution failure.
+- Failed requirements on a direct call are diagnostics, not C++-style
+  substitution failure by accident. A later overload-selection integration may
+  use requirements to reject non-viable candidates, but it must preserve
+  diagnostics that summarize relevant failed requirements rather than silently
+  erasing candidates.
 - Requirement-constrained overloads are selected automatically only when one
   candidate is viable. PrimeStruct does not rank viable candidates by
   requirement specificity; ambiguous viable candidates require clearer names or

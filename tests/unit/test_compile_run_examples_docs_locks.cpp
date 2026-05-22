@@ -1576,6 +1576,80 @@ TEST_CASE("Result helper compatibility adapter inventory stays source locked") {
   CHECK(primeStructDoc.find("legacy Result helpers") == std::string::npos);
 }
 
+TEST_CASE("generic requirement predicate surface stays source locked") {
+  const std::filesystem::path primeStructPath = resolveRepoPath("docs/PrimeStruct.md");
+  const std::filesystem::path syntaxSpecPath =
+      resolveRepoPath("docs/PrimeStruct_SyntaxSpec.md");
+  const std::filesystem::path todoFinishedPath =
+      resolveRepoPath("docs/todo_finished.md");
+  REQUIRE(std::filesystem::exists(primeStructPath));
+  REQUIRE(std::filesystem::exists(syntaxSpecPath));
+  REQUIRE(std::filesystem::exists(todoFinishedPath));
+
+  const std::string primeStructDoc = readFile(primeStructPath.string());
+  const std::string syntaxSpec = readFile(syntaxSpecPath.string());
+  const std::string todoFinished = readFile(todoFinishedPath.string());
+
+  CHECK(primeStructDoc.find("Requirements are definition transforms, not body statements") !=
+        std::string::npos);
+  CHECK(primeStructDoc.find("[require(typeof<left> == i32, typeof<right> == i32)]") !=
+        std::string::npos);
+  CHECK(primeStructDoc.find("duplicate require transform; combine predicates into one require(...)") !=
+        std::string::npos);
+  CHECK(primeStructDoc.find("`typeof<left>` is a compile-time\n"
+                            "  query because it uses the compile-time argument channel; `typeof(left)`\n"
+                            "  remains an ordinary runtime call shape") !=
+        std::string::npos);
+  CHECK(primeStructDoc.find("`/std/meta/type_equals<A, B>()`") !=
+        std::string::npos);
+  CHECK(primeStructDoc.find("`/std/meta/has_trait<T>(Trait)`") !=
+        std::string::npos);
+  CHECK(primeStructDoc.find("`/std/meta/can_construct<T, Args...>()`") !=
+        std::string::npos);
+  CHECK(primeStructDoc.find("`/std/meta/can_copy<T>()`") !=
+        std::string::npos);
+  CHECK(primeStructDoc.find("`/std/meta/can_move<T>()`") !=
+        std::string::npos);
+  CHECK(primeStructDoc.find("`/std/meta/has_field<T>(name)`") !=
+        std::string::npos);
+  CHECK(primeStructDoc.find("`/std/meta/value_greater_equal<A, B>()`") !=
+        std::string::npos);
+  CHECK(primeStructDoc.find("Existing transform-style trait constraints such as `[Additive<i32>]` remain\n"
+                            "source-compatible compatibility vocabulary") !=
+        std::string::npos);
+  CHECK(primeStructDoc.find("Failed requirements on direct calls are diagnostics, not C++-style\n"
+                            "  substitution failure by accident.") !=
+        std::string::npos);
+
+  CHECK(syntaxSpec.find("[require(typeof<left> == typeof<right>, "
+                        "meta.has_trait<typeof<left>>(Additive))]") !=
+        std::string::npos);
+  CHECK(syntaxSpec.find("They live with the callable signature, run during\n"
+                        "  semantic validation before final IR lowering, and do not create runtime\n"
+                        "  values visible to the function body.") !=
+        std::string::npos);
+  CHECK(syntaxSpec.find("A repeated transform is rejected with\n"
+                        "  `duplicate require transform; combine predicates into one require(...)`.") !=
+        std::string::npos);
+  CHECK(syntaxSpec.find("`typeof(left)` remains an ordinary runtime\n"
+                        "  call-shaped expression and is not a requirement primitive.") !=
+        std::string::npos);
+  CHECK(syntaxSpec.find("User-defined predicates distinguish `false` from invalid evaluation") !=
+        std::string::npos);
+  CHECK(syntaxSpec.find("Failed requirements on a direct call are diagnostics, not C++-style\n"
+                        "  substitution failure by accident.") !=
+        std::string::npos);
+  CHECK(syntaxSpec.find("rather than silently\n"
+                        "  erasing candidates.") !=
+        std::string::npos);
+
+  CHECK(todoFinished.find("TODO-4341: Define generic requirement predicate surface") !=
+        std::string::npos);
+  CHECK(todoFinished.find("Marked transform-style trait constraints such as `[Additive<i32>]` as\n"
+                          "      source-compatible compatibility vocabulary") !=
+        std::string::npos);
+}
+
 TEST_CASE("todo queue and skipped doctest debt stay source locked") {
   std::filesystem::path todoPath = std::filesystem::path("..") / "docs" / "todo.md";
   std::filesystem::path todoFinishedPath = std::filesystem::path("..") / "docs" / "todo_finished.md";
@@ -1613,8 +1687,8 @@ TEST_CASE("todo queue and skipped doctest debt stay source locked") {
   CHECK(todo.find("### Ready Now (Parallel-Candidate Leaves; No Unmet TODO Dependencies)") !=
         std::string::npos);
   CHECK(todo.find("### Ready Now (Parallel-Candidate Leaves; No Unmet TODO Dependencies)\n\n"
-                  "- TODO-4341: Define generic requirement predicate surface | track: generic-requirements |\n"
-                  "  primary surface: user-facing requirement predicate syntax and docs") !=
+                  "- TODO-4342: Represent requirement predicates as semantic facts | track: generic-requirements |\n"
+                  "  primary surface: typed semantic-product facts and evaluation results") !=
         std::string::npos);
   CHECK(todo.find("- `soa-zero-audit`: TODO-4529 replaced the residue inventory with a strict\n"
                   "  zero-production-trace audit; no SoA zero-audit leaf is ready.") !=
@@ -1642,13 +1716,13 @@ TEST_CASE("todo queue and skipped doctest debt stay source locked") {
                   "  examples, and TODO-4546 added negative conformance; no procedural-genericity\n"
                   "  leaf is ready.") !=
         std::string::npos);
-  CHECK(todo.find("- `generic-requirements`: TODO-4331 and TODO-4334 are complete; TODO-4341\n"
-                  "  is ready after the procedural-genericity docs and conformance leaves.") !=
+  CHECK(todo.find("- `generic-requirements`: TODO-4331, TODO-4334, and TODO-4341 are complete;\n"
+                  "  TODO-4342 is ready after the requirement predicate surface docs.") !=
         std::string::npos);
   CHECK(todo.find("### Immediate Next 10 (Track Successors; Not Ready Until Dependencies Land)\n\n"
                   "- TODO-4545: Implement first structured task spawn/wait substrate\n"
                   "- TODO-4278: Integrate multi-wait with stdlib tuple\n"
-                  "- TODO-4342: Represent requirement predicates as semantic facts") !=
+                  "- TODO-4343: Add builtin type relation predicates") !=
         std::string::npos);
   CHECK(todo.find("- TODO-4273: Add heterogeneous value-pack inference") ==
         std::string::npos);
@@ -1664,7 +1738,7 @@ TEST_CASE("todo queue and skipped doctest debt stay source locked") {
   CHECK(todo.find("- Deferred SoA finish: TODO-4252") ==
         std::string::npos);
   CHECK(todo.find("### Execution Queue (Recommended Track Order)\n\n"
-                  "- TODO-4341: Define generic requirement predicate surface") !=
+                  "- TODO-4342: Represent requirement predicates as semantic facts") !=
         std::string::npos);
   CHECK(todo.find("- [ ] TODO-4331: Implement compile-time argument channel model") ==
         std::string::npos);
@@ -1725,7 +1799,7 @@ TEST_CASE("todo queue and skipped doctest debt stay source locked") {
   CHECK(todoFinished.find("TODO-4519: Delete `soa_vector` compatibility seams") !=
         std::string::npos);
   const std::vector<std::string> semanticPhaseQueue = {
-      "TODO-4341: Define generic requirement predicate surface",
+      "TODO-4342: Represent requirement predicates as semantic facts",
   };
   for (const std::string &entry : semanticPhaseQueue) {
     CHECK(todo.find("- " + entry) != std::string::npos);
@@ -1771,11 +1845,15 @@ TEST_CASE("todo queue and skipped doctest debt stay source locked") {
         std::string::npos);
   CHECK(todoFinished.find("TODO-4336: Allow type locals in envelope positions") !=
         std::string::npos);
+  CHECK(todo.find("TODO-4341: Define generic requirement predicate surface") ==
+        std::string::npos);
+  CHECK(todoFinished.find("TODO-4341: Define generic requirement predicate surface") !=
+        std::string::npos);
   CHECK(todo.find("TODO-4545: Implement first structured task spawn/wait substrate") !=
         std::string::npos);
   CHECK(todo.find("  - depends_on: TODO-4277, TODO-4545") !=
         std::string::npos);
-  CHECK(todo.find("  - depends_on: TODO-4331, TODO-4334, TODO-4546") !=
+  CHECK(todo.find("  - depends_on: TODO-4341") !=
         std::string::npos);
   CHECK(todoFinished.find("  - parallel_track: soa-zero-audit") !=
         std::string::npos);

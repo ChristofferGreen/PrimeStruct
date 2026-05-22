@@ -83,8 +83,8 @@ Task template:
 
 ### Ready Now (Parallel-Candidate Leaves; No Unmet TODO Dependencies)
 
-- TODO-4341: Define generic requirement predicate surface | track: generic-requirements |
-  primary surface: user-facing requirement predicate syntax and docs
+- TODO-4342: Represent requirement predicates as semantic facts | track: generic-requirements |
+  primary surface: typed semantic-product facts and evaluation results
 
 ### Parallel Work Tracks (Current)
 
@@ -117,14 +117,14 @@ Task template:
   direct-call and layout metadata, and TODO-4340 added docs and positive
   examples, and TODO-4546 added negative conformance; no procedural-genericity
   leaf is ready.
-- `generic-requirements`: TODO-4331 and TODO-4334 are complete; TODO-4341
-  is ready after the procedural-genericity docs and conformance leaves.
+- `generic-requirements`: TODO-4331, TODO-4334, and TODO-4341 are complete;
+  TODO-4342 is ready after the requirement predicate surface docs.
 
 ### Immediate Next 10 (Track Successors; Not Ready Until Dependencies Land)
 
 - TODO-4545: Implement first structured task spawn/wait substrate
 - TODO-4278: Integrate multi-wait with stdlib tuple
-- TODO-4342: Represent requirement predicates as semantic facts
+- TODO-4343: Add builtin type relation predicates
 
 ### Priority Lanes (Current)
 
@@ -148,15 +148,14 @@ Task template:
   prerequisite split out of TODO-4278
 - Procedural compile-time genericity: none active after TODO-4340 and
   TODO-4546
-- Generic constraint and compile-time flow alignment: TODO-4341
-  -> TODO-4342 -> TODO-4343 -> TODO-4344 -> TODO-4352 -> TODO-4353
+- Generic constraint and compile-time flow alignment: TODO-4342 -> TODO-4343
+  -> TODO-4344 -> TODO-4352 -> TODO-4353
   -> TODO-4354 -> TODO-4355 -> TODO-4356 -> TODO-4357 -> TODO-4345
   -> TODO-4346 -> TODO-4358 -> TODO-4347 -> TODO-4351 -> TODO-4348
   -> TODO-4359 -> TODO-4349 -> TODO-4350
 
 ### Execution Queue (Recommended Track Order)
 
-- TODO-4341: Define generic requirement predicate surface
 - TODO-4342: Represent requirement predicates as semantic facts
 - TODO-4343: Add builtin type relation predicates
 - TODO-4344: Add capability and trait support predicates
@@ -205,7 +204,7 @@ Task template:
 | Stdlib ADT migration for `Maybe` and `Result` | none |
 | Generic type packs and tuple stdlib surface | TODO-4274, TODO-4273, TODO-4277, TODO-4278 |
 | Procedural compile-time genericity and local type facts | none |
-| Generic constraints and compile-time flow control | TODO-4341, TODO-4342, TODO-4343, TODO-4344, TODO-4352, TODO-4353, TODO-4354, TODO-4355, TODO-4356, TODO-4357, TODO-4345, TODO-4346, TODO-4358, TODO-4347, TODO-4351, TODO-4348, TODO-4359, TODO-4349, TODO-4350 |
+| Generic constraints and compile-time flow control | TODO-4342, TODO-4343, TODO-4344, TODO-4352, TODO-4353, TODO-4354, TODO-4355, TODO-4356, TODO-4357, TODO-4345, TODO-4346, TODO-4358, TODO-4347, TODO-4351, TODO-4348, TODO-4359, TODO-4349, TODO-4350 |
 
 ### Validation Coverage Snapshot
 
@@ -232,7 +231,7 @@ Task template:
 | Maybe/Result sum migration conformance | none |
 | Generic type-pack and tuple conformance | TODO-4274, TODO-4273, TODO-4277, TODO-4278 |
 | Procedural compile-time genericity conformance | none |
-| Generic constraint and compile-time flow conformance | TODO-4341, TODO-4342, TODO-4343, TODO-4344, TODO-4352, TODO-4353, TODO-4354, TODO-4355, TODO-4356, TODO-4357, TODO-4345, TODO-4346, TODO-4358, TODO-4347, TODO-4351, TODO-4348, TODO-4359, TODO-4349, TODO-4350 |
+| Generic constraint and compile-time flow conformance | TODO-4342, TODO-4343, TODO-4344, TODO-4352, TODO-4353, TODO-4354, TODO-4355, TODO-4356, TODO-4357, TODO-4345, TODO-4346, TODO-4358, TODO-4347, TODO-4351, TODO-4348, TODO-4359, TODO-4349, TODO-4350 |
 
 ### Vector/Map Bridge Contract Summary
 
@@ -816,63 +815,6 @@ Task template:
   - stop_rule: Stop once multi-wait returns stdlib `tuple<...>` or the missing
     task-side prerequisite is split into an explicit multithreading TODO.
 
-- [ ] TODO-4341: Define generic requirement predicate surface
-  - owner: ai
-  - created_at: 2026-05-04
-  - phase: Generic constraint and compile-time flow alignment
-  - depends_on: TODO-4331, TODO-4334, TODO-4546
-  - scope: Specify the user-facing requirement predicate surface for
-    procedural generic code so authors can state type requirements directly
-    instead of relying on late body failures.
-  - implementation_notes:
-    - Start from `docs/PrimeStruct.md`,
-      `docs/PrimeStruct_SyntaxSpec.md`, the existing transform-style trait
-      examples such as `[Additive<i32>]`, and planned
-      `meta.has_trait<...>` reflection hooks.
-    - Decide whether requirements are expressed as a statement, transform,
-      compile-time command, or another surface form; document why the chosen
-      form fits the `<...>` compile-time argument channel.
-    - Use definition-transform syntax such as
-      `[require(typeof<left> == i32, typeof<right> == i32)] add(left, right)
-      { ... }` as the readability target, and document why `typeof<left>` is
-      the compile-time type query while `typeof(left)` remains an ordinary
-      runtime call shape.
-    - Treat `require(...)` as a single transform with a comma-separated
-      predicate list; repeated `[require(...)]` transforms are not the planned
-      source style.
-    - Keep v1 predicate expressions intentionally small: equality,
-      inequality, comma-separated conjunction, builtin/user-defined predicate
-      calls, and simple compile-time value comparisons such as `N > 0`.
-    - Put builtin predicates under `/std/meta/*`; readable requirement syntax
-      may rewrite to those helpers or compiler-recognized facts, but public
-      user helpers should not collide with that namespace.
-    - Include the initial predicate family names for equality, trait/capability
-      support, construction, copy/move availability, field/member queries, and
-      compile-time integer/value relations.
-  - acceptance:
-    - The docs define a minimal generic requirement syntax with examples for
-      same-type checks and capability/trait checks.
-    - The selected syntax uses a single bracketed `[require(...)]` transform
-      form with multiple comma-separated predicates; repeated `require`
-      transforms are rejected or canonicalized with a stable diagnostic.
-    - The docs specify when requirements run, whether they can produce runtime
-      values, and how they interact with ordinary function bodies.
-    - The docs define how user-authored compile-time predicate helpers return
-      ordinary source-level `bool` values, how semantics wraps those values as
-      requirement facts, and how those helpers compose with builtin
-      predicates.
-    - The docs distinguish a predicate returning `false` from an invalid
-      predicate evaluation; invalid predicate evaluation is a hard diagnostic,
-      not a failed requirement or silent overload-filtering event.
-    - The surface explicitly rejects C++-style SFINAE-by-accident; failed
-      requirements are diagnostics, not silent candidate erasure unless a
-      later overload-selection task says so.
-    - Existing transform-style trait examples are either aligned with the new
-      requirement vocabulary or marked as a compatibility surface.
-    - `./scripts/compile.sh --release` passes.
-  - stop_rule: Stop once the requirement language is specified tightly enough
-    for parser and semantic-product implementation work to proceed.
-
 - [ ] TODO-4342: Represent requirement predicates as semantic facts
   - owner: ai
   - created_at: 2026-05-04
@@ -1263,9 +1205,9 @@ Task template:
     - Start from call resolution, import alias resolution, helper selection,
       template inference, ambiguity diagnostics, and semantic-product
       candidate metadata.
-    - Prefer explicit candidate rejection with related diagnostics over
-      silent C++-style substitution failure unless TODO-4341 chose a specific
-      overload-filtering contract.
+    - Follow the TODO-4341 surface contract: overload filtering may reject
+      non-viable candidates, but it must preserve failed-requirement
+      diagnostics rather than silently erasing candidates.
     - Do not rank candidates by requirement specificity. If more than one
       candidate remains viable after requirement filtering, reject as
       ambiguous and require clearer names or imports.

@@ -6,6 +6,42 @@ Legend:
 Finished items are periodically archived here from `docs/todo.md`; section headers record the archive date.
 
 **Todo Completion (May 23, 2026)**
+- [x] TODO-4341: Define generic requirement predicate surface
+  - owner: ai
+  - created_at: 2026-05-04
+  - finished_at: 2026-05-23
+  - phase: Generic constraint and compile-time flow alignment
+  - parallel_track: generic-requirements
+  - depends_on: TODO-4331, TODO-4334, TODO-4546
+  - scope: Specify the user-facing requirement predicate surface for
+    procedural generic code so authors can state type requirements directly
+    instead of relying on late body failures.
+  - outcome:
+    - Defined `[require(...)]` as the single definition-transform surface with
+      comma-separated predicates and a stable duplicate-transform diagnostic.
+    - Documented why `typeof<symbol>` is the compile-time type query while
+      `typeof(symbol)` remains ordinary runtime call syntax.
+    - Locked v1 predicate grammar to equality, inequality, comma conjunction,
+      builtin/user predicates, and simple compile-time value comparisons.
+    - Named the initial `/std/meta/*` predicate families for type relations,
+      trait/capability support, construction, copy/move availability,
+      field/member queries, and compile-time value relations.
+    - Specified predicate timing, lack of runtime values, ordinary `bool`
+      helper results, invalid-evaluation diagnostics, and no accidental
+      C++-style SFINAE behavior.
+    - Marked transform-style trait constraints such as `[Additive<i32>]` as
+      source-compatible compatibility vocabulary alongside the new
+      requirement predicate vocabulary.
+  - validation:
+    - `cmake --build build-release --target PrimeStruct_compile_run_tests primec -j 1`
+      passed after resuming the cold worker build.
+    - `cd build-release && ./PrimeStruct_compile_run_tests --test-case="generic requirement predicate surface stays source locked" --no-skip`
+      passed.
+    - `cd build-release && ./PrimeStruct_compile_run_tests --test-case="todo queue and skipped doctest debt stay source locked" --no-skip`
+      passed.
+    - Full `./scripts/compile.sh --release` remains deferred by the lite
+      workflow.
+
 - [x] TODO-4340: Add procedural generic docs and examples
   - owner: ai
   - created_at: 2026-05-04
