@@ -2,8 +2,10 @@
 
 #include "StdlibCollectionSurfaceHelpers.h"
 
+#include <algorithm>
 #include <string>
 #include <string_view>
+#include <vector>
 
 namespace primec::semantics {
 namespace {
@@ -34,6 +36,127 @@ std::string keyValueCollectionMarkerPathForBuildReturnKinds() {
 }
 
 } // namespace
+
+std::string SemanticsValidator::formatLocalGeneratedStructEscapeDiagnostic(
+    const std::string &structPath) const {
+  auto sourcePointText = [](int line, int column) {
+    return std::to_string(line) + ":" + std::to_string(column);
+  };
+
+  const Definition *structDef = nullptr;
+  for (const auto &def : program_.definitions) {
+    if (def.fullPath == structPath) {
+      structDef = &def;
+      break;
+    }
+  }
+
+  std::string message =
+      "local generated struct cannot escape return type: " + structPath;
+  if (structDef == nullptr) {
+    return message;
+  }
+
+  if (structDef->sourceLine > 0 && structDef->sourceColumn > 0) {
+    message += " (local type defined at ";
+    message += sourcePointText(structDef->sourceLine, structDef->sourceColumn);
+  } else {
+    message += " (local type definition source unknown";
+  }
+
+  const Definition *parentDef = nullptr;
+  for (const auto &def : program_.definitions) {
+    if (def.fullPath == structDef->namespacePrefix) {
+      parentDef = &def;
+      break;
+    }
+  }
+  if (parentDef == nullptr) {
+    message += ")";
+    return message;
+  }
+
+  struct TypeLocalFact {
+    std::string name;
+    int line = 0;
+    int column = 0;
+  };
+  std::vector<TypeLocalFact> typeLocals;
+  for (const auto &stmt : parentDef->statements) {
+    if (stmt.sourceLine == structDef->sourceLine &&
+        stmt.sourceColumn == structDef->sourceColumn) {
+      break;
+    }
+    if (!isCompileTimeTypeBinding(stmt)) {
+      continue;
+    }
+    typeLocals.push_back({stmt.name, stmt.sourceLine, stmt.sourceColumn});
+  }
+
+  auto referencesTypeLocal = [](const Transform &transform,
+                                const TypeLocalFact &fact) {
+    auto nameMatches = [](const std::string &candidate,
+                          const std::string &name) {
+      if (candidate == name) {
+        return true;
+      }
+      const std::string suffix = "/" + name;
+      return candidate.size() >= suffix.size() &&
+             candidate.compare(candidate.size() - suffix.size(),
+                               suffix.size(),
+                               suffix) == 0;
+    };
+    if (nameMatches(transform.name, fact.name)) {
+      return true;
+    }
+    for (const auto &arg : transform.templateArgs) {
+      if (nameMatches(arg, fact.name)) {
+        return true;
+      }
+    }
+    return false;
+  };
+
+  std::vector<TypeLocalFact> referencedFacts;
+  for (const auto &field : structDef->statements) {
+    for (const auto &transform : field.transforms) {
+      if (isBindingAuxTransformName(transform.name)) {
+        continue;
+      }
+      for (const auto &fact : typeLocals) {
+        if (!referencesTypeLocal(transform, fact)) {
+          continue;
+        }
+        const bool alreadyRecorded =
+            std::any_of(referencedFacts.begin(),
+                        referencedFacts.end(),
+                        [&](const TypeLocalFact &existing) {
+                          return existing.name == fact.name;
+                        });
+        if (!alreadyRecorded) {
+          referencedFacts.push_back(fact);
+        }
+      }
+    }
+  }
+
+  if (!referencedFacts.empty()) {
+    message += "; type facts: ";
+    for (std::size_t i = 0; i < referencedFacts.size(); ++i) {
+      if (i > 0) {
+        message += ", ";
+      }
+      message += referencedFacts[i].name;
+      if (referencedFacts[i].line > 0 && referencedFacts[i].column > 0) {
+        message += " at ";
+        message += sourcePointText(referencedFacts[i].line,
+                                   referencedFacts[i].column);
+      }
+    }
+  }
+  message += ")";
+  return message;
+}
 
 std::string SemanticsValidator::resolveStructReturnPathForBuild(const std::string &typeName,
                                                                const std::string &namespacePrefix) const {
@@ -216,8 +339,8 @@ bool SemanticsValidator::buildDefinitionReturnKinds(const std::unordered_set<std
                 resolveStructReturnPathForBuild(transform.templateArgs.front(),
                                                 def.namespacePrefix);
             isLocalGeneratedStructReturn(def, localStructPath)) {
-          returnKindError = "local generated struct cannot escape return type: " +
-                            localStructPath;
+          returnKindError =
+              formatLocalGeneratedStructEscapeDiagnostic(localStructPath);
           break;
         }
         hasExplicitSumReturn =

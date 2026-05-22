@@ -20903,3 +20903,35 @@ Moved from `docs/todo.md` during unfinished-only cleanup:
     propagated those facts through type-local erasure for lowering, rejected
     local generated return escapes and shadowing, documented the non-escaping
     boundary, and validated the focused semantic and compile-run slices.
+
+- [x] TODO-4338: Stabilize generated type identity and mangling
+  - owner: ai
+  - created_at: 2026-05-04
+  - finished_at: 2026-05-22
+  - phase: Procedural compile-time genericity
+  - depends_on: TODO-4337
+  - scope: Define and implement deterministic paths, names, provenance, and
+    diagnostics for local generated nominal types across repeated builds and
+    import order.
+  - implementation_notes:
+    - Started from template specialization mangling, semantic node ids,
+      semantic-product provenance handles, AST/IR printers, and diagnostics
+      that mention generated type paths.
+    - Avoided path schemes that depend on unordered map iteration or incidental
+      clone order.
+  - acceptance:
+    - Generated type paths include the enclosing definition specialization and
+      local type name in a deterministic form.
+    - Repeated builds and import-order variations produce identical
+      semantic-product and IR names for the same source.
+    - Diagnostics for generated type errors point at the local type definition
+      and the relevant type-local facts.
+    - Golden/snapshot tests pin the generated identity surface.
+    - `./scripts/compile.sh --release` passes.
+  - stop_rule: Stop once generated type identity is deterministic and covered;
+    leave full lowering integration to TODO-4339.
+  - evidence: Routed all local generated return-escape diagnostics through a
+    shared source-aware formatter, included local type definition positions and
+    referenced type-local facts in the diagnostic, added semantic-product and
+    boundary-dump snapshots for deterministic generated type paths and
+    provenance, and promoted TODO-4339 as the next Ready Now leaf.

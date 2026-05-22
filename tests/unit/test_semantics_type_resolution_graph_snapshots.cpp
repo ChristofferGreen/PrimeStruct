@@ -4489,6 +4489,222 @@ TEST_CASE("semantic product semantic ids ignore unrelated definition ordering") 
   CHECK(firstReturn->sourceColumn == secondReturn->sourceColumn);
 }
 
+TEST_CASE("local generated type identity stays deterministic in semantic product") {
+  const std::string source =
+      "[return<i32>]\n"
+      "sum_pair([i32] left, [i32] right) {\n"
+      "  [type] LeftT { typeof<left> }\n"
+      "  [type] RightT { typeof<right> }\n"
+      "  [struct] PairT {\n"
+      "    [LeftT] first{0i32}\n"
+      "    [RightT] second{0i32}\n"
+      "  }\n"
+      "  [PairT] pair{PairT{left, right}}\n"
+      "  return(plus(pair.first, pair.second))\n"
+      "}\n"
+      "\n"
+      "[return<i32>]\n"
+      "mirror_pair([i32] left, [i32] right) {\n"
+      "  [type] LeftT { typeof<left> }\n"
+      "  [type] RightT { typeof<right> }\n"
+      "  [struct] PairT {\n"
+      "    [LeftT] first{0i32}\n"
+      "    [RightT] second{0i32}\n"
+      "  }\n"
+      "  [PairT] pair{PairT{left, right}}\n"
+      "  return(plus(pair.first, pair.second))\n"
+      "}\n"
+      "\n"
+      "[return<i32>]\n"
+      "main() {\n"
+      "  [i32] direct{sum_pair(1i32, 2i32)}\n"
+      "  [i32] mirrored{mirror_pair(3i32, 4i32)}\n"
+      "  return(plus(direct, mirrored))\n"
+      "}\n";
+
+  auto validateSemanticProduct = [](const std::string &programText) {
+    auto program = parseProgram(programText);
+    primec::Semantics semantics;
+    primec::SemanticProgram semanticProgram;
+    std::string error;
+    const std::vector<std::string> defaults = {"io_out", "io_err"};
+    REQUIRE(semantics.validate(program,
+                               "/main",
+                               error,
+                               defaults,
+                               defaults,
+                               {},
+                               nullptr,
+                               false,
+                               &semanticProgram));
+    CHECK(error.empty());
+    return semanticProgram;
+  };
+
+  const primec::SemanticProgram first = validateSemanticProduct(source);
+  const primec::SemanticProgram second = validateSemanticProduct(source);
+
+  CHECK(primec::formatSemanticProgram(first) ==
+        primec::formatSemanticProgram(second));
+
+  const auto *firstSumPair =
+      findSemanticEntry(first.typeMetadata,
+                        [](const primec::SemanticProgramTypeMetadata &entry) {
+                          return entry.fullPath == "/sum_pair/PairT";
+                        });
+  const auto *secondSumPair =
+      findSemanticEntry(second.typeMetadata,
+                        [](const primec::SemanticProgramTypeMetadata &entry) {
+                          return entry.fullPath == "/sum_pair/PairT";
+                        });
+  const auto *firstMirrorPair =
+      findSemanticEntry(first.typeMetadata,
+                        [](const primec::SemanticProgramTypeMetadata &entry) {
+                          return entry.fullPath == "/mirror_pair/PairT";
+                        });
+  REQUIRE(firstSumPair != nullptr);
+  REQUIRE(secondSumPair != nullptr);
+  REQUIRE(firstMirrorPair != nullptr);
+  CHECK(firstSumPair->semanticNodeId != 0);
+  CHECK(firstSumPair->semanticNodeId == secondSumPair->semanticNodeId);
+  CHECK(firstSumPair->provenanceHandle != 0);
+  CHECK(firstSumPair->provenanceHandle == secondSumPair->provenanceHandle);
+  CHECK(firstSumPair->semanticNodeId != firstMirrorPair->semanticNodeId);
+
+  const std::string dump = primec::formatSemanticProgram(first);
+  CHECK(dump.find("full_path=\"/sum_pair/PairT\"") != std::string::npos);
+  CHECK(dump.find("full_path=\"/mirror_pair/PairT\"") !=
+        std::string::npos);
+  CHECK(dump.find("struct_path=\"/sum_pair/PairT\" field_name=\"first\"") !=
+        std::string::npos);
+  CHECK(dump.find("struct_path=\"/sum_pair/PairT\" field_name=\"second\"") !=
+        std::string::npos);
+}
+
+TEST_CASE("local generated type semantic ids ignore unrelated definition order") {
+  const std::string sharedSuffix =
+      "[return<i32>]\n"
+      "sum_pair([i32] left, [i32] right) {\n"
+      "  [type] LeftT { typeof<left> }\n"
+      "  [type] RightT { typeof<right> }\n"
+      "  [struct] PairT {\n"
+      "    [LeftT] first{0i32}\n"
+      "    [RightT] second{0i32}\n"
+      "  }\n"
+      "  [PairT] pair{PairT{left, right}}\n"
+      "  return(plus(pair.first, pair.second))\n"
+      "}\n"
+      "\n"
+      "[return<i32>]\n"
+      "main() {\n"
+      "  return(sum_pair(1i32, 2i32))\n"
+      "}\n";
+  const std::string helperDefinition =
+      "[return<i32>]\n"
+      "helper([i32] value) {\n"
+      "  return(value)\n"
+      "}\n"
+      "\n";
+  const std::string noiseDefinition =
+      "[return<i32>]\n"
+      "noise([i32] value) {\n"
+      "  return(value)\n"
+      "}\n"
+      "\n";
+  const std::string sourceA =
+      helperDefinition + noiseDefinition + sharedSuffix;
+  const std::string sourceB =
+      noiseDefinition + helperDefinition + sharedSuffix;
+
+  auto validateSemanticProduct = [](const std::string &programText) {
+    auto program = parseProgram(programText);
+    primec::Semantics semantics;
+    primec::SemanticProgram semanticProgram;
+    std::string error;
+    const std::vector<std::string> defaults = {"io_out", "io_err"};
+    REQUIRE(semantics.validate(program,
+                               "/main",
+                               error,
+                               defaults,
+                               defaults,
+                               {},
+                               nullptr,
+                               false,
+                               &semanticProgram));
+    CHECK(error.empty());
+    return semanticProgram;
+  };
+
+  const primec::SemanticProgram first = validateSemanticProduct(sourceA);
+  const primec::SemanticProgram second = validateSemanticProduct(sourceB);
+
+  const auto *firstType =
+      findSemanticEntry(first.typeMetadata,
+                        [](const primec::SemanticProgramTypeMetadata &entry) {
+                          return entry.fullPath == "/sum_pair/PairT";
+                        });
+  const auto *secondType =
+      findSemanticEntry(second.typeMetadata,
+                        [](const primec::SemanticProgramTypeMetadata &entry) {
+                          return entry.fullPath == "/sum_pair/PairT";
+                        });
+  REQUIRE(firstType != nullptr);
+  REQUIRE(secondType != nullptr);
+  CHECK(firstType->semanticNodeId == secondType->semanticNodeId);
+  CHECK(firstType->provenanceHandle == secondType->provenanceHandle);
+  CHECK(firstType->sourceLine == secondType->sourceLine);
+  CHECK(firstType->sourceColumn == secondType->sourceColumn);
+
+  const auto *firstField =
+      findSemanticEntry(first.structFieldMetadata,
+                        [](const primec::SemanticProgramStructFieldMetadata &entry) {
+                          return entry.structPath == "/sum_pair/PairT" &&
+                                 entry.fieldName == "first";
+                        });
+  const auto *secondField =
+      findSemanticEntry(second.structFieldMetadata,
+                        [](const primec::SemanticProgramStructFieldMetadata &entry) {
+                          return entry.structPath == "/sum_pair/PairT" &&
+                                 entry.fieldName == "first";
+                        });
+  REQUIRE(firstField != nullptr);
+  REQUIRE(secondField != nullptr);
+  CHECK(firstField->semanticNodeId == secondField->semanticNodeId);
+  CHECK(firstField->provenanceHandle == secondField->provenanceHandle);
+}
+
+TEST_CASE("local generated type paths are pinned in boundary dumps") {
+  const std::string source =
+      "[return<i32>]\n"
+      "sum_pair([i32] left, [i32] right) {\n"
+      "  [type] LeftT { typeof<left> }\n"
+      "  [type] RightT { typeof<right> }\n"
+      "  [struct] PairT {\n"
+      "    [LeftT] first{0i32}\n"
+      "    [RightT] second{0i32}\n"
+      "  }\n"
+      "  [PairT] pair{PairT{left, right}}\n"
+      "  return(plus(pair.first, pair.second))\n"
+      "}\n"
+      "\n"
+      "[return<i32>]\n"
+      "main() {\n"
+      "  return(sum_pair(1i32, 2i32))\n"
+      "}\n";
+
+  primec::testing::CompilePipelineBoundaryDumps dumps;
+  std::string error;
+  REQUIRE(primec::testing::captureSemanticBoundaryDumpsForTesting(
+      source, "/main", dumps, error));
+  CHECK(error.empty());
+  CHECK(dumps.astSemantic.find("/sum_pair/PairT") != std::string::npos);
+  CHECK(dumps.semanticProduct.find("full_path=\"/sum_pair/PairT\"") !=
+        std::string::npos);
+  CHECK(dumps.semanticProduct.find("struct_path=\"/sum_pair/PairT\"") !=
+        std::string::npos);
+  CHECK(dumps.ir.find("/sum_pair") != std::string::npos);
+}
+
 TEST_CASE("semantic product ownership surfaces keep deterministic source order") {
   const std::string source =
       "Record {\n"

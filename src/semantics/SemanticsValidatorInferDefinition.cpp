@@ -169,8 +169,7 @@ bool SemanticsValidator::recordDefinitionInferredReturn(
       const std::string localPrefix = def.fullPath + "/";
       if (!localStructPath.empty() && localStructPath.rfind(localPrefix, 0) == 0) {
         return failInferDefinitionDiagnostic(
-            "local generated struct cannot escape return type: " +
-            localStructPath);
+            formatLocalGeneratedStructEscapeDiagnostic(localStructPath));
       }
     }
     error_.clear();

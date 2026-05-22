@@ -234,8 +234,7 @@ bool SemanticsValidator::validateReturnStatement(const std::vector<ParameterInfo
         return true;
       }
       return failReturnDiagnostic(
-          "local generated struct cannot escape return type: " +
-          localStructPath);
+          formatLocalGeneratedStructEscapeDiagnostic(localStructPath));
     };
     if (!rejectLocalGeneratedStructReturn()) {
       return false;

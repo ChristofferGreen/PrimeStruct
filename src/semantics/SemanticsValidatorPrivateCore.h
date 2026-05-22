@@ -45,6 +45,8 @@
   bool buildImportAliases();
   std::string resolveStructReturnPathForBuild(const std::string &typeName,
                                               const std::string &namespacePrefix) const;
+  std::string formatLocalGeneratedStructEscapeDiagnostic(
+      const std::string &structPath) const;
   bool buildDefinitionReturnKinds(const std::unordered_set<std::string> &explicitStructs);
   bool validateLifecycleHelperDefinitions();
   bool buildParameters();

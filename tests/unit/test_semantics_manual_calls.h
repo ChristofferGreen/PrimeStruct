@@ -473,6 +473,8 @@ make_pair() {
   INFO(explicitError);
   CHECK(explicitError.find("local generated struct cannot escape return type: /make_pair/PairT") !=
         std::string::npos);
+  CHECK(explicitError.find("local type defined at") != std::string::npos);
+  CHECK(explicitError.find("type facts: ValueT at") != std::string::npos);
 
   const std::string autoReturn = R"(
 [return<auto>]
@@ -491,6 +493,8 @@ make_pair() {
   INFO(autoError);
   CHECK(autoError.find("local generated struct cannot escape return type: /make_pair/PairT") !=
         std::string::npos);
+  CHECK(autoError.find("local type defined at") != std::string::npos);
+  CHECK(autoError.find("type facts: ValueT at") != std::string::npos);
 
   const std::string shadowLocal = R"(
 [return<int>]
