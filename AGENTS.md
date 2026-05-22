@@ -91,6 +91,12 @@ build and layout solidify.
 - **`compile.sh` stability rule:** keep `scripts/compile.sh` limited to its current contract (default debug build+test plus the documented `--release` and `--skip-tests` options) and do not expand or refactor it unless the user explicitly asks for that change.
 - **Hard RAM safety rule (non-negotiable):** never launch more than one heavy build/test command at the same time. Treat `./scripts/compile.sh`, `cmake --build`, `ctest`, and any `PrimeStruct_*_tests` binary as heavy commands and run them strictly sequentially.
 - **No parallel heavy-tool orchestration:** do not use parallel tool execution for heavy build/test commands; if additional inspection commands are needed, wait until the active heavy command completes first.
+- **No elevated-privilege workflow commands:** do not run commands that require
+  sandbox escalation or user approval as part of normal repo work. This includes
+  process-inspection commands such as `ps`, `pgrep`, `lsof`, or similar tools
+  used to check whether builds/tests are active. If coordination would require
+  elevated privileges, rely on known command sessions, repo-local state, or ask
+  the user to check externally instead of requesting escalation.
 - **Benchmark helper:** `./scripts/benchmark.sh --build-dir build-release` runs the benchmark suite against an existing build. Add `--report-json build-release/benchmarks/benchmark_report.json --baseline-json benchmarks/benchmark_baseline.json` for regression checks.
 - **Optional Wasm runtime checks:** `./scripts/run_wasm_runtime_checks.sh` executes Wasm outputs with `wasmtime` when available and emits an explicit skip message otherwise.
 - **Coverage helper:** `./scripts/code_coverage.sh` runs a clean debug coverage build, prints total function/line coverage, and writes reports to `build-debug/coverage/coverage.txt` plus `build-debug/coverage/html/`.
