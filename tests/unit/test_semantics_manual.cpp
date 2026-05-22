@@ -1,6 +1,7 @@
 #include "primec/Ast.h"
 #include "primec/Lexer.h"
 #include "primec/Parser.h"
+#include "primec/SemanticProduct.h"
 #include "primec/Semantics.h"
 
 #include "third_party/doctest.h"

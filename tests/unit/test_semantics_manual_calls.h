@@ -455,6 +455,74 @@ main() {
   CHECK(sawSecondField);
 }
 
+TEST_CASE("local generated struct identity is stable for template specialization") {
+  const std::string source = R"(
+[return<T>]
+sum_pair<T>([T] left, [T] right) {
+  [type] LeftT { typeof<left> }
+  [type] RightT { typeof<right> }
+  [struct] PairT {
+    [LeftT] first{0i32}
+    [RightT] second{0i32}
+  }
+  [PairT] pair{PairT{left, right}}
+  return(plus(pair.first, pair.second))
+}
+
+[return<int>]
+main() {
+  return(sum_pair<i32>(3i32, 4i32))
+}
+)";
+  primec::Lexer lexer(source);
+  primec::Parser parser(lexer.tokenize());
+  primec::Program program;
+  std::string error;
+  REQUIRE(parser.parse(program, error));
+  primec::Semantics semantics;
+  primec::SemanticProgram semanticProgram;
+  const std::vector<std::string> defaults = {"io_out", "io_err"};
+  REQUIRE(semantics.validate(program,
+                             "/main",
+                             error,
+                             defaults,
+                             defaults,
+                             {},
+                             nullptr,
+                             false,
+                             &semanticProgram));
+  INFO(error);
+  CHECK(error.empty());
+
+  const auto generatedStructIt =
+      std::find_if(program.definitions.begin(),
+                   program.definitions.end(),
+                   [](const primec::Definition &def) {
+                     return def.fullPath.rfind("/sum_pair__t", 0) == 0 &&
+                            def.fullPath.ends_with("/PairT");
+                   });
+  REQUIRE(generatedStructIt != program.definitions.end());
+  const std::string specializedPairPath = generatedStructIt->fullPath;
+  CHECK(generatedStructIt->isNested);
+  CHECK(generatedStructIt->namespacePrefix.rfind("/sum_pair__t", 0) == 0);
+  CHECK(generatedStructIt->sourceLine > 0);
+  CHECK(generatedStructIt->sourceColumn > 0);
+
+  const std::string semanticDump =
+      primec::formatSemanticProgram(semanticProgram);
+  CHECK(semanticDump.find("type_metadata") != std::string::npos);
+  CHECK(semanticDump.find("full_path=\"" + specializedPairPath + "\"") !=
+        std::string::npos);
+  CHECK(semanticDump.find(std::string("struct_path=\"") +
+                          specializedPairPath +
+                          "\" field_name=\"first\" field_index=0 "
+                          "binding_type_text=\"i32\"") != std::string::npos);
+  CHECK(semanticDump.find(std::string("struct_path=\"") +
+                          specializedPairPath +
+                          "\" field_name=\"second\" field_index=1 "
+                          "binding_type_text=\"i32\"") != std::string::npos);
+}
+
 TEST_CASE("local generated structs reject escapes and shadowing") {
   const std::string explicitReturn = R"(
 [return<PairT>]
@@ -511,6 +579,35 @@ main() {
   INFO(shadowError);
   CHECK(shadowError.find("local generated struct name shadows local binding: PairT") !=
         std::string::npos);
+}
+
+TEST_CASE("local generated struct escape diagnostic uses specialized path") {
+  const std::string source = R"(
+[return<int>]
+main() {
+  return(make_pair<i32>(1i32))
+}
+
+[return<auto>]
+make_pair<T>([T] value) {
+  [type] ValueT { typeof<value> }
+  [struct] PairT {
+    [ValueT] first{0i32}
+  }
+  [PairT] pair{PairT{value}}
+  return(pair)
+}
+)";
+  std::string error;
+  CHECK_FALSE(validateSourceProgram(source, "/main", error));
+  INFO(error);
+  CHECK(error.find("local generated struct cannot escape return type: "
+                   "/make_pair__t") !=
+        std::string::npos);
+  CHECK(error.find("/PairT") !=
+        std::string::npos);
+  CHECK(error.find("local type defined at") != std::string::npos);
+  CHECK(error.find("type facts: ValueT at") != std::string::npos);
 }
 
 TEST_CASE("local generated structs reject forward facts and recursive storage") {
