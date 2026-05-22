@@ -7630,3 +7630,7 @@
 - focused VM canonical vector access and direct experimental SoA conversion shards now pass; canonical vector access with struct-return helpers no longer falls through to builtin scalar vector indexing, and direct experimental SoA conversion helpers now reject raw builtin receivers
 - native canonical vector namespace explicit/wrapper conformance shard now passes; scalar vector `remove_swap` no longer calls vector record lifecycle helpers on scalar element slots
 - focused vector/map receiver stabilization shard no longer fails after helper routing, map precedence, receiver-call fallback, and diagnostic assertion updates
+- VM map receiver precedence shard 305-314 now passes after named-receiver
+  canonical map count slash methods inline the visible `.prime` helper instead
+  of falling through to builtin count; adjacent shards 315-331 and focused
+  lowerer helper checks also pass.

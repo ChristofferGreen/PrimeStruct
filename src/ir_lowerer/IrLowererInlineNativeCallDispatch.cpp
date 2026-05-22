@@ -685,6 +685,11 @@ InlineCallDispatchResult tryEmitInlineCallWithCountFallbacksImpl(
     const Definition *callee = resolveMethodCallDefinition(expr);
     if (callee != nullptr) {
       if (expr.args.size() == 1 &&
+          expr.args.front().kind == Expr::Kind::Call &&
+          callee->fullPath == collectionMemberPath("map", "count")) {
+        return InlineCallDispatchResult::NotHandled;
+      }
+      if (expr.args.size() == 1 &&
           isInternalSoaMetadataHelperPath(callee->fullPath)) {
         return InlineCallDispatchResult::NotHandled;
       }
@@ -1214,7 +1219,8 @@ InlineCallDispatchResult tryEmitInlineCallDispatchWithLocals(
           (directHelperName == "count" || directHelperName == "contains" ||
            directHelperName == "tryAt" || directHelperName == "at" ||
            directHelperName == "at_unsafe")) {
-        if (directHelperName == "count") {
+        if (directHelperName == "count" &&
+            expr.args.front().kind == Expr::Kind::Call) {
           return InlineCallDispatchResult::NotHandled;
         }
         if (const Definition *callee = resolveDefinitionCallFn(expr);

@@ -280,17 +280,18 @@ main() {
 }
 )";
   const std::string srcPath =
-      writeTemp("compile_native_map_unnamespaced_count_builtin_fallback_reject.prime", source);
+      writeTemp("compile_native_map_unnamespaced_count_canonical_helper.prime", source);
   const std::string outPath = (testScratchPath("") /
-                               "primec_native_map_unnamespaced_count_builtin_fallback_reject_out.txt")
+                               "primec_native_map_unnamespaced_count_canonical_helper_out.txt")
                                   .string();
   const std::string exePath = (testScratchPath("") /
-                               "primec_native_map_unnamespaced_count_builtin_fallback_reject_exe")
+                               "primec_native_map_unnamespaced_count_canonical_helper_exe")
                                   .string();
 
   const std::string compileCmd =
       "./primec --emit=native " + srcPath + " -o " + exePath + " --entry /main > " + outPath + " 2>&1";
   CHECK(runCommand(compileCmd) == 0);
+  CHECK(runCommand(exePath) == 17);
 }
 
 TEST_CASE("rejects native bare map count without imported canonical helper") {
@@ -415,7 +416,7 @@ main() {
   CHECK(readFile(outPath).find("unknown call target: /std/collections/map/at_unsafe") != std::string::npos);
 }
 
-TEST_CASE("native map namespaced count method compatibility alias is rejected") {
+TEST_CASE("native map namespaced count method runs through canonical helper") {
   const std::string source = R"(
 [effects(heap_alloc), return<int>]
 /std/collections/map/count([map<i32, i32>] values) {
@@ -429,19 +430,18 @@ main() {
 }
 )";
   const std::string srcPath =
-      writeTemp("compile_native_map_namespaced_count_method_compatibility_alias_reject.prime", source);
+      writeTemp("compile_native_map_namespaced_count_method_canonical_helper.prime", source);
   const std::string outPath = (testScratchPath("") /
-                               "primec_native_map_namespaced_count_method_compatibility_alias_reject_out.txt")
+                               "primec_native_map_namespaced_count_method_canonical_helper_out.txt")
                                   .string();
   const std::string exePath = (testScratchPath("") /
-                               "primec_native_map_namespaced_count_method_compatibility_alias_reject_exe")
+                               "primec_native_map_namespaced_count_method_canonical_helper_exe")
                                   .string();
 
   const std::string compileCmd =
       "./primec --emit=native " + srcPath + " -o " + exePath + " --entry /main > " + outPath + " 2>&1";
-  CHECK(runCommand(compileCmd) == 2);
-  CHECK(readFile(outPath).find("unknown method: /map/count") !=
-        std::string::npos);
+  CHECK(runCommand(compileCmd) == 0);
+  CHECK(runCommand(exePath) == 17);
 }
 
 TEST_CASE("rejects native bare map count method without imported canonical helper") {

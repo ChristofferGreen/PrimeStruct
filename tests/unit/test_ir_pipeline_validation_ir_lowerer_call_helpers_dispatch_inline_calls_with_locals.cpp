@@ -642,7 +642,7 @@ TEST_CASE("ir lowerer call helpers leave direct experimental map helpers unadapt
   CHECK(error == "stale");
 }
 
-TEST_CASE("ir lowerer call helpers split canonical map count and lookup helpers for map locals") {
+TEST_CASE("ir lowerer call helpers inline canonical map count and lookup helpers for map locals") {
   using Result = primec::ir_lowerer::InlineCallDispatchResult;
   using LocalInfo = primec::ir_lowerer::LocalInfo;
 
@@ -712,7 +712,7 @@ TEST_CASE("ir lowerer call helpers split canonical map count and lookup helpers 
   countCall.namespacePrefix = "/std/collections/map";
   countCall.name = "count";
   countCall.args = {valuesName};
-  expectBuiltinFallback(countCall, canonicalCount, Result::NotHandled, 0);
+  expectBuiltinFallback(countCall, canonicalCount, Result::Emitted, 1);
 
   primec::Expr containsCall;
   containsCall.kind = primec::Expr::Kind::Call;

@@ -426,10 +426,6 @@ const Definition *resolveMethodCallDefinitionFromExpr(
     }
     return {};
   };
-  if (isExplicitKeyValueMethodAliasPath(explicitMethodPath)) {
-    errorOut = "unknown method: " + explicitMethodPath;
-    return nullptr;
-  }
   auto resolveDefinitionFamilyByArity = [&](const std::string &path,
                                             size_t argCount) -> const Definition * {
     auto defIt = defMap.find(path);
@@ -482,6 +478,30 @@ const Definition *resolveMethodCallDefinitionFromExpr(
         return canonicalDef;
       }
     }
+  }
+  if (isExplicitKeyValueMethodAliasPath(explicitMethodPath)) {
+    if (semanticProgram != nullptr && !callExpr.args.empty() &&
+        callExpr.args.front().kind != Expr::Kind::Call) {
+      std::string resolvedPath =
+          findSemanticProductMethodCallTarget(semanticProgram, callExpr);
+      if (resolvedPath.empty()) {
+        resolvedPath = findSemanticProductDirectCallTarget(semanticProgram,
+                                                           callExpr);
+      }
+      if (resolvedPath.empty()) {
+        resolvedPath = findSemanticProductBridgePathChoice(semanticProgram,
+                                                           callExpr);
+      }
+      if (!resolvedPath.empty()) {
+        if (const Definition *semanticTarget =
+                resolveDefinitionFamilyByArity(resolvedPath,
+                                               callExpr.args.size())) {
+          return semanticTarget;
+        }
+      }
+    }
+    errorOut = "unknown method: " + explicitMethodPath;
+    return nullptr;
   }
 
   if (semanticProgram != nullptr) {

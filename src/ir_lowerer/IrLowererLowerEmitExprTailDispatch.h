@@ -765,7 +765,11 @@
           }
           if (!((helperName == "contains" && callExpr.args.size() == 2) ||
                 (helperName == "tryAt" && callExpr.args.size() == 2) ||
-                (helperName == "count" && callExpr.args.size() > 1))) {
+                (helperName == "count" && !callExpr.args.empty()))) {
+            return false;
+          }
+          if (helperName == "count" &&
+              callExpr.args.front().kind == Expr::Kind::Call) {
             return false;
           }
           const SemanticProductIndex canonicalKeyValueHelperSemanticIndex =
