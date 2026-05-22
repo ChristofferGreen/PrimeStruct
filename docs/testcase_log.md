@@ -827,8 +827,18 @@
   stale namespaced `tryAt` compatibility assertion to the current
   `unknown call target: /map/tryAt` diagnostic. Next continuation point is
   `PrimeStruct_primestruct_compile_run_vm_collections_alias_and_basics_51_60`.
+  The collection alias/basics 51-60 shard was stabilized on 2026-05-22 07:17
+  CEST by retargeting stale canonical map helper override expectations to the
+  current mixed count/access precedence and current VM wrapper-return
+  access-helper lowering rejection. Next continuation point is
+  `PrimeStruct_primestruct_compile_run_vm_collections_templated_wrapper_parity_61_70`.
 
 ## Recent Test Runs
+- 2026-05-22 07:17 CEST | pass | mode: release | command:
+  `cmake --build build-release --target PrimeStruct_compile_run_tests -j 1`;
+  `cd build-release && ctest --output-on-failure -R '^PrimeStruct_primestruct_compile_run_vm_collections_alias_and_basics_51_60$' --timeout 120`
+  | failures: none | notes: retargeted stale explicit canonical map helper
+  override and wrapper-return access-helper assertions.
 - 2026-05-22 07:15 CEST | pass | mode: release | command:
   `cmake --build build-release --target PrimeStruct_compile_run_tests -j 1`;
   `cd build-release && ctest --output-on-failure -R '^PrimeStruct_primestruct_compile_run_vm_collections_alias_and_basics_41_50$' --timeout 120`

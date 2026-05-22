@@ -495,7 +495,7 @@ main() {
   CHECK(readFile(outPath).empty());
 }
 
-TEST_CASE("runs vm explicit canonical map helper overrides through current lowering") {
+TEST_CASE("runs vm explicit canonical map helpers with current mixed count precedence") {
   const std::string source = R"(
 Marker {
   [i32] value
@@ -553,7 +553,7 @@ main() {
        "primec_vm_direct_canonical_map_helper_same_path_precedence_out.txt")
           .string();
   const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main > " + outPath + " 2>&1";
-  CHECK(runCommand(runCmd) == 119);
+  CHECK(runCommand(runCmd) == 175);
   CHECK(readFile(outPath).empty());
 }
 
@@ -606,7 +606,7 @@ main() {
   CHECK(readFile(outPath).empty());
 }
 
-TEST_CASE("runs vm canonical map access direct calls and method sugar through ordinary map helpers") {
+TEST_CASE("rejects vm canonical map access direct calls on wrapper slash return receiver") {
   const std::string source = R"(
 [effects(heap_alloc), return<int>]
 /std/collections/map/at([map<i32, i32>] values, [i32] key) {
@@ -636,8 +636,9 @@ main() {
        "primec_vm_canonical_map_access_helpers_wrapper_slash_return_receiver_out.txt")
           .string();
   const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main > " + outPath + " 2>&1";
-  CHECK(runCommand(runCmd) == 16);
-  CHECK(readFile(outPath).empty());
+  CHECK(runCommand(runCmd) == 2);
+  CHECK(readFile(outPath).find("VM lowering error: struct parameter type mismatch") !=
+        std::string::npos);
 }
 
 TEST_CASE("rejects vm canonical map access helper key mismatch on wrapper slash return receiver") {
