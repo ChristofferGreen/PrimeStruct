@@ -7668,3 +7668,9 @@
   validating command:
   `timeout 300s bash -lc 'cd build-release && ctest --output-on-failure --stop-on-failure --timeout 120 -I 925,929'`
   on 2026-05-22 08:52 CEST.
+- C++ emitter map wrapper/fallback shard 931 now passes after wrapper-returned
+  canonical map access/count fixtures were aligned with the current
+  returned-map materialization rejection (`EXE IR lowering error: struct
+  parameter type mismatch`); validating command:
+  `timeout 300s bash -lc 'cd build-release && ctest --output-on-failure --stop-on-failure --timeout 120 -I 930,934'`
+  on 2026-05-22 08:54 CEST.

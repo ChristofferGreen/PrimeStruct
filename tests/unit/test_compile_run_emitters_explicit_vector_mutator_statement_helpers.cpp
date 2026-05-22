@@ -494,7 +494,7 @@ main() {
         std::string::npos);
 }
 
-TEST_CASE("C++ emitter compiles direct wrapper-returned canonical map access count shadow") {
+TEST_CASE("C++ emitter rejects direct wrapper-returned canonical map access count shadow") {
   const std::string source = R"(
 [return<int>]
 /string/count([string] values) {
@@ -525,10 +525,12 @@ main() {
 
   const std::string compileCmd =
       "./primec --emit=exe " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
-  CHECK(runCommand(compileCmd) == 0);
+  CHECK(runCommand(compileCmd) == 2);
+  CHECK(readFile(errPath).find("EXE IR lowering error: struct parameter type mismatch") !=
+        std::string::npos);
 }
 
-TEST_CASE("C++ emitter keeps wrapper-returned canonical map method access string receiver typing") {
+TEST_CASE("C++ emitter rejects wrapper-returned canonical map method access string receiver typing") {
   const std::string source = R"(
 [return<int>]
 /string/count([string] values) {
@@ -562,11 +564,16 @@ main() {
       (testScratchPath("") /
        "primec_cpp_wrapper_canonical_map_method_access_count_diag_exe")
           .string();
+  const std::string errPath =
+      (testScratchPath("") /
+       "primec_cpp_wrapper_canonical_map_method_access_count_diag.err")
+          .string();
 
   const std::string compileCmd =
-      "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main";
-  CHECK(runCommand(compileCmd) == 0);
-  CHECK(runCommand(exePath) == 182);
+      "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main 2> " + errPath;
+  CHECK(runCommand(compileCmd) == 2);
+  CHECK(readFile(errPath).find("EXE IR lowering error: struct parameter type mismatch") !=
+        std::string::npos);
 }
 
 TEST_CASE("C++ emitter keeps canonical map unknown-target diagnostics on direct-call wrapper-returned canonical map reference access") {
