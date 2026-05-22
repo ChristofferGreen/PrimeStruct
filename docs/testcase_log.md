@@ -814,8 +814,19 @@
   `count` diagnostic and current helper-precedence return value. Next
   continuation point is
   `PrimeStruct_primestruct_compile_run_vm_collections_alias_and_basics_11_20`.
+  The collection alias/basics 11-20 shard was stabilized on 2026-05-22 07:13
+  CEST by retargeting stale rooted `/map/count` compatibility expectations to
+  ordinary user-definition behavior, current `/map/count` unknown-target
+  diagnostics, and the current VM expression-lowering rejection for a
+  synthetic canonical map count helper call. Next continuation point is
+  `PrimeStruct_primestruct_compile_run_vm_collections_alias_and_basics_21_30`.
 
 ## Recent Test Runs
+- 2026-05-22 07:13 CEST | pass | mode: release | command:
+  `cmake --build build-release --target PrimeStruct_compile_run_tests -j 1`;
+  `cd build-release && ctest --output-on-failure -R '^PrimeStruct_primestruct_compile_run_vm_collections_alias_and_basics_11_20$' --timeout 120`
+  | failures: none | notes: retargeted stale rooted map-count compatibility
+  assertions and the synthetic canonical count expression-call VM limitation.
 - 2026-05-22 07:11 CEST | pass | mode: release | command:
   `cmake --build build-release --target primec PrimeStruct_compile_run_tests -j 1`;
   `cd build-release && ctest --output-on-failure -R '^PrimeStruct_primestruct_compile_run_vm_collections_alias_and_basics_1_10$' --timeout 120`

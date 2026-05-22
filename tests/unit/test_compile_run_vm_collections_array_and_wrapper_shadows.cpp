@@ -307,7 +307,7 @@ main() {
         std::string::npos);
 }
 
-TEST_CASE("runs vm map compatibility count call through builtin count") {
+TEST_CASE("runs vm rooted map count as ordinary user definition") {
   const std::string source = R"(
 [return<int>]
 /map/count([map<i32, i32>] values) {
@@ -332,7 +332,7 @@ main() {
        "primec_vm_map_count_call_alias_precedence_with_canonical_templated_helper_out.txt")
           .string();
   const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main > " + outPath + " 2>&1";
-  CHECK(runCommand(runCmd) == 1);
+  CHECK(runCommand(runCmd) == 96);
   CHECK(readFile(outPath).empty());
 }
 
@@ -362,7 +362,7 @@ main() {
           .string();
   const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main > " + outPath + " 2>&1";
   CHECK(runCommand(runCmd) == 2);
-  CHECK(readFile(outPath).find("argument count mismatch for /map/count") != std::string::npos);
+  CHECK(readFile(outPath).find("unknown call target: /map/count") != std::string::npos);
 }
 
 TEST_CASE("runs vm map compatibility explicit-template count call with canonical templated helper present") {
@@ -512,7 +512,7 @@ main() {
   CHECK(readFile(outPath).find("argument count mismatch for /std/collections/map/count") != std::string::npos);
 }
 
-TEST_CASE("runs vm canonical implicit-template map count call with wrapper slash return envelope") {
+TEST_CASE("rejects vm canonical implicit-template map count expression call with wrapper slash return envelope") {
   const std::string source = R"(
 [return<int>]
 /std/collections/map/count<K, V>([map<K, V>] values, [bool] marker) {
@@ -531,8 +531,14 @@ main() {
 )";
   const std::string srcPath =
       writeTemp("vm_canonical_map_count_implicit_template_wrapper_slash_return_envelope.prime", source);
-  const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main";
-  CHECK(runCommand(runCmd) == 96);
+  const std::string outPath =
+      (std::filesystem::temp_directory_path() /
+       "primec_vm_canonical_map_count_implicit_template_wrapper_slash_return_envelope_out.txt")
+          .string();
+  const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main > " + outPath + " 2>&1";
+  CHECK(runCommand(runCmd) == 2);
+  CHECK(readFile(outPath).find("VM lowering error: vm backend only supports arithmetic/comparison") !=
+        std::string::npos);
 }
 
 TEST_CASE("runs vm with builtin string count before user call shadow") {
