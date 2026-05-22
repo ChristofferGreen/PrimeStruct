@@ -37,6 +37,10 @@ bool SemanticsValidator::validateBlockExpr(const std::vector<ParameterInfo> &par
       continue;
     }
     if (bodyExpr.isBinding) {
+      if (isCompileTimeTypeBinding(bodyExpr)) {
+        return failBlockDiagnostic(bodyExpr,
+                                   "type bindings are only supported in definition bodies");
+      }
       if (isLast && !sawReturn) {
         return failBlockDiagnostic(bodyExpr,
                                    "block expression must end with an expression");

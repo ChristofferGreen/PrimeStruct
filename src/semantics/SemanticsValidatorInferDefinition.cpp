@@ -254,6 +254,9 @@ bool SemanticsValidator::inferDefinitionStatementReturns(
     return failExprDiagnostic(stmt, std::move(message));
   };
   if (stmt.isBinding) {
+    if (isCompileTimeTypeBinding(stmt)) {
+      return true;
+    }
     BindingInfo info;
     std::optional<std::string> restrictType;
     if (!parseBindingInfo(stmt, def.namespacePrefix, structNames_, importAliases_, info, restrictType, error_,

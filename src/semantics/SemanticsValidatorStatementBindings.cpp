@@ -53,6 +53,7 @@ bool SemanticsValidator::validateBindingStatement(const std::vector<ParameterInf
                                                   const Expr &stmt,
                                                   bool allowBindings,
                                                   const std::string &namespacePrefix,
+                                                  bool allowCompileTimeTypeBindings,
                                                   bool &handled) {
   handled = false;
   if (!stmt.isBinding) {
@@ -75,6 +76,77 @@ bool SemanticsValidator::validateBindingStatement(const std::vector<ParameterInf
   if (stmt.hasBodyArguments || !stmt.bodyArguments.empty()) {
     return failBindingDiagnostic("binding does not accept block arguments");
   }
+  if (isCompileTimeTypeBinding(stmt)) {
+    if (!allowCompileTimeTypeBindings) {
+      return failBindingDiagnostic("type bindings are only supported in definition bodies");
+    }
+    if (isParam(params, stmt.name) || locals.count(stmt.name) > 0 ||
+        currentValidationState_.compileTimeTypeLocals.count(stmt.name) > 0) {
+      return failBindingDiagnostic("duplicate binding name: " + stmt.name);
+    }
+    bool sawTypeTransform = false;
+    for (const auto &transform : stmt.transforms) {
+      if (transform.name == "type") {
+        if (sawTypeTransform) {
+          return failBindingDiagnostic("duplicate type transform on binding");
+        }
+        sawTypeTransform = true;
+        if (!transform.templateArgs.empty() || !transform.arguments.empty()) {
+          return failBindingDiagnostic("type binding transform does not take arguments");
+        }
+        continue;
+      }
+      if (isBindingAuxTransformName(transform.name)) {
+        return failBindingDiagnostic("type binding does not accept binding qualifier: " + transform.name);
+      }
+      return failBindingDiagnostic("type binding requires only the type transform");
+    }
+    if (!sawTypeTransform) {
+      return failBindingDiagnostic("type binding requires type transform");
+    }
+    if (stmt.args.size() != 1) {
+      return failBindingDiagnostic("type binding requires exactly one initializer");
+    }
+    const Expr *typeExpr = &stmt.args.front();
+    const Expr &initializer = stmt.args.front();
+    if (initializer.kind == Expr::Kind::Call && initializer.name == "block" &&
+        initializer.hasBodyArguments && initializer.args.empty() &&
+        initializer.templateArgs.empty() && !hasNamedArguments(initializer.argNames)) {
+      if (initializer.bodyArguments.size() != 1) {
+        return failBindingDiagnostic("type binding initializer must be a single type expression");
+      }
+      typeExpr = &initializer.bodyArguments.front();
+    } else if (initializer.hasBodyArguments || !initializer.bodyArguments.empty() ||
+               hasNamedArguments(stmt.argNames)) {
+      return failBindingDiagnostic("type binding initializer must be a single type expression");
+    }
+    if (typeExpr->kind != Expr::Kind::Name || typeExpr->name == "auto") {
+      return failBindingDiagnostic("type binding initializer requires a concrete type");
+    }
+    std::string resolvedType = typeExpr->name;
+    if (!isPrimitiveBindingTypeName(typeExpr->name)) {
+      resolvedType = resolveStructTypePath(typeExpr->name, namespacePrefix, structNames_);
+      if (resolvedType.empty()) {
+        auto importIt = importAliases_.find(typeExpr->name);
+        if (importIt != importAliases_.end() &&
+            (structNames_.count(importIt->second) > 0 || sumNames_.count(importIt->second) > 0)) {
+          resolvedType = importIt->second;
+        }
+      }
+      if (resolvedType.empty() && sumNames_.count(typeExpr->name) > 0) {
+        resolvedType = typeExpr->name;
+      }
+      if (resolvedType.empty() && !typeExpr->name.empty() && typeExpr->name.front() == '/' &&
+          (structNames_.count(typeExpr->name) > 0 || sumNames_.count(typeExpr->name) > 0)) {
+        resolvedType = typeExpr->name;
+      }
+      if (resolvedType.empty()) {
+        return failBindingDiagnostic("type binding initializer requires a concrete type");
+      }
+    }
+    currentValidationState_.compileTimeTypeLocals.emplace(stmt.name, std::move(resolvedType));
+    return true;
+  }
   if (stmt.transforms.empty() && !stmt.args.empty()) {
     const std::string lookupNamespace =
         !stmt.namespacePrefix.empty() ? stmt.namespacePrefix : namespacePrefix;
@@ -92,7 +164,8 @@ bool SemanticsValidator::validateBindingStatement(const std::vector<ParameterInf
       return true;
     }
   }
-  if (isParam(params, stmt.name) || locals.count(stmt.name) > 0) {
+  if (isParam(params, stmt.name) || locals.count(stmt.name) > 0 ||
+      currentValidationState_.compileTimeTypeLocals.count(stmt.name) > 0) {
     return failBindingDiagnostic("duplicate binding name: " + stmt.name);
   }
   for (const auto &transform : stmt.transforms) {

@@ -1022,6 +1022,13 @@ Planned procedural compile-time genericity contract:
 - `[type]` locals are semantic compile-time facts. They may be consumed by
   later type-envelope positions and generated type declarations, but they must
   not survive into backend-facing IR.
+- Current implementation boundary: direct definition-body
+  `[type] Name { ConcreteType }` statements validate as semantic-only type
+  facts, share the local duplicate-name namespace, and are erased before
+  semantic-product publication and IR lowering. The semantic-product dump
+  therefore documents a temporary adapter boundary rather than exposing a
+  dedicated type-local fact family until the later procedural-genericity
+  publication work lands.
 - Local generated types are nominal per enclosing definition specialization.
   Their generated paths, semantic-product provenance, and IR names must be
   stable across repeated builds and import order, but the types cannot escape

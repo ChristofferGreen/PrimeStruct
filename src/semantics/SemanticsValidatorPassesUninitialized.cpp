@@ -340,6 +340,9 @@ std::optional<std::string> SemanticsValidator::validateUninitializedDefiniteStat
       const Expr &stmt = stmts[i];
       const bool isLast = (i + 1 == stmts.size());
       if (stmt.isBinding) {
+        if (isCompileTimeTypeBinding(stmt)) {
+          continue;
+        }
         if (stmt.args.size() == 1) {
           if (auto err = applyExprEffects(stmt.args.front(), localsIn, statesIn)) {
             return err;
@@ -462,6 +465,9 @@ std::optional<std::string> SemanticsValidator::validateUninitializedDefiniteStat
     };
 
     if (stmt.isBinding) {
+      if (isCompileTimeTypeBinding(stmt)) {
+        return {};
+      }
       if (stmt.args.size() == 1) {
         if (auto err = applyExprEffects(stmt.args.front(), localsIn, statesIn)) {
           return {err, false};

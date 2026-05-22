@@ -6,6 +6,39 @@ Legend:
 Finished items are periodically archived here from `docs/todo.md`; section headers record the archive date.
 
 **Todo Completion (May 22, 2026)**
+- [x] TODO-4334: Add compile-time `[type]` local bindings
+  - owner: ai
+  - created_at: 2026-05-04
+  - finished_at: 2026-05-22
+  - phase: Procedural compile-time genericity
+  - parallel_track: procedural-genericity
+  - depends_on: TODO-4333
+  - scope: Parse and validate compile-time local type bindings such as
+    `[type] LeftT { ... }` without yet allowing those locals in every
+    envelope position.
+  - outcome:
+    - Accepted direct definition-body `[type] Name { ConcreteType }`
+      statements as compile-time type facts.
+    - Rejected top-level and unsupported-scope type bindings, runtime-only
+      initializers, mutation qualifiers, duplicate local names, and runtime
+      reads of type locals with deterministic diagnostics.
+    - Kept type locals out of ordinary runtime locals, semantic-product
+      binding facts, and backend-facing IR by erasing validated type-local
+      fact statements before publication/lowering.
+    - Documented the temporary semantic-product adapter boundary and promoted
+      TODO-4335 as the next Ready Now procedural-genericity leaf.
+  - validation:
+    - `cmake --build build-release --target PrimeStruct_misc_tests -j 1`
+      passed.
+    - `cd build-release && ./PrimeStruct_misc_tests --test-case="compile-time type local validates and is erased,type local is not a runtime value,type local rejects runtime initializer,type local rejects binding qualifiers,type local shares duplicate binding namespace,top-level type local rejects as binding syntax" --no-skip`
+      passed.
+    - `cmake --build build-release --target PrimeStruct_compile_run_tests -j 1`
+      passed.
+    - `cd build-release && ./PrimeStruct_compile_run_tests --test-case="todo queue and skipped doctest debt stay source locked" --no-skip`
+      passed.
+    - Full `./scripts/compile.sh --release` remains deferred by the lite
+      workflow.
+
 - [x] TODO-4333: Reject ambiguous value/execution names
   - owner: ai
   - created_at: 2026-05-04

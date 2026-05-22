@@ -359,6 +359,7 @@ bool SemanticsValidator::validatePickExpr(
                                       bodyExpr,
                                       true,
                                       bodyExpr.namespacePrefix,
+                                      false,
                                       handledBinding)) {
           return false;
         }

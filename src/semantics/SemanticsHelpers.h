@@ -69,6 +69,7 @@ std::string resolveStructTypePath(const std::string &name,
 bool isBindingQualifierName(const std::string &name);
 bool isBindingAuxTransformName(const std::string &name);
 bool hasExplicitBindingTypeTransform(const Expr &expr);
+bool isCompileTimeTypeBinding(const Expr &expr);
 bool isPrimitiveBindingTypeName(const std::string &name);
 bool isSoftwareNumericTypeName(const std::string &name);
 std::optional<std::string> findSoftwareNumericType(const std::string &typeName);

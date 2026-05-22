@@ -196,6 +196,9 @@ bool SemanticsValidator::isOutsideEffectFreeStatement(const Expr &stmt,
                                                       EffectFreeContext &ctx,
                                                       bool &writesThis) {
   if (stmt.isBinding) {
+    if (isCompileTimeTypeBinding(stmt)) {
+      return true;
+    }
     if (ctx.locals.count(stmt.name) > 0) {
       return false;
     }

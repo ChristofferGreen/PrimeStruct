@@ -124,6 +124,18 @@ bool hasExplicitBindingTypeTransform(const Expr &expr) {
   return false;
 }
 
+bool isCompileTimeTypeBinding(const Expr &expr) {
+  if (!expr.isBinding) {
+    return false;
+  }
+  for (const auto &transform : expr.transforms) {
+    if (transform.name == "type") {
+      return true;
+    }
+  }
+  return false;
+}
+
 bool isPrimitiveBindingTypeName(const std::string &name) {
   return name == "int" || name == "i32" || name == "i64" || name == "u64" || name == "float" || name == "f32" ||
          name == "f64" || name == "integer" || name == "decimal" || name == "complex" || name == "bool" ||

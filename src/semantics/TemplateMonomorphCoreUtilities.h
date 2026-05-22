@@ -1,7 +1,8 @@
 #pragma once
 
 bool isNonTypeTransformName(const std::string &name) {
-  return name == "return" || name == "effects" || name == "capabilities" || name == "mut" || name == "copy" ||
+  return name == "return" || name == "effects" || name == "capabilities" || name == "type" ||
+         name == "mut" || name == "copy" ||
          name == "restrict" || name == "align_bytes" || name == "align_kbytes" || name == "on_error" ||
          name == "struct" || name == "enum" || name == "unsafe" ||
          name == "pod" || name == "handle" || name == "gpu_lane" || name == "no_padding" ||

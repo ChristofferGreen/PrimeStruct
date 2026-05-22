@@ -258,7 +258,8 @@ bool SemanticsValidator::validateDefinitionsFromStableIndexResolver(
                              &definitionContext.sawReturn,
                              def.namespacePrefix,
                              &def.statements,
-                             stmtIndex)) {
+                             stmtIndex,
+                             true)) {
         if (error_.empty()) {
           return failPassesDefinitionsDiagnostic(
               &stmt,

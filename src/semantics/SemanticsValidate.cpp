@@ -6336,6 +6336,37 @@ bool rewriteOmittedStructInitializers(Program &program, std::string &error) {
 
 namespace {
 
+void eraseCompileTimeTypeBindingsFromExpr(Expr &expr);
+
+void eraseCompileTimeTypeBindingsFromExprs(std::vector<Expr> &exprs) {
+  for (Expr &expr : exprs) {
+    eraseCompileTimeTypeBindingsFromExpr(expr);
+  }
+  exprs.erase(std::remove_if(exprs.begin(), exprs.end(), [](const Expr &expr) {
+                return semantics::isCompileTimeTypeBinding(expr);
+              }),
+              exprs.end());
+}
+
+void eraseCompileTimeTypeBindingsFromExpr(Expr &expr) {
+  eraseCompileTimeTypeBindingsFromExprs(expr.args);
+  eraseCompileTimeTypeBindingsFromExprs(expr.bodyArguments);
+}
+
+void eraseCompileTimeTypeBindings(Program &program) {
+  for (Definition &def : program.definitions) {
+    eraseCompileTimeTypeBindingsFromExprs(def.parameters);
+    eraseCompileTimeTypeBindingsFromExprs(def.statements);
+    if (def.returnExpr.has_value()) {
+      eraseCompileTimeTypeBindingsFromExpr(*def.returnExpr);
+    }
+  }
+  for (Execution &exec : program.executions) {
+    eraseCompileTimeTypeBindingsFromExprs(exec.arguments);
+    eraseCompileTimeTypeBindingsFromExprs(exec.bodyArguments);
+  }
+}
+
 bool runSemanticValidationManifestAstPass(
     const semantics::SemanticValidationPassManifestEntry &pass,
     Program &program,
@@ -6516,6 +6547,7 @@ bool runSemanticValidation(Program &program,
       return false;
     }
     validationCounters = validator.validationCounters();
+    eraseCompileTimeTypeBindings(program);
     if (!rewriteOmittedStructInitializers(program, error)) {
       return false;
     }

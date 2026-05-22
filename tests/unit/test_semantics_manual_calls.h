@@ -211,6 +211,121 @@ main() {
   CHECK(error.find("unknown identifier: needs_value") != std::string::npos);
 }
 
+TEST_CASE("compile-time type local validates and is erased") {
+  const std::string source = R"(
+[return<int>]
+main() {
+  [type] ValueT { i32 }
+  return(5i32)
+}
+)";
+  primec::Lexer lexer(source);
+  primec::Parser parser(lexer.tokenize());
+  primec::Program program;
+  std::string error;
+  REQUIRE(parser.parse(program, error));
+  primec::Semantics semantics;
+  const std::vector<std::string> defaults = {"io_out", "io_err"};
+  primec::SemanticProgram semanticProgram;
+  CHECK(semantics.validate(program,
+                           "/main",
+                           error,
+                           defaults,
+                           defaults,
+                           {},
+                           nullptr,
+                           false,
+                           &semanticProgram));
+  REQUIRE(error.empty());
+  auto mainIt = std::find_if(program.definitions.begin(),
+                             program.definitions.end(),
+                             [](const primec::Definition &def) {
+                               return def.fullPath == "/main";
+                             });
+  REQUIRE(mainIt != program.definitions.end());
+  CHECK(std::none_of(mainIt->statements.begin(),
+                     mainIt->statements.end(),
+                     [](const primec::Expr &stmt) {
+                       return stmt.isBinding && stmt.name == "ValueT";
+                     }));
+  CHECK(std::none_of(semanticProgram.bindingFacts.begin(),
+                     semanticProgram.bindingFacts.end(),
+                     [](const primec::SemanticProgramBindingFact &fact) {
+                       return fact.name == "ValueT";
+                     }));
+}
+
+TEST_CASE("type local is not a runtime value") {
+  const std::string source = R"(
+[return<int>]
+main() {
+  [type] ValueT { i32 }
+  return(ValueT)
+}
+)";
+  std::string error;
+  CHECK_FALSE(validateSourceProgram(source, "/main", error));
+  CHECK(error.find("type local is not a runtime value: ValueT") != std::string::npos);
+}
+
+TEST_CASE("type local rejects runtime initializer") {
+  const std::string source = R"(
+[return<int>]
+main() {
+  value{1i32}
+  [type] ValueT { value }
+  return(value)
+}
+)";
+  std::string error;
+  CHECK_FALSE(validateSourceProgram(source, "/main", error));
+  CHECK(error.find("type binding initializer requires a concrete type") != std::string::npos);
+}
+
+TEST_CASE("type local rejects binding qualifiers") {
+  const std::string source = R"(
+[return<int>]
+main() {
+  [type mut] ValueT { i32 }
+  return(1i32)
+}
+)";
+  std::string error;
+  CHECK_FALSE(validateSourceProgram(source, "/main", error));
+  CHECK(error.find("type binding does not accept binding qualifier: mut") != std::string::npos);
+}
+
+TEST_CASE("type local shares duplicate binding namespace") {
+  const std::string source = R"(
+[return<int>]
+main() {
+  [type] ValueT { i32 }
+  [i32] ValueT{1i32}
+  return(ValueT)
+}
+)";
+  std::string error;
+  CHECK_FALSE(validateSourceProgram(source, "/main", error));
+  CHECK(error.find("duplicate binding name: ValueT") != std::string::npos);
+}
+
+TEST_CASE("top-level type local rejects as binding syntax") {
+  const std::string source = R"(
+[type] ValueT { i32 }
+[return<int>]
+main() {
+  return(1i32)
+}
+)";
+  primec::Lexer lexer(source);
+  primec::Parser parser(lexer.tokenize());
+  primec::Program program;
+  std::string error;
+  CHECK_FALSE(parser.parse(program, error));
+  CHECK(error.find("bindings are only allowed inside definition bodies or parameter lists") !=
+        std::string::npos);
+}
+
 TEST_CASE("named arguments not allowed on builtin calls in manual AST") {
   primec::Program program;
   primec::Expr plusCall = makeCall("plus", {makeLiteral(1), makeLiteral(2)},

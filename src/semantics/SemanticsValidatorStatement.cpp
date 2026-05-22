@@ -78,7 +78,8 @@ bool SemanticsValidator::validateStatement(const std::vector<ParameterInfo> &par
                                            bool *sawReturn,
                                            const std::string &namespacePrefix,
                                            const std::vector<Expr> *enclosingStatements,
-                                           size_t statementIndex) {
+                                           size_t statementIndex,
+                                           bool allowCompileTimeTypeBindings) {
   ExprContextScope statementScope(*this, stmt);
   observeLocalMapSize(locals.size());
   auto failStatementDiagnostic = [&](std::string message) -> bool {
@@ -90,7 +91,13 @@ bool SemanticsValidator::validateStatement(const std::vector<ParameterInfo> &par
     definitionTemplateArgs = &currentDefIt->second->templateArgs;
   }
   bool handledBindingStatement = false;
-  if (!validateBindingStatement(params, locals, stmt, allowBindings, namespacePrefix, handledBindingStatement)) {
+  if (!validateBindingStatement(params,
+                                locals,
+                                stmt,
+                                allowBindings,
+                                namespacePrefix,
+                                allowCompileTimeTypeBindings,
+                                handledBindingStatement)) {
     if (error_.empty()) {
       return failStatementDiagnostic("validateBindingStatement failed");
     }

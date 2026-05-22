@@ -281,6 +281,9 @@ bool SemanticsValidator::inferDefinitionReturnBinding(const Definition &def, Bin
   bool sawReturn = false;
   for (const auto &stmt : def.statements) {
     if (stmt.isBinding) {
+      if (isCompileTimeTypeBinding(stmt)) {
+        continue;
+      }
       BindingInfo binding;
       std::optional<std::string> restrictType;
       std::string parseError;

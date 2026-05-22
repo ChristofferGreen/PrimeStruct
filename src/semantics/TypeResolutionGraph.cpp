@@ -543,6 +543,9 @@ private:
     if (!expr.isBinding) {
       return false;
     }
+    if (isCompileTimeTypeBinding(expr)) {
+      return false;
+    }
     const std::optional<std::string> typeName = explicitBindingTypeName(expr);
     return !typeName.has_value() || *typeName == "auto";
   }

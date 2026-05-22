@@ -6,6 +6,9 @@ bool tryAppendDefinitionParameterBinding(Expr &param,
                                          LocalTypeMap &locals,
                                          std::vector<ParameterInfo> &paramsOut) {
   BindingInfo info;
+  if (isCompileTimeTypeBinding(param)) {
+    return false;
+  }
   if (extractExplicitBindingType(param, info)) {
     if (info.typeName == "auto" && param.args.size() == 1 &&
         inferBindingTypeForMonomorph(param.args.front(), {}, {}, allowMathBare, ctx, info)) {
@@ -62,6 +65,11 @@ void recordDefinitionStatementBindingLocal(Expr &stmt,
                                            Context &ctx,
                                            LocalTypeMap &localsOut) {
   BindingInfo info;
+  if (isCompileTimeTypeBinding(stmt)) {
+    info.typeName = "type";
+    localsOut[stmt.name] = info;
+    return;
+  }
   if (extractExplicitBindingType(stmt, info)) {
     if (info.typeName == "auto" && stmt.args.size() == 1 &&
         inferBindingTypeForMonomorph(stmt.args.front(), params, locals, allowMathBare, ctx, info)) {

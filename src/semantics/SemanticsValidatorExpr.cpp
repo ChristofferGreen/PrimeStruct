@@ -74,6 +74,9 @@ bool SemanticsValidator::validateExpr(const std::vector<ParameterInfo> &params,
       }
       return true;
     }
+    if (currentValidationState_.compileTimeTypeLocals.count(expr.name) > 0) {
+      return failExprRootDiagnostic("type local is not a runtime value: " + expr.name);
+    }
     if (!allowMathBareName(expr.name) && expr.name.find('/') == std::string::npos &&
         isBuiltinMathConstant(expr.name, true)) {
       return failExprRootDiagnostic(

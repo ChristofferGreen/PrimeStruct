@@ -9,12 +9,14 @@
                          bool *sawReturn,
                          const std::string &namespacePrefix,
                          const std::vector<Expr> *enclosingStatements = nullptr,
-                         size_t statementIndex = 0);
+                         size_t statementIndex = 0,
+                         bool allowCompileTimeTypeBindings = false);
   bool validateBindingStatement(const std::vector<ParameterInfo> &params,
                                 std::unordered_map<std::string, BindingInfo> &locals,
                                 const Expr &stmt,
                                 bool allowBindings,
                                 const std::string &namespacePrefix,
+                                bool allowCompileTimeTypeBindings,
                                 bool &handled);
   void insertLocalBinding(std::unordered_map<std::string, BindingInfo> &locals,
                           const std::string &name,
@@ -134,6 +136,7 @@
     ValidationContext context;
     std::unordered_set<std::string> movedBindings;
     std::unordered_set<std::string> endedReferenceBorrows;
+    std::unordered_map<std::string, std::string> compileTimeTypeLocals;
   };
 
   bool parseTransformArgumentExpr(const std::string &text, const std::string &namespacePrefix, Expr &out);
