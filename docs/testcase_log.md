@@ -8340,3 +8340,8 @@
   begins the bindings suite. Validating command: `cd build-release && ctest
   --output-on-failure --stop-on-failure --timeout 120 -I 1406,1410` on
   2026-05-23 22:24 CEST. Next focused continuation starts at `-I 1411,1415`.
+- Compile-run shards 1411-1415 now pass without source edits. This window
+  includes bindings and the first spinning-cube example tests. Validating
+  command: `cd build-release && ctest --output-on-failure --stop-on-failure
+  --timeout 120 -I 1411,1415` on 2026-05-23 22:26 CEST. Next focused
+  continuation starts at `-I 1416,1420`.
