@@ -6,6 +6,28 @@ Legend:
 Finished items are periodically archived here from `docs/todo.md`; section headers record the archive date.
 
 **Todo Completion (May 23, 2026)**
+- [x] TODO-4347: Integrate requirements with overload selection
+  - owner: ai
+  - created_at: 2026-05-04
+  - finished_at: 2026-05-23
+  - phase: Generic constraint and compile-time flow alignment
+  - parallel_track: generic-requirements-overload-selection
+  - depends_on: TODO-4344, TODO-4357, TODO-4358, TODO-4550, TODO-4551
+  - scope: Route requirement facts into call and overload resolution so
+    constrained generic candidates are selected or rejected deterministically.
+  - outcome:
+    - Allowed same-arity helper overload families when requirement transforms
+      constrain at least one candidate.
+    - Routed same-arity helper selection through requirement predicate facts
+      derived from simple call argument types, locals, and parameters.
+    - Preserved deterministic no-viable and ambiguous requirement-overload
+      diagnostics instead of silently erasing failed candidates.
+    - Added focused semantics coverage for viable, local-fact, no-viable, and
+      ambiguous requirement-constrained overload calls.
+  - validation:
+    - `cmake --build build-release --target PrimeStruct_semantics_tests -j 1`
+    - `./PrimeStruct_semantics_tests --test-case="requirement constrained overload selects the viable same arity candidate,requirement constrained overload uses local argument facts,requirement constrained overload preserves no viable diagnostics,requirement constrained overload rejects multiple viable candidates" --no-skip`
+
 - [x] TODO-4551: Add compile-time evaluation cache keys
   - owner: ai
   - created_at: 2026-05-23

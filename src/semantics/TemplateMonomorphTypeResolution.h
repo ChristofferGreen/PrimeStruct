@@ -585,7 +585,11 @@ bool rewriteTransforms(std::vector<Transform> &transforms,
   return true;
 }
 
-std::string resolveCalleePath(const Expr &expr, const std::string &namespacePrefix, const Context &ctx) {
+std::string resolveCalleePath(const Expr &expr,
+                              const std::string &namespacePrefix,
+                              const Context &ctx,
+                              const LocalTypeMap *locals,
+                              const std::vector<ParameterInfo> *params) {
   auto rewriteBuiltinCollectionImportAlias = [&](const std::string &resolvedPath) -> std::string {
     if (expr.isMethodCall) {
       return resolvedPath;
@@ -628,7 +632,8 @@ std::string resolveCalleePath(const Expr &expr, const std::string &namespacePref
     return resolvedPath;
   };
   auto finalizeResolvedPath = [&](const std::string &resolvedPath) -> std::string {
-    return selectHelperOverloadPath(expr, rewriteCanonicalCollectionConstructorPath(resolvedPath), ctx);
+    return selectHelperOverloadPath(
+        expr, rewriteCanonicalCollectionConstructorPath(resolvedPath), ctx, locals, params);
   };
   auto resolveStdlibSurfaceCompatibilityAlias = [&]() -> std::string {
     if (expr.isMethodCall || !usesStdlibScopedImportAliases(namespacePrefix, ctx)) {

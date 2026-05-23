@@ -1059,6 +1059,102 @@ main() {
         std::string::npos);
 }
 
+TEST_CASE("requirement constrained overload selects the viable same arity candidate") {
+  const std::string source = R"(
+[return<T> require(type_equals<typeof<value>, i64>())]
+choose<T>([T] value) {
+  return(value)
+}
+
+[return<T> require(type_equals<typeof<value>, i32>())]
+choose<T>([T] value) {
+  return(value)
+}
+
+[return<i32>]
+main() {
+  return(choose(4i32))
+}
+)";
+
+  std::string error;
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
+}
+
+TEST_CASE("requirement constrained overload uses local argument facts") {
+  const std::string source = R"(
+[return<T> require(type_equals<typeof<value>, i64>())]
+choose<T>([T] value) {
+  return(value)
+}
+
+[return<T> require(type_equals<typeof<value>, i32>())]
+choose<T>([T] value) {
+  return(value)
+}
+
+[return<i64>]
+main() {
+  [i64] selected{8i64}
+  return(choose(selected))
+}
+)";
+
+  std::string error;
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
+}
+
+TEST_CASE("requirement constrained overload preserves no viable diagnostics") {
+  const std::string source = R"(
+[return<T> require(type_equals<typeof<value>, i64>())]
+choose<T>([T] value) {
+  return(value)
+}
+
+[return<T> require(type_equals<typeof<value>, i32>())]
+choose<T>([T] value) {
+  return(value)
+}
+
+[return<f32>]
+main() {
+  return(choose(4.0f32))
+}
+)";
+
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("no viable requirement overload for /choose") !=
+        std::string::npos);
+  CHECK(error.find("/std/meta/type_equals") != std::string::npos);
+}
+
+TEST_CASE("requirement constrained overload rejects multiple viable candidates") {
+  const std::string source = R"(
+[return<T> require(type_equals<typeof<value>, i32>())]
+choose<T>([T] value) {
+  return(value)
+}
+
+[return<T> require(is_type<i32>())]
+choose<T>([T] value) {
+  return(value)
+}
+
+[return<i32>]
+main() {
+  return(choose(4i32))
+}
+)";
+
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("ambiguous requirement overload for /choose") !=
+        std::string::npos);
+}
+
 TEST_CASE("type resolution try operand metadata stays aligned with query snapshots") {
   const std::string source = R"(
 MyError {

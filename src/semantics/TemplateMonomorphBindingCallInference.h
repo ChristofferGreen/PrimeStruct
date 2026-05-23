@@ -53,7 +53,7 @@ bool inferCallBindingTypeForMonomorph(const Expr &initializer,
       resolved.clear();
     }
   } else {
-    resolved = resolveCalleePath(initializer, initializer.namespacePrefix, ctx);
+    resolved = resolveCalleePath(initializer, initializer.namespacePrefix, ctx, &locals, &params);
   }
 
   if (!initializer.isMethodCall && initializer.templateArgs.size() == 1) {

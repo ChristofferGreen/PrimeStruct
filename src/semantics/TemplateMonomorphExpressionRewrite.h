@@ -1984,7 +1984,13 @@ bool rewriteExpr(Expr &expr,
         return false;
       }
     }
-    std::string resolvedPath = resolveCalleePath(expr, namespacePrefix, ctx);
+    std::string resolvedPath =
+        resolveCalleePath(expr, namespacePrefix, ctx, &locals, &params);
+    if (!ctx.requirementOverloadSelectionError.empty()) {
+      error = ctx.requirementOverloadSelectionError;
+      ctx.requirementOverloadSelectionError.clear();
+      return false;
+    }
     const std::string preferredCollectionHelperPath =
         preferCanonicalStdlibCollectionHelperPath(resolvedPath);
     if (preferredCollectionHelperPath != resolvedPath) {
@@ -2680,6 +2686,11 @@ bool rewriteExpr(Expr &expr,
     const bool methodCallSyntax = expr.isMethodCall;
     std::string methodPath;
     if (resolveMethodCallTemplateTarget(expr, locals, ctx, methodPath)) {
+      if (!ctx.requirementOverloadSelectionError.empty()) {
+        error = ctx.requirementOverloadSelectionError;
+        ctx.requirementOverloadSelectionError.clear();
+        return false;
+      }
       const bool preserveExplicitCompatibilityTemplateMethodPath =
           !expr.templateArgs.empty() &&
           shouldPreserveCompatibilityTemplatePath(methodPath, ctx);

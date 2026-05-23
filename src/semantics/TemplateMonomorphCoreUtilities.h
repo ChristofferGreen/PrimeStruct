@@ -202,6 +202,21 @@ std::string helperOverloadInternalPath(const std::string &publicPath, size_t par
   return publicPath + "__ov" + std::to_string(parameterCount);
 }
 
+std::string helperOverloadDefinitionKey(const Definition &def) {
+  return def.fullPath + "#" + std::to_string(def.sourceLine) + ":" +
+         std::to_string(def.sourceColumn) + ":" +
+         std::to_string(def.parameters.size());
+}
+
+bool definitionHasRequireTransform(const Definition &def) {
+  for (const auto &transform : def.transforms) {
+    if (transform.name == "require") {
+      return true;
+    }
+  }
+  return false;
+}
+
 std::string genericTypeOverloadInternalPath(const std::string &publicPath,
                                             size_t templateParameterCount) {
   return publicPath + "__arity" + std::to_string(templateParameterCount);
@@ -260,7 +275,209 @@ bool selectGenericTypeOverloadPath(const std::string &resolvedPath,
   return false;
 }
 
-std::string selectHelperOverloadPath(const Expr &expr, const std::string &resolvedPath, const Context &ctx) {
+std::string bindingTypeTextForRequirementOverloadSelection(const BindingInfo &binding) {
+  if (binding.typeTemplateArg.empty()) {
+    return binding.typeName;
+  }
+  return binding.typeName + "<" + binding.typeTemplateArg + ">";
+}
+
+std::optional<std::string>
+requirementOverloadArgumentTypeText(const Expr &arg,
+                                    const LocalTypeMap *locals,
+                                    const std::vector<ParameterInfo> *params) {
+  switch (arg.kind) {
+  case Expr::Kind::Literal:
+    if (arg.isUnsigned) {
+      return arg.intWidth == 64 ? std::optional<std::string>("u64")
+                                : std::optional<std::string>("u32");
+    }
+    return arg.intWidth == 64 ? std::optional<std::string>("i64")
+                              : std::optional<std::string>("i32");
+  case Expr::Kind::BoolLiteral:
+    return std::string("bool");
+  case Expr::Kind::FloatLiteral:
+    return arg.floatWidth == 64 ? std::optional<std::string>("f64")
+                                : std::optional<std::string>("f32");
+  case Expr::Kind::StringLiteral:
+    return std::string("string");
+  case Expr::Kind::Name:
+    if (locals != nullptr) {
+      auto localIt = locals->find(arg.name);
+      if (localIt != locals->end()) {
+        return bindingTypeTextForRequirementOverloadSelection(localIt->second);
+      }
+    }
+    if (params != nullptr) {
+      for (const auto &param : *params) {
+        if (param.name == arg.name) {
+          return bindingTypeTextForRequirementOverloadSelection(param.binding);
+        }
+      }
+    }
+    return std::nullopt;
+  case Expr::Kind::Call:
+    return std::nullopt;
+  }
+  return std::nullopt;
+}
+
+struct RequirementOverloadViability {
+  bool viable = true;
+  bool decisive = false;
+  std::vector<std::string> diagnostics;
+};
+
+RequirementOverloadViability evaluateRequirementOverloadViability(
+    const Definition &def,
+    const Expr &expr,
+    const Context &ctx,
+    const LocalTypeMap *locals,
+    const std::vector<ParameterInfo> *params) {
+  RequirementOverloadViability result;
+  if (!definitionHasRequireTransform(def)) {
+    result.decisive = true;
+    return result;
+  }
+  RequirementPredicateDefinitionContext requirementContext;
+  requirementContext.definitionPath = def.fullPath;
+  requirementContext.namespacePrefix = def.namespacePrefix;
+  requirementContext.templateArgs = def.templateArgs;
+  requirementContext.importAliases = ctx.importAliases;
+
+  for (std::size_t i = 0; i < def.parameters.size(); ++i) {
+    ParameterInfo param;
+    param.name = def.parameters[i].name;
+    extractExplicitBindingType(def.parameters[i], param.binding);
+    if (i < expr.args.size()) {
+      const std::optional<std::string> argType =
+          requirementOverloadArgumentTypeText(expr.args[i], locals, params);
+      if (argType.has_value() &&
+          std::find(def.templateArgs.begin(),
+                    def.templateArgs.end(),
+                    param.binding.typeName) != def.templateArgs.end()) {
+        param.binding.typeName = *argType;
+        param.binding.typeTemplateArg.clear();
+      }
+    }
+    requirementContext.params.push_back(std::move(param));
+  }
+
+  for (const auto &transform : def.transforms) {
+    if (transform.name != "require") {
+      continue;
+    }
+    const int sourceLine = transform.sourceLine > 0 ? transform.sourceLine
+                                                    : def.sourceLine;
+    const int sourceColumn = transform.sourceColumn > 0 ? transform.sourceColumn
+                                                        : def.sourceColumn;
+    for (const auto &argument : transform.arguments) {
+      RequirementPredicateFactDraft fact =
+          buildRequirementPredicateFactDraft(argument,
+                                             sourceLine,
+                                             sourceColumn,
+                                             requirementContext);
+      if (fact.evaluationDiagnostic.find("deferred for unresolved type facts") !=
+          std::string::npos) {
+        continue;
+      }
+      result.decisive = true;
+      if (fact.evaluationOutcome == "satisfied") {
+        continue;
+      }
+      result.viable = false;
+      const std::string predicate =
+          fact.predicateName.empty() ? argument : fact.predicateName;
+      result.diagnostics.push_back(predicate + ": " + fact.evaluationDiagnostic);
+    }
+  }
+  return result;
+}
+
+std::string selectRequirementAwareHelperOverloadPath(
+    const Expr &expr,
+    const std::string &resolvedPath,
+    const Context &ctx,
+    const std::vector<const HelperOverloadEntry *> &candidates,
+    const LocalTypeMap *locals,
+    const std::vector<ParameterInfo> *params) {
+  if (candidates.size() <= 1) {
+    return candidates.empty() ? resolvedPath : candidates.front()->internalPath;
+  }
+  bool hasRequirementCandidate = false;
+  for (const auto *entry : candidates) {
+    if (entry != nullptr && entry->hasRequirementTransform) {
+      hasRequirementCandidate = true;
+      break;
+    }
+  }
+  if (!hasRequirementCandidate) {
+    return candidates.front()->internalPath;
+  }
+
+  std::vector<const HelperOverloadEntry *> viable;
+  std::vector<std::string> rejected;
+  for (const auto *entry : candidates) {
+    if (entry == nullptr) {
+      continue;
+    }
+    auto defIt = ctx.sourceDefs.find(entry->internalPath);
+    if (defIt == ctx.sourceDefs.end()) {
+      viable.push_back(entry);
+      continue;
+    }
+    RequirementOverloadViability viability =
+        evaluateRequirementOverloadViability(defIt->second,
+                                             expr,
+                                             ctx,
+                                             locals,
+                                             params);
+    if (viability.viable) {
+      viable.push_back(entry);
+      continue;
+    }
+    std::ostringstream message;
+    message << helperOverloadDisplayPath(entry->internalPath, ctx);
+    if (!viability.diagnostics.empty()) {
+      message << " rejected by ";
+      for (std::size_t i = 0; i < viability.diagnostics.size(); ++i) {
+        if (i != 0) {
+          message << "; ";
+        }
+        message << viability.diagnostics[i];
+      }
+    }
+    rejected.push_back(message.str());
+  }
+
+  if (viable.size() == 1) {
+    return viable.front()->internalPath;
+  }
+  std::ostringstream error;
+  if (viable.empty()) {
+    error << "no viable requirement overload for " << resolvedPath;
+    if (!rejected.empty()) {
+      error << ": ";
+      for (std::size_t i = 0; i < rejected.size(); ++i) {
+        if (i != 0) {
+          error << "; ";
+        }
+        error << rejected[i];
+      }
+    }
+  } else {
+    error << "ambiguous requirement overload for " << resolvedPath;
+  }
+  ctx.requirementOverloadSelectionError = error.str();
+  return resolvedPath;
+}
+
+std::string selectHelperOverloadPath(const Expr &expr,
+                                     const std::string &resolvedPath,
+                                     const Context &ctx,
+                                     const LocalTypeMap *locals = nullptr,
+                                     const std::vector<ParameterInfo> *params = nullptr) {
+  ctx.requirementOverloadSelectionError.clear();
   auto familyIt = ctx.helperOverloads.find(resolvedPath);
   if (familyIt == ctx.helperOverloads.end()) {
     return resolvedPath;
@@ -300,10 +517,15 @@ std::string selectHelperOverloadPath(const Expr &expr, const std::string &resolv
         return true;
       })();
   if (preferKeyValueEntryArgsPackOverload) {
+    std::vector<const HelperOverloadEntry *> candidates;
     for (const auto &entry : familyIt->second) {
       if (entry.parameterCount == 1) {
-        return entry.internalPath;
+        candidates.push_back(&entry);
       }
+    }
+    if (!candidates.empty()) {
+      return selectRequirementAwareHelperOverloadPath(
+          expr, resolvedPath, ctx, candidates, locals, params);
     }
   }
   std::vector<size_t> candidateCounts;
@@ -318,17 +540,27 @@ std::string selectHelperOverloadPath(const Expr &expr, const std::string &resolv
     candidateCounts.push_back(expr.args.size());
   }
   for (size_t candidateCount : candidateCounts) {
+    std::vector<const HelperOverloadEntry *> candidates;
     for (const auto &entry : familyIt->second) {
       if (entry.parameterCount == candidateCount) {
-        return entry.internalPath;
+        candidates.push_back(&entry);
       }
+    }
+    if (!candidates.empty()) {
+      return selectRequirementAwareHelperOverloadPath(
+          expr, resolvedPath, ctx, candidates, locals, params);
     }
   }
   for (size_t candidateCount : candidateCounts) {
+    std::vector<const HelperOverloadEntry *> candidates;
     for (const auto &entry : familyIt->second) {
       if (entry.isVariadic && candidateCount >= entry.variadicMinArgumentCount) {
-        return entry.internalPath;
+        candidates.push_back(&entry);
       }
+    }
+    if (!candidates.empty()) {
+      return selectRequirementAwareHelperOverloadPath(
+          expr, resolvedPath, ctx, candidates, locals, params);
     }
   }
   return resolvedPath;
@@ -343,6 +575,14 @@ bool resolveHelperOverloadDefinitionIdentity(const Definition &def,
   auto familyIt = ctx.helperOverloads.find(def.fullPath);
   if (familyIt == ctx.helperOverloads.end()) {
     return false;
+  }
+  const std::string sourceKey = helperOverloadDefinitionKey(def);
+  auto identityIt = ctx.helperOverloadDefinitionIdentity.find(sourceKey);
+  if (identityIt != ctx.helperOverloadDefinitionIdentity.end()) {
+    internalPathOut = identityIt->second;
+    const size_t slash = internalPathOut.find_last_of('/');
+    nameOut = slash == std::string::npos ? internalPathOut : internalPathOut.substr(slash + 1);
+    return true;
   }
   const size_t parameterCount = def.parameters.size();
   for (const auto &entry : familyIt->second) {

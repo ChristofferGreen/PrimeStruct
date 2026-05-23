@@ -127,7 +127,8 @@ bool initializeTemplateMonomorphSourceDefinitions(Context &ctx,
     }
 
     bool allowHelperOverloadFamily = true;
-    std::unordered_set<size_t> seenParameterCounts;
+    std::unordered_map<size_t, std::size_t> parameterCountFrequencies;
+    std::unordered_map<size_t, std::size_t> parameterCountOrdinals;
     std::vector<HelperOverloadEntry> overloads;
     overloads.reserve(family.size());
     for (const Definition *def : family) {
@@ -135,32 +136,61 @@ bool initializeTemplateMonomorphSourceDefinitions(Context &ctx,
         allowHelperOverloadFamily = false;
         break;
       }
-      const size_t parameterCount = def->parameters.size();
-      if (!seenParameterCounts.insert(parameterCount).second) {
+      ++parameterCountFrequencies[def->parameters.size()];
+    }
+    for (const auto &[parameterCount, frequency] : parameterCountFrequencies) {
+      if (frequency <= 1) {
+        continue;
+      }
+      bool hasRequirementConstrainedCandidate = false;
+      for (const Definition *def : family) {
+        if (def->parameters.size() == parameterCount &&
+            definitionHasRequireTransform(*def)) {
+          hasRequirementConstrainedCandidate = true;
+          break;
+        }
+      }
+      if (!hasRequirementConstrainedCandidate) {
         allowHelperOverloadFamily = false;
         break;
       }
-      const std::string internalPath = helperOverloadInternalPath(publicPath, parameterCount);
+    }
+    if (!allowHelperOverloadFamily) {
+      error = "duplicate definition: " + publicPath;
+      return false;
+    }
+    for (const Definition *def : family) {
+      const size_t parameterCount = def->parameters.size();
+      const std::size_t ordinal = parameterCountOrdinals[parameterCount]++;
+      std::string internalPath = helperOverloadInternalPath(publicPath, parameterCount);
+      if (parameterCountFrequencies[parameterCount] > 1) {
+        internalPath += "_" + std::to_string(ordinal);
+      }
       if (occupiedPaths.count(internalPath) > 0) {
         error = "helper overload internal path conflicts with existing definition: " + internalPath;
         return false;
       }
       const bool isVariadic = definitionHasVariadicParameter(*def);
       overloads.push_back({internalPath,
+                           helperOverloadDefinitionKey(*def),
                            parameterCount,
                            isVariadic && parameterCount > 0 ? parameterCount - 1 : parameterCount,
-                           isVariadic});
-    }
-    if (!allowHelperOverloadFamily) {
-      error = "duplicate definition: " + publicPath;
-      return false;
+                           isVariadic,
+                           definitionHasRequireTransform(*def)});
     }
     std::stable_sort(overloads.begin(),
                      overloads.end(),
                      [](const HelperOverloadEntry &left, const HelperOverloadEntry &right) {
-                       return left.parameterCount < right.parameterCount;
+                       if (left.parameterCount != right.parameterCount) {
+                         return left.parameterCount < right.parameterCount;
+                       }
+                       return left.internalPath < right.internalPath;
                      });
     ctx.helperOverloads.emplace(publicPath, overloads);
+    for (const auto &entry : overloads) {
+      ctx.helperOverloadDefinitionIdentity.emplace(entry.sourceKey,
+                                                   entry.internalPath);
+    }
     for (const Definition *def : family) {
       std::string internalPath;
       std::string internalName;

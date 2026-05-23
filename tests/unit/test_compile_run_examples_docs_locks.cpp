@@ -1754,8 +1754,8 @@ TEST_CASE("todo queue and skipped doctest debt stay source locked") {
   CHECK(todo.find("### Ready Now (Parallel-Candidate Leaves; No Unmet TODO Dependencies)") !=
         std::string::npos);
   CHECK(todo.find("### Ready Now (Parallel-Candidate Leaves; No Unmet TODO Dependencies)\n\n"
-                  "- TODO-4347: Integrate requirements with overload selection | track:\n"
-                  "  generic-requirements-overload-selection | primary surface: call resolution") !=
+                  "- TODO-4351: Add value-level compile-time requirement facts | track:\n"
+                  "  generic-requirements-value-facts | primary surface: compile-time value predicates") !=
         std::string::npos);
   CHECK(todo.find("- `soa-zero-audit`: TODO-4529 replaced the residue inventory with a strict\n"
                   "  zero-production-trace audit; no SoA zero-audit leaf is ready.") !=
@@ -1793,8 +1793,9 @@ TEST_CASE("todo queue and skipped doctest debt stay source locked") {
                   "  selected-branch generated type facts; TODO-4346 documented compile-time flow\n"
                   "  policy; TODO-4550 enforced active compile-time budget limits; TODO-4358\n"
                   "  enforced phase-qualified compile-time effects; TODO-4551 added\n"
-                  "  deterministic cache keys and invalidation. TODO-4347 is ready to route\n"
-                  "  requirement facts into overload selection.") !=
+                  "  deterministic cache keys and invalidation; TODO-4347 routed requirement\n"
+                  "  facts into overload selection. TODO-4351 is ready to add value-level\n"
+                  "  compile-time requirement facts.") !=
         std::string::npos);
   CHECK(todo.find("### Immediate Next 10 (Track Successors; Not Ready Until Dependencies Land)\n\n"
                   "- TODO-4545: Implement first structured task spawn/wait substrate\n"
@@ -1816,8 +1817,8 @@ TEST_CASE("todo queue and skipped doctest debt stay source locked") {
   CHECK(todo.find("### Execution Queue (Recommended Track Order)\n\n"
                   "- TODO-4545: Implement first structured task spawn/wait substrate\n"
                   "- TODO-4278: Integrate multi-wait with stdlib tuple\n"
-                  "- TODO-4347: Integrate requirements with overload selection\n"
-                  "- TODO-4351: Add value-level compile-time requirement facts") !=
+                  "- TODO-4351: Add value-level compile-time requirement facts\n"
+                  "- TODO-4348: Publish requirement diagnostics with provenance") !=
         std::string::npos);
   CHECK(todo.find("- [ ] TODO-4548: Add expression-position `ct_if` values") ==
         std::string::npos);
@@ -1934,6 +1935,7 @@ TEST_CASE("todo queue and skipped doctest debt stay source locked") {
   CHECK(todoFinished.find("TODO-4519: Delete `soa_vector` compatibility seams") !=
         std::string::npos);
   const std::vector<std::string> completedSemanticPhaseQueue = {
+      "TODO-4347: Integrate requirements with overload selection",
       "TODO-4358: Enforce phase-qualified compile-time effects",
       "TODO-4550: Enforce compile-time evaluation budgets",
       "TODO-4551: Add compile-time evaluation cache keys",

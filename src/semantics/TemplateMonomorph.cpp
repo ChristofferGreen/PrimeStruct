@@ -1,4 +1,5 @@
 #include "SemanticsHelpers.h"
+#include "RequirementPredicateFacts.h"
 #include "StdlibCollectionSurfaceHelpers.h"
 #include "SemanticsValidatorInferCollectionCompatibilityInternal.h"
 #include "primec/Ast.h"
@@ -42,9 +43,11 @@ struct TemplateArgumentBinding {
 
 struct HelperOverloadEntry {
   std::string internalPath;
+  std::string sourceKey;
   size_t parameterCount = 0;
   size_t variadicMinArgumentCount = 0;
   bool isVariadic = false;
+  bool hasRequirementTransform = false;
 };
 
 struct GenericTypeOverloadEntry {
@@ -78,6 +81,7 @@ struct Context {
   std::unordered_map<std::string, std::vector<std::string>> importAliasTargets;
   std::unordered_map<std::string, std::vector<HelperOverloadEntry>> helperOverloads;
   std::unordered_map<std::string, std::string> helperOverloadInternalToPublic;
+  std::unordered_map<std::string, std::string> helperOverloadDefinitionIdentity;
   std::unordered_map<std::string, std::vector<GenericTypeOverloadEntry>> genericTypeOverloads;
   std::unordered_map<std::string, std::string> genericTypeOverloadInternalToPublic;
   std::unordered_map<std::string, std::string> specializationCache;
@@ -97,6 +101,7 @@ struct Context {
   std::unordered_map<std::string, ImplicitTemplateArgInferenceFact> implicitTemplateArgInferenceFacts;
   uint64_t implicitTemplateArgInferenceFactHitsForTesting = 0;
   const Definition *currentRewriteDefinition = nullptr;
+  mutable std::string requirementOverloadSelectionError;
 };
 
 using LocalTypeMap = std::unordered_map<std::string, BindingInfo>;
@@ -145,6 +150,7 @@ bool isEnclosingTemplateParamName(const std::string &name,
 bool isEnclosingTypePackParamName(const std::string &name,
                                   const std::string &namespacePrefix,
                                   const Context &ctx);
+bool extractExplicitBindingType(const Expr &expr, BindingInfo &infoOut);
 
 bool inferImplicitTemplateArgs(const Definition &def,
                                const Expr &callExpr,
@@ -197,7 +203,11 @@ bool isStructDefinition(const Definition &def) {
   return true;
 }
 
-std::string resolveCalleePath(const Expr &expr, const std::string &namespacePrefix, const Context &ctx);
+std::string resolveCalleePath(const Expr &expr,
+                              const std::string &namespacePrefix,
+                              const Context &ctx,
+                              const LocalTypeMap *locals = nullptr,
+                              const std::vector<ParameterInfo> *params = nullptr);
 
 bool resolveMethodCallTemplateTarget(const Expr &expr,
                                      const LocalTypeMap &locals,
