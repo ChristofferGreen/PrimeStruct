@@ -8472,3 +8472,8 @@
   command: `cd build-release && ctest --output-on-failure --stop-on-failure
   --timeout 120 -I 1531,1535` on 2026-05-23 23:07 CEST. Next focused
   continuation starts at `-I 1536,1540`.
+- Compile-run shards 1536-1540 now pass without source edits. Test 1540 is
+  comparatively slow locally at about 42 seconds, with the five-test window
+  taking about 55 seconds. Validating command: `cd build-release && ctest
+  --output-on-failure --stop-on-failure --timeout 120 -I 1536,1540` on
+  2026-05-23 23:08 CEST. Next focused continuation starts at `-I 1541,1545`.
