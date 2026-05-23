@@ -172,6 +172,72 @@ std::vector<uint8_t> serializeIrIgnoringSourceMapsAndDebug(const primec::IrModul
 
 TEST_SUITE_BEGIN("primestruct.semantics.type_resolution_graph");
 
+TEST_CASE("require transforms publish requirement predicate facts") {
+  const std::string source = R"(
+[return<int> require(type_equals<typeof<value>, int>(), has_trait<typeof<value>>(Additive))]
+identity([int] value) {
+  return(value)
+}
+
+[return<int>]
+main() {
+  return(identity(4))
+}
+)";
+
+  primec::testing::CompilePipelineBoundaryDumps dumps;
+  std::string error;
+  REQUIRE(primec::testing::captureSemanticBoundaryDumpsForTesting(
+      source, "/main", dumps, error));
+  CHECK(error.empty());
+  CHECK(dumps.semanticProduct.find(
+            "requirement_predicate_facts[0]: definition_path=\"/identity\" "
+            "predicate_kind=\"predicate_call\" predicate_name=\"type_equals\"") !=
+        std::string::npos);
+  CHECK(dumps.semanticProduct.find(
+            "source_text=\"type_equals<typeof<value>, int>()\" "
+            "operands=[{kind=\"type_fact\" text=\"typeof<value>\" "
+            "stable_handle=\"type_fact:typeof<value>\"") !=
+        std::string::npos);
+  CHECK(dumps.semanticProduct.find(
+            "{kind=\"type_fact\" text=\"int\" stable_handle=\"type_fact:int\"") !=
+        std::string::npos);
+  CHECK(dumps.semanticProduct.find(
+            "requirement_predicate_facts[1]: definition_path=\"/identity\" "
+            "predicate_kind=\"predicate_call\" predicate_name=\"has_trait\"") !=
+        std::string::npos);
+  CHECK(dumps.semanticProduct.find(
+            "{kind=\"compile_time_symbol\" text=\"Additive\" "
+            "stable_handle=\"compile_time_symbol:Additive\"") !=
+        std::string::npos);
+  CHECK(dumps.semanticProduct.find("evaluation_outcome=\"invalid_evaluation\"") !=
+        std::string::npos);
+  CHECK(dumps.semanticProduct.find(
+            "evaluation_diagnostic=\"requirement predicate evaluation pending\"") !=
+        std::string::npos);
+}
+
+TEST_CASE("duplicate require transforms fail closed before publication") {
+  const std::string source = R"(
+[return<int> require(type_equals<typeof<value>, int>()) require(has_trait<typeof<value>>(Additive))]
+identity([int] value) {
+  return(value)
+}
+
+[return<int>]
+main() {
+  return(identity(4))
+}
+)";
+
+  primec::testing::CompilePipelineBoundaryDumps dumps;
+  std::string error;
+  CHECK_FALSE(primec::testing::captureSemanticBoundaryDumpsForTesting(
+      source, "/main", dumps, error));
+  CHECK(error.find("duplicate require transform; combine predicates into one require(...)") !=
+        std::string::npos);
+}
+
 TEST_CASE("type resolution try operand metadata stays aligned with query snapshots") {
   const std::string source = R"(
 MyError {

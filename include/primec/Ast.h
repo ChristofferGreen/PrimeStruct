@@ -12,6 +12,19 @@ namespace primec {
 enum class TransformPhase { Auto, Text, Semantic };
 
 enum class TemplateArgumentKind { Type, Integer, Symbol, Unsupported };
+enum class RequirementPredicateKind { Relation, PredicateCall, Unsupported };
+enum class RequirementPredicateOperandKind {
+  TypeFact,
+  Value,
+  CompileTimeSymbol,
+  LiteralCompileTimeArgument,
+  UnsupportedRuntimeOnlyExpression,
+};
+enum class RequirementPredicateEvaluationOutcome {
+  Satisfied,
+  Unsatisfied,
+  InvalidEvaluation,
+};
 
 struct TemplateArgument {
   TemplateArgumentKind kind = TemplateArgumentKind::Type;
@@ -65,10 +78,33 @@ struct Transform {
   std::vector<std::string> templateArgs = {};
   std::vector<TemplateArgument> templateArgDetails = {};
   std::vector<std::string> arguments = {};
+  struct RequirementPredicateOperand {
+    RequirementPredicateOperandKind kind =
+        RequirementPredicateOperandKind::UnsupportedRuntimeOnlyExpression;
+    std::string text = {};
+    std::string stableHandle = {};
+    int sourceLine = 0;
+    int sourceColumn = 0;
+  };
+  struct RequirementPredicate {
+    RequirementPredicateKind kind = RequirementPredicateKind::Unsupported;
+    std::string predicateName = {};
+    std::string relationOperator = {};
+    std::string sourceText = {};
+    std::vector<RequirementPredicateOperand> operands = {};
+    RequirementPredicateEvaluationOutcome evaluationOutcome =
+        RequirementPredicateEvaluationOutcome::InvalidEvaluation;
+    std::string evaluationDiagnostic = {};
+    int sourceLine = 0;
+    int sourceColumn = 0;
+  };
+  std::vector<RequirementPredicate> requirementPredicates = {};
   TransformPhase phase = TransformPhase::Auto;
   std::string resolvedPath = {};
   bool isAstTransformHook = false;
   bool isPackExpansion = false;
+  int sourceLine = 0;
+  int sourceColumn = 0;
 };
 
 struct Expr {

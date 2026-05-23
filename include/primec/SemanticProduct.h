@@ -370,6 +370,39 @@ struct SemanticProgramOnErrorFact {
   SymbolId returnResultErrorTypeId = InvalidSymbolId;
 };
 
+struct SemanticProgramRequirementPredicateOperand {
+  std::string kind = {};
+  std::string text = {};
+  std::string stableHandle = {};
+  int sourceLine = 0;
+  int sourceColumn = 0;
+  SymbolId kindId = InvalidSymbolId;
+  SymbolId textId = InvalidSymbolId;
+  SymbolId stableHandleId = InvalidSymbolId;
+};
+
+struct SemanticProgramRequirementPredicateFact {
+  std::string definitionPath = {};
+  std::string predicateKind = {};
+  std::string predicateName = {};
+  std::string relationOperator = {};
+  std::string sourceText = {};
+  std::vector<SemanticProgramRequirementPredicateOperand> operands = {};
+  std::string evaluationOutcome = {};
+  std::string evaluationDiagnostic = {};
+  int sourceLine = 0;
+  int sourceColumn = 0;
+  uint64_t semanticNodeId = 0;
+  uint64_t provenanceHandle = 0;
+  SymbolId definitionPathId = InvalidSymbolId;
+  SymbolId predicateKindId = InvalidSymbolId;
+  SymbolId predicateNameId = InvalidSymbolId;
+  SymbolId relationOperatorId = InvalidSymbolId;
+  SymbolId sourceTextId = InvalidSymbolId;
+  SymbolId evaluationOutcomeId = InvalidSymbolId;
+  SymbolId evaluationDiagnosticId = InvalidSymbolId;
+};
+
 struct SemanticProgramModuleIdentity {
   std::string moduleKey = {};
   std::size_t stableOrder = 0;
@@ -388,6 +421,7 @@ struct SemanticProgramModuleResolvedArtifacts {
   std::vector<std::size_t> queryFactIndices = {};
   std::vector<std::size_t> tryFactIndices = {};
   std::vector<std::size_t> onErrorFactIndices = {};
+  std::vector<std::size_t> requirementPredicateFactIndices = {};
 };
 
 struct SemanticProgramPublishedRoutingLookups {
@@ -451,6 +485,7 @@ struct SemanticProgram {
   std::vector<SemanticProgramQueryFact> queryFacts = {};
   std::vector<SemanticProgramTryFact> tryFacts = {};
   std::vector<SemanticProgramOnErrorFact> onErrorFacts = {};
+  std::vector<SemanticProgramRequirementPredicateFact> requirementPredicateFacts = {};
 };
 
 const std::vector<SemanticProgramFactFamilyInfo> &semanticProgramFactFamilyInfos();
@@ -485,6 +520,8 @@ std::vector<const SemanticProgramTryFact *>
 semanticProgramTryFactView(const SemanticProgram &semanticProgram);
 std::vector<const SemanticProgramOnErrorFact *>
 semanticProgramOnErrorFactView(const SemanticProgram &semanticProgram);
+std::vector<const SemanticProgramRequirementPredicateFact *>
+semanticProgramRequirementPredicateFactView(const SemanticProgram &semanticProgram);
 
 void freezeSemanticProgramPublishedStorage(SemanticProgram &semanticProgram);
 bool semanticProgramPublishedStorageFrozen(const SemanticProgram &semanticProgram);

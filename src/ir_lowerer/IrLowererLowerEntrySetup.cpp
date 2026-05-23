@@ -264,7 +264,11 @@ bool validateModuleResolvedArtifactIdentity(const SemanticProgram &semanticProgr
         !validateFamilyIndices("result-control.on-error",
                                moduleKey,
                                module.onErrorFactIndices,
-                               semanticProgram.onErrorFacts.size())) {
+                               semanticProgram.onErrorFacts.size()) ||
+        !validateFamilyIndices("requirements.predicate",
+                               moduleKey,
+                               module.requirementPredicateFactIndices,
+                               semanticProgram.requirementPredicateFacts.size())) {
       return false;
     }
   }

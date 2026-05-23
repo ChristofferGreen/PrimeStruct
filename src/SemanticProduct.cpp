@@ -95,6 +95,37 @@ std::string formatSemanticStdlibSurfaceId(StdlibSurfaceId id) {
   return std::to_string(static_cast<int>(id));
 }
 
+std::string formatSemanticSourceLocation(int line, int column);
+
+std::string formatSemanticRequirementOperandList(
+    const SemanticProgram &semanticProgram,
+    const std::vector<SemanticProgramRequirementPredicateOperand> &operands) {
+  std::ostringstream out;
+  out << "[";
+  for (size_t i = 0; i < operands.size(); ++i) {
+    if (i != 0) {
+      out << ", ";
+    }
+    const auto &operand = operands[i];
+    const std::string_view kind =
+        semanticProgramResolveCallTargetString(semanticProgram, operand.kindId);
+    const std::string_view text =
+        semanticProgramResolveCallTargetString(semanticProgram, operand.textId);
+    const std::string_view stableHandle =
+        semanticProgramResolveCallTargetString(semanticProgram, operand.stableHandleId);
+    out << "{kind=" << quoteSemanticString(kind.empty() ? operand.kind : kind)
+        << " text=" << quoteSemanticString(text.empty() ? operand.text : text)
+        << " stable_handle="
+        << quoteSemanticString(stableHandle.empty() ? operand.stableHandle : stableHandle)
+        << " source="
+        << quoteSemanticString(formatSemanticSourceLocation(operand.sourceLine,
+                                                            operand.sourceColumn))
+        << "}";
+  }
+  out << "]";
+  return out.str();
+}
+
 void appendSemanticHeaderLine(std::ostringstream &out, std::string_view label, const std::string &value) {
   out << "  " << label << ": " << value << "\n";
 }
@@ -226,6 +257,9 @@ const std::vector<SemanticProgramFactFamilyInfo> &semanticProgramFactFamilyInfos
       {"tryFacts",
        SemanticProgramFactOwnership::SemanticProduct,
        "published try expression facts"},
+      {"requirementPredicateFacts",
+       SemanticProgramFactOwnership::SemanticProduct,
+       "published requirement predicate facts"},
       {"onErrorFacts",
        SemanticProgramFactOwnership::SemanticProduct,
        "published on_error facts"},
@@ -1141,6 +1175,34 @@ semanticProgramOnErrorFactView(const SemanticProgram &semanticProgram) {
   return entries;
 }
 
+std::vector<const SemanticProgramRequirementPredicateFact *>
+semanticProgramRequirementPredicateFactView(const SemanticProgram &semanticProgram) {
+  std::vector<const SemanticProgramRequirementPredicateFact *> entries;
+  if (!semanticProgram.moduleResolvedArtifacts.empty()) {
+    size_t moduleEntryCount = 0;
+    for (const auto &module : semanticProgram.moduleResolvedArtifacts) {
+      moduleEntryCount += module.requirementPredicateFactIndices.size();
+    }
+    entries.reserve(moduleEntryCount);
+    for (const auto &module : semanticProgram.moduleResolvedArtifacts) {
+      for (const std::size_t entryIndex : module.requirementPredicateFactIndices) {
+        if (entryIndex < semanticProgram.requirementPredicateFacts.size()) {
+          entries.push_back(&semanticProgram.requirementPredicateFacts[entryIndex]);
+        }
+      }
+    }
+    if (!entries.empty() || semanticProgram.requirementPredicateFacts.empty()) {
+      return entries;
+    }
+  }
+
+  entries.reserve(semanticProgram.requirementPredicateFacts.size());
+  for (const auto &entry : semanticProgram.requirementPredicateFacts) {
+    entries.push_back(&entry);
+  }
+  return entries;
+}
+
 std::string formatSemanticProgram(const SemanticProgram &semanticProgram) {
   std::ostringstream out;
   out << "semantic_product {\n";
@@ -1737,6 +1799,63 @@ std::string formatSemanticProgram(const SemanticProgram &semanticProgram) {
                                   quoteSemanticString(formatSemanticSourceLocation(entry.sourceLine, entry.sourceColumn)));
   }
   const auto onErrorFacts = semanticProgramOnErrorFactView(semanticProgram);
+  const auto requirementPredicateFacts =
+      semanticProgramRequirementPredicateFactView(semanticProgram);
+  for (size_t i = 0; i < requirementPredicateFacts.size(); ++i) {
+    const auto &entry = *requirementPredicateFacts[i];
+    const std::string_view definitionPath =
+        semanticProgramResolveCallTargetString(semanticProgram, entry.definitionPathId);
+    const std::string_view predicateKind =
+        semanticProgramResolveCallTargetString(semanticProgram, entry.predicateKindId);
+    const std::string_view predicateName =
+        semanticProgramResolveCallTargetString(semanticProgram, entry.predicateNameId);
+    const std::string_view relationOperator =
+        semanticProgramResolveCallTargetString(semanticProgram, entry.relationOperatorId);
+    const std::string_view sourceText =
+        semanticProgramResolveCallTargetString(semanticProgram, entry.sourceTextId);
+    const std::string_view evaluationOutcome =
+        semanticProgramResolveCallTargetString(semanticProgram, entry.evaluationOutcomeId);
+    const std::string_view evaluationDiagnostic =
+        semanticProgramResolveCallTargetString(semanticProgram, entry.evaluationDiagnosticId);
+    appendSemanticIndexedLine(out,
+                              "requirement_predicate_facts",
+                              i,
+                              "definition_path=" +
+                                  quoteSemanticString(definitionPath.empty()
+                                                          ? entry.definitionPath
+                                                          : definitionPath) +
+                                  " predicate_kind=" +
+                                  quoteSemanticString(predicateKind.empty()
+                                                          ? entry.predicateKind
+                                                          : predicateKind) +
+                                  " predicate_name=" +
+                                  quoteSemanticString(predicateName.empty()
+                                                          ? entry.predicateName
+                                                          : predicateName) +
+                                  " relation_operator=" +
+                                  quoteSemanticString(relationOperator.empty()
+                                                          ? entry.relationOperator
+                                                          : relationOperator) +
+                                  " source_text=" +
+                                  quoteSemanticString(sourceText.empty()
+                                                          ? entry.sourceText
+                                                          : sourceText) +
+                                  " operands=" +
+                                  formatSemanticRequirementOperandList(semanticProgram,
+                                                                       entry.operands) +
+                                  " evaluation_outcome=" +
+                                  quoteSemanticString(evaluationOutcome.empty()
+                                                          ? entry.evaluationOutcome
+                                                          : evaluationOutcome) +
+                                  " evaluation_diagnostic=" +
+                                  quoteSemanticString(evaluationDiagnostic.empty()
+                                                          ? entry.evaluationDiagnostic
+                                                          : evaluationDiagnostic) +
+                                  " provenance_handle=" +
+                                  std::to_string(entry.provenanceHandle) + " source=" +
+                                  quoteSemanticString(formatSemanticSourceLocation(entry.sourceLine,
+                                                                                   entry.sourceColumn)));
+  }
   for (size_t i = 0; i < onErrorFacts.size(); ++i) {
     const auto &entry = *onErrorFacts[i];
     const std::string_view definitionPath =

@@ -286,6 +286,8 @@ bool Parser::parseTransformList(std::vector<Transform> &out) {
     }
     transform.name = name.text;
     transform.phase = phase;
+    transform.sourceLine = name.line;
+    transform.sourceColumn = name.column;
     if (match(TokenKind::LAngle)) {
       if (!parseTemplateList(transform.templateArgs, &transform.templateArgDetails)) {
         return false;
@@ -345,6 +347,8 @@ bool Parser::parseTransformList(std::vector<Transform> &out) {
     Transform transform;
     transform.name = name.text;
     transform.phase = TransformPhase::Auto;
+    transform.sourceLine = name.line;
+    transform.sourceColumn = name.column;
     if (match(TokenKind::LAngle)) {
       if (!parseTemplateList(transform.templateArgs, &transform.templateArgDetails)) {
         return false;

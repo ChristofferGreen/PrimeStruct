@@ -6,6 +6,43 @@ Legend:
 Finished items are periodically archived here from `docs/todo.md`; section headers record the archive date.
 
 **Todo Completion (May 23, 2026)**
+- [x] TODO-4342: Represent requirement predicates as semantic facts
+  - owner: ai
+  - created_at: 2026-05-04
+  - finished_at: 2026-05-23
+  - phase: Generic constraint and compile-time flow alignment
+  - parallel_track: generic-requirements
+  - depends_on: TODO-4341
+  - scope: Add typed AST and semantic-product representation for generic
+    requirement predicates and their evaluated results.
+  - outcome:
+    - Registered `require` as a semantic transform so full predicate
+      expression arguments parse through the existing transform channel.
+    - Added source-positioned requirement predicate records to the semantic
+      product with typed operand categories, stable handles, provenance, and
+      distinct invalid-evaluation status for predicates not evaluated yet.
+    - Published one deterministic semantic-product fact per `require(...)`
+      predicate before IR lowering and included those facts in module
+      resolved-artifact views and formatted dumps.
+    - Rejected repeated `require` transforms with the documented
+      fail-closed duplicate diagnostic so missing or ambiguous requirement
+      fact publication cannot silently continue.
+  - validation:
+    - `cmake --build build-release --target PrimeStruct_semantics_tests
+      PrimeStruct_compile_run_tests primec -j 1` completed after resuming the
+      cold worker build.
+    - `cd build-release && ./PrimeStruct_semantics_tests
+      --test-case="require transforms publish requirement predicate facts"
+      --no-skip` passed.
+    - `cd build-release && ./PrimeStruct_semantics_tests
+      --test-case="duplicate require transforms fail closed before publication"
+      --no-skip` passed.
+    - `cd build-release && ./PrimeStruct_compile_run_tests
+      --test-case="todo queue and skipped doctest debt stay source locked"
+      --no-skip` passed.
+    - Full `./scripts/compile.sh --release` remains deferred by the lite
+      workflow.
+
 - [x] TODO-4341: Define generic requirement predicate surface
   - owner: ai
   - created_at: 2026-05-04

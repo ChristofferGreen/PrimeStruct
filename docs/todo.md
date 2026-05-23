@@ -83,8 +83,8 @@ Task template:
 
 ### Ready Now (Parallel-Candidate Leaves; No Unmet TODO Dependencies)
 
-- TODO-4342: Represent requirement predicates as semantic facts | track: generic-requirements |
-  primary surface: typed semantic-product facts and evaluation results
+- TODO-4343: Add builtin type relation predicates | track: generic-requirements |
+  primary surface: initial builtin predicate evaluation over type facts
 
 ### Parallel Work Tracks (Current)
 
@@ -117,14 +117,15 @@ Task template:
   direct-call and layout metadata, and TODO-4340 added docs and positive
   examples, and TODO-4546 added negative conformance; no procedural-genericity
   leaf is ready.
-- `generic-requirements`: TODO-4331, TODO-4334, and TODO-4341 are complete;
-  TODO-4342 is ready after the requirement predicate surface docs.
+- `generic-requirements`: TODO-4331, TODO-4334, TODO-4341, and TODO-4342
+  are complete; TODO-4343 is ready after requirement predicate fact
+  publication.
 
 ### Immediate Next 10 (Track Successors; Not Ready Until Dependencies Land)
 
 - TODO-4545: Implement first structured task spawn/wait substrate
 - TODO-4278: Integrate multi-wait with stdlib tuple
-- TODO-4343: Add builtin type relation predicates
+- TODO-4344: Add capability and trait support predicates
 
 ### Priority Lanes (Current)
 
@@ -148,15 +149,14 @@ Task template:
   prerequisite split out of TODO-4278
 - Procedural compile-time genericity: none active after TODO-4340 and
   TODO-4546
-- Generic constraint and compile-time flow alignment: TODO-4342 -> TODO-4343
-  -> TODO-4344 -> TODO-4352 -> TODO-4353
+- Generic constraint and compile-time flow alignment: TODO-4343 -> TODO-4344
+  -> TODO-4352 -> TODO-4353
   -> TODO-4354 -> TODO-4355 -> TODO-4356 -> TODO-4357 -> TODO-4345
   -> TODO-4346 -> TODO-4358 -> TODO-4347 -> TODO-4351 -> TODO-4348
   -> TODO-4359 -> TODO-4349 -> TODO-4350
 
 ### Execution Queue (Recommended Track Order)
 
-- TODO-4342: Represent requirement predicates as semantic facts
 - TODO-4343: Add builtin type relation predicates
 - TODO-4344: Add capability and trait support predicates
 - TODO-4352: Add compile-time VM facade and host
@@ -204,7 +204,7 @@ Task template:
 | Stdlib ADT migration for `Maybe` and `Result` | none |
 | Generic type packs and tuple stdlib surface | TODO-4274, TODO-4273, TODO-4277, TODO-4278 |
 | Procedural compile-time genericity and local type facts | none |
-| Generic constraints and compile-time flow control | TODO-4342, TODO-4343, TODO-4344, TODO-4352, TODO-4353, TODO-4354, TODO-4355, TODO-4356, TODO-4357, TODO-4345, TODO-4346, TODO-4358, TODO-4347, TODO-4351, TODO-4348, TODO-4359, TODO-4349, TODO-4350 |
+| Generic constraints and compile-time flow control | TODO-4343, TODO-4344, TODO-4352, TODO-4353, TODO-4354, TODO-4355, TODO-4356, TODO-4357, TODO-4345, TODO-4346, TODO-4358, TODO-4347, TODO-4351, TODO-4348, TODO-4359, TODO-4349, TODO-4350 |
 
 ### Validation Coverage Snapshot
 
@@ -231,7 +231,7 @@ Task template:
 | Maybe/Result sum migration conformance | none |
 | Generic type-pack and tuple conformance | TODO-4274, TODO-4273, TODO-4277, TODO-4278 |
 | Procedural compile-time genericity conformance | none |
-| Generic constraint and compile-time flow conformance | TODO-4342, TODO-4343, TODO-4344, TODO-4352, TODO-4353, TODO-4354, TODO-4355, TODO-4356, TODO-4357, TODO-4345, TODO-4346, TODO-4358, TODO-4347, TODO-4351, TODO-4348, TODO-4359, TODO-4349, TODO-4350 |
+| Generic constraint and compile-time flow conformance | TODO-4343, TODO-4344, TODO-4352, TODO-4353, TODO-4354, TODO-4355, TODO-4356, TODO-4357, TODO-4345, TODO-4346, TODO-4358, TODO-4347, TODO-4351, TODO-4348, TODO-4359, TODO-4349, TODO-4350 |
 
 ### Vector/Map Bridge Contract Summary
 
@@ -814,42 +814,6 @@ Task template:
     - `./scripts/compile.sh --release` passes.
   - stop_rule: Stop once multi-wait returns stdlib `tuple<...>` or the missing
     task-side prerequisite is split into an explicit multithreading TODO.
-
-- [ ] TODO-4342: Represent requirement predicates as semantic facts
-  - owner: ai
-  - created_at: 2026-05-04
-  - phase: Generic constraint and compile-time flow alignment
-  - depends_on: TODO-4341
-  - scope: Add typed AST and semantic-product representation for generic
-    requirement predicates and their evaluated results.
-  - implementation_notes:
-    - Start from `include/primec/Ast.h`, parser requirement syntax from
-      TODO-4341, `SemanticProduct.h`, semantic validation snapshots, and the
-      established graph-backed fact authority.
-    - Preserve source provenance for every predicate, operand, inferred type
-      fact, and final pass/fail result.
-    - Represent predicate evaluation outcomes distinctly: satisfied,
-      unsatisfied, and invalid evaluation.
-    - Keep predicates typed; do not lower them into strings or backend-local
-      source reconstruction.
-  - acceptance:
-    - Requirement predicates parse into typed nodes or typed semantic records
-      with stable AST/semantic-product dump output.
-    - Predicate operands distinguish type facts, values, compile-time
-      symbols, literal compile-time arguments, and unsupported runtime-only
-      expressions.
-    - Predicate facts can reference future typed compile-time values by stable
-      handles without requiring the CT value model to be implemented in this
-      task.
-    - Semantic validation publishes requirement facts before IR lowering and
-      fails closed when a required fact is missing.
-    - Invalid predicate evaluation is represented separately from a failed
-      requirement so overload resolution and diagnostics cannot treat compiler
-      or predicate-body errors as non-viable candidates.
-    - Existing template and procedural-generic tests remain source-compatible.
-    - `./scripts/compile.sh --release` passes.
-  - stop_rule: Stop once requirements have a typed semantic representation
-    and diagnostics can point at their source operands.
 
 - [ ] TODO-4343: Add builtin type relation predicates
   - owner: ai

@@ -11,6 +11,7 @@ primec::TransformRegistry buildDefaultTransformRegistry() {
   registry.registerTransform({"implicit-utf8", primec::TransformPhase::Text, "-", true, true});
   registry.registerTransform({"on_error", primec::TransformPhase::Semantic, "-", true, true});
   registry.registerTransform({"operators", primec::TransformPhase::Text, "-", true, true});
+  registry.registerTransform({"require", primec::TransformPhase::Semantic, "-", true, true});
   registry.registerTransform({"single_type_to_return", primec::TransformPhase::Semantic, "-", true, true});
   registry.registerTransform({"unsafe", primec::TransformPhase::Semantic, "-", true, true});
   return registry;

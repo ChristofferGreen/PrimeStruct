@@ -17,6 +17,7 @@ bool isUnsupportedSumPayloadEnvelope(const Transform &transform) {
          transform.name == "effects" || transform.name == "capabilities" ||
          transform.name == "on_error" || transform.name == "compute" ||
          transform.name == "workgroup_size" || transform.name == "unsafe" ||
+         transform.name == "require" ||
          transform.name == "ast" || transform.name == "reflect" ||
          transform.name == "generate" || transform.name == "static" ||
          transform.name == "public" || transform.name == "private" ||
@@ -101,6 +102,7 @@ bool SemanticsValidator::validateDefinitionBuildTransforms(
   bool sawOnError = false;
   bool sawCompute = false;
   bool sawUnsafe = false;
+  bool sawRequire = false;
   bool sawWorkgroupSize = false;
   bool sawNoPadding = false;
   bool sawPlatformPadding = false;
@@ -330,6 +332,26 @@ bool SemanticsValidator::validateDefinitionBuildTransforms(
         }
         break;
       }
+    } else if (transform.name == "require") {
+      if (sawRequire) {
+        if (addTransformDiagnostic("duplicate require transform; combine predicates into one require(...)")) {
+          return false;
+        }
+        break;
+      }
+      sawRequire = true;
+      if (!transform.templateArgs.empty()) {
+        if (addTransformDiagnostic("require transform does not accept template arguments on " + def.fullPath)) {
+          return false;
+        }
+        break;
+      }
+      if (transform.arguments.empty()) {
+        if (addTransformDiagnostic("require transform requires at least one predicate on " + def.fullPath)) {
+          return false;
+        }
+        break;
+      }
     } else if (transform.name == "ast") {
       if (sawAst) {
         if (addTransformDiagnostic("duplicate ast transform on " + def.fullPath)) {
@@ -544,6 +566,7 @@ bool SemanticsValidator::validateDefinitionBuildTransforms(
       if (transform.name == "effects" || transform.name == "capabilities" ||
           transform.name == "compute" || transform.name == "unsafe" ||
           transform.name == "on_error" || transform.name == "workgroup_size" ||
+          transform.name == "require" ||
           transform.name == "ast" || transform.name == "reflect" ||
           transform.name == "generate") {
         if (addTransformDiagnostic("sum definitions cannot combine with callable transforms: " + def.fullPath)) {
