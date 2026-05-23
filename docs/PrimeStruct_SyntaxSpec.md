@@ -881,7 +881,11 @@ Requirement rules:
   the validated AST. In expression position, return values, local binding
   initializers, and nested expression operands use exactly one selected branch
   value. The discarded branch is still parsed for structural syntax.
-  Branch-local generated nominal identity remains follow-up work.
+  Local generated structs introduced by the selected statement branch receive
+  deterministic branch-scoped identities, for example
+  `/pick/PairT__ct_if_then_5_5`; selected-branch type and constructor uses are
+  rewritten to that identity. Discarded-branch generated definitions and type
+  facts are not published to semantic products or IR.
 - Requirement and predicate execution runs in a compiler-hosted compile-time VM
   facade. It may share the runtime VM interpreter core for arithmetic, calls,
   branching, and frame mechanics, but it uses a separate `CompileTimeHost` with

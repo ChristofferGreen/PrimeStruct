@@ -1654,6 +1654,10 @@ TEST_CASE("generic requirement predicate surface stays source locked") {
   CHECK(primeStructDoc.find("Generic-specialized definitions may also use `ct_if` over type facts\n"
                             "  after template monomorphization selects concrete parameter types.") !=
         std::string::npos);
+  CHECK(primeStructDoc.find("Local generated structs\n"
+                            "  introduced by the selected statement branch receive a deterministic\n"
+                            "  branch-scoped identity") !=
+        std::string::npos);
   CHECK(syntaxSpec.find("The initial implemented user-predicate evaluator accepts pure predicates with\n"
                         "  no runtime parameters and a literal source `bool` return body.") !=
         std::string::npos);
@@ -1667,6 +1671,9 @@ TEST_CASE("generic requirement predicate surface stays source locked") {
   CHECK(syntaxSpec.find("In expression position, return values, local binding\n"
                         "  initializers, and nested expression operands use exactly one selected branch\n"
                         "  value.") !=
+        std::string::npos);
+  CHECK(syntaxSpec.find("Local generated structs introduced by the selected statement branch receive\n"
+                        "  deterministic branch-scoped identities") !=
         std::string::npos);
   CHECK(syntaxSpec.find("Failed requirements on a direct call are diagnostics, not C++-style\n"
                         "  substitution failure by accident.") !=
@@ -1719,9 +1726,9 @@ TEST_CASE("todo queue and skipped doctest debt stay source locked") {
   CHECK(todo.find("### Ready Now (Parallel-Candidate Leaves; No Unmet TODO Dependencies)") !=
         std::string::npos);
   CHECK(todo.find("### Ready Now (Parallel-Candidate Leaves; No Unmet TODO Dependencies)\n\n"
-                  "- TODO-4549: Scope branch-local generated type facts | track:\n"
-                  "  generic-requirements-ct-if | primary surface: selected-branch generated\n"
-                  "  type facts") !=
+                  "- TODO-4346: Add compile-time flow effect and termination policy | track:\n"
+                  "  generic-requirements-flow | primary surface: compile-time effect and\n"
+                  "  termination policy") !=
         std::string::npos);
   CHECK(todo.find("- `soa-zero-audit`: TODO-4529 replaced the residue inventory with a strict\n"
                   "  zero-production-trace audit; no SoA zero-audit leaf is ready.") !=
@@ -1755,8 +1762,9 @@ TEST_CASE("todo queue and skipped doctest debt stay source locked") {
                   "  facts; TODO-4356 prepared restricted compile-time callables; TODO-4357\n"
                   "  evaluates pure user predicates; TODO-4345 added statement-level concrete\n"
                   "  `ct_if`; TODO-4547 added generic-specialized branch selection, and\n"
-                  "  TODO-4548 added expression-position `ct_if` values; TODO-4549 is ready for\n"
-                  "  branch-local generated type facts.") !=
+                  "  TODO-4548 added expression-position `ct_if` values; TODO-4549 scoped\n"
+                  "  selected-branch generated type facts; TODO-4346 is ready for compile-time\n"
+                  "  flow policy.") !=
         std::string::npos);
   CHECK(todo.find("### Immediate Next 10 (Track Successors; Not Ready Until Dependencies Land)\n\n"
                   "- TODO-4545: Implement first structured task spawn/wait substrate\n"
@@ -1776,12 +1784,16 @@ TEST_CASE("todo queue and skipped doctest debt stay source locked") {
   CHECK(todo.find("- Deferred SoA finish: TODO-4252") ==
         std::string::npos);
   CHECK(todo.find("### Execution Queue (Recommended Track Order)\n\n"
-                  "- TODO-4549: Scope branch-local generated type facts\n"
+                  "- TODO-4346: Add compile-time flow effect and termination policy\n"
                   "- TODO-4545: Implement first structured task spawn/wait substrate") !=
         std::string::npos);
   CHECK(todo.find("- [ ] TODO-4548: Add expression-position `ct_if` values") ==
         std::string::npos);
   CHECK(todoFinished.find("TODO-4548: Add expression-position `ct_if` values") !=
+        std::string::npos);
+  CHECK(todo.find("- [ ] TODO-4549: Scope branch-local generated type facts") ==
+        std::string::npos);
+  CHECK(todoFinished.find("TODO-4549: Scope branch-local generated type facts") !=
         std::string::npos);
   CHECK(todo.find("- [ ] TODO-4547: Add specialization-aware `ct_if` over type facts") ==
         std::string::npos);
@@ -1886,7 +1898,7 @@ TEST_CASE("todo queue and skipped doctest debt stay source locked") {
   CHECK(todoFinished.find("TODO-4519: Delete `soa_vector` compatibility seams") !=
         std::string::npos);
   const std::vector<std::string> semanticPhaseQueue = {
-      "TODO-4549: Scope branch-local generated type facts",
+      "TODO-4346: Add compile-time flow effect and termination policy",
   };
   for (const std::string &entry : semanticPhaseQueue) {
     CHECK(todo.find("- " + entry) != std::string::npos);

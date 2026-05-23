@@ -754,6 +754,114 @@ main() {
   CHECK(dumps.astSemantic.find("5") != std::string::npos);
 }
 
+TEST_CASE("statement ct_if scopes selected branch generated structs") {
+  const std::string source = R"(
+[return<i32>]
+pick([i32] value) {
+  [i32 mut] result{0i32}
+  ct_if(type_equals<typeof<value>, i32>()) {
+    [type] ValueT { typeof<value> }
+    [struct] PairT {
+      [ValueT] first{0i32}
+    }
+    [PairT] pair{PairT{value}}
+    assign(result, pair.first)
+  } else {
+    [struct] DiscardedT {
+      [bool] flag{false}
+    }
+    missing_in_discarded_branch(value)
+  }
+  return(result)
+}
+
+[return<i32>]
+main() {
+  return(pick(7i32))
+}
+)";
+
+  primec::testing::CompilePipelineBoundaryDumps dumps;
+  std::string error;
+  REQUIRE(primec::testing::captureSemanticBoundaryDumpsForTesting(
+      source, "/main", dumps, error));
+  CHECK(error.empty());
+  CHECK(dumps.astSemantic.find("ct_if(") == std::string::npos);
+  CHECK(dumps.astSemantic.find("missing_in_discarded_branch") ==
+        std::string::npos);
+  CHECK(dumps.astSemantic.find("DiscardedT") == std::string::npos);
+  CHECK(dumps.astSemantic.find("/pick/PairT__ct_if_then_") !=
+        std::string::npos);
+  CHECK(dumps.semanticProduct.find(
+            "full_path=\"/pick/PairT__ct_if_then_") != std::string::npos);
+  CHECK(dumps.semanticProduct.find(
+            "struct_path=\"/pick/PairT__ct_if_then_") != std::string::npos);
+  CHECK(dumps.semanticProduct.find("field_name=\"first\" field_index=0 "
+                                   "binding_type_text=\"i32\"") !=
+        std::string::npos);
+  CHECK(dumps.semanticProduct.find("DiscardedT") == std::string::npos);
+  CHECK(dumps.semanticProduct.find("ValueT") == std::string::npos);
+}
+
+TEST_CASE("statement ct_if branch generated structs do not leak") {
+  const std::string source = R"(
+[return<i32>]
+pick([i32] value) {
+  ct_if(type_equals<typeof<value>, i32>()) {
+    [struct] PairT {
+      [i32] first{0i32}
+    }
+  } else {
+    print(0i32)
+  }
+  [PairT] pair{PairT{value}}
+  return(pair.first)
+}
+
+[return<i32>]
+main() {
+  return(pick(7i32))
+}
+)";
+
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  INFO(error);
+  CHECK(error.find("unsupported binding type: PairT") != std::string::npos);
+}
+
+TEST_CASE("statement ct_if branch generated escape names selected branch") {
+  const std::string source = R"(
+[return<auto>]
+pick([i32] value) {
+  ct_if(type_equals<typeof<value>, i32>()) {
+    [type] ValueT { typeof<value> }
+    [struct] PairT {
+      [ValueT] first{0i32}
+    }
+    [PairT] pair{PairT{value}}
+    return(pair)
+  } else {
+    return(value)
+  }
+}
+
+[return<i32>]
+main() {
+  return(pick(7i32))
+}
+)";
+
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  INFO(error);
+  CHECK(error.find("local generated struct cannot escape return type: "
+                   "/pick/PairT__ct_if_then_") != std::string::npos);
+  CHECK(error.find("selected compile-time branch: then") !=
+        std::string::npos);
+  CHECK(error.find("type facts: ValueT") != std::string::npos);
+}
+
 TEST_CASE("expression ct_if selects value branches before validation") {
   const std::string selectedReturn = R"(
 [return<i32>]

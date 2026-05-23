@@ -57,11 +57,33 @@ std::string SemanticsValidator::formatLocalGeneratedStructEscapeDiagnostic(
     return message;
   }
 
-  if (structDef->sourceLine > 0 && structDef->sourceColumn > 0) {
-    message += " (local type defined at ";
-    message += sourcePointText(structDef->sourceLine, structDef->sourceColumn);
+  const std::size_t branchMarker = structPath.find("__ct_if_");
+  if (branchMarker != std::string::npos) {
+    const std::size_t branchStart =
+        branchMarker + std::string("__ct_if_").size();
+    const std::size_t branchEnd = structPath.find('_', branchStart);
+    if (branchEnd != std::string::npos && branchEnd > branchStart) {
+      message += " (selected compile-time branch: ";
+      message += structPath.substr(branchStart, branchEnd - branchStart);
+    } else {
+      message += " (selected compile-time branch";
+    }
   } else {
-    message += " (local type definition source unknown";
+    if (structDef->sourceLine > 0 && structDef->sourceColumn > 0) {
+      message += " (local type defined at ";
+      message += sourcePointText(structDef->sourceLine, structDef->sourceColumn);
+    } else {
+      message += " (local type definition source unknown";
+    }
+  }
+
+  if (branchMarker != std::string::npos) {
+    if (structDef->sourceLine > 0 && structDef->sourceColumn > 0) {
+      message += "; local type defined at ";
+      message += sourcePointText(structDef->sourceLine, structDef->sourceColumn);
+    } else {
+      message += "; local type definition source unknown";
+    }
   }
 
   const Definition *parentDef = nullptr;

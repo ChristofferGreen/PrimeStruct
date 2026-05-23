@@ -6804,6 +6804,18 @@ enum class CompileTimeIfDecision {
   Deferred,
 };
 
+std::string compileTimeIfDecisionText(CompileTimeIfDecision decision) {
+  switch (decision) {
+  case CompileTimeIfDecision::SelectedThen:
+    return "then";
+  case CompileTimeIfDecision::SelectedElse:
+    return "else";
+  case CompileTimeIfDecision::Deferred:
+    break;
+  }
+  return "deferred";
+}
+
 bool evaluateCompileTimeIfDecision(
     const Expr &stmt,
     const semantics::RequirementPredicateDefinitionContext &context,
@@ -6850,9 +6862,217 @@ bool evaluateCompileTimeIfDecision(
   return true;
 }
 
+std::string rewriteCompileTimeIfBranchTypeText(
+    const std::string &typeText,
+    const std::unordered_map<std::string, std::string> &branchTypes) {
+  auto exactIt = branchTypes.find(typeText);
+  if (exactIt != branchTypes.end()) {
+    return exactIt->second;
+  }
+  std::string base;
+  std::string argText;
+  if (!semantics::splitTemplateTypeName(typeText, base, argText) ||
+      base.empty()) {
+    return typeText;
+  }
+  std::vector<std::string> args;
+  if (!semantics::splitTopLevelTemplateArgs(argText, args)) {
+    return typeText;
+  }
+  base = rewriteCompileTimeIfBranchTypeText(base, branchTypes);
+  for (std::string &arg : args) {
+    arg = rewriteCompileTimeIfBranchTypeText(arg, branchTypes);
+  }
+  std::ostringstream rebuilt;
+  rebuilt << base << "<";
+  for (std::size_t i = 0; i < args.size(); ++i) {
+    if (i != 0) {
+      rebuilt << ", ";
+    }
+    rebuilt << args[i];
+  }
+  rebuilt << ">";
+  return rebuilt.str();
+}
+
+void rewriteCompileTimeIfBranchTemplateArgs(
+    std::vector<std::string> &templateArgs,
+    std::vector<TemplateArgument> &templateArgDetails,
+    const std::unordered_map<std::string, std::string> &branchTypes) {
+  for (std::string &arg : templateArgs) {
+    arg = rewriteCompileTimeIfBranchTypeText(arg, branchTypes);
+  }
+  for (TemplateArgument &detail : templateArgDetails) {
+    if (detail.kind == TemplateArgumentKind::Type) {
+      detail.text = rewriteCompileTimeIfBranchTypeText(detail.text,
+                                                       branchTypes);
+    }
+  }
+}
+
+void rewriteCompileTimeIfBranchTypeReferences(
+    Expr &expr,
+    const std::unordered_map<std::string, std::string> &branchTypes);
+
+void rewriteCompileTimeIfBranchTransformReferences(
+    Transform &transform,
+    const std::unordered_map<std::string, std::string> &branchTypes) {
+  transform.name =
+      rewriteCompileTimeIfBranchTypeText(transform.name, branchTypes);
+  rewriteCompileTimeIfBranchTemplateArgs(transform.templateArgs,
+                                         transform.templateArgDetails,
+                                         branchTypes);
+}
+
+void rewriteCompileTimeIfBranchTypeReferences(
+    Expr &expr,
+    const std::unordered_map<std::string, std::string> &branchTypes) {
+  expr.name = rewriteCompileTimeIfBranchTypeText(expr.name, branchTypes);
+  rewriteCompileTimeIfBranchTemplateArgs(expr.templateArgs,
+                                         expr.templateArgDetails,
+                                         branchTypes);
+  for (Transform &transform : expr.transforms) {
+    rewriteCompileTimeIfBranchTransformReferences(transform, branchTypes);
+  }
+  for (Expr &arg : expr.args) {
+    rewriteCompileTimeIfBranchTypeReferences(arg, branchTypes);
+  }
+  for (Expr &bodyArg : expr.bodyArguments) {
+    rewriteCompileTimeIfBranchTypeReferences(bodyArg, branchTypes);
+  }
+}
+
+bool isCompileTimeIfBranchGeneratedStructExpr(const Expr &expr) {
+  if (expr.kind != Expr::Kind::Call || !expr.isBinding ||
+      expr.name.empty() || expr.args.size() != 1) {
+    return false;
+  }
+  if (!std::any_of(expr.transforms.begin(),
+                   expr.transforms.end(),
+                   [](const Transform &transform) {
+                     return transform.name == "struct";
+                   })) {
+    return false;
+  }
+  const Expr &initializer = expr.args.front();
+  return initializer.kind == Expr::Kind::Call &&
+         initializer.name == "struct" &&
+         initializer.isBraceConstructor;
+}
+
+void normalizeCompileTimeIfGeneratedStructField(Expr &field) {
+  if (field.isBinding || field.transforms.empty()) {
+    return;
+  }
+  field.isBinding = true;
+  if (field.args.size() != 1) {
+    return;
+  }
+  Expr &initializer = field.args.front();
+  if (initializer.kind != Expr::Kind::Call || initializer.name != "block" ||
+      !initializer.hasBodyArguments || initializer.bodyArguments.size() != 1) {
+    return;
+  }
+  field.args.front() = std::move(initializer.bodyArguments.front());
+  field.argNames.assign(1, std::nullopt);
+}
+
+std::vector<Expr> takeCompileTimeIfGeneratedStructFields(Expr &initializer) {
+  std::vector<Expr> fields = std::move(initializer.args);
+  for (std::size_t i = 0; i < fields.size() && i < initializer.argNames.size();
+       ++i) {
+    if (!initializer.argNames[i].has_value() || !fields[i].transforms.empty()) {
+      continue;
+    }
+    Transform typeTransform;
+    typeTransform.name = *initializer.argNames[i];
+    typeTransform.sourceLine = fields[i].sourceLine;
+    typeTransform.sourceColumn = fields[i].sourceColumn;
+    fields[i].transforms.push_back(std::move(typeTransform));
+  }
+  for (Expr &field : fields) {
+    normalizeCompileTimeIfGeneratedStructField(field);
+  }
+  return fields;
+}
+
+std::string makeCompileTimeIfGeneratedStructName(
+    const Expr &expr,
+    CompileTimeIfDecision decision) {
+  return expr.name + "__ct_if_" + compileTimeIfDecisionText(decision) +
+         "_" + std::to_string(expr.sourceLine) +
+         "_" + std::to_string(expr.sourceColumn);
+}
+
+bool materializeCompileTimeIfGeneratedStructs(
+    std::vector<Expr> &selected,
+    const std::string &definitionPath,
+    CompileTimeIfDecision decision,
+    std::unordered_set<std::string> &structNames,
+    std::vector<Definition> &generatedDefinitions,
+    std::string &error) {
+  std::unordered_map<std::string, std::string> branchTypes;
+  std::vector<Expr> retained;
+  retained.reserve(selected.size());
+  const std::size_t generatedStart = generatedDefinitions.size();
+
+  for (Expr &stmt : selected) {
+    if (!isCompileTimeIfBranchGeneratedStructExpr(stmt)) {
+      retained.push_back(std::move(stmt));
+      continue;
+    }
+    if (branchTypes.count(stmt.name) > 0) {
+      error = "duplicate branch-local generated struct: " + stmt.name +
+              " on " + definitionPath;
+      return false;
+    }
+    Definition generated;
+    generated.name = makeCompileTimeIfGeneratedStructName(stmt, decision);
+    generated.namespacePrefix = definitionPath;
+    generated.fullPath = definitionPath + "/" + generated.name;
+    generated.sourceLine = stmt.sourceLine;
+    generated.sourceColumn = stmt.sourceColumn;
+    generated.transforms = stmt.transforms;
+    generated.isNested = true;
+    generated.statements =
+        takeCompileTimeIfGeneratedStructFields(stmt.args.front());
+    if (structNames.count(generated.fullPath) > 0) {
+      error = "duplicate branch-local generated struct path: " +
+              generated.fullPath;
+      return false;
+    }
+    branchTypes.emplace(stmt.name, generated.fullPath);
+    structNames.insert(generated.fullPath);
+    generatedDefinitions.push_back(std::move(generated));
+  }
+
+  if (branchTypes.empty()) {
+    selected = std::move(retained);
+    return true;
+  }
+
+  for (Expr &stmt : retained) {
+    if (stmt.isBinding && branchTypes.count(stmt.name) > 0) {
+      error = "branch-local generated struct name shadows local binding: " +
+              stmt.name;
+      return false;
+    }
+    rewriteCompileTimeIfBranchTypeReferences(stmt, branchTypes);
+  }
+  for (std::size_t i = generatedStart; i < generatedDefinitions.size(); ++i) {
+    for (Expr &field : generatedDefinitions[i].statements) {
+      rewriteCompileTimeIfBranchTypeReferences(field, branchTypes);
+    }
+  }
+  selected = std::move(retained);
+  return true;
+}
+
 bool rewriteCompileTimeIfStatements(std::vector<Expr> &statements,
-                                    const semantics::RequirementPredicateDefinitionContext &context,
+                                    semantics::RequirementPredicateDefinitionContext context,
                                     const std::string &definitionPath,
+                                    std::unordered_set<std::string> &structNames,
+                                    std::vector<Definition> &generatedDefinitions,
                                     bool allowDeferred,
                                     std::string &error);
 
@@ -6865,8 +7085,10 @@ bool rewriteCompileTimeIfExpression(
 
 bool rewriteCompileTimeIfStatement(Expr &stmt,
                                    std::vector<Expr> &out,
-                                   const semantics::RequirementPredicateDefinitionContext &context,
+                                   semantics::RequirementPredicateDefinitionContext context,
                                    const std::string &definitionPath,
+                                   std::unordered_set<std::string> &structNames,
+                                   std::vector<Definition> &generatedDefinitions,
                                    bool allowDeferred,
                                    std::string &error) {
   if (stmt.kind != Expr::Kind::Call || stmt.name != "ct_if") {
@@ -6890,8 +7112,23 @@ bool rewriteCompileTimeIfStatement(Expr &stmt,
       decision == CompileTimeIfDecision::SelectedThen
           ? std::move(stmt.args[1].bodyArguments)
           : std::move(stmt.args[2].bodyArguments);
+  if (!materializeCompileTimeIfGeneratedStructs(selected,
+                                                definitionPath,
+                                                decision,
+                                                structNames,
+                                                generatedDefinitions,
+                                                error)) {
+    return false;
+  }
+  context.structNames = structNames;
   if (!rewriteCompileTimeIfStatements(
-          selected, context, definitionPath, allowDeferred, error)) {
+          selected,
+          context,
+          definitionPath,
+          structNames,
+          generatedDefinitions,
+          allowDeferred,
+          error)) {
     return false;
   }
   out.insert(out.end(),
@@ -6949,15 +7186,24 @@ bool rewriteCompileTimeIfExpression(
 }
 
 bool rewriteCompileTimeIfStatements(std::vector<Expr> &statements,
-                                    const semantics::RequirementPredicateDefinitionContext &context,
+                                    semantics::RequirementPredicateDefinitionContext context,
                                     const std::string &definitionPath,
+                                    std::unordered_set<std::string> &structNames,
+                                    std::vector<Definition> &generatedDefinitions,
                                     bool allowDeferred,
                                     std::string &error) {
   std::vector<Expr> rewritten;
   rewritten.reserve(statements.size());
   for (Expr &stmt : statements) {
     if (!rewriteCompileTimeIfStatement(
-            stmt, rewritten, context, definitionPath, allowDeferred, error)) {
+            stmt,
+            rewritten,
+            context,
+            definitionPath,
+            structNames,
+            generatedDefinitions,
+            allowDeferred,
+            error)) {
       return false;
     }
   }
@@ -6987,6 +7233,7 @@ bool rewriteCompileTimeIfBranches(Program &program,
     }
   }
 
+  std::vector<Definition> generatedDefinitions;
   for (Definition &definition : program.definitions) {
     semantics::RequirementPredicateDefinitionContext context =
         makeCompileTimeIfRequirementContext(program,
@@ -6998,6 +7245,8 @@ bool rewriteCompileTimeIfBranches(Program &program,
             definition.statements,
             context,
             definition.fullPath,
+            structNames,
+            generatedDefinitions,
             allowDeferred,
             error)) {
       return false;
@@ -7011,6 +7260,11 @@ bool rewriteCompileTimeIfBranches(Program &program,
       return false;
     }
   }
+  program.definitions.insert(program.definitions.end(),
+                             std::make_move_iterator(
+                                 generatedDefinitions.begin()),
+                             std::make_move_iterator(
+                                 generatedDefinitions.end()));
   return true;
 }
 

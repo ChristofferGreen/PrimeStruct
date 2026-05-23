@@ -6,6 +6,30 @@ Legend:
 Finished items are periodically archived here from `docs/todo.md`; section headers record the archive date.
 
 **Todo Completion (May 23, 2026)**
+- [x] TODO-4549: Scope branch-local generated type facts
+  - owner: ai
+  - created_at: 2026-05-23
+  - finished_at: 2026-05-23
+  - phase: Generic constraint and compile-time flow alignment
+  - parallel_track: generic-requirements-ct-if
+  - depends_on: TODO-4548
+  - scope: Give type facts and generated nominal definitions introduced inside
+    selected `ct_if` branches deterministic branch-local scope and identity
+    while keeping discarded branch definitions from leaking.
+  - outcome:
+    - Materialized selected-branch local generated structs during `ct_if`
+      pruning with deterministic branch-suffixed identities.
+    - Rewrote only selected-branch type and constructor uses to the generated
+      branch identity.
+    - Kept discarded branch generated definitions and type facts out of
+      semantic products and IR.
+    - Added diagnostics that name the selected compile-time branch when a
+      branch-local generated type escapes.
+    - Promoted TODO-4346 as the next compile-time flow policy slice.
+  - validation:
+    - `cmake --build build-release --target PrimeStruct_semantics_tests -j 1`
+    - `./PrimeStruct_semantics_tests --test-case='statement ct_if selects predicate branches before validation,statement ct_if scopes selected branch generated structs,statement ct_if branch generated structs do not leak,statement ct_if branch generated escape names selected branch' --no-skip`
+
 - [x] TODO-4548: Add expression-position `ct_if` values
   - owner: ai
   - created_at: 2026-05-23

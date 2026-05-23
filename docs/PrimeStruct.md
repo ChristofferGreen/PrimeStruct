@@ -1121,8 +1121,11 @@ Procedural compile-time genericity contract:
   value. Generic-specialized definitions may also use `ct_if` over type facts
   after template monomorphization selects concrete parameter types. Only the
   selected branch contributes runtime code or diagnostics; the discarded branch
-  is parsed but pruned before validation and lowering. Branch-local generated
-  nominal identity remains follow-up work.
+  is parsed but pruned before validation and lowering. Local generated structs
+  introduced by the selected statement branch receive a deterministic
+  branch-scoped identity such as `/pick/PairT__ct_if_then_5_5`; selected-branch
+  uses are rewritten to that identity, while discarded-branch generated
+  definitions and type facts stay out of semantic products and IR.
 - Compile-time predicate and helper execution should run through a
   compiler-hosted compile-time VM facade. That facade may share the runtime VM
   interpreter core for arithmetic, calls, branching, and frame mechanics, but

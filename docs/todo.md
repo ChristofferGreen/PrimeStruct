@@ -83,9 +83,9 @@ Task template:
 
 ### Ready Now (Parallel-Candidate Leaves; No Unmet TODO Dependencies)
 
-- TODO-4549: Scope branch-local generated type facts | track:
-  generic-requirements-ct-if | primary surface: selected-branch generated
-  type facts
+- TODO-4346: Add compile-time flow effect and termination policy | track:
+  generic-requirements-flow | primary surface: compile-time effect and
+  termination policy
 
 ### Parallel Work Tracks (Current)
 
@@ -124,8 +124,9 @@ Task template:
   facts; TODO-4356 prepared restricted compile-time callables; TODO-4357
   evaluates pure user predicates; TODO-4345 added statement-level concrete
   `ct_if`; TODO-4547 added generic-specialized branch selection, and
-  TODO-4548 added expression-position `ct_if` values; TODO-4549 is ready for
-  branch-local generated type facts.
+  TODO-4548 added expression-position `ct_if` values; TODO-4549 scoped
+  selected-branch generated type facts; TODO-4346 is ready for compile-time
+  flow policy.
 
 ### Immediate Next 10 (Track Successors; Not Ready Until Dependencies Land)
 
@@ -154,16 +155,15 @@ Task template:
   prerequisite split out of TODO-4278
 - Procedural compile-time genericity: none active after TODO-4340 and
   TODO-4546
-- Generic constraint and compile-time flow alignment: TODO-4549
-  -> TODO-4346 -> TODO-4358 -> TODO-4347
+- Generic constraint and compile-time flow alignment: TODO-4346
+  -> TODO-4358 -> TODO-4347
   -> TODO-4351 -> TODO-4348 -> TODO-4359 -> TODO-4349 -> TODO-4350
 
 ### Execution Queue (Recommended Track Order)
 
-- TODO-4549: Scope branch-local generated type facts
+- TODO-4346: Add compile-time flow effect and termination policy
 - TODO-4545: Implement first structured task spawn/wait substrate
 - TODO-4278: Integrate multi-wait with stdlib tuple
-- TODO-4346: Add compile-time flow effect and termination policy
 - TODO-4358: Enforce compile-time cache, budget, and effects
 - TODO-4347: Integrate requirements with overload selection
 - TODO-4351: Add value-level compile-time requirement facts
@@ -810,37 +810,11 @@ Task template:
   - stop_rule: Stop once multi-wait returns stdlib `tuple<...>` or the missing
     task-side prerequisite is split into an explicit multithreading TODO.
 
-- [ ] TODO-4549: Scope branch-local generated type facts
-  - owner: ai
-  - created_at: 2026-05-23
-  - phase: Generic constraint and compile-time flow alignment
-  - parallel_track: generic-requirements-ct-if
-  - depends_on: TODO-4548
-  - scope: Give type facts and generated nominal definitions introduced inside
-    selected `ct_if` branches deterministic branch-local scope and identity
-    while keeping discarded branch definitions from leaking.
-  - implementation_notes:
-    - Start from local generated struct identity/provenance, semantic-product
-      type facts, and the `ct_if` branch pruning pass.
-    - Keep generated identity stable across equivalent specializations without
-      making discarded branch definitions visible to downstream validation.
-  - acceptance:
-    - Generated names and type facts inside the selected branch are
-      deterministic and branch-scoped.
-    - Discarded branch generated definitions and type facts are absent from
-      semantic products and IR.
-    - Diagnostics identify the selected compile-time branch when a
-      branch-local generated definition fails validation.
-    - Focused tests cover selected-branch generated definitions and discarded
-      branch non-leakage.
-  - stop_rule: Stop once branch-local generated identities are deterministic
-    and non-selected branch definitions remain invisible; leave global effect
-    policy to TODO-4346.
-
 - [ ] TODO-4346: Add compile-time flow effect and termination policy
   - owner: ai
   - created_at: 2026-05-04
   - phase: Generic constraint and compile-time flow alignment
+  - parallel_track: generic-requirements-flow
   - depends_on: TODO-4549
   - scope: Define the purity, effect, recursion, caching, and termination
     policy for compile-time generic execution, leaving full enforcement to
