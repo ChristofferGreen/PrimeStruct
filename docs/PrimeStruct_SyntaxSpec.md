@@ -868,7 +868,10 @@ Requirement rules:
   facade. It may share the runtime VM interpreter core for arithmetic, calls,
   branching, and frame mechanics, but it uses a separate `CompileTimeHost` with
   typed compile-time values, semantic facts, `/std/meta/*` intrinsics,
-  provenance, budgets, caches, and phase-qualified compile-time effects.
+  provenance, budgets, caches, and phase-qualified compile-time effects. The
+  shared VM execution kernel keeps argv, heap allocation, file IO, and print IO
+  behind a host interface so compile-time evaluation can include interpreter
+  mechanics without pulling in runtime-only helpers or debug adapter state.
   Facade results distinguish success, unsatisfied predicates, invalid
   evaluation, denied effects, budget exhaustion, and internal compiler errors,
   and every non-success result carries semantic provenance for diagnostics.

@@ -1908,6 +1908,8 @@ TEST_CASE("vm control flow opcode helpers source delegation stays stable") {
                                                             : std::filesystem::path("..");
 
   const std::filesystem::path vmExecutionPath = repoRoot / "src" / "VmExecution.cpp";
+  const std::filesystem::path vmExecutionKernelPath =
+      repoRoot / "src" / "VmExecutionKernel.cpp";
   const std::filesystem::path vmDebugInstructionPath =
       repoRoot / "src" / "VmDebugSessionInstruction.cpp";
   const std::filesystem::path vmControlFlowSharedPath =
@@ -1915,25 +1917,38 @@ TEST_CASE("vm control flow opcode helpers source delegation stays stable") {
   const std::filesystem::path vmControlFlowSharedHeaderPath =
       repoRoot / "src" / "VmControlFlowOpcodeShared.h";
   REQUIRE(std::filesystem::exists(vmExecutionPath));
+  REQUIRE(std::filesystem::exists(vmExecutionKernelPath));
   REQUIRE(std::filesystem::exists(vmDebugInstructionPath));
   REQUIRE(std::filesystem::exists(vmControlFlowSharedPath));
   REQUIRE(std::filesystem::exists(vmControlFlowSharedHeaderPath));
 
   const std::string vmExecutionSource = readText(vmExecutionPath);
+  const std::string vmExecutionKernelSource = readText(vmExecutionKernelPath);
   const std::string vmDebugInstructionSource = readText(vmDebugInstructionPath);
   const std::string vmControlFlowSharedSource = readText(vmControlFlowSharedPath);
   const std::string vmControlFlowSharedHeaderSource = readText(vmControlFlowSharedHeaderPath);
 
-  CHECK(vmExecutionSource.find("#include \"VmControlFlowOpcodeShared.h\"") != std::string::npos);
+  CHECK(vmExecutionSource.find("#include \"primec/VmExecutionKernel.h\"") !=
+        std::string::npos);
+  CHECK(vmExecutionSource.find("executeVmKernel(module, host, result, error)") !=
+        std::string::npos);
+  CHECK(vmExecutionKernelSource.find("#include \"VmControlFlowOpcodeShared.h\"") !=
+        std::string::npos);
   CHECK(vmDebugInstructionSource.find("#include \"VmControlFlowOpcodeShared.h\"") !=
         std::string::npos);
-  CHECK(vmExecutionSource.find("handleSharedVmControlFlowOpcode(") != std::string::npos);
+  CHECK(vmExecutionKernelSource.find("handleSharedVmControlFlowOpcode(") !=
+        std::string::npos);
   CHECK(vmDebugInstructionSource.find("handleSharedVmControlFlowOpcode(") != std::string::npos);
   CHECK(vmExecutionSource.find("case IrOpcode::JumpIfZero:") == std::string::npos);
+  CHECK(vmExecutionKernelSource.find("case IrOpcode::JumpIfZero:") ==
+        std::string::npos);
   CHECK(vmDebugInstructionSource.find("case IrOpcode::JumpIfZero:") == std::string::npos);
   CHECK(vmExecutionSource.find("case IrOpcode::Call:") == std::string::npos);
+  CHECK(vmExecutionKernelSource.find("case IrOpcode::Call:") == std::string::npos);
   CHECK(vmDebugInstructionSource.find("case IrOpcode::Call:") == std::string::npos);
   CHECK(vmExecutionSource.find("case IrOpcode::ReturnI32:") == std::string::npos);
+  CHECK(vmExecutionKernelSource.find("case IrOpcode::ReturnI32:") ==
+        std::string::npos);
   CHECK(vmDebugInstructionSource.find("case IrOpcode::ReturnI32:") == std::string::npos);
 
   CHECK(vmControlFlowSharedHeaderSource.find("enum class VmControlFlowOpcodeResult") !=

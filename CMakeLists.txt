@@ -462,6 +462,7 @@ set(PRIMESTRUCT_RUNTIME_SOURCES
   src/VmDebugSessionSetup.cpp
   src/VmControlFlowOpcodeShared.cpp
   src/VmExecution.cpp
+  src/VmExecutionKernel.cpp
   src/VmExecutionNumeric.cpp
   src/VmNumericOpcodeShared.cpp
   src/VmHeapHelpers.cpp
@@ -895,6 +896,7 @@ if(PRIMESTRUCT_BUILD_TESTS)
     tests/unit/test_ir_pipeline_to_glsl.cpp
     tests/unit/test_ir_pipeline_to_glsl_runtime.cpp
     tests/unit/test_vm_debug_session.cpp
+    tests/unit/test_vm_execution_kernel_boundary.cpp
   )
 
   set(PrimeStructCompileRunTestSources)
@@ -1120,6 +1122,7 @@ if(PRIMESTRUCT_BUILD_TESTS)
     primestruct.ir.pipeline.to_cpp
     primestruct.ir.pipeline.to_glsl
     primestruct.vm.debug.session
+    primestruct.vm.execution.kernel
   )
 
   set(PrimeStructBackendTestSuites

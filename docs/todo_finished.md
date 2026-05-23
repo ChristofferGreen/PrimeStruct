@@ -6,6 +6,32 @@ Legend:
 Finished items are periodically archived here from `docs/todo.md`; section headers record the archive date.
 
 **Todo Completion (May 23, 2026)**
+- [x] TODO-4354: Factor reusable VM interpreter kernel
+  - owner: ai
+  - created_at: 2026-05-04
+  - finished_at: 2026-05-23
+  - phase: Generic constraint and compile-time flow alignment
+  - parallel_track: generic-requirements-vm-kernel
+  - depends_on: TODO-4352
+  - scope: Factor runtime VM execution so arithmetic, branching, calls, frame
+    mechanics, and deterministic faults can be reused by compile-time
+    evaluation without sharing runtime-only host state.
+  - outcome:
+    - Added `primec/VmExecutionKernel.h` and `src/VmExecutionKernel.cpp` as a
+      reusable interpreter kernel for arithmetic, control flow, calls, frames,
+      locals, strings, and deterministic faults.
+    - Kept runtime `Vm::execute(...)` ABI stable by routing it through a
+      runtime `VmKernelHost` that owns argv, heap, print IO, and file IO.
+    - Added focused runtime coverage for kernel call/numeric behavior,
+      host-delegated print/file boundaries, argv/local memory access, and
+      source locks that prevent runtime-only helper dependencies from
+      entering the shared kernel.
+    - Promoted TODO-4355 as the next Ready Now generic-requirements leaf.
+  - validation:
+    - Focused release validation was selected under the lite workflow; full
+      `./scripts/compile.sh --release` remains deferred to parent/root
+      validation.
+
 - [x] TODO-4353: Add typed compile-time value model
   - owner: ai
   - created_at: 2026-05-04

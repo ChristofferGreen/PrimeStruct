@@ -1108,11 +1108,15 @@ Procedural compile-time genericity contract:
   interpreter core for arithmetic, calls, branching, and frame mechanics, but
   it has a separate `CompileTimeHost` with typed compile-time values, semantic
   facts, `/std/meta/*` intrinsics, provenance, budgets, caches, and
-  phase-qualified compile-time effects. The public compiler-internal facade
-  reports stable categories for success, unsatisfied predicates, invalid
-  evaluation, denied effects, budget exhaustion, and internal compiler errors;
-  diagnostics format those categories with the definition, predicate, and
-  source provenance supplied by semantic validation.
+  phase-qualified compile-time effects. The shared VM execution kernel exposes
+  an explicit host boundary for runtime-only behavior such as argv, heap
+  allocation, file IO, and print IO so compile-time evaluation can reuse the
+  deterministic interpreter mechanics without depending on `primevm` runtime
+  state. The public compiler-internal facade reports stable categories for
+  success, unsatisfied predicates, invalid evaluation, denied effects, budget
+  exhaustion, and internal compiler errors; diagnostics format those categories
+  with the definition, predicate, and source provenance supplied by semantic
+  validation.
 - Compile-time values are typed facts, not raw VM slots. The compiler-internal
   value model represents `bool`, signed and unsigned integer constants, string
   literals, type facts, symbols, and requirement outcomes with stable equality,

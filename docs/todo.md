@@ -83,9 +83,9 @@ Task template:
 
 ### Ready Now (Parallel-Candidate Leaves; No Unmet TODO Dependencies)
 
-- TODO-4354: Factor reusable VM interpreter kernel | track:
-  generic-requirements-vm-kernel | primary surface: VM runtime execution kernel
-  factoring
+- TODO-4355: Add compile-time host and meta intrinsics | track:
+  generic-requirements-host | primary surface: compile-time host and
+  `/std/meta/*` intrinsic dispatch
 
 ### Parallel Work Tracks (Current)
 
@@ -119,12 +119,11 @@ Task template:
   examples, and TODO-4546 added negative conformance; no procedural-genericity
   leaf is ready.
 - `generic-requirements`: TODO-4331, TODO-4334, TODO-4341, TODO-4342,
-  TODO-4343, TODO-4344, TODO-4352, and TODO-4353 are complete; TODO-4354 is
-  ready as the remaining VM kernel factoring prerequisite for TODO-4355.
+  TODO-4343, TODO-4344, TODO-4352, TODO-4353, and TODO-4354 are complete;
+  TODO-4355 is ready for compile-time host and meta intrinsic dispatch.
 
 ### Immediate Next 10 (Track Successors; Not Ready Until Dependencies Land)
 
-- TODO-4355: Add compile-time host and meta intrinsics
 - TODO-4545: Implement first structured task spawn/wait substrate
 - TODO-4278: Integrate multi-wait with stdlib tuple
 
@@ -150,14 +149,13 @@ Task template:
   prerequisite split out of TODO-4278
 - Procedural compile-time genericity: none active after TODO-4340 and
   TODO-4546
-- Generic constraint and compile-time flow alignment: TODO-4354 -> TODO-4355
+- Generic constraint and compile-time flow alignment: TODO-4355
   -> TODO-4356 -> TODO-4357 -> TODO-4345
   -> TODO-4346 -> TODO-4358 -> TODO-4347 -> TODO-4351 -> TODO-4348
   -> TODO-4359 -> TODO-4349 -> TODO-4350
 
 ### Execution Queue (Recommended Track Order)
 
-- TODO-4354: Factor reusable VM interpreter kernel
 - TODO-4355: Add compile-time host and meta intrinsics
 - TODO-4356: Add restricted compile-time callable lowering
 - TODO-4545: Implement first structured task spawn/wait substrate
@@ -811,41 +809,11 @@ Task template:
   - stop_rule: Stop once multi-wait returns stdlib `tuple<...>` or the missing
     task-side prerequisite is split into an explicit multithreading TODO.
 
-- [ ] TODO-4354: Factor reusable VM interpreter kernel
-  - owner: ai
-  - created_at: 2026-05-04
-  - phase: Generic constraint and compile-time flow alignment
-  - depends_on: TODO-4352
-  - scope: Factor runtime VM execution so arithmetic, branching, calls, frame
-    mechanics, and deterministic faults can be reused by compile-time
-    evaluation without sharing runtime-only host state.
-  - implementation_notes:
-    - Start from `src/VmExecution.cpp`, `src/VmExecution.h`,
-      `src/VmExecutionNumeric.*`, `src/VmControlFlowOpcodeShared.*`,
-      `src/VmNumericOpcodeShared.*`, `src/VmHeapHelpers.*`, and
-      `src/VmIoHelpers.*`.
-    - Keep `Vm::execute(...)` behavior and public ABI stable while extracting
-      narrow reusable helpers or a kernel interface.
-    - Do not introduce compile-time dependencies into runtime-only debug,
-      argv, heap, or IO paths.
-  - acceptance:
-    - Runtime `Vm::execute(...)` continues to pass existing VM tests with no
-      behavior changes.
-    - Shared interpreter code has an explicit host boundary for operations
-      that differ between runtime and compile time.
-    - Compile-time code can include the shared kernel without pulling in
-      `primevm_main.cpp`, debug adapter state, argv ownership, or runtime IO
-      helpers.
-    - Source-lock or unit coverage protects the new kernel boundary from
-      collapsing back into one runtime-only execution loop.
-    - `./scripts/compile.sh --release` passes.
-  - stop_rule: Stop once VM execution has a reusable kernel boundary while
-    preserving runtime VM behavior.
-
 - [ ] TODO-4355: Add compile-time host and meta intrinsics
   - owner: ai
   - created_at: 2026-05-04
   - phase: Generic constraint and compile-time flow alignment
+  - parallel_track: generic-requirements-host
   - depends_on: TODO-4353, TODO-4354, TODO-4343, TODO-4344
   - scope: Implement `CompileTimeHost` support for semantic facts,
     `/std/meta/*` builtin predicates, provenance, and pure compile-time
