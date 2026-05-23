@@ -8067,3 +8067,10 @@
   -I 1086,1090`, and `cd build-release && ctest --output-on-failure
   --stop-on-failure --timeout 120 -I 1091,1095` on 2026-05-23 16:02 CEST.
   Next focused continuation starts at `-I 1096,1100`.
+- Native backend continuation shards 1096-1110 now pass without source edits;
+  validating commands: `cd build-release && ctest --output-on-failure
+  --stop-on-failure --timeout 120 -I 1096,1100`, `cd build-release && ctest
+  --output-on-failure --stop-on-failure --timeout 120 -I 1101,1105`, and
+  `cd build-release && ctest --output-on-failure --stop-on-failure --timeout
+  120 -I 1106,1110` on 2026-05-23 16:06 CEST. Next focused continuation
+  starts at `-I 1111,1115`.
