@@ -8513,3 +8513,7 @@
   command: `cd build-release && ctest --output-on-failure --stop-on-failure
   --timeout 120 -I 1556,1560` on 2026-05-23 23:48 CEST. Next focused
   continuation starts at `-I 1561,1565`.
+- Compile-run shards 1561-1565 now pass without source edits. Validating
+  command: `cd build-release && ctest --output-on-failure --stop-on-failure
+  --timeout 120 -I 1561,1565` on 2026-05-23 23:49 CEST. Next focused
+  continuation starts at `-I 1566,1570`.
