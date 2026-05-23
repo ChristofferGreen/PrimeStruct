@@ -8161,3 +8161,7 @@
   edits. Validating command: `cd build-release && ctest --output-on-failure
   --stop-on-failure --timeout 120 -I 1206,1210` on 2026-05-23 19:08 CEST.
   Next focused continuation starts at `-I 1211,1215`.
+- Reflection codegen shards 1211-1215 now pass without source edits.
+  Validating command: `cd build-release && ctest --output-on-failure
+  --stop-on-failure --timeout 120 -I 1211,1215` on 2026-05-23 19:09 CEST.
+  Next focused continuation starts at `-I 1216,1220`.
