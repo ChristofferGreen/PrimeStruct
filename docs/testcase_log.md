@@ -8429,3 +8429,8 @@
   command: `cd build-release && ctest --output-on-failure --stop-on-failure
   --timeout 120 -I 1481,1485` on 2026-05-23 22:53 CEST. Next focused
   continuation starts at `-I 1486,1490`.
+- Compile-run shards 1486-1490 now pass without source edits. This window
+  moves from metal example coverage into math conformance. Validating command:
+  `cd build-release && ctest --output-on-failure --stop-on-failure --timeout
+  120 -I 1486,1490` on 2026-05-23 22:55 CEST. Next focused continuation
+  starts at `-I 1491,1495`.
