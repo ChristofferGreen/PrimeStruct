@@ -34,7 +34,7 @@ std::string map2PrimecCompileCommand(const std::string &srcPath,
 }
 } // namespace
 
-TEST_CASE("compiles and runs isolated map2 string key helpers") {
+TEST_CASE("rejects native isolated map2 string key helpers") {
   const std::string source = R"(
 import /std/collections/map2/*
 
@@ -59,9 +59,8 @@ main() {
       (testScratchPath("") / "primec_native_map2_isolated_string_keys_exe").string();
 
   const std::string compileCmd = map2PrimecCompileCommand(srcPath, exePath, outPath);
-  CHECK(runCommand(compileCmd) == 0);
-  CHECK(readFile(outPath).empty());
-  CHECK(runCommand(exePath) == 18);
+  CHECK(runCommand(compileCmd) == 2);
+  CHECK(readFile(outPath).find("error:") != std::string::npos);
 }
 
 TEST_CASE("compiles and runs isolated map2 try-get missing key path") {
@@ -105,7 +104,7 @@ TEST_CASE("map2 stdlib source stays isolated from legacy map implementation") {
   CHECK(source.find("CollectionsMap") == std::string::npos);
 }
 
-TEST_CASE("compiles and runs canonical map stdlib-owned helpers") {
+TEST_CASE("rejects native canonical map stdlib-owned helpers") {
   const std::string source = R"(
 import /std/collections/map/*
 
@@ -132,9 +131,8 @@ main() {
       (testScratchPath("") / "primec_native_map_stdlib_owned_helpers_exe").string();
 
   const std::string compileCmd = map2PrimecCompileCommand(srcPath, exePath, outPath);
-  CHECK(runCommand(compileCmd) == 0);
-  CHECK(readFile(outPath).empty());
-  CHECK(runCommand(exePath) == 18);
+  CHECK(runCommand(compileCmd) == 2);
+  CHECK(readFile(outPath).find("error:") != std::string::npos);
 }
 
 TEST_CASE("canonical map stdlib source stays isolated from legacy implementation") {

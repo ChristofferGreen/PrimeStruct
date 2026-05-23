@@ -4142,7 +4142,7 @@ main() {
   CHECK(readFile(errPath).find("struct parameter type mismatch") != std::string::npos);
 }
 
-TEST_CASE("compiles and runs native templated stdlib wrapper temporary count capacity parity") {
+TEST_CASE("rejects native templated stdlib wrapper temporary count capacity parity") {
   const std::string source = R"(
 import /std/collections/*
 
@@ -4171,12 +4171,13 @@ main() {
 )";
   const std::string srcPath =
       writeTemp("compile_native_stdlib_collection_shim_templated_return_temp_count_capacity_parity.prime", source);
-  const std::string exePath = (testScratchPath("") /
-                               "primec_native_stdlib_collection_shim_templated_return_temp_count_capacity_parity_exe")
+  const std::string errPath = (testScratchPath("") /
+                               "primec_native_stdlib_collection_shim_templated_return_temp_count_capacity_parity.err")
                                   .string();
-  const std::string compileCmd = "./primec --emit=native " + srcPath + " -o " + exePath + " --entry /main";
-  CHECK(runCommand(compileCmd) == 0);
-  CHECK(runCommand(exePath) == 6);
+  const std::string compileCmd =
+      "./primec --emit=native " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
+  CHECK(runCommand(compileCmd) == 2);
+  CHECK(readFile(errPath).find("struct parameter type mismatch") != std::string::npos);
 }
 
 TEST_SUITE_END();

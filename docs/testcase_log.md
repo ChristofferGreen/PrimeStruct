@@ -8140,3 +8140,10 @@
   command: `cd build-release && ctest --output-on-failure --stop-on-failure
   --timeout 120 -I 1186,1190` on 2026-05-23 18:52 CEST. Next focused
   continuation starts at `-I 1191,1195`.
+- Native backend collection map access shards 1191-1195 now pass after
+  aligning the final wrapper temporary count/capacity lock, preserving the
+  native map2 missing-key positive, and updating map2/string-key map access
+  expectations to current compile/run behavior. Validating command: `cd
+  build-release && ctest --output-on-failure --stop-on-failure --timeout 120
+  -I 1191,1195` on 2026-05-23 19:02 CEST. Next focused continuation starts
+  at `-I 1196,1200`.
