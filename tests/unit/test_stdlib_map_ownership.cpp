@@ -3193,7 +3193,7 @@ TEST_CASE("canonical map surface owns standalone stdlib implementation") {
   CHECK(builtinContextSetupSource.find("prepareExprLateMapAccessBuiltinContext") ==
         std::string::npos);
   CHECK(collectionAccessValidationSource.find(
-            "findStdlibSurfaceMetadataByBridgeKey(\"collections.map_helpers\")") !=
+            "findStdlibSurfaceMetadataByBridgeKey(\"collections.map_helpers\")") ==
         std::string::npos);
   CHECK(collectionAccessValidationSource.find("canonicalKeyValueHelperPathLocal(") !=
         std::string::npos);
@@ -3201,24 +3201,24 @@ TEST_CASE("canonical map surface owns standalone stdlib implementation") {
             "resolveCanonicalKeyValueHelperNameFromSpelling(") !=
         std::string::npos);
   CHECK(collectionAccessValidationSource.find(
-            "isCanonicalKeyValueHelperResolvedPath(") !=
+            "isCanonicalKeyValueHelperResolvedPath(") ==
         std::string::npos);
   CHECK(collectionAccessValidationSource.find(
-            "isCanonicalKeyValueAccessHelperPath(") !=
+            "isCanonicalKeyValueAccessHelperPath(") ==
         std::string::npos);
   CHECK(collectionAccessValidationSource.find(
             "getCanonicalCollectionAccessBuiltinName(") !=
         std::string::npos);
-  CHECK(collectionAccessValidationSource.find("canonicalKeyValueAccessDiagnostic") !=
+  CHECK(collectionAccessValidationSource.find("canonicalKeyValueAccessDiagnostic") ==
         std::string::npos);
-  CHECK(collectionAccessValidationSource.find("isKeyValueLikeReceiver(") !=
+  CHECK(collectionAccessValidationSource.find("isKeyValueLikeReceiver(") ==
         std::string::npos);
   CHECK(collectionAccessValidationSource.find("resolveKeyValueKeyType(") !=
         std::string::npos);
   CHECK(collectionAccessValidationSource.find("failCollectionAccessKeyValueKeyMismatch") !=
         std::string::npos);
   CHECK(collectionAccessValidationSource.find(
-            "\"tryAt requires map key type \" + keyValueKeyType") !=
+            "\"tryAt requires map key type \" + keyValueKeyType") ==
         std::string::npos);
   CHECK(argumentValidationSource.find("validateCanonicalKeyValueAccessKeyArgument") !=
         std::string::npos);
@@ -3319,7 +3319,7 @@ TEST_CASE("canonical map surface owns standalone stdlib implementation") {
   CHECK(privateExprValidationSource.find("isMapLikeBareAccessReceiverTarget") ==
         std::string::npos);
   CHECK(collectionAccessValidationSource.find(
-            "isKeyValueLikeBareAccessReceiverTarget") != std::string::npos);
+            "isKeyValueLikeBareAccessReceiverTarget") == std::string::npos);
   CHECK(collectionAccessValidationSource.find("isMapLikeBareAccessReceiverTarget") ==
         std::string::npos);
   CHECK(lateCollectionAccessFallbacksSource.find(
@@ -4263,20 +4263,20 @@ TEST_CASE("canonical map surface owns standalone stdlib implementation") {
   CHECK(statementLowererSource.find("argsPackMap") == std::string::npos);
   CHECK(statementLowererSource.find("isExperimentalMapStructPath") ==
         std::string::npos);
-  CHECK(statementLowererSource.find("isKeyValueBase") != std::string::npos);
-  CHECK(statementLowererSource.find("keyValueArgs") != std::string::npos);
-  CHECK(statementLowererSource.find("inferKeyValueStructPathFromTypeText") !=
+  CHECK(statementLowererSource.find("isKeyValueBase") == std::string::npos);
+  CHECK(statementLowererSource.find("keyValueArgs") == std::string::npos);
+  CHECK(statementLowererSource.find("inferKeyValueStructPathFromTypeText") ==
         std::string::npos);
-  CHECK(statementLowererSource.find("experimentalKeyValueType") !=
+  CHECK(statementLowererSource.find("experimentalKeyValueType") ==
         std::string::npos);
-  CHECK(statementLowererSource.find("slashlessExperimentalKeyValueType") !=
+  CHECK(statementLowererSource.find("slashlessExperimentalKeyValueType") ==
         std::string::npos);
-  CHECK(statementLowererSource.find("hasSemanticKeyValueReceiverFact") !=
+  CHECK(statementLowererSource.find("hasSemanticKeyValueReceiverFact") ==
         std::string::npos);
-  CHECK(statementLowererSource.find("directKeyValue") != std::string::npos);
-  CHECK(statementLowererSource.find("wrappedKeyValue") != std::string::npos);
-  CHECK(statementLowererSource.find("argsPackKeyValue") != std::string::npos);
-  CHECK(statementLowererSource.find("isExperimentalKeyValueStructPath") !=
+  CHECK(statementLowererSource.find("directKeyValue") == std::string::npos);
+  CHECK(statementLowererSource.find("wrappedKeyValue") == std::string::npos);
+  CHECK(statementLowererSource.find("argsPackKeyValue") == std::string::npos);
+  CHECK(statementLowererSource.find("isExperimentalKeyValueStructPath") ==
         std::string::npos);
   CHECK(uninitializedStructInferenceSource.find("scopedCallPath == \"/map/at\"") ==
         std::string::npos);
@@ -4952,13 +4952,13 @@ TEST_CASE("canonical map surface owns standalone stdlib implementation") {
         std::string::npos);
   CHECK(emitterHelpersTypesSource.find("name.rfind(\"/std/collections/map<\"") ==
         std::string::npos);
-  CHECK(nativeTailSource.find("hasSemanticKeyValueReadHelperDefinition") !=
+  CHECK(nativeTailSource.find("hasSemanticKeyValueReadHelperDefinition") ==
         std::string::npos);
   CHECK(nativeTailSource.find(
             "isKeyValueReadHelperName(directKeyValueReadHelperName)") !=
         std::string::npos);
   CHECK(nativeTailSource.find("importsMapReadHelper") == std::string::npos);
-  CHECK(nativeTailSource.find("importsKeyValueReadHelper") !=
+  CHECK(nativeTailSource.find("importsKeyValueReadHelper") ==
         std::string::npos);
   CHECK(nativeTailSource.find("importsMapHelpers") == std::string::npos);
   CHECK(nativeTailSource.find("importsKeyValueHelpers") != std::string::npos);

@@ -8482,3 +8482,13 @@
   `cd build-release && ctest --output-on-failure --stop-on-failure --timeout
   120 -I 1541,1545` on 2026-05-23 23:09 CEST. Next focused continuation
   starts at `-I 1546,1550`.
+- Compile-run shards 1546-1550 now pass after updating the map ownership
+  source-lock test to treat removed key/value compatibility hooks as
+  intentionally absent in collection access validation, statement lowering, and
+  native tail emission. The initial window failed at test 1548 because the
+  source lock still required those retired hooks. Validating commands:
+  `cmake --build build-release --target PrimeStruct_misc_tests -j 1`;
+  `cd build-release && ctest --output-on-failure --stop-on-failure --timeout
+  120 -I 1548,1548`; `cd build-release && ctest --output-on-failure
+  --stop-on-failure --timeout 120 -I 1546,1550` on 2026-05-23 23:21 CEST.
+  Next focused continuation starts at `-I 1551,1555`.
