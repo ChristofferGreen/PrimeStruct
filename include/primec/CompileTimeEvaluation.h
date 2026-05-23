@@ -58,6 +58,9 @@ struct CompileTimeEvaluationBudget {
 struct CompileTimeEvaluationRequest {
   const SemanticProgram *semanticProgram = nullptr;
   const SemanticProgramRequirementPredicateFact *requirementPredicate = nullptr;
+  std::string definitionPath;
+  std::string predicateName;
+  std::string sourceText;
   CompileTimeEvaluationProvenance provenance;
   CompileTimeEvaluationBudget budget;
 };
@@ -72,7 +75,33 @@ public:
   virtual std::optional<std::string>
   describeSemanticFact(std::string_view factName) const;
 
+  virtual const SemanticProgramRequirementPredicateFact *
+  findRequirementPredicateFact(std::string_view definitionPath,
+                               std::string_view predicateName,
+                               std::string_view sourceText = {}) const;
+
   virtual const SemanticProgram *semanticProgram() const;
+};
+
+class SemanticProgramCompileTimeHost final : public CompileTimeHost {
+public:
+  explicit SemanticProgramCompileTimeHost(const SemanticProgram &semanticProgram);
+
+  bool allowEffect(std::string_view effectName,
+                   CompileTimeEffectPhase phase) const override;
+
+  std::optional<std::string>
+  describeSemanticFact(std::string_view factName) const override;
+
+  const SemanticProgramRequirementPredicateFact *
+  findRequirementPredicateFact(std::string_view definitionPath,
+                               std::string_view predicateName,
+                               std::string_view sourceText = {}) const override;
+
+  const SemanticProgram *semanticProgram() const override;
+
+private:
+  const SemanticProgram &semanticProgram_;
 };
 
 class DenyAllCompileTimeHost final : public CompileTimeHost {

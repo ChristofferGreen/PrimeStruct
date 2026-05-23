@@ -1087,7 +1087,10 @@ Procedural compile-time genericity contract:
   `Additive`/`Multiplicative`/`Comparable`/`Indexable`, named
   `supports_call`, exact positional `can_construct`, explicit lifecycle
   `can_copy`/`can_move`, and visibility-aware `has_field`/`has_member`.
-  `field_type_equals` and the value comparison predicates remain deferred.
+  The compile-time host can answer these canonical `/std/meta/*` predicates
+  from published semantic requirement facts with deterministic success,
+  unsatisfied, and invalid-evaluation results. `field_type_equals` and the
+  value comparison predicates remain deferred.
 - Builtin requirement predicates live under `/std/meta/*`; readable predicate
   syntax may rewrite to these builtin helpers or compiler-recognized facts, but
   user helpers should not collide with the builtin namespace. Public

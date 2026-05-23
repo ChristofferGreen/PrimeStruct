@@ -1617,7 +1617,9 @@ TEST_CASE("generic requirement predicate surface stays source locked") {
   CHECK(primeStructDoc.find("The implemented capability slice evaluates `has_trait` for\n"
                             "  `Additive`/`Multiplicative`/`Comparable`/`Indexable`") !=
         std::string::npos);
-  CHECK(syntaxSpec.find("`field_type_equals` and the value comparison predicates remain deferred.") !=
+  CHECK(syntaxSpec.find("The compile-time host can answer these canonical `/std/meta/*` predicates\n"
+                        "  from published semantic requirement facts with deterministic success,\n"
+                        "  unsatisfied, and invalid-evaluation results. `field_type_equals` and the") !=
         std::string::npos);
   CHECK(primeStructDoc.find("Existing transform-style trait constraints such as `[Additive<i32>]` remain\n"
                             "source-compatible compatibility vocabulary") !=
@@ -1692,9 +1694,9 @@ TEST_CASE("todo queue and skipped doctest debt stay source locked") {
   CHECK(todo.find("### Ready Now (Parallel-Candidate Leaves; No Unmet TODO Dependencies)") !=
         std::string::npos);
   CHECK(todo.find("### Ready Now (Parallel-Candidate Leaves; No Unmet TODO Dependencies)\n\n"
-                  "- TODO-4355: Add compile-time host and meta intrinsics | track:\n"
-                  "  generic-requirements-host | primary surface: compile-time host and\n"
-                  "  `/std/meta/*` intrinsic dispatch") !=
+                  "- TODO-4356: Add restricted compile-time callable lowering | track:\n"
+                  "  generic-requirements-callable | primary surface: restricted compile-time\n"
+                  "  callable preparation") !=
         std::string::npos);
   CHECK(todo.find("- `soa-zero-audit`: TODO-4529 replaced the residue inventory with a strict\n"
                   "  zero-production-trace audit; no SoA zero-audit leaf is ready.") !=
@@ -1724,7 +1726,8 @@ TEST_CASE("todo queue and skipped doctest debt stay source locked") {
         std::string::npos);
   CHECK(todo.find("- `generic-requirements`: TODO-4331, TODO-4334, TODO-4341, TODO-4342,\n"
                   "  TODO-4343, TODO-4344, TODO-4352, TODO-4353, and TODO-4354 are complete;\n"
-                  "  TODO-4355 is ready for compile-time host and meta intrinsic dispatch.") !=
+                  "  TODO-4355 wired the compile-time host to published `/std/meta/*` predicate\n"
+                  "  facts; TODO-4356 is ready for restricted compile-time callable preparation.") !=
         std::string::npos);
   CHECK(todo.find("### Immediate Next 10 (Track Successors; Not Ready Until Dependencies Land)\n\n"
                   "- TODO-4545: Implement first structured task spawn/wait substrate\n"
@@ -1744,8 +1747,12 @@ TEST_CASE("todo queue and skipped doctest debt stay source locked") {
   CHECK(todo.find("- Deferred SoA finish: TODO-4252") ==
         std::string::npos);
   CHECK(todo.find("### Execution Queue (Recommended Track Order)\n\n"
-                  "- TODO-4355: Add compile-time host and meta intrinsics\n"
-                  "- TODO-4356: Add restricted compile-time callable lowering") !=
+                  "- TODO-4356: Add restricted compile-time callable lowering\n"
+                  "- TODO-4545: Implement first structured task spawn/wait substrate") !=
+        std::string::npos);
+  CHECK(todo.find("- [ ] TODO-4355: Add compile-time host and meta intrinsics") ==
+        std::string::npos);
+  CHECK(todoFinished.find("TODO-4355: Add compile-time host and meta intrinsics") !=
         std::string::npos);
   CHECK(todo.find("- [ ] TODO-4354: Factor reusable VM interpreter kernel") ==
         std::string::npos);
@@ -1830,7 +1837,7 @@ TEST_CASE("todo queue and skipped doctest debt stay source locked") {
   CHECK(todoFinished.find("TODO-4519: Delete `soa_vector` compatibility seams") !=
         std::string::npos);
   const std::vector<std::string> semanticPhaseQueue = {
-      "TODO-4355: Add compile-time host and meta intrinsics",
+      "TODO-4356: Add restricted compile-time callable lowering",
   };
   for (const std::string &entry : semanticPhaseQueue) {
     CHECK(todo.find("- " + entry) != std::string::npos);

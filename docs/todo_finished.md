@@ -6,6 +6,34 @@ Legend:
 Finished items are periodically archived here from `docs/todo.md`; section headers record the archive date.
 
 **Todo Completion (May 23, 2026)**
+- [x] TODO-4355: Add compile-time host and meta intrinsics
+  - owner: ai
+  - created_at: 2026-05-04
+  - finished_at: 2026-05-23
+  - phase: Generic constraint and compile-time flow alignment
+  - parallel_track: generic-requirements-host
+  - depends_on: TODO-4353, TODO-4354, TODO-4343, TODO-4344
+  - scope: Implement `CompileTimeHost` support for semantic facts,
+    `/std/meta/*` builtin predicates, provenance, and pure compile-time
+    intrinsic dispatch.
+  - outcome:
+    - Added `SemanticProgramCompileTimeHost` as a compile-time host backed by
+      published semantic requirement predicate facts.
+    - Let `CompileTimeEvaluationFacade` resolve canonical `/std/meta/*`
+      predicate requests by definition, predicate name, and optional source
+      text instead of requiring callers to pass a fact pointer directly.
+    - Kept result mapping deterministic for satisfied, unsatisfied, and
+      invalid builtin meta predicate facts, including visibility-sensitive
+      field diagnostics and unknown predicate diagnostics.
+    - Added focused tests for type equality, trait/capability predicates,
+      field visibility, canonical `/std/meta/*` names, host fact discovery,
+      and missing published predicate diagnostics.
+    - Promoted TODO-4356 as the next Ready Now generic-requirements leaf.
+  - validation:
+    - Focused release validation was selected under the lite workflow; full
+      `./scripts/compile.sh --release` remains deferred to parent/root
+      validation.
+
 - [x] TODO-4354: Factor reusable VM interpreter kernel
   - owner: ai
   - created_at: 2026-05-04

@@ -4,6 +4,7 @@
 #include <optional>
 #include <string>
 #include <string_view>
+#include <utility>
 
 #include "third_party/doctest.h"
 
@@ -19,6 +20,54 @@ primec::CompileTimeEvaluationProvenance sampleProvenance() {
   provenance.line = 12;
   provenance.column = 5;
   return provenance;
+}
+
+primec::SemanticProgramRequirementPredicateFact makeRequirementFact(
+    std::string definitionPath,
+    std::string predicateName,
+    std::string sourceText,
+    std::string outcome,
+    std::string diagnostic) {
+  primec::SemanticProgramRequirementPredicateFact fact;
+  fact.definitionPath = std::move(definitionPath);
+  fact.predicateName = std::move(predicateName);
+  fact.sourceText = std::move(sourceText);
+  fact.evaluationOutcome = std::move(outcome);
+  fact.evaluationDiagnostic = std::move(diagnostic);
+  fact.sourceLine = 17;
+  fact.sourceColumn = 9;
+  fact.semanticNodeId = 77;
+  fact.provenanceHandle = 88;
+  return fact;
+}
+
+primec::SemanticProgram makeRequirementProgram() {
+  primec::SemanticProgram program;
+  program.requirementPredicateFacts.push_back(makeRequirementFact(
+      "/generic/same",
+      "/std/meta/type_equals",
+      "/std/meta/type_equals<i32, i32>()",
+      "satisfied",
+      "types are equal: i32"));
+  program.requirementPredicateFacts.push_back(makeRequirementFact(
+      "/generic/add",
+      "/std/meta/has_trait",
+      "/std/meta/has_trait<i32, Additive>()",
+      "satisfied",
+      "type supports Additive: i32"));
+  program.requirementPredicateFacts.push_back(makeRequirementFact(
+      "/generic/field",
+      "/std/meta/has_field",
+      "/std/meta/has_field</Record, secret>()",
+      "unsatisfied",
+      "no visible field named secret on /Record"));
+  program.requirementPredicateFacts.push_back(makeRequirementFact(
+      "/generic/bad",
+      "/std/meta/unknown_predicate",
+      "/std/meta/unknown_predicate<i32>()",
+      "invalid_evaluation",
+      "unknown requirement predicate: /std/meta/unknown_predicate"));
+  return program;
 }
 
 class AllowOneEffectHost final : public primec::CompileTimeHost {
@@ -170,6 +219,71 @@ TEST_CASE("compile-time evaluation facade wraps published requirement facts") {
   CHECK(formatted.find("semantic_node_id 42") != std::string::npos);
   CHECK(formatted.find("provenance_handle 99") != std::string::npos);
   CHECK(formatted.find("trait Additive is absent") != std::string::npos);
+}
+
+TEST_CASE("semantic CT host answers canonical builtin meta predicate facts") {
+  const primec::SemanticProgram program = makeRequirementProgram();
+  const primec::SemanticProgramCompileTimeHost host(program);
+  const primec::CompileTimeEvaluationFacade facade(host);
+
+  CHECK(host.describeSemanticFact("requirement_predicate_count") ==
+        std::optional<std::string>("4"));
+  CHECK(host.describeSemanticFact(
+            "requirement_predicate:/std/meta/has_trait") ==
+        std::optional<std::string>("1"));
+
+  primec::CompileTimeEvaluationRequest typeRequest;
+  typeRequest.definitionPath = "/generic/same";
+  typeRequest.predicateName = "/std/meta/type_equals";
+  typeRequest.sourceText = "/std/meta/type_equals<i32, i32>()";
+  const auto typeResult = facade.evaluateRequirementPredicate(typeRequest);
+  CHECK(typeResult.kind == primec::CompileTimeEvaluationResultKind::Success);
+  CHECK(typeResult.boolValue);
+  CHECK(typeResult.provenance.predicatePath == "/std/meta/type_equals");
+  CHECK(typeResult.message == "types are equal: i32");
+
+  primec::CompileTimeEvaluationRequest traitRequest;
+  traitRequest.definitionPath = "/generic/add";
+  traitRequest.predicateName = "/std/meta/has_trait";
+  const auto traitResult = facade.evaluateRequirementPredicate(traitRequest);
+  CHECK(traitResult.kind == primec::CompileTimeEvaluationResultKind::Success);
+  CHECK(traitResult.message.find("Additive") != std::string::npos);
+}
+
+TEST_CASE("semantic CT host preserves visibility and invalid meta diagnostics") {
+  const primec::SemanticProgram program = makeRequirementProgram();
+  const primec::SemanticProgramCompileTimeHost host(program);
+  const primec::CompileTimeEvaluationFacade facade(host);
+
+  primec::CompileTimeEvaluationRequest fieldRequest;
+  fieldRequest.definitionPath = "/generic/field";
+  fieldRequest.predicateName = "/std/meta/has_field";
+  const auto fieldResult = facade.evaluateRequirementPredicate(fieldRequest);
+  CHECK(fieldResult.kind ==
+        primec::CompileTimeEvaluationResultKind::UnsatisfiedPredicate);
+  CHECK_FALSE(fieldResult.boolValue);
+  CHECK(fieldResult.message.find("no visible field named secret") !=
+        std::string::npos);
+
+  primec::CompileTimeEvaluationRequest invalidRequest;
+  invalidRequest.definitionPath = "/generic/bad";
+  invalidRequest.predicateName = "/std/meta/unknown_predicate";
+  const auto invalidResult = facade.evaluateRequirementPredicate(invalidRequest);
+  CHECK(invalidResult.kind ==
+        primec::CompileTimeEvaluationResultKind::InvalidEvaluation);
+  CHECK(invalidResult.message.find("unknown requirement predicate") !=
+        std::string::npos);
+
+  primec::CompileTimeEvaluationRequest missingRequest;
+  missingRequest.definitionPath = "/generic/missing";
+  missingRequest.predicateName = "/std/meta/type_equals";
+  missingRequest.provenance = sampleProvenance();
+  const auto missingResult = facade.evaluateRequirementPredicate(missingRequest);
+  CHECK(missingResult.kind ==
+        primec::CompileTimeEvaluationResultKind::InternalCompilerError);
+  CHECK(missingResult.message.find(
+            "requires a published predicate fact for /std/meta/type_equals") !=
+        std::string::npos);
 }
 
 TEST_SUITE_END();

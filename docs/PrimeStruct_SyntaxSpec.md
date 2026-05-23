@@ -850,7 +850,10 @@ Requirement rules:
   `Additive`/`Multiplicative`/`Comparable`/`Indexable`, named
   `supports_call`, exact positional `can_construct`, explicit lifecycle
   `can_copy`/`can_move`, and visibility-aware `has_field`/`has_member`.
-  `field_type_equals` and the value comparison predicates remain deferred.
+  The compile-time host can answer these canonical `/std/meta/*` predicates
+  from published semantic requirement facts with deterministic success,
+  unsatisfied, and invalid-evaluation results. `field_type_equals` and the
+  value comparison predicates remain deferred.
   User-defined requirement predicates use the same compile-time execution model
   and return ordinary `bool` at the source level; semantic validation wraps
   `true` and `false` into typed requirement facts.

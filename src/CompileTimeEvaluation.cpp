@@ -21,6 +21,13 @@ std::string_view resolvedSemanticText(
   return resolved.empty() ? std::string_view(fallback) : resolved;
 }
 
+std::string_view resolvedRequirementFactText(
+    const SemanticProgram &semanticProgram,
+    SymbolId textId,
+    const std::string &fallback) {
+  return resolvedSemanticText(&semanticProgram, textId, fallback);
+}
+
 CompileTimeEvaluationResultKind resultKindFromRequirementOutcome(
     std::string_view outcome) {
   if (outcome == "satisfied" || outcome == "success") {
@@ -84,8 +91,95 @@ CompileTimeHost::describeSemanticFact(std::string_view factName) const {
   return std::nullopt;
 }
 
+const SemanticProgramRequirementPredicateFact *
+CompileTimeHost::findRequirementPredicateFact(std::string_view definitionPath,
+                                              std::string_view predicateName,
+                                              std::string_view sourceText) const {
+  (void)definitionPath;
+  (void)predicateName;
+  (void)sourceText;
+  return nullptr;
+}
+
 const SemanticProgram *CompileTimeHost::semanticProgram() const {
   return nullptr;
+}
+
+SemanticProgramCompileTimeHost::SemanticProgramCompileTimeHost(
+    const SemanticProgram &semanticProgram)
+    : semanticProgram_(semanticProgram) {}
+
+bool SemanticProgramCompileTimeHost::allowEffect(
+    std::string_view effectName,
+    CompileTimeEffectPhase phase) const {
+  (void)effectName;
+  (void)phase;
+  return false;
+}
+
+std::optional<std::string>
+SemanticProgramCompileTimeHost::describeSemanticFact(
+    std::string_view factName) const {
+  if (factName == "requirement_predicate_count") {
+    return std::to_string(semanticProgramRequirementPredicateFactView(
+                              semanticProgram_)
+                              .size());
+  }
+  if (factName.rfind("requirement_predicate:", 0) == 0) {
+    const std::string_view predicateName =
+        factName.substr(std::string_view("requirement_predicate:").size());
+    std::size_t count = 0;
+    for (const auto *fact :
+         semanticProgramRequirementPredicateFactView(semanticProgram_)) {
+      if (fact == nullptr) {
+        continue;
+      }
+      if (resolvedRequirementFactText(semanticProgram_,
+                                      fact->predicateNameId,
+                                      fact->predicateName) == predicateName) {
+        ++count;
+      }
+    }
+    return std::to_string(count);
+  }
+  return std::nullopt;
+}
+
+const SemanticProgramRequirementPredicateFact *
+SemanticProgramCompileTimeHost::findRequirementPredicateFact(
+    std::string_view definitionPath,
+    std::string_view predicateName,
+    std::string_view sourceText) const {
+  for (const auto *fact :
+       semanticProgramRequirementPredicateFactView(semanticProgram_)) {
+    if (fact == nullptr) {
+      continue;
+    }
+    if (!definitionPath.empty() &&
+        resolvedRequirementFactText(semanticProgram_,
+                                    fact->definitionPathId,
+                                    fact->definitionPath) != definitionPath) {
+      continue;
+    }
+    if (!predicateName.empty() &&
+        resolvedRequirementFactText(semanticProgram_,
+                                    fact->predicateNameId,
+                                    fact->predicateName) != predicateName) {
+      continue;
+    }
+    if (!sourceText.empty() &&
+        resolvedRequirementFactText(semanticProgram_,
+                                    fact->sourceTextId,
+                                    fact->sourceText) != sourceText) {
+      continue;
+    }
+    return fact;
+  }
+  return nullptr;
+}
+
+const SemanticProgram *SemanticProgramCompileTimeHost::semanticProgram() const {
+  return &semanticProgram_;
 }
 
 bool DenyAllCompileTimeHost::allowEffect(std::string_view effectName,
@@ -183,14 +277,27 @@ CompileTimeEvaluationFacade::evaluateRequirementPredicate(
   const SemanticProgram *semanticProgram =
       request.semanticProgram != nullptr ? request.semanticProgram
                                          : host_.semanticProgram();
-  if (request.requirementPredicate == nullptr) {
+  const SemanticProgramRequirementPredicateFact *requirementPredicate =
+      request.requirementPredicate;
+  if (requirementPredicate == nullptr) {
+    requirementPredicate =
+        host_.findRequirementPredicateFact(request.definitionPath,
+                                           request.predicateName,
+                                           request.sourceText);
+  }
+  if (requirementPredicate == nullptr) {
+    const std::string predicateName =
+        request.predicateName.empty() ? std::string("<unknown>")
+                                      : request.predicateName;
     return internalCompilerError(
         request.provenance,
-        "compile-time requirement evaluation requires a published predicate fact");
+        "compile-time requirement evaluation requires a published predicate fact "
+        "for " +
+            predicateName);
   }
 
   const SemanticProgramRequirementPredicateFact &fact =
-      *request.requirementPredicate;
+      *requirementPredicate;
   CompileTimeEvaluationProvenance provenance =
       compileTimeEvaluationProvenanceFromRequirement(fact);
   provenance.definitionPath = std::string(resolvedSemanticText(

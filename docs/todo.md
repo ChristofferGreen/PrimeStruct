@@ -83,9 +83,9 @@ Task template:
 
 ### Ready Now (Parallel-Candidate Leaves; No Unmet TODO Dependencies)
 
-- TODO-4355: Add compile-time host and meta intrinsics | track:
-  generic-requirements-host | primary surface: compile-time host and
-  `/std/meta/*` intrinsic dispatch
+- TODO-4356: Add restricted compile-time callable lowering | track:
+  generic-requirements-callable | primary surface: restricted compile-time
+  callable preparation
 
 ### Parallel Work Tracks (Current)
 
@@ -120,7 +120,8 @@ Task template:
   leaf is ready.
 - `generic-requirements`: TODO-4331, TODO-4334, TODO-4341, TODO-4342,
   TODO-4343, TODO-4344, TODO-4352, TODO-4353, and TODO-4354 are complete;
-  TODO-4355 is ready for compile-time host and meta intrinsic dispatch.
+  TODO-4355 wired the compile-time host to published `/std/meta/*` predicate
+  facts; TODO-4356 is ready for restricted compile-time callable preparation.
 
 ### Immediate Next 10 (Track Successors; Not Ready Until Dependencies Land)
 
@@ -149,14 +150,13 @@ Task template:
   prerequisite split out of TODO-4278
 - Procedural compile-time genericity: none active after TODO-4340 and
   TODO-4546
-- Generic constraint and compile-time flow alignment: TODO-4355
-  -> TODO-4356 -> TODO-4357 -> TODO-4345
+- Generic constraint and compile-time flow alignment: TODO-4356 -> TODO-4357
+  -> TODO-4345
   -> TODO-4346 -> TODO-4358 -> TODO-4347 -> TODO-4351 -> TODO-4348
   -> TODO-4359 -> TODO-4349 -> TODO-4350
 
 ### Execution Queue (Recommended Track Order)
 
-- TODO-4355: Add compile-time host and meta intrinsics
 - TODO-4356: Add restricted compile-time callable lowering
 - TODO-4545: Implement first structured task spawn/wait substrate
 - TODO-4278: Integrate multi-wait with stdlib tuple
@@ -809,39 +809,11 @@ Task template:
   - stop_rule: Stop once multi-wait returns stdlib `tuple<...>` or the missing
     task-side prerequisite is split into an explicit multithreading TODO.
 
-- [ ] TODO-4355: Add compile-time host and meta intrinsics
-  - owner: ai
-  - created_at: 2026-05-04
-  - phase: Generic constraint and compile-time flow alignment
-  - parallel_track: generic-requirements-host
-  - depends_on: TODO-4353, TODO-4354, TODO-4343, TODO-4344
-  - scope: Implement `CompileTimeHost` support for semantic facts,
-    `/std/meta/*` builtin predicates, provenance, and pure compile-time
-    intrinsic dispatch.
-  - implementation_notes:
-    - Start from builtin predicate tasks TODO-4343/TODO-4344, semantic-product
-      facts, visibility metadata, import resolution, and the CT value model.
-    - Include relation predicates, capability/trait predicates, and
-      field/member queries that obey normal visibility.
-    - Keep `/std/meta/*` dispatch typed and deterministic; readable source
-      predicates may lower to host intrinsics or explicit stdlib helper calls.
-  - acceptance:
-    - The CT host can answer builtin `/std/meta/*` predicates using published
-      semantic facts without backend source reconstruction.
-    - Reflection-style predicates cannot observe private fields outside their
-      visibility boundary.
-    - Unknown, ambiguous, or unsupported meta predicates return invalid
-      evaluation with deterministic diagnostics.
-    - Unit tests cover type equality, kind/capability checks, field visibility,
-      and canonical `/std/meta/*` names.
-    - `./scripts/compile.sh --release` passes.
-  - stop_rule: Stop once builtin meta predicates are executable through the
-    compile-time host.
-
 - [ ] TODO-4356: Add restricted compile-time callable lowering
   - owner: ai
   - created_at: 2026-05-04
   - phase: Generic constraint and compile-time flow alignment
+  - parallel_track: generic-requirements-callable
   - depends_on: TODO-4354, TODO-4355, TODO-4339
   - scope: Add the restricted lowering or CT bytecode/fact-evaluator path
     needed to run compile-time callables before final backend IR exists.
