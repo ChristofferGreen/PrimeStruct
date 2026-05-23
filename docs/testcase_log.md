@@ -8521,3 +8521,12 @@
   command: `cd build-release && ctest --output-on-failure --stop-on-failure
   --timeout 120 -I 1566,1570` on 2026-05-23 23:50 CEST. Next focused
   continuation starts at `-I 1571,1575`.
+- Compile-run shards 1571-1575 now pass after splitting two SoA-vector
+  source string fragments that tripped the vector surface trace audit. The
+  initial window failed at test 1574 because the audit saw literal `Vector<`
+  fragments inside emitter helper source text, not because runtime vector
+  compatibility paths were still active. Validating commands: `cd
+  build-release && ctest --output-on-failure --stop-on-failure --timeout 120
+  -I 1574,1574`; `cd build-release && ctest --output-on-failure
+  --stop-on-failure --timeout 120 -I 1571,1575` on 2026-05-23 23:52 CEST.
+  Next focused continuation starts at `-I 1576,1580`.

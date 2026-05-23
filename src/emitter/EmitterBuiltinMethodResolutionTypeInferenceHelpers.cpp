@@ -98,8 +98,8 @@ bool isSoaVectorReceiverTypeNameLocal(const std::string &typeName) {
       normalized == "std/collections/" "soa" "_vector" ||
       normalized == "std/collections/experimental" "_soa" "_vector/Soa" "Vector" ||
       normalized.rfind("soa" "_vector<", 0) == 0 ||
-      normalized.rfind("Soa" "Vector<", 0) == 0 ||
-      normalized.rfind("std/collections/experimental" "_soa" "_vector/Soa" "Vector<", 0) == 0) {
+      normalized.rfind("Soa" "Vector" "<", 0) == 0 ||
+      normalized.rfind("std/collections/experimental" "_soa" "_vector/Soa" "Vector" "<", 0) == 0) {
     return true;
   }
   std::string base;

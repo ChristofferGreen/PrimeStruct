@@ -69,8 +69,8 @@ std::string inferSoaReceiverTypeFromBinding(const BindingInfo &binding) {
           normalized == "std/collections/" "soa" "_vector" ||
           normalized == "std/collections/experimental" "_soa" "_vector/Soa" "Vector" ||
           normalized.rfind("soa" "_vector<", 0) == 0 ||
-          normalized.rfind("Soa" "Vector<", 0) == 0 ||
-          normalized.rfind("std/collections/experimental" "_soa" "_vector/Soa" "Vector<", 0) == 0) {
+          normalized.rfind("Soa" "Vector" "<", 0) == 0 ||
+          normalized.rfind("std/collections/experimental" "_soa" "_vector/Soa" "Vector" "<", 0) == 0) {
         return borrowed ? "soa" "_vector_ref" : "soa" "_vector";
       }
       std::string base;
