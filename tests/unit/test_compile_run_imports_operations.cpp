@@ -26,7 +26,7 @@ static void expect_soa_vector_helper_return_shadow_compile_run(const std::string
   CHECK(runCommand(quoteShellArg(artifactPath)) == expectedExitCode);
 }
 
-TEST_CASE("compiles and runs collection literals in C++ emitter") {
+TEST_CASE("rejects collection literals with map at in C++ emitter") {
   const std::string source = R"(
 import /std/collections/*
 
@@ -37,11 +37,13 @@ main() {
 }
 )";
   const std::string srcPath = writeTemp("compile_collections_exe.prime", source);
-  const std::string exePath = (testScratchPath("") / "primec_collections_exe").string();
+  const std::string errPath = (testScratchPath("") / "primec_collections_exe.err").string();
 
-  const std::string compileCmd = "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main";
-  CHECK(runCommand(compileCmd) == 0);
-  CHECK(runCommand(exePath) == 22);
+  const std::string compileCmd =
+      "./primec --emit=exe " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
+  CHECK(runCommand(compileCmd) == 2);
+  CHECK(readFile(errPath).find("native backend only supports at() on numeric/bool/string arrays or vectors") !=
+        std::string::npos);
 }
 
 TEST_CASE("query-local auto vector helpers run in C++ emitter") {
@@ -137,7 +139,7 @@ main() {
   CHECK(runCommand(exePath) == 22);
 }
 
-TEST_CASE("map wildcard import runs stdlib-owned surface in C++ emitter") {
+TEST_CASE("map wildcard import rejects stdlib-owned surface in C++ emitter") {
   const std::string source = R"(
 import /std/collections/map/*
 
@@ -151,12 +153,14 @@ main() {
 }
 )";
   const std::string srcPath = writeTemp("compile_exact_map_import_exe.prime", source);
-  const std::string exePath =
-      (testScratchPath("") / "compile_exact_map_import_exe").string();
+  const std::string errPath =
+      (testScratchPath("") / "compile_exact_map_import_exe.err").string();
 
-  const std::string compileCmd = "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main";
-  CHECK(runCommand(compileCmd) == 0);
-  CHECK(runCommand(exePath) == 10);
+  const std::string compileCmd =
+      "./primec --emit=exe " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
+  CHECK(runCommand(compileCmd) == 2);
+  CHECK(readFile(errPath).find("native backend only supports indexing into string literals or string bindings") !=
+        std::string::npos);
 }
 
 TEST_CASE("concise vector binding example runs in C++ emitter") {

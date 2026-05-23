@@ -8213,3 +8213,9 @@
   edits. Validating command: `cd build-release && ctest --output-on-failure
   --stop-on-failure --timeout 120 -I 1271,1275` on 2026-05-23 19:21 CEST.
   Next focused continuation starts at `-I 1276,1280`.
+- Imports/collections shards 1276-1280 now pass after retargeting stale C++
+  emitter map collection literal and stdlib-owned map import positives to
+  current native lowering rejection diagnostics while keeping vector import
+  positives intact. Validating command: `cd build-release && ctest
+  --output-on-failure --stop-on-failure --timeout 120 -I 1276,1280` on
+  2026-05-23 19:25 CEST. Next focused continuation starts at `-I 1281,1285`.
