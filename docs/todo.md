@@ -83,8 +83,8 @@ Task template:
 
 ### Ready Now (Parallel-Candidate Leaves; No Unmet TODO Dependencies)
 
-- TODO-4551: Add compile-time evaluation cache keys | track:
-  generic-requirements-cache | primary surface: compile-time cache invalidation
+- TODO-4347: Integrate requirements with overload selection | track:
+  generic-requirements-overload-selection | primary surface: call resolution
 
 ### Parallel Work Tracks (Current)
 
@@ -126,8 +126,9 @@ Task template:
   TODO-4548 added expression-position `ct_if` values; TODO-4549 scoped
   selected-branch generated type facts; TODO-4346 documented compile-time flow
   policy; TODO-4550 enforced active compile-time budget limits; TODO-4358
-  enforced phase-qualified compile-time effects, and TODO-4551 is ready for
-  deterministic cache keys and invalidation.
+  enforced phase-qualified compile-time effects; TODO-4551 added
+  deterministic cache keys and invalidation. TODO-4347 is ready to route
+  requirement facts into overload selection.
 
 ### Immediate Next 10 (Track Successors; Not Ready Until Dependencies Land)
 
@@ -156,12 +157,11 @@ Task template:
   prerequisite split out of TODO-4278
 - Procedural compile-time genericity: none active after TODO-4340 and
   TODO-4546
-- Generic constraint and compile-time flow alignment: TODO-4551 -> TODO-4347
-  -> TODO-4351 -> TODO-4348 -> TODO-4359 -> TODO-4349 -> TODO-4350
+- Generic constraint and compile-time flow alignment: TODO-4347 -> TODO-4351
+  -> TODO-4348 -> TODO-4359 -> TODO-4349 -> TODO-4350
 
 ### Execution Queue (Recommended Track Order)
 
-- TODO-4551: Add compile-time evaluation cache keys
 - TODO-4545: Implement first structured task spawn/wait substrate
 - TODO-4278: Integrate multi-wait with stdlib tuple
 - TODO-4347: Integrate requirements with overload selection
@@ -808,33 +808,6 @@ Task template:
     - `./scripts/compile.sh --release` passes.
   - stop_rule: Stop once multi-wait returns stdlib `tuple<...>` or the missing
     task-side prerequisite is split into an explicit multithreading TODO.
-
-- [ ] TODO-4551: Add compile-time evaluation cache keys
-  - owner: ai
-  - created_at: 2026-05-23
-  - phase: Generic constraint and compile-time flow alignment
-  - parallel_track: generic-requirements-cache
-  - depends_on: TODO-4358, TODO-4550
-  - scope: Add deterministic compile-time evaluation cache keys and
-    invalidation for pure and effectful compile-time predicate/helper results.
-  - implementation_notes:
-    - Start from the CT facade, semantic-product versioning, import/fact
-      publication, effect metadata, and budget/provenance results.
-    - Cache keys must include predicate/helper identity, compile-time
-      arguments, visible imports and semantic facts, active
-      `effects<compiletime>(...)`, host-service fingerprints, evaluator policy
-      version, and the language/semantic-product version.
-  - acceptance:
-    - Repeated pure CT evaluations reuse cached results while preserving
-      identical diagnostics when cache reuse is disabled.
-    - Cache-key tests prove that changing imports, semantic facts, CT
-      arguments, active CT effects, host fingerprints, evaluator policy, or
-      semantic-product version invalidates stale results.
-    - Cache corruption or version mismatch reports the documented diagnostic
-      category without falling back to stale data.
-    - `./scripts/compile.sh --release` passes.
-  - stop_rule: Stop once compile-time evaluation cache reuse is deterministic,
-    invalidation-safe, and provenance-preserving for semantic validation.
 
 - [ ] TODO-4347: Integrate requirements with overload selection
   - owner: ai

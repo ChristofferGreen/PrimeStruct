@@ -96,6 +96,15 @@ primec::SemanticProgram makeBudgetProgram() {
   return program;
 }
 
+primec::SemanticProgram makeCacheProgram() {
+  primec::SemanticProgram program = makeBudgetProgram();
+  program.sourceImports = {"/project/b", "/project/a"};
+  program.imports = {"/std/meta"};
+  program.requirementPredicateFacts.front().compileTimeEffects.push_back(
+      "file_read");
+  return program;
+}
+
 class AllowOneEffectHost final : public primec::CompileTimeHost {
 public:
   bool allowEffect(std::string_view effectName,
@@ -113,6 +122,47 @@ public:
     }
     return std::nullopt;
   }
+};
+
+class FingerprintedSemanticHost final : public primec::CompileTimeHost {
+public:
+  FingerprintedSemanticHost(primec::SemanticProgram program,
+                            std::string fingerprint)
+      : program_(std::move(program)),
+        delegate_(program_),
+        fingerprint_(std::move(fingerprint)) {}
+
+  bool allowEffect(std::string_view effectName,
+                   primec::CompileTimeEffectPhase phase,
+                   std::string_view definitionPath = {}) const override {
+    return delegate_.allowEffect(effectName, phase, definitionPath);
+  }
+
+  std::optional<std::string>
+  hostServiceFingerprint(std::string_view serviceName) const override {
+    if (serviceName == "file_read") {
+      return fingerprint_;
+    }
+    return std::nullopt;
+  }
+
+  const primec::SemanticProgramRequirementPredicateFact *
+  findRequirementPredicateFact(std::string_view definitionPath,
+                               std::string_view predicateName,
+                               std::string_view sourceText = {}) const override {
+    return delegate_.findRequirementPredicateFact(definitionPath,
+                                                  predicateName,
+                                                  sourceText);
+  }
+
+  const primec::SemanticProgram *semanticProgram() const override {
+    return &program_;
+  }
+
+private:
+  primec::SemanticProgram program_;
+  primec::SemanticProgramCompileTimeHost delegate_;
+  std::string fingerprint_;
 };
 
 } // namespace
@@ -133,6 +183,10 @@ TEST_CASE("compile-time evaluation facade names every result and fault") {
             primec::CompileTimeEvaluationResultKind::BudgetExhausted) ==
         "budget_exhausted");
   CHECK(primec::compileTimeEvaluationResultKindName(
+            primec::CompileTimeEvaluationResultKind::
+                CacheCorruptOrVersionMismatch) ==
+        "cache_corrupt_or_version_mismatch");
+  CHECK(primec::compileTimeEvaluationResultKindName(
             primec::CompileTimeEvaluationResultKind::InternalCompilerError) ==
         "internal_compiler_error");
 
@@ -150,6 +204,10 @@ TEST_CASE("compile-time evaluation facade names every result and fault") {
   CHECK(primec::compileTimeEvaluationFaultKindName(
             primec::CompileTimeEvaluationFaultKind::BudgetExhausted) ==
         "budget_exhausted");
+  CHECK(primec::compileTimeEvaluationFaultKindName(
+            primec::CompileTimeEvaluationFaultKind::
+                CacheCorruptOrVersionMismatch) ==
+        "cache_corrupt_or_version_mismatch");
   CHECK(primec::compileTimeEvaluationFaultKindName(
             primec::CompileTimeEvaluationFaultKind::InternalCompilerError) ==
         "internal_compiler_error");
@@ -359,6 +417,180 @@ TEST_CASE("compile-time evaluation facade enforces deterministic budgets") {
         primec::CompileTimeEvaluationResultKind::BudgetExhausted);
   CHECK(provenanceResult.message.find("provenance payload budget exceeded") !=
         std::string::npos);
+}
+
+TEST_CASE("compile-time evaluation facade reuses deterministic cache results") {
+  const primec::SemanticProgram program = makeBudgetProgram();
+  const primec::SemanticProgramCompileTimeHost host(program);
+  primec::CompileTimeEvaluationCache cache;
+  const primec::CompileTimeEvaluationFacade facade(host, {}, &cache);
+
+  auto makeRequest = [] {
+    primec::CompileTimeEvaluationRequest request;
+    request.definitionPath = "/generic/user";
+    request.predicateName = "/project/is_small";
+    return request;
+  };
+
+  const auto first = facade.evaluateRequirementPredicate(makeRequest());
+  CHECK(first.kind == primec::CompileTimeEvaluationResultKind::Success);
+  CHECK(cache.missCount == 1);
+  CHECK(cache.storeCount == 1);
+  CHECK(cache.hitCount == 0);
+
+  const auto second = facade.evaluateRequirementPredicate(makeRequest());
+  CHECK(second.kind == primec::CompileTimeEvaluationResultKind::Success);
+  CHECK(second.message == first.message);
+  CHECK(cache.missCount == 1);
+  CHECK(cache.storeCount == 1);
+  CHECK(cache.hitCount == 1);
+
+  auto uncachedRequest = makeRequest();
+  uncachedRequest.enableCacheReuse = false;
+  const auto uncached = facade.evaluateRequirementPredicate(uncachedRequest);
+  CHECK(uncached.kind == primec::CompileTimeEvaluationResultKind::Success);
+  CHECK(uncached.message == first.message);
+  CHECK(cache.missCount == 1);
+  CHECK(cache.storeCount == 1);
+  CHECK(cache.hitCount == 1);
+}
+
+TEST_CASE("compile-time evaluation cache keys include invalidation material") {
+  const primec::CompileTimeEvaluationBudget budget;
+  const primec::SemanticProgram baseProgram = makeCacheProgram();
+  const FingerprintedSemanticHost baseHost(baseProgram, "host-a");
+  const auto baseKey = primec::buildCompileTimeEvaluationCacheKey(
+      baseHost,
+      baseHost.semanticProgram(),
+      baseHost.semanticProgram()->requirementPredicateFacts.front(),
+      budget,
+      "policy-a");
+
+  primec::SemanticProgram reorderedImports = baseProgram;
+  reorderedImports.sourceImports = {"/project/a", "/project/b"};
+  const FingerprintedSemanticHost reorderedHost(reorderedImports, "host-a");
+  const auto reorderedKey = primec::buildCompileTimeEvaluationCacheKey(
+      reorderedHost,
+      reorderedHost.semanticProgram(),
+      reorderedHost.semanticProgram()->requirementPredicateFacts.front(),
+      budget,
+      "policy-a");
+  CHECK(reorderedKey.digest == baseKey.digest);
+
+  primec::SemanticProgram changedArgument = baseProgram;
+  changedArgument.requirementPredicateFacts.front().operands.front().text =
+      "67890";
+  const FingerprintedSemanticHost changedArgumentHost(changedArgument,
+                                                     "host-a");
+  CHECK(primec::buildCompileTimeEvaluationCacheKey(
+            changedArgumentHost,
+            changedArgumentHost.semanticProgram(),
+            changedArgumentHost.semanticProgram()
+                ->requirementPredicateFacts.front(),
+            budget,
+            "policy-a")
+            .digest != baseKey.digest);
+
+  primec::SemanticProgram changedImports = baseProgram;
+  changedImports.imports.push_back("/project/extra");
+  const FingerprintedSemanticHost changedImportsHost(changedImports, "host-a");
+  CHECK(primec::buildCompileTimeEvaluationCacheKey(
+            changedImportsHost,
+            changedImportsHost.semanticProgram(),
+            changedImportsHost.semanticProgram()
+                ->requirementPredicateFacts.front(),
+            budget,
+            "policy-a")
+            .digest != baseKey.digest);
+
+  primec::SemanticProgram changedFact = baseProgram;
+  changedFact.requirementPredicateFacts.front().evaluationDiagnostic =
+      "changed diagnostic";
+  const FingerprintedSemanticHost changedFactHost(changedFact, "host-a");
+  CHECK(primec::buildCompileTimeEvaluationCacheKey(
+            changedFactHost,
+            changedFactHost.semanticProgram(),
+            changedFactHost.semanticProgram()->requirementPredicateFacts.front(),
+            budget,
+            "policy-a")
+            .digest != baseKey.digest);
+
+  primec::SemanticProgram changedEffects = baseProgram;
+  changedEffects.requirementPredicateFacts.front().compileTimeEffects.push_back(
+      "net_read");
+  const FingerprintedSemanticHost changedEffectsHost(changedEffects, "host-a");
+  CHECK(primec::buildCompileTimeEvaluationCacheKey(
+            changedEffectsHost,
+            changedEffectsHost.semanticProgram(),
+            changedEffectsHost.semanticProgram()
+                ->requirementPredicateFacts.front(),
+            budget,
+            "policy-a")
+            .digest != baseKey.digest);
+
+  const FingerprintedSemanticHost changedFingerprintHost(baseProgram, "host-b");
+  CHECK(primec::buildCompileTimeEvaluationCacheKey(
+            changedFingerprintHost,
+            changedFingerprintHost.semanticProgram(),
+            changedFingerprintHost.semanticProgram()
+                ->requirementPredicateFacts.front(),
+            budget,
+            "policy-a")
+            .digest != baseKey.digest);
+
+  CHECK(primec::buildCompileTimeEvaluationCacheKey(
+            baseHost,
+            baseHost.semanticProgram(),
+            baseHost.semanticProgram()->requirementPredicateFacts.front(),
+            budget,
+            "policy-b")
+            .digest != baseKey.digest);
+
+  primec::SemanticProgram changedVersion = baseProgram;
+  changedVersion.contractVersion = primec::SemanticProductContractVersionCurrent + 1;
+  const FingerprintedSemanticHost changedVersionHost(changedVersion, "host-a");
+  CHECK(primec::buildCompileTimeEvaluationCacheKey(
+            changedVersionHost,
+            changedVersionHost.semanticProgram(),
+            changedVersionHost.semanticProgram()
+                ->requirementPredicateFacts.front(),
+            budget,
+            "policy-a")
+            .digest != baseKey.digest);
+}
+
+TEST_CASE("compile-time evaluation cache rejects corrupt entries") {
+  const primec::SemanticProgram program = makeBudgetProgram();
+  const primec::SemanticProgramCompileTimeHost host(program);
+  primec::CompileTimeEvaluationCache cache;
+
+  const primec::CompileTimeEvaluationBudget budget;
+  const auto key = primec::buildCompileTimeEvaluationCacheKey(
+      host,
+      &program,
+      program.requirementPredicateFacts.front(),
+      budget,
+      {});
+  primec::CompileTimeEvaluationCacheEntry entry;
+  entry.key = key;
+  entry.key.material = "corrupt";
+  entry.semanticProductContractVersion = program.contractVersion;
+  entry.evaluatorPolicyVersion = "primestruct-ct-evaluator-v1";
+  cache.entries[key.digest] = std::move(entry);
+
+  const primec::CompileTimeEvaluationFacade facade(host, {}, &cache);
+  primec::CompileTimeEvaluationRequest request;
+  request.definitionPath = "/generic/user";
+  request.predicateName = "/project/is_small";
+  const auto result = facade.evaluateRequirementPredicate(request);
+  CHECK(result.kind ==
+        primec::CompileTimeEvaluationResultKind::CacheCorruptOrVersionMismatch);
+  CHECK(result.fault ==
+        primec::CompileTimeEvaluationFaultKind::CacheCorruptOrVersionMismatch);
+  CHECK(result.message.find("cache corrupt or version mismatch") !=
+        std::string::npos);
+  CHECK(cache.corruptOrVersionMismatchCount == 1);
+  CHECK(cache.hitCount == 0);
 }
 
 TEST_CASE("semantic CT host answers canonical builtin meta predicate facts") {

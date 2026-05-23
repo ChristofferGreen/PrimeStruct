@@ -2,9 +2,12 @@
 
 #include "primec/SemanticProduct.h"
 
+#include <algorithm>
+#include <iomanip>
 #include <optional>
 #include <sstream>
 #include <utility>
+#include <vector>
 
 namespace primec {
 
@@ -46,6 +49,9 @@ CompileTimeEvaluationResultKind resultKindFromRequirementOutcome(
   if (outcome == "budget_exhausted") {
     return CompileTimeEvaluationResultKind::BudgetExhausted;
   }
+  if (outcome == "cache_corrupt_or_version_mismatch") {
+    return CompileTimeEvaluationResultKind::CacheCorruptOrVersionMismatch;
+  }
   if (outcome == "internal_compiler_error") {
     return CompileTimeEvaluationResultKind::InternalCompilerError;
   }
@@ -65,6 +71,8 @@ CompileTimeEvaluationFaultKind faultKindFromResultKind(
     return CompileTimeEvaluationFaultKind::DeniedEffect;
   case CompileTimeEvaluationResultKind::BudgetExhausted:
     return CompileTimeEvaluationFaultKind::BudgetExhausted;
+  case CompileTimeEvaluationResultKind::CacheCorruptOrVersionMismatch:
+    return CompileTimeEvaluationFaultKind::CacheCorruptOrVersionMismatch;
   case CompileTimeEvaluationResultKind::InternalCompilerError:
     return CompileTimeEvaluationFaultKind::InternalCompilerError;
   }
@@ -196,11 +204,248 @@ bool budgetEquals(const CompileTimeEvaluationBudget &left,
          left.maxProvenanceBytes == right.maxProvenanceBytes;
 }
 
+constexpr std::string_view DefaultEvaluatorPolicyVersion =
+    "primestruct-ct-evaluator-v1";
+constexpr std::string_view CompileTimeCacheMaterialVersion =
+    "primestruct-ct-cache-key-v1";
+
+std::string evaluatorPolicyText(std::string_view evaluatorPolicyVersion) {
+  return evaluatorPolicyVersion.empty()
+             ? std::string(DefaultEvaluatorPolicyVersion)
+             : std::string(evaluatorPolicyVersion);
+}
+
+void appendCacheField(std::string &material,
+                      std::string_view key,
+                      std::string_view value) {
+  material.append(key);
+  material.push_back('=');
+  material.append(std::to_string(value.size()));
+  material.push_back(':');
+  material.append(value);
+  material.push_back('\n');
+}
+
+void appendCacheField(std::string &material,
+                      std::string_view key,
+                      std::uint64_t value) {
+  appendCacheField(material, key, std::to_string(value));
+}
+
+std::string hex64(std::uint64_t value) {
+  std::ostringstream out;
+  out << std::hex << std::setfill('0') << std::setw(16) << value;
+  return out.str();
+}
+
+std::string fnv1a64Hex(std::string_view text) {
+  std::uint64_t hash = 1469598103934665603ull;
+  for (const unsigned char ch : text) {
+    hash ^= ch;
+    hash *= 1099511628211ull;
+  }
+  return hex64(hash);
+}
+
+std::vector<std::string> sortedUniqueStrings(std::vector<std::string> values) {
+  std::sort(values.begin(), values.end());
+  values.erase(std::unique(values.begin(), values.end()), values.end());
+  return values;
+}
+
+void appendBudgetMaterial(std::string &material,
+                          const CompileTimeEvaluationBudget &budget) {
+  appendCacheField(material, "budget.maxPreparationSteps",
+                   budget.maxPreparationSteps);
+  appendCacheField(material, "budget.maxSteps", budget.maxSteps);
+  appendCacheField(material, "budget.maxFrames", budget.maxFrames);
+  appendCacheField(material, "budget.maxUserPredicateCalls",
+                   budget.maxUserPredicateCalls);
+  appendCacheField(material, "budget.maxValueBytes", budget.maxValueBytes);
+  appendCacheField(material, "budget.maxStorageBytes", budget.maxStorageBytes);
+  appendCacheField(material, "budget.maxHostBytes", budget.maxHostBytes);
+  appendCacheField(material, "budget.maxDiagnosticBytes",
+                   budget.maxDiagnosticBytes);
+  appendCacheField(material, "budget.maxProvenanceBytes",
+                   budget.maxProvenanceBytes);
+}
+
+std::string requirementFactCacheMaterial(
+    const SemanticProgram *semanticProgram,
+    const SemanticProgramRequirementPredicateFact &fact,
+    std::string_view prefix) {
+  std::string material;
+  appendCacheField(material,
+                   std::string(prefix) + ".definitionPath",
+                   resolvedSemanticText(semanticProgram,
+                                        fact.definitionPathId,
+                                        fact.definitionPath));
+  appendCacheField(material,
+                   std::string(prefix) + ".predicateKind",
+                   resolvedSemanticText(semanticProgram,
+                                        fact.predicateKindId,
+                                        fact.predicateKind));
+  appendCacheField(material,
+                   std::string(prefix) + ".predicateName",
+                   resolvedSemanticText(semanticProgram,
+                                        fact.predicateNameId,
+                                        fact.predicateName));
+  appendCacheField(material,
+                   std::string(prefix) + ".relationOperator",
+                   resolvedSemanticText(semanticProgram,
+                                        fact.relationOperatorId,
+                                        fact.relationOperator));
+  appendCacheField(material,
+                   std::string(prefix) + ".sourceText",
+                   resolvedSemanticText(semanticProgram,
+                                        fact.sourceTextId,
+                                        fact.sourceText));
+  appendCacheField(material,
+                   std::string(prefix) + ".evaluationOutcome",
+                   resolvedSemanticText(semanticProgram,
+                                        fact.evaluationOutcomeId,
+                                        fact.evaluationOutcome));
+  appendCacheField(material,
+                   std::string(prefix) + ".evaluationDiagnostic",
+                   resolvedSemanticText(semanticProgram,
+                                        fact.evaluationDiagnosticId,
+                                        fact.evaluationDiagnostic));
+  appendCacheField(material,
+                   std::string(prefix) + ".semanticNodeId",
+                   fact.semanticNodeId);
+  appendCacheField(material,
+                   std::string(prefix) + ".provenanceHandle",
+                   fact.provenanceHandle);
+  std::vector<std::string> effects;
+  for (std::size_t i = 0; i < fact.compileTimeEffects.size(); ++i) {
+    const SymbolId effectId =
+        i < fact.compileTimeEffectIds.size()
+            ? fact.compileTimeEffectIds[i]
+            : InvalidSymbolId;
+    effects.emplace_back(resolvedSemanticText(semanticProgram,
+                                              effectId,
+                                              fact.compileTimeEffects[i]));
+  }
+  for (const auto &effect : sortedUniqueStrings(std::move(effects))) {
+    appendCacheField(material, std::string(prefix) + ".compileTimeEffect",
+                     effect);
+  }
+  for (std::size_t i = 0; i < fact.operands.size(); ++i) {
+    const SemanticProgramRequirementPredicateOperand &operand =
+        fact.operands[i];
+    const std::string operandPrefix =
+        std::string(prefix) + ".operand." + std::to_string(i);
+    appendCacheField(material,
+                     operandPrefix + ".kind",
+                     resolvedSemanticText(semanticProgram,
+                                          operand.kindId,
+                                          operand.kind));
+    appendCacheField(material,
+                     operandPrefix + ".text",
+                     resolvedSemanticText(semanticProgram,
+                                          operand.textId,
+                                          operand.text));
+    appendCacheField(material,
+                     operandPrefix + ".stableHandle",
+                     resolvedSemanticText(semanticProgram,
+                                          operand.stableHandleId,
+                                          operand.stableHandle));
+  }
+  return material;
+}
+
 } // namespace
+
+CompileTimeEvaluationCacheKey buildCompileTimeEvaluationCacheKey(
+    const CompileTimeHost &host,
+    const SemanticProgram *semanticProgram,
+    const SemanticProgramRequirementPredicateFact &fact,
+    const CompileTimeEvaluationBudget &budget,
+    std::string_view evaluatorPolicyVersion) {
+  std::string material;
+  appendCacheField(material,
+                   "cache.materialVersion",
+                   CompileTimeCacheMaterialVersion);
+  appendCacheField(material,
+                   "language.version",
+                   "primestruct-language-v1");
+  appendCacheField(material,
+                   "semanticProduct.contractVersion",
+                   semanticProgram == nullptr
+                       ? SemanticProductContractVersionCurrent
+                       : semanticProgram->contractVersion);
+  appendCacheField(material,
+                   "evaluator.policyVersion",
+                   evaluatorPolicyText(evaluatorPolicyVersion));
+  appendBudgetMaterial(material, budget);
+
+  if (semanticProgram != nullptr) {
+    std::vector<std::string> visibleImports;
+    visibleImports.reserve(semanticProgram->sourceImports.size() +
+                           semanticProgram->imports.size());
+    for (const auto &importPath : semanticProgram->sourceImports) {
+      visibleImports.push_back("source:" + importPath);
+    }
+    for (const auto &importPath : semanticProgram->imports) {
+      visibleImports.push_back("import:" + importPath);
+    }
+    for (const auto &importPath :
+         sortedUniqueStrings(std::move(visibleImports))) {
+      appendCacheField(material, "visibleImport", importPath);
+    }
+
+    std::vector<std::string> requirementFactMaterials;
+    requirementFactMaterials.reserve(
+        semanticProgramRequirementPredicateFactView(*semanticProgram).size());
+    for (const auto *entry :
+         semanticProgramRequirementPredicateFactView(*semanticProgram)) {
+      if (entry != nullptr) {
+        requirementFactMaterials.push_back(
+            requirementFactCacheMaterial(semanticProgram, *entry, "fact"));
+      }
+    }
+    std::sort(requirementFactMaterials.begin(),
+              requirementFactMaterials.end());
+    for (const auto &factMaterial : requirementFactMaterials) {
+      appendCacheField(material, "semanticRequirementFact", factMaterial);
+    }
+  }
+
+  material.append(requirementFactCacheMaterial(semanticProgram, fact, "request"));
+
+  std::vector<std::string> activeEffects;
+  for (std::size_t i = 0; i < fact.compileTimeEffects.size(); ++i) {
+    const SymbolId effectId =
+        i < fact.compileTimeEffectIds.size()
+            ? fact.compileTimeEffectIds[i]
+            : InvalidSymbolId;
+    activeEffects.emplace_back(resolvedSemanticText(semanticProgram,
+                                                    effectId,
+                                                    fact.compileTimeEffects[i]));
+  }
+  for (const auto &effect : sortedUniqueStrings(std::move(activeEffects))) {
+    appendCacheField(material, "activeCompileTimeEffect", effect);
+    appendCacheField(material,
+                     "hostServiceFingerprint." + effect,
+                     host.hostServiceFingerprint(effect).value_or(
+                         std::string("<unavailable>")));
+  }
+
+  CompileTimeEvaluationCacheKey key;
+  key.material = std::move(material);
+  key.digest = fnv1a64Hex(key.material);
+  return key;
+}
 
 std::optional<std::string>
 CompileTimeHost::describeSemanticFact(std::string_view factName) const {
   (void)factName;
+  return std::nullopt;
+}
+
+std::optional<std::string>
+CompileTimeHost::hostServiceFingerprint(std::string_view serviceName) const {
+  (void)serviceName;
   return std::nullopt;
 }
 
@@ -332,9 +577,11 @@ bool DenyAllCompileTimeHost::allowEffect(std::string_view effectName,
 
 CompileTimeEvaluationFacade::CompileTimeEvaluationFacade(
     const CompileTimeHost &host,
-    CompileTimeEvaluationBudget budget)
+    CompileTimeEvaluationBudget budget,
+    CompileTimeEvaluationCache *cache)
     : host_(host),
-      budget_(budget) {}
+      budget_(budget),
+      cache_(cache) {}
 
 const CompileTimeEvaluationBudget &CompileTimeEvaluationFacade::budget() const {
   return budget_;
@@ -441,6 +688,16 @@ CompileTimeEvaluationResult CompileTimeEvaluationFacade::budgetExhausted(
 }
 
 CompileTimeEvaluationResult
+CompileTimeEvaluationFacade::cacheCorruptOrVersionMismatch(
+    CompileTimeEvaluationProvenance provenance,
+    std::string message) const {
+  return makeFault(CompileTimeEvaluationResultKind::CacheCorruptOrVersionMismatch,
+                   CompileTimeEvaluationFaultKind::CacheCorruptOrVersionMismatch,
+                   std::move(provenance),
+                   std::move(message));
+}
+
+CompileTimeEvaluationResult
 CompileTimeEvaluationFacade::internalCompilerError(
     CompileTimeEvaluationProvenance provenance,
     std::string message) const {
@@ -512,7 +769,7 @@ CompileTimeEvaluationFacade::evaluateRequirementPredicate(
   const CompileTimeEvaluationBudget defaultBudget;
   const CompileTimeEvaluationBudget &activeBudget =
       budgetEquals(request.budget, defaultBudget) ? budget_ : request.budget;
-  const CompileTimeEvaluationFacade activeFacade(host_, activeBudget);
+  const CompileTimeEvaluationFacade activeFacade(host_, activeBudget, cache_);
   const SemanticProgram *semanticProgram =
       request.semanticProgram != nullptr ? request.semanticProgram
                                          : host_.semanticProgram();
@@ -545,6 +802,37 @@ CompileTimeEvaluationFacade::evaluateRequirementPredicate(
       semanticProgram, fact.predicateNameId, fact.predicateName));
   provenance.sourceText = std::string(resolvedSemanticText(
       semanticProgram, fact.sourceTextId, fact.sourceText));
+
+  const std::string evaluatorPolicyVersion =
+      evaluatorPolicyText(request.evaluatorPolicyVersion);
+  std::optional<CompileTimeEvaluationCacheKey> cacheKey;
+  const bool useCache = cache_ != nullptr && cache_->enabled &&
+                        request.enableCacheReuse;
+  if (useCache) {
+    cacheKey = buildCompileTimeEvaluationCacheKey(host_,
+                                                  semanticProgram,
+                                                  fact,
+                                                  activeBudget,
+                                                  evaluatorPolicyVersion);
+    const auto cached = cache_->entries.find(cacheKey->digest);
+    if (cached != cache_->entries.end()) {
+      const CompileTimeEvaluationCacheEntry &entry = cached->second;
+      if (entry.key.material != cacheKey->material ||
+          entry.semanticProductContractVersion !=
+              (semanticProgram == nullptr
+                   ? SemanticProductContractVersionCurrent
+                   : semanticProgram->contractVersion) ||
+          entry.evaluatorPolicyVersion != evaluatorPolicyVersion) {
+        ++cache_->corruptOrVersionMismatchCount;
+        return activeFacade.cacheCorruptOrVersionMismatch(
+            provenance,
+            "compile-time evaluation cache corrupt or version mismatch");
+      }
+      ++cache_->hitCount;
+      return entry.result;
+    }
+    ++cache_->missCount;
+  }
 
   const std::uint64_t requiredSteps =
       static_cast<std::uint64_t>(fact.operands.size()) + 1;
@@ -595,31 +883,42 @@ CompileTimeEvaluationFacade::evaluateRequirementPredicate(
       semanticProgram, fact.evaluationDiagnosticId, fact.evaluationDiagnostic);
   const CompileTimeEvaluationResultKind kind =
       resultKindFromRequirementOutcome(outcome);
+  CompileTimeEvaluationResult result;
   if (kind == CompileTimeEvaluationResultKind::Success) {
-    return activeFacade.success(true,
-                                std::move(provenance),
-                                std::string(diagnostic));
-  }
-  if (kind == CompileTimeEvaluationResultKind::UnsatisfiedPredicate) {
-    return activeFacade.unsatisfiedPredicate(std::move(provenance),
-                                             std::string(diagnostic));
-  }
-  if (kind == CompileTimeEvaluationResultKind::InvalidEvaluation) {
-    return activeFacade.invalidEvaluation(std::move(provenance),
-                                          std::string(diagnostic));
-  }
-  if (kind == CompileTimeEvaluationResultKind::DeniedEffect) {
-    return makeFault(kind,
-                     faultKindFromResultKind(kind),
-                     std::move(provenance),
-                     std::string(diagnostic));
-  }
-  if (kind == CompileTimeEvaluationResultKind::BudgetExhausted) {
-    return activeFacade.budgetExhausted(std::move(provenance),
-                                        std::string(diagnostic));
-  }
-  return activeFacade.internalCompilerError(std::move(provenance),
+    result = activeFacade.success(true,
+                                  std::move(provenance),
+                                  std::string(diagnostic));
+  } else if (kind == CompileTimeEvaluationResultKind::UnsatisfiedPredicate) {
+    result = activeFacade.unsatisfiedPredicate(std::move(provenance),
+                                               std::string(diagnostic));
+  } else if (kind == CompileTimeEvaluationResultKind::InvalidEvaluation) {
+    result = activeFacade.invalidEvaluation(std::move(provenance),
                                             std::string(diagnostic));
+  } else if (kind == CompileTimeEvaluationResultKind::DeniedEffect ||
+             kind == CompileTimeEvaluationResultKind::CacheCorruptOrVersionMismatch) {
+    result = makeFault(kind,
+                       faultKindFromResultKind(kind),
+                       std::move(provenance),
+                       std::string(diagnostic));
+  } else if (kind == CompileTimeEvaluationResultKind::BudgetExhausted) {
+    result = activeFacade.budgetExhausted(std::move(provenance),
+                                          std::string(diagnostic));
+  } else {
+    result = activeFacade.internalCompilerError(std::move(provenance),
+                                                std::string(diagnostic));
+  }
+  if (useCache && cacheKey.has_value()) {
+    CompileTimeEvaluationCacheEntry entry;
+    entry.key = *cacheKey;
+    entry.result = result;
+    entry.semanticProductContractVersion =
+        semanticProgram == nullptr ? SemanticProductContractVersionCurrent
+                                   : semanticProgram->contractVersion;
+    entry.evaluatorPolicyVersion = evaluatorPolicyVersion;
+    cache_->entries[cacheKey->digest] = std::move(entry);
+    ++cache_->storeCount;
+  }
+  return result;
 }
 
 bool isCompileTimeEvaluationFault(CompileTimeEvaluationResultKind kind) {
@@ -648,6 +947,8 @@ compileTimeEvaluationResultKindName(CompileTimeEvaluationResultKind kind) {
     return "denied_effect";
   case CompileTimeEvaluationResultKind::BudgetExhausted:
     return "budget_exhausted";
+  case CompileTimeEvaluationResultKind::CacheCorruptOrVersionMismatch:
+    return "cache_corrupt_or_version_mismatch";
   case CompileTimeEvaluationResultKind::InternalCompilerError:
     return "internal_compiler_error";
   }
@@ -667,6 +968,8 @@ compileTimeEvaluationFaultKindName(CompileTimeEvaluationFaultKind kind) {
     return "denied_effect";
   case CompileTimeEvaluationFaultKind::BudgetExhausted:
     return "budget_exhausted";
+  case CompileTimeEvaluationFaultKind::CacheCorruptOrVersionMismatch:
+    return "cache_corrupt_or_version_mismatch";
   case CompileTimeEvaluationFaultKind::InternalCompilerError:
     return "internal_compiler_error";
   }

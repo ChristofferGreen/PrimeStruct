@@ -4,6 +4,8 @@
 #include <optional>
 #include <string>
 #include <string_view>
+#include <unordered_map>
+#include <vector>
 
 namespace primec {
 
@@ -20,6 +22,7 @@ enum class CompileTimeEvaluationResultKind {
   InvalidEvaluation,
   DeniedEffect,
   BudgetExhausted,
+  CacheCorruptOrVersionMismatch,
   InternalCompilerError,
 };
 
@@ -29,6 +32,7 @@ enum class CompileTimeEvaluationFaultKind {
   InvalidEvaluation,
   DeniedEffect,
   BudgetExhausted,
+  CacheCorruptOrVersionMismatch,
   InternalCompilerError,
 };
 
@@ -67,6 +71,8 @@ struct CompileTimeEvaluationRequest {
   std::string definitionPath;
   std::string predicateName;
   std::string sourceText;
+  std::string evaluatorPolicyVersion;
+  bool enableCacheReuse = true;
   CompileTimeEvaluationProvenance provenance;
   CompileTimeEvaluationBudget budget;
 };
@@ -81,6 +87,9 @@ public:
 
   virtual std::optional<std::string>
   describeSemanticFact(std::string_view factName) const;
+
+  virtual std::optional<std::string>
+  hostServiceFingerprint(std::string_view serviceName) const;
 
   virtual const SemanticProgramRequirementPredicateFact *
   findRequirementPredicateFact(std::string_view definitionPath,
@@ -128,10 +137,47 @@ struct CompileTimeEvaluationResult {
   bool boolValue = false;
 };
 
+struct CompileTimeEvaluationCacheKey {
+  std::string digest;
+  std::string material;
+};
+
+struct CompileTimeEvaluationCacheEntry {
+  CompileTimeEvaluationCacheKey key;
+  CompileTimeEvaluationResult result;
+  uint32_t semanticProductContractVersion = 0;
+  std::string evaluatorPolicyVersion;
+};
+
+struct CompileTimeEvaluationCache {
+  std::unordered_map<std::string, CompileTimeEvaluationCacheEntry> entries;
+  bool enabled = true;
+  std::uint64_t hitCount = 0;
+  std::uint64_t missCount = 0;
+  std::uint64_t storeCount = 0;
+  std::uint64_t corruptOrVersionMismatchCount = 0;
+
+  void clear() {
+    entries.clear();
+    hitCount = 0;
+    missCount = 0;
+    storeCount = 0;
+    corruptOrVersionMismatchCount = 0;
+  }
+};
+
+CompileTimeEvaluationCacheKey buildCompileTimeEvaluationCacheKey(
+    const CompileTimeHost &host,
+    const SemanticProgram *semanticProgram,
+    const SemanticProgramRequirementPredicateFact &fact,
+    const CompileTimeEvaluationBudget &budget,
+    std::string_view evaluatorPolicyVersion);
+
 class CompileTimeEvaluationFacade {
 public:
   CompileTimeEvaluationFacade(const CompileTimeHost &host,
-                              CompileTimeEvaluationBudget budget = {});
+                              CompileTimeEvaluationBudget budget = {},
+                              CompileTimeEvaluationCache *cache = nullptr);
 
   static constexpr bool finalBackendIrAvailable() { return false; }
   static constexpr bool launchesRuntimeVm() { return false; }
@@ -152,6 +198,9 @@ public:
   CompileTimeEvaluationResult budgetExhausted(
       CompileTimeEvaluationProvenance provenance,
       std::string message) const;
+  CompileTimeEvaluationResult cacheCorruptOrVersionMismatch(
+      CompileTimeEvaluationProvenance provenance,
+      std::string message) const;
   CompileTimeEvaluationResult internalCompilerError(
       CompileTimeEvaluationProvenance provenance,
       std::string message) const;
@@ -170,6 +219,7 @@ public:
 private:
   const CompileTimeHost &host_;
   CompileTimeEvaluationBudget budget_;
+  CompileTimeEvaluationCache *cache_ = nullptr;
 };
 
 bool isCompileTimeEvaluationFault(CompileTimeEvaluationResultKind kind);

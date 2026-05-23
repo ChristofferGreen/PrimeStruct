@@ -6,6 +6,29 @@ Legend:
 Finished items are periodically archived here from `docs/todo.md`; section headers record the archive date.
 
 **Todo Completion (May 23, 2026)**
+- [x] TODO-4551: Add compile-time evaluation cache keys
+  - owner: ai
+  - created_at: 2026-05-23
+  - finished_at: 2026-05-23
+  - phase: Generic constraint and compile-time flow alignment
+  - parallel_track: generic-requirements-cache
+  - depends_on: TODO-4358, TODO-4550
+  - scope: Add deterministic compile-time evaluation cache keys and
+    invalidation for pure and effectful compile-time predicate/helper results.
+  - outcome:
+    - Added deterministic compile-time evaluation cache-key material with
+      semantic-product version, evaluator policy, budget limits, predicate
+      identity, operands, visible imports, requirement facts, active
+      compile-time effects, and host-service fingerprints.
+    - Added an optional in-memory compile-time evaluation cache to the facade,
+      including hit/miss/store accounting and request-level cache bypass.
+    - Added a `cache_corrupt_or_version_mismatch` result/fault category for
+      stale or corrupt cache entries.
+    - Added focused cache reuse, invalidation, and corruption tests.
+  - validation:
+    - `cmake --build build-release --target PrimeStruct_compile_time_tests -j 1`
+    - `ctest --output-on-failure -R ^PrimeStruct_compile_time_ --timeout 120`
+
 - [x] TODO-4358: Enforce phase-qualified compile-time effects
   - owner: ai
   - created_at: 2026-05-04

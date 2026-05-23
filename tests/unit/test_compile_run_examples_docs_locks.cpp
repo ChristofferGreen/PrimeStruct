@@ -1754,10 +1754,8 @@ TEST_CASE("todo queue and skipped doctest debt stay source locked") {
   CHECK(todo.find("### Ready Now (Parallel-Candidate Leaves; No Unmet TODO Dependencies)") !=
         std::string::npos);
   CHECK(todo.find("### Ready Now (Parallel-Candidate Leaves; No Unmet TODO Dependencies)\n\n"
-                  "- TODO-4358: Enforce phase-qualified compile-time effects | track:\n"
-                  "  generic-requirements-effects | primary surface: compile-time effect gates\n"
-                  "- TODO-4550: Enforce compile-time evaluation budgets | track:\n"
-                  "  generic-requirements-budgets | primary surface: compile-time budget limits") !=
+                  "- TODO-4347: Integrate requirements with overload selection | track:\n"
+                  "  generic-requirements-overload-selection | primary surface: call resolution") !=
         std::string::npos);
   CHECK(todo.find("- `soa-zero-audit`: TODO-4529 replaced the residue inventory with a strict\n"
                   "  zero-production-trace audit; no SoA zero-audit leaf is ready.") !=
@@ -1793,11 +1791,12 @@ TEST_CASE("todo queue and skipped doctest debt stay source locked") {
                   "  `ct_if`; TODO-4547 added generic-specialized branch selection, and\n"
                   "  TODO-4548 added expression-position `ct_if` values; TODO-4549 scoped\n"
                   "  selected-branch generated type facts; TODO-4346 documented compile-time flow\n"
-                  "  policy; TODO-4358 and TODO-4550 are ready for effect and budget\n"
-                  "  enforcement, while TODO-4551 follows with cache invalidation.") !=
+                  "  policy; TODO-4550 enforced active compile-time budget limits; TODO-4358\n"
+                  "  enforced phase-qualified compile-time effects; TODO-4551 added\n"
+                  "  deterministic cache keys and invalidation. TODO-4347 is ready to route\n"
+                  "  requirement facts into overload selection.") !=
         std::string::npos);
   CHECK(todo.find("### Immediate Next 10 (Track Successors; Not Ready Until Dependencies Land)\n\n"
-                  "- TODO-4551: Add compile-time evaluation cache keys\n"
                   "- TODO-4545: Implement first structured task spawn/wait substrate\n"
                   "- TODO-4278: Integrate multi-wait with stdlib tuple") !=
         std::string::npos);
@@ -1815,10 +1814,10 @@ TEST_CASE("todo queue and skipped doctest debt stay source locked") {
   CHECK(todo.find("- Deferred SoA finish: TODO-4252") ==
         std::string::npos);
   CHECK(todo.find("### Execution Queue (Recommended Track Order)\n\n"
-                  "- TODO-4358: Enforce phase-qualified compile-time effects\n"
-                  "- TODO-4550: Enforce compile-time evaluation budgets\n"
-                  "- TODO-4551: Add compile-time evaluation cache keys\n"
-                  "- TODO-4545: Implement first structured task spawn/wait substrate") !=
+                  "- TODO-4545: Implement first structured task spawn/wait substrate\n"
+                  "- TODO-4278: Integrate multi-wait with stdlib tuple\n"
+                  "- TODO-4347: Integrate requirements with overload selection\n"
+                  "- TODO-4351: Add value-level compile-time requirement facts") !=
         std::string::npos);
   CHECK(todo.find("- [ ] TODO-4548: Add expression-position `ct_if` values") ==
         std::string::npos);
@@ -1934,13 +1933,15 @@ TEST_CASE("todo queue and skipped doctest debt stay source locked") {
         std::string::npos);
   CHECK(todoFinished.find("TODO-4519: Delete `soa_vector` compatibility seams") !=
         std::string::npos);
-  const std::vector<std::string> semanticPhaseQueue = {
+  const std::vector<std::string> completedSemanticPhaseQueue = {
       "TODO-4358: Enforce phase-qualified compile-time effects",
       "TODO-4550: Enforce compile-time evaluation budgets",
+      "TODO-4551: Add compile-time evaluation cache keys",
   };
-  for (const std::string &entry : semanticPhaseQueue) {
-    CHECK(todo.find("- " + entry) != std::string::npos);
-    CHECK(todo.find("- [ ] " + entry) != std::string::npos);
+  for (const std::string &entry : completedSemanticPhaseQueue) {
+    CHECK(todo.find("- " + entry) == std::string::npos);
+    CHECK(todo.find("- [ ] " + entry) == std::string::npos);
+    CHECK(todoFinished.find(entry) != std::string::npos);
   }
   CHECK(todo.find("| track: procedural-genericity-docs |") ==
         std::string::npos);
@@ -2538,7 +2539,7 @@ TEST_CASE("constructor-shaped compatibility inventory stays source locked") {
                             "are retained compatibility entry points") !=
         std::string::npos);
   CHECK(primeStructDoc.find(
-            "`array<T>(...)`, `vector<T>(...)`, `map<K, V>(...)`, canonical") !=
+            "Legacy call-shaped `array<T>(...)`, `vector<T>(...)`, `map<K, V>(...)`,") !=
         std::string::npos);
   CHECK(primeStructDoc.find(
             "`Maybe<T>` is now a stdlib-owned sum with `none` and `some` variants") !=
@@ -2566,7 +2567,7 @@ TEST_CASE("constructor-shaped compatibility inventory stays source locked") {
   CHECK(gfxSemantics.find("TEST_CASE(\"canonical gfx Buffer allocation helper "
                           "validates through builtin rewrite\")") !=
         std::string::npos);
-  CHECK(maybeSemantics.find("TEST_CASE(\"maybe helpers report empty and some\")") !=
+  CHECK(maybeSemantics.find("TEST_CASE(\"maybe some constructs present sum value\")") !=
         std::string::npos);
   CHECK(maybeSemantics.find("TEST_CASE(\"maybe target-typed initializer accepts "
                             "unique inferred payload\")") !=
@@ -2580,7 +2581,7 @@ TEST_CASE("constructor-shaped compatibility inventory stays source locked") {
         std::string::npos);
   CHECK(collectionSnapshot.find("StdlibSurfaceId::CollectionsVectorConstructors") !=
         std::string::npos);
-  CHECK(collectionSnapshot.find("StdlibSurfaceId::CollectionsMapConstructors") !=
+  CHECK(collectionSnapshot.find("findStdlibSurfaceMetadataByBridgeKey(\"collections.map_constructors\")") !=
         std::string::npos);
   CHECK(collectionSnapshot.find("StdlibSurfaceId::CollectionsColumnarConstructors") !=
         std::string::npos);
