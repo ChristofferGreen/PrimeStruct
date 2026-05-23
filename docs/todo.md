@@ -83,9 +83,6 @@ Task template:
 
 ### Ready Now (Parallel-Candidate Leaves; No Unmet TODO Dependencies)
 
-- TODO-4353: Add typed compile-time value model | track:
-  generic-requirements-values | primary surface: compiler-internal compile-time
-  value representation and diagnostics
 - TODO-4354: Factor reusable VM interpreter kernel | track:
   generic-requirements-vm-kernel | primary surface: VM runtime execution kernel
   factoring
@@ -122,9 +119,8 @@ Task template:
   examples, and TODO-4546 added negative conformance; no procedural-genericity
   leaf is ready.
 - `generic-requirements`: TODO-4331, TODO-4334, TODO-4341, TODO-4342,
-  TODO-4343, TODO-4344, and TODO-4352 are complete; TODO-4353 and TODO-4354
-  are ready in parallel because one owns typed CT values and the other owns VM
-  kernel factoring.
+  TODO-4343, TODO-4344, TODO-4352, and TODO-4353 are complete; TODO-4354 is
+  ready as the remaining VM kernel factoring prerequisite for TODO-4355.
 
 ### Immediate Next 10 (Track Successors; Not Ready Until Dependencies Land)
 
@@ -154,14 +150,13 @@ Task template:
   prerequisite split out of TODO-4278
 - Procedural compile-time genericity: none active after TODO-4340 and
   TODO-4546
-- Generic constraint and compile-time flow alignment: TODO-4353 + TODO-4354
-  -> TODO-4355 -> TODO-4356 -> TODO-4357 -> TODO-4345
+- Generic constraint and compile-time flow alignment: TODO-4354 -> TODO-4355
+  -> TODO-4356 -> TODO-4357 -> TODO-4345
   -> TODO-4346 -> TODO-4358 -> TODO-4347 -> TODO-4351 -> TODO-4348
   -> TODO-4359 -> TODO-4349 -> TODO-4350
 
 ### Execution Queue (Recommended Track Order)
 
-- TODO-4353: Add typed compile-time value model
 - TODO-4354: Factor reusable VM interpreter kernel
 - TODO-4355: Add compile-time host and meta intrinsics
 - TODO-4356: Add restricted compile-time callable lowering
@@ -815,34 +810,6 @@ Task template:
     - `./scripts/compile.sh --release` passes.
   - stop_rule: Stop once multi-wait returns stdlib `tuple<...>` or the missing
     task-side prerequisite is split into an explicit multithreading TODO.
-
-- [ ] TODO-4353: Add typed compile-time value model
-  - owner: ai
-  - created_at: 2026-05-04
-  - phase: Generic constraint and compile-time flow alignment
-  - depends_on: TODO-4352, TODO-4342
-  - scope: Add the typed compile-time value and result representation used by
-    requirement predicates, `/std/meta/*` intrinsics, and future CT helpers.
-  - implementation_notes:
-    - Start from semantic-product type facts, compile-time integer arguments
-      from TODO-4270, string-literal/string-table handling, and requirement
-      result representation from TODO-4342.
-    - Model at least `bool`, signed/unsigned integer constants, string
-      literals, type facts, symbols, and requirement outcomes.
-    - Keep values deterministic and printable; no backend/runtime slot layout
-      should leak into this layer.
-  - acceptance:
-    - CT values have stable equality, hashing, debug formatting, and
-      provenance handles suitable for cache keys and diagnostics.
-    - `true`/`false` source predicate results can be wrapped as satisfied or
-      unsatisfied requirement facts.
-    - Unsupported runtime-only values reject with a stable invalid-evaluation
-      result instead of being represented as raw VM slots.
-    - Unit tests cover value equality, formatting, provenance preservation,
-      and unsupported value rejection.
-    - `./scripts/compile.sh --release` passes.
-  - stop_rule: Stop once compile-time values can represent predicate inputs
-    and outputs independently of runtime VM `uint64_t` slots.
 
 - [ ] TODO-4354: Factor reusable VM interpreter kernel
   - owner: ai

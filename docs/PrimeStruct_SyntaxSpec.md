@@ -878,7 +878,10 @@ Requirement rules:
   lowering path or a small CT bytecode/fact evaluator that shares VM pieces.
 - Compile-time value results are typed facts, not raw runtime slots. The
   initial value set should include `bool`, integer constants, string literals,
-  type facts, symbols, and requirement results.
+  type facts, symbols, and requirement results. These values have deterministic
+  equality, hashing, debug formatting, and provenance handles; unsupported
+  runtime-only values reject as invalid evaluation rather than being represented
+  as VM `uint64_t` slots.
 - Failed requirements on a direct call are diagnostics, not C++-style
   substitution failure by accident. A later overload-selection integration may
   use requirements to reject non-viable candidates, but it must preserve

@@ -6,6 +6,31 @@ Legend:
 Finished items are periodically archived here from `docs/todo.md`; section headers record the archive date.
 
 **Todo Completion (May 23, 2026)**
+- [x] TODO-4353: Add typed compile-time value model
+  - owner: ai
+  - created_at: 2026-05-04
+  - finished_at: 2026-05-23
+  - phase: Generic constraint and compile-time flow alignment
+  - parallel_track: generic-requirements-values
+  - depends_on: TODO-4352, TODO-4342
+  - scope: Add the typed compile-time value and result representation used by
+    requirement predicates, `/std/meta/*` intrinsics, and future CT helpers.
+  - outcome:
+    - Added `primec/CompileTimeValue.h` with typed compile-time facts for
+      `bool`, signed and unsigned integer constants, string literals, type
+      facts, symbols, requirement outcomes, and unsupported runtime-only
+      values.
+    - Added stable equality, hashing, debug formatting, and provenance handle
+      preservation suitable for diagnostics and future cache keys.
+    - Added helpers that wrap `true`/`false` source predicate results as
+      satisfied or unsatisfied requirement evaluation results.
+    - Added invalid-evaluation rejection for unsupported runtime-only values
+      instead of representing them as raw runtime VM `uint64_t` slots.
+  - validation:
+    - Focused release validation was selected under the lite workflow; full
+      `./scripts/compile.sh --release` remains deferred to parent/root
+      validation.
+
 - [x] TODO-4352: Add compile-time VM facade and host
   - owner: ai
   - created_at: 2026-05-04

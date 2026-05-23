@@ -1113,6 +1113,12 @@ Procedural compile-time genericity contract:
   evaluation, denied effects, budget exhaustion, and internal compiler errors;
   diagnostics format those categories with the definition, predicate, and
   source provenance supplied by semantic validation.
+- Compile-time values are typed facts, not raw VM slots. The compiler-internal
+  value model represents `bool`, signed and unsigned integer constants, string
+  literals, type facts, symbols, and requirement outcomes with stable equality,
+  hashing, debug formatting, and provenance handles. Runtime-only values such
+  as buffers, heap addresses, or backend stack slots are rejected as invalid
+  compile-time evaluation instead of being encoded as `uint64_t` VM slots.
 - The compiler must not depend on launching the normal runtime VM or final
   backend IR to evaluate requirements. Requirements run during semantic
   validation, before final lowering is complete, so the CT evaluator needs a
