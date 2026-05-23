@@ -8026,3 +8026,9 @@
   --stop-on-failure --timeout 120 -I 1020,1025` on 2026-05-23 14:59 CEST.
   Next focused continuation starts at `-I 1026,1030`; shards 1022-1025 are
   slow, so continue in small windows rather than a broad stop-on-failure run.
+- Native backend core continuation shards 1026-1035 now pass; validating
+  commands: `cd build-release && ctest --output-on-failure --stop-on-failure
+  --timeout 120 -I 1026,1030` and `cd build-release && ctest
+  --output-on-failure --stop-on-failure --timeout 120 -I 1031,1035` on
+  2026-05-23 15:14 CEST. Next focused continuation starts at `-I 1036,1040`;
+  these native backend core shards are slow, so continue in small windows.
