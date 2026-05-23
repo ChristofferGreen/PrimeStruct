@@ -8059,3 +8059,11 @@
   --stop-on-failure --timeout 120 -I 1071,1075` on 2026-05-23 15:55 CEST.
   Next focused continuation starts at `-I 1076,1080`; continue in small
   windows rather than a broad stop-on-failure run.
+- Native backend continuation shards 1076-1095 now pass without source edits;
+  validating commands: `cd build-release && ctest --output-on-failure
+  --stop-on-failure --timeout 120 -I 1076,1080`, `cd build-release && ctest
+  --output-on-failure --stop-on-failure --timeout 120 -I 1081,1085`, `cd
+  build-release && ctest --output-on-failure --stop-on-failure --timeout 120
+  -I 1086,1090`, and `cd build-release && ctest --output-on-failure
+  --stop-on-failure --timeout 120 -I 1091,1095` on 2026-05-23 16:02 CEST.
+  Next focused continuation starts at `-I 1096,1100`.
