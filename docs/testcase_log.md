@@ -8492,3 +8492,20 @@
   120 -I 1548,1548`; `cd build-release && ctest --output-on-failure
   --stop-on-failure --timeout 120 -I 1546,1550` on 2026-05-23 23:21 CEST.
   Next focused continuation starts at `-I 1551,1555`.
+- Compile-run shards 1551-1555 now pass after aligning stale IR/backend
+  tests with current collection ownership boundaries. The parity corpus now
+  expects the already-locked public SoA `soa_vector<Particle>` diagnostic,
+  GPU buffer-load lowering reads semantic product query facts for indexed
+  Buffer arg-pack targets, Buffer method tests avoid vector `at` fallback by
+  using bracket indexing, and the backend registry source lock expects the
+  native unsupported-call diagnostic for direct `/std/collections/map/contains`
+  lowering. Validating commands: `cmake --build build-release --target
+  PrimeStruct_backend_ir_tests -j 1`; `cd build-release && ctest
+  --output-on-failure --stop-on-failure --timeout 120 -I 1551,1551`; `cd
+  build-release && ctest --output-on-failure --stop-on-failure --timeout 120
+  -I 1552,1552`; `cmake --build build-release --target
+  PrimeStruct_backend_runtime_tests -j 1`; `cd build-release && ctest
+  --output-on-failure --stop-on-failure --timeout 120 -I 1554,1554`; `cd
+  build-release && ctest --output-on-failure --stop-on-failure --timeout 120
+  -I 1551,1555` on 2026-05-23 23:47 CEST. Next focused continuation starts
+  at `-I 1556,1560`.

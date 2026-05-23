@@ -3805,7 +3805,11 @@ TEST_CASE("ir lowerer production entry reports native diagnostic without bridge-
   std::string error;
 
   CHECK_FALSE(lowerer.lower(program, &semanticProgram, "/main", {}, {}, module, error, &diagnosticInfo));
-  CHECK(error == "contains requires exactly two arguments");
+  CHECK(error.find("native backend only supports arithmetic/comparison/clamp/min/max/abs/sign/"
+                   "saturate/convert/pointer/assign/increment/decrement calls in expressions") !=
+        std::string::npos);
+  CHECK(error.find("call=/std/collections/map/contains") != std::string::npos);
+  CHECK(error.find("name=contains") != std::string::npos);
   CHECK(diagnosticInfo.message == error);
 }
 

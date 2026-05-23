@@ -669,7 +669,8 @@ main() {
   return(0i32)
 }
 )",
-          true,
+          false,
+          "template arguments are only supported on templated definitions: /soa_vector",
       },
   };
 

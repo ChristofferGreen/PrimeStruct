@@ -32,8 +32,8 @@ main() {
 )";
   std::string error;
   primec::IrModule ir;
-  CHECK(parseValidateAndLower(source, ir, error));
-  CHECK(error.empty());
+  CHECK_MESSAGE(parseValidateAndLower(source, ir, error), error);
+  CHECK_MESSAGE(error.empty(), error);
 }
 
 TEST_CASE("lowers canonical stdlib Buffer compute access helpers") {
@@ -60,8 +60,8 @@ main() {
 )";
   std::string error;
   primec::IrModule ir;
-  CHECK(parseValidateAndLower(source, ir, error));
-  CHECK(error.empty());
+  CHECK_MESSAGE(parseValidateAndLower(source, ir, error), error);
+  CHECK_MESSAGE(error.empty(), error);
 }
 
 TEST_CASE("lowers experimental stdlib Buffer compute access helpers") {
@@ -88,8 +88,8 @@ main() {
 )";
   std::string error;
   primec::IrModule ir;
-  CHECK(parseValidateAndLower(source, ir, error));
-  CHECK(error.empty());
+  CHECK_MESSAGE(parseValidateAndLower(source, ir, error), error);
+  CHECK_MESSAGE(error.empty(), error);
 }
 
 TEST_CASE("lowers gpu dispatch fallback with variadic Buffer packs") {
@@ -152,8 +152,8 @@ main() {
 )";
   std::string error;
   primec::IrModule ir;
-  CHECK(parseValidateAndLower(source, ir, error));
-  CHECK(error.empty());
+  CHECK_MESSAGE(parseValidateAndLower(source, ir, error), error);
+  CHECK_MESSAGE(error.empty(), error);
 }
 
 TEST_CASE("lowers gpu dispatch fallback with borrowed variadic Buffer packs") {
@@ -225,8 +225,8 @@ main() {
 )";
   std::string error;
   primec::IrModule ir;
-  CHECK(parseValidateAndLower(source, ir, error));
-  CHECK(error.empty());
+  CHECK_MESSAGE(parseValidateAndLower(source, ir, error), error);
+  CHECK_MESSAGE(error.empty(), error);
 }
 
 TEST_CASE("lowers gpu dispatch fallback with pointer variadic Buffer packs") {
@@ -298,8 +298,8 @@ main() {
 )";
   std::string error;
   primec::IrModule ir;
-  CHECK(parseValidateAndLower(source, ir, error));
-  CHECK(error.empty());
+  CHECK_MESSAGE(parseValidateAndLower(source, ir, error), error);
+  CHECK_MESSAGE(error.empty(), error);
 }
 
 TEST_CASE("lowers canonical stdlib Buffer arg-pack method receivers") {
@@ -308,22 +308,22 @@ import /std/gfx/*
 
 [compute workgroup_size(1, 1, 1)]
 /score_values([args<Buffer<i32>>] values) {
-  [i32] head{values.at(0i32).load(0i32)}
-  [i32] tail{values.at_unsafe(minus(count(values), 1i32)).load(0i32)}
+  [i32] head{values[0i32].load(0i32)}
+  [i32] tail{values[minus(count(values), 1i32)].load(0i32)}
   values[0i32].store(0i32, plus(head, tail))
 }
 
 [compute workgroup_size(1, 1, 1)]
 /score_refs([args<Reference<Buffer<i32>>>] values) {
-  [i32] head{dereference(values.at(0i32)).load(0i32)}
-  [i32] tail{dereference(values.at_unsafe(minus(count(values), 1i32))).load(0i32)}
+  [i32] head{dereference(values[0i32]).load(0i32)}
+  [i32] tail{dereference(values[minus(count(values), 1i32)]).load(0i32)}
   dereference(values[0i32]).store(0i32, plus(head, tail))
 }
 
 [compute workgroup_size(1, 1, 1)]
 /score_ptrs([args<Pointer<Buffer<i32>>>] values) {
-  [i32] head{dereference(values.at(0i32)).load(0i32)}
-  [i32] tail{dereference(values.at_unsafe(minus(count(values), 1i32))).load(0i32)}
+  [i32] head{dereference(values[0i32]).load(0i32)}
+  [i32] tail{dereference(values[minus(count(values), 1i32)]).load(0i32)}
   dereference(values[0i32]).store(0i32, plus(head, tail))
 }
 
@@ -368,8 +368,8 @@ main() {
 )";
   std::string error;
   primec::IrModule ir;
-  CHECK(parseValidateAndLower(source, ir, error));
-  CHECK(error.empty());
+  CHECK_MESSAGE(parseValidateAndLower(source, ir, error), error);
+  CHECK_MESSAGE(error.empty(), error);
 }
 
 TEST_SUITE_END();

@@ -34,12 +34,11 @@ LocalInfo::ValueKind semanticBufferElementKindFromTypeText(const std::string &ty
   return valueKindFromTypeName(trimTemplateTypeText(argText));
 }
 
-bool inferSemanticBufferElementKindForName(const Expr &expr,
-                                           const SemanticProductTargetAdapter *semanticProductTargets,
-                                           LocalInfo::ValueKind &kindOut) {
+bool inferSemanticBufferElementKind(const Expr &expr,
+                                    const SemanticProductTargetAdapter *semanticProductTargets,
+                                    LocalInfo::ValueKind &kindOut) {
   kindOut = LocalInfo::ValueKind::Unknown;
-  if (expr.kind != Expr::Kind::Name || semanticProductTargets == nullptr ||
-      !semanticProductTargets->hasSemanticProduct ||
+  if (semanticProductTargets == nullptr || !semanticProductTargets->hasSemanticProduct ||
       semanticProductTargets->semanticProgram == nullptr || expr.semanticNodeId == 0) {
     return false;
   }
@@ -47,13 +46,13 @@ bool inferSemanticBufferElementKindForName(const Expr &expr,
   if (const auto *bindingFact = findSemanticProductBindingFact(*semanticProductTargets, expr)) {
     kindOut = semanticBufferElementKindFromTypeText(resolveSemanticProductTypeText(
         semanticProgram, bindingFact->bindingTypeText, bindingFact->bindingTypeTextId));
-    return true;
+    return kindOut != LocalInfo::ValueKind::Unknown;
   }
   if (const auto *localAutoFact =
           findSemanticProductLocalAutoFactBySemanticId(*semanticProductTargets, expr)) {
     kindOut = semanticBufferElementKindFromTypeText(resolveSemanticProductTypeText(
         semanticProgram, localAutoFact->bindingTypeText, localAutoFact->bindingTypeTextId));
-    return true;
+    return kindOut != LocalInfo::ValueKind::Unknown;
   }
   if (const auto *queryFact = findSemanticProductQueryFactBySemanticId(*semanticProductTargets, expr)) {
     std::string typeText = resolveSemanticProductTypeText(
@@ -63,7 +62,7 @@ bool inferSemanticBufferElementKindForName(const Expr &expr,
           semanticProgram, queryFact->bindingTypeText, queryFact->bindingTypeTextId);
     }
     kindOut = semanticBufferElementKindFromTypeText(typeText);
-    return true;
+    return kindOut != LocalInfo::ValueKind::Unknown;
   }
   return false;
 }
@@ -210,12 +209,11 @@ BufferBuiltinCallEmitResult tryEmitBufferBuiltinCall(
     if (!resolveBufferLoadInfo(
             expr,
             [&](const Expr &bufferExpr) -> std::optional<LocalInfo::ValueKind> {
+              LocalInfo::ValueKind semanticKind = LocalInfo::ValueKind::Unknown;
+              if (inferSemanticBufferElementKind(bufferExpr, semanticProductTargets, semanticKind)) {
+                return semanticKind;
+              }
               if (bufferExpr.kind == Expr::Kind::Name) {
-                LocalInfo::ValueKind semanticKind = LocalInfo::ValueKind::Unknown;
-                if (inferSemanticBufferElementKindForName(
-                        bufferExpr, semanticProductTargets, semanticKind)) {
-                  return semanticKind;
-                }
                 auto it = localsIn.find(bufferExpr.name);
                 if (it == localsIn.end() || it->second.kind != LocalInfo::Kind::Buffer) {
                   return std::nullopt;
@@ -227,8 +225,7 @@ BufferBuiltinCallEmitResult tryEmitBufferBuiltinCall(
                 const Expr &targetExpr = bufferExpr.args.front();
                 if (targetExpr.kind == Expr::Kind::Name) {
                   LocalInfo::ValueKind semanticKind = LocalInfo::ValueKind::Unknown;
-                  if (inferSemanticBufferElementKindForName(
-                          targetExpr, semanticProductTargets, semanticKind)) {
+                  if (inferSemanticBufferElementKind(targetExpr, semanticProductTargets, semanticKind)) {
                     return semanticKind;
                   }
                   auto it = localsIn.find(targetExpr.name);
