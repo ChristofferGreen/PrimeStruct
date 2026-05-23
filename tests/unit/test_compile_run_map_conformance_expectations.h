@@ -186,6 +186,16 @@ inline void expectMapTryAtConformance(const std::string &emitMode,
 }
 
 inline void expectExperimentalMapMethodConformance(const std::string &emitMode) {
+  if (emitMode == "native") {
+    expectMapConformanceFailure(makeExperimentalMapMethodConformanceSource(),
+                                "experimental_map_methods",
+                                emitMode,
+                                2,
+                                "",
+                                true);
+    return;
+  }
+
   const int expectedExitCode = 20;
   const std::string expectedError;
   expectMapConformanceFailure(makeExperimentalMapMethodConformanceSource(),
@@ -334,6 +344,14 @@ inline void expectCanonicalMapNamespaceExperimentalInsertConformance(const std::
 }
 
 inline void expectBuiltinCanonicalMapInsertFirstGrowthConformance(const std::string &emitMode) {
+  if (emitMode == "native") {
+    expectMapConformanceCompileReject(makeBuiltinCanonicalMapInsertFirstGrowthConformanceSource(),
+                                      "map_builtin_canonical_insert_first_growth_" + emitMode,
+                                      emitMode,
+                                      "native backend only supports at() on numeric/bool/string arrays or vectors");
+    return;
+  }
+
   expectMapConformanceProgramRunsWithOutput(makeBuiltinCanonicalMapInsertFirstGrowthConformanceSource(),
                                             "map_builtin_canonical_insert_first_growth_" + emitMode,
                                             emitMode,
@@ -342,6 +360,14 @@ inline void expectBuiltinCanonicalMapInsertFirstGrowthConformance(const std::str
 }
 
 inline void expectBuiltinCanonicalMapInsertRepeatedGrowthConformance(const std::string &emitMode) {
+  if (emitMode == "native") {
+    expectMapConformanceCompileReject(makeBuiltinCanonicalMapInsertRepeatedGrowthConformanceSource(),
+                                      "map_builtin_canonical_insert_repeated_growth_" + emitMode,
+                                      emitMode,
+                                      "native backend only supports at() on numeric/bool/string arrays or vectors");
+    return;
+  }
+
   expectMapConformanceProgramRunsWithOutput(makeBuiltinCanonicalMapInsertRepeatedGrowthConformanceSource(),
                                             "map_builtin_canonical_insert_repeated_growth_" + emitMode,
                                             emitMode,
@@ -502,6 +528,14 @@ inline void expectBuiltinCanonicalMapInsertTwentiethGrowthConformance(const std:
 }
 
 inline void expectBuiltinCanonicalMapInsertOverwriteConformance(const std::string &emitMode) {
+  if (emitMode == "native") {
+    expectMapConformanceCompileReject(makeBuiltinCanonicalMapInsertOverwriteConformanceSource(),
+                                      "map_builtin_canonical_insert_overwrite_" + emitMode,
+                                      emitMode,
+                                      "native backend only supports at() on numeric/bool/string arrays or vectors");
+    return;
+  }
+
   expectMapConformanceProgramRunsWithOutput(makeBuiltinCanonicalMapInsertOverwriteConformanceSource(),
                                             "map_builtin_canonical_insert_overwrite_" + emitMode,
                                             emitMode,

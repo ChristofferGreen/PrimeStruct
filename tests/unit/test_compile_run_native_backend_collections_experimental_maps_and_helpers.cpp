@@ -3747,7 +3747,7 @@ TEST_CASE("rejects native canonical namespaced map _ref helpers on borrowed expe
   expectCanonicalMapNamespaceExperimentalBorrowedRefConformance("native");
 }
 
-TEST_CASE("compiles and runs native experimental map methods") {
+TEST_CASE("rejects native experimental map methods") {
   expectExperimentalMapMethodConformance("native");
 }
 
@@ -3775,15 +3775,15 @@ TEST_CASE("rejects native canonical namespaced map inserts on explicit experimen
   expectCanonicalMapNamespaceExperimentalInsertConformance("native");
 }
 
-TEST_CASE("compiles and runs native builtin canonical map first-growth inserts") {
+TEST_CASE("rejects native builtin canonical map first-growth inserts") {
   expectBuiltinCanonicalMapInsertFirstGrowthConformance("native");
 }
 
-TEST_CASE("compiles and runs native builtin canonical map repeated-growth inserts") {
+TEST_CASE("rejects native builtin canonical map repeated-growth inserts") {
   expectBuiltinCanonicalMapInsertRepeatedGrowthConformance("native");
 }
 
-TEST_CASE("compiles and runs native builtin canonical map insert overwrites") {
+TEST_CASE("rejects native builtin canonical map insert overwrites") {
   expectBuiltinCanonicalMapInsertOverwriteConformance("native");
 }
 

@@ -8128,3 +8128,9 @@
   command: `cd build-release && ctest --output-on-failure --stop-on-failure
   --timeout 120 -I 1176,1180` on 2026-05-23 18:35 CEST. Next focused
   continuation starts at `-I 1181,1185`.
+- Native backend collection receiver-precedence shards 1181-1185 now pass
+  after retargeting stale native map method and builtin canonical insert
+  positives to current compile-time rejection diagnostics. Validating command:
+  `cd build-release && ctest --output-on-failure --stop-on-failure --timeout
+  120 -I 1181,1185` on 2026-05-23 18:47 CEST. Next focused continuation
+  starts at `-I 1186,1190`.
