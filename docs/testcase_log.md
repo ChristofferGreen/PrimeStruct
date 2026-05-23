@@ -976,8 +976,17 @@
   2026-05-23 14:00 CEST without code changes after rebuilding the release
   compile-run test binary. Next continuation point is
   `PrimeStruct_primestruct_compile_run_emitters_cpp_lambda_and_mutator_resolution_19_19`.
+  The emitters C++ lambda and mutator resolution 19-19 shard passed on
+  2026-05-23 14:23 CEST without code changes after rebuilding the release
+  compile-run test binary. Next continuation point is
+  `PrimeStruct_primestruct_compile_run_emitters_cpp_lambda_and_mutator_resolution_20_20`.
 
 ## Recent Test Runs
+- 2026-05-23 14:23 CEST | pass | mode: release | command:
+  `cmake --build build-release --target PrimeStruct_compile_run_tests primec -j 1`;
+  `cd build-release && ctest --output-on-failure -R '^PrimeStruct_primestruct_compile_run_emitters_cpp_lambda_and_mutator_resolution_19_19$' --timeout 120`
+  | failures: none | notes: current known-failure pointer advanced to the
+  next emitters C++ shard.
 - 2026-05-23 14:00 CEST | pass | mode: release | command:
   `cmake --build build-release --target PrimeStruct_compile_run_tests primec -j 1`;
   `cd build-release && ctest --output-on-failure -R '^PrimeStruct_primestruct_compile_run_emitters_cpp_lambda_and_mutator_resolution_18_18$' --timeout 120`
