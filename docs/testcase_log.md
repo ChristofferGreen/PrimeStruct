@@ -8315,3 +8315,7 @@
   Validating command: `cd build-release && ctest --output-on-failure
   --stop-on-failure --timeout 120 -I 1376,1380` on 2026-05-23 22:20 CEST.
   Next focused continuation starts at `-I 1381,1385`.
+- Text-filter shards 1381-1385 now pass without source edits. Validating
+  command: `cd build-release && ctest --output-on-failure --stop-on-failure
+  --timeout 120 -I 1381,1385` on 2026-05-23 22:21 CEST. Next focused
+  continuation starts at `-I 1386,1390`.
