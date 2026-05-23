@@ -8189,3 +8189,7 @@
   command: `cd build-release && ctest --output-on-failure --stop-on-failure
   --timeout 120 -I 1241,1245` on 2026-05-23 19:15 CEST. Next focused
   continuation starts at `-I 1246,1250`.
+- Versioned import shards 1246-1250 now pass without source edits. Validating
+  command: `cd build-release && ctest --output-on-failure --stop-on-failure
+  --timeout 120 -I 1246,1250` on 2026-05-23 19:16 CEST. Next focused
+  continuation starts at `-I 1251,1255`.
