@@ -1182,7 +1182,7 @@ main() {
   CHECK(cppParityProgramOffset != std::string::npos);
   CHECK(cppParity.find("CHECK(runCommand(compileCmd) == 2);", cppParityProgramOffset) !=
         std::string::npos);
-  CHECK(cppParity.find("direct import of retired soa_vector compatibility modules", cppParityProgramOffset) !=
+  CHECK(cppParity.find("meta.field_count requires struct type argument: type:Particle", cppParityProgramOffset) !=
         std::string::npos);
 
   CHECK(vmParity.find("TEST_CASE(\"vm legacy soa_vector compatibility helpers reject\")") !=
@@ -1200,7 +1200,7 @@ main() {
   CHECK(nativeParityProgramOffset != std::string::npos);
   CHECK(nativeParity.find("CHECK(runCommand(compileCmd) == 2);", nativeParityProgramOffset) !=
         std::string::npos);
-  CHECK(nativeParity.find("direct import of retired soa_vector compatibility modules", nativeParityProgramOffset) !=
+  CHECK(nativeParity.find("meta.field_count requires struct type argument: type:Particle", nativeParityProgramOffset) !=
         std::string::npos);
 }
 
@@ -1429,7 +1429,7 @@ TEST_CASE("canonical soa example stays source locked") {
   CHECK(example.find("import /std/collections/soa_vector_conversions/*") ==
         std::string::npos);
   CHECK(example.find("[struct reflect]") != std::string::npos);
-  CHECK(example.find("[auto mut] particles{soa<Particle>()}") !=
+  CHECK(example.find("[auto mut] particles{soa</Particle>()}") !=
         std::string::npos);
   CHECK(example.find("particles.reserve(plus(particles.count(), spawnQueue.count()))") !=
         std::string::npos);

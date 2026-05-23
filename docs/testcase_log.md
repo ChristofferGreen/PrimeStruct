@@ -8383,3 +8383,12 @@
   command: `cd build-release && ctest --output-on-failure --stop-on-failure
   --timeout 120 -I 1441,1445` on 2026-05-23 22:37 CEST. Next focused
   continuation starts at `-I 1446,1450`.
+- Compile-run shards 1446-1450 now pass after aligning source locks with the
+  current SoA migration diagnostics and the slash-qualified `soa_ecs.prime`
+  type argument. Validating commands: `cmake --build build-release --target
+  PrimeStruct_compile_run_tests -j 1`; `cd build-release && ctest
+  --output-on-failure --stop-on-failure --timeout 120 -I 1446,1446`;
+  `cd build-release && ctest --output-on-failure --stop-on-failure --timeout
+  120 -I 1447,1447`; `cd build-release && ctest --output-on-failure
+  --stop-on-failure --timeout 120 -I 1446,1450` on 2026-05-23 22:41 CEST.
+  Next focused continuation starts at `-I 1451,1455`.
