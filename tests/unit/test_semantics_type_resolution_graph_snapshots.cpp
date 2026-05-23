@@ -639,6 +639,88 @@ main() {
                    "/runtime_body") != std::string::npos);
 }
 
+TEST_CASE("statement ct_if selects predicate branches before validation") {
+  const std::string selectedThen = R"(
+[return<i32>]
+pick([i32] value) {
+  [i32 mut] result{0i32}
+  ct_if(type_equals<typeof<value>, i32>()) {
+    assign(result, value)
+  } else {
+    missing_in_discarded_branch(value)
+  }
+  return(result)
+}
+
+[return<i32>]
+main() {
+  return(pick(7i32))
+}
+)";
+
+  primec::testing::CompilePipelineBoundaryDumps dumps;
+  std::string error;
+  REQUIRE(primec::testing::captureSemanticBoundaryDumpsForTesting(
+      selectedThen, "/main", dumps, error));
+  CHECK(error.empty());
+  CHECK(dumps.astSemantic.find("missing_in_discarded_branch") ==
+        std::string::npos);
+  CHECK(dumps.astSemantic.find("assign(result, value)") != std::string::npos);
+
+  const std::string selectedElse = R"(
+[return<i32>]
+pick([i32] value) {
+  [i32 mut] result{0i32}
+  ct_if(type_equals<typeof<value>, f32>()) {
+    missing_in_discarded_branch(value)
+  } else {
+    assign(result, value)
+  }
+  return(result)
+}
+
+[return<i32>]
+main() {
+  return(pick(9i32))
+}
+)";
+
+  error.clear();
+  dumps = {};
+  REQUIRE(primec::testing::captureSemanticBoundaryDumpsForTesting(
+      selectedElse, "/main", dumps, error));
+  CHECK(error.empty());
+  CHECK(dumps.astSemantic.find("missing_in_discarded_branch") ==
+        std::string::npos);
+  CHECK(dumps.astSemantic.find("assign(result, value)") != std::string::npos);
+}
+
+TEST_CASE("statement ct_if diagnoses invalid predicate conditions") {
+  const std::string source = R"(
+[return<i32>]
+pick() {
+  ct_if(type_equals<typeof<missing>, i32>()) {
+    print(1i32)
+  } else {
+    print(2i32)
+  }
+  return(0i32)
+}
+
+[return<i32>]
+main() {
+  return(pick())
+}
+)";
+
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("invalid ct_if condition on /pick") != std::string::npos);
+  CHECK(error.find("unknown type fact for requirement predicate "
+                   "/std/meta/type_equals: typeof<missing>") !=
+        std::string::npos);
+}
+
 TEST_CASE("duplicate require transforms fail closed before publication") {
   const std::string source = R"(
 [return<int> require(type_equals<typeof<value>, int>()) require(has_trait<typeof<value>>(Additive))]

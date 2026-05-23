@@ -34,7 +34,7 @@ bool Parser::tryParseIfStatementSugar(Expr &out,
     return true;
   }
   const std::string keyword = tokens_[pos_].text;
-  if (keyword != "if" && keyword != "match") {
+  if (keyword != "if" && keyword != "match" && keyword != "ct_if") {
     return true;
   }
   size_t savedPos = pos_;
@@ -119,7 +119,10 @@ bool Parser::tryParseIfStatementSugar(Expr &out,
   Expr ifCall;
   ifCall.kind = Expr::Kind::Call;
   ifCall.name = name.text;
+  ifCall.sourceName = name.text;
   ifCall.namespacePrefix = namespacePrefix;
+  ifCall.sourceLine = name.line;
+  ifCall.sourceColumn = name.column;
   ifCall.args.push_back(std::move(condition));
   ifCall.argNames.push_back(std::nullopt);
   ifCall.args.push_back(std::move(thenCall));

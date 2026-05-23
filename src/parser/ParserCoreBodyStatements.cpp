@@ -164,7 +164,8 @@ bool Parser::parseDefinitionBody(Definition &def, bool allowNoReturn, std::vecto
       continue;
     }
     if (allowSurfaceSyntax_ && match(TokenKind::Identifier) &&
-        (tokens_[pos_].text == "if" || tokens_[pos_].text == "match")) {
+        (tokens_[pos_].text == "if" || tokens_[pos_].text == "match" ||
+         tokens_[pos_].text == "ct_if")) {
       if (hasStatementTransforms) {
         return fail(tokens_[pos_].text + " statement cannot have transforms");
       }
@@ -192,7 +193,7 @@ bool Parser::parseDefinitionBody(Definition &def, bool allowNoReturn, std::vecto
       if (name.kind == TokenKind::End) {
         return false;
       }
-      if (name.text == "if" || name.text == "match") {
+      if (name.text == "if" || name.text == "match" || name.text == "ct_if") {
         return fail(name.text + " statement cannot have transforms");
       }
       if (name.text == "return") {

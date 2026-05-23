@@ -29,7 +29,9 @@ bool isIgnorableToken(TokenKind kind) {
 }
 
 bool isControlKeyword(const std::string &name) {
-  return name == "if" || name == "else" || name == "loop" || name == "while" || name == "for" || name == "match";
+  return name == "if" || name == "else" || name == "loop" ||
+         name == "while" || name == "for" || name == "match" ||
+         name == "ct_if";
 }
 
 bool isLoopFormKeyword(const std::string &name) {
@@ -37,7 +39,8 @@ bool isLoopFormKeyword(const std::string &name) {
 }
 
 bool isSurfaceControlFlowBody(const std::string &name) {
-  return name == "if" || name == "match" || isLoopFormKeyword(name);
+  return name == "if" || name == "match" || name == "ct_if" ||
+         isLoopFormKeyword(name);
 }
 
 std::string stripNumericSeparators(const std::string &text) {
@@ -179,7 +182,8 @@ bool Parser::parseExpr(Expr &expr, const std::string &namespacePrefix) {
       return true;
     }
     if (allowSurfaceSyntax_ && match(TokenKind::Identifier) &&
-        (tokens_[pos_].text == "if" || tokens_[pos_].text == "match")) {
+        (tokens_[pos_].text == "if" || tokens_[pos_].text == "match" ||
+         tokens_[pos_].text == "ct_if")) {
       bool parsed = false;
       if (!tryParseIfStatementSugar(out, namespacePrefix, parsed, false)) {
         return false;

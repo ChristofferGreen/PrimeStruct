@@ -11,6 +11,7 @@
 #include "SemanticsValidateReflectionMetadata.h"
 #include "SemanticsValidateTransforms.h"
 #include "StdlibCollectionSurfaceHelpers.h"
+#include "RequirementPredicateFacts.h"
 #include "SemanticsHelpers.h"
 #include "SemanticsValidationBenchmarkOrchestration.h"
 #include "SemanticsValidationPublicationOrchestration.h"
@@ -21,6 +22,7 @@
 #include <cstdint>
 #include <exception>
 #include <functional>
+#include <iterator>
 #include <limits>
 #include <optional>
 #include <sstream>
@@ -6582,6 +6584,321 @@ void eraseCompileTimeTypeBindings(Program &program) {
   }
 }
 
+std::string joinCompileTimeIfTemplateArgs(const std::vector<std::string> &args) {
+  std::ostringstream out;
+  for (std::size_t i = 0; i < args.size(); ++i) {
+    if (i != 0) {
+      out << ", ";
+    }
+    out << args[i];
+  }
+  return out.str();
+}
+
+bool serializeCompileTimeIfPredicateExpr(const Expr &expr, std::string &out) {
+  out.clear();
+  switch (expr.kind) {
+  case Expr::Kind::Name:
+    out = expr.name;
+    return !out.empty();
+  case Expr::Kind::BoolLiteral:
+    out = expr.boolValue ? "true" : "false";
+    return true;
+  case Expr::Kind::Literal:
+    out = std::to_string(static_cast<std::int64_t>(expr.literalValue));
+    if (expr.isUnsigned) {
+      out += expr.intWidth == 64 ? "u64" : "u32";
+    } else {
+      out += expr.intWidth == 64 ? "i64" : "i32";
+    }
+    return true;
+  case Expr::Kind::StringLiteral:
+    out = expr.stringValue;
+    return !out.empty();
+  case Expr::Kind::FloatLiteral:
+    out = expr.floatValue + (expr.floatWidth == 64 ? "f64" : "f32");
+    return true;
+  case Expr::Kind::Call:
+    break;
+  }
+
+  if (expr.isMethodCall || expr.isFieldAccess || expr.isBinding ||
+      expr.isBraceConstructor || !expr.transforms.empty() ||
+      expr.hasBodyArguments || !expr.bodyArguments.empty()) {
+    return false;
+  }
+  std::ostringstream printed;
+  printed << (expr.sourceName.empty() ? expr.name : expr.sourceName);
+  if (!expr.templateArgs.empty()) {
+    printed << "<" << joinCompileTimeIfTemplateArgs(expr.templateArgs) << ">";
+  }
+  printed << "(";
+  for (std::size_t i = 0; i < expr.args.size(); ++i) {
+    if (i != 0) {
+      printed << ", ";
+    }
+    std::string argText;
+    if (!serializeCompileTimeIfPredicateExpr(expr.args[i], argText)) {
+      return false;
+    }
+    printed << argText;
+  }
+  printed << ")";
+  out = printed.str();
+  return !expr.name.empty();
+}
+
+bool isTransformNamed(const std::vector<Transform> &transforms,
+                      std::string_view name) {
+  for (const Transform &transform : transforms) {
+    if (transform.name == name) {
+      return true;
+    }
+  }
+  return false;
+}
+
+std::string compileTimeIfBindingTypeText(
+    const semantics::BindingInfo &binding) {
+  if (!binding.typeTemplateArg.empty()) {
+    return binding.typeName + "<" + binding.typeTemplateArg + ">";
+  }
+  return binding.typeName;
+}
+
+std::string compileTimeIfReturnTypeText(const Definition &definition) {
+  for (const Transform &transform : definition.transforms) {
+    if (transform.name == "return" && transform.templateArgs.size() == 1) {
+      return transform.templateArgs.front();
+    }
+  }
+  return {};
+}
+
+void addCompileTimeIfImportAlias(
+    std::unordered_map<std::string, std::string> &aliases,
+    const std::string &path) {
+  if (path.empty()) {
+    return;
+  }
+  const std::size_t slash = path.find_last_of('/');
+  const std::string alias =
+      slash == std::string::npos ? path : path.substr(slash + 1);
+  if (!alias.empty()) {
+    aliases.try_emplace(alias, path);
+  }
+}
+
+semantics::RequirementPredicateDefinitionContext
+makeCompileTimeIfRequirementContext(
+    const Program &program,
+    const Definition &definition,
+    const std::unordered_set<std::string> &structNames,
+    const std::unordered_set<std::string> &sumNames,
+    const std::unordered_map<std::string, std::string> &importAliases) {
+  semantics::RequirementPredicateDefinitionContext context;
+  context.definitionPath = definition.fullPath;
+  context.namespacePrefix = definition.namespacePrefix;
+  context.templateArgs = definition.templateArgs;
+  context.structNames = structNames;
+  context.sumNames = sumNames;
+  context.importAliases = importAliases;
+
+  for (const Expr &param : definition.parameters) {
+    semantics::BindingInfo binding;
+    std::optional<std::string> restrictType;
+    std::string ignoredError;
+    if (semantics::parseBindingInfo(param,
+                                    definition.namespacePrefix,
+                                    structNames,
+                                    importAliases,
+                                    binding,
+                                    restrictType,
+                                    ignoredError)) {
+      context.params.push_back(
+          semantics::ParameterInfo{param.name, binding, nullptr});
+    }
+  }
+
+  for (const Definition &candidate : program.definitions) {
+    semantics::RequirementPredicateDefinitionContext::CallableFact callable;
+    callable.fullPath = candidate.fullPath;
+    callable.namespacePrefix = candidate.namespacePrefix;
+    callable.templateArgs = candidate.templateArgs;
+    callable.returnType = compileTimeIfReturnTypeText(candidate);
+    callable.isPrivate = isTransformNamed(candidate.transforms, "private");
+    for (const Transform &transform : candidate.transforms) {
+      if (transform.name == "effects") {
+        callable.effectNames.insert(callable.effectNames.end(),
+                                    transform.arguments.begin(),
+                                    transform.arguments.end());
+      }
+    }
+    callable.hasReturnExpr = candidate.returnExpr.has_value();
+    if (candidate.returnExpr.has_value() &&
+        candidate.returnExpr->kind == Expr::Kind::BoolLiteral) {
+      callable.returnExprIsBoolLiteral = true;
+      callable.returnBoolValue = candidate.returnExpr->boolValue;
+    }
+    bool paramsOk = true;
+    for (const Expr &param : candidate.parameters) {
+      semantics::BindingInfo binding;
+      std::optional<std::string> restrictType;
+      std::string ignoredError;
+      if (!semantics::parseBindingInfo(param,
+                                       candidate.namespacePrefix,
+                                       structNames,
+                                       importAliases,
+                                       binding,
+                                       restrictType,
+                                       ignoredError)) {
+        paramsOk = false;
+        break;
+      }
+      callable.parameterTypes.push_back(compileTimeIfBindingTypeText(binding));
+    }
+    if (!callable.returnType.empty() && paramsOk) {
+      context.callables.push_back(std::move(callable));
+    }
+
+    if (structNames.count(candidate.fullPath) == 0) {
+      continue;
+    }
+    for (const Expr &stmt : candidate.statements) {
+      if (!stmt.isBinding || isTransformNamed(stmt.transforms, "static") ||
+          semantics::isCompileTimeTypeBinding(stmt)) {
+        continue;
+      }
+      semantics::BindingInfo binding;
+      std::optional<std::string> restrictType;
+      std::string ignoredError;
+      if (!semantics::parseBindingInfo(stmt,
+                                       candidate.namespacePrefix,
+                                       structNames,
+                                       importAliases,
+                                       binding,
+                                       restrictType,
+                                       ignoredError)) {
+        continue;
+      }
+      semantics::RequirementPredicateDefinitionContext::StructFieldFact field;
+      field.structPath = candidate.fullPath;
+      field.fieldName = stmt.name;
+      field.typeText = compileTimeIfBindingTypeText(binding);
+      field.isPrivate = isTransformNamed(stmt.transforms, "private");
+      context.structFields.push_back(std::move(field));
+    }
+  }
+
+  return context;
+}
+
+bool isCompileTimeIfEnvelope(const Expr &expr, std::string_view expectedName) {
+  return expr.kind == Expr::Kind::Call && expr.name == expectedName &&
+         expr.hasBodyArguments;
+}
+
+bool rewriteCompileTimeIfStatements(std::vector<Expr> &statements,
+                                    const semantics::RequirementPredicateDefinitionContext &context,
+                                    const std::string &definitionPath,
+                                    std::string &error);
+
+bool rewriteCompileTimeIfStatement(Expr &stmt,
+                                   std::vector<Expr> &out,
+                                   const semantics::RequirementPredicateDefinitionContext &context,
+                                   const std::string &definitionPath,
+                                   std::string &error) {
+  if (stmt.kind != Expr::Kind::Call || stmt.name != "ct_if") {
+    out.push_back(std::move(stmt));
+    return true;
+  }
+  if (stmt.args.size() != 3 ||
+      !isCompileTimeIfEnvelope(stmt.args[1], "then") ||
+      !isCompileTimeIfEnvelope(stmt.args[2], "else")) {
+    error = "ct_if requires condition, then, else on " + definitionPath;
+    return false;
+  }
+  std::string conditionText;
+  if (!serializeCompileTimeIfPredicateExpr(stmt.args[0], conditionText)) {
+    error = "ct_if condition must be a compile-time predicate call on " +
+            definitionPath;
+    return false;
+  }
+  semantics::RequirementPredicateFactDraft fact =
+      semantics::buildRequirementPredicateFactDraft(conditionText,
+                                                    stmt.sourceLine,
+                                                    stmt.sourceColumn,
+                                                    context);
+  if (fact.evaluationOutcome != "satisfied" &&
+      fact.evaluationOutcome != "unsatisfied") {
+    error = "invalid ct_if condition on " + definitionPath + ": " +
+            fact.evaluationDiagnostic;
+    return false;
+  }
+  std::vector<Expr> selected =
+      fact.evaluationOutcome == "satisfied"
+          ? std::move(stmt.args[1].bodyArguments)
+          : std::move(stmt.args[2].bodyArguments);
+  if (!rewriteCompileTimeIfStatements(selected, context, definitionPath, error)) {
+    return false;
+  }
+  out.insert(out.end(),
+             std::make_move_iterator(selected.begin()),
+             std::make_move_iterator(selected.end()));
+  return true;
+}
+
+bool rewriteCompileTimeIfStatements(std::vector<Expr> &statements,
+                                    const semantics::RequirementPredicateDefinitionContext &context,
+                                    const std::string &definitionPath,
+                                    std::string &error) {
+  std::vector<Expr> rewritten;
+  rewritten.reserve(statements.size());
+  for (Expr &stmt : statements) {
+    if (!rewriteCompileTimeIfStatement(
+            stmt, rewritten, context, definitionPath, error)) {
+      return false;
+    }
+  }
+  statements = std::move(rewritten);
+  return true;
+}
+
+bool rewriteCompileTimeIfBranches(Program &program, std::string &error) {
+  std::unordered_set<std::string> structNames;
+  std::unordered_set<std::string> sumNames;
+  std::unordered_map<std::string, std::string> importAliases;
+  for (const std::string &path : program.imports) {
+    addCompileTimeIfImportAlias(importAliases, path);
+  }
+  for (const std::string &path : program.sourceImports) {
+    addCompileTimeIfImportAlias(importAliases, path);
+  }
+  for (const Definition &definition : program.definitions) {
+    if (isTransformNamed(definition.transforms, "sum")) {
+      sumNames.insert(definition.fullPath);
+    } else if (definition.returnExpr.has_value()) {
+      continue;
+    } else {
+      structNames.insert(definition.fullPath);
+    }
+  }
+
+  for (Definition &definition : program.definitions) {
+    semantics::RequirementPredicateDefinitionContext context =
+        makeCompileTimeIfRequirementContext(program,
+                                            definition,
+                                            structNames,
+                                            sumNames,
+                                            importAliases);
+    if (!rewriteCompileTimeIfStatements(
+            definition.statements, context, definition.fullPath, error)) {
+      return false;
+    }
+  }
+  return true;
+}
+
 bool runSemanticValidationManifestAstPass(
     const semantics::SemanticValidationPassManifestEntry &pass,
     Program &program,
@@ -6662,6 +6979,9 @@ bool runSemanticValidationManifestAstPass(
   }
   if (pass.name == "convert-constructors") {
     return semantics::rewriteConvertConstructors(program, error);
+  }
+  if (pass.name == "compile-time-branch-pruning") {
+    return rewriteCompileTimeIfBranches(program, error);
   }
 
   error = "semantic validation manifest has no pre-validator runner for pass: " +

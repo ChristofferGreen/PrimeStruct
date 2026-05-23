@@ -83,9 +83,9 @@ Task template:
 
 ### Ready Now (Parallel-Candidate Leaves; No Unmet TODO Dependencies)
 
-- TODO-4345: Add compile-time `if` over type facts | track:
-  generic-requirements-ct-if | primary surface: type-fact compile-time
-  branching
+- TODO-4547: Add specialization-aware `ct_if` over type facts | track:
+  generic-requirements-ct-if | primary surface: generic-specialized
+  compile-time branching
 
 ### Parallel Work Tracks (Current)
 
@@ -122,13 +122,15 @@ Task template:
   TODO-4343, TODO-4344, TODO-4352, TODO-4353, and TODO-4354 are complete;
   TODO-4355 wired the compile-time host to published `/std/meta/*` predicate
   facts; TODO-4356 prepared restricted compile-time callables; TODO-4357
-  evaluates pure user predicates; TODO-4345 is ready for compile-time `if`
-  over type facts.
+  evaluates pure user predicates; TODO-4345 added statement-level concrete
+  `ct_if`; TODO-4547 is ready for generic-specialized branch selection.
 
 ### Immediate Next 10 (Track Successors; Not Ready Until Dependencies Land)
 
 - TODO-4545: Implement first structured task spawn/wait substrate
 - TODO-4278: Integrate multi-wait with stdlib tuple
+- TODO-4548: Add expression-position `ct_if` values
+- TODO-4549: Scope branch-local generated type facts
 
 ### Priority Lanes (Current)
 
@@ -152,15 +154,17 @@ Task template:
   prerequisite split out of TODO-4278
 - Procedural compile-time genericity: none active after TODO-4340 and
   TODO-4546
-- Generic constraint and compile-time flow alignment: TODO-4345
-  -> TODO-4346 -> TODO-4358 -> TODO-4347 -> TODO-4351 -> TODO-4348
-  -> TODO-4359 -> TODO-4349 -> TODO-4350
+- Generic constraint and compile-time flow alignment: TODO-4547
+  -> TODO-4548 -> TODO-4549 -> TODO-4346 -> TODO-4358 -> TODO-4347
+  -> TODO-4351 -> TODO-4348 -> TODO-4359 -> TODO-4349 -> TODO-4350
 
 ### Execution Queue (Recommended Track Order)
 
-- TODO-4345: Add compile-time `if` over type facts
+- TODO-4547: Add specialization-aware `ct_if` over type facts
 - TODO-4545: Implement first structured task spawn/wait substrate
 - TODO-4278: Integrate multi-wait with stdlib tuple
+- TODO-4548: Add expression-position `ct_if` values
+- TODO-4549: Scope branch-local generated type facts
 - TODO-4346: Add compile-time flow effect and termination policy
 - TODO-4358: Enforce compile-time cache, budget, and effects
 - TODO-4347: Integrate requirements with overload selection
@@ -197,7 +201,7 @@ Task template:
 | Stdlib ADT migration for `Maybe` and `Result` | none |
 | Generic type packs and tuple stdlib surface | TODO-4274, TODO-4273, TODO-4277, TODO-4278 |
 | Procedural compile-time genericity and local type facts | none |
-| Generic constraints and compile-time flow control | TODO-4352, TODO-4353, TODO-4354, TODO-4355, TODO-4356, TODO-4357, TODO-4345, TODO-4346, TODO-4358, TODO-4347, TODO-4351, TODO-4348, TODO-4359, TODO-4349, TODO-4350 |
+| Generic constraints and compile-time flow control | TODO-4352, TODO-4353, TODO-4354, TODO-4355, TODO-4356, TODO-4357, TODO-4345, TODO-4547, TODO-4548, TODO-4549, TODO-4346, TODO-4358, TODO-4347, TODO-4351, TODO-4348, TODO-4359, TODO-4349, TODO-4350 |
 
 ### Validation Coverage Snapshot
 
@@ -224,7 +228,7 @@ Task template:
 | Maybe/Result sum migration conformance | none |
 | Generic type-pack and tuple conformance | TODO-4274, TODO-4273, TODO-4277, TODO-4278 |
 | Procedural compile-time genericity conformance | none |
-| Generic constraint and compile-time flow conformance | TODO-4352, TODO-4353, TODO-4354, TODO-4355, TODO-4356, TODO-4357, TODO-4345, TODO-4346, TODO-4358, TODO-4347, TODO-4351, TODO-4348, TODO-4359, TODO-4349, TODO-4350 |
+| Generic constraint and compile-time flow conformance | TODO-4352, TODO-4353, TODO-4354, TODO-4355, TODO-4356, TODO-4357, TODO-4345, TODO-4547, TODO-4548, TODO-4549, TODO-4346, TODO-4358, TODO-4347, TODO-4351, TODO-4348, TODO-4359, TODO-4349, TODO-4350 |
 
 ### Vector/Map Bridge Contract Summary
 
@@ -808,40 +812,95 @@ Task template:
   - stop_rule: Stop once multi-wait returns stdlib `tuple<...>` or the missing
     task-side prerequisite is split into an explicit multithreading TODO.
 
-- [ ] TODO-4345: Add compile-time `if` over type facts
+- [ ] TODO-4547: Add specialization-aware `ct_if` over type facts
   - owner: ai
-  - created_at: 2026-05-04
+  - created_at: 2026-05-23
   - phase: Generic constraint and compile-time flow alignment
   - parallel_track: generic-requirements-ct-if
-  - depends_on: TODO-4343, TODO-4344, TODO-4357
-  - scope: Add a compile-time branching form that selects code paths from
-    evaluated requirement/type facts before IR lowering.
+  - depends_on: TODO-4345
+  - scope: Extend statement-level `ct_if` branch selection from concrete type
+    facts to template-specialized generic definitions without letting template
+    monomorphization validate discarded `typeof<...>` predicate conditions
+    first.
   - implementation_notes:
-    - Start from parser statement forms, semantic rewrites, requirement fact
-      evaluation, and existing compile-time transform infrastructure.
-    - Only the selected branch may contribute generated definitions, local
-      type facts, runtime statements, or diagnostics from selected code.
-    - Document how compile-time `if` differs from runtime `if` and how the
-      language spells the distinction.
+    - Start from `compile-time-branch-pruning` in
+      `src/semantics/SemanticsValidate.cpp`, template monomorphization, and
+      requirement predicate fact evaluation.
+    - Keep the discarded branch pruned before ordinary statement validation
+      and lowering for each specialization.
+    - Do not add expression-position branch values in this slice; that is
+      TODO-4548.
   - acceptance:
-    - Generic code can branch on a type relation or capability predicate and
-      lower only the selected branch.
-    - The non-selected branch is still parsed enough for structural errors
-      needed by the language contract, but unsupported type operations inside
-      that branch do not fail the selected specialization.
-    - Branch-local type facts and generated nominal types have deterministic
-      scope and identity.
-    - Diagnostics clearly identify compile-time branch conditions and selected
-      versus discarded branches.
-    - `./scripts/compile.sh --release` passes.
-  - stop_rule: Stop once compile-time branching is usable for type-directed
-    generic implementation; leave global effect policy to TODO-4346.
+    - Generic code can use
+      `ct_if(type_equals<typeof<value>, T>()) { ... } else { ... }` and
+      concrete type relations after specialization.
+    - Template monomorphization does not reject `typeof<...>` in a `ct_if`
+      condition before branch selection.
+    - The non-selected specialized branch may contain unsupported calls
+      without diagnostics.
+    - Focused semantic or compile-run tests cover true and false specialized
+      selections.
+  - stop_rule: Stop once generic-specialized statement `ct_if` works for type
+    predicate branches and expression-valued branches remain deferred to
+    TODO-4548.
+
+- [ ] TODO-4548: Add expression-position `ct_if` values
+  - owner: ai
+  - created_at: 2026-05-23
+  - phase: Generic constraint and compile-time flow alignment
+  - depends_on: TODO-4547
+  - scope: Allow `ct_if(...) { value } else { value }` to produce a value in
+    return, binding, and expression contexts after selecting a branch at
+    compile time.
+  - implementation_notes:
+    - Start from parser value-block normalization, expression inference, and
+      statement branch pruning.
+    - Preserve the statement-level pruning contract from TODO-4345 and
+      TODO-4547; expression-valued branch handling should reuse the same
+      predicate decision boundary rather than adding a second evaluator.
+  - acceptance:
+    - A returned or bound `ct_if` value lowers only the selected branch.
+    - Unsupported operations in the unselected expression branch do not emit
+      diagnostics for the selected specialization.
+    - Type mismatches in the selected expression branch report deterministic
+      source diagnostics.
+    - `docs/PrimeStruct.md` and `docs/PrimeStruct_SyntaxSpec.md` document the
+      implemented expression-position form.
+  - stop_rule: Stop once expression-valued `ct_if` works in return and local
+    binding contexts; leave branch-local generated nominal identity to
+    TODO-4549.
+
+- [ ] TODO-4549: Scope branch-local generated type facts
+  - owner: ai
+  - created_at: 2026-05-23
+  - phase: Generic constraint and compile-time flow alignment
+  - depends_on: TODO-4548
+  - scope: Give type facts and generated nominal definitions introduced inside
+    selected `ct_if` branches deterministic branch-local scope and identity
+    while keeping discarded branch definitions from leaking.
+  - implementation_notes:
+    - Start from local generated struct identity/provenance, semantic-product
+      type facts, and the `ct_if` branch pruning pass.
+    - Keep generated identity stable across equivalent specializations without
+      making discarded branch definitions visible to downstream validation.
+  - acceptance:
+    - Generated names and type facts inside the selected branch are
+      deterministic and branch-scoped.
+    - Discarded branch generated definitions and type facts are absent from
+      semantic products and IR.
+    - Diagnostics identify the selected compile-time branch when a
+      branch-local generated definition fails validation.
+    - Focused tests cover selected-branch generated definitions and discarded
+      branch non-leakage.
+  - stop_rule: Stop once branch-local generated identities are deterministic
+    and non-selected branch definitions remain invisible; leave global effect
+    policy to TODO-4346.
 
 - [ ] TODO-4346: Add compile-time flow effect and termination policy
   - owner: ai
   - created_at: 2026-05-04
   - phase: Generic constraint and compile-time flow alignment
-  - depends_on: TODO-4345
+  - depends_on: TODO-4549
   - scope: Define the purity, effect, recursion, caching, and termination
     policy for compile-time generic execution, leaving full enforcement to
     TODO-4358.

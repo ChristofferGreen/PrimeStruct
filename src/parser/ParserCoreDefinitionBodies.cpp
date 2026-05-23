@@ -15,7 +15,7 @@ bool isIgnorableToken(TokenKind kind) {
 
 bool isControlKeyword(const std::string &name) {
   return name == "if" || name == "else" || name == "loop" || name == "while" || name == "for" ||
-         name == "match";
+         name == "match" || name == "ct_if";
 }
 
 bool isNoReturnDefinitionTransform(const std::string &name) {

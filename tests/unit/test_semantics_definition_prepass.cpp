@@ -91,6 +91,7 @@ TEST_CASE("semantic validation pass manifest pins ordered pipeline phases") {
       "borrowed-experimental-map-methods",
       "experimental-map-value-methods",
       "builtin-map-insert-methods",
+      "compile-time-branch-pruning",
       "template-monomorphization",
       "reflection-metadata-queries",
       "convert-constructors",

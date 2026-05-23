@@ -6,6 +6,30 @@ Legend:
 Finished items are periodically archived here from `docs/todo.md`; section headers record the archive date.
 
 **Todo Completion (May 23, 2026)**
+- [x] TODO-4345: Add compile-time `if` over type facts
+  - owner: ai
+  - created_at: 2026-05-04
+  - finished_at: 2026-05-23
+  - phase: Generic constraint and compile-time flow alignment
+  - parallel_track: generic-requirements-ct-if
+  - depends_on: TODO-4343, TODO-4344, TODO-4357
+  - scope: Add the first statement-level compile-time branch form for concrete
+    type facts before ordinary statement validation.
+  - outcome:
+    - Added surface and canonical parser support for
+      `ct_if(...) { ... } else { ... }`.
+    - Added `compile-time-branch-pruning` before template monomorphization to
+      select branches from requirement predicate evaluation over concrete type
+      facts.
+    - Pruned discarded branches before ordinary statement validation and IR
+      lowering.
+    - Split remaining generic-specialized, expression-valued, and
+      branch-local generated-type work into TODO-4547, TODO-4548, and
+      TODO-4549.
+  - validation:
+    - `cmake --build build-release --target PrimeStruct_semantics_tests -j 1`
+    - `./PrimeStruct_semantics_tests --test-case='statement ct_if selects predicate branches before validation,statement ct_if diagnoses invalid predicate conditions,semantic validation pass manifest pins ordered pipeline phases,require builtin type predicates publish semantic product facts,require pure user predicates drive semantic facts' --no-skip`
+
 - [x] TODO-4357: Evaluate pure user predicates at compile time
   - owner: ai
   - created_at: 2026-05-04
