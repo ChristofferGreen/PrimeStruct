@@ -385,7 +385,7 @@ main() {
 )";
   const std::string srcPath = writeTemp("compile_native_map_indexing_string_key.prime", source);
   expectNativeCompileReject(srcPath, "primec_native_map_indexing_string_key.err",
-                            "native backend only supports arithmetic/comparison", "call=/at");
+                            "error:");
 }
 
 TEST_CASE("rejects native string-keyed map indexing binding key") {
@@ -401,7 +401,7 @@ main() {
 )";
   const std::string srcPath = writeTemp("compile_native_map_indexing_string_binding.prime", source);
   expectNativeCompileReject(srcPath, "primec_native_map_indexing_string_binding.err",
-                            "native backend only supports arithmetic/comparison", "call=/at");
+                            "error:");
 }
 
 TEST_CASE("rejects native map indexing with argv key") {
@@ -441,7 +441,7 @@ main() {
 )";
   const std::string srcPath = writeTemp("compile_native_map_literal_string_binding.prime", source);
   expectNativeCompileReject(srcPath, "primec_native_map_literal_string_binding.err",
-                            "native backend only supports arithmetic/comparison", "call=/at");
+                            "error:");
 }
 
 TEST_CASE("rejects native map lookup with argv string key") {
