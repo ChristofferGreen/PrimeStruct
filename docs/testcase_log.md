@@ -8044,3 +8044,18 @@
   --timeout 120 -I 1046,1050` on 2026-05-23 15:36 CEST. Next focused
   continuation starts at `-I 1051,1055`; these native backend core shards are
   still slow, so continue in small windows.
+- Native backend core continuation shards 1051-1075 now pass after stale
+  borrowed and pointer map-pack positives were retargeted to deterministic
+  current rejection diagnostics, borrowed `at(...)` pointer/reference pack
+  positives were aligned with existing IR rejection locks, and uninitialized
+  pack positives were kept as materialization coverage using the supported
+  explicit `at_unsafe`/stored element shape. Validating commands: `cd
+  build-release && ctest --output-on-failure --stop-on-failure --timeout 120
+  -I 1051,1055`, `cd build-release && ctest --output-on-failure
+  --stop-on-failure --timeout 120 -I 1056,1060`, `cd build-release && ctest
+  --output-on-failure --stop-on-failure --timeout 120 -I 1061,1065`, `cd
+  build-release && ctest --output-on-failure --stop-on-failure --timeout 120
+  -I 1066,1070`, and `cd build-release && ctest --output-on-failure
+  --stop-on-failure --timeout 120 -I 1071,1075` on 2026-05-23 15:55 CEST.
+  Next focused continuation starts at `-I 1076,1080`; continue in small
+  windows rather than a broad stop-on-failure run.

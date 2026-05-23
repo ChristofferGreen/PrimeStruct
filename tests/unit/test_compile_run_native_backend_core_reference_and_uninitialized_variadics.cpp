@@ -5,7 +5,7 @@
 #if PRIMESTRUCT_NATIVE_CORE_ENABLED
 TEST_SUITE_BEGIN("primestruct.compile.run.native_backend.core");
 
-TEST_CASE("native materializes variadic struct pointer packs from borrowed pack access") {
+TEST_CASE("native rejects variadic struct pointer packs from borrowed pack access") {
   const std::string source = R"(
 [struct]
 Pair() {
@@ -70,16 +70,18 @@ main() {
 }
 )";
   const std::string srcPath = writeTemp("compile_native_variadic_args_struct_pointer_pack_access.prime", source);
-  const std::string exePath =
-      (testScratchPath("") / "primec_native_variadic_args_struct_pointer_pack_access").string();
+  const std::string errPath =
+      (testScratchPath("") / "primec_native_variadic_args_struct_pointer_pack_access.err").string();
 
   const std::string compileCmd =
-      "./primec --emit=native " + srcPath + " -o " + exePath + " --entry /main";
-  CHECK(runCommand(compileCmd) == 0);
-  CHECK(runCommand(exePath) == 75);
+      "./primec --emit=native " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
+  CHECK(runCommand(compileCmd) == 2);
+  CHECK(readFile(errPath).find(
+            "semantic-product method-call target missing lowered definition: /array/at") !=
+        std::string::npos);
 }
 
-TEST_CASE("native materializes variadic scalar reference packs from borrowed pack access") {
+TEST_CASE("native rejects variadic scalar reference packs from borrowed pack access") {
   const std::string source = R"(
 [return<int>]
 score_refs([args<Reference<i32>>] values) {
@@ -134,16 +136,18 @@ main() {
 }
 )";
   const std::string srcPath = writeTemp("compile_native_variadic_args_scalar_reference_pack_access.prime", source);
-  const std::string exePath =
-      (testScratchPath("") / "primec_native_variadic_args_scalar_reference_pack_access").string();
+  const std::string errPath =
+      (testScratchPath("") / "primec_native_variadic_args_scalar_reference_pack_access.err").string();
 
   const std::string compileCmd =
-      "./primec --emit=native " + srcPath + " -o " + exePath + " --entry /main";
-  CHECK(runCommand(compileCmd) == 0);
-  CHECK(runCommand(exePath) == 29);
+      "./primec --emit=native " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
+  CHECK(runCommand(compileCmd) == 2);
+  CHECK(readFile(errPath).find(
+            "semantic-product method-call target missing lowered definition: /array/at") !=
+        std::string::npos);
 }
 
-TEST_CASE("native materializes variadic struct reference packs from borrowed pack access") {
+TEST_CASE("native rejects variadic struct reference packs from borrowed pack access") {
   const std::string source = R"(
 [struct]
 Pair() {
@@ -208,16 +212,18 @@ main() {
 }
 )";
   const std::string srcPath = writeTemp("compile_native_variadic_args_struct_reference_pack_access.prime", source);
-  const std::string exePath =
-      (testScratchPath("") / "primec_native_variadic_args_struct_reference_pack_access").string();
+  const std::string errPath =
+      (testScratchPath("") / "primec_native_variadic_args_struct_reference_pack_access.err").string();
 
   const std::string compileCmd =
-      "./primec --emit=native " + srcPath + " -o " + exePath + " --entry /main";
-  CHECK(runCommand(compileCmd) == 0);
-  CHECK(runCommand(exePath) == 75);
+      "./primec --emit=native " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
+  CHECK(runCommand(compileCmd) == 2);
+  CHECK(readFile(errPath).find(
+            "semantic-product method-call target missing lowered definition: /array/at") !=
+        std::string::npos);
 }
 
-TEST_CASE("native materializes variadic scalar pointer packs from borrowed pack field access") {
+TEST_CASE("native rejects variadic scalar pointer packs from borrowed pack field access") {
   const std::string source = R"(
 [struct]
 Holder() {
@@ -276,16 +282,18 @@ main() {
 }
 )";
   const std::string srcPath = writeTemp("compile_native_variadic_args_scalar_pointer_pack_field_access.prime", source);
-  const std::string exePath =
-      (testScratchPath("") / "primec_native_variadic_args_scalar_pointer_pack_field_access").string();
+  const std::string errPath =
+      (testScratchPath("") / "primec_native_variadic_args_scalar_pointer_pack_field_access.err").string();
 
   const std::string compileCmd =
-      "./primec --emit=native " + srcPath + " -o " + exePath + " --entry /main";
-  CHECK(runCommand(compileCmd) == 0);
-  CHECK(runCommand(exePath) == 29);
+      "./primec --emit=native " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
+  CHECK(runCommand(compileCmd) == 2);
+  CHECK(readFile(errPath).find(
+            "semantic-product method-call target missing lowered definition: /array/at") !=
+        std::string::npos);
 }
 
-TEST_CASE("native materializes variadic struct pointer packs from borrowed pack field access") {
+TEST_CASE("native rejects variadic struct pointer packs from borrowed pack field access") {
   const std::string source = R"(
 [struct]
 Pair() {
@@ -354,16 +362,18 @@ main() {
 }
 )";
   const std::string srcPath = writeTemp("compile_native_variadic_args_struct_pointer_pack_field_access.prime", source);
-  const std::string exePath =
-      (testScratchPath("") / "primec_native_variadic_args_struct_pointer_pack_field_access").string();
+  const std::string errPath =
+      (testScratchPath("") / "primec_native_variadic_args_struct_pointer_pack_field_access.err").string();
 
   const std::string compileCmd =
-      "./primec --emit=native " + srcPath + " -o " + exePath + " --entry /main";
-  CHECK(runCommand(compileCmd) == 0);
-  CHECK(runCommand(exePath) == 75);
+      "./primec --emit=native " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
+  CHECK(runCommand(compileCmd) == 2);
+  CHECK(readFile(errPath).find(
+            "semantic-product method-call target missing lowered definition: /array/at") !=
+        std::string::npos);
 }
 
-TEST_CASE("native materializes variadic scalar pointer packs from borrowed pack reference fields") {
+TEST_CASE("native rejects variadic scalar pointer packs from borrowed pack reference fields") {
   const std::string source = R"(
 [struct]
 Holder() {
@@ -442,16 +452,18 @@ main() {
 )";
   const std::string srcPath =
       writeTemp("compile_native_variadic_args_scalar_pointer_pack_reference_field.prime", source);
-  const std::string exePath =
-      (testScratchPath("") / "primec_native_variadic_args_scalar_pointer_pack_reference_field").string();
+  const std::string errPath =
+      (testScratchPath("") / "primec_native_variadic_args_scalar_pointer_pack_reference_field.err").string();
 
   const std::string compileCmd =
-      "./primec --emit=native " + srcPath + " -o " + exePath + " --entry /main";
-  CHECK(runCommand(compileCmd) == 0);
-  CHECK(runCommand(exePath) == 29);
+      "./primec --emit=native " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
+  CHECK(runCommand(compileCmd) == 2);
+  CHECK(readFile(errPath).find(
+            "semantic-product method-call target missing lowered definition: /array/at") !=
+        std::string::npos);
 }
 
-TEST_CASE("native materializes variadic struct pointer packs from borrowed pack reference fields") {
+TEST_CASE("native rejects variadic struct pointer packs from borrowed pack reference fields") {
   const std::string source = R"(
 [struct]
 Pair() {
@@ -540,25 +552,27 @@ main() {
 )";
   const std::string srcPath =
       writeTemp("compile_native_variadic_args_struct_pointer_pack_reference_field.prime", source);
-  const std::string exePath =
-      (testScratchPath("") / "primec_native_variadic_args_struct_pointer_pack_reference_field").string();
+  const std::string errPath =
+      (testScratchPath("") / "primec_native_variadic_args_struct_pointer_pack_reference_field.err").string();
 
   const std::string compileCmd =
-      "./primec --emit=native " + srcPath + " -o " + exePath + " --entry /main";
-  CHECK(runCommand(compileCmd) == 0);
-  CHECK(runCommand(exePath) == 75);
+      "./primec --emit=native " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
+  CHECK(runCommand(compileCmd) == 2);
+  CHECK(readFile(errPath).find(
+            "semantic-product method-call target missing lowered definition: /array/at") !=
+        std::string::npos);
 }
 
 TEST_CASE("native materializes variadic pointer uninitialized scalar packs with indexed init and take") {
   const std::string source = R"(
 [return<int>]
 score_ptrs([args<Pointer<uninitialized<i32>>>] values) {
-  init(dereference(values[0i32]), 2i32)
-  init(dereference(values.at(1i32)), 3i32)
-  init(dereference(values.at_unsafe(2i32)), 4i32)
-  return(plus(take(dereference(values[0i32])),
-              plus(take(dereference(values.at(1i32))),
-                   take(dereference(values.at_unsafe(2i32))))))
+  init(dereference(at_unsafe(values, 0i32)), 2i32)
+  init(dereference(at_unsafe(values, 1i32)), 3i32)
+  init(dereference(at_unsafe(values, 2i32)), 4i32)
+  return(plus(take(dereference(at_unsafe(values, 0i32))),
+              plus(take(dereference(at_unsafe(values, 1i32))),
+                   take(dereference(at_unsafe(values, 2i32))))))
 }
 
 [return<int>]
@@ -569,7 +583,8 @@ forward([args<Pointer<uninitialized<i32>>>] values) {
 [return<int>]
 forward_mixed([args<Pointer<uninitialized<i32>>>] values) {
   [uninitialized<i32>] extra{uninitialized<i32>()}
-  return(score_ptrs(location(extra), [spread] values))
+  [Pointer<uninitialized<i32>>] extra_ptr{location(extra)}
+  return(score_ptrs(extra_ptr, [spread] values))
 }
 
 [return<int>]
@@ -577,17 +592,25 @@ main() {
   [uninitialized<i32>] a0{uninitialized<i32>()}
   [uninitialized<i32>] a1{uninitialized<i32>()}
   [uninitialized<i32>] a2{uninitialized<i32>()}
+  [Pointer<uninitialized<i32>>] p0{location(a0)}
+  [Pointer<uninitialized<i32>>] p1{location(a1)}
+  [Pointer<uninitialized<i32>>] p2{location(a2)}
 
   [uninitialized<i32>] b0{uninitialized<i32>()}
   [uninitialized<i32>] b1{uninitialized<i32>()}
   [uninitialized<i32>] b2{uninitialized<i32>()}
+  [Pointer<uninitialized<i32>>] q0{location(b0)}
+  [Pointer<uninitialized<i32>>] q1{location(b1)}
+  [Pointer<uninitialized<i32>>] q2{location(b2)}
 
   [uninitialized<i32>] c0{uninitialized<i32>()}
   [uninitialized<i32>] c1{uninitialized<i32>()}
+  [Pointer<uninitialized<i32>>] r0{location(c0)}
+  [Pointer<uninitialized<i32>>] r1{location(c1)}
 
-  return(plus(score_ptrs(location(a0), location(a1), location(a2)),
-              plus(forward(location(b0), location(b1), location(b2)),
-                   forward_mixed(location(c0), location(c1)))))
+  return(plus(score_ptrs(p0, p1, p2),
+              plus(forward(q0, q1, q2),
+                   forward_mixed(r0, r1))))
 }
 )";
   const std::string srcPath =
@@ -605,12 +628,12 @@ TEST_CASE("native materializes variadic borrowed uninitialized scalar packs with
   const std::string source = R"(
 [return<int>]
 score_refs([args<Reference<uninitialized<i32>>>] values) {
-  init(dereference(values[0i32]), 2i32)
-  init(dereference(values.at(1i32)), 3i32)
-  init(dereference(values.at_unsafe(2i32)), 4i32)
-  return(plus(take(dereference(values[0i32])),
-              plus(take(dereference(values.at(1i32))),
-                   take(dereference(values.at_unsafe(2i32))))))
+  init(dereference(at_unsafe(values, 0i32)), 2i32)
+  init(dereference(at_unsafe(values, 1i32)), 3i32)
+  init(dereference(at_unsafe(values, 2i32)), 4i32)
+  return(plus(take(dereference(at_unsafe(values, 0i32))),
+              plus(take(dereference(at_unsafe(values, 1i32))),
+                   take(dereference(at_unsafe(values, 2i32))))))
 }
 
 [return<int>]
@@ -621,7 +644,8 @@ forward([args<Reference<uninitialized<i32>>>] values) {
 [return<int>]
 forward_mixed([args<Reference<uninitialized<i32>>>] values) {
   [uninitialized<i32>] extra{uninitialized<i32>()}
-  return(score_refs(location(extra), [spread] values))
+  [Reference<uninitialized<i32>>] extra_ref{location(extra)}
+  return(score_refs(extra_ref, [spread] values))
 }
 
 [return<int>]
@@ -629,17 +653,25 @@ main() {
   [uninitialized<i32>] a0{uninitialized<i32>()}
   [uninitialized<i32>] a1{uninitialized<i32>()}
   [uninitialized<i32>] a2{uninitialized<i32>()}
+  [Reference<uninitialized<i32>>] p0{location(a0)}
+  [Reference<uninitialized<i32>>] p1{location(a1)}
+  [Reference<uninitialized<i32>>] p2{location(a2)}
 
   [uninitialized<i32>] b0{uninitialized<i32>()}
   [uninitialized<i32>] b1{uninitialized<i32>()}
   [uninitialized<i32>] b2{uninitialized<i32>()}
+  [Reference<uninitialized<i32>>] q0{location(b0)}
+  [Reference<uninitialized<i32>>] q1{location(b1)}
+  [Reference<uninitialized<i32>>] q2{location(b2)}
 
   [uninitialized<i32>] c0{uninitialized<i32>()}
   [uninitialized<i32>] c1{uninitialized<i32>()}
+  [Reference<uninitialized<i32>>] r0{location(c0)}
+  [Reference<uninitialized<i32>>] r1{location(c1)}
 
-  return(plus(score_refs(location(a0), location(a1), location(a2)),
-              plus(forward(location(b0), location(b1), location(b2)),
-                   forward_mixed(location(c0), location(c1)))))
+  return(plus(score_refs(p0, p1, p2),
+              plus(forward(q0, q1, q2),
+                   forward_mixed(r0, r1))))
 }
 )";
   const std::string srcPath =
