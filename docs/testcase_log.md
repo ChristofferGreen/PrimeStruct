@@ -8434,3 +8434,8 @@
   `cd build-release && ctest --output-on-failure --stop-on-failure --timeout
   120 -I 1486,1490` on 2026-05-23 22:55 CEST. Next focused continuation
   starts at `-I 1491,1495`.
+- Compile-run shards 1491-1495 now pass without source edits. This math
+  conformance window is long-running locally, with the five-test slice taking
+  about 106 seconds. Validating command: `cd build-release && ctest
+  --output-on-failure --stop-on-failure --timeout 120 -I 1491,1495` on
+  2026-05-23 22:58 CEST. Next focused continuation starts at `-I 1496,1500`.
