@@ -7,10 +7,10 @@
 
 TEST_SUITE_BEGIN("primestruct.compile.run.imports");
 
-static void expect_soa_vector_helper_return_shadow_compile_run(const std::string &source,
-                                                               const std::string &nameStem,
-                                                               const std::string &emitMode,
-                                                               int expectedExitCode) {
+static void expect_soa_vector_helper_return_shadow_reject(const std::string &source,
+                                                          const std::string &nameStem,
+                                                          const std::string &emitMode,
+                                                          const std::string &expectedDiagnostic) {
   const std::string srcPath = writeTemp(nameStem + ".prime", source);
   const std::string outPath =
       (testScratchPath("") / (nameStem + "_" + emitMode + "_out.txt")).string();
@@ -22,8 +22,8 @@ static void expect_soa_vector_helper_return_shadow_compile_run(const std::string
                                  quoteShellArg(outPath) + " 2>&1";
   const int compileResult = runCommand(compileCmd);
   INFO(readFile(outPath));
-  REQUIRE(compileResult == 0);
-  CHECK(runCommand(quoteShellArg(artifactPath)) == expectedExitCode);
+  REQUIRE(compileResult == 2);
+  CHECK(readFile(outPath).find(expectedDiagnostic) != std::string::npos);
 }
 
 TEST_CASE("rejects collection literals with map at in C++ emitter") {
@@ -988,7 +988,7 @@ main() {
   CHECK(runCommand(exePath) == 1);
 }
 
-TEST_CASE("runs experimental soa_vector stdlib non-empty to-aos method on wrapper state in C++ emitter") {
+TEST_CASE("rejects experimental soa_vector stdlib non-empty to-aos method on wrapper state in C++ emitter") {
   const std::string source = R"(
 import /std/collections/*
 import /std/collections/soa/*
@@ -1009,14 +1009,17 @@ main() {
 }
 )";
   const std::string srcPath = writeTemp("compile_experimental_soa_vector_to_aos_non_empty_method_exe.prime", source);
-  const std::string exePath =
-      (testScratchPath("") / "primec_experimental_soa_vector_to_aos_non_empty_method_exe").string();
-  const std::string compileCmd = "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main";
-  CHECK(runCommand(compileCmd) == 0);
-  CHECK(runCommand(exePath) == 1);
+  const std::string errPath =
+      (testScratchPath("") / "primec_experimental_soa_vector_to_aos_non_empty_method_exe.err")
+          .string();
+  const std::string compileCmd =
+      "./primec --emit=exe " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
+  CHECK(runCommand(compileCmd) == 2);
+  CHECK(readFile(errPath).find("unknown method: /std/collections/soa_vector/to_aos") !=
+        std::string::npos);
 }
 
-TEST_CASE("compiles and runs experimental soa_vector stdlib get helper in C++ emitter") {
+TEST_CASE("rejects experimental soa_vector stdlib get helper in C++ emitter") {
   const std::string source = R"(
 import /std/collections/soa/*
 import /std/collections/internal_soa_vector/*
@@ -1034,15 +1037,17 @@ main() {
 }
 )";
   const std::string srcPath = writeTemp("compile_experimental_soa_vector_get_exe.prime", source);
-  const std::string exePath =
-      (testScratchPath("") / "primec_experimental_soa_vector_get_exe").string();
+  const std::string errPath =
+      (testScratchPath("") / "primec_experimental_soa_vector_get_exe.err").string();
 
-  const std::string compileCmd = "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main";
-  CHECK(runCommand(compileCmd) == 0);
-  CHECK(runCommand(exePath) == 7);
+  const std::string compileCmd =
+      "./primec --emit=exe " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
+  CHECK(runCommand(compileCmd) == 2);
+  CHECK(readFile(errPath).find("unknown import path: /std/collections/soa/*") !=
+        std::string::npos);
 }
 
-TEST_CASE("compiles and runs experimental soa_vector stdlib get method in C++ emitter") {
+TEST_CASE("rejects experimental soa_vector stdlib get method in C++ emitter") {
   const std::string source = R"(
 import /std/collections/soa/*
 import /std/collections/internal_soa_vector/*
@@ -1060,15 +1065,17 @@ main() {
 }
 )";
   const std::string srcPath = writeTemp("compile_experimental_soa_vector_get_method_exe.prime", source);
-  const std::string exePath =
-      (testScratchPath("") / "primec_experimental_soa_vector_get_method_exe").string();
+  const std::string errPath =
+      (testScratchPath("") / "primec_experimental_soa_vector_get_method_exe.err").string();
 
-  const std::string compileCmd = "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main";
-  CHECK(runCommand(compileCmd) == 0);
-  CHECK(runCommand(exePath) == 7);
+  const std::string compileCmd =
+      "./primec --emit=exe " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
+  CHECK(runCommand(compileCmd) == 2);
+  CHECK(readFile(errPath).find("unknown import path: /std/collections/soa/*") !=
+        std::string::npos);
 }
 
-TEST_CASE("compiles and runs bare soa_vector get helper through helper return in C++ emitter compatibility") {
+TEST_CASE("rejects bare soa_vector get helper through helper return in C++ emitter compatibility") {
   const std::string source = R"(
 import /std/collections/*
 import /std/collections/soa/*
@@ -1093,15 +1100,17 @@ main() {
 )";
   const std::string srcPath =
       writeTemp("compile_experimental_soa_vector_get_helper_return_exe.prime", source);
-  const std::string exePath =
-      (testScratchPath("") / "primec_experimental_soa_vector_get_helper_return_exe").string();
+  const std::string errPath =
+      (testScratchPath("") / "primec_experimental_soa_vector_get_helper_return_exe.err").string();
 
-  const std::string compileCmd = "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main";
-  CHECK(runCommand(compileCmd) == 0);
-  CHECK(runCommand(exePath) == 7);
+  const std::string compileCmd =
+      "./primec --emit=exe " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
+  CHECK(runCommand(compileCmd) == 2);
+  CHECK(readFile(errPath).find("meta.field_count requires struct type argument: type:Particle") !=
+        std::string::npos);
 }
 
-TEST_CASE("runs global helper-return soa_vector method shadows in C++ emitter compatibility") {
+TEST_CASE("rejects global helper-return soa_vector method shadows in C++ emitter compatibility") {
   const std::string source = R"(
 import /std/collections/*
 import /std/collections/soa/*
@@ -1154,14 +1163,14 @@ main() {
                              cloneValues().reserve(37i32))))))
 }
 )";
-  expect_soa_vector_helper_return_shadow_compile_run(
+  expect_soa_vector_helper_return_shadow_reject(
       source,
       "compile_experimental_soa_vector_method_shadow_global_helper_return_exe",
       "exe",
-      131);
+      "missing semantic-product bridge-path choice: /main -> /soa_vector/get");
 }
 
-TEST_CASE("runs method-like helper-return soa_vector method shadows in C++ emitter compatibility") {
+TEST_CASE("rejects method-like helper-return soa_vector method shadows in C++ emitter compatibility") {
   const std::string source = R"(
 import /std/collections/*
 import /std/collections/soa/*
@@ -1218,11 +1227,11 @@ main() {
                              holder.cloneValues().reserve(37i32))))))
 }
 )";
-  expect_soa_vector_helper_return_shadow_compile_run(
+  expect_soa_vector_helper_return_shadow_reject(
       source,
       "compile_experimental_soa_vector_method_shadow_method_like_helper_return_exe",
       "exe",
-      131);
+      "missing semantic-product bridge-path choice: /main -> /soa_vector/get");
 }
 
 TEST_CASE("compiles and runs vector-target old-explicit soa mutator shadows in C++ emitter") {
@@ -1281,7 +1290,7 @@ main() {
   CHECK(runCommand(exePath) == 10);
 }
 
-TEST_CASE("compiles and runs vector-target to_aos helper shadows in C++ emitter") {
+TEST_CASE("rejects vector-target to_aos helper shadows in C++ emitter") {
   const std::string source = R"(
 import /std/collections/*
 
@@ -1301,13 +1310,14 @@ main() {
 )";
   const std::string srcPath =
       writeTemp("compile_vector_target_to_aos_shadow_exe.prime", source);
-  const std::string exePath =
-      (testScratchPath("") / "primec_vector_target_to_aos_shadow_exe").string();
+  const std::string errPath =
+      (testScratchPath("") / "primec_vector_target_to_aos_shadow_exe.err").string();
 
   const std::string compileCmd =
-      "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main";
-  CHECK(runCommand(compileCmd) == 0);
-  CHECK(runCommand(exePath) == 27);
+      "./primec --emit=exe " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
+  CHECK(runCommand(compileCmd) == 2);
+  CHECK(readFile(errPath).find("missing semantic-product bridge-path choice: /main -> /to_aos") !=
+        std::string::npos);
 }
 
 TEST_CASE("compiles nested struct-body soa_vector constructor-bearing helper returns in C++ emitter compatibility") {

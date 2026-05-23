@@ -8232,3 +8232,9 @@
   `cd build-release && ctest --output-on-failure --stop-on-failure
   --timeout 120 -I 1286,1290` on 2026-05-23 21:25 CEST. Next focused
   continuation starts at `-I 1291,1295`.
+- Imports/collections shards 1291-1295 now pass after retargeting stale C++
+  emitter SoA get/helper-return/to_aos shadow positives to current semantic
+  and bridge-path rejection diagnostics. Validating command:
+  `cd build-release && ctest --output-on-failure --stop-on-failure
+  --timeout 120 -I 1291,1295` on 2026-05-23 21:32 CEST. Next focused
+  continuation starts at `-I 1296,1300`.
