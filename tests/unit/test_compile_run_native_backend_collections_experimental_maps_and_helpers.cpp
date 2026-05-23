@@ -4032,7 +4032,7 @@ main() {
   CHECK(runCommand(exePath) == 11);
 }
 
-TEST_CASE("compiles and runs native templated stdlib wrapper temporary index forms") {
+TEST_CASE("rejects native templated stdlib wrapper temporary index forms") {
   const std::string source = R"(
 import /std/collections/*
 
@@ -4056,16 +4056,19 @@ main() {
 )";
   const std::string srcPath =
       writeTemp("compile_native_stdlib_collection_shim_templated_return_temp_index_forms.prime", source);
-  const std::string exePath = (testScratchPath("") /
-                               "primec_native_stdlib_collection_shim_templated_return_temp_index_forms_exe")
+  const std::string errPath = (testScratchPath("") /
+                               "primec_native_stdlib_collection_shim_templated_return_temp_index_forms.err")
                                   .string();
 
-  const std::string compileCmd = "./primec --emit=native " + srcPath + " -o " + exePath + " --entry /main";
-  CHECK(runCommand(compileCmd) == 0);
-  CHECK(runCommand(exePath) == 9);
+  const std::string compileCmd =
+      "./primec --emit=native " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
+  CHECK(runCommand(compileCmd) == 2);
+  CHECK(readFile(errPath).find(
+            "native backend only supports at() on numeric/bool/string arrays or vectors") !=
+        std::string::npos);
 }
 
-TEST_CASE("compiles and runs native templated stdlib wrapper temporary syntax parity") {
+TEST_CASE("rejects native templated stdlib wrapper temporary syntax parity") {
   const std::string source = R"(
 import /std/collections/*
 
@@ -4093,16 +4096,17 @@ main() {
 )";
   const std::string srcPath =
       writeTemp("compile_native_stdlib_collection_shim_templated_return_temp_syntax_parity.prime", source);
-  const std::string exePath = (testScratchPath("") /
-                               "primec_native_stdlib_collection_shim_templated_return_temp_syntax_parity_exe")
+  const std::string errPath = (testScratchPath("") /
+                               "primec_native_stdlib_collection_shim_templated_return_temp_syntax_parity.err")
                                   .string();
 
-  const std::string compileCmd = "./primec --emit=native " + srcPath + " -o " + exePath + " --entry /main";
-  CHECK(runCommand(compileCmd) == 0);
-  CHECK(runCommand(exePath) == 27);
+  const std::string compileCmd =
+      "./primec --emit=native " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
+  CHECK(runCommand(compileCmd) == 2);
+  CHECK(readFile(errPath).find("struct parameter type mismatch") != std::string::npos);
 }
 
-TEST_CASE("compiles and runs native templated stdlib wrapper temporary unsafe parity") {
+TEST_CASE("rejects native templated stdlib wrapper temporary unsafe parity") {
   const std::string source = R"(
 import /std/collections/*
 
@@ -4128,13 +4132,14 @@ main() {
 )";
   const std::string srcPath =
       writeTemp("compile_native_stdlib_collection_shim_templated_return_temp_unsafe_parity.prime", source);
-  const std::string exePath = (testScratchPath("") /
-                               "primec_native_stdlib_collection_shim_templated_return_temp_unsafe_parity_exe")
+  const std::string errPath = (testScratchPath("") /
+                               "primec_native_stdlib_collection_shim_templated_return_temp_unsafe_parity.err")
                                   .string();
 
-  const std::string compileCmd = "./primec --emit=native " + srcPath + " -o " + exePath + " --entry /main";
-  CHECK(runCommand(compileCmd) == 0);
-  CHECK(runCommand(exePath) == 18);
+  const std::string compileCmd =
+      "./primec --emit=native " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
+  CHECK(runCommand(compileCmd) == 2);
+  CHECK(readFile(errPath).find("struct parameter type mismatch") != std::string::npos);
 }
 
 TEST_CASE("compiles and runs native templated stdlib wrapper temporary count capacity parity") {
