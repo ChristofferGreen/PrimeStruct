@@ -8530,3 +8530,9 @@
   -I 1574,1574`; `cd build-release && ctest --output-on-failure
   --stop-on-failure --timeout 120 -I 1571,1575` on 2026-05-23 23:52 CEST.
   Next focused continuation starts at `-I 1576,1580`.
+- Compile-run shards 1576-1580 now pass without source edits. This window
+  covers map/vector trace-audit lock tests around map adapters, semantic map
+  wrappers, and map backing traces. Validating command: `cd build-release &&
+  ctest --output-on-failure --stop-on-failure --timeout 120 -I 1576,1580`
+  on 2026-05-23 23:53 CEST. Next focused continuation starts at
+  `-I 1581,1585`.
