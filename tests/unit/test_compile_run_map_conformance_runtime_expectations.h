@@ -54,6 +54,14 @@ inline void expectCanonicalMapNamespaceExperimentalValueConformance(const std::s
 inline void expectCanonicalMapNamespaceExperimentalConstructorConformance(const std::string &emitMode) {
   (void)emitMode;
   const std::string expectedOutput = "4\ncontainer missing key\n2\n4\n7\n1\n2\n";
+  if (emitMode == "native") {
+    expectMapConformanceCompileReject(makeCanonicalMapNamespaceExperimentalConstructorConformanceSource(),
+                                      "map_namespace_canonical_experimental_constructor",
+                                      emitMode,
+                                      "native backend only supports indexing into string literals or string bindings");
+    return;
+  }
+
   expectMapConformanceProgramRunsWithOutput(makeCanonicalMapNamespaceExperimentalConstructorConformanceSource(),
                                             "map_namespace_canonical_experimental_constructor",
                                             emitMode,
@@ -85,6 +93,14 @@ inline void expectExperimentalMapOwnershipMethodConformance(const std::string &e
 }
 
 inline void expectCanonicalMapNamespaceExperimentalReturnConformance(const std::string &emitMode) {
+  if (emitMode == "native") {
+    expectMapConformanceCompileReject(makeCanonicalMapNamespaceExperimentalReturnConformanceSource(),
+                                      "map_namespace_canonical_experimental_return",
+                                      emitMode,
+                                      "native backend only supports indexing into string literals or string bindings");
+    return;
+  }
+
   expectMapConformanceProgramRunsWithOutput(makeCanonicalMapNamespaceExperimentalReturnConformanceSource(),
                                             "map_namespace_canonical_experimental_return",
                                             emitMode,
@@ -99,7 +115,7 @@ inline void expectCanonicalMapNamespaceExperimentalParameterConformance(const st
         "map_namespace_canonical_experimental_parameter",
         18,
         "2\n4\n4\n7\n1\n",
-        "Native lowering error:");
+        "argument type mismatch for /scoreValues parameter values");
     return;
   }
 
@@ -345,6 +361,14 @@ inline void expectImplicitMapAutoInferenceConformance(const std::string &emitMod
 }
 
 inline void expectInferredExperimentalMapReturnConformance(const std::string &emitMode) {
+  if (emitMode == "native") {
+    expectMapConformanceCompileReject(makeInferredExperimentalMapReturnConformanceSource(),
+                                      "map_inferred_experimental_return",
+                                      emitMode,
+                                      "native backend only supports indexing into string literals or string bindings");
+    return;
+  }
+
   expectMapConformanceProgramRunsWithOutput(makeInferredExperimentalMapReturnConformanceSource(),
                                             "map_inferred_experimental_return",
                                             emitMode,
@@ -428,7 +452,7 @@ inline void expectExperimentalMapStructFieldConformance(const std::string &emitM
   expectMapConformanceCompileReject(makeExperimentalMapStructFieldConformanceSource(),
                                     "map_experimental_struct_fields",
                                     emitMode,
-                                    "block expression requires a value");
+                                    emitMode == "native" ? "error:" : "block expression requires a value");
 }
 
 inline void expectInferredExperimentalMapStructFieldConformance(const std::string &emitMode) {

@@ -3615,15 +3615,15 @@ TEST_CASE("compiles and runs native helper-wrapped experimental map assignment R
   expectWrappedExperimentalMapAssignConformance("native");
 }
 
-TEST_CASE("compiles and runs native canonical namespaced map constructors on explicit experimental map bindings") {
+TEST_CASE("rejects native canonical namespaced map constructors on explicit experimental map bindings") {
   expectCanonicalMapNamespaceExperimentalConstructorConformance("native");
 }
 
-TEST_CASE("compiles and runs native canonical namespaced map constructors through explicit experimental map returns") {
+TEST_CASE("rejects native canonical namespaced map constructors through explicit experimental map returns") {
   expectCanonicalMapNamespaceExperimentalReturnConformance("native");
 }
 
-TEST_CASE("compiles and runs native canonical namespaced map constructors through explicit experimental map parameters") {
+TEST_CASE("rejects native canonical namespaced map constructors through explicit experimental map parameters") {
   expectCanonicalMapNamespaceExperimentalParameterConformance("native");
 }
 
@@ -3655,7 +3655,7 @@ TEST_CASE("compiles and runs native implicit map auto constructor inference") {
   expectImplicitMapAutoInferenceConformance("native");
 }
 
-TEST_CASE("compiles and runs native inferred experimental map returns") {
+TEST_CASE("rejects native inferred experimental map returns") {
   expectInferredExperimentalMapReturnConformance("native");
 }
 

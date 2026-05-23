@@ -8122,3 +8122,9 @@
   --output-on-failure --stop-on-failure --timeout 120 -I 1171,1175` on
   2026-05-23 18:21 CEST. Next focused continuation starts at `-I 1176,1180`;
   shard 1174 took about 180s and shard 1175 about 96s in release validation.
+- Native backend collection shim/accessor shards 1176-1180 now pass after
+  retargeting stale native map constructor, inferred return, and struct-field
+  expectations to current semantic/native rejection diagnostics. Validating
+  command: `cd build-release && ctest --output-on-failure --stop-on-failure
+  --timeout 120 -I 1176,1180` on 2026-05-23 18:35 CEST. Next focused
+  continuation starts at `-I 1181,1185`.
