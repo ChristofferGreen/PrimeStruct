@@ -8081,3 +8081,13 @@
   `cd build-release && ctest --output-on-failure --stop-on-failure --timeout
   120 -I 1121,1125` on 2026-05-23 16:10 CEST. Next focused continuation
   starts at `-I 1126,1130`.
+- Native backend continuation shards 1126-1145 now pass after retargeting the
+  stale wrapper-returned canonical map slash-method struct-receiver native
+  positive to current `Native lowering error: struct parameter type mismatch`
+  rejection coverage. Validating commands: `cd build-release && ctest
+  --output-on-failure --stop-on-failure --timeout 120 -I 1126,1130`, `cd
+  build-release && ctest --output-on-failure --stop-on-failure --timeout 120
+  -I 1131,1135`, `cd build-release && ctest --output-on-failure
+  --stop-on-failure --timeout 120 -I 1136,1140`, and `cd build-release &&
+  ctest --output-on-failure --stop-on-failure --timeout 120 -I 1141,1145` on
+  2026-05-23 16:17 CEST. Next focused continuation starts at `-I 1146,1150`.

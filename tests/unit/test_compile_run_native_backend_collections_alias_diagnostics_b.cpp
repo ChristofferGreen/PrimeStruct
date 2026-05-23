@@ -395,7 +395,7 @@ main() {
         std::string::npos);
 }
 
-TEST_CASE("native wrapper-returned canonical map slash-method forwards struct receiver") {
+TEST_CASE("rejects native wrapper-returned canonical map slash-method struct receiver forwarding") {
   const std::string source = R"(
 Marker {
   [i32] value
@@ -423,14 +423,15 @@ main() {
 )";
   const std::string srcPath =
       writeTemp("compile_native_wrapper_map_method_alias_struct_receiver_forwarding.prime", source);
-  const std::string exePath =
+  const std::string errPath =
       (testScratchPath("") /
-       "primec_native_wrapper_map_method_alias_struct_receiver_forwarding")
+       "primec_native_wrapper_map_method_alias_struct_receiver_forwarding.err")
           .string();
   const std::string compileCmd =
-      "./primec --emit=native " + srcPath + " -o " + exePath + " --entry /main";
-  CHECK(runCommand(compileCmd) == 0);
-  CHECK(runCommand(exePath) == 2);
+      "./primec --emit=native " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
+  CHECK(runCommand(compileCmd) == 2);
+  CHECK(readFile(errPath).find("Native lowering error: struct parameter type mismatch") !=
+        std::string::npos);
 }
 
 TEST_CASE("rejects native wrapper-returned canonical direct-call map receiver fallback") {
