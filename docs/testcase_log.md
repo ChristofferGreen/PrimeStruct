@@ -8193,3 +8193,7 @@
   command: `cd build-release && ctest --output-on-failure --stop-on-failure
   --timeout 120 -I 1246,1250` on 2026-05-23 19:16 CEST. Next focused
   continuation starts at `-I 1251,1255`.
+- Import block/operator rewrite shards 1251-1255 now pass without source
+  edits. Validating command: `cd build-release && ctest --output-on-failure
+  --stop-on-failure --timeout 120 -I 1251,1255` on 2026-05-23 19:17 CEST.
+  Next focused continuation starts at `-I 1256,1260`.
