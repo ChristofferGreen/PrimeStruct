@@ -8153,3 +8153,7 @@
   build-release && ctest --output-on-failure --stop-on-failure --timeout 120
   -I 1196,1200` on 2026-05-23 19:05 CEST. Next focused continuation starts
   at `-I 1201,1205`.
+- Native backend collection/import shards 1201-1205 now pass without source
+  edits. Validating command: `cd build-release && ctest --output-on-failure
+  --stop-on-failure --timeout 120 -I 1201,1205` on 2026-05-23 19:07 CEST.
+  Next focused continuation starts at `-I 1206,1210`.
