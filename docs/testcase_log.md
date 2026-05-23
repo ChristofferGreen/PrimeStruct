@@ -8003,3 +8003,12 @@
   `Pointer<Buffer>` packs; validating command:
   `timeout 300s bash -lc 'cd build-release && ctest --output-on-failure --stop-on-failure --timeout 120 -I 945,949'`
   on 2026-05-22 09:32 CEST.
+- Native backend core continuation shards 950-974 now pass; validating
+  commands: `cd build-release && ctest --output-on-failure --stop-on-failure
+  --timeout 120 -I 950,954`, `cd build-release && ctest --output-on-failure
+  --stop-on-failure --timeout 120 -I 955,959`, `cd build-release && ctest
+  --output-on-failure --stop-on-failure --timeout 120 -I 960,964`,
+  `cd build-release && ctest --output-on-failure --stop-on-failure --timeout
+  120 -I 965,969`, and `cd build-release && ctest --output-on-failure
+  --stop-on-failure --timeout 120 -I 970,974` on 2026-05-23 14:47 CEST.
+  Next focused continuation starts at `-I 975,979`.
