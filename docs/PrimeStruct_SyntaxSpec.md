@@ -635,10 +635,10 @@ The compiler rewrites surface forms into canonical call syntax. The core uses pr
 - Collection literals (via the `collections` text transform) are constructor forms:
   - `array<T>{...}` / `array<T>[...]`
   - `vector<T>{...}` / `vector<T>[...]`
-  - `map<K, V>{...}` / `map<K, V>[...]`
+  - `map<K, V>{...}`
   - Map literals accept `key = value` pairs as shorthand for entry construction (e.g., `map<i32, i32>{1i32=2i32}`).
-  - The text transform preserves brace construction, normalizes bracket aliases to braces, and rewrites map pair
-    shorthand inside the braces; retained call-shaped collection forms are compatibility helpers.
+  - The text transform preserves brace construction, normalizes array/vector bracket aliases to braces, and rewrites
+    map pair shorthand inside braces; retained call-shaped collection forms are compatibility helpers.
   - Planned stdlib-owned map lowering target: once variadic packs are available for user-defined constructors, the
     intended canonical helper target is `map<K, V>(entry(key1, value1), entry(key2, value2), ...)` rather than
     alternating raw key/value user-defined variadic parameters.
@@ -1341,7 +1341,6 @@ changing runtime behavior outside that contract.
 
 ```
 map<i32, i32>{1i32=2i32, 3i32=4i32}
-map<i32, i32>[1i32=2i32, 3i32=4i32]
 ```
 
 Map literals supply alternating key/value forms; an odd number of entries is a diagnostic.

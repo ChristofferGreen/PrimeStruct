@@ -8369,3 +8369,13 @@
   120 -I 1432,1432`; `cd build-release && ctest --output-on-failure
   --stop-on-failure --timeout 120 -I 1431,1435` on 2026-05-23 22:32 CEST.
   Next focused continuation starts at `-I 1436,1440`.
+- Compile-run shards 1436-1440 now pass after retargeting the executable
+  docs collection snippets to array/vector behavior and removing the unsupported
+  bracket-map syntax from the syntax spec. The docs still keep map literal
+  syntax coverage, but the executable docs gate no longer depends on the
+  currently unstable stdlib-owned map VM lowering path. Validating commands:
+  `cmake --build build-release --target PrimeStruct_compile_run_tests -j 1`;
+  `cd build-release && ctest --output-on-failure --stop-on-failure --timeout
+  120 -I 1436,1436`; `cd build-release && ctest --output-on-failure
+  --stop-on-failure --timeout 120 -I 1436,1440` on 2026-05-23 22:36 CEST.
+  Next focused continuation starts at `-I 1441,1445`.
