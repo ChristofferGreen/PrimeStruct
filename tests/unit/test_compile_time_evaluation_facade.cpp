@@ -5,6 +5,7 @@
 #include <string>
 #include <string_view>
 #include <utility>
+#include <vector>
 
 #include "third_party/doctest.h"
 
@@ -41,6 +42,17 @@ primec::SemanticProgramRequirementPredicateFact makeRequirementFact(
   return fact;
 }
 
+primec::SemanticProgramRequirementPredicateOperand makeOperand(
+    std::string kind,
+    std::string text) {
+  primec::SemanticProgramRequirementPredicateOperand operand;
+  operand.kind = std::move(kind);
+  operand.text = std::move(text);
+  operand.sourceLine = 17;
+  operand.sourceColumn = 9;
+  return operand;
+}
+
 primec::SemanticProgram makeRequirementProgram() {
   primec::SemanticProgram program;
   program.requirementPredicateFacts.push_back(makeRequirementFact(
@@ -67,6 +79,20 @@ primec::SemanticProgram makeRequirementProgram() {
       "/std/meta/unknown_predicate<i32>()",
       "invalid_evaluation",
       "unknown requirement predicate: /std/meta/unknown_predicate"));
+  return program;
+}
+
+primec::SemanticProgram makeBudgetProgram() {
+  primec::SemanticProgram program;
+  primec::SemanticProgramRequirementPredicateFact fact = makeRequirementFact(
+      "/generic/user",
+      "/project/is_small",
+      "/project/is_small<N>()",
+      "satisfied",
+      "user predicate returned true");
+  fact.operands.push_back(
+      makeOperand("literal_compile_time_argument", "12345"));
+  program.requirementPredicateFacts.push_back(std::move(fact));
   return program;
 }
 
@@ -219,6 +245,81 @@ TEST_CASE("compile-time evaluation facade wraps published requirement facts") {
   CHECK(formatted.find("semantic_node_id 42") != std::string::npos);
   CHECK(formatted.find("provenance_handle 99") != std::string::npos);
   CHECK(formatted.find("trait Additive is absent") != std::string::npos);
+}
+
+TEST_CASE("compile-time evaluation facade enforces deterministic budgets") {
+  const primec::SemanticProgram program = makeBudgetProgram();
+  const primec::SemanticProgramCompileTimeHost host(program);
+  const primec::CompileTimeEvaluationFacade facade(host);
+
+  auto makeRequest = [] {
+    primec::CompileTimeEvaluationRequest request;
+    request.definitionPath = "/generic/user";
+    request.predicateName = "/project/is_small";
+    return request;
+  };
+
+  CHECK(facade.evaluateRequirementPredicate(makeRequest()).kind ==
+        primec::CompileTimeEvaluationResultKind::Success);
+
+  auto stepRequest = makeRequest();
+  stepRequest.budget.maxSteps = 1;
+  const auto stepResult = facade.evaluateRequirementPredicate(stepRequest);
+  CHECK(stepResult.kind ==
+        primec::CompileTimeEvaluationResultKind::BudgetExhausted);
+  CHECK(stepResult.message.find("evaluator step budget exceeded") !=
+        std::string::npos);
+
+  auto userRequest = makeRequest();
+  userRequest.budget.maxUserPredicateCalls = 0;
+  const auto userResult = facade.evaluateRequirementPredicate(userRequest);
+  CHECK(userResult.kind ==
+        primec::CompileTimeEvaluationResultKind::BudgetExhausted);
+  CHECK(userResult.message.find("user predicate call budget exceeded") !=
+        std::string::npos);
+
+  auto valueRequest = makeRequest();
+  valueRequest.budget.maxValueBytes = 4;
+  const auto valueResult = facade.evaluateRequirementPredicate(valueRequest);
+  CHECK(valueResult.kind ==
+        primec::CompileTimeEvaluationResultKind::BudgetExhausted);
+  CHECK(valueResult.message.find("value storage budget exceeded") !=
+        std::string::npos);
+
+  auto storageRequest = makeRequest();
+  storageRequest.budget.maxStorageBytes = 4;
+  const auto storageResult =
+      facade.evaluateRequirementPredicate(storageRequest);
+  CHECK(storageResult.kind ==
+        primec::CompileTimeEvaluationResultKind::BudgetExhausted);
+  CHECK(storageResult.message.find("storage byte budget exceeded") !=
+        std::string::npos);
+
+  auto hostRequest = makeRequest();
+  hostRequest.budget.maxHostBytes = 4;
+  const auto hostResult = facade.evaluateRequirementPredicate(hostRequest);
+  CHECK(hostResult.kind ==
+        primec::CompileTimeEvaluationResultKind::BudgetExhausted);
+  CHECK(hostResult.message.find("host byte budget exceeded") !=
+        std::string::npos);
+
+  auto diagnosticRequest = makeRequest();
+  diagnosticRequest.budget.maxDiagnosticBytes = 4;
+  const auto diagnosticResult =
+      facade.evaluateRequirementPredicate(diagnosticRequest);
+  CHECK(diagnosticResult.kind ==
+        primec::CompileTimeEvaluationResultKind::BudgetExhausted);
+  CHECK(diagnosticResult.message.find("diagnostic payload budget exceeded") !=
+        std::string::npos);
+
+  auto provenanceRequest = makeRequest();
+  provenanceRequest.budget.maxProvenanceBytes = 4;
+  const auto provenanceResult =
+      facade.evaluateRequirementPredicate(provenanceRequest);
+  CHECK(provenanceResult.kind ==
+        primec::CompileTimeEvaluationResultKind::BudgetExhausted);
+  CHECK(provenanceResult.message.find("provenance payload budget exceeded") !=
+        std::string::npos);
 }
 
 TEST_CASE("semantic CT host answers canonical builtin meta predicate facts") {

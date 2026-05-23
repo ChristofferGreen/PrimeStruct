@@ -166,6 +166,72 @@ TEST_CASE("evaluated user predicates prepare with compile-time arguments") {
         4);
 }
 
+TEST_CASE("compile-time callable preparation enforces deterministic budgets") {
+  auto prepareWithBudget = [](primec::CompileTimeEvaluationBudget budget) {
+    primec::SemanticProgram program = makeProgramWith(makeRequirementFact(
+        "/generic/user",
+        "/project/is_small",
+        "/project/is_small<N>()",
+        {makeOperand("literal_compile_time_argument", "12345")}));
+    const primec::SemanticProgramCompileTimeHost host(program);
+    primec::CompileTimeCallablePrepareRequest request =
+        makeRequest("/generic/user", "/project/is_small", {});
+    request.budget = budget;
+    return primec::prepareCompileTimeCallable(host, request);
+  };
+
+  CHECK(prepareWithBudget({}).status ==
+        primec::CompileTimeCallablePrepareStatus::Prepared);
+
+  auto frameBudget = primec::CompileTimeEvaluationBudget{};
+  frameBudget.maxFrames = 0;
+  const auto frame = prepareWithBudget(frameBudget);
+  CHECK(frame.status ==
+        primec::CompileTimeCallablePrepareStatus::BudgetExceeded);
+  CHECK(frame.diagnostic.message.find("frame budget exceeded") !=
+        std::string::npos);
+
+  auto userBudget = primec::CompileTimeEvaluationBudget{};
+  userBudget.maxUserPredicateCalls = 0;
+  const auto user = prepareWithBudget(userBudget);
+  CHECK(user.status ==
+        primec::CompileTimeCallablePrepareStatus::BudgetExceeded);
+  CHECK(user.diagnostic.message.find("user predicate call budget exceeded") !=
+        std::string::npos);
+
+  auto valueBudget = primec::CompileTimeEvaluationBudget{};
+  valueBudget.maxValueBytes = 4;
+  const auto value = prepareWithBudget(valueBudget);
+  CHECK(value.status ==
+        primec::CompileTimeCallablePrepareStatus::BudgetExceeded);
+  CHECK(value.diagnostic.message.find("value storage budget exceeded") !=
+        std::string::npos);
+
+  auto storageBudget = primec::CompileTimeEvaluationBudget{};
+  storageBudget.maxStorageBytes = 4;
+  const auto storage = prepareWithBudget(storageBudget);
+  CHECK(storage.status ==
+        primec::CompileTimeCallablePrepareStatus::BudgetExceeded);
+  CHECK(storage.diagnostic.message.find("storage byte budget exceeded") !=
+        std::string::npos);
+
+  auto hostBudget = primec::CompileTimeEvaluationBudget{};
+  hostBudget.maxHostBytes = 4;
+  const auto host = prepareWithBudget(hostBudget);
+  CHECK(host.status ==
+        primec::CompileTimeCallablePrepareStatus::BudgetExceeded);
+  CHECK(host.diagnostic.message.find("host byte budget exceeded") !=
+        std::string::npos);
+
+  auto diagnosticBudget = primec::CompileTimeEvaluationBudget{};
+  diagnosticBudget.maxDiagnosticBytes = 4;
+  const auto diagnostic = prepareWithBudget(diagnosticBudget);
+  CHECK(diagnostic.status ==
+        primec::CompileTimeCallablePrepareStatus::BudgetExceeded);
+  CHECK(diagnostic.diagnostic.message.find(
+            "diagnostic payload budget exceeded") != std::string::npos);
+}
+
 TEST_CASE("unsupported user predicates and operands reject deterministically") {
   primec::SemanticProgram program = makeProgramWith(makeRequirementFact(
       "/generic/user",
@@ -240,6 +306,7 @@ TEST_CASE("missing facts and preparation budgets fail before execution") {
       makeRequest("/generic/budget",
                   "/std/meta/type_equals",
                   "/std/meta/type_equals<i32, i64>()");
+  budgetRequest.budget.maxPreparationSteps = 2;
   budgetRequest.budget.maxSteps = 2;
 
   const primec::CompileTimeCallablePrepareResult budget =

@@ -50,9 +50,15 @@ struct CompileTimeEvaluationProvenance {
 };
 
 struct CompileTimeEvaluationBudget {
+  std::uint64_t maxPreparationSteps = 10000;
   std::uint64_t maxSteps = 10000;
   std::uint64_t maxFrames = 128;
-  std::uint64_t maxUserPredicateCalls = 0;
+  std::uint64_t maxUserPredicateCalls = 128;
+  std::uint64_t maxValueBytes = 1048576;
+  std::uint64_t maxStorageBytes = 1048576;
+  std::uint64_t maxHostBytes = 1048576;
+  std::uint64_t maxDiagnosticBytes = 65536;
+  std::uint64_t maxProvenanceBytes = 65536;
 };
 
 struct CompileTimeEvaluationRequest {
@@ -146,6 +152,11 @@ public:
   CompileTimeEvaluationResult internalCompilerError(
       CompileTimeEvaluationProvenance provenance,
       std::string message) const;
+  std::optional<CompileTimeEvaluationResult> requireBudget(
+      std::string_view budgetName,
+      std::uint64_t used,
+      std::uint64_t limit,
+      CompileTimeEvaluationProvenance provenance) const;
 
   CompileTimeEvaluationResult requireEffect(
       std::string_view effectName,

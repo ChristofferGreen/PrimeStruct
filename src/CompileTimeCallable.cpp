@@ -84,6 +84,74 @@ struct PreparedOperandResult {
   std::string message;
 };
 
+std::uint64_t byteSize(std::string_view text) {
+  return static_cast<std::uint64_t>(text.size());
+}
+
+std::uint64_t addBudgetBytes(std::uint64_t left, std::uint64_t right) {
+  constexpr std::uint64_t Max = UINT64_MAX;
+  if (Max - left < right) {
+    return Max;
+  }
+  return left + right;
+}
+
+std::uint64_t callableHostBudgetBytes(
+    const SemanticProgram *semanticProgram,
+    const SemanticProgramRequirementPredicateFact &fact,
+    std::string_view predicatePath,
+    std::string_view sourceText,
+    std::string_view outcome) {
+  std::uint64_t bytes = byteSize(predicatePath);
+  bytes = addBudgetBytes(bytes, byteSize(sourceText));
+  bytes = addBudgetBytes(bytes, byteSize(outcome));
+  bytes = addBudgetBytes(bytes,
+                         byteSize(resolvedSemanticText(
+                             semanticProgram, fact.definitionPathId,
+                             fact.definitionPath)));
+  bytes = addBudgetBytes(bytes,
+                         byteSize(resolvedSemanticText(
+                             semanticProgram, fact.evaluationDiagnosticId,
+                             fact.evaluationDiagnostic)));
+  return bytes;
+}
+
+std::uint64_t callableValueBudgetBytes(
+    const SemanticProgram *semanticProgram,
+    const SemanticProgramRequirementPredicateFact &fact) {
+  std::uint64_t bytes = 0;
+  for (const SemanticProgramRequirementPredicateOperand &operand :
+       fact.operands) {
+    bytes = addBudgetBytes(bytes,
+                           byteSize(resolvedSemanticText(
+                               semanticProgram, operand.kindId, operand.kind)));
+    bytes = addBudgetBytes(bytes,
+                           byteSize(resolvedSemanticText(
+                               semanticProgram, operand.textId, operand.text)));
+  }
+  return bytes;
+}
+
+std::uint64_t callableStorageBudgetBytes(
+    const SemanticProgram *semanticProgram,
+    const SemanticProgramRequirementPredicateFact &fact) {
+  std::uint64_t bytes = callableValueBudgetBytes(semanticProgram, fact);
+  bytes = addBudgetBytes(bytes,
+                         byteSize(resolvedSemanticText(
+                             semanticProgram, fact.sourceTextId,
+                             fact.sourceText)));
+  for (const SemanticProgramRequirementPredicateOperand &operand :
+       fact.operands) {
+    bytes = addBudgetBytes(bytes, sizeof(operand.sourceLine));
+    bytes = addBudgetBytes(bytes, sizeof(operand.sourceColumn));
+    bytes = addBudgetBytes(bytes,
+                           byteSize(resolvedSemanticText(
+                               semanticProgram, operand.stableHandleId,
+                               operand.stableHandle)));
+  }
+  return bytes;
+}
+
 PreparedOperandResult prepareOperand(
     const SemanticProgramRequirementPredicateFact &fact,
     const SemanticProgramRequirementPredicateOperand &operand,
@@ -180,6 +248,14 @@ PreparedOperandResult prepareOperand(
   return result;
 }
 
+CompileTimeCallablePrepareResult makeBudgetRejectedResult(
+    CompileTimeEvaluationResult diagnostic) {
+  CompileTimeCallablePrepareResult result;
+  result.status = CompileTimeCallablePrepareStatus::BudgetExceeded;
+  result.diagnostic = std::move(diagnostic);
+  return result;
+}
+
 CompileTimeCallablePrepareResult makeRejectedResult(
     CompileTimeCallablePrepareStatus status,
     const CompileTimeEvaluationFacade &facade,
@@ -258,6 +334,54 @@ CompileTimeCallablePrepareResult prepareCompileTimeCallable(
 
   const std::string_view outcome = resolvedSemanticText(
       semanticProgram, fact->evaluationOutcomeId, fact->evaluationOutcome);
+  const std::uint64_t requiredSteps =
+      static_cast<std::uint64_t>(fact->operands.size()) + 1;
+  if (auto overBudget = facade.requireBudget("frame",
+                                             1,
+                                             request.budget.maxFrames,
+                                             provenance)) {
+    return makeBudgetRejectedResult(std::move(*overBudget));
+  }
+  if (auto overBudget = facade.requireBudget("preparation step",
+                                             requiredSteps,
+                                             request.budget.maxPreparationSteps,
+                                             provenance)) {
+    return makeBudgetRejectedResult(std::move(*overBudget));
+  }
+  if (auto overBudget = facade.requireBudget(
+          "user predicate call",
+          isEvaluatedUserPredicateFact(provenance.predicatePath, outcome) ? 1
+                                                                          : 0,
+          request.budget.maxUserPredicateCalls,
+          provenance)) {
+    return makeBudgetRejectedResult(std::move(*overBudget));
+  }
+  if (auto overBudget = facade.requireBudget(
+          "value storage",
+          callableValueBudgetBytes(semanticProgram, *fact),
+          request.budget.maxValueBytes,
+          provenance)) {
+    return makeBudgetRejectedResult(std::move(*overBudget));
+  }
+  if (auto overBudget = facade.requireBudget(
+          "storage byte",
+          callableStorageBudgetBytes(semanticProgram, *fact),
+          request.budget.maxStorageBytes,
+          provenance)) {
+    return makeBudgetRejectedResult(std::move(*overBudget));
+  }
+  if (auto overBudget = facade.requireBudget(
+          "host byte",
+          callableHostBudgetBytes(semanticProgram,
+                                  *fact,
+                                  provenance.predicatePath,
+                                  provenance.sourceText,
+                                  outcome),
+          request.budget.maxHostBytes,
+          provenance)) {
+    return makeBudgetRejectedResult(std::move(*overBudget));
+  }
+
   if (!isSupportedBuiltinPredicate(provenance.predicatePath) &&
       !isEvaluatedUserPredicateFact(provenance.predicatePath, outcome)) {
     return makeRejectedResult(
@@ -265,17 +389,6 @@ CompileTimeCallablePrepareResult prepareCompileTimeCallable(
         facade,
         provenance,
         "unsupported or unevaluated compile-time predicate: " +
-            provenance.predicatePath);
-  }
-
-  const std::uint64_t requiredSteps =
-      static_cast<std::uint64_t>(fact->operands.size()) + 1;
-  if (request.budget.maxFrames == 0 || request.budget.maxSteps < requiredSteps) {
-    return makeRejectedResult(
-        CompileTimeCallablePrepareStatus::BudgetExceeded,
-        facade,
-        provenance,
-        "compile-time callable preparation budget exceeded for " +
             provenance.predicatePath);
   }
 
@@ -311,6 +424,11 @@ CompileTimeCallablePrepareResult prepareCompileTimeCallable(
                      provenance,
                      "prepared compile-time callable: " +
                          result.callable.predicateName);
+  if (result.diagnostic.kind ==
+      CompileTimeEvaluationResultKind::BudgetExhausted) {
+    result.status = CompileTimeCallablePrepareStatus::BudgetExceeded;
+    result.callable = {};
+  }
   return result;
 }
 

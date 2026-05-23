@@ -6,6 +6,30 @@ Legend:
 Finished items are periodically archived here from `docs/todo.md`; section headers record the archive date.
 
 **Todo Completion (May 23, 2026)**
+- [x] TODO-4550: Enforce compile-time evaluation budgets
+  - owner: ai
+  - created_at: 2026-05-23
+  - finished_at: 2026-05-23
+  - phase: Generic constraint and compile-time flow alignment
+  - parallel_track: generic-requirements-budgets
+  - depends_on: TODO-4346, TODO-4357
+  - scope: Enforce deterministic compile-time preparation, recursion, step,
+    value/storage, host-byte, and diagnostic/provenance budgets for the
+    compile-time VM facade.
+  - outcome:
+    - Added deterministic compile-time budget ceilings for preparation steps,
+      evaluator steps, frames, user-predicate calls, value bytes, storage
+      bytes, host bytes, diagnostic payload bytes, and provenance payload
+      bytes.
+    - Enforced request-level budgets in requirement predicate evaluation and
+      callable preparation while preserving facade-level defaults.
+    - Kept successful pure predicates below budget on the existing success
+      path and returned budget-exhaustion diagnostics for active over-budget
+      evaluator/callable paths.
+  - validation:
+    - `cmake --build build-release --target PrimeStruct_compile_time_tests -j 1`
+    - `ctest --output-on-failure -R '^PrimeStruct_compile_time_(facade|callable)$' --timeout 120`
+
 - [x] TODO-4346: Add compile-time flow effect and termination policy
   - owner: ai
   - created_at: 2026-05-04

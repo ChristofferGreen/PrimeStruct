@@ -2,6 +2,7 @@
 
 #include "primec/SemanticProduct.h"
 
+#include <optional>
 #include <sstream>
 #include <utility>
 
@@ -81,6 +82,118 @@ CompileTimeEvaluationResult makeFault(CompileTimeEvaluationResultKind kind,
   result.message = std::move(message);
   result.boolValue = false;
   return result;
+}
+
+std::string formatBudgetExhaustedMessage(std::string_view budgetName,
+                                         std::uint64_t used,
+                                         std::uint64_t limit) {
+  std::ostringstream out;
+  out << "compile-time " << budgetName << " budget exceeded";
+  out << " (used " << used << ", limit " << limit << ')';
+  return out.str();
+}
+
+std::uint64_t byteSize(std::string_view text) {
+  return static_cast<std::uint64_t>(text.size());
+}
+
+std::uint64_t addBudgetBytes(std::uint64_t left, std::uint64_t right) {
+  constexpr std::uint64_t Max = UINT64_MAX;
+  if (Max - left < right) {
+    return Max;
+  }
+  return left + right;
+}
+
+std::uint64_t provenanceBudgetBytes(
+    const CompileTimeEvaluationProvenance &provenance) {
+  std::uint64_t bytes = byteSize(provenance.definitionPath);
+  bytes = addBudgetBytes(bytes, byteSize(provenance.predicatePath));
+  bytes = addBudgetBytes(bytes, byteSize(provenance.sourcePath));
+  bytes = addBudgetBytes(bytes, byteSize(provenance.sourceText));
+  bytes = addBudgetBytes(bytes, sizeof(provenance.line));
+  bytes = addBudgetBytes(bytes, sizeof(provenance.column));
+  bytes = addBudgetBytes(bytes, sizeof(provenance.semanticNodeId));
+  bytes = addBudgetBytes(bytes, sizeof(provenance.provenanceHandle));
+  return bytes;
+}
+
+std::uint64_t requirementValueBudgetBytes(
+    const SemanticProgram *semanticProgram,
+    const SemanticProgramRequirementPredicateFact &fact) {
+  std::uint64_t bytes = 0;
+  for (const SemanticProgramRequirementPredicateOperand &operand :
+       fact.operands) {
+    bytes = addBudgetBytes(bytes,
+                           byteSize(resolvedSemanticText(
+                               semanticProgram, operand.kindId, operand.kind)));
+    bytes = addBudgetBytes(bytes,
+                           byteSize(resolvedSemanticText(
+                               semanticProgram, operand.textId, operand.text)));
+  }
+  return bytes;
+}
+
+std::uint64_t requirementStorageBudgetBytes(
+    const SemanticProgram *semanticProgram,
+    const SemanticProgramRequirementPredicateFact &fact) {
+  std::uint64_t bytes = requirementValueBudgetBytes(semanticProgram, fact);
+  bytes = addBudgetBytes(bytes,
+                         byteSize(resolvedSemanticText(
+                             semanticProgram, fact.sourceTextId,
+                             fact.sourceText)));
+  for (const SemanticProgramRequirementPredicateOperand &operand :
+       fact.operands) {
+    bytes = addBudgetBytes(bytes, sizeof(operand.sourceLine));
+    bytes = addBudgetBytes(bytes, sizeof(operand.sourceColumn));
+    bytes = addBudgetBytes(bytes,
+                           byteSize(resolvedSemanticText(
+                               semanticProgram, operand.stableHandleId,
+                               operand.stableHandle)));
+  }
+  return bytes;
+}
+
+std::uint64_t requirementHostBudgetBytes(
+    const SemanticProgram *semanticProgram,
+    const SemanticProgramRequirementPredicateFact &fact) {
+  std::uint64_t bytes = byteSize(resolvedSemanticText(
+      semanticProgram, fact.definitionPathId, fact.definitionPath));
+  bytes = addBudgetBytes(bytes,
+                         byteSize(resolvedSemanticText(
+                             semanticProgram, fact.predicateNameId,
+                             fact.predicateName)));
+  bytes = addBudgetBytes(bytes,
+                         byteSize(resolvedSemanticText(
+                             semanticProgram, fact.sourceTextId,
+                             fact.sourceText)));
+  bytes = addBudgetBytes(bytes,
+                         byteSize(resolvedSemanticText(
+                             semanticProgram, fact.evaluationOutcomeId,
+                             fact.evaluationOutcome)));
+  bytes = addBudgetBytes(bytes,
+                         byteSize(resolvedSemanticText(
+                             semanticProgram, fact.evaluationDiagnosticId,
+                             fact.evaluationDiagnostic)));
+  return bytes;
+}
+
+bool isUserPredicatePath(std::string_view predicatePath) {
+  return !predicatePath.empty() &&
+         predicatePath.rfind("/std/meta/", 0) != 0;
+}
+
+bool budgetEquals(const CompileTimeEvaluationBudget &left,
+                  const CompileTimeEvaluationBudget &right) {
+  return left.maxPreparationSteps == right.maxPreparationSteps &&
+         left.maxSteps == right.maxSteps &&
+         left.maxFrames == right.maxFrames &&
+         left.maxUserPredicateCalls == right.maxUserPredicateCalls &&
+         left.maxValueBytes == right.maxValueBytes &&
+         left.maxStorageBytes == right.maxStorageBytes &&
+         left.maxHostBytes == right.maxHostBytes &&
+         left.maxDiagnosticBytes == right.maxDiagnosticBytes &&
+         left.maxProvenanceBytes == right.maxProvenanceBytes;
 }
 
 } // namespace
@@ -203,6 +316,18 @@ CompileTimeEvaluationResult CompileTimeEvaluationFacade::success(
     bool value,
     CompileTimeEvaluationProvenance provenance,
     std::string message) const {
+  if (auto overBudget = requireBudget("diagnostic payload",
+                                      byteSize(message),
+                                      budget_.maxDiagnosticBytes,
+                                      provenance)) {
+    return *overBudget;
+  }
+  if (auto overBudget = requireBudget("provenance payload",
+                                      provenanceBudgetBytes(provenance),
+                                      budget_.maxProvenanceBytes,
+                                      provenance)) {
+    return *overBudget;
+  }
   CompileTimeEvaluationResult result;
   result.kind = CompileTimeEvaluationResultKind::Success;
   result.fault = CompileTimeEvaluationFaultKind::None;
@@ -216,6 +341,18 @@ CompileTimeEvaluationResult
 CompileTimeEvaluationFacade::unsatisfiedPredicate(
     CompileTimeEvaluationProvenance provenance,
     std::string message) const {
+  if (auto overBudget = requireBudget("diagnostic payload",
+                                      byteSize(message),
+                                      budget_.maxDiagnosticBytes,
+                                      provenance)) {
+    return *overBudget;
+  }
+  if (auto overBudget = requireBudget("provenance payload",
+                                      provenanceBudgetBytes(provenance),
+                                      budget_.maxProvenanceBytes,
+                                      provenance)) {
+    return *overBudget;
+  }
   return makeFault(CompileTimeEvaluationResultKind::UnsatisfiedPredicate,
                    CompileTimeEvaluationFaultKind::UnsatisfiedPredicate,
                    std::move(provenance),
@@ -225,6 +362,18 @@ CompileTimeEvaluationFacade::unsatisfiedPredicate(
 CompileTimeEvaluationResult CompileTimeEvaluationFacade::invalidEvaluation(
     CompileTimeEvaluationProvenance provenance,
     std::string message) const {
+  if (auto overBudget = requireBudget("diagnostic payload",
+                                      byteSize(message),
+                                      budget_.maxDiagnosticBytes,
+                                      provenance)) {
+    return *overBudget;
+  }
+  if (auto overBudget = requireBudget("provenance payload",
+                                      provenanceBudgetBytes(provenance),
+                                      budget_.maxProvenanceBytes,
+                                      provenance)) {
+    return *overBudget;
+  }
   return makeFault(CompileTimeEvaluationResultKind::InvalidEvaluation,
                    CompileTimeEvaluationFaultKind::InvalidEvaluation,
                    std::move(provenance),
@@ -235,10 +384,23 @@ CompileTimeEvaluationResult
 CompileTimeEvaluationFacade::deniedEffect(
     std::string_view effectName,
     CompileTimeEvaluationProvenance provenance) const {
+  std::string message = "denied compile-time effect: " + std::string(effectName);
+  if (auto overBudget = requireBudget("diagnostic payload",
+                                      byteSize(message),
+                                      budget_.maxDiagnosticBytes,
+                                      provenance)) {
+    return *overBudget;
+  }
+  if (auto overBudget = requireBudget("provenance payload",
+                                      provenanceBudgetBytes(provenance),
+                                      budget_.maxProvenanceBytes,
+                                      provenance)) {
+    return *overBudget;
+  }
   return makeFault(CompileTimeEvaluationResultKind::DeniedEffect,
                    CompileTimeEvaluationFaultKind::DeniedEffect,
                    std::move(provenance),
-                   "denied compile-time effect: " + std::string(effectName));
+                   std::move(message));
 }
 
 CompileTimeEvaluationResult CompileTimeEvaluationFacade::budgetExhausted(
@@ -254,15 +416,58 @@ CompileTimeEvaluationResult
 CompileTimeEvaluationFacade::internalCompilerError(
     CompileTimeEvaluationProvenance provenance,
     std::string message) const {
+  if (auto overBudget = requireBudget("diagnostic payload",
+                                      byteSize(message),
+                                      budget_.maxDiagnosticBytes,
+                                      provenance)) {
+    return *overBudget;
+  }
+  if (auto overBudget = requireBudget("provenance payload",
+                                      provenanceBudgetBytes(provenance),
+                                      budget_.maxProvenanceBytes,
+                                      provenance)) {
+    return *overBudget;
+  }
   return makeFault(CompileTimeEvaluationResultKind::InternalCompilerError,
                    CompileTimeEvaluationFaultKind::InternalCompilerError,
                    std::move(provenance),
                    std::move(message));
 }
 
+std::optional<CompileTimeEvaluationResult>
+CompileTimeEvaluationFacade::requireBudget(
+    std::string_view budgetName,
+    std::uint64_t used,
+    std::uint64_t limit,
+    CompileTimeEvaluationProvenance provenance) const {
+  if (used <= limit) {
+    return std::nullopt;
+  }
+  return budgetExhausted(std::move(provenance),
+                         formatBudgetExhaustedMessage(budgetName, used, limit));
+}
+
 CompileTimeEvaluationResult CompileTimeEvaluationFacade::requireEffect(
     std::string_view effectName,
     CompileTimeEvaluationProvenance provenance) const {
+  if (auto overBudget = requireBudget("frame",
+                                      1,
+                                      budget_.maxFrames,
+                                      provenance)) {
+    return *overBudget;
+  }
+  if (auto overBudget = requireBudget("evaluator step",
+                                      1,
+                                      budget_.maxSteps,
+                                      provenance)) {
+    return *overBudget;
+  }
+  if (auto overBudget = requireBudget("host byte",
+                                      byteSize(effectName),
+                                      budget_.maxHostBytes,
+                                      provenance)) {
+    return *overBudget;
+  }
   if (!host_.allowEffect(effectName, CompileTimeEffectPhase::SemanticRequirement)) {
     return deniedEffect(effectName, std::move(provenance));
   }
@@ -274,6 +479,10 @@ CompileTimeEvaluationResult CompileTimeEvaluationFacade::requireEffect(
 CompileTimeEvaluationResult
 CompileTimeEvaluationFacade::evaluateRequirementPredicate(
     const CompileTimeEvaluationRequest &request) const {
+  const CompileTimeEvaluationBudget defaultBudget;
+  const CompileTimeEvaluationBudget &activeBudget =
+      budgetEquals(request.budget, defaultBudget) ? budget_ : request.budget;
+  const CompileTimeEvaluationFacade activeFacade(host_, activeBudget);
   const SemanticProgram *semanticProgram =
       request.semanticProgram != nullptr ? request.semanticProgram
                                          : host_.semanticProgram();
@@ -289,7 +498,7 @@ CompileTimeEvaluationFacade::evaluateRequirementPredicate(
     const std::string predicateName =
         request.predicateName.empty() ? std::string("<unknown>")
                                       : request.predicateName;
-    return internalCompilerError(
+    return activeFacade.internalCompilerError(
         request.provenance,
         "compile-time requirement evaluation requires a published predicate fact "
         "for " +
@@ -307,6 +516,49 @@ CompileTimeEvaluationFacade::evaluateRequirementPredicate(
   provenance.sourceText = std::string(resolvedSemanticText(
       semanticProgram, fact.sourceTextId, fact.sourceText));
 
+  const std::uint64_t requiredSteps =
+      static_cast<std::uint64_t>(fact.operands.size()) + 1;
+  if (auto overBudget = activeFacade.requireBudget("frame",
+                                                   1,
+                                                   activeBudget.maxFrames,
+                                                   provenance)) {
+    return *overBudget;
+  }
+  if (auto overBudget = activeFacade.requireBudget("evaluator step",
+                                                   requiredSteps,
+                                                   activeBudget.maxSteps,
+                                                   provenance)) {
+    return *overBudget;
+  }
+  if (auto overBudget = activeFacade.requireBudget(
+          "user predicate call",
+          isUserPredicatePath(provenance.predicatePath) ? 1 : 0,
+          activeBudget.maxUserPredicateCalls,
+          provenance)) {
+    return *overBudget;
+  }
+  if (auto overBudget = activeFacade.requireBudget(
+          "value storage",
+          requirementValueBudgetBytes(semanticProgram, fact),
+          activeBudget.maxValueBytes,
+          provenance)) {
+    return *overBudget;
+  }
+  if (auto overBudget = activeFacade.requireBudget(
+          "storage byte",
+          requirementStorageBudgetBytes(semanticProgram, fact),
+          activeBudget.maxStorageBytes,
+          provenance)) {
+    return *overBudget;
+  }
+  if (auto overBudget = activeFacade.requireBudget(
+          "host byte",
+          requirementHostBudgetBytes(semanticProgram, fact),
+          activeBudget.maxHostBytes,
+          provenance)) {
+    return *overBudget;
+  }
+
   const std::string_view outcome = resolvedSemanticText(
       semanticProgram, fact.evaluationOutcomeId, fact.evaluationOutcome);
   const std::string_view diagnostic = resolvedSemanticText(
@@ -314,12 +566,30 @@ CompileTimeEvaluationFacade::evaluateRequirementPredicate(
   const CompileTimeEvaluationResultKind kind =
       resultKindFromRequirementOutcome(outcome);
   if (kind == CompileTimeEvaluationResultKind::Success) {
-    return success(true, std::move(provenance), std::string(diagnostic));
+    return activeFacade.success(true,
+                                std::move(provenance),
+                                std::string(diagnostic));
   }
-  return makeFault(kind,
-                   faultKindFromResultKind(kind),
-                   std::move(provenance),
-                   std::string(diagnostic));
+  if (kind == CompileTimeEvaluationResultKind::UnsatisfiedPredicate) {
+    return activeFacade.unsatisfiedPredicate(std::move(provenance),
+                                             std::string(diagnostic));
+  }
+  if (kind == CompileTimeEvaluationResultKind::InvalidEvaluation) {
+    return activeFacade.invalidEvaluation(std::move(provenance),
+                                          std::string(diagnostic));
+  }
+  if (kind == CompileTimeEvaluationResultKind::DeniedEffect) {
+    return makeFault(kind,
+                     faultKindFromResultKind(kind),
+                     std::move(provenance),
+                     std::string(diagnostic));
+  }
+  if (kind == CompileTimeEvaluationResultKind::BudgetExhausted) {
+    return activeFacade.budgetExhausted(std::move(provenance),
+                                        std::string(diagnostic));
+  }
+  return activeFacade.internalCompilerError(std::move(provenance),
+                                            std::string(diagnostic));
 }
 
 bool isCompileTimeEvaluationFault(CompileTimeEvaluationResultKind kind) {

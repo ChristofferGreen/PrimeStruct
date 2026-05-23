@@ -85,8 +85,6 @@ Task template:
 
 - TODO-4358: Enforce phase-qualified compile-time effects | track:
   generic-requirements-effects | primary surface: compile-time effect gates
-- TODO-4550: Enforce compile-time evaluation budgets | track:
-  generic-requirements-budgets | primary surface: compile-time budget limits
 
 ### Parallel Work Tracks (Current)
 
@@ -127,8 +125,9 @@ Task template:
   `ct_if`; TODO-4547 added generic-specialized branch selection, and
   TODO-4548 added expression-position `ct_if` values; TODO-4549 scoped
   selected-branch generated type facts; TODO-4346 documented compile-time flow
-  policy; TODO-4358 and TODO-4550 are ready for effect and budget
-  enforcement, while TODO-4551 follows with cache invalidation.
+  policy; TODO-4550 enforced active compile-time budget limits; TODO-4358 is
+  ready for phase-qualified effect enforcement, while TODO-4551 follows with
+  cache invalidation.
 
 ### Immediate Next 10 (Track Successors; Not Ready Until Dependencies Land)
 
@@ -158,14 +157,13 @@ Task template:
   prerequisite split out of TODO-4278
 - Procedural compile-time genericity: none active after TODO-4340 and
   TODO-4546
-- Generic constraint and compile-time flow alignment: TODO-4358 + TODO-4550
-  -> TODO-4551 -> TODO-4347
+- Generic constraint and compile-time flow alignment: TODO-4358 -> TODO-4551
+  -> TODO-4347
   -> TODO-4351 -> TODO-4348 -> TODO-4359 -> TODO-4349 -> TODO-4350
 
 ### Execution Queue (Recommended Track Order)
 
 - TODO-4358: Enforce phase-qualified compile-time effects
-- TODO-4550: Enforce compile-time evaluation budgets
 - TODO-4551: Add compile-time evaluation cache keys
 - TODO-4545: Implement first structured task spawn/wait substrate
 - TODO-4278: Integrate multi-wait with stdlib tuple
@@ -828,7 +826,7 @@ Task template:
       user-predicate evaluator.
     - Effect checks must distinguish runtime `effects(...)` from
       compile-time `effects<compiletime>(...)`.
-    - Leave budget enforcement to TODO-4550 and cache-key invalidation to
+    - Budget enforcement landed in TODO-4550; leave cache-key invalidation to
       TODO-4551.
   - acceptance:
     - Compile-time IO or other effectful host operations reject without the
@@ -839,33 +837,7 @@ Task template:
       phase-qualified effect metadata.
     - `./scripts/compile.sh --release` passes.
   - stop_rule: Stop once compile-time effect authorization is deterministic
-    and phase-qualified; leave budget and cache enforcement to TODO-4550 and
-    TODO-4551.
-
-- [ ] TODO-4550: Enforce compile-time evaluation budgets
-  - owner: ai
-  - created_at: 2026-05-23
-  - phase: Generic constraint and compile-time flow alignment
-  - parallel_track: generic-requirements-budgets
-  - depends_on: TODO-4346, TODO-4357
-  - scope: Enforce deterministic compile-time preparation, recursion, step,
-    value/storage, host-byte, and diagnostic/provenance budgets for the
-    compile-time VM facade.
-  - implementation_notes:
-    - Start from the CT facade, `CompileTimeHost`, existing preparation budget
-      plumbing, and user-predicate evaluator recursion guards.
-    - Keep effect gating and cache invalidation out of this slice except where
-      a budget counter must be recorded for their future use.
-  - acceptance:
-    - Recursive or runaway compile-time evaluation stops with a deterministic
-      budget-exhaustion diagnostic and provenance.
-    - Preparation, evaluator-step, value/storage, host-byte, and diagnostic
-      payload limits have focused tests or explicit TODO-4551 follow-up notes
-      when a host/cache path is not implemented yet.
-    - Pure successful predicates below budget preserve their current behavior.
-    - `./scripts/compile.sh --release` passes.
-  - stop_rule: Stop once budget exhaustion is deterministic and covered for
-    active compile-time evaluator paths; leave cache invalidation to TODO-4551.
+    and phase-qualified; leave cache enforcement to TODO-4551.
 
 - [ ] TODO-4551: Add compile-time evaluation cache keys
   - owner: ai
