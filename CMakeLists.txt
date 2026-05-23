@@ -69,6 +69,7 @@ set(PRIMESTRUCT_SUPPORT_SOURCES
 
 set(PRIMESTRUCT_FRONTEND_SOURCES
   src/AstPrinter.cpp
+  src/CompileTimeCallable.cpp
   src/CompileTimeEvaluation.cpp
   src/CompileTimeValue.cpp
   src/FrontendSyntax.cpp
@@ -550,6 +551,7 @@ if(PRIMESTRUCT_BUILD_TESTS)
 
   add_executable(PrimeStruct_compile_time_tests
     tests/unit/test_main.cpp
+    tests/unit/test_compile_time_callable.cpp
     tests/unit/test_compile_time_evaluation_facade.cpp
     tests/unit/test_compile_time_value.cpp
   )
@@ -563,6 +565,14 @@ if(PRIMESTRUCT_BUILD_TESTS)
             "--order-by=file"
   )
   set_tests_properties(PrimeStruct_compile_time_facade
+                       PROPERTIES TIMEOUT 120 LABELS "parallel-safe")
+  add_test(
+    NAME PrimeStruct_compile_time_callable
+    COMMAND $<TARGET_FILE:PrimeStruct_compile_time_tests>
+            "--test-suite=primestruct.compile_time.callable"
+            "--order-by=file"
+  )
+  set_tests_properties(PrimeStruct_compile_time_callable
                        PROPERTIES TIMEOUT 120 LABELS "parallel-safe")
   add_test(
     NAME PrimeStruct_compile_time_value

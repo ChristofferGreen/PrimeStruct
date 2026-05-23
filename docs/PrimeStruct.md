@@ -1126,6 +1126,14 @@ Procedural compile-time genericity contract:
   hashing, debug formatting, and provenance handles. Runtime-only values such
   as buffers, heap addresses, or backend stack slots are rejected as invalid
   compile-time evaluation instead of being encoded as `uint64_t` VM slots.
+- Restricted compile-time callable preparation currently turns published
+  semantic requirement predicate facts for builtin `/std/meta/*` predicates
+  into typed CT callable descriptors. Preparation records the definition path,
+  predicate identity, source text, typed operands, budget, and provenance, and
+  it rejects missing facts, unsupported predicate families, runtime-only
+  operands, unsupported operand shapes, and exhausted preparation budgets before
+  execution. Prepared CT callables are deliberately independent of final
+  backend IR, native/C++ emission, and `primevm` runtime launch.
 - The compiler must not depend on launching the normal runtime VM or final
   backend IR to evaluate requirements. Requirements run during semantic
   validation, before final lowering is complete, so the CT evaluator needs a

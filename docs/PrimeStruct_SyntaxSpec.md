@@ -888,6 +888,14 @@ Requirement rules:
   equality, hashing, debug formatting, and provenance handles; unsupported
   runtime-only values reject as invalid evaluation rather than being represented
   as VM `uint64_t` slots.
+- Restricted compile-time callable preparation currently builds typed CT
+  callable descriptors from published semantic requirement predicate facts for
+  builtin `/std/meta/*` predicates. Preparation preserves definition,
+  predicate, source, operand, budget, and provenance data, and it rejects
+  missing facts, unsupported predicate families, runtime-only operands,
+  unsupported operand shapes, and exhausted budgets before execution. Prepared
+  callables do not require final backend IR, native/C++ emission, or launching
+  `primevm`.
 - Failed requirements on a direct call are diagnostics, not C++-style
   substitution failure by accident. A later overload-selection integration may
   use requirements to reject non-viable candidates, but it must preserve

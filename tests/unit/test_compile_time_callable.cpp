@@ -1,0 +1,228 @@
+#include "primec/CompileTimeCallable.h"
+#include "primec/SemanticProduct.h"
+
+#include <string>
+#include <utility>
+#include <variant>
+#include <vector>
+
+#include "third_party/doctest.h"
+
+TEST_SUITE_BEGIN("primestruct.compile_time.callable");
+
+namespace {
+
+primec::SemanticProgramRequirementPredicateOperand makeOperand(
+    std::string kind,
+    std::string text,
+    int line = 17,
+    int column = 9) {
+  primec::SemanticProgramRequirementPredicateOperand operand;
+  operand.kind = std::move(kind);
+  operand.text = std::move(text);
+  operand.sourceLine = line;
+  operand.sourceColumn = column;
+  return operand;
+}
+
+primec::SemanticProgramRequirementPredicateFact makeRequirementFact(
+    std::string definitionPath,
+    std::string predicateName,
+    std::string sourceText,
+    std::vector<primec::SemanticProgramRequirementPredicateOperand> operands) {
+  primec::SemanticProgramRequirementPredicateFact fact;
+  fact.definitionPath = std::move(definitionPath);
+  fact.predicateName = std::move(predicateName);
+  fact.sourceText = std::move(sourceText);
+  fact.operands = std::move(operands);
+  fact.evaluationOutcome = "satisfied";
+  fact.evaluationDiagnostic = "prepared";
+  fact.sourceLine = 23;
+  fact.sourceColumn = 5;
+  fact.semanticNodeId = 77;
+  fact.provenanceHandle = 88;
+  return fact;
+}
+
+primec::SemanticProgram makeProgramWith(
+    primec::SemanticProgramRequirementPredicateFact fact) {
+  primec::SemanticProgram program;
+  program.requirementPredicateFacts.push_back(std::move(fact));
+  return program;
+}
+
+primec::CompileTimeCallablePrepareRequest makeRequest(
+    std::string definitionPath,
+    std::string predicateName,
+    std::string sourceText) {
+  primec::CompileTimeCallablePrepareRequest request;
+  request.definitionPath = std::move(definitionPath);
+  request.predicateName = std::move(predicateName);
+  request.sourceText = std::move(sourceText);
+  request.provenance.definitionPath = request.definitionPath;
+  request.provenance.predicatePath = request.predicateName;
+  request.provenance.sourceText = request.sourceText;
+  request.provenance.line = 1;
+  request.provenance.column = 1;
+  return request;
+}
+
+} // namespace
+
+TEST_CASE("builtin meta predicate facts prepare restricted callables") {
+  primec::SemanticProgram program = makeProgramWith(makeRequirementFact(
+      "/generic/same",
+      "/std/meta/type_equals",
+      "/std/meta/type_equals<i32, i32>()",
+      {makeOperand("type_fact", "i32"), makeOperand("type_fact", "i32")}));
+  const primec::SemanticProgramCompileTimeHost host(program);
+
+  const primec::CompileTimeCallablePrepareResult result =
+      primec::prepareCompileTimeCallable(
+          host,
+          makeRequest("/generic/same",
+                      "/std/meta/type_equals",
+                      "/std/meta/type_equals<i32, i32>()"));
+
+  REQUIRE(result.prepared());
+  CHECK(result.status == primec::CompileTimeCallablePrepareStatus::Prepared);
+  CHECK(primec::compileTimeCallablePrepareStatusName(result.status) ==
+        "prepared");
+  CHECK(result.callable.definitionPath == "/generic/same");
+  CHECK(result.callable.predicateName == "/std/meta/type_equals");
+  CHECK(result.callable.sourceText == "/std/meta/type_equals<i32, i32>()");
+  CHECK(result.callable.provenance.line == 23);
+  CHECK(result.callable.provenance.column == 5);
+  CHECK(result.callable.provenance.semanticNodeId == 77);
+  CHECK(result.callable.provenance.provenanceHandle == 88);
+  CHECK(result.callable.maxSteps == 10000);
+  CHECK(result.callable.maxFrames == 128);
+  REQUIRE(result.callable.operands.size() == 2);
+  CHECK(result.callable.operands[0].kind == "type_fact");
+  CHECK(result.callable.operands[0].sourceText == "i32");
+  CHECK(result.callable.operands[0].value.kind ==
+        primec::CompileTimeValueKind::TypeFact);
+  CHECK(std::get<std::string>(result.callable.operands[0].value.payload) ==
+        "i32");
+  CHECK(result.callable.operands[0].value.provenance.line == 17);
+  CHECK(result.diagnostic.kind ==
+        primec::CompileTimeEvaluationResultKind::Success);
+  CHECK(result.diagnostic.boolValue);
+
+  CHECK(!primec::CompileTimePreparedCallable::requiresFinalBackendIr());
+  CHECK(!primec::CompileTimePreparedCallable::launchesRuntimeVm());
+}
+
+TEST_CASE("runtime-only operands fail before compile-time execution") {
+  primec::SemanticProgram program = makeProgramWith(makeRequirementFact(
+      "/generic/runtime",
+      "/std/meta/type_equals",
+      "/std/meta/type_equals<read(), i32>()",
+      {makeOperand("runtime_expression", "file.read()"),
+       makeOperand("type_fact", "i32")}));
+  const primec::SemanticProgramCompileTimeHost host(program);
+
+  const primec::CompileTimeCallablePrepareResult result =
+      primec::prepareCompileTimeCallable(
+          host,
+          makeRequest("/generic/runtime",
+                      "/std/meta/type_equals",
+                      "/std/meta/type_equals<read(), i32>()"));
+
+  CHECK_FALSE(result.prepared());
+  CHECK(result.status ==
+        primec::CompileTimeCallablePrepareStatus::RuntimeOnlyOperation);
+  CHECK(result.diagnostic.kind ==
+        primec::CompileTimeEvaluationResultKind::InvalidEvaluation);
+  CHECK(result.diagnostic.message.find("runtime-only operation") !=
+        std::string::npos);
+  CHECK(result.callable.operands.empty());
+}
+
+TEST_CASE("unsupported user predicates and operands reject deterministically") {
+  primec::SemanticProgram program = makeProgramWith(makeRequirementFact(
+      "/generic/user",
+      "/project/is_small",
+      "/project/is_small<N>()",
+      {makeOperand("unsigned_integer", "4")}));
+  const primec::SemanticProgramCompileTimeHost host(program);
+
+  const primec::CompileTimeCallablePrepareResult result =
+      primec::prepareCompileTimeCallable(
+          host,
+          makeRequest("/generic/user", "/project/is_small", {}));
+
+  CHECK_FALSE(result.prepared());
+  CHECK(result.status ==
+        primec::CompileTimeCallablePrepareStatus::UnsupportedPredicate);
+  CHECK(result.diagnostic.kind ==
+        primec::CompileTimeEvaluationResultKind::InvalidEvaluation);
+  CHECK(result.diagnostic.message.find("user-predicate execution") !=
+        std::string::npos);
+
+  primec::SemanticProgram unsupportedOperandProgram =
+      makeProgramWith(makeRequirementFact("/generic/bad",
+                                          "/std/meta/has_trait",
+                                          "/std/meta/has_trait<i32, Additive>()",
+                                          {makeOperand("opaque_handle", "x")}));
+  const primec::SemanticProgramCompileTimeHost unsupportedOperandHost(
+      unsupportedOperandProgram);
+
+  const primec::CompileTimeCallablePrepareResult unsupportedOperand =
+      primec::prepareCompileTimeCallable(
+          unsupportedOperandHost,
+          makeRequest("/generic/bad",
+                      "/std/meta/has_trait",
+                      "/std/meta/has_trait<i32, Additive>()"));
+
+  CHECK_FALSE(unsupportedOperand.prepared());
+  CHECK(unsupportedOperand.status ==
+        primec::CompileTimeCallablePrepareStatus::UnsupportedOperand);
+  CHECK(unsupportedOperand.diagnostic.message.find("opaque_handle") !=
+        std::string::npos);
+}
+
+TEST_CASE("missing facts and preparation budgets fail before execution") {
+  primec::SemanticProgram emptyProgram;
+  const primec::SemanticProgramCompileTimeHost emptyHost(emptyProgram);
+
+  const primec::CompileTimeCallablePrepareResult missing =
+      primec::prepareCompileTimeCallable(
+          emptyHost,
+          makeRequest("/generic/missing",
+                      "/std/meta/has_trait",
+                      "/std/meta/has_trait<i32, Additive>()"));
+
+  CHECK_FALSE(missing.prepared());
+  CHECK(missing.status ==
+        primec::CompileTimeCallablePrepareStatus::MissingSemanticFact);
+  CHECK(missing.diagnostic.kind ==
+        primec::CompileTimeEvaluationResultKind::InvalidEvaluation);
+  CHECK(missing.diagnostic.message.find("missing semantic fact") !=
+        std::string::npos);
+
+  primec::SemanticProgram budgetProgram = makeProgramWith(makeRequirementFact(
+      "/generic/budget",
+      "/std/meta/type_equals",
+      "/std/meta/type_equals<i32, i64>()",
+      {makeOperand("type_fact", "i32"), makeOperand("type_fact", "i64")}));
+  const primec::SemanticProgramCompileTimeHost budgetHost(budgetProgram);
+  primec::CompileTimeCallablePrepareRequest budgetRequest =
+      makeRequest("/generic/budget",
+                  "/std/meta/type_equals",
+                  "/std/meta/type_equals<i32, i64>()");
+  budgetRequest.budget.maxSteps = 2;
+
+  const primec::CompileTimeCallablePrepareResult budget =
+      primec::prepareCompileTimeCallable(budgetHost, budgetRequest);
+
+  CHECK_FALSE(budget.prepared());
+  CHECK(budget.status ==
+        primec::CompileTimeCallablePrepareStatus::BudgetExceeded);
+  CHECK(budget.diagnostic.kind ==
+        primec::CompileTimeEvaluationResultKind::BudgetExhausted);
+  CHECK(budget.diagnostic.message.find("budget exceeded") !=
+        std::string::npos);
+}
+
+TEST_SUITE_END();

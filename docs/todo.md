@@ -83,9 +83,9 @@ Task template:
 
 ### Ready Now (Parallel-Candidate Leaves; No Unmet TODO Dependencies)
 
-- TODO-4356: Add restricted compile-time callable lowering | track:
-  generic-requirements-callable | primary surface: restricted compile-time
-  callable preparation
+- TODO-4357: Evaluate pure user predicates at compile time | track:
+  generic-requirements-user-predicates | primary surface: pure user predicate
+  CT evaluation
 
 ### Parallel Work Tracks (Current)
 
@@ -121,7 +121,8 @@ Task template:
 - `generic-requirements`: TODO-4331, TODO-4334, TODO-4341, TODO-4342,
   TODO-4343, TODO-4344, TODO-4352, TODO-4353, and TODO-4354 are complete;
   TODO-4355 wired the compile-time host to published `/std/meta/*` predicate
-  facts; TODO-4356 is ready for restricted compile-time callable preparation.
+  facts; TODO-4356 prepared restricted compile-time callables; TODO-4357 is
+  ready for pure user predicate CT evaluation.
 
 ### Immediate Next 10 (Track Successors; Not Ready Until Dependencies Land)
 
@@ -150,17 +151,16 @@ Task template:
   prerequisite split out of TODO-4278
 - Procedural compile-time genericity: none active after TODO-4340 and
   TODO-4546
-- Generic constraint and compile-time flow alignment: TODO-4356 -> TODO-4357
+- Generic constraint and compile-time flow alignment: TODO-4357
   -> TODO-4345
   -> TODO-4346 -> TODO-4358 -> TODO-4347 -> TODO-4351 -> TODO-4348
   -> TODO-4359 -> TODO-4349 -> TODO-4350
 
 ### Execution Queue (Recommended Track Order)
 
-- TODO-4356: Add restricted compile-time callable lowering
+- TODO-4357: Evaluate pure user predicates at compile time
 - TODO-4545: Implement first structured task spawn/wait substrate
 - TODO-4278: Integrate multi-wait with stdlib tuple
-- TODO-4357: Evaluate pure user predicates at compile time
 - TODO-4345: Add compile-time `if` over type facts
 - TODO-4346: Add compile-time flow effect and termination policy
 - TODO-4358: Enforce compile-time cache, budget, and effects
@@ -809,37 +809,11 @@ Task template:
   - stop_rule: Stop once multi-wait returns stdlib `tuple<...>` or the missing
     task-side prerequisite is split into an explicit multithreading TODO.
 
-- [ ] TODO-4356: Add restricted compile-time callable lowering
-  - owner: ai
-  - created_at: 2026-05-04
-  - phase: Generic constraint and compile-time flow alignment
-  - parallel_track: generic-requirements-callable
-  - depends_on: TODO-4354, TODO-4355, TODO-4339
-  - scope: Add the restricted lowering or CT bytecode/fact-evaluator path
-    needed to run compile-time callables before final backend IR exists.
-  - implementation_notes:
-    - Start from template monomorphization, semantic-product publication,
-      IR-preparation/lowering boundaries, and the VM kernel facade.
-    - Only allow operations supported by the compile-time host and CT value
-      layer; reject runtime-only expressions before execution.
-    - Avoid final backend IR dependencies and avoid launching `primevm`.
-  - acceptance:
-    - A pure compile-time callable can be prepared for CT execution during
-      semantic validation.
-    - Runtime-only operations, unsupported value shapes, and missing semantic
-      facts fail before execution with deterministic diagnostics.
-    - Prepared CT callables preserve source provenance for call sites,
-      predicate bodies, and failed operations.
-    - Tests prove CT callable preparation does not require final VM/native/C++
-      lowering artifacts.
-    - `./scripts/compile.sh --release` passes.
-  - stop_rule: Stop once pure CT callables can be prepared independently of
-    final backend lowering.
-
 - [ ] TODO-4357: Evaluate pure user predicates at compile time
   - owner: ai
   - created_at: 2026-05-04
   - phase: Generic constraint and compile-time flow alignment
+  - parallel_track: generic-requirements-user-predicates
   - depends_on: TODO-4356
   - scope: Execute pure user-defined requirement predicates that return source
     `bool`, then publish satisfied/unsatisfied/invalid requirement facts for

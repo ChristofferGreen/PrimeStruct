@@ -6,6 +6,32 @@ Legend:
 Finished items are periodically archived here from `docs/todo.md`; section headers record the archive date.
 
 **Todo Completion (May 23, 2026)**
+- [x] TODO-4356: Add restricted compile-time callable lowering
+  - owner: ai
+  - created_at: 2026-05-04
+  - finished_at: 2026-05-23
+  - phase: Generic constraint and compile-time flow alignment
+  - parallel_track: generic-requirements-callable
+  - depends_on: TODO-4354, TODO-4355, TODO-4339
+  - scope: Add the restricted lowering or CT bytecode/fact-evaluator path
+    needed to run compile-time callables before final backend IR exists.
+  - outcome:
+    - Added a restricted compile-time callable preparation API that converts
+      published semantic requirement predicate facts into typed CT operand
+      descriptors.
+    - Kept the prepared callable independent of final backend IR, native/C++
+      emission, and `primevm` runtime launch.
+    - Added deterministic pre-execution rejects for missing semantic facts,
+      unsupported predicate families, runtime-only operands, unsupported
+      operand shapes, and exhausted preparation budgets.
+    - Preserved requirement and operand provenance on prepared callables and
+      rejection diagnostics.
+    - Promoted TODO-4357 as the next Ready Now generic-requirements leaf.
+  - validation:
+    - Focused release validation was selected under the lite workflow; full
+      `./scripts/compile.sh --release` remains deferred to parent/root
+      validation.
+
 - [x] TODO-4355: Add compile-time host and meta intrinsics
   - owner: ai
   - created_at: 2026-05-04
