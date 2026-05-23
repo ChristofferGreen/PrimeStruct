@@ -4,6 +4,84 @@
 namespace primec::semantics {
 
 bool SemanticsValidator::validateRequirementPredicates() {
+  auto bindingTypeText = [](const BindingInfo &binding) {
+    if (!binding.typeTemplateArg.empty()) {
+      return binding.typeName + "<" + binding.typeTemplateArg + ">";
+    }
+    return binding.typeName;
+  };
+  auto hasTransform = [](const auto &transforms, std::string_view name) {
+    for (const auto &transform : transforms) {
+      if (transform.name == name) {
+        return true;
+      }
+    }
+    return false;
+  };
+  auto isStaticField = [&](const Expr &stmt) {
+    return hasTransform(stmt.transforms, "static");
+  };
+  auto returnTypeTextForDefinition = [&](const Definition &definition) {
+    if (const auto bindingIt = returnBindings_.find(definition.fullPath);
+        bindingIt != returnBindings_.end() &&
+        !bindingIt->second.typeName.empty()) {
+      return bindingTypeText(bindingIt->second);
+    }
+    if (const auto structIt = returnStructs_.find(definition.fullPath);
+        structIt != returnStructs_.end() && !structIt->second.empty()) {
+      return structIt->second;
+    }
+    if (const auto kindIt = returnKinds_.find(definition.fullPath);
+        kindIt != returnKinds_.end()) {
+      if (kindIt->second == ReturnKind::Void) {
+        return std::string("void");
+      }
+      return typeNameForReturnKind(kindIt->second);
+    }
+    return std::string{};
+  };
+  auto populateCapabilityFacts = [&](RequirementPredicateDefinitionContext &context) {
+    context.callables.clear();
+    context.structFields.clear();
+    context.callables.reserve(program_.definitions.size());
+    for (const auto &candidate : program_.definitions) {
+      auto paramsIt = paramsByDef_.find(candidate.fullPath);
+      const std::string returnType = returnTypeTextForDefinition(candidate);
+      if (paramsIt != paramsByDef_.end() && !returnType.empty()) {
+        RequirementPredicateDefinitionContext::CallableFact callable;
+        callable.fullPath = candidate.fullPath;
+        callable.namespacePrefix = candidate.namespacePrefix;
+        callable.isPrivate = hasTransform(candidate.transforms, "private");
+        callable.returnType = returnType;
+        callable.parameterTypes.reserve(paramsIt->second.size());
+        for (const auto &param : paramsIt->second) {
+          callable.parameterTypes.push_back(bindingTypeText(param.binding));
+        }
+        context.callables.push_back(std::move(callable));
+      }
+
+      if (structNames_.count(candidate.fullPath) == 0) {
+        continue;
+      }
+      for (const auto &stmt : candidate.statements) {
+        if (!stmt.isBinding || isStaticField(stmt) ||
+            isCompileTimeTypeBinding(stmt)) {
+          continue;
+        }
+        BindingInfo binding;
+        if (!resolveStructFieldBinding(candidate, stmt, binding)) {
+          continue;
+        }
+        RequirementPredicateDefinitionContext::StructFieldFact field;
+        field.structPath = candidate.fullPath;
+        field.fieldName = stmt.name;
+        field.typeText = bindingTypeText(binding);
+        field.isPrivate = hasTransform(stmt.transforms, "private");
+        context.structFields.push_back(std::move(field));
+      }
+    }
+  };
+
   for (const auto &definition : program_.definitions) {
     DefinitionContextScope definitionScope(*this, definition);
     if (isReservedRequirementPredicateNamespace(definition.fullPath)) {
@@ -26,6 +104,7 @@ bool SemanticsValidator::validateRequirementPredicates() {
     if (paramsIt != paramsByDef_.end()) {
       context.params = paramsIt->second;
     }
+    populateCapabilityFacts(context);
 
     for (const auto &transform : definition.transforms) {
       if (transform.name != "require") {

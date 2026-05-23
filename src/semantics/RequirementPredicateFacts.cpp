@@ -1,5 +1,7 @@
 #include "RequirementPredicateFacts.h"
 
+#include "primec/StringLiteral.h"
+
 #include <algorithm>
 #include <cctype>
 #include <optional>
@@ -256,6 +258,27 @@ std::string canonicalPredicateName(std::string name) {
   if (name == "is_sum") {
     return "/std/meta/is_sum";
   }
+  if (name == "has_trait") {
+    return "/std/meta/has_trait";
+  }
+  if (name == "supports_call" || name == "callable") {
+    return "/std/meta/supports_call";
+  }
+  if (name == "can_construct" || name == "constructible") {
+    return "/std/meta/can_construct";
+  }
+  if (name == "can_copy" || name == "copyable") {
+    return "/std/meta/can_copy";
+  }
+  if (name == "can_move" || name == "movable") {
+    return "/std/meta/can_move";
+  }
+  if (name == "has_field") {
+    return "/std/meta/has_field";
+  }
+  if (name == "has_member") {
+    return "/std/meta/has_member";
+  }
   return name;
 }
 
@@ -265,6 +288,21 @@ bool isBuiltinTypeRelationPredicate(std::string_view name) {
          name == "/std/meta/is_type" ||
          name == "/std/meta/is_struct" ||
          name == "/std/meta/is_sum";
+}
+
+bool isBuiltinCapabilityPredicate(std::string_view name) {
+  return name == "/std/meta/has_trait" ||
+         name == "/std/meta/supports_call" ||
+         name == "/std/meta/can_construct" ||
+         name == "/std/meta/can_copy" ||
+         name == "/std/meta/can_move" ||
+         name == "/std/meta/has_field" ||
+         name == "/std/meta/has_member";
+}
+
+bool isBuiltinRequirementPredicate(std::string_view name) {
+  return isBuiltinTypeRelationPredicate(name) ||
+         isBuiltinCapabilityPredicate(name);
 }
 
 std::string canonicalCallSourceText(std::string_view predicateName,
@@ -285,6 +323,7 @@ RequirementPredicateOperandFact classifyRequirementOperand(
     std::string text,
     std::string_view predicateName,
     std::size_t operandIndex,
+    bool isTemplateOperand,
     int sourceLine,
     int sourceColumn) {
   text = trimRequirementText(text);
@@ -295,6 +334,8 @@ RequirementPredicateOperandFact classifyRequirementOperand(
   operand.sourceColumn = sourceColumn;
 
   if (text.rfind("typeof<", 0) == 0 && text.size() > 8 && text.back() == '>') {
+    operand.kind = "type_fact";
+  } else if (isTemplateOperand && isRequirementSymbolText(text)) {
     operand.kind = "type_fact";
   } else if ((predicateName.find("type") != std::string_view::npos ||
               predicateName.find("struct") != std::string_view::npos ||
@@ -471,6 +512,229 @@ TypeOperandResolution resolveTypeOperand(
               std::string(predicateName) + ": " + text};
 }
 
+std::string formatResolvedTypeFacts(const std::vector<TypeOperandResolution> &resolved) {
+  std::ostringstream out;
+  out << "type facts: ";
+  for (std::size_t i = 0; i < resolved.size(); ++i) {
+    if (i != 0) {
+      out << ", ";
+    }
+    out << resolved[i].canonicalType;
+  }
+  return out.str();
+}
+
+std::string callableDisplaySignature(
+    std::string_view name,
+    const std::vector<TypeOperandResolution> &resolved,
+    std::size_t paramCount,
+    std::string_view returnType) {
+  std::ostringstream out;
+  out << name << "(";
+  for (std::size_t i = 0; i < paramCount; ++i) {
+    if (i != 0) {
+      out << ", ";
+    }
+    out << resolved[i].canonicalType;
+  }
+  out << ") -> " << returnType;
+  return out.str();
+}
+
+bool parseCompileTimeNameOperand(const RequirementPredicateOperandFact &operand,
+                                 std::string_view predicateName,
+                                 std::string_view label,
+                                 std::string &nameOut,
+                                 std::string &diagnosticOut) {
+  if (operand.kind == "compile_time_symbol") {
+    nameOut = operand.text;
+    return true;
+  }
+  if (operand.kind == "literal_compile_time_argument") {
+    ParsedStringLiteral parsed;
+    std::string parseError;
+    if (!parseStringLiteralToken(operand.text, parsed, parseError)) {
+      diagnosticOut = "requirement predicate " + std::string(predicateName) +
+                      " requires utf8/ascii string literal " +
+                      std::string(label) + " argument";
+      return false;
+    }
+    nameOut = parsed.decoded;
+    if (nameOut.empty()) {
+      diagnosticOut = "requirement predicate " + std::string(predicateName) +
+                      " requires non-empty " + std::string(label) + " name";
+      return false;
+    }
+    return true;
+  }
+  diagnosticOut = "requirement predicate " + std::string(predicateName) +
+                  " requires constant string or identifier " +
+                  std::string(label) + " argument";
+  return false;
+}
+
+std::string typePathForCanonical(std::string_view canonicalType) {
+  if (!canonicalType.empty() && canonicalType.front() == '/') {
+    return std::string(canonicalType);
+  }
+  return "/" + std::string(canonicalType);
+}
+
+bool isVisibleFromRequirementDefinition(
+    const RequirementPredicateDefinitionContext &context,
+    std::string_view ownerPath,
+    bool isPrivate) {
+  if (!isPrivate) {
+    return true;
+  }
+  if (context.definitionPath == ownerPath) {
+    return true;
+  }
+  const std::string ownerPrefix = std::string(ownerPath) + "/";
+  return context.definitionPath.rfind(ownerPrefix, 0) == 0;
+}
+
+bool callableFactIsVisibleFromRequirementDefinition(
+    const RequirementPredicateDefinitionContext &context,
+    const RequirementPredicateDefinitionContext::CallableFact &callable) {
+  const std::size_t slash = callable.fullPath.find_last_of('/');
+  const std::string owner =
+      slash == std::string::npos ? std::string{} : callable.fullPath.substr(0, slash);
+  return isVisibleFromRequirementDefinition(context, owner, callable.isPrivate);
+}
+
+bool fieldFactIsVisibleFromRequirementDefinition(
+    const RequirementPredicateDefinitionContext &context,
+    const RequirementPredicateDefinitionContext::StructFieldFact &field) {
+  return isVisibleFromRequirementDefinition(context, field.structPath, field.isPrivate);
+}
+
+std::vector<RequirementPredicateDefinitionContext::CallableFact>
+visibleCallableMatches(const RequirementPredicateDefinitionContext &context,
+                       std::string_view requestedPath) {
+  std::vector<RequirementPredicateDefinitionContext::CallableFact> matches;
+  const std::string path(requestedPath);
+  for (const auto &callable : context.callables) {
+    const bool samePath = callable.fullPath == path;
+    const bool overloadPath = callable.fullPath.rfind(path + "__ov", 0) == 0 ||
+                              callable.fullPath.rfind(path + "__t", 0) == 0;
+    if (!samePath && !overloadPath) {
+      continue;
+    }
+    if (!callableFactIsVisibleFromRequirementDefinition(context, callable)) {
+      continue;
+    }
+    matches.push_back(callable);
+  }
+  std::stable_sort(matches.begin(), matches.end(), [](const auto &left, const auto &right) {
+    return left.fullPath < right.fullPath;
+  });
+  return matches;
+}
+
+bool callableSignatureMatches(
+    const RequirementPredicateDefinitionContext &context,
+    std::string_view requestedPath,
+    const std::vector<TypeOperandResolution> &resolved,
+    std::size_t paramCount,
+    std::string_view expectedReturnType) {
+  const std::vector<RequirementPredicateDefinitionContext::CallableFact> matches =
+      visibleCallableMatches(context, requestedPath);
+  for (const auto &callable : matches) {
+    if (callable.parameterTypes.size() != paramCount) {
+      continue;
+    }
+    bool paramsMatch = true;
+    for (std::size_t i = 0; i < paramCount; ++i) {
+      const std::string canonicalParam =
+          canonicalizeResolvedType(context, callable.parameterTypes[i]);
+      if (canonicalParam != resolved[i].canonicalType) {
+        paramsMatch = false;
+        break;
+      }
+    }
+    if (!paramsMatch) {
+      continue;
+    }
+    const std::string canonicalReturn =
+        canonicalizeResolvedType(context, callable.returnType);
+    if (canonicalReturn == expectedReturnType) {
+      return true;
+    }
+  }
+  return false;
+}
+
+std::vector<const RequirementPredicateDefinitionContext::StructFieldFact *>
+visibleStructFields(const RequirementPredicateDefinitionContext &context,
+                    std::string_view structPath) {
+  std::vector<const RequirementPredicateDefinitionContext::StructFieldFact *> fields;
+  for (const auto &field : context.structFields) {
+    if (field.structPath != structPath) {
+      continue;
+    }
+    if (!fieldFactIsVisibleFromRequirementDefinition(context, field)) {
+      continue;
+    }
+    fields.push_back(&field);
+  }
+  std::stable_sort(fields.begin(), fields.end(), [](const auto *left, const auto *right) {
+    if (left->structPath != right->structPath) {
+      return left->structPath < right->structPath;
+    }
+    return left->fieldName < right->fieldName;
+  });
+  return fields;
+}
+
+bool isNumericTraitType(std::string_view canonicalType) {
+  if (canonicalType.empty() || canonicalType.find('<') != std::string_view::npos) {
+    return false;
+  }
+  const std::string normalized = normalizeBindingTypeName(std::string(canonicalType));
+  return normalized == "i32" || normalized == "i64" ||
+         normalized == "u64" || normalized == "f32" ||
+         normalized == "f64" || normalized == "integer" ||
+         normalized == "decimal" || normalized == "complex";
+}
+
+bool isComparableBuiltinTraitType(std::string_view canonicalType) {
+  if (canonicalType.empty() || canonicalType.find('<') != std::string_view::npos) {
+    return false;
+  }
+  const std::string normalized = normalizeBindingTypeName(std::string(canonicalType));
+  if (normalized == "complex") {
+    return false;
+  }
+  if (isNumericTraitType(canonicalType)) {
+    return true;
+  }
+  return normalized == "bool" || normalized == "string";
+}
+
+bool isIndexableBuiltinTraitType(std::string_view canonicalType,
+                                 std::string_view elemCanonicalType) {
+  const std::string normalized = normalizeBindingTypeName(std::string(canonicalType));
+  if (normalized == "string") {
+    return elemCanonicalType == "i32";
+  }
+  std::string base;
+  std::string arg;
+  if (!splitTemplateTypeName(std::string(canonicalType), base, arg)) {
+    return false;
+  }
+  const std::string normalizedBase = normalizeBindingTypeName(base);
+  if (normalizedBase != "array" && normalizedBase != "vector") {
+    return false;
+  }
+  std::vector<std::string> args;
+  if (!splitTopLevelTemplateArgs(arg, args) || args.size() != 1) {
+    return false;
+  }
+  return canonicalizeResolvedType(RequirementPredicateDefinitionContext{}, args.front()) ==
+         elemCanonicalType;
+}
+
 void evaluateBuiltinTypePredicate(RequirementPredicateFactDraft &fact,
                                   const RequirementPredicateDefinitionContext &context) {
   const std::string &predicate = fact.predicateName;
@@ -544,15 +808,456 @@ void evaluateBuiltinTypePredicate(RequirementPredicateFactDraft &fact,
   fact.evaluationOutcome = satisfied ? "satisfied" : "unsatisfied";
 }
 
+void evaluateHasTraitPredicate(RequirementPredicateFactDraft &fact,
+                               const RequirementPredicateDefinitionContext &context) {
+  if (fact.operands.size() != 2 && fact.operands.size() != 3) {
+    fact.evaluationOutcome = "invalid_evaluation";
+    fact.evaluationDiagnostic =
+        "requirement predicate /std/meta/has_trait expects one type operand, "
+        "one trait-name argument, and optional element type";
+    return;
+  }
+
+  std::vector<TypeOperandResolution> resolved;
+  resolved.reserve(fact.operands.size());
+  TypeOperandResolution target = resolveTypeOperand(context, fact.operands[0], fact.predicateName);
+  if (target.status == TypeOperandStatus::Invalid) {
+    fact.evaluationOutcome = "invalid_evaluation";
+    fact.evaluationDiagnostic = std::move(target.diagnostic);
+    return;
+  }
+  if (target.status == TypeOperandStatus::Deferred) {
+    fact.evaluationOutcome = "invalid_evaluation";
+    fact.evaluationDiagnostic =
+        "requirement predicate evaluation deferred for unresolved type facts";
+    return;
+  }
+  resolved.push_back(target);
+
+  std::optional<TypeOperandResolution> elem;
+  if (fact.operands.size() == 3) {
+    elem = resolveTypeOperand(context, fact.operands[1], fact.predicateName);
+    if (elem->status == TypeOperandStatus::Invalid) {
+      fact.evaluationOutcome = "invalid_evaluation";
+      fact.evaluationDiagnostic = std::move(elem->diagnostic);
+      return;
+    }
+    if (elem->status == TypeOperandStatus::Deferred) {
+      fact.evaluationOutcome = "invalid_evaluation";
+      fact.evaluationDiagnostic =
+          "requirement predicate evaluation deferred for unresolved type facts";
+      return;
+    }
+    resolved.push_back(*elem);
+  }
+
+  const RequirementPredicateOperandFact &traitOperand =
+      fact.operands.size() == 3 ? fact.operands[2] : fact.operands[1];
+  std::string traitName;
+  std::string diagnostic;
+  if (!parseCompileTimeNameOperand(traitOperand,
+                                   fact.predicateName,
+                                   "trait",
+                                   traitName,
+                                   diagnostic)) {
+    fact.evaluationOutcome = "invalid_evaluation";
+    fact.evaluationDiagnostic = std::move(diagnostic);
+    return;
+  }
+
+  const bool isAdditive = traitName == "Additive";
+  const bool isMultiplicative = traitName == "Multiplicative";
+  const bool isComparable = traitName == "Comparable";
+  const bool isIndexable = traitName == "Indexable";
+  if (!isAdditive && !isMultiplicative && !isComparable && !isIndexable) {
+    fact.evaluationOutcome = "invalid_evaluation";
+    fact.evaluationDiagnostic =
+        "requirement predicate /std/meta/has_trait does not support trait: " +
+        traitName;
+    return;
+  }
+  if (isIndexable && !elem.has_value()) {
+    fact.evaluationOutcome = "invalid_evaluation";
+    fact.evaluationDiagnostic =
+        "requirement predicate /std/meta/has_trait Indexable requires type "
+        "and element type operands";
+    return;
+  }
+  if (!isIndexable && elem.has_value()) {
+    fact.evaluationOutcome = "invalid_evaluation";
+    fact.evaluationDiagnostic =
+        "requirement predicate /std/meta/has_trait " + traitName +
+        " requires exactly one type operand";
+    return;
+  }
+
+  bool satisfied = false;
+  std::string requirementText;
+  const std::string typePath = typePathForCanonical(target.canonicalType);
+  if (isAdditive) {
+    std::vector<TypeOperandResolution> callTypes = {target, target};
+    requirementText = callableDisplaySignature("plus", callTypes, 2, target.canonicalType);
+    if (isNumericTraitType(target.canonicalType)) {
+      satisfied = true;
+    } else {
+      satisfied = callableSignatureMatches(context,
+                                           typePath + "/plus",
+                                           callTypes,
+                                           2,
+                                           target.canonicalType);
+    }
+  } else if (isMultiplicative) {
+    std::vector<TypeOperandResolution> callTypes = {target, target};
+    requirementText = callableDisplaySignature("multiply", callTypes, 2, target.canonicalType);
+    if (isNumericTraitType(target.canonicalType)) {
+      satisfied = true;
+    } else {
+      satisfied = callableSignatureMatches(context,
+                                           typePath + "/multiply",
+                                           callTypes,
+                                           2,
+                                           target.canonicalType);
+    }
+  } else if (isComparable) {
+    requirementText = "equal(" + target.canonicalType + ", " +
+                      target.canonicalType + ") -> bool and less_than(" +
+                      target.canonicalType + ", " + target.canonicalType +
+                      ") -> bool";
+    if (isComparableBuiltinTraitType(target.canonicalType)) {
+      satisfied = true;
+    } else {
+      std::vector<TypeOperandResolution> callTypes = {target, target};
+      satisfied = callableSignatureMatches(context,
+                                           typePath + "/equal",
+                                           callTypes,
+                                           2,
+                                           "bool") &&
+                  callableSignatureMatches(context,
+                                           typePath + "/less_than",
+                                           callTypes,
+                                           2,
+                                           "bool");
+    }
+  } else if (isIndexable) {
+    requirementText = "count(" + target.canonicalType +
+                      ") -> i32 and at(" + target.canonicalType +
+                      ", i32) -> " + elem->canonicalType;
+    if (isIndexableBuiltinTraitType(target.canonicalType, elem->canonicalType)) {
+      satisfied = true;
+    } else {
+      std::vector<TypeOperandResolution> countTypes = {target};
+      TypeOperandResolution intType;
+      intType.status = TypeOperandStatus::Resolved;
+      intType.canonicalType = "i32";
+      std::vector<TypeOperandResolution> atTypes = {target, intType};
+      satisfied = callableSignatureMatches(context,
+                                           typePath + "/count",
+                                           countTypes,
+                                           1,
+                                           "i32") &&
+                  callableSignatureMatches(context,
+                                           typePath + "/at",
+                                           atTypes,
+                                           2,
+                                           elem->canonicalType);
+    }
+  }
+
+  fact.evaluationOutcome = satisfied ? "satisfied" : "unsatisfied";
+  fact.evaluationDiagnostic =
+      satisfied ? "trait predicate satisfied: " + traitName + " with " +
+                      formatResolvedTypeFacts(resolved)
+                : "trait predicate failed: " + traitName + " requires " +
+                      requirementText + " with " + formatResolvedTypeFacts(resolved);
+}
+
+void evaluateSupportsCallPredicate(RequirementPredicateFactDraft &fact,
+                                   const RequirementPredicateDefinitionContext &context) {
+  if (fact.operands.size() < 2) {
+    fact.evaluationOutcome = "invalid_evaluation";
+    fact.evaluationDiagnostic =
+        "requirement predicate /std/meta/supports_call expects at least one "
+        "type operand and one call-name argument";
+    return;
+  }
+
+  const std::size_t typeOperandCount = fact.operands.size() - 1;
+  std::vector<TypeOperandResolution> resolved;
+  resolved.reserve(typeOperandCount);
+  for (std::size_t i = 0; i < typeOperandCount; ++i) {
+    TypeOperandResolution resolution =
+        resolveTypeOperand(context, fact.operands[i], fact.predicateName);
+    if (resolution.status == TypeOperandStatus::Invalid) {
+      fact.evaluationOutcome = "invalid_evaluation";
+      fact.evaluationDiagnostic = std::move(resolution.diagnostic);
+      return;
+    }
+    if (resolution.status == TypeOperandStatus::Deferred) {
+      fact.evaluationOutcome = "invalid_evaluation";
+      fact.evaluationDiagnostic =
+          "requirement predicate evaluation deferred for unresolved type facts";
+      return;
+    }
+    resolved.push_back(std::move(resolution));
+  }
+
+  std::string callName;
+  std::string diagnostic;
+  if (!parseCompileTimeNameOperand(fact.operands.back(),
+                                   fact.predicateName,
+                                   "call",
+                                   callName,
+                                   diagnostic)) {
+    fact.evaluationOutcome = "invalid_evaluation";
+    fact.evaluationDiagnostic = std::move(diagnostic);
+    return;
+  }
+  if (callName.empty()) {
+    fact.evaluationOutcome = "invalid_evaluation";
+    fact.evaluationDiagnostic =
+        "requirement predicate /std/meta/supports_call requires non-empty call name";
+    return;
+  }
+  const std::string requestedPath =
+      callName.front() == '/' ? callName : "/" + callName;
+  const std::size_t paramCount = resolved.size() - 1;
+  const std::string expectedReturn = resolved.back().canonicalType;
+  const bool satisfied = callableSignatureMatches(context,
+                                                  requestedPath,
+                                                  resolved,
+                                                  paramCount,
+                                                  expectedReturn);
+  fact.evaluationOutcome = satisfied ? "satisfied" : "unsatisfied";
+  fact.evaluationDiagnostic =
+      satisfied ? "call support predicate satisfied: " +
+                      callableDisplaySignature(requestedPath,
+                                               resolved,
+                                               paramCount,
+                                               expectedReturn)
+                : "call support predicate failed: no visible callable matches " +
+                      callableDisplaySignature(requestedPath,
+                                               resolved,
+                                               paramCount,
+                                               expectedReturn) +
+                      " with " + formatResolvedTypeFacts(resolved);
+}
+
+void evaluateCanConstructPredicate(RequirementPredicateFactDraft &fact,
+                                   const RequirementPredicateDefinitionContext &context) {
+  if (fact.operands.empty()) {
+    fact.evaluationOutcome = "invalid_evaluation";
+    fact.evaluationDiagnostic =
+        "requirement predicate /std/meta/can_construct expects a target type";
+    return;
+  }
+
+  std::vector<TypeOperandResolution> resolved;
+  resolved.reserve(fact.operands.size());
+  for (const auto &operand : fact.operands) {
+    TypeOperandResolution resolution =
+        resolveTypeOperand(context, operand, fact.predicateName);
+    if (resolution.status == TypeOperandStatus::Invalid) {
+      fact.evaluationOutcome = "invalid_evaluation";
+      fact.evaluationDiagnostic = std::move(resolution.diagnostic);
+      return;
+    }
+    if (resolution.status == TypeOperandStatus::Deferred) {
+      fact.evaluationOutcome = "invalid_evaluation";
+      fact.evaluationDiagnostic =
+          "requirement predicate evaluation deferred for unresolved type facts";
+      return;
+    }
+    resolved.push_back(std::move(resolution));
+  }
+
+  const std::string &targetType = resolved.front().canonicalType;
+  const bool isStruct = context.structNames.count(targetType) > 0;
+  bool satisfied = false;
+  std::string expectedShape;
+  if (isStruct) {
+    const auto fields = visibleStructFields(context, targetType);
+    expectedShape = targetType + "{";
+    for (std::size_t i = 0; i < fields.size(); ++i) {
+      if (i != 0) {
+        expectedShape += ", ";
+      }
+      expectedShape += canonicalizeResolvedType(context, fields[i]->typeText);
+    }
+    expectedShape += "}";
+    if (fields.size() == resolved.size() - 1) {
+      satisfied = true;
+      for (std::size_t i = 0; i < fields.size(); ++i) {
+        const std::string fieldType =
+            canonicalizeResolvedType(context, fields[i]->typeText);
+        if (fieldType != resolved[i + 1].canonicalType) {
+          satisfied = false;
+          break;
+        }
+      }
+    }
+  } else {
+    expectedShape = targetType + "{...}";
+  }
+
+  fact.evaluationOutcome = satisfied ? "satisfied" : "unsatisfied";
+  fact.evaluationDiagnostic =
+      satisfied ? "construct predicate satisfied: " + expectedShape
+                : "construct predicate failed: " + expectedShape +
+                      " does not match requested constructor with " +
+                      formatResolvedTypeFacts(resolved);
+}
+
+void evaluateLifecyclePredicate(RequirementPredicateFactDraft &fact,
+                                const RequirementPredicateDefinitionContext &context,
+                                std::string_view helperName) {
+  if (fact.operands.size() != 1) {
+    fact.evaluationOutcome = "invalid_evaluation";
+    fact.evaluationDiagnostic = "requirement predicate " + fact.predicateName +
+                                " expects exactly one type operand";
+    return;
+  }
+  TypeOperandResolution target =
+      resolveTypeOperand(context, fact.operands.front(), fact.predicateName);
+  if (target.status == TypeOperandStatus::Invalid) {
+    fact.evaluationOutcome = "invalid_evaluation";
+    fact.evaluationDiagnostic = std::move(target.diagnostic);
+    return;
+  }
+  if (target.status == TypeOperandStatus::Deferred) {
+    fact.evaluationOutcome = "invalid_evaluation";
+    fact.evaluationDiagnostic =
+        "requirement predicate evaluation deferred for unresolved type facts";
+    return;
+  }
+
+  bool satisfied = false;
+  const bool builtinValue = isPrimitiveOrBuiltinTypeName(target.canonicalType) &&
+                            context.structNames.count(target.canonicalType) == 0;
+  if (builtinValue) {
+    satisfied = true;
+  } else {
+    const std::string helperPath =
+        typePathForCanonical(target.canonicalType) + "/" + std::string(helperName);
+    const auto matches = visibleCallableMatches(context, helperPath);
+    satisfied = !matches.empty();
+  }
+
+  fact.evaluationOutcome = satisfied ? "satisfied" : "unsatisfied";
+  fact.evaluationDiagnostic =
+      satisfied ? "lifecycle predicate satisfied: " + std::string(helperName) +
+                      " for " + target.canonicalType
+                : "lifecycle predicate failed: no visible " +
+                      std::string(helperName) + " helper for " +
+                      target.canonicalType + " with type facts: " +
+                      target.canonicalType;
+}
+
+void evaluateNamedMemberPredicate(RequirementPredicateFactDraft &fact,
+                                  const RequirementPredicateDefinitionContext &context,
+                                  bool fieldOnly) {
+  if (fact.operands.size() != 2) {
+    fact.evaluationOutcome = "invalid_evaluation";
+    fact.evaluationDiagnostic = "requirement predicate " + fact.predicateName +
+                                " expects one type operand and one name argument";
+    return;
+  }
+  TypeOperandResolution target =
+      resolveTypeOperand(context, fact.operands.front(), fact.predicateName);
+  if (target.status == TypeOperandStatus::Invalid) {
+    fact.evaluationOutcome = "invalid_evaluation";
+    fact.evaluationDiagnostic = std::move(target.diagnostic);
+    return;
+  }
+  if (target.status == TypeOperandStatus::Deferred) {
+    fact.evaluationOutcome = "invalid_evaluation";
+    fact.evaluationDiagnostic =
+        "requirement predicate evaluation deferred for unresolved type facts";
+    return;
+  }
+  std::string memberName;
+  std::string diagnostic;
+  if (!parseCompileTimeNameOperand(fact.operands.back(),
+                                   fact.predicateName,
+                                   fieldOnly ? "field" : "member",
+                                   memberName,
+                                   diagnostic)) {
+    fact.evaluationOutcome = "invalid_evaluation";
+    fact.evaluationDiagnostic = std::move(diagnostic);
+    return;
+  }
+
+  bool hasVisibleField = false;
+  for (const auto *field : visibleStructFields(context, target.canonicalType)) {
+    if (field->fieldName == memberName) {
+      hasVisibleField = true;
+      break;
+    }
+  }
+
+  bool hasVisibleHelper = false;
+  if (!fieldOnly) {
+    const std::string helperPath =
+        typePathForCanonical(target.canonicalType) + "/" + memberName;
+    hasVisibleHelper = !visibleCallableMatches(context, helperPath).empty();
+  }
+  const bool satisfied = fieldOnly ? hasVisibleField
+                                   : (hasVisibleField || hasVisibleHelper);
+  fact.evaluationOutcome = satisfied ? "satisfied" : "unsatisfied";
+  fact.evaluationDiagnostic =
+      satisfied ? "member predicate satisfied: " + target.canonicalType +
+                      "." + memberName
+                : "member predicate failed: no visible " +
+                      std::string(fieldOnly ? "field" : "field or helper") +
+                      " named " + memberName + " on " + target.canonicalType +
+                      " with type facts: " + target.canonicalType;
+}
+
+void evaluateBuiltinCapabilityPredicate(
+    RequirementPredicateFactDraft &fact,
+    const RequirementPredicateDefinitionContext &context) {
+  if (fact.predicateName == "/std/meta/has_trait") {
+    evaluateHasTraitPredicate(fact, context);
+    return;
+  }
+  if (fact.predicateName == "/std/meta/supports_call") {
+    evaluateSupportsCallPredicate(fact, context);
+    return;
+  }
+  if (fact.predicateName == "/std/meta/can_construct") {
+    evaluateCanConstructPredicate(fact, context);
+    return;
+  }
+  if (fact.predicateName == "/std/meta/can_copy") {
+    evaluateLifecyclePredicate(fact, context, "Copy");
+    return;
+  }
+  if (fact.predicateName == "/std/meta/can_move") {
+    evaluateLifecyclePredicate(fact, context, "Move");
+    return;
+  }
+  if (fact.predicateName == "/std/meta/has_field") {
+    evaluateNamedMemberPredicate(fact, context, true);
+    return;
+  }
+  if (fact.predicateName == "/std/meta/has_member") {
+    evaluateNamedMemberPredicate(fact, context, false);
+    return;
+  }
+}
+
 void evaluateRequirementPredicate(RequirementPredicateFactDraft &fact,
                                   const RequirementPredicateDefinitionContext &context) {
-  if (!isBuiltinTypeRelationPredicate(fact.predicateName)) {
+  if (!isBuiltinRequirementPredicate(fact.predicateName)) {
     fact.evaluationOutcome = "invalid_evaluation";
     fact.evaluationDiagnostic =
         "unknown requirement predicate: " + fact.predicateName;
     return;
   }
-  evaluateBuiltinTypePredicate(fact, context);
+  if (isBuiltinTypeRelationPredicate(fact.predicateName)) {
+    evaluateBuiltinTypePredicate(fact, context);
+    return;
+  }
+  evaluateBuiltinCapabilityPredicate(fact, context);
 }
 
 } // namespace
@@ -587,12 +1292,14 @@ RequirementPredicateFactDraft buildRequirementPredicateFactDraft(
         sourceText.substr(0, relation->first),
         fact.predicateName,
         0,
+        false,
         sourceLine,
         sourceColumn));
     fact.operands.push_back(classifyRequirementOperand(
         sourceText.substr(relation->first + relation->second.size()),
         fact.predicateName,
         1,
+        false,
         sourceLine,
         sourceColumn));
     if (fact.predicateKind == "predicate_call") {
@@ -621,6 +1328,7 @@ RequirementPredicateFactDraft buildRequirementPredicateFactDraft(
         fact.operands.push_back(classifyRequirementOperand(arg,
                                                            fact.predicateName,
                                                            fact.operands.size(),
+                                                           true,
                                                            sourceLine,
                                                            sourceColumn));
       }
@@ -631,10 +1339,11 @@ RequirementPredicateFactDraft buildRequirementPredicateFactDraft(
       fact.operands.push_back(classifyRequirementOperand(arg,
                                                          fact.predicateName,
                                                          fact.operands.size(),
+                                                         false,
                                                          sourceLine,
                                                          sourceColumn));
     }
-    if (isBuiltinTypeRelationPredicate(fact.predicateName)) {
+    if (isBuiltinRequirementPredicate(fact.predicateName)) {
       fact.sourceText = canonicalCallSourceText(fact.predicateName, fact.operands);
     }
     evaluateRequirementPredicate(fact, context);
@@ -646,6 +1355,7 @@ RequirementPredicateFactDraft buildRequirementPredicateFactDraft(
   fact.operands.push_back(classifyRequirementOperand(sourceText,
                                                      fact.predicateName,
                                                      0,
+                                                     false,
                                                      sourceLine,
                                                      sourceColumn));
   fact.evaluationDiagnostic = "unsupported requirement predicate shape";

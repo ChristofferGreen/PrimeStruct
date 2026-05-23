@@ -943,6 +943,7 @@ void publishLowererPreflightFacts(SemanticPublicationBuilderState &state) {
 }
 
 RequirementPredicateDefinitionContext makeRequirementPredicateDefinitionContext(
+    const Program &program,
     const Definition &definition,
     const SemanticPublicationSurface &publicationSurface) {
   RequirementPredicateDefinitionContext context;
@@ -960,6 +961,35 @@ RequirementPredicateDefinitionContext makeRequirementPredicateDefinitionContext(
     context.sumNames.insert(entry.fullPath);
   }
 
+  auto hasTransform = [](const auto &transforms, std::string_view name) {
+    for (const auto &transform : transforms) {
+      if (transform.name == name) {
+        return true;
+      }
+    }
+    return false;
+  };
+  auto returnTypeTextForDefinition = [&](const Definition &candidate) {
+    for (const auto &entry : publicationSurface.returnFacts) {
+      if (entry.definitionPath != candidate.fullPath) {
+        continue;
+      }
+      if (!entry.binding.typeName.empty()) {
+        return bindingTypeTextForSemanticProduct(entry.binding);
+      }
+      if (!entry.structPath.empty()) {
+        return entry.structPath;
+      }
+      return returnKindSnapshotName(entry.kind);
+    }
+    for (const auto &transform : candidate.transforms) {
+      if (transform.name == "return" && transform.templateArgs.size() == 1) {
+        return transform.templateArgs.front();
+      }
+    }
+    return std::string{};
+  };
+
   context.params.reserve(definition.parameters.size());
   for (const auto &param : definition.parameters) {
     BindingInfo binding;
@@ -974,6 +1004,69 @@ RequirementPredicateDefinitionContext makeRequirementPredicateDefinitionContext(
                          parseError,
                          &context.sumNames)) {
       context.params.push_back(ParameterInfo{param.name, std::move(binding), nullptr});
+    }
+  }
+
+  context.callables.reserve(program.definitions.size());
+  for (const auto &candidate : program.definitions) {
+    const std::string returnType = returnTypeTextForDefinition(candidate);
+    if (!candidate.parameters.empty() || !returnType.empty()) {
+      RequirementPredicateDefinitionContext::CallableFact callable;
+      callable.fullPath = candidate.fullPath;
+      callable.namespacePrefix = candidate.namespacePrefix;
+      callable.returnType = returnType;
+      callable.isPrivate = hasTransform(candidate.transforms, "private");
+      callable.parameterTypes.reserve(candidate.parameters.size());
+      bool paramsOk = true;
+      for (const auto &param : candidate.parameters) {
+        BindingInfo binding;
+        std::optional<std::string> restrictType;
+        std::string parseError;
+        if (!parseBindingInfo(param,
+                              candidate.namespacePrefix,
+                              context.structNames,
+                              context.importAliases,
+                              binding,
+                              restrictType,
+                              parseError,
+                              &context.sumNames)) {
+          paramsOk = false;
+          break;
+        }
+        callable.parameterTypes.push_back(bindingTypeTextForSemanticProduct(binding));
+      }
+      if (paramsOk && !callable.returnType.empty()) {
+        context.callables.push_back(std::move(callable));
+      }
+    }
+
+    if (context.structNames.count(candidate.fullPath) == 0) {
+      continue;
+    }
+    for (const auto &stmt : candidate.statements) {
+      if (!stmt.isBinding || hasTransform(stmt.transforms, "static") ||
+          isCompileTimeTypeBinding(stmt)) {
+        continue;
+      }
+      BindingInfo binding;
+      std::optional<std::string> restrictType;
+      std::string parseError;
+      if (!parseBindingInfo(stmt,
+                            candidate.namespacePrefix,
+                            context.structNames,
+                            context.importAliases,
+                            binding,
+                            restrictType,
+                            parseError,
+                            &context.sumNames)) {
+        continue;
+      }
+      RequirementPredicateDefinitionContext::StructFieldFact field;
+      field.structPath = candidate.fullPath;
+      field.fieldName = stmt.name;
+      field.typeText = bindingTypeTextForSemanticProduct(binding);
+      field.isPrivate = hasTransform(stmt.transforms, "private");
+      context.structFields.push_back(std::move(field));
     }
   }
   return context;
@@ -1003,7 +1096,7 @@ void publishRequirementPredicateFacts(SemanticPublicationBuilderState &state,
         continue;
       }
       const RequirementPredicateDefinitionContext context =
-          makeRequirementPredicateDefinitionContext(definition, publicationSurface);
+          makeRequirementPredicateDefinitionContext(state.program, definition, publicationSurface);
       for (const auto &argument : transform.arguments) {
         SemanticProgramRequirementPredicateFact fact =
             classifyRequirementPredicateFact(definition, transform, argument, context);

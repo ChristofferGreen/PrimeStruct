@@ -11,6 +11,21 @@
 namespace primec::semantics {
 
 struct RequirementPredicateDefinitionContext {
+  struct CallableFact {
+    std::string fullPath;
+    std::string namespacePrefix;
+    std::vector<std::string> parameterTypes;
+    std::string returnType;
+    bool isPrivate = false;
+  };
+
+  struct StructFieldFact {
+    std::string structPath;
+    std::string fieldName;
+    std::string typeText;
+    bool isPrivate = false;
+  };
+
   std::string definitionPath;
   std::string namespacePrefix;
   std::vector<ParameterInfo> params;
@@ -18,6 +33,8 @@ struct RequirementPredicateDefinitionContext {
   std::unordered_set<std::string> structNames;
   std::unordered_set<std::string> sumNames;
   std::unordered_map<std::string, std::string> importAliases;
+  std::vector<CallableFact> callables;
+  std::vector<StructFieldFact> structFields;
 };
 
 struct RequirementPredicateOperandFact {

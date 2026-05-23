@@ -1083,6 +1083,11 @@ Procedural compile-time genericity contract:
     `/std/meta/value_greater<A, B>()`, and
     `/std/meta/value_greater_equal<A, B>()` for compile-time integer/value
     relations such as `N > 0`.
+  The implemented capability slice evaluates `has_trait` for
+  `Additive`/`Multiplicative`/`Comparable`/`Indexable`, named
+  `supports_call`, exact positional `can_construct`, explicit lifecycle
+  `can_copy`/`can_move`, and visibility-aware `has_field`/`has_member`.
+  `field_type_equals` and the value comparison predicates remain deferred.
 - Builtin requirement predicates live under `/std/meta/*`; readable predicate
   syntax may rewrite to these builtin helpers or compiler-recognized facts, but
   user helpers should not collide with the builtin namespace. Public

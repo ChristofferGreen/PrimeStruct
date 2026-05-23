@@ -83,9 +83,9 @@ Task template:
 
 ### Ready Now (Parallel-Candidate Leaves; No Unmet TODO Dependencies)
 
-- TODO-4344: Add capability and trait support predicates | track:
-  generic-requirements | primary surface: initial capability/trait predicate
-  evaluation over semantic facts
+- TODO-4352: Add compile-time VM facade and host | track:
+  generic-requirements | primary surface: compiler-internal compile-time
+  evaluation facade boundary
 
 ### Parallel Work Tracks (Current)
 
@@ -118,9 +118,9 @@ Task template:
   direct-call and layout metadata, and TODO-4340 added docs and positive
   examples, and TODO-4546 added negative conformance; no procedural-genericity
   leaf is ready.
-- `generic-requirements`: TODO-4331, TODO-4334, TODO-4341, TODO-4342, and
-  TODO-4343 are complete; TODO-4344 is ready after builtin type relation
-  predicates.
+- `generic-requirements`: TODO-4331, TODO-4334, TODO-4341, TODO-4342,
+  TODO-4343, and TODO-4344 are complete; TODO-4352 is ready after initial
+  capability predicate evaluation.
 
 ### Immediate Next 10 (Track Successors; Not Ready Until Dependencies Land)
 
@@ -149,15 +149,13 @@ Task template:
   prerequisite split out of TODO-4278
 - Procedural compile-time genericity: none active after TODO-4340 and
   TODO-4546
-- Generic constraint and compile-time flow alignment: TODO-4344 -> TODO-4352
-  -> TODO-4353
+- Generic constraint and compile-time flow alignment: TODO-4352 -> TODO-4353
   -> TODO-4354 -> TODO-4355 -> TODO-4356 -> TODO-4357 -> TODO-4345
   -> TODO-4346 -> TODO-4358 -> TODO-4347 -> TODO-4351 -> TODO-4348
   -> TODO-4359 -> TODO-4349 -> TODO-4350
 
 ### Execution Queue (Recommended Track Order)
 
-- TODO-4344: Add capability and trait support predicates
 - TODO-4352: Add compile-time VM facade and host
 - TODO-4353: Add typed compile-time value model
 - TODO-4354: Factor reusable VM interpreter kernel
@@ -203,7 +201,7 @@ Task template:
 | Stdlib ADT migration for `Maybe` and `Result` | none |
 | Generic type packs and tuple stdlib surface | TODO-4274, TODO-4273, TODO-4277, TODO-4278 |
 | Procedural compile-time genericity and local type facts | none |
-| Generic constraints and compile-time flow control | TODO-4344, TODO-4352, TODO-4353, TODO-4354, TODO-4355, TODO-4356, TODO-4357, TODO-4345, TODO-4346, TODO-4358, TODO-4347, TODO-4351, TODO-4348, TODO-4359, TODO-4349, TODO-4350 |
+| Generic constraints and compile-time flow control | TODO-4352, TODO-4353, TODO-4354, TODO-4355, TODO-4356, TODO-4357, TODO-4345, TODO-4346, TODO-4358, TODO-4347, TODO-4351, TODO-4348, TODO-4359, TODO-4349, TODO-4350 |
 
 ### Validation Coverage Snapshot
 
@@ -230,7 +228,7 @@ Task template:
 | Maybe/Result sum migration conformance | none |
 | Generic type-pack and tuple conformance | TODO-4274, TODO-4273, TODO-4277, TODO-4278 |
 | Procedural compile-time genericity conformance | none |
-| Generic constraint and compile-time flow conformance | TODO-4344, TODO-4352, TODO-4353, TODO-4354, TODO-4355, TODO-4356, TODO-4357, TODO-4345, TODO-4346, TODO-4358, TODO-4347, TODO-4351, TODO-4348, TODO-4359, TODO-4349, TODO-4350 |
+| Generic constraint and compile-time flow conformance | TODO-4352, TODO-4353, TODO-4354, TODO-4355, TODO-4356, TODO-4357, TODO-4345, TODO-4346, TODO-4358, TODO-4347, TODO-4351, TODO-4348, TODO-4359, TODO-4349, TODO-4350 |
 
 ### Vector/Map Bridge Contract Summary
 
@@ -813,48 +811,6 @@ Task template:
     - `./scripts/compile.sh --release` passes.
   - stop_rule: Stop once multi-wait returns stdlib `tuple<...>` or the missing
     task-side prerequisite is split into an explicit multithreading TODO.
-
-- [ ] TODO-4344: Add capability and trait support predicates
-  - owner: ai
-  - created_at: 2026-05-04
-  - phase: Generic constraint and compile-time flow alignment
-  - depends_on: TODO-4342, TODO-4343
-  - scope: Implement the first capability/trait predicate slice for named
-    operation support, construction availability, and one lifecycle
-    availability query.
-  - implementation_notes:
-    - Start from transform-style trait constraints, lifecycle helper
-      validation, helper/call resolution, struct constructor validation, and
-      `meta.has_trait<...>` documentation.
-    - Use C++'s practical generic toolbox as inspiration for the initial
-      builtin surface while keeping PrimeStruct facts typed and deterministic:
-      constructible, copyable, movable, comparable, callable, field/member
-      presence, and operation/trait support, but implement only the minimal
-      subset needed for this leaf.
-    - Reflection-style predicates must obey normal visibility: private fields
-      and helpers are invisible outside their visibility boundary unless a
-      later privileged reflection feature explicitly authorizes access.
-    - Define the exact bridge from legacy trait transforms to requirement
-      facts so old code stays compatible while new generic code has one
-      canonical predicate vocabulary.
-    - Treat support checks as explicit semantic facts; do not execute arbitrary
-      runtime code to prove a capability.
-  - acceptance:
-    - Requirement predicates can check at least one arithmetic/comparison
-      trait, one constructor shape, and one lifecycle capability.
-    - Other planned capability names are listed as deferred or split into
-      follow-up TODOs if they are not implemented in this slice.
-    - Failed capability checks produce diagnostics at the requirement site and
-      include the call-site type facts that caused the failure.
-    - Overloaded helpers, imported traits, and generated types produce
-      deterministic support results.
-    - Field/member predicates cannot observe private fields from outside the
-      declaring type's visible API.
-    - Compatibility behavior for existing transform-style traits is covered by
-      tests or documented as still pending with a narrower follow-up TODO.
-    - `./scripts/compile.sh --release` passes.
-  - stop_rule: Stop once generic code can state useful capability
-    requirements without depending on body-instantiation failure.
 
 - [ ] TODO-4352: Add compile-time VM facade and host
   - owner: ai

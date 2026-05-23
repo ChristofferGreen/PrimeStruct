@@ -283,6 +283,174 @@ main() {
   CHECK(error.empty());
 }
 
+TEST_CASE("require capability predicates accept trait constructor lifecycle and call facts") {
+  const std::string source = R"(
+[struct]
+Vec2 {
+  [i32] x
+  [i32] y
+
+  Copy([Reference<Self>] other) {
+  }
+}
+
+[return<Vec2>]
+/Vec2/plus([Vec2] left, [Vec2] right) {
+  return(Vec2{plus(left.x, right.x), plus(left.y, right.y)})
+}
+
+[return<bool>]
+/Vec2/equal([Vec2] left, [Vec2] right) {
+  return(left.x == right.x)
+}
+
+[return<bool>]
+/Vec2/less_than([Vec2] left, [Vec2] right) {
+  return(left.x < right.x)
+}
+
+[return<Vec2> require(has_trait<Vec2>(Additive), has_trait<Vec2>(Comparable),
+                      can_construct<Vec2, i32, i32>(), can_copy<Vec2>(),
+                      supports_call<Vec2, Vec2, Vec2>(/Vec2/plus),
+                      has_field<Vec2>(x), has_member<Vec2>(plus))]
+makeVec([Vec2] value) {
+  return(value)
+}
+
+[return<int>]
+main() {
+  [Vec2] value{Vec2{1i32, 2i32}}
+  [Vec2] copy{makeVec(value)}
+  return(copy.x)
+}
+)";
+
+  primec::testing::CompilePipelineBoundaryDumps dumps;
+  std::string error;
+  const bool captured = primec::testing::captureSemanticBoundaryDumpsForTesting(
+      source, "/main", dumps, error);
+  INFO(error);
+  REQUIRE(captured);
+  CHECK(error.empty());
+  CHECK(dumps.semanticProduct.find(
+            "predicate_name=\"/std/meta/has_trait\"") != std::string::npos);
+  CHECK(dumps.semanticProduct.find(
+            "predicate_name=\"/std/meta/can_construct\"") != std::string::npos);
+  CHECK(dumps.semanticProduct.find(
+            "predicate_name=\"/std/meta/can_copy\"") != std::string::npos);
+  CHECK(dumps.semanticProduct.find(
+            "predicate_name=\"/std/meta/supports_call\"") != std::string::npos);
+  CHECK(dumps.semanticProduct.find(
+            "predicate_name=\"/std/meta/has_field\"") != std::string::npos);
+  CHECK(dumps.semanticProduct.find("evaluation_outcome=\"satisfied\"") !=
+        std::string::npos);
+}
+
+TEST_CASE("require capability predicates reject failed trait checks with type facts") {
+  const std::string source = R"(
+[struct]
+Vec2 {
+  [i32] x
+  [i32] y
+}
+
+[return<bool>]
+/Vec2/equal([Vec2] left, [Vec2] right) {
+  return(left.x == right.x)
+}
+
+[return<Vec2> require(has_trait<Vec2>(Comparable))]
+needsComparable([Vec2] value) {
+  return(value)
+}
+
+[return<int>]
+main() {
+  [Vec2] value{Vec2{1i32, 2i32}}
+  [Vec2] copy{needsComparable(value)}
+  return(copy.x)
+}
+)";
+
+  std::string error;
+  const bool validated = validateProgramThroughCompilePipeline(source,
+                                                              "/main",
+                                                              {"io_out", "io_err"},
+                                                              {"io_out", "io_err"},
+                                                              error);
+  INFO(error);
+  CHECK_FALSE(validated);
+  CHECK(error.find("requirement predicate not satisfied: /std/meta/has_trait") !=
+        std::string::npos);
+  CHECK(error.find("trait predicate failed: Comparable") != std::string::npos);
+  CHECK(error.find("type facts: /Vec2") != std::string::npos);
+}
+
+TEST_CASE("require field predicates cannot observe private fields outside owner") {
+  const std::string source = R"(
+[struct]
+SecretBox {
+  [private i32] secret
+  [i32] visible
+}
+
+[return<int> require(has_field<SecretBox>(secret))]
+readSecret([SecretBox] box) {
+  return(box.visible)
+}
+
+[return<int>]
+main() {
+  return(0i32)
+}
+)";
+
+  std::string error;
+  const bool validated = validateProgramThroughCompilePipeline(source,
+                                                              "/main",
+                                                              {"io_out", "io_err"},
+                                                              {"io_out", "io_err"},
+                                                              error);
+  INFO(error);
+  CHECK_FALSE(validated);
+  CHECK(error.find("requirement predicate not satisfied: /std/meta/has_field") !=
+        std::string::npos);
+  CHECK(error.find("no visible field named secret on /SecretBox") !=
+        std::string::npos);
+}
+
+TEST_CASE("require call predicates resolve overload-style helpers deterministically") {
+  const std::string source = R"(
+namespace Ops {
+  [return<i32>]
+  op__ov0([i32] value) {
+    return(value)
+  }
+
+  [return<f32>]
+  op__ov1([f32] value) {
+    return(value)
+  }
+}
+
+[return<int> require(supports_call<i32, i32>(/Ops/op),
+                     supports_call<f32, f32>(/Ops/op))]
+main() {
+  return(0i32)
+}
+)";
+
+  std::string error;
+  const bool validated = validateProgramThroughCompilePipeline(source,
+                                                              "/main",
+                                                              {"io_out", "io_err"},
+                                                              {"io_out", "io_err"},
+                                                              error);
+  INFO(error);
+  CHECK(validated);
+  CHECK(error.empty());
+}
+
 TEST_CASE("require builtin type predicates diagnose invalid operands and reserved names") {
   const std::string unknownSource = R"(
 [return<int> require(type_contains<typeof<value>, i32>())]

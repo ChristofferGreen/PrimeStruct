@@ -1614,6 +1614,11 @@ TEST_CASE("generic requirement predicate surface stays source locked") {
         std::string::npos);
   CHECK(primeStructDoc.find("`/std/meta/value_greater_equal<A, B>()`") !=
         std::string::npos);
+  CHECK(primeStructDoc.find("The implemented capability slice evaluates `has_trait` for\n"
+                            "  `Additive`/`Multiplicative`/`Comparable`/`Indexable`") !=
+        std::string::npos);
+  CHECK(syntaxSpec.find("`field_type_equals` and the value comparison predicates remain deferred.") !=
+        std::string::npos);
   CHECK(primeStructDoc.find("Existing transform-style trait constraints such as `[Additive<i32>]` remain\n"
                             "source-compatible compatibility vocabulary") !=
         std::string::npos);
@@ -1687,9 +1692,9 @@ TEST_CASE("todo queue and skipped doctest debt stay source locked") {
   CHECK(todo.find("### Ready Now (Parallel-Candidate Leaves; No Unmet TODO Dependencies)") !=
         std::string::npos);
   CHECK(todo.find("### Ready Now (Parallel-Candidate Leaves; No Unmet TODO Dependencies)\n\n"
-                  "- TODO-4344: Add capability and trait support predicates | track:\n"
-                  "  generic-requirements | primary surface: initial capability/trait predicate\n"
-                  "  evaluation over semantic facts") !=
+                  "- TODO-4352: Add compile-time VM facade and host | track:\n"
+                  "  generic-requirements | primary surface: compiler-internal compile-time\n"
+                  "  evaluation facade boundary") !=
         std::string::npos);
   CHECK(todo.find("- `soa-zero-audit`: TODO-4529 replaced the residue inventory with a strict\n"
                   "  zero-production-trace audit; no SoA zero-audit leaf is ready.") !=
@@ -1717,9 +1722,9 @@ TEST_CASE("todo queue and skipped doctest debt stay source locked") {
                   "  examples, and TODO-4546 added negative conformance; no procedural-genericity\n"
                   "  leaf is ready.") !=
         std::string::npos);
-  CHECK(todo.find("- `generic-requirements`: TODO-4331, TODO-4334, TODO-4341, TODO-4342, and\n"
-                  "  TODO-4343 are complete; TODO-4344 is ready after builtin type relation\n"
-                  "  predicates.") !=
+  CHECK(todo.find("- `generic-requirements`: TODO-4331, TODO-4334, TODO-4341, TODO-4342,\n"
+                  "  TODO-4343, and TODO-4344 are complete; TODO-4352 is ready after initial\n"
+                  "  capability predicate evaluation.") !=
         std::string::npos);
   CHECK(todo.find("### Immediate Next 10 (Track Successors; Not Ready Until Dependencies Land)\n\n"
                   "- TODO-4545: Implement first structured task spawn/wait substrate\n"
@@ -1739,7 +1744,11 @@ TEST_CASE("todo queue and skipped doctest debt stay source locked") {
   CHECK(todo.find("- Deferred SoA finish: TODO-4252") ==
         std::string::npos);
   CHECK(todo.find("### Execution Queue (Recommended Track Order)\n\n"
-                  "- TODO-4344: Add capability and trait support predicates") !=
+                  "- TODO-4352: Add compile-time VM facade and host") !=
+        std::string::npos);
+  CHECK(todo.find("- [ ] TODO-4344: Add capability and trait support predicates") ==
+        std::string::npos);
+  CHECK(todoFinished.find("TODO-4344: Add capability and trait support predicates") !=
         std::string::npos);
   CHECK(todo.find("- [ ] TODO-4343: Add builtin type relation predicates") ==
         std::string::npos);
@@ -1808,7 +1817,7 @@ TEST_CASE("todo queue and skipped doctest debt stay source locked") {
   CHECK(todoFinished.find("TODO-4519: Delete `soa_vector` compatibility seams") !=
         std::string::npos);
   const std::vector<std::string> semanticPhaseQueue = {
-      "TODO-4344: Add capability and trait support predicates",
+      "TODO-4352: Add compile-time VM facade and host",
   };
   for (const std::string &entry : semanticPhaseQueue) {
     CHECK(todo.find("- " + entry) != std::string::npos);
@@ -1862,7 +1871,7 @@ TEST_CASE("todo queue and skipped doctest debt stay source locked") {
         std::string::npos);
   CHECK(todo.find("  - depends_on: TODO-4277, TODO-4545") !=
         std::string::npos);
-  CHECK(todo.find("  - depends_on: TODO-4342, TODO-4343") !=
+  CHECK(todoFinished.find("  - depends_on: TODO-4342, TODO-4343") !=
         std::string::npos);
   CHECK(todoFinished.find("  - depends_on: TODO-4342, TODO-4335") !=
         std::string::npos);

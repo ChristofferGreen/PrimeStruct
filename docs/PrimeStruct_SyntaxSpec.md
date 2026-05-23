@@ -846,6 +846,11 @@ Requirement rules:
     `/std/meta/value_less<A, B>()`, `/std/meta/value_less_equal<A, B>()`,
     `/std/meta/value_greater<A, B>()`, and
     `/std/meta/value_greater_equal<A, B>()`.
+  The implemented capability slice evaluates `has_trait` for
+  `Additive`/`Multiplicative`/`Comparable`/`Indexable`, named
+  `supports_call`, exact positional `can_construct`, explicit lifecycle
+  `can_copy`/`can_move`, and visibility-aware `has_field`/`has_member`.
+  `field_type_equals` and the value comparison predicates remain deferred.
   User-defined requirement predicates use the same compile-time execution model
   and return ordinary `bool` at the source level; semantic validation wraps
   `true` and `false` into typed requirement facts.

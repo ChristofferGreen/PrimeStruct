@@ -6,6 +6,38 @@ Legend:
 Finished items are periodically archived here from `docs/todo.md`; section headers record the archive date.
 
 **Todo Completion (May 23, 2026)**
+- [x] TODO-4344: Add capability and trait support predicates
+  - owner: ai
+  - created_at: 2026-05-04
+  - finished_at: 2026-05-23
+  - phase: Generic constraint and compile-time flow alignment
+  - parallel_track: generic-requirements
+  - depends_on: TODO-4342, TODO-4343
+  - scope: Implement the first capability/trait predicate slice for named
+    operation support, construction availability, and one lifecycle
+    availability query.
+  - outcome:
+    - Extended shared `RequirementPredicateFacts` evaluation so semantic
+      validation and semantic-product publication agree on capability
+      predicate canonicalization and outcomes.
+    - Added deterministic support checks for `has_trait` over the existing
+      Additive/Multiplicative/Comparable/Indexable trait vocabulary, including
+      the transform-style trait bridge through equivalent helper signatures.
+    - Added `supports_call`, exact positional `can_construct`,
+      `can_copy`/`can_move`, `has_field`, and `has_member` fact evaluation
+      over already-built semantic callable and struct-field facts.
+    - Kept support checks explicit and non-executing; no user runtime code is
+      invoked to prove a capability.
+    - Preserved normal visibility for reflection-style field and member
+      predicates so private fields/helpers are invisible outside the declaring
+      type boundary.
+    - Documented deferred builtin predicates: `field_type_equals` and
+      compile-time value comparison predicates remain for later slices.
+  - validation:
+    - Focused release validation was selected under the lite workflow; full
+      `./scripts/compile.sh --release` remains deferred to parent/root
+      validation.
+
 - [x] TODO-4343: Add builtin type relation predicates
   - owner: ai
   - created_at: 2026-05-04
