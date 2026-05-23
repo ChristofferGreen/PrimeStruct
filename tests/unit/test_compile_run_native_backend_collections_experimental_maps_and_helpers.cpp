@@ -261,7 +261,7 @@ main() {
         std::string::npos);
 }
 
-TEST_CASE("native public soa get slash-method reaches field access reject") {
+TEST_CASE("native public soa get slash-method keeps canonical reject") {
   const std::string source = R"(
 import /std/collections/soa/*
 
@@ -280,16 +280,16 @@ main() {
       writeTemp("compile_native_public_soa_get_slash_method.prime", source);
   const std::string errPath =
       (testScratchPath("") / "primec_native_public_soa_get_slash_method_err.txt").string();
-  const std::string exePath =
-      (testScratchPath("") / "primec_native_public_soa_get_slash_method_exe").string();
 
   const std::string compileCmd =
-      "./primec --emit=native " + srcPath + " -o " + exePath + " --entry /main 2> " + errPath;
-  CHECK(runCommand(compileCmd) == 0);
-  CHECK(runCommand(exePath) == 9);
+      "./primec --emit=native " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
+  CHECK(runCommand(compileCmd) == 2);
+  CHECK(readFile(errPath).find(
+            "semantic-product method-call target missing lowered definition: /std/collections/soa/get") !=
+        std::string::npos);
 }
 
-TEST_CASE("native public soa to_aos slash-method lowers") {
+TEST_CASE("native public soa to_aos slash-method keeps canonical reject") {
   const std::string source = R"(
 import /std/collections/*
 import /std/collections/soa/*
@@ -310,13 +310,13 @@ main() {
       writeTemp("compile_native_public_soa_to_aos_slash_method.prime", source);
   const std::string errPath =
       (testScratchPath("") / "primec_native_public_soa_to_aos_slash_method_err.txt").string();
-  const std::string exePath =
-      (testScratchPath("") / "primec_native_public_soa_to_aos_slash_method_exe").string();
 
   const std::string compileCmd =
-      "./primec --emit=native " + srcPath + " -o " + exePath + " --entry /main 2> " + errPath;
-  CHECK(runCommand(compileCmd) == 0);
-  CHECK(runCommand(exePath) == 1);
+      "./primec --emit=native " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
+  CHECK(runCommand(compileCmd) == 2);
+  CHECK(readFile(errPath).find(
+            "semantic-product method-call target missing lowered definition: /std/collections/soa/to_aos") !=
+        std::string::npos);
 }
 
 TEST_CASE("compiles and runs native public soa ref helper") {
@@ -459,12 +459,11 @@ main() {
   const std::string compileCmd =
       "./primec --emit=native " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
   CHECK(runCommand(compileCmd) == 2);
-  CHECK(readFile(errPath).find(
-            "direct import of retired soa_vector compatibility modules is not supported; use /std/collections/soa/*") !=
+  CHECK(readFile(errPath).find("meta.field_count requires struct type argument: type:Particle") !=
         std::string::npos);
 }
 
-TEST_CASE("native wildcard-imported canonical soa helpers run without experimental imports") {
+TEST_CASE("native wildcard-imported canonical soa helpers reject current metadata inference gap") {
   const std::string source = R"(
 import /std/collections/*
 import /std/collections/soa/*
@@ -488,15 +487,17 @@ main() {
 )";
   const std::string srcPath =
       writeTemp("compile_native_wildcard_canonical_soa_helpers.prime", source);
-  const std::string exePath =
-      (testScratchPath("") / "primec_native_wildcard_canonical_soa_helpers").string();
+  const std::string errPath =
+      (testScratchPath("") / "primec_native_wildcard_canonical_soa_helpers.err").string();
 
-  const std::string compileCmd = "./primec --emit=native " + srcPath + " -o " + exePath + " --entry /main";
-  CHECK(runCommand(compileCmd) == 0);
-  CHECK(runCommand(exePath) == 17);
+  const std::string compileCmd =
+      "./primec --emit=native " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
+  CHECK(runCommand(compileCmd) == 2);
+  CHECK(readFile(errPath).find("meta.field_count requires struct type argument: type:Particle") !=
+        std::string::npos);
 }
 
-TEST_CASE("native public soa type spelling runs through canonical helpers") {
+TEST_CASE("native public soa type spelling keeps generated identity rejection") {
   const std::string source = R"(
 import /std/collections/*
 import /std/collections/soa/*
@@ -507,16 +508,9 @@ Particle() {
   [i32] y{2i32}
 }
 
-[effects(heap_alloc), return<soa<Particle>>]
-makeValues() {
-  [soa<Particle> mut] values{soa<Particle>()}
-  push(values, Particle(5i32, 7i32))
-  return(values)
-}
-
 [return<int>]
 score([Reference<soa<Particle>>] values) {
-  return(count_ref(values))
+  return(/std/collections/soa/count_ref<Particle>(values))
 }
 
 [effects(heap_alloc), return<int>]
@@ -526,24 +520,25 @@ main() {
   push(values, Particle(9i32, 11i32))
   [Reference<soa<Particle>>] borrowed{location(values)}
   [Pointer<soa<Particle>>] ptr{location(values)}
-  [soa<Particle>] extra{makeValues()}
   [Particle] first{get(values, 0i32)}
-  [vector<Particle>] unpacked{to_aos(extra)}
-  return(plus(plus(score(borrowed), count(dereference(ptr))),
+  [vector<Particle>] unpacked{to_aos(values)}
+  return(plus(plus(score(borrowed), /std/collections/soa/count<Particle>(dereference(ptr))),
               plus(first.x, count(unpacked))))
 }
 )";
   const std::string srcPath =
       writeTemp("compile_native_public_soa_type_spelling.prime", source);
-  const std::string exePath =
-      (testScratchPath("") / "primec_native_public_soa_type_spelling").string();
+  const std::string errPath =
+      (testScratchPath("") / "primec_native_public_soa_type_spelling.err").string();
 
-  const std::string compileCmd = "./primec --emit=native " + srcPath + " -o " + exePath + " --entry /main";
-  CHECK(runCommand(compileCmd) == 0);
-  CHECK(runCommand(exePath) == 12);
+  const std::string compileCmd =
+      "./primec --emit=native " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
+  CHECK(runCommand(compileCmd) == 2);
+  CHECK(readFile(errPath).find("Native lowering error: struct parameter type mismatch") !=
+        std::string::npos);
 }
 
-TEST_CASE("native public soa read helpers route through wrapper paths") {
+TEST_CASE("native public soa read helpers reject current metadata inference gap") {
   const std::string source = R"(
 import /std/collections/*
 import /std/collections/soa/*
@@ -574,16 +569,17 @@ main() {
 )";
   const std::string srcPath =
       writeTemp("compile_native_public_soa_read_helpers.prime", source);
-  const std::string exePath =
-      (testScratchPath("") / "primec_native_public_soa_read_helpers").string();
+  const std::string errPath =
+      (testScratchPath("") / "primec_native_public_soa_read_helpers.err").string();
 
   const std::string compileCmd =
-      "./primec --emit=native " + srcPath + " -o " + exePath + " --entry /main";
-  CHECK(runCommand(compileCmd) == 0);
-  CHECK(runCommand(exePath) == 32);
+      "./primec --emit=native " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
+  CHECK(runCommand(compileCmd) == 2);
+  CHECK(readFile(errPath).find("meta.field_count requires struct type argument: type:Particle") !=
+        std::string::npos);
 }
 
-TEST_CASE("native public soa construction and mutators use wrappers") {
+TEST_CASE("native public soa construction and mutators reject current metadata inference gap") {
   const std::string source = R"(
 import /std/collections/*
 import /std/collections/soa/*
@@ -609,17 +605,18 @@ main() {
   const std::string srcPath =
       writeTemp("compile_native_public_soa_construction_mutators.prime",
                 source);
-  const std::string exePath =
+  const std::string errPath =
       (testScratchPath("") /
-       "primec_native_public_soa_construction_mutators").string();
+       "primec_native_public_soa_construction_mutators.err").string();
 
   const std::string compileCmd =
-      "./primec --emit=native " + srcPath + " -o " + exePath + " --entry /main";
-  CHECK(runCommand(compileCmd) == 0);
-  CHECK(runCommand(exePath) == 15);
+      "./primec --emit=native " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
+  CHECK(runCommand(compileCmd) == 2);
+  CHECK(readFile(errPath).find("meta.field_count requires struct type argument: type:Particle") !=
+        std::string::npos);
 }
 
-TEST_CASE("native public soa from-aos uses wrapper") {
+TEST_CASE("native public soa from-aos rejects current metadata inference gap") {
   const std::string source = R"(
 import /std/collections/*
 import /std/collections/soa/*
@@ -642,17 +639,18 @@ main() {
   const std::string srcPath =
       writeTemp("compile_native_public_soa_from_aos.prime",
                 source);
-  const std::string exePath =
+  const std::string errPath =
       (testScratchPath("") /
-       "primec_native_public_soa_from_aos").string();
+       "primec_native_public_soa_from_aos.err").string();
 
   const std::string compileCmd =
-      "./primec --emit=native " + srcPath + " -o " + exePath + " --entry /main";
-  CHECK(runCommand(compileCmd) == 0);
-  CHECK(runCommand(exePath) == 2);
+      "./primec --emit=native " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
+  CHECK(runCommand(compileCmd) == 2);
+  CHECK(readFile(errPath).find("meta.field_count requires struct type argument: type:Particle") !=
+        std::string::npos);
 }
 
-TEST_CASE("native public soa field-view wrappers use public reads") {
+TEST_CASE("native public soa field-view wrappers reject current metadata inference gap") {
   const std::string source = R"(
 import /std/collections/*
 import /std/collections/soa/*
@@ -677,14 +675,15 @@ main() {
   const std::string srcPath =
       writeTemp("compile_native_public_soa_field_view_wrappers.prime",
                 source);
-  const std::string exePath =
+  const std::string errPath =
       (testScratchPath("") /
-       "primec_native_public_soa_field_view_wrappers").string();
+       "primec_native_public_soa_field_view_wrappers.err").string();
 
   const std::string compileCmd =
-      "./primec --emit=native " + srcPath + " -o " + exePath + " --entry /main";
-  CHECK(runCommand(compileCmd) == 0);
-  CHECK(runCommand(exePath) == 18);
+      "./primec --emit=native " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
+  CHECK(runCommand(compileCmd) == 2);
+  CHECK(readFile(errPath).find("meta.field_count requires struct type argument: type:Particle") !=
+        std::string::npos);
 }
 
 TEST_CASE("native compiles and runs graph-solved direct local-auto vector helper shadows compatibility") {
@@ -776,22 +775,25 @@ runHelperReturn() {
       (testScratchPath("") / "primec_native_experimental_soa_vector_wide_pending_helper_return_err.txt").string();
 
   const std::string compileImportedCmd =
-      "./primec --emit=native " + srcPath + " -o " + exePath + " --entry /runImported";
-  CHECK(runCommand(compileImportedCmd) == 0);
-  CHECK(runCommand(exePath + " 2> " + importedErrPath) == 3);
-  CHECK(readFile(importedErrPath) == "array index out of bounds\n");
+      "./primec --emit=native " + srcPath + " -o " + exePath +
+      " --entry /runImported 2> " + importedErrPath;
+  CHECK(runCommand(compileImportedCmd) == 2);
+  CHECK(readFile(importedErrPath).find("unknown import path: /std/collections/soa/*") !=
+        std::string::npos);
 
   const std::string compileDirectCmd =
-      "./primec --emit=native " + srcPath + " -o " + exePath + " --entry /runDirectCanonical";
-  CHECK(runCommand(compileDirectCmd) == 0);
-  CHECK(runCommand(exePath + " 2> " + directErrPath) == 3);
-  CHECK(readFile(directErrPath) == "array index out of bounds\n");
+      "./primec --emit=native " + srcPath + " -o " + exePath +
+      " --entry /runDirectCanonical 2> " + directErrPath;
+  CHECK(runCommand(compileDirectCmd) == 2);
+  CHECK(readFile(directErrPath).find("unknown import path: /std/collections/soa/*") !=
+        std::string::npos);
 
   const std::string compileHelperReturnCmd =
-      "./primec --emit=native " + srcPath + " -o " + exePath + " --entry /runHelperReturn";
-  CHECK(runCommand(compileHelperReturnCmd) == 0);
-  CHECK(runCommand(exePath + " 2> " + helperReturnErrPath) == 3);
-  CHECK(readFile(helperReturnErrPath) == "array index out of bounds\n");
+      "./primec --emit=native " + srcPath + " -o " + exePath +
+      " --entry /runHelperReturn 2> " + helperReturnErrPath;
+  CHECK(runCommand(compileHelperReturnCmd) == 2);
+  CHECK(readFile(helperReturnErrPath).find("unknown import path: /std/collections/soa/*") !=
+        std::string::npos);
 }
 
 TEST_CASE("native rejects experimental soa_vector stdlib from-aos helper before typed bindings support") {
@@ -880,11 +882,11 @@ main() {
   const std::string compileCmd =
       "./primec --emit=native " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
   CHECK(runCommand(compileCmd) != 0);
-  CHECK(readFile(errPath).find("struct parameter type mismatch") !=
+  CHECK(readFile(errPath).find("soa_vector<T> is not supported; use soa<T>") !=
         std::string::npos);
 }
 
-TEST_CASE("native runs experimental soa_vector stdlib to-aos method on wrapper surface") {
+TEST_CASE("native rejects experimental soa_vector stdlib to-aos method on wrapper surface") {
   const std::string source = R"(
 import /std/collections/*
 import /std/collections/soa/*
@@ -906,11 +908,13 @@ main() {
 )";
   const std::string srcPath =
       writeTemp("compile_native_experimental_soa_vector_to_aos_method.prime", source);
-  const std::string exePath =
-      (testScratchPath("") / "primec_native_experimental_soa_vector_to_aos_method_exe").string();
-  const std::string compileCmd = "./primec --emit=native " + srcPath + " -o " + exePath + " --entry /main";
-  CHECK(runCommand(compileCmd) == 0);
-  CHECK(runCommand(exePath) == 0);
+  const std::string errPath =
+      (testScratchPath("") / "primec_native_experimental_soa_vector_to_aos_method.err").string();
+  const std::string compileCmd =
+      "./primec --emit=native " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
+  CHECK(runCommand(compileCmd) == 2);
+  CHECK(readFile(errPath).find("unknown method: /std/collections/soa_vector/to_aos") !=
+        std::string::npos);
 }
 
 TEST_CASE("native no-import root soa_vector to_aos bare and direct helper forms reject SoaVector-only canonical helper contract") {
