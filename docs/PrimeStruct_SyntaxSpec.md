@@ -915,6 +915,41 @@ Requirement rules:
   unsupported operand shapes, and exhausted budgets before execution. Prepared
   callables do not require final backend IR, native/C++ emission, or launching
   `primevm`.
+- Compile-time execution is pure unless the enclosing definition declares
+  phase-qualified effects with `effects<compiletime>(...)`. Pure compile-time
+  helpers may read semantic facts, compile-time arguments, template arguments,
+  type/symbol metadata, literal-backed strings, and deterministic source or
+  module metadata that semantic validation already loaded. They may use
+  arithmetic, comparisons, boolean logic, deterministic branches, and pure
+  compile-time helper calls over typed compile-time values.
+- Runtime `effects(...)` and compile-time `effects<compiletime>(...)` share
+  effect names but authorize different phases. A runtime effect does not
+  authorize compile-time host access, and a compile-time effect does not grant
+  runtime permission. Phase-qualified compile-time effects are required before
+  a helper may consult deterministic host services such as import-graph source
+  reads, package metadata, or explicit compile-time diagnostics/tracing; those
+  services must provide provenance and cache fingerprints.
+- Compile-time evaluation always rejects runtime VM/backend behavior, runtime
+  heap allocation, addresses, stack slots, runtime argv/stdin/stdout/stderr,
+  debugger state, wall-clock time, randomness, environment variables, process
+  state, network state, and unordered host iteration that can affect results.
+- Compile-time termination uses independent budgets for callable preparation,
+  call depth and recursion edges, evaluator steps, typed value/storage size,
+  imported host bytes read by effectful helpers, and diagnostic/provenance
+  payload size. Budget exhaustion is reported as invalid evaluation instead of
+  falling back to runtime execution.
+- Compile-time cache keys include the language/semantic-product version,
+  predicate/helper identity, normalized compile-time arguments, canonical
+  visible imports sorted by path, semantic facts read with provenance handles,
+  active compile-time effects, host-service fingerprints, and evaluator policy
+  version. Import order and unordered container iteration cannot change the
+  key.
+- Compile-time diagnostics use stable categories: `satisfied`, `unsatisfied`,
+  `invalid-evaluation`, `denied-effect`, `budget-exhausted`,
+  `cache-corrupt-or-version-mismatch`, and `internal-compiler-error`.
+  Diagnostics include the predicate/helper path, source span, selected
+  specialization, consulted effects, relevant budget category, and the semantic
+  facts or host fingerprints that determined the result.
 - Failed requirements on a direct call are diagnostics, not C++-style
   substitution failure by accident. A later overload-selection integration may
   use requirements to reject non-viable candidates, but it must preserve

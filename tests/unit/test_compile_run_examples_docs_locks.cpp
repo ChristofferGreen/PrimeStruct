@@ -1658,6 +1658,19 @@ TEST_CASE("generic requirement predicate surface stays source locked") {
                             "  introduced by the selected statement branch receive a deterministic\n"
                             "  branch-scoped identity") !=
         std::string::npos);
+  CHECK(primeStructDoc.find("Compile-time flow is pure by default.") !=
+        std::string::npos);
+  CHECK(primeStructDoc.find("`effects<compiletime>(...)` uses the same effect vocabulary as runtime\n"
+                            "  `effects(...)`, but it authorizes only the compile-time phase") !=
+        std::string::npos);
+  CHECK(primeStructDoc.find("Compile-time termination is budgeted in categories that TODO-4358 must\n"
+                            "  enforce independently") !=
+        std::string::npos);
+  CHECK(primeStructDoc.find("Compile-time caches are semantic caches, not backend caches.") !=
+        std::string::npos);
+  CHECK(primeStructDoc.find("Compile-time diagnostic categories are stable: `satisfied`, `unsatisfied`,\n"
+                            "  `invalid-evaluation`, `denied-effect`, `budget-exhausted`,") !=
+        std::string::npos);
   CHECK(syntaxSpec.find("The initial implemented user-predicate evaluator accepts pure predicates with\n"
                         "  no runtime parameters and a literal source `bool` return body.") !=
         std::string::npos);
@@ -1674,6 +1687,21 @@ TEST_CASE("generic requirement predicate surface stays source locked") {
         std::string::npos);
   CHECK(syntaxSpec.find("Local generated structs introduced by the selected statement branch receive\n"
                         "  deterministic branch-scoped identities") !=
+        std::string::npos);
+  CHECK(syntaxSpec.find("Compile-time execution is pure unless the enclosing definition declares\n"
+                        "  phase-qualified effects with `effects<compiletime>(...)`.") !=
+        std::string::npos);
+  CHECK(syntaxSpec.find("Runtime `effects(...)` and compile-time `effects<compiletime>(...)` share\n"
+                        "  effect names but authorize different phases.") !=
+        std::string::npos);
+  CHECK(syntaxSpec.find("Compile-time termination uses independent budgets for callable preparation,\n"
+                        "  call depth and recursion edges, evaluator steps") !=
+        std::string::npos);
+  CHECK(syntaxSpec.find("Compile-time cache keys include the language/semantic-product version,\n"
+                        "  predicate/helper identity, normalized compile-time arguments") !=
+        std::string::npos);
+  CHECK(syntaxSpec.find("Compile-time diagnostics use stable categories: `satisfied`, `unsatisfied`,\n"
+                        "  `invalid-evaluation`, `denied-effect`, `budget-exhausted`,") !=
         std::string::npos);
   CHECK(syntaxSpec.find("Failed requirements on a direct call are diagnostics, not C++-style\n"
                         "  substitution failure by accident.") !=
@@ -1726,9 +1754,10 @@ TEST_CASE("todo queue and skipped doctest debt stay source locked") {
   CHECK(todo.find("### Ready Now (Parallel-Candidate Leaves; No Unmet TODO Dependencies)") !=
         std::string::npos);
   CHECK(todo.find("### Ready Now (Parallel-Candidate Leaves; No Unmet TODO Dependencies)\n\n"
-                  "- TODO-4346: Add compile-time flow effect and termination policy | track:\n"
-                  "  generic-requirements-flow | primary surface: compile-time effect and\n"
-                  "  termination policy") !=
+                  "- TODO-4358: Enforce phase-qualified compile-time effects | track:\n"
+                  "  generic-requirements-effects | primary surface: compile-time effect gates\n"
+                  "- TODO-4550: Enforce compile-time evaluation budgets | track:\n"
+                  "  generic-requirements-budgets | primary surface: compile-time budget limits") !=
         std::string::npos);
   CHECK(todo.find("- `soa-zero-audit`: TODO-4529 replaced the residue inventory with a strict\n"
                   "  zero-production-trace audit; no SoA zero-audit leaf is ready.") !=
@@ -1763,10 +1792,12 @@ TEST_CASE("todo queue and skipped doctest debt stay source locked") {
                   "  evaluates pure user predicates; TODO-4345 added statement-level concrete\n"
                   "  `ct_if`; TODO-4547 added generic-specialized branch selection, and\n"
                   "  TODO-4548 added expression-position `ct_if` values; TODO-4549 scoped\n"
-                  "  selected-branch generated type facts; TODO-4346 is ready for compile-time\n"
-                  "  flow policy.") !=
+                  "  selected-branch generated type facts; TODO-4346 documented compile-time flow\n"
+                  "  policy; TODO-4358 and TODO-4550 are ready for effect and budget\n"
+                  "  enforcement, while TODO-4551 follows with cache invalidation.") !=
         std::string::npos);
   CHECK(todo.find("### Immediate Next 10 (Track Successors; Not Ready Until Dependencies Land)\n\n"
+                  "- TODO-4551: Add compile-time evaluation cache keys\n"
                   "- TODO-4545: Implement first structured task spawn/wait substrate\n"
                   "- TODO-4278: Integrate multi-wait with stdlib tuple") !=
         std::string::npos);
@@ -1784,7 +1815,9 @@ TEST_CASE("todo queue and skipped doctest debt stay source locked") {
   CHECK(todo.find("- Deferred SoA finish: TODO-4252") ==
         std::string::npos);
   CHECK(todo.find("### Execution Queue (Recommended Track Order)\n\n"
-                  "- TODO-4346: Add compile-time flow effect and termination policy\n"
+                  "- TODO-4358: Enforce phase-qualified compile-time effects\n"
+                  "- TODO-4550: Enforce compile-time evaluation budgets\n"
+                  "- TODO-4551: Add compile-time evaluation cache keys\n"
                   "- TODO-4545: Implement first structured task spawn/wait substrate") !=
         std::string::npos);
   CHECK(todo.find("- [ ] TODO-4548: Add expression-position `ct_if` values") ==
@@ -1794,6 +1827,10 @@ TEST_CASE("todo queue and skipped doctest debt stay source locked") {
   CHECK(todo.find("- [ ] TODO-4549: Scope branch-local generated type facts") ==
         std::string::npos);
   CHECK(todoFinished.find("TODO-4549: Scope branch-local generated type facts") !=
+        std::string::npos);
+  CHECK(todo.find("- [ ] TODO-4346: Add compile-time flow effect and termination policy") ==
+        std::string::npos);
+  CHECK(todoFinished.find("TODO-4346: Add compile-time flow effect and termination policy") !=
         std::string::npos);
   CHECK(todo.find("- [ ] TODO-4547: Add specialization-aware `ct_if` over type facts") ==
         std::string::npos);
@@ -1898,7 +1935,8 @@ TEST_CASE("todo queue and skipped doctest debt stay source locked") {
   CHECK(todoFinished.find("TODO-4519: Delete `soa_vector` compatibility seams") !=
         std::string::npos);
   const std::vector<std::string> semanticPhaseQueue = {
-      "TODO-4346: Add compile-time flow effect and termination policy",
+      "TODO-4358: Enforce phase-qualified compile-time effects",
+      "TODO-4550: Enforce compile-time evaluation budgets",
   };
   for (const std::string &entry : semanticPhaseQueue) {
     CHECK(todo.find("- " + entry) != std::string::npos);

@@ -1163,15 +1163,48 @@ Procedural compile-time genericity contract:
   `/std/meta/*` facts first, then a typed compile-time value layer, then pure
   user-defined predicate execution, and only then effectful compile-time
   execution gated by `effects<compiletime>(...)`.
-- Compile-time execution is pure by default. Definitions may opt into
-  compile-time side effects only through phase-qualified
-  `effects<compiletime>(...)` transforms. Runtime `effects(...)` and
-  compile-time effects use the same effect vocabulary but are interpreted by
-  their own phase; a runtime effect annotation does not automatically authorize
-  compile-time IO.
-- Compile-time cache keys include the predicate/helper identity, compile-time
-  arguments, visible imports and semantic facts, active compile-time effects,
-  and the language/semantic-product version.
+- Compile-time flow is pure by default. Without an explicit phase-qualified
+  effect, compile-time requirement and helper evaluation may only read semantic
+  facts, compile-time arguments, template arguments, type/symbol metadata,
+  literal-backed strings, and deterministic imported source/module metadata
+  that semantic validation already loaded. It may execute arithmetic,
+  comparisons, boolean logic, deterministic branches, and calls to other pure
+  compile-time helpers over typed compile-time values.
+- `effects<compiletime>(...)` uses the same effect vocabulary as runtime
+  `effects(...)`, but it authorizes only the compile-time phase and does not
+  imply any runtime permission. Runtime `effects(...)` does not authorize
+  compile-time host access. Effectful compile-time helpers must name the
+  phase-qualified effects on the enclosing definition before they can consult
+  deterministic host services such as source-file reads within the import
+  graph, package metadata, or explicit compile-time diagnostics/tracing.
+  Host services must publish stable provenance and cache fingerprints.
+- Some operations are always invalid at compile time, even with an effect:
+  launching `primevm` or final backend IR, depending on native/C++/GPU backend
+  behavior, allocating runtime heap objects, observing addresses or stack
+  slots, reading argv/stdin/stdout/stderr as runtime streams, using debugger
+  state, reading wall-clock time, randomness, environment variables, process
+  state, network state, or unordered host iteration whose order can affect a
+  result.
+- Compile-time termination is budgeted in categories that TODO-4358 must
+  enforce independently: preparation steps while turning semantic facts into
+  callable descriptors, call depth and recursion edges between compile-time
+  helpers, executed CT instructions or evaluator steps, typed value/storage
+  size, imported host bytes consulted by effectful helpers, and emitted
+  diagnostic/provenance payload size. Budget exhaustion is a deterministic
+  invalid-evaluation category, not a crash or fallback to runtime execution.
+- Compile-time caches are semantic caches, not backend caches. A cache key must
+  include the language/semantic-product version, predicate or helper identity,
+  normalized compile-time arguments, visible import set sorted by canonical
+  path, semantic facts read by the helper with provenance handles, active
+  compile-time effects, host-service fingerprints for effectful reads, and the
+  evaluator policy version. Import order and unordered map iteration must not
+  affect the key.
+- Compile-time diagnostic categories are stable: `satisfied`, `unsatisfied`,
+  `invalid-evaluation`, `denied-effect`, `budget-exhausted`,
+  `cache-corrupt-or-version-mismatch`, and `internal-compiler-error`. Each
+  diagnostic includes the predicate/helper path, source span, selected
+  specialization if any, effects consulted, budget category when relevant, and
+  the semantic facts or host fingerprints that caused the result.
 - Failed requirements on direct calls are diagnostics, not C++-style
   substitution failure by accident. Overload filtering may reject non-viable
   candidates only when it also preserves failed-requirement diagnostics.

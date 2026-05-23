@@ -6,6 +6,29 @@ Legend:
 Finished items are periodically archived here from `docs/todo.md`; section headers record the archive date.
 
 **Todo Completion (May 23, 2026)**
+- [x] TODO-4346: Add compile-time flow effect and termination policy
+  - owner: ai
+  - created_at: 2026-05-04
+  - finished_at: 2026-05-23
+  - phase: Generic constraint and compile-time flow alignment
+  - parallel_track: generic-requirements-flow
+  - depends_on: TODO-4549
+  - scope: Define the purity, effect, recursion, caching, and termination
+    policy for compile-time generic execution, leaving full enforcement to
+    TODO-4358.
+  - outcome:
+    - Documented that compile-time execution is pure by default.
+    - Defined when `effects<compiletime>(...)` is required and how it differs
+      from runtime `effects(...)`.
+    - Listed runtime/backend/ambient host operations that are always rejected
+      during compile-time evaluation.
+    - Defined budget categories, cache-key fields, and diagnostic categories
+      for the TODO-4358, TODO-4550, and TODO-4551 enforcement slices.
+    - Split the next enforcement work into effect, budget, and cache leaves.
+  - validation:
+    - `cmake --build build-release --target PrimeStruct_compile_run_tests -j 1`
+    - `./PrimeStruct_compile_run_tests --test-case='generic requirement predicate surface stays source locked,todo queue and skipped doctest debt stay source locked' --no-skip`
+
 - [x] TODO-4549: Scope branch-local generated type facts
   - owner: ai
   - created_at: 2026-05-23
