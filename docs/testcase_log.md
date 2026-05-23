@@ -8416,3 +8416,12 @@
   command: `cd build-release && ctest --output-on-failure --stop-on-failure
   --timeout 120 -I 1471,1475` on 2026-05-23 22:48 CEST. Next focused
   continuation starts at `-I 1476,1480`.
+- Compile-run shards 1476-1480 now pass after allowing Metal host smoke tests
+  to lock the no-device `device_create_failed` diagnostic path on machines
+  where `MTLCreateSystemDefaultDevice()` returns nil. Validating commands:
+  `cmake --build build-release --target PrimeStruct_compile_run_tests -j 1`;
+  `cd build-release && ctest --output-on-failure --stop-on-failure --timeout
+  120 -I 1477,1477`; `cd build-release && ctest --output-on-failure
+  --stop-on-failure --timeout 120 -I 1480,1480`; `cd build-release && ctest
+  --output-on-failure --stop-on-failure --timeout 120 -I 1476,1480` on
+  2026-05-23 22:53 CEST. Next focused continuation starts at `-I 1481,1485`.

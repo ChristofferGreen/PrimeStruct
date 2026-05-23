@@ -41,14 +41,20 @@ TEST_CASE("spinning cube metal host missing metallib diagnostics stay stable") {
   const std::string runHostCmd =
       quoteShellArg(hostBinaryPath.string()) + " " + quoteShellArg(missingMetallibPath.string()) + " > " +
       quoteShellArg(hostStdoutPath.string()) + " 2> " + quoteShellArg(hostStderrPath.string());
-  CHECK(runCommand(runHostCmd) == 71);
+  const int hostResult = runCommand(runHostCmd);
 
   const std::string hostStdout = readFile(hostStdoutPath.string());
   const std::string hostStderr = readFile(hostStderrPath.string());
   CHECK(hostStdout.empty());
   CHECK(hostStderr.find("gfx_profile=metal-osx") != std::string::npos);
-  CHECK(hostStderr.find("gfx_error_code=pipeline_create_failed") != std::string::npos);
-  CHECK(hostStderr.find("gfx_error_why=failed to load metallib:") != std::string::npos);
+  if (hostResult == 70) {
+    CHECK(hostStderr.find("gfx_error_code=device_create_failed") != std::string::npos);
+    CHECK(hostStderr.find("gfx_error_why=failed to create Metal device") != std::string::npos);
+  } else {
+    CHECK(hostResult == 71);
+    CHECK(hostStderr.find("gfx_error_code=pipeline_create_failed") != std::string::npos);
+    CHECK(hostStderr.find("gfx_error_why=failed to load metallib:") != std::string::npos);
+  }
 }
 
 TEST_CASE("spinning cube metal host pipeline creation regression stays fixed") {
@@ -219,9 +225,18 @@ TEST_CASE("spinning cube metal software surface bridge smoke") {
   const std::string runHostCmd =
       quoteShellArg(hostBinaryPath.string()) + " --software-surface-demo > " +
       quoteShellArg(hostStdoutPath.string()) + " 2> " + quoteShellArg(hostStderrPath.string());
-  CHECK(runCommand(runHostCmd) == 0);
-  CHECK(readFile(hostStderrPath.string()).empty());
+  const int hostResult = runCommand(runHostCmd);
+  const std::string hostStderr = readFile(hostStderrPath.string());
   const std::string hostStdout = readFile(hostStdoutPath.string());
+  if (hostResult == 70) {
+    CHECK(hostStdout.empty());
+    CHECK(hostStderr.find("gfx_profile=metal-osx") != std::string::npos);
+    CHECK(hostStderr.find("gfx_error_code=device_create_failed") != std::string::npos);
+    CHECK(hostStderr.find("gfx_error_why=failed to create Metal device") != std::string::npos);
+    return;
+  }
+  CHECK(hostResult == 0);
+  CHECK(hostStderr.empty());
   CHECK(hostStdout.find("gfx_profile=metal-osx") != std::string::npos);
   CHECK(hostStdout.find("software_surface_bridge=1") != std::string::npos);
   CHECK(hostStdout.find("software_surface_width=64") != std::string::npos);
