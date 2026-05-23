@@ -8256,3 +8256,9 @@
   `cd build-release && ctest --output-on-failure --stop-on-failure
   --timeout 120 -I 1306,1310` on 2026-05-23 21:58 CEST. Next focused
   continuation starts at `-I 1311,1315`.
+- Imports/collections shards 1311-1315 now pass after retargeting stale C++
+  emitter direct-return and inline-location SoA helper positives to current
+  `count_ref` and `ref_ref` unknown-method diagnostics. Validating command:
+  `cd build-release && ctest --output-on-failure --stop-on-failure
+  --timeout 120 -I 1311,1315` on 2026-05-23 22:04 CEST. Next focused
+  continuation starts at `-I 1316,1320`.

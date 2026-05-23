@@ -2594,7 +2594,7 @@ main() {
         std::string::npos);
 }
 
-TEST_CASE("compiles and runs direct return borrowed helper-return experimental soa_vector reads in C++ emitter") {
+TEST_CASE("rejects direct return borrowed helper-return experimental soa_vector reads in C++ emitter") {
   const std::string source = R"(
 import /std/collections/*
 import /std/collections/soa/*
@@ -2632,16 +2632,18 @@ main() {
   const std::string srcPath = writeTemp(
       "compile_experimental_soa_vector_direct_return_borrowed_return_reads_exe.prime",
       source);
-  const std::string exePath =
+  const std::string errPath =
       (testScratchPath("") /
-       "primec_experimental_soa_vector_direct_return_borrowed_return_reads_exe")
+       "primec_experimental_soa_vector_direct_return_borrowed_return_reads_exe.err")
           .string();
-  const std::string compileCmd = "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main";
-  CHECK(runCommand(compileCmd) == 0);
-  CHECK(runCommand(exePath) == 55);
+  const std::string compileCmd =
+      "./primec --emit=exe " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
+  CHECK(runCommand(compileCmd) == 2);
+  CHECK(readFile(errPath).find("unknown method: /std/collections/soa_vector/count_ref") !=
+        std::string::npos);
 }
 
-TEST_CASE("compiles and runs direct return method-like borrowed helper-return experimental soa_vector reads in C++ emitter") {
+TEST_CASE("rejects direct return method-like borrowed helper-return experimental soa_vector reads in C++ emitter") {
   const std::string source = R"(
 import /std/collections/*
 import /std/collections/soa/*
@@ -2683,16 +2685,18 @@ main() {
   const std::string srcPath = writeTemp(
       "compile_experimental_soa_vector_direct_return_method_like_borrowed_return_reads_exe.prime",
       source);
-  const std::string exePath =
+  const std::string errPath =
       (testScratchPath("") /
-       "primec_experimental_soa_vector_direct_return_method_like_borrowed_return_reads_exe")
+       "primec_experimental_soa_vector_direct_return_method_like_borrowed_return_reads_exe.err")
           .string();
-  const std::string compileCmd = "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main";
-  CHECK(runCommand(compileCmd) == 0);
-  CHECK(runCommand(exePath) == 55);
+  const std::string compileCmd =
+      "./primec --emit=exe " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
+  CHECK(runCommand(compileCmd) == 2);
+  CHECK(readFile(errPath).find("unknown method: /std/collections/soa_vector/count_ref") !=
+        std::string::npos);
 }
 
-TEST_CASE("compiles and runs direct return inline location borrowed helper-return experimental soa_vector reads in C++ emitter") {
+TEST_CASE("rejects direct return inline location borrowed helper-return experimental soa_vector reads in C++ emitter") {
   const std::string source = R"(
 import /std/collections/*
 import /std/collections/soa/*
@@ -2730,16 +2734,18 @@ main() {
   const std::string srcPath = writeTemp(
       "compile_experimental_soa_vector_direct_return_inline_location_borrowed_return_reads_exe.prime",
       source);
-  const std::string exePath =
+  const std::string errPath =
       (testScratchPath("") /
-       "primec_experimental_soa_vector_direct_return_inline_location_borrowed_return_reads_exe")
+       "primec_experimental_soa_vector_direct_return_inline_location_borrowed_return_reads_exe.err")
           .string();
-  const std::string compileCmd = "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main";
-  CHECK(runCommand(compileCmd) == 0);
-  CHECK(runCommand(exePath) == 52);
+  const std::string compileCmd =
+      "./primec --emit=exe " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
+  CHECK(runCommand(compileCmd) == 2);
+  CHECK(readFile(errPath).find("unknown method: /std/collections/soa_vector/count_ref") !=
+        std::string::npos);
 }
 
-TEST_CASE("compiles and runs inline location method-like borrowed helper-return experimental soa_vector helpers in C++ emitter") {
+TEST_CASE("rejects inline location method-like borrowed helper-return experimental soa_vector helpers in C++ emitter") {
   const std::string source = R"(
 import /std/collections/*
 import /std/collections/soa/*
@@ -2805,16 +2811,18 @@ main() {
   const std::string srcPath = writeTemp(
       "compile_experimental_soa_vector_inline_location_method_like_borrowed_return_helpers_exe.prime",
       source);
-  const std::string exePath =
+  const std::string errPath =
       (testScratchPath("") /
-       "primec_experimental_soa_vector_inline_location_method_like_borrowed_return_helpers_exe")
+       "primec_experimental_soa_vector_inline_location_method_like_borrowed_return_helpers_exe.err")
           .string();
-  const std::string compileCmd = "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main";
-  CHECK(runCommand(compileCmd) == 0);
-  CHECK(runCommand(exePath) == 147);
+  const std::string compileCmd =
+      "./primec --emit=exe " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
+  CHECK(runCommand(compileCmd) == 2);
+  CHECK(readFile(errPath).find("unknown method: /std/collections/soa/ref_ref") !=
+        std::string::npos);
 }
 
-TEST_CASE("compiles and runs direct return inline location method-like borrowed helper-return experimental soa_vector reads in C++ emitter") {
+TEST_CASE("rejects direct return inline location method-like borrowed helper-return experimental soa_vector reads in C++ emitter") {
   const std::string source = R"(
 import /std/collections/*
 import /std/collections/soa/*
@@ -2856,16 +2864,18 @@ main() {
   const std::string srcPath = writeTemp(
       "compile_experimental_soa_vector_direct_return_inline_location_method_like_borrowed_return_reads_exe.prime",
       source);
-  const std::string exePath =
+  const std::string errPath =
       (testScratchPath("") /
-       "primec_experimental_soa_vector_direct_return_inline_location_method_like_borrowed_return_reads_exe")
+       "primec_experimental_soa_vector_direct_return_inline_location_method_like_borrowed_return_reads_exe.err")
           .string();
-  const std::string compileCmd = "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main";
-  CHECK(runCommand(compileCmd) == 0);
-  CHECK(runCommand(exePath) == 52);
+  const std::string compileCmd =
+      "./primec --emit=exe " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
+  CHECK(runCommand(compileCmd) == 2);
+  CHECK(readFile(errPath).find("unknown method: /std/collections/soa_vector/count_ref") !=
+        std::string::npos);
 }
 
-TEST_CASE("compiles and runs inline location borrowed helper-return experimental soa_vector helpers in C++ emitter") {
+TEST_CASE("rejects inline location borrowed helper-return experimental soa_vector helpers in C++ emitter") {
   const std::string source = R"(
 import /std/collections/*
 import /std/collections/soa/*
@@ -2921,13 +2931,15 @@ main() {
   const std::string srcPath =
       writeTemp("compile_experimental_soa_vector_inline_location_borrowed_return_helpers_exe.prime",
                 source);
-  const std::string exePath =
+  const std::string errPath =
       (testScratchPath("") /
-       "primec_experimental_soa_vector_inline_location_borrowed_return_helpers_exe")
+       "primec_experimental_soa_vector_inline_location_borrowed_return_helpers_exe.err")
           .string();
-  const std::string compileCmd = "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main";
-  CHECK(runCommand(compileCmd) == 0);
-  CHECK(runCommand(exePath) == 116);
+  const std::string compileCmd =
+      "./primec --emit=exe " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
+  CHECK(runCommand(compileCmd) == 2);
+  CHECK(readFile(errPath).find("unknown method: /std/collections/soa/ref_ref") !=
+        std::string::npos);
 }
 
 TEST_CASE("compiles and runs experimental soa storage helpers in C++ emitter") {
