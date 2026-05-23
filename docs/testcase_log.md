@@ -8392,3 +8392,11 @@
   120 -I 1447,1447`; `cd build-release && ctest --output-on-failure
   --stop-on-failure --timeout 120 -I 1446,1450` on 2026-05-23 22:41 CEST.
   Next focused continuation starts at `-I 1451,1455`.
+- Compile-run shards 1451-1455 now pass after aligning stdlib source locks
+  with the standalone `map.prime` implementation instead of the retired
+  wrapper-over-`internal_map` shape. Validating commands: `cmake --build
+  build-release --target PrimeStruct_compile_run_tests -j 1`; `cd
+  build-release && ctest --output-on-failure --stop-on-failure --timeout 120
+  -I 1452,1452`; `cd build-release && ctest --output-on-failure
+  --stop-on-failure --timeout 120 -I 1451,1455` on 2026-05-23 22:44 CEST.
+  Next focused continuation starts at `-I 1456,1460`.

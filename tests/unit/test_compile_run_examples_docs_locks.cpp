@@ -3504,21 +3504,27 @@ TEST_CASE("small stdlib wrappers stay source locked to inferred locals") {
   CHECK(collectionsStdlib.find("[public") == std::string::npos);
 
   CHECK(mapStdlib.find(
-            "// Canonical public wrapper layer over the internal_map implementation module.") !=
+            "// Standalone canonical stdlib-owned map implementation.") !=
         std::string::npos);
-  CHECK(mapStdlib.find("[mut] out{/std/collections/internal_map/mapNew<K, V>()}") !=
+  CHECK(mapStdlib.find("import /std/collections/internal_vector/*") !=
         std::string::npos);
-  CHECK(mapStdlib.find("entryCount{count(entries)}") != std::string::npos);
-  CHECK(mapStdlib.find("[mut] index{0i32}") != std::string::npos);
-  CHECK(mapStdlib.find("current{entries[index]}") != std::string::npos);
+  CHECK(mapStdlib.find("import /std/collections/internal_map") == std::string::npos);
+  CHECK(mapStdlib.find("import /std/collections/experimental_map") == std::string::npos);
+  CHECK(mapStdlib.find("[MapValue<K, V> mut] out{mapNew<K, V>()}") !=
+        std::string::npos);
+  CHECK(mapStdlib.find("[i32] entryCount{count(entries)}") != std::string::npos);
+  CHECK(mapStdlib.find("[i32 mut] index{0i32}") != std::string::npos);
+  CHECK(mapStdlib.find("[Entry<K, V>] current{entries[index]}") !=
+        std::string::npos);
   CHECK(mapStdlib.find("/std/collections/mapSingle") == std::string::npos);
   CHECK(mapStdlib.find("/std/collections/mapPair") == std::string::npos);
-  CHECK(mapStdlib.find("/std/collections/map/count<K, V>") != std::string::npos);
-  CHECK(mapStdlib.find("[map<K, V> mut] values") != std::string::npos);
+  CHECK(mapStdlib.find("/std/collections/map/mapCount<K, V>") !=
+        std::string::npos);
+  CHECK(mapStdlib.find("[MapValue<K, V> mut] values") == std::string::npos);
   CHECK(mapStdlib.find("[map<K, V> mut] out{/std/collections/internal_map/mapNew<K, V>()}") ==
         std::string::npos);
-  CHECK(mapStdlib.find("[i32] entryCount{count(entries)}") == std::string::npos);
-  CHECK(mapStdlib.find("[Entry<K, V>] current{entries[index]}") == std::string::npos);
+  CHECK(mapStdlib.find("/std/collections/internal_map/mapNew<K, V>()") ==
+        std::string::npos);
 
   CHECK(experimentalVectorStdlib.find("// Rejected direct-import shim for the legacy experimental vector namespace.") !=
         std::string::npos);
