@@ -8109,3 +8109,9 @@
   positives. Validating command: `cd build-release && ctest
   --output-on-failure --stop-on-failure --timeout 120 -I 1161,1165` on
   2026-05-23 16:58 CEST. Next focused continuation starts at `-I 1166,1170`.
+- Native backend collection shim shards 1166-1170 now pass after retargeting
+  stale root and experimental `soa_vector` positives to current unsupported
+  type, retired import-path, semantic metadata, and bridge-path rejection
+  diagnostics. Validating command: `cd build-release && ctest
+  --output-on-failure --stop-on-failure --timeout 120 -I 1166,1170` on
+  2026-05-23 17:56 CEST. Next focused continuation starts at `-I 1171,1175`.
