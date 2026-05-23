@@ -99,7 +99,9 @@ primec::SemanticProgram makeBudgetProgram() {
 class AllowOneEffectHost final : public primec::CompileTimeHost {
 public:
   bool allowEffect(std::string_view effectName,
-                   primec::CompileTimeEffectPhase phase) const override {
+                   primec::CompileTimeEffectPhase phase,
+                   std::string_view definitionPath = {}) const override {
+    (void)definitionPath;
     return phase == primec::CompileTimeEffectPhase::SemanticRequirement &&
            effectName == "meta_lookup";
   }
@@ -199,6 +201,43 @@ TEST_CASE("compile-time evaluation facade gates effects through the CT host") {
   CHECK(allowedFacade.budget().maxSteps == 5);
   CHECK(allowHost.describeSemanticFact("trait:Additive") ==
         std::optional<std::string>("trait Additive is available"));
+}
+
+TEST_CASE("semantic CT host gates effects on phase-qualified metadata") {
+  primec::SemanticProgram program;
+  program.requirementPredicateFacts.push_back(makeRequirementFact(
+      "/generic/runtime",
+      "/project/effectful",
+      "/project/effectful()",
+      "satisfied",
+      "runtime effect metadata only"));
+
+  auto compileTimeFact = makeRequirementFact("/generic/compiletime",
+                                             "/project/effectful",
+                                             "/project/effectful()",
+                                             "satisfied",
+                                             "compile-time effect allowed");
+  compileTimeFact.compileTimeEffects.push_back("file_read");
+  program.requirementPredicateFacts.push_back(std::move(compileTimeFact));
+
+  const primec::SemanticProgramCompileTimeHost host(program);
+  const primec::CompileTimeEvaluationFacade facade(host);
+
+  auto provenance = sampleProvenance();
+  provenance.definitionPath = "/generic/runtime";
+  const auto runtimeOnly = facade.requireEffect("file_read", provenance);
+  CHECK(runtimeOnly.kind ==
+        primec::CompileTimeEvaluationResultKind::DeniedEffect);
+
+  provenance.definitionPath = "/generic/missing";
+  const auto wrongDefinition = facade.requireEffect("file_read", provenance);
+  CHECK(wrongDefinition.kind ==
+        primec::CompileTimeEvaluationResultKind::DeniedEffect);
+
+  provenance.definitionPath = "/generic/compiletime";
+  const auto allowed = facade.requireEffect("file_read", provenance);
+  CHECK(allowed.kind == primec::CompileTimeEvaluationResultKind::Success);
+  CHECK(allowed.boolValue);
 }
 
 TEST_CASE("compile-time evaluation facade reports stable non-success categories") {

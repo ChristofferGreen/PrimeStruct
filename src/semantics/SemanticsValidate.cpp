@@ -6728,7 +6728,7 @@ makeCompileTimeIfRequirementContext(
     callable.returnType = compileTimeIfReturnTypeText(candidate);
     callable.isPrivate = isTransformNamed(candidate.transforms, "private");
     for (const Transform &transform : candidate.transforms) {
-      if (transform.name == "effects") {
+      if (transform.name == "effects" && transform.templateArgs.empty()) {
         callable.effectNames.insert(callable.effectNames.end(),
                                     transform.arguments.begin(),
                                     transform.arguments.end());

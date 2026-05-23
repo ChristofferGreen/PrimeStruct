@@ -6,6 +6,32 @@ Legend:
 Finished items are periodically archived here from `docs/todo.md`; section headers record the archive date.
 
 **Todo Completion (May 23, 2026)**
+- [x] TODO-4358: Enforce phase-qualified compile-time effects
+  - owner: ai
+  - created_at: 2026-05-04
+  - finished_at: 2026-05-23
+  - phase: Generic constraint and compile-time flow alignment
+  - parallel_track: generic-requirements-effects
+  - depends_on: TODO-4346, TODO-4357
+  - scope: Enforce phase-qualified `effects<compiletime>(...)` authorization
+    for compile-time helper evaluation without treating runtime `effects(...)`
+    as compile-time permission.
+  - outcome:
+    - Allowed definition-level `effects<compiletime>(...)` transforms without
+      treating them as runtime effects.
+    - Published phase-qualified compile-time effect metadata on requirement
+      predicate facts.
+    - Gated `SemanticProgramCompileTimeHost` effect authorization on the
+      requesting definition's compile-time effect metadata.
+    - Preserved runtime-only `effects(...)` as insufficient for compile-time
+      host access.
+  - validation:
+    - `cmake --build build-release --target PrimeStruct_compile_time_tests -j 1`
+    - `cmake --build build-release --target PrimeStruct_semantics_tests -j 1`
+    - `ctest --output-on-failure -R ^PrimeStruct_compile_time_facade$ --timeout 120`
+    - `ctest --output-on-failure -R ^PrimeStruct_primestruct_semantics_type_resolution_graph_type_resolution_graph_1_10$ --timeout 300`
+    - `ctest --output-on-failure -R PrimeStruct_primestruct_semantics_effects_effects_ --timeout 300`
+
 - [x] TODO-4550: Enforce compile-time evaluation budgets
   - owner: ai
   - created_at: 2026-05-23

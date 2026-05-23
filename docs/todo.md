@@ -83,8 +83,8 @@ Task template:
 
 ### Ready Now (Parallel-Candidate Leaves; No Unmet TODO Dependencies)
 
-- TODO-4358: Enforce phase-qualified compile-time effects | track:
-  generic-requirements-effects | primary surface: compile-time effect gates
+- TODO-4551: Add compile-time evaluation cache keys | track:
+  generic-requirements-cache | primary surface: compile-time cache invalidation
 
 ### Parallel Work Tracks (Current)
 
@@ -125,13 +125,12 @@ Task template:
   `ct_if`; TODO-4547 added generic-specialized branch selection, and
   TODO-4548 added expression-position `ct_if` values; TODO-4549 scoped
   selected-branch generated type facts; TODO-4346 documented compile-time flow
-  policy; TODO-4550 enforced active compile-time budget limits; TODO-4358 is
-  ready for phase-qualified effect enforcement, while TODO-4551 follows with
-  cache invalidation.
+  policy; TODO-4550 enforced active compile-time budget limits; TODO-4358
+  enforced phase-qualified compile-time effects, and TODO-4551 is ready for
+  deterministic cache keys and invalidation.
 
 ### Immediate Next 10 (Track Successors; Not Ready Until Dependencies Land)
 
-- TODO-4551: Add compile-time evaluation cache keys
 - TODO-4545: Implement first structured task spawn/wait substrate
 - TODO-4278: Integrate multi-wait with stdlib tuple
 
@@ -157,13 +156,11 @@ Task template:
   prerequisite split out of TODO-4278
 - Procedural compile-time genericity: none active after TODO-4340 and
   TODO-4546
-- Generic constraint and compile-time flow alignment: TODO-4358 -> TODO-4551
-  -> TODO-4347
+- Generic constraint and compile-time flow alignment: TODO-4551 -> TODO-4347
   -> TODO-4351 -> TODO-4348 -> TODO-4359 -> TODO-4349 -> TODO-4350
 
 ### Execution Queue (Recommended Track Order)
 
-- TODO-4358: Enforce phase-qualified compile-time effects
 - TODO-4551: Add compile-time evaluation cache keys
 - TODO-4545: Implement first structured task spawn/wait substrate
 - TODO-4278: Integrate multi-wait with stdlib tuple
@@ -201,7 +198,7 @@ Task template:
 | Stdlib ADT migration for `Maybe` and `Result` | none |
 | Generic type packs and tuple stdlib surface | TODO-4274, TODO-4273, TODO-4277, TODO-4278 |
 | Procedural compile-time genericity and local type facts | none |
-| Generic constraints and compile-time flow control | TODO-4352, TODO-4353, TODO-4354, TODO-4355, TODO-4356, TODO-4357, TODO-4345, TODO-4547, TODO-4548, TODO-4549, TODO-4346, TODO-4358, TODO-4550, TODO-4551, TODO-4347, TODO-4351, TODO-4348, TODO-4359, TODO-4349, TODO-4350 |
+| Generic constraints and compile-time flow control | TODO-4352, TODO-4353, TODO-4354, TODO-4355, TODO-4356, TODO-4357, TODO-4345, TODO-4547, TODO-4548, TODO-4549, TODO-4346, TODO-4550, TODO-4551, TODO-4347, TODO-4351, TODO-4348, TODO-4359, TODO-4349, TODO-4350 |
 
 ### Validation Coverage Snapshot
 
@@ -228,7 +225,7 @@ Task template:
 | Maybe/Result sum migration conformance | none |
 | Generic type-pack and tuple conformance | TODO-4274, TODO-4273, TODO-4277, TODO-4278 |
 | Procedural compile-time genericity conformance | none |
-| Generic constraint and compile-time flow conformance | TODO-4352, TODO-4353, TODO-4354, TODO-4355, TODO-4356, TODO-4357, TODO-4345, TODO-4547, TODO-4548, TODO-4549, TODO-4346, TODO-4358, TODO-4550, TODO-4551, TODO-4347, TODO-4351, TODO-4348, TODO-4359, TODO-4349, TODO-4350 |
+| Generic constraint and compile-time flow conformance | TODO-4352, TODO-4353, TODO-4354, TODO-4355, TODO-4356, TODO-4357, TODO-4345, TODO-4547, TODO-4548, TODO-4549, TODO-4346, TODO-4550, TODO-4551, TODO-4347, TODO-4351, TODO-4348, TODO-4359, TODO-4349, TODO-4350 |
 
 ### Vector/Map Bridge Contract Summary
 
@@ -811,33 +808,6 @@ Task template:
     - `./scripts/compile.sh --release` passes.
   - stop_rule: Stop once multi-wait returns stdlib `tuple<...>` or the missing
     task-side prerequisite is split into an explicit multithreading TODO.
-
-- [ ] TODO-4358: Enforce phase-qualified compile-time effects
-  - owner: ai
-  - created_at: 2026-05-04
-  - phase: Generic constraint and compile-time flow alignment
-  - parallel_track: generic-requirements-effects
-  - depends_on: TODO-4346, TODO-4357
-  - scope: Enforce phase-qualified `effects<compiletime>(...)` authorization
-    for compile-time helper evaluation without treating runtime `effects(...)`
-    as compile-time permission.
-  - implementation_notes:
-    - Start from the CT facade, `CompileTimeHost`, effect metadata, and the
-      user-predicate evaluator.
-    - Effect checks must distinguish runtime `effects(...)` from
-      compile-time `effects<compiletime>(...)`.
-    - Budget enforcement landed in TODO-4550; leave cache-key invalidation to
-      TODO-4551.
-  - acceptance:
-    - Compile-time IO or other effectful host operations reject without the
-      matching `effects<compiletime>(...)` transform.
-    - Runtime `effects(...)` alone does not authorize compile-time host access.
-    - Pure compile-time predicates keep their current behavior and diagnostics.
-    - Focused tests cover denied-effect diagnostics and allowed
-      phase-qualified effect metadata.
-    - `./scripts/compile.sh --release` passes.
-  - stop_rule: Stop once compile-time effect authorization is deterministic
-    and phase-qualified; leave cache enforcement to TODO-4551.
 
 - [ ] TODO-4551: Add compile-time evaluation cache keys
   - owner: ai

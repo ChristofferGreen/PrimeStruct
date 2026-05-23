@@ -98,6 +98,7 @@ bool SemanticsValidator::validateDefinitionBuildTransforms(
     bool &definitionTransformError) {
   definitionTransformError = false;
   std::unordered_set<std::string> seenEffects;
+  std::unordered_set<std::string> seenCompileTimeEffects;
   bool sawCapabilities = false;
   bool sawOnError = false;
   bool sawCompute = false;
@@ -410,11 +411,25 @@ bool SemanticsValidator::validateDefinitionBuildTransforms(
       }
       break;
     } else if (transform.name == "effects") {
-      if (!validateEffectsTransform(transform, def.fullPath, error_)) {
+      if (!validateEffectsTransform(transform, def.fullPath, error_, true)) {
         if (addTransformDiagnostic(error_)) {
           return false;
         }
         break;
+      }
+      if (!transform.templateArgs.empty()) {
+        for (const auto &effect : transform.arguments) {
+          if (!seenCompileTimeEffects.insert(effect).second) {
+            if (addTransformDiagnostic("duplicate effects transform on " + def.fullPath)) {
+              return false;
+            }
+            break;
+          }
+        }
+        if (definitionTransformError) {
+          break;
+        }
+        continue;
       }
       for (const auto &effect : transform.arguments) {
         if (!seenEffects.insert(effect).second) {

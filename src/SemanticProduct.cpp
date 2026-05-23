@@ -1813,6 +1813,10 @@ std::string formatSemanticProgram(const SemanticProgram &semanticProgram) {
         semanticProgramResolveCallTargetString(semanticProgram, entry.relationOperatorId);
     const std::string_view sourceText =
         semanticProgramResolveCallTargetString(semanticProgram, entry.sourceTextId);
+    const std::string compileTimeEffects =
+        formatSemanticStringListFromIds(semanticProgram,
+                                        entry.compileTimeEffectIds,
+                                        entry.compileTimeEffects);
     const std::string_view evaluationOutcome =
         semanticProgramResolveCallTargetString(semanticProgram, entry.evaluationOutcomeId);
     const std::string_view evaluationDiagnostic =
@@ -1843,6 +1847,8 @@ std::string formatSemanticProgram(const SemanticProgram &semanticProgram) {
                                   " operands=" +
                                   formatSemanticRequirementOperandList(semanticProgram,
                                                                        entry.operands) +
+                                  " compile_time_effects=" +
+                                  compileTimeEffects +
                                   " evaluation_outcome=" +
                                   quoteSemanticString(evaluationOutcome.empty()
                                                           ? entry.evaluationOutcome

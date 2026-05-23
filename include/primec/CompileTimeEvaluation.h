@@ -76,7 +76,8 @@ public:
   virtual ~CompileTimeHost() = default;
 
   virtual bool allowEffect(std::string_view effectName,
-                           CompileTimeEffectPhase phase) const = 0;
+                           CompileTimeEffectPhase phase,
+                           std::string_view definitionPath = {}) const = 0;
 
   virtual std::optional<std::string>
   describeSemanticFact(std::string_view factName) const;
@@ -94,7 +95,8 @@ public:
   explicit SemanticProgramCompileTimeHost(const SemanticProgram &semanticProgram);
 
   bool allowEffect(std::string_view effectName,
-                   CompileTimeEffectPhase phase) const override;
+                   CompileTimeEffectPhase phase,
+                   std::string_view definitionPath = {}) const override;
 
   std::optional<std::string>
   describeSemanticFact(std::string_view factName) const override;
@@ -113,7 +115,8 @@ private:
 class DenyAllCompileTimeHost final : public CompileTimeHost {
 public:
   bool allowEffect(std::string_view effectName,
-                   CompileTimeEffectPhase phase) const override;
+                   CompileTimeEffectPhase phase,
+                   std::string_view definitionPath = {}) const override;
 };
 
 struct CompileTimeEvaluationResult {

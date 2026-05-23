@@ -17,7 +17,7 @@ std::unordered_set<std::string> SemanticsValidator::resolveEffects(const std::ve
   bool sawEffects = false;
   std::unordered_set<std::string> effects;
   for (const auto &transform : transforms) {
-    if (transform.name != "effects") {
+    if (transform.name != "effects" || !transform.templateArgs.empty()) {
       continue;
     }
     sawEffects = true;

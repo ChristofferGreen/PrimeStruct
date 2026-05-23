@@ -220,7 +220,10 @@ bool parseBindingInfo(const Expr &expr,
                       const std::unordered_set<std::string> *additionalNominalTypes = nullptr,
                       const std::unordered_map<std::string, std::string> *compileTimeTypeLocals = nullptr);
 bool isEffectName(const std::string &text);
-bool validateEffectsTransform(const Transform &transform, const std::string &context, std::string &error);
+bool validateEffectsTransform(const Transform &transform,
+                              const std::string &context,
+                              std::string &error,
+                              bool allowCompileTimePhase = false);
 bool validateCapabilitiesTransform(const Transform &transform, const std::string &context, std::string &error);
 bool parsePositiveIntArg(const std::string &text, int &value);
 

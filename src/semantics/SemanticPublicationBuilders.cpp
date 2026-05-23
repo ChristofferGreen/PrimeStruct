@@ -405,6 +405,7 @@ uint64_t makeSumVariantMetadataSumPathVariantNameKey(SymbolId sumPathId, SymbolI
 SemanticProgramRequirementPredicateFact classifyRequirementPredicateFact(
     const Definition &definition,
     const Transform &transform,
+    std::vector<std::string> compileTimeEffects,
     std::string sourceText,
     const RequirementPredicateDefinitionContext &context) {
   SemanticProgramRequirementPredicateFact fact;
@@ -422,6 +423,7 @@ SemanticProgramRequirementPredicateFact classifyRequirementPredicateFact(
   fact.predicateName = draft.predicateName;
   fact.relationOperator = draft.relationOperator;
   fact.sourceText = draft.sourceText;
+  fact.compileTimeEffects = std::move(compileTimeEffects);
   fact.evaluationOutcome = draft.evaluationOutcome;
   fact.evaluationDiagnostic = draft.evaluationDiagnostic;
   fact.operands.reserve(draft.operands.size());
@@ -435,6 +437,22 @@ SemanticProgramRequirementPredicateFact classifyRequirementPredicateFact(
     fact.operands.push_back(std::move(operand));
   }
   return fact;
+}
+
+std::vector<std::string> definitionCompileTimeEffects(
+    const Definition &definition) {
+  std::vector<std::string> effects;
+  for (const Transform &transform : definition.transforms) {
+    if (transform.name == "effects" && transform.templateArgs.size() == 1 &&
+        transform.templateArgs.front() == "compiletime") {
+      effects.insert(effects.end(),
+                     transform.arguments.begin(),
+                     transform.arguments.end());
+    }
+  }
+  std::sort(effects.begin(), effects.end());
+  effects.erase(std::unique(effects.begin(), effects.end()), effects.end());
+  return effects;
 }
 
 struct SemanticPublicationBuilderState {
@@ -1018,7 +1036,7 @@ RequirementPredicateDefinitionContext makeRequirementPredicateDefinitionContext(
       callable.returnType = returnType;
       callable.isPrivate = hasTransform(candidate.transforms, "private");
       for (const auto &transform : candidate.transforms) {
-        if (transform.name == "effects") {
+        if (transform.name == "effects" && transform.templateArgs.empty()) {
           callable.effectNames.insert(callable.effectNames.end(),
                                       transform.arguments.begin(),
                                       transform.arguments.end());
@@ -1105,6 +1123,8 @@ void publishRequirementPredicateFacts(SemanticPublicationBuilderState &state,
 
   state.semanticProgram.requirementPredicateFacts.reserve(factCount);
   for (const auto &definition : state.program.definitions) {
+    const std::vector<std::string> compileTimeEffects =
+        definitionCompileTimeEffects(definition);
     for (const auto &transform : definition.transforms) {
       if (transform.name != "require") {
         continue;
@@ -1113,7 +1133,11 @@ void publishRequirementPredicateFacts(SemanticPublicationBuilderState &state,
           makeRequirementPredicateDefinitionContext(state.program, definition, publicationSurface);
       for (const auto &argument : transform.arguments) {
         SemanticProgramRequirementPredicateFact fact =
-            classifyRequirementPredicateFact(definition, transform, argument, context);
+            classifyRequirementPredicateFact(definition,
+                                             transform,
+                                             compileTimeEffects,
+                                             argument,
+                                             context);
         fact.definitionPathId =
             semanticProgramInternCallTargetString(state.semanticProgram, fact.definitionPath);
         fact.predicateKindId =
@@ -1124,6 +1148,11 @@ void publishRequirementPredicateFacts(SemanticPublicationBuilderState &state,
             semanticProgramInternCallTargetString(state.semanticProgram, fact.relationOperator);
         fact.sourceTextId =
             semanticProgramInternCallTargetString(state.semanticProgram, fact.sourceText);
+        fact.compileTimeEffectIds.reserve(fact.compileTimeEffects.size());
+        for (const auto &effect : fact.compileTimeEffects) {
+          fact.compileTimeEffectIds.push_back(
+              semanticProgramInternCallTargetString(state.semanticProgram, effect));
+        }
         fact.evaluationOutcomeId =
             semanticProgramInternCallTargetString(state.semanticProgram, fact.evaluationOutcome);
         fact.evaluationDiagnosticId =

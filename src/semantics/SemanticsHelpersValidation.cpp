@@ -30,8 +30,13 @@ bool isEffectName(const std::string &text) {
   return true;
 }
 
-bool validateEffectsTransform(const Transform &transform, const std::string &context, std::string &error) {
-  if (!transform.templateArgs.empty()) {
+bool validateEffectsTransform(const Transform &transform,
+                              const std::string &context,
+                              std::string &error,
+                              bool allowCompileTimePhase) {
+  if (!transform.templateArgs.empty() &&
+      !(allowCompileTimePhase && transform.templateArgs.size() == 1 &&
+        transform.templateArgs.front() == "compiletime")) {
     error = "effects transform does not accept template arguments on " + context;
     return false;
   }

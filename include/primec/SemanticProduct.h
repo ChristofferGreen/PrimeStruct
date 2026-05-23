@@ -388,6 +388,7 @@ struct SemanticProgramRequirementPredicateFact {
   std::string relationOperator = {};
   std::string sourceText = {};
   std::vector<SemanticProgramRequirementPredicateOperand> operands = {};
+  std::vector<std::string> compileTimeEffects = {};
   std::string evaluationOutcome = {};
   std::string evaluationDiagnostic = {};
   int sourceLine = 0;
@@ -399,6 +400,7 @@ struct SemanticProgramRequirementPredicateFact {
   SymbolId predicateNameId = InvalidSymbolId;
   SymbolId relationOperatorId = InvalidSymbolId;
   SymbolId sourceTextId = InvalidSymbolId;
+  std::vector<SymbolId> compileTimeEffectIds = {};
   SymbolId evaluationOutcomeId = InvalidSymbolId;
   SymbolId evaluationDiagnosticId = InvalidSymbolId;
 };

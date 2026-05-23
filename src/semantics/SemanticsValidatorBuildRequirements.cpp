@@ -60,7 +60,7 @@ bool SemanticsValidator::validateRequirementPredicates() {
         callable.isPrivate = hasTransform(candidate.transforms, "private");
         callable.returnType = returnType;
         for (const auto &transform : candidate.transforms) {
-          if (transform.name == "effects") {
+          if (transform.name == "effects" && transform.templateArgs.empty()) {
             callable.effectNames.insert(callable.effectNames.end(),
                                         transform.arguments.begin(),
                                         transform.arguments.end());

@@ -224,9 +224,35 @@ SemanticProgramCompileTimeHost::SemanticProgramCompileTimeHost(
 
 bool SemanticProgramCompileTimeHost::allowEffect(
     std::string_view effectName,
-    CompileTimeEffectPhase phase) const {
-  (void)effectName;
-  (void)phase;
+    CompileTimeEffectPhase phase,
+    std::string_view definitionPath) const {
+  if (phase != CompileTimeEffectPhase::SemanticRequirement ||
+      definitionPath.empty()) {
+    return false;
+  }
+  for (const auto *fact :
+       semanticProgramRequirementPredicateFactView(semanticProgram_)) {
+    if (fact == nullptr) {
+      continue;
+    }
+    if (resolvedRequirementFactText(semanticProgram_,
+                                    fact->definitionPathId,
+                                    fact->definitionPath) != definitionPath) {
+      continue;
+    }
+    for (std::size_t i = 0; i < fact->compileTimeEffects.size(); ++i) {
+      const SymbolId effectId =
+          i < fact->compileTimeEffectIds.size()
+              ? fact->compileTimeEffectIds[i]
+              : InvalidSymbolId;
+      if (resolvedRequirementFactText(semanticProgram_,
+                                      effectId,
+                                      fact->compileTimeEffects[i]) ==
+          effectName) {
+        return true;
+      }
+    }
+  }
   return false;
 }
 
@@ -296,9 +322,11 @@ const SemanticProgram *SemanticProgramCompileTimeHost::semanticProgram() const {
 }
 
 bool DenyAllCompileTimeHost::allowEffect(std::string_view effectName,
-                                         CompileTimeEffectPhase phase) const {
+                                         CompileTimeEffectPhase phase,
+                                         std::string_view definitionPath) const {
   (void)effectName;
   (void)phase;
+  (void)definitionPath;
   return false;
 }
 
@@ -468,7 +496,9 @@ CompileTimeEvaluationResult CompileTimeEvaluationFacade::requireEffect(
                                       provenance)) {
     return *overBudget;
   }
-  if (!host_.allowEffect(effectName, CompileTimeEffectPhase::SemanticRequirement)) {
+  if (!host_.allowEffect(effectName,
+                         CompileTimeEffectPhase::SemanticRequirement,
+                         provenance.definitionPath)) {
     return deniedEffect(effectName, std::move(provenance));
   }
   return success(true,

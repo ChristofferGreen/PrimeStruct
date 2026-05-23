@@ -232,6 +232,52 @@ main() {
         std::string::npos);
 }
 
+TEST_CASE("require facts publish phase-qualified compile-time effects") {
+  const std::string source = R"(
+[effects(file_read) return<int> require(is_type<i32>())]
+runtime_only() {
+  return(1i32)
+}
+
+[effects(file_read) effects<compiletime>(file_read) return<int> require(is_type<i32>())]
+compiletime_allowed() {
+  return(2i32)
+}
+
+[return<int>]
+main() {
+  return(0i32)
+}
+)";
+
+  primec::testing::CompilePipelineBoundaryDumps dumps;
+  std::string error;
+  REQUIRE(primec::testing::captureSemanticBoundaryDumpsForTesting(
+      source, "/main", dumps, error));
+  CHECK(error.empty());
+  const size_t runtimePos = dumps.semanticProduct.find(
+      "definition_path=\"/runtime_only\" predicate_kind=\"predicate_call\" "
+      "predicate_name=\"/std/meta/is_type\"");
+  REQUIRE(runtimePos != std::string::npos);
+  const size_t runtimeEnd = dumps.semanticProduct.find('\n', runtimePos);
+  const std::string runtimeLine =
+      dumps.semanticProduct.substr(runtimePos, runtimeEnd - runtimePos);
+  CHECK(runtimeLine.find("compile_time_effects=[]") != std::string::npos);
+
+  const size_t compileTimePos = dumps.semanticProduct.find(
+      "definition_path=\"/compiletime_allowed\" "
+      "predicate_kind=\"predicate_call\" "
+      "predicate_name=\"/std/meta/is_type\"");
+  REQUIRE(compileTimePos != std::string::npos);
+  const size_t compileTimeEnd =
+      dumps.semanticProduct.find('\n', compileTimePos);
+  const std::string compileTimeLine =
+      dumps.semanticProduct.substr(compileTimePos,
+                                   compileTimeEnd - compileTimePos);
+  CHECK(compileTimeLine.find("compile_time_effects=[\"file_read\"]") !=
+        std::string::npos);
+}
+
 TEST_CASE("require builtin type predicates reject mismatched calls") {
   const std::string source = R"(
 [return<T> require(typeof<value> == i32)]
