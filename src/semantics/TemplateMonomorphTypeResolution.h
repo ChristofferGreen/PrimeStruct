@@ -206,6 +206,56 @@ bool resolveTemplateArgumentList(std::vector<std::string> &args,
   return true;
 }
 
+bool isRequirementSubstitutionIdentChar(char ch) {
+  return std::isalnum(static_cast<unsigned char>(ch)) || ch == '_';
+}
+
+std::string rewriteRequirementArgumentText(const std::string &text,
+                                           const SubstMap &mapping) {
+  std::string out;
+  out.reserve(text.size());
+  bool inString = false;
+  char stringDelimiter = '\0';
+  for (std::size_t i = 0; i < text.size();) {
+    const char ch = text[i];
+    if (inString) {
+      out.push_back(ch);
+      if (ch == '\\' && i + 1 < text.size()) {
+        out.push_back(text[i + 1]);
+        i += 2;
+        continue;
+      }
+      if (ch == stringDelimiter) {
+        inString = false;
+        stringDelimiter = '\0';
+      }
+      ++i;
+      continue;
+    }
+    if (ch == '"' || ch == '\'') {
+      inString = true;
+      stringDelimiter = ch;
+      out.push_back(ch);
+      ++i;
+      continue;
+    }
+    if (!isRequirementSubstitutionIdentChar(ch) ||
+        std::isdigit(static_cast<unsigned char>(ch))) {
+      out.push_back(ch);
+      ++i;
+      continue;
+    }
+    const std::size_t start = i;
+    while (i < text.size() && isRequirementSubstitutionIdentChar(text[i])) {
+      ++i;
+    }
+    const std::string token = text.substr(start, i - start);
+    auto mappedIt = mapping.find(token);
+    out.append(mappedIt == mapping.end() ? token : mappedIt->second);
+  }
+  return out;
+}
+
 ResolvedType resolveTypeStringImpl(std::string input,
                                    const SubstMap &mapping,
                                    const std::unordered_set<std::string> &allowedParams,
@@ -580,6 +630,11 @@ bool rewriteTransforms(std::vector<Transform> &transforms,
                                      error,
                                      ignoredAllConcrete)) {
       return false;
+    }
+    if (transform.name == "require") {
+      for (std::string &argument : transform.arguments) {
+        argument = rewriteRequirementArgumentText(argument, mapping);
+      }
     }
   }
   return true;

@@ -849,11 +849,12 @@ Requirement rules:
   The implemented capability slice evaluates `has_trait` for
   `Additive`/`Multiplicative`/`Comparable`/`Indexable`, named
   `supports_call`, exact positional `can_construct`, explicit lifecycle
-  `can_copy`/`can_move`, and visibility-aware `has_field`/`has_member`.
+  `can_copy`/`can_move`, visibility-aware `has_field`/`has_member`, and
+  compile-time integer `value_*` equality and ordering predicates.
   The compile-time host can answer these canonical `/std/meta/*` predicates
   from published semantic requirement facts with deterministic success,
-  unsatisfied, and invalid-evaluation results. `field_type_equals` and the
-  value comparison predicates remain deferred.
+  unsatisfied, and invalid-evaluation results. `field_type_equals` remains
+  deferred.
   User-defined requirement predicates use the same compile-time execution model
   and return ordinary `bool` at the source level; semantic validation wraps
   `true` and `false` into typed requirement facts.

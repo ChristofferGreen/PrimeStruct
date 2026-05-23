@@ -1619,7 +1619,9 @@ TEST_CASE("generic requirement predicate surface stays source locked") {
         std::string::npos);
   CHECK(syntaxSpec.find("The compile-time host can answer these canonical `/std/meta/*` predicates\n"
                         "  from published semantic requirement facts with deterministic success,\n"
-                        "  unsatisfied, and invalid-evaluation results. `field_type_equals` and the") !=
+                        "  unsatisfied, and invalid-evaluation results. `field_type_equals` remains") !=
+        std::string::npos);
+  CHECK(primeStructDoc.find("compile-time integer `value_*` equality and ordering predicates.") !=
         std::string::npos);
   CHECK(primeStructDoc.find("Existing transform-style trait constraints such as `[Additive<i32>]` remain\n"
                             "source-compatible compatibility vocabulary") !=
@@ -1754,8 +1756,8 @@ TEST_CASE("todo queue and skipped doctest debt stay source locked") {
   CHECK(todo.find("### Ready Now (Parallel-Candidate Leaves; No Unmet TODO Dependencies)") !=
         std::string::npos);
   CHECK(todo.find("### Ready Now (Parallel-Candidate Leaves; No Unmet TODO Dependencies)\n\n"
-                  "- TODO-4351: Add value-level compile-time requirement facts | track:\n"
-                  "  generic-requirements-value-facts | primary surface: compile-time value predicates") !=
+                  "- TODO-4348: Publish requirement diagnostics with provenance | track:\n"
+                  "  generic-requirements-diagnostics | primary surface: requirement diagnostics") !=
         std::string::npos);
   CHECK(todo.find("- `soa-zero-audit`: TODO-4529 replaced the residue inventory with a strict\n"
                   "  zero-production-trace audit; no SoA zero-audit leaf is ready.") !=
@@ -1794,12 +1796,16 @@ TEST_CASE("todo queue and skipped doctest debt stay source locked") {
                   "  policy; TODO-4550 enforced active compile-time budget limits; TODO-4358\n"
                   "  enforced phase-qualified compile-time effects; TODO-4551 added\n"
                   "  deterministic cache keys and invalidation; TODO-4347 routed requirement\n"
-                  "  facts into overload selection. TODO-4351 is ready to add value-level\n"
-                  "  compile-time requirement facts.") !=
+                  "  facts into overload selection; and TODO-4351 added integer value\n"
+                  "  requirement facts. TODO-4348 is ready to publish provenance-rich\n"
+                  "  diagnostics for failed and invalid requirements.") !=
         std::string::npos);
   CHECK(todo.find("### Immediate Next 10 (Track Successors; Not Ready Until Dependencies Land)\n\n"
                   "- TODO-4545: Implement first structured task spawn/wait substrate\n"
-                  "- TODO-4278: Integrate multi-wait with stdlib tuple") !=
+                  "- TODO-4278: Integrate multi-wait with stdlib tuple\n"
+                  "- TODO-4359: Add compile-time VM conformance coverage\n"
+                  "- TODO-4349: Add generic constraint conformance matrix\n"
+                  "- TODO-4350: Add high-level generic design examples") !=
         std::string::npos);
   CHECK(todo.find("- TODO-4273: Add heterogeneous value-pack inference") ==
         std::string::npos);
@@ -1817,7 +1823,6 @@ TEST_CASE("todo queue and skipped doctest debt stay source locked") {
   CHECK(todo.find("### Execution Queue (Recommended Track Order)\n\n"
                   "- TODO-4545: Implement first structured task spawn/wait substrate\n"
                   "- TODO-4278: Integrate multi-wait with stdlib tuple\n"
-                  "- TODO-4351: Add value-level compile-time requirement facts\n"
                   "- TODO-4348: Publish requirement diagnostics with provenance") !=
         std::string::npos);
   CHECK(todo.find("- [ ] TODO-4548: Add expression-position `ct_if` values") ==
@@ -1935,6 +1940,7 @@ TEST_CASE("todo queue and skipped doctest debt stay source locked") {
   CHECK(todoFinished.find("TODO-4519: Delete `soa_vector` compatibility seams") !=
         std::string::npos);
   const std::vector<std::string> completedSemanticPhaseQueue = {
+      "TODO-4351: Add value-level compile-time requirement facts",
       "TODO-4347: Integrate requirements with overload selection",
       "TODO-4358: Enforce phase-qualified compile-time effects",
       "TODO-4550: Enforce compile-time evaluation budgets",

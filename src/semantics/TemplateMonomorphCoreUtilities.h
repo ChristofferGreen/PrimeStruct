@@ -377,7 +377,7 @@ RequirementOverloadViability evaluateRequirementOverloadViability(
                                              sourceLine,
                                              sourceColumn,
                                              requirementContext);
-      if (fact.evaluationDiagnostic.find("deferred for unresolved type facts") !=
+      if (fact.evaluationDiagnostic.find("deferred for unresolved") !=
           std::string::npos) {
         continue;
       }

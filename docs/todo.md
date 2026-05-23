@@ -83,8 +83,8 @@ Task template:
 
 ### Ready Now (Parallel-Candidate Leaves; No Unmet TODO Dependencies)
 
-- TODO-4351: Add value-level compile-time requirement facts | track:
-  generic-requirements-value-facts | primary surface: compile-time value predicates
+- TODO-4348: Publish requirement diagnostics with provenance | track:
+  generic-requirements-diagnostics | primary surface: requirement diagnostics
 
 ### Parallel Work Tracks (Current)
 
@@ -128,13 +128,17 @@ Task template:
   policy; TODO-4550 enforced active compile-time budget limits; TODO-4358
   enforced phase-qualified compile-time effects; TODO-4551 added
   deterministic cache keys and invalidation; TODO-4347 routed requirement
-  facts into overload selection. TODO-4351 is ready to add value-level
-  compile-time requirement facts.
+  facts into overload selection; and TODO-4351 added integer value
+  requirement facts. TODO-4348 is ready to publish provenance-rich
+  diagnostics for failed and invalid requirements.
 
 ### Immediate Next 10 (Track Successors; Not Ready Until Dependencies Land)
 
 - TODO-4545: Implement first structured task spawn/wait substrate
 - TODO-4278: Integrate multi-wait with stdlib tuple
+- TODO-4359: Add compile-time VM conformance coverage
+- TODO-4349: Add generic constraint conformance matrix
+- TODO-4350: Add high-level generic design examples
 
 ### Priority Lanes (Current)
 
@@ -158,14 +162,13 @@ Task template:
   prerequisite split out of TODO-4278
 - Procedural compile-time genericity: none active after TODO-4340 and
   TODO-4546
-- Generic constraint and compile-time flow alignment: TODO-4351 -> TODO-4348
-  -> TODO-4359 -> TODO-4349 -> TODO-4350
+- Generic constraint and compile-time flow alignment: TODO-4348 -> TODO-4359
+  -> TODO-4349 -> TODO-4350
 
 ### Execution Queue (Recommended Track Order)
 
 - TODO-4545: Implement first structured task spawn/wait substrate
 - TODO-4278: Integrate multi-wait with stdlib tuple
-- TODO-4351: Add value-level compile-time requirement facts
 - TODO-4348: Publish requirement diagnostics with provenance
 - TODO-4359: Add compile-time VM conformance coverage
 - TODO-4349: Add generic constraint conformance matrix
@@ -198,7 +201,7 @@ Task template:
 | Stdlib ADT migration for `Maybe` and `Result` | none |
 | Generic type packs and tuple stdlib surface | TODO-4274, TODO-4273, TODO-4277, TODO-4278 |
 | Procedural compile-time genericity and local type facts | none |
-| Generic constraints and compile-time flow control | TODO-4352, TODO-4353, TODO-4354, TODO-4355, TODO-4356, TODO-4357, TODO-4345, TODO-4547, TODO-4548, TODO-4549, TODO-4346, TODO-4550, TODO-4551, TODO-4351, TODO-4348, TODO-4359, TODO-4349, TODO-4350 |
+| Generic constraints and compile-time flow control | TODO-4352, TODO-4353, TODO-4354, TODO-4355, TODO-4356, TODO-4357, TODO-4345, TODO-4547, TODO-4548, TODO-4549, TODO-4346, TODO-4550, TODO-4551, TODO-4348, TODO-4359, TODO-4349, TODO-4350 |
 
 ### Validation Coverage Snapshot
 
@@ -225,7 +228,7 @@ Task template:
 | Maybe/Result sum migration conformance | none |
 | Generic type-pack and tuple conformance | TODO-4274, TODO-4273, TODO-4277, TODO-4278 |
 | Procedural compile-time genericity conformance | none |
-| Generic constraint and compile-time flow conformance | TODO-4352, TODO-4353, TODO-4354, TODO-4355, TODO-4356, TODO-4357, TODO-4345, TODO-4547, TODO-4548, TODO-4549, TODO-4346, TODO-4550, TODO-4551, TODO-4351, TODO-4348, TODO-4359, TODO-4349, TODO-4350 |
+| Generic constraint and compile-time flow conformance | TODO-4352, TODO-4353, TODO-4354, TODO-4355, TODO-4356, TODO-4357, TODO-4345, TODO-4547, TODO-4548, TODO-4549, TODO-4346, TODO-4550, TODO-4551, TODO-4348, TODO-4359, TODO-4349, TODO-4350 |
 
 ### Vector/Map Bridge Contract Summary
 
@@ -809,47 +812,11 @@ Task template:
   - stop_rule: Stop once multi-wait returns stdlib `tuple<...>` or the missing
     task-side prerequisite is split into an explicit multithreading TODO.
 
-- [ ] TODO-4351: Add value-level compile-time requirement facts
-  - owner: ai
-  - created_at: 2026-05-04
-  - phase: Generic constraint and compile-time flow alignment
-  - parallel_track: generic-requirements-value-facts
-  - depends_on: TODO-4353, TODO-4342, TODO-4270
-  - scope: Extend requirement predicates from type facts to typed
-    compile-time value facts such as integer template arguments, tuple
-    indexes, array extents, SIMD widths, and GPU/workgroup dimensions.
-  - implementation_notes:
-    - Start from the compile-time integer argument representation in
-      TODO-4270, requirement fact publication from TODO-4342, parser support
-      for readable predicate expressions, and diagnostics for constant
-      expression evaluation.
-    - Keep v1 value predicates narrow: equality, inequality, ordered integer
-      comparisons, range checks, divisibility/alignment checks, and named
-      builtin predicates where the operand type is already a compile-time
-      value fact.
-    - Avoid a separate value-metaprogramming language; value facts should use
-      the same compile-time argument channel and semantic-product provenance
-      as type facts.
-  - acceptance:
-    - A generic helper can require a compile-time integer argument to satisfy
-      a predicate such as `N > 0` and reject a failing specialization before
-      lowering.
-    - Value predicate facts publish operand values, predicate names, pass/fail
-      results, and source provenance through the semantic product.
-    - Invalid value predicates, unsupported operand types, and non-constant
-      operands produce stable diagnostics.
-    - Tests cover array/tuple-style lengths or indexes, one GPU/SIMD-style
-      dimension predicate if that surface exists, and at least one negative
-      range/alignment diagnostic.
-    - `./scripts/compile.sh --release` passes.
-  - stop_rule: Stop once compile-time value facts can participate in
-    requirements with the same provenance and determinism guarantees as type
-    facts.
-
 - [ ] TODO-4348: Publish requirement diagnostics with provenance
   - owner: ai
   - created_at: 2026-05-04
   - phase: Generic constraint and compile-time flow alignment
+  - parallel_track: generic-requirements-diagnostics
   - depends_on: TODO-4347, TODO-4351
   - scope: Add stable, user-facing diagnostics for failed requirements,
     ambiguous requirement-driven overloads, and invalid compile-time flow.

@@ -4,6 +4,7 @@
 
 #include <algorithm>
 #include <cctype>
+#include <cstdint>
 #include <optional>
 #include <sstream>
 
@@ -11,10 +12,17 @@ namespace primec::semantics {
 namespace {
 
 enum class TypeOperandStatus { Resolved, Deferred, Invalid };
+enum class ValueOperandStatus { Resolved, Deferred, Invalid };
 
 struct TypeOperandResolution {
   TypeOperandStatus status = TypeOperandStatus::Invalid;
   std::string canonicalType;
+  std::string diagnostic;
+};
+
+struct ValueOperandResolution {
+  ValueOperandStatus status = ValueOperandStatus::Invalid;
+  std::uint64_t unsignedValue = 0;
   std::string diagnostic;
 };
 
@@ -168,6 +176,17 @@ findTopLevelRequirementRelation(std::string_view text) {
   int bracketDepth = 0;
   for (std::size_t i = 0; i + 1 < text.size(); ++i) {
     const char ch = text[i];
+    if (angleDepth == 0 && parenDepth == 0 && braceDepth == 0 && bracketDepth == 0) {
+      const std::string_view op = text.substr(i, 2);
+      if (op == "==" || op == "!=" || op == ">=" || op == "<=") {
+        return std::make_pair(i, std::string(op));
+      }
+      if ((ch == '>' || ch == '<') && i > 0 && i + 1 < text.size() &&
+          std::isspace(static_cast<unsigned char>(text[i - 1])) &&
+          std::isspace(static_cast<unsigned char>(text[i + 1]))) {
+        return std::make_pair(i, std::string(1, ch));
+      }
+    }
     if (ch == '<') {
       ++angleDepth;
       continue;
@@ -202,10 +221,6 @@ findTopLevelRequirementRelation(std::string_view text) {
     }
     if (angleDepth != 0 || parenDepth != 0 || braceDepth != 0 || bracketDepth != 0) {
       continue;
-    }
-    const std::string_view op = text.substr(i, 2);
-    if (op == "==" || op == "!=" || op == ">=" || op == "<=") {
-      return std::make_pair(i, std::string(op));
     }
   }
   return std::nullopt;
@@ -279,6 +294,24 @@ std::string canonicalPredicateName(std::string name) {
   if (name == "has_member") {
     return "/std/meta/has_member";
   }
+  if (name == "value_equals" || name == "value_equal") {
+    return "/std/meta/value_equals";
+  }
+  if (name == "value_not_equals" || name == "value_not_equal") {
+    return "/std/meta/value_not_equals";
+  }
+  if (name == "value_less" || name == "less_than") {
+    return "/std/meta/value_less";
+  }
+  if (name == "value_less_equal" || name == "less_equal") {
+    return "/std/meta/value_less_equal";
+  }
+  if (name == "value_greater" || name == "greater_than") {
+    return "/std/meta/value_greater";
+  }
+  if (name == "value_greater_equal" || name == "greater_equal") {
+    return "/std/meta/value_greater_equal";
+  }
   return name;
 }
 
@@ -300,9 +333,19 @@ bool isBuiltinCapabilityPredicate(std::string_view name) {
          name == "/std/meta/has_member";
 }
 
+bool isBuiltinValuePredicate(std::string_view name) {
+  return name == "/std/meta/value_equals" ||
+         name == "/std/meta/value_not_equals" ||
+         name == "/std/meta/value_less" ||
+         name == "/std/meta/value_less_equal" ||
+         name == "/std/meta/value_greater" ||
+         name == "/std/meta/value_greater_equal";
+}
+
 bool isBuiltinRequirementPredicate(std::string_view name) {
   return isBuiltinTypeRelationPredicate(name) ||
-         isBuiltinCapabilityPredicate(name);
+         isBuiltinCapabilityPredicate(name) ||
+         isBuiltinValuePredicate(name);
 }
 
 std::string canonicalCallSourceText(std::string_view predicateName,
@@ -335,6 +378,12 @@ RequirementPredicateOperandFact classifyRequirementOperand(
 
   if (text.rfind("typeof<", 0) == 0 && text.size() > 8 && text.back() == '>') {
     operand.kind = "type_fact";
+  } else if (isBuiltinValuePredicate(predicateName) &&
+             isRequirementLiteralText(text)) {
+    operand.kind = "literal_compile_time_argument";
+  } else if (isBuiltinValuePredicate(predicateName) &&
+             isRequirementSymbolText(text)) {
+    operand.kind = "compile_time_symbol";
   } else if (isTemplateOperand && isRequirementSymbolText(text)) {
     operand.kind = "type_fact";
   } else if ((predicateName.find("type") != std::string_view::npos ||
@@ -510,6 +559,108 @@ TypeOperandResolution resolveTypeOperand(
           {},
           "unknown type fact for requirement predicate " +
               std::string(predicateName) + ": " + text};
+}
+
+bool parseUnsignedRequirementInteger(std::string_view text,
+                                     std::uint64_t &valueOut) {
+  text = trimRequirementText(text);
+  if (text.empty()) {
+    return false;
+  }
+  auto isSupportedIntegerSuffix = [](std::string_view suffix) {
+    return suffix.empty() || suffix == "int" || suffix == "uint" ||
+           suffix == "i8" || suffix == "i16" || suffix == "i32" ||
+           suffix == "i64" || suffix == "u8" || suffix == "u16" ||
+           suffix == "u32" || suffix == "u64";
+  };
+  std::uint64_t value = 0;
+  if (text.size() > 2 && text[0] == '0' &&
+      (text[1] == 'x' || text[1] == 'X')) {
+    bool sawDigit = false;
+    std::size_t i = 2;
+    for (; i < text.size(); ++i) {
+      const char c = text[i];
+      if (c == ',' || c == '_') {
+        continue;
+      }
+      std::uint64_t digit = 0;
+      if (c >= '0' && c <= '9') {
+        digit = static_cast<std::uint64_t>(c - '0');
+      } else if (c >= 'a' && c <= 'f') {
+        digit = static_cast<std::uint64_t>(10 + c - 'a');
+      } else if (c >= 'A' && c <= 'F') {
+        digit = static_cast<std::uint64_t>(10 + c - 'A');
+      } else {
+        break;
+      }
+      if (value > (UINT64_MAX - digit) / 16) {
+        return false;
+      }
+      value = value * 16 + digit;
+      sawDigit = true;
+    }
+    if (!sawDigit || !isSupportedIntegerSuffix(text.substr(i))) {
+      return false;
+    }
+    valueOut = value;
+    return true;
+  }
+  bool sawDigit = false;
+  std::size_t i = 0;
+  for (; i < text.size(); ++i) {
+    const char c = text[i];
+    if (c == ',' || c == '_') {
+      continue;
+    }
+    if (c < '0' || c > '9') {
+      break;
+    }
+    const std::uint64_t digit = static_cast<std::uint64_t>(c - '0');
+    if (value > (UINT64_MAX - digit) / 10) {
+      return false;
+    }
+    value = value * 10 + digit;
+    sawDigit = true;
+  }
+  if (!sawDigit || !isSupportedIntegerSuffix(text.substr(i))) {
+    return false;
+  }
+  valueOut = value;
+  return true;
+}
+
+ValueOperandResolution resolveValueOperand(
+    const RequirementPredicateDefinitionContext &context,
+    const RequirementPredicateOperandFact &operand,
+    std::string_view predicateName) {
+  if (operand.kind == "literal_compile_time_argument") {
+    std::uint64_t value = 0;
+    if (!parseUnsignedRequirementInteger(operand.text, value)) {
+      return {ValueOperandStatus::Invalid,
+              0,
+              "unsupported integer value operand for requirement predicate " +
+                  std::string(predicateName) + ": " + operand.text};
+    }
+    return {ValueOperandStatus::Resolved, value, {}};
+  }
+  if (operand.kind == "compile_time_symbol") {
+    if (std::find(context.templateArgs.begin(),
+                  context.templateArgs.end(),
+                  operand.text) != context.templateArgs.end()) {
+      return {ValueOperandStatus::Deferred,
+              0,
+              "requirement predicate " + std::string(predicateName) +
+                  " deferred for unresolved value fact: " + operand.text};
+    }
+    return {ValueOperandStatus::Invalid,
+            0,
+            "non-constant value operand for requirement predicate " +
+                std::string(predicateName) + ": " + operand.text};
+  }
+  return {ValueOperandStatus::Invalid,
+          0,
+          "unsupported value operand for requirement predicate " +
+              std::string(predicateName) + ": " + operand.text};
 }
 
 std::string formatResolvedTypeFacts(const std::vector<TypeOperandResolution> &resolved) {
@@ -956,6 +1107,69 @@ void evaluateBuiltinTypePredicate(RequirementPredicateFactDraft &fact,
                         " is not a sum";
   }
   fact.evaluationOutcome = satisfied ? "satisfied" : "unsatisfied";
+}
+
+void evaluateBuiltinValuePredicate(RequirementPredicateFactDraft &fact,
+                                   const RequirementPredicateDefinitionContext &context) {
+  if (fact.operands.size() != 2) {
+    fact.evaluationOutcome = "invalid_evaluation";
+    fact.evaluationDiagnostic =
+        "requirement predicate " + fact.predicateName +
+        " expects two compile-time integer value operands";
+    return;
+  }
+
+  std::vector<ValueOperandResolution> resolved;
+  resolved.reserve(fact.operands.size());
+  bool deferred = false;
+  for (const auto &operand : fact.operands) {
+    ValueOperandResolution resolution =
+        resolveValueOperand(context, operand, fact.predicateName);
+    if (resolution.status == ValueOperandStatus::Invalid) {
+      fact.evaluationOutcome = "invalid_evaluation";
+      fact.evaluationDiagnostic = std::move(resolution.diagnostic);
+      return;
+    }
+    if (resolution.status == ValueOperandStatus::Deferred) {
+      deferred = true;
+    }
+    resolved.push_back(std::move(resolution));
+  }
+  if (deferred) {
+    fact.evaluationOutcome = "invalid_evaluation";
+    fact.evaluationDiagnostic =
+        "requirement predicate evaluation deferred for unresolved value facts";
+    return;
+  }
+
+  const std::uint64_t left = resolved[0].unsignedValue;
+  const std::uint64_t right = resolved[1].unsignedValue;
+  bool satisfied = false;
+  std::string comparison;
+  if (fact.predicateName == "/std/meta/value_equals") {
+    satisfied = left == right;
+    comparison = "==";
+  } else if (fact.predicateName == "/std/meta/value_not_equals") {
+    satisfied = left != right;
+    comparison = "!=";
+  } else if (fact.predicateName == "/std/meta/value_less") {
+    satisfied = left < right;
+    comparison = "<";
+  } else if (fact.predicateName == "/std/meta/value_less_equal") {
+    satisfied = left <= right;
+    comparison = "<=";
+  } else if (fact.predicateName == "/std/meta/value_greater") {
+    satisfied = left > right;
+    comparison = ">";
+  } else if (fact.predicateName == "/std/meta/value_greater_equal") {
+    satisfied = left >= right;
+    comparison = ">=";
+  }
+
+  fact.evaluationOutcome = satisfied ? "satisfied" : "unsatisfied";
+  fact.evaluationDiagnostic =
+      std::string("value predicate ") + (satisfied ? "satisfied: " : "failed: ") +
+      std::to_string(left) + " " + comparison + " " + std::to_string(right);
 }
 
 void evaluateHasTraitPredicate(RequirementPredicateFactDraft &fact,
@@ -1405,6 +1619,10 @@ void evaluateRequirementPredicate(RequirementPredicateFactDraft &fact,
     evaluateBuiltinTypePredicate(fact, context);
     return;
   }
+  if (isBuiltinValuePredicate(fact.predicateName)) {
+    evaluateBuiltinValuePredicate(fact, context);
+    return;
+  }
   evaluateBuiltinCapabilityPredicate(fact, context);
 }
 
@@ -1433,8 +1651,16 @@ RequirementPredicateFactDraft buildRequirementPredicateFactDraft(
       fact.predicateName = relation->second == "==" ? "/std/meta/type_equals"
                                                     : "/std/meta/type_not_equals";
     } else {
-      fact.predicateKind = "relation";
-      fact.predicateName = "relation";
+      fact.predicateKind = "predicate_call";
+      if (relation->second == "<") {
+        fact.predicateName = "/std/meta/value_less";
+      } else if (relation->second == "<=") {
+        fact.predicateName = "/std/meta/value_less_equal";
+      } else if (relation->second == ">") {
+        fact.predicateName = "/std/meta/value_greater";
+      } else if (relation->second == ">=") {
+        fact.predicateName = "/std/meta/value_greater_equal";
+      }
     }
     fact.operands.push_back(classifyRequirementOperand(
         sourceText.substr(0, relation->first),
@@ -1450,12 +1676,7 @@ RequirementPredicateFactDraft buildRequirementPredicateFactDraft(
         false,
         sourceLine,
         sourceColumn));
-    if (fact.predicateKind == "predicate_call") {
-      fact.sourceText = canonicalCallSourceText(fact.predicateName, fact.operands);
-    } else {
-      fact.evaluationDiagnostic =
-          "unsupported requirement relation operator: " + relation->second;
-    }
+    fact.sourceText = canonicalCallSourceText(fact.predicateName, fact.operands);
     evaluateRequirementPredicate(fact, context);
     return fact;
   }

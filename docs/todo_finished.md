@@ -6,6 +6,32 @@ Legend:
 Finished items are periodically archived here from `docs/todo.md`; section headers record the archive date.
 
 **Todo Completion (May 23, 2026)**
+- [x] TODO-4351: Add value-level compile-time requirement facts
+  - owner: ai
+  - created_at: 2026-05-04
+  - finished_at: 2026-05-23
+  - phase: Generic constraint and compile-time flow alignment
+  - parallel_track: generic-requirements-value-facts
+  - depends_on: TODO-4353, TODO-4342, TODO-4270
+  - scope: Extend requirement predicates from type facts to integer
+    compile-time value facts.
+  - outcome:
+    - Added builtin `/std/meta/value_*` equality and ordering predicates for
+      integer compile-time operands.
+    - Treated source-filtered comparison helpers such as `greater_than(N, 0)`
+      as requirement-only aliases for canonical value predicates.
+    - Rewrote requirement transform argument text during template
+      specialization so integer template arguments become concrete value
+      facts before predicate evaluation.
+    - Published value predicate operands, stable handles, evaluation outcomes,
+      and deterministic diagnostics through the semantic product.
+    - Rejected non-constant and unsupported value operands with stable
+      diagnostics.
+    - Promoted TODO-4348 as the next Ready Now generic-requirements leaf.
+  - validation:
+    - `cmake --build build-release --target PrimeStruct_semantics_tests -j 1`
+    - `./PrimeStruct_semantics_tests --test-case="require transforms publish evaluated builtin type predicate facts,require transforms publish evaluated value predicate facts,require builtin type predicates reject mismatched calls,require value predicates use integer template arguments,require value predicates reject failing integer template arguments,require value predicates reject non-constant operands,requirement constrained overload selects the viable same arity candidate,requirement constrained overload uses local argument facts,requirement constrained overload preserves no viable diagnostics,requirement constrained overload rejects multiple viable candidates" --no-skip`
+
 - [x] TODO-4347: Integrate requirements with overload selection
   - owner: ai
   - created_at: 2026-05-04

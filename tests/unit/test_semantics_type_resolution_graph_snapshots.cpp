@@ -232,6 +232,114 @@ main() {
         std::string::npos);
 }
 
+TEST_CASE("require transforms publish evaluated value predicate facts") {
+  const std::string source = R"(
+[return<int> require(value_greater<4, 0>(), value_less_equal<4, 4>(), value_not_equals<4, 5>())]
+positive() {
+  return(4i32)
+}
+
+[return<int>]
+main() {
+  return(positive())
+}
+)";
+
+  primec::testing::CompilePipelineBoundaryDumps dumps;
+  std::string error;
+  REQUIRE(primec::testing::captureSemanticBoundaryDumpsForTesting(
+      source, "/main", dumps, error));
+  CHECK(error.empty());
+  CHECK(dumps.semanticProduct.find(
+            "predicate_name=\"/std/meta/value_greater\"") !=
+        std::string::npos);
+  CHECK(dumps.semanticProduct.find(
+            "source_text=\"/std/meta/value_greater<4, 0>()\" "
+            "operands=[{kind=\"literal_compile_time_argument\" text=\"4\" "
+            "stable_handle=\"literal_compile_time_argument:4\"") !=
+        std::string::npos);
+  CHECK(dumps.semanticProduct.find(
+            "{kind=\"literal_compile_time_argument\" text=\"0\" "
+            "stable_handle=\"literal_compile_time_argument:0\"") !=
+        std::string::npos);
+  CHECK(dumps.semanticProduct.find(
+            "evaluation_diagnostic=\"value predicate satisfied: 4 > 0\"") !=
+        std::string::npos);
+  CHECK(dumps.semanticProduct.find(
+            "predicate_name=\"/std/meta/value_less_equal\"") !=
+        std::string::npos);
+  CHECK(dumps.semanticProduct.find(
+            "predicate_name=\"/std/meta/value_not_equals\"") !=
+        std::string::npos);
+}
+
+TEST_CASE("require value predicates use integer template arguments") {
+  const std::string source = R"(
+[return<i32> require(N > 0)]
+positive_index<N>() {
+  return(1i32)
+}
+
+[return<i32>]
+main() {
+  return(positive_index<4>())
+}
+)";
+
+  std::string error;
+  CHECK(validateProgramThroughCompilePipeline(source,
+                                              "/main",
+                                              {"io_out", "io_err"},
+                                              {"io_out", "io_err"},
+                                              error));
+  CHECK(error.empty());
+}
+
+TEST_CASE("require value predicates reject failing integer template arguments") {
+  const std::string source = R"(
+[return<i32> require(N > 0)]
+positive_index<N>() {
+  return(1i32)
+}
+
+[return<i32>]
+main() {
+  return(positive_index<0>())
+}
+)";
+
+  std::string error;
+  CHECK_FALSE(validateProgramThroughCompilePipeline(source,
+                                                    "/main",
+                                                    {"io_out", "io_err"},
+                                                    {"io_out", "io_err"},
+                                                    error));
+  CHECK(error.find("requirement predicate not satisfied: "
+                   "/std/meta/value_greater") != std::string::npos);
+  CHECK(error.find("value predicate failed: 0 > 0") != std::string::npos);
+}
+
+TEST_CASE("require value predicates reject non-constant operands") {
+  const std::string source = R"(
+[return<i32> require(value_greater<value, 0>())]
+bad([i32] value) {
+  return(value)
+}
+
+[return<i32>]
+main() {
+  return(bad(1i32))
+}
+)";
+
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("invalid requirement predicate /std/meta/value_greater") !=
+        std::string::npos);
+  CHECK(error.find("non-constant value operand for requirement predicate "
+                   "/std/meta/value_greater: value") != std::string::npos);
+}
+
 TEST_CASE("require facts publish phase-qualified compile-time effects") {
   const std::string source = R"(
 [effects(file_read) return<int> require(is_type<i32>())]

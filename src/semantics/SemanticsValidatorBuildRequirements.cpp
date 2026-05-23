@@ -141,7 +141,7 @@ bool SemanticsValidator::validateRequirementPredicates() {
                                                sourceLine,
                                                sourceColumn,
                                                context);
-        if (fact.evaluationDiagnostic.find("deferred for unresolved type facts") !=
+        if (fact.evaluationDiagnostic.find("deferred for unresolved") !=
             std::string::npos) {
           continue;
         }
