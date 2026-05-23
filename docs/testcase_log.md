@@ -8477,3 +8477,8 @@
   taking about 55 seconds. Validating command: `cd build-release && ctest
   --output-on-failure --stop-on-failure --timeout 120 -I 1536,1540` on
   2026-05-23 23:08 CEST. Next focused continuation starts at `-I 1541,1545`.
+- Compile-run shards 1541-1545 now pass without source edits. This window
+  moves from GLSL numbered shards into dump coverage. Validating command:
+  `cd build-release && ctest --output-on-failure --stop-on-failure --timeout
+  120 -I 1541,1545` on 2026-05-23 23:09 CEST. Next focused continuation
+  starts at `-I 1546,1550`.
