@@ -8173,3 +8173,7 @@
   Validating command: `cd build-release && ctest --output-on-failure
   --stop-on-failure --timeout 120 -I 1221,1225` on 2026-05-23 19:11 CEST.
   Next focused continuation starts at `-I 1226,1230`.
+- Reflection/import shards 1226-1230 now pass without source edits.
+  Validating command: `cd build-release && ctest --output-on-failure
+  --stop-on-failure --timeout 120 -I 1226,1230` on 2026-05-23 19:12 CEST.
+  Next focused continuation starts at `-I 1231,1235`.
