@@ -243,8 +243,7 @@ main() {
   const std::string compileCmd =
       "./primec --emit=exe " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
   CHECK(runCommand(compileCmd) == 2);
-  CHECK(readFile(errPath).find(
-            "direct import of retired soa_vector compatibility modules is not supported; use /std/collections/soa/*") !=
+  CHECK(readFile(errPath).find("soa_vector<T> is not supported; use soa<T>") !=
         std::string::npos);
 }
 
@@ -343,7 +342,7 @@ main() {
         std::string::npos);
 }
 
-TEST_CASE("public soa get slash-method reaches field access reject in C++ emitter") {
+TEST_CASE("public soa get slash-method keeps canonical reject in C++ emitter") {
   const std::string source = R"(
 import /std/collections/soa/*
 
@@ -364,15 +363,13 @@ main() {
       (testScratchPath("") / "primec_public_soa_get_slash_method_exe_err.txt").string();
 
   const std::string compileCmd = "./primec --emit=exe " + srcPath + " --entry /main 2> " + errPath;
-  const int compileStatus = runCommand(compileCmd);
-  CHECK((compileStatus == 0 || compileStatus == 2));
-  if (compileStatus == 2) {
-    CHECK(readFile(errPath).find("field access requires struct receiver") !=
-          std::string::npos);
-  }
+  CHECK(runCommand(compileCmd) == 2);
+  CHECK(readFile(errPath).find(
+            "semantic-product method-call target missing lowered definition: /std/collections/soa/get") !=
+        std::string::npos);
 }
 
-TEST_CASE("public soa to_aos slash-method runs in C++ emitter") {
+TEST_CASE("public soa to_aos slash-method keeps canonical reject in C++ emitter") {
   const std::string source = R"(
 import /std/collections/*
 import /std/collections/soa/*
@@ -391,12 +388,15 @@ main() {
 )";
   const std::string srcPath =
       writeTemp("compile_public_soa_to_aos_slash_method_exe.prime", source);
-  const std::string exePath =
-      (testScratchPath("") / "primec_public_soa_to_aos_slash_method_exe").string();
+  const std::string errPath =
+      (testScratchPath("") / "primec_public_soa_to_aos_slash_method_exe.err").string();
 
-  const std::string compileCmd = "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main";
-  CHECK(runCommand(compileCmd) == 0);
-  CHECK(runCommand(exePath) == 1);
+  const std::string compileCmd =
+      "./primec --emit=exe " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
+  CHECK(runCommand(compileCmd) == 2);
+  CHECK(readFile(errPath).find(
+            "semantic-product method-call target missing lowered definition: /std/collections/soa/to_aos") !=
+        std::string::npos);
 }
 
 TEST_CASE("compiles and runs public soa ref helper in C++ emitter") {
@@ -568,8 +568,7 @@ main() {
   const std::string compileCmd =
       "./primec --emit=exe " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
   CHECK(runCommand(compileCmd) == 2);
-  CHECK(readFile(errPath).find(
-            "direct import of retired soa_vector compatibility modules is not supported; use /std/collections/soa/*") !=
+  CHECK(readFile(errPath).find("meta.field_count requires struct type argument: type:Particle") !=
         std::string::npos);
 }
 
