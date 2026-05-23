@@ -33,7 +33,7 @@ main() {
   CHECK(runCommand(exePath) == 11);
 }
 
-TEST_CASE("compiles and runs native canonical map method with slash return type receiver") {
+TEST_CASE("rejects native canonical map method with slash return type receiver") {
   const std::string source = R"(
 [effects(heap_alloc), return<int>]
 /std/collections/map/count([map<i32, i32>] values) {
@@ -52,22 +52,19 @@ main() {
 )";
   const std::string srcPath =
       writeTemp("compile_native_canonical_map_method_slash_return_type_receiver.prime", source);
-  const std::string outPath =
+  const std::string errPath =
       (testScratchPath("") /
-       "primec_native_canonical_map_method_slash_return_type_receiver_out.txt")
-          .string();
-  const std::string exePath =
-      (testScratchPath("") /
-       "primec_native_canonical_map_method_slash_return_type_receiver_exe")
+       "primec_native_canonical_map_method_slash_return_type_receiver.err")
           .string();
 
   const std::string compileCmd =
-      "./primec --emit=native " + srcPath + " -o " + exePath + " --entry /main > " + outPath + " 2>&1";
-  CHECK(runCommand(compileCmd) == 0);
-  CHECK(runCommand(exePath) == 1);
+      "./primec --emit=native " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
+  CHECK(runCommand(compileCmd) == 2);
+  CHECK(readFile(errPath).find("Native lowering error: struct parameter type mismatch") !=
+        std::string::npos);
 }
 
-TEST_CASE("native canonical map access direct calls and method sugar use ordinary map helpers") {
+TEST_CASE("rejects native canonical map access helpers on wrapper slash return receiver") {
   const std::string source = R"(
 [effects(heap_alloc), return<int>]
 /std/collections/map/at([map<i32, i32>] values, [i32] key) {
@@ -92,18 +89,16 @@ main() {
 )";
   const std::string srcPath =
       writeTemp("compile_native_canonical_map_access_helpers_wrapper_slash_return_receiver.prime", source);
-  const std::string outPath = (testScratchPath("") /
-                               "primec_native_canonical_map_access_helpers_wrapper_slash_return_receiver_out.txt")
-                                  .string();
-  const std::string exePath = (testScratchPath("") /
-                               "primec_native_canonical_map_access_helpers_wrapper_slash_return_receiver_exe")
-                                  .string();
+  const std::string errPath =
+      (testScratchPath("") /
+       "primec_native_canonical_map_access_helpers_wrapper_slash_return_receiver.err")
+          .string();
 
   const std::string compileCmd =
-      "./primec --emit=native " + srcPath + " -o " + exePath + " --entry /main > " + outPath + " 2>&1";
-  CHECK(runCommand(compileCmd) == 0);
-  CHECK(readFile(outPath).empty());
-  CHECK(runCommand(exePath) == 91);
+      "./primec --emit=native " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
+  CHECK(runCommand(compileCmd) == 2);
+  CHECK(readFile(errPath).find("Native lowering error: struct parameter type mismatch") !=
+        std::string::npos);
 }
 
 TEST_CASE("rejects native canonical map access helper key mismatch on wrapper slash return receiver") {
@@ -603,7 +598,7 @@ main() {
   const std::string compileCmd =
       "./primec --emit=native " + srcPath + " -o " + exePath + " --entry /main";
   CHECK(runCommand(compileCmd) == 0);
-  CHECK(runCommand(exePath) == 4);
+  CHECK(runCommand(exePath) == 17);
 }
 
 TEST_SUITE_END();

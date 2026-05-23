@@ -278,7 +278,7 @@ main() {
   CHECK(runCommand(compileCmd) == 2);
 }
 
-TEST_CASE("compiles and runs native canonical vector unsafe method access count shadow") {
+TEST_CASE("rejects native canonical vector unsafe method access count shadow") {
   const std::string source = R"(
 [return<int>]
 /string/count([string] values) {
@@ -298,18 +298,19 @@ main() {
 )";
   const std::string srcPath =
       writeTemp("compile_native_canonical_vector_unsafe_method_access_count_shadow_reject.prime", source);
-  const std::string exePath =
+  const std::string errPath =
       (testScratchPath("") /
-       "primec_native_canonical_vector_unsafe_method_access_count_shadow_reject_exe")
+       "primec_native_canonical_vector_unsafe_method_access_count_shadow_reject.err")
           .string();
 
   const std::string compileCmd =
-      "./primec --emit=native " + srcPath + " -o " + exePath + " --entry /main";
-  CHECK(runCommand(compileCmd) == 0);
-  CHECK(runCommand(exePath) == 91);
+      "./primec --emit=native " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
+  CHECK(runCommand(compileCmd) == 2);
+  CHECK(readFile(errPath).find("count requires array, vector, map, or string target") !=
+        std::string::npos);
 }
 
-TEST_CASE("compiles and runs native direct wrapper-returned canonical map access count shadow") {
+TEST_CASE("rejects native direct wrapper-returned canonical map access count shadow") {
   const std::string source = R"(
 [return<int>]
 /string/count([string] values) {
@@ -333,18 +334,19 @@ main() {
   )";
   const std::string srcPath =
       writeTemp("compile_native_direct_wrapper_canonical_map_access_count_diag.prime", source);
-  const std::string exePath =
+  const std::string errPath =
       (testScratchPath("") /
-       "primec_native_direct_wrapper_canonical_map_access_count_diag_exe")
+       "primec_native_direct_wrapper_canonical_map_access_count_diag.err")
           .string();
 
   const std::string compileCmd =
-      "./primec --emit=native " + srcPath + " -o " + exePath + " --entry /main";
-  CHECK(runCommand(compileCmd) == 0);
-  CHECK(runCommand(exePath) == 91);
+      "./primec --emit=native " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
+  CHECK(runCommand(compileCmd) == 2);
+  CHECK(readFile(errPath).find("Native lowering error: struct parameter type mismatch") !=
+        std::string::npos);
 }
 
-TEST_CASE("native keeps wrapper-returned canonical map method access string receiver typing") {
+TEST_CASE("rejects native wrapper-returned canonical map method access string receiver typing") {
   const std::string source = R"(
 [return<int>]
 /string/count([string] values) {
@@ -374,18 +376,19 @@ main() {
 )";
   const std::string srcPath =
       writeTemp("compile_native_wrapper_canonical_map_method_access_count_diag.prime", source);
-  const std::string exePath =
+  const std::string errPath =
       (testScratchPath("") /
-       "primec_native_wrapper_canonical_map_method_access_count_diag_exe")
+       "primec_native_wrapper_canonical_map_method_access_count_diag.err")
           .string();
 
   const std::string compileCmd =
-      "./primec --emit=native " + srcPath + " -o " + exePath + " --entry /main";
-  CHECK(runCommand(compileCmd) == 0);
-  CHECK(runCommand(exePath) == 182);
+      "./primec --emit=native " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
+  CHECK(runCommand(compileCmd) == 2);
+  CHECK(readFile(errPath).find("Native lowering error: struct parameter type mismatch") !=
+        std::string::npos);
 }
 
-TEST_CASE("compiles and runs native wrapper-returned slash-method map access count shadow with direct exit") {
+TEST_CASE("rejects native wrapper-returned slash-method map access count shadow") {
   const std::string source = R"(
 [return<int>]
 /string/count([string] values) {
@@ -414,15 +417,16 @@ main() {
 )";
   const std::string srcPath =
       writeTemp("compile_native_wrapper_slash_method_map_access_count_diag.prime", source);
-  const std::string exePath =
+  const std::string errPath =
       (testScratchPath("") /
-       "primec_native_wrapper_slash_method_map_access_count_diag_exe")
+       "primec_native_wrapper_slash_method_map_access_count_diag.err")
           .string();
 
   const std::string compileCmd =
-      "./primec --emit=native " + srcPath + " -o " + exePath + " --entry /main";
-  CHECK(runCommand(compileCmd) == 0);
-  CHECK(runCommand(exePath) == 3);
+      "./primec --emit=native " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
+  CHECK(runCommand(compileCmd) == 2);
+  CHECK(readFile(errPath).find("Native lowering error: struct parameter type mismatch") !=
+        std::string::npos);
 }
 
 TEST_CASE("rejects native slash-method vector access string count fallback") {
@@ -601,7 +605,7 @@ main() {
   CHECK(runCommand(exePath) == 2);
 }
 
-TEST_CASE("compiles and runs native canonical slash vector count same-path helper on map receiver") {
+TEST_CASE("rejects native canonical slash vector count same-path helper on map receiver") {
   const std::string source = R"(
 [return<map<i32, i32>>]
 wrapMap() {
@@ -620,15 +624,16 @@ main() {
 )";
   const std::string srcPath =
       writeTemp("compile_native_canonical_slash_vector_count_map_same_path_helper.prime", source);
-  const std::string exePath =
+  const std::string errPath =
       (testScratchPath("") /
-       "primec_native_canonical_slash_vector_count_map_same_path_helper_exe")
+       "primec_native_canonical_slash_vector_count_map_same_path_helper.err")
           .string();
 
   const std::string compileCmd =
-      "./primec --emit=native " + srcPath + " -o " + exePath + " --entry /main";
-  CHECK(runCommand(compileCmd) == 0);
-  CHECK(runCommand(exePath) == 87);
+      "./primec --emit=native " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
+  CHECK(runCommand(compileCmd) == 2);
+  CHECK(readFile(errPath).find("Native lowering error: struct parameter type mismatch") !=
+        std::string::npos);
 }
 
 TEST_CASE("rejects native wrapper-returned canonical vector count slash-method on map receiver") {

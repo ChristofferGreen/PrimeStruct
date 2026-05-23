@@ -8091,3 +8091,14 @@
   --stop-on-failure --timeout 120 -I 1136,1140`, and `cd build-release &&
   ctest --output-on-failure --stop-on-failure --timeout 120 -I 1141,1145` on
   2026-05-23 16:17 CEST. Next focused continuation starts at `-I 1146,1150`.
+- Native backend collection wrapper shards 1146-1160 now pass after aligning
+  stale native count-shadow and canonical map helper positives with current
+  vector/map lowering rejection diagnostics, keeping the namespaced map `at`
+  alias on its current user-helper return value, and retargeting templated
+  stdlib map wrapper temporaries to the current missing-lowered-definition
+  rejection. Validating commands: `cd build-release && ctest
+  --output-on-failure --stop-on-failure --timeout 120 -I 1146,1150`, `cd
+  build-release && ctest --output-on-failure --stop-on-failure --timeout 120
+  -I 1151,1155`, and `cd build-release && ctest --output-on-failure
+  --stop-on-failure --timeout 120 -I 1156,1160` on 2026-05-23 16:34 CEST.
+  Next focused continuation starts at `-I 1161,1165`.

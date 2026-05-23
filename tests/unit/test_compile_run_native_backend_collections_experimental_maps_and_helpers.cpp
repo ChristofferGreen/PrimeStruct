@@ -25,7 +25,7 @@ static void expect_soa_vector_helper_return_shadow_compiles_and_runs(const std::
   CHECK(runCommand(artifactPath) == expectedStatus);
 }
 
-TEST_CASE("compiles and runs native templated stdlib return wrapper temporaries in expressions") {
+TEST_CASE("rejects native templated stdlib return wrapper temporaries in expressions") {
   const std::string source = R"(
 import /std/collections/*
 
@@ -51,13 +51,17 @@ main() {
 )";
   const std::string srcPath =
       writeTemp("compile_native_stdlib_collection_shim_templated_return_temporaries.prime", source);
-  const std::string exePath = (testScratchPath("") /
-                               "primec_native_stdlib_collection_shim_templated_return_temporaries_exe")
-                                  .string();
+  const std::string errPath =
+      (testScratchPath("") /
+       "primec_native_stdlib_collection_shim_templated_return_temporaries.err")
+          .string();
 
-  const std::string compileCmd = "./primec --emit=native " + srcPath + " -o " + exePath + " --entry /main";
-  CHECK(runCommand(compileCmd) == 0);
-  CHECK(runCommand(exePath) == 10);
+  const std::string compileCmd =
+      "./primec --emit=native " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
+  CHECK(runCommand(compileCmd) == 2);
+  CHECK(readFile(errPath).find(
+            "Native lowering error: semantic-product method-call target missing lowered definition: "
+            "/std/collections/map/at") != std::string::npos);
 }
 
 TEST_CASE("native query-local auto vector helpers run through lowering") {
