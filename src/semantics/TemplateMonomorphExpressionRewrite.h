@@ -1,3 +1,37 @@
+bool isCompileTimeTypeofPredicateArg(const std::string &arg) {
+  const std::string trimmed = trimWhitespace(arg);
+  return trimmed.rfind("typeof<", 0) == 0 && trimmed.size() > 8 &&
+         trimmed.back() == '>';
+}
+
+bool rewriteCompileTimePredicateExpr(Expr &expr,
+                                     const SubstMap &mapping,
+                                     const std::unordered_set<std::string> &allowedParams,
+                                     const std::string &namespacePrefix,
+                                     Context &ctx,
+                                     std::string &error) {
+  if (!rewriteTransforms(expr.transforms, mapping, allowedParams, namespacePrefix, ctx, error)) {
+    return false;
+  }
+  for (std::string &templateArg : expr.templateArgs) {
+    if (isCompileTimeTypeofPredicateArg(templateArg)) {
+      continue;
+    }
+    ResolvedType resolved =
+        resolveTypeString(templateArg, mapping, allowedParams, namespacePrefix, ctx, error);
+    if (!error.empty()) {
+      return false;
+    }
+    templateArg = std::move(resolved.text);
+  }
+  for (Expr &arg : expr.args) {
+    if (!rewriteCompileTimePredicateExpr(arg, mapping, allowedParams, namespacePrefix, ctx, error)) {
+      return false;
+    }
+  }
+  return true;
+}
+
 bool rewriteExpr(Expr &expr,
                  const SubstMap &mapping,
                  const std::unordered_set<std::string> &allowedParams,
@@ -10,6 +44,31 @@ bool rewriteExpr(Expr &expr,
   expr.namespacePrefix = namespacePrefix;
   if (!rewriteTransforms(expr.transforms, mapping, allowedParams, namespacePrefix, ctx, error)) {
     return false;
+  }
+  if (expr.kind == Expr::Kind::Call && expr.name == "ct_if" &&
+      expr.args.size() == 3) {
+    if (!rewriteCompileTimePredicateExpr(
+            expr.args[0], mapping, allowedParams, namespacePrefix, ctx, error)) {
+      return false;
+    }
+    for (std::size_t branchIndex = 1; branchIndex < expr.args.size();
+         ++branchIndex) {
+      LocalTypeMap branchLocals = locals;
+      for (Expr &bodyArg : expr.args[branchIndex].bodyArguments) {
+        if (!rewriteExpr(bodyArg,
+                         mapping,
+                         allowedParams,
+                         namespacePrefix,
+                         ctx,
+                         error,
+                         branchLocals,
+                         params,
+                         allowMathBare)) {
+          return false;
+        }
+      }
+    }
+    return true;
   }
   if (expr.kind == Expr::Kind::Name) {
     auto isRuntimeParameter = [&]() {

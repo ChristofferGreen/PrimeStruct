@@ -6,6 +6,30 @@ Legend:
 Finished items are periodically archived here from `docs/todo.md`; section headers record the archive date.
 
 **Todo Completion (May 23, 2026)**
+- [x] TODO-4547: Add specialization-aware `ct_if` over type facts
+  - owner: ai
+  - created_at: 2026-05-23
+  - finished_at: 2026-05-23
+  - phase: Generic constraint and compile-time flow alignment
+  - parallel_track: generic-requirements-ct-if
+  - depends_on: TODO-4345
+  - scope: Extend statement-level `ct_if` branch selection from concrete type
+    facts to template-specialized generic definitions without letting template
+    monomorphization validate discarded `typeof<...>` predicate conditions
+    first.
+  - outcome:
+    - Let pre-monomorphization branch pruning defer unresolved generic type
+      predicates instead of diagnosing them before specialization.
+    - Added a post-monomorphization specialized branch pruning pass that
+      selects `ct_if` branches after template parameters are concrete.
+    - Kept discarded specialized branches out of ordinary validation and IR
+      lowering.
+    - Promoted TODO-4548 as the next Ready Now expression-position `ct_if`
+      leaf.
+  - validation:
+    - `cmake --build build-release --target PrimeStruct_semantics_tests -j 1`
+    - `./PrimeStruct_semantics_tests --test-case='generic statement ct_if selects branches after specialization,statement ct_if selects predicate branches before validation,statement ct_if diagnoses invalid predicate conditions,semantic validation pass manifest pins ordered pipeline phases' --no-skip`
+
 - [x] TODO-4345: Add compile-time `if` over type facts
   - owner: ai
   - created_at: 2026-05-04

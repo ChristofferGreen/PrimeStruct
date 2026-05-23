@@ -93,6 +93,7 @@ TEST_CASE("semantic validation pass manifest pins ordered pipeline phases") {
       "builtin-map-insert-methods",
       "compile-time-branch-pruning",
       "template-monomorphization",
+      "compile-time-specialized-branch-pruning",
       "reflection-metadata-queries",
       "convert-constructors",
       "validator-passes",

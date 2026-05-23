@@ -83,8 +83,8 @@ Task template:
 
 ### Ready Now (Parallel-Candidate Leaves; No Unmet TODO Dependencies)
 
-- TODO-4547: Add specialization-aware `ct_if` over type facts | track:
-  generic-requirements-ct-if | primary surface: generic-specialized
+- TODO-4548: Add expression-position `ct_if` values | track:
+  generic-requirements-ct-if | primary surface: expression-position
   compile-time branching
 
 ### Parallel Work Tracks (Current)
@@ -123,13 +123,13 @@ Task template:
   TODO-4355 wired the compile-time host to published `/std/meta/*` predicate
   facts; TODO-4356 prepared restricted compile-time callables; TODO-4357
   evaluates pure user predicates; TODO-4345 added statement-level concrete
-  `ct_if`; TODO-4547 is ready for generic-specialized branch selection.
+  `ct_if`; TODO-4547 added generic-specialized branch selection; TODO-4548
+  is ready for expression-position `ct_if` values.
 
 ### Immediate Next 10 (Track Successors; Not Ready Until Dependencies Land)
 
 - TODO-4545: Implement first structured task spawn/wait substrate
 - TODO-4278: Integrate multi-wait with stdlib tuple
-- TODO-4548: Add expression-position `ct_if` values
 - TODO-4549: Scope branch-local generated type facts
 
 ### Priority Lanes (Current)
@@ -154,16 +154,15 @@ Task template:
   prerequisite split out of TODO-4278
 - Procedural compile-time genericity: none active after TODO-4340 and
   TODO-4546
-- Generic constraint and compile-time flow alignment: TODO-4547
-  -> TODO-4548 -> TODO-4549 -> TODO-4346 -> TODO-4358 -> TODO-4347
+- Generic constraint and compile-time flow alignment: TODO-4548
+  -> TODO-4549 -> TODO-4346 -> TODO-4358 -> TODO-4347
   -> TODO-4351 -> TODO-4348 -> TODO-4359 -> TODO-4349 -> TODO-4350
 
 ### Execution Queue (Recommended Track Order)
 
-- TODO-4547: Add specialization-aware `ct_if` over type facts
+- TODO-4548: Add expression-position `ct_if` values
 - TODO-4545: Implement first structured task spawn/wait substrate
 - TODO-4278: Integrate multi-wait with stdlib tuple
-- TODO-4548: Add expression-position `ct_if` values
 - TODO-4549: Scope branch-local generated type facts
 - TODO-4346: Add compile-time flow effect and termination policy
 - TODO-4358: Enforce compile-time cache, budget, and effects
@@ -812,42 +811,11 @@ Task template:
   - stop_rule: Stop once multi-wait returns stdlib `tuple<...>` or the missing
     task-side prerequisite is split into an explicit multithreading TODO.
 
-- [ ] TODO-4547: Add specialization-aware `ct_if` over type facts
-  - owner: ai
-  - created_at: 2026-05-23
-  - phase: Generic constraint and compile-time flow alignment
-  - parallel_track: generic-requirements-ct-if
-  - depends_on: TODO-4345
-  - scope: Extend statement-level `ct_if` branch selection from concrete type
-    facts to template-specialized generic definitions without letting template
-    monomorphization validate discarded `typeof<...>` predicate conditions
-    first.
-  - implementation_notes:
-    - Start from `compile-time-branch-pruning` in
-      `src/semantics/SemanticsValidate.cpp`, template monomorphization, and
-      requirement predicate fact evaluation.
-    - Keep the discarded branch pruned before ordinary statement validation
-      and lowering for each specialization.
-    - Do not add expression-position branch values in this slice; that is
-      TODO-4548.
-  - acceptance:
-    - Generic code can use
-      `ct_if(type_equals<typeof<value>, T>()) { ... } else { ... }` and
-      concrete type relations after specialization.
-    - Template monomorphization does not reject `typeof<...>` in a `ct_if`
-      condition before branch selection.
-    - The non-selected specialized branch may contain unsupported calls
-      without diagnostics.
-    - Focused semantic or compile-run tests cover true and false specialized
-      selections.
-  - stop_rule: Stop once generic-specialized statement `ct_if` works for type
-    predicate branches and expression-valued branches remain deferred to
-    TODO-4548.
-
 - [ ] TODO-4548: Add expression-position `ct_if` values
   - owner: ai
   - created_at: 2026-05-23
   - phase: Generic constraint and compile-time flow alignment
+  - parallel_track: generic-requirements-ct-if
   - depends_on: TODO-4547
   - scope: Allow `ct_if(...) { value } else { value }` to produce a value in
     return, binding, and expression contexts after selecting a branch at

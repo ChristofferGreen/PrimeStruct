@@ -1112,13 +1112,15 @@ Procedural compile-time genericity contract:
   unsatisfied fact and fails the constrained definition, and unsupported bodies,
   runtime parameters, denied effects, unknown predicate definitions, or missing
   facts remain invalid-evaluation diagnostics.
-- The first implemented compile-time branch slice adds statement-level
+- The implemented compile-time branch slice adds statement-level
   `ct_if(predicate()) { ... } else { ... }` for predicate conditions that can
   be evaluated from concrete type facts before ordinary statement validation.
-  Only the selected branch contributes runtime statements or diagnostics; the
-  discarded branch is parsed but pruned before validation and lowering. Generic
-  specialization-aware `ct_if`, expression-position branch values, and
-  branch-local generated nominal identity are tracked as follow-up work.
+  Generic-specialized definitions may also use `ct_if` over type facts after
+  template monomorphization selects concrete parameter types. Only the selected
+  branch contributes runtime statements or diagnostics; the discarded branch is
+  parsed but pruned before validation and lowering. Expression-position branch
+  values and branch-local generated nominal identity are tracked as follow-up
+  work.
 - Compile-time predicate and helper execution should run through a
   compiler-hosted compile-time VM facade. That facade may share the runtime VM
   interpreter core for arithmetic, calls, branching, and frame mechanics, but

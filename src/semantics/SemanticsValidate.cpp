@@ -6801,12 +6801,14 @@ bool isCompileTimeIfEnvelope(const Expr &expr, std::string_view expectedName) {
 bool rewriteCompileTimeIfStatements(std::vector<Expr> &statements,
                                     const semantics::RequirementPredicateDefinitionContext &context,
                                     const std::string &definitionPath,
+                                    bool allowDeferred,
                                     std::string &error);
 
 bool rewriteCompileTimeIfStatement(Expr &stmt,
                                    std::vector<Expr> &out,
                                    const semantics::RequirementPredicateDefinitionContext &context,
                                    const std::string &definitionPath,
+                                   bool allowDeferred,
                                    std::string &error) {
   if (stmt.kind != Expr::Kind::Call || stmt.name != "ct_if") {
     out.push_back(std::move(stmt));
@@ -6831,6 +6833,16 @@ bool rewriteCompileTimeIfStatement(Expr &stmt,
                                                     context);
   if (fact.evaluationOutcome != "satisfied" &&
       fact.evaluationOutcome != "unsatisfied") {
+    const bool templatedUnknownTypeFact =
+        !context.templateArgs.empty() &&
+        fact.evaluationDiagnostic.find("unknown type fact") !=
+            std::string::npos;
+    if (allowDeferred &&
+        (fact.evaluationDiagnostic.find("deferred") != std::string::npos ||
+         templatedUnknownTypeFact)) {
+      out.push_back(std::move(stmt));
+      return true;
+    }
     error = "invalid ct_if condition on " + definitionPath + ": " +
             fact.evaluationDiagnostic;
     return false;
@@ -6839,7 +6851,8 @@ bool rewriteCompileTimeIfStatement(Expr &stmt,
       fact.evaluationOutcome == "satisfied"
           ? std::move(stmt.args[1].bodyArguments)
           : std::move(stmt.args[2].bodyArguments);
-  if (!rewriteCompileTimeIfStatements(selected, context, definitionPath, error)) {
+  if (!rewriteCompileTimeIfStatements(
+          selected, context, definitionPath, allowDeferred, error)) {
     return false;
   }
   out.insert(out.end(),
@@ -6851,12 +6864,13 @@ bool rewriteCompileTimeIfStatement(Expr &stmt,
 bool rewriteCompileTimeIfStatements(std::vector<Expr> &statements,
                                     const semantics::RequirementPredicateDefinitionContext &context,
                                     const std::string &definitionPath,
+                                    bool allowDeferred,
                                     std::string &error) {
   std::vector<Expr> rewritten;
   rewritten.reserve(statements.size());
   for (Expr &stmt : statements) {
     if (!rewriteCompileTimeIfStatement(
-            stmt, rewritten, context, definitionPath, error)) {
+            stmt, rewritten, context, definitionPath, allowDeferred, error)) {
       return false;
     }
   }
@@ -6864,7 +6878,9 @@ bool rewriteCompileTimeIfStatements(std::vector<Expr> &statements,
   return true;
 }
 
-bool rewriteCompileTimeIfBranches(Program &program, std::string &error) {
+bool rewriteCompileTimeIfBranches(Program &program,
+                                  bool allowDeferred,
+                                  std::string &error) {
   std::unordered_set<std::string> structNames;
   std::unordered_set<std::string> sumNames;
   std::unordered_map<std::string, std::string> importAliases;
@@ -6892,7 +6908,11 @@ bool rewriteCompileTimeIfBranches(Program &program, std::string &error) {
                                             sumNames,
                                             importAliases);
     if (!rewriteCompileTimeIfStatements(
-            definition.statements, context, definition.fullPath, error)) {
+            definition.statements,
+            context,
+            definition.fullPath,
+            allowDeferred,
+            error)) {
       return false;
     }
   }
@@ -6981,7 +7001,10 @@ bool runSemanticValidationManifestAstPass(
     return semantics::rewriteConvertConstructors(program, error);
   }
   if (pass.name == "compile-time-branch-pruning") {
-    return rewriteCompileTimeIfBranches(program, error);
+    return rewriteCompileTimeIfBranches(program, true, error);
+  }
+  if (pass.name == "compile-time-specialized-branch-pruning") {
+    return rewriteCompileTimeIfBranches(program, false, error);
   }
 
   error = "semantic validation manifest has no pre-validator runner for pass: " +

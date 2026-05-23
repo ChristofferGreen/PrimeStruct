@@ -695,6 +695,65 @@ main() {
   CHECK(dumps.astSemantic.find("assign(result, value)") != std::string::npos);
 }
 
+TEST_CASE("generic statement ct_if selects branches after specialization") {
+  const std::string selectedThen = R"(
+[return<i32>]
+pick<T>([T] value) {
+  [i32 mut] result{0i32}
+  ct_if(type_equals<typeof<value>, T>()) {
+    assign(result, 7i32)
+  } else {
+    missing_in_discarded_branch(value)
+  }
+  return(result)
+}
+
+[return<i32>]
+main() {
+  return(pick(1i32))
+}
+)";
+
+  primec::testing::CompilePipelineBoundaryDumps dumps;
+  std::string error;
+  const bool selectedThenOk = primec::testing::captureSemanticBoundaryDumpsForTesting(
+      selectedThen, "/main", dumps, error);
+  REQUIRE(selectedThenOk);
+  CHECK(error.empty());
+  CHECK(dumps.astSemantic.find("missing_in_discarded_branch") ==
+        std::string::npos);
+  CHECK(dumps.astSemantic.find("assign") != std::string::npos);
+  CHECK(dumps.astSemantic.find("7") != std::string::npos);
+
+  const std::string selectedElse = R"(
+[return<i32>]
+pick<T>([T] value) {
+  [i32 mut] result{0i32}
+  ct_if(type_equals<typeof<value>, i32>()) {
+    missing_in_discarded_branch(value)
+  } else {
+    assign(result, 5i32)
+  }
+  return(result)
+}
+
+[return<i32>]
+main() {
+  return(pick(1.5f32))
+}
+)";
+
+  error.clear();
+  dumps = {};
+  REQUIRE(primec::testing::captureSemanticBoundaryDumpsForTesting(
+      selectedElse, "/main", dumps, error));
+  CHECK(error.empty());
+  CHECK(dumps.astSemantic.find("missing_in_discarded_branch") ==
+        std::string::npos);
+  CHECK(dumps.astSemantic.find("assign") != std::string::npos);
+  CHECK(dumps.astSemantic.find("5") != std::string::npos);
+}
+
 TEST_CASE("statement ct_if diagnoses invalid predicate conditions") {
   const std::string source = R"(
 [return<i32>]
