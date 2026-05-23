@@ -8225,3 +8225,10 @@
   Validating command: `cd build-release && ctest --output-on-failure
   --stop-on-failure --timeout 120 -I 1281,1285` on 2026-05-23 20:05 CEST.
   Next focused continuation starts at `-I 1286,1290`.
+- Imports/collections shards 1286-1290 now pass after retargeting stale C++
+  emitter experimental/root SoA conversion positives to current semantic
+  rejection diagnostics for unsupported `soa_vector<T>` and missing
+  `/std/collections/soa_vector/*` methods. Validating command:
+  `cd build-release && ctest --output-on-failure --stop-on-failure
+  --timeout 120 -I 1286,1290` on 2026-05-23 21:25 CEST. Next focused
+  continuation starts at `-I 1291,1295`.
