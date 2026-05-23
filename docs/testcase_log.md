@@ -8467,3 +8467,8 @@
   command: `cd build-release && ctest --output-on-failure --stop-on-failure
   --timeout 120 -I 1526,1530` on 2026-05-23 23:06 CEST. Next focused
   continuation starts at `-I 1531,1535`.
+- Compile-run shards 1531-1535 now pass without source edits. This window
+  moves from math conformance into GLSL compile-run coverage. Validating
+  command: `cd build-release && ctest --output-on-failure --stop-on-failure
+  --timeout 120 -I 1531,1535` on 2026-05-23 23:07 CEST. Next focused
+  continuation starts at `-I 1536,1540`.
