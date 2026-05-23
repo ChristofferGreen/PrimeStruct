@@ -872,15 +872,16 @@ Requirement rules:
   satisfied facts for `true`, unsatisfied facts for `false`, and invalid
   diagnostics for unsupported bodies, runtime parameters, denied effects,
   unknown predicate definitions, or missing facts.
-- The implemented compile-time branch form is statement-level
+- The implemented compile-time branch form is
   `ct_if(predicate()) { ... } else { ... }`. Its condition must serialize to
   an existing requirement predicate over concrete type facts. Generic
   definitions may defer `ct_if` branch selection until template
-  monomorphization gives the predicate concrete specialized facts. Only the
-  selected branch contributes statements or diagnostics to the validated AST.
-  The discarded branch is still parsed for structural syntax. Expression-position
-  `ct_if` values and branch-local generated nominal identity remain follow-up
-  work.
+  monomorphization gives the predicate concrete specialized facts. In statement
+  position, only the selected branch contributes statements or diagnostics to
+  the validated AST. In expression position, return values, local binding
+  initializers, and nested expression operands use exactly one selected branch
+  value. The discarded branch is still parsed for structural syntax.
+  Branch-local generated nominal identity remains follow-up work.
 - Requirement and predicate execution runs in a compiler-hosted compile-time VM
   facade. It may share the runtime VM interpreter core for arithmetic, calls,
   branching, and frame mechanics, but it uses a separate `CompileTimeHost` with

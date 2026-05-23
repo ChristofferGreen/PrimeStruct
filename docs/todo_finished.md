@@ -6,6 +6,30 @@ Legend:
 Finished items are periodically archived here from `docs/todo.md`; section headers record the archive date.
 
 **Todo Completion (May 23, 2026)**
+- [x] TODO-4548: Add expression-position `ct_if` values
+  - owner: ai
+  - created_at: 2026-05-23
+  - finished_at: 2026-05-23
+  - phase: Generic constraint and compile-time flow alignment
+  - parallel_track: generic-requirements-ct-if
+  - depends_on: TODO-4547
+  - scope: Allow `ct_if(...) { value } else { value }` to produce a value in
+    return, binding, and expression contexts after selecting a branch at
+    compile time.
+  - acceptance:
+    - Added expression-position `ct_if` pruning that reuses the same predicate
+      decision boundary as statement-level pruning.
+    - Added return and local binding coverage showing discarded expression
+      branches are pruned before diagnostics.
+    - Added generic-specialization coverage for expression-valued `ct_if`.
+    - Added selected-branch type-mismatch coverage and updated compile-time
+      branch docs.
+  - evidence:
+    - `./PrimeStruct_semantics_tests --test-case='expression ct_if selects value branches before validation,generic expression ct_if selects branches after specialization,expression ct_if diagnoses selected branch type mismatch,statement ct_if selects predicate branches before validation,generic statement ct_if selects branches after specialization,statement ct_if diagnoses invalid predicate conditions,semantic validation pass manifest pins ordered pipeline phases' --no-skip`
+  - notes:
+    - Promoted TODO-4549 as the next Ready Now branch-local generated type
+      facts slice.
+
 - [x] TODO-4547: Add specialization-aware `ct_if` over type facts
   - owner: ai
   - created_at: 2026-05-23

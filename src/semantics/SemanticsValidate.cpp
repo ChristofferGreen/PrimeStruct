@@ -6798,22 +6798,19 @@ bool isCompileTimeIfEnvelope(const Expr &expr, std::string_view expectedName) {
          expr.hasBodyArguments;
 }
 
-bool rewriteCompileTimeIfStatements(std::vector<Expr> &statements,
-                                    const semantics::RequirementPredicateDefinitionContext &context,
-                                    const std::string &definitionPath,
-                                    bool allowDeferred,
-                                    std::string &error);
+enum class CompileTimeIfDecision {
+  SelectedThen,
+  SelectedElse,
+  Deferred,
+};
 
-bool rewriteCompileTimeIfStatement(Expr &stmt,
-                                   std::vector<Expr> &out,
-                                   const semantics::RequirementPredicateDefinitionContext &context,
-                                   const std::string &definitionPath,
-                                   bool allowDeferred,
-                                   std::string &error) {
-  if (stmt.kind != Expr::Kind::Call || stmt.name != "ct_if") {
-    out.push_back(std::move(stmt));
-    return true;
-  }
+bool evaluateCompileTimeIfDecision(
+    const Expr &stmt,
+    const semantics::RequirementPredicateDefinitionContext &context,
+    const std::string &definitionPath,
+    bool allowDeferred,
+    CompileTimeIfDecision &decision,
+    std::string &error) {
   if (stmt.args.size() != 3 ||
       !isCompileTimeIfEnvelope(stmt.args[1], "then") ||
       !isCompileTimeIfEnvelope(stmt.args[2], "else")) {
@@ -6840,15 +6837,57 @@ bool rewriteCompileTimeIfStatement(Expr &stmt,
     if (allowDeferred &&
         (fact.evaluationDiagnostic.find("deferred") != std::string::npos ||
          templatedUnknownTypeFact)) {
-      out.push_back(std::move(stmt));
+      decision = CompileTimeIfDecision::Deferred;
       return true;
     }
     error = "invalid ct_if condition on " + definitionPath + ": " +
             fact.evaluationDiagnostic;
     return false;
   }
+  decision = fact.evaluationOutcome == "satisfied"
+                 ? CompileTimeIfDecision::SelectedThen
+                 : CompileTimeIfDecision::SelectedElse;
+  return true;
+}
+
+bool rewriteCompileTimeIfStatements(std::vector<Expr> &statements,
+                                    const semantics::RequirementPredicateDefinitionContext &context,
+                                    const std::string &definitionPath,
+                                    bool allowDeferred,
+                                    std::string &error);
+
+bool rewriteCompileTimeIfExpression(
+    Expr &expr,
+    const semantics::RequirementPredicateDefinitionContext &context,
+    const std::string &definitionPath,
+    bool allowDeferred,
+    std::string &error);
+
+bool rewriteCompileTimeIfStatement(Expr &stmt,
+                                   std::vector<Expr> &out,
+                                   const semantics::RequirementPredicateDefinitionContext &context,
+                                   const std::string &definitionPath,
+                                   bool allowDeferred,
+                                   std::string &error) {
+  if (stmt.kind != Expr::Kind::Call || stmt.name != "ct_if") {
+    if (!rewriteCompileTimeIfExpression(
+            stmt, context, definitionPath, allowDeferred, error)) {
+      return false;
+    }
+    out.push_back(std::move(stmt));
+    return true;
+  }
+  CompileTimeIfDecision decision = CompileTimeIfDecision::Deferred;
+  if (!evaluateCompileTimeIfDecision(
+          stmt, context, definitionPath, allowDeferred, decision, error)) {
+    return false;
+  }
+  if (decision == CompileTimeIfDecision::Deferred) {
+    out.push_back(std::move(stmt));
+    return true;
+  }
   std::vector<Expr> selected =
-      fact.evaluationOutcome == "satisfied"
+      decision == CompileTimeIfDecision::SelectedThen
           ? std::move(stmt.args[1].bodyArguments)
           : std::move(stmt.args[2].bodyArguments);
   if (!rewriteCompileTimeIfStatements(
@@ -6858,6 +6897,54 @@ bool rewriteCompileTimeIfStatement(Expr &stmt,
   out.insert(out.end(),
              std::make_move_iterator(selected.begin()),
              std::make_move_iterator(selected.end()));
+  return true;
+}
+
+bool rewriteCompileTimeIfExpression(
+    Expr &expr,
+    const semantics::RequirementPredicateDefinitionContext &context,
+    const std::string &definitionPath,
+    bool allowDeferred,
+    std::string &error) {
+  if (expr.kind == Expr::Kind::Call && expr.name == "ct_if") {
+    CompileTimeIfDecision decision = CompileTimeIfDecision::Deferred;
+    if (!evaluateCompileTimeIfDecision(
+            expr, context, definitionPath, allowDeferred, decision, error)) {
+      return false;
+    }
+    if (decision == CompileTimeIfDecision::Deferred) {
+      return true;
+    }
+    std::vector<Expr> &selected =
+        decision == CompileTimeIfDecision::SelectedThen
+            ? expr.args[1].bodyArguments
+            : expr.args[2].bodyArguments;
+    if (selected.size() != 1 || selected.front().isBinding) {
+      error = "ct_if expression requires exactly one selected branch value on " +
+              definitionPath;
+      return false;
+    }
+    Expr selectedExpr = std::move(selected.front());
+    if (!rewriteCompileTimeIfExpression(
+            selectedExpr, context, definitionPath, allowDeferred, error)) {
+      return false;
+    }
+    expr = std::move(selectedExpr);
+    return true;
+  }
+
+  for (Expr &arg : expr.args) {
+    if (!rewriteCompileTimeIfExpression(
+            arg, context, definitionPath, allowDeferred, error)) {
+      return false;
+    }
+  }
+  for (Expr &bodyArg : expr.bodyArguments) {
+    if (!rewriteCompileTimeIfExpression(
+            bodyArg, context, definitionPath, allowDeferred, error)) {
+      return false;
+    }
+  }
   return true;
 }
 
@@ -6913,6 +7000,14 @@ bool rewriteCompileTimeIfBranches(Program &program,
             definition.fullPath,
             allowDeferred,
             error)) {
+      return false;
+    }
+    if (definition.returnExpr.has_value() &&
+        !rewriteCompileTimeIfExpression(*definition.returnExpr,
+                                        context,
+                                        definition.fullPath,
+                                        allowDeferred,
+                                        error)) {
       return false;
     }
   }

@@ -754,6 +754,110 @@ main() {
   CHECK(dumps.astSemantic.find("5") != std::string::npos);
 }
 
+TEST_CASE("expression ct_if selects value branches before validation") {
+  const std::string selectedReturn = R"(
+[return<i32>]
+pick([i32] value) {
+  return(ct_if(type_equals<typeof<value>, i32>()) {
+    value
+  } else {
+    missing_in_discarded_branch(value)
+  })
+}
+
+[return<i32>]
+main() {
+  return(pick(7i32))
+}
+)";
+
+  primec::testing::CompilePipelineBoundaryDumps dumps;
+  std::string error;
+  REQUIRE(primec::testing::captureSemanticBoundaryDumpsForTesting(
+      selectedReturn, "/main", dumps, error));
+  CHECK(error.empty());
+  CHECK(dumps.astSemantic.find("missing_in_discarded_branch") ==
+        std::string::npos);
+  CHECK(dumps.astSemantic.find("ct_if") == std::string::npos);
+
+  const std::string selectedBinding = R"(
+[return<i32>]
+pick([i32] value) {
+  [i32] result{ct_if(type_equals<typeof<value>, f32>()) {
+    missing_in_discarded_branch(value)
+  } else {
+    value
+  }}
+  return(result)
+}
+
+[return<i32>]
+main() {
+  return(pick(9i32))
+}
+)";
+
+  error.clear();
+  dumps = {};
+  REQUIRE(primec::testing::captureSemanticBoundaryDumpsForTesting(
+      selectedBinding, "/main", dumps, error));
+  CHECK(error.empty());
+  CHECK(dumps.astSemantic.find("missing_in_discarded_branch") ==
+        std::string::npos);
+  CHECK(dumps.astSemantic.find("ct_if") == std::string::npos);
+}
+
+TEST_CASE("generic expression ct_if selects branches after specialization") {
+  const std::string source = R"(
+[return<T>]
+pick<T>([T] value) {
+  return(ct_if(type_equals<typeof<value>, T>()) {
+    value
+  } else {
+    missing_in_discarded_branch(value)
+  })
+}
+
+[return<i32>]
+main() {
+  return(pick(11i32))
+}
+)";
+
+  primec::testing::CompilePipelineBoundaryDumps dumps;
+  std::string error;
+  REQUIRE(primec::testing::captureSemanticBoundaryDumpsForTesting(
+      source, "/main", dumps, error));
+  CHECK(error.empty());
+  CHECK(dumps.astSemantic.find("missing_in_discarded_branch") ==
+        std::string::npos);
+  CHECK(dumps.astSemantic.find("ct_if") == std::string::npos);
+}
+
+TEST_CASE("expression ct_if diagnoses selected branch type mismatch") {
+  const std::string source = R"(
+[return<i32>]
+pick([i32] value) {
+  [i32] result{ct_if(type_equals<typeof<value>, i32>()) {
+    1.5f32
+  } else {
+    value
+  }}
+  return(result)
+}
+
+[return<i32>]
+main() {
+  return(pick(3i32))
+}
+)";
+
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("binding initializer type mismatch") != std::string::npos);
+  CHECK(error.find("missing_in_discarded_branch") == std::string::npos);
+}
+
 TEST_CASE("statement ct_if diagnoses invalid predicate conditions") {
   const std::string source = R"(
 [return<i32>]
