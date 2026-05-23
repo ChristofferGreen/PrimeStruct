@@ -632,6 +632,156 @@ visibleCallableMatches(const RequirementPredicateDefinitionContext &context,
   return matches;
 }
 
+std::vector<std::string> userPredicatePathCandidates(
+    const RequirementPredicateDefinitionContext &context,
+    std::string_view predicateName) {
+  std::vector<std::string> candidates;
+  const std::string name = trimRequirementText(predicateName);
+  if (name.empty()) {
+    return candidates;
+  }
+  auto pushUnique = [&](std::string path) {
+    if (path.empty()) {
+      return;
+    }
+    if (std::find(candidates.begin(), candidates.end(), path) == candidates.end()) {
+      candidates.push_back(std::move(path));
+    }
+  };
+
+  if (name.front() == '/') {
+    pushUnique(name);
+    return candidates;
+  }
+  if (const auto importIt = context.importAliases.find(name);
+      importIt != context.importAliases.end()) {
+    pushUnique(importIt->second);
+  }
+  if (name.find('/') != std::string::npos) {
+    pushUnique("/" + name);
+  }
+  if (!context.namespacePrefix.empty()) {
+    pushUnique(context.namespacePrefix + "/" + name);
+  }
+  pushUnique("/" + name);
+  return candidates;
+}
+
+std::vector<RequirementPredicateDefinitionContext::CallableFact>
+visibleUserPredicateMatches(const RequirementPredicateDefinitionContext &context,
+                            std::string_view predicateName) {
+  std::vector<RequirementPredicateDefinitionContext::CallableFact> matches;
+  for (const std::string &candidatePath :
+       userPredicatePathCandidates(context, predicateName)) {
+    std::vector<RequirementPredicateDefinitionContext::CallableFact> pathMatches =
+        visibleCallableMatches(context, candidatePath);
+    matches.insert(matches.end(), pathMatches.begin(), pathMatches.end());
+  }
+  std::stable_sort(matches.begin(),
+                   matches.end(),
+                   [](const auto &left, const auto &right) {
+                     return left.fullPath < right.fullPath;
+                   });
+  matches.erase(std::unique(matches.begin(),
+                            matches.end(),
+                            [](const auto &left, const auto &right) {
+                              return left.fullPath == right.fullPath;
+                            }),
+                matches.end());
+  return matches;
+}
+
+std::string compileTimeOperandDiagnostic(
+    const RequirementPredicateOperandFact &operand,
+    std::string_view predicateName) {
+  if (operand.kind == "unsupported_runtime_only_expression") {
+    return "runtime-only operation in compile-time predicate " +
+           std::string(predicateName) + ": " + operand.text;
+  }
+  if (operand.kind != "type_fact" &&
+      operand.kind != "compile_time_symbol" &&
+      operand.kind != "literal_compile_time_argument") {
+    return "unsupported compile-time argument for predicate " +
+           std::string(predicateName) + ": " + operand.text;
+  }
+  return {};
+}
+
+void evaluateUserDefinedRequirementPredicate(
+    RequirementPredicateFactDraft &fact,
+    const RequirementPredicateDefinitionContext &context) {
+  const std::vector<RequirementPredicateDefinitionContext::CallableFact> matches =
+      visibleUserPredicateMatches(context, fact.predicateName);
+  if (matches.empty()) {
+    fact.evaluationOutcome = "invalid_evaluation";
+    fact.evaluationDiagnostic =
+        "unknown requirement predicate: " + fact.predicateName;
+    return;
+  }
+  if (matches.size() > 1) {
+    fact.evaluationOutcome = "invalid_evaluation";
+    fact.evaluationDiagnostic =
+        "ambiguous user requirement predicate: " + fact.predicateName;
+    return;
+  }
+
+  const RequirementPredicateDefinitionContext::CallableFact &callable =
+      matches.front();
+  fact.predicateName = callable.fullPath;
+  const std::string canonicalReturn =
+      canonicalizeResolvedType(context, callable.returnType);
+  if (canonicalReturn != "bool") {
+    fact.evaluationOutcome = "invalid_evaluation";
+    fact.evaluationDiagnostic =
+        "user requirement predicate must return bool: " + callable.fullPath;
+    return;
+  }
+  if (!callable.effectNames.empty()) {
+    fact.evaluationOutcome = "denied_effect";
+    fact.evaluationDiagnostic =
+        "denied compile-time effect in user requirement predicate " +
+        callable.fullPath + ": " + callable.effectNames.front();
+    return;
+  }
+  if (!callable.parameterTypes.empty()) {
+    fact.evaluationOutcome = "invalid_evaluation";
+    fact.evaluationDiagnostic =
+        "runtime parameters are not supported in compile-time user predicate: " +
+        callable.fullPath;
+    return;
+  }
+  if (fact.operands.size() != callable.templateArgs.size()) {
+    fact.evaluationOutcome = "invalid_evaluation";
+    fact.evaluationDiagnostic =
+        "user requirement predicate " + callable.fullPath + " expects " +
+        std::to_string(callable.templateArgs.size()) +
+        " compile-time arguments, got " +
+        std::to_string(fact.operands.size());
+    return;
+  }
+  for (const RequirementPredicateOperandFact &operand : fact.operands) {
+    if (const std::string diagnostic =
+            compileTimeOperandDiagnostic(operand, callable.fullPath);
+        !diagnostic.empty()) {
+      fact.evaluationOutcome = "invalid_evaluation";
+      fact.evaluationDiagnostic = diagnostic;
+      return;
+    }
+  }
+  if (!callable.hasReturnExpr || !callable.returnExprIsBoolLiteral) {
+    fact.evaluationOutcome = "invalid_evaluation";
+    fact.evaluationDiagnostic =
+        "unsupported pure user requirement predicate body: " +
+        callable.fullPath;
+    return;
+  }
+
+  fact.evaluationOutcome = callable.returnBoolValue ? "satisfied" : "unsatisfied";
+  fact.evaluationDiagnostic = callable.returnBoolValue
+                                  ? "user predicate returned true"
+                                  : "user predicate returned false";
+}
+
 bool callableSignatureMatches(
     const RequirementPredicateDefinitionContext &context,
     std::string_view requestedPath,
@@ -1248,9 +1398,7 @@ void evaluateBuiltinCapabilityPredicate(
 void evaluateRequirementPredicate(RequirementPredicateFactDraft &fact,
                                   const RequirementPredicateDefinitionContext &context) {
   if (!isBuiltinRequirementPredicate(fact.predicateName)) {
-    fact.evaluationOutcome = "invalid_evaluation";
-    fact.evaluationDiagnostic =
-        "unknown requirement predicate: " + fact.predicateName;
+    evaluateUserDefinedRequirementPredicate(fact, context);
     return;
   }
   if (isBuiltinTypeRelationPredicate(fact.predicateName)) {

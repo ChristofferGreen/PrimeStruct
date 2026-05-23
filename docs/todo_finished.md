@@ -6,6 +6,32 @@ Legend:
 Finished items are periodically archived here from `docs/todo.md`; section headers record the archive date.
 
 **Todo Completion (May 23, 2026)**
+- [x] TODO-4357: Evaluate pure user predicates at compile time
+  - owner: ai
+  - created_at: 2026-05-04
+  - finished_at: 2026-05-23
+  - phase: Generic constraint and compile-time flow alignment
+  - parallel_track: generic-requirements-user-predicates
+  - depends_on: TODO-4356
+  - scope: Execute pure user-defined requirement predicates that return source
+    `bool`, then publish satisfied/unsatisfied/invalid requirement facts for
+    semantic validation and overload filtering.
+  - outcome:
+    - Added a conservative user-predicate evaluator for pure predicates with
+      no runtime parameters and literal source `bool` return bodies.
+    - Published satisfied facts for `true` results and unsatisfied facts for
+      `false` results while keeping invalid bodies, runtime parameters, denied
+      effects, and unknown predicates as deterministic diagnostics.
+    - Let evaluated user predicate facts prepare as CT callables with typed
+      compile-time operands and provenance.
+    - Added semantic-product and compile-time callable coverage for satisfied,
+      unsatisfied, invalid, and prepared user predicate facts.
+    - Promoted TODO-4345 as the next Ready Now generic-requirements leaf.
+  - validation:
+    - Focused release validation was selected under the lite workflow; full
+      `./scripts/compile.sh --release` remains deferred to parent/root
+      validation.
+
 - [x] TODO-4356: Add restricted compile-time callable lowering
   - owner: ai
   - created_at: 2026-05-04

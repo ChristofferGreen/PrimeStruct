@@ -83,9 +83,9 @@ Task template:
 
 ### Ready Now (Parallel-Candidate Leaves; No Unmet TODO Dependencies)
 
-- TODO-4357: Evaluate pure user predicates at compile time | track:
-  generic-requirements-user-predicates | primary surface: pure user predicate
-  CT evaluation
+- TODO-4345: Add compile-time `if` over type facts | track:
+  generic-requirements-ct-if | primary surface: type-fact compile-time
+  branching
 
 ### Parallel Work Tracks (Current)
 
@@ -121,8 +121,9 @@ Task template:
 - `generic-requirements`: TODO-4331, TODO-4334, TODO-4341, TODO-4342,
   TODO-4343, TODO-4344, TODO-4352, TODO-4353, and TODO-4354 are complete;
   TODO-4355 wired the compile-time host to published `/std/meta/*` predicate
-  facts; TODO-4356 prepared restricted compile-time callables; TODO-4357 is
-  ready for pure user predicate CT evaluation.
+  facts; TODO-4356 prepared restricted compile-time callables; TODO-4357
+  evaluates pure user predicates; TODO-4345 is ready for compile-time `if`
+  over type facts.
 
 ### Immediate Next 10 (Track Successors; Not Ready Until Dependencies Land)
 
@@ -151,17 +152,15 @@ Task template:
   prerequisite split out of TODO-4278
 - Procedural compile-time genericity: none active after TODO-4340 and
   TODO-4546
-- Generic constraint and compile-time flow alignment: TODO-4357
-  -> TODO-4345
+- Generic constraint and compile-time flow alignment: TODO-4345
   -> TODO-4346 -> TODO-4358 -> TODO-4347 -> TODO-4351 -> TODO-4348
   -> TODO-4359 -> TODO-4349 -> TODO-4350
 
 ### Execution Queue (Recommended Track Order)
 
-- TODO-4357: Evaluate pure user predicates at compile time
+- TODO-4345: Add compile-time `if` over type facts
 - TODO-4545: Implement first structured task spawn/wait substrate
 - TODO-4278: Integrate multi-wait with stdlib tuple
-- TODO-4345: Add compile-time `if` over type facts
 - TODO-4346: Add compile-time flow effect and termination policy
 - TODO-4358: Enforce compile-time cache, budget, and effects
 - TODO-4347: Integrate requirements with overload selection
@@ -809,36 +808,11 @@ Task template:
   - stop_rule: Stop once multi-wait returns stdlib `tuple<...>` or the missing
     task-side prerequisite is split into an explicit multithreading TODO.
 
-- [ ] TODO-4357: Evaluate pure user predicates at compile time
-  - owner: ai
-  - created_at: 2026-05-04
-  - phase: Generic constraint and compile-time flow alignment
-  - parallel_track: generic-requirements-user-predicates
-  - depends_on: TODO-4356
-  - scope: Execute pure user-defined requirement predicates that return source
-    `bool`, then publish satisfied/unsatisfied/invalid requirement facts for
-    semantic validation and overload filtering.
-  - implementation_notes:
-    - Start from the compile-time facade, CT callable preparation, requirement
-      fact publication, and diagnostics for invalid predicate evaluation.
-    - Keep ordinary `false` separate from VM/evaluator faults.
-    - Do not enable compile-time IO or other effects in this slice.
-  - acceptance:
-    - A user-defined pure predicate returning `true` satisfies a requirement.
-    - A user-defined pure predicate returning `false` makes the requirement
-      unsatisfied and reports that fact at the requirement/call site.
-    - Invalid predicate bodies, denied effects, unsupported operations, and
-      missing facts are hard diagnostics, not non-viable candidates.
-    - The semantic product records predicate identity, CT arguments, result
-      category, and provenance.
-    - `./scripts/compile.sh --release` passes.
-  - stop_rule: Stop once pure user predicates can drive requirement facts
-    through semantic validation.
-
 - [ ] TODO-4345: Add compile-time `if` over type facts
   - owner: ai
   - created_at: 2026-05-04
   - phase: Generic constraint and compile-time flow alignment
+  - parallel_track: generic-requirements-ct-if
   - depends_on: TODO-4343, TODO-4344, TODO-4357
   - scope: Add a compile-time branching form that selects code paths from
     evaluated requirement/type facts before IR lowering.

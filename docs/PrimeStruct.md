@@ -1106,6 +1106,12 @@ Procedural compile-time genericity contract:
 - User-defined requirement predicates return ordinary `bool` at the source
   level. The compile-time evaluation layer wraps `true` and `false` into typed
   requirement facts; evaluation faults remain hard diagnostics.
+- The first implemented user-predicate slice evaluates pure zero-runtime-argument
+  predicates whose bodies return a literal source `bool`. A `true` result
+  publishes a satisfied requirement fact, a `false` result publishes an
+  unsatisfied fact and fails the constrained definition, and unsupported bodies,
+  runtime parameters, denied effects, unknown predicate definitions, or missing
+  facts remain invalid-evaluation diagnostics.
 - Compile-time predicate and helper execution should run through a
   compiler-hosted compile-time VM facade. That facade may share the runtime VM
   interpreter core for arithmetic, calls, branching, and frame mechanics, but

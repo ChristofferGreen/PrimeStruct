@@ -867,6 +867,11 @@ Requirement rules:
   predicate that returns `false` makes the requirement fail; a predicate that
   cannot be evaluated because its body is invalid, unsupported, effectful
   without permission, or missing a compile-time fact is a hard diagnostic.
+- The initial implemented user-predicate evaluator accepts pure predicates with
+  no runtime parameters and a literal source `bool` return body. It publishes
+  satisfied facts for `true`, unsatisfied facts for `false`, and invalid
+  diagnostics for unsupported bodies, runtime parameters, denied effects,
+  unknown predicate definitions, or missing facts.
 - Requirement and predicate execution runs in a compiler-hosted compile-time VM
   facade. It may share the runtime VM interpreter core for arithmetic, calls,
   branching, and frame mechanics, but it uses a separate `CompileTimeHost` with

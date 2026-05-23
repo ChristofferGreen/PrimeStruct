@@ -1,6 +1,7 @@
 #include "primec/CompileTimeCallable.h"
 #include "primec/SemanticProduct.h"
 
+#include <cstdint>
 #include <string>
 #include <utility>
 #include <variant>
@@ -29,14 +30,16 @@ primec::SemanticProgramRequirementPredicateFact makeRequirementFact(
     std::string definitionPath,
     std::string predicateName,
     std::string sourceText,
-    std::vector<primec::SemanticProgramRequirementPredicateOperand> operands) {
+    std::vector<primec::SemanticProgramRequirementPredicateOperand> operands,
+    std::string outcome = "satisfied",
+    std::string diagnostic = "prepared") {
   primec::SemanticProgramRequirementPredicateFact fact;
   fact.definitionPath = std::move(definitionPath);
   fact.predicateName = std::move(predicateName);
   fact.sourceText = std::move(sourceText);
   fact.operands = std::move(operands);
-  fact.evaluationOutcome = "satisfied";
-  fact.evaluationDiagnostic = "prepared";
+  fact.evaluationOutcome = std::move(outcome);
+  fact.evaluationDiagnostic = std::move(diagnostic);
   fact.sourceLine = 23;
   fact.sourceColumn = 5;
   fact.semanticNodeId = 77;
@@ -139,12 +142,38 @@ TEST_CASE("runtime-only operands fail before compile-time execution") {
   CHECK(result.callable.operands.empty());
 }
 
+TEST_CASE("evaluated user predicates prepare with compile-time arguments") {
+  primec::SemanticProgram program = makeProgramWith(makeRequirementFact(
+      "/generic/user",
+      "/project/is_small",
+      "/project/is_small<N>()",
+      {makeOperand("literal_compile_time_argument", "4")}));
+  const primec::SemanticProgramCompileTimeHost host(program);
+
+  const primec::CompileTimeCallablePrepareResult result =
+      primec::prepareCompileTimeCallable(
+          host,
+          makeRequest("/generic/user", "/project/is_small", {}));
+
+  REQUIRE(result.prepared());
+  CHECK(result.status == primec::CompileTimeCallablePrepareStatus::Prepared);
+  CHECK(result.callable.predicateName == "/project/is_small");
+  REQUIRE(result.callable.operands.size() == 1);
+  CHECK(result.callable.operands[0].kind == "literal_compile_time_argument");
+  CHECK(result.callable.operands[0].value.kind ==
+        primec::CompileTimeValueKind::UnsignedInteger);
+  CHECK(std::get<std::uint64_t>(result.callable.operands[0].value.payload) ==
+        4);
+}
+
 TEST_CASE("unsupported user predicates and operands reject deterministically") {
   primec::SemanticProgram program = makeProgramWith(makeRequirementFact(
       "/generic/user",
       "/project/is_small",
       "/project/is_small<N>()",
-      {makeOperand("unsigned_integer", "4")}));
+      {makeOperand("unsigned_integer", "4")},
+      "invalid_evaluation",
+      "unsupported pure user predicate body"));
   const primec::SemanticProgramCompileTimeHost host(program);
 
   const primec::CompileTimeCallablePrepareResult result =
@@ -157,7 +186,7 @@ TEST_CASE("unsupported user predicates and operands reject deterministically") {
         primec::CompileTimeCallablePrepareStatus::UnsupportedPredicate);
   CHECK(result.diagnostic.kind ==
         primec::CompileTimeEvaluationResultKind::InvalidEvaluation);
-  CHECK(result.diagnostic.message.find("user-predicate execution") !=
+  CHECK(result.diagnostic.message.find("unsupported or unevaluated") !=
         std::string::npos);
 
   primec::SemanticProgram unsupportedOperandProgram =

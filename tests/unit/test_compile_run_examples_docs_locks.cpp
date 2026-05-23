@@ -1643,6 +1643,12 @@ TEST_CASE("generic requirement predicate surface stays source locked") {
         std::string::npos);
   CHECK(syntaxSpec.find("User-defined predicates distinguish `false` from invalid evaluation") !=
         std::string::npos);
+  CHECK(primeStructDoc.find("The first implemented user-predicate slice evaluates pure zero-runtime-argument\n"
+                            "  predicates whose bodies return a literal source `bool`.") !=
+        std::string::npos);
+  CHECK(syntaxSpec.find("The initial implemented user-predicate evaluator accepts pure predicates with\n"
+                        "  no runtime parameters and a literal source `bool` return body.") !=
+        std::string::npos);
   CHECK(syntaxSpec.find("Failed requirements on a direct call are diagnostics, not C++-style\n"
                         "  substitution failure by accident.") !=
         std::string::npos);
@@ -1694,9 +1700,9 @@ TEST_CASE("todo queue and skipped doctest debt stay source locked") {
   CHECK(todo.find("### Ready Now (Parallel-Candidate Leaves; No Unmet TODO Dependencies)") !=
         std::string::npos);
   CHECK(todo.find("### Ready Now (Parallel-Candidate Leaves; No Unmet TODO Dependencies)\n\n"
-                  "- TODO-4357: Evaluate pure user predicates at compile time | track:\n"
-                  "  generic-requirements-user-predicates | primary surface: pure user predicate\n"
-                  "  CT evaluation") !=
+                  "- TODO-4345: Add compile-time `if` over type facts | track:\n"
+                  "  generic-requirements-ct-if | primary surface: type-fact compile-time\n"
+                  "  branching") !=
         std::string::npos);
   CHECK(todo.find("- `soa-zero-audit`: TODO-4529 replaced the residue inventory with a strict\n"
                   "  zero-production-trace audit; no SoA zero-audit leaf is ready.") !=
@@ -1727,8 +1733,9 @@ TEST_CASE("todo queue and skipped doctest debt stay source locked") {
   CHECK(todo.find("- `generic-requirements`: TODO-4331, TODO-4334, TODO-4341, TODO-4342,\n"
                   "  TODO-4343, TODO-4344, TODO-4352, TODO-4353, and TODO-4354 are complete;\n"
                   "  TODO-4355 wired the compile-time host to published `/std/meta/*` predicate\n"
-                  "  facts; TODO-4356 prepared restricted compile-time callables; TODO-4357 is\n"
-                  "  ready for pure user predicate CT evaluation.") !=
+                  "  facts; TODO-4356 prepared restricted compile-time callables; TODO-4357\n"
+                  "  evaluates pure user predicates; TODO-4345 is ready for compile-time `if`\n"
+                  "  over type facts.") !=
         std::string::npos);
   CHECK(todo.find("### Immediate Next 10 (Track Successors; Not Ready Until Dependencies Land)\n\n"
                   "- TODO-4545: Implement first structured task spawn/wait substrate\n"
@@ -1748,8 +1755,12 @@ TEST_CASE("todo queue and skipped doctest debt stay source locked") {
   CHECK(todo.find("- Deferred SoA finish: TODO-4252") ==
         std::string::npos);
   CHECK(todo.find("### Execution Queue (Recommended Track Order)\n\n"
-                  "- TODO-4357: Evaluate pure user predicates at compile time\n"
+                  "- TODO-4345: Add compile-time `if` over type facts\n"
                   "- TODO-4545: Implement first structured task spawn/wait substrate") !=
+        std::string::npos);
+  CHECK(todo.find("- [ ] TODO-4357: Evaluate pure user predicates at compile time") ==
+        std::string::npos);
+  CHECK(todoFinished.find("TODO-4357: Evaluate pure user predicates at compile time") !=
         std::string::npos);
   CHECK(todo.find("- [ ] TODO-4356: Add restricted compile-time callable lowering") ==
         std::string::npos);
@@ -1842,7 +1853,7 @@ TEST_CASE("todo queue and skipped doctest debt stay source locked") {
   CHECK(todoFinished.find("TODO-4519: Delete `soa_vector` compatibility seams") !=
         std::string::npos);
   const std::vector<std::string> semanticPhaseQueue = {
-      "TODO-4357: Evaluate pure user predicates at compile time",
+      "TODO-4345: Add compile-time `if` over type facts",
   };
   for (const std::string &entry : semanticPhaseQueue) {
     CHECK(todo.find("- " + entry) != std::string::npos);

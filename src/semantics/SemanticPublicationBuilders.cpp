@@ -1014,8 +1014,22 @@ RequirementPredicateDefinitionContext makeRequirementPredicateDefinitionContext(
       RequirementPredicateDefinitionContext::CallableFact callable;
       callable.fullPath = candidate.fullPath;
       callable.namespacePrefix = candidate.namespacePrefix;
+      callable.templateArgs = candidate.templateArgs;
       callable.returnType = returnType;
       callable.isPrivate = hasTransform(candidate.transforms, "private");
+      for (const auto &transform : candidate.transforms) {
+        if (transform.name == "effects") {
+          callable.effectNames.insert(callable.effectNames.end(),
+                                      transform.arguments.begin(),
+                                      transform.arguments.end());
+        }
+      }
+      callable.hasReturnExpr = candidate.returnExpr.has_value();
+      if (candidate.returnExpr.has_value() &&
+          candidate.returnExpr->kind == Expr::Kind::BoolLiteral) {
+        callable.returnExprIsBoolLiteral = true;
+        callable.returnBoolValue = candidate.returnExpr->boolValue;
+      }
       callable.parameterTypes.reserve(candidate.parameters.size());
       bool paramsOk = true;
       for (const auto &param : candidate.parameters) {

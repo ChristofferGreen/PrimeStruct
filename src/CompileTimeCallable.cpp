@@ -40,6 +40,14 @@ bool isSupportedBuiltinPredicate(std::string_view predicateName) {
          predicateName == "/std/meta/has_member";
 }
 
+bool isEvaluatedUserPredicateFact(std::string_view predicateName,
+                                  std::string_view outcome) {
+  return !predicateName.empty() &&
+         predicateName.rfind("/std/meta/", 0) != 0 &&
+         (outcome == "satisfied" || outcome == "success" ||
+          outcome == "unsatisfied");
+}
+
 CompileTimeValueProvenance operandProvenance(
     const SemanticProgramRequirementPredicateFact &fact,
     const SemanticProgramRequirementPredicateOperand &operand,
@@ -101,8 +109,25 @@ PreparedOperandResult prepareOperand(
         makeCompileTimeTypeFact(std::string(text), provenance);
     return result;
   }
-  if (kind == "symbol" || kind == "name") {
+  if (kind == "symbol" || kind == "name" || kind == "compile_time_symbol") {
     result.operand.value = makeCompileTimeSymbol(std::string(text), provenance);
+    return result;
+  }
+  if (kind == "literal_compile_time_argument") {
+    if (text == "true" || text == "false") {
+      result.operand.value =
+          makeCompileTimeBool(text == "true", provenance);
+      return result;
+    }
+    if (const std::optional<std::uint64_t> parsed =
+            parseInteger<std::uint64_t>(text);
+        parsed.has_value()) {
+      result.operand.value =
+          makeCompileTimeUnsignedInteger(*parsed, provenance);
+      return result;
+    }
+    result.operand.value =
+        makeCompileTimeStringLiteral(std::string(text), provenance);
     return result;
   }
   if (kind == "bool") {
@@ -231,13 +256,15 @@ CompileTimeCallablePrepareResult prepareCompileTimeCallable(
   provenance.sourceText = std::string(resolvedSemanticText(
       semanticProgram, fact->sourceTextId, fact->sourceText));
 
-  if (!isSupportedBuiltinPredicate(provenance.predicatePath)) {
+  const std::string_view outcome = resolvedSemanticText(
+      semanticProgram, fact->evaluationOutcomeId, fact->evaluationOutcome);
+  if (!isSupportedBuiltinPredicate(provenance.predicatePath) &&
+      !isEvaluatedUserPredicateFact(provenance.predicatePath, outcome)) {
     return makeRejectedResult(
         CompileTimeCallablePrepareStatus::UnsupportedPredicate,
         facade,
         provenance,
-        "unsupported compile-time predicate before user-predicate execution "
-        "is enabled: " +
+        "unsupported or unevaluated compile-time predicate: " +
             provenance.predicatePath);
   }
 

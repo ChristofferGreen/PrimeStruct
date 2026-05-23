@@ -38,6 +38,11 @@ bool SemanticsValidator::validateRequirementPredicates() {
       }
       return typeNameForReturnKind(kindIt->second);
     }
+    for (const auto &transform : definition.transforms) {
+      if (transform.name == "return" && transform.templateArgs.size() == 1) {
+        return transform.templateArgs.front();
+      }
+    }
     return std::string{};
   };
   auto populateCapabilityFacts = [&](RequirementPredicateDefinitionContext &context) {
@@ -47,15 +52,31 @@ bool SemanticsValidator::validateRequirementPredicates() {
     for (const auto &candidate : program_.definitions) {
       auto paramsIt = paramsByDef_.find(candidate.fullPath);
       const std::string returnType = returnTypeTextForDefinition(candidate);
-      if (paramsIt != paramsByDef_.end() && !returnType.empty()) {
+      if (!returnType.empty()) {
         RequirementPredicateDefinitionContext::CallableFact callable;
         callable.fullPath = candidate.fullPath;
         callable.namespacePrefix = candidate.namespacePrefix;
+        callable.templateArgs = candidate.templateArgs;
         callable.isPrivate = hasTransform(candidate.transforms, "private");
         callable.returnType = returnType;
-        callable.parameterTypes.reserve(paramsIt->second.size());
-        for (const auto &param : paramsIt->second) {
-          callable.parameterTypes.push_back(bindingTypeText(param.binding));
+        for (const auto &transform : candidate.transforms) {
+          if (transform.name == "effects") {
+            callable.effectNames.insert(callable.effectNames.end(),
+                                        transform.arguments.begin(),
+                                        transform.arguments.end());
+          }
+        }
+        callable.hasReturnExpr = candidate.returnExpr.has_value();
+        if (candidate.returnExpr.has_value() &&
+            candidate.returnExpr->kind == Expr::Kind::BoolLiteral) {
+          callable.returnExprIsBoolLiteral = true;
+          callable.returnBoolValue = candidate.returnExpr->boolValue;
+        }
+        if (paramsIt != paramsByDef_.end()) {
+          callable.parameterTypes.reserve(paramsIt->second.size());
+          for (const auto &param : paramsIt->second) {
+            callable.parameterTypes.push_back(bindingTypeText(param.binding));
+          }
         }
         context.callables.push_back(std::move(callable));
       }

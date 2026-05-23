@@ -514,6 +514,131 @@ main() {
                    "/std/meta/type_equals") != std::string::npos);
 }
 
+TEST_CASE("require pure user predicates drive semantic facts") {
+  const std::string acceptedSource = R"(
+[return<bool>]
+is_supported() {
+  return(true)
+}
+
+[return<int> require(is_supported())]
+identity([int] value) {
+  return(value)
+}
+
+[return<int>]
+main() {
+  return(identity(4i32))
+}
+)";
+
+  primec::testing::CompilePipelineBoundaryDumps dumps;
+  std::string error;
+  const bool accepted = primec::testing::captureSemanticBoundaryDumpsForTesting(
+      acceptedSource, "/main", dumps, error);
+  REQUIRE(accepted);
+  CHECK(error.empty());
+  CHECK(dumps.semanticProduct.find(
+            "predicate_name=\"/is_supported\"") != std::string::npos);
+  CHECK(dumps.semanticProduct.find("operands=[]") != std::string::npos);
+  CHECK(dumps.semanticProduct.find("evaluation_outcome=\"satisfied\"") !=
+        std::string::npos);
+  CHECK(dumps.semanticProduct.find(
+            "evaluation_diagnostic=\"user predicate returned true\"") !=
+        std::string::npos);
+
+  const std::string rejectedSource = R"(
+[return<bool>]
+is_supported() {
+  return(false)
+}
+
+[return<int> require(is_supported())]
+identity([int] value) {
+  return(value)
+}
+
+[return<int>]
+main() {
+  return(identity(4i32))
+}
+)";
+
+  error.clear();
+  CHECK_FALSE(validateProgram(rejectedSource, "/main", error));
+  CHECK(error.find("requirement predicate not satisfied: /is_supported") !=
+        std::string::npos);
+  CHECK(error.find("user predicate returned false") != std::string::npos);
+}
+
+TEST_CASE("require pure user predicates reject impure and unsupported bodies") {
+  const std::string effectSource = R"(
+[effects(file_read), return<bool>]
+needs_file() {
+  return(true)
+}
+
+[return<int> require(needs_file())]
+identity([int] value) {
+  return(value)
+}
+
+[return<int>]
+main() {
+  return(identity(4i32))
+}
+)";
+
+  std::string error;
+  CHECK_FALSE(validateProgram(effectSource, "/main", error));
+  CHECK(error.find("denied compile-time effect in user requirement predicate "
+                   "/needs_file: file_read") != std::string::npos);
+
+  const std::string runtimeParamSource = R"(
+[return<bool>]
+needs_runtime([i32] value) {
+  return(true)
+}
+
+[return<int> require(needs_runtime(value))]
+identity([int] value) {
+  return(value)
+}
+
+[return<int>]
+main() {
+  return(identity(4i32))
+}
+)";
+
+  error.clear();
+  CHECK_FALSE(validateProgram(runtimeParamSource, "/main", error));
+  CHECK(error.find("runtime parameters are not supported in compile-time "
+                   "user predicate: /needs_runtime") != std::string::npos);
+
+  const std::string bodySource = R"(
+[return<bool>]
+runtime_body() {
+  return(equals(1i32, 1i32))
+}
+
+[return<int> require(runtime_body())]
+identity([int] value) {
+  return(value)
+}
+
+[return<int>]
+main() {
+  return(identity(4i32))
+}
+)";
+
+  error.clear();
+  CHECK_FALSE(validateProgram(bodySource, "/main", error));
+  CHECK(error.find("unsupported pure user requirement predicate body: "
+                   "/runtime_body") != std::string::npos);
+}
+
 TEST_CASE("duplicate require transforms fail closed before publication") {
   const std::string source = R"(
 [return<int> require(type_equals<typeof<value>, int>()) require(has_trait<typeof<value>>(Additive))]

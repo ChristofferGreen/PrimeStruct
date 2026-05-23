@@ -14,8 +14,13 @@ struct RequirementPredicateDefinitionContext {
   struct CallableFact {
     std::string fullPath;
     std::string namespacePrefix;
+    std::vector<std::string> templateArgs;
     std::vector<std::string> parameterTypes;
     std::string returnType;
+    std::vector<std::string> effectNames;
+    bool hasReturnExpr = false;
+    bool returnExprIsBoolLiteral = false;
+    bool returnBoolValue = false;
     bool isPrivate = false;
   };
 
