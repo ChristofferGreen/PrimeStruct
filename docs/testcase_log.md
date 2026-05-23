@@ -8039,3 +8039,8 @@
   2026-05-23 15:28 CEST. Next focused continuation starts at `-I 1046,1050`;
   these native backend core shards are still slow, so continue in small
   windows.
+- Native backend core continuation shard 1046-1050 now passes; validating
+  command: `cd build-release && ctest --output-on-failure --stop-on-failure
+  --timeout 120 -I 1046,1050` on 2026-05-23 15:36 CEST. Next focused
+  continuation starts at `-I 1051,1055`; these native backend core shards are
+  still slow, so continue in small windows.
