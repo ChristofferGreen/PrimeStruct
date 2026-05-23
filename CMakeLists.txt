@@ -69,6 +69,7 @@ set(PRIMESTRUCT_SUPPORT_SOURCES
 
 set(PRIMESTRUCT_FRONTEND_SOURCES
   src/AstPrinter.cpp
+  src/CompileTimeEvaluation.cpp
   src/FrontendSyntax.cpp
   src/ImportResolver.cpp
   src/ImportResolverHelpers.cpp
@@ -544,6 +545,22 @@ if(PRIMESTRUCT_BUILD_TESTS)
   target_include_directories(PrimeStruct_misc_tests PRIVATE third_party ${CMAKE_SOURCE_DIR})
   target_link_libraries(PrimeStruct_misc_tests PRIVATE primec_ir_lib)
   primestructEnableWarnings(PrimeStruct_misc_tests)
+
+  add_executable(PrimeStruct_compile_time_tests
+    tests/unit/test_main.cpp
+    tests/unit/test_compile_time_evaluation_facade.cpp
+  )
+  target_include_directories(PrimeStruct_compile_time_tests PRIVATE third_party ${CMAKE_SOURCE_DIR})
+  target_link_libraries(PrimeStruct_compile_time_tests PRIVATE primec_frontend_lib)
+  primestructEnableWarnings(PrimeStruct_compile_time_tests)
+  add_test(
+    NAME PrimeStruct_compile_time_facade
+    COMMAND $<TARGET_FILE:PrimeStruct_compile_time_tests>
+            "--test-suite=primestruct.compile_time.facade"
+            "--order-by=file"
+  )
+  set_tests_properties(PrimeStruct_compile_time_facade
+                       PROPERTIES TIMEOUT 120 LABELS "parallel-safe")
 
   set(PrimeStructBackendAllTestSources
     tests/unit/test_ir_pipeline.cpp

@@ -869,6 +869,9 @@ Requirement rules:
   branching, and frame mechanics, but it uses a separate `CompileTimeHost` with
   typed compile-time values, semantic facts, `/std/meta/*` intrinsics,
   provenance, budgets, caches, and phase-qualified compile-time effects.
+  Facade results distinguish success, unsatisfied predicates, invalid
+  evaluation, denied effects, budget exhaustion, and internal compiler errors,
+  and every non-success result carries semantic provenance for diagnostics.
   Requirement evaluation must not depend on launching `primevm` or on final
   backend IR, because requirements run during semantic validation before final
   lowering is complete. The implementation may use a restricted compile-time

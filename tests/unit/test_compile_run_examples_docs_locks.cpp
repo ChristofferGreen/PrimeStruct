@@ -1692,9 +1692,12 @@ TEST_CASE("todo queue and skipped doctest debt stay source locked") {
   CHECK(todo.find("### Ready Now (Parallel-Candidate Leaves; No Unmet TODO Dependencies)") !=
         std::string::npos);
   CHECK(todo.find("### Ready Now (Parallel-Candidate Leaves; No Unmet TODO Dependencies)\n\n"
-                  "- TODO-4352: Add compile-time VM facade and host | track:\n"
-                  "  generic-requirements | primary surface: compiler-internal compile-time\n"
-                  "  evaluation facade boundary") !=
+                  "- TODO-4353: Add typed compile-time value model | track:\n"
+                  "  generic-requirements-values | primary surface: compiler-internal compile-time\n"
+                  "  value representation and diagnostics\n"
+                  "- TODO-4354: Factor reusable VM interpreter kernel | track:\n"
+                  "  generic-requirements-vm-kernel | primary surface: VM runtime execution kernel\n"
+                  "  factoring") !=
         std::string::npos);
   CHECK(todo.find("- `soa-zero-audit`: TODO-4529 replaced the residue inventory with a strict\n"
                   "  zero-production-trace audit; no SoA zero-audit leaf is ready.") !=
@@ -1723,10 +1726,12 @@ TEST_CASE("todo queue and skipped doctest debt stay source locked") {
                   "  leaf is ready.") !=
         std::string::npos);
   CHECK(todo.find("- `generic-requirements`: TODO-4331, TODO-4334, TODO-4341, TODO-4342,\n"
-                  "  TODO-4343, and TODO-4344 are complete; TODO-4352 is ready after initial\n"
-                  "  capability predicate evaluation.") !=
+                  "  TODO-4343, TODO-4344, and TODO-4352 are complete; TODO-4353 and TODO-4354\n"
+                  "  are ready in parallel because one owns typed CT values and the other owns VM\n"
+                  "  kernel factoring.") !=
         std::string::npos);
   CHECK(todo.find("### Immediate Next 10 (Track Successors; Not Ready Until Dependencies Land)\n\n"
+                  "- TODO-4355: Add compile-time host and meta intrinsics\n"
                   "- TODO-4545: Implement first structured task spawn/wait substrate\n"
                   "- TODO-4278: Integrate multi-wait with stdlib tuple") !=
         std::string::npos);
@@ -1744,7 +1749,12 @@ TEST_CASE("todo queue and skipped doctest debt stay source locked") {
   CHECK(todo.find("- Deferred SoA finish: TODO-4252") ==
         std::string::npos);
   CHECK(todo.find("### Execution Queue (Recommended Track Order)\n\n"
-                  "- TODO-4352: Add compile-time VM facade and host") !=
+                  "- TODO-4353: Add typed compile-time value model\n"
+                  "- TODO-4354: Factor reusable VM interpreter kernel") !=
+        std::string::npos);
+  CHECK(todo.find("- [ ] TODO-4352: Add compile-time VM facade and host") ==
+        std::string::npos);
+  CHECK(todoFinished.find("TODO-4352: Add compile-time VM facade and host") !=
         std::string::npos);
   CHECK(todo.find("- [ ] TODO-4344: Add capability and trait support predicates") ==
         std::string::npos);
@@ -1817,7 +1827,8 @@ TEST_CASE("todo queue and skipped doctest debt stay source locked") {
   CHECK(todoFinished.find("TODO-4519: Delete `soa_vector` compatibility seams") !=
         std::string::npos);
   const std::vector<std::string> semanticPhaseQueue = {
-      "TODO-4352: Add compile-time VM facade and host",
+      "TODO-4353: Add typed compile-time value model",
+      "TODO-4354: Factor reusable VM interpreter kernel",
   };
   for (const std::string &entry : semanticPhaseQueue) {
     CHECK(todo.find("- " + entry) != std::string::npos);

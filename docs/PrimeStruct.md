@@ -1108,7 +1108,11 @@ Procedural compile-time genericity contract:
   interpreter core for arithmetic, calls, branching, and frame mechanics, but
   it has a separate `CompileTimeHost` with typed compile-time values, semantic
   facts, `/std/meta/*` intrinsics, provenance, budgets, caches, and
-  phase-qualified compile-time effects.
+  phase-qualified compile-time effects. The public compiler-internal facade
+  reports stable categories for success, unsatisfied predicates, invalid
+  evaluation, denied effects, budget exhaustion, and internal compiler errors;
+  diagnostics format those categories with the definition, predicate, and
+  source provenance supplied by semantic validation.
 - The compiler must not depend on launching the normal runtime VM or final
   backend IR to evaluate requirements. Requirements run during semantic
   validation, before final lowering is complete, so the CT evaluator needs a

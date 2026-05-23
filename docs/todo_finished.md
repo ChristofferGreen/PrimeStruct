@@ -6,6 +6,34 @@ Legend:
 Finished items are periodically archived here from `docs/todo.md`; section headers record the archive date.
 
 **Todo Completion (May 23, 2026)**
+- [x] TODO-4352: Add compile-time VM facade and host
+  - owner: ai
+  - created_at: 2026-05-04
+  - finished_at: 2026-05-23
+  - phase: Generic constraint and compile-time flow alignment
+  - parallel_track: generic-requirements
+  - depends_on: TODO-4342, TODO-4339
+  - scope: Define and add the public compiler-internal facade boundary for
+    compile-time evaluation, without yet executing arbitrary user predicates.
+  - outcome:
+    - Added `primec/CompileTimeEvaluation.h` with a compiler-internal facade,
+      `CompileTimeHost`, budget/provenance structs, and stable result/fault
+      categories for success, unsatisfied predicates, invalid evaluation,
+      denied effects, budget exhaustion, and internal compiler errors.
+    - Kept the boundary in `primec_frontend_lib`, separate from runtime
+      `primevm` entrypoints and final backend IR.
+    - Added deterministic formatting helpers for result categories, fault
+      kinds, and semantic provenance.
+    - Added stubbed facade tests for category naming, provenance formatting,
+      host effect gating, budget plumbing, semantic fact hooks, and
+      non-success result construction without running arbitrary user code.
+    - Documented that semantic requirement evaluation cannot launch `primevm`
+      or depend on final backend IR.
+  - validation:
+    - Focused release validation was selected under the lite workflow; full
+      `./scripts/compile.sh --release` remains deferred to parent/root
+      validation.
+
 - [x] TODO-4344: Add capability and trait support predicates
   - owner: ai
   - created_at: 2026-05-04

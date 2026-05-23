@@ -83,9 +83,12 @@ Task template:
 
 ### Ready Now (Parallel-Candidate Leaves; No Unmet TODO Dependencies)
 
-- TODO-4352: Add compile-time VM facade and host | track:
-  generic-requirements | primary surface: compiler-internal compile-time
-  evaluation facade boundary
+- TODO-4353: Add typed compile-time value model | track:
+  generic-requirements-values | primary surface: compiler-internal compile-time
+  value representation and diagnostics
+- TODO-4354: Factor reusable VM interpreter kernel | track:
+  generic-requirements-vm-kernel | primary surface: VM runtime execution kernel
+  factoring
 
 ### Parallel Work Tracks (Current)
 
@@ -119,11 +122,13 @@ Task template:
   examples, and TODO-4546 added negative conformance; no procedural-genericity
   leaf is ready.
 - `generic-requirements`: TODO-4331, TODO-4334, TODO-4341, TODO-4342,
-  TODO-4343, and TODO-4344 are complete; TODO-4352 is ready after initial
-  capability predicate evaluation.
+  TODO-4343, TODO-4344, and TODO-4352 are complete; TODO-4353 and TODO-4354
+  are ready in parallel because one owns typed CT values and the other owns VM
+  kernel factoring.
 
 ### Immediate Next 10 (Track Successors; Not Ready Until Dependencies Land)
 
+- TODO-4355: Add compile-time host and meta intrinsics
 - TODO-4545: Implement first structured task spawn/wait substrate
 - TODO-4278: Integrate multi-wait with stdlib tuple
 
@@ -149,14 +154,13 @@ Task template:
   prerequisite split out of TODO-4278
 - Procedural compile-time genericity: none active after TODO-4340 and
   TODO-4546
-- Generic constraint and compile-time flow alignment: TODO-4352 -> TODO-4353
-  -> TODO-4354 -> TODO-4355 -> TODO-4356 -> TODO-4357 -> TODO-4345
+- Generic constraint and compile-time flow alignment: TODO-4353 + TODO-4354
+  -> TODO-4355 -> TODO-4356 -> TODO-4357 -> TODO-4345
   -> TODO-4346 -> TODO-4358 -> TODO-4347 -> TODO-4351 -> TODO-4348
   -> TODO-4359 -> TODO-4349 -> TODO-4350
 
 ### Execution Queue (Recommended Track Order)
 
-- TODO-4352: Add compile-time VM facade and host
 - TODO-4353: Add typed compile-time value model
 - TODO-4354: Factor reusable VM interpreter kernel
 - TODO-4355: Add compile-time host and meta intrinsics
@@ -811,39 +815,6 @@ Task template:
     - `./scripts/compile.sh --release` passes.
   - stop_rule: Stop once multi-wait returns stdlib `tuple<...>` or the missing
     task-side prerequisite is split into an explicit multithreading TODO.
-
-- [ ] TODO-4352: Add compile-time VM facade and host
-  - owner: ai
-  - created_at: 2026-05-04
-  - phase: Generic constraint and compile-time flow alignment
-  - depends_on: TODO-4342, TODO-4339
-  - scope: Define and add the public compiler-internal facade boundary for
-    compile-time evaluation, without yet executing arbitrary user predicates.
-  - implementation_notes:
-    - Start from `include/primec/Vm.h`, `src/VmExecution.cpp`,
-      `src/VmExecution.h`, `src/VmControlFlowOpcodeShared.*`,
-      `src/VmNumericOpcodeShared.*`, semantic-product publication, and the
-      requirement predicate representation from TODO-4342.
-    - Leave the concrete typed compile-time value model to TODO-4353; this
-      task only defines the facade boundary and result categories.
-    - Define the facade API, result/fault categories, provenance inputs, and
-      host interface expected by later CT value, VM-kernel, and host tasks.
-    - Requirement evaluation runs before final backend lowering is complete,
-      so the facade contract must explicitly forbid depending on final backend
-      IR or launching `primevm`.
-  - acceptance:
-    - A compile-time evaluation facade type/API exists and can be included by
-      semantics code without depending on runtime CLI entrypoints.
-    - The facade result model distinguishes success, unsatisfied predicate,
-      invalid evaluation, denied effect, budget exhaustion, and internal
-      compiler errors.
-    - The facade contract documents that final backend IR and `primevm` are
-      unavailable during semantic requirement evaluation.
-    - Stubbed facade tests verify result/fault formatting and provenance
-      plumbing without running arbitrary user code.
-    - `./scripts/compile.sh --release` passes.
-  - stop_rule: Stop once the compiler has a stable compile-time evaluation
-    boundary that later tasks can implement behind.
 
 - [ ] TODO-4353: Add typed compile-time value model
   - owner: ai
