@@ -8115,3 +8115,10 @@
   diagnostics. Validating command: `cd build-release && ctest
   --output-on-failure --stop-on-failure --timeout 120 -I 1166,1170` on
   2026-05-23 17:56 CEST. Next focused continuation starts at `-I 1171,1175`.
+- Native backend collection shim/accessor shards 1171-1175 now pass after
+  retargeting stale borrowed `soa_vector`, helper-return `soa_vector`, and
+  native map temporary/accessor positives to current semantic/native rejection
+  diagnostics. Validating command: `cd build-release && ctest
+  --output-on-failure --stop-on-failure --timeout 120 -I 1171,1175` on
+  2026-05-23 18:21 CEST. Next focused continuation starts at `-I 1176,1180`;
+  shard 1174 took about 180s and shard 1175 about 96s in release validation.

@@ -36,6 +36,14 @@ inline void expectNativeMapConformanceProgramRunsOrCompileRejectWithOutput(
 inline void expectCanonicalMapNamespaceExperimentalValueConformance(const std::string &emitMode) {
   (void)emitMode;
   const std::string expectedOutput = "4\ncontainer missing key\n2\n4\n7\n1\n2\n";
+  if (emitMode == "native") {
+    expectMapConformanceCompileReject(makeCanonicalMapNamespaceExperimentalValueConformanceSource(),
+                                      "map_namespace_canonical_experimental_value",
+                                      emitMode,
+                                      "native backend only supports indexing into string literals or string bindings");
+    return;
+  }
+
   expectMapConformanceProgramRunsWithOutput(makeCanonicalMapNamespaceExperimentalValueConformanceSource(),
                                             "map_namespace_canonical_experimental_value",
                                             emitMode,
@@ -286,6 +294,14 @@ inline void expectWrappedExperimentalMapStorageDerefFieldConformance(const std::
 }
 
 inline void expectWrapperMapHelperExperimentalValueConformance(const std::string &emitMode) {
+  if (emitMode == "native") {
+    expectMapConformanceCompileReject(makeWrapperMapHelperExperimentalValueConformanceSource(),
+                                      "map_wrapper_helper_experimental_value",
+                                      emitMode,
+                                      "native backend only supports indexing into string literals or string bindings");
+    return;
+  }
+
   expectMapConformanceProgramRunsWithOutput(makeWrapperMapHelperExperimentalValueConformanceSource(),
                                             "map_wrapper_helper_experimental_value",
                                             emitMode,

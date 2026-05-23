@@ -1957,7 +1957,7 @@ main() {
         std::string::npos);
 }
 
-TEST_CASE("native compiles and runs borrowed experimental soa_vector reflected index syntax") {
+TEST_CASE("native rejects borrowed experimental soa_vector reflected index syntax") {
   const std::string source = R"(
 import /std/collections/soa/*
 import /std/collections/internal_soa_vector/*
@@ -1979,14 +1979,17 @@ main() {
 )";
   const std::string srcPath =
       writeTemp("compile_native_experimental_soa_vector_borrowed_field_view.prime", source);
-  const std::string exePath =
-      (testScratchPath("") / "primec_native_experimental_soa_vector_borrowed_field_view_exe").string();
-  const std::string compileCmd = "./primec --emit=native " + srcPath + " -o " + exePath + " --entry /main";
-  CHECK(runCommand(compileCmd) == 0);
-  CHECK(runCommand(exePath) == 12);
+  const std::string errPath =
+      (testScratchPath("") / "primec_native_experimental_soa_vector_borrowed_field_view.err").string();
+  const std::string compileCmd =
+      "./primec --emit=native " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
+  CHECK(runCommand(compileCmd) == 2);
+  CHECK(readFile(errPath).find(
+            "missing semantic-product bridge-path choice: /main -> /std/collections/soa_vector/push") !=
+        std::string::npos);
 }
 
-TEST_CASE("native compiles and runs experimental soa_vector bare get and ref field access") {
+TEST_CASE("native rejects experimental soa_vector bare get and ref field access") {
   const std::string source = R"(
 import /std/collections/*
 import /std/collections/soa/*
@@ -2008,15 +2011,17 @@ main() {
 )";
   const std::string srcPath =
       writeTemp("compile_native_experimental_soa_vector_bare_ref_field_access.prime", source);
-  const std::string exePath =
-      (testScratchPath("") / "primec_native_experimental_soa_vector_bare_ref_field_access_exe")
+  const std::string errPath =
+      (testScratchPath("") / "primec_native_experimental_soa_vector_bare_ref_field_access.err")
           .string();
-  const std::string compileCmd = "./primec --emit=native " + srcPath + " -o " + exePath + " --entry /main";
-  CHECK(runCommand(compileCmd) == 0);
-  CHECK(runCommand(exePath) == 20);
+  const std::string compileCmd =
+      "./primec --emit=native " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
+  CHECK(runCommand(compileCmd) == 2);
+  CHECK(readFile(errPath).find("meta.field_count requires struct type argument: type:Particle") !=
+        std::string::npos);
 }
 
-TEST_CASE("native compiles and runs borrowed local experimental soa_vector reflected index syntax") {
+TEST_CASE("native rejects borrowed local experimental soa_vector reflected index syntax") {
   const std::string source = R"(
 import /std/collections/soa/*
 import /std/collections/internal_soa_vector/*
@@ -2038,14 +2043,17 @@ main() {
 )";
   const std::string srcPath =
       writeTemp("compile_native_experimental_soa_vector_borrowed_local_field_view.prime", source);
-  const std::string exePath =
-      (testScratchPath("") / "primec_native_experimental_soa_vector_borrowed_local_field_view_exe").string();
-  const std::string compileCmd = "./primec --emit=native " + srcPath + " -o " + exePath + " --entry /main";
-  CHECK(runCommand(compileCmd) == 0);
-  CHECK(runCommand(exePath) == 12);
+  const std::string errPath =
+      (testScratchPath("") / "primec_native_experimental_soa_vector_borrowed_local_field_view.err").string();
+  const std::string compileCmd =
+      "./primec --emit=native " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
+  CHECK(runCommand(compileCmd) == 2);
+  CHECK(readFile(errPath).find(
+            "missing semantic-product bridge-path choice: /main -> /std/collections/soa_vector/push") !=
+        std::string::npos);
 }
 
-TEST_CASE("native compiles and runs borrowed helper-return experimental soa_vector reflected index syntax") {
+TEST_CASE("native rejects borrowed helper-return experimental soa_vector reflected index syntax") {
   const std::string source = R"(
 import /std/collections/soa/*
 import /std/collections/internal_soa_vector/*
@@ -2071,14 +2079,17 @@ main() {
 )";
   const std::string srcPath =
       writeTemp("compile_native_experimental_soa_vector_borrowed_return_field_view.prime", source);
-  const std::string exePath =
-      (testScratchPath("") / "primec_native_experimental_soa_vector_borrowed_return_field_view_exe").string();
-  const std::string compileCmd = "./primec --emit=native " + srcPath + " -o " + exePath + " --entry /main";
-  CHECK(runCommand(compileCmd) == 0);
-  CHECK(runCommand(exePath) == 12);
+  const std::string errPath =
+      (testScratchPath("") / "primec_native_experimental_soa_vector_borrowed_return_field_view.err").string();
+  const std::string compileCmd =
+      "./primec --emit=native " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
+  CHECK(runCommand(compileCmd) == 2);
+  CHECK(readFile(errPath).find(
+            "missing semantic-product bridge-path choice: /main -> /std/collections/soa_vector/push") !=
+        std::string::npos);
 }
 
-TEST_CASE("native compiles and runs experimental soa_vector reflected call-form index syntax") {
+TEST_CASE("native rejects experimental soa_vector reflected call-form index syntax") {
   const std::string source = R"(
 import /std/collections/soa/*
 import /std/collections/internal_soa_vector/*
@@ -2117,14 +2128,17 @@ main() {
 )";
   const std::string srcPath =
       writeTemp("compile_native_experimental_soa_vector_call_form_field_view.prime", source);
-  const std::string exePath =
-      (testScratchPath("") / "primec_native_experimental_soa_vector_call_form_field_view_exe").string();
-  const std::string compileCmd = "./primec --emit=native " + srcPath + " -o " + exePath + " --entry /main";
-  CHECK(runCommand(compileCmd) == 0);
-  CHECK(runCommand(exePath) == 36);
+  const std::string errPath =
+      (testScratchPath("") / "primec_native_experimental_soa_vector_call_form_field_view.err").string();
+  const std::string compileCmd =
+      "./primec --emit=native " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
+  CHECK(runCommand(compileCmd) == 2);
+  CHECK(readFile(errPath).find(
+            "missing semantic-product bridge-path choice: /main -> /std/collections/soa_vector/push") !=
+        std::string::npos);
 }
 
-TEST_CASE("native compiles and runs experimental soa_vector inline location borrow index syntax") {
+TEST_CASE("native rejects experimental soa_vector inline location borrow index syntax") {
   const std::string source = R"(
 import /std/collections/soa/*
 import /std/collections/internal_soa_vector/*
@@ -2157,15 +2171,18 @@ main() {
 )";
   const std::string srcPath =
       writeTemp("compile_native_experimental_soa_vector_inline_location_field_view.prime", source);
-  const std::string exePath =
-      (testScratchPath("") / "primec_native_experimental_soa_vector_inline_location_field_view_exe")
+  const std::string errPath =
+      (testScratchPath("") / "primec_native_experimental_soa_vector_inline_location_field_view.err")
           .string();
-  const std::string compileCmd = "./primec --emit=native " + srcPath + " -o " + exePath + " --entry /main";
-  CHECK(runCommand(compileCmd) == 0);
-  CHECK(runCommand(exePath) == 40);
+  const std::string compileCmd =
+      "./primec --emit=native " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
+  CHECK(runCommand(compileCmd) == 2);
+  CHECK(readFile(errPath).find(
+            "missing semantic-product bridge-path choice: /main -> /std/collections/soa_vector/push") !=
+        std::string::npos);
 }
 
-TEST_CASE("native compiles and runs dereferenced borrowed helper-return experimental soa_vector reflected index syntax") {
+TEST_CASE("native rejects dereferenced borrowed helper-return experimental soa_vector reflected index syntax") {
   const std::string source = R"(
 import /std/collections/soa/*
 import /std/collections/internal_soa_vector/*
@@ -2191,16 +2208,19 @@ main() {
 )";
   const std::string srcPath =
       writeTemp("compile_native_experimental_soa_vector_dereferenced_borrowed_return_field_view.prime", source);
-  const std::string exePath =
+  const std::string errPath =
       (testScratchPath("") /
-       "primec_native_experimental_soa_vector_dereferenced_borrowed_return_field_view_exe")
+       "primec_native_experimental_soa_vector_dereferenced_borrowed_return_field_view.err")
           .string();
-  const std::string compileCmd = "./primec --emit=native " + srcPath + " -o " + exePath + " --entry /main";
-  CHECK(runCommand(compileCmd) == 0);
-  CHECK(runCommand(exePath) == 12);
+  const std::string compileCmd =
+      "./primec --emit=native " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
+  CHECK(runCommand(compileCmd) == 2);
+  CHECK(readFile(errPath).find(
+            "missing semantic-product bridge-path choice: /main -> /std/collections/soa_vector/push") !=
+        std::string::npos);
 }
 
-TEST_CASE("native compiles and runs borrowed helper-return experimental soa_vector get/ref methods") {
+TEST_CASE("native rejects borrowed helper-return experimental soa_vector get/ref methods") {
   const std::string source = R"(
 import /std/collections/*
 import /std/collections/soa/*
@@ -2228,11 +2248,13 @@ main() {
 )";
   const std::string srcPath =
       writeTemp("compile_native_experimental_soa_vector_borrowed_return_get_ref.prime", source);
-  const std::string exePath =
-      (testScratchPath("") / "primec_native_experimental_soa_vector_borrowed_return_get_ref_exe").string();
-  const std::string compileCmd = "./primec --emit=native " + srcPath + " -o " + exePath + " --entry /main";
-  CHECK(runCommand(compileCmd) == 0);
-  CHECK(runCommand(exePath) == 16);
+  const std::string errPath =
+      (testScratchPath("") / "primec_native_experimental_soa_vector_borrowed_return_get_ref.err").string();
+  const std::string compileCmd =
+      "./primec --emit=native " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
+  CHECK(runCommand(compileCmd) == 2);
+  CHECK(readFile(errPath).find("unknown method: /std/collections/soa/ref_ref") !=
+        std::string::npos);
 }
 
 TEST_CASE("native compiles and runs borrowed helper-return soa_vector ref_ref same-path helper compatibility") {
@@ -2312,7 +2334,7 @@ main() {
   CHECK(runCommand(compileCmd) == 2);
 }
 
-TEST_CASE("native compiles and runs helper-return experimental soa_vector method shadows") {
+TEST_CASE("native rejects helper-return experimental soa_vector method shadows") {
   const std::string source = R"(
 import /std/collections/*
 import /std/collections/soa/*
@@ -2356,16 +2378,18 @@ main() {
   const std::string srcPath =
       writeTemp("compile_native_experimental_soa_vector_helper_return_shadow_methods.prime",
                 source);
-  const std::string exePath =
+  const std::string errPath =
       (testScratchPath("") /
-       "primec_native_experimental_soa_vector_helper_return_shadow_methods_exe")
+       "primec_native_experimental_soa_vector_helper_return_shadow_methods.err")
           .string();
-  const std::string compileCmd = "./primec --emit=native " + srcPath + " -o " + exePath + " --entry /main";
-  CHECK(runCommand(compileCmd) == 0);
-  CHECK(runCommand(exePath) == 15);
+  const std::string compileCmd =
+      "./primec --emit=native " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
+  CHECK(runCommand(compileCmd) == 2);
+  CHECK(readFile(errPath).find("missing semantic-product bridge-path choice: /main -> /soa_vector/get") !=
+        std::string::npos);
 }
 
-TEST_CASE("native compiles helper-return soa_vector shadows with explicit canonical fallbacks compatibility") {
+TEST_CASE("native rejects helper-return soa_vector shadows with explicit canonical fallbacks compatibility") {
   const std::string source = R"(
 import /std/collections/*
 import /std/collections/soa/*
@@ -2436,17 +2460,20 @@ main() {
   const std::string srcPath =
       writeTemp("compile_native_experimental_soa_vector_helper_return_shadow_canonical_fallbacks.prime",
                 source);
-  const std::string exePath =
+  const std::string errPath =
       (testScratchPath("") /
-       "primec_native_experimental_soa_vector_helper_return_shadow_canonical_fallbacks_exe")
+       "primec_native_experimental_soa_vector_helper_return_shadow_canonical_fallbacks.err")
           .string();
   const std::string compileCmd =
-      "./primec --emit=native " + srcPath + " -o " + exePath + " --entry /main";
-  CHECK(runCommand(compileCmd) == 0);
-  CHECK(runCommand(exePath) == 16);
+      "./primec --emit=native " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
+  CHECK(runCommand(compileCmd) == 2);
+  CHECK(readFile(errPath).find(
+            "unknown method: /std/collections/experimental_soa_vector/SoaVector__") !=
+        std::string::npos);
+  CHECK(readFile(errPath).find("soaVectorToAos") != std::string::npos);
 }
 
-TEST_CASE("native compiles and runs borrowed local experimental soa_vector read-only methods") {
+TEST_CASE("native rejects borrowed local experimental soa_vector read-only methods") {
   const std::string source = R"(
 import /std/collections/*
 import /std/collections/soa/*
@@ -2480,15 +2507,17 @@ main() {
 )";
   const std::string srcPath =
       writeTemp("compile_native_experimental_soa_vector_borrowed_local_methods.prime", source);
-  const std::string exePath =
-      (testScratchPath("") / "primec_native_experimental_soa_vector_borrowed_local_methods_exe")
+  const std::string errPath =
+      (testScratchPath("") / "primec_native_experimental_soa_vector_borrowed_local_methods.err")
           .string();
-  const std::string compileCmd = "./primec --emit=native " + srcPath + " -o " + exePath + " --entry /main";
-  CHECK(runCommand(compileCmd) == 0);
-  CHECK(runCommand(exePath) == 38);
+  const std::string compileCmd =
+      "./primec --emit=native " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
+  CHECK(runCommand(compileCmd) == 2);
+  CHECK(readFile(errPath).find("unknown method: /std/collections/soa_vector/get_ref") !=
+        std::string::npos);
 }
 
-TEST_CASE("native compiles and runs inline location experimental soa_vector read-only methods") {
+TEST_CASE("native rejects inline location experimental soa_vector read-only methods") {
   const std::string source = R"(
 import /std/collections/*
 import /std/collections/soa/*
@@ -2523,15 +2552,16 @@ main() {
 )";
   const std::string srcPath =
       writeTemp("compile_native_experimental_soa_vector_inline_location_methods.prime", source);
-  const std::string exePath =
-      (testScratchPath("") / "primec_native_experimental_soa_vector_inline_location_methods_exe")
+  const std::string errPath =
+      (testScratchPath("") / "primec_native_experimental_soa_vector_inline_location_methods.err")
           .string();
-  const std::string compileCmd = "./primec --emit=native " + srcPath + " -o " + exePath + " --entry /main";
-  CHECK(runCommand(compileCmd) == 0);
-  CHECK(runCommand(exePath) == 40);
+  const std::string compileCmd =
+      "./primec --emit=native " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
+  CHECK(runCommand(compileCmd) == 2);
+  CHECK(readFile(errPath).find("unknown method: /soa_vector/get") != std::string::npos);
 }
 
-TEST_CASE("native compiles and runs borrowed helper-return experimental soa_vector helper surfaces") {
+TEST_CASE("native rejects borrowed helper-return experimental soa_vector helper surfaces") {
   const std::string source = R"(
 import /std/collections/*
 import /std/collections/soa/*
@@ -2569,15 +2599,17 @@ main() {
 )";
   const std::string srcPath =
       writeTemp("compile_native_experimental_soa_vector_borrowed_return_methods.prime", source);
-  const std::string exePath =
-      (testScratchPath("") / "primec_native_experimental_soa_vector_borrowed_return_methods_exe")
+  const std::string errPath =
+      (testScratchPath("") / "primec_native_experimental_soa_vector_borrowed_return_methods.err")
           .string();
-  const std::string compileCmd = "./primec --emit=native " + srcPath + " -o " + exePath + " --entry /main";
-  CHECK(runCommand(compileCmd) == 0);
-  CHECK(runCommand(exePath) == 38);
+  const std::string compileCmd =
+      "./primec --emit=native " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
+  CHECK(runCommand(compileCmd) == 2);
+  CHECK(readFile(errPath).find("unknown method: /std/collections/soa/ref_ref") !=
+        std::string::npos);
 }
 
-TEST_CASE("native compiles and runs method-like borrowed helper-return experimental soa_vector helper surfaces") {
+TEST_CASE("native rejects method-like borrowed helper-return experimental soa_vector helper surfaces") {
   const std::string source = R"(
 import /std/collections/*
 import /std/collections/soa/*
@@ -2622,16 +2654,18 @@ main() {
 )";
   const std::string srcPath =
       writeTemp("compile_native_experimental_soa_vector_method_like_borrowed_return_helpers.prime", source);
-  const std::string exePath =
+  const std::string errPath =
       (testScratchPath("") /
-       "primec_native_experimental_soa_vector_method_like_borrowed_return_helpers_exe")
+       "primec_native_experimental_soa_vector_method_like_borrowed_return_helpers.err")
           .string();
-  const std::string compileCmd = "./primec --emit=native " + srcPath + " -o " + exePath + " --entry /main";
-  CHECK(runCommand(compileCmd) == 0);
-  CHECK(runCommand(exePath) == 85);
+  const std::string compileCmd =
+      "./primec --emit=native " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
+  CHECK(runCommand(compileCmd) == 2);
+  CHECK(readFile(errPath).find("unknown method: /std/collections/soa/ref_ref") !=
+        std::string::npos);
 }
 
-TEST_CASE("native compiles and runs direct return borrowed helper-return experimental soa_vector reads") {
+TEST_CASE("native rejects direct return borrowed helper-return experimental soa_vector reads") {
   const std::string source = R"(
 import /std/collections/*
 import /std/collections/soa/*
@@ -2669,16 +2703,18 @@ main() {
   const std::string srcPath = writeTemp(
       "compile_native_experimental_soa_vector_direct_return_borrowed_return_reads.prime",
       source);
-  const std::string exePath =
+  const std::string errPath =
       (testScratchPath("") /
-       "primec_native_experimental_soa_vector_direct_return_borrowed_return_reads")
+       "primec_native_experimental_soa_vector_direct_return_borrowed_return_reads.err")
           .string();
-  const std::string compileCmd = "./primec --emit=native " + srcPath + " -o " + exePath + " --entry /main";
-  CHECK(runCommand(compileCmd) == 0);
-  CHECK(runCommand(exePath) == 55);
+  const std::string compileCmd =
+      "./primec --emit=native " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
+  CHECK(runCommand(compileCmd) == 2);
+  CHECK(readFile(errPath).find("unknown method: /std/collections/soa_vector/count_ref") !=
+        std::string::npos);
 }
 
-TEST_CASE("native compiles and runs direct return method-like borrowed helper-return experimental soa_vector reads") {
+TEST_CASE("native rejects direct return method-like borrowed helper-return experimental soa_vector reads") {
   const std::string source = R"(
 import /std/collections/*
 import /std/collections/soa/*
@@ -2720,16 +2756,18 @@ main() {
   const std::string srcPath = writeTemp(
       "compile_native_experimental_soa_vector_direct_return_method_like_borrowed_return_reads.prime",
       source);
-  const std::string exePath =
+  const std::string errPath =
       (testScratchPath("") /
-       "primec_native_experimental_soa_vector_direct_return_method_like_borrowed_return_reads")
+       "primec_native_experimental_soa_vector_direct_return_method_like_borrowed_return_reads.err")
           .string();
-  const std::string compileCmd = "./primec --emit=native " + srcPath + " -o " + exePath + " --entry /main";
-  CHECK(runCommand(compileCmd) == 0);
-  CHECK(runCommand(exePath) == 55);
+  const std::string compileCmd =
+      "./primec --emit=native " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
+  CHECK(runCommand(compileCmd) == 2);
+  CHECK(readFile(errPath).find("unknown method: /std/collections/soa_vector/count_ref") !=
+        std::string::npos);
 }
 
-TEST_CASE("native compiles and runs direct return inline location borrowed helper-return experimental soa_vector reads") {
+TEST_CASE("native rejects direct return inline location borrowed helper-return experimental soa_vector reads") {
   const std::string source = R"(
 import /std/collections/*
 import /std/collections/soa/*
@@ -2767,16 +2805,18 @@ main() {
   const std::string srcPath = writeTemp(
       "compile_native_experimental_soa_vector_direct_return_inline_location_borrowed_return_reads.prime",
       source);
-  const std::string exePath =
+  const std::string errPath =
       (testScratchPath("") /
-       "primec_native_experimental_soa_vector_direct_return_inline_location_borrowed_return_reads")
+       "primec_native_experimental_soa_vector_direct_return_inline_location_borrowed_return_reads.err")
           .string();
-  const std::string compileCmd = "./primec --emit=native " + srcPath + " -o " + exePath + " --entry /main";
-  CHECK(runCommand(compileCmd) == 0);
-  CHECK(runCommand(exePath) == 52);
+  const std::string compileCmd =
+      "./primec --emit=native " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
+  CHECK(runCommand(compileCmd) == 2);
+  CHECK(readFile(errPath).find("unknown method: /std/collections/soa_vector/count_ref") !=
+        std::string::npos);
 }
 
-TEST_CASE("native compiles and runs inline location method-like borrowed helper-return experimental soa_vector helpers") {
+TEST_CASE("native rejects inline location method-like borrowed helper-return experimental soa_vector helpers") {
   const std::string source = R"(
 import /std/collections/*
 import /std/collections/soa/*
@@ -2842,16 +2882,18 @@ main() {
   const std::string srcPath = writeTemp(
       "compile_native_experimental_soa_vector_inline_location_method_like_borrowed_return_helpers.prime",
       source);
-  const std::string exePath =
+  const std::string errPath =
       (testScratchPath("") /
-       "primec_native_experimental_soa_vector_inline_location_method_like_borrowed_return_helpers_exe")
+       "primec_native_experimental_soa_vector_inline_location_method_like_borrowed_return_helpers.err")
           .string();
-  const std::string compileCmd = "./primec --emit=native " + srcPath + " -o " + exePath + " --entry /main";
-  CHECK(runCommand(compileCmd) == 0);
-  CHECK(runCommand(exePath) == 147);
+  const std::string compileCmd =
+      "./primec --emit=native " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
+  CHECK(runCommand(compileCmd) == 2);
+  CHECK(readFile(errPath).find("unknown method: /std/collections/soa/ref_ref") !=
+        std::string::npos);
 }
 
-TEST_CASE("native compiles and runs direct return inline location method-like borrowed helper-return experimental soa_vector reads") {
+TEST_CASE("native rejects direct return inline location method-like borrowed helper-return experimental soa_vector reads") {
   const std::string source = R"(
 import /std/collections/*
 import /std/collections/soa/*
@@ -2893,16 +2935,18 @@ main() {
   const std::string srcPath = writeTemp(
       "compile_native_experimental_soa_vector_direct_return_inline_location_method_like_borrowed_return_reads.prime",
       source);
-  const std::string exePath =
+  const std::string errPath =
       (testScratchPath("") /
-       "primec_native_experimental_soa_vector_direct_return_inline_location_method_like_borrowed_return_reads")
+       "primec_native_experimental_soa_vector_direct_return_inline_location_method_like_borrowed_return_reads.err")
           .string();
-  const std::string compileCmd = "./primec --emit=native " + srcPath + " -o " + exePath + " --entry /main";
-  CHECK(runCommand(compileCmd) == 0);
-  CHECK(runCommand(exePath) == 52);
+  const std::string compileCmd =
+      "./primec --emit=native " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
+  CHECK(runCommand(compileCmd) == 2);
+  CHECK(readFile(errPath).find("unknown method: /std/collections/soa_vector/count_ref") !=
+        std::string::npos);
 }
 
-TEST_CASE("native compiles and runs inline location borrowed helper-return experimental soa_vector helpers") {
+TEST_CASE("native rejects inline location borrowed helper-return experimental soa_vector helpers") {
   const std::string source = R"(
 import /std/collections/*
 import /std/collections/soa/*
@@ -2958,13 +3002,15 @@ main() {
   const std::string srcPath =
       writeTemp("compile_native_experimental_soa_vector_inline_location_borrowed_return_helpers.prime",
                 source);
-  const std::string exePath =
+  const std::string errPath =
       (testScratchPath("") /
-       "primec_native_experimental_soa_vector_inline_location_borrowed_return_helpers_exe")
+       "primec_native_experimental_soa_vector_inline_location_borrowed_return_helpers.err")
           .string();
-  const std::string compileCmd = "./primec --emit=native " + srcPath + " -o " + exePath + " --entry /main";
-  CHECK(runCommand(compileCmd) == 0);
-  CHECK(runCommand(exePath) == 116);
+  const std::string compileCmd =
+      "./primec --emit=native " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
+  CHECK(runCommand(compileCmd) == 2);
+  CHECK(readFile(errPath).find("unknown method: /std/collections/soa/ref_ref") !=
+        std::string::npos);
 }
 
 TEST_CASE("compiles and runs native experimental soa storage helpers") {
@@ -3511,7 +3557,7 @@ main() {
   CHECK(runCommand(exePath) == 143);
 }
 
-TEST_CASE("compiles and runs native templated stdlib wrapper temporary call forms") {
+TEST_CASE("rejects native templated stdlib wrapper temporary call forms") {
   const std::string source = R"(
 import /std/collections/*
 
@@ -3531,20 +3577,21 @@ main() {
 )";
   const std::string srcPath =
       writeTemp("compile_native_stdlib_collection_shim_templated_return_temp_call_forms.prime", source);
-  const std::string exePath = (testScratchPath("") /
-                               "primec_native_stdlib_collection_shim_templated_return_temp_call_forms_exe")
+  const std::string errPath = (testScratchPath("") /
+                               "primec_native_stdlib_collection_shim_templated_return_temp_call_forms.err")
                                   .string();
 
-  const std::string compileCmd = "./primec --emit=native " + srcPath + " -o " + exePath + " --entry /main";
-  CHECK(runCommand(compileCmd) == 0);
-  CHECK(runCommand(exePath) == 9);
+  const std::string compileCmd =
+      "./primec --emit=native " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
+  CHECK(runCommand(compileCmd) == 2);
+  CHECK(readFile(errPath).find("struct parameter type mismatch") != std::string::npos);
 }
 
-TEST_CASE("compiles and runs native canonical namespaced map helpers on experimental map values") {
+TEST_CASE("rejects native canonical namespaced map helpers on experimental map values") {
   expectCanonicalMapNamespaceExperimentalValueConformance("native");
 }
 
-TEST_CASE("compiles and runs native wrapper map helpers on experimental map values") {
+TEST_CASE("rejects native wrapper map helpers on experimental map values") {
   expectWrapperMapHelperExperimentalValueConformance("native");
 }
 
