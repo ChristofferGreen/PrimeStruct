@@ -129,6 +129,7 @@ set(PRIMESTRUCT_FRONTEND_SOURCES
   src/semantics/SemanticsValidatorResultHelpers.cpp
   src/semantics/SemanticsValidatorBuild.cpp
   src/semantics/SemanticsValidatorBuildTransforms.cpp
+  src/semantics/SemanticsValidatorBuildRequirements.cpp
   src/semantics/SemanticsValidatorBuildImports.cpp
   src/semantics/SemanticsValidatorBuildReturnKinds.cpp
   src/semantics/SemanticsValidatorBuildLifecycle.cpp
@@ -238,6 +239,7 @@ set(PRIMESTRUCT_FRONTEND_SOURCES
   src/semantics/SemanticsValidatorStatementVectorResolution.cpp
   src/semantics/SemanticsValidatorStatement.cpp
   src/semantics/SemanticsValidatorTraits.cpp
+  src/semantics/RequirementPredicateFacts.cpp
   src/text_filter/TextFilterHelpers.cpp
   src/text_filter/TextFilterUnaryRewrites.cpp
   src/text_filter/TextFilterPipelineEnvelope.cpp

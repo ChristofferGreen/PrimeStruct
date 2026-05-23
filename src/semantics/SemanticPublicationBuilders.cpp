@@ -1,5 +1,6 @@
 #include "SemanticPublicationBuilders.h"
 
+#include "RequirementPredicateFacts.h"
 #include "StdlibCollectionSurfaceHelpers.h"
 #include "primec/StdlibSurfaceRegistry.h"
 
@@ -401,314 +402,38 @@ uint64_t makeSumVariantMetadataSumPathVariantNameKey(SymbolId sumPathId, SymbolI
          static_cast<uint64_t>(variantNameId);
 }
 
-std::string trimRequirementPredicateText(std::string_view text) {
-  while (!text.empty() &&
-         std::isspace(static_cast<unsigned char>(text.front()))) {
-    text.remove_prefix(1);
-  }
-  while (!text.empty() &&
-         std::isspace(static_cast<unsigned char>(text.back()))) {
-    text.remove_suffix(1);
-  }
-  return std::string(text);
-}
-
-bool isRequirementIdentifierChar(char ch) {
-  return std::isalnum(static_cast<unsigned char>(ch)) || ch == '_' ||
-         ch == '/' || ch == '.' || ch == ':';
-}
-
-bool isRequirementSymbolText(std::string_view text) {
-  if (text.empty()) {
-    return false;
-  }
-  if (!std::isalpha(static_cast<unsigned char>(text.front())) &&
-      text.front() != '_' && text.front() != '/') {
-    return false;
-  }
-  for (char ch : text) {
-    if (!isRequirementIdentifierChar(ch)) {
-      return false;
-    }
-  }
-  return true;
-}
-
-bool isRequirementLiteralText(std::string_view text) {
-  if (text == "true" || text == "false") {
-    return true;
-  }
-  if (text.size() >= 2 &&
-      ((text.front() == '"' && text.back() == '"') ||
-       (text.front() == '\'' && text.back() == '\''))) {
-    return true;
-  }
-  bool sawDigit = false;
-  for (char ch : text) {
-    if (std::isdigit(static_cast<unsigned char>(ch))) {
-      sawDigit = true;
-      continue;
-    }
-    if (ch == '.' || ch == '-' || ch == '+' || ch == '_' ||
-        std::isalpha(static_cast<unsigned char>(ch))) {
-      continue;
-    }
-    return false;
-  }
-  return sawDigit;
-}
-
-std::vector<std::string> splitRequirementTopLevelList(std::string_view text) {
-  std::vector<std::string> out;
-  int angleDepth = 0;
-  int parenDepth = 0;
-  int braceDepth = 0;
-  int bracketDepth = 0;
-  std::size_t start = 0;
-  auto pushSegment = [&](std::size_t end) {
-    std::string segment = trimRequirementPredicateText(text.substr(start, end - start));
-    if (!segment.empty()) {
-      out.push_back(std::move(segment));
-    }
-  };
-  for (std::size_t i = 0; i < text.size(); ++i) {
-    const char ch = text[i];
-    if (ch == '<') {
-      ++angleDepth;
-      continue;
-    }
-    if (ch == '>') {
-      angleDepth = std::max(0, angleDepth - 1);
-      continue;
-    }
-    if (ch == '(') {
-      ++parenDepth;
-      continue;
-    }
-    if (ch == ')') {
-      parenDepth = std::max(0, parenDepth - 1);
-      continue;
-    }
-    if (ch == '{') {
-      ++braceDepth;
-      continue;
-    }
-    if (ch == '}') {
-      braceDepth = std::max(0, braceDepth - 1);
-      continue;
-    }
-    if (ch == '[') {
-      ++bracketDepth;
-      continue;
-    }
-    if (ch == ']') {
-      bracketDepth = std::max(0, bracketDepth - 1);
-      continue;
-    }
-    if (ch == ',' && angleDepth == 0 && parenDepth == 0 &&
-        braceDepth == 0 && bracketDepth == 0) {
-      pushSegment(i);
-      start = i + 1;
-    }
-  }
-  pushSegment(text.size());
-  return out;
-}
-
-std::optional<std::size_t> findTopLevelRequirementCallParen(std::string_view text) {
-  int angleDepth = 0;
-  for (std::size_t i = 0; i < text.size(); ++i) {
-    const char ch = text[i];
-    if (ch == '<') {
-      ++angleDepth;
-      continue;
-    }
-    if (ch == '>') {
-      angleDepth = std::max(0, angleDepth - 1);
-      continue;
-    }
-    if (ch == '(' && angleDepth == 0) {
-      return i;
-    }
-  }
-  return std::nullopt;
-}
-
-std::optional<std::size_t> findTopLevelTemplateStart(std::string_view text) {
-  for (std::size_t i = 0; i < text.size(); ++i) {
-    if (text[i] == '<') {
-      return i;
-    }
-  }
-  return std::nullopt;
-}
-
-std::optional<std::pair<std::size_t, std::string>>
-findTopLevelRequirementRelation(std::string_view text) {
-  int angleDepth = 0;
-  int parenDepth = 0;
-  int braceDepth = 0;
-  int bracketDepth = 0;
-  for (std::size_t i = 0; i + 1 < text.size(); ++i) {
-    const char ch = text[i];
-    if (ch == '<') {
-      ++angleDepth;
-      continue;
-    }
-    if (ch == '>') {
-      angleDepth = std::max(0, angleDepth - 1);
-      continue;
-    }
-    if (ch == '(') {
-      ++parenDepth;
-      continue;
-    }
-    if (ch == ')') {
-      parenDepth = std::max(0, parenDepth - 1);
-      continue;
-    }
-    if (ch == '{') {
-      ++braceDepth;
-      continue;
-    }
-    if (ch == '}') {
-      braceDepth = std::max(0, braceDepth - 1);
-      continue;
-    }
-    if (ch == '[') {
-      ++bracketDepth;
-      continue;
-    }
-    if (ch == ']') {
-      bracketDepth = std::max(0, bracketDepth - 1);
-      continue;
-    }
-    if (angleDepth != 0 || parenDepth != 0 || braceDepth != 0 || bracketDepth != 0) {
-      continue;
-    }
-    const std::string_view op = text.substr(i, 2);
-    if (op == "==" || op == "!=" || op == ">=" || op == "<=") {
-      return std::make_pair(i, std::string(op));
-    }
-  }
-  return std::nullopt;
-}
-
-std::string requirementOperandStableHandle(std::string_view kind, std::string_view text) {
-  std::string handle(kind);
-  handle.push_back(':');
-  handle.append(text);
-  return handle;
-}
-
-SemanticProgramRequirementPredicateOperand classifyRequirementOperand(
-    std::string text,
-    std::string_view predicateName,
-    std::size_t operandIndex,
-    int sourceLine,
-    int sourceColumn) {
-  text = trimRequirementPredicateText(text);
-  SemanticProgramRequirementPredicateOperand operand;
-  operand.text = text;
-  operand.sourceLine = sourceLine;
-  operand.sourceColumn = sourceColumn;
-
-  if (text.rfind("typeof<", 0) == 0 && text.size() > 8 && text.back() == '>') {
-    operand.kind = "type_fact";
-  } else if ((predicateName.find("type") != std::string_view::npos ||
-              predicateName.find("construct") != std::string_view::npos ||
-              predicateName.find("copy") != std::string_view::npos ||
-              predicateName.find("move") != std::string_view::npos) &&
-             isRequirementSymbolText(text)) {
-    operand.kind = "type_fact";
-  } else if (isRequirementLiteralText(text)) {
-    operand.kind = "literal_compile_time_argument";
-  } else if (predicateName.find("trait") != std::string_view::npos &&
-             operandIndex > 0 && isRequirementSymbolText(text)) {
-    operand.kind = "compile_time_symbol";
-  } else if (isRequirementSymbolText(text)) {
-    operand.kind = "compile_time_symbol";
-  } else {
-    operand.kind = "unsupported_runtime_only_expression";
-  }
-  operand.stableHandle = requirementOperandStableHandle(operand.kind, operand.text);
-  return operand;
-}
-
 SemanticProgramRequirementPredicateFact classifyRequirementPredicateFact(
     const Definition &definition,
     const Transform &transform,
-    std::string sourceText) {
-  sourceText = trimRequirementPredicateText(sourceText);
+    std::string sourceText,
+    const RequirementPredicateDefinitionContext &context) {
   SemanticProgramRequirementPredicateFact fact;
   fact.definitionPath = definition.fullPath;
-  fact.sourceText = sourceText;
   fact.sourceLine = transform.sourceLine > 0 ? transform.sourceLine : definition.sourceLine;
   fact.sourceColumn = transform.sourceColumn > 0 ? transform.sourceColumn : definition.sourceColumn;
   fact.semanticNodeId = definition.semanticNodeId;
   fact.provenanceHandle = makeSemanticProvenanceHandle(definition.semanticNodeId);
-  fact.evaluationOutcome = "invalid_evaluation";
-  fact.evaluationDiagnostic = "requirement predicate evaluation pending";
-
-  if (const auto relation = findTopLevelRequirementRelation(sourceText);
-      relation.has_value()) {
-    fact.predicateKind = "relation";
-    fact.relationOperator = relation->second;
-    fact.predicateName = "relation";
-    fact.operands.push_back(classifyRequirementOperand(
-        sourceText.substr(0, relation->first),
-        fact.predicateName,
-        0,
-        fact.sourceLine,
-        fact.sourceColumn));
-    fact.operands.push_back(classifyRequirementOperand(
-        sourceText.substr(relation->first + relation->second.size()),
-        fact.predicateName,
-        1,
-        fact.sourceLine,
-        fact.sourceColumn));
-    return fact;
+  const RequirementPredicateFactDraft draft =
+      buildRequirementPredicateFactDraft(std::move(sourceText),
+                                         fact.sourceLine,
+                                         fact.sourceColumn,
+                                         context);
+  fact.predicateKind = draft.predicateKind;
+  fact.predicateName = draft.predicateName;
+  fact.relationOperator = draft.relationOperator;
+  fact.sourceText = draft.sourceText;
+  fact.evaluationOutcome = draft.evaluationOutcome;
+  fact.evaluationDiagnostic = draft.evaluationDiagnostic;
+  fact.operands.reserve(draft.operands.size());
+  for (const auto &draftOperand : draft.operands) {
+    SemanticProgramRequirementPredicateOperand operand;
+    operand.kind = draftOperand.kind;
+    operand.text = draftOperand.text;
+    operand.stableHandle = draftOperand.stableHandle;
+    operand.sourceLine = draftOperand.sourceLine;
+    operand.sourceColumn = draftOperand.sourceColumn;
+    fact.operands.push_back(std::move(operand));
   }
-
-  if (const auto callParen = findTopLevelRequirementCallParen(sourceText);
-      callParen.has_value() && sourceText.back() == ')') {
-    const std::string calleeText =
-        trimRequirementPredicateText(std::string_view(sourceText).substr(0, *callParen));
-    const auto templateStart = findTopLevelTemplateStart(calleeText);
-    fact.predicateKind = "predicate_call";
-    fact.predicateName =
-        templateStart.has_value() ? calleeText.substr(0, *templateStart) : calleeText;
-    if (templateStart.has_value() && calleeText.back() == '>') {
-      const std::string templateArgs =
-          calleeText.substr(*templateStart + 1, calleeText.size() - *templateStart - 2);
-      for (const auto &arg : splitRequirementTopLevelList(templateArgs)) {
-        fact.operands.push_back(classifyRequirementOperand(arg,
-                                                           fact.predicateName,
-                                                           fact.operands.size(),
-                                                           fact.sourceLine,
-                                                           fact.sourceColumn));
-      }
-    }
-    const std::string callArgs =
-        sourceText.substr(*callParen + 1, sourceText.size() - *callParen - 2);
-    for (const auto &arg : splitRequirementTopLevelList(callArgs)) {
-      fact.operands.push_back(classifyRequirementOperand(arg,
-                                                         fact.predicateName,
-                                                         fact.operands.size(),
-                                                         fact.sourceLine,
-                                                         fact.sourceColumn));
-    }
-    return fact;
-  }
-
-  fact.predicateKind = "unsupported";
-  fact.predicateName = {};
-  fact.operands.push_back(classifyRequirementOperand(sourceText,
-                                                     fact.predicateName,
-                                                     0,
-                                                     fact.sourceLine,
-                                                     fact.sourceColumn));
-  fact.evaluationDiagnostic = "unsupported requirement predicate shape";
   return fact;
 }
 
@@ -1217,7 +942,45 @@ void publishLowererPreflightFacts(SemanticPublicationBuilderState &state) {
   }
 }
 
-void publishRequirementPredicateFacts(SemanticPublicationBuilderState &state) {
+RequirementPredicateDefinitionContext makeRequirementPredicateDefinitionContext(
+    const Definition &definition,
+    const SemanticPublicationSurface &publicationSurface) {
+  RequirementPredicateDefinitionContext context;
+  context.definitionPath = definition.fullPath;
+  context.namespacePrefix = definition.namespacePrefix;
+  context.templateArgs = definition.templateArgs;
+  for (const auto &entry : publicationSurface.typeMetadata) {
+    if (entry.category == "sum") {
+      context.sumNames.insert(entry.fullPath);
+    } else if (entry.category == "struct" || entry.category == "enum") {
+      context.structNames.insert(entry.fullPath);
+    }
+  }
+  for (const auto &entry : publicationSurface.sumTypeMetadata) {
+    context.sumNames.insert(entry.fullPath);
+  }
+
+  context.params.reserve(definition.parameters.size());
+  for (const auto &param : definition.parameters) {
+    BindingInfo binding;
+    std::optional<std::string> restrictType;
+    std::string parseError;
+    if (parseBindingInfo(param,
+                         definition.namespacePrefix,
+                         context.structNames,
+                         context.importAliases,
+                         binding,
+                         restrictType,
+                         parseError,
+                         &context.sumNames)) {
+      context.params.push_back(ParameterInfo{param.name, std::move(binding), nullptr});
+    }
+  }
+  return context;
+}
+
+void publishRequirementPredicateFacts(SemanticPublicationBuilderState &state,
+                                      const SemanticPublicationSurface &publicationSurface) {
   if (!state.isCollectorEnabled("requirementPredicateFacts")) {
     return;
   }
@@ -1239,9 +1002,11 @@ void publishRequirementPredicateFacts(SemanticPublicationBuilderState &state) {
       if (transform.name != "require") {
         continue;
       }
+      const RequirementPredicateDefinitionContext context =
+          makeRequirementPredicateDefinitionContext(definition, publicationSurface);
       for (const auto &argument : transform.arguments) {
         SemanticProgramRequirementPredicateFact fact =
-            classifyRequirementPredicateFact(definition, transform, argument);
+            classifyRequirementPredicateFact(definition, transform, argument, context);
         fact.definitionPathId =
             semanticProgramInternCallTargetString(state.semanticProgram, fact.definitionPath);
         fact.predicateKindId =
@@ -2090,7 +1855,7 @@ SemanticProgram buildSemanticProgramFromPublicationSurface(
   preseedSemanticProgramCallTargetStrings(state, publicationSurface);
   publishRoutingLookupIndexes(state);
   publishLowererPreflightFacts(state);
-  publishRequirementPredicateFacts(state);
+  publishRequirementPredicateFacts(state, publicationSurface);
   publishSemanticRoutingFamilies(state, publicationSurface);
   publishSemanticMetadataFamilies(state, publicationSurface);
   publishSemanticScopedFactFamilies(state, publicationSurface);

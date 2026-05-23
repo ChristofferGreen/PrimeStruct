@@ -83,8 +83,9 @@ Task template:
 
 ### Ready Now (Parallel-Candidate Leaves; No Unmet TODO Dependencies)
 
-- TODO-4343: Add builtin type relation predicates | track: generic-requirements |
-  primary surface: initial builtin predicate evaluation over type facts
+- TODO-4344: Add capability and trait support predicates | track:
+  generic-requirements | primary surface: initial capability/trait predicate
+  evaluation over semantic facts
 
 ### Parallel Work Tracks (Current)
 
@@ -117,15 +118,14 @@ Task template:
   direct-call and layout metadata, and TODO-4340 added docs and positive
   examples, and TODO-4546 added negative conformance; no procedural-genericity
   leaf is ready.
-- `generic-requirements`: TODO-4331, TODO-4334, TODO-4341, and TODO-4342
-  are complete; TODO-4343 is ready after requirement predicate fact
-  publication.
+- `generic-requirements`: TODO-4331, TODO-4334, TODO-4341, TODO-4342, and
+  TODO-4343 are complete; TODO-4344 is ready after builtin type relation
+  predicates.
 
 ### Immediate Next 10 (Track Successors; Not Ready Until Dependencies Land)
 
 - TODO-4545: Implement first structured task spawn/wait substrate
 - TODO-4278: Integrate multi-wait with stdlib tuple
-- TODO-4344: Add capability and trait support predicates
 
 ### Priority Lanes (Current)
 
@@ -149,15 +149,14 @@ Task template:
   prerequisite split out of TODO-4278
 - Procedural compile-time genericity: none active after TODO-4340 and
   TODO-4546
-- Generic constraint and compile-time flow alignment: TODO-4343 -> TODO-4344
-  -> TODO-4352 -> TODO-4353
+- Generic constraint and compile-time flow alignment: TODO-4344 -> TODO-4352
+  -> TODO-4353
   -> TODO-4354 -> TODO-4355 -> TODO-4356 -> TODO-4357 -> TODO-4345
   -> TODO-4346 -> TODO-4358 -> TODO-4347 -> TODO-4351 -> TODO-4348
   -> TODO-4359 -> TODO-4349 -> TODO-4350
 
 ### Execution Queue (Recommended Track Order)
 
-- TODO-4343: Add builtin type relation predicates
 - TODO-4344: Add capability and trait support predicates
 - TODO-4352: Add compile-time VM facade and host
 - TODO-4353: Add typed compile-time value model
@@ -204,7 +203,7 @@ Task template:
 | Stdlib ADT migration for `Maybe` and `Result` | none |
 | Generic type packs and tuple stdlib surface | TODO-4274, TODO-4273, TODO-4277, TODO-4278 |
 | Procedural compile-time genericity and local type facts | none |
-| Generic constraints and compile-time flow control | TODO-4343, TODO-4344, TODO-4352, TODO-4353, TODO-4354, TODO-4355, TODO-4356, TODO-4357, TODO-4345, TODO-4346, TODO-4358, TODO-4347, TODO-4351, TODO-4348, TODO-4359, TODO-4349, TODO-4350 |
+| Generic constraints and compile-time flow control | TODO-4344, TODO-4352, TODO-4353, TODO-4354, TODO-4355, TODO-4356, TODO-4357, TODO-4345, TODO-4346, TODO-4358, TODO-4347, TODO-4351, TODO-4348, TODO-4359, TODO-4349, TODO-4350 |
 
 ### Validation Coverage Snapshot
 
@@ -231,7 +230,7 @@ Task template:
 | Maybe/Result sum migration conformance | none |
 | Generic type-pack and tuple conformance | TODO-4274, TODO-4273, TODO-4277, TODO-4278 |
 | Procedural compile-time genericity conformance | none |
-| Generic constraint and compile-time flow conformance | TODO-4343, TODO-4344, TODO-4352, TODO-4353, TODO-4354, TODO-4355, TODO-4356, TODO-4357, TODO-4345, TODO-4346, TODO-4358, TODO-4347, TODO-4351, TODO-4348, TODO-4359, TODO-4349, TODO-4350 |
+| Generic constraint and compile-time flow conformance | TODO-4344, TODO-4352, TODO-4353, TODO-4354, TODO-4355, TODO-4356, TODO-4357, TODO-4345, TODO-4346, TODO-4358, TODO-4347, TODO-4351, TODO-4348, TODO-4359, TODO-4349, TODO-4350 |
 
 ### Vector/Map Bridge Contract Summary
 
@@ -815,48 +814,11 @@ Task template:
   - stop_rule: Stop once multi-wait returns stdlib `tuple<...>` or the missing
     task-side prerequisite is split into an explicit multithreading TODO.
 
-- [ ] TODO-4343: Add builtin type relation predicates
-  - owner: ai
-  - created_at: 2026-05-04
-  - phase: Generic constraint and compile-time flow alignment
-  - depends_on: TODO-4342, TODO-4335
-  - scope: Implement the initial builtin predicates for relations between
-    compile-time type facts, limited to equality and type-kind checks.
-  - implementation_notes:
-    - Start with equality and kind checks such as same-type, is-type,
-      is-struct, and is-sum.
-    - Do not add type-argument or element extraction in this slice; split that
-      into a later TODO once tuple/collection type-pack facts are stable.
-    - Canonicalize readable source predicates such as `typeof<left> == i32`
-      into builtin compile-time predicate calls such as `equals<left, i32>`
-      before requirement facts are published.
-    - Place builtin relation predicates under `/std/meta/*` or a compiler
-      fact namespace that is surfaced through `/std/meta/*` docs.
-    - Reuse `typeof<symbol>` and type-local facts from the procedural
-      genericity lane rather than adding a second inference path.
-    - Keep relation evaluation deterministic and independent of import order.
-  - acceptance:
-    - A generic helper can require an inferred type or symbol to equal a
-      concrete type and reject a mismatched call before lowering.
-    - Type-kind predicates work on generated nominal structs and ordinary
-      named types with stable results.
-    - Unsupported extraction-style predicates produce stable diagnostics or
-      are documented as deferred rather than partially implemented.
-    - Builtin predicate names and user predicate names cannot collide
-      ambiguously with `/std/meta/*`.
-    - Unsupported operands and unknown relation names produce stable
-      diagnostics that name the requirement predicate.
-    - Semantic-product tests cover positive, negative, and generated-type
-      predicate cases.
-    - `./scripts/compile.sh --release` passes.
-  - stop_rule: Stop once relation predicates are usable by semantic
-    validation; leave trait/capability checks to TODO-4344.
-
 - [ ] TODO-4344: Add capability and trait support predicates
   - owner: ai
   - created_at: 2026-05-04
   - phase: Generic constraint and compile-time flow alignment
-  - depends_on: TODO-4342
+  - depends_on: TODO-4342, TODO-4343
   - scope: Implement the first capability/trait predicate slice for named
     operation support, construction availability, and one lifecycle
     availability query.

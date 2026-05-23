@@ -1687,8 +1687,9 @@ TEST_CASE("todo queue and skipped doctest debt stay source locked") {
   CHECK(todo.find("### Ready Now (Parallel-Candidate Leaves; No Unmet TODO Dependencies)") !=
         std::string::npos);
   CHECK(todo.find("### Ready Now (Parallel-Candidate Leaves; No Unmet TODO Dependencies)\n\n"
-                  "- TODO-4343: Add builtin type relation predicates | track: generic-requirements |\n"
-                  "  primary surface: initial builtin predicate evaluation over type facts") !=
+                  "- TODO-4344: Add capability and trait support predicates | track:\n"
+                  "  generic-requirements | primary surface: initial capability/trait predicate\n"
+                  "  evaluation over semantic facts") !=
         std::string::npos);
   CHECK(todo.find("- `soa-zero-audit`: TODO-4529 replaced the residue inventory with a strict\n"
                   "  zero-production-trace audit; no SoA zero-audit leaf is ready.") !=
@@ -1716,14 +1717,13 @@ TEST_CASE("todo queue and skipped doctest debt stay source locked") {
                   "  examples, and TODO-4546 added negative conformance; no procedural-genericity\n"
                   "  leaf is ready.") !=
         std::string::npos);
-  CHECK(todo.find("- `generic-requirements`: TODO-4331, TODO-4334, TODO-4341, and TODO-4342\n"
-                  "  are complete; TODO-4343 is ready after requirement predicate fact\n"
-                  "  publication.") !=
+  CHECK(todo.find("- `generic-requirements`: TODO-4331, TODO-4334, TODO-4341, TODO-4342, and\n"
+                  "  TODO-4343 are complete; TODO-4344 is ready after builtin type relation\n"
+                  "  predicates.") !=
         std::string::npos);
   CHECK(todo.find("### Immediate Next 10 (Track Successors; Not Ready Until Dependencies Land)\n\n"
                   "- TODO-4545: Implement first structured task spawn/wait substrate\n"
-                  "- TODO-4278: Integrate multi-wait with stdlib tuple\n"
-                  "- TODO-4344: Add capability and trait support predicates") !=
+                  "- TODO-4278: Integrate multi-wait with stdlib tuple") !=
         std::string::npos);
   CHECK(todo.find("- TODO-4273: Add heterogeneous value-pack inference") ==
         std::string::npos);
@@ -1739,7 +1739,11 @@ TEST_CASE("todo queue and skipped doctest debt stay source locked") {
   CHECK(todo.find("- Deferred SoA finish: TODO-4252") ==
         std::string::npos);
   CHECK(todo.find("### Execution Queue (Recommended Track Order)\n\n"
-                  "- TODO-4343: Add builtin type relation predicates") !=
+                  "- TODO-4344: Add capability and trait support predicates") !=
+        std::string::npos);
+  CHECK(todo.find("- [ ] TODO-4343: Add builtin type relation predicates") ==
+        std::string::npos);
+  CHECK(todoFinished.find("TODO-4343: Add builtin type relation predicates") !=
         std::string::npos);
   CHECK(todo.find("- [ ] TODO-4342: Represent requirement predicates as semantic facts") ==
         std::string::npos);
@@ -1804,7 +1808,7 @@ TEST_CASE("todo queue and skipped doctest debt stay source locked") {
   CHECK(todoFinished.find("TODO-4519: Delete `soa_vector` compatibility seams") !=
         std::string::npos);
   const std::vector<std::string> semanticPhaseQueue = {
-      "TODO-4343: Add builtin type relation predicates",
+      "TODO-4344: Add capability and trait support predicates",
   };
   for (const std::string &entry : semanticPhaseQueue) {
     CHECK(todo.find("- " + entry) != std::string::npos);
@@ -1858,7 +1862,9 @@ TEST_CASE("todo queue and skipped doctest debt stay source locked") {
         std::string::npos);
   CHECK(todo.find("  - depends_on: TODO-4277, TODO-4545") !=
         std::string::npos);
-  CHECK(todo.find("  - depends_on: TODO-4342, TODO-4335") !=
+  CHECK(todo.find("  - depends_on: TODO-4342, TODO-4343") !=
+        std::string::npos);
+  CHECK(todoFinished.find("  - depends_on: TODO-4342, TODO-4335") !=
         std::string::npos);
   CHECK(todoFinished.find("  - parallel_track: soa-zero-audit") !=
         std::string::npos);

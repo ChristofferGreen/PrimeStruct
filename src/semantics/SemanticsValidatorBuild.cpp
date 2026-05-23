@@ -255,6 +255,10 @@ bool SemanticsValidator::buildDefinitionMaps() {
   }
   rebuildCallResolutionFamilyIndexes();
 
+  if (!validateRequirementPredicates()) {
+    return false;
+  }
+
   for (const auto &declaration : validationPlan_->definitionPrepass.declarationsInStableOrder) {
     const Definition &def = program_.definitions[declaration.stableIndex];
     DefinitionContextScope definitionContextScope(*this, def);

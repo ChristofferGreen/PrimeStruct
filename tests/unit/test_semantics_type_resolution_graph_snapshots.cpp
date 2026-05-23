@@ -172,9 +172,20 @@ std::vector<uint8_t> serializeIrIgnoringSourceMapsAndDebug(const primec::IrModul
 
 TEST_SUITE_BEGIN("primestruct.semantics.type_resolution_graph");
 
-TEST_CASE("require transforms publish requirement predicate facts") {
+TEST_CASE("require transforms publish evaluated builtin type predicate facts") {
   const std::string source = R"(
-[return<int> require(type_equals<typeof<value>, int>(), has_trait<typeof<value>>(Additive))]
+[struct]
+Item {
+  [i32] value
+}
+
+[sum]
+Choice {
+  [i32] left
+  [i32] right
+}
+
+[return<int> require(typeof<value> == int, type_not_equals<typeof<value>, f32>(), is_type<i32>(), is_struct<Item>(), is_sum<Choice>())]
 identity([int] value) {
   return(value)
 }
@@ -192,10 +203,10 @@ main() {
   CHECK(error.empty());
   CHECK(dumps.semanticProduct.find(
             "requirement_predicate_facts[0]: definition_path=\"/identity\" "
-            "predicate_kind=\"predicate_call\" predicate_name=\"type_equals\"") !=
+            "predicate_kind=\"predicate_call\" predicate_name=\"/std/meta/type_equals\"") !=
         std::string::npos);
   CHECK(dumps.semanticProduct.find(
-            "source_text=\"type_equals<typeof<value>, int>()\" "
+            "source_text=\"/std/meta/type_equals<typeof<value>, int>()\" "
             "operands=[{kind=\"type_fact\" text=\"typeof<value>\" "
             "stable_handle=\"type_fact:typeof<value>\"") !=
         std::string::npos);
@@ -204,17 +215,135 @@ main() {
         std::string::npos);
   CHECK(dumps.semanticProduct.find(
             "requirement_predicate_facts[1]: definition_path=\"/identity\" "
-            "predicate_kind=\"predicate_call\" predicate_name=\"has_trait\"") !=
+            "predicate_kind=\"predicate_call\" predicate_name=\"/std/meta/type_not_equals\"") !=
         std::string::npos);
   CHECK(dumps.semanticProduct.find(
-            "{kind=\"compile_time_symbol\" text=\"Additive\" "
-            "stable_handle=\"compile_time_symbol:Additive\"") !=
-        std::string::npos);
-  CHECK(dumps.semanticProduct.find("evaluation_outcome=\"invalid_evaluation\"") !=
+            "requirement_predicate_facts[3]: definition_path=\"/identity\" "
+            "predicate_kind=\"predicate_call\" predicate_name=\"/std/meta/is_struct\"") !=
         std::string::npos);
   CHECK(dumps.semanticProduct.find(
-            "evaluation_diagnostic=\"requirement predicate evaluation pending\"") !=
+            "requirement_predicate_facts[4]: definition_path=\"/identity\" "
+            "predicate_kind=\"predicate_call\" predicate_name=\"/std/meta/is_sum\"") !=
         std::string::npos);
+  CHECK(dumps.semanticProduct.find("evaluation_outcome=\"satisfied\"") !=
+        std::string::npos);
+  CHECK(dumps.semanticProduct.find(
+            "evaluation_diagnostic=\"type equality satisfied\"") !=
+        std::string::npos);
+}
+
+TEST_CASE("require builtin type predicates reject mismatched calls") {
+  const std::string source = R"(
+[return<T> require(typeof<value> == i32)]
+only_i32<T>([T] value) {
+  return(value)
+}
+
+[return<int>]
+main() {
+  [f32] bad{only_i32<f32>(4.0f32)}
+  return(0i32)
+}
+)";
+
+  std::string error;
+  CHECK_FALSE(validateProgramThroughCompilePipeline(source,
+                                                    "/main",
+                                                    {"io_out", "io_err"},
+                                                    {"io_out", "io_err"},
+                                                    error));
+  CHECK(error.find("requirement predicate not satisfied: /std/meta/type_equals") !=
+        std::string::npos);
+  CHECK(error.find("type equality failed: f32 != i32") != std::string::npos);
+}
+
+TEST_CASE("require builtin type predicates accept local generated structs") {
+  const std::string source = R"(
+[return<int>]
+main() {
+  [i32] left{3i32}
+  [i32] right{4i32}
+  [type] LeftT { typeof<left> }
+  [type] RightT { typeof<right> }
+  [struct] PairT {
+    [LeftT] first{0i32}
+    [RightT] second{0i32}
+  }
+  [return<int> require(is_struct<PairT>())]
+  usePair([PairT] pair) {
+    return(plus(pair.first, pair.second))
+  }
+  [PairT] pair{PairT{left, right}}
+  return(usePair(pair))
+}
+)";
+
+  std::string error;
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
+}
+
+TEST_CASE("require builtin type predicates diagnose invalid operands and reserved names") {
+  const std::string unknownSource = R"(
+[return<int> require(type_contains<typeof<value>, i32>())]
+identity([int] value) {
+  return(value)
+}
+
+[return<int>]
+main() {
+  return(identity(4i32))
+}
+)";
+
+  std::string error;
+  CHECK_FALSE(validateProgram(unknownSource, "/main", error));
+  CHECK(error.find("invalid requirement predicate type_contains") !=
+        std::string::npos);
+  CHECK(error.find("unknown requirement predicate: type_contains") !=
+        std::string::npos);
+
+  const std::string unsupportedOperandSource = R"(
+[return<int> require(type_equals<4, i32>())]
+identity([int] value) {
+  return(value)
+}
+
+[return<int>]
+main() {
+  return(identity(4i32))
+}
+)";
+
+  error.clear();
+  CHECK_FALSE(validateProgram(unsupportedOperandSource, "/main", error));
+  CHECK(error.find("invalid requirement predicate /std/meta/type_equals") !=
+        std::string::npos);
+  CHECK(error.find(
+            "unsupported operand for requirement predicate "
+            "/std/meta/type_equals: 4") !=
+        std::string::npos);
+
+  const std::string reservedNamespaceSource = R"(
+namespace std {
+  namespace meta {
+    [return<bool>]
+    type_equals() {
+      return(true)
+    }
+  }
+}
+
+[return<int>]
+main() {
+  return(0i32)
+}
+)";
+
+  error.clear();
+  CHECK_FALSE(validateProgram(reservedNamespaceSource, "/main", error));
+  CHECK(error.find("/std/meta is reserved for builtin requirement predicates: "
+                   "/std/meta/type_equals") != std::string::npos);
 }
 
 TEST_CASE("duplicate require transforms fail closed before publication") {

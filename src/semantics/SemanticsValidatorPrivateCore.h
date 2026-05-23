@@ -42,6 +42,7 @@
                                          std::unordered_set<std::string> &explicitStructs,
                                          std::vector<SemanticDiagnosticRecord> *transformDiagnosticRecords,
                                          bool &definitionTransformError);
+  bool validateRequirementPredicates();
   bool buildImportAliases();
   std::string resolveStructReturnPathForBuild(const std::string &typeName,
                                               const std::string &namespacePrefix) const;

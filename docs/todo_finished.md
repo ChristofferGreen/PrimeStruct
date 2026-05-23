@@ -6,6 +6,43 @@ Legend:
 Finished items are periodically archived here from `docs/todo.md`; section headers record the archive date.
 
 **Todo Completion (May 23, 2026)**
+- [x] TODO-4343: Add builtin type relation predicates
+  - owner: ai
+  - created_at: 2026-05-04
+  - finished_at: 2026-05-23
+  - phase: Generic constraint and compile-time flow alignment
+  - parallel_track: generic-requirements
+  - depends_on: TODO-4342, TODO-4335
+  - scope: Implement the initial builtin predicates for relations between
+    compile-time type facts, limited to equality and type-kind checks.
+  - outcome:
+    - Added shared requirement predicate fact parsing/canonicalization helpers
+      consumed by semantic validation and semantic-product publication.
+    - Canonicalized readable type equality spellings through `/std/meta` type
+      predicate calls before publishing requirement facts.
+    - Evaluated `/std/meta/type_equals`, `/std/meta/type_not_equals`,
+      `/std/meta/is_type`, `/std/meta/is_struct`, and `/std/meta/is_sum`
+      over resolved type facts and rejected unsatisfied or invalid predicates
+      before lowering.
+    - Reserved `/std/meta/*` for builtin requirement predicates so
+      user-authored predicate names cannot collide with the builtin surface.
+    - Added semantic-product and negative validation coverage for satisfied
+      predicates, mismatched generic calls, invalid operands, unknown
+      predicates, and reserved-name collisions.
+  - validation:
+    - `cmake -S . -B build-release -DCMAKE_BUILD_TYPE=Release
+      -DCMAKE_EXPORT_COMPILE_COMMANDS=ON` passed in the worker worktree.
+    - `cmake --build build-release --target PrimeStruct_semantics_tests
+      primec -j 1` passed after resuming the cold worker build.
+    - `cd build-release && ./PrimeStruct_semantics_tests
+      --test-case="require transforms publish evaluated builtin type predicate
+      facts,require builtin type predicates reject mismatched calls,require
+      builtin type predicates accept local generated structs,require builtin
+      type predicates diagnose invalid operands and reserved names,duplicate
+      require transforms fail closed before publication" --no-skip` passed.
+    - Full `./scripts/compile.sh --release` remains deferred by the lite
+      workflow.
+
 - [x] TODO-4342: Represent requirement predicates as semantic facts
   - owner: ai
   - created_at: 2026-05-04
