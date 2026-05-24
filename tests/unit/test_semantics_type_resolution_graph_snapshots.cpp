@@ -230,6 +230,11 @@ main() {
   CHECK(dumps.semanticProduct.find(
             "evaluation_diagnostic=\"type equality satisfied\"") !=
         std::string::npos);
+  CHECK(dumps.semanticProduct.find(
+            "stable_handle=\"type_fact:typeof<value>\"") !=
+        std::string::npos);
+  CHECK(dumps.semanticProduct.find("text=\"typeof<value>\"") !=
+        std::string::npos);
 }
 
 TEST_CASE("require transforms publish evaluated value predicate facts") {
@@ -316,7 +321,17 @@ main() {
                                                     error));
   CHECK(error.find("requirement predicate not satisfied: "
                    "/std/meta/value_greater") != std::string::npos);
+  CHECK(error.find("direct requirement check failed on /positive_index") !=
+        std::string::npos);
+  CHECK(error.find("category: unsatisfied requirement predicate") !=
+        std::string::npos);
+  CHECK(error.find("require transform: /positive_index") !=
+        std::string::npos);
+  CHECK(error.find("concrete facts:") != std::string::npos);
+  CHECK(error.find("literal_compile_time_argument:0") != std::string::npos);
   CHECK(error.find("value predicate failed: 0 > 0") != std::string::npos);
+  CHECK(error.find("hint: pass values or types that satisfy the require(...) "
+                   "predicate") != std::string::npos);
 }
 
 TEST_CASE("require value predicates reject non-constant operands") {
@@ -336,8 +351,13 @@ main() {
   CHECK_FALSE(validateProgram(source, "/main", error));
   CHECK(error.find("invalid requirement predicate /std/meta/value_greater") !=
         std::string::npos);
+  CHECK(error.find("category: invalid requirement predicate evaluation") !=
+        std::string::npos);
+  CHECK(error.find("compile_time_symbol:value") != std::string::npos);
   CHECK(error.find("non-constant value operand for requirement predicate "
                    "/std/meta/value_greater: value") != std::string::npos);
+  CHECK(error.find("hint: make the require(...) predicate a supported "
+                   "compile-time predicate") != std::string::npos);
 }
 
 TEST_CASE("require facts publish phase-qualified compile-time effects") {
@@ -408,6 +428,12 @@ main() {
                                                     error));
   CHECK(error.find("requirement predicate not satisfied: /std/meta/type_equals") !=
         std::string::npos);
+  CHECK(error.find("direct requirement check failed on /only_i32") !=
+        std::string::npos);
+  CHECK(error.find("category: unsatisfied requirement predicate") !=
+        std::string::npos);
+  CHECK(error.find("type_fact:typeof<value>") != std::string::npos);
+  CHECK(error.find("type_fact:i32") != std::string::npos);
   CHECK(error.find("type equality failed: f32 != i32") != std::string::npos);
 }
 
@@ -722,6 +748,9 @@ main() {
   CHECK_FALSE(validateProgram(rejectedSource, "/main", error));
   CHECK(error.find("requirement predicate not satisfied: /is_supported") !=
         std::string::npos);
+  CHECK(error.find("category: unsatisfied requirement predicate") !=
+        std::string::npos);
+  CHECK(error.find("predicate source: is_supported()") != std::string::npos);
   CHECK(error.find("user predicate returned false") != std::string::npos);
 }
 
@@ -745,6 +774,10 @@ main() {
 
   std::string error;
   CHECK_FALSE(validateProgram(effectSource, "/main", error));
+  CHECK(error.find("invalid requirement predicate /needs_file") !=
+        std::string::npos);
+  CHECK(error.find("category: invalid requirement predicate evaluation") !=
+        std::string::npos);
   CHECK(error.find("denied compile-time effect in user requirement predicate "
                    "/needs_file: file_read") != std::string::npos);
 
@@ -789,6 +822,10 @@ main() {
 
   error.clear();
   CHECK_FALSE(validateProgram(bodySource, "/main", error));
+  CHECK(error.find("invalid requirement predicate /runtime_body") !=
+        std::string::npos);
+  CHECK(error.find("category: invalid requirement predicate evaluation") !=
+        std::string::npos);
   CHECK(error.find("unsupported pure user requirement predicate body: "
                    "/runtime_body") != std::string::npos);
 }

@@ -1,6 +1,8 @@
 #include "RequirementPredicateFacts.h"
 #include "SemanticsValidator.h"
 
+#include <sstream>
+
 namespace primec::semantics {
 
 bool SemanticsValidator::validateRequirementPredicates() {
@@ -21,6 +23,56 @@ bool SemanticsValidator::validateRequirementPredicates() {
   auto isStaticField = [&](const Expr &stmt) {
     return hasTransform(stmt.transforms, "static");
   };
+  auto formatRequirementPredicateDiagnostic =
+      [](const Definition &definition,
+         int sourceLine,
+         int sourceColumn,
+         std::string_view argument,
+         const RequirementPredicateFactDraft &fact) {
+        const std::string predicateName =
+            fact.predicateName.empty() ? std::string(argument)
+                                       : fact.predicateName;
+        const bool unsatisfied = fact.evaluationOutcome == "unsatisfied";
+        std::ostringstream out;
+        out << "direct requirement check failed on " << definition.fullPath
+            << '\n';
+        if (unsatisfied) {
+          out << "requirement predicate not satisfied: " << predicateName
+              << '\n';
+          out << "category: unsatisfied requirement predicate\n";
+        } else {
+          out << "invalid requirement predicate " << predicateName << '\n';
+          out << "category: invalid requirement predicate evaluation\n";
+        }
+        out << "require transform: " << definition.fullPath << " at "
+            << sourceLine << ':' << sourceColumn << '\n';
+        out << "predicate source: "
+            << (fact.sourceText.empty() ? std::string(argument)
+                                        : fact.sourceText)
+            << '\n';
+        out << "concrete facts:";
+        if (fact.operands.empty()) {
+          out << " none\n";
+        } else {
+          out << '\n';
+          for (const RequirementPredicateOperandFact &operand :
+               fact.operands) {
+            out << "- " << operand.stableHandle << " kind=" << operand.kind
+                << " text=" << operand.text << " at "
+                << operand.sourceLine << ':' << operand.sourceColumn
+                << '\n';
+          }
+        }
+        out << "result: " << fact.evaluationDiagnostic << '\n';
+        if (unsatisfied) {
+          out << "hint: pass values or types that satisfy the require(...) "
+                 "predicate, or relax the constrained definition.";
+        } else {
+          out << "hint: make the require(...) predicate a supported "
+                 "compile-time predicate with available concrete facts.";
+        }
+        return out.str();
+      };
   auto returnTypeTextForDefinition = [&](const Definition &definition) {
     if (const auto bindingIt = returnBindings_.find(definition.fullPath);
         bindingIt != returnBindings_.end() &&
@@ -148,19 +200,13 @@ bool SemanticsValidator::validateRequirementPredicates() {
         if (fact.evaluationOutcome == "satisfied") {
           continue;
         }
-        if (fact.evaluationOutcome == "unsatisfied") {
-          return failDefinitionDiagnostic(
-              definition,
-              "requirement predicate not satisfied: " + fact.predicateName +
-                  " on " + definition.fullPath + ": " +
-                  fact.evaluationDiagnostic);
-        }
         return failDefinitionDiagnostic(
             definition,
-            "invalid requirement predicate " +
-                (fact.predicateName.empty() ? argument : fact.predicateName) +
-                " on " + definition.fullPath + ": " +
-                fact.evaluationDiagnostic);
+            formatRequirementPredicateDiagnostic(definition,
+                                                 sourceLine,
+                                                 sourceColumn,
+                                                 argument,
+                                                 fact));
       }
     }
   }

@@ -982,6 +982,19 @@
   `PrimeStruct_primestruct_compile_run_emitters_cpp_lambda_and_mutator_resolution_20_20`.
 
 ## Recent Test Runs
+- 2026-05-24 08:35 CEST | pass | mode: release | command:
+  `cmake --build build-release --target PrimeStruct_semantics_tests -j 1`;
+  `cd build-release && ./PrimeStruct_semantics_tests --test-case="require transforms publish evaluated builtin type predicate facts,require value predicates reject failing integer template arguments,require value predicates reject non-constant operands,require builtin type predicates reject mismatched calls,require pure user predicates drive semantic facts,require pure user predicates reject impure and unsupported bodies" --no-skip`
+  | failures: none | notes: narrowed TODO-4552 direct requirement
+  diagnostics validation passed after the broader type-resolution graph suite
+  exposed unrelated stale graph snapshots.
+- 2026-05-24 08:32 CEST | fail | mode: release | command:
+  `cmake --build build-release --target PrimeStruct_semantics_tests -j 1`;
+  `cd build-release && ./PrimeStruct_semantics_tests --test-suite=primestruct.semantics.type_resolution_graph`
+  | failures: 39 type-resolution graph cases | notes: build passed; the
+  selected suite was broader than TODO-4552 and exposed unrelated stale graph
+  and semantic-product snapshots. Narrow direct requirement diagnostic rerun is
+  the next validation step.
 - 2026-05-23 14:23 CEST | pass | mode: release | command:
   `cmake --build build-release --target PrimeStruct_compile_run_tests primec -j 1`;
   `cd build-release && ctest --output-on-failure -R '^PrimeStruct_primestruct_compile_run_emitters_cpp_lambda_and_mutator_resolution_19_19$' --timeout 120`

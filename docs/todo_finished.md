@@ -6,6 +6,33 @@ Legend:
 Finished items are periodically archived here from `docs/todo.md`; section headers record the archive date.
 
 **Todo Completion (May 24, 2026)**
+- [x] TODO-4552: Publish direct requirement failure diagnostics
+  - owner: ai
+  - created_at: 2026-05-24
+  - finished_at: 2026-05-24
+  - phase: Generic constraint and compile-time flow alignment
+  - parallel_track: generic-requirements-diagnostics
+  - depends_on: TODO-4347, TODO-4351
+  - scope: Add stable, user-facing diagnostics for direct requirement
+    predicate failures and invalid predicate evaluation on constrained
+    definitions.
+  - outcome:
+    - Replaced the one-line direct requirement predicate failures with
+      deterministic multi-line diagnostics.
+    - Diagnostics now identify the triggering constrained definition, the
+      require transform location, predicate source, concrete operand facts,
+      evaluation result, and an actionable hint.
+    - Emitted distinct categories for unsatisfied direct predicates and
+      invalid predicate evaluation.
+    - Extended golden semantics coverage for failed direct type predicates,
+      value predicates such as `N > 0`, false user predicates, denied
+      compile-time effects, and unsupported user predicate bodies.
+    - Kept successful semantic-product coverage pinned to stable predicate
+      provenance handles and concrete fact text.
+  - validation:
+    - `cmake --build build-release --target PrimeStruct_semantics_tests -j 1`
+    - `./PrimeStruct_semantics_tests --test-case="require transforms publish evaluated builtin type predicate facts,require value predicates reject failing integer template arguments,require value predicates reject non-constant operands,require builtin type predicates reject mismatched calls,require pure user predicates drive semantic facts,require pure user predicates reject impure and unsupported bodies" --no-skip`
+
 - [x] TODO-4348: Publish requirement diagnostics with provenance
   - owner: ai
   - created_at: 2026-05-04
