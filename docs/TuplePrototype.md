@@ -3,8 +3,8 @@
 Status: partially implemented. The accepted `tuple<Ts...>` storage and
 `get<I, ...>` helper surface is now canonicalized in `docs/PrimeStruct.md`.
 Bracket indexing, heterogeneous `make_tuple(...)` inference, and destructuring
-of named tuple values are supported; multi-wait integration remains a
-prototype follow-up.
+of named tuple values are supported; task multi-wait returns ordinary stdlib
+tuple values.
 
 This document captures the proposed `tuple` design needed by future
 multi-value APIs such as multithreaded `wait(left, right)`. When the design is
@@ -386,9 +386,9 @@ wait(Task<A>, Task<B>) -> tuple<A, B>
 That should be a normal stdlib tuple return. The task system should not invent a
 separate product type.
 
-For the first task implementation, only single-task `wait(Task<T>) -> T` is
-needed. Tuple support now has construction, indexed access, and named-value
-destructuring; multi-wait can build on that surface by returning `tuple<...>`.
+Task `wait(Task<T>) -> T` handles single task joins. Multi-task
+`wait(left, right, ...)` now builds on the tuple surface by returning an
+ordinary `tuple<...>` whose elements preserve task argument order.
 
 ## Diagnostics
 
@@ -422,6 +422,6 @@ When this prototype graduates into active implementation work:
 - add copy/move/destruction tests with non-trivial element types once lifecycle
   behavior is settled
 - add tuple destructuring and multi-wait integration only as later follow-ups,
-  tracked by TODO-4277 (done) and TODO-4278
+  tracked by TODO-4277 (done) and TODO-4278 (done)
 - update `docs/PrimeStruct.md` and `docs/CodeExamples.md` only after the
   supported surface is implemented (done for the initial surface)

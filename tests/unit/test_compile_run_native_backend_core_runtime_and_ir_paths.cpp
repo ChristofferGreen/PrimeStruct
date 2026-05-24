@@ -194,6 +194,39 @@ main() {
   CHECK(runCommand(exePath) == 24);
 }
 
+TEST_CASE("native backend returns stdlib tuple from multi task wait") {
+  const std::string source = R"(
+import /std/tuple/*
+
+[return<i32>]
+computeLeft() {
+  return(11i32)
+}
+
+[return<i32>]
+computeRight() {
+  return(13i32)
+}
+
+[effects(task), return<int>]
+main() {
+  [Task<i32>] left{[spawn] computeLeft()};
+  [Task<i32>] right{[spawn] computeRight()};
+  [auto] both{wait(left, right)}
+  [leftResult rightResult] both
+  return(plus(plus(get<0, i32, i32>(both), both[1i32]),
+              plus(leftResult, rightResult)))
+}
+)";
+  const std::string srcPath = writeTemp("compile_native_multi_task_wait_tuple.prime", source);
+  const std::string exePath =
+      (testScratchPath("") / "primec_native_multi_task_wait_tuple_exe").string();
+
+  const std::string compileCmd = "./primec --emit=native " + srcPath + " -o " + exePath + " --entry /main";
+  CHECK(runCommand(compileCmd) == 0);
+  CHECK(runCommand(exePath) == 48);
+}
+
 TEST_CASE("compiles and runs native method call") {
   const std::string source = R"(
 namespace i32 {

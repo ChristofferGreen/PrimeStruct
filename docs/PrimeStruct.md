@@ -2550,11 +2550,11 @@ module {
 - **Task effect prototype:** the first structured-concurrency surface uses `[effects(task)]` on definitions that request
   source-visible task work. The parser accepts `[spawn] f(...)` as an execution transform on call envelopes and parses
   `wait(task)` as the first task-handle join expression. The semantic pass publishes `Task<T>` binding facts for
-  `[spawn] f(...)`, infers `wait(Task<T>) -> T`, requires the `task` effect for both operations, and rejects live
-  task handles on return, double waits, task-handle escapes, and mutable/reference captures. VM/native lower the first
-  single-task runtime slice by storing the spawned call result in the task handle binding and lowering `wait(handle)` to
-  return that stored result. Multi-wait, detached tasks, task groups, channels, scheduler controls, and true parallel
-  scheduling remain future work.
+  `[spawn] f(...)`, infers `wait(Task<T>) -> T` and multi-task `wait(...) -> tuple<...>`, requires the `task` effect
+  for both operations, and rejects live task handles on return, double waits, task-handle escapes, and mutable/reference
+  captures. VM/native lower the structured runtime slice by storing spawned call results in task handle bindings,
+  lowering `wait(handle)` to return that stored result, and lowering multi-wait to ordinary stdlib tuple construction.
+  Detached tasks, task groups, channels, scheduler controls, and true parallel scheduling remain future work.
 
 ### Backend Type Support (v1)
 - **VM/native:** scalar `i32`, `i64`, `u64`, `bool`, `f32`, `f64`. `array`/`vector`/`map` support numeric/bool values;

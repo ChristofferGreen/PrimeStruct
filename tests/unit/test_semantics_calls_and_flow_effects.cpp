@@ -42,6 +42,27 @@ bool hasBindingFact(const primec::SemanticProgram &semanticProgram,
            semanticProductText(semanticProgram,
                                fact.bindingTypeTextId,
                                fact.bindingTypeText) == bindingTypeText;
+                     });
+}
+
+bool startsWith(const std::string &text, const std::string &prefix) {
+  return text.rfind(prefix, 0) == 0;
+}
+
+bool hasBindingFactWithTypePrefix(const primec::SemanticProgram &semanticProgram,
+                                  const std::string &scopePath,
+                                  const std::string &name,
+                                  const std::string &bindingTypePrefix) {
+  return std::any_of(semanticProgram.bindingFacts.begin(),
+                     semanticProgram.bindingFacts.end(),
+                     [&](const primec::SemanticProgramBindingFact &fact) {
+    return semanticProductText(semanticProgram, fact.scopePathId, fact.scopePath) ==
+               scopePath &&
+           semanticProductText(semanticProgram, fact.nameId, fact.name) == name &&
+           startsWith(semanticProductText(semanticProgram,
+                                          fact.bindingTypeTextId,
+                                          fact.bindingTypeText),
+                      bindingTypePrefix);
   });
 }
 
@@ -63,6 +84,31 @@ bool hasQueryFact(const primec::SemanticProgram &semanticProgram,
            semanticProductText(semanticProgram,
                                fact.bindingTypeTextId,
                                fact.bindingTypeText) == bindingTypeText;
+                     });
+}
+
+bool hasQueryFactWithTupleSpecialization(
+    const primec::SemanticProgram &semanticProgram,
+    const std::string &scopePath,
+    const std::string &callNamePrefix) {
+  return std::any_of(semanticProgram.queryFacts.begin(),
+                     semanticProgram.queryFacts.end(),
+                     [&](const primec::SemanticProgramQueryFact &fact) {
+    const std::string callName =
+        semanticProductText(semanticProgram, fact.callNameId, fact.callName);
+    const std::string queryType =
+        semanticProductText(semanticProgram,
+                            fact.queryTypeTextId,
+                            fact.queryTypeText);
+    const std::string bindingType =
+        semanticProductText(semanticProgram,
+                            fact.bindingTypeTextId,
+                            fact.bindingTypeText);
+    return semanticProductText(semanticProgram, fact.scopePathId, fact.scopePath) ==
+               scopePath &&
+           startsWith(callName, callNamePrefix) &&
+           startsWith(queryType, "/std/tuple/tuple__t") &&
+           startsWith(bindingType, "/std/tuple/tuple__t");
   });
 }
 
@@ -103,6 +149,50 @@ main() {
   CHECK(hasBindingFact(semanticProgram, "/main", "left", "Task<i32>"));
   CHECK(hasBindingFact(semanticProgram, "/main", "leftResult", "i32"));
   CHECK(hasQueryFact(semanticProgram, "/main", "wait", "i32", "i32"));
+}
+
+TEST_CASE("multi wait publishes stdlib tuple result facts") {
+  const std::string source = R"(
+namespace std {
+  namespace tuple {
+  [public struct]
+  tuple<Ts...>() {
+    [Ts...] values
+  }
+  }
+}
+
+[effects(task), return<i32>]
+computeLeft() {
+  return(7i32)
+}
+
+[effects(task), return<i32>]
+computeRight() {
+  return(11i32)
+}
+
+[effects(task), return<i32>]
+main() {
+  [Task<i32>] left{[spawn] computeLeft()};
+  [Task<i32>] right{[spawn] computeRight()};
+  [auto] both{wait(left, right)}
+  return(0i32)
+}
+)";
+  std::string error;
+  primec::SemanticProgram semanticProgram;
+  INFO(error);
+  REQUIRE(validateProgramWithSemanticProduct(source, semanticProgram, error));
+  CHECK(error.empty());
+
+  CHECK(hasBindingFactWithTypePrefix(semanticProgram,
+                                     "/main",
+                                     "both",
+                                     "/std/tuple/tuple__t"));
+  CHECK(hasQueryFactWithTupleSpecialization(semanticProgram,
+                                            "/main",
+                                            "/std/tuple/tuple__t"));
 }
 
 TEST_CASE("spawn requires task effect") {
@@ -171,6 +261,41 @@ main() {
   [i32] first{wait(left)}
   [i32] second{wait(left)}
   return(first)
+}
+)";
+  std::string error;
+  INFO(error);
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("task handle already waited: left") != std::string::npos);
+}
+
+TEST_CASE("multi wait consumes each task handle") {
+  const std::string source = R"(
+namespace std {
+  namespace tuple {
+  [public struct]
+  tuple<Ts...>() {
+    [Ts...] values
+  }
+  }
+}
+
+[effects(task), return<i32>]
+computeLeft() {
+  return(7i32)
+}
+
+[effects(task), return<i32>]
+computeRight() {
+  return(11i32)
+}
+
+[effects(task), return<i32>]
+main() {
+  [Task<i32>] left{[spawn] computeLeft()};
+  [Task<i32>] right{[spawn] computeRight()};
+  [auto] both{wait(left, right)}
+  return(wait(left))
 }
 )";
   std::string error;

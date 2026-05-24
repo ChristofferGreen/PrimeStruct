@@ -44,6 +44,24 @@ bool has_task_spawn_transform(const Expr &expr) {
   });
 }
 
+bool is_stdlib_tuple_constructor_expr(const Expr &expr) {
+  if (expr.kind != Expr::Kind::Call || expr.isBinding ||
+      expr.isMethodCall || expr.isFieldAccess) {
+    return false;
+  }
+  const std::string normalized = normalizeBindingTypeName(expr.name);
+  return normalized == "/std/tuple/tuple" ||
+         normalized.rfind("/std/tuple/tuple__t", 0) == 0;
+}
+
+bool is_multi_wait_tuple_materialization_expr(const Expr &expr) {
+  std::string sourceName = expr.sourceName.empty() ? expr.name : expr.sourceName;
+  if (!sourceName.empty() && sourceName.front() == '/') {
+    sourceName.erase(sourceName.begin());
+  }
+  return sourceName == "wait" && is_stdlib_tuple_constructor_expr(expr);
+}
+
 struct TaskCarrierInitializer {
   const Expr *expr = nullptr;
   bool hasSpawnMarker = false;
@@ -167,7 +185,8 @@ ReturnKind SemanticsValidator::taskResultReturnKind(
     base = normalizeBindingTypeName(base);
     if (base == "array" || base == "vector" || base == "soa" "_vector" ||
         base == "Buffer" || base == "Result" || base == "Maybe" ||
-        isKeyValueCollectionTypeName(base)) {
+        base == "tuple" || base == "std/tuple/tuple" ||
+        base == "/std/tuple/tuple" || isKeyValueCollectionTypeName(base)) {
       return ReturnKind::Array;
     }
   }
@@ -243,16 +262,28 @@ bool SemanticsValidator::inferTaskWaitBinding(
     const std::vector<ParameterInfo> &params,
     const std::unordered_map<std::string, BindingInfo> &locals,
     BindingInfo &bindingOut) const {
-  if (!isTaskWaitExpr(expr) || expr.args.size() != 1 ||
-      expr.args.front().kind != Expr::Kind::Name) {
+  if (!isTaskWaitExpr(expr) || expr.args.empty()) {
     return false;
   }
-  const BindingInfo *taskBinding =
-      task_lookup_binding(params, locals, expr.args.front().name);
-  std::string resultType;
-  if (taskBinding == nullptr || !isTaskBinding(*taskBinding, &resultType)) {
-    return false;
+  std::vector<std::string> resultTypes;
+  resultTypes.reserve(expr.args.size());
+  for (const Expr &arg : expr.args) {
+    if (arg.kind != Expr::Kind::Name) {
+      return false;
+    }
+    const BindingInfo *taskBinding = task_lookup_binding(params, locals, arg.name);
+    std::string resultType;
+    if (taskBinding == nullptr || !isTaskBinding(*taskBinding, &resultType)) {
+      return false;
+    }
+    resultTypes.push_back(std::move(resultType));
   }
+  if (resultTypes.size() > 1) {
+    bindingOut.typeName = "/std/tuple/tuple";
+    bindingOut.typeTemplateArg = joinTemplateArgs(resultTypes);
+    return true;
+  }
+  std::string resultType = std::move(resultTypes.front());
   std::string base;
   std::string arg;
   if (splitTemplateTypeName(normalizeBindingTypeName(resultType), base, arg) &&
@@ -349,31 +380,33 @@ bool SemanticsValidator::validateTaskWaitExpr(
   if (currentValidationState_.context.activeEffects.count("task") == 0) {
     return failExprDiagnostic(expr, "wait requires task effect");
   }
-  if (expr.args.size() != 1 || hasNamedArguments(expr.argNames) ||
+  if (expr.args.empty() || hasNamedArguments(expr.argNames) ||
       expr.hasBodyArguments || !expr.bodyArguments.empty() ||
       !expr.templateArgs.empty()) {
-    return failExprDiagnostic(expr, "wait requires exactly one task handle");
+    return failExprDiagnostic(expr, "wait requires at least one task handle");
   }
-  const Expr &arg = expr.args.front();
-  if (arg.kind != Expr::Kind::Name) {
-    return failExprDiagnostic(arg, "wait requires a task handle binding");
+  for (const Expr &arg : expr.args) {
+    if (arg.kind != Expr::Kind::Name) {
+      return failExprDiagnostic(arg, "wait requires a task handle binding");
+    }
+    const BindingInfo *binding = task_lookup_binding(params, locals, arg.name);
+    std::string resultType;
+    if (binding == nullptr || !isTaskBinding(*binding, &resultType)) {
+      return failExprDiagnostic(arg, "wait requires a task handle binding");
+    }
+    auto stateIt = currentValidationState_.taskHandles.find(arg.name);
+    if (stateIt == currentValidationState_.taskHandles.end()) {
+      stateIt = currentValidationState_.taskHandles
+                    .emplace(arg.name,
+                             ValidationState::TaskHandleState{resultType, true, false})
+                    .first;
+    }
+    if (stateIt->second.waited || !stateIt->second.live) {
+      return failExprDiagnostic(arg, "task handle already waited: " + arg.name);
+    }
+    stateIt->second.live = false;
+    stateIt->second.waited = true;
   }
-  const BindingInfo *binding = task_lookup_binding(params, locals, arg.name);
-  std::string resultType;
-  if (binding == nullptr || !isTaskBinding(*binding, &resultType)) {
-    return failExprDiagnostic(arg, "wait requires a task handle binding");
-  }
-  auto stateIt = currentValidationState_.taskHandles.find(arg.name);
-  if (stateIt == currentValidationState_.taskHandles.end()) {
-    stateIt = currentValidationState_.taskHandles
-                  .emplace(arg.name, ValidationState::TaskHandleState{resultType, true, false})
-                  .first;
-  }
-  if (stateIt->second.waited || !stateIt->second.live) {
-    return failExprDiagnostic(arg, "task handle already waited: " + arg.name);
-  }
-  stateIt->second.live = false;
-  stateIt->second.waited = true;
   return true;
 }
 
@@ -433,6 +466,9 @@ bool SemanticsValidator::validateTaskHandleArgumentEscapes(
     const Expr &expr) {
   if (isTaskWaitExpr(expr)) {
     return true;
+  }
+  if (is_multi_wait_tuple_materialization_expr(expr)) {
+    return validateTaskWaitExpr(params, locals, expr);
   }
   for (const Expr &arg : expr.args) {
     if (arg.kind != Expr::Kind::Name) {

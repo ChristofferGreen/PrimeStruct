@@ -593,6 +593,90 @@ bool rewriteExpr(Expr &expr,
   std::vector<std::optional<std::string>> bodyArgumentNames;
   expandCurrentTypePackSpreadArguments(expr.bodyArguments, bodyArgumentNames);
 
+  if (!expr.isMethodCall && !expr.isBinding && !expr.isFieldAccess &&
+      expr.kind == Expr::Kind::Call && expr.transforms.empty() &&
+      isSimpleCallName(expr, "wait") && expr.args.size() > 1 &&
+      !expr.hasBodyArguments && expr.bodyArguments.empty() &&
+      expr.templateArgs.empty()) {
+    if (hasNamedCallArguments(expr)) {
+      error = "wait does not accept named task handles";
+      return false;
+    }
+    std::vector<std::string> tupleArgs;
+    tupleArgs.reserve(expr.args.size());
+    for (Expr &arg : expr.args) {
+      if (!rewriteExpr(arg,
+                       mapping,
+                       allowedParams,
+                       namespacePrefix,
+                       ctx,
+                       error,
+                       locals,
+                       params,
+                       allowMathBare)) {
+        return false;
+      }
+      if (arg.kind != Expr::Kind::Name) {
+        error = "wait requires a task handle binding";
+        return false;
+      }
+      BindingInfo taskBinding;
+      if (!inferBindingTypeForMonomorph(arg,
+                                        params,
+                                        locals,
+                                        allowMathBare,
+                                        ctx,
+                                        taskBinding)) {
+        error = "wait requires a task handle binding";
+        return false;
+      }
+      std::string taskBase = normalizeBindingTypeName(taskBinding.typeName);
+      std::string taskResultType = taskBinding.typeTemplateArg;
+      if (taskResultType.empty()) {
+        std::string splitBase;
+        std::string splitArg;
+        if (splitTemplateTypeName(taskBase, splitBase, splitArg)) {
+          taskBase = normalizeBindingTypeName(splitBase);
+          taskResultType = splitArg;
+        }
+      }
+      if (taskBase != "Task" || taskResultType.empty()) {
+        error = "wait requires a task handle binding";
+        return false;
+      }
+      ResolvedType resolvedArg =
+          resolveTypeString(taskResultType, mapping, allowedParams, namespacePrefix, ctx, error);
+      if (!error.empty()) {
+        return false;
+      }
+      if (!resolvedArg.concrete) {
+        error = "multi-wait task result types must be concrete";
+        return false;
+      }
+      tupleArgs.push_back(std::move(resolvedArg.text));
+    }
+    std::string tuplePath;
+    if (!instantiateTemplate("/std/tuple/tuple",
+                             tupleArgs,
+                             nullptr,
+                             ctx,
+                             error,
+                             tuplePath)) {
+      return false;
+    }
+    const std::string sourceName = expr.sourceName.empty() ? expr.name : expr.sourceName;
+    expr.name = std::move(tuplePath);
+    expr.sourceName = sourceName;
+    expr.sourceIsMethodCall = false;
+    expr.namespacePrefix.clear();
+    expr.templateArgs.clear();
+    expr.templateArgDetails.clear();
+    expr.isMethodCall = false;
+    expr.isFieldAccess = false;
+    expr.isBraceConstructor = true;
+    return true;
+  }
+
   if (!expr.isMethodCall && !expr.isBinding && expr.kind == Expr::Kind::Call &&
       !expr.hasBodyArguments && expr.bodyArguments.empty() &&
       resolveCalleePath(expr, namespacePrefix, ctx) == "/std/tuple/make_tuple") {

@@ -152,6 +152,33 @@ main() {
   CHECK(runCommand(runCmd) == 24);
 }
 
+TEST_CASE("runs vm with multi task wait tuple") {
+  const std::string source = R"(
+import /std/tuple/*
+
+[return<i32>]
+computeLeft() {
+  return(11i32)
+}
+
+[return<i32>]
+computeRight() {
+  return(13i32)
+}
+
+[effects(task), return<int>]
+main() {
+  [Task<i32>] left{[spawn] computeLeft()};
+  [Task<i32>] right{[spawn] computeRight()};
+  [auto] both{wait(left, right)}
+  return(plus(both[0i32], both[1i32]))
+}
+)";
+  const std::string srcPath = writeTemp("vm_multi_task_wait_tuple.prime", source);
+  const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main";
+  CHECK(runCommand(runCmd) == 24);
+}
+
 TEST_CASE("runs vm with chained method calls") {
   const std::string source = R"(
 namespace i32 {

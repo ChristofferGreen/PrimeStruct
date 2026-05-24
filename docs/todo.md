@@ -83,8 +83,7 @@ Task template:
 
 ### Ready Now (Parallel-Candidate Leaves; No Unmet TODO Dependencies)
 
-- TODO-4278: Integrate multi-wait with stdlib tuple | track:
-  tuple-type-packs | primary surface: stdlib tuple/task wait integration
+- none
 
 ### Parallel Work Tracks (Current)
 
@@ -105,8 +104,8 @@ Task template:
   expansion, TODO-4271 added compile-time pack indexing, TODO-4272 added
   the initial stdlib tuple surface, and TODO-4274 added tuple bracket
   indexing, TODO-4273 added heterogeneous `make_tuple` inference, and
-  TODO-4277 added tuple destructuring. TODO-4278 is ready now that TODO-4563
-  added the single-task VM/native spawn/wait substrate.
+  TODO-4277 added tuple destructuring. TODO-4278 added task multi-wait over
+  ordinary stdlib tuples; no tuple-type-packs leaf is ready.
 - `multithreading-substrate`: TODO-4545 was split into TODO-4561,
   TODO-4562, and TODO-4563 so single-task spawn/wait can land as parser/effect,
   semantic/lifetime, and runtime execution slices before TODO-4278. TODO-4561
@@ -168,9 +167,7 @@ Task template:
   template-monomorph residue; TODO-4533 removed lowerer call-resolution
   residual bridge traces; TODO-4528 removed lowerer count/access residue; and
   TODO-4529 replaced the residue inventory with a strict zero audit
-- Deferred generic tuple substrate: TODO-4278 is ready now that TODO-4277
-  added tuple destructuring sugar over ordinary stdlib tuple values and
-  TODO-4563 added single-task spawn/wait runtime execution
+- Deferred generic tuple substrate: none active after TODO-4278
 - Multithreading substrate: none active after TODO-4563
 - Procedural compile-time genericity: none active after TODO-4340 and
   TODO-4546
@@ -179,7 +176,7 @@ Task template:
 
 ### Execution Queue (Recommended Track Order)
 
-- TODO-4278: Integrate multi-wait with stdlib tuple
+- none
 
 ### PrimeStruct Coverage Snapshot
 
@@ -760,35 +757,6 @@ Task template:
   skipped coverage is not a stable end state.
 
 ### Task Blocks
-
-- [ ] TODO-4278: Integrate multi-wait with stdlib tuple
-  - owner: ai
-  - created_at: 2026-04-27
-  - phase: Deferred generic tuple substrate
-  - depends_on: TODO-4277, TODO-4563
-  - scope: Wire future multi-task `wait(left, right, ...)` to return ordinary
-    `tuple<...>` values instead of a task-specific product type.
-  - implementation_notes:
-    - Start from `docs/MultithreadingPrototype.md`,
-      `docs/TuplePrototype.md`, tuple destructuring from TODO-4277, and the
-      single-task handle/runtime path from TODO-4563.
-    - Keep this leaf limited to multi-wait returning ordinary stdlib tuple
-      values; do not add detached tasks, task groups, channels, scheduler
-      controls, or true parallel scheduling here.
-  - acceptance:
-    - Multi-task `wait(left, right, ...)` returns `tuple<Left, Right, ...>`
-      using the stdlib tuple type when task support is present.
-    - The result can be consumed through `get<I>`, bracket indexing, and tuple
-      destructuring.
-    - Multi-wait preserves the structured task lifetime rule from
-      `docs/MultithreadingPrototype.md`.
-    - `docs/MultithreadingPrototype.md` and `docs/TuplePrototype.md` describe
-      the implemented integration and remove prototype-only caveats that are no
-      longer true.
-    - `./scripts/compile.sh --release` passes.
-  - stop_rule: Stop once multi-wait returns stdlib `tuple<...>` for task
-    handles; leave scheduler-backed parallel execution to a future
-    multithreading leaf.
 
 - [~] TODO-4305: Rename and style canonical `.prime` SoA surface
   - owner: ai

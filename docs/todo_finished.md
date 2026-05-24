@@ -6,6 +6,30 @@ Legend:
 Finished items are periodically archived here from `docs/todo.md`; section headers record the archive date.
 
 **Todo Completion (May 24, 2026)**
+- [x] TODO-4278: Integrate multi-wait with stdlib tuple
+  - owner: ai
+  - created_at: 2026-04-27
+  - finished_at: 2026-05-24
+  - phase: Deferred generic tuple substrate
+  - depends_on: TODO-4277, TODO-4563
+  - scope: Wire multi-task `wait(left, right, ...)` to return ordinary
+    `tuple<...>` values instead of a task-specific product type.
+  - outcome:
+    - Rewrote multi-task `wait(...)` to ordinary specialized stdlib tuple
+      construction after task result types are known.
+    - Preserved structured task lifetime validation for each consumed handle.
+    - Added semantic-product coverage for tuple-returning multi-wait.
+    - Added focused VM/native coverage for consuming multi-wait through
+      `get<I>`, bracket indexing, and tuple destructuring.
+    - Documented that true parallel scheduling, detached tasks, task groups,
+      channels, and scheduler controls remain future multithreading leaves.
+  - validation:
+    - `git diff --check`
+    - `cmake --build build-release --target PrimeStruct_semantics_tests -j 1`
+    - `cd build-release && ./PrimeStruct_semantics_tests --test-case="multi wait publishes stdlib tuple result facts,spawn publishes task facts and wait returns task result,task handles reject double wait" --no-skip`
+    - `cmake --build build-release --target PrimeStruct_compile_run_tests -j 1`
+    - `cd build-release && ./PrimeStruct_compile_run_tests --test-case="native backend returns stdlib tuple from multi task wait,runs vm with multi task wait tuple,native backend runs single task spawn wait,runs vm with single task spawn wait" --no-skip`
+
 - [x] TODO-4563: Add single-task spawn/wait runtime execution
   - owner: ai
   - created_at: 2026-05-24

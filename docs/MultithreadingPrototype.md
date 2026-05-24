@@ -27,9 +27,6 @@ The first slice should not try to design every concurrency feature at once.
 
 Out of scope for the first implementation:
 
-- multi-task `wait(left, right)` `tuple` returns
-- tuple/product type implementation details beyond the separate
-  `docs/TuplePrototype.md` design note
 - detached tasks
 - transferring tasks to supervisors or external runtimes
 - channels, mutexes, atomics, thread-local storage, and fences
@@ -88,8 +85,8 @@ For the first slice:
 
 - `[spawn] f(...)` returns `Task<T>` when `f(...)` returns `T`
 - `wait(task)` consumes `Task<T>` and returns `T`
-- only single-task `wait` is required
-- multi-task wait is reserved for a later tuple/product-value feature
+- `wait(left, right, ...)` consumes multiple task handles and returns an
+  ordinary stdlib `tuple<...>` with one result per task in argument order
 
 The grouped effect name `task` is the initial prototype spelling. Later design
 work may split it into finer effects such as `task_spawn`, `task_wait`, and
@@ -102,8 +99,9 @@ diagnostics. `spawn` is accepted as an execution transform on call envelopes
 such as `[spawn] f(...)`, and `wait(task)` now consumes a semantic task handle.
 TODO-4563 added the first VM/native execution behavior: a single spawned call
 stores its result in the task handle binding, and `wait(handle)` returns that
-stored result. This is a structured runtime substrate, not true parallel
-scheduling yet.
+stored result. TODO-4278 then layered multi-task `wait(left, right, ...)` on
+top of that substrate by returning ordinary stdlib tuple values. This is
+structured task syntax and result collection, not true parallel scheduling yet.
 
 ## First Runtime Slice
 
@@ -120,10 +118,10 @@ the handle to be waited before return and reject double wait or escaping
 handles, so future scheduler-backed tasks can preserve the same source
 contract.
 
-This first runtime slice deliberately does not start an OS thread, detach work,
-or schedule multiple tasks concurrently. It exists so TODO-4278 can wire
-multi-task `wait(left, right, ...)` to stdlib tuple values on top of a real
-single-task handle path.
+This runtime slice deliberately does not start an OS thread, detach work, or
+schedule multiple tasks concurrently. It exists so the task handle lifetime
+rules and stdlib tuple integration can settle before scheduler-backed tasks are
+introduced.
 
 ## Required Effect
 
@@ -400,12 +398,12 @@ The semantic product should eventually publish enough task facts for lowering:
 - live-task diagnostics and source provenance
 - effect summaries needed by backend selection
 
-## Future Multi-Wait
+## Multi-Wait
 
-Multi-wait is desirable but should wait for `tuple` values. The tuple design is
-tracked separately in `docs/TuplePrototype.md`.
+Multi-wait returns ordinary stdlib `tuple` values. The tuple storage and helper
+surface are tracked separately in `docs/TuplePrototype.md`.
 
-Future shape:
+Implemented shape:
 
 ```prime
 [effects(task), return<int>]
@@ -425,12 +423,8 @@ Semantically:
 wait(Task<A>, Task<B>) -> tuple<A, B>
 ```
 
-The destructuring binding receives tuple elements in argument order. Until tuple
-or product return semantics are settled, implement only:
-
-```prime
-value{wait(task)}
-```
+The tuple elements preserve task argument order. The result can be consumed
+through `get<I>`, bracket indexing, or tuple destructuring.
 
 ## First Implementation Checklist
 
@@ -446,15 +440,14 @@ The first implementation slices now cover:
 - add positive and negative semantic tests
 - add semantic-product coverage for task facts
 - add first VM/native single-task runtime execution
+- integrate multi-task `wait(left, right, ...)` with stdlib tuple values
 
 Remaining implementation work:
 
-- integrate multi-task `wait(left, right, ...)` with stdlib tuple values
-  (TODO-4278)
 - design true parallel scheduling, task groups, detached tasks, channels, and
   scheduler controls as later multithreading leaves
 
 This document is a prototype note. The `[spawn] f(...)`, `wait(task)`, and
 `effects(task)` spellings are now parser/source-lock commitments, and the
-semantic and VM/native runtime rules above are implemented for the first
-single-task slice.
+semantic and VM/native runtime rules above are implemented for single-task wait
+and tuple-returning multi-wait.
