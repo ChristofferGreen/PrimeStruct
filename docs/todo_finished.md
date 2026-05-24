@@ -63,6 +63,34 @@ Finished items are periodically archived here from `docs/todo.md`; section heade
     - `./PrimeStruct_compile_time_tests --test-case="compile-time evaluation facade gates effects through the CT host,semantic CT host gates effects on phase-qualified metadata,compile-time evaluation facade enforces deterministic budgets,compile-time evaluation cache keys include invalidation material,compile-time evaluation cache rejects corrupt entries" --no-skip`
     - `./PrimeStruct_semantics_tests --test-case="require facts publish phase-qualified compile-time effects,require pure user predicates reject impure and unsupported bodies" --no-skip`
 
+- [x] TODO-4557: Lock compiler-hosted compile-time VM boundary
+  - owner: ai
+  - created_at: 2026-05-24
+  - finished_at: 2026-05-24
+  - phase: Generic constraint and compile-time flow alignment
+  - parallel_track: generic-requirements-diagnostics
+  - depends_on: TODO-4554, TODO-4358, TODO-4550, TODO-4551
+  - split_from: TODO-4359
+  - scope: Add source-lock and focused conformance coverage proving
+    compile-time requirement evaluation uses the compiler-hosted facade rather
+    than final backend lowering artifacts.
+  - outcome:
+    - Added a focused compile-time facade regression showing requirement
+      evaluation and callable preparation can use a published semantic
+      requirement fact directly with no final backend IR, native/C++ output,
+      or `primevm` launch available.
+    - Added a source-lock boundary test over the compile-time evaluation and
+      callable sources plus the compile-time test target linkage so CT
+      requirement evaluation stays on the frontend/compiler-host side of the
+      architecture.
+    - Documented the new source lock in `docs/source_lock_inventory.md` and
+      left predicate/value behavior to TODO-4555 and effects/cache/budget
+      behavior to TODO-4556.
+  - validation:
+    - `cmake -S . -B build-release -DCMAKE_BUILD_TYPE=Release`
+    - `cmake --build build-release --target PrimeStruct_compile_time_tests -j 1`
+    - `./PrimeStruct_compile_time_tests --test-suite=primestruct.compile_time.facade --no-skip`
+
 - [x] TODO-4359: Add compile-time VM conformance coverage
   - owner: ai
   - created_at: 2026-05-04

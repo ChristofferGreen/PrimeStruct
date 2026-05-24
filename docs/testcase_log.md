@@ -982,6 +982,18 @@
   `PrimeStruct_primestruct_compile_run_emitters_cpp_lambda_and_mutator_resolution_20_20`.
 
 ## Recent Test Runs
+- 2026-05-24 10:10 CEST | pass | mode: release | command:
+  `cd build-release && ./PrimeStruct_compile_time_tests --test-suite=primestruct.compile_time.facade --no-skip`
+  | failures: none | notes: TODO-4557 compiler-hosted CT VM boundary
+  focused facade suite passed with 14 cases and 177 assertions.
+- 2026-05-24 10:10 CEST | pass | mode: release | command:
+  `cmake --build build-release --target PrimeStruct_compile_time_tests -j 1`
+  | failures: none | notes: rebuilt affected compile-time doctest target
+  for TODO-4557 focused validation.
+- 2026-05-24 10:10 CEST | pass | mode: release | command:
+  `cmake -S . -B build-release -DCMAKE_BUILD_TYPE=Release`
+  | failures: none | notes: configured worker release build before
+  TODO-4557 focused validation.
 - 2026-05-24 10:30 CEST | pass | mode: release | command:
   `cd build-release && ./PrimeStruct_semantics_tests --test-case="require facts publish phase-qualified compile-time effects,require pure user predicates reject impure and unsupported bodies" --no-skip`
   | failures: none | notes: TODO-4556 semantic effects doctest slice

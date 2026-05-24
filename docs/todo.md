@@ -83,9 +83,8 @@ Task template:
 
 ### Ready Now (Parallel-Candidate Leaves; No Unmet TODO Dependencies)
 
-- TODO-4557: Lock compiler-hosted compile-time VM boundary | track:
-  generic-requirements-diagnostics | primary surface: host-boundary/source-lock
-  tests
+- TODO-4349: Add generic constraint conformance matrix | track:
+  generic-requirements-diagnostics | primary surface: conformance matrix tests
 
 ### Parallel Work Tracks (Current)
 
@@ -136,15 +135,16 @@ Task template:
   compile-time-flow diagnostics, and TODO-4555 added predicate/value
   conformance coverage. TODO-4556 added focused conformance for compile-time
   effect opt-ins, cache invalidation material, and active budget enforcement.
-  TODO-4359 was split into TODO-4555, TODO-4556, and TODO-4557 so compile-time
-  VM conformance can be covered in parallel by predicate/value,
-  effects/cache/budget, and compiler-host boundary leaves.
+  TODO-4557 locked compiler-hosted CT VM boundary coverage. TODO-4359 was
+  split into TODO-4555, TODO-4556, and TODO-4557 so compile-time VM conformance
+  could be covered in parallel by predicate/value, effects/cache/budget, and
+  compiler-host boundary leaves. TODO-4349 is ready for the broader conformance
+  matrix.
 
 ### Immediate Next 10 (Track Successors; Not Ready Until Dependencies Land)
 
 - TODO-4545: Implement first structured task spawn/wait substrate
 - TODO-4278: Integrate multi-wait with stdlib tuple
-- TODO-4349: Add generic constraint conformance matrix
 - TODO-4350: Add high-level generic design examples
 
 ### Priority Lanes (Current)
@@ -169,14 +169,12 @@ Task template:
   prerequisite split out of TODO-4278
 - Procedural compile-time genericity: none active after TODO-4340 and
   TODO-4546
-- Generic constraint and compile-time flow alignment: TODO-4557 -> TODO-4349
-  -> TODO-4350
+- Generic constraint and compile-time flow alignment: TODO-4349 -> TODO-4350
 
 ### Execution Queue (Recommended Track Order)
 
 - TODO-4545: Implement first structured task spawn/wait substrate
 - TODO-4278: Integrate multi-wait with stdlib tuple
-- TODO-4557: Lock compiler-hosted compile-time VM boundary
 - TODO-4349: Add generic constraint conformance matrix
 - TODO-4350: Add high-level generic design examples
 
@@ -207,7 +205,7 @@ Task template:
 | Stdlib ADT migration for `Maybe` and `Result` | none |
 | Generic type packs and tuple stdlib surface | TODO-4274, TODO-4273, TODO-4277, TODO-4278 |
 | Procedural compile-time genericity and local type facts | none |
-| Generic constraints and compile-time flow control | TODO-4352, TODO-4353, TODO-4354, TODO-4355, TODO-4356, TODO-4357, TODO-4345, TODO-4547, TODO-4548, TODO-4549, TODO-4346, TODO-4550, TODO-4551, TODO-4552, TODO-4553, TODO-4554, TODO-4556, TODO-4557, TODO-4349, TODO-4350 |
+| Generic constraints and compile-time flow control | TODO-4352, TODO-4353, TODO-4354, TODO-4355, TODO-4356, TODO-4357, TODO-4345, TODO-4547, TODO-4548, TODO-4549, TODO-4346, TODO-4550, TODO-4551, TODO-4552, TODO-4553, TODO-4554, TODO-4555, TODO-4556, TODO-4557, TODO-4349, TODO-4350 |
 
 ### Validation Coverage Snapshot
 
@@ -234,7 +232,7 @@ Task template:
 | Maybe/Result sum migration conformance | none |
 | Generic type-pack and tuple conformance | TODO-4274, TODO-4273, TODO-4277, TODO-4278 |
 | Procedural compile-time genericity conformance | none |
-| Generic constraint and compile-time flow conformance | TODO-4352, TODO-4353, TODO-4354, TODO-4355, TODO-4356, TODO-4357, TODO-4345, TODO-4547, TODO-4548, TODO-4549, TODO-4346, TODO-4550, TODO-4551, TODO-4552, TODO-4553, TODO-4554, TODO-4556, TODO-4557, TODO-4349, TODO-4350 |
+| Generic constraint and compile-time flow conformance | TODO-4352, TODO-4353, TODO-4354, TODO-4355, TODO-4356, TODO-4357, TODO-4345, TODO-4547, TODO-4548, TODO-4549, TODO-4346, TODO-4550, TODO-4551, TODO-4552, TODO-4553, TODO-4554, TODO-4555, TODO-4556, TODO-4557, TODO-4349, TODO-4350 |
 
 ### Vector/Map Bridge Contract Summary
 
@@ -818,39 +816,12 @@ Task template:
   - stop_rule: Stop once multi-wait returns stdlib `tuple<...>` or the missing
     task-side prerequisite is split into an explicit multithreading TODO.
 
-- [ ] TODO-4557: Lock compiler-hosted compile-time VM boundary
-  - owner: ai
-  - created_at: 2026-05-24
-  - phase: Generic constraint and compile-time flow alignment
-  - parallel_track: generic-requirements-diagnostics
-  - depends_on: TODO-4554, TODO-4358, TODO-4550, TODO-4551
-  - split_from: TODO-4359
-  - scope: Add source-lock and focused conformance coverage proving
-    compile-time requirement evaluation uses the compiler-hosted facade rather
-    than final backend lowering artifacts.
-  - implementation_notes:
-    - Start from CT facade unit tests, compile-pipeline golden tests,
-      semantic-product snapshot tests, and any source-lock tests around
-      backend/VM boundaries.
-    - Include source-lock coverage only where it protects an intentional
-      architecture boundary such as shared VM kernel extraction.
-    - Keep predicate/value behavior in TODO-4555 and effects/cache/budget
-      behavior in TODO-4556.
-  - acceptance:
-    - Tests prove requirement evaluation does not require final VM/native/C++
-      lowering artifacts or `primevm`.
-    - Source-lock or compile-pipeline coverage protects the compiler-hosted CT
-      facade boundary without blocking legitimate shared VM kernel extraction.
-    - Compile-time VM conformance tests do not depend on final backend output.
-    - `./scripts/compile.sh --release` passes.
-  - stop_rule: Stop once the compiler-hosted CT VM boundary has targeted
-    regression coverage independent of the broader generic conformance matrix.
-
 - [ ] TODO-4349: Add generic constraint conformance matrix
   - owner: ai
   - created_at: 2026-05-04
   - phase: Generic constraint and compile-time flow alignment
-  - depends_on: TODO-4554, TODO-4555, TODO-4556, TODO-4557
+  - parallel_track: generic-requirements-diagnostics
+  - depends_on: TODO-4554, TODO-4555, TODO-4556
   - scope: Add parser, semantic, IR-preparation, compile-run, and diagnostic
     conformance coverage for the generic requirement and compile-time flow
     model.

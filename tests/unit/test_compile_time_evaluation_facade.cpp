@@ -1,6 +1,10 @@
 #include "primec/CompileTimeEvaluation.h"
+#include "primec/CompileTimeCallable.h"
 #include "primec/SemanticProduct.h"
 
+#include <filesystem>
+#include <fstream>
+#include <iterator>
 #include <optional>
 #include <string>
 #include <string_view>
@@ -51,6 +55,24 @@ primec::SemanticProgramRequirementPredicateOperand makeOperand(
   operand.sourceLine = 17;
   operand.sourceColumn = 9;
   return operand;
+}
+
+std::filesystem::path repoRootPath() {
+  const std::filesystem::path cwd = std::filesystem::current_path();
+  if (std::filesystem::exists(cwd / "src" / "CompileTimeEvaluation.cpp")) {
+    return cwd;
+  }
+  return cwd.parent_path();
+}
+
+std::string readSourceFile(const std::filesystem::path &path) {
+  std::ifstream file(path);
+  CHECK(file.is_open());
+  if (!file.is_open()) {
+    return {};
+  }
+  return std::string((std::istreambuf_iterator<char>(file)),
+                     std::istreambuf_iterator<char>());
 }
 
 primec::SemanticProgram makeRequirementProgram() {
@@ -313,6 +335,89 @@ TEST_CASE("compile-time evaluation facade gates effects through the CT host") {
   CHECK(allowedFacade.budget().maxSteps == 5);
   CHECK(allowHost.describeSemanticFact("trait:Additive") ==
         std::optional<std::string>("trait Additive is available"));
+}
+
+TEST_CASE("compiler-hosted CT facade evaluates published facts without backend artifacts") {
+  primec::SemanticProgramRequirementPredicateFact fact = makeRequirementFact(
+      "/generic/direct",
+      "/project/host_predicate",
+      "/project/host_predicate<T, 4>()",
+      "satisfied",
+      "published semantic fact evaluated by compiler-hosted CT facade");
+  fact.operands.push_back(makeOperand("type_fact", "i32"));
+  fact.operands.push_back(makeOperand("literal_compile_time_argument", "4"));
+
+  primec::DenyAllCompileTimeHost host;
+  const primec::CompileTimeEvaluationFacade facade(host);
+  static_assert(
+      !primec::CompileTimeEvaluationFacade::finalBackendIrAvailable());
+  static_assert(!primec::CompileTimeEvaluationFacade::launchesRuntimeVm());
+
+  primec::CompileTimeEvaluationRequest request;
+  request.requirementPredicate = &fact;
+  const auto result = facade.evaluateRequirementPredicate(request);
+  CHECK(result.kind == primec::CompileTimeEvaluationResultKind::Success);
+  CHECK(result.boolValue);
+  CHECK(result.message.find("compiler-hosted CT facade") !=
+        std::string::npos);
+  CHECK(result.provenance.definitionPath == "/generic/direct");
+  CHECK(result.provenance.predicatePath == "/project/host_predicate");
+
+  primec::CompileTimeCallablePrepareRequest prepareRequest;
+  prepareRequest.requirementPredicate = &fact;
+  const auto prepared = primec::prepareCompileTimeCallable(host, prepareRequest);
+  REQUIRE(prepared.prepared());
+  CHECK_FALSE(primec::CompileTimePreparedCallable::requiresFinalBackendIr());
+  CHECK_FALSE(primec::CompileTimePreparedCallable::launchesRuntimeVm());
+  CHECK(prepared.callable.definitionPath == "/generic/direct");
+  REQUIRE(prepared.callable.operands.size() == 2);
+  CHECK(prepared.callable.operands[0].kind == "type_fact");
+  CHECK(prepared.callable.operands[1].kind ==
+        "literal_compile_time_argument");
+}
+
+TEST_CASE("compile-time VM facade stays source locked to compiler-host boundary") {
+  const std::filesystem::path repoRoot = repoRootPath();
+  const std::vector<std::filesystem::path> boundarySources = {
+      repoRoot / "include" / "primec" / "CompileTimeEvaluation.h",
+      repoRoot / "include" / "primec" / "CompileTimeCallable.h",
+      repoRoot / "src" / "CompileTimeEvaluation.cpp",
+      repoRoot / "src" / "CompileTimeCallable.cpp",
+  };
+  const std::vector<std::string_view> forbiddenFinalArtifacts = {
+      "primevm_main",
+      "primec/Vm.h",
+      "IrPreparation",
+      "IrToCpp",
+      "NativeEmitter",
+      "WasmEmitter",
+      "GlslEmitter",
+      "prepareIrModule",
+      "emitCpp",
+      "emitNative",
+      "executeVm(",
+  };
+
+  for (const auto &sourcePath : boundarySources) {
+    REQUIRE(std::filesystem::exists(sourcePath));
+    const std::string source = readSourceFile(sourcePath);
+    CAPTURE(sourcePath.string());
+    CHECK(source.find("CompileTimeHost") != std::string::npos);
+    for (const std::string_view forbidden : forbiddenFinalArtifacts) {
+      CHECK(source.find(forbidden) == std::string::npos);
+    }
+  }
+
+  const std::string cmake = readSourceFile(repoRoot / "CMakeLists.txt");
+  CHECK(cmake.find("src/CompileTimeEvaluation.cpp") != std::string::npos);
+  CHECK(cmake.find("src/CompileTimeCallable.cpp") != std::string::npos);
+  CHECK(cmake.find("target_link_libraries(PrimeStruct_compile_time_tests "
+                   "PRIVATE primec_frontend_lib)") != std::string::npos);
+  CHECK(cmake.find("target_link_libraries(PrimeStruct_compile_time_tests "
+                   "PRIVATE primec_runtime_lib)") == std::string::npos);
+  CHECK(cmake.find("target_link_libraries(PrimeStruct_compile_time_tests "
+                   "PRIVATE primec_backend_emitters_lib)") ==
+        std::string::npos);
 }
 
 TEST_CASE("semantic CT host gates effects on phase-qualified metadata") {
