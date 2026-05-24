@@ -6,6 +6,35 @@ Legend:
 Finished items are periodically archived here from `docs/todo.md`; section headers record the archive date.
 
 **Todo Completion (May 24, 2026)**
+- [x] TODO-4558: Add generic parser and source-lock conformance
+  - owner: ai
+  - created_at: 2026-05-24
+  - finished_at: 2026-05-24
+  - phase: Generic constraint and compile-time flow alignment
+  - parallel_track: generic-requirements-conformance
+  - depends_on: TODO-4555, TODO-4556, TODO-4557
+  - split_from: TODO-4349
+  - scope: Add parser, source-lock, and example-lock conformance coverage for
+    the public generic requirement and compile-time flow syntax.
+  - outcome:
+    - Added parser conformance for canonical `require(...)` predicate
+      transforms covering same-type, capability, and compile-time value
+      predicates.
+    - Added parser coverage for public readable `require(...)` syntax after
+      text-filter normalization, including same-type relation syntax,
+      `meta.has_trait`, and value comparison syntax such as `N > 0`.
+    - Added parser coverage for public `ct_if(predicate()) { ... } else { ... }`
+      statement and expression branch syntax, independent of semantic selection
+      and runtime lowering.
+    - Strengthened the existing generic requirement source-lock so the docs
+      keep compile-time value predicate syntax pinned.
+  - validation:
+    - `cmake -S . -B build-release-generic-parser-source-lock -DCMAKE_BUILD_TYPE=Release`
+    - `cmake --build build-release-generic-parser-source-lock --target PrimeStruct_parser_tests PrimeStruct_compile_run_tests -j 1`
+    - `cmake --build build-release-generic-parser-source-lock --target PrimeStruct_parser_tests -j 1`
+    - `./PrimeStruct_parser_tests --test-suite=primestruct.parser.templates --no-skip`
+    - `./PrimeStruct_compile_run_tests --test-case="generic requirement predicate surface stays source locked" --no-skip`
+
 - [x] TODO-4349: Add generic constraint conformance matrix
   - owner: ai
   - created_at: 2026-05-04

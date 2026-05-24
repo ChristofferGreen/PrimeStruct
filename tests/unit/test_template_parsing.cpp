@@ -1,5 +1,6 @@
 #include "primec/Lexer.h"
 #include "primec/Parser.h"
+#include "primec/TextFilterPipeline.h"
 
 #include "third_party/doctest.h"
 
@@ -21,6 +22,19 @@ std::string parseError(const std::string &source) {
   std::string error;
   CHECK_FALSE(parser.parse(program, error));
   return error;
+}
+
+primec::Program parseSurfaceProgram(const std::string &source,
+                                    std::string &filtered) {
+  primec::TextFilterPipeline pipeline;
+  primec::TextFilterOptions options;
+  options.enabledFilters = {"operators", "implicit-i32"};
+  std::string error;
+  CHECK(pipeline.apply(source, filtered, error, options));
+  CAPTURE(error);
+  CHECK(error.empty());
+  CAPTURE(filtered);
+  return parseProgram(filtered);
 }
 } // namespace
 
@@ -354,6 +368,92 @@ forward<Ts...>() {
   REQUIRE(useCall.kind == primec::Expr::Kind::Call);
   REQUIRE(useCall.templateArgs.size() == 1);
   CHECK(useCall.templateArgs.front() == "Ts...");
+}
+
+TEST_CASE("parses canonical generic requirement predicate transforms") {
+  const std::string source = R"(
+[return<LeftT> require(type_equals<typeof<left>, typeof<right>>(), has_trait<typeof<left>>(Additive), value_greater<N, 0>())]
+choose<LeftT, RightT, N>([LeftT] left, [RightT] right) {
+  return(left)
+}
+)";
+  const auto program = parseProgram(source);
+  REQUIRE(program.definitions.size() == 1);
+  const auto &def = program.definitions.front();
+  REQUIRE(def.transforms.size() == 2);
+  const auto &requireTransform = def.transforms[1];
+  CHECK(requireTransform.name == "require");
+  REQUIRE(requireTransform.arguments.size() == 3);
+  CHECK(requireTransform.arguments[0] ==
+        "type_equals<typeof<left>, typeof<right>>()");
+  CHECK(requireTransform.arguments[1] == "has_trait<typeof<left>>(Additive)");
+  CHECK(requireTransform.arguments[2] == "value_greater<N, 0>()");
+  CHECK(def.templateArgs == std::vector<std::string>{"LeftT", "RightT", "N"});
+}
+
+TEST_CASE("parses public requirement syntax after text-filter normalization") {
+  const std::string source = R"(
+[require(typeof<left> == typeof<right>, meta.has_trait<typeof<left>>(Additive), N > 0) return<LeftT>]
+choose<LeftT, RightT, N>([LeftT] left, [RightT] right) {
+  return(left)
+}
+)";
+  std::string filtered;
+  const auto program = parseSurfaceProgram(source, filtered);
+  REQUIRE(program.definitions.size() == 1);
+  const auto &requireTransform = program.definitions.front().transforms.front();
+  CHECK(requireTransform.name == "require");
+  REQUIRE(requireTransform.arguments.size() == 3);
+  CHECK(requireTransform.arguments[0] ==
+        "equal(typeof<left>(), typeof<right>())");
+  CHECK(requireTransform.arguments[1] ==
+        "meta.has_trait<typeof<left>>(Additive)");
+  CHECK(requireTransform.arguments[2] == "greater_than(N, 0i32)");
+}
+
+TEST_CASE("parses public ct_if statement and expression branch syntax") {
+  const std::string source = R"(
+[return<LeftT>]
+choose<LeftT, RightT>([LeftT] left, [RightT] right) {
+  ct_if(type_equals<typeof<left>, typeof<right>>()) {
+    [LeftT] selected{left}
+  } else {
+    [LeftT] selected{left}
+  }
+  return(ct_if(type_equals<typeof<left>, typeof<right>>()) {
+    left
+  } else {
+    left
+  })
+}
+)";
+  const auto program = parseProgram(source);
+  REQUIRE(program.definitions.size() == 1);
+  const auto &def = program.definitions.front();
+  REQUIRE(def.statements.size() == 2);
+  const auto &statementBranch = def.statements.front();
+  CHECK(statementBranch.name == "ct_if");
+  REQUIRE(statementBranch.args.size() == 3);
+  CHECK(statementBranch.args[0].name == "type_equals");
+  CHECK(statementBranch.args[1].name == "then");
+  REQUIRE(statementBranch.args[1].bodyArguments.size() == 1);
+  CHECK(statementBranch.args[1].bodyArguments.front().isBinding);
+  CHECK(statementBranch.args[2].name == "else");
+  REQUIRE(statementBranch.args[2].bodyArguments.size() == 1);
+  CHECK(statementBranch.args[2].bodyArguments.front().isBinding);
+  CHECK(def.statements[1].name == "return");
+
+  REQUIRE(def.returnExpr.has_value());
+  const auto &valueBranch = *def.returnExpr;
+  CHECK(valueBranch.name == "ct_if");
+  REQUIRE(valueBranch.args.size() == 3);
+  CHECK(valueBranch.args[0].name == "type_equals");
+  CHECK(valueBranch.args[1].name == "then");
+  REQUIRE(valueBranch.args[1].bodyArguments.size() == 1);
+  CHECK(valueBranch.args[1].bodyArguments.front().name == "left");
+  CHECK(valueBranch.args[2].name == "else");
+  REQUIRE(valueBranch.args[2].bodyArguments.size() == 1);
+  CHECK(valueBranch.args[2].bodyArguments.front().name == "left");
 }
 
 TEST_SUITE_END();

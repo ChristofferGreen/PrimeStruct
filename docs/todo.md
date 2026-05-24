@@ -83,8 +83,6 @@ Task template:
 
 ### Ready Now (Parallel-Candidate Leaves; No Unmet TODO Dependencies)
 
-- TODO-4558: Add generic parser and source-lock conformance | track:
-  generic-requirements-conformance | primary surface: parser/source locks
 - TODO-4559: Add generic semantic and IR conformance | track:
   generic-semantic-ir-conformance | primary surface: semantic-product/IR handoff
 - TODO-4560: Add generic compile-run diagnostics conformance | track:
@@ -139,12 +137,14 @@ Task template:
   compile-time-flow diagnostics, and TODO-4555 added predicate/value
   conformance coverage. TODO-4556 added focused conformance for compile-time
   effect opt-ins, cache invalidation material, and active budget enforcement.
-  TODO-4557 locked compiler-hosted CT VM boundary coverage. TODO-4359 was
-  split into TODO-4555, TODO-4556, and TODO-4557 so compile-time VM conformance
-  could be covered in parallel by predicate/value, effects/cache/budget, and
-  compiler-host boundary leaves. TODO-4349 was split into TODO-4558,
-  TODO-4559, and TODO-4560 so the broader conformance matrix can proceed in
-  parser/source-lock, semantic/IR, and compile-run/diagnostic tracks.
+  TODO-4557 locked compiler-hosted CT VM boundary coverage. TODO-4558 added
+  parser and source-lock conformance for public generic requirement and
+  `ct_if` syntax. TODO-4359 was split into TODO-4555, TODO-4556, and
+  TODO-4557 so compile-time VM conformance could be covered in parallel by
+  predicate/value, effects/cache/budget, and compiler-host boundary leaves.
+  TODO-4349 was split into TODO-4558, TODO-4559, and TODO-4560 so the broader
+  conformance matrix can proceed in parser/source-lock, semantic/IR, and
+  compile-run/diagnostic tracks.
 
 ### Immediate Next 10 (Track Successors; Not Ready Until Dependencies Land)
 
@@ -174,14 +174,13 @@ Task template:
   prerequisite split out of TODO-4278
 - Procedural compile-time genericity: none active after TODO-4340 and
   TODO-4546
-- Generic constraint and compile-time flow alignment: TODO-4558/TODO-4559/
-  TODO-4560 -> TODO-4350
+- Generic constraint and compile-time flow alignment: TODO-4559/TODO-4560 ->
+  TODO-4350
 
 ### Execution Queue (Recommended Track Order)
 
 - TODO-4545: Implement first structured task spawn/wait substrate
 - TODO-4278: Integrate multi-wait with stdlib tuple
-- TODO-4558: Add generic parser and source-lock conformance
 - TODO-4559: Add generic semantic and IR conformance
 - TODO-4560: Add generic compile-run diagnostics conformance
 - TODO-4350: Add high-level generic design examples
@@ -823,33 +822,6 @@ Task template:
     - `./scripts/compile.sh --release` passes.
   - stop_rule: Stop once multi-wait returns stdlib `tuple<...>` or the missing
     task-side prerequisite is split into an explicit multithreading TODO.
-
-- [ ] TODO-4558: Add generic parser and source-lock conformance
-  - owner: ai
-  - created_at: 2026-05-24
-  - phase: Generic constraint and compile-time flow alignment
-  - parallel_track: generic-requirements-conformance
-  - depends_on: TODO-4555, TODO-4556, TODO-4557
-  - split_from: TODO-4349
-  - scope: Add parser, source-lock, and example-lock conformance coverage for
-    the public generic requirement and compile-time flow syntax.
-  - implementation_notes:
-    - Start from parser tests, compile-pipeline parse/golden fixtures,
-      `docs/PrimeStruct.md`, `docs/PrimeStruct_SyntaxSpec.md`, and source-lock
-      or example-lock tests around generic requirement syntax.
-    - Keep semantic-product and IR-preparation handoff checks in TODO-4559.
-    - Keep runtime compile-run behavior and rich diagnostic matrix checks in
-      TODO-4560.
-  - acceptance:
-    - Parser or compile-pipeline tests cover public syntax for same-type
-      requirements, capability predicates, value predicates, and `ct_if`.
-    - Source-lock or example-lock coverage protects the intended user-facing
-      syntax without depending on backend output.
-    - Docs/examples touched by this slice are minimal, runnable, and aligned
-      with `docs/CodeExamples.md`.
-    - `./scripts/compile.sh --release` passes.
-  - stop_rule: Stop once public generic syntax has targeted parser/source-lock
-    regression coverage independent of semantic and runtime conformance.
 
 - [ ] TODO-4559: Add generic semantic and IR conformance
   - owner: ai

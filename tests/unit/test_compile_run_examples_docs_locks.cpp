@@ -1614,6 +1614,9 @@ TEST_CASE("generic requirement predicate surface stays source locked") {
         std::string::npos);
   CHECK(primeStructDoc.find("`/std/meta/value_greater_equal<A, B>()`") !=
         std::string::npos);
+  CHECK(primeStructDoc.find("simple\n"
+                            "  comparisons over compile-time values such as `N > 0`") !=
+        std::string::npos);
   CHECK(primeStructDoc.find("The implemented capability slice evaluates `has_trait` for\n"
                             "  `Additive`/`Multiplicative`/`Comparable`/`Indexable`") !=
         std::string::npos);
@@ -1642,6 +1645,9 @@ TEST_CASE("generic requirement predicate surface stays source locked") {
         std::string::npos);
   CHECK(syntaxSpec.find("`typeof(left)` remains an ordinary runtime\n"
                         "  call-shaped expression and is not a requirement primitive.") !=
+        std::string::npos);
+  CHECK(syntaxSpec.find("simple comparisons over\n"
+                        "  compile-time values such as `N > 0`") !=
         std::string::npos);
   CHECK(syntaxSpec.find("User-defined predicates distinguish `false` from invalid evaluation") !=
         std::string::npos);
@@ -1716,6 +1722,12 @@ TEST_CASE("generic requirement predicate surface stays source locked") {
         std::string::npos);
   CHECK(todoFinished.find("Marked transform-style trait constraints such as `[Additive<i32>]` as\n"
                           "      source-compatible compatibility vocabulary") !=
+        std::string::npos);
+  CHECK(todoFinished.find("TODO-4558: Add generic parser and source-lock conformance") !=
+        std::string::npos);
+  CHECK(todoFinished.find("Added parser conformance for canonical `require(...)` predicate\n"
+                          "      transforms covering same-type, capability, and compile-time value\n"
+                          "      predicates.") !=
         std::string::npos);
 }
 
