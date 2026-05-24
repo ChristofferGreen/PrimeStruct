@@ -1,75 +1,56 @@
 # PrimeStruct TODO Log
 
-## Operating Rules (Human + AI)
+## Purpose
 
-1. This file contains only open work (`[ ]` or `[~]`).
-2. Use one task block per item with a stable ID: `TODO-XXXX`.
-3. Keep task ordering aligned with dependency and execution priority. New
-   tasks should be inserted into the relevant lane/queue position rather than
-   blindly prepended by creation date.
-4. Every task must include:
-   - clear scope
-   - acceptance criteria
-   - owner (`human` or `ai`)
-5. When a task is completed:
-   - mark it `[x]`
-   - add `finished_at` and short evidence note
-   - move the full block to `docs/todo_finished.md`
-   - remove it from this file (do not keep completed tasks here)
-6. `docs/todo_finished.md` is append-only history. Do not rewrite old entries except to fix factual mistakes.
-7. Each implementation task SHOULD include `phase` and `depends_on` to keep execution order explicit.
-8. Prefer small, testable tasks over broad epics; split before starting if acceptance cannot be verified in one PR.
-9. Every task block must be implementable by someone arriving with no session context, including an AI agent. Include
-   enough local detail to identify the intended behavior, likely source/test areas, dependencies, diagnostics, and
-   validation gate without relying on prior conversation.
-10. Implementation tasks SHOULD include `implementation_notes` when source entry points, nearby tests, migration
-    hazards, or validation strategy are not obvious from scope and acceptance alone.
-11. Keep the `Execution Queue` and coverage snapshots current when adding/removing tasks.
-    When adding, splitting, renaming, completing, or deleting a task, update every
-    reference to that TODO ID in lanes, queues, snapshots, `depends_on`, stop
-    rules, and notes; use `rg TODO-XXXX docs/todo.md` to catch stale references.
-12. Keep an explicit `Ready Now` shortlist synced with dependencies; only items with no unmet TODO dependencies belong there.
-13. When splitting broad tasks, update parent task scope to avoid duplicated acceptance criteria across child tasks.
-14. Keep `Priority Lanes` aligned with queue order so critical-path tasks remain visible.
-15. For phase-level tracking tasks, pair planning trackers with explicit acceptance-gate tasks before marking a phase complete.
-16. Every active leaf must include a stop rule and deliver at least one of:
+This file is the live open-work queue for PrimeStruct.
+
+- Keep only open work here: `[ ]` queued or `[~]` in progress.
+- Move completed work to `docs/todo_finished.md`.
+- Do not keep completed-task summaries, historical rollout notes, or closed
+  coverage snapshots in this file.
+- When this file has no task blocks, the tracked TODO queue is empty.
+
+## Operating Rules
+
+1. Use one task block per item with a stable `TODO-XXXX` ID.
+2. Every active leaf must be implementable by someone arriving with no session
+   context, including an AI agent.
+3. Every active leaf must include `owner`, `created_at`, `scope`,
+   `acceptance`, and `stop_rule`.
+4. Prefer small, testable leaves over broad epics; split work before starting
+   when acceptance cannot be verified in one bounded change.
+5. Every active leaf must target at least one value outcome:
    - user-visible behavior change
    - measurable perf/memory improvement
    - deletion of a real compatibility subsystem
-17. Avoid standalone micro-cleanups (alias renames, trivial bool rewrites, local dedup) unless bundled into one value outcome above.
-18. If a leaf misses its value target after 2 attempts, archive it as low-value and replace it with a different hotspot.
-19. Keep the live execution queue short: no more than 8 leaf tasks in `Ready Now` at once. Additional dependency-blocked or deferred follow-up leaves may stay in the task blocks and `Immediate Next 10`, but only `Ready Now` counts as the live queue cap.
-20. Treat disabled tests as debt: every retained `doctest::skip(true)` cluster must either map to an active TODO leaf with a clear re-enable-or-delete outcome, or be removed once proven stale.
-21. Keep active work leaf-shaped: `Ready Now`, `Immediate Next`, and the
-    `Execution Queue` must not contain umbrella, tracker, phase, or
-    "continue with another slice" items. If a TODO accumulates completed-slice
-    history while staying open, close the satisfied parent and create bounded
-    follow-up leaves for any remaining worthwhile work.
-22. Keep parallel work explicit. `Ready Now` may contain multiple unrelated
-    leaves, but each entry must name a parallel track and a primary surface so
-    `$implement-todo-lite-parallel` can choose independent workers without
-    re-reading the whole file.
-23. Do not put two same-track successors in `Ready Now` at the same time unless
-    their task blocks prove they touch different source/test surfaces. Serial
-    successors belong in `Immediate Next 10` until their dependencies land.
-24. Before launching a parallel run, the parent should choose at most one ready
-    leaf per track, skip blocked/coupled tracks explicitly, and preserve
-    worker-side TODO edits as provisional until root reconciliation.
+6. Avoid standalone micro-cleanups unless bundled into a value outcome.
+7. If a leaf misses its value target after two attempts, archive it as
+   low-value and replace it with a different hotspot.
+8. Keep `Ready Now`, `Immediate Next 10`, `Priority Lanes`, `Execution Queue`,
+   and task blocks synchronized when adding, splitting, completing, or deleting
+   a task.
+9. Keep `Ready Now` capped at eight active leaf tasks.
+10. Keep active work leaf-shaped: queue sections must not contain umbrella,
+    tracker, phase, research-shaped, or "continue with another slice" items.
+11. For parallel work, each `Ready Now` item must name a `parallel_track` and a
+    primary surface. Do not put two same-track successors in `Ready Now` unless
+    their task blocks prove they touch different source/test surfaces.
+12. Treat disabled tests as debt: each retained `doctest::skip(true)` cluster
+    must map to an active TODO leaf with a re-enable-or-delete outcome, or be
+    removed once proven stale.
+13. When completing a task, mark it `[x]`, add `finished_at` plus a short
+    evidence note, move the full block to `docs/todo_finished.md`, and remove
+    it from this file.
 
-Status legend:
-- `[ ]` queued
-- `[~]` in progress
-- `[x]` completed (must be moved to `docs/todo_finished.md`)
-
-Task template:
+## Task Template
 
 ```md
 - [ ] TODO-<id>: Short title
   - owner: ai|human
   - created_at: YYYY-MM-DD
-  - phase: Group/Phase name (optional but recommended)
+  - phase: Group/Phase name (optional)
   - parallel_track: short-track-name (required when listed in Ready Now)
-  - depends_on: TODO-XXXX, TODO-YYYY (optional but recommended)
+  - depends_on: TODO-XXXX, TODO-YYYY (optional)
   - scope: ...
   - implementation_notes: optional, but required when source/test entry points are not obvious
   - acceptance:
@@ -81,677 +62,988 @@ Task template:
 
 ## Open Tasks
 
-### Ready Now (Parallel-Candidate Leaves; No Unmet TODO Dependencies)
+### Ready Now
 
-- none
+- TODO-4591: Add expanded-source provenance ledger | track: source-unit-provenance | primary surface: import resolver/compile pipeline provenance
+- TODO-4564: Lock scene renderer defaults and UI producer contract | track: scene-renderer | primary surface: docs/scene-renderer contract
+- TODO-4570: Retire duplicate map2 candidate surface | track: collection-stdlib-cleanup | primary surface: stdlib/std/collections/map*.prime
+- TODO-4571: Add compiler-knowledge inventory for map/vector | track: collection-audit | primary surface: scripts/tests audit coverage
+- TODO-4572: Remove vector statement-helper compiler path | track: vector-special-case-deletion | primary surface: vector semantic/lowerer helpers
+- TODO-4573: Remove compiler-owned map literal lowering | track: map-special-case-deletion | primary surface: map literal semantics/lowering
 
-### Parallel Work Tracks (Current)
+### Immediate Next 10
 
-- `soa-zero-audit`: TODO-4524/TODO-4529 completed the strict
-  zero-production-trace audit; no SoA zero-audit leaf is ready.
-- `map-zero-audit`: TODO-4537 split the broad lowerer substrate item into
-  bounded leaves; TODO-4539 removed generated MapValue path synthesis, and
-  TODO-4540 removed the lowerer key/value local kind plus ref/pointer flags.
-  TODO-4541 removed direct key/value access emission, TODO-4542 retired
-  native map-value gates, TODO-4543 moved residual access-target API names
-  to generic collection-pair type facts, TODO-4538 replaced the hanging broad
-  inventory with a fast strict audit, and TODO-4464 enforced the final zero
-  map-surface audit; no map zero-audit leaf is ready.
-- `generic-helper-call-lowering`: TODO-4544 fixed statement-context
-  generated `.prime` helper calls without restoring map-specific native
-  insert dispatch; no generic helper-call leaf is ready.
-- `tuple-type-packs`: TODO-4276 completed helper/lifecycle pack
-  expansion, TODO-4271 added compile-time pack indexing, TODO-4272 added
-  the initial stdlib tuple surface, and TODO-4274 added tuple bracket
-  indexing, TODO-4273 added heterogeneous `make_tuple` inference, and
-  TODO-4277 added tuple destructuring. TODO-4278 added task multi-wait over
-  ordinary stdlib tuples; no tuple-type-packs leaf is ready.
-- `multithreading-substrate`: TODO-4545 was split into TODO-4561,
-  TODO-4562, and TODO-4563 so single-task spawn/wait can land as parser/effect,
-  semantic/lifetime, and runtime execution slices before TODO-4278. TODO-4561
-  locked the parser/effect spelling, TODO-4562 added semantic/lifetime facts
-  and diagnostics, and TODO-4563 added single-task VM/native runtime
-  execution; no multithreading-substrate leaf is ready.
-- `procedural-genericity`: TODO-4336 allowed type locals in local binding and
-  struct-field envelopes, TODO-4337 added non-escaping local generated
-  structs, TODO-4338 stabilized deterministic generated identity and
-  provenance, TODO-4339 lowered procedural facts through semantic-product
-  direct-call and layout metadata, and TODO-4340 added docs and positive
-  examples, and TODO-4546 added negative conformance; no procedural-genericity
-  leaf is ready.
-- `generic-requirements`: TODO-4331, TODO-4334, TODO-4341, TODO-4342,
-  TODO-4343, TODO-4344, TODO-4352, TODO-4353, and TODO-4354 are complete;
-  TODO-4355 wired the compile-time host to published `/std/meta/*` predicate
-  facts; TODO-4356 prepared restricted compile-time callables; TODO-4357
-  evaluates pure user predicates; TODO-4345 added statement-level concrete
-  `ct_if`; TODO-4547 added generic-specialized branch selection, and
-  TODO-4548 added expression-position `ct_if` values; TODO-4549 scoped
-  selected-branch generated type facts; TODO-4346 documented compile-time flow
-  policy; TODO-4550 enforced active compile-time budget limits; TODO-4358
-  enforced phase-qualified compile-time effects; TODO-4551 added
-  deterministic cache keys and invalidation; TODO-4347 routed requirement
-  facts into overload selection; and TODO-4351 added integer value
-  requirement facts. TODO-4348 was split into bounded diagnostic leaves,
-  TODO-4552 published provenance-rich direct requirement failures,
-  TODO-4553 published requirement-overload diagnostics, TODO-4554 published
-  compile-time-flow diagnostics, and TODO-4555 added predicate/value
-  conformance coverage. TODO-4556 added focused conformance for compile-time
-  effect opt-ins, cache invalidation material, and active budget enforcement.
-  TODO-4557 locked compiler-hosted CT VM boundary coverage. TODO-4558 added
-  parser and source-lock conformance for public generic requirement and
-  `ct_if` syntax. TODO-4560 added compile-run and user-facing diagnostic
-  conformance coverage. TODO-4559 added semantic-product and IR-preparation
-  handoff conformance. TODO-4359 was split into TODO-4555, TODO-4556, and
-  TODO-4557 so compile-time VM conformance could be covered in parallel by
-  predicate/value, effects/cache/budget, and compiler-host boundary leaves.
-  TODO-4349 was split into TODO-4558, TODO-4559, and TODO-4560 so the broader
-  conformance matrix could proceed in parser/source-lock, semantic/IR, and
-  compile-run/diagnostic tracks; all three split leaves are complete.
+- TODO-4592: Map parser and semantic diagnostics through source units
+- TODO-4593: Carry source-unit provenance into IR and VM debug maps
+- TODO-4565: Add minimal scene graph and camera data model
+- TODO-4566: Render flat and rounded-rect scene primitives to BGRA8
+- TODO-4590: Add international text shaping and glyph atlas path
+- TODO-4567: Render first globally lit 3D SDF widget primitive
+- TODO-4568: Emit scene nodes from the existing UI layout/widgets
+- TODO-4569: Present scene-rendered UI through software surface bridge
+- TODO-4574: Remove vector count/access compiler classifiers
+- TODO-4575: Remove map helper/access compiler classifiers
 
-### Immediate Next 10 (Track Successors; Not Ready Until Dependencies Land)
+### Priority Lanes
 
-- none
+- Source-unit provenance ledger: TODO-4591 -> TODO-4592; TODO-4593 waits on
+  TODO-4592 and TODO-4583 because it changes IR source-map metadata. This lane
+  is intentionally separate from TODO-4581 provenance ownership and TODO-4586
+  diagnostic stability tiers: it adds the missing source-unit/file identity
+  that those later contracts can consume without absorbing TODO-4583's
+  schema/versioning work.
+- Scene graph renderer and UI presentation: TODO-4564 -> TODO-4565 ->
+  TODO-4566 -> (TODO-4590 and TODO-4567) -> TODO-4568 -> TODO-4569
+- Map/vector compiler-independence: TODO-4570 and TODO-4571 can run in
+  parallel with the deletion tracks; vector path TODO-4572 -> TODO-4574 ->
+  TODO-4577; map path TODO-4573 -> TODO-4575 -> TODO-4576; join at
+  TODO-4578 -> TODO-4579
+- Architecture hardening backlog: TODO-4580, TODO-4581 -> TODO-4582,
+  TODO-4583, TODO-4584, TODO-4585, TODO-4586, TODO-4587, TODO-4588,
+  TODO-4589
 
-### Priority Lanes (Current)
+### Execution Queue
 
-- Semantic ownership authority: none active; future semantic-authority work
-  must enter as bounded leaves only.
-- Deferred stdlib ADT migration: none active
-- Vector stdlib ownership cutover: none active
-- Map stdlib ownership cutover: none active after TODO-4464 enforced the
-  strict zero audit
-- Generic helper-call lowering: none active after TODO-4544
-- SoA public surface rename and ownership cutover: none active after
-  TODO-4305/TODO-4306 parent reconciliation and the TODO-4524 strict zero
-  audit
-- Deferred generic tuple substrate: none active after TODO-4278
-- Multithreading substrate: none active after TODO-4563
-- Procedural compile-time genericity: none active after TODO-4340 and
-  TODO-4546
-- Generic constraint and compile-time flow alignment: none active after
-  TODO-4350
-
-### Execution Queue (Recommended Track Order)
-
-- none
-
-### PrimeStruct Coverage Snapshot
-
-| PrimeStruct area | Primary TODO IDs |
-| --- | --- |
-| Semantic ownership boundary and graph/local-auto authority | none |
-| Compile-pipeline stage and publication-boundary contracts | none |
-| Compile-time macro hooks and AST transform ownership | none |
-| Stdlib surface-style alignment and public helper readability | none |
-| Stdlib bridge consolidation and collection/file/gfx surface authority | none |
-| Vector/map stdlib ownership cutover and collection surface authority | none |
-| Stdlib de-experimentalization and public/internal namespace cleanup | none |
-| SoA maturity and `soa` public-surface rename | none |
-| Validator entrypoint and benchmark-plumbing split | none |
-| Semantic-product publication by module and fact family | none |
-| Semantic-product public API factoring and versioning | none |
-| IR lowerer compile-unit breakup | none |
-| Backend validation/build ergonomics | none |
-| Emitter/semantics map-helper parity | none |
-| VM debug-session argv ownership | none |
-| Debugger/source-map provenance parity | none |
-| Debug trace replay robustness | none |
-| VM/runtime debug stateful opcode parity | none |
-| Test-suite audit follow-up and release-gate stability | none |
-| Algebraic sum types and brace-only construction | none |
-| Stdlib ADT migration for `Maybe` and `Result` | none |
-| Generic type packs and tuple stdlib surface | TODO-4274, TODO-4273, TODO-4277, TODO-4278 |
-| Multithreading substrate | none |
-| Procedural compile-time genericity and local type facts | none |
-| Generic constraints and compile-time flow control | TODO-4352, TODO-4353, TODO-4354, TODO-4355, TODO-4356, TODO-4357, TODO-4345, TODO-4547, TODO-4548, TODO-4549, TODO-4346, TODO-4550, TODO-4551, TODO-4552, TODO-4553, TODO-4554, TODO-4555, TODO-4556, TODO-4557, TODO-4558, TODO-4559, TODO-4560 |
-
-### Validation Coverage Snapshot
-
-| Validation area | Primary TODO IDs |
-| --- | --- |
-| Semantic-product-authority conformance | none |
-| AST transform hook conformance | none |
-| CodeExamples-aligned stdlib surface syntax conformance | none |
-| Compile-pipeline stage handoff conformance | none |
-| Semantic-product publication parity and deterministic ordering | none |
-| Lowerer/source-composition contract coverage | none |
-| Vector/map bridge parity for imports, rewrites, and lowering | none |
-| De-experimentalization surface and namespace parity | none |
-| `soa` maturity and canonical surface parity | none |
-| Focused backend rerun ergonomics and suite partitioning | none |
-| Architecture contract probe migration | none |
-| Emitter map-helper canonicalization parity | none |
-| VM debug-session argv lifetime coverage | none |
-| Debugger/source-map provenance parity | none |
-| Debug trace replay malformed-input coverage | none |
-| Shared VM/debug stateful opcode behavior | none |
-| Release benchmark/example suite stability and doctest governance | none |
-| Sum-type and brace-construction conformance | none |
-| Maybe/Result sum migration conformance | none |
-| Generic type-pack and tuple conformance | TODO-4274, TODO-4273, TODO-4277, TODO-4278 |
-| Multithreading substrate conformance | none |
-| Procedural compile-time genericity conformance | none |
-| Generic constraint and compile-time flow conformance | TODO-4352, TODO-4353, TODO-4354, TODO-4355, TODO-4356, TODO-4357, TODO-4345, TODO-4547, TODO-4548, TODO-4549, TODO-4346, TODO-4550, TODO-4551, TODO-4552, TODO-4553, TODO-4554, TODO-4555, TODO-4556, TODO-4557, TODO-4558, TODO-4559, TODO-4560 |
-
-### Vector/Map Bridge Contract Summary
-
-- Bridge-owned public contract: exact and wildcard `/std/collections` imports,
-  `vector<T>` / `map<K, V>` constructor and literal-rewrite surfaces, helper
-  families, compatibility spellings plus removed-helper diagnostics, semantic
-  surface IDs, and lowerer dispatch metadata.
-- Migration-only seams: rooted `/map/*` spellings,
-  `mapCount`-style internal lowering names, and
-  `/std/collections/experimental_*` implementation modules stay temporary.
-  Rooted `/vector/*` helper spellings are no longer builtin vector
-  compatibility aliases; explicit user definitions under those paths remain
-  ordinary definitions.
-  The vector/map adapter cutover is complete for semantic,
-  template-monomorph, and lowerer helper path-candidate decisions. Canonical
-  read/access helper routing is finished in `docs/todo_finished.md`; vector
-  header materialization now uses
-  layout facts instead of hard-coded record slots, and canonical vector surface
-  metadata is now owned by `stdlib/std/collections/surfaces.psmeta`, and the
-  registry no longer advertises vector compatibility spellings through that
-  manifest. Direct experimental vector source imports are now rejected, and
-  the vector production C++ zero-trace audit is now mechanically enforced.
-  TODO-4464 completed the same ownership model for map after the internal-map
-  lookup/insertion substrate moved into `.prime` helper code, canonical
-  read/access/insert wrappers stopped routing through builtin/native map fast
-  paths, canonical map surface metadata moved into
-  `stdlib/std/collections/surfaces.psmeta`, map compatibility spellings were
-  removed from that manifest, slashless experimental-map helper path
-  normalization was deleted, experimental-map access alias probes were removed
-  from lowerer/emitter builtin-access classification, experimental-map entry
-  constructor aliases were deleted from lowerer/emitter builtin-map
-  constructor classification, experimental-map constructor direct targets were
-  deleted from setup-type method-call resolution, and experimental-map method
-  fallback guards were removed from lowerer dispatch, and frontend
-  import-alias normalization no longer roots slashless map helper paths. The
-  emitter collection fallback path no longer carries a dead slashless map path
-  normalizer, and semantic snapshot receiver-query collection no longer treats
-  rooted `/map/*` direct calls as receiver candidates, and semantic call
-  validation no longer strips rooted `/map/*` specialization or overload
-  suffixes to recover removed compatibility definition families. The remaining
-  rooted `/map/*` template definitions are no longer treated as stdlib
-  collection helpers by implicit template inference, and template
-  monomorphization no longer strips slashless `map/` method prefixes from map
-  receiver method targets, and emitter builtin collection inference no longer
-  recognizes slashless `map/count` as an explicit map-count helper. The
-  semantic late unknown-target map method fallback now resolves canonical
-  helper targets through stdlib surface metadata instead of concatenating a
-  production C++ canonical map helper path, and implicit template inference
-  now classifies canonical map helper definitions through stdlib surface
-  metadata instead of hard-coding the canonical map helper prefix, and
-  statement body-argument map helper target routing now uses stdlib surface
-  metadata instead of hard-coded map helper path prefixes and concatenations,
-  and statement container drop/relocation triviality now recognizes
-  experimental map backing structs through the shared collection backing-type
-  helper instead of a production C++ map path literal, and semantic
-  direct-call return binding inference now recognizes experimental map backing
-  specializations through the same helper instead of a production C++ map path
-  literal, and setup-type map struct classification, Result map identity, and
-  statement-return collection normalization now derive canonical `MapValue`
-  roots through collection path helpers instead of split-string map roots, and
-  lowerer fallback setup plus struct-layout generated map classifiers now
-  derive experimental map backing paths through shared collection helpers
-  instead of direct backing path roots, and uninitialized-struct specialized
-  map detection now derives generated experimental map backing recognition
-  through the same helper, and initializer inference now derives generated
-  experimental map backing recognition through
-  `isExperimentalCollectionBackingTypeName`, including graph binding
-  initializer inference, and statement return collection normalization now
-  uses the same helper for generated map backing recognition, and
-  collection-type normalization now uses the same helper for generated map
-  backing recognition, and struct-return inference now uses the same helper
-  for generated map backing recognition, and Result helper map payload
-  recognition now uses the same helper for generated map backing paths, and
-  receiver-path map backing exclusions now use the same helper, and late
-  map-access receiver classification now uses the same helper, and statement
-  init map type matching now uses the same helper, and lowerer simple-call
-  scoped collection alias rejection now recognizes map helper surface paths
-  through `CollectionsMapHelpers` metadata instead of a direct slashless
-  `map/` prefix check, and semantic method-target resolution now recognizes
-  slashless map helper alias paths through
-  `metadataBackedMapHelperRootAliasMethodName` instead of direct `map/`
-  prefix checks, and semantic simple-call path helpers now resolve map helper
-  member names through `collections.map_helpers` metadata instead of direct
-  slashless and canonical map prefix stripping, and semantic concrete call
-  resolution now recognizes map entry helper and constructor base paths
-  through map surface metadata instead of direct canonical map
-  entry/constructor literals, and lowerer count fallback now recognizes
-  removed map helper alias calls through `collections.map_helpers` metadata
-  instead of a local slashless `map/` helper table, and semantic collection
-  dispatch setup now recognizes rooted map access compatibility paths
-  through `CollectionsMapHelpers` import-alias metadata instead of a literal
-  `/map/at*` table, and semantic initializer helper preference now resolves
-  explicit stdlib map helper names through `collections.map_helpers` metadata
-  instead of a hard-coded canonical map namespace and helper-name table, and
-  semantic struct-return map helper probing now derives explicit map access
-  helper names and canonical method candidates through the same metadata
-  instead of direct rooted/canonical map helper strings, and semantic
-  map/SOA builtin validation now resolves canonical map contains helper paths
-  through `collections.map_helpers` metadata instead of direct map surface
-  IDs, and statement printability now resolves canonical map access helper
-  paths through the same metadata instead of direct map surface IDs, and
-  expression collection-dispatch setup now resolves canonical map access
-  helper paths through that metadata instead of direct map surface IDs, and
-  expression method resolution now derives canonical map access helper paths
-  through that metadata instead of direct map surface IDs, and try builtin
-  validation now derives canonical map tryAt helper paths through that
-  metadata instead of direct map surface IDs, and pointer-like collection
-  method normalization now derives the unrooted canonical map helper prefix
-  through that metadata instead of direct map surface IDs, and collection
-  return inference now derives canonical map access helper return lookup
-  paths through that metadata instead of direct path concatenation, and
-  template monomorph collection compatibility now derives explicit map helper
-  member names and map collection-root matching through stdlib surface
-  metadata instead of direct `map/` or `std/collections/map` checks, and core
-  semantic unknown-call formatting and diagnostic target normalization now
-  derive map helper membership and canonical count paths through that metadata
-  instead of direct map path checks, and late fallback map access diagnostics
-  now derive rooted import-alias access helper recognition from stdlib map
-  import-alias metadata instead of a direct `/map/at*` path table, and
-  template monomorph core collection-base/import coverage plus map entry and
-  constructor overload checks now derive roots and member paths through stdlib
-  surface metadata instead of direct map path literals, and infer collection
-  dispatch setup now derives map helper metadata through the bridge key before
-  resolving rooted aliases, canonical access helpers, and namespace checks
-  instead of directly naming the map helper surface ID, and expression
-  argument validation now derives canonical map access helper matching through
-  stdlib map helper metadata and map template-base checks through
-  `isMapCollectionTypeName` instead of direct canonical map path and type
-  spellings, and definition return inference now detects deferred canonical
-  map access helpers through stdlib map helper metadata instead of direct
-  canonical map access path literals, and lowerer map lookup helper APIs now
-  use key/value lookup names instead of map-specific lookup helper names, and
-  setup-inference access element-kind helpers now use array/key-value names
-  instead of array/map API names, and inline/native-tail contains/tryAt helper
-  predicates plus key comparison opcode selection now use key/value names
-  instead of map-specific predicate and opcode-helper names.
-  The
-  remaining production
-  lowerer/emitter
-  experimental-map traces
-  are source-locked as temporary internal backing substrate by
-  `test_stdlib_map_ownership.cpp`, and
-  all production `src`/`include` experimental-map/`Map__*` backing traces are
-  capped by the decaying `scripts/check_map_backing_traces.py` release gate.
-  The old broad `scripts/check_map_surface_trace_inventory.py` inventory has
-  been replaced by the tracked-file
-  `scripts/check_map_surface_strict_audit.py` gate, whose normal mode and
-  `--enforce-zero` mode both reject production map-surface traces.
-- Compatibility adapter inventory: map insert helper compatibility no longer
-  lives in `StdlibSurfaceRegistry::CollectionsMapHelpers`; that metadata now
-  recognizes only canonical `/std/collections/map/*` helper spellings.
-  Direct experimental map source imports are now rejected, public map wrapper
-  bridge names are gone, and definition/execution intra-body diagnostics no
-  longer carry special
-  removed-map helper classification branches, and semantic pre-dispatch helper
-  path candidates no longer mirror rooted and canonical map helpers, and native
-  tail map-access helper probes no longer treat rooted `/map/*` imports or
-  definitions as canonical map helper availability, and semantic helper-path
-  preference no longer cross-resolves rooted `/map/*` and canonical
-  `/std/collections/map/*` definitions, and semantic method resolution no
-  longer treats explicit rooted `/map/*` method targets as canonical
-  `/std/collections/map/*` helper calls, semantic validation no longer
-  recognizes `mapCount`-style wrapper names as special map helper branches,
-  and inline/native dispatch no longer treats rooted `/map/*` or experimental
-  map helper raw paths as canonical map helper aliases, and lowerer/emitter
-  code no longer adapts internal `mapCount`-style helper names as canonical map
-  operations, emitter helper candidate generation no longer mirrors rooted
-  `/map/*` and canonical `/std/collections/map/*` helpers, and semantic,
-  lowerer, and emitter access-helper classification no longer treat rooted
-  `/map/at*` calls as builtin map access helpers without same-path
-  definitions, and lowerer setup-type, return-kind, and struct-return helper
-  path candidates no longer mirror rooted `/map/*` and canonical
-  `/std/collections/map/*` helper definitions, and semantic snapshot
-  receiver-query collection no longer treats rooted `/map/*` direct calls as
-  receiver candidates, and semantic call validation no longer strips rooted
-  `/map/*` specialization or overload suffixes to recover removed
-  compatibility definition families, and implicit template inference no longer
-  classifies rooted `/map/*` template definitions as stdlib collection helpers,
-  and template monomorphization no longer strips slashless `map/` method
-  prefixes from map receiver method targets, and emitter builtin collection
-  inference no longer recognizes slashless `map/count` as an explicit
-  map-count helper and now resolves its canonical explicit map-count check
-  through stdlib surface metadata, with release validation gates now locking
-  those retired semantic and lowerer/emitter adapter names. The emitter helper
-  header now resolves canonical map helper path members through stdlib surface
-  metadata rather than carrying a hard-coded canonical map helper prefix.
-  Lowerer setup-type return-kind inference now uses metadata-backed canonical
-  map helper path lookup for string access overrides instead of a production
-  C++ map path literal.
-  Semantic named-argument builtin access filtering now uses metadata-backed
-  canonical map helper lookup for `at`/`at_unsafe` guards instead of a
-  production C++ map path prefix.
-  Semantic infer target field-type extraction now recognizes the experimental
-  map backing type through the shared collection backing-type helper instead
-  of a production C++ map path literal.
-  Statement container drop/relocation triviality now recognizes experimental
-  map backing structs through the shared collection backing-type helper
-  instead of a production C++ map path prefix.
-  Semantic direct-call return binding inference now recognizes experimental
-  map backing specializations through the shared collection backing-type
-  helper instead of a production C++ map path prefix.
-  Template
-  monomorphization now asks the registry for preferred experimental vector/SoA
-  helper spellings instead of carrying bespoke canonical-to-experimental maps.
-  Scalar pointer/memory builtin validation no longer carries a direct
-  rooted-or-canonical map access helper path classifier; only the generic
-  memory-`at` map-like operand bypass remains for true memory builtin names.
-  String argument validation no longer treats rooted `/map/at*` resolved
-  paths or slashless `map/at*_ref` names as explicit map access helper
-  classifiers.
-  Collection-access validation no longer treats rooted `/map/at*` resolved
-  paths as canonical map access helper paths.
-  Collection-access validation also no longer treats slashless `map/at*_ref`
-  names or a `map` namespace prefix as canonical map access helper names.
-  Collection return-kind inference no longer grants rooted `/map/*` helper
-  paths builtin map return kinds.
-  Collection-dispatch setup inference no longer treats rooted
-  `/map/at*_ref` resolved paths or a `map` namespace prefix as canonical map
-  access helper-name classifiers.
-  Infer-definition deferred map alias detection no longer treats rooted
-  `/map/at*` resolved paths as map access helpers.
-  Late map access validation no longer treats slashless `map/at*_ref` names
-  or a `map` namespace prefix as canonical map access helper names.
-  Statement printability no longer treats rooted `/map/at` or
-  `/map/at_unsafe` calls as builtin map access printability shortcuts.
-  Collection-access resolution no longer treats rooted `/map/at*_ref`,
-  slashless `map/at*`, or a `map` namespace prefix as canonical map access
-  helper-name classifiers; removed-alias rejection remains separate.
-  Struct-return inference no longer carries the explicit `map/at` or
-  `/map/at` compatibility probe for map access helper return structs.
-  Template monomorphization no longer canonicalizes unknown-target
-  diagnostics from rooted `/map/{count,contains,tryAt,at,at_unsafe,insert}`
-  helper paths to `/std/collections/map/*`.
-  Collection-access validation no longer retargets rooted `/map/*`
-  diagnostic targets to `/std/collections/map/*`.
-  Direct call resolution no longer returns a missing-target shortcut for
-  rooted `/map/at*_ref` access helper calls.
-  Diagnostic target formatting no longer carries a rooted `/map/count__t`
-  specialization shortcut.
-  Infer-method resolution no longer mirrors `/map/*` receiver paths to
-  `/std/collections/map/*` candidates or vice versa.
-  Pointer-like call target candidate generation no longer appends reciprocal
-  `/map/*` and `/std/collections/map/*` helper candidates.
-  Preferred map method target selection no longer returns explicit
-  `/map/<helper>` definitions or imports ahead of canonical stdlib map
-  helpers.
-  Bare map helper rewrite target selection no longer falls back to visible
-  rooted `/map/<helper>` helper families after canonical lookup.
-  Initializer inference no longer prefers or falls back to rooted
-  `/map/<helper>` aliases for explicit stdlib map helper targets.
-  Method-target resolution no longer prefers rooted `/map/<helper>`
-  definitions or imports when choosing map method targets.
-  Removed-map body-argument target resolution no longer falls back from
-  canonical `/std/collections/map/<helper>` to rooted `/map/<helper>`
-  definitions.
-  Collection-access resolution no longer prefers rooted `/map/at*` helper
-  definitions when resolving canonical map access helper calls.
-  IR access-target resolution now recognizes canonical map constructor and
-  access-helper paths through stdlib surface metadata instead of direct
-  canonical map path literals.
-  Native-tail dispatch now derives canonical map helper paths, explicit
-  helper classification, import coverage, and missing-helper diagnostics
-  through stdlib surface metadata instead of direct canonical map path text.
-  Statement-expression lowering now derives direct canonical map helper and
-  constructor recognition through stdlib surface metadata instead of direct
-  canonical map path literals.
-  Lowerer inline-call map-kind inference now uses the shared builtin and
-  experimental collection classifiers instead of local rooted/canonical map type
-  string checks.
-  Uninitialized-struct inference now recognizes explicit map args-pack access
-  through the published map-helper surface instead of direct rooted/canonical map
-  access strings.
-  Struct-slot layout now recognizes builtin map type names through the shared
-  collection classifier instead of direct rooted/canonical map type strings.
-  Declared collection inference now recognizes map type bases and direct map
-  constructors through shared collection classifiers and constructor surface
-  metadata instead of direct map type and constructor path strings.
-  Binding type normalization now recognizes map types through shared collection
-  classifiers instead of direct rooted/canonical map type strings.
-  Inference base-kind and dispatch setup now recognize map family type text
-  through shared collection classifiers instead of direct rooted/canonical map
-  strings.
-  Setup-type method target resolution now recognizes map receiver types through
-  shared collection classifiers instead of direct rooted/canonical map strings.
-  Setup-type method-call canonical map constructor direct-target checks now
-  construct the canonical path through collection path helpers instead of a
-  direct map path literal.
-  Setup-type method-call map helper prefix stripping now derives rooted and
-  canonical map prefixes through collection path helpers instead of direct map
-  path strings.
-  Setup-type method-call canonical map helper lookup now builds the helper path
-  through collection path helpers instead of direct map helper path
-  concatenation.
-  Setup-type method-call synthetic fallback blocking and explicit vector-count
-  map-target checks now derive map paths through collection path helpers instead
-  of direct map path strings.
-  Inference base-kind map `tryAt`/`contains` call-name checks now derive
-  slashless canonical helper paths through collection path helpers instead of
-  direct map helper path strings.
-  Lowerer struct-return map helper candidate paths now derive rooted and
-  canonical prefixes through collection path helpers instead of direct map
-  helper path strings.
-  Emitter method metadata removed-alias detection now resolves canonical map
-  helper paths through stdlib surface metadata instead of a direct slashless
-  canonical map path string.
-  Emitter method metadata removed-alias detection now resolves both map import
-  aliases and canonical map helper paths through the published stdlib surface
-  member resolver instead of direct map helper prefix checks.
-  Emitter method metadata receiver normalization now relies on the shared map
-  type classifier instead of a direct rooted `/map` type check.
-  Emitter setup return-inference map method candidate construction now derives
-  explicit import-alias and canonical helper paths through published stdlib
-  surface metadata instead of direct map helper path strings.
-  Emitter method resolution now resolves explicit map helper names and helper
-  paths through published stdlib surface metadata instead of direct map helper
-  prefix and path strings.
-  Emitter method type inference now classifies canonical and import-alias map
-  access helper paths through published stdlib surface metadata instead of
-  direct map helper prefix checks.
-  Emitter call-path helper classification now derives map helper and
-  constructor path ownership through published stdlib surface metadata instead
-  of direct map helper prefix strings.
-  Emitter collection-type canonical map access detection now resolves helper
-  ownership through `collections.map_helpers` metadata instead of parsing the
-  canonical map helper prefix.
-  Lowerer statement-binding explicit map helper canonicalization now detects
-  raw published map helper paths through `CollectionsMapHelpers` metadata
-  instead of direct rooted/canonical map path prefix checks.
-  Lowerer emit-expression explicit map helper rewriting now detects raw alias
-  and canonical map helper paths through `CollectionsMapHelpers` metadata
-  instead of direct rooted/canonical map helper prefix checks.
-  Lowerer builtin array-access classification now rejects published map
-  helper surface paths through `CollectionsMapHelpers` metadata instead of
-  direct `map/` and `std/collections/map/` prefix checks.
-  Inline native dispatch now classifies removed explicit map access helper
-  paths through `CollectionsMapHelpers` metadata instead of a literal
-  `map/at*` raw-path table.
-  Emitter binding-type map compatibility checks now derive canonical and
-  experimental map type paths through local collection path helpers instead of
-  direct map path fragments.
-  Setup-type collection helper map alias and normalization checks now derive
-  rooted and canonical map prefixes through collection path helpers instead of
-  direct map helper path strings.
-  Setup-type method-target map method prefix stripping now derives rooted and
-  canonical map prefixes through collection path helpers instead of direct map
-  path strings.
-  Count/access map access helper lookup, explicit std-map spelling checks,
-  and rewritten parser-shaped map access receivers now derive canonical map
-  helper paths and prefixes through collection path helpers instead of direct
-  map path strings.
-  Semantic vector helper method-target normalization now derives published map
-  helper member names through stdlib surface metadata instead of direct
-  `map/` and `std/collections/map/` prefix stripping.
-  Infer-method method-name normalization now derives explicit map helper names
-  through stdlib surface metadata instead of direct `map/` and
-  `std/collections/map/` prefix stripping.
-  Semantic-product collection specialization publication now derives map
-  type-root recognition and helper/constructor surface ids through stdlib
-  surface metadata instead of direct map paths and map surface enum constants.
-  Result metadata direct map constructor recognition now derives rooted and
-  unrooted canonical map constructor paths through collection path helpers
-  instead of direct map path strings.
-  Inline-call context generated canonical map constructor helper recognition
-  now derives the map constructor prefix through collection path helpers
-  instead of a direct map path string.
-  Statement binding explicit map helper canonicalization now derives the
-  canonical map helper root through a local collection path helper instead of
-  a direct canonical map path string.
-  Lower emit expression collection helper explicit map helper canonicalization
-  now derives the canonical map helper root through the local collection path
-  helper instead of a direct canonical map path string.
-  SoA public helper, constructor, import-alias, field-view, and conversion
-  metadata now lives in
-  `stdlib/std/collections/surfaces.psmeta` and is consumed through the generic
-  `StdlibSurfaceRegistry` manifest path. The `soa<T>` public surface is
-  declared there without temporary `/std/collections/soa_vector/*`,
-  same-path `/soa_vector/*`, mixed `/std/collections/{count,get,ref,reserve,push}`,
-  experimental helper wrapper, or conversion-helper compatibility spellings.
-  old fixture usage of those names was migrated, and the compatibility seams
-  now reject. The
-  registry keeps surface ids and generic APIs in C++, but it no longer owns
-  SoA public collection member lists, import aliases, helper aliases,
-  constructor spellings, or conversion spellings as handwritten tables.
-  Vector/map and SoA constructor compatibility is metadata-backed by the
-  constructor surface adapters. Gfx Buffer helper compatibility is routed
-  through `StdlibSurfaceRegistry::GfxBufferHelpers` for canonical
-  `/std/gfx/Buffer/*`, legacy `/std/gfx/experimental/Buffer/*`, and rooted
-  `/Buffer/*` helper spellings before semantic gfx-buffer rewrites and GPU
-  wrapper diagnostics choose canonical builtin targets. Remaining
-  removed-helper diagnostics,
-  import spellings, wildcard expansion, user-defined helper precedence,
-  field-view field-name lowering, gfx constructor sugar, and lowerer raw-path
-  dispatch checks are syntax/provenance-owned or lowering-owned.
-- Outside this lane: `array<T>` core ownership remains separate. The
-  `soa<T>` public-surface rename, generic substrate boundary, and strict
-  zero-audit gate are reconciled in `docs/todo_finished.md` under TODO-4305,
-  TODO-4306, and TODO-4524.
-  Generic contiguous-storage coverage needed before vector ordinary `.prime`
-  lowering is complete and recorded in `docs/todo_finished.md`. Map-specific
-  lookup/insertion substrate work is complete; remaining map work focuses on
-  ordinary helper lowering, metadata deletion, compatibility deletion, and the
-  final zero-trace audit.
-- End-state rule for vector: production C++ under `src/` and
-  `include/` must not contain PrimeStruct-vector-specific paths, helper names,
-  type names, diagnostics, parser/lowering branches, or metadata tables.
-  `std::vector` as the C++ standard-library container remains allowed; tests,
-  docs, generated source-lock fixtures, and stdlib `.prime` files may still
-  mention the PrimeStruct vector surface.
-- End-state rule for map: after TODO-4464, production C++ under `src/` and
-  `include/` must not contain PrimeStruct-map-specific paths, helper names,
-  type names, diagnostics, parser/lowering branches, or metadata tables.
-  Ordinary C++ words or containers such as `std::map`, generic mapping
-  variables, and source-map infrastructure remain allowed; tests, docs,
-  generated source-lock fixtures, and stdlib `.prime` files may still mention
-  the PrimeStruct map surface.
-- End-state rule for SoA: after TODO-4524, the public collection name is
-  `soa<T>` under `/std/collections/soa/*`. The old `soa_vector<T>`,
-  `/std/collections/soa_vector/*`, `/soa_vector/*`, `SoaVector<T>`,
-  `soaVector*`, and direct experimental SoA imports are rejected
-  compatibility spellings after TODO-4518 migrated old fixtures. Production
-  C++ under `src/` and `include/` must
-  not contain PrimeStruct-SoA-collection surface paths, helper names, type
-  names, diagnostics, parser/lowering branches, or metadata tables after the
-  TODO-4524 zero audit. `scripts/check_soa_surface_trace_inventory.py`
-  is now the strict zero-production-trace gate after TODO-4523 deleted
-  parser/header/registry source-family traces, TODO-4525 deleted
-  text-filter/IR-printer traces, and TODO-4526 through TODO-4529 reduced and
-  tightened the remaining production inventory.
-  Generic SoA substrate terms remain allowed where they do not encode
-  the public collection surface: field-layout/codegen/introspection,
-  `SoaColumn`, `SoaFieldView`, `SoaSchema*`, field-view
-  borrowing/invalidation, and allocation primitives.
-
-### Stdlib De-Experimentalization Policy Summary
-
-- Canonical public API: non-`experimental` namespaces are the intended
-  long-term user-facing contracts.
-- Canonical collection contract: `/std/collections/vector/*` and
-  `/std/collections/map/*` are the sole public vector/map collection surfaces.
-- SoA compatibility shim: direct
-  `/std/collections/soa_vector*` and `/std/collections/experimental_soa_vector*`
-  imports are rejected; canonical public code uses `/std/collections/soa/*`.
-- Internal collection implementation modules:
-  `/std/collections/internal_vector/*` owns the canonical vector backing
-  adapter while preserving the current compatibility `Vector<T>` identity;
-  `/std/collections/internal_map/*` owns the canonical map backing adapter
-  while preserving the current compatibility `Map<K, V>` identity.
-- Vector compatibility shim: direct
-  `/std/collections/experimental_vector/*` source imports are rejected; the
-  file remains only as a legacy forwarding shim behind
-  `/std/collections/internal_vector/*`.
-- Map compatibility shim: direct
-  `/std/collections/experimental_map/*` source imports are rejected; the file
-  remains only as a legacy forwarding shim behind
-  `/std/collections/internal_map/*`.
-- Legacy gfx compatibility seam: `/std/gfx/experimental/*` remains importable
-  only for targeted compatibility coverage and staged migration support;
-  canonical `/std/gfx/*` is the only public gfx namespace.
-- Internal substrate/helper namespaces:
-  `/std/collections/internal_buffer_checked/*`,
-  `/std/collections/internal_buffer_unchecked/*`,
-  `/std/collections/internal_soa_vector_conversions/*`,
-  `/std/collections/internal_soa_vector/*`, and
-  `/std/collections/internal_soa_storage/*` are implementation-facing plumbing
-  rather than public API.
-- Default rule: no `experimental` namespace is canonical public API unless the
-  docs call out an accepted compatibility exception explicitly.
-
-### SoA Public Collection Summary
-
-- Rename direction: `soa_vector<T>` is retired as the public collection name in
-  favor of `soa<T>`. The target canonical public spellings are
-  `/std/collections/soa/*` plus conversion helpers under the same public
-  surface.
-- Retired compatibility spellings are `soa_vector<T>`,
-  `/std/collections/soa_vector*`, rooted `/soa_vector/*`, `SoaVector<T>`,
-  `soaVector*`, and direct `/std/collections/experimental_soa_vector*` imports;
-  ordinary public examples use the `soa` spelling and `/std/collections/soa/*`.
-- Rejection seams: C++/VM/native tests lock the direct-import rejection
-  diagnostic for retired SoA compatibility modules and the `soa_vector<T>` type
-  spelling rejection.
-- Internal substrate namespaces: `/std/collections/internal_soa_vector/*`
-  owns canonical wrapper implementation forwarding,
-  `/std/collections/internal_soa_vector_conversions/*` owns canonical
-  conversion implementation forwarding, while
-  `/std/collections/internal_soa_storage/*` remains implementation-facing SoA
-  storage/layout plumbing. The internal wrapper adapter still preserves the
-  internal `SoaVector<T>` backing identity behind the promoted public wrapper
-  surface. The inline-parameter and direct lowerer wrapper-dispatch bridges no
-  longer use rooted `/soa_vector/*`, `/to_aos`, or `/to_aos_ref` spellings as
-  hidden raw fallbacks.
-- Promoted contract complete: the canonical public helper wrapper is
-  authoritative for ordinary construction/read/ref/mutator/conversion helper
-  names, bound field-view borrow-root invalidation, and canonical-only
-  C++/VM/native helper, field-view, and conversion parity coverage. Conversion
-  receiver contracts are spelled through canonical `soa<T>` surfaces, the
-  checked-in ECS example uses canonical `soa` imports, and ordinary
-  public code cannot use `experimental_soa_vector` or
-  `experimental_soa_vector_conversions` imports. The canonical wrapper routes through
-  `/std/collections/internal_soa_vector/*` and canonical conversions route
-  through `/std/collections/internal_soa_vector_conversions/*` instead of
-  directly importing experimental implementation modules.
-- Stdlib-owned metadata: canonical `soa` helper/import/constructor,
-  field-view, and conversion metadata lives in
-  `stdlib/std/collections/surfaces.psmeta` and is consumed through the generic
-  `StdlibSurfaceRegistry` manifest path, while generic SoA substrate metadata
-  remains separate from the public collection surface manifest.
-- Generic substrate boundary: compiler/runtime-owned SoA behavior is limited
-  to field-layout/codegen/introspection, `SoaSchema*` metadata, `SoaColumn<T>`
-  and `SoaFieldView<T>` storage/view carriers, borrow-root and invalidation
-  provenance, and allocation primitives. Public construction, helper routing,
-  conversion naming, import aliases, and compatibility diagnostics belong to
-  stdlib wrappers or focused diagnostics.
-
-### Skipped Doctest Debt Summary
-
-- Retained `doctest::skip(true)` coverage is currently absent from the active
-  queue because no skipped doctest cases remain under `tests/unit`.
-- New skipped doctest coverage must create a new explicit TODO before it lands.
-- The success condition for each lane is re-enable-or-delete; indefinite
-  skipped coverage is not a stable end state.
+- TODO-4591: Add expanded-source provenance ledger
+- TODO-4592: Map parser and semantic diagnostics through source units
+- TODO-4564: Lock scene renderer defaults and UI producer contract
+- TODO-4570: Retire duplicate map2 candidate surface
+- TODO-4571: Add compiler-knowledge inventory for map/vector
+- TODO-4572: Remove vector statement-helper compiler path
+- TODO-4573: Remove compiler-owned map literal lowering
+- TODO-4565: Add minimal scene graph and camera data model
+- TODO-4566: Render flat and rounded-rect scene primitives to BGRA8
+- TODO-4590: Add international text shaping and glyph atlas path
+- TODO-4567: Render first globally lit 3D SDF widget primitive
+- TODO-4568: Emit scene nodes from the existing UI layout/widgets
+- TODO-4569: Present scene-rendered UI through software surface bridge
+- TODO-4574: Remove vector count/access compiler classifiers
+- TODO-4575: Remove map helper/access compiler classifiers
+- TODO-4576: Remove map backing-type compiler classification
+- TODO-4577: Remove vector backing-type compiler classification
+- TODO-4578: Generalize stdlib surface registry away from map/vector IDs
+- TODO-4579: Enforce zero map/vector compiler-knowledge traces
+- TODO-4580: Replace private source-lock tests with public contracts
+- TODO-4581: Split lowerer meaning from syntax provenance
+- TODO-4582: Add semantic-product consumer coverage matrix
+- TODO-4583: Add IR schema/version contract
+- TODO-4593: Carry source-unit provenance into IR and VM debug maps
+- TODO-4584: Generalize backend capability gating
+- TODO-4585: Manifest-drive stdlib module inclusion
+- TODO-4586: Define diagnostic stability tiers
+- TODO-4587: Extract shared compile-time/runtime VM kernel boundary
+- TODO-4588: Add pass/phase invalidation manifest beyond semantics
+- TODO-4589: Add architecture health dashboard script
 
 ### Task Blocks
+
+- [ ] TODO-4564: Lock scene renderer defaults and UI producer contract
+  - owner: ai
+  - created_at: 2026-05-24
+  - phase: Scene graph renderer and UI presentation
+  - parallel_track: scene-renderer
+  - scope: Document the scene-graph renderer boundary that makes UI a scene
+    producer instead of a special-purpose renderer, and lock the first
+    rendering invariants: `Camera` projection config, rect/layout UI
+    interaction, SDF geometry/coverage, material-owned color, international 2D
+    text overlay policy, deterministic order/depth rules, and initial
+    lighting/material defaults.
+  - implementation_notes: Start from `docs/Graphics_API_Design.md`,
+    `docs/PrimeStruct.md`, `stdlib/std/ui/ui.prime`,
+    `examples/shared/software_surface_bridge.h`, and
+    `tests/unit/test_compile_run_examples_docs_locks.cpp`. Preserve the
+    existing `/std/ui/CommandList.serialize()` contract as an adapter path.
+    State that UI hit testing remains rect/layout based while visual rendering
+    may use 2D or 3D SDF scene primitives, and define the deterministic
+    painter/depth tie-break policy before runtime renderer code exists.
+    Preferred defaults: UI scene coordinates map one scene unit to one logical
+    pixel under the first orthographic camera; UI origin is top-left with +x
+    right, +y down, base plane z=0, and positive local z raised toward the
+    viewer; UI painter order remains primary, with local z only used for
+    deterministic tie/depth metadata unless a future depth group opts in.
+  - acceptance:
+    - Docs define the initial `/std/scene` or equivalent scene boundary:
+      `Scene`, `Node`, `Transform`, `Camera`, `Material`, `Light`, and
+      primitive descriptors.
+    - Docs specify that `Camera` has a projection mode/config rather than a
+      separate public `OrthographicCamera` type, and that orthographic is the
+      first supported projection.
+    - Docs define the default UI coordinate mapping: one scene unit equals one
+      logical pixel, origin is top-left, +x is right, +y is down, z=0 is the UI
+      base plane, and positive local z raises visual geometry toward the viewer.
+    - Docs specify that materials own color, SDFs produce coverage or normals,
+      and differently colored commands do not smooth-blend implicit materials.
+    - Docs specify that 2D SDFs act as coverage masks painted source-over, while
+      3D SDFs may blend geometry, depth, and normals only under explicit
+      material assignment.
+    - Docs describe UI as rect/state/event logic that emits scene nodes for
+      presentation, while keeping existing command-list serialization stable.
+    - Docs define deterministic scene ordering, including how painter order,
+      local z/depth, and equal-depth ties are resolved for UI presentation.
+    - Docs specify that text remains a 2D overlay/primitive in the first UI
+      scene path, not a 3D SDF or mesh problem, but must support
+      international shaping, bidi ordering, fallback fonts, and deterministic
+      glyph atlas/raster output from the first presented UI path.
+    - Docs define the native text dependency boundary: HarfBuzz-class shaping,
+      FreeType-class glyph loading/rasterization, and an ICU/FriBidi-class
+      Unicode bidi/boundary service stay behind renderer-owned wrapper APIs,
+      with no third-party types exposed through PrimeStruct source APIs.
+    - Docs define the first global UI light rig as a fixed ambient-plus-key
+      setup: ambient weight 0.55, key weight 0.45, key direction from
+      upper-left/front, no shadows, no stochastic sampling, and no author
+      lights in the first slice.
+    - Docs define initial material defaults: base color from the primitive/UI
+      state, opacity 1.0, shade strength 1.0, no texture slots, and no implicit
+      material interpolation across SDF blends.
+    - Source-lock coverage pins the new boundary and rejects stale wording that
+      frames the work as only a UI-specific software renderer.
+  - stop_rule: Stop once the architecture contract is documented and locked by
+    tests, without adding runtime renderer code in this slice.
+
+- [ ] TODO-4565: Add minimal scene graph and camera data model
+  - owner: ai
+  - created_at: 2026-05-24
+  - phase: Scene graph renderer and UI presentation
+  - depends_on: TODO-4564
+  - scope: Add the first source-level scene graph data model with deterministic
+    node ordering, local transforms, optional local z/order metadata,
+    material/light handles, primitive handles, and a camera projection config
+    whose only implemented render mode is orthographic.
+  - implementation_notes: Prefer a narrow stdlib surface such as
+    `stdlib/std/scene/scene.prime` plus focused compile-run tests. Keep any C++
+    helper/parser/lowerer additions generic and avoid hard-coding UI widget
+    names into the scene model. The scene graph should be serializable or
+    otherwise inspectable enough for deterministic golden tests. Use `f32`
+    scene units for transforms/camera/material parameters; the UI adapter maps
+    existing `i32` layout rect pixels into those scene units.
+  - acceptance:
+    - A small PrimeStruct program can build a scene with parented nodes,
+      transforms, one camera, one light rig, and one material.
+    - Node traversal and serialized/inspected output are deterministic across
+      repeated VM/native/C++ emitter runs.
+    - Orthographic projection parameters are represented on `Camera` as a
+      projection mode/config; perspective is either absent from construction or
+      rejected with a deterministic unsupported diagnostic.
+    - A default UI camera/viewport fixture proves one scene unit maps to one
+      logical pixel with the documented top-left, y-down UI orientation.
+    - Tests cover parent-before-child ordering, deterministic render-order/z
+      metadata, local transform composition metadata, and stable
+      material/light/primitive ids.
+  - stop_rule: Stop once scene data can be authored and inspected
+    deterministically; do not add pixel rendering in this slice.
+
+- [ ] TODO-4566: Render flat and rounded-rect scene primitives to BGRA8
+  - owner: ai
+  - created_at: 2026-05-24
+  - phase: Scene graph renderer and UI presentation
+  - depends_on: TODO-4565
+  - scope: Add a deterministic CPU BGRA8 renderer for the minimal scene graph,
+    covering flat rect/plane primitives and 2D rounded-rect SDF coverage under
+    the orthographic camera.
+  - implementation_notes: Reuse `examples/shared/software_surface_bridge.h` for
+    `SoftwareSurfaceFrame` validation and add a narrow renderer helper under
+    `examples/shared/` or the smallest appropriate runtime/test helper area.
+    Treat SDF distance as coverage for one primitive, then source-over blend
+    the primitive material color; do not add smooth boolean composition between
+    differently colored commands. Follow UI painter order as the primary
+    default; do not add a global depth sort for UI widgets in this slice.
+  - acceptance:
+    - Renderer output for one flat rect and one rounded rect is stable through
+      exact pixel checks or fixed hashes on small BGRA8 buffers.
+    - Rounded-rect rendering uses an analytic 2D SDF or equivalent distance
+      function for edge coverage and radius handling.
+    - Painter order, local z/depth ties, and clipping/target bounds follow the
+      deterministic scene ordering contract.
+    - A fixture proves local z metadata does not accidentally reorder ordinary
+      UI source-over painting outside the documented tie/depth rule.
+    - Tests cover differently colored overlapping 2D primitives as explicit
+      source-over painting, not SDF/material color blending.
+    - Existing `/std/ui/CommandList` golden serialization tests remain
+      unchanged.
+  - stop_rule: Stop once deterministic 2D scene primitives render to BGRA8;
+    leave 3D SDF widgets and presenter wiring to later slices.
+
+- [ ] TODO-4590: Add international text shaping and glyph atlas path
+  - owner: ai
+  - created_at: 2026-05-24
+  - phase: Scene graph renderer and UI presentation
+  - depends_on: TODO-4566
+  - scope: Add the first renderer-private international text pipeline for 2D
+    overlay scene text: Unicode text segmentation/bidi handling, shaped glyph
+    runs, font fallback, glyph rasterization, glyph atlas packing, and
+    deterministic BGRA8 composition under the orthographic UI camera.
+  - implementation_notes: Use wrapper APIs owned by the renderer/text layer so
+    third-party C/C++ types do not leak into PrimeStruct public APIs. Target a
+    HarfBuzz-class shaping backend, FreeType-class font loading/rasterization
+    backend, and ICU/FriBidi-class Unicode bidi/boundary backend. Do not depend
+    on system fonts for tests; add small checked-in fixture fonts with explicit
+    license notes or a documented repo-local font-fixture strategy. Keep text as
+    2D overlay coverage/atlas rendering; do not add 3D SDF text, mesh text, font
+    editing, emoji color-font rendering, or arbitrary OpenType feature UI in
+    this slice.
+  - acceptance:
+    - A renderer-owned API converts UTF-8 text plus font fallback candidates
+      into deterministic positioned glyph runs without exposing third-party
+      library types through stdlib or compiler public APIs.
+    - Tests cover at least Latin with combining marks, Cyrillic or Greek,
+      right-to-left Arabic or Hebrew, and one complex-shaping script fixture
+      using checked-in deterministic fonts.
+    - Font fallback is deterministic: missing glyphs choose the first covering
+      fixture font in a documented fallback list and emit a stable missing-glyph
+      result when no fixture covers the code point.
+    - Glyph rasterization and atlas placement produce stable metrics and
+      pixel/hash output across repeated runs for small BGRA8 buffers.
+    - The build integration documents whether the text libraries are vendored,
+      pinned FetchContent dependencies, or required system packages, and keeps
+      their warnings/includes isolated from PrimeStruct production targets.
+  - stop_rule: Stop once international 2D text can be shaped, rasterized, and
+    composited deterministically for scene text fixtures; leave paragraph layout,
+    color emoji, advanced OpenType controls, and 3D text to later leaves.
+
+- [ ] TODO-4567: Render first globally lit 3D SDF widget primitive
+  - owner: ai
+  - created_at: 2026-05-24
+  - phase: Scene graph renderer and UI presentation
+  - depends_on: TODO-4566
+  - scope: Add the first 3D SDF scene primitive for UI, a single beveled
+    button/slab rendered through the same orthographic camera and a
+    deterministic global light rig.
+  - implementation_notes: Model the primitive as a shallow 3D volume in the
+    widget rect's local space. Derive normals from the SDF gradient or a
+    documented analytic approximation, and use a fixed light/material model
+    with no stochastic sampling. The pressed state should adjust depth or
+    bevel/material parameters explicitly, without introducing implicit material
+    interpolation between SDF fields. Start with the documented default global
+    UI light rig and default material fields; for the first button primitive,
+    prefer bevel radius 4 logical pixels, normal depth 3 logical pixels, and
+    pressed depth 1 logical pixel unless the TODO-4564 contract documents a
+    better reasoned default.
+  - acceptance:
+    - The renderer produces stable pixel/hash output for normal and pressed
+      states of the 3D SDF button primitive.
+    - Lighting is global and deterministic, with documented ambient and
+      directional/area-light-like terms.
+    - The default button fixture uses the documented initial bevel/depth
+      defaults and proves pressed state changes geometry/depth rather than
+      relying on material color blending.
+    - Material color remains owned by the primitive/material and is not inferred
+      from blending SDF fields across unrelated shapes.
+    - Any 3D SDF blending is limited to geometry/depth/normals unless a later
+      explicit material-composition rule is documented.
+    - Tests prove the 3D primitive can share a scene with 2D primitives under
+      the same camera and render order rules.
+  - stop_rule: Stop after one globally lit 3D UI primitive is deterministic and
+    covered; do not add general mesh assets, animation, or free-camera behavior.
+
+- [ ] TODO-4568: Emit scene nodes from the existing UI layout/widgets
+  - owner: ai
+  - created_at: 2026-05-24
+  - phase: Scene graph renderer and UI presentation
+  - depends_on: TODO-4567, TODO-4590
+  - scope: Add an adapter from the current `/std/ui` layout/widget layer to the
+    scene graph so UI rects and widget state produce scene nodes for flat and
+    raised presentation.
+  - implementation_notes: Keep the existing `CommandList`, `HtmlCommandList`,
+    `UiEventStream`, and `LayoutTree` contracts stable. Add adapter helpers
+    rather than replacing command serialization. Start with labels/panels as
+    flat primitives and buttons as the first raised 3D SDF primitive; hit
+    testing, focus, and events remain layout-node based. Label/text output
+    should emit shaped international 2D overlay scene primitives through the
+    TODO-4590 text path; do not make text a 3D SDF primitive in this slice.
+  - acceptance:
+    - A checked-in PrimeStruct fixture builds a small UI layout and emits a
+      deterministic scene representation.
+    - Existing command-list, HTML adapter, event-stream, and layout golden tests
+      continue to pass unchanged.
+    - Scene emission preserves stable node ids or a documented mapping from UI
+      layout nodes to scene nodes.
+    - Docs and tests distinguish logical UI rects/state/events from scene
+      presentation primitives, including 3D-looking widgets.
+    - Label/text scene emission follows the documented international 2D overlay
+      policy, uses shaped glyph runs, and has deterministic ordering over
+      panels/buttons.
+  - stop_rule: Stop once the UI-to-scene adapter covers one small panel/button
+    fixture; leave host presentation and broader controls to later slices.
+
+- [ ] TODO-4569: Present scene-rendered UI through software surface bridge
+  - owner: ai
+  - created_at: 2026-05-24
+  - phase: Scene graph renderer and UI presentation
+  - depends_on: TODO-4568
+  - scope: Wire the scene renderer output into the existing BGRA8 software
+    surface bridge so a real PrimeStruct-authored UI scene can be presented
+    through the native/Metal host path.
+  - implementation_notes: Start from `examples/shared/software_surface_bridge.h`,
+    `examples/native/spinning_cube/window_host.mm`,
+    `examples/metal/spinning_cube/metal_host.mm`, and the existing
+    `--software-surface-demo` tests. Keep the deterministic demo frame as a
+    fallback or separate mode, but add a mode that renders the UI scene output
+    instead of the checker/gradient buffer.
+  - acceptance:
+    - A host/demo mode renders a PrimeStruct-authored UI scene into a
+      `SoftwareSurfaceFrame` and uploads/presents that BGRA8 output through the
+      existing bridge.
+    - Tests cover command-line mode validation and deterministic renderer output
+      before any GUI-dependent smoke step.
+    - macOS/Metal visual smoke remains explicitly skippable on unsupported
+      runners while source-level and pixel/hash coverage still run where
+      possible.
+    - Docs describe the path from `/std/ui` layout to scene graph to BGRA8
+      surface to presenter without making UI events depend on rendered pixels
+      or 3D ray tests.
+    - The demo fixture uses the default orthographic UI coordinate mapping,
+      painter-order policy, global light rig, and international 2D text overlay
+      policy.
+  - stop_rule: Stop once one PrimeStruct UI scene reaches the software-surface
+    presenter path with deterministic non-GUI coverage.
+
+- [ ] TODO-4570: Retire duplicate map2 candidate surface
+  - owner: ai
+  - created_at: 2026-05-24
+  - phase: Map/vector compiler-independence
+  - parallel_track: collection-stdlib-cleanup
+  - scope: Remove the temporary `map2` replacement candidate now that
+    `stdlib/std/collections/map.prime` is the standalone canonical map
+    implementation, and lock that public `map.prime` does not delegate to the
+    old map implementation or to `map2`.
+  - implementation_notes: Start with `stdlib/std/collections/map.prime`,
+    `stdlib/std/collections/map2.prime`, `stdlib/std/collections/surfaces.psmeta`,
+    map compile-run fixtures, and any source-lock tests that mention map2.
+    This is a stdlib cleanup slice only; do not edit compiler map/vector
+    lowering in this task.
+  - acceptance:
+    - `stdlib/std/collections/map2.prime` is removed or made unreachable from
+      public imports, with all checked-in references updated.
+    - `stdlib/std/collections/map.prime` remains a standalone `.prime`
+      implementation backed by ordinary vector helpers and does not import
+      `map2`, `experimental_map`, or a compiler-native map implementation.
+    - Focused map stdlib tests still cover construction, count, contains,
+      try/get, unsafe get, insert/update, and reference helpers through
+      `/std/collections/map/*`.
+    - A source-lock test proves the active TODO queue no longer points at
+      `map2` as a pending replacement strategy.
+  - stop_rule: Stop once the duplicate map2 surface is gone or explicitly
+    unreachable and canonical map tests pass; leave compiler special-case
+    deletion to the later map/vector compiler-independence leaves.
+
+- [ ] TODO-4571: Add compiler-knowledge inventory for map/vector
+  - owner: ai
+  - created_at: 2026-05-24
+  - phase: Map/vector compiler-independence
+  - parallel_track: collection-audit
+  - scope: Add an honest audit for PrimeStruct map/vector compiler knowledge
+    that is broader than the current surface-trace checks, including bridge
+    keys, helper recognizers, map/vector literal paths, and backing-layout
+    classifiers under `src/` and `include/`.
+  - implementation_notes: The current passing checks
+    `scripts/check_vector_surface_traces.py` and
+    `scripts/check_map_surface_strict_audit.py` prove only that direct
+    production surface traces are absent. The new audit should also inventory
+    patterns such as `collections.vector_helpers`, `collections.map_helpers`,
+    `isVectorBuiltinName`, `tryEmitVectorStatementHelper`,
+    `validateVectorStatementHelper`, `isExperimentalMapStructTypePath`,
+    `MapValue`, `map literal`, `resolveExperimentalMapValueTarget`, and
+    `isMapValue`. Start as a nonzero inventory plus `--enforce-zero` mode, and
+    only wire the zero mode into routine release validation after TODO-4578.
+  - acceptance:
+    - A script reports current PrimeStruct map/vector compiler-knowledge
+      traces in tracked `src/` and `include/` files while ignoring ordinary
+      C++ `std::map`, `std::vector`, source-map terminology, tests, docs,
+      and stdlib `.prime` files.
+    - The script has self-tests proving it catches bridge-key strings,
+      vector statement-helper APIs, map literal diagnostics/lowering, map
+      backing-type classifiers, and registry enum/id special cases.
+    - The script supports an `--enforce-zero` mode that fails on any remaining
+      map/vector compiler-knowledge trace but is not yet required by the
+      routine release gate while the deletion leaves remain open.
+    - `docs/todo.md` points follow-up leaves at the inventory categories so
+      later workers can delete real special cases instead of chasing raw grep
+      noise.
+  - stop_rule: Stop once the inventory and self-tests are committed and the
+    current nonzero trace categories are actionable; do not start deleting
+    semantic or lowerer special cases in this slice.
+
+- [ ] TODO-4572: Remove vector statement-helper compiler path
+  - owner: ai
+  - created_at: 2026-05-24
+  - phase: Map/vector compiler-independence
+  - parallel_track: vector-special-case-deletion
+  - scope: Delete the compiler-owned vector statement-helper validation and
+    lowering path so `push`, `pop`, `reserve`, `clear`, `remove_at`, and
+    `remove_swap` on vectors are resolved as ordinary imported `.prime`
+    helper calls.
+  - implementation_notes: Start with
+    `src/semantics/SemanticsValidatorStatementVectorHelpers.cpp`,
+    `src/semantics/SemanticsValidatorExprVectorHelpers.cpp`,
+    `src/ir_lowerer/IrLowererFlowVectorHelpers.cpp`,
+    `src/ir_lowerer/IrLowererFlowVectorResolutionHelpers.cpp`,
+    `src/ir_lowerer/IrLowererLowerStatementsCallsStep.cpp`, and
+    `src/ir_lowerer/IrLowererLowerInlineCalls.h`. Preserve ordinary
+    parser/import resolution and the `.prime` implementations in
+    `stdlib/std/collections/vector.prime` and
+    `stdlib/std/collections/internal_vector.prime`.
+  - acceptance:
+    - Production C++ no longer declares or calls
+      `validateVectorStatementHelper`, `tryEmitVectorStatementHelper`, or a
+      vector-statement-only helper resolver.
+    - Vector mutator calls compile and run through ordinary `.prime` helper
+      definitions when those helpers are imported, with deterministic
+      missing-import diagnostics when they are not.
+    - Existing vector construction/count/access behavior remains covered by
+      focused VM/native/C++ emitter tests.
+    - The compiler-knowledge inventory from TODO-4571, if present, shows the
+      vector statement-helper category at zero.
+  - stop_rule: Stop once vector statement mutators are ordinary helper calls
+    and focused vector tests pass; leave vector backing-layout classification
+    and registry metadata cleanup to later leaves.
+
+- [ ] TODO-4573: Remove compiler-owned map literal lowering
+  - owner: ai
+  - created_at: 2026-05-24
+  - phase: Map/vector compiler-independence
+  - parallel_track: map-special-case-deletion
+  - scope: Remove C++ semantic and lowering branches that treat `map` literal
+    construction as a compiler-owned collection literal instead of an ordinary
+    call into `/std/collections/map/*` `.prime` code.
+  - implementation_notes: Start with
+    `src/semantics/SemanticsValidatorExprCollectionLiterals.cpp`,
+    `src/semantics/SemanticsValidatorExprResolvedCallArguments.cpp`,
+    `src/ir_lowerer/IrLowererOperatorCollectionMutationHelpers.cpp`, and
+    compile-run tests that exercise `map<K, V>(...)`, `entry<K, V>(...)`, and
+    assignment-pair syntax. Prefer making source examples call explicit
+    `.prime` constructors/helpers over preserving a compiler-side map literal
+    fast path.
+  - acceptance:
+    - Production C++ no longer has `collectMapLiteralEntries`, map-literal
+      key/value validation diagnostics, or native lowering that constructs
+      map storage slots directly.
+    - Public map construction tests still pass through ordinary
+      `/std/collections/map/map` and `/std/collections/map/entry`
+      definitions.
+    - Invalid map construction reports diagnostics from ordinary function
+      resolution/type checking rather than map-literal-specific C++ branches.
+    - The compiler-knowledge inventory from TODO-4571, if present, shows the
+      map-literal category at zero.
+  - stop_rule: Stop once map construction is no longer a compiler-owned
+    literal/lowering path and focused map construction tests pass; leave map
+    helper/access classifiers to TODO-4575 and map backing-type recognition
+    cleanup to TODO-4576.
+
+- [ ] TODO-4574: Remove vector count/access compiler classifiers
+  - owner: ai
+  - created_at: 2026-05-24
+  - phase: Map/vector compiler-independence
+  - depends_on: TODO-4572
+  - scope: Remove compiler-owned vector count/capacity/access helper
+    classifiers after vector mutator statements have been routed through
+    ordinary `.prime` helper calls.
+  - implementation_notes: Start with `isVectorBuiltinName` callers that handle
+    count, capacity, `at`, and `at_unsafe` in `src/semantics`,
+    `src/ir_lowerer`, and `src/emitter`, especially
+    `SemanticsValidatorExprCountCapacityBuiltins.cpp`,
+    `SemanticsValidatorExprCollectionCountCapacity.cpp`,
+    `IrLowererCountAccessClassifiers.cpp`,
+    `IrLowererCountAccessHelpers.cpp`, `IrLowererNativeTailDispatch.cpp`, and
+    emitter count/access rewrite helpers. Do not touch vector backing-layout
+    path builders in this slice unless they become dead after the classifier
+    deletion.
+  - acceptance:
+    - Production C++ no longer uses `isVectorBuiltinName` or equivalent
+      vector-specific classifier branches for count, capacity, `at`, or
+      `at_unsafe`.
+    - Vector count/capacity/access calls compile and run through ordinary
+      imported `.prime` helper definitions, with deterministic missing-import
+      diagnostics when helpers are unavailable.
+    - Focused VM/native/C++ emitter tests cover vector construction, count,
+      capacity, safe access, unsafe access, and statement mutators after the
+      classifier deletion.
+    - The compiler-knowledge inventory from TODO-4571, if present, shows the
+      vector helper-classifier category at zero, excluding backing-layout
+      classifiers left for TODO-4577.
+  - stop_rule: Stop once vector helper names are no longer compiler builtin
+    classifiers and focused vector behavior still passes; leave vector
+    backing-type recognition to TODO-4577.
+
+- [ ] TODO-4575: Remove map helper/access compiler classifiers
+  - owner: ai
+  - created_at: 2026-05-24
+  - phase: Map/vector compiler-independence
+  - depends_on: TODO-4573
+  - scope: Remove compiler-owned map helper/access classifiers after map
+    construction literals have been routed through ordinary `.prime`
+    constructors and helpers.
+  - implementation_notes: Start with `isKeyValueBuiltinName`,
+    map-specific access/contains/tryAt/insert helper classifiers, map helper
+    bridge-key dispatch checks, and map-specific access target resolution in
+    `src/semantics`, `src/ir_lowerer`, and `src/emitter`. Keep generic
+    key/value wording only when it applies to non-map collection-pair facts
+    and does not recognize `/std/collections/map/*` as a compiler builtin.
+  - acceptance:
+    - Production C++ no longer uses `isKeyValueBuiltinName` or equivalent
+      map-specific helper/access classifier branches for count, contains,
+      tryAt, at, at_unsafe, insert, or their reference variants.
+    - Public map helper calls compile and run through ordinary imported
+      `.prime` definitions, with deterministic missing-import diagnostics when
+      helpers are unavailable.
+    - Focused VM/native/C++ emitter tests cover map construction, count,
+      contains, tryAt, at, at_unsafe, insert, and reference helpers after the
+      classifier deletion.
+    - The compiler-knowledge inventory from TODO-4571, if present, shows the
+      map helper/access-classifier category at zero, excluding backing-layout
+      classifiers left for TODO-4576.
+  - stop_rule: Stop once map helper names are no longer compiler builtin
+    classifiers and focused map behavior still passes; leave map backing-type
+    recognition to TODO-4576.
+
+- [ ] TODO-4576: Remove map backing-type compiler classification
+  - owner: ai
+  - created_at: 2026-05-24
+  - phase: Map/vector compiler-independence
+  - depends_on: TODO-4575
+  - scope: Delete C++ recognition of map backing structs and `MapValue`
+    shapes, replacing it with generic struct layout, semantic product, and
+    ordinary helper-call facts.
+  - implementation_notes: Start with `isExperimentalMapStructTypePath`,
+    `inferPublishedExperimentalMapStructPathFromConstructorPath`,
+    `resolveExperimentalMapValueTarget`, `isMapValue`, and any
+    `MapValue`-specific paths in `src/ir_lowerer`, `src/semantics`, and
+    `src/emitter`. Do this only after map helper/access classifiers are gone,
+    so the remaining matches are backing/layout responsibilities rather than
+    public helper dispatch.
+  - acceptance:
+    - Production C++ no longer checks for `MapValue`, experimental map backing
+      paths, `isExperimentalMapStructTypePath`,
+      `resolveExperimentalMapValueTarget`, or `isMapValue`.
+    - Map helper calls, returns, access, and insertion behavior still compile
+      through `.prime` definitions and generic struct/layout facts.
+    - Existing map backing/source trace tests are updated or replaced so they
+      assert zero compiler backing knowledge instead of maintaining an
+      allowance inventory.
+    - The compiler-knowledge inventory from TODO-4571 shows the map
+      backing-classifier category at zero.
+  - stop_rule: Stop once map backing identity is no longer recognized by
+    compiler-specific C++ branches and focused map runtime tests pass.
+
+- [ ] TODO-4577: Remove vector backing-type compiler classification
+  - owner: ai
+  - created_at: 2026-05-24
+  - phase: Map/vector compiler-independence
+  - depends_on: TODO-4574
+  - scope: Delete C++ recognition of vector backing structs and specialized
+    `Vector` storage paths, replacing it with generic struct layout,
+    semantic product, and ordinary helper-call facts.
+  - implementation_notes: Start with
+    `specializedExperimentalVectorStructPathForElementType`,
+    `experimentalCollectionTypePath("vector", "Vector")`,
+    `experimentalCollectionMemberRoot("vector")`,
+    vector local capacity diagnostics, and vector backing predicates in
+    `src/ir_lowerer`, `src/semantics`, and `src/emitter`. Do this only after
+    vector helper classifiers are gone, so remaining matches are
+    backing/layout responsibilities rather than public helper dispatch.
+    Preserve ordinary C++ `std::vector` container use.
+  - acceptance:
+    - Production C++ no longer checks for PrimeStruct `Vector` backing paths,
+      specialized vector struct path builders, or vector-only layout branches.
+    - Vector construction, count, capacity, access, and mutation tests still
+      pass through `.prime` definitions and generic struct/layout facts.
+    - Vector capacity/allocation diagnostics either come from `.prime` code or
+      from generic runtime/allocation diagnostics, not vector-specific C++
+      branches.
+    - The compiler-knowledge inventory from TODO-4571 shows the vector
+      backing-classifier category at zero.
+  - stop_rule: Stop once vector backing identity is no longer recognized by
+    compiler-specific C++ branches and focused vector runtime tests pass.
+
+- [ ] TODO-4578: Generalize stdlib surface registry away from map/vector IDs
+  - owner: ai
+  - created_at: 2026-05-24
+  - phase: Map/vector compiler-independence
+  - depends_on: TODO-4576, TODO-4577
+  - scope: Remove map/vector-specific C++ stdlib surface IDs, helper APIs,
+    and bridge-key branches so C++ treats stdlib surface metadata as generic
+    manifest data instead of named collection knowledge.
+  - implementation_notes: Start with `include/primec/StdlibSurfaceRegistry.h`,
+    `src/StdlibSurfaceRegistry.cpp`, `stdlib/std/collections/surfaces.psmeta`,
+    `StdlibCollectionSurfaceHelpers.h`, and all callers of
+    `findStdlibSurfaceMetadataByBridgeKey("collections.vector_helpers")` or
+    `findStdlibSurfaceMetadataByBridgeKey("collections.map_helpers")`.
+    Keep a generic manifest loader/resolver if compiler phases still need
+    import/visibility metadata, but remove public enum constants and helper
+    functions whose names encode map or vector.
+  - acceptance:
+    - `StdlibSurfaceId` and registry helper APIs no longer contain
+      map/vector-specific names such as `CollectionsVector*` or
+      `CollectionsMap*`.
+    - Production C++ no longer hard-codes `collections.vector_helpers`,
+      `collections.vector_constructors`, `collections.map_helpers`, or
+      `collections.map_constructors`.
+    - Map/vector import visibility and helper resolution still work through
+      generic manifest data loaded from `.psmeta` or equivalent stdlib-owned
+      files.
+    - Focused tests prove adding or renaming a stdlib collection surface only
+      requires stdlib metadata/test updates, not new C++ enum/API branches.
+  - stop_rule: Stop once map/vector stdlib metadata is data-driven from the
+    compiler's point of view and focused map/vector import/helper tests pass.
+
+- [ ] TODO-4579: Enforce zero map/vector compiler-knowledge traces
+  - owner: ai
+  - created_at: 2026-05-24
+  - phase: Map/vector compiler-independence
+  - depends_on: TODO-4571, TODO-4578
+  - scope: Turn the broad compiler-knowledge inventory into the release-gate
+    zero audit for PrimeStruct map/vector special-casing under production
+    `src/` and `include/`.
+  - implementation_notes: Start from the TODO-4571 audit script and wire its
+    zero mode into CTest/CMake only after the deletion leaves have removed
+    their categories. Keep existing narrow surface-trace scripts only if they
+    still catch a distinct regression; otherwise replace them with the broader
+    zero gate and self-tests.
+  - acceptance:
+    - Routine release validation fails on any production C++ map/vector
+      compiler-knowledge trace, including bridge keys, helper recognizers,
+      literal paths, backing-layout classifiers, and map/vector-specific
+      stdlib registry names.
+    - The gate explicitly ignores ordinary C++ containers (`std::map`,
+      `std::vector`), source-map terminology, tests, docs, and stdlib
+      `.prime`/`.psmeta` files.
+    - C++ tests may still mention map/vector to test stdlib behavior, but
+      production compiler/runtime code no longer contains PrimeStruct
+      map/vector special cases.
+    - `docs/todo.md` and `docs/PrimeStruct.md` state the final invariant:
+      map/vector semantics and implementation live in stdlib `.prime` and
+      metadata files, while C++ treats them as ordinary included stdlib code.
+  - stop_rule: Stop once the zero gate is wired into routine validation and
+    focused map/vector stdlib tests plus the new audit pass.
+
+- [ ] TODO-4580: Replace private source-lock tests with public contracts
+  - owner: ai
+  - created_at: 2026-05-24
+  - phase: Architecture hardening
+  - scope: Replace one cluster of temporary private-source architecture locks
+    with public semantic-product, IR, diagnostic, or testing-helper contracts.
+  - implementation_notes: Start from `docs/source_lock_inventory.md`,
+    `tests/unit/test_ir_pipeline_backends_graph_contexts.h`, and the matching
+    source-lock shard. Pick one bounded cluster, add public contract coverage
+    first, then remove or narrow the private-source string assertions and update
+    the inventory.
+  - acceptance:
+    - One inventory row classified as a temporary migration lock is replaced or
+      materially reduced by public API, semantic-product dump, IR, or diagnostic
+      contract coverage.
+    - The replacement test fails on the intended behavior regression without
+      reading private `src/` files as the primary assertion surface.
+    - `docs/source_lock_inventory.md` records the retired lock or the remaining
+      reduced private-source dependency.
+    - Focused release-mode tests covering the changed contract pass.
+  - stop_rule: Stop after one source-lock cluster is replaced or narrowed; do
+    not attempt a repo-wide source-lock migration in this slice.
+
+- [ ] TODO-4581: Split lowerer meaning from syntax provenance
+  - owner: ai
+  - created_at: 2026-05-24
+  - phase: Architecture hardening
+  - scope: Introduce an explicit lowering context that separates
+    semantic-product meaning from AST-owned syntax provenance for one lowerer
+    stage or helper family.
+  - implementation_notes: Start from `src/IrPreparation.cpp`,
+    `include/primec/IrLowerer.h`, `src/ir_lowerer/IrLowererLower.cpp`, and
+    `src/ir_lowerer/IrLowererSemanticProductTargetAdapters.*`. Choose a narrow
+    consumer where both `Program` and `SemanticProgram` are currently consulted,
+    and make the semantic-product lookup the only authority for meaning while
+    retaining AST spans/source-map data only as provenance.
+  - acceptance:
+    - The selected lowering helper receives a context or inputs that make
+      meaning-vs-provenance ownership explicit.
+    - Missing semantic-product meaning for the selected helper fails closed with
+      a deterministic diagnostic instead of silently re-deriving from AST state.
+    - Syntax spans, source-map data, or debug provenance still come from the AST
+      where needed.
+    - Focused IR/lowering tests cover both positive lowering and stale/missing
+      semantic-product facts for the selected helper.
+  - stop_rule: Stop after one lowerer helper family has the explicit split and
+    focused coverage; leave broader lowerer entrypoint reshaping to follow-up
+    slices.
+
+- [ ] TODO-4582: Add semantic-product consumer coverage matrix
+  - owner: ai
+  - created_at: 2026-05-24
+  - phase: Architecture hardening
+  - depends_on: TODO-4581
+  - scope: Add a checked inventory mapping semantic-product fact families to
+    production consumers and coverage for positive plus stale/missing-fact
+    behavior.
+  - implementation_notes: Start from `include/primec/SemanticProduct.h`,
+    `src/SemanticProduct.cpp`, `src/ir_lowerer/`, and existing negative
+    semantic-product tests in `tests/unit/test_ir_pipeline_backends_*`.
+    Prefer a small checked document or script output that can be source-locked
+    until a richer manifest exists.
+  - acceptance:
+    - Each published semantic-product fact family has an inventory row naming
+      known production consumers or explicitly stating no production consumer.
+    - At least three fact families have positive consumer coverage and
+      stale/missing-fact coverage referenced from the inventory.
+    - The inventory identifies gaps as concrete follow-up candidates without
+      adding broad umbrella TODOs.
+    - Focused backend IR or semantic-product tests pass.
+  - stop_rule: Stop once the first consumer matrix is checked and validates real
+    coverage for at least three representative fact families.
+
+- [ ] TODO-4583: Add IR schema/version contract
+  - owner: ai
+  - created_at: 2026-05-24
+  - phase: Architecture hardening
+  - scope: Define a versioned IR serialization contract with golden
+    compatibility coverage and explicit migration expectations for
+    format-affecting changes.
+  - implementation_notes: Start from `include/primec/Ir.h`,
+    `src/IrSerializer.cpp`, `src/IrPrinter.cpp`, and
+    `tests/unit/test_ir_pipeline_serialization_*`. Keep the first slice narrow:
+    version metadata, one golden fixture, and one rejection or migration note
+    for incompatible versions.
+  - acceptance:
+    - Serialized IR carries or is paired with an explicit schema/contract version.
+    - Golden serialization coverage proves stable output for one representative
+      module with functions, strings, source map, and struct layout metadata.
+    - Incompatible or unknown version handling is deterministic and covered by a
+      focused test or documented as intentionally unsupported.
+    - Docs state when an IR format change must update version/migration notes.
+  - stop_rule: Stop after the initial version contract and representative
+    golden coverage land; do not redesign the IR format in this slice.
+
+- [ ] TODO-4584: Generalize backend capability gating
+  - owner: ai
+  - created_at: 2026-05-24
+  - phase: Architecture hardening
+  - scope: Replace one ad hoc backend/profile support check with a generic
+    backend capability registry used by diagnostics and tests.
+  - implementation_notes: Start from graphics substrate target checks in
+    `src/CompilePipeline.cpp`, backend profile helpers, and
+    `include/primec/IrBackends.h`. The first registry should cover one
+    capability family such as graphics runtime substrate availability without
+    changing supported targets.
+  - acceptance:
+    - A backend/profile capability table or API describes the selected
+      capability for VM, native, Wasm, GLSL/SPIR-V, and C++/IR aliases as
+      applicable.
+    - The selected ad hoc check is routed through the registry and still emits
+      the same deterministic unsupported-target diagnostic.
+    - Focused tests cover at least one supported target and one unsupported
+      target for the capability.
+    - Docs or code comments identify how future capability gates should use the
+      registry.
+  - stop_rule: Stop once one backend capability family is registry-driven and
+    covered; leave broader backend policy migration to later slices.
+
+- [ ] TODO-4585: Manifest-drive stdlib module inclusion
+  - owner: ai
+  - created_at: 2026-05-24
+  - phase: Architecture hardening
+  - scope: Replace one stdlib auto-include heuristic with checked manifest data
+    for module roots, dependencies, public imports, or backend support.
+  - implementation_notes: Start from `appendStdlibModuleSources` and
+    `collectStdlibAutoIncludeKeys` in `src/CompilePipeline.cpp`, plus existing
+    `.psmeta` stdlib metadata. Keep the first manifest field small and
+    deterministic, and preserve current import behavior.
+  - acceptance:
+    - One currently hard-coded stdlib inclusion rule is represented in a checked
+      manifest or manifest-like metadata file.
+    - The compile pipeline reads that metadata deterministically and preserves
+      current successful imports and diagnostics.
+    - Tests cover direct import, wildcard import, and missing/invalid metadata
+      behavior for the selected rule.
+    - Docs or source-lock coverage describe the manifest field so future stdlib
+      modules can follow it.
+  - stop_rule: Stop after one inclusion rule is manifest-driven and covered; do
+    not convert the entire stdlib loader in this slice.
+
+- [ ] TODO-4586: Define diagnostic stability tiers
+  - owner: ai
+  - created_at: 2026-05-24
+  - phase: Architecture hardening
+  - scope: Classify diagnostics into stable user-facing contracts and
+    implementation diagnostics for one compiler phase, then lock the stable tier
+    with code/message/span coverage.
+  - implementation_notes: Start from `include/primec/Diagnostics.h`,
+    semantic/parser diagnostic tests, and `--collect-diagnostics` behavior.
+    Choose one phase such as parser errors, import errors, or semantic
+    call-resolution diagnostics.
+  - acceptance:
+    - The selected diagnostic phase has documented stability tiers for code,
+      message text, primary span, and notes.
+    - Stable-tier diagnostics have focused tests that assert code and span
+      behavior, not only raw message substrings.
+    - Implementation-tier diagnostics are clearly allowed to change without
+      implying a public contract break.
+    - Existing diagnostics for the selected phase remain deterministic.
+  - stop_rule: Stop after one diagnostic phase has tier docs and focused
+    coverage; leave other phases to future slices.
+
+- [ ] TODO-4587: Extract shared compile-time/runtime VM kernel boundary
+  - owner: ai
+  - created_at: 2026-05-24
+  - phase: Architecture hardening
+  - scope: Make one compile-time evaluation path and one `primevm` runtime path
+    share a documented VM-kernel API instead of incidental runtime state.
+  - implementation_notes: Start from `include/primec/CompileTimeEvaluation.h`,
+    `src/CompileTimeEvaluation.cpp`, `src/VmExecutionKernel.cpp`, and
+    `tests/unit/test_compile_time_evaluation_facade.cpp`. Keep the first slice
+    to arithmetic/call/frame mechanics or another small common kernel surface.
+  - acceptance:
+    - A named shared kernel API is used by both compile-time evaluation and
+      runtime VM execution for the selected behavior.
+    - Compile-time evaluation remains unable to perform runtime-only effects or
+      launch final backend IR.
+    - Runtime VM behavior and debug execution for the selected behavior remain
+      covered.
+    - Focused CT-eval and VM tests prove parity where the kernel is shared and
+      rejection where compile-time effects are not allowed.
+  - stop_rule: Stop once one shared kernel behavior is extracted and covered;
+    do not merge compile-time and runtime hosts broadly.
+
+- [ ] TODO-4588: Add pass/phase invalidation manifest beyond semantics
+  - owner: ai
+  - created_at: 2026-05-24
+  - phase: Architecture hardening
+  - scope: Extend the semantic validation manifest idea to one IR
+    preparation, lowering, or emitter phase with explicit inputs, outputs,
+    mutation, and invalidation rules.
+  - implementation_notes: Start from `include/primec/SemanticValidationPlan.h`,
+    `src/semantics/SemanticValidationPlan.cpp`, `src/IrPreparation.cpp`, and
+    the selected phase implementation. Prefer a public header manifest rather
+    than source-locking private control flow.
+  - acceptance:
+    - One non-semantics phase publishes a manifest entry or manifest family with
+      phase name, input ownership, output ownership, mutation action, and
+      invalidation/consumer notes.
+    - Tests assert the manifest shape and at least one ordering or ownership
+      invariant relevant to the selected phase.
+    - Any existing source-lock assertion for the same phase is narrowed,
+      replaced, or explicitly documented as still temporary.
+    - Docs explain how future phase changes should update the manifest.
+  - stop_rule: Stop after one non-semantics phase has a manifest-backed
+    contract and focused tests.
+
+- [ ] TODO-4589: Add architecture health dashboard script
+  - owner: ai
+  - created_at: 2026-05-24
+  - phase: Architecture hardening
+  - scope: Add a repo-local script that reports architecture health metrics
+    without changing compiler behavior.
+  - implementation_notes: Aggregate existing checks where possible:
+    `docs/source_lock_inventory.md`, `scripts/include_layer_allowlist.txt`,
+    semantic-product fact family metadata, top file sizes, and semantic memory
+    or graph budget artifacts when present. The first version should report
+    metrics and support an optional JSON output; only fail on script errors, not
+    metric thresholds.
+  - acceptance:
+    - A script prints source-lock inventory count, include-layer allowlist count,
+      semantic-product fact family count, largest subsystem files, and available
+      graph/semantic-memory budget summary paths.
+    - The script has self-tests for parsing representative inputs and for
+      missing optional benchmark artifacts.
+    - CMake/CTest wires the self-test, while the dashboard itself remains a
+      developer helper unless a later TODO defines thresholds.
+    - README or docs mention the helper as an architecture triage entrypoint.
+  - stop_rule: Stop once the dashboard and self-tests land; do not add failing
+    architecture thresholds in this slice.
+
+- [ ] TODO-4591: Add expanded-source provenance ledger
+  - owner: ai
+  - created_at: 2026-05-24
+  - phase: Source-unit provenance ledger
+  - parallel_track: source-unit-provenance
+  - scope: Introduce the first compile-pipeline source-unit ledger that records
+    how primary input, imported `.prime` files, stdlib auto-included files, and
+    generated or unknown text segments map into the flattened source stream,
+    while preserving current compile and dump behavior.
+  - implementation_notes: Start from `ImportResolver::expandImports`,
+    `CompilePipelineImportStageState`, `appendStdlibModuleSources`,
+    `Program::sourceImports`, and diagnostics/source-map helpers. Keep this
+    slice data-contract focused: do not change diagnostic wording policy
+    (TODO-4586), stdlib inclusion manifest policy (TODO-4585), lowerer
+    meaning/provenance ownership (TODO-4581), or IR source-map schema
+    (TODO-4583). Prefer a small public type such as `ExpandedSource`,
+    `SourceUnit`, and `SourceSegment` rather than ad hoc side vectors.
+  - acceptance:
+    - Compile pipeline output or an adjacent public helper exposes a
+      deterministic source-unit table with stable ids, display path or module
+      key, source kind (`primary`, `import`, `stdlib`, `generated`/`unknown`),
+      flattened line range, and original starting line/column where available.
+    - Import expansion records segments for primary input, direct imports,
+      nested imports, and directory imports without overlapping flattened line
+      ranges and with stable ordering for identical inputs/import paths.
+    - Stdlib auto-inclusion records source units for appended stdlib files
+      without changing current successful compile behavior or `pre_ast`/`ast`
+      dump text.
+    - Focused tests cover one primary file, one imported file, one nested
+      import, and one stdlib auto-include provenance table.
+    - Parser/semantic diagnostics still behave as before except for any
+      optional inspectable provenance helper; diagnostic span remapping is left
+      to TODO-4592.
+  - stop_rule: Stop once flattened source provenance is inspectable and
+    covered for imports plus stdlib appends; do not remap diagnostics, alter IR
+    source maps, or change VM debugger behavior in this slice.
+
+- [ ] TODO-4592: Map parser and semantic diagnostics through source units
+  - owner: ai
+  - created_at: 2026-05-24
+  - phase: Source-unit provenance ledger
+  - depends_on: TODO-4591
+  - scope: Use the source-unit ledger to populate diagnostic `file`, line, and
+    column fields for parser and one representative semantic diagnostic family
+    that currently reports only flattened line/column positions.
+  - implementation_notes: Start from `runCompilePipelineParseStage`,
+    `DiagnosticSink`, parser error collection,
+    `SemanticsValidatorPassesDiagnostics.cpp`, and one existing semantic
+    call-resolution or unresolved-target diagnostic test. This is not
+    TODO-4586 diagnostic-tier work: keep message stability policy unchanged
+    and only prove source-unit span translation.
+  - acceptance:
+    - A syntax error in an imported `.prime` file reports a primary
+      `DiagnosticSpan.file` for the imported file and original line/column
+      rather than only the flattened source position.
+    - A syntax error in the primary input still reports the primary input path
+      and unchanged line/column.
+    - One semantic diagnostic emitted from an imported source unit reports the
+      imported file/module provenance and original line/column.
+    - `--collect-diagnostics` output with diagnostics from multiple source
+      units is deterministic by source-unit order and original source position.
+    - Focused parser/semantic diagnostic tests pass and demonstrate the span
+      mapping without changing unrelated diagnostic message text.
+  - stop_rule: Stop after parser diagnostics and one semantic diagnostic
+    family are source-unit mapped and covered; leave full diagnostic-tier
+    classification to TODO-4586 and broad all-diagnostic migration to
+    follow-up leaves only if concrete gaps remain.
+
+- [ ] TODO-4593: Carry source-unit provenance into IR and VM debug maps
+  - owner: ai
+  - created_at: 2026-05-24
+  - phase: Source-unit provenance ledger
+  - depends_on: TODO-4592, TODO-4583
+  - scope: Extend lowered IR source-map metadata and VM/debug lookup so
+    instruction provenance can identify the source unit/file as well as line,
+    column, and AST/synthetic provenance.
+  - implementation_notes: Start from `IrInstructionSourceMapEntry`,
+    `IrSerializer.cpp`, `IrLowererLowerStatementsSourceMapStep.*`,
+    `VmDebugHelpers.cpp`, and
+    `tests/unit/test_ir_pipeline_serialization_control_flow_metadata.h`.
+    Coordinate with TODO-4583 because serialized IR source-map metadata changes
+    must follow the version/schema contract; if TODO-4583 already landed,
+    update that contract in the same slice.
+  - acceptance:
+    - IR source-map entries can carry a source-unit id or file identity in
+      addition to debug id, line, column, and provenance.
+    - IR serialization/deserialization and golden coverage include
+      source-unit-aware metadata, with unknown/old metadata behavior handled
+      according to the TODO-4583 schema contract.
+    - VM breakpoint lookup can disambiguate identical line/column positions in
+      different source units when file/module identity is supplied.
+    - VM mapped stack traces include source file or source-unit display
+      identity when available and keep deterministic fallback text when it is
+      unavailable.
+    - Focused IR serialization and VM debug tests pass for primary-source and
+      imported-source instruction provenance.
+  - stop_rule: Stop once source-unit identity survives lowering,
+    serialization, and VM debug lookup for a focused imported-source fixture;
+    do not redesign the debugger protocol or broaden diagnostic policy in this
+    slice.
