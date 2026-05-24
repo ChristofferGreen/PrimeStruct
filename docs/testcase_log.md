@@ -982,6 +982,27 @@
   `PrimeStruct_primestruct_compile_run_emitters_cpp_lambda_and_mutator_resolution_20_20`.
 
 ## Recent Test Runs
+- 2026-05-24 12:16 CEST | pass | mode: release | command:
+  `cmake --build build-release --target PrimeStruct_compile_run_tests -j 1`;
+  `cd build-release && ./PrimeStruct_compile_run_tests --test-case="todo queue and skipped doctest debt stay source locked" --no-skip`
+  | failures: none | notes: root source-lock repair passed after integrating
+  TODO-4558/TODO-4559/TODO-4560 and splitting TODO-4545 into TODO-4561,
+  TODO-4562, and TODO-4563.
+- 2026-05-24 12:16 CEST | pass | mode: release | command:
+  `cmake --build build-release --target primec PrimeStruct_parser_tests PrimeStruct_compile_run_tests PrimeStruct_compile_time_tests PrimeStruct_semantics_tests PrimeStruct_backend_ir_tests -j 1`;
+  `cd build-release && ./PrimeStruct_parser_tests --test-suite=primestruct.parser.templates --no-skip`;
+  `cd build-release && ./PrimeStruct_compile_run_tests --test-case="generic requirement predicate surface stays source locked" --no-skip`;
+  `cd build-release && ./PrimeStruct_compile_run_tests --test-suite=primestruct.compile.run.generic_requirements --no-skip`;
+  `cd build-release && ./PrimeStruct_compile_time_tests --test-case="compile-time budget exhaustion diagnostics include provenance" --no-skip`;
+  `cd build-release && ./PrimeStruct_semantics_tests --test-case="generic semantic product handoff snapshots requirement and branch facts,rejected generic semantic facts stop before product publication" --no-skip`;
+  `cd build-release && ./PrimeStruct_backend_ir_tests --test-case="ir preparation stops unresolved generic semantic facts before lowering" --no-skip`
+  | failures: none | notes: root focused validation passed after
+  cherry-picking TODO-4558, TODO-4559, and TODO-4560 worker commits.
+- 2026-05-24 12:16 CEST | fail | mode: release | command:
+  `cd build-release && ./PrimeStruct_compile_run_tests --test-case="todo queue and skipped doctest debt stay source locked" --no-skip`
+  | failures: todo queue and skipped doctest debt stay source locked | notes:
+  root integration left stale Ready Now, generic-requirements, and execution
+  queue source-lock expectations; updated the lock to the integrated queue.
 - 2026-05-24 12:06 CEST | pass | mode: release | command:
   `cd build-release && ./PrimeStruct_backend_ir_tests --test-case="ir preparation stops unresolved generic semantic facts before lowering" --no-skip`
   | failures: none | notes: TODO-4559 moved IR-preparation handoff test

@@ -83,8 +83,10 @@ Task template:
 
 ### Ready Now (Parallel-Candidate Leaves; No Unmet TODO Dependencies)
 
-No generic conformance leaves remain ready after TODO-4558, TODO-4559, and
-TODO-4560 completed. TODO-4545 is the next execution-queue candidate.
+- TODO-4561: Add task spawn/wait parser and effect locks | track:
+  task-spawn-syntax-effects | primary surface: parser/effect docs
+- TODO-4350: Add high-level generic design examples | track:
+  generic-design-examples | primary surface: docs/examples
 
 ### Parallel Work Tracks (Current)
 
@@ -106,10 +108,10 @@ TODO-4560 completed. TODO-4545 is the next execution-queue candidate.
   the initial stdlib tuple surface, and TODO-4274 added tuple bracket
   indexing, TODO-4273 added heterogeneous `make_tuple` inference, and
   TODO-4277 added tuple destructuring. TODO-4278 is blocked on missing
-  task-side spawn/wait support, now tracked by TODO-4545.
-- `multithreading-substrate`: TODO-4545 was split from TODO-4278 to capture
-  the missing first structured task spawn/wait prerequisite; keep it out of
-  Ready Now until the multithreading lane is selected or split further.
+  task-side spawn/wait support, now tracked by TODO-4563.
+- `multithreading-substrate`: TODO-4545 was split into TODO-4561,
+  TODO-4562, and TODO-4563 so single-task spawn/wait can land as parser/effect,
+  semantic/lifetime, and runtime execution slices before TODO-4278.
 - `procedural-genericity`: TODO-4336 allowed type locals in local binding and
   struct-field envelopes, TODO-4337 added non-escaping local generated
   structs, TODO-4338 stabilized deterministic generated identity and
@@ -148,9 +150,9 @@ TODO-4560 completed. TODO-4545 is the next execution-queue candidate.
 
 ### Immediate Next 10 (Track Successors; Not Ready Until Dependencies Land)
 
-- TODO-4545: Implement first structured task spawn/wait substrate
+- TODO-4562: Add task handle semantic facts and lifetime diagnostics
+- TODO-4563: Add single-task spawn/wait runtime execution
 - TODO-4278: Integrate multi-wait with stdlib tuple
-- TODO-4350: Add high-level generic design examples
 
 ### Priority Lanes (Current)
 
@@ -168,19 +170,20 @@ TODO-4560 completed. TODO-4545 is the next execution-queue candidate.
   residual bridge traces; TODO-4528 removed lowerer count/access residue; and
   TODO-4529 replaced the residue inventory with a strict zero audit
 - Deferred generic tuple substrate: TODO-4278 is blocked on task-side
-  TODO-4545 after TODO-4277 added tuple destructuring sugar over ordinary
+  TODO-4563 after TODO-4277 added tuple destructuring sugar over ordinary
   stdlib tuple values
-- Multithreading substrate: TODO-4545 captures the first task spawn/wait
-  prerequisite split out of TODO-4278
+- Multithreading substrate: TODO-4561 -> TODO-4562 -> TODO-4563 -> TODO-4278
 - Procedural compile-time genericity: none active after TODO-4340 and
   TODO-4546
 - Generic constraint and compile-time flow alignment: TODO-4350
 
 ### Execution Queue (Recommended Track Order)
 
-- TODO-4545: Implement first structured task spawn/wait substrate
-- TODO-4278: Integrate multi-wait with stdlib tuple
+- TODO-4561: Add task spawn/wait parser and effect locks
 - TODO-4350: Add high-level generic design examples
+- TODO-4562: Add task handle semantic facts and lifetime diagnostics
+- TODO-4563: Add single-task spawn/wait runtime execution
+- TODO-4278: Integrate multi-wait with stdlib tuple
 
 ### PrimeStruct Coverage Snapshot
 
@@ -208,6 +211,7 @@ TODO-4560 completed. TODO-4545 is the next execution-queue candidate.
 | Algebraic sum types and brace-only construction | none |
 | Stdlib ADT migration for `Maybe` and `Result` | none |
 | Generic type packs and tuple stdlib surface | TODO-4274, TODO-4273, TODO-4277, TODO-4278 |
+| Multithreading substrate | TODO-4561, TODO-4562, TODO-4563 |
 | Procedural compile-time genericity and local type facts | none |
 | Generic constraints and compile-time flow control | TODO-4352, TODO-4353, TODO-4354, TODO-4355, TODO-4356, TODO-4357, TODO-4345, TODO-4547, TODO-4548, TODO-4549, TODO-4346, TODO-4550, TODO-4551, TODO-4552, TODO-4553, TODO-4554, TODO-4555, TODO-4556, TODO-4557, TODO-4558, TODO-4559, TODO-4560, TODO-4350 |
 
@@ -235,6 +239,7 @@ TODO-4560 completed. TODO-4545 is the next execution-queue candidate.
 | Sum-type and brace-construction conformance | none |
 | Maybe/Result sum migration conformance | none |
 | Generic type-pack and tuple conformance | TODO-4274, TODO-4273, TODO-4277, TODO-4278 |
+| Multithreading substrate conformance | TODO-4561, TODO-4562, TODO-4563 |
 | Procedural compile-time genericity conformance | none |
 | Generic constraint and compile-time flow conformance | TODO-4352, TODO-4353, TODO-4354, TODO-4355, TODO-4356, TODO-4357, TODO-4345, TODO-4547, TODO-4548, TODO-4549, TODO-4346, TODO-4550, TODO-4551, TODO-4552, TODO-4553, TODO-4554, TODO-4555, TODO-4556, TODO-4557, TODO-4558, TODO-4559, TODO-4560, TODO-4350 |
 
@@ -760,33 +765,86 @@ TODO-4560 completed. TODO-4545 is the next execution-queue candidate.
 
 ### Task Blocks
 
-- [ ] TODO-4545: Implement first structured task spawn/wait substrate
+- [ ] TODO-4561: Add task spawn/wait parser and effect locks
   - owner: ai
-  - created_at: 2026-05-20
+  - created_at: 2026-05-24
   - phase: Multithreading substrate
-  - scope: Implement the first single-task structured concurrency substrate
-    described by `docs/MultithreadingPrototype.md` so later multi-wait can be
-    built on real task handles instead of placeholder behavior.
+  - parallel_track: task-spawn-syntax-effects
+  - split_from: TODO-4545
+  - scope: Add parser, text-filter/source-lock, effect-spelling, and docs
+    coverage for the first `[spawn] f(...)` plus `wait(task)` surface without
+    adding semantic task-state or runtime execution behavior yet.
   - implementation_notes:
-    - Start from parser transform handling, semantic validation, effect
-      checks, binding inference, and native/runtime execution boundaries.
-    - Keep this first slice to `[spawn] f(...)` and `wait(task)` for one task
-      handle. Do not add multi-wait, detached tasks, task groups, channels, or
+    - Start from parser transform handling, effect annotations,
+      `docs/MultithreadingPrototype.md`, and `docs/PrimeStruct.md`.
+    - Keep this slice to recognizing and documenting the single-task surface;
+      leave `Task<T>` semantic facts, lifetime diagnostics, and execution to
+      TODO-4562/TODO-4563.
+    - Do not add multi-wait, detached tasks, task groups, channels, or
       scheduler controls here.
-    - If this remains too broad for one implementation commit, split it before
-      coding into smaller leaves for syntax/effects, task type facts,
-      lifetime-state diagnostics, and native/runtime execution.
   - acceptance:
-    - `[spawn] f(...)` produces a structured `Task<T>` handle when `f` returns
-      `T`, and `wait(task)` consumes that handle and returns `T`.
+    - Parser or compile-pipeline tests cover `[spawn] f(...)` and
+      `wait(task)` in statement/expression contexts intended for the first
+      single-task surface.
+    - Source-lock or example-lock coverage protects the documented spelling
+      and effect opt-in text without depending on backend execution.
+    - Docs state that semantic task-state and runtime execution follow in
+      TODO-4562/TODO-4563.
+    - `./scripts/compile.sh --release` passes.
+  - stop_rule: Stop once the first task surface syntax and effect spelling are
+    locked independently of semantic task-state and runtime execution.
+
+- [ ] TODO-4562: Add task handle semantic facts and lifetime diagnostics
+  - owner: ai
+  - created_at: 2026-05-24
+  - phase: Multithreading substrate
+  - depends_on: TODO-4561
+  - split_from: TODO-4545
+  - scope: Add semantic `Task<T>` facts, binding inference, task-effect
+    requirements, and first-slice lifetime diagnostics for single-task
+    spawn/wait.
+  - implementation_notes:
+    - Start from semantic validation, effect checks, binding inference,
+      `docs/MultithreadingPrototype.md`, and the parser/effect locks from
+      TODO-4561.
+    - Keep runtime/native execution out of this slice except for minimal
+      fixtures needed to prove semantic publication boundaries.
+    - Preserve the first-slice limits: no multi-wait, detached tasks, task
+      groups, channels, scheduler controls, or mutable/reference captures.
+  - acceptance:
+    - `[spawn] f(...)` publishes a structured `Task<T>` handle fact when `f`
+      returns `T`, and `wait(task)` consumes that handle and returns `T`.
     - Functions using `[spawn]` or `wait` require the documented task effect.
     - Diagnostics reject returning with live tasks, double waiting the same
-      task, escaping task handles, and unsupported mutable/reference captures
-      for the first slice.
-    - Focused parser, semantic, and native/runtime tests cover successful
-      single-task spawn/wait and the required diagnostics.
-    - `docs/MultithreadingPrototype.md` and `docs/PrimeStruct.md` describe
-      the implemented first task surface.
+      task, escaping task handles, and unsupported mutable/reference captures.
+    - Focused semantic/product tests cover successful single-task facts and
+      the required diagnostics.
+    - `./scripts/compile.sh --release` passes.
+  - stop_rule: Stop once single-task spawn/wait semantic facts and lifetime
+    diagnostics are covered without implementing runtime execution.
+
+- [ ] TODO-4563: Add single-task spawn/wait runtime execution
+  - owner: ai
+  - created_at: 2026-05-24
+  - phase: Multithreading substrate
+  - depends_on: TODO-4562
+  - split_from: TODO-4545
+  - scope: Implement native/runtime execution for one structured task handle
+    so TODO-4278 can build multi-wait on real task handles.
+  - implementation_notes:
+    - Start from native/runtime execution boundaries and the semantic facts
+      from TODO-4562.
+    - Keep execution single-task only; do not add multi-wait, detached tasks,
+      task groups, channels, or scheduler controls here.
+    - Update `docs/MultithreadingPrototype.md` and `docs/PrimeStruct.md` once
+      the first task surface actually runs.
+  - acceptance:
+    - Focused native/runtime tests cover successful `[spawn] f(...)` followed
+      by `wait(task)` for a function returning `T`.
+    - Runtime behavior respects the structured lifetime and first-slice
+      capture restrictions established by TODO-4562.
+    - `docs/MultithreadingPrototype.md` and `docs/PrimeStruct.md` describe the
+      implemented first task surface and leave multi-wait to TODO-4278.
     - `./scripts/compile.sh --release` passes.
   - stop_rule: Stop once single-task spawn/wait is real enough for TODO-4278
     to wire multi-wait to stdlib `tuple<...>`; leave multi-wait itself to
@@ -796,7 +854,7 @@ TODO-4560 completed. TODO-4545 is the next execution-queue candidate.
   - owner: ai
   - created_at: 2026-04-27
   - phase: Deferred generic tuple substrate
-  - depends_on: TODO-4277, TODO-4545
+  - depends_on: TODO-4277, TODO-4563
   - scope: Wire future multi-task `wait(left, right, ...)` to return ordinary
     `tuple<...>` values instead of a task-specific product type.
   - implementation_notes:

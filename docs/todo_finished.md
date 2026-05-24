@@ -6,6 +6,28 @@ Legend:
 Finished items are periodically archived here from `docs/todo.md`; section headers record the archive date.
 
 **Todo Completion (May 24, 2026)**
+- [x] TODO-4545: Implement first structured task spawn/wait substrate
+  - owner: ai
+  - created_at: 2026-05-20
+  - finished_at: 2026-05-24
+  - phase: Multithreading substrate
+  - scope: Implement the first single-task structured concurrency substrate
+    described by `docs/MultithreadingPrototype.md` so later multi-wait can be
+    built on real task handles instead of placeholder behavior.
+  - outcome:
+    - Split the broad first structured task substrate into parser/effect,
+      semantic/lifetime, and runtime execution leaves so future work can land
+      as bounded commits.
+    - Created TODO-4561 for `[spawn] f(...)` and `wait(task)` parser,
+      effect-spelling, source-lock, and docs coverage.
+    - Created TODO-4562 for `Task<T>` semantic facts, effect requirements,
+      and first-slice lifetime diagnostics.
+    - Created TODO-4563 for single-task native/runtime execution.
+    - Moved TODO-4278 behind TODO-4563 so multi-wait waits for real task
+      handles.
+  - validation:
+    - TODO-only split; no build required.
+
 - [x] TODO-4558: Add generic parser and source-lock conformance
   - owner: ai
   - created_at: 2026-05-24

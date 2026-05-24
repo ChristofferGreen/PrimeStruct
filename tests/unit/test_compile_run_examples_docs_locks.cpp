@@ -1768,10 +1768,10 @@ TEST_CASE("todo queue and skipped doctest debt stay source locked") {
   CHECK(todo.find("### Ready Now (Parallel-Candidate Leaves; No Unmet TODO Dependencies)") !=
         std::string::npos);
   CHECK(todo.find("### Ready Now (Parallel-Candidate Leaves; No Unmet TODO Dependencies)\n\n"
-                  "- TODO-4558: Add generic parser and source-lock conformance | track:\n"
-                  "  generic-requirements-conformance | primary surface: parser/source locks\n"
-                  "- TODO-4559: Add generic semantic and IR conformance | track:\n"
-                  "  generic-semantic-ir-conformance | primary surface: semantic-product/IR handoff") !=
+                  "- TODO-4561: Add task spawn/wait parser and effect locks | track:\n"
+                  "  task-spawn-syntax-effects | primary surface: parser/effect docs\n"
+                  "- TODO-4350: Add high-level generic design examples | track:\n"
+                  "  generic-design-examples | primary surface: docs/examples") !=
         std::string::npos);
   CHECK(todo.find("- `soa-zero-audit`: TODO-4529 replaced the residue inventory with a strict\n"
                   "  zero-production-trace audit; no SoA zero-audit leaf is ready.") !=
@@ -1787,9 +1787,11 @@ TEST_CASE("todo queue and skipped doctest debt stay source locked") {
                   "  the initial stdlib tuple surface, and TODO-4274 added tuple bracket\n"
                   "  indexing, TODO-4273 added heterogeneous `make_tuple` inference, and\n"
                   "  TODO-4277 added tuple destructuring. TODO-4278 is blocked on missing\n"
-                  "  task-side spawn/wait support, now tracked by TODO-4545.") !=
+                  "  task-side spawn/wait support, now tracked by TODO-4563.") !=
         std::string::npos);
-  CHECK(todo.find("- `multithreading-substrate`: TODO-4545 was split from TODO-4278") !=
+  CHECK(todo.find("- `multithreading-substrate`: TODO-4545 was split into TODO-4561,\n"
+                  "  TODO-4562, and TODO-4563 so single-task spawn/wait can land as parser/effect,\n"
+                  "  semantic/lifetime, and runtime execution slices before TODO-4278.") !=
         std::string::npos);
   CHECK(todo.find("- `procedural-genericity`: TODO-4336 allowed type locals in local binding and\n"
                   "  struct-field envelopes, TODO-4337 added non-escaping local generated\n"
@@ -1817,19 +1819,21 @@ TEST_CASE("todo queue and skipped doctest debt stay source locked") {
                   "  compile-time-flow diagnostics, and TODO-4555 added predicate/value\n"
                   "  conformance coverage. TODO-4556 added focused conformance for compile-time\n"
                   "  effect opt-ins, cache invalidation material, and active budget enforcement.\n"
-                  "  TODO-4557 locked compiler-hosted CT VM boundary coverage. TODO-4359 was\n"
-                  "  split into TODO-4555, TODO-4556, and TODO-4557 so compile-time VM conformance\n"
-                  "  could be covered in parallel by predicate/value, effects/cache/budget, and\n"
-                  "  compiler-host boundary leaves. TODO-4349 was split into TODO-4558,\n"
-                  "  TODO-4559, and TODO-4560 so the broader conformance matrix could proceed in\n"
-                  "  parser/source-lock, semantic/IR, and compile-run/diagnostic tracks.\n"
-                  "  TODO-4560 added compile-run and user-facing diagnostic conformance coverage;\n"
-                  "  TODO-4558 and TODO-4559 remain active.") !=
+                  "  TODO-4557 locked compiler-hosted CT VM boundary coverage. TODO-4558 added\n"
+                  "  parser and source-lock conformance for public generic requirement and\n"
+                  "  `ct_if` syntax. TODO-4560 added compile-run and user-facing diagnostic\n"
+                  "  conformance coverage. TODO-4559 added semantic-product and IR-preparation\n"
+                  "  handoff conformance. TODO-4359 was split into TODO-4555, TODO-4556, and\n"
+                  "  TODO-4557 so compile-time VM conformance could be covered in parallel by\n"
+                  "  predicate/value, effects/cache/budget, and compiler-host boundary leaves.\n"
+                  "  TODO-4349 was split into TODO-4558, TODO-4559, and TODO-4560 so the broader\n"
+                  "  conformance matrix could proceed in parser/source-lock, semantic/IR, and\n"
+                  "  compile-run/diagnostic tracks; all three split leaves are complete.") !=
         std::string::npos);
   CHECK(todo.find("### Immediate Next 10 (Track Successors; Not Ready Until Dependencies Land)\n\n"
-                  "- TODO-4545: Implement first structured task spawn/wait substrate\n"
-                  "- TODO-4278: Integrate multi-wait with stdlib tuple\n"
-                  "- TODO-4350: Add high-level generic design examples") !=
+                  "- TODO-4562: Add task handle semantic facts and lifetime diagnostics\n"
+                  "- TODO-4563: Add single-task spawn/wait runtime execution\n"
+                  "- TODO-4278: Integrate multi-wait with stdlib tuple") !=
         std::string::npos);
   CHECK(todo.find("- TODO-4273: Add heterogeneous value-pack inference") ==
         std::string::npos);
@@ -1845,11 +1849,27 @@ TEST_CASE("todo queue and skipped doctest debt stay source locked") {
   CHECK(todo.find("- Deferred SoA finish: TODO-4252") ==
         std::string::npos);
   CHECK(todo.find("### Execution Queue (Recommended Track Order)\n\n"
-                  "- TODO-4545: Implement first structured task spawn/wait substrate\n"
-                  "- TODO-4278: Integrate multi-wait with stdlib tuple\n"
-                  "- TODO-4558: Add generic parser and source-lock conformance\n"
-                  "- TODO-4559: Add generic semantic and IR conformance\n"
-                  "- TODO-4350: Add high-level generic design examples") !=
+                  "- TODO-4561: Add task spawn/wait parser and effect locks\n"
+                  "- TODO-4350: Add high-level generic design examples\n"
+                  "- TODO-4562: Add task handle semantic facts and lifetime diagnostics\n"
+                  "- TODO-4563: Add single-task spawn/wait runtime execution\n"
+                  "- TODO-4278: Integrate multi-wait with stdlib tuple") !=
+        std::string::npos);
+  CHECK(todo.find("- [ ] TODO-4545: Implement first structured task spawn/wait substrate") ==
+        std::string::npos);
+  CHECK(todoFinished.find("TODO-4545: Implement first structured task spawn/wait substrate") !=
+        std::string::npos);
+  CHECK(todo.find("- [ ] TODO-4558: Add generic parser and source-lock conformance") ==
+        std::string::npos);
+  CHECK(todo.find("- [ ] TODO-4559: Add generic semantic and IR conformance") ==
+        std::string::npos);
+  CHECK(todo.find("- [ ] TODO-4560: Add generic compile-run diagnostics conformance") ==
+        std::string::npos);
+  CHECK(todoFinished.find("TODO-4558: Add generic parser and source-lock conformance") !=
+        std::string::npos);
+  CHECK(todoFinished.find("TODO-4559: Add generic semantic and IR conformance") !=
+        std::string::npos);
+  CHECK(todoFinished.find("TODO-4560: Add generic compile-run diagnostics conformance") !=
         std::string::npos);
   CHECK(todo.find("- [ ] TODO-4548: Add expression-position `ct_if` values") ==
         std::string::npos);
@@ -2026,9 +2046,11 @@ TEST_CASE("todo queue and skipped doctest debt stay source locked") {
         std::string::npos);
   CHECK(todoFinished.find("TODO-4341: Define generic requirement predicate surface") !=
         std::string::npos);
-  CHECK(todo.find("TODO-4545: Implement first structured task spawn/wait substrate") !=
+  CHECK(todo.find("TODO-4561: Add task spawn/wait parser and effect locks") !=
         std::string::npos);
-  CHECK(todo.find("  - depends_on: TODO-4277, TODO-4545") !=
+  CHECK(todo.find("  - depends_on: TODO-4277, TODO-4563") !=
+        std::string::npos);
+  CHECK(todoFinished.find("TODO-4545: Implement first structured task spawn/wait substrate") !=
         std::string::npos);
   CHECK(todoFinished.find("  - depends_on: TODO-4342, TODO-4343") !=
         std::string::npos);
