@@ -6,6 +6,35 @@ Legend:
 Finished items are periodically archived here from `docs/todo.md`; section headers record the archive date.
 
 **Todo Completion (May 24, 2026)**
+- [x] TODO-4553: Publish requirement overload diagnostics
+  - owner: ai
+  - created_at: 2026-05-24
+  - finished_at: 2026-05-24
+  - phase: Generic constraint and compile-time flow alignment
+  - parallel_track: generic-requirements-diagnostics
+  - depends_on: TODO-4552
+  - scope: Add stable, provenance-rich diagnostics for requirement-driven
+    overload rejection and ambiguity.
+  - outcome:
+    - Replaced one-line requirement overload failures with deterministic
+      multi-line diagnostics that start at the concrete call site.
+    - No-viable diagnostics now list each rejected constrained candidate with
+      the failed predicate, requirement source, source location, and evaluation
+      result.
+    - Ambiguous diagnostics now list each viable constrained candidate and the
+      satisfied predicates that left the call indistinguishable.
+    - Both diagnostic shapes include concrete inferred call argument facts and
+      a short actionable hint, while leaving compile-time-flow diagnostics to
+      TODO-4554.
+    - Extended golden semantics tests for failed type requirements, failed
+      value predicates, ambiguous constrained calls, and unchanged successful
+      constrained overload selection.
+    - Promoted TODO-4554 as the next Ready Now generic-requirements
+      diagnostics leaf.
+  - validation:
+    - `cmake --build build-release --target PrimeStruct_semantics_tests -j 1`
+    - `./PrimeStruct_semantics_tests --test-case="requirement constrained overload selects the viable same arity candidate,requirement constrained overload uses local argument facts,requirement constrained overload preserves no viable diagnostics,requirement constrained overload reports value predicate rejection,requirement constrained overload reports ambiguous candidates" --no-skip`
+
 - [x] TODO-4552: Publish direct requirement failure diagnostics
   - owner: ai
   - created_at: 2026-05-24

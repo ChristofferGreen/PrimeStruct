@@ -982,6 +982,22 @@
   `PrimeStruct_primestruct_compile_run_emitters_cpp_lambda_and_mutator_resolution_20_20`.
 
 ## Recent Test Runs
+- 2026-05-24 09:02 CEST | pass | mode: release | command:
+  `cd build-release && ./PrimeStruct_semantics_tests --test-case="requirement constrained overload selects the viable same arity candidate,requirement constrained overload uses local argument facts,requirement constrained overload preserves no viable diagnostics,requirement constrained overload reports value predicate rejection,requirement constrained overload reports ambiguous candidates" --no-skip`
+  | failures: none | notes: final TODO-4553 diagnostic-shape rerun passed
+  with 5 cases and 52 assertions after hiding internal overload paths.
+- 2026-05-24 09:02 CEST | pass | mode: release | command:
+  `cmake --build build-release --target PrimeStruct_semantics_tests -j 1`
+  | failures: none | notes: incremental rebuild after requirement overload
+  candidate summary refinement.
+- 2026-05-24 09:00 CEST | pass | mode: release | command:
+  `cd build-release && ./PrimeStruct_semantics_tests --test-case="requirement constrained overload selects the viable same arity candidate,requirement constrained overload uses local argument facts,requirement constrained overload preserves no viable diagnostics,requirement constrained overload reports value predicate rejection,requirement constrained overload reports ambiguous candidates" --no-skip`
+  | failures: none | notes: TODO-4553 requirement-overload diagnostics
+  focused doctest slice passed with 5 cases and 52 assertions.
+- 2026-05-24 08:59 CEST | pass | mode: release | command:
+  `cmake --build build-release --target PrimeStruct_semantics_tests -j 1`
+  | failures: none | notes: rebuilt affected semantics doctest target for
+  TODO-4553 focused validation.
 - 2026-05-24 08:35 CEST | pass | mode: release | command:
   `cmake --build build-release --target PrimeStruct_semantics_tests -j 1`;
   `cd build-release && ./PrimeStruct_semantics_tests --test-case="require transforms publish evaluated builtin type predicate facts,require value predicates reject failing integer template arguments,require value predicates reject non-constant operands,require builtin type predicates reject mismatched calls,require pure user predicates drive semantic facts,require pure user predicates reject impure and unsupported bodies" --no-skip`

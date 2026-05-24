@@ -83,8 +83,9 @@ Task template:
 
 ### Ready Now (Parallel-Candidate Leaves; No Unmet TODO Dependencies)
 
-- TODO-4553: Publish requirement overload diagnostics | track:
-  generic-requirements-diagnostics | primary surface: overload diagnostics
+- TODO-4554: Publish compile-time flow diagnostics with provenance | track:
+  generic-requirements-diagnostics | primary surface: compile-time flow
+  diagnostics
 
 ### Parallel Work Tracks (Current)
 
@@ -129,16 +130,15 @@ Task template:
   enforced phase-qualified compile-time effects; TODO-4551 added
   deterministic cache keys and invalidation; TODO-4347 routed requirement
   facts into overload selection; and TODO-4351 added integer value
-  requirement facts. TODO-4348 was split into bounded diagnostic leaves, and
-  TODO-4552 published provenance-rich direct requirement failures. TODO-4553
-  is ready to publish overload diagnostics, with compile-time-flow diagnostics
-  following in TODO-4554.
+  requirement facts. TODO-4348 was split into bounded diagnostic leaves,
+  TODO-4552 published provenance-rich direct requirement failures, and
+  TODO-4553 published requirement-overload diagnostics. TODO-4554 is ready to
+  publish compile-time-flow diagnostics.
 
 ### Immediate Next 10 (Track Successors; Not Ready Until Dependencies Land)
 
 - TODO-4545: Implement first structured task spawn/wait substrate
 - TODO-4278: Integrate multi-wait with stdlib tuple
-- TODO-4554: Publish compile-time flow diagnostics with provenance
 - TODO-4359: Add compile-time VM conformance coverage
 - TODO-4349: Add generic constraint conformance matrix
 - TODO-4350: Add high-level generic design examples
@@ -165,14 +165,13 @@ Task template:
   prerequisite split out of TODO-4278
 - Procedural compile-time genericity: none active after TODO-4340 and
   TODO-4546
-- Generic constraint and compile-time flow alignment: TODO-4553 -> TODO-4554
-  -> TODO-4359 -> TODO-4349 -> TODO-4350
+- Generic constraint and compile-time flow alignment: TODO-4554 -> TODO-4359
+  -> TODO-4349 -> TODO-4350
 
 ### Execution Queue (Recommended Track Order)
 
 - TODO-4545: Implement first structured task spawn/wait substrate
 - TODO-4278: Integrate multi-wait with stdlib tuple
-- TODO-4553: Publish requirement overload diagnostics
 - TODO-4554: Publish compile-time flow diagnostics with provenance
 - TODO-4359: Add compile-time VM conformance coverage
 - TODO-4349: Add generic constraint conformance matrix
@@ -815,38 +814,6 @@ Task template:
     - `./scripts/compile.sh --release` passes.
   - stop_rule: Stop once multi-wait returns stdlib `tuple<...>` or the missing
     task-side prerequisite is split into an explicit multithreading TODO.
-
-- [ ] TODO-4553: Publish requirement overload diagnostics
-  - owner: ai
-  - created_at: 2026-05-24
-  - phase: Generic constraint and compile-time flow alignment
-  - parallel_track: generic-requirements-diagnostics
-  - depends_on: TODO-4552
-  - scope: Add stable, provenance-rich diagnostics for requirement-driven
-    overload rejection and ambiguity.
-  - implementation_notes:
-    - Start from `evaluateRequirementOverloadViability`,
-      `selectRequirementAwareHelperOverloadPath`, template instantiation
-      diagnostics, and the existing no-viable/ambiguous constrained overload
-      tests.
-    - Keep the user-facing shape call site first, rejected candidate or
-      ambiguous candidate second, concrete inferred argument facts third, and
-      a short actionable hint last.
-    - Summarize each relevant candidate deterministically without dumping
-      every internal predicate detail by default.
-  - acceptance:
-    - No-viable diagnostics point at the concrete call and summarize why each
-      relevant constrained candidate was rejected.
-    - Ambiguous constrained-call diagnostics identify the viable candidates and
-      the facts that made them indistinguishable.
-    - Golden diagnostics cover failed type requirements and value predicates
-      through overload selection, plus an ambiguous constrained call.
-    - Existing successful constrained overload selection behavior remains
-      unchanged.
-    - `./scripts/compile.sh --release` passes.
-  - stop_rule: Stop once requirement-overload failures are explainable from
-    user code; leave compile-time branch/generated-type diagnostics to
-    TODO-4554.
 
 - [ ] TODO-4554: Publish compile-time flow diagnostics with provenance
   - owner: ai

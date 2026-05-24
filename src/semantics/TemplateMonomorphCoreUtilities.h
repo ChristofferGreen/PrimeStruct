@@ -322,10 +322,94 @@ requirementOverloadArgumentTypeText(const Expr &arg,
   return std::nullopt;
 }
 
+std::string requirementOverloadSourceLocation(int line, int column) {
+  if (line <= 0) {
+    return "unknown";
+  }
+  return std::to_string(line) + ":" + std::to_string(column > 0 ? column : 1);
+}
+
+std::string requirementOverloadExprDisplayText(const Expr &expr) {
+  switch (expr.kind) {
+  case Expr::Kind::Literal: {
+    std::string suffix;
+    if (expr.isUnsigned) {
+      suffix = expr.intWidth == 64 ? "u64" : "u32";
+    } else {
+      suffix = expr.intWidth == 64 ? "i64" : "i32";
+    }
+    return std::to_string(expr.literalValue) + suffix;
+  }
+  case Expr::Kind::BoolLiteral:
+    return expr.boolValue ? "true" : "false";
+  case Expr::Kind::FloatLiteral:
+    return expr.floatValue + (expr.floatWidth == 64 ? "f64" : "f32");
+  case Expr::Kind::StringLiteral:
+    return "\"" + expr.stringValue + "\"";
+  case Expr::Kind::Name:
+    return expr.name.empty() ? "<anonymous>" : expr.name;
+  case Expr::Kind::Call:
+    return (expr.sourceName.empty() ? expr.name : expr.sourceName) + "(...)";
+  }
+  return "<expr>";
+}
+
+std::string formatRequirementOverloadArgumentFacts(
+    const Expr &expr,
+    const LocalTypeMap *locals,
+    const std::vector<ParameterInfo> *params) {
+  std::ostringstream out;
+  out << "concrete inferred argument facts:";
+  if (expr.args.empty()) {
+    out << "\n- none";
+    return out.str();
+  }
+  for (std::size_t i = 0; i < expr.args.size(); ++i) {
+    const Expr &arg = expr.args[i];
+    const std::optional<std::string> typeText =
+        requirementOverloadArgumentTypeText(arg, locals, params);
+    out << "\n- arg" << i << " type="
+        << (typeText.has_value() ? *typeText : std::string("unknown"))
+        << " expr=" << requirementOverloadExprDisplayText(arg)
+        << " at "
+        << requirementOverloadSourceLocation(arg.sourceLine,
+                                             arg.sourceColumn);
+  }
+  return out.str();
+}
+
+std::string formatRequirementOverloadCallSite(const Expr &expr,
+                                              const std::string &resolvedPath) {
+  const std::string callee =
+      expr.sourceName.empty() ? (expr.name.empty() ? resolvedPath : expr.name)
+                              : expr.sourceName;
+  return "call site: " + callee + " at " +
+         requirementOverloadSourceLocation(expr.sourceLine, expr.sourceColumn);
+}
+
+std::string formatRequirementOverloadPredicateSummary(
+    const RequirementPredicateFactDraft &fact,
+    std::string_view originalArgument,
+    int sourceLine,
+    int sourceColumn) {
+  const std::string predicate =
+      fact.predicateName.empty() ? std::string(originalArgument)
+                                 : fact.predicateName;
+  std::ostringstream out;
+  out << predicate << " at "
+      << requirementOverloadSourceLocation(sourceLine, sourceColumn) << ": "
+      << fact.evaluationDiagnostic;
+  if (!fact.sourceText.empty()) {
+    out << " (source: " << fact.sourceText << ")";
+  }
+  return out.str();
+}
+
 struct RequirementOverloadViability {
   bool viable = true;
   bool decisive = false;
   std::vector<std::string> diagnostics;
+  std::vector<std::string> satisfiedDiagnostics;
 };
 
 RequirementOverloadViability evaluateRequirementOverloadViability(
@@ -383,15 +467,52 @@ RequirementOverloadViability evaluateRequirementOverloadViability(
       }
       result.decisive = true;
       if (fact.evaluationOutcome == "satisfied") {
+        result.satisfiedDiagnostics.push_back(
+            formatRequirementOverloadPredicateSummary(fact,
+                                                      argument,
+                                                      sourceLine,
+                                                      sourceColumn));
         continue;
       }
       result.viable = false;
-      const std::string predicate =
-          fact.predicateName.empty() ? argument : fact.predicateName;
-      result.diagnostics.push_back(predicate + ": " + fact.evaluationDiagnostic);
+      result.diagnostics.push_back(
+          formatRequirementOverloadPredicateSummary(fact,
+                                                    argument,
+                                                    sourceLine,
+                                                    sourceColumn));
     }
   }
   return result;
+}
+
+std::string formatRequirementOverloadCandidateSummary(
+    const HelperOverloadEntry &entry,
+    const Definition *def,
+    const Context &ctx,
+    const RequirementOverloadViability *viability) {
+  std::ostringstream out;
+  out << helperOverloadDisplayPath(entry.internalPath, ctx);
+  if (def != nullptr) {
+    out << " at "
+        << requirementOverloadSourceLocation(def->sourceLine,
+                                             def->sourceColumn);
+  }
+
+  if (viability != nullptr && !viability->diagnostics.empty()) {
+    out << "\n  rejected by:";
+    for (const std::string &diagnostic : viability->diagnostics) {
+      out << "\n  - " << diagnostic;
+    }
+  } else if (viability != nullptr &&
+             !viability->satisfiedDiagnostics.empty()) {
+    out << "\n  requirements satisfied:";
+    for (const std::string &diagnostic : viability->satisfiedDiagnostics) {
+      out << "\n  - " << diagnostic;
+    }
+  } else {
+    out << "\n  requirements: none or deferred";
+  }
+  return out.str();
 }
 
 std::string selectRequirementAwareHelperOverloadPath(
@@ -417,6 +538,7 @@ std::string selectRequirementAwareHelperOverloadPath(
 
   std::vector<const HelperOverloadEntry *> viable;
   std::vector<std::string> rejected;
+  std::vector<std::string> viableSummaries;
   for (const auto *entry : candidates) {
     if (entry == nullptr) {
       continue;
@@ -424,6 +546,11 @@ std::string selectRequirementAwareHelperOverloadPath(
     auto defIt = ctx.sourceDefs.find(entry->internalPath);
     if (defIt == ctx.sourceDefs.end()) {
       viable.push_back(entry);
+      viableSummaries.push_back(
+          formatRequirementOverloadCandidateSummary(*entry,
+                                                    nullptr,
+                                                    ctx,
+                                                    nullptr));
       continue;
     }
     RequirementOverloadViability viability =
@@ -434,39 +561,45 @@ std::string selectRequirementAwareHelperOverloadPath(
                                              params);
     if (viability.viable) {
       viable.push_back(entry);
+      viableSummaries.push_back(formatRequirementOverloadCandidateSummary(
+          *entry, &defIt->second, ctx, &viability));
       continue;
     }
-    std::ostringstream message;
-    message << helperOverloadDisplayPath(entry->internalPath, ctx);
-    if (!viability.diagnostics.empty()) {
-      message << " rejected by ";
-      for (std::size_t i = 0; i < viability.diagnostics.size(); ++i) {
-        if (i != 0) {
-          message << "; ";
-        }
-        message << viability.diagnostics[i];
-      }
-    }
-    rejected.push_back(message.str());
+    rejected.push_back(formatRequirementOverloadCandidateSummary(
+        *entry, &defIt->second, ctx, &viability));
   }
 
   if (viable.size() == 1) {
     return viable.front()->internalPath;
   }
+  std::sort(rejected.begin(), rejected.end());
+  std::sort(viableSummaries.begin(), viableSummaries.end());
   std::ostringstream error;
+  error << formatRequirementOverloadCallSite(expr, resolvedPath) << '\n';
   if (viable.empty()) {
-    error << "no viable requirement overload for " << resolvedPath;
+    error << "no viable requirement overload for " << resolvedPath << '\n';
     if (!rejected.empty()) {
-      error << ": ";
-      for (std::size_t i = 0; i < rejected.size(); ++i) {
-        if (i != 0) {
-          error << "; ";
-        }
-        error << rejected[i];
+      error << "rejected candidates:";
+      for (const std::string &candidate : rejected) {
+        error << "\n- " << candidate;
       }
+      error << '\n';
     }
+    error << formatRequirementOverloadArgumentFacts(expr, locals, params)
+          << '\n';
+    error << "hint: pass values or types that satisfy exactly one "
+             "constrained overload, or call a more specific helper name.";
   } else {
-    error << "ambiguous requirement overload for " << resolvedPath;
+    error << "ambiguous requirement overload for " << resolvedPath << '\n';
+    error << "viable candidates:";
+    for (const std::string &candidate : viableSummaries) {
+      error << "\n- " << candidate;
+    }
+    error << '\n'
+          << formatRequirementOverloadArgumentFacts(expr, locals, params)
+          << '\n';
+    error << "hint: make the overload requirements mutually exclusive, or "
+             "call a clearer helper name.";
   }
   ctx.requirementOverloadSelectionError = error.str();
   return resolvedPath;

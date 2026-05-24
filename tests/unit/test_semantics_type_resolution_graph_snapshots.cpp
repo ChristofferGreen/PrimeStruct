@@ -1271,12 +1271,64 @@ main() {
 
   std::string error;
   CHECK_FALSE(validateProgram(source, "/main", error));
-  CHECK(error.find("no viable requirement overload for /choose") !=
-        std::string::npos);
+  const size_t callSitePos = error.find("call site:");
+  const size_t noViablePos =
+      error.find("no viable requirement overload for /choose");
+  const size_t candidatesPos = error.find("rejected candidates:");
+  const size_t factsPos = error.find("concrete inferred argument facts:");
+  const size_t hintPos = error.find("hint: pass values or types that satisfy "
+                                   "exactly one constrained overload");
+  CHECK(callSitePos != std::string::npos);
+  CHECK(noViablePos != std::string::npos);
+  CHECK(candidatesPos != std::string::npos);
+  CHECK(factsPos != std::string::npos);
+  CHECK(hintPos != std::string::npos);
+  CHECK(callSitePos < noViablePos);
+  CHECK(noViablePos < candidatesPos);
+  CHECK(candidatesPos < factsPos);
+  CHECK(factsPos < hintPos);
+  CHECK(error.find("rejected by:") != std::string::npos);
   CHECK(error.find("/std/meta/type_equals") != std::string::npos);
+  CHECK(error.find("type equality failed: f32 != i64") !=
+        std::string::npos);
+  CHECK(error.find("type equality failed: f32 != i32") !=
+        std::string::npos);
+  CHECK(error.find("arg0 type=f32") != std::string::npos);
 }
 
-TEST_CASE("requirement constrained overload rejects multiple viable candidates") {
+TEST_CASE("requirement constrained overload reports value predicate rejection") {
+  const std::string source = R"(
+[return<T> require(value_greater<0, 1>())]
+choose<T>([T] value) {
+  return(value)
+}
+
+[return<T> require(value_less<5, 4>())]
+choose<T>([T] value) {
+  return(value)
+}
+
+[return<i32>]
+main() {
+  return(choose(4i32))
+}
+)";
+
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("no viable requirement overload for /choose") !=
+        std::string::npos);
+  CHECK(error.find("/std/meta/value_greater") != std::string::npos);
+  CHECK(error.find("value predicate failed: 0 > 1") != std::string::npos);
+  CHECK(error.find("/std/meta/value_less") != std::string::npos);
+  CHECK(error.find("value predicate failed: 5 < 4") != std::string::npos);
+  CHECK(error.find("literal_compile_time_argument") == std::string::npos);
+  CHECK(error.find("arg0 type=i32") != std::string::npos);
+  CHECK(error.find("hint: pass values or types that satisfy exactly one "
+                   "constrained overload") != std::string::npos);
+}
+
+TEST_CASE("requirement constrained overload reports ambiguous candidates") {
   const std::string source = R"(
 [return<T> require(type_equals<typeof<value>, i32>())]
 choose<T>([T] value) {
@@ -1296,8 +1348,26 @@ main() {
 
   std::string error;
   CHECK_FALSE(validateProgram(source, "/main", error));
-  CHECK(error.find("ambiguous requirement overload for /choose") !=
-        std::string::npos);
+  const size_t callSitePos = error.find("call site:");
+  const size_t ambiguousPos =
+      error.find("ambiguous requirement overload for /choose");
+  const size_t candidatesPos = error.find("viable candidates:");
+  const size_t factsPos = error.find("concrete inferred argument facts:");
+  const size_t hintPos =
+      error.find("hint: make the overload requirements mutually exclusive");
+  CHECK(callSitePos != std::string::npos);
+  CHECK(ambiguousPos != std::string::npos);
+  CHECK(candidatesPos != std::string::npos);
+  CHECK(factsPos != std::string::npos);
+  CHECK(hintPos != std::string::npos);
+  CHECK(callSitePos < ambiguousPos);
+  CHECK(ambiguousPos < candidatesPos);
+  CHECK(candidatesPos < factsPos);
+  CHECK(factsPos < hintPos);
+  CHECK(error.find("requirements satisfied:") != std::string::npos);
+  CHECK(error.find("type equality satisfied") != std::string::npos);
+  CHECK(error.find("type fact resolved: i32") != std::string::npos);
+  CHECK(error.find("arg0 type=i32") != std::string::npos);
 }
 
 TEST_CASE("type resolution try operand metadata stays aligned with query snapshots") {
