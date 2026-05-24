@@ -6,6 +6,34 @@ Legend:
 Finished items are periodically archived here from `docs/todo.md`; section headers record the archive date.
 
 **Todo Completion (May 24, 2026)**
+- [x] TODO-4555: Add compile-time predicate value conformance
+  - owner: ai
+  - created_at: 2026-05-24
+  - finished_at: 2026-05-24
+  - phase: Generic constraint and compile-time flow alignment
+  - parallel_track: generic-requirements-diagnostics
+  - depends_on: TODO-4554, TODO-4358, TODO-4550, TODO-4551
+  - split_from: TODO-4359
+  - scope: Add focused conformance coverage for compile-time predicate
+    evaluation and typed compile-time values.
+  - outcome:
+    - Added facade-level conformance coverage that distinguishes builtin
+      `/std/meta/*` predicate success, unsatisfied predicate results, and
+      invalid evaluation.
+    - Added the same true, false, and invalid outcome coverage for pure user
+      predicates evaluated through the compile-time host.
+    - Expanded typed compile-time value formatting coverage for bool, signed
+      and unsigned integer, string literal, type fact, symbol, requirement
+      outcome, and unsupported runtime-only values.
+    - Strengthened semantic diagnostics tests so builtin and user predicate
+      paths keep unsatisfied predicate diagnostics distinct from invalid
+      predicate evaluation, while existing direct requirement, overload, and
+      `ct_if` diagnostics remain stable.
+  - validation:
+    - `cmake --build build-release --target PrimeStruct_compile_time_tests PrimeStruct_semantics_tests -j 1`
+    - `./PrimeStruct_compile_time_tests --test-case="compile-time evaluation facade distinguishes predicate conformance outcomes,compile-time values format supported typed facts" --no-skip`
+    - `./PrimeStruct_semantics_tests --test-case="require value predicates reject failing integer template arguments,require value predicates reject non-constant operands,require pure user predicates drive semantic facts,require pure user predicates reject impure and unsupported bodies,requirement constrained overload preserves no viable diagnostics,requirement constrained overload reports value predicate rejection,requirement constrained overload reports ambiguous candidates,statement ct_if diagnoses invalid predicate conditions,ct_if flow diagnostics distinguish invalid user predicates,ct_if unsatisfied predicates select else without diagnostics" --no-skip`
+
 - [x] TODO-4359: Add compile-time VM conformance coverage
   - owner: ai
   - created_at: 2026-05-04

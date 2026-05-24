@@ -83,9 +83,6 @@ Task template:
 
 ### Ready Now (Parallel-Candidate Leaves; No Unmet TODO Dependencies)
 
-- TODO-4555: Add compile-time predicate value conformance | track:
-  generic-requirements-diagnostics | primary surface: predicate/value
-  semantics tests
 - TODO-4556: Add compile-time effects and budget conformance | track:
   generic-requirements-diagnostics | primary surface: effects/cache/budget
   tests
@@ -138,11 +135,11 @@ Task template:
   facts into overload selection; and TODO-4351 added integer value
   requirement facts. TODO-4348 was split into bounded diagnostic leaves,
   TODO-4552 published provenance-rich direct requirement failures,
-  TODO-4553 published requirement-overload diagnostics, and TODO-4554
-  published compile-time-flow diagnostics. TODO-4359 was split into
-  TODO-4555, TODO-4556, and TODO-4557 so compile-time VM conformance can be
-  covered in parallel by predicate/value, effects/cache/budget, and
-  compiler-host boundary leaves.
+  TODO-4553 published requirement-overload diagnostics, TODO-4554 published
+  compile-time-flow diagnostics, and TODO-4555 added predicate/value
+  conformance coverage. TODO-4359 was split into TODO-4555, TODO-4556, and
+  TODO-4557 so compile-time VM conformance can be covered in parallel by
+  predicate/value, effects/cache/budget, and compiler-host boundary leaves.
 
 ### Immediate Next 10 (Track Successors; Not Ready Until Dependencies Land)
 
@@ -173,14 +170,13 @@ Task template:
   prerequisite split out of TODO-4278
 - Procedural compile-time genericity: none active after TODO-4340 and
   TODO-4546
-- Generic constraint and compile-time flow alignment: TODO-4555/TODO-4556/
-  TODO-4557 -> TODO-4349 -> TODO-4350
+- Generic constraint and compile-time flow alignment: TODO-4556/TODO-4557 ->
+  TODO-4349 -> TODO-4350
 
 ### Execution Queue (Recommended Track Order)
 
 - TODO-4545: Implement first structured task spawn/wait substrate
 - TODO-4278: Integrate multi-wait with stdlib tuple
-- TODO-4555: Add compile-time predicate value conformance
 - TODO-4556: Add compile-time effects and budget conformance
 - TODO-4557: Lock compiler-hosted compile-time VM boundary
 - TODO-4349: Add generic constraint conformance matrix
@@ -213,7 +209,7 @@ Task template:
 | Stdlib ADT migration for `Maybe` and `Result` | none |
 | Generic type packs and tuple stdlib surface | TODO-4274, TODO-4273, TODO-4277, TODO-4278 |
 | Procedural compile-time genericity and local type facts | none |
-| Generic constraints and compile-time flow control | TODO-4352, TODO-4353, TODO-4354, TODO-4355, TODO-4356, TODO-4357, TODO-4345, TODO-4547, TODO-4548, TODO-4549, TODO-4346, TODO-4550, TODO-4551, TODO-4552, TODO-4553, TODO-4554, TODO-4555, TODO-4556, TODO-4557, TODO-4349, TODO-4350 |
+| Generic constraints and compile-time flow control | TODO-4352, TODO-4353, TODO-4354, TODO-4355, TODO-4356, TODO-4357, TODO-4345, TODO-4547, TODO-4548, TODO-4549, TODO-4346, TODO-4550, TODO-4551, TODO-4552, TODO-4553, TODO-4554, TODO-4556, TODO-4557, TODO-4349, TODO-4350 |
 
 ### Validation Coverage Snapshot
 
@@ -240,7 +236,7 @@ Task template:
 | Maybe/Result sum migration conformance | none |
 | Generic type-pack and tuple conformance | TODO-4274, TODO-4273, TODO-4277, TODO-4278 |
 | Procedural compile-time genericity conformance | none |
-| Generic constraint and compile-time flow conformance | TODO-4352, TODO-4353, TODO-4354, TODO-4355, TODO-4356, TODO-4357, TODO-4345, TODO-4547, TODO-4548, TODO-4549, TODO-4346, TODO-4550, TODO-4551, TODO-4552, TODO-4553, TODO-4554, TODO-4555, TODO-4556, TODO-4557, TODO-4349, TODO-4350 |
+| Generic constraint and compile-time flow conformance | TODO-4352, TODO-4353, TODO-4354, TODO-4355, TODO-4356, TODO-4357, TODO-4345, TODO-4547, TODO-4548, TODO-4549, TODO-4346, TODO-4550, TODO-4551, TODO-4552, TODO-4553, TODO-4554, TODO-4556, TODO-4557, TODO-4349, TODO-4350 |
 
 ### Vector/Map Bridge Contract Summary
 
@@ -823,33 +819,6 @@ Task template:
     - `./scripts/compile.sh --release` passes.
   - stop_rule: Stop once multi-wait returns stdlib `tuple<...>` or the missing
     task-side prerequisite is split into an explicit multithreading TODO.
-
-- [ ] TODO-4555: Add compile-time predicate value conformance
-  - owner: ai
-  - created_at: 2026-05-24
-  - phase: Generic constraint and compile-time flow alignment
-  - parallel_track: generic-requirements-diagnostics
-  - depends_on: TODO-4554, TODO-4358, TODO-4550, TODO-4551
-  - split_from: TODO-4359
-  - scope: Add focused conformance coverage for compile-time predicate
-    evaluation and typed compile-time values.
-  - implementation_notes:
-    - Start from CT facade unit tests, semantic-product snapshot tests,
-      parser/semantic diagnostics tests, and compile-pipeline golden tests.
-    - Prefer narrow tests that prove CT execution uses the compiler-hosted
-      facade and not final backend IR or `primevm`.
-    - Keep phase-qualified effects, cache invalidation, budget exhaustion, and
-      source-lock boundary assertions in TODO-4556 and TODO-4557.
-  - acceptance:
-    - Tests cover builtin `/std/meta/*` predicates, pure user predicates,
-      `true` versus `false`, invalid evaluation, and typed CT value formatting.
-    - Diagnostics coverage distinguishes unsatisfied predicates from invalid
-      predicate evaluation for both builtin and pure user predicate paths.
-    - Existing direct requirement, overload, and `ct_if` diagnostics remain
-      stable.
-    - `./scripts/compile.sh --release` passes.
-  - stop_rule: Stop once predicate/value compile-time VM behavior has targeted
-    regression coverage independent of the broader generic conformance matrix.
 
 - [ ] TODO-4556: Add compile-time effects and budget conformance
   - owner: ai

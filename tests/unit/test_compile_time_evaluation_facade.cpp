@@ -105,6 +105,60 @@ primec::SemanticProgram makeCacheProgram() {
   return program;
 }
 
+primec::SemanticProgram makePredicateConformanceProgram() {
+  primec::SemanticProgram program;
+
+  auto addFact = [&](primec::SemanticProgramRequirementPredicateFact fact,
+                     std::vector<primec::SemanticProgramRequirementPredicateOperand>
+                         operands = {}) {
+    fact.operands = std::move(operands);
+    program.requirementPredicateFacts.push_back(std::move(fact));
+  };
+
+  addFact(makeRequirementFact("/generic/value_true",
+                              "/std/meta/value_greater",
+                              "/std/meta/value_greater<4, 0>()",
+                              "satisfied",
+                              "value predicate satisfied: 4 > 0"),
+          {makeOperand("literal_compile_time_argument", "4"),
+           makeOperand("literal_compile_time_argument", "0")});
+  addFact(makeRequirementFact("/generic/value_false",
+                              "/std/meta/value_less",
+                              "/std/meta/value_less<5, 4>()",
+                              "unsatisfied",
+                              "value predicate failed: 5 < 4"),
+          {makeOperand("literal_compile_time_argument", "5"),
+           makeOperand("literal_compile_time_argument", "4")});
+  addFact(makeRequirementFact(
+              "/generic/value_invalid",
+              "/std/meta/value_greater",
+              "/std/meta/value_greater<value, 0>()",
+              "invalid_evaluation",
+              "non-constant value operand for requirement predicate "
+              "/std/meta/value_greater: value"),
+          {makeOperand("compile_time_symbol", "value"),
+           makeOperand("literal_compile_time_argument", "0")});
+  addFact(makeRequirementFact("/generic/user_true",
+                              "/project/is_small",
+                              "/project/is_small<N>()",
+                              "satisfied",
+                              "user predicate returned true"),
+          {makeOperand("literal_compile_time_argument", "4")});
+  addFact(makeRequirementFact("/generic/user_false",
+                              "/project/is_supported",
+                              "/project/is_supported()",
+                              "unsatisfied",
+                              "user predicate returned false"));
+  addFact(makeRequirementFact(
+      "/generic/user_invalid",
+      "/project/runtime_body",
+      "/project/runtime_body()",
+      "invalid_evaluation",
+      "unsupported pure user requirement predicate body: /project/runtime_body"));
+
+  return program;
+}
+
 class AllowOneEffectHost final : public primec::CompileTimeHost {
 public:
   bool allowEffect(std::string_view effectName,
@@ -620,6 +674,74 @@ TEST_CASE("semantic CT host answers canonical builtin meta predicate facts") {
   const auto traitResult = facade.evaluateRequirementPredicate(traitRequest);
   CHECK(traitResult.kind == primec::CompileTimeEvaluationResultKind::Success);
   CHECK(traitResult.message.find("Additive") != std::string::npos);
+}
+
+TEST_CASE("compile-time evaluation facade distinguishes predicate conformance outcomes") {
+  const primec::SemanticProgram program = makePredicateConformanceProgram();
+  const primec::SemanticProgramCompileTimeHost host(program);
+  const primec::CompileTimeEvaluationFacade facade(host);
+
+  auto evaluate = [&](std::string definitionPath, std::string predicateName) {
+    primec::CompileTimeEvaluationRequest request;
+    request.definitionPath = std::move(definitionPath);
+    request.predicateName = std::move(predicateName);
+    return facade.evaluateRequirementPredicate(request);
+  };
+
+  const auto builtinTrue =
+      evaluate("/generic/value_true", "/std/meta/value_greater");
+  CHECK(builtinTrue.kind == primec::CompileTimeEvaluationResultKind::Success);
+  CHECK(builtinTrue.fault == primec::CompileTimeEvaluationFaultKind::None);
+  CHECK(builtinTrue.boolValue);
+  CHECK(builtinTrue.message == "value predicate satisfied: 4 > 0");
+
+  const auto builtinFalse =
+      evaluate("/generic/value_false", "/std/meta/value_less");
+  CHECK(builtinFalse.kind ==
+        primec::CompileTimeEvaluationResultKind::UnsatisfiedPredicate);
+  CHECK(builtinFalse.fault ==
+        primec::CompileTimeEvaluationFaultKind::UnsatisfiedPredicate);
+  CHECK_FALSE(builtinFalse.boolValue);
+  CHECK(builtinFalse.message == "value predicate failed: 5 < 4");
+  CHECK(primec::formatCompileTimeEvaluationResult(builtinFalse)
+            .find("compile-time evaluation unsatisfied_predicate") !=
+        std::string::npos);
+
+  const auto builtinInvalid =
+      evaluate("/generic/value_invalid", "/std/meta/value_greater");
+  CHECK(builtinInvalid.kind ==
+        primec::CompileTimeEvaluationResultKind::InvalidEvaluation);
+  CHECK(builtinInvalid.fault ==
+        primec::CompileTimeEvaluationFaultKind::InvalidEvaluation);
+  CHECK_FALSE(builtinInvalid.boolValue);
+  CHECK(builtinInvalid.message.find("non-constant value operand") !=
+        std::string::npos);
+
+  const auto userTrue = evaluate("/generic/user_true", "/project/is_small");
+  CHECK(userTrue.kind == primec::CompileTimeEvaluationResultKind::Success);
+  CHECK(userTrue.boolValue);
+  CHECK(userTrue.message == "user predicate returned true");
+
+  const auto userFalse =
+      evaluate("/generic/user_false", "/project/is_supported");
+  CHECK(userFalse.kind ==
+        primec::CompileTimeEvaluationResultKind::UnsatisfiedPredicate);
+  CHECK(userFalse.fault ==
+        primec::CompileTimeEvaluationFaultKind::UnsatisfiedPredicate);
+  CHECK_FALSE(userFalse.boolValue);
+  CHECK(userFalse.message == "user predicate returned false");
+
+  const auto userInvalid =
+      evaluate("/generic/user_invalid", "/project/runtime_body");
+  CHECK(userInvalid.kind ==
+        primec::CompileTimeEvaluationResultKind::InvalidEvaluation);
+  CHECK(userInvalid.fault ==
+        primec::CompileTimeEvaluationFaultKind::InvalidEvaluation);
+  CHECK_FALSE(userInvalid.boolValue);
+  CHECK(userInvalid.message.find("unsupported pure user requirement predicate "
+                                 "body") != std::string::npos);
+  CHECK(primec::formatCompileTimeEvaluationResult(userInvalid)
+            .find("predicate /project/runtime_body") != std::string::npos);
 }
 
 TEST_CASE("semantic CT host preserves visibility and invalid meta diagnostics") {

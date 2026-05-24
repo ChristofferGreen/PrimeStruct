@@ -60,6 +60,15 @@ TEST_CASE("compile-time values format supported typed facts") {
             primec::makeCompileTimeBool(true, provenance))
             .find("ct_value bool true") != std::string::npos);
   CHECK(primec::formatCompileTimeValue(
+            primec::makeCompileTimeBool(false, provenance))
+            .find("ct_value bool false") != std::string::npos);
+  CHECK(primec::formatCompileTimeValue(
+            primec::makeCompileTimeSignedInteger(-7, provenance))
+            .find("ct_value signed_integer -7") != std::string::npos);
+  CHECK(primec::formatCompileTimeValue(
+            primec::makeCompileTimeUnsignedInteger(7, provenance))
+            .find("ct_value unsigned_integer 7u") != std::string::npos);
+  CHECK(primec::formatCompileTimeValue(
             primec::makeCompileTimeStringLiteral("hello", provenance))
             .find("ct_value string_literal \"hello\"") != std::string::npos);
   CHECK(primec::formatCompileTimeValue(
@@ -80,6 +89,12 @@ TEST_CASE("compile-time values format supported typed facts") {
   CHECK(formatted.find("source_text \"N > 0\"") != std::string::npos);
   CHECK(formatted.find("semantic_node_id 101") != std::string::npos);
   CHECK(formatted.find("provenance_handle 202") != std::string::npos);
+
+  CHECK(primec::formatCompileTimeValue(
+            primec::makeUnsupportedRuntimeCompileTimeValue("runtime file IO",
+                                                           provenance))
+            .find("ct_value unsupported_runtime_value runtime file IO") !=
+        std::string::npos);
 }
 
 TEST_CASE("compile-time bool values wrap requirement outcomes") {

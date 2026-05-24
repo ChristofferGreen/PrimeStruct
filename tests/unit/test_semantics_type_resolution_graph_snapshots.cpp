@@ -325,6 +325,8 @@ main() {
         std::string::npos);
   CHECK(error.find("category: unsatisfied requirement predicate") !=
         std::string::npos);
+  CHECK(error.find("category: invalid requirement predicate evaluation") ==
+        std::string::npos);
   CHECK(error.find("require transform: /positive_index") !=
         std::string::npos);
   CHECK(error.find("concrete facts:") != std::string::npos);
@@ -352,6 +354,8 @@ main() {
   CHECK(error.find("invalid requirement predicate /std/meta/value_greater") !=
         std::string::npos);
   CHECK(error.find("category: invalid requirement predicate evaluation") !=
+        std::string::npos);
+  CHECK(error.find("category: unsatisfied requirement predicate") ==
         std::string::npos);
   CHECK(error.find("compile_time_symbol:value") != std::string::npos);
   CHECK(error.find("non-constant value operand for requirement predicate "
@@ -750,6 +754,8 @@ main() {
         std::string::npos);
   CHECK(error.find("category: unsatisfied requirement predicate") !=
         std::string::npos);
+  CHECK(error.find("category: invalid requirement predicate evaluation") ==
+        std::string::npos);
   CHECK(error.find("predicate source: is_supported()") != std::string::npos);
   CHECK(error.find("user predicate returned false") != std::string::npos);
 }
@@ -777,6 +783,8 @@ main() {
   CHECK(error.find("invalid requirement predicate /needs_file") !=
         std::string::npos);
   CHECK(error.find("category: invalid requirement predicate evaluation") !=
+        std::string::npos);
+  CHECK(error.find("category: unsatisfied requirement predicate") ==
         std::string::npos);
   CHECK(error.find("denied compile-time effect in user requirement predicate "
                    "/needs_file: file_read") != std::string::npos);
