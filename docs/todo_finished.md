@@ -6,6 +6,29 @@ Legend:
 Finished items are periodically archived here from `docs/todo.md`; section headers record the archive date.
 
 **Todo Completion (May 24, 2026)**
+- [x] TODO-4349: Add generic constraint conformance matrix
+  - owner: ai
+  - created_at: 2026-05-04
+  - finished_at: 2026-05-24
+  - phase: Generic constraint and compile-time flow alignment
+  - depends_on: TODO-4554, TODO-4555, TODO-4556, TODO-4557
+  - scope: Add parser, semantic, IR-preparation, compile-run, and diagnostic
+    conformance coverage for the generic requirement and compile-time flow
+    model.
+  - outcome:
+    - Split the broad conformance matrix into three independently testable
+      leaves so future parallel runs can cover parser/source-lock syntax,
+      semantic-product/IR handoff, and compile-run diagnostics separately.
+    - Created TODO-4558 for public generic parser, source-lock, and
+      example-lock conformance.
+    - Created TODO-4559 for semantic-product and IR-preparation handoff
+      conformance.
+    - Created TODO-4560 for compile-run and user-facing diagnostic
+      conformance.
+    - Moved TODO-4350 behind the three concrete conformance leaves.
+  - validation:
+    - TODO-only split; no build required.
+
 - [x] TODO-4555: Add compile-time predicate value conformance
   - owner: ai
   - created_at: 2026-05-24
