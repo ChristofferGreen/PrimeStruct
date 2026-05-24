@@ -5,6 +5,26 @@ Legend:
 
 Finished items are periodically archived here from `docs/todo.md`; section headers record the archive date.
 
+**Todo Completion (May 24, 2026)**
+- [x] TODO-4348: Publish requirement diagnostics with provenance
+  - owner: ai
+  - created_at: 2026-05-04
+  - finished_at: 2026-05-24
+  - phase: Generic constraint and compile-time flow alignment
+  - parallel_track: generic-requirements-diagnostics
+  - depends_on: TODO-4347, TODO-4351
+  - outcome:
+    - Split the broad diagnostic umbrella into bounded implementation leaves:
+      TODO-4552 for direct requirement failures and invalid predicates,
+      TODO-4553 for requirement-overload diagnostics, and TODO-4554 for
+      compile-time-flow and generated-type diagnostics.
+    - Promoted TODO-4552 as the next Ready Now generic-requirements
+      diagnostics leaf while keeping same-track successors dependency-gated.
+    - Updated the generic constraint lane, execution queue, coverage
+      snapshots, and successor dependencies to reference the split leaves.
+  - validation:
+    - Not run; planning-only split per worker assignment.
+
 **Todo Completion (May 23, 2026)**
 - [x] TODO-4351: Add value-level compile-time requirement facts
   - owner: ai

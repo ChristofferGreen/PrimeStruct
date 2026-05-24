@@ -83,7 +83,7 @@ Task template:
 
 ### Ready Now (Parallel-Candidate Leaves; No Unmet TODO Dependencies)
 
-- TODO-4348: Publish requirement diagnostics with provenance | track:
+- TODO-4552: Publish direct requirement failure diagnostics | track:
   generic-requirements-diagnostics | primary surface: requirement diagnostics
 
 ### Parallel Work Tracks (Current)
@@ -129,13 +129,17 @@ Task template:
   enforced phase-qualified compile-time effects; TODO-4551 added
   deterministic cache keys and invalidation; TODO-4347 routed requirement
   facts into overload selection; and TODO-4351 added integer value
-  requirement facts. TODO-4348 is ready to publish provenance-rich
-  diagnostics for failed and invalid requirements.
+  requirement facts. TODO-4348 was split into bounded diagnostic leaves;
+  TODO-4552 is ready to publish provenance-rich direct requirement failures,
+  with overload and compile-time-flow diagnostics following in TODO-4553 and
+  TODO-4554.
 
 ### Immediate Next 10 (Track Successors; Not Ready Until Dependencies Land)
 
 - TODO-4545: Implement first structured task spawn/wait substrate
 - TODO-4278: Integrate multi-wait with stdlib tuple
+- TODO-4553: Publish requirement overload diagnostics
+- TODO-4554: Publish compile-time flow diagnostics with provenance
 - TODO-4359: Add compile-time VM conformance coverage
 - TODO-4349: Add generic constraint conformance matrix
 - TODO-4350: Add high-level generic design examples
@@ -162,14 +166,16 @@ Task template:
   prerequisite split out of TODO-4278
 - Procedural compile-time genericity: none active after TODO-4340 and
   TODO-4546
-- Generic constraint and compile-time flow alignment: TODO-4348 -> TODO-4359
-  -> TODO-4349 -> TODO-4350
+- Generic constraint and compile-time flow alignment: TODO-4552 -> TODO-4553
+  -> TODO-4554 -> TODO-4359 -> TODO-4349 -> TODO-4350
 
 ### Execution Queue (Recommended Track Order)
 
 - TODO-4545: Implement first structured task spawn/wait substrate
 - TODO-4278: Integrate multi-wait with stdlib tuple
-- TODO-4348: Publish requirement diagnostics with provenance
+- TODO-4552: Publish direct requirement failure diagnostics
+- TODO-4553: Publish requirement overload diagnostics
+- TODO-4554: Publish compile-time flow diagnostics with provenance
 - TODO-4359: Add compile-time VM conformance coverage
 - TODO-4349: Add generic constraint conformance matrix
 - TODO-4350: Add high-level generic design examples
@@ -201,7 +207,7 @@ Task template:
 | Stdlib ADT migration for `Maybe` and `Result` | none |
 | Generic type packs and tuple stdlib surface | TODO-4274, TODO-4273, TODO-4277, TODO-4278 |
 | Procedural compile-time genericity and local type facts | none |
-| Generic constraints and compile-time flow control | TODO-4352, TODO-4353, TODO-4354, TODO-4355, TODO-4356, TODO-4357, TODO-4345, TODO-4547, TODO-4548, TODO-4549, TODO-4346, TODO-4550, TODO-4551, TODO-4348, TODO-4359, TODO-4349, TODO-4350 |
+| Generic constraints and compile-time flow control | TODO-4352, TODO-4353, TODO-4354, TODO-4355, TODO-4356, TODO-4357, TODO-4345, TODO-4547, TODO-4548, TODO-4549, TODO-4346, TODO-4550, TODO-4551, TODO-4552, TODO-4553, TODO-4554, TODO-4359, TODO-4349, TODO-4350 |
 
 ### Validation Coverage Snapshot
 
@@ -228,7 +234,7 @@ Task template:
 | Maybe/Result sum migration conformance | none |
 | Generic type-pack and tuple conformance | TODO-4274, TODO-4273, TODO-4277, TODO-4278 |
 | Procedural compile-time genericity conformance | none |
-| Generic constraint and compile-time flow conformance | TODO-4352, TODO-4353, TODO-4354, TODO-4355, TODO-4356, TODO-4357, TODO-4345, TODO-4547, TODO-4548, TODO-4549, TODO-4346, TODO-4550, TODO-4551, TODO-4348, TODO-4359, TODO-4349, TODO-4350 |
+| Generic constraint and compile-time flow conformance | TODO-4352, TODO-4353, TODO-4354, TODO-4355, TODO-4356, TODO-4357, TODO-4345, TODO-4547, TODO-4548, TODO-4549, TODO-4346, TODO-4550, TODO-4551, TODO-4552, TODO-4553, TODO-4554, TODO-4359, TODO-4349, TODO-4350 |
 
 ### Vector/Map Bridge Contract Summary
 
@@ -812,20 +818,23 @@ Task template:
   - stop_rule: Stop once multi-wait returns stdlib `tuple<...>` or the missing
     task-side prerequisite is split into an explicit multithreading TODO.
 
-- [ ] TODO-4348: Publish requirement diagnostics with provenance
+- [ ] TODO-4552: Publish direct requirement failure diagnostics
   - owner: ai
-  - created_at: 2026-05-04
+  - created_at: 2026-05-24
   - phase: Generic constraint and compile-time flow alignment
   - parallel_track: generic-requirements-diagnostics
   - depends_on: TODO-4347, TODO-4351
-  - scope: Add stable, user-facing diagnostics for failed requirements,
-    ambiguous requirement-driven overloads, and invalid compile-time flow.
+  - scope: Add stable, user-facing diagnostics for direct requirement
+    predicate failures and invalid predicate evaluation on constrained
+    definitions.
   - implementation_notes:
     - Start from the diagnostic engine, semantic-product provenance handles,
-      template instantiation diagnostics, generated type path diagnostics, and
-      golden diagnostic tests.
-    - Diagnostics should show the requirement site, the call site, the
-      relevant inferred type facts, and the missing/failed predicate.
+      `RequirementPredicateFactDraft`, `validateRequirementPredicates`, and
+      the existing semantic golden diagnostics in
+      `test_semantics_type_resolution_graph_snapshots.cpp`.
+    - Diagnostics should show the triggering definition or specialization,
+      the requirement transform site, relevant inferred type/value facts, and
+      the missing or failed predicate.
     - Use the diagnostic style examples in
       `docs/PrimeStruct_SyntaxSpec.md` as the target shape: call site first,
       failed requirement second, concrete facts third, then a short actionable
@@ -834,27 +843,89 @@ Task template:
       predicates that cannot be evaluated.
     - Keep output deterministic across import order and repeated builds.
   - acceptance:
-    - Failed requirement diagnostics point at both the generic requirement and
-      the concrete call or specialization that triggered it.
-    - Overload failures summarize why each relevant candidate was rejected
-      without dumping every internal predicate detail by default.
-    - Compile-time branch and termination diagnostics include enough
-      provenance to debug generated types and type-local facts.
-    - Golden diagnostics cover failed type requirements, ambiguous constrained
-      calls, local generated type escape, missing compile-time effects, and
-      value-level predicates such as `N > 0`.
+    - Golden diagnostics cover failed direct type requirements, value-level
+      predicates such as `N > 0`, and missing compile-time effects on direct
+      user-defined predicates.
     - Golden diagnostics cover at least one invalid user-defined predicate
       body and make clear that it is not merely a failed requirement.
     - Golden diagnostic tests pin representative success and failure output.
+    - Successful requirement semantic-product output continues to include
+      stable predicate provenance handles and concrete fact text.
     - `./scripts/compile.sh --release` passes.
-  - stop_rule: Stop once requirement failures are explainable from user code
-    without inspecting compiler internals.
+  - stop_rule: Stop once direct requirement failures and invalid predicate
+    evaluations are explainable from user code without inspecting compiler
+    internals; leave overload and compile-time-flow diagnostics to TODO-4553
+    and TODO-4554.
+
+- [ ] TODO-4553: Publish requirement overload diagnostics
+  - owner: ai
+  - created_at: 2026-05-24
+  - phase: Generic constraint and compile-time flow alignment
+  - parallel_track: generic-requirements-diagnostics
+  - depends_on: TODO-4552
+  - scope: Add stable, provenance-rich diagnostics for requirement-driven
+    overload rejection and ambiguity.
+  - implementation_notes:
+    - Start from `evaluateRequirementOverloadViability`,
+      `selectRequirementAwareHelperOverloadPath`, template instantiation
+      diagnostics, and the existing no-viable/ambiguous constrained overload
+      tests.
+    - Keep the user-facing shape call site first, rejected candidate or
+      ambiguous candidate second, concrete inferred argument facts third, and
+      a short actionable hint last.
+    - Summarize each relevant candidate deterministically without dumping
+      every internal predicate detail by default.
+  - acceptance:
+    - No-viable diagnostics point at the concrete call and summarize why each
+      relevant constrained candidate was rejected.
+    - Ambiguous constrained-call diagnostics identify the viable candidates and
+      the facts that made them indistinguishable.
+    - Golden diagnostics cover failed type requirements and value predicates
+      through overload selection, plus an ambiguous constrained call.
+    - Existing successful constrained overload selection behavior remains
+      unchanged.
+    - `./scripts/compile.sh --release` passes.
+  - stop_rule: Stop once requirement-overload failures are explainable from
+    user code; leave compile-time branch/generated-type diagnostics to
+    TODO-4554.
+
+- [ ] TODO-4554: Publish compile-time flow diagnostics with provenance
+  - owner: ai
+  - created_at: 2026-05-24
+  - phase: Generic constraint and compile-time flow alignment
+  - parallel_track: generic-requirements-diagnostics
+  - depends_on: TODO-4553
+  - scope: Add stable, provenance-rich diagnostics for invalid compile-time
+    flow, including `ct_if` predicate evaluation and branch-local generated
+    type failures.
+  - implementation_notes:
+    - Start from `evaluateCompileTimeIfDecision`, branch-local generated type
+      path diagnostics, semantic-product provenance handles, and existing
+      `ct_if` and local generated type tests.
+    - Diagnostics should identify the `ct_if` site, selected/discarded branch
+      context where relevant, generated type path, and type-local facts.
+    - Distinguish predicates that are unsatisfied and select `else` from
+      predicates that cannot be evaluated.
+  - acceptance:
+    - Invalid `ct_if` diagnostics include predicate source/provenance and the
+      missing or invalid fact that prevented evaluation.
+    - Branch-local generated type escape diagnostics include selected branch,
+      generated type path, local type fact provenance, and a short fix hint.
+    - Golden diagnostics cover local generated type escape, missing
+      compile-time effects in flow, invalid predicate bodies used by flow, and
+      representative success/failure output.
+    - Existing selected-branch pruning and semantic-product output remain
+      deterministic.
+    - `./scripts/compile.sh --release` passes.
+  - stop_rule: Stop once invalid compile-time flow and generated-type
+    diagnostics are explainable from user code without inspecting compiler
+    internals.
 
 - [ ] TODO-4359: Add compile-time VM conformance coverage
   - owner: ai
   - created_at: 2026-05-04
   - phase: Generic constraint and compile-time flow alignment
-  - depends_on: TODO-4348, TODO-4358, TODO-4550, TODO-4551
+  - depends_on: TODO-4554, TODO-4358, TODO-4550, TODO-4551
   - scope: Add focused conformance coverage for the compile-time VM facade,
     host, typed values, pure user predicates, cache/budget behavior, and
     phase-qualified effects.
@@ -882,7 +953,7 @@ Task template:
   - owner: ai
   - created_at: 2026-05-04
   - phase: Generic constraint and compile-time flow alignment
-  - depends_on: TODO-4348, TODO-4359
+  - depends_on: TODO-4554, TODO-4359
   - scope: Add parser, semantic, IR-preparation, compile-run, and diagnostic
     conformance coverage for the generic requirement and compile-time flow
     model.
