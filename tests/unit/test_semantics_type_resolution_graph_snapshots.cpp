@@ -1050,7 +1050,14 @@ main() {
                    "/pick/PairT__ct_if_then_") != std::string::npos);
   CHECK(error.find("selected compile-time branch: then") !=
         std::string::npos);
+  CHECK(error.find("generated type path: /pick/PairT__ct_if_then_") !=
+        std::string::npos);
+  CHECK(error.find("local generated type source:") != std::string::npos);
   CHECK(error.find("type facts: ValueT") != std::string::npos);
+  CHECK(error.find("local type fact provenance:\n- ValueT at ") !=
+        std::string::npos);
+  CHECK(error.find("hint: keep branch-local generated structs inside the "
+                   "selected ct_if branch") != std::string::npos);
 }
 
 TEST_CASE("expression ct_if selects value branches before validation") {
@@ -1178,9 +1185,114 @@ main() {
   std::string error;
   CHECK_FALSE(validateProgram(source, "/main", error));
   CHECK(error.find("invalid ct_if condition on /pick") != std::string::npos);
+  CHECK(error.find("category: invalid compile-time flow predicate") !=
+        std::string::npos);
+  CHECK(error.find("ct_if site: /pick at ") != std::string::npos);
+  CHECK(error.find("predicate source: "
+                   "/std/meta/type_equals<typeof<missing>, i32>()") !=
+        std::string::npos);
+  CHECK(error.find("compile-time facts:") != std::string::npos);
+  CHECK(error.find("type_fact:typeof<missing>") != std::string::npos);
   CHECK(error.find("unknown type fact for requirement predicate "
                    "/std/meta/type_equals: typeof<missing>") !=
         std::string::npos);
+  CHECK(error.find("hint: make the ct_if predicate evaluable from "
+                   "compile-time facts") != std::string::npos);
+}
+
+TEST_CASE("ct_if flow diagnostics distinguish invalid user predicates") {
+  const std::string deniedEffectSource = R"(
+[effects(file_read), return<bool>]
+needs_file() {
+  return(true)
+}
+
+[return<i32>]
+pick() {
+  ct_if(needs_file()) {
+    print(1i32)
+  } else {
+    print(2i32)
+  }
+  return(0i32)
+}
+
+[return<i32>]
+main() {
+  return(pick())
+}
+)";
+
+  std::string error;
+  CHECK_FALSE(validateProgram(deniedEffectSource, "/main", error));
+  INFO(error);
+  CHECK(error.find("invalid ct_if condition on /pick") != std::string::npos);
+  CHECK(error.find("category: invalid compile-time flow predicate") !=
+        std::string::npos);
+  CHECK(error.find("predicate source: needs_file()") != std::string::npos);
+  CHECK(error.find("predicate path: /needs_file") != std::string::npos);
+  CHECK(error.find("denied compile-time effect in user requirement predicate "
+                   "/needs_file: file_read") != std::string::npos);
+
+  const std::string unsupportedBodySource = R"(
+[return<bool>]
+runtime_body() {
+  return(equals(1i32, 1i32))
+}
+
+[return<i32>]
+pick() {
+  ct_if(runtime_body()) {
+    print(1i32)
+  } else {
+    print(2i32)
+  }
+  return(0i32)
+}
+
+[return<i32>]
+main() {
+  return(pick())
+}
+)";
+
+  error.clear();
+  CHECK_FALSE(validateProgram(unsupportedBodySource, "/main", error));
+  INFO(error);
+  CHECK(error.find("invalid ct_if condition on /pick") != std::string::npos);
+  CHECK(error.find("predicate source: runtime_body()") != std::string::npos);
+  CHECK(error.find("unsupported pure user requirement predicate body: "
+                   "/runtime_body") != std::string::npos);
+}
+
+TEST_CASE("ct_if unsatisfied predicates select else without diagnostics") {
+  const std::string source = R"(
+[return<i32>]
+pick([i32] value) {
+  [i32 mut] result{0i32}
+  ct_if(type_equals<typeof<value>, f32>()) {
+    missing_in_discarded_branch(value)
+  } else {
+    assign(result, value)
+  }
+  return(result)
+}
+
+[return<i32>]
+main() {
+  return(pick(9i32))
+}
+)";
+
+  primec::testing::CompilePipelineBoundaryDumps dumps;
+  std::string error;
+  REQUIRE(primec::testing::captureSemanticBoundaryDumpsForTesting(
+      source, "/main", dumps, error));
+  CHECK(error.empty());
+  CHECK(dumps.astSemantic.find("missing_in_discarded_branch") ==
+        std::string::npos);
+  CHECK(dumps.astSemantic.find("assign(result, value)") != std::string::npos);
+  CHECK(dumps.astSemantic.find("ct_if") == std::string::npos);
 }
 
 TEST_CASE("duplicate require transforms fail closed before publication") {

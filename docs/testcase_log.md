@@ -982,6 +982,14 @@
   `PrimeStruct_primestruct_compile_run_emitters_cpp_lambda_and_mutator_resolution_20_20`.
 
 ## Recent Test Runs
+- 2026-05-24 09:28 CEST | pass | mode: release | command:
+  `cd build-release && ./PrimeStruct_semantics_tests --test-case="statement ct_if branch generated escape names selected branch,statement ct_if diagnoses invalid predicate conditions,ct_if flow diagnostics distinguish invalid user predicates,ct_if unsatisfied predicates select else without diagnostics" --no-skip`
+  | failures: none | notes: TODO-4554 compile-time flow diagnostics
+  focused doctest slice passed with 4 cases and 40 assertions.
+- 2026-05-24 09:28 CEST | pass | mode: release | command:
+  `cmake --build build-release --target PrimeStruct_semantics_tests -j 1`
+  | failures: none | notes: rebuilt affected semantics doctest target for
+  TODO-4554 focused validation.
 - 2026-05-24 09:02 CEST | pass | mode: release | command:
   `cd build-release && ./PrimeStruct_semantics_tests --test-case="requirement constrained overload selects the viable same arity candidate,requirement constrained overload uses local argument facts,requirement constrained overload preserves no viable diagnostics,requirement constrained overload reports value predicate rejection,requirement constrained overload reports ambiguous candidates" --no-skip`
   | failures: none | notes: final TODO-4553 diagnostic-shape rerun passed

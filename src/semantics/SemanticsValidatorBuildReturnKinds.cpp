@@ -58,13 +58,16 @@ std::string SemanticsValidator::formatLocalGeneratedStructEscapeDiagnostic(
   }
 
   const std::size_t branchMarker = structPath.find("__ct_if_");
+  std::string selectedBranch;
   if (branchMarker != std::string::npos) {
     const std::size_t branchStart =
         branchMarker + std::string("__ct_if_").size();
     const std::size_t branchEnd = structPath.find('_', branchStart);
     if (branchEnd != std::string::npos && branchEnd > branchStart) {
+      selectedBranch = structPath.substr(branchStart,
+                                         branchEnd - branchStart);
       message += " (selected compile-time branch: ";
-      message += structPath.substr(branchStart, branchEnd - branchStart);
+      message += selectedBranch;
     } else {
       message += " (selected compile-time branch";
     }
@@ -84,6 +87,17 @@ std::string SemanticsValidator::formatLocalGeneratedStructEscapeDiagnostic(
     } else {
       message += "; local type definition source unknown";
     }
+  }
+
+  message += "\ngenerated type path: ";
+  message += structPath;
+  if (!selectedBranch.empty()) {
+    message += "\nselected compile-time branch: ";
+    message += selectedBranch;
+  }
+  if (structDef->sourceLine > 0 && structDef->sourceColumn > 0) {
+    message += "\nlocal generated type source: ";
+    message += sourcePointText(structDef->sourceLine, structDef->sourceColumn);
   }
 
   const Definition *parentDef = nullptr;
@@ -175,7 +189,20 @@ std::string SemanticsValidator::formatLocalGeneratedStructEscapeDiagnostic(
                                    referencedFacts[i].column);
       }
     }
+    message += "\nlocal type fact provenance:";
+    for (const auto &fact : referencedFacts) {
+      message += "\n- ";
+      message += fact.name;
+      if (fact.line > 0 && fact.column > 0) {
+        message += " at ";
+        message += sourcePointText(fact.line, fact.column);
+      } else {
+        message += " at source unknown";
+      }
+    }
   }
+  message += "\nhint: keep branch-local generated structs inside the selected "
+             "ct_if branch or return a top-level type.";
   message += ")";
   return message;
 }

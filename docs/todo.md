@@ -83,9 +83,9 @@ Task template:
 
 ### Ready Now (Parallel-Candidate Leaves; No Unmet TODO Dependencies)
 
-- TODO-4554: Publish compile-time flow diagnostics with provenance | track:
-  generic-requirements-diagnostics | primary surface: compile-time flow
-  diagnostics
+- TODO-4359: Add compile-time VM conformance coverage | track:
+  generic-requirements-diagnostics | primary surface: compile-time VM
+  conformance
 
 ### Parallel Work Tracks (Current)
 
@@ -131,15 +131,15 @@ Task template:
   deterministic cache keys and invalidation; TODO-4347 routed requirement
   facts into overload selection; and TODO-4351 added integer value
   requirement facts. TODO-4348 was split into bounded diagnostic leaves,
-  TODO-4552 published provenance-rich direct requirement failures, and
-  TODO-4553 published requirement-overload diagnostics. TODO-4554 is ready to
-  publish compile-time-flow diagnostics.
+  TODO-4552 published provenance-rich direct requirement failures,
+  TODO-4553 published requirement-overload diagnostics, and TODO-4554
+  published compile-time-flow diagnostics. TODO-4359 is ready to add
+  compile-time VM conformance coverage.
 
 ### Immediate Next 10 (Track Successors; Not Ready Until Dependencies Land)
 
 - TODO-4545: Implement first structured task spawn/wait substrate
 - TODO-4278: Integrate multi-wait with stdlib tuple
-- TODO-4359: Add compile-time VM conformance coverage
 - TODO-4349: Add generic constraint conformance matrix
 - TODO-4350: Add high-level generic design examples
 
@@ -165,14 +165,13 @@ Task template:
   prerequisite split out of TODO-4278
 - Procedural compile-time genericity: none active after TODO-4340 and
   TODO-4546
-- Generic constraint and compile-time flow alignment: TODO-4554 -> TODO-4359
-  -> TODO-4349 -> TODO-4350
+- Generic constraint and compile-time flow alignment: TODO-4359 -> TODO-4349
+  -> TODO-4350
 
 ### Execution Queue (Recommended Track Order)
 
 - TODO-4545: Implement first structured task spawn/wait substrate
 - TODO-4278: Integrate multi-wait with stdlib tuple
-- TODO-4554: Publish compile-time flow diagnostics with provenance
 - TODO-4359: Add compile-time VM conformance coverage
 - TODO-4349: Add generic constraint conformance matrix
 - TODO-4350: Add high-level generic design examples
@@ -814,38 +813,6 @@ Task template:
     - `./scripts/compile.sh --release` passes.
   - stop_rule: Stop once multi-wait returns stdlib `tuple<...>` or the missing
     task-side prerequisite is split into an explicit multithreading TODO.
-
-- [ ] TODO-4554: Publish compile-time flow diagnostics with provenance
-  - owner: ai
-  - created_at: 2026-05-24
-  - phase: Generic constraint and compile-time flow alignment
-  - parallel_track: generic-requirements-diagnostics
-  - depends_on: TODO-4553
-  - scope: Add stable, provenance-rich diagnostics for invalid compile-time
-    flow, including `ct_if` predicate evaluation and branch-local generated
-    type failures.
-  - implementation_notes:
-    - Start from `evaluateCompileTimeIfDecision`, branch-local generated type
-      path diagnostics, semantic-product provenance handles, and existing
-      `ct_if` and local generated type tests.
-    - Diagnostics should identify the `ct_if` site, selected/discarded branch
-      context where relevant, generated type path, and type-local facts.
-    - Distinguish predicates that are unsatisfied and select `else` from
-      predicates that cannot be evaluated.
-  - acceptance:
-    - Invalid `ct_if` diagnostics include predicate source/provenance and the
-      missing or invalid fact that prevented evaluation.
-    - Branch-local generated type escape diagnostics include selected branch,
-      generated type path, local type fact provenance, and a short fix hint.
-    - Golden diagnostics cover local generated type escape, missing
-      compile-time effects in flow, invalid predicate bodies used by flow, and
-      representative success/failure output.
-    - Existing selected-branch pruning and semantic-product output remain
-      deterministic.
-    - `./scripts/compile.sh --release` passes.
-  - stop_rule: Stop once invalid compile-time flow and generated-type
-    diagnostics are explainable from user code without inspecting compiler
-    internals.
 
 - [ ] TODO-4359: Add compile-time VM conformance coverage
   - owner: ai

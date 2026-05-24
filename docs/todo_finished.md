@@ -6,6 +6,33 @@ Legend:
 Finished items are periodically archived here from `docs/todo.md`; section headers record the archive date.
 
 **Todo Completion (May 24, 2026)**
+- [x] TODO-4554: Publish compile-time flow diagnostics with provenance
+  - owner: ai
+  - created_at: 2026-05-24
+  - finished_at: 2026-05-24
+  - phase: Generic constraint and compile-time flow alignment
+  - parallel_track: generic-requirements-diagnostics
+  - depends_on: TODO-4553
+  - scope: Add stable, provenance-rich diagnostics for invalid compile-time
+    flow, including `ct_if` predicate evaluation and branch-local generated
+    type failures.
+  - outcome:
+    - Replaced one-line invalid `ct_if` failures with deterministic
+      multi-line diagnostics that name the `ct_if` site, predicate source,
+      predicate path, compile-time facts, evaluation result, and fix hint.
+    - Kept unsatisfied predicates as normal `else` branch selection while
+      reserving diagnostics for predicates that cannot be evaluated.
+    - Expanded branch-local generated type escape diagnostics with the
+      selected branch, generated path, local generated type source, type-local
+      fact provenance, and a fix hint.
+    - Documented the compile-time-flow diagnostic contract in
+      `docs/PrimeStruct.md`.
+    - Promoted TODO-4359 as the next Ready Now generic-requirements
+      conformance leaf.
+  - validation:
+    - `cmake --build build-release --target PrimeStruct_semantics_tests -j 1`
+    - `./PrimeStruct_semantics_tests --test-case="statement ct_if branch generated escape names selected branch,statement ct_if diagnoses invalid predicate conditions,ct_if flow diagnostics distinguish invalid user predicates,ct_if unsatisfied predicates select else without diagnostics" --no-skip`
+
 - [x] TODO-4553: Publish requirement overload diagnostics
   - owner: ai
   - created_at: 2026-05-24

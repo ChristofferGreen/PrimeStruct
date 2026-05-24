@@ -1126,7 +1126,11 @@ Procedural compile-time genericity contract:
   introduced by the selected statement branch receive a deterministic
   branch-scoped identity such as `/pick/PairT__ct_if_then_5_5`; selected-branch
   uses are rewritten to that identity, while discarded-branch generated
-  definitions and type facts stay out of semantic products and IR.
+  definitions and type facts stay out of semantic products and IR. Invalid
+  `ct_if` predicates report the branch site, predicate source, predicate path,
+  concrete compile-time facts, and the evaluation result that prevented branch
+  selection. Branch-local generated type escape diagnostics report the selected
+  branch, generated path, type-local fact provenance, and a short fix hint.
 - Compile-time predicate and helper execution should run through a
   compiler-hosted compile-time VM facade. That facade may share the runtime VM
   interpreter core for arithmetic, calls, branching, and frame mechanics, but

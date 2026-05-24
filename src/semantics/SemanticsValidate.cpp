@@ -6816,6 +6816,56 @@ std::string compileTimeIfDecisionText(CompileTimeIfDecision decision) {
   return "deferred";
 }
 
+std::string formatCompileTimeIfConditionShapeDiagnostic(
+    const Expr &stmt,
+    const std::string &definitionPath) {
+  std::ostringstream out;
+  out << "invalid ct_if condition on " << definitionPath << '\n';
+  out << "category: invalid compile-time flow predicate\n";
+  out << "ct_if site: " << definitionPath << " at " << stmt.sourceLine
+      << ':' << stmt.sourceColumn << '\n';
+  out << "predicate source: <not a supported compile-time predicate call>\n";
+  out << "result: ct_if condition must be a compile-time predicate call\n";
+  out << "hint: make the ct_if predicate evaluable from compile-time facts, "
+         "or move non-flow constraints into require(...).";
+  return out.str();
+}
+
+std::string formatCompileTimeIfPredicateDiagnostic(
+    const Expr &stmt,
+    const std::string &definitionPath,
+    const semantics::RequirementPredicateFactDraft &fact) {
+  std::ostringstream out;
+  out << "invalid ct_if condition on " << definitionPath << '\n';
+  out << "category: invalid compile-time flow predicate\n";
+  out << "ct_if site: " << definitionPath << " at " << stmt.sourceLine
+      << ':' << stmt.sourceColumn << '\n';
+  out << "predicate source: "
+      << (fact.sourceText.empty() ? std::string("<unknown>")
+                                  : fact.sourceText)
+      << '\n';
+  out << "predicate path: "
+      << (fact.predicateName.empty() ? std::string("<unknown>")
+                                     : fact.predicateName)
+      << '\n';
+  out << "compile-time facts:";
+  if (fact.operands.empty()) {
+    out << " none\n";
+  } else {
+    out << '\n';
+    for (const semantics::RequirementPredicateOperandFact &operand :
+         fact.operands) {
+      out << "- " << operand.stableHandle << " kind=" << operand.kind
+          << " text=" << operand.text << " at " << operand.sourceLine
+          << ':' << operand.sourceColumn << '\n';
+    }
+  }
+  out << "result: " << fact.evaluationDiagnostic << '\n';
+  out << "hint: make the ct_if predicate evaluable from compile-time facts, "
+         "or move non-flow constraints into require(...).";
+  return out.str();
+}
+
 bool evaluateCompileTimeIfDecision(
     const Expr &stmt,
     const semantics::RequirementPredicateDefinitionContext &context,
@@ -6831,8 +6881,7 @@ bool evaluateCompileTimeIfDecision(
   }
   std::string conditionText;
   if (!serializeCompileTimeIfPredicateExpr(stmt.args[0], conditionText)) {
-    error = "ct_if condition must be a compile-time predicate call on " +
-            definitionPath;
+    error = formatCompileTimeIfConditionShapeDiagnostic(stmt, definitionPath);
     return false;
   }
   semantics::RequirementPredicateFactDraft fact =
@@ -6852,8 +6901,7 @@ bool evaluateCompileTimeIfDecision(
       decision = CompileTimeIfDecision::Deferred;
       return true;
     }
-    error = "invalid ct_if condition on " + definitionPath + ": " +
-            fact.evaluationDiagnostic;
+    error = formatCompileTimeIfPredicateDiagnostic(stmt, definitionPath, fact);
     return false;
   }
   decision = fact.evaluationOutcome == "satisfied"
