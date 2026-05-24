@@ -6,6 +6,29 @@ Legend:
 Finished items are periodically archived here from `docs/todo.md`; section headers record the archive date.
 
 **Todo Completion (May 24, 2026)**
+- [x] TODO-4359: Add compile-time VM conformance coverage
+  - owner: ai
+  - created_at: 2026-05-04
+  - finished_at: 2026-05-24
+  - phase: Generic constraint and compile-time flow alignment
+  - depends_on: TODO-4554, TODO-4358, TODO-4550, TODO-4551
+  - scope: Add focused conformance coverage for the compile-time VM facade,
+    host, typed values, pure user predicates, cache/budget behavior, and
+    phase-qualified effects.
+  - outcome:
+    - Split the broad conformance leaf into three independently testable
+      leaves so predicate/value behavior, effects/cache/budget behavior, and
+      compiler-host boundary coverage can proceed in parallel.
+    - Created TODO-4555 for builtin and pure user predicate value coverage,
+      typed CT value formatting, and invalid-versus-unsatisfied diagnostics.
+    - Created TODO-4556 for compile-time effect opt-ins, cache invalidation,
+      and budget exhaustion coverage.
+    - Created TODO-4557 for source-lock and focused conformance coverage that
+      proves CT requirement evaluation stays compiler-hosted rather than
+      depending on final backend artifacts.
+  - validation:
+    - TODO-only split; no build required.
+
 - [x] TODO-4554: Publish compile-time flow diagnostics with provenance
   - owner: ai
   - created_at: 2026-05-24
