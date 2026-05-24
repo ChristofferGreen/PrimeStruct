@@ -244,6 +244,15 @@ bool isBindingAuxTransformName(const std::string &name) {
          name == "public" || name == "private" || name == "static";
 }
 
+bool hasTransformNamed(const std::vector<Transform> &transforms, std::string_view name) {
+  for (const auto &transform : transforms) {
+    if (transform.name == name) {
+      return true;
+    }
+  }
+  return false;
+}
+
 bool hasExplicitBindingTypeTransform(const std::vector<Transform> &transforms) {
   for (const auto &transform : transforms) {
     if (transform.name == "effects" || transform.name == "capabilities") {

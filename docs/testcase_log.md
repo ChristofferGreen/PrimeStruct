@@ -985,6 +985,20 @@
   `PrimeStruct_primestruct_compile_run_emitters_cpp_lambda_and_mutator_resolution_20_20`.
 
 ## Recent Test Runs
+- 2026-05-24 12:56 CEST | fail | mode: release | command:
+  `cd build-release && ./PrimeStruct_parser_tests --test-case="parses task spawn and wait surface,parser helper finds transform names,spawn transform is rejected on bindings,spawn transform is rejected on definitions"`
+  | failures: parses task spawn and wait surface | notes: new positive
+  parser fixture used inferred/inline task binding shapes that the current
+  parser canonicalized differently before TODO-4562 task facts exist.
+- 2026-05-24 12:56 CEST | pass | mode: release | command:
+  `cmake --build build-release --target PrimeStruct_parser_tests -j 1`;
+  `cd build-release && ./PrimeStruct_parser_tests --test-case="parses task spawn and wait surface,parser helper finds transform names,spawn transform is rejected on bindings,spawn transform is rejected on definitions"`
+  | failures: none | notes: focused parser spawn/wait surface filter passed
+  after retargeting the fixture to explicit parser-level task bindings.
+- 2026-05-24 12:56 CEST | pass | mode: release | command:
+  `cd build-release && ./PrimeStruct_compile_run_tests --test-case="task spawn wait prototype docs stay source locked,todo queue and skipped doctest debt stay source locked"`
+  | failures: none | notes: focused task prototype docs/source-lock filter
+  passed.
 - 2026-05-24 12:53 CEST | pass | mode: release | command: `cmake --build
   build-release --target primec PrimeStruct_compile_run_tests -j 1`; `cd
   build-release && ./PrimeStruct_compile_run_tests --test-case="generic
@@ -7851,6 +7865,13 @@
   improve unconstrained generic failures" --no-skip` | notes: updated the
   unconstrained comparison to assert the current body-local
   `binding initializer type mismatch [PSC1005]` diagnostic.
+
+- [x] TODO-4561 parser spawn/wait positive fixture | resolved:
+  2026-05-24 12:56 CEST | validating command:
+  `cd build-release && ./PrimeStruct_parser_tests --test-case="parses task spawn and wait surface,parser helper finds transform names,spawn transform is rejected on bindings,spawn transform is rejected on definitions"`
+  | notes: fixture now locks execution-level `[spawn] f(...)` plus
+  statement/expression `wait(task)` parsing without depending on TODO-4562
+  task inference.
 - [x] TODO-4560 docs-lock source check | resolved: 2026-05-24 11:42 CEST |
   validating command:
   `cd build-release && ./PrimeStruct_compile_run_tests --test-case="todo queue and skipped doctest debt stay source locked" --no-skip`

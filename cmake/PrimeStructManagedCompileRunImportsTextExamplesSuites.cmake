@@ -99,7 +99,7 @@ addPrimeStructManagedDoctestSuite("primestruct.compile.run.examples"
                                   SHARD_PREFIX "metal_pipeline_and_borrow_checker"
                                   SOURCE_FILE "*test_compile_run_examples_*.cpp"
                                   RANGE_FIRST 72
-                                  RANGE_LAST 93
+                                  RANGE_LAST 94
                                   CASES_PER_SHARD 1)
 
 addPrimeStructManagedDoctestSuite("primestruct.compile.run.math_conformance"

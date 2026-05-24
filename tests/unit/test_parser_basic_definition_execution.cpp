@@ -78,6 +78,62 @@ main() {
   CHECK(nestedLog.transforms[0].name == "effects");
 }
 
+TEST_CASE("parses task spawn and wait surface") {
+  const std::string source = R"(
+[effects(task), return<int>]
+compute() {
+  return(1i32)
+}
+
+[effects(task), return<int>]
+main() {
+  [spawn] compute();
+  [Task<int>] left{[spawn] compute()};
+  wait(left);
+  [int] result{wait(left)}
+  return(add([spawn] compute() 2i32))
+}
+)";
+  const auto program = parseProgram(source);
+  REQUIRE(program.definitions.size() == 2);
+  const auto &statements = program.definitions[1].statements;
+  REQUIRE(statements.size() == 5);
+
+  const auto &spawnStatement = statements[0];
+  REQUIRE(spawnStatement.kind == primec::Expr::Kind::Call);
+  CHECK(spawnStatement.name == "compute");
+  REQUIRE(spawnStatement.transforms.size() == 1);
+  CHECK(spawnStatement.transforms[0].name == "spawn");
+
+  const auto &taskBinding = statements[1];
+  REQUIRE(taskBinding.isBinding);
+  CHECK(taskBinding.name == "left");
+  REQUIRE(taskBinding.transforms.size() == 1);
+  CHECK(taskBinding.transforms[0].name == "Task");
+
+  const auto &waitStatement = statements[2];
+  REQUIRE(waitStatement.kind == primec::Expr::Kind::Call);
+  CHECK(waitStatement.name == "wait");
+  REQUIRE(waitStatement.args.size() == 1);
+  CHECK(waitStatement.args[0].name == "left");
+
+  const auto &waitBinding = statements[3];
+  REQUIRE(waitBinding.isBinding);
+  REQUIRE(waitBinding.args.size() == 1);
+  CHECK(waitBinding.args[0].name == "wait");
+
+  const auto &returnCall = statements[4];
+  REQUIRE(returnCall.kind == primec::Expr::Kind::Call);
+  REQUIRE(returnCall.args.size() == 1);
+  const auto &returnAdd = returnCall.args[0];
+  REQUIRE(returnAdd.kind == primec::Expr::Kind::Call);
+  CHECK(returnAdd.name == "add");
+  REQUIRE(returnAdd.args.size() == 2);
+  const auto &inlineSpawn = returnAdd.args[0];
+  REQUIRE(inlineSpawn.kind == primec::Expr::Kind::Call);
+  CHECK(inlineSpawn.name == "compute");
+}
+
 TEST_CASE("parses semicolon-separated transforms and lists") {
   const std::string source = R"(
 [effects(io_out; io_err); return<int>]

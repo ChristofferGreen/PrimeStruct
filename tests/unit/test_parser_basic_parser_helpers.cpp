@@ -50,6 +50,20 @@ TEST_CASE("parser helper recognizes additional core builtin names") {
   CHECK(primec::parser::isBuiltinName("/print", false));
 }
 
+TEST_CASE("parser helper finds transform names") {
+  std::vector<primec::Transform> transforms;
+  primec::Transform effects;
+  effects.name = "effects";
+  transforms.push_back(effects);
+  primec::Transform spawn;
+  spawn.name = "spawn";
+  transforms.push_back(spawn);
+
+  CHECK(primec::parser::hasTransformNamed(transforms, "spawn"));
+  CHECK(primec::parser::hasTransformNamed(transforms, "effects"));
+  CHECK_FALSE(primec::parser::hasTransformNamed(transforms, "return"));
+}
+
 TEST_CASE("parser helper rejects non-builtin slash paths") {
   CHECK_FALSE(primec::parser::isBuiltinName("foo/bar", false));
   CHECK_FALSE(primec::parser::isBuiltinName("/foo/bar", false));

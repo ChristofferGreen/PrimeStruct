@@ -404,6 +404,39 @@ main() {
   CHECK(error.find("match statement cannot have transforms") != std::string::npos);
 }
 
+TEST_CASE("spawn transform is rejected on bindings") {
+  const std::string source = R"(
+[return<int>]
+main() {
+  [spawn] task{compute()}
+  return(1i32)
+}
+)";
+  primec::Lexer lexer(source);
+  primec::Parser parser(lexer.tokenize());
+  primec::Program program;
+  std::string error;
+  CHECK_FALSE(parser.parse(program, error));
+  CHECK(error.find("spawn transform is only valid on executions") !=
+        std::string::npos);
+}
+
+TEST_CASE("spawn transform is rejected on definitions") {
+  const std::string source = R"(
+[spawn return<int>]
+main() {
+  return(1i32)
+}
+)";
+  primec::Lexer lexer(source);
+  primec::Parser parser(lexer.tokenize());
+  primec::Program program;
+  std::string error;
+  CHECK_FALSE(parser.parse(program, error));
+  CHECK(error.find("spawn transform is only valid on executions") !=
+        std::string::npos);
+}
+
 TEST_CASE("definition without parameter list is allowed") {
   const std::string source = R"(
 [return<int>]

@@ -34,6 +34,29 @@ Finished items are periodically archived here from `docs/todo.md`; section heade
     - Focused release-mode validation only; full release gate intentionally
       skipped by the lite workflow.
 
+- [x] TODO-4561: Add task spawn/wait parser and effect locks
+  - owner: ai
+  - created_at: 2026-05-24
+  - finished_at: 2026-05-24
+  - phase: Multithreading substrate
+  - parallel_track: task-spawn-syntax-effects
+  - split_from: TODO-4545
+  - scope: Add parser, source-lock, effect-spelling, and docs coverage for
+    the first `[spawn] f(...)` plus `wait(task)` surface without adding
+    semantic task-state or runtime execution behavior.
+  - outcome:
+    - Locked `spawn` as an execution-only transform that must prefix call
+      syntax such as `[spawn] f(...)`.
+    - Added parser coverage for `[spawn] f(...)` and `wait(task)` in
+      statement and expression contexts.
+    - Added docs/source-lock coverage for the `[effects(task)]`,
+      `[spawn] f(...)`, and `wait(task)` spelling.
+    - Left `Task<T>` semantic facts, lifetime diagnostics, and runtime/native
+      execution to TODO-4562 and TODO-4563.
+  - validation:
+    - Focused release parser/docs-lock tests only; full release gate deferred
+      to the parent workflow.
+
 - [x] TODO-4545: Implement first structured task spawn/wait substrate
   - owner: ai
   - created_at: 2026-05-20

@@ -614,6 +614,9 @@ bool Parser::parseParameterBinding(Expr &out,
   if (!parseTransformList(transforms)) {
     return false;
   }
+  if (hasTransformNamed(transforms, "spawn")) {
+    return fail("spawn transform is only valid on executions");
+  }
   Token name = consume(TokenKind::Identifier, "expected parameter identifier");
   if (name.kind == TokenKind::End) {
     return false;

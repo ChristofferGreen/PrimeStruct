@@ -95,6 +95,12 @@ The grouped effect name `task` is the initial prototype spelling. Later design
 work may split it into finer effects such as `task_spawn`, `task_wait`, and
 `task_cancel` if that proves useful.
 
+Current implementation status: TODO-4561 locks the parser surface and
+documentation spelling only. `spawn` is accepted as an execution transform on
+call envelopes such as `[spawn] f(...)`, and `wait(task)` remains an ordinary
+call-shaped expression until TODO-4562 adds `Task<T>` semantic facts and
+lifetime diagnostics. TODO-4563 adds runtime/native execution behavior.
+
 ## Required Effect
 
 The spawning function must declare the task effect:
@@ -409,16 +415,19 @@ should include:
 
 - parse `[spawn]` as an execution transform on call envelopes
 - require `effects(task)` for functions that use `[spawn]` or `wait`
-- introduce internal `Task<T>` type facts
-- infer `wait(Task<T>) -> T`
-- track task handle states through statements and returns
+  (TODO-4562)
+- introduce internal `Task<T>` type facts (TODO-4562)
+- infer `wait(Task<T>) -> T` (TODO-4562)
+- track task handle states through statements and returns (TODO-4562)
 - reject double wait, escaped handles, and missing waits before return
-- reject mutable/reference captures by default
-- add positive and negative semantic tests
+  (TODO-4562)
+- reject mutable/reference captures by default (TODO-4562)
+- add positive and negative semantic tests (TODO-4562)
 - add at least one compile-pipeline or semantic-product dump test once task
   facts are published
 - document any backend that intentionally rejects `effects(task)` at first
+  (TODO-4563)
 
-This document is a prototype note only. Do not treat the syntax or diagnostics
-above as canonical until they are folded into `docs/PrimeStruct.md` and backed
-by TODO entries plus implementation tests.
+This document is a prototype note. The `[spawn] f(...)`, `wait(task)`, and
+`effects(task)` spellings are now parser/source-lock commitments; the semantic
+and runtime rules above become canonical only as TODO-4562 and TODO-4563 land.

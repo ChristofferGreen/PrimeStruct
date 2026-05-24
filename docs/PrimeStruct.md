@@ -2546,6 +2546,11 @@ module {
 - **Execution effects:** executions may also carry `[effects(...)]`. The execution’s effects must be a subset of the
   enclosing definition’s active effects; otherwise it is a diagnostic. The default set is controlled by
   `--default-effects` in the compiler/VM.
+- **Task effect prototype:** the first structured-concurrency surface uses `[effects(task)]` on definitions that request
+  source-visible task work. The parser accepts `[spawn] f(...)` as an execution transform on call envelopes and parses
+  `wait(task)` as an ordinary call-shaped expression. This TODO-4561 slice does not publish `Task<T>` semantic facts,
+  lifetime diagnostics, or runtime execution; TODO-4562 adds the semantic task-state rules and TODO-4563 adds
+  single-task execution.
 
 ### Backend Type Support (v1)
 - **VM/native:** scalar `i32`, `i64`, `u64`, `bool`, `f32`, `f64`. `array`/`vector`/`map` support numeric/bool values;
@@ -2677,6 +2682,8 @@ module {
 - **Applicability limits (v1):**
   - **Definitions/executions only:** `return<T>`, `effects(...)`, `capabilities(...)`, `text(...)`, `semantic(...)`,
     `single_type_to_return`.
+  - **Executions only:** `spawn` is reserved for the first task surface and must prefix call syntax as
+    `[spawn] f(...)`.
   - **Definitions only:** `compute`, `workgroup_size(x, y, z)`, `unsafe`, `ast`.
   - **Struct/tag only (definitions):** `struct`, `pod`, `handle`, `gpu_lane`, `align_bytes(n)`, `align_kbytes(n)`.
   - **Definitions/bindings:** access/visibility markers (`public`, `private`). `static` is valid on bindings and struct

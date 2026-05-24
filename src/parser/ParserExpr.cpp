@@ -276,6 +276,9 @@ bool Parser::parseExpr(Expr &expr, const std::string &namespacePrefix) {
         return true;
       }
       if (match(TokenKind::LBrace)) {
+        if (hasTransformNamed(call.transforms, "spawn")) {
+          return fail("spawn transform is only valid on executions");
+        }
         if (!bindingTransforms &&
             (!allowBareBindings_ || isPrimitiveBraceType(call.name) ||
              isCollectionBraceType(call.name) ||
@@ -296,6 +299,9 @@ bool Parser::parseExpr(Expr &expr, const std::string &namespacePrefix) {
         return true;
       }
       if (bindingTransforms) {
+        if (hasTransformNamed(call.transforms, "spawn")) {
+          return fail("spawn transform is only valid on executions");
+        }
         call.isBinding = true;
         out = std::move(call);
         return true;

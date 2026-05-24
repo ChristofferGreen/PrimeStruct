@@ -11,6 +11,7 @@ namespace {
   primec::Parser parser(lexer.tokenize());
   primec::Program program;
   std::string error;
+  INFO(error);
   CHECK(parser.parse(program, error));
   CHECK(error.empty());
   return program;

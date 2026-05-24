@@ -83,8 +83,8 @@ Task template:
 
 ### Ready Now (Parallel-Candidate Leaves; No Unmet TODO Dependencies)
 
-- TODO-4561: Add task spawn/wait parser and effect locks | track:
-  task-spawn-syntax-effects | primary surface: parser/effect docs
+- TODO-4562: Add task handle semantic facts and lifetime diagnostics | track:
+  task-spawn-semantics | primary surface: semantics/task facts
 
 ### Parallel Work Tracks (Current)
 
@@ -109,7 +109,9 @@ Task template:
   task-side spawn/wait support, now tracked by TODO-4563.
 - `multithreading-substrate`: TODO-4545 was split into TODO-4561,
   TODO-4562, and TODO-4563 so single-task spawn/wait can land as parser/effect,
-  semantic/lifetime, and runtime execution slices before TODO-4278.
+  semantic/lifetime, and runtime execution slices before TODO-4278. TODO-4561
+  locked the parser/effect spelling; TODO-4562 is now the semantic/lifetime
+  successor.
 - `procedural-genericity`: TODO-4336 allowed type locals in local binding and
   struct-field envelopes, TODO-4337 added non-escaping local generated
   structs, TODO-4338 stabilized deterministic generated identity and
@@ -148,7 +150,6 @@ Task template:
 
 ### Immediate Next 10 (Track Successors; Not Ready Until Dependencies Land)
 
-- TODO-4562: Add task handle semantic facts and lifetime diagnostics
 - TODO-4563: Add single-task spawn/wait runtime execution
 - TODO-4278: Integrate multi-wait with stdlib tuple
 
@@ -170,7 +171,7 @@ Task template:
 - Deferred generic tuple substrate: TODO-4278 is blocked on task-side
   TODO-4563 after TODO-4277 added tuple destructuring sugar over ordinary
   stdlib tuple values
-- Multithreading substrate: TODO-4561 -> TODO-4562 -> TODO-4563 -> TODO-4278
+- Multithreading substrate: TODO-4562 -> TODO-4563 -> TODO-4278
 - Procedural compile-time genericity: none active after TODO-4340 and
   TODO-4546
 - Generic constraint and compile-time flow alignment: none active after
@@ -178,7 +179,6 @@ Task template:
 
 ### Execution Queue (Recommended Track Order)
 
-- TODO-4561: Add task spawn/wait parser and effect locks
 - TODO-4562: Add task handle semantic facts and lifetime diagnostics
 - TODO-4563: Add single-task spawn/wait runtime execution
 - TODO-4278: Integrate multi-wait with stdlib tuple
@@ -209,7 +209,7 @@ Task template:
 | Algebraic sum types and brace-only construction | none |
 | Stdlib ADT migration for `Maybe` and `Result` | none |
 | Generic type packs and tuple stdlib surface | TODO-4274, TODO-4273, TODO-4277, TODO-4278 |
-| Multithreading substrate | TODO-4561, TODO-4562, TODO-4563 |
+| Multithreading substrate | TODO-4562, TODO-4563 |
 | Procedural compile-time genericity and local type facts | none |
 | Generic constraints and compile-time flow control | TODO-4352, TODO-4353, TODO-4354, TODO-4355, TODO-4356, TODO-4357, TODO-4345, TODO-4547, TODO-4548, TODO-4549, TODO-4346, TODO-4550, TODO-4551, TODO-4552, TODO-4553, TODO-4554, TODO-4555, TODO-4556, TODO-4557, TODO-4558, TODO-4559, TODO-4560 |
 
@@ -237,7 +237,7 @@ Task template:
 | Sum-type and brace-construction conformance | none |
 | Maybe/Result sum migration conformance | none |
 | Generic type-pack and tuple conformance | TODO-4274, TODO-4273, TODO-4277, TODO-4278 |
-| Multithreading substrate conformance | TODO-4561, TODO-4562, TODO-4563 |
+| Multithreading substrate conformance | TODO-4562, TODO-4563 |
 | Procedural compile-time genericity conformance | none |
 | Generic constraint and compile-time flow conformance | TODO-4352, TODO-4353, TODO-4354, TODO-4355, TODO-4356, TODO-4357, TODO-4345, TODO-4547, TODO-4548, TODO-4549, TODO-4346, TODO-4550, TODO-4551, TODO-4552, TODO-4553, TODO-4554, TODO-4555, TODO-4556, TODO-4557, TODO-4558, TODO-4559, TODO-4560 |
 
@@ -762,35 +762,6 @@ Task template:
   skipped coverage is not a stable end state.
 
 ### Task Blocks
-
-- [ ] TODO-4561: Add task spawn/wait parser and effect locks
-  - owner: ai
-  - created_at: 2026-05-24
-  - phase: Multithreading substrate
-  - parallel_track: task-spawn-syntax-effects
-  - split_from: TODO-4545
-  - scope: Add parser, text-filter/source-lock, effect-spelling, and docs
-    coverage for the first `[spawn] f(...)` plus `wait(task)` surface without
-    adding semantic task-state or runtime execution behavior yet.
-  - implementation_notes:
-    - Start from parser transform handling, effect annotations,
-      `docs/MultithreadingPrototype.md`, and `docs/PrimeStruct.md`.
-    - Keep this slice to recognizing and documenting the single-task surface;
-      leave `Task<T>` semantic facts, lifetime diagnostics, and execution to
-      TODO-4562/TODO-4563.
-    - Do not add multi-wait, detached tasks, task groups, channels, or
-      scheduler controls here.
-  - acceptance:
-    - Parser or compile-pipeline tests cover `[spawn] f(...)` and
-      `wait(task)` in statement/expression contexts intended for the first
-      single-task surface.
-    - Source-lock or example-lock coverage protects the documented spelling
-      and effect opt-in text without depending on backend execution.
-    - Docs state that semantic task-state and runtime execution follow in
-      TODO-4562/TODO-4563.
-    - `./scripts/compile.sh --release` passes.
-  - stop_rule: Stop once the first task surface syntax and effect spelling are
-    locked independently of semantic task-state and runtime execution.
 
 - [ ] TODO-4562: Add task handle semantic facts and lifetime diagnostics
   - owner: ai

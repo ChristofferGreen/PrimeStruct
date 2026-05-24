@@ -252,6 +252,9 @@ bool Parser::parseDefinitionBody(Definition &def, bool allowNoReturn, std::vecto
       }
       if (match(TokenKind::LBrace)) {
         if (!sawParen) {
+          if (hasTransformNamed(callExpr.transforms, "spawn")) {
+            return fail("spawn transform is only valid on executions");
+          }
           if (!callExpr.templateArgs.empty()) {
             return fail("template arguments require a call");
           }
@@ -290,6 +293,9 @@ bool Parser::parseDefinitionBody(Definition &def, bool allowNoReturn, std::vecto
         return fail("template arguments require a call");
       }
       if (bindingTransforms) {
+        if (hasTransformNamed(callExpr.transforms, "spawn")) {
+          return fail("spawn transform is only valid on executions");
+        }
         callExpr.isBinding = true;
         def.statements.push_back(std::move(callExpr));
         continue;

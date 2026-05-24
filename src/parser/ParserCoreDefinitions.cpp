@@ -190,12 +190,16 @@ bool Parser::parseDefinitionOrExecution(std::vector<Definition> &defs, std::vect
   }
   bool hasReturnTransform = false;
   bool hasNoReturnDefinitionTransform = false;
+  bool hasSpawnTransform = false;
   for (const auto &transform : transforms) {
     if (transform.name == "return") {
       hasReturnTransform = true;
     }
     if (isNoReturnDefinitionTransform(transform.name)) {
       hasNoReturnDefinitionTransform = true;
+    }
+    if (transform.name == "spawn") {
+      hasSpawnTransform = true;
     }
   }
   bool hasDefinitionOnlyNoReturnTransform = false;
@@ -214,6 +218,9 @@ bool Parser::parseDefinitionOrExecution(std::vector<Definition> &defs, std::vect
     }
   }
   if (match(TokenKind::LBrace)) {
+    if (hasSpawnTransform) {
+      return fail("spawn transform is only valid on executions");
+    }
     if ((hasBindingTypeTransform || hasBindingOnlyTransform) && !hasReturnTransform &&
         !hasDefinitionOnlyNoReturnTransform) {
       return fail(
@@ -282,8 +289,14 @@ bool Parser::parseDefinitionOrExecution(std::vector<Definition> &defs, std::vect
         if (isNoReturnDefinitionTransform(transform.name)) {
           hasNoReturnDefinitionTransform = true;
         }
+        if (transform.name == "spawn") {
+          hasSpawnTransform = true;
+        }
         transforms.push_back(std::move(transform));
       }
+    }
+    if (hasSpawnTransform) {
+      return fail("spawn transform is only valid on executions");
     }
     if (!match(TokenKind::LBrace)) {
       return fail("definitions must have a body");
