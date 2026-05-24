@@ -91,6 +91,20 @@ bool SemanticsValidator::validateExpr(const std::vector<ParameterInfo> &params,
     if (expr.isBinding) {
       return failExprRootDiagnostic("binding not allowed in expression context");
     }
+    if (isTaskTypeCarrierExpr(expr)) {
+      return validateTaskTypeCarrierExpr(
+          params, locals, expr, enclosingStatements, statementIndex);
+    }
+    if (isTaskSpawnExpr(expr)) {
+      return validateTaskSpawnExpr(
+          params, locals, expr, enclosingStatements, statementIndex);
+    }
+    if (isTaskWaitExpr(expr)) {
+      return validateTaskWaitExpr(params, locals, expr);
+    }
+    if (!validateTaskHandleArgumentEscapes(params, locals, expr)) {
+      return false;
+    }
     if (isSimpleCallName(expr, "move")) {
       bool handledMoveBuiltin = false;
       if (!validateExprMutationBorrowBuiltins(

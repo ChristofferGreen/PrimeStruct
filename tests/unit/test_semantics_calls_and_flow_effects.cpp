@@ -1,9 +1,72 @@
 #include "third_party/doctest.h"
 
+#include "primec/SemanticProduct.h"
 #include "test_semantics_helpers.h"
+
+#include <algorithm>
 
 
 TEST_SUITE_BEGIN("primestruct.semantics.calls_flow.effects");
+
+namespace {
+
+bool validateProgramWithSemanticProduct(const std::string &source,
+                                        primec::SemanticProgram &semanticProgram,
+                                        std::string &error) {
+  auto program = parseProgram(source);
+  primec::Semantics semantics;
+  const std::vector<std::string> defaults = {"io_out", "io_err"};
+  return semantics.validate(program, "/main", error, defaults, defaults, {}, nullptr, false, &semanticProgram);
+}
+
+std::string semanticProductText(const primec::SemanticProgram &semanticProgram,
+                                primec::SymbolId textId,
+                                const std::string &fallback) {
+  if (textId == primec::InvalidSymbolId) {
+    return fallback;
+  }
+  return std::string(
+      primec::semanticProgramResolveCallTargetString(semanticProgram, textId));
+}
+
+bool hasBindingFact(const primec::SemanticProgram &semanticProgram,
+                    const std::string &scopePath,
+                    const std::string &name,
+                    const std::string &bindingTypeText) {
+  return std::any_of(semanticProgram.bindingFacts.begin(),
+                     semanticProgram.bindingFacts.end(),
+                     [&](const primec::SemanticProgramBindingFact &fact) {
+    return semanticProductText(semanticProgram, fact.scopePathId, fact.scopePath) ==
+               scopePath &&
+           semanticProductText(semanticProgram, fact.nameId, fact.name) == name &&
+           semanticProductText(semanticProgram,
+                               fact.bindingTypeTextId,
+                               fact.bindingTypeText) == bindingTypeText;
+  });
+}
+
+bool hasQueryFact(const primec::SemanticProgram &semanticProgram,
+                  const std::string &scopePath,
+                  const std::string &callName,
+                  const std::string &queryTypeText,
+                  const std::string &bindingTypeText) {
+  return std::any_of(semanticProgram.queryFacts.begin(),
+                     semanticProgram.queryFacts.end(),
+                     [&](const primec::SemanticProgramQueryFact &fact) {
+    return semanticProductText(semanticProgram, fact.scopePathId, fact.scopePath) ==
+               scopePath &&
+           semanticProductText(semanticProgram, fact.callNameId, fact.callName) ==
+               callName &&
+           semanticProductText(semanticProgram,
+                               fact.queryTypeTextId,
+                               fact.queryTypeText) == queryTypeText &&
+           semanticProductText(semanticProgram,
+                               fact.bindingTypeTextId,
+                               fact.bindingTypeText) == bindingTypeText;
+  });
+}
+
+} // namespace
 
 TEST_CASE("boolean literal validates") {
   const std::string source = R"(
@@ -15,6 +78,194 @@ main() {
   std::string error;
   CHECK(validateProgram(source, "/main", error));
   CHECK(error.empty());
+}
+
+TEST_CASE("spawn publishes task facts and wait returns task result") {
+  const std::string source = R"(
+[effects(task), return<i32>]
+computeLeft() {
+  return(7i32)
+}
+
+[effects(task), return<i32>]
+main() {
+  [Task<i32>] left{[spawn] computeLeft()};
+  [i32] leftResult{wait(left)}
+  return(leftResult)
+}
+)";
+  std::string error;
+  primec::SemanticProgram semanticProgram;
+  INFO(error);
+  REQUIRE(validateProgramWithSemanticProduct(source, semanticProgram, error));
+  CHECK(error.empty());
+
+  CHECK(hasBindingFact(semanticProgram, "/main", "left", "Task<i32>"));
+  CHECK(hasBindingFact(semanticProgram, "/main", "leftResult", "i32"));
+  CHECK(hasQueryFact(semanticProgram, "/main", "wait", "i32", "i32"));
+}
+
+TEST_CASE("spawn requires task effect") {
+  const std::string source = R"(
+[effects(task), return<i32>]
+computeLeft() {
+  return(7i32)
+}
+
+[return<i32>]
+main() {
+  [Task<i32>] left{[spawn] computeLeft()};
+  [i32] leftResult{wait(left)}
+  return(leftResult)
+}
+)";
+  std::string error;
+  INFO(error);
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("spawn requires task effect") != std::string::npos);
+}
+
+TEST_CASE("wait requires task effect") {
+  const std::string source = R"(
+[return<i32>]
+main([Task<i32>] left) {
+  return(wait(left))
+}
+)";
+  std::string error;
+  INFO(error);
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("wait requires task effect") != std::string::npos);
+}
+
+TEST_CASE("task handles must be waited before return") {
+  const std::string source = R"(
+[effects(task), return<i32>]
+computeLeft() {
+  return(7i32)
+}
+
+[effects(task), return<i32>]
+main() {
+  [Task<i32>] left{[spawn] computeLeft()};
+  return(0i32)
+}
+)";
+  std::string error;
+  INFO(error);
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("task handle must be waited before return: left") !=
+        std::string::npos);
+}
+
+TEST_CASE("task handles reject double wait") {
+  const std::string source = R"(
+[effects(task), return<i32>]
+computeLeft() {
+  return(7i32)
+}
+
+[effects(task), return<i32>]
+main() {
+  [Task<i32>] left{[spawn] computeLeft()};
+  [i32] first{wait(left)}
+  [i32] second{wait(left)}
+  return(first)
+}
+)";
+  std::string error;
+  INFO(error);
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("task handle already waited: left") != std::string::npos);
+}
+
+TEST_CASE("task handles cannot escape through return") {
+  const std::string source = R"(
+[effects(task), return<i32>]
+computeLeft() {
+  return(7i32)
+}
+
+[effects(task), return<Task<i32>>]
+main() {
+  [Task<i32>] left{[spawn] computeLeft()};
+  return(left)
+}
+)";
+  std::string error;
+  INFO(error);
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("task handles cannot escape their spawning function: left") !=
+        std::string::npos);
+}
+
+TEST_CASE("task handles cannot escape through call arguments") {
+  const std::string source = R"(
+[effects(task), return<i32>]
+computeLeft() {
+  return(7i32)
+}
+
+[return<void>]
+consume([Task<i32>] left) {
+  return()
+}
+
+[effects(task), return<i32>]
+main() {
+  [Task<i32>] left{[spawn] computeLeft()};
+  consume(left)
+  return(wait(left))
+}
+)";
+  std::string error;
+  INFO(error);
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("task handles cannot escape their spawning function: left") !=
+        std::string::npos);
+}
+
+TEST_CASE("spawn rejects mutable captures") {
+  const std::string source = R"(
+[effects(task), return<i32>]
+echo([i32] value) {
+  return(value)
+}
+
+[effects(task), return<i32>]
+main() {
+  [i32 mut] value{1i32}
+  [Task<i32>] left{[spawn] echo(value)};
+  return(wait(left))
+}
+)";
+  std::string error;
+  INFO(error);
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("mutable binding cannot be captured by spawned task: value") !=
+        std::string::npos);
+}
+
+TEST_CASE("spawn rejects reference captures") {
+  const std::string source = R"(
+[effects(task), return<i32>]
+read([Reference<i32>] valueRef) {
+  return(dereference(valueRef))
+}
+
+[effects(task), return<i32>]
+main() {
+  [i32 mut] value{1i32}
+  [Reference<i32>] valueRef{location(value)}
+  [Task<i32>] left{[spawn] read(valueRef)};
+  return(wait(left))
+}
+)";
+  std::string error;
+  INFO(error);
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("reference binding cannot be captured by spawned task: valueRef") !=
+        std::string::npos);
 }
 
 TEST_CASE("if statement sugar validates") {

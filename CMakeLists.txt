@@ -241,6 +241,7 @@ set(PRIMESTRUCT_FRONTEND_SOURCES
   src/semantics/SemanticsValidatorStatementVectorHelpers.cpp
   src/semantics/SemanticsValidatorStatementVectorResolution.cpp
   src/semantics/SemanticsValidatorStatement.cpp
+  src/semantics/SemanticsValidatorTaskHandles.cpp
   src/semantics/SemanticsValidatorTraits.cpp
   src/semantics/RequirementPredicateFacts.cpp
   src/text_filter/TextFilterHelpers.cpp

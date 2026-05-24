@@ -6,6 +6,29 @@ Legend:
 Finished items are periodically archived here from `docs/todo.md`; section headers record the archive date.
 
 **Todo Completion (May 24, 2026)**
+- [x] TODO-4562: Add task handle semantic facts and lifetime diagnostics
+  - owner: ai
+  - created_at: 2026-05-24
+  - finished_at: 2026-05-24
+  - phase: Multithreading substrate
+  - depends_on: TODO-4561
+  - split_from: TODO-4545
+  - scope: Add semantic `Task<T>` facts, binding inference, task-effect
+    requirements, and first-slice lifetime diagnostics for single-task
+    spawn/wait.
+  - outcome:
+    - Added semantic task-handle tracking so `[spawn] f(...)` publishes
+      `Task<T>` binding/local-auto facts when `f` returns `T`.
+    - Added builtin `wait(Task<T>) -> T` inference and semantic product query
+      facts for `wait(...)`.
+    - Required the `task` effect for `[spawn]` and `wait(...)`.
+    - Rejected live task handles on return/end, double waits, task-handle
+      escapes, and mutable/reference captures in spawned calls.
+    - Kept runtime/native execution deferred to TODO-4563.
+  - validation:
+    - Focused release semantics/docs-lock tests only; full release gate
+      deferred to the parent workflow.
+
 - [x] TODO-4350: Add high-level generic design examples
   - owner: ai
   - created_at: 2026-05-04

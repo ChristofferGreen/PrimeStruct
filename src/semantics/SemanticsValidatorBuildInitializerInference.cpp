@@ -1122,6 +1122,10 @@ bool SemanticsValidator::inferBindingTypeFromInitializer(
   if (inferExplicitSumConstructorBinding(initializer, bindingOut)) {
     return preserveBindingQualifiers();
   }
+  if (inferTaskSpawnBinding(initializer, params, locals, bindingOut) ||
+      inferTaskWaitBinding(initializer, params, locals, bindingOut)) {
+    return preserveBindingQualifiers();
+  }
   if (initializer.kind == Expr::Kind::Call && initializer.isFieldAccess &&
       initializer.args.size() == 1) {
     BindingInfo fieldBinding;

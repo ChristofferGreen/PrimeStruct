@@ -358,6 +358,9 @@ bool SemanticsValidator::validateDefinitionsFromStableIndexResolver(
                                               *std::move(uninitError));
       }
     }
+    if (!validateNoLiveTaskHandlesAtDefinitionEnd()) {
+      return false;
+    }
     return true;
   };
 

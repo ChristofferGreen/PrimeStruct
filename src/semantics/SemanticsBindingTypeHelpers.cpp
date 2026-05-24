@@ -493,7 +493,8 @@ bool splitTemplateTypeName(const std::string &text, std::string &base, std::stri
 }
 
 bool isBuiltinTemplateTypeName(const std::string &name) {
-  return name == "Pointer" || name == "Reference" || name == "Buffer" || name == "uninitialized";
+  return name == "Pointer" || name == "Reference" || name == "Buffer" ||
+         name == "Task" || name == "uninitialized";
 }
 
 bool restrictMatchesBinding(const std::string &restrictType,

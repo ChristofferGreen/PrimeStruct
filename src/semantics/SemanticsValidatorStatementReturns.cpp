@@ -145,6 +145,9 @@ bool SemanticsValidator::validateReturnStatement(const std::vector<ParameterInfo
     if (!stmt.args.empty()) {
       return failReturnDiagnostic("return value not allowed for void definition");
     }
+    if (!validateNoLiveTaskHandlesAtReturn(stmt)) {
+      return false;
+    }
   } else {
     if (stmt.args.size() != 1) {
       return failReturnDiagnostic("return requires exactly one argument");
@@ -168,6 +171,12 @@ bool SemanticsValidator::validateReturnStatement(const std::vector<ParameterInfo
         return rewriteAutoReturnDiagnostic("unable to infer return type on " +
                                            currentValidationState_.context.definitionPath);
       }
+      return false;
+    }
+    if (!validateTaskHandleReturnEscape(params, locals, stmt.args.front(), stmt)) {
+      return false;
+    }
+    if (!validateNoLiveTaskHandlesAtReturn(stmt)) {
       return false;
     }
     auto bindingTypeText = [](const BindingInfo &binding) {

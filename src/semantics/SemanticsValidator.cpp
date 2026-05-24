@@ -168,6 +168,7 @@ void SemanticsValidator::insertLocalBinding(
     return;
   }
   bumpLocalBindingMemoRevision(&locals);
+  recordTaskHandleBinding(name, it->second);
   if (activeLocalBindingScopes_.empty()) {
     return;
   }

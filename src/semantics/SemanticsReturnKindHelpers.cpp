@@ -136,7 +136,7 @@ ReturnKind getReturnKind(const Definition &def,
       }
       if (base == "array" || base == "vector" || base == "soa" "_vector" ||
           base == "Buffer" || base == "Reference" || base == "Pointer" ||
-          base == "uninitialized") {
+          base == "uninitialized" || base == "Task") {
         return args.size() == 1 && isAllowedCollectionTypeArg(args.front());
       }
       if (isKeyValueCollectionTypeName(base)) {
@@ -170,6 +170,18 @@ ReturnKind getReturnKind(const Definition &def,
           return ReturnKind::Unknown;
         }
         return resolveReturnTypeKind(args.front());
+      }
+      if (splitTemplateTypeName(normalizedType, base, arg) && normalizeBindingTypeName(base) == "Task") {
+        std::vector<std::string> args;
+        if (!splitTopLevelTemplateArgs(arg, args) || args.size() != 1) {
+          error = "Task return type requires exactly one template argument on " + def.fullPath;
+          return ReturnKind::Unknown;
+        }
+        if (!isAllowedCollectionTypeArg(args.front())) {
+          error = "unsupported return type on " + def.fullPath;
+          return ReturnKind::Unknown;
+        }
+        return ReturnKind::Array;
       }
       if (splitTemplateTypeName(normalizedType, base, arg) && base == "vector") {
         std::vector<std::string> args;

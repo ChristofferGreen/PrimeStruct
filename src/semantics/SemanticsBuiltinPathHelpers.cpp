@@ -523,8 +523,9 @@ bool isRootBuiltinName(const std::string &name) {
   return normalized == "assign" || normalized == "move" || normalized == "if" || normalized == "then" ||
          normalized == "else" ||
          normalized == "loop" || normalized == "while" || normalized == "for" || normalized == "repeat" ||
-         normalized == "return" || normalized == "array" || normalized == "vector" || normalized == "map" ||
-         normalized == "File" || normalized == "try" || normalized == "count" || normalized == "capacity" ||
+         normalized == "return" || normalized == "array" || normalized == "vector" ||
+         normalized == "map" || normalized == "Task" || normalized == "File" ||
+         normalized == "try" || normalized == "count" || normalized == "capacity" ||
          normalized == "to_soa" || normalized == "to" "_aos" ||
          normalized == "to" "_aos_ref" ||
          normalized == "push" || normalized == "pop" ||

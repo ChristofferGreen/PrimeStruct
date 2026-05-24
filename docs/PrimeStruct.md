@@ -2548,9 +2548,10 @@ module {
   `--default-effects` in the compiler/VM.
 - **Task effect prototype:** the first structured-concurrency surface uses `[effects(task)]` on definitions that request
   source-visible task work. The parser accepts `[spawn] f(...)` as an execution transform on call envelopes and parses
-  `wait(task)` as an ordinary call-shaped expression. This TODO-4561 slice does not publish `Task<T>` semantic facts,
-  lifetime diagnostics, or runtime execution; TODO-4562 adds the semantic task-state rules and TODO-4563 adds
-  single-task execution.
+  `wait(task)` as the first task-handle join expression. The semantic pass publishes `Task<T>` binding facts for
+  `[spawn] f(...)`, infers `wait(Task<T>) -> T`, requires the `task` effect for both operations, and rejects live
+  task handles on return, double waits, task-handle escapes, and mutable/reference captures. Runtime/native task
+  execution remains deferred to TODO-4563.
 
 ### Backend Type Support (v1)
 - **VM/native:** scalar `i32`, `i64`, `u64`, `bool`, `f32`, `f64`. `array`/`vector`/`map` support numeric/bool values;

@@ -792,7 +792,16 @@ bool SemanticsValidator::validateBindingStatement(const std::vector<ParameterInf
         resultInfo.isResult) {
       return failBindingDiagnostic("binding initializer type mismatch");
     }
-    if (expectedType == "string") {
+    if (expectedType == "Task") {
+      BindingInfo initializerBindingInfo;
+      if (!inferTaskSpawnBinding(initializer, params, locals,
+                                 initializerBindingInfo) ||
+          !errorTypesMatch(info.typeTemplateArg,
+                           initializerBindingInfo.typeTemplateArg,
+                           namespacePrefix)) {
+        return failBindingDiagnostic("binding initializer type mismatch");
+      }
+    } else if (expectedType == "string") {
       if (!isStringExpr(initializer, params, locals)) {
         return failBindingDiagnostic("binding initializer type mismatch");
       }

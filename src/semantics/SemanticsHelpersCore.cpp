@@ -384,6 +384,10 @@ bool parseBindingInfo(const Expr &expr,
         error = "map requires exactly two template arguments";
         return false;
       }
+      if (normalizedTypeName == "Task" && transformTemplateArgs.size() != 1) {
+        error = "Task requires exactly one template argument";
+        return false;
+      }
       if (normalizedTypeName == "soa" "_vector") {
         const bool isPublicSoaSpelling =
             transformName == "soa" || transformName == "/soa" ||

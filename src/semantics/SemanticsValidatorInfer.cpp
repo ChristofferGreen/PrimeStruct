@@ -113,6 +113,18 @@ ReturnKind SemanticsValidator::inferExprReturnKindImpl(const Expr &expr,
     return ReturnKind::Float64;
   }
   if (expr.kind == Expr::Kind::Call) {
+    if (isTaskWaitExpr(expr)) {
+      BindingInfo waitBinding;
+      if (!inferTaskWaitBinding(expr, params, locals, waitBinding)) {
+        return ReturnKind::Unknown;
+      }
+      const std::string waitTypeText = bindingTypeText(waitBinding);
+      ReturnKind kind = returnKindForTypeName(normalizeBindingTypeName(waitTypeText));
+      if (kind != ReturnKind::Unknown) {
+        return kind;
+      }
+      return taskResultReturnKind(waitTypeText, expr.namespacePrefix);
+    }
     if (expr.isFieldAccess) {
       auto resolveStructFieldKind = [&](const Expr &receiver, const std::string &fieldName) -> ReturnKind {
         auto isStaticField = [](const Expr &stmt) -> bool {

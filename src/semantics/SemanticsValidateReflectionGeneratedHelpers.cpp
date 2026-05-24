@@ -27,8 +27,9 @@ bool isNonTypeTransformName(const std::string &name) {
          name == "unsafe" || name == "pod" || name == "handle" || name == "gpu_lane" || name == "no_padding" ||
          name == "platform_independent_padding" || name == "public" || name == "private" ||
          name == "static" || name == "single_type_to_return" || name == "stack" || name == "heap" ||
-         name == "buffer" || name == "reflect" || name == "generate" || name == "Additive" ||
-         name == "Multiplicative" || name == "Comparable" || name == "Indexable";
+         name == "buffer" || name == "spawn" || name == "reflect" ||
+         name == "generate" || name == "Additive" || name == "Multiplicative" ||
+         name == "Comparable" || name == "Indexable";
 }
 
 std::string formatTemplateArgs(const std::vector<std::string> &args) {

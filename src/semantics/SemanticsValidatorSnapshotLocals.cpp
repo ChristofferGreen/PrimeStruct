@@ -102,6 +102,23 @@ bool SemanticsValidator::inferCallSnapshotData(const std::vector<ParameterInfo> 
     return ok;
   };
 
+  if (isTaskWaitExpr(expr)) {
+    BindingInfo waitBinding;
+    if (inferTaskWaitBinding(expr, defParams, activeLocals, waitBinding)) {
+      out.resolvedPath = "/task/wait";
+      out.binding = std::move(waitBinding);
+      return true;
+    }
+  }
+  if (isTaskSpawnExpr(expr)) {
+    BindingInfo taskBinding;
+    if (inferTaskSpawnBinding(expr, defParams, activeLocals, taskBinding)) {
+      out.resolvedPath = "/task/spawn";
+      out.binding = std::move(taskBinding);
+      return true;
+    }
+  }
+
   out.resolvedPath = preferredCollectionHelperResolvedPath(expr);
   if (out.resolvedPath.empty() &&
       !(expr.kind == Expr::Kind::Call && expr.isMethodCall)) {

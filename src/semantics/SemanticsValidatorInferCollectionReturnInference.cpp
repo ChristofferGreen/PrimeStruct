@@ -114,7 +114,8 @@ bool SemanticsValidator::inferDefinitionReturnBinding(const Definition &def, Bin
     }
     if (base == "Pointer" || base == "Reference" || base == "Result" ||
         base == "Buffer" || base == "uninitialized" || base == "array" ||
-        base == "vector" || base == "soa" "_vector" || isKeyValueCollectionTypeName(base) ||
+        base == "vector" || base == "soa" "_vector" || base == "Task" ||
+        isKeyValueCollectionTypeName(base) ||
         base == "Vector" ||
         isLegacyExperimentalVectorCompatibilityPath("/" + base) ||
         isUnspecializedExperimentalKeyValueBackingTypeName(base) ||
@@ -569,6 +570,14 @@ bool SemanticsValidator::inferQueryExprTypeText(const Expr &expr,
     }
     if (isSimpleCallName(candidate, "move") && candidate.args.size() == 1) {
       return inferExprTypeText(candidate.args.front(), currentTypeTextOut);
+    }
+    if (isTaskWaitExpr(candidate)) {
+      BindingInfo waitBinding;
+      if (!inferTaskWaitBinding(candidate, params, locals, waitBinding)) {
+        return false;
+      }
+      currentTypeTextOut = bindingTypeText(waitBinding);
+      return !currentTypeTextOut.empty();
     }
     if (isAssignCall(candidate) && candidate.args.size() == 2) {
       return inferExprTypeText(candidate.args[1], currentTypeTextOut);

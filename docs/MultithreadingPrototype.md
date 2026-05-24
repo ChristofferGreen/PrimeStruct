@@ -1,6 +1,6 @@
 # PrimeStruct Multithreading Prototype
 
-Status: prototype design note, not implemented yet and not part of the
+Status: partially implemented prototype design note, not yet part of the
 canonical language spec.
 
 This document captures the first proposed language-level multithreading model.
@@ -70,9 +70,9 @@ required.
 Use an execution transform for spawning:
 
 ```prime
-[effects(task), int]
+[effects(task), return<int>]
 main() {
-  left{[spawn] computeLeft()}
+  [Task<int>] left{[spawn] computeLeft()};
 
   leftResult{wait(left)}
 
@@ -95,20 +95,21 @@ The grouped effect name `task` is the initial prototype spelling. Later design
 work may split it into finer effects such as `task_spawn`, `task_wait`, and
 `task_cancel` if that proves useful.
 
-Current implementation status: TODO-4561 locks the parser surface and
-documentation spelling only. `spawn` is accepted as an execution transform on
-call envelopes such as `[spawn] f(...)`, and `wait(task)` remains an ordinary
-call-shaped expression until TODO-4562 adds `Task<T>` semantic facts and
-lifetime diagnostics. TODO-4563 adds runtime/native execution behavior.
+Current implementation status: TODO-4561 locked the parser surface and
+documentation spelling, and TODO-4562 added semantic `Task<T>` facts, `task`
+effect requirements, wait result inference, and first-slice lifetime
+diagnostics. `spawn` is accepted as an execution transform on call envelopes
+such as `[spawn] f(...)`, and `wait(task)` now consumes a semantic task handle.
+TODO-4563 adds runtime/native execution behavior.
 
 ## Required Effect
 
 The spawning function must declare the task effect:
 
 ```prime
-[effects(task), int]
+[effects(task), return<int>]
 main() {
-  left{[spawn] computeLeft()}
+  [Task<int>] left{[spawn] computeLeft()};
   return(wait(left))
 }
 ```
@@ -116,9 +117,9 @@ main() {
 This should reject:
 
 ```prime
-[int]
+[return<int>]
 main() {
-  left{[spawn] computeLeft()}
+  [Task<int>] left{[spawn] computeLeft()};
   return(wait(left))
 }
 ```
@@ -126,7 +127,7 @@ main() {
 Expected diagnostic shape:
 
 ```text
-spawn requires effect `task`
+spawn requires task effect
 ```
 
 If the effect is later split, the diagnostic should name the narrower required
@@ -147,9 +148,9 @@ created by `[spawn]`.
 This should reject:
 
 ```prime
-[effects(task), int]
+[effects(task), return<int>]
 main() {
-  left{[spawn] computeLeft()}
+  [Task<int>] left{[spawn] computeLeft()};
   return(0)
 }
 ```
@@ -157,7 +158,7 @@ main() {
 Expected diagnostic shape:
 
 ```text
-task `left` must be waited before returning from `/main`
+task handle must be waited before return: left
 ```
 
 The same check applies to implicit fallthrough at the end of a function.
@@ -169,9 +170,9 @@ The same check applies to implicit fallthrough at the end of a function.
 This should reject:
 
 ```prime
-[effects(task), int]
+[effects(task), return<int>]
 main() {
-  left{[spawn] computeLeft()}
+  [Task<int>] left{[spawn] computeLeft()};
   first{wait(left)}
   second{wait(left)}
   return(first + second)
@@ -181,7 +182,7 @@ main() {
 Expected diagnostic shape:
 
 ```text
-task `left` has already been consumed by wait
+task handle already waited: left
 ```
 
 After a successful `wait(left)`, `left` is no longer a live task handle.
@@ -193,9 +194,9 @@ For the first slice, task handles cannot escape the function that spawned them.
 Reject returning a task:
 
 ```prime
-[effects(task), Task<int>]
+[effects(task), return<Task<int>>]
 main() {
-  left{[spawn] computeLeft()}
+  [Task<int>] left{[spawn] computeLeft()};
   return(left)
 }
 ```
@@ -234,9 +235,9 @@ For branches, the first implementation can be conservative:
 Example:
 
 ```prime
-[effects(task), int]
+[effects(task), return<int>]
 main([bool] cond) {
-  left{[spawn] computeLeft()}
+  [Task<int>] left{[spawn] computeLeft()};
 
   if (cond) {
     value{wait(left)}
@@ -267,9 +268,9 @@ either reject it or require a defined cleanup policy before the function exits.
 For the first slice, prefer rejection when the cleanup behavior is not explicit:
 
 ```prime
-[effects(task), Result<int, Error>]
+[effects(task), return<Result<int, Error>>]
 main() {
-  left{[spawn] computeLeft()}
+  [Task<int>] left{[spawn] computeLeft()};
   value{fallible()?}
   result{wait(left)}
   return(Result.ok(result + value))
@@ -297,11 +298,11 @@ The first safe rule should be strict:
 This should reject:
 
 ```prime
-[effects(task), int]
+[effects(task), return<int>]
 main() {
   [mut] counter{0}
 
-  left{[spawn] increment(counter)}
+  [Task<int>] left{[spawn] increment(counter)};
   result{wait(left)}
 
   return(result)
@@ -317,10 +318,10 @@ mutable binding `counter` cannot be captured by spawned task
 Future safe shared-state primitives can make sharing explicit:
 
 ```prime
-[effects(task, atomic), int]
+[effects(task, atomic), return<int>]
 main() {
   counter{Atomic<int>{0}}
-  left{[spawn] increment(counter)}
+  [Task<int>] left{[spawn] increment(counter)};
   wait(left)
   return(counter.load())
 }
@@ -384,10 +385,10 @@ tracked separately in `docs/TuplePrototype.md`.
 Future shape:
 
 ```prime
-[effects(task), int]
+[effects(task), return<int>]
 main() {
-  left{[spawn] computeLeft()}
-  right{[spawn] computeRight()}
+  [Task<int>] left{[spawn] computeLeft()};
+  [Task<int>] right{[spawn] computeRight()};
 
   [leftResult rightResult] wait(left, right)
 
@@ -410,24 +411,24 @@ value{wait(task)}
 
 ## First Implementation Checklist
 
-When this prototype graduates into active implementation work, the first slice
-should include:
+The first implementation slices now cover:
 
 - parse `[spawn]` as an execution transform on call envelopes
 - require `effects(task)` for functions that use `[spawn]` or `wait`
-  (TODO-4562)
-- introduce internal `Task<T>` type facts (TODO-4562)
-- infer `wait(Task<T>) -> T` (TODO-4562)
-- track task handle states through statements and returns (TODO-4562)
+- introduce internal `Task<T>` type facts
+- infer `wait(Task<T>) -> T`
+- track task handle states through statements and returns
 - reject double wait, escaped handles, and missing waits before return
-  (TODO-4562)
-- reject mutable/reference captures by default (TODO-4562)
-- add positive and negative semantic tests (TODO-4562)
-- add at least one compile-pipeline or semantic-product dump test once task
-  facts are published
+- reject mutable/reference captures by default
+- add positive and negative semantic tests
+- add semantic-product coverage once task facts are published
+
+Remaining implementation work:
+
 - document any backend that intentionally rejects `effects(task)` at first
   (TODO-4563)
 
 This document is a prototype note. The `[spawn] f(...)`, `wait(task)`, and
-`effects(task)` spellings are now parser/source-lock commitments; the semantic
-and runtime rules above become canonical only as TODO-4562 and TODO-4563 land.
+`effects(task)` spellings are now parser/source-lock commitments, and the
+semantic rules above are implemented for the first single-task slice. Runtime
+execution becomes canonical once TODO-4563 lands.

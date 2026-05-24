@@ -1750,8 +1750,8 @@ TEST_CASE("task spawn wait prototype docs stay source locked") {
         std::string::npos);
   CHECK(primeStructDoc.find("The parser accepts `[spawn] f(...)` as an execution transform on call envelopes") !=
         std::string::npos);
-  CHECK(primeStructDoc.find("This TODO-4561 slice does not publish `Task<T>` semantic facts,\n"
-                            "  lifetime diagnostics, or runtime execution; TODO-4562 adds") !=
+  CHECK(primeStructDoc.find("The semantic pass publishes `Task<T>` binding facts for\n"
+                            "  `[spawn] f(...)`, infers `wait(Task<T>) -> T`, requires the `task` effect") !=
         std::string::npos);
   CHECK(primeStructDoc.find("`spawn` is reserved for the first task surface and must prefix call syntax as\n"
                             "    `[spawn] f(...)`.") !=
@@ -1763,11 +1763,10 @@ TEST_CASE("task spawn wait prototype docs stay source locked") {
         std::string::npos);
   CHECK(multithreadingDoc.find("The grouped effect name `task` is the initial prototype spelling.") !=
         std::string::npos);
-  CHECK(multithreadingDoc.find("TODO-4561 locks the parser surface and\n"
-                               "documentation spelling only.") !=
+  CHECK(multithreadingDoc.find("TODO-4561 locked the parser surface and\n"
+                               "documentation spelling, and TODO-4562 added semantic `Task<T>` facts") !=
         std::string::npos);
-  CHECK(multithreadingDoc.find("TODO-4562 adds `Task<T>` semantic facts and\n"
-                               "lifetime diagnostics. TODO-4563 adds runtime/native execution behavior.") !=
+  CHECK(multithreadingDoc.find("TODO-4563 adds runtime/native execution behavior.") !=
         std::string::npos);
 
   CHECK(todoFinished.find("TODO-4561: Add task spawn/wait parser and effect locks") !=
@@ -1777,6 +1776,11 @@ TEST_CASE("task spawn wait prototype docs stay source locked") {
         std::string::npos);
   CHECK(todoFinished.find("Left `Task<T>` semantic facts, lifetime diagnostics, and runtime/native\n"
                           "      execution to TODO-4562 and TODO-4563.") !=
+        std::string::npos);
+  CHECK(todoFinished.find("TODO-4562: Add task handle semantic facts and lifetime diagnostics") !=
+        std::string::npos);
+  CHECK(todoFinished.find("Added semantic task-handle tracking so `[spawn] f(...)` publishes\n"
+                          "      `Task<T>` binding/local-auto facts when `f` returns `T`.") !=
         std::string::npos);
 }
 
@@ -1816,9 +1820,7 @@ TEST_CASE("todo queue and skipped doctest debt stay source locked") {
 
   CHECK(todo.find("### Ready Now (Parallel-Candidate Leaves; No Unmet TODO Dependencies)") !=
         std::string::npos);
-  CHECK(todo.find("### Ready Now (Parallel-Candidate Leaves; No Unmet TODO Dependencies)\n\n"
-                  "- TODO-4562: Add task handle semantic facts and lifetime diagnostics | track:\n"
-                  "  task-spawn-semantics | primary surface: semantics/task facts") !=
+  CHECK(todo.find("- TODO-4562: Add task handle semantic facts and lifetime diagnostics | track:") ==
         std::string::npos);
   CHECK(todo.find("- `soa-zero-audit`: TODO-4529 replaced the residue inventory with a strict\n"
                   "  zero-production-trace audit; no SoA zero-audit leaf is ready.") !=
@@ -1839,8 +1841,8 @@ TEST_CASE("todo queue and skipped doctest debt stay source locked") {
   CHECK(todo.find("- `multithreading-substrate`: TODO-4545 was split into TODO-4561,\n"
                   "  TODO-4562, and TODO-4563 so single-task spawn/wait can land as parser/effect,\n"
                   "  semantic/lifetime, and runtime execution slices before TODO-4278. TODO-4561\n"
-                  "  locked the parser/effect spelling; TODO-4562 is now the semantic/lifetime\n"
-                  "  successor.") !=
+                  "  locked the parser/effect spelling, TODO-4562 added semantic/lifetime facts\n"
+                  "  and diagnostics, and TODO-4563 is now the runtime/native execution successor.") !=
         std::string::npos);
   CHECK(todo.find("- `procedural-genericity`: TODO-4336 allowed type locals in local binding and\n"
                   "  struct-field envelopes, TODO-4337 added non-escaping local generated\n"
@@ -1897,7 +1899,6 @@ TEST_CASE("todo queue and skipped doctest debt stay source locked") {
   CHECK(todo.find("- Deferred SoA finish: TODO-4252") ==
         std::string::npos);
   CHECK(todo.find("### Execution Queue (Recommended Track Order)\n\n"
-                  "- TODO-4562: Add task handle semantic facts and lifetime diagnostics\n"
                   "- TODO-4563: Add single-task spawn/wait runtime execution\n"
                   "- TODO-4278: Integrate multi-wait with stdlib tuple") !=
         std::string::npos);
@@ -2095,6 +2096,10 @@ TEST_CASE("todo queue and skipped doctest debt stay source locked") {
   CHECK(todo.find("TODO-4561: Add task spawn/wait parser and effect locks") ==
         std::string::npos);
   CHECK(todoFinished.find("TODO-4561: Add task spawn/wait parser and effect locks") !=
+        std::string::npos);
+  CHECK(todo.find("TODO-4562: Add task handle semantic facts and lifetime diagnostics") ==
+        std::string::npos);
+  CHECK(todoFinished.find("TODO-4562: Add task handle semantic facts and lifetime diagnostics") !=
         std::string::npos);
   CHECK(todo.find("  - depends_on: TODO-4277, TODO-4563") !=
         std::string::npos);

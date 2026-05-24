@@ -137,7 +137,62 @@
     std::unordered_set<std::string> movedBindings;
     std::unordered_set<std::string> endedReferenceBorrows;
     std::unordered_map<std::string, std::string> compileTimeTypeLocals;
+    struct TaskHandleState {
+      std::string resultType;
+      bool live = false;
+      bool waited = false;
+    };
+    std::unordered_map<std::string, TaskHandleState> taskHandles;
   };
+
+  bool exprHasExecutionTransform(const Expr &expr, std::string_view name) const;
+  bool isTaskSpawnExpr(const Expr &expr) const;
+  bool isTaskWaitExpr(const Expr &expr) const;
+  bool isTaskTypeCarrierExpr(const Expr &expr) const;
+  bool isTaskBinding(const BindingInfo &binding, std::string *resultTypeOut = nullptr) const;
+  bool inferTaskSpawnCallBinding(const Expr &spawnedCall,
+                                 const std::vector<ParameterInfo> &params,
+                                 const std::unordered_map<std::string, BindingInfo> &locals,
+                                 BindingInfo &bindingOut);
+  bool inferTaskSpawnBinding(const Expr &expr,
+                             const std::vector<ParameterInfo> &params,
+                             const std::unordered_map<std::string, BindingInfo> &locals,
+                             BindingInfo &bindingOut);
+  bool inferTaskWaitBinding(const Expr &expr,
+                            const std::vector<ParameterInfo> &params,
+                            const std::unordered_map<std::string, BindingInfo> &locals,
+                            BindingInfo &bindingOut) const;
+  ReturnKind taskResultReturnKind(std::string_view resultType,
+                                  const std::string &namespacePrefix) const;
+  bool validateTaskSpawnExpr(const std::vector<ParameterInfo> &params,
+                             const std::unordered_map<std::string, BindingInfo> &locals,
+                             const Expr &expr,
+                             const std::vector<Expr> *enclosingStatements = nullptr,
+                             size_t statementIndex = 0);
+  bool validateTaskSpawnCall(const std::vector<ParameterInfo> &params,
+                             const std::unordered_map<std::string, BindingInfo> &locals,
+                             const Expr &diagnosticExpr,
+                             const Expr &spawnedCall,
+                             const std::vector<Expr> *enclosingStatements,
+                             size_t statementIndex);
+  bool validateTaskWaitExpr(const std::vector<ParameterInfo> &params,
+                            const std::unordered_map<std::string, BindingInfo> &locals,
+                            const Expr &expr);
+  bool validateTaskTypeCarrierExpr(const std::vector<ParameterInfo> &params,
+                                   const std::unordered_map<std::string, BindingInfo> &locals,
+                                   const Expr &expr,
+                                   const std::vector<Expr> *enclosingStatements,
+                                   size_t statementIndex);
+  void recordTaskHandleBinding(const std::string &name, const BindingInfo &binding);
+  bool validateTaskHandleArgumentEscapes(const std::vector<ParameterInfo> &params,
+                                         const std::unordered_map<std::string, BindingInfo> &locals,
+                                         const Expr &expr);
+  bool validateTaskHandleReturnEscape(const std::vector<ParameterInfo> &params,
+                                      const std::unordered_map<std::string, BindingInfo> &locals,
+                                      const Expr &returnExpr,
+                                      const Expr &returnStmt);
+  bool validateNoLiveTaskHandlesAtReturn(const Expr &returnStmt);
+  bool validateNoLiveTaskHandlesAtDefinitionEnd();
 
   bool parseTransformArgumentExpr(const std::string &text, const std::string &namespacePrefix, Expr &out);
   bool resolveResultTypeFromTypeName(const std::string &typeName, ResultTypeInfo &out) const;

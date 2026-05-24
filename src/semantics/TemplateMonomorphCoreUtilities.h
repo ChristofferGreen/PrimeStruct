@@ -7,8 +7,11 @@ bool isNonTypeTransformName(const std::string &name) {
          name == "struct" || name == "enum" || name == "unsafe" ||
          name == "pod" || name == "handle" || name == "gpu_lane" || name == "no_padding" ||
          name == "platform_independent_padding" || name == "public" || name == "private" ||
-         name == "static" || name == "single_type_to_return" || name == "stack" || name == "heap" || name == "buffer" ||
-         name == "Additive" || name == "Multiplicative" || name == "Comparable" || name == "Indexable";
+         name == "static" || name == "single_type_to_return" ||
+         name == "stack" || name == "heap" || name == "buffer" ||
+         name == "spawn" || name == "Additive" ||
+         name == "Multiplicative" || name == "Comparable" ||
+         name == "Indexable";
 }
 
 bool isBuiltinTemplateContainer(const std::string &name) {
