@@ -1881,8 +1881,11 @@ TEST_CASE("todo queue and skipped doctest debt stay source locked") {
                   "  conformance matrix could proceed in parser/source-lock, semantic/IR, and\n"
                   "  compile-run/diagnostic tracks; all three split leaves are complete.") !=
         std::string::npos);
+  CHECK(todo.find("### Ready Now (Parallel-Candidate Leaves; No Unmet TODO Dependencies)\n\n"
+                  "- TODO-4563: Add single-task spawn/wait runtime execution | track:\n"
+                  "  multithreading-substrate | primary surface: native/runtime execution") !=
+        std::string::npos);
   CHECK(todo.find("### Immediate Next 10 (Track Successors; Not Ready Until Dependencies Land)\n\n"
-                  "- TODO-4563: Add single-task spawn/wait runtime execution\n"
                   "- TODO-4278: Integrate multi-wait with stdlib tuple") !=
         std::string::npos);
   CHECK(todo.find("- TODO-4273: Add heterogeneous value-pack inference") ==

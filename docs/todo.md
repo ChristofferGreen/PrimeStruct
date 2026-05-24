@@ -83,6 +83,9 @@ Task template:
 
 ### Ready Now (Parallel-Candidate Leaves; No Unmet TODO Dependencies)
 
+- TODO-4563: Add single-task spawn/wait runtime execution | track:
+  multithreading-substrate | primary surface: native/runtime execution
+
 ### Parallel Work Tracks (Current)
 
 - `soa-zero-audit`: TODO-4529 replaced the residue inventory with a strict
@@ -147,7 +150,6 @@ Task template:
 
 ### Immediate Next 10 (Track Successors; Not Ready Until Dependencies Land)
 
-- TODO-4563: Add single-task spawn/wait runtime execution
 - TODO-4278: Integrate multi-wait with stdlib tuple
 
 ### Priority Lanes (Current)
