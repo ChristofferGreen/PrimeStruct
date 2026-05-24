@@ -86,6 +86,34 @@ Finished items are periodically archived here from `docs/todo.md`; section heade
   - validation:
     - TODO-only split; no build required.
 
+- [x] TODO-4559: Add generic semantic and IR conformance
+  - owner: ai
+  - created_at: 2026-05-24
+  - finished_at: 2026-05-24
+  - phase: Generic constraint and compile-time flow alignment
+  - parallel_track: generic-semantic-ir-conformance
+  - depends_on: TODO-4555, TODO-4556, TODO-4557
+  - split_from: TODO-4349
+  - scope: Add semantic-product and IR-preparation conformance coverage for
+    generic requirement facts, selected compile-time branches, and generated
+    type facts.
+  - outcome:
+    - Added a semantic-product boundary snapshot that combines same-type
+      requirements, capability predicates, compile-time value predicates,
+      selected `ct_if` pruning, and branch-local generated type metadata.
+    - Added rejected publication coverage proving unsatisfied requirement
+      facts and escaping branch-local generated type facts stop before
+      semantic-product output is published.
+    - Added an IR-preparation boundary regression proving unresolved generic
+      requirement failures and escaping branch-local generated type facts do
+      not reach lowering, while accepted selected-branch requirement facts can
+      prepare IR successfully.
+  - validation:
+    - `cmake --build build-release --target PrimeStruct_semantics_tests -j 1`
+    - `./PrimeStruct_semantics_tests --test-case="generic semantic product handoff snapshots requirement and branch facts,rejected generic semantic facts stop before product publication" --no-skip`
+    - `cmake --build build-release --target PrimeStruct_backend_ir_tests -j 1`
+    - `./PrimeStruct_backend_ir_tests --test-case="ir preparation stops unresolved generic semantic facts before lowering" --no-skip`
+
 - [x] TODO-4555: Add compile-time predicate value conformance
   - owner: ai
   - created_at: 2026-05-24

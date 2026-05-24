@@ -168,6 +168,40 @@ std::vector<uint8_t> serializeIrIgnoringSourceMapsAndDebug(const primec::IrModul
   return encoded;
 }
 
+bool runDumpStageForSource(const std::string &source,
+                           std::string_view dumpStage,
+                           primec::CompilePipelineOutput &output,
+                           primec::CompilePipelineErrorStage &errorStage,
+                           std::string &error) {
+  const std::filesystem::path sourcePath =
+      primec::testing::detail::makeCompilePipelineDumpSourcePath();
+  {
+    std::ofstream file(sourcePath);
+    if (!file) {
+      error = "failed to write compile-pipeline boundary test source";
+      return false;
+    }
+    file << source;
+  }
+
+  primec::Options options;
+  options.inputPath = sourcePath.string();
+  options.entryPath = "/main";
+  options.emitKind = "native";
+  options.wasmProfile = "wasi";
+  options.defaultEffects =
+      primec::testing::detail::defaultCompilePipelineTestingEffects();
+  options.entryDefaultEffects = options.defaultEffects;
+  options.dumpStage = std::string(dumpStage);
+  primec::addDefaultStdlibInclude(options.inputPath, options.importPaths);
+
+  const bool ok = primec::runCompilePipeline(options, output, errorStage, error);
+
+  std::error_code ec;
+  std::filesystem::remove(sourcePath, ec);
+  return ok;
+}
+
 } // namespace
 
 TEST_SUITE_BEGIN("primestruct.semantics.type_resolution_graph");
@@ -408,6 +442,162 @@ main() {
                                    compileTimeEnd - compileTimePos);
   CHECK(compileTimeLine.find("compile_time_effects=[\"file_read\"]") !=
         std::string::npos);
+}
+
+TEST_CASE("generic semantic product handoff snapshots requirement and branch facts") {
+  const std::string source = R"(
+[struct]
+Vec2 {
+  [i32] x
+  [i32] y
+
+  Copy([Reference<Self>] other) {
+  }
+}
+
+[return<Vec2>]
+/Vec2/plus([Vec2] left, [Vec2] right) {
+  return(Vec2{plus(left.x, right.x), plus(left.y, right.y)})
+}
+
+[return<bool>]
+/Vec2/equal([Vec2] left, [Vec2] right) {
+  return(left.x == right.x)
+}
+
+[return<bool>]
+/Vec2/less_than([Vec2] left, [Vec2] right) {
+  return(left.x < right.x)
+}
+
+[return<i32> require(typeof<value> == Vec2, has_trait<Vec2>(Additive),
+                     can_copy<Vec2>(), N > 0)]
+measure<T, N>([T] value) {
+  [i32 mut] result{0i32}
+  ct_if(type_equals<typeof<value>, Vec2>()) {
+    [type] ValueT { typeof<value> }
+    [struct] BranchBox {
+      [ValueT] held{Vec2{0i32, 0i32}}
+    }
+    [BranchBox] boxed{BranchBox{value}}
+    assign(result, boxed.held.x)
+  } else {
+    missing_in_discarded_branch(value)
+  }
+  return(result)
+}
+
+[return<i32>]
+main() {
+  return(measure<Vec2, 4>(Vec2{7i32, 2i32}))
+}
+)";
+
+  primec::testing::CompilePipelineBoundaryDumps dumps;
+  std::string error;
+  REQUIRE(primec::testing::captureSemanticBoundaryDumpsForTesting(
+      source, "/main", dumps, error));
+  CHECK(error.empty());
+
+  CHECK(dumps.astSemantic.find("ct_if(") == std::string::npos);
+  CHECK(dumps.astSemantic.find("missing_in_discarded_branch") ==
+        std::string::npos);
+
+  CHECK(dumps.semanticProduct.find(
+            "definition_path=\"/measure__t") != std::string::npos);
+  CHECK(dumps.semanticProduct.find(
+            "predicate_name=\"/std/meta/type_equals\"") !=
+        std::string::npos);
+  CHECK(dumps.semanticProduct.find(
+            "source_text=\"/std/meta/type_equals<typeof<value>, Vec2>()\"") !=
+        std::string::npos);
+  CHECK(dumps.semanticProduct.find(
+            "predicate_name=\"/std/meta/has_trait\"") != std::string::npos);
+  CHECK(dumps.semanticProduct.find(
+            "evaluation_diagnostic=\"trait predicate satisfied: Additive") !=
+        std::string::npos);
+  CHECK(dumps.semanticProduct.find(
+            "predicate_name=\"/std/meta/can_copy\"") != std::string::npos);
+  CHECK(dumps.semanticProduct.find(
+            "predicate_name=\"/std/meta/value_greater\"") !=
+        std::string::npos);
+  CHECK(dumps.semanticProduct.find(
+            "evaluation_diagnostic=\"value predicate satisfied: 4 > 0\"") !=
+        std::string::npos);
+  CHECK(dumps.semanticProduct.find(
+            "full_path=\"/measure__t") != std::string::npos);
+  CHECK(dumps.semanticProduct.find("BranchBox__ct_if_then_") !=
+        std::string::npos);
+  CHECK(dumps.semanticProduct.find(
+            "struct_path=\"/measure__t") != std::string::npos);
+  CHECK(dumps.semanticProduct.find(
+            "field_name=\"held\" field_index=0 binding_type_text=\"Vec2\"") !=
+        std::string::npos);
+  CHECK(dumps.semanticProduct.find("DiscardedT") == std::string::npos);
+  CHECK(dumps.semanticProduct.find("ValueT") == std::string::npos);
+
+  CHECK(dumps.ir.find("module {") != std::string::npos);
+  CHECK(dumps.ir.find("requirement_predicate_facts") == std::string::npos);
+}
+
+TEST_CASE("rejected generic semantic facts stop before product publication") {
+  const std::string unsatisfiedRequirement = R"(
+[return<i32> require(N > 0)]
+positive_index<N>() {
+  return(1i32)
+}
+
+[return<i32>]
+main() {
+  return(positive_index<0>())
+}
+)";
+
+  primec::CompilePipelineOutput output;
+  primec::CompilePipelineErrorStage errorStage =
+      primec::CompilePipelineErrorStage::None;
+  std::string error;
+  CHECK_FALSE(runDumpStageForSource(
+      unsatisfiedRequirement, "semantic-product", output, errorStage, error));
+  CHECK(errorStage == primec::CompilePipelineErrorStage::Semantic);
+  CHECK(error.find("requirement predicate not satisfied: "
+                   "/std/meta/value_greater") != std::string::npos);
+  CHECK_FALSE(output.hasDumpOutput);
+  CHECK_FALSE(output.hasSemanticProgram);
+
+  const std::string escapingBranchType = R"(
+[return<auto>]
+pick([i32] value) {
+  ct_if(type_equals<typeof<value>, i32>()) {
+    [type] ValueT { typeof<value> }
+    [struct] PairT {
+      [ValueT] first{0i32}
+    }
+    [PairT] pair{PairT{value}}
+    return(pair)
+  } else {
+    return(value)
+  }
+}
+
+[return<i32>]
+main() {
+  return(pick(7i32))
+}
+)";
+
+  output = {};
+  errorStage = primec::CompilePipelineErrorStage::None;
+  error.clear();
+  CHECK_FALSE(runDumpStageForSource(
+      escapingBranchType, "semantic-product", output, errorStage, error));
+  CHECK(errorStage == primec::CompilePipelineErrorStage::Semantic);
+  CHECK(error.find("local generated struct cannot escape return type: "
+                   "/pick/PairT__ct_if_then_") != std::string::npos);
+  CHECK(error.find("selected compile-time branch: then") !=
+        std::string::npos);
+  CHECK_FALSE(output.hasDumpOutput);
+  CHECK_FALSE(output.hasSemanticProgram);
 }
 
 TEST_CASE("require builtin type predicates reject mismatched calls") {

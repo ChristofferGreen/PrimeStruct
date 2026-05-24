@@ -83,8 +83,8 @@ Task template:
 
 ### Ready Now (Parallel-Candidate Leaves; No Unmet TODO Dependencies)
 
-- TODO-4559: Add generic semantic and IR conformance | track:
-  generic-semantic-ir-conformance | primary surface: semantic-product/IR handoff
+No generic conformance leaves remain ready after TODO-4558, TODO-4559, and
+TODO-4560 completed. TODO-4545 is the next execution-queue candidate.
 
 ### Parallel Work Tracks (Current)
 
@@ -138,12 +138,13 @@ Task template:
   TODO-4557 locked compiler-hosted CT VM boundary coverage. TODO-4558 added
   parser and source-lock conformance for public generic requirement and
   `ct_if` syntax. TODO-4560 added compile-run and user-facing diagnostic
-  conformance coverage. TODO-4359 was split into TODO-4555, TODO-4556, and
+  conformance coverage. TODO-4559 added semantic-product and IR-preparation
+  handoff conformance. TODO-4359 was split into TODO-4555, TODO-4556, and
   TODO-4557 so compile-time VM conformance could be covered in parallel by
   predicate/value, effects/cache/budget, and compiler-host boundary leaves.
   TODO-4349 was split into TODO-4558, TODO-4559, and TODO-4560 so the broader
   conformance matrix could proceed in parser/source-lock, semantic/IR, and
-  compile-run/diagnostic tracks; only TODO-4559 remains active.
+  compile-run/diagnostic tracks; all three split leaves are complete.
 
 ### Immediate Next 10 (Track Successors; Not Ready Until Dependencies Land)
 
@@ -173,13 +174,12 @@ Task template:
   prerequisite split out of TODO-4278
 - Procedural compile-time genericity: none active after TODO-4340 and
   TODO-4546
-- Generic constraint and compile-time flow alignment: TODO-4559 -> TODO-4350
+- Generic constraint and compile-time flow alignment: TODO-4350
 
 ### Execution Queue (Recommended Track Order)
 
 - TODO-4545: Implement first structured task spawn/wait substrate
 - TODO-4278: Integrate multi-wait with stdlib tuple
-- TODO-4559: Add generic semantic and IR conformance
 - TODO-4350: Add high-level generic design examples
 
 ### PrimeStruct Coverage Snapshot
@@ -209,7 +209,7 @@ Task template:
 | Stdlib ADT migration for `Maybe` and `Result` | none |
 | Generic type packs and tuple stdlib surface | TODO-4274, TODO-4273, TODO-4277, TODO-4278 |
 | Procedural compile-time genericity and local type facts | none |
-| Generic constraints and compile-time flow control | TODO-4352, TODO-4353, TODO-4354, TODO-4355, TODO-4356, TODO-4357, TODO-4345, TODO-4547, TODO-4548, TODO-4549, TODO-4346, TODO-4550, TODO-4551, TODO-4552, TODO-4553, TODO-4554, TODO-4555, TODO-4556, TODO-4557, TODO-4558, TODO-4559, TODO-4350 |
+| Generic constraints and compile-time flow control | TODO-4352, TODO-4353, TODO-4354, TODO-4355, TODO-4356, TODO-4357, TODO-4345, TODO-4547, TODO-4548, TODO-4549, TODO-4346, TODO-4550, TODO-4551, TODO-4552, TODO-4553, TODO-4554, TODO-4555, TODO-4556, TODO-4557, TODO-4558, TODO-4559, TODO-4560, TODO-4350 |
 
 ### Validation Coverage Snapshot
 
@@ -236,7 +236,7 @@ Task template:
 | Maybe/Result sum migration conformance | none |
 | Generic type-pack and tuple conformance | TODO-4274, TODO-4273, TODO-4277, TODO-4278 |
 | Procedural compile-time genericity conformance | none |
-| Generic constraint and compile-time flow conformance | TODO-4352, TODO-4353, TODO-4354, TODO-4355, TODO-4356, TODO-4357, TODO-4345, TODO-4547, TODO-4548, TODO-4549, TODO-4346, TODO-4550, TODO-4551, TODO-4552, TODO-4553, TODO-4554, TODO-4555, TODO-4556, TODO-4557, TODO-4558, TODO-4559, TODO-4350 |
+| Generic constraint and compile-time flow conformance | TODO-4352, TODO-4353, TODO-4354, TODO-4355, TODO-4356, TODO-4357, TODO-4345, TODO-4547, TODO-4548, TODO-4549, TODO-4346, TODO-4550, TODO-4551, TODO-4552, TODO-4553, TODO-4554, TODO-4555, TODO-4556, TODO-4557, TODO-4558, TODO-4559, TODO-4560, TODO-4350 |
 
 ### Vector/Map Bridge Contract Summary
 
@@ -819,35 +819,6 @@ Task template:
     - `./scripts/compile.sh --release` passes.
   - stop_rule: Stop once multi-wait returns stdlib `tuple<...>` or the missing
     task-side prerequisite is split into an explicit multithreading TODO.
-
-- [ ] TODO-4559: Add generic semantic and IR conformance
-  - owner: ai
-  - created_at: 2026-05-24
-  - phase: Generic constraint and compile-time flow alignment
-  - parallel_track: generic-semantic-ir-conformance
-  - depends_on: TODO-4555, TODO-4556, TODO-4557
-  - split_from: TODO-4349
-  - scope: Add semantic-product and IR-preparation conformance coverage for
-    generic requirement facts, selected compile-time branches, and generated
-    type facts.
-  - implementation_notes:
-    - Start from semantic-product snapshot tests, IR-preparation/lowering
-      contract tests, and compile-pipeline dumps that do not execute programs.
-    - Cover facts consumed by IR lowering, including unresolved requirement
-      facts, selected `ct_if` branches, and generated type provenance.
-    - Keep public parser/source-lock syntax in TODO-4558; runtime compile-run
-      diagnostics are covered by completed TODO-4560.
-  - acceptance:
-    - Semantic-product tests cover same-type requirements, capability
-      requirements, compile-time value requirements, and branch-local generated
-      type facts.
-    - IR-preparation tests prove unresolved requirement or type facts do not
-      reach backend lowering.
-    - Deterministic snapshots cover both accepted and rejected semantic-product
-      publication paths.
-    - `./scripts/compile.sh --release` passes.
-  - stop_rule: Stop once semantic and IR handoff behavior has targeted
-    conformance coverage independent of parser and runtime compile-run slices.
 
 - [ ] TODO-4350: Add high-level generic design examples
   - owner: ai

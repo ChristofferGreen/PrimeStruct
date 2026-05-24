@@ -982,6 +982,40 @@
   `PrimeStruct_primestruct_compile_run_emitters_cpp_lambda_and_mutator_resolution_20_20`.
 
 ## Recent Test Runs
+- 2026-05-24 12:06 CEST | pass | mode: release | command:
+  `cd build-release && ./PrimeStruct_backend_ir_tests --test-case="ir preparation stops unresolved generic semantic facts before lowering" --no-skip`
+  | failures: none | notes: TODO-4559 moved IR-preparation handoff test
+  selected and passed with 1 case and 15 assertions after narrowing the
+  accepted selected-branch case.
+- 2026-05-24 12:06 CEST | pass | mode: release | command:
+  `cmake --build build-release --target PrimeStruct_backend_ir_tests -j 1`
+  | failures: none | notes: rebuilt backend IR doctest target after moving
+  the TODO-4559 IR-preparation test into an IR-target source file.
+- 2026-05-24 12:06 CEST | fail | mode: release | command:
+  `cd build-release && ./PrimeStruct_backend_ir_tests --test-case="ir preparation stops unresolved generic semantic facts before lowering" --no-skip`
+  | failures: ir preparation stops unresolved generic semantic facts before
+  lowering | notes: selected 1 case; positive branch-local generated struct
+  IR-preparation setup returned false, so the accepted branch was narrowed.
+- 2026-05-24 12:06 CEST | pass | mode: release | command:
+  `cd build-release && ./PrimeStruct_semantics_tests --test-case="generic semantic product handoff snapshots requirement and branch facts,rejected generic semantic facts stop before product publication" --no-skip`
+  | failures: none | notes: TODO-4559 semantic-product publication slice
+  passed with 2 cases and 31 assertions after correcting the publication
+  contract expectations.
+- 2026-05-24 12:06 CEST | pass | mode: release | command:
+  `cmake --build build-release --target PrimeStruct_semantics_tests -j 1`
+  | failures: none | notes: rebuilt semantics doctest target for the
+  corrected TODO-4559 semantic-product publication tests.
+- 2026-05-24 12:06 CEST | fail | mode: release | command:
+  `cd build-release && ./PrimeStruct_semantics_tests --test-case="generic semantic product handoff snapshots requirement and branch facts,rejected generic semantic facts stop before product publication" --no-skip`
+  | failures: generic semantic product handoff snapshots requirement and
+  branch facts; rejected generic semantic facts stop before product publication
+  | notes: initial TODO-4559 assertions assumed IR dump used semantic-product
+  publication and overconstrained selected-branch IR text; tests were narrowed
+  to semantic-product publication plus IR-preparation handoff coverage.
+- 2026-05-24 12:06 CEST | pass | mode: release | command:
+  `cmake -S . -B build-release -DCMAKE_BUILD_TYPE=Release`
+  | failures: none | notes: parent configured worker release build before
+  focused TODO-4559 validation.
 - 2026-05-24 11:42 CEST | pass | mode: release | command:
   `cd build-release && ./PrimeStruct_compile_time_tests --test-case="compile-time budget exhaustion diagnostics include provenance" --no-skip`
   | failures: none | notes: TODO-4560 budget diagnostic slice passed with
