@@ -1817,8 +1817,6 @@ TEST_CASE("todo queue and skipped doctest debt stay source locked") {
   CHECK(todo.find("### Ready Now (Parallel-Candidate Leaves; No Unmet TODO Dependencies)") !=
         std::string::npos);
   CHECK(todo.find("### Ready Now (Parallel-Candidate Leaves; No Unmet TODO Dependencies)\n\n"
-                  "- TODO-4350: Add high-level generic design examples | track:\n"
-                  "  generic-design-examples | primary surface: docs/examples\n"
                   "- TODO-4562: Add task handle semantic facts and lifetime diagnostics | track:\n"
                   "  task-spawn-semantics | primary surface: semantics/task facts") !=
         std::string::npos);
@@ -1899,7 +1897,6 @@ TEST_CASE("todo queue and skipped doctest debt stay source locked") {
   CHECK(todo.find("- Deferred SoA finish: TODO-4252") ==
         std::string::npos);
   CHECK(todo.find("### Execution Queue (Recommended Track Order)\n\n"
-                  "- TODO-4350: Add high-level generic design examples\n"
                   "- TODO-4562: Add task handle semantic facts and lifetime diagnostics\n"
                   "- TODO-4563: Add single-task spawn/wait runtime execution\n"
                   "- TODO-4278: Integrate multi-wait with stdlib tuple") !=

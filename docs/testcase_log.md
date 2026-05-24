@@ -985,6 +985,24 @@
   `PrimeStruct_primestruct_compile_run_emitters_cpp_lambda_and_mutator_resolution_20_20`.
 
 ## Recent Test Runs
+- 2026-05-24 13:06 CEST | pass | mode: release | command:
+  `cmake --build build-release --target PrimeStruct_compile_run_tests -j 1`;
+  `cd build-release && ./PrimeStruct_compile_run_tests --test-case="task spawn wait prototype docs stay source locked,todo queue and skipped doctest debt stay source locked"`;
+  `cd build-release && ./PrimeStruct_compile_run_tests --test-case="generic design examples stay documented and executable,requirement diagnostics improve unconstrained generic failures" --no-skip`
+  | failures: none | notes: root focused compile-run/docs validation passed
+  after merging TODO-4350 and TODO-4561 and reconciling the Ready Now source
+  lock to TODO-4562.
+- 2026-05-24 13:06 CEST | pass | mode: release | command:
+  `cmake --build build-release --target primec PrimeStruct_parser_tests PrimeStruct_compile_run_tests -j 1`;
+  `cd build-release && ./PrimeStruct_parser_tests --test-case="parses task spawn and wait surface,parser helper finds transform names,spawn transform is rejected on bindings,spawn transform is rejected on definitions"`
+  | failures: none | notes: root focused parser validation passed after
+  merging TODO-4561 task spawn/wait parser locks.
+- 2026-05-24 13:06 CEST | fail | mode: release | command:
+  `cd build-release && ./PrimeStruct_compile_run_tests --test-case="task spawn wait prototype docs stay source locked,todo queue and skipped doctest debt stay source locked"`
+  | failures: todo queue and skipped doctest debt stay source locked | notes:
+  root integration left stale TODO-4350 Ready Now and execution-queue
+  expectations in the source-lock test; updated the lock to the integrated
+  queue where TODO-4562 is Ready Now.
 - 2026-05-24 12:56 CEST | fail | mode: release | command:
   `cd build-release && ./PrimeStruct_parser_tests --test-case="parses task spawn and wait surface,parser helper finds transform names,spawn transform is rejected on bindings,spawn transform is rejected on definitions"`
   | failures: parses task spawn and wait surface | notes: new positive
