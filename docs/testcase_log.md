@@ -8542,3 +8542,21 @@
   --output-on-failure --stop-on-failure --timeout 120 -I 1581,1585` on
   2026-05-23 23:54 CEST. Next focused continuation starts at
   `-I 1586,1590`.
+- Compile-run shards 1586-1590 now pass after refreshing semantic-memory RSS
+  budget policy entries from the May 23 release runner artifact and fixing the
+  trend checker's duplicate-current history selection. The initial window
+  passed tests 1586-1588, with the semantic-memory benchmark taking 131.30s
+  and definition-worker parity taking 385.19s, then failed test 1589 on seven
+  hard RSS caps plus sustained regressions for
+  `math_vector_matrix:semantic-product` and `scale_2x:semantic-product`.
+  Validating commands: `python3 scripts/check_semantic_memory_trend.py
+  --policy benchmarks/semantic_memory_budget_policy.json --report
+  build-release/benchmarks/semantic_memory_report.json --history-dir
+  build-release/benchmarks/semantic_memory_history --history-limit 2
+  --report-json build-release/benchmarks/semantic_memory_budget_check_report.json
+  --trend-report-json build-release/benchmarks/semantic_memory_trend_report.json`;
+  `cd build-release && ctest --output-on-failure --stop-on-failure --timeout
+  120 -I 1589,1590`; `cmake --build build-release --target
+  PrimeStruct_compile_run_tests -j 1`; `cd build-release && ctest
+  --output-on-failure --stop-on-failure --timeout 120 -I 1597,1597` on
+  2026-05-24 00:09 CEST. Next focused continuation starts at `-I 1591,1595`.

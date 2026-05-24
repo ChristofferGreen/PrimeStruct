@@ -94,15 +94,18 @@ def main() -> int:
     if history_dir.is_dir():
       auto_candidates = sorted(history_dir.glob(args.history_glob), key=lambda path: path.name)
       auto_candidates = [path.resolve() for path in auto_candidates]
-      auto_candidates = [path for path in auto_candidates
-                         if path != current_report_path and path not in seen and path.is_file()]
-      if args.history_limit > 0:
-        auto_candidates = auto_candidates[-args.history_limit:]
-      for path in auto_candidates:
+      selected_candidates: list[Path] = []
+      for path in reversed(auto_candidates):
+        if path == current_report_path or path in seen or not path.is_file():
+          continue
         if not is_semantic_memory_report(path):
           continue
         if file_sha256(path) == current_report_digest:
           continue
+        selected_candidates.append(path)
+        if args.history_limit > 0 and len(selected_candidates) >= args.history_limit:
+          break
+      for path in reversed(selected_candidates):
         history_paths.append(path)
         seen.add(path)
 

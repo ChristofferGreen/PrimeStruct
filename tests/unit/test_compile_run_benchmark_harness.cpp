@@ -3220,7 +3220,23 @@ TEST_CASE("semantic memory trend checker ignores duplicate current report in his
     REQUIRE(oldHistory.good());
   }
   {
-    std::ofstream duplicateHistory(historyDir / "semantic_memory_report_20260102.json");
+    std::ofstream recentHistory(historyDir / "semantic_memory_report_20260102.json");
+    REQUIRE(recentHistory.good());
+    recentHistory << "{\n"
+                     "  \"schema\": \"primestruct_semantic_memory_report_v1\",\n"
+                     "  \"results\": [\n"
+                     "    {\n"
+                     "      \"fixture\": \"toy\",\n"
+                     "      \"phase\": \"ast-semantic\",\n"
+                     "      \"worst_peak_rss_bytes\": 110,\n"
+                     "      \"worst_wall_seconds\": 1.1\n"
+                     "    }\n"
+                     "  ]\n"
+                     "}\n";
+    REQUIRE(recentHistory.good());
+  }
+  {
+    std::ofstream duplicateHistory(historyDir / "semantic_memory_report_20260103.json");
     REQUIRE(duplicateHistory.good());
     duplicateHistory << "{\n"
                         "  \"schema\": \"primestruct_semantic_memory_report_v1\",\n"
@@ -3250,7 +3266,8 @@ TEST_CASE("semantic memory trend checker ignores duplicate current report in his
   const std::string stdoutText = readFile(stdoutPath);
   CHECK(stdoutText.find("history reports:") != std::string::npos);
   CHECK(stdoutText.find("semantic_memory_report_20260101.json") != std::string::npos);
-  CHECK(stdoutText.find("semantic_memory_report_20260102.json") == std::string::npos);
+  CHECK(stdoutText.find("semantic_memory_report_20260102.json") != std::string::npos);
+  CHECK(stdoutText.find("semantic_memory_report_20260103.json") == std::string::npos);
 }
 
 TEST_CASE("semantic memory ci artifact wrapper forwards definition worker mode") {
