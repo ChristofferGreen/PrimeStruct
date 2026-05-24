@@ -6,6 +6,69 @@ Legend:
 Finished items are periodically archived here from `docs/todo.md`; section headers record the archive date.
 
 **Todo Completion (May 24, 2026)**
+- [x] TODO-4305: Rename and style canonical `.prime` SoA surface
+  - owner: ai
+  - created_at: 2026-04-28
+  - finished_at: 2026-05-24
+  - phase: SoA public surface rename and ownership cutover
+  - scope: Rename the public SoA collection surface from `soa_vector<T>` to
+    `soa<T>` and from `/std/collections/soa_vector/*` to
+    `/std/collections/soa/*`, while keeping public `.prime` source aligned
+    with `docs/CodeExamples.md`.
+  - outcome:
+    - Completed by split leaves TODO-4507, TODO-4508, and TODO-4509.
+    - Canonical public docs, examples, helper wrappers, and source locks use
+      `soa<T>` and `/std/collections/soa/*`.
+    - Retired `soa_vector` spellings remain only as explicit compatibility or
+      rejection coverage, not as the public style reference.
+  - validation:
+    - Parent reconciliation verified the split-leaf completion record and
+      refreshed TODO source-lock expectations; full release gate deferred per
+      the lite-parallel workflow.
+
+- [x] TODO-4306: Stabilize generic SoA substrate boundaries
+  - owner: ai
+  - created_at: 2026-04-28
+  - finished_at: 2026-05-24
+  - phase: SoA public surface rename and ownership cutover
+  - depends_on: TODO-4509
+  - scope: Make compiler/runtime-owned SoA behavior explicit as generic
+    substrate rather than public `soa` collection semantics.
+  - outcome:
+    - Completed by split leaves TODO-4510, TODO-4511, TODO-4512, TODO-4513,
+      TODO-4514, TODO-4515, TODO-4516, and TODO-4517.
+    - Docs and source locks separate generic SoA substrate from public
+      collection behavior.
+    - Public construction, read/ref, mutator, conversion, and field-view
+      behavior route through canonical stdlib wrappers.
+  - validation:
+    - Parent reconciliation verified the split-leaf completion record and
+      refreshed TODO source-lock expectations; full release gate deferred per
+      the lite-parallel workflow.
+
+- [x] TODO-4524: Tighten SoA surface audit to zero
+  - owner: ai
+  - created_at: 2026-05-15
+  - finished_at: 2026-05-24
+  - phase: SoA public surface rename and ownership cutover
+  - split_from: TODO-4310
+  - depends_on: TODO-4523
+  - scope: Convert the SoA public-surface trace inventory gate into the final
+    zero-production-trace audit.
+  - outcome:
+    - Completed by split leaves TODO-4525, TODO-4526, TODO-4527, TODO-4528,
+      TODO-4533, and TODO-4529.
+    - The release CTest gate now runs `PrimeStruct_soa_surface_trace_zero_audit`
+      for strict production C++ public-surface trace rejection.
+    - Generic SoA substrate terms remain allowed while public collection paths,
+      helper aliases, retired type names, and registry surface IDs fail the
+      checker.
+  - validation:
+    - `python3 scripts/check_soa_surface_trace_inventory.py --root . --print-inventory`
+      produced no inventory rows.
+    - Focused docs-lock validation covers the reconciled empty queue; full
+      release gate deferred per the lite-parallel workflow.
+
 - [x] TODO-4278: Integrate multi-wait with stdlib tuple
   - owner: ai
   - created_at: 2026-04-27

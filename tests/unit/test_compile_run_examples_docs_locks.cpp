@@ -1011,7 +1011,7 @@ TEST_CASE("soa public collection docs stay source locked") {
         std::string::npos);
 
   CHECK(todo.find("### SoA Public Collection Summary") != std::string::npos);
-  CHECK(todo.find("Rename direction: `soa_vector<T>` is being retired as the public collection") !=
+  CHECK(todo.find("Rename direction: `soa_vector<T>` is retired as the public collection") !=
         std::string::npos);
   CHECK(todo.find("/std/collections/soa_vector*`, rooted") != std::string::npos);
   CHECK(todo.find("Retired compatibility spellings are `soa_vector<T>`") !=
@@ -1323,6 +1323,8 @@ TEST_CASE("generic soa substrate boundary stays source locked") {
       resolveRepoPath(std::filesystem::path("docs") / "PrimeStruct_SyntaxSpec.md");
   const std::filesystem::path todoPath =
       resolveRepoPath(std::filesystem::path("docs") / "todo.md");
+  const std::filesystem::path todoFinishedPath =
+      resolveRepoPath(std::filesystem::path("docs") / "todo_finished.md");
   const std::filesystem::path internalStoragePath =
       resolveRepoPath(std::filesystem::path("stdlib") / "std" / "collections" /
                       "internal_soa_storage.prime");
@@ -1332,12 +1334,14 @@ TEST_CASE("generic soa substrate boundary stays source locked") {
   REQUIRE(std::filesystem::exists(primeStructPath));
   REQUIRE(std::filesystem::exists(syntaxSpecPath));
   REQUIRE(std::filesystem::exists(todoPath));
+  REQUIRE(std::filesystem::exists(todoFinishedPath));
   REQUIRE(std::filesystem::exists(internalStoragePath));
   REQUIRE(std::filesystem::exists(reflectionRuntimePath));
 
   const std::string primeStructDoc = readFile(primeStructPath.string());
   const std::string syntaxSpecDoc = readFile(syntaxSpecPath.string());
   const std::string todo = readFile(todoPath.string());
+  const std::string todoFinished = readFile(todoFinishedPath.string());
   const std::string internalStorage = readFile(internalStoragePath.string());
   const std::string reflectionRuntime = readFile(reflectionRuntimePath.string());
 
@@ -1361,7 +1365,9 @@ TEST_CASE("generic soa substrate boundary stays source locked") {
         std::string::npos);
   CHECK(todo.find("Generic substrate boundary: compiler/runtime-owned SoA behavior is limited") !=
         std::string::npos);
-  CHECK(todo.find("- [~] TODO-4306: Stabilize generic SoA substrate boundaries") !=
+  CHECK(todo.find("- [~] TODO-4306: Stabilize generic SoA substrate boundaries") ==
+        std::string::npos);
+  CHECK(todoFinished.find("TODO-4306: Stabilize generic SoA substrate boundaries") !=
         std::string::npos);
 
   CHECK(internalStorage.find("[public struct]\n  SoaColumn<T>()") !=
@@ -1834,7 +1840,7 @@ TEST_CASE("todo queue and skipped doctest debt stay source locked") {
         std::string::npos);
   CHECK(todo.find("- TODO-4562: Add task handle semantic facts and lifetime diagnostics | track:") ==
         std::string::npos);
-  CHECK(todo.find("- `soa-zero-audit`: TODO-4529 replaced the residue inventory with a strict\n"
+  CHECK(todo.find("- `soa-zero-audit`: TODO-4524/TODO-4529 completed the strict\n"
                   "  zero-production-trace audit; no SoA zero-audit leaf is ready.") !=
         std::string::npos);
   CHECK(todo.find("- `map-zero-audit`: TODO-4537 split the broad lowerer substrate item into\n"
@@ -1902,7 +1908,9 @@ TEST_CASE("todo queue and skipped doctest debt stay source locked") {
         std::string::npos);
   CHECK(todo.find("- TODO-4273: Add heterogeneous value-pack inference") ==
         std::string::npos);
-  CHECK(todo.find("- [~] TODO-4305: Rename and style canonical `.prime` SoA surface") !=
+  CHECK(todo.find("- [~] TODO-4305: Rename and style canonical `.prime` SoA surface") ==
+        std::string::npos);
+  CHECK(todoFinished.find("TODO-4305: Rename and style canonical `.prime` SoA surface") !=
         std::string::npos);
   CHECK(todo.find("- Semantic phase contract hardening:") == std::string::npos);
   CHECK(todo.find("- Deferred graph and inference hardening: TODO-4239") ==
@@ -2028,7 +2036,9 @@ TEST_CASE("todo queue and skipped doctest debt stay source locked") {
         std::string::npos);
   CHECK(todoFinished.find("TODO-4522: Delete lowerer and emitter SoA public-surface traces") !=
         std::string::npos);
-  CHECK(todo.find("- [~] TODO-4524: Tighten SoA surface audit to zero") !=
+  CHECK(todo.find("- [~] TODO-4524: Tighten SoA surface audit to zero") ==
+        std::string::npos);
+  CHECK(todoFinished.find("TODO-4524: Tighten SoA surface audit to zero") !=
         std::string::npos);
   CHECK(todoFinished.find("TODO-4525: Delete text-filter and IR-printer SoA zero-audit residue") !=
         std::string::npos);
@@ -2478,11 +2488,11 @@ TEST_CASE("todo queue and skipped doctest debt stay source locked") {
         std::string::npos);
   CHECK(todo.find("| Stdlib de-experimentalization and public/internal namespace cleanup | none |") !=
         std::string::npos);
-  CHECK(todo.find("| SoA maturity and `soa` public-surface rename | TODO-4305, TODO-4306, TODO-4514, TODO-4524 |") !=
+  CHECK(todo.find("| SoA maturity and `soa` public-surface rename | none |") !=
         std::string::npos);
   CHECK(todo.find("| De-experimentalization surface and namespace parity | none |") !=
         std::string::npos);
-  CHECK(todo.find("| `soa` maturity and canonical surface parity | TODO-4305, TODO-4306, TODO-4514, TODO-4524 |") !=
+  CHECK(todo.find("| `soa` maturity and canonical surface parity | none |") !=
         std::string::npos);
   CHECK(todo.find("| Validator entrypoint and benchmark-plumbing split | none |") !=
         std::string::npos);
