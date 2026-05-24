@@ -8560,3 +8560,14 @@
   PrimeStruct_compile_run_tests -j 1`; `cd build-release && ctest
   --output-on-failure --stop-on-failure --timeout 120 -I 1597,1597` on
   2026-05-24 00:09 CEST. Next focused continuation starts at `-I 1591,1595`.
+- Compile-run shards 1591-1595 now pass after stabilizing VM GPU Buffer
+  arg-pack lowering. The initial window passed 1591-1593 and then failed
+  1594 because the VM path could not recover Buffer element kinds from
+  semantic-product query facts for arg-pack buffer access expressions; after
+  rebuilding `primec`, the remaining method-receiver case exposed stale
+  `values.at(...).load(...)` coverage, so the VM test now uses bracket access
+  while still exercising Buffer `load` and `store` method receivers. Validating
+  commands: `cmake --build build-release --target primec
+  PrimeStruct_compile_run_tests -j 1`; `cd build-release && ctest
+  --output-on-failure --stop-on-failure --timeout 120 -I 1594,1595` on
+  2026-05-24 07:51 CEST. Next focused continuation starts at `-I 1596,1600`.

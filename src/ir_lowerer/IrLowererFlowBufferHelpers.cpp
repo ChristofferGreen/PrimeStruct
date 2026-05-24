@@ -55,13 +55,16 @@ bool inferSemanticBufferElementKind(const Expr &expr,
     return kindOut != LocalInfo::ValueKind::Unknown;
   }
   if (const auto *queryFact = findSemanticProductQueryFactBySemanticId(*semanticProductTargets, expr)) {
-    std::string typeText = resolveSemanticProductTypeText(
+    const std::string queryTypeText = resolveSemanticProductTypeText(
         semanticProgram, queryFact->queryTypeText, queryFact->queryTypeTextId);
-    if (typeText.empty()) {
-      typeText = resolveSemanticProductTypeText(
-          semanticProgram, queryFact->bindingTypeText, queryFact->bindingTypeTextId);
+    kindOut = semanticBufferElementKindFromTypeText(queryTypeText);
+    if (kindOut != LocalInfo::ValueKind::Unknown) {
+      return true;
     }
-    kindOut = semanticBufferElementKindFromTypeText(typeText);
+
+    const std::string bindingTypeText = resolveSemanticProductTypeText(
+        semanticProgram, queryFact->bindingTypeText, queryFact->bindingTypeTextId);
+    kindOut = semanticBufferElementKindFromTypeText(bindingTypeText);
     return kindOut != LocalInfo::ValueKind::Unknown;
   }
   return false;

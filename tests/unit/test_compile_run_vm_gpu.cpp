@@ -407,22 +407,22 @@ import /std/gfx/*
 
 [compute workgroup_size(1, 1, 1)]
 /score_values([args<Buffer<i32>>] values) {
-  [i32] head{values.at(0i32).load(0i32)}
-  [i32] tail{values.at_unsafe(minus(count(values), 1i32)).load(0i32)}
+  [i32] head{values[0i32].load(0i32)}
+  [i32] tail{values[minus(count(values), 1i32)].load(0i32)}
   values[0i32].store(0i32, plus(head, tail))
 }
 
 [compute workgroup_size(1, 1, 1)]
 /score_refs([args<Reference<Buffer<i32>>>] values) {
-  [i32] head{dereference(values.at(0i32)).load(0i32)}
-  [i32] tail{dereference(values.at_unsafe(minus(count(values), 1i32))).load(0i32)}
+  [i32] head{dereference(values[0i32]).load(0i32)}
+  [i32] tail{dereference(values[minus(count(values), 1i32)]).load(0i32)}
   dereference(values[0i32]).store(0i32, plus(head, tail))
 }
 
 [compute workgroup_size(1, 1, 1)]
 /score_ptrs([args<Pointer<Buffer<i32>>>] values) {
-  [i32] head{dereference(values.at(0i32)).load(0i32)}
-  [i32] tail{dereference(values.at_unsafe(minus(count(values), 1i32))).load(0i32)}
+  [i32] head{dereference(values[0i32]).load(0i32)}
+  [i32] tail{dereference(values[minus(count(values), 1i32)]).load(0i32)}
   dereference(values[0i32]).store(0i32, plus(head, tail))
 }
 
