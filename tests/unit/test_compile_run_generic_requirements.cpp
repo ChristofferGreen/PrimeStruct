@@ -154,6 +154,50 @@ main() {
        "hint: pass values or types that satisfy the require(...) predicate"});
 }
 
+TEST_CASE("requirement diagnostics improve unconstrained generic failures") {
+  const std::string unconstrainedSource = R"(
+[return<T>]
+only_i32_unconstrained<T>([T] value) {
+  [i32] narrowed{value}
+  return(narrowed)
+}
+
+[return<int>]
+main() {
+  [f32] bad{only_i32_unconstrained<f32>(4.0f32)}
+  return(0i32)
+}
+)";
+
+  expectPrimecDiagnostic(
+      "generic_requirements_unconstrained_failure",
+      unconstrainedSource,
+      {"only_i32_unconstrained",
+       "binding initializer type mismatch",
+       "PSC1005"});
+
+  const std::string constrainedSource = R"(
+[return<T> require(typeof<value> == i32)]
+only_i32<T>([T] value) {
+  return(value)
+}
+
+[return<int>]
+main() {
+  [f32] bad{only_i32<f32>(4.0f32)}
+  return(0i32)
+}
+)";
+
+  expectPrimecDiagnostic(
+      "generic_requirements_constrained_failure",
+      constrainedSource,
+      {"direct requirement check failed on /only_i32",
+       "predicate source: /std/meta/type_equals<typeof<value>, i32>()",
+       "type equality failed: f32 != i32",
+       "hint: pass values or types that satisfy the require(...) predicate"});
+}
+
 TEST_CASE("constrained overload diagnostics cover ambiguity and value failures") {
   const std::string ambiguousSource = R"(
 [return<T> require(type_equals<typeof<value>, i32>())]

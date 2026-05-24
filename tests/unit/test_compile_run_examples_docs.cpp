@@ -2,6 +2,9 @@
 
 #include "test_compile_run_examples_helpers.h"
 
+#include <utility>
+#include <vector>
+
 TEST_SUITE_BEGIN("primestruct.compile.run.examples");
 
 TEST_CASE("compiles concrete examples to IR") {
@@ -116,6 +119,68 @@ TEST_CASE("procedural generic docs example runs in VM and native") {
       " -o " + quoteShellArg(nativePath) + " --entry /main";
   CHECK(runCommand(compileNativeCmd) == 0);
   CHECK(runCommand(quoteShellArg(nativePath)) == 23);
+}
+
+TEST_CASE("generic design examples stay documented and executable") {
+  auto resolveRepoPath = [](const std::string &name) -> std::filesystem::path {
+    std::filesystem::path path = std::filesystem::path("..") / name;
+    if (!std::filesystem::exists(path)) {
+      path = std::filesystem::current_path() / name;
+    }
+    return path;
+  };
+
+  const std::filesystem::path codeExamplesPath =
+      resolveRepoPath("docs/CodeExamples.md");
+  const std::filesystem::path primeStructPath =
+      resolveRepoPath("docs/PrimeStruct.md");
+  REQUIRE(std::filesystem::exists(codeExamplesPath));
+  REQUIRE(std::filesystem::exists(primeStructPath));
+
+  const std::string codeExamples = readFile(codeExamplesPath.string());
+  const std::string primeStructDoc = readFile(primeStructPath.string());
+  const std::vector<std::string> requiredCodeExampleSnippets = {
+      "## Generic Coding Style",
+      "Use plain inference for pass-through helpers",
+      "Use requirements when an unconstrained helper would fail later",
+      "[return<T> require(typeof<left> == typeof<right>, N > 0)]",
+      "return(ct_if(type_equals<typeof<value>, i32>())",
+      "[struct] Pair<LeftT, RightT>",
+      "`examples/2.Inference/generic_requirements_design.prime`"};
+  for (const std::string &snippet : requiredCodeExampleSnippets) {
+    CAPTURE(snippet);
+    CHECK(codeExamples.find(snippet) != std::string::npos);
+  }
+  CHECK(primeStructDoc.find("High-level generic examples should follow the "
+                            "style section in") != std::string::npos);
+  CHECK(primeStructDoc.find("examples/2.Inference/"
+                            "generic_pair_design.prime") !=
+        std::string::npos);
+
+  const std::vector<std::pair<std::string, int>> examples = {
+      {"examples/2.Inference/generic_identity.prime", 42},
+      {"examples/2.Inference/generic_pair_design.prime", 42},
+      {"examples/2.Inference/generic_requirements_design.prime", 50}};
+  for (const auto &[exampleName, expectedExit] : examples) {
+    const std::filesystem::path examplePath = resolveRepoPath(exampleName);
+    REQUIRE(std::filesystem::exists(examplePath));
+    CAPTURE(exampleName);
+
+    const std::string runVmCmd =
+        "./primec --emit=vm " + quoteShellArg(examplePath.string()) +
+        " --entry /main";
+    CHECK(runCommand(runVmCmd) == expectedExit);
+
+    const std::string nativePath =
+        (testScratchPath("") /
+         ("primec_" + examplePath.stem().string() + "_native"))
+            .string();
+    const std::string compileNativeCmd =
+        "./primec --emit=native " + quoteShellArg(examplePath.string()) +
+        " -o " + quoteShellArg(nativePath) + " --entry /main";
+    CHECK(runCommand(compileNativeCmd) == 0);
+    CHECK(runCommand(quoteShellArg(nativePath)) == expectedExit);
+  }
 }
 
 TEST_CASE("collection docs snippets stay code-examples style and executable") {

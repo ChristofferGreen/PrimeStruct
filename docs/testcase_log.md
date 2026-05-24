@@ -1,7 +1,10 @@
 # Testcase Log
 
 ## Current Known Failures
-- [ ] release gate baseline | mode: release | command:
+- none
+
+## Historical Release-Gate Continuation Notes
+- [x] release gate baseline | mode: release | command:
   `./scripts/compile.sh --release` | first_seen: 2026-05-21 07:37 CEST |
   last_seen: 2026-05-21 11:25 CEST | next:
   `cmake --build build-release -j 1`;
@@ -982,6 +985,24 @@
   `PrimeStruct_primestruct_compile_run_emitters_cpp_lambda_and_mutator_resolution_20_20`.
 
 ## Recent Test Runs
+- 2026-05-24 12:53 CEST | pass | mode: release | command: `cmake --build
+  build-release --target primec PrimeStruct_compile_run_tests -j 1`; `cd
+  build-release && ./PrimeStruct_compile_run_tests --test-case="generic
+  design examples stay documented and executable,requirement diagnostics
+  improve unconstrained generic failures" --no-skip` | failures: none |
+  notes: revised TODO-4350 focused lane passed 2 cases and 36 assertions.
+- 2026-05-24 12:52 CEST | fail | mode: release | command: `cmake --build
+  build-release --target PrimeStruct_compile_run_tests -j 1`; `cd
+  build-release && ./PrimeStruct_compile_run_tests --test-case="generic
+  design examples stay documented and executable,requirement diagnostics
+  improve unconstrained generic failures" --no-skip`; `cmake --build
+  build-release --target primec -j 1`; `cd build-release &&
+  ./PrimeStruct_compile_run_tests --test-case="generic design examples stay
+  documented and executable,requirement diagnostics improve unconstrained
+  generic failures" --no-skip` | failures: requirement diagnostics improve
+  unconstrained generic failures | notes: first test run lacked `./primec`;
+  after building `primec`, design examples passed and only the stale
+  unconstrained diagnostic needle failed.
 - 2026-05-24 12:16 CEST | pass | mode: release | command:
   `cmake --build build-release --target PrimeStruct_compile_run_tests -j 1`;
   `cd build-release && ./PrimeStruct_compile_run_tests --test-case="todo queue and skipped doctest debt stay source locked" --no-skip`
@@ -7822,6 +7843,14 @@
 - 2026-05-12 17:28 local | fail | mode: release | command: `./scripts/compile.sh --release` | failures: 146 CTest targets | notes: baseline after preflight checkpoint failed; stabilization blocks TODO work
 
 ## Resolved Failures
+- [x] requirement diagnostics improve unconstrained generic failures |
+  resolved: 2026-05-24 12:53 CEST | validating command: `cmake --build
+  build-release --target primec PrimeStruct_compile_run_tests -j 1`; `cd
+  build-release && ./PrimeStruct_compile_run_tests --test-case="generic
+  design examples stay documented and executable,requirement diagnostics
+  improve unconstrained generic failures" --no-skip` | notes: updated the
+  unconstrained comparison to assert the current body-local
+  `binding initializer type mismatch [PSC1005]` diagnostic.
 - [x] TODO-4560 docs-lock source check | resolved: 2026-05-24 11:42 CEST |
   validating command:
   `cd build-release && ./PrimeStruct_compile_run_tests --test-case="todo queue and skipped doctest debt stay source locked" --no-skip`

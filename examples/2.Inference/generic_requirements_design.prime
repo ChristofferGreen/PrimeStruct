@@ -1,0 +1,35 @@
+[return<T> require(N > 0)]
+require_length<N,T>([T] value) {
+  return(value)
+}
+
+[return<T> require(typeof<left> == typeof<right>, N > 0)]
+add_same<N,T>([T] left, [T] right) {
+  return(plus(left, right))
+}
+
+[return<i32>]
+optional_i32<T>([T] value) {
+  return(ct_if(type_equals<typeof<value>, i32>()) {
+    value
+  } else {
+    0i32
+  })
+}
+
+[return<i32> require(type_equals<typeof<value>, i64>())]
+classify<T>([T] value) {
+  return(1i32)
+}
+
+[return<i32> require(type_equals<typeof<value>, i32>())]
+classify<T>([T] value) {
+  return(plus(value, 1i32))
+}
+
+[return<int>]
+main() {
+  [i32] checked{require_length<2,i32>(20i32)}
+  [i32] total{add_same<3,i32>(checked, 22i32)}
+  return(plus(total, plus(classify(7i32), optional_i32(1.5f32))))
+}

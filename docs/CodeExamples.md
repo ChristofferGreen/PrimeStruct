@@ -101,6 +101,120 @@ Mixed-directory rule:
   it does not, choose a non-mutating name.
 - Prefer examples that compile and run unchanged under the current toolchain.
 
+## Generic Coding Style
+
+Generic PrimeStruct should read like ordinary procedural code over named facts.
+Use plain inference when the caller already supplies enough type information,
+then add constraints only at the boundary where the function needs a stable
+promise. Reach for explicit template arguments when the call site is meant to
+select a public shape or value fact, not to work around unclear inference.
+
+Good generic examples follow these conventions:
+- Use `T` for one unconstrained type, `ElemT` for collection elements,
+  `LeftT` and `RightT` for heterogeneous pairs, and `N` for compile-time
+  integer facts such as lengths or small capacities.
+- Keep `[type]` locals near the value they describe. Prefer
+  `[type] ElemT { typeof<value> }` over repeating a long computed type.
+- Use `require(...)` for caller-visible obligations such as same-type
+  arithmetic, positive length facts, construction support, or selected
+  overload viability.
+- Use `ct_if(...)` only when one branch must disappear before validation or
+  lowering. Ordinary runtime `if` is clearer when both branches are valid
+  runtime code.
+- Use local generated structs for non-escaping implementation storage. Return
+  caller-visible types such as `Pair<LeftT, RightT>` when callers need to name
+  the result.
+
+### Plain Inference
+
+Use plain inference for pass-through helpers where the body does not need an
+extra requirement.
+
+```prime
+[return<T>]
+identity<T>([T] value) {
+  return(value)
+}
+
+[return<int>]
+main() {
+  return(identity<i32>(42i32))
+}
+```
+
+The checked-in version lives at `examples/2.Inference/generic_identity.prime`.
+
+### Caller-Visible Generic Results
+
+Return a public generic shape when the caller must observe or store the result.
+Function-local generated structs are intentionally not part of the public
+signature.
+
+```prime
+[struct] Pair<LeftT, RightT> {
+  [LeftT] first
+  [RightT] second
+}
+
+[return<Pair<LeftT, RightT>>]
+make_pair<LeftT, RightT>([LeftT] left, [RightT] right) {
+  return(Pair<LeftT, RightT>{[first] left, [second] right})
+}
+```
+
+The checked-in version lives at
+`examples/2.Inference/generic_pair_design.prime`.
+
+### Requirements And Compile-Time Flow
+
+Use requirements when an unconstrained helper would fail later with a generic
+body diagnostic. The requirement puts the obligation at the call boundary and
+lets diagnostics name the failed predicate.
+
+```prime
+[return<T> require(N > 0)]
+require_length<N,T>([T] value) {
+  return(value)
+}
+
+[return<T> require(typeof<left> == typeof<right>, N > 0)]
+add_same<N,T>([T] left, [T] right) {
+  return(plus(left, right))
+}
+
+[return<i32>]
+optional_i32<T>([T] value) {
+  return(ct_if(type_equals<typeof<value>, i32>()) {
+    value
+  } else {
+    0i32
+  })
+}
+```
+
+This style keeps value facts (`N > 0`), same-type facts
+(`typeof<left> == typeof<right>`), and type-directed branching visible in the
+source order where the function uses them. The checked-in executable example
+lives at `examples/2.Inference/generic_requirements_design.prime`.
+
+### Constrained Overloads
+
+Use a small overload pair only when each overload has a distinct, visible
+requirement. If both candidates can be viable, prefer clearer names instead of
+depending on specificity ranking.
+
+```prime
+[return<i32> require(type_equals<typeof<value>, i64>())]
+classify<T>([T] value) {
+  return(1i32)
+}
+
+[return<i32> require(type_equals<typeof<value>, i32>())]
+classify<T>([T] value) {
+  return(plus(value, 1i32))
+}
+```
+
 ## AST Transform Hook Declarations
 
 User-authored AST transform hooks can be metadata-only with `[ast return<void>]`,

@@ -1221,6 +1221,16 @@ Procedural compile-time genericity contract:
   with a short actionable hint.
 - Generic public examples should use consistent parameter names such as `T`,
   `ElemT`, `LeftT`, `RightT`, and value-level names such as `N`.
+- High-level generic examples should follow the style section in
+  `docs/CodeExamples.md`: use plain inference for pass-through helpers,
+  `require(...)` for caller-visible obligations, compile-time value facts for
+  values such as lengths, `ct_if(...)` only when a branch must be pruned before
+  validation, local generated structs for non-escaping storage, and explicit
+  template arguments when the call site intentionally selects a public type or
+  compile-time value. Runnable examples live in
+  `examples/2.Inference/generic_identity.prime`,
+  `examples/2.Inference/generic_pair_design.prime`, and
+  `examples/2.Inference/generic_requirements_design.prime`.
 - The implementation path should first document and parse the compile-time
   argument channel, then add bare zero-argument name resolution, then add type
   locals and `typeof<symbol>`, and only then lower local generated types through

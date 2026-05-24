@@ -1,0 +1,15 @@
+[struct] Pair<LeftT, RightT> {
+  [LeftT] first
+  [RightT] second
+}
+
+[return<Pair<LeftT, RightT>>]
+make_pair<LeftT, RightT>([LeftT] left, [RightT] right) {
+  return(Pair<LeftT, RightT>{[first] left, [second] right})
+}
+
+[return<int>]
+main() {
+  [Pair<i32, i32>] pair{make_pair<i32, i32>(17i32, 25i32)}
+  return(plus(pair.first, pair.second))
+}

@@ -6,6 +6,34 @@ Legend:
 Finished items are periodically archived here from `docs/todo.md`; section headers record the archive date.
 
 **Todo Completion (May 24, 2026)**
+- [x] TODO-4350: Add high-level generic design examples
+  - owner: ai
+  - created_at: 2026-05-04
+  - finished_at: 2026-05-24
+  - phase: Generic constraint and compile-time flow alignment
+  - depends_on: TODO-4558, TODO-4559
+  - scope: Add docs and example programs that demonstrate PrimeStruct's
+    intended generic coding style against common alternatives.
+  - outcome:
+    - Added a `CodeExamples.md` generic coding style section covering when to
+      use plain inference, requirements, compile-time value facts,
+      compile-time branching, generated types, and explicit template
+      arguments.
+    - Added runnable inference examples for identity, caller-visible
+      `Pair<LeftT, RightT>` construction, and requirement-oriented generic
+      design.
+    - Locked the examples with focused VM/native compile-run coverage and
+      added a diagnostic comparison between an unconstrained generic failure
+      and a requirement-based failure.
+    - Cleared the stale active testcase-log failure entry after the existing
+      focused continuation notes showed the release CTest terminal shard had
+      completed.
+  - validation:
+    - `cmake --build build-release --target primec PrimeStruct_compile_run_tests -j 1`
+    - `./PrimeStruct_compile_run_tests --test-case="generic design examples stay documented and executable,requirement diagnostics improve unconstrained generic failures" --no-skip`
+    - Focused release-mode validation only; full release gate intentionally
+      skipped by the lite workflow.
+
 - [x] TODO-4545: Implement first structured task spawn/wait substrate
   - owner: ai
   - created_at: 2026-05-20

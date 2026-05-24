@@ -1,0 +1,9 @@
+[return<T>]
+identity<T>([T] value) {
+  return(value)
+}
+
+[return<int>]
+main() {
+  return(identity<i32>(42i32))
+}

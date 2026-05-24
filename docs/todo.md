@@ -85,8 +85,6 @@ Task template:
 
 - TODO-4561: Add task spawn/wait parser and effect locks | track:
   task-spawn-syntax-effects | primary surface: parser/effect docs
-- TODO-4350: Add high-level generic design examples | track:
-  generic-design-examples | primary surface: docs/examples
 
 ### Parallel Work Tracks (Current)
 
@@ -175,12 +173,12 @@ Task template:
 - Multithreading substrate: TODO-4561 -> TODO-4562 -> TODO-4563 -> TODO-4278
 - Procedural compile-time genericity: none active after TODO-4340 and
   TODO-4546
-- Generic constraint and compile-time flow alignment: TODO-4350
+- Generic constraint and compile-time flow alignment: none active after
+  TODO-4350
 
 ### Execution Queue (Recommended Track Order)
 
 - TODO-4561: Add task spawn/wait parser and effect locks
-- TODO-4350: Add high-level generic design examples
 - TODO-4562: Add task handle semantic facts and lifetime diagnostics
 - TODO-4563: Add single-task spawn/wait runtime execution
 - TODO-4278: Integrate multi-wait with stdlib tuple
@@ -213,7 +211,7 @@ Task template:
 | Generic type packs and tuple stdlib surface | TODO-4274, TODO-4273, TODO-4277, TODO-4278 |
 | Multithreading substrate | TODO-4561, TODO-4562, TODO-4563 |
 | Procedural compile-time genericity and local type facts | none |
-| Generic constraints and compile-time flow control | TODO-4352, TODO-4353, TODO-4354, TODO-4355, TODO-4356, TODO-4357, TODO-4345, TODO-4547, TODO-4548, TODO-4549, TODO-4346, TODO-4550, TODO-4551, TODO-4552, TODO-4553, TODO-4554, TODO-4555, TODO-4556, TODO-4557, TODO-4558, TODO-4559, TODO-4560, TODO-4350 |
+| Generic constraints and compile-time flow control | TODO-4352, TODO-4353, TODO-4354, TODO-4355, TODO-4356, TODO-4357, TODO-4345, TODO-4547, TODO-4548, TODO-4549, TODO-4346, TODO-4550, TODO-4551, TODO-4552, TODO-4553, TODO-4554, TODO-4555, TODO-4556, TODO-4557, TODO-4558, TODO-4559, TODO-4560 |
 
 ### Validation Coverage Snapshot
 
@@ -241,7 +239,7 @@ Task template:
 | Generic type-pack and tuple conformance | TODO-4274, TODO-4273, TODO-4277, TODO-4278 |
 | Multithreading substrate conformance | TODO-4561, TODO-4562, TODO-4563 |
 | Procedural compile-time genericity conformance | none |
-| Generic constraint and compile-time flow conformance | TODO-4352, TODO-4353, TODO-4354, TODO-4355, TODO-4356, TODO-4357, TODO-4345, TODO-4547, TODO-4548, TODO-4549, TODO-4346, TODO-4550, TODO-4551, TODO-4552, TODO-4553, TODO-4554, TODO-4555, TODO-4556, TODO-4557, TODO-4558, TODO-4559, TODO-4560, TODO-4350 |
+| Generic constraint and compile-time flow conformance | TODO-4352, TODO-4353, TODO-4354, TODO-4355, TODO-4356, TODO-4357, TODO-4345, TODO-4547, TODO-4548, TODO-4549, TODO-4346, TODO-4550, TODO-4551, TODO-4552, TODO-4553, TODO-4554, TODO-4555, TODO-4556, TODO-4557, TODO-4558, TODO-4559, TODO-4560 |
 
 ### Vector/Map Bridge Contract Summary
 
@@ -877,41 +875,6 @@ Task template:
     - `./scripts/compile.sh --release` passes.
   - stop_rule: Stop once multi-wait returns stdlib `tuple<...>` or the missing
     task-side prerequisite is split into an explicit multithreading TODO.
-
-- [ ] TODO-4350: Add high-level generic design examples
-  - owner: ai
-  - created_at: 2026-05-04
-  - phase: Generic constraint and compile-time flow alignment
-  - depends_on: TODO-4558, TODO-4559
-  - scope: Add docs and example programs that demonstrate PrimeStruct's
-    intended generic coding style against common alternatives.
-  - implementation_notes:
-    - Start from `docs/PrimeStruct.md`, `docs/PrimeStruct_SyntaxSpec.md`,
-      `docs/CodeExamples.md`, `examples/`, and any conformance examples from
-      TODO-4558 or TODO-4559.
-    - Include examples such as identity, caller-visible `Pair<LeftT, RightT>`
-      construction, non-escaping local generated struct use, same-type add,
-      value-level length requirements, optional type-directed branch, and a
-      constrained overload pair.
-    - Align generic naming conventions in examples: use `T`, `ElemT`,
-      `LeftT`, `RightT`, and value-level names such as `N` consistently.
-    - Keep the examples procedural and readable: type work should look like a
-      left-to-right program over named facts, not a template metaprogramming
-      puzzle.
-  - acceptance:
-    - Docs include a short "generic coding style" section that explains when
-      to use plain inference, requirements, compile-time value facts,
-      compile-time branching, generated types, and explicit template
-      arguments.
-    - At least one runnable example compares unconstrained failure with a
-      requirement-based diagnostic.
-    - Examples compile under the supported backends for the feature or carry a
-      narrow documented skip reason.
-    - `docs/todo.md` is updated to remove or split any remaining genericity
-      follow-up discovered during example work.
-    - `./scripts/compile.sh --release` passes.
-  - stop_rule: Stop once the generic design direction is documented through
-    runnable examples rather than only prose.
 
 - [~] TODO-4305: Rename and style canonical `.prime` SoA surface
   - owner: ai
