@@ -35,6 +35,34 @@ Finished items are periodically archived here from `docs/todo.md`; section heade
     - `./PrimeStruct_parser_tests --test-suite=primestruct.parser.templates --no-skip`
     - `./PrimeStruct_compile_run_tests --test-case="generic requirement predicate surface stays source locked" --no-skip`
 
+- [x] TODO-4560: Add generic compile-run diagnostics conformance
+  - owner: ai
+  - created_at: 2026-05-24
+  - finished_at: 2026-05-24
+  - phase: Generic constraint and compile-time flow alignment
+  - parallel_track: generic-compile-run-diagnostics
+  - depends_on: TODO-4555, TODO-4556, TODO-4557
+  - split_from: TODO-4349
+  - scope: Add compile-run and diagnostic conformance coverage for generic
+    requirements, constrained overloads, compile-time effect rejection, budget
+    rejection, and non-selected compile-time branches.
+  - outcome:
+    - Added a focused compile-run conformance suite for accepted generic
+      programs that execute through VM, native, and executable backends.
+    - Covered same-type constraints, integer value constraints, constrained
+      overload selection, selected statement/expression `ct_if` branches, and
+      discarded branch pruning with end-to-end programs.
+    - Added CLI diagnostic checks for direct requirement failure, ambiguous
+      constrained overloads, value predicate failure, compile-time effect
+      rejection, and provenance-rich diagnostic text.
+    - Expanded compile-time facade coverage for budget-exhaustion diagnostic
+      formatting with predicate, source, semantic node, and provenance fields.
+  - validation:
+    - `cmake --build build-release --target PrimeStruct_compile_run_tests PrimeStruct_compile_time_tests -j 1`
+    - `./PrimeStruct_compile_run_tests --test-suite=primestruct.compile.run.generic_requirements --no-skip`
+    - `./PrimeStruct_compile_run_tests --test-case="todo queue and skipped doctest debt stay source locked" --no-skip`
+    - `./PrimeStruct_compile_time_tests --test-case="compile-time budget exhaustion diagnostics include provenance" --no-skip`
+
 - [x] TODO-4349: Add generic constraint conformance matrix
   - owner: ai
   - created_at: 2026-05-04

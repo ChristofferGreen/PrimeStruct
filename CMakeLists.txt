@@ -756,6 +756,7 @@ if(PRIMESTRUCT_BUILD_TESTS)
     tests/unit/test_compile_run_emitters_variadic_file_packs.cpp
     tests/unit/test_compile_run_emitters_variadic_pointer_pack_access.cpp
     tests/unit/test_compile_run_emitters_variadic_reference_pack_access.cpp
+    tests/unit/test_compile_run_generic_requirements.cpp
     tests/unit/test_compile_run_glsl.cpp
     tests/unit/test_compile_run_imports_versions.cpp
     tests/unit/test_compile_run_imports_blocks.cpp

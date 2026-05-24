@@ -982,6 +982,52 @@
   `PrimeStruct_primestruct_compile_run_emitters_cpp_lambda_and_mutator_resolution_20_20`.
 
 ## Recent Test Runs
+- 2026-05-24 11:42 CEST | pass | mode: release | command:
+  `cd build-release && ./PrimeStruct_compile_time_tests --test-case="compile-time budget exhaustion diagnostics include provenance" --no-skip`
+  | failures: none | notes: TODO-4560 budget diagnostic slice passed with
+  1 case and 8 assertions after aligning the provenance-format expectation.
+- 2026-05-24 11:42 CEST | pass | mode: release | command:
+  `cd build-release && ./PrimeStruct_compile_run_tests --test-case="todo queue and skipped doctest debt stay source locked" --no-skip`
+  | failures: none | notes: TODO-4560 docs-lock slice passed with 1 case
+  and 425 assertions after refreshing the execution-queue source lock.
+- 2026-05-24 11:42 CEST | pass | mode: release | command:
+  `cd build-release && ./PrimeStruct_compile_run_tests --test-suite=primestruct.compile.run.generic_requirements --no-skip`
+  | failures: none | notes: TODO-4560 generic compile-run conformance suite
+  still passed with 6 cases and 59 assertions after the focused fixes.
+- 2026-05-24 11:42 CEST | pass | mode: release | command:
+  `cmake --build build-release --target primec PrimeStruct_compile_run_tests PrimeStruct_compile_time_tests -j 1`
+  | failures: none | notes: rebuilt `primec` plus affected doctest targets
+  before rerunning TODO-4560 focused validation.
+- 2026-05-24 11:42 CEST | fail | mode: release | command:
+  `cd build-release && ./PrimeStruct_compile_time_tests --test-case="compile-time budget exhaustion diagnostics include provenance" --no-skip`
+  | failures: compile-time budget exhaustion diagnostics include provenance |
+  notes: formatted budget diagnostic did not include line/column text without
+  source path provenance.
+- 2026-05-24 11:42 CEST | fail | mode: release | command:
+  `cd build-release && ./PrimeStruct_compile_run_tests --test-case="todo queue and skipped doctest debt stay source locked" --no-skip`
+  | failures: todo queue and skipped doctest debt stay source locked | notes:
+  stale execution-queue source-lock substring still expected TODO-4348 after
+  TODO-4558/4559/4560 split.
+- 2026-05-24 11:42 CEST | pass | mode: release | command:
+  `cd build-release && ./PrimeStruct_compile_run_tests --test-suite=primestruct.compile.run.generic_requirements --no-skip`
+  | failures: none | notes: TODO-4560 generic compile-run conformance suite
+  passed with 6 cases and 59 assertions after rebuilding `primec`.
+- 2026-05-24 11:42 CEST | pass | mode: release | command:
+  `cmake --build build-release --target primec -j 1`
+  | failures: none | notes: rebuilt `primec` after the initial compile-run
+  suite failed because `./primec` was missing in `build-release`.
+- 2026-05-24 11:42 CEST | fail | mode: release | command:
+  `cd build-release && ./PrimeStruct_compile_run_tests --test-suite=primestruct.compile.run.generic_requirements --no-skip`
+  | failures: primestruct.compile.run.generic_requirements | notes: initial
+  focused compile-run attempt failed only because `./primec` was missing.
+- 2026-05-24 11:42 CEST | pass | mode: release | command:
+  `cmake --build build-release --target PrimeStruct_compile_run_tests PrimeStruct_compile_time_tests -j 1`
+  | failures: none | notes: rebuilt affected doctest targets, but compile-run
+  validation also needed the `primec` target.
+- 2026-05-24 11:42 CEST | pass | mode: release | command:
+  `cmake -S . -B build-release -DCMAKE_BUILD_TYPE=Release`
+  | failures: none | notes: parent configured release build before TODO-4560
+  focused validation.
 - 2026-05-24 10:10 CEST | pass | mode: release | command:
   `cd build-release && ./PrimeStruct_compile_time_tests --test-suite=primestruct.compile_time.facade --no-skip`
   | failures: none | notes: TODO-4557 compiler-hosted CT VM boundary
@@ -7721,6 +7767,16 @@
 - 2026-05-12 17:28 local | fail | mode: release | command: `./scripts/compile.sh --release` | failures: 146 CTest targets | notes: baseline after preflight checkpoint failed; stabilization blocks TODO work
 
 ## Resolved Failures
+- [x] TODO-4560 docs-lock source check | resolved: 2026-05-24 11:42 CEST |
+  validating command:
+  `cd build-release && ./PrimeStruct_compile_run_tests --test-case="todo queue and skipped doctest debt stay source locked" --no-skip`
+  | notes: execution-queue source lock now matches the TODO-4558/4559
+  active queue after TODO-4560 moved to finished.
+- [x] TODO-4560 budget provenance diagnostic check | resolved:
+  2026-05-24 11:42 CEST | validating command:
+  `cd build-release && ./PrimeStruct_compile_time_tests --test-case="compile-time budget exhaustion diagnostics include provenance" --no-skip`
+  | notes: budget diagnostic coverage now asserts the stable formatted
+  provenance fields available without a source path.
 - [x] TODO-4546 focused manual negative diagnostics | resolved: 2026-05-23
   00:00 CEST | validating command:
   `cmake --build build-release --target PrimeStruct_misc_tests -j 1`;

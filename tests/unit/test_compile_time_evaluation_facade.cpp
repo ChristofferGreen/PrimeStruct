@@ -578,6 +578,34 @@ TEST_CASE("compile-time evaluation facade enforces deterministic budgets") {
         std::string::npos);
 }
 
+TEST_CASE("compile-time budget exhaustion diagnostics include provenance") {
+  const primec::SemanticProgram program = makeBudgetProgram();
+  const primec::SemanticProgramCompileTimeHost host(program);
+  const primec::CompileTimeEvaluationFacade facade(host);
+
+  primec::CompileTimeEvaluationRequest request;
+  request.definitionPath = "/generic/user";
+  request.predicateName = "/project/is_small";
+  request.budget.maxSteps = 1;
+
+  const auto result = facade.evaluateRequirementPredicate(request);
+  REQUIRE(result.kind ==
+          primec::CompileTimeEvaluationResultKind::BudgetExhausted);
+  CHECK(result.fault == primec::CompileTimeEvaluationFaultKind::BudgetExhausted);
+  CHECK(result.message.find("evaluator step budget exceeded") !=
+        std::string::npos);
+
+  const std::string formatted =
+      primec::formatCompileTimeEvaluationResult(result);
+  CHECK(formatted.find("compile-time evaluation budget_exhausted") !=
+        std::string::npos);
+  CHECK(formatted.find("predicate /project/is_small") != std::string::npos);
+  CHECK(formatted.find("source_text \"/project/is_small<N>()\"") !=
+        std::string::npos);
+  CHECK(formatted.find("semantic_node_id 77") != std::string::npos);
+  CHECK(formatted.find("provenance_handle 88") != std::string::npos);
+}
+
 TEST_CASE("compile-time evaluation facade reuses deterministic cache results") {
   const primec::SemanticProgram program = makeBudgetProgram();
   const primec::SemanticProgramCompileTimeHost host(program);
