@@ -384,6 +384,28 @@ CompileTimeCallablePrepareResult prepareCompileTimeCallable(
 
   if (!isSupportedBuiltinPredicate(provenance.predicatePath) &&
       !isEvaluatedUserPredicateFact(provenance.predicatePath, outcome)) {
+    const std::string_view diagnostic = resolvedSemanticText(
+        semanticProgram, fact->evaluationDiagnosticId, fact->evaluationDiagnostic);
+    if (outcome == "denied_effect") {
+      return makeRejectedResult(
+          CompileTimeCallablePrepareStatus::DeniedEffect,
+          facade,
+          provenance,
+          diagnostic.empty()
+              ? "denied compile-time effect for predicate: " +
+                    provenance.predicatePath
+              : std::string(diagnostic));
+    }
+    if (outcome == "budget_exhausted") {
+      return makeRejectedResult(
+          CompileTimeCallablePrepareStatus::BudgetExceeded,
+          facade,
+          provenance,
+          diagnostic.empty()
+              ? "compile-time predicate budget exhausted: " +
+                    provenance.predicatePath
+              : std::string(diagnostic));
+    }
     return makeRejectedResult(
         CompileTimeCallablePrepareStatus::UnsupportedPredicate,
         facade,

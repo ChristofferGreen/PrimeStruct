@@ -166,6 +166,32 @@ TEST_CASE("evaluated user predicates prepare with compile-time arguments") {
         4);
 }
 
+TEST_CASE("denied compile-time effect facts reject before callable execution") {
+  primec::SemanticProgram program = makeProgramWith(makeRequirementFact(
+      "/generic/effect",
+      "/project/needs_file",
+      "/project/needs_file()",
+      {},
+      "denied_effect",
+      "denied compile-time effect in user requirement predicate "
+      "/project/needs_file: file_read "
+      "(missing effects<compiletime>(file_read))"));
+  const primec::SemanticProgramCompileTimeHost host(program);
+
+  const primec::CompileTimeCallablePrepareResult result =
+      primec::prepareCompileTimeCallable(
+          host,
+          makeRequest("/generic/effect", "/project/needs_file", {}));
+
+  CHECK_FALSE(result.prepared());
+  CHECK(result.status == primec::CompileTimeCallablePrepareStatus::DeniedEffect);
+  CHECK(result.diagnostic.kind ==
+        primec::CompileTimeEvaluationResultKind::DeniedEffect);
+  CHECK(result.diagnostic.message.find("missing effects<compiletime>") !=
+        std::string::npos);
+  CHECK(result.callable.operands.empty());
+}
+
 TEST_CASE("compile-time callable preparation enforces deterministic budgets") {
   auto prepareWithBudget = [](primec::CompileTimeEvaluationBudget budget) {
     primec::SemanticProgram program = makeProgramWith(makeRequirementFact(

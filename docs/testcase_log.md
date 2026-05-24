@@ -982,6 +982,22 @@
   `PrimeStruct_primestruct_compile_run_emitters_cpp_lambda_and_mutator_resolution_20_20`.
 
 ## Recent Test Runs
+- 2026-05-24 10:30 CEST | pass | mode: release | command:
+  `cd build-release && ./PrimeStruct_semantics_tests --test-case="require facts publish phase-qualified compile-time effects,require pure user predicates reject impure and unsupported bodies" --no-skip`
+  | failures: none | notes: TODO-4556 semantic effects doctest slice
+  passed with 2 cases and 28 assertions.
+- 2026-05-24 10:30 CEST | pass | mode: release | command:
+  `cd build-release && ./PrimeStruct_compile_time_tests --test-case="compile-time evaluation facade gates effects through the CT host,semantic CT host gates effects on phase-qualified metadata,compile-time evaluation facade enforces deterministic budgets,compile-time evaluation cache keys include invalidation material,compile-time evaluation cache rejects corrupt entries" --no-skip`
+  | failures: none | notes: TODO-4556 CT facade effects/cache/budget
+  doctest slice passed with 5 cases and 43 assertions.
+- 2026-05-24 10:30 CEST | pass | mode: release | command:
+  `cd build-release && ./PrimeStruct_compile_time_tests --test-case="denied compile-time effect facts reject before callable execution,compile-time callable preparation enforces deterministic budgets" --no-skip`
+  | failures: none | notes: TODO-4556 CT callable denied-effect and
+  budget doctest slice passed with 2 cases and 18 assertions.
+- 2026-05-24 10:30 CEST | pass | mode: release | command:
+  `cmake --build build-release --target PrimeStruct_compile_time_tests PrimeStruct_semantics_tests -j 1`
+  | failures: none | notes: rebuilt affected compile-time and semantics
+  doctest targets for TODO-4556 focused validation.
 - 2026-05-24 10:01 CEST | pass | mode: release | command:
   `cd build-release && ./PrimeStruct_semantics_tests --test-case="require value predicates reject failing integer template arguments,require value predicates reject non-constant operands,require pure user predicates drive semantic facts,require pure user predicates reject impure and unsupported bodies,requirement constrained overload preserves no viable diagnostics,requirement constrained overload reports value predicate rejection,requirement constrained overload reports ambiguous candidates,statement ct_if diagnoses invalid predicate conditions,ct_if flow diagnostics distinguish invalid user predicates,ct_if unsatisfied predicates select else without diagnostics" --no-skip`
   | failures: none | notes: TODO-4555 predicate/value conformance

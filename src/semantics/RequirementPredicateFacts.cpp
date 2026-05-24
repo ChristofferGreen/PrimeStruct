@@ -888,11 +888,19 @@ void evaluateUserDefinedRequirementPredicate(
     return;
   }
   if (!callable.effectNames.empty()) {
-    fact.evaluationOutcome = "denied_effect";
-    fact.evaluationDiagnostic =
-        "denied compile-time effect in user requirement predicate " +
-        callable.fullPath + ": " + callable.effectNames.front();
-    return;
+    for (const std::string &effectName : callable.effectNames) {
+      if (std::find(context.compileTimeEffects.begin(),
+                    context.compileTimeEffects.end(),
+                    effectName) != context.compileTimeEffects.end()) {
+        continue;
+      }
+      fact.evaluationOutcome = "denied_effect";
+      fact.evaluationDiagnostic =
+          "denied compile-time effect in user requirement predicate " +
+          callable.fullPath + ": " + effectName +
+          " (missing effects<compiletime>(" + effectName + "))";
+      return;
+    }
   }
   if (!callable.parameterTypes.empty()) {
     fact.evaluationOutcome = "invalid_evaluation";

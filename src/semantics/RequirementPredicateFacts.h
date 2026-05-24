@@ -35,6 +35,7 @@ struct RequirementPredicateDefinitionContext {
   std::string namespacePrefix;
   std::vector<ParameterInfo> params;
   std::vector<std::string> templateArgs;
+  std::vector<std::string> compileTimeEffects;
   std::unordered_set<std::string> structNames;
   std::unordered_set<std::string> sumNames;
   std::unordered_map<std::string, std::string> importAliases;

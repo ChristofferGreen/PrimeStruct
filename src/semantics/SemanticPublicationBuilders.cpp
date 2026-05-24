@@ -968,6 +968,7 @@ RequirementPredicateDefinitionContext makeRequirementPredicateDefinitionContext(
   context.definitionPath = definition.fullPath;
   context.namespacePrefix = definition.namespacePrefix;
   context.templateArgs = definition.templateArgs;
+  context.compileTimeEffects = definitionCompileTimeEffects(definition);
   for (const auto &entry : publicationSurface.typeMetadata) {
     if (entry.category == "sum") {
       context.sumNames.insert(entry.fullPath);

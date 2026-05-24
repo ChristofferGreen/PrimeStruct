@@ -1,6 +1,7 @@
 #include "RequirementPredicateFacts.h"
 #include "SemanticsValidator.h"
 
+#include <algorithm>
 #include <sstream>
 
 namespace primec::semantics {
@@ -23,6 +24,20 @@ bool SemanticsValidator::validateRequirementPredicates() {
   auto isStaticField = [&](const Expr &stmt) {
     return hasTransform(stmt.transforms, "static");
   };
+  auto compileTimeEffectsForDefinition = [](const Definition &definition) {
+    std::vector<std::string> effects;
+    for (const Transform &transform : definition.transforms) {
+      if (transform.name == "effects" && transform.templateArgs.size() == 1 &&
+          transform.templateArgs.front() == "compiletime") {
+        effects.insert(effects.end(),
+                       transform.arguments.begin(),
+                       transform.arguments.end());
+      }
+    }
+    std::sort(effects.begin(), effects.end());
+    effects.erase(std::unique(effects.begin(), effects.end()), effects.end());
+    return effects;
+  };
   auto formatRequirementPredicateDiagnostic =
       [](const Definition &definition,
          int sourceLine,
@@ -40,6 +55,10 @@ bool SemanticsValidator::validateRequirementPredicates() {
           out << "requirement predicate not satisfied: " << predicateName
               << '\n';
           out << "category: unsatisfied requirement predicate\n";
+        } else if (fact.evaluationOutcome == "denied_effect") {
+          out << "compile-time effect opt-in rejected: " << predicateName
+              << '\n';
+          out << "category: denied compile-time effect\n";
         } else {
           out << "invalid requirement predicate " << predicateName << '\n';
           out << "category: invalid requirement predicate evaluation\n";
@@ -67,6 +86,9 @@ bool SemanticsValidator::validateRequirementPredicates() {
         if (unsatisfied) {
           out << "hint: pass values or types that satisfy the require(...) "
                  "predicate, or relax the constrained definition.";
+        } else if (fact.evaluationOutcome == "denied_effect") {
+          out << "hint: add effects<compiletime>(...) for the required "
+                 "compile-time host effect, or make the predicate pure.";
         } else {
           out << "hint: make the require(...) predicate a supported "
                  "compile-time predicate with available concrete facts.";
@@ -171,6 +193,7 @@ bool SemanticsValidator::validateRequirementPredicates() {
     context.definitionPath = definition.fullPath;
     context.namespacePrefix = definition.namespacePrefix;
     context.templateArgs = definition.templateArgs;
+    context.compileTimeEffects = compileTimeEffectsForDefinition(definition);
     context.structNames = structNames_;
     context.sumNames = sumNames_;
     context.importAliases = importAliases_;

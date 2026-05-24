@@ -83,9 +83,6 @@ Task template:
 
 ### Ready Now (Parallel-Candidate Leaves; No Unmet TODO Dependencies)
 
-- TODO-4556: Add compile-time effects and budget conformance | track:
-  generic-requirements-diagnostics | primary surface: effects/cache/budget
-  tests
 - TODO-4557: Lock compiler-hosted compile-time VM boundary | track:
   generic-requirements-diagnostics | primary surface: host-boundary/source-lock
   tests
@@ -137,9 +134,11 @@ Task template:
   TODO-4552 published provenance-rich direct requirement failures,
   TODO-4553 published requirement-overload diagnostics, TODO-4554 published
   compile-time-flow diagnostics, and TODO-4555 added predicate/value
-  conformance coverage. TODO-4359 was split into TODO-4555, TODO-4556, and
-  TODO-4557 so compile-time VM conformance can be covered in parallel by
-  predicate/value, effects/cache/budget, and compiler-host boundary leaves.
+  conformance coverage. TODO-4556 added focused conformance for compile-time
+  effect opt-ins, cache invalidation material, and active budget enforcement.
+  TODO-4359 was split into TODO-4555, TODO-4556, and TODO-4557 so compile-time
+  VM conformance can be covered in parallel by predicate/value,
+  effects/cache/budget, and compiler-host boundary leaves.
 
 ### Immediate Next 10 (Track Successors; Not Ready Until Dependencies Land)
 
@@ -170,14 +169,13 @@ Task template:
   prerequisite split out of TODO-4278
 - Procedural compile-time genericity: none active after TODO-4340 and
   TODO-4546
-- Generic constraint and compile-time flow alignment: TODO-4556/TODO-4557 ->
-  TODO-4349 -> TODO-4350
+- Generic constraint and compile-time flow alignment: TODO-4557 -> TODO-4349
+  -> TODO-4350
 
 ### Execution Queue (Recommended Track Order)
 
 - TODO-4545: Implement first structured task spawn/wait substrate
 - TODO-4278: Integrate multi-wait with stdlib tuple
-- TODO-4556: Add compile-time effects and budget conformance
 - TODO-4557: Lock compiler-hosted compile-time VM boundary
 - TODO-4349: Add generic constraint conformance matrix
 - TODO-4350: Add high-level generic design examples
@@ -819,35 +817,6 @@ Task template:
     - `./scripts/compile.sh --release` passes.
   - stop_rule: Stop once multi-wait returns stdlib `tuple<...>` or the missing
     task-side prerequisite is split into an explicit multithreading TODO.
-
-- [ ] TODO-4556: Add compile-time effects and budget conformance
-  - owner: ai
-  - created_at: 2026-05-24
-  - phase: Generic constraint and compile-time flow alignment
-  - parallel_track: generic-requirements-diagnostics
-  - depends_on: TODO-4554, TODO-4358, TODO-4550, TODO-4551
-  - split_from: TODO-4359
-  - scope: Add focused conformance coverage for compile-time effect opt-ins,
-    cache-key invalidation, and active compile-time budget enforcement.
-  - implementation_notes:
-    - Start from CT facade unit tests, semantic-product snapshot tests,
-      parser/semantic diagnostics tests, budget tests, and compile-pipeline
-      golden tests.
-    - Keep builtin/user predicate value formatting in TODO-4555 and
-      compiler-host boundary source locks in TODO-4557.
-    - Prefer narrow negative tests that prove missing or invalid
-      `effects<compiletime>(...)` declarations fail before backend lowering.
-  - acceptance:
-    - Tests cover missing `effects<compiletime>(...)`, allowed
-      compile-time effects, cache-key invalidation, and budget exhaustion.
-    - Diagnostics distinguish effect opt-in rejection, cache invalidation, and
-      budget exhaustion from ordinary unsatisfied predicates.
-    - Existing selected-branch pruning and semantic-product output remain
-      deterministic.
-    - `./scripts/compile.sh --release` passes.
-  - stop_rule: Stop once effects/cache/budget compile-time VM behavior has
-    targeted regression coverage independent of the broader generic
-    conformance matrix.
 
 - [ ] TODO-4557: Lock compiler-hosted compile-time VM boundary
   - owner: ai

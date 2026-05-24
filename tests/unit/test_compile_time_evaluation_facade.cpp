@@ -519,6 +519,12 @@ TEST_CASE("compile-time evaluation cache keys include invalidation material") {
       baseHost.semanticProgram()->requirementPredicateFacts.front(),
       budget,
       "policy-a");
+  CHECK(baseKey.material.find("activeCompileTimeEffect=9:file_read") !=
+        std::string::npos);
+  CHECK(baseKey.material.find("hostServiceFingerprint.file_read=6:host-a") !=
+        std::string::npos);
+  CHECK(baseKey.material.find("budget.maxSteps=5:10000") !=
+        std::string::npos);
 
   primec::SemanticProgram reorderedImports = baseProgram;
   reorderedImports.sourceImports = {"/project/a", "/project/b"};
@@ -589,6 +595,16 @@ TEST_CASE("compile-time evaluation cache keys include invalidation material") {
             changedFingerprintHost.semanticProgram()
                 ->requirementPredicateFacts.front(),
             budget,
+            "policy-a")
+            .digest != baseKey.digest);
+
+  auto changedBudget = budget;
+  changedBudget.maxSteps = 9999;
+  CHECK(primec::buildCompileTimeEvaluationCacheKey(
+            baseHost,
+            baseHost.semanticProgram(),
+            baseHost.semanticProgram()->requirementPredicateFacts.front(),
+            changedBudget,
             "policy-a")
             .digest != baseKey.digest);
 

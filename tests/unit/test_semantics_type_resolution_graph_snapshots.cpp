@@ -780,14 +780,48 @@ main() {
 
   std::string error;
   CHECK_FALSE(validateProgram(effectSource, "/main", error));
-  CHECK(error.find("invalid requirement predicate /needs_file") !=
+  CHECK(error.find("compile-time effect opt-in rejected: /needs_file") !=
         std::string::npos);
-  CHECK(error.find("category: invalid requirement predicate evaluation") !=
+  CHECK(error.find("category: denied compile-time effect") !=
         std::string::npos);
   CHECK(error.find("category: unsatisfied requirement predicate") ==
         std::string::npos);
   CHECK(error.find("denied compile-time effect in user requirement predicate "
-                   "/needs_file: file_read") != std::string::npos);
+                   "/needs_file: file_read "
+                   "(missing effects<compiletime>(file_read))") !=
+        std::string::npos);
+  CHECK(error.find("hint: add effects<compiletime>(...)") !=
+        std::string::npos);
+
+  const std::string allowedEffectSource = R"(
+[effects(file_read), return<bool>]
+needs_file() {
+  return(true)
+}
+
+[effects<compiletime>(file_read) return<int> require(needs_file())]
+identity([int] value) {
+  return(value)
+}
+
+[return<int>]
+main() {
+  return(identity(4i32))
+}
+)";
+
+  primec::testing::CompilePipelineBoundaryDumps dumps;
+  error.clear();
+  REQUIRE(primec::testing::captureSemanticBoundaryDumpsForTesting(
+      allowedEffectSource, "/main", dumps, error));
+  CHECK(error.empty());
+  CHECK(dumps.semanticProduct.find(
+            "definition_path=\"/identity\" predicate_kind=\"predicate_call\" "
+            "predicate_name=\"/needs_file\"") != std::string::npos);
+  CHECK(dumps.semanticProduct.find("compile_time_effects=[\"file_read\"]") !=
+        std::string::npos);
+  CHECK(dumps.semanticProduct.find("evaluation_outcome=\"satisfied\"") !=
+        std::string::npos);
 
   const std::string runtimeParamSource = R"(
 [return<bool>]

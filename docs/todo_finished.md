@@ -34,6 +34,35 @@ Finished items are periodically archived here from `docs/todo.md`; section heade
     - `./PrimeStruct_compile_time_tests --test-case="compile-time evaluation facade distinguishes predicate conformance outcomes,compile-time values format supported typed facts" --no-skip`
     - `./PrimeStruct_semantics_tests --test-case="require value predicates reject failing integer template arguments,require value predicates reject non-constant operands,require pure user predicates drive semantic facts,require pure user predicates reject impure and unsupported bodies,requirement constrained overload preserves no viable diagnostics,requirement constrained overload reports value predicate rejection,requirement constrained overload reports ambiguous candidates,statement ct_if diagnoses invalid predicate conditions,ct_if flow diagnostics distinguish invalid user predicates,ct_if unsatisfied predicates select else without diagnostics" --no-skip`
 
+- [x] TODO-4556: Add compile-time effects and budget conformance
+  - owner: ai
+  - created_at: 2026-05-24
+  - finished_at: 2026-05-24
+  - phase: Generic constraint and compile-time flow alignment
+  - parallel_track: generic-requirements-diagnostics
+  - depends_on: TODO-4554, TODO-4358, TODO-4550, TODO-4551
+  - split_from: TODO-4359
+  - scope: Add focused conformance coverage for compile-time effect opt-ins,
+    cache-key invalidation, and active compile-time budget enforcement.
+  - outcome:
+    - Threaded `effects<compiletime>(...)` opt-ins into user requirement
+      predicate evaluation so effectful compile-time predicates fail closed
+      without an explicit phase-qualified opt-in and can evaluate when the
+      opt-in is present.
+    - Added denied-effect diagnostics that distinguish compile-time effect
+      rejection from ordinary unsatisfied requirement predicates.
+    - Expanded CT callable/facade tests for denied-effect preparation,
+      active cache invalidation material, host-service fingerprints, and
+      budget key invalidation.
+    - Added semantic conformance coverage for missing and allowed
+      `effects<compiletime>(...)` on requirement predicates while keeping the
+      semantic-product output deterministic.
+  - validation:
+    - `cmake --build build-release --target PrimeStruct_compile_time_tests PrimeStruct_semantics_tests -j 1`
+    - `./PrimeStruct_compile_time_tests --test-case="denied compile-time effect facts reject before callable execution,compile-time callable preparation enforces deterministic budgets" --no-skip`
+    - `./PrimeStruct_compile_time_tests --test-case="compile-time evaluation facade gates effects through the CT host,semantic CT host gates effects on phase-qualified metadata,compile-time evaluation facade enforces deterministic budgets,compile-time evaluation cache keys include invalidation material,compile-time evaluation cache rejects corrupt entries" --no-skip`
+    - `./PrimeStruct_semantics_tests --test-case="require facts publish phase-qualified compile-time effects,require pure user predicates reject impure and unsupported bodies" --no-skip`
+
 - [x] TODO-4359: Add compile-time VM conformance coverage
   - owner: ai
   - created_at: 2026-05-04
