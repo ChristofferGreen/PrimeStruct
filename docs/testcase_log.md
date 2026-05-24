@@ -8571,3 +8571,9 @@
   PrimeStruct_compile_run_tests -j 1`; `cd build-release && ctest
   --output-on-failure --stop-on-failure --timeout 120 -I 1594,1595` on
   2026-05-24 07:51 CEST. Next focused continuation starts at `-I 1596,1600`.
+- Compile-run shards 1596-1600 now pass without source edits. This window
+  covers native Maybe coverage, the benchmark harness shard, and suite
+  registration checks; test 1597 took 219.20s locally. Validating command:
+  `cd build-release && ctest --output-on-failure --stop-on-failure --timeout
+  120 -I 1596,1600` on 2026-05-24 07:55 CEST. Next focused continuation
+  starts at `-I 1601,1605`.
