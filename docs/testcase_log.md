@@ -8577,3 +8577,10 @@
   `cd build-release && ctest --output-on-failure --stop-on-failure --timeout
   120 -I 1596,1600` on 2026-05-24 07:55 CEST. Next focused continuation
   starts at `-I 1601,1605`.
+- Release CTest terminal shard 1601-1603 now passes without source edits.
+  The requested `-I 1601,1605` window selected only the final three suite
+  registration tests because this build currently has 1603 tests total.
+  Validating command: `cd build-release && ctest --output-on-failure
+  --stop-on-failure --timeout 120 -I 1601,1605` on 2026-05-24 07:56 CEST.
+  Known focused testcase-log continuation is now complete; resume TODO
+  selection after checking `docs/todo.md`.
