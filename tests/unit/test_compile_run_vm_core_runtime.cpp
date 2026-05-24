@@ -133,6 +133,25 @@ main() {
   CHECK(runCommand(runCmd) == 20);
 }
 
+TEST_CASE("runs vm with single task spawn wait") {
+  const std::string source = R"(
+[return<i32>]
+computeLeft() {
+  return(21i32)
+}
+
+[effects(task), return<int>]
+main() {
+  [Task<i32>] left{[spawn] computeLeft()};
+  [i32] result{wait(left)}
+  return(plus(result, 3i32))
+}
+)";
+  const std::string srcPath = writeTemp("vm_single_task_spawn_wait.prime", source);
+  const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main";
+  CHECK(runCommand(runCmd) == 24);
+}
+
 TEST_CASE("runs vm with chained method calls") {
   const std::string source = R"(
 namespace i32 {

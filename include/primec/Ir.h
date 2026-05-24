@@ -153,6 +153,7 @@ constexpr uint64_t EffectGpuDispatch = 1ull << 7;
 constexpr uint64_t EffectPathSpaceBind = 1ull << 8;
 constexpr uint64_t EffectPathSpaceSchedule = 1ull << 9;
 constexpr uint64_t EffectFileRead = 1ull << 10;
+constexpr uint64_t EffectTask = 1ull << 11;
 constexpr uint32_t FileReadEofCode = 65536u;
 
 struct IrStructField {

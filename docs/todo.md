@@ -83,8 +83,8 @@ Task template:
 
 ### Ready Now (Parallel-Candidate Leaves; No Unmet TODO Dependencies)
 
-- TODO-4563: Add single-task spawn/wait runtime execution | track:
-  multithreading-substrate | primary surface: native/runtime execution
+- TODO-4278: Integrate multi-wait with stdlib tuple | track:
+  tuple-type-packs | primary surface: stdlib tuple/task wait integration
 
 ### Parallel Work Tracks (Current)
 
@@ -105,13 +105,14 @@ Task template:
   expansion, TODO-4271 added compile-time pack indexing, TODO-4272 added
   the initial stdlib tuple surface, and TODO-4274 added tuple bracket
   indexing, TODO-4273 added heterogeneous `make_tuple` inference, and
-  TODO-4277 added tuple destructuring. TODO-4278 is blocked on missing
-  task-side spawn/wait support, now tracked by TODO-4563.
+  TODO-4277 added tuple destructuring. TODO-4278 is ready now that TODO-4563
+  added the single-task VM/native spawn/wait substrate.
 - `multithreading-substrate`: TODO-4545 was split into TODO-4561,
   TODO-4562, and TODO-4563 so single-task spawn/wait can land as parser/effect,
   semantic/lifetime, and runtime execution slices before TODO-4278. TODO-4561
   locked the parser/effect spelling, TODO-4562 added semantic/lifetime facts
-  and diagnostics, and TODO-4563 is now the runtime/native execution successor.
+  and diagnostics, and TODO-4563 added single-task VM/native runtime
+  execution; no multithreading-substrate leaf is ready.
 - `procedural-genericity`: TODO-4336 allowed type locals in local binding and
   struct-field envelopes, TODO-4337 added non-escaping local generated
   structs, TODO-4338 stabilized deterministic generated identity and
@@ -150,7 +151,7 @@ Task template:
 
 ### Immediate Next 10 (Track Successors; Not Ready Until Dependencies Land)
 
-- TODO-4278: Integrate multi-wait with stdlib tuple
+- none
 
 ### Priority Lanes (Current)
 
@@ -167,10 +168,10 @@ Task template:
   template-monomorph residue; TODO-4533 removed lowerer call-resolution
   residual bridge traces; TODO-4528 removed lowerer count/access residue; and
   TODO-4529 replaced the residue inventory with a strict zero audit
-- Deferred generic tuple substrate: TODO-4278 is blocked on task-side
-  TODO-4563 after TODO-4277 added tuple destructuring sugar over ordinary
-  stdlib tuple values
-- Multithreading substrate: TODO-4563 -> TODO-4278
+- Deferred generic tuple substrate: TODO-4278 is ready now that TODO-4277
+  added tuple destructuring sugar over ordinary stdlib tuple values and
+  TODO-4563 added single-task spawn/wait runtime execution
+- Multithreading substrate: none active after TODO-4563
 - Procedural compile-time genericity: none active after TODO-4340 and
   TODO-4546
 - Generic constraint and compile-time flow alignment: none active after
@@ -178,7 +179,6 @@ Task template:
 
 ### Execution Queue (Recommended Track Order)
 
-- TODO-4563: Add single-task spawn/wait runtime execution
 - TODO-4278: Integrate multi-wait with stdlib tuple
 
 ### PrimeStruct Coverage Snapshot
@@ -207,7 +207,7 @@ Task template:
 | Algebraic sum types and brace-only construction | none |
 | Stdlib ADT migration for `Maybe` and `Result` | none |
 | Generic type packs and tuple stdlib surface | TODO-4274, TODO-4273, TODO-4277, TODO-4278 |
-| Multithreading substrate | TODO-4563 |
+| Multithreading substrate | none |
 | Procedural compile-time genericity and local type facts | none |
 | Generic constraints and compile-time flow control | TODO-4352, TODO-4353, TODO-4354, TODO-4355, TODO-4356, TODO-4357, TODO-4345, TODO-4547, TODO-4548, TODO-4549, TODO-4346, TODO-4550, TODO-4551, TODO-4552, TODO-4553, TODO-4554, TODO-4555, TODO-4556, TODO-4557, TODO-4558, TODO-4559, TODO-4560 |
 
@@ -235,7 +235,7 @@ Task template:
 | Sum-type and brace-construction conformance | none |
 | Maybe/Result sum migration conformance | none |
 | Generic type-pack and tuple conformance | TODO-4274, TODO-4273, TODO-4277, TODO-4278 |
-| Multithreading substrate conformance | TODO-4563 |
+| Multithreading substrate conformance | none |
 | Procedural compile-time genericity conformance | none |
 | Generic constraint and compile-time flow conformance | TODO-4352, TODO-4353, TODO-4354, TODO-4355, TODO-4356, TODO-4357, TODO-4345, TODO-4547, TODO-4548, TODO-4549, TODO-4346, TODO-4550, TODO-4551, TODO-4552, TODO-4553, TODO-4554, TODO-4555, TODO-4556, TODO-4557, TODO-4558, TODO-4559, TODO-4560 |
 
@@ -761,33 +761,6 @@ Task template:
 
 ### Task Blocks
 
-- [ ] TODO-4563: Add single-task spawn/wait runtime execution
-  - owner: ai
-  - created_at: 2026-05-24
-  - phase: Multithreading substrate
-  - depends_on: TODO-4562
-  - split_from: TODO-4545
-  - scope: Implement native/runtime execution for one structured task handle
-    so TODO-4278 can build multi-wait on real task handles.
-  - implementation_notes:
-    - Start from native/runtime execution boundaries and the semantic facts
-      from TODO-4562.
-    - Keep execution single-task only; do not add multi-wait, detached tasks,
-      task groups, channels, or scheduler controls here.
-    - Update `docs/MultithreadingPrototype.md` and `docs/PrimeStruct.md` once
-      the first task surface actually runs.
-  - acceptance:
-    - Focused native/runtime tests cover successful `[spawn] f(...)` followed
-      by `wait(task)` for a function returning `T`.
-    - Runtime behavior respects the structured lifetime and first-slice
-      capture restrictions established by TODO-4562.
-    - `docs/MultithreadingPrototype.md` and `docs/PrimeStruct.md` describe the
-      implemented first task surface and leave multi-wait to TODO-4278.
-    - `./scripts/compile.sh --release` passes.
-  - stop_rule: Stop once single-task spawn/wait is real enough for TODO-4278
-    to wire multi-wait to stdlib `tuple<...>`; leave multi-wait itself to
-    TODO-4278.
-
 - [ ] TODO-4278: Integrate multi-wait with stdlib tuple
   - owner: ai
   - created_at: 2026-04-27
@@ -797,11 +770,11 @@ Task template:
     `tuple<...>` values instead of a task-specific product type.
   - implementation_notes:
     - Start from `docs/MultithreadingPrototype.md`,
-      `docs/TuplePrototype.md`, tuple destructuring from TODO-4277, and task
-      handle facts once task support exists.
-    - If task spawning/wait is not implemented yet, keep this TODO blocked or
-      split the task-side prerequisite into the multithreading lane rather than
-      adding placeholder runtime behavior.
+      `docs/TuplePrototype.md`, tuple destructuring from TODO-4277, and the
+      single-task handle/runtime path from TODO-4563.
+    - Keep this leaf limited to multi-wait returning ordinary stdlib tuple
+      values; do not add detached tasks, task groups, channels, scheduler
+      controls, or true parallel scheduling here.
   - acceptance:
     - Multi-task `wait(left, right, ...)` returns `tuple<Left, Right, ...>`
       using the stdlib tuple type when task support is present.
@@ -813,8 +786,9 @@ Task template:
       the implemented integration and remove prototype-only caveats that are no
       longer true.
     - `./scripts/compile.sh --release` passes.
-  - stop_rule: Stop once multi-wait returns stdlib `tuple<...>` or the missing
-    task-side prerequisite is split into an explicit multithreading TODO.
+  - stop_rule: Stop once multi-wait returns stdlib `tuple<...>` for task
+    handles; leave scheduler-backed parallel execution to a future
+    multithreading leaf.
 
 - [~] TODO-4305: Rename and style canonical `.prime` SoA surface
   - owner: ai

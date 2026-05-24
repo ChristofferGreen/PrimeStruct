@@ -1753,6 +1753,9 @@ TEST_CASE("task spawn wait prototype docs stay source locked") {
   CHECK(primeStructDoc.find("The semantic pass publishes `Task<T>` binding facts for\n"
                             "  `[spawn] f(...)`, infers `wait(Task<T>) -> T`, requires the `task` effect") !=
         std::string::npos);
+  CHECK(primeStructDoc.find("VM/native lower the first\n"
+                            "  single-task runtime slice by storing the spawned call result in the task handle binding") !=
+        std::string::npos);
   CHECK(primeStructDoc.find("`spawn` is reserved for the first task surface and must prefix call syntax as\n"
                             "    `[spawn] f(...)`.") !=
         std::string::npos);
@@ -1766,7 +1769,9 @@ TEST_CASE("task spawn wait prototype docs stay source locked") {
   CHECK(multithreadingDoc.find("TODO-4561 locked the parser surface and\n"
                                "documentation spelling, and TODO-4562 added semantic `Task<T>` facts") !=
         std::string::npos);
-  CHECK(multithreadingDoc.find("TODO-4563 adds runtime/native execution behavior.") !=
+  CHECK(multithreadingDoc.find("TODO-4563 added the first VM/native execution behavior") !=
+        std::string::npos);
+  CHECK(multithreadingDoc.find("as a stack-backed task handle whose payload is the result of `computeLeft()`.") !=
         std::string::npos);
 
   CHECK(todoFinished.find("TODO-4561: Add task spawn/wait parser and effect locks") !=
@@ -1781,6 +1786,11 @@ TEST_CASE("task spawn wait prototype docs stay source locked") {
         std::string::npos);
   CHECK(todoFinished.find("Added semantic task-handle tracking so `[spawn] f(...)` publishes\n"
                           "      `Task<T>` binding/local-auto facts when `f` returns `T`.") !=
+        std::string::npos);
+  CHECK(todoFinished.find("TODO-4563: Add single-task spawn/wait runtime execution") !=
+        std::string::npos);
+  CHECK(todoFinished.find("Lowered a single `[Task<T>] handle{[spawn] f(...)}` binding as a\n"
+                          "      stack-backed stored result for the spawned call.") !=
         std::string::npos);
 }
 
@@ -1835,14 +1845,15 @@ TEST_CASE("todo queue and skipped doctest debt stay source locked") {
                   "  expansion, TODO-4271 added compile-time pack indexing, TODO-4272 added\n"
                   "  the initial stdlib tuple surface, and TODO-4274 added tuple bracket\n"
                   "  indexing, TODO-4273 added heterogeneous `make_tuple` inference, and\n"
-                  "  TODO-4277 added tuple destructuring. TODO-4278 is blocked on missing\n"
-                  "  task-side spawn/wait support, now tracked by TODO-4563.") !=
+                  "  TODO-4277 added tuple destructuring. TODO-4278 is ready now that TODO-4563\n"
+                  "  added the single-task VM/native spawn/wait substrate.") !=
         std::string::npos);
   CHECK(todo.find("- `multithreading-substrate`: TODO-4545 was split into TODO-4561,\n"
                   "  TODO-4562, and TODO-4563 so single-task spawn/wait can land as parser/effect,\n"
                   "  semantic/lifetime, and runtime execution slices before TODO-4278. TODO-4561\n"
                   "  locked the parser/effect spelling, TODO-4562 added semantic/lifetime facts\n"
-                  "  and diagnostics, and TODO-4563 is now the runtime/native execution successor.") !=
+                  "  and diagnostics, and TODO-4563 added single-task VM/native runtime\n"
+                  "  execution; no multithreading-substrate leaf is ready.") !=
         std::string::npos);
   CHECK(todo.find("- `procedural-genericity`: TODO-4336 allowed type locals in local binding and\n"
                   "  struct-field envelopes, TODO-4337 added non-escaping local generated\n"
@@ -1882,11 +1893,11 @@ TEST_CASE("todo queue and skipped doctest debt stay source locked") {
                   "  compile-run/diagnostic tracks; all three split leaves are complete.") !=
         std::string::npos);
   CHECK(todo.find("### Ready Now (Parallel-Candidate Leaves; No Unmet TODO Dependencies)\n\n"
-                  "- TODO-4563: Add single-task spawn/wait runtime execution | track:\n"
-                  "  multithreading-substrate | primary surface: native/runtime execution") !=
+                  "- TODO-4278: Integrate multi-wait with stdlib tuple | track:\n"
+                  "  tuple-type-packs | primary surface: stdlib tuple/task wait integration") !=
         std::string::npos);
   CHECK(todo.find("### Immediate Next 10 (Track Successors; Not Ready Until Dependencies Land)\n\n"
-                  "- TODO-4278: Integrate multi-wait with stdlib tuple") !=
+                  "- none") !=
         std::string::npos);
   CHECK(todo.find("- TODO-4273: Add heterogeneous value-pack inference") ==
         std::string::npos);
@@ -1902,8 +1913,9 @@ TEST_CASE("todo queue and skipped doctest debt stay source locked") {
   CHECK(todo.find("- Deferred SoA finish: TODO-4252") ==
         std::string::npos);
   CHECK(todo.find("### Execution Queue (Recommended Track Order)\n\n"
-                  "- TODO-4563: Add single-task spawn/wait runtime execution\n"
                   "- TODO-4278: Integrate multi-wait with stdlib tuple") !=
+        std::string::npos);
+  CHECK(todo.find("- TODO-4563: Add single-task spawn/wait runtime execution | track:") ==
         std::string::npos);
   CHECK(todo.find("- [ ] TODO-4545: Implement first structured task spawn/wait substrate") ==
         std::string::npos);
@@ -2103,6 +2115,10 @@ TEST_CASE("todo queue and skipped doctest debt stay source locked") {
   CHECK(todo.find("TODO-4562: Add task handle semantic facts and lifetime diagnostics") ==
         std::string::npos);
   CHECK(todoFinished.find("TODO-4562: Add task handle semantic facts and lifetime diagnostics") !=
+        std::string::npos);
+  CHECK(todo.find("TODO-4563: Add single-task spawn/wait runtime execution") ==
+        std::string::npos);
+  CHECK(todoFinished.find("TODO-4563: Add single-task spawn/wait runtime execution") !=
         std::string::npos);
   CHECK(todo.find("  - depends_on: TODO-4277, TODO-4563") !=
         std::string::npos);

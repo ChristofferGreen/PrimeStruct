@@ -985,6 +985,19 @@
   `PrimeStruct_primestruct_compile_run_emitters_cpp_lambda_and_mutator_resolution_20_20`.
 
 ## Recent Test Runs
+- 2026-05-24 16:06 CEST | pass | mode: release | command:
+  `cmake --build build-release --target primec PrimeStruct_compile_run_tests -j 1`;
+  `cd build-release && ./PrimeStruct_compile_run_tests --test-case="native backend runs single task spawn wait,runs vm with single task spawn wait,task spawn wait prototype docs stay source locked" --no-skip`
+  | failures: none | notes: parent focused TODO-4563 validation passed 3
+  cases and 28 assertions after task wait direct routing and merged
+  publication fact pruning landed.
+- 2026-05-24 16:06 CEST | fail | mode: release | command:
+  `cmake --build build-release --target PrimeStruct_compile_run_tests -j 1`;
+  `cd build-release && ./PrimeStruct_compile_run_tests --test-case="native backend runs single task spawn wait,runs vm with single task spawn wait,task spawn wait prototype docs stay source locked" --no-skip`
+  | failures: native backend runs single task spawn wait; runs vm with single
+  task spawn wait | notes: both runtime cases failed with stale
+  semantic-product query fact `wait`; fixed by publishing task wait direct
+  routes as `/task/wait` and pruning obsolete merged direct-call/query facts.
 - 2026-05-24 13:06 CEST | pass | mode: release | command:
   `cmake --build build-release --target PrimeStruct_compile_run_tests -j 1`;
   `cd build-release && ./PrimeStruct_compile_run_tests --test-case="task spawn wait prototype docs stay source locked,todo queue and skipped doctest debt stay source locked"`;

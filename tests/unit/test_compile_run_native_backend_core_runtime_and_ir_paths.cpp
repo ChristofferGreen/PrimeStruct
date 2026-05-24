@@ -171,6 +171,29 @@ main() {
   CHECK(runCommand(exePath) == 7);
 }
 
+TEST_CASE("native backend runs single task spawn wait") {
+  const std::string source = R"(
+[return<i32>]
+computeLeft() {
+  return(21i32)
+}
+
+[effects(task), return<int>]
+main() {
+  [Task<i32>] left{[spawn] computeLeft()};
+  [i32] result{wait(left)}
+  return(plus(result, 3i32))
+}
+)";
+  const std::string srcPath = writeTemp("compile_native_single_task_spawn_wait.prime", source);
+  const std::string exePath =
+      (testScratchPath("") / "primec_native_single_task_spawn_wait_exe").string();
+
+  const std::string compileCmd = "./primec --emit=native " + srcPath + " -o " + exePath + " --entry /main";
+  CHECK(runCommand(compileCmd) == 0);
+  CHECK(runCommand(exePath) == 24);
+}
+
 TEST_CASE("compiles and runs native method call") {
   const std::string source = R"(
 namespace i32 {

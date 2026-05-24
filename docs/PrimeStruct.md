@@ -2540,8 +2540,9 @@ module {
   --default-effects <list>` supplies the default effect set for any definition/execution that omits `[effects]`
   (comma-separated list; `default` and `none` are supported tokens). If `[capabilities(...)]` is present it must be a
   subset of the active effects (explicit or default). VM/native accept `io_out`, `io_err`, `heap_alloc`, `file_read`,
-  `file_write`, `gpu_dispatch`, and `pathspace_*` effects (`pathspace_notify`, `pathspace_insert`, `pathspace_take`,
-  `pathspace_bind`, `pathspace_schedule`); `file_write` also implies `file_read` for compatibility. GLSL accepts
+  `file_write`, `gpu_dispatch`, `task`, and `pathspace_*` effects (`pathspace_notify`, `pathspace_insert`,
+  `pathspace_take`, `pathspace_bind`, `pathspace_schedule`); `file_write` also implies `file_read` for compatibility.
+  GLSL accepts
   `io_out`, `io_err`, plus `pathspace_*` metadata effects/capabilities.
 - **Execution effects:** executions may also carry `[effects(...)]`. The execution’s effects must be a subset of the
   enclosing definition’s active effects; otherwise it is a diagnostic. The default set is controlled by
@@ -2550,8 +2551,10 @@ module {
   source-visible task work. The parser accepts `[spawn] f(...)` as an execution transform on call envelopes and parses
   `wait(task)` as the first task-handle join expression. The semantic pass publishes `Task<T>` binding facts for
   `[spawn] f(...)`, infers `wait(Task<T>) -> T`, requires the `task` effect for both operations, and rejects live
-  task handles on return, double waits, task-handle escapes, and mutable/reference captures. Runtime/native task
-  execution remains deferred to TODO-4563.
+  task handles on return, double waits, task-handle escapes, and mutable/reference captures. VM/native lower the first
+  single-task runtime slice by storing the spawned call result in the task handle binding and lowering `wait(handle)` to
+  return that stored result. Multi-wait, detached tasks, task groups, channels, scheduler controls, and true parallel
+  scheduling remain future work.
 
 ### Backend Type Support (v1)
 - **VM/native:** scalar `i32`, `i64`, `u64`, `bool`, `f32`, `f64`. `array`/`vector`/`map` support numeric/bool values;

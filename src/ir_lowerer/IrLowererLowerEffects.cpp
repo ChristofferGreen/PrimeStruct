@@ -140,6 +140,10 @@ bool effectBitForName(const std::string &name, uint64_t &outBit) {
     outBit = EffectGpuDispatch;
     return true;
   }
+  if (name == "task") {
+    outBit = EffectTask;
+    return true;
+  }
   return false;
 }
 
@@ -147,7 +151,7 @@ bool isSupportedEffect(const std::string &name) {
   return name == "io_out" || name == "io_err" || name == "heap_alloc" || name == "pathspace_notify" ||
          name == "pathspace_insert" || name == "pathspace_take" || name == "pathspace_bind" ||
          name == "pathspace_schedule" || name == "file_write" || name == "file_read" ||
-         name == "gpu_dispatch";
+         name == "gpu_dispatch" || name == "task";
 }
 
 std::unordered_set<std::string> resolveActiveEffects(const std::vector<Transform> &transforms,

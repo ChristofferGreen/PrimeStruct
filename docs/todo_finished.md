@@ -6,6 +6,28 @@ Legend:
 Finished items are periodically archived here from `docs/todo.md`; section headers record the archive date.
 
 **Todo Completion (May 24, 2026)**
+- [x] TODO-4563: Add single-task spawn/wait runtime execution
+  - owner: ai
+  - created_at: 2026-05-24
+  - finished_at: 2026-05-24
+  - phase: Multithreading substrate
+  - depends_on: TODO-4562
+  - split_from: TODO-4545
+  - scope: Implement native/runtime execution for one structured task handle
+    so TODO-4278 can build multi-wait on real task handles.
+  - outcome:
+    - Allowed the VM/native lowerer effect gate to accept the `task` effect.
+    - Lowered a single `[Task<T>] handle{[spawn] f(...)}` binding as a
+      stack-backed stored result for the spawned call.
+    - Lowered `wait(handle)` to return the stored task payload while preserving
+      the structured lifetime and capture diagnostics from TODO-4562.
+    - Documented that true parallel scheduling, detached tasks, task groups,
+      channels, scheduler controls, and multi-wait remain out of this slice.
+    - Promoted TODO-4278 as the next Ready Now tuple/task integration leaf.
+  - validation:
+    - Focused release VM/native compile-run and docs-lock tests only; full
+      release gate deferred to the parent workflow.
+
 - [x] TODO-4562: Add task handle semantic facts and lifetime diagnostics
   - owner: ai
   - created_at: 2026-05-24

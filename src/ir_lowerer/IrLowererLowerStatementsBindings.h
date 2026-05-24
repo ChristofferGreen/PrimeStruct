@@ -311,6 +311,139 @@
         semanticLocalAutoBindingExpr.transforms.push_back(std::move(semanticTypeTransform));
         bindingTypeExpr = &semanticLocalAutoBindingExpr;
       }
+      auto isTaskTransformName = [](std::string name) {
+        if (!name.empty() && name.front() == '/') {
+          name.erase(name.begin());
+        }
+        return trimTemplateTypeText(name) == "Task";
+      };
+      auto isTaskSpawnTransformName = [](std::string name) {
+        if (!name.empty() && name.front() == '/') {
+          name.erase(name.begin());
+        }
+        return trimTemplateTypeText(name) == "spawn";
+      };
+      auto extractTaskResultType = [&](const Expr &bindingExpr,
+                                       std::string &resultTypeOut) {
+        resultTypeOut.clear();
+        for (const Transform &transform : bindingExpr.transforms) {
+          if (!isTaskTransformName(transform.name) ||
+              transform.templateArgs.size() != 1 ||
+              !transform.arguments.empty()) {
+            continue;
+          }
+          resultTypeOut = trimTemplateTypeText(transform.templateArgs.front());
+          return !resultTypeOut.empty();
+        }
+        return false;
+      };
+      auto removeTaskSpawnTransform = [&](Expr expr) {
+        expr.transforms.erase(
+            std::remove_if(expr.transforms.begin(),
+                           expr.transforms.end(),
+                           [&](const Transform &transform) {
+                             return isTaskSpawnTransformName(transform.name);
+                           }),
+            expr.transforms.end());
+        return expr;
+      };
+      auto hasTaskSpawnTransform = [&](const Expr &candidate) {
+        return std::any_of(candidate.transforms.begin(),
+                           candidate.transforms.end(),
+                           [&](const Transform &transform) {
+                             return isTaskSpawnTransformName(transform.name);
+                           });
+      };
+      auto extractTaskSpawnInitializer = [&](const Expr &candidate,
+                                             Expr &spawnedCallOut) {
+        spawnedCallOut = {};
+        if (candidate.kind != Expr::Kind::Call || candidate.isBinding) {
+          return false;
+        }
+        if (hasTaskSpawnTransform(candidate)) {
+          spawnedCallOut = removeTaskSpawnTransform(candidate);
+          return spawnedCallOut.kind == Expr::Kind::Call && !spawnedCallOut.isBinding;
+        }
+        if (candidate.isMethodCall || candidate.isFieldAccess ||
+            !isTaskTransformName(candidate.name) ||
+            candidate.templateArgs.size() != 1) {
+          return false;
+        }
+        bool hasNamedArg = false;
+        bool hasSpawnLabel = false;
+        for (const auto &argName : candidate.argNames) {
+          if (!argName.has_value()) {
+            continue;
+          }
+          hasNamedArg = true;
+          if (isTaskSpawnTransformName(*argName) && !hasSpawnLabel) {
+            hasSpawnLabel = true;
+            continue;
+          }
+          return false;
+        }
+        if (hasNamedArg && (!hasSpawnLabel || candidate.argNames.size() != 1 ||
+                            candidate.args.size() != 1 ||
+                            candidate.hasBodyArguments ||
+                            !candidate.bodyArguments.empty())) {
+          return false;
+        }
+        const Expr *initializer = nullptr;
+        if (candidate.args.size() == 1 && !candidate.hasBodyArguments &&
+            candidate.bodyArguments.empty()) {
+          initializer = &candidate.args.front();
+        } else if (candidate.args.empty() && candidate.hasBodyArguments &&
+                   candidate.bodyArguments.size() == 1) {
+          initializer = &candidate.bodyArguments.front();
+        }
+        if (initializer == nullptr ||
+            (!hasSpawnLabel && !hasTaskSpawnTransform(*initializer)) ||
+            initializer->kind != Expr::Kind::Call || initializer->isBinding) {
+          return false;
+        }
+        spawnedCallOut = removeTaskSpawnTransform(*initializer);
+        return spawnedCallOut.kind == Expr::Kind::Call && !spawnedCallOut.isBinding;
+      };
+      auto replaceTaskTransformWithResultType = [&](Expr &bindingExpr,
+                                                    const std::string &resultType) {
+        for (Transform &transform : bindingExpr.transforms) {
+          if (!isTaskTransformName(transform.name) ||
+              transform.templateArgs.size() != 1 ||
+              !transform.arguments.empty()) {
+            continue;
+          }
+          std::string base;
+          std::string argList;
+          transform.arguments.clear();
+          transform.templateArgs.clear();
+          if (splitTemplateTypeName(resultType, base, argList)) {
+            transform.name = trimTemplateTypeText(base);
+            if (!argList.empty() &&
+                !splitTemplateArgs(argList, transform.templateArgs)) {
+              transform.templateArgs.push_back(trimTemplateTypeText(argList));
+            }
+          } else {
+            transform.name = trimTemplateTypeText(resultType);
+          }
+          return true;
+        }
+        return false;
+      };
+      std::string taskResultType;
+      Expr spawnedTaskCall;
+      if (extractTaskResultType(*bindingTypeExpr, taskResultType) &&
+          extractTaskSpawnInitializer(init, spawnedTaskCall)) {
+        Expr loweredTaskResultStmt = stmt;
+        loweredTaskResultStmt.transforms = bindingTypeExpr->transforms;
+        loweredTaskResultStmt.args.front() = std::move(spawnedTaskCall);
+        loweredTaskResultStmt.semanticNodeId = 0;
+        if (!replaceTaskTransformWithResultType(loweredTaskResultStmt,
+                                                taskResultType)) {
+          error = "task binding missing result type on " + stmt.name;
+          return false;
+        }
+        return emitStatement(loweredTaskResultStmt, localsIn);
+      }
       const StatementBindingTypeInfo bindingTypeInfo = inferStatementBindingTypeInfo(
           *bindingTypeExpr,
           init,

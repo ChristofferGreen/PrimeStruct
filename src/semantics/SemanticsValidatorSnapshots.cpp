@@ -110,6 +110,35 @@ bool appendMissingEntriesBySnapshotKey(std::vector<Entry> &entries,
   return appended;
 }
 
+template <typename Entry, typename IdentityKeyForEntry, typename SnapshotKeyForEntry>
+bool pruneReplacedEntriesBySnapshotKey(std::vector<Entry> &entries,
+                                       const std::vector<Entry> &freshEntries,
+                                       IdentityKeyForEntry identityKeyForEntry,
+                                       SnapshotKeyForEntry snapshotKeyForEntry) {
+  std::unordered_set<std::string> freshIdentities;
+  std::unordered_set<std::string> freshSnapshotKeys;
+  freshIdentities.reserve(freshEntries.size());
+  freshSnapshotKeys.reserve(freshEntries.size());
+  for (const auto &entry : freshEntries) {
+    freshIdentities.insert(identityKeyForEntry(entry));
+    freshSnapshotKeys.insert(snapshotKeyForEntry(entry));
+  }
+
+  const auto oldSize = entries.size();
+  entries.erase(
+      std::remove_if(entries.begin(),
+                     entries.end(),
+                     [&](const Entry &entry) {
+                       const std::string identityKey = identityKeyForEntry(entry);
+                       if (freshIdentities.count(identityKey) == 0) {
+                         return false;
+                       }
+                       return freshSnapshotKeys.count(snapshotKeyForEntry(entry)) == 0;
+                     }),
+      entries.end());
+  return entries.size() != oldSize;
+}
+
 std::string snapshotKey(std::string_view first,
                         std::string_view second,
                         int sourceLine,
@@ -1001,10 +1030,23 @@ void SemanticsValidator::rebindMergedWorkerPublicationFactSemanticNodeIds() {
                            entry.sourceColumn,
                            entry.resolvedPath);
       };
+  const auto directCallTargetIdentityKey =
+      [](const CollectedDirectCallTargetEntry &entry) {
+        return snapshotKey(entry.scopePath,
+                           entry.callName,
+                           entry.sourceLine,
+                           entry.sourceColumn);
+      };
+  const bool prunedDirectCallTargets = pruneReplacedEntriesBySnapshotKey(
+      mergedWorkerPublicationFacts_.directCallTargets,
+      freshDirectCallTargets,
+      directCallTargetIdentityKey,
+      directCallTargetSnapshotKey);
   if (appendMissingEntriesBySnapshotKey(
           mergedWorkerPublicationFacts_.directCallTargets,
           freshDirectCallTargets,
-          directCallTargetSnapshotKey)) {
+          directCallTargetSnapshotKey) ||
+      prunedDirectCallTargets) {
     std::stable_sort(mergedWorkerPublicationFacts_.directCallTargets.begin(),
                      mergedWorkerPublicationFacts_.directCallTargets.end(),
                      [](const auto &left, const auto &right) {
@@ -1147,10 +1189,23 @@ void SemanticsValidator::rebindMergedWorkerPublicationFactSemanticNodeIds() {
                            entry.sourceColumn,
                            entry.resolvedPath);
       };
+  const auto queryFactIdentityKey =
+      [](const QueryFactSnapshotEntry &entry) {
+        return snapshotKey(entry.scopePath,
+                           entry.callName,
+                           entry.sourceLine,
+                           entry.sourceColumn);
+      };
+  const bool prunedQueryFacts = pruneReplacedEntriesBySnapshotKey(
+      mergedWorkerPublicationFacts_.queryFacts,
+      freshQueryFacts,
+      queryFactIdentityKey,
+      queryFactSnapshotKey);
   if (appendMissingEntriesBySnapshotKey(
           mergedWorkerPublicationFacts_.queryFacts,
           freshQueryFacts,
-          queryFactSnapshotKey)) {
+          queryFactSnapshotKey) ||
+      prunedQueryFacts) {
     std::stable_sort(mergedWorkerPublicationFacts_.queryFacts.begin(),
                      mergedWorkerPublicationFacts_.queryFacts.end(),
                      [](const auto &left, const auto &right) {
@@ -1240,7 +1295,12 @@ void SemanticsValidator::collectPilotRoutingSemanticProductFacts() {
 
   collectDirectCallExpr = [&](const std::string &scopePath, const Expr &expr) {
     if (expr.kind == Expr::Kind::Call && !expr.isMethodCall) {
-      std::string resolvedPath = preferredCollectionHelperResolvedPath(expr);
+      std::string resolvedPath;
+      if (isTaskWaitExpr(expr)) {
+        resolvedPath = "/task/wait";
+      } else {
+        resolvedPath = preferredCollectionHelperResolvedPath(expr);
+      }
       if (resolvedPath.empty()) {
         resolvedPath = resolveCalleePath(expr);
       }

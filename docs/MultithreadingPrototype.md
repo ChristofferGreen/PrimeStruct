@@ -100,7 +100,30 @@ documentation spelling, and TODO-4562 added semantic `Task<T>` facts, `task`
 effect requirements, wait result inference, and first-slice lifetime
 diagnostics. `spawn` is accepted as an execution transform on call envelopes
 such as `[spawn] f(...)`, and `wait(task)` now consumes a semantic task handle.
-TODO-4563 adds runtime/native execution behavior.
+TODO-4563 added the first VM/native execution behavior: a single spawned call
+stores its result in the task handle binding, and `wait(handle)` returns that
+stored result. This is a structured runtime substrate, not true parallel
+scheduling yet.
+
+## First Runtime Slice
+
+For the implemented single-task runtime slice, VM/native execution lowers:
+
+```prime
+[Task<int>] left{[spawn] computeLeft()};
+leftResult{wait(left)}
+```
+
+as a stack-backed task handle whose payload is the result of `computeLeft()`.
+`wait(left)` returns that payload. The semantic lifetime rules still require
+the handle to be waited before return and reject double wait or escaping
+handles, so future scheduler-backed tasks can preserve the same source
+contract.
+
+This first runtime slice deliberately does not start an OS thread, detach work,
+or schedule multiple tasks concurrently. It exists so TODO-4278 can wire
+multi-task `wait(left, right, ...)` to stdlib tuple values on top of a real
+single-task handle path.
 
 ## Required Effect
 
@@ -421,14 +444,17 @@ The first implementation slices now cover:
 - reject double wait, escaped handles, and missing waits before return
 - reject mutable/reference captures by default
 - add positive and negative semantic tests
-- add semantic-product coverage once task facts are published
+- add semantic-product coverage for task facts
+- add first VM/native single-task runtime execution
 
 Remaining implementation work:
 
-- document any backend that intentionally rejects `effects(task)` at first
-  (TODO-4563)
+- integrate multi-task `wait(left, right, ...)` with stdlib tuple values
+  (TODO-4278)
+- design true parallel scheduling, task groups, detached tasks, channels, and
+  scheduler controls as later multithreading leaves
 
 This document is a prototype note. The `[spawn] f(...)`, `wait(task)`, and
 `effects(task)` spellings are now parser/source-lock commitments, and the
-semantic rules above are implemented for the first single-task slice. Runtime
-execution becomes canonical once TODO-4563 lands.
+semantic and VM/native runtime rules above are implemented for the first
+single-task slice.

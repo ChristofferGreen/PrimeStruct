@@ -14,7 +14,7 @@ constexpr uint64_t MaxGlslLocalIndex = 1023;
 constexpr uint64_t KnownEffectMask = EffectIoOut | EffectIoErr | EffectHeapAlloc | EffectPathSpaceNotify |
                                      EffectPathSpaceInsert | EffectPathSpaceTake | EffectFileWrite |
                                      EffectGpuDispatch | EffectPathSpaceBind | EffectPathSpaceSchedule |
-                                     EffectFileRead;
+                                     EffectFileRead | EffectTask;
 constexpr uint64_t KnownWasmWasiEffectMask =
     EffectIoOut | EffectIoErr | EffectHeapAlloc | EffectFileWrite | EffectFileRead;
 constexpr uint64_t KnownWasmBrowserEffectMask = 0ull;

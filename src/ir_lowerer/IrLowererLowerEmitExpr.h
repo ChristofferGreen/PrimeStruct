@@ -145,6 +145,12 @@
         return false;
       }
       case Expr::Kind::Call: {
+        if (!expr.isMethodCall && !expr.isFieldAccess && expr.transforms.empty() &&
+            isSimpleCallName(expr, "wait") && expr.args.size() == 1 &&
+            !expr.hasBodyArguments && expr.bodyArguments.empty() &&
+            expr.templateArgs.empty()) {
+          return emitExpr(expr.args.front(), localsIn);
+        }
         const auto pickExprResult = tryEmitPickExpr(expr, localsIn);
         if (pickExprResult == LoweredSumPickEmitResult::Error) {
           return false;
