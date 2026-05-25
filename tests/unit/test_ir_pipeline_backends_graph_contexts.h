@@ -1540,6 +1540,102 @@ TEST_CASE("compile pipeline publishes an initial semantic product shell") {
         std::string::npos);
 }
 
+TEST_CASE("semantic-product consumer coverage matrix stays source locked") {
+  const std::filesystem::path cwd = std::filesystem::current_path();
+  const std::filesystem::path root =
+      std::filesystem::exists(cwd / "include" / "primec" / "SemanticProduct.h")
+          ? cwd
+          : cwd.parent_path();
+  auto readRepoFile = [&](const std::filesystem::path &relativePath) {
+    const std::filesystem::path fullPath = root / relativePath;
+    REQUIRE(std::filesystem::exists(fullPath));
+    return readTextFile(fullPath);
+  };
+
+  const std::string semanticProductSource = readRepoFile("src/SemanticProduct.cpp");
+  const std::string matrix = readRepoFile("docs/SemanticProductConsumerMatrix.md");
+  const std::string registryTests =
+      readRepoFile("tests/unit/test_ir_pipeline_backends_registry.cpp");
+  const std::string callHelperTests = readRepoFile(
+      "tests/unit/test_ir_pipeline_validation_ir_lowerer_call_helpers_source_delegation_stays_stable.cpp");
+
+  const std::size_t familiesStart =
+      semanticProductSource.find("static const std::vector<SemanticProgramFactFamilyInfo> Families = {");
+  REQUIRE(familiesStart != std::string::npos);
+  const std::size_t familiesEnd =
+      semanticProductSource.find("  };\n  return Families;", familiesStart);
+  REQUIRE(familiesEnd != std::string::npos);
+  const std::string familiesBlock =
+      semanticProductSource.substr(familiesStart, familiesEnd - familiesStart);
+
+  std::vector<std::string> factFamilies;
+  std::size_t searchStart = 0;
+  while (true) {
+    const std::size_t entryStart = familiesBlock.find("{\"", searchStart);
+    if (entryStart == std::string::npos) {
+      break;
+    }
+    const std::size_t nameStart = entryStart + 2;
+    const std::size_t nameEnd = familiesBlock.find('"', nameStart);
+    REQUIRE(nameEnd != std::string::npos);
+    factFamilies.push_back(familiesBlock.substr(nameStart, nameEnd - nameStart));
+    searchStart = nameEnd + 1;
+  }
+  REQUIRE(factFamilies.size() >= 20);
+  for (const std::string &factFamily : factFamilies) {
+    CHECK(matrix.find("| `" + factFamily + "` |") != std::string::npos);
+  }
+
+  CHECK(matrix.find("Every row below is source-locked against `semanticProgramFactFamilyInfos()`") !=
+        std::string::npos);
+  CHECK(matrix.find("SPCM-FOLLOWUP-preflight") != std::string::npos);
+  CHECK(matrix.find("SPCM-FOLLOWUP-struct-fields") != std::string::npos);
+  CHECK(matrix.find("SPCM-FOLLOWUP-requirements") != std::string::npos);
+
+  auto checkCoverage = [&](const std::string &factFamily,
+                           const std::string &positiveTest,
+                           const std::string &positiveSource,
+                           const std::string &staleOrMissingTest,
+                           const std::string &staleOrMissingSource) {
+    const std::string rowPrefix = "| `" + factFamily + "` |";
+    const std::size_t rowStart = matrix.find(rowPrefix);
+    REQUIRE(rowStart != std::string::npos);
+    const std::size_t rowEnd = matrix.find('\n', rowStart);
+    REQUIRE(rowEnd != std::string::npos);
+    const std::string row = matrix.substr(rowStart, rowEnd - rowStart);
+    CHECK(row.find("positive: `" + positiveTest + "`") != std::string::npos);
+    CHECK(row.find("stale/missing: `" + staleOrMissingTest + "`") !=
+          std::string::npos);
+    CHECK(positiveSource.find("TEST_CASE(\"" + positiveTest + "\")") !=
+          std::string::npos);
+    CHECK(staleOrMissingSource.find("TEST_CASE(\"" + staleOrMissingTest + "\")") !=
+          std::string::npos);
+  };
+
+  checkCoverage(
+      "directCallTargets",
+      "ir lowerer keeps semantic-product direct-call targets authoritative over rooted rewritten expr names",
+      registryTests,
+      "ir lowerer rejects stale semantic-product direct-call metadata",
+      registryTests);
+  checkCoverage("bindingFacts",
+                "for-condition auto bindings use semantic-product binding facts",
+                registryTests,
+                "ir lowerer rejects missing semantic-product binding facts",
+                registryTests);
+  checkCoverage("queryFacts",
+                "native Result combinator sources use semantic-product query facts",
+                registryTests,
+                "ir lowerer rejects stale semantic-product query facts",
+                registryTests);
+  checkCoverage(
+      "tryFacts",
+      "ir lowerer semantic-product adapter uses try semantic-id matches without path fallback",
+      callHelperTests,
+      "ir lowerer rejects stale semantic-product try result metadata",
+      registryTests);
+}
+
 TEST_CASE("semantic snapshot shared traversal keeps direct and bridge ordering keys") {
   const std::filesystem::path cwd = std::filesystem::current_path();
   const std::filesystem::path root =

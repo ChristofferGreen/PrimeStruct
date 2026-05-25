@@ -67,7 +67,6 @@ This file is the live open-work queue for PrimeStruct.
 - TODO-4565: Add minimal scene graph and camera data model | track: scene-renderer | primary surface: stdlib/std/scene scene model
 - TODO-4572: Remove vector statement-helper compiler path | track: vector-special-case-deletion | primary surface: vector semantic/lowerer helpers
 - TODO-4573: Remove compiler-owned map literal lowering | track: map-special-case-deletion | primary surface: map literal semantics/lowering
-- TODO-4582: Add semantic-product consumer coverage matrix | track: architecture-semantic-product-consumers | primary surface: semantic-product consumer inventory
 - TODO-4585: Manifest-drive stdlib module inclusion | track: architecture-stdlib-manifest | primary surface: stdlib auto-include manifest
 
 ### Immediate Next 10
@@ -100,8 +99,8 @@ This file is the live open-work queue for PrimeStruct.
   guide deletion scope. Vector path TODO-4572 -> TODO-4574 ->
   TODO-4577; map path TODO-4573 -> TODO-4575 -> TODO-4576; join at
   TODO-4578 -> TODO-4579
-- Architecture hardening backlog: TODO-4582,
-  TODO-4585, TODO-4586, TODO-4587, TODO-4588, TODO-4589
+- Architecture hardening backlog: TODO-4585, TODO-4586, TODO-4587,
+  TODO-4588, TODO-4589
 
 ### Execution Queue
 
@@ -119,7 +118,6 @@ This file is the live open-work queue for PrimeStruct.
 - TODO-4577: Remove vector backing-type compiler classification
 - TODO-4578: Generalize stdlib surface registry away from map/vector IDs
 - TODO-4579: Enforce zero map/vector compiler-knowledge traces
-- TODO-4582: Add semantic-product consumer coverage matrix
 - TODO-4593: Carry source-unit provenance into IR and VM debug maps
 - TODO-4585: Manifest-drive stdlib module inclusion
 - TODO-4586: Define diagnostic stability tiers
@@ -586,31 +584,6 @@ This file is the live open-work queue for PrimeStruct.
       metadata files, while C++ treats them as ordinary included stdlib code.
   - stop_rule: Stop once the zero gate is wired into routine validation and
     focused map/vector stdlib tests plus the new audit pass.
-
-- [ ] TODO-4582: Add semantic-product consumer coverage matrix
-  - owner: ai
-  - created_at: 2026-05-24
-  - phase: Architecture hardening
-  - parallel_track: architecture-semantic-product-consumers
-  - depends_on: TODO-4581
-  - scope: Add a checked inventory mapping semantic-product fact families to
-    production consumers and coverage for positive plus stale/missing-fact
-    behavior.
-  - implementation_notes: Start from `include/primec/SemanticProduct.h`,
-    `src/SemanticProduct.cpp`, `src/ir_lowerer/`, and existing negative
-    semantic-product tests in `tests/unit/test_ir_pipeline_backends_*`.
-    Prefer a small checked document or script output that can be source-locked
-    until a richer manifest exists.
-  - acceptance:
-    - Each published semantic-product fact family has an inventory row naming
-      known production consumers or explicitly stating no production consumer.
-    - At least three fact families have positive consumer coverage and
-      stale/missing-fact coverage referenced from the inventory.
-    - The inventory identifies gaps as concrete follow-up candidates without
-      adding broad umbrella TODOs.
-    - Focused backend IR or semantic-product tests pass.
-  - stop_rule: Stop once the first consumer matrix is checked and validates real
-    coverage for at least three representative fact families.
 
 - [ ] TODO-4585: Manifest-drive stdlib module inclusion
   - owner: ai

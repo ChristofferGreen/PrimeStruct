@@ -6,6 +6,35 @@ Legend:
 Finished items are periodically archived here from `docs/todo.md`; section headers record the archive date.
 
 **Todo Completion (May 25, 2026)**
+- [x] TODO-4582: Add semantic-product consumer coverage matrix
+  - owner: ai
+  - created_at: 2026-05-24
+  - finished_at: 2026-05-25
+  - phase: Architecture hardening
+  - parallel_track: architecture-semantic-product-consumers
+  - depends_on: TODO-4581
+  - scope: Add a checked inventory mapping semantic-product fact families to
+    production consumers and coverage for positive plus stale/missing-fact
+    behavior.
+  - outcome:
+    - Added `docs/SemanticProductConsumerMatrix.md` as the first checked
+      semantic-product fact-family consumer matrix.
+    - Mapped every `semanticProgramFactFamilyInfos()` row to known production
+      consumers or explicitly noted provenance/dump-only families with no
+      lowering consumer.
+    - Referenced positive plus stale/missing-fact coverage for representative
+      `directCallTargets`, `bindingFacts`, `queryFacts`, and `tryFacts`.
+    - Added concrete follow-up candidates for preflight facts, struct-field
+      metadata, and requirement-predicate completeness without adding broad
+      umbrella TODOs.
+    - Source-locked the matrix from the backend IR graph-context tests so new
+      fact families require an inventory row.
+  - validation:
+    - `cmake --build build-release --target PrimeStruct_backend_runtime_tests -j 1`
+    - `cd build-release && ./PrimeStruct_backend_runtime_tests --test-case="semantic-product consumer coverage matrix stays source locked" --no-skip`
+  - stop_rule: Stopped once the first consumer matrix was checked and
+    validated real coverage references for four representative fact families.
+
 - [x] TODO-4581: Split lowerer meaning from syntax provenance
   - owner: ai
   - created_at: 2026-05-24

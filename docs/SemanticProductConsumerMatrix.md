@@ -1,0 +1,51 @@
+# Semantic-Product Consumer Matrix
+
+This inventory tracks the first checked map from published
+`SemanticProgram` fact families to production consumers and existing coverage.
+Every row below is source-locked against `semanticProgramFactFamilyInfos()` in
+`src/SemanticProduct.cpp`.
+
+Coverage markers:
+- `positive:` names coverage proving a consumer accepts or prefers the published
+  fact family.
+- `stale/missing:` names coverage proving the consumer fails closed when the
+  published fact is absent, incomplete, or stale.
+- `source-lock:` names structural coverage for families that currently have
+  dump/index/publication consumers but no direct stale/missing behavioral gate.
+
+| Fact family | Ownership | Production consumers | Coverage | Gap candidate |
+| --- | --- | --- | --- | --- |
+| `sourceImports` | AST provenance | `formatSemanticProgram`; semantic-product dump provenance. No lowering consumer. | source-lock: `compile pipeline publishes an initial semantic product shell` | None. |
+| `imports` | AST provenance | `formatSemanticProgram`; semantic-product dump provenance. No lowering consumer. | source-lock: `compile pipeline publishes an initial semantic product shell` | None. |
+| `definitions` | AST provenance | `semanticProgramLookupPublishedDefinitionByPathId`; lowerer call validation and callable lookup support. | source-lock: `compile pipeline publishes an initial semantic product shell` | Add a focused missing-definition index diagnostic if production stops falling back through AST definitions. |
+| `executions` | AST provenance | `formatSemanticProgram`; execution provenance dump only. No lowering consumer. | source-lock: `compile pipeline publishes an initial semantic product shell` | None. |
+| `callTargetStringTable` | Derived index | all published `SymbolId` lookups in `src/SemanticProduct.cpp`, IR lowerer adapters, and CT-eval requirement predicates. | source-lock: `semantic product query and try projections expose stable public lookup keys` | Add a compact stale string-table diagnostic test for one public lookup family if symbol-id validation moves out of per-family checks. |
+| `moduleResolvedArtifacts` | Derived index | semantic-product family views in `src/SemanticProduct.cpp`; semantic-product dump grouping. | source-lock: `semantic product query and try projections expose stable public lookup keys` | Add one cross-module stale-index test for a semantic-owned family view. |
+| `publishedRoutingLookups` | Derived index | direct semantic-product lookup helpers and lowerer semantic indexes in `src/ir_lowerer/IrLowererSemanticProductTargetAdapters.cpp`. | source-lock: `semantic product query and try projections expose stable public lookup keys` | Add one missing published-map test for each new lookup map as families are added. |
+| `publishedLowererPreflightFacts` | Semantic product | entry/setup effect lowering in `src/ir_lowerer/IrLowererLowerEffects.cpp`. | source-lock: `compile pipeline publishes an initial semantic product shell` | Add missing/stale diagnostics for absent software numeric type and runtime reflection preflight ids. |
+| `directCallTargets` | Semantic product | call resolution, direct statement calls, inline native dispatch, Result/native helper routing. | positive: `ir lowerer keeps semantic-product direct-call targets authoritative over rooted rewritten expr names`; stale/missing: `ir lowerer rejects stale semantic-product direct-call metadata` | None. |
+| `methodCallTargets` | Semantic product | method-call resolution, direct statement call rewrites, inline native dispatch. | stale/missing: `semantic-product method-call coverage conformance rejects missing targets`; source-lock: `compile pipeline publishes an initial semantic product shell` | Add a positive method-call consumer test that proves semantic-product method ids beat stale syntax. |
+| `bridgePathChoices` | Semantic product | collection/helper bridge routing in call resolution and inline native dispatch. | stale/missing: `ir lowerer rejects missing semantic-product bridge-path choices`; source-lock: `semantic product bridge path choices use helperNameId without helperName shadow field` | Add a positive bridge-choice routing test that names one canonical stdlib surface. |
+| `callableSummaries` | Semantic product | effect setup, return inference, Result metadata validation, CT-eval callable context. | source-lock: `semantic product callable summaries use fullPathId without fullPath shadow field` | Add positive plus stale/missing coverage for callable result metadata outside return/query result helpers. |
+| `typeMetadata` | Semantic product | struct layout validation, effect/layout setup, on_error helpers, type-return inference. | stale/missing: `ir lowerer rejects missing semantic-product type metadata for struct layouts`; source-lock: `compile pipeline publishes an initial semantic product shell` | Add a positive consumer test proving type metadata overrides stale AST layout hints. |
+| `structFieldMetadata` | Semantic product | struct layout helpers and field binding helpers. | stale/missing: `ir lowerer struct layout helpers validate semantic product coverage`; source-lock: `compile pipeline publishes an initial semantic product shell` | Add positive coverage for `IrLowererStructFieldBindingHelpers.cpp` reading published field metadata. |
+| `sumTypeMetadata` | Semantic product | sum layout helpers, native pick/Result paths, lowerer target adapters. | positive: `native pick target sum resolution uses semantic-product facts`; stale/missing: `native pick target sum resolution uses semantic-product facts` | None. |
+| `sumVariantMetadata` | Semantic product | sum variant lookup, native pick/active-payload emission, lowerer target adapters. | positive: `native pick target sum resolution uses semantic-product facts`; stale/missing: `native pick payload locals use semantic-product variant metadata` | None. |
+| `collectionSpecializations` | Semantic product | binding type helpers, statement-call collection receiver gates, inline native dispatch, collection mutation helpers. | stale/missing: `ir lowerer rejects missing semantic-product collection specializations`; source-lock: `compile pipeline publishes an initial semantic product shell` | Add a positive collection-specialization consumer test that proves semantic facts override stale local classification. |
+| `bindingFacts` | Semantic product | binding type helpers, loop/for-condition lowering, entry parameter setup, collection/indexed access, inline native dispatch. | positive: `for-condition auto bindings use semantic-product binding facts`; stale/missing: `ir lowerer rejects missing semantic-product binding facts` | None. |
+| `returnFacts` | Semantic product | return inference, aggregate pointer/location helpers, Result/try emit helpers, count/access helpers. | positive: `native aggregate pointer dereference calls use semantic-product return facts`; stale/missing: `ir lowerer rejects missing semantic-product return facts` | None. |
+| `localAutoFacts` | Semantic product | setup inference, binding type helpers, count/access helpers, collection receiver gates, inline native dispatch. | positive: `semantic-product local-auto call paths accept stdlib surface equivalents`; stale/missing: `semantic-product contract rejects missing local-auto facts across entry targets` | None. |
+| `queryFacts` | Semantic product | Result metadata helpers, `try(...)` emit, count/access helpers, sum helpers, inline native dispatch, collection mutations. | positive: `native Result combinator sources use semantic-product query facts`; stale/missing: `ir lowerer rejects stale semantic-product query facts` | None. |
+| `tryFacts` | Semantic product | Result metadata helpers, `try(...)` emit, uninitialized struct inference. | positive: `ir lowerer semantic-product adapter uses try semantic-id matches without path fallback`; stale/missing: `ir lowerer rejects stale semantic-product try result metadata` | None. |
+| `requirementPredicateFacts` | Semantic product | compile-time evaluation facade and callable CT-eval host. | positive: `compile-time evaluation facade wraps published requirement facts` | Add missing/stale requirement-predicate fact diagnostics once CT-eval rejects incomplete published facts instead of reporting ordinary no-match outcomes. |
+| `onErrorFacts` | Semantic product | on_error setup/lowering helpers, try result metadata validation, return-info helpers. | stale/missing: `ir lowerer rejects missing semantic-product on_error facts`; source-lock: `compile pipeline publishes an initial semantic product shell` | Add a positive on_error consumer test that proves semantic-product facts override stale callable summary text. |
+
+Concrete follow-up candidates from this first matrix:
+- `SPCM-FOLLOWUP-preflight`: add missing/stale diagnostics for
+  `publishedLowererPreflightFacts` software numeric type and runtime reflection
+  ids.
+- `SPCM-FOLLOWUP-struct-fields`: add a direct stale/missing consumer test for
+  `structFieldMetadata` at the field binding helper boundary.
+- `SPCM-FOLLOWUP-requirements`: add CT-eval stale/missing diagnostics for
+  incomplete `requirementPredicateFacts` once that path fails closed on
+  published semantic-product fact completeness.

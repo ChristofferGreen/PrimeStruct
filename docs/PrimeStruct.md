@@ -1301,6 +1301,11 @@ Ownership split by responsibility:
   - final binding/type/effect facts consumed by lowering
   - semantic node ids used to join lowering facts back to syntax provenance
   - deterministic per-definition metadata exported to IR preparation and later backends
+- Consumer coverage for published fact families is tracked in
+  `docs/SemanticProductConsumerMatrix.md`. Each row names the known production
+  consumers or states that no production consumer exists, and representative
+  rows link positive plus stale/missing-fact coverage until a richer manifest
+  replaces the checked document.
 - Shared boundary rule:
   - source spans, debug/source-map data, and user-facing syntax reproduction remain AST-owned, but the semantic product
     carries stable references to that provenance so lowering/debuggers never need to re-infer semantics from syntax.
