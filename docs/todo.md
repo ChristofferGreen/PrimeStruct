@@ -64,7 +64,7 @@ This file is the live open-work queue for PrimeStruct.
 
 ### Ready Now
 
-- TODO-4591: Add expanded-source provenance ledger | track: source-unit-provenance | primary surface: import resolver/compile pipeline provenance
+- TODO-4592: Map parser and semantic diagnostics through source units | track: source-unit-provenance | primary surface: parser/semantic diagnostics
 - TODO-4564: Lock scene renderer defaults and UI producer contract | track: scene-renderer | primary surface: docs/scene-renderer contract
 - TODO-4570: Retire duplicate map2 candidate surface | track: collection-stdlib-cleanup | primary surface: stdlib/std/collections/map*.prime
 - TODO-4571: Add compiler-knowledge inventory for map/vector | track: collection-audit | primary surface: scripts/tests audit coverage
@@ -73,7 +73,6 @@ This file is the live open-work queue for PrimeStruct.
 
 ### Immediate Next 10
 
-- TODO-4592: Map parser and semantic diagnostics through source units
 - TODO-4593: Carry source-unit provenance into IR and VM debug maps
 - TODO-4565: Add minimal scene graph and camera data model
 - TODO-4566: Render flat and rounded-rect scene primitives to BGRA8
@@ -86,12 +85,13 @@ This file is the live open-work queue for PrimeStruct.
 
 ### Priority Lanes
 
-- Source-unit provenance ledger: TODO-4591 -> TODO-4592; TODO-4593 waits on
-  TODO-4592 and TODO-4583 because it changes IR source-map metadata. This lane
-  is intentionally separate from TODO-4581 provenance ownership and TODO-4586
-  diagnostic stability tiers: it adds the missing source-unit/file identity
-  that those later contracts can consume without absorbing TODO-4583's
-  schema/versioning work.
+- Source-unit provenance ledger: TODO-4592 -> TODO-4593; TODO-4593 waits on
+  TODO-4592 and TODO-4583 because it changes IR source-map metadata. TODO-4591
+  completed the inspectable expanded-source ledger that this lane builds on.
+  This lane is intentionally separate from TODO-4581 provenance ownership and
+  TODO-4586 diagnostic stability tiers: it adds the missing source-unit/file
+  identity that those later contracts can consume without absorbing
+  TODO-4583's schema/versioning work.
 - Scene graph renderer and UI presentation: TODO-4564 -> TODO-4565 ->
   TODO-4566 -> (TODO-4590 and TODO-4567) -> TODO-4568 -> TODO-4569
 - Map/vector compiler-independence: TODO-4570 and TODO-4571 can run in
@@ -104,7 +104,6 @@ This file is the live open-work queue for PrimeStruct.
 
 ### Execution Queue
 
-- TODO-4591: Add expanded-source provenance ledger
 - TODO-4592: Map parser and semantic diagnostics through source units
 - TODO-4564: Lock scene renderer defaults and UI producer contract
 - TODO-4570: Retire duplicate map2 candidate surface
@@ -946,43 +945,6 @@ This file is the live open-work queue for PrimeStruct.
     - README or docs mention the helper as an architecture triage entrypoint.
   - stop_rule: Stop once the dashboard and self-tests land; do not add failing
     architecture thresholds in this slice.
-
-- [ ] TODO-4591: Add expanded-source provenance ledger
-  - owner: ai
-  - created_at: 2026-05-24
-  - phase: Source-unit provenance ledger
-  - parallel_track: source-unit-provenance
-  - scope: Introduce the first compile-pipeline source-unit ledger that records
-    how primary input, imported `.prime` files, stdlib auto-included files, and
-    generated or unknown text segments map into the flattened source stream,
-    while preserving current compile and dump behavior.
-  - implementation_notes: Start from `ImportResolver::expandImports`,
-    `CompilePipelineImportStageState`, `appendStdlibModuleSources`,
-    `Program::sourceImports`, and diagnostics/source-map helpers. Keep this
-    slice data-contract focused: do not change diagnostic wording policy
-    (TODO-4586), stdlib inclusion manifest policy (TODO-4585), lowerer
-    meaning/provenance ownership (TODO-4581), or IR source-map schema
-    (TODO-4583). Prefer a small public type such as `ExpandedSource`,
-    `SourceUnit`, and `SourceSegment` rather than ad hoc side vectors.
-  - acceptance:
-    - Compile pipeline output or an adjacent public helper exposes a
-      deterministic source-unit table with stable ids, display path or module
-      key, source kind (`primary`, `import`, `stdlib`, `generated`/`unknown`),
-      flattened line range, and original starting line/column where available.
-    - Import expansion records segments for primary input, direct imports,
-      nested imports, and directory imports without overlapping flattened line
-      ranges and with stable ordering for identical inputs/import paths.
-    - Stdlib auto-inclusion records source units for appended stdlib files
-      without changing current successful compile behavior or `pre_ast`/`ast`
-      dump text.
-    - Focused tests cover one primary file, one imported file, one nested
-      import, and one stdlib auto-include provenance table.
-    - Parser/semantic diagnostics still behave as before except for any
-      optional inspectable provenance helper; diagnostic span remapping is left
-      to TODO-4592.
-  - stop_rule: Stop once flattened source provenance is inspectable and
-    covered for imports plus stdlib appends; do not remap diagnostics, alter IR
-    source maps, or change VM debugger behavior in this slice.
 
 - [ ] TODO-4592: Map parser and semantic diagnostics through source units
   - owner: ai

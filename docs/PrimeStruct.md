@@ -17,7 +17,9 @@ Related design notes:
 
 ### Source-processing pipeline
 1. **Import resolver:** first pass walks the raw text and expands every `import<...>` source entry so the compiler
-   always works on a single flattened source stream.
+   always works on a single flattened source stream. The compile pipeline also records an expanded-source provenance
+   ledger for that stream: primary input, imported files, stdlib auto-included files, and generated separator text get
+   stable source-unit ids plus flattened and original source ranges. Diagnostic remapping still remains a later stage.
 2. **Text transforms:** the flattened stream flows through ordered token-level transforms (operator sugar, collection
    literals, implicit suffixes, project-specific macros, etc.). Text transforms apply to the entire envelope (transform
    list, templates, parameters, and body). Executions are treated as envelopes with an implicit empty body, so the same

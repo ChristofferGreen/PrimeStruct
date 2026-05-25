@@ -1799,7 +1799,8 @@ TEST_CASE("todo queue and skipped doctest debt stay source locked") {
                   "  coverage snapshots in this file.") !=
         std::string::npos);
   CHECK(todo.find("### Ready Now\n\n"
-                  "- TODO-4591: Add expanded-source provenance ledger | track: source-unit-provenance") !=
+                  "- TODO-4592: Map parser and semantic diagnostics through source units | track: "
+                  "source-unit-provenance") !=
         std::string::npos);
   CHECK(todo.find("- TODO-4564: Lock scene renderer defaults and UI producer contract | track: scene-renderer") !=
         std::string::npos);
@@ -1812,15 +1813,22 @@ TEST_CASE("todo queue and skipped doctest debt stay source locked") {
   CHECK(todo.find("- TODO-4573: Remove compiler-owned map literal lowering | track: map-special-case-deletion") !=
         std::string::npos);
   CHECK(todo.find("### Immediate Next 10\n\n"
-                  "- TODO-4592: Map parser and semantic diagnostics through source units") !=
+                  "- TODO-4593: Carry source-unit provenance into IR and VM debug maps") !=
         std::string::npos);
   CHECK(todo.find("### Priority Lanes") != std::string::npos);
-  CHECK(todo.find("Source-unit provenance ledger: TODO-4591 -> TODO-4592; TODO-4593 waits on") !=
+  CHECK(todo.find("Source-unit provenance ledger: TODO-4592 -> TODO-4593; TODO-4593 waits on") !=
+        std::string::npos);
+  CHECK(todo.find("TODO-4591\n"
+                  "  completed the inspectable expanded-source ledger that this lane builds on.") !=
         std::string::npos);
   CHECK(todo.find("Map/vector compiler-independence: TODO-4570 and TODO-4571 can run in") !=
         std::string::npos);
   CHECK(todo.find("### Execution Queue\n\n"
-                  "- TODO-4591: Add expanded-source provenance ledger") !=
+                  "- TODO-4592: Map parser and semantic diagnostics through source units") !=
+        std::string::npos);
+  CHECK(todoFinished.find("TODO-4591: Add expanded-source provenance ledger") !=
+        std::string::npos);
+  CHECK(todoFinished.find("Added public `ExpandedSource`, `SourceUnit`, and `SourceSegment` types") !=
         std::string::npos);
   CHECK(todo.find("- TODO-4562: Add task handle semantic facts and lifetime diagnostics | track:") ==
         std::string::npos);

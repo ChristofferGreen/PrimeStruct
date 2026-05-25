@@ -2,6 +2,7 @@
 
 #include "primec/Ast.h"
 #include "primec/Diagnostics.h"
+#include "primec/ExpandedSource.h"
 #include "primec/Options.h"
 #include "primec/SemanticProduct.h"
 #include "primec/Semantics.h"
@@ -70,6 +71,7 @@ struct CompilePipelineOutput {
   bool semanticProductBuilt = false;
   SemanticPhaseCounters semanticPhaseCounters;
   bool hasSemanticPhaseCounters = false;
+  ExpandedSource expandedSource;
   std::string filteredSource;
   std::string dumpOutput;
   bool hasDumpOutput = false;
@@ -91,6 +93,7 @@ struct CompilePipelineFailureResult {
   bool semanticProductBuilt = false;
   SemanticPhaseCounters semanticPhaseCounters;
   bool hasSemanticPhaseCounters = false;
+  ExpandedSource expandedSource;
   std::string filteredSource;
   std::string dumpOutput;
   bool hasDumpOutput = false;

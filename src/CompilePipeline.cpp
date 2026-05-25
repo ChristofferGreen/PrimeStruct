@@ -1,5 +1,7 @@
 #include "primec/CompilePipeline.h"
 
+#include "ExpandedSourceBuilder.h"
+
 #include "primec/AstMemory.h"
 #include "primec/AstPrinter.h"
 #include "primec/ImportResolver.h"
@@ -22,6 +24,7 @@
 #include <fstream>
 #include <iostream>
 #include <limits>
+#include <optional>
 #include <sstream>
 #include <string_view>
 #include <unordered_set>
@@ -466,7 +469,8 @@ bool appendStdlibModuleSources(const std::vector<std::string> &importPaths,
                                const std::vector<std::string> &sourceImports,
                                const std::vector<std::string> &implicitKeys,
                                std::string &source,
-                               std::string &error) {
+                               std::string &error,
+                               ExpandedSource *expandedSource = nullptr) {
   std::error_code ec;
   std::deque<std::string> pendingKeys;
   std::unordered_set<std::string> queuedKeys;
@@ -492,6 +496,10 @@ bool appendStdlibModuleSources(const std::vector<std::string> &importPaths,
 
   std::unordered_set<std::string> seenFiles;
   std::unordered_set<std::string> processedKeys;
+  std::optional<ExpandedSourceBuilder> sourceBuilder;
+  if (expandedSource != nullptr) {
+    sourceBuilder.emplace(*expandedSource);
+  }
   bool appended = false;
   while (!pendingKeys.empty()) {
     const std::string key = pendingKeys.front();
@@ -548,8 +556,15 @@ bool appendStdlibModuleSources(const std::vector<std::string> &importPaths,
         std::ostringstream buffer;
         buffer << file.rdbuf();
         const std::string contents = buffer.str();
-        source.append("\n");
-        source.append(contents);
+        if (sourceBuilder.has_value()) {
+          sourceBuilder->appendGenerated("\n", "<stdlib-separator>");
+          const std::size_t unitId =
+              sourceBuilder->addUnit(SourceUnitKind::Stdlib, absoluteText, key, 1, 1);
+          sourceBuilder->appendSegment(unitId, contents, 1, 1);
+        } else {
+          source.append("\n");
+          source.append(contents);
+        }
         appended = true;
 
         const std::vector<std::string> nestedImports = collectStdImportPaths(contents);
@@ -610,6 +625,9 @@ bool appendStdlibModuleSources(const std::vector<std::string> &importPaths,
     error = "stdlib import requested but matching stdlib modules were not found";
     return false;
   }
+  if (expandedSource != nullptr) {
+    source = expandedSource->text;
+  }
   return true;
 }
 
@@ -661,6 +679,7 @@ bool validateGraphicsBackendSupport(const Program &program,
 
 struct CompilePipelineImportStageState {
   std::string source;
+  ExpandedSource expandedSource;
   std::vector<std::string> sourceImports;
   std::vector<std::string> sourceStdImports;
   std::vector<std::string> implicitStdlibKeys;
@@ -681,12 +700,13 @@ bool runCompilePipelineImportStage(const Options &options,
                                    DiagnosticSink &diagnosticSink) {
   ImportResolver importResolver;
   if (!importResolver.expandImports(options.inputPath,
-                                    out.source,
+                                    out.expandedSource,
                                     error,
                                     options.importPaths)) {
     diagnosticSink.setSummary(error);
     return false;
   }
+  out.source = out.expandedSource.text;
 
   out.sourceImports = collectSourceImportPaths(out.source);
   out.sourceStdImports = collectStdImportPaths(out.source);
@@ -696,7 +716,8 @@ bool runCompilePipelineImportStage(const Options &options,
                                    out.sourceStdImports,
                                    out.implicitStdlibKeys,
                                    out.source,
-                                   error)) {
+                                   error,
+                                   &out.expandedSource)) {
       diagnosticSink.setSummary(error);
       return false;
     }
@@ -888,6 +909,7 @@ CompilePipelineFailureResult makeCompilePipelineFailureResult(
   result.semanticProductBuilt = output.semanticProductBuilt;
   result.semanticPhaseCounters = output.semanticPhaseCounters;
   result.hasSemanticPhaseCounters = output.hasSemanticPhaseCounters;
+  result.expandedSource = std::move(output.expandedSource);
   result.filteredSource = std::move(output.filteredSource);
   result.dumpOutput = std::move(output.dumpOutput);
   result.hasDumpOutput = output.hasDumpOutput;
@@ -971,6 +993,7 @@ bool runCompilePipeline(const Options &options,
                                      diagnosticSink)) {
     return failPipeline(CompilePipelineErrorStage::Import, error, capturedDiagnosticInfo);
   }
+  output.expandedSource = importStage.expandedSource;
 
   CompilePipelinePreParseStageState preParseStage;
   if (!runCompilePipelineTransformStage(options,

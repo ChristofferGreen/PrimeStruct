@@ -5,6 +5,34 @@ Legend:
 
 Finished items are periodically archived here from `docs/todo.md`; section headers record the archive date.
 
+**Todo Completion (May 25, 2026)**
+- [x] TODO-4591: Add expanded-source provenance ledger
+  - owner: ai
+  - created_at: 2026-05-24
+  - finished_at: 2026-05-25
+  - phase: Source-unit provenance ledger
+  - parallel_track: source-unit-provenance
+  - scope: Introduce the first compile-pipeline source-unit ledger that records
+    how primary input, imported `.prime` files, stdlib auto-included files, and
+    generated or unknown text segments map into the flattened source stream,
+    while preserving current compile and dump behavior.
+  - outcome:
+    - Added public `ExpandedSource`, `SourceUnit`, and `SourceSegment` types
+      with stable source kinds, display/module identity, flattened ranges, and
+      original starting positions.
+    - Routed import expansion and stdlib auto-inclusion through the ledger
+      while preserving the flattened source text consumed by dumps, parsing,
+      diagnostics, and lowering.
+    - Added focused source tests for primary, direct import, nested import,
+      directory import, generated separator, and stdlib auto-include
+      provenance.
+  - validation:
+    - Focused validation was limited to the import-resolver misc-test slice per
+      the lite worker rules; broad release validation remains parent-owned.
+  - stop_rule: Stopped after flattened source provenance became inspectable and
+    covered for imports plus stdlib appends; diagnostic remapping, IR source
+    maps, and VM debugger behavior remain with follow-up leaves.
+
 **Todo Completion (May 24, 2026)**
 - [x] TODO-4305: Rename and style canonical `.prime` SoA surface
   - owner: ai

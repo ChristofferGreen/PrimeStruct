@@ -72,6 +72,7 @@ set(PRIMESTRUCT_FRONTEND_SOURCES
   src/CompileTimeCallable.cpp
   src/CompileTimeEvaluation.cpp
   src/CompileTimeValue.cpp
+  src/ExpandedSourceBuilder.cpp
   src/FrontendSyntax.cpp
   src/ImportResolver.cpp
   src/ImportResolverHelpers.cpp
