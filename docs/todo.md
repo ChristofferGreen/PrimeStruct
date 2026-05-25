@@ -65,8 +65,8 @@ This file is the live open-work queue for PrimeStruct.
 ### Ready Now
 
 - TODO-4566: Render flat and rounded-rect scene primitives to BGRA8 | track: scene-renderer | primary surface: scene renderer BGRA8 output
-- TODO-4572: Remove vector statement-helper compiler path | track: vector-special-case-deletion | primary surface: vector semantic/lowerer helpers
 - TODO-4575: Remove map helper/access compiler classifiers | track: map-special-case-deletion | primary surface: map helper/access classifiers
+- TODO-4574: Remove vector count/access compiler classifiers | track: vector-helper-classifier-deletion | primary surface: vector count/access helpers
 
 ### Immediate Next 10
 
@@ -74,8 +74,8 @@ This file is the live open-work queue for PrimeStruct.
 - TODO-4567: Render first globally lit 3D SDF widget primitive
 - TODO-4568: Emit scene nodes from the existing UI layout/widgets
 - TODO-4569: Present scene-rendered UI through software surface bridge
-- TODO-4574: Remove vector count/access compiler classifiers
 - TODO-4576: Remove map backing-type compiler classification
+- TODO-4577: Remove vector backing-type compiler classification
 
 ### Priority Lanes
 
@@ -97,13 +97,12 @@ This file is the live open-work queue for PrimeStruct.
 ### Execution Queue
 
 - TODO-4566: Render flat and rounded-rect scene primitives to BGRA8
-- TODO-4572: Remove vector statement-helper compiler path
 - TODO-4575: Remove map helper/access compiler classifiers
+- TODO-4574: Remove vector count/access compiler classifiers
 - TODO-4590: Add international text shaping and glyph atlas path
 - TODO-4567: Render first globally lit 3D SDF widget primitive
 - TODO-4568: Emit scene nodes from the existing UI layout/widgets
 - TODO-4569: Present scene-rendered UI through software surface bridge
-- TODO-4574: Remove vector count/access compiler classifiers
 - TODO-4576: Remove map backing-type compiler classification
 - TODO-4577: Remove vector backing-type compiler classification
 - TODO-4578: Generalize stdlib surface registry away from map/vector IDs
@@ -279,41 +278,6 @@ This file is the live open-work queue for PrimeStruct.
       policy.
   - stop_rule: Stop once one PrimeStruct UI scene reaches the software-surface
     presenter path with deterministic non-GUI coverage.
-
-- [ ] TODO-4572: Remove vector statement-helper compiler path
-  - owner: ai
-  - created_at: 2026-05-24
-  - phase: Map/vector compiler-independence
-  - parallel_track: vector-special-case-deletion
-  - inventory_categories: `vector-statement-helper`
-  - scope: Delete the compiler-owned vector statement-helper validation and
-    lowering path so `push`, `pop`, `reserve`, `clear`, `remove_at`, and
-    `remove_swap` on vectors are resolved as ordinary imported `.prime`
-    helper calls.
-  - implementation_notes: Start with
-    `src/semantics/SemanticsValidatorStatementVectorHelpers.cpp`,
-    `src/semantics/SemanticsValidatorExprVectorHelpers.cpp`,
-    `src/ir_lowerer/IrLowererFlowVectorHelpers.cpp`,
-    `src/ir_lowerer/IrLowererFlowVectorResolutionHelpers.cpp`,
-    `src/ir_lowerer/IrLowererLowerStatementsCallsStep.cpp`, and
-    `src/ir_lowerer/IrLowererLowerInlineCalls.h`. Preserve ordinary
-    parser/import resolution and the `.prime` implementations in
-    `stdlib/std/collections/vector.prime` and
-    `stdlib/std/collections/internal_vector.prime`.
-  - acceptance:
-    - Production C++ no longer declares or calls
-      `validateVectorStatementHelper`, `tryEmitVectorStatementHelper`, or a
-      vector-statement-only helper resolver.
-    - Vector mutator calls compile and run through ordinary `.prime` helper
-      definitions when those helpers are imported, with deterministic
-      missing-import diagnostics when they are not.
-    - Existing vector construction/count/access behavior remains covered by
-      focused VM/native/C++ emitter tests.
-    - The compiler-knowledge inventory from TODO-4571, if present, shows the
-      vector statement-helper category at zero.
-  - stop_rule: Stop once vector statement mutators are ordinary helper calls
-    and focused vector tests pass; leave vector backing-layout classification
-    and registry metadata cleanup to later leaves.
 
 - [ ] TODO-4574: Remove vector count/access compiler classifiers
   - owner: ai

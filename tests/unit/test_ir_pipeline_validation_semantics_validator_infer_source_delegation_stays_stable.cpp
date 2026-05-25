@@ -909,7 +909,7 @@ TEST_CASE("semantics validator infer source delegation stays stable") {
         std::string::npos);
   CHECK(semanticsInferPreDispatchCallsSource.find("const std::string directRemovedMapCompatibilityPath =") ==
         std::string::npos);
-  CHECK(semanticsInferPreDispatchCallsSource.find("if (getVectorStatementHelperName(expr, vectorHelper) && !expr.args.empty()) {") !=
+  CHECK(semanticsInferPreDispatchCallsSource.find("if (getVectorMutatorHelperName(expr, vectorHelper) && !expr.args.empty()) {") !=
         std::string::npos);
   CHECK(semanticsInferPreDispatchCallsSource.find(
             "auto tryResolveReceiverIndex = [&](size_t index) -> std::optional<ReturnKind> {") !=
@@ -1026,7 +1026,7 @@ TEST_CASE("semantics validator infer source delegation stays stable") {
         std::string::npos);
   CHECK(semanticsInferCollectionsSource.find("std::string SemanticsValidator::methodRemovedCollectionCompatibilityPath") !=
         std::string::npos);
-  CHECK(semanticsInferCollectionsSource.find("bool SemanticsValidator::getVectorStatementHelperName") !=
+  CHECK(semanticsInferCollectionsSource.find("bool SemanticsValidator::getVectorMutatorHelperName") !=
         std::string::npos);
   CHECK(semanticsInferCollectionsSource.find(
             "bool isSoaSamePathHelperName(std::string_view helperName)") !=
@@ -1640,27 +1640,30 @@ TEST_CASE("semantics validator statement source delegation stays stable") {
       repoRoot / "src" / "semantics" / "SemanticsValidatorStatementVectorHelpers.cpp";
   const std::filesystem::path semanticsStatementVectorResolutionPath =
       repoRoot / "src" / "semantics" / "SemanticsValidatorStatementVectorResolution.cpp";
+  const std::filesystem::path semanticsCollectionHelperRewritesPath =
+      repoRoot / "src" / "semantics" / "SemanticsValidatorCollectionHelperRewrites.cpp";
   REQUIRE(std::filesystem::exists(semanticsStatementPath));
   REQUIRE(std::filesystem::exists(semanticsStatementBindingsPath));
   REQUIRE(std::filesystem::exists(semanticsStatementBuiltinsPath));
   REQUIRE(std::filesystem::exists(semanticsStatementBodyArgumentsPath));
   REQUIRE(std::filesystem::exists(semanticsStatementControlFlowPath));
-  REQUIRE(std::filesystem::exists(semanticsStatementVectorHelpersPath));
-  REQUIRE(std::filesystem::exists(semanticsStatementVectorResolutionPath));
+  CHECK_FALSE(std::filesystem::exists(semanticsStatementVectorHelpersPath));
+  CHECK_FALSE(std::filesystem::exists(semanticsStatementVectorResolutionPath));
+  REQUIRE(std::filesystem::exists(semanticsCollectionHelperRewritesPath));
   const std::string semanticsStatementSource = readText(semanticsStatementPath);
   const std::string semanticsStatementBindingsSource = readText(semanticsStatementBindingsPath);
   const std::string semanticsStatementBuiltinsSource = readText(semanticsStatementBuiltinsPath);
   const std::string semanticsStatementBodyArgumentsSource = readText(semanticsStatementBodyArgumentsPath);
   const std::string semanticsStatementControlFlowSource = readText(semanticsStatementControlFlowPath);
-  const std::string semanticsStatementVectorHelpersSource = readText(semanticsStatementVectorHelpersPath);
-  const std::string semanticsStatementVectorResolutionSource = readText(semanticsStatementVectorResolutionPath);
+  const std::string semanticsCollectionHelperRewritesSource =
+      readText(semanticsCollectionHelperRewritesPath);
   CHECK(semanticsStatementSource.find("bool SemanticsValidator::validateStatement") != std::string::npos);
   CHECK(semanticsStatementSource.find("#include \"SemanticsValidatorStatementLoopCountStep.h\"") !=
         std::string::npos);
   CHECK(semanticsStatementSource.find("validateBindingStatement(") != std::string::npos);
   CHECK(semanticsStatementSource.find("validatePathSpaceComputeBuiltinStatement(") != std::string::npos);
   CHECK(semanticsStatementSource.find("validateControlFlowStatement(") != std::string::npos);
-  CHECK(semanticsStatementSource.find("validateVectorStatementHelper(") != std::string::npos);
+  CHECK(semanticsStatementSource.find("validateVectorStatementHelper(") == std::string::npos);
   CHECK(semanticsStatementSource.find("#include \"SemanticsValidatorStatementHelpers.h\"") == std::string::npos);
   CHECK(semanticsStatementSource.find("#include \"SemanticsValidatorStatementBindings.h\"") == std::string::npos);
   CHECK(semanticsStatementSource.find("#include \"SemanticsValidatorStatementBuiltins.h\"") == std::string::npos);
@@ -1889,10 +1892,10 @@ TEST_CASE("semantics validator statement source delegation stays stable") {
             "findStdlibSurfaceMetadataByBridgeKey(\"collections.map_helpers\")") !=
         std::string::npos);
   CHECK(semanticsStatementBodyArgumentsSource.find(
-            "canonicalMapHelperPath(helperName)") !=
+            "canonicalKeyValueHelperPathForBodyArguments(helperName)") !=
         std::string::npos);
   CHECK(semanticsStatementBodyArgumentsSource.find(
-            "legacyMapHelperPath(helperName)") !=
+            "legacyKeyValueHelperAliasPath(helperName)") !=
         std::string::npos);
   CHECK(semanticsStatementBodyArgumentsSource.find(
             "std::vector<size_t> receiverIndices;") ==
@@ -1907,7 +1910,7 @@ TEST_CASE("semantics validator statement source delegation stays stable") {
             "for (size_t receiverIndex : receiverIndices)") ==
         std::string::npos);
   CHECK(semanticsStatementBodyArgumentsSource.find(
-            "if (isMapReceiverExpr(candidate.args[i])) {") !=
+            "if (isKeyValueReceiverExpr(candidate.args[i])) {") !=
         std::string::npos);
   CHECK(semanticsStatementBodyArgumentsSource.find(
             "if (receiver.kind == Expr::Kind::Call && !receiver.isBinding) {") !=
@@ -1931,302 +1934,15 @@ TEST_CASE("semantics validator statement source delegation stays stable") {
   CHECK(semanticsStatementControlFlowSource.find("if (isWhileCall(stmt)) {") != std::string::npos);
   CHECK(semanticsStatementControlFlowSource.find("if (isForCall(stmt)) {") != std::string::npos);
   CHECK(semanticsStatementControlFlowSource.find("if (isRepeatCall(stmt)) {") != std::string::npos);
-  CHECK(semanticsStatementVectorHelpersSource.find("bool SemanticsValidator::validateVectorStatementHelper(") !=
+  CHECK(semanticsCollectionHelperRewritesSource.find(
+            "std::string SemanticsValidator::preferVectorStdlibHelperPath(") !=
         std::string::npos);
-  CHECK(semanticsStatementVectorHelpersSource.find("std::string SemanticsValidator::preferVectorStdlibHelperPath(") !=
-        std::string::npos);
-  CHECK(semanticsStatementVectorHelpersSource.find("isRemovedMapCompatibilityHelper(") ==
-        std::string::npos);
-  CHECK(semanticsStatementVectorHelpersSource.find(
-            "const std::string stdlibAlias = \"/std/collections/map/\" + suffix;") ==
-        std::string::npos);
-  CHECK(semanticsStatementVectorHelpersSource.find(
-            "const std::string mapAlias = \"/map/\" + suffix;") ==
-        std::string::npos);
-  CHECK(semanticsStatementVectorHelpersSource.find("auto failStatementDiagnostic = [&](std::string message) -> bool {") !=
-        std::string::npos);
-  CHECK(semanticsStatementVectorHelpersSource.find("auto publishExistingStatementDiagnostic = [&]() -> bool {") !=
-        std::string::npos);
-  CHECK(semanticsStatementVectorHelpersSource.find("return failExprDiagnostic(stmt, std::move(message));") !=
-        std::string::npos);
-  CHECK(semanticsStatementVectorHelpersSource.find("std::string vectorHelper;") != std::string::npos);
-  CHECK(semanticsStatementVectorHelpersSource.find("if (vectorHelperIsPush) {") != std::string::npos);
-  CHECK(semanticsStatementVectorHelpersSource.find("validateVectorRelocationHelperElementType(binding, \"push\"") !=
-        std::string::npos);
-  CHECK(semanticsStatementVectorHelpersSource.find(
-            "std::string vectorHelperResolvedCanonical =") !=
-        std::string::npos);
-  CHECK(semanticsStatementVectorHelpersSource.find(
-            "const bool hasNamedStatementArgs = hasNamedArguments(stmt.argNames);") !=
-        std::string::npos);
-  CHECK(semanticsStatementVectorHelpersSource.find(
-            "const size_t namedValuesStatementArgIndex = [&]() -> size_t {") !=
-        std::string::npos);
-  CHECK(semanticsStatementVectorHelpersSource.find(
-            "const bool hasNamedValuesStatementArg = namedValuesStatementArgIndex < stmt.args.size();") !=
-        std::string::npos);
-  CHECK(semanticsStatementVectorHelpersSource.find(
-            "const std::string normalizedStatementNamespacePrefix =") !=
-        std::string::npos);
-  CHECK(semanticsStatementVectorHelpersSource.find(
-            "const std::string normalizedStatementName =") !=
-        std::string::npos);
-  CHECK(semanticsStatementVectorHelpersSource.find(
-            "const bool hasNamedArgs = hasNamedArguments(stmt.argNames);") ==
-        std::string::npos);
-  CHECK(semanticsStatementVectorHelpersSource.find(
-            "bool hasValuesNamedReceiver = false;") ==
-        std::string::npos);
-  CHECK(semanticsStatementVectorHelpersSource.find(
-            "const bool vectorHelperNeedsStandaloneSoaBorrowCheck =") !=
-        std::string::npos);
-  CHECK(semanticsStatementVectorHelpersSource.find(
-            "const bool hasHeapAllocEffect =") !=
-        std::string::npos);
-  CHECK(semanticsStatementVectorHelpersSource.find(
-            "const std::string normalizedPrefix = std::string(trimLeadingSlash(stmt.namespacePrefix));") ==
-        std::string::npos);
-  CHECK(semanticsStatementVectorHelpersSource.find(
-            "const std::string normalizedName = std::string(trimLeadingSlash(stmt.name));") ==
-        std::string::npos);
-  CHECK(semanticsStatementVectorHelpersSource.find(
-            "const bool helperAllowsSoaVectorTarget = helperName == \"push\" || helperName == \"reserve\";") !=
-        std::string::npos);
-  CHECK(semanticsStatementVectorHelpersSource.find(
-            "vectorHelperResolvedCanonical.rfind(\"/std/collections/soa_vector/\", 0) == 0") !=
-        std::string::npos);
-  CHECK(semanticsStatementVectorHelpersSource.find(
-            "isLegacyOrCanonicalSoaHelperPath(vectorHelperResolvedCanonical, \"push\")") !=
-        std::string::npos);
-  CHECK(semanticsStatementVectorHelpersSource.find(
-            "isLegacyOrCanonicalSoaHelperPath(vectorHelperResolvedCanonical, \"reserve\")") !=
-        std::string::npos);
-  CHECK(semanticsStatementVectorHelpersSource.find(
-            "auto tryResolveVectorHelperReceiverIndex = [&](size_t receiverIndex) -> bool {") !=
-        std::string::npos);
-  CHECK(semanticsStatementVectorHelpersSource.find(
-            "if (!tryResolveVectorHelperReceiverIndex(0) && probePositionalReorderedReceiver) {") !=
-        std::string::npos);
-  CHECK(semanticsStatementVectorHelpersSource.find(
-            "auto tryResolveCanonicalBuiltinCompatibilityReceiverIndex = [&](size_t receiverIndex) -> bool {") !=
-        std::string::npos);
-  CHECK(semanticsStatementVectorHelpersSource.find(
-            "const bool canonicalCompatibilityAllowsSoaVectorTarget =") !=
-        std::string::npos);
-  CHECK(semanticsStatementVectorHelpersSource.find(
-            "const bool hasResolvedVectorHelperDefinition = defMap_.find(vectorHelperResolved) != defMap_.end();") !=
-        std::string::npos);
-  CHECK(semanticsStatementVectorHelpersSource.find(
-            "const bool isResolvedExperimentalVectorHelper =") !=
-        std::string::npos);
-  CHECK(semanticsStatementVectorHelpersSource.find(
-            "auto hasDeclaredOrImportedPath = [&](const std::string &path) {") !=
-        std::string::npos);
-  CHECK(semanticsStatementVectorHelpersSource.find(
-            "auto failIfStandaloneSoaGrowthBorrowed = [&](const BindingInfo &binding, const Expr &receiverExpr) -> bool {") !=
-        std::string::npos);
-  CHECK(semanticsStatementVectorHelpersSource.find(
-            "const size_t builtinReceiverIndex = shouldUseCanonicalBuiltinCompatibilityFallback") !=
-        std::string::npos);
-  CHECK(semanticsStatementVectorHelpersSource.find(
-            "auto resolveBuiltinOperandIndex = [&](std::string_view namedArg) -> size_t {") !=
-        std::string::npos);
-  CHECK(semanticsStatementVectorHelpersSource.find(
-            "const bool hasVisibleResolvedVectorHelper =") !=
-        std::string::npos);
-  CHECK(semanticsStatementVectorHelpersSource.find("\"/std/collections/vector/") ==
-        std::string::npos);
-  CHECK(semanticsStatementVectorHelpersSource.find(
-            "#include \"SemanticsValidatorInferCollectionCompatibilityInternal.h\"") !=
-        std::string::npos);
-  CHECK(semanticsStatementVectorHelpersSource.find(
+  CHECK(semanticsCollectionHelperRewritesSource.find(
             "std::string canonicalPublishedVectorHelperTarget(") !=
         std::string::npos);
-  CHECK(semanticsStatementVectorHelpersSource.find(
-            "bool resolveExplicitPublishedVectorHelperExprMemberName(") !=
+  CHECK(semanticsCollectionHelperRewritesSource.find("validateVectorStatementHelper(") ==
         std::string::npos);
-  CHECK(semanticsStatementVectorHelpersSource.find(
-            "findStdlibSurfaceMetadataByBridgeKey(\"collections.vector_helpers\")") !=
-        std::string::npos);
-  CHECK(semanticsStatementVectorHelpersSource.find(
-            "auto isStdNamespacedVectorCompatibilityHelperCallPath = [&]() {") !=
-        std::string::npos);
-  CHECK(semanticsStatementVectorHelpersSource.find(
-            "isStdNamespacedVectorCompatibilityHelperPath(vectorHelperResolved,\n"
-            "                                                   vectorHelper)") !=
-        std::string::npos);
-  CHECK(semanticsStatementVectorHelpersSource.find(
-            "auto explicitPublishedVectorMutatorCallPath = [&]() -> std::string {") !=
-        std::string::npos);
-  CHECK(semanticsStatementVectorHelpersSource.find(
-            "auto explicitPublishedVectorMutatorMethodPath = [&]() -> std::string {") !=
-        std::string::npos);
-  CHECK(semanticsStatementVectorHelpersSource.find(
-            "return canonicalPublishedVectorHelperTarget(helperName);") !=
-        std::string::npos);
-  CHECK(semanticsStatementVectorHelpersSource.find(
-            "!hasDeclaredDefinitionPath(explicitCanonicalStdVectorMutatorCallPath) &&") ==
-        std::string::npos);
-  CHECK(semanticsStatementVectorHelpersSource.find(
-            "auto explicitCanonicalStdVectorMutatorCallPath = [&]() -> std::string {") ==
-        std::string::npos);
-  CHECK(semanticsStatementVectorHelpersSource.find(
-            "auto explicitCanonicalStdVectorMutatorMethodPath = [&]() -> std::string {") ==
-        std::string::npos);
-  CHECK(semanticsStatementVectorHelpersSource.find(
-            "vectorHelperResolved == \"/std/collections/vector/push\"") ==
-        std::string::npos);
-  CHECK(semanticsStatementVectorHelpersSource.find(
-            "const std::string stdlibAlias = \"/std/collections/vector/\" + suffix;") ==
-        std::string::npos);
-  CHECK(semanticsStatementVectorHelpersSource.find(
-            "helperCall.templateArgs.empty() &&\n"
-            "        vectorHelperResolved.rfind(\"/std/collections/experimental_vector/\", 0) == 0") ==
-        std::string::npos);
-  CHECK(semanticsStatementVectorHelpersSource.find(
-            "if (isSoaGrowthBinding(binding) &&\n"
-            "        resolveStandaloneSoaGrowthRoot(stmt.args[receiverIndex], borrowRoot,\n"
-            "                                       ignoreBorrowName) &&\n"
-            "        hasActiveBorrowForRoot(borrowRoot, ignoreBorrowName)) {") ==
-        std::string::npos);
-  CHECK(semanticsStatementVectorHelpersSource.find(
-            "const size_t receiverIndex = shouldUseCanonicalBuiltinCompatibilityFallback\n"
-            "                                     ? canonicalBuiltinCompatibilityReceiverIndex\n"
-            "                                     : 0;") ==
-        std::string::npos);
-  CHECK(semanticsStatementVectorHelpersSource.find(
-            "const size_t valueIndex = shouldUseCanonicalBuiltinCompatibilityFallback\n"
-            "                                  ? findCanonicalBuiltinCompatibilityOperandIndex(\"value\")\n"
-            "                                  : 1;") ==
-        std::string::npos);
-  CHECK(semanticsStatementVectorHelpersSource.find(
-            "if (currentValidationState_.context.activeEffects.count(\"heap_alloc\") == 0) {") ==
-        std::string::npos);
-  CHECK(semanticsStatementVectorHelpersSource.find(
-            "(defMap_.find(vectorHelperResolved) == defMap_.end() || isNamespacedVectorHelperCall) &&") ==
-        std::string::npos);
-  CHECK(semanticsStatementVectorHelpersSource.find(
-            "    };\n"
-            "    std::vector<size_t> receiverIndices;\n"
-            "    auto appendReceiverIndex = [&](size_t index) {") ==
-        std::string::npos);
-  CHECK(semanticsStatementVectorHelpersSource.find(
-            "if (canonicalBuiltinCompatibilityHelper && !stmt.args.empty()) {\n"
-            "    std::vector<size_t> receiverIndices;\n"
-            "    auto appendReceiverIndex = [&](size_t index) {") ==
-        std::string::npos);
-  CHECK(semanticsStatementVectorHelpersSource.find(
-            "auto tryResolveSoaCanonicalMutatorReceiverIndex = [&](size_t receiverIndex) -> bool {") !=
-        std::string::npos);
-  CHECK(semanticsStatementVectorHelpersSource.find(
-            "if (!shouldUseCanonicalBuiltinCompatibilityFallback &&\n"
-            "      isStdNamespacedSoaCanonicalMutatorHelperCall &&\n"
-            "      !stmt.args.empty()) {\n"
-            "    std::vector<size_t> receiverIndices;\n"
-            "    auto appendReceiverIndex = [&](size_t index) {") ==
-        std::string::npos);
-  CHECK(semanticsStatementVectorHelpersSource.find(
-            "auto bareBuiltinVectorMutatorPreferredPath = [&]() -> std::string {") !=
-        std::string::npos);
-  CHECK(semanticsStatementVectorHelpersSource.find(
-            "auto tryResolveReceiverIndex = [&](size_t receiverIndex) -> bool {") !=
-        std::string::npos);
-  CHECK(semanticsStatementVectorHelpersSource.find(
-            "if (tryResolveReceiverIndex(0)) {") !=
-        std::string::npos);
-  CHECK(semanticsStatementVectorHelpersSource.find(
-            "      return binding.typeName == \"vector\";\n"
-            "    };\n"
-            "    std::vector<size_t> receiverIndices;") ==
-        std::string::npos);
-  CHECK(semanticsStatementVectorHelpersSource.find(
-            "vectorHelperResolved.rfind(\"/std/collections/soa_vector/push\", 0) == 0") ==
-        std::string::npos);
-  CHECK(semanticsStatementVectorHelpersSource.find(
-            "vectorHelperResolved.rfind(\"/std/collections/soa_vector/reserve\", 0) == 0") ==
-        std::string::npos);
-  CHECK(semanticsStatementVectorResolutionSource.find("bool SemanticsValidator::resolveVectorStatementBinding(") !=
-        std::string::npos);
-  CHECK(semanticsStatementVectorResolutionSource.find("bool SemanticsValidator::validateVectorStatementElementType(") !=
-        std::string::npos);
-  CHECK(semanticsStatementVectorResolutionSource.find(
-            "auto failVectorElementDiagnostic = [&](std::string message) -> bool {") !=
-        std::string::npos);
-  CHECK(semanticsStatementVectorResolutionSource.find("bool SemanticsValidator::validateVectorStatementHelperTarget(") !=
-        std::string::npos);
-  CHECK(semanticsStatementVectorResolutionSource.find(
-            "auto failVectorTargetDiagnostic = [&](std::string message) -> bool {") !=
-        std::string::npos);
-  CHECK(semanticsStatementVectorResolutionSource.find("bool SemanticsValidator::resolveVectorStatementHelperTargetPath(") !=
-        std::string::npos);
-  CHECK(semanticsStatementVectorResolutionSource.find(
-            "auto failVectorReceiverDiagnostic = [&](std::string message) -> bool {") !=
-        std::string::npos);
-  CHECK(semanticsStatementVectorResolutionSource.find(
-            "auto tryResolveConcreteExperimentalSoaWrapperHelper =") !=
-        std::string::npos);
-  CHECK(semanticsStatementVectorResolutionSource.find(
-            "if (tryResolveConcreteExperimentalSoaWrapperHelper(resolvedType)) {") !=
-        std::string::npos);
-  CHECK(semanticsStatementVectorResolutionSource.find(
-            "preferredSoaHelperTargetForCollectionType(helperName, \"/soa_vector\")") !=
-        std::string::npos);
-  CHECK(semanticsStatementVectorResolutionSource.find(
-            "resolvedOut = (helperName == \"count\" || helperName == \"count_ref\" ||\n"
-            "                   helperName == \"capacity\" ||\n"
-            "                   helperName == \"at\" || helperName == \"at_unsafe\")") !=
-        std::string::npos);
-  CHECK(semanticsStatementVectorResolutionSource.find(
-            "if (receiver.kind == Expr::Kind::Call &&\n"
-            "      (helperName == \"count\" || helperName == \"count_ref\" ||\n"
-            "       helperName == \"capacity\" ||\n"
-            "       helperName == \"at\" || helperName == \"at_unsafe\" ||\n"
-            "       helperName == \"get\" || helperName == \"get_ref\" ||\n"
-            "       helperName == \"ref\" || helperName == \"ref_ref\" ||\n"
-            "       helperName == \"to_aos\" || helperName == \"to_aos_ref\" ||\n"
-            "       helperName == \"push\" || helperName == \"reserve\")) {") !=
-        std::string::npos);
-  CHECK(semanticsStatementVectorResolutionSource.find(
-            "      if (collectionTypePath == \"/soa_vector\" &&\n"
-            "          (helperName == \"count\" || helperName == \"count_ref\" ||\n"
-            "           helperName == \"get\" || helperName == \"get_ref\" ||\n"
-            "           helperName == \"ref\" || helperName == \"ref_ref\" ||\n"
-            "           helperName == \"to_aos\" || helperName == \"to_aos_ref\" ||\n"
-            "           helperName == \"push\" || helperName == \"reserve\")) {\n"
-            "        resolvedOut =\n"
-            "            preferredSoaHelperTargetForCollectionType(helperName, \"/soa_vector\");") !=
-        std::string::npos);
-  CHECK(semanticsStatementVectorResolutionSource.find(
-            "      if (collectionTypePath == \"/vector\") {\n"
-            "        resolvedOut = preferredBareVectorHelperTarget(helperName);") !=
-        std::string::npos);
-  CHECK(semanticsStatementVectorResolutionSource.find(
-            "if (vectorBinding.typeName == \"vector\") {\n"
-            "      resolvedOut = preferredBareVectorHelperTarget(helperName);") !=
-        std::string::npos);
-  CHECK(semanticsStatementVectorResolutionSource.find(
-            "resolvedOut = \"/std/collections/vector/\" + helperName;") ==
-        std::string::npos);
-  CHECK(semanticsStatementVectorResolutionSource.find(
-            "if (receiver.kind == Expr::Kind::Call && !receiver.isBinding) {") !=
-        std::string::npos);
-  CHECK(semanticsStatementVectorResolutionSource.find(
-            "if (receiver.kind == Expr::Kind::Call && !receiver.isBinding && !receiver.isMethodCall) {") ==
-        std::string::npos);
-  CHECK(semanticsStatementVectorResolutionSource.find(
-            "matchesVectorCtorPath(\"/std/collections/vector/vector\")") ==
-        std::string::npos);
-  CHECK(semanticsStatementVectorResolutionSource.find(
-            "matchesVectorCtorPath(\"/std/collections/experimental_vector/vector\")") ==
-        std::string::npos);
-  CHECK(semanticsStatementVectorResolutionSource.find(
-            "return failExprDiagnostic(receiver, std::move(message));") !=
-        std::string::npos);
-  CHECK(semanticsStatementVectorResolutionSource.find(
-            "return failExprDiagnostic(arg, std::move(message));") !=
-        std::string::npos);
-  CHECK(semanticsStatementVectorResolutionSource.find(
-            "return failExprDiagnostic(target, std::move(message));") !=
+  CHECK(semanticsCollectionHelperRewritesSource.find("resolveVectorStatementHelperTargetPath(") ==
         std::string::npos);
   CHECK(semanticsStatementReturnsSource.find(
             "auto failReturnDiagnostic = [&](std::string message) -> bool {") !=

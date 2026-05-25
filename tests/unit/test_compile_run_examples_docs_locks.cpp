@@ -661,11 +661,13 @@ TEST_CASE("vector map bridge boundary docs stay source locked") {
   CHECK(todo.find("map2 replacement candidate") == std::string::npos);
   CHECK(todo.find("- TODO-4571: Add compiler-knowledge inventory for map/vector | track: collection-audit") ==
         std::string::npos);
-  CHECK(todo.find("- TODO-4572: Remove vector statement-helper compiler path | track: vector-special-case-deletion") !=
+  CHECK(todo.find("- TODO-4572: Remove vector statement-helper compiler path | track: vector-special-case-deletion") ==
         std::string::npos);
   CHECK(todo.find("- TODO-4573: Remove compiler-owned map literal lowering | track: map-special-case-deletion") ==
         std::string::npos);
   CHECK(todo.find("- TODO-4575: Remove map helper/access compiler classifiers | track: map-special-case-deletion") !=
+        std::string::npos);
+  CHECK(todo.find("- TODO-4574: Remove vector count/access compiler classifiers | track: vector-helper-classifier-deletion") !=
         std::string::npos);
   CHECK(todo.find("Map/vector compiler-independence: TODO-4570 retired the duplicate `map2`\n"
                   "  surface, TODO-4571 added the compiler-knowledge inventory categories") !=
@@ -730,11 +732,12 @@ TEST_CASE("stdlib de-experimentalization policy docs stay source locked") {
         std::string::npos);
   CHECK(primeStructDoc.find("| `/std/collections/internal_buffer_checked/*` | Internal substrate/helper namespace | Explicitly internal checked buffer plumbing for container conformance and memory-wrapper flows, not a stable user-facing stdlib API. | none |") !=
         std::string::npos);
-  CHECK(primeStructDoc.find("Explicit canonical statement calls to\n"
-                            "    `/std/collections/vector/push`, `pop`, `reserve`, `clear`, `remove_at`,") !=
+  CHECK(primeStructDoc.find("Canonical and bare statement calls to vector mutators such\n"
+                            "    as `push`, `pop`, `reserve`, `clear`, `remove_at`, and `remove_swap`") !=
         std::string::npos);
-  CHECK(primeStructDoc.find("fall through to visible `.prime` helper definitions\n"
-                            "    instead of the vector statement-helper emitter") !=
+  CHECK(primeStructDoc.find("resolve through visible `.prime` helper definitions and deterministic\n"
+                            "    missing-import diagnostics instead of a compiler-owned vector\n"
+                            "    statement-helper emitter") !=
         std::string::npos);
   CHECK(primeStructDoc.find("Wrapper-layer\n"
                             "    `/std/collections/vectorPush`-style mutator aliases are removed from the") !=
@@ -1822,11 +1825,13 @@ TEST_CASE("todo queue and skipped doctest debt stay source locked") {
   CHECK(todo.find("map2 replacement candidate") == std::string::npos);
   CHECK(todo.find("- TODO-4571: Add compiler-knowledge inventory for map/vector | track: collection-audit") ==
         std::string::npos);
-  CHECK(todo.find("- TODO-4572: Remove vector statement-helper compiler path | track: vector-special-case-deletion") !=
+  CHECK(todo.find("- TODO-4572: Remove vector statement-helper compiler path | track: vector-special-case-deletion") ==
         std::string::npos);
   CHECK(todo.find("- TODO-4573: Remove compiler-owned map literal lowering | track: map-special-case-deletion") ==
         std::string::npos);
   CHECK(todo.find("- TODO-4575: Remove map helper/access compiler classifiers | track: map-special-case-deletion") !=
+        std::string::npos);
+  CHECK(todo.find("- TODO-4574: Remove vector count/access compiler classifiers | track: vector-helper-classifier-deletion") !=
         std::string::npos);
   CHECK(todo.find("### Immediate Next 10\n\n"
                   "- TODO-4590: Add international text shaping and glyph atlas path") !=
@@ -1877,6 +1882,8 @@ TEST_CASE("todo queue and skipped doctest debt stay source locked") {
   CHECK(todoFinished.find("TODO-4571: Add compiler-knowledge inventory for map/vector") !=
         std::string::npos);
   CHECK(todoFinished.find("TODO-4573: Remove compiler-owned map literal lowering") !=
+        std::string::npos);
+  CHECK(todoFinished.find("TODO-4572: Remove vector statement-helper compiler path") !=
         std::string::npos);
   CHECK(todo.find("- TODO-4570: Retire duplicate map2 candidate surface") ==
         std::string::npos);

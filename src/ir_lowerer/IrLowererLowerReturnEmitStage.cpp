@@ -87,11 +87,6 @@ bool runLowerReturnEmitStage(const LowerReturnEmitStageInput &input,
   auto &emitPointerIndexOutOfBounds = runtimeErrorEmitters.emitPointerIndexOutOfBounds;
   auto &emitStringIndexOutOfBounds = runtimeErrorEmitters.emitStringIndexOutOfBounds;
   auto &emitMapKeyNotFound = runtimeErrorEmitters.emitMapKeyNotFound;
-  auto &emitVectorIndexOutOfBounds = runtimeErrorEmitters.emitVectorIndexOutOfBounds;
-  auto &emitVectorPopOnEmpty = runtimeErrorEmitters.emitVectorPopOnEmpty;
-  auto &emitVectorCapacityExceeded = runtimeErrorEmitters.emitVectorCapacityExceeded;
-  auto &emitVectorReserveNegative = runtimeErrorEmitters.emitVectorReserveNegative;
-  auto &emitVectorReserveExceeded = runtimeErrorEmitters.emitVectorReserveExceeded;
   auto &emitLoopCountNegative = runtimeErrorEmitters.emitLoopCountNegative;
   auto &emitPowNegativeExponent = runtimeErrorEmitters.emitPowNegativeExponent;
   auto &emitFloatToIntNonFinite = runtimeErrorEmitters.emitFloatToIntNonFinite;
@@ -242,38 +237,12 @@ bool runLowerReturnEmitStage(const LowerReturnEmitStageInput &input,
             .semanticIndex = &callResolutionAdapters.semanticProductTargets.semanticIndex,
             .inferExprKind =
                 [&](const Expr &valueExpr, const LocalMap &valueLocals) { return inferExprKind(valueExpr, valueLocals); },
-            .inferStructExprPath =
-                [&](const Expr &valueExpr, const LocalMap &valueLocals) {
-                  return inferStructExprPath(valueExpr, valueLocals);
-                },
             .emitExpr = [&](const Expr &valueExpr, const LocalMap &valueLocals) { return emitExpr(valueExpr, valueLocals); },
             .allocTempLocal = [&]() { return allocTempLocal(); },
             .resolveExprPath = [&](const Expr &valueExpr) { return resolveExprPath(valueExpr); },
             .findDefinitionByPath = [&](const std::string &path) -> const Definition * {
               auto it = defMap.find(path);
               return it == defMap.end() ? nullptr : it->second;
-            },
-            .resolveDestroyHelperForStruct = [&](const std::string &structPath) -> const Definition * {
-              auto destroyIt = defMap.find(structPath + "/DestroyStack");
-              if (destroyIt != defMap.end()) {
-                return destroyIt->second;
-              }
-              destroyIt = defMap.find(structPath + "/Destroy");
-              if (destroyIt != defMap.end()) {
-                return destroyIt->second;
-              }
-              return nullptr;
-            },
-            .resolveMoveHelperForStruct = [&](const std::string &structPath) -> const Definition * {
-              auto moveIt = defMap.find(structPath + "/Move");
-              if (moveIt != defMap.end()) {
-                return moveIt->second;
-              }
-              moveIt = defMap.find(structPath + "/Copy");
-              if (moveIt != defMap.end()) {
-                return moveIt->second;
-              }
-              return nullptr;
             },
             .isArrayCountCall = [&](const Expr &callExpr, const LocalMap &callLocals) {
               return isArrayCountCall(callExpr, callLocals);
@@ -297,11 +266,6 @@ bool runLowerReturnEmitStage(const LowerReturnEmitStageInput &input,
                   return emitInlineDefinitionCall(callExpr, callee, callLocals, expectValue);
                 },
             .emitArrayIndexOutOfBounds = [&]() { emitArrayIndexOutOfBounds(); },
-            .emitVectorCapacityExceeded = [&]() { emitVectorCapacityExceeded(); },
-            .emitVectorPopOnEmpty = [&]() { emitVectorPopOnEmpty(); },
-            .emitVectorIndexOutOfBounds = [&]() { emitVectorIndexOutOfBounds(); },
-            .emitVectorReserveNegative = [&]() { emitVectorReserveNegative(); },
-            .emitVectorReserveExceeded = [&]() { emitVectorReserveExceeded(); },
             .instructions = &function.instructions,
         },
         stmt,

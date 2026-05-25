@@ -6938,50 +6938,54 @@ TEST_CASE("ir lowerer statement call emission source delegation stays stable") {
   REQUIRE(std::filesystem::exists(statementCallEmissionPath));
 
   const std::string source = readText(statementCallEmissionPath);
-  CHECK(source.find("#include \"primec/StdlibSurfaceRegistry.h\"") !=
+  CHECK(source.find("#include \"primec/StdlibSurfaceRegistry.h\"") ==
         std::string::npos);
-  CHECK(source.find("resolvePublishedStatementVectorHelperName(") !=
+  CHECK(source.find("resolvePublishedStatementCallVectorHelperName(") ==
         std::string::npos);
   CHECK(source.find("resolveStatementCallPathWithoutFallbackProbes(") !=
         std::string::npos);
-  CHECK(source.find("resolvePublishedStatementKeyValueHelperName(") !=
+  CHECK(source.find("resolvePublishedStatementKeyValueHelperName(") ==
         std::string::npos);
   CHECK(source.find("resolvePublishedStatementMapHelperName(") ==
         std::string::npos);
-  CHECK(source.find("resolvePublishedStdlibSurfaceExprMemberName(") !=
+  CHECK(source.find("resolvePublishedStdlibSurfaceExprMemberName(") ==
         std::string::npos);
-  CHECK(source.find("std::string helperName =\n        resolveStatementCallPathWithoutFallbackProbes(callExpr);") !=
+  CHECK(source.find("const std::string rawPath =\n        resolveStatementCallPathWithoutFallbackProbes(callExpr);") !=
         std::string::npos);
-  CHECK(source.find("std::string normalizedName =\n        resolveStatementCallPathWithoutFallbackProbes(stmt);") !=
+  CHECK(source.find("std::string normalizedName =\n        resolveStatementCallPathWithoutFallbackProbes(stmt);") ==
         std::string::npos);
-  CHECK(source.find("std::string directName = resolveStatementCallPathWithoutFallbackProbes(expr);") !=
+  CHECK(source.find("std::string directName = resolveStatementCallPathWithoutFallbackProbes(expr);") ==
         std::string::npos);
-  CHECK(source.find("std::string methodName = resolveStatementCallPathWithoutFallbackProbes(expr);") !=
+  CHECK(source.find("std::string methodName = resolveStatementCallPathWithoutFallbackProbes(expr);") ==
         std::string::npos);
-  CHECK(source.find("findStdlibSurfaceMetadataByResolvedPath(resolvedPath)") !=
+  CHECK(source.find("findStdlibSurfaceMetadataByResolvedPath(resolvedPath)") ==
         std::string::npos);
-  CHECK(source.find("const auto *vectorMetadata = statementVectorHelperMetadata();") !=
+  CHECK(source.find("const auto *vectorMetadata = statementCallVectorHelperMetadata();") ==
         std::string::npos);
-  CHECK(source.find("metadata->id != vectorMetadata->id") !=
+  CHECK(source.find("metadata->id != vectorMetadata->id") ==
         std::string::npos);
-  CHECK(source.find("const auto *keyValueMetadata = statementKeyValueHelperMetadata();") !=
+  CHECK(source.find("const auto *keyValueMetadata = statementKeyValueHelperMetadata();") ==
         std::string::npos);
-  CHECK(source.find("metadata->id != keyValueMetadata->id") !=
+  CHECK(source.find("metadata->id != keyValueMetadata->id") ==
         std::string::npos);
-  CHECK(source.find("matchesRegistrySpellingSet(metadata->loweringSpellings, resolvedPath)") !=
+  CHECK(source.find("matchesRegistrySpellingSet(metadata->loweringSpellings, resolvedPath)") ==
         std::string::npos);
   CHECK(source.find("isPublishedWrapperStatementVectorMutatorAliasPath(") ==
         std::string::npos);
   CHECK(source.find("explicitVectorMutatorHelperCall && !explicitWrapperVectorMutatorHelperPath") ==
         std::string::npos);
-  CHECK(source.find("explicitVectorHelperUsesBuiltinVectorReceiver") !=
+  CHECK(source.find("explicitVectorHelperUsesBuiltinVectorReceiver") ==
+        std::string::npos);
+  CHECK(source.find("tryEmitVectorHelperCallFormStatement(") ==
+        std::string::npos);
+  CHECK(source.find("rewriteBareVectorMethodMutatorToDirectCall") ==
         std::string::npos);
   CHECK(source.find("emitExperimentalVectorHeaderSetter") == std::string::npos);
   CHECK(source.find("resolveStatementExperimentalVectorReceiverFromSemanticFacts") ==
         std::string::npos);
-  CHECK(source.find("return resolvePublishedStatementVectorHelperName(expr.name, helperNameOut);") ==
+  CHECK(source.find("return resolvePublishedStatementCallVectorHelperName(expr.name, helperNameOut);") ==
         std::string::npos);
-  CHECK(source.find("std::string helperName = callExpr.name;") !=
+  CHECK(source.find("std::string helperName = callExpr.name;") ==
         std::string::npos);
   CHECK(source.find("std::string normalizedName = stmt.name;") ==
         std::string::npos);

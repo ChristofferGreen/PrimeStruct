@@ -392,6 +392,113 @@
   | failures: 10 of 11 map constructor semantics cases | notes: positives
   failed validation and negative cases still asserted old map-literal-specific
   diagnostics instead of ordinary helper resolution/type-checking errors.
+- 2026-05-26 00:35 CEST | pass | mode: release | command:
+  `cd build-release && ./PrimeStruct_compile_run_tests --test-case="vector map bridge boundary docs stay source locked,stdlib de-experimentalization policy docs stay source locked,todo queue and skipped doctest debt stay source locked,C++ emitter lowers stdlib namespaced vector mutator statement through imported helper,C++ emitter helper accepts canonical vector mutators without alias bridge,C++ emitter helper rejects rooted vector mutator aliases,rejects canonical namespaced vector mutators without imported helpers in C++ emitter,runs vm vector namespaced mutator alias,rejects vm canonical namespaced vector mutators without imported helpers,compiles and runs canonical vector indexed removal helpers with owned elements in native backend,runs native indexed vector removals with ownership semantics,rejects native canonical namespaced vector mutators without imported helpers" --no-skip`
+  | failures: none | notes: parent validation passed 12 cases and 625
+  assertions; the `/vector/push` diagnostic is expected rejection output.
+- 2026-05-26 00:35 CEST | pass | mode: release | command:
+  `cd build-release && ./PrimeStruct_backend_ir_tests --test-case="ir lowerer statement call helper validates direct-call diagnostics,ir lowerer statement call helper emits semantic direct void helpers as statements,ir lowerer statement call helper does not pop direct struct statements,ir lowerer call helpers source delegation stays stable,ir lowerer statement call emission source delegation stays stable,ir lowerer statement calls step receives semantic product adapters,stdlib surface metadata classifies collection helper categories,semantics validator infer source delegation stays stable,semantics validator statement source delegation stays stable,semantics validator expr source delegation stays stable,cmake splits primec library into subsystem targets" --no-skip`
+  | failures: none | notes: parent validation passed 10 cases and 1270
+  assertions after the direct-call diagnostic source-lock update.
+- 2026-05-26 00:35 CEST | pass | mode: release | command:
+  `cmake --build build-release --target primec PrimeStruct_backend_ir_tests PrimeStruct_compile_run_tests -j 1`
+  | failures: none | notes: parent validation rebuilt the focused TODO-4572
+  targets before the backend IR and compile-run reruns.
+- 2026-05-26 00:03 CEST | fail | mode: release | command:
+  `cd build-release && ./PrimeStruct_backend_ir_tests --test-case="ir lowerer statement call helper validates direct-call diagnostics,ir lowerer statement call helper emits semantic direct void helpers as statements,ir lowerer statement call helper does not pop direct struct statements,ir lowerer call helpers source delegation stays stable,ir lowerer statement call emission source delegation stays stable,ir lowerer statement calls step receives semantic product adapters,stdlib surface metadata classifies collection helper categories,semantics validator infer source delegation stays stable,semantics validator statement source delegation stays stable,semantics validator expr source delegation stays stable,cmake splits primec library into subsystem targets" --no-skip`
+  | failures: 1 backend IR case | notes: parent validation reported
+  `ir lowerer statement call helper validates direct-call diagnostics`
+  expected one definition probe, but direct generated-definition fallback now
+  makes two probes after the SoA method miss.
+- 2026-05-26 00:03 CEST | pass | mode: release | command:
+  `cmake --build build-release --target primec PrimeStruct_backend_ir_tests PrimeStruct_compile_run_tests -j 1`
+  | failures: none | notes: parent validation rebuilt the focused targets
+  before the backend IR rerun.
+- 2026-05-26 00:00 CEST | fail | mode: release | command:
+  `cd build-release && ./PrimeStruct_compile_run_tests --test-case="vector map bridge boundary docs stay source locked,stdlib de-experimentalization policy docs stay source locked,todo queue and skipped doctest debt stay source locked,C++ emitter lowers stdlib namespaced vector mutator statement through imported helper,C++ emitter helper accepts canonical vector mutators without alias bridge,C++ emitter helper rejects rooted vector mutator aliases,rejects canonical namespaced vector mutators without imported helpers in C++ emitter,runs vm vector namespaced mutator alias,rejects vm canonical namespaced vector mutators without imported helpers,compiles and runs canonical vector indexed removal helpers with owned elements in native backend,runs native indexed vector removals with ownership semantics,rejects native canonical namespaced vector mutators without imported helpers" --no-skip`
+  | failures: 2 compile-run cases | notes: parent validation reported
+  native stack validation failures at `Pop` instructions in the indexed
+  removal ownership fixtures; direct struct statement lowering now has a
+  source fix pending parent rebuild.
+- 2026-05-26 00:00 CEST | pass | mode: release | command:
+  `cmake --build build-release --target primec PrimeStruct_backend_ir_tests PrimeStruct_compile_run_tests -j 1`;
+  `cd build-release && ./PrimeStruct_backend_ir_tests --test-case="ir lowerer call helpers source delegation stays stable,ir lowerer statement call emission source delegation stays stable,ir lowerer statement calls step receives semantic product adapters,stdlib surface metadata classifies collection helper categories,semantics validator infer source delegation stays stable,semantics validator statement source delegation stays stable,semantics validator expr source delegation stays stable,cmake splits primec library into subsystem targets" --no-skip`
+  | failures: none | notes: parent validation confirmed the build and
+  backend/source-delegation slice still pass before the compile-run failure.
+- 2026-05-25 23:47 CEST | pass | mode: release | command:
+  `cd build-release && ./PrimeStruct_semantics_tests --test-case="bare vector remove_at validates through imported stdlib helper,bare vector remove_swap validates through imported stdlib helper,remove_at accepts ownership-sensitive vector element types once survivor motion is wired,remove_swap accepts ownership-sensitive vector element types once survivor motion is wired" --no-skip`
+  | failures: none | notes: parent validation passed 4 cases and 8
+  assertions after widening the template monomorph vector helper allow-list.
+- 2026-05-25 23:47 CEST | pass | mode: release | command:
+  `cmake --build build-release --target primec PrimeStruct_semantics_tests -j 1`
+  | failures: none | notes: parent validation rebuilt the changed
+  template monomorph header users before the focused semantics rerun.
+- 2026-05-25 23:37 CEST | fail | mode: release | command:
+  `cd build-release && ./PrimeStruct_semantics_tests --test-case="bare vector remove_at validates through imported stdlib helper,bare vector remove_swap validates through imported stdlib helper,remove_at accepts ownership-sensitive vector element types once survivor motion is wired,remove_swap accepts ownership-sensitive vector element types once survivor motion is wired" --no-skip`
+  | failures: 4 semantics cases | notes: parent validation still reported
+  unknown call target for imported bare `remove_at` and `remove_swap` after
+  rebuilding `SemanticsValidatorExprVectorHelpers.cpp`.
+- 2026-05-25 23:37 CEST | pass | mode: release | command:
+  `cmake --build build-release --target primec PrimeStruct_semantics_tests -j 1`
+  | failures: none | notes: parent validation rebuilt the changed vector
+  helper object before the focused semantics rerun.
+- 2026-05-25 23:32 CEST | fail | mode: release | command:
+  `cd build-release && ./PrimeStruct_semantics_tests --test-case="bare vector remove_at validates through imported stdlib helper,bare vector remove_swap validates through imported stdlib helper,remove_at accepts ownership-sensitive vector element types once survivor motion is wired,remove_swap accepts ownership-sensitive vector element types once survivor motion is wired" --no-skip`
+  | failures: 4 semantics cases | notes: parent validation reported
+  unknown call target for imported bare `remove_at` and `remove_swap`.
+- 2026-05-25 23:32 CEST | pass | mode: release | command:
+  `cmake --build build-release --target primec PrimeStruct_backend_ir_tests PrimeStruct_semantics_tests PrimeStruct_compile_run_tests -j 1`
+  | failures: none | notes: parent validation confirmed the combined
+  focused build still passed before the semantics rerun.
+- 2026-05-25 23:21 CEST | fail | mode: release | command:
+  `cd build-release && ./PrimeStruct_semantics_tests --test-case="bare vector remove_at validates through imported stdlib helper,bare vector remove_swap validates through imported stdlib helper,remove_at accepts ownership-sensitive vector element types once survivor motion is wired,remove_swap accepts ownership-sensitive vector element types once survivor motion is wired" --no-skip`
+  | failures: 3 semantics cases | notes: parent validation reported
+  imported bare `remove_at`/`remove_swap` statement positives failing; the
+  requested `bare vector remove_at validates through imported stdlib helper`
+  name was absent from the test source and has been added.
+- 2026-05-25 23:21 CEST | pass | mode: release | command:
+  `cmake --build build-release --target primec PrimeStruct_backend_ir_tests PrimeStruct_semantics_tests PrimeStruct_compile_run_tests -j 1`
+  | failures: none | notes: parent validation confirmed the combined
+  focused build passed before the semantics rerun.
+- 2026-05-25 22:53 CEST | fail | mode: release | command:
+  `cd build-release && ./PrimeStruct_compile_run_tests --test-case="vector map bridge boundary docs stay source locked,stdlib de-experimentalization policy docs stay source locked,todo queue and skipped doctest debt stay source locked,C++ emitter lowers stdlib namespaced vector mutator statement through imported helper,C++ emitter helper accepts canonical vector mutators without alias bridge,C++ emitter helper rejects rooted vector mutator aliases,rejects canonical namespaced vector mutators without imported helpers in C++ emitter,runs vm vector namespaced mutator alias,rejects vm canonical namespaced vector mutators without imported helpers,compiles and runs canonical vector indexed removal helpers with owned elements in native backend,runs native indexed vector removals with ownership semantics,rejects native canonical namespaced vector mutators without imported helpers" --no-skip`
+  | failures: 2 compile-run cases | notes: C++ stdlib push path now passed;
+  native canonical indexed removal still used unsupported object vector
+  literals, and native ownership removal fixtures used bare
+  `remove_at`/`remove_swap` statements.
+- 2026-05-25 22:53 CEST | pass | mode: release | command:
+  `cmake --build build-release --target primec PrimeStruct_backend_ir_tests PrimeStruct_compile_run_tests -j 1`;
+  `cd build-release && ./PrimeStruct_backend_ir_tests --test-case="ir lowerer call helpers source delegation stays stable,ir lowerer statement call emission source delegation stays stable,ir lowerer statement calls step receives semantic product adapters,stdlib surface metadata classifies collection helper categories,semantics validator infer source delegation stays stable,semantics validator statement source delegation stays stable,semantics validator expr source delegation stays stable,cmake splits primec library into subsystem targets" --no-skip`
+  | failures: none | notes: parent validation confirmed the combined build
+  and backend IR/source-lock window passed after removing remaining statement
+  vector helper lowerer paths.
+- 2026-05-25 22:45 CEST | fail | mode: release | command:
+  `cd build-release && ./PrimeStruct_compile_run_tests --test-case="vector map bridge boundary docs stay source locked,stdlib de-experimentalization policy docs stay source locked,todo queue and skipped doctest debt stay source locked,C++ emitter lowers stdlib namespaced vector mutator statement through imported helper,C++ emitter helper accepts canonical vector mutators without alias bridge,C++ emitter helper rejects rooted vector mutator aliases,rejects canonical namespaced vector mutators without imported helpers in C++ emitter,runs vm vector namespaced mutator alias,rejects vm canonical namespaced vector mutators without imported helpers,compiles and runs canonical vector indexed removal helpers with owned elements in native backend,runs native indexed vector removals with ownership semantics,rejects native canonical namespaced vector mutators without imported helpers" --no-skip`
+  | failures: 3 compile-run cases | notes: explicit stdlib push hit void
+  expression lowering; native indexed removal fixtures reported unknown
+  `remove_at`/`push` after vector statement-helper deletion.
+- 2026-05-25 22:45 CEST | pass | mode: release | command:
+  `cmake --build build-release --target PrimeStruct_compile_run_tests -j 1`
+  | failures: none | notes: parent validation rebuilt compile-run tests
+  before the focused vector mutator rerun.
+- 2026-05-25 22:45 CEST | pass | mode: release | command:
+  `cmake --build build-release --target PrimeStruct_backend_ir_tests -j 1`;
+  `cd build-release && ./PrimeStruct_backend_ir_tests --test-case="ir lowerer call helpers source delegation stays stable,ir lowerer statement call emission source delegation stays stable,ir lowerer statement calls step receives semantic product adapters,stdlib surface metadata classifies collection helper categories,semantics validator infer source delegation stays stable,semantics validator statement source delegation stays stable,semantics validator expr source delegation stays stable,cmake splits primec library into subsystem targets" --no-skip`
+  | failures: none | notes: parent validation confirmed the updated
+  backend IR/source-lock window passed 7 cases and 1240 assertions.
+- 2026-05-25 22:33 CEST | fail | mode: release | command:
+  `cd build-release && ./PrimeStruct_backend_ir_tests --test-case="ir lowerer call helpers source delegation stays stable,ir lowerer statement call emission source delegation stays stable,ir lowerer statement calls step receives semantic product adapters,stdlib surface metadata classifies collection helper categories,semantics validator infer source delegation stays stable,semantics validator statement source delegation stays stable,semantics validator expr source delegation stays stable,cmake splits primec library into subsystem targets" --no-skip`
+  | failures: 3 source-lock cases | notes: stale assertions expected removed
+  vector statement-helper strings and old map/key-value helper names.
+- 2026-05-25 22:33 CEST | pass | mode: release | command:
+  `cmake --build build-release --target primec PrimeStruct_backend_ir_tests PrimeStruct_compile_run_tests -j 1`
+  | failures: none | notes: parent validation confirmed the prior unused
+  lowerer bindings no longer block compilation.
+- 2026-05-25 21:27 CEST | fail | mode: release | command:
+  `cmake --build build-release --target primec PrimeStruct_backend_ir_tests PrimeStruct_compile_run_tests -j 1`
+  | failures: primec_ir_lib build | notes: parent validation stopped on
+  warnings-as-errors for unused vector statement-helper leftovers in lowerer
+  return/emit-expression sources.
 - 2026-05-25 05:31 CEST | pass | mode: release | command:
   `cmake --build build-release --target primec PrimeStruct_misc_tests PrimeStruct_compile_run_tests -j 1`;
   `cd build-release && ./PrimeStruct_misc_tests --test-suite=primestruct.imports.resolver --order-by=file`;
@@ -8528,6 +8635,39 @@
   | notes: parent validation passed 11 focused map constructor cases after
   constructor sources were retargeted to ordinary fully qualified stdlib helper
   calls.
+- [x] TODO-4572 focused compile-run vector mutators | resolved:
+  2026-05-26 00:35 CEST | validating command:
+  `cmake --build build-release --target primec PrimeStruct_backend_ir_tests PrimeStruct_compile_run_tests -j 1`;
+  `cd build-release && ./PrimeStruct_compile_run_tests --test-case="vector map bridge boundary docs stay source locked,stdlib de-experimentalization policy docs stay source locked,todo queue and skipped doctest debt stay source locked,C++ emitter lowers stdlib namespaced vector mutator statement through imported helper,C++ emitter helper accepts canonical vector mutators without alias bridge,C++ emitter helper rejects rooted vector mutator aliases,rejects canonical namespaced vector mutators without imported helpers in C++ emitter,runs vm vector namespaced mutator alias,rejects vm canonical namespaced vector mutators without imported helpers,compiles and runs canonical vector indexed removal helpers with owned elements in native backend,runs native indexed vector removals with ownership semantics,rejects native canonical namespaced vector mutators without imported helpers" --no-skip`
+  | notes: parent validation passed 12 cases and 625 assertions after
+  retargeting the native ownership survivor checks away from public vector
+  access helpers and through imported/internal stdlib helper behavior.
+- [x] TODO-4572 focused backend IR source locks | resolved:
+  2026-05-26 00:35 CEST | validating command:
+  `cmake --build build-release --target primec PrimeStruct_backend_ir_tests PrimeStruct_compile_run_tests -j 1`;
+  `cd build-release && ./PrimeStruct_backend_ir_tests --test-case="ir lowerer statement call helper validates direct-call diagnostics,ir lowerer statement call helper emits semantic direct void helpers as statements,ir lowerer statement call helper does not pop direct struct statements,ir lowerer call helpers source delegation stays stable,ir lowerer statement call emission source delegation stays stable,ir lowerer statement calls step receives semantic product adapters,stdlib surface metadata classifies collection helper categories,semantics validator infer source delegation stays stable,semantics validator statement source delegation stays stable,semantics validator expr source delegation stays stable,cmake splits primec library into subsystem targets" --no-skip`
+  | notes: parent validation passed 10 cases and 1270 assertions after
+  updating the direct-call diagnostic expectation.
+- [x] TODO-4572 focused semantics vector mutators | resolved:
+  2026-05-25 23:47 CEST | validating command:
+  `cmake --build build-release --target primec PrimeStruct_semantics_tests -j 1`;
+  `cd build-release && ./PrimeStruct_semantics_tests --test-case="bare vector remove_at validates through imported stdlib helper,bare vector remove_swap validates through imported stdlib helper,remove_at accepts ownership-sensitive vector element types once survivor motion is wired,remove_swap accepts ownership-sensitive vector element types once survivor motion is wired" --no-skip`
+  | notes: parent validation passed after widening template monomorph
+  vector helper bare-call rewriting for `pop`, `clear`, `remove_at`, and
+  `remove_swap`.
+- [x] TODO-4572 focused backend IR source locks | resolved:
+  2026-05-25 22:45 CEST | validating command:
+  `cmake --build build-release --target PrimeStruct_backend_ir_tests -j 1`;
+  `cd build-release && ./PrimeStruct_backend_ir_tests --test-case="ir lowerer call helpers source delegation stays stable,ir lowerer statement call emission source delegation stays stable,ir lowerer statement calls step receives semantic product adapters,stdlib surface metadata classifies collection helper categories,semantics validator infer source delegation stays stable,semantics validator statement source delegation stays stable,semantics validator expr source delegation stays stable,cmake splits primec library into subsystem targets" --no-skip`
+  | notes: parent validation passed after updating stale source-lock
+  expectations for the deleted vector statement-helper path and helper
+  renames.
+- [x] TODO-4572 focused release build | resolved: 2026-05-25 22:33 CEST |
+  validating command:
+  `cmake --build build-release --target primec PrimeStruct_backend_ir_tests PrimeStruct_compile_run_tests -j 1`
+  | notes: parent validation passed after removing unused vector
+  statement-helper leftovers from `IrLowererLowerEmitExpr.h` and
+  `IrLowererLowerReturnEmitStage.cpp`.
 - [x] runs vm shared stdlib map conformance harness | resolved:
   2026-05-25 05:09 CEST | validating command:
   `cmake --build build-release --target PrimeStruct_compile_run_tests -j 1 && cd build-release && ./PrimeStruct_compile_run_tests --test-case="runs vm shared stdlib map conformance harness" --no-skip`;

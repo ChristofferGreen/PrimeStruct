@@ -1396,7 +1396,7 @@
             "bool failedReceiverProbe = false;") !=
         std::string::npos);
   CHECK(semanticsExprVectorHelpersSource.find(
-            "if (isBareVectorMutatorExpressionReceiver(receiverCandidate)) {\n"
+            "if (isBareVectorMutatorExpressionReceiver(receiverCandidate) && !allowStatementOnlyMutator) {\n"
             "        failedReceiverProbe = true;\n"
             "        return failVectorHelperDiagnostic(\n"
             "            vectorHelper + \" is only supported as a statement\");\n"

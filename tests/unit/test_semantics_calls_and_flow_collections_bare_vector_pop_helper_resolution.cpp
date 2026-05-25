@@ -317,6 +317,23 @@ main() {
   CHECK(error.find("unknown call target: /std/collections/vector/remove_at") != std::string::npos);
 }
 
+TEST_CASE("bare vector remove_at validates through imported stdlib helper") {
+  const std::string source = R"(
+import /std/collections/*
+
+[effects(heap_alloc), return<int>]
+main() {
+  [vector<i32> mut] values{vector<i32>(1i32, 2i32)}
+  remove_at(values, 1i32)
+  return(0i32)
+}
+)";
+  std::string error;
+  CAPTURE(error);
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
+}
+
 TEST_CASE("remove_at accepts ownership-sensitive vector element types once survivor motion is wired") {
   const std::string source = R"(
 import /std/collections/*
@@ -339,6 +356,7 @@ main() {
 }
 )";
   std::string error;
+  CAPTURE(error);
   CHECK(validateProgram(source, "/main", error));
   CHECK(error.empty());
 }
@@ -372,6 +390,7 @@ main() {
 }
 )";
   std::string error;
+  CAPTURE(error);
   CHECK(validateProgram(source, "/main", error));
   CHECK(error.empty());
 }
@@ -515,6 +534,7 @@ main() {
 }
 )";
   std::string error;
+  CAPTURE(error);
   CHECK(validateProgram(source, "/main", error));
   CHECK(error.empty());
 }
@@ -548,6 +568,7 @@ main() {
 }
 )";
   std::string error;
+  CAPTURE(error);
   CHECK(validateProgram(source, "/main", error));
   CHECK(error.empty());
 }
@@ -564,6 +585,7 @@ main() {
 }
 )";
   std::string error;
+  CAPTURE(error);
   CHECK(validateProgram(source, "/main", error));
   CHECK(error.empty());
 }

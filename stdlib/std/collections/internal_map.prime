@@ -79,8 +79,8 @@ namespace std {
              /std/collections/internal_vector/vectorCount<T>(values))
          /std/collections/internal_buffer_checked/bufferFreeUninitialized<T>(values.data)
          assign(values.ownsData, false)
-         values.set_field_count(0i32)
-         values.set_field_capacity(0i32)
+         assign(values.fieldCount, 0i32)
+         assign(values.fieldCapacity, 0i32)
        },
        else() { })
   }

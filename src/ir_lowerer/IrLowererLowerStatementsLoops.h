@@ -386,18 +386,6 @@
             return "/std/collections/experimental_" +
                    std::string(collectionName) + "/";
           };
-      auto experimentalCollectionTypePath =
-          [&](std::string_view collectionName, std::string_view typeName) {
-            return experimentalCollectionMemberRoot(collectionName) +
-                   std::string(typeName);
-          };
-      auto matchesGeneratedSpecializedType =
-          [&](std::string_view path, std::string_view collectionName,
-              std::string_view typeName) {
-            const std::string typePath =
-                experimentalCollectionTypePath(collectionName, typeName);
-            return path.rfind(typePath + "__", 0) == 0;
-          };
       if (!stmt.isMethodCall &&
           stmt.name.rfind(experimentalCollectionMemberRoot("vector"), 0) == 0) {
         if (const Definition *callee = resolveDefinitionCall(stmt)) {
@@ -413,77 +401,5 @@
           }
           return true;
         }
-      }
-      const auto vectorHelperResult = ir_lowerer::tryEmitVectorStatementHelper(
-          stmt,
-          localsIn,
-          function.instructions,
-          [&]() { return allocTempLocal(); },
-          [&](const Expr &valueExpr, const LocalMap &valueLocals) { return inferExprKind(valueExpr, valueLocals); },
-          [&](const Expr &valueExpr, const LocalMap &valueLocals) {
-            return inferStructExprPath(valueExpr, valueLocals);
-          },
-          [&](const Expr &valueExpr, const LocalMap &valueLocals) { return emitExpr(valueExpr, valueLocals); },
-          [&](const std::string &structPath) -> const Definition * {
-            auto destroyIt = defMap.find(structPath + "/DestroyStack");
-            if (destroyIt != defMap.end()) {
-              return destroyIt->second;
-            }
-            destroyIt = defMap.find(structPath + "/Destroy");
-            if (destroyIt != defMap.end()) {
-              return destroyIt->second;
-            }
-            return nullptr;
-          },
-          [&](const std::string &structPath) -> const Definition * {
-            auto moveIt = defMap.find(structPath + "/Move");
-            if (moveIt != defMap.end()) {
-              return moveIt->second;
-            }
-            moveIt = defMap.find(structPath + "/Copy");
-            if (moveIt != defMap.end()) {
-              return moveIt->second;
-            }
-            return nullptr;
-          },
-          [&](const Expr &callExpr, const Definition &callee, const LocalMap &callLocals, bool requireValue) {
-            return emitInlineDefinitionCall(callExpr, callee, callLocals, requireValue);
-          },
-          [&](const Expr &candidate) {
-            if (candidate.isMethodCall && candidate.namespacePrefix.empty() &&
-                !candidate.args.empty() &&
-                (candidate.name == "push" || candidate.name == "pop" ||
-                 candidate.name == "reserve" || candidate.name == "clear" ||
-                 candidate.name == "remove_at" ||
-                 candidate.name == "remove_swap") &&
-                candidate.args.front().kind == Expr::Kind::Name) {
-              auto localIt = localsIn.find(candidate.args.front().name);
-              if (localIt != localsIn.end() && !localIt->second.isSoaVector &&
-                  (localIt->second.kind == LocalInfo::Kind::Vector ||
-                   localIt->second.structTypeName ==
-                       experimentalCollectionTypePath("vector", "Vector") ||
-                   matchesGeneratedSpecializedType(
-                       localIt->second.structTypeName, "vector", "Vector"))) {
-                return false;
-              }
-            }
-            if (candidate.isMethodCall && !isArrayCountCall(candidate, localsIn) &&
-                !isStringCountCall(candidate, localsIn) && !isVectorCapacityCall(candidate, localsIn)) {
-              return resolveMethodCallDefinition(candidate, localsIn) != nullptr;
-            }
-            return resolveDefinitionCall(candidate) != nullptr;
-          },
-          [&]() { emitVectorCapacityExceeded(); },
-          [&]() { emitVectorPopOnEmpty(); },
-          [&]() { emitVectorIndexOutOfBounds(); },
-          [&]() { emitArrayIndexOutOfBounds(); },
-          [&]() { emitVectorReserveNegative(); },
-          [&]() { emitVectorReserveExceeded(); },
-          error);
-      if (vectorHelperResult == ir_lowerer::VectorStatementHelperEmitResult::Error) {
-        return false;
-      }
-      if (vectorHelperResult == ir_lowerer::VectorStatementHelperEmitResult::Emitted) {
-        return true;
       }
     }

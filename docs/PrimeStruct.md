@@ -3385,10 +3385,11 @@ for(
     over that same backing constructor for `auto` bindings and temporary receiver flows, and imported named-argument
     legacy constructor-shaped canonical calls now resolve through same-path fixed-arity
     `/std/collections/vector/vector` overloads instead of helper-path rewrites for those same inferred and temporary
-    receiver cases. Explicit canonical statement calls to
-    `/std/collections/vector/push`, `pop`, `reserve`, `clear`, `remove_at`,
-    and `remove_swap` now fall through to visible `.prime` helper definitions
-    instead of the vector statement-helper emitter. Wrapper-layer
+    receiver cases. Canonical and bare statement calls to vector mutators such
+    as `push`, `pop`, `reserve`, `clear`, `remove_at`, and `remove_swap` now
+    resolve through visible `.prime` helper definitions and deterministic
+    missing-import diagnostics instead of a compiler-owned vector
+    statement-helper emitter. Wrapper-layer
     `/std/collections/vectorPush`-style mutator aliases are removed from the
     public wrapper layer instead of rewriting back into raw builtin-vector
     emission.
@@ -4113,7 +4114,7 @@ re-defining it piecemeal.
   `stdlib/std/collections/surfaces.psmeta` and consumed by
   `StdlibSurfaceRegistry` through generic manifest loading. Production C++
   keeps the surface ids and registry APIs, but the canonical collection member
-  lists, import aliases, lowering spellings, and vector statement-helper subset
+  lists, import aliases, lowering spellings, and vector mutator helper subset
   live with the stdlib collection source. Old vector compatibility spellings are
   intentionally absent from that metadata; rooted helper aliases are removed,
   and direct experimental vector source imports are rejected by import

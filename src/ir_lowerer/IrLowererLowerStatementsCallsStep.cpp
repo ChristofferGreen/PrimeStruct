@@ -1,216 +1,6 @@
 #include "IrLowererLowerStatementsCallsStep.h"
 
-#include "IrLowererBindingTransformHelpers.h"
-#include "IrLowererBindingTypeHelpers.h"
-#include "IrLowererFlowHelpers.h"
-#include "IrLowererSemanticProductTargetAdapters.h"
-#include "IrLowererTemplateTypeParseHelpers.h"
-
-#include <string_view>
-
 namespace primec::ir_lowerer {
-
-namespace {
-
-enum class CallsStepVectorHelperReceiverFact {
-  Unknown,
-  Vector,
-  NonVector,
-};
-
-bool isCallsStepVectorMutatorMethod(const Expr &candidate) {
-  return candidate.isMethodCall && candidate.namespacePrefix.empty() &&
-         !candidate.args.empty() &&
-         (candidate.name == "push" || candidate.name == "pop" ||
-          candidate.name == "reserve" || candidate.name == "clear" ||
-          candidate.name == "remove_at" || candidate.name == "remove_swap") &&
-         candidate.args.front().kind == Expr::Kind::Name;
-}
-
-std::string stdCollectionsRoot(bool leadingSlash = true) {
-  return leadingSlash ? "/std/collections" : "std/collections";
-}
-
-std::string experimentalCollectionMemberRoot(std::string_view collectionName,
-                                             bool leadingSlash = true) {
-  return stdCollectionsRoot(leadingSlash) + "/experimental_" +
-         std::string(collectionName) + "/";
-}
-
-std::string experimentalCollectionTypePath(std::string_view collectionName,
-                                           std::string_view typeName,
-                                           bool leadingSlash = true) {
-  return experimentalCollectionMemberRoot(collectionName, leadingSlash) +
-         std::string(typeName);
-}
-
-std::string collectionWrapperAlias(std::string_view collectionName,
-                                   std::string_view suffix) {
-  return std::string(collectionName) + std::string(suffix);
-}
-
-bool matchesGeneratedSpecializedPath(std::string_view text,
-                                     const std::string &basePath) {
-  return text.rfind(basePath + "__", 0) == 0;
-}
-
-bool isCallsStepBuiltinVectorMutatorCall(const Expr &candidate) {
-  if (candidate.isMethodCall || candidate.name.empty()) {
-    return false;
-  }
-  std::string path = candidate.name;
-  if (path.find('/') == std::string::npos && !candidate.namespacePrefix.empty()) {
-    path = candidate.namespacePrefix == "/" ? "/" + path
-                                            : candidate.namespacePrefix + "/" + path;
-  }
-  if (!path.empty() && path.front() == '/') {
-    path.erase(path.begin());
-  }
-  const std::string experimentalPrefix = experimentalCollectionMemberRoot("vector", false);
-  const std::string internalPrefix = "std/collections/internal_vector/";
-  std::string leaf;
-  if (path.rfind(experimentalPrefix, 0) == 0) {
-    leaf = path.substr(experimentalPrefix.size());
-  } else if (path.rfind(internalPrefix, 0) == 0) {
-    leaf = path.substr(internalPrefix.size());
-  } else {
-    return false;
-  }
-  const size_t generatedSuffix = leaf.find("__");
-  if (generatedSuffix != std::string::npos) {
-    leaf.erase(generatedSuffix);
-  }
-  return leaf == collectionWrapperAlias("vector", "Push") ||
-         leaf == collectionWrapperAlias("vector", "Pop") ||
-         leaf == collectionWrapperAlias("vector", "Reserve") ||
-         leaf == collectionWrapperAlias("vector", "Clear") ||
-         leaf == collectionWrapperAlias("vector", "RemoveAt") ||
-         leaf == collectionWrapperAlias("vector", "RemoveSwap") ||
-         leaf == "push" || leaf == "pop" || leaf == "reserve" ||
-         leaf == "clear" || leaf == "remove_at" || leaf == "remove_swap";
-}
-
-bool isCallsStepExperimentalVectorTypeName(const std::string &typeName) {
-  const std::string normalized = trimTemplateTypeText(typeName);
-  const std::string vectorTypePath =
-      experimentalCollectionTypePath("vector", "Vector", false);
-  const std::string slashVectorTypePath =
-      experimentalCollectionTypePath("vector", "Vector");
-  return normalized == "Vector" ||
-         normalized == vectorTypePath ||
-         normalized == slashVectorTypePath ||
-         matchesGeneratedSpecializedPath(normalized, vectorTypePath) ||
-         matchesGeneratedSpecializedPath(normalized, slashVectorTypePath);
-}
-
-bool isCallsStepVectorTypeText(const std::string &typeText) {
-  std::string base;
-  std::string argText;
-  const std::string normalizedTypeText =
-      unwrapTopLevelUninitializedTypeText(trimTemplateTypeText(typeText));
-  if (splitTemplateTypeName(normalizedTypeText, base, argText)) {
-    const std::string normalizedBase =
-        normalizeCollectionBindingTypeName(trimTemplateTypeText(base));
-    if (normalizedBase == "Reference" || normalizedBase == "/Reference" ||
-        normalizedBase == "Pointer" || normalizedBase == "/Pointer") {
-      return isCallsStepVectorTypeText(argText);
-    }
-    return normalizedBase == "vector" ||
-           isCallsStepExperimentalVectorTypeName(trimTemplateTypeText(base));
-  }
-  return normalizeCollectionBindingTypeName(normalizedTypeText) == "vector" ||
-         isCallsStepExperimentalVectorTypeName(normalizedTypeText);
-}
-
-CallsStepVectorHelperReceiverFact classifyCallsStepVectorHelperReceiverTypeText(
-    const SemanticProgram *semanticProgram,
-    SymbolId typeTextId,
-    const std::string &typeText) {
-  const std::string resolvedTypeText =
-      resolveSemanticProductTypeText(semanticProgram, typeText, typeTextId);
-  return isCallsStepVectorTypeText(resolvedTypeText)
-             ? CallsStepVectorHelperReceiverFact::Vector
-             : CallsStepVectorHelperReceiverFact::NonVector;
-}
-
-CallsStepVectorHelperReceiverFact combineCallsStepVectorHelperReceiverFacts(
-    CallsStepVectorHelperReceiverFact lhs,
-    CallsStepVectorHelperReceiverFact rhs) {
-  if (lhs == CallsStepVectorHelperReceiverFact::Vector ||
-      rhs == CallsStepVectorHelperReceiverFact::Vector) {
-    return CallsStepVectorHelperReceiverFact::Vector;
-  }
-  if (lhs == CallsStepVectorHelperReceiverFact::NonVector ||
-      rhs == CallsStepVectorHelperReceiverFact::NonVector) {
-    return CallsStepVectorHelperReceiverFact::NonVector;
-  }
-  return CallsStepVectorHelperReceiverFact::Unknown;
-}
-
-CallsStepVectorHelperReceiverFact classifyCallsStepVectorHelperReceiverFromSemanticFacts(
-    const Expr &receiverExpr,
-    const SemanticProgram *semanticProgram,
-    const SemanticProductIndex *semanticIndex) {
-  if (semanticProgram == nullptr || semanticIndex == nullptr ||
-      receiverExpr.semanticNodeId == 0) {
-    return CallsStepVectorHelperReceiverFact::Unknown;
-  }
-
-  if (const auto *collectionFact =
-          findSemanticProductCollectionSpecialization(*semanticIndex, receiverExpr);
-      collectionFact != nullptr) {
-    const std::string collectionFamily =
-        resolveSemanticProductTypeText(semanticProgram,
-                                       collectionFact->collectionFamily,
-                                       collectionFact->collectionFamilyId);
-    return normalizeCollectionBindingTypeName(collectionFamily) == "vector" ||
-                   isCallsStepVectorTypeText(collectionFamily)
-               ? CallsStepVectorHelperReceiverFact::Vector
-               : CallsStepVectorHelperReceiverFact::NonVector;
-  }
-
-  if (const auto *queryFact =
-          findSemanticProductQueryFact(semanticProgram, *semanticIndex, receiverExpr);
-      queryFact != nullptr) {
-    CallsStepVectorHelperReceiverFact fact =
-        classifyCallsStepVectorHelperReceiverTypeText(semanticProgram,
-                                                      queryFact->bindingTypeTextId,
-                                                      queryFact->bindingTypeText);
-    fact = combineCallsStepVectorHelperReceiverFacts(
-        fact,
-        classifyCallsStepVectorHelperReceiverTypeText(semanticProgram,
-                                                      queryFact->queryTypeTextId,
-                                                      queryFact->queryTypeText));
-    return combineCallsStepVectorHelperReceiverFacts(
-        fact,
-        classifyCallsStepVectorHelperReceiverTypeText(
-            semanticProgram,
-            queryFact->receiverBindingTypeTextId,
-            queryFact->receiverBindingTypeText));
-  }
-
-  if (const auto *bindingFact =
-          findSemanticProductBindingFact(*semanticIndex, receiverExpr);
-      bindingFact != nullptr) {
-    return classifyCallsStepVectorHelperReceiverTypeText(
-        semanticProgram,
-        bindingFact->bindingTypeTextId,
-        bindingFact->bindingTypeText);
-  }
-
-  if (const auto *localAutoFact =
-          findSemanticProductLocalAutoFact(semanticProgram, *semanticIndex, receiverExpr);
-      localAutoFact != nullptr) {
-    return classifyCallsStepVectorHelperReceiverTypeText(
-        semanticProgram,
-        localAutoFact->bindingTypeTextId,
-        localAutoFact->bindingTypeText);
-  }
-
-  return CallsStepVectorHelperReceiverFact::Unknown;
-}
-
-} // namespace
 
 bool runLowerStatementsCallsStep(const LowerStatementsCallsStepInput &input,
                                  const Expr &stmt,
@@ -218,10 +8,6 @@ bool runLowerStatementsCallsStep(const LowerStatementsCallsStepInput &input,
                                  std::string &errorOut) {
   if (!input.inferExprKind) {
     errorOut = "native backend missing statements/calls step dependency: inferExprKind";
-    return false;
-  }
-  if (!input.inferStructExprPath) {
-    errorOut = "native backend missing statements/calls step dependency: inferStructExprPath";
     return false;
   }
   if (!input.emitExpr) {
@@ -238,14 +24,6 @@ bool runLowerStatementsCallsStep(const LowerStatementsCallsStepInput &input,
   }
   if (!input.findDefinitionByPath) {
     errorOut = "native backend missing statements/calls step dependency: findDefinitionByPath";
-    return false;
-  }
-  if (!input.resolveDestroyHelperForStruct) {
-    errorOut = "native backend missing statements/calls step dependency: resolveDestroyHelperForStruct";
-    return false;
-  }
-  if (!input.resolveMoveHelperForStruct) {
-    errorOut = "native backend missing statements/calls step dependency: resolveMoveHelperForStruct";
     return false;
   }
   if (!input.isArrayCountCall) {
@@ -278,26 +56,6 @@ bool runLowerStatementsCallsStep(const LowerStatementsCallsStepInput &input,
   }
   if (!input.emitArrayIndexOutOfBounds) {
     errorOut = "native backend missing statements/calls step dependency: emitArrayIndexOutOfBounds";
-    return false;
-  }
-  if (!input.emitVectorCapacityExceeded) {
-    errorOut = "native backend missing statements/calls step dependency: emitVectorCapacityExceeded";
-    return false;
-  }
-  if (!input.emitVectorPopOnEmpty) {
-    errorOut = "native backend missing statements/calls step dependency: emitVectorPopOnEmpty";
-    return false;
-  }
-  if (!input.emitVectorIndexOutOfBounds) {
-    errorOut = "native backend missing statements/calls step dependency: emitVectorIndexOutOfBounds";
-    return false;
-  }
-  if (!input.emitVectorReserveNegative) {
-    errorOut = "native backend missing statements/calls step dependency: emitVectorReserveNegative";
-    return false;
-  }
-  if (!input.emitVectorReserveExceeded) {
-    errorOut = "native backend missing statements/calls step dependency: emitVectorReserveExceeded";
     return false;
   }
   if (input.instructions == nullptr) {
@@ -342,76 +100,6 @@ bool runLowerStatementsCallsStep(const LowerStatementsCallsStepInput &input,
     return false;
   }
   if (dispatchResult == DispatchStatementEmitResult::Emitted) {
-    return true;
-  }
-
-  const auto vectorHelperResult = tryEmitVectorStatementHelper(
-      stmt,
-      localsIn,
-      instructions,
-      [&]() { return input.allocTempLocal(); },
-      [&](const Expr &valueExpr, const LocalMap &valueLocals) {
-        return input.inferExprKind(valueExpr, valueLocals);
-      },
-      [&](const Expr &valueExpr, const LocalMap &valueLocals) {
-        return input.inferStructExprPath(valueExpr, valueLocals);
-      },
-      [&](const Expr &valueExpr, const LocalMap &valueLocals) {
-        return input.emitExpr(valueExpr, valueLocals);
-      },
-      [&](const std::string &structPath) {
-        return input.resolveDestroyHelperForStruct(structPath);
-      },
-      [&](const std::string &structPath) {
-        return input.resolveMoveHelperForStruct(structPath);
-      },
-      [&](const Expr &callExpr, const Definition &callee, const LocalMap &callLocals, bool requireValue) {
-        return input.emitInlineDefinitionCall(callExpr, callee, callLocals, requireValue);
-      },
-      [&](const Expr &candidate) {
-        if (isCallsStepVectorMutatorMethod(candidate)) {
-          const CallsStepVectorHelperReceiverFact receiverFact =
-              classifyCallsStepVectorHelperReceiverFromSemanticFacts(
-                  candidate.args.front(),
-                  input.semanticProgram,
-                  input.semanticIndex);
-          if (receiverFact == CallsStepVectorHelperReceiverFact::Vector) {
-            return false;
-          }
-          if (receiverFact == CallsStepVectorHelperReceiverFact::NonVector) {
-            return input.resolveMethodCallDefinition(candidate, localsIn) != nullptr;
-          }
-
-          auto localIt = localsIn.find(candidate.args.front().name);
-          if (localIt != localsIn.end() && !localIt->second.isSoaVector &&
-              (localIt->second.kind == LocalInfo::Kind::Vector ||
-               localIt->second.referenceToVector ||
-               localIt->second.pointerToVector ||
-               isCallsStepVectorTypeText(localIt->second.structTypeName))) {
-            return false;
-          }
-        }
-        if (isCallsStepBuiltinVectorMutatorCall(candidate)) {
-          return false;
-        }
-        if (candidate.isMethodCall && !input.isArrayCountCall(candidate, localsIn) &&
-            !input.isStringCountCall(candidate, localsIn) &&
-            !input.isVectorCapacityCall(candidate, localsIn)) {
-          return input.resolveMethodCallDefinition(candidate, localsIn) != nullptr;
-        }
-        return input.resolveDefinitionCall(candidate) != nullptr;
-      },
-      [&]() { input.emitVectorCapacityExceeded(); },
-      [&]() { input.emitVectorPopOnEmpty(); },
-      [&]() { input.emitVectorIndexOutOfBounds(); },
-      [&]() { input.emitArrayIndexOutOfBounds(); },
-      [&]() { input.emitVectorReserveNegative(); },
-      [&]() { input.emitVectorReserveExceeded(); },
-      errorOut);
-  if (vectorHelperResult == VectorStatementHelperEmitResult::Error) {
-    return false;
-  }
-  if (vectorHelperResult == VectorStatementHelperEmitResult::Emitted) {
     return true;
   }
 

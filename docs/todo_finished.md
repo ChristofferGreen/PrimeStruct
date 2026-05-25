@@ -6,6 +6,47 @@ Legend:
 Finished items are periodically archived here from `docs/todo.md`; section headers record the archive date.
 
 **Todo Completion (May 25, 2026)**
+- [x] TODO-4572: Remove vector statement-helper compiler path
+  - owner: ai
+  - created_at: 2026-05-24
+  - finished_at: 2026-05-25
+  - phase: Map/vector compiler-independence
+  - parallel_track: vector-special-case-deletion
+  - inventory_categories: `vector-statement-helper`
+  - scope: Deleted the compiler-owned vector statement-helper validation and
+    lowering path so `push`, `pop`, `reserve`, `clear`, `remove_at`, and
+    `remove_swap` on vectors resolve as ordinary imported `.prime` helper
+    calls.
+  - outcome:
+    - Removed the production declarations/calls for
+      `validateVectorStatementHelper`, `tryEmitVectorStatementHelper`, and
+      the vector-statement-only helper resolver files.
+    - Removed stale lowerer expression, inline-call, loop, and statement-call
+      fast paths that rewrote vector mutators through builtin IR emission.
+    - Kept vector mutator resolution on imported `.prime` helpers and
+      deterministic missing-import diagnostics, with rooted `/vector/*`
+      aliases remaining ordinary user definitions only.
+    - Updated source-lock coverage and removed direct unit tests for the
+      deleted private helper API.
+    - The map/vector compiler-knowledge inventory now reports no
+      `vector-statement-helper` category.
+  - validation:
+    - `python3 scripts/check_map_vector_compiler_knowledge.py --root .`
+      passed and reported no `vector-statement-helper` category.
+    - Parent release build validation passed:
+      `cmake --build build-release --target primec PrimeStruct_backend_ir_tests PrimeStruct_compile_run_tests -j 1`.
+    - Parent backend/source-lock validation passed 10 selected cases and 1270
+      assertions, covering the deleted vector statement-helper declarations,
+      statement-call emission, semantic source delegation, stdlib surface
+      metadata, and CMake source locks.
+    - Parent compile-run validation passed 12 selected cases and 625
+      assertions, covering VM/native/C++ imported vector mutator behavior,
+      missing-import diagnostics, rooted alias rejection, and native indexed
+      removal ownership checks.
+  - stop_rule: Stopped once vector statement mutators were ordinary helper
+    calls with focused vector validation passing; vector count/access
+    classifiers remain with TODO-4574.
+
 - [x] TODO-4565: Add minimal scene graph and camera data model
   - owner: ai
   - created_at: 2026-05-24
@@ -13920,7 +13961,7 @@ Staged graph rollout note: the graph builder, deterministic dump, return-kind pi
 - ✓ Replace the remaining local experimental-map wrapper/compatibility heuristics in `SemanticsValidatorExpr.cpp` (for example `shouldBuiltinValidateCurrentMapWrapperHelper(...)` and the map compatibility path helpers) with shared helper metadata so map helper fallback rules stop depending on duplicated helper-name conditionals before broader legacy removal. Progress: the shared experimental-map helper descriptor table now drives wrapper-availability checks plus direct/method compatibility-path parsing, `SemanticsValidatorExpr.cpp` calls those shared helpers instead of keeping local helper-name conditionals, and validation coverage now locks removed-path diagnostics on field-bound experimental-map receivers for both `/map/count(...)` and `./std/collections/map/count()`.
 - ✓ Extract the remaining removed collection-helper compatibility parsing in `SemanticsValidatorExpr.cpp` (notably `explicitRemovedCollectionMethodPath(...)` and the unnamespaced map-count fallback logic) into shared collection-helper metadata so legacy removed-helper diagnostics stop depending on local string parsing before broader legacy removal. Progress: shared removed-collection helper metadata now owns vector/map compatibility helper whitelists plus explicit removed-path parsing, `SemanticsValidatorExpr.cpp` calls those shared helpers for explicit removed method routing, bare `count(...)` map fallback, and body-argument preservation, and validation coverage now locks field-bound bare `count(holder.values)` plus removed-path diagnostics on field-bound compatibility calls.
 - ✓ Extract the remaining bare/body-argument removed map helper parsing in `SemanticsValidatorExpr.cpp` (for example `resolveBareMapCallBodyArgumentTarget(...)` and the remaining direct `count`/`at`/`at_unsafe` helper-name branches) onto shared collection-helper metadata so body-argument remapping stops depending on local helper-name parsing before broader legacy removal. Progress: shared removed-collection metadata now resolves bare and wrapped map body-argument helpers through one helper in `SemanticsValidatorInferCollections.cpp`, `SemanticsValidatorExpr.cpp` calls that shared helper instead of keeping local `count`/`at`/`at_unsafe` parsing lambdas, and validation coverage now locks field-bound bare `at(holder.values, ...) { ... }` remapping.
-- ✓ Extract the remaining vector-like body-argument compatibility remapping in `SemanticsValidatorExpr.cpp` (currently the `preferVectorStdlibHelperPath(...)` path rewrite around block arguments and the remaining bare mutator/access helper branches) into shared collection-helper metadata so vector body-argument remapping stops depending on local path rewriting before broader legacy removal. Progress: `SemanticsValidatorExpr.cpp` now calls the shared `preferVectorStdlibHelperPath(...)`, `getVectorStatementHelperName(...)`, and `getDirectVectorHelperCompatibilityPath(...)` helpers instead of keeping local vector mutator/access compatibility tables, and validation coverage now locks array-alias statement diagnostics plus `/vector/push(...) { ... }` block-argument rejection through the shared helper metadata path.
+- ✓ Extract the remaining vector-like body-argument compatibility remapping in `SemanticsValidatorExpr.cpp` (currently the `preferVectorStdlibHelperPath(...)` path rewrite around block arguments and the remaining bare mutator/access helper branches) into shared collection-helper metadata so vector body-argument remapping stops depending on local path rewriting before broader legacy removal. Progress: `SemanticsValidatorExpr.cpp` now calls the shared `preferVectorStdlibHelperPath(...)`, `getVectorMutatorHelperName(...)`, and `getDirectVectorHelperCompatibilityPath(...)` helpers instead of keeping local vector mutator/access compatibility tables, and validation coverage now locks array-alias statement diagnostics plus `/vector/push(...) { ... }` block-argument rejection through the shared helper metadata path.
 
 **Types & Semantics (March 18, 2026)**
 - ✓ Variadic arg-pack IR-backed experimental stdlib `Map<K, V>` value-pack count slice: explicit struct locals materialized from indexed `[args<Map<K, V>>]` access now preserve full struct-slot copies through IR/VM/native lowering, and callable-definition `[args<Map<K, V>>]` locals retain struct slot counts for downstream lowering, so canonical `/std/collections/map/count(...)` works across direct, pure-spread, and mixed forwarding of experimental stdlib map value packs.

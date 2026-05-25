@@ -241,8 +241,6 @@ set(PRIMESTRUCT_FRONTEND_SOURCES
   src/semantics/SemanticsValidatorStatementLoopCountStep.cpp
   src/semantics/SemanticsValidatorStatementPrintability.cpp
   src/semantics/SemanticsValidatorStatementReturns.cpp
-  src/semantics/SemanticsValidatorStatementVectorHelpers.cpp
-  src/semantics/SemanticsValidatorStatementVectorResolution.cpp
   src/semantics/SemanticsValidatorStatement.cpp
   src/semantics/SemanticsValidatorTaskHandles.cpp
   src/semantics/SemanticsValidatorTraits.cpp
@@ -290,7 +288,6 @@ set(PRIMESTRUCT_IR_SOURCES
   src/ir_lowerer/IrLowererFlowBufferHelpers.cpp
   src/ir_lowerer/IrLowererFlowControlHelpers.cpp
   src/ir_lowerer/IrLowererFlowVectorHelpers.cpp
-  src/ir_lowerer/IrLowererFlowVectorResolutionHelpers.cpp
   src/ir_lowerer/IrLowererFlowHelpers.cpp
   src/ir_lowerer/IrLowererBuiltinNameHelpers.cpp
   src/ir_lowerer/IrLowererHelpers.cpp
@@ -690,8 +687,6 @@ if(PRIMESTRUCT_BUILD_TESTS)
     tests/unit/test_ir_pipeline_validation_ir_lowerer_result_helpers_try_emit_result_why_method_calls.cpp
     tests/unit/test_ir_pipeline_validation_ir_lowerer_result_helpers_emit_result_why_with_composed_ops.cpp
     tests/unit/test_ir_pipeline_validation_ir_lowerer_flow_helpers_emit_counted_loop_scaffolding.cpp
-    tests/unit/test_ir_pipeline_validation_ir_lowerer_flow_helpers_emit_vector_statement_helpers_through_variadic_vector_receiver.cpp
-    tests/unit/test_ir_pipeline_validation_ir_lowerer_flow_helpers_skip_user_defined_vector_helper_names.cpp
     tests/unit/test_ir_pipeline_validation_ir_lowerer_flow_helpers_resolve_buffer_load_info.cpp
     tests/unit/test_ir_pipeline_validation_ir_lowerer_file_write_helpers_resolve_write_opcodes.cpp
     tests/unit/test_ir_pipeline_validation_ir_lowerer_file_write_helpers_emit_write_bytes_loops.cpp

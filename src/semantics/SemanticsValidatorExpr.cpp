@@ -18,7 +18,8 @@ bool SemanticsValidator::validateExpr(const std::vector<ParameterInfo> &params,
                                       const std::unordered_map<std::string, BindingInfo> &locals,
                                       const Expr &expr,
                                       const std::vector<Expr> *enclosingStatements,
-                                      size_t statementIndex) {
+                                      size_t statementIndex,
+                                      bool expressionIsStatementContext) {
   ExprContextScope exprScope(*this, expr);
   observeLocalMapSize(locals.size());
   if (expr.kind == Expr::Kind::Call) {
@@ -636,6 +637,7 @@ bool SemanticsValidator::validateExpr(const std::vector<ParameterInfo> &params,
     if (!resolveExprVectorHelperCall(params,
                                      locals,
                                      expr,
+                                     expressionIsStatementContext,
                                      hasVectorHelperCallResolution,
                                      vectorHelperCallResolvedPath,
                                      vectorHelperCallReceiverIndex)) {

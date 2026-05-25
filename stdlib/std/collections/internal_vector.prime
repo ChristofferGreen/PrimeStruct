@@ -216,7 +216,7 @@ namespace std {
               vectorMovePrefixToBuffer<T>(grown, values, values.field_count())
               /std/collections/internal_buffer_checked/bufferFreeUninitialized<T>(values.data)
               assign(values.data, grown)
-              values.set_field_capacity(capacity)
+              assign(values.fieldCapacity, capacity)
             },
             else() { })
        },
@@ -350,7 +350,7 @@ namespace std {
        },
        else() { })
     vectorInitSlot<T>(values, values.field_count(), value)
-    values.set_field_count(plus(values.field_count(), 1i32))
+    assign(values.fieldCount, plus(values.field_count(), 1i32))
   }
 
   [public effects(heap_alloc), return<void>]
@@ -362,9 +362,9 @@ namespace std {
          empty[0i32]
        },
        else() {
-         [i32] lastIndex{minus(values.field_count(), 1i32)}
+         [i32] lastIndex{plus(values.field_count(), -1i32)}
          vectorDropSlot<T>(values, lastIndex)
-         values.set_field_count(lastIndex)
+         assign(values.fieldCount, lastIndex)
        })
   }
 
@@ -372,33 +372,33 @@ namespace std {
   vectorClear<T>([Vector<T> mut] values) {
     vectorCheckShape<T>(values)
     vectorDropRange<T>(values, values.field_count())
-    values.set_field_count(0i32)
+    assign(values.fieldCount, 0i32)
   }
 
   [public effects(heap_alloc), return<void>]
   vectorRemoveAt<T>([Vector<T> mut] values, [i32] index) {
     vectorCheckIndex<T>(values, index)
-    [i32] lastIndex{minus(values.field_count(), 1i32)}
+    [i32] lastIndex{plus(values.field_count(), -1i32)}
     vectorDropSlot<T>(values, index)
     [i32 mut] current{index}
     while(less_than(current, lastIndex), do() {
       vectorInitSlot<T>(values, current, vectorTakeSlot<T>(values, plus(current, 1i32)))
       increment(current)
     })
-    values.set_field_count(lastIndex)
+    assign(values.fieldCount, lastIndex)
   }
 
   [public effects(heap_alloc), return<void>]
   vectorRemoveSwap<T>([Vector<T> mut] values, [i32] index) {
     vectorCheckIndex<T>(values, index)
-    [i32] lastIndex{minus(values.field_count(), 1i32)}
+    [i32] lastIndex{plus(values.field_count(), -1i32)}
     if(less_than(index, lastIndex),
        then() {
          vectorDropSlot<T>(values, index)
          vectorInitSlot<T>(values, index, vectorTakeSlot<T>(values, lastIndex))
        },
        else() { vectorDropSlot<T>(values, lastIndex) })
-    values.set_field_count(lastIndex)
+    assign(values.fieldCount, lastIndex)
   }
 
   [public return<T>]

@@ -116,11 +116,6 @@ enum class BufferBuiltinCallEmitResult {
   Emitted,
   Error,
 };
-enum class VectorStatementHelperEmitResult {
-  NotMatched,
-  Emitted,
-  Error,
-};
 struct CountedLoopControl {
   int32_t counterLocal = -1;
   LocalInfo::ValueKind countKind = LocalInfo::ValueKind::Unknown;
@@ -182,103 +177,6 @@ bool emitForConditionBindingInit(
     const LocalMap &localsIn,
     const std::function<bool(const Expr &, const LocalMap &)> &emitExpr,
     const std::function<void(IrOpcode, uint64_t)> &emitInstruction,
-    std::string &error);
-VectorStatementHelperEmitResult tryEmitVectorStatementHelper(
-    const Expr &stmt,
-    const LocalMap &localsIn,
-    std::vector<IrInstruction> &instructions,
-    const std::function<int32_t()> &allocTempLocal,
-    const std::function<LocalInfo::ValueKind(const Expr &, const LocalMap &)> &inferExprKind,
-    const std::function<std::string(const Expr &, const LocalMap &)> &inferStructExprPath,
-    const std::function<bool(const Expr &, const LocalMap &)> &emitExpr,
-    const std::function<const Definition *(const std::string &)> &resolveDestroyHelperForStruct,
-    const std::function<const Definition *(const std::string &)> &resolveMoveHelperForStruct,
-    const std::function<bool(const Expr &, const Definition &, const LocalMap &, bool)> &emitInlineDefinitionCall,
-    const std::function<bool(const Expr &)> &isUserDefinedVectorHelperCall,
-    const std::function<void()> &emitVectorCapacityExceeded,
-    const std::function<void()> &emitVectorPopOnEmpty,
-    const std::function<void()> &emitVectorIndexOutOfBounds,
-    const std::function<void()> &emitVectorReserveNegative,
-    const std::function<void()> &emitVectorReserveExceeded,
-    std::string &error);
-VectorStatementHelperEmitResult tryEmitVectorStatementHelper(
-    const Expr &stmt,
-    const LocalMap &localsIn,
-    std::vector<IrInstruction> &instructions,
-    const std::function<int32_t()> &allocTempLocal,
-    const std::function<LocalInfo::ValueKind(const Expr &, const LocalMap &)> &inferExprKind,
-    const std::function<std::string(const Expr &, const LocalMap &)> &inferStructExprPath,
-    const std::function<bool(const Expr &, const LocalMap &)> &emitExpr,
-    const std::function<const Definition *(const std::string &)> &resolveDestroyHelperForStruct,
-    const std::function<const Definition *(const std::string &)> &resolveMoveHelperForStruct,
-    const std::function<bool(const Expr &, const Definition &, const LocalMap &, bool)> &emitInlineDefinitionCall,
-    const std::function<bool(const Expr &)> &isUserDefinedVectorHelperCall,
-    const std::function<void()> &emitVectorCapacityExceeded,
-    const std::function<void()> &emitVectorPopOnEmpty,
-    const std::function<void()> &emitVectorIndexOutOfBounds,
-    const std::function<void()> &emitArrayIndexOutOfBounds,
-    const std::function<void()> &emitVectorReserveNegative,
-    const std::function<void()> &emitVectorReserveExceeded,
-    std::string &error);
-VectorStatementHelperEmitResult tryEmitVectorStatementHelper(
-    const Expr &stmt,
-    const LocalMap &localsIn,
-    std::vector<IrInstruction> &instructions,
-    const std::function<int32_t()> &allocTempLocal,
-    const std::function<LocalInfo::ValueKind(const Expr &, const LocalMap &)> &inferExprKind,
-    const std::function<std::string(const Expr &, const LocalMap &)> &inferStructExprPath,
-    const std::function<bool(const Expr &, const LocalMap &)> &emitExpr,
-    const std::function<bool(const Expr &)> &isUserDefinedVectorHelperCall,
-    const std::function<void()> &emitVectorCapacityExceeded,
-    const std::function<void()> &emitVectorPopOnEmpty,
-    const std::function<void()> &emitVectorIndexOutOfBounds,
-    const std::function<void()> &emitVectorReserveNegative,
-    const std::function<void()> &emitVectorReserveExceeded,
-    std::string &error);
-VectorStatementHelperEmitResult tryEmitVectorStatementHelper(
-    const Expr &stmt,
-    const LocalMap &localsIn,
-    std::vector<IrInstruction> &instructions,
-    const std::function<int32_t()> &allocTempLocal,
-    const std::function<LocalInfo::ValueKind(const Expr &, const LocalMap &)> &inferExprKind,
-    const std::function<std::string(const Expr &, const LocalMap &)> &inferStructExprPath,
-    const std::function<bool(const Expr &, const LocalMap &)> &emitExpr,
-    const std::function<bool(const Expr &)> &isUserDefinedVectorHelperCall,
-    const std::function<void()> &emitVectorCapacityExceeded,
-    const std::function<void()> &emitVectorPopOnEmpty,
-    const std::function<void()> &emitVectorIndexOutOfBounds,
-    const std::function<void()> &emitArrayIndexOutOfBounds,
-    const std::function<void()> &emitVectorReserveNegative,
-    const std::function<void()> &emitVectorReserveExceeded,
-    std::string &error);
-VectorStatementHelperEmitResult tryEmitVectorStatementHelper(
-    const Expr &stmt,
-    const LocalMap &localsIn,
-    std::vector<IrInstruction> &instructions,
-    const std::function<int32_t()> &allocTempLocal,
-    const std::function<LocalInfo::ValueKind(const Expr &, const LocalMap &)> &inferExprKind,
-    const std::function<bool(const Expr &, const LocalMap &)> &emitExpr,
-    const std::function<bool(const Expr &)> &isUserDefinedVectorHelperCall,
-    const std::function<void()> &emitVectorCapacityExceeded,
-    const std::function<void()> &emitVectorPopOnEmpty,
-    const std::function<void()> &emitVectorIndexOutOfBounds,
-    const std::function<void()> &emitVectorReserveNegative,
-    const std::function<void()> &emitVectorReserveExceeded,
-    std::string &error);
-VectorStatementHelperEmitResult tryEmitVectorStatementHelper(
-    const Expr &stmt,
-    const LocalMap &localsIn,
-    std::vector<IrInstruction> &instructions,
-    const std::function<int32_t()> &allocTempLocal,
-    const std::function<LocalInfo::ValueKind(const Expr &, const LocalMap &)> &inferExprKind,
-    const std::function<bool(const Expr &, const LocalMap &)> &emitExpr,
-    const std::function<bool(const Expr &)> &isUserDefinedVectorHelperCall,
-    const std::function<void()> &emitVectorCapacityExceeded,
-    const std::function<void()> &emitVectorPopOnEmpty,
-    const std::function<void()> &emitVectorIndexOutOfBounds,
-    const std::function<void()> &emitArrayIndexOutOfBounds,
-    const std::function<void()> &emitVectorReserveNegative,
-    const std::function<void()> &emitVectorReserveExceeded,
     std::string &error);
 struct BufferInitInfo {
   int32_t count = 0;

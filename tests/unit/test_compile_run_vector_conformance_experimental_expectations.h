@@ -178,8 +178,13 @@ inline void expectExperimentalVectorCapacityRefAfterReserveConformance(const std
                                      10);
 }
 
-inline std::string makeVectorIndexedRemovalOwnershipConformanceSource(const std::string &mode) {
+inline std::string makeVectorIndexedRemovalOwnershipConformanceSource(const std::string &mode,
+                                                                      bool validateWithInternalTake = false) {
   std::string source;
+  source += "import /std/collections/*\n\n";
+  if (validateWithInternalTake) {
+    source += "import /std/collections/internal_vector/*\n\n";
+  }
   if (mode == "remove_at_drop") {
     source += "[struct]\n";
     source += "Owned() {\n";
@@ -190,10 +195,16 @@ inline std::string makeVectorIndexedRemovalOwnershipConformanceSource(const std:
     source += "[effects(heap_alloc), return<int>]\n";
     source += "main() {\n";
     source += "  [vector<Owned> mut] values{vector<Owned>()}\n";
-    source += "  push(values, Owned())\n";
-    source += "  push(values, Owned(9i32))\n";
-    source += "  remove_at(values, 0i32)\n";
-    source += "  return(plus(count(values), at(values, 0i32).value))\n";
+    source += "  /std/collections/vector/push<Owned>(values, Owned())\n";
+    source += "  /std/collections/vector/push<Owned>(values, Owned(9i32))\n";
+    source += "  /std/collections/vector/remove_at<Owned>(values, 0i32)\n";
+    if (validateWithInternalTake) {
+      source += "  [Owned] survivor{/std/collections/experimental_vector/vectorTakeSlot<Owned>(values, 0i32)}\n";
+      source += "  return(plus(/std/collections/vector/count<Owned>(values), survivor.value))\n";
+    } else {
+      source += "  return(plus(/std/collections/vector/count<Owned>(values),\n";
+      source += "              /std/collections/vector/at<Owned>(values, 0i32).value))\n";
+    }
     source += "}\n";
     return source;
   }
@@ -213,10 +224,16 @@ inline std::string makeVectorIndexedRemovalOwnershipConformanceSource(const std:
   source += "[effects(heap_alloc), return<int>]\n";
   source += "main() {\n";
   source += "  [vector<Wrapper> mut] values{vector<Wrapper>()}\n";
-  source += "  push(values, Wrapper(Mover(1i32)))\n";
-  source += "  push(values, Wrapper(Mover(7i32)))\n";
-  source += "  remove_swap(values, 0i32)\n";
-  source += "  return(plus(count(values), at_unsafe(values, 0i32).value.value))\n";
+  source += "  /std/collections/vector/push<Wrapper>(values, Wrapper(Mover(1i32)))\n";
+  source += "  /std/collections/vector/push<Wrapper>(values, Wrapper(Mover(7i32)))\n";
+  source += "  /std/collections/vector/remove_swap<Wrapper>(values, 0i32)\n";
+  if (validateWithInternalTake) {
+    source += "  [Wrapper] survivor{/std/collections/experimental_vector/vectorTakeSlot<Wrapper>(values, 0i32)}\n";
+    source += "  return(plus(/std/collections/vector/count<Wrapper>(values), survivor.value.value))\n";
+  } else {
+    source += "  return(plus(/std/collections/vector/count<Wrapper>(values),\n";
+    source += "              /std/collections/vector/at_unsafe<Wrapper>(values, 0i32).value.value))\n";
+  }
   source += "}\n";
   return source;
 }
@@ -232,7 +249,7 @@ inline void expectVectorIndexedRemovalOwnershipConformance(const std::string &em
         "/std/collections/vector/push");
     return;
   }
-  expectVectorConformanceProgramRuns(makeVectorIndexedRemovalOwnershipConformanceSource(mode),
+  expectVectorConformanceProgramRuns(makeVectorIndexedRemovalOwnershipConformanceSource(mode, true),
                                      "vector_indexed_removal_ownership_" + mode + "_" + emitMode,
                                      emitMode,
                                      expectedOut);

@@ -271,9 +271,9 @@ isPublishedBorrowedKeyValueHelperName(std::string_view helperName) {
   return resolvedMemberName.ends_with("_ref");
 }
 
-[[maybe_unused]] bool isRemovedPublishedVectorStatementHelperName(
+[[maybe_unused]] bool isPublishedVectorMutatorHelperName(
     std::string_view helperName) {
-  return isStdlibVectorStatementHelperName(helperName);
+  return isStdlibVectorMutatorHelperName(helperName);
 }
 
 [[maybe_unused]] std::string canonicalCollectionHelperPath(
@@ -750,7 +750,7 @@ resolveExplicitPublishedKeyValueHelperExprMemberName(
   preserveArrayPathOut = false;
 
   auto setVectorLike = [&](std::string_view helperName, bool preserveArrayPath) {
-    if (!isRemovedPublishedVectorStatementHelperName(helperName)) {
+    if (!isPublishedVectorMutatorHelperName(helperName)) {
       return false;
     }
     helperNameOut = helperName;
@@ -807,7 +807,7 @@ resolveExplicitPublishedKeyValueHelperExprMemberName(
     std::string_view helperName,
     bool preserveArrayPath) {
   if (family == RemovedCollectionHelperFamily::VectorLike) {
-    if (!isRemovedPublishedVectorStatementHelperName(helperName)) {
+    if (!isPublishedVectorMutatorHelperName(helperName)) {
       return "";
     }
     if (preserveArrayPath) {

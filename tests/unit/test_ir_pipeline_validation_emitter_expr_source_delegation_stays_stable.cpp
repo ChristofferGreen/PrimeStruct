@@ -263,6 +263,8 @@ TEST_CASE("semantics validator expr source delegation stays stable") {
       repoRoot / "src" / "semantics" / "SemanticsValidatorExprVectorHelpers.cpp";
   const std::filesystem::path semanticsStatementVectorHelpersPath =
       repoRoot / "src" / "semantics" / "SemanticsValidatorStatementVectorHelpers.cpp";
+  const std::filesystem::path semanticsCollectionHelperRewritesPath =
+      repoRoot / "src" / "semantics" / "SemanticsValidatorCollectionHelperRewrites.cpp";
   REQUIRE(std::filesystem::exists(semanticsExprPath));
   REQUIRE(std::filesystem::exists(semanticsExprCollectionCountCapacityPath));
   REQUIRE(std::filesystem::exists(semanticsExprCollectionDispatchSetupPath));
@@ -274,7 +276,8 @@ TEST_CASE("semantics validator expr source delegation stays stable") {
   REQUIRE(std::filesystem::exists(semanticsExprMethodResolutionPath));
   REQUIRE(std::filesystem::exists(semanticsExprMethodTargetResolutionPath));
   REQUIRE(std::filesystem::exists(semanticsExprVectorHelpersPath));
-  REQUIRE(std::filesystem::exists(semanticsStatementVectorHelpersPath));
+  CHECK_FALSE(std::filesystem::exists(semanticsStatementVectorHelpersPath));
+  REQUIRE(std::filesystem::exists(semanticsCollectionHelperRewritesPath));
 
   const std::string semanticsExprSource = readText(semanticsExprPath);
   const std::string semanticsExprCollectionCountCapacitySource =
@@ -297,8 +300,8 @@ TEST_CASE("semantics validator expr source delegation stays stable") {
       readText(semanticsExprMethodTargetResolutionPath);
   const std::string semanticsExprVectorHelpersSource =
       readText(semanticsExprVectorHelpersPath);
-  const std::string semanticsStatementVectorHelpersSource =
-      readText(semanticsStatementVectorHelpersPath);
+  const std::string semanticsCollectionHelperRewritesSource =
+      readText(semanticsCollectionHelperRewritesPath);
 
   CHECK(semanticsExprSource.find("validateExprCountCapacityBuiltins(") !=
         std::string::npos);
@@ -426,51 +429,34 @@ TEST_CASE("semantics validator expr source delegation stays stable") {
   CHECK(semanticsExprVectorHelpersSource.find(
             "const bool isStdNamespacedVectorCountCapacityNamedArgException =") !=
         std::string::npos);
-  CHECK(semanticsStatementVectorHelpersSource.find(
-            "explicitRootVectorMutatorPath(false)") !=
-        std::string::npos);
-  CHECK(semanticsStatementVectorHelpersSource.find(
-            "explicitRootVectorMutatorPath(true)") !=
-        std::string::npos);
-  CHECK(semanticsStatementVectorHelpersSource.find("\"/std/collections/vector/") ==
-        std::string::npos);
-  CHECK(semanticsStatementVectorHelpersSource.find(
+  CHECK(semanticsCollectionHelperRewritesSource.find(
             "std::string canonicalPublishedVectorHelperTarget(") !=
         std::string::npos);
-  CHECK(semanticsStatementVectorHelpersSource.find(
-            "bool resolveExplicitPublishedVectorHelperExprMemberName(") !=
+  CHECK(semanticsCollectionHelperRewritesSource.find(
+            "std::string SemanticsValidator::preferVectorStdlibHelperPath(") !=
         std::string::npos);
-  CHECK(semanticsStatementVectorHelpersSource.find(
-            "auto explicitPublishedVectorMutatorCallPath = [&]() -> std::string {") !=
-        std::string::npos);
-  CHECK(semanticsStatementVectorHelpersSource.find(
-            "return canonicalPublishedVectorHelperTarget(helperName);") !=
-        std::string::npos);
-  CHECK(semanticsStatementVectorHelpersSource.find(
+  CHECK(semanticsCollectionHelperRewritesSource.find(
             "auto explicitCanonicalStdVectorMutatorCallPath = [&]() -> std::string {") ==
         std::string::npos);
-  CHECK(semanticsStatementVectorHelpersSource.find(
+  CHECK(semanticsCollectionHelperRewritesSource.find(
             "vectorHelperResolved == \"/std/collections/vector/push\"") ==
         std::string::npos);
-  CHECK(semanticsStatementVectorHelpersSource.find(
+  CHECK(semanticsCollectionHelperRewritesSource.find(
             "auto rootedVectorMutatorPath = [](std::string_view helperName)") ==
         std::string::npos);
-  CHECK(semanticsStatementVectorHelpersSource.find(
-            "const std::string rootVectorMutatorPrefix =") !=
-        std::string::npos);
-  CHECK(semanticsStatementVectorHelpersSource.find(
+  CHECK(semanticsCollectionHelperRewritesSource.find(
             "rootedVectorHelperPath(helperName)") !=
         std::string::npos);
-  CHECK(semanticsStatementVectorHelpersSource.find(
+  CHECK(semanticsCollectionHelperRewritesSource.find(
             "auto explicitRootVectorMutatorCallPath = [&]()") ==
         std::string::npos);
-  CHECK(semanticsStatementVectorHelpersSource.find(
+  CHECK(semanticsCollectionHelperRewritesSource.find(
             "auto explicitRootVectorMutatorMethodPath = [&]()") ==
         std::string::npos);
-  CHECK(semanticsStatementVectorHelpersSource.find(
+  CHECK(semanticsCollectionHelperRewritesSource.find(
             "constexpr std::string_view kRootPrefix = \"vector/\"") ==
         std::string::npos);
-  CHECK(semanticsStatementVectorHelpersSource.find(
+  CHECK(semanticsCollectionHelperRewritesSource.find(
             "return \"/vector/\" + helperName;") ==
         std::string::npos);
 }

@@ -597,6 +597,7 @@ bool SemanticsValidator::resolveVectorHelperMethodTarget(
 bool SemanticsValidator::resolveExprVectorHelperCall(const std::vector<ParameterInfo> &params,
                                                      const std::unordered_map<std::string, BindingInfo> &locals,
                                                      const Expr &expr,
+                                                     bool allowStatementOnlyMutator,
                                                      bool &hasResolutionOut,
                                                      std::string &resolvedPathOut,
                                                      size_t &receiverIndexOut) {
@@ -608,14 +609,15 @@ bool SemanticsValidator::resolveExprVectorHelperCall(const std::vector<Parameter
   receiverIndexOut = 0;
 
   std::string vectorHelper;
-  if (!getVectorStatementHelperName(expr, vectorHelper)) {
+  if (!getVectorMutatorHelperName(expr, vectorHelper)) {
     return true;
   }
   auto hasVisibleDefinitionPath = [&](const std::string &path) {
-    if (hasImportedDefinitionPath(path)) {
+    if (hasImportedDefinitionPath(path) ||
+        hasDeclaredDefinitionPath(path)) {
       return true;
     }
-    if (defMap_.count(path) == 0) {
+    if (!hasDefinitionFamilyPath(path)) {
       return false;
     }
     if (isStdNamespacedVectorCompatibilityHelperPath(path, vectorHelper)) {
@@ -822,7 +824,7 @@ bool SemanticsValidator::resolveExprVectorHelperCall(const std::vector<Parameter
       if (!hasVisibleDefinitionPath(methodTarget)) {
         return false;
       }
-      if (isBareMutatorExpressionReceiver) {
+      if (isBareMutatorExpressionReceiver && !allowStatementOnlyMutator) {
         failedReceiverProbe = true;
         return failVectorHelperDiagnostic(
             vectorHelper + " is only supported as a statement");

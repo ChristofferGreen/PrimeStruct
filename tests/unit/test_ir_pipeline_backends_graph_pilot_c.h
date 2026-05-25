@@ -234,7 +234,7 @@
         std::string::npos);
   CHECK(validatorInferMain.find("const std::string directRemovedKeyValueCompatibilityPath =") ==
         std::string::npos);
-  CHECK(validatorInferMain.find("if (getVectorStatementHelperName(expr, vectorHelper) && !expr.args.empty()) {") ==
+  CHECK(validatorInferMain.find("if (getVectorMutatorHelperName(expr, vectorHelper) && !expr.args.empty()) {") ==
         std::string::npos);
   CHECK(validatorInferMain.find("if (getBuiltinMathName(expr, builtinName, allowMathBareName(expr.name))) {") ==
         std::string::npos);
@@ -274,7 +274,7 @@
         std::string::npos);
   CHECK(validatorInfer.find("const std::string directRemovedKeyValueCompatibilityPath =") !=
         std::string::npos);
-  CHECK(validatorInfer.find("if (getVectorStatementHelperName(expr, vectorHelper) && !expr.args.empty()) {") !=
+  CHECK(validatorInfer.find("if (getVectorMutatorHelperName(expr, vectorHelper) && !expr.args.empty()) {") !=
         std::string::npos);
   CHECK(validatorInfer.find("ReturnKind SemanticsValidator::inferScalarBuiltinReturnKind(") !=
         std::string::npos);

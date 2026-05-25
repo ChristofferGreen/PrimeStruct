@@ -797,7 +797,7 @@ std::string SemanticsValidator::explicitRemovedCollectionMethodPath(std::string_
     } else {
       return "";
     }
-    if (!isRemovedPublishedVectorStatementHelperName(helperName)) {
+    if (!isPublishedVectorMutatorHelperName(helperName)) {
       return "";
     }
     std::string aliasPath = rootedVectorHelperPath(helperName);
@@ -860,15 +860,15 @@ std::string SemanticsValidator::methodRemovedCollectionCompatibilityPath(
   return removedCollectionMethodPath(family, helperName, preserveArrayPath);
 }
 
-bool SemanticsValidator::getVectorStatementHelperName(const Expr &candidate,
-                                                      std::string &helperNameOut) const {
+bool SemanticsValidator::getVectorMutatorHelperName(const Expr &candidate,
+                                                    std::string &helperNameOut) const {
   helperNameOut.clear();
   if (candidate.kind != Expr::Kind::Call || candidate.name.empty()) {
     return false;
   }
 
   const std::string normalizedName = std::string(trimLeadingSlash(candidate.name));
-  if (isRemovedPublishedVectorStatementHelperName(normalizedName)) {
+  if (isPublishedVectorMutatorHelperName(normalizedName)) {
     helperNameOut = normalizedName;
     return true;
   }
@@ -926,7 +926,7 @@ bool SemanticsValidator::getVectorStatementHelperName(const Expr &candidate,
       return false;
     }
   }
-  if (!isRemovedPublishedVectorStatementHelperName(helperName)) {
+  if (!isPublishedVectorMutatorHelperName(helperName)) {
     return false;
   }
   helperNameOut = helperName;

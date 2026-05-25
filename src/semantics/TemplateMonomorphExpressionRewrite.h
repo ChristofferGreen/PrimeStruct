@@ -1550,7 +1550,9 @@ bool rewriteExpr(Expr &expr,
     helperName = canonicalizeSoaHelperPath(helperName);
     if (helperName != "count" && helperName != "count_ref" &&
         helperName != "capacity" && helperName != "push" &&
-        helperName != "reserve" && helperName != "get" &&
+        helperName != "pop" && helperName != "reserve" &&
+        helperName != "clear" && helperName != "remove_at" &&
+        helperName != "remove_swap" && helperName != "get" &&
         helperName != "get_ref" && helperName != "ref" &&
         helperName != "ref_ref" &&
         helperName != templateMonomorphSoaToAosHelperName() &&

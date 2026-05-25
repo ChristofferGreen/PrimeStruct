@@ -1348,9 +1348,9 @@ TEST_CASE("stdlib surface metadata classifies collection helper categories") {
   CHECK_FALSE(primec::isStdlibSurfaceMemberName(
       primec::StdlibSurfaceId::CollectionsVectorHelperSurface, "insert"));
 
-  CHECK(primec::isStdlibVectorStatementHelperName("push"));
-  CHECK(primec::isStdlibVectorStatementHelperName("remove_swap"));
-  CHECK_FALSE(primec::isStdlibVectorStatementHelperName("count"));
+  CHECK(primec::isStdlibVectorMutatorHelperName("push"));
+  CHECK(primec::isStdlibVectorMutatorHelperName("remove_swap"));
+  CHECK_FALSE(primec::isStdlibVectorMutatorHelperName("count"));
 
   const auto *mapHelperMetadata =
       primec::findStdlibSurfaceMetadataByBridgeKey("collections.map_helpers");

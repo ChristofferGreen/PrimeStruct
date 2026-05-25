@@ -525,7 +525,7 @@ ReturnKind SemanticsValidator::inferPreDispatchCallReturnKind(
   }
   if (!expr.isMethodCall) {
     std::string vectorHelper;
-    if (getVectorStatementHelperName(expr, vectorHelper) && !expr.args.empty()) {
+    if (getVectorMutatorHelperName(expr, vectorHelper) && !expr.args.empty()) {
       std::string namespacedCollection;
       std::string namespacedHelper;
       const bool isNamespacedCollectionHelperCall =

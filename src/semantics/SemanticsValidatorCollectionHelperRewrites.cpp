@@ -33,8 +33,23 @@ bool isBareKeyValueAccessHelperName(std::string_view helperName) {
          helperName == "at_unsafe" || helperName == "at_unsafe_ref";
 }
 
+bool allowsArrayVectorCompatibilitySuffix(const std::string &suffix) {
+  return suffix != "count" && suffix != "capacity" && suffix != "at" &&
+         suffix != "at_unsafe" && suffix != "push" && suffix != "pop" &&
+         suffix != "reserve" && suffix != "clear" &&
+         suffix != "remove_at" && suffix != "remove_swap";
+}
+
 const StdlibSurfaceMetadata *collectionRewriteKeyValueHelperMetadata() {
   return findStdlibSurfaceMetadataByBridgeKey("collections.map_helpers");
+}
+
+std::string canonicalPublishedVectorHelperTarget(std::string_view helperName) {
+  const StdlibSurfaceMetadata *metadata = vectorHelperSurfaceMetadata();
+  if (metadata == nullptr || !isVectorCompatibilityHelperName(helperName)) {
+    return "";
+  }
+  return std::string(metadata->canonicalPath) + "/" + std::string(helperName);
 }
 
 std::string canonicalKeyValueHelperPathForRewrite(std::string_view helperName) {
@@ -270,7 +285,7 @@ std::string SemanticsValidator::preferredBareVectorHelperTarget(std::string_view
   };
   const std::string canonical =
       canonicalVectorCompatibilityHelperPathOrFallback(helperName);
-  if (isRemovedPublishedVectorStatementHelperName(helperName)) {
+  if (isPublishedVectorMutatorHelperName(helperName)) {
     const std::string samePath = rootedVectorHelperPath(helperName);
     if (hasVisibleVectorHelperFamily(samePath)) {
       return samePath;
@@ -292,6 +307,44 @@ std::string SemanticsValidator::preferredBareVectorHelperTarget(std::string_view
     return canonical;
   }
   return canonical;
+}
+
+std::string SemanticsValidator::preferVectorStdlibHelperPath(const std::string &path) const {
+  auto hasVisibleDefinitionPath = [&](const std::string &candidate) {
+    return hasImportedDefinitionPath(candidate) ||
+           hasDeclaredDefinitionPath(candidate) ||
+           defMap_.count(candidate) > 0;
+  };
+  std::string preferred = path;
+  if (preferred.rfind("/array/", 0) == 0 && !hasVisibleDefinitionPath(preferred)) {
+    const std::string suffix = preferred.substr(std::string("/array/").size());
+    if (allowsArrayVectorCompatibilitySuffix(suffix)) {
+      const std::string stdlibAlias = canonicalPublishedVectorHelperTarget(suffix);
+      if (hasVisibleDefinitionPath(stdlibAlias)) {
+        return stdlibAlias;
+      }
+    }
+  }
+  if (preferred.rfind("/soa" "_vector/", 0) == 0 && !hasVisibleDefinitionPath(preferred)) {
+    const std::string suffix = preferred.substr(std::string("/soa" "_vector/").size());
+    const std::string stdlibAlias = "/std/collections/" "soa" "_vector/" + suffix;
+    if (hasVisibleDefinitionPath(stdlibAlias)) {
+      preferred = stdlibAlias;
+    }
+  }
+  if (preferred.rfind("/std/collections/" "soa" "_vector/", 0) == 0 &&
+      !hasVisibleDefinitionPath(preferred)) {
+    const std::string suffix =
+        preferred.substr(std::string("/std/collections/" "soa" "_vector/").size());
+    const std::string samePath =
+        (suffix == "to" "_aos" || suffix == "to" "_aos_ref")
+            ? "/" + suffix
+            : "/soa" "_vector/" + suffix;
+    if (hasVisibleDefinitionPath(samePath)) {
+      preferred = samePath;
+    }
+  }
+  return preferred;
 }
 
 bool SemanticsValidator::tryRewriteBareKeyValueHelperCall(

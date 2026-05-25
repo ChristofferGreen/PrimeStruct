@@ -85,11 +85,6 @@ bool SemanticsValidator::validateStatement(const std::vector<ParameterInfo> &par
   auto failStatementDiagnostic = [&](std::string message) -> bool {
     return failExprDiagnostic(stmt, std::move(message));
   };
-  const std::vector<std::string> *definitionTemplateArgs = nullptr;
-  auto currentDefIt = defMap_.find(currentValidationState_.context.definitionPath);
-  if (currentDefIt != defMap_.end() && currentDefIt->second != nullptr) {
-    definitionTemplateArgs = &currentDefIt->second->templateArgs;
-  }
   bool handledBindingStatement = false;
   if (!validateBindingStatement(params,
                                 locals,
@@ -536,20 +531,6 @@ bool SemanticsValidator::validateStatement(const std::vector<ParameterInfo> &par
   if (handledPathSpaceComputeBuiltin) {
     return true;
   }
-  bool handledVectorStatementHelper = false;
-  if (!validateVectorStatementHelper(params,
-                                     locals,
-                                     stmt,
-                                     namespacePrefix,
-                                     definitionTemplateArgs,
-                                     enclosingStatements,
-                                     statementIndex,
-                                     handledVectorStatementHelper)) {
-    return false;
-  }
-  if (handledVectorStatementHelper) {
-    return true;
-  }
   bool handledBodyArgumentStatement = false;
   if (!validateStatementBodyArguments(params,
                                       locals,
@@ -577,7 +558,8 @@ bool SemanticsValidator::validateStatement(const std::vector<ParameterInfo> &par
     return validateExpr(params, locals, stmt.args.front()) &&
            validateExpr(params, locals, stmt.args[1]);
   }
-  return validateExpr(params, locals, stmt, enclosingStatements, statementIndex);
+  return validateExpr(
+      params, locals, stmt, enclosingStatements, statementIndex, true);
 }
 
 } // namespace primec::semantics

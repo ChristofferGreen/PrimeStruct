@@ -67,7 +67,8 @@
                     const std::unordered_map<std::string, BindingInfo> &locals,
                     const Expr &expr,
                     const std::vector<Expr> *enclosingStatements = nullptr,
-                    size_t statementIndex = 0);
+                    size_t statementIndex = 0,
+                    bool expressionIsStatementContext = false);
   bool isNumericExpr(const std::vector<ParameterInfo> &params,
                      const std::unordered_map<std::string, BindingInfo> &locals,
                      const Expr &expr);
@@ -433,7 +434,7 @@
                            std::string &resolvedOut,
                            bool &isBuiltinOut);
   bool isVectorBuiltinName(const Expr &candidate, const char *helper) const;
-  bool getVectorStatementHelperName(const Expr &candidate, std::string &nameOut) const;
+  bool getVectorMutatorHelperName(const Expr &candidate, std::string &nameOut) const;
   bool resolveVectorHelperMethodTarget(const std::vector<ParameterInfo> &params,
                                        const std::unordered_map<std::string, BindingInfo> &locals,
                                        const Expr &receiver,
@@ -442,6 +443,7 @@
   bool resolveExprVectorHelperCall(const std::vector<ParameterInfo> &params,
                                    const std::unordered_map<std::string, BindingInfo> &locals,
                                    const Expr &expr,
+                                   bool allowStatementOnlyMutator,
                                    bool &hasResolutionOut,
                                    std::string &resolvedPathOut,
                                    size_t &receiverIndexOut);

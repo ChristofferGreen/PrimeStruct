@@ -9,23 +9,13 @@
 #include "IrLowererSetupTypeCollectionHelpers.h"
 #include "IrLowererSetupTypeHelpers.h"
 #include "IrLowererTemplateTypeParseHelpers.h"
-#include "primec/StdlibSurfaceRegistry.h"
 
 #include <optional>
 #include <string_view>
-#include <utility>
 
 namespace primec::ir_lowerer {
 
 namespace {
-
-std::string stripGeneratedHelperSuffix(std::string helperName) {
-  const size_t generatedSuffix = helperName.find("__");
-  if (generatedSuffix != std::string::npos) {
-    helperName.erase(generatedSuffix);
-  }
-  return helperName;
-}
 
 std::string stdCollectionsRoot() {
   return "/std/collections";
@@ -37,28 +27,9 @@ std::string experimentalCollectionTypePath(std::string_view collectionName,
          "/" + std::string(typeName);
 }
 
-std::string collectionWrapperAlias(std::string_view collectionName,
-                                   std::string_view suffix) {
-  return std::string(collectionName) + std::string(suffix);
-}
-
-const StdlibSurfaceMetadata *statementVectorHelperMetadata() {
-  return findStdlibSurfaceMetadataByBridgeKey("collections.vector_helpers");
-}
-
 bool isExperimentalVectorTypePath(std::string_view path) {
   const std::string vectorTypePath = experimentalCollectionTypePath("vector", "Vector");
   return path == vectorTypePath || path.rfind(vectorTypePath + "__", 0) == 0;
-}
-
-bool matchesRegistrySpellingSet(std::span<const std::string_view> spellings,
-                                std::string_view spelling) {
-  for (const std::string_view candidate : spellings) {
-    if (candidate == spelling) {
-      return true;
-    }
-  }
-  return false;
 }
 
 std::string resolveStatementCallPathWithoutFallbackProbes(const Expr &expr) {
@@ -73,66 +44,6 @@ std::string resolveStatementCallPathWithoutFallbackProbes(const Expr &expr) {
     return scoped + "/" + expr.name;
   }
   return expr.name;
-}
-
-std::string canonicalStatementVectorHelperName(std::string helperName) {
-  helperName = stripGeneratedHelperSuffix(std::move(helperName));
-  if (helperName == collectionWrapperAlias("vector", "Count")) {
-    return "count";
-  }
-  if (helperName == collectionWrapperAlias("vector", "Capacity")) {
-    return "capacity";
-  }
-  if (helperName == collectionWrapperAlias("vector", "At")) {
-    return "at";
-  }
-  if (helperName == collectionWrapperAlias("vector", "AtUnsafe")) {
-    return "at_unsafe";
-  }
-  if (helperName == collectionWrapperAlias("vector", "Push")) {
-    return "push";
-  }
-  if (helperName == collectionWrapperAlias("vector", "Pop")) {
-    return "pop";
-  }
-  if (helperName == collectionWrapperAlias("vector", "Reserve")) {
-    return "reserve";
-  }
-  if (helperName == collectionWrapperAlias("vector", "Clear")) {
-    return "clear";
-  }
-  if (helperName == collectionWrapperAlias("vector", "RemoveAt")) {
-    return "remove_at";
-  }
-  if (helperName == collectionWrapperAlias("vector", "RemoveSwap")) {
-    return "remove_swap";
-  }
-  return helperName;
-}
-
-bool resolvePublishedStatementVectorHelperName(std::string_view resolvedPath,
-                                               std::string &helperNameOut) {
-  const auto *metadata = findStdlibSurfaceMetadataByResolvedPath(resolvedPath);
-  const auto *vectorMetadata = statementVectorHelperMetadata();
-  if (metadata == nullptr || vectorMetadata == nullptr || metadata->id != vectorMetadata->id) {
-    return false;
-  }
-  const size_t slash = resolvedPath.find_last_of('/');
-  if (slash == std::string_view::npos || slash + 1 >= resolvedPath.size()) {
-    return false;
-  }
-  helperNameOut =
-      canonicalStatementVectorHelperName(std::string(resolvedPath.substr(slash + 1)));
-  return !helperNameOut.empty();
-}
-
-bool isPublishedCanonicalStatementVectorHelperPath(std::string_view resolvedPath) {
-  const auto *metadata = findStdlibSurfaceMetadataByResolvedPath(resolvedPath);
-  const auto *vectorMetadata = statementVectorHelperMetadata();
-  return metadata != nullptr &&
-         vectorMetadata != nullptr &&
-         metadata->id == vectorMetadata->id &&
-         matchesRegistrySpellingSet(metadata->loweringSpellings, resolvedPath);
 }
 
 bool isFreeMemoryIntrinsicCall(const Expr &expr) {
@@ -151,175 +62,6 @@ std::string resolveStatementCallSemanticTypeText(const SemanticProgram *semantic
     }
   }
   return trimTemplateTypeText(typeText);
-}
-
-static bool populateStatementVectorTargetInfoFromTypeText(
-    const std::string &typeText,
-    ArrayVectorAccessTargetInfo &targetInfoOut) {
-  std::string base;
-  std::string argText;
-  const std::string normalizedTypeText =
-      unwrapTopLevelUninitializedTypeText(trimTemplateTypeText(typeText));
-  if (!splitTemplateTypeName(normalizedTypeText, base, argText)) {
-    return false;
-  }
-
-  const std::string normalizedBase =
-      normalizeCollectionBindingTypeName(trimTemplateTypeText(base));
-  if (normalizedBase == "Reference" || normalizedBase == "Pointer") {
-    return populateStatementVectorTargetInfoFromTypeText(argText, targetInfoOut);
-  }
-  if (normalizedBase != "vector") {
-    return false;
-  }
-
-  targetInfoOut = {};
-  targetInfoOut.isArrayOrVectorTarget = true;
-  targetInfoOut.isVectorTarget = true;
-  std::vector<std::string> args;
-  if (splitTemplateArgs(argText, args) && args.size() == 1) {
-    const std::string elementType = trimTemplateTypeText(args.front());
-    targetInfoOut.elemKind = valueKindFromTypeName(elementType);
-    if (targetInfoOut.elemKind == LocalInfo::ValueKind::Unknown &&
-        !elementType.empty()) {
-      targetInfoOut.structTypeName =
-          specializedExperimentalVectorStructPathForElementType(elementType);
-    }
-  }
-  return true;
-}
-
-static bool resolveStatementVectorReceiverTargetInfoFromSemanticFacts(
-    const Expr &receiverExpr,
-    const SemanticProgram *semanticProgram,
-    const SemanticProductIndex *semanticIndex,
-    ArrayVectorAccessTargetInfo &targetInfoOut,
-    bool &hasSemanticVectorFactOut) {
-  hasSemanticVectorFactOut = false;
-  if (semanticProgram == nullptr || semanticIndex == nullptr) {
-    return false;
-  }
-
-  auto tryPopulateFromSemanticTypeText =
-      [&](SymbolId typeTextId, const std::string &typeText) {
-    const std::string resolvedTypeText =
-        resolveStatementCallSemanticTypeText(semanticProgram, typeTextId, typeText);
-    return !resolvedTypeText.empty() &&
-           populateStatementVectorTargetInfoFromTypeText(resolvedTypeText, targetInfoOut);
-  };
-
-  if (receiverExpr.semanticNodeId != 0) {
-    if (const auto *collectionFact =
-            findSemanticProductCollectionSpecialization(*semanticIndex, receiverExpr);
-        collectionFact != nullptr) {
-      hasSemanticVectorFactOut = true;
-      const std::string collectionFamily = resolveStatementCallSemanticTypeText(
-          semanticProgram,
-          collectionFact->collectionFamilyId,
-          collectionFact->collectionFamily);
-      if (normalizeCollectionBindingTypeName(collectionFamily) != "vector") {
-        return false;
-      }
-      targetInfoOut = {};
-      targetInfoOut.isArrayOrVectorTarget = true;
-      targetInfoOut.isVectorTarget = true;
-      const std::string elementType = resolveStatementCallSemanticTypeText(
-          semanticProgram,
-          collectionFact->elementTypeTextId,
-          collectionFact->elementTypeText);
-      targetInfoOut.elemKind = valueKindFromTypeName(elementType);
-      if (targetInfoOut.elemKind == LocalInfo::ValueKind::Unknown &&
-          !elementType.empty()) {
-        targetInfoOut.structTypeName =
-            specializedExperimentalVectorStructPathForElementType(elementType);
-      }
-      return true;
-    }
-
-    if (const auto *queryFact =
-            findSemanticProductQueryFact(semanticProgram, *semanticIndex, receiverExpr);
-        queryFact != nullptr) {
-      hasSemanticVectorFactOut = true;
-      return tryPopulateFromSemanticTypeText(queryFact->bindingTypeTextId,
-                                             queryFact->bindingTypeText) ||
-             tryPopulateFromSemanticTypeText(queryFact->queryTypeTextId,
-                                             queryFact->queryTypeText) ||
-             tryPopulateFromSemanticTypeText(queryFact->receiverBindingTypeTextId,
-                                             queryFact->receiverBindingTypeText);
-    }
-
-    if (const auto *bindingFact =
-            findSemanticProductBindingFact(*semanticIndex, receiverExpr);
-        bindingFact != nullptr) {
-      hasSemanticVectorFactOut = true;
-      return tryPopulateFromSemanticTypeText(bindingFact->bindingTypeTextId,
-                                             bindingFact->bindingTypeText);
-    }
-
-    if (const auto *localAutoFact =
-            findSemanticProductLocalAutoFact(semanticProgram, *semanticIndex, receiverExpr);
-        localAutoFact != nullptr) {
-      hasSemanticVectorFactOut = true;
-      return tryPopulateFromSemanticTypeText(localAutoFact->bindingTypeTextId,
-                                             localAutoFact->bindingTypeText);
-    }
-  }
-
-  if (receiverExpr.kind == Expr::Kind::Call && receiverExpr.args.size() == 1 &&
-      (isSimpleCallName(receiverExpr, "location") ||
-       isSimpleCallName(receiverExpr, "dereference"))) {
-    return resolveStatementVectorReceiverTargetInfoFromSemanticFacts(
-        receiverExpr.args.front(),
-        semanticProgram,
-        semanticIndex,
-        targetInfoOut,
-        hasSemanticVectorFactOut);
-  }
-
-  return false;
-}
-
-static bool resolveStatementVectorHelperAliasName(const Expr &expr, std::string &helperNameOut) {
-  if (expr.name.empty()) {
-    return false;
-  }
-  const auto *metadata = statementVectorHelperMetadata();
-  if (metadata == nullptr) {
-    return false;
-  }
-  return resolvePublishedStdlibSurfaceExprMemberName(
-             expr,
-             metadata->id,
-             helperNameOut) ||
-         resolvePublishedStatementVectorHelperName(
-             resolveStatementCallPathWithoutFallbackProbes(expr),
-             helperNameOut);
-}
-
-static bool isVectorBuiltinName(const Expr &expr, const char *name) {
-  if (isSimpleCallName(expr, name)) {
-    return true;
-  }
-  std::string aliasName;
-  return resolveStatementVectorHelperAliasName(expr, aliasName) && aliasName == name;
-}
-
-static bool isExplicitVectorMutatorHelperCall(const Expr &expr) {
-  std::string aliasName;
-  if (!resolveStatementVectorHelperAliasName(expr, aliasName)) {
-    return false;
-  }
-  return aliasName == "push" || aliasName == "pop" || aliasName == "reserve" || aliasName == "clear" ||
-         aliasName == "remove_at" || aliasName == "remove_swap";
-}
-
-static size_t explicitVectorHelperReceiverIndex(const Expr &expr) {
-  for (size_t i = 0; i < expr.argNames.size() && i < expr.args.size(); ++i) {
-    if (expr.argNames[i].has_value() && *expr.argNames[i] == "values") {
-      return i;
-    }
-  }
-  return 0;
 }
 
 static bool isStatementSoaVectorTypeText(const std::string &typeText) {
@@ -653,111 +395,6 @@ static std::optional<LocalInfo::ValueKind> resolveStatementValueKindFromSemantic
   }
 
   return std::nullopt;
-}
-
-static DirectCallStatementEmitResult tryEmitVectorHelperCallFormStatement(
-    const Expr &stmt,
-    const LocalMap &localsIn,
-    const std::function<const Definition *(const Expr &, const LocalMap &)> &resolveMethodCallDefinition,
-    const std::function<bool(const Expr &, const Definition &, const LocalMap &, bool)> &emitInlineDefinitionCall,
-    std::string &error) {
-  if (stmt.kind != Expr::Kind::Call || stmt.isMethodCall) {
-    return DirectCallStatementEmitResult::NotMatched;
-  }
-  const bool isVectorMutatorCall =
-      isVectorBuiltinName(stmt, "push") || isVectorBuiltinName(stmt, "pop") || isVectorBuiltinName(stmt, "reserve") ||
-      isVectorBuiltinName(stmt, "clear") || isVectorBuiltinName(stmt, "remove_at") ||
-      isVectorBuiltinName(stmt, "remove_swap");
-  if (!isVectorMutatorCall || stmt.args.empty()) {
-    return DirectCallStatementEmitResult::NotMatched;
-  }
-  std::string explicitStdlibHelperName;
-  const bool isExplicitStdlibVectorHelper =
-      resolveStatementVectorHelperAliasName(stmt, explicitStdlibHelperName) &&
-      isPublishedCanonicalStatementVectorHelperPath(
-          resolveStatementCallPathWithoutFallbackProbes(stmt));
-
-  std::vector<size_t> receiverIndices;
-  auto appendReceiverIndex = [&](size_t index) {
-    if (index >= stmt.args.size()) {
-      return;
-    }
-    for (size_t existing : receiverIndices) {
-      if (existing == index) {
-        return;
-      }
-    }
-    receiverIndices.push_back(index);
-  };
-
-  const bool hasNamedArgs = hasNamedArguments(stmt.argNames);
-  if (hasNamedArgs) {
-    bool hasValuesNamedReceiver = false;
-    for (size_t i = 0; i < stmt.args.size(); ++i) {
-      if (i < stmt.argNames.size() && stmt.argNames[i].has_value() && *stmt.argNames[i] == "values") {
-        appendReceiverIndex(i);
-        hasValuesNamedReceiver = true;
-      }
-    }
-    if (!hasValuesNamedReceiver) {
-      appendReceiverIndex(0);
-      for (size_t i = 1; i < stmt.args.size(); ++i) {
-        appendReceiverIndex(i);
-      }
-    }
-  } else {
-    appendReceiverIndex(0);
-  }
-
-  const bool probePositionalReorderedReceiver =
-      !hasNamedArgs && stmt.args.size() > 1 &&
-      (stmt.args.front().kind == Expr::Kind::Literal || stmt.args.front().kind == Expr::Kind::BoolLiteral ||
-       stmt.args.front().kind == Expr::Kind::FloatLiteral || stmt.args.front().kind == Expr::Kind::StringLiteral ||
-       stmt.args.front().kind == Expr::Kind::Name);
-  if (probePositionalReorderedReceiver) {
-    for (size_t i = 1; i < stmt.args.size(); ++i) {
-      appendReceiverIndex(i);
-    }
-  }
-
-  for (size_t receiverIndex : receiverIndices) {
-    Expr methodStmt = stmt;
-    methodStmt.isMethodCall = true;
-    std::string normalizedHelperName;
-    if (resolveStatementVectorHelperAliasName(methodStmt, normalizedHelperName)) {
-      methodStmt.name = normalizedHelperName;
-    }
-    if (receiverIndex != 0) {
-      std::swap(methodStmt.args[0], methodStmt.args[receiverIndex]);
-      if (methodStmt.argNames.size() < methodStmt.args.size()) {
-        methodStmt.argNames.resize(methodStmt.args.size());
-      }
-      std::swap(methodStmt.argNames[0], methodStmt.argNames[receiverIndex]);
-    }
-    const std::string priorError = error;
-    const Definition *callee = resolveMethodCallDefinition(methodStmt, localsIn);
-    if (!callee) {
-      error = priorError;
-      continue;
-    }
-    if (methodStmt.hasBodyArguments || !methodStmt.bodyArguments.empty()) {
-      error = "native backend does not support block arguments on calls";
-      return DirectCallStatementEmitResult::Error;
-    }
-    if (!emitInlineDefinitionCall(methodStmt, *callee, localsIn, false)) {
-      return DirectCallStatementEmitResult::Error;
-    }
-    error = priorError;
-    return DirectCallStatementEmitResult::Emitted;
-  }
-
-  if (isExplicitStdlibVectorHelper &&
-      (explicitStdlibHelperName == "clear" || explicitStdlibHelperName == "remove_at" ||
-       explicitStdlibHelperName == "remove_swap")) {
-    return DirectCallStatementEmitResult::NotMatched;
-  }
-
-  return DirectCallStatementEmitResult::NotMatched;
 }
 
 } // namespace
@@ -1110,64 +747,6 @@ DirectCallStatementEmitResult tryEmitDirectCallStatement(
     return resolveGeneratedDefinitionPath(callExpr, resolvedTarget);
   };
 
-  bool explicitVectorMutatorHelperCall = isExplicitVectorMutatorHelperCall(stmt);
-  auto explicitVectorHelperUsesBuiltinVectorReceiver = [&](const Expr &callExpr) {
-    if (!explicitVectorMutatorHelperCall || callExpr.args.empty()) {
-      return false;
-    }
-    const size_t receiverIndex = explicitVectorHelperReceiverIndex(callExpr);
-    ArrayVectorAccessTargetInfo semanticTargetInfo;
-    bool hasSemanticVectorFact = false;
-    if (receiverIndex < callExpr.args.size() &&
-        resolveStatementVectorReceiverTargetInfoFromSemanticFacts(
-            callExpr.args[receiverIndex],
-            semanticProgram,
-            semanticIndex,
-            semanticTargetInfo,
-            hasSemanticVectorFact)) {
-      return true;
-    }
-    if (hasSemanticVectorFact) {
-      return false;
-    }
-    const auto targetInfo =
-        resolveArrayVectorAccessTargetInfo(callExpr.args[receiverIndex],
-                                           localsIn,
-                                           {},
-                                           semanticProgram,
-                                           semanticIndex);
-    return targetInfo.isVectorTarget;
-  };
-  auto isBuiltinVectorReceiverExpr = [&](const Expr &candidate) {
-    ArrayVectorAccessTargetInfo semanticTargetInfo;
-    bool hasSemanticVectorFact = false;
-    if (resolveStatementVectorReceiverTargetInfoFromSemanticFacts(candidate,
-                                                                 semanticProgram,
-                                                                 semanticIndex,
-                                                                 semanticTargetInfo,
-                                                                 hasSemanticVectorFact)) {
-      return true;
-    }
-    if (hasSemanticVectorFact) {
-      return false;
-    }
-    const auto targetInfo =
-        resolveArrayVectorAccessTargetInfo(candidate,
-                                           localsIn,
-                                           {},
-                                           semanticProgram,
-                                           semanticIndex);
-    if (targetInfo.isVectorTarget) {
-      return true;
-    }
-    if (candidate.kind != Expr::Kind::Name) {
-      return false;
-    }
-    auto localIt = localsIn.find(candidate.name);
-    return localIt != localsIn.end() &&
-           (localIt->second.kind == LocalInfo::Kind::Vector ||
-            isExperimentalVectorTypePath(localIt->second.structTypeName));
-  };
   auto emitVectorHeaderFieldAddress = [&](const Expr &receiver, int32_t slotOffset) {
     if (receiver.kind == Expr::Kind::Name) {
       auto localIt = localsIn.find(receiver.name);
@@ -1210,91 +789,21 @@ DirectCallStatementEmitResult tryEmitDirectCallStatement(
   auto isInternalVectorMetadataSetterCallee = [](const Definition &callee) {
     return isExperimentalVectorTypePath(callee.fullPath);
   };
+  auto isStructDefinitionCallee = [](const Definition &definition) {
+    for (const auto &transform : definition.transforms) {
+      if (transform.name == "struct") {
+        return true;
+      }
+    }
+    return false;
+  };
   auto metadataCountSlotOffset = [&](const Definition &callee) {
     return isInternalVectorMetadataSetterCallee(callee) ? 0 : 1;
   };
   auto metadataCapacitySlotOffset = [&](const Definition &callee) {
     return isInternalVectorMetadataSetterCallee(callee) ? 1 : 2;
   };
-  auto rewriteBareVectorMethodMutatorToDirectCall = [&](const Expr &callExpr, Expr &rewrittenExpr) {
-    if (callExpr.kind != Expr::Kind::Call || !callExpr.isMethodCall || callExpr.args.empty() ||
-        !callExpr.namespacePrefix.empty() || callExpr.name.find('/') != std::string::npos) {
-      return false;
-    }
-    const std::string helperName = callExpr.name;
-    if (helperName != "push" && helperName != "pop" && helperName != "reserve" &&
-        helperName != "clear" && helperName != "remove_at" && helperName != "remove_swap") {
-      return false;
-    }
-    const size_t expectedArgCount =
-        (helperName == "pop" || helperName == "clear") ? 1u : 2u;
-    if (callExpr.args.size() != expectedArgCount) {
-      return false;
-    }
-    if (!isBuiltinVectorReceiverExpr(callExpr.args.front())) {
-      return false;
-    }
-    rewrittenExpr = callExpr;
-    rewrittenExpr.isMethodCall = false;
-    rewrittenExpr.namespacePrefix.clear();
-    rewrittenExpr.name = helperName;
-    return true;
-  };
   Expr directStmt = stmt;
-  bool rewrittenExplicitVectorMutatorToBuiltinCall = false;
-  bool rewrittenBareVectorMutatorToBuiltinCall = false;
-  Expr rewrittenBareVectorMethodStmt;
-  if (!explicitVectorMutatorHelperCall &&
-      rewriteBareVectorMethodMutatorToDirectCall(stmt, rewrittenBareVectorMethodStmt)) {
-    directStmt = rewrittenBareVectorMethodStmt;
-    rewrittenBareVectorMutatorToBuiltinCall = true;
-  }
-  if (explicitVectorMutatorHelperCall &&
-      explicitVectorHelperUsesBuiltinVectorReceiver(directStmt)) {
-    std::string helperName;
-    if (resolveStatementVectorHelperAliasName(directStmt, helperName)) {
-      const size_t receiverIndex = explicitVectorHelperReceiverIndex(directStmt);
-      directStmt.name = helperName;
-      directStmt.namespacePrefix.clear();
-      directStmt.templateArgs.clear();
-      if (receiverIndex < directStmt.args.size() && receiverIndex != 0) {
-        std::swap(directStmt.args[0], directStmt.args[receiverIndex]);
-        if (directStmt.argNames.size() < directStmt.args.size()) {
-          directStmt.argNames.resize(directStmt.args.size());
-        }
-        std::swap(directStmt.argNames[0], directStmt.argNames[receiverIndex]);
-      }
-      if (hasNamedArguments(directStmt.argNames)) {
-        directStmt.argNames.clear();
-      }
-      explicitVectorMutatorHelperCall = false;
-      rewrittenExplicitVectorMutatorToBuiltinCall = true;
-    }
-  }
-  if (rewrittenExplicitVectorMutatorToBuiltinCall) {
-    const size_t beforeExpr = instructions.size();
-    if (!emitExpr(directStmt, localsIn)) {
-      return DirectCallStatementEmitResult::Error;
-    }
-    if (instructions.size() > beforeExpr &&
-        instructions.back().op == IrOpcode::PushI32 &&
-        instructions.back().imm == 0) {
-      instructions.push_back({IrOpcode::Pop, 0});
-    }
-    return DirectCallStatementEmitResult::Emitted;
-  }
-  if (rewrittenBareVectorMutatorToBuiltinCall) {
-    const size_t beforeExpr = instructions.size();
-    if (!emitExpr(directStmt, localsIn)) {
-      return DirectCallStatementEmitResult::Error;
-    }
-    if (instructions.size() > beforeExpr &&
-        instructions.back().op == IrOpcode::PushI32 &&
-        instructions.back().imm == 0) {
-      instructions.push_back({IrOpcode::Pop, 0});
-    }
-    return DirectCallStatementEmitResult::Emitted;
-  }
 
   if (!directStmt.isMethodCall && directStmt.args.size() == 2) {
 	if (const Definition *callee = resolveDefinitionCall(directStmt);
@@ -1349,8 +858,9 @@ DirectCallStatementEmitResult tryEmitDirectCallStatement(
     }
   }
 
-  if (!explicitVectorMutatorHelperCall &&
-      !directStmt.isMethodCall &&
+  if (!directStmt.isMethodCall &&
+      directStmt.namespacePrefix.empty() &&
+      directStmt.name.find('/') == std::string::npos &&
       directStmt.args.size() == 1 &&
       isSoaVectorTargetExpr(directStmt.args.front(), localsIn, semanticProgram, semanticIndex)) {
     Expr methodStmt = directStmt;
@@ -1378,14 +888,6 @@ DirectCallStatementEmitResult tryEmitDirectCallStatement(
         directStmt.args.size() == 2 &&
         (isSimpleCallName(directStmt, "set_field_count") ||
          isSimpleCallName(directStmt, "set_field_capacity"));
-    auto isStructDefinitionCallee = [](const Definition &definition) {
-      for (const auto &transform : definition.transforms) {
-        if (transform.name == "struct") {
-          return true;
-        }
-      }
-      return false;
-    };
     const std::string priorError = error;
     const Definition *callee = resolveMethodStatementDefinition(directStmt);
     if (callee != nullptr && isVectorMetadataSetterMethod &&
@@ -1472,15 +974,6 @@ DirectCallStatementEmitResult tryEmitDirectCallStatement(
     error.clear();
   }
 
-  const auto vectorHelperCallFormResult = tryEmitVectorHelperCallFormStatement(
-      directStmt, localsIn, resolveMethodCallDefinition, emitInlineDefinitionCall, error);
-  if (vectorHelperCallFormResult == DirectCallStatementEmitResult::Error) {
-    return DirectCallStatementEmitResult::Error;
-  }
-  if (vectorHelperCallFormResult == DirectCallStatementEmitResult::Emitted) {
-    return DirectCallStatementEmitResult::Emitted;
-  }
-
   const std::string priorError = error;
   const Definition *callee = resolveDirectStatementDefinition(directStmt);
   if (!callee) {
@@ -1498,7 +991,7 @@ DirectCallStatementEmitResult tryEmitDirectCallStatement(
   if (!emitInlineDefinitionCall(directStmt, *callee, localsIn, false)) {
     return DirectCallStatementEmitResult::Error;
   }
-  if (!info.returnsVoid) {
+  if (!info.returnsVoid && !isStructDefinitionCallee(*callee)) {
     instructions.push_back({IrOpcode::Pop, 0});
   }
   error = priorError;

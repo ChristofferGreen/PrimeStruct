@@ -770,7 +770,7 @@ bool isStdlibSurfaceMemberName(StdlibSurfaceId id, std::string_view memberName) 
   return metadata != nullptr && matchesAny(metadata->memberNames, memberName);
 }
 
-bool isStdlibVectorStatementHelperName(std::string_view memberName) {
+bool isStdlibVectorMutatorHelperName(std::string_view memberName) {
   const auto *metadata = findStdlibSurfaceMetadata(StdlibSurfaceId::CollectionsVectorHelperSurface);
   return metadata != nullptr && matchesAny(metadata->statementMemberNames, memberName);
 }

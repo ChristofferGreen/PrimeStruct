@@ -139,7 +139,7 @@ bool SemanticsValidator::validateExprNamedArgumentBuiltins(
   if (hasNamedArguments(expr.argNames) && resolvedMethod &&
       !allowsNamedArgsPackBuiltinLabels) {
     std::string vectorHelperName;
-    if (getVectorStatementHelperName(expr, vectorHelperName)) {
+    if (getVectorMutatorHelperName(expr, vectorHelperName)) {
       return failNamedArgumentDiagnostic(vectorHelperName + " is only supported as a statement");
     }
     return failNamedArgumentDiagnostic("named arguments not supported for builtin calls");

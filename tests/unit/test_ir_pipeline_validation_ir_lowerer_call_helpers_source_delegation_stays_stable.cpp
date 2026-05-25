@@ -86,7 +86,7 @@ TEST_CASE("ir lowerer call helpers source delegation stays stable") {
   REQUIRE(std::filesystem::exists(setupTypeMethodTargetHelpersPath));
   REQUIRE(std::filesystem::exists(countAccessClassifiersPath));
   REQUIRE(std::filesystem::exists(countAccessHelpersPath));
-  REQUIRE(std::filesystem::exists(flowVectorResolutionHelpersPath));
+  CHECK_FALSE(std::filesystem::exists(flowVectorResolutionHelpersPath));
   REQUIRE(std::filesystem::exists(nativeTailDispatchPath));
   REQUIRE(std::filesystem::exists(tailDispatchPath));
   REQUIRE(std::filesystem::exists(lowerEmitExprPath));
@@ -119,7 +119,6 @@ TEST_CASE("ir lowerer call helpers source delegation stays stable") {
       readText(setupTypeMethodTargetHelpersPath);
   const std::string countAccessClassifiersSource = readText(countAccessClassifiersPath);
   const std::string countAccessHelpersSource = readText(countAccessHelpersPath);
-  const std::string flowVectorResolutionHelpersSource = readText(flowVectorResolutionHelpersPath);
   const std::string nativeTailDispatchSource = readText(nativeTailDispatchPath);
   const std::string tailDispatchSource = readText(tailDispatchPath);
   const std::string lowerEmitExprSource = readText(lowerEmitExprPath);
@@ -856,24 +855,16 @@ TEST_CASE("ir lowerer call helpers source delegation stays stable") {
         std::string::npos);
   CHECK(countAccessHelpersSource.find("canonicalCollectionMemberPrefix(\"vector\")") !=
         std::string::npos);
-  CHECK(flowVectorResolutionHelpersSource.find("findStdlibSurfaceMetadataByBridgeKey(\"collections.vector_helpers\")") !=
-        std::string::npos);
   CHECK(countAccessClassifiersSource.find("std/collections/vector/") == std::string::npos);
   CHECK(countAccessHelpersSource.find("std/collections/vector/") == std::string::npos);
-  CHECK(flowVectorResolutionHelpersSource.find("std/collections/vector/") == std::string::npos);
   CHECK(countAccessClassifiersSource.find("std/collections/experimental_vector") ==
         std::string::npos);
   CHECK(countAccessHelpersSource.find("std/collections/experimental_vector") ==
         std::string::npos);
-  CHECK(flowVectorResolutionHelpersSource.find("std/collections/experimental_vector") ==
-        std::string::npos);
   CHECK(countAccessClassifiersSource.find("\"/vector/\"") == std::string::npos);
   CHECK(countAccessHelpersSource.find("\"/vector/\"") == std::string::npos);
-  CHECK(flowVectorResolutionHelpersSource.find("\"/vector/\"") == std::string::npos);
   CHECK(countAccessHelpersSource.find("vectorCount") == std::string::npos);
   CHECK(countAccessHelpersSource.find("vectorCapacity") == std::string::npos);
-  CHECK(flowVectorResolutionHelpersSource.find("vectorPush") == std::string::npos);
-  CHECK(flowVectorResolutionHelpersSource.find("vectorRemoveSwap") == std::string::npos);
   CHECK(countAccessHelpersSource.find("isVectorCountTarget(expr.args.front(), localsIn)") !=
         std::string::npos);
   const size_t staticStringCountPos =
@@ -975,23 +966,23 @@ TEST_CASE("ir lowerer call helpers source delegation stays stable") {
         std::string::npos);
   CHECK(inlineCallContextHelpersSource.find("collectionWrapperAlias(\"vector\", \"InitSlot\")") !=
         std::string::npos);
-  CHECK(lowerEmitExprSource.find("collectionWrapperAlias(\"vector\", \"Push\")") !=
+  CHECK(lowerEmitExprSource.find("collectionWrapperAlias(\"vector\", \"Push\")") ==
         std::string::npos);
   CHECK(lowerInlineCallsSource.find("collectionWrapperAlias(\"vector\", \"New\")") !=
         std::string::npos);
-  CHECK(statementCallEmissionSource.find("statementVectorHelperMetadata()") !=
+  CHECK(statementCallEmissionSource.find("statementCallVectorHelperMetadata()") ==
         std::string::npos);
-  CHECK(statementCallEmissionSource.find("metadata->id != vectorMetadata->id") !=
+  CHECK(statementCallEmissionSource.find("metadata->id != vectorMetadata->id") ==
         std::string::npos);
-  CHECK(statementCallEmissionSource.find("collectionWrapperAlias(\"vector\", \"Push\")") !=
+  CHECK(statementCallEmissionSource.find("collectionWrapperAlias(\"vector\", \"Push\")") ==
         std::string::npos);
   CHECK(statementCallEmissionSource.find(
             "experimentalCollectionTypePath(\"vector\", \"Vector\")") !=
         std::string::npos);
-  CHECK(lowerStatementsCallsStepSource.find("collectionWrapperAlias(\"vector\", \"Push\")") !=
+  CHECK(lowerStatementsCallsStepSource.find("collectionWrapperAlias(\"vector\", \"Push\")") ==
         std::string::npos);
   CHECK(lowerStatementsCallsStepSource.find(
-            "experimentalCollectionMemberRoot(\"vector\", false)") !=
+            "experimentalCollectionMemberRoot(\"vector\", false)") ==
         std::string::npos);
   CHECK(lowerStatementsBindingsSource.find("collectionWrapperAlias(\"vector\", \"New\")") !=
         std::string::npos);

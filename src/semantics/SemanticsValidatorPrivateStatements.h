@@ -64,40 +64,6 @@
                                       const std::vector<Expr> *enclosingStatements,
                                       size_t statementIndex,
                                       bool &handled);
-  bool validateVectorStatementHelper(const std::vector<ParameterInfo> &params,
-                                     const std::unordered_map<std::string, BindingInfo> &locals,
-                                     const Expr &stmt,
-                                     const std::string &namespacePrefix,
-                                     const std::vector<std::string> *definitionTemplateArgs,
-                                     const std::vector<Expr> *enclosingStatements,
-                                     size_t statementIndex,
-                                     bool &handled);
-  bool isVectorStatementIntegerExpr(const std::vector<ParameterInfo> &params,
-                                    const std::unordered_map<std::string, BindingInfo> &locals,
-                                    const Expr &arg);
-  bool resolveVectorStatementBinding(const std::vector<ParameterInfo> &params,
-                                     const std::unordered_map<std::string, BindingInfo> &locals,
-                                     const Expr &target,
-                                     BindingInfo &bindingOut);
-  bool validateVectorStatementElementType(const std::vector<ParameterInfo> &params,
-                                          const std::unordered_map<std::string, BindingInfo> &locals,
-                                          const Expr &arg,
-                                          const std::string &typeName);
-  bool validateVectorStatementHelperTarget(const std::vector<ParameterInfo> &params,
-                                           const std::unordered_map<std::string, BindingInfo> &locals,
-                                           const Expr &target,
-                                           const char *helperName,
-                                           BindingInfo &bindingOut);
-  bool resolveVectorStatementHelperTargetPath(const std::vector<ParameterInfo> &params,
-                                              const std::unordered_map<std::string, BindingInfo> &locals,
-                                              const Expr &receiver,
-                                              const std::string &helperName,
-                                              std::string &resolvedOut);
-  bool isNonCollectionStructVectorHelperTarget(const std::string &resolvedPath) const;
-  bool validateVectorStatementHelperReceiver(const std::vector<ParameterInfo> &params,
-                                             const std::unordered_map<std::string, BindingInfo> &locals,
-                                             const Expr &receiver,
-                                             const std::string &helperName);
   std::string preferVectorStdlibHelperPath(const std::string &path) const;
   bool statementAlwaysReturns(const Expr &stmt);
   bool blockAlwaysReturns(const std::vector<Expr> &statements);

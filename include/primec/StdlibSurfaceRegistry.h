@@ -66,6 +66,6 @@ std::string stdlibSurfacePreferredSpellingForMember(StdlibSurfaceId id,
                                                     std::string_view preferredPrefix);
 bool stdlibSurfaceMatchesSpelling(const StdlibSurfaceMetadata &metadata, std::string_view spelling);
 bool isStdlibSurfaceMemberName(StdlibSurfaceId id, std::string_view memberName);
-bool isStdlibVectorStatementHelperName(std::string_view memberName);
+bool isStdlibVectorMutatorHelperName(std::string_view memberName);
 
 } // namespace primec

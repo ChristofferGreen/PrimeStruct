@@ -550,7 +550,7 @@ inline void expectCanonicalVectorIndexedRemovalOwnershipConformance(const std::s
       makeCanonicalVectorIndexedRemovalOwnershipConformanceSource(),
       "vector_indexed_removal_canonical_ownership_" + emitMode,
       emitMode,
-      8);
+      18);
 }
 
 inline void expectCanonicalVectorPopVmImportRequirement() {
