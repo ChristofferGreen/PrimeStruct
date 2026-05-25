@@ -67,6 +67,8 @@ This file is the live open-work queue for PrimeStruct.
 - TODO-4565: Add minimal scene graph and camera data model | track: scene-renderer | primary surface: stdlib/std/scene scene model
 - TODO-4572: Remove vector statement-helper compiler path | track: vector-special-case-deletion | primary surface: vector semantic/lowerer helpers
 - TODO-4573: Remove compiler-owned map literal lowering | track: map-special-case-deletion | primary surface: map literal semantics/lowering
+- TODO-4588: Add pass/phase invalidation manifest beyond semantics | track: architecture-phase-invalidation | primary surface: IR phase manifest contract
+- TODO-4589: Add architecture health dashboard script | track: architecture-health-dashboard | primary surface: scripts architecture dashboard
 
 ### Immediate Next 10
 
@@ -109,6 +111,8 @@ This file is the live open-work queue for PrimeStruct.
 - TODO-4565: Add minimal scene graph and camera data model
 - TODO-4572: Remove vector statement-helper compiler path
 - TODO-4573: Remove compiler-owned map literal lowering
+- TODO-4588: Add pass/phase invalidation manifest beyond semantics
+- TODO-4589: Add architecture health dashboard script
 - TODO-4566: Render flat and rounded-rect scene primitives to BGRA8
 - TODO-4590: Add international text shaping and glyph atlas path
 - TODO-4567: Render first globally lit 3D SDF widget primitive
@@ -121,8 +125,6 @@ This file is the live open-work queue for PrimeStruct.
 - TODO-4578: Generalize stdlib surface registry away from map/vector IDs
 - TODO-4579: Enforce zero map/vector compiler-knowledge traces
 - TODO-4593: Carry source-unit provenance into IR and VM debug maps
-- TODO-4588: Add pass/phase invalidation manifest beyond semantics
-- TODO-4589: Add architecture health dashboard script
 - TODO-4594: Classify semantic call diagnostic stability tiers
 
 ### Task Blocks
@@ -589,6 +591,7 @@ This file is the live open-work queue for PrimeStruct.
   - owner: ai
   - created_at: 2026-05-24
   - phase: Architecture hardening
+  - parallel_track: architecture-phase-invalidation
   - scope: Extend the semantic validation manifest idea to one IR
     preparation, lowering, or emitter phase with explicit inputs, outputs,
     mutation, and invalidation rules.
@@ -612,6 +615,7 @@ This file is the live open-work queue for PrimeStruct.
   - owner: ai
   - created_at: 2026-05-24
   - phase: Architecture hardening
+  - parallel_track: architecture-health-dashboard
   - scope: Add a repo-local script that reports architecture health metrics
     without changing compiler behavior.
   - implementation_notes: Aggregate existing checks where possible:
