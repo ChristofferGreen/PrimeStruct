@@ -67,7 +67,6 @@ This file is the live open-work queue for PrimeStruct.
 - TODO-4592: Map parser and semantic diagnostics through source units | track: source-unit-provenance | primary surface: parser/semantic diagnostics
 - TODO-4565: Add minimal scene graph and camera data model | track: scene-renderer | primary surface: stdlib/std/scene scene model
 - TODO-4570: Retire duplicate map2 candidate surface | track: collection-stdlib-cleanup | primary surface: stdlib/std/collections/map*.prime
-- TODO-4571: Add compiler-knowledge inventory for map/vector | track: collection-audit | primary surface: scripts/tests audit coverage
 - TODO-4572: Remove vector statement-helper compiler path | track: vector-special-case-deletion | primary surface: vector semantic/lowerer helpers
 - TODO-4573: Remove compiler-owned map literal lowering | track: map-special-case-deletion | primary surface: map literal semantics/lowering
 
@@ -94,8 +93,9 @@ This file is the live open-work queue for PrimeStruct.
   TODO-4583's schema/versioning work.
 - Scene graph renderer and UI presentation: TODO-4565 -> TODO-4566 ->
   (TODO-4590 and TODO-4567) -> TODO-4568 -> TODO-4569
-- Map/vector compiler-independence: TODO-4570 and TODO-4571 can run in
-  parallel with the deletion tracks; vector path TODO-4572 -> TODO-4574 ->
+- Map/vector compiler-independence: TODO-4570 can run in parallel with the
+  deletion tracks; the compiler-knowledge inventory categories from
+  TODO-4571 guide deletion scope. Vector path TODO-4572 -> TODO-4574 ->
   TODO-4577; map path TODO-4573 -> TODO-4575 -> TODO-4576; join at
   TODO-4578 -> TODO-4579
 - Architecture hardening backlog: TODO-4580, TODO-4581 -> TODO-4582,
@@ -107,7 +107,6 @@ This file is the live open-work queue for PrimeStruct.
 - TODO-4592: Map parser and semantic diagnostics through source units
 - TODO-4565: Add minimal scene graph and camera data model
 - TODO-4570: Retire duplicate map2 candidate surface
-- TODO-4571: Add compiler-knowledge inventory for map/vector
 - TODO-4572: Remove vector statement-helper compiler path
 - TODO-4573: Remove compiler-owned map literal lowering
 - TODO-4566: Render flat and rounded-rect scene primitives to BGRA8
@@ -361,48 +360,12 @@ This file is the live open-work queue for PrimeStruct.
     unreachable and canonical map tests pass; leave compiler special-case
     deletion to the later map/vector compiler-independence leaves.
 
-- [ ] TODO-4571: Add compiler-knowledge inventory for map/vector
-  - owner: ai
-  - created_at: 2026-05-24
-  - phase: Map/vector compiler-independence
-  - parallel_track: collection-audit
-  - scope: Add an honest audit for PrimeStruct map/vector compiler knowledge
-    that is broader than the current surface-trace checks, including bridge
-    keys, helper recognizers, map/vector literal paths, and backing-layout
-    classifiers under `src/` and `include/`.
-  - implementation_notes: The current passing checks
-    `scripts/check_vector_surface_traces.py` and
-    `scripts/check_map_surface_strict_audit.py` prove only that direct
-    production surface traces are absent. The new audit should also inventory
-    patterns such as `collections.vector_helpers`, `collections.map_helpers`,
-    `isVectorBuiltinName`, `tryEmitVectorStatementHelper`,
-    `validateVectorStatementHelper`, `isExperimentalMapStructTypePath`,
-    `MapValue`, `map literal`, `resolveExperimentalMapValueTarget`, and
-    `isMapValue`. Start as a nonzero inventory plus `--enforce-zero` mode, and
-    only wire the zero mode into routine release validation after TODO-4578.
-  - acceptance:
-    - A script reports current PrimeStruct map/vector compiler-knowledge
-      traces in tracked `src/` and `include/` files while ignoring ordinary
-      C++ `std::map`, `std::vector`, source-map terminology, tests, docs,
-      and stdlib `.prime` files.
-    - The script has self-tests proving it catches bridge-key strings,
-      vector statement-helper APIs, map literal diagnostics/lowering, map
-      backing-type classifiers, and registry enum/id special cases.
-    - The script supports an `--enforce-zero` mode that fails on any remaining
-      map/vector compiler-knowledge trace but is not yet required by the
-      routine release gate while the deletion leaves remain open.
-    - `docs/todo.md` points follow-up leaves at the inventory categories so
-      later workers can delete real special cases instead of chasing raw grep
-      noise.
-  - stop_rule: Stop once the inventory and self-tests are committed and the
-    current nonzero trace categories are actionable; do not start deleting
-    semantic or lowerer special cases in this slice.
-
 - [ ] TODO-4572: Remove vector statement-helper compiler path
   - owner: ai
   - created_at: 2026-05-24
   - phase: Map/vector compiler-independence
   - parallel_track: vector-special-case-deletion
+  - inventory_categories: `vector-statement-helper`
   - scope: Delete the compiler-owned vector statement-helper validation and
     lowering path so `push`, `pop`, `reserve`, `clear`, `remove_at`, and
     `remove_swap` on vectors are resolved as ordinary imported `.prime`
@@ -437,6 +400,7 @@ This file is the live open-work queue for PrimeStruct.
   - created_at: 2026-05-24
   - phase: Map/vector compiler-independence
   - parallel_track: map-special-case-deletion
+  - inventory_categories: `map-literal-path`
   - scope: Remove C++ semantic and lowering branches that treat `map` literal
     construction as a compiler-owned collection literal instead of an ordinary
     call into `/std/collections/map/*` `.prime` code.
@@ -469,6 +433,7 @@ This file is the live open-work queue for PrimeStruct.
   - created_at: 2026-05-24
   - phase: Map/vector compiler-independence
   - depends_on: TODO-4572
+  - inventory_categories: `vector-helper-classifier`
   - scope: Remove compiler-owned vector count/capacity/access helper
     classifiers after vector mutator statements have been routed through
     ordinary `.prime` helper calls.
@@ -504,6 +469,7 @@ This file is the live open-work queue for PrimeStruct.
   - created_at: 2026-05-24
   - phase: Map/vector compiler-independence
   - depends_on: TODO-4573
+  - inventory_categories: `map-helper-classifier`
   - scope: Remove compiler-owned map helper/access classifiers after map
     construction literals have been routed through ordinary `.prime`
     constructors and helpers.
@@ -535,6 +501,7 @@ This file is the live open-work queue for PrimeStruct.
   - created_at: 2026-05-24
   - phase: Map/vector compiler-independence
   - depends_on: TODO-4575
+  - inventory_categories: `map-backing-classifier`
   - scope: Delete C++ recognition of map backing structs and `MapValue`
     shapes, replacing it with generic struct layout, semantic product, and
     ordinary helper-call facts.
@@ -564,6 +531,7 @@ This file is the live open-work queue for PrimeStruct.
   - created_at: 2026-05-24
   - phase: Map/vector compiler-independence
   - depends_on: TODO-4574
+  - inventory_categories: `vector-backing-classifier`, `vector-literal-path`
   - scope: Delete C++ recognition of vector backing structs and specialized
     `Vector` storage paths, replacing it with generic struct layout,
     semantic product, and ordinary helper-call facts.
@@ -594,6 +562,7 @@ This file is the live open-work queue for PrimeStruct.
   - created_at: 2026-05-24
   - phase: Map/vector compiler-independence
   - depends_on: TODO-4576, TODO-4577
+  - inventory_categories: `stdlib-bridge-key`, `stdlib-registry-id`
   - scope: Remove map/vector-specific C++ stdlib surface IDs, helper APIs,
     and bridge-key branches so C++ treats stdlib surface metadata as generic
     manifest data instead of named collection knowledge.
@@ -625,6 +594,8 @@ This file is the live open-work queue for PrimeStruct.
   - created_at: 2026-05-24
   - phase: Map/vector compiler-independence
   - depends_on: TODO-4571, TODO-4578
+  - inventory_categories: all categories reported by
+    `scripts/check_map_vector_compiler_knowledge.py`
   - scope: Turn the broad compiler-knowledge inventory into the release-gate
     zero audit for PrimeStruct map/vector special-casing under production
     `src/` and `include/`.

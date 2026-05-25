@@ -1521,6 +1521,20 @@ if(PRIMESTRUCT_BUILD_TESTS)
   set_tests_properties(PrimeStruct_map_backing_trace_checker_self_test PROPERTIES TIMEOUT 60)
 
   add_test(
+    NAME PrimeStruct_map_vector_compiler_knowledge_inventory
+    COMMAND ${Python3_EXECUTABLE} ${CMAKE_SOURCE_DIR}/scripts/check_map_vector_compiler_knowledge.py
+            --root ${CMAKE_SOURCE_DIR}
+  )
+  set_tests_properties(PrimeStruct_map_vector_compiler_knowledge_inventory PROPERTIES TIMEOUT 60)
+
+  add_test(
+    NAME PrimeStruct_map_vector_compiler_knowledge_inventory_self_test
+    COMMAND ${Python3_EXECUTABLE} ${CMAKE_SOURCE_DIR}/tests/scripts/test_check_map_vector_compiler_knowledge.py
+            --repo-root ${CMAKE_SOURCE_DIR}
+  )
+  set_tests_properties(PrimeStruct_map_vector_compiler_knowledge_inventory_self_test PROPERTIES TIMEOUT 60)
+
+  add_test(
     NAME PrimeStruct_map_surface_strict_audit
     COMMAND ${Python3_EXECUTABLE} ${CMAKE_SOURCE_DIR}/scripts/check_map_surface_strict_audit.py
             --root ${CMAKE_SOURCE_DIR}

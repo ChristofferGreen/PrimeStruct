@@ -68,6 +68,59 @@ Finished items are periodically archived here from `docs/todo.md`; section heade
     - Focused release docs-lock validation was selected for this leaf; broad
       release validation is deferred to the parent workflow.
 
+- [x] TODO-4571: Add compiler-knowledge inventory for map/vector
+  - owner: ai
+  - created_at: 2026-05-24
+  - finished_at: 2026-05-25
+  - phase: Map/vector compiler-independence
+  - parallel_track: collection-audit
+  - scope: Add an honest audit for PrimeStruct map/vector compiler knowledge
+    that is broader than the current surface-trace checks, including bridge
+    keys, helper recognizers, map/vector literal paths, and backing-layout
+    classifiers under `src/` and `include/`.
+  - implementation_notes: The prior passing checks
+    `scripts/check_vector_surface_traces.py` and
+    `scripts/check_map_surface_strict_audit.py` only proved direct
+    production surface traces were absent. The new audit inventories patterns
+    such as `collections.vector_helpers`, `collections.map_helpers`,
+    `isVectorBuiltinName`, `tryEmitVectorStatementHelper`,
+    `validateVectorStatementHelper`, `isExperimentalMapStructTypePath`,
+    `MapValue`, `map literal`, `resolveExperimentalMapValueTarget`, and
+    `isMapValue`. It starts as a nonzero inventory plus `--enforce-zero`
+    mode, with zero enforcement left to TODO-4579.
+  - acceptance:
+    - `scripts/check_map_vector_compiler_knowledge.py` reports current
+      PrimeStruct map/vector compiler-knowledge traces in tracked `src/` and
+      `include/` C++ files while ignoring ordinary C++ `std::map`,
+      `std::vector`, source-map terminology, tests, docs, stdlib `.prime`
+      files, and `include/primec/testing` helper declarations.
+    - `tests/scripts/test_check_map_vector_compiler_knowledge.py` proves the
+      audit catches bridge-key strings, vector statement-helper APIs, map
+      literal diagnostics/lowering, map backing-type classifiers, and
+      registry enum/id special cases.
+    - `--enforce-zero` fails when any remaining map/vector
+      compiler-knowledge trace is present, but the routine CTest entry runs
+      only the nonzero inventory while deletion leaves remain open.
+    - Follow-up leaves in `docs/todo.md` name the inventory categories they
+      are expected to drive to zero.
+  - outcome:
+    - Added the broad compiler-knowledge inventory and self-test, plus CMake
+      entries for the nonzero inventory and self-test.
+    - The current inventory reported 887 traces across
+      `stdlib-bridge-key`, `stdlib-registry-id`,
+      `vector-statement-helper`, `vector-helper-classifier`,
+      `vector-literal-path`, `vector-backing-classifier`,
+      `map-literal-path`, `map-helper-classifier`, and
+      `map-backing-classifier`.
+    - Updated deletion follow-up leaves to point at those category names.
+  - validation:
+    - `python3 tests/scripts/test_check_map_vector_compiler_knowledge.py
+      --repo-root .` passed.
+    - `python3 scripts/check_map_vector_compiler_knowledge.py --root .`
+      passed and reported the current nonzero inventory.
+    - `python3 -m py_compile scripts/check_map_vector_compiler_knowledge.py
+      tests/scripts/test_check_map_vector_compiler_knowledge.py` passed.
+
 **Todo Completion (May 24, 2026)**
 - [x] TODO-4305: Rename and style canonical `.prime` SoA surface
   - owner: ai
