@@ -533,6 +533,18 @@ if(PRIMESTRUCT_BUILD_TESTS)
   find_package(Python3 REQUIRED COMPONENTS Interpreter)
   enable_testing()
 
+  # This source-lock test is intentionally large and does not benefit from
+  # Release optimization; keeping it at O0 avoids long optimizer stalls.
+  if(MSVC)
+    set(PrimeStructStdlibMapOwnershipCompileOptions /Od)
+  else()
+    set(PrimeStructStdlibMapOwnershipCompileOptions -O0)
+  endif()
+  set_source_files_properties(
+    tests/unit/test_stdlib_map_ownership.cpp
+    PROPERTIES COMPILE_OPTIONS "${PrimeStructStdlibMapOwnershipCompileOptions}"
+  )
+
   add_executable(PrimeStruct_misc_tests
     tests/unit/test_main.cpp
     tests/unit/test_import_resolver.cpp

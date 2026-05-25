@@ -1,17 +1,28 @@
 # Testcase Log
 
 ## Current Known Failures
-- [~] Root TODO-4592 focused validation rebuild blocker | mode: release |
-  command:
-  `cmake --build build-release --target primec PrimeStruct_misc_tests PrimeStruct_compile_run_tests -j 1`
-  | first_seen: 2026-05-25 10:18 CEST | next: rerun the focused rebuild or
-  a narrower `PrimeStruct_misc_tests` rebuild to determine whether the silent
-  compile/link stall is reproducible before running the merged TODO-4592
-  focused doctests. The earlier TODO-4565 scene-model worker validation
-  session was stopped and no longer blocks the one-heavy-command rule, but
-  that worker patch remains dirty, unvalidated, and not mergeable.
+- None recorded. The TODO-4592 focused validation rebuild blocker was
+  stabilized on 2026-05-25 10:36 CEST by compiling the large
+  `test_stdlib_map_ownership.cpp` source-lock test at O0, then rebuilding the
+  focused release targets and rerunning the selected source-diagnostics and
+  map-ownership doctests.
 
 ## Recent Test Runs
+- 2026-05-25 10:36 CEST | pass | mode: release | command:
+  `cmake --build build-release --target PrimeStruct_misc_tests -j 1`;
+  `cmake --build build-release --target primec PrimeStruct_compile_run_tests -j 1`;
+  `cd build-release && ./PrimeStruct_misc_tests --test-case="compile pipeline maps parser diagnostics through source units,compile pipeline maps imported semantic diagnostics through source units" --no-skip`;
+  `cd build-release && ./PrimeStruct_compile_run_tests --test-case="primec collect-diagnostics maps parse spans through source units" --no-skip`;
+  `cd build-release && ./PrimeStruct_misc_tests --test-suite=primestruct.stdlib.map_ownership --order-by=file`
+  | failures: none | notes: compiling `test_stdlib_map_ownership.cpp` at O0
+  avoids the Release optimizer stall while preserving the map-ownership
+  source-lock assertions; TODO-4592 focused validation now passes in root.
+- 2026-05-25 10:26 CEST | blocked | mode: release | command:
+  `cmake --build build-release --target PrimeStruct_misc_tests -j 1`
+  | failures: command was stopped after several silent minutes while compiling
+  `tests/unit/test_stdlib_map_ownership.cpp` | notes: narrowed the earlier
+  focused rebuild blocker to the large map-ownership source-lock test
+  translation unit under Release optimization.
 - 2026-05-25 10:18 CEST | blocked | mode: release | command:
   `cmake --build build-release --target primec PrimeStruct_misc_tests PrimeStruct_compile_run_tests -j 1`
   | failures: command was stopped after several silent minutes while building
