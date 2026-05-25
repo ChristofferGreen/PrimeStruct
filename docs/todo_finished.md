@@ -44,6 +44,37 @@ Finished items are periodically archived here from `docs/todo.md`; section heade
     serialization, and VM debug lookup for a focused imported-source fixture;
     no debugger protocol redesign or broader diagnostic policy change was added.
 
+- [x] TODO-4594: Classify semantic call diagnostic stability tiers
+  - owner: ai
+  - created_at: 2026-05-25
+  - finished_at: 2026-05-25
+  - phase: Architecture hardening
+  - parallel_track: architecture-diagnostic-stability
+  - depends_on: TODO-4586
+  - scope: Extend the diagnostic stability-tier contract from parser
+    diagnostics to one semantic call-resolution diagnostic family, including
+    code/message/span/note classification and focused stable-tier coverage.
+  - outcome:
+    - Promoted the semantic unknown-call target family to stable message,
+      primary-span, and notes tiers through a message-aware
+      `diagnosticStabilityContract(...)` overload.
+    - Kept unpromoted semantic diagnostics at implementation tier while
+      preserving stable diagnostic code strings.
+    - Documented the semantic unknown-call target stability matrix in
+      `docs/PrimeStruct.md`, including the source-unit mapped primary span,
+      `stage: semantic` note, and enclosing definition/execution related span.
+    - Added focused API and compile-pipeline coverage for stable semantic
+      unknown-call code, message text, source-unit mapped primary span, and
+      related note behavior.
+  - validation:
+    - `cmake -S . -B build-release -DCMAKE_BUILD_TYPE=Release`
+    - `cmake --build build-release --target PrimeStruct_misc_tests -j 1`
+    - Passed 3 focused misc test cases / 53 assertions:
+      `cd build-release && ./PrimeStruct_misc_tests --test-case="semantic unknown-call diagnostics stay source locked,semantic unknown-call stability contract exposes mapped notes,compile pipeline maps imported semantic diagnostics through source units" --no-skip`
+  - stop_rule: Stopped after one semantic call-resolution family gained
+    documented tiers and focused coverage; no broad semantic diagnostic
+    classification was attempted.
+
 - [x] TODO-4588: Add pass/phase invalidation manifest beyond semantics
   - owner: ai
   - created_at: 2026-05-24

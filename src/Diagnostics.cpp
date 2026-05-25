@@ -102,6 +102,10 @@ bool spanHasLocation(const DiagnosticSpan &span) {
   return span.line > 0 && span.column > 0;
 }
 
+bool isStableSemanticUnknownCallTargetDiagnostic(std::string_view message) {
+  return message.rfind("unknown call target: ", 0) == 0;
+}
+
 std::string spanFileText(const DiagnosticSpan &span) {
   if (!span.file.empty()) {
     return span.file;
@@ -224,6 +228,18 @@ DiagnosticStabilityContract diagnosticStabilityContract(DiagnosticCode code) {
     case DiagnosticCode::OutputError:
     case DiagnosticCode::RuntimeError:
       break;
+  }
+  return contract;
+}
+
+DiagnosticStabilityContract diagnosticStabilityContract(DiagnosticCode code,
+                                                        std::string_view message) {
+  DiagnosticStabilityContract contract = diagnosticStabilityContract(code);
+  if (code == DiagnosticCode::SemanticError &&
+      isStableSemanticUnknownCallTargetDiagnostic(message)) {
+    contract.message = DiagnosticStabilityTier::Stable;
+    contract.primarySpan = DiagnosticStabilityTier::Stable;
+    contract.notes = DiagnosticStabilityTier::Stable;
   }
   return contract;
 }

@@ -67,7 +67,6 @@ This file is the live open-work queue for PrimeStruct.
 - TODO-4565: Add minimal scene graph and camera data model | track: scene-renderer | primary surface: stdlib/std/scene scene model
 - TODO-4572: Remove vector statement-helper compiler path | track: vector-special-case-deletion | primary surface: vector semantic/lowerer helpers
 - TODO-4573: Remove compiler-owned map literal lowering | track: map-special-case-deletion | primary surface: map literal semantics/lowering
-- TODO-4594: Classify semantic call diagnostic stability tiers | track: architecture-diagnostic-stability | primary surface: semantic call diagnostics
 
 ### Immediate Next 10
 
@@ -92,15 +91,14 @@ This file is the live open-work queue for PrimeStruct.
 - Architecture hardening backlog: TODO-4586 completed parser diagnostic
   stability tiers. TODO-4587 completed the shared compile-time/runtime VM
   kernel boundary. TODO-4588 added the IR-preparation phase manifest.
-  TODO-4589 added the architecture health dashboard. Remaining architecture
-  leaf: TODO-4594.
+  TODO-4589 added the architecture health dashboard. TODO-4594 completed the
+  semantic unknown-call diagnostic stability slice.
 
 ### Execution Queue
 
 - TODO-4565: Add minimal scene graph and camera data model
 - TODO-4572: Remove vector statement-helper compiler path
 - TODO-4573: Remove compiler-owned map literal lowering
-- TODO-4594: Classify semantic call diagnostic stability tiers
 - TODO-4566: Render flat and rounded-rect scene primitives to BGRA8
 - TODO-4590: Add international text shaping and glyph atlas path
 - TODO-4567: Render first globally lit 3D SDF widget primitive
@@ -572,29 +570,3 @@ This file is the live open-work queue for PrimeStruct.
       metadata files, while C++ treats them as ordinary included stdlib code.
   - stop_rule: Stop once the zero gate is wired into routine validation and
     focused map/vector stdlib tests plus the new audit pass.
-
-- [ ] TODO-4594: Classify semantic call diagnostic stability tiers
-  - owner: ai
-  - created_at: 2026-05-25
-  - phase: Architecture hardening
-  - parallel_track: architecture-diagnostic-stability
-  - depends_on: TODO-4586
-  - scope: Extend the diagnostic stability-tier contract from parser
-    diagnostics to one semantic call-resolution diagnostic family, including
-    code/message/span/note classification and focused stable-tier coverage.
-  - implementation_notes: Start from `SemanticsValidatorPassesDiagnostics.cpp`,
-    the semantic intra-body `--collect-diagnostics` tests, and the
-    `diagnosticStabilityContract(...)` shape added by TODO-4586. Keep the
-    slice to unresolved-target or resolved-call argument-shape/type diagnostics
-    rather than all semantic errors.
-  - acceptance:
-    - One semantic call-resolution diagnostic family has documented stability
-      tiers for code, message text, primary span, and notes.
-    - Stable-tier semantic diagnostics have focused tests asserting diagnostic
-      code, message text, source-unit-mapped primary span, and related note
-      behavior.
-    - Other semantic diagnostics remain implementation tier unless promoted by
-      this slice.
-    - Existing semantic `--collect-diagnostics` ordering remains deterministic.
-  - stop_rule: Stop after one semantic call-resolution family has tier docs and
-    focused coverage; do not classify every semantic diagnostic in this slice.

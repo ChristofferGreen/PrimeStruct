@@ -95,6 +95,8 @@ std::string diagnosticCodeString(DiagnosticCode code);
 std::string diagnosticStabilityTierString(DiagnosticStabilityTier tier);
 
 DiagnosticStabilityContract diagnosticStabilityContract(DiagnosticCode code);
+DiagnosticStabilityContract diagnosticStabilityContract(DiagnosticCode code,
+                                                        std::string_view message);
 
 DiagnosticRecord makeDiagnosticRecord(DiagnosticCode code,
                                       const std::string &message,

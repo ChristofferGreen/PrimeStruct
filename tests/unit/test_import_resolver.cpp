@@ -446,6 +446,74 @@ TEST_CASE("compile pipeline maps imported semantic diagnostics through source un
   CHECK(recordIt->relatedSpans[0].span.column == 1);
 }
 
+TEST_CASE("semantic unknown-call stability contract exposes mapped notes") {
+  auto baseDir = importResolverPath("source_diagnostics_semantic_stability");
+  std::filesystem::remove_all(baseDir);
+  std::filesystem::create_directories(baseDir);
+
+  const std::string importedPath = writeFile(baseDir / "imported.prime",
+                                             "[return<int>]\n"
+                                             "imported() {\n"
+                                             "  return(missing_imported(1i32))\n"
+                                             "}\n");
+  const std::string srcPath = writeFile(baseDir / "main.prime",
+                                        "import<\"imported.prime\">\n"
+                                        "[return<int>]\n"
+                                        "main(){ return(0i32) }\n");
+
+  primec::Options options = diagnosticPipelineOptions(srcPath);
+  primec::CompilePipelineOutput output;
+  primec::CompilePipelineDiagnosticInfo diagnostics;
+  primec::CompilePipelineErrorStage errorStage = primec::CompilePipelineErrorStage::None;
+  std::string error;
+  CHECK_FALSE(primec::runCompilePipeline(options, output, errorStage, error, &diagnostics));
+  CHECK(errorStage == primec::CompilePipelineErrorStage::Semantic);
+  REQUIRE(output.hasFailure);
+
+  const primec::CliFailure failure = primec::describeCompilePipelineFailure(output);
+  CHECK(failure.code == primec::DiagnosticCode::SemanticError);
+  REQUIRE(failure.diagnosticInfo.has_value());
+
+  const auto recordIt = std::find_if(failure.diagnosticInfo->records.begin(),
+                                     failure.diagnosticInfo->records.end(),
+                                     [](const primec::DiagnosticSinkRecord &record) {
+                                       return record.message ==
+                                              "unknown call target: missing_imported";
+                                     });
+  REQUIRE(recordIt != failure.diagnosticInfo->records.end());
+  REQUIRE(recordIt->hasPrimarySpan);
+  REQUIRE(recordIt->relatedSpans.size() == 1);
+
+  const primec::DiagnosticStabilityContract contract =
+      primec::diagnosticStabilityContract(failure.code, recordIt->message);
+  CHECK(contract.code == primec::DiagnosticStabilityTier::Stable);
+  CHECK(contract.message == primec::DiagnosticStabilityTier::Stable);
+  CHECK(contract.primarySpan == primec::DiagnosticStabilityTier::Stable);
+  CHECK(contract.notes == primec::DiagnosticStabilityTier::Stable);
+
+  const primec::DiagnosticRecord publicRecord =
+      primec::makeDiagnosticRecord(failure.code,
+                                   recordIt->message,
+                                   srcPath,
+                                   failure.notes,
+                                   &recordIt->primarySpan,
+                                   recordIt->relatedSpans);
+  CHECK(publicRecord.code == "PSC1005");
+  CHECK(publicRecord.message == "unknown call target: missing_imported");
+  CHECK(std::find(publicRecord.notes.begin(), publicRecord.notes.end(), "stage: semantic") !=
+        publicRecord.notes.end());
+  CHECK(publicRecord.primarySpan.file == absolutePathText(importedPath));
+  CHECK(publicRecord.primarySpan.line == 3);
+  CHECK(publicRecord.primarySpan.column == 10);
+  CHECK(publicRecord.primarySpan.endLine == 3);
+  CHECK(publicRecord.primarySpan.endColumn == 10);
+  REQUIRE(publicRecord.relatedSpans.size() == 1);
+  CHECK(publicRecord.relatedSpans[0].label == "definition: /imported");
+  CHECK(publicRecord.relatedSpans[0].span.file == absolutePathText(importedPath));
+  CHECK(publicRecord.relatedSpans[0].span.line == 2);
+  CHECK(publicRecord.relatedSpans[0].span.column == 1);
+}
+
 TEST_CASE("rejects single legacy include alias") {
   const std::string srcPath = writeTemp("main_legacy_alias.prime", "include<\"/std/io\">\n");
 

@@ -38,4 +38,22 @@ TEST_CASE("unclassified diagnostic fields stay implementation tier") {
   CHECK(primec::diagnosticStabilityTierString(contract.message) == "implementation");
 }
 
+TEST_CASE("semantic unknown-call diagnostics stay source locked") {
+  const primec::DiagnosticStabilityContract contract =
+      primec::diagnosticStabilityContract(primec::DiagnosticCode::SemanticError,
+                                          "unknown call target: missing_call");
+  const primec::DiagnosticStabilityContract otherSemanticContract =
+      primec::diagnosticStabilityContract(primec::DiagnosticCode::SemanticError,
+                                          "argument count mismatch for /take_two");
+
+  CHECK(primec::diagnosticCodeString(primec::DiagnosticCode::SemanticError) == "PSC1005");
+  CHECK(contract.code == primec::DiagnosticStabilityTier::Stable);
+  CHECK(contract.message == primec::DiagnosticStabilityTier::Stable);
+  CHECK(contract.primarySpan == primec::DiagnosticStabilityTier::Stable);
+  CHECK(contract.notes == primec::DiagnosticStabilityTier::Stable);
+  CHECK(otherSemanticContract.message == primec::DiagnosticStabilityTier::Implementation);
+  CHECK(otherSemanticContract.primarySpan == primec::DiagnosticStabilityTier::Implementation);
+  CHECK(otherSemanticContract.notes == primec::DiagnosticStabilityTier::Implementation);
+}
+
 TEST_SUITE_END();

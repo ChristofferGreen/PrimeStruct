@@ -2005,12 +2005,17 @@ Diagnostic stability tiers:
 | Parser / `DiagnosticCode::ParseError` (`PSC1003`) | message | stable | The normalized structured `message` omits the legacy trailing `at line:column` suffix and preserves the parser's selected diagnostic text. |
 | Parser / `DiagnosticCode::ParseError` (`PSC1003`) | primary span | stable | `primary_span.file`, `line`, `column`, `end_line`, and `end_column` identify the source-unit-mapped parser anchor chosen by the parser. |
 | Parser / `DiagnosticCode::ParseError` (`PSC1003`) | notes | stable | CLI structured output includes `stage: parse`. Parser diagnostics currently do not publish related spans. |
+| Semantic unknown-call target / `DiagnosticCode::SemanticError` (`PSC1005`) | code | stable | `PSC1005` identifies semantic failures in structured output; this row promotes only messages beginning with `unknown call target: `. |
+| Semantic unknown-call target / `DiagnosticCode::SemanticError` (`PSC1005`) | message | stable | The normalized structured `message` has the exact shape `unknown call target: <callee>`, where `<callee>` is the semantic call target text selected by resolution. |
+| Semantic unknown-call target / `DiagnosticCode::SemanticError` (`PSC1005`) | primary span | stable | `primary_span.file`, `line`, `column`, `end_line`, and `end_column` identify the source-unit-mapped call expression anchor. |
+| Semantic unknown-call target / `DiagnosticCode::SemanticError` (`PSC1005`) | notes | stable | CLI structured output includes `stage: semantic`. When the validator has an enclosing definition or execution source location, `related_spans` include the source-unit-mapped note label `definition: <path>` or `execution: <path>`. |
 
 - Plain text prefixes, caret snippets, and parser recovery choices beyond the
   selected stable primary span remain implementation tier unless a focused
   contract test promotes them.
-- Non-parser diagnostic message, span, and notes fields remain implementation
-  tier until a later slice classifies that phase explicitly.
+- Semantic diagnostics outside the unknown-call target family, and other
+  non-parser diagnostic message, span, and notes fields, remain implementation
+  tier until a later slice classifies that family explicitly.
 
 ### Language ethos (v1)
 - **Simplified and coherent C:** keep the core small, explicit, and close to how the machine behaves when it matters.

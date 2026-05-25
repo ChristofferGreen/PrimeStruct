@@ -11,8 +11,8 @@
   focused root validation passed on 2026-05-25 after serial root
   cherry-picks. Post-run TODO queue validation passed after promoting
   TODO-4593 and TODO-4594 as additional parallel-ready leaves. TODO-4593
-  worker-focused validation passed on 2026-05-25 before parent root
-  reconciliation.
+  and TODO-4594 worker-focused validation passed on 2026-05-25 before
+  parent root reconciliation.
 
 ## Recent Test Runs
 - 2026-05-25 19:09 CEST | pass | mode: release | command:
@@ -39,6 +39,12 @@
   notes: parent-scheduled TODO-4593 build caught aggregate initializers that
   were missing explicit empty `sourceUnit` values after extending source-map and
   adapter breakpoint structs.
+- 2026-05-25 17:20 CEST | pass | mode: release | command:
+  `cmake -S . -B build-release -DCMAKE_BUILD_TYPE=Release`;
+  `cmake --build build-release --target PrimeStruct_misc_tests -j 1`;
+  `cd build-release && ./PrimeStruct_misc_tests --test-case="semantic unknown-call diagnostics stay source locked,semantic unknown-call stability contract exposes mapped notes,compile pipeline maps imported semantic diagnostics through source units" --no-skip`
+  | failures: none | notes: TODO-4594 worker validation passed semantic
+  unknown-call diagnostic stability coverage, 3 cases / 53 assertions.
 - 2026-05-25 16:08 CEST | pass | mode: release | command:
   `cd build-release && ./PrimeStruct_compile_run_tests --test-case="todo queue and skipped doctest debt stay source locked" --no-skip`
   | failures: none | notes: root post-run TODO parallelization review
