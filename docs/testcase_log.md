@@ -2,9 +2,21 @@
 
 ## Current Known Failures
 - None recorded. TODO-4580 and TODO-4583 focused release validation passed
-  on 2026-05-25 after parent-scheduled worker validation reruns.
+  on 2026-05-25 after parent-scheduled worker validation reruns and root
+  focused validation.
 
 ## Recent Test Runs
+- 2026-05-25 12:04 CEST | pass | mode: release | command:
+  `cmake --build build-release --target PrimeStruct_backend_runtime_tests -j 1`;
+  `cd build-release && ./PrimeStruct_backend_runtime_tests --test-case="semantic product query and try projections expose stable public lookup keys,semantic snapshot traversal inventory avoids inactive next-candidate pointer" --no-skip`;
+  `cmake --build build-release --target PrimeStruct_backend_ir_tests -j 1`;
+  `cd build-release && ./PrimeStruct_backend_ir_tests --test-suite=primestruct.ir.pipeline.serialization --test-case="ir serialization schema golden fixture stays stable,ir deserialization rejects unsupported version" --no-skip`;
+  `cmake --build build-release --target PrimeStruct_compile_run_tests -j 1`;
+  `cd build-release && ./PrimeStruct_compile_run_tests --test-case="source lock inventory keeps replacement surfaces explicit" --no-skip`
+  | failures: none | notes: root validation after serially merging
+  TODO-4580 and TODO-4583 passed the runtime public fact contract
+  (2 cases / 41 assertions), IR schema contract (2 cases / 17 assertions),
+  and source-lock inventory contract (1 case / 7 assertions).
 - 2026-05-25 11:41 CEST | pass | mode: release | command:
   `cmake -S . -B build-release -DCMAKE_BUILD_TYPE=Release`;
   `cmake --build build-release --target PrimeStruct_backend_runtime_tests -j 1`;

@@ -67,6 +67,8 @@ This file is the live open-work queue for PrimeStruct.
 - TODO-4565: Add minimal scene graph and camera data model | track: scene-renderer | primary surface: stdlib/std/scene scene model
 - TODO-4572: Remove vector statement-helper compiler path | track: vector-special-case-deletion | primary surface: vector semantic/lowerer helpers
 - TODO-4573: Remove compiler-owned map literal lowering | track: map-special-case-deletion | primary surface: map literal semantics/lowering
+- TODO-4581: Split lowerer meaning from syntax provenance | track: architecture-meaning-provenance | primary surface: lowerer semantic-product context
+- TODO-4584: Generalize backend capability gating | track: architecture-backend-capabilities | primary surface: backend capability registry
 
 ### Immediate Next 10
 
@@ -591,6 +593,7 @@ This file is the live open-work queue for PrimeStruct.
   - owner: ai
   - created_at: 2026-05-24
   - phase: Architecture hardening
+  - parallel_track: architecture-meaning-provenance
   - scope: Introduce an explicit lowering context that separates
     semantic-product meaning from AST-owned syntax provenance for one lowerer
     stage or helper family.
@@ -641,6 +644,7 @@ This file is the live open-work queue for PrimeStruct.
   - owner: ai
   - created_at: 2026-05-24
   - phase: Architecture hardening
+  - parallel_track: architecture-backend-capabilities
   - scope: Replace one ad hoc backend/profile support check with a generic
     backend capability registry used by diagnostics and tests.
   - implementation_notes: Start from graphics substrate target checks in
