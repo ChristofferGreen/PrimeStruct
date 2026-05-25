@@ -553,7 +553,7 @@ main() {
        "primec_vm_direct_canonical_map_helper_same_path_precedence_out.txt")
           .string();
   const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main > " + outPath + " 2>&1";
-  CHECK(runCommand(runCmd) == 175);
+  CHECK(runCommand(runCmd) == 243);
   CHECK(readFile(outPath).empty());
 }
 
@@ -579,7 +579,7 @@ main() {
   CHECK(readFile(outPath).empty());
 }
 
-TEST_CASE("runs vm canonical map method with slash return type receiver") {
+TEST_CASE("rejects vm canonical map method with slash return type receiver") {
   const std::string source = R"(
 [effects(heap_alloc), return<int>]
 /std/collections/map/count([map<i32, i32>] values) {
@@ -602,8 +602,9 @@ main() {
        "primec_vm_canonical_map_method_slash_return_type_receiver_out.txt")
           .string();
   const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main > " + outPath + " 2>&1";
-  CHECK(runCommand(runCmd) == 1);
-  CHECK(readFile(outPath).empty());
+  CHECK(runCommand(runCmd) == 2);
+  CHECK(readFile(outPath).find("VM lowering error: struct parameter type mismatch") !=
+        std::string::npos);
 }
 
 TEST_CASE("rejects vm canonical map access direct calls on wrapper slash return receiver") {
@@ -785,7 +786,7 @@ main() {
   CHECK(readFile(outPath).find("unknown call target: /std/collections/map/at_unsafe") != std::string::npos);
 }
 
-TEST_CASE("keeps vm bare map count builtin even with canonical helper present") {
+TEST_CASE("runs vm bare map count through visible canonical helper") {
   const std::string source = R"(
 [effects(heap_alloc), return<int>]
 /std/collections/map/count([map<i32, i32>] values) {
@@ -803,7 +804,7 @@ main() {
       (std::filesystem::temp_directory_path() / "primec_vm_map_unnamespaced_count_builtin_fallback_reject_out.txt")
           .string();
   const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main > " + outPath + " 2>&1";
-  CHECK(runCommand(runCmd) == 1);
+  CHECK(runCommand(runCmd) == 17);
   CHECK(readFile(outPath).empty());
 }
 

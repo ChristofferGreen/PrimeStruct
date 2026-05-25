@@ -1508,6 +1508,16 @@ This file stores durable session-derived facts that are useful in later work. Ke
   `docs/semantic_memory_benchmark_policy.md`, after which the focused
   semantic-memory gate and full `./scripts/compile.sh --release` passed.
 
+### semantic-buffer-facts-mask-stale-local-kinds
+- Updated: 2026-05-25
+- Tags: ir, semantics, collections
+- Fact: Semantic-product buffer facts must distinguish absent facts from
+  present non-buffer facts so stale local buffer graph data cannot reclassify
+  scalar collection helper surfaces as buffers.
+- Evidence: `IrLowererFlowBufferHelpers.cpp` changed semantic buffer element
+  inference to return `std::optional<LocalInfo::ValueKind>`, and the canonical
+  map count fallback source-lock now pins the scalar-fact path.
+
 ### semantic-product-allocation-bytes-are-net
 - Updated: 2026-05-14
 - Tags: semantics, tests, memory
@@ -1625,6 +1635,17 @@ This file stores durable session-derived facts that are useful in later work. Ke
 - Tags: ir, structs, lowering
 - Fact: Statement binding lowering can infer a brace constructor's struct path even when direct call resolution misses the constructor, so it must recover the struct definition by inferred path before falling back to generic struct copy lowering.
 - Evidence: The saved release log failed `ir lowers struct brace constructor binding`; `IrLowererLowerStatementsBindings.h` now looks up inferred struct constructor paths in `defMap` and inline-lowers them, and the serialization test executes the lowered module to confirm the named-field default path returns `3`.
+
+### struct-context-if-initializers
+- Updated: 2026-05-25
+- Tags: semantics, validation, bindings
+- Fact: No-return definitions such as `main()` can use the struct-context
+  binding path, so explicit binding initializers there need direct `if`
+  expression validation instead of relying only on normal call validation.
+- Evidence: The bindings control-flow release shard accepted mixed
+  string/numeric `if` branches until
+  `SemanticsValidatorStatementBindings.cpp` added struct-context
+  `isIfCall(...)` initializer validation.
 
 ### vm-vector-shadow-precedence-and-expression-blockers
 - Updated: 2026-04-20

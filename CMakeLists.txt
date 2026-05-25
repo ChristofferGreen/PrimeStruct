@@ -1708,6 +1708,7 @@ if(PRIMESTRUCT_BUILD_TESTS)
     PROPERTIES DEPENDS PrimeStruct_semantic_memory_benchmark TIMEOUT 300)
 
   set(PrimeStructCompileRunSuites
+    primestruct.compile.run.generic_requirements
     primestruct.compile.run.smoke
     primestruct.compile.run.vm.core
     primestruct.compile.run.vm.collections

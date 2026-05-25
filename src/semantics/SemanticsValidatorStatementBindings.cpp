@@ -331,6 +331,10 @@ bool SemanticsValidator::validateBindingStatement(const std::vector<ParameterInf
     if (!resolveStructFieldBinding(*currentDefIt->second, stmt, info)) {
       return false;
     }
+    if (stmt.args.size() == 1 && stmt.args.front().kind == Expr::Kind::Call &&
+        isIfCall(stmt.args.front()) && !validateIfExpr(params, locals, stmt.args.front())) {
+      return false;
+    }
     if (!validateBuiltinComparableKeyType(info, definitionTemplateArgs, error_)) {
       return false;
     }
@@ -607,6 +611,11 @@ bool SemanticsValidator::validateBindingStatement(const std::vector<ParameterInf
   const bool isMoveInitializer =
       initializer.kind == Expr::Kind::Call && !initializer.isMethodCall &&
       !initializer.isFieldAccess && isSimpleCallName(initializer, "move");
+
+  if (initializer.kind == Expr::Kind::Call && isIfCall(initializer) &&
+      !validateIfExpr(params, locals, initializer)) {
+    return false;
+  }
 
   if (!validateExpr(params, locals, initializer)) {
     if (isStandaloneSoaFieldViewInitializer() && !initializer.args.empty()) {

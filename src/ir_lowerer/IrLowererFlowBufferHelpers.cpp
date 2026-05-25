@@ -8,6 +8,7 @@
 #include "IrLowererTemplateTypeParseHelpers.h"
 
 #include <limits>
+#include <optional>
 #include <vector>
 
 namespace primec::ir_lowerer {
@@ -34,40 +35,36 @@ LocalInfo::ValueKind semanticBufferElementKindFromTypeText(const std::string &ty
   return valueKindFromTypeName(trimTemplateTypeText(argText));
 }
 
-bool inferSemanticBufferElementKind(const Expr &expr,
-                                    const SemanticProductTargetAdapter *semanticProductTargets,
-                                    LocalInfo::ValueKind &kindOut) {
-  kindOut = LocalInfo::ValueKind::Unknown;
+std::optional<LocalInfo::ValueKind> inferSemanticBufferElementKind(
+    const Expr &expr,
+    const SemanticProductTargetAdapter *semanticProductTargets) {
   if (semanticProductTargets == nullptr || !semanticProductTargets->hasSemanticProduct ||
       semanticProductTargets->semanticProgram == nullptr || expr.semanticNodeId == 0) {
-    return false;
+    return std::nullopt;
   }
   const SemanticProgram *semanticProgram = semanticProductTargets->semanticProgram;
   if (const auto *bindingFact = findSemanticProductBindingFact(*semanticProductTargets, expr)) {
-    kindOut = semanticBufferElementKindFromTypeText(resolveSemanticProductTypeText(
+    return semanticBufferElementKindFromTypeText(resolveSemanticProductTypeText(
         semanticProgram, bindingFact->bindingTypeText, bindingFact->bindingTypeTextId));
-    return kindOut != LocalInfo::ValueKind::Unknown;
   }
   if (const auto *localAutoFact =
           findSemanticProductLocalAutoFactBySemanticId(*semanticProductTargets, expr)) {
-    kindOut = semanticBufferElementKindFromTypeText(resolveSemanticProductTypeText(
+    return semanticBufferElementKindFromTypeText(resolveSemanticProductTypeText(
         semanticProgram, localAutoFact->bindingTypeText, localAutoFact->bindingTypeTextId));
-    return kindOut != LocalInfo::ValueKind::Unknown;
   }
   if (const auto *queryFact = findSemanticProductQueryFactBySemanticId(*semanticProductTargets, expr)) {
     const std::string queryTypeText = resolveSemanticProductTypeText(
         semanticProgram, queryFact->queryTypeText, queryFact->queryTypeTextId);
-    kindOut = semanticBufferElementKindFromTypeText(queryTypeText);
-    if (kindOut != LocalInfo::ValueKind::Unknown) {
-      return true;
+    LocalInfo::ValueKind kind = semanticBufferElementKindFromTypeText(queryTypeText);
+    if (kind != LocalInfo::ValueKind::Unknown) {
+      return kind;
     }
 
     const std::string bindingTypeText = resolveSemanticProductTypeText(
         semanticProgram, queryFact->bindingTypeText, queryFact->bindingTypeTextId);
-    kindOut = semanticBufferElementKindFromTypeText(bindingTypeText);
-    return kindOut != LocalInfo::ValueKind::Unknown;
+    return semanticBufferElementKindFromTypeText(bindingTypeText);
   }
-  return false;
+  return std::nullopt;
 }
 
 } // namespace
@@ -212,9 +209,9 @@ BufferBuiltinCallEmitResult tryEmitBufferBuiltinCall(
     if (!resolveBufferLoadInfo(
             expr,
             [&](const Expr &bufferExpr) -> std::optional<LocalInfo::ValueKind> {
-              LocalInfo::ValueKind semanticKind = LocalInfo::ValueKind::Unknown;
-              if (inferSemanticBufferElementKind(bufferExpr, semanticProductTargets, semanticKind)) {
-                return semanticKind;
+              if (const auto semanticKind =
+                      inferSemanticBufferElementKind(bufferExpr, semanticProductTargets)) {
+                return *semanticKind;
               }
               if (bufferExpr.kind == Expr::Kind::Name) {
                 auto it = localsIn.find(bufferExpr.name);
@@ -227,9 +224,9 @@ BufferBuiltinCallEmitResult tryEmitBufferBuiltinCall(
                   bufferExpr.args.size() == 1) {
                 const Expr &targetExpr = bufferExpr.args.front();
                 if (targetExpr.kind == Expr::Kind::Name) {
-                  LocalInfo::ValueKind semanticKind = LocalInfo::ValueKind::Unknown;
-                  if (inferSemanticBufferElementKind(targetExpr, semanticProductTargets, semanticKind)) {
-                    return semanticKind;
+                  if (const auto semanticKind =
+                          inferSemanticBufferElementKind(targetExpr, semanticProductTargets)) {
+                    return *semanticKind;
                   }
                   auto it = localsIn.find(targetExpr.name);
                   if (it != localsIn.end() &&

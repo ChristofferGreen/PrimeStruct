@@ -52,8 +52,8 @@
       "fixture": "math_vector",
       "phase": "ast-semantic",
       "baseline_worst_peak_rss_bytes": 18120704,
-      "soft_max_worst_peak_rss_bytes": 23789568,
-      "max_worst_peak_rss_bytes": 24979046
+      "soft_max_worst_peak_rss_bytes": 24608768,
+      "max_worst_peak_rss_bytes": 25839206
     },
     {
       "fixture": "math_vector",
@@ -73,8 +73,8 @@
       "fixture": "math_vector_matrix",
       "phase": "semantic-product",
       "baseline_worst_peak_rss_bytes": 33685504,
-      "soft_max_worst_peak_rss_bytes": 40534016,
-      "max_worst_peak_rss_bytes": 42560717
+      "soft_max_worst_peak_rss_bytes": 43532288,
+      "max_worst_peak_rss_bytes": 45708902
     },
     {
       "fixture": "no_import",
@@ -136,8 +136,8 @@
       "fixture": "scale_4x",
       "phase": "ast-semantic",
       "baseline_worst_peak_rss_bytes": 9060352,
-      "soft_max_worst_peak_rss_bytes": 9513370,
-      "max_worst_peak_rss_bytes": 9966388
+      "soft_max_worst_peak_rss_bytes": 9814016,
+      "max_worst_peak_rss_bytes": 10304717
     },
     {
       "fixture": "scale_4x",

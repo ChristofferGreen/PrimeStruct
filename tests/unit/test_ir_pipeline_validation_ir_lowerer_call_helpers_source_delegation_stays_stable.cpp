@@ -1811,7 +1811,7 @@ TEST_CASE("vm heap helpers source delegation stays stable") {
         std::string::npos);
   CHECK(vmSource.find("bool isVmHeapAddress(uint64_t address) {") ==
         std::string::npos);
-  CHECK(vmSource.find("bool resolveIndirectAddress(uint64_t address,") ==
+  CHECK(vmSource.find("uint64_t *&slotOut,") ==
         std::string::npos);
   CHECK(vmSource.find("bool allocateVmHeapSlots(uint64_t slotCount,") ==
         std::string::npos);
@@ -1820,6 +1820,8 @@ TEST_CASE("vm heap helpers source delegation stays stable") {
   CHECK(vmSource.find("bool reallocVmHeapSlots(uint64_t address,") ==
         std::string::npos);
   CHECK(vmSource.find("vm_detail::resolveIndirectAddress(") != std::string::npos);
+  CHECK(vmSource.find("return vm_detail::resolveIndirectAddress(address,") !=
+        std::string::npos);
   CHECK(vmSource.find("vm_detail::allocateVmHeapSlots(") != std::string::npos);
   CHECK(vmSource.find("vm_detail::freeVmHeapSlots(") != std::string::npos);
   CHECK(vmSource.find("vm_detail::reallocVmHeapSlots(") != std::string::npos);

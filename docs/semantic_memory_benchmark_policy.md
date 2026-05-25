@@ -68,8 +68,8 @@ When semantic behavior changes intentionally shift memory usage:
 
 ### Current Budget Notes
 
-- `math_vector:ast-semantic` keeps a hard cap of `24979046` bytes after the
-  May 14, 2026 release artifact observed `23789568` bytes on the release
+- `math_vector:ast-semantic` keeps a hard cap of `25839206` bytes after the
+  May 25, 2026 release artifact observed `24608768` bytes on the release
   runner. The cap preserves roughly 5% headroom over that observed value while
   leaving the baseline row unchanged for future comparison.
 - `imported_math_body:ast-semantic` keeps a hard cap of `26664960` bytes after

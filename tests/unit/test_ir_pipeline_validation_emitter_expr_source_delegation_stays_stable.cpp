@@ -2476,7 +2476,11 @@ TEST_CASE("template monomorph source delegation stays stable") {
   CHECK(templateMonomorphTypeResolutionSource.find("bool rewriteTransforms(std::vector<Transform> &transforms,") !=
         std::string::npos);
   CHECK(templateMonomorphTypeResolutionSource.find(
-            "std::string resolveCalleePath(const Expr &expr, const std::string &namespacePrefix, const Context &ctx)") !=
+            "std::string resolveCalleePath(const Expr &expr,\n"
+            "                              const std::string &namespacePrefix,\n"
+            "                              const Context &ctx,\n"
+            "                              const LocalTypeMap *locals,\n"
+            "                              const std::vector<ParameterInfo> *params)") !=
         std::string::npos);
   CHECK(templateMonomorphTypeResolutionSource.find(
             "#include \"StdlibCollectionSurfaceHelpers.h\"") !=

@@ -19,7 +19,7 @@ bool isControlKeyword(const std::string &name) {
 }
 
 bool isNoReturnDefinitionTransform(const std::string &name) {
-  return isStructTransformName(name) || name == "sum";
+  return (isStructTransformName(name) || name == "sum") && !isBindingAuxTransformName(name);
 }
 
 size_t skipCommentTokens(const std::vector<Token> &tokens, size_t index) {

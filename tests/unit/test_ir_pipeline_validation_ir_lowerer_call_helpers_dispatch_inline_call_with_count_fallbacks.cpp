@@ -1161,7 +1161,7 @@ TEST_CASE("ir lowerer call helpers gate canonical map helpers with semantic targ
   };
 
   expectDispatch(makeCountCall(scalarReceiver), staleMapLocals, Result::NotHandled, 0);
-  expectDispatch(makeCountCall(mapReceiver), staleScalarLocals, Result::NotHandled, 0);
+  expectDispatch(makeCountCall(mapReceiver), staleScalarLocals, Result::Emitted, 1);
 }
 
 TEST_CASE("ir lowerer call helpers prefer graph facts for inline map receiver probes") {

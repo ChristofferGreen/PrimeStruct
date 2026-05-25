@@ -650,54 +650,23 @@ TEST_CASE("vector map bridge boundary docs stay source locked") {
   CHECK(primeStructDoc.find("**Out of scope for this bridge lane:** `array<T>` core ownership,") !=
         std::string::npos);
 
-  CHECK(todo.find("### Vector/Map Bridge Contract Summary") != std::string::npos);
-  CHECK(todo.find("Bridge-owned public contract: exact and wildcard `/std/collections` imports,") !=
+  CHECK(todo.find("Do not keep completed-task summaries, historical rollout notes, or closed\n"
+                  "  coverage snapshots in this file.") !=
         std::string::npos);
-  CHECK(todo.find("metadata is now owned by `stdlib/std/collections/surfaces.psmeta`") !=
+  CHECK(todo.find("- TODO-4570: Retire duplicate map2 candidate surface | track: collection-stdlib-cleanup") !=
         std::string::npos);
-  CHECK(todo.find("map compatibility spellings were\n"
-                  "  removed from that manifest") !=
+  CHECK(todo.find("- TODO-4571: Add compiler-knowledge inventory for map/vector | track: collection-audit") !=
         std::string::npos);
-  CHECK(todo.find("Direct experimental vector source imports are now rejected") !=
+  CHECK(todo.find("- TODO-4572: Remove vector statement-helper compiler path | track: vector-special-case-deletion") !=
         std::string::npos);
-  CHECK(todo.find("Migration-only seams: rooted `/map/*` spellings,") !=
+  CHECK(todo.find("- TODO-4573: Remove compiler-owned map literal lowering | track: map-special-case-deletion") !=
         std::string::npos);
-  CHECK(todo.find("The vector/map adapter cutover is complete for semantic,\n"
-                  "  template-monomorph") !=
+  CHECK(todo.find("Map/vector compiler-independence: TODO-4570 and TODO-4571 can run in") !=
         std::string::npos);
-  CHECK(todo.find("Compatibility adapter inventory: map insert helper compatibility no longer") !=
+  CHECK(todo.find("TODO-4574: Remove vector count/access compiler classifiers") !=
         std::string::npos);
-  CHECK(todo.find("lives in `StdlibSurfaceRegistry::CollectionsMapHelpers`") !=
-        std::string::npos);
-  CHECK(todo.find("definition/execution intra-body diagnostics no\n"
-                  "  longer carry special\n"
-                  "  removed-map helper classification branches, and semantic pre-dispatch helper\n"
-                  "  path candidates no longer mirror rooted and canonical map helpers") !=
-        std::string::npos);
-  CHECK(todo.find("tail map-access helper probes no longer treat rooted `/map/*` imports or\n"
-                  "  definitions as canonical map helper availability") !=
-        std::string::npos);
-  CHECK(todo.find("semantic validation no longer\n"
-                  "  recognizes `mapCount`-style wrapper names as special map helper branches,\n"
-                  "  and inline/native dispatch no longer treats rooted `/map/*` or experimental\n"
-                  "  map helper raw paths as canonical map helper aliases") !=
-        std::string::npos);
-  CHECK(todo.find("Template\n"
-                  "  monomorphization now asks the registry for preferred experimental vector/SoA") !=
-        std::string::npos);
-  CHECK(todo.find("SoA public helper, constructor, import-alias, field-view, and conversion\n"
-                  "  metadata now lives in") !=
-        std::string::npos);
-  CHECK(todo.find("without temporary `/std/collections/soa_vector/*`") !=
-        std::string::npos);
-  CHECK(todo.find("Gfx Buffer helper compatibility is routed\n"
-                  "  through `StdlibSurfaceRegistry::GfxBufferHelpers`") !=
-        std::string::npos);
-  CHECK(todo.find("syntax/provenance-owned or lowering-owned") !=
-        std::string::npos);
+  CHECK(todo.find("### Vector/Map Bridge Contract Summary") == std::string::npos);
   CHECK(todo.find("later cutover TODOs retire them") == std::string::npos);
-  CHECK(todo.find("Outside this lane: `array<T>` core ownership and the `soa<T>` public-surface") !=
-        std::string::npos);
   CHECK(todo.find("- [ ] TODO-4042:") == std::string::npos);
   CHECK(todo.find("- [ ] TODO-4043:") == std::string::npos);
   CHECK(todo.find("TODO-4044") == std::string::npos);
@@ -765,45 +734,35 @@ TEST_CASE("stdlib de-experimentalization policy docs stay source locked") {
                             "    `set_field_capacity` statement calls plus `field_count`, `field_capacity`,") !=
         std::string::npos);
 
-  CHECK(todo.find("### Stdlib De-Experimentalization Policy Summary") != std::string::npos);
-  CHECK(todo.find("Canonical public API: non-`experimental` namespaces are the intended") !=
+  CHECK(todo.find("### Stdlib De-Experimentalization Policy Summary") == std::string::npos);
+  CHECK(todo.find("## Open Tasks") != std::string::npos);
+  CHECK(todo.find("- TODO-4570: Retire duplicate map2 candidate surface") !=
         std::string::npos);
-  CHECK(todo.find("Canonical collection contract: `/std/collections/vector/*` and") !=
-        std::string::npos);
-  CHECK(todo.find("Internal collection implementation modules:") != std::string::npos);
-  CHECK(todo.find("/std/collections/internal_vector/*` owns the canonical vector backing") !=
-        std::string::npos);
-  CHECK(todo.find("Vector compatibility shim: direct\n"
-                  "  `/std/collections/experimental_vector/*` source imports are rejected") !=
-        std::string::npos);
-  CHECK(todo.find("Map compatibility shim: direct\n"
-                  "  `/std/collections/experimental_map/*` source imports are rejected") !=
+  CHECK(todo.find("- TODO-4571: Add compiler-knowledge inventory for map/vector") !=
         std::string::npos);
   CHECK(todo.find("Stdlib de-experimentalization: TODO-4059") == std::string::npos);
   CHECK(todo.find("TODO-4103: Rename the remaining experimental SoA storage namespace") ==
         std::string::npos);
   CHECK(todo.find("- [ ] TODO-4059:") == std::string::npos);
-  CHECK(todo.find("Legacy gfx compatibility seam: `/std/gfx/experimental/*` remains importable") !=
+  CHECK(todo.find("Legacy gfx compatibility seam: `/std/gfx/experimental/*` remains importable") ==
         std::string::npos);
   CHECK(todo.find("Accepted temporary compatibility namespace:") == std::string::npos);
-  CHECK(todo.find("`/std/collections/soa_vector*` and `/std/collections/experimental_soa_vector*`") !=
+  CHECK(todo.find("`/std/collections/soa_vector*` and `/std/collections/experimental_soa_vector*`") ==
         std::string::npos);
-  CHECK(todo.find("SoA compatibility shim: direct") !=
+  CHECK(todo.find("SoA compatibility shim: direct") == std::string::npos);
+  CHECK(todo.find("imports are rejected; canonical public code uses `/std/collections/soa/*`") ==
         std::string::npos);
-  CHECK(todo.find("imports are rejected; canonical public code uses `/std/collections/soa/*`") !=
-        std::string::npos);
-  CHECK(todo.find("`/std/collections/internal_soa_vector_conversions/*`,") !=
+  CHECK(todo.find("`/std/collections/internal_soa_vector_conversions/*`,") ==
         std::string::npos);
   CHECK(todo.find("no active\n  TODO currently targets them") ==
         std::string::npos);
   CHECK(todo.find("until their explicit shim, rename, or maturity TODOs land") ==
         std::string::npos);
-  CHECK(todo.find("/std/collections/internal_buffer_checked/*`,") != std::string::npos);
-  CHECK(todo.find("/std/collections/internal_buffer_unchecked/*`,") != std::string::npos);
-  CHECK(todo.find("/std/collections/internal_soa_storage/*` are implementation-facing") !=
+  CHECK(todo.find("/std/collections/internal_buffer_checked/*`,") == std::string::npos);
+  CHECK(todo.find("/std/collections/internal_buffer_unchecked/*`,") == std::string::npos);
+  CHECK(todo.find("/std/collections/internal_soa_storage/*` are implementation-facing") ==
         std::string::npos);
-  CHECK(todo.find("accepted compatibility exception explicitly") !=
-        std::string::npos);
+  CHECK(todo.find("accepted compatibility exception explicitly") == std::string::npos);
   CHECK(todo.find("- [ ] TODO-4103:") == std::string::npos);
   CHECK(todo.find("- [ ] TODO-4052:") == std::string::npos);
   CHECK(todo.find("- [ ] TODO-4053:") == std::string::npos);
@@ -1010,26 +969,25 @@ TEST_CASE("soa public collection docs stay source locked") {
   CHECK(primeStructDoc.find("none active; add a concrete TODO only before retiring, accepting, or reclassifying") ==
         std::string::npos);
 
-  CHECK(todo.find("### SoA Public Collection Summary") != std::string::npos);
-  CHECK(todo.find("Rename direction: `soa_vector<T>` is retired as the public collection") !=
+  CHECK(todo.find("### SoA Public Collection Summary") == std::string::npos);
+  CHECK(todo.find("Rename direction: `soa_vector<T>` is retired as the public collection") ==
         std::string::npos);
-  CHECK(todo.find("/std/collections/soa_vector*`, rooted") != std::string::npos);
-  CHECK(todo.find("Retired compatibility spellings are `soa_vector<T>`") !=
+  CHECK(todo.find("/std/collections/soa_vector*`, rooted") == std::string::npos);
+  CHECK(todo.find("Retired compatibility spellings are `soa_vector<T>`") ==
         std::string::npos);
-  CHECK(todo.find("Rejection seams: C++/VM/native tests lock the direct-import rejection") !=
+  CHECK(todo.find("Rejection seams: C++/VM/native tests lock the direct-import rejection") ==
         std::string::npos);
-  CHECK(todo.find("Internal substrate namespaces: `/std/collections/internal_soa_vector/*`") !=
+  CHECK(todo.find("Internal substrate namespaces: `/std/collections/internal_soa_vector/*`") ==
         std::string::npos);
-  CHECK(todo.find("owns canonical wrapper implementation forwarding") !=
+  CHECK(todo.find("owns canonical wrapper implementation forwarding") ==
         std::string::npos);
-  CHECK(todo.find("`/std/collections/internal_soa_vector_conversions/*` owns canonical") !=
+  CHECK(todo.find("`/std/collections/internal_soa_vector_conversions/*` owns canonical") ==
         std::string::npos);
-  CHECK(todo.find("Promoted contract complete: the canonical public helper wrapper is") !=
+  CHECK(todo.find("Promoted contract complete: the canonical public helper wrapper is") ==
         std::string::npos);
-  CHECK(todo.find("construction/read/ref/mutator/conversion helper") !=
+  CHECK(todo.find("construction/read/ref/mutator/conversion helper") ==
         std::string::npos);
-  CHECK(todo.find("hidden raw fallbacks") !=
-        std::string::npos);
+  CHECK(todo.find("hidden raw fallbacks") == std::string::npos);
   CHECK(todo.find("`TODO-4250` through `TODO-4252`") == std::string::npos);
   CHECK(todo.find("raw-builtin bridge\n  normalization, parity coverage") ==
         std::string::npos);
@@ -1039,7 +997,7 @@ TEST_CASE("soa public collection docs stay source locked") {
         std::string::npos);
   CHECK(todo.find("`soa_vector<T>` remains an\n  incubating canonical experiment") ==
         std::string::npos);
-  CHECK(todo.find("The canonical wrapper routes through\n  `/std/collections/internal_soa_vector/*`") !=
+  CHECK(todo.find("The canonical wrapper routes through\n  `/std/collections/internal_soa_vector/*`") ==
         std::string::npos);
   CHECK(todo.find("- [ ] TODO-4058:") == std::string::npos);
   CHECK(todo.find("TODO-4103") == std::string::npos);
@@ -1363,7 +1321,7 @@ TEST_CASE("generic soa substrate boundary stays source locked") {
         std::string::npos);
   CHECK(syntaxSpecDoc.find("`SoaColumn<T>` storage, `SoaFieldView<T>` non-owning views") !=
         std::string::npos);
-  CHECK(todo.find("Generic substrate boundary: compiler/runtime-owned SoA behavior is limited") !=
+  CHECK(todo.find("Generic substrate boundary: compiler/runtime-owned SoA behavior is limited") ==
         std::string::npos);
   CHECK(todo.find("- [~] TODO-4306: Stabilize generic SoA substrate boundaries") ==
         std::string::npos);
@@ -1836,32 +1794,61 @@ TEST_CASE("todo queue and skipped doctest debt stay source locked") {
   const std::string vmMaps = readFile(vmMapsPath.string());
   const std::string examplesDocs = readFile(examplesDocsPath.string());
 
-  CHECK(todo.find("### Ready Now (Parallel-Candidate Leaves; No Unmet TODO Dependencies)") !=
+  CHECK(todo.find("## Purpose") != std::string::npos);
+  CHECK(todo.find("Do not keep completed-task summaries, historical rollout notes, or closed\n"
+                  "  coverage snapshots in this file.") !=
+        std::string::npos);
+  CHECK(todo.find("### Ready Now\n\n"
+                  "- TODO-4591: Add expanded-source provenance ledger | track: source-unit-provenance") !=
+        std::string::npos);
+  CHECK(todo.find("- TODO-4564: Lock scene renderer defaults and UI producer contract | track: scene-renderer") !=
+        std::string::npos);
+  CHECK(todo.find("- TODO-4570: Retire duplicate map2 candidate surface | track: collection-stdlib-cleanup") !=
+        std::string::npos);
+  CHECK(todo.find("- TODO-4571: Add compiler-knowledge inventory for map/vector | track: collection-audit") !=
+        std::string::npos);
+  CHECK(todo.find("- TODO-4572: Remove vector statement-helper compiler path | track: vector-special-case-deletion") !=
+        std::string::npos);
+  CHECK(todo.find("- TODO-4573: Remove compiler-owned map literal lowering | track: map-special-case-deletion") !=
+        std::string::npos);
+  CHECK(todo.find("### Immediate Next 10\n\n"
+                  "- TODO-4592: Map parser and semantic diagnostics through source units") !=
+        std::string::npos);
+  CHECK(todo.find("### Priority Lanes") != std::string::npos);
+  CHECK(todo.find("Source-unit provenance ledger: TODO-4591 -> TODO-4592; TODO-4593 waits on") !=
+        std::string::npos);
+  CHECK(todo.find("Map/vector compiler-independence: TODO-4570 and TODO-4571 can run in") !=
+        std::string::npos);
+  CHECK(todo.find("### Execution Queue\n\n"
+                  "- TODO-4591: Add expanded-source provenance ledger") !=
         std::string::npos);
   CHECK(todo.find("- TODO-4562: Add task handle semantic facts and lifetime diagnostics | track:") ==
         std::string::npos);
+  CHECK(todo.find("### Ready Now (Parallel-Candidate Leaves; No Unmet TODO Dependencies)") ==
+        std::string::npos);
+  CHECK(todo.find("### Immediate Next 10 (Track Successors; Not Ready Until Dependencies Land)") ==
+        std::string::npos);
   CHECK(todo.find("- `soa-zero-audit`: TODO-4524/TODO-4529 completed the strict\n"
-                  "  zero-production-trace audit; no SoA zero-audit leaf is ready.") !=
+                  "  zero-production-trace audit; no SoA zero-audit leaf is ready.") ==
         std::string::npos);
   CHECK(todo.find("- `map-zero-audit`: TODO-4537 split the broad lowerer substrate item into\n"
                   "  bounded leaves; TODO-4539 removed generated MapValue path synthesis, and\n"
-                  "  TODO-4540 removed the lowerer key/value local kind plus ref/pointer flags.") !=
+                  "  TODO-4540 removed the lowerer key/value local kind plus ref/pointer flags.") ==
         std::string::npos);
-  CHECK(todo.find("no map zero-audit leaf is ready.") !=
-        std::string::npos);
+  CHECK(todo.find("no map zero-audit leaf is ready.") == std::string::npos);
   CHECK(todo.find("- `tuple-type-packs`: TODO-4276 completed helper/lifecycle pack\n"
                   "  expansion, TODO-4271 added compile-time pack indexing, TODO-4272 added\n"
                   "  the initial stdlib tuple surface, and TODO-4274 added tuple bracket\n"
                   "  indexing, TODO-4273 added heterogeneous `make_tuple` inference, and\n"
                   "  TODO-4277 added tuple destructuring. TODO-4278 added task multi-wait over\n"
-                  "  ordinary stdlib tuples; no tuple-type-packs leaf is ready.") !=
+                  "  ordinary stdlib tuples; no tuple-type-packs leaf is ready.") ==
         std::string::npos);
   CHECK(todo.find("- `multithreading-substrate`: TODO-4545 was split into TODO-4561,\n"
                   "  TODO-4562, and TODO-4563 so single-task spawn/wait can land as parser/effect,\n"
                   "  semantic/lifetime, and runtime execution slices before TODO-4278. TODO-4561\n"
                   "  locked the parser/effect spelling, TODO-4562 added semantic/lifetime facts\n"
                   "  and diagnostics, and TODO-4563 added single-task VM/native runtime\n"
-                  "  execution; no multithreading-substrate leaf is ready.") !=
+                  "  execution; no multithreading-substrate leaf is ready.") ==
         std::string::npos);
   CHECK(todo.find("- `procedural-genericity`: TODO-4336 allowed type locals in local binding and\n"
                   "  struct-field envelopes, TODO-4337 added non-escaping local generated\n"
@@ -1869,7 +1856,7 @@ TEST_CASE("todo queue and skipped doctest debt stay source locked") {
                   "  provenance, TODO-4339 lowered procedural facts through semantic-product\n"
                   "  direct-call and layout metadata, and TODO-4340 added docs and positive\n"
                   "  examples, and TODO-4546 added negative conformance; no procedural-genericity\n"
-                  "  leaf is ready.") !=
+                  "  leaf is ready.") ==
         std::string::npos);
   CHECK(todo.find("- `generic-requirements`: TODO-4331, TODO-4334, TODO-4341, TODO-4342,\n"
                   "  TODO-4343, TODO-4344, TODO-4352, TODO-4353, and TODO-4354 are complete;\n"
@@ -1898,14 +1885,12 @@ TEST_CASE("todo queue and skipped doctest debt stay source locked") {
                   "  predicate/value, effects/cache/budget, and compiler-host boundary leaves.\n"
                   "  TODO-4349 was split into TODO-4558, TODO-4559, and TODO-4560 so the broader\n"
                   "  conformance matrix could proceed in parser/source-lock, semantic/IR, and\n"
-                  "  compile-run/diagnostic tracks; all three split leaves are complete.") !=
+                  "  compile-run/diagnostic tracks; all three split leaves are complete.") ==
         std::string::npos);
   CHECK(todo.find("### Ready Now (Parallel-Candidate Leaves; No Unmet TODO Dependencies)\n\n"
-                  "- none") !=
-        std::string::npos);
+                  "- none") == std::string::npos);
   CHECK(todo.find("### Immediate Next 10 (Track Successors; Not Ready Until Dependencies Land)\n\n"
-                  "- none") !=
-        std::string::npos);
+                  "- none") == std::string::npos);
   CHECK(todo.find("- TODO-4273: Add heterogeneous value-pack inference") ==
         std::string::npos);
   CHECK(todo.find("- [~] TODO-4305: Rename and style canonical `.prime` SoA surface") ==
@@ -1917,13 +1902,12 @@ TEST_CASE("todo queue and skipped doctest debt stay source locked") {
         std::string::npos);
   CHECK(todo.find("- Deferred semantic-product/backend/tooling follow-ups: TODO-4245") ==
         std::string::npos);
-  CHECK(todo.find("Generic contiguous-storage coverage needed before vector ordinary `.prime`") !=
+  CHECK(todo.find("Generic contiguous-storage coverage needed before vector ordinary `.prime`") ==
         std::string::npos);
   CHECK(todo.find("- Deferred SoA finish: TODO-4252") ==
         std::string::npos);
   CHECK(todo.find("### Execution Queue (Recommended Track Order)\n\n"
-                  "- none") !=
-        std::string::npos);
+                  "- none") == std::string::npos);
   CHECK(todo.find("- TODO-4563: Add single-task spawn/wait runtime execution | track:") ==
         std::string::npos);
   CHECK(todo.find("- [ ] TODO-4545: Implement first structured task spawn/wait substrate") ==
@@ -2470,60 +2454,66 @@ TEST_CASE("todo queue and skipped doctest debt stay source locked") {
   CHECK(todo.find("- TODO-4152") == std::string::npos);
   CHECK(todo.find("- TODO-4151") == std::string::npos);
   CHECK(todo.find("- TODO-4147") == std::string::npos);
-  CHECK(todo.find("| Semantic ownership boundary and graph/local-auto authority | none |") !=
+  CHECK(todo.find("Architecture hardening backlog: TODO-4580, TODO-4581 -> TODO-4582,") !=
         std::string::npos);
-  CHECK(todo.find("| Compile-pipeline stage and publication-boundary contracts | none |") !=
+  CHECK(todo.find("TODO-4580: Replace private source-lock tests with public contracts") !=
         std::string::npos);
-  CHECK(todo.find("| Compile-time macro hooks and AST transform ownership | none |") !=
+  CHECK(todo.find("TODO-4588: Add pass/phase invalidation manifest beyond semantics") !=
         std::string::npos);
-  CHECK(todo.find("| Stdlib bridge consolidation and collection/file/gfx surface authority | none |") !=
+  CHECK(todo.find("| Semantic ownership boundary and graph/local-auto authority | none |") ==
         std::string::npos);
-  CHECK(todo.find("| Vector/map stdlib ownership cutover and collection surface authority | none |") !=
+  CHECK(todo.find("| Compile-pipeline stage and publication-boundary contracts | none |") ==
         std::string::npos);
-  CHECK(todo.find("| Release benchmark/example suite stability and doctest governance | none |") !=
+  CHECK(todo.find("| Compile-time macro hooks and AST transform ownership | none |") ==
         std::string::npos);
-  CHECK(todo.find("| Focused backend rerun ergonomics and suite partitioning | none |") !=
+  CHECK(todo.find("| Stdlib bridge consolidation and collection/file/gfx surface authority | none |") ==
         std::string::npos);
-  CHECK(todo.find("| Test-suite audit follow-up and release-gate stability | none |") !=
+  CHECK(todo.find("| Vector/map stdlib ownership cutover and collection surface authority | none |") ==
         std::string::npos);
-  CHECK(todo.find("| Stdlib de-experimentalization and public/internal namespace cleanup | none |") !=
+  CHECK(todo.find("| Release benchmark/example suite stability and doctest governance | none |") ==
         std::string::npos);
-  CHECK(todo.find("| SoA maturity and `soa` public-surface rename | none |") !=
+  CHECK(todo.find("| Focused backend rerun ergonomics and suite partitioning | none |") ==
         std::string::npos);
-  CHECK(todo.find("| De-experimentalization surface and namespace parity | none |") !=
+  CHECK(todo.find("| Test-suite audit follow-up and release-gate stability | none |") ==
         std::string::npos);
-  CHECK(todo.find("| `soa` maturity and canonical surface parity | none |") !=
+  CHECK(todo.find("| Stdlib de-experimentalization and public/internal namespace cleanup | none |") ==
         std::string::npos);
-  CHECK(todo.find("| Validator entrypoint and benchmark-plumbing split | none |") !=
+  CHECK(todo.find("| SoA maturity and `soa` public-surface rename | none |") ==
         std::string::npos);
-  CHECK(todo.find("| Semantic-product publication by module and fact family | none |") !=
+  CHECK(todo.find("| De-experimentalization surface and namespace parity | none |") ==
         std::string::npos);
-  CHECK(todo.find("| Semantic-product public API factoring and versioning | none |") !=
+  CHECK(todo.find("| `soa` maturity and canonical surface parity | none |") ==
         std::string::npos);
-  CHECK(todo.find("| IR lowerer compile-unit breakup | none |") !=
+  CHECK(todo.find("| Validator entrypoint and benchmark-plumbing split | none |") ==
         std::string::npos);
-  CHECK(todo.find("| Backend validation/build ergonomics | none |") !=
+  CHECK(todo.find("| Semantic-product publication by module and fact family | none |") ==
         std::string::npos);
-  CHECK(todo.find("| Semantic-product-authority conformance | none |") !=
+  CHECK(todo.find("| Semantic-product public API factoring and versioning | none |") ==
         std::string::npos);
-  CHECK(todo.find("| AST transform hook conformance | none |") !=
+  CHECK(todo.find("| IR lowerer compile-unit breakup | none |") ==
         std::string::npos);
-  CHECK(todo.find("| Compile-pipeline stage handoff conformance | none |") !=
+  CHECK(todo.find("| Backend validation/build ergonomics | none |") ==
         std::string::npos);
-  CHECK(todo.find("| Architecture contract probe migration | none |") !=
+  CHECK(todo.find("| Semantic-product-authority conformance | none |") ==
         std::string::npos);
-  CHECK(todo.find("| Semantic-product publication parity and deterministic ordering | none |") !=
+  CHECK(todo.find("| AST transform hook conformance | none |") ==
         std::string::npos);
-  CHECK(todo.find("| Lowerer/source-composition contract coverage | none |") !=
+  CHECK(todo.find("| Compile-pipeline stage handoff conformance | none |") ==
         std::string::npos);
-  CHECK(todo.find("| Vector/map bridge parity for imports, rewrites, and lowering | none |") !=
+  CHECK(todo.find("| Architecture contract probe migration | none |") ==
         std::string::npos);
-  CHECK(todo.find("### Skipped Doctest Debt Summary") != std::string::npos);
-  CHECK(todo.find("Retained `doctest::skip(true)` coverage is currently absent from the active") !=
+  CHECK(todo.find("| Semantic-product publication parity and deterministic ordering | none |") ==
         std::string::npos);
-  CHECK(todo.find("queue because no skipped doctest cases remain under `tests/unit`.") !=
+  CHECK(todo.find("| Lowerer/source-composition contract coverage | none |") ==
         std::string::npos);
-  CHECK(todo.find("New skipped doctest coverage must create a new explicit TODO before it lands.") !=
+  CHECK(todo.find("| Vector/map bridge parity for imports, rewrites, and lowering | none |") ==
+        std::string::npos);
+  CHECK(todo.find("### Skipped Doctest Debt Summary") == std::string::npos);
+  CHECK(todo.find("Retained `doctest::skip(true)` coverage is currently absent from the active") ==
+        std::string::npos);
+  CHECK(todo.find("queue because no skipped doctest cases remain under `tests/unit`.") ==
+        std::string::npos);
+  CHECK(todo.find("New skipped doctest coverage must create a new explicit TODO before it lands.") ==
         std::string::npos);
   CHECK(todo.find("- [ ] TODO-4146: Split or optimize slow serialization shards") ==
         std::string::npos);

@@ -91,6 +91,9 @@ bool SemanticsValidator::validateExpr(const std::vector<ParameterInfo> &params,
     if (expr.isBinding) {
       return failExprRootDiagnostic("binding not allowed in expression context");
     }
+    if (isIfCall(expr)) {
+      return validateIfExpr(params, locals, expr);
+    }
     if (isTaskTypeCarrierExpr(expr)) {
       return validateTaskTypeCarrierExpr(
           params, locals, expr, enclosingStatements, statementIndex);

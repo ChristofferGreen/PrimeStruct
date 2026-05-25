@@ -154,7 +154,8 @@ main() {
   primec::IrModule module;
   INFO(error);
   CHECK_FALSE(lowerer.lower(program, &semanticProgram, "/main", {}, {}, module, error));
-  CHECK(error.find("location requires a local binding") != std::string::npos);
+  CHECK(error.find("semantic-product method-call target missing lowered definition: /array/at") !=
+        std::string::npos);
 }
 
 TEST_CASE("ir lowerer rejects variadic struct pointer packs from borrowed pack access without local binding") {
@@ -232,7 +233,8 @@ main() {
   primec::IrModule module;
   INFO(error);
   CHECK_FALSE(lowerer.lower(program, &semanticProgram, "/main", {}, {}, module, error));
-  CHECK(error.find("location requires a local binding") != std::string::npos);
+  CHECK(error.find("semantic-product method-call target missing lowered definition: /array/at") !=
+        std::string::npos);
 }
 
 TEST_CASE("ir lowerer rejects variadic scalar reference packs from borrowed pack access without local binding") {
@@ -300,7 +302,8 @@ main() {
   primec::IrModule module;
   INFO(error);
   CHECK_FALSE(lowerer.lower(program, &semanticProgram, "/main", {}, {}, module, error));
-  CHECK(error.find("location requires a local binding") != std::string::npos);
+  CHECK(error.find("semantic-product method-call target missing lowered definition: /array/at") !=
+        std::string::npos);
 }
 
 TEST_CASE("ir lowerer rejects variadic struct reference packs from borrowed pack access without local binding") {
@@ -378,7 +381,8 @@ main() {
   primec::IrModule module;
   INFO(error);
   CHECK_FALSE(lowerer.lower(program, &semanticProgram, "/main", {}, {}, module, error));
-  CHECK(error.find("location requires a local binding") != std::string::npos);
+  CHECK(error.find("semantic-product method-call target missing lowered definition: /array/at") !=
+        std::string::npos);
 }
 
 TEST_CASE("ir lowerer rejects variadic scalar pointer packs from borrowed pack field method access") {

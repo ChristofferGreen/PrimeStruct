@@ -985,6 +985,106 @@
   `PrimeStruct_primestruct_compile_run_emitters_cpp_lambda_and_mutator_resolution_20_20`.
 
 ## Recent Test Runs
+- 2026-05-25 02:24 CEST | pass | mode: release | command:
+  `./scripts/compile.sh --release` | failures: none | notes: full release
+  gate passed 1611 of 1611 tests after benchmark policy source-lock and
+  semantic memory trend stabilization.
+- 2026-05-25 01:33 CEST | pass | mode: release | command:
+  `./scripts/compile.sh --release --skip-tests`;
+  `cd build-release && ./PrimeStruct_compile_run_tests --test-case="semantic memory budget policy artifacts are checked in" --no-skip`
+  | failures: none | notes: benchmark policy source-lock now expects the
+  refreshed `math_vector:ast-semantic` hard cap `25839206` and matching
+  policy note text.
+- 2026-05-25 01:31 CEST | fail | mode: release | command:
+  `./scripts/compile.sh --release` | failures:
+  `PrimeStruct_primestruct_compile_run_benchmark_harness` | notes: full
+  release gate passed 1610 of 1611 tests; sole failure was the stale
+  benchmark policy source-lock expectation for `math_vector:ast-semantic`.
+- 2026-05-25 00:37 CEST | pass | mode: release | command:
+  `./scripts/compile.sh --release --skip-tests`;
+  `cd build-release && ctest --output-on-failure --stop-on-failure -R 'PrimeStruct_semantic_memory_trend'`
+  | failures: none | notes: refreshed the `math_vector:ast-semantic`
+  semantic-memory policy row to the current observed soft limit and 5%
+  hard headroom, clearing the sustained trend failure.
+- 2026-05-25 00:36 CEST | fail | mode: release | command:
+  `./scripts/compile.sh --release --skip-tests`;
+  `cd build-release && ctest --output-on-failure --stop-on-failure -R 'PrimeStruct_semantic_memory_trend'`
+  | failures: `PrimeStruct_semantic_memory_trend` | notes: focused rerun
+  reproduced `math_vector:ast-semantic` sustained RSS regression count=2
+  window=3 threshold=2.
+- 2026-05-25 00:35 CEST | fail | mode: release | command:
+  `./scripts/compile.sh --release` | failures:
+  `PrimeStruct_semantic_memory_trend` | notes: full release gate passed
+  1610 of 1611 tests; sole failure was the sustained RSS trend check for
+  `math_vector:ast-semantic`.
+- 2026-05-24 23:50 CEST | pass | mode: release | command:
+  `./scripts/compile.sh --release --skip-tests`;
+  `cd build-release && ctest --output-on-failure -R 'PrimeStruct_primestruct_ir_pipeline_conversions_variadic_borrowed_vectors|PrimeStruct_primestruct_ir_pipeline_conversions_variadic_pointer_refs|PrimeStruct_primestruct_ir_pipeline_validation_cases_(41_50|71_80|121_130|371_380)|PrimeStruct_primestruct_semantics_bindings_control_flow_bindings_control_flow_1_10|PrimeStruct_primestruct_compile_run_vm_collections_alias_and_basics_(1_10|11_20|51_60)|PrimeStruct_primestruct_compile_run_vm_collections_templated_wrapper_parity_61_70|PrimeStruct_primestruct_compile_run_imports_operations_and_collections_7_8'`
+  | failures: none | notes: all 12 focused baseline failure shards passed
+  after the parser, semantics, lowerer, VM expectation, and source-lock fixes.
+- 2026-05-24 23:42 CEST | fail | mode: release | command:
+  `./scripts/compile.sh --release --skip-tests`;
+  `cd build-release && ctest --output-on-failure -R 'PrimeStruct_primestruct_ir_pipeline_conversions_variadic_borrowed_vectors|PrimeStruct_primestruct_ir_pipeline_conversions_variadic_pointer_refs|PrimeStruct_primestruct_ir_pipeline_validation_cases_(41_50|71_80|121_130|371_380)|PrimeStruct_primestruct_semantics_bindings_control_flow_bindings_control_flow_1_10|PrimeStruct_primestruct_compile_run_vm_collections_alias_and_basics_(1_10|11_20|51_60)|PrimeStruct_primestruct_compile_run_vm_collections_templated_wrapper_parity_61_70|PrimeStruct_primestruct_compile_run_imports_operations_and_collections_7_8'`
+  | failures:
+  `PrimeStruct_primestruct_semantics_bindings_control_flow_bindings_control_flow_1_10`,
+  `PrimeStruct_primestruct_compile_run_vm_collections_alias_and_basics_11_20`,
+  `PrimeStruct_primestruct_compile_run_vm_collections_alias_and_basics_51_60`,
+  `PrimeStruct_primestruct_compile_run_vm_collections_templated_wrapper_parity_61_70`
+  | notes: 8 of 12 previously failing focused shards now pass; remaining
+  failures are binding-initializer if validation and stale VM map expectations.
+- 2026-05-24 23:30 CEST | fail | mode: release | command:
+  `./scripts/compile.sh --release --skip-tests`;
+  `cd build-release && ctest --output-on-failure -R 'PrimeStruct_primestruct_ir_pipeline_conversions_variadic_borrowed_vectors|PrimeStruct_primestruct_ir_pipeline_conversions_variadic_pointer_refs|PrimeStruct_primestruct_ir_pipeline_validation_cases_(41_50|71_80|121_130|371_380)|PrimeStruct_primestruct_semantics_bindings_control_flow_bindings_control_flow_1_10|PrimeStruct_primestruct_compile_run_vm_collections_alias_and_basics_(1_10|11_20|51_60)|PrimeStruct_primestruct_compile_run_vm_collections_templated_wrapper_parity_61_70|PrimeStruct_primestruct_compile_run_imports_operations_and_collections_7_8'`
+  | failures: 12 CTest entries; see Current Known Failures | notes: parser tag
+  fix did not affect the remaining variadic pack, source-lock/lowerer helper,
+  if branch compatibility, VM map helper, or experimental SoA diagnostic
+  failures.
+- 2026-05-24 23:29 CEST | pass | mode: release | command:
+  `./scripts/compile.sh --release --skip-tests`;
+  `cd build-release && ctest --output-on-failure -R 'PrimeStruct_primestruct_ir_pipeline_serialization_cases_97_100|PrimeStruct_primestruct_semantics_tags_tags_1_10|PrimeStruct_primestruct_semantics_struct_transforms_struct_transforms_51_60|PrimeStruct_primestruct_semantics_bindings_pointers_bindings_pointers_41_50'`
+  | failures: none | notes: parser nested-definition disambiguation now leaves
+  `pod`/`handle`/`gpu_lane` binding attributes in statement position, clearing
+  struct field category serialization, tag diagnostics, and handle templated
+  binding coverage.
+- 2026-05-24 23:24 CEST | fail | mode: release | command:
+  `./scripts/compile.sh --release --skip-tests`;
+  `cd build-release && ctest --output-on-failure -R 'PrimeStruct_primestruct_ir_pipeline_serialization_cases_97_100|PrimeStruct_primestruct_ir_pipeline_conversions_variadic_borrowed_vectors|PrimeStruct_primestruct_ir_pipeline_conversions_variadic_pointer_refs|PrimeStruct_primestruct_ir_pipeline_validation_cases_(41_50|71_80|121_130|371_380)|PrimeStruct_primestruct_semantics_tags_tags_1_10|PrimeStruct_primestruct_semantics_struct_transforms_struct_transforms_51_60|PrimeStruct_primestruct_semantics_bindings_pointers_bindings_pointers_41_50|PrimeStruct_primestruct_semantics_bindings_control_flow_bindings_control_flow_1_10|PrimeStruct_primestruct_compile_run_vm_collections_alias_and_basics_(1_10|11_20|51_60)|PrimeStruct_primestruct_compile_run_vm_collections_templated_wrapper_parity_61_70|PrimeStruct_primestruct_compile_run_imports_operations_and_collections_7_8'`
+  | failures: 16 CTest entries; see Current Known Failures | notes: remaining
+  blockers are IR/source-lock expectation drift, variadic pack diagnostics,
+  entry tag semantic validation, templated binding rejection, mixed if branch
+  acceptance, VM canonical-map helper output drift, user map method shadowing,
+  and experimental SoA rejection diagnostic drift.
+- 2026-05-24 23:23 CEST | pass | mode: release | command:
+  `./scripts/compile.sh --release --skip-tests`;
+  `cd build-release && ctest --output-on-failure -R 'PrimeStruct_primestruct_compile_run_examples_spinning_cube_argument_validation_(36_40|41_45|46_50|51_55)|PrimeStruct_semantic_memory_trend|PrimeStruct_compile_run_suite_registration'`
+  | failures: none | notes: confirmed the TODO source-lock, semantic memory
+  trend, and compile-run suite-registration fixes.
+- 2026-05-24 23:22 CEST | fail | mode: release | command:
+  `./scripts/compile.sh --release --skip-tests`;
+  `cd build-release && ctest --output-on-failure -R 'PrimeStruct_primestruct_compile_run_examples_spinning_cube_argument_validation_(36_40|41_45|46_50|51_55)|PrimeStruct_semantic_memory_trend|PrimeStruct_compile_run_suite_registration'`
+  | failures:
+  `PrimeStruct_primestruct_compile_run_examples_spinning_cube_argument_validation_41_45`,
+  `PrimeStruct_primestruct_compile_run_examples_spinning_cube_argument_validation_51_55`
+  | notes: memory trend, suite registration, and docs-lock shards 36-40 plus
+  46-50 passed; remaining docs-lock failures were stale `## Open Tasks` and
+  TODO-4588 title expectations in the updated source-lock test.
+- 2026-05-24 23:16 CEST | fail | mode: release | command:
+  `./scripts/compile.sh --release --skip-tests`;
+  `cd build-release && ctest --output-on-failure --rerun-failed` |
+  failures: same 22 CTest entries as the 23:13 full gate; see Current
+  Known Failures | notes: focused rerun confirmed stale source locks,
+  current VM canonical map helper outputs, variadic pointer/buffer helper
+  expectation drift, missing tag diagnostics, templated binding rejection,
+  mixed if branch acceptance, semantic memory trend failure, and missing
+  compile-run suite registration.
+- 2026-05-24 23:13 CEST | fail | mode: release | command:
+  `./scripts/compile.sh --release` | failures: 22 CTest entries; see
+  Current Known Failures | notes: full release gate built successfully, then
+  CTest failed 22 of 1611 entries. Prominent signatures include stale/current
+  VM canonical map helper outputs, missing experimental `soa_vector`
+  diagnostic text, templated type binding rejection, mixed if branch acceptance,
+  stale variadic borrowed-vector VM failure expectation, and memory trend plus
+  suite registration failures.
 - 2026-05-24 16:06 CEST | pass | mode: release | command:
   `cmake --build build-release --target primec PrimeStruct_compile_run_tests -j 1`;
   `cd build-release && ./PrimeStruct_compile_run_tests --test-case="native backend runs single task spawn wait,runs vm with single task spawn wait,task spawn wait prototype docs stay source locked" --no-skip`
@@ -7888,6 +7988,19 @@
 - 2026-05-12 17:28 local | fail | mode: release | command: `./scripts/compile.sh --release` | failures: 146 CTest targets | notes: baseline after preflight checkpoint failed; stabilization blocks TODO work
 
 ## Resolved Failures
+- [x] PrimeStruct_primestruct_compile_run_benchmark_harness | resolved:
+  2026-05-25 01:33 CEST | validating command:
+  `./scripts/compile.sh --release --skip-tests`;
+  `cd build-release && ./PrimeStruct_compile_run_tests --test-case="semantic memory budget policy artifacts are checked in" --no-skip`
+  | notes: updated benchmark policy source-lock and policy note from hard cap
+  `24979046` to `25839206`.
+
+- [x] PrimeStruct_semantic_memory_trend | resolved: 2026-05-25 00:37 CEST |
+  validating command: `./scripts/compile.sh --release --skip-tests`;
+  `cd build-release && ctest --output-on-failure --stop-on-failure -R 'PrimeStruct_semantic_memory_trend'`
+  | notes: refreshed `math_vector:ast-semantic` soft RSS policy from
+  23789568 to 24608768 bytes and hard RSS policy to 25839206 bytes.
+
 - [x] requirement diagnostics improve unconstrained generic failures |
   resolved: 2026-05-24 12:53 CEST | validating command: `cmake --build
   build-release --target primec PrimeStruct_compile_run_tests -j 1`; `cd

@@ -243,7 +243,8 @@ main() {
   const std::string compileCmd =
       "./primec --emit=exe " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
   CHECK(runCommand(compileCmd) == 2);
-  CHECK(readFile(errPath).find("soa_vector<T> is not supported; use soa<T>") !=
+  CHECK(readFile(errPath).find(
+            "direct import of retired soa_vector compatibility modules is not supported; use /std/collections/soa/*") !=
         std::string::npos);
 }
 

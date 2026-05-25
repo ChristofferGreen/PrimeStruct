@@ -87,8 +87,9 @@ main() {
   primec::Vm vm;
   uint64_t result = 0;
   INFO(error);
-  CHECK_FALSE(vm.execute(module, result, error));
-  CHECK(error.find("unaligned indirect address in IR") != std::string::npos);
+  REQUIRE(vm.execute(module, result, error));
+  CHECK(error.empty());
+  CHECK(result == 25);
 }
 
 TEST_CASE("retired variadic borrowed soa_vector count template compatibility rejects before lowering") {

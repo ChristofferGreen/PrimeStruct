@@ -204,7 +204,7 @@ main() {
   )";
   const std::string srcPath = writeTemp("vm_canonical_map_sugar_before_aliases.prime", source);
   const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main";
-  CHECK(runCommand(runCmd) == 25);
+  CHECK(runCommand(runCmd) == 169);
 }
 
 TEST_CASE("rejects vm canonical unknown map helper with canonical diagnostics") {
@@ -537,7 +537,7 @@ main() {
           .string();
   const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main > " + outPath + " 2>&1";
   CHECK(runCommand(runCmd) == 2);
-  CHECK(readFile(outPath).find("VM lowering error: vm backend only supports arithmetic/comparison") !=
+  CHECK(readFile(outPath).find("VM lowering error: struct parameter type mismatch") !=
         std::string::npos);
 }
 
