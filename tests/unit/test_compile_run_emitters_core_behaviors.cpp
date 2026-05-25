@@ -1,10 +1,28 @@
 #include "test_compile_run_helpers.h"
 #include "test_compile_run_collection_conformance_helpers.h"
 #include "test_compile_run_emitters_helpers.h"
+#include "test_compile_run_scene_model_helpers.h"
 
 #include "primec/testing/EmitterHelpers.h"
 
 TEST_SUITE_BEGIN("primestruct.compile.run.emitters.cpp");
+
+TEST_CASE("C++ emitter serializes scene model source deterministically") {
+  const std::string srcPath =
+      writeTemp("emit_scene_model_authoring_cpp.prime", sceneModelAuthoringSource());
+  const std::string cppPathA =
+      (testScratchPath("") / "primec_scene_model_authoring_a.cpp").string();
+  const std::string cppPathB =
+      (testScratchPath("") / "primec_scene_model_authoring_b.cpp").string();
+
+  const std::string compileCmdA =
+      "./primec --emit=cpp " + srcPath + " -o " + cppPathA + " --entry /main";
+  const std::string compileCmdB =
+      "./primec --emit=cpp " + srcPath + " -o " + cppPathB + " --entry /main";
+  CHECK(runCommand(compileCmdA) == 0);
+  CHECK(runCommand(compileCmdB) == 0);
+  CHECK(readFile(cppPathA) == readFile(cppPathB));
+}
 
 TEST_CASE("compiles and runs chained method calls in C++ emitter") {
   const std::string source = R"(

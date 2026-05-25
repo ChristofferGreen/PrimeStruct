@@ -305,6 +305,12 @@ The initial scene surface is defined by these stable concepts:
   coverage primitives, explicit-material 3D SDF primitives, and future mesh or
   image descriptors.
 
+The first source-level implementation lives in `stdlib/std/scene/scene.prime`.
+It is an authoring and inspection model only: `Scene.serialize()` emits a stable
+integer record stream for golden tests, `Camera` stores orthographic projection
+config and UI pixel mapping, and materials, lights, primitives, nodes, local
+`z`, painter order, and transforms receive stable ids without producing pixels.
+
 ### UI Coordinate and Camera Defaults
 The first UI camera is orthographic. Its default viewport maps one scene unit to
 one logical pixel. UI scene coordinates use a top-left origin, `+x` points

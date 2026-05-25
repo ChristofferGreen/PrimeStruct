@@ -1,0 +1,469 @@
+import /std/collections/*
+import /std/math/*
+
+namespace std {
+  namespace scene {
+  [public return<i32>]
+  projection_orthographic() {
+    return(1i32)
+  }
+
+  [public return<i32>]
+  primitive_rect() {
+    return(1i32)
+  }
+
+  [public return<i32>]
+  light_ambient() {
+    return(1i32)
+  }
+
+  [public return<i32>]
+  light_key() {
+    return(2i32)
+  }
+
+  [public return<i32>]
+  unsupported_id() {
+    return(-1i32)
+  }
+
+  [return<i32>]
+  scene_to_milli([f32] value) {
+    return(convert<i32>(value * 1000.0f32))
+  }
+
+  [public struct]
+  Transform() {
+    [public f32] translationX{0.0f32}
+    [public f32] translationY{0.0f32}
+    [public f32] translationZ{0.0f32}
+    [public f32] scaleX{1.0f32}
+    [public f32] scaleY{1.0f32}
+    [public f32] scaleZ{1.0f32}
+    [public f32] rotationZDegrees{0.0f32}
+  }
+
+  [public struct]
+  Camera() {
+    [public i32] projectionMode{1i32}
+    [public f32] viewportWidth{1.0f32}
+    [public f32] viewportHeight{1.0f32}
+    [public f32] unitsPerPixel{1.0f32}
+    [public f32] originX{0.0f32}
+    [public f32] originY{0.0f32}
+    [public f32] nearZ{-1000.0f32}
+    [public f32] farZ{1000.0f32}
+  }
+
+  namespace Camera {
+    [public return<bool>]
+    isOrthographic([Camera] self) {
+      return(self.projectionMode == projection_orthographic())
+    }
+
+    [public return<f32>]
+    sceneXForPixel([Camera] self, [i32] pixelX) {
+      return(self.originX + convert<f32>(pixelX) * self.unitsPerPixel)
+    }
+
+    [public return<f32>]
+    sceneYForPixel([Camera] self, [i32] pixelY) {
+      return(self.originY + convert<f32>(pixelY) * self.unitsPerPixel)
+    }
+
+    [public return<i32>]
+    pixelXForScene([Camera] self, [f32] sceneX) {
+      return(convert<i32>((sceneX - self.originX) / self.unitsPerPixel))
+    }
+
+    [public return<i32>]
+    pixelYForScene([Camera] self, [f32] sceneY) {
+      return(convert<i32>((sceneY - self.originY) / self.unitsPerPixel))
+    }
+  }
+
+  [public return<Camera>]
+  ui_camera([i32] widthPx, [i32] heightPx) {
+    return(Camera{
+      [projectionMode] projection_orthographic(),
+      [viewportWidth] convert<f32>(widthPx),
+      [viewportHeight] convert<f32>(heightPx),
+      [unitsPerPixel] 1.0f32,
+      [originX] 0.0f32,
+      [originY] 0.0f32,
+      [nearZ] -1000.0f32,
+      [farZ] 1000.0f32
+    })
+  }
+
+  [public struct]
+  Material() {
+    [public f32] r{1.0f32}
+    [public f32] g{1.0f32}
+    [public f32] b{1.0f32}
+    [public f32] opacity{1.0f32}
+    [public f32] shadeStrength{1.0f32}
+  }
+
+  [public struct]
+  Light() {
+    [public i32] kind{1i32}
+    [public f32] weight{1.0f32}
+    [public f32] directionX{0.0f32}
+    [public f32] directionY{0.0f32}
+    [public f32] directionZ{1.0f32}
+  }
+
+  [public struct]
+  Primitive() {
+    [public i32] kind{1i32}
+    [public f32] width{0.0f32}
+    [public f32] height{0.0f32}
+    [public f32] radius{0.0f32}
+    [public i32] materialId{-1i32}
+  }
+
+  [public struct]
+  Node() {
+    [public i32] id{-1i32}
+    [public i32] parentId{-1i32}
+    [public Transform] transform{Transform{}}
+    [public i32] painterOrder{0i32}
+    [public f32] localZ{0.0f32}
+    [public i32] primitiveId{-1i32}
+    [public i32] materialId{-1i32}
+  }
+
+  [public struct]
+  Scene() {
+    [public vector<i32> mut] nodeParentIds{vector<i32>()}
+    [public vector<i32> mut] nodePainterOrders{vector<i32>()}
+    [public vector<i32> mut] nodePrimitiveIds{vector<i32>()}
+    [public vector<i32> mut] nodeMaterialIds{vector<i32>()}
+    [vector<f32> mut] nodeTranslationXs{vector<f32>()}
+    [vector<f32> mut] nodeTranslationYs{vector<f32>()}
+    [vector<f32> mut] nodeTranslationZs{vector<f32>()}
+    [vector<f32> mut] nodeScaleXs{vector<f32>()}
+    [vector<f32> mut] nodeScaleYs{vector<f32>()}
+    [vector<f32> mut] nodeScaleZs{vector<f32>()}
+    [vector<f32> mut] nodeRotationZDegrees{vector<f32>()}
+    [vector<f32> mut] nodeLocalZs{vector<f32>()}
+    [vector<i32> mut] primitiveKinds{vector<i32>()}
+    [vector<f32> mut] primitiveWidths{vector<f32>()}
+    [vector<f32> mut] primitiveHeights{vector<f32>()}
+    [vector<f32> mut] primitiveRadii{vector<f32>()}
+    [vector<i32> mut] primitiveMaterialIds{vector<i32>()}
+    [vector<f32> mut] materialRs{vector<f32>()}
+    [vector<f32> mut] materialGs{vector<f32>()}
+    [vector<f32> mut] materialBs{vector<f32>()}
+    [vector<f32> mut] materialOpacities{vector<f32>()}
+    [vector<f32> mut] materialShadeStrengths{vector<f32>()}
+    [vector<i32> mut] lightKinds{vector<i32>()}
+    [vector<f32> mut] lightWeights{vector<f32>()}
+    [vector<f32> mut] lightDirectionXs{vector<f32>()}
+    [vector<f32> mut] lightDirectionYs{vector<f32>()}
+    [vector<f32> mut] lightDirectionZs{vector<f32>()}
+    [vector<i32> mut] cameraModes{vector<i32>()}
+    [vector<f32> mut] cameraViewportWidths{vector<f32>()}
+    [vector<f32> mut] cameraViewportHeights{vector<f32>()}
+    [vector<f32> mut] cameraUnitsPerPixels{vector<f32>()}
+    [vector<f32> mut] cameraOriginXs{vector<f32>()}
+    [vector<f32> mut] cameraOriginYs{vector<f32>()}
+    [vector<f32> mut] cameraNearZs{vector<f32>()}
+    [vector<f32> mut] cameraFarZs{vector<f32>()}
+    [public i32 mut] activeCameraId{-1i32}
+  }
+
+  namespace Scene {
+    [public return<i32>]
+    nodeCount([Scene] self) {
+      return(self.nodeParentIds.count())
+    }
+
+    [public return<i32>]
+    primitiveCount([Scene] self) {
+      return(self.primitiveKinds.count())
+    }
+
+    [public return<i32>]
+    materialCount([Scene] self) {
+      return(self.materialRs.count())
+    }
+
+    [public return<i32>]
+    lightCount([Scene] self) {
+      return(self.lightKinds.count())
+    }
+
+    [public return<i32>]
+    cameraCount([Scene] self) {
+      return(self.cameraModes.count())
+    }
+
+    [public effects(heap_alloc), return<i32>]
+    appendMaterial([Scene mut] self, [Material] material) {
+      id{self.materialCount()}
+      [mut] materialRs{self.materialRs}
+      [mut] materialGs{self.materialGs}
+      [mut] materialBs{self.materialBs}
+      [mut] materialOpacities{self.materialOpacities}
+      [mut] materialShadeStrengths{self.materialShadeStrengths}
+      /std/collections/vector/push(materialRs, material.r)
+      /std/collections/vector/push(materialGs, material.g)
+      /std/collections/vector/push(materialBs, material.b)
+      /std/collections/vector/push(materialOpacities, material.opacity)
+      /std/collections/vector/push(materialShadeStrengths, material.shadeStrength)
+      self.materialRs = materialRs
+      self.materialGs = materialGs
+      self.materialBs = materialBs
+      self.materialOpacities = materialOpacities
+      self.materialShadeStrengths = materialShadeStrengths
+      return(id)
+    }
+
+    [public effects(heap_alloc), return<i32>]
+    appendLight([Scene mut] self, [Light] light) {
+      id{self.lightCount()}
+      [mut] lightKinds{self.lightKinds}
+      [mut] lightWeights{self.lightWeights}
+      [mut] lightDirectionXs{self.lightDirectionXs}
+      [mut] lightDirectionYs{self.lightDirectionYs}
+      [mut] lightDirectionZs{self.lightDirectionZs}
+      /std/collections/vector/push(lightKinds, light.kind)
+      /std/collections/vector/push(lightWeights, light.weight)
+      /std/collections/vector/push(lightDirectionXs, light.directionX)
+      /std/collections/vector/push(lightDirectionYs, light.directionY)
+      /std/collections/vector/push(lightDirectionZs, light.directionZ)
+      self.lightKinds = lightKinds
+      self.lightWeights = lightWeights
+      self.lightDirectionXs = lightDirectionXs
+      self.lightDirectionYs = lightDirectionYs
+      self.lightDirectionZs = lightDirectionZs
+      return(id)
+    }
+
+    [public effects(heap_alloc), return<i32>]
+    appendUiLightRig([Scene mut] self) {
+      firstId{self.appendLight(Light{
+        [kind] light_ambient(),
+        [weight] 0.55f32,
+        [directionX] 0.0f32,
+        [directionY] 0.0f32,
+        [directionZ] 1.0f32
+      })}
+      secondId{self.appendLight(Light{
+        [kind] light_key(),
+        [weight] 0.45f32,
+        [directionX] -1.0f32,
+        [directionY] -1.0f32,
+        [directionZ] 1.0f32
+      })}
+      return(firstId)
+    }
+
+    [public effects(heap_alloc), return<i32>]
+    appendPrimitive([Scene mut] self, [Primitive] primitive) {
+      id{self.primitiveCount()}
+      [mut] primitiveKinds{self.primitiveKinds}
+      [mut] primitiveWidths{self.primitiveWidths}
+      [mut] primitiveHeights{self.primitiveHeights}
+      [mut] primitiveRadii{self.primitiveRadii}
+      [mut] primitiveMaterialIds{self.primitiveMaterialIds}
+      /std/collections/vector/push(primitiveKinds, primitive.kind)
+      /std/collections/vector/push(primitiveWidths, primitive.width)
+      /std/collections/vector/push(primitiveHeights, primitive.height)
+      /std/collections/vector/push(primitiveRadii, primitive.radius)
+      /std/collections/vector/push(primitiveMaterialIds, primitive.materialId)
+      self.primitiveKinds = primitiveKinds
+      self.primitiveWidths = primitiveWidths
+      self.primitiveHeights = primitiveHeights
+      self.primitiveRadii = primitiveRadii
+      self.primitiveMaterialIds = primitiveMaterialIds
+      return(id)
+    }
+
+    [public effects(heap_alloc), return<i32>]
+    appendCamera([Scene mut] self, [Camera] camera) {
+      if(not(camera.isOrthographic())) {
+        return(unsupported_id())
+      }
+      id{self.cameraCount()}
+      [mut] cameraModes{self.cameraModes}
+      [mut] cameraViewportWidths{self.cameraViewportWidths}
+      [mut] cameraViewportHeights{self.cameraViewportHeights}
+      [mut] cameraUnitsPerPixels{self.cameraUnitsPerPixels}
+      [mut] cameraOriginXs{self.cameraOriginXs}
+      [mut] cameraOriginYs{self.cameraOriginYs}
+      [mut] cameraNearZs{self.cameraNearZs}
+      [mut] cameraFarZs{self.cameraFarZs}
+      /std/collections/vector/push(cameraModes, camera.projectionMode)
+      /std/collections/vector/push(cameraViewportWidths, camera.viewportWidth)
+      /std/collections/vector/push(cameraViewportHeights, camera.viewportHeight)
+      /std/collections/vector/push(cameraUnitsPerPixels, camera.unitsPerPixel)
+      /std/collections/vector/push(cameraOriginXs, camera.originX)
+      /std/collections/vector/push(cameraOriginYs, camera.originY)
+      /std/collections/vector/push(cameraNearZs, camera.nearZ)
+      /std/collections/vector/push(cameraFarZs, camera.farZ)
+      self.cameraModes = cameraModes
+      self.cameraViewportWidths = cameraViewportWidths
+      self.cameraViewportHeights = cameraViewportHeights
+      self.cameraUnitsPerPixels = cameraUnitsPerPixels
+      self.cameraOriginXs = cameraOriginXs
+      self.cameraOriginYs = cameraOriginYs
+      self.cameraNearZs = cameraNearZs
+      self.cameraFarZs = cameraFarZs
+      if(self.activeCameraId < 0i32) {
+        self.activeCameraId = id
+      }
+      return(id)
+    }
+
+    [public return<Camera>]
+    cameraAt([Scene] self, [i32] cameraId) {
+      return(Camera{
+        [projectionMode] /std/collections/vector/at(self.cameraModes, cameraId),
+        [viewportWidth] /std/collections/vector/at(self.cameraViewportWidths, cameraId),
+        [viewportHeight] /std/collections/vector/at(self.cameraViewportHeights, cameraId),
+        [unitsPerPixel] /std/collections/vector/at(self.cameraUnitsPerPixels, cameraId),
+        [originX] /std/collections/vector/at(self.cameraOriginXs, cameraId),
+        [originY] /std/collections/vector/at(self.cameraOriginYs, cameraId),
+        [nearZ] /std/collections/vector/at(self.cameraNearZs, cameraId),
+        [farZ] /std/collections/vector/at(self.cameraFarZs, cameraId)
+      })
+    }
+
+    [public return<Node>]
+    nodeAt([Scene] self, [i32] nodeId) {
+      return(Node{
+        [id] nodeId,
+        [parentId] /std/collections/vector/at(self.nodeParentIds, nodeId),
+        [transform] Transform{
+          [translationX] /std/collections/vector/at(self.nodeTranslationXs, nodeId),
+          [translationY] /std/collections/vector/at(self.nodeTranslationYs, nodeId),
+          [translationZ] /std/collections/vector/at(self.nodeTranslationZs, nodeId),
+          [scaleX] /std/collections/vector/at(self.nodeScaleXs, nodeId),
+          [scaleY] /std/collections/vector/at(self.nodeScaleYs, nodeId),
+          [scaleZ] /std/collections/vector/at(self.nodeScaleZs, nodeId),
+          [rotationZDegrees] /std/collections/vector/at(self.nodeRotationZDegrees, nodeId)
+        },
+        [painterOrder] /std/collections/vector/at(self.nodePainterOrders, nodeId),
+        [localZ] /std/collections/vector/at(self.nodeLocalZs, nodeId),
+        [primitiveId] /std/collections/vector/at(self.nodePrimitiveIds, nodeId),
+        [materialId] /std/collections/vector/at(self.nodeMaterialIds, nodeId)
+      })
+    }
+
+    [public effects(heap_alloc), return<i32>]
+    appendNode([Scene mut] self, [i32] parentId, [Transform] transform, [i32] painterOrder,
+                [f32] localZ, [i32] primitiveId, [i32] materialId) {
+      id{self.nodeCount()}
+      [mut] nodeParentIds{self.nodeParentIds}
+      [mut] nodePainterOrders{self.nodePainterOrders}
+      [mut] nodePrimitiveIds{self.nodePrimitiveIds}
+      [mut] nodeMaterialIds{self.nodeMaterialIds}
+      [mut] nodeTranslationXs{self.nodeTranslationXs}
+      [mut] nodeTranslationYs{self.nodeTranslationYs}
+      [mut] nodeTranslationZs{self.nodeTranslationZs}
+      [mut] nodeScaleXs{self.nodeScaleXs}
+      [mut] nodeScaleYs{self.nodeScaleYs}
+      [mut] nodeScaleZs{self.nodeScaleZs}
+      [mut] nodeRotationZDegrees{self.nodeRotationZDegrees}
+      [mut] nodeLocalZs{self.nodeLocalZs}
+      /std/collections/vector/push(nodeParentIds, parentId)
+      /std/collections/vector/push(nodePainterOrders, painterOrder)
+      /std/collections/vector/push(nodePrimitiveIds, primitiveId)
+      /std/collections/vector/push(nodeMaterialIds, materialId)
+      /std/collections/vector/push(nodeTranslationXs, transform.translationX)
+      /std/collections/vector/push(nodeTranslationYs, transform.translationY)
+      /std/collections/vector/push(nodeTranslationZs, transform.translationZ)
+      /std/collections/vector/push(nodeScaleXs, transform.scaleX)
+      /std/collections/vector/push(nodeScaleYs, transform.scaleY)
+      /std/collections/vector/push(nodeScaleZs, transform.scaleZ)
+      /std/collections/vector/push(nodeRotationZDegrees, transform.rotationZDegrees)
+      /std/collections/vector/push(nodeLocalZs, localZ)
+      self.nodeParentIds = nodeParentIds
+      self.nodePainterOrders = nodePainterOrders
+      self.nodePrimitiveIds = nodePrimitiveIds
+      self.nodeMaterialIds = nodeMaterialIds
+      self.nodeTranslationXs = nodeTranslationXs
+      self.nodeTranslationYs = nodeTranslationYs
+      self.nodeTranslationZs = nodeTranslationZs
+      self.nodeScaleXs = nodeScaleXs
+      self.nodeScaleYs = nodeScaleYs
+      self.nodeScaleZs = nodeScaleZs
+      self.nodeRotationZDegrees = nodeRotationZDegrees
+      self.nodeLocalZs = nodeLocalZs
+      return(id)
+    }
+
+    [public effects(heap_alloc), return<vector<i32>>]
+    serialize([Scene] self) {
+      [mut] words{vector<i32>()}
+      /std/collections/vector/push(words, 1i32)
+      /std/collections/vector/push(words, self.activeCameraId)
+      nodeCount{self.nodeCount()}
+      /std/collections/vector/push(words, nodeCount)
+      for([i32 mut] nodeId{0i32}, nodeId < nodeCount, ++nodeId) {
+        /std/collections/vector/push(words, nodeId)
+        /std/collections/vector/push(words, /std/collections/vector/at(self.nodeParentIds, nodeId))
+        /std/collections/vector/push(words, /std/collections/vector/at(self.nodePainterOrders, nodeId))
+        /std/collections/vector/push(words, scene_to_milli(/std/collections/vector/at(self.nodeLocalZs, nodeId)))
+        /std/collections/vector/push(words, /std/collections/vector/at(self.nodePrimitiveIds, nodeId))
+        /std/collections/vector/push(words, /std/collections/vector/at(self.nodeMaterialIds, nodeId))
+        /std/collections/vector/push(words, scene_to_milli(/std/collections/vector/at(self.nodeTranslationXs, nodeId)))
+        /std/collections/vector/push(words, scene_to_milli(/std/collections/vector/at(self.nodeTranslationYs, nodeId)))
+        /std/collections/vector/push(words, scene_to_milli(/std/collections/vector/at(self.nodeTranslationZs, nodeId)))
+        /std/collections/vector/push(words, scene_to_milli(/std/collections/vector/at(self.nodeScaleXs, nodeId)))
+        /std/collections/vector/push(words, scene_to_milli(/std/collections/vector/at(self.nodeScaleYs, nodeId)))
+        /std/collections/vector/push(words, scene_to_milli(/std/collections/vector/at(self.nodeScaleZs, nodeId)))
+        /std/collections/vector/push(words, scene_to_milli(/std/collections/vector/at(self.nodeRotationZDegrees, nodeId)))
+      }
+      primitiveCount{self.primitiveCount()}
+      /std/collections/vector/push(words, primitiveCount)
+      for([i32 mut] primitiveId{0i32}, primitiveId < primitiveCount, ++primitiveId) {
+        /std/collections/vector/push(words, primitiveId)
+        /std/collections/vector/push(words, /std/collections/vector/at(self.primitiveKinds, primitiveId))
+        /std/collections/vector/push(words, scene_to_milli(/std/collections/vector/at(self.primitiveWidths, primitiveId)))
+        /std/collections/vector/push(words, scene_to_milli(/std/collections/vector/at(self.primitiveHeights, primitiveId)))
+        /std/collections/vector/push(words, scene_to_milli(/std/collections/vector/at(self.primitiveRadii, primitiveId)))
+        /std/collections/vector/push(words, /std/collections/vector/at(self.primitiveMaterialIds, primitiveId))
+      }
+      materialCount{self.materialCount()}
+      /std/collections/vector/push(words, materialCount)
+      for([i32 mut] materialId{0i32}, materialId < materialCount, ++materialId) {
+        /std/collections/vector/push(words, materialId)
+        /std/collections/vector/push(words, scene_to_milli(/std/collections/vector/at(self.materialRs, materialId)))
+        /std/collections/vector/push(words, scene_to_milli(/std/collections/vector/at(self.materialGs, materialId)))
+        /std/collections/vector/push(words, scene_to_milli(/std/collections/vector/at(self.materialBs, materialId)))
+        /std/collections/vector/push(words, scene_to_milli(/std/collections/vector/at(self.materialOpacities, materialId)))
+        /std/collections/vector/push(words, scene_to_milli(/std/collections/vector/at(self.materialShadeStrengths, materialId)))
+      }
+      lightCount{self.lightCount()}
+      /std/collections/vector/push(words, lightCount)
+      for([i32 mut] lightId{0i32}, lightId < lightCount, ++lightId) {
+        /std/collections/vector/push(words, lightId)
+        /std/collections/vector/push(words, /std/collections/vector/at(self.lightKinds, lightId))
+        /std/collections/vector/push(words, scene_to_milli(/std/collections/vector/at(self.lightWeights, lightId)))
+        /std/collections/vector/push(words, scene_to_milli(/std/collections/vector/at(self.lightDirectionXs, lightId)))
+        /std/collections/vector/push(words, scene_to_milli(/std/collections/vector/at(self.lightDirectionYs, lightId)))
+        /std/collections/vector/push(words, scene_to_milli(/std/collections/vector/at(self.lightDirectionZs, lightId)))
+      }
+      cameraCount{self.cameraCount()}
+      /std/collections/vector/push(words, cameraCount)
+      for([i32 mut] cameraId{0i32}, cameraId < cameraCount, ++cameraId) {
+        /std/collections/vector/push(words, cameraId)
+        /std/collections/vector/push(words, /std/collections/vector/at(self.cameraModes, cameraId))
+        /std/collections/vector/push(words, scene_to_milli(/std/collections/vector/at(self.cameraViewportWidths, cameraId)))
+        /std/collections/vector/push(words, scene_to_milli(/std/collections/vector/at(self.cameraViewportHeights, cameraId)))
+        /std/collections/vector/push(words, scene_to_milli(/std/collections/vector/at(self.cameraUnitsPerPixels, cameraId)))
+        /std/collections/vector/push(words, scene_to_milli(/std/collections/vector/at(self.cameraOriginXs, cameraId)))
+        /std/collections/vector/push(words, scene_to_milli(/std/collections/vector/at(self.cameraOriginYs, cameraId)))
+        /std/collections/vector/push(words, scene_to_milli(/std/collections/vector/at(self.cameraNearZs, cameraId)))
+        /std/collections/vector/push(words, scene_to_milli(/std/collections/vector/at(self.cameraFarZs, cameraId)))
+      }
+      return(words)
+    }
+  }
+  }
+}

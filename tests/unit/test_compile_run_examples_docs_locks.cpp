@@ -512,6 +512,7 @@ TEST_CASE("stdlib style boundary docs stay source locked") {
   CHECK(codeExamples.find("`stdlib/std/file/*`") != std::string::npos);
   CHECK(codeExamples.find("`stdlib/std/image/*`") != std::string::npos);
   CHECK(codeExamples.find("`stdlib/std/ui/*`") != std::string::npos);
+  CHECK(codeExamples.find("`stdlib/std/scene/*`") != std::string::npos);
   CHECK(codeExamples.find("`stdlib/std/collections/vector.prime`") != std::string::npos);
   CHECK(codeExamples.find("`stdlib/std/collections/map.prime`") != std::string::npos);
   CHECK(codeExamples.find("`stdlib/std/collections/errors.prime`") != std::string::npos);
@@ -552,6 +553,7 @@ TEST_CASE("stdlib style boundary docs stay source locked") {
   CHECK(primeStructDoc.find("### Stdlib Surface-Style Boundary") != std::string::npos);
   CHECK(primeStructDoc.find("This boundary is the scope reference for the stdlib surface-style cleanup lane in") !=
         std::string::npos);
+  CHECK(primeStructDoc.find("`stdlib/std/scene/*`") != std::string::npos);
   CHECK(primeStructDoc.find("`stdlib/std/collections/vector.prime`") != std::string::npos);
   CHECK(primeStructDoc.find("`stdlib/std/collections/soa.prime`") != std::string::npos);
   CHECK(primeStructDoc.find("`stdlib/std/collections/collections.prime`") != std::string::npos);
@@ -566,6 +568,7 @@ TEST_CASE("stdlib style boundary docs stay source locked") {
 
   CHECK(agents.find("For stdlib style work, follow the exact file-level boundary in") !=
         std::string::npos);
+  CHECK(agents.find("`stdlib/std/ui/*`, `stdlib/std/scene/*`,") != std::string::npos);
   CHECK(agents.find("`stdlib/std/collections/soa.prime`,") != std::string::npos);
   CHECK(agents.find("`stdlib/std/collections/collections.prime`,") != std::string::npos);
   CHECK(agents.find("`stdlib/std/collections/experimental_vector.prime`,") != std::string::npos);

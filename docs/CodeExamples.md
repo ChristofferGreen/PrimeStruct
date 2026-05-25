@@ -36,6 +36,7 @@ Style-aligned surface code:
 - `stdlib/std/file/*`
 - `stdlib/std/image/*`
 - `stdlib/std/ui/*`
+- `stdlib/std/scene/*`
 - `stdlib/std/collections/vector.prime`
 - `stdlib/std/collections/map.prime`
 - `stdlib/std/collections/errors.prime`

@@ -1,8 +1,22 @@
 #include "test_compile_run_helpers.h"
 
+#include "test_compile_run_scene_model_helpers.h"
+
 #include <cerrno>
 
 TEST_SUITE_BEGIN("primestruct.compile.run.vm.core");
+
+TEST_CASE("runs vm scene model authoring deterministically") {
+  const std::string srcPath =
+      writeTemp("vm_scene_model_authoring.prime", sceneModelAuthoringSource());
+  const std::string outPath =
+      (testScratchPath("") / "primec_vm_scene_model_authoring.txt").string();
+  const std::string runCmd =
+      "./primec --emit=vm " + srcPath + " --entry /main > " + outPath;
+
+  CHECK(runCommand(runCmd) == 6);
+  CHECK(readFile(outPath) == expectedSceneModelAuthoringOutput());
+}
 
 
 TEST_CASE("runs vm composite login form deterministically") {

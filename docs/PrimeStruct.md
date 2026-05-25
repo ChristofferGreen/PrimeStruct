@@ -2278,9 +2278,11 @@ module {
   emit deterministic HTML/backend adapter records and normalize pointer, keyboard, IME, resize, and focus input into
   deterministic UI event-stream records. The scene renderer boundary is now locked as a UI producer contract rather
   than a UI-specific software renderer: `/std/ui/*` owns rect/layout/state/event logic and emits scene nodes for
-  presentation, `/std/scene` or an equivalent scene surface owns renderer-facing `Scene`, `Node`, `Transform`,
-  `Camera`, `Material`, `Light`, and primitive descriptor concepts, and `/std/ui/CommandList.serialize()` remains a
-  stable adapter path. The first UI scene camera is an orthographic `Camera` projection config that maps one scene unit
+  presentation, `/std/scene` owns renderer-facing `Scene`, `Node`, `Transform`, `Camera`, `Material`, `Light`, and
+  primitive descriptor concepts, and `/std/ui/CommandList.serialize()` remains a stable adapter path. The first
+  source-level `/std/scene` model is data-only: it authors and serializes stable ids, parent-before-child node order,
+  painter order, local `z`, local transform metadata, orthographic camera config, materials, lights, and primitive
+  descriptors without pixel rendering. The first UI scene camera is an orthographic `Camera` projection config that maps one scene unit
   to one logical pixel with a top-left origin, `+x` right, `+y` down, base plane `z=0`, and positive local `z` toward
   the viewer; painter order is primary, then local `z`, then stable node id and primitive sub-order. Materials own
   color with initial defaults of base color from primitive/UI state, opacity `1.0`, shade strength `1.0`, no texture
@@ -4052,6 +4054,7 @@ flight.
 
 - **Style-aligned surface code:** `stdlib/std/math/*`, `stdlib/std/maybe/*`,
   `stdlib/std/file/*`, `stdlib/std/image/*`, `stdlib/std/ui/*`,
+  `stdlib/std/scene/*`,
   `stdlib/std/collections/vector.prime`,
   `stdlib/std/collections/map.prime`,
   `stdlib/std/collections/errors.prime`,

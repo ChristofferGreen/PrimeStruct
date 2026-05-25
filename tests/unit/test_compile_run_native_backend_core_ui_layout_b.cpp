@@ -1,9 +1,25 @@
 #include "test_compile_run_helpers.h"
 
 #include "test_compile_run_native_backend_core_helpers.h"
+#include "test_compile_run_scene_model_helpers.h"
 
 #if PRIMESTRUCT_NATIVE_CORE_ENABLED
 TEST_SUITE_BEGIN("primestruct.compile.run.native_backend.core");
+
+TEST_CASE("compiles and runs native scene model authoring deterministically") {
+  const std::string srcPath =
+      writeTemp("compile_native_scene_model_authoring.prime", sceneModelAuthoringSource());
+  const std::string exePath =
+      (testScratchPath("") / "primec_native_scene_model_authoring").string();
+  const std::string outPath =
+      (testScratchPath("") / "primec_native_scene_model_authoring.txt").string();
+
+  const std::string compileCmd =
+      "./primec --emit=native " + srcPath + " -o " + exePath + " --entry /main";
+  CHECK(runCommand(compileCmd) == 0);
+  CHECK(runCommand(exePath + " > " + outPath) == 6);
+  CHECK(readFile(outPath) == expectedSceneModelAuthoringOutput());
+}
 
 TEST_CASE("compiles and runs native composite login form deterministically") {
   const std::string source = R"(
