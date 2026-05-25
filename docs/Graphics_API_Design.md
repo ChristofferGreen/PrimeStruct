@@ -1,7 +1,7 @@
 # PrimeStruct Graphics API Design
 
-Status: Locked (v1 Core Contract + Spinning-Cube Mini-Spec)
-Last updated: 2026-03-18
+Status: Locked (v1 Core Contract + Spinning-Cube Mini-Spec + Scene Renderer Boundary)
+Last updated: 2026-05-25
 
 This document defines the locked cross-backend graphics API contract for the
 spinning-cube program family. The goal is to keep one portable language surface,
@@ -78,6 +78,12 @@ contract. Current repo status:
   compatibility/contract glue and keep the remaining public graphics API
   primarily in `.prime` files while leaving only minimal backend substrate in
   C++/host code.
+- **Scene renderer boundary:** UI presentation now targets a scene-graph
+  producer contract rather than a special-purpose UI renderer. `/std/ui/*`
+  owns rect/layout/state/event logic and may keep serializing command-list
+  adapters, while `/std/scene` or an equivalent scene surface owns the
+  renderer-facing `Scene`, `Node`, `Transform`, `Camera`, `Material`, `Light`,
+  and primitive descriptor model.
 
 Status snapshot phrases kept contiguous for doc-lock checks:
 - The non-Result `Frame.render_pass(...)` plus `RenderPass.draw_mesh(...)` / `RenderPass.end()` path now routes through
@@ -268,11 +274,76 @@ Examples and conformance for this mini-spec must use `Result` propagation (`?`)
 plus `on_error<...>` handlers. `.expect(...)`-style unwrap helpers are not part
 of this v1 contract.
 
-## Planned Layered UI/Software Renderer (vNext, Non-Locking)
-The following architecture is planned but not locked as part of the v1 contract:
+## Locked Scene Renderer and UI Producer Contract (vNext)
+This contract locks the renderer boundary before runtime scene-renderer code
+exists. UI is a scene producer, not a special-purpose renderer: `/std/ui/*`
+continues to own rect/layout/state/event behavior, while `/std/scene` or an
+equivalent scene surface owns the renderer-facing object model. The existing
+`/std/ui/CommandList.serialize()` stream remains a stable adapter path for
+tests, demos, and bridge code during migration; it is not the canonical renderer
+API for future UI presentation.
 
-1. Base renderer layer:
-   - Consumes a flat draw-command list (`draw_text`, `draw_rounded_rect`, etc.).
+### Scene Boundary
+The initial scene surface is defined by these stable concepts:
+- `Scene`: insertion-ordered node storage, root/child relationships, one active
+  camera, the fixed first UI light rig, and deterministic traversal metadata.
+- `Node`: stable node id, parent id, local `Transform`, painter-order ordinal,
+  optional local-z/depth metadata, primitive descriptor reference, and material
+  reference.
+- `Transform`: local translation/scale/rotation metadata; the first UI path
+  consumes translation in logical-pixel scene units and leaves full transform
+  composition to later renderer slices.
+- `Camera`: a projection mode plus projection config. Orthographic projection
+  is the first supported mode, represented as `Camera` config rather than a
+  separate public `OrthographicCamera` type.
+- `Material`: owns base color and opacity for a primitive. SDF geometry and
+  coverage do not carry implicit colors, and differently colored commands do
+  not smooth-blend implicit materials.
+- `Light`: renderer-owned lighting data. The first UI scene uses only the fixed
+  ambient-plus-key rig described below.
+- Primitive descriptors: flat rects, rounded rects, text overlays, 2D SDF
+  coverage primitives, explicit-material 3D SDF primitives, and future mesh or
+  image descriptors.
+
+### UI Coordinate and Camera Defaults
+The first UI camera is orthographic. Its default viewport maps one scene unit to
+one logical pixel. UI scene coordinates use a top-left origin, `+x` points
+right, `+y` points down, the UI base plane is `z=0`, and positive local `z`
+raises visual geometry toward the viewer. UI hit testing remains rect/layout
+based; visual rendering may use 2D or 3D SDF scene primitives without changing
+the event/hit-test contract.
+
+### Material, SDF, Text, and Light Defaults
+- Materials own color. Initial material defaults are: base color from the
+  primitive/UI state, opacity `1.0`, shade strength `1.0`, no texture slots, and
+  no implicit material interpolation across SDF blends.
+- 2D SDFs produce coverage masks painted source-over in deterministic scene
+  order. 3D SDFs may blend geometry, depth, and normals only when each SDF has
+  an explicit material assignment.
+- Text remains a 2D overlay/primitive in the first UI scene path, not a 3D SDF
+  or mesh problem. The first presented UI text path must support international
+  shaping, bidi ordering, fallback fonts, and deterministic glyph atlas/raster
+  output.
+- Native text dependencies stay behind renderer-owned wrapper APIs:
+  HarfBuzz-class shaping, FreeType-class glyph loading/rasterization, and an
+  ICU/FriBidi-class Unicode bidi/boundary service. PrimeStruct source APIs must
+  not expose third-party text-library types.
+- The first global UI light rig is fixed: ambient weight `0.55`, key weight
+  `0.45`, key direction from upper-left/front, no shadows, no stochastic
+  sampling, and no author lights.
+
+### Deterministic Ordering
+For UI presentation, painter order emitted by the UI producer is primary. Local
+`z` is deterministic tie/depth metadata unless a future explicit depth group
+opts in to different behavior. Within the same painter-order group, lower local
+`z` is behind higher local `z`; equal-depth ties resolve by stable node id, then
+primitive sub-order. Source-over 2D coverage, 3D SDF evaluation, and text
+overlay emission must all preserve this total order.
+
+### Current UI Producer and Adapter Prototype
+1. Scene producer and command-list adapter layer:
+   - UI rect/state/event logic emits scene nodes for presentation while the
+     command-list stream remains available as an adapter path.
    - The initial stdlib prototype lives under `/std/ui/*` with:
      - `Rgba8`
      - `CommandList`
@@ -322,8 +393,10 @@ The following architecture is planned but not locked as part of the v1 contract:
      - `UiEventStream.push_focus_lost(...)`
      - `UiEventStream.event_count()`
      - `UiEventStream.serialize() -> vector<i32>`
-   - Rounded rectangles are expressed through SDF-style primitives.
-   - Renders into a software color buffer (or shared surface view).
+   - Rounded rectangles are expressed through SDF-style scene primitive
+     descriptors.
+   - Scene renderer output or command-list adapter output can be presented
+     through a software color buffer (or shared surface view).
    - Current host bridge prototype: the native window host and macOS Metal host
      can upload a deterministic BGRA8 software surface into a shared Metal
      texture and blit it through their presenter/output paths via

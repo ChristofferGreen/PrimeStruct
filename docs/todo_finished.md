@@ -33,6 +33,41 @@ Finished items are periodically archived here from `docs/todo.md`; section heade
     covered for imports plus stdlib appends; diagnostic remapping, IR source
     maps, and VM debugger behavior remain with follow-up leaves.
 
+- [x] TODO-4564: Lock scene renderer defaults and UI producer contract
+  - owner: ai
+  - created_at: 2026-05-24
+  - finished_at: 2026-05-25
+  - phase: Scene graph renderer and UI presentation
+  - parallel_track: scene-renderer
+  - scope: Document the scene-graph renderer boundary that makes UI a scene
+    producer instead of a special-purpose renderer, and lock the first
+    rendering invariants: `Camera` projection config, rect/layout UI
+    interaction, SDF geometry/coverage, material-owned color, international 2D
+    text overlay policy, deterministic order/depth rules, and initial
+    lighting/material defaults.
+  - outcome:
+    - Locked the `/std/scene` or equivalent renderer-facing boundary around
+      `Scene`, `Node`, `Transform`, `Camera`, `Material`, `Light`, and
+      primitive descriptor concepts while keeping `/std/ui/*` responsible for
+      rect/layout/state/event logic.
+    - Defined the first orthographic `Camera` projection config and UI
+      coordinate mapping: one scene unit per logical pixel, top-left origin,
+      `+x` right, `+y` down, base plane `z=0`, and positive local `z` toward
+      the viewer.
+    - Documented material-owned color, 2D SDF source-over coverage, explicit
+      3D SDF material assignment, deterministic painter/z/node tie ordering,
+      international 2D text overlay boundaries, renderer-owned
+      HarfBuzz/FreeType/ICU/FriBidi-class wrappers, fixed ambient-plus-key UI
+      light defaults, and initial material defaults.
+    - Preserved `/std/ui/CommandList.serialize()` as a stable adapter path and
+      kept BGRA8 software surfaces framed as presentation transport rather
+      than the canonical UI renderer boundary.
+  - validation:
+    - Added source-lock coverage for the scene renderer/UI producer contract
+      and stale UI-specific software-renderer wording.
+    - Focused release docs-lock validation was selected for this leaf; broad
+      release validation is deferred to the parent workflow.
+
 **Todo Completion (May 24, 2026)**
 - [x] TODO-4305: Rename and style canonical `.prime` SoA surface
   - owner: ai

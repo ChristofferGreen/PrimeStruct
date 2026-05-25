@@ -2212,9 +2212,21 @@ module {
   `arrange`, deterministic `serialize()` output), and the current host bridge can blit a deterministic BGRA8 software
   surface through the native window presenter and macOS Metal host paths while the shared widget/layout model can also
   emit deterministic HTML/backend adapter records and normalize pointer, keyboard, IME, resize, and focus input into
-  deterministic UI event-stream records. No active TODO currently tracks platform/runtime consumption of that shared
-  event stream. Add a concrete TODO before changing that UI runtime seam; composite-widget composition remains locked
-  to the basic widget/container APIs rather than raw draw-command helpers or raw HTML record append helpers.
+  deterministic UI event-stream records. The scene renderer boundary is now locked as a UI producer contract rather
+  than a UI-specific software renderer: `/std/ui/*` owns rect/layout/state/event logic and emits scene nodes for
+  presentation, `/std/scene` or an equivalent scene surface owns renderer-facing `Scene`, `Node`, `Transform`,
+  `Camera`, `Material`, `Light`, and primitive descriptor concepts, and `/std/ui/CommandList.serialize()` remains a
+  stable adapter path. The first UI scene camera is an orthographic `Camera` projection config that maps one scene unit
+  to one logical pixel with a top-left origin, `+x` right, `+y` down, base plane `z=0`, and positive local `z` toward
+  the viewer; painter order is primary, then local `z`, then stable node id and primitive sub-order. Materials own
+  color with initial defaults of base color from primitive/UI state, opacity `1.0`, shade strength `1.0`, no texture
+  slots, and no implicit interpolation across SDF blends. 2D SDFs provide source-over coverage, 3D SDFs require explicit
+  material assignment, text stays a 2D international overlay/primitive with shaping, bidi, fallback-font, and glyph-atlas
+  behavior behind renderer-owned HarfBuzz-class, FreeType-class, and ICU/FriBidi-class wrappers, and the first UI light
+  rig is fixed ambient-plus-key (`0.55` ambient, `0.45` upper-left/front key, no shadows, no stochastic sampling, no
+  author lights). No active TODO currently tracks platform/runtime consumption of that shared event stream. Add a
+  concrete TODO before changing that UI runtime seam; composite-widget composition remains locked to the basic
+  widget/container APIs rather than raw draw-command helpers or raw HTML record append helpers.
 - **IR definition (stable, PSIR v21):**
   - **Module:** `{ string_table, struct_layouts, functions, instruction_source_map, entry_index, version }`.
   - **Function:** `{ name, metadata, local_debug_slots, instructions }` where instructions are linear, stack-based ops

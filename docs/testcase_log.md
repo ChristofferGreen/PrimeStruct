@@ -3,6 +3,14 @@
 ## Current Known Failures
 - none
 
+## Recent Test Runs
+- 2026-05-25 04:15 CEST | pass | mode: release | command:
+  `cmake -S . -B build-release -DCMAKE_BUILD_TYPE=Release && cmake --build build-release --target PrimeStruct_compile_run_tests -j 1 && cd build-release && ./PrimeStruct_compile_run_tests --test-case="scene renderer ui producer contract stays source locked,ui command list adapter docs stay source locked,todo queue and skipped doctest debt stay source locked" --no-skip`
+  | failures: none | notes: configured missing build-release, rebuilt focused test binary, and passed 3 docs/source-lock cases.
+- 2026-05-25 03:50 CEST | fail | mode: release | command:
+  `cmake --build build-release --target PrimeStruct_compile_run_tests -j 1 && cd build-release && ./PrimeStruct_compile_run_tests --test-case="scene renderer ui producer contract stays source locked,ui command list adapter docs stay source locked,todo queue and skipped doctest debt stay source locked" --no-skip`
+  | failures: none | notes: build-release directory was missing before build/test execution.
+
 ## Historical Release-Gate Continuation Notes
 - [x] release gate baseline | mode: release | command:
   `./scripts/compile.sh --release` | first_seen: 2026-05-21 07:37 CEST |

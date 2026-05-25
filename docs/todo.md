@@ -65,7 +65,7 @@ This file is the live open-work queue for PrimeStruct.
 ### Ready Now
 
 - TODO-4592: Map parser and semantic diagnostics through source units | track: source-unit-provenance | primary surface: parser/semantic diagnostics
-- TODO-4564: Lock scene renderer defaults and UI producer contract | track: scene-renderer | primary surface: docs/scene-renderer contract
+- TODO-4565: Add minimal scene graph and camera data model | track: scene-renderer | primary surface: stdlib/std/scene scene model
 - TODO-4570: Retire duplicate map2 candidate surface | track: collection-stdlib-cleanup | primary surface: stdlib/std/collections/map*.prime
 - TODO-4571: Add compiler-knowledge inventory for map/vector | track: collection-audit | primary surface: scripts/tests audit coverage
 - TODO-4572: Remove vector statement-helper compiler path | track: vector-special-case-deletion | primary surface: vector semantic/lowerer helpers
@@ -74,7 +74,6 @@ This file is the live open-work queue for PrimeStruct.
 ### Immediate Next 10
 
 - TODO-4593: Carry source-unit provenance into IR and VM debug maps
-- TODO-4565: Add minimal scene graph and camera data model
 - TODO-4566: Render flat and rounded-rect scene primitives to BGRA8
 - TODO-4590: Add international text shaping and glyph atlas path
 - TODO-4567: Render first globally lit 3D SDF widget primitive
@@ -82,6 +81,7 @@ This file is the live open-work queue for PrimeStruct.
 - TODO-4569: Present scene-rendered UI through software surface bridge
 - TODO-4574: Remove vector count/access compiler classifiers
 - TODO-4575: Remove map helper/access compiler classifiers
+- TODO-4576: Remove map backing-type compiler classification
 
 ### Priority Lanes
 
@@ -92,8 +92,8 @@ This file is the live open-work queue for PrimeStruct.
   TODO-4586 diagnostic stability tiers: it adds the missing source-unit/file
   identity that those later contracts can consume without absorbing
   TODO-4583's schema/versioning work.
-- Scene graph renderer and UI presentation: TODO-4564 -> TODO-4565 ->
-  TODO-4566 -> (TODO-4590 and TODO-4567) -> TODO-4568 -> TODO-4569
+- Scene graph renderer and UI presentation: TODO-4565 -> TODO-4566 ->
+  (TODO-4590 and TODO-4567) -> TODO-4568 -> TODO-4569
 - Map/vector compiler-independence: TODO-4570 and TODO-4571 can run in
   parallel with the deletion tracks; vector path TODO-4572 -> TODO-4574 ->
   TODO-4577; map path TODO-4573 -> TODO-4575 -> TODO-4576; join at
@@ -105,12 +105,11 @@ This file is the live open-work queue for PrimeStruct.
 ### Execution Queue
 
 - TODO-4592: Map parser and semantic diagnostics through source units
-- TODO-4564: Lock scene renderer defaults and UI producer contract
+- TODO-4565: Add minimal scene graph and camera data model
 - TODO-4570: Retire duplicate map2 candidate surface
 - TODO-4571: Add compiler-knowledge inventory for map/vector
 - TODO-4572: Remove vector statement-helper compiler path
 - TODO-4573: Remove compiler-owned map literal lowering
-- TODO-4565: Add minimal scene graph and camera data model
 - TODO-4566: Render flat and rounded-rect scene primitives to BGRA8
 - TODO-4590: Add international text shaping and glyph atlas path
 - TODO-4567: Render first globally lit 3D SDF widget primitive
@@ -135,69 +134,6 @@ This file is the live open-work queue for PrimeStruct.
 - TODO-4589: Add architecture health dashboard script
 
 ### Task Blocks
-
-- [ ] TODO-4564: Lock scene renderer defaults and UI producer contract
-  - owner: ai
-  - created_at: 2026-05-24
-  - phase: Scene graph renderer and UI presentation
-  - parallel_track: scene-renderer
-  - scope: Document the scene-graph renderer boundary that makes UI a scene
-    producer instead of a special-purpose renderer, and lock the first
-    rendering invariants: `Camera` projection config, rect/layout UI
-    interaction, SDF geometry/coverage, material-owned color, international 2D
-    text overlay policy, deterministic order/depth rules, and initial
-    lighting/material defaults.
-  - implementation_notes: Start from `docs/Graphics_API_Design.md`,
-    `docs/PrimeStruct.md`, `stdlib/std/ui/ui.prime`,
-    `examples/shared/software_surface_bridge.h`, and
-    `tests/unit/test_compile_run_examples_docs_locks.cpp`. Preserve the
-    existing `/std/ui/CommandList.serialize()` contract as an adapter path.
-    State that UI hit testing remains rect/layout based while visual rendering
-    may use 2D or 3D SDF scene primitives, and define the deterministic
-    painter/depth tie-break policy before runtime renderer code exists.
-    Preferred defaults: UI scene coordinates map one scene unit to one logical
-    pixel under the first orthographic camera; UI origin is top-left with +x
-    right, +y down, base plane z=0, and positive local z raised toward the
-    viewer; UI painter order remains primary, with local z only used for
-    deterministic tie/depth metadata unless a future depth group opts in.
-  - acceptance:
-    - Docs define the initial `/std/scene` or equivalent scene boundary:
-      `Scene`, `Node`, `Transform`, `Camera`, `Material`, `Light`, and
-      primitive descriptors.
-    - Docs specify that `Camera` has a projection mode/config rather than a
-      separate public `OrthographicCamera` type, and that orthographic is the
-      first supported projection.
-    - Docs define the default UI coordinate mapping: one scene unit equals one
-      logical pixel, origin is top-left, +x is right, +y is down, z=0 is the UI
-      base plane, and positive local z raises visual geometry toward the viewer.
-    - Docs specify that materials own color, SDFs produce coverage or normals,
-      and differently colored commands do not smooth-blend implicit materials.
-    - Docs specify that 2D SDFs act as coverage masks painted source-over, while
-      3D SDFs may blend geometry, depth, and normals only under explicit
-      material assignment.
-    - Docs describe UI as rect/state/event logic that emits scene nodes for
-      presentation, while keeping existing command-list serialization stable.
-    - Docs define deterministic scene ordering, including how painter order,
-      local z/depth, and equal-depth ties are resolved for UI presentation.
-    - Docs specify that text remains a 2D overlay/primitive in the first UI
-      scene path, not a 3D SDF or mesh problem, but must support
-      international shaping, bidi ordering, fallback fonts, and deterministic
-      glyph atlas/raster output from the first presented UI path.
-    - Docs define the native text dependency boundary: HarfBuzz-class shaping,
-      FreeType-class glyph loading/rasterization, and an ICU/FriBidi-class
-      Unicode bidi/boundary service stay behind renderer-owned wrapper APIs,
-      with no third-party types exposed through PrimeStruct source APIs.
-    - Docs define the first global UI light rig as a fixed ambient-plus-key
-      setup: ambient weight 0.55, key weight 0.45, key direction from
-      upper-left/front, no shadows, no stochastic sampling, and no author
-      lights in the first slice.
-    - Docs define initial material defaults: base color from the primitive/UI
-      state, opacity 1.0, shade strength 1.0, no texture slots, and no implicit
-      material interpolation across SDF blends.
-    - Source-lock coverage pins the new boundary and rejects stale wording that
-      frames the work as only a UI-specific software renderer.
-  - stop_rule: Stop once the architecture contract is documented and locked by
-    tests, without adding runtime renderer code in this slice.
 
 - [ ] TODO-4565: Add minimal scene graph and camera data model
   - owner: ai

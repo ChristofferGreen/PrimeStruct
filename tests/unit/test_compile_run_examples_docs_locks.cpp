@@ -1802,7 +1802,7 @@ TEST_CASE("todo queue and skipped doctest debt stay source locked") {
                   "- TODO-4592: Map parser and semantic diagnostics through source units | track: "
                   "source-unit-provenance") !=
         std::string::npos);
-  CHECK(todo.find("- TODO-4564: Lock scene renderer defaults and UI producer contract | track: scene-renderer") !=
+  CHECK(todo.find("- TODO-4565: Add minimal scene graph and camera data model | track: scene-renderer") !=
         std::string::npos);
   CHECK(todo.find("- TODO-4570: Retire duplicate map2 candidate surface | track: collection-stdlib-cleanup") !=
         std::string::npos);
@@ -1821,6 +1821,8 @@ TEST_CASE("todo queue and skipped doctest debt stay source locked") {
   CHECK(todo.find("TODO-4591\n"
                   "  completed the inspectable expanded-source ledger that this lane builds on.") !=
         std::string::npos);
+  CHECK(todo.find("Scene graph renderer and UI presentation: TODO-4565 -> TODO-4566") !=
+        std::string::npos);
   CHECK(todo.find("Map/vector compiler-independence: TODO-4570 and TODO-4571 can run in") !=
         std::string::npos);
   CHECK(todo.find("### Execution Queue\n\n"
@@ -1829,6 +1831,12 @@ TEST_CASE("todo queue and skipped doctest debt stay source locked") {
   CHECK(todoFinished.find("TODO-4591: Add expanded-source provenance ledger") !=
         std::string::npos);
   CHECK(todoFinished.find("Added public `ExpandedSource`, `SourceUnit`, and `SourceSegment` types") !=
+        std::string::npos);
+  CHECK(todo.find("- TODO-4564: Lock scene renderer defaults and UI producer contract | track:") ==
+        std::string::npos);
+  CHECK(todo.find("- [ ] TODO-4564: Lock scene renderer defaults and UI producer contract") ==
+        std::string::npos);
+  CHECK(todoFinished.find("TODO-4564: Lock scene renderer defaults and UI producer contract") !=
         std::string::npos);
   CHECK(todo.find("- TODO-4562: Add task handle semantic facts and lifetime diagnostics | track:") ==
         std::string::npos);
@@ -2733,7 +2741,108 @@ TEST_CASE("constructor-shaped compatibility inventory stays source locked") {
         std::string::npos);
 }
 
-TEST_CASE("software renderer command list docs stay source locked") {
+TEST_CASE("scene renderer ui producer contract stays source locked") {
+  std::filesystem::path graphicsDocPath = std::filesystem::path("..") / "docs" / "Graphics_API_Design.md";
+  std::filesystem::path specDocPath = std::filesystem::path("..") / "docs" / "PrimeStruct.md";
+  std::filesystem::path bridgePath =
+      std::filesystem::path("..") / "examples" / "shared" / "software_surface_bridge.h";
+  if (!std::filesystem::exists(graphicsDocPath)) {
+    graphicsDocPath = std::filesystem::current_path() / "docs" / "Graphics_API_Design.md";
+  }
+  if (!std::filesystem::exists(specDocPath)) {
+    specDocPath = std::filesystem::current_path() / "docs" / "PrimeStruct.md";
+  }
+  if (!std::filesystem::exists(bridgePath)) {
+    bridgePath = std::filesystem::current_path() / "examples" / "shared" / "software_surface_bridge.h";
+  }
+  REQUIRE(std::filesystem::exists(graphicsDocPath));
+  REQUIRE(std::filesystem::exists(specDocPath));
+  REQUIRE(std::filesystem::exists(bridgePath));
+
+  const std::string graphicsDoc = readFile(graphicsDocPath.string());
+  const std::string specDoc = readFile(specDocPath.string());
+  const std::string bridge = readFile(bridgePath.string());
+
+  CHECK(graphicsDoc.find("## Locked Scene Renderer and UI Producer Contract (vNext)") !=
+        std::string::npos);
+  CHECK(graphicsDoc.find("UI is a scene producer, not a special-purpose renderer") !=
+        std::string::npos);
+  CHECK(graphicsDoc.find("`/std/ui/CommandList.serialize()` stream remains a stable adapter path") !=
+        std::string::npos);
+  CHECK(graphicsDoc.find("`Scene`: insertion-ordered node storage") != std::string::npos);
+  CHECK(graphicsDoc.find("`Node`: stable node id, parent id, local `Transform`") !=
+        std::string::npos);
+  CHECK(graphicsDoc.find("`Transform`: local translation/scale/rotation metadata") !=
+        std::string::npos);
+  CHECK(graphicsDoc.find("`Camera`: a projection mode plus projection config") !=
+        std::string::npos);
+  CHECK(graphicsDoc.find("Orthographic projection\n  is the first supported mode") !=
+        std::string::npos);
+  CHECK(graphicsDoc.find("`Material`: owns base color and opacity for a primitive") !=
+        std::string::npos);
+  CHECK(graphicsDoc.find("`Light`: renderer-owned lighting data") != std::string::npos);
+  CHECK(graphicsDoc.find("Primitive descriptors: flat rects, rounded rects, text overlays") !=
+        std::string::npos);
+  CHECK(graphicsDoc.find("one scene unit to\none logical pixel") != std::string::npos);
+  CHECK(graphicsDoc.find("top-left origin") != std::string::npos);
+  CHECK(graphicsDoc.find("`+x` points\nright") != std::string::npos);
+  CHECK(graphicsDoc.find("`+y` points down") != std::string::npos);
+  CHECK(graphicsDoc.find("base plane is `z=0`") != std::string::npos);
+  CHECK(graphicsDoc.find("positive local `z`\nraises visual geometry toward the viewer") !=
+        std::string::npos);
+  CHECK(graphicsDoc.find("UI hit testing remains rect/layout\nbased") != std::string::npos);
+  CHECK(graphicsDoc.find("Materials own color") != std::string::npos);
+  CHECK(graphicsDoc.find("opacity `1.0`, shade strength `1.0`, no texture slots") !=
+        std::string::npos);
+  CHECK(graphicsDoc.find("2D SDFs produce coverage masks painted source-over") !=
+        std::string::npos);
+  CHECK(graphicsDoc.find("3D SDFs may blend geometry, depth, and normals only when each SDF has\n"
+                         "  an explicit material assignment") != std::string::npos);
+  CHECK(graphicsDoc.find("Text remains a 2D overlay/primitive") != std::string::npos);
+  CHECK(graphicsDoc.find("international\n  shaping, bidi ordering, fallback fonts") !=
+        std::string::npos);
+  CHECK(graphicsDoc.find("deterministic glyph atlas/raster\n  output") != std::string::npos);
+  CHECK(graphicsDoc.find("HarfBuzz-class shaping") != std::string::npos);
+  CHECK(graphicsDoc.find("FreeType-class glyph loading/rasterization") != std::string::npos);
+  CHECK(graphicsDoc.find("ICU/FriBidi-class Unicode bidi/boundary service") !=
+        std::string::npos);
+  CHECK(graphicsDoc.find("ambient weight `0.55`, key weight\n  `0.45`") !=
+        std::string::npos);
+  CHECK(graphicsDoc.find("key direction from upper-left/front") != std::string::npos);
+  CHECK(graphicsDoc.find("no shadows, no stochastic\n  sampling, and no author lights") !=
+        std::string::npos);
+  CHECK(graphicsDoc.find("painter order emitted by the UI producer is primary") !=
+        std::string::npos);
+  CHECK(graphicsDoc.find("equal-depth ties resolve by stable node id, then\nprimitive sub-order") !=
+        std::string::npos);
+  CHECK(graphicsDoc.find("Scene producer and command-list adapter layer") !=
+        std::string::npos);
+  CHECK(graphicsDoc.find("UI rect/state/event logic emits scene nodes for presentation") !=
+        std::string::npos);
+  CHECK(graphicsDoc.find("Rounded rectangles are expressed through SDF-style scene primitive\n"
+                         "     descriptors") != std::string::npos);
+  CHECK(graphicsDoc.find("only a UI-specific software renderer") == std::string::npos);
+  CHECK(graphicsDoc.find("Base renderer layer:\n   - Consumes a flat draw-command list") ==
+        std::string::npos);
+
+  CHECK(specDoc.find("The scene renderer boundary is now locked as a UI producer contract") !=
+        std::string::npos);
+  CHECK(specDoc.find("rather\n  than a UI-specific software renderer") != std::string::npos);
+  CHECK(specDoc.find("renderer-facing `Scene`, `Node`, `Transform`,\n"
+                     "  `Camera`, `Material`, `Light`, and primitive descriptor concepts") !=
+        std::string::npos);
+  CHECK(specDoc.find("orthographic `Camera` projection config") != std::string::npos);
+  CHECK(specDoc.find("one scene unit\n  to one logical pixel") != std::string::npos);
+  CHECK(specDoc.find("painter order is primary, then local `z`, then stable node id") !=
+        std::string::npos);
+  CHECK(specDoc.find("HarfBuzz-class, FreeType-class, and ICU/FriBidi-class wrappers") !=
+        std::string::npos);
+
+  CHECK(bridge.find("Presentation transport for scene-renderer or legacy command-list adapter output") !=
+        std::string::npos);
+}
+
+TEST_CASE("ui command list adapter docs stay source locked") {
   std::filesystem::path graphicsDocPath = std::filesystem::path("..") / "docs" / "Graphics_API_Design.md";
   std::filesystem::path specDocPath = std::filesystem::path("..") / "docs" / "PrimeStruct.md";
   if (!std::filesystem::exists(graphicsDocPath)) {
@@ -4459,7 +4568,7 @@ TEST_CASE("ui stdlib arithmetic and assignment stay source locked to surface ope
   CHECK(source.find("return(widget_text_advance(textSizePx) * text.count())") != std::string::npos);
 }
 
-TEST_CASE("software renderer composite widgets stay source locked to basic widgets") {
+TEST_CASE("ui scene producer composite widgets stay locked to basic widgets") {
   std::filesystem::path uiStdlibPath = std::filesystem::path("..") / "stdlib" / "std" / "ui" / "ui.prime";
   if (!std::filesystem::exists(uiStdlibPath)) {
     uiStdlibPath = std::filesystem::current_path() / "stdlib" / "std" / "ui" / "ui.prime";
@@ -4499,7 +4608,7 @@ TEST_CASE("software renderer composite widgets stay source locked to basic widge
   CHECK(appendLoginBody.find("self.append_node(") == std::string::npos);
 }
 
-TEST_CASE("software renderer html adapter stays source locked to shared widgets") {
+TEST_CASE("ui html adapter stays source locked to shared widgets") {
   std::filesystem::path uiStdlibPath = std::filesystem::path("..") / "stdlib" / "std" / "ui" / "ui.prime";
   if (!std::filesystem::exists(uiStdlibPath)) {
     uiStdlibPath = std::filesystem::current_path() / "stdlib" / "std" / "ui" / "ui.prime";
@@ -4524,7 +4633,7 @@ TEST_CASE("software renderer html adapter stays source locked to shared widgets"
   CHECK(emitLoginBody.find("self.append_string(") == std::string::npos);
 }
 
-TEST_CASE("software renderer ui event stream stays source locked to normalized helpers") {
+TEST_CASE("ui event stream stays source locked to normalized helpers") {
   std::filesystem::path uiStdlibPath = std::filesystem::path("..") / "stdlib" / "std" / "ui" / "ui.prime";
   if (!std::filesystem::exists(uiStdlibPath)) {
     uiStdlibPath = std::filesystem::current_path() / "stdlib" / "std" / "ui" / "ui.prime";

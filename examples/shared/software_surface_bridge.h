@@ -6,6 +6,7 @@
 
 namespace primestruct::software_surface {
 
+// Presentation transport for scene-renderer or legacy command-list adapter output.
 struct SoftwareSurfaceFrame {
   int width = 0;
   int height = 0;
