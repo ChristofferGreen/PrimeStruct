@@ -12,9 +12,31 @@
   cherry-picks. Post-run TODO queue validation passed after promoting
   TODO-4593 and TODO-4594 as additional parallel-ready leaves. TODO-4593
   and TODO-4594 worker-focused validation passed on 2026-05-25 before
-  parent root reconciliation.
+  parent root reconciliation. TODO-4593/TODO-4594 root-focused validation
+  passed on 2026-05-25 after serial cherry-picks and a parent docs-lock
+  assertion update.
 
 ## Recent Test Runs
+- 2026-05-25 19:39 CEST | pass | mode: release | command:
+  `cmake --build build-release --target primec primevm PrimeStruct_backend_ir_tests -j 1`;
+  `cd build-release && ./PrimeStruct_backend_ir_tests --test-suite=primestruct.ir.pipeline.serialization --test-case="ir serialization schema golden fixture stays stable,ir serializes instruction source map metadata,ir deserialization rejects malformed instruction source map metadata,ir deserialization rejects unsupported instruction source map provenance,ir lowerer emits deterministic instruction source map provenance,compile pipeline IR source maps preserve imported source units,vm debug adapter preserves lowered source map provenance" --no-skip`;
+  `cmake --build build-release --target PrimeStruct_backend_runtime_tests -j 1`;
+  `cd build-release && ./PrimeStruct_backend_runtime_tests --test-case="vm source breakpoint resolution filters by source unit,vm debug fault diagnostics include mapped source stack traces,vm debug adapter emits deterministic protocol transcripts" --no-skip`;
+  `cmake --build build-release --target PrimeStruct_misc_tests -j 1`;
+  `cd build-release && ./PrimeStruct_misc_tests --test-case="semantic unknown-call diagnostics stay source locked,semantic unknown-call stability contract exposes mapped notes,compile pipeline maps imported semantic diagnostics through source units" --no-skip`;
+  `cmake --build build-release --target PrimeStruct_compile_run_tests -j 1`;
+  `cd build-release && ./PrimeStruct_compile_run_tests --test-case="todo queue and skipped doctest debt stay source locked" --no-skip`
+  | failures: none | notes: root validation after serially merging
+  TODO-4593 and TODO-4594 passed the focused IR source-map slice (7 cases /
+  437 assertions), VM debug slice (3 cases / 30 assertions), semantic
+  diagnostics slice (3 cases / 53 assertions), and refreshed TODO/docs-lock
+  slice (1 case / 479 assertions).
+- 2026-05-25 19:39 CEST | fail | mode: release | command:
+  `cmake --build build-release --target PrimeStruct_compile_run_tests -j 1`;
+  `cd build-release && ./PrimeStruct_compile_run_tests --test-case="todo queue and skipped doctest debt stay source locked" --no-skip`
+  | failures: `todo queue and skipped doctest debt stay source locked` |
+  notes: parent root validation found one stale source-lock assertion for the
+  archived TODO-4593 source-unit provenance wording after docs reconciliation.
 - 2026-05-25 19:09 CEST | pass | mode: release | command:
   `cmake --build build-release --target PrimeStruct_backend_ir_tests -j 1`;
   `cd build-release && ./PrimeStruct_backend_ir_tests --test-suite=primestruct.ir.pipeline.serialization --test-case="compile pipeline IR source maps preserve imported source units" --no-skip`;

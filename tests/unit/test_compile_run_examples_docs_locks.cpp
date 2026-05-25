@@ -1842,8 +1842,8 @@ TEST_CASE("todo queue and skipped doctest debt stay source locked") {
         std::string::npos);
   CHECK(todoFinished.find("TODO-4593: Carry source-unit provenance into IR and VM debug maps") !=
         std::string::npos);
-  CHECK(todoFinished.find("source-unit identity to instruction source-map entries") !=
-        std::string::npos);
+  CHECK(todoFinished.find("source-unit identity to\n"
+                          "      instruction source-map entries") != std::string::npos);
   CHECK(todo.find("TODO-4592: Map parser and semantic diagnostics through source units") ==
         std::string::npos);
   CHECK(todo.find("TODO-4593: Carry source-unit provenance into IR and VM debug maps") ==
