@@ -64,7 +64,6 @@ This file is the live open-work queue for PrimeStruct.
 
 ### Ready Now
 
-- TODO-4592: Map parser and semantic diagnostics through source units | track: source-unit-provenance | primary surface: parser/semantic diagnostics
 - TODO-4565: Add minimal scene graph and camera data model | track: scene-renderer | primary surface: stdlib/std/scene scene model
 - TODO-4572: Remove vector statement-helper compiler path | track: vector-special-case-deletion | primary surface: vector semantic/lowerer helpers
 - TODO-4573: Remove compiler-owned map literal lowering | track: map-special-case-deletion | primary surface: map literal semantics/lowering
@@ -83,9 +82,10 @@ This file is the live open-work queue for PrimeStruct.
 
 ### Priority Lanes
 
-- Source-unit provenance ledger: TODO-4592 -> TODO-4593; TODO-4593 waits on
-  TODO-4592 and TODO-4583 because it changes IR source-map metadata. TODO-4591
-  completed the inspectable expanded-source ledger that this lane builds on.
+- Source-unit provenance ledger: TODO-4592 completed parser/semantic
+  diagnostic source-unit mapping. TODO-4593 waits on TODO-4583 because it
+  changes IR source-map metadata. TODO-4591 completed the inspectable
+  expanded-source ledger that this lane builds on.
   This lane is intentionally separate from TODO-4581 provenance ownership and
   TODO-4586 diagnostic stability tiers: it adds the missing source-unit/file
   identity that those later contracts can consume without absorbing
@@ -103,7 +103,6 @@ This file is the live open-work queue for PrimeStruct.
 
 ### Execution Queue
 
-- TODO-4592: Map parser and semantic diagnostics through source units
 - TODO-4565: Add minimal scene graph and camera data model
 - TODO-4572: Remove vector statement-helper compiler path
 - TODO-4573: Remove compiler-owned map literal lowering
@@ -821,37 +820,6 @@ This file is the live open-work queue for PrimeStruct.
     - README or docs mention the helper as an architecture triage entrypoint.
   - stop_rule: Stop once the dashboard and self-tests land; do not add failing
     architecture thresholds in this slice.
-
-- [ ] TODO-4592: Map parser and semantic diagnostics through source units
-  - owner: ai
-  - created_at: 2026-05-24
-  - phase: Source-unit provenance ledger
-  - depends_on: TODO-4591
-  - scope: Use the source-unit ledger to populate diagnostic `file`, line, and
-    column fields for parser and one representative semantic diagnostic family
-    that currently reports only flattened line/column positions.
-  - implementation_notes: Start from `runCompilePipelineParseStage`,
-    `DiagnosticSink`, parser error collection,
-    `SemanticsValidatorPassesDiagnostics.cpp`, and one existing semantic
-    call-resolution or unresolved-target diagnostic test. This is not
-    TODO-4586 diagnostic-tier work: keep message stability policy unchanged
-    and only prove source-unit span translation.
-  - acceptance:
-    - A syntax error in an imported `.prime` file reports a primary
-      `DiagnosticSpan.file` for the imported file and original line/column
-      rather than only the flattened source position.
-    - A syntax error in the primary input still reports the primary input path
-      and unchanged line/column.
-    - One semantic diagnostic emitted from an imported source unit reports the
-      imported file/module provenance and original line/column.
-    - `--collect-diagnostics` output with diagnostics from multiple source
-      units is deterministic by source-unit order and original source position.
-    - Focused parser/semantic diagnostic tests pass and demonstrate the span
-      mapping without changing unrelated diagnostic message text.
-  - stop_rule: Stop after parser diagnostics and one semantic diagnostic
-    family are source-unit mapped and covered; leave full diagnostic-tier
-    classification to TODO-4586 and broad all-diagnostic migration to
-    follow-up leaves only if concrete gaps remain.
 
 - [ ] TODO-4593: Carry source-unit provenance into IR and VM debug maps
   - owner: ai

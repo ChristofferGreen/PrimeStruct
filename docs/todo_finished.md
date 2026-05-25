@@ -22249,3 +22249,41 @@ Moved from `docs/todo.md` during unfinished-only cleanup:
     referenced type-local facts in the diagnostic, added semantic-product and
     boundary-dump snapshots for deterministic generated type paths and
     provenance, and promoted TODO-4339 as the next Ready Now leaf.
+
+- [x] TODO-4592: Map parser and semantic diagnostics through source units
+  - owner: ai
+  - created_at: 2026-05-24
+  - finished_at: 2026-05-25
+  - phase: Source-unit provenance ledger
+  - depends_on: TODO-4591
+  - scope: Use the source-unit ledger to populate diagnostic `file`, line, and
+    column fields for parser and one representative semantic diagnostic family
+    that currently reports only flattened line/column positions.
+  - implementation_notes: Start from `runCompilePipelineParseStage`,
+    `DiagnosticSink`, parser error collection,
+    `SemanticsValidatorPassesDiagnostics.cpp`, and one existing semantic
+    call-resolution or unresolved-target diagnostic test. This is not
+    TODO-4586 diagnostic-tier work: keep message stability policy unchanged
+    and only prove source-unit span translation.
+  - acceptance:
+    - A syntax error in an imported `.prime` file reports a primary
+      `DiagnosticSpan.file` for the imported file and original line/column
+      rather than only the flattened source position.
+    - A syntax error in the primary input still reports the primary input path
+      and unchanged line/column.
+    - One semantic diagnostic emitted from an imported source unit reports the
+      imported file/module provenance and original line/column.
+    - `--collect-diagnostics` output with diagnostics from multiple source
+      units is deterministic by source-unit order and original source position.
+    - Focused parser/semantic diagnostic tests pass and demonstrate the span
+      mapping without changing unrelated diagnostic message text.
+  - stop_rule: Stop after parser diagnostics and one semantic diagnostic
+    family are source-unit mapped and covered; leave full diagnostic-tier
+    classification to TODO-4586 and broad all-diagnostic migration to
+    follow-up leaves only if concrete gaps remain.
+  - evidence: Added `SourceLocationMapper` and compile-pipeline mapping for
+    parser records, single parser spans, and semantic diagnostic reports;
+    mapped related spans; sorted collected diagnostics by source-unit order
+    and original source position; and added focused pipeline/CLI coverage for
+    primary, imported parser, imported semantic, and multi-source
+    `--collect-diagnostics` spans.

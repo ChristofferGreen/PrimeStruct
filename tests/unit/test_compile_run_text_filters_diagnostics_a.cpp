@@ -218,6 +218,53 @@ main() {
   CHECK(firstMessage < secondMessage);
 }
 
+TEST_CASE("primec collect-diagnostics maps parse spans through source units") {
+  const auto baseDir = testScratchPath("sources/primec_collect_diagnostics_source_units");
+  std::filesystem::remove_all(baseDir);
+  std::filesystem::create_directories(baseDir);
+  const auto importedPath = baseDir / "imported.prime";
+  const auto srcPath = baseDir / "main.prime";
+  {
+    std::ofstream imported(importedPath);
+    REQUIRE(imported.good());
+    imported << "import bad_imported\n"
+             << "[return<int>]\n"
+             << "imported(){ return(1i32) }\n";
+  }
+  {
+    std::ofstream source(srcPath);
+    REQUIRE(source.good());
+    source << "import<\"imported.prime\">\n"
+           << "import bad_primary\n"
+           << "[return<int>]\n"
+           << "main(){ return(0i32) }\n";
+  }
+  const std::string errPath =
+      (testScratchPath("") / "primec_collect_diagnostics_source_units_err.json").string();
+
+  const std::string cmd = "./primec " + quoteShellArg(srcPath.string()) +
+                          " --emit-diagnostics --collect-diagnostics 2> " + quoteShellArg(errPath);
+  CHECK(runCommand(cmd) == 2);
+
+  const std::string diagnostics = readFile(errPath);
+  const std::string primaryFile =
+      "\"file\":\"" + std::filesystem::absolute(srcPath).string() + "\"";
+  const std::string importedFile =
+      "\"file\":\"" + std::filesystem::absolute(importedPath).string() + "\"";
+  CHECK(diagnostics.find("\"version\":1") != std::string::npos);
+  CHECK(diagnostics.find("\"code\":\"PSC1003\"") != std::string::npos);
+  const size_t primarySpan = diagnostics.find(primaryFile);
+  const size_t importedSpan = diagnostics.find(importedFile);
+  REQUIRE(primarySpan != std::string::npos);
+  REQUIRE(importedSpan != std::string::npos);
+  CHECK(primarySpan < importedSpan);
+  const size_t primaryLine = diagnostics.find("\"line\":3", primarySpan);
+  const size_t importedLine = diagnostics.find("\"line\":2", importedSpan);
+  REQUIRE(primaryLine != std::string::npos);
+  REQUIRE(importedLine != std::string::npos);
+  CHECK(primaryLine < importedSpan);
+}
+
 TEST_CASE("primevm collect-diagnostics emits stable semantic import payload for unknown paths") {
   const std::string source = R"(
 import /missing_alpha

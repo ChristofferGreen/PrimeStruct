@@ -25,6 +25,18 @@ bool segmentStartsBeforeOrAt(const primec::SourceSegment &left,
 bool cursorBeforeOrAt(int leftLine, int leftColumn, int rightLine, int rightColumn) {
   return leftLine < rightLine || (leftLine == rightLine && leftColumn <= rightColumn);
 }
+
+std::string absolutePathText(const std::string &path) {
+  return std::filesystem::absolute(path).string();
+}
+
+primec::Options diagnosticPipelineOptions(const std::string &inputPath) {
+  primec::Options options;
+  options.inputPath = inputPath;
+  options.collectDiagnostics = true;
+  options.skipSemanticProductForNonConsumingPath = true;
+  return options;
+}
 } // namespace
 
 TEST_SUITE_BEGIN("primestruct.imports.resolver");
@@ -184,6 +196,85 @@ TEST_CASE("compile pipeline exposes stdlib auto include source units") {
   CHECK(stdlibUnit->originalStartColumn == 1);
   CHECK(stdlibUnit->flattenedStartLine > output.expandedSource.units.front().flattenedStartLine);
   CHECK(output.expandedSource.text.find("Maybe<T>") != std::string::npos);
+}
+
+TEST_CASE("compile pipeline maps parser diagnostics through source units") {
+  auto baseDir = importResolverPath("source_diagnostics_parse");
+  std::filesystem::remove_all(baseDir);
+  std::filesystem::create_directories(baseDir);
+
+  const std::string importedPath = writeFile(baseDir / "imported.prime",
+                                             "import bad_imported\n"
+                                             "[return<int>]\n"
+                                             "imported(){ return(1i32) }\n");
+  const std::string srcPath = writeFile(baseDir / "main.prime",
+                                        "import<\"imported.prime\">\n"
+                                        "import bad_primary\n"
+                                        "[return<int>]\n"
+                                        "main(){ return(0i32) }\n");
+
+  primec::Options options = diagnosticPipelineOptions(srcPath);
+  primec::CompilePipelineOutput output;
+  primec::CompilePipelineDiagnosticInfo diagnostics;
+  primec::CompilePipelineErrorStage errorStage = primec::CompilePipelineErrorStage::None;
+  std::string error;
+  CHECK_FALSE(primec::runCompilePipeline(options, output, errorStage, error, &diagnostics));
+  CHECK(errorStage == primec::CompilePipelineErrorStage::Parse);
+
+  REQUIRE(diagnostics.records.size() >= 2);
+  const auto &primaryRecord = diagnostics.records[0];
+  const auto &importedRecord = diagnostics.records[1];
+  CHECK(primaryRecord.message == "import path must be a slash path");
+  CHECK(importedRecord.message == "import path must be a slash path");
+  REQUIRE(primaryRecord.hasPrimarySpan);
+  REQUIRE(importedRecord.hasPrimarySpan);
+  CHECK(primaryRecord.primarySpan.file == absolutePathText(srcPath));
+  CHECK(primaryRecord.primarySpan.line == 3);
+  CHECK(primaryRecord.primarySpan.column == 1);
+  CHECK(importedRecord.primarySpan.file == absolutePathText(importedPath));
+  CHECK(importedRecord.primarySpan.line == 2);
+  CHECK(importedRecord.primarySpan.column == 1);
+}
+
+TEST_CASE("compile pipeline maps imported semantic diagnostics through source units") {
+  auto baseDir = importResolverPath("source_diagnostics_semantic");
+  std::filesystem::remove_all(baseDir);
+  std::filesystem::create_directories(baseDir);
+
+  const std::string importedPath = writeFile(baseDir / "imported.prime",
+                                             "[return<int>]\n"
+                                             "imported() {\n"
+                                             "  return(missing_imported(1i32))\n"
+                                             "}\n");
+  const std::string srcPath = writeFile(baseDir / "main.prime",
+                                        "import<\"imported.prime\">\n"
+                                        "[return<int>]\n"
+                                        "main(){ return(0i32) }\n");
+
+  primec::Options options = diagnosticPipelineOptions(srcPath);
+  primec::CompilePipelineOutput output;
+  primec::CompilePipelineDiagnosticInfo diagnostics;
+  primec::CompilePipelineErrorStage errorStage = primec::CompilePipelineErrorStage::None;
+  std::string error;
+  CHECK_FALSE(primec::runCompilePipeline(options, output, errorStage, error, &diagnostics));
+  CHECK(errorStage == primec::CompilePipelineErrorStage::Semantic);
+
+  const auto recordIt = std::find_if(diagnostics.records.begin(),
+                                     diagnostics.records.end(),
+                                     [](const primec::DiagnosticSinkRecord &record) {
+                                       return record.message ==
+                                              "unknown call target: missing_imported";
+                                     });
+  REQUIRE(recordIt != diagnostics.records.end());
+  REQUIRE(recordIt->hasPrimarySpan);
+  CHECK(recordIt->primarySpan.file == absolutePathText(importedPath));
+  CHECK(recordIt->primarySpan.line == 3);
+  CHECK(recordIt->primarySpan.column == 10);
+  REQUIRE(recordIt->relatedSpans.size() == 1);
+  CHECK(recordIt->relatedSpans[0].label == "definition: /imported");
+  CHECK(recordIt->relatedSpans[0].span.file == absolutePathText(importedPath));
+  CHECK(recordIt->relatedSpans[0].span.line == 2);
+  CHECK(recordIt->relatedSpans[0].span.column == 1);
 }
 
 TEST_CASE("rejects single legacy include alias") {

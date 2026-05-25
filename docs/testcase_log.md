@@ -4,6 +4,26 @@
 - none
 
 ## Recent Test Runs
+- 2026-05-25 07:59 CEST | pass | mode: release | command:
+  `cmake --build build-release --target PrimeStruct_misc_tests -j 1`;
+  `cd build-release && ./PrimeStruct_misc_tests --test-case="compile pipeline maps parser diagnostics through source units,compile pipeline maps imported semantic diagnostics through source units" --no-skip`;
+  `cd build-release && ./PrimeStruct_compile_run_tests --test-case="primec collect-diagnostics maps parse spans through source units" --no-skip`
+  | failures: none | notes: rebuilt the affected misc test binary after
+  parser coordinate expectation repair; passed 2 compile-pipeline
+  source-unit diagnostic cases and 1 CLI collect-diagnostics case.
+- 2026-05-25 07:58 CEST | fail | mode: release | command:
+  `cd build-release && ./PrimeStruct_misc_tests --test-case="compile pipeline maps parser diagnostics through source units,compile pipeline maps imported semantic diagnostics through source units" --no-skip`
+  | failures: `compile pipeline maps parser diagnostics through source units`
+  expected original import lines one line earlier than the current parser
+  error anchor | notes: semantic source-unit mapping case passed in the same
+  focused rerun; parser expectations were restored to the parser's existing
+  diagnostic coordinates while keeping mapped source-unit files.
+- 2026-05-25 07:39 CEST | fail | mode: release | command:
+  `cmake --build build-release --target primec PrimeStruct_misc_tests PrimeStruct_compile_run_tests -j 1`
+  | failures: `src/CompilePipeline.cpp` failed warning-as-error on a
+  designated `DiagnosticSpan` initializer missing the `file` member | notes:
+  focused source-diagnostics worker build exposed the initializer issue before
+  any doctest binary ran.
 - 2026-05-25 05:31 CEST | pass | mode: release | command:
   `cmake --build build-release --target primec PrimeStruct_misc_tests PrimeStruct_compile_run_tests -j 1`;
   `cd build-release && ./PrimeStruct_misc_tests --test-suite=primestruct.imports.resolver --order-by=file`;

@@ -10,6 +10,7 @@
 #include "primec/Parser.h"
 #include "primec/Semantics.h"
 #include "primec/SemanticsBenchmark.h"
+#include "primec/SourceLocationMapper.h"
 #include "primec/StdlibSurfaceRegistry.h"
 #include "primec/TextFilterPipeline.h"
 #include "primec/TransformRules.h"
@@ -753,6 +754,7 @@ bool runCompilePipelineTransformStage(
 void sortParserErrorsForStableOrdering(std::vector<Parser::ErrorInfo> &errors);
 
 bool runCompilePipelineParseStage(const Options &options,
+                                  const ExpandedSource &expandedSource,
                                   const CompilePipelinePreParseStageState &preParseStage,
                                   CompilePipelineParsedProgramStageState &out,
                                   std::string &error,
@@ -797,12 +799,19 @@ bool runCompilePipelineParseStage(const Options &options,
         }
         records.push_back(std::move(record));
       }
+      mapAndSortDiagnosticRecordsToSourceUnits(expandedSource, records);
       diagnosticSink.setRecords(std::move(records));
     } else {
       diagnosticSink.setSummary(parserErrorInfo.message);
       if (parserErrorInfo.line > 0 && parserErrorInfo.column > 0) {
-        diagnosticSink.capturePrimarySpanIfUnset(parserErrorInfo.line,
-                                                 parserErrorInfo.column);
+        const DiagnosticSpan span = mapDiagnosticSpanToSourceUnit(
+            expandedSource,
+            DiagnosticSpan{.file = {},
+                           .line = parserErrorInfo.line,
+                           .column = parserErrorInfo.column,
+                           .endLine = parserErrorInfo.line,
+                           .endColumn = parserErrorInfo.column});
+        diagnosticSink.capturePrimarySpanIfUnset(span);
       }
     }
     return false;
@@ -1016,6 +1025,7 @@ bool runCompilePipeline(const Options &options,
 
   CompilePipelineParsedProgramStageState parsedStage;
   if (!runCompilePipelineParseStage(options,
+                                    importStage.expandedSource,
                                     preParseStage,
                                     parsedStage,
                                     error,
@@ -1145,6 +1155,8 @@ bool runCompilePipeline(const Options &options,
     if (semanticDiagnosticInfo.message.empty()) {
       semanticDiagnosticInfo.message = error;
     }
+    mapAndSortDiagnosticReportSpansToSourceUnits(importStage.expandedSource,
+                                                 semanticDiagnosticInfo);
     return failPipeline(CompilePipelineErrorStage::Semantic, error, semanticDiagnosticInfo);
   }
   if (benchmarkSemanticPhaseCountersPtr != nullptr) {
