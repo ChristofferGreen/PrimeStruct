@@ -1576,6 +1576,14 @@ if(PRIMESTRUCT_BUILD_TESTS)
   )
   set_tests_properties(PrimeStruct_soa_surface_trace_zero_audit_self_test PROPERTIES TIMEOUT 60)
 
+  add_test(
+    NAME PrimeStruct_architecture_health_dashboard_self_test
+    COMMAND ${Python3_EXECUTABLE} ${CMAKE_SOURCE_DIR}/tests/scripts/test_architecture_health_dashboard.py
+            --repo-root ${CMAKE_SOURCE_DIR}
+            --scratch-dir ${CMAKE_BINARY_DIR}/architecture_health_dashboard_self_test
+  )
+  set_tests_properties(PrimeStruct_architecture_health_dashboard_self_test PROPERTIES TIMEOUT 60)
+
   add_custom_target(
     primestruct_graph_budget_check
     COMMAND ${Python3_EXECUTABLE} ${CMAKE_SOURCE_DIR}/scripts/check_graph_budget.py

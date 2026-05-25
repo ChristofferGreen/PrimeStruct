@@ -1,7 +1,15 @@
 # Testcase Log
 
 ## Current Known Failures
-- none
+- None recorded. TODO-4580 and TODO-4583 focused release validation passed
+  on 2026-05-25 after parent-scheduled worker validation reruns and root
+  focused validation. TODO-4581 and TODO-4584 focused root validation passed
+  on 2026-05-25 after serial root cherry-picks. TODO-4582 and TODO-4585
+  focused root validation passed on 2026-05-25 after serial root
+  cherry-picks. TODO-4586 and TODO-4587 focused root validation passed
+  on 2026-05-25 after serial root cherry-picks. TODO-4588 and TODO-4589
+  focused worker validation passed on 2026-05-25 after parent-scheduled
+  focused reruns.
 
 ## Recent Test Runs
 - 2026-05-25 15:58 CEST | pass | mode: release | command:
@@ -20,6 +28,12 @@
   `cd build-release && ./PrimeStruct_backend_runtime_tests --test-case="ir preparation phase manifest pins ordered handoffs,ir preparation phase manifest documents inline invalidation,ir preparation helper requires semantic product before lowering,compile pipeline publishes an initial semantic product shell" --no-skip`
   | failures: none | notes: parent validation passed the TODO-4588 runtime
   manifest and architecture source-lock slice, 4 cases / 360 assertions.
+- 2026-05-25 15:49 CEST | pass | mode: release | command:
+  `cmake -S . -B build-release -DCMAKE_BUILD_TYPE=Release`;
+  `cd build-release && ctest --output-on-failure -R '^PrimeStruct_architecture_health_dashboard_self_test$'`
+  | failures: none | notes: parent validation for TODO-4589 passed the
+  architecture health dashboard CTest self-test (1 test, 0.12 sec, 100%
+  passed).
 - 2026-05-25 15:48 CEST | fail | mode: release | command:
   `cmake -S . -B build-release -DCMAKE_BUILD_TYPE=Release`;
   `cmake --build build-release --target PrimeStruct_backend_runtime_tests -j 1`;
@@ -27,6 +41,23 @@
   | failures: `compile pipeline publishes an initial semantic product shell`
   | notes: parent validation selected 4 runtime cases; 3 passed and the
   architecture source-lock case failed on four stale string expectations.
+- 2026-05-25 15:37 CEST | pass | mode: script | command:
+  `python3 tests/scripts/test_architecture_health_dashboard.py --repo-root . --scratch-dir build-release/architecture_health_dashboard_self_test`
+  | failures: none | notes: direct architecture dashboard self-test passed
+  after correcting the representative top-file fixture expectation.
+- 2026-05-25 15:36 CEST | fail | mode: script | command:
+  `python3 tests/scripts/test_architecture_health_dashboard.py --repo-root . --scratch-dir build-release/architecture_health_dashboard_self_test`
+  | failures:
+  `tests/scripts/test_architecture_health_dashboard.py::test_representative_parsing`
+  | notes: representative fake repo top-file assertion still expected
+  `include/Medium.h`, but `src/SemanticProduct.cpp` was the deterministic
+  second-largest file.
+- 2026-05-25 15:36 CEST | fail | mode: script | command:
+  `python3 tests/scripts/test_architecture_health_dashboard.py --repo-root . --scratch-dir build-release/architecture_health_dashboard_self_test`
+  | failures:
+  `tests/scripts/test_architecture_health_dashboard.py::test_representative_parsing`
+  | notes: representative fake repo top-file assertion made
+  `src/Large.cpp` smaller than the semantic-product fixture source.
 - 2026-05-25 15:25 CEST | pass | mode: release | command:
   `cmake -S . -B build-release -DCMAKE_BUILD_TYPE=Release`;
   `cmake --build build-release --target PrimeStruct_misc_tests -j 1`;

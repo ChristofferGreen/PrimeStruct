@@ -348,6 +348,14 @@ Inspect the pipeline stages directly:
 ./build-release/primec --dump-stage=ir examples/0.Concrete/hello_world.prime
 ```
 
+Run the architecture triage dashboard when source-locks, include-layer
+exceptions, semantic-product fact families, file size hotspots, or graph and
+semantic-memory budget artifacts need a quick read:
+
+```bash
+python3 scripts/architecture_health_dashboard.py --root .
+```
+
 ## Where To Go Next
 
 - [`docs/PrimeStruct.md`](docs/PrimeStruct.md) for the main language and

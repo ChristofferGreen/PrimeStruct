@@ -42,6 +42,38 @@ Finished items are periodically archived here from `docs/todo.md`; section heade
   - stop_rule: Stopped after IR preparation gained a manifest-backed contract
     and focused tests; no broader lowerer or emitter phase manifest was added.
 
+- [x] TODO-4589: Add architecture health dashboard script
+  - owner: ai
+  - created_at: 2026-05-24
+  - finished_at: 2026-05-25
+  - phase: Architecture hardening
+  - parallel_track: architecture-health-dashboard
+  - scope: Add a repo-local script that reports architecture health metrics
+    without changing compiler behavior.
+  - outcome:
+    - Added `scripts/architecture_health_dashboard.py` as a developer helper
+      that prints source-lock inventory count, include-layer allowlist count,
+      semantic-product fact family count by ownership, largest subsystem
+      files, and available or missing graph/semantic-memory budget paths.
+    - Added text output plus `--format json` and `--json-output` support while
+      keeping the helper non-thresholding: missing optional budget artifacts
+      are reported rather than treated as failures.
+    - Added `tests/scripts/test_architecture_health_dashboard.py` with
+      representative parser coverage and a missing optional artifact fixture.
+    - Wired the self-test into CTest as
+      `PrimeStruct_architecture_health_dashboard_self_test`.
+    - Documented the helper in `README.md` as an architecture triage
+      entrypoint.
+  - validation:
+    - Direct script self-test passed:
+      `python3 tests/scripts/test_architecture_health_dashboard.py --repo-root . --scratch-dir build-release/architecture_health_dashboard_self_test`
+    - Parent-scheduled focused validation passed:
+      `cmake -S . -B build-release -DCMAKE_BUILD_TYPE=Release`
+    - Parent-scheduled focused CTest passed 1 test in 0.12 sec:
+      `cd build-release && ctest --output-on-failure -R '^PrimeStruct_architecture_health_dashboard_self_test$'`
+  - stop_rule: Stopped once the dashboard and self-tests landed; no failing
+    architecture thresholds were added in this slice.
+
 - [x] TODO-4587: Extract shared compile-time/runtime VM kernel boundary
   - owner: ai
   - created_at: 2026-05-24

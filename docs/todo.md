@@ -67,7 +67,6 @@ This file is the live open-work queue for PrimeStruct.
 - TODO-4565: Add minimal scene graph and camera data model | track: scene-renderer | primary surface: stdlib/std/scene scene model
 - TODO-4572: Remove vector statement-helper compiler path | track: vector-special-case-deletion | primary surface: vector semantic/lowerer helpers
 - TODO-4573: Remove compiler-owned map literal lowering | track: map-special-case-deletion | primary surface: map literal semantics/lowering
-- TODO-4589: Add architecture health dashboard script | track: architecture-health-dashboard | primary surface: scripts architecture dashboard
 
 ### Immediate Next 10
 
@@ -103,14 +102,14 @@ This file is the live open-work queue for PrimeStruct.
 - Architecture hardening backlog: TODO-4586 completed parser diagnostic
   stability tiers. TODO-4587 completed the shared compile-time/runtime VM
   kernel boundary. TODO-4588 added the IR-preparation phase manifest.
-  Remaining architecture leaves: TODO-4589, TODO-4594.
+  TODO-4589 added the architecture health dashboard. Remaining architecture
+  leaf: TODO-4594.
 
 ### Execution Queue
 
 - TODO-4565: Add minimal scene graph and camera data model
 - TODO-4572: Remove vector statement-helper compiler path
 - TODO-4573: Remove compiler-owned map literal lowering
-- TODO-4589: Add architecture health dashboard script
 - TODO-4566: Render flat and rounded-rect scene primitives to BGRA8
 - TODO-4590: Add international text shaping and glyph atlas path
 - TODO-4567: Render first globally lit 3D SDF widget primitive
@@ -584,31 +583,6 @@ This file is the live open-work queue for PrimeStruct.
       metadata files, while C++ treats them as ordinary included stdlib code.
   - stop_rule: Stop once the zero gate is wired into routine validation and
     focused map/vector stdlib tests plus the new audit pass.
-
-- [ ] TODO-4589: Add architecture health dashboard script
-  - owner: ai
-  - created_at: 2026-05-24
-  - phase: Architecture hardening
-  - parallel_track: architecture-health-dashboard
-  - scope: Add a repo-local script that reports architecture health metrics
-    without changing compiler behavior.
-  - implementation_notes: Aggregate existing checks where possible:
-    `docs/source_lock_inventory.md`, `scripts/include_layer_allowlist.txt`,
-    semantic-product fact family metadata, top file sizes, and semantic memory
-    or graph budget artifacts when present. The first version should report
-    metrics and support an optional JSON output; only fail on script errors, not
-    metric thresholds.
-  - acceptance:
-    - A script prints source-lock inventory count, include-layer allowlist count,
-      semantic-product fact family count, largest subsystem files, and available
-      graph/semantic-memory budget summary paths.
-    - The script has self-tests for parsing representative inputs and for
-      missing optional benchmark artifacts.
-    - CMake/CTest wires the self-test, while the dashboard itself remains a
-      developer helper unless a later TODO defines thresholds.
-    - README or docs mention the helper as an architecture triage entrypoint.
-  - stop_rule: Stop once the dashboard and self-tests land; do not add failing
-    architecture thresholds in this slice.
 
 - [ ] TODO-4594: Classify semantic call diagnostic stability tiers
   - owner: ai
