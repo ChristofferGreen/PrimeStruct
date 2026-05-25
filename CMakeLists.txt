@@ -789,7 +789,6 @@ if(PRIMESTRUCT_BUILD_TESTS)
     tests/unit/test_compile_run_native_backend_collections_canonical_count_shadows.cpp
     tests/unit/test_compile_run_native_backend_collections_canonical_map_helpers.cpp
     tests/unit/test_compile_run_native_backend_collections_experimental_maps_and_helpers.cpp
-    tests/unit/test_compile_run_native_backend_collections_map2_isolated.cpp
     tests/unit/test_compile_run_native_backend_collections_map_literals_and_string_keys.cpp
     tests/unit/test_compile_run_native_backend_collections_mutators_and_limits_a.cpp
     tests/unit/test_compile_run_native_backend_collections_mutators_and_limits_b.cpp

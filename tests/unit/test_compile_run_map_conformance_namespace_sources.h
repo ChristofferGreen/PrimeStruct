@@ -47,19 +47,19 @@ inline std::string makeCanonicalMapNamespaceNamedArgsSource() {
       "[return<Result<int, ContainerError>> effects(io_out, heap_alloc) on_error<ContainerError, /unexpectedCanonicalMapNamedArgsError>]\n";
   source += "main() {\n";
   source +=
-      "  [map<string, i32>] values{/std/collections/map/map<string, i32>([secondKey] \"right\"raw_utf8, [secondValue] 7i32, [firstKey] \"left\"raw_utf8, [firstValue] 4i32)}\n";
+      "  [map<i32, i32>] values{/std/collections/map/map<i32, i32>([secondKey] 2i32, [secondValue] 7i32, [firstKey] 1i32, [firstValue] 4i32)}\n";
   source +=
-      "  [i32] found{try(/std/collections/map/tryAt<string, i32>([key] \"left\"raw_utf8, [values] values))}\n";
-  source += "  [i32] count{/std/collections/map/count<string, i32>([values] values)}\n";
-  source += "  [i32] right{/std/collections/map/at<string, i32>([key] \"right\"raw_utf8, [values] values)}\n";
-  source += "  [i32] left{/std/collections/map/at_unsafe<string, i32>([key] \"left\"raw_utf8, [values] values)}\n";
+      "  [i32] found{try(/std/collections/map/tryAt<i32, i32>([key] 1i32, [entries] values))}\n";
+  source += "  [i32] count{/std/collections/map/count<i32, i32>([entries] values)}\n";
+  source += "  [i32] right{/std/collections/map/at<i32, i32>([key] 2i32, [entries] values)}\n";
+  source += "  [i32] left{/std/collections/map/at_unsafe<i32, i32>([key] 1i32, [entries] values)}\n";
   source += "  [i32 mut] total{count}\n";
   source +=
       "  assign(total, plus(total, right))\n";
   source +=
       "  assign(total, plus(total, left))\n";
   source += "  [i32 mut] containsBonus{0i32}\n";
-  source += "  if(/std/collections/map/contains<string, i32>([key] \"right\"raw_utf8, [values] values),\n";
+  source += "  if(/std/collections/map/contains<i32, i32>([key] 2i32, [entries] values),\n";
   source += "     then() { assign(containsBonus, found) assign(total, plus(total, containsBonus)) },\n";
   source += "     else() { })\n";
   source += "  print_line(count)\n";
@@ -77,8 +77,8 @@ inline std::string makeCanonicalMapNamespaceTypeMismatchRejectSource() {
   source += "[effects(heap_alloc), return<int>]\n";
   source += "main() {\n";
   source +=
-      "  [map<string, i32>] values{/std/collections/map/map<string, i32>(\"left\"raw_utf8, 4i32, \"right\"raw_utf8, false)}\n";
-  source += "  return(/std/collections/map/count<string, i32>(values))\n";
+      "  [map<i32, i32>] values{/std/collections/map/map<i32, i32>(1i32, 4i32, 2i32, false)}\n";
+  source += "  return(/std/collections/map/count<i32, i32>(values))\n";
   source += "}\n";
   return source;
 }
@@ -88,7 +88,7 @@ inline std::string makeCanonicalMapNamespaceImportRequirementSource() {
   source += "[effects(heap_alloc), return<int>]\n";
   source += "main() {\n";
   source +=
-      "  [map<string, i32>] values{/std/collections/map/map<string, i32>(\"left\"raw_utf8, 4i32, \"right\"raw_utf8, 7i32)}\n";
+      "  [map<i32, i32>] values{/std/collections/map/map<i32, i32>(1i32, 4i32, 2i32, 7i32)}\n";
   source += "  return(count(values))\n";
   source += "}\n";
   return source;
@@ -98,8 +98,8 @@ inline std::string makeCanonicalMapCountImportRequirementSource() {
   std::string source;
   source += "[effects(heap_alloc), return<int>]\n";
   source += "main() {\n";
-  source += "  [map<string, i32>] values{map<string, i32>(\"left\"raw_utf8, 4i32, \"right\"raw_utf8, 7i32)}\n";
-  source += "  return(/std/collections/map/count<string, i32>(values))\n";
+  source += "  [map<i32, i32>] values{map<i32, i32>(1i32, 4i32, 2i32, 7i32)}\n";
+  source += "  return(/std/collections/map/count<i32, i32>(values))\n";
   source += "}\n";
   return source;
 }
@@ -108,8 +108,8 @@ inline std::string makeCanonicalMapContainsImportRequirementSource() {
   std::string source;
   source += "[effects(heap_alloc), return<int>]\n";
   source += "main() {\n";
-  source += "  [map<string, i32>] values{map<string, i32>(\"left\"raw_utf8, 4i32, \"right\"raw_utf8, 7i32)}\n";
-  source += "  [bool] found{/std/collections/map/contains<string, i32>(values, \"left\"raw_utf8)}\n";
+  source += "  [map<i32, i32>] values{map<i32, i32>(1i32, 4i32, 2i32, 7i32)}\n";
+  source += "  [bool] found{/std/collections/map/contains<i32, i32>(values, 1i32)}\n";
   source += "  return(0i32)\n";
   source += "}\n";
   return source;
@@ -119,8 +119,8 @@ inline std::string makeCanonicalMapTryAtImportRequirementSource() {
   std::string source;
   source += "[effects(heap_alloc), return<int>]\n";
   source += "main() {\n";
-  source += "  [map<string, i32>] values{map<string, i32>(\"left\"raw_utf8, 4i32, \"right\"raw_utf8, 7i32)}\n";
-  source += "  return(try(/std/collections/map/tryAt<string, i32>(values, \"left\"raw_utf8)))\n";
+  source += "  [map<i32, i32>] values{map<i32, i32>(1i32, 4i32, 2i32, 7i32)}\n";
+  source += "  return(try(/std/collections/map/tryAt<i32, i32>(values, 1i32)))\n";
   source += "}\n";
   return source;
 }
@@ -130,9 +130,9 @@ inline std::string makeCanonicalMapAccessImportRequirementSource(const std::stri
   source += "import /std/collections/*\n\n";
   source += "[effects(heap_alloc), return<int>]\n";
   source += "main() {\n";
-  source += "  [map<string, i32>] values{map<string, i32>(\"left\"raw_utf8, 4i32, \"right\"raw_utf8, 7i32)}\n";
+  source += "  [map<i32, i32>] values{map<i32, i32>(1i32, 4i32, 2i32, 7i32)}\n";
   source += "  return(/std/collections/map/" + helperName +
-            "<string, i32>(values, \"left\"raw_utf8))\n";
+            "<i32, i32>(values, 1i32))\n";
   source += "}\n";
   return source;
 }

@@ -121,6 +121,36 @@ Finished items are periodically archived here from `docs/todo.md`; section heade
     - `python3 -m py_compile scripts/check_map_vector_compiler_knowledge.py
       tests/scripts/test_check_map_vector_compiler_knowledge.py` passed.
 
+- [x] TODO-4570: Retire duplicate map2 candidate surface
+  - owner: ai
+  - created_at: 2026-05-24
+  - finished_at: 2026-05-25
+  - phase: Map/vector compiler-independence
+  - parallel_track: collection-stdlib-cleanup
+  - scope: Remove the temporary `map2` replacement candidate now that
+    `stdlib/std/collections/map.prime` is the standalone canonical map
+    implementation, and lock that public `map.prime` does not delegate to the
+    old map implementation or to `map2`.
+  - outcome:
+    - Removed `stdlib/std/collections/map2.prime` and the dedicated map2
+      compile-run fixture from the checked-in build.
+    - Kept canonical `map.prime` on standalone fixed-arity constructors for
+      VM-facing conformance, avoiding the retired map2 surface and the
+      compiler-unsupported dynamic args-pack constructor path.
+    - Tightened source-lock coverage so canonical `map.prime` must remain
+      standalone over `internal_vector`, cannot import `map2`,
+      `experimental_map`, or `internal_map`, and cannot publish map2 metadata
+      through `surfaces.psmeta`.
+    - Updated TODO source locks so the active queue no longer points at map2
+      as a pending replacement strategy.
+  - validation:
+    - Focused release validation covers stdlib map ownership, TODO/docs source
+      locks, and the shared VM canonical map conformance harness:
+      `cmake --build build-release --target PrimeStruct_misc_tests PrimeStruct_compile_run_tests -j 1`;
+      `cd build-release && ./PrimeStruct_compile_run_tests --test-case="runs vm shared stdlib map conformance harness" --no-skip`;
+      `cd build-release && ./PrimeStruct_misc_tests --test-case="canonical map surface owns standalone stdlib implementation" --no-skip`;
+      `cd build-release && ./PrimeStruct_compile_run_tests --test-case="vector map bridge boundary docs stay source locked,stdlib de-experimentalization policy docs stay source locked,todo queue and skipped doctest debt stay source locked,small stdlib wrappers stay source locked to inferred locals" --no-skip`.
+
 **Todo Completion (May 24, 2026)**
 - [x] TODO-4305: Rename and style canonical `.prime` SoA surface
   - owner: ai

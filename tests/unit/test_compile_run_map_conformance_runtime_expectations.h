@@ -724,8 +724,8 @@ inline void expectCanonicalMapNamespaceExperimentalBorrowedRefConformance(const 
 inline void expectCanonicalMapNamespaceNamedArgsVmConformance() {
   expectMapVmProgramRunsWithOutput(makeCanonicalMapNamespaceNamedArgsSource(),
                                    "map_namespace_canonical_named_args_vm",
-                                   36,
-                                   "2\n2\n288\n0\n");
+                                   17,
+                                   "2\n7\n4\n4\n");
 }
 
 inline void expectCanonicalMapNamespaceTypeMismatchReject(const std::string &emitMode) {

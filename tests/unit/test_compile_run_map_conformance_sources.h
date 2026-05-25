@@ -1,5 +1,8 @@
 #pragma once
 
+#include <utility>
+#include <vector>
+
 inline std::string mapHelperConformanceImportSlug(const std::string &importPath) {
   if (importPath == "/std/collections/*") {
     return "stdlib";
@@ -24,16 +27,65 @@ inline std::string mapConformanceType(const std::string &importPath,
 }
 
 inline std::string mapConformanceKeyType(const std::string &importPath) {
-  (void)importPath;
+  if (!isExperimentalMapImport(importPath)) {
+    return "i32";
+  }
   return "string";
 }
 
 inline std::string mapConformanceLiteral(const std::string &importPath,
                                          const std::string &numericValue,
                                          const std::string &stringValue) {
-  (void)importPath;
-  (void)numericValue;
+  if (!isExperimentalMapImport(importPath)) {
+    return numericValue;
+  }
   return stringValue;
+}
+
+inline std::string mapConformancePairCtor(const std::string &importPath,
+                                          const std::string &keyType,
+                                          const std::string &valueType,
+                                          const std::string &leftKey,
+                                          const std::string &leftValue,
+                                          const std::string &rightKey,
+                                          const std::string &rightValue) {
+  if (isExperimentalMapImport(importPath)) {
+    return "mapPair<" + keyType + ", " + valueType + ">(" + leftKey + ", " + leftValue + ", " +
+           rightKey + ", " + rightValue + ")";
+  }
+  return "/std/collections/map/map<" + keyType + ", " + valueType + ">(" + leftKey + ", " +
+         leftValue + ", " + rightKey + ", " + rightValue + ")";
+}
+
+inline std::string mapConformanceEntriesCtor(const std::string &importPath,
+                                             const std::string &keyType,
+                                             const std::string &valueType,
+                                             const std::vector<std::pair<std::string, std::string>> &entries) {
+  if (isExperimentalMapImport(importPath)) {
+    static const std::vector<std::string> names = {
+        "map", "mapSingle", "mapPair", "mapTriple", "mapQuad",
+        "mapQuint", "mapSext", "mapSept", "mapOct"};
+    const std::string ctorName = entries.size() < names.size() ? names[entries.size()] : "map";
+    std::string call = ctorName + "<" + keyType + ", " + valueType + ">(";
+    for (std::size_t index = 0; index < entries.size(); ++index) {
+      if (index != 0) {
+        call += ", ";
+      }
+      call += entries[index].first + ", " + entries[index].second;
+    }
+    call += ")";
+    return call;
+  }
+
+  std::string call = "/std/collections/map/map<" + keyType + ", " + valueType + ">(";
+  for (std::size_t index = 0; index < entries.size(); ++index) {
+    if (index != 0) {
+      call += ", ";
+    }
+    call += entries[index].first + ", " + entries[index].second;
+  }
+  call += ")";
+  return call;
 }
 
 inline std::string makeMapHelperSurfaceConformanceSource(const std::string &importPath) {
@@ -46,7 +98,9 @@ inline std::string makeMapHelperSurfaceConformanceSource(const std::string &impo
   source += "import " + importPath + "\n\n";
   source += "[effects(heap_alloc), return<" + mapConformanceType(importPath, "K", "V") + "> Comparable<K>]\n";
   source += "wrapMap<K, V>([K] leftKey, [V] leftValue, [K] rightKey, [V] rightValue) {\n";
-  source += "  [" + mapConformanceType(importPath, "K", "V") + "] values{mapPair<K, V>(leftKey, leftValue, rightKey, rightValue)}\n";
+  source += "  [" + mapConformanceType(importPath, "K", "V") + "] values{" +
+            mapConformancePairCtor(importPath, "K", "V", "leftKey", "leftValue", "rightKey", "rightValue") +
+            "}\n";
   source += "  return(values)\n";
   source += "}\n\n";
   source += "[effects(io_out, heap_alloc), return<int>]\n";
@@ -94,16 +148,31 @@ inline std::string makeMapExtendedConstructorConformanceSource(const std::string
   source += "import " + importPath + "\n\n";
   source += "[effects(heap_alloc), return<" + mapConformanceType(importPath, "K", "V") + "> Comparable<K>]\n";
   source += "wrapMap<K, V>() {\n";
-  source += "  [" + mapConformanceType(importPath, "K", "V") + "] values{mapOct<K, V>(" + wrappedAKey + ", 1i32, " +
-            wrappedBKey + ", 2i32, " + wrappedCKey + ", 3i32, " + wrappedDKey + ", 4i32,\n";
-  source += "      " + wrappedEKey + ", 5i32, " + wrappedFKey + ", 6i32, " + wrappedGKey + ", 7i32, " + wrappedHKey +
-            ", 8i32)}\n";
+  source += "  [" + mapConformanceType(importPath, "K", "V") + "] values{" +
+            mapConformanceEntriesCtor(importPath,
+                                      "K",
+                                      "V",
+                                      {{wrappedAKey, "1i32"},
+                                       {wrappedBKey, "2i32"},
+                                       {wrappedCKey, "3i32"},
+                                       {wrappedDKey, "4i32"},
+                                       {wrappedEKey, "5i32"},
+                                       {wrappedFKey, "6i32"},
+                                       {wrappedGKey, "7i32"},
+                                       {wrappedHKey, "8i32"}}) +
+            "}\n";
   source += "  return(values)\n";
   source += "}\n\n";
   source += "[effects(io_out, heap_alloc), return<int>]\n";
   source += "main() {\n";
-  source += "  [" + mapConformanceType(importPath, keyType, "i32") + "] direct{mapTriple<" + keyType +
-            ", i32>(" + directLeftKey + ", 10i32, " + directMidKey + ", 20i32, " + directRightKey + ", 30i32)}\n";
+  source += "  [" + mapConformanceType(importPath, keyType, "i32") + "] direct{" +
+            mapConformanceEntriesCtor(importPath,
+                                      keyType,
+                                      "i32",
+                                      {{directLeftKey, "10i32"},
+                                       {directMidKey, "20i32"},
+                                       {directRightKey, "30i32"}}) +
+            "}\n";
   source += "  [" + mapConformanceType(importPath, keyType, "i32") + "] wrapped{wrapMap<" + keyType + ", i32>()}\n";
   source += "  [i32] directCount{/std/collections/map/count<" + keyType + ", i32>(direct)}\n";
   source += "  [i32] directLeft{/std/collections/map/at<" + keyType + ", i32>(direct, " + directLeftKey + ")}\n";
@@ -152,8 +221,9 @@ inline std::string makeMapOverwriteConformanceSource(const std::string &importPa
   source += "import " + importPath + "\n\n";
   source += "[effects(heap_alloc), return<int>]\n";
   source += "main() {\n";
-  source += "  [" + mapConformanceType(importPath, keyType, "i32") + "] values{mapPair<" + keyType +
-            ", i32>(" + repeatedKey + ", 4i32, " + repeatedKey + ", 9i32)}\n";
+  source += "  [" + mapConformanceType(importPath, keyType, "i32") + "] values{" +
+            mapConformancePairCtor(importPath, keyType, "i32", repeatedKey, "4i32", repeatedKey, "9i32") +
+            "}\n";
   source += "  return(plus(plus(/std/collections/map/count<" + keyType + ", i32>(values), /std/collections/map/at<" + keyType + ", i32>(values, " +
             repeatedKey + ")),\n";
   source += "      /std/collections/map/at_unsafe<" + keyType + ", i32>(values, " + repeatedKey + ")))\n";
@@ -175,7 +245,7 @@ inline std::string makeExperimentalMapVariadicConstructorConformanceSource() {
   source +=
       "  [Map<string, i32>] direct{map<string, i32>(entry(\"left\"raw_utf8, 4i32), entry(\"right\"raw_utf8, 7i32), entry(\"bonus\"raw_utf8, 9i32))}\n";
   source +=
-      "  [Map<string, i32>] wrapped{wrapMap<string, i32>(entry(\"alpha\"raw_utf8, 2i32), entry(\"beta\"raw_utf8, 5i32))}\n";
+      "  [Map<string, i32>] wrapped{wrapMap<string, i32>(entry(\"alpha\"raw_utf8, 2i32), entry(\"beta\"raw_utf8, 5i32), entry(\"gamma\"raw_utf8, 6i32))}\n";
   source += "  [i32 mut] total{plus(/std/collections/map/count<string, i32>(empty), /std/collections/map/count<string, i32>(direct))}\n";
   source += "  assign(total, plus(total, /std/collections/map/at<string, i32>(direct, \"right\"raw_utf8)))\n";
   source += "  assign(total, plus(total, /std/collections/map/at_unsafe<string, i32>(wrapped, \"beta\"raw_utf8)))\n";
@@ -224,8 +294,9 @@ inline std::string makeMapTryAtConformanceImportSource(const std::string &import
   source +=
       "[return<Result<i32, ContainerError>> effects(io_out, heap_alloc) on_error<ContainerError, /unexpectedMapTryAtError>]\n";
   source += "main() {\n";
-  source += "  [" + mapConformanceType(importPath, keyType, valueType) + "] values{mapPair<" + keyType + ", " +
-            valueType + ">(" + leftKey + ", " + leftValue + ", " + rightKey + ", " + rightValue + ")}\n";
+  source += "  [" + mapConformanceType(importPath, keyType, valueType) + "] values{" +
+            mapConformancePairCtor(importPath, keyType, valueType, leftKey, leftValue, rightKey, rightValue) +
+            "}\n";
   source += "  [" + valueType + "] found{try(/std/collections/map/tryAt<" + keyType + ", " + valueType + ">(values, " + leftKey +
             "))}\n";
   source += "  [Result<" + valueType + ", ContainerError>] missing{/std/collections/map/tryAt<" + keyType + ", " + valueType +
@@ -999,22 +1070,22 @@ inline std::string makeCanonicalMapNamespaceConformanceSource() {
       "[return<Result<int, ContainerError>> effects(io_out, heap_alloc) on_error<ContainerError, /unexpectedCanonicalMapError>]\n";
   source += "main() {\n";
   source +=
-      "  [map<string, i32>] values{/std/collections/map/map<string, i32>(\"left\"raw_utf8, 4i32, \"right\"raw_utf8, 7i32)}\n";
-  source += "  [i32] found{try(/std/collections/map/tryAt<string, i32>(values, \"left\"raw_utf8))}\n";
+      "  [map<i32, i32>] values{/std/collections/map/map<i32, i32>(1i32, 4i32, 2i32, 7i32)}\n";
+  source += "  [i32] found{try(/std/collections/map/tryAt<i32, i32>(values, 1i32))}\n";
   source +=
-      "  [Result<i32, ContainerError>] missing{/std/collections/map/tryAt<string, i32>(values, \"missing\"raw_utf8)}\n";
-  source += "  [i32] count{/std/collections/map/count<string, i32>(values)}\n";
-  source += "  [i32] left{/std/collections/map/at<string, i32>(values, \"left\"raw_utf8)}\n";
-  source += "  [i32] right{/std/collections/map/at_unsafe<string, i32>(values, \"right\"raw_utf8)}\n";
+      "  [Result<i32, ContainerError>] missing{/std/collections/map/tryAt<i32, i32>(values, 99i32)}\n";
+  source += "  [i32] count{/std/collections/map/count<i32, i32>(values)}\n";
+  source += "  [i32] left{/std/collections/map/at<i32, i32>(values, 1i32)}\n";
+  source += "  [i32] right{/std/collections/map/at_unsafe<i32, i32>(values, 2i32)}\n";
   source += "  [i32 mut] total{plus(count, found)}\n";
   source += "  assign(total, plus(total, left))\n";
   source += "  assign(total, plus(total, right))\n";
   source += "  [i32 mut] containsBonus{0i32}\n";
-  source += "  if(/std/collections/map/contains<string, i32>(values, \"left\"raw_utf8),\n";
+  source += "  if(/std/collections/map/contains<i32, i32>(values, 1i32),\n";
   source += "     then() { assign(containsBonus, 1i32) assign(total, plus(total, containsBonus)) },\n";
   source += "     else() { })\n";
   source += "  [i32 mut] missingBonus{0i32}\n";
-  source += "  if(not(/std/collections/map/contains<string, i32>(values, \"missing\"raw_utf8)),\n";
+  source += "  if(not(/std/collections/map/contains<i32, i32>(values, 99i32)),\n";
   source += "     then() { assign(missingBonus, 2i32) assign(total, plus(total, missingBonus)) },\n";
   source += "     else() { })\n";
   source += "  print_line(found)\n";

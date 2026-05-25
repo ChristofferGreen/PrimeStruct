@@ -444,6 +444,7 @@ TEST_CASE("canonical map surface owns standalone stdlib implementation") {
                "IrLowererAccessTargetResolution.cpp");
 
   REQUIRE(!mapSource.empty());
+  CHECK_FALSE(std::filesystem::exists(collectionsFile("map2.prime")));
   REQUIRE(!experimentalSource.empty());
   REQUIRE(!internalSource.empty());
   REQUIRE(!surfacesSource.empty());
@@ -559,6 +560,9 @@ TEST_CASE("canonical map surface owns standalone stdlib implementation") {
 
   CHECK(mapSource.find("import /std/collections/internal_map/*") == std::string::npos);
   CHECK(mapSource.find("import /std/collections/internal_vector/*") != std::string::npos);
+  CHECK(mapSource.find("import /std/collections/map2") == std::string::npos);
+  CHECK(mapSource.find("/std/collections/map2/") == std::string::npos);
+  CHECK(mapSource.find("map2") == std::string::npos);
   CHECK(mapSource.find("/std/collections/experimental_map/") == std::string::npos);
   CHECK(mapSource.find("/std/collections/internal_map/insertImpl") == std::string::npos);
   CHECK(mapSource.find("insert_builtin") == std::string::npos);
@@ -567,6 +571,9 @@ TEST_CASE("canonical map surface owns standalone stdlib implementation") {
   CHECK(mapSource.find("MapValue<K, V>") != std::string::npos);
   CHECK(mapSource.find("mapInsert<K, V>([MapValue<K, V> mut] entries") !=
         std::string::npos);
+  CHECK(mapSource.find("[args<Entry<K, V>>] entries") == std::string::npos);
+  CHECK(mapSource.find("entries[index]") == std::string::npos);
+  CHECK(mapSource.find("[K] eighthKey, [V] eighthValue") != std::string::npos);
 
   CHECK(experimentalSource.find("import /std/collections/internal_map/*") != std::string::npos);
   CHECK(experimentalSource.find("namespace experimental_map") == std::string::npos);
@@ -595,6 +602,7 @@ TEST_CASE("canonical map surface owns standalone stdlib implementation") {
   CHECK(surfacesSource.find("id = CollectionsMapHelpers") != std::string::npos);
   CHECK(surfacesSource.find("id = CollectionsMapConstructors") != std::string::npos);
   CHECK(surfacesSource.find("member_name = at_unsafe_ref") != std::string::npos);
+  CHECK(surfacesSource.find("map2") == std::string::npos);
   CHECK(surfacesSource.find("member_alias = mapInsertRef -> insert_ref") ==
         std::string::npos);
   CHECK(surfacesSource.find("compatibility_spelling = /map/count") == std::string::npos);

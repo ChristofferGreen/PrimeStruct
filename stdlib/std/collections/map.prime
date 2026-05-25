@@ -106,16 +106,68 @@ namespace std {
     return(left.equal(right))
   }
 
+  [effects(heap_alloc), return<void> Comparable<K>]
+  mapInsertEntry<K, V>([MapValue<K, V> mut] out, [Entry<K, V>] entry) {
+    /std/collections/map/mapInsert<K, V>(out, entry.key, entry.value)
+  }
+
+  [public effects(heap_alloc), return<MapValue<K, V>>]
+  map<K, V>() {
+    return(mapNew<K, V>())
+  }
+
   [public effects(heap_alloc), return<MapValue<K, V>> Comparable<K>]
-  map<K, V>([args<Entry<K, V>>] entries) {
+  map<K, V>([Entry<K, V>] firstEntry) {
     [MapValue<K, V> mut] out{mapNew<K, V>()}
-    [i32] entryCount{count(entries)}
-    [i32 mut] index{0i32}
-    while(/less_than(index, entryCount), do() {
-      [Entry<K, V>] current{entries[index]}
-      /std/collections/map/mapInsert<K, V>(out, current.key, current.value)
-      increment(index)
-    })
+    /std/collections/map/mapInsertEntry<K, V>(out, firstEntry)
+    return(out)
+  }
+
+  [public effects(heap_alloc), return<MapValue<K, V>> Comparable<K>]
+  map<K, V>(
+      [Entry<K, V>] firstEntry,
+      [Entry<K, V>] secondEntry,
+      [Entry<K, V>] thirdEntry) {
+    [MapValue<K, V> mut] out{mapNew<K, V>()}
+    /std/collections/map/mapInsertEntry<K, V>(out, firstEntry)
+    /std/collections/map/mapInsertEntry<K, V>(out, secondEntry)
+    /std/collections/map/mapInsertEntry<K, V>(out, thirdEntry)
+    return(out)
+  }
+
+  [public effects(heap_alloc), return<MapValue<K, V>> Comparable<K>]
+  map<K, V>(
+      [Entry<K, V>] firstEntry,
+      [Entry<K, V>] secondEntry,
+      [Entry<K, V>] thirdEntry,
+      [Entry<K, V>] fourthEntry,
+      [Entry<K, V>] fifthEntry) {
+    [MapValue<K, V> mut] out{mapNew<K, V>()}
+    /std/collections/map/mapInsertEntry<K, V>(out, firstEntry)
+    /std/collections/map/mapInsertEntry<K, V>(out, secondEntry)
+    /std/collections/map/mapInsertEntry<K, V>(out, thirdEntry)
+    /std/collections/map/mapInsertEntry<K, V>(out, fourthEntry)
+    /std/collections/map/mapInsertEntry<K, V>(out, fifthEntry)
+    return(out)
+  }
+
+  [public effects(heap_alloc), return<MapValue<K, V>> Comparable<K>]
+  map<K, V>(
+      [Entry<K, V>] firstEntry,
+      [Entry<K, V>] secondEntry,
+      [Entry<K, V>] thirdEntry,
+      [Entry<K, V>] fourthEntry,
+      [Entry<K, V>] fifthEntry,
+      [Entry<K, V>] sixthEntry,
+      [Entry<K, V>] seventhEntry) {
+    [MapValue<K, V> mut] out{mapNew<K, V>()}
+    /std/collections/map/mapInsertEntry<K, V>(out, firstEntry)
+    /std/collections/map/mapInsertEntry<K, V>(out, secondEntry)
+    /std/collections/map/mapInsertEntry<K, V>(out, thirdEntry)
+    /std/collections/map/mapInsertEntry<K, V>(out, fourthEntry)
+    /std/collections/map/mapInsertEntry<K, V>(out, fifthEntry)
+    /std/collections/map/mapInsertEntry<K, V>(out, sixthEntry)
+    /std/collections/map/mapInsertEntry<K, V>(out, seventhEntry)
     return(out)
   }
 
@@ -131,6 +183,108 @@ namespace std {
     [MapValue<K, V> mut] out{mapNew<K, V>()}
     /std/collections/map/mapInsert<K, V>(out, firstKey, firstValue)
     /std/collections/map/mapInsert<K, V>(out, secondKey, secondValue)
+    return(out)
+  }
+
+  [public effects(heap_alloc), return<MapValue<K, V>> Comparable<K>]
+  map<K, V>(
+      [K] firstKey, [V] firstValue,
+      [K] secondKey, [V] secondValue,
+      [K] thirdKey, [V] thirdValue) {
+    [MapValue<K, V> mut] out{mapNew<K, V>()}
+    /std/collections/map/mapInsert<K, V>(out, firstKey, firstValue)
+    /std/collections/map/mapInsert<K, V>(out, secondKey, secondValue)
+    /std/collections/map/mapInsert<K, V>(out, thirdKey, thirdValue)
+    return(out)
+  }
+
+  [public effects(heap_alloc), return<MapValue<K, V>> Comparable<K>]
+  map<K, V>(
+      [K] firstKey, [V] firstValue,
+      [K] secondKey, [V] secondValue,
+      [K] thirdKey, [V] thirdValue,
+      [K] fourthKey, [V] fourthValue) {
+    [MapValue<K, V> mut] out{mapNew<K, V>()}
+    /std/collections/map/mapInsert<K, V>(out, firstKey, firstValue)
+    /std/collections/map/mapInsert<K, V>(out, secondKey, secondValue)
+    /std/collections/map/mapInsert<K, V>(out, thirdKey, thirdValue)
+    /std/collections/map/mapInsert<K, V>(out, fourthKey, fourthValue)
+    return(out)
+  }
+
+  [public effects(heap_alloc), return<MapValue<K, V>> Comparable<K>]
+  map<K, V>(
+      [K] firstKey, [V] firstValue,
+      [K] secondKey, [V] secondValue,
+      [K] thirdKey, [V] thirdValue,
+      [K] fourthKey, [V] fourthValue,
+      [K] fifthKey, [V] fifthValue) {
+    [MapValue<K, V> mut] out{mapNew<K, V>()}
+    /std/collections/map/mapInsert<K, V>(out, firstKey, firstValue)
+    /std/collections/map/mapInsert<K, V>(out, secondKey, secondValue)
+    /std/collections/map/mapInsert<K, V>(out, thirdKey, thirdValue)
+    /std/collections/map/mapInsert<K, V>(out, fourthKey, fourthValue)
+    /std/collections/map/mapInsert<K, V>(out, fifthKey, fifthValue)
+    return(out)
+  }
+
+  [public effects(heap_alloc), return<MapValue<K, V>> Comparable<K>]
+  map<K, V>(
+      [K] firstKey, [V] firstValue,
+      [K] secondKey, [V] secondValue,
+      [K] thirdKey, [V] thirdValue,
+      [K] fourthKey, [V] fourthValue,
+      [K] fifthKey, [V] fifthValue,
+      [K] sixthKey, [V] sixthValue) {
+    [MapValue<K, V> mut] out{mapNew<K, V>()}
+    /std/collections/map/mapInsert<K, V>(out, firstKey, firstValue)
+    /std/collections/map/mapInsert<K, V>(out, secondKey, secondValue)
+    /std/collections/map/mapInsert<K, V>(out, thirdKey, thirdValue)
+    /std/collections/map/mapInsert<K, V>(out, fourthKey, fourthValue)
+    /std/collections/map/mapInsert<K, V>(out, fifthKey, fifthValue)
+    /std/collections/map/mapInsert<K, V>(out, sixthKey, sixthValue)
+    return(out)
+  }
+
+  [public effects(heap_alloc), return<MapValue<K, V>> Comparable<K>]
+  map<K, V>(
+      [K] firstKey, [V] firstValue,
+      [K] secondKey, [V] secondValue,
+      [K] thirdKey, [V] thirdValue,
+      [K] fourthKey, [V] fourthValue,
+      [K] fifthKey, [V] fifthValue,
+      [K] sixthKey, [V] sixthValue,
+      [K] seventhKey, [V] seventhValue) {
+    [MapValue<K, V> mut] out{mapNew<K, V>()}
+    /std/collections/map/mapInsert<K, V>(out, firstKey, firstValue)
+    /std/collections/map/mapInsert<K, V>(out, secondKey, secondValue)
+    /std/collections/map/mapInsert<K, V>(out, thirdKey, thirdValue)
+    /std/collections/map/mapInsert<K, V>(out, fourthKey, fourthValue)
+    /std/collections/map/mapInsert<K, V>(out, fifthKey, fifthValue)
+    /std/collections/map/mapInsert<K, V>(out, sixthKey, sixthValue)
+    /std/collections/map/mapInsert<K, V>(out, seventhKey, seventhValue)
+    return(out)
+  }
+
+  [public effects(heap_alloc), return<MapValue<K, V>> Comparable<K>]
+  map<K, V>(
+      [K] firstKey, [V] firstValue,
+      [K] secondKey, [V] secondValue,
+      [K] thirdKey, [V] thirdValue,
+      [K] fourthKey, [V] fourthValue,
+      [K] fifthKey, [V] fifthValue,
+      [K] sixthKey, [V] sixthValue,
+      [K] seventhKey, [V] seventhValue,
+      [K] eighthKey, [V] eighthValue) {
+    [MapValue<K, V> mut] out{mapNew<K, V>()}
+    /std/collections/map/mapInsert<K, V>(out, firstKey, firstValue)
+    /std/collections/map/mapInsert<K, V>(out, secondKey, secondValue)
+    /std/collections/map/mapInsert<K, V>(out, thirdKey, thirdValue)
+    /std/collections/map/mapInsert<K, V>(out, fourthKey, fourthValue)
+    /std/collections/map/mapInsert<K, V>(out, fifthKey, fifthValue)
+    /std/collections/map/mapInsert<K, V>(out, sixthKey, sixthValue)
+    /std/collections/map/mapInsert<K, V>(out, seventhKey, seventhValue)
+    /std/collections/map/mapInsert<K, V>(out, eighthKey, eighthValue)
     return(out)
   }
 

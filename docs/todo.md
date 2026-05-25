@@ -66,7 +66,6 @@ This file is the live open-work queue for PrimeStruct.
 
 - TODO-4592: Map parser and semantic diagnostics through source units | track: source-unit-provenance | primary surface: parser/semantic diagnostics
 - TODO-4565: Add minimal scene graph and camera data model | track: scene-renderer | primary surface: stdlib/std/scene scene model
-- TODO-4570: Retire duplicate map2 candidate surface | track: collection-stdlib-cleanup | primary surface: stdlib/std/collections/map*.prime
 - TODO-4572: Remove vector statement-helper compiler path | track: vector-special-case-deletion | primary surface: vector semantic/lowerer helpers
 - TODO-4573: Remove compiler-owned map literal lowering | track: map-special-case-deletion | primary surface: map literal semantics/lowering
 
@@ -93,9 +92,9 @@ This file is the live open-work queue for PrimeStruct.
   TODO-4583's schema/versioning work.
 - Scene graph renderer and UI presentation: TODO-4565 -> TODO-4566 ->
   (TODO-4590 and TODO-4567) -> TODO-4568 -> TODO-4569
-- Map/vector compiler-independence: TODO-4570 can run in parallel with the
-  deletion tracks; the compiler-knowledge inventory categories from
-  TODO-4571 guide deletion scope. Vector path TODO-4572 -> TODO-4574 ->
+- Map/vector compiler-independence: TODO-4570 retired the duplicate `map2`
+  surface and TODO-4571 added the compiler-knowledge inventory categories that
+  guide deletion scope. Vector path TODO-4572 -> TODO-4574 ->
   TODO-4577; map path TODO-4573 -> TODO-4575 -> TODO-4576; join at
   TODO-4578 -> TODO-4579
 - Architecture hardening backlog: TODO-4580, TODO-4581 -> TODO-4582,
@@ -106,7 +105,6 @@ This file is the live open-work queue for PrimeStruct.
 
 - TODO-4592: Map parser and semantic diagnostics through source units
 - TODO-4565: Add minimal scene graph and camera data model
-- TODO-4570: Retire duplicate map2 candidate surface
 - TODO-4572: Remove vector statement-helper compiler path
 - TODO-4573: Remove compiler-owned map literal lowering
 - TODO-4566: Render flat and rounded-rect scene primitives to BGRA8
@@ -330,35 +328,6 @@ This file is the live open-work queue for PrimeStruct.
       policy.
   - stop_rule: Stop once one PrimeStruct UI scene reaches the software-surface
     presenter path with deterministic non-GUI coverage.
-
-- [ ] TODO-4570: Retire duplicate map2 candidate surface
-  - owner: ai
-  - created_at: 2026-05-24
-  - phase: Map/vector compiler-independence
-  - parallel_track: collection-stdlib-cleanup
-  - scope: Remove the temporary `map2` replacement candidate now that
-    `stdlib/std/collections/map.prime` is the standalone canonical map
-    implementation, and lock that public `map.prime` does not delegate to the
-    old map implementation or to `map2`.
-  - implementation_notes: Start with `stdlib/std/collections/map.prime`,
-    `stdlib/std/collections/map2.prime`, `stdlib/std/collections/surfaces.psmeta`,
-    map compile-run fixtures, and any source-lock tests that mention map2.
-    This is a stdlib cleanup slice only; do not edit compiler map/vector
-    lowering in this task.
-  - acceptance:
-    - `stdlib/std/collections/map2.prime` is removed or made unreachable from
-      public imports, with all checked-in references updated.
-    - `stdlib/std/collections/map.prime` remains a standalone `.prime`
-      implementation backed by ordinary vector helpers and does not import
-      `map2`, `experimental_map`, or a compiler-native map implementation.
-    - Focused map stdlib tests still cover construction, count, contains,
-      try/get, unsafe get, insert/update, and reference helpers through
-      `/std/collections/map/*`.
-    - A source-lock test proves the active TODO queue no longer points at
-      `map2` as a pending replacement strategy.
-  - stop_rule: Stop once the duplicate map2 surface is gone or explicitly
-    unreachable and canonical map tests pass; leave compiler special-case
-    deletion to the later map/vector compiler-independence leaves.
 
 - [ ] TODO-4572: Remove vector statement-helper compiler path
   - owner: ai

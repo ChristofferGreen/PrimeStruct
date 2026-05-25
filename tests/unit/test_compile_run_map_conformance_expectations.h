@@ -166,10 +166,12 @@ inline void expectMapTryAtConformance(const std::string &emitMode,
           .string();
 
   if (emitMode == "vm") {
+    const std::string expectedOutput =
+        isExperimentalMapImport(importPath) ? "\n" : "container missing key\n";
     const std::string runCmd =
         "./primec --emit=vm " + quoteShellArg(srcPath) + " --entry /main > " + quoteShellArg(outPath);
     CHECK(runCommand(runCmd) == expectedExitCode);
-    CHECK(readFile(outPath) == "\n");
+    CHECK(readFile(outPath) == expectedOutput);
     return;
   }
 
@@ -277,7 +279,7 @@ inline void expectExperimentalMapVariadicConstructorConformance(const std::strin
   expectMapConformanceProgramRuns(makeExperimentalMapVariadicConstructorConformanceSource(),
                                   "experimental_map_variadic_ctor_" + emitMode,
                                   emitMode,
-                                  17);
+                                  18);
 }
 
 inline void expectExperimentalMapVariadicConstructorMismatchReject(const std::string &emitMode) {
@@ -617,12 +619,10 @@ inline void expectExperimentalMapIndexConformance(const std::string &emitMode) {
 }
 
 inline void expectCanonicalMapNamespaceVmConformance() {
-  expectMapConformanceFailure(makeCanonicalMapNamespaceConformanceSource(),
-                              "map_namespace_canonical_vm",
-                              "vm",
-                              3,
-                              "map key not found",
-                              false);
+  expectMapVmProgramRunsWithOutput(makeCanonicalMapNamespaceConformanceSource(),
+                                   "map_namespace_canonical_vm",
+                                   20,
+                                   "4\ncontainer missing key\n2\n4\n7\n1\n2\n");
 }
 
 inline void expectCanonicalMapNamespaceOwnershipReject(const std::string &emitMode) {
