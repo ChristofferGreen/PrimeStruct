@@ -94,14 +94,19 @@ build and layout solidify.
 - **No approval-prompt workflow actions:** do not run commands or use tools that
   require sandbox escalation, user approval, or an approval UI as part of normal
   repo work. Treat a likely approval prompt as a hard blocker and choose a
-  repo-local alternative instead. This includes process-inspection commands such
-  as `ps`, `pgrep`, `lsof`, or similar tools used to check whether builds/tests
-  are active; GUI-opening commands; destructive cleanup outside the current
-  checkout; and ad hoc reads/writes outside the repository such as creating
-  temporary repro files under `/tmp`, `/private/tmp`, or another absolute path.
-  If coordination would require elevated privileges, rely on known command
-  sessions, repo-local state, existing test scratch helpers, or ask the user to
-  check externally instead of requesting escalation.
+  repo-local alternative instead. Do not intentionally run a command that is
+  expected to fail under the sandbox and then retry it with elevated permissions;
+  if a normal workflow command unexpectedly fails because of sandboxing or OS
+  permissions, stop that action and report the blocker instead of asking for
+  escalation. This includes process-inspection or process-control commands such
+  as `ps`, `pgrep`, `pkill`, `killall`, `lsof`, or similar tools used to check
+  or control whether builds/tests are active; GUI-opening commands; destructive
+  cleanup outside the current checkout; and ad hoc reads/writes outside the
+  repository such as creating temporary repro files under `/tmp`,
+  `/private/tmp`, or another absolute path. If coordination would require
+  elevated privileges, rely on known command sessions, repo-local state, existing
+  test scratch helpers, or ask the user to check externally instead of requesting
+  escalation.
 - **Benchmark helper:** `./scripts/benchmark.sh --build-dir build-release` runs the benchmark suite against an existing build. Add `--report-json build-release/benchmarks/benchmark_report.json --baseline-json benchmarks/benchmark_baseline.json` for regression checks.
 - **Optional Wasm runtime checks:** `./scripts/run_wasm_runtime_checks.sh` executes Wasm outputs with `wasmtime` when available and emits an explicit skip message otherwise.
 - **Coverage helper:** `./scripts/code_coverage.sh` runs a clean debug coverage build, prints total function/line coverage, and writes reports to `build-debug/coverage/coverage.txt` plus `build-debug/coverage/html/`.
