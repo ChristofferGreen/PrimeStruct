@@ -68,7 +68,6 @@ This file is the live open-work queue for PrimeStruct.
 - TODO-4572: Remove vector statement-helper compiler path | track: vector-special-case-deletion | primary surface: vector semantic/lowerer helpers
 - TODO-4573: Remove compiler-owned map literal lowering | track: map-special-case-deletion | primary surface: map literal semantics/lowering
 - TODO-4582: Add semantic-product consumer coverage matrix | track: architecture-semantic-product-consumers | primary surface: semantic-product consumer inventory
-- TODO-4584: Generalize backend capability gating | track: architecture-backend-capabilities | primary surface: backend capability registry
 
 ### Immediate Next 10
 
@@ -100,8 +99,8 @@ This file is the live open-work queue for PrimeStruct.
   guide deletion scope. Vector path TODO-4572 -> TODO-4574 ->
   TODO-4577; map path TODO-4573 -> TODO-4575 -> TODO-4576; join at
   TODO-4578 -> TODO-4579
-- Architecture hardening backlog: TODO-4582, TODO-4584, TODO-4585,
-  TODO-4586, TODO-4587, TODO-4588, TODO-4589
+- Architecture hardening backlog: TODO-4582,
+  TODO-4585, TODO-4586, TODO-4587, TODO-4588, TODO-4589
 
 ### Execution Queue
 
@@ -121,7 +120,6 @@ This file is the live open-work queue for PrimeStruct.
 - TODO-4579: Enforce zero map/vector compiler-knowledge traces
 - TODO-4582: Add semantic-product consumer coverage matrix
 - TODO-4593: Carry source-unit provenance into IR and VM debug maps
-- TODO-4584: Generalize backend capability gating
 - TODO-4585: Manifest-drive stdlib module inclusion
 - TODO-4586: Define diagnostic stability tiers
 - TODO-4587: Extract shared compile-time/runtime VM kernel boundary
@@ -612,31 +610,6 @@ This file is the live open-work queue for PrimeStruct.
     - Focused backend IR or semantic-product tests pass.
   - stop_rule: Stop once the first consumer matrix is checked and validates real
     coverage for at least three representative fact families.
-
-- [ ] TODO-4584: Generalize backend capability gating
-  - owner: ai
-  - created_at: 2026-05-24
-  - phase: Architecture hardening
-  - parallel_track: architecture-backend-capabilities
-  - scope: Replace one ad hoc backend/profile support check with a generic
-    backend capability registry used by diagnostics and tests.
-  - implementation_notes: Start from graphics substrate target checks in
-    `src/CompilePipeline.cpp`, backend profile helpers, and
-    `include/primec/IrBackends.h`. The first registry should cover one
-    capability family such as graphics runtime substrate availability without
-    changing supported targets.
-  - acceptance:
-    - A backend/profile capability table or API describes the selected
-      capability for VM, native, Wasm, GLSL/SPIR-V, and C++/IR aliases as
-      applicable.
-    - The selected ad hoc check is routed through the registry and still emits
-      the same deterministic unsupported-target diagnostic.
-    - Focused tests cover at least one supported target and one unsupported
-      target for the capability.
-    - Docs or code comments identify how future capability gates should use the
-      registry.
-  - stop_rule: Stop once one backend capability family is registry-driven and
-    covered; leave broader backend policy migration to later slices.
 
 - [ ] TODO-4585: Manifest-drive stdlib module inclusion
   - owner: ai

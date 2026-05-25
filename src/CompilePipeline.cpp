@@ -5,6 +5,7 @@
 #include "primec/AstMemory.h"
 #include "primec/AstPrinter.h"
 #include "primec/ImportResolver.h"
+#include "primec/IrBackendProfiles.h"
 #include "primec/IrPrinter.h"
 #include "primec/Lexer.h"
 #include "primec/Parser.h"
@@ -640,16 +641,9 @@ bool isGraphicsImportPath(const std::string &importPath) {
 }
 
 std::string unsupportedGraphicsTargetName(const Options &options) {
-  if (options.emitKind == "wasm") {
-    return options.wasmProfile == "browser" ? "wasm-browser" : "wasm-wasi";
-  }
-  if (options.emitKind == "glsl" || options.emitKind == "glsl-ir") {
-    return "glsl";
-  }
-  if (options.emitKind == "spirv" || options.emitKind == "spirv-ir") {
-    return "spirv";
-  }
-  return "";
+  const IrBackendCapabilitySupport support =
+      queryIrBackendCapabilitySupport(options, IrBackendCapability::GraphicsRuntimeSubstrate);
+  return support.supported ? "" : std::string(support.targetName);
 }
 
 bool validateGraphicsBackendSupport(const Program &program,

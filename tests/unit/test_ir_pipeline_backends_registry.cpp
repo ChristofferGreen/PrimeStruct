@@ -284,6 +284,91 @@ TEST_CASE("emit kind aliases resolve to canonical ir backend kinds") {
   CHECK(primec::resolveIrBackendEmitKind("unknown") == "unknown");
 }
 
+TEST_CASE("backend capability registry describes graphics runtime substrate availability") {
+  auto signatureFor = [](const primec::IrBackendCapabilityProfile &profile) {
+    std::string signature = profile.emitKind;
+    signature += ":";
+    if (std::string_view(profile.wasmProfile).empty()) {
+      signature += "-";
+    } else {
+      signature += profile.wasmProfile;
+    }
+    signature += ":";
+    signature += profile.targetName;
+    signature += ":";
+    const bool supportsGraphicsRuntime = primec::irBackendCapabilityProfileSupports(
+        profile, primec::IrBackendCapability::GraphicsRuntimeSubstrate);
+    signature += supportsGraphicsRuntime ? "graphics-runtime" : "-";
+    return signature;
+  };
+
+  std::vector<std::string> actual;
+  for (const primec::IrBackendCapabilityProfile &profile : primec::listIrBackendCapabilityProfiles()) {
+    actual.push_back(signatureFor(profile));
+  }
+
+  const std::vector<std::string> expected = {
+      "vm:-:vm:graphics-runtime",
+      "native:-:native:graphics-runtime",
+      "ir:-:ir:graphics-runtime",
+      "wasm:wasi:wasm-wasi:-",
+      "wasm:browser:wasm-browser:-",
+      "glsl:-:glsl:-",
+      "glsl-ir:-:glsl:-",
+      "spirv:-:spirv:-",
+      "spirv-ir:-:spirv:-",
+      "cpp:-:cpp:graphics-runtime",
+      "cpp-ir:-:cpp-ir:graphics-runtime",
+      "exe:-:exe:graphics-runtime",
+      "exe-ir:-:exe-ir:graphics-runtime",
+  };
+
+  CHECK(actual == expected);
+}
+
+TEST_CASE("backend capability query routes graphics runtime substrate by target profile") {
+  auto graphicsSupportFor = [](std::string_view emitKind, std::string_view wasmProfile = "wasi") {
+    primec::Options options;
+    options.emitKind = std::string(emitKind);
+    options.wasmProfile = std::string(wasmProfile);
+    return primec::queryIrBackendCapabilitySupport(
+        options, primec::IrBackendCapability::GraphicsRuntimeSubstrate);
+  };
+
+  const primec::IrBackendCapabilitySupport vmSupport = graphicsSupportFor("vm");
+  CHECK(vmSupport.supported);
+  CHECK(vmSupport.targetName == "vm");
+
+  const primec::IrBackendCapabilitySupport nativeSupport = graphicsSupportFor("native");
+  CHECK(nativeSupport.supported);
+  CHECK(nativeSupport.targetName == "native");
+
+  const primec::IrBackendCapabilitySupport cppAliasSupport = graphicsSupportFor("cpp");
+  CHECK(cppAliasSupport.supported);
+  CHECK(cppAliasSupport.targetName == "cpp");
+
+  const primec::IrBackendCapabilitySupport irSupport = graphicsSupportFor("ir");
+  CHECK(irSupport.supported);
+  CHECK(irSupport.targetName == "ir");
+
+  const primec::IrBackendCapabilitySupport wasmBrowserSupport =
+      graphicsSupportFor("wasm", "browser");
+  CHECK_FALSE(wasmBrowserSupport.supported);
+  CHECK(wasmBrowserSupport.targetName == "wasm-browser");
+
+  const primec::IrBackendCapabilitySupport wasmWasiSupport = graphicsSupportFor("wasm");
+  CHECK_FALSE(wasmWasiSupport.supported);
+  CHECK(wasmWasiSupport.targetName == "wasm-wasi");
+
+  const primec::IrBackendCapabilitySupport glslAliasSupport = graphicsSupportFor("glsl-ir");
+  CHECK_FALSE(glslAliasSupport.supported);
+  CHECK(glslAliasSupport.targetName == "glsl");
+
+  const primec::IrBackendCapabilitySupport spirvSupport = graphicsSupportFor("spirv");
+  CHECK_FALSE(spirvSupport.supported);
+  CHECK(spirvSupport.targetName == "spirv");
+}
+
 TEST_CASE("all production primec emit kinds route through ir backend resolution") {
   const std::vector<std::string_view> expectedKinds = {
       "cpp", "cpp-ir", "exe", "exe-ir", "native", "ir", "vm", "glsl", "spirv", "wasm", "glsl-ir", "spirv-ir"};
@@ -7766,7 +7851,7 @@ main() {
   REQUIRE(failure != nullptr);
   CHECK(errorStage == primec::CompilePipelineErrorStage::Semantic);
   CHECK(failure->failure.stage == primec::CompilePipelineErrorStage::Semantic);
-  CHECK_FALSE(failure->failure.message.empty());
+  CHECK(error == "graphics stdlib runtime substrate unavailable for glsl target: /std/gfx/experimental/*");
   CHECK(failure->failure.message == error);
   REQUIRE_FALSE(failure->failure.diagnosticInfo.records.empty());
   CHECK(failure->failure.diagnosticInfo.records.front().message == error);

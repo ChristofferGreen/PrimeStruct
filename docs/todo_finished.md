@@ -22379,3 +22379,35 @@ Moved from `docs/todo.md` during unfinished-only cleanup:
     functions, strings, local debug metadata, source maps, and struct layout
     metadata; and documented that format-affecting PSIR changes must bump the
     schema version, update migration notes, and refresh golden coverage.
+
+- [x] TODO-4584: Generalize backend capability gating
+  - owner: ai
+  - created_at: 2026-05-24
+  - finished_at: 2026-05-25
+  - phase: Architecture hardening
+  - parallel_track: architecture-backend-capabilities
+  - scope: Replace one ad hoc backend/profile support check with a generic
+    backend capability registry used by diagnostics and tests.
+  - implementation_notes: Started from graphics substrate target checks in
+    `src/CompilePipeline.cpp`, backend profile helpers, and
+    `include/primec/IrBackends.h`. The first registry covers graphics runtime
+    substrate availability without changing supported targets.
+  - acceptance:
+    - A backend/profile capability table or API describes the selected
+      capability for VM, native, Wasm, GLSL/SPIR-V, and C++/IR aliases as
+      applicable.
+    - The selected ad hoc check is routed through the registry and still emits
+      the same deterministic unsupported-target diagnostic.
+    - Focused tests cover at least one supported target and one unsupported
+      target for the capability.
+    - Docs or code comments identify how future capability gates should use the
+      registry.
+  - stop_rule: Stop once one backend capability family is registry-driven and
+    covered; leave broader backend policy migration to later slices.
+  - evidence: Added `IrBackendCapability` profile data and a query API for
+    graphics runtime substrate availability across VM, native, Wasm
+    profiles, GLSL/SPIR-V aliases, and C++/IR aliases; routed the
+    compile-pipeline graphics stdlib unsupported-target diagnostic through
+    the registry; documented the future-gate pattern in the backend profile
+    header; and added focused registry and compile-pipeline diagnostic
+    coverage.

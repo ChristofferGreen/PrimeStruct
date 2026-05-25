@@ -5,6 +5,7 @@
 #include "primec/IrValidation.h"
 #include "primec/Options.h"
 
+#include <cstdint>
 #include <string>
 #include <string_view>
 #include <vector>
@@ -31,6 +32,22 @@ struct IrBackendEmitOptions {
 
 struct IrBackendEmitResult {
   int exitCode = 0;
+};
+
+enum class IrBackendCapability : uint32_t {
+  GraphicsRuntimeSubstrate = 1u << 0,
+};
+
+struct IrBackendCapabilityProfile {
+  const char *emitKind = "";
+  const char *wasmProfile = "";
+  const char *targetName = "";
+  uint32_t capabilities = 0;
+};
+
+struct IrBackendCapabilitySupport {
+  bool supported = true;
+  std::string_view targetName;
 };
 
 class IrBackend {
