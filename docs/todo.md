@@ -67,7 +67,6 @@ This file is the live open-work queue for PrimeStruct.
 - TODO-4565: Add minimal scene graph and camera data model | track: scene-renderer | primary surface: stdlib/std/scene scene model
 - TODO-4572: Remove vector statement-helper compiler path | track: vector-special-case-deletion | primary surface: vector semantic/lowerer helpers
 - TODO-4573: Remove compiler-owned map literal lowering | track: map-special-case-deletion | primary surface: map literal semantics/lowering
-- TODO-4586: Define diagnostic stability tiers | track: architecture-diagnostic-stability | primary surface: diagnostics contract policy
 - TODO-4587: Extract shared compile-time/runtime VM kernel boundary | track: architecture-vm-kernel-boundary | primary surface: VM execution kernel API
 
 ### Immediate Next 10
@@ -81,6 +80,7 @@ This file is the live open-work queue for PrimeStruct.
 - TODO-4575: Remove map helper/access compiler classifiers
 - TODO-4576: Remove map backing-type compiler classification
 - TODO-4593: Carry source-unit provenance into IR and VM debug maps
+- TODO-4594: Classify semantic call diagnostic stability tiers
 
 ### Priority Lanes
 
@@ -100,8 +100,9 @@ This file is the live open-work queue for PrimeStruct.
   guide deletion scope. Vector path TODO-4572 -> TODO-4574 ->
   TODO-4577; map path TODO-4573 -> TODO-4575 -> TODO-4576; join at
   TODO-4578 -> TODO-4579
-- Architecture hardening backlog: TODO-4586, TODO-4587, TODO-4588,
-  TODO-4589
+- Architecture hardening backlog: TODO-4586 completed parser diagnostic
+  stability tiers. Remaining architecture leaves: TODO-4587, TODO-4588,
+  TODO-4589, TODO-4594.
 
 ### Execution Queue
 
@@ -120,10 +121,10 @@ This file is the live open-work queue for PrimeStruct.
 - TODO-4578: Generalize stdlib surface registry away from map/vector IDs
 - TODO-4579: Enforce zero map/vector compiler-knowledge traces
 - TODO-4593: Carry source-unit provenance into IR and VM debug maps
-- TODO-4586: Define diagnostic stability tiers
 - TODO-4587: Extract shared compile-time/runtime VM kernel boundary
 - TODO-4588: Add pass/phase invalidation manifest beyond semantics
 - TODO-4589: Add architecture health dashboard script
+- TODO-4594: Classify semantic call diagnostic stability tiers
 
 ### Task Blocks
 
@@ -585,29 +586,6 @@ This file is the live open-work queue for PrimeStruct.
   - stop_rule: Stop once the zero gate is wired into routine validation and
     focused map/vector stdlib tests plus the new audit pass.
 
-- [ ] TODO-4586: Define diagnostic stability tiers
-  - owner: ai
-  - created_at: 2026-05-24
-  - phase: Architecture hardening
-  - parallel_track: architecture-diagnostic-stability
-  - scope: Classify diagnostics into stable user-facing contracts and
-    implementation diagnostics for one compiler phase, then lock the stable tier
-    with code/message/span coverage.
-  - implementation_notes: Start from `include/primec/Diagnostics.h`,
-    semantic/parser diagnostic tests, and `--collect-diagnostics` behavior.
-    Choose one phase such as parser errors, import errors, or semantic
-    call-resolution diagnostics.
-  - acceptance:
-    - The selected diagnostic phase has documented stability tiers for code,
-      message text, primary span, and notes.
-    - Stable-tier diagnostics have focused tests that assert code and span
-      behavior, not only raw message substrings.
-    - Implementation-tier diagnostics are clearly allowed to change without
-      implying a public contract break.
-    - Existing diagnostics for the selected phase remain deterministic.
-  - stop_rule: Stop after one diagnostic phase has tier docs and focused
-    coverage; leave other phases to future slices.
-
 - [ ] TODO-4587: Extract shared compile-time/runtime VM kernel boundary
   - owner: ai
   - created_at: 2026-05-24
@@ -677,6 +655,32 @@ This file is the live open-work queue for PrimeStruct.
     - README or docs mention the helper as an architecture triage entrypoint.
   - stop_rule: Stop once the dashboard and self-tests land; do not add failing
     architecture thresholds in this slice.
+
+- [ ] TODO-4594: Classify semantic call diagnostic stability tiers
+  - owner: ai
+  - created_at: 2026-05-25
+  - phase: Architecture hardening
+  - parallel_track: architecture-diagnostic-stability
+  - depends_on: TODO-4586
+  - scope: Extend the diagnostic stability-tier contract from parser
+    diagnostics to one semantic call-resolution diagnostic family, including
+    code/message/span/note classification and focused stable-tier coverage.
+  - implementation_notes: Start from `SemanticsValidatorPassesDiagnostics.cpp`,
+    the semantic intra-body `--collect-diagnostics` tests, and the
+    `diagnosticStabilityContract(...)` shape added by TODO-4586. Keep the
+    slice to unresolved-target or resolved-call argument-shape/type diagnostics
+    rather than all semantic errors.
+  - acceptance:
+    - One semantic call-resolution diagnostic family has documented stability
+      tiers for code, message text, primary span, and notes.
+    - Stable-tier semantic diagnostics have focused tests asserting diagnostic
+      code, message text, source-unit-mapped primary span, and related note
+      behavior.
+    - Other semantic diagnostics remain implementation tier unless promoted by
+      this slice.
+    - Existing semantic `--collect-diagnostics` ordering remains deterministic.
+  - stop_rule: Stop after one semantic call-resolution family has tier docs and
+    focused coverage; do not classify every semantic diagnostic in this slice.
 
 - [ ] TODO-4593: Carry source-unit provenance into IR and VM debug maps
   - owner: ai

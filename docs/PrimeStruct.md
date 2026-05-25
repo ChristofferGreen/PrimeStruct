@@ -1958,6 +1958,32 @@ Structured diagnostic-sink contract:
 - Follow-up work may add stable diagnostic codes, severity modeling, and merge keys to the same sink/result surface
   without reintroducing string-only validator publication state.
 
+Diagnostic stability tiers:
+- Each public diagnostic field is classified independently:
+  - `stable` means the field is a user/tooling contract. Changing it requires
+    an explicit docs update, focused source tests, and a migration note when
+    downstream tools could observe the difference.
+  - `implementation` means the field may change as compiler internals move.
+    Tests may assert it for local regression coverage, but those assertions do
+    not make the field a public compatibility promise.
+- Diagnostic `code` strings such as `PSC1003` are stable identifiers once
+  assigned. The current contract is source-locked by
+  `diagnosticStabilityContract(...)`.
+- Parser diagnostics are the first phase with a full stability classification:
+
+| Phase/code | Field | Tier | Contract |
+| --- | --- | --- | --- |
+| Parser / `DiagnosticCode::ParseError` (`PSC1003`) | code | stable | `PSC1003` identifies parser/AST-builder failures in structured output. |
+| Parser / `DiagnosticCode::ParseError` (`PSC1003`) | message | stable | The normalized structured `message` omits the legacy trailing `at line:column` suffix and preserves the parser's selected diagnostic text. |
+| Parser / `DiagnosticCode::ParseError` (`PSC1003`) | primary span | stable | `primary_span.file`, `line`, `column`, `end_line`, and `end_column` identify the source-unit-mapped parser anchor chosen by the parser. |
+| Parser / `DiagnosticCode::ParseError` (`PSC1003`) | notes | stable | CLI structured output includes `stage: parse`. Parser diagnostics currently do not publish related spans. |
+
+- Plain text prefixes, caret snippets, and parser recovery choices beyond the
+  selected stable primary span remain implementation tier unless a focused
+  contract test promotes them.
+- Non-parser diagnostic message, span, and notes fields remain implementation
+  tier until a later slice classifies that phase explicitly.
+
 ### Language ethos (v1)
 - **Simplified and coherent C:** keep the core small, explicit, and close to how the machine behaves when it matters.
 - **Sane subset of C++:** keep value types, structs, and explicit control flow, but avoid implicit conversions,

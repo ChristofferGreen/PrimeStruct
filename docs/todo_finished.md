@@ -6,6 +6,36 @@ Legend:
 Finished items are periodically archived here from `docs/todo.md`; section headers record the archive date.
 
 **Todo Completion (May 25, 2026)**
+- [x] TODO-4586: Define diagnostic stability tiers
+  - owner: ai
+  - created_at: 2026-05-24
+  - finished_at: 2026-05-25
+  - phase: Architecture hardening
+  - parallel_track: architecture-diagnostic-stability
+  - scope: Classify diagnostics into stable user-facing contracts and
+    implementation diagnostics for one compiler phase, then lock the stable
+    tier with code/message/span coverage.
+  - outcome:
+    - Selected parser diagnostics as the bounded phase for the first
+      diagnostic-stability slice.
+    - Added `DiagnosticStabilityTier` and `DiagnosticStabilityContract` to the
+      public diagnostics API, with `DiagnosticCode::ParseError` classified as
+      stable for code, normalized structured message, primary span, and notes.
+    - Left unclassified diagnostic phases at implementation tier for message,
+      span, and notes, while keeping diagnostic code strings stable.
+    - Documented the parser diagnostic stability matrix in
+      `docs/PrimeStruct.md`, including the implementation-tier status of plain
+      text snippets and non-parser diagnostics.
+    - Added a follow-up TODO for semantic call-resolution diagnostic tiering.
+  - validation:
+    - `cmake -S . -B build-release -DCMAKE_BUILD_TYPE=Release`
+    - `cmake --build build-release --target PrimeStruct_misc_tests -j 1`
+    - Passed 4 test cases / 51 assertions:
+      `cd build-release && ./PrimeStruct_misc_tests --test-case="parser diagnostic stability contract stays source locked,unclassified diagnostic fields stay implementation tier,parser diagnostic stability contract exposes code notes and source-unit spans,compile pipeline maps parser diagnostics through source units" --no-skip`
+  - stop_rule: Stopped after parser diagnostics gained documented stability
+    tiers and focused code/message/span/notes coverage; import, semantic, and
+    backend diagnostic phase tiering remain for future slices.
+
 - [x] TODO-4585: Manifest-drive stdlib module inclusion
   - owner: ai
   - created_at: 2026-05-24

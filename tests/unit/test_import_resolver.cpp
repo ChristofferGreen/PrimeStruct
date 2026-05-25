@@ -1,6 +1,7 @@
 #include "test_import_resolver_helpers.h"
 
 #include "primec/CompilePipeline.h"
+#include "primec/CliDriver.h"
 
 #include <algorithm>
 #include <string_view>
@@ -352,6 +353,56 @@ TEST_CASE("compile pipeline maps parser diagnostics through source units") {
   CHECK(importedRecord.primarySpan.file == absolutePathText(importedPath));
   CHECK(importedRecord.primarySpan.line == 2);
   CHECK(importedRecord.primarySpan.column == 1);
+}
+
+TEST_CASE("parser diagnostic stability contract exposes code notes and source-unit spans") {
+  auto baseDir = importResolverPath("source_diagnostics_parse_stability");
+  std::filesystem::remove_all(baseDir);
+  std::filesystem::create_directories(baseDir);
+
+  const std::string srcPath = writeFile(baseDir / "main.prime",
+                                        "import bad_primary\n"
+                                        "[return<int>]\n"
+                                        "main(){ return(0i32) }\n");
+
+  primec::Options options = diagnosticPipelineOptions(srcPath);
+  primec::CompilePipelineOutput output;
+  primec::CompilePipelineDiagnosticInfo diagnostics;
+  primec::CompilePipelineErrorStage errorStage = primec::CompilePipelineErrorStage::None;
+  std::string error;
+  CHECK_FALSE(primec::runCompilePipeline(options, output, errorStage, error, &diagnostics));
+  CHECK(errorStage == primec::CompilePipelineErrorStage::Parse);
+  REQUIRE(output.hasFailure);
+
+  const primec::CliFailure failure = primec::describeCompilePipelineFailure(output);
+  CHECK(failure.code == primec::DiagnosticCode::ParseError);
+  CHECK(failure.notes == std::vector<std::string>{"stage: parse"});
+  REQUIRE(failure.diagnosticInfo.has_value());
+  REQUIRE(failure.diagnosticInfo->records.size() == 1);
+
+  const primec::DiagnosticSinkRecord &record = failure.diagnosticInfo->records.front();
+  CHECK(record.message == "import path must be a slash path");
+  REQUIRE(record.hasPrimarySpan);
+  CHECK(record.primarySpan.file == absolutePathText(srcPath));
+  CHECK(record.primarySpan.line == 2);
+  CHECK(record.primarySpan.column == 1);
+  CHECK(record.primarySpan.endLine == 2);
+  CHECK(record.primarySpan.endColumn == 1);
+
+  const primec::DiagnosticRecord publicRecord =
+      primec::makeDiagnosticRecord(failure.code,
+                                   record.message,
+                                   srcPath,
+                                   failure.notes,
+                                   &record.primarySpan,
+                                   record.relatedSpans);
+  CHECK(publicRecord.code == "PSC1003");
+  CHECK(publicRecord.message == "import path must be a slash path");
+  CHECK(publicRecord.notes == std::vector<std::string>{"stage: parse"});
+  CHECK(publicRecord.primarySpan.file == absolutePathText(srcPath));
+  CHECK(publicRecord.primarySpan.line == 2);
+  CHECK(publicRecord.primarySpan.column == 1);
+  CHECK(publicRecord.relatedSpans.empty());
 }
 
 TEST_CASE("compile pipeline maps imported semantic diagnostics through source units") {

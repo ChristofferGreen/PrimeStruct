@@ -20,6 +20,18 @@ enum class DiagnosticCode {
   RuntimeError,
 };
 
+enum class DiagnosticStabilityTier {
+  Stable,
+  Implementation,
+};
+
+struct DiagnosticStabilityContract {
+  DiagnosticStabilityTier code = DiagnosticStabilityTier::Stable;
+  DiagnosticStabilityTier message = DiagnosticStabilityTier::Implementation;
+  DiagnosticStabilityTier primarySpan = DiagnosticStabilityTier::Implementation;
+  DiagnosticStabilityTier notes = DiagnosticStabilityTier::Implementation;
+};
+
 struct DiagnosticSpan {
   std::string file;
   int line = 0;
@@ -79,6 +91,10 @@ struct DiagnosticRecord {
 };
 
 std::string diagnosticCodeString(DiagnosticCode code);
+
+std::string diagnosticStabilityTierString(DiagnosticStabilityTier tier);
+
+DiagnosticStabilityContract diagnosticStabilityContract(DiagnosticCode code);
 
 DiagnosticRecord makeDiagnosticRecord(DiagnosticCode code,
                                       const std::string &message,

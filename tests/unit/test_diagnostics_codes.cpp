@@ -15,4 +15,27 @@ TEST_CASE("import diagnostic record emits stable code") {
   CHECK(record.message == "import failed");
 }
 
+TEST_CASE("parser diagnostic stability contract stays source locked") {
+  const primec::DiagnosticStabilityContract contract =
+      primec::diagnosticStabilityContract(primec::DiagnosticCode::ParseError);
+
+  CHECK(primec::diagnosticCodeString(primec::DiagnosticCode::ParseError) == "PSC1003");
+  CHECK(contract.code == primec::DiagnosticStabilityTier::Stable);
+  CHECK(contract.message == primec::DiagnosticStabilityTier::Stable);
+  CHECK(contract.primarySpan == primec::DiagnosticStabilityTier::Stable);
+  CHECK(contract.notes == primec::DiagnosticStabilityTier::Stable);
+  CHECK(primec::diagnosticStabilityTierString(contract.message) == "stable");
+}
+
+TEST_CASE("unclassified diagnostic fields stay implementation tier") {
+  const primec::DiagnosticStabilityContract contract =
+      primec::diagnosticStabilityContract(primec::DiagnosticCode::SemanticError);
+
+  CHECK(contract.code == primec::DiagnosticStabilityTier::Stable);
+  CHECK(contract.message == primec::DiagnosticStabilityTier::Implementation);
+  CHECK(contract.primarySpan == primec::DiagnosticStabilityTier::Implementation);
+  CHECK(contract.notes == primec::DiagnosticStabilityTier::Implementation);
+  CHECK(primec::diagnosticStabilityTierString(contract.message) == "implementation");
+}
+
 TEST_SUITE_END();

@@ -6,9 +6,17 @@
   focused validation. TODO-4581 and TODO-4584 focused root validation passed
   on 2026-05-25 after serial root cherry-picks. TODO-4582 and TODO-4585
   focused root validation passed on 2026-05-25 after serial root
-  cherry-picks.
+  cherry-picks. TODO-4586 focused worker validation passed on 2026-05-25
+  after the parent-scheduled heavy validation turn.
 
 ## Recent Test Runs
+- 2026-05-25 14:38 CEST | pass | mode: release | command:
+  `cmake -S . -B build-release -DCMAKE_BUILD_TYPE=Release`;
+  `cmake --build build-release --target PrimeStruct_misc_tests -j 1`;
+  `cd build-release && ./PrimeStruct_misc_tests --test-case="parser diagnostic stability contract stays source locked,unclassified diagnostic fields stay implementation tier,parser diagnostic stability contract exposes code notes and source-unit spans,compile pipeline maps parser diagnostics through source units" --no-skip`
+  | failures: none | notes: parent-scheduled TODO-4586 worker validation
+  passed 4 diagnostic-stability/source-unit parser test cases and 51
+  assertions.
 - 2026-05-25 14:12 CEST | pass | mode: release | command:
   `cmake --build build-release --target PrimeStruct_backend_runtime_tests -j 1`;
   `cd build-release && ./PrimeStruct_backend_runtime_tests --test-case="semantic-product consumer coverage matrix stays source locked" --no-skip`;

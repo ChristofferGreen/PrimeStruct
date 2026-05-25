@@ -195,6 +195,39 @@ std::string diagnosticCodeString(DiagnosticCode code) {
   }
 }
 
+std::string diagnosticStabilityTierString(DiagnosticStabilityTier tier) {
+  switch (tier) {
+    case DiagnosticStabilityTier::Stable:
+      return "stable";
+    case DiagnosticStabilityTier::Implementation:
+      return "implementation";
+  }
+  return "implementation";
+}
+
+DiagnosticStabilityContract diagnosticStabilityContract(DiagnosticCode code) {
+  DiagnosticStabilityContract contract;
+  switch (code) {
+    case DiagnosticCode::ParseError:
+      contract.message = DiagnosticStabilityTier::Stable;
+      contract.primarySpan = DiagnosticStabilityTier::Stable;
+      contract.notes = DiagnosticStabilityTier::Stable;
+      break;
+    case DiagnosticCode::ArgumentError:
+    case DiagnosticCode::ImportError:
+    case DiagnosticCode::TransformError:
+    case DiagnosticCode::UnsupportedDumpStage:
+    case DiagnosticCode::SemanticError:
+    case DiagnosticCode::LoweringError:
+    case DiagnosticCode::IrSerializeError:
+    case DiagnosticCode::EmitError:
+    case DiagnosticCode::OutputError:
+    case DiagnosticCode::RuntimeError:
+      break;
+  }
+  return contract;
+}
+
 void DiagnosticSink::reset() {
   if (report_ == nullptr) {
     return;
