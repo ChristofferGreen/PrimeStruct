@@ -1805,8 +1805,8 @@ TEST_CASE("todo queue and skipped doctest debt stay source locked") {
                   "  coverage snapshots in this file.") !=
         std::string::npos);
   CHECK(todo.find("### Ready Now\n\n"
-                  "- TODO-4592: Map parser and semantic diagnostics through source units | track: "
-                  "source-unit-provenance") !=
+                  "- TODO-4565: Add minimal scene graph and camera data model | track: "
+                  "scene-renderer") !=
         std::string::npos);
   CHECK(todo.find("- TODO-4565: Add minimal scene graph and camera data model | track: scene-renderer") !=
         std::string::npos);
@@ -1820,13 +1820,13 @@ TEST_CASE("todo queue and skipped doctest debt stay source locked") {
   CHECK(todo.find("- TODO-4573: Remove compiler-owned map literal lowering | track: map-special-case-deletion") !=
         std::string::npos);
   CHECK(todo.find("### Immediate Next 10\n\n"
-                  "- TODO-4593: Carry source-unit provenance into IR and VM debug maps") !=
+                  "- TODO-4566: Render flat and rounded-rect scene primitives to BGRA8") !=
         std::string::npos);
   CHECK(todo.find("### Priority Lanes") != std::string::npos);
-  CHECK(todo.find("Source-unit provenance ledger: TODO-4592 -> TODO-4593; TODO-4593 waits on") !=
+  CHECK(todo.find("Source-unit provenance ledger: TODO-4592 completed parser/semantic") !=
         std::string::npos);
-  CHECK(todo.find("TODO-4591\n"
-                  "  completed the inspectable expanded-source ledger that this lane builds on.") !=
+  CHECK(todo.find("TODO-4583 added the IR schema/version\n"
+                  "  contract that TODO-4593 must follow") !=
         std::string::npos);
   CHECK(todo.find("Scene graph renderer and UI presentation: TODO-4565 -> TODO-4566") !=
         std::string::npos);
@@ -1834,9 +1834,13 @@ TEST_CASE("todo queue and skipped doctest debt stay source locked") {
                   "  surface and TODO-4571 added the compiler-knowledge inventory categories") !=
         std::string::npos);
   CHECK(todo.find("### Execution Queue\n\n"
-                  "- TODO-4592: Map parser and semantic diagnostics through source units") !=
+                  "- TODO-4565: Add minimal scene graph and camera data model") !=
         std::string::npos);
   CHECK(todoFinished.find("TODO-4591: Add expanded-source provenance ledger") !=
+        std::string::npos);
+  CHECK(todoFinished.find("TODO-4592: Map parser and semantic diagnostics through source units") !=
+        std::string::npos);
+  CHECK(todo.find("TODO-4592: Map parser and semantic diagnostics through source units") ==
         std::string::npos);
   CHECK(todoFinished.find("Added public `ExpandedSource`, `SourceUnit`, and `SourceSegment` types") !=
         std::string::npos);
@@ -2482,13 +2486,15 @@ TEST_CASE("todo queue and skipped doctest debt stay source locked") {
   CHECK(todo.find("- TODO-4152") == std::string::npos);
   CHECK(todo.find("- TODO-4151") == std::string::npos);
   CHECK(todo.find("- TODO-4147") == std::string::npos);
-  CHECK(todo.find("Architecture hardening backlog: TODO-4581 -> TODO-4582, TODO-4583,") !=
+  CHECK(todo.find("TODO-4588 added the IR-preparation phase manifest") !=
         std::string::npos);
   CHECK(todo.find("TODO-4580: Replace private source-lock tests with public contracts") ==
         std::string::npos);
   CHECK(todoFinished.find("TODO-4580: Replace private source-lock tests with public contracts") !=
         std::string::npos);
-  CHECK(todo.find("TODO-4588: Add pass/phase invalidation manifest beyond semantics") !=
+  CHECK(todo.find("TODO-4588: Add pass/phase invalidation manifest beyond semantics") ==
+        std::string::npos);
+  CHECK(todoFinished.find("TODO-4588: Add pass/phase invalidation manifest beyond semantics") !=
         std::string::npos);
   CHECK(todo.find("| Semantic ownership boundary and graph/local-auto authority | none |") ==
         std::string::npos);

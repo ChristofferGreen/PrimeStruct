@@ -6,6 +6,42 @@ Legend:
 Finished items are periodically archived here from `docs/todo.md`; section headers record the archive date.
 
 **Todo Completion (May 25, 2026)**
+- [x] TODO-4588: Add pass/phase invalidation manifest beyond semantics
+  - owner: ai
+  - created_at: 2026-05-24
+  - finished_at: 2026-05-25
+  - phase: Architecture hardening
+  - parallel_track: architecture-phase-invalidation
+  - scope: Extend the semantic validation manifest idea to one IR
+    preparation, lowering, or emitter phase with explicit inputs, outputs,
+    mutation, and invalidation rules.
+  - outcome:
+    - Added `irPreparationPhaseManifest()` to the public IR preparation API,
+      covering semantic-product preflight, semantic-product-to-IR lowering,
+      lowered-IR validation, optional call inlining, post-inline validation,
+      and lowered-AST body release.
+    - Recorded required inputs, input/output ownership, mutation action,
+      invalidation notes, consumer notes, and optional-phase status for each
+      phase.
+    - Added backend-runtime manifest tests for ordered handoffs, lowering
+      ownership, optional inline invalidation, post-inline revalidation, and
+      AST body release ownership.
+    - Narrowed the compile-pipeline architecture source lock by replacing the
+      private `src/IrPreparation.cpp` semantic-product preflight assertion with
+      public manifest and behavior coverage.
+    - Documented the IR-preparation manifest update rule in
+      `docs/PrimeStruct.md` and refreshed the source-lock inventory.
+  - validation:
+    - `cmake -S . -B build-release -DCMAKE_BUILD_TYPE=Release`
+    - `cmake --build build-release --target PrimeStruct_backend_runtime_tests -j 1`
+    - Passed 4 backend-runtime manifest/source-lock cases / 360 assertions:
+      `cd build-release && ./PrimeStruct_backend_runtime_tests --test-case="ir preparation phase manifest pins ordered handoffs,ir preparation phase manifest documents inline invalidation,ir preparation helper requires semantic product before lowering,compile pipeline publishes an initial semantic product shell" --no-skip`
+    - `cmake --build build-release --target PrimeStruct_compile_run_tests -j 1`
+    - Passed the TODO/docs-lock case / 476 assertions:
+      `cd build-release && ./PrimeStruct_compile_run_tests --test-case="todo queue and skipped doctest debt stay source locked" --no-skip`
+  - stop_rule: Stopped after IR preparation gained a manifest-backed contract
+    and focused tests; no broader lowerer or emitter phase manifest was added.
+
 - [x] TODO-4587: Extract shared compile-time/runtime VM kernel boundary
   - owner: ai
   - created_at: 2026-05-24

@@ -1,15 +1,32 @@
 # Testcase Log
 
 ## Current Known Failures
-- None recorded. TODO-4580 and TODO-4583 focused release validation passed
-  on 2026-05-25 after parent-scheduled worker validation reruns and root
-  focused validation. TODO-4581 and TODO-4584 focused root validation passed
-  on 2026-05-25 after serial root cherry-picks. TODO-4582 and TODO-4585
-  focused root validation passed on 2026-05-25 after serial root
-  cherry-picks. TODO-4586 and TODO-4587 focused root validation passed
-  on 2026-05-25 after serial root cherry-picks.
+- none
 
 ## Recent Test Runs
+- 2026-05-25 15:58 CEST | pass | mode: release | command:
+  `cmake --build build-release --target PrimeStruct_compile_run_tests -j 1`;
+  `cd build-release && ./PrimeStruct_compile_run_tests --test-case="todo queue and skipped doctest debt stay source locked" --no-skip`
+  | failures: none | notes: parent validation passed the refreshed
+  TODO/docs-lock case, 1 case / 476 assertions.
+- 2026-05-25 15:58 CEST | fail | mode: release | command:
+  `cmake --build build-release --target PrimeStruct_compile_run_tests -j 1`;
+  `cd build-release && ./PrimeStruct_compile_run_tests --test-case="todo queue and skipped doctest debt stay source locked" --no-skip`
+  | failures: `todo queue and skipped doctest debt stay source locked` |
+  notes: parent validation selected 1 docs-lock case; stale TODO-4592 queue
+  expectations failed 5 assertions.
+- 2026-05-25 15:58 CEST | pass | mode: release | command:
+  `cmake --build build-release --target PrimeStruct_backend_runtime_tests -j 1`;
+  `cd build-release && ./PrimeStruct_backend_runtime_tests --test-case="ir preparation phase manifest pins ordered handoffs,ir preparation phase manifest documents inline invalidation,ir preparation helper requires semantic product before lowering,compile pipeline publishes an initial semantic product shell" --no-skip`
+  | failures: none | notes: parent validation passed the TODO-4588 runtime
+  manifest and architecture source-lock slice, 4 cases / 360 assertions.
+- 2026-05-25 15:48 CEST | fail | mode: release | command:
+  `cmake -S . -B build-release -DCMAKE_BUILD_TYPE=Release`;
+  `cmake --build build-release --target PrimeStruct_backend_runtime_tests -j 1`;
+  `cd build-release && ./PrimeStruct_backend_runtime_tests --test-case="ir preparation phase manifest pins ordered handoffs,ir preparation phase manifest documents inline invalidation,ir preparation helper requires semantic product before lowering,compile pipeline publishes an initial semantic product shell" --no-skip`
+  | failures: `compile pipeline publishes an initial semantic product shell`
+  | notes: parent validation selected 4 runtime cases; 3 passed and the
+  architecture source-lock case failed on four stale string expectations.
 - 2026-05-25 15:25 CEST | pass | mode: release | command:
   `cmake -S . -B build-release -DCMAKE_BUILD_TYPE=Release`;
   `cmake --build build-release --target PrimeStruct_misc_tests -j 1`;
@@ -8237,6 +8254,24 @@
 - 2026-05-12 17:28 local | fail | mode: release | command: `./scripts/compile.sh --release` | failures: 146 CTest targets | notes: baseline after preflight checkpoint failed; stabilization blocks TODO work
 
 ## Resolved Failures
+- [x] todo queue and skipped doctest debt stay source locked | resolved:
+  2026-05-25 15:58 CEST | validating command: `cmake --build
+  build-release --target PrimeStruct_compile_run_tests -j 1 && cd
+  build-release && ./PrimeStruct_compile_run_tests --test-case="todo queue
+  and skipped doctest debt stay source locked" --no-skip` | notes:
+  refreshed stale TODO-4592 queue expectations after TODO-4592 was moved to
+  `docs/todo_finished.md`.
+- [x] compile pipeline publishes an initial semantic product shell |
+  resolved: 2026-05-25 15:58 CEST | validating command: `cmake --build
+  build-release --target PrimeStruct_backend_runtime_tests -j 1 && cd
+  build-release && ./PrimeStruct_backend_runtime_tests --test-case="ir
+  preparation phase manifest pins ordered handoffs,ir preparation phase
+  manifest documents inline invalidation,ir preparation helper requires
+  semantic product before lowering,compile pipeline publishes an initial
+  semantic product shell" --no-skip` | notes: refreshed stale architecture
+  source-lock expectations for current SoA helper path construction,
+  published stdlib member resolution owner, and generic key/value lookup
+  contains helper.
 - [x] semantic product query and try projections expose stable public lookup
   keys | resolved: 2026-05-25 11:41 CEST | validating command:
   `cmake --build build-release --target PrimeStruct_backend_runtime_tests -j 1 && cd build-release && ./PrimeStruct_backend_runtime_tests --test-case="semantic product query and try projections expose stable public lookup keys,semantic snapshot traversal inventory avoids inactive next-candidate pointer" --no-skip`

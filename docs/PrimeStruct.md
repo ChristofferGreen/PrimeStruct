@@ -1727,6 +1727,29 @@ Current semantic validation pass manifest:
   needs another semantic rewrite, add it intentionally rather than assuming it
   inherits the full validation manifest.
 
+Current IR preparation phase manifest:
+- `prepareIrModule(...)` publishes its backend-facing phase contract through
+  `irPreparationPhaseManifest()` in `include/primec/IrPreparation.h`.
+  The manifest names the semantic-product preflight, semantic-product-to-IR
+  lowering, lowered-IR validation, optional call inlining, post-inline
+  validation, and lowered-AST body release phases.
+- Each entry records required inputs, input ownership, output ownership,
+  mutation action, invalidation notes, consumer notes, and whether the phase is
+  optional. In particular, `inline-ir-calls` is marked as an optional IR
+  mutation that invalidates the prior validation result, and
+  `validate-inlined-ir` is the required consumer before backend emitters see
+  inlined IR.
+- Future changes that add, remove, split, or reorder IR preparation lowering,
+  validation, inline, or cleanup phases must update the manifest and focused
+  manifest tests in the same change. Any phase that mutates IR or releases AST
+  storage must state which previous result is invalidated and which later phase
+  or backend consumer is allowed to use the new output.
+- The old private-source assertion that read `src/IrPreparation.cpp` only to
+  prove the semantic-product preflight has been replaced by public behavior
+  coverage and this manifest contract. Broader compile-pipeline architecture
+  source locks remain temporary migration guards until equivalent public
+  contracts exist for each remaining handoff.
+
 Current semantic phase handoff conformance gate:
 - The release doctest suite includes a compile-pipeline handoff gate that runs
   imported, transform-normalized source through validation, semantic-product

@@ -949,7 +949,6 @@ TEST_CASE("compile pipeline publishes an initial semantic product shell") {
   const std::string irPreparationHeader = readRepoFile("include/primec/IrPreparation.h");
   const std::string irLowererHeader = readRepoFile("include/primec/IrLowerer.h");
   const std::string compilePipelineSource = readRepoFile("src/CompilePipeline.cpp");
-  const std::string irPreparationSource = readRepoFile("src/IrPreparation.cpp");
   const std::string irLowererEntrySetup =
       readRepoFile("src/ir_lowerer/IrLowererLowerSetupEntryEffects.h");
   const std::string semanticPublicationBuildersHeader =
@@ -968,6 +967,8 @@ TEST_CASE("compile pipeline publishes an initial semantic product shell") {
   const std::string irCallResolution = readRepoFile("src/ir_lowerer/IrLowererCallResolution.cpp");
   const std::string irMethodResolution =
       readRepoFile("src/ir_lowerer/IrLowererSetupTypeMethodCallResolution.cpp");
+  const std::string collectionHelpersSource =
+      readRepoFile("src/ir_lowerer/IrLowererSetupTypeCollectionHelpers.cpp");
   const std::string bindingTypeHelpersSource =
       readRepoFile("src/ir_lowerer/IrLowererBindingTypeHelpers.cpp");
   const std::string structLayoutHelpersSource =
@@ -1099,7 +1100,8 @@ TEST_CASE("compile pipeline publishes an initial semantic product shell") {
   CHECK(irLowererHeader.find("const SemanticProgram *semanticProgram,") != std::string::npos);
   CHECK(irLowererHeader.find("return lower(program, nullptr, entryPath, defaultEffects, entryDefaultEffects, out, error, diagnosticInfo);") ==
         std::string::npos);
-  CHECK(irPreparationSource.find("semantic product is required for IR preparation") != std::string::npos);
+  CHECK(irPreparationHeader.find("irPreparationPhaseManifest()") != std::string::npos);
+  CHECK(irPreparationHeader.find("IrPreparationPhaseOwnership") != std::string::npos);
   CHECK(irLowererEntrySetup.find("semantic product is required for IR lowering") != std::string::npos);
   CHECK(cmake.find("src/semantics/SemanticPublicationBuilders.cpp") != std::string::npos);
   CHECK(cmake.find("src/semantics/SemanticsValidationPublicationOrchestration.cpp") !=
@@ -1363,9 +1365,11 @@ TEST_CASE("compile pipeline publishes an initial semantic product shell") {
         std::string::npos);
   CHECK(semanticsSnapshots.find("StdlibSurfaceId::CollectionsMapConstructors") ==
         std::string::npos);
-  CHECK(semanticsSnapshots.find("return std::pair<std::string, std::string>(\"soa_vector\"") !=
+  CHECK(semanticsSnapshots.find("internalSoaCollectionTypeName(), std::string(helperName)") !=
         std::string::npos);
-  CHECK(semanticsSnapshots.find("/std/collections/experimental_soa_vector/") !=
+  CHECK(semanticsSnapshots.find("experimentalSoaStorageTypePath(true) + \"/\"") !=
+        std::string::npos);
+  CHECK(semanticsSnapshots.find("experimentalSoaConversionsPrefix") !=
         std::string::npos);
   CHECK(semanticsSnapshots.find("takeSemanticPublicationSurfaceForSemanticProduct(") !=
         std::string::npos);
@@ -1444,7 +1448,7 @@ TEST_CASE("compile pipeline publishes an initial semantic product shell") {
         std::string::npos);
   CHECK(irCallResolution.find("findSemanticProductBridgePathChoiceStdlibSurfaceId(semanticProgram, expr)") !=
         std::string::npos);
-  CHECK(irCallResolution.find("resolvePublishedSemanticStdlibSurfaceMemberName(") !=
+  CHECK(collectionHelpersSource.find("resolvePublishedSemanticStdlibSurfaceMemberName(") !=
         std::string::npos);
   CHECK(irCallResolution.find("findStdlibSurfaceMetadataByBridgeKey(\"collections.vector_helpers\")") !=
         std::string::npos);
@@ -1522,7 +1526,8 @@ TEST_CASE("compile pipeline publishes an initial semantic product shell") {
         std::string::npos);
   CHECK(functionTableStepHeader.find("const SemanticProgram *semanticProgram = nullptr;") !=
         std::string::npos);
-  CHECK(callAccessHelpersHeader.find("bool emitMapLookupContains(") != std::string::npos);
+  CHECK(callAccessHelpersHeader.find("bool emitKeyValueLookupContains(") !=
+        std::string::npos);
   CHECK(callAccessHelpersHeader.find("bool emitBuiltinCanonicalMapInsertOverwriteOrGrow(") !=
         std::string::npos);
   CHECK(structLayoutHelpersHeader.find("const ::primec::SemanticProgram *semanticProgram,") !=

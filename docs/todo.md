@@ -67,7 +67,6 @@ This file is the live open-work queue for PrimeStruct.
 - TODO-4565: Add minimal scene graph and camera data model | track: scene-renderer | primary surface: stdlib/std/scene scene model
 - TODO-4572: Remove vector statement-helper compiler path | track: vector-special-case-deletion | primary surface: vector semantic/lowerer helpers
 - TODO-4573: Remove compiler-owned map literal lowering | track: map-special-case-deletion | primary surface: map literal semantics/lowering
-- TODO-4588: Add pass/phase invalidation manifest beyond semantics | track: architecture-phase-invalidation | primary surface: IR phase manifest contract
 - TODO-4589: Add architecture health dashboard script | track: architecture-health-dashboard | primary surface: scripts architecture dashboard
 
 ### Immediate Next 10
@@ -103,15 +102,14 @@ This file is the live open-work queue for PrimeStruct.
   TODO-4578 -> TODO-4579
 - Architecture hardening backlog: TODO-4586 completed parser diagnostic
   stability tiers. TODO-4587 completed the shared compile-time/runtime VM
-  kernel boundary. Remaining architecture leaves: TODO-4588, TODO-4589,
-  TODO-4594.
+  kernel boundary. TODO-4588 added the IR-preparation phase manifest.
+  Remaining architecture leaves: TODO-4589, TODO-4594.
 
 ### Execution Queue
 
 - TODO-4565: Add minimal scene graph and camera data model
 - TODO-4572: Remove vector statement-helper compiler path
 - TODO-4573: Remove compiler-owned map literal lowering
-- TODO-4588: Add pass/phase invalidation manifest beyond semantics
 - TODO-4589: Add architecture health dashboard script
 - TODO-4566: Render flat and rounded-rect scene primitives to BGRA8
 - TODO-4590: Add international text shaping and glyph atlas path
@@ -586,30 +584,6 @@ This file is the live open-work queue for PrimeStruct.
       metadata files, while C++ treats them as ordinary included stdlib code.
   - stop_rule: Stop once the zero gate is wired into routine validation and
     focused map/vector stdlib tests plus the new audit pass.
-
-- [ ] TODO-4588: Add pass/phase invalidation manifest beyond semantics
-  - owner: ai
-  - created_at: 2026-05-24
-  - phase: Architecture hardening
-  - parallel_track: architecture-phase-invalidation
-  - scope: Extend the semantic validation manifest idea to one IR
-    preparation, lowering, or emitter phase with explicit inputs, outputs,
-    mutation, and invalidation rules.
-  - implementation_notes: Start from `include/primec/SemanticValidationPlan.h`,
-    `src/semantics/SemanticValidationPlan.cpp`, `src/IrPreparation.cpp`, and
-    the selected phase implementation. Prefer a public header manifest rather
-    than source-locking private control flow.
-  - acceptance:
-    - One non-semantics phase publishes a manifest entry or manifest family with
-      phase name, input ownership, output ownership, mutation action, and
-      invalidation/consumer notes.
-    - Tests assert the manifest shape and at least one ordering or ownership
-      invariant relevant to the selected phase.
-    - Any existing source-lock assertion for the same phase is narrowed,
-      replaced, or explicitly documented as still temporary.
-    - Docs explain how future phase changes should update the manifest.
-  - stop_rule: Stop after one non-semantics phase has a manifest-backed
-    contract and focused tests.
 
 - [ ] TODO-4589: Add architecture health dashboard script
   - owner: ai

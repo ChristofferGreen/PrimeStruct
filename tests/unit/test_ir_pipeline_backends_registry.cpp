@@ -244,6 +244,18 @@ const primec::semantics::SemanticValidationPassManifestEntry *findSemanticValida
   return it == manifest.end() ? nullptr : &*it;
 }
 
+const primec::IrPreparationPhaseManifestEntry *findIrPreparationPhase(
+    std::string_view name) {
+  const auto &manifest = primec::irPreparationPhaseManifest();
+  const auto it = std::find_if(
+      manifest.begin(),
+      manifest.end(),
+      [name](const primec::IrPreparationPhaseManifestEntry &entry) {
+        return entry.name == name;
+      });
+  return it == manifest.end() ? nullptr : &*it;
+}
+
 const primec::SemanticProgramModuleResolvedArtifacts *findSemanticModuleArtifacts(
     const primec::SemanticProgram &semanticProgram,
     std::string_view moduleKey) {
@@ -385,6 +397,80 @@ TEST_CASE("all production primec emit kinds route through ir backend resolution"
   }
 
   CHECK_FALSE(primec::isPrimecEmitKind("metal"));
+}
+
+TEST_CASE("ir preparation phase manifest pins ordered handoffs") {
+  const auto &manifest = primec::irPreparationPhaseManifest();
+  REQUIRE(manifest.size() == 6);
+
+  std::vector<std::string_view> names;
+  names.reserve(manifest.size());
+  for (const primec::IrPreparationPhaseManifestEntry &entry : manifest) {
+    names.push_back(entry.name);
+    CHECK_FALSE(entry.requiredInputs.empty());
+    CHECK_FALSE(entry.invalidationNotes.empty());
+    CHECK_FALSE(entry.consumerNotes.empty());
+  }
+
+  const std::vector<std::string_view> expectedNames = {
+      "semantic-product-preflight",
+      "lower-semantic-product-to-ir",
+      "validate-lowered-ir",
+      "inline-ir-calls",
+      "validate-inlined-ir",
+      "release-lowered-ast-bodies",
+  };
+  CHECK(names == expectedNames);
+
+  const auto *lowering = findIrPreparationPhase("lower-semantic-product-to-ir");
+  REQUIRE(lowering != nullptr);
+  CHECK(lowering->inputOwnership ==
+        primec::IrPreparationPhaseOwnership::CompilePipelineAstAndSemanticProduct);
+  CHECK(lowering->outputOwnership ==
+        primec::IrPreparationPhaseOwnership::IrPreparationLoweredIr);
+  CHECK(lowering->action == primec::IrPreparationPhaseAction::CreatesOutput);
+  CHECK_FALSE(lowering->optional);
+  CHECK(std::string_view(lowering->requiredInputs).find("semantic-product facts") !=
+        std::string_view::npos);
+  CHECK(std::string_view(lowering->invalidationNotes).find("stale semantic-product facts") !=
+        std::string_view::npos);
+}
+
+TEST_CASE("ir preparation phase manifest documents inline invalidation") {
+  const auto *validateLowered = findIrPreparationPhase("validate-lowered-ir");
+  const auto *inlineCalls = findIrPreparationPhase("inline-ir-calls");
+  const auto *validateInlined = findIrPreparationPhase("validate-inlined-ir");
+  const auto *releaseAst = findIrPreparationPhase("release-lowered-ast-bodies");
+  REQUIRE(validateLowered != nullptr);
+  REQUIRE(inlineCalls != nullptr);
+  REQUIRE(validateInlined != nullptr);
+  REQUIRE(releaseAst != nullptr);
+
+  CHECK(validateLowered < inlineCalls);
+  CHECK(inlineCalls < validateInlined);
+  CHECK(validateInlined < releaseAst);
+
+  CHECK(inlineCalls->optional);
+  CHECK(inlineCalls->inputOwnership ==
+        primec::IrPreparationPhaseOwnership::IrPreparationValidatedIr);
+  CHECK(inlineCalls->outputOwnership ==
+        primec::IrPreparationPhaseOwnership::IrPreparationInlinedIr);
+  CHECK(inlineCalls->action == primec::IrPreparationPhaseAction::MutatesOutput);
+  CHECK(std::string_view(inlineCalls->invalidationNotes)
+            .find("invalidates the prior validation result") != std::string_view::npos);
+
+  CHECK(validateInlined->optional);
+  CHECK(validateInlined->inputOwnership ==
+        primec::IrPreparationPhaseOwnership::IrPreparationInlinedIr);
+  CHECK(validateInlined->outputOwnership ==
+        primec::IrPreparationPhaseOwnership::IrPreparationValidatedIr);
+  CHECK(validateInlined->action == primec::IrPreparationPhaseAction::ValidatesOnly);
+
+  CHECK(releaseAst->inputOwnership ==
+        primec::IrPreparationPhaseOwnership::CompilerAstStorage);
+  CHECK(releaseAst->action == primec::IrPreparationPhaseAction::ReleasesInputStorage);
+  CHECK(std::string_view(releaseAst->invalidationNotes).find("releases lowered AST bodies") !=
+        std::string_view::npos);
 }
 
 TEST_CASE("ir preparation helper requires semantic product before lowering") {
