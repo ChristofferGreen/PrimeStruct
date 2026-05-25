@@ -4,6 +4,21 @@
 - none
 
 ## Recent Test Runs
+- 2026-05-25 05:31 CEST | pass | mode: release | command:
+  `cmake --build build-release --target primec PrimeStruct_misc_tests PrimeStruct_compile_run_tests -j 1`;
+  `cd build-release && ./PrimeStruct_misc_tests --test-suite=primestruct.imports.resolver --order-by=file`;
+  `cd build-release && ./PrimeStruct_misc_tests --test-case="canonical map surface owns standalone stdlib implementation" --no-skip`;
+  `cd build-release && ./PrimeStruct_compile_run_tests --test-case="scene renderer ui producer contract stays source locked,ui command list adapter docs stay source locked,todo queue and skipped doctest debt stay source locked,vector map bridge boundary docs stay source locked,stdlib de-experimentalization policy docs stay source locked,small stdlib wrappers stay source locked to inferred locals,runs vm shared stdlib map conformance harness" --no-skip`
+  | failures: none | notes: parent root focused validation passed after
+  reconciling the parallel TODO docs-lock wording and making the new stdlib
+  auto-include provenance test resolve `../stdlib` when run from
+  `build-release`.
+- 2026-05-25 05:27 CEST | fail | mode: release | command:
+  `cd build-release && ./PrimeStruct_misc_tests --test-suite=primestruct.imports.resolver --order-by=file`
+  | failures: compile pipeline exposes stdlib auto include source units |
+  notes: direct root validation ran the misc binary from `build-release`, so
+  the new test resolved `stdlib` relative to the build directory and failed to
+  find matching stdlib modules.
 - 2026-05-25 04:15 CEST | pass | mode: release | command:
   `cmake -S . -B build-release -DCMAKE_BUILD_TYPE=Release && cmake --build build-release --target PrimeStruct_compile_run_tests -j 1 && cd build-release && ./PrimeStruct_compile_run_tests --test-case="scene renderer ui producer contract stays source locked,ui command list adapter docs stay source locked,todo queue and skipped doctest debt stay source locked" --no-skip`
   | failures: none | notes: configured missing build-release, rebuilt focused test binary, and passed 3 docs/source-lock cases.

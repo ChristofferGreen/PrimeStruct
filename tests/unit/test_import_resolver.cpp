@@ -156,12 +156,16 @@ TEST_CASE("compile pipeline exposes stdlib auto include source units") {
 
   primec::Options options;
   options.inputPath = srcPath;
-  options.importPaths = {std::filesystem::absolute("stdlib").string()};
+  const std::filesystem::path stdlibPath = std::filesystem::exists("stdlib")
+                                               ? std::filesystem::path("stdlib")
+                                               : std::filesystem::path("..") / "stdlib";
+  options.importPaths = {std::filesystem::absolute(stdlibPath).string()};
   options.dumpStage = "pre_ast";
 
   primec::CompilePipelineOutput output;
   primec::CompilePipelineErrorStage errorStage = primec::CompilePipelineErrorStage::None;
   std::string error;
+  INFO(error);
   REQUIRE(primec::runCompilePipeline(options, output, errorStage, error));
   CHECK(error.empty());
   CHECK(output.hasDumpOutput);

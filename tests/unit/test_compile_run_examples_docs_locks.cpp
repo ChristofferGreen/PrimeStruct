@@ -656,13 +656,14 @@ TEST_CASE("vector map bridge boundary docs stay source locked") {
   CHECK(todo.find("- TODO-4570: Retire duplicate map2 candidate surface") ==
         std::string::npos);
   CHECK(todo.find("map2 replacement candidate") == std::string::npos);
-  CHECK(todo.find("- TODO-4571: Add compiler-knowledge inventory for map/vector | track: collection-audit") !=
+  CHECK(todo.find("- TODO-4571: Add compiler-knowledge inventory for map/vector | track: collection-audit") ==
         std::string::npos);
   CHECK(todo.find("- TODO-4572: Remove vector statement-helper compiler path | track: vector-special-case-deletion") !=
         std::string::npos);
   CHECK(todo.find("- TODO-4573: Remove compiler-owned map literal lowering | track: map-special-case-deletion") !=
         std::string::npos);
-  CHECK(todo.find("Map/vector compiler-independence: TODO-4571 can run in") !=
+  CHECK(todo.find("Map/vector compiler-independence: TODO-4570 retired the duplicate `map2`\n"
+                  "  surface and TODO-4571 added the compiler-knowledge inventory categories") !=
         std::string::npos);
   CHECK(todo.find("TODO-4574: Remove vector count/access compiler classifiers") !=
         std::string::npos);
@@ -673,6 +674,8 @@ TEST_CASE("vector map bridge boundary docs stay source locked") {
   CHECK(todo.find("TODO-4044") == std::string::npos);
   CHECK(todo.find("TODO-4187") == std::string::npos);
   CHECK(todoFinished.find("TODO-4570: Retire duplicate map2 candidate surface") !=
+        std::string::npos);
+  CHECK(todoFinished.find("TODO-4571: Add compiler-knowledge inventory for map/vector") !=
         std::string::npos);
   CHECK(todoFinished.find("TODO-4187: Align vector-map cutover docs") !=
         std::string::npos);
@@ -741,7 +744,7 @@ TEST_CASE("stdlib de-experimentalization policy docs stay source locked") {
   CHECK(todo.find("## Open Tasks") != std::string::npos);
   CHECK(todo.find("- TODO-4570: Retire duplicate map2 candidate surface") ==
         std::string::npos);
-  CHECK(todo.find("- TODO-4571: Add compiler-knowledge inventory for map/vector") !=
+  CHECK(todo.find("- TODO-4571: Add compiler-knowledge inventory for map/vector") ==
         std::string::npos);
   CHECK(todo.find("Stdlib de-experimentalization: TODO-4059") == std::string::npos);
   CHECK(todo.find("TODO-4103: Rename the remaining experimental SoA storage namespace") ==
@@ -1810,7 +1813,7 @@ TEST_CASE("todo queue and skipped doctest debt stay source locked") {
   CHECK(todo.find("- TODO-4570: Retire duplicate map2 candidate surface") ==
         std::string::npos);
   CHECK(todo.find("map2 replacement candidate") == std::string::npos);
-  CHECK(todo.find("- TODO-4571: Add compiler-knowledge inventory for map/vector | track: collection-audit") !=
+  CHECK(todo.find("- TODO-4571: Add compiler-knowledge inventory for map/vector | track: collection-audit") ==
         std::string::npos);
   CHECK(todo.find("- TODO-4572: Remove vector statement-helper compiler path | track: vector-special-case-deletion") !=
         std::string::npos);
@@ -1827,7 +1830,8 @@ TEST_CASE("todo queue and skipped doctest debt stay source locked") {
         std::string::npos);
   CHECK(todo.find("Scene graph renderer and UI presentation: TODO-4565 -> TODO-4566") !=
         std::string::npos);
-  CHECK(todo.find("Map/vector compiler-independence: TODO-4571 can run in") !=
+  CHECK(todo.find("Map/vector compiler-independence: TODO-4570 retired the duplicate `map2`\n"
+                  "  surface and TODO-4571 added the compiler-knowledge inventory categories") !=
         std::string::npos);
   CHECK(todo.find("### Execution Queue\n\n"
                   "- TODO-4592: Map parser and semantic diagnostics through source units") !=
@@ -1841,6 +1845,8 @@ TEST_CASE("todo queue and skipped doctest debt stay source locked") {
   CHECK(todo.find("- [ ] TODO-4564: Lock scene renderer defaults and UI producer contract") ==
         std::string::npos);
   CHECK(todoFinished.find("TODO-4564: Lock scene renderer defaults and UI producer contract") !=
+        std::string::npos);
+  CHECK(todoFinished.find("TODO-4571: Add compiler-knowledge inventory for map/vector") !=
         std::string::npos);
   CHECK(todo.find("- TODO-4570: Retire duplicate map2 candidate surface") ==
         std::string::npos);
