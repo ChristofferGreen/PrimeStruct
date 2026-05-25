@@ -1,16 +1,29 @@
 # Testcase Log
 
 ## Current Known Failures
-- [~] TODO-4565 scene-model worker validation blocker | mode: release |
+- [~] Root TODO-4592 focused validation rebuild blocker | mode: release |
   command:
-  `cd workspaces/agent-scene-model-4565/PrimeStruct/build-release && ./PrimeStruct_compile_run_tests --test-case="runs vm scene model authoring deterministically,C++ emitter serializes scene model source deterministically,compiles and runs native scene model authoring deterministically,stdlib style boundary docs stay source locked,scene renderer ui producer contract stays source locked" --no-skip`
-  | first_seen: 2026-05-25 09:32 CEST | next: wait for the known parent tool
-  session to exit naturally or have the user stop it outside the repo workflow;
-  then rerun focused root validation for merged TODO-4592 and either resume or
-  abandon the dirty TODO-4565 worker patch. Do not use sandbox escalation,
-  process-inspection, or process-control commands for this blocker.
+  `cmake --build build-release --target primec PrimeStruct_misc_tests PrimeStruct_compile_run_tests -j 1`
+  | first_seen: 2026-05-25 10:18 CEST | next: rerun the focused rebuild or
+  a narrower `PrimeStruct_misc_tests` rebuild to determine whether the silent
+  compile/link stall is reproducible before running the merged TODO-4592
+  focused doctests. The earlier TODO-4565 scene-model worker validation
+  session was stopped and no longer blocks the one-heavy-command rule, but
+  that worker patch remains dirty, unvalidated, and not mergeable.
 
 ## Recent Test Runs
+- 2026-05-25 10:18 CEST | blocked | mode: release | command:
+  `cmake --build build-release --target primec PrimeStruct_misc_tests PrimeStruct_compile_run_tests -j 1`
+  | failures: command was stopped after several silent minutes while building
+  the focused test targets | notes: the build completed `primec` and reached
+  `PrimeStruct_misc_tests`, but root focused validation for merged TODO-4592
+  did not reach doctest execution.
+- 2026-05-25 10:18 CEST | stopped | mode: release | command:
+  `cd workspaces/agent-scene-model-4565/PrimeStruct/build-release && ./PrimeStruct_compile_run_tests --test-case="runs vm scene model authoring deterministically,C++ emitter serializes scene model source deterministically,compiles and runs native scene model authoring deterministically,stdlib style boundary docs stay source locked,scene renderer ui producer contract stays source locked" --no-skip`
+  | failures: unresolved long-running TODO-4565 worker validation |
+  notes: the parent stopped the known direct test-binary tool session after
+  user instruction to kill it; the dirty TODO-4565 worker patch is retained
+  for a later resume or abandon decision.
 - 2026-05-25 09:32 CEST | blocked | mode: release | command:
   `cd workspaces/agent-scene-model-4565/PrimeStruct/build-release && ./PrimeStruct_compile_run_tests --test-case="runs vm scene model authoring deterministically,C++ emitter serializes scene model source deterministically,compiles and runs native scene model authoring deterministically,stdlib style boundary docs stay source locked,scene renderer ui producer contract stays source locked" --no-skip`
   | failures: unresolved long-running TODO-4565 worker validation |
