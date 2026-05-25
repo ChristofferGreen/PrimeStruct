@@ -99,12 +99,14 @@ main() {
   CHECK(runCommand(nativePath) == 3);
 }
 
-TEST_CASE("compiles and runs map literal preserving assignment value") {
+TEST_CASE("compiles and runs map constructor preserving assignment value") {
   const std::string source = R"(
-[return<int>]
+import /std/collections/*
+
+[effects(heap_alloc), return<int>]
 main() {
   [i32 mut] value{0i32}
-  map<i32, i32>{1i32, assign(value, 2i32)}
+  /std/collections/map/map<i32, i32>(1i32, assign(value, 2i32))
   return(value)
 }
 )";

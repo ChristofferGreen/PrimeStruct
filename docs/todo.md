@@ -66,7 +66,7 @@ This file is the live open-work queue for PrimeStruct.
 
 - TODO-4566: Render flat and rounded-rect scene primitives to BGRA8 | track: scene-renderer | primary surface: scene renderer BGRA8 output
 - TODO-4572: Remove vector statement-helper compiler path | track: vector-special-case-deletion | primary surface: vector semantic/lowerer helpers
-- TODO-4573: Remove compiler-owned map literal lowering | track: map-special-case-deletion | primary surface: map literal semantics/lowering
+- TODO-4575: Remove map helper/access compiler classifiers | track: map-special-case-deletion | primary surface: map helper/access classifiers
 
 ### Immediate Next 10
 
@@ -75,7 +75,6 @@ This file is the live open-work queue for PrimeStruct.
 - TODO-4568: Emit scene nodes from the existing UI layout/widgets
 - TODO-4569: Present scene-rendered UI through software surface bridge
 - TODO-4574: Remove vector count/access compiler classifiers
-- TODO-4575: Remove map helper/access compiler classifiers
 - TODO-4576: Remove map backing-type compiler classification
 
 ### Priority Lanes
@@ -84,9 +83,10 @@ This file is the live open-work queue for PrimeStruct.
   scene model; TODO-4566 ->
   (TODO-4590 and TODO-4567) -> TODO-4568 -> TODO-4569
 - Map/vector compiler-independence: TODO-4570 retired the duplicate `map2`
-  surface and TODO-4571 added the compiler-knowledge inventory categories that
-  guide deletion scope. Vector path TODO-4572 -> TODO-4574 ->
-  TODO-4577; map path TODO-4573 -> TODO-4575 -> TODO-4576; join at
+  surface, TODO-4571 added the compiler-knowledge inventory categories that
+  guide deletion scope, and TODO-4573 removed compiler-owned map literal
+  lowering. Vector path TODO-4572 -> TODO-4574 -> TODO-4577; map path
+  TODO-4575 -> TODO-4576; join at
   TODO-4578 -> TODO-4579
 - Architecture hardening backlog: TODO-4586 completed parser diagnostic
   stability tiers. TODO-4587 completed the shared compile-time/runtime VM
@@ -98,13 +98,12 @@ This file is the live open-work queue for PrimeStruct.
 
 - TODO-4566: Render flat and rounded-rect scene primitives to BGRA8
 - TODO-4572: Remove vector statement-helper compiler path
-- TODO-4573: Remove compiler-owned map literal lowering
+- TODO-4575: Remove map helper/access compiler classifiers
 - TODO-4590: Add international text shaping and glyph atlas path
 - TODO-4567: Render first globally lit 3D SDF widget primitive
 - TODO-4568: Emit scene nodes from the existing UI layout/widgets
 - TODO-4569: Present scene-rendered UI through software surface bridge
 - TODO-4574: Remove vector count/access compiler classifiers
-- TODO-4575: Remove map helper/access compiler classifiers
 - TODO-4576: Remove map backing-type compiler classification
 - TODO-4577: Remove vector backing-type compiler classification
 - TODO-4578: Generalize stdlib surface registry away from map/vector IDs
@@ -316,39 +315,6 @@ This file is the live open-work queue for PrimeStruct.
     and focused vector tests pass; leave vector backing-layout classification
     and registry metadata cleanup to later leaves.
 
-- [ ] TODO-4573: Remove compiler-owned map literal lowering
-  - owner: ai
-  - created_at: 2026-05-24
-  - phase: Map/vector compiler-independence
-  - parallel_track: map-special-case-deletion
-  - inventory_categories: `map-literal-path`
-  - scope: Remove C++ semantic and lowering branches that treat `map` literal
-    construction as a compiler-owned collection literal instead of an ordinary
-    call into `/std/collections/map/*` `.prime` code.
-  - implementation_notes: Start with
-    `src/semantics/SemanticsValidatorExprCollectionLiterals.cpp`,
-    `src/semantics/SemanticsValidatorExprResolvedCallArguments.cpp`,
-    `src/ir_lowerer/IrLowererOperatorCollectionMutationHelpers.cpp`, and
-    compile-run tests that exercise `map<K, V>(...)`, `entry<K, V>(...)`, and
-    assignment-pair syntax. Prefer making source examples call explicit
-    `.prime` constructors/helpers over preserving a compiler-side map literal
-    fast path.
-  - acceptance:
-    - Production C++ no longer has `collectMapLiteralEntries`, map-literal
-      key/value validation diagnostics, or native lowering that constructs
-      map storage slots directly.
-    - Public map construction tests still pass through ordinary
-      `/std/collections/map/map` and `/std/collections/map/entry`
-      definitions.
-    - Invalid map construction reports diagnostics from ordinary function
-      resolution/type checking rather than map-literal-specific C++ branches.
-    - The compiler-knowledge inventory from TODO-4571, if present, shows the
-      map-literal category at zero.
-  - stop_rule: Stop once map construction is no longer a compiler-owned
-    literal/lowering path and focused map construction tests pass; leave map
-    helper/access classifiers to TODO-4575 and map backing-type recognition
-    cleanup to TODO-4576.
-
 - [ ] TODO-4574: Remove vector count/access compiler classifiers
   - owner: ai
   - created_at: 2026-05-24
@@ -389,11 +355,10 @@ This file is the live open-work queue for PrimeStruct.
   - owner: ai
   - created_at: 2026-05-24
   - phase: Map/vector compiler-independence
-  - depends_on: TODO-4573
   - inventory_categories: `map-helper-classifier`
   - scope: Remove compiler-owned map helper/access classifiers after map
-    construction literals have been routed through ordinary `.prime`
-    constructors and helpers.
+    construction has been routed through ordinary `.prime` constructors and
+    helpers.
   - implementation_notes: Start with `isKeyValueBuiltinName`,
     map-specific access/contains/tryAt/insert helper classifiers, map helper
     bridge-key dispatch checks, and map-specific access target resolution in

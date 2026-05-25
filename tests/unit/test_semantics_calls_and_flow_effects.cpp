@@ -1485,7 +1485,7 @@ main() {
   CHECK(error.find("array literal does not accept block arguments") != std::string::npos);
 }
 
-TEST_CASE("map literal block arguments require definition target") {
+TEST_CASE("map constructor block arguments require definition target") {
   const std::string source = R"(
 [effects(heap_alloc), return<int>]
 main() {

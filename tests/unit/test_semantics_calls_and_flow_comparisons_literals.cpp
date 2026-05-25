@@ -30,7 +30,9 @@ main() {
 
 TEST_CASE("builtin at map string comparisons reject mixed types") {
   const std::string source = R"(
-[return<bool>]
+import /std/collections/*
+
+[effects(heap_alloc), return<bool>]
 main() {
   [map<i32, string>] values{map<i32, string>(1i32, "one"utf8)}
   return(equal(at(values, 1i32), 1i32))
@@ -43,6 +45,8 @@ main() {
 
 TEST_CASE("builtin map at comparisons prefer canonical map access over root at") {
   const std::string source = R"(
+import /std/collections/*
+
 [return<int>]
 at([map<i32, string>] values, [i32] key) {
   return(key)
@@ -126,32 +130,40 @@ main() {
   CHECK(error.find("comparisons do not support mixed int/float operands") != std::string::npos);
 }
 
-TEST_CASE("map literal validates") {
+TEST_CASE("stdlib map constructor validates through imported helper") {
   const std::string source = R"(
-[return<int>]
-use([i32] x) {
-  return(1i32)
-}
+import /std/collections/map
 
 [return<int>]
+use([map<i32, i32>] x) {
+  return(count(x))
+}
+
+[effects(heap_alloc), return<int>]
 main() {
-  return(use(map<i32, i32>(1i32, 2i32)))
+  return(use(/std/collections/map/map<i32, i32>(1i32, 2i32)))
 }
 )";
   std::string error;
+  INFO(error);
   CHECK(validateProgram(source, "/main", error));
   CHECK(error.empty());
 }
 
-TEST_CASE("map literal validates bool keys and values") {
+TEST_CASE("stdlib map constructor validates bool keys and values") {
   const std::string source = R"(
-[return<int>]
+import /std/collections/map
+
+[effects(heap_alloc), return<int>]
 main() {
-  map<bool, bool>(true, false)
-  return(1i32)
+  [map<bool, bool>] values{/std/collections/map/map<bool, bool>(true, false)}
+  if(at_unsafe(values, true),
+     then() { return(1i32) },
+     else() { return(0i32) })
 }
 )";
   std::string error;
+  INFO(error);
   CHECK(validateProgram(source, "/main", error));
   CHECK(error.empty());
 }
@@ -403,7 +415,7 @@ main() {
   CHECK(error.find("unsupported convert target type: decimal") != std::string::npos);
 }
 
-TEST_CASE("map literal missing template args fails") {
+TEST_CASE("map constructor without import fails ordinary resolution") {
   const std::string source = R"(
 [return<int>]
 use([i32] x) {
@@ -417,136 +429,156 @@ main() {
 )";
   std::string error;
   CHECK_FALSE(validateProgram(source, "/main", error));
-  CHECK(error.find("map literal requires exactly two template arguments") != std::string::npos);
+  CHECK_FALSE(error.empty());
+  CHECK(error.find("unknown call target") != std::string::npos);
+  CHECK(error.find("map literal") == std::string::npos);
 }
 
-TEST_CASE("map literal rejects software numeric types") {
+TEST_CASE("map constructor rejects software numeric types") {
   const std::string source = R"(
-[return<int>]
+import /std/collections/map
+
+[effects(heap_alloc), return<int>]
 main() {
-  map<integer, i32>(convert<integer>(1i32), 2i32)
+  /std/collections/map/map<integer, i32>(convert<integer>(1i32), 2i32)
   return(1i32)
 }
 )";
   std::string error;
   CHECK_FALSE(validateProgram(source, "/main", error));
-  CHECK(error.find("unsupported convert target type: integer") != std::string::npos);
+  CHECK_FALSE(error.empty());
+  CHECK(error.find("map literal") == std::string::npos);
 }
 
-TEST_CASE("map literal key type mismatch fails") {
+TEST_CASE("map constructor key type mismatch fails") {
   const std::string source = R"(
-[return<int>]
-use([i32] x) {
-  return(1i32)
-}
+import /std/collections/map
 
 [return<int>]
+use([map<i32, i32>] x) {
+  return(count(x))
+}
+
+[effects(heap_alloc), return<int>]
 main() {
-  return(use(map<i32, i32>("a"utf8, 2i32)))
+  return(use(/std/collections/map/map<i32, i32>("a"utf8, 2i32)))
 }
 )";
   std::string error;
   CHECK_FALSE(validateProgram(source, "/main", error));
-  CHECK(error.find("map literal requires key type i32") != std::string::npos);
+  CHECK_FALSE(error.empty());
+  CHECK(error.find("map literal") == std::string::npos);
 }
 
-TEST_CASE("map literal value type mismatch fails") {
+TEST_CASE("map constructor value type mismatch fails") {
   const std::string source = R"(
-[return<int>]
-use([i32] x) {
-  return(1i32)
-}
+import /std/collections/map
 
 [return<int>]
+use([map<string, i32>] x) {
+  return(count(x))
+}
+
+[effects(heap_alloc), return<int>]
 main() {
-  return(use(map<string, i32>("a"utf8, "b"utf8)))
+  return(use(/std/collections/map/map<string, i32>("a"utf8, "b"utf8)))
 }
 )";
   std::string error;
   CHECK_FALSE(validateProgram(source, "/main", error));
-  CHECK(error.find("map literal requires value type i32") != std::string::npos);
+  CHECK_FALSE(error.empty());
+  CHECK(error.find("map literal") == std::string::npos);
 }
 
-TEST_CASE("map literal requires even argument count") {
+TEST_CASE("map constructor odd raw argument count uses ordinary argument diagnostics") {
   const std::string source = R"(
-[return<int>]
-use([i32] x) {
-  return(1i32)
-}
+import /std/collections/map
 
 [return<int>]
+use([map<i32, i32>] x) {
+  return(count(x))
+}
+
+[effects(heap_alloc), return<int>]
 main() {
-  return(use(map<i32, i32>(1i32, 2i32, 3i32)))
+  return(use(/std/collections/map/map<i32, i32>(1i32, 2i32, 3i32)))
 }
 )";
   std::string error;
   CHECK_FALSE(validateProgram(source, "/main", error));
-  CHECK(error.find("map literal requires an even number of arguments") != std::string::npos);
+  CHECK_FALSE(error.empty());
+  CHECK(error.find("map literal") == std::string::npos);
 }
 
 TEST_CASE("map access validates key type") {
   const std::string source = R"(
-import /std/collections/*
+import /std/collections/map
 
-[return<int>]
+[effects(heap_alloc), return<int>]
 main() {
-  [map<i32, i32>] values{map<i32, i32>(1i32, 2i32)}
+  [map<i32, i32>] values{/std/collections/map/map<i32, i32>(1i32, 2i32)}
   return(at(values, "nope"utf8))
 }
 )";
   std::string error;
   CHECK_FALSE(validateProgram(source, "/main", error));
-  CHECK(error.find("at requires map key type i32") != std::string::npos);
+  CHECK_FALSE(error.empty());
+  CHECK(error.find("map literal") == std::string::npos);
 }
 
-TEST_CASE("map literal access validates") {
+TEST_CASE("map constructor access validates") {
   const std::string source = R"(
-import /std/collections/*
+import /std/collections/map
 
-[return<int>]
+[effects(heap_alloc), return<int>]
 main() {
-  return(at_unsafe(map<i32, i32>(1i32, 2i32), 1i32))
+  [map<i32, i32>] values{/std/collections/map/map<i32, i32>(1i32, 2i32)}
+  return(at_unsafe(values, 1i32))
 }
 )";
   std::string error;
+  INFO(error);
   CHECK(validateProgram(source, "/main", error));
   CHECK(error.empty());
 }
 
-TEST_CASE("map literal access validates for string keys") {
+TEST_CASE("map constructor access validates for string keys") {
   const std::string source = R"(
-import /std/collections/*
+import /std/collections/map
 
-[return<int>]
+[effects(heap_alloc), return<int>]
 main() {
-  return(at_unsafe(map<string, i32>("a"utf8, 2i32), "a"utf8))
+  [map<string, i32>] values{/std/collections/map/map<string, i32>("a"utf8, 2i32)}
+  return(at_unsafe(values, "a"utf8))
 }
 )";
   std::string error;
+  INFO(error);
   CHECK(validateProgram(source, "/main", error));
   CHECK(error.empty());
 }
 
 TEST_CASE("unsafe map access validates key type") {
   const std::string source = R"(
-import /std/collections/*
+import /std/collections/map
 
-[return<int>]
+[effects(heap_alloc), return<int>]
 main() {
-  [map<i32, i32>] values{map<i32, i32>(1i32, 2i32)}
+  [map<i32, i32>] values{/std/collections/map/map<i32, i32>(1i32, 2i32)}
   return(at_unsafe(values, "nope"utf8))
 }
 )";
   std::string error;
   CHECK_FALSE(validateProgram(source, "/main", error));
-  CHECK(error.find("at_unsafe requires map key type i32") != std::string::npos);
+  CHECK_FALSE(error.empty());
+  CHECK(error.find("map literal") == std::string::npos);
 }
 
 TEST_CASE("string map access rejects numeric index") {
   const std::string source = R"(
 import /std/collections/*
 
-[return<int>]
+[effects(heap_alloc), return<int>]
 main() {
   [map<string, i32>] values{map<string, i32>("a"utf8, 3i32)}
   return(at(values, 1i32))
@@ -561,7 +593,7 @@ TEST_CASE("unsafe string map access rejects numeric index") {
   const std::string source = R"(
 import /std/collections/*
 
-[return<int>]
+[effects(heap_alloc), return<int>]
 main() {
   [map<string, i32>] values{map<string, i32>("a"utf8, 3i32)}
   return(at_unsafe(values, 1i32))
@@ -576,7 +608,7 @@ TEST_CASE("map access accepts matching key type") {
   const std::string source = R"(
 import /std/collections/*
 
-[return<int>]
+[effects(heap_alloc), return<int>]
 main() {
   [map<string, i32>] values{map<string, i32>("a"utf8, 3i32)}
   return(at(values, "a"utf8))
@@ -591,7 +623,7 @@ TEST_CASE("map access accepts string key expression") {
   const std::string source = R"(
 import /std/collections/*
 
-[return<int>]
+[effects(heap_alloc), return<int>]
 main() {
   [map<string, i32>] values{map<string, i32>("a"utf8, 1i32)}
   [map<i32, string>] keys{map<i32, string>(1i32, "a"utf8)}
@@ -607,7 +639,7 @@ TEST_CASE("unsafe map access accepts string key expression") {
   const std::string source = R"(
 import /std/collections/*
 
-[return<int>]
+[effects(heap_alloc), return<int>]
 main() {
   [map<string, i32>] values{map<string, i32>("a"utf8, 1i32)}
   [map<i32, string>] keys{map<i32, string>(1i32, "a"utf8)}

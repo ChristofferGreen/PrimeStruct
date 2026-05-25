@@ -393,13 +393,13 @@ main() {
   CHECK(result == 1);
 }
 
-TEST_CASE("ir lowerer rejects direct string-keyed map literal lowering") {
+TEST_CASE("ir lowerer rejects direct string-keyed map constructor lowering") {
   const std::string source = R"(
 import /std/collections/*
 
-[return<int>]
+[effects(heap_alloc), return<int>]
 main() {
-  [map<string, i32>] values{map<string, i32>("a"raw_utf8, 1i32, "b"raw_utf8, 2i32)}
+  [map<string, i32>] values{/std/collections/map/map<string, i32>("a"raw_utf8, 1i32, "b"raw_utf8, 2i32)}
   return(plus(/std/collections/map/count(values), /std/collections/map/at(values, "b"raw_utf8)))
 }
 )";

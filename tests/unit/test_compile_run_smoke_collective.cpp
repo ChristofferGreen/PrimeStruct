@@ -384,9 +384,11 @@ main() {
 
 TEST_CASE("compiles and runs binding inferring map type") {
   const std::string source = R"(
-[return<int>]
+import /std/collections/*
+
+[effects(heap_alloc), return<int>]
 main() {
-  [mut] values{map<i32, i32>{1i32, 2i32, 3i32, 4i32}}
+  [mut] values{/std/collections/map/map<i32, i32>(1i32, 2i32, 3i32, 4i32)}
   return(0i32)
 }
 )";
@@ -408,14 +410,11 @@ main() {
 
 TEST_CASE("compiles and runs map count") {
   const std::string source = R"(
-[return<int>]
-/std/collections/map/count([map<i32, i32>] values) {
-  return(2i32)
-}
+import /std/collections/*
 
-[return<int>]
+[effects(heap_alloc), return<int>]
 main() {
-  [map<i32, i32>] values{map<i32, i32>{1i32, 2i32, 3i32, 4i32}}
+  [map<i32, i32>] values{/std/collections/map/map<i32, i32>(1i32, 2i32, 3i32, 4i32)}
   return(plus(count(values), values.count()))
 }
 )";

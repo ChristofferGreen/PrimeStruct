@@ -107,7 +107,7 @@ TEST_CASE("fails on unterminated collection literal") {
   CHECK(error.find("unterminated collection literal") != std::string::npos);
 }
 
-TEST_CASE("fails on unterminated block comment in map literal") {
+TEST_CASE("fails on unterminated block comment in map constructor expression") {
   const std::string source = "map<i32,i32>{1i32=2i32 /* comment }";
   primec::TextFilterPipeline pipeline;
   std::string output;

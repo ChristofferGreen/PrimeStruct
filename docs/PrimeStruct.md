@@ -44,8 +44,8 @@ Pipeline operating rules:
   Other validation inside a single definition/execution body remains fail-fast.
 - Text transforms are configured via `--text-transforms=<list>`. The default list enables `collections`, `operators`,
   `implicit-utf8` (auto-appends `utf8` to bare string literals), and `implicit-i32` (auto-appends `i32` to bare
-  integer literals). Order matters: `collections` runs before `operators` so map literal `key=value` pairs are
-  rewritten as key/value arguments rather than assignment expressions.
+  integer literals). Order matters: `collections` runs before `operators` so array/vector/SoA bracket aliases are
+  normalized before generic operator rewriting.
 - Semantic transforms are configured via `--semantic-transforms=<list>`.
 - `--transform-list=<list>` is an auto-deducing shorthand that routes each transform name to its declared phase (text
   or semantic); ambiguous names are errors.
@@ -864,8 +864,8 @@ Planned non-template inference migration contract:
   dispatch or non-literal string validation can consult local string metadata.
   Known non-string graph facts suppress stale runtime/string-binding access
   paths; graph-known strings keep the existing string-index diagnostic.
-- Completed native collection literal string slice: native array/vector and
-  map literal string-element emission now asks graph-backed value-kind
+- Completed native collection literal string slice: native array/vector literals
+  and then-active map constructor string-element emission now ask graph-backed value-kind
   inference before literal-backed string metadata can select string-table
   storage. Known non-string graph facts suppress stale string-table metadata;
   no-fact literal-backed metadata remains the syntax-only compatibility
@@ -2572,7 +2572,7 @@ explicit `utf8`/`ascii` suffix.** `ascii` enforces 7-bit ASCII (the compiler rej
   - Executions accept the same argument syntax as calls, including labeled arguments (`[param] value`).
   - Nested forms inside execution arguments still follow their own rules (e.g., labeled entries are valid in
     `array<i32>{[first] 1i32}` only if that collection form explicitly supports them).
-  - Example: `execute_task([items] array<i32>{1i32, 2i32} [pairs] map<i32, i32>{1i32=2i32})`.
+  - Example: `execute_task([items] array<i32>{1i32, 2i32} [pairs] /std/collections/map/map<i32, i32>(1i32, 2i32))`.
   - **Definition order:** call sites may reference definitions that appear later in the same file or namespace. Name
     resolution runs after import expansion and namespace expansion; unresolved names remain diagnostics.
   - **Helper overloading:** non-struct definitions may reuse the same public helper path when their exact parameter
@@ -3000,9 +3000,11 @@ or a semicolon if you intended to index.
 - **`operators`:** desugars infix/prefix operators, comparisons, boolean ops, assignment, and increment/decrement
   (`++`/`--`) into canonical calls (`plus`, `less_than`, `assign`, `increment`, etc.).
   - Example: `a = b` rewrites to `assign(a, b)`.
-- **`collections`:** preserves `array<T>{...}` / `vector<T>{...}` / `map<K,V>{...}` as brace construction,
-  normalizes bracket aliases to braces, and rewrites map `key=value` entries into alternating key/value entries inside
-  the braces. Legacy compatibility lowering may still route call-shaped collection helpers through stdlib adapters.
+- **`collections`:** preserves `array<T>{...}` / `vector<T>{...}` / `soa<T>{...}` as brace construction and normalizes
+  bracket aliases to braces. Map construction is ordinary stdlib helper resolution, so use
+  `/std/collections/map/map<K,V>(...)` with `/std/collections/map/entry<K,V>(key, value)` helpers when the entry form is
+  clearer; bare helper aliases are import-surface dependent.
+  Legacy compatibility lowering may still route call-shaped collection helpers through stdlib adapters.
 - **`implicit-utf8`:** appends `utf8` to bare string literals.
 - **`implicit-i32`:** appends `i32` to bare integer literals (enabled by default).
   - Text transform arguments are limited to identifiers and literals (no nested envelopes or calls).
@@ -3450,8 +3452,10 @@ for(
     unchecked indexing (`value[index]` and `value.at(index)` are the same safe operation). Vector forms currently
     require `import /std/collections/*`.
   - **`print*`**: `print`, `print_line`, `print_error`, `print_line_error`.
-  - **Collections:** `array<T>{...}`, `vector<T>{...}`, `map<K, V>{...}`. Legacy call-shaped collection helpers remain
-    compatibility helper surfaces.
+  - **Collections:** `array<T>{...}`, `vector<T>{...}`, and stdlib map helpers such as
+    `/std/collections/map/map<K, V>(key, value, ...)` or
+    `/std/collections/map/map<K, V>(/std/collections/map/entry<K, V>(key, value))`. Legacy call-shaped collection helpers
+    remain compatibility helper surfaces.
   - **Pointer helpers:** `location`, `dereference`.
   - **Ownership helpers:** `move`, `clone`.
   - **Uninitialized helpers (draft):** `init`, `drop`, `take`, `borrow`.
@@ -4580,8 +4584,10 @@ Enum entry access uses static field syntax (`Colors.Blue`) and rewrites to brace
   their `Result`/`?` shape; `Buffer<T>(count)` routes through the gfx buffer helper rewrite. Gfx semantic tests also keep
   bare explicit bindings without `?` on the mismatch path, proving these are not plain value constructors.
 - **Collections:** brace forms such as `array<T>{...}`, `vector<T>{...}`,
-  `map<K, V>{...}`, and `soa<T>{...}` are preferred construction syntax.
-  Legacy call-shaped `array<T>(...)`, `vector<T>(...)`, `map<K, V>(...)`,
+  and `soa<T>{...}` are preferred construction syntax for compiler-owned collection envelopes.
+  Map construction is stdlib-owned and should use canonical `/std/collections/map/map<K, V>(...)`
+  and `/std/collections/map/entry<K, V>(key, value)` helpers, or bare helper aliases from import surfaces that publish
+  them. Legacy call-shaped `array<T>(...)`, `vector<T>(...)`,
   canonical `/std/collections/vector/vector<T>(...)`, and
   `/std/collections/map/map<K, V>(...)` spellings remain compatibility helper
   families registered through stdlib surface metadata; `soa_vector<T>(...)`
@@ -4852,16 +4858,17 @@ bad_set() {
     arg-packs now preserves `write*()` / `flush()` receivers plus `readByte(...)` `?` inference across direct calls
     plus pure/mixed spread forwarding, while wrapped `FileError` free-builtin named access remains on the existing
     named-argument rejection path.
-- **Collections:** `array<Type>{ ... }` / `array<Type>[ ... ]`, `vector<Type>{ ... }` / `vector<Type>[ ... ]`,
-  `map<Key,Value>{ ... }` / `map<Key,Value>[ ... ]` are brace-backed collection construction surfaces. The
-  `collections` text transform normalizes bracket aliases to braces and map `key=value` pairs to alternating key/value
-  entries; it no longer emits call-shaped collection construction text. Legacy call-shaped helpers such as
-  `array<Type>(...)`, `vector<Type>(...)`, and `map<Key,Value>(key1, value1, key2, value2, ...)` are compatibility
-  helper forms, not the preferred construction syntax. Map literals supply alternating key/value forms.
-  - Requires the `collections` text transform (enabled by default in `--text-transforms`).
-  - Map literal entries are read left-to-right as alternating key/value forms; an odd number of entries is a diagnostic.
-  - String keys are allowed in map literals (e.g., `map<string, i32>{"a"utf8=1i32}`), and nested forms inside braces are
-    rewritten as usual.
+- **Collections:** `array<Type>{ ... }` / `array<Type>[ ... ]`, `vector<Type>{ ... }` / `vector<Type>[ ... ]`, and
+  `soa<Type>{ ... }` are brace-backed collection construction surfaces. The `collections` text transform normalizes
+  bracket aliases to braces; it no longer owns map construction text. Map construction resolves through ordinary
+  stdlib helpers such as canonical `/std/collections/map/map<Key,Value>(key1, value1, key2, value2, ...)` or
+  `/std/collections/map/map<Key,Value>(/std/collections/map/entry<Key,Value>(key, value))` calls.
+  - Fully qualified `/std/collections/map/*` calls do not require an alias; bare `map(...)` and `entry(...)` helper
+    names are available only from import surfaces that publish them.
+  - Map constructor arguments are validated by the selected stdlib helper signature, so invalid arity and type errors
+    are ordinary call-resolution or argument-type diagnostics.
+  - String keys are allowed in map constructors (e.g.,
+    `/std/collections/map/map<string, i32>("a"utf8, 1i32)`) when the selected backend supports the resulting helper calls.
   - Collections can appear anywhere forms are allowed, including execution arguments.
   - Numeric/bool array literals (`array<i32>{...}`, `array<i64>{...}`, `array<u64>{...}`, `array<bool>{...}`) lower
     through IR/VM/native.
@@ -4897,11 +4904,11 @@ bad_set() {
     `tryAt` routes misses to `Result<ContainerError>` / `Result<T, ContainerError>` instead of the checked
     missing-key abort path and, on IR-backed backends, currently supports the same `i32`/`bool`/`f32`/`string` plus
     single-slot int-backed stdlib error-struct value subset as `Result.ok(value)`.
-  - Planned stdlib-owned map constructor surface: the internal map backing module now uses `map(entries...)`
-    where each item is an `Entry<K, V>`/`entry(key, value)` pair, and the remaining migration work is to move the
-    canonical imported constructor surface off the fixed-arity wrapper helpers onto that same entry-based variadic
-    shape. The corresponding literal rewrite target is therefore planned to become `map(entry(k1, v1), entry(k2, v2),
-    ...)` for the user-defined `.prime` implementation.
+  - Stdlib-owned map constructor surface: canonical map construction lives in
+    `stdlib/std/collections/map.prime` as `map(...)`, `entry(key, value)`, and
+    `/std/collections/map/map(...)` helpers over the internal `MapValue<K, V>`
+    backing implementation. Future variadic entry work can extend that helper
+    surface without reviving compiler-owned map literal lowering.
   - Current discard contract: builtin `pop` and `clear` are only defined for drop-trivial element types while
     container-owned destruction is still being specified. Drop-trivial currently includes scalar primitives, `string`,
     `Pointer<T>`, `Reference<T>`, arrays of drop-trivial elements, and concrete structs that do not define `Destroy*`
@@ -5019,9 +5026,9 @@ bad_set() {
   - Current builtin map key contract: `K` must resolve to the builtin `Comparable` subset (`i32`, `i64`, `u64`, `f32`,
     `f64`, `bool`, or `string`). Generic `map<K, V>` helpers may defer that check until monomorphisation, but concrete
     user-defined `Comparable` structs are not accepted by the builtin map runtime yet.
-  - Numeric/bool map literals (`map<i32, i32>{...}`, `map<u64, bool>{...}`) also lower through IR/VM/native
-    (construction, `count`, `at`, and `at_unsafe`).
-  - String-keyed map literals lower through VM/native when keys are string literals or bindings backed by literals;
+  - Numeric/bool map constructors lower through IR/VM/native via stdlib map helpers (construction, `count`, `at`, and
+    `at_unsafe`).
+  - String-keyed map constructors lower through VM/native when keys are string literals or bindings backed by literals;
     other string key expressions require the C++ emitter (which uses `std::string_view` keys).
 - **Conversions:** no implicit coercions. Use explicit executions (`convert<f32>(value)` or `bool{value}`) or custom
   transforms. The builtin `convert<T>(value)` is the default cast helper and supports `i32/i64/u64/bool/f32/f64` in the

@@ -320,6 +320,78 @@
   designated `DiagnosticSpan` initializer missing the `file` member | notes:
   focused source-diagnostics worker build exposed the initializer issue before
   any doctest binary ran.
+- 2026-05-25 23:13 CEST | pass | mode: release | command:
+  `cmake --build build-release --target PrimeStruct_compile_run_tests -j 1`;
+  `cd build-release && ./PrimeStruct_compile_run_tests --test-case="compiles and runs flat map constructor,compiles and runs map entry constructor,compiles and runs canonical map constructor,compiles and runs map constructor with named-arg value,runs vm with map constructor,runs vm with map constructor count helper,rejects vm map constructor odd args,rejects vm map constructor type mismatch,compiles and runs map constructor preserving assignment value,compiles and runs binding inferring map type,compiles and runs map count,runs vm with array vector bracket literals and map constructor,rejects string-keyed map constructors in C++ emitter,rejects string-keyed map constructor indexing sugar in C++ emitter,compiles and runs paired map constructor,rejects native map constructor odd args,rejects native map constructor type mismatch,rejects native string-keyed map constructor access expressions,rejects native map constructor string binding key access expressions,rejects native map constructor string key from argv binding" --no-skip`;
+  `cd build-release && ./PrimeStruct_compile_run_tests --test-case="compiles surface examples to IR,vector map bridge boundary docs stay source locked,todo queue and skipped doctest debt stay source locked" --no-skip`
+  | failures: none | notes: parent validation passed the final focused
+  compile-run map constructor slice (20 cases, 84 assertions) plus 3
+  docs/example lock cases.
+- 2026-05-25 23:13 CEST | fail | mode: release | command:
+  `cmake --build build-release --target PrimeStruct_compile_run_tests -j 1`;
+  `cd build-release && ./PrimeStruct_compile_run_tests --test-case="compiles and runs flat map constructor,compiles and runs map entry constructor,compiles and runs canonical map constructor,compiles and runs map constructor with named-arg value,runs vm with map constructor,runs vm with map constructor count helper,rejects vm map constructor odd args,rejects vm map constructor type mismatch,compiles and runs map constructor preserving assignment value,compiles and runs binding inferring map type,compiles and runs map count,runs vm with array vector bracket literals and map constructor,compiles and runs string-keyed map constructors in C++ emitter,rejects string-keyed map constructor indexing sugar in C++ emitter,compiles and runs paired map constructor,rejects native map constructor odd args,rejects native map constructor type mismatch,rejects native string-keyed map constructor access expressions,rejects native map constructor string binding key access expressions,rejects native map constructor string key from argv binding" --no-skip`
+  | failures: compiles and runs string-keyed map constructors in C++ emitter |
+  notes: build passed and 19 of 20 cases passed; construction plus
+  `count(values)` still hit the existing `--emit=exe` native string-indexing
+  limitation, so this case is now explicit rejection coverage.
+- 2026-05-25 22:59 CEST | fail | mode: release | command:
+  `cmake --build build-release --target PrimeStruct_compile_run_tests -j 1`;
+  `cd build-release && ./PrimeStruct_compile_run_tests --test-case="compiles and runs flat map constructor,compiles and runs map entry constructor,compiles and runs canonical map constructor,compiles and runs map constructor with named-arg value,runs vm with map constructor,runs vm with map constructor count helper,rejects vm map constructor odd args,rejects vm map constructor type mismatch,compiles and runs map constructor preserving assignment value,compiles and runs binding inferring map type,compiles and runs map count,runs vm with array vector bracket literals and map constructor,compiles and runs string-keyed map constructors in C++ emitter,compiles and runs string-keyed map constructor with indexing sugar in C++ emitter,compiles and runs paired map constructor,rejects native map constructor odd args,rejects native map constructor type mismatch,rejects native string-keyed map constructor access expressions,rejects native map constructor string binding key access expressions,rejects native map constructor string key from argv binding" --no-skip`
+  | failures: 2 string-keyed map constructor compile-run cases | notes: rebuild
+  passed; the remaining failures both used `values["b"utf8]` in the
+  `--emit=exe` path and hit the existing native string-indexing limitation.
+- 2026-05-25 22:53 CEST | fail | mode: release | command:
+  `cmake --build build-release --target PrimeStruct_compile_run_tests -j 1`;
+  `cd build-release && ./PrimeStruct_compile_run_tests --test-case="compiles and runs flat map constructor,compiles and runs map entry constructor,compiles and runs canonical map constructor,compiles and runs map constructor with named-arg value,runs vm with map constructor,runs vm with map constructor count helper,rejects vm map constructor odd args,rejects vm map constructor type mismatch,compiles and runs map constructor preserving assignment value,compiles and runs binding inferring map type,compiles and runs map count,runs vm with array vector bracket literals and map constructor,compiles and runs string-keyed map constructors in C++ emitter,compiles and runs string-keyed map constructor with indexing sugar in C++ emitter,compiles and runs paired map constructor,rejects native map constructor odd args,rejects native map constructor type mismatch,rejects native string-keyed map constructor access expressions,rejects native map constructor string binding key access expressions,rejects native map constructor string key from argv binding" --no-skip`
+  | failures: 13 of 20 map constructor compile-run cases | notes: rebuild
+  passed; failures were dominated by stale bare `map(...)` sources reporting
+  `unknown call target: map`, with one canonical constructor positive failing
+  on direct temporary map access after retargeting.
+- 2026-05-25 22:53 CEST | pass | mode: release | command:
+  `cmake --build build-release --target PrimeStruct_backend_ir_tests -j 1`;
+  `cd build-release && ./PrimeStruct_backend_ir_tests --test-case="ir lowers stdlib map constructor call as statement,ir lowerer rejects direct string-keyed map constructor lowering" --no-skip`
+  | failures: none | notes: parent validation confirmed the focused backend IR
+  map constructor slice passes after retargeting stale sources and relaxing the
+  statement-case single-function assertion.
+- 2026-05-25 22:46 CEST | fail | mode: release | command:
+  `cmake --build build-release --target PrimeStruct_backend_ir_tests -j 1`;
+  `cd build-release && ./PrimeStruct_backend_ir_tests --test-case="ir lowers stdlib map constructor call as statement,ir lowerer rejects direct string-keyed map constructor lowering" --no-skip`
+  | failures: ir lowers stdlib map constructor call as statement | notes:
+  rebuild passed; string-keyed rejection passed, and the remaining failure was
+  the stale `module.functions.size() == 1` assertion because the fully
+  qualified stdlib constructor path lowers 16 functions.
+- 2026-05-25 22:44 CEST | fail | mode: release | command:
+  `cmake --build build-release --target PrimeStruct_backend_ir_tests -j 1`;
+  `cd build-release && ./PrimeStruct_backend_ir_tests --test-case="ir lowers stdlib map constructor call as statement,ir lowerer rejects direct string-keyed map constructor lowering" --no-skip`
+  | failures: 2 backend IR map constructor cases | notes: rebuild passed; both
+  fatal preconditions failed before lowering because stale sources still called
+  bare `map(...)`.
+- 2026-05-25 22:44 CEST | pass | mode: release | command:
+  `cmake --build build-release --target PrimeStruct_semantics_tests -j 1`;
+  `cd build-release && ./PrimeStruct_semantics_tests --test-case="stdlib map constructor validates through imported helper,stdlib map constructor validates bool keys and values,map constructor without import fails ordinary resolution,map constructor rejects software numeric types,map constructor key type mismatch fails,map constructor value type mismatch fails,map constructor odd raw argument count uses ordinary argument diagnostics,map constructor odd argument count uses ordinary diagnostics,map constructor access validates,map constructor access validates for string keys,map constructor block arguments require definition target" --no-skip`;
+  `cd build-release && ./PrimeStruct_text_filter_tests --test-suite=primestruct.text_filters.pipeline.collections --no-skip`;
+  `cd build-release && ./PrimeStruct_text_filter_tests --test-suite=primestruct.text_filters.pipeline.rewrites --no-skip`
+  | failures: none | notes: parent validation confirmed the focused semantics
+  map constructor slice and text-filter collection/rewrite suites pass after
+  retargeting stale bare map constructor sources.
+- 2026-05-25 22:40 CEST | fail | mode: release | command:
+  `cmake --build build-release --target PrimeStruct_semantics_tests -j 1`;
+  `cd build-release && ./PrimeStruct_semantics_tests --test-case="stdlib map constructor validates through imported helper,stdlib map constructor validates bool keys and values,map constructor without import fails ordinary resolution,map constructor rejects software numeric types,map constructor key type mismatch fails,map constructor value type mismatch fails,map constructor odd raw argument count uses ordinary argument diagnostics,map constructor odd argument count uses ordinary diagnostics,map constructor access validates,map constructor access validates for string keys,map constructor block arguments require definition target" --no-skip`
+  | failures: 4 positive map constructor semantics cases | notes: rebuild
+  passed; exact `/std/collections/map` import sources still logged
+  `unknown call target: map`, so the focused constructor calls now use the
+  fully qualified stdlib helper.
+- 2026-05-25 22:35 CEST | fail | mode: release | command:
+  `cmake --build build-release --target PrimeStruct_semantics_tests -j 1`;
+  `cd build-release && ./PrimeStruct_semantics_tests --test-case="stdlib map constructor validates through imported helper,stdlib map constructor validates bool keys and values,map constructor without import fails ordinary resolution,map constructor rejects software numeric types,map constructor key type mismatch fails,map constructor value type mismatch fails,map constructor odd raw argument count uses ordinary argument diagnostics,map constructor odd argument count uses ordinary diagnostics,map constructor access validates,map constructor access validates for string keys,map constructor block arguments require definition target" --no-skip`
+  | failures: 4 positive map constructor semantics cases | notes: rebuild
+  passed; remaining validation failures logged `unknown call target: map` from
+  bare `map` constructor calls after the first import retarget attempt.
+- 2026-05-25 22:08 CEST | fail | mode: release | command:
+  `cd build-release && ./PrimeStruct_semantics_tests --test-case="stdlib map constructor validates through imported helper,stdlib map constructor validates bool keys and values,map constructor without import fails ordinary resolution,map constructor rejects software numeric types,map constructor key type mismatch fails,map constructor value type mismatch fails,map constructor odd raw argument count uses ordinary argument diagnostics,map constructor odd argument count uses ordinary diagnostics,map constructor access validates,map constructor access validates for string keys,map constructor block arguments require definition target" --no-skip`
+  | failures: 10 of 11 map constructor semantics cases | notes: positives
+  failed validation and negative cases still asserted old map-literal-specific
+  diagnostics instead of ordinary helper resolution/type-checking errors.
 - 2026-05-25 05:31 CEST | pass | mode: release | command:
   `cmake --build build-release --target primec PrimeStruct_misc_tests PrimeStruct_compile_run_tests -j 1`;
   `cd build-release && ./PrimeStruct_misc_tests --test-suite=primestruct.imports.resolver --order-by=file`;
@@ -8433,6 +8505,29 @@
   | notes: TODO-4580 replacement contract now explicitly requests query/try
   semantic-product collectors and filters to the intended lookup operands
   through interned public fact keys.
+- [x] PrimeStruct_compile_run_tests map constructor focused slice | resolved:
+  2026-05-25 23:13 CEST | validating command:
+  `cmake --build build-release --target PrimeStruct_compile_run_tests -j 1`;
+  `cd build-release && ./PrimeStruct_compile_run_tests --test-case="compiles and runs flat map constructor,compiles and runs map entry constructor,compiles and runs canonical map constructor,compiles and runs map constructor with named-arg value,runs vm with map constructor,runs vm with map constructor count helper,rejects vm map constructor odd args,rejects vm map constructor type mismatch,compiles and runs map constructor preserving assignment value,compiles and runs binding inferring map type,compiles and runs map count,runs vm with array vector bracket literals and map constructor,rejects string-keyed map constructors in C++ emitter,rejects string-keyed map constructor indexing sugar in C++ emitter,compiles and runs paired map constructor,rejects native map constructor odd args,rejects native map constructor type mismatch,rejects native string-keyed map constructor access expressions,rejects native map constructor string binding key access expressions,rejects native map constructor string key from argv binding" --no-skip`;
+  `cd build-release && ./PrimeStruct_compile_run_tests --test-case="compiles surface examples to IR,vector map bridge boundary docs stay source locked,todo queue and skipped doctest debt stay source locked" --no-skip`
+  | notes: parent validation passed the final 20-case map constructor
+  compile-run slice plus 3 docs/source-lock cases after string-keyed
+  `--emit=exe` constructor and indexing coverage became explicit rejection
+  coverage for the existing native string-indexing limitation.
+- [x] PrimeStruct_backend_ir_tests map constructor focused slice | resolved:
+  2026-05-25 22:53 CEST | validating command:
+  `cmake --build build-release --target PrimeStruct_backend_ir_tests -j 1`;
+  `cd build-release && ./PrimeStruct_backend_ir_tests --test-case="ir lowers stdlib map constructor call as statement,ir lowerer rejects direct string-keyed map constructor lowering" --no-skip`
+  | notes: parent validation passed the 2-case backend IR slice after focused
+  fixtures used fully qualified stdlib constructors and checked the entry
+  function instead of a single-function module shape.
+- [x] PrimeStruct_semantics_tests map constructor focused slice | resolved:
+  2026-05-25 22:44 CEST | validating command:
+  `cmake --build build-release --target PrimeStruct_semantics_tests -j 1`;
+  `cd build-release && ./PrimeStruct_semantics_tests --test-case="stdlib map constructor validates through imported helper,stdlib map constructor validates bool keys and values,map constructor without import fails ordinary resolution,map constructor rejects software numeric types,map constructor key type mismatch fails,map constructor value type mismatch fails,map constructor odd raw argument count uses ordinary argument diagnostics,map constructor odd argument count uses ordinary diagnostics,map constructor access validates,map constructor access validates for string keys,map constructor block arguments require definition target" --no-skip`
+  | notes: parent validation passed 11 focused map constructor cases after
+  constructor sources were retargeted to ordinary fully qualified stdlib helper
+  calls.
 - [x] runs vm shared stdlib map conformance harness | resolved:
   2026-05-25 05:09 CEST | validating command:
   `cmake --build build-release --target PrimeStruct_compile_run_tests -j 1 && cd build-release && ./PrimeStruct_compile_run_tests --test-case="runs vm shared stdlib map conformance harness" --no-skip`;

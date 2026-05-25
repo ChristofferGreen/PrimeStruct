@@ -373,6 +373,33 @@ Finished items are periodically archived here from `docs/todo.md`; section heade
     - `cd build-release && ./PrimeStruct_compile_run_tests --test-case="source lock inventory keeps replacement surfaces explicit" --no-skip`
   - stop_rule: Stopped after one source-lock cluster was narrowed; no
     repo-wide source-lock migration was attempted in this slice.
+- [x] TODO-4573: Remove compiler-owned map literal lowering
+  - owner: ai
+  - created_at: 2026-05-24
+  - finished_at: 2026-05-25
+  - phase: Map/vector compiler-independence
+  - parallel_track: map-special-case-deletion
+  - scope: Remove C++ semantic and lowering branches that treat `map` literal
+    construction as a compiler-owned collection literal instead of an ordinary
+    call into `/std/collections/map/*` `.prime` code.
+  - outcome:
+    - Deleted `collectMapLiteralEntries`, `isMapLiteralAssignPair`, map-literal
+      key/value diagnostics, and native direct map storage-slot emission from
+      the production semantic, lowering, and text-filter paths.
+    - Retargeted public map construction examples and focused tests to
+      imported stdlib `map(...)`, `entry(...)`, and canonical
+      `/std/collections/map/map(...)` helper calls.
+    - Locked the compiler-knowledge inventory's `map-literal-path` category at
+      zero while leaving map helper/access classifiers and backing-type
+      classifiers to the later deletion leaves.
+  - validation:
+    - Focused validation was selected for stdlib map ownership locks,
+      semantics diagnostics, text-filter map ownership, VM/native map
+      constructor compile-run coverage, and docs/source locks; broad release
+      validation remains parent-owned.
+  - stop_rule: Stopped once map construction was no longer a compiler-owned
+    literal/lowering path; TODO-4575 owns helper/access classifiers and
+    TODO-4576 owns backing-type recognition cleanup.
 
 - [x] TODO-4591: Add expanded-source provenance ledger
   - owner: ai

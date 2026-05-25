@@ -459,7 +459,7 @@ main() {
   CHECK(out.find("/vector/count") != std::string::npos);
 }
 
-TEST_CASE("runs vm with array vector bracket literals and map braces") {
+TEST_CASE("runs vm with array vector bracket literals and map constructor") {
   const std::string source = R"(
 import /std/collections/*
 
@@ -467,7 +467,7 @@ import /std/collections/*
 main() {
   [array<i32>] values{array<i32>[1i32, 2i32]}
   [vector<i32>] list{vector<i32>[3i32, 4i32]}
-  [map<i32, i32>] table{map<i32, i32>{5i32=6i32}}
+  [map<i32, i32>] table{/std/collections/map/map<i32, i32>(5i32, 6i32)}
   return(plus(plus(values.count(), /std/collections/vector/count<i32>(list)), count(table)))
 }
 )";
@@ -694,9 +694,9 @@ TEST_CASE("runs vm with map at helper") {
   const std::string source = R"(
 import /std/collections/*
 
-[return<int>]
+[effects(heap_alloc), return<int>]
 main() {
-  [map<i32, i32>] values{map<i32, i32>{1i32=2i32, 3i32=4i32}}
+  [map<i32, i32>] values{map<i32, i32>(1i32, 2i32, 3i32, 4i32)}
   return(at(values, 3i32))
 }
 )";
@@ -709,9 +709,9 @@ TEST_CASE("runs vm with map at_unsafe helper") {
   const std::string source = R"(
 import /std/collections/*
 
-[return<int>]
+[effects(heap_alloc), return<int>]
 main() {
-  [map<i32, i32>] values{map<i32, i32>{1i32=2i32, 3i32=4i32}}
+  [map<i32, i32>] values{map<i32, i32>(1i32, 2i32, 3i32, 4i32)}
   return(at_unsafe(values, 1i32))
 }
 )";

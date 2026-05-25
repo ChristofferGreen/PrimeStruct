@@ -142,12 +142,14 @@ main([array<string>] args) {
   CHECK(sawUnsafeDecoded);
 }
 
-TEST_CASE("ir lowers map literal call as statement") {
+TEST_CASE("ir lowers stdlib map constructor call as statement") {
   const std::string source = R"(
-[return<int>]
+import /std/collections/*
+
+[effects(heap_alloc), return<int>]
 main() {
   [i32 mut] value{0i32}
-  map<i32, i32>(1i32, assign(value, 7i32))
+  /std/collections/map/map<i32, i32>(1i32, assign(value, 7i32))
   return(value)
 }
 )";
@@ -155,7 +157,9 @@ main() {
   primec::IrModule module;
   REQUIRE(parseValidateAndLower(source, module, error));
   CHECK(error.empty());
-  REQUIRE(module.functions.size() == 1);
+  REQUIRE(module.entryIndex >= 0);
+  REQUIRE(static_cast<size_t>(module.entryIndex) < module.functions.size());
+  CHECK(module.functions[static_cast<size_t>(module.entryIndex)].name == "/main");
 
   primec::Vm vm;
   uint64_t result = 0;

@@ -184,8 +184,10 @@ main() {
             "/std/math/Mat3") != std::string::npos);
 }
 
-TEST_CASE("rejects string-keyed map literal in C++ emitter") {
+TEST_CASE("rejects string-keyed map constructor in C++ emitter") {
   const std::string source = R"(
+import /std/collections/*
+
 [return<int>]
 main() {
   [map<string, i32>] values{map<string, i32>("a"utf8, 1i32, "b"utf8, 2i32)}

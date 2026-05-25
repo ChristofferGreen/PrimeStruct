@@ -6,11 +6,13 @@ TEST_SUITE_BEGIN("primestruct.semantics.bindings.assignments");
 
 TEST_CASE("collections validate") {
   const std::string source = R"(
+import /std/collections/*
+
 [effects(heap_alloc), return<int>]
 main() {
   array<i32>{1i32, 2i32, 3i32}
   vector<i32>{1i32, 2i32, 3i32}
-  map<i32, i32>{1i32, 10i32, 2i32, 20i32}
+  map<i32, i32>(1i32, 10i32, 2i32, 20i32)
   return(1i32)
 }
 )";
@@ -34,7 +36,7 @@ main() {
   CHECK(mainDef->statements[0].name == "array");
   CHECK(mainDef->statements[1].isBraceConstructor);
   CHECK(mainDef->statements[1].name == "vector");
-  CHECK(mainDef->statements[2].isBraceConstructor);
+  CHECK_FALSE(mainDef->statements[2].isBraceConstructor);
   CHECK(mainDef->statements[2].name == "map");
 }
 
@@ -77,17 +79,20 @@ main() {
   CHECK(error.find("array<T, N> is unsupported; use array<T> (runtime-count array)") != std::string::npos);
 }
 
-TEST_CASE("map requires even number of arguments") {
+TEST_CASE("map constructor odd argument count uses ordinary diagnostics") {
   const std::string source = R"(
-[return<int>]
+import /std/collections/map
+
+[effects(heap_alloc), return<int>]
 main() {
-  map<i32, i32>(1i32, 10i32, 2i32)
+  /std/collections/map/map<i32, i32>(1i32, 10i32, 2i32)
   return(1i32)
 }
 )";
   std::string error;
   CHECK_FALSE(validateProgram(source, "/main", error));
-  CHECK(error.find("map literal requires an even number of arguments") != std::string::npos);
+  CHECK_FALSE(error.empty());
+  CHECK(error.find("map literal") == std::string::npos);
 }
 
 TEST_CASE("assign to mutable binding succeeds") {

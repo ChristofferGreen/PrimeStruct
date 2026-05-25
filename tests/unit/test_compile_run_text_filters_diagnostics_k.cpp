@@ -162,7 +162,7 @@ main() {
   CHECK(diagnostics.find("\"label\":\"definition: /bad\"") != std::string::npos);
 }
 
-TEST_CASE("primec collect-diagnostics reports builtin map literal template-arity failure before execution") {
+TEST_CASE("primec collect-diagnostics reports ordinary map resolution failure before execution") {
   const std::string source = R"(
 [return<i32>]
 bad() {
@@ -193,12 +193,13 @@ execute_repeat(map(key=3i32, value=4i32), 0i32)
   CHECK(runCommand(cmd) == 2);
 
   const std::string diagnostics = readFile(errPath);
-  CHECK(diagnostics.find("\"message\":\"map literal requires exactly two template arguments\"") !=
+  CHECK(diagnostics.find("\"message\":\"unknown call target: /map\"") !=
         std::string::npos);
+  CHECK(diagnostics.find("map literal") == std::string::npos);
   CHECK(diagnostics.find("\"label\":\"definition: /bad\"") != std::string::npos);
 }
 
-TEST_CASE("primevm collect-diagnostics reports builtin map literal template-arity failure before execution") {
+TEST_CASE("primevm collect-diagnostics reports ordinary map resolution failure before execution") {
   const std::string source = R"(
 [return<i32>]
 bad() {
@@ -229,8 +230,9 @@ execute_repeat(map(key=3i32, value=4i32), 0i32)
   CHECK(runCommand(cmd) == 2);
 
   const std::string diagnostics = readFile(errPath);
-  CHECK(diagnostics.find("\"message\":\"map literal requires exactly two template arguments\"") !=
+  CHECK(diagnostics.find("\"message\":\"unknown call target: /map\"") !=
         std::string::npos);
+  CHECK(diagnostics.find("map literal") == std::string::npos);
   CHECK(diagnostics.find("\"label\":\"definition: /bad\"") != std::string::npos);
 }
 

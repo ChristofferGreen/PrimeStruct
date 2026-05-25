@@ -635,13 +635,13 @@ The compiler rewrites surface forms into canonical call syntax. The core uses pr
 - Collection literals (via the `collections` text transform) are constructor forms:
   - `array<T>{...}` / `array<T>[...]`
   - `vector<T>{...}` / `vector<T>[...]`
-  - `map<K, V>{...}`
-  - Map literals accept `key = value` pairs as shorthand for entry construction (e.g., `map<i32, i32>{1i32=2i32}`).
-  - The text transform preserves brace construction, normalizes array/vector bracket aliases to braces, and rewrites
-    map pair shorthand inside braces; retained call-shaped collection forms are compatibility helpers.
-  - Planned stdlib-owned map lowering target: once variadic packs are available for user-defined constructors, the
-    intended canonical helper target is `map<K, V>(entry(key1, value1), entry(key2, value2), ...)` rather than
-    alternating raw key/value user-defined variadic parameters.
+  - `soa<T>{...}` / `soa<T>[...]`
+  - Map construction is stdlib helper resolution rather than a compiler-owned collection literal. Prefer
+    `/std/collections/map/map<K, V>(key1, value1, ...)` or
+    `/std/collections/map/map<K, V>(/std/collections/map/entry<K, V>(key, value))`;
+    bare helper aliases are import-surface dependent.
+  - The text transform preserves brace construction and normalizes array/vector/SoA bracket aliases to braces;
+    retained call-shaped collection forms are compatibility helpers.
 - `/std/math/*` builtins include the core set (`abs`, `sign`, `min`, `max`, `clamp`, `saturate`, `lerp`, `pow`, `sqrt`,
   `sin`, `cos`, etc.) plus `floor`, `ceil`, `round`, `trunc`, `fract`, `is_nan`, `is_inf`, and `is_finite`.
 - Math builtin operand rules:
@@ -1340,10 +1340,13 @@ changing runtime behavior outside that contract.
 ### 8.3 Maps
 
 ```
-map<i32, i32>{1i32=2i32, 3i32=4i32}
+/std/collections/map/map<i32, i32>(1i32, 2i32, 3i32, 4i32)
+/std/collections/map/map<i32, i32>(/std/collections/map/entry<i32, i32>(1i32, 2i32))
 ```
 
-Map literals supply alternating key/value forms; an odd number of entries is a diagnostic.
+Map construction resolves through stdlib `map(...)` and `entry(...)` helpers; invalid arity and type combinations are
+ordinary call-resolution or argument-type diagnostics. Fully qualified `/std/collections/map/*` calls do not require an
+alias, while bare helper aliases are available only from import surfaces that publish them.
 Maps likewise remain portable envelopes today, but the intended end-state is a stdlib-owned public map surface over
 generic memory/error substrate rather than permanent compiler-owned collection semantics.
 

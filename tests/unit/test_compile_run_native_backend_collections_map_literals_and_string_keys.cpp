@@ -99,7 +99,7 @@ TEST_CASE("rejects native map constructor call access expressions") {
   const std::string source = R"(
 import /std/collections/*
 
-[return<int>]
+[effects(heap_alloc), return<int>]
 main() {
   return(at(map<i32, i32>(1i32, 2i32, 3i32, 4i32), 3i32))
 }
@@ -115,7 +115,7 @@ TEST_CASE("compiles and runs native map count helper") {
   const std::string source = R"(
 import /std/collections/*
 
-[return<int>]
+[effects(heap_alloc), return<int>]
 main() {
   [map<i32, i32>] values{map<i32, i32>(1i32, 2i32, 3i32, 4i32)}
   return(count(values))
@@ -133,12 +133,12 @@ TEST_CASE("compiles and runs native map method call") {
   const std::string source = R"(
 import /std/collections/*
 
-[return<int>]
+[effects(heap_alloc), return<int>]
 /map/size([map<i32, i32>] items) {
   return(count(items))
 }
 
-[return<int>]
+[effects(heap_alloc), return<int>]
 main() {
   [map<i32, i32>] values{map<i32, i32>(1i32, 2i32, 3i32, 4i32)}
   return(values.size())
@@ -157,7 +157,7 @@ TEST_CASE("compiles and runs native map at helper") {
   const std::string source = R"(
 import /std/collections/*
 
-[return<int>]
+[effects(heap_alloc), return<int>]
 main() {
   [map<i32, i32>] values{map<i32, i32>(1i32, 2i32, 3i32, 4i32)}
   return(at(values, 3i32))
@@ -175,7 +175,7 @@ TEST_CASE("compiles and runs native map indexing sugar") {
   const std::string source = R"(
 import /std/collections/*
 
-[return<int>]
+[effects(heap_alloc), return<int>]
 main() {
   [map<i32, i32>] values{map<i32, i32>(1i32, 2i32, 3i32, 4i32)}
   return(values[3i32])
@@ -193,7 +193,7 @@ TEST_CASE("compiles and runs native map at_unsafe helper") {
   const std::string source = R"(
 import /std/collections/*
 
-[return<int>]
+[effects(heap_alloc), return<int>]
 main() {
   [map<i32, i32>] values{map<i32, i32>(1i32, 2i32, 3i32, 4i32)}
   return(at_unsafe(values, 1i32))
@@ -211,7 +211,7 @@ TEST_CASE("compiles and runs native bool map access helpers") {
   const std::string source = R"(
 import /std/collections/*
 
-[return<int>]
+[effects(heap_alloc), return<int>]
 main() {
   [map<bool, i32>] values{map<bool, i32>(true, 1i32, false, 2i32)}
   return(plus(at(values, true), at_unsafe(values, false)))
@@ -229,7 +229,7 @@ TEST_CASE("compiles and runs native u64 map access helpers") {
   const std::string source = R"(
 import /std/collections/*
 
-[return<int>]
+[effects(heap_alloc), return<int>]
 main() {
   [map<u64, i32>] values{map<u64, i32>(2u64, 7i32, 11u64, 5i32)}
   return(plus(at(values, 2u64), at_unsafe(values, 11u64)))
@@ -247,7 +247,7 @@ TEST_CASE("compiles and runs native map at missing key") {
   const std::string source = R"(
 import /std/collections/*
 
-[return<int>]
+[effects(heap_alloc), return<int>]
 main() {
   [map<i32, i32>] values{map<i32, i32>(1i32, 2i32, 3i32, 4i32)}
   return(at(values, 9i32))
@@ -267,7 +267,7 @@ main() {
 
 TEST_CASE("compiles and runs native typed map binding") {
   const std::string source = R"(
-[return<int>]
+[effects(heap_alloc), return<int>]
 main() {
   [map<i32, i32>] values{map<i32, i32>(1i32, 2i32, 3i32, 4i32)}
   return(0i32)
@@ -289,11 +289,13 @@ main() {
   CHECK(runCommand(nativePath) == 0);
 }
 
-TEST_CASE("rejects native map literal odd args") {
+TEST_CASE("rejects native map constructor odd args") {
   const std::string source = R"(
-[return<int>]
+import /std/collections/*
+
+[effects(heap_alloc), return<int>]
 main() {
-  map<i32, i32>(1i32)
+  /std/collections/map/map<i32, i32>(1i32)
   return(1i32)
 }
 )";
@@ -304,11 +306,13 @@ main() {
   CHECK(runCommand(compileCmd) == 2);
 }
 
-TEST_CASE("rejects native map literal type mismatch") {
+TEST_CASE("rejects native map constructor type mismatch") {
   const std::string source = R"(
-[return<int>]
+import /std/collections/*
+
+[effects(heap_alloc), return<int>]
 main() {
-  map<i32, i32>(1i32, true)
+  /std/collections/map/map<i32, i32>(1i32, true)
   return(1i32)
 }
 )";
@@ -324,7 +328,7 @@ TEST_CASE("compiles native string-valued map constructors on stdlib path") {
   const std::string source = R"(
 import /std/collections/*
 
-[return<int>]
+[effects(heap_alloc), return<int>]
 main() {
   [map<i32, string>] values{map<i32, string>(1i32, "abc"raw_utf8, 2i32, "de"raw_utf8)}
   return(plus(count(at(values, 1i32)), count(at_unsafe(values, 2i32))))
@@ -340,13 +344,13 @@ main() {
   CHECK(readFile(outPath).empty());
 }
 
-TEST_CASE("rejects native string-keyed map literal access expressions") {
+TEST_CASE("rejects native string-keyed map constructor access expressions") {
   const std::string source = R"(
 import /std/collections/*
 
-[return<int>]
+[effects(heap_alloc), return<int>]
 main() {
-  [map<string, i32>] values{map<string, i32>("a"raw_utf8, 1i32, "b"raw_utf8, 2i32)}
+  [map<string, i32>] values{/std/collections/map/map<string, i32>("a"raw_utf8, 1i32, "b"raw_utf8, 2i32)}
   [i32] a{at(values, "b"raw_utf8)}
   [i32] b{at_unsafe(values, "a"raw_utf8)}
   return(plus(plus(a, b), count(values)))
@@ -357,14 +361,14 @@ main() {
                             "error:");
 }
 
-TEST_CASE("rejects native map literal string binding key access expressions") {
+TEST_CASE("rejects native map constructor string binding key access expressions") {
   const std::string source = R"(
 import /std/collections/*
 
-[return<int>]
+[effects(heap_alloc), return<int>]
 main() {
   [string] key{"b"raw_utf8}
-  [map<string, i32>] values{map<string, i32>(key, 2i32, "a"raw_utf8, 1i32)}
+  [map<string, i32>] values{/std/collections/map/map<string, i32>(key, 2i32, "a"raw_utf8, 1i32)}
   return(at(values, key))
 }
 )";
@@ -377,7 +381,7 @@ TEST_CASE("rejects native string-keyed map indexing sugar") {
   const std::string source = R"(
 import /std/collections/*
 
-[return<int>]
+[effects(heap_alloc), return<int>]
 main() {
   [map<string, i32>] values{map<string, i32>("a"raw_utf8, 1i32, "b"raw_utf8, 2i32)}
   return(values["b"raw_utf8])
@@ -392,7 +396,7 @@ TEST_CASE("rejects native string-keyed map indexing binding key") {
   const std::string source = R"(
 import /std/collections/*
 
-[return<int>]
+[effects(heap_alloc), return<int>]
 main() {
   [map<string, i32>] values{map<string, i32>("a"raw_utf8, 1i32, "b"raw_utf8, 2i32)}
   [string] key{"b"raw_utf8}
@@ -408,7 +412,7 @@ TEST_CASE("rejects native map indexing with argv key") {
   const std::string source = R"(
 import /std/collections/*
 
-[return<int>]
+[effects(heap_alloc), return<int>]
 main([array<string>] args) {
   [map<string, i32>] values{map<string, i32>("a"raw_utf8, 1i32)}
   [string] key{args[0i32]}
@@ -432,7 +436,7 @@ TEST_CASE("rejects native string-keyed map binding lookup") {
   const std::string source = R"(
 import /std/collections/*
 
-[return<int>]
+[effects(heap_alloc), return<int>]
 main() {
   [map<string, i32>] values{map<string, i32>("a"raw_utf8, 1i32, "b"raw_utf8, 2i32)}
   [string] key{"b"raw_utf8}
@@ -448,7 +452,7 @@ TEST_CASE("rejects native map lookup with argv string key") {
   const std::string source = R"(
 import /std/collections/*
 
-[return<int>]
+[effects(heap_alloc), return<int>]
 main([array<string>] args) {
   [map<string, i32>] values{map<string, i32>("a"raw_utf8, 1i32)}
   [string] key{args[0i32]}
@@ -468,12 +472,14 @@ main([array<string>] args) {
   CHECK(err.find("^") != std::string::npos);
 }
 
-TEST_CASE("rejects native map literal string key from argv binding") {
+TEST_CASE("rejects native map constructor string key from argv binding") {
   const std::string source = R"(
-[return<int>]
+import /std/collections/*
+
+[effects(heap_alloc), return<int>]
 main([array<string>] args) {
   [string] key{args[0i32]}
-  map<string, i32>(key, 1i32)
+  /std/collections/map/map<string, i32>(key, 1i32)
   return(1i32)
 }
 )";

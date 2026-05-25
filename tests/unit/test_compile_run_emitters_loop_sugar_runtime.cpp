@@ -204,11 +204,14 @@ main() {
   CHECK(runCommand(exePath) == 5);
 }
 
-TEST_CASE("compiles and runs paired map literal") {
+TEST_CASE("compiles and runs paired map constructor") {
   const std::string source = R"(
-[return<int>]
+import /std/collections/*
+
+[effects(heap_alloc), return<int>]
 main() {
-  return(at(map<i32, i32>{1i32=2i32, 3i32=4i32}, 3i32))
+  [map<i32, i32>] values{/std/collections/map/map<i32, i32>(1i32, 2i32, 3i32, 4i32)}
+  return(at(values, 3i32))
 }
 )";
   const std::string srcPath = writeTemp("compile_map_literal.prime", source);

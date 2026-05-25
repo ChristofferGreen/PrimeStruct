@@ -1,6 +1,8 @@
-[return<i32>]
+import /std/collections/map
+
+[effects(heap_alloc), return<i32>]
 main() {
   array<i32>{1i32, 2i32, 3i32}
-  map<i32, i32>{1i32=10i32, 2i32=20i32}
+  /std/collections/map/map<i32, i32>(1i32, 10i32, 2i32, 20i32)
   return(1i32)
 }

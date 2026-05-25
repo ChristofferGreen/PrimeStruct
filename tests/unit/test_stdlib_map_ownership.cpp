@@ -315,6 +315,9 @@ TEST_CASE("canonical map surface owns standalone stdlib implementation") {
   const std::string argumentValidationSource =
       readText(repoRoot() / "src" / "semantics" /
                "SemanticsValidatorExprArgumentValidation.cpp");
+  const std::string collectionLiteralValidationSource =
+      readText(repoRoot() / "src" / "semantics" /
+               "SemanticsValidatorExprCollectionLiterals.cpp");
   const std::string resolvedCallArgumentsSource =
       readText(repoRoot() / "src" / "semantics" /
                "SemanticsValidatorExprResolvedCallArguments.cpp");
@@ -371,8 +374,14 @@ TEST_CASE("canonical map surface owns standalone stdlib implementation") {
                "EmitterBuiltinMethodResolutionMetadataHelpers.cpp");
   const std::string statementLowererSource =
       readText(repoRoot() / "src" / "ir_lowerer" / "IrLowererStatementCallEmission.cpp");
+  const std::string operatorCollectionMutationSource =
+      readText(repoRoot() / "src" / "ir_lowerer" /
+               "IrLowererOperatorCollectionMutationHelpers.cpp");
   const std::string lowererCallHelpersSource =
       readText(repoRoot() / "src" / "ir_lowerer" / "IrLowererCallHelpers.cpp");
+  const std::string textFilterPipelinePassSource =
+      readText(repoRoot() / "src" / "text_filter" /
+               "TextFilterPipelinePass.cpp");
   const std::string lowerStatementsExprSource =
       readText(repoRoot() / "src" / "ir_lowerer" / "IrLowererLowerStatementsExpr.h");
   const std::string lowerStatementsBindingsSource =
@@ -511,6 +520,7 @@ TEST_CASE("canonical map surface owns standalone stdlib implementation") {
   REQUIRE(!statementContainerHelpersSource.empty());
   REQUIRE(!buildDirectCallBindingSource.empty());
   REQUIRE(!argumentValidationSource.empty());
+  REQUIRE(!collectionLiteralValidationSource.empty());
   REQUIRE(!resolvedCallArgumentsSource.empty());
   REQUIRE(!argumentValidationCollectionsSource.empty());
   REQUIRE(!namedArgumentBuiltinsSource.empty());
@@ -523,7 +533,9 @@ TEST_CASE("canonical map surface owns standalone stdlib implementation") {
   REQUIRE(!emitterPackedArgsSource.empty());
   REQUIRE(!emitterMethodMetadataSource.empty());
   REQUIRE(!statementLowererSource.empty());
+  REQUIRE(!operatorCollectionMutationSource.empty());
   REQUIRE(!lowererCallHelpersSource.empty());
+  REQUIRE(!textFilterPipelinePassSource.empty());
   REQUIRE(!lowerStatementsExprSource.empty());
   REQUIRE(!lowerStatementsBindingsSource.empty());
   REQUIRE(!inlineNativeSource.empty());
@@ -3612,6 +3624,28 @@ TEST_CASE("canonical map surface owns standalone stdlib implementation") {
   CHECK(argumentValidationSource.find("const bool mapConstructorCall") ==
         std::string::npos);
   CHECK(argumentValidationSource.find("const bool keyValueConstructorCall") !=
+        std::string::npos);
+  CHECK(collectionLiteralValidationSource.find("collectMapLiteralEntries") ==
+        std::string::npos);
+  CHECK(collectionLiteralValidationSource.find("isMapLiteralAssignPair") ==
+        std::string::npos);
+  CHECK(collectionLiteralValidationSource.find("map literal requires") ==
+        std::string::npos);
+  CHECK(operatorCollectionMutationSource.find("collectMapLiteralEntries") ==
+        std::string::npos);
+  CHECK(operatorCollectionMutationSource.find("isMapLiteralAssignPair") ==
+        std::string::npos);
+  CHECK(operatorCollectionMutationSource.find("map literal key type mismatch") ==
+        std::string::npos);
+  CHECK(operatorCollectionMutationSource.find("map literal value type mismatch") ==
+        std::string::npos);
+  CHECK(operatorCollectionMutationSource.find(
+            "native backend requires collection literal key/value types") ==
+        std::string::npos);
+  CHECK(textFilterPipelinePassSource.find("name == \"map\"") ==
+        std::string::npos);
+  CHECK(textFilterPipelinePassSource.find(
+            "const std::string names[] = {\"array\", \"vector\", publicSoaName}") !=
         std::string::npos);
   CHECK(resolvedCallArgumentsSource.find("mapConstructorArgumentMatchesExactType") ==
         std::string::npos);

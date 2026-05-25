@@ -2,11 +2,13 @@
 
 TEST_SUITE_BEGIN("primestruct.compile.run.vm.maps");
 
-TEST_CASE("runs vm with map literal") {
+TEST_CASE("runs vm with map constructor") {
   const std::string source = R"(
-[return<int>]
+import /std/collections/*
+
+[effects(heap_alloc), return<int>]
 main() {
-  map<i32, i32>{1i32=2i32, 3i32=4i32}
+  /std/collections/map/map<i32, i32>(1i32, 2i32, 3i32, 4i32)
   return(1i32)
 }
 )";
@@ -15,13 +17,14 @@ main() {
   CHECK(runCommand(runCmd) == 1);
 }
 
-TEST_CASE("runs vm with map literal count helper") {
+TEST_CASE("runs vm with map constructor count helper") {
   const std::string source = R"(
 import /std/collections/*
 
-[return<int>]
+[effects(heap_alloc), return<int>]
 main() {
-  return(count(map<i32, i32>{1i32=2i32, 3i32=4i32}))
+  [map<i32, i32>] values{/std/collections/map/map<i32, i32>(1i32, 2i32, 3i32, 4i32)}
+  return(count(values))
 }
 )";
   const std::string srcPath = writeTemp("vm_map_literal_count.prime", source);
@@ -33,9 +36,9 @@ TEST_CASE("runs vm with map count helper") {
   const std::string source = R"(
 import /std/collections/*
 
-[return<int>]
+[effects(heap_alloc), return<int>]
 main() {
-  [map<i32, i32>] values{map<i32, i32>{1i32=2i32, 3i32=4i32}}
+  [map<i32, i32>] values{/std/collections/map/map<i32, i32>(1i32, 2i32, 3i32, 4i32)}
   return(count(values))
 }
 )";
@@ -53,9 +56,9 @@ import /std/collections/*
   return(count(items))
 }
 
-[return<int>]
+[effects(heap_alloc), return<int>]
 main() {
-  [map<i32, i32>] values{map<i32, i32>{1i32=2i32, 3i32=4i32}}
+  [map<i32, i32>] values{/std/collections/map/map<i32, i32>(1i32, 2i32, 3i32, 4i32)}
   return(values.size())
 }
 )";
@@ -66,9 +69,9 @@ main() {
 
 TEST_CASE("rejects vm map indexing sugar without canonical helper") {
   const std::string source = R"(
-[return<int>]
+[effects(heap_alloc), return<int>]
 main() {
-  [map<i32, i32>] values{map<i32, i32>{1i32=2i32, 3i32=4i32}}
+  [map<i32, i32>] values{/std/collections/map/map<i32, i32>(1i32, 2i32, 3i32, 4i32)}
   return(values[3i32])
 }
 )";
@@ -86,9 +89,9 @@ TEST_CASE("runs vm with map at_unsafe helper") {
   const std::string source = R"(
 import /std/collections/*
 
-[return<int>]
+[effects(heap_alloc), return<int>]
 main() {
-  [map<i32, i32>] values{map<i32, i32>{1i32=2i32, 3i32=4i32}}
+  [map<i32, i32>] values{/std/collections/map/map<i32, i32>(1i32, 2i32, 3i32, 4i32)}
   return(at_unsafe(values, 1i32))
 }
 )";
@@ -99,9 +102,9 @@ main() {
 
 TEST_CASE("rejects vm bool map access helpers without canonical helper") {
   const std::string source = R"(
-[return<int>]
+[effects(heap_alloc), return<int>]
 main() {
-  [map<bool, i32>] values{map<bool, i32>{true=1i32, false=2i32}}
+  [map<bool, i32>] values{/std/collections/map/map<bool, i32>(true, 1i32, false, 2i32)}
   return(plus(at(values, true), at_unsafe(values, false)))
 }
 )";
@@ -117,9 +120,9 @@ main() {
 
 TEST_CASE("rejects vm u64 map access helpers without canonical helper") {
   const std::string source = R"(
-[return<int>]
+[effects(heap_alloc), return<int>]
 main() {
-  [map<u64, i32>] values{map<u64, i32>{2u64=7i32, 11u64=5i32}}
+  [map<u64, i32>] values{/std/collections/map/map<u64, i32>(2u64, 7i32, 11u64, 5i32)}
   return(plus(at(values, 2u64), at_unsafe(values, 11u64)))
 }
 )";
@@ -133,11 +136,13 @@ main() {
         std::string::npos);
 }
 
-TEST_CASE("rejects vm map literal odd args") {
+TEST_CASE("rejects vm map constructor odd args") {
   const std::string source = R"(
-[return<int>]
+import /std/collections/*
+
+[effects(heap_alloc), return<int>]
 main() {
-  map<i32, i32>(1i32)
+  /std/collections/map/map<i32, i32>(1i32)
   return(1i32)
 }
 )";
@@ -146,11 +151,13 @@ main() {
   CHECK(runCommand(runCmd) == 2);
 }
 
-TEST_CASE("rejects vm map literal type mismatch") {
+TEST_CASE("rejects vm map constructor type mismatch") {
   const std::string source = R"(
-[return<int>]
+import /std/collections/*
+
+[effects(heap_alloc), return<int>]
 main() {
-  map<i32, i32>(1i32, true)
+  /std/collections/map/map<i32, i32>(1i32, true)
   return(1i32)
 }
 )";
@@ -159,14 +166,14 @@ main() {
   CHECK(runCommand(runCmd) == 2);
 }
 
-TEST_CASE("runs vm with map literal string binding key") {
+TEST_CASE("runs vm with map constructor string binding key") {
   const std::string source = R"(
 import /std/collections/*
 
-[return<int>]
+[effects(heap_alloc), return<int>]
 main() {
   [string] key{"b"raw_utf8}
-  [map<string, i32>] values{map<string, i32>(key, 2i32, "a"raw_utf8, 1i32)}
+  [map<string, i32>] values{/std/collections/map/map<string, i32>(key, 2i32, "a"raw_utf8, 1i32)}
   return(at(values, key))
 }
 )";
@@ -179,9 +186,9 @@ TEST_CASE("runs vm with string-keyed map indexing sugar") {
   const std::string source = R"(
 import /std/collections/*
 
-[return<int>]
+[effects(heap_alloc), return<int>]
 main() {
-  [map<string, i32>] values{map<string, i32>("a"raw_utf8, 1i32, "b"raw_utf8, 2i32)}
+  [map<string, i32>] values{/std/collections/map/map<string, i32>("a"raw_utf8, 1i32, "b"raw_utf8, 2i32)}
   return(values["b"raw_utf8])
 }
 )";
@@ -194,9 +201,9 @@ TEST_CASE("runs vm with string-keyed map indexing binding key") {
   const std::string source = R"(
 import /std/collections/*
 
-[return<int>]
+[effects(heap_alloc), return<int>]
 main() {
-  [map<string, i32>] values{map<string, i32>("a"raw_utf8, 1i32, "b"raw_utf8, 2i32)}
+  [map<string, i32>] values{/std/collections/map/map<string, i32>("a"raw_utf8, 1i32, "b"raw_utf8, 2i32)}
   [string] key{"b"raw_utf8}
   return(values[key])
 }
@@ -206,12 +213,14 @@ main() {
   CHECK(runCommand(runCmd) == 2);
 }
 
-TEST_CASE("rejects vm map literal string key from argv binding") {
+TEST_CASE("rejects vm map constructor string key from argv binding") {
   const std::string source = R"(
-[return<int>]
+import /std/collections/*
+
+[effects(heap_alloc), return<int>]
 main([array<string>] args) {
   [string] key{args[0i32]}
-  map<string, i32>(key, 1i32)
+  /std/collections/map/map<string, i32>(key, 1i32)
   return(1i32)
 }
 )";

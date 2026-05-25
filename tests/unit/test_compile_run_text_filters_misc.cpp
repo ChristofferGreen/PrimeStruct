@@ -397,13 +397,14 @@ main() {
   CHECK(runCommand(exePath) == 2);
 }
 
-TEST_CASE("compiles and runs flat map literal") {
+TEST_CASE("compiles and runs flat map constructor") {
   const std::string source = R"(
 import /std/collections/*
 
-[return<int>]
+[effects(heap_alloc), return<int>]
 main() {
-  return(at(map<i32, i32>{1i32, 2i32, 3i32, 4i32}, 3i32))
+  [map<i32, i32>] values{/std/collections/map/map<i32, i32>(1i32, 2i32, 3i32, 4i32)}
+  return(at(values, 3i32))
 }
 )";
   const std::string srcPath = writeTemp("compile_map.prime", source);
@@ -414,13 +415,15 @@ main() {
   CHECK(runCommand(exePath) == 4);
 }
 
-TEST_CASE("compiles and runs map literal pairs") {
+TEST_CASE("compiles and runs map entry constructor") {
   const std::string source = R"(
 import /std/collections/*
 
-[return<int>]
+[effects(heap_alloc), return<int>]
 main() {
-  return(at(map<i32, i32>{1i32=2i32, 3i32=4i32}, 3i32))
+  [map<i32, i32>] values{/std/collections/map/map<i32, i32>(
+    /std/collections/map/entry<i32, i32>(3i32, 4i32))}
+  return(at(values, 3i32))
 }
 )";
   const std::string srcPath = writeTemp("compile_map_pairs.prime", source);
@@ -431,13 +434,14 @@ main() {
   CHECK(runCommand(exePath) == 4);
 }
 
-TEST_CASE("compiles and runs map literal whitespace pairs") {
+TEST_CASE("compiles and runs canonical map constructor") {
   const std::string source = R"(
 import /std/collections/*
 
-[return<int>]
+[effects(heap_alloc), return<int>]
 main() {
-  return(at(map<i32, i32>{1i32 2i32 3i32 4i32}, 3i32))
+  [map<i32, i32>] values{/std/collections/map/map<i32, i32>(1i32, 2i32, 3i32, 4i32)}
+  return(at(values, 3i32))
 }
 )";
   const std::string srcPath = writeTemp("compile_map_whitespace_pairs.prime", source);
@@ -544,7 +548,7 @@ main() {
   CHECK(runCommand(exePath) == 123);
 }
 
-TEST_CASE("compiles and runs map literal with named-arg value") {
+TEST_CASE("compiles and runs map constructor with named-arg value") {
   const std::string source = R"(
 import /std/collections/*
 
@@ -553,9 +557,10 @@ make_color([i32] hue, [i32] value) {
   return(plus(hue, value))
 }
 
-[return<int>]
+[effects(heap_alloc), return<int>]
 main() {
-  return(at(map<i32, i32>{1i32=make_color([hue] 2i32, [value] 3i32)}, 1i32))
+  [map<i32, i32>] values{/std/collections/map/map<i32, i32>(1i32, make_color([hue] 2i32, [value] 3i32))}
+  return(at(values, 1i32))
 }
 )";
   const std::string srcPath = writeTemp("compile_map_named_value.prime", source);

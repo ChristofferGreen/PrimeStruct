@@ -698,7 +698,7 @@ import /std/collections/*
 
 [effects(heap_alloc), return<int>]
 main() {
-  [map<i32, i32>] literal{map<i32, i32>{1i32=11i32, 2i32=13i32}}
+  [map<i32, i32>] literal{map<i32, i32>(1i32, 11i32, 2i32, 13i32)}
   [map<i32, i32>] directCtor{map<i32, i32>(3i32, 17i32, 4i32, 19i32)}
   [map<i32, i32>] canonicalCtor{/std/collections/map/map<i32, i32>(
       /std/collections/map/entry<i32, i32>(5i32, 23i32),

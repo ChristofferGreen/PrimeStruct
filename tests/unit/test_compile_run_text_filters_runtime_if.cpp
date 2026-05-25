@@ -201,9 +201,11 @@ main() {
 
 TEST_CASE("rejects method call on map") {
   const std::string source = R"(
-[return<int>]
+import /std/collections/*
+
+[effects(heap_alloc), return<int>]
 main() {
-  [map<i32, i32>] values{map<i32, i32>{1i32=2i32}}
+  [map<i32, i32>] values{map<i32, i32>(1i32, 2i32)}
   return(values.inc())
 }
 )";

@@ -222,7 +222,7 @@ TEST_CASE("collection docs snippets stay code-examples style and executable") {
     CHECK(primeStructDoc.find(snippet) != std::string::npos);
   }
   CHECK(primeStructDoc.find("map<string, i32>") != std::string::npos);
-  CHECK(primeStructDoc.find("\"a\"utf8=1i32") != std::string::npos);
+  CHECK(primeStructDoc.find("\"a\"utf8, 1i32") != std::string::npos);
   for (const std::string &snippet : requiredSyntaxSpecSnippets) {
     CAPTURE(snippet);
     CHECK(syntaxSpecDoc.find(snippet) != std::string::npos);
@@ -230,9 +230,9 @@ TEST_CASE("collection docs snippets stay code-examples style and executable") {
   CHECK(syntaxSpecDoc.find("vector<i32>{") != std::string::npos);
   CHECK(syntaxSpecDoc.find("vector<i32>[") != std::string::npos);
   CHECK(syntaxSpecDoc.find("1i32, 2i32") != std::string::npos);
-  CHECK(syntaxSpecDoc.find("map<i32, i32>{") != std::string::npos);
-  CHECK(syntaxSpecDoc.find("1i32=2i32") != std::string::npos);
-  CHECK(syntaxSpecDoc.find("3i32=4i32") != std::string::npos);
+  CHECK(syntaxSpecDoc.find("map<i32, i32>(1i32, 2i32, 3i32, 4i32)") !=
+        std::string::npos);
+  CHECK(syntaxSpecDoc.find("entry<i32, i32>(1i32, 2i32)") != std::string::npos);
   CHECK(syntaxSpecDoc.find("Structural mutation boundaries are") != std::string::npos);
   CHECK(syntaxSpecDoc.find("`remove_at`") != std::string::npos);
   CHECK(syntaxSpecDoc.find("`remove_swap`") != std::string::npos);

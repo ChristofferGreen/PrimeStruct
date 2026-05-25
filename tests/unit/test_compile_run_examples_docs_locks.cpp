@@ -663,10 +663,12 @@ TEST_CASE("vector map bridge boundary docs stay source locked") {
         std::string::npos);
   CHECK(todo.find("- TODO-4572: Remove vector statement-helper compiler path | track: vector-special-case-deletion") !=
         std::string::npos);
-  CHECK(todo.find("- TODO-4573: Remove compiler-owned map literal lowering | track: map-special-case-deletion") !=
+  CHECK(todo.find("- TODO-4573: Remove compiler-owned map literal lowering | track: map-special-case-deletion") ==
+        std::string::npos);
+  CHECK(todo.find("- TODO-4575: Remove map helper/access compiler classifiers | track: map-special-case-deletion") !=
         std::string::npos);
   CHECK(todo.find("Map/vector compiler-independence: TODO-4570 retired the duplicate `map2`\n"
-                  "  surface and TODO-4571 added the compiler-knowledge inventory categories") !=
+                  "  surface, TODO-4571 added the compiler-knowledge inventory categories") !=
         std::string::npos);
   CHECK(todo.find("TODO-4574: Remove vector count/access compiler classifiers") !=
         std::string::npos);
@@ -679,6 +681,8 @@ TEST_CASE("vector map bridge boundary docs stay source locked") {
   CHECK(todoFinished.find("TODO-4570: Retire duplicate map2 candidate surface") !=
         std::string::npos);
   CHECK(todoFinished.find("TODO-4571: Add compiler-knowledge inventory for map/vector") !=
+        std::string::npos);
+  CHECK(todoFinished.find("TODO-4573: Remove compiler-owned map literal lowering") !=
         std::string::npos);
   CHECK(todoFinished.find("TODO-4187: Align vector-map cutover docs") !=
         std::string::npos);
@@ -1820,7 +1824,9 @@ TEST_CASE("todo queue and skipped doctest debt stay source locked") {
         std::string::npos);
   CHECK(todo.find("- TODO-4572: Remove vector statement-helper compiler path | track: vector-special-case-deletion") !=
         std::string::npos);
-  CHECK(todo.find("- TODO-4573: Remove compiler-owned map literal lowering | track: map-special-case-deletion") !=
+  CHECK(todo.find("- TODO-4573: Remove compiler-owned map literal lowering | track: map-special-case-deletion") ==
+        std::string::npos);
+  CHECK(todo.find("- TODO-4575: Remove map helper/access compiler classifiers | track: map-special-case-deletion") !=
         std::string::npos);
   CHECK(todo.find("### Immediate Next 10\n\n"
                   "- TODO-4590: Add international text shaping and glyph atlas path") !=
@@ -1835,7 +1841,7 @@ TEST_CASE("todo queue and skipped doctest debt stay source locked") {
                   "  scene model; TODO-4566 ->") !=
         std::string::npos);
   CHECK(todo.find("Map/vector compiler-independence: TODO-4570 retired the duplicate `map2`\n"
-                  "  surface and TODO-4571 added the compiler-knowledge inventory categories") !=
+                  "  surface, TODO-4571 added the compiler-knowledge inventory categories") !=
         std::string::npos);
   CHECK(todo.find("### Execution Queue\n\n"
                   "- TODO-4566: Render flat and rounded-rect scene primitives to BGRA8") !=
@@ -1869,6 +1875,8 @@ TEST_CASE("todo queue and skipped doctest debt stay source locked") {
   CHECK(todoFinished.find("pixel rendering remains with TODO-4566") !=
         std::string::npos);
   CHECK(todoFinished.find("TODO-4571: Add compiler-knowledge inventory for map/vector") !=
+        std::string::npos);
+  CHECK(todoFinished.find("TODO-4573: Remove compiler-owned map literal lowering") !=
         std::string::npos);
   CHECK(todo.find("- TODO-4570: Retire duplicate map2 candidate surface") ==
         std::string::npos);

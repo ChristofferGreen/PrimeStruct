@@ -1,5 +1,6 @@
 #include "SemanticsValidator.h"
 #include "StdlibCollectionSurfaceHelpers.h"
+#include "SemanticsValidatorInferCollectionCompatibilityInternal.h"
 
 #include <optional>
 #include <string>

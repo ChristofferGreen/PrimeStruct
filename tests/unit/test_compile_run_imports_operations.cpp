@@ -30,10 +30,10 @@ TEST_CASE("rejects collection literals with map at in C++ emitter") {
   const std::string source = R"(
 import /std/collections/*
 
-[return<int>]
+[effects(heap_alloc), return<int>]
 main() {
   return(plus(at_unsafe(array<i32>{1i32, 2i32, 3i32}, 1i32),
-              at(map<i32, i32>{1i32=10i32, 2i32=20i32}, 2i32)))
+              at(map<i32, i32>(1i32, 10i32, 2i32, 20i32), 2i32)))
 }
 )";
   const std::string srcPath = writeTemp("compile_collections_exe.prime", source);
@@ -3463,40 +3463,46 @@ main() {
   CHECK(runCommand(emitCmd) == 0);
 }
 
-TEST_CASE("compiles and runs string-keyed map literals in C++ emitter") {
+TEST_CASE("rejects string-keyed map constructors in C++ emitter") {
   const std::string source = R"(
 import /std/collections/*
 
-[return<int>]
+[effects(heap_alloc), return<int>]
 main() {
-  return(map<string, i32>{"a"utf8=1i32, "b"utf8=2i32}["b"utf8])
+  [map<string, i32>] values{/std/collections/map/map<string, i32>("a"utf8, 1i32, "b"utf8, 2i32)}
+  return(count(values))
 }
 )";
   const std::string srcPath = writeTemp("compile_collections_string_map.prime", source);
-  const std::string exePath =
-      (testScratchPath("") / "primec_collections_string_map_exe").string();
+  const std::string errPath =
+      (testScratchPath("") / "primec_collections_string_map_err.txt").string();
 
-  const std::string compileCmd = "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main";
-  CHECK(runCommand(compileCmd) == 0);
-  CHECK(runCommand(exePath) == 2);
+  const std::string compileCmd =
+      "./primec --emit=exe " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
+  CHECK(runCommand(compileCmd) == 2);
+  CHECK(readFile(errPath).find("native backend only supports indexing into string literals or string bindings") !=
+        std::string::npos);
 }
 
-TEST_CASE("compiles and runs string-keyed map literals with bracket sugar in C++ emitter") {
+TEST_CASE("rejects string-keyed map constructor indexing sugar in C++ emitter") {
   const std::string source = R"(
 import /std/collections/*
 
-[return<int>]
+[effects(heap_alloc), return<int>]
 main() {
-  return(map<string, i32>["a"=1i32, "b"=2i32]["b"utf8])
+  [map<string, i32>] values{/std/collections/map/map<string, i32>("a"utf8, 1i32, "b"utf8, 2i32)}
+  return(values["b"utf8])
 }
 )";
   const std::string srcPath = writeTemp("compile_collections_string_map_brackets.prime", source);
-  const std::string exePath =
-      (testScratchPath("") / "primec_collections_string_map_brackets_exe").string();
+  const std::string errPath =
+      (testScratchPath("") / "primec_collections_string_map_brackets_err.txt").string();
 
-  const std::string compileCmd = "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main";
-  CHECK(runCommand(compileCmd) == 0);
-  CHECK(runCommand(exePath) == 2);
+  const std::string compileCmd =
+      "./primec --emit=exe " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
+  CHECK(runCommand(compileCmd) == 2);
+  CHECK(readFile(errPath).find("native backend only supports indexing into string literals or string bindings") !=
+        std::string::npos);
 }
 
 TEST_CASE("compiles and runs canonical namespaced map helpers on experimental map values in C++ emitter") {
