@@ -67,7 +67,6 @@ This file is the live open-work queue for PrimeStruct.
 - TODO-4565: Add minimal scene graph and camera data model | track: scene-renderer | primary surface: stdlib/std/scene scene model
 - TODO-4572: Remove vector statement-helper compiler path | track: vector-special-case-deletion | primary surface: vector semantic/lowerer helpers
 - TODO-4573: Remove compiler-owned map literal lowering | track: map-special-case-deletion | primary surface: map literal semantics/lowering
-- TODO-4580: Replace private source-lock tests with public contracts | track: architecture-source-lock-contracts | primary surface: source-lock inventory and public contract tests
 
 ### Immediate Next 10
 
@@ -99,7 +98,7 @@ This file is the live open-work queue for PrimeStruct.
   guide deletion scope. Vector path TODO-4572 -> TODO-4574 ->
   TODO-4577; map path TODO-4573 -> TODO-4575 -> TODO-4576; join at
   TODO-4578 -> TODO-4579
-- Architecture hardening backlog: TODO-4580, TODO-4581 -> TODO-4582,
+- Architecture hardening backlog: TODO-4581 -> TODO-4582,
   TODO-4584, TODO-4585, TODO-4586, TODO-4587, TODO-4588, TODO-4589
 
 ### Execution Queue
@@ -118,7 +117,6 @@ This file is the live open-work queue for PrimeStruct.
 - TODO-4577: Remove vector backing-type compiler classification
 - TODO-4578: Generalize stdlib surface registry away from map/vector IDs
 - TODO-4579: Enforce zero map/vector compiler-knowledge traces
-- TODO-4580: Replace private source-lock tests with public contracts
 - TODO-4581: Split lowerer meaning from syntax provenance
 - TODO-4582: Add semantic-product consumer coverage matrix
 - TODO-4593: Carry source-unit provenance into IR and VM debug maps
@@ -588,30 +586,6 @@ This file is the live open-work queue for PrimeStruct.
       metadata files, while C++ treats them as ordinary included stdlib code.
   - stop_rule: Stop once the zero gate is wired into routine validation and
     focused map/vector stdlib tests plus the new audit pass.
-
-- [ ] TODO-4580: Replace private source-lock tests with public contracts
-  - owner: ai
-  - created_at: 2026-05-24
-  - phase: Architecture hardening
-  - parallel_track: architecture-source-lock-contracts
-  - scope: Replace one cluster of temporary private-source architecture locks
-    with public semantic-product, IR, diagnostic, or testing-helper contracts.
-  - implementation_notes: Start from `docs/source_lock_inventory.md`,
-    `tests/unit/test_ir_pipeline_backends_graph_contexts.h`, and the matching
-    source-lock shard. Pick one bounded cluster, add public contract coverage
-    first, then remove or narrow the private-source string assertions and update
-    the inventory.
-  - acceptance:
-    - One inventory row classified as a temporary migration lock is replaced or
-      materially reduced by public API, semantic-product dump, IR, or diagnostic
-      contract coverage.
-    - The replacement test fails on the intended behavior regression without
-      reading private `src/` files as the primary assertion surface.
-    - `docs/source_lock_inventory.md` records the retired lock or the remaining
-      reduced private-source dependency.
-    - Focused release-mode tests covering the changed contract pass.
-  - stop_rule: Stop after one source-lock cluster is replaced or narrowed; do
-    not attempt a repo-wide source-lock migration in this slice.
 
 - [ ] TODO-4581: Split lowerer meaning from syntax provenance
   - owner: ai

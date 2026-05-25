@@ -84,9 +84,10 @@ output-order parity checks in `P2-03`.
   - call + try snapshot collection now runs once through
     `ensureCallAndTrySnapshotFactCaches()` and populates cached outputs for:
     `callBindingSnapshotForTesting` and `tryValueSnapshotForTesting`.
-  - guard coverage:
-    `semantic snapshot shared traversal keeps call and try ordering keys`
-    in `tests/unit/test_ir_pipeline_backends_graph_contexts.h`.
+  - the former private source-lock guard for call/try snapshot ordering is now
+    covered by the public semantic-product contract
+    `semantic product query and try projections expose stable public lookup
+    keys` in `tests/unit/test_ir_pipeline_backends_graph_contexts.h`.
 - `P2-11` implemented in `src/semantics/SemanticsValidatorSnapshots.cpp`:
   - callable-summary definition snapshots and `on_error` snapshots now share
     `ensureCallableAndOnErrorSnapshotFactCaches()`, so both outputs read from

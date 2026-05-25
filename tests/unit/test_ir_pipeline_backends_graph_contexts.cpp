@@ -1,5 +1,7 @@
 #include <filesystem>
+#include <fstream>
 #include <string>
+#include <vector>
 
 #include "third_party/doctest.h"
 

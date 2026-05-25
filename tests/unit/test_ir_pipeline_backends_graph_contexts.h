@@ -2036,44 +2036,101 @@ TEST_CASE("semantic product on_error facts use handlerPathId without handlerPath
         std::string::npos);
 }
 
-TEST_CASE("semantic product query projections expose stable public lookup keys") {
+TEST_CASE("semantic product query and try projections expose stable public lookup keys") {
   const std::string source = R"(
 [return<void>]
-unexpectedError([i32] err) {
+unexpected_error([i32] err) {
 }
 
 [return<Result<int, i32>>]
-lookup() {
+lookup_alpha() {
   return(Result.ok(4i32))
 }
 
-[return<i32> effects(heap_alloc) on_error<i32, /unexpectedError>]
+[return<Result<int, i32>>]
+lookup_beta() {
+  return(Result.ok(5i32))
+}
+
+[return<i32> effects(heap_alloc) on_error<i32, /unexpected_error>]
 main() {
-  [auto] selected{try(lookup())}
-  return(selected)
+  [auto] beta_value{try(lookup_beta())}
+  [auto] alpha_value{try(lookup_alpha())}
+  return(beta_value)
 }
 )";
 
-  primec::testing::CompilePipelineBackendConformance conformance;
-  std::string error;
-  REQUIRE(primec::testing::runCompilePipelineBackendConformanceForTesting(
-      source, "/main", "native", conformance, error));
-  CHECK(error.empty());
-  REQUIRE(conformance.output.hasSemanticProgram);
-  const primec::SemanticProgram &semanticProgram =
-      conformance.output.semanticProgram;
+  const std::filesystem::path sourcePath =
+      primec::testing::detail::makeCompilePipelineDumpSourcePath();
+  {
+    std::ofstream file(sourcePath);
+    REQUIRE(file.good());
+    file << source;
+  }
 
-  const primec::SemanticProgramQueryFact *queryFact = nullptr;
+  primec::Options options;
+  options.inputPath = sourcePath.string();
+  options.entryPath = "/main";
+  options.emitKind = "native";
+  options.defaultEffects = primec::testing::detail::defaultCompilePipelineTestingEffects();
+  options.entryDefaultEffects = options.defaultEffects;
+  options.benchmarkSemanticFactFamiliesSpecified = true;
+  options.benchmarkSemanticFactFamilies = {"query_facts", "try_facts"};
+  primec::testing::detail::applySemanticProductIntent(
+      options, primec::testing::detail::CompilePipelineSemanticProductIntent::Require);
+  primec::addDefaultStdlibInclude(options.inputPath, options.importPaths);
+
+  primec::CompilePipelineOutput output;
+  primec::CompilePipelineErrorStage errorStage =
+      primec::CompilePipelineErrorStage::None;
+  std::string error;
+  const bool ok = primec::runCompilePipeline(options, output, errorStage, error);
+  std::error_code ec;
+  std::filesystem::remove(sourcePath, ec);
+
+  REQUIRE(ok);
+  CHECK(error.empty());
+  REQUIRE(output.hasSemanticProgram);
+  const primec::SemanticProgram &semanticProgram = output.semanticProgram;
+  const auto semanticTextOrFallback =
+      [&semanticProgram](primec::SymbolId textId,
+                         std::string_view fallback) {
+        if (textId != primec::InvalidSymbolId) {
+          const std::string_view resolved =
+              primec::semanticProgramResolveCallTargetString(semanticProgram, textId);
+          if (!resolved.empty()) {
+            return std::string(resolved);
+          }
+        }
+        return std::string(fallback);
+      };
+
+  std::vector<const primec::SemanticProgramQueryFact *> lookupQueryFacts;
   for (const auto *entry : primec::semanticProgramQueryFactView(semanticProgram)) {
-    if (entry != nullptr && entry->scopePath == "/main" &&
-        primec::semanticProgramQueryFactResolvedPath(semanticProgram, *entry) ==
-            "/lookup") {
-      queryFact = entry;
-      break;
+    if (entry == nullptr ||
+        semanticTextOrFallback(entry->scopePathId, entry->scopePath) != "/main") {
+      continue;
+    }
+    const std::string callName =
+        semanticTextOrFallback(entry->callNameId, entry->callName);
+    const std::string resolvedPath =
+        std::string(primec::semanticProgramQueryFactResolvedPath(semanticProgram, *entry));
+    if ((callName == "lookup_beta" && resolvedPath == "/lookup_beta") ||
+        (callName == "lookup_alpha" && resolvedPath == "/lookup_alpha")) {
+      lookupQueryFacts.push_back(entry);
     }
   }
+  REQUIRE(lookupQueryFacts.size() == 2);
+  CHECK(primec::semanticProgramQueryFactResolvedPath(semanticProgram, *lookupQueryFacts[0]) ==
+        "/lookup_beta");
+  CHECK(primec::semanticProgramQueryFactResolvedPath(semanticProgram, *lookupQueryFacts[1]) ==
+        "/lookup_alpha");
+  CHECK(lookupQueryFacts[0]->sourceLine < lookupQueryFacts[1]->sourceLine);
+
+  const primec::SemanticProgramQueryFact *queryFact = lookupQueryFacts.front();
   REQUIRE(queryFact != nullptr);
-  CHECK(queryFact->callName == "lookup");
+  CHECK(semanticTextOrFallback(queryFact->callNameId, queryFact->callName) ==
+        "lookup_beta");
   CHECK(queryFact->bindingTypeText == "Result<int, i32>");
   CHECK(queryFact->hasResultType);
   CHECK(queryFact->resultTypeHasValue);
@@ -2088,11 +2145,26 @@ main() {
             semanticProgram, queryFact->resolvedPathId, queryFact->callNameId) ==
         queryFact);
 
+  std::vector<const primec::SemanticProgramTryFact *> mainTryFacts;
+  for (const auto *entry : primec::semanticProgramTryFactView(semanticProgram)) {
+    if (entry != nullptr &&
+        semanticTextOrFallback(entry->scopePathId, entry->scopePath) == "/main") {
+      mainTryFacts.push_back(entry);
+    }
+  }
+  REQUIRE(mainTryFacts.size() == 2);
+  CHECK(primec::semanticProgramTryFactOperandResolvedPath(semanticProgram, *mainTryFacts[0]) ==
+        "/lookup_beta");
+  CHECK(primec::semanticProgramTryFactOperandResolvedPath(semanticProgram, *mainTryFacts[1]) ==
+        "/lookup_alpha");
+  CHECK(mainTryFacts[0]->sourceLine < mainTryFacts[1]->sourceLine);
+
   const primec::SemanticProgramTryFact *tryFact = nullptr;
   for (const auto *entry : primec::semanticProgramTryFactView(semanticProgram)) {
-    if (entry != nullptr && entry->scopePath == "/main" &&
+    if (entry != nullptr &&
+        semanticTextOrFallback(entry->scopePathId, entry->scopePath) == "/main" &&
         primec::semanticProgramTryFactOperandResolvedPath(semanticProgram, *entry) ==
-            "/lookup") {
+            "/lookup_beta") {
       tryFact = entry;
       break;
     }
@@ -2100,7 +2172,7 @@ main() {
   REQUIRE(tryFact != nullptr);
   CHECK(tryFact->valueType == "int");
   CHECK(tryFact->errorType == "i32");
-  CHECK(tryFact->onErrorHandlerPath == "/unexpectedError");
+  CHECK(tryFact->onErrorHandlerPath == "/unexpected_error");
   REQUIRE(tryFact->semanticNodeId != 0);
   REQUIRE(tryFact->operandResolvedPathId != primec::InvalidSymbolId);
   CHECK(primec::semanticProgramLookupPublishedTryFactBySemanticId(
@@ -2110,73 +2182,6 @@ main() {
             tryFact->operandResolvedPathId,
             tryFact->sourceLine,
             tryFact->sourceColumn) == tryFact);
-}
-
-TEST_CASE("semantic snapshot shared traversal keeps call and try ordering keys") {
-  const std::filesystem::path cwd = std::filesystem::current_path();
-  std::filesystem::path headerPath = cwd / "src" / "semantics" / "SemanticsValidator.h";
-  const std::filesystem::path root =
-      std::filesystem::exists(cwd / "src" / "semantics" / "SemanticsValidatorSnapshots.cpp")
-          ? cwd
-          : cwd.parent_path();
-  if (!std::filesystem::exists(headerPath)) {
-    headerPath = root / "src" / "semantics" / "SemanticsValidator.h";
-  }
-  REQUIRE(std::filesystem::exists(headerPath));
-  const std::string semanticsHeader = readTextFile(headerPath);
-  const std::string graphLocalAutoHeader =
-      readTextFile(root / "src" / "semantics" / "SemanticsValidatorGraphLocalAuto.h");
-  const std::string semanticsSnapshots =
-      readTextFile(root / "src" / "semantics" / "SemanticsValidatorSnapshots.cpp");
-  const std::string semanticsSnapshotLocals =
-      readTextFile(root / "src" / "semantics" / "SemanticsValidatorSnapshotLocals.cpp");
-  const std::string semanticsValidate =
-      readTextFile(root / "src" / "semantics" / "SemanticsValidate.cpp");
-
-  const std::size_t callBindingStart =
-      semanticsSnapshots.find("SemanticsValidator::callBindingSnapshotForTesting() {");
-  const std::size_t directCallStart =
-      semanticsSnapshots.find("SemanticsValidator::takeCollectedDirectCallTargetsForSemanticProduct() {");
-  const std::size_t tryFactStart =
-      semanticsSnapshots.find("SemanticsValidator::tryFactSnapshotForSemanticProduct() {");
-  const std::size_t onErrorFactStart =
-      semanticsSnapshots.find("SemanticsValidator::onErrorFactSnapshotForSemanticProduct() {");
-  const std::size_t callTryCacheHelperStart =
-      semanticsSnapshotLocals.find("SemanticsValidator::ensureCallAndTrySnapshotFactCaches(");
-  REQUIRE(callBindingStart != std::string::npos);
-  REQUIRE(directCallStart != std::string::npos);
-  REQUIRE(tryFactStart != std::string::npos);
-  REQUIRE(onErrorFactStart != std::string::npos);
-  REQUIRE(callTryCacheHelperStart != std::string::npos);
-  REQUIRE(graphLocalAutoHeader.find("struct GraphLocalAutoKey {") != std::string::npos);
-  REQUIRE(callBindingStart < directCallStart);
-  REQUIRE(tryFactStart < onErrorFactStart);
-
-  const std::string callBindingBody = semanticsSnapshots.substr(callBindingStart, directCallStart - callBindingStart);
-  CHECK(callBindingBody.find("ensureCallAndTrySnapshotFactCaches(") != std::string::npos);
-  CHECK(callBindingBody.find("return callBindingSnapshotCache_;") != std::string::npos);
-
-  const std::string tryFactBody = semanticsSnapshots.substr(tryFactStart, onErrorFactStart - tryFactStart);
-  CHECK(tryFactBody.find("ensureCallAndTrySnapshotFactCaches(") != std::string::npos);
-  CHECK(tryFactBody.find("return std::exchange(tryValueSnapshotCache_, {});") != std::string::npos);
-
-  const std::string callTryCacheHelperBody = semanticsSnapshotLocals.substr(callTryCacheHelperStart);
-  CHECK(callTryCacheHelperBody.find("forEachLocalAwareSnapshotCall(") != std::string::npos);
-  CHECK(callTryCacheHelperBody.find("callBindingSnapshotCache_.push_back(") != std::string::npos);
-  CHECK(callTryCacheHelperBody.find("tryValueSnapshotCache_.push_back(") != std::string::npos);
-  CHECK(callTryCacheHelperBody.find("std::stable_sort(callBindingSnapshotCache_.begin(),") != std::string::npos);
-  CHECK(callTryCacheHelperBody.find("std::stable_sort(tryValueSnapshotCache_.begin(),") != std::string::npos);
-  CHECK(callTryCacheHelperBody.find("if (left.scopePath != right.scopePath)") != std::string::npos);
-  CHECK(callTryCacheHelperBody.find("if (left.sourceLine != right.sourceLine)") != std::string::npos);
-  CHECK(callTryCacheHelperBody.find("if (left.sourceColumn != right.sourceColumn)") != std::string::npos);
-  CHECK(callTryCacheHelperBody.find("return left.callName < right.callName;") != std::string::npos);
-  CHECK(callTryCacheHelperBody.find("return left.operandResolvedPath < right.operandResolvedPath;") !=
-        std::string::npos);
-  CHECK(semanticsSnapshotLocals.find("out.resolvedPath.rfind(\"/map/\", 0)") == std::string::npos);
-
-  CHECK(semanticsHeader.find("tryValueSnapshotForTesting") == std::string::npos);
-  CHECK(semanticsValidate.find("validator.tryFactSnapshotForSemanticProduct()") != std::string::npos);
-  CHECK(semanticsValidate.find("validator.tryValueSnapshotForTesting()") == std::string::npos);
 }
 
 TEST_CASE("semantic snapshot locals concrete-call canonicalization stays stable") {

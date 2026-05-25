@@ -2482,9 +2482,11 @@ TEST_CASE("todo queue and skipped doctest debt stay source locked") {
   CHECK(todo.find("- TODO-4152") == std::string::npos);
   CHECK(todo.find("- TODO-4151") == std::string::npos);
   CHECK(todo.find("- TODO-4147") == std::string::npos);
-  CHECK(todo.find("Architecture hardening backlog: TODO-4580, TODO-4581 -> TODO-4582,") !=
+  CHECK(todo.find("Architecture hardening backlog: TODO-4581 -> TODO-4582, TODO-4583,") !=
         std::string::npos);
-  CHECK(todo.find("TODO-4580: Replace private source-lock tests with public contracts") !=
+  CHECK(todo.find("TODO-4580: Replace private source-lock tests with public contracts") ==
+        std::string::npos);
+  CHECK(todoFinished.find("TODO-4580: Replace private source-lock tests with public contracts") !=
         std::string::npos);
   CHECK(todo.find("TODO-4588: Add pass/phase invalidation manifest beyond semantics") !=
         std::string::npos);

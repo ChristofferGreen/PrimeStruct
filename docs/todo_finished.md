@@ -6,6 +6,34 @@ Legend:
 Finished items are periodically archived here from `docs/todo.md`; section headers record the archive date.
 
 **Todo Completion (May 25, 2026)**
+- [x] TODO-4580: Replace private source-lock tests with public contracts
+  - owner: ai
+  - created_at: 2026-05-24
+  - finished_at: 2026-05-25
+  - phase: Architecture hardening
+  - parallel_track: architecture-source-lock-contracts
+  - scope: Replace one cluster of temporary private-source architecture locks
+    with public semantic-product, IR, diagnostic, or testing-helper contracts.
+  - outcome:
+    - Replaced the call/try snapshot-ordering private source lock in
+      `tests/unit/test_ir_pipeline_backends_graph_contexts.h` with a public
+      semantic-product query/try fact projection contract.
+    - The replacement contract requests the public `query_facts` and
+      `try_facts` collectors, resolves interned public fact keys, and asserts
+      the intended lookup operands and published lookup maps without reading
+      private `src/semantics` files as the assertion surface.
+    - Updated `docs/source_lock_inventory.md` and
+      `docs/semantic_snapshot_traversal_inventory.md` to record the retired
+      private call/try ordering lock and the remaining reduced migration row.
+  - validation:
+    - `cmake -S . -B build-release -DCMAKE_BUILD_TYPE=Release`
+    - `cmake --build build-release --target PrimeStruct_backend_runtime_tests -j 1`
+    - `cd build-release && ./PrimeStruct_backend_runtime_tests --test-case="semantic product query and try projections expose stable public lookup keys,semantic snapshot traversal inventory avoids inactive next-candidate pointer" --no-skip`
+    - `cmake --build build-release --target PrimeStruct_compile_run_tests -j 1`
+    - `cd build-release && ./PrimeStruct_compile_run_tests --test-case="source lock inventory keeps replacement surfaces explicit" --no-skip`
+  - stop_rule: Stopped after one source-lock cluster was narrowed; no
+    repo-wide source-lock migration was attempted in this slice.
+
 - [x] TODO-4591: Add expanded-source provenance ledger
   - owner: ai
   - created_at: 2026-05-24

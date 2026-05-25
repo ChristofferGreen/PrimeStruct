@@ -1,12 +1,38 @@
 # Testcase Log
 
 ## Current Known Failures
-- None recorded. TODO-4583 focused release validation passed on
-  2026-05-25 11:08 CEST after the parent configured `build-release`,
-  rebuilt `PrimeStruct_backend_ir_tests`, and reran the selected IR
-  serialization schema doctests.
+- None recorded. TODO-4580 and TODO-4583 focused release validation passed
+  on 2026-05-25 after parent-scheduled worker validation reruns.
 
 ## Recent Test Runs
+- 2026-05-25 11:41 CEST | pass | mode: release | command:
+  `cmake -S . -B build-release -DCMAKE_BUILD_TYPE=Release`;
+  `cmake --build build-release --target PrimeStruct_backend_runtime_tests -j 1`;
+  `cd build-release && ./PrimeStruct_backend_runtime_tests --test-case="semantic product query and try projections expose stable public lookup keys,semantic snapshot traversal inventory avoids inactive next-candidate pointer" --no-skip`;
+  `cmake --build build-release --target PrimeStruct_compile_run_tests -j 1`;
+  `cd build-release && ./PrimeStruct_compile_run_tests --test-case="source lock inventory keeps replacement surfaces explicit" --no-skip`
+  | failures: none | notes: TODO-4580 focused validation passed after the
+  public query/try contract filtered to intended lookup facts by interned
+  public fact keys; runtime slice passed 2 cases / 41 assertions and
+  compile-run inventory slice passed 1 case / 7 assertions.
+- 2026-05-25 11:30 CEST | fail | mode: release | command:
+  `cd build-release && ./PrimeStruct_backend_runtime_tests --test-case="semantic product query and try projections expose stable public lookup keys,semantic snapshot traversal inventory avoids inactive next-candidate pointer" --no-skip`
+  | failures: `semantic product query and try projections expose stable public
+  lookup keys` | notes: public `/main` query fact count was 5, so the test
+  must filter to the two lookup operand facts by public call-name and
+  resolved-path fields; sibling traversal inventory case passed.
+- 2026-05-25 11:28 CEST | fail | mode: release | command:
+  `cd build-release && ./PrimeStruct_backend_runtime_tests --test-case="semantic product query and try projections expose stable public lookup keys,semantic snapshot traversal inventory avoids inactive next-candidate pointer" --no-skip`
+  | failures: `semantic product query and try projections expose stable public
+  lookup keys` | notes: `/main` query fact count was still 0 after collector
+  enablement because the test filtered on interned-and-cleared fallback
+  `scopePath` strings; sibling traversal inventory case passed.
+- 2026-05-25 11:25 CEST | fail | mode: release | command:
+  `cd build-release && ./PrimeStruct_backend_runtime_tests --test-case="semantic product query and try projections expose stable public lookup keys,semantic snapshot traversal inventory avoids inactive next-candidate pointer" --no-skip`
+  | failures: `semantic product query and try projections expose stable public
+  lookup keys` | notes: `/main` query fact count was 0 because the new public
+  contract fixture did not request the query/try semantic-product collectors;
+  sibling traversal inventory case passed.
 - 2026-05-25 11:08 CEST | pass | mode: release | command:
   `cmake -S . -B build-release -DCMAKE_BUILD_TYPE=Release`;
   `cmake --build build-release --target PrimeStruct_backend_ir_tests -j 1`;
@@ -8135,6 +8161,12 @@
 - 2026-05-12 17:28 local | fail | mode: release | command: `./scripts/compile.sh --release` | failures: 146 CTest targets | notes: baseline after preflight checkpoint failed; stabilization blocks TODO work
 
 ## Resolved Failures
+- [x] semantic product query and try projections expose stable public lookup
+  keys | resolved: 2026-05-25 11:41 CEST | validating command:
+  `cmake --build build-release --target PrimeStruct_backend_runtime_tests -j 1 && cd build-release && ./PrimeStruct_backend_runtime_tests --test-case="semantic product query and try projections expose stable public lookup keys,semantic snapshot traversal inventory avoids inactive next-candidate pointer" --no-skip`
+  | notes: TODO-4580 replacement contract now explicitly requests query/try
+  semantic-product collectors and filters to the intended lookup operands
+  through interned public fact keys.
 - [x] runs vm shared stdlib map conformance harness | resolved:
   2026-05-25 05:09 CEST | validating command:
   `cmake --build build-release --target PrimeStruct_compile_run_tests -j 1 && cd build-release && ./PrimeStruct_compile_run_tests --test-case="runs vm shared stdlib map conformance harness" --no-skip`;
