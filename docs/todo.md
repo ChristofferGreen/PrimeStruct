@@ -67,6 +67,8 @@ This file is the live open-work queue for PrimeStruct.
 - TODO-4565: Add minimal scene graph and camera data model | track: scene-renderer | primary surface: stdlib/std/scene scene model
 - TODO-4572: Remove vector statement-helper compiler path | track: vector-special-case-deletion | primary surface: vector semantic/lowerer helpers
 - TODO-4573: Remove compiler-owned map literal lowering | track: map-special-case-deletion | primary surface: map literal semantics/lowering
+- TODO-4586: Define diagnostic stability tiers | track: architecture-diagnostic-stability | primary surface: diagnostics contract policy
+- TODO-4587: Extract shared compile-time/runtime VM kernel boundary | track: architecture-vm-kernel-boundary | primary surface: VM execution kernel API
 
 ### Immediate Next 10
 
@@ -587,6 +589,7 @@ This file is the live open-work queue for PrimeStruct.
   - owner: ai
   - created_at: 2026-05-24
   - phase: Architecture hardening
+  - parallel_track: architecture-diagnostic-stability
   - scope: Classify diagnostics into stable user-facing contracts and
     implementation diagnostics for one compiler phase, then lock the stable tier
     with code/message/span coverage.
@@ -609,6 +612,7 @@ This file is the live open-work queue for PrimeStruct.
   - owner: ai
   - created_at: 2026-05-24
   - phase: Architecture hardening
+  - parallel_track: architecture-vm-kernel-boundary
   - scope: Make one compile-time evaluation path and one `primevm` runtime path
     share a documented VM-kernel API instead of incidental runtime state.
   - implementation_notes: Start from `include/primec/CompileTimeEvaluation.h`,

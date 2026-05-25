@@ -4,9 +4,20 @@
 - None recorded. TODO-4580 and TODO-4583 focused release validation passed
   on 2026-05-25 after parent-scheduled worker validation reruns and root
   focused validation. TODO-4581 and TODO-4584 focused root validation passed
-  on 2026-05-25 after serial root cherry-picks.
+  on 2026-05-25 after serial root cherry-picks. TODO-4582 and TODO-4585
+  focused root validation passed on 2026-05-25 after serial root
+  cherry-picks.
 
 ## Recent Test Runs
+- 2026-05-25 14:12 CEST | pass | mode: release | command:
+  `cmake --build build-release --target PrimeStruct_backend_runtime_tests -j 1`;
+  `cd build-release && ./PrimeStruct_backend_runtime_tests --test-case="semantic-product consumer coverage matrix stays source locked" --no-skip`;
+  `cmake --build build-release --target PrimeStruct_misc_tests -j 1`;
+  `cd build-release && ./PrimeStruct_misc_tests --test-case="compile pipeline uses module manifest for direct gfx import,compile pipeline uses module manifest for gfx wildcard import,compile pipeline rejects malformed stdlib module manifest metadata,compile pipeline exposes stdlib auto include source units" --no-skip`
+  | failures: none | notes: root validation after serially merging
+  TODO-4582 and TODO-4585 passed the semantic-product consumer matrix
+  source-lock slice (1 case / 83 assertions) and stdlib manifest import slice
+  (4 cases / 47 assertions).
 - 2026-05-25 13:24 CEST | pass | mode: release | command:
   `cmake --build build-release --target PrimeStruct_backend_ir_tests -j 1`;
   `cd build-release && ./PrimeStruct_backend_ir_tests --test-case="ir lowerer semantic-product call-target context separates meaning from provenance,ir lowerer semantic-product call-target context fails closed on missing meaning,ir lowerer call helpers avoid semantic-product scope/root fallback probes,ir lowerer call helpers fail closed when semantic-product direct-call targets are missing,ir lowerer call helpers keep semantic direct-call targets authoritative over rooted rewritten helper paths" --no-skip`;
