@@ -67,6 +67,8 @@ This file is the live open-work queue for PrimeStruct.
 - TODO-4565: Add minimal scene graph and camera data model | track: scene-renderer | primary surface: stdlib/std/scene scene model
 - TODO-4572: Remove vector statement-helper compiler path | track: vector-special-case-deletion | primary surface: vector semantic/lowerer helpers
 - TODO-4573: Remove compiler-owned map literal lowering | track: map-special-case-deletion | primary surface: map literal semantics/lowering
+- TODO-4593: Carry source-unit provenance into IR and VM debug maps | track: source-unit-provenance | primary surface: IR source maps and VM debug lookup
+- TODO-4594: Classify semantic call diagnostic stability tiers | track: architecture-diagnostic-stability | primary surface: semantic call diagnostics
 
 ### Immediate Next 10
 
@@ -78,8 +80,6 @@ This file is the live open-work queue for PrimeStruct.
 - TODO-4574: Remove vector count/access compiler classifiers
 - TODO-4575: Remove map helper/access compiler classifiers
 - TODO-4576: Remove map backing-type compiler classification
-- TODO-4593: Carry source-unit provenance into IR and VM debug maps
-- TODO-4594: Classify semantic call diagnostic stability tiers
 
 ### Priority Lanes
 
@@ -110,6 +110,8 @@ This file is the live open-work queue for PrimeStruct.
 - TODO-4565: Add minimal scene graph and camera data model
 - TODO-4572: Remove vector statement-helper compiler path
 - TODO-4573: Remove compiler-owned map literal lowering
+- TODO-4593: Carry source-unit provenance into IR and VM debug maps
+- TODO-4594: Classify semantic call diagnostic stability tiers
 - TODO-4566: Render flat and rounded-rect scene primitives to BGRA8
 - TODO-4590: Add international text shaping and glyph atlas path
 - TODO-4567: Render first globally lit 3D SDF widget primitive
@@ -121,8 +123,6 @@ This file is the live open-work queue for PrimeStruct.
 - TODO-4577: Remove vector backing-type compiler classification
 - TODO-4578: Generalize stdlib surface registry away from map/vector IDs
 - TODO-4579: Enforce zero map/vector compiler-knowledge traces
-- TODO-4593: Carry source-unit provenance into IR and VM debug maps
-- TODO-4594: Classify semantic call diagnostic stability tiers
 
 ### Task Blocks
 
@@ -614,6 +614,7 @@ This file is the live open-work queue for PrimeStruct.
   - owner: ai
   - created_at: 2026-05-24
   - phase: Source-unit provenance ledger
+  - parallel_track: source-unit-provenance
   - depends_on: TODO-4592, TODO-4583
   - scope: Extend lowered IR source-map metadata and VM/debug lookup so
     instruction provenance can identify the source unit/file as well as line,

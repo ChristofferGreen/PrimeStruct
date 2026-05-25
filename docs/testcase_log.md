@@ -8,10 +8,27 @@
   focused root validation passed on 2026-05-25 after serial root
   cherry-picks. TODO-4586 and TODO-4587 focused root validation passed
   on 2026-05-25 after serial root cherry-picks. TODO-4588 and TODO-4589
-  focused worker validation passed on 2026-05-25 after parent-scheduled
-  focused reruns.
+  focused root validation passed on 2026-05-25 after serial root
+  cherry-picks. Post-run TODO queue validation passed after promoting
+  TODO-4593 and TODO-4594 as additional parallel-ready leaves.
 
 ## Recent Test Runs
+- 2026-05-25 16:08 CEST | pass | mode: release | command:
+  `cd build-release && ./PrimeStruct_compile_run_tests --test-case="todo queue and skipped doctest debt stay source locked" --no-skip`
+  | failures: none | notes: root post-run TODO parallelization review
+  promoted TODO-4593 and TODO-4594 into Ready Now; the docs-lock case still
+  passed, 1 case / 476 assertions.
+- 2026-05-25 16:08 CEST | pass | mode: release | command:
+  `cmake -S . -B build-release -DCMAKE_BUILD_TYPE=Release`;
+  `cmake --build build-release --target PrimeStruct_backend_runtime_tests -j 1`;
+  `cd build-release && ./PrimeStruct_backend_runtime_tests --test-case="ir preparation phase manifest pins ordered handoffs,ir preparation phase manifest documents inline invalidation,ir preparation helper requires semantic product before lowering,compile pipeline publishes an initial semantic product shell" --no-skip`;
+  `cmake --build build-release --target PrimeStruct_compile_run_tests -j 1`;
+  `cd build-release && ./PrimeStruct_compile_run_tests --test-case="todo queue and skipped doctest debt stay source locked" --no-skip`;
+  `cd build-release && ctest --output-on-failure -R '^PrimeStruct_architecture_health_dashboard_self_test$'`
+  | failures: none | notes: root validation after serially merging
+  TODO-4588 and TODO-4589 passed the IR-preparation manifest slice (4 cases /
+  360 assertions), TODO/docs-lock slice (1 case / 476 assertions), and
+  architecture dashboard CTest self-test (1 test, 0.10 sec).
 - 2026-05-25 15:58 CEST | pass | mode: release | command:
   `cmake --build build-release --target PrimeStruct_compile_run_tests -j 1`;
   `cd build-release && ./PrimeStruct_compile_run_tests --test-case="todo queue and skipped doctest debt stay source locked" --no-skip`
