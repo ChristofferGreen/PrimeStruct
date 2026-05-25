@@ -2,12 +2,10 @@
 
 #include <cstring>
 #include <limits>
+#include <string>
 
 namespace primec {
 namespace {
-constexpr uint32_t IrMagic = 0x50534952; // "PSIR"
-constexpr uint32_t IrVersion = 21;
-
 void appendU32(std::vector<uint8_t> &out, uint32_t value) {
   out.push_back(static_cast<uint8_t>(value & 0xFF));
   out.push_back(static_cast<uint8_t>((value >> 8) & 0xFF));
@@ -67,12 +65,17 @@ bool readU8(const std::vector<uint8_t> &data, size_t &offset, uint8_t &outValue)
 
 bool serializeIr(const IrModule &module, std::vector<uint8_t> &out, std::string &error) {
   out.clear();
+  if (module.schemaVersion != IrSchemaVersion) {
+    error = "unsupported IR schema version " + std::to_string(module.schemaVersion) +
+            " for serialization (supported " + std::to_string(IrSchemaVersion) + ")";
+    return false;
+  }
   if (module.entryIndex < 0 || static_cast<size_t>(module.entryIndex) >= module.functions.size()) {
     error = "invalid IR entry index";
     return false;
   }
-  appendU32(out, IrMagic);
-  appendU32(out, IrVersion);
+  appendU32(out, IrSchemaMagic);
+  appendU32(out, IrSchemaVersion);
   appendU32(out, static_cast<uint32_t>(module.functions.size()));
   appendU32(out, static_cast<uint32_t>(module.entryIndex));
   if (module.stringTable.size() > static_cast<size_t>(std::numeric_limits<uint32_t>::max())) {
@@ -189,15 +192,25 @@ bool deserializeIr(const std::vector<uint8_t> &data, IrModule &out, std::string 
   out = IrModule{};
   size_t offset = 0;
   uint32_t magic = 0;
-  if (!readU32(data, offset, magic) || magic != IrMagic) {
+  if (!readU32(data, offset, magic) || magic != IrSchemaMagic) {
     error = "invalid IR header";
     return false;
   }
   uint32_t version = 0;
-  if (!readU32(data, offset, version) || version != IrVersion) {
-    error = "unsupported IR version";
+  if (!readU32(data, offset, version)) {
+    error = "truncated IR schema version";
     return false;
   }
+  if (version < IrSchemaMinimumSupportedVersion || version > IrSchemaMaximumSupportedVersion) {
+    error = "unsupported IR schema version " + std::to_string(version) + " (supported " +
+            std::to_string(IrSchemaMinimumSupportedVersion);
+    if (IrSchemaMinimumSupportedVersion != IrSchemaMaximumSupportedVersion) {
+      error += ".." + std::to_string(IrSchemaMaximumSupportedVersion);
+    }
+    error += ")";
+    return false;
+  }
+  out.schemaVersion = version;
   uint32_t funcCount = 0;
   uint32_t entryIndex = 0;
   if (!readU32(data, offset, funcCount) || !readU32(data, offset, entryIndex)) {

@@ -1,13 +1,18 @@
 # Testcase Log
 
 ## Current Known Failures
-- None recorded. The TODO-4592 focused validation rebuild blocker was
-  stabilized on 2026-05-25 10:36 CEST by compiling the large
-  `test_stdlib_map_ownership.cpp` source-lock test at O0, then rebuilding the
-  focused release targets and rerunning the selected source-diagnostics and
-  map-ownership doctests.
+- None recorded. TODO-4583 focused release validation passed on
+  2026-05-25 11:08 CEST after the parent configured `build-release`,
+  rebuilt `PrimeStruct_backend_ir_tests`, and reran the selected IR
+  serialization schema doctests.
 
 ## Recent Test Runs
+- 2026-05-25 11:08 CEST | pass | mode: release | command:
+  `cmake -S . -B build-release -DCMAKE_BUILD_TYPE=Release`;
+  `cmake --build build-release --target PrimeStruct_backend_ir_tests -j 1`;
+  `cd build-release && ./PrimeStruct_backend_ir_tests --test-suite=primestruct.ir.pipeline.serialization --test-case="ir serialization schema golden fixture stays stable,ir deserialization rejects unsupported version" --no-skip`
+  | failures: none | notes: parent validation for TODO-4583 passed 2 IR
+  serialization schema test cases and 17 assertions.
 - 2026-05-25 10:36 CEST | pass | mode: release | command:
   `cmake --build build-release --target PrimeStruct_misc_tests -j 1`;
   `cmake --build build-release --target primec PrimeStruct_compile_run_tests -j 1`;

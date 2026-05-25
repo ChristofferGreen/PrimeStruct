@@ -68,7 +68,6 @@ This file is the live open-work queue for PrimeStruct.
 - TODO-4572: Remove vector statement-helper compiler path | track: vector-special-case-deletion | primary surface: vector semantic/lowerer helpers
 - TODO-4573: Remove compiler-owned map literal lowering | track: map-special-case-deletion | primary surface: map literal semantics/lowering
 - TODO-4580: Replace private source-lock tests with public contracts | track: architecture-source-lock-contracts | primary surface: source-lock inventory and public contract tests
-- TODO-4583: Add IR schema/version contract | track: architecture-ir-schema-contract | primary surface: IR serialization contract
 
 ### Immediate Next 10
 
@@ -85,9 +84,10 @@ This file is the live open-work queue for PrimeStruct.
 ### Priority Lanes
 
 - Source-unit provenance ledger: TODO-4592 completed parser/semantic
-  diagnostic source-unit mapping. TODO-4593 waits on TODO-4583 because it
-  changes IR source-map metadata. TODO-4591 completed the inspectable
-  expanded-source ledger that this lane builds on.
+  diagnostic source-unit mapping. TODO-4583 added the IR schema/version
+  contract that TODO-4593 must follow when it changes IR source-map metadata.
+  TODO-4591 completed the inspectable expanded-source ledger that this lane
+  builds on.
   This lane is intentionally separate from TODO-4581 provenance ownership and
   TODO-4586 diagnostic stability tiers: it adds the missing source-unit/file
   identity that those later contracts can consume without absorbing
@@ -100,8 +100,7 @@ This file is the live open-work queue for PrimeStruct.
   TODO-4577; map path TODO-4573 -> TODO-4575 -> TODO-4576; join at
   TODO-4578 -> TODO-4579
 - Architecture hardening backlog: TODO-4580, TODO-4581 -> TODO-4582,
-  TODO-4583, TODO-4584, TODO-4585, TODO-4586, TODO-4587, TODO-4588,
-  TODO-4589
+  TODO-4584, TODO-4585, TODO-4586, TODO-4587, TODO-4588, TODO-4589
 
 ### Execution Queue
 
@@ -122,7 +121,6 @@ This file is the live open-work queue for PrimeStruct.
 - TODO-4580: Replace private source-lock tests with public contracts
 - TODO-4581: Split lowerer meaning from syntax provenance
 - TODO-4582: Add semantic-product consumer coverage matrix
-- TODO-4583: Add IR schema/version contract
 - TODO-4593: Carry source-unit provenance into IR and VM debug maps
 - TODO-4584: Generalize backend capability gating
 - TODO-4585: Manifest-drive stdlib module inclusion
@@ -664,29 +662,6 @@ This file is the live open-work queue for PrimeStruct.
     - Focused backend IR or semantic-product tests pass.
   - stop_rule: Stop once the first consumer matrix is checked and validates real
     coverage for at least three representative fact families.
-
-- [ ] TODO-4583: Add IR schema/version contract
-  - owner: ai
-  - created_at: 2026-05-24
-  - phase: Architecture hardening
-  - parallel_track: architecture-ir-schema-contract
-  - scope: Define a versioned IR serialization contract with golden
-    compatibility coverage and explicit migration expectations for
-    format-affecting changes.
-  - implementation_notes: Start from `include/primec/Ir.h`,
-    `src/IrSerializer.cpp`, `src/IrPrinter.cpp`, and
-    `tests/unit/test_ir_pipeline_serialization_*`. Keep the first slice narrow:
-    version metadata, one golden fixture, and one rejection or migration note
-    for incompatible versions.
-  - acceptance:
-    - Serialized IR carries or is paired with an explicit schema/contract version.
-    - Golden serialization coverage proves stable output for one representative
-      module with functions, strings, source map, and struct layout metadata.
-    - Incompatible or unknown version handling is deterministic and covered by a
-      focused test or documented as intentionally unsupported.
-    - Docs state when an IR format change must update version/migration notes.
-  - stop_rule: Stop after the initial version contract and representative
-    golden coverage land; do not redesign the IR format in this slice.
 
 - [ ] TODO-4584: Generalize backend capability gating
   - owner: ai

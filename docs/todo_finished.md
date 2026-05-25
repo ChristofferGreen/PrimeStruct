@@ -22287,3 +22287,34 @@ Moved from `docs/todo.md` during unfinished-only cleanup:
     and original source position; and added focused pipeline/CLI coverage for
     primary, imported parser, imported semantic, and multi-source
     `--collect-diagnostics` spans.
+
+- [x] TODO-4583: Add IR schema/version contract
+  - owner: ai
+  - created_at: 2026-05-24
+  - finished_at: 2026-05-25
+  - phase: Architecture hardening
+  - parallel_track: architecture-ir-schema-contract
+  - scope: Define a versioned IR serialization contract with golden
+    compatibility coverage and explicit migration expectations for
+    format-affecting changes.
+  - implementation_notes: Started from `include/primec/Ir.h`,
+    `src/IrSerializer.cpp`, `src/IrPrinter.cpp`, and
+    `tests/unit/test_ir_pipeline_serialization_*`. Kept the first slice to
+    version metadata, one golden fixture, and deterministic unsupported-version
+    handling.
+  - acceptance:
+    - Serialized IR carries or is paired with an explicit schema/contract version.
+    - Golden serialization coverage proves stable output for one representative
+      module with functions, strings, source map, and struct layout metadata.
+    - Incompatible or unknown version handling is deterministic and covered by a
+      focused test or documented as intentionally unsupported.
+    - Docs state when an IR format change must update version/migration notes.
+  - stop_rule: Stop after the initial version contract and representative
+    golden coverage land; do not redesign the IR format in this slice.
+  - evidence: Added public `IrSchemaMagic`, `IrSchemaVersion`, and supported
+    version-range constants plus `IrModule::schemaVersion`; routed
+    serialization/deserialization through those constants with deterministic
+    unsupported-version errors; added an exact-byte IR golden fixture covering
+    functions, strings, local debug metadata, source maps, and struct layout
+    metadata; and documented that format-affecting PSIR changes must bump the
+    schema version, update migration notes, and refresh golden coverage.

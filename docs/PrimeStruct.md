@@ -2229,6 +2229,9 @@ module {
   widget/container APIs rather than raw draw-command helpers or raw HTML record append helpers.
 - **IR definition (stable, PSIR v21):**
   - **Module:** `{ string_table, struct_layouts, functions, instruction_source_map, entry_index, version }`.
+    The canonical contract constants live in `include/primec/Ir.h` as `IrSchemaMagic`,
+    `IrSchemaVersion`, and the supported-version range; serializer implementations
+    must use those constants rather than private version literals.
   - **Function:** `{ name, metadata, local_debug_slots, instructions }` where instructions are linear, stack-based ops
     with immediates and debug IDs.
   - **Metadata:** `{ effect_mask, capability_mask, scheduling_scope, instrumentation_flags }` (see PSIR binary layout).
@@ -2276,7 +2279,9 @@ module {
   - **PSIR v4:** adds `ReturnVoid` so void definitions can omit explicit returns without losing a bytecode terminator.
   - **Versioning policy:** the `version` field is a single, monotonically increasing integer for incompatible changes.
     There is no forward/backward compatibility guarantee today; tools reject unknown versions and require recompilation.
-    Migration tooling may be added later, but no automatic migrations exist yet.
+    Migration tooling may be added later, but no automatic migrations exist yet. Any change to the binary layout,
+    opcode numbering/meaning, metadata encoding, or required module fields must bump `IrSchemaVersion`, update this
+    versioning note with the migration expectation, and refresh the representative golden serialization fixture.
 - **Backends:**
   - **C++ emitter** – generates host code for native binaries.
   - **GLSL emitter** – produces shader code; SPIR-V output is available via `--emit=spirv`.

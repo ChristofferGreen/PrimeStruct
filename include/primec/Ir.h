@@ -6,6 +6,11 @@
 
 namespace primec {
 
+constexpr uint32_t IrSchemaMagic = 0x50534952u; // "PSIR"
+constexpr uint32_t IrSchemaVersion = 21u;
+constexpr uint32_t IrSchemaMinimumSupportedVersion = IrSchemaVersion;
+constexpr uint32_t IrSchemaMaximumSupportedVersion = IrSchemaVersion;
+
 enum class IrOpcode : uint8_t {
   PushI32 = 1,
   PushI64,
@@ -240,6 +245,7 @@ struct IrFunction {
 };
 
 struct IrModule {
+  uint32_t schemaVersion = IrSchemaVersion;
   std::vector<IrFunction> functions;
   int32_t entryIndex = -1;
   std::vector<std::string> stringTable;
