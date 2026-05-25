@@ -1,9 +1,23 @@
 # Testcase Log
 
 ## Current Known Failures
-- none
+- [~] TODO-4565 scene-model worker validation blocker | mode: release |
+  command:
+  `cd workspaces/agent-scene-model-4565/PrimeStruct/build-release && ./PrimeStruct_compile_run_tests --test-case="runs vm scene model authoring deterministically,C++ emitter serializes scene model source deterministically,compiles and runs native scene model authoring deterministically,stdlib style boundary docs stay source locked,scene renderer ui producer contract stays source locked" --no-skip`
+  | first_seen: 2026-05-25 09:32 CEST | next: wait for the known parent tool
+  session to exit naturally or have the user stop it outside the repo workflow;
+  then rerun focused root validation for merged TODO-4592 and either resume or
+  abandon the dirty TODO-4565 worker patch. Do not use sandbox escalation,
+  process-inspection, or process-control commands for this blocker.
 
 ## Recent Test Runs
+- 2026-05-25 09:32 CEST | blocked | mode: release | command:
+  `cd workspaces/agent-scene-model-4565/PrimeStruct/build-release && ./PrimeStruct_compile_run_tests --test-case="runs vm scene model authoring deterministically,C++ emitter serializes scene model source deterministically,compiles and runs native scene model authoring deterministically,stdlib style boundary docs stay source locked,scene renderer ui producer contract stays source locked" --no-skip`
+  | failures: unresolved long-running TODO-4565 worker validation |
+  notes: the parent still has the known direct test-binary tool session open
+  with no output; root focused validation for the already-merged TODO-4592
+  source-diagnostics commit is intentionally blocked by the one-heavy-command
+  rule until this session exits.
 - 2026-05-25 07:59 CEST | pass | mode: release | command:
   `cmake --build build-release --target PrimeStruct_misc_tests -j 1`;
   `cd build-release && ./PrimeStruct_misc_tests --test-case="compile pipeline maps parser diagnostics through source units,compile pipeline maps imported semantic diagnostics through source units" --no-skip`;
