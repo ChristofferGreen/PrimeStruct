@@ -3984,7 +3984,8 @@ sum_two_files([string] a, [string] b) {
 - **Composite:** `array<T>`, `vector<T>`, `map<K, V>`, `Pointer<T>`, `Reference<T>`,
   stdlib-owned `soa<T>`, stdlib-owned `tuple<Ts...>`, and draft math value
   types (`Mat2`, `Mat3`, `Mat4`, `Quat`).
-- **User types:** struct definitions and named aliases.
+- **User types:** struct definitions and named aliases, including
+  stdlib-owned scene descriptor structs imported from `/std/scene/*`.
 - **Template applications:** `Name<T1, T2, ...>`.
 
 ### Core Type Set (portable)
@@ -4031,7 +4032,8 @@ language/runtime-owned, which remain hybrid, and which should move fully into st
   `.prime` wherever practical, then delete the old compatibility paths once the bridge is empty.
 - `stdlib-owned`
   Public types/surfaces: `Maybe<T>`, `vector<T>`, `map<K, V>`, `soa<T>`,
-  `tuple<Ts...>`.
+  `tuple<Ts...>`, and the `/std/scene` descriptor surface (`Scene`, `Node`,
+  `Transform`, `Camera`, `Material`, `Light`, and `Primitive`).
   Ownership rule: public API should live in stdlib `.prime` on top of minimal generic substrate.
   Migration stance: prefer slices that replace type-named compiler special cases with generic
   allocation/layout/drop substrate, then delete the old compatibility paths.
@@ -4044,6 +4046,10 @@ language/runtime-owned, which remain hybrid, and which should move fully into st
 - `tuple<Ts...>` is a stdlib-owned heterogeneous product type. It is not a
   compiler-owned tuple envelope, fixed-arity family, opcode, or backend runtime
   object.
+- `/std/scene` is a stdlib-owned data model for renderer-facing descriptors.
+  The compiler owns no scene graph, camera, material, light, or primitive
+  special case; renderer/runtime slices consume authored scene records through
+  ordinary imported stdlib definitions.
 
 ### Stdlib Surface-Style Boundary
 This boundary is the scope reference for the stdlib surface-style cleanup lane in

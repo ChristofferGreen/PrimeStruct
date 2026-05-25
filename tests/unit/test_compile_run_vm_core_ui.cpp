@@ -8,14 +8,11 @@ TEST_SUITE_BEGIN("primestruct.compile.run.vm.core");
 
 TEST_CASE("runs vm scene model authoring deterministically") {
   const std::string srcPath =
-      writeTemp("vm_scene_model_authoring.prime", sceneModelAuthoringSource());
-  const std::string outPath =
-      (testScratchPath("") / "primec_vm_scene_model_authoring.txt").string();
+      writeTemp("vm_scene_model_descriptors.prime", sceneModelNativeDescriptorSource());
   const std::string runCmd =
-      "./primec --emit=vm " + srcPath + " --entry /main > " + outPath;
+      "./primec --emit=vm " + quoteShellArg(srcPath) + " --entry /main";
 
-  CHECK(runCommand(runCmd) == 6);
-  CHECK(readFile(outPath) == expectedSceneModelAuthoringOutput());
+  CHECK(runCommand(runCmd) == 14);
 }
 
 

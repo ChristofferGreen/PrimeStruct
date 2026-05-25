@@ -9,16 +9,16 @@ TEST_SUITE_BEGIN("primestruct.compile.run.emitters.cpp");
 
 TEST_CASE("C++ emitter serializes scene model source deterministically") {
   const std::string srcPath =
-      writeTemp("emit_scene_model_authoring_cpp.prime", sceneModelAuthoringSource());
+      writeTemp("emit_scene_model_descriptors_cpp.prime", sceneModelCppEmitterSource());
   const std::string cppPathA =
-      (testScratchPath("") / "primec_scene_model_authoring_a.cpp").string();
+      (testScratchPath("") / "primec_scene_model_descriptors_a.cpp").string();
   const std::string cppPathB =
-      (testScratchPath("") / "primec_scene_model_authoring_b.cpp").string();
+      (testScratchPath("") / "primec_scene_model_descriptors_b.cpp").string();
 
   const std::string compileCmdA =
-      "./primec --emit=cpp " + srcPath + " -o " + cppPathA + " --entry /main";
+      "./primec --emit=cpp " + quoteShellArg(srcPath) + " -o " + quoteShellArg(cppPathA) + " --entry /main";
   const std::string compileCmdB =
-      "./primec --emit=cpp " + srcPath + " -o " + cppPathB + " --entry /main";
+      "./primec --emit=cpp " + quoteShellArg(srcPath) + " -o " + quoteShellArg(cppPathB) + " --entry /main";
   CHECK(runCommand(compileCmdA) == 0);
   CHECK(runCommand(compileCmdB) == 0);
   CHECK(readFile(cppPathA) == readFile(cppPathB));

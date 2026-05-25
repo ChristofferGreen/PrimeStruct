@@ -1,22 +1,54 @@
 # Testcase Log
 
 ## Current Known Failures
-- None recorded. TODO-4580 and TODO-4583 focused release validation passed
-  on 2026-05-25 after parent-scheduled worker validation reruns and root
-  focused validation. TODO-4581 and TODO-4584 focused root validation passed
-  on 2026-05-25 after serial root cherry-picks. TODO-4582 and TODO-4585
-  focused root validation passed on 2026-05-25 after serial root
-  cherry-picks. TODO-4586 and TODO-4587 focused root validation passed
-  on 2026-05-25 after serial root cherry-picks. TODO-4588 and TODO-4589
-  focused root validation passed on 2026-05-25 after serial root
-  cherry-picks. Post-run TODO queue validation passed after promoting
-  TODO-4593 and TODO-4594 as additional parallel-ready leaves. TODO-4593
-  and TODO-4594 worker-focused validation passed on 2026-05-25 before
-  parent root reconciliation. TODO-4593/TODO-4594 root-focused validation
-  passed on 2026-05-25 after serial cherry-picks and a parent docs-lock
-  assertion update.
+- none
 
 ## Recent Test Runs
+- 2026-05-25 22:41 CEST | pass | mode: release | command:
+  `cmake --build build-release --target PrimeStruct_compile_run_tests -j 1`;
+  `cd build-release && ./PrimeStruct_compile_run_tests --test-suite=primestruct.compile.run.vm.core --source-file="*test_compile_run_vm_core_ui.cpp" --test-case="runs vm scene model authoring deterministically" --order-by=file --no-skip --success`;
+  `cd build-release && ./PrimeStruct_compile_run_tests --test-suite=primestruct.compile.run.examples --source-file="*test_compile_run_examples_docs_locks.cpp" --test-case="stdlib style boundary docs stay source locked,scene renderer ui producer contract stays source locked,todo queue and skipped doctest debt stay source locked" --order-by=file --no-skip --success`
+  | failures: none | notes: parent rerun passed the descriptor-only VM
+  scene case, 1 case / 3 assertions, and refreshed docs/source-lock cases,
+  3 cases / 604 assertions.
+- 2026-05-25 22:37 CEST | fail | mode: release | command:
+  `cd build-release && ./PrimeStruct_compile_run_tests --test-suite=primestruct.compile.run.vm.core --source-file="*test_compile_run_vm_core_ui.cpp" --test-case="runs vm scene model authoring deterministically" --order-by=file --no-skip --success`
+  | failures: `runs vm scene model authoring deterministically` | notes:
+  parent interrupted the silent `primec --emit=vm` run over the full scene
+  authoring fixture; output remained empty and the command returned -1.
+- 2026-05-25 22:37 CEST | pass | mode: release | command:
+  `cmake --build build-release --target PrimeStruct_compile_run_tests -j 1`;
+  `cd build-release && ./PrimeStruct_compile_run_tests --test-suite=primestruct.compile.run.emitters.cpp --source-file="*test_compile_run_emitters_core_behaviors.cpp" --test-case="C++ emitter serializes scene model source deterministically" --order-by=file --no-skip --success`;
+  `cd build-release && ./PrimeStruct_compile_run_tests --test-suite=primestruct.compile.run.native_backend.core --source-file="*test_compile_run_native_backend_core_ui_layout_b.cpp" --test-case="compiles and runs native scene model authoring deterministically" --order-by=file --no-skip --success`
+  | failures: none | notes: parent rerun passed the descriptor-only C++
+  emitter scene case, 1 case / 5 assertions, and the descriptor-only native
+  scene case, 1 case / 4 assertions.
+- 2026-05-25 22:12 CEST | fail | mode: release | command:
+  `cd build-release && ./PrimeStruct_compile_run_tests --test-suite=primestruct.compile.run.native_backend.core --source-file="*test_compile_run_native_backend_core_ui_layout_b.cpp" --test-case="compiles and runs native scene model authoring deterministically" --order-by=file --no-skip --success`
+  | failures: `compiles and runs native scene model authoring deterministically`
+  | notes: parent interrupted the silent `primec --emit=native` compile over
+  the full scene authoring fixture; the generated executable did not exist, so
+  the run command returned 127 and output was empty.
+- 2026-05-25 22:12 CEST | pass | mode: release | command:
+  `cmake --build build-release --target PrimeStruct_compile_run_tests -j 1`;
+  `cd build-release && ./PrimeStruct_compile_run_tests --test-suite=primestruct.compile.run.emitters.cpp --source-file="*test_compile_run_emitters_core_behaviors.cpp" --test-case="C++ emitter serializes scene model source deterministically" --order-by=file --no-skip --success`
+  | failures: none | notes: parent rerun passed the retargeted
+  descriptor-only scene C++ emitter case, 1 case / 5 assertions.
+- 2026-05-25 21:32 CEST | fail | mode: release | command:
+  `cd build-release && ./PrimeStruct_compile_run_tests --test-suite=primestruct.compile.run.emitters.cpp --source-file="*test_compile_run_emitters_core_behaviors.cpp" --test-case="C++ emitter serializes scene model source deterministically" --order-by=file --no-skip --success`
+  | failures: `C++ emitter serializes scene model source deterministically` |
+  notes: parent interrupted the silent first `primec --emit=cpp` command; the
+  doctest reported `runCommand(compileCmdA) == -1` and then
+  `runCommand(compileCmdB) == -1` after a second interrupt.
+- 2026-05-25 21:32 CEST | pass | mode: release | command:
+  `cd build-release && ./PrimeStruct_compile_run_tests --test-suite=primestruct.compile.run.examples --source-file="*test_compile_run_examples_docs_locks.cpp" --test-case="stdlib style boundary docs stay source locked,scene renderer ui producer contract stays source locked,todo queue and skipped doctest debt stay source locked" --order-by=file --no-skip --success`
+  | failures: none | notes: parent rerun passed 3 docs/source-lock cases and
+  594 assertions after refreshing the scene renderer source-lock wrapping.
+- 2026-05-25 21:32 CEST | fail | mode: release | command:
+  `cd build-release && ./PrimeStruct_compile_run_tests --test-suite=primestruct.compile.run.examples --source-file="*test_compile_run_examples_docs_locks.cpp" --test-case="stdlib style boundary docs stay source locked,scene renderer ui producer contract stays source locked,todo queue and skipped doctest debt stay source locked" --order-by=file --no-skip --success`
+  | failures: `scene renderer ui producer contract stays source locked` |
+  notes: stale source-lock assertion expected an older line break around
+  `renderer-facing Scene/Node/Transform/Camera/Material/Light`.
 - 2026-05-25 19:39 CEST | pass | mode: release | command:
   `cmake --build build-release --target primec primevm PrimeStruct_backend_ir_tests -j 1`;
   `cd build-release && ./PrimeStruct_backend_ir_tests --test-suite=primestruct.ir.pipeline.serialization --test-case="ir serialization schema golden fixture stays stable,ir serializes instruction source map metadata,ir deserialization rejects malformed instruction source map metadata,ir deserialization rejects unsupported instruction source map provenance,ir lowerer emits deterministic instruction source map provenance,compile pipeline IR source maps preserve imported source units,vm debug adapter preserves lowered source map provenance" --no-skip`;
@@ -8356,6 +8388,27 @@
 - 2026-05-12 17:28 local | fail | mode: release | command: `./scripts/compile.sh --release` | failures: 146 CTest targets | notes: baseline after preflight checkpoint failed; stabilization blocks TODO work
 
 ## Resolved Failures
+- [x] `runs vm scene model authoring deterministically` |
+  resolved: 2026-05-25 22:41 CEST | validating command:
+  `cmake --build build-release --target PrimeStruct_compile_run_tests -j 1`;
+  `cd build-release && ./PrimeStruct_compile_run_tests --test-suite=primestruct.compile.run.vm.core --source-file="*test_compile_run_vm_core_ui.cpp" --test-case="runs vm scene model authoring deterministically" --order-by=file --no-skip --success`
+  | notes: retargeted the VM backend check from the full scene authoring
+  fixture to a descriptor-only scene source; parent rerun passed 1 case / 3
+  assertions.
+- [x] `compiles and runs native scene model authoring deterministically` |
+  resolved: 2026-05-25 22:37 CEST | validating command:
+  `cmake --build build-release --target PrimeStruct_compile_run_tests -j 1`;
+  `cd build-release && ./PrimeStruct_compile_run_tests --test-suite=primestruct.compile.run.native_backend.core --source-file="*test_compile_run_native_backend_core_ui_layout_b.cpp" --test-case="compiles and runs native scene model authoring deterministically" --order-by=file --no-skip --success`
+  | notes: retargeted the native backend check from the full scene authoring
+  fixture to a descriptor-only scene source; parent rerun passed 1 case / 4
+  assertions.
+- [x] `C++ emitter serializes scene model source deterministically` |
+  resolved: 2026-05-25 22:12 CEST | validating command:
+  `cmake --build build-release --target PrimeStruct_compile_run_tests -j 1`;
+  `cd build-release && ./PrimeStruct_compile_run_tests --test-suite=primestruct.compile.run.emitters.cpp --source-file="*test_compile_run_emitters_core_behaviors.cpp" --test-case="C++ emitter serializes scene model source deterministically" --order-by=file --no-skip --success`
+  | notes: retargeted the C++ emitter check from the full scene authoring
+  fixture to a descriptor-only scene source; parent rerun passed 1 case / 5
+  assertions.
 - [x] todo queue and skipped doctest debt stay source locked | resolved:
   2026-05-25 15:58 CEST | validating command: `cmake --build
   build-release --target PrimeStruct_compile_run_tests -j 1 && cd

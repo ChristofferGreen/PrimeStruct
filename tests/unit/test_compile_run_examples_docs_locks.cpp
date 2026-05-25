@@ -1808,10 +1808,10 @@ TEST_CASE("todo queue and skipped doctest debt stay source locked") {
                   "  coverage snapshots in this file.") !=
         std::string::npos);
   CHECK(todo.find("### Ready Now\n\n"
-                  "- TODO-4565: Add minimal scene graph and camera data model | track: "
+                  "- TODO-4566: Render flat and rounded-rect scene primitives to BGRA8 | track: "
                   "scene-renderer") !=
         std::string::npos);
-  CHECK(todo.find("- TODO-4565: Add minimal scene graph and camera data model | track: scene-renderer") !=
+  CHECK(todo.find("- TODO-4565: Add minimal scene graph and camera data model | track: scene-renderer") ==
         std::string::npos);
   CHECK(todo.find("- TODO-4570: Retire duplicate map2 candidate surface") ==
         std::string::npos);
@@ -1823,7 +1823,7 @@ TEST_CASE("todo queue and skipped doctest debt stay source locked") {
   CHECK(todo.find("- TODO-4573: Remove compiler-owned map literal lowering | track: map-special-case-deletion") !=
         std::string::npos);
   CHECK(todo.find("### Immediate Next 10\n\n"
-                  "- TODO-4566: Render flat and rounded-rect scene primitives to BGRA8") !=
+                  "- TODO-4590: Add international text shaping and glyph atlas path") !=
         std::string::npos);
   CHECK(todo.find("### Priority Lanes") != std::string::npos);
   CHECK(todo.find("Source-unit provenance ledger: TODO-4592 completed parser/semantic") ==
@@ -1831,13 +1831,14 @@ TEST_CASE("todo queue and skipped doctest debt stay source locked") {
   CHECK(todo.find("TODO-4583 added the IR schema/version\n"
                   "  contract that TODO-4593 must follow") ==
         std::string::npos);
-  CHECK(todo.find("Scene graph renderer and UI presentation: TODO-4565 -> TODO-4566") !=
+  CHECK(todo.find("Scene graph renderer and UI presentation: TODO-4565 completed the data-only\n"
+                  "  scene model; TODO-4566 ->") !=
         std::string::npos);
   CHECK(todo.find("Map/vector compiler-independence: TODO-4570 retired the duplicate `map2`\n"
                   "  surface and TODO-4571 added the compiler-knowledge inventory categories") !=
         std::string::npos);
   CHECK(todo.find("### Execution Queue\n\n"
-                  "- TODO-4565: Add minimal scene graph and camera data model") !=
+                  "- TODO-4566: Render flat and rounded-rect scene primitives to BGRA8") !=
         std::string::npos);
   CHECK(todoFinished.find("TODO-4591: Add expanded-source provenance ledger") !=
         std::string::npos);
@@ -1858,6 +1859,14 @@ TEST_CASE("todo queue and skipped doctest debt stay source locked") {
   CHECK(todo.find("- [ ] TODO-4564: Lock scene renderer defaults and UI producer contract") ==
         std::string::npos);
   CHECK(todoFinished.find("TODO-4564: Lock scene renderer defaults and UI producer contract") !=
+        std::string::npos);
+  CHECK(todo.find("- [ ] TODO-4565: Add minimal scene graph and camera data model") ==
+        std::string::npos);
+  CHECK(todoFinished.find("TODO-4565: Add minimal scene graph and camera data model") !=
+        std::string::npos);
+  CHECK(todoFinished.find("Added `stdlib/std/scene/scene.prime` as a data-only scene authoring") !=
+        std::string::npos);
+  CHECK(todoFinished.find("pixel rendering remains with TODO-4566") !=
         std::string::npos);
   CHECK(todoFinished.find("TODO-4571: Add compiler-knowledge inventory for map/vector") !=
         std::string::npos);
@@ -2773,6 +2782,7 @@ TEST_CASE("constructor-shaped compatibility inventory stays source locked") {
 TEST_CASE("scene renderer ui producer contract stays source locked") {
   std::filesystem::path graphicsDocPath = std::filesystem::path("..") / "docs" / "Graphics_API_Design.md";
   std::filesystem::path specDocPath = std::filesystem::path("..") / "docs" / "PrimeStruct.md";
+  std::filesystem::path sceneStdlibPath = std::filesystem::path("..") / "stdlib" / "std" / "scene" / "scene.prime";
   std::filesystem::path bridgePath =
       std::filesystem::path("..") / "examples" / "shared" / "software_surface_bridge.h";
   if (!std::filesystem::exists(graphicsDocPath)) {
@@ -2781,15 +2791,20 @@ TEST_CASE("scene renderer ui producer contract stays source locked") {
   if (!std::filesystem::exists(specDocPath)) {
     specDocPath = std::filesystem::current_path() / "docs" / "PrimeStruct.md";
   }
+  if (!std::filesystem::exists(sceneStdlibPath)) {
+    sceneStdlibPath = std::filesystem::current_path() / "stdlib" / "std" / "scene" / "scene.prime";
+  }
   if (!std::filesystem::exists(bridgePath)) {
     bridgePath = std::filesystem::current_path() / "examples" / "shared" / "software_surface_bridge.h";
   }
   REQUIRE(std::filesystem::exists(graphicsDocPath));
   REQUIRE(std::filesystem::exists(specDocPath));
+  REQUIRE(std::filesystem::exists(sceneStdlibPath));
   REQUIRE(std::filesystem::exists(bridgePath));
 
   const std::string graphicsDoc = readFile(graphicsDocPath.string());
   const std::string specDoc = readFile(specDocPath.string());
+  const std::string sceneStdlib = readFile(sceneStdlibPath.string());
   const std::string bridge = readFile(bridgePath.string());
 
   CHECK(graphicsDoc.find("## Locked Scene Renderer and UI Producer Contract (vNext)") !=
@@ -2857,14 +2872,29 @@ TEST_CASE("scene renderer ui producer contract stays source locked") {
   CHECK(specDoc.find("The scene renderer boundary is now locked as a UI producer contract") !=
         std::string::npos);
   CHECK(specDoc.find("rather\n  than a UI-specific software renderer") != std::string::npos);
-  CHECK(specDoc.find("renderer-facing `Scene`, `Node`, `Transform`,\n"
-                     "  `Camera`, `Material`, `Light`, and primitive descriptor concepts") !=
+  CHECK(specDoc.find("renderer-facing `Scene`, `Node`, `Transform`, `Camera`, `Material`, `Light`, and\n"
+                     "  primitive descriptor concepts") !=
         std::string::npos);
+  CHECK(specDoc.find("`/std/scene` descriptor surface (`Scene`, `Node`,\n"
+                     "  `Transform`, `Camera`, `Material`, `Light`, and `Primitive`)") !=
+        std::string::npos);
+  CHECK(specDoc.find("The compiler owns no scene graph, camera, material, light, or primitive\n"
+                     "  special case") != std::string::npos);
   CHECK(specDoc.find("orthographic `Camera` projection config") != std::string::npos);
   CHECK(specDoc.find("one scene unit\n  to one logical pixel") != std::string::npos);
   CHECK(specDoc.find("painter order is primary, then local `z`, then stable node id") !=
         std::string::npos);
   CHECK(specDoc.find("HarfBuzz-class, FreeType-class, and ICU/FriBidi-class wrappers") !=
+        std::string::npos);
+  CHECK(sceneStdlib.find("namespace scene") != std::string::npos);
+  CHECK(sceneStdlib.find("[public struct]\n  Scene()") != std::string::npos);
+  CHECK(sceneStdlib.find("[public struct]\n  Node()") != std::string::npos);
+  CHECK(sceneStdlib.find("[public struct]\n  Camera()") != std::string::npos);
+  CHECK(sceneStdlib.find("appendNode([Scene mut] self") != std::string::npos);
+  CHECK(sceneStdlib.find("appendCamera([Scene mut] self") != std::string::npos);
+  CHECK(sceneStdlib.find("appendUiLightRig([Scene mut] self)") != std::string::npos);
+  CHECK(sceneStdlib.find("serialize([Scene] self)") != std::string::npos);
+  CHECK(sceneStdlib.find("for([i32 mut] nodeId{0i32}, nodeId < nodeCount, ++nodeId)") !=
         std::string::npos);
 
   CHECK(bridge.find("Presentation transport for scene-renderer or legacy command-list adapter output") !=

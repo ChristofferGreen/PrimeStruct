@@ -64,13 +64,12 @@ This file is the live open-work queue for PrimeStruct.
 
 ### Ready Now
 
-- TODO-4565: Add minimal scene graph and camera data model | track: scene-renderer | primary surface: stdlib/std/scene scene model
+- TODO-4566: Render flat and rounded-rect scene primitives to BGRA8 | track: scene-renderer | primary surface: scene renderer BGRA8 output
 - TODO-4572: Remove vector statement-helper compiler path | track: vector-special-case-deletion | primary surface: vector semantic/lowerer helpers
 - TODO-4573: Remove compiler-owned map literal lowering | track: map-special-case-deletion | primary surface: map literal semantics/lowering
 
 ### Immediate Next 10
 
-- TODO-4566: Render flat and rounded-rect scene primitives to BGRA8
 - TODO-4590: Add international text shaping and glyph atlas path
 - TODO-4567: Render first globally lit 3D SDF widget primitive
 - TODO-4568: Emit scene nodes from the existing UI layout/widgets
@@ -81,7 +80,8 @@ This file is the live open-work queue for PrimeStruct.
 
 ### Priority Lanes
 
-- Scene graph renderer and UI presentation: TODO-4565 -> TODO-4566 ->
+- Scene graph renderer and UI presentation: TODO-4565 completed the data-only
+  scene model; TODO-4566 ->
   (TODO-4590 and TODO-4567) -> TODO-4568 -> TODO-4569
 - Map/vector compiler-independence: TODO-4570 retired the duplicate `map2`
   surface and TODO-4571 added the compiler-knowledge inventory categories that
@@ -96,10 +96,9 @@ This file is the live open-work queue for PrimeStruct.
 
 ### Execution Queue
 
-- TODO-4565: Add minimal scene graph and camera data model
+- TODO-4566: Render flat and rounded-rect scene primitives to BGRA8
 - TODO-4572: Remove vector statement-helper compiler path
 - TODO-4573: Remove compiler-owned map literal lowering
-- TODO-4566: Render flat and rounded-rect scene primitives to BGRA8
 - TODO-4590: Add international text shaping and glyph atlas path
 - TODO-4567: Render first globally lit 3D SDF widget primitive
 - TODO-4568: Emit scene nodes from the existing UI layout/widgets
@@ -113,42 +112,11 @@ This file is the live open-work queue for PrimeStruct.
 
 ### Task Blocks
 
-- [ ] TODO-4565: Add minimal scene graph and camera data model
-  - owner: ai
-  - created_at: 2026-05-24
-  - phase: Scene graph renderer and UI presentation
-  - depends_on: TODO-4564
-  - scope: Add the first source-level scene graph data model with deterministic
-    node ordering, local transforms, optional local z/order metadata,
-    material/light handles, primitive handles, and a camera projection config
-    whose only implemented render mode is orthographic.
-  - implementation_notes: Prefer a narrow stdlib surface such as
-    `stdlib/std/scene/scene.prime` plus focused compile-run tests. Keep any C++
-    helper/parser/lowerer additions generic and avoid hard-coding UI widget
-    names into the scene model. The scene graph should be serializable or
-    otherwise inspectable enough for deterministic golden tests. Use `f32`
-    scene units for transforms/camera/material parameters; the UI adapter maps
-    existing `i32` layout rect pixels into those scene units.
-  - acceptance:
-    - A small PrimeStruct program can build a scene with parented nodes,
-      transforms, one camera, one light rig, and one material.
-    - Node traversal and serialized/inspected output are deterministic across
-      repeated VM/native/C++ emitter runs.
-    - Orthographic projection parameters are represented on `Camera` as a
-      projection mode/config; perspective is either absent from construction or
-      rejected with a deterministic unsupported diagnostic.
-    - A default UI camera/viewport fixture proves one scene unit maps to one
-      logical pixel with the documented top-left, y-down UI orientation.
-    - Tests cover parent-before-child ordering, deterministic render-order/z
-      metadata, local transform composition metadata, and stable
-      material/light/primitive ids.
-  - stop_rule: Stop once scene data can be authored and inspected
-    deterministically; do not add pixel rendering in this slice.
-
 - [ ] TODO-4566: Render flat and rounded-rect scene primitives to BGRA8
   - owner: ai
   - created_at: 2026-05-24
   - phase: Scene graph renderer and UI presentation
+  - parallel_track: scene-renderer
   - depends_on: TODO-4565
   - scope: Add a deterministic CPU BGRA8 renderer for the minimal scene graph,
     covering flat rect/plane primitives and 2D rounded-rect SDF coverage under
@@ -156,6 +124,9 @@ This file is the live open-work queue for PrimeStruct.
   - implementation_notes: Reuse `examples/shared/software_surface_bridge.h` for
     `SoftwareSurfaceFrame` validation and add a narrow renderer helper under
     `examples/shared/` or the smallest appropriate runtime/test helper area.
+    Consume the stdlib-owned `/std/scene` data model added by TODO-4565; do
+    not introduce compiler-owned scene graph, camera, material, light, or
+    primitive special cases.
     Treat SDF distance as coverage for one primitive, then source-over blend
     the primitive material color; do not add smooth boolean composition between
     differently colored commands. Follow UI painter order as the primary

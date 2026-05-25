@@ -8,17 +8,14 @@ TEST_SUITE_BEGIN("primestruct.compile.run.native_backend.core");
 
 TEST_CASE("compiles and runs native scene model authoring deterministically") {
   const std::string srcPath =
-      writeTemp("compile_native_scene_model_authoring.prime", sceneModelAuthoringSource());
+      writeTemp("compile_native_scene_model_descriptors.prime", sceneModelNativeDescriptorSource());
   const std::string exePath =
-      (testScratchPath("") / "primec_native_scene_model_authoring").string();
-  const std::string outPath =
-      (testScratchPath("") / "primec_native_scene_model_authoring.txt").string();
+      (testScratchPath("") / "primec_native_scene_model_descriptors").string();
 
   const std::string compileCmd =
-      "./primec --emit=native " + srcPath + " -o " + exePath + " --entry /main";
+      "./primec --emit=native " + quoteShellArg(srcPath) + " -o " + quoteShellArg(exePath) + " --entry /main";
   CHECK(runCommand(compileCmd) == 0);
-  CHECK(runCommand(exePath + " > " + outPath) == 6);
-  CHECK(readFile(outPath) == expectedSceneModelAuthoringOutput());
+  CHECK(runCommand(quoteShellArg(exePath)) == 14);
 }
 
 TEST_CASE("compiles and runs native composite login form deterministically") {

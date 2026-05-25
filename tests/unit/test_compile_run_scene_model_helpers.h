@@ -2,6 +2,97 @@
 
 #include <string>
 
+inline std::string sceneModelCppEmitterSource() {
+  return R"(
+[struct]
+Transform() {
+  [f32] translationX{0.0f32}
+  [f32] translationY{0.0f32}
+  [f32] translationZ{0.0f32}
+  [f32] scaleX{1.0f32}
+  [f32] scaleY{1.0f32}
+  [f32] scaleZ{1.0f32}
+  [f32] rotationZDegrees{0.0f32}
+}
+
+[struct]
+Camera() {
+  [i32] projectionMode{1i32}
+  [f32] viewportWidth{1.0f32}
+  [f32] viewportHeight{1.0f32}
+  [f32] unitsPerPixel{1.0f32}
+  [f32] originX{0.0f32}
+  [f32] originY{0.0f32}
+}
+
+[struct]
+Material() {
+  [f32] r{1.0f32}
+  [f32] g{1.0f32}
+  [f32] b{1.0f32}
+  [f32] opacity{1.0f32}
+  [f32] shadeStrength{1.0f32}
+}
+
+[struct]
+Light() {
+  [i32] kind{1i32}
+  [f32] weight{1.0f32}
+  [f32] directionX{0.0f32}
+  [f32] directionY{0.0f32}
+  [f32] directionZ{1.0f32}
+}
+
+[struct]
+Primitive() {
+  [i32] kind{1i32}
+  [f32] width{0.0f32}
+  [f32] height{0.0f32}
+  [f32] radius{0.0f32}
+  [i32] materialId{-1i32}
+}
+
+[struct]
+Node() {
+  [i32] id{-1i32}
+  [i32] parentId{-1i32}
+  [Transform] transform{Transform{}}
+  [i32] painterOrder{0i32}
+  [f32] localZ{0.0f32}
+  [i32] primitiveId{-1i32}
+  [i32] materialId{-1i32}
+}
+
+[return<int>]
+main() {
+  [Camera] camera{Camera{
+    [projectionMode] 1i32,
+    [viewportWidth] 320.0f32,
+    [viewportHeight] 200.0f32,
+    [unitsPerPixel] 1.0f32
+  }}
+  [Material] material{Material{[r] 0.25f32, [g] 0.5f32, [b] 0.75f32, [opacity] 0.875f32}}
+  [Light] light{Light{[kind] 2i32, [weight] 0.45f32, [directionX] -1.0f32, [directionY] -1.0f32}}
+  [Primitive] primitive{Primitive{[kind] 1i32, [width] 50.0f32, [height] 25.0f32, [radius] 4.0f32, [materialId] 0i32}}
+  [Node] node{Node{
+    [id] 1i32,
+    [parentId] 0i32,
+    [transform] Transform{[translationX] 3.0f32, [translationY] 5.0f32, [translationZ] 4.0f32},
+    [painterOrder] 2i32,
+    [localZ] 4.0f32,
+    [primitiveId] 0i32,
+    [materialId] 0i32
+  }}
+  return(camera.projectionMode + light.kind + primitive.kind + node.id +
+         node.painterOrder + convert<int>(material.opacity * 8.0f32))
+}
+)";
+}
+
+inline std::string sceneModelNativeDescriptorSource() {
+  return sceneModelCppEmitterSource();
+}
+
 inline std::string sceneModelAuthoringSource() {
   return R"(
 import /std/scene/*

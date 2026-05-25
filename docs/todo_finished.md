@@ -6,6 +6,48 @@ Legend:
 Finished items are periodically archived here from `docs/todo.md`; section headers record the archive date.
 
 **Todo Completion (May 25, 2026)**
+- [x] TODO-4565: Add minimal scene graph and camera data model
+  - owner: ai
+  - created_at: 2026-05-24
+  - finished_at: 2026-05-25
+  - phase: Scene graph renderer and UI presentation
+  - parallel_track: scene-renderer
+  - depends_on: TODO-4564
+  - scope: Add the first source-level scene graph data model with deterministic
+    node ordering, local transforms, optional local z/order metadata,
+    material/light handles, primitive handles, and a camera projection config
+    whose only implemented render mode is orthographic.
+  - outcome:
+    - Added `stdlib/std/scene/scene.prime` as a data-only scene authoring
+      surface with public `Scene`, `Node`, `Transform`, `Camera`, `Material`,
+      `Light`, and `Primitive` records.
+    - Stored nodes, primitives, materials, lights, and cameras in append-only
+      vectors so ids and serialized inspection order stay deterministic and
+      parent-before-child authoring order is preserved.
+    - Added orthographic `Camera` helpers and `ui_camera(...)` defaults that
+      map one scene unit to one logical pixel with top-left, y-down UI
+      orientation.
+    - Added deterministic `Scene.serialize()` inspection records covering node
+      ids, parent ids, painter order, local z, primitive/material handles,
+      local transforms, material values, light rig values, and camera config
+      without adding pixel rendering.
+    - Added descriptor-focused compile-run coverage for VM execution, native
+      execution, and deterministic C++ emitter output, while source-lock
+      coverage pins the heavier stdlib append/serialize surface.
+  - validation:
+    - Parent-scheduled release build passed:
+      `cmake --build build-release --target PrimeStruct_compile_run_tests -j 1`
+    - Passed 1 C++ emitter descriptor case / 5 assertions:
+      `cd build-release && ./PrimeStruct_compile_run_tests --test-suite=primestruct.compile.run.emitters.cpp --source-file="*test_compile_run_emitters_core_behaviors.cpp" --test-case="C++ emitter serializes scene model source deterministically" --order-by=file --no-skip --success`
+    - Passed 1 native descriptor case / 4 assertions:
+      `cd build-release && ./PrimeStruct_compile_run_tests --test-suite=primestruct.compile.run.native_backend.core --source-file="*test_compile_run_native_backend_core_ui_layout_b.cpp" --test-case="compiles and runs native scene model authoring deterministically" --order-by=file --no-skip --success`
+    - Passed 1 VM descriptor case / 3 assertions:
+      `cd build-release && ./PrimeStruct_compile_run_tests --test-suite=primestruct.compile.run.vm.core --source-file="*test_compile_run_vm_core_ui.cpp" --test-case="runs vm scene model authoring deterministically" --order-by=file --no-skip --success`
+    - Passed 3 docs/source-lock cases / 604 assertions:
+      `cd build-release && ./PrimeStruct_compile_run_tests --test-suite=primestruct.compile.run.examples --source-file="*test_compile_run_examples_docs_locks.cpp" --test-case="stdlib style boundary docs stay source locked,scene renderer ui producer contract stays source locked,todo queue and skipped doctest debt stay source locked" --order-by=file --no-skip --success`
+  - stop_rule: Stopped once scene data can be authored and inspected
+    deterministically; pixel rendering remains with TODO-4566.
+
 - [x] TODO-4593: Carry source-unit provenance into IR and VM debug maps
   - owner: ai
   - created_at: 2026-05-24
