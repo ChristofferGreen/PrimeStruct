@@ -6,6 +6,47 @@ Legend:
 Finished items are periodically archived here from `docs/todo.md`; section headers record the archive date.
 
 **Todo Completion (May 25, 2026)**
+- [x] TODO-4587: Extract shared compile-time/runtime VM kernel boundary
+  - owner: ai
+  - created_at: 2026-05-24
+  - finished_at: 2026-05-25
+  - phase: Architecture hardening
+  - parallel_track: architecture-vm-kernel-boundary
+  - scope: Make one compile-time evaluation path and one `primevm` runtime path
+    share a documented VM-kernel API instead of incidental runtime state.
+  - outcome:
+    - Added `primec/VmKernelBoundary.h` with a named pure numeric VM-kernel
+      API for stack-based opcode execution and result classification.
+    - Moved arithmetic/comparison/conversion behavior behind
+      `executePureNumericOpcode`, routed runtime VM numeric dispatch through
+      that API, and kept runtime-only IO/file/heap/argv behavior on host
+      boundaries.
+    - Routed compile-time `value_*` requirement predicates through the same
+      pure numeric kernel API while preserving budget checks, invalid operand
+      rejection, and the existing no-final-backend/no-`primevm` CT boundary.
+    - Added CT-eval, VM execution, VM debug parity, and source-lock coverage
+      for the shared kernel boundary.
+  - validation:
+    - `cmake -S . -B build-release -DCMAKE_BUILD_TYPE=Release`
+    - `cmake --build build-release --target PrimeStruct_compile_time_tests -j 1`
+    - Passed 4 compile-time facade cases / 112 assertions:
+      `cd build-release && ./PrimeStruct_compile_time_tests --test-suite=primestruct.compile_time.facade --test-case="compile-time value predicates use shared VM kernel numeric API,compile-time VM facade stays source locked to compiler-host boundary,semantic CT host gates effects on phase-qualified metadata,compile-time evaluation facade distinguishes predicate conformance outcomes" --no-skip`
+    - `cmake --build build-release --target PrimeStruct_backend_runtime_tests -j 1`
+    - Passed 2 VM execution kernel cases / 31 assertions:
+      `cd build-release && ./PrimeStruct_backend_runtime_tests --test-suite=primestruct.vm.execution.kernel --test-case="vm execution kernel owns frame calls and numeric opcodes,vm execution kernel avoids runtime-only dependencies" --no-skip`
+    - Passed 2 VM debug parity cases / 63 assertions:
+      `cd build-release && ./PrimeStruct_backend_runtime_tests --test-suite=primestruct.vm.debug.session --test-case="vm and debug session share numeric opcode behavior,vm and debug session share control flow opcode behavior" --no-skip`
+    - `cmake --build build-release --target PrimeStruct_backend_ir_tests -j 1`
+    - Passed 2 backend IR source-lock cases / 64 assertions:
+      `cd build-release && ./PrimeStruct_backend_ir_tests --test-case="vm numeric opcode helpers source delegation stays stable,vm control flow opcode helpers source delegation stays stable,cmake splits primec library into subsystem targets" --no-skip`
+    - Passed the CMake subsystem target case / 155 assertions from the runtime
+      binary after the combined backend IR filter selected only the two IR
+      source-delegation cases:
+      `cd build-release && ./PrimeStruct_backend_runtime_tests --test-case="cmake splits primec library into subsystem targets" --no-skip`
+  - stop_rule: Stopped after the pure numeric value-predicate/runtime VM
+    behavior shared one documented kernel API; no broader compile-time/runtime
+    host merge was attempted.
+
 - [x] TODO-4586: Define diagnostic stability tiers
   - owner: ai
   - created_at: 2026-05-24

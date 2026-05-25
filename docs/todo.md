@@ -67,7 +67,6 @@ This file is the live open-work queue for PrimeStruct.
 - TODO-4565: Add minimal scene graph and camera data model | track: scene-renderer | primary surface: stdlib/std/scene scene model
 - TODO-4572: Remove vector statement-helper compiler path | track: vector-special-case-deletion | primary surface: vector semantic/lowerer helpers
 - TODO-4573: Remove compiler-owned map literal lowering | track: map-special-case-deletion | primary surface: map literal semantics/lowering
-- TODO-4587: Extract shared compile-time/runtime VM kernel boundary | track: architecture-vm-kernel-boundary | primary surface: VM execution kernel API
 
 ### Immediate Next 10
 
@@ -101,8 +100,9 @@ This file is the live open-work queue for PrimeStruct.
   TODO-4577; map path TODO-4573 -> TODO-4575 -> TODO-4576; join at
   TODO-4578 -> TODO-4579
 - Architecture hardening backlog: TODO-4586 completed parser diagnostic
-  stability tiers. Remaining architecture leaves: TODO-4587, TODO-4588,
-  TODO-4589, TODO-4594.
+  stability tiers. TODO-4587 completed the shared compile-time/runtime VM
+  kernel boundary. Remaining architecture leaves: TODO-4588, TODO-4589,
+  TODO-4594.
 
 ### Execution Queue
 
@@ -121,7 +121,6 @@ This file is the live open-work queue for PrimeStruct.
 - TODO-4578: Generalize stdlib surface registry away from map/vector IDs
 - TODO-4579: Enforce zero map/vector compiler-knowledge traces
 - TODO-4593: Carry source-unit provenance into IR and VM debug maps
-- TODO-4587: Extract shared compile-time/runtime VM kernel boundary
 - TODO-4588: Add pass/phase invalidation manifest beyond semantics
 - TODO-4589: Add architecture health dashboard script
 - TODO-4594: Classify semantic call diagnostic stability tiers
@@ -585,29 +584,6 @@ This file is the live open-work queue for PrimeStruct.
       metadata files, while C++ treats them as ordinary included stdlib code.
   - stop_rule: Stop once the zero gate is wired into routine validation and
     focused map/vector stdlib tests plus the new audit pass.
-
-- [ ] TODO-4587: Extract shared compile-time/runtime VM kernel boundary
-  - owner: ai
-  - created_at: 2026-05-24
-  - phase: Architecture hardening
-  - parallel_track: architecture-vm-kernel-boundary
-  - scope: Make one compile-time evaluation path and one `primevm` runtime path
-    share a documented VM-kernel API instead of incidental runtime state.
-  - implementation_notes: Start from `include/primec/CompileTimeEvaluation.h`,
-    `src/CompileTimeEvaluation.cpp`, `src/VmExecutionKernel.cpp`, and
-    `tests/unit/test_compile_time_evaluation_facade.cpp`. Keep the first slice
-    to arithmetic/call/frame mechanics or another small common kernel surface.
-  - acceptance:
-    - A named shared kernel API is used by both compile-time evaluation and
-      runtime VM execution for the selected behavior.
-    - Compile-time evaluation remains unable to perform runtime-only effects or
-      launch final backend IR.
-    - Runtime VM behavior and debug execution for the selected behavior remain
-      covered.
-    - Focused CT-eval and VM tests prove parity where the kernel is shared and
-      rejection where compile-time effects are not allowed.
-  - stop_rule: Stop once one shared kernel behavior is extracted and covered;
-    do not merge compile-time and runtime hosts broadly.
 
 - [ ] TODO-4588: Add pass/phase invalidation manifest beyond semantics
   - owner: ai

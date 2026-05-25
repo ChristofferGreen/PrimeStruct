@@ -6,10 +6,26 @@
   focused validation. TODO-4581 and TODO-4584 focused root validation passed
   on 2026-05-25 after serial root cherry-picks. TODO-4582 and TODO-4585
   focused root validation passed on 2026-05-25 after serial root
-  cherry-picks. TODO-4586 focused worker validation passed on 2026-05-25
-  after the parent-scheduled heavy validation turn.
+  cherry-picks. TODO-4586 and TODO-4587 focused worker validation passed
+  on 2026-05-25 after parent-scheduled heavy validation turns.
 
 ## Recent Test Runs
+- 2026-05-25 15:03 CEST | pass | mode: release | command:
+  `cmake -S . -B build-release -DCMAKE_BUILD_TYPE=Release`;
+  `cmake --build build-release --target PrimeStruct_compile_time_tests -j 1`;
+  `cd build-release && ./PrimeStruct_compile_time_tests --test-suite=primestruct.compile_time.facade --test-case="compile-time value predicates use shared VM kernel numeric API,compile-time VM facade stays source locked to compiler-host boundary,semantic CT host gates effects on phase-qualified metadata,compile-time evaluation facade distinguishes predicate conformance outcomes" --no-skip`;
+  `cmake --build build-release --target PrimeStruct_backend_runtime_tests -j 1`;
+  `cd build-release && ./PrimeStruct_backend_runtime_tests --test-suite=primestruct.vm.execution.kernel --test-case="vm execution kernel owns frame calls and numeric opcodes,vm execution kernel avoids runtime-only dependencies" --no-skip`;
+  `cd build-release && ./PrimeStruct_backend_runtime_tests --test-suite=primestruct.vm.debug.session --test-case="vm and debug session share numeric opcode behavior,vm and debug session share control flow opcode behavior" --no-skip`;
+  `cmake --build build-release --target PrimeStruct_backend_ir_tests -j 1`;
+  `cd build-release && ./PrimeStruct_backend_ir_tests --test-case="vm numeric opcode helpers source delegation stays stable,vm control flow opcode helpers source delegation stays stable,cmake splits primec library into subsystem targets" --no-skip`;
+  `cd build-release && ./PrimeStruct_backend_runtime_tests --test-case="cmake splits primec library into subsystem targets" --no-skip`
+  | failures: none | notes: parent validation for TODO-4587 passed
+  after configuring the missing release build dir; CT facade slice passed
+  4 cases / 112 assertions, VM execution kernel slice passed 2 cases / 31
+  assertions, VM debug parity slice passed 2 cases / 63 assertions, backend
+  IR source-delegation slice passed 2 cases / 64 assertions, and the CMake
+  subsystem target case passed 1 case / 155 assertions.
 - 2026-05-25 14:38 CEST | pass | mode: release | command:
   `cmake -S . -B build-release -DCMAKE_BUILD_TYPE=Release`;
   `cmake --build build-release --target PrimeStruct_misc_tests -j 1`;

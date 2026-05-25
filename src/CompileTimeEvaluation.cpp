@@ -1,11 +1,14 @@
 #include "primec/CompileTimeEvaluation.h"
 
 #include "primec/SemanticProduct.h"
+#include "primec/VmKernelBoundary.h"
 
 #include <algorithm>
+#include <charconv>
 #include <iomanip>
 #include <optional>
 #include <sstream>
+#include <system_error>
 #include <utility>
 #include <vector>
 
@@ -189,6 +192,157 @@ std::uint64_t requirementHostBudgetBytes(
 bool isUserPredicatePath(std::string_view predicatePath) {
   return !predicatePath.empty() &&
          predicatePath.rfind("/std/meta/", 0) != 0;
+}
+
+bool isValuePredicatePath(std::string_view predicatePath) {
+  return predicatePath == "/std/meta/value_equals" ||
+         predicatePath == "/std/meta/value_not_equals" ||
+         predicatePath == "/std/meta/value_less" ||
+         predicatePath == "/std/meta/value_less_equal" ||
+         predicatePath == "/std/meta/value_greater" ||
+         predicatePath == "/std/meta/value_greater_equal";
+}
+
+std::optional<IrOpcode> valuePredicateKernelOpcode(
+    std::string_view predicatePath) {
+  if (predicatePath == "/std/meta/value_equals") {
+    return IrOpcode::CmpEqI64;
+  }
+  if (predicatePath == "/std/meta/value_not_equals") {
+    return IrOpcode::CmpNeI64;
+  }
+  if (predicatePath == "/std/meta/value_less") {
+    return IrOpcode::CmpLtU64;
+  }
+  if (predicatePath == "/std/meta/value_less_equal") {
+    return IrOpcode::CmpLeU64;
+  }
+  if (predicatePath == "/std/meta/value_greater") {
+    return IrOpcode::CmpGtU64;
+  }
+  if (predicatePath == "/std/meta/value_greater_equal") {
+    return IrOpcode::CmpGeU64;
+  }
+  return std::nullopt;
+}
+
+std::string_view valuePredicateOperator(std::string_view predicatePath) {
+  if (predicatePath == "/std/meta/value_equals") {
+    return "==";
+  }
+  if (predicatePath == "/std/meta/value_not_equals") {
+    return "!=";
+  }
+  if (predicatePath == "/std/meta/value_less") {
+    return "<";
+  }
+  if (predicatePath == "/std/meta/value_less_equal") {
+    return "<=";
+  }
+  if (predicatePath == "/std/meta/value_greater") {
+    return ">";
+  }
+  if (predicatePath == "/std/meta/value_greater_equal") {
+    return ">=";
+  }
+  return "?";
+}
+
+std::optional<std::uint64_t> parseKernelValueOperand(std::string_view text) {
+  std::uint64_t value = 0;
+  const char *begin = text.data();
+  const char *end = text.data() + text.size();
+  const auto [ptr, error] = std::from_chars(begin, end, value);
+  if (error != std::errc{} || ptr != end) {
+    return std::nullopt;
+  }
+  return value;
+}
+
+std::optional<CompileTimeEvaluationResult> evaluateValuePredicateWithKernel(
+    const CompileTimeEvaluationFacade &facade,
+    const SemanticProgram *semanticProgram,
+    const SemanticProgramRequirementPredicateFact &fact,
+    const CompileTimeEvaluationProvenance &provenance) {
+  if (!isValuePredicatePath(provenance.predicatePath)) {
+    return std::nullopt;
+  }
+  const std::optional<IrOpcode> opcode =
+      valuePredicateKernelOpcode(provenance.predicatePath);
+  if (!opcode.has_value()) {
+    return facade.internalCompilerError(
+        provenance,
+        "missing VM kernel opcode for value predicate: " +
+            provenance.predicatePath);
+  }
+  if (fact.operands.size() != 2) {
+    return facade.invalidEvaluation(
+        provenance,
+        "requirement predicate " + provenance.predicatePath +
+            " expects two value operands");
+  }
+
+  std::vector<std::uint64_t> stack;
+  stack.reserve(2);
+  std::vector<std::uint64_t> parsedOperands;
+  parsedOperands.reserve(2);
+  for (const SemanticProgramRequirementPredicateOperand &operand :
+       fact.operands) {
+    const std::string_view kind =
+        resolvedSemanticText(semanticProgram, operand.kindId, operand.kind);
+    const std::string_view text =
+        resolvedSemanticText(semanticProgram, operand.textId, operand.text);
+    if (kind != "literal_compile_time_argument") {
+      return facade.invalidEvaluation(
+          provenance,
+          "non-constant value operand for requirement predicate " +
+              provenance.predicatePath + ": " + std::string(text));
+    }
+    const std::optional<std::uint64_t> parsed =
+        parseKernelValueOperand(text);
+    if (!parsed.has_value()) {
+      return facade.invalidEvaluation(
+          provenance,
+          "unsupported value operand for requirement predicate " +
+              provenance.predicatePath + ": " + std::string(text));
+    }
+    stack.push_back(*parsed);
+    parsedOperands.push_back(*parsed);
+  }
+
+  IrInstruction inst;
+  inst.op = *opcode;
+  std::string error;
+  const vm_kernel::PureOpcodeResult kernelResult =
+      vm_kernel::executePureNumericOpcode(inst, stack, error);
+  if (kernelResult == vm_kernel::PureOpcodeResult::NotHandled) {
+    return facade.internalCompilerError(
+        provenance,
+        "VM kernel did not handle value predicate opcode");
+  }
+  if (kernelResult == vm_kernel::PureOpcodeResult::Fault) {
+    return facade.invalidEvaluation(
+        provenance,
+        error.empty() ? "VM kernel value predicate evaluation failed"
+                      : std::move(error));
+  }
+  if (stack.empty()) {
+    return facade.internalCompilerError(
+        provenance,
+        "VM kernel value predicate produced no result");
+  }
+
+  const bool satisfied = stack.back() != 0;
+  std::string message =
+      std::string("value predicate ") +
+      (satisfied ? "satisfied: " : "failed: ") +
+      std::to_string(parsedOperands[0]) + " " +
+      std::string(valuePredicateOperator(provenance.predicatePath)) + " " +
+      std::to_string(parsedOperands[1]);
+  if (satisfied) {
+    return facade.success(true, provenance, std::move(message));
+  }
+  return facade.unsatisfiedPredicate(provenance, std::move(message));
 }
 
 bool budgetEquals(const CompileTimeEvaluationBudget &left,
@@ -875,6 +1029,14 @@ CompileTimeEvaluationFacade::evaluateRequirementPredicate(
           activeBudget.maxHostBytes,
           provenance)) {
     return *overBudget;
+  }
+
+  if (auto kernelResult =
+          evaluateValuePredicateWithKernel(activeFacade,
+                                           semanticProgram,
+                                           fact,
+                                           provenance)) {
+    return *kernelResult;
   }
 
   const std::string_view outcome = resolvedSemanticText(

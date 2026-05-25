@@ -1094,6 +1094,11 @@ Procedural compile-time genericity contract:
   from published semantic requirement facts with deterministic success,
   unsatisfied, and invalid-evaluation results. `field_type_equals` remains
   deferred.
+- Compile-time integer `value_*` predicates execute their pure comparison
+  opcode through the shared `primec/VmKernelBoundary.h` API. The same API is
+  used by the runtime VM numeric path, while compile-time evaluation still
+  rejects runtime-only values, IO/file effects, heap/argv access, final backend
+  IR, and `primevm` launches.
 - Builtin requirement predicates live under `/std/meta/*`; readable predicate
   syntax may rewrite to these builtin helpers or compiler-recognized facts, but
   user helpers should not collide with the builtin namespace. Public

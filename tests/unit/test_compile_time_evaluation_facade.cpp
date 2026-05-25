@@ -1,6 +1,7 @@
 #include "primec/CompileTimeEvaluation.h"
 #include "primec/CompileTimeCallable.h"
 #include "primec/SemanticProduct.h"
+#include "primec/VmKernelBoundary.h"
 
 #include <filesystem>
 #include <fstream>
@@ -376,6 +377,61 @@ TEST_CASE("compiler-hosted CT facade evaluates published facts without backend a
         "literal_compile_time_argument");
 }
 
+TEST_CASE("compile-time value predicates use shared VM kernel numeric API") {
+  primec::SemanticProgram program;
+  program.requirementPredicateFacts.push_back(makeRequirementFact(
+      "/generic/kernel_true",
+      "/std/meta/value_greater",
+      "/std/meta/value_greater<4, 0>()",
+      "unsatisfied",
+      "stale published outcome should not bypass kernel"));
+  program.requirementPredicateFacts.back().operands.push_back(
+      makeOperand("literal_compile_time_argument", "4"));
+  program.requirementPredicateFacts.back().operands.push_back(
+      makeOperand("literal_compile_time_argument", "0"));
+
+  program.requirementPredicateFacts.push_back(makeRequirementFact(
+      "/generic/kernel_false",
+      "/std/meta/value_less_equal",
+      "/std/meta/value_less_equal<7, 3>()",
+      "satisfied",
+      "stale published outcome should not bypass kernel"));
+  program.requirementPredicateFacts.back().operands.push_back(
+      makeOperand("literal_compile_time_argument", "7"));
+  program.requirementPredicateFacts.back().operands.push_back(
+      makeOperand("literal_compile_time_argument", "3"));
+
+  const primec::SemanticProgramCompileTimeHost host(program);
+  const primec::CompileTimeEvaluationFacade facade(host);
+
+  primec::CompileTimeEvaluationRequest trueRequest;
+  trueRequest.definitionPath = "/generic/kernel_true";
+  trueRequest.predicateName = "/std/meta/value_greater";
+  const auto trueResult = facade.evaluateRequirementPredicate(trueRequest);
+  CHECK(trueResult.kind == primec::CompileTimeEvaluationResultKind::Success);
+  CHECK(trueResult.boolValue);
+  CHECK(trueResult.message == "value predicate satisfied: 4 > 0");
+
+  primec::CompileTimeEvaluationRequest falseRequest;
+  falseRequest.definitionPath = "/generic/kernel_false";
+  falseRequest.predicateName = "/std/meta/value_less_equal";
+  const auto falseResult = facade.evaluateRequirementPredicate(falseRequest);
+  CHECK(falseResult.kind ==
+        primec::CompileTimeEvaluationResultKind::UnsatisfiedPredicate);
+  CHECK_FALSE(falseResult.boolValue);
+  CHECK(falseResult.message == "value predicate failed: 7 <= 3");
+
+  primec::IrInstruction inst;
+  inst.op = primec::IrOpcode::CmpGtU64;
+  std::vector<std::uint64_t> stack = {4, 0};
+  std::string error;
+  CHECK(primec::vm_kernel::executePureNumericOpcode(inst, stack, error) ==
+        primec::vm_kernel::PureOpcodeResult::Continue);
+  REQUIRE(stack.size() == 1);
+  CHECK(stack.back() == 1);
+  CHECK(error.empty());
+}
+
 TEST_CASE("compile-time VM facade stays source locked to compiler-host boundary") {
   const std::filesystem::path repoRoot = repoRootPath();
   const std::vector<std::filesystem::path> boundarySources = {
@@ -396,6 +452,7 @@ TEST_CASE("compile-time VM facade stays source locked to compiler-host boundary"
       "emitCpp",
       "emitNative",
       "executeVm(",
+      "executeVmKernel(",
   };
 
   for (const auto &sourcePath : boundarySources) {
@@ -408,7 +465,20 @@ TEST_CASE("compile-time VM facade stays source locked to compiler-host boundary"
     }
   }
 
+  const std::string compileTimeSource =
+      readSourceFile(repoRoot / "src" / "CompileTimeEvaluation.cpp");
+  const std::string kernelBoundaryHeader =
+      readSourceFile(repoRoot / "include" / "primec" / "VmKernelBoundary.h");
+  CHECK(compileTimeSource.find("#include \"primec/VmKernelBoundary.h\"") !=
+        std::string::npos);
+  CHECK(compileTimeSource.find("executePureNumericOpcode(") !=
+        std::string::npos);
+  CHECK(kernelBoundaryHeader.find("executePureNumericOpcode(") !=
+        std::string::npos);
+  CHECK(kernelBoundaryHeader.find("primec/Vm.h") == std::string::npos);
+
   const std::string cmake = readSourceFile(repoRoot / "CMakeLists.txt");
+  CHECK(cmake.find("src/VmKernelBoundary.cpp") != std::string::npos);
   CHECK(cmake.find("src/CompileTimeEvaluation.cpp") != std::string::npos);
   CHECK(cmake.find("src/CompileTimeCallable.cpp") != std::string::npos);
   CHECK(cmake.find("target_link_libraries(PrimeStruct_compile_time_tests "

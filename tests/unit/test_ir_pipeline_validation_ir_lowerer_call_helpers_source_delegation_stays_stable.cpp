@@ -1868,15 +1868,24 @@ TEST_CASE("vm numeric opcode helpers source delegation stays stable") {
   const std::filesystem::path vmDebugNumericPath = repoRoot / "src" / "VmDebugSessionInstructionNumeric.cpp";
   const std::filesystem::path vmNumericSharedPath = repoRoot / "src" / "VmNumericOpcodeShared.cpp";
   const std::filesystem::path vmNumericSharedHeaderPath = repoRoot / "src" / "VmNumericOpcodeShared.h";
+  const std::filesystem::path vmKernelBoundaryPath =
+      repoRoot / "src" / "VmKernelBoundary.cpp";
+  const std::filesystem::path vmKernelBoundaryHeaderPath =
+      repoRoot / "include" / "primec" / "VmKernelBoundary.h";
   REQUIRE(std::filesystem::exists(vmExecutionNumericPath));
   REQUIRE(std::filesystem::exists(vmDebugNumericPath));
   REQUIRE(std::filesystem::exists(vmNumericSharedPath));
   REQUIRE(std::filesystem::exists(vmNumericSharedHeaderPath));
+  REQUIRE(std::filesystem::exists(vmKernelBoundaryPath));
+  REQUIRE(std::filesystem::exists(vmKernelBoundaryHeaderPath));
 
   const std::string vmExecutionNumericSource = readText(vmExecutionNumericPath);
   const std::string vmDebugNumericSource = readText(vmDebugNumericPath);
   const std::string vmNumericSharedSource = readText(vmNumericSharedPath);
   const std::string vmNumericSharedHeaderSource = readText(vmNumericSharedHeaderPath);
+  const std::string vmKernelBoundarySource = readText(vmKernelBoundaryPath);
+  const std::string vmKernelBoundaryHeaderSource =
+      readText(vmKernelBoundaryHeaderPath);
 
   CHECK(vmExecutionNumericSource.find("#include \"VmNumericOpcodeShared.h\"") != std::string::npos);
   CHECK(vmDebugNumericSource.find("#include \"VmNumericOpcodeShared.h\"") != std::string::npos);
@@ -1890,10 +1899,20 @@ TEST_CASE("vm numeric opcode helpers source delegation stays stable") {
   CHECK(vmNumericSharedHeaderSource.find("enum class VmNumericOpcodeResult") != std::string::npos);
   CHECK(vmNumericSharedHeaderSource.find("handleSharedVmNumericOpcode(") != std::string::npos);
 
-  CHECK(vmNumericSharedSource.find("case IrOpcode::AddI32:") != std::string::npos);
-  CHECK(vmNumericSharedSource.find("case IrOpcode::CmpEqF64:") != std::string::npos);
-  CHECK(vmNumericSharedSource.find("case IrOpcode::ConvertF64ToF32:") != std::string::npos);
-  CHECK(vmNumericSharedSource.find("division by zero in IR") != std::string::npos);
+  CHECK(vmNumericSharedSource.find("#include \"primec/VmKernelBoundary.h\"") !=
+        std::string::npos);
+  CHECK(vmNumericSharedSource.find("executePureNumericOpcode(inst, stack, error)") !=
+        std::string::npos);
+  CHECK(vmNumericSharedSource.find("case IrOpcode::AddI32:") == std::string::npos);
+
+  CHECK(vmKernelBoundaryHeaderSource.find("enum class PureOpcodeResult") !=
+        std::string::npos);
+  CHECK(vmKernelBoundaryHeaderSource.find("executePureNumericOpcode(") !=
+        std::string::npos);
+  CHECK(vmKernelBoundarySource.find("case IrOpcode::AddI32:") != std::string::npos);
+  CHECK(vmKernelBoundarySource.find("case IrOpcode::CmpEqF64:") != std::string::npos);
+  CHECK(vmKernelBoundarySource.find("case IrOpcode::ConvertF64ToF32:") != std::string::npos);
+  CHECK(vmKernelBoundarySource.find("division by zero in IR") != std::string::npos);
 }
 
 TEST_CASE("vm control flow opcode helpers source delegation stays stable") {

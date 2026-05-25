@@ -66,6 +66,7 @@ set(PRIMESTRUCT_SUPPORT_SOURCES
   src/TempPaths.cpp
   src/TransformRules.cpp
   src/TransformRegistry.cpp
+  src/VmKernelBoundary.cpp
 )
 
 set(PRIMESTRUCT_FRONTEND_SOURCES
