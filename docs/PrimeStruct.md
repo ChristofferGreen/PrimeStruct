@@ -4012,6 +4012,17 @@ Style-aligned modules should follow `docs/CodeExamples.md`. The internal impleme
 bridge-oriented files may stay helper-heavy until the relevant migration or
 cleanup TODO explicitly retargets them.
 
+### Stdlib Module Inclusion Manifest
+Stdlib import expansion may use small checked module metadata when a slash
+import root should append a deterministic source file instead of scanning a
+directory. The first manifest lives at `stdlib/std/modules.psmeta`. Each
+`[module]` entry declares a `root` such as `/std/gfx` and a relative
+`source_file` such as `std/gfx/gfx.prime`; `source_file` must stay under the
+stdlib root and must name a `.prime` file. The compile pipeline consumes this
+field before falling back to ordinary directory/module-file discovery, so
+direct imports and wildcard imports can share the same manifest-owned module
+root without adding new C++ path heuristics.
+
 ### Vector/Map Bridge Contract
 This contract is the scope reference for future vector/map ownership-cutover
 TODOs. Follow-on bridge tasks should share this boundary instead of

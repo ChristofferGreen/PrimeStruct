@@ -29,6 +29,7 @@
 #include <optional>
 #include <sstream>
 #include <string_view>
+#include <unordered_map>
 #include <unordered_set>
 
 namespace primec {
@@ -325,6 +326,164 @@ std::vector<std::string> collectStdlibAutoIncludeKeys(const std::string &importP
   return keys;
 }
 
+struct StdlibModuleManifest {
+  std::unordered_map<std::string, std::filesystem::path> sourceFilesByRoot;
+};
+
+std::string trimAscii(std::string_view value) {
+  while (!value.empty() && std::isspace(static_cast<unsigned char>(value.front())) != 0) {
+    value.remove_prefix(1);
+  }
+  while (!value.empty() && std::isspace(static_cast<unsigned char>(value.back())) != 0) {
+    value.remove_suffix(1);
+  }
+  return std::string(value);
+}
+
+bool isValidStdlibModuleRoot(std::string_view root) {
+  return root == "/std" || root.rfind("/std/", 0) == 0;
+}
+
+bool pathContainsParentTraversal(const std::filesystem::path &path) {
+  for (const auto &part : path) {
+    if (part == std::filesystem::path("..")) {
+      return true;
+    }
+  }
+  return false;
+}
+
+bool appendStdlibModuleManifestEntry(StdlibModuleManifest &manifest,
+                                     const std::filesystem::path &manifestPath,
+                                     const std::string &root,
+                                     const std::string &sourceFile,
+                                     std::string &error) {
+  if (root.empty()) {
+    error = "invalid stdlib module manifest " + manifestPath.string() + ": module entry missing root";
+    return false;
+  }
+  if (!isValidStdlibModuleRoot(root)) {
+    error = "invalid stdlib module manifest " + manifestPath.string() +
+            ": module root must be /std or /std/...: " + root;
+    return false;
+  }
+  if (sourceFile.empty()) {
+    error = "invalid stdlib module manifest " + manifestPath.string() +
+            ": module entry missing source_file for " + root;
+    return false;
+  }
+
+  const std::filesystem::path sourcePath(sourceFile);
+  if (sourcePath.is_absolute() || pathContainsParentTraversal(sourcePath)) {
+    error = "invalid stdlib module manifest " + manifestPath.string() +
+            ": source_file must be a relative stdlib path for " + root;
+    return false;
+  }
+  if (sourcePath.extension() != ".prime") {
+    error = "invalid stdlib module manifest " + manifestPath.string() +
+            ": source_file must name a .prime file for " + root;
+    return false;
+  }
+  if (!manifest.sourceFilesByRoot.emplace(root, sourcePath).second) {
+    error = "invalid stdlib module manifest " + manifestPath.string() +
+            ": duplicate module root " + root;
+    return false;
+  }
+  return true;
+}
+
+bool readStdlibModuleManifest(const std::filesystem::path &stdlibRoot,
+                              StdlibModuleManifest &manifest,
+                              std::string &error) {
+  std::error_code ec;
+  const std::filesystem::path manifestPath =
+      stdlibRoot / "std" / "modules.psmeta";
+  if (!std::filesystem::exists(manifestPath, ec)) {
+    return true;
+  }
+  if (!std::filesystem::is_regular_file(manifestPath, ec)) {
+    error = "invalid stdlib module manifest path: " + manifestPath.string();
+    return false;
+  }
+
+  std::ifstream input(manifestPath);
+  if (!input) {
+    error = "failed to read stdlib module manifest: " + manifestPath.string();
+    return false;
+  }
+
+  bool inModule = false;
+  std::string currentRoot;
+  std::string currentSourceFile;
+  auto flushModule = [&]() -> bool {
+    if (!inModule) {
+      return true;
+    }
+    if (!appendStdlibModuleManifestEntry(
+            manifest, manifestPath, currentRoot, currentSourceFile, error)) {
+      return false;
+    }
+    currentRoot.clear();
+    currentSourceFile.clear();
+    return true;
+  };
+
+  std::string line;
+  while (std::getline(input, line)) {
+    const std::size_t commentPos = line.find('#');
+    if (commentPos != std::string::npos) {
+      line.resize(commentPos);
+    }
+    const std::string trimmed = trimAscii(line);
+    if (trimmed.empty()) {
+      continue;
+    }
+    if (trimmed == "[module]") {
+      if (!flushModule()) {
+        return false;
+      }
+      inModule = true;
+      continue;
+    }
+    if (!inModule) {
+      error = "invalid stdlib module manifest " + manifestPath.string() +
+              ": expected [module] before entries";
+      return false;
+    }
+    const std::size_t equalsPos = trimmed.find('=');
+    if (equalsPos == std::string::npos) {
+      error = "invalid stdlib module manifest " + manifestPath.string() +
+              ": expected key = value entry";
+      return false;
+    }
+
+    const std::string key = trimAscii(std::string_view(trimmed).substr(0, equalsPos));
+    const std::string value =
+        trimAscii(std::string_view(trimmed).substr(equalsPos + 1));
+    if (key == "root") {
+      if (!currentRoot.empty()) {
+        error = "invalid stdlib module manifest " + manifestPath.string() +
+                ": duplicate root in module entry";
+        return false;
+      }
+      currentRoot = value;
+    } else if (key == "source_file") {
+      if (!currentSourceFile.empty()) {
+        error = "invalid stdlib module manifest " + manifestPath.string() +
+                ": duplicate source_file in module entry";
+        return false;
+      }
+      currentSourceFile = value;
+    } else {
+      error = "invalid stdlib module manifest " + manifestPath.string() +
+              ": unknown key " + key;
+      return false;
+    }
+  }
+
+  return flushModule();
+}
+
 bool isMathBuiltinOrConstantName(std::string_view name) {
   constexpr std::array<std::string_view, 44> MathBuiltinsAndConstants = {
       "abs",
@@ -476,6 +635,7 @@ bool appendStdlibModuleSources(const std::vector<std::string> &importPaths,
   std::error_code ec;
   std::deque<std::string> pendingKeys;
   std::unordered_set<std::string> queuedKeys;
+  std::unordered_map<std::string, StdlibModuleManifest> moduleManifestCache;
   const bool skipMathWildcardStdlibModule = shouldSkipMathWildcardStdlibModule(sourceImports, source);
   for (const auto &importPath : sourceImports) {
     for (const auto &key : collectStdlibAutoIncludeKeys(importPath)) {
@@ -503,6 +663,26 @@ bool appendStdlibModuleSources(const std::vector<std::string> &importPaths,
     sourceBuilder.emplace(*expandedSource);
   }
   bool appended = false;
+  auto manifestForStdlibRoot = [&](const std::filesystem::path &root)
+      -> const StdlibModuleManifest * {
+    std::error_code absoluteEc;
+    std::filesystem::path absolute = std::filesystem::absolute(root, absoluteEc);
+    if (absoluteEc) {
+      absolute = root;
+    }
+    const std::string cacheKey = absolute.string();
+    auto existing = moduleManifestCache.find(cacheKey);
+    if (existing != moduleManifestCache.end()) {
+      return &existing->second;
+    }
+    StdlibModuleManifest manifest;
+    if (!readStdlibModuleManifest(root, manifest, error)) {
+      return nullptr;
+    }
+    auto inserted = moduleManifestCache.emplace(cacheKey, std::move(manifest)).first;
+    return &inserted->second;
+  };
+
   while (!pendingKeys.empty()) {
     const std::string key = pendingKeys.front();
     pendingKeys.pop_front();
@@ -519,19 +699,32 @@ bool appendStdlibModuleSources(const std::vector<std::string> &importPaths,
         continue;
       }
 
+      const StdlibModuleManifest *moduleManifest = manifestForStdlibRoot(root);
+      if (moduleManifest == nullptr && !error.empty()) {
+        return false;
+      }
+
       std::filesystem::path moduleRoot;
       bool appendSpecificFile = false;
-      if (key == "/std/gfx/experimental") {
-        moduleRoot = root / "std" / "gfx" / "experimental.prime";
-        appendSpecificFile = true;
-      } else if (key == "/std/gfx") {
-        moduleRoot = root / "std" / "gfx" / "gfx.prime";
-        appendSpecificFile = true;
-      } else {
+      if (moduleManifest != nullptr) {
+        auto manifestEntry = moduleManifest->sourceFilesByRoot.find(key);
+        if (manifestEntry != moduleManifest->sourceFilesByRoot.end()) {
+          moduleRoot = root / manifestEntry->second;
+          appendSpecificFile = true;
+        }
+      }
+      if (!appendSpecificFile) {
         const std::string relative = key.substr(std::string("/std/").size());
         moduleRoot = root / "std" / relative;
       }
-      if (!std::filesystem::exists(moduleRoot, ec)) {
+      if (appendSpecificFile &&
+          (!std::filesystem::exists(moduleRoot, ec) ||
+           !std::filesystem::is_regular_file(moduleRoot, ec))) {
+        error = "stdlib module manifest source not found for " + key + ": " +
+                moduleRoot.string();
+        return false;
+      }
+      if (!appendSpecificFile && !std::filesystem::exists(moduleRoot, ec)) {
         std::filesystem::path moduleFile = moduleRoot;
         moduleFile += ".prime";
         if (std::filesystem::exists(moduleFile, ec)) {

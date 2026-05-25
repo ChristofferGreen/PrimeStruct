@@ -67,7 +67,6 @@ This file is the live open-work queue for PrimeStruct.
 - TODO-4565: Add minimal scene graph and camera data model | track: scene-renderer | primary surface: stdlib/std/scene scene model
 - TODO-4572: Remove vector statement-helper compiler path | track: vector-special-case-deletion | primary surface: vector semantic/lowerer helpers
 - TODO-4573: Remove compiler-owned map literal lowering | track: map-special-case-deletion | primary surface: map literal semantics/lowering
-- TODO-4585: Manifest-drive stdlib module inclusion | track: architecture-stdlib-manifest | primary surface: stdlib auto-include manifest
 
 ### Immediate Next 10
 
@@ -99,8 +98,8 @@ This file is the live open-work queue for PrimeStruct.
   guide deletion scope. Vector path TODO-4572 -> TODO-4574 ->
   TODO-4577; map path TODO-4573 -> TODO-4575 -> TODO-4576; join at
   TODO-4578 -> TODO-4579
-- Architecture hardening backlog: TODO-4585, TODO-4586, TODO-4587,
-  TODO-4588, TODO-4589
+- Architecture hardening backlog: TODO-4586, TODO-4587, TODO-4588,
+  TODO-4589
 
 ### Execution Queue
 
@@ -119,7 +118,6 @@ This file is the live open-work queue for PrimeStruct.
 - TODO-4578: Generalize stdlib surface registry away from map/vector IDs
 - TODO-4579: Enforce zero map/vector compiler-knowledge traces
 - TODO-4593: Carry source-unit provenance into IR and VM debug maps
-- TODO-4585: Manifest-drive stdlib module inclusion
 - TODO-4586: Define diagnostic stability tiers
 - TODO-4587: Extract shared compile-time/runtime VM kernel boundary
 - TODO-4588: Add pass/phase invalidation manifest beyond semantics
@@ -584,29 +582,6 @@ This file is the live open-work queue for PrimeStruct.
       metadata files, while C++ treats them as ordinary included stdlib code.
   - stop_rule: Stop once the zero gate is wired into routine validation and
     focused map/vector stdlib tests plus the new audit pass.
-
-- [ ] TODO-4585: Manifest-drive stdlib module inclusion
-  - owner: ai
-  - created_at: 2026-05-24
-  - phase: Architecture hardening
-  - parallel_track: architecture-stdlib-manifest
-  - scope: Replace one stdlib auto-include heuristic with checked manifest data
-    for module roots, dependencies, public imports, or backend support.
-  - implementation_notes: Start from `appendStdlibModuleSources` and
-    `collectStdlibAutoIncludeKeys` in `src/CompilePipeline.cpp`, plus existing
-    `.psmeta` stdlib metadata. Keep the first manifest field small and
-    deterministic, and preserve current import behavior.
-  - acceptance:
-    - One currently hard-coded stdlib inclusion rule is represented in a checked
-      manifest or manifest-like metadata file.
-    - The compile pipeline reads that metadata deterministically and preserves
-      current successful imports and diagnostics.
-    - Tests cover direct import, wildcard import, and missing/invalid metadata
-      behavior for the selected rule.
-    - Docs or source-lock coverage describe the manifest field so future stdlib
-      modules can follow it.
-  - stop_rule: Stop after one inclusion rule is manifest-driven and covered; do
-    not convert the entire stdlib loader in this slice.
 
 - [ ] TODO-4586: Define diagnostic stability tiers
   - owner: ai

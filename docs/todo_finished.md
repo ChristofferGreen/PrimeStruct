@@ -6,6 +6,34 @@ Legend:
 Finished items are periodically archived here from `docs/todo.md`; section headers record the archive date.
 
 **Todo Completion (May 25, 2026)**
+- [x] TODO-4585: Manifest-drive stdlib module inclusion
+  - owner: ai
+  - created_at: 2026-05-24
+  - finished_at: 2026-05-25
+  - phase: Architecture hardening
+  - parallel_track: architecture-stdlib-manifest
+  - scope: Replace one stdlib auto-include heuristic with checked manifest data
+    for module roots, dependencies, public imports, or backend support.
+  - outcome:
+    - Added `stdlib/std/modules.psmeta` with checked `[module]` entries for
+      `/std/gfx` and `/std/gfx/experimental`.
+    - Routed `appendStdlibModuleSources` through the module manifest's
+      `source_file` mapping before generic stdlib directory discovery, removing
+      the hard-coded `/std/gfx` source-file special case while preserving direct
+      and wildcard import behavior.
+    - Added deterministic diagnostics for malformed module manifest metadata,
+      including missing `source_file` values and invalid relative paths.
+    - Documented the `root` plus `source_file` manifest field in
+      `docs/PrimeStruct.md` so later stdlib modules can follow the same shape.
+  - validation:
+    - `cmake -S . -B build-release -DCMAKE_BUILD_TYPE=Release`
+    - `cmake --build build-release --target PrimeStruct_misc_tests -j 1`
+    - Passed 4 test cases / 47 assertions:
+      `cd build-release && ./PrimeStruct_misc_tests --test-case="compile pipeline uses module manifest for direct gfx import,compile pipeline uses module manifest for gfx wildcard import,compile pipeline rejects malformed stdlib module manifest metadata,compile pipeline exposes stdlib auto include source units" --no-skip`
+  - stop_rule: Stopped after the `/std/gfx` source-file inclusion rule became
+    manifest-driven and covered; no broader stdlib loader conversion was
+    attempted in this slice.
+
 - [x] TODO-4582: Add semantic-product consumer coverage matrix
   - owner: ai
   - created_at: 2026-05-24

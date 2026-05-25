@@ -1,0 +1,11 @@
+# Stdlib module inclusion metadata.
+# The compile pipeline consumes source_file for module roots whose import root
+# should include one deterministic .prime file instead of scanning a directory.
+
+[module]
+root = /std/gfx
+source_file = std/gfx/gfx.prime
+
+[module]
+root = /std/gfx/experimental
+source_file = std/gfx/experimental.prime

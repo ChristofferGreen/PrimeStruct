@@ -37,6 +37,31 @@ primec::Options diagnosticPipelineOptions(const std::string &inputPath) {
   options.skipSemanticProductForNonConsumingPath = true;
   return options;
 }
+
+std::filesystem::path repositoryStdlibPath() {
+  return std::filesystem::exists("stdlib") ? std::filesystem::path("stdlib")
+                                           : std::filesystem::path("..") / "stdlib";
+}
+
+primec::Options preAstPipelineOptions(const std::string &inputPath,
+                                      const std::filesystem::path &stdlibPath) {
+  primec::Options options;
+  options.inputPath = inputPath;
+  options.importPaths = {std::filesystem::absolute(stdlibPath).string()};
+  options.dumpStage = "pre_ast";
+  return options;
+}
+
+const primec::SourceUnit *findStdlibUnitByModuleKey(const primec::ExpandedSource &source,
+                                                    std::string_view moduleKey) {
+  auto it = std::find_if(source.units.begin(),
+                         source.units.end(),
+                         [&](const primec::SourceUnit &unit) {
+                           return unit.kind == primec::SourceUnitKind::Stdlib &&
+                                  unit.moduleKey == moduleKey;
+                         });
+  return it == source.units.end() ? nullptr : &*it;
+}
 } // namespace
 
 TEST_SUITE_BEGIN("primestruct.imports.resolver");
@@ -196,6 +221,99 @@ TEST_CASE("compile pipeline exposes stdlib auto include source units") {
   CHECK(stdlibUnit->originalStartColumn == 1);
   CHECK(stdlibUnit->flattenedStartLine > output.expandedSource.units.front().flattenedStartLine);
   CHECK(output.expandedSource.text.find("Maybe<T>") != std::string::npos);
+}
+
+TEST_CASE("compile pipeline uses module manifest for direct gfx import") {
+  auto baseDir = importResolverPath("stdlib_manifest_gfx_direct");
+  std::filesystem::remove_all(baseDir);
+  std::filesystem::create_directories(baseDir);
+  const std::string srcPath = writeFile(baseDir / "main.prime",
+                                        "import /std/gfx\n"
+                                        "[return<int>]\n"
+                                        "main(){ return(0i32) }\n");
+
+  primec::Options options = preAstPipelineOptions(srcPath, repositoryStdlibPath());
+  primec::CompilePipelineOutput output;
+  primec::CompilePipelineErrorStage errorStage = primec::CompilePipelineErrorStage::None;
+  std::string error;
+  INFO(error);
+  REQUIRE(primec::runCompilePipeline(options, output, errorStage, error));
+  CHECK(error.empty());
+  CHECK(output.hasDumpOutput);
+
+  const primec::SourceUnit *gfxUnit = findStdlibUnitByModuleKey(output.expandedSource, "/std/gfx");
+  REQUIRE(gfxUnit != nullptr);
+  CHECK(gfxUnit->displayPath.find("stdlib/std/gfx/gfx.prime") != std::string::npos);
+  CHECK(output.expandedSource.text.find("namespace experimental") == std::string::npos);
+  CHECK(output.expandedSource.text.find("/std/gfx/ignoreGfxError") != std::string::npos);
+}
+
+TEST_CASE("compile pipeline uses module manifest for gfx wildcard import") {
+  auto baseDir = importResolverPath("stdlib_manifest_gfx_wildcard");
+  std::filesystem::remove_all(baseDir);
+  std::filesystem::create_directories(baseDir);
+  const std::string srcPath = writeFile(baseDir / "main.prime",
+                                        "import /std/gfx/*\n"
+                                        "[return<int>]\n"
+                                        "main(){ return(0i32) }\n");
+
+  primec::Options options = preAstPipelineOptions(srcPath, repositoryStdlibPath());
+  primec::CompilePipelineOutput output;
+  primec::CompilePipelineErrorStage errorStage = primec::CompilePipelineErrorStage::None;
+  std::string error;
+  INFO(error);
+  REQUIRE(primec::runCompilePipeline(options, output, errorStage, error));
+  CHECK(error.empty());
+  CHECK(output.hasDumpOutput);
+
+  const primec::SourceUnit *gfxUnit = findStdlibUnitByModuleKey(output.expandedSource, "/std/gfx");
+  REQUIRE(gfxUnit != nullptr);
+  CHECK(gfxUnit->displayPath.find("stdlib/std/gfx/gfx.prime") != std::string::npos);
+  CHECK(output.expandedSource.text.find("namespace experimental") == std::string::npos);
+  CHECK(output.expandedSource.text.find("/std/gfx/ignoreGfxError") != std::string::npos);
+}
+
+TEST_CASE("compile pipeline rejects malformed stdlib module manifest metadata") {
+  auto runWithManifest = [](std::string_view scratchName,
+                            const std::string &manifestContents,
+                            std::string &error) {
+    auto baseDir = importResolverPath(scratchName);
+    std::filesystem::remove_all(baseDir);
+    std::filesystem::create_directories(baseDir);
+    const std::filesystem::path stdlibRoot = baseDir / "stdlib";
+    writeFile(stdlibRoot / "std" / "modules.psmeta", manifestContents);
+    writeFile(stdlibRoot / "std" / "gfx" / "gfx.prime",
+              "namespace std { namespace gfx { [public return<void>] noop(){ return() } } }\n");
+    const std::string srcPath = writeFile(baseDir / "main.prime",
+                                          "import /std/gfx\n"
+                                          "[return<int>]\n"
+                                          "main(){ return(0i32) }\n");
+
+    primec::Options options = preAstPipelineOptions(srcPath, stdlibRoot);
+    primec::CompilePipelineOutput output;
+    primec::CompilePipelineErrorStage errorStage = primec::CompilePipelineErrorStage::None;
+    return primec::runCompilePipeline(options, output, errorStage, error);
+  };
+
+  SUBCASE("missing source_file") {
+    std::string error;
+    CHECK_FALSE(runWithManifest("stdlib_manifest_missing_source",
+                                "[module]\n"
+                                "root = /std/gfx\n",
+                                error));
+    CHECK(error.find("module entry missing source_file for /std/gfx") != std::string::npos);
+  }
+
+  SUBCASE("invalid source_file") {
+    std::string error;
+    CHECK_FALSE(runWithManifest("stdlib_manifest_invalid_source",
+                                "[module]\n"
+                                "root = /std/gfx\n"
+                                "source_file = ../gfx.prime\n",
+                                error));
+    CHECK(error.find("source_file must be a relative stdlib path for /std/gfx") !=
+          std::string::npos);
+  }
 }
 
 TEST_CASE("compile pipeline maps parser diagnostics through source units") {
