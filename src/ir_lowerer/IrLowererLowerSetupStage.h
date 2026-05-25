@@ -11,6 +11,7 @@
 #include "IrLowererLowerInferenceSetup.h"
 #include "IrLowererLowerStatementsSourceMapStep.h"
 #include "IrLowererSetupLocalsHelpers.h"
+#include "primec/ExpandedSource.h"
 #include "primec/Ir.h"
 #include "primec/IrValidation.h"
 
@@ -19,6 +20,7 @@ namespace primec::ir_lowerer {
 struct LowerSetupStageInput {
   const Program *program = nullptr;
   const SemanticProgram *semanticProgram = nullptr;
+  const primec::ExpandedSource *expandedSource = nullptr;
   const std::string *entryPath = nullptr;
   const std::vector<std::string> *defaultEffects = nullptr;
   const std::vector<std::string> *entryDefaultEffects = nullptr;
@@ -42,6 +44,7 @@ struct LowerSetupStageState {
   std::unordered_set<std::string> loweredCallTargets;
   std::unordered_map<std::string, std::vector<InstructionSourceRange>> instructionSourceRangesByFunction;
   std::unordered_map<std::string, FunctionSyntaxProvenance> functionSyntaxProvenanceByName;
+  const primec::ExpandedSource *expandedSource = nullptr;
   std::vector<std::vector<int32_t>> fileScopeStack;
   std::optional<OnErrorHandler> currentOnError;
   std::optional<ResultReturnInfo> currentReturnResult;

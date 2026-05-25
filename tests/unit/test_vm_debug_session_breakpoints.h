@@ -102,10 +102,10 @@ TEST_CASE("vm resolves source breakpoints for single and multi-hit mappings") {
   module.functions.push_back(std::move(mainFn));
   module.functions.push_back(std::move(helperFn));
   module.entryIndex = 0;
-  module.instructionSourceMap.push_back({11u, 100u, 4u, primec::IrSourceMapProvenance::CanonicalAst});
-  module.instructionSourceMap.push_back({21u, 100u, 4u, primec::IrSourceMapProvenance::CanonicalAst});
-  module.instructionSourceMap.push_back({13u, 101u, 2u, primec::IrSourceMapProvenance::CanonicalAst});
-  module.instructionSourceMap.push_back({22u, 100u, 4u, primec::IrSourceMapProvenance::SyntheticIr});
+  module.instructionSourceMap.push_back({11u, 100u, 4u, primec::IrSourceMapProvenance::CanonicalAst, ""});
+  module.instructionSourceMap.push_back({21u, 100u, 4u, primec::IrSourceMapProvenance::CanonicalAst, ""});
+  module.instructionSourceMap.push_back({13u, 101u, 2u, primec::IrSourceMapProvenance::CanonicalAst, ""});
+  module.instructionSourceMap.push_back({22u, 100u, 4u, primec::IrSourceMapProvenance::SyntheticIr, ""});
 
   std::vector<primec::VmResolvedSourceBreakpoint> matches;
   std::string error;
@@ -136,8 +136,8 @@ TEST_CASE("vm source breakpoint resolution reports ambiguous span diagnostics") 
   mainFn.instructions.push_back({primec::IrOpcode::ReturnI32, 0, 3});
   module.functions.push_back(std::move(mainFn));
   module.entryIndex = 0;
-  module.instructionSourceMap.push_back({1u, 200u, 3u, primec::IrSourceMapProvenance::CanonicalAst});
-  module.instructionSourceMap.push_back({2u, 200u, 9u, primec::IrSourceMapProvenance::CanonicalAst});
+  module.instructionSourceMap.push_back({1u, 200u, 3u, primec::IrSourceMapProvenance::CanonicalAst, ""});
+  module.instructionSourceMap.push_back({2u, 200u, 9u, primec::IrSourceMapProvenance::CanonicalAst, ""});
 
   std::vector<primec::VmResolvedSourceBreakpoint> matches;
   std::string error;
@@ -146,6 +146,55 @@ TEST_CASE("vm source breakpoint resolution reports ambiguous span diagnostics") 
   CHECK(error.find("line 200") != std::string::npos);
   CHECK(error.find("3") != std::string::npos);
   CHECK(error.find("9") != std::string::npos);
+}
+
+TEST_CASE("vm source breakpoint resolution filters by source unit") {
+  primec::IrModule module;
+
+  primec::IrFunction mainFn;
+  mainFn.name = "/main";
+  mainFn.instructions.push_back({primec::IrOpcode::PushI32, 1, 11});
+  mainFn.instructions.push_back({primec::IrOpcode::ReturnI32, 0, 12});
+
+  primec::IrFunction importedFn;
+  importedFn.name = "/imported";
+  importedFn.instructions.push_back({primec::IrOpcode::PushI32, 2, 21});
+  importedFn.instructions.push_back({primec::IrOpcode::ReturnI32, 0, 22});
+
+  module.functions.push_back(std::move(mainFn));
+  module.functions.push_back(std::move(importedFn));
+  module.entryIndex = 0;
+  module.instructionSourceMap.push_back(
+      {11u, 12u, 4u, primec::IrSourceMapProvenance::CanonicalAst, "main.prime"});
+  module.instructionSourceMap.push_back(
+      {21u, 12u, 4u, primec::IrSourceMapProvenance::CanonicalAst, "imported.prime"});
+
+  std::vector<primec::VmResolvedSourceBreakpoint> matches;
+  std::string error;
+  REQUIRE(primec::resolveSourceBreakpoints(
+      module, 12u, 4u, matches, error, std::string_view("imported.prime")));
+  CHECK(error.empty());
+  REQUIRE(matches.size() == 1);
+  CHECK(matches[0].functionIndex == 1);
+  CHECK(matches[0].instructionPointer == 0);
+  CHECK(matches[0].sourceUnit == "imported.prime");
+
+  primec::VmDebugSession session;
+  REQUIRE(session.start(module, error));
+  CHECK(error.empty());
+  size_t resolvedCount = 0;
+  REQUIRE(session.addSourceBreakpoint(
+      12u, 4u, resolvedCount, error, std::string_view("main.prime")));
+  CHECK(error.empty());
+  CHECK(resolvedCount == 1);
+
+  primec::VmDebugStopReason stopReason = primec::VmDebugStopReason::Step;
+  REQUIRE(session.continueExecution(stopReason, error));
+  CHECK(error.empty());
+  CHECK(stopReason == primec::VmDebugStopReason::Breakpoint);
+  const auto snap = session.snapshot();
+  CHECK(snap.functionIndex == 0);
+  CHECK(snap.instructionPointer == 0);
 }
 
 TEST_CASE("vm debug session adds source breakpoints and hits all mapped locations") {
@@ -166,8 +215,8 @@ TEST_CASE("vm debug session adds source breakpoints and hits all mapped location
   module.functions.push_back(std::move(mainFn));
   module.functions.push_back(std::move(helperFn));
   module.entryIndex = 0;
-  module.instructionSourceMap.push_back({31u, 300u, 6u, primec::IrSourceMapProvenance::CanonicalAst});
-  module.instructionSourceMap.push_back({41u, 300u, 6u, primec::IrSourceMapProvenance::CanonicalAst});
+  module.instructionSourceMap.push_back({31u, 300u, 6u, primec::IrSourceMapProvenance::CanonicalAst, ""});
+  module.instructionSourceMap.push_back({41u, 300u, 6u, primec::IrSourceMapProvenance::CanonicalAst, ""});
 
   primec::VmDebugSession session;
   std::string error;

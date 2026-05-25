@@ -1,6 +1,8 @@
 #include "primec/VmDebugAdapter.h"
 
+#include <optional>
 #include <string>
+#include <string_view>
 #include <unordered_map>
 
 namespace primec {
@@ -226,9 +228,18 @@ bool VmDebugAdapter::setSourceBreakpoints(const std::vector<VmDebugAdapterSource
     VmDebugAdapterBreakpointResult result;
     result.line = breakpoint.line;
     result.column = breakpoint.column.value_or(0);
+    result.sourceUnit = breakpoint.sourceUnit;
     std::string localError;
     size_t resolvedCount = 0;
-    if (session_.addSourceBreakpoint(breakpoint.line, breakpoint.column, resolvedCount, localError)) {
+    std::optional<std::string_view> sourceUnit;
+    if (!breakpoint.sourceUnit.empty()) {
+      sourceUnit = std::string_view(breakpoint.sourceUnit);
+    }
+    if (session_.addSourceBreakpoint(breakpoint.line,
+                                     breakpoint.column,
+                                     resolvedCount,
+                                     localError,
+                                     sourceUnit)) {
       result.verified = true;
       result.resolvedCount = resolvedCount;
       ++verifiedCount;
@@ -303,6 +314,7 @@ bool VmDebugAdapter::stackTrace(int64_t threadId, std::vector<VmDebugAdapterStac
         frame.line = entry->line;
         frame.column = entry->column;
         frame.provenance = entry->provenance;
+        frame.sourceUnit = entry->sourceUnit;
       }
     }
     outFrames.push_back(std::move(frame));

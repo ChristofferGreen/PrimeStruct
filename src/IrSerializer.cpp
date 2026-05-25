@@ -3,6 +3,7 @@
 #include <cstring>
 #include <limits>
 #include <string>
+#include <string_view>
 
 namespace primec {
 namespace {
@@ -22,6 +23,19 @@ void appendU64(std::vector<uint8_t> &out, uint64_t value) {
   out.push_back(static_cast<uint8_t>((value >> 40) & 0xFF));
   out.push_back(static_cast<uint8_t>((value >> 48) & 0xFF));
   out.push_back(static_cast<uint8_t>((value >> 56) & 0xFF));
+}
+
+bool appendString(std::vector<uint8_t> &out,
+                  const std::string &text,
+                  std::string_view errorContext,
+                  std::string &error) {
+  if (text.size() > static_cast<size_t>(std::numeric_limits<uint32_t>::max())) {
+    error = std::string(errorContext) + " too long for IR serialization";
+    return false;
+  }
+  appendU32(out, static_cast<uint32_t>(text.size()));
+  out.insert(out.end(), text.begin(), text.end());
+  return true;
 }
 
 bool readU32(const std::vector<uint8_t> &data, size_t &offset, uint32_t &outValue) {
@@ -61,6 +75,26 @@ bool readU8(const std::vector<uint8_t> &data, size_t &offset, uint8_t &outValue)
   ++offset;
   return true;
 }
+
+bool readString(const std::vector<uint8_t> &data,
+                size_t &offset,
+                std::string &outValue,
+                std::string_view truncatedLengthError,
+                std::string_view truncatedTextError,
+                std::string &error) {
+  uint32_t len = 0;
+  if (!readU32(data, offset, len)) {
+    error = truncatedLengthError;
+    return false;
+  }
+  if (offset + len > data.size()) {
+    error = truncatedTextError;
+    return false;
+  }
+  outValue.assign(reinterpret_cast<const char *>(data.data() + offset), len);
+  offset += len;
+  return true;
+}
 } // namespace
 
 bool serializeIr(const IrModule &module, std::vector<uint8_t> &out, std::string &error) {
@@ -84,12 +118,9 @@ bool serializeIr(const IrModule &module, std::vector<uint8_t> &out, std::string 
   }
   appendU32(out, static_cast<uint32_t>(module.stringTable.size()));
   for (const auto &text : module.stringTable) {
-    if (text.size() > static_cast<size_t>(std::numeric_limits<uint32_t>::max())) {
-      error = "string literal too long for IR serialization";
+    if (!appendString(out, text, "string literal", error)) {
       return false;
     }
-    appendU32(out, static_cast<uint32_t>(text.size()));
-    out.insert(out.end(), text.begin(), text.end());
   }
   if (module.structLayouts.size() > static_cast<size_t>(std::numeric_limits<uint32_t>::max())) {
     error = "too many struct layouts for IR serialization";
@@ -97,12 +128,9 @@ bool serializeIr(const IrModule &module, std::vector<uint8_t> &out, std::string 
   }
   appendU32(out, static_cast<uint32_t>(module.structLayouts.size()));
   for (const auto &layout : module.structLayouts) {
-    if (layout.name.size() > static_cast<size_t>(std::numeric_limits<uint32_t>::max())) {
-      error = "struct name too long for IR serialization";
+    if (!appendString(out, layout.name, "struct name", error)) {
       return false;
     }
-    appendU32(out, static_cast<uint32_t>(layout.name.size()));
-    out.insert(out.end(), layout.name.begin(), layout.name.end());
     appendU32(out, layout.totalSizeBytes);
     appendU32(out, layout.alignmentBytes);
     if (layout.fields.size() > static_cast<size_t>(std::numeric_limits<uint32_t>::max())) {
@@ -111,18 +139,12 @@ bool serializeIr(const IrModule &module, std::vector<uint8_t> &out, std::string 
     }
     appendU32(out, static_cast<uint32_t>(layout.fields.size()));
     for (const auto &field : layout.fields) {
-      if (field.name.size() > static_cast<size_t>(std::numeric_limits<uint32_t>::max())) {
-        error = "struct field name too long for IR serialization";
+      if (!appendString(out, field.name, "struct field name", error)) {
         return false;
       }
-      appendU32(out, static_cast<uint32_t>(field.name.size()));
-      out.insert(out.end(), field.name.begin(), field.name.end());
-      if (field.envelope.size() > static_cast<size_t>(std::numeric_limits<uint32_t>::max())) {
-        error = "struct field envelope too long for IR serialization";
+      if (!appendString(out, field.envelope, "struct field envelope", error)) {
         return false;
       }
-      appendU32(out, static_cast<uint32_t>(field.envelope.size()));
-      out.insert(out.end(), field.envelope.begin(), field.envelope.end());
       appendU32(out, field.offsetBytes);
       appendU32(out, field.sizeBytes);
       appendU32(out, field.alignmentBytes);
@@ -133,12 +155,9 @@ bool serializeIr(const IrModule &module, std::vector<uint8_t> &out, std::string 
     }
   }
   for (const auto &fn : module.functions) {
-    if (fn.name.size() > static_cast<size_t>(std::numeric_limits<uint32_t>::max())) {
-      error = "function name too long for IR serialization";
+    if (!appendString(out, fn.name, "function name", error)) {
       return false;
     }
-    appendU32(out, static_cast<uint32_t>(fn.name.size()));
-    out.insert(out.end(), fn.name.begin(), fn.name.end());
     appendU64(out, fn.metadata.effectMask);
     appendU64(out, fn.metadata.capabilityMask);
     appendU32(out, static_cast<uint32_t>(fn.metadata.schedulingScope));
@@ -150,18 +169,12 @@ bool serializeIr(const IrModule &module, std::vector<uint8_t> &out, std::string 
     appendU32(out, static_cast<uint32_t>(fn.localDebugSlots.size()));
     for (const auto &slot : fn.localDebugSlots) {
       appendU32(out, slot.slotIndex);
-      if (slot.name.size() > static_cast<size_t>(std::numeric_limits<uint32_t>::max())) {
-        error = "local debug slot name too long for IR serialization";
+      if (!appendString(out, slot.name, "local debug slot name", error)) {
         return false;
       }
-      appendU32(out, static_cast<uint32_t>(slot.name.size()));
-      out.insert(out.end(), slot.name.begin(), slot.name.end());
-      if (slot.typeName.size() > static_cast<size_t>(std::numeric_limits<uint32_t>::max())) {
-        error = "local debug slot type too long for IR serialization";
+      if (!appendString(out, slot.typeName, "local debug slot type", error)) {
         return false;
       }
-      appendU32(out, static_cast<uint32_t>(slot.typeName.size()));
-      out.insert(out.end(), slot.typeName.begin(), slot.typeName.end());
     }
     if (fn.instructions.size() > static_cast<size_t>(std::numeric_limits<uint32_t>::max())) {
       error = "too many IR instructions";
@@ -184,6 +197,9 @@ bool serializeIr(const IrModule &module, std::vector<uint8_t> &out, std::string 
     appendU32(out, entry.line);
     appendU32(out, entry.column);
     out.push_back(static_cast<uint8_t>(entry.provenance));
+    if (!appendString(out, entry.sourceUnit, "instruction source map source unit", error)) {
+      return false;
+    }
   }
   return true;
 }
@@ -224,17 +240,11 @@ bool deserializeIr(const std::vector<uint8_t> &data, IrModule &out, std::string 
   }
   out.stringTable.reserve(stringCount);
   for (uint32_t i = 0; i < stringCount; ++i) {
-    uint32_t len = 0;
-    if (!readU32(data, offset, len)) {
-      error = "truncated IR string length";
+    std::string text;
+    if (!readString(data, offset, text, "truncated IR string length", "truncated IR string", error)) {
       return false;
     }
-    if (offset + len > data.size()) {
-      error = "truncated IR string";
-      return false;
-    }
-    out.stringTable.emplace_back(reinterpret_cast<const char *>(data.data() + offset), len);
-    offset += len;
+    out.stringTable.push_back(std::move(text));
   }
   uint32_t structCount = 0;
   if (!readU32(data, offset, structCount)) {
@@ -243,17 +253,10 @@ bool deserializeIr(const std::vector<uint8_t> &data, IrModule &out, std::string 
   }
   out.structLayouts.reserve(structCount);
   for (uint32_t i = 0; i < structCount; ++i) {
-    uint32_t nameLen = 0;
-    if (!readU32(data, offset, nameLen)) {
-      error = "truncated IR struct name";
+    std::string name;
+    if (!readString(data, offset, name, "truncated IR struct name", "truncated IR struct name", error)) {
       return false;
     }
-    if (offset + nameLen > data.size()) {
-      error = "truncated IR struct name";
-      return false;
-    }
-    std::string name(reinterpret_cast<const char *>(data.data() + offset), nameLen);
-    offset += nameLen;
     uint32_t totalSize = 0;
     uint32_t alignment = 0;
     uint32_t fieldCount = 0;
@@ -268,28 +271,24 @@ bool deserializeIr(const std::vector<uint8_t> &data, IrModule &out, std::string 
     layout.alignmentBytes = alignment;
     layout.fields.reserve(fieldCount);
     for (uint32_t fieldIndex = 0; fieldIndex < fieldCount; ++fieldIndex) {
-      uint32_t fieldNameLen = 0;
-      if (!readU32(data, offset, fieldNameLen)) {
-        error = "truncated IR struct field name";
+      std::string fieldName;
+      if (!readString(data,
+                      offset,
+                      fieldName,
+                      "truncated IR struct field name",
+                      "truncated IR struct field name",
+                      error)) {
         return false;
       }
-      if (offset + fieldNameLen > data.size()) {
-        error = "truncated IR struct field name";
+      std::string envelope;
+      if (!readString(data,
+                      offset,
+                      envelope,
+                      "truncated IR struct field envelope",
+                      "truncated IR struct field envelope",
+                      error)) {
         return false;
       }
-      std::string fieldName(reinterpret_cast<const char *>(data.data() + offset), fieldNameLen);
-      offset += fieldNameLen;
-      uint32_t envelopeLen = 0;
-      if (!readU32(data, offset, envelopeLen)) {
-        error = "truncated IR struct field envelope";
-        return false;
-      }
-      if (offset + envelopeLen > data.size()) {
-        error = "truncated IR struct field envelope";
-        return false;
-      }
-      std::string envelope(reinterpret_cast<const char *>(data.data() + offset), envelopeLen);
-      offset += envelopeLen;
       uint32_t offsetBytes = 0;
       uint32_t sizeBytes = 0;
       uint32_t alignmentBytes = 0;
@@ -323,17 +322,10 @@ bool deserializeIr(const std::vector<uint8_t> &data, IrModule &out, std::string 
   }
   out.functions.reserve(funcCount);
   for (uint32_t i = 0; i < funcCount; ++i) {
-    uint32_t nameLen = 0;
-    if (!readU32(data, offset, nameLen)) {
-      error = "truncated IR function header";
+    std::string name;
+    if (!readString(data, offset, name, "truncated IR function header", "truncated IR function name", error)) {
       return false;
     }
-    if (offset + nameLen > data.size()) {
-      error = "truncated IR function name";
-      return false;
-    }
-    std::string name(reinterpret_cast<const char *>(data.data() + offset), nameLen);
-    offset += nameLen;
     uint64_t effectMask = 0;
     uint64_t capabilityMask = 0;
     uint32_t schedulingScope = 0;
@@ -357,28 +349,28 @@ bool deserializeIr(const std::vector<uint8_t> &data, IrModule &out, std::string 
     fn.localDebugSlots.reserve(localDebugCount);
     for (uint32_t localIndex = 0; localIndex < localDebugCount; ++localIndex) {
       uint32_t slotIndex = 0;
-      uint32_t localNameLen = 0;
-      uint32_t typeNameLen = 0;
-      if (!readU32(data, offset, slotIndex) || !readU32(data, offset, localNameLen)) {
+      if (!readU32(data, offset, slotIndex)) {
         error = "truncated IR local debug metadata entry";
         return false;
       }
-      if (offset + localNameLen > data.size()) {
-        error = "truncated IR local debug metadata name";
+      std::string localName;
+      if (!readString(data,
+                      offset,
+                      localName,
+                      "truncated IR local debug metadata entry",
+                      "truncated IR local debug metadata name",
+                      error)) {
         return false;
       }
-      std::string localName(reinterpret_cast<const char *>(data.data() + offset), localNameLen);
-      offset += localNameLen;
-      if (!readU32(data, offset, typeNameLen)) {
-        error = "truncated IR local debug metadata type length";
+      std::string typeName;
+      if (!readString(data,
+                      offset,
+                      typeName,
+                      "truncated IR local debug metadata type length",
+                      "truncated IR local debug metadata type",
+                      error)) {
         return false;
       }
-      if (offset + typeNameLen > data.size()) {
-        error = "truncated IR local debug metadata type";
-        return false;
-      }
-      std::string typeName(reinterpret_cast<const char *>(data.data() + offset), typeNameLen);
-      offset += typeNameLen;
 
       IrLocalDebugSlot slot;
       slot.slotIndex = slotIndex;
@@ -438,6 +430,14 @@ bool deserializeIr(const std::vector<uint8_t> &data, IrModule &out, std::string 
       return false;
     }
     entry.provenance = static_cast<IrSourceMapProvenance>(provenance);
+    if (!readString(data,
+                    offset,
+                    entry.sourceUnit,
+                    "truncated IR instruction source map source unit",
+                    "truncated IR instruction source map source unit",
+                    error)) {
+      return false;
+    }
     out.instructionSourceMap.push_back(entry);
   }
   if (entryIndex >= out.functions.size()) {

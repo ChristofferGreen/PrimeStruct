@@ -467,7 +467,13 @@ int main(int argc, char **argv) {
 
   primec::IrModule ir;
   primec::IrPreparationFailure irFailure;
-  if (!primec::prepareIrModule(program, semanticProgram, options, primec::IrValidationTarget::Vm, ir, irFailure)) {
+  if (!primec::prepareIrModule(program,
+                               semanticProgram,
+                               options,
+                               primec::IrValidationTarget::Vm,
+                               ir,
+                               irFailure,
+                               &pipelineOutput.expandedSource)) {
     return primec::emitCliFailure(
         std::cerr,
         options,

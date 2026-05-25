@@ -19,13 +19,35 @@ const char *sourceMapProvenanceName(IrSourceMapProvenance provenance) {
   return "unknown";
 }
 
+bool sourceMapEntryMatchesSourceUnit(const IrInstructionSourceMapEntry &entry,
+                                     std::optional<std::string_view> sourceUnit) {
+  if (!sourceUnit.has_value() || sourceUnit->empty()) {
+    return true;
+  }
+  return entry.sourceUnit == *sourceUnit;
+}
+
+std::string sourceBreakpointLocationText(uint32_t line,
+                                         std::optional<uint32_t> column,
+                                         std::optional<std::string_view> sourceUnit) {
+  std::string text = "line " + std::to_string(line);
+  if (column.has_value()) {
+    text += ", column " + std::to_string(*column);
+  }
+  if (sourceUnit.has_value() && !sourceUnit->empty()) {
+    text += " in " + std::string(*sourceUnit);
+  }
+  return text;
+}
+
 } // namespace
 
 bool resolveSourceBreakpoints(const IrModule &module,
                               uint32_t line,
                               std::optional<uint32_t> column,
                               std::vector<VmResolvedSourceBreakpoint> &outBreakpoints,
-                              std::string &error) {
+                              std::string &error,
+                              std::optional<std::string_view> sourceUnit) {
   outBreakpoints.clear();
   if (line == 0) {
     error = "invalid source breakpoint line";
@@ -37,6 +59,9 @@ bool resolveSourceBreakpoints(const IrModule &module,
   matchingColumns.reserve(module.instructionSourceMap.size());
   for (const auto &entry : module.instructionSourceMap) {
     if (entry.provenance != IrSourceMapProvenance::CanonicalAst) {
+      continue;
+    }
+    if (!sourceMapEntryMatchesSourceUnit(entry, sourceUnit)) {
       continue;
     }
     if (entry.line != line || entry.column == 0) {
@@ -51,7 +76,8 @@ bool resolveSourceBreakpoints(const IrModule &module,
 
   if (!column.has_value()) {
     if (matchingColumns.empty()) {
-      error = "source breakpoint not found at line " + std::to_string(line);
+      error = "source breakpoint not found at " +
+              sourceBreakpointLocationText(line, std::nullopt, sourceUnit);
       return false;
     }
     std::sort(matchingColumns.begin(), matchingColumns.end());
@@ -75,12 +101,16 @@ bool resolveSourceBreakpoints(const IrModule &module,
       if (entry.provenance != IrSourceMapProvenance::CanonicalAst) {
         continue;
       }
+      if (!sourceMapEntryMatchesSourceUnit(entry, sourceUnit)) {
+        continue;
+      }
       if (entry.line == line && entry.column == selectedColumn) {
         entriesByDebugId.emplace(entry.debugId, &entry);
       }
     }
   } else if (entriesByDebugId.empty()) {
-    error = "source breakpoint not found at line " + std::to_string(line) + ", column " + std::to_string(*column);
+    error = "source breakpoint not found at " +
+            sourceBreakpointLocationText(line, column, sourceUnit);
     return false;
   }
 
@@ -93,17 +123,18 @@ bool resolveSourceBreakpoints(const IrModule &module,
         continue;
       }
       const IrInstructionSourceMapEntry &entry = *entryIt->second;
-      outBreakpoints.push_back(
-          {functionIndex, instructionPointer, instruction.debugId, entry.line, entry.column, entry.provenance});
+      outBreakpoints.push_back({functionIndex,
+                                instructionPointer,
+                                instruction.debugId,
+                                entry.line,
+                                entry.column,
+                                entry.provenance,
+                                entry.sourceUnit});
     }
   }
   if (outBreakpoints.empty()) {
-    if (column.has_value()) {
-      error = "source breakpoint has no executable instructions at line " + std::to_string(line) + ", column " +
-              std::to_string(*column);
-    } else {
-      error = "source breakpoint has no executable instructions at line " + std::to_string(line);
-    }
+    error = "source breakpoint has no executable instructions at " +
+            sourceBreakpointLocationText(line, column, sourceUnit);
     return false;
   }
 
@@ -163,7 +194,11 @@ void VmDebugSession::appendMappedStackTrace(std::string &error) const {
       trace << " debug_id " << instruction.debugId;
       auto sourceIt = sourceByDebugId.find(instruction.debugId);
       if (sourceIt != sourceByDebugId.end() && sourceIt->second->line > 0 && sourceIt->second->column > 0) {
-        trace << " at " << sourceIt->second->line << ":" << sourceIt->second->column << " ["
+        trace << " at ";
+        if (!sourceIt->second->sourceUnit.empty()) {
+          trace << sourceIt->second->sourceUnit << ":";
+        }
+        trace << sourceIt->second->line << ":" << sourceIt->second->column << " ["
               << sourceMapProvenanceName(sourceIt->second->provenance) << "]";
       }
     }

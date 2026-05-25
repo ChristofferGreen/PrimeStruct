@@ -78,11 +78,13 @@ TEST_CASE("ir serialization schema golden fixture stays stable") {
 
   module.functions.push_back(mainFn);
   module.functions.push_back(helperFn);
-  module.instructionSourceMap.push_back({101u, 10u, 5u, primec::IrSourceMapProvenance::CanonicalAst});
-  module.instructionSourceMap.push_back({102u, 11u, 3u, primec::IrSourceMapProvenance::SyntheticIr});
+  module.instructionSourceMap.push_back(
+      {101u, 10u, 5u, primec::IrSourceMapProvenance::CanonicalAst, "main.prime"});
+  module.instructionSourceMap.push_back(
+      {102u, 11u, 3u, primec::IrSourceMapProvenance::SyntheticIr, "import.prime"});
 
   const std::vector<uint8_t> expected = {
-      0x52, 0x49, 0x53, 0x50, 0x15, 0x00, 0x00, 0x00, 0x02, 0x00, 0x00, 0x00,
+      0x52, 0x49, 0x53, 0x50, 0x16, 0x00, 0x00, 0x00, 0x02, 0x00, 0x00, 0x00,
       0x00, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x05, 0x00, 0x00, 0x00,
       0x68, 0x65, 0x6c, 0x6c, 0x6f, 0x01, 0x00, 0x00, 0x00, 0x05, 0x00, 0x00,
       0x00, 0x2f, 0x50, 0x61, 0x69, 0x72, 0x08, 0x00, 0x00, 0x00, 0x04, 0x00,
@@ -109,8 +111,11 @@ TEST_CASE("ir serialization schema golden fixture stays stable") {
       0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0xc9, 0x00, 0x00, 0x00, 0x28, 0x00,
       0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0xca, 0x00, 0x00, 0x00, 0x02,
       0x00, 0x00, 0x00, 0x65, 0x00, 0x00, 0x00, 0x0a, 0x00, 0x00, 0x00, 0x05,
-      0x00, 0x00, 0x00, 0x01, 0x66, 0x00, 0x00, 0x00, 0x0b, 0x00, 0x00, 0x00,
-      0x03, 0x00, 0x00, 0x00, 0x02};
+      0x00, 0x00, 0x00, 0x01, 0x0a, 0x00, 0x00, 0x00, 0x6d, 0x61, 0x69,
+      0x6e, 0x2e, 0x70, 0x72, 0x69, 0x6d, 0x65, 0x66, 0x00, 0x00, 0x00,
+      0x0b, 0x00, 0x00, 0x00, 0x03, 0x00, 0x00, 0x00, 0x02, 0x0c, 0x00,
+      0x00, 0x00, 0x69, 0x6d, 0x70, 0x6f, 0x72, 0x74, 0x2e, 0x70, 0x72,
+      0x69, 0x6d, 0x65};
 
   std::vector<uint8_t> data;
   std::string error;
@@ -128,6 +133,8 @@ TEST_CASE("ir serialization schema golden fixture stays stable") {
   REQUIRE(decoded.structLayouts.size() == 1u);
   CHECK(decoded.structLayouts[0].fields.size() == 2u);
   CHECK(decoded.instructionSourceMap.size() == 2u);
+  CHECK(decoded.instructionSourceMap[0].sourceUnit == "main.prime");
+  CHECK(decoded.instructionSourceMap[1].sourceUnit == "import.prime");
 }
 
 TEST_CASE("ir serializes instruction debug ids") {
@@ -165,8 +172,9 @@ TEST_CASE("ir serializes instruction source map metadata") {
   fn.instructions.push_back({primec::IrOpcode::PushI32, 1, 11});
   fn.instructions.push_back({primec::IrOpcode::ReturnI32, 0, 12});
   module.functions.push_back(fn);
-  module.instructionSourceMap.push_back({11u, 4u, 2u, primec::IrSourceMapProvenance::CanonicalAst});
-  module.instructionSourceMap.push_back({12u, 5u, 3u, primec::IrSourceMapProvenance::SyntheticIr});
+  module.instructionSourceMap.push_back(
+      {11u, 4u, 2u, primec::IrSourceMapProvenance::CanonicalAst, "primary.prime"});
+  module.instructionSourceMap.push_back({12u, 5u, 3u, primec::IrSourceMapProvenance::SyntheticIr, ""});
 
   std::vector<uint8_t> data;
   std::string error;
@@ -181,10 +189,12 @@ TEST_CASE("ir serializes instruction source map metadata") {
   CHECK(decoded.instructionSourceMap[0].line == 4u);
   CHECK(decoded.instructionSourceMap[0].column == 2u);
   CHECK(decoded.instructionSourceMap[0].provenance == primec::IrSourceMapProvenance::CanonicalAst);
+  CHECK(decoded.instructionSourceMap[0].sourceUnit == "primary.prime");
   CHECK(decoded.instructionSourceMap[1].debugId == 12u);
   CHECK(decoded.instructionSourceMap[1].line == 5u);
   CHECK(decoded.instructionSourceMap[1].column == 3u);
   CHECK(decoded.instructionSourceMap[1].provenance == primec::IrSourceMapProvenance::SyntheticIr);
+  CHECK(decoded.instructionSourceMap[1].sourceUnit.empty());
 }
 
 TEST_CASE("ir serializes local debug slot metadata") {
@@ -293,7 +303,7 @@ TEST_CASE("ir deserialization rejects malformed instruction source map metadata"
   fn.instructions.push_back({primec::IrOpcode::PushI32, 1, 9});
   fn.instructions.push_back({primec::IrOpcode::ReturnI32, 0, 10});
   module.functions.push_back(fn);
-  module.instructionSourceMap.push_back({9u, 3u, 1u, primec::IrSourceMapProvenance::CanonicalAst});
+  module.instructionSourceMap.push_back({9u, 3u, 1u, primec::IrSourceMapProvenance::CanonicalAst, ""});
 
   std::vector<uint8_t> data;
   std::string error;
@@ -304,7 +314,7 @@ TEST_CASE("ir deserialization rejects malformed instruction source map metadata"
 
   primec::IrModule decoded;
   CHECK_FALSE(primec::deserializeIr(data, decoded, error));
-  CHECK(error == "truncated IR instruction source map entry");
+  CHECK(error == "truncated IR instruction source map source unit");
 }
 
 TEST_CASE("ir deserialization rejects unsupported instruction source map provenance") {
@@ -315,14 +325,14 @@ TEST_CASE("ir deserialization rejects unsupported instruction source map provena
   fn.instructions.push_back({primec::IrOpcode::PushI32, 1, 9});
   fn.instructions.push_back({primec::IrOpcode::ReturnI32, 0, 10});
   module.functions.push_back(fn);
-  module.instructionSourceMap.push_back({9u, 3u, 1u, primec::IrSourceMapProvenance::CanonicalAst});
+  module.instructionSourceMap.push_back({9u, 3u, 1u, primec::IrSourceMapProvenance::CanonicalAst, ""});
 
   std::vector<uint8_t> data;
   std::string error;
   REQUIRE(primec::serializeIr(module, data, error));
   REQUIRE(error.empty());
-  REQUIRE(!data.empty());
-  data.back() = 0xFF;
+  REQUIRE(data.size() >= 5);
+  data[data.size() - 5] = 0xFF;
 
   primec::IrModule decoded;
   CHECK_FALSE(primec::deserializeIr(data, decoded, error));
@@ -537,7 +547,144 @@ main() {
     CHECK(firstEntry.line == secondEntry.line);
     CHECK(firstEntry.column == secondEntry.column);
     CHECK(firstEntry.provenance == secondEntry.provenance);
+    CHECK(firstEntry.sourceUnit == secondEntry.sourceUnit);
   }
+}
+
+TEST_CASE("compile pipeline IR source maps preserve imported source units") {
+  const std::filesystem::path baseDir =
+      primec::testing::testScratchPath("ir_pipeline/source_unit_ir_vm_4593");
+  std::filesystem::remove_all(baseDir);
+  std::filesystem::create_directories(baseDir);
+  const std::filesystem::path importedPath = baseDir / "imported.prime";
+  const std::filesystem::path primaryPath = baseDir / "main.prime";
+  {
+    std::ofstream imported(importedPath);
+    REQUIRE(imported.good());
+    imported << "\n"
+             << "[return<int>]\n"
+             << "helper([int] x) {\n"
+             << "  return(plus(x, 2i32))\n"
+             << "}\n";
+  }
+  {
+    std::ofstream primary(primaryPath);
+    REQUIRE(primary.good());
+    primary << "import<\"imported.prime\">\n"
+            << "[return<int>]\n"
+            << "main() {\n"
+            << "  return(helper(5i32))\n"
+            << "}\n";
+  }
+
+  primec::Options options;
+  options.inputPath = primaryPath.string();
+  options.entryPath = "/main";
+  applyCompilePipelineSemanticProductIntentForTesting(
+      options, CompilePipelineSemanticProductIntentForTesting::Require);
+  primec::addDefaultStdlibInclude(options.inputPath, options.importPaths);
+
+  primec::CompilePipelineOutput output;
+  primec::CompilePipelineErrorStage errorStage = primec::CompilePipelineErrorStage::None;
+  std::string error;
+  REQUIRE(primec::runCompilePipeline(options, output, errorStage, error));
+  CHECK(error.empty());
+  REQUIRE(output.hasSemanticProgram);
+
+  primec::IrModule module;
+  primec::IrPreparationFailure failure;
+  REQUIRE(primec::prepareIrModule(output.program,
+                                  &output.semanticProgram,
+                                  options,
+                                  primec::IrValidationTarget::Vm,
+                                  module,
+                                  failure,
+                                  &output.expandedSource));
+
+  const std::string importedSource = std::filesystem::absolute(importedPath).string();
+  const std::string primarySource = std::filesystem::absolute(primaryPath).string();
+  struct SourcePoint {
+    uint32_t line = 0;
+    uint32_t column = 0;
+  };
+  std::optional<SourcePoint> sharedPoint;
+  for (const auto &importedEntry : module.instructionSourceMap) {
+    if (importedEntry.sourceUnit != importedSource ||
+        importedEntry.provenance != primec::IrSourceMapProvenance::CanonicalAst ||
+        importedEntry.line == 0u || importedEntry.column == 0u) {
+      continue;
+    }
+    const bool primaryHasSamePoint =
+        std::any_of(module.instructionSourceMap.begin(),
+                    module.instructionSourceMap.end(),
+                    [&](const primec::IrInstructionSourceMapEntry &primaryEntry) {
+                      return primaryEntry.sourceUnit == primarySource &&
+                             primaryEntry.provenance == primec::IrSourceMapProvenance::CanonicalAst &&
+                             primaryEntry.line == importedEntry.line &&
+                             primaryEntry.column == importedEntry.column;
+                    });
+    if (primaryHasSamePoint) {
+      sharedPoint = SourcePoint{importedEntry.line, importedEntry.column};
+      break;
+    }
+  }
+  REQUIRE(sharedPoint.has_value());
+
+  std::vector<primec::VmResolvedSourceBreakpoint> importedBreakpoints;
+  REQUIRE(primec::resolveSourceBreakpoints(module,
+                                           sharedPoint->line,
+                                           sharedPoint->column,
+                                           importedBreakpoints,
+                                           error,
+                                           std::string_view(importedSource)));
+  CHECK(error.empty());
+  REQUIRE(!importedBreakpoints.empty());
+  CHECK(std::all_of(importedBreakpoints.begin(),
+                    importedBreakpoints.end(),
+                    [&](const primec::VmResolvedSourceBreakpoint &breakpoint) {
+                      return breakpoint.sourceUnit == importedSource;
+                    }));
+
+  std::vector<primec::VmResolvedSourceBreakpoint> primaryBreakpoints;
+  error.clear();
+  REQUIRE(primec::resolveSourceBreakpoints(module,
+                                           sharedPoint->line,
+                                           sharedPoint->column,
+                                           primaryBreakpoints,
+                                           error,
+                                           std::string_view(primarySource)));
+  CHECK(error.empty());
+  REQUIRE(!primaryBreakpoints.empty());
+  CHECK(std::all_of(primaryBreakpoints.begin(),
+                    primaryBreakpoints.end(),
+                    [&](const primec::VmResolvedSourceBreakpoint &breakpoint) {
+                      return breakpoint.sourceUnit == primarySource;
+                    }));
+
+  primec::VmDebugAdapter adapter;
+  REQUIRE(adapter.launch(module, error));
+  CHECK(error.empty());
+  primec::VmDebugAdapterSourceBreakpoint breakpoint;
+  breakpoint.line = sharedPoint->line;
+  breakpoint.column = sharedPoint->column;
+  breakpoint.sourceUnit = importedSource;
+  std::vector<primec::VmDebugAdapterBreakpointResult> breakpointResults;
+  REQUIRE(adapter.setSourceBreakpoints({breakpoint}, breakpointResults, error));
+  CHECK(error.empty());
+  REQUIRE(breakpointResults.size() == 1);
+  CHECK(breakpointResults.front().verified);
+  CHECK(breakpointResults.front().sourceUnit == importedSource);
+
+  primec::VmDebugAdapterStopEvent stopEvent;
+  REQUIRE(adapter.continueExecution(stopEvent, error));
+  CHECK(error.empty());
+  CHECK(stopEvent.reason == primec::VmDebugStopReason::Breakpoint);
+
+  std::vector<primec::VmDebugAdapterStackFrame> frames;
+  REQUIRE(adapter.stackTrace(1, frames, error));
+  CHECK(error.empty());
+  REQUIRE(!frames.empty());
+  CHECK(frames.front().sourceUnit == importedSource);
 }
 
 TEST_CASE("ir lowerer marks implicit return source map provenance as synthetic") {
@@ -612,10 +759,12 @@ main() {
   auto formatSourcePoint = [&](uint32_t debugId,
                                uint32_t line,
                                uint32_t column,
-                               primec::IrSourceMapProvenance provenance) {
+                               primec::IrSourceMapProvenance provenance,
+                               const std::string &sourceUnit) {
     std::ostringstream out;
     out << "debug_id=" << debugId << " source=" << line << ":" << column
-        << " provenance=" << provenanceName(provenance);
+        << " provenance=" << provenanceName(provenance)
+        << " source_unit=" << sourceUnit;
     return out.str();
   };
 
@@ -685,7 +834,8 @@ main() {
       formatSourcePoint(expectedBreakpoint.debugId,
                         expectedBreakpoint.line,
                         expectedBreakpoint.column,
-                        expectedBreakpoint.provenance);
+                        expectedBreakpoint.provenance,
+                        expectedBreakpoint.sourceUnit);
 
   primec::VmDebugAdapter adapter;
   REQUIRE(adapter.launch(module, error));
@@ -693,7 +843,7 @@ main() {
 
   std::vector<primec::VmDebugAdapterBreakpointResult> breakpointResults;
   REQUIRE(adapter.setSourceBreakpoints(
-      {{expectedBreakpoint.line, expectedBreakpoint.column}}, breakpointResults, error));
+      {{expectedBreakpoint.line, expectedBreakpoint.column, ""}}, breakpointResults, error));
   CHECK(error.empty());
   REQUIRE(breakpointResults.size() == 1);
   CHECK(breakpointResults.front().verified);
@@ -710,7 +860,7 @@ main() {
   REQUIRE(!frames.empty());
   const primec::VmDebugAdapterStackFrame &frame = frames.front();
   const std::string actualSource =
-      formatSourcePoint(frame.debugId, frame.line, frame.column, frame.provenance);
+      formatSourcePoint(frame.debugId, frame.line, frame.column, frame.provenance, frame.sourceUnit);
   INFO("expected source-map provenance: " << expectedSource);
   INFO("debug adapter frame provenance: " << actualSource);
   CHECK(frame.functionIndex == expectedBreakpoint.functionIndex);
@@ -719,6 +869,7 @@ main() {
   CHECK(frame.line == expectedBreakpoint.line);
   CHECK(frame.column == expectedBreakpoint.column);
   CHECK(frame.provenance == expectedBreakpoint.provenance);
+  CHECK(frame.sourceUnit == expectedBreakpoint.sourceUnit);
 }
 
 TEST_CASE("ir leaves tail metadata unset for builtin return") {

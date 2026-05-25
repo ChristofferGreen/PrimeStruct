@@ -6,6 +6,7 @@
 #include "IrLowererLowerImportsStructsSetup.h"
 #include "IrLowererLowerLocalsSetup.h"
 #include "IrLowererSetupMathHelpers.h"
+#include "primec/SourceLocationMapper.h"
 
 namespace primec::ir_lowerer {
 
@@ -20,6 +21,7 @@ bool runLowerSetupStage(const LowerSetupStageInput &input,
   }
 
   stateOut = LowerSetupStageState{};
+  stateOut.expandedSource = input.expandedSource;
 
   uint64_t entryEffectMask = 0;
   uint64_t entryCapabilityMask = 0;
@@ -56,6 +58,19 @@ bool runLowerSetupStage(const LowerSetupStageInput &input,
       }
       if (definition->sourceColumn > 0) {
         provenance.column = static_cast<uint32_t>(definition->sourceColumn);
+      }
+      if (input.expandedSource != nullptr && definition->sourceLine > 0 && definition->sourceColumn > 0) {
+        const std::optional<SourceUnitLocation> location =
+            mapExpandedSourceLocation(*input.expandedSource, definition->sourceLine, definition->sourceColumn);
+        if (location.has_value()) {
+          if (location->line > 0) {
+            provenance.line = static_cast<uint32_t>(location->line);
+          }
+          if (location->column > 0) {
+            provenance.column = static_cast<uint32_t>(location->column);
+          }
+          provenance.sourceUnit = location->file;
+        }
       }
     }
     stateOut.functionSyntaxProvenanceByName.insert_or_assign(path, provenance);

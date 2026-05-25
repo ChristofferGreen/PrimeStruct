@@ -89,7 +89,8 @@ bool prepareIrModule(Program &program,
                      const Options &options,
                      IrValidationTarget validationTarget,
                      IrModule &ir,
-                     IrPreparationFailure &failure) {
+                     IrPreparationFailure &failure,
+                     const ExpandedSource *expandedSource) {
   failure = {};
   std::string error;
   DiagnosticSink diagnosticSink(&failure.diagnosticInfo);
@@ -111,7 +112,8 @@ bool prepareIrModule(Program &program,
                      ir,
                      error,
                      &failure.diagnosticInfo,
-                     validationTarget)) {
+                     validationTarget,
+                     expandedSource)) {
     failure.stage = IrPreparationFailureStage::Lowering;
     failure.message = std::move(error);
     return false;

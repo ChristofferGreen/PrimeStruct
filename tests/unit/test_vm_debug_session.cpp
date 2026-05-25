@@ -691,11 +691,15 @@ TEST_CASE("vm debug fault diagnostics include mapped source stack traces") {
   module.functions.push_back(std::move(mainFn));
   module.functions.push_back(std::move(helperFn));
   module.entryIndex = 0;
-  module.instructionSourceMap.push_back({101u, 40u, 5u, primec::IrSourceMapProvenance::CanonicalAst});
-  module.instructionSourceMap.push_back({102u, 41u, 3u, primec::IrSourceMapProvenance::SyntheticIr});
-  module.instructionSourceMap.push_back({201u, 90u, 2u, primec::IrSourceMapProvenance::CanonicalAst});
-  module.instructionSourceMap.push_back({202u, 91u, 2u, primec::IrSourceMapProvenance::CanonicalAst});
-  module.instructionSourceMap.push_back({203u, 92u, 7u, primec::IrSourceMapProvenance::CanonicalAst});
+  module.instructionSourceMap.push_back(
+      {101u, 40u, 5u, primec::IrSourceMapProvenance::CanonicalAst, "main.prime"});
+  module.instructionSourceMap.push_back({102u, 41u, 3u, primec::IrSourceMapProvenance::SyntheticIr, ""});
+  module.instructionSourceMap.push_back(
+      {201u, 90u, 2u, primec::IrSourceMapProvenance::CanonicalAst, "imported.prime"});
+  module.instructionSourceMap.push_back(
+      {202u, 91u, 2u, primec::IrSourceMapProvenance::CanonicalAst, "imported.prime"});
+  module.instructionSourceMap.push_back(
+      {203u, 92u, 7u, primec::IrSourceMapProvenance::CanonicalAst, "imported.prime"});
 
   primec::VmDebugSession session;
   std::string error;
@@ -707,8 +711,10 @@ TEST_CASE("vm debug fault diagnostics include mapped source stack traces") {
   CHECK(stopReason == primec::VmDebugStopReason::Fault);
   CHECK(error.find("division by zero in IR") != std::string::npos);
   CHECK(error.find("stack trace:") != std::string::npos);
-  CHECK(error.find("#0 /helper ip 2 debug_id 203 at 92:7 [canonical_ast]") != std::string::npos);
-  CHECK(error.find("#1 /main ip 0 debug_id 101 at 40:5 [canonical_ast]") != std::string::npos);
+  CHECK(error.find("#0 /helper ip 2 debug_id 203 at imported.prime:92:7 [canonical_ast]") !=
+        std::string::npos);
+  CHECK(error.find("#1 /main ip 0 debug_id 101 at main.prime:40:5 [canonical_ast]") !=
+        std::string::npos);
 }
 
 TEST_CASE("vm debug session owns argv text after startup") {

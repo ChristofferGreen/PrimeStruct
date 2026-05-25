@@ -169,13 +169,15 @@ struct VmResolvedSourceBreakpoint {
   uint32_t line = 0;
   uint32_t column = 0;
   IrSourceMapProvenance provenance = IrSourceMapProvenance::Unknown;
+  std::string sourceUnit{};
 };
 
 bool resolveSourceBreakpoints(const IrModule &module,
                               uint32_t line,
                               std::optional<uint32_t> column,
                               std::vector<VmResolvedSourceBreakpoint> &outBreakpoints,
-                              std::string &error);
+                              std::string &error,
+                              std::optional<std::string_view> sourceUnit = std::nullopt);
 
 class Vm {
 public:
@@ -194,7 +196,11 @@ public:
   bool continueExecution(VmDebugStopReason &stopReason, std::string &error);
   bool pause(std::string &error);
   bool addBreakpoint(size_t functionIndex, size_t instructionPointer, std::string &error);
-  bool addSourceBreakpoint(uint32_t line, std::optional<uint32_t> column, size_t &resolvedCount, std::string &error);
+  bool addSourceBreakpoint(uint32_t line,
+                           std::optional<uint32_t> column,
+                           size_t &resolvedCount,
+                           std::string &error,
+                           std::optional<std::string_view> sourceUnit = std::nullopt);
   bool removeBreakpoint(size_t functionIndex, size_t instructionPointer, std::string &error);
   void clearBreakpoints();
   void setHooks(const VmDebugHooks &hooks);

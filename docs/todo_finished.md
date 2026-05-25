@@ -6,6 +6,44 @@ Legend:
 Finished items are periodically archived here from `docs/todo.md`; section headers record the archive date.
 
 **Todo Completion (May 25, 2026)**
+- [x] TODO-4593: Carry source-unit provenance into IR and VM debug maps
+  - owner: ai
+  - created_at: 2026-05-24
+  - finished_at: 2026-05-25
+  - phase: Source-unit provenance ledger
+  - parallel_track: source-unit-provenance
+  - depends_on: TODO-4592, TODO-4583
+  - scope: Extended lowered IR source-map metadata and VM/debug lookup so
+    instruction provenance can identify the source unit/file as well as line,
+    column, and AST/synthetic provenance.
+  - outcome:
+    - Bumped serialized PSIR to v22 and added source-unit identity to
+      instruction source-map entries, including serializer/deserializer and
+      golden metadata coverage.
+    - Threaded expanded-source provenance through IR preparation/lowering so
+      primary and imported source-unit file identities survive into lowered IR
+      debug maps.
+    - Extended VM source-breakpoint resolution, debug sessions, adapter
+      breakpoints, DAP source handling, and mapped stack traces to carry and
+      filter on source-unit identity while preserving deterministic fallback
+      text when it is unavailable.
+    - Added focused IR serialization, imported-source provenance, VM breakpoint
+      disambiguation, stack-trace, and adapter coverage.
+  - validation:
+    - Parent-scheduled release build passed:
+      `cmake --build build-release --target PrimeStruct_backend_ir_tests -j 1`
+    - Passed 1 imported-source IR/VM source-map case / 29 assertions:
+      `cd build-release && ./PrimeStruct_backend_ir_tests --test-suite=primestruct.ir.pipeline.serialization --test-case="compile pipeline IR source maps preserve imported source units" --no-skip`
+    - Passed 7 IR serialization/source-map cases / 437 assertions:
+      `cd build-release && ./PrimeStruct_backend_ir_tests --test-suite=primestruct.ir.pipeline.serialization --test-case="ir serialization schema golden fixture stays stable,ir serializes instruction source map metadata,ir deserialization rejects malformed instruction source map metadata,ir deserialization rejects unsupported instruction source map provenance,ir lowerer emits deterministic instruction source map provenance,compile pipeline IR source maps preserve imported source units,vm debug adapter preserves lowered source map provenance" --no-skip`
+    - Parent-scheduled release build passed:
+      `cmake --build build-release --target PrimeStruct_backend_runtime_tests -j 1`
+    - Passed 3 VM debug cases / 30 assertions:
+      `cd build-release && ./PrimeStruct_backend_runtime_tests --test-case="vm source breakpoint resolution filters by source unit,vm debug fault diagnostics include mapped source stack traces,vm debug adapter emits deterministic protocol transcripts" --no-skip`
+  - stop_rule: Stopped once source-unit identity survived lowering,
+    serialization, and VM debug lookup for a focused imported-source fixture;
+    no debugger protocol redesign or broader diagnostic policy change was added.
+
 - [x] TODO-4588: Add pass/phase invalidation manifest beyond semantics
   - owner: ai
   - created_at: 2026-05-24

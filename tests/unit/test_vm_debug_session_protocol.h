@@ -17,12 +17,12 @@ TEST_CASE("vm debug adapter emits deterministic protocol transcripts") {
 
     module.functions.push_back(std::move(mainFn));
     module.entryIndex = 0;
-    module.instructionSourceMap.push_back({101u, 10u, 1u, primec::IrSourceMapProvenance::CanonicalAst});
-    module.instructionSourceMap.push_back({102u, 11u, 3u, primec::IrSourceMapProvenance::CanonicalAst});
-    module.instructionSourceMap.push_back({103u, 12u, 4u, primec::IrSourceMapProvenance::CanonicalAst});
-    module.instructionSourceMap.push_back({104u, 14u, 2u, primec::IrSourceMapProvenance::CanonicalAst});
-    module.instructionSourceMap.push_back({105u, 15u, 2u, primec::IrSourceMapProvenance::CanonicalAst});
-    module.instructionSourceMap.push_back({106u, 16u, 1u, primec::IrSourceMapProvenance::CanonicalAst});
+    module.instructionSourceMap.push_back({101u, 10u, 1u, primec::IrSourceMapProvenance::CanonicalAst, ""});
+    module.instructionSourceMap.push_back({102u, 11u, 3u, primec::IrSourceMapProvenance::CanonicalAst, ""});
+    module.instructionSourceMap.push_back({103u, 12u, 4u, primec::IrSourceMapProvenance::CanonicalAst, ""});
+    module.instructionSourceMap.push_back({104u, 14u, 2u, primec::IrSourceMapProvenance::CanonicalAst, ""});
+    module.instructionSourceMap.push_back({105u, 15u, 2u, primec::IrSourceMapProvenance::CanonicalAst, ""});
+    module.instructionSourceMap.push_back({106u, 16u, 1u, primec::IrSourceMapProvenance::CanonicalAst, ""});
 
     primec::VmDebugAdapter adapter;
     if (!adapter.launch(module, error)) {
@@ -39,7 +39,7 @@ TEST_CASE("vm debug adapter emits deterministic protocol transcripts") {
     }
 
     std::vector<primec::VmDebugAdapterBreakpointResult> breakpoints;
-    if (!adapter.setSourceBreakpoints({{14u, 2u}}, breakpoints, error)) {
+    if (!adapter.setSourceBreakpoints({{14u, 2u, ""}}, breakpoints, error)) {
       return false;
     }
     if (breakpoints.size() != 1 || !breakpoints.front().verified || breakpoints.front().resolvedCount != 1) {
@@ -182,7 +182,7 @@ TEST_CASE("vm debug adapter reports invalid debug protocol queries") {
   mainFn.instructions.push_back({primec::IrOpcode::ReturnI32, 0, 12});
   module.functions.push_back(std::move(mainFn));
   module.entryIndex = 0;
-  module.instructionSourceMap.push_back({11u, 20u, 2u, primec::IrSourceMapProvenance::CanonicalAst});
+  module.instructionSourceMap.push_back({11u, 20u, 2u, primec::IrSourceMapProvenance::CanonicalAst, ""});
 
   primec::VmDebugAdapter adapter;
   std::string error;
@@ -205,7 +205,7 @@ TEST_CASE("vm debug adapter reports invalid debug protocol queries") {
 
   std::vector<primec::VmDebugAdapterBreakpointResult> breakpoints;
   error.clear();
-  REQUIRE(adapter.setSourceBreakpoints({{999u, std::nullopt}}, breakpoints, error));
+  REQUIRE(adapter.setSourceBreakpoints({{999u, std::nullopt, ""}}, breakpoints, error));
   CHECK(error.empty());
   REQUIRE(breakpoints.size() == 1);
   CHECK_FALSE(breakpoints[0].verified);
@@ -234,8 +234,8 @@ TEST_CASE("vm debug adapter exposes caller locals for non-top frames") {
   module.functions.push_back(std::move(mainFn));
   module.functions.push_back(std::move(helperFn));
   module.entryIndex = 0;
-  module.instructionSourceMap.push_back({103u, 40u, 5u, primec::IrSourceMapProvenance::CanonicalAst});
-  module.instructionSourceMap.push_back({203u, 80u, 7u, primec::IrSourceMapProvenance::CanonicalAst});
+  module.instructionSourceMap.push_back({103u, 40u, 5u, primec::IrSourceMapProvenance::CanonicalAst, ""});
+  module.instructionSourceMap.push_back({203u, 80u, 7u, primec::IrSourceMapProvenance::CanonicalAst, ""});
 
   primec::VmDebugAdapter adapter;
   std::string error;

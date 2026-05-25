@@ -26,6 +26,7 @@ struct VmDebugAdapterStackFrame {
   uint32_t line = 0;
   uint32_t column = 0;
   IrSourceMapProvenance provenance = IrSourceMapProvenance::Unknown;
+  std::string sourceUnit{};
 };
 
 struct VmDebugAdapterScope {
@@ -45,6 +46,7 @@ struct VmDebugAdapterVariable {
 struct VmDebugAdapterSourceBreakpoint {
   uint32_t line = 0;
   std::optional<uint32_t> column;
+  std::string sourceUnit{};
 };
 
 struct VmDebugAdapterBreakpointResult {
@@ -52,6 +54,7 @@ struct VmDebugAdapterBreakpointResult {
   uint32_t line = 0;
   uint32_t column = 0;
   size_t resolvedCount = 0;
+  std::string sourceUnit{};
   std::string message;
 };
 

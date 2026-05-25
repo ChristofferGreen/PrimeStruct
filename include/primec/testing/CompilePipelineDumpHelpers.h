@@ -268,7 +268,8 @@ inline bool prepareCompilePipelineIr(const std::string &source,
                                prepared.options,
                                backend->validationTarget(prepared.options),
                                prepared.ir,
-                               failure)) {
+                               failure,
+                               &prepared.output.expandedSource)) {
     error = failure.message;
     std::error_code ec;
     std::filesystem::remove(sourcePath, ec);

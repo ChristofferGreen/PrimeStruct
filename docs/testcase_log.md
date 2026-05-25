@@ -10,9 +10,35 @@
   on 2026-05-25 after serial root cherry-picks. TODO-4588 and TODO-4589
   focused root validation passed on 2026-05-25 after serial root
   cherry-picks. Post-run TODO queue validation passed after promoting
-  TODO-4593 and TODO-4594 as additional parallel-ready leaves.
+  TODO-4593 and TODO-4594 as additional parallel-ready leaves. TODO-4593
+  worker-focused validation passed on 2026-05-25 before parent root
+  reconciliation.
 
 ## Recent Test Runs
+- 2026-05-25 19:09 CEST | pass | mode: release | command:
+  `cmake --build build-release --target PrimeStruct_backend_ir_tests -j 1`;
+  `cd build-release && ./PrimeStruct_backend_ir_tests --test-suite=primestruct.ir.pipeline.serialization --test-case="compile pipeline IR source maps preserve imported source units" --no-skip`;
+  `cd build-release && ./PrimeStruct_backend_ir_tests --test-suite=primestruct.ir.pipeline.serialization --test-case="ir serialization schema golden fixture stays stable,ir serializes instruction source map metadata,ir deserialization rejects malformed instruction source map metadata,ir deserialization rejects unsupported instruction source map provenance,ir lowerer emits deterministic instruction source map provenance,compile pipeline IR source maps preserve imported source units,vm debug adapter preserves lowered source map provenance" --no-skip`;
+  `cmake --build build-release --target PrimeStruct_backend_runtime_tests -j 1`;
+  `cd build-release && ./PrimeStruct_backend_runtime_tests --test-case="vm source breakpoint resolution filters by source unit,vm debug fault diagnostics include mapped source stack traces,vm debug adapter emits deterministic protocol transcripts" --no-skip`
+  | failures: none | notes: parent-scheduled TODO-4593 worker validation
+  passed after rebuilding the changed IR fixture; the imported-source source-map
+  case passed 1 case / 29 assertions, the focused IR serialization/source-map
+  set passed 7 cases / 437 assertions, and the VM debug set passed 3 cases /
+  30 assertions.
+- 2026-05-25 19:09 CEST | fail | mode: release | command:
+  `cd build-release && ./PrimeStruct_backend_ir_tests --test-suite=primestruct.ir.pipeline.serialization --test-case="ir serialization schema golden fixture stays stable,ir serializes instruction source map metadata,ir deserialization rejects malformed instruction source map metadata,ir deserialization rejects unsupported instruction source map provenance,ir lowerer emits deterministic instruction source map provenance,compile pipeline IR source maps preserve imported source units,vm debug adapter preserves lowered source map provenance" --no-skip`
+  | failures:
+  `compile pipeline IR source maps preserve imported source units` | notes:
+  parent-scheduled TODO-4593 rerun selected 7 cases; 6 passed, and the
+  imported-source case failed because the fixture did not yet provide a shared
+  local line/column in primary and imported source units.
+- 2026-05-25 19:09 CEST | fail | mode: release | command:
+  `cmake --build build-release --target primec primevm PrimeStruct_backend_ir_tests -j 1`
+  | failures: `tests/unit/test_ir_pipeline_serialization_control_flow.cpp` |
+  notes: parent-scheduled TODO-4593 build caught aggregate initializers that
+  were missing explicit empty `sourceUnit` values after extending source-map and
+  adapter breakpoint structs.
 - 2026-05-25 16:08 CEST | pass | mode: release | command:
   `cd build-release && ./PrimeStruct_compile_run_tests --test-case="todo queue and skipped doctest debt stay source locked" --no-skip`
   | failures: none | notes: root post-run TODO parallelization review

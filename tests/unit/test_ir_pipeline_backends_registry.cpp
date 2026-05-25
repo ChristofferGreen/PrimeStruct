@@ -9577,7 +9577,7 @@ TEST_CASE("main routes cpp and exe through ir backend alias lookup") {
   CHECK(source.find("describeIrPreparationFailure(") != std::string::npos);
   CHECK(source.find("pipelineOutput.hasSemanticProgram ? &pipelineOutput.semanticProgram : nullptr") !=
         std::string::npos);
-  CHECK(source.find("prepareIrModule(program, semanticProgram, options, validationTarget, ir, prepFailure)") !=
+  CHECK(source.find("prepareIrModule(program, semanticProgram, options, validationTarget, ir, prepFailure, expandedSource)") !=
         std::string::npos);
   CHECK(source.find("IrLowerer lowerer") == std::string::npos);
   CHECK(source.find("inlineIrModuleCalls(ir, error)") == std::string::npos);
@@ -9617,7 +9617,7 @@ TEST_CASE("primevm uses shared ir preparation helper") {
   CHECK(source.find("describeIrPreparationFailure(") != std::string::npos);
   CHECK(source.find("pipelineOutput.hasSemanticProgram ? &pipelineOutput.semanticProgram : nullptr") !=
         std::string::npos);
-  CHECK(source.find("prepareIrModule(program, semanticProgram, options, primec::IrValidationTarget::Vm, ir, irFailure)") !=
+  CHECK(source.find("&pipelineOutput.expandedSource") !=
         std::string::npos);
   CHECK(source.find("findIrBackend(\"vm\")") == std::string::npos);
   CHECK(source.find("CompilePipelineErrorStage::Import") == std::string::npos);

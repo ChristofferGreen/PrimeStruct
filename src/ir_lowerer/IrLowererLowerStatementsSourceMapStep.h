@@ -16,11 +16,13 @@ struct InstructionSourceRange {
   uint32_t line = 0;
   uint32_t column = 0;
   IrSourceMapProvenance provenance = IrSourceMapProvenance::CanonicalAst;
+  std::string sourceUnit;
 };
 
 struct FunctionSyntaxProvenance {
   uint32_t line = 0;
   uint32_t column = 0;
+  std::string sourceUnit;
 };
 
 struct LowerStatementsSourceMapStepInput {

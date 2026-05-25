@@ -6,9 +6,11 @@ bool IrLowerer::lower(const Program &program,
                       IrModule &out,
                       std::string &error,
                       DiagnosticSinkReport *diagnosticInfo,
-                      IrValidationTarget validationTarget) const {
+                      IrValidationTarget validationTarget,
+                      const ExpandedSource *expandedSource) const {
   out = IrModule{};
   error.clear();
+  (void)expandedSource;
   DiagnosticSink diagnosticSink(diagnosticInfo);
   diagnosticSink.reset();
   bool loweringSucceeded = false;

@@ -7,7 +7,7 @@
 namespace primec {
 
 constexpr uint32_t IrSchemaMagic = 0x50534952u; // "PSIR"
-constexpr uint32_t IrSchemaVersion = 21u;
+constexpr uint32_t IrSchemaVersion = 22u;
 constexpr uint32_t IrSchemaMinimumSupportedVersion = IrSchemaVersion;
 constexpr uint32_t IrSchemaMaximumSupportedVersion = IrSchemaVersion;
 
@@ -235,6 +235,7 @@ struct IrInstructionSourceMapEntry {
   uint32_t line = 0;
   uint32_t column = 0;
   IrSourceMapProvenance provenance = IrSourceMapProvenance::CanonicalAst;
+  std::string sourceUnit{};
 };
 
 struct IrFunction {

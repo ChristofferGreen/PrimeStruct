@@ -1823,10 +1823,10 @@ TEST_CASE("todo queue and skipped doctest debt stay source locked") {
                   "- TODO-4566: Render flat and rounded-rect scene primitives to BGRA8") !=
         std::string::npos);
   CHECK(todo.find("### Priority Lanes") != std::string::npos);
-  CHECK(todo.find("Source-unit provenance ledger: TODO-4592 completed parser/semantic") !=
+  CHECK(todo.find("Source-unit provenance ledger: TODO-4592 completed parser/semantic") ==
         std::string::npos);
   CHECK(todo.find("TODO-4583 added the IR schema/version\n"
-                  "  contract that TODO-4593 must follow") !=
+                  "  contract that TODO-4593 must follow") ==
         std::string::npos);
   CHECK(todo.find("Scene graph renderer and UI presentation: TODO-4565 -> TODO-4566") !=
         std::string::npos);
@@ -1840,7 +1840,13 @@ TEST_CASE("todo queue and skipped doctest debt stay source locked") {
         std::string::npos);
   CHECK(todoFinished.find("TODO-4592: Map parser and semantic diagnostics through source units") !=
         std::string::npos);
+  CHECK(todoFinished.find("TODO-4593: Carry source-unit provenance into IR and VM debug maps") !=
+        std::string::npos);
+  CHECK(todoFinished.find("source-unit identity to instruction source-map entries") !=
+        std::string::npos);
   CHECK(todo.find("TODO-4592: Map parser and semantic diagnostics through source units") ==
+        std::string::npos);
+  CHECK(todo.find("TODO-4593: Carry source-unit provenance into IR and VM debug maps") ==
         std::string::npos);
   CHECK(todoFinished.find("Added public `ExpandedSource`, `SourceUnit`, and `SourceSegment` types") !=
         std::string::npos);

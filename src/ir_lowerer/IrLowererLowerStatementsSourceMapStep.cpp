@@ -37,7 +37,10 @@ bool runLowerStatementsSourceMapStep(const LowerStatementsSourceMapStepInput &in
       if (left.line != right.line) {
         return left.line < right.line;
       }
-      return left.column < right.column;
+      if (left.column != right.column) {
+        return left.column < right.column;
+      }
+      return left.sourceUnit < right.sourceUnit;
     });
   }
 
@@ -52,10 +55,12 @@ bool runLowerStatementsSourceMapStep(const LowerStatementsSourceMapStepInput &in
   for (auto &loweredFunction : input.outModule->functions) {
     uint32_t fallbackSourceLine = 0;
     uint32_t fallbackSourceColumn = 0;
+    std::string fallbackSourceUnit;
     auto provenanceIt = input.functionSyntaxProvenanceByName->find(loweredFunction.name);
     if (provenanceIt != input.functionSyntaxProvenanceByName->end()) {
       fallbackSourceLine = provenanceIt->second.line;
       fallbackSourceColumn = provenanceIt->second.column;
+      fallbackSourceUnit = provenanceIt->second.sourceUnit;
     }
     const auto sourceRangesIt = input.instructionSourceRangesByFunction->find(loweredFunction.name);
     const std::vector<InstructionSourceRange> *sourceRanges =
@@ -69,6 +74,7 @@ bool runLowerStatementsSourceMapStep(const LowerStatementsSourceMapStepInput &in
       instruction.debugId = static_cast<uint32_t>(nextInstructionDebugId);
       uint32_t sourceLine = fallbackSourceLine;
       uint32_t sourceColumn = fallbackSourceColumn;
+      std::string sourceUnit = fallbackSourceUnit;
       IrSourceMapProvenance sourceProvenance = IrSourceMapProvenance::SyntheticIr;
       if (sourceRanges != nullptr) {
         const InstructionSourceRange *bestRange = nullptr;
@@ -91,11 +97,14 @@ bool runLowerStatementsSourceMapStep(const LowerStatementsSourceMapStepInput &in
         if (bestRange != nullptr) {
           sourceLine = bestRange->line;
           sourceColumn = bestRange->column;
+          if (!bestRange->sourceUnit.empty()) {
+            sourceUnit = bestRange->sourceUnit;
+          }
           sourceProvenance = bestRange->provenance;
         }
       }
       input.outModule->instructionSourceMap.push_back(
-          {instruction.debugId, sourceLine, sourceColumn, sourceProvenance});
+          {instruction.debugId, sourceLine, sourceColumn, sourceProvenance, std::move(sourceUnit)});
       ++nextInstructionDebugId;
     }
   }

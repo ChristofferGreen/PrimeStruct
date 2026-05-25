@@ -1556,7 +1556,7 @@ Planned lowerer entrypoint cutover:
   - native-backend software-numeric and runtime-reflection rejection are pinned as syntax-owned backend policy scans over spelled expression surfaces rather than semantic-product facts
   - import/layout setup now treats its remaining `Definition*` map as an explicitly AST-owned provenance/body inventory for field statements, namespace prefixes, and recursive layout traversal; the import-alias table is pinned as a syntax-owned shorthand layer derived from spelled `import` directives plus wildcard expansion; top-level struct layout enumeration already prefers semantic-product type inventories, so the only live raw-`Program` seam left there is AST-owned field/provenance traversal inside layout computation
   - helper/local setup now prefers semantic-product `on_error`, callable, binding, and return facts wherever lowering-facing meaning exists; entry completeness validation checks `on_error` coverage from published callable summaries and `onErrorFacts` instead of rebuilding a handler map from raw AST transforms; callable-definition lowering enumerates semantic-product definitions and keeps the AST only as the executable body/provenance source, while statement-call lowering remains intentionally syntax-owned because it walks spelled statement bodies directly and the math-import probe remains syntax-owned import shorthand during uninitialized setup
-  - source-map finalization consumes a narrow `FunctionSyntaxProvenance` map for fallback function line/column data rather than the full `Definition*` inventory
+  - source-map finalization consumes a narrow `FunctionSyntaxProvenance` map for fallback function line/column/source-unit data rather than the full `Definition*` inventory
   - no raw-`Program` lowerer entry remains; the old public compatibility overload used by tests/helpers is retired
 - The entrypoint boundary should make ownership explicit:
   - lowering-facing meaning comes from the semantic product
@@ -2286,7 +2286,7 @@ module {
   author lights). No active TODO currently tracks platform/runtime consumption of that shared event stream. Add a
   concrete TODO before changing that UI runtime seam; composite-widget composition remains locked to the basic
   widget/container APIs rather than raw draw-command helpers or raw HTML record append helpers.
-- **IR definition (stable, PSIR v21):**
+- **IR definition (stable, PSIR v22):**
   - **Module:** `{ string_table, struct_layouts, functions, instruction_source_map, entry_index, version }`.
     The canonical contract constants live in `include/primec/Ir.h` as `IrSchemaMagic`,
     `IrSchemaVersion`, and the supported-version range; serializer implementations
@@ -2296,10 +2296,12 @@ module {
   - **Metadata:** `{ effect_mask, capability_mask, scheduling_scope, instrumentation_flags }` (see PSIR binary layout).
   - **Instruction:** `{ op, imm, debug_id }`; `op` is an `IrOpcode`, `imm` is a 64-bit immediate payload whose meaning
     depends on `op`, and `debug_id` is a deterministic per-instruction identifier used for source-map linkage.
-  - **Instruction source map entry:** `{ debug_id, line, column, provenance }`; entries map instruction debug IDs back
-    to canonical AST statement/expression coordinates when available (including inlined callee statements) and
+  - **Instruction source map entry:** `{ debug_id, line, column, provenance, source_unit }`; entries map instruction
+    debug IDs back to canonical AST statement/expression coordinates when available (including inlined callee
+    statements), the source unit/file identity when compile-pipeline expanded-source metadata is available, and
     provenance tags (`canonical_ast` for direct statement/expression mappings, `synthetic_ir` for compiler-generated
-    instructions). Instructions with no direct AST origin currently fall back to definition coordinates.
+    instructions). Instructions with no direct AST origin currently fall back to definition coordinates and omit
+    `source_unit` only when no source-unit ledger was supplied.
   - **Locals:** addressed by index; `LoadLocal`, `StoreLocal`, `AddressOfLocal` operate on the index encoded in `imm`.
   - **Strings:** string literals are interned in `string_table` and referenced by index in print ops (see PSIR
     versioning).
@@ -2317,8 +2319,8 @@ module {
       `u32 slot_index`, `u32 name_len` + name bytes, `u32 type_len` + type bytes, then `u32 instruction_count` and
       `instruction_count` entries: `u8 opcode` + `u64 imm` + `u32 debug_id`.
     - `u32 instruction_source_map_count`, then `instruction_source_map_count` entries:
-      `u32 debug_id`, `u32 line`, `u32 column`, `u8 provenance`.
-  - **PSIR opcode set:** see the `IrOpcode` enum and the “PSIR opcode set (v21, VM/native)” section below.
+      `u32 debug_id`, `u32 line`, `u32 column`, `u8 provenance`, `u32 source_unit_len` + source-unit bytes.
+  - **PSIR opcode set:** see the `IrOpcode` enum and the “PSIR opcode set (v22, VM/native)” section below.
 - **PSIR versioning:** serialized IR includes a version tag; v2 introduces `AddressOfLocal`, `LoadIndirect`, and
   `StoreIndirect` for pointer/reference lowering; v4 adds `ReturnVoid` to model implicit void returns in the VM/native
   backends; v5 adds a string table + print opcodes for stdout/stderr output; v6 extends print opcodes with
@@ -2332,7 +2334,8 @@ module {
   without runtime semantic changes; v18 adds per-instruction debug IDs for source-map linkage; v19 adds per-instruction
   source-map metadata entries keyed by instruction debug ID (`line`, `column`, `provenance`); v20 adds `FileReadByte`
   for deterministic single-byte file reads with explicit EOF mapping and `HeapFree` for `/std/intrinsics/memory/free`;
-  v21 adds `HeapRealloc` for `/std/intrinsics/memory/realloc`.
+  v21 adds `HeapRealloc` for `/std/intrinsics/memory/realloc`; v22 adds per-instruction source-unit/file identity to
+  source-map metadata so VM debug lookup can disambiguate identical line/column positions across source units.
   - **PSIR v2:** adds pointer opcodes (`AddressOfLocal`, `LoadIndirect`, `StoreIndirect`) to support
     `location`/`dereference`.
   - **PSIR v4:** adds `ReturnVoid` so void definitions can omit explicit returns without losing a bytecode terminator.
@@ -5282,7 +5285,8 @@ bad_set() {
   opcodes yet.
 - **GLSL note:** GLSL/SPIR-V emission routes through canonical IR (`glsl-ir`/`spirv-ir`) and `IrValidationTarget::Glsl`;
   these modes emit backend output directly without requiring PSIR serialization.
-- **PSIR versioning:** current portable IR is PSIR v21 (adds `HeapRealloc` on top of v20’s `FileReadByte` and
+- **PSIR versioning:** current portable IR is PSIR v22 (adds source-unit/file identity to source-map metadata on top of
+  v21’s `HeapRealloc`, v20’s `FileReadByte` and
   `HeapFree`, v19’s per-instruction source-map metadata keyed by debug ID, v18’s instruction debug IDs, v17’s local
   debug slots, v16’s function-call opcodes `Call`/`CallVoid`, v15’s execution metadata, v14’s float return opcodes,
   v13’s float arithmetic/compare/convert opcodes, and v12’s struct field visibility/static metadata, `LoadStringByte`,
@@ -5460,11 +5464,12 @@ module {
 ### VM IR Breakpoints
 - `VmDebugSession` supports IR-level breakpoints keyed by `(functionIndex, instructionPointer)` through `addBreakpoint`,
   `removeBreakpoint`, and `clearBreakpoints`.
-- `resolveSourceBreakpoints(...)` maps source locations (`line`, optional `column`) to executable IR breakpoint
-  locations via canonical source-map entries; line-only requests reject ambiguous multi-column matches with explicit
-  diagnostics.
-- `VmDebugSession::addSourceBreakpoint(line, column, resolvedCount, ...)` resolves and installs all matching IR
-  breakpoints in one call; `resolvedCount` reports how many executable locations were mapped.
+- `resolveSourceBreakpoints(...)` maps source locations (`line`, optional `column`, optional source-unit/file identity)
+  to executable IR breakpoint locations via canonical source-map entries; line-only requests reject ambiguous
+  multi-column matches with explicit diagnostics, and source-unit filtering disambiguates identical positions in
+  primary/imported files.
+- `VmDebugSession::addSourceBreakpoint(line, column, resolvedCount, ..., sourceUnit)` resolves and installs all matching
+  IR breakpoints in one call; `resolvedCount` reports how many executable locations were mapped.
 - Breakpoints are checked in `continueExecution` before instruction execution and stop with reason `Breakpoint`.
 - Continuing from a breakpoint resumes past that same location once (prevents immediate repeat-stops at the same
   `(functionIndex, instructionPointer)`), then normal breakpoint checks resume.
@@ -5472,7 +5477,8 @@ module {
 ### VM Fault Stack Traces
 - `VmDebugSession` fault diagnostics append a deterministic mapped stack trace when source-map metadata is available.
 - Stack frames are listed from faulting frame to caller frames and include function path, instruction pointer,
-  instruction debug ID, and mapped source span (`line:column`) with provenance.
+  instruction debug ID, and mapped source span (`source_unit:line:column` when available, otherwise `line:column`) with
+  provenance.
 - Caller-frame mapping reports call-site instructions (the `Call`/`CallVoid` slot) rather than the post-call instruction
   pointer.
 
@@ -5481,8 +5487,8 @@ module {
   - execution control: `launch`, `continueExecution`, `step`, `pause`
   - debugger queries: `threads`, `stackTrace`, `scopes`, `variables`
   - breakpoints: `setInstructionBreakpoints`, `setSourceBreakpoints`
-- Stack-frame responses use source-map metadata when available (`line`, `column`, provenance) and keep the same
-  call-site mapping behavior used by VM fault stack traces.
+- Stack-frame responses use source-map metadata when available (`sourceUnit`, `line`, `column`, provenance) and keep the
+  same call-site mapping behavior used by VM fault stack traces.
 - Adapter calls append deterministic transcript lines through `transcript()` to support protocol transcript tests and
   replay checks.
 - Snapshot payloads now carry per-frame locals (`frame_locals`) so `scopes/variables` return concrete local values for

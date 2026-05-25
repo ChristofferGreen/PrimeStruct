@@ -150,13 +150,14 @@ bool VmDebugSession::addBreakpoint(size_t functionIndex, size_t instructionPoint
 bool VmDebugSession::addSourceBreakpoint(uint32_t line,
                                          std::optional<uint32_t> column,
                                          size_t &resolvedCount,
-                                         std::string &error) {
+                                         std::string &error,
+                                         std::optional<std::string_view> sourceUnit) {
   if (!module_) {
     error = "debug session is not started";
     return false;
   }
   std::vector<VmResolvedSourceBreakpoint> resolved;
-  if (!resolveSourceBreakpoints(*module_, line, column, resolved, error)) {
+  if (!resolveSourceBreakpoints(*module_, line, column, resolved, error, sourceUnit)) {
     return false;
   }
   for (const auto &breakpoint : resolved) {

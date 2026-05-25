@@ -332,9 +332,11 @@ TEST_CASE("ir lowerer statements source-map step finalizes instruction metadata"
   std::unordered_map<std::string, primec::ir_lowerer::FunctionSyntaxProvenance>
       functionSyntaxProvenanceByName;
   functionSyntaxProvenanceByName.emplace(
-      "/main", primec::ir_lowerer::FunctionSyntaxProvenance{.line = 12, .column = 4});
+      "/main", primec::ir_lowerer::FunctionSyntaxProvenance{
+                   .line = 12, .column = 4, .sourceUnit = "main.prime"});
   functionSyntaxProvenanceByName.emplace(
-      "/helper", primec::ir_lowerer::FunctionSyntaxProvenance{.line = 25, .column = 3});
+      "/helper", primec::ir_lowerer::FunctionSyntaxProvenance{
+                     .line = 25, .column = 3, .sourceUnit = "helper.prime"});
 
   std::unordered_map<std::string, std::vector<primec::ir_lowerer::InstructionSourceRange>>
       instructionSourceRangesByFunction;
@@ -344,6 +346,7 @@ TEST_CASE("ir lowerer statements source-map step finalizes instruction metadata"
       .line = 77,
       .column = 9,
       .provenance = primec::IrSourceMapProvenance::SyntheticIr,
+      .sourceUnit = "synthetic.prime",
   });
   instructionSourceRangesByFunction["/main"].push_back({
       .beginIndex = 0,
@@ -351,6 +354,7 @@ TEST_CASE("ir lowerer statements source-map step finalizes instruction metadata"
       .line = 100,
       .column = 2,
       .provenance = primec::IrSourceMapProvenance::CanonicalAst,
+      .sourceUnit = "main.prime",
   });
 
   primec::IrModule module;
@@ -401,22 +405,27 @@ TEST_CASE("ir lowerer statements source-map step finalizes instruction metadata"
   CHECK(module.instructionSourceMap[0].line == 100);
   CHECK(module.instructionSourceMap[0].column == 2);
   CHECK(module.instructionSourceMap[0].provenance == primec::IrSourceMapProvenance::CanonicalAst);
+  CHECK(module.instructionSourceMap[0].sourceUnit == "main.prime");
 
   CHECK(module.instructionSourceMap[1].line == 77);
   CHECK(module.instructionSourceMap[1].column == 9);
   CHECK(module.instructionSourceMap[1].provenance == primec::IrSourceMapProvenance::SyntheticIr);
+  CHECK(module.instructionSourceMap[1].sourceUnit == "synthetic.prime");
 
   CHECK(module.instructionSourceMap[2].line == 12);
   CHECK(module.instructionSourceMap[2].column == 4);
   CHECK(module.instructionSourceMap[2].provenance == primec::IrSourceMapProvenance::SyntheticIr);
+  CHECK(module.instructionSourceMap[2].sourceUnit == "main.prime");
 
   CHECK(module.instructionSourceMap[3].line == 25);
   CHECK(module.instructionSourceMap[3].column == 3);
   CHECK(module.instructionSourceMap[3].provenance == primec::IrSourceMapProvenance::SyntheticIr);
+  CHECK(module.instructionSourceMap[3].sourceUnit == "helper.prime");
 
   CHECK(module.instructionSourceMap[4].line == 0);
   CHECK(module.instructionSourceMap[4].column == 0);
   CHECK(module.instructionSourceMap[4].provenance == primec::IrSourceMapProvenance::SyntheticIr);
+  CHECK(module.instructionSourceMap[4].sourceUnit.empty());
 
   REQUIRE(module.stringTable.size() == 2);
   CHECK(module.stringTable[0] == "alpha");

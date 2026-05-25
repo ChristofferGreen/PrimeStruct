@@ -67,7 +67,6 @@ This file is the live open-work queue for PrimeStruct.
 - TODO-4565: Add minimal scene graph and camera data model | track: scene-renderer | primary surface: stdlib/std/scene scene model
 - TODO-4572: Remove vector statement-helper compiler path | track: vector-special-case-deletion | primary surface: vector semantic/lowerer helpers
 - TODO-4573: Remove compiler-owned map literal lowering | track: map-special-case-deletion | primary surface: map literal semantics/lowering
-- TODO-4593: Carry source-unit provenance into IR and VM debug maps | track: source-unit-provenance | primary surface: IR source maps and VM debug lookup
 - TODO-4594: Classify semantic call diagnostic stability tiers | track: architecture-diagnostic-stability | primary surface: semantic call diagnostics
 
 ### Immediate Next 10
@@ -83,15 +82,6 @@ This file is the live open-work queue for PrimeStruct.
 
 ### Priority Lanes
 
-- Source-unit provenance ledger: TODO-4592 completed parser/semantic
-  diagnostic source-unit mapping. TODO-4583 added the IR schema/version
-  contract that TODO-4593 must follow when it changes IR source-map metadata.
-  TODO-4591 completed the inspectable expanded-source ledger that this lane
-  builds on.
-  This lane is intentionally separate from TODO-4581 provenance ownership and
-  TODO-4586 diagnostic stability tiers: it adds the missing source-unit/file
-  identity that those later contracts can consume without absorbing
-  TODO-4583's schema/versioning work.
 - Scene graph renderer and UI presentation: TODO-4565 -> TODO-4566 ->
   (TODO-4590 and TODO-4567) -> TODO-4568 -> TODO-4569
 - Map/vector compiler-independence: TODO-4570 retired the duplicate `map2`
@@ -110,7 +100,6 @@ This file is the live open-work queue for PrimeStruct.
 - TODO-4565: Add minimal scene graph and camera data model
 - TODO-4572: Remove vector statement-helper compiler path
 - TODO-4573: Remove compiler-owned map literal lowering
-- TODO-4593: Carry source-unit provenance into IR and VM debug maps
 - TODO-4594: Classify semantic call diagnostic stability tiers
 - TODO-4566: Render flat and rounded-rect scene primitives to BGRA8
 - TODO-4590: Add international text shaping and glyph atlas path
@@ -609,37 +598,3 @@ This file is the live open-work queue for PrimeStruct.
     - Existing semantic `--collect-diagnostics` ordering remains deterministic.
   - stop_rule: Stop after one semantic call-resolution family has tier docs and
     focused coverage; do not classify every semantic diagnostic in this slice.
-
-- [ ] TODO-4593: Carry source-unit provenance into IR and VM debug maps
-  - owner: ai
-  - created_at: 2026-05-24
-  - phase: Source-unit provenance ledger
-  - parallel_track: source-unit-provenance
-  - depends_on: TODO-4592, TODO-4583
-  - scope: Extend lowered IR source-map metadata and VM/debug lookup so
-    instruction provenance can identify the source unit/file as well as line,
-    column, and AST/synthetic provenance.
-  - implementation_notes: Start from `IrInstructionSourceMapEntry`,
-    `IrSerializer.cpp`, `IrLowererLowerStatementsSourceMapStep.*`,
-    `VmDebugHelpers.cpp`, and
-    `tests/unit/test_ir_pipeline_serialization_control_flow_metadata.h`.
-    Coordinate with TODO-4583 because serialized IR source-map metadata changes
-    must follow the version/schema contract; if TODO-4583 already landed,
-    update that contract in the same slice.
-  - acceptance:
-    - IR source-map entries can carry a source-unit id or file identity in
-      addition to debug id, line, column, and provenance.
-    - IR serialization/deserialization and golden coverage include
-      source-unit-aware metadata, with unknown/old metadata behavior handled
-      according to the TODO-4583 schema contract.
-    - VM breakpoint lookup can disambiguate identical line/column positions in
-      different source units when file/module identity is supplied.
-    - VM mapped stack traces include source file or source-unit display
-      identity when available and keep deterministic fallback text when it is
-      unavailable.
-    - Focused IR serialization and VM debug tests pass for primary-source and
-      imported-source instruction provenance.
-  - stop_rule: Stop once source-unit identity survives lowering,
-    serialization, and VM debug lookup for a focused imported-source fixture;
-    do not redesign the debugger protocol or broaden diagnostic policy in this
-    slice.

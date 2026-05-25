@@ -13,6 +13,8 @@
 
 namespace primec {
 
+struct ExpandedSource;
+
 enum class IrPreparationPhaseOwnership {
   CompilePipelineAstAndSemanticProduct,
   IrPreparationLoweredIr,
@@ -61,6 +63,7 @@ bool prepareIrModule(Program &program,
                      const Options &options,
                      IrValidationTarget validationTarget,
                      IrModule &ir,
-                     IrPreparationFailure &failure);
+                     IrPreparationFailure &failure,
+                     const ExpandedSource *expandedSource = nullptr);
 
 } // namespace primec

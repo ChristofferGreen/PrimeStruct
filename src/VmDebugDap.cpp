@@ -83,6 +83,13 @@ bool parseSourceBreakpoints(const JsonValue *arguments,
     error = "setBreakpoints arguments.breakpoints must be an array";
     return false;
   }
+  std::string sourceUnit;
+  const JsonValue *source = jsonObjectField(arguments, "source");
+  if (source != nullptr && source->kind == JsonValue::Kind::Object) {
+    if (!jsonStringField(*source, "path", sourceUnit)) {
+      (void)jsonStringField(*source, "name", sourceUnit);
+    }
+  }
   for (const JsonValue &entry : list->arrayValue) {
     if (entry.kind != JsonValue::Kind::Object) {
       error = "setBreakpoints entries must be objects";
@@ -99,6 +106,7 @@ bool parseSourceBreakpoints(const JsonValue *arguments,
     if (jsonNumberField(entry, "column", column) && column > 0) {
       breakpoint.column = static_cast<uint32_t>(column);
     }
+    breakpoint.sourceUnit = sourceUnit;
     breakpoints.push_back(breakpoint);
   }
   return true;
@@ -210,17 +218,19 @@ std::string encodeThreadsBody(const std::vector<VmDebugAdapterThread> &threads) 
 }
 
 std::string encodeStackTraceBody(const std::vector<VmDebugAdapterStackFrame> &frames, std::string_view sourcePath) {
-  const std::string sourceName = fileNameFromPath(sourcePath);
   std::string body = "{\"stackFrames\":[";
   for (size_t i = 0; i < frames.size(); ++i) {
     if (i > 0) {
       body += ",";
     }
     const auto &frame = frames[i];
+    const std::string_view frameSourcePath =
+        frame.sourceUnit.empty() ? sourcePath : std::string_view(frame.sourceUnit);
+    const std::string sourceName = fileNameFromPath(frameSourcePath);
     body += std::string("{\"id\":") + std::to_string(frame.id) + ",\"name\":\"" + jsonEscape(frame.name) +
             "\",\"line\":" + std::to_string(frame.line) + ",\"column\":" + std::to_string(frame.column) +
             ",\"instructionPointer\":" + std::to_string(frame.instructionPointer) + ",\"source\":{\"name\":\"" +
-            jsonEscape(sourceName) + "\",\"path\":\"" + jsonEscape(sourcePath) + "\"}}";
+            jsonEscape(sourceName) + "\",\"path\":\"" + jsonEscape(frameSourcePath) + "\"}}";
   }
   body += "],\"totalFrames\":" + std::to_string(frames.size()) + "}";
   return body;

@@ -169,7 +169,8 @@ inline bool prepareIrThroughCompilePipeline(const std::string &source,
                                prepared.options,
                                backend->validationTarget(prepared.options),
                                prepared.ir,
-                               failure)) {
+                               failure,
+                               &prepared.output.expandedSource)) {
     error = failure.message;
     return false;
   }

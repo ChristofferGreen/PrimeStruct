@@ -1,5 +1,7 @@
 #include "IrLowererLowerReturnEmitStage.h"
 
+#include "primec/SourceLocationMapper.h"
+
 #include "IrLowererBindingTypeHelpers.h"
 #include "IrLowererHelpers.h"
 #include "IrLowererBindingTransformHelpers.h"
@@ -178,6 +180,19 @@ bool runLowerReturnEmitStage(const LowerReturnEmitStageInput &input,
     }
     if (expr.sourceColumn > 0) {
       range.column = static_cast<uint32_t>(expr.sourceColumn);
+    }
+    if (setupStage.expandedSource != nullptr && expr.sourceLine > 0 && expr.sourceColumn > 0) {
+      const std::optional<SourceUnitLocation> location =
+          mapExpandedSourceLocation(*setupStage.expandedSource, expr.sourceLine, expr.sourceColumn);
+      if (location.has_value()) {
+        if (location->line > 0) {
+          range.line = static_cast<uint32_t>(location->line);
+        }
+        if (location->column > 0) {
+          range.column = static_cast<uint32_t>(location->column);
+        }
+        range.sourceUnit = location->file;
+      }
     }
     instructionSourceRangesByFunction[functionName].push_back(range);
   };

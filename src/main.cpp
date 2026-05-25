@@ -191,6 +191,7 @@ void emitBenchmarkSemanticRepeatLeakCheck(std::ostream &err,
 bool runIrBackend(const primec::IrBackend &backend,
                   primec::Program &program,
                   primec::SemanticProgram *semanticProgram,
+                  const primec::ExpandedSource *expandedSource,
                   const primec::Options &options,
                   primec::IrBackendEmitResult &result,
                   IrBackendRunFailure &failure) {
@@ -200,7 +201,7 @@ bool runIrBackend(const primec::IrBackend &backend,
   const primec::IrValidationTarget validationTarget = backend.validationTarget(options);
   primec::IrModule ir;
   primec::IrPreparationFailure prepFailure;
-  if (!primec::prepareIrModule(program, semanticProgram, options, validationTarget, ir, prepFailure)) {
+  if (!primec::prepareIrModule(program, semanticProgram, options, validationTarget, ir, prepFailure, expandedSource)) {
     failure.cliFailure = primec::describeIrPreparationFailure(prepFailure, backend);
     return false;
   }
@@ -369,7 +370,13 @@ int main(int argc, char **argv) {
     IrBackendRunFailure failure;
     primec::SemanticProgram *semanticProgram =
         pipelineOutput.hasSemanticProgram ? &pipelineOutput.semanticProgram : nullptr;
-    if (!runIrBackend(*irBackend, program, semanticProgram, options, emitResult, failure)) {
+    if (!runIrBackend(*irBackend,
+                      program,
+                      semanticProgram,
+                      &pipelineOutput.expandedSource,
+                      options,
+                      emitResult,
+                      failure)) {
       if (failure.cliFailure.has_value()) {
         return primec::emitCliFailure(std::cerr, options, *failure.cliFailure);
       }

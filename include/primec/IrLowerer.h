@@ -11,6 +11,8 @@
 
 namespace primec {
 
+struct ExpandedSource;
+
 class IrLowerer {
  public:
   bool lower(const Program &program,
@@ -21,7 +23,8 @@ class IrLowerer {
              IrModule &out,
              std::string &error,
              DiagnosticSinkReport *diagnosticInfo = nullptr,
-             IrValidationTarget validationTarget = IrValidationTarget::Native) const;
+             IrValidationTarget validationTarget = IrValidationTarget::Native,
+             const ExpandedSource *expandedSource = nullptr) const;
 };
 
 } // namespace primec
