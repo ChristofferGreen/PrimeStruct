@@ -7,38 +7,6 @@
 #include <vector>
 
 namespace primec::semantics {
-namespace {
-
-bool isMapLiteralAssignPair(const Expr &arg) {
-  return arg.kind == Expr::Kind::Call && !arg.isMethodCall &&
-         !arg.isFieldAccess && arg.name == "assign" &&
-         arg.namespacePrefix.empty() && arg.templateArgs.empty() &&
-         arg.args.size() == 2;
-}
-
-std::vector<const Expr *> collectMapLiteralEntries(const std::vector<Expr> &args) {
-  std::vector<const Expr *> entries;
-  entries.reserve(args.size() * 2);
-  bool allAssignPairs = !args.empty();
-  for (const auto &arg : args) {
-    if (!isMapLiteralAssignPair(arg)) {
-      allAssignPairs = false;
-      break;
-    }
-  }
-  const bool flattenAssignPairs = allAssignPairs || (args.size() % 2 != 0);
-  for (const auto &arg : args) {
-    if (flattenAssignPairs && isMapLiteralAssignPair(arg)) {
-      entries.push_back(&arg.args[0]);
-      entries.push_back(&arg.args[1]);
-    } else {
-      entries.push_back(&arg);
-    }
-  }
-  return entries;
-}
-
-} // namespace
 
 bool SemanticsValidator::validateExprCollectionLiteralBuiltins(
     const std::vector<ParameterInfo> &params,
@@ -51,6 +19,9 @@ bool SemanticsValidator::validateExprCollectionLiteralBuiltins(
   handledOut = false;
   std::string builtinName;
   if (!getBuiltinCollectionName(expr, builtinName)) {
+    return true;
+  }
+  if (builtinName == "map") {
     return true;
   }
 
@@ -80,9 +51,6 @@ bool SemanticsValidator::validateExprCollectionLiteralBuiltins(
   if (expr.hasBodyArguments || !expr.bodyArguments.empty()) {
     return failCollectionLiteralDiagnostic(builtinName + " literal does not accept block arguments");
   }
-  const std::vector<const Expr *> mapLiteralEntries =
-      builtinName == "map" ? collectMapLiteralEntries(expr.args)
-                           : std::vector<const Expr *>{};
   if (builtinName == "soa" "_vector") {
     if (expr.templateArgs.size() != 1) {
       return failCollectionLiteralDiagnostic(
@@ -106,35 +74,17 @@ bool SemanticsValidator::validateExprCollectionLiteralBuiltins(
       return failCollectionLiteralDiagnostic("vector literal requires heap_alloc effect");
     }
   }
-  if (builtinName == "array" || builtinName == "vector" ||
-      builtinName == "soa" "_vector") {
-    if (expr.templateArgs.size() != 1) {
-      if (builtinName == "array" && expr.templateArgs.size() > 1) {
-        return failCollectionLiteralDiagnostic(
-            "array<T, N> is unsupported; use array<T> (runtime-count array)");
-      }
+  if (expr.templateArgs.size() != 1) {
+    if (builtinName == "array" && expr.templateArgs.size() > 1) {
       return failCollectionLiteralDiagnostic(
-          builtinName + " literal requires exactly one template argument");
+          "array<T, N> is unsupported; use array<T> (runtime-count array)");
     }
-  } else {
-    if (expr.templateArgs.size() != 2) {
-      return failCollectionLiteralDiagnostic("map literal requires exactly two template arguments");
-    }
-    if (mapLiteralEntries.size() % 2 != 0) {
-      return failCollectionLiteralDiagnostic("map literal requires an even number of arguments");
-    }
+    return failCollectionLiteralDiagnostic(
+        builtinName + " literal requires exactly one template argument");
   }
-  if (builtinName == "map") {
-    for (const Expr *arg : mapLiteralEntries) {
-      if (!validateExpr(params, locals, *arg)) {
-        return false;
-      }
-    }
-  } else {
-    for (const auto &arg : expr.args) {
-      if (!validateExpr(params, locals, arg)) {
-        return false;
-      }
+  for (const auto &arg : expr.args) {
+    if (!validateExpr(params, locals, arg)) {
+      return false;
     }
   }
   auto resolveOwnershipContext = [&](std::string &namespacePrefixOut,
@@ -189,47 +139,6 @@ bool SemanticsValidator::validateExprCollectionLiteralBuiltins(
       if (!this->validateCollectionElementType(
               arg, elemType, builtinName + " literal requires element type ",
               params, locals, builtinCollectionDispatchResolvers)) {
-        return false;
-      }
-    }
-  }
-  if (builtinName == "map" && expr.templateArgs.size() == 2) {
-    if (!validateBuiltinComparableKeyType(expr.templateArgs.front(), nullptr, error_)) {
-      return false;
-    }
-    const std::vector<std::string> *definitionTemplateArgs = nullptr;
-    std::string definitionNamespacePrefix;
-    resolveOwnershipContext(definitionNamespacePrefix, definitionTemplateArgs);
-    const std::string &keyType = expr.templateArgs[0];
-    const std::string &valueType = expr.templateArgs[1];
-    if (!mapLiteralEntries.empty()) {
-      std::unordered_set<std::string> visitingStructs;
-      if (!isRelocationTrivialContainerElementType(
-              keyType, definitionNamespacePrefix, definitionTemplateArgs, visitingStructs)) {
-        return failCollectionLiteralDiagnostic(
-            "map literal requires relocation-trivial map key type until container move/reallocation semantics are "
-            "implemented: " +
-            keyType);
-      }
-      visitingStructs.clear();
-      if (!isRelocationTrivialContainerElementType(
-              valueType, definitionNamespacePrefix, definitionTemplateArgs, visitingStructs)) {
-        return failCollectionLiteralDiagnostic(
-            "map literal requires relocation-trivial map value type until container move/reallocation semantics are "
-            "implemented: " +
-            valueType);
-      }
-    }
-    for (size_t i = 0; i + 1 < mapLiteralEntries.size(); i += 2) {
-      if (!this->validateCollectionElementType(
-              *mapLiteralEntries[i], keyType, "map literal requires key type ", params,
-              locals, builtinCollectionDispatchResolvers)) {
-        return false;
-      }
-      if (!this->validateCollectionElementType(
-              *mapLiteralEntries[i + 1], valueType,
-              "map literal requires value type ", params, locals,
-              builtinCollectionDispatchResolvers)) {
         return false;
       }
     }

@@ -1,6 +1,5 @@
 #include "SemanticsValidator.h"
 #include "StdlibCollectionSurfaceHelpers.h"
-#include "SemanticsValidatorInferCollectionCompatibilityInternal.h"
 
 #include <optional>
 #include <string>
@@ -487,56 +486,6 @@ bool SemanticsValidator::validateExprResolvedCallArguments(
 
   if (!validateExplicitCanonicalKeyValueConstructorArguments()) {
     return false;
-  }
-
-  if (context.resolvedDefinition != nullptr &&
-      isCanonicalMapConstructorResolvedPath(resolved) &&
-      !orderedArgs.empty()) {
-    auto resolvedContainerType = [&](size_t templateIndex,
-                                     const ParameterInfo &param,
-                                     std::string &typeOut) {
-      typeOut.clear();
-      if (expr.templateArgs.size() == 2 && templateIndex < expr.templateArgs.size() &&
-          !expr.templateArgs[templateIndex].empty()) {
-        typeOut = expr.templateArgs[templateIndex];
-        return;
-      }
-      typeOut = expectedBindingTypeText(param.binding);
-    };
-
-    std::string keyType;
-    std::string valueType;
-    resolvedContainerType(0, calleeParams.front(), keyType);
-    if (calleeParams.size() > 1) {
-      resolvedContainerType(1, calleeParams[1], valueType);
-    }
-
-    const std::vector<std::string> *definitionTemplateArgs =
-        context.resolvedDefinition->templateArgs.empty()
-            ? nullptr
-            : &context.resolvedDefinition->templateArgs;
-    std::unordered_set<std::string> visitingStructs;
-    if (!keyType.empty() &&
-        !isRelocationTrivialContainerElementType(keyType,
-                                                 context.resolvedDefinition->namespacePrefix,
-                                                 definitionTemplateArgs,
-                                                 visitingStructs)) {
-      return failResolvedCallArgumentDiagnostic(
-          "map literal requires relocation-trivial map key type until container move/reallocation semantics are "
-          "implemented: " +
-          keyType);
-    }
-    visitingStructs.clear();
-    if (!valueType.empty() &&
-        !isRelocationTrivialContainerElementType(valueType,
-                                                 context.resolvedDefinition->namespacePrefix,
-                                                 definitionTemplateArgs,
-                                                 visitingStructs)) {
-      return failResolvedCallArgumentDiagnostic(
-          "map literal requires relocation-trivial map value type until container move/reallocation semantics are "
-          "implemented: " +
-          valueType);
-    }
   }
 
   handledOut = true;
