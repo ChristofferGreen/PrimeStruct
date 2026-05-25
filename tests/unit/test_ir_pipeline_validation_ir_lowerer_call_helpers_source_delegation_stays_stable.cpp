@@ -2532,6 +2532,78 @@ TEST_CASE("ir lowerer semantic-product adapter rejects call-target source lookup
   CHECK(*semanticSurfaceId == primec::StdlibSurfaceId::CollectionsVectorHelperSurface);
 }
 
+TEST_CASE("ir lowerer semantic-product call-target context separates meaning from provenance") {
+  primec::SemanticProgram semanticProgram;
+  semanticProgram.directCallTargets.push_back(primec::SemanticProgramDirectCallTarget{
+      .scopePath = "/main",
+      .callName = "callee",
+      .sourceLine = 3,
+      .sourceColumn = 5,
+      .semanticNodeId = 77,
+      .scopePathId = primec::semanticProgramInternCallTargetString(semanticProgram, "/main"),
+      .callNameId = primec::semanticProgramInternCallTargetString(semanticProgram, "callee"),
+      .resolvedPathId =
+          primec::semanticProgramInternCallTargetString(semanticProgram, "/semantic/callee"),
+      .stdlibSurfaceId = std::nullopt,
+  });
+  semanticProgram.publishedRoutingLookups.directCallTargetIdsByExpr.insert_or_assign(
+      77,
+      semanticProgram.directCallTargets.back().resolvedPathId);
+
+  const auto adapter = primec::ir_lowerer::buildSemanticProductTargetAdapter(&semanticProgram);
+  const primec::ir_lowerer::SemanticProductMeaningContext meaning{&adapter};
+
+  primec::Expr callExpr;
+  callExpr.kind = primec::Expr::Kind::Call;
+  callExpr.name = "syntax_callee";
+  callExpr.sourceLine = 3;
+  callExpr.sourceColumn = 5;
+  callExpr.semanticNodeId = 77;
+
+  primec::ir_lowerer::SemanticProductCallTarget target;
+  std::string error;
+  CHECK(primec::ir_lowerer::requireSemanticProductCallTarget(
+      {
+          .meaning = meaning,
+          .syntax = {.scopePath = "/main", .expr = &callExpr},
+      },
+      primec::ir_lowerer::SemanticProductCallTargetKind::DirectCall,
+      target,
+      error));
+  CHECK(target.resolvedPath == "/semantic/callee");
+  CHECK_FALSE(target.stdlibSurfaceId.has_value());
+  CHECK(error.empty());
+  CHECK(primec::ir_lowerer::describeSyntaxCallSite({"/main", &callExpr}) ==
+        "/main -> syntax_callee");
+}
+
+TEST_CASE("ir lowerer semantic-product call-target context fails closed on missing meaning") {
+  primec::SemanticProgram semanticProgram;
+  const auto adapter = primec::ir_lowerer::buildSemanticProductTargetAdapter(&semanticProgram);
+  const primec::ir_lowerer::SemanticProductMeaningContext meaning{&adapter};
+
+  primec::Expr callExpr;
+  callExpr.kind = primec::Expr::Kind::Call;
+  callExpr.name = "callee";
+  callExpr.sourceLine = 8;
+  callExpr.sourceColumn = 13;
+  callExpr.semanticNodeId = 91;
+
+  primec::ir_lowerer::SemanticProductCallTarget target;
+  std::string error;
+  CHECK_FALSE(primec::ir_lowerer::requireSemanticProductCallTarget(
+      {
+          .meaning = meaning,
+          .syntax = {.scopePath = "/main", .expr = &callExpr},
+      },
+      primec::ir_lowerer::SemanticProductCallTargetKind::DirectCall,
+      target,
+      error));
+  CHECK(target.resolvedPath.empty());
+  CHECK_FALSE(target.stdlibSurfaceId.has_value());
+  CHECK(error == "missing semantic-product direct-call target: /main -> callee");
+}
+
 TEST_CASE("ir lowerer semantic-product adapter exposes published stdlib surface ids") {
   primec::SemanticProgram semanticProgram;
   semanticProgram.directCallTargets.push_back(primec::SemanticProgramDirectCallTarget{

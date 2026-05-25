@@ -134,6 +134,91 @@ SemanticProductTargetAdapter buildSemanticProductTargetAdapter(const SemanticPro
   return adapter;
 }
 
+std::string describeSyntaxCallSite(const SyntaxCallSiteProvenance &syntax) {
+  const std::string scopePath =
+      syntax.scopePath.empty() ? std::string("<unknown>") : std::string(syntax.scopePath);
+  if (syntax.expr == nullptr) {
+    return scopePath + " -> <missing>";
+  }
+
+  const Expr &expr = *syntax.expr;
+  std::string displayName;
+  if (!expr.name.empty() && expr.name.front() == '/') {
+    displayName = expr.name;
+  } else if (!expr.namespacePrefix.empty()) {
+    displayName = expr.namespacePrefix;
+    if (!displayName.empty() && displayName.front() != '/') {
+      displayName.insert(displayName.begin(), '/');
+    }
+    displayName += "/" + expr.name;
+  } else if (!expr.name.empty()) {
+    displayName = expr.name;
+  } else {
+    displayName = "<unnamed>";
+  }
+  return scopePath + " -> " + displayName;
+}
+
+bool lookupSemanticProductCallTarget(const SemanticProductMeaningContext &meaning,
+                                     const Expr &expr,
+                                     SemanticProductCallTargetKind kind,
+                                     SemanticProductCallTarget &targetOut) {
+  targetOut = {};
+  if (meaning.targets == nullptr || meaning.targets->semanticProgram == nullptr) {
+    return false;
+  }
+
+  switch (kind) {
+    case SemanticProductCallTargetKind::DirectCall:
+      targetOut.resolvedPath =
+          findSemanticProductDirectCallTarget(*meaning.targets, expr);
+      targetOut.stdlibSurfaceId =
+          findSemanticProductDirectCallStdlibSurfaceId(*meaning.targets, expr);
+      break;
+    case SemanticProductCallTargetKind::MethodCall:
+      targetOut.resolvedPath =
+          findSemanticProductMethodCallTarget(*meaning.targets, expr);
+      targetOut.stdlibSurfaceId =
+          findSemanticProductMethodCallStdlibSurfaceId(*meaning.targets, expr);
+      break;
+    case SemanticProductCallTargetKind::BridgePathChoice:
+      targetOut.resolvedPath =
+          findSemanticProductBridgePathChoice(*meaning.targets, expr);
+      targetOut.stdlibSurfaceId =
+          findSemanticProductBridgePathChoiceStdlibSurfaceId(*meaning.targets, expr);
+      break;
+  }
+
+  return !targetOut.resolvedPath.empty();
+}
+
+bool requireSemanticProductCallTarget(const SemanticProductCallTargetContext &context,
+                                      SemanticProductCallTargetKind kind,
+                                      SemanticProductCallTarget &targetOut,
+                                      std::string &errorOut) {
+  if (context.syntax.expr != nullptr &&
+      lookupSemanticProductCallTarget(context.meaning, *context.syntax.expr, kind, targetOut)) {
+    return true;
+  }
+
+  targetOut = {};
+  std::string family;
+  switch (kind) {
+    case SemanticProductCallTargetKind::DirectCall:
+      family = "direct-call target";
+      break;
+    case SemanticProductCallTargetKind::MethodCall:
+      family = "method-call target";
+      break;
+    case SemanticProductCallTargetKind::BridgePathChoice:
+      family = "bridge-path choice";
+      break;
+  }
+  errorOut = "missing semantic-product " + family + ": " +
+             describeSyntaxCallSite(context.syntax);
+  return false;
+}
+
 std::string findSemanticProductDirectCallTarget(const SemanticProgram *semanticProgram, const Expr &expr) {
   if (semanticProgram == nullptr) {
     return {};

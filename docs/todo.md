@@ -67,7 +67,7 @@ This file is the live open-work queue for PrimeStruct.
 - TODO-4565: Add minimal scene graph and camera data model | track: scene-renderer | primary surface: stdlib/std/scene scene model
 - TODO-4572: Remove vector statement-helper compiler path | track: vector-special-case-deletion | primary surface: vector semantic/lowerer helpers
 - TODO-4573: Remove compiler-owned map literal lowering | track: map-special-case-deletion | primary surface: map literal semantics/lowering
-- TODO-4581: Split lowerer meaning from syntax provenance | track: architecture-meaning-provenance | primary surface: lowerer semantic-product context
+- TODO-4582: Add semantic-product consumer coverage matrix | track: architecture-semantic-product-consumers | primary surface: semantic-product consumer inventory
 - TODO-4584: Generalize backend capability gating | track: architecture-backend-capabilities | primary surface: backend capability registry
 
 ### Immediate Next 10
@@ -100,8 +100,8 @@ This file is the live open-work queue for PrimeStruct.
   guide deletion scope. Vector path TODO-4572 -> TODO-4574 ->
   TODO-4577; map path TODO-4573 -> TODO-4575 -> TODO-4576; join at
   TODO-4578 -> TODO-4579
-- Architecture hardening backlog: TODO-4581 -> TODO-4582,
-  TODO-4584, TODO-4585, TODO-4586, TODO-4587, TODO-4588, TODO-4589
+- Architecture hardening backlog: TODO-4582, TODO-4584, TODO-4585,
+  TODO-4586, TODO-4587, TODO-4588, TODO-4589
 
 ### Execution Queue
 
@@ -119,7 +119,6 @@ This file is the live open-work queue for PrimeStruct.
 - TODO-4577: Remove vector backing-type compiler classification
 - TODO-4578: Generalize stdlib surface registry away from map/vector IDs
 - TODO-4579: Enforce zero map/vector compiler-knowledge traces
-- TODO-4581: Split lowerer meaning from syntax provenance
 - TODO-4582: Add semantic-product consumer coverage matrix
 - TODO-4593: Carry source-unit provenance into IR and VM debug maps
 - TODO-4584: Generalize backend capability gating
@@ -589,37 +588,11 @@ This file is the live open-work queue for PrimeStruct.
   - stop_rule: Stop once the zero gate is wired into routine validation and
     focused map/vector stdlib tests plus the new audit pass.
 
-- [ ] TODO-4581: Split lowerer meaning from syntax provenance
-  - owner: ai
-  - created_at: 2026-05-24
-  - phase: Architecture hardening
-  - parallel_track: architecture-meaning-provenance
-  - scope: Introduce an explicit lowering context that separates
-    semantic-product meaning from AST-owned syntax provenance for one lowerer
-    stage or helper family.
-  - implementation_notes: Start from `src/IrPreparation.cpp`,
-    `include/primec/IrLowerer.h`, `src/ir_lowerer/IrLowererLower.cpp`, and
-    `src/ir_lowerer/IrLowererSemanticProductTargetAdapters.*`. Choose a narrow
-    consumer where both `Program` and `SemanticProgram` are currently consulted,
-    and make the semantic-product lookup the only authority for meaning while
-    retaining AST spans/source-map data only as provenance.
-  - acceptance:
-    - The selected lowering helper receives a context or inputs that make
-      meaning-vs-provenance ownership explicit.
-    - Missing semantic-product meaning for the selected helper fails closed with
-      a deterministic diagnostic instead of silently re-deriving from AST state.
-    - Syntax spans, source-map data, or debug provenance still come from the AST
-      where needed.
-    - Focused IR/lowering tests cover both positive lowering and stale/missing
-      semantic-product facts for the selected helper.
-  - stop_rule: Stop after one lowerer helper family has the explicit split and
-    focused coverage; leave broader lowerer entrypoint reshaping to follow-up
-    slices.
-
 - [ ] TODO-4582: Add semantic-product consumer coverage matrix
   - owner: ai
   - created_at: 2026-05-24
   - phase: Architecture hardening
+  - parallel_track: architecture-semantic-product-consumers
   - depends_on: TODO-4581
   - scope: Add a checked inventory mapping semantic-product fact families to
     production consumers and coverage for positive plus stale/missing-fact

@@ -6,6 +6,39 @@ Legend:
 Finished items are periodically archived here from `docs/todo.md`; section headers record the archive date.
 
 **Todo Completion (May 25, 2026)**
+- [x] TODO-4581: Split lowerer meaning from syntax provenance
+  - owner: ai
+  - created_at: 2026-05-24
+  - finished_at: 2026-05-25
+  - phase: Architecture hardening
+  - parallel_track: architecture-meaning-provenance
+  - scope: Introduce an explicit lowering context that separates
+    semantic-product meaning from AST-owned syntax provenance for one lowerer
+    stage or helper family.
+  - outcome:
+    - Selected the call-target resolution helper family as the bounded
+      lowerer slice.
+    - Added `SemanticProductMeaningContext` for semantic-product call-target
+      meaning and `SyntaxCallSiteProvenance` for AST-owned diagnostic
+      provenance.
+    - Routed direct-call, method-call, bridge-path, and scoped call-path helper
+      lookups through explicit semantic-product call-target context helpers.
+    - Kept deterministic missing-fact diagnostics sourced from syntax
+      provenance while semantic-product facts remain the only call-target
+      meaning authority for this helper family.
+    - Added focused tests for positive meaning/provenance separation, missing
+      semantic-product meaning, missing direct-call facts, stale direct-call
+      metadata, semantic-product scope/root fallback avoidance, and
+      semantic-authoritative rewritten rooted call targets.
+  - validation:
+    - `cmake -S . -B build-release -DCMAKE_BUILD_TYPE=Release`
+    - `cmake --build build-release --target PrimeStruct_backend_ir_tests -j 1`
+    - `cd build-release && ./PrimeStruct_backend_ir_tests --test-case="ir lowerer semantic-product call-target context separates meaning from provenance,ir lowerer semantic-product call-target context fails closed on missing meaning,ir lowerer call helpers avoid semantic-product scope/root fallback probes,ir lowerer call helpers fail closed when semantic-product direct-call targets are missing,ir lowerer call helpers keep semantic direct-call targets authoritative over rooted rewritten helper paths" --no-skip`
+    - `cd build-release && ./PrimeStruct_backend_ir_tests --test-case="ir lowerer call helpers keep semantic-product direct-call targets authoritative over rooted rewritten expr names" --no-skip`
+  - stop_rule: Stopped after the call-target helper family gained the explicit
+    meaning/provenance split and focused coverage; broader lowerer entrypoint
+    reshaping remains for follow-up slices.
+
 - [x] TODO-4580: Replace private source-lock tests with public contracts
   - owner: ai
   - created_at: 2026-05-24

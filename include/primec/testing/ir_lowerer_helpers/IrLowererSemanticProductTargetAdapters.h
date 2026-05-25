@@ -30,9 +30,43 @@ struct SemanticProductTargetAdapter {
   SemanticProductIndex semanticIndex;
 };
 
+struct SyntaxCallSiteProvenance {
+  std::string_view scopePath;
+  const Expr *expr = nullptr;
+};
+
+struct SemanticProductMeaningContext {
+  const SemanticProductTargetAdapter *targets = nullptr;
+};
+
+struct SemanticProductCallTargetContext {
+  SemanticProductMeaningContext meaning;
+  SyntaxCallSiteProvenance syntax;
+};
+
+enum class SemanticProductCallTargetKind {
+  DirectCall,
+  MethodCall,
+  BridgePathChoice,
+};
+
+struct SemanticProductCallTarget {
+  std::string resolvedPath;
+  std::optional<StdlibSurfaceId> stdlibSurfaceId;
+};
+
 SemanticProductIndex buildSemanticProductIndex(const SemanticProgram *semanticProgram);
 SemanticProductTargetAdapter buildSemanticProductTargetAdapter(const SemanticProgram *semanticProgram);
 
+std::string describeSyntaxCallSite(const SyntaxCallSiteProvenance &syntax);
+bool lookupSemanticProductCallTarget(const SemanticProductMeaningContext &meaning,
+                                     const Expr &expr,
+                                     SemanticProductCallTargetKind kind,
+                                     SemanticProductCallTarget &targetOut);
+bool requireSemanticProductCallTarget(const SemanticProductCallTargetContext &context,
+                                      SemanticProductCallTargetKind kind,
+                                      SemanticProductCallTarget &targetOut,
+                                      std::string &errorOut);
 std::string findSemanticProductDirectCallTarget(const SemanticProgram *semanticProgram, const Expr &expr);
 std::string findSemanticProductMethodCallTarget(const SemanticProgram *semanticProgram, const Expr &expr);
 std::string findSemanticProductBridgePathChoice(const SemanticProgram *semanticProgram, const Expr &expr);
