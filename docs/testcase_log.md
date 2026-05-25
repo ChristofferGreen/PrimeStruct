@@ -3,9 +3,20 @@
 ## Current Known Failures
 - None recorded. TODO-4580 and TODO-4583 focused release validation passed
   on 2026-05-25 after parent-scheduled worker validation reruns and root
-  focused validation.
+  focused validation. TODO-4581 and TODO-4584 focused root validation passed
+  on 2026-05-25 after serial root cherry-picks.
 
 ## Recent Test Runs
+- 2026-05-25 13:24 CEST | pass | mode: release | command:
+  `cmake --build build-release --target PrimeStruct_backend_ir_tests -j 1`;
+  `cd build-release && ./PrimeStruct_backend_ir_tests --test-case="ir lowerer semantic-product call-target context separates meaning from provenance,ir lowerer semantic-product call-target context fails closed on missing meaning,ir lowerer call helpers avoid semantic-product scope/root fallback probes,ir lowerer call helpers fail closed when semantic-product direct-call targets are missing,ir lowerer call helpers keep semantic direct-call targets authoritative over rooted rewritten helper paths" --no-skip`;
+  `cd build-release && ./PrimeStruct_backend_ir_tests --test-case="ir lowerer call helpers keep semantic-product direct-call targets authoritative over rooted rewritten expr names" --no-skip`;
+  `cmake --build build-release --target PrimeStruct_backend_runtime_tests -j 1`;
+  `cd build-release && ./PrimeStruct_backend_runtime_tests --test-case="backend capability registry describes graphics runtime substrate availability,backend capability query routes graphics runtime substrate by target profile,compile pipeline preserves semantic product on post-semantics failure" --no-skip`
+  | failures: none | notes: root validation after serially merging
+  TODO-4581 and TODO-4584 passed the lowerer semantic-product call-target
+  filters (5 cases / 15 assertions and 1 case / 1 assertion) and backend
+  capability registry filters (3 cases / 31 assertions).
 - 2026-05-25 12:04 CEST | pass | mode: release | command:
   `cmake --build build-release --target PrimeStruct_backend_runtime_tests -j 1`;
   `cd build-release && ./PrimeStruct_backend_runtime_tests --test-case="semantic product query and try projections expose stable public lookup keys,semantic snapshot traversal inventory avoids inactive next-candidate pointer" --no-skip`;

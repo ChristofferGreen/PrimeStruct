@@ -68,6 +68,7 @@ This file is the live open-work queue for PrimeStruct.
 - TODO-4572: Remove vector statement-helper compiler path | track: vector-special-case-deletion | primary surface: vector semantic/lowerer helpers
 - TODO-4573: Remove compiler-owned map literal lowering | track: map-special-case-deletion | primary surface: map literal semantics/lowering
 - TODO-4582: Add semantic-product consumer coverage matrix | track: architecture-semantic-product-consumers | primary surface: semantic-product consumer inventory
+- TODO-4585: Manifest-drive stdlib module inclusion | track: architecture-stdlib-manifest | primary surface: stdlib auto-include manifest
 
 ### Immediate Next 10
 
@@ -615,6 +616,7 @@ This file is the live open-work queue for PrimeStruct.
   - owner: ai
   - created_at: 2026-05-24
   - phase: Architecture hardening
+  - parallel_track: architecture-stdlib-manifest
   - scope: Replace one stdlib auto-include heuristic with checked manifest data
     for module roots, dependencies, public imports, or backend support.
   - implementation_notes: Start from `appendStdlibModuleSources` and
