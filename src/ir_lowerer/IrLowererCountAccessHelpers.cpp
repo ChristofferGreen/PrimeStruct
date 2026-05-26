@@ -171,7 +171,7 @@ bool isExplicitVectorCountMethodCall(const Expr &expr) {
   }
   const std::string scopedPath = resolveScopedCallPath(expr);
   if (scopedPath == rootedCollectionMemberPath("vector", "count") ||
-      scopedPath == collectionMemberPath("vector", "count")) {
+      scopedPath == "vector/count") {
     return true;
   }
   const std::string normalizedPath =
@@ -270,7 +270,7 @@ bool isExplicitRemovedCountLikeAliasCall(const Expr &expr,
   const std::string scopedPath = resolveScopedCallPath(expr);
   if (helperName == "count" &&
       (scopedPath == rootedCollectionMemberPath("vector", "count") ||
-       scopedPath == collectionMemberPath("vector", "count"))) {
+       scopedPath == "vector/count")) {
     return false;
   }
   auto matchesCollectionRoot = [&](std::string_view collectionName) {
@@ -1088,7 +1088,7 @@ bool isArrayCountCall(const Expr &expr,
                       const SemanticProductIndex *semanticIndex) {
   const bool isSemanticVectorCountBridge =
       isSemanticVectorCountBridgeCall(expr, semanticProgram);
-  if (!(count_access_detail::isVectorBuiltinName(expr, "count") || isSimpleCallName(expr, "count") ||
+  if (!(count_access_detail::isUnqualifiedCollectionBuiltinName(expr, "count") ||
         isSemanticVectorCountBridge) ||
       expr.args.size() != 1) {
     return false;
@@ -1223,7 +1223,7 @@ bool isVectorCapacityCall(const Expr &expr,
                           const LocalMap &localsIn,
                           const SemanticProgram *semanticProgram,
                           const SemanticProductIndex *semanticIndex) {
-  if (!count_access_detail::isVectorBuiltinName(expr, "capacity") || expr.args.size() != 1) {
+  if (!count_access_detail::isUnqualifiedCollectionBuiltinName(expr, "capacity") || expr.args.size() != 1) {
     return false;
   }
   if (isExplicitRemovedCountLikeAliasCall(expr, "capacity")) {
@@ -1331,7 +1331,8 @@ bool isStringCountCall(const Expr &expr,
                        const LocalMap &localsIn,
                        const SemanticProgram *semanticProgram,
                        const SemanticProductIndex *semanticIndex) {
-  if (!(count_access_detail::isVectorBuiltinName(expr, "count") || isSimpleCallName(expr, "count")) || expr.args.size() != 1) {
+  if (!count_access_detail::isUnqualifiedCollectionBuiltinName(expr, "count") ||
+      expr.args.size() != 1) {
     return false;
   }
   if (isExplicitVectorCountMethodCall(expr)) {
@@ -1422,8 +1423,7 @@ CountAccessCallEmitResult tryEmitCountAccessCall(
   const bool explicitPublishedVectorCapacityCall =
       isExplicitPublishedVectorMetadataCall(expr, "capacity");
   const auto isCountLikeCall = [&]() {
-    return (count_access_detail::isVectorBuiltinName(expr, "count") ||
-            isSimpleCallName(expr, "count") ||
+    return (count_access_detail::isUnqualifiedCollectionBuiltinName(expr, "count") ||
             explicitPublishedVectorCountCall ||
             explicitPublishedKeyValueCountCall) &&
            expr.args.size() == 1;
@@ -1589,8 +1589,7 @@ CountAccessCallEmitResult tryEmitCountAccessCall(
     return CountAccessCallEmitResult::Emitted;
   }
   const bool namedArgVectorTemporaryCountTarget =
-      (count_access_detail::isVectorBuiltinName(expr, "count") ||
-       isSimpleCallName(expr, "count") ||
+      (count_access_detail::isUnqualifiedCollectionBuiltinName(expr, "count") ||
        explicitPublishedVectorCountCall ||
        explicitPublishedKeyValueCountCall) &&
       expr.args.size() == 1 &&
@@ -1697,7 +1696,8 @@ CountAccessCallEmitResult tryEmitCountAccessCall(
     }
   }
   if (isArrayCountCallFn(expr, localsIn)) {
-    if ((count_access_detail::isVectorBuiltinName(expr, "count") || isSimpleCallName(expr, "count")) && expr.args.size() == 1 &&
+    if (count_access_detail::isUnqualifiedCollectionBuiltinName(expr, "count") &&
+        expr.args.size() == 1 &&
         expr.args.front().kind == Expr::Kind::Name) {
       auto it = localsIn.find(expr.args.front().name);
       if (it != localsIn.end() &&
@@ -1781,8 +1781,7 @@ CountAccessCallEmitResult tryEmitCountAccessCall(
     }
   }
 
-  if ((count_access_detail::isVectorBuiltinName(expr, "count") ||
-       isSimpleCallName(expr, "count") ||
+  if ((count_access_detail::isUnqualifiedCollectionBuiltinName(expr, "count") ||
        explicitPublishedVectorCountCall ||
        explicitPublishedKeyValueCountCall) && expr.args.size() == 1 &&
       isDynamicCollectionCountTargetFn && isDynamicCollectionCountTargetFn(expr.args.front(), localsIn)) {
@@ -1798,7 +1797,7 @@ CountAccessCallEmitResult tryEmitCountAccessCall(
   }
 
   if ((expr.namespacePrefix.empty() || explicitPublishedVectorCapacityCall) &&
-      (count_access_detail::isVectorBuiltinName(expr, "capacity") || explicitPublishedVectorCapacityCall) &&
+      (count_access_detail::isUnqualifiedCollectionBuiltinName(expr, "capacity") || explicitPublishedVectorCapacityCall) &&
       expr.args.size() == 1 &&
       isDynamicVectorCapacityTargetFn && isDynamicVectorCapacityTargetFn(expr.args.front(), localsIn)) {
     if (!emitDynamicVectorCapacity(expr.args.front())) {
@@ -1826,8 +1825,7 @@ CountAccessCallEmitResult tryEmitCountAccessCall(
     return CountAccessCallEmitResult::Emitted;
   }
 
-  if ((count_access_detail::isVectorBuiltinName(expr, "count") ||
-       isSimpleCallName(expr, "count") ||
+  if ((count_access_detail::isUnqualifiedCollectionBuiltinName(expr, "count") ||
        explicitPublishedKeyValueCountCall) && expr.args.size() == 1 &&
       expr.args.front().kind == Expr::Kind::Call) {
     std::string accessName;
@@ -1888,8 +1886,7 @@ CountAccessCallEmitResult tryEmitCountAccessCall(
     }
   }
 
-  if ((count_access_detail::isVectorBuiltinName(expr, "count") ||
-       isSimpleCallName(expr, "count") ||
+  if ((count_access_detail::isUnqualifiedCollectionBuiltinName(expr, "count") ||
        explicitPublishedKeyValueCountCall) && expr.args.size() == 1 &&
       inferExprKind) {
     const SemanticStringCountTargetResolution semanticStringTarget =

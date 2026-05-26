@@ -6,6 +6,55 @@ Legend:
 Finished items are periodically archived here from `docs/todo.md`; section headers record the archive date.
 
 **Todo Completion (May 26, 2026)**
+- [x] TODO-4574: Remove vector count/access compiler classifiers
+  - owner: ai
+  - created_at: 2026-05-24
+  - finished_at: 2026-05-26
+  - phase: Map/vector compiler-independence
+  - parallel_track: vector-helper-classifier-deletion
+  - depends_on: TODO-4572
+  - inventory_categories: `vector-helper-classifier`
+  - scope: Removed compiler-owned vector count/capacity/access helper
+    classifiers after vector mutator statements were routed through ordinary
+    `.prime` helper calls.
+  - outcome:
+    - Replaced `isVectorBuiltinName` with a bare-name-only collection helper
+      predicate so canonical and rooted vector helper paths are no longer
+      treated as compiler builtin spellings.
+    - Deleted the lowerer read-helper classifier for canonical vector
+      count/capacity/at/at_unsafe calls and removed stale bare-vector helper
+      rewrite blocks from lower-emission setup.
+    - Kept vector helper calls on imported `/std/collections/vector/*`
+      definitions, with missing imports falling through to ordinary unknown
+      call diagnostics.
+    - Updated source-lock coverage for semantic, IR-lowerer, and emitter
+      delegation so it pins the classifier deletion and registry-backed
+      canonical helper path lookups.
+    - The map/vector compiler-knowledge inventory now reports no
+      `vector-helper-classifier` category; vector backing classifiers and
+      vector literal paths remain for TODO-4577.
+  - validation:
+    - The local pre-map inventory script only supports broad `--enforce-zero`,
+      which still reports unrelated map categories; its category list no
+      longer contains `vector-helper-classifier`.
+    - `python3 -m py_compile scripts/check_map_vector_compiler_knowledge.py
+      tests/scripts/test_check_map_vector_compiler_knowledge.py` passed.
+    - `python3 tests/scripts/test_check_map_vector_compiler_knowledge.py
+      --repo-root .` passed.
+    - `git diff --check` passed.
+    - Parent-scheduled release build passed:
+      `cmake --build build-release --target primec PrimeStruct_backend_ir_tests PrimeStruct_semantics_tests PrimeStruct_compile_run_tests -j 1`.
+    - Parent-scheduled backend IR/source-lock validation passed 4 cases /
+      1031 assertions:
+      `cd build-release && ./PrimeStruct_backend_ir_tests --test-case="ir lowerer call helpers source delegation stays stable,semantics validator infer source delegation stays stable,emitter expr source delegation stays stable,ir lowerer count access helpers classify canonical counts and defer vector reads,emitter expr control count-rewrite step only rewrites bare collection calls" --no-skip`.
+    - Parent-scheduled semantics validation passed 5 cases / 14 assertions:
+      `cd build-release && ./PrimeStruct_semantics_tests --test-case="bare vector count call resolves through imported stdlib helper,bare vector count call requires imported stdlib helper or explicit definition,bare vector capacity wrapper call resolves through imported stdlib helper,bare vector at_unsafe auto inference resolves through imported stdlib helper,bare vector at_unsafe auto inference requires imported stdlib helper or explicit definition" --no-skip`.
+    - Parent-scheduled compile-run validation passed 10 cases / 592 assertions:
+      `cd build-release && ./PrimeStruct_compile_run_tests --test-case="vector map bridge boundary docs stay source locked,todo queue and skipped doctest debt stay source locked,compiles and runs stdlib namespaced vector helpers in C++ emitter,C++ emitter keeps stdlib namespaced vector access helper emission,rejects vector namespaced count capacity access aliases without helpers in C++ emitter,C++ emitter lowers stdlib namespaced vector mutator statement through imported helper,rejects vm canonical namespaced vector mutators without imported helpers,runs vm canonical vector helpers on experimental vector receivers,rejects native canonical namespaced vector mutators without imported helpers,compiles and runs native canonical vector helpers on experimental vector receivers" --no-skip`.
+  - stop_rule: Stopped once vector helper names were no longer compiler
+    builtin classifiers and focused vector behavior passed parent validation;
+    vector backing-type recognition remains with TODO-4577.
+
 - [x] TODO-4575: Remove map helper/access compiler classifiers
   - owner: ai
   - created_at: 2026-05-24

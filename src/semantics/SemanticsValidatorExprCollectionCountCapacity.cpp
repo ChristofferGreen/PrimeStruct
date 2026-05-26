@@ -402,7 +402,7 @@ bool SemanticsValidator::resolveExprCollectionCountCapacityTarget(
   const bool isSingleArgCountCall = expr.args.size() == 1;
   const bool isMultiArgCountCall = !isSingleArgCountCall;
   const bool routesThroughVectorBuiltinCountSurface =
-      isVectorBuiltinName(expr, "count") || countHelperName == "count_ref";
+      isUnqualifiedCollectionBuiltinName(expr, "count") || countHelperName == "count_ref";
   const bool routesThroughNamespacedVectorCountHelperSurface =
       context.isNamespacedVectorHelperCall &&
       isCountLikeHelperName(context.namespacedHelper);
@@ -605,7 +605,7 @@ bool SemanticsValidator::resolveExprCollectionCountCapacityTarget(
               "capacity",
               hasImportedCanonicalVectorHelperPath("capacity"));
   const bool capacityMethodSurfaceUsesNonVectorBuiltinName =
-      !isVectorBuiltinName(expr, "capacity");
+      !isUnqualifiedCollectionBuiltinName(expr, "capacity");
   const bool violatesCapacityMethodSurfacePreconditions =
       capacityMethodSurfaceHasNamedArguments ||
       routesThroughUnimportedStdNamespacedVectorCapacityCompatibilityDirectCall ||

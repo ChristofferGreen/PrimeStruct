@@ -16,11 +16,6 @@ std::string collectionMemberRoot(std::string_view collectionName) {
   return stdCollectionsRoot() + "/" + std::string(collectionName) + "/";
 }
 
-std::string collectionMemberPath(std::string_view collectionName,
-                                 std::string_view memberName) {
-  return collectionMemberRoot(collectionName) + std::string(memberName);
-}
-
 std::string experimentalCollectionMemberRoot(std::string_view collectionName) {
   return stdCollectionsRoot() + "/experimental_" + std::string(collectionName) + "/";
 }
@@ -543,8 +538,16 @@ bool getBuiltinArrayAccessName(const Expr &expr, std::string &out) {
     rawName.erase(0, 1);
   }
   const std::string scopedNameWithoutSuffix = stripGeneratedSuffix(scopedName);
-  if (scopedNameWithoutSuffix == collectionMemberPath("vector", "at") ||
-      scopedNameWithoutSuffix == collectionMemberPath("vector", "at_unsafe")) {
+  auto unrootedStdlibVectorHelperPath = [](std::string_view helperName) {
+    std::string path = stdlibSurfaceCanonicalHelperPath(
+        StdlibSurfaceId::CollectionsVectorHelperSurface, helperName);
+    if (!path.empty() && path.front() == '/') {
+      path.erase(path.begin());
+    }
+    return path;
+  };
+  if (scopedNameWithoutSuffix == unrootedStdlibVectorHelperPath("at") ||
+      scopedNameWithoutSuffix == unrootedStdlibVectorHelperPath("at_unsafe")) {
     return false;
   }
   if (matchAccessAlias(scopedName, collectionMemberRoot("vector"), "Vector")) {

@@ -1584,7 +1584,7 @@ bool rewriteExpr(Expr &expr,
         return samePathVectorHelper;
       }
     }
-    const auto vectorReceiverHasVisibleCanonicalHelper =
+    const auto receiverHasVisibleCanonicalCollectionHelper =
         [&](std::string_view candidateHelperName) {
           const std::string preferred =
               canonicalVectorCompatibilityHelperPathOrFallback(candidateHelperName);
@@ -1599,10 +1599,10 @@ bool rewriteExpr(Expr &expr,
       const bool receiverEligibleForSamePathSoaHelper =
           isTemplateMonomorphSoaReceiverType(receiverFamily) ||
           receiverResolvesBorrowedExperimentalSoaVector ||
-          receiverResolvesExperimentalSoaVector ||
+           receiverResolvesExperimentalSoaVector ||
           ((helperName == "count" || helperName == "count_ref") &&
            receiverFamily == "vector" &&
-           !vectorReceiverHasVisibleCanonicalHelper(helperName));
+           !receiverHasVisibleCanonicalCollectionHelper(helperName));
       if (receiverEligibleForSamePathSoaHelper &&
           hasDefinitionFamilyPath(samePathSoaNonRefHelper)) {
         return samePathSoaNonRefHelper;

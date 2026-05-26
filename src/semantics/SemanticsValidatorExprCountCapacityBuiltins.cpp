@@ -255,8 +255,18 @@ bool SemanticsValidator::validateExprCountCapacityBuiltins(
     handledOut = true;
     return validateVectorCountBuiltinCall();
   };
+  const bool isArgsPackCountBuiltinCall = [&]() {
+    if (!isUnqualifiedCollectionBuiltinName(expr, "count") || expr.args.size() != 1 ||
+        (*dispatchResolvers).resolveArgsPackAccessTarget == nullptr) {
+      return false;
+    }
+    std::string argsPackElemType;
+    return (*dispatchResolvers).resolveArgsPackAccessTarget(expr.args.front(),
+                                                           argsPackElemType);
+  }();
   const bool shouldValidateVectorCountBuiltinFallback =
-      !resolvedMethod && isVectorBuiltinName(expr, "count") &&
+      (!resolvedMethod || (isArgsPackCountBuiltinCall && it == defMap_.end())) &&
+      isUnqualifiedCollectionBuiltinName(expr, "count") &&
       !isArrayNamespacedVectorCountCompatibilityCall(expr, *dispatchResolvers) &&
       !isStdNamespacedVectorCompatibilityDirectCall(expr.isMethodCall,
                                                     resolveCalleePath(expr),
@@ -383,7 +393,7 @@ bool SemanticsValidator::validateExprCountCapacityBuiltins(
     return validateVectorCapacityBuiltinCall();
   }
 
-  if (!resolvedMethod && isVectorBuiltinName(expr, "capacity") &&
+  if (!resolvedMethod && isUnqualifiedCollectionBuiltinName(expr, "capacity") &&
       !isStdNamespacedVectorCompatibilityDirectCall(expr.isMethodCall,
                                                     resolveCalleePath(expr),
                                                     "capacity") &&

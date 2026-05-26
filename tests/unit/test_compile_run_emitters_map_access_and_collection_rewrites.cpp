@@ -150,7 +150,7 @@ main() {
   CHECK(runCommand(compileCmd) == 2);
 }
 
-TEST_CASE("compiles and runs stdlib namespaced vector builtin aliases in C++ emitter") {
+TEST_CASE("compiles and runs stdlib namespaced vector helpers in C++ emitter") {
   const std::string source = R"(
 import /std/collections/*
 
@@ -160,8 +160,10 @@ main() {
   /std/collections/vector/push(values, 6i32)
   [i32] countValue{/std/collections/vector/count(values)}
   [i32] capacityValue{/std/collections/vector/capacity(values)}
+  [i32] firstValue{/std/collections/vector/at(values, 0i32)}
   [i32] tailValue{/std/collections/vector/at_unsafe(values, 2i32)}
-  return(plus(plus(countValue, tailValue), minus(capacityValue, capacityValue)))
+  return(plus(plus(countValue, tailValue),
+              plus(firstValue, minus(capacityValue, capacityValue))))
 }
 )";
   const std::string srcPath = writeTemp("compile_cpp_stdlib_namespaced_vector_aliases.prime", source);
@@ -170,7 +172,7 @@ main() {
 
   const std::string compileCmd = "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main";
   CHECK(runCommand(compileCmd) == 0);
-  CHECK(runCommand(exePath) == 9);
+  CHECK(runCommand(exePath) == 13);
 }
 
 TEST_CASE("rejects array namespaced vector constructor alias in C++ emitter") {

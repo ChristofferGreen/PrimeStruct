@@ -433,7 +433,7 @@
                            const std::string &methodName,
                            std::string &resolvedOut,
                            bool &isBuiltinOut);
-  bool isVectorBuiltinName(const Expr &candidate, const char *helper) const;
+  bool isUnqualifiedCollectionBuiltinName(const Expr &candidate, const char *helper) const;
   bool getVectorMutatorHelperName(const Expr &candidate, std::string &nameOut) const;
   bool resolveVectorHelperMethodTarget(const std::vector<ParameterInfo> &params,
                                        const std::unordered_map<std::string, BindingInfo> &locals,

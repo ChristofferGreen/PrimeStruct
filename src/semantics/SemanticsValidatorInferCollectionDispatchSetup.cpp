@@ -114,7 +114,7 @@ void SemanticsValidator::prepareInferCollectionDispatchSetup(
       isStdNamespacedVectorCountCall && hasStdNamespacedVectorCountDefinition;
   const bool isNamespacedVectorCountCall =
       !expr.isMethodCall && isNamespacedVectorHelperCall && namespacedHelper == "count" &&
-      isVectorBuiltinName(expr, "count") &&
+      isUnqualifiedCollectionBuiltinName(expr, "count") &&
       !isArrayNamespacedVectorCountCompatibilityCall(expr, builtinCollectionDispatchResolvers);
   const std::string directRemovedKeyValueCompatibilityPath =
       !expr.isMethodCall
@@ -168,7 +168,7 @@ void SemanticsValidator::prepareInferCollectionDispatchSetup(
   const bool isNamespacedVectorCapacityCall =
       !expr.isMethodCall && isNamespacedVectorHelperCall &&
       namespacedHelper == "capacity" &&
-      isVectorBuiltinName(expr, "capacity");
+      isUnqualifiedCollectionBuiltinName(expr, "capacity");
   const bool callsStdNamespacedVectorCapacityHelper =
       !expr.isMethodCall &&
       isStdNamespacedVectorCompatibilityHelperPath(resolvedCalleePath, "capacity");
@@ -176,7 +176,7 @@ void SemanticsValidator::prepareInferCollectionDispatchSetup(
       !callsStdNamespacedVectorCapacityHelper ||
       hasImportedCanonicalVectorHelperDefinition("capacity");
   const bool isInferBuiltinCapacityLike =
-      !expr.isMethodCall && isVectorBuiltinName(expr, "capacity") &&
+      !expr.isMethodCall && isUnqualifiedCollectionBuiltinName(expr, "capacity") &&
       stdNamespacedVectorCapacityHelperAvailableForInfer;
   const bool isInferBuiltinSingleArgCapacityLike =
       isInferBuiltinCapacityLike && expr.args.size() == 1;
@@ -277,7 +277,7 @@ void SemanticsValidator::prepareInferCollectionDispatchSetup(
       };
 
   setupOut.builtinCollectionCountCapacityDispatchContext.isCountLike =
-      isVectorBuiltinName(expr, "count") &&
+      isUnqualifiedCollectionBuiltinName(expr, "count") &&
       expr.args.size() == 1 &&
       !isArrayNamespacedVectorCountCompatibilityCall(
           expr, builtinCollectionDispatchResolvers) &&
@@ -320,7 +320,7 @@ void SemanticsValidator::prepareInferCollectionDispatchSetup(
 
   const bool isDirectBuiltinCountCapacityCountCall =
       !expr.isMethodCall &&
-      isVectorBuiltinName(expr, "count") &&
+      isUnqualifiedCollectionBuiltinName(expr, "count") &&
       !expr.args.empty() &&
       !isArrayNamespacedVectorCountCompatibilityCall(
           expr, builtinCollectionDispatchResolvers) &&

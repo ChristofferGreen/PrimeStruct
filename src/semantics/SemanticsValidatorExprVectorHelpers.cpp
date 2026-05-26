@@ -92,51 +92,16 @@ bool isVectorHelperReceiverName(const Expr &candidate,
 
 } // namespace
 
-bool SemanticsValidator::isVectorBuiltinName(const Expr &candidate, const char *helper) const {
-  const std::string helperName = helper == nullptr ? std::string() : std::string(helper);
-  auto hasVisibleDefinitionPath = [&](const std::string &path) {
-    if (hasImportedDefinitionPath(path)) {
-      return true;
-    }
-    if (defMap_.count(path) == 0) {
-      return false;
-    }
-    if (isStdNamespacedVectorCompatibilityHelperPath(path, helperName)) {
-      auto paramsIt = paramsByDef_.find(path);
-      if (paramsIt != paramsByDef_.end() && !paramsIt->second.empty()) {
-        std::string experimentalElemType;
-        if (extractExperimentalVectorElementType(paramsIt->second.front().binding, experimentalElemType)) {
-          return false;
-        }
-      }
-    }
-    return true;
-  };
-  if (isSimpleCallName(candidate, helper)) {
-    return true;
-  }
-  std::string namespacedCollection;
-  std::string namespacedHelper;
-  if (!getNamespacedCollectionHelperName(candidate, namespacedCollection, namespacedHelper)) {
+bool SemanticsValidator::isUnqualifiedCollectionBuiltinName(const Expr &candidate,
+                                                            const char *helper) const {
+  if (candidate.kind != Expr::Kind::Call || helper == nullptr ||
+      candidate.name != helper) {
     return false;
   }
-  if (!(namespacedCollection == "vector" && namespacedHelper == helper)) {
-    const std::string resolvedPath = resolveCalleePath(candidate);
-    if (resolvedPath.rfind("/std/", 0) != 0 || defMap_.count(resolvedPath) != 0) {
-      return false;
-    }
-    const size_t lastSlash = resolvedPath.find_last_of('/');
-    if (lastSlash == std::string::npos || resolvedPath.substr(lastSlash + 1) != helperName) {
-      return false;
-    }
-    return isVectorCompatibilityHelperName(helperName);
+  if (!candidate.namespacePrefix.empty()) {
+    return false;
   }
-  const std::string resolvedCandidate = resolveCalleePath(candidate);
-  if ((namespacedHelper != "count" && namespacedHelper != "capacity") ||
-      !isStdNamespacedVectorCompatibilityHelperPath(resolvedCandidate, namespacedHelper)) {
-    return true;
-  }
-  return hasVisibleDefinitionPath(resolvedCandidate);
+  return candidate.name.find('/') == std::string::npos;
 }
 
 bool SemanticsValidator::resolveVectorHelperMethodTarget(

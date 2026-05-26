@@ -1096,13 +1096,13 @@ TEST_CASE("ir lowerer count access helpers classify canonical counts and defer v
   CHECK(primec::ir_lowerer::isArrayCountCall(callExpr, vectorLocals, true, "argv"));
 
   callExpr.name = "/std/collections/vector/count";
-  CHECK(primec::ir_lowerer::isArrayCountCall(callExpr, vectorLocals, true, "argv"));
+  CHECK_FALSE(primec::ir_lowerer::isArrayCountCall(callExpr, vectorLocals, true, "argv"));
   callExpr.name = "/std/collections/vector/count__ti32";
   CHECK_FALSE(primec::ir_lowerer::isArrayCountCall(callExpr, vectorLocals, true, "argv"));
 
   callExpr.name = "count";
   callExpr.namespacePrefix = "/std/collections/vector";
-  CHECK(primec::ir_lowerer::isArrayCountCall(callExpr, vectorLocals, true, "argv"));
+  CHECK_FALSE(primec::ir_lowerer::isArrayCountCall(callExpr, vectorLocals, true, "argv"));
   callExpr.isMethodCall = true;
   CHECK_FALSE(primec::ir_lowerer::isArrayCountCall(callExpr, vectorLocals, true, "argv"));
   callExpr.isMethodCall = false;

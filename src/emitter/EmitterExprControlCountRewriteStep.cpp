@@ -26,7 +26,7 @@ bool isBareCallName(const Expr &expr, const char *name) {
   return expr.name == name;
 }
 
-bool isVectorBuiltinName(const Expr &expr, const char *name) {
+bool isUnqualifiedCollectionBuiltinName(const Expr &expr, const char *name) {
   return isBareCallName(expr, name);
 }
 
@@ -49,16 +49,21 @@ std::optional<std::string> runEmitterExprControlCountRewriteStep(
     return std::nullopt;
   }
   const bool isCountLikeCall =
-      isVectorBuiltinName(expr, "count") && expr.args.size() == 1;
-  const bool isCapacityLikeCall = isVectorBuiltinName(expr, "capacity") && expr.args.size() == 1;
+      isUnqualifiedCollectionBuiltinName(expr, "count") && expr.args.size() == 1;
+  const bool isCapacityLikeCall =
+      isUnqualifiedCollectionBuiltinName(expr, "capacity") && expr.args.size() == 1;
   const bool isAccessLikeCall =
-      (isVectorBuiltinName(expr, "at") || isVectorBuiltinName(expr, "at_unsafe")) &&
+      (isUnqualifiedCollectionBuiltinName(expr, "at") ||
+       isUnqualifiedCollectionBuiltinName(expr, "at_unsafe")) &&
       expr.args.size() == 2;
   const bool isVectorMutatorLikeCall =
-      ((isVectorBuiltinName(expr, "push") || isVectorBuiltinName(expr, "reserve") ||
-        isVectorBuiltinName(expr, "remove_at") || isVectorBuiltinName(expr, "remove_swap")) &&
+      ((isUnqualifiedCollectionBuiltinName(expr, "push") ||
+        isUnqualifiedCollectionBuiltinName(expr, "reserve") ||
+        isUnqualifiedCollectionBuiltinName(expr, "remove_at") ||
+        isUnqualifiedCollectionBuiltinName(expr, "remove_swap")) &&
        expr.args.size() == 2) ||
-      ((isVectorBuiltinName(expr, "pop") || isVectorBuiltinName(expr, "clear")) && expr.args.size() == 1);
+      ((isUnqualifiedCollectionBuiltinName(expr, "pop") ||
+        isUnqualifiedCollectionBuiltinName(expr, "clear")) && expr.args.size() == 1);
   if (!isCountLikeCall && !isCapacityLikeCall && !isAccessLikeCall && !isVectorMutatorLikeCall) {
     return std::nullopt;
   }

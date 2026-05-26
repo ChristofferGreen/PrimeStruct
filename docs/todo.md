@@ -64,16 +64,15 @@ This file is the live open-work queue for PrimeStruct.
 
 ### Ready Now
 
-- TODO-4574: Remove vector count/access compiler classifiers | track: vector-helper-classifier-deletion | primary surface: vector count/access helpers
 - TODO-4590: Add international text shaping and glyph atlas path | track: scene-text-renderer | primary surface: scene renderer text/glyph output
 - TODO-4567: Render first globally lit 3D SDF widget primitive | track: scene-3d-sdf | primary surface: scene renderer 3D primitive output
+- TODO-4576: Remove map backing-type compiler classification | track: map-backing-classifier-deletion | primary surface: map backing/layout classifiers
+- TODO-4577: Remove vector backing-type compiler classification | track: vector-backing-classifier-deletion | primary surface: vector backing/layout classifiers
 
 ### Immediate Next 10
 
 - TODO-4568: Emit scene nodes from the existing UI layout/widgets
 - TODO-4569: Present scene-rendered UI through software surface bridge
-- TODO-4576: Remove map backing-type compiler classification
-- TODO-4577: Remove vector backing-type compiler classification
 
 ### Priority Lanes
 
@@ -83,8 +82,9 @@ This file is the live open-work queue for PrimeStruct.
 - Map/vector compiler-independence: TODO-4570 retired the duplicate `map2`
   surface, TODO-4571 added the compiler-knowledge inventory categories that
   guide deletion scope, and TODO-4573 removed compiler-owned map literal
-  lowering. TODO-4575 removed map helper/access classifiers. Vector path
-  TODO-4572 -> TODO-4574 -> TODO-4577; map path TODO-4576; join at
+  lowering. TODO-4575 removed map helper/access classifiers, and vector path
+  TODO-4572 and TODO-4574 completed the public helper classifier deletions.
+  Map path TODO-4576 and vector path TODO-4577 can now proceed; join at
   TODO-4578 -> TODO-4579
 - Architecture hardening backlog: TODO-4586 completed parser diagnostic
   stability tiers. TODO-4587 completed the shared compile-time/runtime VM
@@ -94,13 +94,12 @@ This file is the live open-work queue for PrimeStruct.
 
 ### Execution Queue
 
-- TODO-4574: Remove vector count/access compiler classifiers
 - TODO-4590: Add international text shaping and glyph atlas path
 - TODO-4567: Render first globally lit 3D SDF widget primitive
-- TODO-4568: Emit scene nodes from the existing UI layout/widgets
-- TODO-4569: Present scene-rendered UI through software surface bridge
 - TODO-4576: Remove map backing-type compiler classification
 - TODO-4577: Remove vector backing-type compiler classification
+- TODO-4568: Emit scene nodes from the existing UI layout/widgets
+- TODO-4569: Present scene-rendered UI through software surface bridge
 - TODO-4578: Generalize stdlib surface registry away from map/vector IDs
 - TODO-4579: Enforce zero map/vector compiler-knowledge traces
 
@@ -239,42 +238,6 @@ This file is the live open-work queue for PrimeStruct.
       policy.
   - stop_rule: Stop once one PrimeStruct UI scene reaches the software-surface
     presenter path with deterministic non-GUI coverage.
-
-- [ ] TODO-4574: Remove vector count/access compiler classifiers
-  - owner: ai
-  - created_at: 2026-05-24
-  - phase: Map/vector compiler-independence
-  - depends_on: TODO-4572
-  - inventory_categories: `vector-helper-classifier`
-  - scope: Remove compiler-owned vector count/capacity/access helper
-    classifiers after vector mutator statements have been routed through
-    ordinary `.prime` helper calls.
-  - implementation_notes: Start with `isVectorBuiltinName` callers that handle
-    count, capacity, `at`, and `at_unsafe` in `src/semantics`,
-    `src/ir_lowerer`, and `src/emitter`, especially
-    `SemanticsValidatorExprCountCapacityBuiltins.cpp`,
-    `SemanticsValidatorExprCollectionCountCapacity.cpp`,
-    `IrLowererCountAccessClassifiers.cpp`,
-    `IrLowererCountAccessHelpers.cpp`, `IrLowererNativeTailDispatch.cpp`, and
-    emitter count/access rewrite helpers. Do not touch vector backing-layout
-    path builders in this slice unless they become dead after the classifier
-    deletion.
-  - acceptance:
-    - Production C++ no longer uses `isVectorBuiltinName` or equivalent
-      vector-specific classifier branches for count, capacity, `at`, or
-      `at_unsafe`.
-    - Vector count/capacity/access calls compile and run through ordinary
-      imported `.prime` helper definitions, with deterministic missing-import
-      diagnostics when helpers are unavailable.
-    - Focused VM/native/C++ emitter tests cover vector construction, count,
-      capacity, safe access, unsafe access, and statement mutators after the
-      classifier deletion.
-    - The compiler-knowledge inventory from TODO-4571, if present, shows the
-      vector helper-classifier category at zero, excluding backing-layout
-      classifiers left for TODO-4577.
-  - stop_rule: Stop once vector helper names are no longer compiler builtin
-    classifiers and focused vector behavior still passes; leave vector
-    backing-type recognition to TODO-4577.
 
 - [ ] TODO-4576: Remove map backing-type compiler classification
   - owner: ai

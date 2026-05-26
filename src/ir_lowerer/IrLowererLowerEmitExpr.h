@@ -28,13 +28,6 @@
     const auto stdCollectionsRoot = []() {
       return std::string("/std/collections");
     };
-    const auto collectionMemberRoot = [&](std::string_view collectionName) {
-      return stdCollectionsRoot() + "/" + std::string(collectionName) + "/";
-    };
-    const auto collectionMemberPath =
-        [&](std::string_view collectionName, std::string_view memberName) {
-          return collectionMemberRoot(collectionName) + std::string(memberName);
-        };
     const auto experimentalCollectionMemberRoot =
         [&](std::string_view collectionName) {
           return stdCollectionsRoot() + "/experimental_" +

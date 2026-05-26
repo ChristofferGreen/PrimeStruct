@@ -22,7 +22,7 @@
         std::string::npos);
   CHECK(semanticsExprSource.find("auto resolveDirectCallTemporaryAccessReceiverPath = [&](const Expr &receiverExpr,") ==
         std::string::npos);
-  CHECK(semanticsExprSource.find("auto isVectorBuiltinName = [&](const Expr &candidate, const char *helper) -> bool {") ==
+  CHECK(semanticsExprSource.find("auto isUnqualifiedCollectionBuiltinName = [&](const Expr &candidate, const char *helper) -> bool {") ==
         std::string::npos);
   CHECK(semanticsExprSource.find("auto resolveVectorHelperMethodTarget = [&](const Expr &receiver,") ==
         std::string::npos);
@@ -848,7 +848,7 @@
         std::string::npos);
   CHECK(semanticsExprFieldResolutionSource.find("std::string SemanticsValidator::describeMethodReflectionTarget") !=
         std::string::npos);
-  CHECK(semanticsExprVectorHelpersSource.find("bool SemanticsValidator::isVectorBuiltinName") !=
+  CHECK(semanticsExprVectorHelpersSource.find("bool SemanticsValidator::isUnqualifiedCollectionBuiltinName") !=
         std::string::npos);
   CHECK(semanticsExprVectorHelpersSource.find("bool SemanticsValidator::resolveVectorHelperMethodTarget") !=
         std::string::npos);

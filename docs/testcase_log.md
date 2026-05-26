@@ -34,6 +34,82 @@
   notes: renderer unit slice passed 5 cases / 22 assertions; docs/source-lock
   failed because `docs/todo_finished.md` did not contain the exact
   `rounded-rect 2D SDF coverage when radius is` phrase.
+- 2026-05-26 04:51 CEST | pass | mode: release + script | command:
+  `cmake --build build-release --target primec PrimeStruct_backend_ir_tests PrimeStruct_semantics_tests PrimeStruct_compile_run_tests -j 1`;
+  `cd build-release && ./PrimeStruct_backend_ir_tests --test-case="ir lowerer call helpers source delegation stays stable,semantics validator infer source delegation stays stable,emitter expr source delegation stays stable,ir lowerer count access helpers classify canonical counts and defer vector reads,emitter expr control count-rewrite step only rewrites bare collection calls" --no-skip`;
+  `cd build-release && ./PrimeStruct_semantics_tests --test-case="bare vector count call resolves through imported stdlib helper,bare vector count call requires imported stdlib helper or explicit definition,bare vector capacity wrapper call resolves through imported stdlib helper,bare vector at_unsafe auto inference resolves through imported stdlib helper,bare vector at_unsafe auto inference requires imported stdlib helper or explicit definition" --no-skip`;
+  `cd build-release && ./PrimeStruct_compile_run_tests --test-case="vector map bridge boundary docs stay source locked,todo queue and skipped doctest debt stay source locked,compiles and runs stdlib namespaced vector helpers in C++ emitter,C++ emitter keeps stdlib namespaced vector access helper emission,rejects vector namespaced count capacity access aliases without helpers in C++ emitter,C++ emitter lowers stdlib namespaced vector mutator statement through imported helper,rejects vm canonical namespaced vector mutators without imported helpers,runs vm canonical vector helpers on experimental vector receivers,rejects native canonical namespaced vector mutators without imported helpers,compiles and runs native canonical vector helpers on experimental vector receivers" --no-skip`;
+  `cd build-release && ./PrimeStruct_compile_run_tests --test-case="todo queue and skipped doctest debt stay source locked" --no-skip`;
+  `python3 -m py_compile scripts/check_map_vector_compiler_knowledge.py tests/scripts/test_check_map_vector_compiler_knowledge.py`;
+  `python3 tests/scripts/test_check_map_vector_compiler_knowledge.py --repo-root .`;
+  `git diff --check`
+  | failures: none | notes: parent took over the vector worktree after the
+  worker stalled, added a late args-pack `count` fallback, and reran the full
+  focused validation window. Backend IR passed 4 cases / 1031 assertions,
+  semantics passed 5 cases / 14 assertions, compile-run passed 10 cases /
+  592 assertions, Python bytecode/script self-test passed, and whitespace
+  check passed. A post-bookkeeping docs source-lock rerun passed 1 case /
+  487 assertions. The local pre-map branch inventory script only supports
+  broad `--enforce-zero`, which still fails on unrelated map categories; the
+  selected vector-helper category is absent from its reported category list.
+- 2026-05-26 04:27 CEST | fail | mode: release | command:
+  `cmake --build build-release --target primec PrimeStruct_backend_ir_tests PrimeStruct_semantics_tests PrimeStruct_compile_run_tests -j 1`;
+  `cd build-release && ./PrimeStruct_backend_ir_tests --test-case="ir lowerer call helpers source delegation stays stable,semantics validator infer source delegation stays stable,emitter expr source delegation stays stable,ir lowerer count access helpers classify canonical counts and defer vector reads,emitter expr control count-rewrite step only rewrites bare collection calls" --no-skip`;
+  `cd build-release && ./PrimeStruct_semantics_tests --test-case="bare vector count call resolves through imported stdlib helper,bare vector count call requires imported stdlib helper or explicit definition,bare vector capacity wrapper call resolves through imported stdlib helper,bare vector at_unsafe auto inference resolves through imported stdlib helper,bare vector at_unsafe auto inference requires imported stdlib helper or explicit definition" --no-skip`;
+  `cd build-release && ./PrimeStruct_compile_run_tests --test-case="vector map bridge boundary docs stay source locked,todo queue and skipped doctest debt stay source locked,compiles and runs stdlib namespaced vector helpers in C++ emitter,C++ emitter keeps stdlib namespaced vector access helper emission,rejects vector namespaced count capacity access aliases without helpers in C++ emitter,C++ emitter lowers stdlib namespaced vector mutator statement through imported helper,rejects vm canonical namespaced vector mutators without imported helpers,runs vm canonical vector helpers on experimental vector receivers,rejects native canonical namespaced vector mutators without imported helpers,compiles and runs native canonical vector helpers on experimental vector receivers" --no-skip`
+  | failures: `compiles and runs stdlib namespaced vector helpers in C++ emitter`
+  | notes: parent rerun build, backend IR slice, and semantics slice passed;
+  compile-run slice still failed one selected case, now with
+  `unknown call target: /count` after the explicit root builtin spelling.
+- 2026-05-26 04:20 CEST | fail | mode: release | command:
+  `cmake --build build-release --target primec PrimeStruct_backend_ir_tests PrimeStruct_semantics_tests PrimeStruct_compile_run_tests -j 1`;
+  `cd build-release && ./PrimeStruct_backend_ir_tests --test-case="ir lowerer call helpers source delegation stays stable,semantics validator infer source delegation stays stable,emitter expr source delegation stays stable,ir lowerer count access helpers classify canonical counts and defer vector reads,emitter expr control count-rewrite step only rewrites bare collection calls" --no-skip`;
+  `cd build-release && ./PrimeStruct_semantics_tests --test-case="bare vector count call resolves through imported stdlib helper,bare vector count call requires imported stdlib helper or explicit definition,bare vector capacity wrapper call resolves through imported stdlib helper,bare vector at_unsafe auto inference resolves through imported stdlib helper,bare vector at_unsafe auto inference requires imported stdlib helper or explicit definition" --no-skip`;
+  `cd build-release && ./PrimeStruct_compile_run_tests --test-case="vector map bridge boundary docs stay source locked,todo queue and skipped doctest debt stay source locked,compiles and runs stdlib namespaced vector helpers in C++ emitter,C++ emitter keeps stdlib namespaced vector access helper emission,rejects vector namespaced count capacity access aliases without helpers in C++ emitter,C++ emitter lowers stdlib namespaced vector mutator statement through imported helper,rejects vm canonical namespaced vector mutators without imported helpers,runs vm canonical vector helpers on experimental vector receivers,rejects native canonical namespaced vector mutators without imported helpers,compiles and runs native canonical vector helpers on experimental vector receivers" --no-skip`
+  | failures: `compiles and runs stdlib namespaced vector helpers in C++ emitter`
+  | notes: parent rerun build, backend IR slice, and semantics slice passed;
+  compile-run slice still failed one selected case with unchanged
+  `unknown call target: count` diagnostic in `internal_vector.prime`.
+- 2026-05-26 04:12 CEST | fail | mode: release | command:
+  `cmake --build build-release --target primec PrimeStruct_backend_ir_tests PrimeStruct_semantics_tests PrimeStruct_compile_run_tests -j 1`;
+  `cd build-release && ./PrimeStruct_backend_ir_tests --test-case="ir lowerer call helpers source delegation stays stable,semantics validator infer source delegation stays stable,emitter expr source delegation stays stable,ir lowerer count access helpers classify canonical counts and defer vector reads,emitter expr control count-rewrite step only rewrites bare collection calls" --no-skip`;
+  `cd build-release && ./PrimeStruct_semantics_tests --test-case="bare vector count call resolves through imported stdlib helper,bare vector count call requires imported stdlib helper or explicit definition,bare vector capacity wrapper call resolves through imported stdlib helper,bare vector at_unsafe auto inference resolves through imported stdlib helper,bare vector at_unsafe auto inference requires imported stdlib helper or explicit definition" --no-skip`;
+  `cd build-release && ./PrimeStruct_compile_run_tests --test-case="vector map bridge boundary docs stay source locked,todo queue and skipped doctest debt stay source locked,compiles and runs stdlib namespaced vector helpers in C++ emitter,C++ emitter keeps stdlib namespaced vector access helper emission,rejects vector namespaced count capacity access aliases without helpers in C++ emitter,C++ emitter lowers stdlib namespaced vector mutator statement through imported helper,rejects vm canonical namespaced vector mutators without imported helpers,runs vm canonical vector helpers on experimental vector receivers,rejects native canonical namespaced vector mutators without imported helpers,compiles and runs native canonical vector helpers on experimental vector receivers" --no-skip`
+  | failures: `compiles and runs stdlib namespaced vector helpers in C++ emitter`
+  | notes: parent rerun build, backend IR slice, and semantics slice passed;
+  compile-run slice still failed one selected case on unqualified args-pack
+  `count(values)` in `internal_vector.prime`.
+- 2026-05-26 04:00 CEST | fail | mode: release | command:
+  `cmake --build build-release --target primec PrimeStruct_backend_ir_tests PrimeStruct_semantics_tests PrimeStruct_compile_run_tests -j 1`;
+  `cd build-release && ./PrimeStruct_backend_ir_tests --test-case="ir lowerer call helpers source delegation stays stable,semantics validator infer source delegation stays stable,emitter expr source delegation stays stable,ir lowerer count access helpers classify canonical counts and defer vector reads,emitter expr control count-rewrite step only rewrites bare collection calls" --no-skip`;
+  `cd build-release && ./PrimeStruct_semantics_tests --test-case="bare vector count call resolves through imported stdlib helper,bare vector count call requires imported stdlib helper or explicit definition,bare vector capacity wrapper call resolves through imported stdlib helper,bare vector at_unsafe auto inference resolves through imported stdlib helper,bare vector at_unsafe auto inference requires imported stdlib helper or explicit definition" --no-skip`;
+  `cd build-release && ./PrimeStruct_compile_run_tests --test-case="vector map bridge boundary docs stay source locked,todo queue and skipped doctest debt stay source locked,compiles and runs stdlib namespaced vector helpers in C++ emitter,C++ emitter keeps stdlib namespaced vector access helper emission,rejects vector namespaced count capacity access aliases without helpers in C++ emitter,C++ emitter lowers stdlib namespaced vector mutator statement through imported helper,rejects vm canonical namespaced vector mutators without imported helpers,runs vm canonical vector helpers on experimental vector receivers,rejects native canonical namespaced vector mutators without imported helpers,compiles and runs native canonical vector helpers on experimental vector receivers" --no-skip`
+  | failures: `compiles and runs stdlib namespaced vector helpers in C++ emitter`,
+  `rejects vector namespaced count capacity access aliases without helpers in C++ emitter`
+  | notes: parent rerun build, backend IR slice, and semantics slice passed;
+  compile-run slice failed 2 of 10 selected cases due stdlib args-pack
+  method-count use and stale missing-helper diagnostic expectation.
+- 2026-05-26 03:56 CEST | fail | mode: release | command:
+  `cmake --build build-release --target primec PrimeStruct_backend_ir_tests PrimeStruct_semantics_tests PrimeStruct_compile_run_tests -j 1`;
+  `cd build-release && ./PrimeStruct_backend_ir_tests --test-case="ir lowerer call helpers source delegation stays stable,semantics validator infer source delegation stays stable,emitter expr source delegation stays stable,ir lowerer count access helpers classify canonical counts and defer vector reads,emitter expr control count-rewrite step only rewrites bare collection calls" --no-skip`
+  | failures: `ir lowerer call helpers source delegation stays stable` |
+  notes: parent rerun build passed, then backend IR source-lock slice ran
+  4 selected cases with 3 passed and 1 failed due stale expectations for
+  surviving map alias matching and bridge-key vector surface lookup.
+- 2026-05-26 03:52 CEST | fail | mode: release | command:
+  `cmake --build build-release --target primec PrimeStruct_backend_ir_tests PrimeStruct_semantics_tests PrimeStruct_compile_run_tests -j 1`;
+  `cd build-release && ./PrimeStruct_backend_ir_tests --test-case="ir lowerer call helpers source delegation stays stable,semantics validator infer source delegation stays stable,emitter expr source delegation stays stable,ir lowerer count access helpers classify canonical counts and defer vector reads,emitter expr control count-rewrite step only rewrites bare collection calls" --no-skip`
+  | failures: `ir lowerer call helpers source delegation stays stable` |
+  notes: parent rerun build passed, then backend IR source-lock slice ran
+  4 selected cases with 3 passed and 1 failed due stale expectations for
+  deleted vector helper classifier internals.
+- 2026-05-26 03:06 CEST | fail | mode: release | command:
+  `cmake --build build-release --target primec PrimeStruct_backend_ir_tests PrimeStruct_semantics_tests PrimeStruct_compile_run_tests -j 1`
+  | failures: TODO-4574 release build | notes: parent-configured
+  `build-release` succeeded, then release build failed on unused local
+  lambdas in `IrLowererLowerEmitExprCollectionHelpers.h` and
+  `IrLowererLowerEmitExpr.h`.
+
 - 2026-05-26 02:11 CEST | pass | mode: release + asan | command:
   `cmake --build build-asan-clang --target PrimeStruct_backend_ir_tests -j 1`;
   `cd build-asan-clang && ./PrimeStruct_backend_ir_tests --test-case="ir lowers stdlib map constructor call as statement" --no-skip`;
@@ -8622,6 +8698,22 @@
   `cd build-release && ./PrimeStruct_compile_run_tests --test-suite=primestruct.compile.run.examples --source-file="*test_compile_run_examples_docs_locks.cpp" --test-case="scene renderer ui producer contract stays source locked,todo queue and skipped doctest debt stay source locked,ui command list adapter docs stay source locked" --order-by=file --no-skip --success`
   | notes: TODO-4566 finished wording now includes the locked
   `rounded-rect 2D SDF coverage when radius is` phrase.
+- [x] TODO-4574 compile-run vector helper import/diagnostic |
+  resolved: 2026-05-26 04:51 CEST | validating command:
+  `cd build-release && ./PrimeStruct_compile_run_tests --test-case="vector map bridge boundary docs stay source locked,todo queue and skipped doctest debt stay source locked,compiles and runs stdlib namespaced vector helpers in C++ emitter,C++ emitter keeps stdlib namespaced vector access helper emission,rejects vector namespaced count capacity access aliases without helpers in C++ emitter,C++ emitter lowers stdlib namespaced vector mutator statement through imported helper,rejects vm canonical namespaced vector mutators without imported helpers,runs vm canonical vector helpers on experimental vector receivers,rejects native canonical namespaced vector mutators without imported helpers,compiles and runs native canonical vector helpers on experimental vector receivers" --no-skip`
+  | notes: parent rerun passed all 10 selected compile-run cases and 592
+  assertions after args-pack `count` late fallback handling preserved
+  `values.count()` inside the internal vector variadic constructor.
+- [x] TODO-4574 backend IR source-lock | resolved: 2026-05-26 04:00 CEST |
+  validating command:
+  `cd build-release && ./PrimeStruct_backend_ir_tests --test-case="ir lowerer call helpers source delegation stays stable,semantics validator infer source delegation stays stable,emitter expr source delegation stays stable,ir lowerer count access helpers classify canonical counts and defer vector reads,emitter expr control count-rewrite step only rewrites bare collection calls" --no-skip`
+  | notes: parent rerun passed 4 selected backend IR/source-lock cases and
+  1031 assertions after source-lock expectation updates.
+- [x] TODO-4574 release build | resolved: 2026-05-26 03:52 CEST |
+  validating command:
+  `cmake --build build-release --target primec PrimeStruct_backend_ir_tests PrimeStruct_semantics_tests PrimeStruct_compile_run_tests -j 1`
+  | notes: parent rerun passed after removing unused local lambdas left by
+  vector helper classifier deletion.
 - [x] `runs vm scene model authoring deterministically` |
   resolved: 2026-05-25 22:41 CEST | validating command:
   `cmake --build build-release --target PrimeStruct_compile_run_tests -j 1`;

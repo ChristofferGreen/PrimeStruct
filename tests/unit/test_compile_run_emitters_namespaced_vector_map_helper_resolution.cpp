@@ -39,25 +39,39 @@ main() {
 }
 
 TEST_CASE("rejects vector namespaced count capacity access aliases without helpers in C++ emitter") {
-  const std::string source = R"(
+  auto checkRejectedAlias = [](const std::string &helperName,
+                               const std::string &callExpr) {
+    const std::string source = R"(
 [effects(heap_alloc), return<int>]
 main() {
   [vector<i32>] values{vector<i32>(4i32, 5i32)}
-  [i32] c{/vector/count(values)}
-  [i32] k{/vector/capacity(values)}
-  [i32] first{/vector/at(values, 0i32)}
-  [i32] second{/vector/at_unsafe(values, 1i32)}
-  return(plus(plus(c, k), plus(first, second)))
+  return)" + callExpr + R"(
 }
 )";
-  const std::string srcPath = writeTemp("compile_cpp_vector_namespaced_count_access_aliases.prime", source);
-  const std::string errPath =
-      (testScratchPath("") / "primec_cpp_vector_namespaced_count_access_aliases.err").string();
-  const std::string compileCmd =
-      "./primec --emit=exe " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
-  CHECK(runCommand(compileCmd) != 0);
-  const std::string errors = readFile(errPath);
-  CHECK(errors.find("unknown call target: /std/collections/vector/at") != std::string::npos);
+    const std::string safeHelperName =
+        helperName == "at_unsafe" ? "at_unsafe" : helperName;
+    const std::string srcPath =
+        writeTemp("compile_cpp_vector_namespaced_" + safeHelperName +
+                      "_alias_without_helper.prime",
+                  source);
+    const std::string errPath =
+        (testScratchPath("") /
+         ("primec_cpp_vector_namespaced_" + safeHelperName +
+          "_alias_without_helper.err"))
+            .string();
+    const std::string compileCmd =
+        "./primec --emit=exe " + srcPath +
+        " -o /dev/null --entry /main 2> " + errPath;
+    CHECK(runCommand(compileCmd) != 0);
+    const std::string errors = readFile(errPath);
+    CHECK(errors.find("unknown call target: /vector/" + helperName) !=
+          std::string::npos);
+  };
+
+  checkRejectedAlias("count", "(/vector/count(values))");
+  checkRejectedAlias("capacity", "(/vector/capacity(values))");
+  checkRejectedAlias("at", "(/vector/at(values, 0i32))");
+  checkRejectedAlias("at_unsafe", "(/vector/at_unsafe(values, 1i32))");
 }
 
 TEST_CASE("C++ emitter lowers stdlib namespaced vector mutator statement through imported helper") {
@@ -101,7 +115,7 @@ main() {
   CHECK(readFile(errPath).find("unknown call target: /vector/push") != std::string::npos);
 }
 
-TEST_CASE("C++ emitter keeps stdlib namespaced vector access builtin fallback") {
+TEST_CASE("C++ emitter keeps stdlib namespaced vector access helper emission") {
   const std::string source = R"(
 import /std/collections/*
 

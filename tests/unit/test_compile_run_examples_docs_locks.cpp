@@ -667,12 +667,14 @@ TEST_CASE("vector map bridge boundary docs stay source locked") {
         std::string::npos);
   CHECK(todo.find("- TODO-4575: Remove map helper/access compiler classifiers | track: map-special-case-deletion") ==
         std::string::npos);
-  CHECK(todo.find("- TODO-4574: Remove vector count/access compiler classifiers | track: vector-helper-classifier-deletion") !=
+  CHECK(todo.find("- TODO-4574: Remove vector count/access compiler classifiers | track: vector-helper-classifier-deletion") ==
         std::string::npos);
   CHECK(todo.find("Map/vector compiler-independence: TODO-4570 retired the duplicate `map2`\n"
                   "  surface, TODO-4571 added the compiler-knowledge inventory categories") !=
         std::string::npos);
-  CHECK(todo.find("TODO-4574: Remove vector count/access compiler classifiers") !=
+  CHECK(todo.find("TODO-4574: Remove vector count/access compiler classifiers") ==
+        std::string::npos);
+  CHECK(todoFinished.find("TODO-4574: Remove vector count/access compiler classifiers") !=
         std::string::npos);
   CHECK(todo.find("### Vector/Map Bridge Contract Summary") == std::string::npos);
   CHECK(todo.find("later cutover TODOs retire them") == std::string::npos);
@@ -1817,8 +1819,8 @@ TEST_CASE("todo queue and skipped doctest debt stay source locked") {
                   "  coverage snapshots in this file.") !=
         std::string::npos);
   CHECK(todo.find("### Ready Now\n\n"
-                  "- TODO-4575: Remove map helper/access compiler classifiers | track: "
-                  "map-special-case-deletion") !=
+                  "- TODO-4590: Add international text shaping and glyph atlas path | track: "
+                  "scene-text-renderer") !=
         std::string::npos);
   CHECK(todo.find("- TODO-4590: Add international text shaping and glyph atlas path | track: "
                   "scene-text-renderer") !=
@@ -1839,7 +1841,7 @@ TEST_CASE("todo queue and skipped doctest debt stay source locked") {
         std::string::npos);
   CHECK(todo.find("- TODO-4575: Remove map helper/access compiler classifiers | track: map-special-case-deletion") ==
         std::string::npos);
-  CHECK(todo.find("- TODO-4574: Remove vector count/access compiler classifiers | track: vector-helper-classifier-deletion") !=
+  CHECK(todo.find("- TODO-4574: Remove vector count/access compiler classifiers | track: vector-helper-classifier-deletion") ==
         std::string::npos);
   CHECK(todo.find("### Immediate Next 10\n\n"
                   "- TODO-4568: Emit scene nodes from the existing UI layout/widgets") !=
@@ -1857,7 +1859,7 @@ TEST_CASE("todo queue and skipped doctest debt stay source locked") {
                   "  surface, TODO-4571 added the compiler-knowledge inventory categories") !=
         std::string::npos);
   CHECK(todo.find("### Execution Queue\n\n"
-                  "- TODO-4575: Remove map helper/access compiler classifiers") !=
+                  "- TODO-4590: Add international text shaping and glyph atlas path") !=
         std::string::npos);
   CHECK(todoFinished.find("TODO-4591: Add expanded-source provenance ledger") !=
         std::string::npos);
@@ -3842,7 +3844,7 @@ TEST_CASE("small stdlib wrappers stay source locked to inferred locals") {
         std::string::npos);
   CHECK(vectorStdlib.find("[Vector<T> mut] out{/std/collections/internal_vector/vector<T>()}") ==
         std::string::npos);
-  CHECK(vectorStdlib.find("[i32] valueCount{count(values)}") == std::string::npos);
+  CHECK(vectorStdlib.find("[i32] valueCount{values.count()}") == std::string::npos);
   CHECK(vectorStdlib.find("[i32 mut] index{0i32}") == std::string::npos);
 
   CHECK(collectionsStdlib.find("Retired compatibility umbrella.") != std::string::npos);
@@ -3898,6 +3900,8 @@ TEST_CASE("small stdlib wrappers stay source locked to inferred locals") {
         std::string::npos);
   CHECK(internalVectorStdlib.find("namespace internal_vector") != std::string::npos);
   CHECK(internalVectorStdlib.find("[public struct]\n  Vector<T>()") != std::string::npos);
+  CHECK(internalVectorStdlib.find("[i32] valueCount{values.count()}") !=
+        std::string::npos);
   CHECK(internalVectorStdlib.find("/std/collections/internal_vector/vectorPush<T>(values, value)") ==
         std::string::npos);
   CHECK(experimentalMapStdlib.find("// Rejected direct-import shim for the legacy experimental map namespace.") !=

@@ -373,7 +373,7 @@ bool SemanticsValidator::validateExprMethodCallTarget(
     if (resolvedVisibleCollectionMethod) {
       resolved = collectionMethodTarget;
       isBuiltinMethod = false;
-    } else if (isVectorBuiltinName(expr, "capacity") &&
+    } else if (isUnqualifiedCollectionBuiltinName(expr, "capacity") &&
         isStdNamespacedVectorCompatibilityHelperPath(resolveCalleePath(expr),
                                                      "capacity")) {
       context.promoteCapacityToBuiltinValidation(expr.args.front(), resolved,
@@ -685,7 +685,7 @@ bool SemanticsValidator::validateExprMethodCallTarget(
     }
   }
   if (!isBuiltinMethod && defMap_.find(resolved) == defMap_.end() &&
-      isVectorBuiltinName(expr, "capacity")) {
+      isUnqualifiedCollectionBuiltinName(expr, "capacity")) {
     context.promoteCapacityToBuiltinValidation(expr.args.front(), resolved, isBuiltinMethod, true);
   }
   if (!isBuiltinMethod &&

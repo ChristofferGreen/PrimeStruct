@@ -743,7 +743,7 @@ TEST_CASE("semantics validator infer source delegation stays stable") {
         std::string::npos);
   CHECK(semanticsInferCollectionDispatchSetupSource.find(
             "const bool isInferBuiltinCapacityLike =\n"
-            "      !expr.isMethodCall && isVectorBuiltinName(expr, \"capacity\") &&\n"
+            "      !expr.isMethodCall && isUnqualifiedCollectionBuiltinName(expr, \"capacity\") &&\n"
             "      stdNamespacedVectorCapacityHelperAvailableForInfer;") !=
         std::string::npos);
   CHECK(semanticsInferCollectionDispatchSetupSource.find(

@@ -3081,7 +3081,7 @@
             "                      expr.isMethodCall, resolveCalleePath(expr), \"count\") &&\n"
             "                  context.isNamespacedVectorHelperCall &&\n"
             "                  context.namespacedHelper == \"count\" &&\n"
-            "                  isVectorBuiltinName(expr, \"count\") &&\n"
+            "                  isUnqualifiedCollectionBuiltinName(expr, \"count\") &&\n"
             "                  expr.args.size() == 1 &&\n"
             "                  !hasDefinitionPath(resolved) &&\n"
             "                  !(context.isArrayNamespacedVectorCountCompatibilityCall !=\n"
@@ -3234,7 +3234,7 @@
         std::string::npos);
   CHECK(semanticsExprCollectionCountCapacitySource.find(
             "const bool routesThroughVectorBuiltinCountSurface =\n"
-            "      isVectorBuiltinName(expr, \"count\") || countHelperName == \"count_ref\";") !=
+            "      isUnqualifiedCollectionBuiltinName(expr, \"count\") || countHelperName == \"count_ref\";") !=
         std::string::npos);
   CHECK(semanticsExprCollectionCountCapacitySource.find(
             "const bool routesThroughNamespacedVectorCountHelperSurface =\n"
@@ -3610,7 +3610,7 @@
             "                 expr.isMethodCall, resolveCalleePath(expr), \"count\") &&\n"
             "             context.isNamespacedVectorHelperCall &&\n"
             "             context.namespacedHelper == \"count\" &&\n"
-            "             isVectorBuiltinName(expr, \"count\") &&\n"
+            "             isUnqualifiedCollectionBuiltinName(expr, \"count\") &&\n"
             "             expr.args.size() == 1 &&\n"
             "             !hasDefinitionPath(resolved) &&\n"
             "             !(context.isArrayNamespacedVectorCountCompatibilityCall != nullptr &&\n"
@@ -3812,7 +3812,7 @@
  	            "        context.isArrayNamespacedVectorCountCompatibilityCall(expr)) &&") ==
  	        std::string::npos);
   CHECK(semanticsExprCollectionCountCapacitySource.find(
-            "      isVectorBuiltinName(expr, \"count\") && expr.args.size() == 1 &&\n"
+            "      isUnqualifiedCollectionBuiltinName(expr, \"count\") && expr.args.size() == 1 &&\n"
             "      !hasDefinitionPath(resolved) &&\n"
             "      !isArrayNamespacedVectorCountCompatibilityActive;") ==
         std::string::npos);
@@ -3837,7 +3837,7 @@
         std::string::npos);
   CHECK(semanticsExprCollectionCountCapacitySource.find(
             "const bool routesThroughCountMethodSurface =\n"
-            "      isVectorBuiltinName(expr, \"count\") || routesThroughMapCountCallSurface;") ==
+            "      isUnqualifiedCollectionBuiltinName(expr, \"count\") || routesThroughMapCountCallSurface;") ==
         std::string::npos);
   CHECK(semanticsExprCollectionCountCapacitySource.find(
             "                const bool rejectsDirectBareMapCountTarget =\n"
@@ -4047,7 +4047,7 @@
             "            resolveCalleePath(expr),\n"
             "            \"capacity\",\n"
             "            hasImportedDefinitionPath(\"/std/collections/vector/capacity\")) ||\n"
-            "        !isVectorBuiltinName(expr, \"capacity\"))) {\n"
+            "        !isUnqualifiedCollectionBuiltinName(expr, \"capacity\"))) {\n"
             "    if (!(expr.args.empty() || expr.args.size() == 1 ||\n"
             "          defMap_.find(resolved) == defMap_.end()) &&\n"
             "        context.isNamespacedVectorHelperCall) {") ==
@@ -4068,7 +4068,7 @@
             "            \"capacity\",\n"
             "            hasImportedDefinitionPath(\"/std/collections/vector/capacity\"));\n"
             "const bool capacityMethodSurfaceUsesNonVectorBuiltinName =\n"
-            "    !isVectorBuiltinName(expr, \"capacity\");\n"
+            "    !isUnqualifiedCollectionBuiltinName(expr, \"capacity\");\n"
             "const bool violatesCapacityMethodSurfacePreconditions =\n"
             "    capacityMethodSurfaceHasNamedArguments ||\n"
             "    routesThroughUnimportedStdNamespacedVectorCapacityCompatibilityDirectCall ||\n"
@@ -4111,7 +4111,7 @@
             "          resolveCalleePath(expr),\n"
             "          \"capacity\",\n"
             "          hasImportedDefinitionPath(\"/std/collections/vector/capacity\")) ||\n"
-            "      !isVectorBuiltinName(expr, \"capacity\")) &&\n") ==
+            "      !isUnqualifiedCollectionBuiltinName(expr, \"capacity\")) &&\n") ==
         std::string::npos);
   CHECK(semanticsExprCollectionCountCapacitySource.find(
             "const bool\n"
@@ -4124,7 +4124,7 @@
         std::string::npos);
   CHECK(semanticsExprCollectionCountCapacitySource.find(
             "const bool capacityMethodSurfaceUsesNonVectorBuiltinName =\n"
-            "    !isVectorBuiltinName(expr, \"capacity\");\n") !=
+            "    !isUnqualifiedCollectionBuiltinName(expr, \"capacity\");\n") !=
         std::string::npos);
   CHECK(semanticsExprCollectionCountCapacitySource.find(
             "const bool violatesCapacityMethodSurfacePreconditions =\n"
@@ -4196,7 +4196,7 @@
   CHECK(semanticsExprCollectionCountCapacitySource.find(
             "if (!(capacityMethodSurfaceHasNamedArguments ||\n"
             "      routesThroughUnimportedStdNamespacedVectorCapacityCompatibilityDirectCall ||\n"
-            "      !isVectorBuiltinName(expr, \"capacity\")) &&\n"
+            "      !isUnqualifiedCollectionBuiltinName(expr, \"capacity\")) &&\n"
             "    routesThroughCapacityMethodSurface) {\n") ==
         std::string::npos);
   CHECK(semanticsExprCollectionCountCapacitySource.find(
@@ -4484,7 +4484,7 @@
   CHECK(semanticsExprCollectionDispatchSetupSource.find(
             "!expr.isMethodCall && !callsStdNamespacedVectorCapacityHelper &&\n"
             "      setupOut.isNamespacedVectorHelperCall && setupOut.namespacedHelper == \"capacity\" &&\n"
-            "      isVectorBuiltinName(expr, \"capacity\") && expr.args.size() == 1 &&\n"
+            "      isUnqualifiedCollectionBuiltinName(expr, \"capacity\") && expr.args.size() == 1 &&\n"
             "      !hasDefinitionPath(resolved);") !=
         std::string::npos);
   CHECK(semanticsExprCollectionDispatchSetupSource.find(
@@ -4718,7 +4718,7 @@
             "  }") == std::string::npos);
   CHECK(semanticsExprCountCapacityMapBuiltinsSource.find(
             "const bool shouldValidateVectorCountBuiltinFallback =\n"
-            "      !resolvedMethod && isVectorBuiltinName(expr, \"count\") &&\n"
+            "      !resolvedMethod && isUnqualifiedCollectionBuiltinName(expr, \"count\") &&\n"
             "      !isArrayNamespacedVectorCountCompatibilityCall(expr, *dispatchResolvers) &&\n"
             "      !isStdNamespacedVectorCompatibilityDirectCall(expr.isMethodCall,\n"
             "                                                    resolveCalleePath(expr),\n"
@@ -4746,7 +4746,7 @@
             "    return validateVectorCountBuiltinCall();\n"
             "  };") == std::string::npos);
   CHECK(semanticsExprCountCapacityMapBuiltinsSource.find(
-            "if (!resolvedMethod && isVectorBuiltinName(expr, \"count\") &&\n"
+            "if (!resolvedMethod && isUnqualifiedCollectionBuiltinName(expr, \"count\") &&\n"
             "      !isArrayNamespacedVectorCountCompatibilityCall(expr, *dispatchResolvers) &&\n"
             "      !isStdNamespacedVectorCompatibilityDirectCall(expr.isMethodCall,\n"
             "                                                    resolveCalleePath(expr),\n"
@@ -4809,7 +4809,7 @@
             "            expr.isMethodCall, resolveCalleePath(expr), \"count\") &&\n"
             "        context.isNamespacedVectorHelperCall &&\n"
             "        context.namespacedHelper == \"count\" &&\n"
-            "        isVectorBuiltinName(expr, \"count\") &&\n"
+            "        isUnqualifiedCollectionBuiltinName(expr, \"count\") &&\n"
             "        expr.args.size() == 1 &&\n"
             "        !hasDefinitionPath(resolved) &&\n"
             "        !(context.isArrayNamespacedVectorCountCompatibilityCall != nullptr &&\n"
@@ -4846,7 +4846,7 @@
             "const bool isCountLike =") ==
         std::string::npos);
   CHECK(semanticsExprCollectionCountCapacitySource.find(
-            "if (!(isVectorBuiltinName(expr, \"count\") || context.isStdNamespacedMapCountCall ||\n"
+            "if (!(isUnqualifiedCollectionBuiltinName(expr, \"count\") || context.isStdNamespacedMapCountCall ||\n"
             "          context.isNamespacedMapCountCall ||\n"
             "          context.isUnnamespacedMapCountFallbackCall ||\n"
             "          context.isResolvedMapCountCall)) {\n"
@@ -4854,7 +4854,7 @@
             "    }") ==
         std::string::npos);
   CHECK(semanticsExprCollectionCountCapacitySource.find(
-            "if (!(isVectorBuiltinName(expr, \"count\") ||\n"
+            "if (!(isUnqualifiedCollectionBuiltinName(expr, \"count\") ||\n"
             "          routesThroughMapCountCallSurface)) {\n"
             "      return false;\n"
             "    }") !=
@@ -4952,7 +4952,7 @@
             "                    expr.isMethodCall, resolveCalleePath(expr), \"count\") &&\n"
             "                context.isNamespacedVectorHelperCall &&\n"
             "                context.namespacedHelper == \"count\" &&\n"
-            "                isVectorBuiltinName(expr, \"count\") &&\n"
+            "                isUnqualifiedCollectionBuiltinName(expr, \"count\") &&\n"
             "                expr.args.size() == 1 &&\n"
             "                !hasDefinitionPath(resolved) &&\n"
             "                !(context.isArrayNamespacedVectorCountCompatibilityCall != nullptr &&\n"
@@ -5055,7 +5055,7 @@
             "    const auto validateVectorCapacityBuiltinCall = [&]() -> bool {") ==
         std::string::npos);
   CHECK(semanticsExprCountCapacityMapBuiltinsSource.find(
-            "if (!resolvedMethod && isVectorBuiltinName(expr, \"capacity\") &&\n"
+            "if (!resolvedMethod && isUnqualifiedCollectionBuiltinName(expr, \"capacity\") &&\n"
             "      !isStdNamespacedVectorCompatibilityDirectCall(expr.isMethodCall,\n"
             "                                                    resolveCalleePath(expr),\n"
             "                                                    \"capacity\") &&\n"

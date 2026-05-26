@@ -222,6 +222,28 @@ bool SemanticsValidator::validateExprLateUnknownTargetFallbacks(
     }
   }
 
+  if (!requestsExplicitVectorCompatibilityMethod &&
+      normalizedMethodName == "count" && expr.args.size() == 1) {
+    std::string argsPackElemType;
+    if (resolveArgsPackElementTypeForExpr(expr.args.front(), params, locals,
+                                          argsPackElemType)) {
+      handledOut = true;
+      if (hasNamedArguments(expr.argNames)) {
+        return failLateUnknownTargetDiagnostic(
+            "named arguments not supported for builtin calls");
+      }
+      if (!expr.templateArgs.empty()) {
+        return failLateUnknownTargetDiagnostic(
+            "count does not accept template arguments");
+      }
+      if (expr.hasBodyArguments || !expr.bodyArguments.empty()) {
+        return failLateUnknownTargetDiagnostic(
+            "count does not accept block arguments");
+      }
+      return validateExpr(params, locals, expr.args.front());
+    }
+  }
+
   if (!expr.isMethodCall && expr.args.size() == 2 &&
       expr.name.find('/') == std::string::npos &&
       (normalizedMethodName == "get" || normalizedMethodName == "get_ref" ||

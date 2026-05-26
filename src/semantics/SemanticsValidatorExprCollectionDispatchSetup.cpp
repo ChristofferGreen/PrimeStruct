@@ -120,7 +120,7 @@ bool SemanticsValidator::prepareExprCollectionDispatchSetup(
   setupOut.isNamespacedVectorCapacityCall =
       !expr.isMethodCall && !callsStdNamespacedVectorCapacityHelper &&
       setupOut.isNamespacedVectorHelperCall && setupOut.namespacedHelper == "capacity" &&
-      isVectorBuiltinName(expr, "capacity") && expr.args.size() == 1 &&
+      isUnqualifiedCollectionBuiltinName(expr, "capacity") && expr.args.size() == 1 &&
       !hasDefinitionPath(resolved);
   const bool hasBuiltinAccessSpelling =
       !expr.isMethodCall && getBuiltinArrayAccessName(expr, accessHelperName);

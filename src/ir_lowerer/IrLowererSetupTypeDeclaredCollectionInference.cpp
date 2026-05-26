@@ -177,13 +177,20 @@ bool inferDeclaredReturnCollection(const Definition &definition,
           metadata->id);
     };
     auto isDirectVectorConstructor = [&]() {
-      const std::string constructorPath =
-          collectionMemberPath("vector", "vector", false);
+      const StdlibSurfaceMetadata *metadata =
+          findStdlibSurfaceMetadata(StdlibSurfaceId::CollectionsVectorConstructors);
+      if (metadata == nullptr) {
+        return false;
+      }
+      std::string constructorPath(metadata->canonicalPath);
+      if (!constructorPath.empty() && constructorPath.front() == '/') {
+        constructorPath.erase(constructorPath.begin());
+      }
       return normalizedName == constructorPath ||
              normalizedName.rfind(constructorPath + "__", 0) == 0 ||
              isPublishedStdlibSurfaceConstructorExpr(
                  candidate,
-                 primec::StdlibSurfaceId::CollectionsVectorConstructors);
+                 metadata->id);
     };
     if (isDirectKeyValueConstructor() && candidate.templateArgs.size() == 2) {
       nameOut = "map";

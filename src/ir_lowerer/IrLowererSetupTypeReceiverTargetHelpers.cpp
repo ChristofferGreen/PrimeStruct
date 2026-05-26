@@ -157,15 +157,18 @@ bool resolveMethodCallReceiverExpr(const Expr &callExpr,
   std::string accessName;
   const bool isBuiltinAccessCall = getBuiltinArrayAccessName(callExpr, accessName) && callExpr.args.size() == 2;
   const bool isBuiltinCountOrCapacityCall =
-      isVectorBuiltinName(callExpr, "count") || isSimpleCallName(callExpr, "count") ||
-      isVectorBuiltinName(callExpr, "capacity");
+      isUnqualifiedCollectionBuiltinName(callExpr, "count") ||
+      isUnqualifiedCollectionBuiltinName(callExpr, "capacity");
   const bool isBuiltinBareVectorCapacityMethod =
       isSimpleCallName(callExpr, "capacity") &&
       isVectorCapacityCall && isVectorCapacityCall(callExpr, localsIn);
   const bool isBuiltinVectorMutatorCall =
-      isVectorBuiltinName(callExpr, "push") || isVectorBuiltinName(callExpr, "pop") ||
-      isVectorBuiltinName(callExpr, "reserve") || isVectorBuiltinName(callExpr, "clear") ||
-      isVectorBuiltinName(callExpr, "remove_at") || isVectorBuiltinName(callExpr, "remove_swap");
+      isUnqualifiedCollectionBuiltinName(callExpr, "push") ||
+      isUnqualifiedCollectionBuiltinName(callExpr, "pop") ||
+      isUnqualifiedCollectionBuiltinName(callExpr, "reserve") ||
+      isUnqualifiedCollectionBuiltinName(callExpr, "clear") ||
+      isUnqualifiedCollectionBuiltinName(callExpr, "remove_at") ||
+      isUnqualifiedCollectionBuiltinName(callExpr, "remove_swap");
   const std::string scopedMethodPath = resolveScopedMethodPath(callExpr);
   const bool isExplicitRemovedVectorMethodAlias = isExplicitRemovedVectorMethodAliasPath(scopedMethodPath);
   const bool isExplicitKeyValueMethodAlias = isExplicitKeyValueMethodAliasPath(scopedMethodPath);

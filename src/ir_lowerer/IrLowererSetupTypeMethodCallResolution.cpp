@@ -573,8 +573,11 @@ const Definition *resolveMethodCallDefinitionFromExpr(
       }
       return nullptr;
     };
+    const std::string canonicalVectorCountPath =
+        stdlibSurfaceCanonicalHelperPath(StdlibSurfaceId::CollectionsVectorHelperSurface, "count");
     const bool requestsExplicitVectorCountMethod =
-        explicitMethodPath == collectionMemberPath("vector", "count") ||
+        (!canonicalVectorCountPath.empty() &&
+         explicitMethodPath == canonicalVectorCountPath) ||
         explicitMethodPath ==
             normalizeBuiltinCollectionStructPath("vector") + "/count";
     if (callExpr.semanticNodeId == 0 &&
@@ -700,10 +703,10 @@ const Definition *resolveMethodCallDefinitionFromExpr(
   std::string accessName;
   const bool isBuiltinAccessCall = getBuiltinArrayAccessName(callExpr, accessName) && callExpr.args.size() == 2;
   const bool isBuiltinCountOrCapacityCall =
-      isVectorBuiltinName(callExpr, "count") || isSimpleCallName(callExpr, "count") ||
-      isVectorBuiltinName(callExpr, "capacity");
+      isUnqualifiedCollectionBuiltinName(callExpr, "count") ||
+      isUnqualifiedCollectionBuiltinName(callExpr, "capacity");
   const bool isBuiltinBareVectorCapacityMethod =
-      isVectorBuiltinName(callExpr, "capacity") &&
+      isUnqualifiedCollectionBuiltinName(callExpr, "capacity") &&
       isVectorCapacityCall && isVectorCapacityCall(callExpr, localsIn);
   const bool isBuiltinBareVectorAccessMethod =
       callExpr.isMethodCall && callExpr.args.size() == 2 &&
@@ -727,9 +730,12 @@ const Definition *resolveMethodCallDefinitionFromExpr(
                                          semanticIndexPtr)
           .isVectorTarget;
   const bool isBuiltinVectorMutatorCall =
-      isVectorBuiltinName(callExpr, "push") || isVectorBuiltinName(callExpr, "pop") ||
-      isVectorBuiltinName(callExpr, "reserve") || isVectorBuiltinName(callExpr, "clear") ||
-      isVectorBuiltinName(callExpr, "remove_at") || isVectorBuiltinName(callExpr, "remove_swap");
+      isUnqualifiedCollectionBuiltinName(callExpr, "push") ||
+      isUnqualifiedCollectionBuiltinName(callExpr, "pop") ||
+      isUnqualifiedCollectionBuiltinName(callExpr, "reserve") ||
+      isUnqualifiedCollectionBuiltinName(callExpr, "clear") ||
+      isUnqualifiedCollectionBuiltinName(callExpr, "remove_at") ||
+      isUnqualifiedCollectionBuiltinName(callExpr, "remove_swap");
   const bool isExplicitRemovedVectorMethodAlias =
       isExplicitRemovedVectorMethodAliasPath(explicitMethodPath);
   const bool isExplicitKeyValueMethodAlias =
@@ -1149,7 +1155,7 @@ const Definition *resolveMethodCallDefinitionFromExpr(
   }
   if (resolvedDef == nullptr) {
     const bool blocksBuiltinBareVectorCountMethod =
-        isVectorBuiltinName(callExpr, "count") && typeName == "vector";
+        isUnqualifiedCollectionBuiltinName(callExpr, "count") && typeName == "vector";
     const bool blocksBuiltinBareVectorAccessMethod =
         isBuiltinAccessCall && typeName == "vector";
     const bool blocksBuiltinBareVectorMutatorMethod =

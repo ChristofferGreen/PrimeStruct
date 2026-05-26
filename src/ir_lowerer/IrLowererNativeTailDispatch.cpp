@@ -547,12 +547,14 @@ UnsupportedNativeCallResult emitUnsupportedNativeCallDiagnosticImpl(
       !isDiagnosticVectorTarget(expr.args.front())) {
     return UnsupportedNativeCallResult::NotHandled;
   }
-  if (!expr.isMethodCall && count_access_detail::isVectorBuiltinName(expr, "count") && expr.args.size() == 1 &&
+  if (!expr.isMethodCall &&
+      count_access_detail::isUnqualifiedCollectionBuiltinName(expr, "count") &&
+      expr.args.size() == 1 &&
       isDiagnosticVectorTarget(expr.args.front())) {
     return UnsupportedNativeCallResult::NotHandled;
   }
   if (!expr.isMethodCall &&
-      (count_access_detail::isVectorBuiltinName(expr, "count") || isSimpleCallName(expr, "count"))) {
+      count_access_detail::isUnqualifiedCollectionBuiltinName(expr, "count")) {
     if (expr.name == "/count" && expr.namespacePrefix.empty() &&
         expr.args.size() == 1 && expr.args.front().kind != Expr::Kind::Call &&
         !isDiagnosticVectorTarget(expr.args.front())) {
@@ -562,15 +564,19 @@ UnsupportedNativeCallResult emitUnsupportedNativeCallDiagnosticImpl(
             diagnosticTargetName() + ")";
     return UnsupportedNativeCallResult::Error;
   }
-  if (!expr.isMethodCall && count_access_detail::isVectorBuiltinName(expr, "capacity") && expr.args.size() == 1 &&
+  if (!expr.isMethodCall &&
+      count_access_detail::isUnqualifiedCollectionBuiltinName(expr, "capacity") &&
+      expr.args.size() == 1 &&
       isDiagnosticVectorTarget(expr.args.front())) {
     return UnsupportedNativeCallResult::NotHandled;
   }
-  if (!expr.isMethodCall && count_access_detail::isVectorBuiltinName(expr, "capacity") &&
+  if (!expr.isMethodCall &&
+      count_access_detail::isUnqualifiedCollectionBuiltinName(expr, "capacity") &&
       expr.args.size() == 1 && expr.args.front().kind == Expr::Kind::Call) {
     return UnsupportedNativeCallResult::NotHandled;
   }
-  if (!expr.isMethodCall && count_access_detail::isVectorBuiltinName(expr, "capacity")) {
+  if (!expr.isMethodCall &&
+      count_access_detail::isUnqualifiedCollectionBuiltinName(expr, "capacity")) {
     error = "capacity requires vector target";
     return UnsupportedNativeCallResult::Error;
   }
@@ -644,7 +650,8 @@ NativeCallTailDispatchResult tryEmitNativeCallTailDispatch(
     return NativeCallTailDispatchResult::NotHandled;
   }
   if (!isExplicitDirectVectorCountCall(semanticProgram, expr) &&
-      !expr.isMethodCall && count_access_detail::isVectorBuiltinName(expr, "count") &&
+      !expr.isMethodCall &&
+      count_access_detail::isUnqualifiedCollectionBuiltinName(expr, "count") &&
       expr.args.size() == 1 &&
       !isNamedArgumentVectorTemporary(expr.args.front())) {
     if (isVectorCountTarget(expr.args.front(), localsIn)) {
@@ -691,8 +698,7 @@ NativeCallTailDispatchResult tryEmitNativeCallTailDispatch(
   }
 
   if (expr.args.size() == 1 &&
-      (count_access_detail::isVectorBuiltinName(expr, "count") ||
-       isSimpleCallName(expr, "count") ||
+      (count_access_detail::isUnqualifiedCollectionBuiltinName(expr, "count") ||
        isSimpleCallName(expr, "count") ||
        resolveNativeTailCallPathWithoutFallbackProbes(expr) == "/string/count")) {
     const Expr &target = expr.args.front();

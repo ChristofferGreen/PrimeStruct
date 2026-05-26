@@ -1,4 +1,5 @@
-    if (isVectorBuiltinName(expr, "count") && expr.args.size() == 1 && isResolvedArrayLikeTarget(expr.args.front())) {
+    if (isUnqualifiedCollectionBuiltinName(expr, "count") && expr.args.size() == 1 &&
+        isResolvedArrayLikeTarget(expr.args.front())) {
       std::ostringstream out;
       out << "ps_array_count("
           << emitExpr(expr.args.front(),
@@ -15,7 +16,8 @@
           << ")";
       return out.str();
     }
-    if (isVectorBuiltinName(expr, "count") && expr.args.size() == 1 && isResolvedStringTarget(expr.args.front())) {
+    if (isUnqualifiedCollectionBuiltinName(expr, "count") && expr.args.size() == 1 &&
+        isResolvedStringTarget(expr.args.front())) {
       std::ostringstream out;
       out << "ps_string_count("
           << emitExpr(expr.args.front(),

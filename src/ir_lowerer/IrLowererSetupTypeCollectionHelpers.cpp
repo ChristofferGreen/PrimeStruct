@@ -660,12 +660,14 @@ bool isExplicitKeyValueContainsOrTryAtMethodPath(const std::string &methodName) 
   return false;
 }
 
-bool isVectorBuiltinName(const Expr &expr, const char *name) {
-  if (isSimpleCallName(expr, name)) {
-    return true;
+bool isUnqualifiedCollectionBuiltinName(const Expr &expr, const char *name) {
+  if (expr.kind != Expr::Kind::Call || name == nullptr || expr.name != name) {
+    return false;
   }
-  std::string aliasName;
-  return resolveVectorHelperAliasName(expr, aliasName) && aliasName == name;
+  if (!expr.namespacePrefix.empty()) {
+    return false;
+  }
+  return expr.name.find('/') == std::string::npos;
 }
 
 bool isExplicitKeyValueHelperFallbackPath(const Expr &expr) {
@@ -695,8 +697,12 @@ bool isExplicitKeyValueReceiverProbeHelperExpr(const Expr &expr) {
 
 bool isExplicitVectorAccessHelperPath(const std::string &path) {
   const std::string normalizedPath = normalizeCollectionHelperPath(path);
-  return normalizedPath == collectionMemberPath("vector", "at") ||
-         normalizedPath == collectionMemberPath("vector", "at_unsafe");
+  const std::string atPath = normalizeCollectionHelperPath(
+      stdlibSurfaceCanonicalHelperPath(StdlibSurfaceId::CollectionsVectorHelperSurface, "at"));
+  const std::string atUnsafePath = normalizeCollectionHelperPath(
+      stdlibSurfaceCanonicalHelperPath(StdlibSurfaceId::CollectionsVectorHelperSurface, "at_unsafe"));
+  return (!atPath.empty() && normalizedPath == atPath) ||
+         (!atUnsafePath.empty() && normalizedPath == atUnsafePath);
 }
 
 bool isExplicitVectorAccessHelperExpr(const Expr &expr) {
@@ -1017,7 +1023,11 @@ std::vector<std::string> collectionHelperPathCandidates(const std::string &path)
   if (normalizedPath.rfind("/array/", 0) == 0) {
     const std::string suffix = normalizedPath.substr(std::string("/array/").size());
     if (allowsArrayVectorCompatibilitySuffix(suffix)) {
-      appendUnique(collectionMemberPath("vector", suffix));
+      const std::string vectorCandidate =
+          stdlibSurfaceCanonicalHelperPath(StdlibSurfaceId::CollectionsVectorHelperSurface, suffix);
+      if (!vectorCandidate.empty()) {
+        appendUnique(vectorCandidate);
+      }
     }
   }
 

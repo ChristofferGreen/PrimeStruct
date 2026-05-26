@@ -831,7 +831,7 @@ TEST_CASE("ir lowerer call helpers source delegation stays stable") {
         std::string::npos);
   CHECK(countAccessHelpersSource.find("bool isExplicitPublishedVectorMetadataCall(const Expr &expr,") !=
         std::string::npos);
-  CHECK(countAccessClassifiersSource.find("canonicalCollectionMemberPath(\"vector\", name)") !=
+  CHECK(countAccessClassifiersSource.find("canonicalCollectionMemberPath(\"vector\", name)") ==
         std::string::npos);
   CHECK(countAccessHelpersSource.find("canonicalCollectionMemberPrefix(\"vector\")") !=
         std::string::npos);
@@ -893,26 +893,29 @@ TEST_CASE("ir lowerer call helpers source delegation stays stable") {
         std::string::npos);
   CHECK(nativeTailDispatchSource.find("!isExplicitDirectVectorCountCall(semanticProgram, expr) &&") !=
         std::string::npos);
-  CHECK(nativeTailDispatchSource.find(
-            "!expr.isMethodCall && count_access_detail::isVectorBuiltinName(expr, \"count\")") !=
+  CHECK(nativeTailDispatchSource.find("count_access_detail::isUnqualifiedCollectionBuiltinName(expr, \"count\")") !=
         std::string::npos);
   CHECK(nativeTailDispatchSource.find("!isNamedArgumentVectorTemporary(expr.args.front()))") !=
         std::string::npos);
-  CHECK(countAccessClassifiersSource.find("bool isVectorBuiltinName(const Expr &expr, const char *name)") !=
+  CHECK(countAccessClassifiersSource.find("bool isUnqualifiedCollectionBuiltinName(const Expr &expr, const char *name)") !=
         std::string::npos);
-  CHECK(countAccessClassifiersSource.find("bool isExplicitCanonicalVectorReadHelperCall(") !=
+  CHECK(countAccessClassifiersSource.find("bool isExplicitCanonicalVectorReadHelperCall(") ==
         std::string::npos);
-  CHECK(countAccessClassifiersSource.find("isExplicitCanonicalVectorReadHelperCall(expr, name)") !=
+  CHECK(countAccessClassifiersSource.find("isExplicitCanonicalVectorReadHelperCall(expr, name)") ==
         std::string::npos);
-  CHECK(countAccessClassifiersSource.find("isExplicitRemovedCountLikeAliasCall(expr, name)") !=
+  CHECK(countAccessClassifiersSource.find("isExplicitRemovedCountLikeAliasCall(expr, name)") ==
         std::string::npos);
-  CHECK(countAccessClassifiersSource.find("resolveVectorHelperAliasName(expr, aliasName)") !=
+  CHECK(countAccessClassifiersSource.find("resolveVectorHelperAliasName(expr, aliasName)") ==
         std::string::npos);
-  CHECK(countAccessClassifiersSource.find("aliasName == name") !=
+  CHECK(countAccessClassifiersSource.find("bool isKeyValueBuiltinName(") ==
         std::string::npos);
-  CHECK(builtinNameHelpersSource.find("collectionMemberPath(\"vector\", \"at\")") !=
+  CHECK(countAccessClassifiersSource.find(
+            "resolveKeyValueHelperAliasName(expr, aliasName) && aliasName == name") ==
         std::string::npos);
-  CHECK(builtinNameHelpersSource.find("collectionMemberPath(\"vector\", \"at_unsafe\")") !=
+  CHECK(builtinNameHelpersSource.find("auto unrootedStdlibVectorHelperPath =") !=
+        std::string::npos);
+  CHECK(builtinNameHelpersSource.find(
+            "StdlibSurfaceId::CollectionsVectorHelperSurface, helperName") !=
         std::string::npos);
   CHECK(nativeTailDispatchSource.find("isExplicitPublishedVectorCountCall(expr)") ==
         std::string::npos);
@@ -934,7 +937,8 @@ TEST_CASE("ir lowerer call helpers source delegation stays stable") {
   CHECK(builtinNameHelpersSource.find("vectorPush") == std::string::npos);
   CHECK(callResolutionSource.find("std/collections/experimental_vector") ==
         std::string::npos);
-  CHECK(callResolutionSource.find("StdlibSurfaceId::CollectionsVectorHelperSurface") ==
+  CHECK(callResolutionSource.find(
+            "findStdlibSurfaceMetadataByBridgeKey(\"collections.vector_helpers\")") !=
         std::string::npos);
   CHECK(nativeTailDispatchSource.find("std/collections/experimental_vector") ==
         std::string::npos);
@@ -1138,8 +1142,6 @@ TEST_CASE("ir lowerer vector type layout traces use generic collection helpers")
     CHECK(source.find("std/collections/vector/") == std::string::npos);
     CHECK(source.find("std/collections/experimental_vector") ==
           std::string::npos);
-    CHECK(source.find("StdlibSurfaceId::CollectionsVectorHelperSurface") ==
-          std::string::npos);
     CHECK(source.find("Vector<") == std::string::npos);
   };
 
@@ -1176,17 +1178,18 @@ TEST_CASE("ir lowerer vector type layout traces use generic collection helpers")
             "collectionWrapperAlias(\"vector\", \"New\")") !=
         std::string::npos);
   CHECK(methodTargetSource.find(
-            "collectionMemberPath(\"vector\", normalizedMethodName)") !=
+            "stdlibSurfaceCanonicalHelperPath(StdlibSurfaceId::CollectionsVectorHelperSurface,\n"
+            "                                         normalizedMethodName)") !=
         std::string::npos);
   CHECK(methodCallSource.find(
-            "normalizeBuiltinCollectionStructPath(\"vector\") + \"/count\"") !=
+            "stdlibSurfaceCanonicalHelperPath(StdlibSurfaceId::CollectionsVectorHelperSurface, \"count\")") !=
         std::string::npos);
   CHECK(methodCallSource.find("collectionMemberPath(\"map\", \"map\")") !=
         std::string::npos);
   CHECK(methodCallSource.find("path == \"/std/collections/experimental_map/map") ==
         std::string::npos);
   CHECK(declaredCollectionSource.find(
-            "collectionMemberPath(\"vector\", \"vector\", false)") !=
+            "findStdlibSurfaceMetadata(StdlibSurfaceId::CollectionsVectorConstructors)") !=
         std::string::npos);
   CHECK(setupCollectionSource.find(
             "appendUnique(\"/std/collections/map/\" +") == std::string::npos);

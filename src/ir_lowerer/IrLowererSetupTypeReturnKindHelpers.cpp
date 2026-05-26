@@ -679,7 +679,7 @@ bool resolveCountMethodCallReturnKind(const Expr &callExpr,
     }
   }
   const bool isCountCall =
-      isVectorBuiltinName(callExpr, "count") &&
+      isUnqualifiedCollectionBuiltinName(callExpr, "count") &&
       callExpr.args.size() == 1;
   const bool isContainsCall = isSimpleCallName(callExpr, "contains") && callExpr.args.size() == 2;
   std::string accessName;
@@ -688,11 +688,15 @@ bool resolveCountMethodCallReturnKind(const Expr &callExpr,
                              isSimpleCallName(callExpr, "ref")) &&
                             callExpr.args.size() == 2;
   const bool isVectorMutatorCall =
-      isVectorBuiltinName(callExpr, "push") || isVectorBuiltinName(callExpr, "pop") ||
-      isVectorBuiltinName(callExpr, "reserve") || isVectorBuiltinName(callExpr, "clear") ||
-      isVectorBuiltinName(callExpr, "remove_at") || isVectorBuiltinName(callExpr, "remove_swap");
+      isUnqualifiedCollectionBuiltinName(callExpr, "push") ||
+      isUnqualifiedCollectionBuiltinName(callExpr, "pop") ||
+      isUnqualifiedCollectionBuiltinName(callExpr, "reserve") ||
+      isUnqualifiedCollectionBuiltinName(callExpr, "clear") ||
+      isUnqualifiedCollectionBuiltinName(callExpr, "remove_at") ||
+      isUnqualifiedCollectionBuiltinName(callExpr, "remove_swap");
   auto expectedVectorMutatorArgCount = [&]() -> size_t {
-    if (isVectorBuiltinName(callExpr, "pop") || isVectorBuiltinName(callExpr, "clear")) {
+    if (isUnqualifiedCollectionBuiltinName(callExpr, "pop") ||
+        isUnqualifiedCollectionBuiltinName(callExpr, "clear")) {
       return 1u;
     }
     return 2u;
@@ -1128,7 +1132,8 @@ bool resolveCapacityMethodCallReturnKind(const Expr &callExpr,
   if (isExplicitRemovedVectorMethodAliasPath(scopedCallPath)) {
     return false;
   }
-  if (!isVectorBuiltinName(callExpr, "capacity") || callExpr.args.size() != 1) {
+  if (!isUnqualifiedCollectionBuiltinName(callExpr, "capacity") ||
+      callExpr.args.size() != 1) {
     return false;
   }
 

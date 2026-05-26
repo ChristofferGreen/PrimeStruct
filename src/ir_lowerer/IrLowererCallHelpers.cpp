@@ -234,33 +234,25 @@ CountMethodFallbackResult tryEmitNonMethodCountFallback(
   std::string normalizedKeyValueHelperName;
   const bool hasVectorHelperAlias = resolveVectorHelperAliasName(expr, normalizedVectorHelperName);
   const bool hasKeyValueHelperAlias = resolveKeyValueHelperAliasName(expr, normalizedKeyValueHelperName);
-  const bool isCountCall = isVectorBuiltinName(expr, "count") ||
-                           isSimpleCallName(expr, "count") ||
-                           (hasVectorHelperAlias && normalizedVectorHelperName == "count") ||
+  if (hasVectorHelperAlias) {
+    return CountMethodFallbackResult::NotHandled;
+  }
+  const bool isCountCall = isUnqualifiedCollectionBuiltinName(expr, "count") ||
                            (hasKeyValueHelperAlias && normalizedKeyValueHelperName == "count");
-  const bool isCapacityCall = isVectorBuiltinName(expr, "capacity") ||
-                              (hasVectorHelperAlias &&
-                               normalizedVectorHelperName == "capacity");
+  const bool isCapacityCall = isUnqualifiedCollectionBuiltinName(expr, "capacity");
   std::string accessName;
-  const bool isCollectionAccessCall =
-      getBuiltinArrayAccessName(expr, accessName) ||
-      (hasVectorHelperAlias &&
-       (normalizedVectorHelperName == "at" ||
-        normalizedVectorHelperName == "at_unsafe"));
+  const bool isCollectionAccessCall = getBuiltinArrayAccessName(expr, accessName);
   const bool isAccessCall = isCollectionAccessCall || isSimpleCallName(expr, "get") || isSimpleCallName(expr, "ref");
   const bool isVectorMutatorCall =
-      isVectorBuiltinName(expr, "push") || isVectorBuiltinName(expr, "pop") || isVectorBuiltinName(expr, "reserve") ||
-      isVectorBuiltinName(expr, "clear") || isVectorBuiltinName(expr, "remove_at") ||
-      isVectorBuiltinName(expr, "remove_swap") ||
-      (hasVectorHelperAlias &&
-       (normalizedVectorHelperName == "push" ||
-        normalizedVectorHelperName == "pop" ||
-        normalizedVectorHelperName == "reserve" ||
-        normalizedVectorHelperName == "clear" ||
-        normalizedVectorHelperName == "remove_at" ||
-        normalizedVectorHelperName == "remove_swap"));
+      isUnqualifiedCollectionBuiltinName(expr, "push") ||
+      isUnqualifiedCollectionBuiltinName(expr, "pop") ||
+      isUnqualifiedCollectionBuiltinName(expr, "reserve") ||
+      isUnqualifiedCollectionBuiltinName(expr, "clear") ||
+      isUnqualifiedCollectionBuiltinName(expr, "remove_at") ||
+      isUnqualifiedCollectionBuiltinName(expr, "remove_swap");
   auto expectedVectorMutatorArgCount = [&]() -> size_t {
-    if (isVectorBuiltinName(expr, "pop") || isVectorBuiltinName(expr, "clear")) {
+    if (isUnqualifiedCollectionBuiltinName(expr, "pop") ||
+        isUnqualifiedCollectionBuiltinName(expr, "clear")) {
       return 1u;
     }
     return 2u;

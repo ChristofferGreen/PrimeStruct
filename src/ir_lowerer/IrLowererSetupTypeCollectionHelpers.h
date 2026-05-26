@@ -68,7 +68,7 @@ std::string normalizeCollectionHelperPath(const std::string &path);
 bool isExplicitRemovedVectorMethodAliasPath(const std::string &methodName);
 bool isExplicitKeyValueMethodAliasPath(const std::string &methodName);
 bool isExplicitKeyValueContainsOrTryAtMethodPath(const std::string &methodName);
-bool isVectorBuiltinName(const Expr &expr, const char *name);
+bool isUnqualifiedCollectionBuiltinName(const Expr &expr, const char *name);
 bool isExplicitKeyValueHelperFallbackPath(const Expr &expr);
 bool isExplicitKeyValueReceiverProbeHelperExpr(const Expr &expr);
 bool isExplicitVectorAccessHelperPath(const std::string &path);

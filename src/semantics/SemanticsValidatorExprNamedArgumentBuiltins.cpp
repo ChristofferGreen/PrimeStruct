@@ -196,7 +196,7 @@ bool SemanticsValidator::validateExprNamedArgumentBuiltins(
     return defMap_.find(resolved) == defMap_.end();
   };
   auto isLegacyCountLikeBuiltinCall = [&](const char *helperName) {
-    if (!isVectorBuiltinName(expr, helperName)) {
+    if (!isUnqualifiedCollectionBuiltinName(expr, helperName)) {
       return false;
     }
     const std::string resolvedPath = resolveCalleePath(expr);

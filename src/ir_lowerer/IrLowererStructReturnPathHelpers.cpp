@@ -221,7 +221,7 @@ std::vector<std::string> collectionMethodPathCandidates(const std::string &recei
                                                         const std::string &rawMethodName) {
   if (receiverStruct == "/vector") {
     std::vector<std::string> candidates = {
-        collectionMemberPath("vector", methodName)};
+        stdlibSurfaceCanonicalHelperPath(StdlibSurfaceId::CollectionsVectorHelperSurface, methodName)};
     if (allowsArrayVectorCompatibilitySuffix(methodName)) {
       candidates.push_back("/array/" + methodName);
     }
@@ -232,7 +232,8 @@ std::vector<std::string> collectionMethodPathCandidates(const std::string &recei
         "/array/" + methodName,
     };
     if (allowsArrayVectorCompatibilitySuffix(methodName)) {
-      candidates.push_back(collectionMemberPath("vector", methodName));
+      candidates.push_back(
+          stdlibSurfaceCanonicalHelperPath(StdlibSurfaceId::CollectionsVectorHelperSurface, methodName));
     }
     return candidates;
   }
@@ -286,7 +287,8 @@ std::vector<std::string> collectionHelperPathCandidates(const std::string &path)
   if (normalizedPath.rfind("/array/", 0) == 0) {
     const std::string suffix = normalizedPath.substr(std::string("/array/").size());
     if (allowsArrayVectorCompatibilitySuffix(suffix)) {
-      appendUnique(collectionMemberPath("vector", suffix));
+      appendUnique(stdlibSurfaceCanonicalHelperPath(
+          StdlibSurfaceId::CollectionsVectorHelperSurface, suffix));
     }
   }
   return candidates;
@@ -298,7 +300,8 @@ std::string preferCollectionHelperPath(const std::string &path,
   if (preferred.rfind("/array/", 0) == 0 && defMap.count(preferred) == 0) {
     const std::string suffix = preferred.substr(std::string("/array/").size());
     if (allowsArrayVectorCompatibilitySuffix(suffix)) {
-      const std::string stdlibAlias = collectionMemberPath("vector", suffix);
+      const std::string stdlibAlias =
+          stdlibSurfaceCanonicalHelperPath(StdlibSurfaceId::CollectionsVectorHelperSurface, suffix);
       if (defMap.count(stdlibAlias) > 0) {
         return stdlibAlias;
       }
@@ -527,7 +530,8 @@ std::string inferStructReturnPathFromExprInternal(
     std::vector<std::string> candidates = collectionMethodPathCandidates(receiverStruct, methodName, rawMethodName);
     if ((receiverStruct == "/vector" || receiverStruct == "/array" || receiverStruct == "/string") &&
         (methodName == "at" || methodName == "at_unsafe")) {
-      const std::string canonicalCandidate = collectionMemberPath("vector", methodName);
+      const std::string canonicalCandidate =
+          stdlibSurfaceCanonicalHelperPath(StdlibSurfaceId::CollectionsVectorHelperSurface, methodName);
       for (auto it = candidates.begin(); it != candidates.end();) {
         if (*it == canonicalCandidate) {
           it = candidates.erase(it);
@@ -596,7 +600,8 @@ std::string inferStructReturnPathFromExprInternal(
                                                                    visitedDefs);
           }
           if (receiverStruct == "/vector" || receiverStruct == "/array" || receiverStruct == "/string") {
-            const std::string canonicalCandidate = collectionMemberPath("vector", suffix);
+            const std::string canonicalCandidate =
+                stdlibSurfaceCanonicalHelperPath(StdlibSurfaceId::CollectionsVectorHelperSurface, suffix);
             for (auto it = resolvedCandidates.begin(); it != resolvedCandidates.end();) {
               if (*it == canonicalCandidate) {
                 it = resolvedCandidates.erase(it);

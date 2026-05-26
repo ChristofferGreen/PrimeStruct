@@ -1403,14 +1403,12 @@ InlineCallDispatchResult tryEmitInlineCallDispatchWithLocals(
 
   bool deferVectorReturningMutatorCall = false;
   auto isVectorMutatorCallName = [&](const Expr &callExpr) {
-    return isVectorBuiltinName(callExpr, "push") ||
-           isVectorBuiltinName(callExpr, "pop") ||
-           isVectorBuiltinName(callExpr, "reserve") ||
-           isVectorBuiltinName(callExpr, "clear") ||
-           isVectorBuiltinName(callExpr, "remove_at") ||
-           isVectorBuiltinName(callExpr, "remove_swap") ||
-           isVectorBuiltinName(callExpr, "at") ||
-           isVectorBuiltinName(callExpr, "at_unsafe");
+    return isUnqualifiedCollectionBuiltinName(callExpr, "push") ||
+           isUnqualifiedCollectionBuiltinName(callExpr, "pop") ||
+           isUnqualifiedCollectionBuiltinName(callExpr, "reserve") ||
+           isUnqualifiedCollectionBuiltinName(callExpr, "clear") ||
+           isUnqualifiedCollectionBuiltinName(callExpr, "remove_at") ||
+           isUnqualifiedCollectionBuiltinName(callExpr, "remove_swap");
   };
   auto tryEmitVectorMutatorCallFormExpr = [&]() {
     const bool isVectorMutatorCall = isVectorMutatorCallName(expr);

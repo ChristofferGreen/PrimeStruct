@@ -46,13 +46,16 @@
     }
     return 0;
   };
-  auto isVectorBuiltinName = [&](const Expr &candidate, const char *helper) -> bool {
-    if (isSimpleCallName(candidate, helper)) {
-      return true;
+  auto isUnqualifiedCollectionBuiltinName = [&](const Expr &candidate,
+                                                const char *helper) -> bool {
+    if (candidate.kind != Expr::Kind::Call || helper == nullptr ||
+        candidate.name != helper) {
+      return false;
     }
-    const std::string memberName =
-        collectionFallbackVectorHelperMemberName(candidate, false);
-    return memberName == helper;
+    if (!candidate.namespacePrefix.empty()) {
+      return false;
+    }
+    return candidate.name.find('/') == std::string::npos;
   };
   auto preferStructReturningCollectionHelperPath = [&](const std::string &path) {
     std::string firstExisting;

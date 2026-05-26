@@ -381,7 +381,7 @@ ReturnKind SemanticsValidator::inferPreDispatchCallReturnKind(
           "unknown method: " + removedCollectionMethodPath);
     }
   }
-  if (expr.isMethodCall && isVectorBuiltinName(expr, "count") &&
+  if (expr.isMethodCall && isUnqualifiedCollectionBuiltinName(expr, "count") &&
       expr.args.size() == 1 &&
       !isArrayNamespacedVectorCountCompatibilityCall(
           expr, builtinCollectionDispatchResolvers)) {
@@ -415,7 +415,7 @@ ReturnKind SemanticsValidator::inferPreDispatchCallReturnKind(
       hasResolvedPath = true;
     }
   }
-  if (expr.isMethodCall && isVectorBuiltinName(expr, "capacity") &&
+  if (expr.isMethodCall && isUnqualifiedCollectionBuiltinName(expr, "capacity") &&
       expr.args.size() == 1) {
     std::string elemType;
     if (resolveVectorTarget(expr.args.front(), elemType)) {

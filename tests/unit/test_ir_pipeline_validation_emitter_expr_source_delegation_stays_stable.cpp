@@ -2065,7 +2065,7 @@ TEST_CASE("template monomorph source delegation stays stable") {
             "          templateMonomorphSamePathSoaHelperPrefix() + helperName;") !=
         std::string::npos);
   CHECK(templateMonomorphExpressionRewriteSource.find(
-            "const auto vectorReceiverHasVisibleCanonicalHelper =\n"
+            "const auto receiverHasVisibleCanonicalCollectionHelper =\n"
             "        [&](std::string_view candidateHelperName) {\n"
             "          const std::string preferred =\n"
             "              canonicalVectorCompatibilityHelperPathOrFallback(candidateHelperName);\n"
@@ -2081,7 +2081,7 @@ TEST_CASE("template monomorph source delegation stays stable") {
             "          receiverResolvesExperimentalSoaVector ||\n"
             "          ((helperName == \"count\" || helperName == \"count_ref\") &&\n"
             "           receiverFamily == \"vector\" &&\n"
-            "           !vectorReceiverHasVisibleCanonicalHelper(helperName));") !=
+            "           !receiverHasVisibleCanonicalCollectionHelper(helperName));") !=
         std::string::npos);
   CHECK(templateMonomorphExpressionRewriteSource.find(
             "isLegacyOrCanonicalSoaHelperPath(samePathSoaNonRefHelper,") ==

@@ -1,7 +1,6 @@
 #include "IrLowererCountAccessClassifiers.h"
 
 #include <string_view>
-#include <utility>
 
 #include "IrLowererHelpers.h"
 #include "IrLowererSetupTypeCollectionHelpers.h"
@@ -20,16 +19,6 @@ bool hasInferredTypedWrappedKeyValue(const LocalInfo &info, LocalInfo::Kind kind
 
 bool isVectorTargetImpl(const Expr &target, const LocalMap &localsIn);
 
-std::string collectionMemberPath(std::string_view collectionName,
-                                 std::string_view memberName) {
-  return std::string(collectionName) + "/" + std::string(memberName);
-}
-
-std::string rootedCollectionMemberPath(std::string_view collectionName,
-                                       std::string_view memberName) {
-  return "/" + collectionMemberPath(collectionName, memberName);
-}
-
 std::string experimentalCollectionRoot(std::string_view collectionName) {
   return "/std/collections/experimental_" + std::string(collectionName);
 }
@@ -39,45 +28,12 @@ std::string experimentalCollectionTypePath(std::string_view collectionName,
   return experimentalCollectionRoot(collectionName) + "/" + std::string(typeName);
 }
 
-std::string experimentalCollectionMemberRoot(std::string_view collectionName) {
-  return experimentalCollectionRoot(collectionName) + "/";
-}
-
-std::string trimLeadingSlash(std::string text) {
-  if (!text.empty() && text.front() == '/') {
-    text.erase(text.begin());
-  }
-  return text;
-}
-
-std::string experimentalVectorWrapperAlias(std::string_view suffix) {
-  return std::string("vector") + std::string(suffix);
-}
-
 bool isExperimentalCollectionStructPath(const std::string &structTypeName,
                                         std::string_view collectionName,
                                         std::string_view typeName) {
   const std::string basePath = experimentalCollectionTypePath(collectionName, typeName);
   return structTypeName == basePath ||
          structTypeName.rfind(basePath + "__", 0) == 0;
-}
-
-std::string resolveScopedCallPath(const Expr &expr) {
-  std::string scopedPath = expr.name;
-  if (scopedPath.find('/') == std::string::npos && !expr.namespacePrefix.empty()) {
-    scopedPath = expr.namespacePrefix + "/" + scopedPath;
-  }
-  return scopedPath;
-}
-
-std::string stdCollectionsRoot() {
-  return "/std/collections";
-}
-
-std::string canonicalCollectionMemberPath(std::string_view collectionName,
-                                          std::string_view memberName) {
-  return stdCollectionsRoot().substr(1) + "/" +
-         std::string(collectionName) + "/" + std::string(memberName);
 }
 
 std::string unrootedSoaCollectionPath(std::string_view folderName) {
@@ -92,82 +48,8 @@ std::string soaConversionHelperName() {
   return std::string("to") + "_aos";
 }
 
-std::string stripGeneratedHelperSuffix(std::string path) {
-  const size_t leafStart = path.find_last_of('/');
-  const size_t generatedSuffix =
-      path.find("__", leafStart == std::string::npos ? 0 : leafStart + 1);
-  if (generatedSuffix != std::string::npos) {
-    path.erase(generatedSuffix);
-  }
-  return path;
-}
-
-bool resolveExperimentalVectorReadHelperAliasName(const Expr &expr,
-                                                  std::string &helperNameOut) {
-  helperNameOut.clear();
-  const std::string experimentalPrefix =
-      trimLeadingSlash(experimentalCollectionMemberRoot("vector"));
-  std::string scopedPath = trimLeadingSlash(resolveScopedCallPath(expr));
-  if (scopedPath.rfind(experimentalPrefix, 0) != 0) {
-    return false;
-  }
-  std::string leaf = scopedPath.substr(experimentalPrefix.size());
-  const size_t generatedSuffix = leaf.find("__");
-  if (generatedSuffix != std::string::npos) {
-    leaf.erase(generatedSuffix);
-  }
-  auto matchesAlias = [&](std::string_view suffix, std::string_view memberName) {
-    if (leaf != experimentalVectorWrapperAlias(suffix)) {
-      return false;
-    }
-    helperNameOut = memberName;
-    return true;
-  };
-  return matchesAlias("Count", "count") ||
-         matchesAlias("Capacity", "capacity") ||
-         matchesAlias("At", "at") ||
-         matchesAlias("AtUnsafe", "at_unsafe");
-}
-
 bool isExperimentalVectorStructPath(const std::string &structTypeName) {
   return isExperimentalCollectionStructPath(structTypeName, "vector", "Vector");
-}
-
-bool isExplicitRemovedCountLikeAliasCall(const Expr &expr,
-                                         std::string_view helperName) {
-  if (expr.kind != Expr::Kind::Call || expr.isMethodCall) {
-    return false;
-  }
-  const std::string scopedPath = resolveScopedCallPath(expr);
-  if (helperName == "count" &&
-      (scopedPath == rootedCollectionMemberPath("vector", "count") ||
-       scopedPath == collectionMemberPath("vector", "count"))) {
-    return false;
-  }
-  auto matchesCollectionRoot = [&](std::string_view collectionName) {
-    return scopedPath == rootedCollectionMemberPath(collectionName, helperName) ||
-           scopedPath == collectionMemberPath(collectionName, helperName);
-  };
-  return matchesCollectionRoot("vector") ||
-         matchesCollectionRoot("array") ||
-         matchesCollectionRoot(soa_paths::legacySoaFolder());
-}
-
-bool isExplicitCanonicalVectorReadHelperCall(const Expr &expr,
-                                             std::string_view helperName) {
-  if (expr.kind != Expr::Kind::Call || expr.name.empty()) {
-    return false;
-  }
-  if (helperName != "count" && helperName != "capacity" &&
-      helperName != "at" && helperName != "at_unsafe") {
-    return false;
-  }
-  std::string scopedPath = resolveScopedCallPath(expr);
-  if (!scopedPath.empty() && scopedPath.front() == '/') {
-    scopedPath.erase(scopedPath.begin());
-  }
-  scopedPath = stripGeneratedHelperSuffix(std::move(scopedPath));
-  return scopedPath == canonicalCollectionMemberPath("vector", helperName);
 }
 
 bool getArrayVectorAccessClassifierName(const Expr &expr,
@@ -333,36 +215,14 @@ bool resolveKeyValueHelperAliasName(const Expr &expr, std::string &helperNameOut
   return false;
 }
 
-bool isVectorBuiltinName(const Expr &expr, const char *name) {
-  if (expr.kind == Expr::Kind::Call && name != nullptr) {
-    std::string scopedPath = resolveScopedCallPath(expr);
-    if (!scopedPath.empty() && scopedPath.front() == '/') {
-      scopedPath.erase(scopedPath.begin());
-    }
-    scopedPath = stripGeneratedHelperSuffix(std::move(scopedPath));
-    if (scopedPath == canonicalCollectionMemberPath("vector", name)) {
-      return false;
-    }
-  }
-  if (isExplicitCanonicalVectorReadHelperCall(expr, name)) {
+bool isUnqualifiedCollectionBuiltinName(const Expr &expr, const char *name) {
+  if (expr.kind != Expr::Kind::Call || name == nullptr || expr.name != name) {
     return false;
   }
-  if (isSimpleCallName(expr, name)) {
-    return true;
-  }
-  if ((std::string_view{name} == "count" || std::string_view{name} == "capacity") &&
-      isExplicitRemovedCountLikeAliasCall(expr, name)) {
+  if (!expr.namespacePrefix.empty() || expr.name.find('/') != std::string::npos) {
     return false;
   }
-  std::string aliasName;
-  if (resolveExperimentalVectorReadHelperAliasName(expr, aliasName) &&
-      aliasName == name) {
-    return true;
-  }
-  if (resolveVectorHelperAliasName(expr, aliasName) && aliasName == name) {
-    return true;
-  }
-  return false;
+  return true;
 }
 
 } // namespace primec::ir_lowerer::count_access_detail
