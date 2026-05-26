@@ -14,6 +14,11 @@ namespace std {
   }
 
   [public return<i32>]
+  primitive_sdf_button() {
+    return(2i32)
+  }
+
+  [public return<i32>]
   light_ambient() {
     return(1i32)
   }

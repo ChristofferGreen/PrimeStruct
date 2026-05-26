@@ -2284,13 +2284,16 @@ module {
   painter order, local `z`, local transform metadata, orthographic camera config, materials, lights, and primitive
   descriptors. The shared CPU BGRA8 renderer consumes that serialized `/std/scene` record stream from
   `examples/shared/scene_bgra8_renderer.h` and emits validated `SoftwareSurfaceFrame` output for flat rect/plane
-  primitives plus rounded-rect 2D SDF coverage with deterministic source-over composition, target-bound clipping, and
-  documented painter-order/local-z/stable-node ordering. The first UI scene camera is an orthographic `Camera` projection config that maps one scene unit
+  primitives, rounded-rect 2D SDF coverage, and the first globally lit 3D SDF button/slab primitive with deterministic
+  source-over composition, target-bound clipping, fixed global lighting, and documented painter-order/local-z/stable-node
+  ordering. The first UI scene camera is an orthographic `Camera` projection config that maps one scene unit
   to one logical pixel with a top-left origin, `+x` right, `+y` down, base plane `z=0`, and positive local `z` toward
   the viewer; painter order is primary, then local `z`, then stable node id and primitive sub-order. Materials own
   color with initial defaults of base color from primitive/UI state, opacity `1.0`, shade strength `1.0`, no texture
   slots, and no implicit interpolation across SDF blends. 2D SDFs provide source-over coverage, 3D SDFs require explicit
-  material assignment, text stays a 2D international overlay/primitive with shaping, bidi, fallback-font, and glyph-atlas
+  material assignment, and the initial 3D SDF widget is `primitive_sdf_button()` with a `4` logical-pixel bevel radius,
+  `3` logical-pixel normal depth, and `1` logical-pixel pressed depth. Text stays a 2D international overlay/primitive
+  with shaping, bidi, fallback-font, and glyph-atlas
   behavior behind renderer-owned HarfBuzz-class, FreeType-class, and ICU/FriBidi-class wrappers, and the first UI light
   rig is fixed ambient-plus-key (`0.55` ambient, `0.45` upper-left/front key, no shadows, no stochastic sampling, no
   author lights). No active TODO currently tracks platform/runtime consumption of that shared event stream. Add a

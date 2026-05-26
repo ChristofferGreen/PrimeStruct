@@ -6,6 +6,41 @@ Legend:
 Finished items are periodically archived here from `docs/todo.md`; section headers record the archive date.
 
 **Todo Completion (May 26, 2026)**
+- [x] TODO-4567: Render first globally lit 3D SDF widget primitive
+  - owner: ai
+  - created_at: 2026-05-24
+  - finished_at: 2026-05-26
+  - phase: Scene graph renderer and UI presentation
+  - parallel_track: scene-3d-sdf
+  - scope: Added the first globally lit 3D SDF scene primitive for UI, a
+    deterministic beveled button/slab rendered through the existing
+    orthographic BGRA8 scene renderer.
+  - outcome:
+    - Added `/std/scene` primitive kind `primitive_sdf_button()` so authored
+      scene records can name the 3D SDF button primitive without compiler-owned
+      scene special cases.
+    - Extended `examples/shared/scene_bgra8_renderer.h` with kind `2` SDF
+      button rendering, analytic rounded-rect distance/gradient normals, fixed
+      ambient-plus-key lighting, and explicit node `scaleZ` depth for normal
+      versus pressed button states.
+    - Preserved material ownership: primitive/material color is shaded by the
+      fixed global light rig, while SDF geometry supplies only coverage,
+      normals, and depth.
+    - Added exact pixel/hash coverage for normal and pressed button states and
+      for a shared scene where 2D primitives and the 3D SDF button obey the
+      existing painter-order/local-z/stable-node ordering rules.
+  - validation:
+    - Parent-scheduled focused validation passed 7 cases / 35 assertions:
+      `cmake --build build-release --target PrimeStruct_misc_tests -j 1`
+      followed by `cd build-release && ./PrimeStruct_misc_tests --test-suite=primestruct.scene.renderer --no-skip`.
+    - Parent-scheduled docs/source-lock validation passed 2 cases / 576
+      assertions:
+      `cmake --build build-release --target PrimeStruct_compile_run_tests -j 1`
+      followed by `cd build-release && ./PrimeStruct_compile_run_tests --test-suite=primestruct.compile.run.examples --source-file="*test_compile_run_examples_docs_locks.cpp" --test-case="scene renderer ui producer contract stays source locked,todo queue and skipped doctest debt stay source locked" --order-by=file --no-skip --success`.
+  - stop_rule: Stopped after one deterministic globally lit 3D UI primitive was
+    covered; general mesh assets, animation, free-camera behavior, UI adapter
+    emission, and host presentation remain with later scene leaves.
+
 - [x] TODO-4574: Remove vector count/access compiler classifiers
   - owner: ai
   - created_at: 2026-05-24

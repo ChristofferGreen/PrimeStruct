@@ -1826,7 +1826,7 @@ TEST_CASE("todo queue and skipped doctest debt stay source locked") {
                   "scene-text-renderer") !=
         std::string::npos);
   CHECK(todo.find("- TODO-4567: Render first globally lit 3D SDF widget primitive | track: "
-                  "scene-3d-sdf") !=
+                  "scene-3d-sdf") ==
         std::string::npos);
   CHECK(todo.find("- TODO-4565: Add minimal scene graph and camera data model | track: scene-renderer") ==
         std::string::npos);
@@ -1853,7 +1853,8 @@ TEST_CASE("todo queue and skipped doctest debt stay source locked") {
                   "  contract that TODO-4593 must follow") ==
         std::string::npos);
   CHECK(todo.find("Scene graph renderer and UI presentation: TODO-4565 completed the data-only\n"
-                  "  scene model and TODO-4566 completed the first BGRA8 2D primitive renderer") !=
+                  "  scene model and TODO-4566 completed the first BGRA8 2D primitive renderer;\n"
+                  "  TODO-4567 completed the first globally lit 3D SDF widget primitive.") !=
         std::string::npos);
   CHECK(todo.find("Map/vector compiler-independence: TODO-4570 retired the duplicate `map2`\n"
                   "  surface, TODO-4571 added the compiler-knowledge inventory categories") !=
@@ -1897,6 +1898,12 @@ TEST_CASE("todo queue and skipped doctest debt stay source locked") {
         std::string::npos);
   CHECK(todoFinished.find("rounded-rect 2D SDF coverage when radius is\n"
                           "      positive") != std::string::npos);
+  CHECK(todo.find("- [ ] TODO-4567: Render first globally lit 3D SDF widget primitive") ==
+        std::string::npos);
+  CHECK(todoFinished.find("TODO-4567: Render first globally lit 3D SDF widget primitive") !=
+        std::string::npos);
+  CHECK(todoFinished.find("Added `/std/scene` primitive kind `primitive_sdf_button()`") !=
+        std::string::npos);
   CHECK(todoFinished.find("TODO-4571: Add compiler-knowledge inventory for map/vector") !=
         std::string::npos);
   CHECK(todoFinished.find("TODO-4573: Remove compiler-owned map literal lowering") !=
@@ -2884,6 +2891,13 @@ TEST_CASE("scene renderer ui producer contract stays source locked") {
         std::string::npos);
   CHECK(graphicsDoc.find("3D SDFs may blend geometry, depth, and normals only when each SDF has\n"
                          "  an explicit material assignment") != std::string::npos);
+  CHECK(graphicsDoc.find("The first 3D SDF widget primitive is `primitive_sdf_button()`") !=
+        std::string::npos);
+  CHECK(graphicsDoc.find("`4` logical-pixel bevel radius, `3` logical-pixel normal depth, and `1`\n"
+                         "  logical-pixel pressed depth") != std::string::npos);
+  CHECK(graphicsDoc.find("Pressed state changes explicit depth through the\n"
+                         "  node transform rather than blending material colors") !=
+        std::string::npos);
   CHECK(graphicsDoc.find("Text remains a 2D overlay/primitive") != std::string::npos);
   CHECK(graphicsDoc.find("international\n  shaping, bidi ordering, fallback fonts") !=
         std::string::npos);
@@ -2909,7 +2923,7 @@ TEST_CASE("scene renderer ui producer contract stays source locked") {
                          "     descriptors") != std::string::npos);
   CHECK(graphicsDoc.find("`examples/shared/scene_bgra8_renderer.h`") !=
         std::string::npos);
-  CHECK(graphicsDoc.find("flat\nrect/plane records and rounded-rect 2D SDF coverage") !=
+  CHECK(graphicsDoc.find("flat\nrect/plane records, rounded-rect 2D SDF coverage, and the first raised 3D SDF") !=
         std::string::npos);
   CHECK(graphicsDoc.find("only a UI-specific software renderer") == std::string::npos);
   CHECK(graphicsDoc.find("Base renderer layer:\n   - Consumes a flat draw-command list") ==
@@ -2927,15 +2941,20 @@ TEST_CASE("scene renderer ui producer contract stays source locked") {
   CHECK(specDoc.find("The compiler owns no scene graph, camera, material, light, or primitive\n"
                      "  special case") != std::string::npos);
   CHECK(specDoc.find("`examples/shared/scene_bgra8_renderer.h`") != std::string::npos);
-  CHECK(specDoc.find("deterministic source-over composition, target-bound clipping") !=
+  CHECK(specDoc.find("first globally lit 3D SDF button/slab primitive") !=
+        std::string::npos);
+  CHECK(specDoc.find("deterministic\n  source-over composition, target-bound clipping") !=
         std::string::npos);
   CHECK(specDoc.find("orthographic `Camera` projection config") != std::string::npos);
   CHECK(specDoc.find("one scene unit\n  to one logical pixel") != std::string::npos);
   CHECK(specDoc.find("painter order is primary, then local `z`, then stable node id") !=
         std::string::npos);
+  CHECK(specDoc.find("initial 3D SDF widget is `primitive_sdf_button()` with a `4` logical-pixel bevel radius") !=
+        std::string::npos);
   CHECK(specDoc.find("HarfBuzz-class, FreeType-class, and ICU/FriBidi-class wrappers") !=
         std::string::npos);
   CHECK(sceneStdlib.find("namespace scene") != std::string::npos);
+  CHECK(sceneStdlib.find("primitive_sdf_button()") != std::string::npos);
   CHECK(sceneStdlib.find("[public struct]\n  Scene()") != std::string::npos);
   CHECK(sceneStdlib.find("[public struct]\n  Node()") != std::string::npos);
   CHECK(sceneStdlib.find("[public struct]\n  Camera()") != std::string::npos);
@@ -2950,6 +2969,9 @@ TEST_CASE("scene renderer ui producer contract stays source locked") {
         std::string::npos);
   CHECK(renderer.find("renderSerializedSceneToBgra8") != std::string::npos);
   CHECK(renderer.find("detail::roundedRectCoverage") != std::string::npos);
+  CHECK(renderer.find("detail::SdfButtonPrimitiveKind") != std::string::npos);
+  CHECK(renderer.find("detail::sdfButtonShade") != std::string::npos);
+  CHECK(renderer.find("DefaultUiLightAmbientWeight") != std::string::npos);
   CHECK(renderer.find("software_surface::validateFrame") != std::string::npos);
   CHECK(renderer.find("left.node->painterOrder < right.node->painterOrder") !=
         std::string::npos);

@@ -4,6 +4,15 @@
 - none
 
 ## Recent Test Runs
+- 2026-05-26 07:30 CEST | pass | mode: release | command:
+  `cmake -S . -B build-release -DCMAKE_BUILD_TYPE=Release`;
+  `cmake --build build-release --target PrimeStruct_misc_tests -j 1`;
+  `cd build-release && ./PrimeStruct_misc_tests --test-suite=primestruct.scene.renderer --no-skip`;
+  `cmake --build build-release --target PrimeStruct_compile_run_tests -j 1`;
+  `cd build-release && ./PrimeStruct_compile_run_tests --test-suite=primestruct.compile.run.examples --source-file="*test_compile_run_examples_docs_locks.cpp" --test-case="scene renderer ui producer contract stays source locked,todo queue and skipped doctest debt stay source locked" --order-by=file --no-skip --success`
+  | failures: none | notes: TODO-4567 focused validation passed the
+  3D SDF renderer slice, 7 cases / 35 assertions, and refreshed docs/source
+  locks, 2 cases / 576 assertions.
 - 2026-05-26 03:26 CEST | pass | mode: release + script | command:
   `cmake --build build-release --target PrimeStruct_compile_run_tests PrimeStruct_semantics_tests PrimeStruct_misc_tests -j 1`;
   `python3 -m py_compile scripts/check_map_vector_compiler_knowledge.py tests/scripts/test_check_map_vector_compiler_knowledge.py`;

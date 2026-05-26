@@ -33,7 +33,13 @@ namespace detail {
 constexpr int SceneRecordVersion = 1;
 constexpr int OrthographicProjectionMode = 1;
 constexpr int RectPrimitiveKind = 1;
+constexpr int SdfButtonPrimitiveKind = 2;
 constexpr int MaxSoftwareSurfaceExtent = 16384;
+constexpr double DefaultSdfButtonBevelRadius = 4.0;
+constexpr double DefaultSdfButtonNormalDepth = 3.0;
+constexpr double DefaultSdfButtonPressedDepth = 1.0;
+constexpr double DefaultUiLightAmbientWeight = 0.55;
+constexpr double DefaultUiLightKeyWeight = 0.45;
 
 struct NormalizedPixel {
   double blue = 0.0;
@@ -88,11 +94,21 @@ struct SceneCamera {
   double farZ = 1000.0;
 };
 
+struct SceneLight {
+  int id = -1;
+  int kind = 0;
+  double weight = 0.0;
+  double directionX = 0.0;
+  double directionY = 0.0;
+  double directionZ = 1.0;
+};
+
 struct SceneRecord {
   int activeCameraId = -1;
   std::vector<SceneNode> nodes;
   std::vector<ScenePrimitive> primitives;
   std::vector<SceneMaterial> materials;
+  std::vector<SceneLight> lights;
   std::vector<SceneCamera> cameras;
 };
 
@@ -262,15 +278,16 @@ inline bool readSceneRecord(const std::vector<std::int32_t> &words,
     errorOut = "scene renderer record has invalid light count";
     return false;
   }
+  scene.lights.reserve(static_cast<std::size_t>(lightCount));
   for (int index = 0; index < lightCount; ++index) {
-    int unusedInt = 0;
-    double unusedMilli = 0.0;
-    if (!reader.readInt(unusedInt) || !reader.readInt(unusedInt) ||
-        !reader.readMilli(unusedMilli) || !reader.readMilli(unusedMilli) ||
-        !reader.readMilli(unusedMilli) || !reader.readMilli(unusedMilli)) {
+    SceneLight light;
+    if (!reader.readInt(light.id) || !reader.readInt(light.kind) ||
+        !reader.readMilli(light.weight) || !reader.readMilli(light.directionX) ||
+        !reader.readMilli(light.directionY) || !reader.readMilli(light.directionZ)) {
       errorOut = "scene renderer record ended inside light table";
       return false;
     }
+    scene.lights.push_back(light);
   }
 
   int cameraCount = 0;
@@ -333,6 +350,87 @@ inline double roundedRectCoverage(double localX,
   return clampUnit(0.5 - signedDistance / safeEdgeWidth);
 }
 
+inline double roundedRectSignedDistance(double localX,
+                                        double localY,
+                                        double width,
+                                        double height,
+                                        double radius) {
+  if (width <= 0.0 || height <= 0.0) {
+    return 1.0;
+  }
+  radius = std::clamp(radius, 0.0, std::min(width, height) * 0.5);
+  if (radius <= 0.0) {
+    const double outsideX = std::max(std::max(-localX, localX - width), 0.0);
+    const double outsideY = std::max(std::max(-localY, localY - height), 0.0);
+    const double outsideDistance = std::sqrt(outsideX * outsideX + outsideY * outsideY);
+    const double insideDistance =
+        std::min(std::max(std::max(-localX, localX - width), std::max(-localY, localY - height)), 0.0);
+    return outsideDistance + insideDistance;
+  }
+
+  const double halfWidth = width * 0.5;
+  const double halfHeight = height * 0.5;
+  const double centeredX = localX - halfWidth;
+  const double centeredY = localY - halfHeight;
+  const double qx = std::abs(centeredX) - (halfWidth - radius);
+  const double qy = std::abs(centeredY) - (halfHeight - radius);
+  const double outsideX = std::max(qx, 0.0);
+  const double outsideY = std::max(qy, 0.0);
+  const double outsideDistance = std::sqrt(outsideX * outsideX + outsideY * outsideY);
+  const double insideDistance = std::min(std::max(qx, qy), 0.0);
+  return outsideDistance + insideDistance - radius;
+}
+
+inline double roundedRectGradientComponent(double positiveDistance, double negativeDistance) {
+  const double gradient = positiveDistance - negativeDistance;
+  if (std::abs(gradient) <= 0.000001) {
+    return 0.0;
+  }
+  return gradient;
+}
+
+inline double sdfButtonShade(double localX,
+                             double localY,
+                             double width,
+                             double height,
+                             double bevelRadius,
+                             double depth,
+                             double shadeStrength) {
+  bevelRadius = bevelRadius > 0.0 ? bevelRadius : DefaultSdfButtonBevelRadius;
+  depth = depth > 0.0 ? depth : DefaultSdfButtonNormalDepth;
+  const double signedDistance =
+      roundedRectSignedDistance(localX, localY, width, height, bevelRadius);
+  const double interiorDistance = std::max(-signedDistance, 0.0);
+  const double bevelT = clampUnit((bevelRadius - interiorDistance) / bevelRadius);
+  const double slope = bevelT * depth / bevelRadius;
+  const double sample = 0.25;
+  double gradientX = roundedRectGradientComponent(
+      roundedRectSignedDistance(localX + sample, localY, width, height, bevelRadius),
+      roundedRectSignedDistance(localX - sample, localY, width, height, bevelRadius));
+  double gradientY = roundedRectGradientComponent(
+      roundedRectSignedDistance(localX, localY + sample, width, height, bevelRadius),
+      roundedRectSignedDistance(localX, localY - sample, width, height, bevelRadius));
+  const double gradientLength = std::sqrt(gradientX * gradientX + gradientY * gradientY);
+  if (gradientLength > 0.000001) {
+    gradientX /= gradientLength;
+    gradientY /= gradientLength;
+  }
+
+  const double normalX = gradientX * slope;
+  const double normalY = gradientY * slope;
+  constexpr double normalZ = 1.0;
+  const double normalLength = std::sqrt(normalX * normalX + normalY * normalY + normalZ * normalZ);
+  const double unitNormalX = normalX / normalLength;
+  const double unitNormalY = normalY / normalLength;
+  const double unitNormalZ = normalZ / normalLength;
+
+  constexpr double invSqrt3 = 0.5773502691896258;
+  const double keyDot = std::max(0.0, unitNormalX * -invSqrt3 + unitNormalY * -invSqrt3 +
+                                           unitNormalZ * invSqrt3);
+  const double lit = DefaultUiLightAmbientWeight + DefaultUiLightKeyWeight * keyDot;
+  return 1.0 - clampUnit(shadeStrength) + clampUnit(shadeStrength) * lit;
+}
+
 } // namespace detail
 
 inline SceneRenderResult renderSerializedSceneToBgra8(
@@ -378,7 +476,9 @@ inline SceneRenderResult renderSerializedSceneToBgra8(
   commands.reserve(scene.nodes.size());
   for (const detail::SceneNode &node : scene.nodes) {
     const detail::ScenePrimitive *primitive = detail::findById(scene.primitives, node.primitiveId);
-    if (primitive == nullptr || primitive->kind != detail::RectPrimitiveKind ||
+    if (primitive == nullptr ||
+        (primitive->kind != detail::RectPrimitiveKind &&
+         primitive->kind != detail::SdfButtonPrimitiveKind) ||
         primitive->width <= 0.0 || primitive->height <= 0.0) {
       continue;
     }
@@ -419,12 +519,27 @@ inline SceneRenderResult renderSerializedSceneToBgra8(
         if (coverage <= 0.0) {
           continue;
         }
+        double red = command.material->red;
+        double green = command.material->green;
+        double blue = command.material->blue;
+        if (command.primitive->kind == detail::SdfButtonPrimitiveKind) {
+          const double shade = detail::sdfButtonShade(localX,
+                                                      localY,
+                                                      command.primitive->width,
+                                                      command.primitive->height,
+                                                      command.primitive->radius,
+                                                      command.node->scaleZ,
+                                                      command.material->shadeStrength);
+          red *= shade;
+          green *= shade;
+          blue *= shade;
+        }
         const std::size_t pixelIndex =
             static_cast<std::size_t>(y) * static_cast<std::size_t>(width) + static_cast<std::size_t>(x);
         detail::blendSourceOver(pixels[pixelIndex],
-                                command.material->red,
-                                command.material->green,
-                                command.material->blue,
+                                red,
+                                green,
+                                blue,
                                 command.material->opacity * coverage);
       }
     }

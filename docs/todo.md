@@ -65,7 +65,6 @@ This file is the live open-work queue for PrimeStruct.
 ### Ready Now
 
 - TODO-4590: Add international text shaping and glyph atlas path | track: scene-text-renderer | primary surface: scene renderer text/glyph output
-- TODO-4567: Render first globally lit 3D SDF widget primitive | track: scene-3d-sdf | primary surface: scene renderer 3D primitive output
 - TODO-4576: Remove map backing-type compiler classification | track: map-backing-classifier-deletion | primary surface: map backing/layout classifiers
 - TODO-4577: Remove vector backing-type compiler classification | track: vector-backing-classifier-deletion | primary surface: vector backing/layout classifiers
 
@@ -78,7 +77,8 @@ This file is the live open-work queue for PrimeStruct.
 
 - Scene graph renderer and UI presentation: TODO-4565 completed the data-only
   scene model and TODO-4566 completed the first BGRA8 2D primitive renderer;
-  TODO-4590 and TODO-4567 -> TODO-4568 -> TODO-4569
+  TODO-4567 completed the first globally lit 3D SDF widget primitive.
+  TODO-4590 -> TODO-4568 -> TODO-4569
 - Map/vector compiler-independence: TODO-4570 retired the duplicate `map2`
   surface, TODO-4571 added the compiler-knowledge inventory categories that
   guide deletion scope, and TODO-4573 removed compiler-owned map literal
@@ -95,7 +95,6 @@ This file is the live open-work queue for PrimeStruct.
 ### Execution Queue
 
 - TODO-4590: Add international text shaping and glyph atlas path
-- TODO-4567: Render first globally lit 3D SDF widget primitive
 - TODO-4576: Remove map backing-type compiler classification
 - TODO-4577: Remove vector backing-type compiler classification
 - TODO-4568: Emit scene nodes from the existing UI layout/widgets
@@ -141,41 +140,6 @@ This file is the live open-work queue for PrimeStruct.
   - stop_rule: Stop once international 2D text can be shaped, rasterized, and
     composited deterministically for scene text fixtures; leave paragraph layout,
     color emoji, advanced OpenType controls, and 3D text to later leaves.
-
-- [ ] TODO-4567: Render first globally lit 3D SDF widget primitive
-  - owner: ai
-  - created_at: 2026-05-24
-  - phase: Scene graph renderer and UI presentation
-  - parallel_track: scene-3d-sdf
-  - scope: Add the first 3D SDF scene primitive for UI, a single beveled
-    button/slab rendered through the same orthographic camera and a
-    deterministic global light rig.
-  - implementation_notes: Model the primitive as a shallow 3D volume in the
-    widget rect's local space. Derive normals from the SDF gradient or a
-    documented analytic approximation, and use a fixed light/material model
-    with no stochastic sampling. The pressed state should adjust depth or
-    bevel/material parameters explicitly, without introducing implicit material
-    interpolation between SDF fields. Start with the documented default global
-    UI light rig and default material fields; for the first button primitive,
-    prefer bevel radius 4 logical pixels, normal depth 3 logical pixels, and
-    pressed depth 1 logical pixel unless the TODO-4564 contract documents a
-    better reasoned default.
-  - acceptance:
-    - The renderer produces stable pixel/hash output for normal and pressed
-      states of the 3D SDF button primitive.
-    - Lighting is global and deterministic, with documented ambient and
-      directional/area-light-like terms.
-    - The default button fixture uses the documented initial bevel/depth
-      defaults and proves pressed state changes geometry/depth rather than
-      relying on material color blending.
-    - Material color remains owned by the primitive/material and is not inferred
-      from blending SDF fields across unrelated shapes.
-    - Any 3D SDF blending is limited to geometry/depth/normals unless a later
-      explicit material-composition rule is documented.
-    - Tests prove the 3D primitive can share a scene with 2D primitives under
-      the same camera and render order rules.
-  - stop_rule: Stop after one globally lit 3D UI primitive is deterministic and
-    covered; do not add general mesh assets, animation, or free-camera behavior.
 
 - [ ] TODO-4568: Emit scene nodes from the existing UI layout/widgets
   - owner: ai

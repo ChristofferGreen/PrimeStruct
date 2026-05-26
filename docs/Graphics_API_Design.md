@@ -312,10 +312,10 @@ config and UI pixel mapping, and materials, lights, primitives, nodes, local
 `z`, painter order, and transforms receive stable ids without producing pixels.
 The first renderer helper lives in `examples/shared/scene_bgra8_renderer.h` and
 consumes that serialized `/std/scene` record stream directly. It renders flat
-rect/plane records and rounded-rect 2D SDF coverage into a validated
-`SoftwareSurfaceFrame` BGRA8 buffer with deterministic source-over composition,
-target-bound clipping, and the documented painter-order/local-z/stable-node
-ordering.
+rect/plane records, rounded-rect 2D SDF coverage, and the first raised 3D SDF
+button/slab primitive into a validated `SoftwareSurfaceFrame` BGRA8 buffer with
+deterministic source-over composition, target-bound clipping, fixed global
+lighting, and the documented painter-order/local-z/stable-node ordering.
 
 ### UI Coordinate and Camera Defaults
 The first UI camera is orthographic. Its default viewport maps one scene unit to
@@ -332,6 +332,11 @@ the event/hit-test contract.
 - 2D SDFs produce coverage masks painted source-over in deterministic scene
   order. 3D SDFs may blend geometry, depth, and normals only when each SDF has
   an explicit material assignment.
+- The first 3D SDF widget primitive is `primitive_sdf_button()`: a shallow
+  beveled button/slab in widget-local rect space. Its default fixture uses a
+  `4` logical-pixel bevel radius, `3` logical-pixel normal depth, and `1`
+  logical-pixel pressed depth. Pressed state changes explicit depth through the
+  node transform rather than blending material colors.
 - Text remains a 2D overlay/primitive in the first UI scene path, not a 3D SDF
   or mesh problem. The first presented UI text path must support international
   shaping, bidi ordering, fallback fonts, and deterministic glyph atlas/raster
