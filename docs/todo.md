@@ -64,12 +64,11 @@ This file is the live open-work queue for PrimeStruct.
 
 ### Ready Now
 
-- TODO-4568: Emit scene nodes from the existing UI layout/widgets | track: ui-scene-adapter | primary surface: stdlib ui-to-scene adapter fixtures
+- TODO-4569: Present scene-rendered UI through software surface bridge | track: ui-scene-presentation | primary surface: software surface bridge fixture
 - TODO-4578: Generalize stdlib surface registry away from map/vector IDs | track: stdlib-registry-generalization | primary surface: stdlib surface registry metadata
 
 ### Immediate Next 10
 
-- TODO-4569: Present scene-rendered UI through software surface bridge
 - TODO-4579: Enforce zero map/vector compiler-knowledge traces
 
 ### Priority Lanes
@@ -78,8 +77,9 @@ This file is the live open-work queue for PrimeStruct.
   scene model and TODO-4566 completed the first BGRA8 2D primitive renderer;
   TODO-4567 completed the first globally lit 3D SDF widget primitive, and
   TODO-4595 completed deterministic shaped glyph runs. TODO-4596 completed
-  deterministic text atlas/raster composition.
-  TODO-4568 -> TODO-4569
+  deterministic text atlas/raster composition. TODO-4568 completed the first
+  UI scene-record adapter.
+  TODO-4569
 - Map/vector compiler-independence: TODO-4570 retired the duplicate `map2`
   surface, TODO-4571 added the compiler-knowledge inventory categories that
   guide deletion scope, and TODO-4573 removed compiler-owned map literal
@@ -95,48 +95,17 @@ This file is the live open-work queue for PrimeStruct.
 
 ### Execution Queue
 
-- TODO-4568: Emit scene nodes from the existing UI layout/widgets
-- TODO-4578: Generalize stdlib surface registry away from map/vector IDs
 - TODO-4569: Present scene-rendered UI through software surface bridge
+- TODO-4578: Generalize stdlib surface registry away from map/vector IDs
 - TODO-4579: Enforce zero map/vector compiler-knowledge traces
 
 ### Task Blocks
-
-- [ ] TODO-4568: Emit scene nodes from the existing UI layout/widgets
-  - owner: ai
-  - created_at: 2026-05-24
-  - phase: Scene graph renderer and UI presentation
-  - depends_on: TODO-4567, TODO-4596
-  - scope: Add an adapter from the current `/std/ui` layout/widget layer to the
-    scene graph so UI rects and widget state produce scene nodes for flat and
-    raised presentation.
-  - implementation_notes: Keep the existing `CommandList`, `HtmlCommandList`,
-    `UiEventStream`, and `LayoutTree` contracts stable. Add adapter helpers
-    rather than replacing command serialization. Start with labels/panels as
-    flat primitives and buttons as the first raised 3D SDF primitive; hit
-    testing, focus, and events remain layout-node based. Label/text output
-    should emit shaped international 2D overlay scene primitives through the
-    TODO-4596 atlas/raster path; do not make text a 3D SDF primitive in this
-    slice.
-  - acceptance:
-    - A checked-in PrimeStruct fixture builds a small UI layout and emits a
-      deterministic scene representation.
-    - Existing command-list, HTML adapter, event-stream, and layout golden tests
-      continue to pass unchanged.
-    - Scene emission preserves stable node ids or a documented mapping from UI
-      layout nodes to scene nodes.
-    - Docs and tests distinguish logical UI rects/state/events from scene
-      presentation primitives, including 3D-looking widgets.
-    - Label/text scene emission follows the documented international 2D overlay
-      policy, uses shaped glyph runs, and has deterministic ordering over
-      panels/buttons.
-  - stop_rule: Stop once the UI-to-scene adapter covers one small panel/button
-    fixture; leave host presentation and broader controls to later slices.
 
 - [ ] TODO-4569: Present scene-rendered UI through software surface bridge
   - owner: ai
   - created_at: 2026-05-24
   - phase: Scene graph renderer and UI presentation
+  - parallel_track: ui-scene-presentation
   - depends_on: TODO-4568
   - scope: Wire the scene renderer output into the existing BGRA8 software
     surface bridge so a real PrimeStruct-authored UI scene can be presented

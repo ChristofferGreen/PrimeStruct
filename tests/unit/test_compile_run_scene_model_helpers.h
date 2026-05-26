@@ -179,3 +179,80 @@ inline std::string expectedSceneModelAuthoringOutput() {
          "9\n"
          "-1\n";
 }
+
+inline std::string uiSceneAdapterSource() {
+  return R"(
+import /std/ui/*
+import /std/collections/*
+
+[effects(io_out), return<void>]
+dump_words([vector<i32>] words) {
+  len{words.count()}
+  for([i32 mut] index{0i32}, index < len, ++index) {
+    if(index > 0i32) {
+      print(","utf8)
+    }
+    print(words[index])
+  }
+  print_line(""utf8)
+}
+
+[effects(heap_alloc, io_out), return<int>]
+main() {
+  [LayoutTree mut] layout{LayoutTree{}}
+  root{layout.append_root_column(1i32, 0i32, 0i32, 0i32)}
+  panel{layout.append_panel(root, 2i32, 1i32, 20i32, 12i32)}
+  label{layout.append_leaf(panel, 10i32, 10i32)}
+  button{layout.append_leaf(panel, 20i32, 14i32)}
+  layout.measure()
+  layout.arrange(6i32, 7i32, 40i32, 32i32)
+
+  [UiScene mut] scene{UiScene{}}
+  [UiSceneTextOverlays mut] overlays{UiSceneTextOverlays{}}
+  nodes{layout.emit_scene_panel_button(
+    scene,
+    overlays,
+    panel,
+    label,
+    button,
+    10i32,
+    2i32,
+    4i32,
+    3i32,
+    Rgba8{[r] 9i32, [g] 8i32, [b] 7i32, [a] 255i32},
+    Rgba8{[r] 1i32, [g] 2i32, [b] 3i32, [a] 255i32},
+    Rgba8{[r] 50i32, [g] 60i32, [b] 70i32, [a] 255i32},
+    Rgba8{[r] 250i32, [g] 251i32, [b] 252i32, [a] 255i32},
+    2i32,
+    "Hi"utf8,
+    2i32,
+    "Go"utf8
+  )}
+
+  dump_words(scene.serialize())
+  dump_words(overlays.serialize())
+  print_line(nodes.panel)
+  print_line(nodes.label)
+  print_line(nodes.button)
+  return(
+    scene.nodeCount() +
+    scene.primitiveCount() +
+    scene.materialCount() +
+    overlays.overlay_count() +
+    nodes.button
+  )
+}
+)";
+}
+
+inline std::string expectedUiSceneAdapterOutput() {
+  return "1,3,0,1,-1,0,0,0,0,7,8,1000,1,2,0,1,0,-1,-1,"
+         "9,10,1000,2,3,0,2,3000,1,1,9,21,3000,2,0,1,38,"
+         "29,4,0,1,2,34,14,3,1,2,0,9,8,7,255,1,50,60,70,"
+         "255\n"
+         "1,2,2,1,9,10,10,1,2,3,255,2,72,105,3,2,11,23,10,"
+         "250,251,252,255,2,71,111\n"
+         "0\n"
+         "1\n"
+         "2\n";
+}

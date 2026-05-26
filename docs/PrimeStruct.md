@@ -2271,14 +2271,17 @@ module {
   `begin_panel`, `end_panel`, `draw_login_form`, `HtmlCommandList`, `emit_panel`, `emit_label`, `emit_button`,
   `emit_input`, `bind_event`, `emit_login_form`, `UiEventStream`, `push_pointer_move`, `push_pointer_down`,
   `push_pointer_up`, `push_key_down`, `push_key_up`, `push_ime_preedit`, `push_ime_commit`, `push_resize`,
-  `push_focus_gained`, `push_focus_lost`, `LayoutTree`, `LoginFormNodes`, `append_root_column`, `append_column`,
-  `append_leaf`, `append_label`, `append_button`, `append_input`, `append_panel`, `append_login_form`, `measure`,
-  `arrange`, deterministic `serialize()` output), and the current host bridge can blit a deterministic BGRA8 software
+  `push_focus_gained`, `push_focus_lost`, `LayoutTree`, `LoginFormNodes`, `UiScene`, `UiSceneNodes`,
+  `UiSceneTextOverlays`, `append_root_column`, `append_column`, `append_leaf`, `append_label`, `append_button`,
+  `append_input`, `append_panel`, `append_login_form`, `emit_scene_panel`, `emit_scene_label`, `emit_scene_button`,
+  `emit_scene_panel_button`, `measure`, `arrange`, deterministic `serialize()` output), and the current host bridge can
+  blit a deterministic BGRA8 software
   surface through the native window presenter and macOS Metal host paths while the shared widget/layout model can also
   emit deterministic HTML/backend adapter records and normalize pointer, keyboard, IME, resize, and focus input into
   deterministic UI event-stream records. The scene renderer boundary is now locked as a UI producer contract rather
-  than a UI-specific software renderer: `/std/ui/*` owns rect/layout/state/event logic and emits scene nodes for
-  presentation, `/std/scene` owns renderer-facing `Scene`, `Node`, `Transform`, `Camera`, `Material`, `Light`, and
+  than a UI-specific software renderer: `/std/ui/*` owns rect/layout/state/event logic and now emits deterministic
+  `UiScene` scene records plus `UiSceneTextOverlays` records for panel, label, and raised button presentation,
+  `/std/scene` owns renderer-facing `Scene`, `Node`, `Transform`, `Camera`, `Material`, `Light`, and
   primitive descriptor concepts, and `/std/ui/CommandList.serialize()` remains a stable adapter path. The first
   source-level `/std/scene` model is data-only: it authors and serializes stable ids, parent-before-child node order,
   painter order, local `z`, local transform metadata, orthographic camera config, materials, lights, and primitive

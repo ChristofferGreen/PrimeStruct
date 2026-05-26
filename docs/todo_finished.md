@@ -6,6 +6,53 @@ Legend:
 Finished items are periodically archived here from `docs/todo.md`; section headers record the archive date.
 
 **Todo Completion (May 26, 2026)**
+- [x] TODO-4568: Emit scene nodes from the existing UI layout/widgets
+  - owner: ai
+  - created_at: 2026-05-24
+  - finished_at: 2026-05-26
+  - phase: Scene graph renderer and UI presentation
+  - depends_on: TODO-4567, TODO-4596
+  - scope: Added an adapter from the current `/std/ui` layout/widget layer to a
+    lightweight deterministic UI scene-record stream so panel, label, and
+    button widgets produce stable scene node records for flat and raised
+    presentation.
+  - outcome:
+    - Added `UiScene`, `UiSceneNodes`, and `UiSceneTextOverlays` records under
+      `/std/ui/*` without replacing `CommandList`, `HtmlCommandList`,
+      `UiEventStream`, or `LayoutTree` serialization contracts.
+    - Added `LayoutTree.emit_scene_panel`, `emit_scene_label`,
+      `emit_scene_button`, and `emit_scene_panel_button` helpers that preserve
+      layout-node to scene-node mapping and delegate the composite fixture
+      through the basic scene emitters.
+    - Kept text as deterministic 2D overlay records carrying layout id, scene
+      id, logical position, text size, RGBA color, byte length, and UTF-8 bytes
+      for the existing shaped glyph/atlas renderer path instead of emitting text
+      as a 3D SDF primitive.
+    - Added native and VM compile-run fixtures that build a small arranged
+      panel/label/button layout and compare the serialized scene and overlay
+      records to stable golden output.
+    - Updated graphics and language docs to distinguish logical UI
+      rects/state/events from scene presentation records and the renderer-owned
+      `/std/scene` model.
+  - validation:
+    - Local release test-target rebuild passed:
+      `cmake --build build-release --target PrimeStruct_compile_run_tests -j 1`.
+    - Local native UI scene adapter slice passed:
+      `cd build-release && ./PrimeStruct_compile_run_tests --test-case="compiles and runs native ui scene adapter deterministically" --no-skip --success`
+      with 1 case / 5 assertions.
+    - Local VM UI scene adapter slice passed:
+      `cd build-release && ./PrimeStruct_compile_run_tests --test-case="runs vm ui scene adapter deterministically" --no-skip --success`
+      with 1 case / 4 assertions.
+    - Local docs/source-lock slice passed:
+      `cd build-release && ./PrimeStruct_compile_run_tests --test-suite=primestruct.compile.run.examples --source-file="*test_compile_run_examples_docs_locks.cpp" --test-case="ui command list adapter docs stay source locked,todo queue and skipped doctest debt stay source locked,ui stdlib workflows stay source locked to inferred locals,ui stdlib arithmetic and assignment stay source locked to surface operators,ui scene producer composite widgets stay locked to basic widgets" --order-by=file --no-skip --success`
+      with 5 cases / 756 assertions.
+    - Root post-cherry-pick focused validation passed the same docs/source-lock,
+      native UI scene adapter, and VM UI scene adapter slices.
+    - Local whitespace check passed: `git diff --check`.
+  - stop_rule: Stopped once the UI-to-scene adapter covered one small
+    panel/button fixture; host presentation and broader controls remain with
+    later slices.
+
 - [x] TODO-4596: Rasterize shaped scene text through a glyph atlas
   - owner: ai
   - created_at: 2026-05-26

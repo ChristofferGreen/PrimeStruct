@@ -387,6 +387,15 @@ overlay emission must all preserve this total order.
      - `LayoutTree.measure()`
      - `LayoutTree.arrange(x, y, width, height)`
      - `LayoutTree.serialize() -> vector<i32>`
+     - `UiScene`
+     - `UiSceneNodes`
+     - `UiSceneTextOverlays`
+     - `UiScene.serialize() -> vector<i32>`
+     - `UiSceneTextOverlays.serialize() -> vector<i32>`
+     - `LayoutTree.emit_scene_panel(...)`
+     - `LayoutTree.emit_scene_label(...)`
+     - `LayoutTree.emit_scene_button(...)`
+     - `LayoutTree.emit_scene_panel_button(...)`
      - `CommandList.draw_label(...)`
      - `CommandList.draw_button(...)`
      - `CommandList.draw_input(...)`
@@ -414,6 +423,21 @@ overlay emission must all preserve this total order.
      - `UiEventStream.push_focus_lost(...)`
      - `UiEventStream.event_count()`
      - `UiEventStream.serialize() -> vector<i32>`
+   - `UiScene` is the current lightweight `/std/ui/*` scene-record producer:
+     it serializes layout-node ids, stable scene-node ids, parent ids, painter
+     order, local-z/scale-z milli-units, primitive descriptors, and materials.
+     This keeps the logical layout/event tree separate from renderer-facing
+     presentation records while the heavier `/std/scene` import surface
+     remains the renderer-owned descriptor model.
+   - `UiSceneTextOverlays` serializes deterministic 2D text overlay records:
+     layout node id, scene node id, logical x/y, text size, RGBA color, text
+     length, and UTF-8 bytes. Text stays on the international shaped glyph/atlas
+     path and is not emitted as a 3D SDF primitive.
+   - `LayoutTree.emit_scene_panel_button(...)` emits one panel scene node, one
+     label overlay node, and one raised SDF button scene node by delegating to
+     `emit_scene_panel(...)`, `emit_scene_label(...)`, and
+     `emit_scene_button(...)`; it returns `UiSceneNodes` so tests and hosts can
+     preserve the documented layout-node to scene-node mapping.
    - Rounded rectangles are expressed through SDF-style scene primitive
      descriptors.
    - Scene renderer output or command-list adapter output can be presented
@@ -592,6 +616,50 @@ Current prototype serialization format for `/std/ui/LayoutTree.serialize()`:
 - Current node kinds:
   - `1` = `leaf`
   - `2` = `column`
+
+Current prototype serialization format for `/std/ui/UiScene.serialize()`:
+
+- First word: format version (`1`)
+- Second word: total scene node count
+- Then, for each scene node in insertion order:
+  - scene node id
+  - layout node id
+  - parent scene node id
+  - painter order
+  - local z in milli-units
+  - primitive id
+  - material id
+  - logical x
+  - logical y
+  - scale z in milli-units
+- Then total primitive count followed by primitive records:
+  - primitive id
+  - primitive kind (`1` = rect, `2` = raised SDF button)
+  - width
+  - height
+  - radius
+  - material id
+- Then total material count followed by material records:
+  - material id
+  - red
+  - green
+  - blue
+  - alpha
+
+Current prototype serialization format for
+`/std/ui/UiSceneTextOverlays.serialize()`:
+
+- First word: format version (`1`)
+- Second word: total overlay count
+- Then, for each overlay in insertion order:
+  - layout node id
+  - scene node id
+  - logical x
+  - logical y
+  - text size in pixels
+  - RGBA color
+  - text byte length
+  - UTF-8 bytes
 
 Example:
 

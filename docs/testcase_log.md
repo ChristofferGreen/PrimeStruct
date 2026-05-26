@@ -4,6 +4,25 @@
 - none
 
 ## Recent Test Runs
+- 2026-05-26 13:42 CEST | pass | mode: release | command:
+  `cmake --build build-release --target PrimeStruct_compile_run_tests -j 1`;
+  `cd build-release && ./PrimeStruct_compile_run_tests --test-suite=primestruct.compile.run.examples --source-file="*test_compile_run_examples_docs_locks.cpp" --test-case="ui command list adapter docs stay source locked,todo queue and skipped doctest debt stay source locked,ui stdlib workflows stay source locked to inferred locals,ui stdlib arithmetic and assignment stay source locked to surface operators,ui scene producer composite widgets stay locked to basic widgets" --order-by=file --no-skip`;
+  `cd build-release && ./PrimeStruct_compile_run_tests --test-case="compiles and runs native ui scene adapter deterministically" --no-skip`;
+  `cd build-release && ./PrimeStruct_compile_run_tests --test-case="runs vm ui scene adapter deterministically" --no-skip`
+  | failures: none | notes: root post-cherry-pick validation for
+  TODO-4568 passed the docs/TODO/source-lock slice, 5 cases / 756
+  assertions, the native UI scene adapter fixture, 1 case / 5 assertions, and
+  the VM UI scene adapter fixture, 1 case / 4 assertions.
+- 2026-05-26 13:28 CEST | pass | mode: release | command:
+  `cmake --build build-release --target PrimeStruct_compile_run_tests -j 1`;
+  `cd build-release && ./PrimeStruct_compile_run_tests --test-suite=primestruct.compile.run.examples --source-file="*test_compile_run_examples_docs_locks.cpp" --test-case="ui command list adapter docs stay source locked,todo queue and skipped doctest debt stay source locked,ui stdlib workflows stay source locked to inferred locals,ui stdlib arithmetic and assignment stay source locked to surface operators,ui scene producer composite widgets stay locked to basic widgets" --order-by=file --no-skip --success`;
+  `cd build-release && ./PrimeStruct_compile_run_tests --test-case="compiles and runs native ui scene adapter deterministically" --no-skip`;
+  `cd build-release && ./PrimeStruct_compile_run_tests --test-case="runs vm ui scene adapter deterministically" --no-skip`;
+  `git diff --check`
+  | failures: none | notes: TODO-4568 focused validation passed the
+  refreshed docs/TODO/source-lock slice, 5 cases / 756 assertions, the native
+  UI scene adapter fixture, 1 case / 5 assertions, and the VM UI scene adapter
+  fixture, 1 case / 4 assertions. Whitespace check passed.
 - 2026-05-26 11:34 CEST | pass | mode: release | command:
   `cmake -S . -B build-release -DCMAKE_BUILD_TYPE=Release`;
   `cmake --build build-release --target PrimeStruct_misc_tests PrimeStruct_compile_run_tests -j 1`;

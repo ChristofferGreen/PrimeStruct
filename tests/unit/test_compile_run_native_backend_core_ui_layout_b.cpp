@@ -18,6 +18,22 @@ TEST_CASE("compiles and runs native scene model authoring deterministically") {
   CHECK(runCommand(quoteShellArg(exePath)) == 14);
 }
 
+TEST_CASE("compiles and runs native ui scene adapter deterministically") {
+  const std::string srcPath =
+      writeTemp("compile_native_ui_scene_adapter.prime", uiSceneAdapterSource());
+  const std::string exePath =
+      (testScratchPath("") / "primec_native_ui_scene_adapter").string();
+  const std::string outPath =
+      (testScratchPath("") / "primec_native_ui_scene_adapter.txt").string();
+
+  const std::string compileCmd =
+      "./primec --emit=native " + quoteShellArg(srcPath) + " -o " + quoteShellArg(exePath) +
+      " --entry /main";
+  CHECK(runCommand(compileCmd) == 0);
+  CHECK(runCommand(quoteShellArg(exePath) + " > " + quoteShellArg(outPath)) == 11);
+  CHECK(readFile(outPath) == expectedUiSceneAdapterOutput());
+}
+
 TEST_CASE("compiles and runs native composite login form deterministically") {
   const std::string source = R"(
 import /std/ui/*

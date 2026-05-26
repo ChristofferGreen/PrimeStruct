@@ -55,6 +55,56 @@ namespace std {
     [public i32] submitButton{0i32}
   }
 
+  [public struct]
+  UiSceneNodes() {
+    [public i32] panel{-1i32}
+    [public i32] label{-1i32}
+    [public i32] button{-1i32}
+  }
+
+  [public struct]
+  UiScene() {
+    [public vector<i32> mut] nodeLayoutIds{vector<i32>()}
+    [public vector<i32> mut] nodeParentIds{vector<i32>()}
+    [public vector<i32> mut] nodePainterOrders{vector<i32>()}
+    [public vector<i32> mut] nodePrimitiveIds{vector<i32>()}
+    [public vector<i32> mut] nodeMaterialIds{vector<i32>()}
+    [vector<i32> mut] nodeXs{vector<i32>()}
+    [vector<i32> mut] nodeYs{vector<i32>()}
+    [vector<i32> mut] nodeLocalZMillis{vector<i32>()}
+    [vector<i32> mut] nodeScaleZMillis{vector<i32>()}
+    [vector<i32> mut] primitiveKinds{vector<i32>()}
+    [vector<i32> mut] primitiveWidths{vector<i32>()}
+    [vector<i32> mut] primitiveHeights{vector<i32>()}
+    [vector<i32> mut] primitiveRadii{vector<i32>()}
+    [vector<i32> mut] primitiveMaterialIds{vector<i32>()}
+    [vector<i32> mut] materialRs{vector<i32>()}
+    [vector<i32> mut] materialGs{vector<i32>()}
+    [vector<i32> mut] materialBs{vector<i32>()}
+    [vector<i32> mut] materialAs{vector<i32>()}
+  }
+
+  [public struct]
+  UiSceneTextOverlays() {
+    [public vector<i32> mut] records{vector<i32>()}
+    [public i32 mut] overlayCount{0i32}
+  }
+
+  [public return<i32>]
+  ui_scene_primitive_rect() {
+    return(1i32)
+  }
+
+  [public return<i32>]
+  ui_scene_primitive_sdf_button() {
+    return(2i32)
+  }
+
+  [public return<i32>]
+  ui_scene_unsupported_id() {
+    return(-1i32)
+  }
+
   [return<i32>]
   widget_text_advance([i32] textSizePx) {
     return(max(1i32, (textSizePx + 1i32) / 2i32))
@@ -257,6 +307,211 @@ namespace std {
       len{records.count()}
       /std/collections/vector/push(words, 1i32)
       /std/collections/vector/push(words, self.commandCount)
+      for([i32 mut] index{0i32}, index < len, ++index) {
+        /std/collections/vector/push(words, /std/collections/vector/at(records, index))
+      }
+      return(words)
+    }
+  }
+
+  namespace UiScene {
+    [public return<i32>]
+    nodeCount([/std/ui/UiScene] self) {
+      return(/std/collections/vector/count(self.nodeParentIds))
+    }
+
+    [public return<i32>]
+    primitiveCount([/std/ui/UiScene] self) {
+      return(/std/collections/vector/count(self.primitiveKinds))
+    }
+
+    [public return<i32>]
+    materialCount([/std/ui/UiScene] self) {
+      return(/std/collections/vector/count(self.materialRs))
+    }
+
+    [public effects(heap_alloc), return<i32>]
+    appendMaterial([/std/ui/UiScene mut] self, [Rgba8] color) {
+      id{self.materialCount()}
+      [mut] materialRs{self.materialRs}
+      [mut] materialGs{self.materialGs}
+      [mut] materialBs{self.materialBs}
+      [mut] materialAs{self.materialAs}
+      /std/collections/vector/push(materialRs, color.r)
+      /std/collections/vector/push(materialGs, color.g)
+      /std/collections/vector/push(materialBs, color.b)
+      /std/collections/vector/push(materialAs, color.a)
+      self.materialRs = materialRs
+      self.materialGs = materialGs
+      self.materialBs = materialBs
+      self.materialAs = materialAs
+      return(id)
+    }
+
+    [public effects(heap_alloc), return<i32>]
+    appendPrimitive(
+        [/std/ui/UiScene mut] self,
+        [i32] kind,
+        [i32] width,
+        [i32] height,
+        [i32] radius,
+        [i32] materialId) {
+      id{self.primitiveCount()}
+      [mut] primitiveKinds{self.primitiveKinds}
+      [mut] primitiveWidths{self.primitiveWidths}
+      [mut] primitiveHeights{self.primitiveHeights}
+      [mut] primitiveRadii{self.primitiveRadii}
+      [mut] primitiveMaterialIds{self.primitiveMaterialIds}
+      /std/collections/vector/push(primitiveKinds, kind)
+      /std/collections/vector/push(primitiveWidths, width)
+      /std/collections/vector/push(primitiveHeights, height)
+      /std/collections/vector/push(primitiveRadii, radius)
+      /std/collections/vector/push(primitiveMaterialIds, materialId)
+      self.primitiveKinds = primitiveKinds
+      self.primitiveWidths = primitiveWidths
+      self.primitiveHeights = primitiveHeights
+      self.primitiveRadii = primitiveRadii
+      self.primitiveMaterialIds = primitiveMaterialIds
+      return(id)
+    }
+
+    [public effects(heap_alloc), return<i32>]
+    appendNode(
+        [/std/ui/UiScene mut] self,
+        [i32] layoutNodeId,
+        [i32] parentSceneNodeId,
+        [i32] painterOrder,
+        [i32] localZMillis,
+        [i32] primitiveId,
+        [i32] materialId,
+        [i32] x,
+        [i32] y,
+        [i32] scaleZMillis) {
+      id{self.nodeCount()}
+      [mut] nodeLayoutIds{self.nodeLayoutIds}
+      [mut] nodeParentIds{self.nodeParentIds}
+      [mut] nodePainterOrders{self.nodePainterOrders}
+      [mut] nodePrimitiveIds{self.nodePrimitiveIds}
+      [mut] nodeMaterialIds{self.nodeMaterialIds}
+      [mut] nodeXs{self.nodeXs}
+      [mut] nodeYs{self.nodeYs}
+      [mut] nodeLocalZMillis{self.nodeLocalZMillis}
+      [mut] nodeScaleZMillis{self.nodeScaleZMillis}
+      /std/collections/vector/push(nodeLayoutIds, layoutNodeId)
+      /std/collections/vector/push(nodeParentIds, parentSceneNodeId)
+      /std/collections/vector/push(nodePainterOrders, painterOrder)
+      /std/collections/vector/push(nodePrimitiveIds, primitiveId)
+      /std/collections/vector/push(nodeMaterialIds, materialId)
+      /std/collections/vector/push(nodeXs, x)
+      /std/collections/vector/push(nodeYs, y)
+      /std/collections/vector/push(nodeLocalZMillis, localZMillis)
+      /std/collections/vector/push(nodeScaleZMillis, scaleZMillis)
+      self.nodeLayoutIds = nodeLayoutIds
+      self.nodeParentIds = nodeParentIds
+      self.nodePainterOrders = nodePainterOrders
+      self.nodePrimitiveIds = nodePrimitiveIds
+      self.nodeMaterialIds = nodeMaterialIds
+      self.nodeXs = nodeXs
+      self.nodeYs = nodeYs
+      self.nodeLocalZMillis = nodeLocalZMillis
+      self.nodeScaleZMillis = nodeScaleZMillis
+      return(id)
+    }
+
+    [public effects(heap_alloc), return<vector<i32>>]
+    serialize([/std/ui/UiScene] self) {
+      [mut] words{vector<i32>()}
+      nodeCount{self.nodeCount()}
+      primitiveCount{self.primitiveCount()}
+      materialCount{self.materialCount()}
+      /std/collections/vector/push(words, 1i32)
+      /std/collections/vector/push(words, nodeCount)
+      for([i32 mut] nodeId{0i32}, nodeId < nodeCount, ++nodeId) {
+        /std/collections/vector/push(words, nodeId)
+        /std/collections/vector/push(words, /std/collections/vector/at(self.nodeLayoutIds, nodeId))
+        /std/collections/vector/push(words, /std/collections/vector/at(self.nodeParentIds, nodeId))
+        /std/collections/vector/push(words, /std/collections/vector/at(self.nodePainterOrders, nodeId))
+        /std/collections/vector/push(words, /std/collections/vector/at(self.nodeLocalZMillis, nodeId))
+        /std/collections/vector/push(words, /std/collections/vector/at(self.nodePrimitiveIds, nodeId))
+        /std/collections/vector/push(words, /std/collections/vector/at(self.nodeMaterialIds, nodeId))
+        /std/collections/vector/push(words, /std/collections/vector/at(self.nodeXs, nodeId))
+        /std/collections/vector/push(words, /std/collections/vector/at(self.nodeYs, nodeId))
+        /std/collections/vector/push(words, /std/collections/vector/at(self.nodeScaleZMillis, nodeId))
+      }
+      /std/collections/vector/push(words, primitiveCount)
+      for([i32 mut] primitiveId{0i32}, primitiveId < primitiveCount, ++primitiveId) {
+        /std/collections/vector/push(words, primitiveId)
+        /std/collections/vector/push(words, /std/collections/vector/at(self.primitiveKinds, primitiveId))
+        /std/collections/vector/push(words, /std/collections/vector/at(self.primitiveWidths, primitiveId))
+        /std/collections/vector/push(words, /std/collections/vector/at(self.primitiveHeights, primitiveId))
+        /std/collections/vector/push(words, /std/collections/vector/at(self.primitiveRadii, primitiveId))
+        /std/collections/vector/push(words, /std/collections/vector/at(self.primitiveMaterialIds, primitiveId))
+      }
+      /std/collections/vector/push(words, materialCount)
+      for([i32 mut] materialId{0i32}, materialId < materialCount, ++materialId) {
+        /std/collections/vector/push(words, materialId)
+        /std/collections/vector/push(words, /std/collections/vector/at(self.materialRs, materialId))
+        /std/collections/vector/push(words, /std/collections/vector/at(self.materialGs, materialId))
+        /std/collections/vector/push(words, /std/collections/vector/at(self.materialBs, materialId))
+        /std/collections/vector/push(words, /std/collections/vector/at(self.materialAs, materialId))
+      }
+      return(words)
+    }
+  }
+
+  namespace UiSceneTextOverlays {
+    [effects(heap_alloc), return<void>]
+    append_word([/std/ui/UiSceneTextOverlays mut] self, [i32] value) {
+      [mut] records{self.records}
+      /std/collections/vector/push(records, value)
+      self.records = records
+    }
+
+    [effects(heap_alloc), return<void>]
+    append_color([/std/ui/UiSceneTextOverlays mut] self, [Rgba8] color) {
+      self.append_word(color.r)
+      self.append_word(color.g)
+      self.append_word(color.b)
+      self.append_word(color.a)
+    }
+
+    [public effects(heap_alloc), return<void>]
+    append_overlay(
+        [/std/ui/UiSceneTextOverlays mut] self,
+        [i32] layoutNodeId,
+        [i32] sceneNodeId,
+        [i32] x,
+        [i32] y,
+        [i32] textSizePx,
+        [Rgba8] color,
+        [i32] textLength,
+        [string] text) {
+      len{textLength}
+      self.append_word(layoutNodeId)
+      self.append_word(sceneNodeId)
+      self.append_word(x)
+      self.append_word(y)
+      self.append_word(textSizePx)
+      self.append_color(color)
+      self.append_word(len)
+      for([i32 mut] index{0i32}, index < len, ++index) {
+        self.append_word(at(text, index))
+      }
+      self.overlayCount = self.overlayCount + 1i32
+    }
+
+    [public return<i32>]
+    overlay_count([/std/ui/UiSceneTextOverlays] self) {
+      return(self.overlayCount)
+    }
+
+    [public effects(heap_alloc), return<vector<i32>>]
+    serialize([/std/ui/UiSceneTextOverlays] self) {
+      [mut] records{self.records}
+      [mut] words{vector<i32>()}
+      len{records.count()}
+      /std/collections/vector/push(words, 1i32)
+      /std/collections/vector/push(words, self.overlayCount)
       for([i32 mut] index{0i32}, index < len, ++index) {
         /std/collections/vector/push(words, /std/collections/vector/at(records, index))
       }
@@ -803,6 +1058,179 @@ namespace std {
     [return<i32>]
     parent_index([LayoutTree] self, [i32] nodeId) {
       return(/std/collections/vector/at(self.parentIndices, nodeId))
+    }
+
+    [public effects(heap_alloc), return<i32>]
+    emit_scene_panel(
+        [LayoutTree] self,
+        [/std/ui/UiScene mut] scene,
+        [i32] nodeId,
+        [i32] parentSceneNodeId,
+        [i32] painterOrder,
+        [i32] radiusPx,
+        [Rgba8] fill) {
+      materialId{scene.appendMaterial(fill)}
+      primitiveId{scene.appendPrimitive(
+        ui_scene_primitive_rect(),
+        self.rect_width(nodeId),
+        self.rect_height(nodeId),
+        radiusPx,
+        materialId
+      )}
+      return(scene.appendNode(
+        nodeId,
+        parentSceneNodeId,
+        painterOrder,
+        0i32,
+        primitiveId,
+        materialId,
+        self.rect_x(nodeId),
+        self.rect_y(nodeId),
+        1000i32
+      ))
+    }
+
+    [public effects(heap_alloc), return<i32>]
+    emit_scene_label(
+        [LayoutTree] self,
+        [/std/ui/UiScene mut] scene,
+        [/std/ui/UiSceneTextOverlays mut] overlays,
+        [i32] nodeId,
+        [i32] parentSceneNodeId,
+        [i32] painterOrder,
+        [i32] textSizePx,
+        [Rgba8] textColor,
+        [i32] textLength,
+        [string] text) {
+      sceneNodeId{scene.appendNode(
+        nodeId,
+        parentSceneNodeId,
+        painterOrder,
+        0i32,
+        ui_scene_unsupported_id(),
+        ui_scene_unsupported_id(),
+        self.rect_x(nodeId),
+        self.rect_y(nodeId),
+        1000i32
+      )}
+      overlays.append_overlay(
+        nodeId,
+        sceneNodeId,
+        self.rect_x(nodeId),
+        self.rect_y(nodeId),
+        textSizePx,
+        textColor,
+        textLength,
+        text
+      )
+      return(sceneNodeId)
+    }
+
+    [public effects(heap_alloc), return<i32>]
+    emit_scene_button(
+        [LayoutTree] self,
+        [/std/ui/UiScene mut] scene,
+        [/std/ui/UiSceneTextOverlays mut] overlays,
+        [i32] nodeId,
+        [i32] parentSceneNodeId,
+        [i32] painterOrder,
+        [i32] textSizePx,
+        [i32] paddingPx,
+        [i32] radiusPx,
+        [Rgba8] fill,
+        [Rgba8] textColor,
+        [i32] textLength,
+        [string] text) {
+      materialId{scene.appendMaterial(fill)}
+      primitiveId{scene.appendPrimitive(
+        ui_scene_primitive_sdf_button(),
+        self.rect_width(nodeId),
+        self.rect_height(nodeId),
+        radiusPx,
+        materialId
+      )}
+      sceneNodeId{scene.appendNode(
+        nodeId,
+        parentSceneNodeId,
+        painterOrder,
+        3000i32,
+        primitiveId,
+        materialId,
+        self.rect_x(nodeId),
+        self.rect_y(nodeId),
+        3000i32
+      )}
+      overlays.append_overlay(
+        nodeId,
+        sceneNodeId,
+        self.rect_x(nodeId) + paddingPx,
+        self.rect_y(nodeId) + paddingPx,
+        textSizePx,
+        textColor,
+        textLength,
+        text
+      )
+      return(sceneNodeId)
+    }
+
+    [public effects(heap_alloc), return<UiSceneNodes>]
+    emit_scene_panel_button(
+        [LayoutTree] self,
+        [/std/ui/UiScene mut] scene,
+        [/std/ui/UiSceneTextOverlays mut] overlays,
+        [i32] panelNodeId,
+        [i32] labelNodeId,
+        [i32] buttonNodeId,
+        [i32] textSizePx,
+        [i32] buttonPaddingPx,
+        [i32] panelRadiusPx,
+        [i32] buttonRadiusPx,
+        [Rgba8] panelFill,
+        [Rgba8] labelTextColor,
+        [Rgba8] buttonFill,
+        [Rgba8] buttonTextColor,
+        [i32] labelTextLength,
+        [string] labelText,
+        [i32] buttonTextLength,
+        [string] buttonText) {
+      panelSceneNodeId{self.emit_scene_panel(
+        scene,
+        panelNodeId,
+        -1i32,
+        0i32,
+        panelRadiusPx,
+        panelFill
+      )}
+      labelSceneNodeId{self.emit_scene_label(
+        scene,
+        overlays,
+        labelNodeId,
+        panelSceneNodeId,
+        1i32,
+        textSizePx,
+        labelTextColor,
+        labelTextLength,
+        labelText
+      )}
+      buttonSceneNodeId{self.emit_scene_button(
+        scene,
+        overlays,
+        buttonNodeId,
+        panelSceneNodeId,
+        2i32,
+        textSizePx,
+        buttonPaddingPx,
+        buttonRadiusPx,
+        buttonFill,
+        buttonTextColor,
+        buttonTextLength,
+        buttonText
+      )}
+      return(UiSceneNodes{
+        [panel] panelSceneNodeId,
+        [label] labelSceneNodeId,
+        [button] buttonSceneNodeId
+      })
     }
 
     [public return<void>]

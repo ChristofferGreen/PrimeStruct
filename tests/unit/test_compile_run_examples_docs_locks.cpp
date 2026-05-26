@@ -1823,8 +1823,11 @@ TEST_CASE("todo queue and skipped doctest debt stay source locked") {
                   "  coverage snapshots in this file.") !=
         std::string::npos);
   CHECK(todo.find("### Ready Now\n\n"
-                  "- TODO-4568: Emit scene nodes from the existing UI layout/widgets | track: "
-                  "ui-scene-adapter") !=
+                  "- TODO-4569: Present scene-rendered UI through software surface bridge | track: "
+                  "ui-scene-presentation") !=
+        std::string::npos);
+  CHECK(todo.find("- TODO-4568: Emit scene nodes from the existing UI layout/widgets | track: "
+                  "ui-scene-adapter") ==
         std::string::npos);
   CHECK(todo.find("- TODO-4595: Add deterministic scene text shaping runs | track: "
                   "scene-text-shaping") ==
@@ -1856,7 +1859,6 @@ TEST_CASE("todo queue and skipped doctest debt stay source locked") {
   CHECK(todo.find("- TODO-4574: Remove vector count/access compiler classifiers | track: vector-helper-classifier-deletion") ==
         std::string::npos);
   CHECK(todo.find("### Immediate Next 10\n\n"
-                  "- TODO-4569: Present scene-rendered UI through software surface bridge\n"
                   "- TODO-4579: Enforce zero map/vector compiler-knowledge traces") !=
         std::string::npos);
   CHECK(todo.find("### Priority Lanes") != std::string::npos);
@@ -1869,13 +1871,14 @@ TEST_CASE("todo queue and skipped doctest debt stay source locked") {
                   "  scene model and TODO-4566 completed the first BGRA8 2D primitive renderer;\n"
                   "  TODO-4567 completed the first globally lit 3D SDF widget primitive, and\n"
                   "  TODO-4595 completed deterministic shaped glyph runs. TODO-4596 completed\n"
-                  "  deterministic text atlas/raster composition.") !=
+                  "  deterministic text atlas/raster composition. TODO-4568 completed the first\n"
+                  "  UI scene-record adapter.") !=
         std::string::npos);
   CHECK(todo.find("Map/vector compiler-independence: TODO-4570 retired the duplicate `map2`\n"
                   "  surface, TODO-4571 added the compiler-knowledge inventory categories") !=
         std::string::npos);
   CHECK(todo.find("### Execution Queue\n\n"
-                  "- TODO-4568: Emit scene nodes from the existing UI layout/widgets") !=
+                  "- TODO-4569: Present scene-rendered UI through software surface bridge") !=
         std::string::npos);
   CHECK(todo.find("- TODO-4595: Add deterministic scene text shaping runs") ==
         std::string::npos);
@@ -1884,6 +1887,16 @@ TEST_CASE("todo queue and skipped doctest debt stay source locked") {
   CHECK(todoFinished.find("TODO-4595: Add deterministic scene text shaping runs") !=
         std::string::npos);
   CHECK(todoFinished.find("TODO-4596: Rasterize shaped scene text through a glyph atlas") !=
+        std::string::npos);
+  CHECK(todoFinished.find("TODO-4568: Emit scene nodes from the existing UI layout/widgets") !=
+        std::string::npos);
+  CHECK(todoFinished.find("Added `UiScene`, `UiSceneNodes`, and `UiSceneTextOverlays` records") !=
+        std::string::npos);
+  CHECK(todoFinished.find("LayoutTree.emit_scene_panel`, `emit_scene_label`") !=
+        std::string::npos);
+  CHECK(todoFinished.find("Local native UI scene adapter slice passed") !=
+        std::string::npos);
+  CHECK(todo.find("- [ ] TODO-4568: Emit scene nodes from the existing UI layout/widgets") ==
         std::string::npos);
   CHECK(todoFinished.find("shapeSceneTextUtf8()") !=
         std::string::npos);
@@ -3068,6 +3081,15 @@ TEST_CASE("ui command list adapter docs stay source locked") {
   CHECK(graphicsDoc.find("`LayoutTree.measure()`") != std::string::npos);
   CHECK(graphicsDoc.find("`LayoutTree.arrange(x, y, width, height)`") != std::string::npos);
   CHECK(graphicsDoc.find("`LayoutTree.serialize() -> vector<i32>`") != std::string::npos);
+  CHECK(graphicsDoc.find("`UiScene`") != std::string::npos);
+  CHECK(graphicsDoc.find("`UiSceneNodes`") != std::string::npos);
+  CHECK(graphicsDoc.find("`UiSceneTextOverlays`") != std::string::npos);
+  CHECK(graphicsDoc.find("`UiScene.serialize() -> vector<i32>`") != std::string::npos);
+  CHECK(graphicsDoc.find("`UiSceneTextOverlays.serialize() -> vector<i32>`") != std::string::npos);
+  CHECK(graphicsDoc.find("`LayoutTree.emit_scene_panel(...)`") != std::string::npos);
+  CHECK(graphicsDoc.find("`LayoutTree.emit_scene_label(...)`") != std::string::npos);
+  CHECK(graphicsDoc.find("`LayoutTree.emit_scene_button(...)`") != std::string::npos);
+  CHECK(graphicsDoc.find("`LayoutTree.emit_scene_panel_button(...)`") != std::string::npos);
   CHECK(graphicsDoc.find("`CommandList.draw_label(...)`") != std::string::npos);
   CHECK(graphicsDoc.find("`CommandList.draw_button(...)`") != std::string::npos);
   CHECK(graphicsDoc.find("`CommandList.draw_input(...)`") != std::string::npos);
@@ -3154,6 +3176,23 @@ TEST_CASE("ui command list adapter docs stay source locked") {
         std::string::npos);
   CHECK(graphicsDoc.find("`append_word`, `append_color`, or `append_string` directly.") !=
         std::string::npos);
+  CHECK(graphicsDoc.find("`UiScene` is the current lightweight `/std/ui/*` scene-record producer") !=
+        std::string::npos);
+  CHECK(graphicsDoc.find("layout-node ids, stable scene-node ids, parent ids, painter") !=
+        std::string::npos);
+  CHECK(graphicsDoc.find("local-z/scale-z milli-units") != std::string::npos);
+  CHECK(graphicsDoc.find("`UiSceneTextOverlays` serializes deterministic 2D text overlay records") !=
+        std::string::npos);
+  CHECK(graphicsDoc.find("Text stays on the international shaped glyph/atlas") != std::string::npos);
+  CHECK(graphicsDoc.find("`LayoutTree.emit_scene_panel_button(...)` emits one panel scene node") !=
+        std::string::npos);
+  CHECK(graphicsDoc.find("Current prototype serialization format for `/std/ui/UiScene.serialize()`") !=
+        std::string::npos);
+  CHECK(graphicsDoc.find("primitive kind (`1` = rect, `2` = raised SDF button)") != std::string::npos);
+  CHECK(graphicsDoc.find("Current prototype serialization format for\n"
+                         "`/std/ui/UiSceneTextOverlays.serialize()`") != std::string::npos);
+  CHECK(graphicsDoc.find("Second word: total overlay count") != std::string::npos);
+  CHECK(graphicsDoc.find("text byte length") != std::string::npos);
   CHECK(graphicsDoc.find("`push_pointer_move(...)`, `push_pointer_down(...)`, and `push_pointer_up(...)` normalize through one pointer") !=
         std::string::npos);
   CHECK(graphicsDoc.find("`push_key_down(...)` and `push_key_up(...)` normalize through one key event record shape") !=
@@ -3191,12 +3230,18 @@ TEST_CASE("ui command list adapter docs stay source locked") {
         std::string::npos);
   CHECK(specDoc.find("`emit_input`, `bind_event`, `emit_login_form`, `UiEventStream`, `push_pointer_move`, `push_pointer_down`,") !=
         std::string::npos);
-  CHECK(specDoc.find("host bridge can blit a deterministic BGRA8 software") !=
+  CHECK(specDoc.find("`UiScene`, `UiSceneNodes`,") != std::string::npos);
+  CHECK(specDoc.find("`UiSceneTextOverlays`, `append_root_column`,") != std::string::npos);
+  CHECK(specDoc.find("`emit_scene_panel_button`, `measure`, `arrange`") != std::string::npos);
+  CHECK(specDoc.find("host bridge can\n"
+                     "  blit a deterministic BGRA8 software") !=
         std::string::npos);
   CHECK(specDoc.find("emit deterministic HTML/backend adapter records and normalize pointer, keyboard, IME, resize, and focus input into") !=
         std::string::npos);
   CHECK(specDoc.find("deterministic UI event-stream records") !=
         std::string::npos);
+  CHECK(specDoc.find("`UiScene` scene records plus `UiSceneTextOverlays` records") != std::string::npos);
+  CHECK(specDoc.find("panel, label, and raised button presentation") != std::string::npos);
 }
 
 TEST_CASE("image api docs and stdlib stay source locked") {
@@ -4800,6 +4845,33 @@ TEST_CASE("ui scene producer composite widgets stay locked to basic widgets") {
   CHECK(appendLoginBody.find("self.append_leaf(") == std::string::npos);
   CHECK(appendLoginBody.find("self.append_column(") == std::string::npos);
   CHECK(appendLoginBody.find("self.append_node(") == std::string::npos);
+
+  CHECK(source.find("[public struct]\n  UiSceneNodes()") != std::string::npos);
+  CHECK(source.find("[public struct]\n  UiScene()") != std::string::npos);
+  CHECK(source.find("[public struct]\n  UiSceneTextOverlays()") != std::string::npos);
+  CHECK(source.find("append_overlay(\n"
+                    "        [/std/ui/UiSceneTextOverlays mut] self,") !=
+        std::string::npos);
+  CHECK(source.find("        [i32] textLength,\n"
+                    "        [string] text) {\n"
+                    "      len{textLength}") != std::string::npos);
+  CHECK(source.find("appendNode(\n"
+                    "        [/std/ui/UiScene mut] self,") !=
+        std::string::npos);
+
+  const size_t emitSceneStart = source.find("emit_scene_panel_button(");
+  const size_t measureStart = source.find("\n    [public return<void>]\n    measure(", emitSceneStart);
+  REQUIRE(emitSceneStart != std::string::npos);
+  REQUIRE(measureStart != std::string::npos);
+  REQUIRE(measureStart > emitSceneStart);
+  const std::string emitSceneBody = source.substr(emitSceneStart, measureStart - emitSceneStart);
+  CHECK(emitSceneBody.find("self.emit_scene_panel(") != std::string::npos);
+  CHECK(emitSceneBody.find("self.emit_scene_label(") != std::string::npos);
+  CHECK(emitSceneBody.find("self.emit_scene_button(") != std::string::npos);
+  CHECK(emitSceneBody.find("scene.appendMaterial(") == std::string::npos);
+  CHECK(emitSceneBody.find("scene.appendPrimitive(") == std::string::npos);
+  CHECK(emitSceneBody.find("scene.appendNode(") == std::string::npos);
+  CHECK(emitSceneBody.find("overlays.append_overlay(") == std::string::npos);
 }
 
 TEST_CASE("ui html adapter stays source locked to shared widgets") {

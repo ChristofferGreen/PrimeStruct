@@ -15,6 +15,17 @@ TEST_CASE("runs vm scene model authoring deterministically") {
   CHECK(runCommand(runCmd) == 14);
 }
 
+TEST_CASE("runs vm ui scene adapter deterministically") {
+  const std::string srcPath =
+      writeTemp("vm_ui_scene_adapter.prime", uiSceneAdapterSource());
+  const std::string outPath = (testScratchPath("") / "vm_ui_scene_adapter.txt").string();
+  const std::string runCmd =
+      "./primec --emit=vm " + quoteShellArg(srcPath) + " --entry /main > " + quoteShellArg(outPath);
+
+  CHECK(runCommand(runCmd) == 11);
+  CHECK(readFile(outPath) == expectedUiSceneAdapterOutput());
+}
+
 
 TEST_CASE("runs vm composite login form deterministically") {
   const std::string source = R"(
