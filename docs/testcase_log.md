@@ -4,6 +4,25 @@
 - none
 
 ## Recent Test Runs
+- 2026-05-26 03:10 CEST | pass | mode: release | command:
+  `cmake --build build-release --target PrimeStruct_compile_run_tests -j 1`;
+  `cd build-release && ./PrimeStruct_compile_run_tests --test-suite=primestruct.compile.run.examples --source-file="*test_compile_run_examples_docs_locks.cpp" --test-case="scene renderer ui producer contract stays source locked,todo queue and skipped doctest debt stay source locked,ui command list adapter docs stay source locked" --order-by=file --no-skip --success`;
+  `cmake --build build-release --target primec -j 1`;
+  `cd build-release && ./PrimeStruct_compile_run_tests --test-case="compiles and runs native software renderer command serialization deterministically,compiles and runs native software renderer clip stack serialization deterministically,runs vm software renderer command serialization deterministically,runs vm software renderer clip stack serialization deterministically,C++ emitter runs software renderer command serialization deterministically,C++ emitter runs software renderer clip stack serialization deterministically" --no-skip`
+  | failures: none | notes: docs/source-lock rerun passed 3 cases /
+  687 assertions; renderer serialization command first reported missing
+  `./primec`, then passed after rebuilding the `primec` target with 6 cases /
+  26 assertions.
+- 2026-05-26 02:48 CEST | fail | mode: release | command:
+  `cmake -S . -B build-release -DCMAKE_BUILD_TYPE=Release`;
+  `cmake --build build-release --target PrimeStruct_misc_tests -j 1`;
+  `cd build-release && ./PrimeStruct_misc_tests --test-suite=primestruct.scene.renderer --no-skip`;
+  `cmake --build build-release --target PrimeStruct_compile_run_tests -j 1`;
+  `cd build-release && ./PrimeStruct_compile_run_tests --test-suite=primestruct.compile.run.examples --source-file="*test_compile_run_examples_docs_locks.cpp" --test-case="scene renderer ui producer contract stays source locked,todo queue and skipped doctest debt stay source locked,ui command list adapter docs stay source locked" --order-by=file --no-skip --success`
+  | failures: `todo queue and skipped doctest debt stay source locked` |
+  notes: renderer unit slice passed 5 cases / 22 assertions; docs/source-lock
+  failed because `docs/todo_finished.md` did not contain the exact
+  `rounded-rect 2D SDF coverage when radius is` phrase.
 - 2026-05-26 02:11 CEST | pass | mode: release + asan | command:
   `cmake --build build-asan-clang --target PrimeStruct_backend_ir_tests -j 1`;
   `cd build-asan-clang && ./PrimeStruct_backend_ir_tests --test-case="ir lowers stdlib map constructor call as statement" --no-skip`;
@@ -8587,6 +8606,11 @@
 - 2026-05-12 17:28 local | fail | mode: release | command: `./scripts/compile.sh --release` | failures: 146 CTest targets | notes: baseline after preflight checkpoint failed; stabilization blocks TODO work
 
 ## Resolved Failures
+- [x] `todo queue and skipped doctest debt stay source locked` | resolved:
+  2026-05-26 03:10 CEST | validating command:
+  `cd build-release && ./PrimeStruct_compile_run_tests --test-suite=primestruct.compile.run.examples --source-file="*test_compile_run_examples_docs_locks.cpp" --test-case="scene renderer ui producer contract stays source locked,todo queue and skipped doctest debt stay source locked,ui command list adapter docs stay source locked" --order-by=file --no-skip --success`
+  | notes: TODO-4566 finished wording now includes the locked
+  `rounded-rect 2D SDF coverage when radius is` phrase.
 - [x] `runs vm scene model authoring deterministically` |
   resolved: 2026-05-25 22:41 CEST | validating command:
   `cmake --build build-release --target PrimeStruct_compile_run_tests -j 1`;

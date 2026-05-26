@@ -2282,7 +2282,10 @@ module {
   primitive descriptor concepts, and `/std/ui/CommandList.serialize()` remains a stable adapter path. The first
   source-level `/std/scene` model is data-only: it authors and serializes stable ids, parent-before-child node order,
   painter order, local `z`, local transform metadata, orthographic camera config, materials, lights, and primitive
-  descriptors without pixel rendering. The first UI scene camera is an orthographic `Camera` projection config that maps one scene unit
+  descriptors. The shared CPU BGRA8 renderer consumes that serialized `/std/scene` record stream from
+  `examples/shared/scene_bgra8_renderer.h` and emits validated `SoftwareSurfaceFrame` output for flat rect/plane
+  primitives plus rounded-rect 2D SDF coverage with deterministic source-over composition, target-bound clipping, and
+  documented painter-order/local-z/stable-node ordering. The first UI scene camera is an orthographic `Camera` projection config that maps one scene unit
   to one logical pixel with a top-left origin, `+x` right, `+y` down, base plane `z=0`, and positive local `z` toward
   the viewer; painter order is primary, then local `z`, then stable node id and primitive sub-order. Materials own
   color with initial defaults of base color from primitive/UI state, opacity `1.0`, shade strength `1.0`, no texture

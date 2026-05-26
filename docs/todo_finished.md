@@ -5,6 +5,54 @@ Legend:
 
 Finished items are periodically archived here from `docs/todo.md`; section headers record the archive date.
 
+**Todo Completion (May 26, 2026)**
+- [x] TODO-4566: Render flat and rounded-rect scene primitives to BGRA8
+  - owner: ai
+  - created_at: 2026-05-24
+  - finished_at: 2026-05-26
+  - phase: Scene graph renderer and UI presentation
+  - parallel_track: scene-renderer
+  - depends_on: TODO-4565
+  - scope: Added the first deterministic CPU BGRA8 renderer for the minimal
+    `/std/scene` graph record stream, covering flat rect/plane primitives and
+    rounded-rect 2D SDF coverage under the orthographic UI camera.
+  - outcome:
+    - Added `examples/shared/scene_bgra8_renderer.h` as a narrow shared helper
+      that decodes the stable `Scene.serialize()` integer stream and emits a
+      validated `SoftwareSurfaceFrame` BGRA8 buffer.
+    - Rendered current `/std/scene` rect primitive records as flat rects when
+      radius is zero and analytic rounded-rect 2D SDF coverage when radius is
+      positive, without adding compiler-owned scene graph, camera, material,
+      light, or primitive special cases.
+    - Preserved deterministic source-over composition, target-bound clipping,
+      and documented draw ordering: painter order first, then local `z`, then
+      stable node id.
+    - Added focused C++ unit coverage for exact flat-rect pixels/hashes,
+      rounded-rect edge coverage/hashes, painter-order precedence over local
+      `z`, local-z ties, and overlapping semi-transparent source-over output.
+    - Kept existing `/std/ui/CommandList` serialization paths unchanged; scene
+      presentation remains separate from the stable command-list adapter.
+  - validation:
+    - Parent configured the missing release build directory:
+      `cmake -S . -B build-release -DCMAKE_BUILD_TYPE=Release`
+    - Parent-scheduled release build passed:
+      `cmake --build build-release --target PrimeStruct_misc_tests -j 1`
+    - Passed the new renderer unit slice, 5 cases / 22 assertions:
+      `cd build-release && ./PrimeStruct_misc_tests --test-suite=primestruct.scene.renderer --no-skip`
+    - Parent-scheduled compile-run build passed:
+      `cmake --build build-release --target PrimeStruct_compile_run_tests -j 1`
+    - Passed docs/source-lock coverage, 3 cases / 687 assertions:
+      `cd build-release && ./PrimeStruct_compile_run_tests --test-suite=primestruct.compile.run.examples --source-file="*test_compile_run_examples_docs_locks.cpp" --test-case="scene renderer ui producer contract stays source locked,todo queue and skipped doctest debt stay source locked,ui command list adapter docs stay source locked" --order-by=file --no-skip --success`
+    - Parent rebuilt stale `primec` after the selected compile-run
+      serialization command first reported missing `./primec`:
+      `cmake --build build-release --target primec -j 1`
+    - Passed unchanged `/std/ui/CommandList` serialization coverage, 6 cases /
+      26 assertions:
+      `cd build-release && ./PrimeStruct_compile_run_tests --test-case="compiles and runs native software renderer command serialization deterministically,compiles and runs native software renderer clip stack serialization deterministically,runs vm software renderer command serialization deterministically,runs vm software renderer clip stack serialization deterministically,C++ emitter runs software renderer command serialization deterministically,C++ emitter runs software renderer clip stack serialization deterministically" --no-skip`
+  - stop_rule: Stopped once deterministic 2D scene primitives render to BGRA8;
+    3D SDF widgets, text shaping, and presenter wiring remain in follow-up
+    scene-renderer leaves.
+
 **Todo Completion (May 25, 2026)**
 - [x] TODO-4572: Remove vector statement-helper compiler path
   - owner: ai

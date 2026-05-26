@@ -310,6 +310,12 @@ It is an authoring and inspection model only: `Scene.serialize()` emits a stable
 integer record stream for golden tests, `Camera` stores orthographic projection
 config and UI pixel mapping, and materials, lights, primitives, nodes, local
 `z`, painter order, and transforms receive stable ids without producing pixels.
+The first renderer helper lives in `examples/shared/scene_bgra8_renderer.h` and
+consumes that serialized `/std/scene` record stream directly. It renders flat
+rect/plane records and rounded-rect 2D SDF coverage into a validated
+`SoftwareSurfaceFrame` BGRA8 buffer with deterministic source-over composition,
+target-bound clipping, and the documented painter-order/local-z/stable-node
+ordering.
 
 ### UI Coordinate and Camera Defaults
 The first UI camera is orthographic. Its default viewport maps one scene unit to

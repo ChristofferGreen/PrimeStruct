@@ -554,6 +554,7 @@ if(PRIMESTRUCT_BUILD_TESTS)
     tests/unit/test_ast_ir_dump_inference.cpp
     tests/unit/test_ast_ir_dump_namespace.cpp
     tests/unit/test_printers_manual.cpp
+    tests/unit/test_scene_bgra8_renderer.cpp
     tests/unit/test_semantics_manual.cpp
     tests/unit/test_lexer.cpp
     tests/unit/test_diagnostics_codes.cpp

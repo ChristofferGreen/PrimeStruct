@@ -64,14 +64,13 @@ This file is the live open-work queue for PrimeStruct.
 
 ### Ready Now
 
-- TODO-4566: Render flat and rounded-rect scene primitives to BGRA8 | track: scene-renderer | primary surface: scene renderer BGRA8 output
 - TODO-4575: Remove map helper/access compiler classifiers | track: map-special-case-deletion | primary surface: map helper/access classifiers
 - TODO-4574: Remove vector count/access compiler classifiers | track: vector-helper-classifier-deletion | primary surface: vector count/access helpers
+- TODO-4590: Add international text shaping and glyph atlas path | track: scene-text-renderer | primary surface: scene renderer text/glyph output
+- TODO-4567: Render first globally lit 3D SDF widget primitive | track: scene-3d-sdf | primary surface: scene renderer 3D primitive output
 
 ### Immediate Next 10
 
-- TODO-4590: Add international text shaping and glyph atlas path
-- TODO-4567: Render first globally lit 3D SDF widget primitive
 - TODO-4568: Emit scene nodes from the existing UI layout/widgets
 - TODO-4569: Present scene-rendered UI through software surface bridge
 - TODO-4576: Remove map backing-type compiler classification
@@ -80,8 +79,8 @@ This file is the live open-work queue for PrimeStruct.
 ### Priority Lanes
 
 - Scene graph renderer and UI presentation: TODO-4565 completed the data-only
-  scene model; TODO-4566 ->
-  (TODO-4590 and TODO-4567) -> TODO-4568 -> TODO-4569
+  scene model and TODO-4566 completed the first BGRA8 2D primitive renderer;
+  TODO-4590 and TODO-4567 -> TODO-4568 -> TODO-4569
 - Map/vector compiler-independence: TODO-4570 retired the duplicate `map2`
   surface, TODO-4571 added the compiler-knowledge inventory categories that
   guide deletion scope, and TODO-4573 removed compiler-owned map literal
@@ -96,7 +95,6 @@ This file is the live open-work queue for PrimeStruct.
 
 ### Execution Queue
 
-- TODO-4566: Render flat and rounded-rect scene primitives to BGRA8
 - TODO-4575: Remove map helper/access compiler classifiers
 - TODO-4574: Remove vector count/access compiler classifiers
 - TODO-4590: Add international text shaping and glyph atlas path
@@ -110,46 +108,11 @@ This file is the live open-work queue for PrimeStruct.
 
 ### Task Blocks
 
-- [ ] TODO-4566: Render flat and rounded-rect scene primitives to BGRA8
-  - owner: ai
-  - created_at: 2026-05-24
-  - phase: Scene graph renderer and UI presentation
-  - parallel_track: scene-renderer
-  - depends_on: TODO-4565
-  - scope: Add a deterministic CPU BGRA8 renderer for the minimal scene graph,
-    covering flat rect/plane primitives and 2D rounded-rect SDF coverage under
-    the orthographic camera.
-  - implementation_notes: Reuse `examples/shared/software_surface_bridge.h` for
-    `SoftwareSurfaceFrame` validation and add a narrow renderer helper under
-    `examples/shared/` or the smallest appropriate runtime/test helper area.
-    Consume the stdlib-owned `/std/scene` data model added by TODO-4565; do
-    not introduce compiler-owned scene graph, camera, material, light, or
-    primitive special cases.
-    Treat SDF distance as coverage for one primitive, then source-over blend
-    the primitive material color; do not add smooth boolean composition between
-    differently colored commands. Follow UI painter order as the primary
-    default; do not add a global depth sort for UI widgets in this slice.
-  - acceptance:
-    - Renderer output for one flat rect and one rounded rect is stable through
-      exact pixel checks or fixed hashes on small BGRA8 buffers.
-    - Rounded-rect rendering uses an analytic 2D SDF or equivalent distance
-      function for edge coverage and radius handling.
-    - Painter order, local z/depth ties, and clipping/target bounds follow the
-      deterministic scene ordering contract.
-    - A fixture proves local z metadata does not accidentally reorder ordinary
-      UI source-over painting outside the documented tie/depth rule.
-    - Tests cover differently colored overlapping 2D primitives as explicit
-      source-over painting, not SDF/material color blending.
-    - Existing `/std/ui/CommandList` golden serialization tests remain
-      unchanged.
-  - stop_rule: Stop once deterministic 2D scene primitives render to BGRA8;
-    leave 3D SDF widgets and presenter wiring to later slices.
-
 - [ ] TODO-4590: Add international text shaping and glyph atlas path
   - owner: ai
   - created_at: 2026-05-24
   - phase: Scene graph renderer and UI presentation
-  - depends_on: TODO-4566
+  - parallel_track: scene-text-renderer
   - scope: Add the first renderer-private international text pipeline for 2D
     overlay scene text: Unicode text segmentation/bidi handling, shaped glyph
     runs, font fallback, glyph rasterization, glyph atlas packing, and
@@ -186,7 +149,7 @@ This file is the live open-work queue for PrimeStruct.
   - owner: ai
   - created_at: 2026-05-24
   - phase: Scene graph renderer and UI presentation
-  - depends_on: TODO-4566
+  - parallel_track: scene-3d-sdf
   - scope: Add the first 3D SDF scene primitive for UI, a single beveled
     button/slab rendered through the same orthographic camera and a
     deterministic global light rig.
