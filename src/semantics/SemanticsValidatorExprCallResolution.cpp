@@ -486,18 +486,25 @@ std::string SemanticsValidator::resolveExprConcreteCallPath(
       const std::string rootedAlias = "/" + std::string(alias);
       if (candidatePath == rootedAlias ||
           candidatePath.rfind(rootedAlias + "__ov", 0) == 0) {
-        return rootedAlias;
+        return canonicalPath;
       }
     }
     return {};
   }();
-  const bool preferDirectKeyValueConstructorCandidate =
-      !keyValueConstructorBasePath.empty() &&
-      !expr.isMethodCall &&
+  const bool usesTemplatedKeyValueConstructor =
+      !keyValueConstructorBasePath.empty() && !expr.templateArgs.empty();
+  const bool usesFlatKeyValueConstructorArgs =
+      usesTemplatedKeyValueConstructor &&
+      expr.args.size() % 2 == 0;
+  const bool usesEntryKeyValueConstructorArgs =
       !expr.args.empty() &&
       std::all_of(expr.args.begin(), expr.args.end(), [&](const Expr &arg) {
         return isKeyValueEntryConstructorExpr(arg);
       });
+  const bool preferDirectKeyValueConstructorCandidate =
+      !keyValueConstructorBasePath.empty() &&
+      !expr.isMethodCall &&
+      (usesFlatKeyValueConstructorArgs || usesEntryKeyValueConstructorArgs);
   auto buildBaseCandidates = [&](auto &baseCandidates) {
     baseCandidates.clear();
     if (preferDirectKeyValueConstructorCandidate) {

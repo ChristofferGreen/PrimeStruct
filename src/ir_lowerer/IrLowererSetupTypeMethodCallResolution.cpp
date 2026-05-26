@@ -640,6 +640,23 @@ const Definition *resolveMethodCallDefinitionFromExpr(
       const bool routesExplicitVectorCountMethodThroughBuiltinScalarTarget =
           requestsExplicitVectorCountMethod &&
           (resolvedPath == "/string/count" || resolvedPath == "/array/count");
+      const bool routesExplicitVectorCountMethodThroughArgsPackCount =
+          routesExplicitVectorCountMethodThroughBuiltinScalarTarget &&
+          resolvedPath == "/array/count" &&
+          [&]() {
+            std::string receiverTypeText =
+                unwrapSemanticReceiverTypeText(
+                    findSemanticProductMethodCallReceiverTypeText(semanticProgram,
+                                                                  callExpr));
+            std::string base;
+            std::string argText;
+            return splitTemplateTypeName(receiverTypeText, base, argText) &&
+                   normalizeDeclaredCollectionTypeBase(trimTemplateTypeText(base)) == "args";
+      }();
+      if (routesExplicitVectorCountMethodThroughArgsPackCount) {
+        errorOut.clear();
+        return nullptr;
+      }
       if (routesExplicitVectorCountMethodThroughBuiltinScalarTarget) {
         if (const Definition *explicitVectorCountDef =
                 resolveLoweredDefinitionPath(explicitMethodPath);

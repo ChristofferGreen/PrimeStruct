@@ -569,9 +569,11 @@ void SemanticsValidator::collectGraphLocalAutoBindings(const TypeResolutionGraph
           }
         }
         CallSnapshotData initializerCallData;
+        std::string inferredInitializerResolvedPath;
         if (initializerAnalysisExpr != nullptr &&
             inferCallSnapshotData(defParams, activeLocals.bindings, *initializerAnalysisExpr, initializerCallData)) {
           if (!initializerCallData.resolvedPath.empty()) {
+            inferredInitializerResolvedPath = initializerCallData.resolvedPath;
             fact.initializerResolvedPath = std::move(initializerCallData.resolvedPath);
           } else {
             fact.initializerResolvedPath.clear();
@@ -591,8 +593,11 @@ void SemanticsValidator::collectGraphLocalAutoBindings(const TypeResolutionGraph
         if (initializerAnalysisExpr != nullptr &&
             initializerAnalysisExpr->kind == Expr::Kind::Call &&
             !initializerAnalysisExpr->isMethodCall) {
-          std::string directCallResolvedPath =
-              preferredCollectionHelperResolvedPath(*initializerAnalysisExpr);
+          std::string directCallResolvedPath = inferredInitializerResolvedPath;
+          if (directCallResolvedPath.empty()) {
+            directCallResolvedPath =
+                preferredCollectionHelperResolvedPath(*initializerAnalysisExpr);
+          }
           if (directCallResolvedPath.empty()) {
             directCallResolvedPath = resolveCalleePath(*initializerAnalysisExpr);
           }

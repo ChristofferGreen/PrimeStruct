@@ -81,6 +81,11 @@ bool matchesKeyValueBackingRootMetadataLocal(const std::string &normalized) {
   if (metadata == nullptr) {
     return false;
   }
+  if (!metadata->backingTypeName.empty() &&
+      (normalized == metadata->backingTypeName ||
+       normalized.rfind(std::string(metadata->backingTypeName) + "__", 0) == 0)) {
+    return true;
+  }
   auto matchesRoot = [&](std::string_view root) {
     const std::string unrootedRoot = stripLeadingSlashLocal(root);
     if (unrootedRoot.empty() || metadata->backingTypeName.empty()) {

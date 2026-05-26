@@ -1544,6 +1544,12 @@ bool rewriteExpr(Expr &expr,
                ctx.sourceDefs.count(path) == 0 &&
                ctx.helperOverloads.count(path) == 0) {
       helperName = path.substr(1);
+    } else if (!expr.isMethodCall &&
+               !expr.name.empty() &&
+               expr.name.find('/') == std::string::npos &&
+               ctx.sourceDefs.count(path) == 0 &&
+               ctx.helperOverloads.count(path) == 0) {
+      helperName = expr.name;
     } else {
       return path;
     }

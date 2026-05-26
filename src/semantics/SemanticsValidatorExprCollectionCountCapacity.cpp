@@ -85,6 +85,58 @@ bool SemanticsValidator::resolveExprCollectionCountCapacityTarget(
         hasMethodReceiverIndex = true;
         methodReceiverIndex = 0;
       };
+  const auto resolveCurrentDefinitionArgsPackBinding =
+      [&](const std::string &name, std::string &elemTypeOut) -> bool {
+    elemTypeOut.clear();
+    auto resolveBinding = [&](const BindingInfo &binding) {
+      return getArgsPackElementType(binding, elemTypeOut);
+    };
+    if (const BindingInfo *paramBinding = findParamBinding(params, name)) {
+      if (resolveBinding(*paramBinding)) {
+        return true;
+      }
+    }
+    if (auto localIt = locals.find(name); localIt != locals.end() &&
+        resolveBinding(localIt->second)) {
+      return true;
+    }
+    if (currentValidationState_.context.definitionPath.empty()) {
+      return false;
+    }
+    if (auto paramsIt = paramsByDef_.find(currentValidationState_.context.definitionPath);
+        paramsIt != paramsByDef_.end()) {
+      if (const BindingInfo *binding = findParamBinding(paramsIt->second, name)) {
+        return resolveBinding(*binding);
+      }
+    }
+    auto defIt = defMap_.find(currentValidationState_.context.definitionPath);
+    if (defIt == defMap_.end() || defIt->second == nullptr) {
+      return false;
+    }
+    for (const Expr &param : defIt->second->parameters) {
+      if (param.name != name) {
+        continue;
+      }
+      BindingInfo binding;
+      std::optional<std::string> restrictType;
+      std::string parseError;
+      return parseBindingInfo(param,
+                              defIt->second->namespacePrefix,
+                              structNames_,
+                              importAliases_,
+                              binding,
+                              restrictType,
+                              parseError,
+                              &sumNames_) &&
+             resolveBinding(binding);
+    }
+    return false;
+  };
+  const auto resolveArgsPackCountReceiver =
+      [&](const Expr &receiverExpr, std::string &elemTypeOut) -> bool {
+    return receiverExpr.kind == Expr::Kind::Name &&
+           resolveCurrentDefinitionArgsPackBinding(receiverExpr.name, elemTypeOut);
+  };
   const auto resolveVisiblePreferredVectorHelperMethodTarget =
       [&](const Expr &receiverExpr,
           const char *helperName,
@@ -403,6 +455,16 @@ bool SemanticsValidator::resolveExprCollectionCountCapacityTarget(
   const bool isMultiArgCountCall = !isSingleArgCountCall;
   const bool routesThroughVectorBuiltinCountSurface =
       isUnqualifiedCollectionBuiltinName(expr, "count") || countHelperName == "count_ref";
+  if (expr.isMethodCall && countHelperName == "count" && expr.args.size() == 1) {
+    std::string argsPackElemType;
+    if (resolveArgsPackCountReceiver(expr.args.front(), argsPackElemType)) {
+      handledOut = true;
+      markMethodTargetUsage();
+      resolved = "/array/count";
+      resolvedMethod = true;
+      return true;
+    }
+  }
   const bool routesThroughNamespacedVectorCountHelperSurface =
       context.isNamespacedVectorHelperCall &&
       isCountLikeHelperName(context.namespacedHelper);

@@ -345,6 +345,24 @@ bool SemanticsValidator::validateExprLateUnknownTargetFallbacks(
     }
   }
 
+  if (!expr.isMethodCall && isResolvedKeyValueConstructorPath(resolvedTarget)) {
+    handledOut = true;
+    if (hasNamedArguments(expr.argNames)) {
+      return failLateUnknownTargetDiagnostic(
+          "named arguments not supported for builtin calls");
+    }
+    if (expr.hasBodyArguments || !expr.bodyArguments.empty()) {
+      return failLateUnknownTargetDiagnostic(
+          "block arguments require a definition target: " + resolvedTarget);
+    }
+    for (const Expr &arg : expr.args) {
+      if (!validateExpr(params, locals, arg)) {
+        return false;
+      }
+    }
+    return true;
+  }
+
   handledOut = true;
   return failLateUnknownTargetDiagnostic("unknown call target: " +
                                          formatUnknownCallTarget(expr));

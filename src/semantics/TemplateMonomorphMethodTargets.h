@@ -463,6 +463,13 @@ bool resolveMethodCallTemplateTarget(const Expr &expr,
     return true;
   }
   if (normalizedReceiverLeafName == "args") {
+    const std::string argsPackMethodName =
+        normalizeCollectionMethodName("array", methodName);
+    if (argsPackMethodName == "count" || argsPackMethodName == "at" ||
+        argsPackMethodName == "at_unsafe") {
+      pathOut = "/array/" + argsPackMethodName;
+      return true;
+    }
     return false;
   }
   const std::string fileErrorMethodName =

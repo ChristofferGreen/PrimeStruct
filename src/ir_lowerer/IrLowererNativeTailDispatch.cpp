@@ -46,16 +46,68 @@ bool semanticSurfaceMatches(std::optional<StdlibSurfaceId> surfaceId,
   return surfaceId.has_value() && metadata != nullptr && *surfaceId == metadata->id;
 }
 
+const SemanticProgramQueryFact *findSourceQueryFact(
+    const SemanticProgram *semanticProgram,
+    const Expr &expr) {
+  if (semanticProgram == nullptr) {
+    return nullptr;
+  }
+  std::vector<std::pair<int, int>> sourcePositions;
+  if (expr.sourceLine != 0 && expr.sourceColumn != 0) {
+    sourcePositions.emplace_back(expr.sourceLine, expr.sourceColumn);
+  }
+  if (!expr.args.empty() && expr.args.front().sourceLine != 0 &&
+      expr.args.front().sourceColumn != 0) {
+    sourcePositions.emplace_back(expr.args.front().sourceLine,
+                                 expr.args.front().sourceColumn);
+  }
+  for (const auto &queryFact : semanticProgram->queryFacts) {
+    const bool sameSourcePosition =
+        std::any_of(sourcePositions.begin(), sourcePositions.end(),
+                    [&](const auto &sourcePosition) {
+                      return queryFact.sourceLine == sourcePosition.first &&
+                             queryFact.sourceColumn == sourcePosition.second;
+                    });
+    if (!sameSourcePosition) {
+      continue;
+    }
+    const std::string_view callName =
+        queryFact.callNameId != InvalidSymbolId
+            ? semanticProgramResolveCallTargetString(*semanticProgram,
+                                                     queryFact.callNameId)
+            : std::string_view(queryFact.callName);
+    if (callName == expr.name ||
+        (!expr.sourceName.empty() && callName == expr.sourceName)) {
+      return &queryFact;
+    }
+  }
+  return nullptr;
+}
+
 bool resolvePublishedNativeTailHelperName(const SemanticProgram *semanticProgram,
                                           const Expr &expr,
                                           StdlibSurfaceId surfaceId,
                                           std::string &helperNameOut) {
-  return resolvePublishedSemanticStdlibSurfaceMemberName(
-             semanticProgram, expr, surfaceId, helperNameOut) ||
-         resolvePublishedStdlibSurfaceMemberName(
-             resolveNativeTailCallPathWithoutFallbackProbes(expr),
-             surfaceId,
-             helperNameOut);
+  if (resolvePublishedSemanticStdlibSurfaceMemberName(
+          semanticProgram, expr, surfaceId, helperNameOut)) {
+    return true;
+  }
+  if (resolvePublishedStdlibSurfaceMemberName(
+          resolveNativeTailCallPathWithoutFallbackProbes(expr),
+          surfaceId,
+          helperNameOut)) {
+    return true;
+  }
+  const SemanticProgramQueryFact *queryFact =
+      findSourceQueryFact(semanticProgram, expr);
+  if (queryFact == nullptr || queryFact->resolvedPathId == InvalidSymbolId) {
+    return false;
+  }
+  return resolvePublishedStdlibSurfaceMemberName(
+      semanticProgramResolveCallTargetString(*semanticProgram,
+                                             queryFact->resolvedPathId),
+      surfaceId,
+      helperNameOut);
 }
 
 bool resolvePublishedNativeTailVectorHelperName(const SemanticProgram *semanticProgram,
@@ -276,36 +328,7 @@ const SemanticProgramQueryFact *findSourceKeyValueAccessAliasQueryFact(
       return queryFact;
     }
   }
-  std::vector<std::pair<int, int>> sourcePositions;
-  if (expr.sourceLine != 0 && expr.sourceColumn != 0) {
-    sourcePositions.emplace_back(expr.sourceLine, expr.sourceColumn);
-  }
-  if (!expr.args.empty() && expr.args.front().sourceLine != 0 &&
-      expr.args.front().sourceColumn != 0) {
-    sourcePositions.emplace_back(expr.args.front().sourceLine,
-                                 expr.args.front().sourceColumn);
-  }
-  for (const auto &queryFact : semanticProgram->queryFacts) {
-    const bool sameSourcePosition =
-        std::any_of(sourcePositions.begin(), sourcePositions.end(),
-                    [&](const auto &sourcePosition) {
-                      return queryFact.sourceLine == sourcePosition.first &&
-                             queryFact.sourceColumn == sourcePosition.second;
-                    });
-    if (!sameSourcePosition) {
-      continue;
-    }
-    const std::string_view callName =
-        queryFact.callNameId != InvalidSymbolId
-            ? semanticProgramResolveCallTargetString(*semanticProgram,
-                                                     queryFact.callNameId)
-            : std::string_view(queryFact.callName);
-    if (callName == expr.name ||
-        (!expr.sourceName.empty() && callName == expr.sourceName)) {
-      return &queryFact;
-    }
-  }
-  return nullptr;
+  return findSourceQueryFact(semanticProgram, expr);
 }
 
 bool isStringReturningKeyValueAccessAlias(
@@ -695,6 +718,21 @@ NativeCallTailDispatchResult tryEmitNativeCallTailDispatch(
   }
   if (countAccessResult == CountAccessCallEmitResult::Error) {
     return NativeCallTailDispatchResult::Error;
+  }
+
+  if (expr.isMethodCall && expr.args.size() == 1 &&
+      (isSimpleCallName(expr, "count") ||
+       resolveNativeTailCallPathWithoutFallbackProbes(expr) == "/string/count")) {
+    const Expr &target = expr.args.front();
+    if ((target.kind == Expr::Kind::Name ||
+         target.kind == Expr::Kind::StringLiteral) &&
+        inferExprKind(target, localsIn) == LocalInfo::ValueKind::String) {
+      if (!emitExpr(target, localsIn)) {
+        return NativeCallTailDispatchResult::Error;
+      }
+      emitInstruction(IrOpcode::LoadStringLength, 0);
+      return NativeCallTailDispatchResult::Emitted;
+    }
   }
 
   if (expr.args.size() == 1 &&

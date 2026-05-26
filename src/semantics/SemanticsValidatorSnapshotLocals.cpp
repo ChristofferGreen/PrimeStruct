@@ -120,6 +120,22 @@ bool SemanticsValidator::inferCallSnapshotData(const std::vector<ParameterInfo> 
   }
 
   out.resolvedPath = preferredCollectionHelperResolvedPath(expr);
+  if (out.resolvedPath.empty() && expr.kind == Expr::Kind::Call &&
+      !expr.isMethodCall && expr.args.size() == 1 &&
+      (isUnqualifiedCollectionBuiltinName(expr, "count") ||
+       isUnqualifiedCollectionBuiltinName(expr, "capacity"))) {
+    std::string resolvedCollectionMethodPath;
+    if (withPreservedError([&]() {
+          return resolveVectorHelperMethodTarget(defParams,
+                                                 activeLocals,
+                                                 expr.args.front(),
+                                                 expr.name,
+                                                 resolvedCollectionMethodPath);
+        }) &&
+        !resolvedCollectionMethodPath.empty()) {
+      out.resolvedPath = std::move(resolvedCollectionMethodPath);
+    }
+  }
   if (out.resolvedPath.empty() &&
       !(expr.kind == Expr::Kind::Call && expr.isMethodCall)) {
     out.resolvedPath = resolveCalleePath(expr);

@@ -717,6 +717,81 @@
               }
               return true;
             };
+        auto tryEmitBuiltinKeyValueConstructor =
+            [&](const Expr &callExpr,
+                const std::string &resolvedCallPath,
+                bool &handledOut) -> bool {
+          handledOut = false;
+          if (callExpr.isMethodCall ||
+              !isCanonicalKeyValueConstructorPath(resolvedCallPath)) {
+            return true;
+          }
+          if (callExpr.templateArgs.size() != 2) {
+            return true;
+          }
+          if ((callExpr.args.size() % 2) != 0) {
+            error = "argument count mismatch for " +
+                    normalizeCollectionHelperPath(resolvedCallPath);
+            handledOut = true;
+            return false;
+          }
+
+          const auto keyKind =
+              ir_lowerer::valueKindFromTypeName(callExpr.templateArgs.front());
+          if (keyKind == ir_lowerer::LocalInfo::ValueKind::Unknown) {
+            error = "native backend requires typed map constructor keys";
+            handledOut = true;
+            return false;
+          }
+
+          const int32_t mapLocal = allocTempLocal();
+          function.instructions.push_back({IrOpcode::PushI64, 0});
+          function.instructions.push_back(
+              {IrOpcode::StoreLocal, static_cast<uint64_t>(mapLocal)});
+
+          for (size_t argIndex = 0; argIndex < callExpr.args.size(); argIndex += 2) {
+            const int32_t keyLocal = allocTempLocal();
+            if (!emitExpr(callExpr.args[argIndex], localsIn)) {
+              handledOut = true;
+              return false;
+            }
+            function.instructions.push_back(
+                {IrOpcode::StoreLocal, static_cast<uint64_t>(keyLocal)});
+
+            const int32_t valueLocal = allocTempLocal();
+            if (!emitExpr(callExpr.args[argIndex + 1], localsIn)) {
+              handledOut = true;
+              return false;
+            }
+            function.instructions.push_back(
+                {IrOpcode::StoreLocal, static_cast<uint64_t>(valueLocal)});
+
+            if (!ir_lowerer::emitBuiltinCanonicalMapInsertOverwriteOrGrow(
+                    mapLocal,
+                    -1,
+                    mapLocal,
+                    keyLocal,
+                    valueLocal,
+                    keyKind,
+                    [&]() { return allocTempLocal(); },
+                    [&]() { return function.instructions.size(); },
+                    [&](IrOpcode op, uint64_t imm) {
+                      function.instructions.push_back({op, imm});
+                    },
+                    [&](size_t indexToPatch, uint64_t target) {
+                      function.instructions[indexToPatch].imm = target;
+                    })) {
+              error = "failed to lower builtin canonical map constructor";
+              handledOut = true;
+              return false;
+            }
+          }
+
+          function.instructions.push_back(
+              {IrOpcode::LoadLocal, static_cast<uint64_t>(mapLocal)});
+          handledOut = true;
+          return true;
+        };
         if (!expr.isMethodCall) {
           const std::string rawPath = resolveDirectHelperPath(expr);
           std::string experimentalVectorElementType;
@@ -769,8 +844,22 @@
           if (directCallee == nullptr && isDirectCollectionHelperPath(rawPath)) {
             directCallee = findDirectHelperDefinition(rawPath);
           }
+          if (directCallee == nullptr &&
+              isCanonicalKeyValueConstructorPath(resolvedExprPath)) {
+            directCallee = findDirectHelperDefinition(resolvedExprPath);
+          }
           if (directCallee == nullptr && isDirectCollectionHelperPath(resolvedExprPath)) {
             directCallee = findDirectHelperDefinition(resolvedExprPath);
+          }
+          if (directCallee == nullptr) {
+            bool handledBuiltinKeyValueConstructor = false;
+            if (!tryEmitBuiltinKeyValueConstructor(
+                    expr, resolvedExprPath, handledBuiltinKeyValueConstructor)) {
+              return false;
+            }
+            if (handledBuiltinKeyValueConstructor) {
+              return true;
+            }
           }
           auto findExperimentalVectorMetadataMethodDefinition =
               [&]() -> const Definition * {
@@ -983,6 +1072,23 @@
               }
               return true;
             }
+            if (!hasKeyValueEntryCtorArgs(expr) &&
+                (isCanonicalKeyValueConstructorPath(rawPath) ||
+                 isCanonicalKeyValueConstructorPath(resolvedExprPath) ||
+                 isCanonicalKeyValueConstructorPath(directCallee->fullPath)) &&
+                isDirectHelperDefinitionFamily(expr, *directCallee) &&
+                ir_lowerer::resolveCollectionPairTypeInfo(
+                    expr,
+                    localsIn,
+                    {},
+                    semanticProgram,
+                    &callResolutionAdapters.semanticProductTargets.semanticIndex)
+                    .isKeyValueTarget) {
+              if (!emitInlineDefinitionCall(expr, *directCallee, localsIn, true)) {
+                return false;
+              }
+              return true;
+            }
             std::string helperName;
             const bool hasKeyValueHelperAlias = resolveKeyValueHelperAliasName(expr, helperName);
             bool hasSameFamilyKeyValueHelperAlias = false;
@@ -1020,6 +1126,7 @@
                 isDirectHelperDefinitionFamily(expr, *directCallee)) {
               const bool deferKeyValueCountToBuiltinEmitter =
                   helperName == "count" && expr.args.size() == 1 &&
+                  expr.args.front().kind == Expr::Kind::Call &&
                   hasSemanticKeyValueHelperDefinition(helperName) &&
                   ir_lowerer::resolveCollectionPairTypeInfo(
                       expr.args.front(),
@@ -1152,8 +1259,108 @@
           }
         }
 
+        if (expr.isMethodCall && expr.args.size() == 1 &&
+            (resolveExprPath(expr) == "/string/count" ||
+             isSimpleCallName(expr, "count"))) {
+          const Expr &stringCountTarget = expr.args.front();
+          const bool hasDirectStringCountTarget =
+              (stringCountTarget.kind == Expr::Kind::Name ||
+               stringCountTarget.kind == Expr::Kind::StringLiteral) &&
+              inferExprKind(stringCountTarget, localsIn) ==
+                  LocalInfo::ValueKind::String;
+          if (hasDirectStringCountTarget) {
+            const Definition *stringCountCallee =
+                resolveMethodCallDefinition(expr, localsIn);
+            if (stringCountCallee == nullptr) {
+              stringCountCallee = findDirectHelperDefinition("/string/count");
+            }
+            if (stringCountCallee != nullptr) {
+              if (!emitInlineDefinitionCall(
+                      expr, *stringCountCallee, localsIn, true)) {
+                return false;
+              }
+              return true;
+            }
+            if (!emitExpr(stringCountTarget, localsIn)) {
+              return false;
+            }
+            function.instructions.push_back({IrOpcode::LoadStringLength, 0});
+            return true;
+          }
+        }
+
         Expr countAccessExpr = expr;
         if (!expr.isMethodCall && expr.args.size() == 1) {
+          auto resolveSourceQueryPath = [&](const Expr &callExpr) {
+            if (semanticProgram == nullptr) {
+              return std::string{};
+            }
+            std::vector<std::pair<int, int>> sourcePositions;
+            if (callExpr.sourceLine != 0 && callExpr.sourceColumn != 0) {
+              sourcePositions.emplace_back(callExpr.sourceLine,
+                                           callExpr.sourceColumn);
+            }
+            if (!callExpr.args.empty() &&
+                callExpr.args.front().sourceLine != 0 &&
+                callExpr.args.front().sourceColumn != 0) {
+              sourcePositions.emplace_back(callExpr.args.front().sourceLine,
+                                           callExpr.args.front().sourceColumn);
+            }
+            for (const auto &queryFact : semanticProgram->queryFacts) {
+              const bool sameSourcePosition =
+                  std::any_of(sourcePositions.begin(),
+                              sourcePositions.end(),
+                              [&](const auto &sourcePosition) {
+                                return queryFact.sourceLine ==
+                                           sourcePosition.first &&
+                                       queryFact.sourceColumn ==
+                                           sourcePosition.second;
+                              });
+              if (!sameSourcePosition) {
+                continue;
+              }
+              const std::string_view callName =
+                  queryFact.callNameId != InvalidSymbolId
+                      ? semanticProgramResolveCallTargetString(
+                            *semanticProgram, queryFact.callNameId)
+                      : std::string_view(queryFact.callName);
+              if (callName != callExpr.name &&
+                  (callExpr.sourceName.empty() ||
+                   callName != callExpr.sourceName)) {
+                continue;
+              }
+              if (queryFact.resolvedPathId == InvalidSymbolId) {
+                return std::string{};
+              }
+              return std::string(semanticProgramResolveCallTargetString(
+                  *semanticProgram, queryFact.resolvedPathId));
+            }
+            return std::string{};
+          };
+          if (const auto *metadata = keyValueHelperMetadata();
+              metadata != nullptr) {
+            std::string semanticHelperName;
+            const std::string semanticResolvedPath =
+                resolveSourceQueryPath(expr);
+            if (!semanticResolvedPath.empty() &&
+                resolvePublishedStdlibSurfaceMemberName(
+                    semanticResolvedPath, metadata->id, semanticHelperName) &&
+                semanticHelperName == "count") {
+              if (const Definition *semanticCountDef =
+                      findDirectHelperDefinition(semanticResolvedPath);
+                  semanticCountDef != nullptr) {
+                Expr directCountExpr = expr;
+                directCountExpr.name = semanticResolvedPath;
+                directCountExpr.namespacePrefix.clear();
+                directCountExpr.semanticNodeId = 0;
+                if (!emitInlineDefinitionCall(
+                        directCountExpr, *semanticCountDef, localsIn, true)) {
+                  return false;
+                }
+                return true;
+              }
+            }
+          }
           std::string keyValueCountHelperName;
           if (resolveSameFamilyKeyValueHelperMemberName(
                   expr, expr.args.front(), keyValueCountHelperName) &&
@@ -1168,6 +1375,17 @@
                 countAccessExpr.name = canonicalCountPath;
                 countAccessExpr.namespacePrefix.clear();
                 countAccessExpr.semanticNodeId = 0;
+                if (expr.args.front().kind != Expr::Kind::Call) {
+                  if (const Definition *canonicalCountDef =
+                          findDirectHelperDefinition(canonicalCountPath);
+                      canonicalCountDef != nullptr) {
+                    if (!emitInlineDefinitionCall(
+                            countAccessExpr, *canonicalCountDef, localsIn, true)) {
+                      return false;
+                    }
+                    return true;
+                  }
+                }
               }
             }
           }

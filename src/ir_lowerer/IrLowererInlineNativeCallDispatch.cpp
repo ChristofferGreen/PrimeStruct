@@ -986,6 +986,24 @@ InlineCallDispatchResult tryEmitInlineCallDispatchWithLocals(
     }
     return emitInlineDefinitionCallFn(callExpr, callee, localsIn);
   };
+  if (expr.isMethodCall && expr.args.size() == 1 &&
+      isStringCountCallFn(expr, localsIn)) {
+    const Definition *stringCountCallee =
+        resolveMethodCallDefinitionFn(expr, localsIn);
+    if (stringCountCallee == nullptr) {
+      Expr directStringCountExpr = expr;
+      directStringCountExpr.isMethodCall = false;
+      directStringCountExpr.namespacePrefix.clear();
+      directStringCountExpr.name = "/string/count";
+      stringCountCallee = resolveDefinitionCallFn(directStringCountExpr);
+    }
+    if (stringCountCallee != nullptr &&
+        stringCountCallee->fullPath == "/string/count") {
+      return emitCanonicalInlineDefinitionCall(expr, *stringCountCallee)
+                 ? InlineCallDispatchResult::Emitted
+                 : InlineCallDispatchResult::Error;
+    }
+  }
   if (isArrayCountCallFn(expr, localsIn) ||
       isStringCountCallFn(expr, localsIn) ||
       isVectorCapacityCallFn(expr, localsIn)) {
@@ -1112,6 +1130,14 @@ InlineCallDispatchResult tryEmitInlineCallDispatchWithLocals(
   if (!expr.isMethodCall) {
     std::string keyValueHelperName;
     const std::string rawPath = resolveInlineCallPathWithoutFallbackProbes(expr);
+    if (const Definition *directCallee = resolveDefinitionCallFn(expr);
+        directCallee != nullptr &&
+        isSemanticBarePreferredKeyValueHelperDefinitionCall(expr,
+                                                            *directCallee)) {
+      return emitCanonicalInlineDefinitionCall(expr, *directCallee)
+                 ? InlineCallDispatchResult::Emitted
+                 : InlineCallDispatchResult::Error;
+    }
     if (expr.args.size() == 1 &&
         isSemanticOrLegacyVectorTarget(expr.args.front())) {
       std::string vectorHelperName;

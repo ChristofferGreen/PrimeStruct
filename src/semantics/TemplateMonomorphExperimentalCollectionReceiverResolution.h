@@ -45,6 +45,25 @@ bool isSpecializedExperimentalKeyValueBackingTypeForReceiverResolution(
          isExperimentalCollectionBackingTypeName("map", "Map", typeName);
 }
 
+bool isSpecializedCanonicalKeyValueBackingTypeForReceiverResolution(
+    std::string typeName) {
+  typeName = normalizeBindingTypeName(std::move(typeName));
+  if (!typeName.empty() && typeName.front() == '/') {
+    typeName.erase(typeName.begin());
+  }
+  std::string backingRoot = keyValueBackingTypePathLocal();
+  if (!backingRoot.empty() && backingRoot.front() == '/') {
+    backingRoot.erase(backingRoot.begin());
+  }
+  if (!backingRoot.empty() && typeName.rfind(backingRoot + "__", 0) == 0) {
+    return true;
+  }
+  const primec::StdlibSurfaceMetadata *metadata =
+      keyValueHelperSurfaceMetadataLocal();
+  return metadata != nullptr && !metadata->backingTypeName.empty() &&
+         typeName.rfind(std::string(metadata->backingTypeName) + "__", 0) == 0;
+}
+
 bool isRootMapConstructorReceiverExpr(const Expr *receiverExpr) {
   if (receiverExpr == nullptr || receiverExpr->kind != Expr::Kind::Call ||
       receiverExpr->isMethodCall || receiverExpr->name.empty()) {
@@ -226,7 +245,8 @@ bool extractExperimentalKeyValueReceiverTemplateArgsFromTypeText(const std::stri
       continue;
     }
     if (isUnspecializedExperimentalKeyValueBackingTypeForReceiverResolution(
-            normalizedBase)) {
+            normalizedBase) ||
+        isKeyValueCollectionTypeName(normalizedBase)) {
       return splitTopLevelTemplateArgs(argText, templateArgsOut) && templateArgsOut.size() == 2;
     }
     break;
@@ -240,6 +260,8 @@ bool extractExperimentalKeyValueReceiverTemplateArgsFromTypeText(const std::stri
     normalizedResolvedPath.erase(normalizedResolvedPath.begin());
   }
   if (!isSpecializedExperimentalKeyValueBackingTypeForReceiverResolution(
+          normalizedResolvedPath) &&
+      !isSpecializedCanonicalKeyValueBackingTypeForReceiverResolution(
           normalizedResolvedPath)) {
     return false;
   }

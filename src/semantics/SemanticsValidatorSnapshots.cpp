@@ -1361,7 +1361,7 @@ void SemanticsValidator::collectPilotRoutingSemanticProductFacts() {
   for (const auto &exec : program_.executions) {
     ExecutionContextScope executionScope(*this, exec);
     collectDirectCallExprs(exec.fullPath, exec.arguments);
-    collectDirectCallExprs(exec.fullPath, exec.bodyArguments);
+      collectDirectCallExprs(exec.fullPath, exec.bodyArguments);
   }
 
   if (!useMergedWorkerPublicationFacts) {
@@ -1370,6 +1370,52 @@ void SemanticsValidator::collectPilotRoutingSemanticProductFacts() {
             const std::vector<ParameterInfo> &defParams,
             const Expr &expr,
             const std::unordered_map<std::string, BindingInfo> &activeLocals) {
+          if (expr.kind == Expr::Kind::Call && !expr.isMethodCall) {
+            CallSnapshotData callData;
+            if (inferCallSnapshotData(defParams, activeLocals, expr, callData) &&
+                !callData.resolvedPath.empty()) {
+              if (expr.semanticNodeId != 0) {
+                collectedDirectCallTargets_.erase(
+                    std::remove_if(
+                        collectedDirectCallTargets_.begin(),
+                        collectedDirectCallTargets_.end(),
+                        [&](const CollectedDirectCallTargetEntry &entry) {
+                          return entry.semanticNodeId == expr.semanticNodeId;
+                        }),
+                    collectedDirectCallTargets_.end());
+                collectedBridgePathChoices_.erase(
+                    std::remove_if(
+                        collectedBridgePathChoices_.begin(),
+                        collectedBridgePathChoices_.end(),
+                        [&](const CollectedBridgePathChoiceEntry &entry) {
+                          return entry.semanticNodeId == expr.semanticNodeId;
+                        }),
+                    collectedBridgePathChoices_.end());
+              }
+              if (const auto bridgeChoice =
+                      collectionBridgeChoiceFromResolvedPath(callData.resolvedPath);
+                  bridgeChoice.has_value()) {
+                collectedBridgePathChoices_.push_back(CollectedBridgePathChoiceEntry{
+                    def.fullPath,
+                    bridgeChoice->first,
+                    bridgeChoice->second,
+                    callData.resolvedPath,
+                    expr.sourceLine,
+                    expr.sourceColumn,
+                    expr.semanticNodeId,
+                });
+              }
+              collectedDirectCallTargets_.push_back(CollectedDirectCallTargetEntry{
+                  def.fullPath,
+                  expr.name,
+                  std::move(callData.resolvedPath),
+                  expr.sourceLine,
+                  expr.sourceColumn,
+                  expr.semanticNodeId,
+              });
+            }
+            return;
+          }
           if (expr.kind != Expr::Kind::Call || !expr.isMethodCall || expr.args.empty()) {
             return;
           }

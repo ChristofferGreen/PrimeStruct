@@ -1387,6 +1387,22 @@ bool SemanticsValidator::validateExpr(const std::vector<ParameterInfo> &params,
         return true;
       }
     }
+    if (!expr.isMethodCall && isResolvedKeyValueConstructorPath(resolved)) {
+      if (hasNamedArguments(expr.argNames)) {
+        return failExprRootDiagnostic(
+            "named arguments not supported for builtin calls");
+      }
+      if (expr.hasBodyArguments || !expr.bodyArguments.empty()) {
+        return failExprRootDiagnostic(
+            "block arguments require a definition target: " + resolved);
+      }
+      for (const Expr &arg : expr.args) {
+        if (!validateExpr(params, locals, arg)) {
+          return false;
+        }
+      }
+      return true;
+    }
     if (resolvedDefinition == nullptr || calleeParamsIt == paramsByDef_.end()) {
       if (isStdNamespacedVectorCompatibilityHelperPath(resolved, "count") &&
           expr.args.size() != 1) {

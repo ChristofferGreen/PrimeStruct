@@ -221,6 +221,35 @@ bool SemanticsValidator::validateExprMethodCallTarget(
   hasMethodReceiverIndex = true;
   methodReceiverIndex = 0;
   bool isBuiltinMethod = false;
+  auto resolveCurrentArgsPackCountReceiver = [&](const Expr &receiverExpr,
+                                                std::string &elemTypeOut) {
+    elemTypeOut.clear();
+    if (receiverExpr.kind != Expr::Kind::Name) {
+      return false;
+    }
+    auto resolveBinding = [&](const BindingInfo &binding) {
+      return getArgsPackElementType(binding, elemTypeOut);
+    };
+    if (const BindingInfo *paramBinding = findParamBinding(params, receiverExpr.name)) {
+      if (resolveBinding(*paramBinding)) {
+        return true;
+      }
+    }
+    if (auto localIt = locals.find(receiverExpr.name); localIt != locals.end() &&
+        resolveBinding(localIt->second)) {
+      return true;
+    }
+    if (currentValidationState_.context.definitionPath.empty()) {
+      return false;
+    }
+    if (auto paramsIt = paramsByDef_.find(currentValidationState_.context.definitionPath);
+        paramsIt != paramsByDef_.end()) {
+      if (const BindingInfo *binding = findParamBinding(paramsIt->second, receiverExpr.name)) {
+        return resolveBinding(*binding);
+      }
+    }
+    return false;
+  };
   auto resolveIndexedArgsPackKeyValueMethod = [&]() -> bool {
     if (!(normalizedMethodName == "count" ||
           normalizedMethodName == "count_ref" ||
@@ -616,7 +645,10 @@ bool SemanticsValidator::validateExprMethodCallTarget(
   } else if (isStdNamespacedVectorCompatibilityHelperPath(resolved, "count") &&
              !expr.args.empty()) {
     std::string elemType;
-    if (resolveVectorTarget(expr.args.front(), elemType)) {
+    if (resolveCurrentArgsPackCountReceiver(expr.args.front(), elemType)) {
+      resolved = "/array/count";
+      isBuiltinMethod = true;
+    } else if (resolveVectorTarget(expr.args.front(), elemType)) {
       isBuiltinMethod = true;
     }
   }

@@ -1,16 +1,92 @@
 # Testcase Log
 
 ## Current Known Failures
-- `cd build-release && ./PrimeStruct_compile_run_tests --test-case="spinning cube native window host sample compiles and validates args deterministically" --no-skip`
-  currently reaches the `/cubeStdGfxEmitFrameStream` native compile step and
-  fails with `Native lowering error: native backend only supports
-  numeric/bool/string array literals`. The fixture still constructs
-  `array<VertexColored>` with struct literals in
-  `examples/web/spinning_cube/cube.prime`, so the native window-host runtime
-  smoke remains blocked until the backend supports struct array literals or
-  the fixture is refactored to a native-compatible stream source.
+- [ ] stdlib surface helper visibility/lowering regression | mode: release |
+  command: `./scripts/compile.sh --release` | first_seen:
+  2026-05-26 15:23 CEST | last_seen: 2026-05-26 19:50 CEST |
+  next: `./scripts/compile.sh --release`
+  | notes: release build completed, then CTest failed 317/1615 targets.
+  Later release-gate rerun was canceled around 211/1615 after repeated
+  `/std/collections/vector/count` and `/string/count` native/C++ unsupported
+  call signatures plus the broader collection/helper failures already present
+  in this stabilization branch.
+- [ ] `C++ emitter runs ui ime event stream deterministically` | mode:
+  release | command:
+  `cd build-release && ./PrimeStruct_compile_run_tests --test-case="C++ emitter runs ui ime event stream deterministically" --no-skip`
+  | first_seen: 2026-05-26 19:50 CEST | last_seen:
+  2026-05-26 19:50 CEST | next:
+  `cmake --build build-release --target primec PrimeStruct_compile_run_tests -j 1; cd build-release && ./PrimeStruct_compile_run_tests --test-case="C++ emitter runs ui ime event stream deterministically" --no-skip`
+  | notes: after focused string-count lowering fixes, the prior `/string/count`
+  unsupported-call diagnostic did not recur, but the isolated fixture stayed
+  silent for several minutes and was stopped with SIGTERM.
 
 ## Recent Test Runs
+- 2026-05-26 19:50 CEST | canceled | mode: release | command:
+  `./scripts/compile.sh --release` | failures: incomplete; see Current Known
+  Failures | notes: rerun was stopped after reaching about 211/1615 CTest
+  cases while repeatedly exposing `/std/collections/vector/count` and
+  `/string/count` native/C++ unsupported-call diagnostics on top of the
+  existing stdlib helper regression.
+- 2026-05-26 19:50 CEST | pass | mode: release | command:
+  `cmake --build build-release --target primec PrimeStruct_compile_run_tests -j 1`;
+  `cd build-release && ./PrimeStruct_compile_run_tests --test-case="compiles and runs native user string count method shadow" --no-skip`;
+  `cd build-release && ./PrimeStruct_compile_run_tests --test-case="compiles and runs native user vector count method shadow,compiles and runs native image api contract deterministically" --no-skip`;
+  `cd build-release && ./PrimeStruct_compile_run_tests --test-case="compiles native bare map count through canonical helper,compiles native bare map at through canonical helper,compiles native bare map at_unsafe through canonical helper,compiles and runs native bare map contains through canonical helper,rejects native bare map count without imported canonical helper,rejects native bare map contains call without imported canonical helper" --no-skip`
+  | failures: none | notes: focused native/C++ lowerer coverage passed
+  string method shadow 1 case / 4 assertions, vector/image 2 cases / 9
+  assertions, and canonical map helper coverage 6 cases / 22 assertions.
+- 2026-05-26 19:50 CEST | pass | mode: release | command:
+  `cd build-release && ./primec --emit=cpp codex_ui_string_count.prime -o /dev/null --entry /main`
+  | failures: none | notes: direct small `/std/ui` import repro using
+  `text.count()` emitted C++ without the prior `/string/count` unsupported
+  native call.
+- 2026-05-26 19:50 CEST | canceled | mode: release | command:
+  `cd build-release && ./PrimeStruct_compile_run_tests --test-case="C++ emitter runs ui ime event stream deterministically" --no-skip`
+  | failures: `C++ emitter runs ui ime event stream deterministically` |
+  notes: prior `/string/count` unsupported-call diagnostic no longer emitted,
+  but the case stayed silent for several minutes and was stopped with SIGTERM.
+- 2026-05-26 18:02 CEST | pass | mode: release | command:
+  `python3 scripts/check_vector_surface_traces.py --root .`;
+  `git diff --check`;
+  `cmake --build build-release --target PrimeStruct_semantics_tests -j 1`;
+  `cd build-release && ./PrimeStruct_semantics_tests --test-case="bare collection count resolves inside stdlib namespace helper,args pack count method resolves inside stdlib vector namespace" --no-skip`
+  | failures: none | notes: vector trace inventory and whitespace checks
+  passed; focused semantics coverage for stdlib namespace count and args-pack
+  count routing passed 2 cases / 6 assertions.
+- 2026-05-26 18:02 CEST | pass | mode: release | command:
+  `cmake --build build-release --target primec PrimeStruct_compile_run_tests PrimeStruct_backend_ir_tests -j 1`;
+  `cd build-release && ./PrimeStruct_compile_run_tests --test-case="compiles native bare map count through canonical helper,compiles native bare map at through canonical helper,compiles native bare map at_unsafe through canonical helper,compiles and runs native bare map contains through canonical helper,rejects native bare map count without imported canonical helper,rejects native bare map contains call without imported canonical helper" --no-skip`;
+  `cd build-release && ./PrimeStruct_backend_ir_tests --test-case="ir lowerer call helpers split legacy and canonical map count defs" --no-skip`
+  | failures: none | notes: native canonical map helper precedence and
+  no-import diagnostics passed 6 cases / 22 assertions; backend IR helper
+  split guard passed 1 case / 68 assertions.
+- 2026-05-26 17:54 CEST | fail | mode: release | command:
+  `cmake --build build-release --target primec PrimeStruct_compile_run_tests PrimeStruct_backend_ir_tests -j 1`;
+  `cd build-release && ./PrimeStruct_compile_run_tests --test-case="compiles native bare map count through canonical helper" --no-skip`
+  | failures: `compiles native bare map count through canonical helper` |
+  notes: native compile succeeded, but generated executable exited 1 instead
+  of expected 17 because cloned map-count calls fell through to builtin map
+  count instead of the visible canonical helper.
+- 2026-05-26 17:10 CEST | fail | mode: release | command:
+  `cd build-release && ./PrimeStruct_compile_run_tests --test-case="*map*" --no-skip`
+  | failures: 382 map-focused compile-run cases | notes: broad map shard
+  completed 433 passed / 382 failed / 3099 skipped while localizing the
+  stdlib helper regression; dominant signatures were unknown `map`, `mapPair`,
+  `mapSingle`, `mapOct`, `/std/collections/map/count`, and downstream
+  VM/native/C++ map lowering errors.
+- 2026-05-26 15:26 CEST | fail | mode: release | command:
+  `cmake --build build-release --target PrimeStruct_semantics_tests -j 1`;
+  `cd build-release && ./PrimeStruct_semantics_tests --test-case="stdlib map constructors accept inferred canonical map default parameters" --no-skip`
+  | failures: `stdlib map constructors accept inferred canonical map default
+  parameters` | notes: focused repro failed on
+  `unknown call target: /std/collections/map/count`, matching the broader
+  stdlib surface helper visibility regression from the release gate.
+- 2026-05-26 15:23 CEST | fail | mode: release | command:
+  `./scripts/compile.sh --release` | failures: 317 CTest targets; see
+  Current Known Failures | notes: full release gate built successfully, then
+  broad stdlib surface routing/lowering failures hit collection, gfx, image,
+  result, UI, reflection, and semantic-memory shards. The prior spinning cube
+  struct-array-literal signature did not recur in the first examples shards.
 - 2026-05-26 14:48 CEST | pass | mode: release | command:
   `cmake --build build-release --target PrimeStruct_misc_tests -j 1`;
   `cd build-release && ./PrimeStruct_misc_tests --test-case="ui scene surface bridge renders prime-authored ui scene to bgra8" --no-skip`;
@@ -8829,6 +8905,12 @@
 - 2026-05-12 17:28 local | fail | mode: release | command: `./scripts/compile.sh --release` | failures: 146 CTest targets | notes: baseline after preflight checkpoint failed; stabilization blocks TODO work
 
 ## Resolved Failures
+- [x] `spinning cube native window host sample compiles and validates args
+  deterministically` | resolved: 2026-05-26 15:23 CEST | validating
+  command: `./scripts/compile.sh --release` | notes: the previous
+  `/cubeStdGfxEmitFrameStream` struct-array-literal native lowering signature
+  was not present in the fresh release gate; current failures are tracked as
+  the broader stdlib surface helper regression above.
 - [x] TODO-4576 map C++ emitter slice | resolved:
   2026-05-26 09:57 CEST | validating command:
   `cd build-release && ./PrimeStruct_compile_run_tests --test-case="todo queue and skipped doctest debt stay source locked,compiles and runs canonical map constructor,compiles and runs map count,compiles and runs canonical namespaced map helpers on experimental map values in C++ emitter,compiles and runs wrapper map helpers on experimental map values in C++ emitter,compiles and runs inferred experimental map returns in C++ emitter,compiles and runs helper-wrapped experimental map struct storage fields in C++ emitter,compiles and runs borrowed experimental map helpers in C++ emitter" --no-skip`

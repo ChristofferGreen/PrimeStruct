@@ -1054,6 +1054,39 @@ bool SemanticsValidator::resolveMethodTarget(const std::vector<ParameterInfo> &p
     pointeeTypeOut = args.front();
     return !pointeeTypeOut.empty();
   };
+  auto resolveCurrentDefinitionParamBinding =
+      [&](const std::string &name, BindingInfo &bindingOut) -> bool {
+    if (currentValidationState_.context.definitionPath.empty()) {
+      return false;
+    }
+    if (auto paramsIt = paramsByDef_.find(currentValidationState_.context.definitionPath);
+        paramsIt != paramsByDef_.end()) {
+      if (const BindingInfo *binding = findParamBinding(paramsIt->second, name)) {
+        bindingOut = *binding;
+        return true;
+      }
+    }
+    auto defIt = defMap_.find(currentValidationState_.context.definitionPath);
+    if (defIt == defMap_.end() || defIt->second == nullptr) {
+      return false;
+    }
+    for (const Expr &param : defIt->second->parameters) {
+      if (param.name != name) {
+        continue;
+      }
+      std::optional<std::string> restrictType;
+      std::string parseError;
+      return parseBindingInfo(param,
+                              defIt->second->namespacePrefix,
+                              structNames_,
+                              importAliases_,
+                              bindingOut,
+                              restrictType,
+                              parseError,
+                              &sumNames_);
+    }
+    return false;
+  };
   auto resolveArgsPackCountTarget = [&](const Expr &target, std::string &elemType) -> bool {
     elemType.clear();
     auto resolveBinding = [&](const BindingInfo &binding) {
@@ -1061,17 +1094,33 @@ bool SemanticsValidator::resolveMethodTarget(const std::vector<ParameterInfo> &p
     };
     if (target.kind == Expr::Kind::Name) {
       if (const BindingInfo *paramBinding = findParamBinding(params, target.name)) {
-        return resolveBinding(*paramBinding);
+        if (resolveBinding(*paramBinding)) {
+          return true;
+        }
       }
       auto it = locals.find(target.name);
       if (it != locals.end()) {
-        return resolveBinding(it->second);
+        if (resolveBinding(it->second)) {
+          return true;
+        }
+      }
+      BindingInfo currentDefBinding;
+      if (resolveCurrentDefinitionParamBinding(target.name, currentDefBinding)) {
+        return resolveBinding(currentDefBinding);
       }
     }
     return false;
   };
   auto resolveArgsPackAccessTarget = [&](const Expr &target, std::string &elemType) -> bool {
-    return resolveArgsPackElementTypeForExpr(target, params, locals, elemType);
+    if (resolveArgsPackElementTypeForExpr(target, params, locals, elemType)) {
+      return true;
+    }
+    if (target.kind != Expr::Kind::Name) {
+      return false;
+    }
+    BindingInfo currentDefBinding;
+    return resolveCurrentDefinitionParamBinding(target.name, currentDefBinding) &&
+           getArgsPackElementType(currentDefBinding, elemType);
   };
   auto resolveIndexedArgsPackElementType = [&](const Expr &target, std::string &elemTypeOut) -> bool {
     elemTypeOut.clear();
@@ -1858,6 +1907,20 @@ bool SemanticsValidator::resolveMethodTarget(const std::vector<ParameterInfo> &p
       isBuiltinOut = false;
       return true;
     }
+    if (!explicitRemovedMethodPath.empty() &&
+        path.rfind("/array/", 0) == 0) {
+      std::string ignoredElemType;
+      const bool isArgsPackArrayBuiltin =
+          (normalizedMethodName == "count" &&
+           resolveArgsPackCountTarget(receiver, ignoredElemType)) ||
+          (isValueSurfaceAccessMethodName(normalizedMethodName) &&
+           resolveArgsPackAccessTarget(receiver, ignoredElemType));
+      if (isArgsPackArrayBuiltin) {
+        resolvedOut = path;
+        isBuiltinOut = true;
+        return true;
+      }
+    }
     if (!explicitRemovedMethodPath.empty() && path.rfind("/string/", 0) != 0) {
       if (shouldPreserveBuiltinCompatibilityForExplicitRemovedMethod()) {
         resolvedOut = explicitRemovedMethodPath;
@@ -2056,6 +2119,14 @@ bool SemanticsValidator::resolveMethodTarget(const std::vector<ParameterInfo> &p
     if (resolvedExplicitRootKeyValueMethod || !error_.empty()) {
       return resolvedExplicitRootKeyValueMethod;
     }
+  }
+  if (normalizedMethodName == "count" &&
+      resolveArgsPackCountTarget(receiver, elemType)) {
+    return setCollectionMethodTarget("/array/count");
+  }
+  if (isValueSurfaceAccessMethodName(normalizedMethodName) &&
+      resolveArgsPackAccessTarget(receiver, elemType)) {
+    return setCollectionMethodTarget("/array/" + normalizedMethodName);
   }
   auto resolveDirectReceiver = [&](const Expr &directCandidate,
                                    std::string &directElemTypeOut) -> bool {

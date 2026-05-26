@@ -15,8 +15,8 @@ bool isNonTypeTransformName(const std::string &name) {
 }
 
 bool isBuiltinTemplateContainer(const std::string &name) {
-  return name == "array" || name == "vector" || name == "soa" || name == "map" || name == "Result" ||
-         name == "File" || isBuiltinTemplateTypeName(name);
+  return name == "array" || name == "args" || name == "vector" || name == "soa" ||
+         name == "map" || name == "Result" || name == "File" || isBuiltinTemplateTypeName(name);
 }
 
 std::string templateMonomorphSoaReceiverTypeName() {

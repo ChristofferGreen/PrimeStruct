@@ -125,6 +125,58 @@ main() {
   CHECK(error.empty());
 }
 
+TEST_CASE("bare collection count resolves inside stdlib namespace helper") {
+  const std::string source = R"(
+import /std/collections/*
+
+namespace std {
+  namespace image {
+    [effects(heap_alloc), return<int>]
+    vector_count([vector<i32>] values) {
+      return(count(values))
+    }
+
+    [return<int>]
+    array_count([array<i32>] values) {
+      return(count(values))
+    }
+  }
+}
+
+[effects(heap_alloc), return<int>]
+main() {
+  [vector<i32>] values{vector<i32>(1i32, 2i32)}
+  [array<i32>] fixed{array<i32>(3i32, 4i32, 5i32)}
+  return(/std/image/vector_count(values) + /std/image/array_count(fixed))
+}
+)";
+  std::string error;
+  const bool valid = validateProgram(source, "/main", error);
+  INFO(error);
+  CHECK(valid);
+  CHECK(error.empty());
+}
+
+TEST_CASE("args pack count method resolves inside stdlib vector namespace") {
+  const std::string source = R"(
+[return<i32>]
+/std/collections/vector/make<T>([args<T>] values) {
+  valueCount{values.count()}
+  return(valueCount)
+}
+
+[return<i32>]
+main() {
+  return(/std/collections/vector/make<i32>())
+}
+)";
+  std::string error;
+  const bool valid = validateProgram(source, "/main", error);
+  INFO(error);
+  CHECK(valid);
+  CHECK(error.empty());
+}
+
 TEST_CASE("bare vector count call requires imported stdlib helper or explicit definition") {
   const std::string source = R"(
 [effects(heap_alloc), return<int>]

@@ -98,10 +98,19 @@ bool SemanticsValidator::isUnqualifiedCollectionBuiltinName(const Expr &candidat
       candidate.name != helper) {
     return false;
   }
-  if (!candidate.namespacePrefix.empty()) {
+  if (candidate.name.find('/') != std::string::npos) {
     return false;
   }
-  return candidate.name.find('/') == std::string::npos;
+  if (candidate.namespacePrefix.empty()) {
+    return true;
+  }
+  const std::string resolved = resolveCalleePath(candidate);
+  if (!candidate.isMethodCall && hasImportedDefinitionPath(resolved)) {
+    return true;
+  }
+  return resolved.empty() || (!hasDefinitionPath(resolved) &&
+                              !hasDeclaredDefinitionPath(resolved) &&
+                              !hasImportedDefinitionPath(resolved));
 }
 
 bool SemanticsValidator::resolveVectorHelperMethodTarget(

@@ -169,15 +169,34 @@ bool isExplicitVectorCountMethodCall(const Expr &expr) {
   if (expr.kind != Expr::Kind::Call || !expr.isMethodCall) {
     return false;
   }
-  const std::string scopedPath = resolveScopedCallPath(expr);
-  if (scopedPath == rootedCollectionMemberPath("vector", "count") ||
-      scopedPath == "vector/count") {
+  const auto *metadata =
+      findStdlibSurfaceMetadataByBridgeKey("collections.vector_helpers");
+  if (metadata == nullptr) {
+    return false;
+  }
+  std::string resolvedHelperName;
+  return (resolvePublishedStdlibSurfaceExprMemberName(
+              expr, metadata->id, resolvedHelperName) ||
+          resolvePublishedStdlibSurfaceMemberName(
+              resolveScopedCallPath(expr), metadata->id, resolvedHelperName)) &&
+         resolvedHelperName == "count";
+}
+
+bool isResolvedVectorCountMethodCall(const Expr &expr,
+                                     const SemanticProgram *semanticProgram) {
+  if (expr.kind != Expr::Kind::Call || !expr.isMethodCall ||
+      expr.args.size() != 1) {
+    return false;
+  }
+  if (isExplicitVectorCountMethodCall(expr)) {
     return true;
   }
-  const std::string normalizedPath =
-      normalizeUnrootedHelperPath(resolveScopedCallPath(expr));
-  return normalizedPath ==
-         canonicalCollectionMemberPrefix("vector") + "count";
+  const std::string canonicalVectorCountPath =
+      stdlibSurfaceCanonicalHelperPath(
+          StdlibSurfaceId::CollectionsVectorHelperSurface, "count");
+  return !canonicalVectorCountPath.empty() &&
+         findSemanticProductMethodCallTarget(semanticProgram, expr) ==
+             canonicalVectorCountPath;
 }
 
 bool isExplicitPublishedVectorMetadataCall(const Expr &expr,
@@ -233,6 +252,38 @@ bool isSemanticVectorCountBridgeCall(const Expr &expr,
   return bridgePath == canonicalCollectionMemberPrefix("vector") + "count";
 }
 
+bool isSemanticArrayCountMethodTarget(const Expr &expr,
+                                      const SemanticProgram *semanticProgram) {
+  return semanticProgram != nullptr && expr.kind == Expr::Kind::Call &&
+         expr.isMethodCall && expr.semanticNodeId != 0 &&
+         findSemanticProductMethodCallTarget(semanticProgram, expr) == "/array/count";
+}
+
+std::string semanticMethodReceiverTypeText(const SemanticProgram *semanticProgram,
+                                           const Expr &expr) {
+  if (semanticProgram == nullptr || expr.kind != Expr::Kind::Call ||
+      !expr.isMethodCall || expr.semanticNodeId == 0) {
+    return {};
+  }
+  const auto methodCallTargets =
+      semanticProgramMethodCallTargetView(*semanticProgram);
+  for (const auto *entry : methodCallTargets) {
+    if (entry == nullptr || entry->semanticNodeId != expr.semanticNodeId) {
+      continue;
+    }
+    if (entry->receiverTypeTextId != InvalidSymbolId) {
+      const std::string_view internedTypeText =
+          semanticProgramResolveCallTargetString(*semanticProgram,
+                                                 entry->receiverTypeTextId);
+      if (!internedTypeText.empty()) {
+        return std::string(internedTypeText);
+      }
+    }
+    return entry->receiverTypeText;
+  }
+  return {};
+}
+
 bool isInternalVectorMetadataCall(const Expr &expr,
                                   std::string_view helperName) {
   if (expr.kind != Expr::Kind::Call || expr.isMethodCall ||
@@ -268,10 +319,18 @@ bool isExplicitRemovedCountLikeAliasCall(const Expr &expr,
     return false;
   }
   const std::string scopedPath = resolveScopedCallPath(expr);
-  if (helperName == "count" &&
-      (scopedPath == rootedCollectionMemberPath("vector", "count") ||
-       scopedPath == "vector/count")) {
-    return false;
+  if (helperName == "count") {
+    const auto *metadata =
+        findStdlibSurfaceMetadataByBridgeKey("collections.vector_helpers");
+    std::string resolvedHelperName;
+    if (metadata != nullptr &&
+        (resolvePublishedStdlibSurfaceExprMemberName(
+             expr, metadata->id, resolvedHelperName) ||
+         resolvePublishedStdlibSurfaceMemberName(
+             scopedPath, metadata->id, resolvedHelperName)) &&
+        resolvedHelperName == helperName) {
+      return false;
+    }
   }
   auto matchesCollectionRoot = [&](std::string_view collectionName) {
     return scopedPath == rootedCollectionMemberPath(collectionName, helperName) ||
@@ -1088,12 +1147,14 @@ bool isArrayCountCall(const Expr &expr,
                       const SemanticProductIndex *semanticIndex) {
   const bool isSemanticVectorCountBridge =
       isSemanticVectorCountBridgeCall(expr, semanticProgram);
+  const bool isSemanticArrayCountMethod =
+      isSemanticArrayCountMethodTarget(expr, semanticProgram);
   if (!(count_access_detail::isUnqualifiedCollectionBuiltinName(expr, "count") ||
-        isSemanticVectorCountBridge) ||
+        isSemanticVectorCountBridge || isSemanticArrayCountMethod) ||
       expr.args.size() != 1) {
     return false;
   }
-  if (isExplicitVectorCountMethodCall(expr)) {
+  if (isExplicitVectorCountMethodCall(expr) && !isSemanticArrayCountMethod) {
     return false;
   }
   if (isExplicitPublishedVectorMetadataCall(expr, "count") &&
@@ -1420,12 +1481,48 @@ CountAccessCallEmitResult tryEmitCountAccessCall(
       isExplicitPublishedKeyValueMetadataCall(expr, semanticProgram, "count");
   const bool semanticVectorCountBridge =
       isSemanticVectorCountBridgeCall(expr, semanticProgram);
+  const bool semanticArrayCountMethod =
+      isSemanticArrayCountMethodTarget(expr, semanticProgram);
   const bool explicitPublishedVectorCapacityCall =
       isExplicitPublishedVectorMetadataCall(expr, "capacity");
+  const auto resolvedVectorCountMethodHasBuiltinTarget = [&]() {
+    if (!isResolvedVectorCountMethodCall(expr, semanticProgram) ||
+        expr.args.size() != 1) {
+      return false;
+    }
+    const Expr &target = expr.args.front();
+    if (isDynamicVectorCountTargetFn != nullptr &&
+        isDynamicVectorCountTargetFn(target, localsIn)) {
+      return true;
+    }
+    if (isVectorCountTarget(target, localsIn)) {
+      return true;
+    }
+    SemanticCountTargetInfo semanticTargetInfo;
+    if (semanticProgram != nullptr && semanticIndex != nullptr &&
+        target.semanticNodeId != 0 &&
+        classifySemanticCountTarget(target,
+                                    semanticProgram,
+                                    semanticIndex,
+                                    semanticTargetInfo) &&
+        semanticTargetInfo.isVector) {
+      return true;
+    }
+    const std::string receiverTypeText =
+        semanticMethodReceiverTypeText(semanticProgram, expr);
+    return !receiverTypeText.empty() &&
+           classifySemanticCountTargetTypeText(receiverTypeText,
+                                               semanticTargetInfo) &&
+           semanticTargetInfo.isVector;
+  };
+  const bool resolvedVectorCountMethodBuiltinTarget =
+      resolvedVectorCountMethodHasBuiltinTarget();
   const auto isCountLikeCall = [&]() {
     return (count_access_detail::isUnqualifiedCollectionBuiltinName(expr, "count") ||
             explicitPublishedVectorCountCall ||
-            explicitPublishedKeyValueCountCall) &&
+            explicitPublishedKeyValueCountCall ||
+            semanticArrayCountMethod ||
+            resolvedVectorCountMethodBuiltinTarget) &&
            expr.args.size() == 1;
   };
   const auto isBareSimpleCountLikeCall = [&](std::string_view helperName) {
@@ -1475,7 +1572,9 @@ CountAccessCallEmitResult tryEmitCountAccessCall(
       shouldDeferBareSimpleCountLikeCall("capacity")) {
     return CountAccessCallEmitResult::NotHandled;
   }
-  if (isExplicitVectorCountMethodCall(expr)) {
+  if (isResolvedVectorCountMethodCall(expr, semanticProgram) &&
+      !semanticArrayCountMethod &&
+      !resolvedVectorCountMethodBuiltinTarget) {
     return CountAccessCallEmitResult::NotHandled;
   }
   const bool namedArgVectorTemporaryCountCall =
@@ -1620,6 +1719,20 @@ CountAccessCallEmitResult tryEmitCountAccessCall(
   const auto isRuntimeStringCountTarget = [&]() {
     if (!isCountLikeCall() || isStaticallyKnownStringCountTarget()) {
       return false;
+    }
+    const std::string receiverTypeText =
+        semanticMethodReceiverTypeText(semanticProgram, expr);
+    if (!receiverTypeText.empty()) {
+      SemanticCountTargetInfo receiverInfo;
+      if (classifySemanticCountTargetTypeText(receiverTypeText,
+                                              receiverInfo)) {
+        if (receiverInfo.isString) {
+          return true;
+        }
+        if (receiverInfo.isCollection) {
+          return false;
+        }
+      }
     }
     const Expr &target = expr.args.front();
     const SemanticStringCountTargetResolution semanticStringTarget =
@@ -1783,7 +1896,8 @@ CountAccessCallEmitResult tryEmitCountAccessCall(
 
   if ((count_access_detail::isUnqualifiedCollectionBuiltinName(expr, "count") ||
        explicitPublishedVectorCountCall ||
-       explicitPublishedKeyValueCountCall) && expr.args.size() == 1 &&
+       explicitPublishedKeyValueCountCall ||
+       resolvedVectorCountMethodBuiltinTarget) && expr.args.size() == 1 &&
       isDynamicCollectionCountTargetFn && isDynamicCollectionCountTargetFn(expr.args.front(), localsIn)) {
     if (inferExprKind &&
         inferExprKind(expr.args.front(), localsIn) == LocalInfo::ValueKind::String) {
