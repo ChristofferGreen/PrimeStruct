@@ -2293,8 +2293,9 @@ module {
   slots, and no implicit interpolation across SDF blends. 2D SDFs provide source-over coverage, 3D SDFs require explicit
   material assignment, and the initial 3D SDF widget is `primitive_sdf_button()` with a `4` logical-pixel bevel radius,
   `3` logical-pixel normal depth, and `1` logical-pixel pressed depth. Text stays a 2D international overlay/primitive
-  with shaping, bidi, fallback-font, and glyph-atlas
-  behavior behind renderer-owned HarfBuzz-class, FreeType-class, and ICU/FriBidi-class wrappers, and the first UI light
+  with deterministic shaped glyph runs for UTF-8 decoding, script/direction segmentation, combining marks, fallback-font
+  selection, and metrics; glyph-atlas/raster composition remains the next text slice behind renderer-owned HarfBuzz-class,
+  FreeType-class, and ICU/FriBidi-class wrappers, and the first UI light
   rig is fixed ambient-plus-key (`0.55` ambient, `0.45` upper-left/front key, no shadows, no stochastic sampling, no
   author lights). No active TODO currently tracks platform/runtime consumption of that shared event stream. Add a
   concrete TODO before changing that UI runtime seam; composite-widget composition remains locked to the basic

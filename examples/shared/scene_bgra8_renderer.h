@@ -7,6 +7,8 @@
 #include <cstddef>
 #include <cstdint>
 #include <string>
+#include <string_view>
+#include <utility>
 #include <vector>
 
 namespace primestruct::scene_bgra8_renderer {
@@ -26,6 +28,73 @@ struct SceneRenderResult {
   bool ok = false;
   std::string error;
   software_surface::SoftwareSurfaceFrame frame;
+};
+
+enum class SceneTextDirection {
+  LeftToRight,
+  RightToLeft,
+};
+
+enum class SceneTextScript {
+  Common,
+  Latin,
+  Cyrillic,
+  Greek,
+  Hebrew,
+  Arabic,
+  Devanagari,
+  Unknown,
+};
+
+struct SceneTextCodepointRange {
+  std::uint32_t first = 0;
+  std::uint32_t last = 0;
+};
+
+struct SceneTextFixtureFont {
+  std::string name;
+  std::vector<SceneTextCodepointRange> coverage;
+  std::uint32_t glyphBase = 1;
+  double advanceScale = 1.0;
+};
+
+struct SceneTextShapeOptions {
+  std::vector<SceneTextFixtureFont> fallbackFonts;
+  double textSize = 16.0;
+  double missingGlyphAdvanceScale = 0.6;
+};
+
+struct SceneTextGlyph {
+  std::uint32_t codepoint = 0;
+  std::uint32_t glyphId = 0;
+  std::string fontName;
+  SceneTextScript script = SceneTextScript::Common;
+  SceneTextDirection direction = SceneTextDirection::LeftToRight;
+  std::size_t clusterByteOffset = 0;
+  double x = 0.0;
+  double y = 0.0;
+  double xOffset = 0.0;
+  double yOffset = 0.0;
+  double advance = 0.0;
+  bool combiningMark = false;
+  bool missingGlyph = false;
+};
+
+struct SceneTextGlyphRun {
+  SceneTextDirection direction = SceneTextDirection::LeftToRight;
+  SceneTextScript script = SceneTextScript::Common;
+  std::size_t glyphBegin = 0;
+  std::size_t glyphCount = 0;
+  double advance = 0.0;
+};
+
+struct SceneTextShapeResult {
+  bool ok = false;
+  std::string error;
+  std::vector<SceneTextGlyph> glyphs;
+  std::vector<SceneTextGlyphRun> runs;
+  double width = 0.0;
+  double height = 0.0;
 };
 
 namespace detail {
@@ -142,6 +211,277 @@ private:
 };
 
 inline double clampUnit(double value) { return std::clamp(value, 0.0, 1.0); }
+
+struct DecodedScalar {
+  std::uint32_t codepoint = 0;
+  std::size_t byteOffset = 0;
+};
+
+inline bool isContinuationByte(unsigned char byte) {
+  return (byte & 0xc0u) == 0x80u;
+}
+
+inline bool readUtf8Scalar(std::string_view text,
+                           std::size_t &offset,
+                           DecodedScalar &scalarOut) {
+  if (offset >= text.size()) {
+    return false;
+  }
+  const std::size_t start = offset;
+  const unsigned char first = static_cast<unsigned char>(text[offset]);
+  if (first < 0x80u) {
+    scalarOut = DecodedScalar{first, start};
+    ++offset;
+    return true;
+  }
+
+  std::uint32_t codepoint = 0;
+  std::size_t width = 0;
+  std::uint32_t minimum = 0;
+  if ((first & 0xe0u) == 0xc0u) {
+    codepoint = first & 0x1fu;
+    width = 2;
+    minimum = 0x80u;
+  } else if ((first & 0xf0u) == 0xe0u) {
+    codepoint = first & 0x0fu;
+    width = 3;
+    minimum = 0x800u;
+  } else if ((first & 0xf8u) == 0xf0u) {
+    codepoint = first & 0x07u;
+    width = 4;
+    minimum = 0x10000u;
+  } else {
+    return false;
+  }
+  if (offset + width > text.size()) {
+    return false;
+  }
+  for (std::size_t index = 1; index < width; ++index) {
+    const unsigned char byte = static_cast<unsigned char>(text[offset + index]);
+    if (!isContinuationByte(byte)) {
+      return false;
+    }
+    codepoint = (codepoint << 6u) | static_cast<std::uint32_t>(byte & 0x3fu);
+  }
+  if (codepoint < minimum || codepoint > 0x10ffffu ||
+      (codepoint >= 0xd800u && codepoint <= 0xdfffu)) {
+    return false;
+  }
+  scalarOut = DecodedScalar{codepoint, start};
+  offset += width;
+  return true;
+}
+
+inline bool decodeUtf8(std::string_view text,
+                       std::vector<DecodedScalar> &scalarsOut,
+                       std::string &errorOut) {
+  std::size_t offset = 0;
+  while (offset < text.size()) {
+    DecodedScalar scalar;
+    if (!readUtf8Scalar(text, offset, scalar)) {
+      errorOut = "scene text shaper expected valid UTF-8";
+      return false;
+    }
+    scalarsOut.push_back(scalar);
+  }
+  return true;
+}
+
+inline bool codepointInRange(std::uint32_t codepoint,
+                             std::uint32_t first,
+                             std::uint32_t last) {
+  return codepoint >= first && codepoint <= last;
+}
+
+inline SceneTextScript classifyTextScript(std::uint32_t codepoint) {
+  if ((codepointInRange(codepoint, 0x0041u, 0x005au) ||
+       codepointInRange(codepoint, 0x0061u, 0x007au) ||
+       codepointInRange(codepoint, 0x00c0u, 0x024fu))) {
+    return SceneTextScript::Latin;
+  }
+  if (codepoint <= 0x007fu || codepointInRange(codepoint, 0x0300u, 0x036fu) ||
+      codepointInRange(codepoint, 0x2000u, 0x206fu)) {
+    return SceneTextScript::Common;
+  }
+  if (codepointInRange(codepoint, 0x0370u, 0x03ffu)) {
+    return SceneTextScript::Greek;
+  }
+  if (codepointInRange(codepoint, 0x0400u, 0x052fu)) {
+    return SceneTextScript::Cyrillic;
+  }
+  if (codepointInRange(codepoint, 0x0590u, 0x05ffu)) {
+    return SceneTextScript::Hebrew;
+  }
+  if (codepointInRange(codepoint, 0x0600u, 0x06ffu) ||
+      codepointInRange(codepoint, 0x0750u, 0x077fu)) {
+    return SceneTextScript::Arabic;
+  }
+  if (codepointInRange(codepoint, 0x0900u, 0x097fu)) {
+    return SceneTextScript::Devanagari;
+  }
+  return SceneTextScript::Unknown;
+}
+
+inline SceneTextDirection classifyTextDirection(SceneTextScript script) {
+  return (script == SceneTextScript::Hebrew || script == SceneTextScript::Arabic)
+             ? SceneTextDirection::RightToLeft
+             : SceneTextDirection::LeftToRight;
+}
+
+inline bool isCombiningTextMark(std::uint32_t codepoint) {
+  return codepointInRange(codepoint, 0x0300u, 0x036fu) ||
+         codepointInRange(codepoint, 0x0591u, 0x05bdu) ||
+         codepointInRange(codepoint, 0x05bfu, 0x05bfu) ||
+         codepointInRange(codepoint, 0x05c1u, 0x05c2u) ||
+         codepointInRange(codepoint, 0x05c4u, 0x05c5u) ||
+         codepointInRange(codepoint, 0x05c7u, 0x05c7u) ||
+         codepointInRange(codepoint, 0x064bu, 0x065fu) ||
+         codepointInRange(codepoint, 0x093cu, 0x094du);
+}
+
+inline bool fontCoversCodepoint(const SceneTextFixtureFont &font,
+                                std::uint32_t codepoint,
+                                std::uint32_t &glyphIdOut) {
+  for (const SceneTextCodepointRange &range : font.coverage) {
+    if (range.first <= range.last && codepointInRange(codepoint, range.first, range.last)) {
+      glyphIdOut = font.glyphBase + (codepoint - range.first);
+      return true;
+    }
+  }
+  return false;
+}
+
+inline double glyphAdvance(const SceneTextFixtureFont *font,
+                           const SceneTextShapeOptions &options,
+                           bool missingGlyph,
+                           bool combiningMark) {
+  if (combiningMark) {
+    return 0.0;
+  }
+  const double scale = missingGlyph ? options.missingGlyphAdvanceScale : font->advanceScale;
+  return options.textSize * std::max(scale, 0.0);
+}
+
+struct PendingTextGlyph {
+  SceneTextGlyph glyph;
+  const SceneTextFixtureFont *font = nullptr;
+};
+
+struct ShapedTextScalar {
+  DecodedScalar scalar;
+  SceneTextScript script = SceneTextScript::Common;
+  SceneTextDirection direction = SceneTextDirection::LeftToRight;
+  bool combiningMark = false;
+};
+
+struct ShapedTextScalarRun {
+  SceneTextScript script = SceneTextScript::Common;
+  SceneTextDirection direction = SceneTextDirection::LeftToRight;
+  std::size_t scalarBegin = 0;
+  std::size_t scalarEnd = 0;
+};
+
+inline SceneTextScript inheritedTextScript(SceneTextScript script,
+                                           bool combiningMark,
+                                           SceneTextScript previousStrongScript) {
+  if (combiningMark && previousStrongScript != SceneTextScript::Common &&
+      previousStrongScript != SceneTextScript::Unknown) {
+    return previousStrongScript;
+  }
+  return script;
+}
+
+inline bool isStrongTextScript(SceneTextScript script) {
+  return script != SceneTextScript::Common && script != SceneTextScript::Unknown;
+}
+
+inline PendingTextGlyph makePendingTextGlyph(const ShapedTextScalar &scalar,
+                                             const SceneTextShapeOptions &options) {
+  PendingTextGlyph pending;
+  pending.glyph.codepoint = scalar.scalar.codepoint;
+  pending.glyph.script = scalar.script;
+  pending.glyph.direction = scalar.direction;
+  pending.glyph.clusterByteOffset = scalar.scalar.byteOffset;
+  pending.glyph.combiningMark = scalar.combiningMark;
+
+  std::uint32_t glyphId = 0;
+  for (const SceneTextFixtureFont &font : options.fallbackFonts) {
+    if (fontCoversCodepoint(font, scalar.scalar.codepoint, glyphId)) {
+      pending.font = &font;
+      pending.glyph.glyphId = glyphId;
+      pending.glyph.fontName = font.name;
+      return pending;
+    }
+  }
+
+  pending.glyph.fontName = "missing-glyph";
+  pending.glyph.missingGlyph = true;
+  return pending;
+}
+
+inline void appendSceneTextGlyph(PendingTextGlyph pending,
+                                 const SceneTextShapeOptions &options,
+                                 double &cursorX,
+                                 double &lastBaseX,
+                                 double &lastBaseAdvance,
+                                 bool &haveLastBase,
+                                 SceneTextShapeResult &result) {
+  pending.glyph.advance =
+      glyphAdvance(pending.font, options, pending.glyph.missingGlyph, pending.glyph.combiningMark);
+  if (pending.glyph.combiningMark) {
+    pending.glyph.x = haveLastBase ? lastBaseX : cursorX;
+    pending.glyph.xOffset = haveLastBase ? lastBaseAdvance * 0.45 : 0.0;
+    pending.glyph.yOffset = -options.textSize * 0.25;
+  } else {
+    pending.glyph.x = cursorX;
+    lastBaseX = cursorX;
+    lastBaseAdvance = pending.glyph.advance;
+    haveLastBase = true;
+    cursorX += pending.glyph.advance;
+  }
+  result.glyphs.push_back(std::move(pending.glyph));
+}
+
+inline void appendSceneTextRun(const std::vector<ShapedTextScalar> &scalars,
+                               const ShapedTextScalarRun &run,
+                               const SceneTextShapeOptions &options,
+                               double &cursorX,
+                               double &lastBaseX,
+                               double &lastBaseAdvance,
+                               bool &haveLastBase,
+                               SceneTextShapeResult &result) {
+  SceneTextGlyphRun glyphRun;
+  glyphRun.direction = run.direction;
+  glyphRun.script = run.script;
+  glyphRun.glyphBegin = result.glyphs.size();
+  const double startX = cursorX;
+
+  if (run.direction == SceneTextDirection::RightToLeft) {
+    for (std::size_t scalarIndex = run.scalarEnd; scalarIndex > run.scalarBegin; --scalarIndex) {
+      appendSceneTextGlyph(makePendingTextGlyph(scalars[scalarIndex - 1u], options),
+                           options,
+                           cursorX,
+                           lastBaseX,
+                           lastBaseAdvance,
+                           haveLastBase,
+                           result);
+    }
+  } else {
+    for (std::size_t scalarIndex = run.scalarBegin; scalarIndex < run.scalarEnd; ++scalarIndex) {
+      appendSceneTextGlyph(makePendingTextGlyph(scalars[scalarIndex], options),
+                           options,
+                           cursorX,
+                           lastBaseX,
+                           lastBaseAdvance,
+                           haveLastBase,
+                           result);
+    }
+  }
+
+  glyphRun.glyphCount = result.glyphs.size() - glyphRun.glyphBegin;
+  glyphRun.advance = cursorX - startX;
+  result.runs.push_back(glyphRun);
+}
 
 inline std::uint8_t unitToUnorm(double value) {
   return static_cast<std::uint8_t>(std::lround(clampUnit(value) * 255.0));
@@ -432,6 +772,84 @@ inline double sdfButtonShade(double localX,
 }
 
 } // namespace detail
+
+inline SceneTextShapeResult shapeSceneTextUtf8(
+    std::string_view utf8,
+    const SceneTextShapeOptions &options = {}) {
+  SceneTextShapeResult result;
+  if (options.textSize <= 0.0 || !std::isfinite(options.textSize)) {
+    result.error = "scene text shaper text size must be positive";
+    return result;
+  }
+  if (options.missingGlyphAdvanceScale < 0.0 ||
+      !std::isfinite(options.missingGlyphAdvanceScale)) {
+    result.error = "scene text shaper missing glyph advance scale must be non-negative";
+    return result;
+  }
+  for (const SceneTextFixtureFont &font : options.fallbackFonts) {
+    if (!std::isfinite(font.advanceScale)) {
+      result.error = "scene text shaper font advance scale must be finite";
+      return result;
+    }
+  }
+
+  std::vector<detail::DecodedScalar> decoded;
+  if (!detail::decodeUtf8(utf8, decoded, result.error)) {
+    return result;
+  }
+
+  std::vector<detail::ShapedTextScalar> scalars;
+  scalars.reserve(decoded.size());
+  SceneTextScript previousStrongScript = SceneTextScript::Common;
+  for (const detail::DecodedScalar &scalar : decoded) {
+    detail::ShapedTextScalar shaped;
+    shaped.scalar = scalar;
+    shaped.combiningMark = detail::isCombiningTextMark(scalar.codepoint);
+    shaped.script = detail::inheritedTextScript(
+        detail::classifyTextScript(scalar.codepoint), shaped.combiningMark, previousStrongScript);
+    shaped.direction = detail::classifyTextDirection(shaped.script);
+    if (!shaped.combiningMark && detail::isStrongTextScript(shaped.script)) {
+      previousStrongScript = shaped.script;
+    }
+    scalars.push_back(shaped);
+  }
+
+  std::vector<detail::ShapedTextScalarRun> scalarRuns;
+  for (std::size_t index = 0; index < scalars.size(); ++index) {
+    const detail::ShapedTextScalar &scalar = scalars[index];
+    if (scalarRuns.empty() || scalarRuns.back().script != scalar.script ||
+        scalarRuns.back().direction != scalar.direction) {
+      scalarRuns.push_back(detail::ShapedTextScalarRun{
+          scalar.script, scalar.direction, index, index + 1u});
+      continue;
+    }
+    scalarRuns.back().scalarEnd = index + 1u;
+  }
+
+  double cursorX = 0.0;
+  double lastBaseX = 0.0;
+  double lastBaseAdvance = 0.0;
+  bool haveLastBase = false;
+  for (const detail::ShapedTextScalarRun &run : scalarRuns) {
+    detail::appendSceneTextRun(
+        scalars, run, options, cursorX, lastBaseX, lastBaseAdvance, haveLastBase, result);
+  }
+
+  result.width = cursorX;
+  result.height = options.textSize;
+  result.ok = true;
+  return result;
+}
+
+inline SceneTextShapeResult shapeSceneTextUtf8(
+    std::string_view utf8,
+    const std::vector<SceneTextFixtureFont> &fallbackFonts,
+    double textSize) {
+  SceneTextShapeOptions options;
+  options.fallbackFonts = fallbackFonts;
+  options.textSize = textSize;
+  return shapeSceneTextUtf8(utf8, options);
+}
 
 inline SceneRenderResult renderSerializedSceneToBgra8(
     const std::vector<std::int32_t> &serializedScene,

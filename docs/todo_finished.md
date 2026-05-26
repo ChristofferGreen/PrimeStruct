@@ -6,6 +6,42 @@ Legend:
 Finished items are periodically archived here from `docs/todo.md`; section headers record the archive date.
 
 **Todo Completion (May 26, 2026)**
+- [x] TODO-4595: Add deterministic scene text shaping runs
+  - owner: ai
+  - created_at: 2026-05-26
+  - finished_at: 2026-05-26
+  - phase: Scene graph renderer and UI presentation
+  - parallel_track: scene-text-shaping
+  - scope: Added the renderer-owned front half of the international 2D text
+    overlay pipeline: UTF-8 decoding, deterministic direction/script runs,
+    combining-mark attachment, fallback fixture-font selection, and shaped glyph
+    run metrics for scene text.
+  - outcome:
+    - Added `shapeSceneTextUtf8()` and renderer-local text shape result types
+      under `examples/shared/scene_bgra8_renderer.h` without exposing
+      third-party text-library types through stdlib or compiler APIs.
+    - Added a deterministic fixture-font fallback model with stable glyph ids,
+      script/direction metadata, source byte clusters, positioned advances, and
+      stable missing-glyph output for uncovered code points.
+    - Covered Latin combining marks, Cyrillic, Hebrew right-to-left visual
+      ordering, Devanagari combining marks, first-fallback selection, missing
+      glyphs, invalid UTF-8 rejection, and repeated-run stability.
+    - Updated graphics docs to state that glyph rasterization and atlas
+      composition remain deferred to TODO-4596 while shaping wrappers stay ready
+      for HarfBuzz-class and ICU/FriBidi-class backends.
+  - validation:
+    - Local release rebuild passed:
+      `cmake --build build-release --target PrimeStruct_misc_tests -j 1`.
+    - Local scene renderer slice passed:
+      `cd build-release && ./PrimeStruct_misc_tests --test-suite=primestruct.scene.renderer --no-skip`
+      with 10 cases / 148 assertions.
+    - Local docs/source-lock slice passed:
+      `cd build-release && ./PrimeStruct_compile_run_tests --test-suite=primestruct.compile.run.examples --source-file="*test_compile_run_examples_docs_locks.cpp" --test-case="scene renderer ui producer contract stays source locked,todo queue and skipped doctest debt stay source locked" --order-by=file --no-skip --success`
+      with 2 cases / 591 assertions.
+  - stop_rule: Stopped once international scene text could be decoded,
+    segmented, shaped into deterministic glyph runs, and measured for renderer
+    fixtures; glyph bitmap output and BGRA8 composition remain with TODO-4596.
+
 - [x] TODO-4576: Remove map backing-type compiler classification
   - owner: ai
   - created_at: 2026-05-24

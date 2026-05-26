@@ -64,21 +64,22 @@ This file is the live open-work queue for PrimeStruct.
 
 ### Ready Now
 
-- TODO-4595: Add deterministic scene text shaping runs | track: scene-text-shaping | primary surface: scene renderer text shaping/fallback metrics
+- TODO-4596: Rasterize shaped scene text through a glyph atlas | track: scene-text-rasterization | primary surface: scene renderer glyph atlas/BGRA8 text overlay
 - TODO-4578: Generalize stdlib surface registry away from map/vector IDs | track: stdlib-registry-generalization | primary surface: stdlib surface registry metadata
 
 ### Immediate Next 10
 
-- TODO-4596: Rasterize shaped scene text through a glyph atlas
 - TODO-4568: Emit scene nodes from the existing UI layout/widgets
 - TODO-4569: Present scene-rendered UI through software surface bridge
+- TODO-4579: Enforce zero map/vector compiler-knowledge traces
 
 ### Priority Lanes
 
 - Scene graph renderer and UI presentation: TODO-4565 completed the data-only
   scene model and TODO-4566 completed the first BGRA8 2D primitive renderer;
-  TODO-4567 completed the first globally lit 3D SDF widget primitive.
-  TODO-4595 -> TODO-4596 -> TODO-4568 -> TODO-4569
+  TODO-4567 completed the first globally lit 3D SDF widget primitive, and
+  TODO-4595 completed deterministic shaped glyph runs.
+  TODO-4596 -> TODO-4568 -> TODO-4569
 - Map/vector compiler-independence: TODO-4570 retired the duplicate `map2`
   surface, TODO-4571 added the compiler-knowledge inventory categories that
   guide deletion scope, and TODO-4573 removed compiler-owned map literal
@@ -94,49 +95,13 @@ This file is the live open-work queue for PrimeStruct.
 
 ### Execution Queue
 
-- TODO-4595: Add deterministic scene text shaping runs
-- TODO-4578: Generalize stdlib surface registry away from map/vector IDs
 - TODO-4596: Rasterize shaped scene text through a glyph atlas
+- TODO-4578: Generalize stdlib surface registry away from map/vector IDs
 - TODO-4568: Emit scene nodes from the existing UI layout/widgets
 - TODO-4569: Present scene-rendered UI through software surface bridge
 - TODO-4579: Enforce zero map/vector compiler-knowledge traces
 
 ### Task Blocks
-
-- [ ] TODO-4595: Add deterministic scene text shaping runs
-  - owner: ai
-  - created_at: 2026-05-26
-  - phase: Scene graph renderer and UI presentation
-  - parallel_track: scene-text-shaping
-  - scope: Add the renderer-owned front half of the international 2D text
-    overlay pipeline: UTF-8 decoding, deterministic direction/script runs,
-    combining-mark attachment, fallback fixture-font selection, and shaped glyph
-    run metrics for scene text.
-  - implementation_notes: Keep the API under the renderer/text layer and expose
-    no third-party text-library types. A deterministic repo-local fixture
-    backend is acceptable for this slice if the wrapper boundary leaves room for
-    HarfBuzz-class shaping and ICU/FriBidi-class bidi/boundary backends later.
-    Do not add glyph bitmap rasterization, atlas packing, BGRA8 composition,
-    paragraph layout, color emoji, advanced OpenType controls, 3D SDF text, or
-    mesh text in this slice.
-  - acceptance:
-    - A renderer-owned API converts UTF-8 text plus ordered fallback candidates
-      into deterministic positioned glyph runs without exposing third-party
-      library types through stdlib or compiler public APIs.
-    - Tests cover Latin with combining marks, Cyrillic or Greek,
-      right-to-left Arabic or Hebrew, and one complex-shaping fixture using
-      checked-in deterministic fixture-font metadata.
-    - Font fallback is deterministic: missing glyphs choose the first covering
-      fixture font in a documented fallback list and emit a stable
-      missing-glyph result when no fixture covers the code point.
-    - Shaped glyph run metrics are stable across repeated runs for small scene
-      text fixtures and include enough data for a later atlas/raster pass.
-    - Docs state that glyph rasterization and atlas composition are deferred to
-      TODO-4596, while the wrapper API remains ready for HarfBuzz-class and
-      ICU/FriBidi-class backends.
-  - stop_rule: Stop once international scene text can be decoded, segmented,
-    shaped into deterministic glyph runs, and measured for renderer fixtures;
-    leave glyph bitmap output and BGRA8 composition to TODO-4596.
 
 - [ ] TODO-4596: Rasterize shaped scene text through a glyph atlas
   - owner: ai

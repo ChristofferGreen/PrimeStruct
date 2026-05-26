@@ -4,6 +4,14 @@
 - none
 
 ## Recent Test Runs
+- 2026-05-26 11:02 CEST | pass | mode: release | command:
+  `cmake --build build-release --target PrimeStruct_misc_tests -j 1`;
+  `cd build-release && ./PrimeStruct_misc_tests --test-suite=primestruct.scene.renderer --no-skip`;
+  `cmake --build build-release --target PrimeStruct_compile_run_tests -j 1`;
+  `cd build-release && ./PrimeStruct_compile_run_tests --test-suite=primestruct.compile.run.examples --source-file="*test_compile_run_examples_docs_locks.cpp" --test-case="scene renderer ui producer contract stays source locked,todo queue and skipped doctest debt stay source locked" --order-by=file --no-skip --success`
+  | failures: none | notes: TODO-4595 focused validation passed the
+  scene renderer shaper slice, 10 cases / 148 assertions, and refreshed
+  docs/source locks, 2 cases / 591 assertions.
 - 2026-05-26 09:57 CEST | pass | mode: release | command:
   `cmake --build build-release --target PrimeStruct_compile_run_tests -j 1`;
   `cd build-release && ./PrimeStruct_compile_run_tests --test-case="todo queue and skipped doctest debt stay source locked,compiles and runs canonical map constructor,compiles and runs map count,compiles and runs canonical namespaced map helpers on experimental map values in C++ emitter,compiles and runs wrapper map helpers on experimental map values in C++ emitter,compiles and runs inferred experimental map returns in C++ emitter,compiles and runs helper-wrapped experimental map struct storage fields in C++ emitter,compiles and runs borrowed experimental map helpers in C++ emitter" --no-skip`

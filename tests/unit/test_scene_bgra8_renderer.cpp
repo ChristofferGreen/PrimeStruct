@@ -148,6 +148,19 @@ std::uint64_t hashPixels(const primestruct::software_surface::SoftwareSurfaceFra
   return hash;
 }
 
+std::vector<primestruct::scene_bgra8_renderer::SceneTextFixtureFont> makeTextFixtureFonts() {
+  using Font = primestruct::scene_bgra8_renderer::SceneTextFixtureFont;
+  using Range = primestruct::scene_bgra8_renderer::SceneTextCodepointRange;
+  return std::vector<Font>{
+      Font{"LatinPrimary", std::vector<Range>{{0x0041u, 0x005au},
+                                              {0x0061u, 0x007au},
+                                              {0x0300u, 0x036fu}},
+           100u, 0.5},
+      Font{"CyrillicFixture", std::vector<Range>{{0x0400u, 0x052fu}}, 1000u, 0.75},
+      Font{"HebrewFixture", std::vector<Range>{{0x0590u, 0x05ffu}}, 2000u, 0.8},
+      Font{"DevanagariFixture", std::vector<Range>{{0x0900u, 0x097fu}}, 3000u, 0.7}};
+}
+
 } // namespace
 
 TEST_CASE("scene bgra8 renderer fills clipped flat rect from serialized scene") {
@@ -329,6 +342,115 @@ TEST_CASE("scene bgra8 renderer composes sdf button with 2d primitives") {
   CHECK(pixelAt(result.frame, 4, 2) == raisedButtonPixel);
   CHECK(pixelAt(result.frame, 5, 3) == foregroundPixel);
   CHECK(hashPixels(result.frame) == 0xab0df377cebef9bbull);
+}
+
+TEST_CASE("scene text shaper emits deterministic international glyph runs") {
+  namespace renderer = primestruct::scene_bgra8_renderer;
+  const std::vector<renderer::SceneTextFixtureFont> fonts = makeTextFixtureFonts();
+  const std::string text = std::string("A") + "\xCC\x81" + "\xD0\x96" + "\xD7\x90\xD7\x91" +
+                           "\xE0\xA4\x95\xE0\xA5\x8D\xE0\xA4\xB7";
+
+  const auto first = renderer::shapeSceneTextUtf8(text, fonts, 16.0);
+  const auto second = renderer::shapeSceneTextUtf8(text, fonts, 16.0);
+
+  REQUIRE(first.ok);
+  REQUIRE(second.ok);
+  CHECK(first.error.empty());
+  CHECK(first.glyphs.size() == 8u);
+  CHECK(first.runs.size() == 4u);
+  CHECK(first.width == doctest::Approx(68.0));
+  CHECK(first.height == doctest::Approx(16.0));
+  CHECK(second.width == first.width);
+  CHECK(second.height == first.height);
+  REQUIRE(second.glyphs.size() == first.glyphs.size());
+  REQUIRE(second.runs.size() == first.runs.size());
+
+  CHECK(first.runs[0].script == renderer::SceneTextScript::Latin);
+  CHECK(first.runs[0].direction == renderer::SceneTextDirection::LeftToRight);
+  CHECK(first.runs[0].glyphBegin == 0u);
+  CHECK(first.runs[0].glyphCount == 2u);
+  CHECK(first.glyphs[0].codepoint == 0x0041u);
+  CHECK(first.glyphs[0].glyphId == 100u);
+  CHECK(first.glyphs[0].fontName == "LatinPrimary");
+  CHECK(first.glyphs[0].advance == doctest::Approx(8.0));
+  CHECK_FALSE(first.glyphs[0].combiningMark);
+  CHECK(first.glyphs[1].codepoint == 0x0301u);
+  CHECK(first.glyphs[1].combiningMark);
+  CHECK(first.glyphs[1].script == renderer::SceneTextScript::Latin);
+  CHECK(first.glyphs[1].advance == doctest::Approx(0.0));
+  CHECK(first.glyphs[1].x == doctest::Approx(first.glyphs[0].x));
+  CHECK(first.glyphs[1].xOffset == doctest::Approx(3.6));
+  CHECK(first.glyphs[1].yOffset == doctest::Approx(-4.0));
+
+  CHECK(first.runs[1].script == renderer::SceneTextScript::Cyrillic);
+  CHECK(first.runs[1].direction == renderer::SceneTextDirection::LeftToRight);
+  CHECK(first.glyphs[2].codepoint == 0x0416u);
+  CHECK(first.glyphs[2].glyphId == 1022u);
+  CHECK(first.glyphs[2].fontName == "CyrillicFixture");
+
+  CHECK(first.runs[2].script == renderer::SceneTextScript::Hebrew);
+  CHECK(first.runs[2].direction == renderer::SceneTextDirection::RightToLeft);
+  CHECK(first.runs[2].glyphBegin == 3u);
+  CHECK(first.runs[2].glyphCount == 2u);
+  CHECK(first.glyphs[3].codepoint == 0x05d1u);
+  CHECK(first.glyphs[3].clusterByteOffset == 7u);
+  CHECK(first.glyphs[4].codepoint == 0x05d0u);
+  CHECK(first.glyphs[4].clusterByteOffset == 5u);
+
+  CHECK(first.runs[3].script == renderer::SceneTextScript::Devanagari);
+  CHECK(first.runs[3].glyphBegin == 5u);
+  CHECK(first.runs[3].glyphCount == 3u);
+  CHECK(first.glyphs[5].codepoint == 0x0915u);
+  CHECK(first.glyphs[6].codepoint == 0x094du);
+  CHECK(first.glyphs[6].combiningMark);
+  CHECK(first.glyphs[6].advance == doctest::Approx(0.0));
+  CHECK(first.glyphs[7].codepoint == 0x0937u);
+
+  for (std::size_t index = 0; index < first.glyphs.size(); ++index) {
+    CHECK(second.glyphs[index].codepoint == first.glyphs[index].codepoint);
+    CHECK(second.glyphs[index].glyphId == first.glyphs[index].glyphId);
+    CHECK(second.glyphs[index].fontName == first.glyphs[index].fontName);
+    CHECK(second.glyphs[index].clusterByteOffset == first.glyphs[index].clusterByteOffset);
+    CHECK(second.glyphs[index].x == first.glyphs[index].x);
+    CHECK(second.glyphs[index].advance == first.glyphs[index].advance);
+  }
+}
+
+TEST_CASE("scene text shaper chooses first fallback and stable missing glyph") {
+  namespace renderer = primestruct::scene_bgra8_renderer;
+  using Font = renderer::SceneTextFixtureFont;
+  using Range = renderer::SceneTextCodepointRange;
+  const std::vector<Font> fonts{
+      Font{"FirstAscii", std::vector<Range>{{0x0041u, 0x0041u}}, 500u, 0.5},
+      Font{"SecondAscii", std::vector<Range>{{0x0041u, 0x0041u}}, 900u, 0.9}};
+
+  const auto result = renderer::shapeSceneTextUtf8(std::string("A") + "\xF0\x9F\x99\x82", fonts, 10.0);
+
+  REQUIRE(result.ok);
+  REQUIRE(result.glyphs.size() == 2u);
+  CHECK(result.runs.size() == 2u);
+  CHECK(result.glyphs[0].fontName == "FirstAscii");
+  CHECK(result.glyphs[0].glyphId == 500u);
+  CHECK(result.glyphs[0].advance == doctest::Approx(5.0));
+  CHECK(result.glyphs[1].codepoint == 0x1f642u);
+  CHECK(result.glyphs[1].script == renderer::SceneTextScript::Unknown);
+  CHECK(result.glyphs[1].fontName == "missing-glyph");
+  CHECK(result.glyphs[1].glyphId == 0u);
+  CHECK(result.glyphs[1].missingGlyph);
+  CHECK(result.glyphs[1].advance == doctest::Approx(6.0));
+  CHECK(result.width == doctest::Approx(11.0));
+}
+
+TEST_CASE("scene text shaper rejects invalid utf8 deterministically") {
+  namespace renderer = primestruct::scene_bgra8_renderer;
+  const std::string invalid("\xC3\x28", 2u);
+
+  const auto result = renderer::shapeSceneTextUtf8(invalid, makeTextFixtureFonts(), 12.0);
+
+  CHECK_FALSE(result.ok);
+  CHECK(result.error == "scene text shaper expected valid UTF-8");
+  CHECK(result.glyphs.empty());
+  CHECK(result.runs.empty());
 }
 
 TEST_SUITE_END();

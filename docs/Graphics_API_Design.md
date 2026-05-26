@@ -338,9 +338,12 @@ the event/hit-test contract.
   logical-pixel pressed depth. Pressed state changes explicit depth through the
   node transform rather than blending material colors.
 - Text remains a 2D overlay/primitive in the first UI scene path, not a 3D SDF
-  or mesh problem. The first presented UI text path must support international
-  shaping, bidi ordering, fallback fonts, and deterministic glyph atlas/raster
-  output.
+  or mesh problem. The renderer helper now exposes a deterministic shaped glyph
+  run path for UTF-8 decoding, script/direction runs, combining-mark
+  attachment, fallback fixture fonts, and stable metrics. The first presented
+  UI text path still keeps international shaping, bidi ordering, fallback
+  fonts, and stable glyph metrics behind that wrapper boundary; TODO-4596 owns
+  deterministic glyph atlas/raster output.
 - Native text dependencies stay behind renderer-owned wrapper APIs:
   HarfBuzz-class shaping, FreeType-class glyph loading/rasterization, and an
   ICU/FriBidi-class Unicode bidi/boundary service. PrimeStruct source APIs must

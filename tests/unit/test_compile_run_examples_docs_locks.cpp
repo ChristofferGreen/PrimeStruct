@@ -1823,11 +1823,14 @@ TEST_CASE("todo queue and skipped doctest debt stay source locked") {
                   "  coverage snapshots in this file.") !=
         std::string::npos);
   CHECK(todo.find("### Ready Now\n\n"
-                  "- TODO-4595: Add deterministic scene text shaping runs | track: "
-                  "scene-text-shaping") !=
+                  "- TODO-4596: Rasterize shaped scene text through a glyph atlas | track: "
+                  "scene-text-rasterization") !=
         std::string::npos);
   CHECK(todo.find("- TODO-4595: Add deterministic scene text shaping runs | track: "
-                  "scene-text-shaping") !=
+                  "scene-text-shaping") ==
+        std::string::npos);
+  CHECK(todo.find("- TODO-4578: Generalize stdlib surface registry away from map/vector IDs | track: "
+                  "stdlib-registry-generalization") !=
         std::string::npos);
   CHECK(todo.find("- TODO-4590: Add international text shaping and glyph atlas path | track:") ==
         std::string::npos);
@@ -1850,8 +1853,9 @@ TEST_CASE("todo queue and skipped doctest debt stay source locked") {
   CHECK(todo.find("- TODO-4574: Remove vector count/access compiler classifiers | track: vector-helper-classifier-deletion") ==
         std::string::npos);
   CHECK(todo.find("### Immediate Next 10\n\n"
-                  "- TODO-4596: Rasterize shaped scene text through a glyph atlas\n"
-                  "- TODO-4568: Emit scene nodes from the existing UI layout/widgets") !=
+                  "- TODO-4568: Emit scene nodes from the existing UI layout/widgets\n"
+                  "- TODO-4569: Present scene-rendered UI through software surface bridge\n"
+                  "- TODO-4579: Enforce zero map/vector compiler-knowledge traces") !=
         std::string::npos);
   CHECK(todo.find("### Priority Lanes") != std::string::npos);
   CHECK(todo.find("Source-unit provenance ledger: TODO-4592 completed parser/semantic") ==
@@ -1861,15 +1865,22 @@ TEST_CASE("todo queue and skipped doctest debt stay source locked") {
         std::string::npos);
   CHECK(todo.find("Scene graph renderer and UI presentation: TODO-4565 completed the data-only\n"
                   "  scene model and TODO-4566 completed the first BGRA8 2D primitive renderer;\n"
-                  "  TODO-4567 completed the first globally lit 3D SDF widget primitive.") !=
+                  "  TODO-4567 completed the first globally lit 3D SDF widget primitive, and\n"
+                  "  TODO-4595 completed deterministic shaped glyph runs.") !=
         std::string::npos);
   CHECK(todo.find("Map/vector compiler-independence: TODO-4570 retired the duplicate `map2`\n"
                   "  surface, TODO-4571 added the compiler-knowledge inventory categories") !=
         std::string::npos);
   CHECK(todo.find("### Execution Queue\n\n"
-                  "- TODO-4595: Add deterministic scene text shaping runs") !=
+                  "- TODO-4596: Rasterize shaped scene text through a glyph atlas") !=
         std::string::npos);
-  CHECK(todo.find("- TODO-4596: Rasterize shaped scene text through a glyph atlas") !=
+  CHECK(todo.find("- TODO-4595: Add deterministic scene text shaping runs") ==
+        std::string::npos);
+  CHECK(todoFinished.find("TODO-4595: Add deterministic scene text shaping runs") !=
+        std::string::npos);
+  CHECK(todoFinished.find("shapeSceneTextUtf8()") !=
+        std::string::npos);
+  CHECK(todoFinished.find("glyph bitmap output and BGRA8 composition remain with TODO-4596") !=
         std::string::npos);
   CHECK(todoFinished.find("TODO-4591: Add expanded-source provenance ledger") !=
         std::string::npos);
@@ -2921,9 +2932,15 @@ TEST_CASE("scene renderer ui producer contract stays source locked") {
                          "  node transform rather than blending material colors") !=
         std::string::npos);
   CHECK(graphicsDoc.find("Text remains a 2D overlay/primitive") != std::string::npos);
-  CHECK(graphicsDoc.find("international\n  shaping, bidi ordering, fallback fonts") !=
+  CHECK(graphicsDoc.find("deterministic shaped glyph\n"
+                         "  run path for UTF-8 decoding") !=
         std::string::npos);
-  CHECK(graphicsDoc.find("deterministic glyph atlas/raster\n  output") != std::string::npos);
+  CHECK(graphicsDoc.find("international shaping, bidi ordering, fallback\n"
+                         "  fonts") !=
+        std::string::npos);
+  CHECK(graphicsDoc.find("TODO-4596 owns\n"
+                         "  deterministic glyph atlas/raster output") !=
+        std::string::npos);
   CHECK(graphicsDoc.find("HarfBuzz-class shaping") != std::string::npos);
   CHECK(graphicsDoc.find("FreeType-class glyph loading/rasterization") != std::string::npos);
   CHECK(graphicsDoc.find("ICU/FriBidi-class Unicode bidi/boundary service") !=
@@ -2973,7 +2990,12 @@ TEST_CASE("scene renderer ui producer contract stays source locked") {
         std::string::npos);
   CHECK(specDoc.find("initial 3D SDF widget is `primitive_sdf_button()` with a `4` logical-pixel bevel radius") !=
         std::string::npos);
-  CHECK(specDoc.find("HarfBuzz-class, FreeType-class, and ICU/FriBidi-class wrappers") !=
+  CHECK(specDoc.find("deterministic shaped glyph runs for UTF-8 decoding") !=
+        std::string::npos);
+  CHECK(specDoc.find("glyph-atlas/raster composition remains the next text slice") !=
+        std::string::npos);
+  CHECK(specDoc.find("HarfBuzz-class,\n"
+                     "  FreeType-class, and ICU/FriBidi-class wrappers") !=
         std::string::npos);
   CHECK(sceneStdlib.find("namespace scene") != std::string::npos);
   CHECK(sceneStdlib.find("primitive_sdf_button()") != std::string::npos);
