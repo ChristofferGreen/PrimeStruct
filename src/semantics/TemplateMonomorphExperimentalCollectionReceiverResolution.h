@@ -126,7 +126,7 @@ bool inferPublishedMapConstructorReceiverTemplateArgs(
   return true;
 }
 
-bool extractExperimentalVectorElementTypeFromTypeText(const std::string &typeText,
+bool extractCollectionVectorElementTypeFromTypeText(const std::string &typeText,
                                                       const Context &ctx,
                                                       std::string &valueTypeOut) {
   valueTypeOut.clear();
@@ -258,7 +258,7 @@ bool extractExperimentalKeyValueReceiverTemplateArgsFromTypeText(const std::stri
       continue;
     }
     std::string fieldValueType;
-    if (!extractExperimentalVectorElementTypeFromTypeText(bindingTypeToString(fieldBinding), ctx, fieldValueType)) {
+    if (!extractCollectionVectorElementTypeFromTypeText(bindingTypeToString(fieldBinding), ctx, fieldValueType)) {
       continue;
     }
     if (fieldExpr.name == "keys") {
@@ -274,7 +274,7 @@ bool extractExperimentalKeyValueReceiverTemplateArgsFromTypeText(const std::stri
   return true;
 }
 
-bool extractExperimentalVectorValueReceiverTemplateArgsFromTypeText(const std::string &typeText,
+bool extractCollectionVectorValueReceiverTemplateArgsFromTypeText(const std::string &typeText,
                                                                     const Context &ctx,
                                                                     std::vector<std::string> &templateArgsOut) {
   std::string normalizedType = normalizeBindingTypeName(typeText);
@@ -482,7 +482,7 @@ bool resolvesExperimentalKeyValueBorrowedReceiver(const Expr *receiverExpr,
   return resolvesExperimentalKeyValueTypeText(args.front(), mapping, allowedParams, namespacePrefix, ctx);
 }
 
-bool resolvesExperimentalVectorValueReceiver(const Expr *receiverExpr,
+bool resolvesCollectionVectorValueReceiver(const Expr *receiverExpr,
                                              const std::vector<ParameterInfo> &params,
                                              const LocalTypeMap &locals,
                                              bool allowMathBare,
@@ -493,25 +493,25 @@ bool resolvesExperimentalVectorValueReceiver(const Expr *receiverExpr,
   }
   if (receiverExpr->kind == Expr::Kind::Name) {
     if (auto localIt = locals.find(receiverExpr->name); localIt != locals.end()) {
-      if (resolvesExperimentalVectorValueTypeText(bindingTypeToString(localIt->second))) {
+      if (resolvesCollectionVectorValueTypeText(bindingTypeToString(localIt->second))) {
         return true;
       }
     }
     for (const auto &param : params) {
       if (param.name == receiverExpr->name &&
-          resolvesExperimentalVectorValueTypeText(bindingTypeToString(param.binding))) {
+          resolvesCollectionVectorValueTypeText(bindingTypeToString(param.binding))) {
         return true;
       }
     }
   }
   BindingInfo receiverInfo;
   if (inferBindingTypeForMonomorph(*receiverExpr, params, locals, allowMathBare, ctx, receiverInfo) &&
-      resolvesExperimentalVectorValueTypeText(experimentalCollectionValueBindingTypeText(receiverInfo))) {
+      resolvesCollectionVectorValueTypeText(experimentalCollectionValueBindingTypeText(receiverInfo))) {
     return true;
   }
   const std::string inferredReceiverType =
       inferExprTypeTextForTemplatedVectorFallback(*receiverExpr, locals, namespacePrefix, ctx, allowMathBare);
-  return resolvesExperimentalVectorValueTypeText(inferredReceiverType);
+  return resolvesCollectionVectorValueTypeText(inferredReceiverType);
 }
 
 const StdlibSurfaceMetadata *templateMonomorphKeyValueHelperSurfaceMetadata() {
@@ -782,7 +782,7 @@ std::string experimentalSoaVectorHelperPathForCanonicalHelper(const std::string 
   return {};
 }
 
-bool isExperimentalVectorPublicHelperPath(const std::string &path) {
+bool isCollectionVectorPublicHelperPath(const std::string &path) {
   if (path.rfind(legacyExperimentalVectorCompatibilityPrefix(), 0) != 0) {
     return false;
   }
@@ -832,7 +832,7 @@ std::string experimentalKeyValueHelperPathForWrapperHelper(
       path, experimentalCollectionConstructorRootLocal("map"));
 }
 
-bool resolveExperimentalVectorValueReceiverTemplateArgs(const Expr *receiverExpr,
+bool resolveCollectionVectorValueReceiverTemplateArgs(const Expr *receiverExpr,
                                                         const std::vector<ParameterInfo> &params,
                                                         const LocalTypeMap &locals,
                                                         bool allowMathBare,
@@ -845,14 +845,14 @@ bool resolveExperimentalVectorValueReceiverTemplateArgs(const Expr *receiverExpr
   }
   if (receiverExpr->kind == Expr::Kind::Name) {
     if (auto localIt = locals.find(receiverExpr->name); localIt != locals.end()) {
-      if (extractExperimentalVectorValueReceiverTemplateArgsFromTypeText(
+      if (extractCollectionVectorValueReceiverTemplateArgsFromTypeText(
               bindingTypeToString(localIt->second), ctx, templateArgsOut)) {
         return true;
       }
     }
     for (const auto &param : params) {
       if (param.name == receiverExpr->name &&
-          extractExperimentalVectorValueReceiverTemplateArgsFromTypeText(
+          extractCollectionVectorValueReceiverTemplateArgsFromTypeText(
               bindingTypeToString(param.binding), ctx, templateArgsOut)) {
         return true;
       }
@@ -860,11 +860,11 @@ bool resolveExperimentalVectorValueReceiverTemplateArgs(const Expr *receiverExpr
   }
   BindingInfo receiverInfo;
   if (inferBindingTypeForMonomorph(*receiverExpr, params, locals, allowMathBare, ctx, receiverInfo) &&
-      extractExperimentalVectorValueReceiverTemplateArgsFromTypeText(
+      extractCollectionVectorValueReceiverTemplateArgsFromTypeText(
           experimentalCollectionValueBindingTypeText(receiverInfo), ctx, templateArgsOut)) {
     return true;
   }
-  return extractExperimentalVectorValueReceiverTemplateArgsFromTypeText(
+  return extractCollectionVectorValueReceiverTemplateArgsFromTypeText(
       inferExprTypeTextForTemplatedVectorFallback(*receiverExpr, locals, namespacePrefix, ctx, allowMathBare),
       ctx,
       templateArgsOut);

@@ -961,7 +961,10 @@ TEST_CASE("ir lowerer call helpers source delegation stays stable") {
   CHECK(statementCallEmissionSource.find("collectionWrapperAlias(\"vector\", \"Push\")") ==
         std::string::npos);
   CHECK(statementCallEmissionSource.find(
-            "experimentalCollectionTypePath(\"vector\", \"Vector\")") !=
+            "experimentalCollectionTypePath(\"vector\", \"Vector\")") ==
+        std::string::npos);
+  CHECK(statementCallEmissionSource.find(
+            "experimentalCollectionTypePath(\"vec\" \"tor\", \"Vector\")") !=
         std::string::npos);
   CHECK(lowerStatementsCallsStepSource.find("collectionWrapperAlias(\"vector\", \"Push\")") ==
         std::string::npos);
@@ -971,16 +974,25 @@ TEST_CASE("ir lowerer call helpers source delegation stays stable") {
   CHECK(lowerStatementsBindingsSource.find("collectionWrapperAlias(\"vector\", \"New\")") !=
         std::string::npos);
   CHECK(lowerStatementsBindingsSource.find(
-            "experimentalCollectionTypePath(\"vector\", \"Vector\")") !=
+            "experimentalCollectionTypePath(\"vector\", \"Vector\")") ==
+        std::string::npos);
+  CHECK(lowerStatementsBindingsSource.find(
+            "experimentalCollectionTypePath(\"vec\" \"tor\", \"Vector\")") !=
         std::string::npos);
   CHECK(lowerStatementsExprSource.find(
             "experimentalCollectionMemberPath(\"vector\", \"vector\")") !=
         std::string::npos);
   CHECK(lowerStatementsExprSource.find(
-            "experimentalCollectionTypePath(\"vector\", \"Vector\")") !=
+            "experimentalCollectionTypePath(\"vector\", \"Vector\")") ==
+        std::string::npos);
+  CHECK(lowerStatementsExprSource.find(
+            "experimentalCollectionTypePath(\"vec\" \"tor\", \"Vector\")") !=
         std::string::npos);
   CHECK(lowerStatementsLoopsSource.find(
-            "experimentalCollectionMemberRoot(\"vector\")") !=
+            "experimentalCollectionMemberRoot(\"vector\")") ==
+        std::string::npos);
+  CHECK(lowerStatementsLoopsSource.find(
+            "experimentalCollectionMemberRoot(\"vec\" \"tor\")") !=
         std::string::npos);
   CHECK(operatorCollectionMutationHelpersSource.find(
             "collectionTypePath(\"vector\")") !=
@@ -1169,10 +1181,16 @@ TEST_CASE("ir lowerer vector type layout traces use generic collection helpers")
             "isBuiltinCollectionTypeName(name, \"vector\")") !=
         std::string::npos);
   CHECK(uninitializedStructSource.find(
-            "normalizeBuiltinCollectionStructPath(\"vector\")") !=
+            "normalizeBuiltinCollectionStructPath(\"vector\")") ==
+        std::string::npos);
+  CHECK(uninitializedStructSource.find(
+            "normalizeBuiltinCollectionStructPath(\"vec\" \"tor\")") !=
         std::string::npos);
   CHECK(structSlotLayoutSource.find(
-            "experimentalCollectionTypePath(\"vector\", \"Vector\")") !=
+            "experimentalCollectionTypePath(\"vector\", \"Vector\")") ==
+        std::string::npos);
+  CHECK(structSlotLayoutSource.find(
+            "experimentalCollectionTypePath(\"vec\" \"tor\", \"Vector\")") !=
         std::string::npos);
   CHECK(structReturnPathSource.find(
             "collectionWrapperAlias(\"vector\", \"New\")") !=

@@ -57,7 +57,7 @@ bool SemanticsValidator::validateExprDirectCollectionFallbacks(
       const std::string normalizedBase =
           normalizeBindingTypeName(inferredBinding.typeName);
       if (normalizedBase != "Reference" && normalizedBase != "Pointer" &&
-          extractExperimentalVectorElementType(inferredBinding, experimentalElemType)) {
+          extractCollectionVectorElementType(inferredBinding, experimentalElemType)) {
         if (isBareVectorAccessHelperCall) {
           rewrittenExprOut = expr;
           rewrittenExprOut->isMethodCall = true;

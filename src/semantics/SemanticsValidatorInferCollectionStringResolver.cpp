@@ -62,7 +62,7 @@ void SemanticsValidator::populateBuiltinCollectionDispatchStringResolver(
       if (lockedState->resolveArgsPackAccessTarget(*accessReceiver, elemType) ||
           lockedState->resolveArrayTarget(*accessReceiver, elemType) ||
           lockedState->resolveVectorTarget(*accessReceiver, elemType) ||
-          lockedState->resolveExperimentalVectorTarget(*accessReceiver, elemType)) {
+          lockedState->resolveCollectionVectorTarget(*accessReceiver, elemType)) {
         return normalizeBindingTypeName(elemType) == "string";
       }
       if (lockedState->resolveExperimentalMapTarget(*accessReceiver, keyType, valueType)) {
@@ -82,7 +82,7 @@ void SemanticsValidator::populateBuiltinCollectionDispatchStringResolver(
       return (lockedState->resolveArgsPackAccessTarget(target.args[receiverIndex], elemType) ||
               lockedState->resolveArrayTarget(target.args[receiverIndex], elemType) ||
               lockedState->resolveVectorTarget(target.args[receiverIndex], elemType) ||
-              lockedState->resolveExperimentalVectorTarget(target.args[receiverIndex], elemType)) &&
+              lockedState->resolveCollectionVectorTarget(target.args[receiverIndex], elemType)) &&
              normalizeBindingTypeName(elemType) == "string";
     }
 
@@ -102,7 +102,7 @@ void SemanticsValidator::populateBuiltinCollectionDispatchStringResolver(
     if ((lockedState->resolveArgsPackAccessTarget(target.args.front(), elemType) ||
          lockedState->resolveArrayTarget(target.args.front(), elemType) ||
          lockedState->resolveVectorTarget(target.args.front(), elemType) ||
-         lockedState->resolveExperimentalVectorTarget(target.args.front(), elemType)) &&
+         lockedState->resolveCollectionVectorTarget(target.args.front(), elemType)) &&
         elemType == "string") {
       return true;
     }

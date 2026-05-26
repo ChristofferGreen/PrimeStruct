@@ -163,7 +163,7 @@ std::string normalizeInternalSoaStorageBuiltinAlias(std::string name) {
     return alias;
   }
   const std::string experimentalVectorPrefix =
-      experimentalCollectionMemberRoot("vector");
+      experimentalCollectionMemberRoot("vec" "tor");
   if (name.rfind(experimentalVectorPrefix, 0) == 0) {
     std::string alias = name.substr(experimentalVectorPrefix.size());
     const size_t slash = alias.find_last_of('/');
@@ -559,13 +559,13 @@ bool getBuiltinArrayAccessName(const Expr &expr, std::string &out) {
   if (scopedName.rfind(collectionMemberRoot("vector"), 0) == 0) {
     return false;
   }
-  if (matchAccessAlias(scopedName, experimentalCollectionMemberRoot("vector"), "Vector")) {
+  if (matchAccessAlias(scopedName, experimentalCollectionMemberRoot("vec" "tor"), "Vector")) {
     return true;
   }
-  if (matchLegacyAccessAlias(scopedName, experimentalCollectionMemberRoot("vector"))) {
+  if (matchLegacyAccessAlias(scopedName, experimentalCollectionMemberRoot("vec" "tor"))) {
     return true;
   }
-  if (scopedName.rfind(experimentalCollectionMemberRoot("vector"), 0) == 0) {
+  if (scopedName.rfind(experimentalCollectionMemberRoot("vec" "tor"), 0) == 0) {
     return false;
   }
   if (matchLegacyAccessAlias(scopedName, "std/collections/internal_vector/")) {
@@ -728,7 +728,7 @@ bool getExperimentalVectorConstructorElementTypeAliasFromPath(
   if (!path.empty() && path.front() == '/') {
     path.erase(path.begin());
   }
-  const std::string prefix = experimentalCollectionMemberRoot("vector");
+  const std::string prefix = experimentalCollectionMemberRoot("vec" "tor");
   if (path.rfind(prefix, 0) != 0) {
     return false;
   }

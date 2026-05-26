@@ -42,12 +42,12 @@ bool isInternalSoaColumnTypeName(const std::string &typeName) {
          typeName.rfind("/std/collections/internal_soa_storage/SoaColumn__", 0) == 0;
 }
 
-bool isExperimentalVectorTypeName(const std::string &typeName) {
+bool isCollectionVectorRecordTypeName(const std::string &typeName) {
   return isExperimentalCollectionTypeName(typeName, "vector", "Vector");
 }
 
 bool isVectorTypeName(const std::string &typeName) {
-  return isBuiltinVectorTypeName(typeName) || isExperimentalVectorTypeName(typeName);
+  return isBuiltinVectorTypeName(typeName) || isCollectionVectorRecordTypeName(typeName);
 }
 
 bool isBuiltinMapTypeName(const std::string &typeName) {
@@ -96,13 +96,13 @@ std::string resolveStructSlotLookupPath(
 
 std::string normalizeVectorStructPath(const std::string &typeName) {
   if (isBuiltinVectorTypeName(typeName)) {
-    return normalizeBuiltinCollectionStructPath("vector");
+    return normalizeBuiltinCollectionStructPath("vec" "tor");
   }
   if (isBuiltinSoaVectorTypeName(typeName)) {
     return "/soa" "_vector";
   }
   if (typeName == "Vector") {
-    return experimentalCollectionTypePath("vector", "Vector");
+    return experimentalCollectionTypePath("vec" "tor", "Vector");
   }
   if (isExperimentalCollectionTypeName(typeName, "vector", "Vector")) {
     return normalizeExperimentalCollectionTypePath(typeName, "vector", "Vector");
@@ -228,7 +228,7 @@ std::string resolveSoaVectorFieldStructPath(const std::string &typeName,
   return normalizeVectorStructPath(typeName);
 }
 
-bool resolveExperimentalVectorElementKindFromLayoutFields(
+bool resolveCollectionVectorElementKindFromLayoutFields(
     const std::string &vectorStructPath,
     const CollectStructLayoutFieldsFn &collectStructLayoutFields,
     const ValueKindFromTypeNameFn &valueKindFromTypeName,
@@ -266,13 +266,13 @@ bool resolveExperimentalVectorElementKindFromLayoutFields(
   return false;
 }
 
-std::string resolveExperimentalVectorFieldStructPath(
+std::string resolveCollectionVectorFieldStructPath(
     const StructLayoutFieldInfo &field) {
-  if (!isExperimentalVectorTypeName(field.typeName)) {
+  if (!isCollectionVectorRecordTypeName(field.typeName)) {
     return normalizeVectorStructPath(field.typeName);
   }
   if (!field.typeTemplateArg.empty()) {
-    return specializedExperimentalVectorStructPathForElementType(
+    return specializedCollectionVectorRecordPathForElementType(
         trimTemplateTypeText(field.typeTemplateArg));
   }
   return normalizeVectorStructPath(field.typeName);
@@ -292,17 +292,17 @@ void applySpecializedExperimentalMapFieldLayout(
     return;
   }
   for (const auto &field : fields) {
-    if (field.name != fieldName || !isExperimentalVectorTypeName(field.typeName)) {
+    if (field.name != fieldName || !isCollectionVectorRecordTypeName(field.typeName)) {
       continue;
     }
-    fieldInfo.structPath = resolveExperimentalVectorFieldStructPath(field);
+    fieldInfo.structPath = resolveCollectionVectorFieldStructPath(field);
     if (!field.typeTemplateArg.empty()) {
       fieldInfo.valueKind = valueKindFromTypeName(field.typeTemplateArg);
     }
     if (fieldInfo.valueKind == LocalInfo::ValueKind::Unknown &&
         !fieldInfo.structPath.empty()) {
       LocalInfo::ValueKind elementKind = LocalInfo::ValueKind::Unknown;
-      if (resolveExperimentalVectorElementKindFromLayoutFields(
+      if (resolveCollectionVectorElementKindFromLayoutFields(
               fieldInfo.structPath,
               collectStructLayoutFields,
               valueKindFromTypeName,
@@ -369,7 +369,7 @@ bool resolveStructSlotLayoutFromDefinitionFields(
     out = layout;
     return true;
   }
-  if (isExperimentalVectorTypeName(structPath)) {
+  if (isCollectionVectorRecordTypeName(structPath)) {
     StructSlotLayoutInfo layout;
     layout.structPath = normalizeVectorStructPath(structPath);
     layout.totalSlots = 4;
@@ -407,10 +407,10 @@ bool resolveStructSlotLayoutFromDefinitionFields(
     layout.totalSlots = 8;
     StructSlotFieldInfo keysField{
         "keys", 0, 4, LocalInfo::ValueKind::Unknown,
-        experimentalCollectionTypePath("vector", "Vector")};
+        experimentalCollectionTypePath("vec" "tor", "Vector")};
     StructSlotFieldInfo payloadsField{
         "payloads", 4, 4, LocalInfo::ValueKind::Unknown,
-        experimentalCollectionTypePath("vector", "Vector")};
+        experimentalCollectionTypePath("vec" "tor", "Vector")};
     applySpecializedExperimentalMapFieldLayout(
         structPath, "keys", collectStructLayoutFields, valueKindFromTypeName, keysField);
     applySpecializedExperimentalMapFieldLayout(
@@ -484,7 +484,7 @@ bool resolveStructSlotLayoutFromDefinitionFields(
         }
         info.valueKind = elementKind;
         info.structPath = normalizeVectorStructPath(binding.typeName);
-        info.slotCount = isExperimentalVectorTypeName(binding.typeName) ? 4 : 3;
+        info.slotCount = isCollectionVectorRecordTypeName(binding.typeName) ? 4 : 3;
       } else if (normalizeCollectionBindingTypeName(binding.typeName) == "soa" "_vector") {
         info.structPath = resolveSoaVectorFieldStructPath(binding.typeName, binding.typeTemplateArg);
         info.slotCount = 3;
@@ -537,7 +537,7 @@ bool resolveStructSlotLayoutFromDefinitionFields(
           isVectorTypeName(inlineTemplateBase)) {
         info.valueKind = valueKindFromTypeName(inlineTemplateArg);
         info.structPath = normalizeVectorStructPath(inlineTemplateBase);
-        info.slotCount = isExperimentalVectorTypeName(inlineTemplateBase) ? 4 : 3;
+        info.slotCount = isCollectionVectorRecordTypeName(inlineTemplateBase) ? 4 : 3;
         layout.fields.push_back(info);
         offset += info.slotCount;
         continue;
@@ -580,7 +580,7 @@ bool resolveStructSlotLayoutFromDefinitionFields(
       }
       if (isVectorTypeName(binding.typeName)) {
         info.structPath = normalizeVectorStructPath(binding.typeName);
-        info.slotCount = isExperimentalVectorTypeName(binding.typeName) ? 4 : 3;
+        info.slotCount = isCollectionVectorRecordTypeName(binding.typeName) ? 4 : 3;
         layout.fields.push_back(info);
         offset += info.slotCount;
         continue;

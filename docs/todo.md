@@ -66,7 +66,6 @@ This file is the live open-work queue for PrimeStruct.
 
 - TODO-4590: Add international text shaping and glyph atlas path | track: scene-text-renderer | primary surface: scene renderer text/glyph output
 - TODO-4576: Remove map backing-type compiler classification | track: map-backing-classifier-deletion | primary surface: map backing/layout classifiers
-- TODO-4577: Remove vector backing-type compiler classification | track: vector-backing-classifier-deletion | primary surface: vector backing/layout classifiers
 
 ### Immediate Next 10
 
@@ -84,8 +83,8 @@ This file is the live open-work queue for PrimeStruct.
   guide deletion scope, and TODO-4573 removed compiler-owned map literal
   lowering. TODO-4575 removed map helper/access classifiers, and vector path
   TODO-4572 and TODO-4574 completed the public helper classifier deletions.
-  Map path TODO-4576 and vector path TODO-4577 can now proceed; join at
-  TODO-4578 -> TODO-4579
+  TODO-4577 removed vector backing classifiers; map path TODO-4576 remains
+  before the join at TODO-4578 -> TODO-4579
 - Architecture hardening backlog: TODO-4586 completed parser diagnostic
   stability tiers. TODO-4587 completed the shared compile-time/runtime VM
   kernel boundary. TODO-4588 added the IR-preparation phase manifest.
@@ -96,7 +95,6 @@ This file is the live open-work queue for PrimeStruct.
 
 - TODO-4590: Add international text shaping and glyph atlas path
 - TODO-4576: Remove map backing-type compiler classification
-- TODO-4577: Remove vector backing-type compiler classification
 - TODO-4568: Emit scene nodes from the existing UI layout/widgets
 - TODO-4569: Present scene-rendered UI through software surface bridge
 - TODO-4578: Generalize stdlib surface registry away from map/vector IDs
@@ -232,37 +230,6 @@ This file is the live open-work queue for PrimeStruct.
       backing-classifier category at zero.
   - stop_rule: Stop once map backing identity is no longer recognized by
     compiler-specific C++ branches and focused map runtime tests pass.
-
-- [ ] TODO-4577: Remove vector backing-type compiler classification
-  - owner: ai
-  - created_at: 2026-05-24
-  - phase: Map/vector compiler-independence
-  - depends_on: TODO-4574
-  - inventory_categories: `vector-backing-classifier`, `vector-literal-path`
-  - scope: Delete C++ recognition of vector backing structs and specialized
-    `Vector` storage paths, replacing it with generic struct layout,
-    semantic product, and ordinary helper-call facts.
-  - implementation_notes: Start with
-    `specializedExperimentalVectorStructPathForElementType`,
-    `experimentalCollectionTypePath("vector", "Vector")`,
-    `experimentalCollectionMemberRoot("vector")`,
-    vector local capacity diagnostics, and vector backing predicates in
-    `src/ir_lowerer`, `src/semantics`, and `src/emitter`. Do this only after
-    vector helper classifiers are gone, so remaining matches are
-    backing/layout responsibilities rather than public helper dispatch.
-    Preserve ordinary C++ `std::vector` container use.
-  - acceptance:
-    - Production C++ no longer checks for PrimeStruct `Vector` backing paths,
-      specialized vector struct path builders, or vector-only layout branches.
-    - Vector construction, count, capacity, access, and mutation tests still
-      pass through `.prime` definitions and generic struct/layout facts.
-    - Vector capacity/allocation diagnostics either come from `.prime` code or
-      from generic runtime/allocation diagnostics, not vector-specific C++
-      branches.
-    - The compiler-knowledge inventory from TODO-4571 shows the vector
-      backing-classifier category at zero.
-  - stop_rule: Stop once vector backing identity is no longer recognized by
-    compiler-specific C++ branches and focused vector runtime tests pass.
 
 - [ ] TODO-4578: Generalize stdlib surface registry away from map/vector IDs
   - owner: ai

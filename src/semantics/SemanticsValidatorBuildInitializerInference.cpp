@@ -885,7 +885,7 @@ bool SemanticsValidator::usesSamePathSoaHelperTargetForCollectionType(
 bool SemanticsValidator::hasDirectExperimentalVectorImport() const {
   const auto &importPaths = program_.sourceImports.empty() ? program_.imports : program_.sourceImports;
   for (const auto &importPath : importPaths) {
-    if (isDirectExperimentalVectorImportPath(importPath)) {
+    if (isDirectCollectionVectorImportPath(importPath)) {
       return true;
     }
   }

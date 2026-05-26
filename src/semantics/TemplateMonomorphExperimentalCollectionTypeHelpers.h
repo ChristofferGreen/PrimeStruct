@@ -7,14 +7,14 @@ std::string experimentalVectorConstructorInferencePath(const std::string &resolv
       resolvedPath);
 }
 
-bool isExperimentalVectorConstructorHelperPath(const std::string &resolvedPath) {
+bool isCollectionVectorConstructorHelperPath(const std::string &resolvedPath) {
   const std::string normalizedPath =
       stripCollectionConstructorSuffixes(resolvedPath);
   return normalizedPath.rfind(legacyExperimentalVectorCompatibilityPrefix(), 0) == 0 &&
          isResolvedVectorConstructorHelperPath(normalizedPath);
 }
 
-bool resolvesExperimentalVectorValueTypeText(const std::string &typeText) {
+bool resolvesCollectionVectorValueTypeText(const std::string &typeText) {
   std::string normalizedType = normalizeBindingTypeName(typeText);
   std::string base;
   std::string argText;
@@ -45,7 +45,7 @@ bool resolvesExperimentalVectorValueTypeText(const std::string &typeText) {
       "/" + normalizedResolvedPath);
 }
 
-bool extractVectorValueTypeFromTypeText(const std::string &typeText, std::string &valueTypeOut) {
+bool extractCollectionVectorValueTypeFromTypeText(const std::string &typeText, std::string &valueTypeOut) {
   valueTypeOut.clear();
   std::string normalizedType = normalizeBindingTypeName(typeText);
   std::string base;

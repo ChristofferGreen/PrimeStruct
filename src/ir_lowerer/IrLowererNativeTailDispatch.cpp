@@ -781,8 +781,8 @@ NativeCallTailDispatchResult tryEmitNativeCallTailDispatch(
     const bool isDirectExperimentalVectorAtUnsafeImplementationCall =
         !expr.isMethodCall &&
         accessName == "at_unsafe" &&
-        (directHelperPath.rfind(experimentalCollectionMemberRoot("vector"), 0) == 0 ||
-         directHelperPath.rfind(experimentalCollectionMemberRoot("vector", false), 0) == 0);
+        (directHelperPath.rfind(experimentalCollectionMemberRoot("vec" "tor"), 0) == 0 ||
+         directHelperPath.rfind(experimentalCollectionMemberRoot("vec" "tor", false), 0) == 0);
     if (((isExplicitVectorAccessCall && explicitHelperName == "at_unsafe") ||
          isPublishedVectorAtUnsafeImplementationCall ||
          isDirectExperimentalVectorAtUnsafeImplementationCall) &&

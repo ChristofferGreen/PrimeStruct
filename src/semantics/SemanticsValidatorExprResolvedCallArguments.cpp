@@ -139,7 +139,7 @@ bool SemanticsValidator::validateExprResolvedCallArguments(
         this->expectedBindingTypeText(param.binding);
     std::string expectedExperimentalVectorElemType;
     if (context.argumentValidationContext->dispatchResolvers != nullptr &&
-        this->extractExperimentalVectorElementType(
+        this->extractCollectionVectorElementType(
             param.binding, expectedExperimentalVectorElemType)) {
       std::string actualElemType;
       std::string actualVectorSurface;

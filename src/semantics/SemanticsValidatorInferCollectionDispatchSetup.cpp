@@ -231,8 +231,8 @@ void SemanticsValidator::prepareInferCollectionDispatchSetup(
         const bool isDirectVectorReceiver =
             (builtinCollectionDispatchResolvers.resolveVectorTarget != nullptr &&
              builtinCollectionDispatchResolvers.resolveVectorTarget(receiverExpr, ignoredElemType)) ||
-            (builtinCollectionDispatchResolvers.resolveExperimentalVectorValueTarget != nullptr &&
-             builtinCollectionDispatchResolvers.resolveExperimentalVectorValueTarget(receiverExpr, ignoredElemType));
+            (builtinCollectionDispatchResolvers.resolveCollectionVectorValueTarget != nullptr &&
+             builtinCollectionDispatchResolvers.resolveCollectionVectorValueTarget(receiverExpr, ignoredElemType));
         setupOut.shouldAllowStdAccessCompatibilityFallback =
             !isDirectVectorReceiver;
       }

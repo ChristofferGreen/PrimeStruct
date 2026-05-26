@@ -156,7 +156,7 @@ bool SemanticsValidator::resolveCallCollectionTypePath(const Expr &target,
         return true;
       }
       std::string inferredVectorElemType;
-      if (extractExperimentalVectorElementType(inferredReturn, inferredVectorElemType)) {
+      if (extractCollectionVectorElementType(inferredReturn, inferredVectorElemType)) {
         typePathOut = "/vector";
         return true;
       }
@@ -242,7 +242,7 @@ bool SemanticsValidator::resolveCallCollectionTemplateArgs(const Expr &target,
   auto extractCollectionArgsFromBinding = [&](const BindingInfo &binding) {
     if (expectedBase == "vector") {
       std::string elemType;
-      if (extractExperimentalVectorElementType(binding, elemType)) {
+      if (extractCollectionVectorElementType(binding, elemType)) {
         argsOut = {elemType};
         return true;
       }

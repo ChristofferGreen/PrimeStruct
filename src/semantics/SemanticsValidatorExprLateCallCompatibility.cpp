@@ -77,11 +77,11 @@ bool SemanticsValidator::validateExprLateCallCompatibility(
         context.dispatchResolvers->resolveVectorTarget(expr.args.front(),
                                                        elemType);
     std::string experimentalElemType;
-    const bool resolvesExperimentalVector =
-        context.dispatchResolvers->resolveExperimentalVectorTarget(
+    const bool resolvesCollectionVector =
+        context.dispatchResolvers->resolveCollectionVectorTarget(
             expr.args.front(), experimentalElemType);
     const bool resolvesVectorLikeCountTarget =
-        resolvesVector || resolvesExperimentalVector;
+        resolvesVector || resolvesCollectionVector;
     const bool resolvesArray =
         context.dispatchResolvers->resolveArrayTarget(expr.args.front(),
                                                       arrayElemType);
@@ -126,10 +126,10 @@ bool SemanticsValidator::validateExprLateCallCompatibility(
         context.dispatchResolvers->resolveVectorTarget(expr.args.front(),
                                                        elemType);
     std::string experimentalElemType;
-    const bool resolvesExperimentalVector =
-        context.dispatchResolvers->resolveExperimentalVectorTarget(
+    const bool resolvesCollectionVector =
+        context.dispatchResolvers->resolveCollectionVectorTarget(
             expr.args.front(), experimentalElemType);
-    if (!resolvesVector && !resolvesExperimentalVector) {
+    if (!resolvesVector && !resolvesCollectionVector) {
       if (!validateExpr(params, locals, expr.args.front())) {
         return false;
       }

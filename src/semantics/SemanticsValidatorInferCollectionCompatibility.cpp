@@ -467,7 +467,7 @@ std::string SemanticsValidator::specializedExperimentalVectorHelperTarget(
       continue;
     }
     std::string candidateElemType;
-    if (!extractExperimentalVectorElementType(params.front().binding, candidateElemType)) {
+    if (!extractCollectionVectorElementType(params.front().binding, candidateElemType)) {
       continue;
     }
     if (canonicalizeTypeText(candidateElemType) == canonicalElemType) {

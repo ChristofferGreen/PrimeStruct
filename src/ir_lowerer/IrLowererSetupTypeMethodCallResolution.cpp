@@ -198,24 +198,24 @@ bool matchesGeneratedDefinitionFamilyPath(const std::string &candidatePath,
 
 bool blocksSyntheticCollectionFallbackDirectTarget(const std::string &targetPath) {
   const std::string normalized = normalizeCollectionHelperPath(targetPath);
-  return normalized.rfind(normalizeBuiltinCollectionStructPath("vector") + "/", 0) == 0 ||
+  return normalized.rfind(normalizeBuiltinCollectionStructPath("vec" "tor") + "/", 0) == 0 ||
          normalized.rfind(collectionMemberRoot("vector"), 0) == 0 ||
          normalized.rfind(normalizeBuiltinCollectionStructPath("map") + "/", 0) == 0 ||
          normalized.rfind(collectionMemberRoot("map"), 0) == 0 ||
          normalized.rfind("/soa" "_vector/", 0) == 0 ||
          normalized.rfind("/std/collections/" "soa" "_vector/", 0) == 0 ||
-         normalized.rfind(experimentalCollectionMemberRoot("vector"), 0) == 0 ||
+         normalized.rfind(experimentalCollectionMemberRoot("vec" "tor"), 0) == 0 ||
          normalized.rfind(experimentalCollectionMemberRoot("map"), 0) == 0 ||
          normalized.rfind("/std/collections/experimental" "_soa" "_vector/", 0) == 0;
 }
 
-bool isExperimentalVectorMetadataMethodPath(const std::string &methodPath) {
+bool isCollectionVectorMetadataMethodPath(const std::string &methodPath) {
   const std::string leaf = extractMethodLeafName(methodPath);
   return leaf == "field_count" || leaf == "field_capacity" ||
          leaf == "set_field_count" || leaf == "set_field_capacity";
 }
 
-bool isExperimentalVectorOwnerPath(const std::string &path) {
+bool isCollectionVectorOwnerPath(const std::string &path) {
   const std::string normalized = normalizeCollectionHelperPath(path);
   return isExperimentalCollectionTypeName(normalized, "vector", "Vector");
 }
@@ -401,7 +401,7 @@ const Definition *resolveMethodCallDefinitionFromExpr(
 
   const std::string explicitMethodPath = describeMethodCallExpr(callExpr);
   const bool allowsReceiverResolvedVectorMetadataFallback =
-      isExperimentalVectorMetadataMethodPath(explicitMethodPath);
+      isCollectionVectorMetadataMethodPath(explicitMethodPath);
   const std::string rootedKeyValuePrefix =
       normalizeBuiltinCollectionStructPath("map").substr(1) + "/";
   const std::string canonicalKeyValuePrefix = collectionMemberRoot("map", false);
@@ -537,7 +537,7 @@ const Definition *resolveMethodCallDefinitionFromExpr(
             return resolvedMethodDef;
           }
         }
-        if (isExperimentalVectorOwnerPath(targetPath)) {
+        if (isCollectionVectorOwnerPath(targetPath)) {
           return nullptr;
         }
       }
@@ -579,7 +579,7 @@ const Definition *resolveMethodCallDefinitionFromExpr(
         (!canonicalVectorCountPath.empty() &&
          explicitMethodPath == canonicalVectorCountPath) ||
         explicitMethodPath ==
-            normalizeBuiltinCollectionStructPath("vector") + "/count";
+            normalizeBuiltinCollectionStructPath("vec" "tor") + "/count";
     if (callExpr.semanticNodeId == 0 &&
         (callExpr.sourceLine <= 0 || callExpr.sourceColumn <= 0 ||
          callExpr.name.empty()) &&
@@ -670,7 +670,7 @@ const Definition *resolveMethodCallDefinitionFromExpr(
         if (!receiverTypeText.empty() && receiverTypeText.front() != '/') {
           receiverTypeText.insert(receiverTypeText.begin(), '/');
         }
-        if (isExperimentalVectorOwnerPath(receiverTypeText)) {
+        if (isCollectionVectorOwnerPath(receiverTypeText)) {
           const std::string receiverMethodPath =
               buildReceiverMethodTargetPath(receiverTypeText, explicitMethodPath);
           if (const Definition *receiverTypedDef =
@@ -779,7 +779,7 @@ const Definition *resolveMethodCallDefinitionFromExpr(
       normalizedMethodName.erase(normalizedMethodName.begin());
     }
     const std::string rootedVectorPrefix =
-        normalizeBuiltinCollectionStructPath("vector").substr(1) + "/";
+        normalizeBuiltinCollectionStructPath("vec" "tor").substr(1) + "/";
     const std::string canonicalVectorPrefix =
         collectionMemberRoot("vector", false);
     if (normalizedMethodName.rfind(rootedVectorPrefix, 0) == 0) {

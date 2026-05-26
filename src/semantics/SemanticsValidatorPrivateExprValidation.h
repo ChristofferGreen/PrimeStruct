@@ -52,8 +52,8 @@
     std::function<bool(const Expr &, std::string &)> resolveArgsPackAccessTarget;
     std::function<bool(const Expr &, std::string &)> resolveArrayTarget;
     std::function<bool(const Expr &, std::string &)> resolveVectorTarget;
-    std::function<bool(const Expr &, std::string &)> resolveExperimentalVectorTarget;
-    std::function<bool(const Expr &, std::string &)> resolveExperimentalVectorValueTarget;
+    std::function<bool(const Expr &, std::string &)> resolveCollectionVectorTarget;
+    std::function<bool(const Expr &, std::string &)> resolveCollectionVectorValueTarget;
     std::function<bool(const Expr &, std::string &)> resolveSoaVectorTarget;
     std::function<bool(const Expr &, std::string &)> resolveBufferTarget;
     std::function<bool(const Expr &)> resolveStringTarget;
@@ -368,7 +368,7 @@
     bool shouldBuiltinValidateBareKeyValueAccessCall = false;
     std::function<bool(const Expr &, std::string &)> resolveArgsPackAccessTarget;
     std::function<bool(const Expr &, std::string &)> resolveVectorTarget;
-    std::function<bool(const Expr &, std::string &)> resolveExperimentalVectorValueTarget;
+    std::function<bool(const Expr &, std::string &)> resolveCollectionVectorValueTarget;
     std::function<bool(const Expr &, std::string &)> resolveArrayTarget;
     std::function<bool(const Expr &)> resolveStringTarget;
     std::function<bool(const Expr &, std::string &)> resolveKeyValueKeyType;

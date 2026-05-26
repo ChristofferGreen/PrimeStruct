@@ -170,7 +170,7 @@
     if (receiver.kind == Expr::Kind::StringLiteral || isStringValue(receiver, localTypes)) {
       return "/string";
     }
-    if (isVectorValue(receiver, localTypes)) {
+    if (isCollectionVectorValue(receiver, localTypes)) {
       return "/vector";
     }
     if (isArrayValue(receiver, localTypes)) {
@@ -258,7 +258,7 @@
     if (receiver.kind == Expr::Kind::StringLiteral || isStringValue(receiver, localTypes)) {
       return "/string";
     }
-    if (isVectorValue(receiver, localTypes)) {
+    if (isCollectionVectorValue(receiver, localTypes)) {
       return "/vector";
     }
     if (isArrayValue(receiver, localTypes)) {
@@ -323,7 +323,7 @@
     if (isMapValue(targetExpr, localTypes)) {
       return "/map";
     }
-    if (isVectorValue(targetExpr, localTypes)) {
+    if (isCollectionVectorValue(targetExpr, localTypes)) {
       return "/vector";
     }
     if (isArrayValue(targetExpr, localTypes)) {

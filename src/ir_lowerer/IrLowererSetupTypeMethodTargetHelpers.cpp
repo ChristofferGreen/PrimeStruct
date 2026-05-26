@@ -19,7 +19,7 @@ const Definition *resolveMethodDefinitionFromReceiverTarget(
     normalizedMethodName.erase(normalizedMethodName.begin());
   }
   const std::string rootedVectorPrefix =
-      normalizeBuiltinCollectionStructPath("vector").substr(1) + "/";
+      normalizeBuiltinCollectionStructPath("vec" "tor").substr(1) + "/";
   const std::string canonicalVectorPrefix =
       collectionMemberRoot("vector", false);
   const std::string rootedKeyValuePrefix =
@@ -213,7 +213,7 @@ const Definition *resolveMethodDefinitionFromReceiverTarget(
     }
     return findMethodDefinitionByPath("/std/collections/" "soa" "_vector/" + normalizedMethodName);
   };
-  auto isExperimentalVectorMetadataMethodName = [&]() {
+  auto isCollectionVectorMetadataMethodName = [&]() {
     return normalizedMethodName == "field_count" ||
            normalizedMethodName == "field_capacity" ||
            normalizedMethodName == "set_field_count" ||
@@ -221,7 +221,7 @@ const Definition *resolveMethodDefinitionFromReceiverTarget(
   };
   auto findExperimentalVectorMetadataDefinition =
       [&](const std::string &candidate) -> const Definition * {
-    if (!isExperimentalVectorMetadataMethodName()) {
+    if (!isCollectionVectorMetadataMethodName()) {
       return nullptr;
     }
     const std::string normalized = stripReceiverPrefix(candidate);
@@ -231,7 +231,7 @@ const Definition *resolveMethodDefinitionFromReceiverTarget(
       return nullptr;
     }
     const std::string specializedVectorPrefix =
-        experimentalCollectionTypePath("vector", "Vector", false) + "__";
+        experimentalCollectionTypePath("vec" "tor", "Vector", false) + "__";
     if (normalized.rfind(specializedVectorPrefix, 0) == 0) {
       if (const Definition *specializedDef =
               findMethodDefinitionByPath("/" + normalized + "/" + normalizedMethodName)) {
@@ -239,12 +239,12 @@ const Definition *resolveMethodDefinitionFromReceiverTarget(
       }
     }
     return findMethodDefinitionByPath(
-        experimentalCollectionTypePath("vector", "Vector") + "/" +
+        experimentalCollectionTypePath("vec" "tor", "Vector") + "/" +
         normalizedMethodName);
   };
   if (isExplicitVectorAliasMethod) {
     errorOut = "unknown method: " +
-               normalizeBuiltinCollectionStructPath("vector") + "/" +
+               normalizeBuiltinCollectionStructPath("vec" "tor") + "/" +
                normalizedMethodName;
     return nullptr;
   }

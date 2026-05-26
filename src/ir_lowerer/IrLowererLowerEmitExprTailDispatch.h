@@ -1235,7 +1235,7 @@
                     }
                     if (candidate.isVectorTarget) {
                       candidate.structTypeName =
-                          specializedExperimentalVectorStructPathForElementType(
+                          specializedCollectionVectorRecordPathForElementType(
                               normalizedElementType);
                     } else if (candidate.isSoaVector) {
                       candidate.structTypeName =

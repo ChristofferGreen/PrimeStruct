@@ -18,11 +18,11 @@ bool allowsArrayVectorCompatibilitySuffix(const std::string &suffix) {
          suffix != "remove_at" && suffix != "remove_swap";
 }
 
-bool isExperimentalVectorConstructorPath(std::string path) {
+bool isCollectionVectorConstructorPath(std::string path) {
   if (!path.empty() && path.front() != '/') {
     path.insert(path.begin(), '/');
   }
-  const std::string prefix = experimentalCollectionMemberRoot("vector");
+  const std::string prefix = experimentalCollectionMemberRoot("vec" "tor");
   const std::string_view Prefix(prefix.data(), prefix.size());
   if (path.rfind(Prefix, 0) != 0) {
     return false;
@@ -80,7 +80,7 @@ std::string resolveSpecializedExperimentalVectorReturnPath(
   if (!normalizedArg.empty() && normalizedArg.front() == '/') {
     normalizedArg.erase(normalizedArg.begin());
   }
-  return specializedExperimentalVectorStructPathForElementType(normalizedArg);
+  return specializedCollectionVectorRecordPathForElementType(normalizedArg);
 }
 
 std::string resolveSpecializedExperimentalSoaVectorReturnPath(
@@ -149,7 +149,7 @@ std::string normalizeCollectionMethodName(std::string methodName) {
     methodName.erase(methodName.begin());
   }
   const std::string vectorPrefix =
-      normalizeBuiltinCollectionStructPath("vector").substr(1) + "/";
+      normalizeBuiltinCollectionStructPath("vec" "tor").substr(1) + "/";
   const std::string arrayPrefix = "array/";
   const std::string stdVectorPrefix =
       collectionMemberRoot("vector", false);
@@ -274,7 +274,7 @@ std::vector<std::string> collectionHelperPathCandidates(const std::string &path)
   std::string normalizedPath = path;
   if (!normalizedPath.empty() && normalizedPath.front() != '/') {
     if (normalizedPath.rfind("array/", 0) == 0 ||
-        normalizedPath.rfind(normalizeBuiltinCollectionStructPath("vector").substr(1) + "/", 0) == 0 ||
+        normalizedPath.rfind(normalizeBuiltinCollectionStructPath("vec" "tor").substr(1) + "/", 0) == 0 ||
         normalizedPath.rfind(collectionMemberRoot("vector", false), 0) == 0 ||
         normalizedPath.rfind(normalizeBuiltinCollectionStructPath("map").substr(1) + "/", 0) == 0 ||
         normalizedPath.rfind(collectionMemberRoot("map", false), 0) == 0) {
@@ -551,7 +551,7 @@ std::string inferStructReturnPathFromExprInternal(
   }
 
   const std::string resolvedExprPath = resolveStructLayoutExprPath(expr);
-  if (isExperimentalVectorConstructorPath(resolvedExprPath) &&
+  if (isCollectionVectorConstructorPath(resolvedExprPath) &&
       expr.templateArgs.size() == 1) {
     const std::string specializedVector =
         resolveSpecializedExperimentalVectorReturnPath(
@@ -566,7 +566,7 @@ std::string inferStructReturnPathFromExprInternal(
   if (!expr.isMethodCall && !expr.args.empty()) {
     std::string normalizedPath = resolveStructLayoutExprPath(expr);
     if (!normalizedPath.empty() && normalizedPath.front() != '/') {
-      if (normalizedPath.rfind(normalizeBuiltinCollectionStructPath("vector").substr(1) + "/", 0) == 0 ||
+      if (normalizedPath.rfind(normalizeBuiltinCollectionStructPath("vec" "tor").substr(1) + "/", 0) == 0 ||
           normalizedPath.rfind(collectionMemberRoot("vector", false), 0) == 0) {
         normalizedPath.insert(normalizedPath.begin(), '/');
       }

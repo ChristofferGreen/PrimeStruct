@@ -89,7 +89,7 @@ std::string inferVectorLikeStructPathFromLocalInfo(const LocalInfo &localInfo) {
   if (normalizedStructTypeName.empty()) {
     const std::string elementType = scalarKindTypeName(localInfo.valueKind);
     if (!elementType.empty()) {
-      return specializedExperimentalVectorStructPathForElementType(elementType);
+      return specializedCollectionVectorRecordPathForElementType(elementType);
     }
     return "/vector";
   }
@@ -105,7 +105,7 @@ std::string inferVectorLikeStructPathFromLocalInfo(const LocalInfo &localInfo) {
       "vector") {
     const std::string elementType = scalarKindTypeName(localInfo.valueKind);
     if (!elementType.empty()) {
-      return specializedExperimentalVectorStructPathForElementType(elementType);
+      return specializedCollectionVectorRecordPathForElementType(elementType);
     }
     return "/vector";
   }
@@ -114,7 +114,7 @@ std::string inferVectorLikeStructPathFromLocalInfo(const LocalInfo &localInfo) {
   if (!elementType.empty() && elementType.front() == '/') {
     elementType.erase(elementType.begin());
   }
-  return specializedExperimentalVectorStructPathForElementType(elementType);
+  return specializedCollectionVectorRecordPathForElementType(elementType);
 }
 
 } // namespace

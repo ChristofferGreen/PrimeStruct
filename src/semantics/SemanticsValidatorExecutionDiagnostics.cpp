@@ -186,8 +186,8 @@ void SemanticsValidator::collectExecutionIntraBodyCallDiagnostics(
                                                       const std::string &expectedStructPath) {
       std::string expectedElemType;
       std::string actualElemType;
-      if (!(extractExperimentalVectorElementType(param.binding, expectedElemType) ||
-            extractExperimentalVectorElementTypeFromStructPath(expectedStructPath, expectedElemType))) {
+      if (!(extractCollectionVectorElementType(param.binding, expectedElemType) ||
+            extractCollectionVectorElementTypeFromStructPath(expectedStructPath, expectedElemType))) {
         return false;
       }
       if (dispatchResolvers.resolveVectorTarget != nullptr &&
@@ -221,12 +221,12 @@ void SemanticsValidator::collectExecutionIntraBodyCallDiagnostics(
         return false;
       }
       const std::string normalizedInferredBase = normalizeBindingTypeName(inferredBase);
-      const bool isExperimentalVectorBase =
+      const bool isCollectionVectorBase =
           isLegacyExperimentalVectorCompatibilityPath(normalizedInferredBase) ||
           isLegacyExperimentalVectorCompatibilityPath("/" + normalizedInferredBase);
       return (normalizedInferredBase == "vector" ||
               normalizedInferredBase == "Vector" ||
-              isExperimentalVectorBase) &&
+              isCollectionVectorBase) &&
              normalizeBindingTypeName(expectedElemType) == normalizeBindingTypeName(inferredArgs.front());
     };
     std::string message;

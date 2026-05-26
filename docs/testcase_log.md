@@ -4,6 +4,27 @@
 - none
 
 ## Recent Test Runs
+- 2026-05-26 09:04 CEST | pass | mode: release + script | command:
+  `cmake -S . -B build-release -DCMAKE_BUILD_TYPE=Release`;
+  `cmake --build build-release --target primec PrimeStruct_backend_ir_tests PrimeStruct_semantics_tests PrimeStruct_compile_run_tests -j 1`;
+  `cmake --build build-release --target PrimeStruct_backend_ir_tests -j 1`;
+  `cd build-release && ./PrimeStruct_backend_ir_tests --test-case="ir lowerer call helpers source delegation stays stable,semantics validator infer source delegation stays stable,emitter expr source delegation stays stable,ir lowerer count access helpers classify canonical counts and defer vector reads,emitter expr control count-rewrite step only rewrites bare collection calls" --no-skip`;
+  `cd build-release && ./PrimeStruct_semantics_tests --test-case="bare vector count call resolves through imported stdlib helper,bare vector count call requires imported stdlib helper or explicit definition,bare vector capacity wrapper call resolves through imported stdlib helper,bare vector at_unsafe auto inference resolves through imported stdlib helper,bare vector at_unsafe auto inference requires imported stdlib helper or explicit definition" --no-skip`;
+  `cd build-release && ./PrimeStruct_compile_run_tests --test-case="vector map bridge boundary docs stay source locked,todo queue and skipped doctest debt stay source locked,compiles and runs stdlib namespaced vector helpers in C++ emitter,C++ emitter keeps stdlib namespaced vector access helper emission,rejects vector namespaced count capacity access aliases without helpers in C++ emitter,C++ emitter lowers stdlib namespaced vector mutator statement through imported helper,rejects vm canonical namespaced vector mutators without imported helpers,runs vm canonical vector helpers on experimental vector receivers,rejects native canonical namespaced vector mutators without imported helpers,compiles and runs native canonical vector helpers on experimental vector receivers" --no-skip`;
+  `python3 scripts/check_map_vector_compiler_knowledge.py --root . --require-zero-category vector-backing-classifier`;
+  `python3 tests/scripts/test_check_map_vector_compiler_knowledge.py --repo-root .`;
+  `python3 -m py_compile scripts/check_map_vector_compiler_knowledge.py tests/scripts/test_check_map_vector_compiler_knowledge.py`;
+  `git diff --check`;
+  `cmake --build build-release --target PrimeStruct_compile_run_tests -j 1`;
+  `cd build-release && ./PrimeStruct_compile_run_tests --test-case="todo queue and skipped doctest debt stay source locked" --no-skip`
+  | failures: none | notes: parent release configure/build passed, backend
+  IR source-lock rerun passed 4 cases / 1036 assertions after refreshing
+  stale vector backing path-builder expectations, semantics passed 5 cases /
+  14 assertions, and compile-run passed 10 cases / 600 assertions. Local
+  inventory reported no `vector-backing-classifier` category; script
+  self-test, Python bytecode check, and whitespace check passed. Parent final
+  docs-lock rebuild/rerun passed 1 case / 496 assertions after TODO
+  bookkeeping.
 - 2026-05-26 07:30 CEST | pass | mode: release | command:
   `cmake -S . -B build-release -DCMAKE_BUILD_TYPE=Release`;
   `cmake --build build-release --target PrimeStruct_misc_tests -j 1`;

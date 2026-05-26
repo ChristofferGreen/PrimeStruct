@@ -48,7 +48,7 @@ std::string soaConversionHelperName() {
   return std::string("to") + "_aos";
 }
 
-bool isExperimentalVectorStructPath(const std::string &structTypeName) {
+bool isCollectionVectorRecordPath(const std::string &structTypeName) {
   return isExperimentalCollectionStructPath(structTypeName, "vector", "Vector");
 }
 
@@ -125,7 +125,7 @@ bool isVectorTargetImpl(const Expr &target, const LocalMap &localsIn) {
     return it != localsIn.end() && !it->second.isSoaVector &&
            (it->second.kind == LocalInfo::Kind::Vector ||
             (it->second.kind == LocalInfo::Kind::Value &&
-             isExperimentalVectorStructPath(it->second.structTypeName)) ||
+             isCollectionVectorRecordPath(it->second.structTypeName)) ||
             (it->second.kind == LocalInfo::Kind::Reference &&
              it->second.referenceToVector) ||
             (it->second.kind == LocalInfo::Kind::Pointer &&

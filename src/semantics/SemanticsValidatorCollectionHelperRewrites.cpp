@@ -425,11 +425,11 @@ bool SemanticsValidator::tryRewriteBareVectorHelperCall(
       std::string elemType;
       return (dispatchResolvers.resolveVectorTarget != nullptr &&
               dispatchResolvers.resolveVectorTarget(receiverCandidate, elemType)) ||
-             (dispatchResolvers.resolveExperimentalVectorValueTarget != nullptr &&
-              dispatchResolvers.resolveExperimentalVectorValueTarget(receiverCandidate,
+             (dispatchResolvers.resolveCollectionVectorValueTarget != nullptr &&
+              dispatchResolvers.resolveCollectionVectorValueTarget(receiverCandidate,
                                                                     elemType)) ||
-             (dispatchResolvers.resolveExperimentalVectorTarget != nullptr &&
-              dispatchResolvers.resolveExperimentalVectorTarget(receiverCandidate,
+             (dispatchResolvers.resolveCollectionVectorTarget != nullptr &&
+              dispatchResolvers.resolveCollectionVectorTarget(receiverCandidate,
                                                                elemType));
     };
     if (!resolvesVectorTarget(candidate.args.front())) {
@@ -448,14 +448,14 @@ bool SemanticsValidator::tryRewriteBareVectorHelperCall(
   const bool resolvesBuiltinVector =
       dispatchResolvers.resolveVectorTarget(candidate.args[receiverIndex], builtinElemType);
   std::string experimentalElemType;
-  const bool resolvesExperimentalVector =
-      dispatchResolvers.resolveExperimentalVectorValueTarget != nullptr &&
-      dispatchResolvers.resolveExperimentalVectorValueTarget(candidate.args[receiverIndex], experimentalElemType);
-  if (!resolvesBuiltinVector && !resolvesExperimentalVector) {
+  const bool resolvesCollectionVector =
+      dispatchResolvers.resolveCollectionVectorValueTarget != nullptr &&
+      dispatchResolvers.resolveCollectionVectorValueTarget(candidate.args[receiverIndex], experimentalElemType);
+  if (!resolvesBuiltinVector && !resolvesCollectionVector) {
     return false;
   }
   rewrittenOut = candidate;
-  if (resolvesExperimentalVector) {
+  if (resolvesCollectionVector) {
     const std::string preferredHelperPath =
         preferredBareVectorHelperTarget(helperName);
     if (hasImportedDefinitionPath(preferredHelperPath) ||
@@ -504,8 +504,8 @@ bool SemanticsValidator::tryRewriteCanonicalExperimentalVectorHelperCall(
     const BuiltinCollectionDispatchResolvers &dispatchResolvers,
     Expr &rewrittenOut) const {
   if (candidate.kind != Expr::Kind::Call || candidate.args.empty() ||
-      dispatchResolvers.resolveExperimentalVectorTarget == nullptr ||
-      dispatchResolvers.resolveExperimentalVectorValueTarget == nullptr) {
+      dispatchResolvers.resolveCollectionVectorTarget == nullptr ||
+      dispatchResolvers.resolveCollectionVectorValueTarget == nullptr) {
     return false;
   }
   const std::string resolvedCandidatePath =
@@ -557,11 +557,11 @@ bool SemanticsValidator::tryRewriteCanonicalExperimentalVectorHelperCall(
       std::string elemType;
       return (dispatchResolvers.resolveVectorTarget != nullptr &&
               dispatchResolvers.resolveVectorTarget(receiverCandidate, elemType)) ||
-             (dispatchResolvers.resolveExperimentalVectorValueTarget != nullptr &&
-              dispatchResolvers.resolveExperimentalVectorValueTarget(receiverCandidate,
+             (dispatchResolvers.resolveCollectionVectorValueTarget != nullptr &&
+              dispatchResolvers.resolveCollectionVectorValueTarget(receiverCandidate,
                                                                     elemType)) ||
-             (dispatchResolvers.resolveExperimentalVectorTarget != nullptr &&
-              dispatchResolvers.resolveExperimentalVectorTarget(receiverCandidate,
+             (dispatchResolvers.resolveCollectionVectorTarget != nullptr &&
+              dispatchResolvers.resolveCollectionVectorTarget(receiverCandidate,
                                                                elemType));
     };
     if (!resolvesVectorTarget(canonicalCandidate.args.front())) {
@@ -595,7 +595,7 @@ bool SemanticsValidator::tryRewriteCanonicalExperimentalVectorHelperCall(
       auto paramsIt = paramsByDef_.find(path);
       if (paramsIt != paramsByDef_.end() && !paramsIt->second.empty()) {
         std::string experimentalElemType;
-        if (extractExperimentalVectorElementType(paramsIt->second.front().binding, experimentalElemType)) {
+        if (extractCollectionVectorElementType(paramsIt->second.front().binding, experimentalElemType)) {
           return false;
         }
       }
@@ -604,7 +604,7 @@ bool SemanticsValidator::tryRewriteCanonicalExperimentalVectorHelperCall(
   };
 
   std::string elemType;
-  if (!dispatchResolvers.resolveExperimentalVectorValueTarget(receiverExpr, elemType)) {
+  if (!dispatchResolvers.resolveCollectionVectorValueTarget(receiverExpr, elemType)) {
     return false;
   }
   if (!hasVisibleCanonicalVectorHelperPath(canonicalPath)) {

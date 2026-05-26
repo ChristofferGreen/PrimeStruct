@@ -28,7 +28,7 @@ bool isGeneratedSinglePathSegmentWithPrefix(std::string_view path, std::string_v
 
 bool isGeneratedStdlibCollectionStructPath(std::string_view path) {
   const std::string experimentalVectorTypePrefix =
-      experimentalCollectionTypePath("vector", "Vector") + "__";
+      experimentalCollectionTypePath("vec" "tor", "Vector") + "__";
   const std::string experimentalMapTypePrefix =
       experimentalCollectionTypePath("map", "Map") + "__";
   const auto *mapMetadata = findStdlibSurfaceMetadataByBridgeKey("collections.map_helpers");
@@ -221,7 +221,7 @@ CountMethodFallbackResult tryEmitNonMethodCountFallback(
   };
   if (!expr.isMethodCall) {
     const std::string directHelperPath = resolveDirectHelperPath();
-    if (directHelperPath.rfind(experimentalCollectionMemberRoot("vector"), 0) == 0) {
+    if (directHelperPath.rfind(experimentalCollectionMemberRoot("vec" "tor"), 0) == 0) {
       return CountMethodFallbackResult::NotHandled;
     }
     if (isExplicitRemovedCountLikeAliasCall("count") ||

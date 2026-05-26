@@ -71,7 +71,7 @@ bool SemanticsValidator::validateExprCountCapacityBuiltins(
       } else {
         inferredBinding.typeName = normalizedType;
       }
-      if (extractExperimentalVectorElementType(inferredBinding, elemTypeOut)) {
+      if (extractCollectionVectorElementType(inferredBinding, elemTypeOut)) {
         return true;
       }
       const std::string normalizedBase = normalizeBindingTypeName(inferredBinding.typeName);
@@ -139,7 +139,7 @@ bool SemanticsValidator::validateExprCountCapacityBuiltins(
                 !paramBinding.typeTemplateArg.empty()) {
               expectedElemType = paramBinding.typeTemplateArg;
             } else {
-              extractExperimentalVectorElementType(paramBinding, expectedElemType);
+              extractCollectionVectorElementType(paramBinding, expectedElemType);
             }
           }
         }

@@ -16,7 +16,7 @@ namespace primec::ir_lowerer {
 
 namespace {
 
-bool isExperimentalVectorStructPath(const std::string &structTypeName) {
+bool isCollectionVectorRecordPath(const std::string &structTypeName) {
   return isExperimentalCollectionTypeName(structTypeName, "vector", "Vector");
 }
 
@@ -61,7 +61,7 @@ std::string inferExperimentalVectorStructPathFromTypeName(
   if (!normalizedArg.empty() && normalizedArg.front() == '/') {
     normalizedArg.erase(normalizedArg.begin());
   }
-  return specializedExperimentalVectorStructPathForElementType(normalizedArg);
+  return specializedCollectionVectorRecordPathForElementType(normalizedArg);
 }
 
 bool hasInferredTypedWrappedKeyValue(const LocalInfo &localInfo, LocalInfo::Kind kind) {
@@ -169,7 +169,7 @@ std::string normalizeAccessCollectionFamily(std::string family) {
 bool classifySemanticArrayVectorAccessTypeText(const std::string &typeText,
                                                ArrayVectorAccessTargetInfo &targetInfoOut) {
   std::string normalizedDirectType = trimTemplateTypeText(typeText);
-  if (isExperimentalVectorStructPath(normalizedDirectType)) {
+  if (isCollectionVectorRecordPath(normalizedDirectType)) {
     targetInfoOut = {};
     targetInfoOut.isArrayOrVectorTarget = true;
     targetInfoOut.isVectorTarget = true;
@@ -302,7 +302,7 @@ bool resolveSemanticArrayVectorAccessTargetInfo(
     } else if (family == "vector" &&
                targetInfoOut.elemKind == LocalInfo::ValueKind::Unknown) {
       targetInfoOut.structTypeName = elementTypeText.empty() &&
-                                             isExperimentalVectorStructPath(rawFamily)
+                                             isCollectionVectorRecordPath(rawFamily)
                                          ? rawFamily
                                          : inferExperimentalVectorStructPathFromTypeName(elementTypeText);
     }
@@ -1048,7 +1048,7 @@ ArrayVectorAccessTargetInfo resolveArrayVectorAccessTargetInfo(
     }
     if (localInfo.argsPackElementKind == LocalInfo::Kind::Value &&
         !localInfo.isSoaVector &&
-        isExperimentalVectorStructPath(localInfo.structTypeName)) {
+        isCollectionVectorRecordPath(localInfo.structTypeName)) {
       info.isArrayOrVectorTarget = true;
       info.isVectorTarget = true;
       info.isSoaVector = false;
@@ -1162,7 +1162,7 @@ ArrayVectorAccessTargetInfo resolveArrayVectorAccessTargetInfo(
       return info;
     }
     if (it != localsIn.end() && it->second.kind == LocalInfo::Kind::Value &&
-        !it->second.isSoaVector && isExperimentalVectorStructPath(it->second.structTypeName)) {
+        !it->second.isSoaVector && isCollectionVectorRecordPath(it->second.structTypeName)) {
       info.isArrayOrVectorTarget = true;
       info.elemKind = it->second.valueKind;
       info.isVectorTarget = true;

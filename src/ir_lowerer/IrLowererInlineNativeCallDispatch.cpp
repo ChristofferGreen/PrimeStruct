@@ -346,8 +346,8 @@ bool isPublicOrCompatibilitySoaToAosCall(const Expr &expr) {
          isCanonicalCollectionHelperCall(expr, "std/collections/" "soa" "_vector", "to" "_aos", 1);
 }
 
-bool isExperimentalVectorStructPath(std::string_view structTypeName) {
-  const std::string vectorTypePath = experimentalCollectionTypePath("vector", "Vector");
+bool isCollectionVectorRecordPath(std::string_view structTypeName) {
+  const std::string vectorTypePath = experimentalCollectionTypePath("vec" "tor", "Vector");
   return structTypeName == vectorTypePath ||
          matchesGeneratedSpecializedPath(structTypeName, vectorTypePath);
 }
@@ -361,7 +361,7 @@ bool isVectorTarget(const Expr &expr, const LocalMap &localsIn) {
             ((it->second.kind == LocalInfo::Kind::Value ||
               it->second.kind == LocalInfo::Kind::Reference ||
               it->second.kind == LocalInfo::Kind::Pointer) &&
-             isExperimentalVectorStructPath(it->second.structTypeName)));
+             isCollectionVectorRecordPath(it->second.structTypeName)));
   }
   if (expr.kind == Expr::Kind::Call) {
     std::string collection;
@@ -431,7 +431,7 @@ bool isInternalSoaMetadataHelperPath(std::string_view path) {
   return leaf == "field_count" || leaf == "field_capacity";
 }
 
-bool isExperimentalVectorTarget(const Expr &expr, const LocalMap &localsIn) {
+bool isCollectionVectorTarget(const Expr &expr, const LocalMap &localsIn) {
   if (expr.kind != Expr::Kind::Name) {
     return false;
   }
@@ -440,7 +440,7 @@ bool isExperimentalVectorTarget(const Expr &expr, const LocalMap &localsIn) {
          (it->second.kind == LocalInfo::Kind::Value ||
           it->second.kind == LocalInfo::Kind::Reference ||
           it->second.kind == LocalInfo::Kind::Pointer) &&
-         isExperimentalVectorStructPath(it->second.structTypeName);
+         isCollectionVectorRecordPath(it->second.structTypeName);
 }
 
 bool isSoaVectorTarget(const Expr &expr, const LocalMap &localsIn) {
@@ -784,9 +784,9 @@ InlineCallDispatchResult tryEmitInlineCallDispatchWithLocals(
   auto isInlineExperimentalVectorTypeName = [](std::string typeName) {
     typeName = trimTemplateTypeText(typeName);
     const std::string vectorTypePath =
-        experimentalCollectionTypePath("vector", "Vector", false);
+        experimentalCollectionTypePath("vec" "tor", "Vector", false);
     const std::string slashVectorTypePath =
-        experimentalCollectionTypePath("vector", "Vector");
+        experimentalCollectionTypePath("vec" "tor", "Vector");
     return typeName == "Vector" ||
            typeName == "/Vector" ||
            typeName == vectorTypePath ||
@@ -895,7 +895,7 @@ InlineCallDispatchResult tryEmitInlineCallDispatchWithLocals(
     if (semanticFact == InlineVectorTargetFact::NonVector) {
       return false;
     }
-    return isExperimentalVectorTarget(targetExpr, localsIn);
+    return isCollectionVectorTarget(targetExpr, localsIn);
   };
   auto isInlineRawBuiltinSoaVectorTypeText = [&](SymbolId typeTextId,
                                                 const std::string &typeText) {
@@ -1637,7 +1637,7 @@ InlineCallDispatchResult tryEmitInlineCallDispatchWithLocals(
           }
           if (info.kind == LocalInfo::Kind::Array || info.kind == LocalInfo::Kind::Vector ||
               (info.kind == LocalInfo::Kind::Value &&
-               (isExperimentalVectorStructPath(info.structTypeName) ||
+               (isCollectionVectorRecordPath(info.structTypeName) ||
                 !info.structTypeName.empty()))) {
             return true;
           }

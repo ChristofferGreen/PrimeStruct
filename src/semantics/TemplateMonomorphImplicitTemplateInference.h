@@ -1234,7 +1234,7 @@ bool inferImplicitTemplateArgs(const Definition &def,
         }
         std::vector<std::string> argTemplateArgs;
         if (argTemplateArgText.empty()) {
-          if (!extractExperimentalVectorValueReceiverTemplateArgsFromTypeText(argBaseType, ctx, argTemplateArgs) &&
+          if (!extractCollectionVectorValueReceiverTemplateArgsFromTypeText(argBaseType, ctx, argTemplateArgs) &&
               !extractExperimentalSoaVectorValueReceiverTemplateArgsFromTypeText(
                   argBaseType, ctx, argTemplateArgs) &&
               !extractExperimentalKeyValueReceiverTemplateArgsFromTypeText(argBaseType, ctx, argTemplateArgs) &&

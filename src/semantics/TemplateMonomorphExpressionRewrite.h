@@ -1741,7 +1741,7 @@ bool rewriteExpr(Expr &expr,
     if (hasVisibleStdCollectionsImportForPath(ctx, path) && ctx.templateDefs.count(path) > 0) {
       if (isCanonicalVectorCompatibilityPath(path) &&
           !resolvesBuiltinVectorReceiver(collectionHelperReceiverExpr(expr)) &&
-          !resolvesExperimentalVectorValueReceiver(
+          !resolvesCollectionVectorValueReceiver(
               collectionHelperReceiverExpr(expr), params, locals, allowMathBare, namespacePrefix, ctx)) {
         return true;
       }
@@ -1801,7 +1801,7 @@ bool rewriteExpr(Expr &expr,
         allowMathBare,
         ctx,
         [&](const std::string &bindingTypeText) {
-          return resolvesExperimentalVectorValueTypeText(bindingTypeText);
+          return resolvesCollectionVectorValueTypeText(bindingTypeText);
         },
         "vector",
         rewriteVectorTargetValueForResolvedType);
@@ -2312,14 +2312,14 @@ bool rewriteExpr(Expr &expr,
     if (!experimentalVectorPath.empty() && ctx.sourceDefs.count(experimentalVectorPath) > 0 &&
         hasVisibleStdCollectionsImportForPath(ctx, resolvedPath) &&
         canRewriteNamedExperimentalVectorTemporary &&
-        resolvesExperimentalVectorValueReceiver(
+        resolvesCollectionVectorValueReceiver(
             experimentalVectorReceiverExpr, params, locals, allowMathBare, namespacePrefix, ctx)) {
       resolvedPath = experimentalVectorPath;
       expr.name = experimentalVectorPath;
       expr.namespacePrefix.clear();
       if (expr.templateArgs.empty()) {
         std::vector<std::string> receiverTemplateArgs;
-        if (resolveExperimentalVectorValueReceiverTemplateArgs(
+        if (resolveCollectionVectorValueReceiverTemplateArgs(
                 collectionHelperReceiverExpr(expr), params, locals, allowMathBare, namespacePrefix, ctx, receiverTemplateArgs)) {
           expr.templateArgs = std::move(receiverTemplateArgs);
         }
@@ -2383,10 +2383,10 @@ bool rewriteExpr(Expr &expr,
     }
     if (expr.templateArgs.empty() &&
         resolvedPath.rfind(legacyExperimentalVectorCompatibilityPrefix(), 0) == 0 &&
-        resolvesExperimentalVectorValueReceiver(
+        resolvesCollectionVectorValueReceiver(
             collectionHelperReceiverExpr(expr), params, locals, allowMathBare, namespacePrefix, ctx)) {
       std::vector<std::string> receiverTemplateArgs;
-      if (resolveExperimentalVectorValueReceiverTemplateArgs(
+      if (resolveCollectionVectorValueReceiverTemplateArgs(
               collectionHelperReceiverExpr(expr), params, locals, allowMathBare, namespacePrefix, ctx, receiverTemplateArgs)) {
         expr.templateArgs = std::move(receiverTemplateArgs);
       }
@@ -2806,12 +2806,12 @@ bool rewriteExpr(Expr &expr,
       if (shouldRewriteCanonicalVectorMethodToExperimental &&
           !experimentalVectorMethodPath.empty() &&
           ctx.sourceDefs.count(experimentalVectorMethodPath) > 0 &&
-          resolvesExperimentalVectorValueReceiver(
+          resolvesCollectionVectorValueReceiver(
               collectionHelperReceiverExpr(expr), params, locals, allowMathBare, namespacePrefix, ctx)) {
         methodPath = experimentalVectorMethodPath;
         if (expr.templateArgs.empty()) {
           std::vector<std::string> receiverTemplateArgs;
-          if (resolveExperimentalVectorValueReceiverTemplateArgs(
+          if (resolveCollectionVectorValueReceiverTemplateArgs(
                   collectionHelperReceiverExpr(expr),
                   params,
                   locals,
@@ -2853,11 +2853,11 @@ bool rewriteExpr(Expr &expr,
         }
       }
       if (expr.templateArgs.empty() &&
-          isExperimentalVectorPublicHelperPath(methodPath) &&
-          resolvesExperimentalVectorValueReceiver(
+          isCollectionVectorPublicHelperPath(methodPath) &&
+          resolvesCollectionVectorValueReceiver(
               collectionHelperReceiverExpr(expr), params, locals, allowMathBare, namespacePrefix, ctx)) {
         std::vector<std::string> receiverTemplateArgs;
-        if (resolveExperimentalVectorValueReceiverTemplateArgs(
+        if (resolveCollectionVectorValueReceiverTemplateArgs(
                 collectionHelperReceiverExpr(expr),
                 params,
                 locals,

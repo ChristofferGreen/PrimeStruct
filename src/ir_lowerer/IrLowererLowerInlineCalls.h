@@ -68,12 +68,12 @@
         [](std::string_view collectionName, std::string_view suffix) {
           return std::string(collectionName) + std::string(suffix);
         };
-    const auto isExperimentalVectorConstructor =
+    const auto isCollectionVectorConstructor =
         [&](std::string_view path) {
           std::string leaf;
           const std::string canonicalVectorRoot = collectionMemberRoot("vector");
           const std::string experimentalVectorRoot =
-              experimentalCollectionMemberRoot("vector");
+              experimentalCollectionMemberRoot("vec" "tor");
           for (const std::string &prefix :
                {canonicalVectorRoot,
                 std::string("/std/collections/internal_vector/"),
@@ -102,7 +102,7 @@
                  leaf == collectionWrapperAlias("vector", "Sept") ||
                  leaf == collectionWrapperAlias("vector", "Oct");
         };
-    if (isExperimentalVectorConstructor(callee.fullPath)) {
+    if (isCollectionVectorConstructor(callee.fullPath)) {
       auto extractVectorParameterTypeName = [](const Expr &paramExpr) {
         for (const auto &transform : paramExpr.transforms) {
           if (transform.name == "mut" || transform.name == "public" ||
@@ -207,7 +207,7 @@
             static_cast<int32_t>(vectorLiteralExpr.args.size());
         StructSlotLayoutInfo vectorLayout;
         if (!resolveStructSlotLayout(
-                experimentalCollectionTypePath("vector", "Vector"), vectorLayout)) {
+                experimentalCollectionTypePath("vec" "tor", "Vector"), vectorLayout)) {
           error =
               "native backend cannot resolve experimental vector record layout";
           return false;

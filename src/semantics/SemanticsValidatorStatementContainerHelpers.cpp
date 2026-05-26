@@ -230,7 +230,7 @@ bool SemanticsValidator::validateVectorIndexedRemovalHelperElementType(
   };
   std::string experimentalElemType;
   const bool requiresDropTrivial = helperName != "remove_swap" && helperName != "remove_at";
-  if (requiresDropTrivial && !extractExperimentalVectorElementType(binding, experimentalElemType) &&
+  if (requiresDropTrivial && !extractCollectionVectorElementType(binding, experimentalElemType) &&
       !isLegacyExperimentalVectorValidationContext(
           currentValidationState_.context.definitionPath,
           namespacePrefix) &&
@@ -264,7 +264,7 @@ bool SemanticsValidator::validateVectorRelocationHelperElementType(
     return true;
   }
   std::string experimentalElemType;
-  if (extractExperimentalVectorElementType(binding, experimentalElemType)) {
+  if (extractCollectionVectorElementType(binding, experimentalElemType)) {
     return true;
   }
   if (isLegacyExperimentalVectorValidationContext(

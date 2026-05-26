@@ -158,7 +158,7 @@ bool SemanticsValidator::inferBuiltinCollectionValueBinding(const Expr &expr,
                                                             BindingInfo &bindingOut) {
   auto inferArrayElementType = [&](const BindingInfo &binding, std::string &elemTypeOut) {
     elemTypeOut.clear();
-    if (extractExperimentalVectorElementType(binding, elemTypeOut)) {
+    if (extractCollectionVectorElementType(binding, elemTypeOut)) {
       return true;
     }
     const std::string normalizedTypeName = normalizeBindingTypeName(binding.typeName);

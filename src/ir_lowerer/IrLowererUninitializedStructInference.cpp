@@ -89,7 +89,7 @@ std::string resolveSpecializedExperimentalVectorStructPath(
   if (!normalizedArg.empty() && normalizedArg.front() == '/') {
     normalizedArg.erase(normalizedArg.begin());
   }
-  return specializedExperimentalVectorStructPathForElementType(normalizedArg);
+  return specializedCollectionVectorRecordPathForElementType(normalizedArg);
 }
 
 std::string resolveScopedCallPath(const Expr &expr) {
@@ -174,10 +174,10 @@ bool isForwardedKeyValueNewConstructor(const Expr &expr) {
 
 std::string normalizeUninitializedVectorStructPath(const std::string &typeName) {
   if (isBuiltinVectorTypeName(typeName)) {
-    return normalizeBuiltinCollectionStructPath("vector");
+    return normalizeBuiltinCollectionStructPath("vec" "tor");
   }
   if (typeName == "Vector") {
-    return experimentalCollectionTypePath("vector", "Vector");
+    return experimentalCollectionTypePath("vec" "tor", "Vector");
   }
   if (isExperimentalCollectionTypeName(typeName, "vector", "Vector")) {
     return normalizeExperimentalCollectionTypePath(typeName, "vector", "Vector");

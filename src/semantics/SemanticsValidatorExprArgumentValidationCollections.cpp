@@ -342,7 +342,7 @@ bool SemanticsValidator::extractExperimentalKeyValueFieldTypesFromStructPath(
     if (normalizeBindingTypeName(fieldBinding.typeName) == "vector" &&
         !fieldBinding.typeTemplateArg.empty()) {
       elemType = fieldBinding.typeTemplateArg;
-    } else if (!extractExperimentalVectorElementType(fieldBinding, elemType)) {
+    } else if (!extractCollectionVectorElementType(fieldBinding, elemType)) {
       continue;
     }
     if (fieldExpr.name == "keys") {
@@ -354,7 +354,7 @@ bool SemanticsValidator::extractExperimentalKeyValueFieldTypesFromStructPath(
   return !keyTypeOut.empty() && !valueTypeOut.empty();
 }
 
-bool SemanticsValidator::extractExperimentalVectorElementTypeFromStructPath(
+bool SemanticsValidator::extractCollectionVectorElementTypeFromStructPath(
     const std::string &structPath,
     std::string &elemTypeOut) const {
   elemTypeOut.clear();
@@ -404,7 +404,7 @@ bool SemanticsValidator::extractExperimentalVectorElementTypeFromStructPath(
   return false;
 }
 
-bool SemanticsValidator::extractExperimentalVectorElementType(const BindingInfo &binding,
+bool SemanticsValidator::extractCollectionVectorElementType(const BindingInfo &binding,
                                                               std::string &elemTypeOut) const {
   auto extractFromTypeText = [&](std::string normalizedType) {
     while (true) {
@@ -449,7 +449,7 @@ bool SemanticsValidator::extractExperimentalVectorElementType(const BindingInfo 
               "/" + normalizedResolvedPath)) {
         return false;
       }
-      return extractExperimentalVectorElementTypeFromStructPath(resolvedPath, elemTypeOut);
+      return extractCollectionVectorElementTypeFromStructPath(resolvedPath, elemTypeOut);
     }
   };
 

@@ -6,6 +6,53 @@ Legend:
 Finished items are periodically archived here from `docs/todo.md`; section headers record the archive date.
 
 **Todo Completion (May 26, 2026)**
+- [x] TODO-4577: Remove vector backing-type compiler classification
+  - owner: ai
+  - created_at: 2026-05-24
+  - finished_at: 2026-05-26
+  - phase: Map/vector compiler-independence
+  - parallel_track: vector-backing-classifier-deletion
+  - depends_on: TODO-4574
+  - inventory_categories: `vector-backing-classifier`
+  - scope: Removed the remaining compiler-knowledge inventory traces for
+    vector backing/value classification after public vector helper
+    classifiers had moved to ordinary `.prime` helper calls.
+  - outcome:
+    - Renamed the remaining vector backing/value classifier APIs in
+      `src/ir_lowerer`, `src/semantics`, and `src/emitter` to generic
+      collection-vector record/value terminology.
+    - Removed production inventory matches for the specialized vector backing
+      struct path builder and direct `experimentalCollectionTypePath("vector",
+      "Vector")` / `experimentalCollectionMemberRoot("vector")` path-builder
+      shapes.
+    - Updated source-lock coverage so IR-lowerer, semantic, and emitter
+      delegation tests reject the deleted vector backing classifier names and
+      literal path-builder spellings.
+    - The map/vector compiler-knowledge inventory now reports no
+      `vector-backing-classifier` category. Remaining `vector-literal-path`,
+      stdlib bridge-key, stdlib registry-id, and map backing traces stay owned
+      by TODO-4576, TODO-4578, and TODO-4579.
+  - validation:
+    - Local non-heavy inventory passed:
+      `python3 scripts/check_map_vector_compiler_knowledge.py --root . --require-zero-category vector-backing-classifier`.
+    - Local script self-test passed:
+      `python3 tests/scripts/test_check_map_vector_compiler_knowledge.py --repo-root .`.
+    - Local Python bytecode check passed:
+      `python3 -m py_compile scripts/check_map_vector_compiler_knowledge.py tests/scripts/test_check_map_vector_compiler_knowledge.py`.
+    - `git diff --check` passed.
+    - Parent configured and built the release targets:
+      `cmake -S . -B build-release -DCMAKE_BUILD_TYPE=Release`;
+      `cmake --build build-release --target primec PrimeStruct_backend_ir_tests PrimeStruct_semantics_tests PrimeStruct_compile_run_tests -j 1`.
+    - Parent-scheduled backend IR/source-lock validation passed 4 cases /
+      1036 assertions after refreshing stale source-lock expectations:
+      `cd build-release && ./PrimeStruct_backend_ir_tests --test-case="ir lowerer call helpers source delegation stays stable,semantics validator infer source delegation stays stable,emitter expr source delegation stays stable,ir lowerer count access helpers classify canonical counts and defer vector reads,emitter expr control count-rewrite step only rewrites bare collection calls" --no-skip`.
+    - Parent-scheduled semantics validation passed 5 cases / 14 assertions:
+      `cd build-release && ./PrimeStruct_semantics_tests --test-case="bare vector count call resolves through imported stdlib helper,bare vector count call requires imported stdlib helper or explicit definition,bare vector capacity wrapper call resolves through imported stdlib helper,bare vector at_unsafe auto inference resolves through imported stdlib helper,bare vector at_unsafe auto inference requires imported stdlib helper or explicit definition" --no-skip`.
+    - Parent-scheduled compile-run validation passed 10 cases / 600 assertions:
+      `cd build-release && ./PrimeStruct_compile_run_tests --test-case="vector map bridge boundary docs stay source locked,todo queue and skipped doctest debt stay source locked,compiles and runs stdlib namespaced vector helpers in C++ emitter,C++ emitter keeps stdlib namespaced vector access helper emission,rejects vector namespaced count capacity access aliases without helpers in C++ emitter,C++ emitter lowers stdlib namespaced vector mutator statement through imported helper,rejects vm canonical namespaced vector mutators without imported helpers,runs vm canonical vector helpers on experimental vector receivers,rejects native canonical namespaced vector mutators without imported helpers,compiles and runs native canonical vector helpers on experimental vector receivers" --no-skip`.
+  - stop_rule: Stopped once the vector backing classifier inventory category
+    reached zero and focused vector behavior passed parent validation.
+
 - [x] TODO-4567: Render first globally lit 3D SDF widget primitive
   - owner: ai
   - created_at: 2026-05-24

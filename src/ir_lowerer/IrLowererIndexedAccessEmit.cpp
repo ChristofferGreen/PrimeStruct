@@ -9,14 +9,14 @@ namespace primec::ir_lowerer {
 
 namespace {
 
-bool isExperimentalVectorStructPath(const std::string &structPath) {
+bool isCollectionVectorRecordPath(const std::string &structPath) {
   return isExperimentalCollectionTypeName(structPath, "vector", "Vector");
 }
 
-bool usesBuiltinVectorValueStorage(const ArrayVectorAccessTargetInfo &targetInfo) {
+bool usesCollectionVectorValueStorage(const ArrayVectorAccessTargetInfo &targetInfo) {
   return targetInfo.isVectorTarget &&
          (targetInfo.structTypeName.empty() || targetInfo.structTypeName == "/vector" ||
-          isExperimentalVectorStructPath(targetInfo.structTypeName));
+          isCollectionVectorRecordPath(targetInfo.structTypeName));
 }
 
 } // namespace
@@ -314,7 +314,7 @@ bool emitArrayVectorIndexedAccess(
        arrayVectorTargetInfo.isKeyValueTarget ||
        arrayVectorTargetInfo.isWrappedKeyValueTarget ||
        isVectorArgsPackTarget ||
-       usesBuiltinVectorValueStorage(arrayVectorTargetInfo) ||
+       usesCollectionVectorValueStorage(arrayVectorTargetInfo) ||
        isWrappedStructArgsPackTarget);
 
   emitArrayVectorAccessLoad(

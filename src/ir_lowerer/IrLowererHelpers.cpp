@@ -163,7 +163,7 @@ std::string vectorReserveAllocationFailedMessage() {
   return "vector reserve allocation failed (out of memory)";
 }
 
-std::string specializedExperimentalVectorStructPathForElementType(
+std::string specializedCollectionVectorRecordPathForElementType(
     const std::string &elementTypeText) {
   std::string normalized = elementTypeText;
   while (!normalized.empty() &&

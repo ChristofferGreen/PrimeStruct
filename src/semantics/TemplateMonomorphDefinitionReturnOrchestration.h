@@ -12,7 +12,7 @@ bool rewriteDefinitionReturnConstructors(Expr &expr,
                                          RewriteVectorFn &&rewriteVectorReturn,
                                          RewriteKeyValueFn &&rewriteKeyValueReturn,
                                          std::string &error) {
-  if (plan.expectedExperimentalVectorReturn) {
+  if (plan.expectedCollectionVectorReturn) {
     rewriteVectorReturn(expr);
     if (!error.empty()) {
       return false;

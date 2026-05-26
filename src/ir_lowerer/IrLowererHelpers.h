@@ -18,7 +18,7 @@ std::string vectorReserveExceedsLocalCapacityLimitMessage();
 std::string vectorLiteralExceedsLocalCapacityLimitMessage();
 std::string vectorPushAllocationFailedMessage();
 std::string vectorReserveAllocationFailedMessage();
-std::string specializedExperimentalVectorStructPathForElementType(
+std::string specializedCollectionVectorRecordPathForElementType(
     const std::string &elementTypeText);
 std::string specializedExperimentalSoaVectorStructPathForElementType(
     const std::string &elementTypeText);

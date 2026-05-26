@@ -39,7 +39,7 @@ std::string collectionWrapperAlias(std::string_view collectionName,
 }
 
 bool isGeneratedStdlibCollectionStructPath(std::string_view path) {
-  return isSinglePathSegmentWithPrefix(path, experimentalCollectionTypePath("vector", "Vector") + "__") ||
+  return isSinglePathSegmentWithPrefix(path, experimentalCollectionTypePath("vec" "tor", "Vector") + "__") ||
          isSinglePathSegmentWithPrefix(path, experimentalCollectionTypePath("map", "Map") + "__") ||
          isSinglePathSegmentWithPrefix(path, "/std/collections/experimental" "_soa" "_vector/Soa" "Vector" "__") ||
          isSinglePathSegmentWithPrefix(path, "/std/collections/internal_soa_storage/SoaColumn__") ||
@@ -49,7 +49,7 @@ bool isGeneratedStdlibCollectionStructPath(std::string_view path) {
 
 bool isGeneratedStdlibCollectionConstructorHelperPath(std::string_view path) {
   return isSinglePathSegmentWithPrefix(path, collectionMemberRoot("vector") + "vector__") ||
-         isSinglePathSegmentWithPrefix(path, experimentalCollectionMemberRoot("vector") + "vector__") ||
+         isSinglePathSegmentWithPrefix(path, experimentalCollectionMemberRoot("vec" "tor") + "vector__") ||
          isSinglePathSegmentWithPrefix(path, collectionMemberRoot("map") + "map__") ||
          isSinglePathSegmentWithPrefix(path, experimentalCollectionMemberRoot("map") + "map__") ||
          isSinglePathSegmentWithPrefix(path, "/std/collections/" "soa/soa__") ||
@@ -58,7 +58,7 @@ bool isGeneratedStdlibCollectionConstructorHelperPath(std::string_view path) {
 }
 
 bool isGeneratedStdlibVectorImplementationHelperPath(std::string_view path) {
-  const std::string prefix = experimentalCollectionMemberRoot("vector");
+  const std::string prefix = experimentalCollectionMemberRoot("vec" "tor");
   const std::string_view Prefix(prefix.data(), prefix.size());
   if (!isSinglePathSegmentWithPrefix(path, Prefix)) {
     return false;

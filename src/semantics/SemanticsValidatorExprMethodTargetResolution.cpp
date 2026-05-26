@@ -408,7 +408,7 @@ bool SemanticsValidator::resolveMethodTarget(const std::vector<ParameterInfo> &p
                  normalizedMethodName, canonicalKeyValueHelperName)) {
     normalizedMethodName = canonicalKeyValueHelperName;
   }
-  auto isExperimentalVectorMetadataMethodName = [](std::string_view name) {
+  auto isCollectionVectorMetadataMethodName = [](std::string_view name) {
     return name == "field_count" || name == "field_capacity" ||
            name == "set_field_count" || name == "set_field_capacity";
   };
@@ -445,7 +445,7 @@ bool SemanticsValidator::resolveMethodTarget(const std::vector<ParameterInfo> &p
       return typeText;
     }
     std::string elemType;
-    if (extractExperimentalVectorElementType(binding, elemType)) {
+    if (extractCollectionVectorElementType(binding, elemType)) {
       const std::string specializedVectorPath =
           specializedExperimentalVectorHelperTarget("Vector", elemType);
       if (isLegacyExperimentalVectorCompatibilityTypePath(
@@ -455,8 +455,8 @@ bool SemanticsValidator::resolveMethodTarget(const std::vector<ParameterInfo> &p
     }
     return {};
   };
-  auto resolveExperimentalVectorMetadataMethodTarget = [&]() -> bool {
-    if (!isExperimentalVectorMetadataMethodName(normalizedMethodName)) {
+  auto resolveCollectionVectorMetadataMethodTarget = [&]() -> bool {
+    if (!isCollectionVectorMetadataMethodName(normalizedMethodName)) {
       return false;
     }
     BindingInfo receiverBinding;
@@ -495,7 +495,7 @@ bool SemanticsValidator::resolveMethodTarget(const std::vector<ParameterInfo> &p
     isBuiltinOut = false;
     return true;
   };
-  if (resolveExperimentalVectorMetadataMethodTarget()) {
+  if (resolveCollectionVectorMetadataMethodTarget()) {
     return true;
   }
   std::string canonicalCollectionHelperName = normalizedMethodName;
@@ -805,14 +805,14 @@ bool SemanticsValidator::resolveMethodTarget(const std::vector<ParameterInfo> &p
     }
     return false;
   };
-  auto resolveExperimentalVectorValueTarget = [&](const Expr &target, std::string &elemTypeOut) -> bool {
+  auto resolveCollectionVectorValueTarget = [&](const Expr &target, std::string &elemTypeOut) -> bool {
     elemTypeOut.clear();
     auto extractValueBinding = [&](const BindingInfo &binding) {
       const std::string normalizedType = normalizeBindingTypeName(binding.typeName);
       if (normalizedType == "Reference" || normalizedType == "Pointer") {
         return false;
       }
-      return extractExperimentalVectorElementType(binding, elemTypeOut);
+      return extractCollectionVectorElementType(binding, elemTypeOut);
     };
     auto extractBindingFromTypeText = [&](const std::string &typeText, BindingInfo &bindingOut) {
       const std::string normalizedType = normalizeBindingTypeName(typeText);
@@ -2098,7 +2098,7 @@ bool SemanticsValidator::resolveMethodTarget(const std::vector<ParameterInfo> &p
     }
     std::string elemType;
     if (isCanonicalVectorCompatibilityPath(explicitVectorHelperPath)) {
-      return resolveExperimentalVectorValueTarget(receiverExpr, elemType);
+      return resolveCollectionVectorValueTarget(receiverExpr, elemType);
     }
     if (splitSoaSurfaceHelperPath(explicitVectorHelperPath, nullptr, nullptr)) {
       return resolveSoaVectorTarget(receiverExpr, elemType);
@@ -2107,7 +2107,7 @@ bool SemanticsValidator::resolveMethodTarget(const std::vector<ParameterInfo> &p
   };
   auto classifyExplicitVectorHelperReceiver = [&](const Expr &receiverExpr) -> std::string {
     std::string elemType;
-    if (resolveExperimentalVectorValueTarget(receiverExpr, elemType)) {
+    if (resolveCollectionVectorValueTarget(receiverExpr, elemType)) {
       return legacyExperimentalVectorCompatibilityFamilyName();
     }
     if (resolveVectorTarget(receiverExpr, elemType)) {
@@ -2139,7 +2139,7 @@ bool SemanticsValidator::resolveMethodTarget(const std::vector<ParameterInfo> &p
     std::string elemType;
     std::string keyType;
     std::string valueType;
-    if (extractExperimentalVectorElementType(binding, elemType)) {
+    if (extractCollectionVectorElementType(binding, elemType)) {
       return legacyExperimentalVectorCompatibilityFamilyName();
     }
     if (extractKeyValueCollectionTypes(binding, keyType, valueType)) {
@@ -2739,7 +2739,7 @@ bool SemanticsValidator::resolveMethodTarget(const std::vector<ParameterInfo> &p
       return setCollectionMethodTarget(canonicalVectorHelperTarget("count"));
     }
     if (normalizedMethodName == "count" &&
-        resolveExperimentalVectorValueTarget(receiver, elemType)) {
+        resolveCollectionVectorValueTarget(receiver, elemType)) {
       return setCollectionMethodTarget(canonicalVectorHelperTarget("count"));
     }
     if (resolveSoaVectorTarget(receiver, elemType)) {
@@ -2804,7 +2804,7 @@ bool SemanticsValidator::resolveMethodTarget(const std::vector<ParameterInfo> &p
     if (resolveVectorTarget(receiver, elemType)) {
       return setCollectionMethodTarget(canonicalVectorHelperTarget("capacity"));
     }
-    if (resolveExperimentalVectorValueTarget(receiver, elemType)) {
+    if (resolveCollectionVectorValueTarget(receiver, elemType)) {
       return setCollectionMethodTarget(canonicalVectorHelperTarget("capacity"));
     }
   }
@@ -2815,7 +2815,7 @@ bool SemanticsValidator::resolveMethodTarget(const std::vector<ParameterInfo> &p
     if (resolveVectorTarget(receiver, elemType)) {
       return setCollectionMethodTarget(canonicalVectorHelperTarget(normalizedMethodName));
     }
-    if (resolveExperimentalVectorValueTarget(receiver, elemType)) {
+    if (resolveCollectionVectorValueTarget(receiver, elemType)) {
       return setCollectionMethodTarget(canonicalVectorHelperTarget(normalizedMethodName));
     }
     if (resolveArrayTarget(receiver, elemType)) {
@@ -3225,7 +3225,7 @@ bool SemanticsValidator::resolveMethodTarget(const std::vector<ParameterInfo> &p
             usesSamePathSoaHelperTargetForCollectionType(normalizedMethodName, "/vector")) ||
            normalizedMethodName == "capacity" ||
            normalizedMethodName == "at" || normalizedMethodName == "at_unsafe") &&
-          extractExperimentalVectorElementType(receiverBinding, experimentalElemType)) {
+          extractCollectionVectorElementType(receiverBinding, experimentalElemType)) {
         if ((normalizedMethodName == "count" || normalizedMethodName == "count_ref") &&
             usesSamePathSoaHelperTargetForCollectionType(normalizedMethodName, "/vector")) {
           return setCollectionMethodTarget(
@@ -3370,7 +3370,7 @@ bool SemanticsValidator::resolveMethodTarget(const std::vector<ParameterInfo> &p
     receiverBinding.typeName = typeName;
     receiverBinding.typeTemplateArg = typeTemplateArg;
     std::string experimentalElemType;
-    if (extractExperimentalVectorElementType(receiverBinding, experimentalElemType)) {
+    if (extractCollectionVectorElementType(receiverBinding, experimentalElemType)) {
       if (normalizedMethodName == "count") {
         return setCollectionMethodTarget(canonicalVectorHelperTarget("count"));
       }

@@ -371,11 +371,11 @@ bool SemanticsValidator::validateExprCollectionAccessFallbacks(
           receiverIndex < expr.args.size() &&
           context.resolveVectorTarget != nullptr &&
           context.resolveVectorTarget(expr.args[receiverIndex], elemType);
-      const bool isExperimentalVectorReceiver =
+      const bool isCollectionVectorReceiver =
           receiverIndex < expr.args.size() &&
-          context.resolveExperimentalVectorValueTarget != nullptr &&
-          context.resolveExperimentalVectorValueTarget(expr.args[receiverIndex], elemType);
-      if (!isBuiltinVectorReceiver && !isExperimentalVectorReceiver) {
+          context.resolveCollectionVectorValueTarget != nullptr &&
+          context.resolveCollectionVectorValueTarget(expr.args[receiverIndex], elemType);
+      if (!isBuiltinVectorReceiver && !isCollectionVectorReceiver) {
         const std::string canonicalVectorAccessPath =
             canonicalVectorCompatibilityHelperPathOrFallback(builtinName);
         return failCollectionAccessDiagnostic(
@@ -488,8 +488,8 @@ bool SemanticsValidator::validateExprCollectionAccessFallbacks(
            context.resolveArgsPackAccessTarget(candidate, elemTypeOut)) ||
           (context.resolveVectorTarget != nullptr &&
            context.resolveVectorTarget(candidate, elemTypeOut)) ||
-          (context.resolveExperimentalVectorValueTarget != nullptr &&
-           context.resolveExperimentalVectorValueTarget(candidate, elemTypeOut)) ||
+          (context.resolveCollectionVectorValueTarget != nullptr &&
+           context.resolveCollectionVectorValueTarget(candidate, elemTypeOut)) ||
           (context.resolveArrayTarget != nullptr &&
            context.resolveArrayTarget(candidate, elemTypeOut)) ||
           (context.resolveStringTarget != nullptr &&
@@ -573,8 +573,8 @@ bool SemanticsValidator::validateExprCollectionAccessFallbacks(
         context.resolveVectorTarget(receiverExpr, vectorElemType);
     std::string experimentalVectorElemType;
     const bool isDirectExperimentalVectorReceiver =
-        context.resolveExperimentalVectorValueTarget != nullptr &&
-        context.resolveExperimentalVectorValueTarget(receiverExpr, experimentalVectorElemType);
+        context.resolveCollectionVectorValueTarget != nullptr &&
+        context.resolveCollectionVectorValueTarget(receiverExpr, experimentalVectorElemType);
     std::string receiverBuiltinCollection;
     if (getBuiltinCollectionName(receiverExpr, receiverBuiltinCollection)) {
       if (receiverBuiltinCollection == "map" &&

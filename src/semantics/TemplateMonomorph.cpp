@@ -233,7 +233,7 @@ bool extractExperimentalKeyValueReceiverTemplateArgsFromTypeText(const std::stri
                                                                  const Context &ctx,
                                                                  std::vector<std::string> &templateArgsOut);
 
-bool extractExperimentalVectorValueReceiverTemplateArgsFromTypeText(const std::string &typeText,
+bool extractCollectionVectorValueReceiverTemplateArgsFromTypeText(const std::string &typeText,
                                                                     const Context &ctx,
                                                                     std::vector<std::string> &templateArgsOut);
 

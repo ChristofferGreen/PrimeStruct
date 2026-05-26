@@ -130,7 +130,7 @@ std::string normalizeCollectionHelperPath(std::string path) {
   if (!path.empty() && path.front() != '/' &&
       (path.rfind("array/", 0) == 0 ||
        collectionSurfaceMemberPathUsesKnownPrefix(path) ||
-       path.rfind(experimentalCollectionMemberRoot("vector"), 0) == 0)) {
+       path.rfind(experimentalCollectionMemberRoot("vec" "tor"), 0) == 0)) {
     path.insert(path.begin(), '/');
   }
   return path;

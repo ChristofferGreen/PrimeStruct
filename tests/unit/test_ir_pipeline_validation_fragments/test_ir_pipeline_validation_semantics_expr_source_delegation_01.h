@@ -533,7 +533,7 @@
             "if (context.dispatchResolvers == nullptr)") ==
         std::string::npos);
   CHECK(semanticsExprDirectCollectionFallbacksSource.find(
-            "auto resolvesExperimentalVectorValueReceiverForBareAccess =") ==
+            "auto resolvesCollectionVectorValueReceiverForBareAccess =") ==
         std::string::npos);
   CHECK(semanticsExprDirectCollectionFallbacksSource.find(
             "std::string experimentalElemType;\n"
@@ -554,7 +554,7 @@
             "      const std::string normalizedBase =\n"
             "          normalizeBindingTypeName(inferredBinding.typeName);\n"
             "      if (normalizedBase != \"Reference\" && normalizedBase != \"Pointer\" &&\n"
-            "          extractExperimentalVectorElementType(inferredBinding, experimentalElemType)) {") !=
+            "          extractCollectionVectorElementType(inferredBinding, experimentalElemType)) {") !=
         std::string::npos);
   CHECK(semanticsExprCollectionCountCapacitySource.find(
             "getRemovedRootedVectorDirectCallDiagnostic(expr, \"count\", \"capacity\")") ==
@@ -1426,7 +1426,7 @@
   CHECK(semanticsExprLateCallCompatibilitySource.find(
             "if (resolved == \"/std/collections/vector/count\" &&\n"
             "        hasImportedDefinitionPath(\"/std/collections/vector/count\") &&\n"
-            "        (resolvesVector || resolvesExperimentalVector))") ==
+            "        (resolvesVector || resolvesCollectionVector))") ==
         std::string::npos);
   CHECK(semanticsExprLateCallCompatibilitySource.find(
             "if (resolved == \"/std/collections/vector/capacity\" &&\n"
@@ -1435,7 +1435,7 @@
   CHECK(semanticsExprLateCallCompatibilitySource.find(
             "if (!hasDeclaredDefinitionPath(\"/std/collections/vector/capacity\") &&\n"
             "        !hasImportedDefinitionPath(\"/std/collections/vector/capacity\") &&\n"
-            "        (resolvesVector || resolvesExperimentalVector))") ==
+            "        (resolvesVector || resolvesCollectionVector))") ==
         std::string::npos);
   CHECK(semanticsExprLateCallCompatibilitySource.find(
             "const bool resolvesNonVectorCollectionLikeTarget =\n"
@@ -1463,7 +1463,7 @@
         std::string::npos);
   CHECK(semanticsExprLateCallCompatibilitySource.find(
             "const bool resolvesVectorLikeCountTarget =\n"
-            "          resolvesVector || resolvesExperimentalVector;") !=
+            "          resolvesVector || resolvesCollectionVector;") !=
         std::string::npos);
   CHECK(semanticsExprLateCallCompatibilitySource.find(
             "const bool resolvesNonVectorCountTarget =\n"
@@ -1472,7 +1472,7 @@
         std::string::npos);
   CHECK(semanticsExprLateCallCompatibilitySource.find(
             "const bool resolvesNonVectorCountTarget =\n"
-            "          !resolvesVector && !resolvesExperimentalVector && !resolvesArray &&\n"
+            "          !resolvesVector && !resolvesCollectionVector && !resolvesArray &&\n"
             "          !resolvesString;") ==
         std::string::npos);
   CHECK(semanticsExprLateCallCompatibilitySource.find(
@@ -1670,7 +1670,7 @@
             "        resolvesVectorLikeCountTarget;") ==
         std::string::npos);
   CHECK(semanticsExprLateCallCompatibilitySource.find(
-            "(resolvesVector || resolvesExperimentalVector);") ==
+            "(resolvesVector || resolvesCollectionVector);") ==
         std::string::npos);
   CHECK(semanticsExprLateCallCompatibilitySource.find(
             "if (rejectsVectorCountTargetWithoutVisibleHelper)") ==

@@ -256,9 +256,9 @@
   bool isBuiltinCollectionLiteralExpr(const Expr &candidate) const;
   bool isStringExprForArgumentValidation(const Expr &arg,
                                          const BuiltinCollectionDispatchResolvers &dispatchResolvers) const;
-  bool extractExperimentalVectorElementTypeFromStructPath(const std::string &structPath,
+  bool extractCollectionVectorElementTypeFromStructPath(const std::string &structPath,
                                                           std::string &elemTypeOut) const;
-  bool extractExperimentalVectorElementType(const BindingInfo &binding,
+  bool extractCollectionVectorElementType(const BindingInfo &binding,
                                            std::string &elemTypeOut) const;
   bool extractExperimentalSoaColumnElementTypeFromStructPath(const std::string &structPath,
                                                              std::string &elemTypeOut) const;

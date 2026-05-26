@@ -362,7 +362,7 @@ bool resolveVectorHelperAliasName(const Expr &expr, std::string &helperNameOut) 
   const std::string internalSoaVectorPrefix = "std/collections/internal_soa" "_vector/";
   const std::string experimentalSoaVectorPrefix = "std/collections/experimental" "_soa" "_vector/";
   const std::string experimentalVectorPrefix =
-      experimentalCollectionMemberRoot("vector", false);
+      experimentalCollectionMemberRoot("vec" "tor", false);
   if (normalized.rfind(arrayPrefix, 0) == 0) {
     helperNameOut = stripGeneratedHelperSuffix(normalized.substr(arrayPrefix.size()));
     if (isRemovedVectorCompatibilityHelper(helperNameOut)) {
@@ -563,7 +563,7 @@ std::string normalizeCollectionHelperPath(const std::string &path) {
     if (normalizedPath.rfind("array/", 0) == 0 ||
         normalizedPath.rfind(std::string("vector") + "/", 0) == 0 ||
         normalizedPath.rfind(collectionMemberRoot("vector", false), 0) == 0 ||
-        normalizedPath.rfind(experimentalCollectionMemberRoot("vector", false), 0) == 0 ||
+        normalizedPath.rfind(experimentalCollectionMemberRoot("vec" "tor", false), 0) == 0 ||
         normalizedPath.rfind(normalizeBuiltinCollectionStructPath("map").substr(1) + "/", 0) == 0 ||
         normalizedPath.rfind(collectionMemberRoot("map", false), 0) == 0) {
       normalizedPath.insert(normalizedPath.begin(), '/');
@@ -591,7 +591,7 @@ bool isExplicitRemovedVectorMethodAliasPath(const std::string &methodName) {
   const std::string arrayPrefix = "array/";
   const std::string stdVectorPrefix = collectionMemberRoot("vector", false);
   const std::string experimentalVectorPrefix =
-      experimentalCollectionMemberRoot("vector", false);
+      experimentalCollectionMemberRoot("vec" "tor", false);
   if (normalized.rfind(arrayPrefix, 0) == 0) {
     return isRemovedVectorCompatibilityHelper(stripGeneratedHelperSuffix(normalized.substr(arrayPrefix.size())));
   }

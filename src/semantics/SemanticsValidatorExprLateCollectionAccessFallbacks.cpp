@@ -33,8 +33,8 @@ bool SemanticsValidator::validateExprLateCollectionAccessFallbacks(
       context.dispatchResolvers->resolveArgsPackAccessTarget;
   collectionAccessValidationContext.resolveVectorTarget =
       context.dispatchResolvers->resolveVectorTarget;
-  collectionAccessValidationContext.resolveExperimentalVectorValueTarget =
-      context.dispatchResolvers->resolveExperimentalVectorValueTarget;
+  collectionAccessValidationContext.resolveCollectionVectorValueTarget =
+      context.dispatchResolvers->resolveCollectionVectorValueTarget;
   collectionAccessValidationContext.resolveArrayTarget =
       context.dispatchResolvers->resolveArrayTarget;
   collectionAccessValidationContext.resolveStringTarget =

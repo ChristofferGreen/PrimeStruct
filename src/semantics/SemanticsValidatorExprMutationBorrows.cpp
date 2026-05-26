@@ -49,7 +49,7 @@ bool SemanticsValidator::validateExprMutationBorrowBuiltins(
         return true;
       }
       std::string experimentalVectorElemType;
-      if (extractExperimentalVectorElementType(binding,
+      if (extractCollectionVectorElementType(binding,
                                                experimentalVectorElemType)) {
         return true;
       }

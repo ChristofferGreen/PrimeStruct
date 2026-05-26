@@ -209,7 +209,7 @@
   CHECK(semanticsExprCollectionDispatchSetupSource.find(
             "this->isUnnamespacedMapCountBuiltinFallbackCall(expr, params, locals, dispatchResolverAdapters)") !=
         std::string::npos);
-  CHECK(semanticsExprSource.find("auto resolvesExperimentalVectorValueReceiverForBareAccess =") ==
+  CHECK(semanticsExprSource.find("auto resolvesCollectionVectorValueReceiverForBareAccess =") ==
         std::string::npos);
   CHECK(semanticsExprDirectCollectionFallbacksSource.find(
             "const bool receiverLooksLikeBuiltinCountTarget =") !=

@@ -661,7 +661,7 @@ resolveCanonicalCompatibilityKeyValueHelperNameFromResolvedPath(
   return callPath == trimLeadingSlash(metadata->canonicalPath);
 }
 
-[[maybe_unused]] bool isDirectExperimentalVectorImportPath(
+[[maybe_unused]] bool isDirectCollectionVectorImportPath(
     std::string_view importPath) {
   const std::string root = legacyExperimentalVectorCompatibilityPrefix();
   const std::string normalizedRoot = root.substr(0, root.size() - 1);
@@ -671,7 +671,7 @@ resolveCanonicalCompatibilityKeyValueHelperNameFromResolvedPath(
           importPath[normalizedRoot.size()] == '/');
 }
 
-[[maybe_unused]] std::string directExperimentalVectorImportDiagnostic() {
+[[maybe_unused]] std::string directCollectionVectorImportDiagnostic() {
   const std::string legacyRoot =
       legacyExperimentalVectorCompatibilityPrefix();
   const std::string canonicalRoot =

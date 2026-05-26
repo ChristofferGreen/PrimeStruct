@@ -669,6 +669,10 @@ TEST_CASE("vector map bridge boundary docs stay source locked") {
         std::string::npos);
   CHECK(todo.find("- TODO-4574: Remove vector count/access compiler classifiers | track: vector-helper-classifier-deletion") ==
         std::string::npos);
+  CHECK(todo.find("- TODO-4577: Remove vector backing-type compiler classification | track: "
+                  "vector-backing-classifier-deletion") == std::string::npos);
+  CHECK(todo.find("- [ ] TODO-4577: Remove vector backing-type compiler classification") ==
+        std::string::npos);
   CHECK(todo.find("Map/vector compiler-independence: TODO-4570 retired the duplicate `map2`\n"
                   "  surface, TODO-4571 added the compiler-knowledge inventory categories") !=
         std::string::npos);
@@ -1911,6 +1915,11 @@ TEST_CASE("todo queue and skipped doctest debt stay source locked") {
   CHECK(todoFinished.find("TODO-4575: Remove map helper/access compiler classifiers") !=
         std::string::npos);
   CHECK(todoFinished.find("TODO-4572: Remove vector statement-helper compiler path") !=
+        std::string::npos);
+  CHECK(todoFinished.find("TODO-4577: Remove vector backing-type compiler classification") !=
+        std::string::npos);
+  CHECK(todoFinished.find("The map/vector compiler-knowledge inventory now reports no\n"
+                          "      `vector-backing-classifier` category.") !=
         std::string::npos);
   CHECK(todo.find("- TODO-4570: Retire duplicate map2 candidate surface") ==
         std::string::npos);

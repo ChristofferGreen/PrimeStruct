@@ -226,7 +226,7 @@ std::string inferMethodResolutionPrimitiveTypeName(
       return false;
     }
     const Expr &receiverExpr = candidate.args.front();
-    if (isVectorValue(receiverExpr, localTypes)) {
+    if (isCollectionVectorValue(receiverExpr, localTypes)) {
       return true;
     }
     if (inferPrimitiveTypeName) {
@@ -246,7 +246,7 @@ std::string inferMethodResolutionPrimitiveTypeName(
       return false;
     }
     const Expr &receiverExpr = candidate.args.front();
-    if (isVectorValue(receiverExpr, localTypes)) {
+    if (isCollectionVectorValue(receiverExpr, localTypes)) {
       return true;
     }
     if (inferPrimitiveTypeName) {
@@ -336,7 +336,7 @@ std::string inferMethodResolutionPrimitiveTypeName(
       return false;
     }
     return isArrayValue(candidate.args[receiverIndex], localTypes) ||
-           isVectorValue(candidate.args[receiverIndex], localTypes) ||
+           isCollectionVectorValue(candidate.args[receiverIndex], localTypes) ||
            isStringValue(candidate.args[receiverIndex], localTypes);
   };
   auto isExplicitVectorCountCapacityDirectCall = [&](const Expr &candidate) {

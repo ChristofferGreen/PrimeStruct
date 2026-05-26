@@ -127,7 +127,7 @@ SemanticsValidator::BuiltinCollectionDispatchResolvers SemanticsValidator::makeB
               continue;
             }
             vectorElementType = fieldArgs.front();
-          } else if (!extractExperimentalVectorElementType(fieldBinding, vectorElementType)) {
+          } else if (!extractCollectionVectorElementType(fieldBinding, vectorElementType)) {
             continue;
           }
           if (fieldExpr.name == "keys") {
@@ -293,7 +293,7 @@ SemanticsValidator::BuiltinCollectionDispatchResolvers SemanticsValidator::makeB
       if (normalizedType == "Reference" || normalizedType == "Pointer") {
         return false;
       }
-      return extractExperimentalVectorElementType(binding, elemTypeOut);
+      return extractCollectionVectorElementType(binding, elemTypeOut);
     }
     elemTypeOut = binding.typeTemplateArg;
     return true;
@@ -507,7 +507,7 @@ SemanticsValidator::BuiltinCollectionDispatchResolvers SemanticsValidator::makeB
     extractBindingFromTypeText(inferredTypeText, inferredBinding);
     return resolveVectorBinding(inferredBinding, elemType);
   };
-  state->resolveExperimentalVectorTarget =
+  state->resolveCollectionVectorTarget =
       [=, this](const Expr &target, std::string &elemTypeOut) -> bool {
     elemTypeOut.clear();
     auto extractBindingFromTypeText = [&](const std::string &typeText, BindingInfo &bindingOut) {
@@ -524,13 +524,13 @@ SemanticsValidator::BuiltinCollectionDispatchResolvers SemanticsValidator::makeB
     };
     BindingInfo binding;
     if (resolveBindingTarget(target, binding)) {
-      return extractExperimentalVectorElementType(binding, elemTypeOut);
+      return extractCollectionVectorElementType(binding, elemTypeOut);
     }
     if (target.kind != Expr::Kind::Call) {
       return false;
     }
     if (inferCallBinding(target, binding) &&
-        extractExperimentalVectorElementType(binding, elemTypeOut)) {
+        extractCollectionVectorElementType(binding, elemTypeOut)) {
       return true;
     }
     std::string inferredTypeText;
@@ -539,16 +539,16 @@ SemanticsValidator::BuiltinCollectionDispatchResolvers SemanticsValidator::makeB
     }
     BindingInfo inferredBinding;
     extractBindingFromTypeText(inferredTypeText, inferredBinding);
-    return extractExperimentalVectorElementType(inferredBinding, elemTypeOut);
+    return extractCollectionVectorElementType(inferredBinding, elemTypeOut);
   };
-  state->resolveExperimentalVectorValueTarget =
+  state->resolveCollectionVectorValueTarget =
       [=, this](const Expr &target, std::string &elemTypeOut) -> bool {
     auto extractValueBinding = [&](const BindingInfo &binding) {
       const std::string normalizedType = normalizeBindingTypeName(binding.typeName);
       if (normalizedType == "Reference" || normalizedType == "Pointer") {
         return false;
       }
-      return extractExperimentalVectorElementType(binding, elemTypeOut);
+      return extractCollectionVectorElementType(binding, elemTypeOut);
     };
     auto extractBindingFromTypeText = [&](const std::string &typeText, BindingInfo &bindingOut) {
       const std::string normalizedType = normalizeBindingTypeName(typeText);
@@ -718,8 +718,8 @@ SemanticsValidator::BuiltinCollectionDispatchResolvers SemanticsValidator::makeB
       state->resolveArgsPackAccessTarget,
       state->resolveArrayTarget,
       state->resolveVectorTarget,
-      state->resolveExperimentalVectorTarget,
-      state->resolveExperimentalVectorValueTarget,
+      state->resolveCollectionVectorTarget,
+      state->resolveCollectionVectorValueTarget,
       state->resolveSoaVectorTarget,
       state->resolveBufferTarget,
       state->resolveStringTarget,

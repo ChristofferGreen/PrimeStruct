@@ -291,7 +291,7 @@ bool isNamedArgumentCollectionTemporary(const Expr &expr,
   return getBuiltinCollectionName(expr, collection) && collection == collectionName;
 }
 
-bool isExperimentalVectorStructValueLocal(const LocalInfo &info) {
+bool isCollectionVectorStructValueLocal(const LocalInfo &info) {
   return info.kind == LocalInfo::Kind::Value &&
          isExperimentalCollectionStructPath(info.structTypeName, "vector", "Vector");
 }
@@ -1518,7 +1518,7 @@ CountAccessCallEmitResult tryEmitCountAccessCall(
   const auto emitDynamicVectorHeaderBase = [&](const Expr &target) {
     if (target.kind == Expr::Kind::Name) {
       auto it = localsIn.find(target.name);
-      if (it != localsIn.end() && isExperimentalVectorStructValueLocal(it->second)) {
+      if (it != localsIn.end() && isCollectionVectorStructValueLocal(it->second)) {
         emitInstruction(IrOpcode::LoadLocal, static_cast<uint64_t>(it->second.index));
         return true;
       }

@@ -117,7 +117,7 @@ bool rewriteExperimentalVectorTargetValueForType(const std::string &typeText,
                                                        valueExpr,
                                                        rewriteNestedVectorValue);
   }
-  if (!resolvesExperimentalVectorValueTypeText(typeText)) {
+  if (!resolvesCollectionVectorValueTypeText(typeText)) {
     return true;
   }
   return rewriteNestedVectorValue(valueExpr);

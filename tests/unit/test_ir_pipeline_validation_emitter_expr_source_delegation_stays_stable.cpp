@@ -752,11 +752,11 @@ TEST_CASE("template monomorph source delegation stays stable") {
         std::string::npos);
   CHECK(templateMonomorphSource.find("bool resolvesExperimentalMapBorrowedReceiver(") ==
         std::string::npos);
-  CHECK(templateMonomorphSource.find("bool resolvesExperimentalVectorValueReceiver(") ==
+  CHECK(templateMonomorphSource.find("bool resolvesCollectionVectorValueReceiver(") ==
         std::string::npos);
   CHECK(templateMonomorphSource.find("bool resolveExperimentalMapValueReceiverTemplateArgs(") ==
         std::string::npos);
-  CHECK(templateMonomorphSource.find("bool resolveExperimentalVectorValueReceiverTemplateArgs(") ==
+  CHECK(templateMonomorphSource.find("bool resolveCollectionVectorValueReceiverTemplateArgs(") ==
         std::string::npos);
   CHECK(templateMonomorphSource.find("bool hasVisibleStdCollectionsImportForPath(") ==
         std::string::npos);
@@ -2547,7 +2547,7 @@ TEST_CASE("template monomorph source delegation stays stable") {
             "bool resolveExperimentalKeyValueReceiverTemplateArgs(const Expr *receiverExpr,") !=
         std::string::npos);
   CHECK(templateMonomorphExperimentalCollectionReceiverResolutionSource.find(
-            "bool resolveExperimentalVectorValueReceiverTemplateArgs(const Expr *receiverExpr,") !=
+            "bool resolveCollectionVectorValueReceiverTemplateArgs(const Expr *receiverExpr,") !=
         std::string::npos);
   CHECK(templateMonomorphExperimentalCollectionReceiverResolutionSource.find(
             "std::string experimentalKeyValueHelperPathForCanonicalHelper(const std::string &path)") !=

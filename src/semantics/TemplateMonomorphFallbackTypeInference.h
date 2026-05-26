@@ -79,7 +79,7 @@ std::string resolveStructLikeExprPathForTemplatedVectorFallback(const Expr &expr
     if (!experimentalPath.empty() && ctx.sourceDefs.count(experimentalPath) > 0) {
       return legacyExperimentalVectorCompatibilityTypeText(joinTemplateArgs(expr.templateArgs));
     }
-    if (isExperimentalVectorConstructorHelperPath(resolved)) {
+    if (isCollectionVectorConstructorHelperPath(resolved)) {
       return legacyExperimentalVectorCompatibilityTypeText(joinTemplateArgs(expr.templateArgs));
     }
   }
@@ -106,7 +106,7 @@ std::string resolveStructLikeExprPathForTemplatedVectorFallback(const Expr &expr
         }
       }
     }
-    if (isExperimentalVectorConstructorHelperPath(resolved)) {
+    if (isCollectionVectorConstructorHelperPath(resolved)) {
       const auto defIt = ctx.sourceDefs.find(resolved);
       if (defIt != ctx.sourceDefs.end()) {
         std::vector<std::string> inferredArgs;
@@ -140,7 +140,7 @@ std::string resolveStructLikeExprPathForTemplatedVectorFallback(const Expr &expr
           continue;
         }
         std::string valueType;
-        if (extractVectorValueTypeFromTypeText(transform.templateArgs.front(), valueType)) {
+        if (extractCollectionVectorValueTypeFromTypeText(transform.templateArgs.front(), valueType)) {
           return legacyExperimentalVectorCompatibilityTypeText(valueType);
         }
       }

@@ -120,12 +120,12 @@ bool SemanticsValidator::validateExprCollectionLiteralBuiltins(
         experimentalVectorContextRoot.back() == '/') {
       experimentalVectorContextRoot.pop_back();
     }
-    const bool isExperimentalVectorContext =
+    const bool isCollectionVectorContext =
         currentValidationState_.context.definitionPath.rfind(
             experimentalVectorContextPrefix, 0) == 0 ||
         definitionNamespacePrefix.rfind(experimentalVectorContextRoot, 0) == 0;
     if (builtinName == "vector" && !expr.args.empty() &&
-        !isExperimentalVectorContext) {
+        !isCollectionVectorContext) {
       std::unordered_set<std::string> visitingStructs;
       if (!isRelocationTrivialContainerElementType(
               elemType, definitionNamespacePrefix, definitionTemplateArgs, visitingStructs)) {

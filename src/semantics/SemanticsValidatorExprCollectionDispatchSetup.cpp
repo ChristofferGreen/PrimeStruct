@@ -100,7 +100,7 @@ bool SemanticsValidator::prepareExprCollectionDispatchSetup(
     auto paramsIt = paramsByDef_.find(path);
     if (paramsIt != paramsByDef_.end() && !paramsIt->second.empty()) {
       std::string experimentalElemType;
-      if (extractExperimentalVectorElementType(paramsIt->second.front().binding, experimentalElemType)) {
+      if (extractCollectionVectorElementType(paramsIt->second.front().binding, experimentalElemType)) {
         return isStdlibVectorWrapperDefinition;
       }
     }
@@ -171,8 +171,8 @@ bool SemanticsValidator::prepareExprCollectionDispatchSetup(
         const bool isDirectVectorReceiver =
             (dispatchResolvers.resolveVectorTarget != nullptr &&
              dispatchResolvers.resolveVectorTarget(receiverExpr, ignoredElemType)) ||
-            (dispatchResolvers.resolveExperimentalVectorValueTarget != nullptr &&
-             dispatchResolvers.resolveExperimentalVectorValueTarget(receiverExpr, ignoredElemType));
+            (dispatchResolvers.resolveCollectionVectorValueTarget != nullptr &&
+             dispatchResolvers.resolveCollectionVectorValueTarget(receiverExpr, ignoredElemType));
         setupOut.shouldAllowStdAccessCompatibilityFallback =
             !isDirectVectorReceiver;
       }

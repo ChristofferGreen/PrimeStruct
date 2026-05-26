@@ -336,8 +336,8 @@ bool SemanticsValidator::buildImportAliases() {
 
   const auto &importPaths = validationPlan_->imports.directImportPaths;
   for (const auto &importPath : importPaths) {
-    if (isDirectExperimentalVectorImportPath(importPath)) {
-      if (!addImportDiagnostic(directExperimentalVectorImportDiagnostic())) {
+    if (isDirectCollectionVectorImportPath(importPath)) {
+      if (!addImportDiagnostic(directCollectionVectorImportDiagnostic())) {
         return false;
       }
       continue;

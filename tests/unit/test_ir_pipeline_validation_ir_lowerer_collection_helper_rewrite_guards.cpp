@@ -296,7 +296,7 @@ TEST_CASE("ir lowerer rewrites experimental vector constructor aliases before di
   const std::string source = readText(lowerStatementsExprPath);
 
   const size_t aliasRewrite = source.find(
-      "const bool isExperimentalVectorConstructorAlias =\n"
+      "const bool isCollectionVectorConstructorAlias =\n"
       "              getExperimentalVectorConstructorElementTypeAlias(");
   const size_t resolvedAliasRewrite = source.find(
       "getExperimentalVectorConstructorElementTypeAliasFromPath(\n"

@@ -50,7 +50,7 @@ bool isSoaVectorBindingLocal(const BindingInfo &binding) {
 
 bool isSoaVectorValueLocal(const Expr &target,
                            const std::unordered_map<std::string, BindingInfo> &localTypes);
-bool isVectorValueLocal(const Expr &target,
+bool isCollectionVectorValueLocal(const Expr &target,
                         const std::unordered_map<std::string, BindingInfo> &localTypes);
 
 bool isPublicOrCompatibilitySoaToAosCall(const Expr &target) {
@@ -70,13 +70,13 @@ bool isSoaVectorValueLocal(const Expr &target,
       return target.templateArgs.size() == 1;
     }
     if (!target.isMethodCall && isSimpleCallName(target, "to_soa") && target.args.size() == 1) {
-      return isVectorValueLocal(target.args.front(), localTypes);
+      return isCollectionVectorValueLocal(target.args.front(), localTypes);
     }
   }
   return false;
 }
 
-bool isVectorValueLocal(const Expr &target,
+bool isCollectionVectorValueLocal(const Expr &target,
                         const std::unordered_map<std::string, BindingInfo> &localTypes) {
   if (target.kind == Expr::Kind::Name) {
     auto it = localTypes.find(target.name);
@@ -160,8 +160,8 @@ bool isExplicitMapCountNameLocal(const Expr &expr) {
          resolveStdlibSurfaceMemberName(*metadata, resolved) == "count";
 }
 
-bool isVectorValue(const Expr &target, const std::unordered_map<std::string, BindingInfo> &localTypes) {
-  return isVectorValueLocal(target, localTypes);
+bool isCollectionVectorValue(const Expr &target, const std::unordered_map<std::string, BindingInfo> &localTypes) {
+  return isCollectionVectorValueLocal(target, localTypes);
 }
 
 bool isMapValue(const Expr &target, const std::unordered_map<std::string, BindingInfo> &localTypes) {
@@ -207,7 +207,7 @@ bool isArrayCountCall(const Expr &call, const std::unordered_map<std::string, Bi
   if (!matchesScopedBuiltinSimpleCall(call, "count") || call.args.size() != 1) {
     return false;
   }
-  if (isExplicitArrayCountName(call) && isVectorValue(call.args.front(), localTypes)) {
+  if (isExplicitArrayCountName(call) && isCollectionVectorValue(call.args.front(), localTypes)) {
     return false;
   }
   return isArrayValue(call.args.front(), localTypes);
@@ -224,7 +224,7 @@ bool isVectorCapacityCall(const Expr &call, const std::unordered_map<std::string
   if (!matchesScopedBuiltinSimpleCall(call, "capacity") || call.args.size() != 1) {
     return false;
   }
-  return isVectorValue(call.args.front(), localTypes);
+  return isCollectionVectorValue(call.args.front(), localTypes);
 }
 
 size_t getAccessCallReceiverIndex(const Expr &call,
@@ -240,11 +240,11 @@ size_t getAccessCallReceiverIndex(const Expr &call,
     }
   }
   const bool leadingIsCollectionLike = isArrayValue(call.args.front(), localTypes) ||
-                                       isVectorValue(call.args.front(), localTypes) ||
+                                       isCollectionVectorValue(call.args.front(), localTypes) ||
                                        isMapValue(call.args.front(), localTypes) ||
                                        isStringValue(call.args.front(), localTypes);
   const bool trailingIsCollectionLike = isArrayValue(call.args[1], localTypes) ||
-                                        isVectorValue(call.args[1], localTypes) ||
+                                        isCollectionVectorValue(call.args[1], localTypes) ||
                                         isMapValue(call.args[1], localTypes) ||
                                         isStringValue(call.args[1], localTypes);
   if (!leadingIsCollectionLike && trailingIsCollectionLike) {

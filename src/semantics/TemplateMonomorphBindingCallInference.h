@@ -64,7 +64,7 @@ bool inferCallBindingTypeForMonomorph(const Expr &initializer,
       infoOut.typeTemplateArg = joinTemplateArgs(initializer.templateArgs);
       return true;
     }
-    if (isExperimentalVectorConstructorHelperPath(resolved)) {
+    if (isCollectionVectorConstructorHelperPath(resolved)) {
       handledOut = true;
       infoOut.typeName = legacyExperimentalVectorCompatibilityPrefix() + "Vector";
       infoOut.typeTemplateArg = joinTemplateArgs(initializer.templateArgs);
@@ -108,7 +108,7 @@ bool inferCallBindingTypeForMonomorph(const Expr &initializer,
             continue;
           }
           std::string valueType;
-          if (extractVectorValueTypeFromTypeText(transform.templateArgs.front(), valueType)) {
+          if (extractCollectionVectorValueTypeFromTypeText(transform.templateArgs.front(), valueType)) {
             infoOut.typeName = legacyExperimentalVectorCompatibilityPrefix() + "Vector";
             infoOut.typeTemplateArg = valueType;
             return true;
@@ -116,7 +116,7 @@ bool inferCallBindingTypeForMonomorph(const Expr &initializer,
         }
       }
     }
-    if (isExperimentalVectorConstructorHelperPath(resolved)) {
+    if (isCollectionVectorConstructorHelperPath(resolved)) {
       auto defIt = ctx.sourceDefs.find(resolved);
       if (defIt != ctx.sourceDefs.end()) {
         std::vector<std::string> inferredArgs;
@@ -151,7 +151,7 @@ bool inferCallBindingTypeForMonomorph(const Expr &initializer,
             continue;
           }
           std::string valueType;
-          if (extractVectorValueTypeFromTypeText(transform.templateArgs.front(), valueType)) {
+          if (extractCollectionVectorValueTypeFromTypeText(transform.templateArgs.front(), valueType)) {
             infoOut.typeName = legacyExperimentalVectorCompatibilityPrefix() + "Vector";
             infoOut.typeTemplateArg = valueType;
             return true;

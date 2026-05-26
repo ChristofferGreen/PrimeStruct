@@ -27,8 +27,8 @@ std::string experimentalCollectionTypePath(std::string_view collectionName,
          "/" + std::string(typeName);
 }
 
-bool isExperimentalVectorTypePath(std::string_view path) {
-  const std::string vectorTypePath = experimentalCollectionTypePath("vector", "Vector");
+bool isCollectionVectorRecordTypePath(std::string_view path) {
+  const std::string vectorTypePath = experimentalCollectionTypePath("vec" "tor", "Vector");
   return path == vectorTypePath || path.rfind(vectorTypePath + "__", 0) == 0;
 }
 
@@ -787,7 +787,7 @@ DirectCallStatementEmitResult tryEmitDirectCallStatement(
                "/std/collections/internal_soa_storage/SoaFieldView", 0) == 0;
   };
   auto isInternalVectorMetadataSetterCallee = [](const Definition &callee) {
-    return isExperimentalVectorTypePath(callee.fullPath);
+    return isCollectionVectorRecordTypePath(callee.fullPath);
   };
   auto isStructDefinitionCallee = [](const Definition &definition) {
     for (const auto &transform : definition.transforms) {

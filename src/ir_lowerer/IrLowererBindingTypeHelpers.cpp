@@ -290,7 +290,7 @@ void setReferenceCollectionInfoFromSpecialization(
             elementTypeText);
       } else {
         info.structTypeName =
-            specializedExperimentalVectorStructPathForElementType(elementTypeText);
+            specializedCollectionVectorRecordPathForElementType(elementTypeText);
       }
     }
     return;
@@ -1270,7 +1270,7 @@ void setReferenceArrayInfoFromTransforms(const Expr &expr, LocalInfo &info) {
       }
       if (info.structTypeName.empty() && valueKindFromTypeName(elementType) == LocalInfo::ValueKind::Unknown) {
         info.structTypeName =
-            specializedExperimentalVectorStructPathForElementType(elementType);
+            specializedCollectionVectorRecordPathForElementType(elementType);
       }
       return;
     }

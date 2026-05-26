@@ -239,7 +239,7 @@ bool SemanticsValidator::resolveStructFieldReceiverPath(const std::vector<Parame
       if (normalizedType == "Reference" || normalizedType == "Pointer") {
         return false;
       }
-      return extractExperimentalVectorElementType(binding, elemType);
+      return extractCollectionVectorElementType(binding, elemType);
     };
     if (target.kind == Expr::Kind::Name) {
       if (const BindingInfo *paramBinding = findParamBinding(params, target.name)) {

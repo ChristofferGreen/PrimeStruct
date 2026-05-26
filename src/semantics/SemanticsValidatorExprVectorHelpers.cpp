@@ -163,16 +163,16 @@ bool SemanticsValidator::resolveVectorHelperMethodTarget(
     return isRootKeyValueAliasPath(resolveCalleePath(candidate)) ||
            isRootKeyValueAliasPath(explicitCallPath(candidate));
   };
-  auto resolveExperimentalVectorReceiver = [&](const Expr &candidate,
+  auto resolveCollectionVectorReceiver = [&](const Expr &candidate,
                                                std::string &elemTypeOut) -> bool {
     BindingInfo inferredBinding;
     if (candidate.kind == Expr::Kind::Name) {
       if (const BindingInfo *paramBinding = findParamBinding(params, candidate.name)) {
-        return extractExperimentalVectorElementType(*paramBinding, elemTypeOut);
+        return extractCollectionVectorElementType(*paramBinding, elemTypeOut);
       }
       auto localIt = locals.find(candidate.name);
       if (localIt != locals.end()) {
-        return extractExperimentalVectorElementType(localIt->second, elemTypeOut);
+        return extractCollectionVectorElementType(localIt->second, elemTypeOut);
       }
     }
     if (candidate.kind == Expr::Kind::Call) {
@@ -186,11 +186,11 @@ bool SemanticsValidator::resolveVectorHelperMethodTarget(
       auto defIt = defMap_.find(resolveCalleePath(candidate));
       if (defIt != defMap_.end() && defIt->second != nullptr &&
           inferDefinitionReturnBinding(*defIt->second, inferredBinding) &&
-          extractExperimentalVectorElementType(inferredBinding, elemTypeOut)) {
+          extractCollectionVectorElementType(inferredBinding, elemTypeOut)) {
         return true;
       }
       if (inferBindingTypeFromInitializer(candidate, params, locals, inferredBinding) &&
-          extractExperimentalVectorElementType(inferredBinding, elemTypeOut)) {
+          extractCollectionVectorElementType(inferredBinding, elemTypeOut)) {
         return true;
       }
     }
@@ -206,7 +206,7 @@ bool SemanticsValidator::resolveVectorHelperMethodTarget(
         inferredBinding.typeName = normalizedType;
         inferredBinding.typeTemplateArg.clear();
       }
-      if (extractExperimentalVectorElementType(inferredBinding, elemTypeOut)) {
+      if (extractCollectionVectorElementType(inferredBinding, elemTypeOut)) {
         return true;
       }
     }
@@ -345,7 +345,7 @@ bool SemanticsValidator::resolveVectorHelperMethodTarget(
     return true;
   };
   std::string experimentalElemType;
-  if (resolveExperimentalVectorReceiver(receiver, experimentalElemType)) {
+  if (resolveCollectionVectorReceiver(receiver, experimentalElemType)) {
     if (tryResolvePublishedVectorAccessHelper(normalizedHelperName)) {
       return true;
     }
@@ -529,7 +529,7 @@ bool SemanticsValidator::resolveVectorHelperMethodTarget(
         BindingInfo receiverBinding;
         receiverBinding.typeName = resolvedType;
         std::string experimentalElemType;
-        if (extractExperimentalVectorElementType(receiverBinding, experimentalElemType)) {
+        if (extractCollectionVectorElementType(receiverBinding, experimentalElemType)) {
           if (tryResolvePublishedVectorAccessHelper(normalizedHelperName)) {
             return true;
           }
@@ -589,7 +589,7 @@ bool SemanticsValidator::resolveExprVectorHelperCall(const std::vector<Parameter
       auto paramsIt = paramsByDef_.find(path);
       if (paramsIt != paramsByDef_.end() && !paramsIt->second.empty()) {
         std::string experimentalElemType;
-        if (extractExperimentalVectorElementType(paramsIt->second.front().binding, experimentalElemType)) {
+        if (extractCollectionVectorElementType(paramsIt->second.front().binding, experimentalElemType)) {
           return false;
         }
       }
@@ -629,7 +629,7 @@ bool SemanticsValidator::resolveExprVectorHelperCall(const std::vector<Parameter
     std::string elemType;
     std::string keyType;
     std::string valueType;
-    if (extractExperimentalVectorElementType(receiverBinding, elemType)) {
+    if (extractCollectionVectorElementType(receiverBinding, elemType)) {
       return legacyExperimentalVectorCompatibilityFamilyName();
     }
     if (extractKeyValueCollectionTypes(receiverBinding, keyType, valueType)) {
@@ -659,7 +659,7 @@ bool SemanticsValidator::resolveExprVectorHelperCall(const std::vector<Parameter
     std::string elemType;
     std::string keyType;
     std::string valueType;
-    if (extractExperimentalVectorElementType(binding, elemType)) {
+    if (extractCollectionVectorElementType(binding, elemType)) {
       return receiverFamily ==
              legacyExperimentalVectorCompatibilityFamilyName();
     }

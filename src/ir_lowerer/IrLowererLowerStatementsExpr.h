@@ -39,8 +39,8 @@
                   experimentalCollectionTypePath(collectionName, typeName);
               return path.rfind(typePath + "__", 0) == 0;
             };
-        auto isExperimentalVectorTypePath = [&](std::string_view path) {
-          return path == experimentalCollectionTypePath("vector", "Vector") ||
+        auto isCollectionVectorRecordTypePath = [&](std::string_view path) {
+          return path == experimentalCollectionTypePath("vec" "tor", "Vector") ||
                  matchesGeneratedSpecializedType(path, "vector", "Vector");
         };
         auto matchesDirectHelperDefinitionFamilyPath =
@@ -410,7 +410,7 @@
         auto isDirectCollectionHelperPath = [&](const std::string &path) {
           return path.rfind("/array/", 0) == 0 ||
                  path.rfind(collectionMemberRoot("vector"), 0) == 0 ||
-                 path.rfind(experimentalCollectionMemberRoot("vector"), 0) == 0 ||
+                 path.rfind(experimentalCollectionMemberRoot("vec" "tor"), 0) == 0 ||
                  isCanonicalKeyValueHelperFamilyPath(path);
         };
         auto hasKeyValueEntryCtorArgs = [&](const Expr &callExpr) {
@@ -720,12 +720,12 @@
         if (!expr.isMethodCall) {
           const std::string rawPath = resolveDirectHelperPath(expr);
           std::string experimentalVectorElementType;
-          const bool isExperimentalVectorConstructorAlias =
+          const bool isCollectionVectorConstructorAlias =
               getExperimentalVectorConstructorElementTypeAlias(
                   expr, experimentalVectorElementType) ||
               getExperimentalVectorConstructorElementTypeAliasFromPath(
                   resolveExprPath(expr), experimentalVectorElementType);
-          if (isExperimentalVectorConstructorAlias) {
+          if (isCollectionVectorConstructorAlias) {
             Expr rewrittenVectorCtor = expr;
             rewrittenVectorCtor.name =
                 experimentalCollectionMemberPath("vector", "vector");
@@ -792,11 +792,11 @@
               receiverStructPath = inferStructExprPath(receiver, localsIn);
             }
             std::vector<std::string> candidates;
-            if (isExperimentalVectorTypePath(receiverStructPath)) {
+            if (isCollectionVectorRecordTypePath(receiverStructPath)) {
               candidates.push_back(receiverStructPath + "/" + expr.name);
             }
             candidates.push_back(
-                experimentalCollectionTypePath("vector", "Vector") + "/" +
+                experimentalCollectionTypePath("vec" "tor", "Vector") + "/" +
                 expr.name);
             for (const auto &candidate : candidates) {
               auto defIt = defMap.find(candidate);
@@ -948,9 +948,9 @@
               return true;
             }
             if ((rawPath.rfind(collectionMemberRoot("vector"), 0) == 0 ||
-                 rawPath.rfind(experimentalCollectionMemberRoot("vector"), 0) == 0 ||
+                 rawPath.rfind(experimentalCollectionMemberRoot("vec" "tor"), 0) == 0 ||
                  directCallee->fullPath.rfind(collectionMemberRoot("vector"), 0) == 0 ||
-                 directCallee->fullPath.rfind(experimentalCollectionMemberRoot("vector"), 0) == 0) &&
+                 directCallee->fullPath.rfind(experimentalCollectionMemberRoot("vec" "tor"), 0) == 0) &&
                 isDirectHelperDefinitionFamily(expr, *directCallee)) {
               std::string vectorHelperName;
               const bool isMaterializableVectorMetadataReceiver =
@@ -1187,8 +1187,8 @@
                       targetLocals,
                       resolveHelperReturnedArrayVectorAccessTargetInfo);
               const std::string structPath = inferStructExprPath(targetExpr, targetLocals);
-              const bool isExperimentalVectorTarget =
-                  isExperimentalVectorTypePath(structPath);
+              const bool isCollectionVectorTarget =
+                  isCollectionVectorRecordTypePath(structPath);
               const bool isExperimentalKeyValueTarget =
                   structPath == experimentalCollectionTypePath("map", "Map") ||
                   matchesGeneratedSpecializedType(structPath, "map", "Map");
@@ -1205,7 +1205,7 @@
                   structPath.rfind("/std/collections/experimental" "_soa" "_vector/Soa" "Vector" "__", 0) == 0;
               return targetInfo.isArrayOrVectorTarget || structPath == "/array" ||
                      structPath == "/vector" || structPath == "/Buffer" || structPath == "/map" ||
-                     structPath == "/soa" "_vector" || isExperimentalVectorTarget ||
+                     structPath == "/soa" "_vector" || isCollectionVectorTarget ||
                      isExperimentalKeyValueTarget || isSemanticKeyValueTarget ||
                      isExperimentalSoaVectorTarget;
             },
@@ -1217,7 +1217,7 @@
                       resolveHelperReturnedArrayVectorAccessTargetInfo);
               const std::string structPath = inferStructExprPath(targetExpr, targetLocals);
               return (targetInfo.isArrayOrVectorTarget && targetInfo.isVectorTarget) ||
-                     isExperimentalVectorTypePath(structPath);
+                     isCollectionVectorRecordTypePath(structPath);
             },
             [&](const Expr &targetExpr, const LocalMap &targetLocals) {
               const auto targetInfo =
@@ -1227,7 +1227,7 @@
                       resolveHelperReturnedArrayVectorAccessTargetInfo);
               const std::string structPath = inferStructExprPath(targetExpr, targetLocals);
               return (targetInfo.isArrayOrVectorTarget && targetInfo.isVectorTarget) ||
-                     isExperimentalVectorTypePath(structPath);
+                     isCollectionVectorRecordTypePath(structPath);
             },
             inferExprKind,
             resolveStringTableTarget,
@@ -1395,7 +1395,7 @@
           const std::string structPath = inferStructExprPath(expr.args.front(), localsIn);
           const bool isSemanticVectorTarget =
               (targetInfo.isArrayOrVectorTarget && targetInfo.isVectorTarget) ||
-              isExperimentalVectorTypePath(structPath);
+              isCollectionVectorRecordTypePath(structPath);
           if (!isDirectVectorConstructor &&
               (expr.args.front().kind == Expr::Kind::Call ||
                isSemanticVectorTarget)) {

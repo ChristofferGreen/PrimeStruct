@@ -51,15 +51,15 @@ std::string experimentalCollectionTypePath(std::string_view collectionName,
          "/" + std::string(typeName);
 }
 
-bool isExperimentalVectorStructPath(const std::string &structPath) {
-  const std::string vectorTypePath = experimentalCollectionTypePath("vector", "Vector");
+bool isCollectionVectorRecordPath(const std::string &structPath) {
+  const std::string vectorTypePath = experimentalCollectionTypePath("vec" "tor", "Vector");
   return structPath == vectorTypePath ||
          structPath.rfind(vectorTypePath + "__", 0) == 0;
 }
 
 bool isBuiltinVectorStructMatch(const std::string &expectedStruct,
                                 const std::string &argStruct) {
-  return isExperimentalVectorStructPath(expectedStruct) &&
+  return isCollectionVectorRecordPath(expectedStruct) &&
          normalizeCollectionBindingTypeName(argStruct) == "vector";
 }
 

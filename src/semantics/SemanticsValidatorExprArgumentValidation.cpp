@@ -436,7 +436,7 @@ bool SemanticsValidator::validateArgumentTypeAgainstParam(
             inferredStructPath.insert(inferredStructPath.begin(), '/');
           }
           std::string actualElemType;
-          if (extractExperimentalVectorElementTypeFromStructPath(inferredStructPath,
+          if (extractCollectionVectorElementTypeFromStructPath(inferredStructPath,
                                                                 actualElemType)) {
             if (normalizeBindingTypeName(expectedTemplateArgs.front()) ==
                 normalizeBindingTypeName(actualElemType)) {
@@ -582,7 +582,7 @@ bool SemanticsValidator::validateArgumentTypeAgainstParam(
               actualStructPath.insert(actualStructPath.begin(), '/');
             }
             std::string actualElemType;
-            if (extractExperimentalVectorElementTypeFromStructPath(actualStructPath,
+            if (extractCollectionVectorElementTypeFromStructPath(actualStructPath,
                                                                   actualElemType)) {
               if (normalizeBindingTypeName(actualElemType) ==
                   normalizeBindingTypeName(expectedTemplateArgs.front())) {
@@ -615,7 +615,7 @@ bool SemanticsValidator::validateArgumentTypeAgainstParam(
   }
 
   std::string expectedExplicitVectorElemType;
-  if (extractExperimentalVectorElementType(param.binding, expectedExplicitVectorElemType)) {
+  if (extractCollectionVectorElementType(param.binding, expectedExplicitVectorElemType)) {
     std::string actualElemType;
     if (dispatchResolvers.resolveVectorTarget != nullptr &&
         dispatchResolvers.resolveVectorTarget(arg, actualElemType)) {
@@ -717,8 +717,8 @@ bool SemanticsValidator::validateArgumentTypeAgainstParam(
         normalizeBindingTypeName(expectedKeyValueValueType) ==
             normalizeBindingTypeName(actualKeyValueTemplateArgs[1])));
   const bool isCompatibleCanonicalVectorReceiver = [&] {
-    if (!(extractExperimentalVectorElementType(param.binding, expectedExperimentalVectorElemType) ||
-          extractExperimentalVectorElementTypeFromStructPath(
+    if (!(extractCollectionVectorElementType(param.binding, expectedExperimentalVectorElemType) ||
+          extractCollectionVectorElementTypeFromStructPath(
               expectedStructPath, expectedExperimentalVectorElemType))) {
       return false;
     }
