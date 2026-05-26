@@ -1823,11 +1823,13 @@ TEST_CASE("todo queue and skipped doctest debt stay source locked") {
                   "  coverage snapshots in this file.") !=
         std::string::npos);
   CHECK(todo.find("### Ready Now\n\n"
-                  "- TODO-4590: Add international text shaping and glyph atlas path | track: "
-                  "scene-text-renderer") !=
+                  "- TODO-4595: Add deterministic scene text shaping runs | track: "
+                  "scene-text-shaping") !=
         std::string::npos);
-  CHECK(todo.find("- TODO-4590: Add international text shaping and glyph atlas path | track: "
-                  "scene-text-renderer") !=
+  CHECK(todo.find("- TODO-4595: Add deterministic scene text shaping runs | track: "
+                  "scene-text-shaping") !=
+        std::string::npos);
+  CHECK(todo.find("- TODO-4590: Add international text shaping and glyph atlas path | track:") ==
         std::string::npos);
   CHECK(todo.find("- TODO-4567: Render first globally lit 3D SDF widget primitive | track: "
                   "scene-3d-sdf") ==
@@ -1848,6 +1850,7 @@ TEST_CASE("todo queue and skipped doctest debt stay source locked") {
   CHECK(todo.find("- TODO-4574: Remove vector count/access compiler classifiers | track: vector-helper-classifier-deletion") ==
         std::string::npos);
   CHECK(todo.find("### Immediate Next 10\n\n"
+                  "- TODO-4596: Rasterize shaped scene text through a glyph atlas\n"
                   "- TODO-4568: Emit scene nodes from the existing UI layout/widgets") !=
         std::string::npos);
   CHECK(todo.find("### Priority Lanes") != std::string::npos);
@@ -1864,7 +1867,9 @@ TEST_CASE("todo queue and skipped doctest debt stay source locked") {
                   "  surface, TODO-4571 added the compiler-knowledge inventory categories") !=
         std::string::npos);
   CHECK(todo.find("### Execution Queue\n\n"
-                  "- TODO-4590: Add international text shaping and glyph atlas path") !=
+                  "- TODO-4595: Add deterministic scene text shaping runs") !=
+        std::string::npos);
+  CHECK(todo.find("- TODO-4596: Rasterize shaped scene text through a glyph atlas") !=
         std::string::npos);
   CHECK(todoFinished.find("TODO-4591: Add expanded-source provenance ledger") !=
         std::string::npos);

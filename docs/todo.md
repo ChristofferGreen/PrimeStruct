@@ -64,11 +64,12 @@ This file is the live open-work queue for PrimeStruct.
 
 ### Ready Now
 
-- TODO-4590: Add international text shaping and glyph atlas path | track: scene-text-renderer | primary surface: scene renderer text/glyph output
+- TODO-4595: Add deterministic scene text shaping runs | track: scene-text-shaping | primary surface: scene renderer text shaping/fallback metrics
 - TODO-4578: Generalize stdlib surface registry away from map/vector IDs | track: stdlib-registry-generalization | primary surface: stdlib surface registry metadata
 
 ### Immediate Next 10
 
+- TODO-4596: Rasterize shaped scene text through a glyph atlas
 - TODO-4568: Emit scene nodes from the existing UI layout/widgets
 - TODO-4569: Present scene-rendered UI through software surface bridge
 
@@ -77,7 +78,7 @@ This file is the live open-work queue for PrimeStruct.
 - Scene graph renderer and UI presentation: TODO-4565 completed the data-only
   scene model and TODO-4566 completed the first BGRA8 2D primitive renderer;
   TODO-4567 completed the first globally lit 3D SDF widget primitive.
-  TODO-4590 -> TODO-4568 -> TODO-4569
+  TODO-4595 -> TODO-4596 -> TODO-4568 -> TODO-4569
 - Map/vector compiler-independence: TODO-4570 retired the duplicate `map2`
   surface, TODO-4571 added the compiler-knowledge inventory categories that
   guide deletion scope, and TODO-4573 removed compiler-owned map literal
@@ -93,56 +94,85 @@ This file is the live open-work queue for PrimeStruct.
 
 ### Execution Queue
 
-- TODO-4590: Add international text shaping and glyph atlas path
+- TODO-4595: Add deterministic scene text shaping runs
 - TODO-4578: Generalize stdlib surface registry away from map/vector IDs
+- TODO-4596: Rasterize shaped scene text through a glyph atlas
 - TODO-4568: Emit scene nodes from the existing UI layout/widgets
 - TODO-4569: Present scene-rendered UI through software surface bridge
 - TODO-4579: Enforce zero map/vector compiler-knowledge traces
 
 ### Task Blocks
 
-- [ ] TODO-4590: Add international text shaping and glyph atlas path
+- [ ] TODO-4595: Add deterministic scene text shaping runs
   - owner: ai
-  - created_at: 2026-05-24
+  - created_at: 2026-05-26
   - phase: Scene graph renderer and UI presentation
-  - parallel_track: scene-text-renderer
-  - scope: Add the first renderer-private international text pipeline for 2D
-    overlay scene text: Unicode text segmentation/bidi handling, shaped glyph
-    runs, font fallback, glyph rasterization, glyph atlas packing, and
-    deterministic BGRA8 composition under the orthographic UI camera.
-  - implementation_notes: Use wrapper APIs owned by the renderer/text layer so
-    third-party C/C++ types do not leak into PrimeStruct public APIs. Target a
-    HarfBuzz-class shaping backend, FreeType-class font loading/rasterization
-    backend, and ICU/FriBidi-class Unicode bidi/boundary backend. Do not depend
-    on system fonts for tests; add small checked-in fixture fonts with explicit
-    license notes or a documented repo-local font-fixture strategy. Keep text as
-    2D overlay coverage/atlas rendering; do not add 3D SDF text, mesh text, font
-    editing, emoji color-font rendering, or arbitrary OpenType feature UI in
-    this slice.
+  - parallel_track: scene-text-shaping
+  - scope: Add the renderer-owned front half of the international 2D text
+    overlay pipeline: UTF-8 decoding, deterministic direction/script runs,
+    combining-mark attachment, fallback fixture-font selection, and shaped glyph
+    run metrics for scene text.
+  - implementation_notes: Keep the API under the renderer/text layer and expose
+    no third-party text-library types. A deterministic repo-local fixture
+    backend is acceptable for this slice if the wrapper boundary leaves room for
+    HarfBuzz-class shaping and ICU/FriBidi-class bidi/boundary backends later.
+    Do not add glyph bitmap rasterization, atlas packing, BGRA8 composition,
+    paragraph layout, color emoji, advanced OpenType controls, 3D SDF text, or
+    mesh text in this slice.
   - acceptance:
-    - A renderer-owned API converts UTF-8 text plus font fallback candidates
+    - A renderer-owned API converts UTF-8 text plus ordered fallback candidates
       into deterministic positioned glyph runs without exposing third-party
       library types through stdlib or compiler public APIs.
-    - Tests cover at least Latin with combining marks, Cyrillic or Greek,
-      right-to-left Arabic or Hebrew, and one complex-shaping script fixture
-      using checked-in deterministic fonts.
+    - Tests cover Latin with combining marks, Cyrillic or Greek,
+      right-to-left Arabic or Hebrew, and one complex-shaping fixture using
+      checked-in deterministic fixture-font metadata.
     - Font fallback is deterministic: missing glyphs choose the first covering
-      fixture font in a documented fallback list and emit a stable missing-glyph
-      result when no fixture covers the code point.
-    - Glyph rasterization and atlas placement produce stable metrics and
-      pixel/hash output across repeated runs for small BGRA8 buffers.
-    - The build integration documents whether the text libraries are vendored,
-      pinned FetchContent dependencies, or required system packages, and keeps
-      their warnings/includes isolated from PrimeStruct production targets.
-  - stop_rule: Stop once international 2D text can be shaped, rasterized, and
-    composited deterministically for scene text fixtures; leave paragraph layout,
-    color emoji, advanced OpenType controls, and 3D text to later leaves.
+      fixture font in a documented fallback list and emit a stable
+      missing-glyph result when no fixture covers the code point.
+    - Shaped glyph run metrics are stable across repeated runs for small scene
+      text fixtures and include enough data for a later atlas/raster pass.
+    - Docs state that glyph rasterization and atlas composition are deferred to
+      TODO-4596, while the wrapper API remains ready for HarfBuzz-class and
+      ICU/FriBidi-class backends.
+  - stop_rule: Stop once international scene text can be decoded, segmented,
+    shaped into deterministic glyph runs, and measured for renderer fixtures;
+    leave glyph bitmap output and BGRA8 composition to TODO-4596.
+
+- [ ] TODO-4596: Rasterize shaped scene text through a glyph atlas
+  - owner: ai
+  - created_at: 2026-05-26
+  - phase: Scene graph renderer and UI presentation
+  - depends_on: TODO-4595
+  - scope: Add the renderer-owned back half of the international 2D text overlay
+    pipeline: deterministic glyph bitmap rasterization, atlas packing, and BGRA8
+    source-over composition for shaped scene text runs.
+  - implementation_notes: Consume the shaped glyph run API from TODO-4595. Keep
+    rasterization and atlas internals behind renderer-owned wrappers so a
+    FreeType-class backend can be substituted without exposing third-party
+    types. Use checked-in deterministic fixture glyphs or fixture fonts; do not
+    depend on system fonts. Keep text a 2D overlay primitive and do not add
+    paragraph layout, color emoji, advanced OpenType controls, 3D SDF text, or
+    mesh text in this slice.
+  - acceptance:
+    - A renderer-owned raster/atlas API consumes shaped glyph runs and produces
+      deterministic atlas placements and coverage masks for small fixtures.
+    - Tests cover repeated atlas packing stability, missing-glyph coverage, and
+      at least one shaped bidirectional or complex-script fixture from
+      TODO-4595.
+    - Scene BGRA8 renderer tests prove text overlay composition is deterministic
+      and source-over ordered with flat, rounded, and 3D SDF primitives.
+    - Docs describe the path from shaped glyph runs to atlas coverage to BGRA8
+      composition and keep native text dependencies behind renderer wrappers.
+  - stop_rule: Stop once shaped scene text fixtures rasterize through a
+    deterministic glyph atlas and compose into BGRA8 scene output; leave
+    paragraph layout, color emoji, advanced OpenType controls, and host UI
+    adapter emission to later leaves.
 
 - [ ] TODO-4568: Emit scene nodes from the existing UI layout/widgets
   - owner: ai
   - created_at: 2026-05-24
   - phase: Scene graph renderer and UI presentation
-  - depends_on: TODO-4567, TODO-4590
+  - depends_on: TODO-4567, TODO-4596
   - scope: Add an adapter from the current `/std/ui` layout/widget layer to the
     scene graph so UI rects and widget state produce scene nodes for flat and
     raised presentation.
@@ -152,7 +182,8 @@ This file is the live open-work queue for PrimeStruct.
     flat primitives and buttons as the first raised 3D SDF primitive; hit
     testing, focus, and events remain layout-node based. Label/text output
     should emit shaped international 2D overlay scene primitives through the
-    TODO-4590 text path; do not make text a 3D SDF primitive in this slice.
+    TODO-4596 atlas/raster path; do not make text a 3D SDF primitive in this
+    slice.
   - acceptance:
     - A checked-in PrimeStruct fixture builds a small UI layout and emits a
       deterministic scene representation.
