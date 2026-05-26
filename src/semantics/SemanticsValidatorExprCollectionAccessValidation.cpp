@@ -452,14 +452,14 @@ bool SemanticsValidator::validateExprCollectionAccessFallbacks(
     auto resolvesNonRootExperimentalKeyValueTarget =
         [&](const Expr &candidate) {
           return !isRootKeyValueAliasExpr(candidate) &&
-                 context.resolveExperimentalMapTarget(
+                 context.resolveKeyValueTarget(
                      candidate, experimentalKeyValueKeyType,
                      experimentalKeyValueValueType);
         };
     const bool isUnqualifiedAccessCall =
         isUnqualifiedCollectionAccessCall(expr, builtinName);
     if (isUnqualifiedAccessCall &&
-        context.resolveExperimentalMapTarget != nullptr &&
+        context.resolveKeyValueTarget != nullptr &&
         (resolvesNonRootExperimentalKeyValueTarget(expr.args.front()) ||
          resolvesNonRootExperimentalKeyValueTarget(expr.args[1]))) {
       handledOut = true;
@@ -529,8 +529,8 @@ bool SemanticsValidator::validateExprCollectionAccessFallbacks(
     }
     bool isKeyValue = isKeyValueTarget(expr.args.front(), keyValueKeyType);
     bool isExperimentalKeyValue =
-        context.resolveExperimentalMapTarget != nullptr &&
-        context.resolveExperimentalMapTarget(expr.args.front(), keyValueKeyType,
+        context.resolveKeyValueTarget != nullptr &&
+        context.resolveKeyValueTarget(expr.args.front(), keyValueKeyType,
                                              keyValueValueType);
     const bool shouldProbeReorderedReceiver =
         expr.args.size() == 2 &&
@@ -552,8 +552,8 @@ bool SemanticsValidator::validateExprCollectionAccessFallbacks(
                                             reorderedElemType);
       const bool reorderedKeyValue = isKeyValueTarget(expr.args[1], reorderedKeyValueKeyType);
       const bool reorderedExperimentalKeyValue =
-          context.resolveExperimentalMapTarget != nullptr &&
-          context.resolveExperimentalMapTarget(expr.args[1], reorderedKeyValueKeyType,
+          context.resolveKeyValueTarget != nullptr &&
+          context.resolveKeyValueTarget(expr.args[1], reorderedKeyValueKeyType,
                                                reorderedKeyValueValueType);
       if (reorderedArrayOrString || reorderedArgsPack || reorderedKeyValue ||
           reorderedExperimentalKeyValue) {

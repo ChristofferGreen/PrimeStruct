@@ -65,7 +65,7 @@ This file is the live open-work queue for PrimeStruct.
 ### Ready Now
 
 - TODO-4590: Add international text shaping and glyph atlas path | track: scene-text-renderer | primary surface: scene renderer text/glyph output
-- TODO-4576: Remove map backing-type compiler classification | track: map-backing-classifier-deletion | primary surface: map backing/layout classifiers
+- TODO-4578: Generalize stdlib surface registry away from map/vector IDs | track: stdlib-registry-generalization | primary surface: stdlib surface registry metadata
 
 ### Immediate Next 10
 
@@ -83,8 +83,8 @@ This file is the live open-work queue for PrimeStruct.
   guide deletion scope, and TODO-4573 removed compiler-owned map literal
   lowering. TODO-4575 removed map helper/access classifiers, and vector path
   TODO-4572 and TODO-4574 completed the public helper classifier deletions.
-  TODO-4577 removed vector backing classifiers; map path TODO-4576 remains
-  before the join at TODO-4578 -> TODO-4579
+  TODO-4576 and TODO-4577 removed map/vector backing classifiers; join at
+  TODO-4578 -> TODO-4579.
 - Architecture hardening backlog: TODO-4586 completed parser diagnostic
   stability tiers. TODO-4587 completed the shared compile-time/runtime VM
   kernel boundary. TODO-4588 added the IR-preparation phase manifest.
@@ -94,10 +94,9 @@ This file is the live open-work queue for PrimeStruct.
 ### Execution Queue
 
 - TODO-4590: Add international text shaping and glyph atlas path
-- TODO-4576: Remove map backing-type compiler classification
+- TODO-4578: Generalize stdlib surface registry away from map/vector IDs
 - TODO-4568: Emit scene nodes from the existing UI layout/widgets
 - TODO-4569: Present scene-rendered UI through software surface bridge
-- TODO-4578: Generalize stdlib surface registry away from map/vector IDs
 - TODO-4579: Enforce zero map/vector compiler-knowledge traces
 
 ### Task Blocks
@@ -201,40 +200,11 @@ This file is the live open-work queue for PrimeStruct.
   - stop_rule: Stop once one PrimeStruct UI scene reaches the software-surface
     presenter path with deterministic non-GUI coverage.
 
-- [ ] TODO-4576: Remove map backing-type compiler classification
-  - owner: ai
-  - created_at: 2026-05-24
-  - phase: Map/vector compiler-independence
-  - depends_on: TODO-4575
-  - inventory_categories: `map-backing-classifier`
-  - scope: Delete C++ recognition of map backing structs and `MapValue`
-    shapes, replacing it with generic struct layout, semantic product, and
-    ordinary helper-call facts.
-  - implementation_notes: Start with `isExperimentalMapStructTypePath`,
-    `inferPublishedExperimentalMapStructPathFromConstructorPath`,
-    `resolveExperimentalMapValueTarget`, `isMapValue`, and any
-    `MapValue`-specific paths in `src/ir_lowerer`, `src/semantics`, and
-    `src/emitter`. Do this only after map helper/access classifiers are gone,
-    so the remaining matches are backing/layout responsibilities rather than
-    public helper dispatch.
-  - acceptance:
-    - Production C++ no longer checks for `MapValue`, experimental map backing
-      paths, `isExperimentalMapStructTypePath`,
-      `resolveExperimentalMapValueTarget`, or `isMapValue`.
-    - Map helper calls, returns, access, and insertion behavior still compile
-      through `.prime` definitions and generic struct/layout facts.
-    - Existing map backing/source trace tests are updated or replaced so they
-      assert zero compiler backing knowledge instead of maintaining an
-      allowance inventory.
-    - The compiler-knowledge inventory from TODO-4571 shows the map
-      backing-classifier category at zero.
-  - stop_rule: Stop once map backing identity is no longer recognized by
-    compiler-specific C++ branches and focused map runtime tests pass.
-
 - [ ] TODO-4578: Generalize stdlib surface registry away from map/vector IDs
   - owner: ai
   - created_at: 2026-05-24
   - phase: Map/vector compiler-independence
+  - parallel_track: stdlib-registry-generalization
   - depends_on: TODO-4576, TODO-4577
   - inventory_categories: `stdlib-bridge-key`, `stdlib-registry-id`
   - scope: Remove map/vector-specific C++ stdlib surface IDs, helper APIs,

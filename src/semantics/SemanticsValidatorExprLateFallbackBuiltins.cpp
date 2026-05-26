@@ -96,7 +96,7 @@ bool SemanticsValidator::validateExprLateFallbackBuiltins(
           context.dispatchResolvers->resolveStringTarget(receiverExpr) ||
           context.dispatchResolvers->resolveMapTarget(receiverExpr, keyType,
                                                      valueType) ||
-          context.dispatchResolvers->resolveExperimentalMapTarget(
+          context.dispatchResolvers->resolveKeyValueTarget(
               receiverExpr, keyType, valueType);
       if (!hasCollectionReceiver) {
         bool isBuiltinMethod = false;

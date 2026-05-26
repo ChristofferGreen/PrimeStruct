@@ -836,7 +836,7 @@
       }
       auto isExperimentalMapStructPath = [&](const std::string &structPath) {
         const std::string experimentalMapType =
-            experimentalCollectionTypePath("map", "Map");
+            keyValueStorageStructRootPath();
         return structPath == experimentalMapType ||
                structPath.rfind(experimentalMapType + "__", 0) == 0;
       };

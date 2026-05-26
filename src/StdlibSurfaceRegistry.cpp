@@ -243,6 +243,7 @@ struct ManifestSurfaceRecord {
   std::string bridgeKey;
   std::string canonicalImportRoot;
   std::string canonicalPath;
+  std::string backingTypeName;
   StringListStore memberNames;
   StringListStore statementMemberNames;
   StringListStore importAliasSpellings;
@@ -255,6 +256,7 @@ struct ManifestSurfaceData {
   std::string bridgeKey;
   std::string canonicalImportRoot;
   std::string canonicalPath;
+  std::string backingTypeName;
   StringListStore memberNames;
   StringListStore statementMemberNames;
   StringListStore importAliasSpellings;
@@ -300,6 +302,8 @@ void appendManifestValue(ManifestSurfaceRecord &record,
     record.canonicalImportRoot = std::move(value);
   } else if (key == "canonical_path") {
     record.canonicalPath = std::move(value);
+  } else if (key == "backing_type_name") {
+    record.backingTypeName = std::move(value);
   } else if (key == "member_name") {
     record.memberNames.values.push_back(std::move(value));
   } else if (key == "statement_member_name") {
@@ -397,6 +401,7 @@ void applyManifestSurfaceRecord(ManifestSurfaceData &surface,
   surface.bridgeKey = std::move(record.bridgeKey);
   surface.canonicalImportRoot = std::move(record.canonicalImportRoot);
   surface.canonicalPath = std::move(record.canonicalPath);
+  surface.backingTypeName = std::move(record.backingTypeName);
   surface.memberNames.values = std::move(record.memberNames.values);
   surface.statementMemberNames.values = std::move(record.statementMemberNames.values);
   surface.importAliasSpellings.values = std::move(record.importAliasSpellings.values);
@@ -446,6 +451,7 @@ const std::array<StdlibSurfaceMetadata, 11> Registry = {{
         .bridgeKey = "file.file_helpers",
         .canonicalImportRoot = "/std/file",
         .canonicalPath = "/std/file/File",
+        .backingTypeName = {},
         .memberNames = FileHelperMembers,
         .memberAliases = {},
         .statementMemberNames = {},
@@ -460,6 +466,7 @@ const std::array<StdlibSurfaceMetadata, 11> Registry = {{
         .bridgeKey = "file.file_error",
         .canonicalImportRoot = "/std/file",
         .canonicalPath = "/std/file/FileError",
+        .backingTypeName = {},
         .memberNames = FileErrorHelperMembers,
         .memberAliases = {},
         .statementMemberNames = {},
@@ -474,6 +481,7 @@ const std::array<StdlibSurfaceMetadata, 11> Registry = {{
         .bridgeKey = CollectionsSurfaces.vectorHelpers.bridgeKey,
         .canonicalImportRoot = CollectionsSurfaces.vectorHelpers.canonicalImportRoot,
         .canonicalPath = CollectionsSurfaces.vectorHelpers.canonicalPath,
+        .backingTypeName = CollectionsSurfaces.vectorHelpers.backingTypeName,
         .memberNames = CollectionsSurfaces.vectorHelpers.memberNames.views,
         .memberAliases = CollectionsSurfaces.vectorHelpers.memberAliases.views,
         .statementMemberNames = CollectionsSurfaces.vectorHelpers.statementMemberNames.views,
@@ -488,6 +496,7 @@ const std::array<StdlibSurfaceMetadata, 11> Registry = {{
         .bridgeKey = CollectionsSurfaces.vectorConstructors.bridgeKey,
         .canonicalImportRoot = CollectionsSurfaces.vectorConstructors.canonicalImportRoot,
         .canonicalPath = CollectionsSurfaces.vectorConstructors.canonicalPath,
+        .backingTypeName = CollectionsSurfaces.vectorConstructors.backingTypeName,
         .memberNames = CollectionsSurfaces.vectorConstructors.memberNames.views,
         .memberAliases = CollectionsSurfaces.vectorConstructors.memberAliases.views,
         .statementMemberNames = CollectionsSurfaces.vectorConstructors.statementMemberNames.views,
@@ -502,6 +511,7 @@ const std::array<StdlibSurfaceMetadata, 11> Registry = {{
         .bridgeKey = CollectionsSurfaces.mapHelpers.bridgeKey,
         .canonicalImportRoot = CollectionsSurfaces.mapHelpers.canonicalImportRoot,
         .canonicalPath = CollectionsSurfaces.mapHelpers.canonicalPath,
+        .backingTypeName = CollectionsSurfaces.mapHelpers.backingTypeName,
         .memberNames = CollectionsSurfaces.mapHelpers.memberNames.views,
         .memberAliases = CollectionsSurfaces.mapHelpers.memberAliases.views,
         .statementMemberNames = CollectionsSurfaces.mapHelpers.statementMemberNames.views,
@@ -516,6 +526,7 @@ const std::array<StdlibSurfaceMetadata, 11> Registry = {{
         .bridgeKey = CollectionsSurfaces.mapConstructors.bridgeKey,
         .canonicalImportRoot = CollectionsSurfaces.mapConstructors.canonicalImportRoot,
         .canonicalPath = CollectionsSurfaces.mapConstructors.canonicalPath,
+        .backingTypeName = CollectionsSurfaces.mapConstructors.backingTypeName,
         .memberNames = CollectionsSurfaces.mapConstructors.memberNames.views,
         .memberAliases = CollectionsSurfaces.mapConstructors.memberAliases.views,
         .statementMemberNames = CollectionsSurfaces.mapConstructors.statementMemberNames.views,
@@ -530,6 +541,7 @@ const std::array<StdlibSurfaceMetadata, 11> Registry = {{
         .bridgeKey = CollectionsSurfaces.soaHelpers.bridgeKey,
         .canonicalImportRoot = CollectionsSurfaces.soaHelpers.canonicalImportRoot,
         .canonicalPath = CollectionsSurfaces.soaHelpers.canonicalPath,
+        .backingTypeName = CollectionsSurfaces.soaHelpers.backingTypeName,
         .memberNames = CollectionsSurfaces.soaHelpers.memberNames.views,
         .memberAliases = CollectionsSurfaces.soaHelpers.memberAliases.views,
         .statementMemberNames = CollectionsSurfaces.soaHelpers.statementMemberNames.views,
@@ -544,6 +556,7 @@ const std::array<StdlibSurfaceMetadata, 11> Registry = {{
         .bridgeKey = CollectionsSurfaces.soaConstructors.bridgeKey,
         .canonicalImportRoot = CollectionsSurfaces.soaConstructors.canonicalImportRoot,
         .canonicalPath = CollectionsSurfaces.soaConstructors.canonicalPath,
+        .backingTypeName = CollectionsSurfaces.soaConstructors.backingTypeName,
         .memberNames = CollectionsSurfaces.soaConstructors.memberNames.views,
         .memberAliases = CollectionsSurfaces.soaConstructors.memberAliases.views,
         .statementMemberNames = CollectionsSurfaces.soaConstructors.statementMemberNames.views,
@@ -558,6 +571,7 @@ const std::array<StdlibSurfaceMetadata, 11> Registry = {{
         .bridgeKey = "collections.container_error",
         .canonicalImportRoot = "/std/collections",
         .canonicalPath = "/std/collections/ContainerError",
+        .backingTypeName = {},
         .memberNames = CollectionsContainerErrorMembers,
         .memberAliases = {},
         .statementMemberNames = {},
@@ -572,6 +586,7 @@ const std::array<StdlibSurfaceMetadata, 11> Registry = {{
         .bridgeKey = "gfx.buffer_helpers",
         .canonicalImportRoot = "/std/gfx",
         .canonicalPath = "/std/gfx/Buffer",
+        .backingTypeName = {},
         .memberNames = GfxBufferHelperMembers,
         .memberAliases = {},
         .statementMemberNames = {},
@@ -586,6 +601,7 @@ const std::array<StdlibSurfaceMetadata, 11> Registry = {{
         .bridgeKey = "gfx.gfx_error",
         .canonicalImportRoot = "/std/gfx",
         .canonicalPath = "/std/gfx/GfxError",
+        .backingTypeName = {},
         .memberNames = GfxErrorHelperMembers,
         .memberAliases = {},
         .statementMemberNames = {},
@@ -728,6 +744,22 @@ std::string stdlibSurfaceCanonicalHelperPath(StdlibSurfaceId id, std::string_vie
     return {};
   }
   return std::string(metadata->canonicalPath) + "/" + std::string(resolvedMemberName);
+}
+
+std::string stdlibSurfaceBackingTypePath(const StdlibSurfaceMetadata &metadata) {
+  if (metadata.canonicalPath.empty() || metadata.backingTypeName.empty()) {
+    return {};
+  }
+  return std::string(metadata.canonicalPath) + "/" +
+         std::string(metadata.backingTypeName);
+}
+
+std::string stdlibSurfaceBackingTypePath(StdlibSurfaceId id) {
+  const StdlibSurfaceMetadata *metadata = findStdlibSurfaceMetadata(id);
+  if (metadata == nullptr) {
+    return {};
+  }
+  return stdlibSurfaceBackingTypePath(*metadata);
 }
 
 std::string stdlibSurfacePreferredSpellingForMember(StdlibSurfaceId id,

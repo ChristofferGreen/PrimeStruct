@@ -58,8 +58,8 @@
     std::function<bool(const Expr &, std::string &)> resolveBufferTarget;
     std::function<bool(const Expr &)> resolveStringTarget;
     std::function<bool(const Expr &, std::string &, std::string &)> resolveMapTarget;
-    std::function<bool(const Expr &, std::string &, std::string &)> resolveExperimentalMapTarget;
-    std::function<bool(const Expr &, std::string &, std::string &)> resolveExperimentalMapValueTarget;
+    std::function<bool(const Expr &, std::string &, std::string &)> resolveKeyValueTarget;
+    std::function<bool(const Expr &, std::string &, std::string &)> resolveDirectKeyValueTarget;
     std::shared_ptr<void> resolverStateKeepAlive;
   };
 
@@ -373,7 +373,7 @@
     std::function<bool(const Expr &)> resolveStringTarget;
     std::function<bool(const Expr &, std::string &)> resolveKeyValueKeyType;
     std::function<bool(const Expr &, std::string &, std::string &)>
-        resolveExperimentalMapTarget;
+        resolveKeyValueTarget;
     std::function<bool(const Expr &)> isIndexedArgsPackKeyValueReceiverTarget;
     std::function<bool(const Expr &)> isNamedArgsPackMethodAccessCall;
     std::function<bool(const Expr &)> isNamedArgsPackWrappedFileBuiltinAccessCall;

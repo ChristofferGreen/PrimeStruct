@@ -15,7 +15,7 @@ bool isVectorCollectionStructPath(const std::string &structPath) {
 }
 
 bool isMapCollectionStructPath(const std::string &structPath) {
-  return structPath == normalizeBuiltinCollectionStructPath("map") ||
+  return structPath == keyValueCollectionAliasRoot() ||
          isExperimentalCollectionTypeName(structPath, "map", "Map");
 }
 

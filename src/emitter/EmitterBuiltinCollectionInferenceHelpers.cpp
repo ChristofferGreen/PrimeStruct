@@ -164,7 +164,7 @@ bool isCollectionVectorValue(const Expr &target, const std::unordered_map<std::s
   return isCollectionVectorValueLocal(target, localTypes);
 }
 
-bool isMapValue(const Expr &target, const std::unordered_map<std::string, BindingInfo> &localTypes) {
+bool isKeyValueStorageValue(const Expr &target, const std::unordered_map<std::string, BindingInfo> &localTypes) {
   if (target.kind == Expr::Kind::Name) {
     auto it = localTypes.find(target.name);
     if (it == localTypes.end()) {
@@ -241,11 +241,11 @@ size_t getAccessCallReceiverIndex(const Expr &call,
   }
   const bool leadingIsCollectionLike = isArrayValue(call.args.front(), localTypes) ||
                                        isCollectionVectorValue(call.args.front(), localTypes) ||
-                                       isMapValue(call.args.front(), localTypes) ||
+                                       isKeyValueStorageValue(call.args.front(), localTypes) ||
                                        isStringValue(call.args.front(), localTypes);
   const bool trailingIsCollectionLike = isArrayValue(call.args[1], localTypes) ||
                                         isCollectionVectorValue(call.args[1], localTypes) ||
-                                        isMapValue(call.args[1], localTypes) ||
+                                        isKeyValueStorageValue(call.args[1], localTypes) ||
                                         isStringValue(call.args[1], localTypes);
   if (!leadingIsCollectionLike && trailingIsCollectionLike) {
     return 1;
@@ -271,7 +271,7 @@ bool inferCollectionElementTypeNameFromBinding(const BindingInfo &binding, std::
     typeOut = normalizeBindingTypeName(templateArg);
     return true;
   }
-  if (isMapCollectionTypeNameLocal(typeName) && !templateArg.empty()) {
+  if (isKeyValueCollectionTypeNameLocal(typeName) && !templateArg.empty()) {
     std::string keyType;
     if (extractKeyValueCollectionTypesLocal(binding, keyType, typeOut)) {
       typeOut = normalizeBindingTypeName(typeOut);

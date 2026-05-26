@@ -90,7 +90,7 @@ std::string resolveCallPathFromScope(
 bool isTailCallCandidate(const Expr &expr,
                          const std::unordered_map<std::string, const Definition *> &defMap,
                          const ResolveExprPathFn &resolveExprPath);
-bool isExperimentalMapStructTypePath(std::string_view path);
+bool isKeyValueStorageStructPath(std::string_view path);
 
 bool hasTailExecutionCandidate(const std::vector<Expr> &statements,
                                bool definitionReturnsVoid,

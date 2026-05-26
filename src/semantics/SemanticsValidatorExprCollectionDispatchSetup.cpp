@@ -54,7 +54,7 @@ bool SemanticsValidator::prepareExprCollectionDispatchSetup(
     std::string keyType;
     std::string valueType;
     if (dispatchResolvers.resolveMapTarget(target, keyType, valueType) ||
-        dispatchResolvers.resolveExperimentalMapTarget(target, keyType, valueType)) {
+        dispatchResolvers.resolveKeyValueTarget(target, keyType, valueType)) {
       return true;
     }
     if (target.kind != Expr::Kind::Call) {

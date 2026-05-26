@@ -29,15 +29,11 @@ bool isGeneratedSinglePathSegmentWithPrefix(std::string_view path, std::string_v
 bool isGeneratedStdlibCollectionStructPath(std::string_view path) {
   const std::string experimentalVectorTypePrefix =
       experimentalCollectionTypePath("vec" "tor", "Vector") + "__";
-  const std::string experimentalMapTypePrefix =
-      experimentalCollectionTypePath("map", "Map") + "__";
-  const auto *mapMetadata = findStdlibSurfaceMetadataByBridgeKey("collections.map_helpers");
-  const std::string mapValueTypePrefix =
-      mapMetadata == nullptr ? std::string{} : std::string(mapMetadata->canonicalPath) + "/MapValue__";
+  const std::string keyValueStorageRoot = keyValueStorageStructRootPath();
+  const std::string keyValueStorageTypePrefix = keyValueStorageRoot + "__";
   return isSinglePathSegmentWithPrefix(path, experimentalVectorTypePrefix) ||
-         isSinglePathSegmentWithPrefix(path, experimentalMapTypePrefix) ||
-         (!mapValueTypePrefix.empty() &&
-          isSinglePathSegmentWithPrefix(path, mapValueTypePrefix)) ||
+         (!keyValueStorageRoot.empty() &&
+          isSinglePathSegmentWithPrefix(path, keyValueStorageTypePrefix)) ||
          isSinglePathSegmentWithPrefix(path, "/std/collections/experimental" "_soa" "_vector/Soa" "Vector" "__") ||
          isSinglePathSegmentWithPrefix(path, "/std/collections/internal_soa_storage/SoaColumn__") ||
          isSinglePathSegmentWithPrefix(path, "/std/collections/internal_soa_storage/SoaFieldView__") ||

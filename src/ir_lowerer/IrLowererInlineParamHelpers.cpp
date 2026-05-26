@@ -329,7 +329,7 @@ bool isMapLikeStructTypeName(const std::string &structTypeName) {
     return false;
   }
   const std::string experimentalKeyValueType =
-      experimentalCollectionTypePath("map", "Map");
+      keyValueStorageStructRootPath();
   return normalizeCollectionBindingTypeName(structTypeName) == "map" ||
          structTypeName == experimentalKeyValueType ||
          structTypeName.rfind(experimentalKeyValueType + "__", 0) == 0;

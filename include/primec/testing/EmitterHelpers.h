@@ -90,7 +90,7 @@ std::string preferVectorStdlibHelperPath(const std::string &path,
                                          const std::unordered_map<std::string, std::string> &nameMap);
 bool isArrayValue(const Expr &target, const std::unordered_map<std::string, BindingInfo> &localTypes);
 bool isCollectionVectorValue(const Expr &target, const std::unordered_map<std::string, BindingInfo> &localTypes);
-bool isMapValue(const Expr &target, const std::unordered_map<std::string, BindingInfo> &localTypes);
+bool isKeyValueStorageValue(const Expr &target, const std::unordered_map<std::string, BindingInfo> &localTypes);
 bool isStringValue(const Expr &target, const std::unordered_map<std::string, BindingInfo> &localTypes);
 bool isArrayCountCall(const Expr &call, const std::unordered_map<std::string, BindingInfo> &localTypes);
 bool isStringCountCall(const Expr &call, const std::unordered_map<std::string, BindingInfo> &localTypes);

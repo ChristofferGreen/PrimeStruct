@@ -23,7 +23,7 @@ const Definition *resolveMethodDefinitionFromReceiverTarget(
   const std::string canonicalVectorPrefix =
       collectionMemberRoot("vector", false);
   const std::string rootedKeyValuePrefix =
-      normalizeBuiltinCollectionStructPath("map").substr(1) + "/";
+      keyValueCollectionAliasRoot(false) + "/";
   const std::string canonicalKeyValuePrefix =
       collectionMemberRoot("map", false);
   if (normalizedMethodName.rfind(rootedVectorPrefix, 0) == 0) {

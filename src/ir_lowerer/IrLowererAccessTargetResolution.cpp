@@ -672,10 +672,10 @@ CollectionPairTypeInfo resolveCollectionPairTypeInfo(
     const bool isDirectKeyValueStorage = localInfo.kind == LocalInfo::Kind::Value;
     const std::string &resolvedStructTypeName = localInfo.structTypeName;
     const bool preserveDirectExperimentalKeyValueStruct =
-        isDirectKeyValueStorage && isExperimentalMapStructTypePath(resolvedStructTypeName);
+        isDirectKeyValueStorage && isKeyValueStorageStructPath(resolvedStructTypeName);
     if (((!info.isWrappedKeyValueTarget || dereferenced) &&
          (!isDirectKeyValueStorage || preserveDirectExperimentalKeyValueStruct)) ||
-        (info.isWrappedKeyValueTarget && isExperimentalMapStructTypePath(resolvedStructTypeName))) {
+        (info.isWrappedKeyValueTarget && isKeyValueStorageStructPath(resolvedStructTypeName))) {
       info.structTypeName = resolvedStructTypeName;
     }
     return true;
@@ -701,10 +701,10 @@ CollectionPairTypeInfo resolveCollectionPairTypeInfo(
         localInfo.argsPackElementKind == LocalInfo::Kind::Value;
     const std::string &resolvedStructTypeName = localInfo.structTypeName;
     const bool preserveDirectExperimentalKeyValueStruct =
-        isDirectKeyValueStorage && isExperimentalMapStructTypePath(resolvedStructTypeName);
+        isDirectKeyValueStorage && isKeyValueStorageStructPath(resolvedStructTypeName);
     if (((!info.isWrappedKeyValueTarget || dereferenced) &&
          (!isDirectKeyValueStorage || preserveDirectExperimentalKeyValueStruct)) ||
-        (info.isWrappedKeyValueTarget && isExperimentalMapStructTypePath(resolvedStructTypeName))) {
+        (info.isWrappedKeyValueTarget && isKeyValueStorageStructPath(resolvedStructTypeName))) {
       info.structTypeName = resolvedStructTypeName;
     }
     return true;

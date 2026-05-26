@@ -122,7 +122,7 @@
           bindingInfo.keyValueValueKind = valueKind;
           bindingInfo.valueKind = valueKind;
           if (bindingInfo.structTypeName.empty()) {
-            ir_lowerer::resolveSpecializedExperimentalMapStructPathForBindingType(
+            ir_lowerer::resolveSpecializedKeyValueStorageStructPathForBindingType(
                 targetType, bindingInfo.structTypeName);
           }
           return;

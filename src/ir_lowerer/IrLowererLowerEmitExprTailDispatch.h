@@ -289,7 +289,7 @@
             return false;
           }
           if (targetInfo.isWrappedKeyValueTarget ||
-              ir_lowerer::isExperimentalMapStructTypePath(targetInfo.structTypeName)) {
+              ir_lowerer::isKeyValueStorageStructPath(targetInfo.structTypeName)) {
             return false;
           }
 
@@ -341,7 +341,7 @@
               semanticProgram == nullptr ? nullptr : &canonicalKeyValueHelperSemanticIndex;
           auto isSpecializedExperimentalKeyValueStructPath =
               [](const std::string &structPath) {
-                if (!ir_lowerer::isExperimentalMapStructTypePath(structPath)) {
+                if (!ir_lowerer::isKeyValueStorageStructPath(structPath)) {
                   return false;
                 }
                 return structPath.find("__") != std::string::npos;

@@ -55,11 +55,11 @@ bool isBuiltinMapTypeName(const std::string &typeName) {
 }
 
 bool isExperimentalMapTypeName(const std::string &typeName) {
-  const std::string experimentalKeyValueType = experimentalCollectionTypePath("map", "Map", false);
-  const std::string rootedExperimentalKeyValueType = experimentalCollectionTypePath("map", "Map");
+  const std::string experimentalKeyValueType = keyValueStorageStructRootPath(false);
+  const std::string rootedExperimentalKeyValueType = keyValueStorageStructRootPath();
   const auto *metadata = findStdlibSurfaceMetadataByBridgeKey("collections.map_helpers");
   const std::string keyValueRoot =
-      metadata == nullptr ? std::string{} : std::string(metadata->canonicalPath) + "/MapValue";
+      metadata == nullptr ? std::string{} : stdlibSurfaceBackingTypePath(*metadata);
   const std::string keyValueRootNoSlash =
       !keyValueRoot.empty() && keyValueRoot.front() == '/' ? keyValueRoot.substr(1) : keyValueRoot;
   return typeName == experimentalKeyValueType ||
@@ -146,7 +146,7 @@ std::string buildTemplatedTypeName(const std::string &typeName, const std::strin
   return trimTemplateTypeText(typeName) + "<" + typeTemplateArg + ">";
 }
 
-bool resolveSpecializedExperimentalMapStructPath(const std::string &typeName,
+bool resolveSpecializedKeyValueStorageStructPath(const std::string &typeName,
                                                  const std::string &,
                                                  std::string &structPathOut) {
   structPathOut.clear();
@@ -154,7 +154,7 @@ bool resolveSpecializedExperimentalMapStructPath(const std::string &typeName,
   if (!normalizedType.empty() && normalizedType.front() != '/') {
     normalizedType.insert(normalizedType.begin(), '/');
   }
-  if (isExperimentalMapStructTypePath(normalizedType)) {
+  if (isKeyValueStorageStructPath(normalizedType)) {
     structPathOut = std::move(normalizedType);
     return true;
   }
@@ -284,7 +284,7 @@ void applySpecializedExperimentalMapFieldLayout(
     const CollectStructLayoutFieldsFn &collectStructLayoutFields,
     const ValueKindFromTypeNameFn &valueKindFromTypeName,
     StructSlotFieldInfo &fieldInfo) {
-  if (!isExperimentalMapStructTypePath(structPath)) {
+  if (!isKeyValueStorageStructPath(structPath)) {
     return;
   }
   std::vector<StructLayoutFieldInfo> fields;
@@ -499,7 +499,7 @@ bool resolveStructSlotLayoutFromDefinitionFields(
         info.slotCount = 1;
       } else if (isMapTypeName(binding.typeName)) {
         std::string nestedStruct;
-        if (!resolveSpecializedExperimentalMapStructPath(binding.typeName, binding.typeTemplateArg, nestedStruct) &&
+        if (!resolveSpecializedKeyValueStorageStructPath(binding.typeName, binding.typeTemplateArg, nestedStruct) &&
             !resolveStructTypeName(buildTemplatedTypeName(binding.typeName, binding.typeTemplateArg),
                                    namespacePrefix,
                                    nestedStruct)) {
@@ -553,7 +553,7 @@ bool resolveStructSlotLayoutFromDefinitionFields(
       if (splitTemplateTypeName(binding.typeName, inlineTemplateBase, inlineTemplateArg) &&
           isMapTypeName(inlineTemplateBase)) {
         std::string nestedStruct;
-        if (!resolveSpecializedExperimentalMapStructPath(inlineTemplateBase, inlineTemplateArg, nestedStruct) &&
+        if (!resolveSpecializedKeyValueStorageStructPath(inlineTemplateBase, inlineTemplateArg, nestedStruct) &&
             !resolveStructTypeName(binding.typeName, namespacePrefix, nestedStruct)) {
           error = "native backend does not support struct field type: " + binding.typeName + " on " + structPath;
           layoutStack.erase(structPath);
@@ -594,7 +594,7 @@ bool resolveStructSlotLayoutFromDefinitionFields(
       }
       if (isMapTypeName(binding.typeName)) {
         std::string nestedStruct;
-        if (!resolveSpecializedExperimentalMapStructPath(binding.typeName, "", nestedStruct) &&
+        if (!resolveSpecializedKeyValueStorageStructPath(binding.typeName, "", nestedStruct) &&
             !resolveStructTypeName(binding.typeName, namespacePrefix, nestedStruct)) {
           error = "native backend does not support struct field type: " + binding.typeName + " on " + structPath;
           layoutStack.erase(structPath);
@@ -1200,7 +1200,7 @@ std::string inferStructPathFromCallTarget(
     normalizedName.erase(normalizedName.begin());
   }
   auto resolveExperimentalKeyValueConstructorStructPath = [&](const std::string &path) -> std::string {
-    return inferPublishedExperimentalMapStructPathFromConstructorPath(path);
+    return inferPublishedKeyValueStorageStructPathFromConstructorPath(path);
   };
   if (const std::string experimentalStructPath = resolveExperimentalKeyValueConstructorStructPath(normalizedName);
       !experimentalStructPath.empty() && isKnownStructPath(experimentalStructPath)) {

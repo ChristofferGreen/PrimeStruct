@@ -724,8 +724,8 @@ SemanticsValidator::BuiltinCollectionDispatchResolvers SemanticsValidator::makeB
       state->resolveBufferTarget,
       state->resolveStringTarget,
       state->resolveMapTarget,
-      state->resolveExperimentalMapTarget,
-      state->resolveExperimentalMapValueTarget,
+      state->resolveKeyValueTarget,
+      state->resolveDirectKeyValueTarget,
       nullptr};
   resolvers.resolverStateKeepAlive = state;
   return resolvers;

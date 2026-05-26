@@ -4,6 +4,39 @@
 - none
 
 ## Recent Test Runs
+- 2026-05-26 09:57 CEST | pass | mode: release | command:
+  `cmake --build build-release --target PrimeStruct_compile_run_tests -j 1`;
+  `cd build-release && ./PrimeStruct_compile_run_tests --test-case="todo queue and skipped doctest debt stay source locked,compiles and runs canonical map constructor,compiles and runs map count,compiles and runs canonical namespaced map helpers on experimental map values in C++ emitter,compiles and runs wrapper map helpers on experimental map values in C++ emitter,compiles and runs inferred experimental map returns in C++ emitter,compiles and runs helper-wrapped experimental map struct storage fields in C++ emitter,compiles and runs borrowed experimental map helpers in C++ emitter" --no-skip`
+  | failures: none | notes: parent rerun passed all 8 selected
+  compile-run cases and 531 assertions after the C++ emitter expectations
+  were updated for removed experimental-map backing compatibility.
+- 2026-05-26 09:51 CEST | fail | mode: release | command:
+  `cmake --build build-release --target PrimeStruct_compile_run_tests -j 1`;
+  `cd build-release && ./PrimeStruct_compile_run_tests --test-case="todo queue and skipped doctest debt stay source locked,compiles and runs canonical map constructor,compiles and runs map count,compiles and runs canonical namespaced map helpers on experimental map values in C++ emitter,compiles and runs wrapper map helpers on experimental map values in C++ emitter,compiles and runs inferred experimental map returns in C++ emitter,compiles and runs helper-wrapped experimental map struct storage fields in C++ emitter,compiles and runs borrowed experimental map helpers in C++ emitter" --no-skip`
+  | failures: same 4 selected C++ emitter cases | notes: parent rebuild
+  passed, then rerun failed after the fixture-path patch on semantic
+  argument mismatches where canonical `map/*` helpers expected
+  `/std/collections/map/MapValue` but received explicit legacy
+  `/std/collections/experimental_map/Map`.
+- 2026-05-26 09:43 CEST | fail | mode: release | command:
+  `cmake --build build-release --target PrimeStruct_compile_run_tests -j 1`;
+  `cd build-release && ./PrimeStruct_compile_run_tests --test-case="todo queue and skipped doctest debt stay source locked,compiles and runs canonical map constructor,compiles and runs map count,compiles and runs canonical namespaced map helpers on experimental map values in C++ emitter,compiles and runs wrapper map helpers on experimental map values in C++ emitter,compiles and runs inferred experimental map returns in C++ emitter,compiles and runs helper-wrapped experimental map struct storage fields in C++ emitter,compiles and runs borrowed experimental map helpers in C++ emitter" --no-skip`
+  | failures: same 4 selected C++ emitter cases | notes: parent rebuild
+  passed, then rerun failed on unknown `/std/collections/mapPair` in three
+  retargeted fixtures plus missing implicit template inference for
+  `/wrapValues` in the helper-wrapped storage fixture.
+- 2026-05-26 09:38 CEST | fail | mode: release | command:
+  `cmake --build build-release --target PrimeStruct_compile_run_tests -j 1`;
+  `cd build-release && ./PrimeStruct_compile_run_tests --test-case="todo queue and skipped doctest debt stay source locked,compiles and runs canonical map constructor,compiles and runs map count,compiles and runs canonical namespaced map helpers on experimental map values in C++ emitter,compiles and runs wrapper map helpers on experimental map values in C++ emitter,compiles and runs inferred experimental map returns in C++ emitter,compiles and runs helper-wrapped experimental map struct storage fields in C++ emitter,compiles and runs borrowed experimental map helpers in C++ emitter" --no-skip`
+  | failures: `canonical namespaced map helpers on experimental map values
+  in C++ emitter`, `wrapper map helpers on experimental map values in C++
+  emitter`, `inferred experimental map returns in C++ emitter`,
+  `helper-wrapped experimental map struct storage fields in C++ emitter` |
+  notes: parent build passed, then 4 selected C++ emitter cases failed with
+  `native backend only supports indexing into string literals or string
+  bindings` for stale canonical string-key map constructors and
+  `template arguments are only supported on templated definitions: /Map` for
+  a stale bare experimental-map storage type.
 - 2026-05-26 09:04 CEST | pass | mode: release + script | command:
   `cmake -S . -B build-release -DCMAKE_BUILD_TYPE=Release`;
   `cmake --build build-release --target primec PrimeStruct_backend_ir_tests PrimeStruct_semantics_tests PrimeStruct_compile_run_tests -j 1`;
@@ -8723,6 +8756,12 @@
 - 2026-05-12 17:28 local | fail | mode: release | command: `./scripts/compile.sh --release` | failures: 146 CTest targets | notes: baseline after preflight checkpoint failed; stabilization blocks TODO work
 
 ## Resolved Failures
+- [x] TODO-4576 map C++ emitter slice | resolved:
+  2026-05-26 09:57 CEST | validating command:
+  `cd build-release && ./PrimeStruct_compile_run_tests --test-case="todo queue and skipped doctest debt stay source locked,compiles and runs canonical map constructor,compiles and runs map count,compiles and runs canonical namespaced map helpers on experimental map values in C++ emitter,compiles and runs wrapper map helpers on experimental map values in C++ emitter,compiles and runs inferred experimental map returns in C++ emitter,compiles and runs helper-wrapped experimental map struct storage fields in C++ emitter,compiles and runs borrowed experimental map helpers in C++ emitter" --no-skip`
+  | notes: parent rerun passed 8 cases / 531 assertions after stale
+  C++ emitter compatibility expectations were updated for the deleted
+  map backing classifier path.
 - [x] `todo queue and skipped doctest debt stay source locked` | resolved:
   2026-05-26 03:10 CEST | validating command:
   `cd build-release && ./PrimeStruct_compile_run_tests --test-suite=primestruct.compile.run.examples --source-file="*test_compile_run_examples_docs_locks.cpp" --test-case="scene renderer ui producer contract stays source locked,todo queue and skipped doctest debt stay source locked,ui command list adapter docs stay source locked" --order-by=file --no-skip --success`

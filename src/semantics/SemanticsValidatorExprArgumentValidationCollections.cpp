@@ -294,8 +294,8 @@ bool SemanticsValidator::isStringExprForArgumentValidation(
       std::string keyValueValueType;
       std::string experimentalKeyValueKeyType;
       std::string experimentalKeyValueValueType;
-      if (dispatchResolvers.resolveExperimentalMapTarget != nullptr &&
-          dispatchResolvers.resolveExperimentalMapTarget(arg.args.front(),
+      if (dispatchResolvers.resolveKeyValueTarget != nullptr &&
+          dispatchResolvers.resolveKeyValueTarget(arg.args.front(),
                                                          experimentalKeyValueKeyType,
                                                          experimentalKeyValueValueType)) {
         return false;

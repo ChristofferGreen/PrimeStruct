@@ -2520,7 +2520,7 @@ bool SemanticsValidator::resolveMethodTarget(const std::vector<ParameterInfo> &p
            normalizedMethodName == "load" || normalizedMethodName == "store")) {
         return setCollectionMethodTarget(preferredBufferMethodTarget(normalizedMethodName));
       }
-      if (isMapCollectionTypeName(elemBase)) {
+      if (isKeyValueCollectionTypeName(elemBase)) {
         return setPreferredKeyValueMethodTarget(receiverExpr, normalizedMethodName);
       }
       if (elemBase == "File" && isFileMethodName(normalizedMethodName)) {
@@ -2642,7 +2642,7 @@ bool SemanticsValidator::resolveMethodTarget(const std::vector<ParameterInfo> &p
            normalizedMethodName == "load" || normalizedMethodName == "store")) {
         return setCollectionMethodTarget(preferredBufferMethodTarget(normalizedMethodName));
       }
-      if (isMapCollectionTypeName(base) &&
+      if (isKeyValueCollectionTypeName(base) &&
           (normalizedMethodName == "count" || normalizedMethodName == "count_ref" ||
            normalizedMethodName == "contains" || normalizedMethodName == "contains_ref" ||
            normalizedMethodName == "tryAt" || normalizedMethodName == "tryAt_ref" ||
@@ -3020,7 +3020,7 @@ bool SemanticsValidator::resolveMethodTarget(const std::vector<ParameterInfo> &p
                  normalizedMethodName == "load" || normalizedMethodName == "store")) {
               return setCollectionMethodTarget(preferredBufferMethodTarget(normalizedMethodName));
             }
-            if (isMapCollectionTypeName(elemBase)) {
+            if (isKeyValueCollectionTypeName(elemBase)) {
               if (setIndexedArgsPackKeyValueMethodTarget(receiver, normalizedMethodName)) {
                 return true;
               }
@@ -3394,7 +3394,7 @@ bool SemanticsValidator::resolveMethodTarget(const std::vector<ParameterInfo> &p
                 ? internalSoaCollectionTypePath(true)
                 : "/vector"));
   }
-  if (isMapCollectionTypeName(normalizeBindingTypeName(typeName)) &&
+  if (isKeyValueCollectionTypeName(normalizeBindingTypeName(typeName)) &&
       (normalizedMethodName == "count" || normalizedMethodName == "count_ref" ||
        normalizedMethodName == "size" ||
        normalizedMethodName == "contains" || normalizedMethodName == "contains_ref" ||

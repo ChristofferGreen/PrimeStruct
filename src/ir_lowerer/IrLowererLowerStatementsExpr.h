@@ -1190,7 +1190,7 @@
               const bool isCollectionVectorTarget =
                   isCollectionVectorRecordTypePath(structPath);
               const bool isExperimentalKeyValueTarget =
-                  structPath == experimentalCollectionTypePath("map", "Map") ||
+                  structPath == keyValueStorageStructRootPath() ||
                   matchesGeneratedSpecializedType(structPath, "map", "Map");
               const bool isSemanticKeyValueTarget =
                   ir_lowerer::resolveCollectionPairTypeInfo(

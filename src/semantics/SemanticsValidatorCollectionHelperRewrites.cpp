@@ -372,8 +372,8 @@ bool SemanticsValidator::tryRewriteBareKeyValueHelperCall(
     return false;
   }
   rewrittenOut = candidate;
-  if (dispatchResolvers.resolveExperimentalMapTarget != nullptr &&
-      dispatchResolvers.resolveExperimentalMapTarget(candidate.args[receiverIndex], keyType, valueType)) {
+  if (dispatchResolvers.resolveKeyValueTarget != nullptr &&
+      dispatchResolvers.resolveKeyValueTarget(candidate.args[receiverIndex], keyType, valueType)) {
     if (isBareKeyValueAccessHelperName(helperName)) {
       return false;
     }
@@ -630,8 +630,8 @@ bool SemanticsValidator::tryRewriteCanonicalExperimentalKeyValueHelperCall(
     const BuiltinCollectionDispatchResolvers &dispatchResolvers,
     Expr &rewrittenOut) const {
   if (candidate.kind != Expr::Kind::Call || candidate.args.empty() ||
-      dispatchResolvers.resolveExperimentalMapTarget == nullptr ||
-      dispatchResolvers.resolveExperimentalMapValueTarget == nullptr) {
+      dispatchResolvers.resolveKeyValueTarget == nullptr ||
+      dispatchResolvers.resolveDirectKeyValueTarget == nullptr) {
     return false;
   }
 
@@ -657,9 +657,9 @@ bool SemanticsValidator::tryRewriteCanonicalExperimentalKeyValueHelperCall(
       std::string keyType;
       std::string valueType;
       const bool resolvesBorrowedExperimentalKeyValue =
-          dispatchResolvers.resolveExperimentalMapTarget(candidate.args.front(), keyType,
+          dispatchResolvers.resolveKeyValueTarget(candidate.args.front(), keyType,
                                                          valueType) &&
-          !dispatchResolvers.resolveExperimentalMapValueTarget(
+          !dispatchResolvers.resolveDirectKeyValueTarget(
               candidate.args.front(), keyType, valueType);
       if (!resolvesBorrowedExperimentalKeyValue) {
         return false;
@@ -757,10 +757,10 @@ bool SemanticsValidator::tryRewriteCanonicalExperimentalKeyValueHelperCall(
   std::string keyType;
   std::string valueType;
   const bool resolvesExperimentalKeyValueValue =
-      dispatchResolvers.resolveExperimentalMapValueTarget(receiverExpr, keyType, valueType);
+      dispatchResolvers.resolveDirectKeyValueTarget(receiverExpr, keyType, valueType);
   const bool resolvesExperimentalKeyValue =
       resolvesExperimentalKeyValueValue ||
-      dispatchResolvers.resolveExperimentalMapTarget(receiverExpr, keyType, valueType);
+      dispatchResolvers.resolveKeyValueTarget(receiverExpr, keyType, valueType);
   const bool resolvesCanonicalKeyValue =
       dispatchResolvers.resolveMapTarget != nullptr &&
       dispatchResolvers.resolveMapTarget(receiverExpr, keyType, valueType);
@@ -801,8 +801,8 @@ bool SemanticsValidator::explicitCanonicalExperimentalKeyValueBorrowedHelperPath
     const BuiltinCollectionDispatchResolvers &dispatchResolvers,
     std::string &resolvedPathOut) const {
   if (candidate.kind != Expr::Kind::Call || candidate.isMethodCall || candidate.args.empty() ||
-      dispatchResolvers.resolveExperimentalMapTarget == nullptr ||
-      dispatchResolvers.resolveExperimentalMapValueTarget == nullptr) {
+      dispatchResolvers.resolveKeyValueTarget == nullptr ||
+      dispatchResolvers.resolveDirectKeyValueTarget == nullptr) {
     return false;
   }
   std::string helperName;
@@ -852,8 +852,8 @@ bool SemanticsValidator::explicitCanonicalExperimentalKeyValueBorrowedHelperPath
   }
   std::string keyType;
   std::string valueType;
-  return dispatchResolvers.resolveExperimentalMapTarget(candidate.args[receiverIndex], keyType, valueType) &&
-         !dispatchResolvers.resolveExperimentalMapValueTarget(candidate.args[receiverIndex], keyType, valueType);
+  return dispatchResolvers.resolveKeyValueTarget(candidate.args[receiverIndex], keyType, valueType) &&
+         !dispatchResolvers.resolveDirectKeyValueTarget(candidate.args[receiverIndex], keyType, valueType);
 }
 
 bool SemanticsValidator::hasResolvableKeyValueHelperPath(const std::string &path) const {

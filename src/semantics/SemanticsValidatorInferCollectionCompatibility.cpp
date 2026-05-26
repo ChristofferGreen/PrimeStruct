@@ -166,7 +166,7 @@ std::string SemanticsValidator::normalizeCollectionTypePath(const std::string &t
         splitTopLevelTemplateArgs(argText, args) && args.size() == 1) {
       return "/soa" "_vector";
     }
-    if ((base == "Map" || isMapCollectionTypeName(base) || base == "/map" ||
+    if ((base == "Map" || isKeyValueCollectionTypeName(base) || base == "/map" ||
          isCanonicalMapCollectionTypeRootLocal(base)) &&
         splitTopLevelTemplateArgs(argText, args) && args.size() == 2) {
       return "/map";
@@ -203,7 +203,7 @@ std::string SemanticsValidator::normalizeCollectionTypePath(const std::string &t
       normalizedType.rfind("std/collections/experimental" "_soa" "_vector/Soa" "Vector" "__", 0) == 0) {
     return "/soa" "_vector";
   }
-  if (normalizedType == "Map" || isMapCollectionTypeName(normalizedType) ||
+  if (normalizedType == "Map" || isKeyValueCollectionTypeName(normalizedType) ||
       normalizedType == "/map" ||
       isCanonicalMapCollectionTypeRootLocal(normalizedType)) {
     return "/map";
@@ -631,7 +631,7 @@ std::string SemanticsValidator::keyValueNamespacedMethodCompatibilityPath(
     std::string keyType;
     std::string valueType;
     return dispatchResolvers.resolveMapTarget(target, keyType, valueType) ||
-           dispatchResolvers.resolveExperimentalMapTarget(target, keyType, valueType);
+           dispatchResolvers.resolveKeyValueTarget(target, keyType, valueType);
   };
   const std::string removedPath = rootedKeyValueCompatibilityHelperPath(helperName);
   if (removedPath.empty()) {
@@ -660,7 +660,7 @@ std::string SemanticsValidator::directKeyValueHelperCompatibilityPath(
     std::string keyType;
     std::string valueType;
     return dispatchResolvers.resolveMapTarget(target, keyType, valueType) ||
-           dispatchResolvers.resolveExperimentalMapTarget(target, keyType, valueType);
+           dispatchResolvers.resolveKeyValueTarget(target, keyType, valueType);
   };
   const std::string resolvedPath = [&]() {
     const std::string resolved = resolveCalleePath(candidate);
@@ -988,7 +988,7 @@ bool SemanticsValidator::isUnnamespacedMapCountBuiltinFallbackCall(
     std::string keyType;
     std::string valueType;
     return dispatchResolvers.resolveMapTarget(target, keyType, valueType) ||
-           dispatchResolvers.resolveExperimentalMapTarget(target, keyType, valueType);
+           dispatchResolvers.resolveKeyValueTarget(target, keyType, valueType);
   };
   if (candidate.kind != Expr::Kind::Call || candidate.name.empty()) {
     return false;
@@ -1039,7 +1039,7 @@ bool SemanticsValidator::resolveRemovedMapBodyArgumentTarget(const Expr &candida
     std::string keyType;
     std::string valueType;
     return dispatchResolvers.resolveMapTarget(target, keyType, valueType) ||
-           dispatchResolvers.resolveExperimentalMapTarget(target, keyType, valueType);
+           dispatchResolvers.resolveKeyValueTarget(target, keyType, valueType);
   };
 
   auto preferredRemovedKeyValueHelperPath = [&](std::string_view helperName) {

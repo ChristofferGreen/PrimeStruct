@@ -118,6 +118,12 @@ inline const primec::StdlibSurfaceMetadata *keyValueHelperSurfaceMetadataLocal()
   return primec::findStdlibSurfaceMetadataByBridgeKey("collections.map_helpers");
 }
 
+inline std::string keyValueBackingTypePathLocal() {
+  const primec::StdlibSurfaceMetadata *metadata = keyValueHelperSurfaceMetadataLocal();
+  return metadata == nullptr ? std::string{}
+                             : primec::stdlibSurfaceBackingTypePath(*metadata);
+}
+
 inline const primec::StdlibSurfaceMetadata *keyValueConstructorSurfaceMetadataLocal() {
   return primec::findStdlibSurfaceMetadataByBridgeKey(
       "collections.map_constructors");

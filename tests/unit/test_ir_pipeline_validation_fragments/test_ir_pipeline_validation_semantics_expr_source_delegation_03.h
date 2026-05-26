@@ -99,13 +99,13 @@
         std::string::npos);
   CHECK(semanticsExprSource.find("if (resolveMapTargetWithTypes(target, keyType, valueType) ||") ==
         std::string::npos);
-  CHECK(semanticsExprSource.find("resolveExperimentalMapTarget(target, keyType, valueType)) {") ==
+  CHECK(semanticsExprSource.find("resolveKeyValueTarget(target, keyType, valueType)) {") ==
         std::string::npos);
   CHECK(semanticsExprDispatchBootstrapSource.find(
             "if (bootstrapOut.dispatchResolvers.resolveMapTarget(target, keyType, valueType) ||") !=
         std::string::npos);
   CHECK(semanticsExprDispatchBootstrapSource.find(
-            "bootstrapOut.dispatchResolvers.resolveExperimentalMapTarget(target, keyType,") !=
+            "bootstrapOut.dispatchResolvers.resolveKeyValueTarget(target, keyType,") !=
         std::string::npos);
   CHECK(semanticsExprSource.find("return resolveMapTargetWithTypes(target, keyTypeOut, valueType);") ==
         std::string::npos);
@@ -170,7 +170,7 @@
   CHECK(semanticsExprSource.find(
             ".collectionAccessFallbackContext.isStdNamespacedVectorAccessCall =") ==
         std::string::npos);
-  CHECK(semanticsExprSource.find("collectionAccessValidationContext.resolveExperimentalMapTarget =") ==
+  CHECK(semanticsExprSource.find("collectionAccessValidationContext.resolveKeyValueTarget =") ==
         std::string::npos);
   CHECK(semanticsExprSource.find("collectionAccessValidationContext.isMapLikeBareAccessReceiverTarget =") ==
         std::string::npos);
@@ -231,9 +231,9 @@
         std::string::npos);
   CHECK(semanticsExprSource.find("auto extractAnyMapKeyValueTypes = [&](const BindingInfo &binding,") ==
         std::string::npos);
-  CHECK(semanticsExprSource.find("auto resolveExperimentalMapTarget = [&](const Expr &target,") ==
+  CHECK(semanticsExprSource.find("auto resolveKeyValueTarget = [&](const Expr &target,") ==
         std::string::npos);
-  CHECK(semanticsExprSource.find("auto resolveExperimentalMapValueTarget = [&](const Expr &target,") ==
+  CHECK(semanticsExprSource.find("auto resolveDirectKeyValueTarget = [&](const Expr &target,") ==
         std::string::npos);
   CHECK(semanticsExprSource.find("auto argumentStructMismatchDiagnostic = [&](const std::string &paramName,") ==
         std::string::npos);
@@ -1003,7 +1003,7 @@
   CHECK(semanticsCollectionHelperRewritesSource.find(
             "bool SemanticsValidator::explicitCanonicalExperimentalMapBorrowedHelperPath") !=
         std::string::npos);
-  CHECK(semanticsCollectionHelperRewritesSource.find("dispatchResolvers.resolveExperimentalMapValueTarget") !=
+  CHECK(semanticsCollectionHelperRewritesSource.find("dispatchResolvers.resolveDirectKeyValueTarget") !=
         std::string::npos);
   CHECK(semanticsCollectionHelperRewritesSource.find("bool SemanticsValidator::hasResolvableKeyValueHelperPath") !=
         std::string::npos);

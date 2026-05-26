@@ -36,7 +36,7 @@ inline void expectNativeMapConformanceProgramRunsOrCompileRejectWithOutput(
 inline void expectCanonicalMapNamespaceExperimentalValueConformance(const std::string &emitMode) {
   (void)emitMode;
   const std::string expectedOutput = "4\ncontainer missing key\n2\n4\n7\n1\n2\n";
-  if (emitMode == "native") {
+  if (emitMode == "native" || emitMode == "exe") {
     expectMapConformanceCompileReject(makeCanonicalMapNamespaceExperimentalValueConformanceSource(),
                                       "map_namespace_canonical_experimental_value",
                                       emitMode,
@@ -274,6 +274,15 @@ inline void expectWrappedExperimentalMapResultDerefFieldAssignConformance(const 
 }
 
 inline void expectWrappedExperimentalMapStorageFieldConformance(const std::string &emitMode) {
+  if (emitMode == "exe") {
+    expectMapConformanceCompileReject(
+        makeWrappedExperimentalMapStorageFieldConformanceSource(),
+        "map_wrapped_experimental_storage_field_" + emitMode,
+        emitMode,
+        "template arguments are only supported on templated definitions: /Map");
+    return;
+  }
+
   if (emitMode == "native") {
     expectNativeMapConformanceProgramRunsOrCompileRejectWithOutput(
         makeWrappedExperimentalMapStorageFieldConformanceSource(),
@@ -310,7 +319,7 @@ inline void expectWrappedExperimentalMapStorageDerefFieldConformance(const std::
 }
 
 inline void expectWrapperMapHelperExperimentalValueConformance(const std::string &emitMode) {
-  if (emitMode == "native") {
+  if (emitMode == "native" || emitMode == "exe") {
     expectMapConformanceCompileReject(makeWrapperMapHelperExperimentalValueConformanceSource(),
                                       "map_wrapper_helper_experimental_value",
                                       emitMode,
@@ -361,7 +370,7 @@ inline void expectImplicitMapAutoInferenceConformance(const std::string &emitMod
 }
 
 inline void expectInferredExperimentalMapReturnConformance(const std::string &emitMode) {
-  if (emitMode == "native") {
+  if (emitMode == "native" || emitMode == "exe") {
     expectMapConformanceCompileReject(makeInferredExperimentalMapReturnConformanceSource(),
                                       "map_inferred_experimental_return",
                                       emitMode,

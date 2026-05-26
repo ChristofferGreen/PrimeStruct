@@ -36,7 +36,7 @@ bool isSpecializedExperimentalMapTypeText(const std::string &typeText) {
   if (!normalized.empty() && normalized.front() != '/') {
     normalized.insert(normalized.begin(), '/');
   }
-  return normalized.rfind(experimentalCollectionTypePath("map", "Map") + "__", 0) == 0;
+  return normalized.rfind(keyValueStorageStructRootPath() + "__", 0) == 0;
 }
 
 std::string resolveSemanticBindingTypeText(const SemanticProgram *semanticProgram,
@@ -174,14 +174,14 @@ bool resolveSpecializedExperimentalMapTypeKinds(const std::string &typeText,
          valueKindOut != LocalInfo::ValueKind::Unknown;
 }
 
-bool resolveSpecializedExperimentalMapStructPathFromTypeText(const std::string &typeText,
+bool resolveSpecializedKeyValueStorageStructPathFromTypeText(const std::string &typeText,
                                                              std::string &structPathOut) {
   structPathOut.clear();
   std::string normalizedType = trimTemplateTypeText(typeText);
   if (!normalizedType.empty() && normalizedType.front() != '/') {
     normalizedType.insert(normalizedType.begin(), '/');
   }
-  if (isExperimentalMapStructTypePath(normalizedType) &&
+  if (isKeyValueStorageStructPath(normalizedType) &&
       normalizedType.find("__") != std::string::npos) {
     structPathOut = normalizedType;
     return true;
@@ -419,7 +419,7 @@ bool populateBindingTypeInfoFromTypeText(
     infoOut.keyValueKeyKind = valueKindFromTypeName(trimTemplateTypeText(args[0]));
     infoOut.keyValueValueKind = valueKindFromTypeName(trimTemplateTypeText(args[1]));
     infoOut.valueKind = infoOut.keyValueValueKind;
-    resolveSpecializedExperimentalMapStructPathFromTypeText(normalizedTypeText, infoOut.structTypeName);
+    resolveSpecializedKeyValueStorageStructPathFromTypeText(normalizedTypeText, infoOut.structTypeName);
     return true;
   }
   if (normalizedBase == "Pointer" || normalizedBase == "Reference") {
@@ -505,7 +505,7 @@ bool populateBindingTypeInfoFromTypeText(
         infoOut.keyValueKeyKind = valueKindFromTypeName(trimTemplateTypeText(args[0]));
         infoOut.keyValueValueKind = valueKindFromTypeName(trimTemplateTypeText(args[1]));
         infoOut.valueKind = infoOut.keyValueValueKind;
-        resolveSpecializedExperimentalMapStructPathFromTypeText(targetType,
+        resolveSpecializedKeyValueStorageStructPathFromTypeText(targetType,
                                                                 infoOut.structTypeName);
         return true;
       }
@@ -821,10 +821,10 @@ bool resolveSpecializedExperimentalMapTypeKindsForBindingType(
       typeText, resolveDefinitionCall, keyKindOut, valueKindOut);
 }
 
-bool resolveSpecializedExperimentalMapStructPathForBindingType(
+bool resolveSpecializedKeyValueStorageStructPathForBindingType(
     const std::string &typeText,
     std::string &structPathOut) {
-  return resolveSpecializedExperimentalMapStructPathFromTypeText(typeText, structPathOut);
+  return resolveSpecializedKeyValueStorageStructPathFromTypeText(typeText, structPathOut);
 }
 
 StatementBindingTypeInfo inferStatementBindingTypeInfo(const Expr &stmt,
@@ -934,7 +934,7 @@ StatementBindingTypeInfo inferStatementBindingTypeInfo(const Expr &stmt,
             std::string declaredType = transform.name + "<" +
                                        trimTemplateTypeText(transform.templateArgs[0]) + ", " +
                                        trimTemplateTypeText(transform.templateArgs[1]) + ">";
-            resolveSpecializedExperimentalMapStructPathFromTypeText(
+            resolveSpecializedKeyValueStorageStructPathFromTypeText(
                 declaredType, info.structTypeName);
           }
           break;
@@ -943,7 +943,7 @@ StatementBindingTypeInfo inferStatementBindingTypeInfo(const Expr &stmt,
             resolveSpecializedExperimentalMapTypeKinds(
                 transform.name, safeResolveDefinitionCall, info.keyValueKeyKind, info.keyValueValueKind)) {
           if (info.structTypeName.empty()) {
-            resolveSpecializedExperimentalMapStructPathFromTypeText(
+            resolveSpecializedKeyValueStorageStructPathFromTypeText(
                 transform.name, info.structTypeName);
           }
           break;
@@ -974,7 +974,7 @@ StatementBindingTypeInfo inferStatementBindingTypeInfo(const Expr &stmt,
         if (info.structTypeName.empty()) {
           std::string initType = "map<" + trimTemplateTypeText(init.templateArgs[0]) + ", " +
                                  trimTemplateTypeText(init.templateArgs[1]) + ">";
-          resolveSpecializedExperimentalMapStructPathFromTypeText(
+          resolveSpecializedKeyValueStorageStructPathFromTypeText(
               initType, info.structTypeName);
         }
       }
@@ -1307,7 +1307,7 @@ bool inferCallParameterLocalInfo(const Expr &param,
                                      trimTemplateTypeText(transform.templateArgs[0]) + ", " +
                                      trimTemplateTypeText(transform.templateArgs[1]) + ">";
           std::string specializedStructPath;
-          if (resolveSpecializedExperimentalMapStructPathFromTypeText(
+          if (resolveSpecializedKeyValueStorageStructPathFromTypeText(
                   declaredType, specializedStructPath)) {
             infoOut.structTypeName = std::move(specializedStructPath);
           }
@@ -1439,7 +1439,7 @@ bool inferCallParameterLocalInfo(const Expr &param,
           infoOut.keyValueValueKind = valueKindFromTypeName(trimTemplateTypeText(args[1]));
           infoOut.valueKind = infoOut.keyValueValueKind;
           if (infoOut.structTypeName.empty()) {
-            resolveSpecializedExperimentalMapStructPathFromTypeText(targetType, infoOut.structTypeName);
+            resolveSpecializedKeyValueStorageStructPathFromTypeText(targetType, infoOut.structTypeName);
           }
         }
       }
@@ -1549,7 +1549,7 @@ bool inferCallParameterLocalInfo(const Expr &param,
       bindingInfo.keyValueValueKind = valueKind;
       bindingInfo.valueKind = valueKind;
       if (bindingInfo.structTypeName.empty()) {
-        resolveSpecializedExperimentalMapStructPathForBindingType(
+        resolveSpecializedKeyValueStorageStructPathForBindingType(
             targetType, bindingInfo.structTypeName);
       }
       return;

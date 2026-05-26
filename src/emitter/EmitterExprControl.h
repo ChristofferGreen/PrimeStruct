@@ -110,7 +110,7 @@
                                          methodPathOut);
           },
           [&](const Expr &receiverExpr) {
-            return isArrayValue(receiverExpr, localTypes) || isMapValue(receiverExpr, localTypes) ||
+            return isArrayValue(receiverExpr, localTypes) || isKeyValueStorageValue(receiverExpr, localTypes) ||
                    isStringValue(receiverExpr, localTypes);
           });
       countRewritePath.has_value()) {

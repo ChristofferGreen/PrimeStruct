@@ -67,7 +67,7 @@ std::string keyValueBackingRootForInferStructReturn() {
   if (metadata == nullptr || metadata->canonicalPath.empty()) {
     return {};
   }
-  return std::string(metadata->canonicalPath) + "/MapValue";
+  return stdlibSurfaceBackingTypePath(*metadata);
 }
 
 } // namespace
@@ -95,7 +95,7 @@ std::string SemanticsValidator::inferStructReturnCollectionPath(const std::strin
       !normalizedTypeTemplateArg.empty()) {
     return "/" + normalizedTypeName;
   }
-  if (isMapCollectionTypeName(normalizedTypeName) && !normalizedTypeTemplateArg.empty()) {
+  if (isKeyValueCollectionTypeName(normalizedTypeName) && !normalizedTypeTemplateArg.empty()) {
     std::vector<std::string> args;
     if (splitTopLevelTemplateArgs(normalizedTypeTemplateArg, args) && args.size() == 2) {
       return specializedExperimentalKeyValueStructReturnPath(args);
@@ -111,7 +111,7 @@ std::string SemanticsValidator::inferStructReturnCollectionPath(const std::strin
       if ((base == "array" || base == "vector" || base == "soa" "_vector") && args.size() == 1) {
         return "/" + base;
       }
-      if (isMapCollectionTypeName(base) && args.size() == 2) {
+      if (isKeyValueCollectionTypeName(base) && args.size() == 2) {
         return specializedExperimentalKeyValueStructReturnPath(args);
       }
     }

@@ -47,25 +47,12 @@ uint64_t fnv1a64(std::string_view text) {
   return hash;
 }
 
-std::string collectionTypePathLocal(std::string_view collectionName,
-                                    std::string_view typeName = {},
-                                    bool leadingSlash = true) {
-  std::string path = leadingSlash ? "/" : "";
-  path += "std/collections/";
-  path += std::string(collectionName);
-  if (!typeName.empty()) {
-    path += "/";
-    path += std::string(typeName);
-  }
-  return path;
-}
-
 std::string canonicalKeyValueIdentity(const std::string &typeText) {
   std::string normalized = normalizeBindingTypeName(trimText(typeText));
   if (!normalized.empty() && normalized.front() != '/') {
     normalized.insert(normalized.begin(), '/');
   }
-  const std::string keyValueRoot = collectionTypePathLocal("map", "MapValue");
+  const std::string keyValueRoot = keyValueBackingTypePathLocal();
   if (normalized == keyValueRoot ||
       normalized.rfind(keyValueRoot + "__", 0) == 0) {
     return stripWhitespace(std::move(normalized));
@@ -74,7 +61,7 @@ std::string canonicalKeyValueIdentity(const std::string &typeText) {
   std::string base;
   std::string argText;
   if (!splitTemplateTypeName(normalized, base, argText) ||
-      !isMapCollectionTypeName(base)) {
+      !isKeyValueCollectionTypeName(base)) {
     return {};
   }
   std::vector<std::string> args;

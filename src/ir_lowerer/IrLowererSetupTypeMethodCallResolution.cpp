@@ -33,7 +33,7 @@ std::string describeMethodCallExpr(const Expr &expr) {
   return "<unnamed>";
 }
 
-bool isMapConstructorDirectTargetPath(std::string path) {
+bool isKeyValueConstructorDirectTargetPath(std::string path) {
   const size_t specializationSuffix = path.find("__t");
   if (specializationSuffix != std::string::npos) {
     path.erase(specializationSuffix);
@@ -200,7 +200,7 @@ bool blocksSyntheticCollectionFallbackDirectTarget(const std::string &targetPath
   const std::string normalized = normalizeCollectionHelperPath(targetPath);
   return normalized.rfind(normalizeBuiltinCollectionStructPath("vec" "tor") + "/", 0) == 0 ||
          normalized.rfind(collectionMemberRoot("vector"), 0) == 0 ||
-         normalized.rfind(normalizeBuiltinCollectionStructPath("map") + "/", 0) == 0 ||
+         normalized.rfind(keyValueCollectionAliasRoot() + "/", 0) == 0 ||
          normalized.rfind(collectionMemberRoot("map"), 0) == 0 ||
          normalized.rfind("/soa" "_vector/", 0) == 0 ||
          normalized.rfind("/std/collections/" "soa" "_vector/", 0) == 0 ||
@@ -403,7 +403,7 @@ const Definition *resolveMethodCallDefinitionFromExpr(
   const bool allowsReceiverResolvedVectorMetadataFallback =
       isCollectionVectorMetadataMethodPath(explicitMethodPath);
   const std::string rootedKeyValuePrefix =
-      normalizeBuiltinCollectionStructPath("map").substr(1) + "/";
+      keyValueCollectionAliasRoot(false) + "/";
   const std::string canonicalKeyValuePrefix = collectionMemberRoot("map", false);
   auto sourceKeyValueMethodHelperName = [&]() -> std::string {
     std::string helperName = explicitMethodPath;
@@ -612,7 +612,7 @@ const Definition *resolveMethodCallDefinitionFromExpr(
              isSimpleCallName(callExpr, "at_unsafe")) &&
             !blocksSyntheticCollectionFallbackDirectTarget(fallbackDirectTarget)) ||
            (isSimpleCallName(callExpr, "map") &&
-            isMapConstructorDirectTargetPath(fallbackDirectTarget)));
+            isKeyValueConstructorDirectTargetPath(fallbackDirectTarget)));
       if (directTargetKeepsSyntheticCollectionFallback) {
         if (const Definition *resolvedDef =
                 resolveLoweredDefinitionPath(fallbackDirectTarget);

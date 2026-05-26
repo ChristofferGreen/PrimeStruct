@@ -99,7 +99,7 @@ bool resolveSpecializedExperimentalMapTypeKindsForBindingType(
     const ResolveDefinitionCallForStatementFn &resolveDefinitionCall,
     LocalInfo::ValueKind &keyKindOut,
     LocalInfo::ValueKind &valueKindOut);
-bool resolveSpecializedExperimentalMapStructPathForBindingType(
+bool resolveSpecializedKeyValueStorageStructPathForBindingType(
     const std::string &typeText,
     std::string &structPathOut);
 

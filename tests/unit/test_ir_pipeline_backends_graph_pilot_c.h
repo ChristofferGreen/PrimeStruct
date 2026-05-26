@@ -113,7 +113,7 @@
         std::string::npos);
   CHECK(validatorExpr.find("if (resolveKeyValueTargetWithTypes(target, keyType, valueType) ||") !=
         std::string::npos);
-  CHECK(validatorExpr.find("resolveExperimentalMapTarget(target, keyType, valueType)) {") !=
+  CHECK(validatorExpr.find("resolveKeyValueTarget(target, keyType, valueType)) {") !=
         std::string::npos);
   CHECK(validatorExpr.find("auto resolveKeyValueValueType = [&](const Expr &target, std::string &valueTypeOut) -> bool {") !=
         std::string::npos);
@@ -142,9 +142,9 @@
         std::string::npos);
   CHECK(validatorExprMain.find("auto extractAnyMapKeyValueTypes = [&](const BindingInfo &binding,") ==
         std::string::npos);
-  CHECK(validatorExprMain.find("auto resolveExperimentalMapTarget = [&](const Expr &target,") ==
+  CHECK(validatorExprMain.find("auto resolveKeyValueTarget = [&](const Expr &target,") ==
         std::string::npos);
-  CHECK(validatorExprMain.find("auto resolveExperimentalMapValueTarget = [&](const Expr &target,") ==
+  CHECK(validatorExprMain.find("auto resolveDirectKeyValueTarget = [&](const Expr &target,") ==
         std::string::npos);
   CHECK(validatorInfer.find("buildTypeResolutionGraph(program_)") != std::string::npos);
   CHECK(validatorInfer.find("collectGraphLocalAutoBindings(graph);") != std::string::npos);

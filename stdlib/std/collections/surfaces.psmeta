@@ -57,6 +57,7 @@ shape = HelperFamily
 bridge_key = collections.map_helpers
 canonical_import_root = /std/collections
 canonical_path = /std/collections/map
+backing_type_name = MapValue
 member_name = entry
 member_name = map
 member_name = count

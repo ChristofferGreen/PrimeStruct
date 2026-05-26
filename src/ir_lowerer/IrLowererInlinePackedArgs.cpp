@@ -88,7 +88,7 @@ bool namesExplicitExperimentalKeyValueType(const std::string &typeText) {
     base.erase(base.begin());
   }
   const std::string experimentalKeyValueType =
-      experimentalCollectionTypePath("map", "Map", false);
+      keyValueStorageStructRootPath(false);
   return base == experimentalKeyValueType ||
          base.rfind(experimentalKeyValueType + "__", 0) == 0;
 }

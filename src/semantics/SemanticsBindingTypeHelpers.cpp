@@ -83,12 +83,14 @@ bool matchesKeyValueBackingRootMetadataLocal(const std::string &normalized) {
   }
   auto matchesRoot = [&](std::string_view root) {
     const std::string unrootedRoot = stripLeadingSlashLocal(root);
-    if (unrootedRoot.empty()) {
+    if (unrootedRoot.empty() || metadata->backingTypeName.empty()) {
       return false;
     }
+    const std::string unrootedBackingRoot =
+        unrootedRoot + "/" + std::string(metadata->backingTypeName);
     const std::array<std::string, 2> roots = {
-        unrootedRoot + "/MapValue",
-        "/" + unrootedRoot + "/MapValue",
+        unrootedBackingRoot,
+        "/" + unrootedBackingRoot,
     };
     for (const std::string &candidate : roots) {
       if (normalized == candidate || normalized.rfind(candidate + "__", 0) == 0) {
@@ -279,7 +281,7 @@ bool validateBuiltinComparableKeyType(const BindingInfo &binding,
   return validateBuiltinComparableKeyType(keyType, templateArgs, error);
 }
 
-bool isMapCollectionTypeName(const std::string &name) {
+bool isKeyValueCollectionTypeName(const std::string &name) {
   const std::string normalized = normalizeBindingTypeName(name);
   return matchesKeyValueCollectionRootMetadataLocal(normalized) ||
          matchesKeyValueBackingRootMetadataLocal(normalized) ||
@@ -293,10 +295,10 @@ bool returnsKeyValueCollectionType(const std::string &typeText) {
     std::string base;
     std::string arg;
     if (!splitTemplateTypeName(normalizedType, base, arg)) {
-      return isMapCollectionTypeName(normalizedType);
+      return isKeyValueCollectionTypeName(normalizedType);
     }
     base = normalizeBindingTypeName(base);
-    if (isMapCollectionTypeName(base)) {
+    if (isKeyValueCollectionTypeName(base)) {
       std::vector<std::string> args;
       return splitTopLevelTemplateArgs(arg, args) && args.size() == 2;
     }
@@ -325,7 +327,7 @@ bool extractKeyValueCollectionTypesFromTypeText(const std::string &typeText,
       return false;
     }
     base = normalizeBindingTypeName(base);
-    if (isMapCollectionTypeName(base)) {
+    if (isKeyValueCollectionTypeName(base)) {
       std::vector<std::string> parts;
       if (!splitTopLevelTemplateArgs(argText, parts) || parts.size() != 2) {
         return false;

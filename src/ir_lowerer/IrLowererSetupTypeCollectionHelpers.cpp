@@ -32,7 +32,7 @@ std::string normalizePublishedCollectionPath(std::string path) {
   path = normalizeCollectionHelperPath(path);
   if (!path.empty() && path.front() != '/' &&
       (path.rfind("std/collections/", 0) == 0 ||
-       path.rfind(normalizeBuiltinCollectionStructPath("map").substr(1) + "/", 0) == 0 ||
+       path.rfind(keyValueCollectionAliasRoot(false) + "/", 0) == 0 ||
        path.rfind(std::string("vector") + "/", 0) == 0)) {
     path.insert(path.begin(), '/');
   }
@@ -497,6 +497,19 @@ std::string collectionWrapperAlias(std::string_view collectionName,
   return std::string(collectionName) + std::string(suffix);
 }
 
+std::string keyValueCollectionAliasRoot(bool leadingSlash) {
+  const auto *metadata = findStdlibSurfaceMetadataByBridgeKey("collections.map_constructors");
+  if (metadata != nullptr) {
+    for (std::string_view alias : metadata->importAliasSpellings) {
+      if (!alias.empty() && alias.front() != '/' &&
+          alias.find('/') == std::string_view::npos) {
+        return leadingSlash ? "/" + std::string(alias) : std::string(alias);
+      }
+    }
+  }
+  return leadingSlash ? "/" + std::string("map") : std::string("map");
+}
+
 bool isBuiltinCollectionTypeName(std::string_view typeName,
                                  std::string_view collectionName) {
   const std::string normalized(typeName);
@@ -528,14 +541,20 @@ bool isExperimentalCollectionTypeName(std::string_view typeName,
          normalized.rfind(rooted + "__", 0) == 0;
 }
 
-bool isExperimentalMapStructTypePath(std::string_view path) {
-  const std::string rooted = experimentalCollectionTypePath("map", "Map");
+std::string keyValueStorageStructRootPath(bool leadingSlash) {
   const auto *metadata = findStdlibSurfaceMetadataByBridgeKey("collections.map_helpers");
-  const std::string mapValueRoot =
-      metadata == nullptr ? std::string{} : std::string(metadata->canonicalPath) + "/MapValue";
-  return path == rooted || path.rfind(rooted + "__", 0) == 0 ||
-         (!mapValueRoot.empty() &&
-          (path == mapValueRoot || path.rfind(mapValueRoot + "__", 0) == 0));
+  std::string path =
+      metadata == nullptr ? std::string{} : stdlibSurfaceBackingTypePath(*metadata);
+  if (!leadingSlash && !path.empty() && path.front() == '/') {
+    path.erase(path.begin());
+  }
+  return path;
+}
+
+bool isKeyValueStorageStructPath(std::string_view path) {
+  const std::string storageRoot = keyValueStorageStructRootPath();
+  return !storageRoot.empty() &&
+         (path == storageRoot || path.rfind(storageRoot + "__", 0) == 0);
 }
 
 std::string normalizeBuiltinCollectionStructPath(std::string_view collectionName) {
@@ -564,7 +583,7 @@ std::string normalizeCollectionHelperPath(const std::string &path) {
         normalizedPath.rfind(std::string("vector") + "/", 0) == 0 ||
         normalizedPath.rfind(collectionMemberRoot("vector", false), 0) == 0 ||
         normalizedPath.rfind(experimentalCollectionMemberRoot("vec" "tor", false), 0) == 0 ||
-        normalizedPath.rfind(normalizeBuiltinCollectionStructPath("map").substr(1) + "/", 0) == 0 ||
+        normalizedPath.rfind(keyValueCollectionAliasRoot(false) + "/", 0) == 0 ||
         normalizedPath.rfind(collectionMemberRoot("map", false), 0) == 0) {
       normalizedPath.insert(normalizedPath.begin(), '/');
     }
@@ -615,7 +634,7 @@ bool isExplicitKeyValueMethodAliasPath(const std::string &methodName) {
     normalized.erase(normalized.begin());
   }
   const std::string mapPrefix =
-      normalizeBuiltinCollectionStructPath("map").substr(1) + "/";
+      keyValueCollectionAliasRoot(false) + "/";
   const std::string stdMapPrefix = collectionMemberRoot("map", false);
   if (normalized.rfind(mapPrefix, 0) == 0) {
     std::string helperName;
@@ -643,7 +662,7 @@ bool isExplicitKeyValueContainsOrTryAtMethodPath(const std::string &methodName) 
     normalized.erase(normalized.begin());
   }
   const std::string mapPrefix =
-      normalizeBuiltinCollectionStructPath("map").substr(1) + "/";
+      keyValueCollectionAliasRoot(false) + "/";
   const std::string stdMapPrefix = collectionMemberRoot("map", false);
   if (normalized.rfind(mapPrefix, 0) == 0) {
     std::string helperName;
@@ -907,7 +926,7 @@ bool isPublishedStdlibSurfaceConstructorExpr(const Expr &expr,
       expr, surfaceId, memberName);
 }
 
-std::string inferPublishedExperimentalMapStructPathFromConstructorPath(std::string_view path) {
+std::string inferPublishedKeyValueStorageStructPathFromConstructorPath(std::string_view path) {
   std::string memberName;
   const std::optional<StdlibSurfaceId> surfaceId = keyValueConstructorSurfaceId();
   if (!surfaceId.has_value()) {
@@ -930,7 +949,11 @@ std::string inferPublishedExperimentalMapStructPathFromConstructorPath(std::stri
   if (leaf.rfind(memberPrefix, 0) != 0) {
     return "";
   }
-  return experimentalCollectionTypePath("map", "Map") + "__" +
+  const std::string storageRoot = keyValueStorageStructRootPath();
+  if (storageRoot.empty()) {
+    return "";
+  }
+  return storageRoot + "__" +
          leaf.substr(memberPrefix.size());
 }
 

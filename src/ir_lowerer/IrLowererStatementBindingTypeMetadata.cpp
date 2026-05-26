@@ -55,7 +55,7 @@ bool inferPointerMemoryIntrinsicTargetsUninitializedStorageImpl(const Expr &expr
   return false;
 }
 
-bool resolveSpecializedExperimentalMapStructPath(const std::string &typeText, std::string &structPathOut) {
+bool resolveSpecializedKeyValueStorageStructPath(const std::string &typeText, std::string &structPathOut) {
   structPathOut.clear();
   std::string normalizedType = trimTemplateTypeText(typeText);
   std::string base;
@@ -75,7 +75,7 @@ bool resolveSpecializedExperimentalMapStructPath(const std::string &typeText, st
   if (!normalizedType.empty() && normalizedType.front() != '/') {
     normalizedType.insert(normalizedType.begin(), '/');
   }
-  if (isExperimentalMapStructTypePath(normalizedType) &&
+  if (isKeyValueStorageStructPath(normalizedType) &&
       normalizedType.find("__") != std::string::npos) {
     structPathOut = normalizedType;
     return true;
@@ -393,7 +393,7 @@ void applyArgsPackElementMetadata(const std::string &typeText, LocalInfo &infoOu
       infoOut.keyValueKeyKind = valueKindFromTypeName(trimTemplateTypeText(args[0]));
       infoOut.keyValueValueKind = valueKindFromTypeName(trimTemplateTypeText(args[1]));
       infoOut.valueKind = infoOut.keyValueValueKind;
-      resolveSpecializedExperimentalMapStructPath(pointerTargetType, infoOut.structTypeName);
+      resolveSpecializedKeyValueStorageStructPath(pointerTargetType, infoOut.structTypeName);
       return;
     }
     if (splitTemplateTypeName(pointerTargetType, pointerBase, pointerArg) &&
@@ -551,7 +551,7 @@ void applyArgsPackElementMetadata(const std::string &typeText, LocalInfo &infoOu
       infoOut.keyValueKeyKind = valueKindFromTypeName(trimTemplateTypeText(args[0]));
       infoOut.keyValueValueKind = valueKindFromTypeName(trimTemplateTypeText(args[1]));
       infoOut.valueKind = infoOut.keyValueValueKind;
-      resolveSpecializedExperimentalMapStructPath(refBase + "<" + refArg + ">", infoOut.structTypeName);
+      resolveSpecializedKeyValueStorageStructPath(refBase + "<" + refArg + ">", infoOut.structTypeName);
       return;
     }
     if (refBase == "File") {
@@ -656,7 +656,7 @@ void applyArgsPackElementStructMetadata(const Expr &param,
   }
 
   std::string specializedExperimentalMapStruct;
-  if (resolveSpecializedExperimentalMapStructPath(elementTypeText, specializedExperimentalMapStruct)) {
+  if (resolveSpecializedKeyValueStorageStructPath(elementTypeText, specializedExperimentalMapStruct)) {
     infoOut.structTypeName = specializedExperimentalMapStruct;
     return;
   }

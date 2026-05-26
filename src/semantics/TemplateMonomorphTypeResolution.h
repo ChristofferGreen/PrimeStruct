@@ -774,6 +774,15 @@ std::string resolveCalleePath(const Expr &expr,
   if (!expr.isMethodCall &&
       getBuiltinCollectionName(expr, builtinCollection) &&
       expr.name == builtinCollection) {
+    if (const std::string *importAlias =
+            lookupScopedImportAliasForNamespace(expr.name, namespacePrefix, ctx);
+        importAlias != nullptr) {
+      const std::string constructorAlias =
+          metadataBackedKeyValueConstructorAliasRewritePath(*importAlias);
+      if (!constructorAlias.empty()) {
+        return finalizeResolvedPath(constructorAlias);
+      }
+    }
     return finalizeResolvedPath("/" + builtinCollection);
   }
   if (!expr.name.empty() && expr.name[0] == '/') {

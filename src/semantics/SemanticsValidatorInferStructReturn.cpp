@@ -501,8 +501,8 @@ std::string SemanticsValidator::inferStructReturnPathImpl(
       keyType.clear();
       valueType.clear();
       const bool isExperimentalKeyValueReceiver =
-          builtinCollectionDispatchResolvers.resolveExperimentalMapTarget != nullptr &&
-          builtinCollectionDispatchResolvers.resolveExperimentalMapTarget(
+          builtinCollectionDispatchResolvers.resolveKeyValueTarget != nullptr &&
+          builtinCollectionDispatchResolvers.resolveKeyValueTarget(
               candidate.args[receiverIndex], keyType, valueType);
       if (!isKeyValueReceiver && !isExperimentalKeyValueReceiver) {
         return {};

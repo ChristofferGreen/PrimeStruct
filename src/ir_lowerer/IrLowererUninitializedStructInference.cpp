@@ -892,7 +892,7 @@ std::string inferStructExprPathFromDefinitionMapByCallTargetWithFieldIndex(
             (!rawCallPath.empty() && rawCallPath.front() != '/') ? "/" + rawCallPath : rawCallPath;
         auto inferPublishedKeyValueConstructorStruct = [&](const std::string &candidatePath) {
           const std::string publishedKeyValueStruct =
-              inferPublishedExperimentalMapStructPathFromConstructorPath(candidatePath);
+              inferPublishedKeyValueStorageStructPathFromConstructorPath(candidatePath);
           if (!publishedKeyValueStruct.empty()) {
             return publishedKeyValueStruct;
           }

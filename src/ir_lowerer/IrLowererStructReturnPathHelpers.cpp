@@ -154,7 +154,7 @@ std::string normalizeCollectionMethodName(std::string methodName) {
   const std::string stdVectorPrefix =
       collectionMemberRoot("vector", false);
   const std::string mapPrefix =
-      normalizeBuiltinCollectionStructPath("map").substr(1) + "/";
+      keyValueCollectionAliasRoot(false) + "/";
   const std::string stdMapPrefix =
       collectionMemberRoot("map", false);
   if (methodName.rfind(vectorPrefix, 0) == 0) {
@@ -243,11 +243,11 @@ std::vector<std::string> collectionMethodPathCandidates(const std::string &recei
       normalizedRawMethodName.erase(normalizedRawMethodName.begin());
     }
     const std::string mapPrefix =
-        normalizeBuiltinCollectionStructPath("map").substr(1) + "/";
+        keyValueCollectionAliasRoot(false) + "/";
     const std::string stdMapPrefix =
         collectionMemberRoot("map", false);
     if (normalizedRawMethodName.rfind(mapPrefix, 0) == 0) {
-      return {normalizeBuiltinCollectionStructPath("map") + "/" + methodName};
+      return {keyValueCollectionAliasRoot() + "/" + methodName};
     }
     if (normalizedRawMethodName.rfind(stdMapPrefix, 0) == 0) {
       return {canonicalKeyValueHelperPath(methodName)};
@@ -276,7 +276,7 @@ std::vector<std::string> collectionHelperPathCandidates(const std::string &path)
     if (normalizedPath.rfind("array/", 0) == 0 ||
         normalizedPath.rfind(normalizeBuiltinCollectionStructPath("vec" "tor").substr(1) + "/", 0) == 0 ||
         normalizedPath.rfind(collectionMemberRoot("vector", false), 0) == 0 ||
-        normalizedPath.rfind(normalizeBuiltinCollectionStructPath("map").substr(1) + "/", 0) == 0 ||
+        normalizedPath.rfind(keyValueCollectionAliasRoot(false) + "/", 0) == 0 ||
         normalizedPath.rfind(collectionMemberRoot("map", false), 0) == 0) {
       normalizedPath.insert(normalizedPath.begin(), '/');
     }

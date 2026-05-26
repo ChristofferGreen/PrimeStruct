@@ -467,7 +467,7 @@
                 receiverDef->fullPath.rfind(
                     experimentalCollectionMemberRoot("map"), 0) == 0) {
               collectionStructPath =
-                  inferPublishedExperimentalMapStructPathFromConstructorPath(
+                  inferPublishedKeyValueStorageStructPathFromConstructorPath(
                       receiverDef->fullPath);
             }
           }
@@ -701,7 +701,7 @@
               materializedInfo.keyValueValueKind = ir_lowerer::valueKindFromTypeName(collectionArgs.back());
               materializedInfo.valueKind = materializedInfo.keyValueValueKind;
               if (collectionStructPath.rfind(
-                      experimentalCollectionTypePath("map", "Map") + "__",
+                      keyValueStorageStructRootPath() + "__",
                       0) == 0) {
                 materializedInfo.structTypeName = collectionStructPath;
                 if (materializedInfo.structSlotCount <= 0) {

@@ -6,6 +6,55 @@ Legend:
 Finished items are periodically archived here from `docs/todo.md`; section headers record the archive date.
 
 **Todo Completion (May 26, 2026)**
+- [x] TODO-4576: Remove map backing-type compiler classification
+  - owner: ai
+  - created_at: 2026-05-24
+  - finished_at: 2026-05-26
+  - phase: Map/vector compiler-independence
+  - parallel_track: map-backing-classifier-deletion
+  - depends_on: TODO-4575
+  - inventory_categories: `map-backing-classifier`
+  - scope: Removed compiler-owned recognition of map backing struct shapes
+    and `MapValue` paths after map helper/access classifiers were deleted.
+  - outcome:
+    - Added stdlib surface metadata for generic backing type names and routed
+      map storage identity through that metadata instead of hard-coded
+      `MapValue` construction in production C++.
+    - Replaced the map backing predicate/resolver names with generic
+      key/value storage helpers and removed production references to
+      `isExperimentalMapStructTypePath`,
+      `inferPublishedExperimentalMapStructPathFromConstructorPath`,
+      `resolveExperimentalMapValueTarget`, `isMapValue`, and direct
+      experimental map backing path builders.
+    - Updated source-lock and inventory coverage so the
+      `map-backing-classifier` category must remain at zero while bridge-key
+      and registry-ID traces remain tracked for TODO-4578.
+  - validation:
+    - Local non-heavy inventory passed:
+      `python3 scripts/check_map_vector_compiler_knowledge.py --root . --require-zero-category map-backing-classifier`.
+    - Local script self-test passed:
+      `python3 tests/scripts/test_check_map_vector_compiler_knowledge.py --repo-root .`.
+    - Local Python bytecode check passed:
+      `python3 -m py_compile scripts/check_map_vector_compiler_knowledge.py tests/scripts/test_check_map_vector_compiler_knowledge.py`.
+    - Local whitespace check passed: `git diff --check`.
+    - Parent-scheduled release build passed:
+      `cmake --build build-release --target primec PrimeStruct_backend_ir_tests PrimeStruct_semantics_tests PrimeStruct_compile_run_tests -j 1`.
+    - Parent-scheduled backend IR slice passed:
+      `cd build-release && ./PrimeStruct_backend_ir_tests --test-case="ir lowerer call helpers source delegation stays stable,semantics validator infer source delegation stays stable,emitter expr source delegation stays stable,ir lowerer constructor metadata helpers retire duplicated constructor tables,ir lowerer tail map insert rewrite uses semantic receiver facts first" --no-skip`
+      with 4 cases / 1004 assertions.
+    - Parent-scheduled map source-lock slice passed:
+      `cd build-release && ./PrimeStruct_misc_tests --test-case="canonical map surface owns standalone stdlib implementation" --no-skip`
+      with 1 case / 2310 assertions.
+    - Parent-scheduled semantics slice passed:
+      `cd build-release && ./PrimeStruct_semantics_tests --test-case="canonical namespaced map access helpers accept experimental map values,stdlib namespaced map helpers accept experimental map value receivers,stdlib wrapper map helpers accept experimental map value receivers,stdlib namespaced map constructor accepts explicit experimental map returns,canonical map value methods validate ownership-sensitive values through map helpers" --no-skip`
+      with 5 cases / 10 assertions.
+    - Parent-scheduled compile-run slice passed:
+      `cd build-release && ./PrimeStruct_compile_run_tests --test-case="todo queue and skipped doctest debt stay source locked,compiles and runs canonical map constructor,compiles and runs map count,compiles and runs canonical namespaced map helpers on experimental map values in C++ emitter,compiles and runs wrapper map helpers on experimental map values in C++ emitter,compiles and runs inferred experimental map returns in C++ emitter,compiles and runs helper-wrapped experimental map struct storage fields in C++ emitter,compiles and runs borrowed experimental map helpers in C++ emitter" --no-skip`
+      with 8 cases / 531 assertions.
+  - stop_rule: Stopped once map backing identity was no longer recognized by
+    compiler-specific C++ branches and focused map behavior passed parent
+    validation.
+
 - [x] TODO-4577: Remove vector backing-type compiler classification
   - owner: ai
   - created_at: 2026-05-24
@@ -30,8 +79,8 @@ Finished items are periodically archived here from `docs/todo.md`; section heade
       literal path-builder spellings.
     - The map/vector compiler-knowledge inventory now reports no
       `vector-backing-classifier` category. Remaining `vector-literal-path`,
-      stdlib bridge-key, stdlib registry-id, and map backing traces stay owned
-      by TODO-4576, TODO-4578, and TODO-4579.
+      stdlib bridge-key, and stdlib registry-id traces stay owned by
+      TODO-4578 and TODO-4579.
   - validation:
     - Local non-heavy inventory passed:
       `python3 scripts/check_map_vector_compiler_knowledge.py --root . --require-zero-category vector-backing-classifier`.

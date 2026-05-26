@@ -129,7 +129,7 @@ bool resolveSemanticProductResultOkPayloadInfo(
       normalizedBase.erase(normalizedBase.begin());
     }
     if (isExperimentalCollectionTypeName(normalizedBase, "map", "Map") &&
-        resolveSpecializedExperimentalMapStructPathForBindingType(
+        resolveSpecializedKeyValueStorageStructPathForBindingType(
             bindingTypeText, out.structType)) {
       return true;
     }

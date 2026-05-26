@@ -2,6 +2,8 @@
 
 #include <string_view>
 
+#include "IrLowererSetupTypeCollectionHelpers.h"
+
 namespace primec::ir_lowerer {
 
 namespace {
@@ -40,7 +42,7 @@ std::string collectionWrapperAlias(std::string_view collectionName,
 
 bool isGeneratedStdlibCollectionStructPath(std::string_view path) {
   return isSinglePathSegmentWithPrefix(path, experimentalCollectionTypePath("vec" "tor", "Vector") + "__") ||
-         isSinglePathSegmentWithPrefix(path, experimentalCollectionTypePath("map", "Map") + "__") ||
+         isSinglePathSegmentWithPrefix(path, keyValueStorageStructRootPath() + "__") ||
          isSinglePathSegmentWithPrefix(path, "/std/collections/experimental" "_soa" "_vector/Soa" "Vector" "__") ||
          isSinglePathSegmentWithPrefix(path, "/std/collections/internal_soa_storage/SoaColumn__") ||
          isSinglePathSegmentWithPrefix(path, "/std/collections/internal_soa_storage/SoaFieldView__") ||

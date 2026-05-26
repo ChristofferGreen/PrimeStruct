@@ -649,7 +649,9 @@ main() {
 }
 )";
   std::string error;
-  CHECK(validateProgram(source, "/main", error));
+  const bool ok = validateProgram(source, "/main", error);
+  INFO(error);
+  CHECK(ok);
   CHECK(error.empty());
 }
 

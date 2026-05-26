@@ -132,7 +132,7 @@ std::string inferCollectionReceiverTypeFromTypeText(const std::string &typeText)
     if ((base == "array" || base == "vector") && args.size() == 1) {
       return borrowed ? "" : base;
     }
-    if (isMapCollectionTypeNameLocal(base) && args.size() == 2) {
+    if (isKeyValueCollectionTypeNameLocal(base) && args.size() == 2) {
       return borrowed ? "" : "map";
     }
     return "";
@@ -282,7 +282,7 @@ std::string inferMethodResolutionPrimitiveTypeName(
       return false;
     }
     const Expr &receiverExpr = candidate.args.front();
-    if (isMapValue(receiverExpr, localTypes)) {
+    if (isKeyValueStorageValue(receiverExpr, localTypes)) {
       return true;
     }
     if (inferPrimitiveTypeName) {
@@ -317,7 +317,7 @@ std::string inferMethodResolutionPrimitiveTypeName(
     }
     const size_t receiverIndex = getAccessCallReceiverIndex(candidate, localTypes);
     return receiverIndex < candidate.args.size() &&
-           isMapValue(candidate.args[receiverIndex], localTypes);
+           isKeyValueStorageValue(candidate.args[receiverIndex], localTypes);
   };
   auto isExplicitVectorAccessCompatibilityCall = [&](const Expr &candidate) {
     if (candidate.kind != Expr::Kind::Call || candidate.isMethodCall || candidate.name.empty()) {

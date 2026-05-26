@@ -480,7 +480,7 @@ bool emitKeyValueLookupAccess(
     const std::function<void(IrOpcode, uint64_t)> &emitInstruction,
     const std::function<void(size_t, uint64_t)> &patchInstructionImm,
     std::string &error) {
-  if (isExperimentalMapStructTypePath(mapStructTypeName)) {
+  if (isKeyValueStorageStructPath(mapStructTypeName)) {
     return emitExperimentalMapLookupAccess(
         accessName,
         keyValueKeyKind,
@@ -553,7 +553,7 @@ bool emitKeyValueLookupContains(
     const std::function<void(IrOpcode, uint64_t)> &emitInstruction,
     const std::function<void(size_t, uint64_t)> &patchInstructionImm,
     std::string &error) {
-  if (isExperimentalMapStructTypePath(mapStructTypeName)) {
+  if (isKeyValueStorageStructPath(mapStructTypeName)) {
     return emitExperimentalMapLookupContains(
         keyValueKeyKind,
         targetExpr,
@@ -616,7 +616,7 @@ bool emitKeyValueLookupTryAt(
     const std::function<void(IrOpcode, uint64_t)> &emitInstruction,
     const std::function<void(size_t, uint64_t)> &patchInstructionImm,
     std::string &error) {
-  if (isExperimentalMapStructTypePath(mapStructTypeName)) {
+  if (isKeyValueStorageStructPath(mapStructTypeName)) {
     return emitExperimentalMapLookupTryAt(
         keyValueKeyKind,
         targetExpr,

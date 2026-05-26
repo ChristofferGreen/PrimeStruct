@@ -625,7 +625,7 @@ TEST_CASE("ir lowerer constructor metadata helpers retire duplicated constructor
             "bool isResolvedCanonicalPublishedStdlibSurfaceConstructorPath(") !=
         std::string::npos);
   CHECK(setupHelpersSource.find(
-            "std::string inferPublishedExperimentalMapStructPathFromConstructorPath(") !=
+            "std::string inferPublishedKeyValueStorageStructPathFromConstructorPath(") !=
         std::string::npos);
 
   CHECK(accessTargetResolutionSource.find(
@@ -1036,13 +1036,13 @@ TEST_CASE("ir lowerer skips builtin map insert rewrite for direct experimental m
         std::string::npos);
   CHECK(tailDispatchSource.find("if (targetInfo.isWrappedKeyValueTarget ||") !=
         std::string::npos);
-  CHECK(tailDispatchSource.find("ir_lowerer::isExperimentalMapStructTypePath(targetInfo.structTypeName)) {") !=
+  CHECK(tailDispatchSource.find("ir_lowerer::isKeyValueStorageStructPath(targetInfo.structTypeName)) {") !=
         std::string::npos);
   CHECK(statementSource.find("experimentalMapType") ==
         std::string::npos);
   CHECK(tailDispatchSource.find("auto isSpecializedExperimentalKeyValueStructPath =") !=
         std::string::npos);
-  CHECK(tailDispatchSource.find("ir_lowerer::isExperimentalMapStructTypePath(structPath)") !=
+  CHECK(tailDispatchSource.find("ir_lowerer::isKeyValueStorageStructPath(structPath)") !=
         std::string::npos);
 }
 
@@ -1537,7 +1537,7 @@ TEST_CASE("ir lowerer tail map insert rewrite uses semantic receiver facts first
         std::string::npos);
   CHECK(tailDispatchSource.find("populateTailDispatchKeyValueStructPathFromKinds") ==
         std::string::npos);
-  CHECK(tailDispatchSource.find("resolveSpecializedExperimentalMapStructPathForBindingType(\n"
+  CHECK(tailDispatchSource.find("resolveSpecializedKeyValueStorageStructPathForBindingType(\n"
                                 "                      typeText, structPath)") ==
         std::string::npos);
   CHECK(tailDispatchSource.find("collectionTypePath(\"map\", false) + \"<\"") ==
@@ -1557,7 +1557,7 @@ TEST_CASE("ir lowerer tail map insert rewrite uses semantic receiver facts first
         std::string::npos);
   CHECK(tailDispatchSource.find("inferTailDispatchMapStructPathFromTypeText") ==
         std::string::npos);
-  CHECK(tailDispatchSource.find("ir_lowerer::isExperimentalMapStructTypePath(targetInfo.structTypeName)") !=
+  CHECK(tailDispatchSource.find("ir_lowerer::isKeyValueStorageStructPath(targetInfo.structTypeName)") !=
         std::string::npos);
 }
 

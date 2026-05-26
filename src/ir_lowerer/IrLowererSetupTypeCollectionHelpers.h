@@ -53,12 +53,14 @@ std::string experimentalCollectionTypePath(std::string_view collectionName,
                                            bool leadingSlash = true);
 std::string collectionWrapperAlias(std::string_view collectionName,
                                    std::string_view suffix);
+std::string keyValueCollectionAliasRoot(bool leadingSlash = true);
 bool isBuiltinCollectionTypeName(std::string_view typeName,
                                  std::string_view collectionName);
 bool isExperimentalCollectionTypeName(std::string_view typeName,
                                       std::string_view collectionName,
                                       std::string_view experimentalTypeName);
-bool isExperimentalMapStructTypePath(std::string_view path);
+std::string keyValueStorageStructRootPath(bool leadingSlash = true);
+bool isKeyValueStorageStructPath(std::string_view path);
 std::string normalizeBuiltinCollectionStructPath(std::string_view collectionName);
 std::string normalizeExperimentalCollectionTypePath(std::string_view typeName,
                                                     std::string_view collectionName,
@@ -94,7 +96,7 @@ bool isResolvedCanonicalPublishedStdlibSurfaceConstructorPath(std::string_view p
                                                               StdlibSurfaceId surfaceId);
 bool isPublishedStdlibSurfaceConstructorExpr(const Expr &expr,
                                              StdlibSurfaceId surfaceId);
-std::string inferPublishedExperimentalMapStructPathFromConstructorPath(std::string_view path);
+std::string inferPublishedKeyValueStorageStructPathFromConstructorPath(std::string_view path);
 bool resolvePublishedSemanticStdlibSurfaceMemberName(const SemanticProgram *semanticProgram,
                                                      const Expr &expr,
                                                      StdlibSurfaceId surfaceId,

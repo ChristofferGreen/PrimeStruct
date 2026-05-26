@@ -65,7 +65,7 @@ void SemanticsValidator::populateBuiltinCollectionDispatchStringResolver(
           lockedState->resolveCollectionVectorTarget(*accessReceiver, elemType)) {
         return normalizeBindingTypeName(elemType) == "string";
       }
-      if (lockedState->resolveExperimentalMapTarget(*accessReceiver, keyType, valueType)) {
+      if (lockedState->resolveKeyValueTarget(*accessReceiver, keyType, valueType)) {
         return false;
       }
       if (lockedState->resolveMapTarget(*accessReceiver, keyType, valueType)) {
@@ -108,7 +108,7 @@ void SemanticsValidator::populateBuiltinCollectionDispatchStringResolver(
     }
     std::string keyType;
     std::string valueType;
-    if (lockedState->resolveExperimentalMapTarget(target.args.front(), keyType, valueType)) {
+    if (lockedState->resolveKeyValueTarget(target.args.front(), keyType, valueType)) {
       return false;
     }
     return lockedState->resolveMapTarget(target.args.front(), keyType, valueType) &&

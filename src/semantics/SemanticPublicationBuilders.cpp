@@ -686,7 +686,7 @@ std::string collectionSpecializationStructPath(const CollectionSpecializationDra
   if (metadata == nullptr || metadata->canonicalPath.empty()) {
     return {};
   }
-  return std::string(metadata->canonicalPath) + "/MapValue" +
+  return stdlibSurfaceBackingTypePath(*metadata) +
          mangleSemanticTemplateArgsSuffix({draft.keyTypeText, draft.valueTypeText});
 }
 

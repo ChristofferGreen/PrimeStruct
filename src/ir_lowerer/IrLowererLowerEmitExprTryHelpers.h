@@ -438,7 +438,7 @@
                 normalized.insert(normalized.begin(), '/');
               }
               if (normalized.rfind(
-                      experimentalCollectionTypePath("map", "Map") + "__",
+                      keyValueStorageStructRootPath() + "__",
                       0) != 0) {
                 return false;
               }

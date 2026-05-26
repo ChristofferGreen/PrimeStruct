@@ -70,7 +70,7 @@ bool SemanticsValidator::validateExprMethodCallTarget(
   const auto &resolveVectorTarget = dispatchResolvers.resolveVectorTarget;
   const auto &resolveKeyValueTargetWithTypes = dispatchResolvers.resolveMapTarget;
   const auto &resolveExperimentalKeyValueTarget =
-      dispatchResolvers.resolveExperimentalMapTarget;
+      dispatchResolvers.resolveKeyValueTarget;
   const std::string normalizedMethodName =
       normalizeCollectionMethodName(expr.name);
   auto resolveKeyValueTarget = [&](const Expr &target) -> bool {

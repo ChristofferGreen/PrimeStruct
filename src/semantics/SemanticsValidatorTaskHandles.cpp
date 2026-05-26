@@ -186,7 +186,7 @@ ReturnKind SemanticsValidator::taskResultReturnKind(
     if (base == "array" || base == "vector" || base == "soa" "_vector" ||
         base == "Buffer" || base == "Result" || base == "Maybe" ||
         base == "tuple" || base == "std/tuple/tuple" ||
-        base == "/std/tuple/tuple" || isMapCollectionTypeName(base)) {
+        base == "/std/tuple/tuple" || isKeyValueCollectionTypeName(base)) {
       return ReturnKind::Array;
     }
   }

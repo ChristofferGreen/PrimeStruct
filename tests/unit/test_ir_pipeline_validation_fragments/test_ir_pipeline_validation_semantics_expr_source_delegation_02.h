@@ -88,18 +88,18 @@
         std::string::npos);
   CHECK(semanticsExprSource.find("const auto &resolveMapTargetWithTypes = builtinCollectionDispatchResolvers.resolveMapTarget;") ==
         std::string::npos);
-  CHECK(semanticsExprSource.find("const auto &resolveExperimentalMapTarget =") ==
+  CHECK(semanticsExprSource.find("const auto &resolveKeyValueTarget =") ==
         std::string::npos);
-  CHECK(semanticsExprSource.find("builtinCollectionDispatchResolvers.resolveExperimentalMapTarget;") ==
+  CHECK(semanticsExprSource.find("builtinCollectionDispatchResolvers.resolveKeyValueTarget;") ==
         std::string::npos);
   CHECK(semanticsExprDispatchBootstrapSource.find(
             "bootstrapOut.resolveMapTarget = [this,") !=
         std::string::npos);
-  CHECK(semanticsExprDispatchBootstrapSource.find("bootstrapOut.dispatchResolvers.resolveExperimentalMapTarget(target, keyType,") !=
+  CHECK(semanticsExprDispatchBootstrapSource.find("bootstrapOut.dispatchResolvers.resolveKeyValueTarget(target, keyType,") !=
         std::string::npos);
-  CHECK(semanticsExprSource.find("const auto &resolveExperimentalMapValueTarget =") ==
+  CHECK(semanticsExprSource.find("const auto &resolveDirectKeyValueTarget =") ==
         std::string::npos);
-  CHECK(semanticsExprSource.find("builtinCollectionDispatchResolvers.resolveExperimentalMapValueTarget;") ==
+  CHECK(semanticsExprSource.find("builtinCollectionDispatchResolvers.resolveDirectKeyValueTarget;") ==
         std::string::npos);
   CHECK(semanticsExprSource.find("auto preferredExperimentalMapHelperTarget = [&](std::string_view helperName) {") ==
         std::string::npos);

@@ -15,7 +15,7 @@ bool isCollectionLikeTemplateBase(std::string_view baseName) {
   const std::string normalizedBase = normalizeBindingTypeName(std::string(baseName));
   return normalizedBase == "array" || normalizedBase == "vector" ||
          normalizedBase == "soa" "_vector" || normalizedBase == "map" ||
-         isMapCollectionTypeName(normalizedBase);
+         isKeyValueCollectionTypeName(normalizedBase);
 }
 
 bool resolveCanonicalArgumentValidationKeyValueAccessHelper(
@@ -506,7 +506,7 @@ bool SemanticsValidator::validateArgumentTypeAgainstParam(
               "argument type mismatch for " + diagnosticResolved + " parameter " + param.name +
                   ": expected " + expectedTypeText + " got array<" + actualElemType + ">");
         }
-      } else if (isMapCollectionTypeName(normalizedExpectedBase) &&
+      } else if (isKeyValueCollectionTypeName(normalizedExpectedBase) &&
                  expectedTemplateArgs.size() == 2) {
         std::string actualKeyType;
         std::string actualValueType;
@@ -550,7 +550,7 @@ bool SemanticsValidator::validateArgumentTypeAgainstParam(
         if (inferCollectionBindingType(arg, inferredBase, inferredArgs) &&
             inferredArgs.size() == 2) {
           const std::string normalizedInferredBase = normalizeBindingTypeName(inferredBase);
-          if (isMapCollectionTypeName(normalizedInferredBase) ||
+          if (isKeyValueCollectionTypeName(normalizedInferredBase) ||
               isExperimentalMapBackingTemplateBaseForArgumentValidation(
                   normalizedInferredBase)) {
             if (normalizeBindingTypeName(expectedTemplateArgs[0]) ==
@@ -709,7 +709,7 @@ bool SemanticsValidator::validateArgumentTypeAgainstParam(
        (inferCollectionBindingType(arg, actualKeyValueBase,
                                    actualKeyValueTemplateArgs) &&
         actualKeyValueTemplateArgs.size() == 2 &&
-        (isMapCollectionTypeName(normalizeBindingTypeName(actualKeyValueBase)) ||
+        (isKeyValueCollectionTypeName(normalizeBindingTypeName(actualKeyValueBase)) ||
          isExperimentalMapBackingTemplateBaseForArgumentValidation(
              actualKeyValueBase)) &&
         normalizeBindingTypeName(expectedKeyValueKeyType) ==

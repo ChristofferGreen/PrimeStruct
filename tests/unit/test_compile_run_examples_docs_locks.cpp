@@ -1914,6 +1914,14 @@ TEST_CASE("todo queue and skipped doctest debt stay source locked") {
         std::string::npos);
   CHECK(todoFinished.find("TODO-4575: Remove map helper/access compiler classifiers") !=
         std::string::npos);
+  CHECK(todo.find("- TODO-4576: Remove map backing-type compiler classification | track:") ==
+        std::string::npos);
+  CHECK(todo.find("- [ ] TODO-4576: Remove map backing-type compiler classification") ==
+        std::string::npos);
+  CHECK(todoFinished.find("TODO-4576: Remove map backing-type compiler classification") !=
+        std::string::npos);
+  CHECK(todoFinished.find("map-backing-classifier` category must remain at zero") !=
+        std::string::npos);
   CHECK(todoFinished.find("TODO-4572: Remove vector statement-helper compiler path") !=
         std::string::npos);
   CHECK(todoFinished.find("TODO-4577: Remove vector backing-type compiler classification") !=

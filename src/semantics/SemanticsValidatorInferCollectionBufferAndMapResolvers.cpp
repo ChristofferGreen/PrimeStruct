@@ -417,7 +417,7 @@ void SemanticsValidator::populateBuiltinCollectionDispatchBufferAndMapResolvers(
     }
     return false;
   };
-  state->resolveExperimentalMapTarget =
+  state->resolveKeyValueTarget =
       [=, this](const Expr &target, std::string &keyTypeOut, std::string &valueTypeOut) -> bool {
     keyTypeOut.clear();
     valueTypeOut.clear();
@@ -469,7 +469,7 @@ void SemanticsValidator::populateBuiltinCollectionDispatchBufferAndMapResolvers(
     return inferCallBinding(target, binding) &&
            extractExperimentalKeyValueFieldTypes(binding, keyTypeOut, valueTypeOut);
   };
-  state->resolveExperimentalMapValueTarget =
+  state->resolveDirectKeyValueTarget =
       [=, this](const Expr &target, std::string &keyTypeOut, std::string &valueTypeOut) -> bool {
     auto extractValueBinding = [&](const BindingInfo &binding) {
       const std::string normalizedType = normalizeBindingTypeName(binding.typeName);

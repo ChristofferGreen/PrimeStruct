@@ -148,8 +148,8 @@ bool SemanticsValidator::resolveBuiltinCollectionMethodReturnKind(
     std::string valueType;
     if ((resolvers.resolveMapTarget != nullptr &&
          resolvers.resolveMapTarget(receiverExpr, keyType, valueType)) ||
-        (resolvers.resolveExperimentalMapTarget != nullptr &&
-         resolvers.resolveExperimentalMapTarget(receiverExpr, keyType, valueType))) {
+        (resolvers.resolveKeyValueTarget != nullptr &&
+         resolvers.resolveKeyValueTarget(receiverExpr, keyType, valueType))) {
       ReturnKind kind = returnKindForTypeName(normalizeBindingTypeName(valueType));
       if (kind != ReturnKind::Unknown) {
         kindOut = kind;
@@ -195,7 +195,7 @@ bool SemanticsValidator::resolveBuiltinCollectionAccessCallReturnKind(
     std::string keyType;
     std::string valueType;
     if (resolvers.resolveMapTarget(receiverExpr, keyType, valueType) ||
-        resolvers.resolveExperimentalMapTarget(receiverExpr, keyType, valueType)) {
+        resolvers.resolveKeyValueTarget(receiverExpr, keyType, valueType)) {
       ReturnKind kind = returnKindForTypeName(normalizeBindingTypeName(valueType));
       if (kind != ReturnKind::Unknown) {
         kindOut = kind;

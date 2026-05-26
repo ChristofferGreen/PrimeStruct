@@ -326,7 +326,7 @@ TEST_CASE("ir lowerer call helpers source delegation stays stable") {
   CHECK(accessLoadHelpersSource.find("bool emitKeyValueLookupTryAt(") !=
         std::string::npos);
   CHECK(accessLoadHelpersSource.find(
-            "isExperimentalMapStructTypePath(mapStructTypeName)") !=
+            "isKeyValueStorageStructPath(mapStructTypeName)") !=
         std::string::npos);
   CHECK(accessLoadHelpersSource.find("bool isExperimentalMapStructPath(") ==
         std::string::npos);
@@ -1170,7 +1170,7 @@ TEST_CASE("ir lowerer vector type layout traces use generic collection helpers")
             "isExperimentalCollectionTypeName(structTypeName, \"vector\", \"Vector\")") !=
         std::string::npos);
   CHECK(accessTargetSource.find(
-            "isExperimentalMapStructTypePath(resolvedStructTypeName)") !=
+            "isKeyValueStorageStructPath(resolvedStructTypeName)") !=
         std::string::npos);
   CHECK(accessTargetSource.find("bool isExperimentalMapStructPath(") ==
         std::string::npos);

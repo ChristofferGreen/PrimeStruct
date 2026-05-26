@@ -49,9 +49,9 @@
         std::string::npos);
   CHECK(validatorHeader.find("std::function<bool(const Expr &, std::string &)> resolveBufferTarget;") !=
         std::string::npos);
-  CHECK(validatorHeader.find("std::function<bool(const Expr &, std::string &, std::string &)> resolveExperimentalMapTarget;") !=
+  CHECK(validatorHeader.find("std::function<bool(const Expr &, std::string &, std::string &)> resolveKeyValueTarget;") !=
         std::string::npos);
-  CHECK(validatorHeader.find("std::function<bool(const Expr &, std::string &, std::string &)> resolveExperimentalMapValueTarget;") !=
+  CHECK(validatorHeader.find("std::function<bool(const Expr &, std::string &, std::string &)> resolveDirectKeyValueTarget;") !=
         std::string::npos);
   CHECK(validatorHeader.find("struct InferCollectionDispatchSetup") != std::string::npos);
   CHECK(validatorHeader.find("void prepareInferCollectionDispatchSetup(") != std::string::npos);
@@ -88,8 +88,8 @@
         std::string::npos);
   CHECK(validatorCollections.find("state->resolveBufferTarget = [") !=
         std::string::npos);
-  CHECK(validatorCollections.find("state->resolveExperimentalMapTarget =") != std::string::npos);
-  CHECK(validatorCollections.find("state->resolveExperimentalMapValueTarget =") != std::string::npos);
+  CHECK(validatorCollections.find("state->resolveKeyValueTarget =") != std::string::npos);
+  CHECK(validatorCollections.find("state->resolveDirectKeyValueTarget =") != std::string::npos);
   CHECK(validatorCollections.find("resolvePublishedCollectionHelperMemberToken(") !=
         std::string::npos);
   CHECK(validatorCollections.find(
@@ -238,15 +238,15 @@
         std::string::npos);
   CHECK(validatorExprMain.find("const auto &resolveKeyValueTargetWithTypes = builtinCollectionDispatchResolvers.resolveMapTarget;") ==
         std::string::npos);
-  CHECK(validatorExprMain.find("const auto &resolveExperimentalMapTarget =") == std::string::npos);
-  CHECK(validatorExprMain.find("builtinCollectionDispatchResolvers.resolveExperimentalMapTarget;") ==
+  CHECK(validatorExprMain.find("const auto &resolveKeyValueTarget =") == std::string::npos);
+  CHECK(validatorExprMain.find("builtinCollectionDispatchResolvers.resolveKeyValueTarget;") ==
         std::string::npos);
   CHECK(validatorExpr.find("bootstrapOut.resolveMapTarget = [this,") !=
         std::string::npos);
-  CHECK(validatorExpr.find("bootstrapOut.dispatchResolvers.resolveExperimentalMapTarget(target, keyType,") !=
+  CHECK(validatorExpr.find("bootstrapOut.dispatchResolvers.resolveKeyValueTarget(target, keyType,") !=
         std::string::npos);
-  CHECK(validatorExpr.find("dispatchResolvers.resolveExperimentalMapValueTarget == nullptr") != std::string::npos);
-  CHECK(validatorExpr.find("dispatchResolvers.resolveExperimentalMapValueTarget(receiverExpr, keyType, valueType)") !=
+  CHECK(validatorExpr.find("dispatchResolvers.resolveDirectKeyValueTarget == nullptr") != std::string::npos);
+  CHECK(validatorExpr.find("dispatchResolvers.resolveDirectKeyValueTarget(receiverExpr, keyType, valueType)") !=
         std::string::npos);
   CHECK(validatorExprMain.find("auto preferredExperimentalKeyValueHelperTarget = [&](std::string_view helperName) {") ==
         std::string::npos);

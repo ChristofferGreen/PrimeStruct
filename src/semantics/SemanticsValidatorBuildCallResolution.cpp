@@ -428,6 +428,15 @@ std::string SemanticsValidator::resolveCalleePath(const Expr &expr) const {
     return rewriteCanonicalCollectionConstructorPath(joinedPath(normalizedPrefix, expr.name));
   }
 
+  if (const std::string *importAlias = lookupScopedImportAlias(expr.name);
+      importAlias != nullptr) {
+    const std::string constructorAlias =
+        metadataBackedKeyValueConstructorAliasRewritePath(*importAlias);
+    if (!constructorAlias.empty()) {
+      return rewriteCanonicalCollectionConstructorPath(constructorAlias);
+    }
+  }
+
   const std::string root = rootedPathForName(expr.name);
   if (hasDefinitionFamilyPath(root)) {
     return rewriteCanonicalCollectionConstructorPath(root);

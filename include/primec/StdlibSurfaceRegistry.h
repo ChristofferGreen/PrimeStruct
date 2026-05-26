@@ -44,6 +44,7 @@ struct StdlibSurfaceMetadata {
   std::string_view bridgeKey;
   std::string_view canonicalImportRoot;
   std::string_view canonicalPath;
+  std::string_view backingTypeName;
   std::span<const std::string_view> memberNames;
   std::span<const StdlibSurfaceMemberAlias> memberAliases;
   std::span<const std::string_view> statementMemberNames;
@@ -61,6 +62,8 @@ const StdlibSurfaceMetadata *findStdlibSurfaceMetadataByResolvedPath(std::string
 std::string_view resolveStdlibSurfaceMemberName(const StdlibSurfaceMetadata &metadata,
                                                 std::string_view path);
 std::string stdlibSurfaceCanonicalHelperPath(StdlibSurfaceId id, std::string_view helperName);
+std::string stdlibSurfaceBackingTypePath(const StdlibSurfaceMetadata &metadata);
+std::string stdlibSurfaceBackingTypePath(StdlibSurfaceId id);
 std::string stdlibSurfacePreferredSpellingForMember(StdlibSurfaceId id,
                                                     std::string_view spelling,
                                                     std::string_view preferredPrefix);

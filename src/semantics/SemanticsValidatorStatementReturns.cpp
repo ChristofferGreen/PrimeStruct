@@ -1,5 +1,6 @@
 #include "SemanticsValidator.h"
 
+#include "StdlibCollectionSurfaceHelpers.h"
 #include "SemanticsValidatorInferCollectionCompatibilityInternal.h"
 
 #include <array>
@@ -1092,8 +1093,11 @@ bool SemanticsValidator::validateReturnStatement(const std::vector<ParameterInfo
             if (isSpecializedExperimentalKeyValueBackingPath(normalizedTypePath)) {
               return keyValueCollectionMarker;
             }
-            const std::string canonicalKeyValueBackingRoot =
-                collectionTypePathLocal("map", "MapValue", false);
+            std::string canonicalKeyValueBackingRoot = keyValueBackingTypePathLocal();
+            if (!canonicalKeyValueBackingRoot.empty() &&
+                canonicalKeyValueBackingRoot.front() == '/') {
+              canonicalKeyValueBackingRoot.erase(canonicalKeyValueBackingRoot.begin());
+            }
             if (normalizedTypePath.rfind(canonicalKeyValueBackingRoot + "__", 0) == 0 ||
                 normalizedTypePath == canonicalKeyValueBackingRoot) {
               return keyValueCollectionMarker;
@@ -1116,7 +1120,7 @@ bool SemanticsValidator::validateReturnStatement(const std::vector<ParameterInfo
             if (typePath == "/soa" "_vector" || typePath == "soa" "_vector") {
               return "/soa" "_vector";
             }
-            if (isMapCollectionTypeName(typePath) || typePath == keyValueCollectionMarker ||
+            if (isKeyValueCollectionTypeName(typePath) || typePath == keyValueCollectionMarker ||
                 typePath == collectionTypePathLocal("map")) {
               return keyValueCollectionMarker;
             }

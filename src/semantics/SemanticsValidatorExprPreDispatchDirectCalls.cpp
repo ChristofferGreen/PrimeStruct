@@ -503,8 +503,8 @@ bool SemanticsValidator::validateExprPreDispatchDirectCalls(
       keyType.clear();
       valueType.clear();
       const bool isExperimentalKeyValueReceiver =
-          dispatchBootstrap.dispatchResolvers.resolveExperimentalMapTarget != nullptr &&
-          dispatchBootstrap.dispatchResolvers.resolveExperimentalMapTarget(
+          dispatchBootstrap.dispatchResolvers.resolveKeyValueTarget != nullptr &&
+          dispatchBootstrap.dispatchResolvers.resolveKeyValueTarget(
               expr.args[receiverIndex], keyType, valueType);
       if (isKeyValueReceiver || isExperimentalKeyValueReceiver) {
         resolvedOut = preferredBareKeyValueHelperTarget(helperName);
@@ -586,8 +586,8 @@ bool SemanticsValidator::validateExprPreDispatchDirectCalls(
       std::string keyType;
       std::string valueType;
       const bool isExperimentalKeyValueTarget =
-          dispatchBootstrap.dispatchResolvers.resolveExperimentalMapTarget != nullptr &&
-          dispatchBootstrap.dispatchResolvers.resolveExperimentalMapTarget(
+          dispatchBootstrap.dispatchResolvers.resolveKeyValueTarget != nullptr &&
+          dispatchBootstrap.dispatchResolvers.resolveKeyValueTarget(
               receiverExpr, keyType, valueType);
       keyType.clear();
       valueType.clear();
@@ -701,7 +701,7 @@ bool SemanticsValidator::validateExprPreDispatchDirectCalls(
     auto resolvesNonRootExperimentalKeyValueTarget =
         [&](const Expr &candidate) {
           return !isRootMapConstructorExpr(candidate) &&
-                 dispatchBootstrap.dispatchResolvers.resolveExperimentalMapValueTarget(
+                 dispatchBootstrap.dispatchResolvers.resolveDirectKeyValueTarget(
                      candidate, receiverTypeText, borrowedHelperProbe);
         };
     auto isNonRootExperimentalKeyValueReceiverExpr = [&](const Expr &candidate) {
@@ -711,7 +711,7 @@ bool SemanticsValidator::validateExprPreDispatchDirectCalls(
     if (getBuiltinArrayAccessName(expr, builtinAccessName) &&
         isUnqualifiedCollectionAccessCall(expr, builtinAccessName) &&
         expr.args.size() == 2 &&
-        ((dispatchBootstrap.dispatchResolvers.resolveExperimentalMapValueTarget !=
+        ((dispatchBootstrap.dispatchResolvers.resolveDirectKeyValueTarget !=
           nullptr &&
           (resolvesNonRootExperimentalKeyValueTarget(expr.args.front()) ||
            resolvesNonRootExperimentalKeyValueTarget(expr.args[1]))) ||

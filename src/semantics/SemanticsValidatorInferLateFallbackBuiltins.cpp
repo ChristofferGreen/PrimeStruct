@@ -151,7 +151,7 @@ ReturnKind SemanticsValidator::inferLateFallbackReturnKind(
   const auto &resolveKeyValueTarget =
       builtinCollectionDispatchResolvers.resolveMapTarget;
   const auto &resolveExperimentalKeyValueTarget =
-      builtinCollectionDispatchResolvers.resolveExperimentalMapTarget;
+      builtinCollectionDispatchResolvers.resolveKeyValueTarget;
   auto finish = [&](ReturnKind kind) -> ReturnKind {
     handled = true;
     return kind;

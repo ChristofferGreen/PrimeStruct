@@ -44,8 +44,8 @@ bool SemanticsValidator::validateExprLateCollectionAccessFallbacks(
         return this->resolveKeyValueKeyType(target, *context.dispatchResolvers,
                                        keyValueKeyTypeOut);
       };
-  collectionAccessValidationContext.resolveExperimentalMapTarget =
-      context.dispatchResolvers->resolveExperimentalMapTarget;
+  collectionAccessValidationContext.resolveKeyValueTarget =
+      context.dispatchResolvers->resolveKeyValueTarget;
   collectionAccessValidationContext.isIndexedArgsPackKeyValueReceiverTarget =
       [&](const Expr &target) {
         return this->isIndexedArgsPackKeyValueReceiverTarget(target,

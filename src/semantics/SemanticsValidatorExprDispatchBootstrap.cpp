@@ -205,7 +205,7 @@ void SemanticsValidator::prepareExprDispatchBootstrap(
     std::string keyType;
     std::string valueType;
     if (bootstrapOut.dispatchResolvers.resolveMapTarget(target, keyType, valueType) ||
-        bootstrapOut.dispatchResolvers.resolveExperimentalMapTarget(target, keyType,
+        bootstrapOut.dispatchResolvers.resolveKeyValueTarget(target, keyType,
                                                                     valueType)) {
       return true;
     }

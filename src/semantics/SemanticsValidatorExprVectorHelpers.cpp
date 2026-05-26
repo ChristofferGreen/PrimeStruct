@@ -474,7 +474,7 @@ bool SemanticsValidator::resolveVectorHelperMethodTarget(
         tryResolveVectorReceiverSamePathSoaHelper(normalizedHelperName)) {
       return true;
     }
-    if ((resolvedType == "/map" || isMapCollectionTypeName(normalizedTypeName)) &&
+    if ((resolvedType == "/map" || isKeyValueCollectionTypeName(normalizedTypeName)) &&
         (normalizedHelperName == "count" || normalizedHelperName == "count_ref" ||
          normalizedHelperName == "size" ||
          normalizedHelperName == "contains" || normalizedHelperName == "contains_ref" ||
