@@ -51,6 +51,8 @@ Or run the manual steps:
    - `./spinning_cube_window_host --gfx ./cube_stdlib_gfx_stream --simulation-smoke`
 6. Optional software-surface bridge demo:
    - `./spinning_cube_window_host --software-surface-demo --max-frames 1`
+7. Optional UI scene software-surface demo:
+   - `./spinning_cube_window_host --software-surface-ui-demo --max-frames 1`
 
 The window host now renders an indexed cube mesh each frame and updates
 transform uniforms from the deterministic simulation tail embedded in the
@@ -60,6 +62,9 @@ readiness metadata consumed by the shared Metal host.
 The software-surface demo reuses the same window presenter path, uploads a
 deterministic BGRA8 software buffer into a shared Metal texture, and blits it
 into the drawable.
+The UI scene software-surface demo first renders the checked-in PrimeStruct
+`/std/ui` scene-record fixture through the shared UI scene bridge, then uses the
+same upload and presenter path.
 
 Expected diagnostics include:
 - `gfx_profile=native-desktop`

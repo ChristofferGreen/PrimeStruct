@@ -1,4 +1,5 @@
 #include "examples/shared/scene_bgra8_renderer.h"
+#include "examples/shared/ui_scene_surface_bridge.h"
 
 #include "third_party/doctest.h"
 
@@ -561,6 +562,30 @@ TEST_CASE("scene bgra8 renderer composes text overlay over scene primitives") {
   CHECK(hashPixels(first.frame) == hashPixels(second.frame));
   CHECK(hashPixels(first.frame) != hashPixels(base.frame));
   CHECK(pixelAt(first.frame, 3, 3) != pixelAt(base.frame, 3, 3));
+  CHECK(pixelAt(first.frame, 1, 1) == pixelAt(base.frame, 1, 1));
+}
+
+TEST_CASE("ui scene surface bridge renders prime-authored ui scene to bgra8") {
+  namespace bridge = primestruct::ui_scene_surface;
+  namespace renderer = primestruct::scene_bgra8_renderer;
+
+  const auto first = bridge::makeDemoUiSceneSurfaceFrame();
+  const auto second = bridge::makeDemoUiSceneSurfaceFrame();
+  REQUIRE(first.ok);
+  REQUIRE(second.ok);
+  REQUIRE(first.frame.width == 40);
+  REQUIRE(first.frame.height == 32);
+  CHECK(first.serializedScene.size() > bridge::demoSerializedUiScene().size());
+  CHECK(first.overlays.size() == 2u);
+
+  std::string validationError;
+  CHECK(primestruct::software_surface::validateFrame(first.frame, validationError));
+  CHECK(hashPixels(first.frame) == hashPixels(second.frame));
+  CHECK(hashPixels(first.frame) != hashPixels(primestruct::software_surface::makeDemoFrame(40, 32)));
+
+  const auto base = renderer::renderSerializedSceneToBgra8(first.serializedScene);
+  REQUIRE(base.ok);
+  CHECK(hashPixels(first.frame) != hashPixels(base.frame));
   CHECK(pixelAt(first.frame, 1, 1) == pixelAt(base.frame, 1, 1));
 }
 

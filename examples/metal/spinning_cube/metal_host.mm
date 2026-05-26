@@ -118,6 +118,7 @@ int main(int argc, char **argv) {
     std::cerr << "       metal_host --snapshot-code <ticks>\n";
     std::cerr << "       metal_host --parity-check <ticks>\n";
     std::cerr << "       metal_host --software-surface-demo\n";
+    std::cerr << "       metal_host --software-surface-ui-demo\n";
     return argc < 2 ? 64 : 0;
   }
 
@@ -145,6 +146,12 @@ int main(int argc, char **argv) {
   if (std::string(argv[1]) == "--software-surface-demo") {
     SoftwareSurfaceDemoConfig config;
     config.gfxProfile = deducedGfxProfileName();
+    return primestruct::metal_offscreen_host::runSoftwareSurfaceDemo(config);
+  }
+  if (std::string(argv[1]) == "--software-surface-ui-demo") {
+    SoftwareSurfaceDemoConfig config;
+    config.gfxProfile = deducedGfxProfileName();
+    config.useUiSceneDemo = true;
     return primestruct::metal_offscreen_host::runSoftwareSurfaceDemo(config);
   }
 

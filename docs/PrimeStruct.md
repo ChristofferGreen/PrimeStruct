@@ -2276,7 +2276,9 @@ module {
   `append_input`, `append_panel`, `append_login_form`, `emit_scene_panel`, `emit_scene_label`, `emit_scene_button`,
   `emit_scene_panel_button`, `measure`, `arrange`, deterministic `serialize()` output), and the current host bridge can
   blit a deterministic BGRA8 software
-  surface through the native window presenter and macOS Metal host paths while the shared widget/layout model can also
+  surface through the native window presenter and macOS Metal host paths. The `--software-surface-ui-demo` mode now
+  renders the checked-in PrimeStruct-authored `UiScene` fixture through `ui_scene_surface_bridge.h` into the same BGRA8
+  presenter path while the shared widget/layout model can also
   emit deterministic HTML/backend adapter records and normalize pointer, keyboard, IME, resize, and focus input into
   deterministic UI event-stream records. The scene renderer boundary is now locked as a UI producer contract rather
   than a UI-specific software renderer: `/std/ui/*` owns rect/layout/state/event logic and now emits deterministic

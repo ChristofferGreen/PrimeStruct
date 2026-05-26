@@ -5,9 +5,11 @@
 
 #include "gfx_contract_shared.h"
 #include "software_surface_bridge.h"
+#include "ui_scene_surface_bridge.h"
 
 #include <iostream>
 #include <string>
+#include <utility>
 
 namespace primestruct::metal_offscreen_host {
 
@@ -21,6 +23,7 @@ struct FailureInfo {
 
 struct SoftwareSurfaceDemoConfig {
   const char *gfxProfile = "";
+  bool useUiSceneDemo = false;
   int deviceFailureExitCode = 70;
   int queueFailureExitCode = 74;
   int uploadFailureExitCode = 75;
@@ -125,7 +128,18 @@ inline int runSoftwareSurfaceDemo(const SoftwareSurfaceDemoConfig &config) {
       return config.queueFailureExitCode;
     }
 
-    const software_surface::SoftwareSurfaceFrame surfaceFrame = software_surface::makeDemoFrame();
+    software_surface::SoftwareSurfaceFrame surfaceFrame;
+    if (config.useUiSceneDemo) {
+      ui_scene_surface::UiSceneSurfaceResult uiSceneResult =
+          ui_scene_surface::makeDemoUiSceneSurfaceFrame();
+      if (!uiSceneResult.ok) {
+        emitGfxError(std::cerr, config.gfxProfile, GfxErrorCode::MeshCreateFailed, uiSceneResult.error);
+        return config.uploadFailureExitCode;
+      }
+      surfaceFrame = std::move(uiSceneResult.frame);
+    } else {
+      surfaceFrame = software_surface::makeDemoFrame();
+    }
     id<MTLTexture> softwareSurfaceTexture = nil;
     std::string softwareSurfaceWhy;
     if (!uploadSoftwareSurfaceFrame(device, surfaceFrame, softwareSurfaceTexture, softwareSurfaceWhy)) {
@@ -188,6 +202,9 @@ inline int runSoftwareSurfaceDemo(const SoftwareSurfaceDemoConfig &config) {
 
     std::cout << "gfx_profile=" << config.gfxProfile << "\n";
     std::cout << "software_surface_bridge=1\n";
+    if (config.useUiSceneDemo) {
+      std::cout << "software_surface_ui_scene=1\n";
+    }
     std::cout << "software_surface_width=" << surfaceFrame.width << "\n";
     std::cout << "software_surface_height=" << surfaceFrame.height << "\n";
     std::cout << "software_surface_presented=1\n";

@@ -47,6 +47,9 @@ spinning-cube sample.
   runs one offscreen frame, and requires `frame_rendered=1`.
 - `--software-surface-demo` skips shader/metallib compilation, runs the shared
   software-surface path, and requires `software_surface_presented=1`.
+- `--software-surface-ui-demo` renders the checked-in PrimeStruct `/std/ui`
+  scene-record fixture through the shared UI scene bridge before the same
+  software-surface upload path.
 - `--snapshot-code` and `--parity-check` compile only the host and forward the
   requested deterministic helper mode through the shared
   `spinning_cube_simulation_reference.h` path.
@@ -57,6 +60,8 @@ The software-surface bridge smoke uploads a deterministic BGRA8 software buffer
 into a shared Metal texture, blits it into the host target texture, and prints
 `software_surface_bridge=1`, `software_surface_width=64`,
 `software_surface_height=64`, and `software_surface_presented=1`.
+The UI scene software-surface mode prints `software_surface_ui_scene=1` and
+uses a deterministic 40x32 BGRA8 frame rendered from the UI scene fixture.
 
 Failure diagnostics print deterministic:
 - `gfx_profile=metal-osx`

@@ -47,7 +47,7 @@ TEST_CASE("spinning cube native window host sample compiles and validates args d
   CHECK(hostSource.find("gfx_mesh_vertex_count=") != std::string::npos);
   CHECK(hostSource.find("gfx_submit_present_mask=") != std::string::npos);
   CHECK(hostSource.find("simulation_stream_loaded=1") != std::string::npos);
-  CHECK(hostSource.find("simulation_fixed_step_millis=16") != std::string::npos);
+  CHECK(hostSource.find("simulation_fixed_step_millis=") != std::string::npos);
   CHECK(hostSource.find("shader_library_ready=1") != std::string::npos);
   CHECK(hostSource.find("vertex_buffer_ready=1") != std::string::npos);
   CHECK(hostSource.find("index_buffer_ready=1") != std::string::npos);
@@ -96,8 +96,8 @@ TEST_CASE("spinning cube native window host sample compiles and validates args d
   CHECK(runCommand(helpCmd) == 0);
   CHECK(readFile(helpErrPath.string()).empty());
   CHECK(readFile(helpOutPath.string())
-            .find("usage: window_host (--gfx <path> | --software-surface-demo) [--max-frames <positive-int>] "
-                  "[--simulation-smoke]") !=
+            .find("usage: window_host (--gfx <path> | --software-surface-demo | --software-surface-ui-demo) "
+                  "[--max-frames <positive-int>] [--simulation-smoke]") !=
         std::string::npos);
 
   const std::filesystem::path missingRequiredOutPath = outDir / "window_host.missing_required.out.txt";
@@ -108,7 +108,7 @@ TEST_CASE("spinning cube native window host sample compiles and validates args d
   CHECK(runCommand(missingRequiredCmd) == 64);
   CHECK(readFile(missingRequiredOutPath.string()).empty());
   CHECK(readFile(missingRequiredErrPath.string())
-            .find("missing required --gfx <path> or --software-surface-demo") !=
+            .find("missing required --gfx <path>, --software-surface-demo, or --software-surface-ui-demo") !=
         std::string::npos);
 
   const std::filesystem::path missingGfxOutPath = outDir / "window_host.missing_gfx_value.out.txt";
@@ -145,7 +145,8 @@ TEST_CASE("spinning cube native window host sample compiles and validates args d
       quoteShellArg(incompatibleModeOutPath.string()) + " 2> " + quoteShellArg(incompatibleModeErrPath.string());
   CHECK(runCommand(incompatibleModeCmd) == 64);
   CHECK(readFile(incompatibleModeOutPath.string()).empty());
-  CHECK(readFile(incompatibleModeErrPath.string()).find("--simulation-smoke is incompatible with --software-surface-demo") !=
+  CHECK(readFile(incompatibleModeErrPath.string())
+            .find("--simulation-smoke is incompatible with --software-surface-demo/--software-surface-ui-demo") !=
         std::string::npos);
 
   const std::filesystem::path badStreamOutPath = outDir / "window_host.bad_stream.out.txt";

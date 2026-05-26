@@ -468,14 +468,19 @@ TEST_CASE("spinning cube native window host software surface bridge stays source
 
   CHECK(hostSource.find("#include \"../../shared/gfx_contract_shared.h\"") != std::string::npos);
   CHECK(hostSource.find("#include \"../../shared/software_surface_bridge.h\"") != std::string::npos);
+  CHECK(hostSource.find("#include \"../../shared/ui_scene_surface_bridge.h\"") != std::string::npos);
   CHECK(hostSource.find("uploadSoftwareSurfaceFrameToTexture") != std::string::npos);
+  CHECK(hostSource.find("primestruct::ui_scene_surface::makeDemoUiSceneSurfaceFrame()") != std::string::npos);
   CHECK(hostSource.find("software_surface_bridge=1") != std::string::npos);
+  CHECK(hostSource.find("software_surface_ui_scene=1") != std::string::npos);
   CHECK(hostSource.find("software_surface_width=") != std::string::npos);
   CHECK(hostSource.find("software_surface_height=") != std::string::npos);
   CHECK(hostSource.find("software_surface_presenter_ready=1") != std::string::npos);
   CHECK(hostSource.find("software_surface_presented=1") != std::string::npos);
   CHECK(hostSource.find("--software-surface-demo") != std::string::npos);
-  CHECK(hostSource.find("--simulation-smoke is incompatible with --software-surface-demo") != std::string::npos);
+  CHECK(hostSource.find("--software-surface-ui-demo") != std::string::npos);
+  CHECK(hostSource.find("--simulation-smoke is incompatible with --software-surface-demo/--software-surface-ui-demo") !=
+        std::string::npos);
   CHECK(hostSource.find("copyFromTexture:state.softwareSurfaceTexture") != std::string::npos);
   CHECK(hostSource.find("id<MTLBlitCommandEncoder> blitEncoder = [commandBuffer blitCommandEncoder];") !=
         std::string::npos);

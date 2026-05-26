@@ -1823,8 +1823,11 @@ TEST_CASE("todo queue and skipped doctest debt stay source locked") {
                   "  coverage snapshots in this file.") !=
         std::string::npos);
   CHECK(todo.find("### Ready Now\n\n"
-                  "- TODO-4569: Present scene-rendered UI through software surface bridge | track: "
-                  "ui-scene-presentation") !=
+                  "- TODO-4578: Generalize stdlib surface registry away from map/vector IDs | track: "
+                  "stdlib-registry-generalization") !=
+        std::string::npos);
+  CHECK(todo.find("- TODO-4569: Present scene-rendered UI through software surface bridge | track: "
+                  "ui-scene-presentation") ==
         std::string::npos);
   CHECK(todo.find("- TODO-4568: Emit scene nodes from the existing UI layout/widgets | track: "
                   "ui-scene-adapter") ==
@@ -1834,9 +1837,6 @@ TEST_CASE("todo queue and skipped doctest debt stay source locked") {
         std::string::npos);
   CHECK(todo.find("- TODO-4596: Rasterize shaped scene text through a glyph atlas | track: "
                   "scene-text-rasterization") ==
-        std::string::npos);
-  CHECK(todo.find("- TODO-4578: Generalize stdlib surface registry away from map/vector IDs | track: "
-                  "stdlib-registry-generalization") !=
         std::string::npos);
   CHECK(todo.find("- TODO-4590: Add international text shaping and glyph atlas path | track:") ==
         std::string::npos);
@@ -1872,13 +1872,16 @@ TEST_CASE("todo queue and skipped doctest debt stay source locked") {
                   "  TODO-4567 completed the first globally lit 3D SDF widget primitive, and\n"
                   "  TODO-4595 completed deterministic shaped glyph runs. TODO-4596 completed\n"
                   "  deterministic text atlas/raster composition. TODO-4568 completed the first\n"
-                  "  UI scene-record adapter.") !=
+                  "  UI scene-record adapter, and TODO-4569 completed the software-surface UI\n"
+                  "  presentation bridge.") !=
         std::string::npos);
   CHECK(todo.find("Map/vector compiler-independence: TODO-4570 retired the duplicate `map2`\n"
                   "  surface, TODO-4571 added the compiler-knowledge inventory categories") !=
         std::string::npos);
   CHECK(todo.find("### Execution Queue\n\n"
-                  "- TODO-4569: Present scene-rendered UI through software surface bridge") !=
+                  "- TODO-4578: Generalize stdlib surface registry away from map/vector IDs") !=
+        std::string::npos);
+  CHECK(todo.find("- TODO-4569: Present scene-rendered UI through software surface bridge") ==
         std::string::npos);
   CHECK(todo.find("- TODO-4595: Add deterministic scene text shaping runs") ==
         std::string::npos);
@@ -1890,6 +1893,10 @@ TEST_CASE("todo queue and skipped doctest debt stay source locked") {
         std::string::npos);
   CHECK(todoFinished.find("TODO-4568: Emit scene nodes from the existing UI layout/widgets") !=
         std::string::npos);
+  CHECK(todoFinished.find("TODO-4569: Present scene-rendered UI through software surface bridge") !=
+        std::string::npos);
+  CHECK(todoFinished.find("`--software-surface-ui-demo`") != std::string::npos);
+  CHECK(todoFinished.find("ui_scene_surface_bridge.h") != std::string::npos);
   CHECK(todoFinished.find("Added `UiScene`, `UiSceneNodes`, and `UiSceneTextOverlays` records") !=
         std::string::npos);
   CHECK(todoFinished.find("LayoutTree.emit_scene_panel`, `emit_scene_label`") !=
@@ -1897,6 +1904,8 @@ TEST_CASE("todo queue and skipped doctest debt stay source locked") {
   CHECK(todoFinished.find("Local native UI scene adapter slice passed") !=
         std::string::npos);
   CHECK(todo.find("- [ ] TODO-4568: Emit scene nodes from the existing UI layout/widgets") ==
+        std::string::npos);
+  CHECK(todo.find("- [ ] TODO-4569: Present scene-rendered UI through software surface bridge") ==
         std::string::npos);
   CHECK(todoFinished.find("shapeSceneTextUtf8()") !=
         std::string::npos);
@@ -3204,6 +3213,8 @@ TEST_CASE("ui command list adapter docs stay source locked") {
   CHECK(graphicsDoc.find("can upload a deterministic BGRA8 software surface into a shared Metal") !=
         std::string::npos);
   CHECK(graphicsDoc.find("`--software-surface-demo`") != std::string::npos);
+  CHECK(graphicsDoc.find("`--software-surface-ui-demo`") != std::string::npos);
+  CHECK(graphicsDoc.find("`ui_scene_surface_bridge.h` adapter") != std::string::npos);
   CHECK(graphicsDoc.find("[CommandList mut] commands{CommandList{}}") != std::string::npos);
   CHECK(graphicsDoc.find("tree.append_root_column(2i32, 3i32, 10i32, 4i32)") != std::string::npos);
   CHECK(graphicsDoc.find("layout.append_label(root, 10i32, \"Hi\"utf8)") != std::string::npos);
@@ -3236,6 +3247,10 @@ TEST_CASE("ui command list adapter docs stay source locked") {
   CHECK(specDoc.find("host bridge can\n"
                      "  blit a deterministic BGRA8 software") !=
         std::string::npos);
+  CHECK(specDoc.find("`--software-surface-ui-demo` mode now\n"
+                     "  renders the checked-in PrimeStruct-authored `UiScene` fixture") !=
+        std::string::npos);
+  CHECK(specDoc.find("`ui_scene_surface_bridge.h`") != std::string::npos);
   CHECK(specDoc.find("emit deterministic HTML/backend adapter records and normalize pointer, keyboard, IME, resize, and focus input into") !=
         std::string::npos);
   CHECK(specDoc.find("deterministic UI event-stream records") !=
@@ -4566,8 +4581,8 @@ TEST_CASE("gfx stdlib wrappers stay source locked to parser-safe locals") {
         std::string::npos);
   CHECK(gfxStdlib.find("[i32] swapchainToken{GraphicsSubstrate.createSwapchain(config)?}") !=
         std::string::npos);
-  CHECK(gfxStdlib.find("[i32] vertexCount{count(vertices)}") != std::string::npos);
-  CHECK(gfxStdlib.find("[i32] indexCount{count(indices)}") != std::string::npos);
+  CHECK(gfxStdlib.find("[i32] vertexCount{vertices.count()}") != std::string::npos);
+  CHECK(gfxStdlib.find("[i32] indexCount{indices.count()}") != std::string::npos);
   CHECK(gfxStdlib.find("[SubstrateMeshConfig] config{") != std::string::npos);
   CHECK(gfxStdlib.find("[i32] meshToken{GraphicsSubstrate.createMesh(config)?}") != std::string::npos);
   CHECK(gfxStdlib.find("[SubstratePipelineConfig] config{") != std::string::npos);
@@ -4595,8 +4610,8 @@ TEST_CASE("gfx stdlib wrappers stay source locked to parser-safe locals") {
   CHECK(gfxStdlib.find("SubstrateSwapchainConfig{") == std::string::npos);
   CHECK(gfxStdlib.find("      swapchainToken{GraphicsSubstrate.createSwapchain(config)?}") ==
         std::string::npos);
-  CHECK(gfxStdlib.find("      vertexCount{count(vertices)}") == std::string::npos);
-  CHECK(gfxStdlib.find("      indexCount{count(indices)}") == std::string::npos);
+  CHECK(gfxStdlib.find("      vertexCount{vertices.count()}") == std::string::npos);
+  CHECK(gfxStdlib.find("      indexCount{indices.count()}") == std::string::npos);
   CHECK(gfxStdlib.find("      meshToken{GraphicsSubstrate.createMesh(config)?}") == std::string::npos);
   CHECK(gfxStdlib.find("      pipelineToken{GraphicsSubstrate.createPipeline(config)?}") ==
         std::string::npos);

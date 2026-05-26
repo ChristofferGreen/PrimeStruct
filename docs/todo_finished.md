@@ -6,6 +6,54 @@ Legend:
 Finished items are periodically archived here from `docs/todo.md`; section headers record the archive date.
 
 **Todo Completion (May 26, 2026)**
+- [x] TODO-4569: Present scene-rendered UI through software surface bridge
+  - owner: ai
+  - created_at: 2026-05-24
+  - finished_at: 2026-05-26
+  - phase: Scene graph renderer and UI presentation
+  - parallel_track: ui-scene-presentation
+  - depends_on: TODO-4568
+  - scope: Wired the checked-in PrimeStruct-authored `/std/ui` scene-record
+    fixture through a renderer-owned adapter into `SoftwareSurfaceFrame` so the
+    native and Metal software-surface presenter paths can show the UI scene
+    instead of only the checker/gradient frame.
+  - outcome:
+    - Added `examples/shared/ui_scene_surface_bridge.h`, which parses the
+      deterministic UI scene and text overlay records, converts them to the
+      renderer-owned scene word stream, composites the international text
+      overlay, and returns BGRA8 software-surface frames.
+    - Added `--software-surface-ui-demo` to the native window host, Metal host,
+      and shared offscreen helper while preserving `--software-surface-demo` as
+      the simple fallback frame path.
+    - Added deterministic renderer coverage proving the UI scene bridge returns
+      stable frames, keeps text-overlay composition separate from base scene
+      rendering, and differs from the older software-surface demo frame.
+    - Updated graphics/language docs and native/Metal READMEs to describe the
+      `/std/ui` scene-record to renderer to BGRA8 presenter path.
+    - Stabilized the adjacent `/std/gfx` wrapper by using method-style array
+      counts in `Device.create_mesh`, matching current surface-code style and
+      avoiding the stale bare `count(vertices)` semantic failure.
+  - validation:
+    - Local release configure passed:
+      `cmake -S . -B build-release -DCMAKE_BUILD_TYPE=Release`.
+    - Local release target rebuilds passed:
+      `cmake --build build-release --target PrimeStruct_misc_tests -j 1`;
+      `cmake --build build-release --target primec -j 1`;
+      `cmake --build build-release --target PrimeStruct_compile_run_tests -j 1`.
+    - Local UI scene bridge renderer slice passed:
+      `cd build-release && ./PrimeStruct_misc_tests --test-case="ui scene surface bridge renders prime-authored ui scene to bgra8" --no-skip`
+      with 1 case / 12 assertions.
+    - Local host/docs source-lock slice passed:
+      `cd build-release && ./PrimeStruct_compile_run_tests --test-case="ui command list adapter docs stay source locked,gfx stdlib wrappers stay source locked to parser-safe locals,spinning cube native window host software surface bridge stays source locked,spinning cube metal host software surface bridge stays source locked,shared metal offscreen host helper stays source locked" --no-skip`
+      with 5 cases / 238 assertions.
+    - The broader `spinning cube native window host sample compiles and
+      validates args deterministically` smoke is recorded in
+      `docs/testcase_log.md` as a current known native-backend struct-array
+      literal blocker; it is outside this UI presenter slice.
+  - stop_rule: Stopped once one PrimeStruct UI scene reached the
+    software-surface presenter path with deterministic non-GUI renderer and
+    source-lock coverage.
+
 - [x] TODO-4568: Emit scene nodes from the existing UI layout/widgets
   - owner: ai
   - created_at: 2026-05-24

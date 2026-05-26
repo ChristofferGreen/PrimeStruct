@@ -5,6 +5,7 @@
 #include "../../shared/gfx_contract_shared.h"
 #include "../../shared/native_metal_window_host.h"
 #include "../../shared/software_surface_bridge.h"
+#include "../../shared/ui_scene_surface_bridge.h"
 
 #include <algorithm>
 #include <array>
@@ -17,6 +18,7 @@
 #include <iostream>
 #include <limits>
 #include <string>
+#include <utility>
 #include <vector>
 
 #include <simd/simd.h>
@@ -417,6 +419,7 @@ bool uploadSoftwareSurfaceFrameToTexture(id<MTLDevice> device,
 
 struct PrimeStructWindowHostState {
   bool softwareSurfaceDemoMode = false;
+  bool softwareSurfaceUiSceneMode = false;
   bool gfxMode = false;
   id<MTLDevice> device = nil;
   id<MTLRenderPipelineState> pipeline = nil;
@@ -461,8 +464,21 @@ bool prepareWindowHostContent(void *context,
   state.device = device;
 
   if (state.softwareSurfaceDemoMode) {
-    const primestruct::software_surface::SoftwareSurfaceFrame surfaceFrame =
-        primestruct::software_surface::makeDemoFrame();
+    primestruct::software_surface::SoftwareSurfaceFrame surfaceFrame;
+    if (state.softwareSurfaceUiSceneMode) {
+      primestruct::ui_scene_surface::UiSceneSurfaceResult uiSceneResult =
+          primestruct::ui_scene_surface::makeDemoUiSceneSurfaceFrame();
+      if (!uiSceneResult.ok) {
+        failureOut.startupStage = StartupFailureStage::PipelineSetup;
+        failureOut.reason = "software_surface_ui_scene_render_failed";
+        failureOut.details = uiSceneResult.error;
+        failureOut.gfxErrorCode = GfxErrorCode::MaterialCreateFailed;
+        return false;
+      }
+      surfaceFrame = std::move(uiSceneResult.frame);
+    } else {
+      surfaceFrame = primestruct::software_surface::makeDemoFrame();
+    }
     std::string surfaceError;
     if (!uploadSoftwareSurfaceFrameToTexture(device, surfaceFrame, state.softwareSurfaceTexture, surfaceError)) {
       failureOut.startupStage = StartupFailureStage::PipelineSetup;
@@ -472,6 +488,9 @@ bool prepareWindowHostContent(void *context,
       return false;
     }
     std::cout << "software_surface_bridge=1\n";
+    if (state.softwareSurfaceUiSceneMode) {
+      std::cout << "software_surface_ui_scene=1\n";
+    }
     std::cout << "software_surface_width=" << surfaceFrame.width << "\n";
     std::cout << "software_surface_height=" << surfaceFrame.height << "\n";
     return true;
@@ -788,13 +807,15 @@ int main(int argc, char **argv) {
   std::string gfxPath;
   bool simulationSmokeMode = false;
   bool softwareSurfaceDemoMode = false;
+  bool softwareSurfaceUiSceneMode = false;
 
   for (int i = 1; i < argc; ++i) {
     const std::string arg = argv[i];
     if (arg == "--help") {
       std::cout
-          << "usage: window_host (--gfx <path> | --software-surface-demo) "
-             "[--max-frames <positive-int>] [--simulation-smoke]\n";
+          << "usage: window_host (--gfx <path> | --software-surface-demo | "
+             "--software-surface-ui-demo) [--max-frames <positive-int>] "
+             "[--simulation-smoke]\n";
       return 0;
     }
     if (arg == "--max-frames") {
@@ -828,25 +849,31 @@ int main(int argc, char **argv) {
       softwareSurfaceDemoMode = true;
       continue;
     }
+    if (arg == "--software-surface-ui-demo") {
+      softwareSurfaceDemoMode = true;
+      softwareSurfaceUiSceneMode = true;
+      continue;
+    }
     std::cerr << "unknown arg: " << arg << "\n";
     return 64;
   }
 
   if (!gfxPath.empty() && softwareSurfaceDemoMode) {
-    std::cerr << "--gfx is incompatible with --software-surface-demo\n";
+    std::cerr << "--gfx is incompatible with --software-surface-demo/--software-surface-ui-demo\n";
     return 64;
   }
   if (simulationSmokeMode && softwareSurfaceDemoMode) {
-    std::cerr << "--simulation-smoke is incompatible with --software-surface-demo\n";
+    std::cerr << "--simulation-smoke is incompatible with --software-surface-demo/--software-surface-ui-demo\n";
     return 64;
   }
   if (gfxPath.empty() && !softwareSurfaceDemoMode) {
-    std::cerr << "missing required --gfx <path> or --software-surface-demo\n";
+    std::cerr << "missing required --gfx <path>, --software-surface-demo, or --software-surface-ui-demo\n";
     return 64;
   }
 
   PrimeStructWindowHostState state;
   state.softwareSurfaceDemoMode = softwareSurfaceDemoMode;
+  state.softwareSurfaceUiSceneMode = softwareSurfaceUiSceneMode;
   state.gfxMode = !gfxPath.empty();
 
   if (!softwareSurfaceDemoMode) {

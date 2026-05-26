@@ -445,7 +445,10 @@ overlay emission must all preserve this total order.
    - Current host bridge prototype: the native window host and macOS Metal host
      can upload a deterministic BGRA8 software surface into a shared Metal
      texture and blit it through their presenter/output paths via
-     `--software-surface-demo`.
+     `--software-surface-demo`. The companion `--software-surface-ui-demo`
+     mode renders the checked-in PrimeStruct-authored `/std/ui` scene-record
+     fixture through the shared `ui_scene_surface_bridge.h` adapter before the
+     same BGRA8 upload/presenter path.
 2. Layout layer:
    - Two-pass layout contract:
      - Bottom-up measure pass (children -> parent).

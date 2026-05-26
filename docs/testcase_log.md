@@ -1,9 +1,47 @@
 # Testcase Log
 
 ## Current Known Failures
-- none
+- `cd build-release && ./PrimeStruct_compile_run_tests --test-case="spinning cube native window host sample compiles and validates args deterministically" --no-skip`
+  currently reaches the `/cubeStdGfxEmitFrameStream` native compile step and
+  fails with `Native lowering error: native backend only supports
+  numeric/bool/string array literals`. The fixture still constructs
+  `array<VertexColored>` with struct literals in
+  `examples/web/spinning_cube/cube.prime`, so the native window-host runtime
+  smoke remains blocked until the backend supports struct array literals or
+  the fixture is refactored to a native-compatible stream source.
 
 ## Recent Test Runs
+- 2026-05-26 14:48 CEST | pass | mode: release | command:
+  `cmake --build build-release --target PrimeStruct_misc_tests -j 1`;
+  `cd build-release && ./PrimeStruct_misc_tests --test-case="ui scene surface bridge renders prime-authored ui scene to bgra8" --no-skip`;
+  `cmake --build build-release --target primec PrimeStruct_compile_run_tests -j 1`;
+  `cd build-release && ./PrimeStruct_compile_run_tests --test-case="todo queue and skipped doctest debt stay source locked,ui command list adapter docs stay source locked,gfx stdlib wrappers stay source locked to parser-safe locals,spinning cube native window host software surface bridge stays source locked,spinning cube metal host software surface bridge stays source locked,shared metal offscreen host helper stays source locked" --no-skip`
+  | failures: none | notes: root post-cherry-pick validation for TODO-4569
+  passed the deterministic UI scene surface bridge test, 1 case / 12
+  assertions, and the refreshed TODO/docs/host source-lock slice, 6 cases /
+  761 assertions.
+- 2026-05-26 14:42 CEST | pass | mode: release | command:
+  `cmake --build build-release --target PrimeStruct_compile_run_tests -j 1`;
+  `cd build-release && ./PrimeStruct_compile_run_tests --test-case="ui command list adapter docs stay source locked,gfx stdlib wrappers stay source locked to parser-safe locals,spinning cube native window host software surface bridge stays source locked,spinning cube metal host software surface bridge stays source locked,shared metal offscreen host helper stays source locked" --no-skip`
+  | failures: none | notes: TODO-4569 source-lock validation passed 5 cases
+  / 238 assertions after adding the software-surface UI demo mode and
+  retargeting `/std/gfx` mesh wrapper counts to method-style array count calls.
+- 2026-05-26 14:41 CEST | fail | mode: release | command:
+  `cmake --build build-release --target primec -j 1`;
+  `cmake --build build-release --target PrimeStruct_compile_run_tests -j 1`;
+  `cd build-release && ./PrimeStruct_compile_run_tests --test-case="ui command list adapter docs stay source locked,spinning cube native window host software surface bridge stays source locked,spinning cube metal host software surface bridge stays source locked,shared metal offscreen host helper stays source locked,spinning cube native window host sample compiles and validates args deterministically" --no-skip`
+  | failures: `spinning cube native window host sample compiles and validates
+  args deterministically` | notes: host/docs source locks passed, the
+  runtime smoke first exposed stale bare `/std/gfx` `count(vertices)` usage and
+  then reached the broader native backend limitation on struct array literals
+  in `/cubeStdGfxEmitFrameStream`.
+- 2026-05-26 14:19 CEST | pass | mode: release | command:
+  `cmake -S . -B build-release -DCMAKE_BUILD_TYPE=Release`;
+  `cmake --build build-release --target PrimeStruct_misc_tests -j 1`;
+  `cd build-release && ./PrimeStruct_misc_tests --test-case="ui scene surface bridge renders prime-authored ui scene to bgra8" --no-skip`
+  | failures: none | notes: TODO-4569 renderer bridge validation passed
+  1 case / 12 assertions for deterministic UI scene to BGRA8 software-surface
+  output.
 - 2026-05-26 13:42 CEST | pass | mode: release | command:
   `cmake --build build-release --target PrimeStruct_compile_run_tests -j 1`;
   `cd build-release && ./PrimeStruct_compile_run_tests --test-suite=primestruct.compile.run.examples --source-file="*test_compile_run_examples_docs_locks.cpp" --test-case="ui command list adapter docs stay source locked,todo queue and skipped doctest debt stay source locked,ui stdlib workflows stay source locked to inferred locals,ui stdlib arithmetic and assignment stay source locked to surface operators,ui scene producer composite widgets stay locked to basic widgets" --order-by=file --no-skip`;

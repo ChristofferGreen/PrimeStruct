@@ -91,8 +91,8 @@ namespace std {
 
     [public return<Result<Mesh, GfxError>> on_error<GfxError, /std/gfx/ignoreGfxError>]
     create_mesh([array<VertexColored>] vertices, [array<i32>] indices) {
-      [i32] vertexCount{count(vertices)}
-      [i32] indexCount{count(indices)}
+      [i32] vertexCount{vertices.count()}
+      [i32] indexCount{indices.count()}
       if(this.token < 1i32 || vertexCount < 1i32 || indexCount < 1i32) {
         return(/std/gfx/GfxError/result<Mesh>(meshCreateFailed()))
       }

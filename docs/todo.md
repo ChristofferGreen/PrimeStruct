@@ -64,7 +64,6 @@ This file is the live open-work queue for PrimeStruct.
 
 ### Ready Now
 
-- TODO-4569: Present scene-rendered UI through software surface bridge | track: ui-scene-presentation | primary surface: software surface bridge fixture
 - TODO-4578: Generalize stdlib surface registry away from map/vector IDs | track: stdlib-registry-generalization | primary surface: stdlib surface registry metadata
 
 ### Immediate Next 10
@@ -78,8 +77,8 @@ This file is the live open-work queue for PrimeStruct.
   TODO-4567 completed the first globally lit 3D SDF widget primitive, and
   TODO-4595 completed deterministic shaped glyph runs. TODO-4596 completed
   deterministic text atlas/raster composition. TODO-4568 completed the first
-  UI scene-record adapter.
-  TODO-4569
+  UI scene-record adapter, and TODO-4569 completed the software-surface UI
+  presentation bridge.
 - Map/vector compiler-independence: TODO-4570 retired the duplicate `map2`
   surface, TODO-4571 added the compiler-knowledge inventory categories that
   guide deletion scope, and TODO-4573 removed compiler-owned map literal
@@ -95,44 +94,10 @@ This file is the live open-work queue for PrimeStruct.
 
 ### Execution Queue
 
-- TODO-4569: Present scene-rendered UI through software surface bridge
 - TODO-4578: Generalize stdlib surface registry away from map/vector IDs
 - TODO-4579: Enforce zero map/vector compiler-knowledge traces
 
 ### Task Blocks
-
-- [ ] TODO-4569: Present scene-rendered UI through software surface bridge
-  - owner: ai
-  - created_at: 2026-05-24
-  - phase: Scene graph renderer and UI presentation
-  - parallel_track: ui-scene-presentation
-  - depends_on: TODO-4568
-  - scope: Wire the scene renderer output into the existing BGRA8 software
-    surface bridge so a real PrimeStruct-authored UI scene can be presented
-    through the native/Metal host path.
-  - implementation_notes: Start from `examples/shared/software_surface_bridge.h`,
-    `examples/native/spinning_cube/window_host.mm`,
-    `examples/metal/spinning_cube/metal_host.mm`, and the existing
-    `--software-surface-demo` tests. Keep the deterministic demo frame as a
-    fallback or separate mode, but add a mode that renders the UI scene output
-    instead of the checker/gradient buffer.
-  - acceptance:
-    - A host/demo mode renders a PrimeStruct-authored UI scene into a
-      `SoftwareSurfaceFrame` and uploads/presents that BGRA8 output through the
-      existing bridge.
-    - Tests cover command-line mode validation and deterministic renderer output
-      before any GUI-dependent smoke step.
-    - macOS/Metal visual smoke remains explicitly skippable on unsupported
-      runners while source-level and pixel/hash coverage still run where
-      possible.
-    - Docs describe the path from `/std/ui` layout to scene graph to BGRA8
-      surface to presenter without making UI events depend on rendered pixels
-      or 3D ray tests.
-    - The demo fixture uses the default orthographic UI coordinate mapping,
-      painter-order policy, global light rig, and international 2D text overlay
-      policy.
-  - stop_rule: Stop once one PrimeStruct UI scene reaches the software-surface
-    presenter path with deterministic non-GUI coverage.
 
 - [ ] TODO-4578: Generalize stdlib surface registry away from map/vector IDs
   - owner: ai

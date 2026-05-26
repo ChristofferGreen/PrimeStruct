@@ -160,7 +160,9 @@ TEST_CASE("spinning cube metal host software surface bridge stays source locked"
   CHECK(source.find("#include \"../../shared/gfx_contract_shared.h\"") != std::string::npos);
   CHECK(source.find("#include \"../../shared/metal_offscreen_host.h\"") != std::string::npos);
   CHECK(source.find("--software-surface-demo") != std::string::npos);
+  CHECK(source.find("--software-surface-ui-demo") != std::string::npos);
   CHECK(source.find("SoftwareSurfaceDemoConfig config;") != std::string::npos);
+  CHECK(source.find("config.useUiSceneDemo = true;") != std::string::npos);
   CHECK(source.find("primestruct::metal_offscreen_host::runSoftwareSurfaceDemo(config)") != std::string::npos);
   CHECK(source.find("uploadSoftwareSurfaceFrame(") == std::string::npos);
   CHECK(source.find("renderSoftwareSurfaceDemo()") == std::string::npos);
@@ -179,17 +181,20 @@ TEST_CASE("shared metal offscreen host helper stays source locked") {
   const std::string source = readFile(sharedHeaderPath.string());
   CHECK(source.find("namespace primestruct::metal_offscreen_host {") != std::string::npos);
   CHECK(source.find("struct SoftwareSurfaceDemoConfig {") != std::string::npos);
+  CHECK(source.find("bool useUiSceneDemo = false;") != std::string::npos);
   CHECK(source.find("struct RenderConfig {") != std::string::npos);
   CHECK(source.find("struct RenderCallbacks {") != std::string::npos);
   CHECK(source.find("gfx_error_code=") != std::string::npos);
   CHECK(source.find("gfx_error_why=") != std::string::npos);
   CHECK(source.find("uploadSoftwareSurfaceFrame(") != std::string::npos);
+  CHECK(source.find("ui_scene_surface::makeDemoUiSceneSurfaceFrame()") != std::string::npos);
   CHECK(source.find("runSoftwareSurfaceDemo") != std::string::npos);
   CHECK(source.find("runLibraryRender") != std::string::npos);
   CHECK(source.find("newLibraryWithURL") != std::string::npos);
   CHECK(source.find("newCommandQueue") != std::string::npos);
   CHECK(source.find("renderCommandEncoderWithDescriptor") != std::string::npos);
   CHECK(source.find("software_surface_bridge=1") != std::string::npos);
+  CHECK(source.find("software_surface_ui_scene=1") != std::string::npos);
   CHECK(source.find("software_surface_presented=1") != std::string::npos);
   CHECK(source.find("frame_rendered=1") != std::string::npos);
 }
