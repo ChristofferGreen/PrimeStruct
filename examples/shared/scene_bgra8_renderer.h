@@ -97,6 +97,58 @@ struct SceneTextShapeResult {
   double height = 0.0;
 };
 
+struct SceneTextRasterOptions {
+  int atlasWidth = 64;
+  int padding = 1;
+};
+
+struct SceneTextGlyphBitmap {
+  std::size_t glyphIndex = 0;
+  std::uint32_t codepoint = 0;
+  std::uint32_t glyphId = 0;
+  std::string fontName;
+  int width = 0;
+  int height = 0;
+  double drawX = 0.0;
+  double drawY = 0.0;
+  bool missingGlyph = false;
+  bool combiningMark = false;
+  std::vector<std::uint8_t> coverage;
+};
+
+struct SceneTextAtlasPlacement {
+  std::size_t glyphIndex = 0;
+  int x = 0;
+  int y = 0;
+  int width = 0;
+  int height = 0;
+};
+
+struct SceneTextGlyphAtlas {
+  int width = 0;
+  int height = 0;
+  std::vector<SceneTextAtlasPlacement> placements;
+  std::vector<std::uint8_t> coverage;
+};
+
+struct SceneTextRasterResult {
+  bool ok = false;
+  std::string error;
+  std::vector<SceneTextGlyphBitmap> glyphs;
+  SceneTextGlyphAtlas atlas;
+  double width = 0.0;
+  double height = 0.0;
+};
+
+struct SceneTextOverlay {
+  std::string utf8;
+  SceneTextShapeOptions shapeOptions;
+  SceneTextRasterOptions rasterOptions;
+  double x = 0.0;
+  double y = 0.0;
+  Bgra8Color color{255, 255, 255, 255};
+};
+
 namespace detail {
 
 constexpr int SceneRecordVersion = 1;
@@ -494,6 +546,16 @@ inline NormalizedPixel normalize(Bgra8Color color) {
                          static_cast<double>(color.alpha) / 255.0};
 }
 
+inline NormalizedPixel readPixel(const software_surface::SoftwareSurfaceFrame &frame,
+                                 std::size_t pixelIndex) {
+  const std::size_t byteIndex = pixelIndex * 4u;
+  return NormalizedPixel{
+      static_cast<double>(frame.pixelsBgra8[byteIndex + 0u]) / 255.0,
+      static_cast<double>(frame.pixelsBgra8[byteIndex + 1u]) / 255.0,
+      static_cast<double>(frame.pixelsBgra8[byteIndex + 2u]) / 255.0,
+      static_cast<double>(frame.pixelsBgra8[byteIndex + 3u]) / 255.0};
+}
+
 inline void writePixel(const NormalizedPixel &pixel,
                        software_surface::SoftwareSurfaceFrame &frame,
                        std::size_t pixelIndex) {
@@ -771,6 +833,59 @@ inline double sdfButtonShade(double localX,
   return 1.0 - clampUnit(shadeStrength) + clampUnit(shadeStrength) * lit;
 }
 
+inline std::uint8_t fixtureGlyphCoverage(const SceneTextGlyphBitmap &bitmap,
+                                         int x,
+                                         int y) {
+  if (bitmap.width <= 0 || bitmap.height <= 0) {
+    return 0;
+  }
+  if (bitmap.missingGlyph) {
+    const bool border = x == 0 || y == 0 || x == bitmap.width - 1 || y == bitmap.height - 1;
+    const bool diagonal = x == y || x == bitmap.width - 1 - y;
+    return border || diagonal ? 230 : 0;
+  }
+  if (bitmap.combiningMark) {
+    return y <= std::max(0, bitmap.height / 3) ? 220 : 0;
+  }
+
+  const std::uint32_t seed = bitmap.glyphId != 0 ? bitmap.glyphId : bitmap.codepoint;
+  const bool stem = x == 0 || x == bitmap.width - 1 || y == bitmap.height - 1;
+  const bool fill = ((static_cast<std::uint32_t>(x) * 31u +
+                      static_cast<std::uint32_t>(y) * 17u + seed) %
+                     11u) < 6u;
+  return stem || fill ? 210 : 0;
+}
+
+inline SceneTextGlyphBitmap rasterizeSceneTextGlyph(std::size_t glyphIndex,
+                                                    const SceneTextGlyph &glyph,
+                                                    double textHeight) {
+  SceneTextGlyphBitmap bitmap;
+  bitmap.glyphIndex = glyphIndex;
+  bitmap.codepoint = glyph.codepoint;
+  bitmap.glyphId = glyph.glyphId;
+  bitmap.fontName = glyph.fontName;
+  bitmap.missingGlyph = glyph.missingGlyph;
+  bitmap.combiningMark = glyph.combiningMark;
+  bitmap.drawX = glyph.x + glyph.xOffset;
+  bitmap.drawY = glyph.y + glyph.yOffset;
+  const double baseHeight = std::max(textHeight, 1.0);
+  const double baseAdvance = std::max(glyph.advance, baseHeight * 0.35);
+  bitmap.width = std::max(1, static_cast<int>(std::lround(
+                                glyph.combiningMark ? baseHeight * 0.30 : baseAdvance * 0.75)));
+  bitmap.height = std::max(1, static_cast<int>(std::lround(
+                                 glyph.combiningMark ? baseHeight * 0.22 : baseHeight * 0.80)));
+  bitmap.coverage.resize(static_cast<std::size_t>(bitmap.width) *
+                         static_cast<std::size_t>(bitmap.height));
+  for (int y = 0; y < bitmap.height; ++y) {
+    for (int x = 0; x < bitmap.width; ++x) {
+      bitmap.coverage[static_cast<std::size_t>(y) * static_cast<std::size_t>(bitmap.width) +
+                      static_cast<std::size_t>(x)] =
+          fixtureGlyphCoverage(bitmap, x, y);
+    }
+  }
+  return bitmap;
+}
+
 } // namespace detail
 
 inline SceneTextShapeResult shapeSceneTextUtf8(
@@ -849,6 +964,121 @@ inline SceneTextShapeResult shapeSceneTextUtf8(
   options.fallbackFonts = fallbackFonts;
   options.textSize = textSize;
   return shapeSceneTextUtf8(utf8, options);
+}
+
+inline SceneTextRasterResult rasterizeSceneTextGlyphs(
+    const SceneTextShapeResult &shape,
+    const SceneTextRasterOptions &options = {}) {
+  SceneTextRasterResult result;
+  if (!shape.ok) {
+    result.error = shape.error.empty() ? "scene text rasterizer requires a valid shape" : shape.error;
+    return result;
+  }
+  if (options.atlasWidth <= 0 || options.padding < 0) {
+    result.error = "scene text rasterizer atlas dimensions were invalid";
+    return result;
+  }
+
+  result.width = shape.width;
+  result.height = shape.height;
+  result.glyphs.reserve(shape.glyphs.size());
+  int maxGlyphWidth = 1;
+  for (std::size_t index = 0; index < shape.glyphs.size(); ++index) {
+    result.glyphs.push_back(detail::rasterizeSceneTextGlyph(index, shape.glyphs[index], shape.height));
+    maxGlyphWidth = std::max(maxGlyphWidth, result.glyphs.back().width);
+  }
+
+  result.atlas.width = std::max(options.atlasWidth, maxGlyphWidth + options.padding * 2);
+  int cursorX = options.padding;
+  int cursorY = options.padding;
+  int rowHeight = 0;
+  for (const SceneTextGlyphBitmap &glyph : result.glyphs) {
+    if (cursorX > options.padding &&
+        cursorX + glyph.width + options.padding > result.atlas.width) {
+      cursorX = options.padding;
+      cursorY += rowHeight + options.padding;
+      rowHeight = 0;
+    }
+    result.atlas.placements.push_back(
+        SceneTextAtlasPlacement{glyph.glyphIndex, cursorX, cursorY, glyph.width, glyph.height});
+    cursorX += glyph.width + options.padding;
+    rowHeight = std::max(rowHeight, glyph.height);
+  }
+  result.atlas.height = cursorY + rowHeight + options.padding;
+  result.atlas.coverage.assign(static_cast<std::size_t>(result.atlas.width) *
+                                   static_cast<std::size_t>(std::max(result.atlas.height, 0)),
+                               0);
+  for (const SceneTextAtlasPlacement &placement : result.atlas.placements) {
+    const SceneTextGlyphBitmap &glyph = result.glyphs[placement.glyphIndex];
+    for (int y = 0; y < placement.height; ++y) {
+      for (int x = 0; x < placement.width; ++x) {
+        const std::size_t atlasIndex =
+            static_cast<std::size_t>(placement.y + y) *
+                static_cast<std::size_t>(result.atlas.width) +
+            static_cast<std::size_t>(placement.x + x);
+        const std::size_t glyphIndex =
+            static_cast<std::size_t>(y) * static_cast<std::size_t>(glyph.width) +
+            static_cast<std::size_t>(x);
+        result.atlas.coverage[atlasIndex] = glyph.coverage[glyphIndex];
+      }
+    }
+  }
+  result.ok = true;
+  return result;
+}
+
+inline bool composeSceneTextBgra8(software_surface::SoftwareSurfaceFrame &frame,
+                                  const SceneTextRasterResult &raster,
+                                  double originX,
+                                  double originY,
+                                  Bgra8Color color,
+                                  std::string &errorOut) {
+  if (!raster.ok) {
+    errorOut = raster.error.empty() ? "scene text composer requires a valid raster" : raster.error;
+    return false;
+  }
+  if (frame.width <= 0 || frame.height <= 0 ||
+      frame.pixelsBgra8.size() !=
+          static_cast<std::size_t>(frame.width) * static_cast<std::size_t>(frame.height) * 4u) {
+    errorOut = "scene text composer expected a valid BGRA8 frame";
+    return false;
+  }
+
+  for (const SceneTextGlyphBitmap &glyph : raster.glyphs) {
+    const int drawX = static_cast<int>(std::lround(originX + glyph.drawX));
+    const int drawY = static_cast<int>(std::lround(originY + glyph.drawY));
+    for (int glyphY = 0; glyphY < glyph.height; ++glyphY) {
+      const int frameY = drawY + glyphY;
+      if (frameY < 0 || frameY >= frame.height) {
+        continue;
+      }
+      for (int glyphX = 0; glyphX < glyph.width; ++glyphX) {
+        const int frameX = drawX + glyphX;
+        if (frameX < 0 || frameX >= frame.width) {
+          continue;
+        }
+        const std::uint8_t coverage =
+            glyph.coverage[static_cast<std::size_t>(glyphY) *
+                               static_cast<std::size_t>(glyph.width) +
+                           static_cast<std::size_t>(glyphX)];
+        if (coverage == 0) {
+          continue;
+        }
+        const std::size_t pixelIndex =
+            static_cast<std::size_t>(frameY) * static_cast<std::size_t>(frame.width) +
+            static_cast<std::size_t>(frameX);
+        detail::NormalizedPixel pixel = detail::readPixel(frame, pixelIndex);
+        detail::blendSourceOver(pixel,
+                                static_cast<double>(color.red) / 255.0,
+                                static_cast<double>(color.green) / 255.0,
+                                static_cast<double>(color.blue) / 255.0,
+                                (static_cast<double>(color.alpha) / 255.0) *
+                                    (static_cast<double>(coverage) / 255.0));
+        detail::writePixel(pixel, frame, pixelIndex);
+      }
+    }
+  }
+  return true;
 }
 
 inline SceneRenderResult renderSerializedSceneToBgra8(
@@ -977,6 +1207,41 @@ inline SceneRenderResult renderSerializedSceneToBgra8(
     return result;
   }
   result.ok = true;
+  return result;
+}
+
+inline SceneRenderResult renderSerializedSceneWithTextOverlayToBgra8(
+    const std::vector<std::int32_t> &serializedScene,
+    const std::vector<SceneTextOverlay> &overlays,
+    const RenderOptions &options = {}) {
+  SceneRenderResult result = renderSerializedSceneToBgra8(serializedScene, options);
+  if (!result.ok) {
+    return result;
+  }
+  for (const SceneTextOverlay &overlay : overlays) {
+    SceneTextShapeResult shape = shapeSceneTextUtf8(overlay.utf8, overlay.shapeOptions);
+    if (!shape.ok) {
+      result.ok = false;
+      result.error = shape.error;
+      return result;
+    }
+    SceneTextRasterResult raster = rasterizeSceneTextGlyphs(shape, overlay.rasterOptions);
+    if (!raster.ok) {
+      result.ok = false;
+      result.error = raster.error;
+      return result;
+    }
+    if (!composeSceneTextBgra8(result.frame, raster, overlay.x, overlay.y, overlay.color, result.error)) {
+      result.ok = false;
+      return result;
+    }
+  }
+  std::string validationError;
+  if (!software_surface::validateFrame(result.frame, validationError)) {
+    result.ok = false;
+    result.error = validationError;
+    return result;
+  }
   return result;
 }
 

@@ -340,10 +340,11 @@ the event/hit-test contract.
 - Text remains a 2D overlay/primitive in the first UI scene path, not a 3D SDF
   or mesh problem. The renderer helper now exposes a deterministic shaped glyph
   run path for UTF-8 decoding, script/direction runs, combining-mark
-  attachment, fallback fixture fonts, and stable metrics. The first presented
-  UI text path still keeps international shaping, bidi ordering, fallback
-  fonts, and stable glyph metrics behind that wrapper boundary; TODO-4596 owns
-  deterministic glyph atlas/raster output.
+  attachment, fallback fixture fonts, stable metrics, fixture glyph coverage,
+  deterministic atlas packing, and BGRA8 source-over composition. The first
+  presented UI text path keeps international shaping, bidi ordering, fallback
+  fonts, glyph metrics, atlas coverage, and raster output behind that wrapper
+  boundary.
 - Native text dependencies stay behind renderer-owned wrapper APIs:
   HarfBuzz-class shaping, FreeType-class glyph loading/rasterization, and an
   ICU/FriBidi-class Unicode bidi/boundary service. PrimeStruct source APIs must

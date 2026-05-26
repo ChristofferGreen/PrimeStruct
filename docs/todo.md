@@ -64,12 +64,11 @@ This file is the live open-work queue for PrimeStruct.
 
 ### Ready Now
 
-- TODO-4596: Rasterize shaped scene text through a glyph atlas | track: scene-text-rasterization | primary surface: scene renderer glyph atlas/BGRA8 text overlay
+- TODO-4568: Emit scene nodes from the existing UI layout/widgets | track: ui-scene-adapter | primary surface: stdlib ui-to-scene adapter fixtures
 - TODO-4578: Generalize stdlib surface registry away from map/vector IDs | track: stdlib-registry-generalization | primary surface: stdlib surface registry metadata
 
 ### Immediate Next 10
 
-- TODO-4568: Emit scene nodes from the existing UI layout/widgets
 - TODO-4569: Present scene-rendered UI through software surface bridge
 - TODO-4579: Enforce zero map/vector compiler-knowledge traces
 
@@ -78,8 +77,9 @@ This file is the live open-work queue for PrimeStruct.
 - Scene graph renderer and UI presentation: TODO-4565 completed the data-only
   scene model and TODO-4566 completed the first BGRA8 2D primitive renderer;
   TODO-4567 completed the first globally lit 3D SDF widget primitive, and
-  TODO-4595 completed deterministic shaped glyph runs.
-  TODO-4596 -> TODO-4568 -> TODO-4569
+  TODO-4595 completed deterministic shaped glyph runs. TODO-4596 completed
+  deterministic text atlas/raster composition.
+  TODO-4568 -> TODO-4569
 - Map/vector compiler-independence: TODO-4570 retired the duplicate `map2`
   surface, TODO-4571 added the compiler-knowledge inventory categories that
   guide deletion scope, and TODO-4573 removed compiler-owned map literal
@@ -95,43 +95,12 @@ This file is the live open-work queue for PrimeStruct.
 
 ### Execution Queue
 
-- TODO-4596: Rasterize shaped scene text through a glyph atlas
-- TODO-4578: Generalize stdlib surface registry away from map/vector IDs
 - TODO-4568: Emit scene nodes from the existing UI layout/widgets
+- TODO-4578: Generalize stdlib surface registry away from map/vector IDs
 - TODO-4569: Present scene-rendered UI through software surface bridge
 - TODO-4579: Enforce zero map/vector compiler-knowledge traces
 
 ### Task Blocks
-
-- [ ] TODO-4596: Rasterize shaped scene text through a glyph atlas
-  - owner: ai
-  - created_at: 2026-05-26
-  - phase: Scene graph renderer and UI presentation
-  - depends_on: TODO-4595
-  - scope: Add the renderer-owned back half of the international 2D text overlay
-    pipeline: deterministic glyph bitmap rasterization, atlas packing, and BGRA8
-    source-over composition for shaped scene text runs.
-  - implementation_notes: Consume the shaped glyph run API from TODO-4595. Keep
-    rasterization and atlas internals behind renderer-owned wrappers so a
-    FreeType-class backend can be substituted without exposing third-party
-    types. Use checked-in deterministic fixture glyphs or fixture fonts; do not
-    depend on system fonts. Keep text a 2D overlay primitive and do not add
-    paragraph layout, color emoji, advanced OpenType controls, 3D SDF text, or
-    mesh text in this slice.
-  - acceptance:
-    - A renderer-owned raster/atlas API consumes shaped glyph runs and produces
-      deterministic atlas placements and coverage masks for small fixtures.
-    - Tests cover repeated atlas packing stability, missing-glyph coverage, and
-      at least one shaped bidirectional or complex-script fixture from
-      TODO-4595.
-    - Scene BGRA8 renderer tests prove text overlay composition is deterministic
-      and source-over ordered with flat, rounded, and 3D SDF primitives.
-    - Docs describe the path from shaped glyph runs to atlas coverage to BGRA8
-      composition and keep native text dependencies behind renderer wrappers.
-  - stop_rule: Stop once shaped scene text fixtures rasterize through a
-    deterministic glyph atlas and compose into BGRA8 scene output; leave
-    paragraph layout, color emoji, advanced OpenType controls, and host UI
-    adapter emission to later leaves.
 
 - [ ] TODO-4568: Emit scene nodes from the existing UI layout/widgets
   - owner: ai

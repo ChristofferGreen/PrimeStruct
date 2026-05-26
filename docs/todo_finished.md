@@ -6,6 +6,43 @@ Legend:
 Finished items are periodically archived here from `docs/todo.md`; section headers record the archive date.
 
 **Todo Completion (May 26, 2026)**
+- [x] TODO-4596: Rasterize shaped scene text through a glyph atlas
+  - owner: ai
+  - created_at: 2026-05-26
+  - finished_at: 2026-05-26
+  - phase: Scene graph renderer and UI presentation
+  - depends_on: TODO-4595
+  - scope: Added the renderer-owned back half of the international 2D text
+    overlay pipeline: deterministic glyph bitmap rasterization, atlas packing,
+    and BGRA8 source-over composition for shaped scene text runs.
+  - outcome:
+    - Added `rasterizeSceneTextGlyphs()` plus renderer-local glyph bitmap,
+      placement, atlas, raster result, and overlay types that consume
+      `shapeSceneTextUtf8()` output without exposing third-party text types.
+    - Added deterministic fixture glyph coverage for normal glyphs, combining
+      marks, and missing glyphs, with stable row-packed atlas placement.
+    - Added `composeSceneTextBgra8()` and
+      `renderSerializedSceneWithTextOverlayToBgra8()` so shaped text fixtures
+      compose source-over into the existing BGRA8 scene output after flat,
+      rounded, and 3D SDF primitives.
+    - Updated graphics docs to describe the shaped-glyph-to-atlas-to-BGRA8 path
+      while keeping native text dependencies behind renderer-owned wrappers.
+  - validation:
+    - Local release configure passed:
+      `cmake -S . -B build-release -DCMAKE_BUILD_TYPE=Release`.
+    - Local release rebuild passed:
+      `cmake --build build-release --target PrimeStruct_misc_tests PrimeStruct_compile_run_tests -j 1`.
+    - Local scene renderer slice passed:
+      `cd build-release && ./PrimeStruct_misc_tests --test-suite=primestruct.scene.renderer --no-skip`
+      with 13 cases / 204 assertions.
+    - Local docs/source-lock slice passed:
+      `cd build-release && ./PrimeStruct_compile_run_tests --test-suite=primestruct.compile.run.examples --source-file="*test_compile_run_examples_docs_locks.cpp" --test-case="scene renderer ui producer contract stays source locked,todo queue and skipped doctest debt stay source locked" --order-by=file --no-skip --success`
+      with 2 cases / 595 assertions.
+  - stop_rule: Stopped once shaped scene text fixtures rasterized through a
+    deterministic glyph atlas and composed into BGRA8 scene output; paragraph
+    layout, color emoji, advanced OpenType controls, and host UI adapter
+    emission remain later leaves.
+
 - [x] TODO-4595: Add deterministic scene text shaping runs
   - owner: ai
   - created_at: 2026-05-26

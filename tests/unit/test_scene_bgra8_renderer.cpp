@@ -148,6 +148,15 @@ std::uint64_t hashPixels(const primestruct::software_surface::SoftwareSurfaceFra
   return hash;
 }
 
+std::uint64_t hashCoverage(const std::vector<std::uint8_t> &coverage) {
+  std::uint64_t hash = 14695981039346656037ull;
+  for (std::uint8_t byte : coverage) {
+    hash ^= static_cast<std::uint64_t>(byte);
+    hash *= 1099511628211ull;
+  }
+  return hash;
+}
+
 std::vector<primestruct::scene_bgra8_renderer::SceneTextFixtureFont> makeTextFixtureFonts() {
   using Font = primestruct::scene_bgra8_renderer::SceneTextFixtureFont;
   using Range = primestruct::scene_bgra8_renderer::SceneTextCodepointRange;
@@ -451,6 +460,108 @@ TEST_CASE("scene text shaper rejects invalid utf8 deterministically") {
   CHECK(result.error == "scene text shaper expected valid UTF-8");
   CHECK(result.glyphs.empty());
   CHECK(result.runs.empty());
+}
+
+TEST_CASE("scene text rasterizer packs shaped glyph coverage deterministically") {
+  namespace renderer = primestruct::scene_bgra8_renderer;
+  const std::vector<renderer::SceneTextFixtureFont> fonts = makeTextFixtureFonts();
+  const std::string text = std::string("\xD7\x90\xD7\x91") +
+                           "\xE0\xA4\x95\xE0\xA5\x8D\xE0\xA4\xB7";
+  const auto shape = renderer::shapeSceneTextUtf8(text, fonts, 16.0);
+  REQUIRE(shape.ok);
+  renderer::SceneTextRasterOptions options;
+  options.atlasWidth = 24;
+  options.padding = 1;
+
+  const auto first = renderer::rasterizeSceneTextGlyphs(shape, options);
+  const auto second = renderer::rasterizeSceneTextGlyphs(shape, options);
+
+  REQUIRE(first.ok);
+  REQUIRE(second.ok);
+  CHECK(first.glyphs.size() == shape.glyphs.size());
+  CHECK(first.atlas.width == 24);
+  CHECK(first.atlas.height > 0);
+  CHECK(first.atlas.placements.size() == first.glyphs.size());
+  CHECK(first.atlas.coverage == second.atlas.coverage);
+  CHECK(hashCoverage(first.atlas.coverage) == hashCoverage(second.atlas.coverage));
+  REQUIRE(first.atlas.placements.size() == second.atlas.placements.size());
+  for (std::size_t index = 0; index < first.atlas.placements.size(); ++index) {
+    CHECK(first.atlas.placements[index].glyphIndex == second.atlas.placements[index].glyphIndex);
+    CHECK(first.atlas.placements[index].x == second.atlas.placements[index].x);
+    CHECK(first.atlas.placements[index].y == second.atlas.placements[index].y);
+    CHECK(first.atlas.placements[index].width == second.atlas.placements[index].width);
+    CHECK(first.atlas.placements[index].height == second.atlas.placements[index].height);
+  }
+  REQUIRE(first.glyphs.size() == 5u);
+  CHECK(first.glyphs[0].codepoint == 0x05d1u);
+  CHECK(first.glyphs[1].codepoint == 0x05d0u);
+  CHECK(first.glyphs[3].codepoint == 0x094du);
+  CHECK(first.glyphs[3].combiningMark);
+  CHECK(first.glyphs[3].coverage.front() > 0);
+}
+
+TEST_CASE("scene text rasterizer emits stable missing glyph coverage") {
+  namespace renderer = primestruct::scene_bgra8_renderer;
+  using Font = renderer::SceneTextFixtureFont;
+  using Range = renderer::SceneTextCodepointRange;
+  const std::vector<Font> fonts{Font{"AsciiOnly", std::vector<Range>{{0x0041u, 0x0041u}}, 800u, 0.5}};
+  const auto shape = renderer::shapeSceneTextUtf8(std::string("A") + "\xF0\x9F\x99\x82", fonts, 12.0);
+  REQUIRE(shape.ok);
+
+  const auto raster = renderer::rasterizeSceneTextGlyphs(shape);
+
+  REQUIRE(raster.ok);
+  REQUIRE(raster.glyphs.size() == 2u);
+  const auto &missing = raster.glyphs[1];
+  CHECK(missing.missingGlyph);
+  CHECK(missing.fontName == "missing-glyph");
+  CHECK(missing.coverage.front() == 230);
+  CHECK(missing.coverage.back() == 230);
+  CHECK(hashCoverage(missing.coverage) != 0u);
+}
+
+TEST_CASE("scene bgra8 renderer composes text overlay over scene primitives") {
+  namespace renderer = primestruct::scene_bgra8_renderer;
+  const int bevelRadius = milli(renderer::detail::DefaultSdfButtonBevelRadius);
+  const std::vector<TestPrimitive> primitives{
+      {16000, 10000, 0, 0, 1}, {12000, 8000, bevelRadius, 1, 2}};
+  const std::vector<TestMaterial> materials{
+      {60, 70, 80, 1000, 1000}, {180, 620, 920, 1000, 1000}};
+  const std::vector<std::int32_t> words = makeSceneWords(
+      16,
+      10,
+      std::vector<TestNode>{{0, 0, 0, 0, 0, 0, 0},
+                            {1,
+                             0,
+                             1,
+                             1,
+                             2000,
+                             1000,
+                             0,
+                             milli(renderer::detail::DefaultSdfButtonNormalDepth)}},
+      primitives,
+      materials,
+      true);
+  renderer::SceneTextOverlay overlay;
+  overlay.utf8 = std::string("A") + "\xF0\x9F\x99\x82";
+  overlay.shapeOptions.fallbackFonts = makeTextFixtureFonts();
+  overlay.shapeOptions.textSize = 8.0;
+  overlay.rasterOptions.atlasWidth = 24;
+  overlay.x = 3.0;
+  overlay.y = 3.0;
+  overlay.color = renderer::Bgra8Color{0, 0, 255, 255};
+
+  const auto base = renderer::renderSerializedSceneToBgra8(words);
+  const auto first = renderer::renderSerializedSceneWithTextOverlayToBgra8(words, std::vector<renderer::SceneTextOverlay>{overlay});
+  const auto second = renderer::renderSerializedSceneWithTextOverlayToBgra8(words, std::vector<renderer::SceneTextOverlay>{overlay});
+
+  REQUIRE(base.ok);
+  REQUIRE(first.ok);
+  REQUIRE(second.ok);
+  CHECK(hashPixels(first.frame) == hashPixels(second.frame));
+  CHECK(hashPixels(first.frame) != hashPixels(base.frame));
+  CHECK(pixelAt(first.frame, 3, 3) != pixelAt(base.frame, 3, 3));
+  CHECK(pixelAt(first.frame, 1, 1) == pixelAt(base.frame, 1, 1));
 }
 
 TEST_SUITE_END();

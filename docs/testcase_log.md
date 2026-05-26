@@ -4,6 +4,14 @@
 - none
 
 ## Recent Test Runs
+- 2026-05-26 11:34 CEST | pass | mode: release | command:
+  `cmake -S . -B build-release -DCMAKE_BUILD_TYPE=Release`;
+  `cmake --build build-release --target PrimeStruct_misc_tests PrimeStruct_compile_run_tests -j 1`;
+  `cd build-release && ./PrimeStruct_misc_tests --test-suite=primestruct.scene.renderer --no-skip`;
+  `cd build-release && ./PrimeStruct_compile_run_tests --test-suite=primestruct.compile.run.examples --source-file="*test_compile_run_examples_docs_locks.cpp" --test-case="scene renderer ui producer contract stays source locked,todo queue and skipped doctest debt stay source locked" --order-by=file --no-skip --success`
+  | failures: none | notes: TODO-4596 focused validation passed the
+  scene text raster/atlas renderer slice, 13 cases / 204 assertions, and
+  refreshed docs/source locks, 2 cases / 595 assertions.
 - 2026-05-26 11:02 CEST | pass | mode: release | command:
   `cmake --build build-release --target PrimeStruct_misc_tests -j 1`;
   `cd build-release && ./PrimeStruct_misc_tests --test-suite=primestruct.scene.renderer --no-skip`;
