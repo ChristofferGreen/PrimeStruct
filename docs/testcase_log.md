@@ -4,6 +4,26 @@
 - none
 
 ## Recent Test Runs
+- 2026-05-26 02:11 CEST | pass | mode: release + asan | command:
+  `cmake --build build-asan-clang --target PrimeStruct_backend_ir_tests -j 1`;
+  `cd build-asan-clang && ./PrimeStruct_backend_ir_tests --test-case="ir lowers stdlib map constructor call as statement" --no-skip`;
+  `cmake --build build-release --target PrimeStruct_backend_ir_tests -j 1`;
+  `cd build-release && ./PrimeStruct_backend_ir_tests --test-case="ir lowers stdlib map constructor call as statement,ir lowerer rejects direct string-keyed map constructor lowering" --no-skip`;
+  `cd build-release && ./PrimeStruct_backend_ir_tests --test-case="ir lowerer statement call helper validates direct-call diagnostics,ir lowerer statement call helper emits semantic direct void helpers as statements,ir lowerer statement call helper does not pop direct struct statements,ir lowerer call helpers source delegation stays stable,ir lowerer statement call emission source delegation stays stable,ir lowerer statement calls step receives semantic product adapters,stdlib surface metadata classifies collection helper categories,semantics validator infer source delegation stays stable,semantics validator statement source delegation stays stable,semantics validator expr source delegation stays stable,cmake splits primec library into subsystem targets" --no-skip`;
+  `cmake --build build-release --target PrimeStruct_compile_run_tests -j 1`;
+  `cd build-release && ./PrimeStruct_compile_run_tests --test-case="compiles and runs flat map constructor,compiles and runs map entry constructor,compiles and runs canonical map constructor,compiles and runs map constructor with named-arg value,runs vm with map constructor,runs vm with map constructor count helper,rejects vm map constructor odd args,rejects vm map constructor type mismatch,compiles and runs map constructor preserving assignment value,compiles and runs binding inferring map type,compiles and runs map count,runs vm with array vector bracket literals and map constructor,rejects string-keyed map constructors in C++ emitter,rejects string-keyed map constructor indexing sugar in C++ emitter,compiles and runs paired map constructor,rejects native map constructor odd args,rejects native map constructor type mismatch,rejects native string-keyed map constructor access expressions,rejects native map constructor string binding key access expressions,rejects native map constructor string key from argv binding" --no-skip`;
+  `cd build-release && ./PrimeStruct_compile_run_tests --test-suite=primestruct.compile.run.examples --source-file="*test_compile_run_examples_docs_locks.cpp" --test-case="stdlib style boundary docs stay source locked,scene renderer ui producer contract stays source locked,todo queue and skipped doctest debt stay source locked,vector map bridge boundary docs stay source locked,stdlib de-experimentalization policy docs stay source locked" --order-by=file --no-skip`;
+  `cd build-release && ./PrimeStruct_compile_run_tests --test-case="C++ emitter serializes scene model source deterministically,compiles and runs native scene model authoring deterministically,runs vm scene model authoring deterministically" --order-by=file --no-skip`;
+  `cd build-release && ./PrimeStruct_compile_run_tests --test-case="vector map bridge boundary docs stay source locked,stdlib de-experimentalization policy docs stay source locked,todo queue and skipped doctest debt stay source locked,C++ emitter lowers stdlib namespaced vector mutator statement through imported helper,C++ emitter helper accepts canonical vector mutators without alias bridge,C++ emitter helper rejects rooted vector mutator aliases,rejects canonical namespaced vector mutators without imported helpers in C++ emitter,runs vm vector namespaced mutator alias,rejects vm canonical namespaced vector mutators without imported helpers,compiles and runs canonical vector indexed removal helpers with owned elements in native backend,runs native indexed vector removals with ownership semantics,rejects native canonical namespaced vector mutators without imported helpers" --no-skip`;
+  `git diff --check`
+  | failures: none | notes: root validation after serially merging
+  TODO-4565, TODO-4572, and TODO-4573 passed the ASan map statement
+  constructor repro (1 case / 8 assertions), release map backend slice
+  (2 cases / 12 assertions), statement-call/source-lock slice (10 cases /
+  1264 assertions), map compile-run slice (20 cases / 84 assertions),
+  docs/source-lock slice (5 cases / 695 assertions), scene descriptor slice
+  (3 cases / 12 assertions), vector compile-run slice (12 cases /
+  640 assertions), and whitespace check.
 - 2026-05-25 22:41 CEST | pass | mode: release | command:
   `cmake --build build-release --target PrimeStruct_compile_run_tests -j 1`;
   `cd build-release && ./PrimeStruct_compile_run_tests --test-suite=primestruct.compile.run.vm.core --source-file="*test_compile_run_vm_core_ui.cpp" --test-case="runs vm scene model authoring deterministically" --order-by=file --no-skip --success`;

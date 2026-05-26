@@ -194,8 +194,27 @@
           }
           return true;
         };
+        auto isNativeUnsupportedStringKeyValueConstructorExpr = [&](const Expr &callExpr) {
+          if (callExpr.kind != Expr::Kind::Call || callExpr.isMethodCall ||
+              callExpr.args.empty() || callExpr.templateArgs.size() != 2) {
+            return false;
+          }
+          std::string constructorName;
+          if (!resolvePublishedLateKeyValueConstructorName(callExpr,
+                                                           constructorName) ||
+              constructorName == "entry") {
+            return false;
+          }
+          return ir_lowerer::valueKindFromTypeName(
+                     ir_lowerer::trimTemplateTypeText(callExpr.templateArgs.front())) ==
+                 ir_lowerer::LocalInfo::ValueKind::String;
+        };
         if (isEntryArgsPackKeyValueConstructorExpr(expr)) {
           error = "native backend does not support variadic entry map constructors";
+          return false;
+        }
+        if (isNativeUnsupportedStringKeyValueConstructorExpr(expr)) {
+          error = "native backend only supports indexing into string literals or string bindings";
           return false;
         }
         auto rewriteExplicitBuiltinKeyValueHelperExpr = [&](const Expr &callExpr, Expr &rewrittenExpr) {

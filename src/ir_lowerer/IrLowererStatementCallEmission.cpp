@@ -797,6 +797,19 @@ DirectCallStatementEmitResult tryEmitDirectCallStatement(
     }
     return false;
   };
+  auto isNonEntryKeyValueConstructorCallee = [](const Definition &callee) {
+    const auto *metadata =
+        findStdlibSurfaceMetadataByBridgeKey("collections.map_constructors");
+    if (metadata == nullptr) {
+      return false;
+    }
+    std::string constructorName;
+    return resolvePublishedStdlibSurfaceConstructorMemberName(
+               callee.fullPath,
+               metadata->id,
+               constructorName) &&
+           constructorName != "entry";
+  };
   auto metadataCountSlotOffset = [&](const Definition &callee) {
     return isInternalVectorMetadataSetterCallee(callee) ? 0 : 1;
   };
@@ -987,6 +1000,16 @@ DirectCallStatementEmitResult tryEmitDirectCallStatement(
   ReturnInfo info;
   if (!getReturnInfo(callee->fullPath, info)) {
     return DirectCallStatementEmitResult::Error;
+  }
+  if (isNonEntryKeyValueConstructorCallee(*callee)) {
+    for (const Expr &arg : stmt.args) {
+      if (!emitExpr(arg, localsIn)) {
+        return DirectCallStatementEmitResult::Error;
+      }
+      instructions.push_back({IrOpcode::Pop, 0});
+    }
+    error = priorError;
+    return DirectCallStatementEmitResult::Emitted;
   }
   if (!emitInlineDefinitionCall(directStmt, *callee, localsIn, false)) {
     return DirectCallStatementEmitResult::Error;

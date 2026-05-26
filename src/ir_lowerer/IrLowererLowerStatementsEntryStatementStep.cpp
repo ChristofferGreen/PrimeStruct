@@ -19,11 +19,12 @@ bool runLowerStatementsEntryStatementStep(const LowerStatementsEntryStatementSte
   }
 
   const size_t startInstructionIndex = input.function->instructions.size();
+  const Expr sourceStmt = stmt;
   if (!input.emitStatement(stmt)) {
     return false;
   }
   input.appendInstructionSourceRange(
-      input.function->name, stmt, startInstructionIndex, input.function->instructions.size());
+      input.function->name, sourceStmt, startInstructionIndex, input.function->instructions.size());
   return true;
 }
 

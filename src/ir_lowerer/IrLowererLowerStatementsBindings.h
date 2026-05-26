@@ -711,6 +711,48 @@
         }
       }
       if (info.kind == LocalInfo::Kind::Value && !info.structTypeName.empty()) {
+        auto isKeyValueConstructorInitializer = [&](const Expr &candidate) {
+          if (candidate.kind != Expr::Kind::Call || candidate.isMethodCall ||
+              candidate.args.empty()) {
+            return false;
+          }
+          const auto *metadata =
+              findStdlibSurfaceMetadataByBridgeKey("collections.map_constructors");
+          if (metadata == nullptr) {
+            return false;
+          }
+          std::string constructorName;
+          const bool resolved =
+              resolvePublishedStdlibSurfaceConstructorExprMemberName(
+                  candidate,
+                  metadata->id,
+                  constructorName) ||
+              resolvePublishedStdlibSurfaceConstructorMemberName(
+                  resolveExprPath(candidate),
+                  metadata->id,
+                  constructorName) ||
+              resolvePublishedStdlibSurfaceConstructorMemberName(
+                  resolveDirectKeyValueHelperPath(candidate),
+                  metadata->id,
+                  constructorName) ||
+              [&]() {
+                const Definition *callee = resolveDefinitionCall(candidate);
+                return callee != nullptr &&
+                       resolvePublishedStdlibSurfaceConstructorMemberName(
+                           callee->fullPath,
+                           metadata->id,
+                           constructorName);
+              }();
+          if (!resolved || constructorName == "entry") {
+            return false;
+          }
+          return true;
+        };
+        if (info.keyValueKeyKind == LocalInfo::ValueKind::String &&
+            isKeyValueConstructorInitializer(init)) {
+          error = "native backend only supports indexing into string literals or string bindings";
+          return false;
+        }
         std::string initStruct = inferStructExprPath(init, localsIn);
         const Definition *initCallee = nullptr;
         if (init.kind == Expr::Kind::Call) {
