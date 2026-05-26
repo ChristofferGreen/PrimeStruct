@@ -6,6 +6,37 @@ Legend:
 Finished items are periodically archived here from `docs/todo.md`; section headers record the archive date.
 
 **Todo Completion (May 26, 2026)**
+- [x] TODO-4575: Remove map helper/access compiler classifiers
+  - owner: ai
+  - created_at: 2026-05-24
+  - finished_at: 2026-05-26
+  - phase: Map/vector compiler-independence
+  - inventory_categories: `map-helper-classifier`
+  - scope: Removed compiler-owned map helper/access classifier traces after
+    map construction had moved through ordinary `.prime` constructors and
+    helpers.
+  - outcome:
+    - Deleted the `isKeyValueBuiltinName` classifier API and stopped using
+      map-specific helper-name branches for count-like access emission.
+    - Replaced remaining canonical map helper path builders with stdlib
+      surface metadata lookups, keeping only map backing/layout recognition
+      tracked for TODO-4576.
+    - Kept generic collection-pair wording where it describes non-map
+      key/value facts instead of public `/std/collections/map/*` builtin
+      helper recognition.
+    - Added a compiler-knowledge inventory zero gate for the
+      `map-helper-classifier` category and CTest coverage for that gate.
+  - validation:
+    - Local non-heavy inventory passed:
+      `python3 scripts/check_map_vector_compiler_knowledge.py --root . --require-zero-category map-helper-classifier`.
+    - Local script self-test passed:
+      `python3 tests/scripts/test_check_map_vector_compiler_knowledge.py --repo-root .`.
+    - Parent release build passed:
+      `cmake --build build-release --target PrimeStruct_compile_run_tests PrimeStruct_semantics_tests PrimeStruct_misc_tests -j 1`.
+  - stop_rule: Stopped once map helper names were no longer compiler builtin
+    classifiers and the inventory reported zero map helper/access-classifier
+    traces; map backing-type recognition remains with TODO-4576.
+
 - [x] TODO-4566: Render flat and rounded-rect scene primitives to BGRA8
   - owner: ai
   - created_at: 2026-05-24

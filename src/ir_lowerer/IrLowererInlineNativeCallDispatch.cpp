@@ -686,7 +686,7 @@ InlineCallDispatchResult tryEmitInlineCallWithCountFallbacksImpl(
     if (callee != nullptr) {
       if (expr.args.size() == 1 &&
           expr.args.front().kind == Expr::Kind::Call &&
-          callee->fullPath == collectionMemberPath("map", "count")) {
+          callee->fullPath == canonicalKeyValueHelperPath("count")) {
         return InlineCallDispatchResult::NotHandled;
       }
       if (expr.args.size() == 1 &&
@@ -1337,7 +1337,7 @@ InlineCallDispatchResult tryEmitInlineCallDispatchWithLocals(
         canonicalKeyValueHelperExpr.isMethodCall = false;
         canonicalKeyValueHelperExpr.isFieldAccess = false;
         canonicalKeyValueHelperExpr.namespacePrefix.clear();
-        canonicalKeyValueHelperExpr.name = collectionMemberPath("map", keyValueHelperName);
+        canonicalKeyValueHelperExpr.name = canonicalKeyValueHelperPath(keyValueHelperName);
         if (const Definition *callee =
                 resolveDefinitionCallFn(canonicalKeyValueHelperExpr);
             callee != nullptr &&

@@ -115,10 +115,10 @@
                      vectorAccessMemberName) &&
                  (vectorAccessMemberName == "at" ||
                   vectorAccessMemberName == "at_unsafe"));
-            const bool isKeyValueAccessName =
+            const bool isCollectionPairAccessName =
                 isCanonicalKeyValueAccessHelperName(normalizedName) ||
                 isCanonicalKeyValueAccessHelperPath(normalizedName);
-            if (!isVectorAccessName && !isKeyValueAccessName) {
+            if (!isVectorAccessName && !isCollectionPairAccessName) {
               return false;
             }
 

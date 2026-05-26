@@ -122,7 +122,7 @@ std::string preferredFileMethodTargetLocal(
   return "/file/" + methodName;
 }
 
-bool isKeyValueCollectionTypeNameLocal(const std::string &name) {
+bool isMapCollectionTypeNameLocal(const std::string &name) {
   const std::string normalized = normalizeBindingTypeName(name);
   const auto *metadata = keyValueConstructorSurfaceMetadataLocal();
   bool matchesMapImportAlias = false;
@@ -153,7 +153,7 @@ bool extractKeyValueCollectionTypesFromTypeTextLocal(const std::string &typeText
       return false;
     }
     base = normalizeBindingTypeName(base);
-    if (isKeyValueCollectionTypeNameLocal(base)) {
+    if (isMapCollectionTypeNameLocal(base)) {
       std::vector<std::string> parts;
       if (!splitTopLevelTemplateArgs(argText, parts) || parts.size() != 2) {
         return false;

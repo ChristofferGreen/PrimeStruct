@@ -390,7 +390,7 @@ bool extractCollectionElementTypeFromReturnType(const std::string &typeName, std
       typeOut = normalizeBindingTypeName(args.front());
       return true;
     }
-    if (isKeyValueCollectionTypeNameLocal(base) && args.size() == 2) {
+    if (isMapCollectionTypeNameLocal(base) && args.size() == 2) {
       typeOut = normalizeBindingTypeName(args[1]);
       return true;
     }
@@ -417,7 +417,7 @@ std::string normalizeCollectionReceiverType(const std::string &typePath) {
       typePath == "Soa" "Vector") {
     return "soa" "_vector";
   }
-  if (isKeyValueCollectionTypeNameLocal(typePath)) {
+  if (isMapCollectionTypeNameLocal(typePath)) {
     return "map";
   }
   return typePath;

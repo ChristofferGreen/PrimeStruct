@@ -249,9 +249,9 @@ std::vector<std::string> collectionMethodPathCandidates(const std::string &recei
       return {normalizeBuiltinCollectionStructPath("map") + "/" + methodName};
     }
     if (normalizedRawMethodName.rfind(stdMapPrefix, 0) == 0) {
-      return {collectionMemberPath("map", methodName)};
+      return {canonicalKeyValueHelperPath(methodName)};
     }
-    return {collectionMemberPath("map", methodName)};
+    return {canonicalKeyValueHelperPath(methodName)};
   }
   return {receiverStruct + "/" + methodName};
 }

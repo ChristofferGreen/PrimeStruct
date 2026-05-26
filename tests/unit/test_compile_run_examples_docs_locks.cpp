@@ -665,7 +665,7 @@ TEST_CASE("vector map bridge boundary docs stay source locked") {
         std::string::npos);
   CHECK(todo.find("- TODO-4573: Remove compiler-owned map literal lowering | track: map-special-case-deletion") ==
         std::string::npos);
-  CHECK(todo.find("- TODO-4575: Remove map helper/access compiler classifiers | track: map-special-case-deletion") !=
+  CHECK(todo.find("- TODO-4575: Remove map helper/access compiler classifiers | track: map-special-case-deletion") ==
         std::string::npos);
   CHECK(todo.find("- TODO-4574: Remove vector count/access compiler classifiers | track: vector-helper-classifier-deletion") !=
         std::string::npos);
@@ -685,6 +685,8 @@ TEST_CASE("vector map bridge boundary docs stay source locked") {
   CHECK(todoFinished.find("TODO-4571: Add compiler-knowledge inventory for map/vector") !=
         std::string::npos);
   CHECK(todoFinished.find("TODO-4573: Remove compiler-owned map literal lowering") !=
+        std::string::npos);
+  CHECK(todoFinished.find("TODO-4575: Remove map helper/access compiler classifiers") !=
         std::string::npos);
   CHECK(todoFinished.find("TODO-4187: Align vector-map cutover docs") !=
         std::string::npos);
@@ -1835,7 +1837,7 @@ TEST_CASE("todo queue and skipped doctest debt stay source locked") {
         std::string::npos);
   CHECK(todo.find("- TODO-4573: Remove compiler-owned map literal lowering | track: map-special-case-deletion") ==
         std::string::npos);
-  CHECK(todo.find("- TODO-4575: Remove map helper/access compiler classifiers | track: map-special-case-deletion") !=
+  CHECK(todo.find("- TODO-4575: Remove map helper/access compiler classifiers | track: map-special-case-deletion") ==
         std::string::npos);
   CHECK(todo.find("- TODO-4574: Remove vector count/access compiler classifiers | track: vector-helper-classifier-deletion") !=
         std::string::npos);
@@ -1896,6 +1898,8 @@ TEST_CASE("todo queue and skipped doctest debt stay source locked") {
   CHECK(todoFinished.find("TODO-4571: Add compiler-knowledge inventory for map/vector") !=
         std::string::npos);
   CHECK(todoFinished.find("TODO-4573: Remove compiler-owned map literal lowering") !=
+        std::string::npos);
+  CHECK(todoFinished.find("TODO-4575: Remove map helper/access compiler classifiers") !=
         std::string::npos);
   CHECK(todoFinished.find("TODO-4572: Remove vector statement-helper compiler path") !=
         std::string::npos);

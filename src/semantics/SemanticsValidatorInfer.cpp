@@ -78,7 +78,7 @@ ReturnKind SemanticsValidator::inferExprReturnKindImpl(const Expr &expr,
       }
       const std::string normalizedTypeName = normalizeBindingTypeName(paramBinding->typeName);
       if ((normalizedTypeName == "array" || normalizedTypeName == "vector" ||
-           normalizedTypeName == "soa" "_vector" || isKeyValueCollectionTypeName(normalizedTypeName)) &&
+           normalizedTypeName == "soa" "_vector" || isMapCollectionTypeName(normalizedTypeName)) &&
           !paramBinding->typeTemplateArg.empty()) {
         return ReturnKind::Array;
       }
@@ -99,7 +99,7 @@ ReturnKind SemanticsValidator::inferExprReturnKindImpl(const Expr &expr,
     }
     const std::string normalizedTypeName = normalizeBindingTypeName(it->second.typeName);
     if ((normalizedTypeName == "array" || normalizedTypeName == "vector" ||
-         normalizedTypeName == "soa" "_vector" || isKeyValueCollectionTypeName(normalizedTypeName)) &&
+         normalizedTypeName == "soa" "_vector" || isMapCollectionTypeName(normalizedTypeName)) &&
         !it->second.typeTemplateArg.empty()) {
       return ReturnKind::Array;
     }

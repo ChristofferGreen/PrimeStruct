@@ -98,7 +98,7 @@ bool isLateFallbackKeyValueAccessHelperName(std::string_view helperName) {
          helperName == "at_unsafe" || helperName == "at_unsafe_ref";
 }
 
-bool isKeyValueImportAliasAccessHelperPath(std::string path) {
+bool isCollectionPairImportAliasAccessHelperPath(std::string path) {
   const StdlibSurfaceMetadata *metadata =
       lateFallbackKeyValueHelperSurfaceMetadata();
   if (metadata == nullptr || path.empty()) {
@@ -510,7 +510,7 @@ ReturnKind SemanticsValidator::inferLateFallbackReturnKind(
             isCanonicalAccessPath
                 ? methodResolved
                 : lateFallbackCanonicalKeyValueHelperPath(builtinAccessName);
-        if ((isKeyValueImportAliasAccessHelperPath(methodResolved) ||
+        if ((isCollectionPairImportAliasAccessHelperPath(methodResolved) ||
              isCanonicalAccessPath) &&
             !inferCollectionDispatchSetup.shouldInferBuiltinBareKeyValueAccessCall &&
             !inferCollectionDispatchSetup.isIndexedArgsPackKeyValueReceiverTarget(

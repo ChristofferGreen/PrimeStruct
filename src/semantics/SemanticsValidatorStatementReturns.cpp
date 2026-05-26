@@ -1116,7 +1116,7 @@ bool SemanticsValidator::validateReturnStatement(const std::vector<ParameterInfo
             if (typePath == "/soa" "_vector" || typePath == "soa" "_vector") {
               return "/soa" "_vector";
             }
-            if (isKeyValueCollectionTypeName(typePath) || typePath == keyValueCollectionMarker ||
+            if (isMapCollectionTypeName(typePath) || typePath == keyValueCollectionMarker ||
                 typePath == collectionTypePathLocal("map")) {
               return keyValueCollectionMarker;
             }

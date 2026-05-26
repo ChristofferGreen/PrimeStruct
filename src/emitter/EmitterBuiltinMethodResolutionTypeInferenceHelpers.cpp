@@ -78,7 +78,7 @@ bool isCanonicalKeyValueHelperMemberPath(std::string_view path,
          rootedHelperPath(path) == keyValueHelperPath(memberNameOut);
 }
 
-bool isKeyValueImportAliasHelperMemberPath(std::string_view path,
+bool isCollectionPairImportAliasHelperMemberPath(std::string_view path,
                                            std::string &memberNameOut) {
   if (path.find('/') == std::string_view::npos) {
     memberNameOut.clear();
@@ -132,7 +132,7 @@ std::string inferCollectionReceiverTypeFromTypeText(const std::string &typeText)
     if ((base == "array" || base == "vector") && args.size() == 1) {
       return borrowed ? "" : base;
     }
-    if (isKeyValueCollectionTypeNameLocal(base) && args.size() == 2) {
+    if (isMapCollectionTypeNameLocal(base) && args.size() == 2) {
       return borrowed ? "" : "map";
     }
     return "";
@@ -308,7 +308,7 @@ std::string inferMethodResolutionPrimitiveTypeName(
     }
     const std::string normalized = resolvedCollectionHelperName(candidate);
     std::string helperName;
-    if (!isKeyValueImportAliasHelperMemberPath(normalized, helperName) ||
+    if (!isCollectionPairImportAliasHelperMemberPath(normalized, helperName) ||
         !isCanonicalKeyValueAccessHelperName(helperName)) {
       return false;
     }
@@ -452,7 +452,7 @@ std::string inferMethodResolutionPrimitiveTypeName(
     }
     const std::string resolvedExprPath = resolveExprPath(candidate);
     std::string helperName;
-    if (!isKeyValueImportAliasHelperMemberPath(resolvedExprPath, helperName)) {
+    if (!isCollectionPairImportAliasHelperMemberPath(resolvedExprPath, helperName)) {
       return false;
     }
     return isRemovedKeyValueDirectCallResultCompatibilityHelperName(helperName);

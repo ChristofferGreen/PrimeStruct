@@ -4,6 +4,17 @@
 - none
 
 ## Recent Test Runs
+- 2026-05-26 03:26 CEST | pass | mode: release + script | command:
+  `cmake --build build-release --target PrimeStruct_compile_run_tests PrimeStruct_semantics_tests PrimeStruct_misc_tests -j 1`;
+  `python3 -m py_compile scripts/check_map_vector_compiler_knowledge.py tests/scripts/test_check_map_vector_compiler_knowledge.py`;
+  `python3 scripts/check_map_vector_compiler_knowledge.py --root . --require-zero-category map-helper-classifier`;
+  `python3 tests/scripts/test_check_map_vector_compiler_knowledge.py --repo-root .`;
+  `git diff --check`
+  | failures: none | notes: parent release rebuild for TODO-4575 passed
+  the compile-run, semantics, and misc test targets after the local
+  count/access compile fix. Local non-heavy inventory validation reported no
+  `map-helper-classifier` traces; script self-test, Python bytecode check, and
+  whitespace check passed.
 - 2026-05-26 03:10 CEST | pass | mode: release | command:
   `cmake --build build-release --target PrimeStruct_compile_run_tests -j 1`;
   `cd build-release && ./PrimeStruct_compile_run_tests --test-suite=primestruct.compile.run.examples --source-file="*test_compile_run_examples_docs_locks.cpp" --test-case="scene renderer ui producer contract stays source locked,todo queue and skipped doctest debt stay source locked,ui command list adapter docs stay source locked" --order-by=file --no-skip --success`;

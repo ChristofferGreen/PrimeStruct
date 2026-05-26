@@ -113,7 +113,7 @@ bool rewritePublishedKeyValueConstructorExpr(const Expr &callExpr,
     return false;
   }
   rewrittenExpr = callExpr;
-  rewrittenExpr.name = collectionMemberPath("map", "map");
+  rewrittenExpr.name = canonicalKeyValueConstructorPath();
   rewrittenExpr.namespacePrefix.clear();
   rewrittenExpr.isMethodCall = false;
   rewrittenExpr.semanticNodeId = 0;

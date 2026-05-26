@@ -124,8 +124,7 @@ TRACE_PATTERNS = [
         "map-helper-classifier",
         "compiler-owned map helper/access classifier",
         re.compile(
-            r"\b(?:isKeyValueBuiltinName|isKeyValue(?:AccessName|HelperMethod|ImportAlias[A-Za-z0-9_]*)|"
-            r"isKeyValueCollectionTypeName(?:Local)?|isKeyValueConstructorDirectTargetPath)\b"
+            r"\b(?:isKeyValueBuiltinName|isKeyValue(?:AccessName|HelperMethod|ImportAlias[A-Za-z0-9_]*))\b"
         ),
     ),
     TracePattern(
@@ -142,6 +141,7 @@ TRACE_PATTERNS = [
             r"\b(?:isExperimentalMapStructTypePath|resolveExperimentalMapValueTarget|"
             r"resolveExperimentalMapTarget|inferPublishedExperimentalMapStructPathFromConstructorPath|"
             r"resolveSpecializedExperimentalMapStructPath(?:ForBindingType)?|"
+            r"isMapCollectionTypeName(?:Local)?|isMapConstructorDirectTargetPath|"
             r"isMapValue|MapValue)\b"
         ),
     ),
@@ -175,6 +175,13 @@ def parse_args() -> argparse.Namespace:
         "--enforce-zero",
         action="store_true",
         help="fail when any map/vector compiler-knowledge trace remains",
+    )
+    parser.add_argument(
+        "--require-zero-category",
+        action="append",
+        default=[],
+        metavar="CATEGORY",
+        help="fail when a specific inventory category has any trace",
     )
     return parser.parse_args()
 
@@ -329,6 +336,11 @@ def main() -> int:
     root = args.root.resolve()
     traces = collect_traces(root)
     lines = format_inventory(traces)
+    category_counts = collect_category_counts(traces)
+    forbidden_categories = {
+        category for category in args.require_zero_category
+        if category_counts.get(category, 0) != 0
+    }
 
     if args.enforce_zero and traces:
         for line in lines:
@@ -336,6 +348,16 @@ def main() -> int:
         print(
             "Map/vector compiler-knowledge zero audit failed: "
             f"{sum(trace.count for trace in traces)} traces remain.",
+            file=sys.stderr,
+        )
+        return 1
+    if forbidden_categories:
+        for line in lines:
+            print(line, file=sys.stderr)
+        categories = ", ".join(sorted(forbidden_categories))
+        print(
+            "Map/vector compiler-knowledge category zero audit failed: "
+            f"{categories}",
             file=sys.stderr,
         )
         return 1

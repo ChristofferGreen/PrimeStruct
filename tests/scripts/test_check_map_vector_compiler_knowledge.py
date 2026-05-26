@@ -97,6 +97,17 @@ def main() -> int:
             return 1
         if not assert_contains(clean.stdout, "0 traces observed", "clean inventory"):
             return 1
+        clean_map_helper_zero = run_checker(
+            repo_root,
+            clean_root,
+            "--require-zero-category",
+            "map-helper-classifier",
+        )
+        if clean_map_helper_zero.returncode != 0:
+            print("Clean inventory should satisfy category-zero mode", file=sys.stderr)
+            print(clean_map_helper_zero.stdout, end="")
+            print(clean_map_helper_zero.stderr, end="", file=sys.stderr)
+            return 1
 
         bad_root = make_scanned_root(repo_root, "bad")
         created_roots.append(bad_root)
@@ -165,6 +176,23 @@ def main() -> int:
         for pattern in expected_patterns:
             if not assert_contains(bad.stdout, pattern, pattern):
                 return 1
+
+        category_zero = run_checker(
+            repo_root,
+            bad_root,
+            "--require-zero-category",
+            "map-helper-classifier",
+        )
+        if category_zero.returncode == 0:
+            print("Category-zero mode accepted map helper traces", file=sys.stderr)
+            print(category_zero.stdout, end="")
+            return 1
+        if not assert_contains(
+            category_zero.stderr,
+            "Map/vector compiler-knowledge category zero audit failed: map-helper-classifier",
+            "category-zero failure",
+        ):
+            return 1
 
         zero = run_checker(repo_root, bad_root, "--enforce-zero")
         if zero.returncode == 0:

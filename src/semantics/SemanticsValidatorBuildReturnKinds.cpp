@@ -217,7 +217,7 @@ std::string SemanticsValidator::resolveStructReturnPathForBuild(const std::strin
     if (baseName == "array" || baseName == "vector" || baseName == "string") {
       return "/" + baseName;
     }
-    if (isKeyValueCollectionTypeName(baseName)) {
+    if (isMapCollectionTypeName(baseName)) {
       return keyValueCollectionMarkerPathForBuildReturnKinds();
     }
     return "";
@@ -239,7 +239,7 @@ std::string SemanticsValidator::resolveStructReturnPathForBuild(const std::strin
       if (collectionBase == "vector" && args.size() == 1) {
         return "/vector";
       }
-      if (isKeyValueCollectionTypeName(collectionBase) && args.size() == 2) {
+      if (isMapCollectionTypeName(collectionBase) && args.size() == 2) {
         return specializedExperimentalKeyValueStructReturnPath(args);
       }
     }

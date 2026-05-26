@@ -715,9 +715,9 @@ bool inferDirectResultValueCollectionInfo(const Expr &expr,
     auto matchesDirectKeyValueConstructor = [&](const Expr &candidate) {
       const std::string scopedPath = resolveScopedCallPath(candidate);
       const std::string rootedKeyValueConstructor =
-          collectionMemberPath("map", "map");
+          canonicalKeyValueConstructorPath();
       const std::string unrootedKeyValueConstructor =
-          collectionMemberPath("map", "map", false);
+          canonicalKeyValueConstructorPath(false);
       const StdlibSurfaceMetadata *metadata =
           keyValueConstructorSurfaceMetadataForResultMetadata();
       return (metadata != nullptr &&

@@ -235,7 +235,7 @@ CountMethodFallbackResult tryEmitNonMethodCountFallback(
   const bool hasVectorHelperAlias = resolveVectorHelperAliasName(expr, normalizedVectorHelperName);
   const bool hasKeyValueHelperAlias = resolveKeyValueHelperAliasName(expr, normalizedKeyValueHelperName);
   const bool isCountCall = isVectorBuiltinName(expr, "count") ||
-                           isKeyValueBuiltinName(expr, "count") ||
+                           isSimpleCallName(expr, "count") ||
                            (hasVectorHelperAlias && normalizedVectorHelperName == "count") ||
                            (hasKeyValueHelperAlias && normalizedKeyValueHelperName == "count");
   const bool isCapacityCall = isVectorBuiltinName(expr, "capacity") ||

@@ -454,6 +454,31 @@ std::string collectionMemberPath(std::string_view collectionName,
          std::string(memberName);
 }
 
+std::string canonicalKeyValueHelperPath(std::string_view memberName,
+                                        bool leadingSlash) {
+  const auto *metadata =
+      findStdlibSurfaceMetadataByBridgeKey("collections.map_helpers");
+  std::string path = metadata == nullptr ? "/std/collections/map"
+                                         : std::string(metadata->canonicalPath);
+  path += "/";
+  path += std::string(memberName);
+  if (!leadingSlash && !path.empty() && path.front() == '/') {
+    path.erase(path.begin());
+  }
+  return path;
+}
+
+std::string canonicalKeyValueConstructorPath(bool leadingSlash) {
+  const auto *metadata =
+      findStdlibSurfaceMetadataByBridgeKey("collections.map_constructors");
+  std::string path = metadata == nullptr ? "/std/collections/map/map"
+                                         : std::string(metadata->canonicalPath);
+  if (!leadingSlash && !path.empty() && path.front() == '/') {
+    path.erase(path.begin());
+  }
+  return path;
+}
+
 std::string experimentalCollectionMemberRoot(std::string_view collectionName,
                                              bool leadingSlash) {
   return stdCollectionsRoot(leadingSlash) + "/experimental_" +
@@ -641,14 +666,6 @@ bool isVectorBuiltinName(const Expr &expr, const char *name) {
   }
   std::string aliasName;
   return resolveVectorHelperAliasName(expr, aliasName) && aliasName == name;
-}
-
-bool isKeyValueBuiltinName(const Expr &expr, const char *name) {
-  if (isSimpleCallName(expr, name)) {
-    return true;
-  }
-  std::string aliasName;
-  return resolveKeyValueHelperAliasName(expr, aliasName) && aliasName == name;
 }
 
 bool isExplicitKeyValueHelperFallbackPath(const Expr &expr) {

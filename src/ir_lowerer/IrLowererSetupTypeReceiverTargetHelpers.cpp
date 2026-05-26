@@ -157,7 +157,7 @@ bool resolveMethodCallReceiverExpr(const Expr &callExpr,
   std::string accessName;
   const bool isBuiltinAccessCall = getBuiltinArrayAccessName(callExpr, accessName) && callExpr.args.size() == 2;
   const bool isBuiltinCountOrCapacityCall =
-      isVectorBuiltinName(callExpr, "count") || isKeyValueBuiltinName(callExpr, "count") ||
+      isVectorBuiltinName(callExpr, "count") || isSimpleCallName(callExpr, "count") ||
       isVectorBuiltinName(callExpr, "capacity");
   const bool isBuiltinBareVectorCapacityMethod =
       isSimpleCallName(callExpr, "capacity") &&

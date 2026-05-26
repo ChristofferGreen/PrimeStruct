@@ -1537,6 +1537,14 @@ if(PRIMESTRUCT_BUILD_TESTS)
   set_tests_properties(PrimeStruct_map_vector_compiler_knowledge_inventory PROPERTIES TIMEOUT 60)
 
   add_test(
+    NAME PrimeStruct_map_helper_classifier_zero_inventory
+    COMMAND ${Python3_EXECUTABLE} ${CMAKE_SOURCE_DIR}/scripts/check_map_vector_compiler_knowledge.py
+            --root ${CMAKE_SOURCE_DIR}
+            --require-zero-category map-helper-classifier
+  )
+  set_tests_properties(PrimeStruct_map_helper_classifier_zero_inventory PROPERTIES TIMEOUT 60)
+
+  add_test(
     NAME PrimeStruct_map_vector_compiler_knowledge_inventory_self_test
     COMMAND ${Python3_EXECUTABLE} ${CMAKE_SOURCE_DIR}/tests/scripts/test_check_map_vector_compiler_knowledge.py
             --repo-root ${CMAKE_SOURCE_DIR}

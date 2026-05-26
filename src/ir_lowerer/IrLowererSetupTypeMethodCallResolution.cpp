@@ -33,7 +33,7 @@ std::string describeMethodCallExpr(const Expr &expr) {
   return "<unnamed>";
 }
 
-bool isKeyValueConstructorDirectTargetPath(std::string path) {
+bool isMapConstructorDirectTargetPath(std::string path) {
   const size_t specializationSuffix = path.find("__t");
   if (specializationSuffix != std::string::npos) {
     path.erase(specializationSuffix);
@@ -42,7 +42,7 @@ bool isKeyValueConstructorDirectTargetPath(std::string path) {
   if (overloadSuffix != std::string::npos) {
     path.erase(overloadSuffix);
   }
-  return path == collectionMemberPath("map", "map");
+  return path == canonicalKeyValueConstructorPath();
 }
 
 const StdlibSurfaceMetadata *keyValueConstructorSurfaceMetadataLocal() {
@@ -471,7 +471,7 @@ const Definition *resolveMethodCallDefinitionFromExpr(
                                     semanticIndexPtr)
              .isKeyValueTarget)) {
       const std::string canonicalKeyValueHelper =
-          collectionMemberPath("map", keyValueHelperName);
+          canonicalKeyValueHelperPath(keyValueHelperName);
       if (const Definition *canonicalDef =
               resolveDefinitionFamilyByArity(canonicalKeyValueHelper,
                                              callExpr.args.size())) {
@@ -609,7 +609,7 @@ const Definition *resolveMethodCallDefinitionFromExpr(
              isSimpleCallName(callExpr, "at_unsafe")) &&
             !blocksSyntheticCollectionFallbackDirectTarget(fallbackDirectTarget)) ||
            (isSimpleCallName(callExpr, "map") &&
-            isKeyValueConstructorDirectTargetPath(fallbackDirectTarget)));
+            isMapConstructorDirectTargetPath(fallbackDirectTarget)));
       if (directTargetKeepsSyntheticCollectionFallback) {
         if (const Definition *resolvedDef =
                 resolveLoweredDefinitionPath(fallbackDirectTarget);
@@ -633,7 +633,7 @@ const Definition *resolveMethodCallDefinitionFromExpr(
       const bool routesExplicitVectorCountMethodThroughMapMethodTarget =
           requestsExplicitVectorCountMethod &&
           normalizeCollectionHelperPath(resolvedPath) ==
-              collectionMemberPath("map", "count");
+              canonicalKeyValueHelperPath("count");
       const bool routesExplicitVectorCountMethodThroughBuiltinScalarTarget =
           requestsExplicitVectorCountMethod &&
           (resolvedPath == "/string/count" || resolvedPath == "/array/count");
@@ -700,7 +700,7 @@ const Definition *resolveMethodCallDefinitionFromExpr(
   std::string accessName;
   const bool isBuiltinAccessCall = getBuiltinArrayAccessName(callExpr, accessName) && callExpr.args.size() == 2;
   const bool isBuiltinCountOrCapacityCall =
-      isVectorBuiltinName(callExpr, "count") || isKeyValueBuiltinName(callExpr, "count") ||
+      isVectorBuiltinName(callExpr, "count") || isSimpleCallName(callExpr, "count") ||
       isVectorBuiltinName(callExpr, "capacity");
   const bool isBuiltinBareVectorCapacityMethod =
       isVectorBuiltinName(callExpr, "capacity") &&

@@ -2504,7 +2504,7 @@ TEST_CASE("canonical map surface owns standalone stdlib implementation") {
   CHECK(passesEffectFreeSource.find("bareMapCallPath") == std::string::npos);
   CHECK(buildParametersSource.find("normalizedType == \"std/collections/map\"") ==
         std::string::npos);
-  CHECK(buildParametersSource.find("isKeyValueCollectionTypeName(normalizedType)") !=
+  CHECK(buildParametersSource.find("isMapCollectionTypeName(normalizedType)") !=
         std::string::npos);
   CHECK(buildParametersSource.find("typeTextIsExperimentalMapValue") ==
         std::string::npos);
@@ -3156,7 +3156,7 @@ TEST_CASE("canonical map surface owns standalone stdlib implementation") {
             "isCanonicalKeyValueAccessHelperName(") !=
         std::string::npos);
   CHECK(inferLateFallbackBuiltinsSource.find(
-            "isKeyValueImportAliasAccessHelperPath(methodResolved)") !=
+            "isCollectionPairImportAliasAccessHelperPath(methodResolved)") !=
         std::string::npos);
   CHECK(inferLateFallbackBuiltinsSource.find("rewrittenKeyValueHelperCall") !=
         std::string::npos);
@@ -3512,7 +3512,7 @@ TEST_CASE("canonical map surface owns standalone stdlib implementation") {
         std::string::npos);
   CHECK(scalarPointerMemorySource.find("collectionName == \"map\"") ==
         std::string::npos);
-  CHECK(scalarPointerMemorySource.find("isKeyValueCollectionTypeName(collectionName)") !=
+  CHECK(scalarPointerMemorySource.find("isMapCollectionTypeName(collectionName)") !=
         std::string::npos);
   CHECK(scalarPointerMemorySource.find("isMapLikeCollectionExpr") ==
         std::string::npos);
@@ -4118,7 +4118,7 @@ TEST_CASE("canonical map surface owns standalone stdlib implementation") {
         std::string::npos);
   CHECK(emitterReturnInferenceCollectionsSource.find("mapMemberName") ==
         std::string::npos);
-  CHECK(emitterReturnInferenceCollectionsSource.find("isKeyValueHelperMethod") !=
+  CHECK(emitterReturnInferenceCollectionsSource.find("isCollectionPairHelperMethod") !=
         std::string::npos);
   CHECK(emitterReturnInferenceCollectionsSource.find("isMapHelperMethod") ==
         std::string::npos);
@@ -4160,7 +4160,7 @@ TEST_CASE("canonical map surface owns standalone stdlib implementation") {
   CHECK(emitterCollectionTypeHelpersSource.find("shouldProbeBuiltinKeyValueAccessType") !=
         std::string::npos);
   CHECK(emitterPackedArgsSource.find("isMapAccessName") == std::string::npos);
-  CHECK(emitterPackedArgsSource.find("isKeyValueAccessName") != std::string::npos);
+  CHECK(emitterPackedArgsSource.find("isCollectionPairAccessName") != std::string::npos);
   CHECK(emitterPackedArgsSource.find("isCanonicalMapAccessHelperName(") ==
         std::string::npos);
   CHECK(emitterPackedArgsSource.find("isCanonicalKeyValueAccessHelperName(") !=
@@ -4236,7 +4236,7 @@ TEST_CASE("canonical map surface owns standalone stdlib implementation") {
         std::string::npos);
   CHECK(emitterMethodResolutionSource.find("MapHelperSurfaceBridgeKey") ==
         std::string::npos);
-  CHECK(emitterMethodResolutionSource.find("isKeyValueHelperMethod") !=
+  CHECK(emitterMethodResolutionSource.find("isCollectionPairHelperMethod") !=
         std::string::npos);
   CHECK(emitterMethodResolutionSource.find("isMapHelperMethod") ==
         std::string::npos);
@@ -4556,7 +4556,7 @@ TEST_CASE("canonical map surface owns standalone stdlib implementation") {
         std::string::npos);
   CHECK(setupTypeMethodCallSource.find("canonicalMapHelper") ==
         std::string::npos);
-  CHECK(setupTypeMethodCallSource.find("isKeyValueConstructorDirectTargetPath(") !=
+  CHECK(setupTypeMethodCallSource.find("isMapConstructorDirectTargetPath(") !=
         std::string::npos);
   CHECK(setupTypeMethodCallSource.find("isMapConstructorDirectTargetPath(") ==
         std::string::npos);
@@ -4927,7 +4927,7 @@ TEST_CASE("canonical map surface owns standalone stdlib implementation") {
   CHECK(emitterMethodTypeInferenceSource.find("isCanonicalMapHelperMemberPath(") ==
         std::string::npos);
   CHECK(emitterMethodTypeInferenceSource.find(
-            "isKeyValueImportAliasHelperMemberPath(resolvedExprPath, helperName)") !=
+            "isCollectionPairImportAliasHelperMemberPath(resolvedExprPath, helperName)") !=
         std::string::npos);
   CHECK(emitterMethodTypeInferenceSource.find("isMapImportAliasHelperMemberPath(") ==
         std::string::npos);

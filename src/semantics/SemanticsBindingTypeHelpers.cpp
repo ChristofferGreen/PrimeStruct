@@ -279,7 +279,7 @@ bool validateBuiltinComparableKeyType(const BindingInfo &binding,
   return validateBuiltinComparableKeyType(keyType, templateArgs, error);
 }
 
-bool isKeyValueCollectionTypeName(const std::string &name) {
+bool isMapCollectionTypeName(const std::string &name) {
   const std::string normalized = normalizeBindingTypeName(name);
   return matchesKeyValueCollectionRootMetadataLocal(normalized) ||
          matchesKeyValueBackingRootMetadataLocal(normalized) ||
@@ -293,10 +293,10 @@ bool returnsKeyValueCollectionType(const std::string &typeText) {
     std::string base;
     std::string arg;
     if (!splitTemplateTypeName(normalizedType, base, arg)) {
-      return isKeyValueCollectionTypeName(normalizedType);
+      return isMapCollectionTypeName(normalizedType);
     }
     base = normalizeBindingTypeName(base);
-    if (isKeyValueCollectionTypeName(base)) {
+    if (isMapCollectionTypeName(base)) {
       std::vector<std::string> args;
       return splitTopLevelTemplateArgs(arg, args) && args.size() == 2;
     }
@@ -325,7 +325,7 @@ bool extractKeyValueCollectionTypesFromTypeText(const std::string &typeText,
       return false;
     }
     base = normalizeBindingTypeName(base);
-    if (isKeyValueCollectionTypeName(base)) {
+    if (isMapCollectionTypeName(base)) {
       std::vector<std::string> parts;
       if (!splitTopLevelTemplateArgs(argText, parts) || parts.size() != 2) {
         return false;

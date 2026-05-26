@@ -139,7 +139,7 @@ ReturnKind getReturnKind(const Definition &def,
           base == "uninitialized" || base == "Task") {
         return args.size() == 1 && isAllowedCollectionTypeArg(args.front());
       }
-      if (isKeyValueCollectionTypeName(base)) {
+      if (isMapCollectionTypeName(base)) {
         return args.size() == 2 &&
                validateBuiltinComparableKeyType(args.front(), &def.templateArgs, error) &&
                isAllowedCollectionTypeArg(args.back());

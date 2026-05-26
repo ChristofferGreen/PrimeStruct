@@ -43,6 +43,9 @@ std::string collectionMemberRoot(std::string_view collectionName,
 std::string collectionMemberPath(std::string_view collectionName,
                                  std::string_view memberName,
                                  bool leadingSlash = true);
+std::string canonicalKeyValueHelperPath(std::string_view memberName,
+                                        bool leadingSlash = true);
+std::string canonicalKeyValueConstructorPath(bool leadingSlash = true);
 std::string experimentalCollectionMemberRoot(std::string_view collectionName,
                                              bool leadingSlash = true);
 std::string experimentalCollectionTypePath(std::string_view collectionName,
@@ -66,7 +69,6 @@ bool isExplicitRemovedVectorMethodAliasPath(const std::string &methodName);
 bool isExplicitKeyValueMethodAliasPath(const std::string &methodName);
 bool isExplicitKeyValueContainsOrTryAtMethodPath(const std::string &methodName);
 bool isVectorBuiltinName(const Expr &expr, const char *name);
-bool isKeyValueBuiltinName(const Expr &expr, const char *name);
 bool isExplicitKeyValueHelperFallbackPath(const Expr &expr);
 bool isExplicitKeyValueReceiverProbeHelperExpr(const Expr &expr);
 bool isExplicitVectorAccessHelperPath(const std::string &path);

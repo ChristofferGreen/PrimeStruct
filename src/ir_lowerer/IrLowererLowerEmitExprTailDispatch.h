@@ -294,7 +294,7 @@
           }
 
           rewrittenExpr = callExpr;
-          rewrittenExpr.name = ir_lowerer::collectionMemberPath("map", "insert");
+          rewrittenExpr.name = ir_lowerer::canonicalKeyValueHelperPath("insert");
           rewrittenExpr.namespacePrefix.clear();
           rewrittenExpr.isMethodCall = false;
           rewrittenExpr.isFieldAccess = false;
@@ -454,7 +454,7 @@
             return false;
           }
           const std::string helperPath =
-              ir_lowerer::collectionMemberPath("map", helperName);
+              ir_lowerer::canonicalKeyValueHelperPath(helperName);
           const auto helperPathId =
               semanticProgramLookupCallTargetStringId(*semanticProgram, helperPath);
           if (!helperPathId.has_value()) {
@@ -790,7 +790,7 @@
           candidate.isMethodCall = false;
           candidate.isFieldAccess = false;
           candidate.namespacePrefix.clear();
-          candidate.name = ir_lowerer::collectionMemberPath("map", helperName);
+          candidate.name = ir_lowerer::canonicalKeyValueHelperPath(helperName);
           candidate.semanticNodeId = 0;
           candidate.templateArgs.clear();
           const Definition *callee =

@@ -157,7 +157,7 @@ bool SemanticsValidator::isStringStatementExpr(const Expr &arg,
             if (isUnspecializedExperimentalKeyValueBackingBaseForPrintability(normalizedBase)) {
               return false;
             }
-            if (isKeyValueCollectionTypeName(normalizedBase)) {
+            if (isMapCollectionTypeName(normalizedBase)) {
               std::vector<std::string> args;
               if (!splitTopLevelTemplateArgs(arg, args) || args.size() != 2) {
                 return false;

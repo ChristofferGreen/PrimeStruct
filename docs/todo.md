@@ -64,7 +64,6 @@ This file is the live open-work queue for PrimeStruct.
 
 ### Ready Now
 
-- TODO-4575: Remove map helper/access compiler classifiers | track: map-special-case-deletion | primary surface: map helper/access classifiers
 - TODO-4574: Remove vector count/access compiler classifiers | track: vector-helper-classifier-deletion | primary surface: vector count/access helpers
 - TODO-4590: Add international text shaping and glyph atlas path | track: scene-text-renderer | primary surface: scene renderer text/glyph output
 - TODO-4567: Render first globally lit 3D SDF widget primitive | track: scene-3d-sdf | primary surface: scene renderer 3D primitive output
@@ -84,8 +83,8 @@ This file is the live open-work queue for PrimeStruct.
 - Map/vector compiler-independence: TODO-4570 retired the duplicate `map2`
   surface, TODO-4571 added the compiler-knowledge inventory categories that
   guide deletion scope, and TODO-4573 removed compiler-owned map literal
-  lowering. Vector path TODO-4572 -> TODO-4574 -> TODO-4577; map path
-  TODO-4575 -> TODO-4576; join at
+  lowering. TODO-4575 removed map helper/access classifiers. Vector path
+  TODO-4572 -> TODO-4574 -> TODO-4577; map path TODO-4576; join at
   TODO-4578 -> TODO-4579
 - Architecture hardening backlog: TODO-4586 completed parser diagnostic
   stability tiers. TODO-4587 completed the shared compile-time/runtime VM
@@ -95,7 +94,6 @@ This file is the live open-work queue for PrimeStruct.
 
 ### Execution Queue
 
-- TODO-4575: Remove map helper/access compiler classifiers
 - TODO-4574: Remove vector count/access compiler classifiers
 - TODO-4590: Add international text shaping and glyph atlas path
 - TODO-4567: Render first globally lit 3D SDF widget primitive
@@ -277,37 +275,6 @@ This file is the live open-work queue for PrimeStruct.
   - stop_rule: Stop once vector helper names are no longer compiler builtin
     classifiers and focused vector behavior still passes; leave vector
     backing-type recognition to TODO-4577.
-
-- [ ] TODO-4575: Remove map helper/access compiler classifiers
-  - owner: ai
-  - created_at: 2026-05-24
-  - phase: Map/vector compiler-independence
-  - inventory_categories: `map-helper-classifier`
-  - scope: Remove compiler-owned map helper/access classifiers after map
-    construction has been routed through ordinary `.prime` constructors and
-    helpers.
-  - implementation_notes: Start with `isKeyValueBuiltinName`,
-    map-specific access/contains/tryAt/insert helper classifiers, map helper
-    bridge-key dispatch checks, and map-specific access target resolution in
-    `src/semantics`, `src/ir_lowerer`, and `src/emitter`. Keep generic
-    key/value wording only when it applies to non-map collection-pair facts
-    and does not recognize `/std/collections/map/*` as a compiler builtin.
-  - acceptance:
-    - Production C++ no longer uses `isKeyValueBuiltinName` or equivalent
-      map-specific helper/access classifier branches for count, contains,
-      tryAt, at, at_unsafe, insert, or their reference variants.
-    - Public map helper calls compile and run through ordinary imported
-      `.prime` definitions, with deterministic missing-import diagnostics when
-      helpers are unavailable.
-    - Focused VM/native/C++ emitter tests cover map construction, count,
-      contains, tryAt, at, at_unsafe, insert, and reference helpers after the
-      classifier deletion.
-    - The compiler-knowledge inventory from TODO-4571, if present, shows the
-      map helper/access-classifier category at zero, excluding backing-layout
-      classifiers left for TODO-4576.
-  - stop_rule: Stop once map helper names are no longer compiler builtin
-    classifiers and focused map behavior still passes; leave map backing-type
-    recognition to TODO-4576.
 
 - [ ] TODO-4576: Remove map backing-type compiler classification
   - owner: ai

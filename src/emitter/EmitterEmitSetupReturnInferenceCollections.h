@@ -148,9 +148,9 @@
           !explicitMapPath.empty()) {
         return {explicitMapPath};
       }
-      const bool isKeyValueHelperMethod =
+      const bool isCollectionPairHelperMethod =
           isCanonicalKeyValueHelperName(methodName);
-      if (isKeyValueHelperMethod) {
+      if (isCollectionPairHelperMethod) {
         return {keyValueHelperPath(methodName)};
       }
       std::vector<std::string> candidates = {

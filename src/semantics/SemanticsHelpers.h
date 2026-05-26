@@ -82,7 +82,7 @@ bool validateBuiltinComparableKeyType(const std::string &typeName,
 bool validateBuiltinComparableKeyType(const BindingInfo &binding,
                                       const std::vector<std::string> *templateArgs,
                                       std::string &error);
-bool isKeyValueCollectionTypeName(const std::string &name);
+bool isMapCollectionTypeName(const std::string &name);
 bool returnsKeyValueCollectionType(const std::string &typeText);
 bool extractKeyValueCollectionTypesFromTypeText(const std::string &typeText,
                                                 std::string &keyTypeOut,

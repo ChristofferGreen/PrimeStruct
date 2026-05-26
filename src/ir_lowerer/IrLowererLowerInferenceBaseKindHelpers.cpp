@@ -990,7 +990,7 @@ bool isMapTryAtCallName(const Expr &expr) {
   if (!normalized.empty() && normalized.front() == '/') {
     normalized.erase(normalized.begin());
   }
-  return normalized == collectionMemberPath("map", "tryAt", false);
+  return normalized == canonicalKeyValueHelperPath("tryAt", false);
 }
 
 bool isMapContainsCallName(const Expr &expr) {
@@ -1004,7 +1004,7 @@ bool isMapContainsCallName(const Expr &expr) {
   if (!normalized.empty() && normalized.front() == '/') {
     normalized.erase(normalized.begin());
   }
-  return normalized == collectionMemberPath("map", "contains", false);
+  return normalized == canonicalKeyValueHelperPath("contains", false);
 }
 
 bool inferMapTryAtResultValueKind(const Expr &expr,

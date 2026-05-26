@@ -166,7 +166,7 @@ std::string SemanticsValidator::normalizeCollectionTypePath(const std::string &t
         splitTopLevelTemplateArgs(argText, args) && args.size() == 1) {
       return "/soa" "_vector";
     }
-    if ((base == "Map" || isKeyValueCollectionTypeName(base) || base == "/map" ||
+    if ((base == "Map" || isMapCollectionTypeName(base) || base == "/map" ||
          isCanonicalMapCollectionTypeRootLocal(base)) &&
         splitTopLevelTemplateArgs(argText, args) && args.size() == 2) {
       return "/map";
@@ -203,7 +203,7 @@ std::string SemanticsValidator::normalizeCollectionTypePath(const std::string &t
       normalizedType.rfind("std/collections/experimental" "_soa" "_vector/Soa" "Vector" "__", 0) == 0) {
     return "/soa" "_vector";
   }
-  if (normalizedType == "Map" || isKeyValueCollectionTypeName(normalizedType) ||
+  if (normalizedType == "Map" || isMapCollectionTypeName(normalizedType) ||
       normalizedType == "/map" ||
       isCanonicalMapCollectionTypeRootLocal(normalizedType)) {
     return "/map";

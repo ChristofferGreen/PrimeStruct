@@ -552,7 +552,7 @@ UnsupportedNativeCallResult emitUnsupportedNativeCallDiagnosticImpl(
     return UnsupportedNativeCallResult::NotHandled;
   }
   if (!expr.isMethodCall &&
-      (count_access_detail::isVectorBuiltinName(expr, "count") || isKeyValueBuiltinName(expr, "count"))) {
+      (count_access_detail::isVectorBuiltinName(expr, "count") || isSimpleCallName(expr, "count"))) {
     if (expr.name == "/count" && expr.namespacePrefix.empty() &&
         expr.args.size() == 1 && expr.args.front().kind != Expr::Kind::Call &&
         !isDiagnosticVectorTarget(expr.args.front())) {
@@ -692,7 +692,7 @@ NativeCallTailDispatchResult tryEmitNativeCallTailDispatch(
 
   if (expr.args.size() == 1 &&
       (count_access_detail::isVectorBuiltinName(expr, "count") ||
-       count_access_detail::isKeyValueBuiltinName(expr, "count") ||
+       isSimpleCallName(expr, "count") ||
        isSimpleCallName(expr, "count") ||
        resolveNativeTailCallPathWithoutFallbackProbes(expr) == "/string/count")) {
     const Expr &target = expr.args.front();
@@ -734,10 +734,10 @@ NativeCallTailDispatchResult tryEmitNativeCallTailDispatch(
     accessName = publishedVectorAccessName;
   }
   if (hasBuiltinArrayAccessName || hasPublishedVectorAccessName) {
-    const bool isKeyValueAccessName =
+    const bool isCollectionPairAccessName =
         accessName == "at" || accessName == "at_ref" ||
         accessName == "at_unsafe" || accessName == "at_unsafe_ref";
-    if (expr.isMethodCall && isKeyValueAccessName && !expr.args.empty() &&
+    if (expr.isMethodCall && isCollectionPairAccessName && !expr.args.empty() &&
         resolveCollectionPairTypeInfo(
             expr.args.front(), localsIn, resolveCallCollectionPairTypeInfo)
             .isKeyValueTarget) {

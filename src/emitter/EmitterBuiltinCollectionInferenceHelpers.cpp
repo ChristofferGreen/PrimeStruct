@@ -271,7 +271,7 @@ bool inferCollectionElementTypeNameFromBinding(const BindingInfo &binding, std::
     typeOut = normalizeBindingTypeName(templateArg);
     return true;
   }
-  if (isKeyValueCollectionTypeNameLocal(typeName) && !templateArg.empty()) {
+  if (isMapCollectionTypeNameLocal(typeName) && !templateArg.empty()) {
     std::string keyType;
     if (extractKeyValueCollectionTypesLocal(binding, keyType, typeOut)) {
       typeOut = normalizeBindingTypeName(typeOut);
