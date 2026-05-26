@@ -14,13 +14,42 @@
   release | command:
   `cd build-release && ./PrimeStruct_compile_run_tests --test-case="C++ emitter runs ui ime event stream deterministically" --no-skip`
   | first_seen: 2026-05-26 19:50 CEST | last_seen:
-  2026-05-26 19:50 CEST | next:
+  2026-05-26 20:44 CEST | next:
   `cmake --build build-release --target primec PrimeStruct_compile_run_tests -j 1; cd build-release && ./PrimeStruct_compile_run_tests --test-case="C++ emitter runs ui ime event stream deterministically" --no-skip`
   | notes: after focused string-count lowering fixes, the prior `/string/count`
   unsupported-call diagnostic did not recur, but the isolated fixture stayed
-  silent for several minutes and was stopped with SIGTERM.
+  silent for several minutes and was stopped with SIGTERM. A worker-local
+  IME-only fixture split and direct-call snapshot-inference guard both rebuilt
+  successfully but still hung before producing a cached `.cpp`, so the blocker
+  remains localized to the imported `/std/ui` IME path during C++ emission.
 
 ## Recent Test Runs
+- 2026-05-26 20:44 CEST | canceled | mode: release | command:
+  worker `codex/stabilize-stdlib-ui-ime`:
+  `cmake --build build-release --target primec PrimeStruct_compile_run_tests -j 1`;
+  `cd build-release && ./PrimeStruct_compile_run_tests --test-case="C++ emitter runs ui ime event stream deterministically" --no-skip`
+  | failures: `C++ emitter runs ui ime event stream deterministically` |
+  notes: worker rebuild passed after gating the expensive direct-call snapshot
+  inference path and splitting the IME fixture to a smaller source, but the
+  focused doctest still stayed silent until SIGTERM. The cache entry again
+  contained only `.prime` plus `.lock`, with no emitted `.cpp` or executable.
+- 2026-05-26 20:33 CEST | canceled | mode: release | command:
+  worker `codex/stabilize-stdlib-ui-ime`:
+  `cmake --build build-release --target primec PrimeStruct_compile_run_tests -j 1`;
+  `cd build-release && ./PrimeStruct_compile_run_tests --test-case="C++ emitter runs ui ime event stream deterministically" --no-skip`
+  | failures: `C++ emitter runs ui ime event stream deterministically` |
+  notes: worker rebuild passed after the IME-only fixture split, but the
+  focused doctest still stayed silent until SIGTERM. The narrowed
+  `primec_cpp_emitter_ui_ime_event_fixture` cache key produced only `.prime`
+  plus `.lock`, so the shared selector fixture size is not the root cause.
+- 2026-05-26 20:21 CEST | canceled | mode: release | command:
+  worker `codex/stabilize-stdlib-ui-ime`:
+  `cmake --build build-release --target primec PrimeStruct_compile_run_tests -j 1`;
+  `cd build-release && ./PrimeStruct_compile_run_tests --test-case="C++ emitter runs ui ime event stream deterministically" --no-skip`
+  | failures: `C++ emitter runs ui ime event stream deterministically` |
+  notes: worker target build passed, then the focused doctest stayed silent
+  while building the full shared UI-events fixture cache entry. Cache inspection
+  showed `.prime` plus `.lock` with no `.cpp` or executable.
 - 2026-05-26 19:50 CEST | canceled | mode: release | command:
   `./scripts/compile.sh --release` | failures: incomplete; see Current Known
   Failures | notes: rerun was stopped after reaching about 211/1615 CTest
