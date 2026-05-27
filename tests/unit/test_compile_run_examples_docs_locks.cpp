@@ -1456,6 +1456,15 @@ TEST_CASE("source lock inventory keeps replacement surfaces explicit") {
   CHECK(inventory.find("temporary migration lock") != std::string::npos);
   CHECK(inventory.find("CompilePipelineResult") != std::string::npos);
   CHECK(inventory.find("direct variant contract test") != std::string::npos);
+  CHECK(inventory.find(
+            "expression-emitter lock retired") != std::string::npos);
+  CHECK(inventory.find(
+            "source C++ emitter emits block-argument expression wrappers without source locks") !=
+        std::string::npos);
+  CHECK(inventory.find(
+            "Guards expression-emitter delegation while C++/GLSL/VM emission "
+            "boundaries are still being separated") ==
+        std::string::npos);
 }
 
 TEST_CASE("status-only result bridge docs stay source locked") {
@@ -1939,7 +1948,6 @@ TEST_CASE("todo queue and skipped doctest debt stay source locked") {
         std::string::npos);
   CHECK(todo.find("### Ready Now\n\n"
                   "- TODO-4613: Retire semantic-validator private source locks | track: semantic-source-lock-retirement | surface: semantic validator source-lock tests\n"
-                  "- TODO-4615: Retire emitter private source locks | track: emitter-source-lock-retirement | surface: emitter source-lock tests\n"
                   "- TODO-4606: Specify capability-parameterized views | track: capability-view-docs | surface: docs view model\n\n"
                   "### Immediate Next 10") !=
         std::string::npos);
@@ -1970,6 +1978,10 @@ TEST_CASE("todo queue and skipped doctest debt stay source locked") {
   CHECK(todo.find("- [ ] TODO-4599: Migrate emitter collection surface lookups") ==
         std::string::npos);
   CHECK(todo.find("- [ ] TODO-4600: Migrate IR lowerer collection surface lookups") ==
+        std::string::npos);
+  CHECK(todo.find("- TODO-4615: Retire emitter private source locks | track:") ==
+        std::string::npos);
+  CHECK(todo.find("- [ ] TODO-4615: Retire emitter private source locks") ==
         std::string::npos);
   CHECK(todo.find("- TODO-4569: Present scene-rendered UI through software surface bridge | track: "
                   "ui-scene-presentation") ==
@@ -2025,9 +2037,9 @@ TEST_CASE("todo queue and skipped doctest debt stay source locked") {
         std::string::npos);
   CHECK(todo.find("### Execution Queue\n\n"
                   "1. TODO-4613: Retire semantic-validator private source locks\n"
-                  "2. TODO-4615: Retire emitter private source locks\n"
-                  "3. TODO-4606: Specify capability-parameterized views\n"
-                  "4. TODO-4607: Publish initial array extent facts") !=
+                  "2. TODO-4606: Specify capability-parameterized views\n"
+                  "3. TODO-4607: Publish initial array extent facts\n"
+                  "4. TODO-4608: Add checked array slice construction") !=
         std::string::npos);
   CHECK(todo.find("### Task Blocks\n\n"
                   "- [ ] TODO-4606: Specify capability-parameterized views") !=
@@ -2050,6 +2062,13 @@ TEST_CASE("todo queue and skipped doctest debt stay source locked") {
   CHECK(todoFinished.find("TODO-4599: Migrate emitter collection surface lookups") !=
         std::string::npos);
   CHECK(todoFinished.find("Production `src/emitter/` no longer contains the assigned") !=
+        std::string::npos);
+  CHECK(todoFinished.find("TODO-4615: Retire emitter private source locks") !=
+        std::string::npos);
+  CHECK(todoFinished.find("source C++ emitter contract that emits a block expression") !=
+        std::string::npos);
+  CHECK(todoFinished.find("expression-emitter private source lock was\n"
+                          "    retired without refactoring backend emitter ownership") !=
         std::string::npos);
   CHECK(todoFinished.find("TODO-4602: Remove semantic vector-literal compiler traces") !=
         std::string::npos);

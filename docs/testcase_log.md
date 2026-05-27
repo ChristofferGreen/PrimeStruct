@@ -38,6 +38,19 @@
   configured the missing build dir and rebuilt successfully; focused doctest
   failed on one line-wrap-sensitive MemoryCapabilities source-lock and stale
   TODO queue expectations.
+- 2026-05-27 21:12 CEST | pass | mode: release + docs/source-lock |
+  command:
+  `cmake -S . -B build-release -DCMAKE_BUILD_TYPE=Release -DCMAKE_EXPORT_COMPILE_COMMANDS=ON`;
+  `cmake --build build-release --target PrimeStruct_backend_ir_tests PrimeStruct_compile_run_tests -j 1`;
+  `cd build-release && ./PrimeStruct_backend_ir_tests --test-case="emitter expr contract covers control routing without source locks,source C++ emitter emits block-argument expression wrappers without source locks" --no-skip`;
+  `cd build-release && ./PrimeStruct_compile_run_tests --test-case="source lock inventory keeps replacement surfaces explicit,todo queue and skipped doctest debt stay source locked" --no-skip`;
+  `python3 scripts/check_include_layers.py`;
+  `git diff --check`
+  | failures: none | notes: TODO-4615 focused validation passed after
+  parent configured the missing worker release build dir. The backend IR
+  emitter contract slice passed 2 cases / 61 assertions, the docs/source-lock
+  slice passed 2 cases / 565 assertions, and include-layer plus whitespace
+  checks passed.
 - 2026-05-27 19:45 CEST | pass | mode: release + docs/source-lock |
   command:
   `cmake --build build-release --target PrimeStruct_compile_run_tests -j 1`;

@@ -65,6 +65,32 @@ Finished items are periodically archived here from `docs/todo.md`; section heade
   - stop_rule: Stopped after the call-helper/dispatch-wrapper source-lock
     family was retired, leaving unrelated lowerer source-lock families open.
 
+- [x] TODO-4615: Retire emitter private source locks
+  - owner: ai
+  - created_at: 2026-05-27
+  - finished_at: 2026-05-27
+  - phase: Architecture hardening
+  - parallel_track: emitter-source-lock-retirement
+  - scope: Replaced the temporary expression-emitter source lock with
+    observable emitted-output coverage so active expression-emitter delegation
+    coverage no longer needs private emitter or lowerer source text.
+  - outcome:
+    - Added a source C++ emitter contract that emits a block expression used as
+      a call argument and checks for the inline expression-wrapper shape,
+      final-value return, and absence of IR `switch (pc)` output.
+    - Kept the existing public emitter helper contract as the step-level
+      coverage for expression-control routing.
+    - Reclassified the emitter row in `docs/source_lock_inventory.md` so the
+      remaining private emitter collection-helper assertions are tracked
+      separately from the retired expression-emitter lock.
+  - validation:
+    - Focused validation was selected for the backend IR emitter contract,
+      docs source-lock coverage, include-layer checker, and whitespace check;
+      see `docs/testcase_log.md` and the commit report for exact commands.
+  - stop_rule: Stopped once the expression-emitter private source lock was
+    retired without refactoring backend emitter ownership beyond the covered
+    block-argument expression family.
+
 - [x] TODO-4604: Specify requirement contract phase split
   - owner: ai
   - created_at: 2026-05-27

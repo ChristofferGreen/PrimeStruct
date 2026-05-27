@@ -226,6 +226,36 @@ TEST_CASE("emitter expr contract covers control routing without source locks") {
   }
 }
 
+TEST_CASE("source C++ emitter emits block-argument expression wrappers without source locks") {
+  const std::string source = R"(
+[return<int>]
+choose([i32] value) {
+  return(value)
+}
+
+[return<int>]
+main() {
+  return(choose(block() {
+    [i32] local{1i32}
+    plus(local, 2i32)
+  }))
+}
+)";
+  primec::Program program;
+  primec::SemanticProgram semanticProgram;
+  std::string error;
+  REQUIRE(parseAndValidate(source, program, semanticProgram, error));
+  CHECK(error.empty());
+
+  primec::Emitter emitter;
+  const std::string cpp = emitter.emitCpp(program, "/main");
+
+  CHECK(cpp.find("return ps_choose(([&]() { const int local = 1; "
+                 "return (local + 2); }()));") != std::string::npos);
+  CHECK(cpp.find("(void)(local + 2);") == std::string::npos);
+  CHECK(cpp.find("switch (pc)") == std::string::npos);
+}
+
 TEST_CASE("semantics validator expr source delegation stays stable") {
   auto readText = [](const std::filesystem::path &path) {
     std::ifstream file(path);
