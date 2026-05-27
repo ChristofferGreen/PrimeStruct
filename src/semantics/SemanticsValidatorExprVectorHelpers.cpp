@@ -787,8 +787,11 @@ bool SemanticsValidator::resolveExprVectorHelperCall(const std::vector<Parameter
         return false;
       }
       const Expr &receiverCandidate = expr.args[receiverIndex];
-      const bool isBareMutatorExpressionReceiver =
-          isBareVectorMutatorExpressionReceiver(receiverCandidate);
+      if (isBareVectorMutatorExpressionReceiver(receiverCandidate) && !allowStatementOnlyMutator) {
+        failedReceiverProbe = true;
+        return failVectorHelperDiagnostic(
+            vectorHelper + " is only supported as a statement");
+      }
       std::string methodTarget;
       if (resolveVectorHelperMethodTarget(params, locals, receiverCandidate, vectorHelper, methodTarget)) {
         if (!expr.isMethodCall) {
@@ -797,11 +800,6 @@ bool SemanticsValidator::resolveExprVectorHelperCall(const std::vector<Parameter
       }
       if (!hasVisibleDefinitionPath(methodTarget)) {
         return false;
-      }
-      if (isBareMutatorExpressionReceiver && !allowStatementOnlyMutator) {
-        failedReceiverProbe = true;
-        return failVectorHelperDiagnostic(
-            vectorHelper + " is only supported as a statement");
       }
       resolved = methodTarget;
       resolvedVectorHelperDefinitionMissing =

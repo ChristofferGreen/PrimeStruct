@@ -24,6 +24,146 @@ bool SemanticsValidator::validateExprDirectCollectionFallbacks(
   }
 
   Expr rewrittenVectorHelperCall;
+  auto directVectorMutatorHelperName = [&]() -> std::string {
+    if (expr.isMethodCall || !expr.namespacePrefix.empty() ||
+        expr.name.find('/') != std::string::npos ||
+        !isPublishedVectorMutatorHelperName(expr.name)) {
+      return {};
+    }
+    return expr.name;
+  };
+  if (const std::string vectorMutatorHelper = directVectorMutatorHelperName();
+      !vectorMutatorHelper.empty() && !expr.args.empty()) {
+    size_t receiverIndex = 0;
+    if (hasNamedArguments(expr.argNames)) {
+      for (size_t i = 0; i < expr.args.size(); ++i) {
+        if (i < expr.argNames.size() && expr.argNames[i].has_value() &&
+            *expr.argNames[i] == "values") {
+          receiverIndex = i;
+          break;
+        }
+      }
+    }
+    const Expr &receiverExpr = expr.args[receiverIndex];
+    std::string elemType;
+    const bool isVectorReceiver =
+        dispatchResolvers.resolveVectorTarget != nullptr &&
+        dispatchResolvers.resolveVectorTarget(receiverExpr, elemType);
+    std::string keyType;
+    std::string valueType;
+    const bool isNonVectorCollectionReceiver =
+        (dispatchResolvers.resolveArrayTarget != nullptr &&
+         dispatchResolvers.resolveArrayTarget(receiverExpr, elemType)) ||
+        (dispatchResolvers.resolveStringTarget != nullptr &&
+         dispatchResolvers.resolveStringTarget(receiverExpr)) ||
+        (dispatchResolvers.resolveMapTarget != nullptr &&
+         dispatchResolvers.resolveMapTarget(receiverExpr, keyType, valueType));
+    if (isNonVectorCollectionReceiver && !isVectorReceiver) {
+      return failDirectCollectionFallbackDiagnostic(
+          vectorMutatorHelper + " requires vector binding");
+    }
+    if (isVectorReceiver) {
+      if (expr.sourceIsMethodCall) {
+        const std::string canonicalPath =
+            canonicalVectorCompatibilityHelperPathOrFallback(
+                vectorMutatorHelper);
+        if (!hasDeclaredDefinitionPath(canonicalPath) &&
+            !hasImportedDefinitionPath(canonicalPath)) {
+          return failDirectCollectionFallbackDiagnostic(
+              "unknown method: " + canonicalPath);
+        }
+        if ((vectorMutatorHelper == "reserve" ||
+             vectorMutatorHelper == "remove_at" ||
+             vectorMutatorHelper == "remove_swap") &&
+            expr.args.size() == 2) {
+          const ReturnKind payloadKind =
+              inferExprReturnKind(expr.args[1], params, locals);
+          if (payloadKind != ReturnKind::Int &&
+              payloadKind != ReturnKind::Int64 &&
+              payloadKind != ReturnKind::UInt64) {
+            const std::string payloadName =
+                vectorMutatorHelper == "reserve" ? "capacity" : "index";
+            return failDirectCollectionFallbackDiagnostic(
+                vectorMutatorHelper + " requires integer " + payloadName);
+          }
+        }
+      }
+      Expr rewrittenBareVectorMutatorCall;
+      if (this->tryRewriteBareVectorHelperCall(
+              expr,
+              vectorMutatorHelper,
+              dispatchResolvers,
+              rewrittenBareVectorMutatorCall)) {
+        rewrittenExprOut = rewrittenBareVectorMutatorCall;
+        return true;
+      }
+    }
+  }
+  auto methodVectorMutatorHelperName = [&]() -> std::string {
+    if (!expr.isMethodCall || expr.name.empty() ||
+        !isPublishedVectorMutatorHelperName(expr.name)) {
+      return {};
+    }
+    return expr.name;
+  };
+  if (const std::string vectorMutatorHelper = methodVectorMutatorHelperName();
+      !vectorMutatorHelper.empty() && !expr.args.empty()) {
+    const Expr &receiverExpr = expr.args.front();
+    std::string elemType;
+    const bool isVectorReceiver =
+        dispatchResolvers.resolveVectorTarget != nullptr &&
+        dispatchResolvers.resolveVectorTarget(receiverExpr, elemType);
+    std::string keyType;
+    std::string valueType;
+    const bool isNonVectorCollectionReceiver =
+        (dispatchResolvers.resolveArrayTarget != nullptr &&
+         dispatchResolvers.resolveArrayTarget(receiverExpr, elemType)) ||
+        (dispatchResolvers.resolveStringTarget != nullptr &&
+         dispatchResolvers.resolveStringTarget(receiverExpr)) ||
+        (dispatchResolvers.resolveMapTarget != nullptr &&
+         dispatchResolvers.resolveMapTarget(receiverExpr, keyType, valueType));
+    if (isNonVectorCollectionReceiver && !isVectorReceiver) {
+      return failDirectCollectionFallbackDiagnostic(
+          vectorMutatorHelper + " requires vector binding");
+    }
+    if (isVectorReceiver) {
+      const std::string canonicalPath =
+          canonicalVectorCompatibilityHelperPathOrFallback(vectorMutatorHelper);
+      std::string methodTarget;
+      if (!resolveVectorHelperMethodTarget(
+              params, locals, receiverExpr, vectorMutatorHelper, methodTarget) ||
+          methodTarget.empty()) {
+        methodTarget = canonicalPath;
+      }
+      if (!hasDeclaredDefinitionPath(methodTarget) &&
+          !hasImportedDefinitionPath(methodTarget)) {
+        return failDirectCollectionFallbackDiagnostic(
+            "unknown method: " + canonicalPath);
+      }
+      if ((vectorMutatorHelper == "reserve" ||
+           vectorMutatorHelper == "remove_at" ||
+           vectorMutatorHelper == "remove_swap") &&
+          expr.args.size() == 2) {
+        const ReturnKind payloadKind =
+            inferExprReturnKind(expr.args[1], params, locals);
+        if (payloadKind != ReturnKind::Int &&
+            payloadKind != ReturnKind::Int64 &&
+            payloadKind != ReturnKind::UInt64) {
+          const std::string payloadName =
+              vectorMutatorHelper == "reserve" ? "capacity" : "index";
+          return failDirectCollectionFallbackDiagnostic(
+              vectorMutatorHelper + " requires integer " + payloadName);
+        }
+      }
+      Expr rewrittenVectorMethodCall = expr;
+      rewrittenVectorMethodCall.isMethodCall = false;
+      rewrittenVectorMethodCall.namespacePrefix.clear();
+      rewrittenVectorMethodCall.name = methodTarget;
+      rewrittenExprOut = rewrittenVectorMethodCall;
+      return true;
+    }
+  }
+
   const bool isBareVectorAccessHelperCall =
       expr.namespacePrefix.empty() &&
       (expr.name == "at" || expr.name == "at_unsafe");

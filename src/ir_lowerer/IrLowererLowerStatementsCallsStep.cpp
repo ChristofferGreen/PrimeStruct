@@ -1,6 +1,370 @@
 #include "IrLowererLowerStatementsCallsStep.h"
 
+#include <string_view>
+
+#include "IrLowererCallHelpers.h"
+#include "IrLowererSetupTypeCollectionHelpers.h"
+
 namespace primec::ir_lowerer {
+
+namespace {
+
+enum class VectorMutationStatementEmitResult {
+  NotMatched,
+  Emitted,
+  Error,
+};
+
+bool isNamedArgument(const Expr &expr, size_t index, std::string_view name) {
+  return index < expr.argNames.size() && expr.argNames[index].has_value() &&
+         *expr.argNames[index] == name;
+}
+
+bool isVectorMutationHelperName(std::string_view helperName) {
+  return helperName == "push" || helperName == "reserve" ||
+         helperName == "remove_at" || helperName == "remove_swap";
+}
+
+bool isVectorIndexedRemovalHelperName(std::string_view helperName) {
+  return helperName == "remove_at" || helperName == "remove_swap";
+}
+
+std::string_view vectorMutationPayloadName(std::string_view helperName) {
+  if (helperName == "reserve") {
+    return "capacity";
+  }
+  if (isVectorIndexedRemovalHelperName(helperName)) {
+    return "index";
+  }
+  return "value";
+}
+
+std::string resolveDirectHelperPath(const Expr &callExpr) {
+  if (!callExpr.name.empty() && callExpr.name.front() == '/') {
+    return callExpr.name;
+  }
+  if (!callExpr.namespacePrefix.empty()) {
+    std::string scoped = callExpr.namespacePrefix;
+    if (!scoped.empty() && scoped.front() != '/') {
+      scoped.insert(scoped.begin(), '/');
+    }
+    return scoped + "/" + callExpr.name;
+  }
+  return callExpr.name;
+}
+
+bool resolveVectorMutationHelperName(const SemanticProgram *semanticProgram,
+                                     const Expr &stmt,
+                                     std::string &helperNameOut,
+                                     bool &isSemanticMatchOut) {
+  helperNameOut.clear();
+  isSemanticMatchOut = false;
+  if (resolvePublishedSemanticStdlibSurfaceMemberName(
+          semanticProgram,
+          stmt,
+          StdlibSurfaceId::CollectionsVectorHelperSurface,
+          helperNameOut)) {
+    isSemanticMatchOut = true;
+    return isVectorMutationHelperName(helperNameOut);
+  }
+
+  const std::string directHelperPath = resolveDirectHelperPath(stmt);
+  if (isCanonicalPublishedStdlibSurfaceHelperPath(
+          directHelperPath, StdlibSurfaceId::CollectionsVectorHelperSurface) &&
+      resolvePublishedStdlibSurfaceMemberName(
+          directHelperPath,
+          StdlibSurfaceId::CollectionsVectorHelperSurface,
+          helperNameOut)) {
+    return isVectorMutationHelperName(helperNameOut);
+  }
+
+  if (stmt.namespacePrefix.empty() && stmt.name.find('/') == std::string::npos &&
+      isVectorMutationHelperName(stmt.name)) {
+    helperNameOut = stmt.name;
+    return true;
+  }
+  return false;
+}
+
+bool selectVectorMutationArgs(const Expr &stmt,
+                              std::string_view helperName,
+                              const Expr *&valuesArgOut,
+                              const Expr *&payloadArgOut) {
+  valuesArgOut = nullptr;
+  payloadArgOut = nullptr;
+  if (stmt.isMethodCall) {
+    if (stmt.args.size() != 2) {
+      return false;
+    }
+    valuesArgOut = &stmt.args[0];
+    payloadArgOut = &stmt.args[1];
+    return true;
+  }
+
+  if (stmt.args.size() != 2) {
+    return false;
+  }
+
+  const std::string_view payloadName = vectorMutationPayloadName(helperName);
+  for (size_t index = 0; index < stmt.args.size(); ++index) {
+    if (isNamedArgument(stmt, index, "values")) {
+      if (valuesArgOut != nullptr) {
+        return false;
+      }
+      valuesArgOut = &stmt.args[index];
+      continue;
+    }
+    if (isNamedArgument(stmt, index, payloadName)) {
+      if (payloadArgOut != nullptr) {
+        return false;
+      }
+      payloadArgOut = &stmt.args[index];
+      continue;
+    }
+    if (index < stmt.argNames.size() && stmt.argNames[index].has_value()) {
+      return false;
+    }
+  }
+
+  size_t positionalIndex = 0;
+  for (size_t index = 0; index < stmt.args.size(); ++index) {
+    if (index < stmt.argNames.size() && stmt.argNames[index].has_value()) {
+      continue;
+    }
+    if (positionalIndex == 0 && valuesArgOut == nullptr) {
+      valuesArgOut = &stmt.args[index];
+    } else if (positionalIndex <= 1 && payloadArgOut == nullptr) {
+      payloadArgOut = &stmt.args[index];
+    } else {
+      return false;
+    }
+    ++positionalIndex;
+  }
+
+  return valuesArgOut != nullptr && payloadArgOut != nullptr;
+}
+
+VectorMutationStatementEmitResult tryEmitCanonicalVectorMutationStatement(
+    const LowerStatementsCallsStepInput &input,
+    const Expr &stmt,
+    const LocalMap &localsIn,
+    std::vector<IrInstruction> &instructions,
+    std::string &errorOut) {
+  if (stmt.kind != Expr::Kind::Call || stmt.hasBodyArguments ||
+      !stmt.bodyArguments.empty() || input.semanticProgram == nullptr ||
+      !input.emitVectorCapacityExceeded || !input.emitVectorReserveNegative ||
+      !input.emitVectorReserveExceeded) {
+    return VectorMutationStatementEmitResult::NotMatched;
+  }
+
+  std::string helperName;
+  bool isSemanticMatch = false;
+  if (!resolveVectorMutationHelperName(
+          input.semanticProgram, stmt, helperName, isSemanticMatch)) {
+    return VectorMutationStatementEmitResult::NotMatched;
+  }
+
+  const Expr *valuesArg = nullptr;
+  const Expr *payloadArg = nullptr;
+  if (!selectVectorMutationArgs(stmt, helperName, valuesArg, payloadArg) ||
+      valuesArg == nullptr || payloadArg == nullptr) {
+    return VectorMutationStatementEmitResult::NotMatched;
+  }
+
+  const ArrayVectorAccessTargetInfo targetInfo =
+      resolveArrayVectorAccessTargetInfo(*valuesArg,
+                                         localsIn,
+                                         {},
+                                         input.semanticProgram,
+                                         input.semanticIndex);
+  if (!targetInfo.isArrayOrVectorTarget) {
+    return VectorMutationStatementEmitResult::NotMatched;
+  }
+  if (!targetInfo.isVectorTarget || targetInfo.isSoaVector ||
+      targetInfo.isKeyValueTarget || targetInfo.isWrappedKeyValueTarget) {
+    errorOut = helperName + " requires vector binding";
+    return VectorMutationStatementEmitResult::Error;
+  }
+  if (!isSemanticMatch) {
+    return VectorMutationStatementEmitResult::NotMatched;
+  }
+  if (targetInfo.elemSlotCount > 1) {
+    return VectorMutationStatementEmitResult::NotMatched;
+  }
+
+  const LocalInfo::ValueKind payloadKind = input.inferExprKind(*payloadArg, localsIn);
+  if (isVectorIndexedRemovalHelperName(helperName)) {
+    if (stmt.isMethodCall && payloadKind != LocalInfo::ValueKind::Int32) {
+      errorOut = helperName + " requires integer index";
+      return VectorMutationStatementEmitResult::Error;
+    }
+    return VectorMutationStatementEmitResult::NotMatched;
+  }
+  if (helperName == "reserve" && payloadKind != LocalInfo::ValueKind::Int32) {
+    if (stmt.isMethodCall) {
+      errorOut = "reserve requires integer capacity";
+      return VectorMutationStatementEmitResult::Error;
+    }
+    return VectorMutationStatementEmitResult::NotMatched;
+  }
+  if (helperName == "push") {
+    if (payloadKind == LocalInfo::ValueKind::Unknown ||
+        payloadKind == LocalInfo::ValueKind::String ||
+        (targetInfo.elemKind != LocalInfo::ValueKind::Unknown &&
+         targetInfo.elemKind != payloadKind)) {
+      return VectorMutationStatementEmitResult::NotMatched;
+    }
+  }
+
+  auto emitFieldAddress = [&](int32_t valuesPtrLocal, int32_t slotOffset) {
+    instructions.push_back({IrOpcode::LoadLocal, static_cast<uint64_t>(valuesPtrLocal)});
+    if (slotOffset != 0) {
+      instructions.push_back({IrOpcode::PushI64, static_cast<uint64_t>(slotOffset) * IrSlotBytes});
+      instructions.push_back({IrOpcode::AddI64, 0});
+    }
+  };
+  auto emitFieldLoad = [&](int32_t valuesPtrLocal, int32_t slotOffset) {
+    emitFieldAddress(valuesPtrLocal, slotOffset);
+    instructions.push_back({IrOpcode::LoadIndirect, 0});
+  };
+  auto emitFieldStoreFromLocal = [&](int32_t valuesPtrLocal,
+                                     int32_t slotOffset,
+                                     int32_t sourceLocal) {
+    emitFieldAddress(valuesPtrLocal, slotOffset);
+    instructions.push_back({IrOpcode::LoadLocal, static_cast<uint64_t>(sourceLocal)});
+    instructions.push_back({IrOpcode::StoreIndirect, 0});
+    instructions.push_back({IrOpcode::Pop, 0});
+  };
+  auto emitTrapIfStackTrue = [&](const std::function<void()> &emitTrap) {
+    const size_t okJump = instructions.size();
+    instructions.push_back({IrOpcode::JumpIfZero, 0});
+    emitTrap();
+    instructions[okJump].imm = static_cast<uint64_t>(instructions.size());
+  };
+  auto emitVectorShapeChecks = [&](int32_t valuesPtrLocal,
+                                   int32_t countLocal,
+                                   int32_t capacityLocal) {
+    emitFieldLoad(valuesPtrLocal, 0);
+    instructions.push_back({IrOpcode::StoreLocal, static_cast<uint64_t>(countLocal)});
+    emitFieldLoad(valuesPtrLocal, 1);
+    instructions.push_back({IrOpcode::StoreLocal, static_cast<uint64_t>(capacityLocal)});
+
+    instructions.push_back({IrOpcode::LoadLocal, static_cast<uint64_t>(countLocal)});
+    instructions.push_back({IrOpcode::PushI32, 0});
+    instructions.push_back({IrOpcode::CmpLtI32, 0});
+    emitTrapIfStackTrue(input.emitArrayIndexOutOfBounds);
+
+    instructions.push_back({IrOpcode::LoadLocal, static_cast<uint64_t>(capacityLocal)});
+    instructions.push_back({IrOpcode::PushI32, 0});
+    instructions.push_back({IrOpcode::CmpLtI32, 0});
+    emitTrapIfStackTrue(input.emitVectorReserveNegative);
+
+    instructions.push_back({IrOpcode::LoadLocal, static_cast<uint64_t>(countLocal)});
+    instructions.push_back({IrOpcode::LoadLocal, static_cast<uint64_t>(capacityLocal)});
+    instructions.push_back({IrOpcode::CmpGtI32, 0});
+    emitTrapIfStackTrue(input.emitVectorCapacityExceeded);
+
+    instructions.push_back({IrOpcode::LoadLocal, static_cast<uint64_t>(capacityLocal)});
+    instructions.push_back({IrOpcode::PushI32, 1073741823});
+    instructions.push_back({IrOpcode::CmpGtI32, 0});
+    emitTrapIfStackTrue(input.emitVectorCapacityExceeded);
+  };
+  auto emitReallocDataToCapacity = [&](int32_t valuesPtrLocal, int32_t capacityLocal) {
+    emitFieldAddress(valuesPtrLocal, 2);
+    emitFieldLoad(valuesPtrLocal, 2);
+    instructions.push_back({IrOpcode::LoadLocal, static_cast<uint64_t>(capacityLocal)});
+    instructions.push_back({IrOpcode::HeapRealloc, 0});
+    instructions.push_back({IrOpcode::StoreIndirect, 0});
+    instructions.push_back({IrOpcode::Pop, 0});
+    emitFieldStoreFromLocal(valuesPtrLocal, 1, capacityLocal);
+  };
+
+  const int32_t valuesPtrLocal = input.allocTempLocal();
+  if (!input.emitExpr(*valuesArg, localsIn)) {
+    return VectorMutationStatementEmitResult::Error;
+  }
+  instructions.push_back({IrOpcode::StoreLocal, static_cast<uint64_t>(valuesPtrLocal)});
+
+  const int32_t payloadLocal = input.allocTempLocal();
+  if (!input.emitExpr(*payloadArg, localsIn)) {
+    return VectorMutationStatementEmitResult::Error;
+  }
+  instructions.push_back({IrOpcode::StoreLocal, static_cast<uint64_t>(payloadLocal)});
+
+  const int32_t countLocal = input.allocTempLocal();
+  const int32_t capacityLocal = input.allocTempLocal();
+  emitVectorShapeChecks(valuesPtrLocal, countLocal, capacityLocal);
+
+  if (helperName == "reserve") {
+    instructions.push_back({IrOpcode::LoadLocal, static_cast<uint64_t>(payloadLocal)});
+    instructions.push_back({IrOpcode::PushI32, 0});
+    instructions.push_back({IrOpcode::CmpLtI32, 0});
+    emitTrapIfStackTrue(input.emitVectorReserveNegative);
+
+    instructions.push_back({IrOpcode::LoadLocal, static_cast<uint64_t>(payloadLocal)});
+    instructions.push_back({IrOpcode::PushI32, 1073741823});
+    instructions.push_back({IrOpcode::CmpGtI32, 0});
+    emitTrapIfStackTrue(input.emitVectorReserveExceeded);
+
+    instructions.push_back({IrOpcode::LoadLocal, static_cast<uint64_t>(payloadLocal)});
+    instructions.push_back({IrOpcode::LoadLocal, static_cast<uint64_t>(capacityLocal)});
+    instructions.push_back({IrOpcode::CmpGtI32, 0});
+    const size_t skipGrowJump = instructions.size();
+    instructions.push_back({IrOpcode::JumpIfZero, 0});
+    emitReallocDataToCapacity(valuesPtrLocal, payloadLocal);
+    instructions[skipGrowJump].imm = static_cast<uint64_t>(instructions.size());
+    return VectorMutationStatementEmitResult::Emitted;
+  }
+
+  instructions.push_back({IrOpcode::LoadLocal, static_cast<uint64_t>(countLocal)});
+  instructions.push_back({IrOpcode::LoadLocal, static_cast<uint64_t>(capacityLocal)});
+  instructions.push_back({IrOpcode::CmpEqI32, 0});
+  const size_t skipGrowJump = instructions.size();
+  instructions.push_back({IrOpcode::JumpIfZero, 0});
+
+  instructions.push_back({IrOpcode::LoadLocal, static_cast<uint64_t>(capacityLocal)});
+  instructions.push_back({IrOpcode::PushI32, 536870911});
+  instructions.push_back({IrOpcode::CmpGtI32, 0});
+  emitTrapIfStackTrue(input.emitVectorCapacityExceeded);
+
+  const int32_t nextCapacityLocal = input.allocTempLocal();
+  instructions.push_back({IrOpcode::LoadLocal, static_cast<uint64_t>(capacityLocal)});
+  instructions.push_back({IrOpcode::PushI32, 0});
+  instructions.push_back({IrOpcode::CmpEqI32, 0});
+  const size_t useDoubleJump = instructions.size();
+  instructions.push_back({IrOpcode::JumpIfZero, 0});
+  instructions.push_back({IrOpcode::PushI32, 1});
+  instructions.push_back({IrOpcode::StoreLocal, static_cast<uint64_t>(nextCapacityLocal)});
+  const size_t afterNextCapacityJump = instructions.size();
+  instructions.push_back({IrOpcode::Jump, 0});
+  instructions[useDoubleJump].imm = static_cast<uint64_t>(instructions.size());
+  instructions.push_back({IrOpcode::LoadLocal, static_cast<uint64_t>(capacityLocal)});
+  instructions.push_back({IrOpcode::LoadLocal, static_cast<uint64_t>(capacityLocal)});
+  instructions.push_back({IrOpcode::AddI32, 0});
+  instructions.push_back({IrOpcode::StoreLocal, static_cast<uint64_t>(nextCapacityLocal)});
+  instructions[afterNextCapacityJump].imm = static_cast<uint64_t>(instructions.size());
+  emitReallocDataToCapacity(valuesPtrLocal, nextCapacityLocal);
+  instructions[skipGrowJump].imm = static_cast<uint64_t>(instructions.size());
+
+  emitFieldLoad(valuesPtrLocal, 2);
+  instructions.push_back({IrOpcode::LoadLocal, static_cast<uint64_t>(countLocal)});
+  instructions.push_back({IrOpcode::PushI32, IrSlotBytesI32});
+  instructions.push_back({IrOpcode::MulI32, 0});
+  instructions.push_back({IrOpcode::AddI64, 0});
+  instructions.push_back({IrOpcode::LoadLocal, static_cast<uint64_t>(payloadLocal)});
+  instructions.push_back({IrOpcode::StoreIndirect, 0});
+  instructions.push_back({IrOpcode::Pop, 0});
+
+  emitFieldAddress(valuesPtrLocal, 0);
+  instructions.push_back({IrOpcode::LoadLocal, static_cast<uint64_t>(countLocal)});
+  instructions.push_back({IrOpcode::PushI32, 1});
+  instructions.push_back({IrOpcode::AddI32, 0});
+  instructions.push_back({IrOpcode::StoreIndirect, 0});
+  instructions.push_back({IrOpcode::Pop, 0});
+  return VectorMutationStatementEmitResult::Emitted;
+}
+
+} // namespace
 
 bool runLowerStatementsCallsStep(const LowerStatementsCallsStepInput &input,
                                  const Expr &stmt,
@@ -100,6 +464,15 @@ bool runLowerStatementsCallsStep(const LowerStatementsCallsStepInput &input,
     return false;
   }
   if (dispatchResult == DispatchStatementEmitResult::Emitted) {
+    return true;
+  }
+
+  const auto vectorMutationResult = tryEmitCanonicalVectorMutationStatement(
+      input, stmt, localsIn, instructions, errorOut);
+  if (vectorMutationResult == VectorMutationStatementEmitResult::Error) {
+    return false;
+  }
+  if (vectorMutationResult == VectorMutationStatementEmitResult::Emitted) {
     return true;
   }
 

@@ -3,6 +3,7 @@
 #include <algorithm>
 #include <cctype>
 #include <functional>
+#include <optional>
 #include <string>
 #include <string_view>
 #include <utility>
@@ -755,10 +756,15 @@ InlineCallDispatchResult tryEmitInlineCallDispatchWithLocals(
     const std::function<bool(const Expr &, const Definition &, const LocalMap &)> &emitInlineDefinitionCallFn,
     std::string &error,
     const SemanticProgram *semanticProgram,
-    const std::function<LocalInfo::ValueKind(const Expr &, const LocalMap &)> &inferExprKind) {
-  const SemanticProductIndex semanticIndex = buildSemanticProductIndex(semanticProgram);
+    const std::function<LocalInfo::ValueKind(const Expr &, const LocalMap &)> &inferExprKind,
+    const SemanticProductIndex *semanticIndex) {
+  std::optional<SemanticProductIndex> ownedSemanticIndex;
+  if (semanticProgram != nullptr && semanticIndex == nullptr) {
+    ownedSemanticIndex = buildSemanticProductIndex(semanticProgram);
+    semanticIndex = &*ownedSemanticIndex;
+  }
   const SemanticProductIndex *const semanticIndexPtr =
-      semanticProgram == nullptr ? nullptr : &semanticIndex;
+      semanticProgram == nullptr ? nullptr : semanticIndex;
   auto resolveInlineSemanticTypeText = [&](SymbolId typeTextId,
                                            const std::string &typeText) {
     if (semanticProgram != nullptr && typeTextId != InvalidSymbolId) {

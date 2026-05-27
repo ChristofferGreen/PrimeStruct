@@ -180,10 +180,11 @@
               }
               return resolvePublishedTailDispatchKeyValueHelperName(callExpr, helperNameOut);
             };
-        const SemanticProductIndex tailDispatchKeyValueSemanticIndex =
-            ir_lowerer::buildSemanticProductIndex(semanticProgram);
+        const SemanticProductIndex *const tailDispatchSemanticIndexPtr =
+            semanticProgram == nullptr ? nullptr
+                                       : &callResolutionAdapters.semanticProductTargets.semanticIndex;
         const SemanticProductIndex *const tailDispatchKeyValueSemanticIndexPtr =
-            semanticProgram == nullptr ? nullptr : &tailDispatchKeyValueSemanticIndex;
+            tailDispatchSemanticIndexPtr;
         const auto inferCallKeyValueTargetInfo = [&](const Expr &targetExpr, ir_lowerer::CollectionPairTypeInfo &out) {
           out = {};
           const Definition *callee =
@@ -335,10 +336,8 @@
           if (callExpr.args.size() != expectedArgCount) {
             return false;
           }
-          const SemanticProductIndex canonicalKeyValueHelperSemanticIndex =
-              ir_lowerer::buildSemanticProductIndex(semanticProgram);
           const SemanticProductIndex *const canonicalKeyValueHelperSemanticIndexPtr =
-              semanticProgram == nullptr ? nullptr : &canonicalKeyValueHelperSemanticIndex;
+              tailDispatchSemanticIndexPtr;
           auto isSpecializedExperimentalKeyValueStructPath =
               [](const std::string &structPath) {
                 if (!ir_lowerer::isKeyValueStorageStructPath(structPath)) {
@@ -512,10 +511,8 @@
           if (!keyValueSurfaceId.has_value()) {
             return false;
           }
-          const SemanticProductIndex explicitKeyValueHelperSemanticIndex =
-              ir_lowerer::buildSemanticProductIndex(semanticProgram);
           const SemanticProductIndex *const explicitKeyValueHelperSemanticIndexPtr =
-              semanticProgram == nullptr ? nullptr : &explicitKeyValueHelperSemanticIndex;
+              tailDispatchSemanticIndexPtr;
           const auto keyValueTargetInfo =
               ir_lowerer::resolveCollectionPairTypeInfo(
                   callExpr.args.front(),
@@ -641,10 +638,8 @@
           if (resolveStdlibSurfaceMemberName(*metadata, memberLeaf) != "count") {
             return false;
           }
-          const SemanticProductIndex keyValueCountSemanticIndex =
-              ir_lowerer::buildSemanticProductIndex(semanticProgram);
           const SemanticProductIndex *const keyValueCountSemanticIndexPtr =
-              semanticProgram == nullptr ? nullptr : &keyValueCountSemanticIndex;
+              tailDispatchSemanticIndexPtr;
           const auto keyValueTargetInfo =
               ir_lowerer::resolveCollectionPairTypeInfo(
                   callExpr.args.front(),
@@ -772,10 +767,8 @@
               callExpr.args.front().kind == Expr::Kind::Call) {
             return false;
           }
-          const SemanticProductIndex canonicalKeyValueHelperSemanticIndex =
-              ir_lowerer::buildSemanticProductIndex(semanticProgram);
           const SemanticProductIndex *const canonicalKeyValueHelperSemanticIndexPtr =
-              semanticProgram == nullptr ? nullptr : &canonicalKeyValueHelperSemanticIndex;
+              tailDispatchSemanticIndexPtr;
           const auto keyValueTargetInfo =
               ir_lowerer::resolveCollectionPairTypeInfo(
                   callExpr.args.front(),
@@ -862,13 +855,11 @@
           };
           const Expr &receiverExpr = inlineDispatchExpr.args.front();
           auto classifyInternalReceiverFromSemanticFacts = [&]() -> std::optional<bool> {
-            if (semanticProgram == nullptr) {
+            if (semanticProgram == nullptr || tailDispatchSemanticIndexPtr == nullptr) {
               return std::nullopt;
             }
-            const SemanticProductIndex semanticIndex =
-                ir_lowerer::buildSemanticProductIndex(semanticProgram);
             if (const auto *queryFact = ir_lowerer::findSemanticProductQueryFact(
-                    semanticProgram, semanticIndex, inlineDispatchExpr);
+                    semanticProgram, *tailDispatchSemanticIndexPtr, inlineDispatchExpr);
                 queryFact != nullptr) {
               return isInternalSoaType(resolveSemanticReceiverTypeText(
                   queryFact->receiverBindingTypeText,
@@ -930,7 +921,8 @@
             semanticProgram,
             [&](const Expr &candidateExpr, const ir_lowerer::LocalMap &localMap) {
               return inferExprKind(candidateExpr, localMap);
-            });
+            },
+            tailDispatchSemanticIndexPtr);
         if (inlineDispatchResult == ir_lowerer::InlineCallDispatchResult::Emitted) {
           return true;
         }
@@ -943,10 +935,8 @@
             return false;
           }
 
-          const SemanticProductIndex borrowedKeyValueReceiverSemanticIndex =
-              ir_lowerer::buildSemanticProductIndex(semanticProgram);
           const SemanticProductIndex *const borrowedKeyValueReceiverSemanticIndexPtr =
-              semanticProgram == nullptr ? nullptr : &borrowedKeyValueReceiverSemanticIndex;
+              tailDispatchSemanticIndexPtr;
           auto resolveBorrowedKeyValueReceiverInfo =
               [&](const Expr &receiverExpr) {
                 return ir_lowerer::resolveCollectionPairTypeInfo(
@@ -1091,11 +1081,10 @@
             return normalized == "/std/collections/internal_soa_storage/SoaColumn" ||
                    normalized == "/std/collections/internal_soa_storage/SoaFieldView";
           };
-          if (semanticProgram != nullptr) {
-            const SemanticProductIndex semanticIndex =
-                ir_lowerer::buildSemanticProductIndex(semanticProgram);
+          if (semanticProgram != nullptr && tailDispatchSemanticIndexPtr != nullptr) {
             const auto *queryFact =
-                ir_lowerer::findSemanticProductQueryFact(semanticProgram, semanticIndex, callExpr);
+                ir_lowerer::findSemanticProductQueryFact(
+                    semanticProgram, *tailDispatchSemanticIndexPtr, callExpr);
             if (queryFact != nullptr) {
               const std::string receiverType = resolveSemanticReceiverTypeText(
                   queryFact->receiverBindingTypeText,
@@ -1366,11 +1355,11 @@
                         collectionName, elementTypeText, targetInfoOut);
                   };
               auto tryPopulateArrayVectorFromSemanticReceiverFacts = [&]() {
-                if (semanticProgram == nullptr) {
+                if (semanticProgram == nullptr || tailDispatchSemanticIndexPtr == nullptr) {
                   return false;
                 }
-                const SemanticProductIndex semanticIndex =
-                    ir_lowerer::buildSemanticProductIndex(semanticProgram);
+                const SemanticProductIndex &semanticIndex =
+                    *tailDispatchSemanticIndexPtr;
                 if (tryPopulateNativeTailArrayVectorTargetFromSemanticCollection(
                         semanticIndex)) {
                   return true;
@@ -1513,7 +1502,8 @@
             [&](IrOpcode op, uint64_t imm) { function.instructions.push_back({op, imm}); },
             [&](size_t instructionIndex, uint64_t imm) { function.instructions[instructionIndex].imm = imm; },
             error,
-            semanticProgram);
+            semanticProgram,
+            tailDispatchSemanticIndexPtr);
         if (nativeTailResult == ir_lowerer::NativeCallTailDispatchResult::Emitted) {
           return true;
         }

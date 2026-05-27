@@ -588,6 +588,22 @@ bool SemanticsValidator::validateExpr(const std::vector<ParameterInfo> &params,
                helperName == "reserve" || helperName == "clear" ||
                helperName == "remove_at" || helperName == "remove_swap";
       };
+      const std::string normalizedMutatorMethodName =
+          normalizeCollectionMethodName(expr.name);
+      if (isVectorMutatorMethodName(normalizedMutatorMethodName)) {
+        std::string receiverTypeText;
+        if (inferQueryExprTypeText(expr.args.front(), params, locals,
+                                   receiverTypeText)) {
+          const std::string receiverCollectionType =
+              inferMethodCollectionTypePathFromTypeText(receiverTypeText);
+          if (receiverCollectionType == "/array" ||
+              receiverCollectionType == "/string" ||
+              receiverCollectionType == "/map") {
+            return failExprRootDiagnostic(
+                normalizedMutatorMethodName + " requires vector binding");
+          }
+        }
+      }
       auto explicitVectorMutatorMethodPath = [&]() -> std::string {
         std::string normalizedPrefix = expr.namespacePrefix;
         if (!normalizedPrefix.empty() && normalizedPrefix.front() == '/') {

@@ -203,7 +203,21 @@ bool SemanticsValidator::resolveStructFieldBinding(const Definition &structDef,
       continue;
     }
     BindingInfo previousBinding;
-    if (resolveStructFieldBinding(structDef, stmt, previousBinding)) {
+    std::optional<std::string> previousRestrictType;
+    std::string previousParseError;
+    if (parseBindingInfo(stmt,
+                         structDef.namespacePrefix,
+                         structNames_,
+                         importAliases_,
+                         previousBinding,
+                         previousRestrictType,
+                         previousParseError,
+                         &sumNames_,
+                         &priorTypeLocals) &&
+        hasExplicitBindingTypeTransform(stmt) &&
+        normalizeBindingTypeName(previousBinding.typeName) != "auto") {
+      priorFieldLocals[stmt.name] = std::move(previousBinding);
+    } else if (resolveStructFieldBinding(structDef, stmt, previousBinding)) {
       priorFieldLocals[stmt.name] = std::move(previousBinding);
     }
   }

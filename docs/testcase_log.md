@@ -1,29 +1,46 @@
 # Testcase Log
 
 ## Current Known Failures
-- [ ] stdlib surface helper visibility/lowering regression | mode: release |
-  command: `./scripts/compile.sh --release` | first_seen:
-  2026-05-26 15:23 CEST | last_seen: 2026-05-26 19:50 CEST |
-  next: `./scripts/compile.sh --release`
-  | notes: release build completed, then CTest failed 317/1615 targets.
-  Later release-gate rerun was canceled around 211/1615 after repeated
-  `/std/collections/vector/count` and `/string/count` native/C++ unsupported
-  call signatures plus the broader collection/helper failures already present
-  in this stabilization branch.
-- [ ] `C++ emitter runs ui ime event stream deterministically` | mode:
-  release | command:
-  `cd build-release && ./PrimeStruct_compile_run_tests --test-case="C++ emitter runs ui ime event stream deterministically" --no-skip`
-  | first_seen: 2026-05-26 19:50 CEST | last_seen:
-  2026-05-26 20:44 CEST | next:
-  `cmake --build build-release --target primec PrimeStruct_compile_run_tests -j 1; cd build-release && ./PrimeStruct_compile_run_tests --test-case="C++ emitter runs ui ime event stream deterministically" --no-skip`
-  | notes: after focused string-count lowering fixes, the prior `/string/count`
-  unsupported-call diagnostic did not recur, but the isolated fixture stayed
-  silent for several minutes and was stopped with SIGTERM. A worker-local
-  IME-only fixture split and direct-call snapshot-inference guard both rebuilt
-  successfully but still hung before producing a cached `.cpp`, so the blocker
-  remains localized to the imported `/std/ui` IME path during C++ emission.
+None currently recorded.
 
 ## Recent Test Runs
+- 2026-05-27 10:17 CEST | pass | mode: release | command:
+  `cmake --build build-release --target PrimeStruct_backend_ir_tests -j 1`;
+  `cd build-release && ./PrimeStruct_backend_ir_tests --test-case="ir lowerer call helpers source delegation stays stable,semantics validator expr source delegation stays stable,ir lowerer statement call emission source delegation stays stable" --no-skip`;
+  `cmake --build build-release --target primec PrimeStruct_compile_run_tests -j 1`;
+  `cd build-release && ./PrimeStruct_compile_run_tests --test-case="compiles and runs shared vector conformance harness in C++ emitter" --no-skip`;
+  `cd build-release && ./PrimeStruct_compile_run_tests --test-case="compiles and runs stdlib namespaced vector helpers in C++ emitter,C++ emitter mutator rewrite keeps known vector receiver leading names" --no-skip`;
+  `cd build-release && ./PrimeStruct_compile_run_tests --test-case="C++ emitter runs ui ime event stream deterministically" --no-skip`;
+  `cd build-release && timeout 60s ./primec --emit=cpp .primec_test_cache/primec_cpp_emitter_ui_events_fixture_575fe24ec44e6247.prime -o /dev/null --entry /main`;
+  `cmake --build build-release --target PrimeStruct_semantics_tests -j 1`;
+  `cd build-release && ./PrimeStruct_semantics_tests --test-case="stdlib map constructors accept inferred canonical map default parameters" --no-skip`;
+  `cd build-release && ./PrimeStruct_semantics_tests --test-case="vector helper named args on array targets report vector binding,push on array reports vector binding before effect requirement,reserve on array reports vector binding before effect requirement,namespaced vector mutator expression helpers stay statement-only,array namespaced vector mutator alias named args stay statement-only in expressions" --no-skip`
+  | failures: none | notes: final focused root validation passed the
+  backend IR source-delegation guards (3 cases / 612 assertions), the shared
+  vector conformance C++ emitter shard (1 case / 92 assertions), vector helper
+  rewrite coverage (2 cases / 8 assertions), the UI IME deterministic C++
+  emitter case (1 case / 5 assertions), the direct UI C++ emit probe, the
+  stdlib map constructor semantics repro (1 case / 2 assertions), and vector
+  mutator diagnostic semantics coverage (5 cases / 84 assertions). Full
+  release validation was not rerun under the lite stabilization policy.
+- 2026-05-27 09:41 CEST | pass | mode: release | command:
+  `cmake --build build-release --target primec PrimeStruct_compile_run_tests -j 1`;
+  `cd build-release && timeout 60s ./primec --emit=cpp .primec_test_cache/primec_cpp_emitter_ui_events_fixture_575fe24ec44e6247.prime -o /dev/null --entry /main`;
+  `cd build-release && ./PrimeStruct_compile_run_tests --test-case="C++ emitter runs ui ime event stream deterministically" --no-skip`;
+  `cd build-release && ./PrimeStruct_compile_run_tests --test-case="compiles and runs stdlib namespaced vector helpers in C++ emitter,C++ emitter mutator rewrite keeps known vector receiver leading names" --no-skip`
+  | failures: none | notes: rebuilt the C++ emitter path after reusing the
+  semantic-product index in native tail dispatch and adding a single-slot
+  vector `push`/`reserve` statement fast path. The direct UI IME C++ emit
+  completed in 12 seconds, the focused UI IME doctest passed 1 case / 5
+  assertions, and vector helper coverage passed 2 cases / 8 assertions.
+- 2026-05-27 09:41 CEST | pass | mode: release | command:
+  `cmake --build build-release --target PrimeStruct_semantics_tests -j 1`;
+  `cd build-release && ./PrimeStruct_semantics_tests --test-case="stdlib map constructors accept inferred canonical map default parameters" --no-skip`;
+  `cd build-release && timeout 30s ./primec --dump-stage semantic-product .primec_test_cache/primec_cpp_emitter_ui_events_fixture_575fe24ec44e6247.prime --entry /main >/dev/null`
+  | failures: none | notes: focused stdlib surface semantics repro passed
+  1 case / 2 assertions, and the UI fixture semantic-product dump completed
+  without the prior struct-field recursion. Full release validation was not
+  rerun under the lite stabilization policy.
 - 2026-05-26 20:44 CEST | canceled | mode: release | command:
   worker `codex/stabilize-stdlib-ui-ime`:
   `cmake --build build-release --target primec PrimeStruct_compile_run_tests -j 1`;

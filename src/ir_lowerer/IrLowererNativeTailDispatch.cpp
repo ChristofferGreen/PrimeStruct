@@ -654,11 +654,16 @@ NativeCallTailDispatchResult tryEmitNativeCallTailDispatch(
     const std::function<void(IrOpcode, uint64_t)> &emitInstruction,
     const std::function<void(size_t, uint64_t)> &patchInstructionImm,
     std::string &error,
-    const SemanticProgram *semanticProgram) {
+    const SemanticProgram *semanticProgram,
+    const SemanticProductIndex *semanticIndex) {
   (void)emitMapKeyNotFound;
-  const SemanticProductIndex semanticIndex = buildSemanticProductIndex(semanticProgram);
+  std::optional<SemanticProductIndex> ownedSemanticIndex;
+  if (semanticProgram != nullptr && semanticIndex == nullptr) {
+    ownedSemanticIndex = buildSemanticProductIndex(semanticProgram);
+    semanticIndex = &*ownedSemanticIndex;
+  }
   const SemanticProductIndex *const semanticIndexPtr =
-      semanticProgram == nullptr ? nullptr : &semanticIndex;
+      semanticProgram == nullptr ? nullptr : semanticIndex;
 
   std::string mathName;
   if (tryGetMathBuiltinName(expr, mathName) && !isSupportedMathBuiltinName(mathName)) {
@@ -971,7 +976,8 @@ NativeCallTailDispatchResult tryEmitNativeCallTailDispatch(
     const std::function<void(IrOpcode, uint64_t)> &emitInstruction,
     const std::function<void(size_t, uint64_t)> &patchInstructionImm,
     std::string &error,
-    const SemanticProgram *semanticProgram) {
+    const SemanticProgram *semanticProgram,
+    const SemanticProductIndex *semanticIndex) {
   return tryEmitNativeCallTailDispatch(
       expr,
       localsIn,
@@ -996,7 +1002,8 @@ NativeCallTailDispatchResult tryEmitNativeCallTailDispatch(
       emitInstruction,
       patchInstructionImm,
       error,
-      semanticProgram);
+      semanticProgram,
+      semanticIndex);
 }
 
 NativeCallTailDispatchResult tryEmitNativeCallTailDispatch(
@@ -1021,7 +1028,8 @@ NativeCallTailDispatchResult tryEmitNativeCallTailDispatch(
     const std::function<void(IrOpcode, uint64_t)> &emitInstruction,
     const std::function<void(size_t, uint64_t)> &patchInstructionImm,
     std::string &error,
-    const SemanticProgram *semanticProgram) {
+    const SemanticProgram *semanticProgram,
+    const SemanticProductIndex *semanticIndex) {
   return tryEmitNativeCallTailDispatch(
       expr,
       localsIn,
@@ -1046,7 +1054,8 @@ NativeCallTailDispatchResult tryEmitNativeCallTailDispatch(
       emitInstruction,
       patchInstructionImm,
       error,
-      semanticProgram);
+      semanticProgram,
+      semanticIndex);
 }
 
 NativeCallTailDispatchResult tryEmitNativeCallTailDispatch(
@@ -1070,7 +1079,8 @@ NativeCallTailDispatchResult tryEmitNativeCallTailDispatch(
     const std::function<void(IrOpcode, uint64_t)> &emitInstruction,
     const std::function<void(size_t, uint64_t)> &patchInstructionImm,
     std::string &error,
-    const SemanticProgram *semanticProgram) {
+    const SemanticProgram *semanticProgram,
+    const SemanticProductIndex *semanticIndex) {
   return tryEmitNativeCallTailDispatch(
       expr,
       localsIn,
@@ -1093,7 +1103,8 @@ NativeCallTailDispatchResult tryEmitNativeCallTailDispatch(
       emitInstruction,
       patchInstructionImm,
       error,
-      semanticProgram);
+      semanticProgram,
+      semanticIndex);
 }
 
 NativeCallTailDispatchResult tryEmitNativeCallTailDispatchWithLocals(
@@ -1120,7 +1131,8 @@ NativeCallTailDispatchResult tryEmitNativeCallTailDispatchWithLocals(
     const std::function<void(IrOpcode, uint64_t)> &emitInstruction,
     const std::function<void(size_t, uint64_t)> &patchInstructionImm,
     std::string &error,
-    const SemanticProgram *semanticProgram) {
+    const SemanticProgram *semanticProgram,
+    const SemanticProductIndex *semanticIndex) {
   return tryEmitNativeCallTailDispatch(
       expr,
       localsIn,
@@ -1145,7 +1157,8 @@ NativeCallTailDispatchResult tryEmitNativeCallTailDispatchWithLocals(
       emitInstruction,
       patchInstructionImm,
       error,
-      semanticProgram);
+      semanticProgram,
+      semanticIndex);
 }
 
 NativeCallTailDispatchResult tryEmitNativeCallTailDispatchWithLocals(
