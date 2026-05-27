@@ -107,6 +107,46 @@ Finished items are periodically archived here from `docs/todo.md`; section heade
   - stop_rule: Stopped once emitter bridge-key traces were removed without
     touching semantics or IR-lowerer bridge-key migrations.
 
+- [x] TODO-4602: Remove semantic vector-literal compiler traces
+  - owner: ai
+  - created_at: 2026-05-27
+  - finished_at: 2026-05-27
+  - phase: Map/vector compiler-independence
+  - parallel_track: semantic-vector-literal-zero
+  - depends_on: TODO-4571
+  - inventory_categories: `vector-literal-path`
+  - scope: Removed vector-specific literal wording from production semantic
+    collection-literal validation while preserving the effect, arity, element
+    type, and relocation-trivial checks through generic collection-literal
+    diagnostics.
+  - outcome:
+    - Routed vector collection-literal diagnostic subjects through
+      `collection literal` wording in
+      `src/semantics/SemanticsValidatorExprCollectionLiterals.cpp` and
+      `src/semantics/SemanticsValidatorStatementBodyArguments.cpp`.
+    - Updated focused semantics and compile-run diagnostic expectations for
+      heap allocation, template arity, element-type mismatch, and
+      relocation-trivial failures.
+    - Left the remaining IR-lowerer vector-literal diagnostics untouched for
+      TODO-4603.
+  - validation:
+    - Local non-heavy inventory passed:
+      `python3 scripts/check_map_vector_compiler_knowledge.py --root .`;
+      it no longer reports `vector-literal-path` traces under
+      `src/semantics/`.
+    - Parent release configure passed:
+      `cmake -S . -B build-release -DCMAKE_BUILD_TYPE=Release -DCMAKE_EXPORT_COMPILE_COMMANDS=ON`.
+    - Parent release target rebuilds passed:
+      `cmake --build build-release --target PrimeStruct_semantics_tests PrimeStruct_compile_run_tests -j 1`;
+      `cmake --build build-release --target primec primevm -j 1`.
+    - Parent release semantics slice passed 11 cases / 42 assertions:
+      `cd build-release && ./PrimeStruct_semantics_tests --test-case="vector literal requires heap_alloc effect,expression effects narrow active effects,parameter default vector literal requires heap_alloc effect,execution effects scope vector literals,definition validation context isolates active effects,vector literal rejects block arguments,vector literal missing template arg fails,vector literal type mismatch fails,vector constructor rejects non-relocation-trivial vector element types,soa literal requires heap_alloc effect when non-empty,array literal type mismatch fails" --no-skip`.
+    - Parent release compile-run/docs slice passed 3 cases / 547 assertions
+      after the fresh build dir also built `primec` and `primevm`:
+      `cd build-release && ./PrimeStruct_compile_run_tests --test-case="primec collect-diagnostics reports builtin vector literal heap-alloc failure before execution,primevm collect-diagnostics reports builtin vector literal heap-alloc failure before execution,todo queue and skipped doctest debt stay source locked" --no-skip`.
+  - stop_rule: Stopped once semantic vector-literal traces were gone and the
+    nearest collection-literal diagnostic tests passed.
+
 **Todo Completion (May 26, 2026)**
 - [x] TODO-4569: Present scene-rendered UI through software surface bridge
   - owner: ai

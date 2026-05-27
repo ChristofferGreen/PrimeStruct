@@ -972,7 +972,7 @@ main() {
 )";
   std::string error;
   CHECK_FALSE(validateProgram(source, "/main", error));
-  CHECK(error.find("vector literal requires heap_alloc effect") != std::string::npos);
+  CHECK(error.find("collection literal requires heap_alloc effect") != std::string::npos);
 }
 
 TEST_CASE("implicit default effects allow print") {
@@ -1509,7 +1509,7 @@ main() {
 )";
   std::string error;
   CHECK_FALSE(validateProgram(source, "/main", error));
-  CHECK(error.find("vector literal does not accept block arguments") != std::string::npos);
+  CHECK(error.find("collection literal does not accept block arguments") != std::string::npos);
 }
 
 TEST_CASE("print accepts string array access") {
@@ -1775,7 +1775,7 @@ main() {
 )";
   std::string error;
   CHECK_FALSE(validateProgram(source, "/main", error));
-  CHECK(error.find("vector literal requires heap_alloc effect") != std::string::npos);
+  CHECK(error.find("collection literal requires heap_alloc effect") != std::string::npos);
 }
 
 TEST_CASE("definition validation context isolates on_error handlers") {

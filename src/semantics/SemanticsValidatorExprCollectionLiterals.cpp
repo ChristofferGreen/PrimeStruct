@@ -26,6 +26,12 @@ bool SemanticsValidator::validateExprCollectionLiteralBuiltins(
   }
 
   handledOut = true;
+  auto collectionLiteralDiagnosticSubject = [&]() -> std::string {
+    if (builtinName == "vector") {
+      return "collection literal";
+    }
+    return builtinName + " literal";
+  };
   const BuiltinCollectionDispatchResolverAdapters builtinCollectionDispatchResolverAdapters{
       .resolveBindingTarget =
           [&](const Expr &target, BindingInfo &bindingOut) -> bool {
@@ -49,7 +55,8 @@ bool SemanticsValidator::validateExprCollectionLiteralBuiltins(
       makeBuiltinCollectionDispatchResolvers(params, locals,
                                             builtinCollectionDispatchResolverAdapters);
   if (expr.hasBodyArguments || !expr.bodyArguments.empty()) {
-    return failCollectionLiteralDiagnostic(builtinName + " literal does not accept block arguments");
+    return failCollectionLiteralDiagnostic(collectionLiteralDiagnosticSubject() +
+                                          " does not accept block arguments");
   }
   if (builtinName == "soa" "_vector") {
     if (expr.templateArgs.size() != 1) {
@@ -71,7 +78,8 @@ bool SemanticsValidator::validateExprCollectionLiteralBuiltins(
   }
   if (builtinName == "vector" && !expr.args.empty()) {
     if (currentValidationState_.context.activeEffects.count("heap_alloc") == 0) {
-      return failCollectionLiteralDiagnostic("vector literal requires heap_alloc effect");
+      return failCollectionLiteralDiagnostic(collectionLiteralDiagnosticSubject() +
+                                            " requires heap_alloc effect");
     }
   }
   if (expr.templateArgs.size() != 1) {
@@ -80,7 +88,8 @@ bool SemanticsValidator::validateExprCollectionLiteralBuiltins(
           "array<T, N> is unsupported; use array<T> (runtime-count array)");
     }
     return failCollectionLiteralDiagnostic(
-        builtinName + " literal requires exactly one template argument");
+        collectionLiteralDiagnosticSubject() +
+        " requires exactly one template argument");
   }
   for (const auto &arg : expr.args) {
     if (!validateExpr(params, locals, arg)) {
@@ -130,14 +139,16 @@ bool SemanticsValidator::validateExprCollectionLiteralBuiltins(
       if (!isRelocationTrivialContainerElementType(
               elemType, definitionNamespacePrefix, definitionTemplateArgs, visitingStructs)) {
         return failCollectionLiteralDiagnostic(
-            "vector literal requires relocation-trivial vector element type until container move/reallocation "
-            "semantics are implemented: " +
+            collectionLiteralDiagnosticSubject() +
+            " requires relocation-trivial collection element type until container "
+            "move/reallocation semantics are implemented: " +
             elemType);
       }
     }
     for (const auto &arg : expr.args) {
       if (!this->validateCollectionElementType(
-              arg, elemType, builtinName + " literal requires element type ",
+              arg, elemType, collectionLiteralDiagnosticSubject() +
+                                 " requires element type ",
               params, locals, builtinCollectionDispatchResolvers)) {
         return false;
       }

@@ -620,7 +620,8 @@ main() {
       "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main > " + outPath + " 2>&1";
   CHECK(runCommand(compileCmd) != 0);
   CHECK(readFile(outPath).find(
-            "vector literal requires relocation-trivial vector element type until container move/reallocation semantics are "
+            "collection literal requires relocation-trivial collection element type until container "
+            "move/reallocation semantics are "
             "implemented: Mover") != std::string::npos);
 }
 
@@ -657,8 +658,8 @@ main() {
       "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main > " + outPath + " 2>&1";
   CHECK(runCommand(compileCmd) != 0);
   CHECK(readFile(outPath).find(
-            "vector literal requires relocation-trivial vector element type until container move/reallocation "
-            "semantics are implemented: Mover") != std::string::npos);
+            "collection literal requires relocation-trivial collection element type until container "
+            "move/reallocation semantics are implemented: Mover") != std::string::npos);
 }
 
 TEST_CASE("supports indexed vector removals with ownership semantics in C++ emitter") {

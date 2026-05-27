@@ -64,7 +64,6 @@ This file is the live open-work queue for PrimeStruct.
 
 ### Ready Now
 
-- TODO-4602: Remove semantic vector-literal compiler traces | track: semantic-vector-literal-zero | primary surface: semantic collection literal diagnostics
 - TODO-4603: Remove IR-lowerer vector-literal compiler traces | track: lowerer-vector-literal-zero | primary surface: native vector literal lowering diagnostics
 
 ### Immediate Next 10
@@ -90,9 +89,9 @@ This file is the live open-work queue for PrimeStruct.
   TODO-4600 subsystem migrations; TODO-4597 completed the generic registry
   IDs, TODO-4598 completed the semantics migration, TODO-4599 completed the
   emitter migration, TODO-4600 completed the IR-lowerer migration, and
-  TODO-4601 removed the final map-helper classifier trace. The final
-  TODO-4579 zero gate still depends on vector-literal trace-deletion leaves
-  TODO-4602 and TODO-4603 before the release-gate switch lands.
+  TODO-4601 removed the final map-helper classifier trace. TODO-4602 removed
+  semantic vector-literal diagnostic traces, and TODO-4603 remains before the
+  final TODO-4579 release-gate switch lands.
 - Architecture hardening backlog: TODO-4586 completed parser diagnostic
   stability tiers. TODO-4587 completed the shared compile-time/runtime VM
   kernel boundary. TODO-4588 added the IR-preparation phase manifest.
@@ -101,34 +100,10 @@ This file is the live open-work queue for PrimeStruct.
 
 ### Execution Queue
 
-- TODO-4602: Remove semantic vector-literal compiler traces
 - TODO-4603: Remove IR-lowerer vector-literal compiler traces
 - TODO-4579: Enforce zero map/vector compiler-knowledge traces
 
 ### Task Blocks
-
-- [ ] TODO-4602: Remove semantic vector-literal compiler traces
-  - owner: ai
-  - created_at: 2026-05-27
-  - phase: Map/vector compiler-independence
-  - parallel_track: semantic-vector-literal-zero
-  - depends_on: TODO-4571
-  - inventory_categories: `vector-literal-path`
-  - scope: Remove vector-specific literal wording and identifiers from
-    production semantic collection-literal validation while preserving the
-    existing diagnostics and effect checks through generic collection-literal
-    surfaces.
-  - implementation_notes: Start with
-    `src/semantics/SemanticsValidatorExprCollectionLiterals.cpp`, where the
-    inventory currently reports vector-literal diagnostics.
-  - acceptance:
-    - `python3 scripts/check_map_vector_compiler_knowledge.py --root .` no
-      longer reports `vector-literal-path` traces in `src/semantics/`.
-    - Focused semantics or compile-run diagnostics for array/vector/soa
-      literal validation still pass with the updated wording or source locks.
-    - The change does not touch IR-lowerer vector-literal lowering.
-  - stop_rule: Stop once semantic vector-literal traces are gone and the
-    nearest collection-literal diagnostic tests pass.
 
 - [ ] TODO-4603: Remove IR-lowerer vector-literal compiler traces
   - owner: ai

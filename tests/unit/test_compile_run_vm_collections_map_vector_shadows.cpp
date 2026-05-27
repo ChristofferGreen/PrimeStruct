@@ -357,7 +357,7 @@ main() {
   const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main > " + outPath + " 2>&1";
   CHECK(runCommand(runCmd) == 2);
   CHECK(readFile(outPath).find(
-            "vector literal requires relocation-trivial vector element type until container move/reallocation semantics are "
+            "collection literal requires relocation-trivial collection element type until container move/reallocation semantics are "
             "implemented: Mover") != std::string::npos);
 }
 
@@ -388,7 +388,7 @@ main() {
   const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main > " + outPath + " 2>&1";
   CHECK(runCommand(runCmd) == 2);
   CHECK(readFile(outPath).find(
-            "vector literal requires relocation-trivial vector element type until container move/reallocation "
+            "collection literal requires relocation-trivial collection element type until container move/reallocation "
             "semantics are implemented: Mover") != std::string::npos);
 }
 

@@ -39,7 +39,7 @@ inline void expectExperimentalVectorVariadicConstructorMismatchReject(const std:
   expectVectorConformanceCompileReject(makeExperimentalVectorVariadicConstructorMismatchSource(),
                                        "experimental_vector_variadic_ctor_mismatch",
                                        emitMode,
-                                       "vector literal requires element type i32");
+                                       "collection literal requires element type i32");
 }
 
 inline std::string makeExperimentalVectorMoveOwnershipSource() {

@@ -170,7 +170,7 @@ add([i32] left, [vector<i32>] right{vector<i32>(1i32)}) {
 )";
   std::string error;
   CHECK_FALSE(validateProgram(source, "/main", error));
-  CHECK(error.find("vector literal requires heap_alloc effect") != std::string::npos);
+  CHECK(error.find("collection literal requires heap_alloc effect") != std::string::npos);
 }
 
 TEST_CASE("parameter default vector literal allows heap_alloc effect") {

@@ -4,6 +4,25 @@
 - none
 
 ## Recent Test Runs
+- 2026-05-27 15:10 CEST | pass | mode: release | command:
+  `cmake -S . -B build-release -DCMAKE_BUILD_TYPE=Release -DCMAKE_EXPORT_COMPILE_COMMANDS=ON`;
+  `cmake --build build-release --target PrimeStruct_semantics_tests PrimeStruct_compile_run_tests -j 1`;
+  `cd build-release && ./PrimeStruct_semantics_tests --test-case="vector literal requires heap_alloc effect,expression effects narrow active effects,parameter default vector literal requires heap_alloc effect,execution effects scope vector literals,definition validation context isolates active effects,vector literal rejects block arguments,vector literal missing template arg fails,vector literal type mismatch fails,vector constructor rejects non-relocation-trivial vector element types,soa literal requires heap_alloc effect when non-empty,array literal type mismatch fails" --no-skip`;
+  `cmake --build build-release --target primec primevm -j 1`;
+  `cd build-release && ./PrimeStruct_compile_run_tests --test-case="primec collect-diagnostics reports builtin vector literal heap-alloc failure before execution,primevm collect-diagnostics reports builtin vector literal heap-alloc failure before execution,todo queue and skipped doctest debt stay source locked" --no-skip`
+  | failures: none | notes: parent validation for TODO-4602 passed after
+  configuring a fresh release build, rebuilding focused semantics/compile-run
+  targets, passing 11 semantics cases / 42 assertions, building missing
+  `primec` and `primevm` CLI targets, and passing 3 compile-run cases / 547
+  assertions.
+- 2026-05-27 15:10 CEST | fail | mode: release | command:
+  `cd build-release && ./PrimeStruct_compile_run_tests --test-case="primec collect-diagnostics reports builtin vector literal heap-alloc failure before execution,primevm collect-diagnostics reports builtin vector literal heap-alloc failure before execution,todo queue and skipped doctest debt stay source locked" --no-skip`
+  | failures:
+  `primec collect-diagnostics reports builtin vector literal heap-alloc failure before execution`,
+  `primevm collect-diagnostics reports builtin vector literal heap-alloc failure before execution`
+  | notes: initial parent compile-run validation returned 127 because the
+  fresh worktree build dir had not built `primec` or `primevm`; resolved by
+  building those CLI targets and rerunning the same focused compile-run slice.
 - 2026-05-27 14:47 CEST | pass | mode: release + script | command:
   `PYTHONDONTWRITEBYTECODE=1 python3 scripts/check_map_vector_compiler_knowledge.py --root . --require-zero-category map-helper-classifier`;
   `PYTHONDONTWRITEBYTECODE=1 python3 tests/scripts/test_check_map_vector_compiler_knowledge.py --repo-root .`;

@@ -82,7 +82,7 @@ main() {
                               quoteShellArg(wasmPath) + " --entry /main 2> " + quoteShellArg(compileErrPath);
   CHECK(runCommand(wasmCmd) == 2);
   CHECK(!std::filesystem::exists(wasmPath));
-  CHECK(readFile(compileErrPath).find("vector literal requires heap_alloc effect") != std::string::npos);
+  CHECK(readFile(compileErrPath).find("collection literal requires heap_alloc effect") != std::string::npos);
 }
 
 TEST_CASE("primec wasm wasi runs png write for deterministic rgb outputs") {
@@ -165,7 +165,7 @@ main() {
                               quoteShellArg(wasmPath) + " --entry /main 2> " + quoteShellArg(compileErrPath);
   CHECK(runCommand(wasmCmd) == 2);
   CHECK(!std::filesystem::exists(wasmPath));
-  CHECK(readFile(compileErrPath).find("vector literal requires heap_alloc effect") != std::string::npos);
+  CHECK(readFile(compileErrPath).find("collection literal requires heap_alloc effect") != std::string::npos);
 }
 
 TEST_CASE("primec wasm wasi rejects invalid png write inputs deterministically") {

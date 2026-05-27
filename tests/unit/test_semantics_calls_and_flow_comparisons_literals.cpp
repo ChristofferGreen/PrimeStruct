@@ -216,7 +216,7 @@ main() {
 )";
   std::string error;
   CHECK_FALSE(validateProgram(source, "/main", error));
-  CHECK(error.find("vector literal requires exactly one template argument") != std::string::npos);
+  CHECK(error.find("collection literal requires exactly one template argument") != std::string::npos);
 }
 
 TEST_CASE("soa literal missing template arg fails") {
@@ -386,7 +386,7 @@ main() {
 )";
   std::string error;
   CHECK_FALSE(validateProgram(source, "/main", error));
-  CHECK(error.find("vector literal requires element type i32") != std::string::npos);
+  CHECK(error.find("collection literal requires element type i32") != std::string::npos);
 }
 
 TEST_CASE("array literal rejects software numeric type") {

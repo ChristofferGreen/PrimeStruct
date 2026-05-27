@@ -51,7 +51,7 @@ main() {
   std::string error;
   CHECK_FALSE(validateProgram(source, "/main", error));
   CHECK(error.find(
-            "vector literal requires relocation-trivial vector element type until container move/reallocation "
+            "collection literal requires relocation-trivial collection element type until container move/reallocation "
             "semantics are implemented: Mover") != std::string::npos);
 }
 

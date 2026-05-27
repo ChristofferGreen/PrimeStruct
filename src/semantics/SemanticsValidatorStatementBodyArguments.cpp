@@ -92,7 +92,9 @@ bool SemanticsValidator::validateStatementBodyArguments(const std::vector<Parame
 
   std::string collectionName;
   if (defMap_.find(resolveCalleePath(stmt)) == defMap_.end() && getBuiltinCollectionName(stmt, collectionName)) {
-    return failStatementDiagnostic(collectionName + " literal does not accept block arguments");
+    const std::string diagnosticSubject =
+        collectionName == "vector" ? "collection literal" : collectionName + " literal";
+    return failStatementDiagnostic(diagnosticSubject + " does not accept block arguments");
   }
 
   auto shouldPreserveBodyArgumentTarget = [&](const std::string &path) -> bool {

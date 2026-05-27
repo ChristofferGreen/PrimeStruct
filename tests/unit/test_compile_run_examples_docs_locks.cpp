@@ -673,6 +673,8 @@ TEST_CASE("vector map bridge boundary docs stay source locked") {
         std::string::npos);
   CHECK(todo.find("- [ ] TODO-4600: Migrate IR lowerer collection surface lookups") ==
         std::string::npos);
+  CHECK(todo.find("- [ ] TODO-4602: Remove semantic vector-literal compiler traces") ==
+        std::string::npos);
   CHECK(todo.find("- TODO-4577: Remove vector backing-type compiler classification | track: "
                   "vector-backing-classifier-deletion") == std::string::npos);
   CHECK(todo.find("- [ ] TODO-4577: Remove vector backing-type compiler classification") ==
@@ -1827,14 +1829,20 @@ TEST_CASE("todo queue and skipped doctest debt stay source locked") {
                   "  coverage snapshots in this file.") !=
         std::string::npos);
   CHECK(todo.find("### Ready Now\n\n"
-                  "- TODO-4602: Remove semantic vector-literal compiler traces | track: "
-                  "semantic-vector-literal-zero") !=
+                  "- TODO-4603: Remove IR-lowerer vector-literal compiler traces | track: "
+                  "lowerer-vector-literal-zero") !=
         std::string::npos);
   CHECK(todo.find("- TODO-4601: Remove final map helper classifier trace | track: "
                   "map-helper-zero") ==
         std::string::npos);
+  CHECK(todo.find("- TODO-4602: Remove semantic vector-literal compiler traces | track: "
+                  "semantic-vector-literal-zero") ==
+        std::string::npos);
   CHECK(todo.find("- TODO-4603: Remove IR-lowerer vector-literal compiler traces | track: "
                   "lowerer-vector-literal-zero") !=
+        std::string::npos);
+  CHECK(todo.find("- TODO-4602: Remove semantic vector-literal compiler traces | track: "
+                  "semantic-vector-literal-zero") ==
         std::string::npos);
   CHECK(todo.find("- TODO-4579: Enforce zero map/vector compiler-knowledge traces | track: "
                   "map-vector-zero-gate") ==
@@ -1898,7 +1906,6 @@ TEST_CASE("todo queue and skipped doctest debt stay source locked") {
                   "  surface, TODO-4571 added the compiler-knowledge inventory categories") !=
         std::string::npos);
   CHECK(todo.find("### Execution Queue\n\n"
-                  "- TODO-4602: Remove semantic vector-literal compiler traces\n"
                   "- TODO-4603: Remove IR-lowerer vector-literal compiler traces\n"
                   "- TODO-4579: Enforce zero map/vector compiler-knowledge traces") !=
         std::string::npos);
@@ -1910,6 +1917,11 @@ TEST_CASE("todo queue and skipped doctest debt stay source locked") {
   CHECK(todoFinished.find("TODO-4599: Migrate emitter collection surface lookups") !=
         std::string::npos);
   CHECK(todoFinished.find("Production `src/emitter/` no longer contains the assigned") !=
+        std::string::npos);
+  CHECK(todoFinished.find("TODO-4602: Remove semantic vector-literal compiler traces") !=
+        std::string::npos);
+  CHECK(todoFinished.find("Routed vector collection-literal diagnostic subjects through\n"
+                          "      `collection literal` wording") !=
         std::string::npos);
   CHECK(todo.find("- TODO-4569: Present scene-rendered UI through software surface bridge") ==
         std::string::npos);

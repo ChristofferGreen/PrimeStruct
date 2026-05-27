@@ -268,7 +268,8 @@ execute_repeat(vector(value=3i32), 0i32)
   CHECK(runCommand(cmd) == 2);
 
   const std::string diagnostics = readFile(errPath);
-  CHECK(diagnostics.find("\"message\":\"vector literal requires heap_alloc effect\"") != std::string::npos);
+  CHECK(diagnostics.find("\"message\":\"collection literal requires heap_alloc effect\"") !=
+        std::string::npos);
   CHECK(diagnostics.find("\"label\":\"definition: /bad\"") != std::string::npos);
 }
 
@@ -304,7 +305,8 @@ execute_repeat(vector(value=3i32), 0i32)
   CHECK(runCommand(cmd) == 2);
 
   const std::string diagnostics = readFile(errPath);
-  CHECK(diagnostics.find("\"message\":\"vector literal requires heap_alloc effect\"") != std::string::npos);
+  CHECK(diagnostics.find("\"message\":\"collection literal requires heap_alloc effect\"") !=
+        std::string::npos);
   CHECK(diagnostics.find("\"label\":\"definition: /bad\"") != std::string::npos);
 }
 

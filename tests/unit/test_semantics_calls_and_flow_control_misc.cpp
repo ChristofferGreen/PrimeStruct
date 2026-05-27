@@ -129,7 +129,7 @@ main() {
 )";
   std::string error;
   CHECK_FALSE(validateProgram(source, "/main", error));
-  CHECK(error.find("vector literal requires heap_alloc effect") != std::string::npos);
+  CHECK(error.find("collection literal requires heap_alloc effect") != std::string::npos);
 }
 
 TEST_CASE("expression effects narrow active effects") {
@@ -141,7 +141,7 @@ main() {
 )";
   std::string error;
   CHECK_FALSE(validateProgram(source, "/main", error));
-  CHECK(error.find("vector literal requires heap_alloc effect") != std::string::npos);
+  CHECK(error.find("collection literal requires heap_alloc effect") != std::string::npos);
 }
 
 TEST_CASE("expression effects must be subset of enclosing") {

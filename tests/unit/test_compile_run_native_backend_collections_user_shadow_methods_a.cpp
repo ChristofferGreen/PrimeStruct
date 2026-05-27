@@ -342,7 +342,7 @@ main() {
       "./primec --emit=native " + srcPath + " -o " + exePath + " --entry /main > " + outPath + " 2>&1";
   CHECK(runCommand(compileCmd) != 0);
   CHECK(readFile(outPath).find(
-            "vector literal requires relocation-trivial vector element type until container move/reallocation "
+            "collection literal requires relocation-trivial collection element type until container move/reallocation "
             "semantics are implemented: Mover") != std::string::npos);
 }
 
