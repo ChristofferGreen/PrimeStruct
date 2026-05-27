@@ -4,6 +4,20 @@
 - none
 
 ## Recent Test Runs
+- 2026-05-27 16:17 CEST | pass | mode: release + script | command:
+  `cmake --build build-release --target primec primevm PrimeStruct_backend_ir_tests PrimeStruct_semantics_tests PrimeStruct_misc_tests PrimeStruct_compile_run_tests -j 1`;
+  `cd build-release && ./PrimeStruct_backend_ir_tests --test-case="ir lowerer constructor metadata helpers retire duplicated constructor tables,ir lowerer collection surfaces avoid bridge-key literals,ir lowerer canonical map contains and tryAt rewrites stay recognized,ir lowerer vector type layout traces use generic collection helpers,ir lowerer materialized collection receivers use published helper queries,ir lowerer collection literal diagnostics avoid vector-literal traces" --no-skip`;
+  `cd build-release && ./PrimeStruct_misc_tests --test-case="canonical map surface owns standalone stdlib implementation" --no-skip`;
+  `cd build-release && ./PrimeStruct_semantics_tests --test-case="vector literal requires heap_alloc effect,expression effects narrow active effects,parameter default vector literal requires heap_alloc effect,execution effects scope vector literals,definition validation context isolates active effects,vector literal rejects block arguments,vector literal missing template arg fails,vector literal type mismatch fails,vector constructor rejects non-relocation-trivial vector element types,soa literal requires heap_alloc effect when non-empty,array literal type mismatch fails" --no-skip`;
+  `cd build-release && ./PrimeStruct_compile_run_tests --test-case="todo queue and skipped doctest debt stay source locked,primec collect-diagnostics reports builtin vector literal heap-alloc failure before execution,primevm collect-diagnostics reports builtin vector literal heap-alloc failure before execution,rejects native vector literal above local dynamic limit,rejects vm vector literal above local dynamic limit,native rejects experimental soa_vector stdlib from-aos helper before typed bindings support,rejects experimental soa_vector stdlib from-aos helper in C++ emitter before typed bindings support,keeps native stdlib wrapper vector constructor explicit Vector mismatch contract,keeps stdlib wrapper vector constructor explicit Vector mismatch contract in C++ emitter" --no-skip`;
+  `python3 scripts/check_map_vector_compiler_knowledge.py --root .`;
+  `PYTHONDONTWRITEBYTECODE=1 python3 tests/scripts/test_check_map_vector_compiler_knowledge.py --repo-root .`;
+  `git diff --check`
+  | failures: none | notes: root validation after merging TODO-4601,
+  TODO-4602, and TODO-4603 passed; inventory reported zero traces, backend IR
+  passed 5 cases / 553 assertions, map ownership passed 1 case / 2326
+  assertions, semantics passed 11 cases / 42 assertions, and compile-run
+  passed 9 cases / 576 assertions.
 - 2026-05-27 15:52 CEST | pass | mode: release | command:
   `cmake --build build-release --target primec primevm PrimeStruct_compile_run_tests -j 1`;
   `cd build-release && ./PrimeStruct_compile_run_tests --test-case="todo queue and skipped doctest debt stay source locked,rejects native vector literal above local dynamic limit,rejects vm vector literal above local dynamic limit,native rejects experimental soa_vector stdlib from-aos helper before typed bindings support,rejects experimental soa_vector stdlib from-aos helper in C++ emitter before typed bindings support,keeps native stdlib wrapper vector constructor explicit Vector mismatch contract,keeps stdlib wrapper vector constructor explicit Vector mismatch contract in C++ emitter" --no-skip`
