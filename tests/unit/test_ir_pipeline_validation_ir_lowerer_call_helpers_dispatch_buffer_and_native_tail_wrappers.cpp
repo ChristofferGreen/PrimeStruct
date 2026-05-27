@@ -1024,7 +1024,7 @@ TEST_CASE("ir lowerer temporary vector receiver reject guards stdlib wrapper con
 
   CHECK(source.find("resolvePublishedLateCollectionMemberName(") !=
         std::string::npos);
-  CHECK(source.find("primec::StdlibSurfaceId::CollectionsVectorConstructors") !=
+  CHECK(source.find("primec::StdlibSurfaceId::CollectionsManifestSurface1") !=
         std::string::npos);
   CHECK(source.find("ir_lowerer::resolvePublishedStdlibSurfaceMemberName(") !=
         std::string::npos);

@@ -207,7 +207,7 @@ TEST_CASE("stdlib surface registry stays source locked") {
   CHECK(source.find("\"/std/file/fileErrorResult\"") != std::string::npos);
   CHECK(source.find("\"/file_error/why\"") != std::string::npos);
 
-  CHECK(source.find("StdlibSurfaceId::CollectionsVectorHelperSurface") != std::string::npos);
+  CHECK(source.find("StdlibSurfaceId::CollectionsManifestSurface0") != std::string::npos);
   CHECK(source.find("loadCollectionsManifestSurfaces()") != std::string::npos);
   CHECK(source.find("surfaces.psmeta") != std::string::npos);
   CHECK(source.find("resolveMetadataMemberName(") != std::string::npos);
@@ -218,7 +218,7 @@ TEST_CASE("stdlib surface registry stays source locked") {
   CHECK(source.find("\"/std/collections/experimental_vector/vectorRemoveSwap\"") ==
         std::string::npos);
 
-  CHECK(source.find("StdlibSurfaceId::CollectionsVectorConstructors") == std::string::npos);
+  CHECK(source.find("StdlibSurfaceId::CollectionsManifestSurface1") == std::string::npos);
   CHECK(source.find(".id = collectionSurfaceId(1)") != std::string::npos);
   CHECK(source.find("\"/std/collections/vector/vector\"") == std::string::npos);
   CHECK(source.find("\"vectorSingle\"") == std::string::npos);
@@ -414,12 +414,12 @@ TEST_CASE("map insert surface registry rejects legacy compatibility spellings") 
 
 TEST_CASE("collection helper surface registry resolves preferred compatibility spellings") {
   CHECK(primec::stdlibSurfacePreferredSpellingForMember(
-            primec::StdlibSurfaceId::CollectionsVectorHelperSurface,
+            primec::StdlibSurfaceId::CollectionsManifestSurface0,
             "/std/collections/vector/count",
             "/std/collections/experimental_vector/") ==
         "");
   CHECK(primec::stdlibSurfacePreferredSpellingForMember(
-            primec::StdlibSurfaceId::CollectionsVectorHelperSurface,
+            primec::StdlibSurfaceId::CollectionsManifestSurface0,
             "/vector/remove_swap",
             "/std/collections/experimental_vector/") ==
         "");

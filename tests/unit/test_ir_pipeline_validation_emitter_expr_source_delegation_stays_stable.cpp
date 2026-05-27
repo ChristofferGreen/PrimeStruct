@@ -3118,7 +3118,7 @@ TEST_CASE("emitter collection helper metadata delegation stays source locked") {
   CHECK(metadataHelpersSource.find("resolveStdlibSurfaceMemberName(metadata, normalizedToken)") !=
         std::string::npos);
   CHECK(metadataHelpersSource.find("std/collections/vector/") == std::string::npos);
-  CHECK(metadataHelpersSource.find("StdlibSurfaceId::CollectionsVectorHelperSurface") ==
+  CHECK(metadataHelpersSource.find("StdlibSurfaceId::CollectionsManifestSurface0") ==
         std::string::npos);
   CHECK(metadataHelpersSource.find("bool isRemovedCollectionMethodAliasPath(") !=
         std::string::npos);
@@ -3186,7 +3186,7 @@ TEST_CASE("emitter collection helper metadata delegation stays source locked") {
   CHECK(methodResolutionHelpersSource.find("publishedCollectionSurfaceHelperPath(") !=
         std::string::npos);
   CHECK(methodResolutionHelpersSource.find("std/collections/vector/") == std::string::npos);
-  CHECK(methodResolutionHelpersSource.find("StdlibSurfaceId::CollectionsVectorHelperSurface") ==
+  CHECK(methodResolutionHelpersSource.find("StdlibSurfaceId::CollectionsManifestSurface0") ==
         std::string::npos);
   CHECK(methodResolutionHelpersSource.find("bool isRemovedCollectionMethodAlias(") ==
         std::string::npos);
@@ -3208,20 +3208,20 @@ TEST_CASE("emitter collection helper metadata delegation stays source locked") {
   CHECK(methodResolutionTypeInferenceHelpersSource.find("std/collections/vector/") ==
         std::string::npos);
   CHECK(methodResolutionTypeInferenceHelpersSource.find(
-            "StdlibSurfaceId::CollectionsVectorHelperSurface") ==
+            "StdlibSurfaceId::CollectionsManifestSurface0") ==
         std::string::npos);
 
   CHECK(emitBodyVectorHelpersSource.find("resolvePublishedCollectionSurfacePathMemberName(") !=
         std::string::npos);
   CHECK(emitBodyVectorHelpersSource.find("std/collections/vector/") == std::string::npos);
-  CHECK(emitBodyVectorHelpersSource.find("StdlibSurfaceId::CollectionsVectorHelperSurface") ==
+  CHECK(emitBodyVectorHelpersSource.find("StdlibSurfaceId::CollectionsManifestSurface0") ==
         std::string::npos);
 
   CHECK(emitSetupReturnInferenceSource.find("publishedCollectionSurfaceHelperPath(") !=
         std::string::npos);
   CHECK(emitSetupReturnInferenceSource.find("std/collections/vector/") ==
         std::string::npos);
-  CHECK(emitSetupReturnInferenceSource.find("StdlibSurfaceId::CollectionsVectorHelperSurface") ==
+  CHECK(emitSetupReturnInferenceSource.find("StdlibSurfaceId::CollectionsManifestSurface0") ==
         std::string::npos);
 
   CHECK(emitSetupReturnInferenceCollectionsSource.find("VectorHelperSurfaceBridgeKey") !=
@@ -3233,7 +3233,7 @@ TEST_CASE("emitter collection helper metadata delegation stays source locked") {
   CHECK(emitSetupReturnInferenceCollectionsSource.find("std/collections/vector/") ==
         std::string::npos);
   CHECK(emitSetupReturnInferenceCollectionsSource.find(
-            "StdlibSurfaceId::CollectionsVectorHelperSurface") ==
+            "StdlibSurfaceId::CollectionsManifestSurface0") ==
         std::string::npos);
   CHECK(emitSetupReturnInferenceCollectionsSource.find(
             "normalizedPath.rfind(\"soa_vector/\", 0) == 0") ==
@@ -3247,13 +3247,13 @@ TEST_CASE("emitter collection helper metadata delegation stays source locked") {
   CHECK(exprLambdaBodySource.find("resolvePublishedCollectionSurfacePathMemberName(") !=
         std::string::npos);
   CHECK(exprLambdaBodySource.find("std/collections/vector/") == std::string::npos);
-  CHECK(exprLambdaBodySource.find("StdlibSurfaceId::CollectionsVectorHelperSurface") ==
+  CHECK(exprLambdaBodySource.find("StdlibSurfaceId::CollectionsManifestSurface0") ==
         std::string::npos);
 
   CHECK(exprPackedArgsSource.find("resolvePublishedCollectionSurfacePathMemberName(") !=
         std::string::npos);
   CHECK(exprPackedArgsSource.find("std/collections/vector/") == std::string::npos);
-  CHECK(exprPackedArgsSource.find("StdlibSurfaceId::CollectionsVectorHelperSurface") ==
+  CHECK(exprPackedArgsSource.find("StdlibSurfaceId::CollectionsManifestSurface0") ==
         std::string::npos);
 
   CHECK(exprCollectionTypeHelpersSource.find(
@@ -3264,7 +3264,7 @@ TEST_CASE("emitter collection helper metadata delegation stays source locked") {
   CHECK(exprCollectionTypeHelpersSource.find("std/collections/vector/") ==
         std::string::npos);
   CHECK(exprCollectionTypeHelpersSource.find("vector/") == std::string::npos);
-  CHECK(exprCollectionTypeHelpersSource.find("StdlibSurfaceId::CollectionsVectorHelperSurface") ==
+  CHECK(exprCollectionTypeHelpersSource.find("StdlibSurfaceId::CollectionsManifestSurface0") ==
         std::string::npos);
 
   CHECK(exprCollectionFallbackHelpersSource.find(
@@ -3274,7 +3274,7 @@ TEST_CASE("emitter collection helper metadata delegation stays source locked") {
         std::string::npos);
   CHECK(exprCollectionFallbackHelpersSource.find("vector/") == std::string::npos);
   CHECK(exprCollectionFallbackHelpersSource.find(
-            "StdlibSurfaceId::CollectionsVectorHelperSurface") ==
+            "StdlibSurfaceId::CollectionsManifestSurface0") ==
         std::string::npos);
 
   CHECK(helperBuiltinsSource.find("findStdlibSurfaceMetadataByBridgeKey(") !=
@@ -3283,7 +3283,7 @@ TEST_CASE("emitter collection helper metadata delegation stays source locked") {
         std::string::npos);
   CHECK(helperBuiltinsSource.find("std/collections/vector/") ==
         std::string::npos);
-  CHECK(helperBuiltinsSource.find("StdlibSurfaceId::CollectionsVectorHelperSurface") ==
+  CHECK(helperBuiltinsSource.find("StdlibSurfaceId::CollectionsManifestSurface0") ==
         std::string::npos);
 
   CHECK(helperTypesSource.find("isVectorCompatibilityStorageBase(") !=
@@ -3292,7 +3292,7 @@ TEST_CASE("emitter collection helper metadata delegation stays source locked") {
         std::string::npos);
   CHECK(helperTypesSource.find("std/collections/vector/") ==
         std::string::npos);
-  CHECK(helperTypesSource.find("StdlibSurfaceId::CollectionsVectorHelperSurface") ==
+  CHECK(helperTypesSource.find("StdlibSurfaceId::CollectionsManifestSurface0") ==
         std::string::npos);
 
   CHECK(exprControlCallPathStepSource.find("return importIt->second;") !=

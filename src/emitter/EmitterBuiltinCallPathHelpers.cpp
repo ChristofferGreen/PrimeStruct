@@ -189,7 +189,7 @@ bool allowsArrayVectorCompatibilitySuffix(const std::string &suffix) {
   std::string canonicalMemberName;
   return !resolvePublishedCollectionSurfaceMemberToken(
       suffix,
-      StdlibSurfaceId::CollectionsVectorHelperSurface,
+      StdlibSurfaceId::CollectionsManifestSurface0,
       canonicalMemberName);
 }
 
@@ -318,7 +318,7 @@ bool resolvePublishedVectorHelperExprMemberName(const Expr &expr,
     return false;
   }
   return resolvePublishedCollectionSurfaceExprMemberName(
-      expr, StdlibSurfaceId::CollectionsVectorHelperSurface, memberNameOut);
+      expr, StdlibSurfaceId::CollectionsManifestSurface0, memberNameOut);
 }
 
 bool resolvePublishedVectorConstructorExprMemberName(
@@ -335,7 +335,7 @@ bool resolvePublishedVectorConstructorExprMemberName(
     return false;
   }
   return resolvePublishedCollectionSurfaceExprMemberName(
-      expr, StdlibSurfaceId::CollectionsVectorConstructors, memberNameOut);
+      expr, StdlibSurfaceId::CollectionsManifestSurface1, memberNameOut);
 }
 
 std::string canonicalVectorHelperPathForSuffix(const std::string &suffix) {

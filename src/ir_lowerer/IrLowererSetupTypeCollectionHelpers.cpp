@@ -717,9 +717,9 @@ bool isExplicitKeyValueReceiverProbeHelperExpr(const Expr &expr) {
 bool isExplicitVectorAccessHelperPath(const std::string &path) {
   const std::string normalizedPath = normalizeCollectionHelperPath(path);
   const std::string atPath = normalizeCollectionHelperPath(
-      stdlibSurfaceCanonicalHelperPath(StdlibSurfaceId::CollectionsVectorHelperSurface, "at"));
+      stdlibSurfaceCanonicalHelperPath(StdlibSurfaceId::CollectionsManifestSurface0, "at"));
   const std::string atUnsafePath = normalizeCollectionHelperPath(
-      stdlibSurfaceCanonicalHelperPath(StdlibSurfaceId::CollectionsVectorHelperSurface, "at_unsafe"));
+      stdlibSurfaceCanonicalHelperPath(StdlibSurfaceId::CollectionsManifestSurface0, "at_unsafe"));
   return (!atPath.empty() && normalizedPath == atPath) ||
          (!atUnsafePath.empty() && normalizedPath == atUnsafePath);
 }
@@ -1047,7 +1047,7 @@ std::vector<std::string> collectionHelperPathCandidates(const std::string &path)
     const std::string suffix = normalizedPath.substr(std::string("/array/").size());
     if (allowsArrayVectorCompatibilitySuffix(suffix)) {
       const std::string vectorCandidate =
-          stdlibSurfaceCanonicalHelperPath(StdlibSurfaceId::CollectionsVectorHelperSurface, suffix);
+          stdlibSurfaceCanonicalHelperPath(StdlibSurfaceId::CollectionsManifestSurface0, suffix);
       if (!vectorCandidate.empty()) {
         appendUnique(vectorCandidate);
       }

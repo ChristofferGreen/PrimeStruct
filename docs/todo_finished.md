@@ -23213,3 +23213,42 @@ Moved from `docs/todo.md` during unfinished-only cleanup:
     the registry; documented the future-gate pattern in the backend profile
     header; and added focused registry and compile-pipeline diagnostic
     coverage.
+
+- [x] TODO-4597: Add generic collection surface registry IDs
+  - owner: ai
+  - created_at: 2026-05-27
+  - finished_at: 2026-05-27
+  - phase: Map/vector compiler-independence
+  - parallel_track: stdlib-registry-foundation
+  - depends_on: TODO-4576, TODO-4577
+  - inventory_categories: `stdlib-bridge-key`, `stdlib-registry-id`
+  - scope: Replace public map/vector-specific collection surface enum IDs and
+    positional manifest slots with generic collection manifest surface IDs and
+    metadata-centric lookup helpers that subsystem migrations can share.
+  - implementation_notes: Started with
+    `include/primec/StdlibSurfaceRegistry.h`,
+    `src/StdlibSurfaceRegistry.cpp`, and the caller/test references to public
+    vector-specific surface IDs. Left bridge-key lookup cleanup to
+    TODO-4598 through TODO-4600.
+  - acceptance:
+    - `StdlibSurfaceId` and registry helper APIs no longer contain
+      map/vector-specific names such as `CollectionsVector*` or
+      `CollectionsMap*`.
+    - The `stdlib-registry-id` inventory category reports zero production
+      traces while the bridge-key category is left to TODO-4598 through
+      TODO-4600.
+    - Map/vector import visibility and helper resolution still work through
+      generic manifest data loaded from `.psmeta` or equivalent stdlib-owned
+      files.
+    - Focused tests prove adding or renaming a stdlib collection surface only
+      requires stdlib metadata/test updates, not new C++ enum branches.
+  - stop_rule: Stop once generic registry IDs are in place, focused registry
+    and map/vector import/helper tests pass, and the remaining production
+    bridge-key traces are isolated for TODO-4598 through TODO-4600.
+  - evidence: Renamed the public vector collection surface enum slots to
+    generic manifest slots, replaced the vector-only statement-member API with
+    `isStdlibSurfaceStatementMemberName`, updated production callers and source
+    locks to use the generic IDs, and verified
+    `scripts/check_map_vector_compiler_knowledge.py --require-zero-category
+    stdlib-registry-id` reports zero production registry-ID traces while
+    bridge-key traces remain isolated for the subsystem migration leaves.

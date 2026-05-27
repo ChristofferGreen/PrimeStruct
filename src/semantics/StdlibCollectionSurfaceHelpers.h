@@ -325,7 +325,7 @@ inline bool isResolvedVectorConstructorHelperPath(const std::string &rawPath) {
   }
   std::string memberName;
   return resolveCollectionConstructorMemberPath(
-             primec::StdlibSurfaceId::CollectionsVectorConstructors,
+             primec::StdlibSurfaceId::CollectionsManifestSurface1,
              normalizedPath, memberName) &&
          memberName != "vector";
 }
@@ -337,7 +337,7 @@ inline bool isResolvedExperimentalVectorConstructorPath(const std::string &rawPa
   }
   std::string memberName;
   return resolveCollectionConstructorMemberPath(
-      primec::StdlibSurfaceId::CollectionsVectorConstructors, normalizedPath,
+      primec::StdlibSurfaceId::CollectionsManifestSurface1, normalizedPath,
       memberName);
 }
 
@@ -391,18 +391,18 @@ inline std::string metadataBackedExperimentalVectorConstructorCompatibilityPath(
   }
   std::string memberName;
   if (!resolveCollectionConstructorMemberPath(
-          primec::StdlibSurfaceId::CollectionsVectorConstructors,
+          primec::StdlibSurfaceId::CollectionsManifestSurface1,
           normalizedPath, memberName) ||
       memberName == "vector") {
     return {};
   }
   const primec::StdlibSurfaceMetadata *metadata = primec::findStdlibSurfaceMetadata(
-      primec::StdlibSurfaceId::CollectionsVectorConstructors);
+      primec::StdlibSurfaceId::CollectionsManifestSurface1);
   if (metadata == nullptr) {
     return {};
   }
   return preferredCollectionConstructorSpelling(
-      primec::StdlibSurfaceId::CollectionsVectorConstructors, memberName,
+      primec::StdlibSurfaceId::CollectionsManifestSurface1, memberName,
       metadata->compatibilitySpellings,
       experimentalCollectionConstructorRootLocal("vector"));
 }

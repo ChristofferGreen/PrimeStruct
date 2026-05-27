@@ -436,11 +436,11 @@ const CollectionsManifestSurfaces CollectionsSurfaces = loadCollectionsManifestS
 
 constexpr StdlibSurfaceId collectionSurfaceId(std::size_t slotIndex) {
   return static_cast<StdlibSurfaceId>(
-      static_cast<int>(StdlibSurfaceId::CollectionsVectorHelperSurface) +
+      static_cast<int>(StdlibSurfaceId::CollectionsManifestSurface0) +
       static_cast<int>(slotIndex));
 }
 
-static_assert(collectionSurfaceId(0) == StdlibSurfaceId::CollectionsVectorHelperSurface);
+static_assert(collectionSurfaceId(0) == StdlibSurfaceId::CollectionsManifestSurface0);
 static_assert(collectionSurfaceId(5) == StdlibSurfaceId::CollectionsColumnarConstructors);
 
 const std::array<StdlibSurfaceMetadata, 11> Registry = {{
@@ -802,8 +802,8 @@ bool isStdlibSurfaceMemberName(StdlibSurfaceId id, std::string_view memberName) 
   return metadata != nullptr && matchesAny(metadata->memberNames, memberName);
 }
 
-bool isStdlibVectorMutatorHelperName(std::string_view memberName) {
-  const auto *metadata = findStdlibSurfaceMetadata(StdlibSurfaceId::CollectionsVectorHelperSurface);
+bool isStdlibSurfaceStatementMemberName(StdlibSurfaceId id, std::string_view memberName) {
+  const auto *metadata = findStdlibSurfaceMetadata(id);
   return metadata != nullptr && matchesAny(metadata->statementMemberNames, memberName);
 }
 

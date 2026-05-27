@@ -540,7 +540,7 @@ bool getBuiltinArrayAccessName(const Expr &expr, std::string &out) {
   const std::string scopedNameWithoutSuffix = stripGeneratedSuffix(scopedName);
   auto unrootedStdlibVectorHelperPath = [](std::string_view helperName) {
     std::string path = stdlibSurfaceCanonicalHelperPath(
-        StdlibSurfaceId::CollectionsVectorHelperSurface, helperName);
+        StdlibSurfaceId::CollectionsManifestSurface0, helperName);
     if (!path.empty() && path.front() == '/') {
       path.erase(path.begin());
     }

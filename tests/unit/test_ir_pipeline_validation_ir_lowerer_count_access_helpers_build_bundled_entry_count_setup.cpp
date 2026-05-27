@@ -215,13 +215,13 @@ TEST_CASE("ir lowerer count access classifiers prefer semantic direct-name facts
       .helperNameId =
           primec::semanticProgramInternCallTargetString(semanticProgram, "count"),
       .chosenPathId = vectorCountPathId,
-      .stdlibSurfaceId = primec::StdlibSurfaceId::CollectionsVectorHelperSurface,
+      .stdlibSurfaceId = primec::StdlibSurfaceId::CollectionsManifestSurface0,
   });
   semanticProgram.publishedRoutingLookups.bridgePathChoiceIdsByExpr
       .insert_or_assign(7005, vectorCountPathId);
   semanticProgram.publishedRoutingLookups.bridgePathChoiceStdlibSurfaceIdsByExpr
       .insert_or_assign(7005,
-                         primec::StdlibSurfaceId::CollectionsVectorHelperSurface);
+                         primec::StdlibSurfaceId::CollectionsManifestSurface0);
 
   primec::ir_lowerer::EntryCountAccessSetup setup;
   std::string error;

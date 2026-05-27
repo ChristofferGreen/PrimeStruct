@@ -193,7 +193,7 @@ bool isResolvedVectorCountMethodCall(const Expr &expr,
   }
   const std::string canonicalVectorCountPath =
       stdlibSurfaceCanonicalHelperPath(
-          StdlibSurfaceId::CollectionsVectorHelperSurface, "count");
+          StdlibSurfaceId::CollectionsManifestSurface0, "count");
   return !canonicalVectorCountPath.empty() &&
          findSemanticProductMethodCallTarget(semanticProgram, expr) ==
              canonicalVectorCountPath;
@@ -244,7 +244,7 @@ bool isSemanticVectorCountBridgeCall(const Expr &expr,
   const std::optional<StdlibSurfaceId> surfaceId =
       findSemanticProductBridgePathChoiceStdlibSurfaceId(semanticProgram, expr);
   if (!surfaceId.has_value() ||
-      *surfaceId != StdlibSurfaceId::CollectionsVectorHelperSurface) {
+      *surfaceId != StdlibSurfaceId::CollectionsManifestSurface0) {
     return false;
   }
   const std::string bridgePath =

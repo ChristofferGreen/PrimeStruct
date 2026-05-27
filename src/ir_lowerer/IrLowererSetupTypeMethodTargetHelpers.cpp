@@ -143,7 +143,7 @@ const Definition *resolveMethodDefinitionFromReceiverTarget(
       const std::string suffix = path.substr(std::string("/array/").size());
       if (allowsArrayVectorCompatibilitySuffix(suffix)) {
         const std::string stdlibAlias =
-            stdlibSurfaceCanonicalHelperPath(StdlibSurfaceId::CollectionsVectorHelperSurface, suffix);
+            stdlibSurfaceCanonicalHelperPath(StdlibSurfaceId::CollectionsManifestSurface0, suffix);
         defIt = defMap.find(stdlibAlias);
         if (defIt != defMap.end()) {
           return defIt->second;
@@ -250,7 +250,7 @@ const Definition *resolveMethodDefinitionFromReceiverTarget(
   }
   if (isExplicitCanonicalVectorMethod) {
     const std::string explicitPath =
-        stdlibSurfaceCanonicalHelperPath(StdlibSurfaceId::CollectionsVectorHelperSurface,
+        stdlibSurfaceCanonicalHelperPath(StdlibSurfaceId::CollectionsManifestSurface0,
                                          normalizedMethodName);
     if (const Definition *resolved = findMethodDefinitionByPath(explicitPath)) {
       errorOut.clear();

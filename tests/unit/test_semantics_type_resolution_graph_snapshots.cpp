@@ -2315,15 +2315,18 @@ TEST_CASE("semantic product publishes resolved method-call targets") {
 
 TEST_CASE("semantic product publishes stdlib surface ids for direct, method, and bridge routing") {
   const std::string source = R"(
-import /std/file/*
-import /std/collections/*
+import /std/collections/vector
 
 [return<i32>]
+/std/collections/vector/count([vector<i32>] self) {
+  return(17i32)
+}
+
+[effects(heap_alloc), return<i32>]
 main() {
-  [FileError] err{FileError.eof()}
   [vector<i32>] values{vector<i32>(1i32)}
-  [auto] directStatus{FileError.status(err)}
-  [auto] methodStatus{err.status()}
+  [auto] directCount{/std/collections/vector/count(values)}
+  [auto] methodCount{values./std/collections/vector/count()}
   [i32] viaBridge{count(values)}
   return(viaBridge)
 }
@@ -2334,38 +2337,43 @@ main() {
   primec::SemanticProgram semanticProgram;
   std::string error;
   const std::vector<std::string> defaults = {"io_out", "io_err"};
-  REQUIRE(semantics.validate(program, "/main", error, defaults, defaults, {}, nullptr, false, &semanticProgram));
+  REQUIRE_MESSAGE(
+      semantics.validate(program, "/main", error, defaults, defaults, {}, nullptr,
+                         false, &semanticProgram),
+      error);
   CHECK(error.empty());
 
   const auto *directEntry = findSemanticEntry(
       primec::semanticProgramDirectCallTargetView(semanticProgram),
       [&semanticProgram](const primec::SemanticProgramDirectCallTarget &entry) {
-        return entry.scopePath == "/main" && entry.callName == "status" &&
-               primec::semanticProgramDirectCallTargetResolvedPath(semanticProgram, entry).find("status") !=
-                   std::string_view::npos;
+        return entry.scopePath == "/main" &&
+               entry.callName == "/std/collections/vector/count" &&
+               primec::semanticProgramDirectCallTargetResolvedPath(semanticProgram, entry) ==
+                   "/std/collections/vector/count";
       });
   REQUIRE(directEntry != nullptr);
   REQUIRE(directEntry->stdlibSurfaceId.has_value());
-  CHECK(*directEntry->stdlibSurfaceId == primec::StdlibSurfaceId::FileErrorHelpers);
+  CHECK(*directEntry->stdlibSurfaceId == primec::StdlibSurfaceId::CollectionsManifestSurface0);
   const auto directSurfaceId = primec::semanticProgramLookupPublishedDirectCallTargetStdlibSurfaceId(
       semanticProgram, directEntry->semanticNodeId);
   REQUIRE(directSurfaceId.has_value());
-  CHECK(*directSurfaceId == primec::StdlibSurfaceId::FileErrorHelpers);
+  CHECK(*directSurfaceId == primec::StdlibSurfaceId::CollectionsManifestSurface0);
 
   const auto *methodEntry = findSemanticEntry(
       primec::semanticProgramMethodCallTargetView(semanticProgram),
       [&semanticProgram](const primec::SemanticProgramMethodCallTarget &entry) {
-        return entry.scopePath == "/main" && entry.methodName == "status" &&
-               primec::semanticProgramMethodCallTargetResolvedPath(semanticProgram, entry).find("status") !=
-                   std::string_view::npos;
+        return entry.scopePath == "/main" &&
+               entry.methodName == "/std/collections/vector/count" &&
+               primec::semanticProgramMethodCallTargetResolvedPath(semanticProgram, entry) ==
+                   "/std/collections/vector/count";
       });
   REQUIRE(methodEntry != nullptr);
   REQUIRE(methodEntry->stdlibSurfaceId.has_value());
-  CHECK(*methodEntry->stdlibSurfaceId == primec::StdlibSurfaceId::FileErrorHelpers);
+  CHECK(*methodEntry->stdlibSurfaceId == primec::StdlibSurfaceId::CollectionsManifestSurface0);
   const auto methodSurfaceId = primec::semanticProgramLookupPublishedMethodCallTargetStdlibSurfaceId(
       semanticProgram, methodEntry->semanticNodeId);
   REQUIRE(methodSurfaceId.has_value());
-  CHECK(*methodSurfaceId == primec::StdlibSurfaceId::FileErrorHelpers);
+  CHECK(*methodSurfaceId == primec::StdlibSurfaceId::CollectionsManifestSurface0);
 
   const auto *bridgeEntry = findSemanticEntry(
       primec::semanticProgramBridgePathChoiceView(semanticProgram),
@@ -2377,12 +2385,12 @@ main() {
       });
   REQUIRE(bridgeEntry != nullptr);
   REQUIRE(bridgeEntry->stdlibSurfaceId.has_value());
-  CHECK(*bridgeEntry->stdlibSurfaceId == primec::StdlibSurfaceId::CollectionsVectorHelperSurface);
+  CHECK(*bridgeEntry->stdlibSurfaceId == primec::StdlibSurfaceId::CollectionsManifestSurface0);
   const auto bridgeSurfaceId =
       primec::semanticProgramLookupPublishedBridgePathChoiceStdlibSurfaceId(
           semanticProgram, bridgeEntry->semanticNodeId);
   REQUIRE(bridgeSurfaceId.has_value());
-  CHECK(*bridgeSurfaceId == primec::StdlibSurfaceId::CollectionsVectorHelperSurface);
+  CHECK(*bridgeSurfaceId == primec::StdlibSurfaceId::CollectionsManifestSurface0);
 }
 
 TEST_CASE("semantic product normalizes experimental vector bridge helper aliases") {
@@ -2419,7 +2427,7 @@ main() {
       });
   REQUIRE(directEntry != nullptr);
   REQUIRE(directEntry->stdlibSurfaceId.has_value());
-  CHECK(*directEntry->stdlibSurfaceId == primec::StdlibSurfaceId::CollectionsVectorHelperSurface);
+  CHECK(*directEntry->stdlibSurfaceId == primec::StdlibSurfaceId::CollectionsManifestSurface0);
 
   const auto *bridgeEntry = findSemanticEntry(
       primec::semanticProgramBridgePathChoiceView(semanticProgram),
@@ -2431,13 +2439,13 @@ main() {
       });
   REQUIRE(bridgeEntry != nullptr);
   REQUIRE(bridgeEntry->stdlibSurfaceId.has_value());
-  CHECK(*bridgeEntry->stdlibSurfaceId == primec::StdlibSurfaceId::CollectionsVectorHelperSurface);
+  CHECK(*bridgeEntry->stdlibSurfaceId == primec::StdlibSurfaceId::CollectionsManifestSurface0);
 
   const auto bridgeSurfaceId =
       primec::semanticProgramLookupPublishedBridgePathChoiceStdlibSurfaceId(
           semanticProgram, bridgeEntry->semanticNodeId);
   REQUIRE(bridgeSurfaceId.has_value());
-  CHECK(*bridgeSurfaceId == primec::StdlibSurfaceId::CollectionsVectorHelperSurface);
+  CHECK(*bridgeSurfaceId == primec::StdlibSurfaceId::CollectionsManifestSurface0);
 }
 
 TEST_CASE("semantic product publishes soa_vector bridge choices for canonical and experimental helpers") {
@@ -5418,11 +5426,11 @@ main() {
   CHECK(viaMethodEntry->initializerMethodCallReturnKind == "i32");
   REQUIRE(viaMethodEntry->initializerStdlibSurfaceId.has_value());
   CHECK(*viaMethodEntry->initializerStdlibSurfaceId ==
-        primec::StdlibSurfaceId::CollectionsVectorHelperSurface);
+        primec::StdlibSurfaceId::CollectionsManifestSurface0);
   CHECK_FALSE(viaMethodEntry->initializerDirectCallStdlibSurfaceId.has_value());
   REQUIRE(viaMethodEntry->initializerMethodCallStdlibSurfaceId.has_value());
   CHECK(*viaMethodEntry->initializerMethodCallStdlibSurfaceId ==
-        primec::StdlibSurfaceId::CollectionsVectorHelperSurface);
+        primec::StdlibSurfaceId::CollectionsManifestSurface0);
 }
 
 TEST_CASE("semantic product publishes graph-backed collection helper direct-call facts") {
@@ -5458,16 +5466,16 @@ main() {
   CHECK(localAutoEntry->initializerDirectCallReturnKind == "i32");
   REQUIRE(localAutoEntry->initializerStdlibSurfaceId.has_value());
   CHECK(*localAutoEntry->initializerStdlibSurfaceId ==
-        primec::StdlibSurfaceId::CollectionsVectorHelperSurface);
+        primec::StdlibSurfaceId::CollectionsManifestSurface0);
   REQUIRE(localAutoEntry->initializerDirectCallStdlibSurfaceId.has_value());
   CHECK(*localAutoEntry->initializerDirectCallStdlibSurfaceId ==
-        primec::StdlibSurfaceId::CollectionsVectorHelperSurface);
+        primec::StdlibSurfaceId::CollectionsManifestSurface0);
   CHECK_FALSE(localAutoEntry->initializerMethodCallStdlibSurfaceId.has_value());
 }
 
 TEST_CASE("semantic product publishes graph-backed collection constructor local-auto surface ids") {
   const std::string source = R"(
-import /std/collections/*
+import /std/collections/vector
 
 [effects(heap_alloc), return<i32>]
 main() {
@@ -5481,9 +5489,10 @@ main() {
   primec::SemanticProgram semanticProgram;
   std::string error;
   const std::vector<std::string> defaults = {"io_out", "io_err"};
-  REQUIRE(
-      semantics.validate(program, "/main", error, defaults, defaults, {}, nullptr, false,
-                         &semanticProgram));
+  REQUIRE_MESSAGE(
+      semantics.validate(program, "/main", error, defaults, defaults, {}, nullptr,
+                         false, &semanticProgram),
+      error);
   CHECK(error.empty());
 
   const auto *localAutoEntry = findSemanticEntry(
@@ -5495,10 +5504,10 @@ main() {
   CHECK(localAutoEntry->bindingTypeText == "vector<i32>");
   REQUIRE(localAutoEntry->initializerStdlibSurfaceId.has_value());
   CHECK(*localAutoEntry->initializerStdlibSurfaceId ==
-        primec::StdlibSurfaceId::CollectionsVectorConstructors);
+        primec::StdlibSurfaceId::CollectionsManifestSurface1);
   REQUIRE(localAutoEntry->initializerDirectCallStdlibSurfaceId.has_value());
   CHECK(*localAutoEntry->initializerDirectCallStdlibSurfaceId ==
-        primec::StdlibSurfaceId::CollectionsVectorConstructors);
+        primec::StdlibSurfaceId::CollectionsManifestSurface1);
   CHECK_FALSE(localAutoEntry->initializerMethodCallStdlibSurfaceId.has_value());
 }
 
@@ -5539,10 +5548,10 @@ main() {
   CHECK(vectorEntry->collectionFamily == "vector");
   CHECK(vectorEntry->elementTypeText == "i32");
   REQUIRE(vectorEntry->helperSurfaceId.has_value());
-  CHECK(*vectorEntry->helperSurfaceId == primec::StdlibSurfaceId::CollectionsVectorHelperSurface);
+  CHECK(*vectorEntry->helperSurfaceId == primec::StdlibSurfaceId::CollectionsManifestSurface0);
   REQUIRE(vectorEntry->constructorSurfaceId.has_value());
   CHECK(*vectorEntry->constructorSurfaceId ==
-        primec::StdlibSurfaceId::CollectionsVectorConstructors);
+        primec::StdlibSurfaceId::CollectionsManifestSurface1);
 
   const auto *mapEntry = findSemanticEntry(
       primec::semanticProgramCollectionSpecializationView(semanticProgram),
@@ -5647,10 +5656,10 @@ main() {
   REQUIRE(valuesEntry != nullptr);
   REQUIRE(valuesEntry->initializerStdlibSurfaceId.has_value());
   CHECK(*valuesEntry->initializerStdlibSurfaceId ==
-        primec::StdlibSurfaceId::CollectionsVectorConstructors);
+        primec::StdlibSurfaceId::CollectionsManifestSurface1);
   REQUIRE(valuesEntry->initializerDirectCallStdlibSurfaceId.has_value());
   CHECK(*valuesEntry->initializerDirectCallStdlibSurfaceId ==
-        primec::StdlibSurfaceId::CollectionsVectorConstructors);
+        primec::StdlibSurfaceId::CollectionsManifestSurface1);
 
   const auto *pairsEntry = findSemanticEntry(
       primec::semanticProgramLocalAutoFactView(semanticProgram),
@@ -5695,12 +5704,12 @@ main() {
         "/std/collections/vector/count");
   REQUIRE(vectorBridgeEntry->stdlibSurfaceId.has_value());
   CHECK(*vectorBridgeEntry->stdlibSurfaceId ==
-        primec::StdlibSurfaceId::CollectionsVectorHelperSurface);
+        primec::StdlibSurfaceId::CollectionsManifestSurface0);
   const auto vectorBridgeSurfaceId =
       primec::semanticProgramLookupPublishedBridgePathChoiceStdlibSurfaceId(
           semanticProgram, vectorBridgeEntry->semanticNodeId);
   REQUIRE(vectorBridgeSurfaceId.has_value());
-  CHECK(*vectorBridgeSurfaceId == primec::StdlibSurfaceId::CollectionsVectorHelperSurface);
+  CHECK(*vectorBridgeSurfaceId == primec::StdlibSurfaceId::CollectionsManifestSurface0);
 
   const auto *mapBridgeEntry = findSemanticEntry(
       primec::semanticProgramBridgePathChoiceView(semanticProgram),
@@ -6696,7 +6705,7 @@ TEST_CASE("semantic product formatter resolves module method-call indices determ
       .resolvedPathId =
           primec::semanticProgramInternCallTargetString(semanticProgram,
                                                         "/std/math/vector/length"),
-      .stdlibSurfaceId = primec::StdlibSurfaceId::CollectionsVectorHelperSurface,
+      .stdlibSurfaceId = primec::StdlibSurfaceId::CollectionsManifestSurface0,
   });
 
   primec::SemanticProgramModuleResolvedArtifacts moduleA;
@@ -6757,7 +6766,7 @@ TEST_CASE("semantic product formatter resolves module bridge-path-choice indices
       .helperNameId = primec::semanticProgramInternCallTargetString(semanticProgram, "length"),
       .chosenPathId =
           primec::semanticProgramInternCallTargetString(semanticProgram, "/std/math/vector/length"),
-      .stdlibSurfaceId = primec::StdlibSurfaceId::CollectionsVectorHelperSurface,
+      .stdlibSurfaceId = primec::StdlibSurfaceId::CollectionsManifestSurface0,
   });
 
   primec::SemanticProgramModuleResolvedArtifacts moduleA;
@@ -8213,7 +8222,7 @@ TEST_CASE("semantic product formatter exact golden is stable") {
       .resolvedPathId =
           primec::semanticProgramInternCallTargetString(semanticProgram,
                                                         "/std/collections/vector/count"),
-      .stdlibSurfaceId = primec::StdlibSurfaceId::CollectionsVectorHelperSurface,
+      .stdlibSurfaceId = primec::StdlibSurfaceId::CollectionsManifestSurface0,
   });
   semanticProgram.bridgePathChoices.push_back(primec::SemanticProgramBridgePathChoice{
       .scopePath = "/main",
@@ -8229,7 +8238,7 @@ TEST_CASE("semantic product formatter exact golden is stable") {
       .chosenPathId =
           primec::semanticProgramInternCallTargetString(semanticProgram,
                                                         "/std/collections/vector/count"),
-      .stdlibSurfaceId = primec::StdlibSurfaceId::CollectionsVectorHelperSurface,
+      .stdlibSurfaceId = primec::StdlibSurfaceId::CollectionsManifestSurface0,
   });
   semanticProgram.callableSummaries.push_back(primec::SemanticProgramCallableSummary{
       .isExecution = true,

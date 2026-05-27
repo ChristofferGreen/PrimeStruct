@@ -719,9 +719,9 @@ void publishCollectionSpecializationForBinding(
     const auto *helperMetadata =
         findStdlibSurfaceMetadataByBridgeKey("collections.vector_helpers");
     entry.helperSurfaceId = helperMetadata == nullptr
-                                ? StdlibSurfaceId::CollectionsVectorHelperSurface
+                                ? StdlibSurfaceId::CollectionsManifestSurface0
                                 : helperMetadata->id;
-    entry.constructorSurfaceId = StdlibSurfaceId::CollectionsVectorConstructors;
+    entry.constructorSurfaceId = StdlibSurfaceId::CollectionsManifestSurface1;
   } else if (entry.collectionFamily == "soa" "_vector") {
     entry.helperSurfaceId = StdlibSurfaceId::CollectionsColumnarHelpers;
     entry.constructorSurfaceId = StdlibSurfaceId::CollectionsColumnarConstructors;

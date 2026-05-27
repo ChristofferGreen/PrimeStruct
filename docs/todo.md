@@ -64,13 +64,12 @@ This file is the live open-work queue for PrimeStruct.
 
 ### Ready Now
 
-- TODO-4597: Add generic collection surface registry IDs | track: stdlib-registry-foundation | primary surface: stdlib surface registry metadata
+- TODO-4598: Migrate semantics collection surface lookups | track: stdlib-registry-semantics | primary surface: semantics collection surface lookup helpers
+- TODO-4599: Migrate emitter collection surface lookups | track: stdlib-registry-emitter | primary surface: emitter collection surface lookup helpers
+- TODO-4600: Migrate IR lowerer collection surface lookups | track: stdlib-registry-lowerer | primary surface: IR lowerer collection surface lookup helpers
 
 ### Immediate Next 10
 
-- TODO-4598: Migrate semantics collection surface lookups
-- TODO-4599: Migrate emitter collection surface lookups
-- TODO-4600: Migrate IR lowerer collection surface lookups
 - TODO-4579: Enforce zero map/vector compiler-knowledge traces
 
 ### Priority Lanes
@@ -89,7 +88,8 @@ This file is the live open-work queue for PrimeStruct.
   TODO-4572 and TODO-4574 completed the public helper classifier deletions.
   TODO-4576 and TODO-4577 removed map/vector backing classifiers. TODO-4578
   was split into TODO-4597 registry foundation plus TODO-4598, TODO-4599, and
-  TODO-4600 subsystem migrations; join at TODO-4579.
+  TODO-4600 subsystem migrations; TODO-4597 completed the generic registry
+  IDs, and the remaining subsystem migrations join at TODO-4579.
 - Architecture hardening backlog: TODO-4586 completed parser diagnostic
   stability tiers. TODO-4587 completed the shared compile-time/runtime VM
   kernel boundary. TODO-4588 added the IR-preparation phase manifest.
@@ -98,46 +98,12 @@ This file is the live open-work queue for PrimeStruct.
 
 ### Execution Queue
 
-- TODO-4597: Add generic collection surface registry IDs
 - TODO-4598: Migrate semantics collection surface lookups
 - TODO-4599: Migrate emitter collection surface lookups
 - TODO-4600: Migrate IR lowerer collection surface lookups
 - TODO-4579: Enforce zero map/vector compiler-knowledge traces
 
 ### Task Blocks
-
-- [ ] TODO-4597: Add generic collection surface registry IDs
-  - owner: ai
-  - created_at: 2026-05-27
-  - phase: Map/vector compiler-independence
-  - parallel_track: stdlib-registry-foundation
-  - depends_on: TODO-4576, TODO-4577
-  - inventory_categories: `stdlib-bridge-key`, `stdlib-registry-id`
-  - scope: Replace public map/vector-specific collection surface enum IDs and
-    positional manifest slots with generic collection manifest surface IDs and
-    metadata-centric lookup helpers that subsystem migrations can share.
-  - implementation_notes: Start with `include/primec/StdlibSurfaceRegistry.h`,
-    `src/StdlibSurfaceRegistry.cpp`, `stdlib/std/collections/surfaces.psmeta`,
-    and the smallest caller/test set needed to remove public
-    `CollectionsVector*` / `CollectionsMap*` IDs. Keep the existing bridge-key
-    lookup API available for follow-up migrations, but make collection manifest
-    records data-driven by manifest `id`, `domain`, and `shape` rather than
-    C++ slot names.
-  - acceptance:
-    - `StdlibSurfaceId` and registry helper APIs no longer contain
-      map/vector-specific names such as `CollectionsVector*` or
-      `CollectionsMap*`.
-    - The `stdlib-registry-id` inventory category reports zero production
-      traces while the bridge-key category is left to TODO-4598 through
-      TODO-4600.
-    - Map/vector import visibility and helper resolution still work through
-      generic manifest data loaded from `.psmeta` or equivalent stdlib-owned
-      files.
-    - Focused tests prove adding or renaming a stdlib collection surface only
-      requires stdlib metadata/test updates, not new C++ enum branches.
-  - stop_rule: Stop once generic registry IDs are in place, focused registry
-    and map/vector import/helper tests pass, and the remaining production
-    bridge-key traces are isolated for TODO-4598 through TODO-4600.
 
 - [ ] TODO-4598: Migrate semantics collection surface lookups
   - owner: ai

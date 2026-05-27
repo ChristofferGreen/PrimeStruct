@@ -273,7 +273,9 @@ isPublishedBorrowedKeyValueHelperName(std::string_view helperName) {
 
 [[maybe_unused]] bool isPublishedVectorMutatorHelperName(
     std::string_view helperName) {
-  return isStdlibVectorMutatorHelperName(helperName);
+  const StdlibSurfaceMetadata *metadata = vectorHelperSurfaceMetadata();
+  return metadata != nullptr &&
+         isStdlibSurfaceStatementMemberName(metadata->id, helperName);
 }
 
 [[maybe_unused]] std::string canonicalCollectionHelperPath(

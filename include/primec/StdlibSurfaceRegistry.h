@@ -21,8 +21,8 @@ enum class StdlibSurfaceShape {
 enum class StdlibSurfaceId {
   FileHelpers,
   FileErrorHelpers,
-  CollectionsVectorHelperSurface,
-  CollectionsVectorConstructors,
+  CollectionsManifestSurface0,
+  CollectionsManifestSurface1,
   CollectionsManifestSurface2,
   CollectionsManifestSurface3,
   CollectionsColumnarHelpers,
@@ -69,6 +69,6 @@ std::string stdlibSurfacePreferredSpellingForMember(StdlibSurfaceId id,
                                                     std::string_view preferredPrefix);
 bool stdlibSurfaceMatchesSpelling(const StdlibSurfaceMetadata &metadata, std::string_view spelling);
 bool isStdlibSurfaceMemberName(StdlibSurfaceId id, std::string_view memberName);
-bool isStdlibVectorMutatorHelperName(std::string_view memberName);
+bool isStdlibSurfaceStatementMemberName(StdlibSurfaceId id, std::string_view memberName);
 
 } // namespace primec

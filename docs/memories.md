@@ -39,6 +39,18 @@ This file stores durable session-derived facts that are useful in later work. Ke
 - Fact: In the C++ emitter, imported stdlib vector mutators outrank rooted `/vector/*` shadows for direct and named calls, while positional `push(value, values)` shadow calls still reject during EXE lowering.
 - Evidence: `tests/unit/test_compile_run_emitters_lambda_mutator_resolution.cpp` now passes focused release reruns that return `0` for the full mutator matrix, `3` for the named-call case, and `push requires mutable vector binding` for the positional shadow reject.
 
+### direct-semantics-snapshots-use-exact-imports
+- Updated: 2026-05-27
+- Tags: tests, semantics, imports
+- Fact: Direct `Semantics::validate` snapshot fixtures should use exact stdlib
+  imports or inline canonical helper definitions instead of wildcard stdlib
+  imports unless the harness explicitly configures import expansion.
+- Evidence: Focused
+  `PrimeStruct_semantics_tests --test-case="semantic product publishes
+  stdlib surface ids*"` rejected `/std/file/*` and `/std/collections/*` as
+  unknown import paths until the fixture used an inline
+  `/std/collections/vector/count` helper plus `import /std/collections/vector`.
+
 ### emitter-key-value-helper-expr-resolution
 - Updated: 2026-05-19
 - Tags: emitter, collections, stdlib

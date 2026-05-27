@@ -178,7 +178,7 @@ bool inferDeclaredReturnCollection(const Definition &definition,
     };
     auto isDirectVectorConstructor = [&]() {
       const StdlibSurfaceMetadata *metadata =
-          findStdlibSurfaceMetadata(StdlibSurfaceId::CollectionsVectorConstructors);
+          findStdlibSurfaceMetadata(StdlibSurfaceId::CollectionsManifestSurface1);
       if (metadata == nullptr) {
         return false;
       }

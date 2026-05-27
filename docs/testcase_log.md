@@ -10080,3 +10080,18 @@ None currently recorded.
   --stop-on-failure --timeout 120 -I 1601,1605` on 2026-05-24 07:56 CEST.
   Known focused testcase-log continuation is now complete; resume TODO
   selection after checking `docs/todo.md`.
+- TODO-4597 generic collection surface registry IDs now pass focused release
+  validation. The `stdlib-registry-id` inventory category is zero in
+  production C++ while `stdlib-bridge-key` remains for TODO-4598 through
+  TODO-4600. One stale metadata test was corrected to reject old experimental
+  SoA lowering paths, and two semantic-product snapshot fixtures were narrowed
+  to exact vector imports so they validate before asserting surface IDs.
+  Validating commands: `python3 scripts/check_map_vector_compiler_knowledge.py
+  --root . --require-zero-category stdlib-registry-id`; `cmake --build
+  build-release --target PrimeStruct_backend_ir_tests
+  PrimeStruct_compile_run_tests PrimeStruct_semantics_tests
+  PrimeStruct_misc_tests -j 1`; `cmake --build build-release --target
+  PrimeStruct_backend_runtime_tests -j 1`; focused release doctest runs for
+  stdlib surface metadata, source locks, semantic-product surface IDs, map
+  ownership, vector import emission, map helper emission, and TODO queue locks
+  on 2026-05-27. No known failing focused testcase remains from this slice.

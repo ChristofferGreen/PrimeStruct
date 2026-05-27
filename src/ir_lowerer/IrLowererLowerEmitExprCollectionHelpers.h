@@ -333,7 +333,7 @@
           std::string constructorName;
           if (!ir_lowerer::resolvePublishedStdlibSurfaceMemberName(
                   receiverDef->fullPath,
-                  primec::StdlibSurfaceId::CollectionsVectorConstructors,
+                  primec::StdlibSurfaceId::CollectionsManifestSurface1,
                   constructorName)) {
             return false;
           }

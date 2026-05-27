@@ -62,7 +62,7 @@ bool resolveVectorMutationHelperName(const SemanticProgram *semanticProgram,
   if (resolvePublishedSemanticStdlibSurfaceMemberName(
           semanticProgram,
           stmt,
-          StdlibSurfaceId::CollectionsVectorHelperSurface,
+          StdlibSurfaceId::CollectionsManifestSurface0,
           helperNameOut)) {
     isSemanticMatchOut = true;
     return isVectorMutationHelperName(helperNameOut);
@@ -70,10 +70,10 @@ bool resolveVectorMutationHelperName(const SemanticProgram *semanticProgram,
 
   const std::string directHelperPath = resolveDirectHelperPath(stmt);
   if (isCanonicalPublishedStdlibSurfaceHelperPath(
-          directHelperPath, StdlibSurfaceId::CollectionsVectorHelperSurface) &&
+          directHelperPath, StdlibSurfaceId::CollectionsManifestSurface0) &&
       resolvePublishedStdlibSurfaceMemberName(
           directHelperPath,
-          StdlibSurfaceId::CollectionsVectorHelperSurface,
+          StdlibSurfaceId::CollectionsManifestSurface0,
           helperNameOut)) {
     return isVectorMutationHelperName(helperNameOut);
   }

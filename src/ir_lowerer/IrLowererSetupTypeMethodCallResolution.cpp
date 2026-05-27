@@ -574,7 +574,7 @@ const Definition *resolveMethodCallDefinitionFromExpr(
       return nullptr;
     };
     const std::string canonicalVectorCountPath =
-        stdlibSurfaceCanonicalHelperPath(StdlibSurfaceId::CollectionsVectorHelperSurface, "count");
+        stdlibSurfaceCanonicalHelperPath(StdlibSurfaceId::CollectionsManifestSurface0, "count");
     const bool requestsExplicitVectorCountMethod =
         (!canonicalVectorCountPath.empty() &&
          explicitMethodPath == canonicalVectorCountPath) ||
