@@ -221,6 +221,74 @@ language features.
 FFI wrappers can still expose thin-pointer forms when required, but that should
 be an adapter concern rather than the core view model.
 
+## Cursors And Pointer Arithmetic
+
+Safe PrimeStruct should prefer cursor traversal over arbitrary arithmetic on
+`Pointer<T>`. A cursor is the public traversal abstraction for both C-style
+contiguous pointer walks and C++-style container iterators.
+
+Conceptually:
+
+```text
+Cursor<T, Capability> {
+  provenance: source view or container generation
+  position: traversal position
+  category: forward | bidirectional | random_access | contiguous
+}
+```
+
+For contiguous storage, cursor movement is safe pointer arithmetic with a
+provenance root and a known traversal boundary. For non-contiguous containers,
+cursor movement is iterator traversal without exposing an address.
+
+Use `limit(values)` for the one-past-final traversal boundary:
+
+```prime
+[return<int>]
+sum_vector([Reference<vector<int>, Read>] values) {
+  [Cursor<int, Read> mut] it{start(values)}
+  [Cursor<int, Read>] lim{limit(values)}
+  [int mut] total{0}
+
+  while(it != lim) {
+    total = total + read(it)
+    it = advance(it)
+  }
+
+  return(total)
+}
+```
+
+`limit(values)` is not the last element. It is the exclusive upper traversal
+boundary, matching the invariant:
+
+```text
+start(values) <= cursor < limit(values)
+```
+
+Reserve `first(values)` and `last(values)` for element-oriented helpers. Since
+empty collections have no first or last element, those helpers should return
+`Maybe<Cursor<T, Capability>>`.
+
+Initial cursor rules:
+
+- `read(cursor)` requires the cursor to be within the readable range, not equal
+  to `limit(...)`
+- `write(cursor, value)` requires write authority and an in-range cursor
+- `advance(cursor)` and `advance(cursor, n)` must prove or check that the result
+  stays within the cursor's valid range
+- cursor equality, ordering, and distance require compatible provenance
+- random-access movement requires a random-access or contiguous cursor category
+- exposing a raw address from a cursor requires explicit address/FFI capability
+- structural mutation of the owner invalidates live cursors unless the container
+  explicitly documents stronger stability
+
+Raw `Pointer<T> + offset` should stay unsafe or internal unless paired with an
+explicit extent and provenance proof. Existing checked memory intrinsics remain
+useful implementation substrate for slices, cursors, vectors, raw buffers, and
+FFI adapters, but should not be the primary user-facing pointer arithmetic
+surface.
+
 ## Borrow Checking For Views
 
 The main risk is borrow-checker expansion. The first implementation should be
