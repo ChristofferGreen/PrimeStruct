@@ -4,6 +4,19 @@
 - none
 
 ## Recent Test Runs
+- 2026-05-27 14:47 CEST | pass | mode: release + script | command:
+  `PYTHONDONTWRITEBYTECODE=1 python3 scripts/check_map_vector_compiler_knowledge.py --root . --require-zero-category map-helper-classifier`;
+  `PYTHONDONTWRITEBYTECODE=1 python3 tests/scripts/test_check_map_vector_compiler_knowledge.py --repo-root .`;
+  `python3 -m py_compile scripts/check_map_vector_compiler_knowledge.py tests/scripts/test_check_map_vector_compiler_knowledge.py`;
+  `git diff --check`;
+  `cmake --build build-release --target PrimeStruct_backend_ir_tests PrimeStruct_misc_tests PrimeStruct_compile_run_tests -j 1`;
+  `cd build-release && ./PrimeStruct_backend_ir_tests --test-case="ir lowerer constructor metadata helpers retire duplicated constructor tables,ir lowerer collection surfaces avoid bridge-key literals,ir lowerer canonical map contains and tryAt rewrites stay recognized" --no-skip`;
+  `cd build-release && ./PrimeStruct_misc_tests --test-case="canonical map surface owns standalone stdlib implementation" --no-skip`;
+  `cd build-release && ./PrimeStruct_compile_run_tests --test-case="todo queue and skipped doctest debt stay source locked" --no-skip`
+  | failures: none | notes: TODO-4601 focused validation passed; inventory
+  reported zero `map-helper-classifier` traces, backend IR source-lock passed
+  2 cases / 238 assertions, map ownership passed 1 case / 2326 assertions,
+  and TODO docs lock passed 1 case / 537 assertions.
 - 2026-05-27 13:37 CEST | pass | mode: release | command:
   `cmake --build build-release --target primec PrimeStruct_compile_run_tests -j 1`;
   `cd build-release && ./PrimeStruct_compile_run_tests --test-case="todo queue and skipped doctest debt stay source locked,compiles and runs shared vector conformance harness in C++ emitter,compiles and runs stdlib namespaced vector helpers in C++ emitter,C++ emitter mutator rewrite keeps known vector receiver leading names,C++ emitter compiles stdlib namespaced map access and count helpers" --no-skip`

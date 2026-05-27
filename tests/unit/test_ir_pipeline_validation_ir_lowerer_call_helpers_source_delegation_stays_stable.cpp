@@ -5393,6 +5393,11 @@ TEST_CASE("ir lowerer collection surfaces avoid bridge-key literals") {
       readText(lowererRoot / "IrLowererSetupTypeCollectionHelpers.cpp");
   CHECK(setupCollectionSource.find("findStdlibSurfaceMetadataByCanonicalPath(canonicalPath)") !=
         std::string::npos);
+  CHECK(setupCollectionSource.find(
+            "findCollectionConstructorSurfaceMetadataForHelper(") !=
+        std::string::npos);
+  CHECK(setupCollectionSource.find("collectionMemberPath(\"map\", \"map\")") ==
+        std::string::npos);
   CHECK(setupCollectionSource.find("vectorHelperSurfaceMetadata()") !=
         std::string::npos);
   CHECK(setupCollectionSource.find("keyValueHelperSurfaceMetadata()") !=

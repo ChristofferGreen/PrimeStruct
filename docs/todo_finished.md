@@ -6,6 +6,37 @@ Legend:
 Finished items are periodically archived here from `docs/todo.md`; section headers record the archive date.
 
 **Todo Completion (May 27, 2026)**
+- [x] TODO-4601: Remove final map helper classifier trace
+  - owner: ai
+  - created_at: 2026-05-27
+  - finished_at: 2026-05-27
+  - phase: Map/vector compiler-independence
+  - parallel_track: map-helper-zero
+  - depends_on: TODO-4597, TODO-4600
+  - inventory_categories: `map-helper-classifier`
+  - scope: Removed the remaining production map-helper classifier trace from
+    IR-lowerer constructor metadata lookup without adding another map-specific
+    helper path builder.
+  - outcome:
+    - Reworked `keyValueConstructorSurfaceMetadata()` to derive the
+      constructor family from generic collection surface metadata by pairing a
+      helper family with constructor metadata whose import aliases include the
+      helper canonical path.
+    - Removed the direct `collectionMemberPath("map", "map")` lookup from
+      production IR-lowerer code, leaving the category-zero inventory with
+      only the follow-up vector-literal traces assigned to TODO-4602 and
+      TODO-4603.
+    - Tightened IR-lowerer and map-ownership source-lock coverage so the
+      constructor metadata path stays generic and the retired trace cannot
+      return unnoticed.
+  - validation:
+    - Focused validation was run in release mode for the inventory,
+      IR-lowerer source-lock, map ownership, and TODO docs slices selected by
+      the TODO worker; see the commit report for exact commands and results.
+  - stop_rule: Stopped once the `map-helper-classifier` inventory category was
+    zero and focused source-lock/tests proved map constructor metadata still
+    resolves.
+
 - [x] TODO-4598: Migrate semantics collection surface lookups
   - owner: ai
   - created_at: 2026-05-27

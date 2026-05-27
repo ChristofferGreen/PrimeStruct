@@ -1827,11 +1827,11 @@ TEST_CASE("todo queue and skipped doctest debt stay source locked") {
                   "  coverage snapshots in this file.") !=
         std::string::npos);
   CHECK(todo.find("### Ready Now\n\n"
-                  "- TODO-4601: Remove final map helper classifier trace | track: "
-                  "map-helper-zero") !=
-        std::string::npos);
-  CHECK(todo.find("- TODO-4602: Remove semantic vector-literal compiler traces | track: "
+                  "- TODO-4602: Remove semantic vector-literal compiler traces | track: "
                   "semantic-vector-literal-zero") !=
+        std::string::npos);
+  CHECK(todo.find("- TODO-4601: Remove final map helper classifier trace | track: "
+                  "map-helper-zero") ==
         std::string::npos);
   CHECK(todo.find("- TODO-4603: Remove IR-lowerer vector-literal compiler traces | track: "
                   "lowerer-vector-literal-zero") !=
@@ -1898,7 +1898,6 @@ TEST_CASE("todo queue and skipped doctest debt stay source locked") {
                   "  surface, TODO-4571 added the compiler-knowledge inventory categories") !=
         std::string::npos);
   CHECK(todo.find("### Execution Queue\n\n"
-                  "- TODO-4601: Remove final map helper classifier trace\n"
                   "- TODO-4602: Remove semantic vector-literal compiler traces\n"
                   "- TODO-4603: Remove IR-lowerer vector-literal compiler traces\n"
                   "- TODO-4579: Enforce zero map/vector compiler-knowledge traces") !=
@@ -1927,6 +1926,10 @@ TEST_CASE("todo queue and skipped doctest debt stay source locked") {
   CHECK(todoFinished.find("TODO-4569: Present scene-rendered UI through software surface bridge") !=
         std::string::npos);
   CHECK(todoFinished.find("TODO-4600: Migrate IR lowerer collection surface lookups") !=
+        std::string::npos);
+  CHECK(todoFinished.find("TODO-4601: Remove final map helper classifier trace") !=
+        std::string::npos);
+  CHECK(todoFinished.find("collectionMemberPath(\"map\", \"map\")") !=
         std::string::npos);
   CHECK(todoFinished.find("TODO-4598: Migrate semantics collection surface lookups") !=
         std::string::npos);

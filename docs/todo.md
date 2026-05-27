@@ -64,7 +64,6 @@ This file is the live open-work queue for PrimeStruct.
 
 ### Ready Now
 
-- TODO-4601: Remove final map helper classifier trace | track: map-helper-zero | primary surface: IR-lowerer map constructor metadata lookup
 - TODO-4602: Remove semantic vector-literal compiler traces | track: semantic-vector-literal-zero | primary surface: semantic collection literal diagnostics
 - TODO-4603: Remove IR-lowerer vector-literal compiler traces | track: lowerer-vector-literal-zero | primary surface: native vector literal lowering diagnostics
 
@@ -90,9 +89,10 @@ This file is the live open-work queue for PrimeStruct.
   was split into TODO-4597 registry foundation plus TODO-4598, TODO-4599, and
   TODO-4600 subsystem migrations; TODO-4597 completed the generic registry
   IDs, TODO-4598 completed the semantics migration, TODO-4599 completed the
-  emitter migration, TODO-4600 completed the IR-lowerer migration, and the
-  final TODO-4579 zero gate was split into concrete trace-deletion leaves
-  TODO-4601 through TODO-4603 before the release-gate switch lands.
+  emitter migration, TODO-4600 completed the IR-lowerer migration, and
+  TODO-4601 removed the final map-helper classifier trace. The final
+  TODO-4579 zero gate still depends on vector-literal trace-deletion leaves
+  TODO-4602 and TODO-4603 before the release-gate switch lands.
 - Architecture hardening backlog: TODO-4586 completed parser diagnostic
   stability tiers. TODO-4587 completed the shared compile-time/runtime VM
   kernel boundary. TODO-4588 added the IR-preparation phase manifest.
@@ -101,37 +101,11 @@ This file is the live open-work queue for PrimeStruct.
 
 ### Execution Queue
 
-- TODO-4601: Remove final map helper classifier trace
 - TODO-4602: Remove semantic vector-literal compiler traces
 - TODO-4603: Remove IR-lowerer vector-literal compiler traces
 - TODO-4579: Enforce zero map/vector compiler-knowledge traces
 
 ### Task Blocks
-
-- [ ] TODO-4601: Remove final map helper classifier trace
-  - owner: ai
-  - created_at: 2026-05-27
-  - phase: Map/vector compiler-independence
-  - parallel_track: map-helper-zero
-  - depends_on: TODO-4597, TODO-4600
-  - inventory_categories: `map-helper-classifier`
-  - scope: Remove the remaining production map-helper classifier trace from
-    IR-lowerer constructor metadata lookup without reintroducing map-specific
-    helper path builders.
-  - implementation_notes: Start with
-    `src/ir_lowerer/IrLowererSetupTypeCollectionHelpers.cpp`, where the
-    inventory currently reports `collectionMemberPath("map", "map")`.
-    Prefer generic collection surface metadata or canonical-path helper APIs
-    over spelling another map-specific path builder.
-  - acceptance:
-    - `python3 scripts/check_map_vector_compiler_knowledge.py --root . --require-zero-category map-helper-classifier`
-      passes.
-    - Existing IR-lowerer and map ownership source-lock coverage for
-      collection constructor metadata still passes.
-    - Production code does not add new `map-helper-classifier`,
-      `stdlib-bridge-key`, or `stdlib-registry-id` traces.
-  - stop_rule: Stop once the map-helper classifier category is zero and the
-    focused source-lock/tests prove map constructor metadata still resolves.
 
 - [ ] TODO-4602: Remove semantic vector-literal compiler traces
   - owner: ai
@@ -187,13 +161,13 @@ This file is the live open-work queue for PrimeStruct.
   - inventory_categories: all categories reported by
     `scripts/check_map_vector_compiler_knowledge.py`
   - scope: Turn the broad compiler-knowledge inventory into the final
-    release-gate zero audit after the remaining map-helper and vector-literal
-    trace deletion leaves have landed.
+    release-gate zero audit after the remaining vector-literal trace deletion
+    leaves have landed.
   - implementation_notes: Start from the TODO-4571 audit script and wire its
-    `--enforce-zero` mode into CTest/CMake once TODO-4601 through TODO-4603
-    remove the current nonzero categories. Keep existing narrow surface-trace
-    scripts only if they still catch a distinct regression; otherwise replace
-    them with the broader zero gate and self-tests.
+    `--enforce-zero` mode into CTest/CMake once TODO-4602 and TODO-4603
+    remove the current nonzero vector-literal categories. Keep existing narrow
+    surface-trace scripts only if they still catch a distinct regression;
+    otherwise replace them with the broader zero gate and self-tests.
   - acceptance:
     - Routine release validation fails on any production C++ map/vector
       compiler-knowledge trace, including bridge keys, helper recognizers,

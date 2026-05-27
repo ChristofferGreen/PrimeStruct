@@ -4656,6 +4656,11 @@ TEST_CASE("canonical map surface owns standalone stdlib implementation") {
             "keyValueConstructorSurfaceMetadata()") !=
         std::string::npos);
   CHECK(setupTypeCollectionSource.find(
+            "findCollectionConstructorSurfaceMetadataForHelper(") !=
+        std::string::npos);
+  CHECK(setupTypeCollectionSource.find("collectionMemberPath(\"map\", \"map\")") ==
+        std::string::npos);
+  CHECK(setupTypeCollectionSource.find(
             "findStdlibSurfaceMetadataByBridgeKey(\"collections.map_constructors\")") ==
         std::string::npos);
   CHECK(setupTypeCollectionSource.find("keyValueHelperSurfaceId()") !=

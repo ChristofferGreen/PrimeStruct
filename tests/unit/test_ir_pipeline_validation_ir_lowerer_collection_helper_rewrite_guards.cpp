@@ -629,6 +629,14 @@ TEST_CASE("ir lowerer constructor metadata helpers retire duplicated constructor
   CHECK(setupHelpersSource.find(
             "std::string inferPublishedKeyValueStorageStructPathFromConstructorPath(") !=
         std::string::npos);
+  CHECK(setupHelpersSource.find(
+            "findCollectionConstructorSurfaceMetadataForHelper(") !=
+        std::string::npos);
+  CHECK(setupHelpersSource.find(
+            "matchesRegistrySpellingSet(metadata.importAliasSpellings") !=
+        std::string::npos);
+  CHECK(setupHelpersSource.find("collectionMemberPath(\"map\", \"map\")") ==
+        std::string::npos);
 
   CHECK(accessTargetResolutionSource.find(
             "resolveKeyValueConstructorPathMemberName(normalizedName, constructorName)") !=
@@ -1945,7 +1953,10 @@ TEST_CASE("ir lowerer canonical map contains and tryAt rewrites stay recognized 
         std::string::npos);
   CHECK(collectionHelpersSource.find("helperName != \"tryAt\" && helperName != \"insert\"") !=
         std::string::npos);
-  CHECK(tailDispatchSource.find("ir_lowerer::collectionMemberPath(\"map\", helperName)") !=
+  CHECK(tailDispatchSource.find("ir_lowerer::collectionMemberPath(\"map\", helperName)") ==
+        std::string::npos);
+  CHECK(tailDispatchSource.find(
+            "isTailDispatchKeyValueImportAliasHelperPath(rawPath, helperName)") !=
         std::string::npos);
   CHECK(tailDispatchSource.find("helperName != \"count\" && helperName != \"contains\" &&") !=
         std::string::npos);

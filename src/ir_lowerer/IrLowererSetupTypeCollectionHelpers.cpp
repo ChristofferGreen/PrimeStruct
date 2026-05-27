@@ -73,6 +73,26 @@ const StdlibSurfaceMetadata *findCollectionSurfaceMetadataByCanonicalPath(
   return metadata;
 }
 
+const StdlibSurfaceMetadata *findCollectionConstructorSurfaceMetadataForHelper(
+    const StdlibSurfaceMetadata &helperMetadata) {
+  if (helperMetadata.domain != StdlibSurfaceDomain::Collections ||
+      helperMetadata.shape != StdlibSurfaceShape::HelperFamily ||
+      helperMetadata.canonicalPath.empty()) {
+    return nullptr;
+  }
+  for (const StdlibSurfaceMetadata &metadata : stdlibSurfaceRegistry()) {
+    if (metadata.domain != StdlibSurfaceDomain::Collections ||
+        metadata.shape != StdlibSurfaceShape::ConstructorFamily) {
+      continue;
+    }
+    if (matchesRegistrySpellingSet(metadata.importAliasSpellings,
+                                   helperMetadata.canonicalPath)) {
+      return &metadata;
+    }
+  }
+  return nullptr;
+}
+
 bool matchesResolvedRootedPublishedCollectionMemberPath(
     std::string_view path,
     std::string_view rootPath,
@@ -188,9 +208,10 @@ const StdlibSurfaceMetadata *keyValueHelperSurfaceMetadata() {
 }
 
 const StdlibSurfaceMetadata *keyValueConstructorSurfaceMetadata() {
-  return findCollectionSurfaceMetadataByCanonicalPath(
-      collectionMemberPath("map", "map"),
-      StdlibSurfaceShape::ConstructorFamily);
+  const auto *helperMetadata = keyValueHelperSurfaceMetadata();
+  return helperMetadata == nullptr
+             ? nullptr
+             : findCollectionConstructorSurfaceMetadataForHelper(*helperMetadata);
 }
 
 bool allowsArrayVectorCompatibilitySuffix(const std::string &suffix) {
