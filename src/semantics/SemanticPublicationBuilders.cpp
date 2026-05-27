@@ -932,6 +932,7 @@ void publishLowererPreflightFacts(SemanticPublicationBuilderState &state) {
     if (found.empty()) {
       return;
     }
+    facts.hasSoftwareNumericType = true;
     facts.firstSoftwareNumericTypeId =
         semanticProgramInternCallTargetString(state.semanticProgram, found);
   };
@@ -944,6 +945,7 @@ void publishLowererPreflightFacts(SemanticPublicationBuilderState &state) {
     if (found.empty()) {
       return;
     }
+    facts.hasRuntimeReflectionPath = true;
     facts.firstRuntimeReflectionPathId =
         semanticProgramInternCallTargetString(state.semanticProgram, found);
     facts.firstRuntimeReflectionPathIsObjectTable = isRuntimeReflectionPath(found);
@@ -953,6 +955,7 @@ void publishLowererPreflightFacts(SemanticPublicationBuilderState &state) {
     if (facts.firstSoftwareNumericTypeId == InvalidSymbolId) {
       if (std::string found = scanTransformsForSoftwareNumeric(def.transforms);
           !found.empty()) {
+        facts.hasSoftwareNumericType = true;
         facts.firstSoftwareNumericTypeId =
             semanticProgramInternCallTargetString(state.semanticProgram, found);
       }
@@ -979,6 +982,7 @@ void publishLowererPreflightFacts(SemanticPublicationBuilderState &state) {
     if (facts.firstSoftwareNumericTypeId == InvalidSymbolId) {
       if (std::string found = scanTransformsForSoftwareNumeric(exec.transforms);
           !found.empty()) {
+        facts.hasSoftwareNumericType = true;
         facts.firstSoftwareNumericTypeId =
             semanticProgramInternCallTargetString(state.semanticProgram, found);
       }

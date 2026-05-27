@@ -66,8 +66,11 @@ bool validateNoSoftwareNumericTypesForBackendSurface(const SemanticProgram *sema
   if (semanticProgram == nullptr) {
     return true;
   }
-  const std::string_view found =
-      semanticProgramLookupPublishedLowererSoftwareNumericType(*semanticProgram);
+  std::string_view found;
+  if (!semanticProgramResolvePublishedLowererSoftwareNumericType(
+          *semanticProgram, found, error)) {
+    return false;
+  }
   if (found.empty()) {
     return true;
   }
@@ -81,8 +84,11 @@ bool validateNoRuntimeReflectionQueriesForBackendSurface(const SemanticProgram *
   if (semanticProgram == nullptr) {
     return true;
   }
-  const std::string_view found =
-      semanticProgramLookupPublishedLowererRuntimeReflectionPath(*semanticProgram);
+  std::string_view found;
+  if (!semanticProgramResolvePublishedLowererRuntimeReflectionPath(
+          *semanticProgram, found, error)) {
+    return false;
+  }
   if (found.empty()) {
     return true;
   }

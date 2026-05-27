@@ -1591,6 +1591,8 @@ TEST_CASE("semantic-product consumer coverage matrix stays source locked") {
       readRepoFile("tests/unit/test_ir_pipeline_backends_registry.cpp");
   const std::string snapshotTests =
       readRepoFile("tests/unit/test_semantics_type_resolution_graph_snapshots.cpp");
+  const std::string entrySetupTests = readRepoFile(
+      "tests/unit/test_ir_pipeline_validation_ir_lowerer_entry_setup_step_resolves_entry_metadata.cpp");
   const std::string callHelperTests = readRepoFile(
       "tests/unit/test_ir_pipeline_validation_ir_lowerer_call_helpers_source_delegation_stays_stable.cpp");
 
@@ -1623,7 +1625,6 @@ TEST_CASE("semantic-product consumer coverage matrix stays source locked") {
 
   CHECK(matrix.find("Every row below is source-locked against `semanticProgramFactFamilyInfos()`") !=
         std::string::npos);
-  CHECK(matrix.find("SPCM-FOLLOWUP-preflight") != std::string::npos);
   CHECK(matrix.find("SPCM-FOLLOWUP-struct-fields") != std::string::npos);
   CHECK(matrix.find("SPCM-FOLLOWUP-requirements") != std::string::npos);
 
@@ -1674,6 +1675,34 @@ TEST_CASE("semantic-product consumer coverage matrix stays source locked") {
       callHelperTests,
       "ir lowerer rejects stale semantic-product try result metadata",
       registryTests);
+
+  const std::string preflightRowPrefix = "| `publishedLowererPreflightFacts` |";
+  const std::size_t preflightRowStart = matrix.find(preflightRowPrefix);
+  REQUIRE(preflightRowStart != std::string::npos);
+  const std::size_t preflightRowEnd = matrix.find('\n', preflightRowStart);
+  REQUIRE(preflightRowEnd != std::string::npos);
+  const std::string preflightRow =
+      matrix.substr(preflightRowStart, preflightRowEnd - preflightRowStart);
+  CHECK(preflightRow.find("stale/missing: `ir lowerer rejects missing semantic-product "
+                          "lowerer preflight software numeric ids`") != std::string::npos);
+  CHECK(preflightRow.find("stale/missing: `ir lowerer rejects stale semantic-product "
+                          "lowerer preflight software numeric ids`") != std::string::npos);
+  CHECK(preflightRow.find("stale/missing: `ir preparation rejects missing semantic-product "
+                          "lowerer preflight runtime reflection ids`") != std::string::npos);
+  CHECK(preflightRow.find("stale/missing: `ir preparation rejects stale semantic-product "
+                          "lowerer preflight runtime reflection ids`") != std::string::npos);
+  CHECK(entrySetupTests.find("TEST_CASE(\"ir lowerer rejects missing semantic-product "
+                             "lowerer preflight software numeric ids\")") !=
+        std::string::npos);
+  CHECK(entrySetupTests.find("TEST_CASE(\"ir lowerer rejects stale semantic-product "
+                             "lowerer preflight software numeric ids\")") !=
+        std::string::npos);
+  CHECK(registryTests.find("TEST_CASE(\"ir preparation rejects missing semantic-product "
+                           "lowerer preflight runtime reflection ids\")") !=
+        std::string::npos);
+  CHECK(registryTests.find("TEST_CASE(\"ir preparation rejects stale semantic-product "
+                           "lowerer preflight runtime reflection ids\")") !=
+        std::string::npos);
 }
 
 TEST_CASE("semantic snapshot shared traversal keeps direct and bridge ordering keys") {

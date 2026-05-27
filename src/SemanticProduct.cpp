@@ -496,16 +496,74 @@ std::optional<StdlibSurfaceId> semanticProgramLookupPublishedBridgePathChoiceStd
 
 std::string_view semanticProgramLookupPublishedLowererSoftwareNumericType(
     const SemanticProgram &semanticProgram) {
-  return semanticProgramResolveCallTargetString(
-      semanticProgram,
-      semanticProgram.publishedLowererPreflightFacts.firstSoftwareNumericTypeId);
+  std::string_view softwareNumericType;
+  std::string error;
+  if (!semanticProgramResolvePublishedLowererSoftwareNumericType(
+          semanticProgram, softwareNumericType, error)) {
+    return {};
+  }
+  return softwareNumericType;
+}
+
+bool semanticProgramResolvePublishedLowererSoftwareNumericType(
+    const SemanticProgram &semanticProgram,
+    std::string_view &softwareNumericType,
+    std::string &error) {
+  softwareNumericType = {};
+  const auto &facts = semanticProgram.publishedLowererPreflightFacts;
+  const bool hasSoftwareNumericType =
+      facts.hasSoftwareNumericType || facts.firstSoftwareNumericTypeId != InvalidSymbolId;
+  if (!hasSoftwareNumericType) {
+    return true;
+  }
+  if (facts.firstSoftwareNumericTypeId == InvalidSymbolId) {
+    error = "missing semantic-product lowerer preflight software numeric type id";
+    return false;
+  }
+  softwareNumericType =
+      semanticProgramResolveCallTargetString(semanticProgram, facts.firstSoftwareNumericTypeId);
+  if (softwareNumericType.empty()) {
+    error = "stale semantic-product lowerer preflight software numeric type id";
+    return false;
+  }
+  return true;
 }
 
 std::string_view semanticProgramLookupPublishedLowererRuntimeReflectionPath(
     const SemanticProgram &semanticProgram) {
-  return semanticProgramResolveCallTargetString(
-      semanticProgram,
-      semanticProgram.publishedLowererPreflightFacts.firstRuntimeReflectionPathId);
+  std::string_view runtimeReflectionPath;
+  std::string error;
+  if (!semanticProgramResolvePublishedLowererRuntimeReflectionPath(
+          semanticProgram, runtimeReflectionPath, error)) {
+    return {};
+  }
+  return runtimeReflectionPath;
+}
+
+bool semanticProgramResolvePublishedLowererRuntimeReflectionPath(
+    const SemanticProgram &semanticProgram,
+    std::string_view &runtimeReflectionPath,
+    std::string &error) {
+  runtimeReflectionPath = {};
+  const auto &facts = semanticProgram.publishedLowererPreflightFacts;
+  const bool hasRuntimeReflectionPath =
+      facts.hasRuntimeReflectionPath ||
+      facts.firstRuntimeReflectionPathId != InvalidSymbolId ||
+      facts.firstRuntimeReflectionPathIsObjectTable;
+  if (!hasRuntimeReflectionPath) {
+    return true;
+  }
+  if (facts.firstRuntimeReflectionPathId == InvalidSymbolId) {
+    error = "missing semantic-product lowerer preflight runtime reflection path id";
+    return false;
+  }
+  runtimeReflectionPath =
+      semanticProgramResolveCallTargetString(semanticProgram, facts.firstRuntimeReflectionPathId);
+  if (runtimeReflectionPath.empty()) {
+    error = "stale semantic-product lowerer preflight runtime reflection path id";
+    return false;
+  }
+  return true;
 }
 
 bool semanticProgramLookupPublishedLowererRuntimeReflectionUsesObjectTable(

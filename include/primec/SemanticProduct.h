@@ -481,7 +481,9 @@ struct SemanticProgramPublishedRoutingLookups {
 };
 
 struct SemanticProgramPublishedLowererPreflightFacts {
+  bool hasSoftwareNumericType = false;
   SymbolId firstSoftwareNumericTypeId = InvalidSymbolId;
+  bool hasRuntimeReflectionPath = false;
   SymbolId firstRuntimeReflectionPathId = InvalidSymbolId;
   bool firstRuntimeReflectionPathIsObjectTable = false;
 };
@@ -584,8 +586,16 @@ std::optional<StdlibSurfaceId> semanticProgramLookupPublishedBridgePathChoiceStd
     uint64_t semanticNodeId);
 std::string_view semanticProgramLookupPublishedLowererSoftwareNumericType(
     const SemanticProgram &semanticProgram);
+bool semanticProgramResolvePublishedLowererSoftwareNumericType(
+    const SemanticProgram &semanticProgram,
+    std::string_view &softwareNumericType,
+    std::string &error);
 std::string_view semanticProgramLookupPublishedLowererRuntimeReflectionPath(
     const SemanticProgram &semanticProgram);
+bool semanticProgramResolvePublishedLowererRuntimeReflectionPath(
+    const SemanticProgram &semanticProgram,
+    std::string_view &runtimeReflectionPath,
+    std::string &error);
 bool semanticProgramLookupPublishedLowererRuntimeReflectionUsesObjectTable(
     const SemanticProgram &semanticProgram);
 const SemanticProgramCallableSummary *semanticProgramLookupPublishedCallableSummaryByPathId(

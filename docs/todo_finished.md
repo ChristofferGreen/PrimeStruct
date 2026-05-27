@@ -33,7 +33,36 @@ Finished items are periodically archived here from `docs/todo.md`; section heade
   - stop_rule: Stopped after array extent facts were published and covered
     without implementing slices or cursor APIs.
 
+- [x] TODO-4617: Add semantic preflight missing-fact diagnostics
+  - owner: ai
+  - created_at: 2026-05-27
+  - finished_at: 2026-05-28
+  - phase: Architecture hardening
+  - parallel_track: semantic-product-preflight-diagnostics
+  - scope: Added deterministic missing/stale diagnostics for
+    `publishedLowererPreflightFacts` so lowerer effect setup and
+    runtime-reflection preflight consumers fail closed when software numeric
+    type or runtime reflection preflight ids are absent, incomplete, or stale.
+  - outcome:
+    - Added semantic-product observed bits for lowerer software numeric and
+      runtime-reflection preflight facts, plus checked public resolvers that
+      distinguish no observed fact from missing or stale interned ids.
+    - Routed native/GPU lowerer effect preflight and IR-preparation
+      runtime-reflection backend-capability preflight through the checked
+      resolvers.
+    - Added focused missing/stale software numeric coverage at lowerer entry
+      setup and missing/stale runtime-reflection coverage at the
+      IR-preparation consumer boundary.
+    - Updated the semantic-product consumer matrix and its source lock to name
+      the new stale/missing coverage.
+  - validation:
+    - Focused backend IR/runtime slices were selected for parent-run release
+      validation; see the commit report for exact commands and results.
+  - stop_rule: Stopped after preflight facts fail closed with stable
+    diagnostics; no new semantic-product fact families were added.
+
 **Todo Completion (May 27, 2026)**
+
 - [x] TODO-4620: Index expanded-source segments for diagnostics
   - owner: ai
   - created_at: 2026-05-27

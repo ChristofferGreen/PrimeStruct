@@ -463,6 +463,48 @@ TEST_CASE("ir preparation rejects runtime reflection before unsupported backend 
   CHECK(failure.diagnosticInfo.message == failure.message);
 }
 
+TEST_CASE("ir preparation rejects missing semantic-product lowerer preflight runtime reflection ids") {
+  primec::Program program;
+  primec::SemanticProgram semanticProgram;
+  semanticProgram.publishedLowererPreflightFacts.hasRuntimeReflectionPath = true;
+
+  primec::Options options;
+  options.emitKind = "wasm";
+  options.wasmProfile = "browser";
+  options.entryPath = "/main";
+
+  primec::IrModule ir;
+  primec::IrPreparationFailure failure;
+  CHECK_FALSE(primec::prepareIrModule(
+      program, &semanticProgram, options, primec::IrValidationTarget::WasmBrowser, ir, failure));
+  CHECK(failure.stage == primec::IrPreparationFailureStage::Lowering);
+  CHECK(failure.message ==
+        "missing semantic-product lowerer preflight runtime reflection path id");
+  CHECK(failure.diagnosticInfo.message == failure.message);
+}
+
+TEST_CASE("ir preparation rejects stale semantic-product lowerer preflight runtime reflection ids") {
+  primec::Program program;
+  primec::SemanticProgram semanticProgram;
+  semanticProgram.publishedLowererPreflightFacts.hasRuntimeReflectionPath = true;
+  semanticProgram.publishedLowererPreflightFacts.firstRuntimeReflectionPathId =
+      static_cast<primec::SymbolId>(semanticProgram.callTargetStringTable.size() + 1u);
+
+  primec::Options options;
+  options.emitKind = "wasm";
+  options.wasmProfile = "browser";
+  options.entryPath = "/main";
+
+  primec::IrModule ir;
+  primec::IrPreparationFailure failure;
+  CHECK_FALSE(primec::prepareIrModule(
+      program, &semanticProgram, options, primec::IrValidationTarget::WasmBrowser, ir, failure));
+  CHECK(failure.stage == primec::IrPreparationFailureStage::Lowering);
+  CHECK(failure.message ==
+        "stale semantic-product lowerer preflight runtime reflection path id");
+  CHECK(failure.diagnosticInfo.message == failure.message);
+}
+
 TEST_CASE("all production primec emit kinds route through ir backend resolution") {
   const std::vector<std::string_view> expectedKinds = {
       "cpp", "cpp-ir", "exe", "exe-ir", "native", "ir", "vm", "glsl", "spirv", "wasm", "glsl-ir", "spirv-ir"};

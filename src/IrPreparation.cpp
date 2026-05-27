@@ -32,8 +32,11 @@ void emitPostIrPreparationAstHeapEstimate(const Program &program) {
 bool validateRuntimeReflectionBackendSupport(const SemanticProgram &semanticProgram,
                                              const Options &options,
                                              std::string &error) {
-  const std::string_view reflectionPath =
-      semanticProgramLookupPublishedLowererRuntimeReflectionPath(semanticProgram);
+  std::string_view reflectionPath;
+  if (!semanticProgramResolvePublishedLowererRuntimeReflectionPath(
+          semanticProgram, reflectionPath, error)) {
+    return false;
+  }
   if (reflectionPath.empty()) {
     return true;
   }

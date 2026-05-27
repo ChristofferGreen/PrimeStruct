@@ -65,7 +65,6 @@ This file is the live open-work queue for PrimeStruct.
 ### Ready Now
 
 - TODO-4608: Add checked array slice construction | track: array-slice-construction | surface: safe array slice construction
-- TODO-4617: Add semantic preflight missing-fact diagnostics | track: semantic-product-preflight-diagnostics | surface: semantic product preflight facts
 - TODO-4618: Fail closed on stale CT-eval requirement facts | track: ct-eval-requirement-fail-closed | surface: CT-eval requirement facts
 - TODO-4621: Classify unsupported variadic-pack diagnostics | track: variadic-pack-diagnostic-tier | surface: lowerer/backend diagnostics
 
@@ -111,9 +110,10 @@ This file is the live open-work queue for PrimeStruct.
   temporary semantic/lowerer/emitter source locks and made the semantic
   validation manifest executable. TODO-4619 completed the second backend
   capability gate, and TODO-4620 completed deterministic indexed
-  expanded-source diagnostic lookup. TODO-4617, TODO-4618, and TODO-4621
-  remain for semantic-product stale/missing diagnostics and one lowerer/backend
-  diagnostic stability-tier promotion.
+  expanded-source diagnostic lookup. TODO-4617 completed preflight
+  stale/missing diagnostics, so TODO-4618 and TODO-4621 remain for CT-eval
+  stale/missing diagnostics and one lowerer/backend diagnostic stability-tier
+  promotion.
 - Safe array extents and capability views: TODO-4604 completed the requirement
   contract phase split, and TODO-4605 completed the non-null safe pointer
   optionality model. TODO-4606 specified the capability-parameterized
@@ -127,13 +127,12 @@ This file is the live open-work queue for PrimeStruct.
 ### Execution Queue
 
 1. TODO-4608: Add checked array slice construction
-2. TODO-4617: Add semantic preflight missing-fact diagnostics
-3. TODO-4618: Fail closed on stale CT-eval requirement facts
-4. TODO-4621: Classify unsupported variadic-pack diagnostics
-5. TODO-4609: Reject escaping local array slices
-6. TODO-4610: Add forward cursor traversal API
-7. TODO-4611: Add reverse cursor traversal API
-8. TODO-4612: Add safe extent and cursor code examples
+2. TODO-4618: Fail closed on stale CT-eval requirement facts
+3. TODO-4621: Classify unsupported variadic-pack diagnostics
+4. TODO-4609: Reject escaping local array slices
+5. TODO-4610: Add forward cursor traversal API
+6. TODO-4611: Add reverse cursor traversal API
+7. TODO-4612: Add safe extent and cursor code examples
 
 ### Task Blocks
 
@@ -253,30 +252,6 @@ This file is the live open-work queue for PrimeStruct.
       until the corresponding implementation leaves land.
   - stop_rule: Stop once the example guide and source-lock coverage are
     updated; do not implement missing language features in this leaf.
-
-- [ ] TODO-4617: Add semantic preflight missing-fact diagnostics
-  - owner: ai
-  - created_at: 2026-05-27
-  - phase: Architecture hardening
-  - parallel_track: semantic-product-preflight-diagnostics
-  - scope: Add deterministic missing/stale diagnostics for
-    `publishedLowererPreflightFacts` so lowerer effect setup fails closed when
-    software numeric type or runtime reflection preflight ids are absent,
-    incomplete, or stale.
-  - implementation_notes: Start with
-    `docs/SemanticProductConsumerMatrix.md`,
-    `include/primec/SemanticProduct.h`, `src/SemanticProduct.cpp`, and
-    `src/ir_lowerer/IrLowererLowerEffects.cpp`.
-  - acceptance:
-    - A focused stale/missing test removes or corrupts one software numeric
-      preflight fact and gets a deterministic diagnostic instead of fallback
-      AST reconstruction.
-    - A focused stale/missing test covers runtime reflection preflight ids at
-      the consumer boundary.
-    - The consumer matrix row is updated with the new stale/missing coverage
-      names.
-  - stop_rule: Stop once preflight facts fail closed with stable diagnostics;
-    do not add new semantic-product fact families in this leaf.
 
 - [ ] TODO-4618: Fail closed on stale CT-eval requirement facts
   - owner: ai
