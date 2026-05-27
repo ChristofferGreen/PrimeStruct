@@ -27,12 +27,12 @@ bool isSpecializedExperimentalKeyValueStructPath(const std::string &typeText) {
 }
 
 const StdlibSurfaceMetadata *keyValueHelperSurfaceMetadataForUninitializedStructs() {
-  return findStdlibSurfaceMetadataByBridgeKey("collections.map_helpers");
+  return keyValueHelperSurfaceMetadata();
 }
 
 const StdlibSurfaceMetadata *
 keyValueConstructorSurfaceMetadataForUninitializedStructs() {
-  return findStdlibSurfaceMetadataByBridgeKey("collections.map_constructors");
+  return keyValueConstructorSurfaceMetadata();
 }
 
 std::string forwardedEmptyKeyValueConstructorMemberName() {

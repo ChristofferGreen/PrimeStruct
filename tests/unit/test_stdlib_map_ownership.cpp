@@ -4395,7 +4395,10 @@ TEST_CASE("canonical map surface owns standalone stdlib implementation") {
   CHECK(declaredCollectionInferenceSource.find("StdlibSurfaceId::CollectionsMapConstructors") ==
         std::string::npos);
   CHECK(declaredCollectionInferenceSource.find(
-            "findStdlibSurfaceMetadataByBridgeKey(\"collections.map_constructors\")") !=
+            "keyValueConstructorSurfaceMetadata()") !=
+        std::string::npos);
+  CHECK(declaredCollectionInferenceSource.find(
+            "findStdlibSurfaceMetadataByBridgeKey(\"collections.map_constructors\")") ==
         std::string::npos);
   CHECK(declaredCollectionInferenceSource.find(
             "keyValueConstructorSurfaceMetadataForDeclaredInference()") !=
@@ -4461,7 +4464,10 @@ TEST_CASE("canonical map surface owns standalone stdlib implementation") {
             "isDispatchSetupMapFamilyText(") ==
         std::string::npos);
   CHECK(inferenceDispatchSetupSource.find(
-            "findStdlibSurfaceMetadataByBridgeKey(\"collections.map_helpers\")") !=
+            "keyValueHelperSurfaceMetadata()") !=
+        std::string::npos);
+  CHECK(inferenceDispatchSetupSource.find(
+            "findStdlibSurfaceMetadataByBridgeKey(\"collections.map_helpers\")") ==
         std::string::npos);
   CHECK(inferenceBaseKindSource.find(
             "isBuiltinCollectionTypeName(normalized, \"map\")") !=
@@ -4518,7 +4524,10 @@ TEST_CASE("canonical map surface owns standalone stdlib implementation") {
   CHECK(setupTypeMethodCallSource.find("StdlibSurfaceId::CollectionsMapConstructors") ==
         std::string::npos);
   CHECK(setupTypeMethodCallSource.find(
-            "findStdlibSurfaceMetadataByBridgeKey(\"collections.map_constructors\")") !=
+            "keyValueConstructorSurfaceMetadata()") !=
+        std::string::npos);
+  CHECK(setupTypeMethodCallSource.find(
+            "findStdlibSurfaceMetadataByBridgeKey(\"collections.map_constructors\")") ==
         std::string::npos);
   CHECK(setupTypeMethodCallSource.find("path == \"/std/collections/map/map\"") ==
         std::string::npos);
@@ -4637,10 +4646,16 @@ TEST_CASE("canonical map surface owns standalone stdlib implementation") {
   CHECK(setupTypeCollectionSource.find("StdlibSurfaceId::CollectionsMapConstructors") ==
         std::string::npos);
   CHECK(setupTypeCollectionSource.find(
-            "findStdlibSurfaceMetadataByBridgeKey(\"collections.map_helpers\")") !=
+            "keyValueHelperSurfaceMetadata()") !=
         std::string::npos);
   CHECK(setupTypeCollectionSource.find(
-            "findStdlibSurfaceMetadataByBridgeKey(\"collections.map_constructors\")") !=
+            "findStdlibSurfaceMetadataByBridgeKey(\"collections.map_helpers\")") ==
+        std::string::npos);
+  CHECK(setupTypeCollectionSource.find(
+            "keyValueConstructorSurfaceMetadata()") !=
+        std::string::npos);
+  CHECK(setupTypeCollectionSource.find(
+            "findStdlibSurfaceMetadataByBridgeKey(\"collections.map_constructors\")") ==
         std::string::npos);
   CHECK(setupTypeCollectionSource.find("keyValueHelperSurfaceId()") !=
         std::string::npos);
@@ -4679,7 +4694,10 @@ TEST_CASE("canonical map surface owns standalone stdlib implementation") {
   CHECK(resultMetadataSource.find("StdlibSurfaceId::CollectionsMapConstructors") ==
         std::string::npos);
   CHECK(resultMetadataSource.find(
-            "findStdlibSurfaceMetadataByBridgeKey(\"collections.map_constructors\")") !=
+            "keyValueConstructorSurfaceMetadata()") !=
+        std::string::npos);
+  CHECK(resultMetadataSource.find(
+            "findStdlibSurfaceMetadataByBridgeKey(\"collections.map_constructors\")") ==
         std::string::npos);
   CHECK(resultMetadataSource.find(
             "keyValueConstructorSurfaceMetadataForResultMetadata()") !=
@@ -5041,7 +5059,10 @@ TEST_CASE("canonical map surface owns standalone stdlib implementation") {
   CHECK(lowerStatementsBindingsSource.find("StdlibSurfaceId::CollectionsMapHelpers") ==
         std::string::npos);
   CHECK(lowerStatementsBindingsSource.find(
-            "findStdlibSurfaceMetadataByBridgeKey(\"collections.map_helpers\")") !=
+            "keyValueHelperSurfaceMetadata()") !=
+        std::string::npos);
+  CHECK(lowerStatementsBindingsSource.find(
+            "findStdlibSurfaceMetadataByBridgeKey(\"collections.map_helpers\")") ==
         std::string::npos);
   CHECK(lowerStatementsBindingsSource.find("canonicalizeExplicitBuiltinKeyValueHelpers") !=
         std::string::npos);
@@ -5065,7 +5086,9 @@ TEST_CASE("canonical map surface owns standalone stdlib implementation") {
         std::string::npos);
   CHECK(tailDispatchSource.find("tailDispatchKeyValueHelperSurfaceId()") !=
         std::string::npos);
-  CHECK(tailDispatchSource.find("collections.map_helpers") !=
+  CHECK(tailDispatchSource.find("keyValueHelperSurfaceMetadata()") !=
+        std::string::npos);
+  CHECK(tailDispatchSource.find("collections.map_helpers") ==
         std::string::npos);
   CHECK(tailDispatchSource.find("isTailDispatchKeyValueImportAliasHelperPath(rawPath, helperName)") !=
         std::string::npos);
@@ -5133,12 +5156,18 @@ TEST_CASE("canonical map surface owns standalone stdlib implementation") {
   CHECK(builtinNameHelpersSource.find("rawName == \"map\"") ==
         std::string::npos);
   CHECK(builtinNameHelpersSource.find(
-            "findStdlibSurfaceMetadataByBridgeKey(\"collections.map_constructors\")") !=
+            "keyValueConstructorSurfaceMetadata()") !=
         std::string::npos);
   CHECK(builtinNameHelpersSource.find("keyValueConstructorAliasToken()") !=
         std::string::npos);
   CHECK(builtinNameHelpersSource.find(
-            "findStdlibSurfaceMetadataByBridgeKey(\"collections.map_helpers\")") !=
+            "keyValueHelperSurfaceMetadata()") !=
+        std::string::npos);
+  CHECK(builtinNameHelpersSource.find(
+            "findStdlibSurfaceMetadataByBridgeKey(\"collections.map_constructors\")") ==
+        std::string::npos);
+  CHECK(builtinNameHelpersSource.find(
+            "findStdlibSurfaceMetadataByBridgeKey(\"collections.map_helpers\")") ==
         std::string::npos);
   CHECK(builtinNameHelpersSource.find("resolvesKeyValueHelperSurfacePath(scopedName)") !=
         std::string::npos);
@@ -5147,7 +5176,10 @@ TEST_CASE("canonical map surface owns standalone stdlib implementation") {
   CHECK(lowererHelpersSource.find("StdlibSurfaceId::CollectionsMapHelpers") ==
         std::string::npos);
   CHECK(lowererHelpersSource.find(
-            "findStdlibSurfaceMetadataByBridgeKey(\"collections.map_helpers\")") !=
+            "keyValueHelperSurfaceMetadata()") !=
+        std::string::npos);
+  CHECK(lowererHelpersSource.find(
+            "findStdlibSurfaceMetadataByBridgeKey(\"collections.map_helpers\")") ==
         std::string::npos);
   CHECK(lowererHelpersSource.find("resolvesKeyValueHelperSurfacePath(candidate)") !=
         std::string::npos);
@@ -5158,7 +5190,10 @@ TEST_CASE("canonical map surface owns standalone stdlib implementation") {
   CHECK(inlinePackedArgsSource.find("StdlibSurfaceId::CollectionsMapConstructors") ==
         std::string::npos);
   CHECK(inlinePackedArgsSource.find(
-            "findStdlibSurfaceMetadataByBridgeKey(\"collections.map_constructors\")") !=
+            "keyValueConstructorSurfaceMetadata()") !=
+        std::string::npos);
+  CHECK(inlinePackedArgsSource.find(
+            "findStdlibSurfaceMetadataByBridgeKey(\"collections.map_constructors\")") ==
         std::string::npos);
   CHECK(inlinePackedArgsSource.find(
             "keyValueConstructorSurfaceMetadataForInlinePackedArgs()") !=
@@ -5195,7 +5230,10 @@ TEST_CASE("canonical map surface owns standalone stdlib implementation") {
   CHECK(inlineParamHelpersSource.find("StdlibSurfaceId::CollectionsMapConstructors") ==
         std::string::npos);
   CHECK(inlineParamHelpersSource.find(
-            "findStdlibSurfaceMetadataByBridgeKey(\"collections.map_constructors\")") !=
+            "keyValueConstructorSurfaceMetadata()") !=
+        std::string::npos);
+  CHECK(inlineParamHelpersSource.find(
+            "findStdlibSurfaceMetadataByBridgeKey(\"collections.map_constructors\")") ==
         std::string::npos);
   CHECK(inlineParamHelpersSource.find("isPublishedKeyValueConstructorExpr(") !=
         std::string::npos);
@@ -5219,7 +5257,10 @@ TEST_CASE("canonical map surface owns standalone stdlib implementation") {
   CHECK(packedResultSource.find("StdlibSurfaceId::CollectionsMapConstructors") ==
         std::string::npos);
   CHECK(packedResultSource.find(
-            "findStdlibSurfaceMetadataByBridgeKey(\"collections.map_constructors\")") !=
+            "keyValueConstructorSurfaceMetadata()") !=
+        std::string::npos);
+  CHECK(packedResultSource.find(
+            "findStdlibSurfaceMetadataByBridgeKey(\"collections.map_constructors\")") ==
         std::string::npos);
   CHECK(packedResultSource.find("keyValueConstructorSurfaceMetadataLocal()") !=
         std::string::npos);

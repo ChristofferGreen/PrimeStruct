@@ -7,6 +7,10 @@
 #include "primec/StdlibSurfaceRegistry.h"
 
 namespace primec::ir_lowerer {
+
+const StdlibSurfaceMetadata *keyValueHelperSurfaceMetadata();
+const StdlibSurfaceMetadata *keyValueConstructorSurfaceMetadata();
+
 namespace {
 std::string stdCollectionsRoot() {
   return "std/collections";
@@ -27,7 +31,7 @@ std::string collectionWrapperAlias(std::string_view collectionName,
 
 bool resolvesKeyValueHelperSurfacePath(std::string_view path) {
   const auto *metadata =
-      findStdlibSurfaceMetadataByBridgeKey("collections.map_helpers");
+      keyValueHelperSurfaceMetadata();
   if (metadata == nullptr) {
     return false;
   }
@@ -43,7 +47,7 @@ bool resolvesKeyValueHelperSurfacePath(std::string_view path) {
 
 std::string keyValueConstructorAliasToken() {
   const auto *metadata =
-      findStdlibSurfaceMetadataByBridgeKey("collections.map_constructors");
+      keyValueConstructorSurfaceMetadata();
   if (metadata == nullptr) {
     return {};
   }

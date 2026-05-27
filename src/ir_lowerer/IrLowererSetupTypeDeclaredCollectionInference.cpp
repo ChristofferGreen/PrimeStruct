@@ -12,7 +12,7 @@ namespace primec::ir_lowerer {
 namespace {
 
 const StdlibSurfaceMetadata *keyValueConstructorSurfaceMetadataForDeclaredInference() {
-  return findStdlibSurfaceMetadataByBridgeKey("collections.map_constructors");
+  return keyValueConstructorSurfaceMetadata();
 }
 
 } // namespace

@@ -48,7 +48,7 @@ bool resolveCanonicalVectorHelperDefinitionMember(const std::string &path,
                                                   std::string &memberNameOut) {
   memberNameOut.clear();
   const auto *metadata =
-      findStdlibSurfaceMetadataByBridgeKey("collections.vector_helpers");
+      vectorHelperSurfaceMetadata();
   if (metadata == nullptr) {
     return false;
   }
@@ -93,7 +93,7 @@ bool resolveKeyValueHelperDefinitionMember(const std::string &path,
     return false;
   }
   const auto *metadata =
-      findStdlibSurfaceMetadataByBridgeKey("collections.map_helpers");
+      keyValueHelperSurfaceMetadata();
   if (metadata == nullptr) {
     return false;
   }

@@ -799,7 +799,7 @@ DirectCallStatementEmitResult tryEmitDirectCallStatement(
   };
   auto isNonEntryKeyValueConstructorCallee = [](const Definition &callee) {
     const auto *metadata =
-        findStdlibSurfaceMetadataByBridgeKey("collections.map_constructors");
+        keyValueConstructorSurfaceMetadata();
     if (metadata == nullptr) {
       return false;
     }

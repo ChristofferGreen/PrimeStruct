@@ -8,6 +8,8 @@
 
 namespace primec::ir_lowerer {
 
+const StdlibSurfaceMetadata *keyValueHelperSurfaceMetadata();
+
 namespace {
 
 std::string resolveScopedExprName(const Expr &expr) {
@@ -71,7 +73,7 @@ bool isNamespacedStdlibBuiltinAlias(const std::string &alias) {
 
 bool resolvesKeyValueHelperSurfacePath(std::string_view path) {
   const auto *metadata =
-      findStdlibSurfaceMetadataByBridgeKey("collections.map_helpers");
+      keyValueHelperSurfaceMetadata();
   if (metadata == nullptr) {
     return false;
   }

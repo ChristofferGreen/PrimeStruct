@@ -1450,9 +1450,13 @@ TEST_CASE("compile pipeline publishes an initial semantic product shell") {
         std::string::npos);
   CHECK(collectionHelpersSource.find("resolvePublishedSemanticStdlibSurfaceMemberName(") !=
         std::string::npos);
-  CHECK(irCallResolution.find("findStdlibSurfaceMetadataByBridgeKey(\"collections.vector_helpers\")") !=
+  CHECK(irCallResolution.find("vectorHelperSurfaceMetadata()") !=
         std::string::npos);
-  CHECK(irCallResolution.find("findStdlibSurfaceMetadataByBridgeKey(\"collections.map_helpers\")") !=
+  CHECK(irCallResolution.find("keyValueHelperSurfaceMetadata()") !=
+        std::string::npos);
+  CHECK(irCallResolution.find("findStdlibSurfaceMetadataByBridgeKey(\"collections.vector_helpers\")") ==
+        std::string::npos);
+  CHECK(irCallResolution.find("findStdlibSurfaceMetadataByBridgeKey(\"collections.map_helpers\")") ==
         std::string::npos);
   CHECK(irCallResolution.find("StdlibSurfaceId::CollectionsMapHelpers") ==
         std::string::npos);

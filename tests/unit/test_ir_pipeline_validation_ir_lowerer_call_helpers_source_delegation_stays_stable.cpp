@@ -212,7 +212,9 @@ TEST_CASE("ir lowerer call helpers source delegation stays stable") {
         std::string::npos);
   CHECK(callHelpersSource.find("resolveCanonicalVectorHelperDefinitionMember(") !=
         std::string::npos);
-  CHECK(callHelpersSource.find("findStdlibSurfaceMetadataByBridgeKey(\"collections.vector_helpers\")") !=
+  CHECK(callHelpersSource.find("vectorHelperSurfaceMetadata()") !=
+        std::string::npos);
+  CHECK(callHelpersSource.find("findStdlibSurfaceMetadataByBridgeKey(\"collections.vector_helpers\")") ==
         std::string::npos);
   CHECK(callHelpersSource.find("std/collections/vector/") == std::string::npos);
   CHECK(callHelpersSource.find("std/collections/experimental_vector") == std::string::npos);
@@ -455,9 +457,13 @@ TEST_CASE("ir lowerer call helpers source delegation stays stable") {
         std::string::npos);
   CHECK(callResolutionSource.find("findSemanticProductBridgePathChoiceStdlibSurfaceId(semanticProgram, expr)") !=
         std::string::npos);
-  CHECK(callResolutionSource.find("findStdlibSurfaceMetadataByBridgeKey(\"collections.vector_helpers\")") !=
+  CHECK(callResolutionSource.find("vectorHelperSurfaceMetadata()") !=
         std::string::npos);
-  CHECK(callResolutionSource.find("findStdlibSurfaceMetadataByBridgeKey(\"collections.map_helpers\")") !=
+  CHECK(callResolutionSource.find("keyValueHelperSurfaceMetadata()") !=
+        std::string::npos);
+  CHECK(callResolutionSource.find("findStdlibSurfaceMetadataByBridgeKey(\"collections.vector_helpers\")") ==
+        std::string::npos);
+  CHECK(callResolutionSource.find("findStdlibSurfaceMetadataByBridgeKey(\"collections.map_helpers\")") ==
         std::string::npos);
   CHECK(callResolutionSource.find("StdlibSurfaceId::CollectionsMapHelpers") ==
         std::string::npos);
@@ -937,8 +943,7 @@ TEST_CASE("ir lowerer call helpers source delegation stays stable") {
   CHECK(builtinNameHelpersSource.find("vectorPush") == std::string::npos);
   CHECK(callResolutionSource.find("std/collections/experimental_vector") ==
         std::string::npos);
-  CHECK(callResolutionSource.find(
-            "findStdlibSurfaceMetadataByBridgeKey(\"collections.vector_helpers\")") !=
+  CHECK(callResolutionSource.find("vectorHelperSurfaceMetadata()") !=
         std::string::npos);
   CHECK(nativeTailDispatchSource.find("std/collections/experimental_vector") ==
         std::string::npos);
@@ -1161,8 +1166,10 @@ TEST_CASE("ir lowerer vector type layout traces use generic collection helpers")
         std::string::npos);
   CHECK(setupCollectionHeader.find("bool isExperimentalCollectionTypeName(") !=
         std::string::npos);
+  CHECK(setupCollectionSource.find("vectorHelperSurfaceMetadata()") !=
+        std::string::npos);
   CHECK(setupCollectionSource.find(
-            "findStdlibSurfaceMetadataByBridgeKey(\"collections.vector_helpers\")") !=
+            "findStdlibSurfaceMetadataByBridgeKey(\"collections.vector_helpers\")") ==
         std::string::npos);
   CHECK(setupCollectionSource.find("stdCollectionsRoot(") !=
         std::string::npos);
@@ -1202,7 +1209,9 @@ TEST_CASE("ir lowerer vector type layout traces use generic collection helpers")
   CHECK(methodCallSource.find(
             "stdlibSurfaceCanonicalHelperPath(StdlibSurfaceId::CollectionsManifestSurface0, \"count\")") !=
         std::string::npos);
-  CHECK(methodCallSource.find("collectionMemberPath(\"map\", \"map\")") !=
+  CHECK(methodCallSource.find("canonicalKeyValueConstructorPath()") !=
+        std::string::npos);
+  CHECK(methodCallSource.find("keyValueConstructorSurfaceMetadata()") !=
         std::string::npos);
   CHECK(methodCallSource.find("path == \"/std/collections/experimental_map/map") ==
         std::string::npos);
@@ -1238,8 +1247,10 @@ TEST_CASE("ir lowerer vector type layout traces use generic collection helpers")
         std::string::npos);
   CHECK(setupReturnKindSource.find("\"/std/collections/map/\" + normalizedName") ==
         std::string::npos);
+  CHECK(setupReturnKindSource.find("keyValueHelperSurfaceMetadata()") !=
+        std::string::npos);
   CHECK(setupReturnKindSource.find(
-            "findStdlibSurfaceMetadataByBridgeKey(\"collections.map_helpers\")") !=
+            "findStdlibSurfaceMetadataByBridgeKey(\"collections.map_helpers\")") ==
         std::string::npos);
   CHECK(setupReturnKindSource.find("appendCandidate(\"/map/\" +") ==
         std::string::npos);
@@ -1370,7 +1381,7 @@ TEST_CASE("native tail and late collection helper metadata dispatch stays source
         std::string::npos);
   CHECK(collectionHelpersSource.find("auto resolvePublishedLateVectorMemberName =") !=
         std::string::npos);
-  CHECK(collectionHelpersSource.find("findStdlibSurfaceMetadataByBridgeKey(\"collections.vector_helpers\")") !=
+  CHECK(collectionHelpersSource.find("vectorHelperSurfaceMetadata()") !=
         std::string::npos);
   CHECK(collectionHelpersSource.find("primec::StdlibSurfaceId::CollectionsManifestSurface0") ==
         std::string::npos);
@@ -1380,9 +1391,15 @@ TEST_CASE("native tail and late collection helper metadata dispatch stays source
         std::string::npos);
   CHECK(collectionHelpersSource.find("StdlibSurfaceId::CollectionsMapConstructors") ==
         std::string::npos);
-  CHECK(collectionHelpersSource.find("findStdlibSurfaceMetadataByBridgeKey(\"collections.map_helpers\")") !=
+  CHECK(collectionHelpersSource.find("keyValueHelperSurfaceMetadata()") !=
         std::string::npos);
-  CHECK(collectionHelpersSource.find("\"collections.map_constructors\"") !=
+  CHECK(collectionHelpersSource.find("keyValueConstructorSurfaceMetadata()") !=
+        std::string::npos);
+  CHECK(collectionHelpersSource.find("findStdlibSurfaceMetadataByBridgeKey(\"collections.vector_helpers\")") ==
+        std::string::npos);
+  CHECK(collectionHelpersSource.find("findStdlibSurfaceMetadataByBridgeKey(\"collections.map_helpers\")") ==
+        std::string::npos);
+  CHECK(collectionHelpersSource.find("\"collections.map_constructors\"") ==
         std::string::npos);
   CHECK(tailDispatchSource.find("resolvePublishedStdlibSurfaceMemberName(") !=
         std::string::npos);
@@ -1392,8 +1409,10 @@ TEST_CASE("native tail and late collection helper metadata dispatch stays source
         std::string::npos);
   CHECK(tailDispatchSource.find("tailDispatchMapHelperSurfaceId()") ==
         std::string::npos);
+  CHECK(tailDispatchSource.find("keyValueHelperSurfaceMetadata()") !=
+        std::string::npos);
   CHECK(tailDispatchSource.find("findStdlibSurfaceMetadataByBridgeKey(\n"
-                                "              \"collections.map_helpers\")") !=
+                                "              \"collections.map_helpers\")") ==
         std::string::npos);
   CHECK(tailDispatchSource.find("hasPublishedSemanticKeyValueSurface(callExpr)") !=
         std::string::npos);
@@ -5323,6 +5342,63 @@ TEST_CASE("lowerer import aliases are delegated to frontend syntax helpers") {
   CHECK(structTypeHelpersSource.find("return primec::buildSyntaxImportAliases(") !=
         std::string::npos);
   CHECK(structTypeHelpersSource.find("normalizeMapImportAliasPath(") == std::string::npos);
+}
+
+TEST_CASE("ir lowerer collection surfaces avoid bridge-key literals") {
+  auto readText = [](const std::filesystem::path &path) {
+    std::ifstream file(path);
+    CHECK(file.is_open());
+    if (!file.is_open()) {
+      return std::string{};
+    }
+    return std::string((std::istreambuf_iterator<char>(file)), std::istreambuf_iterator<char>());
+  };
+  const std::filesystem::path repoRoot =
+      std::filesystem::exists(std::filesystem::path("src")) ? std::filesystem::path(".")
+                                                             : std::filesystem::path("..");
+  const std::filesystem::path lowererRoot = repoRoot / "src" / "ir_lowerer";
+  REQUIRE(std::filesystem::exists(lowererRoot));
+
+  std::vector<std::string> violations;
+  const std::vector<std::string> prohibited = {
+      "collections.vector_helpers",
+      "collections.vector_constructors",
+      "collections.map_helpers",
+      "collections.map_constructors",
+  };
+  for (const auto &entry : std::filesystem::recursive_directory_iterator(lowererRoot)) {
+    if (!entry.is_regular_file()) {
+      continue;
+    }
+    const std::string extension = entry.path().extension().string();
+    if (extension != ".cpp" && extension != ".h") {
+      continue;
+    }
+    const std::string source = readText(entry.path());
+    for (const std::string &needle : prohibited) {
+      if (source.find(needle) != std::string::npos) {
+        violations.push_back(
+            entry.path().lexically_relative(repoRoot).generic_string() + ": " + needle);
+      }
+    }
+  }
+
+  INFO("IR lowerer bridge-key literal violations:");
+  for (const std::string &violation : violations) {
+    INFO(violation);
+  }
+  CHECK(violations.empty());
+
+  const std::string setupCollectionSource =
+      readText(lowererRoot / "IrLowererSetupTypeCollectionHelpers.cpp");
+  CHECK(setupCollectionSource.find("findStdlibSurfaceMetadataByCanonicalPath(canonicalPath)") !=
+        std::string::npos);
+  CHECK(setupCollectionSource.find("vectorHelperSurfaceMetadata()") !=
+        std::string::npos);
+  CHECK(setupCollectionSource.find("keyValueHelperSurfaceMetadata()") !=
+        std::string::npos);
+  CHECK(setupCollectionSource.find("keyValueConstructorSurfaceMetadata()") !=
+        std::string::npos);
 }
 
 TEST_SUITE_END();

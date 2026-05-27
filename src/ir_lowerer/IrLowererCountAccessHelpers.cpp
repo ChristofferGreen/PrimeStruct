@@ -170,7 +170,7 @@ bool isExplicitVectorCountMethodCall(const Expr &expr) {
     return false;
   }
   const auto *metadata =
-      findStdlibSurfaceMetadataByBridgeKey("collections.vector_helpers");
+      vectorHelperSurfaceMetadata();
   if (metadata == nullptr) {
     return false;
   }
@@ -221,7 +221,7 @@ bool isExplicitPublishedKeyValueMetadataCall(const Expr &expr,
     return false;
   }
   const auto *metadata =
-      findStdlibSurfaceMetadataByBridgeKey("collections.map_helpers");
+      keyValueHelperSurfaceMetadata();
   if (metadata == nullptr) {
     return false;
   }
@@ -321,7 +321,7 @@ bool isExplicitRemovedCountLikeAliasCall(const Expr &expr,
   const std::string scopedPath = resolveScopedCallPath(expr);
   if (helperName == "count") {
     const auto *metadata =
-        findStdlibSurfaceMetadataByBridgeKey("collections.vector_helpers");
+        vectorHelperSurfaceMetadata();
     std::string resolvedHelperName;
     if (metadata != nullptr &&
         (resolvePublishedStdlibSurfaceExprMemberName(

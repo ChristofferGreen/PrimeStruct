@@ -44,7 +44,7 @@ bool prefersExactDirectMapCountLikeReturnPath(const Expr &callExpr) {
 
 std::string canonicalKeyValueHelperPathForSetupReturnKind(
     std::string_view helperName) {
-  const auto *metadata = findStdlibSurfaceMetadataByBridgeKey("collections.map_helpers");
+  const auto *metadata = keyValueHelperSurfaceMetadata();
   if (metadata == nullptr) {
     return {};
   }

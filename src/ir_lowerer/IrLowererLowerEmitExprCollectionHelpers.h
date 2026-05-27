@@ -96,11 +96,10 @@
           }
         };
         auto keyValueHelperSurfaceMetadataForLowerEmitExpr = []() {
-          return findStdlibSurfaceMetadataByBridgeKey("collections.map_helpers");
+          return keyValueHelperSurfaceMetadata();
         };
         auto keyValueConstructorSurfaceMetadataForLowerEmitExpr = []() {
-          return findStdlibSurfaceMetadataByBridgeKey(
-              "collections.map_constructors");
+          return keyValueConstructorSurfaceMetadata();
         };
         auto resolvePublishedLateCollectionMemberName =
             [&](const Expr &candidate,
@@ -134,7 +133,7 @@
         auto resolvePublishedLateVectorMemberName =
             [&](const Expr &candidate, std::string &memberNameOut) {
               const auto *metadata =
-                  findStdlibSurfaceMetadataByBridgeKey("collections.vector_helpers");
+                  vectorHelperSurfaceMetadata();
               return metadata != nullptr &&
                      resolvePublishedLateCollectionMemberName(
                          candidate, metadata->id, memberNameOut);

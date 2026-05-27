@@ -31,7 +31,7 @@ std::string resolveScopedCallPath(const Expr &expr) {
 }
 
 const StdlibSurfaceMetadata *keyValueConstructorSurfaceMetadataForResultMetadata() {
-  return findStdlibSurfaceMetadataByBridgeKey("collections.map_constructors");
+  return keyValueConstructorSurfaceMetadata();
 }
 
 bool isFileHandleTypeText(const std::string &typeText) {

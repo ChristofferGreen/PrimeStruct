@@ -669,6 +669,10 @@ TEST_CASE("vector map bridge boundary docs stay source locked") {
         std::string::npos);
   CHECK(todo.find("- TODO-4574: Remove vector count/access compiler classifiers | track: vector-helper-classifier-deletion") ==
         std::string::npos);
+  CHECK(todo.find("- TODO-4600: Migrate IR lowerer collection surface lookups | track:") ==
+        std::string::npos);
+  CHECK(todo.find("- [ ] TODO-4600: Migrate IR lowerer collection surface lookups") ==
+        std::string::npos);
   CHECK(todo.find("- TODO-4577: Remove vector backing-type compiler classification | track: "
                   "vector-backing-classifier-deletion") == std::string::npos);
   CHECK(todo.find("- [ ] TODO-4577: Remove vector backing-type compiler classification") ==
@@ -1881,7 +1885,6 @@ TEST_CASE("todo queue and skipped doctest debt stay source locked") {
   CHECK(todo.find("### Execution Queue\n\n"
                   "- TODO-4598: Migrate semantics collection surface lookups\n"
                   "- TODO-4599: Migrate emitter collection surface lookups\n"
-                  "- TODO-4600: Migrate IR lowerer collection surface lookups\n"
                   "- TODO-4579: Enforce zero map/vector compiler-knowledge traces") !=
         std::string::npos);
   CHECK(todo.find("- TODO-4569: Present scene-rendered UI through software surface bridge") ==
@@ -1897,6 +1900,8 @@ TEST_CASE("todo queue and skipped doctest debt stay source locked") {
   CHECK(todoFinished.find("TODO-4568: Emit scene nodes from the existing UI layout/widgets") !=
         std::string::npos);
   CHECK(todoFinished.find("TODO-4569: Present scene-rendered UI through software surface bridge") !=
+        std::string::npos);
+  CHECK(todoFinished.find("TODO-4600: Migrate IR lowerer collection surface lookups") !=
         std::string::npos);
   CHECK(todoFinished.find("`--software-surface-ui-demo`") != std::string::npos);
   CHECK(todoFinished.find("ui_scene_surface_bridge.h") != std::string::npos);

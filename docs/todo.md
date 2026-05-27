@@ -66,7 +66,6 @@ This file is the live open-work queue for PrimeStruct.
 
 - TODO-4598: Migrate semantics collection surface lookups | track: stdlib-registry-semantics | primary surface: semantics collection surface lookup helpers
 - TODO-4599: Migrate emitter collection surface lookups | track: stdlib-registry-emitter | primary surface: emitter collection surface lookup helpers
-- TODO-4600: Migrate IR lowerer collection surface lookups | track: stdlib-registry-lowerer | primary surface: IR lowerer collection surface lookup helpers
 
 ### Immediate Next 10
 
@@ -89,7 +88,8 @@ This file is the live open-work queue for PrimeStruct.
   TODO-4576 and TODO-4577 removed map/vector backing classifiers. TODO-4578
   was split into TODO-4597 registry foundation plus TODO-4598, TODO-4599, and
   TODO-4600 subsystem migrations; TODO-4597 completed the generic registry
-  IDs, and the remaining subsystem migrations join at TODO-4579.
+  IDs, TODO-4600 completed the IR-lowerer migration, and the remaining
+  semantics/emitter migrations join at TODO-4579.
 - Architecture hardening backlog: TODO-4586 completed parser diagnostic
   stability tiers. TODO-4587 completed the shared compile-time/runtime VM
   kernel boundary. TODO-4588 added the IR-preparation phase manifest.
@@ -100,7 +100,6 @@ This file is the live open-work queue for PrimeStruct.
 
 - TODO-4598: Migrate semantics collection surface lookups
 - TODO-4599: Migrate emitter collection surface lookups
-- TODO-4600: Migrate IR lowerer collection surface lookups
 - TODO-4579: Enforce zero map/vector compiler-knowledge traces
 
 ### Task Blocks
@@ -155,37 +154,11 @@ This file is the live open-work queue for PrimeStruct.
   - stop_rule: Stop once emitter bridge-key traces are removed without touching
     semantics or IR-lowerer bridge-key migrations.
 
-- [ ] TODO-4600: Migrate IR lowerer collection surface lookups
-  - owner: ai
-  - created_at: 2026-05-27
-  - phase: Map/vector compiler-independence
-  - parallel_track: stdlib-registry-lowerer
-  - depends_on: TODO-4597
-  - inventory_categories: `stdlib-bridge-key`
-  - scope: Remove hard-coded `collections.vector_*` and `collections.map_*`
-    bridge-key lookups from production IR-lowerer code by using generic
-    collection surface metadata lookups.
-  - implementation_notes: Start with `src/ir_lowerer/IrLowererCallResolution.cpp`,
-    `src/ir_lowerer/IrLowererCountAccessHelpers.cpp`,
-    `src/ir_lowerer/IrLowererSetupTypeCollectionHelpers.cpp`,
-    `src/ir_lowerer/IrLowererLowerEmitExpr*`, and
-    `src/ir_lowerer/IrLowererLowerStatements*`.
-  - acceptance:
-    - Production `src/ir_lowerer/` no longer contains
-      `collections.vector_helpers`, `collections.vector_constructors`,
-      `collections.map_helpers`, or `collections.map_constructors`.
-    - Existing IR lowerer and C++/native map/vector helper coverage still
-      passes.
-    - Source-lock tests prove lowerer code no longer depends on map/vector
-      bridge-key literals.
-  - stop_rule: Stop once IR-lowerer bridge-key traces are removed without
-    touching semantics or emitter bridge-key migrations.
-
 - [ ] TODO-4579: Enforce zero map/vector compiler-knowledge traces
   - owner: ai
   - created_at: 2026-05-24
   - phase: Map/vector compiler-independence
-  - depends_on: TODO-4571, TODO-4598, TODO-4599, TODO-4600
+  - depends_on: TODO-4571, TODO-4598, TODO-4599
   - inventory_categories: all categories reported by
     `scripts/check_map_vector_compiler_knowledge.py`
   - scope: Turn the broad compiler-knowledge inventory into the release-gate

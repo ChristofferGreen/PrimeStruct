@@ -46,7 +46,7 @@ bool isKeyValueConstructorDirectTargetPath(std::string path) {
 }
 
 const StdlibSurfaceMetadata *keyValueConstructorSurfaceMetadataLocal() {
-  return findStdlibSurfaceMetadataByBridgeKey("collections.map_constructors");
+  return keyValueConstructorSurfaceMetadata();
 }
 
 std::string findKeyValueConstructorBridgePathChoiceBySource(

@@ -81,8 +81,7 @@
           return nullptr;
         };
         auto tailDispatchKeyValueHelperMetadata = []() {
-          return primec::findStdlibSurfaceMetadataByBridgeKey(
-              "collections.map_helpers");
+          return primec::ir_lowerer::keyValueHelperSurfaceMetadata();
         };
         auto tailDispatchKeyValueHelperSurfaceId =
             [&]() -> std::optional<primec::StdlibSurfaceId> {

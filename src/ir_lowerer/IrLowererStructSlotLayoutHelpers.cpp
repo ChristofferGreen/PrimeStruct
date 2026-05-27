@@ -57,7 +57,7 @@ bool isBuiltinMapTypeName(const std::string &typeName) {
 bool isExperimentalMapTypeName(const std::string &typeName) {
   const std::string experimentalKeyValueType = keyValueStorageStructRootPath(false);
   const std::string rootedExperimentalKeyValueType = keyValueStorageStructRootPath();
-  const auto *metadata = findStdlibSurfaceMetadataByBridgeKey("collections.map_helpers");
+  const auto *metadata = keyValueHelperSurfaceMetadata();
   const std::string keyValueRoot =
       metadata == nullptr ? std::string{} : stdlibSurfaceBackingTypePath(*metadata);
   const std::string keyValueRootNoSlash =

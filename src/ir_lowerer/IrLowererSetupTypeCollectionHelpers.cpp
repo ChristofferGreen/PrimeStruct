@@ -61,6 +61,18 @@ const StdlibSurfaceMetadata *findPublishedStdlibSurfaceMetadata(std::string_view
   return nullptr;
 }
 
+const StdlibSurfaceMetadata *findCollectionSurfaceMetadataByCanonicalPath(
+    std::string_view canonicalPath,
+    StdlibSurfaceShape expectedShape) {
+  const auto *metadata = findStdlibSurfaceMetadataByCanonicalPath(canonicalPath);
+  if (metadata == nullptr ||
+      metadata->domain != StdlibSurfaceDomain::Collections ||
+      metadata->shape != expectedShape) {
+    return nullptr;
+  }
+  return metadata;
+}
+
 bool matchesResolvedRootedPublishedCollectionMemberPath(
     std::string_view path,
     std::string_view rootPath,
@@ -93,7 +105,7 @@ std::string rebuildScopedCollectionHelperPath(const Expr &expr) {
 
 std::optional<StdlibSurfaceId> keyValueHelperSurfaceId() {
   const auto *metadata =
-      findStdlibSurfaceMetadataByBridgeKey("collections.map_helpers");
+      keyValueHelperSurfaceMetadata();
   if (metadata == nullptr) {
     return std::nullopt;
   }
@@ -102,7 +114,7 @@ std::optional<StdlibSurfaceId> keyValueHelperSurfaceId() {
 
 std::optional<StdlibSurfaceId> keyValueConstructorSurfaceId() {
   const auto *metadata =
-      findStdlibSurfaceMetadataByBridgeKey("collections.map_constructors");
+      keyValueConstructorSurfaceMetadata();
   if (metadata == nullptr) {
     return std::nullopt;
   }
@@ -138,7 +150,7 @@ bool isBorrowedKeyValueHelperSurface(const Expr &expr) {
 
 std::optional<StdlibSurfaceId> vectorHelperSurfaceId() {
   const auto *metadata =
-      findStdlibSurfaceMetadataByBridgeKey("collections.vector_helpers");
+      vectorHelperSurfaceMetadata();
   if (metadata == nullptr) {
     return std::nullopt;
   }
@@ -162,6 +174,24 @@ bool resolveVectorSurfaceExprMemberName(const Expr &expr,
 }
 
 } // namespace
+
+const StdlibSurfaceMetadata *vectorHelperSurfaceMetadata() {
+  return findCollectionSurfaceMetadataByCanonicalPath(
+      collectionTypePath("vector"),
+      StdlibSurfaceShape::HelperFamily);
+}
+
+const StdlibSurfaceMetadata *keyValueHelperSurfaceMetadata() {
+  return findCollectionSurfaceMetadataByCanonicalPath(
+      collectionTypePath("map"),
+      StdlibSurfaceShape::HelperFamily);
+}
+
+const StdlibSurfaceMetadata *keyValueConstructorSurfaceMetadata() {
+  return findCollectionSurfaceMetadataByCanonicalPath(
+      collectionMemberPath("map", "map"),
+      StdlibSurfaceShape::ConstructorFamily);
+}
 
 bool allowsArrayVectorCompatibilitySuffix(const std::string &suffix) {
   return suffix != "count" && suffix != "capacity" && suffix != "at" && suffix != "at_unsafe" &&
@@ -457,7 +487,7 @@ std::string collectionMemberPath(std::string_view collectionName,
 std::string canonicalKeyValueHelperPath(std::string_view memberName,
                                         bool leadingSlash) {
   const auto *metadata =
-      findStdlibSurfaceMetadataByBridgeKey("collections.map_helpers");
+      keyValueHelperSurfaceMetadata();
   std::string path = metadata == nullptr ? "/std/collections/map"
                                          : std::string(metadata->canonicalPath);
   path += "/";
@@ -470,7 +500,7 @@ std::string canonicalKeyValueHelperPath(std::string_view memberName,
 
 std::string canonicalKeyValueConstructorPath(bool leadingSlash) {
   const auto *metadata =
-      findStdlibSurfaceMetadataByBridgeKey("collections.map_constructors");
+      keyValueConstructorSurfaceMetadata();
   std::string path = metadata == nullptr ? "/std/collections/map/map"
                                          : std::string(metadata->canonicalPath);
   if (!leadingSlash && !path.empty() && path.front() == '/') {
@@ -498,7 +528,7 @@ std::string collectionWrapperAlias(std::string_view collectionName,
 }
 
 std::string keyValueCollectionAliasRoot(bool leadingSlash) {
-  const auto *metadata = findStdlibSurfaceMetadataByBridgeKey("collections.map_constructors");
+  const auto *metadata = keyValueConstructorSurfaceMetadata();
   if (metadata != nullptr) {
     for (std::string_view alias : metadata->importAliasSpellings) {
       if (!alias.empty() && alias.front() != '/' &&
@@ -542,7 +572,7 @@ bool isExperimentalCollectionTypeName(std::string_view typeName,
 }
 
 std::string keyValueStorageStructRootPath(bool leadingSlash) {
-  const auto *metadata = findStdlibSurfaceMetadataByBridgeKey("collections.map_helpers");
+  const auto *metadata = keyValueHelperSurfaceMetadata();
   std::string path =
       metadata == nullptr ? std::string{} : stdlibSurfaceBackingTypePath(*metadata);
   if (!leadingSlash && !path.empty() && path.front() == '/') {

@@ -181,7 +181,7 @@ bool isPublishedKeyValueConstructorExpr(const Expr &callExpr) {
     return true;
   }
   const auto *metadata =
-      findStdlibSurfaceMetadataByBridgeKey("collections.map_constructors");
+      keyValueConstructorSurfaceMetadata();
   return metadata != nullptr &&
          isPublishedStdlibSurfaceConstructorExpr(callExpr, metadata->id);
 }
@@ -225,7 +225,7 @@ bool rewritePublishedKeyValueConstructorExpr(const Expr &callExpr,
   }
   const Definition *callee = resolveDefinitionCall ? resolveDefinitionCall(callExpr) : nullptr;
   const auto *keyValueConstructorMetadata =
-      findStdlibSurfaceMetadataByBridgeKey("collections.map_constructors");
+      keyValueConstructorSurfaceMetadata();
   const bool isResolvedPublishedConstructor =
       callee != nullptr &&
       keyValueConstructorMetadata != nullptr &&

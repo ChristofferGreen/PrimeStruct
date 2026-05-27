@@ -56,7 +56,7 @@
           const std::string rawPath = resolveDirectKeyValueHelperPath(exprIn);
           std::string directHelperName;
           const auto *metadata =
-              findStdlibSurfaceMetadataByBridgeKey("collections.map_helpers");
+              keyValueHelperSurfaceMetadata();
           if (metadata != nullptr &&
               resolvePublishedStdlibSurfaceMemberName(
                   rawPath,
@@ -717,7 +717,7 @@
             return false;
           }
           const auto *metadata =
-              findStdlibSurfaceMetadataByBridgeKey("collections.map_constructors");
+              keyValueConstructorSurfaceMetadata();
           if (metadata == nullptr) {
             return false;
           }

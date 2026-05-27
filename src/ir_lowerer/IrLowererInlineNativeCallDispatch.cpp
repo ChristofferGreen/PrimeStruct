@@ -62,7 +62,7 @@ std::string canonicalInlineKeyValueHelperName(std::string helperName) {
 }
 
 const StdlibSurfaceMetadata *inlineKeyValueHelperMetadata() {
-  return findStdlibSurfaceMetadataByBridgeKey("collections.map_helpers");
+  return keyValueHelperSurfaceMetadata();
 }
 
 bool resolvePublishedInlineKeyValueHelperName(

@@ -31,6 +31,9 @@ std::string preferredGfxErrorHelperTarget(
     const std::string &resolvedTypePath = "");
 
 bool isRemovedVectorCompatibilityHelper(const std::string &helperName);
+const StdlibSurfaceMetadata *vectorHelperSurfaceMetadata();
+const StdlibSurfaceMetadata *keyValueHelperSurfaceMetadata();
+const StdlibSurfaceMetadata *keyValueConstructorSurfaceMetadata();
 bool resolveVectorHelperAliasName(const Expr &expr, std::string &helperNameOut);
 bool resolveKeyValueHelperAliasName(const Expr &expr, std::string &helperNameOut);
 bool resolveBorrowedKeyValueHelperAliasName(const Expr &expr, std::string &helperNameOut);

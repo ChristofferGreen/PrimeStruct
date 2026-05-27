@@ -23252,3 +23252,37 @@ Moved from `docs/todo.md` during unfinished-only cleanup:
     `scripts/check_map_vector_compiler_knowledge.py --require-zero-category
     stdlib-registry-id` reports zero production registry-ID traces while
     bridge-key traces remain isolated for the subsystem migration leaves.
+
+- [x] TODO-4600: Migrate IR lowerer collection surface lookups
+  - owner: ai
+  - created_at: 2026-05-27
+  - finished_at: 2026-05-27
+  - phase: Map/vector compiler-independence
+  - parallel_track: stdlib-registry-lowerer
+  - depends_on: TODO-4597
+  - inventory_categories: `stdlib-bridge-key`
+  - scope: Remove hard-coded `collections.vector_*` and `collections.map_*`
+    bridge-key lookups from production IR-lowerer code by using generic
+    collection surface metadata lookups.
+  - implementation_notes: Started with
+    `src/ir_lowerer/IrLowererCallResolution.cpp`,
+    `src/ir_lowerer/IrLowererCountAccessHelpers.cpp`,
+    `src/ir_lowerer/IrLowererSetupTypeCollectionHelpers.cpp`,
+    `src/ir_lowerer/IrLowererLowerEmitExpr*`, and
+    `src/ir_lowerer/IrLowererLowerStatements*`.
+  - acceptance:
+    - Production `src/ir_lowerer/` no longer contains
+      `collections.vector_helpers`, `collections.vector_constructors`,
+      `collections.map_helpers`, or `collections.map_constructors`.
+    - Existing IR lowerer and C++/native map/vector helper coverage still
+      passes.
+    - Source-lock tests prove lowerer code no longer depends on map/vector
+      bridge-key literals.
+  - stop_rule: Stop once IR-lowerer bridge-key traces are removed without
+    touching semantics or emitter bridge-key migrations.
+  - evidence: Added IR-lowerer-local collection surface metadata accessors
+    that resolve vector helper, key/value helper, and key/value constructor
+    metadata through canonical collection surface paths; replaced production
+    IR-lowerer map/vector bridge-key lookups with those accessors; updated
+    lowerer source-lock coverage to assert the bridge-key literals are absent;
+    and left semantics/emitter bridge-key migrations to their sibling leaves.

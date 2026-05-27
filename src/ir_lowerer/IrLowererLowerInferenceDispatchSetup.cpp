@@ -153,7 +153,7 @@ bool resolveDispatchSetupSemanticReceiverTypeText(const Expr &receiver,
                                                   std::string &typeTextOut);
 
 const StdlibSurfaceMetadata *keyValueHelperSurfaceMetadataForDispatchSetup() {
-  return findStdlibSurfaceMetadataByBridgeKey("collections.map_helpers");
+  return keyValueHelperSurfaceMetadata();
 }
 
 std::string canonicalKeyValueHelperPathForDispatchSetup(std::string_view helperName) {

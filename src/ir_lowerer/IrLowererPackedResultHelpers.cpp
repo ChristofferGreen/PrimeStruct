@@ -77,7 +77,7 @@ bool resultErrorTypesMatch(std::string left, std::string right) {
 }
 
 const StdlibSurfaceMetadata *keyValueConstructorSurfaceMetadataLocal() {
-  return findStdlibSurfaceMetadataByBridgeKey("collections.map_constructors");
+  return keyValueConstructorSurfaceMetadata();
 }
 
 bool resolveSemanticProductResultOkPayloadInfo(

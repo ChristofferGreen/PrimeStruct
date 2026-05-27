@@ -76,11 +76,11 @@ bool hasInferredTypedKeyValue(const LocalInfo &localInfo) {
 }
 
 const StdlibSurfaceMetadata *keyValueHelperSurfaceMetadataForAccessTargets() {
-  return findStdlibSurfaceMetadataByBridgeKey("collections.map_helpers");
+  return keyValueHelperSurfaceMetadata();
 }
 
 const StdlibSurfaceMetadata *keyValueConstructorSurfaceMetadataForAccessTargets() {
-  return findStdlibSurfaceMetadataByBridgeKey("collections.map_constructors");
+  return keyValueConstructorSurfaceMetadata();
 }
 
 bool isKeyValueAccessHelperName(std::string_view helperName) {

@@ -4,6 +4,37 @@
 None currently recorded.
 
 ## Recent Test Runs
+- 2026-05-27 13:29 CEST | pass | mode: release | command:
+  `cmake --build build-release --target primec PrimeStruct_compile_run_tests -j 1`;
+  `cd build-release && ./PrimeStruct_compile_run_tests --test-case="todo queue and skipped doctest debt stay source locked,compiles native bare map count through canonical helper,compiles native bare map at through canonical helper,compiles native bare map at_unsafe through canonical helper,compiles and runs native bare map contains through canonical helper,rejects native bare map count without imported canonical helper,rejects native bare map contains call without imported canonical helper,compiles and runs stdlib namespaced vector helpers in C++ emitter,C++ emitter mutator rewrite keeps known vector receiver leading names" --no-skip`
+  | failures: none | notes: selected compile-run lowerer/map/vector slice
+  passed 9 cases / 554 assertions.
+- 2026-05-27 13:29 CEST | pass | mode: release | command:
+  `cmake --build build-release --target PrimeStruct_misc_tests -j 1`;
+  `cd build-release && ./PrimeStruct_misc_tests --test-case="canonical map surface owns standalone stdlib implementation" --no-skip`
+  | failures: none | notes: selected misc source-lock rerun passed
+  1 case / 2324 assertions after stale lowerer bridge-key expectations were
+  updated.
+- 2026-05-27 13:18 CEST | fail | mode: release | command:
+  `cmake --build build-release --target PrimeStruct_misc_tests -j 1`;
+  `cd build-release && ./PrimeStruct_misc_tests --test-case="canonical map surface owns standalone stdlib implementation" --no-skip`
+  | failures: `canonical map surface owns standalone stdlib implementation`
+  | notes: build passed; selected misc source-lock case failed on six stale
+  lowerer map helper/constructor bridge-key expectations.
+- 2026-05-27 13:18 CEST | pass | mode: release | command:
+  `cmake --build build-release --target PrimeStruct_backend_ir_tests -j 1`;
+  `cd build-release && ./PrimeStruct_backend_ir_tests --test-case="ir lowerer collection surfaces avoid bridge-key literals,native tail and late collection helper metadata dispatch stays source locked,ir lowerer vector type layout traces use generic collection helpers,ir lowerer materialized collection receivers use published helper queries" --no-skip`
+  | failures: none | notes: selected backend IR source-lock rerun passed
+  4 cases / 384 assertions after updating stale source-lock expectations.
+- 2026-05-27 12:15 CEST | fail | mode: release | command:
+  `cmake -S . -B build-release -DCMAKE_BUILD_TYPE=Release -DCMAKE_EXPORT_COMPILE_COMMANDS=ON`;
+  `cmake --build build-release --target PrimeStruct_backend_ir_tests -j 1`;
+  `cd build-release && ./PrimeStruct_backend_ir_tests --test-case="ir lowerer collection surfaces avoid bridge-key literals,native tail and late collection helper metadata dispatch stays source locked,ir lowerer vector type layout traces use generic collection helpers,ir lowerer materialized collection receivers use published helper queries" --no-skip`
+  | failures: `ir lowerer vector type layout traces use generic collection helpers`;
+  `ir lowerer materialized collection receivers use published helper queries`
+  | notes: build passed; selected backend IR source-lock slice failed on stale
+  `collectionMemberPath("map", "map")` and `helperName = callExpr.name`
+  expectations.
 - 2026-05-27 10:30 CEST | pass | mode: release | command:
   `cmake --build build-release --target PrimeStruct_compile_run_tests -j 1`;
   `cd build-release && ./PrimeStruct_compile_run_tests --test-case="todo queue and skipped doctest debt stay source locked" --no-skip`
@@ -8958,6 +8989,17 @@ None currently recorded.
 - 2026-05-12 17:28 local | fail | mode: release | command: `./scripts/compile.sh --release` | failures: 146 CTest targets | notes: baseline after preflight checkpoint failed; stabilization blocks TODO work
 
 ## Resolved Failures
+- [x] `canonical map surface owns standalone stdlib implementation`
+  | resolved: 2026-05-27 13:29 CEST | validating command:
+  `cd build-release && ./PrimeStruct_misc_tests --test-case="canonical map surface owns standalone stdlib implementation" --no-skip`
+  | notes: misc source-lock slice passed 1 case / 2324 assertions after
+  stale lowerer bridge-key expectations were updated.
+- [x] `ir lowerer vector type layout traces use generic collection helpers`;
+  `ir lowerer materialized collection receivers use published helper queries`
+  | resolved: 2026-05-27 13:18 CEST | validating command:
+  `cd build-release && ./PrimeStruct_backend_ir_tests --test-case="ir lowerer collection surfaces avoid bridge-key literals,native tail and late collection helper metadata dispatch stays source locked,ir lowerer vector type layout traces use generic collection helpers,ir lowerer materialized collection receivers use published helper queries" --no-skip`
+  | notes: backend IR source-lock slice passed 4 cases / 384 assertions
+  after stale lowerer source-lock expectations were updated.
 - [x] `spinning cube native window host sample compiles and validates args
   deterministically` | resolved: 2026-05-26 15:23 CEST | validating
   command: `./scripts/compile.sh --release` | notes: the previous

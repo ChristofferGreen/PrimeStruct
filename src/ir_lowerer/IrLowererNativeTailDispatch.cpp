@@ -34,11 +34,11 @@ std::string resolveNativeTailCallPathWithoutFallbackProbes(const Expr &expr) {
 }
 
 const StdlibSurfaceMetadata *nativeTailVectorHelperMetadata() {
-  return findStdlibSurfaceMetadataByBridgeKey("collections.vector_helpers");
+  return vectorHelperSurfaceMetadata();
 }
 
 const StdlibSurfaceMetadata *nativeTailKeyValueHelperMetadata() {
-  return findStdlibSurfaceMetadataByBridgeKey("collections.map_helpers");
+  return keyValueHelperSurfaceMetadata();
 }
 
 bool semanticSurfaceMatches(std::optional<StdlibSurfaceId> surfaceId,

@@ -95,7 +95,9 @@ TEST_CASE("ir lowerer materialized collection receivers use published helper que
         std::string::npos);
   CHECK(source.find("resolvePublishedStdlibSurfaceExprMemberName(") !=
         std::string::npos);
-  CHECK(source.find("findStdlibSurfaceMetadataByBridgeKey(\"collections.vector_helpers\")") !=
+  CHECK(source.find("vectorHelperSurfaceMetadata()") !=
+        std::string::npos);
+  CHECK(source.find("findStdlibSurfaceMetadataByBridgeKey(\"collections.vector_helpers\")") ==
         std::string::npos);
   CHECK(source.find("primec::StdlibSurfaceId::CollectionsManifestSurface0") ==
         std::string::npos);
@@ -111,7 +113,7 @@ TEST_CASE("ir lowerer materialized collection receivers use published helper que
         std::string::npos);
   CHECK(source.find("resolveMaterializedCollectionHelperName(callExpr, helperName)") !=
         std::string::npos);
-  CHECK(source.find("helperName = callExpr.name;") !=
+  CHECK(source.find("helperName = callExpr.name;") ==
         std::string::npos);
   CHECK(source.find(
             "primec::StdlibSurfaceId::CollectionsManifestSurface0,\n"

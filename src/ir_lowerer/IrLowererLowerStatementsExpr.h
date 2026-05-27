@@ -133,10 +133,10 @@
           return helperPath;
         };
         auto keyValueHelperMetadata = []() {
-          return findStdlibSurfaceMetadataByBridgeKey("collections.map_helpers");
+          return keyValueHelperSurfaceMetadata();
         };
         auto keyValueConstructorMetadata = []() {
-          return findStdlibSurfaceMetadataByBridgeKey("collections.map_constructors");
+          return keyValueConstructorSurfaceMetadata();
         };
         auto resolveKeyValueHelperMemberName = [&](std::string path,
                                                    std::string &helperNameOut) {
