@@ -75,6 +75,9 @@ This file is the live open-work queue for PrimeStruct.
 - TODO-4609: Reject escaping local array slices
 - TODO-4610: Add forward cursor traversal API
 - TODO-4611: Add reverse cursor traversal API
+- TODO-4612: Add safe extent and cursor code examples
+- TODO-4613: Retire semantic-validator private source locks
+- TODO-4614: Retire IR-lowerer call-helper source locks
 
 ### Priority Lanes
 
@@ -104,11 +107,18 @@ This file is the live open-work queue for PrimeStruct.
   kernel boundary. TODO-4588 added the IR-preparation phase manifest.
   TODO-4589 added the architecture health dashboard. TODO-4594 completed the
   semantic unknown-call diagnostic stability slice.
-- Safe array extents and capability views: TODO-4604 through TODO-4611 capture
+- Architecture review hardening: TODO-4613 through TODO-4621 capture the
+  concrete follow-ups from the latest architecture review: retire temporary
+  private source locks, make the semantic validation manifest executable, add
+  semantic-product stale/missing diagnostics, add a second backend capability
+  gate, index expanded-source diagnostic lookup, and promote one lowerer or
+  backend diagnostic into the stability-tier contract.
+- Safe array extents and capability views: TODO-4604 through TODO-4612 capture
   the agreed backlog from `docs/SafeArrayExtentViews.md`: requirement
   contracts, non-null safe pointers, capability-parameterized references and
-  slices, semantic extent facts, checked slices, conservative view escapes, and
-  cursor traversal with `limit(...)` / `reverse_limit(...)` boundaries.
+  slices, semantic extent facts, checked slices, conservative view escapes,
+  cursor traversal with `limit(...)` / `reverse_limit(...)` boundaries, and
+  style-aligned examples once the surface is specified.
 
 ### Execution Queue
 
@@ -120,6 +130,16 @@ This file is the live open-work queue for PrimeStruct.
 6. TODO-4609: Reject escaping local array slices
 7. TODO-4610: Add forward cursor traversal API
 8. TODO-4611: Add reverse cursor traversal API
+9. TODO-4612: Add safe extent and cursor code examples
+10. TODO-4613: Retire semantic-validator private source locks
+11. TODO-4614: Retire IR-lowerer call-helper source locks
+12. TODO-4615: Retire emitter private source locks
+13. TODO-4616: Make semantic validation manifest executable
+14. TODO-4617: Add semantic preflight missing-fact diagnostics
+15. TODO-4618: Fail closed on stale CT-eval requirement facts
+16. TODO-4619: Gate runtime reflection by backend profile
+17. TODO-4620: Index expanded-source segments for diagnostics
+18. TODO-4621: Classify unsupported variadic-pack diagnostics
 
 ### Task Blocks
 
@@ -304,3 +324,236 @@ This file is the live open-work queue for PrimeStruct.
   - stop_rule: Stop once read-only reverse traversal is implemented and
     covered for arrays and vectors; leave writable cursors and advanced
     iterator categories to later leaves.
+
+- [ ] TODO-4612: Add safe extent and cursor code examples
+  - owner: ai
+  - created_at: 2026-05-27
+  - phase: Safe array extents and views
+  - depends_on: TODO-4604, TODO-4605, TODO-4606, TODO-4608, TODO-4610,
+    TODO-4611
+  - scope: Add runnable, style-aligned examples to `docs/CodeExamples.md` for
+    the agreed safe-array extent and cursor surfaces after their normative
+    spelling is specified.
+  - implementation_notes: Cover the smallest useful set: a contract-form
+    `require(...)` example that proves-or-checks an extent relationship,
+    `Maybe<Pointer<T>>` optional-pointer handling, a
+    `Reference<T, Capability>`/`Slice<T, Capability>` example, a checked slice
+    loop, a forward cursor loop using `limit(values)`, and a reverse cursor
+    loop using `reverse_limit(values)`. Keep examples minimal and runnable
+    with the current compiler before treating them as style guidance.
+  - acceptance:
+    - `docs/CodeExamples.md` contains user-facing examples for safe extent
+      contracts, optional pointers, capability views, checked slices, and
+      forward/reverse cursor loops.
+    - Examples use the readable surface form and naming guidance from
+      `docs/CodeExamples.md`.
+    - Source-lock coverage proves the examples stay aligned with
+      `docs/SafeArrayExtentViews.md` and the relevant normative
+      `docs/PrimeStruct.md` sections.
+    - The new examples compile or are explicitly marked as proposed syntax
+      until the corresponding implementation leaves land.
+  - stop_rule: Stop once the example guide and source-lock coverage are
+    updated; do not implement missing language features in this leaf.
+
+- [ ] TODO-4613: Retire semantic-validator private source locks
+  - owner: ai
+  - created_at: 2026-05-27
+  - phase: Architecture hardening
+  - scope: Replace the temporary semantic-validator delegation source locks
+    with public semantic-product, type-resolution graph, or deterministic
+    diagnostic contract coverage so active tests no longer read private
+    `src/semantics/*.h` or `src/semantics/*.cpp` fragments just to prove
+    validator split points.
+  - implementation_notes: Start with the semantic-validator rows in
+    `docs/source_lock_inventory.md`, the matching tests under `tests/unit/`,
+    and any existing public helpers under `include/primec/testing/`.
+  - acceptance:
+    - The semantic-validator row in `docs/source_lock_inventory.md` is
+      removed or reclassified because delegation coverage no longer depends on
+      private semantics source text.
+    - Replacement coverage proves one observable public contract: a published
+      semantic fact, type-resolution graph shape, or stable diagnostic.
+    - Include-layer validation passes without adding a new allowlist entry.
+  - stop_rule: Stop once the validator source-delegation source lock is
+    retired and covered; do not split or reorganize semantic validator
+    fragments in this leaf.
+
+- [ ] TODO-4614: Retire IR-lowerer call-helper source locks
+  - owner: ai
+  - created_at: 2026-05-27
+  - phase: Architecture hardening
+  - scope: Replace the temporary IR-lowerer call-helper and dispatch-wrapper
+    source locks with public helper-contract, emitted-IR, or deterministic
+    diagnostic coverage so the active tests stop reading private
+    `src/ir_lowerer/*` files to guard those split points.
+  - implementation_notes: Start with the lowerer rows in
+    `docs/source_lock_inventory.md`, the matching source-lock tests under
+    `tests/unit/`, and the narrow
+    `include/primec/testing/IrLowerer*Contracts.h` surfaces.
+  - acceptance:
+    - The lowerer source-lock inventory row no longer lists call-helper or
+      dispatch-wrapper delegation checks that read private lowerer source.
+    - Replacement tests fail on public emitted IR, lowerer helper contracts, or
+      stable diagnostics instead of private implementation text.
+    - Include-layer validation passes without adding a new allowlist entry.
+  - stop_rule: Stop after the call-helper/dispatch-wrapper source-lock family
+    is retired; leave unrelated lowerer source-lock families to later leaves.
+
+- [ ] TODO-4615: Retire emitter private source locks
+  - owner: ai
+  - created_at: 2026-05-27
+  - phase: Architecture hardening
+  - scope: Replace the temporary expression-emitter source lock with emitted
+    C++/GLSL/VM contract checks or backend diagnostics so active coverage no
+    longer reads private emitter or lowerer source text to prove expression
+    emission delegation.
+  - implementation_notes: Start with `docs/source_lock_inventory.md`,
+    `tests/unit/test_ir_pipeline_validation_emitter_expr_source_delegation_stays_stable.cpp`,
+    and the backend IR/runtime test fixtures that already compare emitted
+    contracts.
+  - acceptance:
+    - The emitter source-lock inventory row is removed or reclassified because
+      its replacement coverage asserts observable emitted output or
+      diagnostics.
+    - The replacement test covers at least one expression shape that would
+      regress if emission routing bypassed the intended backend boundary.
+    - Include-layer validation passes without adding a new allowlist entry.
+  - stop_rule: Stop once the expression-emitter private source lock is retired;
+    do not refactor backend emitter ownership beyond the covered expression
+    family.
+
+- [ ] TODO-4616: Make semantic validation manifest executable
+  - owner: ai
+  - created_at: 2026-05-27
+  - phase: Architecture hardening
+  - scope: Make `semanticValidationPassManifest()` the executable authority for
+    semantic validation pass dispatch instead of keeping the manifest as
+    metadata beside a separate string-name runner.
+  - implementation_notes: Start with
+    `include/primec/SemanticValidationPlan.h`,
+    `src/semantics/SemanticValidationPlan.cpp`, and the
+    `Semantics::validate` pass loop in `src/semantics/SemanticsValidate.cpp`.
+    A typed pass id, runner callback, or checked switch is acceptable if the
+    manifest remains the single order/ownership source.
+  - acceptance:
+    - Semantic validation order and execution are derived from the manifest,
+      and the ad hoc `pass.name == ...` dispatch chain is deleted or reduced to
+      a checked compatibility shim with no independent ordering authority.
+    - Adding a pass to the manifest without runner coverage fails a focused
+      test or compile-time contract.
+    - Existing manifest source-lock coverage still proves AST mutation
+      ownership and semantic-product publication boundaries.
+  - stop_rule: Stop once the manifest drives pass execution; do not split pass
+    implementations or change pass order except where required by the manifest
+    handoff.
+
+- [ ] TODO-4617: Add semantic preflight missing-fact diagnostics
+  - owner: ai
+  - created_at: 2026-05-27
+  - phase: Architecture hardening
+  - scope: Add deterministic missing/stale diagnostics for
+    `publishedLowererPreflightFacts` so lowerer effect setup fails closed when
+    software numeric type or runtime reflection preflight ids are absent,
+    incomplete, or stale.
+  - implementation_notes: Start with
+    `docs/SemanticProductConsumerMatrix.md`,
+    `include/primec/SemanticProduct.h`, `src/SemanticProduct.cpp`, and
+    `src/ir_lowerer/IrLowererLowerEffects.cpp`.
+  - acceptance:
+    - A focused stale/missing test removes or corrupts one software numeric
+      preflight fact and gets a deterministic diagnostic instead of fallback
+      AST reconstruction.
+    - A focused stale/missing test covers runtime reflection preflight ids at
+      the consumer boundary.
+    - The consumer matrix row is updated with the new stale/missing coverage
+      names.
+  - stop_rule: Stop once preflight facts fail closed with stable diagnostics;
+    do not add new semantic-product fact families in this leaf.
+
+- [ ] TODO-4618: Fail closed on stale CT-eval requirement facts
+  - owner: ai
+  - created_at: 2026-05-27
+  - phase: Architecture hardening
+  - scope: Make compile-time requirement evaluation reject incomplete, missing,
+    or stale `requirementPredicateFacts` from the semantic product instead of
+    degrading into ordinary no-match or syntax-derived behavior.
+  - implementation_notes: Start with
+    `docs/SemanticProductConsumerMatrix.md`,
+    `include/primec/CompileTimeEvaluation.h`,
+    `src/CompileTimeEvaluation.cpp`, and
+    `src/semantics/RequirementPredicateFacts.cpp`.
+  - acceptance:
+    - A missing published requirement-predicate fact produces a deterministic
+      CT-eval diagnostic naming the missing semantic fact family.
+    - A stale predicate fact with mismatched callable or argument identity is
+      rejected before evaluation.
+    - The consumer matrix row records the new stale/missing coverage and the
+      positive CT-eval coverage still passes.
+  - stop_rule: Stop once CT-eval fails closed on requirement-predicate fact
+    completeness; do not implement new requirement syntax in this leaf.
+
+- [ ] TODO-4619: Gate runtime reflection by backend profile
+  - owner: ai
+  - created_at: 2026-05-27
+  - phase: Architecture hardening
+  - scope: Add one non-graphics backend capability gate for runtime reflection
+    support, advertise it through `IrBackendProfiles`, and route an existing
+    runtime-reflection preflight path through the profile check before
+    lowering.
+  - implementation_notes: Start with `include/primec/IrBackendProfiles.h`,
+    `src/IrBackendProfiles.cpp`, `src/IrPreparation.cpp`, and any lowerer
+    preflight checks that consume runtime reflection ids.
+  - acceptance:
+    - Backend profiles expose a named runtime-reflection capability in addition
+      to the existing graphics-runtime substrate capability.
+    - A backend without the capability rejects a runtime-reflection-dependent
+      program with a deterministic diagnostic before backend-specific lowering.
+    - A backend with the capability keeps the existing runtime-reflection
+      coverage passing.
+  - stop_rule: Stop after one real runtime-reflection capability gate is
+    enforced; do not expand the profile model to every documented construct in
+    this leaf.
+
+- [ ] TODO-4620: Index expanded-source segments for diagnostics
+  - owner: ai
+  - created_at: 2026-05-27
+  - phase: Architecture hardening
+  - scope: Replace the linear expanded-source segment lookup used for
+    diagnostic source mapping with a deterministic indexed lookup so large
+    generated or expanded sources avoid repeated full segment scans.
+  - implementation_notes: Start with `include/primec/SourceLocationMapper.h`,
+    `src/SourceLocationMapper.cpp`, `include/primec/ExpandedSource.h`, and the
+    expanded-source provenance tests. Keep the index deterministic and local to
+    source mapping.
+  - acceptance:
+    - Source mapping results remain byte-for-byte stable for existing
+      diagnostics and expanded-source tests.
+    - A focused synthetic many-segment test proves lookup uses the indexed
+      path and does not scan every segment for each mapped diagnostic.
+    - The architecture health dashboard or focused benchmark notes the lookup
+      budget improvement or guards against an obvious regression.
+  - stop_rule: Stop once expanded-source diagnostic lookup is indexed and
+    covered; do not redesign expanded-source provenance records in this leaf.
+
+- [ ] TODO-4621: Classify unsupported variadic-pack diagnostics
+  - owner: ai
+  - created_at: 2026-05-27
+  - phase: Architecture hardening
+  - scope: Promote one existing lowerer/backend unsupported variadic-pack
+    diagnostic into the diagnostic stability-tier contract, including stable
+    message text, primary span, and notes where applicable.
+  - implementation_notes: Start with `include/primec/Diagnostics.h`,
+    `src/Diagnostics.cpp`, and the current variadic `args<T>` rejection tests
+    for unsupported string pointer/reference pack elements or unsupported
+    forwarding shapes.
+  - acceptance:
+    - The selected unsupported variadic-pack diagnostic has an explicit
+      `DiagnosticContract` tier and stable message/span expectations.
+    - A focused negative test asserts the stable diagnostic contract through
+      the public diagnostics path.
+    - Existing variadic positive coverage stays unchanged, and the task does
+      not open a new materialization path without a reproduced unsupported
+      non-string pack element.
+  - stop_rule: Stop after exactly one lowerer/backend variadic diagnostic is
+    tiered and source-locked; leave additional diagnostic families to later
+    leaves.
