@@ -4,6 +4,19 @@
 - none
 
 ## Recent Test Runs
+- 2026-05-27 22:10 CEST | pass | mode: release + include-layer |
+  command:
+  `cmake --build build-release --target PrimeStruct_compile_run_tests PrimeStruct_backend_ir_tests -j 1`;
+  `cd build-release && ./PrimeStruct_compile_run_tests --test-case="safe pointer optionality docs stay source locked,source lock inventory keeps replacement surfaces explicit,todo queue and skipped doctest debt stay source locked" --no-skip`;
+  `cd build-release && ./PrimeStruct_backend_ir_tests --test-case="semantic product publishes validator inference routing facts,semantic product publishes stdlib helper routing ids,semantics validate publishes allowlisted pilot routing artifacts,semantics validate publishes return and import artifacts through public semantic product views,semantics validate publishes struct field metadata and parameter binding facts,ir lowerer call-helper contracts replace source delegation locks,ir lowerer collection dispatch metadata resolves through public contracts,ir lowerer native tail wrapper leaves temporary vector receiver to helper lowering,ir lowerer call helpers dispatch buffer and native tail wrappers,ir lowerer call helpers resolve and validate map access targets,ir lowerer call helpers resolve and validate array vector access targets,emitter expr contract covers control routing without source locks,source C++ emitter emits block-argument expression wrappers without source locks" --no-skip`;
+  `git diff --check`;
+  `PYTHONDONTWRITEBYTECODE=1 python3 scripts/check_include_layers.py`
+  | failures: none | notes: root validation after serially merging
+  TODO-4605, TODO-4613, TODO-4614, and TODO-4615 plus post-run TODO queue
+  preparation passed. The docs/source-lock slice passed 3 cases / 596
+  assertions, the combined backend IR semantic/lowerer/emitter slice passed
+  13 cases / 394 assertions, whitespace validation passed, and include-layer
+  validation reported 0 allowlisted private dependencies.
 - 2026-05-27 22:03 CEST | pass | mode: release | command:
   `cmake --build build-release --target PrimeStruct_backend_ir_tests -j 1`;
   `cd build-release && ./PrimeStruct_backend_ir_tests --test-case="semantic product publishes validator inference routing facts,semantic product publishes stdlib helper routing ids,semantics validate publishes allowlisted pilot routing artifacts,semantics validate publishes return and import artifacts through public semantic product views,semantics validate publishes struct field metadata and parameter binding facts" --no-skip`

@@ -65,6 +65,9 @@ This file is the live open-work queue for PrimeStruct.
 ### Ready Now
 
 - TODO-4606: Specify capability-parameterized views | track: capability-view-docs | surface: docs view model
+- TODO-4616: Make semantic validation manifest executable | track: semantic-manifest-execution | surface: semantic validation manifest
+- TODO-4619: Gate runtime reflection by backend profile | track: runtime-reflection-profile-gate | surface: backend profile/runtime reflection preflight
+- TODO-4620: Index expanded-source segments for diagnostics | track: expanded-source-diagnostic-index | surface: source location mapper
 
 ### Immediate Next 10
 
@@ -74,10 +77,9 @@ This file is the live open-work queue for PrimeStruct.
 - TODO-4610: Add forward cursor traversal API
 - TODO-4611: Add reverse cursor traversal API
 - TODO-4612: Add safe extent and cursor code examples
-- TODO-4616: Make semantic validation manifest executable
 - TODO-4617: Add semantic preflight missing-fact diagnostics
 - TODO-4618: Fail closed on stale CT-eval requirement facts
-- TODO-4619: Gate runtime reflection by backend profile
+- TODO-4621: Classify unsupported variadic-pack diagnostics
 
 ### Priority Lanes
 
@@ -125,17 +127,17 @@ This file is the live open-work queue for PrimeStruct.
 ### Execution Queue
 
 1. TODO-4606: Specify capability-parameterized views
-2. TODO-4607: Publish initial array extent facts
-3. TODO-4608: Add checked array slice construction
-4. TODO-4609: Reject escaping local array slices
-5. TODO-4610: Add forward cursor traversal API
-6. TODO-4611: Add reverse cursor traversal API
-7. TODO-4612: Add safe extent and cursor code examples
-8. TODO-4616: Make semantic validation manifest executable
-9. TODO-4617: Add semantic preflight missing-fact diagnostics
-10. TODO-4618: Fail closed on stale CT-eval requirement facts
-11. TODO-4619: Gate runtime reflection by backend profile
-12. TODO-4620: Index expanded-source segments for diagnostics
+2. TODO-4616: Make semantic validation manifest executable
+3. TODO-4619: Gate runtime reflection by backend profile
+4. TODO-4620: Index expanded-source segments for diagnostics
+5. TODO-4607: Publish initial array extent facts
+6. TODO-4608: Add checked array slice construction
+7. TODO-4609: Reject escaping local array slices
+8. TODO-4610: Add forward cursor traversal API
+9. TODO-4611: Add reverse cursor traversal API
+10. TODO-4612: Add safe extent and cursor code examples
+11. TODO-4617: Add semantic preflight missing-fact diagnostics
+12. TODO-4618: Fail closed on stale CT-eval requirement facts
 13. TODO-4621: Classify unsupported variadic-pack diagnostics
 
 ### Task Blocks
@@ -307,6 +309,7 @@ This file is the live open-work queue for PrimeStruct.
   - owner: ai
   - created_at: 2026-05-27
   - phase: Architecture hardening
+  - parallel_track: semantic-manifest-execution
   - scope: Make `semanticValidationPassManifest()` the executable authority for
     semantic validation pass dispatch instead of keeping the manifest as
     metadata beside a separate string-name runner.
@@ -377,6 +380,7 @@ This file is the live open-work queue for PrimeStruct.
   - owner: ai
   - created_at: 2026-05-27
   - phase: Architecture hardening
+  - parallel_track: runtime-reflection-profile-gate
   - scope: Add one non-graphics backend capability gate for runtime reflection
     support, advertise it through `IrBackendProfiles`, and route an existing
     runtime-reflection preflight path through the profile check before
@@ -399,6 +403,7 @@ This file is the live open-work queue for PrimeStruct.
   - owner: ai
   - created_at: 2026-05-27
   - phase: Architecture hardening
+  - parallel_track: expanded-source-diagnostic-index
   - scope: Replace the linear expanded-source segment lookup used for
     diagnostic source mapping with a deterministic indexed lookup so large
     generated or expanded sources avoid repeated full segment scans.
