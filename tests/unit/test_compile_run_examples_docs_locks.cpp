@@ -1843,6 +1843,83 @@ TEST_CASE("safe pointer optionality docs stay source locked") {
         std::string::npos);
 }
 
+TEST_CASE("capability parameterized views docs stay source locked") {
+  const std::filesystem::path primeStructPath =
+      resolveRepoPath("docs/PrimeStruct.md");
+  const std::filesystem::path memoryCapabilitiesPath =
+      resolveRepoPath("docs/MemoryCapabilities.md");
+  const std::filesystem::path safeArrayExtentViewsPath =
+      resolveRepoPath("docs/SafeArrayExtentViews.md");
+  REQUIRE(std::filesystem::exists(primeStructPath));
+  REQUIRE(std::filesystem::exists(memoryCapabilitiesPath));
+  REQUIRE(std::filesystem::exists(safeArrayExtentViewsPath));
+
+  const std::string primeStructDoc = readFile(primeStructPath.string());
+  const std::string memoryCapabilitiesDoc =
+      readFile(memoryCapabilitiesPath.string());
+  const std::string safeArrayExtentViewsDoc =
+      readFile(safeArrayExtentViewsPath.string());
+
+  CHECK(primeStructDoc.find("Capability-parameterized views are a core design direction") !=
+        std::string::npos);
+  CHECK(primeStructDoc.find("`Reference<T, Capability>` is the count-one view form") !=
+        std::string::npos);
+  CHECK(primeStructDoc.find("`Slice<T, Capability>` is the contiguous runtime-count view form") !=
+        std::string::npos);
+  CHECK(primeStructDoc.find("the capability view model around "
+                            "`Reference<T, Capability>` / `Slice<T, Capability>`") !=
+        std::string::npos);
+  CHECK(primeStructDoc.find("the normative view model is semantic\n"
+                            "  `View<T, Capability>` over valid `Pointer<T>` storage") !=
+        std::string::npos);
+  CHECK(primeStructDoc.find("`Reference<T, Capability>` is the non-null single-element view with\n"
+                            "  `count == 1`; `Slice<T, Capability>` is the contiguous multi-element view\n"
+                            "  with a runtime `count`") != std::string::npos);
+  CHECK(primeStructDoc.find("`Reference<T, Capability>` is not nullable and does not carry an absence\n"
+                            "  state") != std::string::npos);
+  CHECK(primeStructDoc.find("`Slice<T, Capability>` carries a runtime element count and borrows\n"
+                            "  `values[start, end)`") != std::string::npos);
+  CHECK(primeStructDoc.find("Current\n"
+                            "  implementation boundary: parser and lowering support the existing\n"
+                            "  `Reference<T>`, array, and pointer surfaces only") !=
+        std::string::npos);
+
+  CHECK(memoryCapabilitiesDoc.find("## Unified View Values") !=
+        std::string::npos);
+  CHECK(memoryCapabilitiesDoc.find("View<T, Capability> {\n"
+                                   "  pointer: Pointer<T>\n"
+                                   "  count: element count\n"
+                                   "  provenance: source place or owner identity\n"
+                                   "  capability: inherited authority metadata\n"
+                                   "}") != std::string::npos);
+  CHECK(memoryCapabilitiesDoc.find("Canonical rule: `Reference<T, Capability>` is the non-null single-element view\n"
+                                   "with `count == 1`; `Slice<T, Capability>` is the contiguous multi-element view\n"
+                                   "with a runtime `count`") != std::string::npos);
+  CHECK(memoryCapabilitiesDoc.find("It is not a nullable pointer and does not carry an absence\n"
+                                   "state; optional production belongs in `Maybe<Pointer<T>>`,\n"
+                                   "`Maybe<Reference<T, Capability>>`, or a `Result` wrapper") !=
+        std::string::npos);
+  CHECK(memoryCapabilitiesDoc.find("It carries the runtime\n"
+                                   "element count needed for indexing, iteration, and bounds checks") !=
+        std::string::npos);
+  CHECK(memoryCapabilitiesDoc.find("Exact standard\n"
+                                   "capability names are still open design vocabulary.") !=
+        std::string::npos);
+
+  CHECK(safeArrayExtentViewsDoc.find("phase split and unified capability view model in this note have\n"
+                                     "been promoted into the normative language direction") !=
+        std::string::npos);
+  CHECK(safeArrayExtentViewsDoc.find("Reference<T, Capability> == Slice<T, Capability> where count == 1") !=
+        std::string::npos);
+  CHECK(safeArrayExtentViewsDoc.find("Canonical rule: `Reference<T, Capability>` is the non-null single-element view\n"
+                                     "with `count == 1`; `Slice<T, Capability>` is the contiguous multi-element view\n"
+                                     "with a runtime `count`") != std::string::npos);
+  CHECK(safeArrayExtentViewsDoc.find("For `Reference<T, Capability>`, `count` is statically one") !=
+        std::string::npos);
+  CHECK(safeArrayExtentViewsDoc.find("For `Slice<T, Capability>`, `count` is\n"
+                                     "normally a runtime value.") != std::string::npos);
+}
+
 TEST_CASE("task spawn wait prototype docs stay source locked") {
   const std::filesystem::path primeStructPath =
       resolveRepoPath("docs/PrimeStruct.md");
@@ -1947,10 +2024,10 @@ TEST_CASE("todo queue and skipped doctest debt stay source locked") {
                   "  coverage snapshots in this file.") !=
         std::string::npos);
   CHECK(todo.find("### Ready Now\n\n"
-                  "- TODO-4606: Specify capability-parameterized views | track: capability-view-docs | surface: docs view model\n"
                   "- TODO-4616: Make semantic validation manifest executable | track: semantic-manifest-execution | surface: semantic validation manifest\n"
                   "- TODO-4619: Gate runtime reflection by backend profile | track: runtime-reflection-profile-gate | surface: backend profile/runtime reflection preflight\n"
-                  "- TODO-4620: Index expanded-source segments for diagnostics | track: expanded-source-diagnostic-index | surface: source location mapper\n\n"
+                  "- TODO-4620: Index expanded-source segments for diagnostics | track: expanded-source-diagnostic-index | surface: source location mapper\n"
+                  "- TODO-4607: Publish initial array extent facts | track: array-extent-facts | surface: semantic product extent facts\n\n"
                   "### Immediate Next 10") !=
         std::string::npos);
   CHECK(todo.find("- TODO-4604: Specify requirement contract phase split") ==
@@ -2018,7 +2095,7 @@ TEST_CASE("todo queue and skipped doctest debt stay source locked") {
   CHECK(todo.find("- TODO-4574: Remove vector count/access compiler classifiers | track: vector-helper-classifier-deletion") ==
         std::string::npos);
   CHECK(todo.find("### Immediate Next 10\n\n"
-                  "- TODO-4607: Publish initial array extent facts") !=
+                  "- TODO-4608: Add checked array slice construction") !=
         std::string::npos);
   CHECK(todo.find("### Priority Lanes") != std::string::npos);
   CHECK(todo.find("Source-unit provenance ledger: TODO-4592 completed parser/semantic") ==
@@ -2037,11 +2114,16 @@ TEST_CASE("todo queue and skipped doctest debt stay source locked") {
   CHECK(todo.find("Map/vector compiler-independence: TODO-4570 retired the duplicate `map2`\n"
                   "  surface, TODO-4571 added the compiler-knowledge inventory categories") !=
         std::string::npos);
+  CHECK(todo.find("Safe array extents and capability views: TODO-4604 completed the requirement\n"
+                  "  contract phase split, and TODO-4605 completed the non-null safe pointer\n"
+                  "  optionality model. TODO-4606 specified the capability-parameterized\n"
+                  "  reference/slice view model in the normative docs. TODO-4607 through") !=
+        std::string::npos);
   CHECK(todo.find("### Execution Queue\n\n"
-                  "1. TODO-4606: Specify capability-parameterized views\n"
-                  "2. TODO-4616: Make semantic validation manifest executable\n"
-                  "3. TODO-4619: Gate runtime reflection by backend profile\n"
-                  "4. TODO-4620: Index expanded-source segments for diagnostics") !=
+                  "1. TODO-4616: Make semantic validation manifest executable\n"
+                  "2. TODO-4619: Gate runtime reflection by backend profile\n"
+                  "3. TODO-4620: Index expanded-source segments for diagnostics\n"
+                  "4. TODO-4607: Publish initial array extent facts") !=
         std::string::npos);
   CHECK(todo.find("- TODO-4613: Retire semantic-validator private source locks | track: "
                   "semantic-source-lock-retirement") ==
@@ -2049,7 +2131,11 @@ TEST_CASE("todo queue and skipped doctest debt stay source locked") {
   CHECK(todo.find("- [ ] TODO-4613: Retire semantic-validator private source locks") ==
         std::string::npos);
   CHECK(todo.find("### Task Blocks\n\n"
-                  "- [ ] TODO-4606: Specify capability-parameterized views") !=
+                  "- [ ] TODO-4607: Publish initial array extent facts") !=
+        std::string::npos);
+  CHECK(todo.find("- TODO-4606: Specify capability-parameterized views | track:") ==
+        std::string::npos);
+  CHECK(todo.find("- [ ] TODO-4606: Specify capability-parameterized views") ==
         std::string::npos);
   CHECK(todo.find("- TODO-4605: Specify non-null pointer optionality | track:") ==
         std::string::npos);
@@ -2060,6 +2146,14 @@ TEST_CASE("todo queue and skipped doctest debt stay source locked") {
   CHECK(todoFinished.find("Documented `Pointer<T>` as valid non-null storage identity in safe code") !=
         std::string::npos);
   CHECK(todoFinished.find("Promoted TODO-4606 as the next safe-array docs leaf") !=
+        std::string::npos);
+  CHECK(todoFinished.find("TODO-4606: Specify capability-parameterized views") !=
+        std::string::npos);
+  CHECK(todoFinished.find("Documented `Reference<T, Capability>` as the non-null count-one view\n"
+                          "      shape") != std::string::npos);
+  CHECK(todoFinished.find("Documented `Slice<T, Capability>` as the runtime-count contiguous view\n"
+                          "      shape") != std::string::npos);
+  CHECK(todoFinished.find("Promoted TODO-4607 as the next safe-array semantic-product leaf") !=
         std::string::npos);
   CHECK(todo.find("- TODO-4599: Migrate emitter collection surface lookups | track: "
                   "stdlib-registry-emitter") ==

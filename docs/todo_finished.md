@@ -6,6 +6,36 @@ Legend:
 Finished items are periodically archived here from `docs/todo.md`; section headers record the archive date.
 
 **Todo Completion (May 27, 2026)**
+- [x] TODO-4606: Specify capability-parameterized views
+  - owner: ai
+  - created_at: 2026-05-27
+  - finished_at: 2026-05-27
+  - phase: Safe array extents and views
+  - parallel_track: capability-view-docs
+  - depends_on: TODO-4605
+  - scope: Promoted the unified view model from
+    `docs/SafeArrayExtentViews.md` into the normative design docs:
+    `Reference<T, Capability>` is the single-element view,
+    `Slice<T, Capability>` is the contiguous multi-element view, and both
+    share semantic `View<T, Capability>` facts over valid pointer storage.
+  - outcome:
+    - Documented `Reference<T, Capability>` as the non-null count-one view
+      shape, distinct from nullable pointer or absence handling.
+    - Documented `Slice<T, Capability>` as the runtime-count contiguous view
+      shape that shares borrow, provenance, extent, capability authority, and
+      alias/exclusivity semantics with references.
+    - Added a current implementation boundary that leaves parser and lowering
+      support for capability-parameterized references and slices to later
+      implementation leaves.
+    - Added source-lock coverage spanning `docs/PrimeStruct.md`,
+      `docs/MemoryCapabilities.md`, and `docs/SafeArrayExtentViews.md`.
+    - Promoted TODO-4607 as the next safe-array semantic-product leaf.
+  - validation:
+    - Focused docs/source-lock validation was selected for this worker; see
+      the commit report for exact commands.
+  - stop_rule: Stopped after the unified view model was specified and
+    source-locked; parser and semantic implementation remain later leaves.
+
 - [x] TODO-4605: Specify non-null pointer optionality
   - owner: ai
   - created_at: 2026-05-27

@@ -197,6 +197,38 @@ no active conflicting loan prevents the write
 There is no special hidden rule for "pointer writes". It is just a write effect
 on the pointee place.
 
+## Unified View Values
+
+References and slices are the public view values that carry inherited memory
+authority. They should share one semantic model instead of becoming separate
+pointer-like concepts:
+
+```text
+View<T, Capability> {
+  pointer: Pointer<T>
+  count: element count
+  provenance: source place or owner identity
+  capability: inherited authority metadata
+}
+```
+
+Canonical rule: `Reference<T, Capability>` is the non-null single-element view
+with `count == 1`; `Slice<T, Capability>` is the contiguous multi-element view
+with a runtime `count`; both share semantic `View<T, Capability>` borrow,
+provenance, extent, and capability facts over valid `Pointer<T>` storage.
+
+`Reference<T, Capability>` therefore remains a borrow of exactly one valid
+storage location. It is not a nullable pointer and does not carry an absence
+state; optional production belongs in `Maybe<Pointer<T>>`,
+`Maybe<Reference<T, Capability>>`, or a `Result` wrapper before a view is used.
+
+`Slice<T, Capability>` is a borrow of a contiguous range. It carries the runtime
+element count needed for indexing, iteration, and bounds checks, while sharing
+the same provenance, lifetime/escape, capability authority, and aliasing rules
+as references. The capability parameter is compile-time authority metadata
+unless a future capability explicitly needs runtime state. Exact standard
+capability names are still open design vocabulary.
+
 ## Effects As Inherited Authority
 
 PrimeStruct already wants effects to describe what an execution may do. Memory

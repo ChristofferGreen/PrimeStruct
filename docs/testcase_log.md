@@ -4,6 +4,13 @@
 - none
 
 ## Recent Test Runs
+- 2026-05-27 22:46 CEST | pass | mode: release + docs/source-lock |
+  command:
+  `cmake -S . -B build-release -DCMAKE_BUILD_TYPE=Release -DCMAKE_EXPORT_COMPILE_COMMANDS=ON`;
+  `cmake --build build-release --target PrimeStruct_compile_run_tests -j 1`;
+  `cd build-release && ./PrimeStruct_compile_run_tests --test-case="capability parameterized views docs stay source locked,todo queue and skipped doctest debt stay source locked" --no-skip`
+  | failures: none | notes: parent validation for TODO-4606 passed the
+  focused docs/source-lock slice, 2 cases / 598 assertions.
 - 2026-05-27 22:10 CEST | pass | mode: release + include-layer |
   command:
   `cmake --build build-release --target PrimeStruct_compile_run_tests PrimeStruct_backend_ir_tests -j 1`;

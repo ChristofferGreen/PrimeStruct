@@ -4055,6 +4055,11 @@ sum_two_files([string] a, [string] b) {
 - Draft extension: `Mat2`, `Mat3`, `Mat4`, and `Quat` with explicit conversion-only interaction rules (not yet portable
   across backends).
 - `Pointer<T>`, `Reference<T>` where `T` is primitive or a struct type.
+- Capability-parameterized views are a core design direction, not yet a parsed
+  surface: `Reference<T, Capability>` is the count-one view form and
+  `Slice<T, Capability>` is the contiguous runtime-count view form. Both share
+  semantic `View<T, Capability>` borrow, provenance, extent, and capability
+  facts over valid `Pointer<T>` storage.
 - User-defined structs with layout manifests.
 - Types outside this set are backend-specific and must be rejected by backends that do not support them.
 
@@ -4064,7 +4069,8 @@ language/runtime-owned, which remain hybrid, and which should move fully into st
 `.prime` implementations.
 
 - `core`
-  Public types/surfaces: fixed-width scalars, `string`, `array<T>`, `Pointer<T>`, `Reference<T>`.
+  Public types/surfaces: fixed-width scalars, `string`, `array<T>`, `Pointer<T>`, `Reference<T>`,
+  and the capability view model around `Reference<T, Capability>` / `Slice<T, Capability>`.
   Ownership rule: language/runtime owns both the public surface and the substrate because other
   features depend on them directly.
   Migration stance: treat these as stable substrate; delete workaround routing around them instead
@@ -5124,6 +5130,27 @@ bad_set() {
   inherits this invariant because it is initialized from a valid storage location or pointer. Raw or foreign nullable
   addresses remain unsafe adapter material, such as `RawPointer<T>` plus an FFI validation wrapper; converting one into
   `Pointer<T>` or `Reference<T>` requires boundary validation that returns `Maybe` or `Result` on failure.
+- **Capability-parameterized views:** the normative view model is semantic
+  `View<T, Capability>` over valid `Pointer<T>` storage plus extent,
+  provenance, and capability facts. Canonical rule:
+  `Reference<T, Capability>` is the non-null single-element view with
+  `count == 1`; `Slice<T, Capability>` is the contiguous multi-element view
+  with a runtime `count`; both share semantic `View<T, Capability>` borrow,
+  provenance, extent, and capability facts over valid `Pointer<T>` storage.
+  `Reference<T, Capability>` is not nullable and does not carry an absence
+  state; optional production still uses `Maybe<Pointer<T>>`,
+  `Maybe<Reference<T, Capability>>`, or an appropriate `Result` wrapper.
+  `Slice<T, Capability>` carries a runtime element count and borrows
+  `values[start, end)` or another contiguous proven range from its source
+  storage. Both forms share provenance, lifetime/escape, capability authority,
+  and alias/exclusivity rules; their capability parameter is compile-time
+  authority metadata unless a future capability explicitly needs runtime state.
+  Standard capability names such as read/write authority remain design
+  vocabulary until the corresponding parser and semantic leaves land. Current
+  implementation boundary: parser and lowering support the existing
+  `Reference<T>`, array, and pointer surfaces only; do not rely on
+  `Reference<T, Capability>` or `Slice<T, Capability>` source syntax before a
+  later implementation leaf adds it.
 - **Qualifiers:** `restrict<T>` is allowed on bindings and parameters only; it must match the binding type (including
   template args) and acts as an explicit type constraint. There is no `readonly` qualifier yet; use `mut` to opt into
   mutation.

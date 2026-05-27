@@ -64,14 +64,13 @@ This file is the live open-work queue for PrimeStruct.
 
 ### Ready Now
 
-- TODO-4606: Specify capability-parameterized views | track: capability-view-docs | surface: docs view model
 - TODO-4616: Make semantic validation manifest executable | track: semantic-manifest-execution | surface: semantic validation manifest
 - TODO-4619: Gate runtime reflection by backend profile | track: runtime-reflection-profile-gate | surface: backend profile/runtime reflection preflight
 - TODO-4620: Index expanded-source segments for diagnostics | track: expanded-source-diagnostic-index | surface: source location mapper
+- TODO-4607: Publish initial array extent facts | track: array-extent-facts | surface: semantic product extent facts
 
 ### Immediate Next 10
 
-- TODO-4607: Publish initial array extent facts
 - TODO-4608: Add checked array slice construction
 - TODO-4609: Reject escaping local array slices
 - TODO-4610: Add forward cursor traversal API
@@ -117,60 +116,36 @@ This file is the live open-work queue for PrimeStruct.
   backend diagnostic into the stability-tier contract.
 - Safe array extents and capability views: TODO-4604 completed the requirement
   contract phase split, and TODO-4605 completed the non-null safe pointer
-  optionality model. TODO-4606 through TODO-4612 remain from the agreed
-  backlog in `docs/SafeArrayExtentViews.md`: capability-parameterized
-  references and slices, semantic extent facts, checked slices, conservative
-  view escapes, cursor traversal with
+  optionality model. TODO-4606 specified the capability-parameterized
+  reference/slice view model in the normative docs. TODO-4607 through
+  TODO-4612 remain from the agreed backlog in `docs/SafeArrayExtentViews.md`:
+  semantic extent facts, checked slices, conservative view escapes, cursor
+  traversal with
   `limit(...)` / `reverse_limit(...)` boundaries, and style-aligned examples
   once the surface is specified.
 
 ### Execution Queue
 
-1. TODO-4606: Specify capability-parameterized views
-2. TODO-4616: Make semantic validation manifest executable
-3. TODO-4619: Gate runtime reflection by backend profile
-4. TODO-4620: Index expanded-source segments for diagnostics
-5. TODO-4607: Publish initial array extent facts
-6. TODO-4608: Add checked array slice construction
-7. TODO-4609: Reject escaping local array slices
-8. TODO-4610: Add forward cursor traversal API
-9. TODO-4611: Add reverse cursor traversal API
-10. TODO-4612: Add safe extent and cursor code examples
-11. TODO-4617: Add semantic preflight missing-fact diagnostics
-12. TODO-4618: Fail closed on stale CT-eval requirement facts
-13. TODO-4621: Classify unsupported variadic-pack diagnostics
+1. TODO-4616: Make semantic validation manifest executable
+2. TODO-4619: Gate runtime reflection by backend profile
+3. TODO-4620: Index expanded-source segments for diagnostics
+4. TODO-4607: Publish initial array extent facts
+5. TODO-4608: Add checked array slice construction
+6. TODO-4609: Reject escaping local array slices
+7. TODO-4610: Add forward cursor traversal API
+8. TODO-4611: Add reverse cursor traversal API
+9. TODO-4612: Add safe extent and cursor code examples
+10. TODO-4617: Add semantic preflight missing-fact diagnostics
+11. TODO-4618: Fail closed on stale CT-eval requirement facts
+12. TODO-4621: Classify unsupported variadic-pack diagnostics
 
 ### Task Blocks
-
-- [ ] TODO-4606: Specify capability-parameterized views
-  - owner: ai
-  - created_at: 2026-05-27
-  - phase: Safe array extents and views
-  - parallel_track: capability-view-docs
-  - depends_on: TODO-4605
-  - scope: Promote the unified view model from `docs/SafeArrayExtentViews.md`
-    into the normative design docs: `Reference<T, Capability>` is the
-    single-element view, `Slice<T, Capability>` is the contiguous multi-element
-    view, and both share a semantic `View<T, Capability>` model over valid
-    pointer storage plus extent/provenance/capability facts.
-  - implementation_notes: Start with `docs/PrimeStruct.md` and
-    `docs/MemoryCapabilities.md`; keep the exact standard capability names
-    open unless the docs already define stable names such as `Read` or `Write`.
-  - acceptance:
-    - Docs explain why `Reference<T, Capability>` is not a nullable pointer but
-      a capability-carrying view with `count == 1`.
-    - Docs explain that `Slice<T, Capability>` carries runtime count and shares
-      borrow/provenance semantics with references.
-    - Source-lock coverage proves the canonical docs and design note agree on
-      the unified view model.
-  - stop_rule: Stop after the view model is specified and source-locked; do not
-    add parser support for capability-parameterized references or slices in
-    this leaf.
 
 - [ ] TODO-4607: Publish initial array extent facts
   - owner: ai
   - created_at: 2026-05-27
   - phase: Safe array extents and views
+  - parallel_track: array-extent-facts
   - depends_on: TODO-4606
   - scope: Add the first semantic-product extent facts for existing
     `array<T>` values, `Reference<array<T>>` parameters, and `count(...)`

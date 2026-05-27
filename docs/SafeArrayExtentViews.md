@@ -1,9 +1,10 @@
 # Safe Array Extents And Views
 
 Status: design note, not yet implemented. The `require<...>` /
-`require(...)` phase split in this note has been promoted into the normative
-language direction in `docs/PrimeStruct.md`; the remaining safe-array extent
-and view surfaces still need their own implementation leaves.
+`require(...)` phase split and unified capability view model in this note have
+been promoted into the normative language direction in `docs/PrimeStruct.md`;
+the remaining safe-array extent and view implementation work still needs its
+own leaves.
 
 This note records the current PrimeStruct design direction after reviewing John
 Nagle's "Safe arrays and pointers for C through compatible additions to the
@@ -177,6 +178,11 @@ underlying view model. A reference is the single-element case of a slice:
 ```text
 Reference<T, Capability> == Slice<T, Capability> where count == 1
 ```
+
+Canonical rule: `Reference<T, Capability>` is the non-null single-element view
+with `count == 1`; `Slice<T, Capability>` is the contiguous multi-element view
+with a runtime `count`; both share semantic `View<T, Capability>` borrow,
+provenance, extent, and capability facts over valid `Pointer<T>` storage.
 
 Conceptually, the core view is:
 
