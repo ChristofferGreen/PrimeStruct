@@ -4046,11 +4046,13 @@ TEST_CASE("canonical map surface owns standalone stdlib implementation") {
         std::string::npos);
   CHECK(emitterCallPathHelpersSource.find("StdlibSurfaceId::CollectionsMapConstructors") ==
         std::string::npos);
-  CHECK(emitterCallPathHelpersSource.find("KeyValueHelperSurfaceBridgeKey") !=
+  CHECK(emitterCallPathHelpersSource.find(
+            "emitterCollectionSurfaceMetadata(EmitterCollectionSurface::KeyValueHelpers)") !=
         std::string::npos);
   CHECK(emitterCallPathHelpersSource.find("MapHelperSurfaceBridgeKey") ==
         std::string::npos);
-  CHECK(emitterCallPathHelpersSource.find("KeyValueConstructorSurfaceBridgeKey") !=
+  CHECK(emitterCallPathHelpersSource.find(
+            "emitterCollectionSurfaceMetadata(EmitterCollectionSurface::KeyValueConstructors)") !=
         std::string::npos);
   CHECK(emitterCallPathHelpersSource.find("MapConstructorSurfaceBridgeKey") ==
         std::string::npos);
@@ -4106,7 +4108,7 @@ TEST_CASE("canonical map surface owns standalone stdlib implementation") {
   CHECK(emitterReturnInferenceCollectionsSource.find("rawMethodName.rfind(\"std/collections/map/\", 0)") ==
         std::string::npos);
   CHECK(emitterReturnInferenceCollectionsSource.find("surfaceHelperPathForRawMethodName(\n"
-                                                     "                  KeyValueHelperSurfaceBridgeKey") !=
+                                                     "                    *keyValueHelperMetadata") !=
         std::string::npos);
   CHECK(emitterReturnInferenceCollectionsSource.find("MapHelperSurfaceBridgeKey") ==
         std::string::npos);
@@ -4130,7 +4132,7 @@ TEST_CASE("canonical map surface owns standalone stdlib implementation") {
         std::string::npos);
   CHECK(emitterCollectionTypeHelpersSource.find("std::string_view(\"std/collections/map/\").size()") ==
         std::string::npos);
-  CHECK(emitterCollectionTypeHelpersSource.find("CollectionTypeKeyValueHelperSurfaceBridgeKey") !=
+  CHECK(emitterCollectionTypeHelpersSource.find("collectionTypeKeyValueHelperMetadata") !=
         std::string::npos);
   CHECK(emitterCollectionTypeHelpersSource.find("CollectionTypeMapHelperSurfaceBridgeKey") ==
         std::string::npos);
@@ -4186,8 +4188,7 @@ TEST_CASE("canonical map surface owns standalone stdlib implementation") {
   CHECK(emitterMethodMetadataSource.find("StdlibSurfaceId::CollectionsMapHelpers") ==
         std::string::npos);
   CHECK(emitterMethodMetadataSource.find(
-            "constexpr std::string_view KeyValueHelperSurfaceBridgeKey = "
-            "\"collections.map_helpers\"") !=
+            "emitterCollectionSurfaceMetadata(EmitterCollectionSurface::KeyValueHelpers)") !=
         std::string::npos);
   CHECK(emitterMethodMetadataSource.find("MapHelperSurfaceBridgeKey") ==
         std::string::npos);
@@ -4231,8 +4232,8 @@ TEST_CASE("canonical map surface owns standalone stdlib implementation") {
         std::string::npos);
   CHECK(emitterMethodResolutionSource.find("const std::string canonicalPath = \"/std/collections/map/\" + normalizedMethodName") ==
         std::string::npos);
-  CHECK(emitterMethodResolutionSource.find("publishedSurfaceHelperPathForRawMethodName(\n"
-                                           "            KeyValueHelperSurfaceBridgeKey") !=
+  CHECK(emitterMethodResolutionSource.find(
+            "publishedSurfaceHelperPathForRawMethodName(*keyValueHelperMetadata") !=
         std::string::npos);
   CHECK(emitterMethodResolutionSource.find("MapHelperSurfaceBridgeKey") ==
         std::string::npos);
@@ -4949,7 +4950,7 @@ TEST_CASE("canonical map surface owns standalone stdlib implementation") {
         std::string::npos);
   CHECK(emitterMethodTypeInferenceSource.find("isMapImportAliasHelperMemberPath(") ==
         std::string::npos);
-  CHECK(emitterMethodTypeInferenceSource.find("KeyValueHelperSurfaceBridgeKey") !=
+  CHECK(emitterMethodTypeInferenceSource.find("EmitterCollectionSurface::KeyValueHelpers") !=
         std::string::npos);
   CHECK(emitterMethodTypeInferenceSource.find("MapHelperSurfaceBridgeKey") ==
         std::string::npos);
