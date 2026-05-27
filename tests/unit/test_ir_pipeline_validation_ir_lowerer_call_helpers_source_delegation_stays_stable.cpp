@@ -1,1109 +1,115 @@
 #include "test_ir_pipeline_validation_helpers.h"
+#include "primec/testing/IrLowererCollectionSurfaceContracts.h"
 
 TEST_SUITE_BEGIN("primestruct.ir.pipeline.validation");
 
-TEST_CASE("ir lowerer call helpers source delegation stays stable") {
-  auto readText = [](const std::filesystem::path &path) {
-    std::ifstream file(path);
-    CHECK(file.is_open());
-    if (!file.is_open()) {
-      return std::string{};
-    }
-    return std::string((std::istreambuf_iterator<char>(file)), std::istreambuf_iterator<char>());
+TEST_CASE("ir lowerer call-helper contracts replace source delegation locks") {
+  using InlineResult = primec::ir_lowerer::InlineCallDispatchResult;
+  using ResolvedInlineResult = primec::ir_lowerer::ResolvedInlineCallResult;
+
+  primec::Definition directDef;
+  directDef.fullPath = "/main/direct";
+  primec::Definition importedDef;
+  importedDef.fullPath = "/pkg/imported";
+  const std::unordered_map<std::string, const primec::Definition *> defMap = {
+      {directDef.fullPath, &directDef},
+      {importedDef.fullPath, &importedDef},
   };
-  const std::filesystem::path repoRoot =
-      std::filesystem::exists(std::filesystem::path("src")) ? std::filesystem::path(".")
-                                                             : std::filesystem::path("..");
+  const std::unordered_map<std::string, std::string> importAliases = {
+      {"importedAlias", importedDef.fullPath},
+  };
 
-  const std::filesystem::path callHelpersPath =
-      repoRoot / "src" / "ir_lowerer" / "IrLowererCallHelpers.cpp";
-  const std::filesystem::path accessTargetResolutionPath =
-      repoRoot / "src" / "ir_lowerer" / "IrLowererAccessTargetResolution.cpp";
-  const std::filesystem::path accessLoadHelpersPath =
-      repoRoot / "src" / "ir_lowerer" / "IrLowererAccessLoadHelpers.cpp";
-  const std::filesystem::path indexedAccessEmitPath =
-      repoRoot / "src" / "ir_lowerer" / "IrLowererIndexedAccessEmit.cpp";
-  const std::filesystem::path callResolutionPath =
-      repoRoot / "src" / "ir_lowerer" / "IrLowererCallResolution.cpp";
-  const std::filesystem::path inlineDispatchPath =
-      repoRoot / "src" / "ir_lowerer" / "IrLowererInlineNativeCallDispatch.cpp";
-  const std::filesystem::path inlineCallContextHelpersPath =
-      repoRoot / "src" / "ir_lowerer" / "IrLowererInlineCallContextHelpers.cpp";
-  const std::filesystem::path inlineParamHelpersPath =
-      repoRoot / "src" / "ir_lowerer" / "IrLowererInlineParamHelpers.cpp";
-  const std::filesystem::path inlineStructArgHelpersPath =
-      repoRoot / "src" / "ir_lowerer" / "IrLowererInlineStructArgHelpers.cpp";
-  const std::filesystem::path uninitializedStructInferencePath =
-      repoRoot / "src" / "ir_lowerer" / "IrLowererUninitializedStructInference.cpp";
-  const std::filesystem::path setupTypeMethodTargetHelpersPath =
-      repoRoot / "src" / "ir_lowerer" / "IrLowererSetupTypeMethodTargetHelpers.cpp";
-  const std::filesystem::path countAccessClassifiersPath =
-      repoRoot / "src" / "ir_lowerer" / "IrLowererCountAccessClassifiers.cpp";
-  const std::filesystem::path countAccessHelpersPath =
-      repoRoot / "src" / "ir_lowerer" / "IrLowererCountAccessHelpers.cpp";
-  const std::filesystem::path flowVectorResolutionHelpersPath =
-      repoRoot / "src" / "ir_lowerer" / "IrLowererFlowVectorResolutionHelpers.cpp";
-  const std::filesystem::path nativeTailDispatchPath =
-      repoRoot / "src" / "ir_lowerer" / "IrLowererNativeTailDispatch.cpp";
-  const std::filesystem::path tailDispatchPath =
-      repoRoot / "src" / "ir_lowerer" / "IrLowererLowerEmitExprTailDispatch.h";
-  const std::filesystem::path lowerEmitExprPath =
-      repoRoot / "src" / "ir_lowerer" / "IrLowererLowerEmitExpr.h";
-  const std::filesystem::path lowerInlineCallsPath =
-      repoRoot / "src" / "ir_lowerer" / "IrLowererLowerInlineCalls.h";
-  const std::filesystem::path emitExprTryHelpersPath =
-      repoRoot / "src" / "ir_lowerer" / "IrLowererLowerEmitExprTryHelpers.h";
-  const std::filesystem::path lowerStatementsExprPath =
-      repoRoot / "src" / "ir_lowerer" / "IrLowererLowerStatementsExpr.h";
-  const std::filesystem::path lowerStatementsBindingsPath =
-      repoRoot / "src" / "ir_lowerer" / "IrLowererLowerStatementsBindings.h";
-  const std::filesystem::path lowerStatementsCallsStepPath =
-      repoRoot / "src" / "ir_lowerer" / "IrLowererLowerStatementsCallsStep.cpp";
-  const std::filesystem::path lowerStatementsLoopsPath =
-      repoRoot / "src" / "ir_lowerer" / "IrLowererLowerStatementsLoops.h";
-  const std::filesystem::path statementCallEmissionPath =
-      repoRoot / "src" / "ir_lowerer" / "IrLowererStatementCallEmission.cpp";
-  const std::filesystem::path operatorCollectionMutationHelpersPath =
-      repoRoot / "src" / "ir_lowerer" / "IrLowererOperatorCollectionMutationHelpers.cpp";
-  const std::filesystem::path operatorMemoryPointerHelpersPath =
-      repoRoot / "src" / "ir_lowerer" / "IrLowererOperatorMemoryPointerHelpers.cpp";
-  const std::filesystem::path stringCallHelpersPath =
-      repoRoot / "src" / "ir_lowerer" / "IrLowererStringCallHelpers.cpp";
-  const std::filesystem::path builtinNameHelpersPath =
-      repoRoot / "src" / "ir_lowerer" / "IrLowererBuiltinNameHelpers.cpp";
-  const std::filesystem::path astCallPathHelpersPath =
-      repoRoot / "include" / "primec" / "AstCallPathHelpers.h";
-  REQUIRE(std::filesystem::exists(callHelpersPath));
-  REQUIRE(std::filesystem::exists(accessTargetResolutionPath));
-  REQUIRE(std::filesystem::exists(accessLoadHelpersPath));
-  REQUIRE(std::filesystem::exists(indexedAccessEmitPath));
-  REQUIRE(std::filesystem::exists(callResolutionPath));
-  REQUIRE(std::filesystem::exists(inlineDispatchPath));
-  REQUIRE(std::filesystem::exists(inlineCallContextHelpersPath));
-  REQUIRE(std::filesystem::exists(inlineParamHelpersPath));
-  REQUIRE(std::filesystem::exists(inlineStructArgHelpersPath));
-  REQUIRE(std::filesystem::exists(uninitializedStructInferencePath));
-  REQUIRE(std::filesystem::exists(setupTypeMethodTargetHelpersPath));
-  REQUIRE(std::filesystem::exists(countAccessClassifiersPath));
-  REQUIRE(std::filesystem::exists(countAccessHelpersPath));
-  CHECK_FALSE(std::filesystem::exists(flowVectorResolutionHelpersPath));
-  REQUIRE(std::filesystem::exists(nativeTailDispatchPath));
-  REQUIRE(std::filesystem::exists(tailDispatchPath));
-  REQUIRE(std::filesystem::exists(lowerEmitExprPath));
-  REQUIRE(std::filesystem::exists(lowerInlineCallsPath));
-  REQUIRE(std::filesystem::exists(emitExprTryHelpersPath));
-  REQUIRE(std::filesystem::exists(lowerStatementsExprPath));
-  REQUIRE(std::filesystem::exists(lowerStatementsBindingsPath));
-  REQUIRE(std::filesystem::exists(lowerStatementsCallsStepPath));
-  REQUIRE(std::filesystem::exists(lowerStatementsLoopsPath));
-  REQUIRE(std::filesystem::exists(statementCallEmissionPath));
-  REQUIRE(std::filesystem::exists(operatorCollectionMutationHelpersPath));
-  REQUIRE(std::filesystem::exists(operatorMemoryPointerHelpersPath));
-  REQUIRE(std::filesystem::exists(stringCallHelpersPath));
-  REQUIRE(std::filesystem::exists(builtinNameHelpersPath));
-  REQUIRE(std::filesystem::exists(astCallPathHelpersPath));
-  const std::string callHelpersSource = readText(callHelpersPath);
-  const std::string accessTargetResolutionSource = readText(accessTargetResolutionPath);
-  const std::string accessLoadHelpersSource = readText(accessLoadHelpersPath);
-  const std::string indexedAccessEmitSource = readText(indexedAccessEmitPath);
-  const std::string callResolutionSource = readText(callResolutionPath);
-  const std::string inlineDispatchSource = readText(inlineDispatchPath);
-  const std::string inlineCallContextHelpersSource =
-      readText(inlineCallContextHelpersPath);
-  const std::string inlineParamHelpersSource = readText(inlineParamHelpersPath);
-  const std::string inlineStructArgHelpersSource =
-      readText(inlineStructArgHelpersPath);
-  const std::string uninitializedStructInferenceSource =
-      readText(uninitializedStructInferencePath);
-  const std::string setupTypeMethodTargetHelpersSource =
-      readText(setupTypeMethodTargetHelpersPath);
-  const std::string countAccessClassifiersSource = readText(countAccessClassifiersPath);
-  const std::string countAccessHelpersSource = readText(countAccessHelpersPath);
-  const std::string nativeTailDispatchSource = readText(nativeTailDispatchPath);
-  const std::string tailDispatchSource = readText(tailDispatchPath);
-  const std::string lowerEmitExprSource = readText(lowerEmitExprPath);
-  const std::string lowerInlineCallsSource = readText(lowerInlineCallsPath);
-  const std::string emitExprTryHelpersSource = readText(emitExprTryHelpersPath);
-  const std::string lowerStatementsExprSource = readText(lowerStatementsExprPath);
-  const std::string lowerStatementsBindingsSource =
-      readText(lowerStatementsBindingsPath);
-  const std::string lowerStatementsCallsStepSource =
-      readText(lowerStatementsCallsStepPath);
-  const std::string lowerStatementsLoopsSource =
-      readText(lowerStatementsLoopsPath);
-  const std::string statementCallEmissionSource =
-      readText(statementCallEmissionPath);
-  const std::string operatorCollectionMutationHelpersSource =
-      readText(operatorCollectionMutationHelpersPath);
-  const std::string operatorMemoryPointerHelpersSource =
-      readText(operatorMemoryPointerHelpersPath);
-  const std::string stringCallHelpersSource = readText(stringCallHelpersPath);
-  const std::string builtinNameHelpersSource = readText(builtinNameHelpersPath);
-  const std::string astCallPathHelpersSource = readText(astCallPathHelpersPath);
+  const auto adapters = primec::ir_lowerer::makeCallResolutionAdapters(defMap, importAliases);
 
-  CHECK(builtinNameHelpersSource.find("matchAccessAlias(scopedName, \"map/\", \"Map\")") ==
-        std::string::npos);
+  primec::Expr directCall;
+  directCall.kind = primec::Expr::Kind::Call;
+  directCall.namespacePrefix = "/main";
+  directCall.name = "direct";
+  CHECK(adapters.resolveExprPath(directCall) == directDef.fullPath);
+  CHECK(primec::ir_lowerer::resolveDefinitionCall(directCall,
+                                                  defMap,
+                                                  adapters.resolveExprPath) == &directDef);
 
-  CHECK(callHelpersSource.find("const Definition *resolveDefinitionCall(const Expr &callExpr,") ==
-        std::string::npos);
-  CHECK(callHelpersSource.find("ResolveDefinitionCallFn makeResolveDefinitionCall(") ==
-        std::string::npos);
-  CHECK(callHelpersSource.find("CallResolutionAdapters makeCallResolutionAdapters(") ==
-        std::string::npos);
-  CHECK(callHelpersSource.find("EntryCallResolutionSetup buildEntryCallResolutionSetup(") ==
-        std::string::npos);
-  CHECK(callHelpersSource.find("ResolveExprPathFn makeResolveCallPathFromScope(") ==
-        std::string::npos);
-  CHECK(callHelpersSource.find("IsTailCallCandidateFn makeIsTailCallCandidate(") ==
-        std::string::npos);
-  CHECK(callHelpersSource.find("DefinitionExistsFn makeDefinitionExistsByPath(") ==
-        std::string::npos);
-  CHECK(callHelpersSource.find("std::string resolveCallPathFromScope(") == std::string::npos);
-  CHECK(callHelpersSource.find("bool isTailCallCandidate(const Expr &expr,") ==
-        std::string::npos);
-  CHECK(callHelpersSource.find("bool hasTailExecutionCandidate(const std::vector<Expr> &statements,") ==
-        std::string::npos);
-  CHECK(callHelpersSource.find("ResolvedInlineCallResult emitResolvedInlineDefinitionCall(") ==
-        std::string::npos);
-  CHECK(callHelpersSource.find("InlineCallDispatchResult tryEmitInlineCallWithCountFallbacks(") ==
-        std::string::npos);
-  CHECK(callHelpersSource.find("InlineCallDispatchResult tryEmitInlineCallDispatchWithLocals(") ==
-        std::string::npos);
-  CHECK(callHelpersSource.find("bool isKeyValueContainsHelperName(const Expr &expr) {") ==
-        std::string::npos);
-  CHECK(callHelpersSource.find("bool isKeyValueTryAtHelperName(const Expr &expr) {") ==
-        std::string::npos);
-  CHECK(callHelpersSource.find(
-            "directHelperPath.rfind(\"/std/collections/experimental_map/\", 0) == 0") ==
-        std::string::npos);
-  CHECK(callHelpersSource.find("bool isVectorTarget(const Expr &expr, const LocalMap &localsIn) {") ==
-        std::string::npos);
-  CHECK(callHelpersSource.find("bool isSoaVectorTarget(const Expr &expr, const LocalMap &localsIn) {") ==
-        std::string::npos);
-  CHECK(callHelpersSource.find("UnsupportedNativeCallResult emitUnsupportedNativeCallDiagnostic(") ==
-        std::string::npos);
-  CHECK(callHelpersSource.find("NativeCallTailDispatchResult tryEmitNativeCallTailDispatch(") ==
-        std::string::npos);
-  CHECK(callHelpersSource.find("NativeCallTailDispatchResult tryEmitNativeCallTailDispatchWithLocals(") ==
-        std::string::npos);
-  CHECK(callHelpersSource.find("CollectionPairTypeInfo resolveCollectionPairTypeInfo(") ==
-        std::string::npos);
-  CHECK(callHelpersSource.find("bool validateCollectionPairTypeInfo(const CollectionPairTypeInfo &targetInfo,") ==
-        std::string::npos);
-  CHECK(callHelpersSource.find("NonLiteralStringAccessTargetResult validateNonLiteralStringAccessTarget(") ==
-        std::string::npos);
-  CHECK(callHelpersSource.find("bool resolveValidatedAccessIndexKind(") ==
-        std::string::npos);
-  CHECK(callHelpersSource.find("ArrayVectorAccessTargetInfo resolveArrayVectorAccessTargetInfo(") ==
-        std::string::npos);
-  CHECK(callHelpersSource.find("KeyValueAccessLookupEmitResult tryEmitKeyValueAccessLookup(") ==
-        std::string::npos);
-  CHECK(callHelpersSource.find("KeyValueAccessLookupEmitResult tryEmitKeyValueContainsLookup(") ==
-        std::string::npos);
-  CHECK(callHelpersSource.find("StringTableAccessEmitResult tryEmitStringTableAccessLoad(") ==
-        std::string::npos);
-  CHECK(callHelpersSource.find("bool validateArrayVectorAccessTargetInfo(const ArrayVectorAccessTargetInfo &targetInfo,") ==
-        std::string::npos);
-  CHECK(callHelpersSource.find("bool emitArrayVectorIndexedAccess(") ==
-        std::string::npos);
-  CHECK(callHelpersSource.find("bool emitBuiltinArrayAccess(") ==
-        std::string::npos);
-  CHECK(callHelpersSource.find("BufferBuiltinDispatchResult tryEmitBufferBuiltinDispatchWithLocals(") !=
-        std::string::npos);
-  CHECK(callHelpersSource.find("resolveCanonicalVectorHelperDefinitionMember(") !=
-        std::string::npos);
-  CHECK(callHelpersSource.find("vectorHelperSurfaceMetadata()") !=
-        std::string::npos);
-  CHECK(callHelpersSource.find("findStdlibSurfaceMetadataByBridgeKey(\"collections.vector_helpers\")") ==
-        std::string::npos);
-  CHECK(callHelpersSource.find("std/collections/vector/") == std::string::npos);
-  CHECK(callHelpersSource.find("std/collections/experimental_vector") == std::string::npos);
-  CHECK(callHelpersSource.find("StdlibSurfaceId::CollectionsManifestSurface0") ==
-        std::string::npos);
-  CHECK(callHelpersSource.find("\"/vector/\"") == std::string::npos);
-  CHECK(callHelpersSource.find("IrOpcode keyValueKeyCompareOpcode(") ==
-        std::string::npos);
-  CHECK(callHelpersSource.find("KeyValueLookupStringKeyResult tryResolveKeyValueLookupStringKey(") ==
-        std::string::npos);
-  CHECK(callHelpersSource.find("KeyValueLookupKeyLocalEmitResult tryEmitKeyValueLookupStringKeyLocal(") ==
-        std::string::npos);
-  CHECK(callHelpersSource.find("bool emitKeyValueLookupNonStringKeyLocal(") ==
-        std::string::npos);
-  CHECK(callHelpersSource.find("bool emitKeyValueLookupKeyLocal(") ==
-        std::string::npos);
-  CHECK(callHelpersSource.find("bool emitKeyValueLookupTargetPointerLocal(") ==
-        std::string::npos);
-  CHECK(callHelpersSource.find("KeyValueLookupLoopLocals emitKeyValueLookupLoopSearchScaffold(") ==
-        std::string::npos);
-  CHECK(callHelpersSource.find("void emitKeyValueLookupAccessEpilogue(") ==
-        std::string::npos);
-  CHECK(callHelpersSource.find("void emitKeyValueLookupContainsResult(") ==
-        std::string::npos);
-  CHECK(callHelpersSource.find("bool emitKeyValueLookupAccess(") ==
-        std::string::npos);
-  CHECK(callHelpersSource.find("bool emitKeyValueLookupContains(") ==
-        std::string::npos);
-  CHECK(callHelpersSource.find("bool emitKeyValueLookupTryAt(") ==
-        std::string::npos);
-  CHECK(callHelpersSource.find("void emitStringAccessLoad(") ==
-        std::string::npos);
-  CHECK(callHelpersSource.find("void emitArrayVectorAccessLoad(") ==
-        std::string::npos);
-  CHECK(callHelpersSource.find("bool validateKeyValueLookupKeyKind(") ==
-        std::string::npos);
+  primec::Expr importedCall;
+  importedCall.kind = primec::Expr::Kind::Call;
+  importedCall.name = "importedAlias";
+  CHECK(adapters.resolveExprPath(importedCall) == importedDef.fullPath);
+  CHECK(primec::ir_lowerer::resolveDefinitionCall(importedCall,
+                                                  defMap,
+                                                  adapters.resolveExprPath) == &importedDef);
+  CHECK(adapters.isTailCallCandidate(importedCall));
+  CHECK(adapters.definitionExists(importedDef.fullPath));
 
-  CHECK(accessTargetResolutionSource.find("CollectionPairTypeInfo resolveCollectionPairTypeInfo(") !=
-        std::string::npos);
-  CHECK(accessTargetResolutionSource.find("bool validateCollectionPairTypeInfo(const CollectionPairTypeInfo &targetInfo,") !=
-        std::string::npos);
-  CHECK(accessTargetResolutionSource.find("KeyValueAccessTargetInfo") ==
-        std::string::npos);
-  CHECK(accessTargetResolutionSource.find("ResolveCallKeyValueAccessTargetInfoFn") ==
-        std::string::npos);
-  CHECK(accessTargetResolutionSource.find("resolveKeyValueAccessTargetInfo") ==
-        std::string::npos);
-  CHECK(accessTargetResolutionSource.find("inferForwardedKeyValueAccessTargetInfo") ==
-        std::string::npos);
-  CHECK(accessTargetResolutionSource.find("validateKeyValueAccessTargetInfo") ==
-        std::string::npos);
-  CHECK(accessTargetResolutionSource.find("NonLiteralStringAccessTargetResult validateNonLiteralStringAccessTarget(") !=
-        std::string::npos);
-  CHECK(accessTargetResolutionSource.find("bool resolveValidatedAccessIndexKind(") !=
-        std::string::npos);
-  CHECK(accessTargetResolutionSource.find("ArrayVectorAccessTargetInfo resolveArrayVectorAccessTargetInfo(") !=
-        std::string::npos);
-  CHECK(accessTargetResolutionSource.find("ArrayVectorAccessTargetInfo inferred;") !=
-        std::string::npos);
-  CHECK(accessTargetResolutionSource.find("KeyValueAccessLookupEmitResult tryEmitKeyValueAccessLookup(") ==
-        std::string::npos);
-  CHECK(accessTargetResolutionSource.find("bool emitBuiltinArrayAccess(") ==
-        std::string::npos);
-  const size_t nonLiteralStringAccessPos = accessTargetResolutionSource.find(
-      "NonLiteralStringAccessTargetResult validateNonLiteralStringAccessTarget(");
-  REQUIRE(nonLiteralStringAccessPos != std::string::npos);
-  const size_t nonLiteralStringSemanticKindPos = accessTargetResolutionSource.find(
-      "const SemanticStringAccessTargetKind semanticTargetKind =",
-      nonLiteralStringAccessPos);
-  const size_t nonLiteralStringGraphKindPos =
-      accessTargetResolutionSource.find("const LocalInfo::ValueKind targetKind =",
-                                        nonLiteralStringAccessPos);
-  const size_t nonLiteralStringLocalLookupPos =
-      accessTargetResolutionSource.find("localsIn.find(targetExpr.name)", nonLiteralStringAccessPos);
-  REQUIRE(nonLiteralStringSemanticKindPos != std::string::npos);
-  REQUIRE(nonLiteralStringGraphKindPos != std::string::npos);
-  REQUIRE(nonLiteralStringLocalLookupPos != std::string::npos);
-  CHECK(nonLiteralStringSemanticKindPos < nonLiteralStringGraphKindPos);
-  CHECK(nonLiteralStringGraphKindPos < nonLiteralStringLocalLookupPos);
-  CHECK(accessTargetResolutionSource.find("SemanticStringAccessTargetKind::NonString",
-                                          nonLiteralStringSemanticKindPos) != std::string::npos);
-  CHECK(accessTargetResolutionSource.find("targetKind != LocalInfo::ValueKind::Unknown",
-                                          nonLiteralStringGraphKindPos) != std::string::npos);
-  CHECK(accessTargetResolutionSource.find("targetKind != LocalInfo::ValueKind::String",
-                                          nonLiteralStringGraphKindPos) != std::string::npos);
-  CHECK(accessTargetResolutionSource.find("targetKind == LocalInfo::ValueKind::String",
-                                          nonLiteralStringGraphKindPos) != std::string::npos);
+  primec::Expr missingCall = importedCall;
+  missingCall.name = "missing";
+  CHECK_FALSE(adapters.isTailCallCandidate(missingCall));
+  CHECK_FALSE(adapters.definitionExists("/pkg/missing"));
 
-  CHECK(accessLoadHelpersSource.find("IrOpcode keyValueKeyCompareOpcode(") !=
-        std::string::npos);
-  CHECK(accessLoadHelpersSource.find("KeyValueLookupStringKeyResult tryResolveKeyValueLookupStringKey(") !=
-        std::string::npos);
-  CHECK(accessLoadHelpersSource.find("KeyValueLookupKeyLocalEmitResult tryEmitKeyValueLookupStringKeyLocal(") !=
-        std::string::npos);
-  CHECK(accessLoadHelpersSource.find("bool emitKeyValueLookupNonStringKeyLocal(") !=
-        std::string::npos);
-  CHECK(accessLoadHelpersSource.find("bool emitKeyValueLookupKeyLocal(") !=
-        std::string::npos);
-  CHECK(accessLoadHelpersSource.find("bool emitKeyValueLookupTargetPointerLocal(") !=
-        std::string::npos);
-  CHECK(accessLoadHelpersSource.find("KeyValueLookupLoopLocals emitKeyValueLookupLoopSearchScaffold(") !=
-        std::string::npos);
-  CHECK(accessLoadHelpersSource.find("void emitKeyValueLookupAccessEpilogue(") !=
-        std::string::npos);
-  CHECK(accessLoadHelpersSource.find("void emitKeyValueLookupContainsResult(") !=
-        std::string::npos);
-  CHECK(accessLoadHelpersSource.find("bool emitKeyValueLookupAccess(") !=
-        std::string::npos);
-  CHECK(accessLoadHelpersSource.find("bool emitKeyValueLookupContains(") !=
-        std::string::npos);
-  CHECK(accessLoadHelpersSource.find("bool emitKeyValueLookupTryAt(") !=
-        std::string::npos);
-  CHECK(accessLoadHelpersSource.find(
-            "isKeyValueStorageStructPath(mapStructTypeName)") !=
-        std::string::npos);
-  CHECK(accessLoadHelpersSource.find("bool isExperimentalMapStructPath(") ==
-        std::string::npos);
-  CHECK(accessLoadHelpersSource.find("/std/collections/experimental_map/Map__") ==
-        std::string::npos);
-  CHECK(accessLoadHelpersSource.find("void emitStringAccessLoad(") !=
-        std::string::npos);
-  CHECK(accessLoadHelpersSource.find("void emitArrayVectorAccessLoad(") !=
-        std::string::npos);
-  CHECK(accessLoadHelpersSource.find("bool validateKeyValueLookupKeyKind(") !=
-        std::string::npos);
-  CHECK(accessLoadHelpersSource.find("CountMethodFallbackResult tryEmitNonMethodCountFallback(") ==
-        std::string::npos);
-  const size_t keyValueLookupStringKeyPos =
-      accessLoadHelpersSource.find("KeyValueLookupStringKeyResult tryResolveKeyValueLookupStringKey(");
-  REQUIRE(keyValueLookupStringKeyPos != std::string::npos);
-  const size_t keyValueLookupGraphKindPos = accessLoadHelpersSource.find(
-      "const LocalInfo::ValueKind lookupKeyKind = inferExprKind(lookupKeyExpr, localsIn);",
-      keyValueLookupStringKeyPos);
-  const size_t keyValueLookupStringTablePos =
-      accessLoadHelpersSource.find("resolveStringTableTarget(lookupKeyExpr, localsIn",
-                                   keyValueLookupStringKeyPos);
-  REQUIRE(keyValueLookupGraphKindPos != std::string::npos);
-  REQUIRE(keyValueLookupStringTablePos != std::string::npos);
-  CHECK(keyValueLookupGraphKindPos < keyValueLookupStringTablePos);
-  CHECK(accessLoadHelpersSource.find("lookupKeyKind != LocalInfo::ValueKind::Unknown",
-                                     keyValueLookupGraphKindPos) != std::string::npos);
-  CHECK(accessLoadHelpersSource.find("lookupKeyKind != LocalInfo::ValueKind::String",
-                                     keyValueLookupGraphKindPos) != std::string::npos);
+  primec::Expr methodCall = importedCall;
+  methodCall.isMethodCall = true;
+  CHECK(primec::ir_lowerer::resolveDefinitionCall(methodCall,
+                                                  defMap,
+                                                  adapters.resolveExprPath) == nullptr);
 
-  CHECK(indexedAccessEmitSource.find("KeyValueAccessLookupEmitResult tryEmitKeyValueAccessLookup(") ==
-        std::string::npos);
-  CHECK(indexedAccessEmitSource.find("KeyValueAccessLookupEmitResult tryEmitKeyValueContainsLookup(") ==
-        std::string::npos);
-  CHECK(indexedAccessEmitSource.find("StringTableAccessEmitResult tryEmitStringTableAccessLoad(") !=
-        std::string::npos);
-  CHECK(indexedAccessEmitSource.find("enum class DynamicStringAccessEmitResult") !=
-        std::string::npos);
-  CHECK(indexedAccessEmitSource.find("bool validateArrayVectorAccessTargetInfo(const ArrayVectorAccessTargetInfo &targetInfo,") !=
-        std::string::npos);
-  CHECK(indexedAccessEmitSource.find("bool emitArrayVectorIndexedAccess(") !=
-        std::string::npos);
-  CHECK(indexedAccessEmitSource.find("bool emitBuiltinArrayAccess(") !=
-        std::string::npos);
-  CHECK(indexedAccessEmitSource.find("bool emitKeyValueLookupAccess(") ==
-        std::string::npos);
-  const size_t dynamicStringAccessPos =
-      indexedAccessEmitSource.find("DynamicStringAccessEmitResult tryEmitDynamicStringAccessLoad(");
-  REQUIRE(dynamicStringAccessPos != std::string::npos);
-  const size_t dynamicStringGraphKindDeclarationPos = indexedAccessEmitSource.find(
-      "const LocalInfo::ValueKind targetKind =",
-      dynamicStringAccessPos);
-  const size_t dynamicStringGraphKindPos = indexedAccessEmitSource.find(
-      "inferExprKind(targetExpr, localsIn)",
-      dynamicStringGraphKindDeclarationPos);
-  const size_t dynamicStringLocalLookupPos =
-      indexedAccessEmitSource.find("localsIn.find(targetExpr.name)", dynamicStringAccessPos);
-  REQUIRE(dynamicStringGraphKindDeclarationPos != std::string::npos);
-  REQUIRE(dynamicStringGraphKindPos != std::string::npos);
-  REQUIRE(dynamicStringLocalLookupPos != std::string::npos);
-  CHECK(dynamicStringGraphKindPos < dynamicStringLocalLookupPos);
-  CHECK(indexedAccessEmitSource.find("targetKind != LocalInfo::ValueKind::Unknown",
-                                     dynamicStringGraphKindPos) != std::string::npos);
-  CHECK(indexedAccessEmitSource.find("targetKind != LocalInfo::ValueKind::String",
-                                     dynamicStringGraphKindPos) != std::string::npos);
-  CHECK(indexedAccessEmitSource.find("} else if (targetKind == LocalInfo::ValueKind::String) {",
-                                     dynamicStringLocalLookupPos) != std::string::npos);
+  int emittedInlineCalls = 0;
+  std::string error;
+  CHECK(primec::ir_lowerer::emitResolvedInlineDefinitionCall(
+            importedCall,
+            &importedDef,
+            [&](const primec::Expr &expr, const primec::Definition &definition) {
+              CHECK(expr.name == "importedAlias");
+              CHECK(&definition == &importedDef);
+              ++emittedInlineCalls;
+              return true;
+            },
+            error) == ResolvedInlineResult::Emitted);
+  CHECK(error.empty());
+  CHECK(emittedInlineCalls == 1);
 
-  CHECK(callResolutionSource.find("const Definition *resolveDefinitionCall(const Expr &callExpr,") !=
-        std::string::npos);
-  CHECK(callResolutionSource.find("ResolveDefinitionCallFn makeResolveDefinitionCall(") !=
-        std::string::npos);
-  CHECK(callResolutionSource.find("CallResolutionAdapters makeCallResolutionAdapters(") !=
-        std::string::npos);
-  CHECK(callResolutionSource.find("bool validateSemanticProductMethodCallCoverage(const Program &program,") !=
-        std::string::npos);
-  CHECK(callResolutionSource.find("EntryCallResolutionSetup buildEntryCallResolutionSetup(") !=
-        std::string::npos);
-  CHECK(callResolutionSource.find("ResolveExprPathFn makeResolveCallPathFromScope(") !=
-        std::string::npos);
-  CHECK(callResolutionSource.find("IsTailCallCandidateFn makeIsTailCallCandidate(") !=
-        std::string::npos);
-  CHECK(callResolutionSource.find("DefinitionExistsFn makeDefinitionExistsByPath(") !=
-        std::string::npos);
-  CHECK(callResolutionSource.find("std::string resolveCallPathFromScope(") !=
-        std::string::npos);
-  CHECK(callResolutionSource.find("bool isTailCallCandidate(const Expr &expr,") !=
-        std::string::npos);
-  CHECK(callResolutionSource.find("bool hasTailExecutionCandidate(const std::vector<Expr> &statements,") !=
-        std::string::npos);
-  CHECK(callResolutionSource.find("bool isMapBuiltinResolvedPath(const SemanticProgram *semanticProgram,") ==
-        std::string::npos);
-  CHECK(callResolutionSource.find("isBuiltinPublishedMapHelperName(expr, semanticHelperName)") ==
-        std::string::npos);
-  CHECK(callResolutionSource.find("const auto mapHelperPath = [](std::string_view memberName)") ==
-        std::string::npos);
-  CHECK(callResolutionSource.find("return matchesResolvedPath(mapHelperPath(\"contains\")) ||") ==
-        std::string::npos);
-  CHECK(callResolutionSource.find("return matchesResolvedPath(mapHelperPath(\"tryAt\")) ||") ==
-        std::string::npos);
-  CHECK(callResolutionSource.find("matchesResolvedPath(\"/std/collections/mapCount\")") ==
-        std::string::npos);
-  CHECK(callResolutionSource.find("matchesResolvedPath(\"/std/collections/mapContains\")") ==
-        std::string::npos);
-  CHECK(callResolutionSource.find("matchesResolvedPath(\"/std/collections/mapTryAt\")") ==
-        std::string::npos);
-  CHECK(callResolutionSource.find("matchesResolvedPath(\"/std/collections/mapAt\")") ==
-        std::string::npos);
-  CHECK(callResolutionSource.find("matchesResolvedPath(\"/std/collections/mapAtUnsafe\")") ==
-        std::string::npos);
-  CHECK(callResolutionSource.find("matchesResolvedPath(\"/std/collections/mapInsert\")") ==
-        std::string::npos);
-  CHECK(callResolutionSource.find("/std/collections/experimental_map/mapCount") ==
-        std::string::npos);
-  CHECK(callResolutionSource.find("/std/collections/experimental_map/mapContains") ==
-        std::string::npos);
-  CHECK(callResolutionSource.find("/std/collections/experimental_map/mapTryAt") ==
-        std::string::npos);
-  CHECK(callResolutionSource.find("/std/collections/experimental_map/mapAt") ==
-        std::string::npos);
-  CHECK(callResolutionSource.find("/std/collections/experimental_map/mapInsert") ==
-        std::string::npos);
-  CHECK(callResolutionSource.find("bool isPublishedCollectionBridgeStdlibSurfaceId(") !=
-        std::string::npos);
-  CHECK(callResolutionSource.find("findSemanticProductDirectCallStdlibSurfaceId(semanticProgram, expr)") !=
-        std::string::npos);
-  CHECK(callResolutionSource.find("findSemanticProductBridgePathChoiceStdlibSurfaceId(semanticProgram, expr)") !=
-        std::string::npos);
-  CHECK(callResolutionSource.find("vectorHelperSurfaceMetadata()") !=
-        std::string::npos);
-  CHECK(callResolutionSource.find("keyValueHelperSurfaceMetadata()") !=
-        std::string::npos);
-  CHECK(callResolutionSource.find("findStdlibSurfaceMetadataByBridgeKey(\"collections.vector_helpers\")") ==
-        std::string::npos);
-  CHECK(callResolutionSource.find("findStdlibSurfaceMetadataByBridgeKey(\"collections.map_helpers\")") ==
-        std::string::npos);
-  CHECK(callResolutionSource.find("StdlibSurfaceId::CollectionsMapHelpers") ==
-        std::string::npos);
-  CHECK(callResolutionSource.find("StdlibSurfaceId::CollectionsColumnarHelpers") !=
-        std::string::npos);
-  CHECK(callResolutionSource.find("normalizeMapImportAliasPath(") !=
-        std::string::npos);
-  CHECK(callResolutionSource.find(
-            "const std::string rawPath = resolveCallPathWithoutSemanticFallbackProbes(expr);") !=
-        std::string::npos);
-  CHECK(callResolutionSource.find("const bool hasSemanticRootedRewrite =") !=
-        std::string::npos);
-  CHECK(callResolutionSource.find("preferExplicitExperimentalMapHelperDefinition(") ==
-        std::string::npos);
-  CHECK(callResolutionSource.find("const size_t rawLeafStart = rawPath.find_last_of('/');") !=
-        std::string::npos);
-  CHECK(callResolutionSource.find("const bool hasGeneratedRootedRawPath =") !=
-        std::string::npos);
-  CHECK(callResolutionSource.find(
-            "rawPath.find(\"__t\", rawLeafStart == std::string::npos ? 0 : rawLeafStart + 1) !=") !=
-        std::string::npos);
-  CHECK(callResolutionSource.find(
-            "rawPath.find(\"__ov\", rawLeafStart == std::string::npos ? 0 : rawLeafStart + 1) !=") !=
-        std::string::npos);
-  CHECK(callResolutionSource.find("rawPath.front() == '/' &&") !=
-        std::string::npos);
-  CHECK(callResolutionSource.find("resolved.front() == '/' &&") !=
-        std::string::npos);
-  CHECK(callResolutionSource.find("(!hasSemanticRootedRewrite || hasGeneratedRootedRawPath)") !=
-        std::string::npos);
-  CHECK(callResolutionSource.find("const std::string canonicalMapRoot = stdCollectionMemberRoot(\"map\");") ==
-        std::string::npos);
-  CHECK(callResolutionSource.find("rawPath.rfind(canonicalMapRoot, 0) != 0 ||") ==
-        std::string::npos);
-  CHECK(callResolutionSource.find(
-            "rawPath.rfind(\"/std/collections/experimental_map/\", 0) != 0") ==
-        std::string::npos);
-  CHECK(callResolutionSource.find(
-            "resolvedPath.rfind(\"/std/collections/experimental_map/\", 0) != 0") ==
-        std::string::npos);
-  CHECK(callResolutionSource.find("return normalizeCollectionHelperPath(rawPath) ==") ==
-        std::string::npos);
-  CHECK(callResolutionSource.find("std::string resolveCallPathFromScopeWithoutImportAliases(") ==
-        std::string::npos);
-  CHECK(callResolutionSource.find("!isBridgeHelperCall(semanticProgram, expr, resolvedPath) &&") !=
-        std::string::npos);
-  CHECK(callResolutionSource.find("isResidualBridgeHelperPath(resolvedPath)") !=
-        std::string::npos);
-  CHECK(callResolutionSource.find("#include \"primec/SoaPathHelpers.h\"") !=
-        std::string::npos);
-  CHECK(callResolutionSource.find("soa_paths::collectionPath(soa_paths::legacySoaFolder())") !=
-        std::string::npos);
-  CHECK(callResolutionSource.find("\"/std/collections/soa_vector/\"") ==
-        std::string::npos);
-  CHECK(callResolutionSource.find("\"soa_vector\"") == std::string::npos);
-  CHECK(callResolutionSource.find("\"to_aos\"") == std::string::npos);
-  CHECK(callResolutionSource.find("isResidualBridgeHelperPath(fallbackResolvedPath)") ==
-        std::string::npos);
-  CHECK(callResolutionSource.find(
-            "!isResidualBridgeHelperPath(directTarget.resolvedPath)) {\n"
-            "        return directTarget.resolvedPath;\n"
-            "      }\n"
-            "      return resolveCallPathWithoutSemanticFallbackProbes(expr);") !=
-        std::string::npos);
-  CHECK(callResolutionSource.find("!isResolvedBridgeHelperPath(resolvedPath) &&") ==
-        std::string::npos);
-  CHECK(callResolutionSource.find("isResolvedBridgeHelperPath(fallbackResolvedPath) &&") ==
-        std::string::npos);
+  primec::Expr blockCall = importedCall;
+  blockCall.hasBodyArguments = true;
+  error.clear();
+  CHECK(primec::ir_lowerer::emitResolvedInlineDefinitionCall(
+            blockCall,
+            &importedDef,
+            [](const primec::Expr &, const primec::Definition &) { return true; },
+            error) == ResolvedInlineResult::Error);
+  CHECK(error == "native backend does not support block arguments on calls");
 
-  CHECK(inlineDispatchSource.find("bool isMapBuiltinInlinePath(const Expr &expr, const Definition &callee)") ==
-        std::string::npos);
-  CHECK(inlineDispatchSource.find("#include \"primec/StdlibSurfaceRegistry.h\"") !=
-        std::string::npos);
-  CHECK(inlineDispatchSource.find("resolvePublishedInlineKeyValueHelperName(callee.fullPath, helperName)") !=
-        std::string::npos);
-  CHECK(inlineDispatchSource.find("findStdlibSurfaceMetadataByResolvedPath(resolvedPath)") !=
-        std::string::npos);
-  CHECK(inlineDispatchSource.find("metadata->id != keyValueMetadata->id") !=
-        std::string::npos);
-  CHECK(inlineDispatchSource.find("matchesInlineMapHelperFamily(aliasName, resolvedHelperName)") ==
-        std::string::npos);
-  CHECK(inlineDispatchSource.find("isInlineMapBuiltinHelperName(resolvedHelperName)") ==
-        std::string::npos);
-  CHECK(inlineDispatchSource.find("rawPath.rfind(\"/map/\", 0)") ==
-        std::string::npos);
-  CHECK(inlineDispatchSource.find("normalizedCalleePath.rfind(\"/map/\", 0)") ==
-        std::string::npos);
-  CHECK(inlineDispatchSource.find("rewriteCanonicalPrefix(\"/std/collections/map/\")") ==
-        std::string::npos);
-  CHECK(inlineDispatchSource.find("rewriteCanonicalPrefix(\"/std/collections/experimental_map/\")") ==
-        std::string::npos);
-  CHECK(inlineDispatchSource.find(
-            "rawPath.rfind(\"/std/collections/experimental_map/\", 0) == 0") ==
-        std::string::npos);
-  CHECK(inlineDispatchSource.find(
-            "scopedExprPath.rfind(\"/std/collections/experimental_map/map\", 0)") ==
-        std::string::npos);
-  CHECK(inlineDispatchSource.find(
-            "callee.fullPath.rfind(\"/std/collections/experimental_map/map\", 0)") ==
-        std::string::npos);
-  CHECK(inlineDispatchSource.find("normalized = \"/map/\" +") ==
-        std::string::npos);
-  CHECK(inlineDispatchSource.find("isExplicitSamePathKeyValueCountLikeDefinitionCall(") ==
-        std::string::npos);
-  CHECK(inlineDispatchSource.find("isExplicitMapContainsOrTryAtMethodPath(") ==
-        std::string::npos);
-  CHECK(inlineDispatchSource.find("std::string normalizedName = scopedExprPath;") ==
-        std::string::npos);
-  CHECK(inlineDispatchSource.find("bool isKeyValueContainsHelperName(const Expr &expr)") !=
-        std::string::npos);
-  CHECK(inlineDispatchSource.find("bool isKeyValueTryAtHelperName(const Expr &expr)") !=
-        std::string::npos);
-  CHECK(inlineDispatchSource.find("matchesHelper(\"/std/collections/map/contains\")") ==
-        std::string::npos);
-  CHECK(inlineDispatchSource.find("matchesHelper(\"/std/collections/experimental_map/mapContainsRef\")") ==
-        std::string::npos);
-  CHECK(inlineDispatchSource.find("/std/collections/experimental_map/mapCount") ==
-        std::string::npos);
-  CHECK(inlineDispatchSource.find("/std/collections/experimental_map/mapContains") ==
-        std::string::npos);
-  CHECK(inlineDispatchSource.find("/std/collections/experimental_map/mapTryAt") ==
-        std::string::npos);
-  CHECK(inlineDispatchSource.find("/std/collections/experimental_map/mapAt") ==
-        std::string::npos);
-  CHECK(inlineDispatchSource.find("/std/collections/experimental_map/mapInsert") ==
-        std::string::npos);
-  CHECK(inlineDispatchSource.find("matchesHelper(\"/std/collections/map/tryAt\")") ==
-        std::string::npos);
-  CHECK(inlineDispatchSource.find("matchesHelper(\"/std/collections/map/insert\")") ==
-        std::string::npos);
-  CHECK(inlineDispatchSource.find("bool isVectorTarget(const Expr &expr, const LocalMap &localsIn)") !=
-        std::string::npos);
-  CHECK(inlineDispatchSource.find("return !hasNamedArguments(expr.argNames);") !=
-        std::string::npos);
-  CHECK(inlineDispatchSource.find("bool isSoaVectorTarget(const Expr &expr, const LocalMap &localsIn)") !=
-        std::string::npos);
-  CHECK(inlineDispatchSource.find("bool isCanonicalSoaToAosHelperCall(const Expr &expr)") ==
-        std::string::npos);
-  CHECK(inlineDispatchSource.find(
-            "isCanonicalCollectionHelperCall(expr, \"std/collections/\" \"soa\", \"to\" \"_aos\", 1)") !=
-        std::string::npos);
-  CHECK(inlineDispatchSource.find(
-            "isCanonicalCollectionHelperCall(expr, \"std/collections/\" \"soa\" \"_vector\", \"to\" \"_aos\", 1)") !=
-        std::string::npos);
-  CHECK(inlineDispatchSource.find("std/collections/soa_vector/to_aos") == std::string::npos);
-  CHECK(inlineDispatchSource.find("isSimpleCallName(expr, \"to_aos\")") == std::string::npos);
-  CHECK(inlineDispatchSource.find("std/collections/soa_vector/get") == std::string::npos);
-  CHECK(inlineDispatchSource.find("std/collections/soa_vector/ref") == std::string::npos);
-  CHECK(inlineDispatchSource.find("std/collections/soa_vector/count") == std::string::npos);
-  CHECK(inlineDispatchSource.find("std/collections/soa_vector/push") == std::string::npos);
-  CHECK(inlineDispatchSource.find("std/collections/soa_vector/reserve") == std::string::npos);
-  CHECK(inlineParamHelpersSource.find(
-            "soa_paths::isExperimentalColumnarVectorSpecializedTypePath(structPath)") !=
-        std::string::npos);
-  CHECK(inlineParamHelpersSource.find(
-            "structPath.rfind(\"/std/collections/experimental_soa_vector/SoaVector__\", 0) == 0") ==
-        std::string::npos);
-  CHECK(inlineParamHelpersSource.find(
-            "matchesPath(\"/std/collections/\" \"soa\" \"_vector/count\")") !=
-        std::string::npos);
-  CHECK(inlineParamHelpersSource.find(
-            "matchesPath(\"/std/collections/\" \"soa\" \"_vector/get\")") !=
-        std::string::npos);
-  CHECK(inlineParamHelpersSource.find(
-            "matchesPath(\"/std/collections/\" \"soa\" \"_vector/get_ref\")") !=
-        std::string::npos);
-  CHECK(inlineParamHelpersSource.find(
-            "matchesPath(\"/std/collections/\" \"soa\" \"_vector/ref\")") !=
-        std::string::npos);
-  CHECK(inlineParamHelpersSource.find(
-            "matchesPath(\"/std/collections/\" \"soa\" \"_vector/ref_ref\")") !=
-        std::string::npos);
-  CHECK(inlineParamHelpersSource.find(
-            "matchesPath(\"/std/collections/\" \"soa/to\" \"_aos\")") !=
-        std::string::npos);
-  CHECK(inlineParamHelpersSource.find(
-            "matchesPath(\"/std/collections/\" \"soa\" \"_vector/to\" \"_aos\")") !=
-        std::string::npos);
-  CHECK(inlineParamHelpersSource.find(
-            "matchesPath(\"/std/collections/\" \"soa\" \"_vector/to\" \"_aos_ref\")") !=
-        std::string::npos);
-  CHECK(inlineParamHelpersSource.find("matchesPath(\"/soa_vector/count\")") ==
-        std::string::npos);
-  CHECK(inlineParamHelpersSource.find("matchesPath(\"/soa_vector/get\")") ==
-        std::string::npos);
-  CHECK(inlineParamHelpersSource.find("matchesPath(\"/soa_vector/get_ref\")") ==
-        std::string::npos);
-  CHECK(inlineParamHelpersSource.find("matchesPath(\"/soa_vector/ref\")") ==
-        std::string::npos);
-  CHECK(inlineParamHelpersSource.find("matchesPath(\"/soa_vector/ref_ref\")") ==
-        std::string::npos);
-  CHECK(inlineParamHelpersSource.find("matchesPath(\"/soa_vector/to_aos\")") ==
-        std::string::npos);
-  CHECK(inlineParamHelpersSource.find("matchesPath(\"/soa_vector/to_aos_ref\")") ==
-        std::string::npos);
-  CHECK(lowerStatementsExprSource.find("canonicalSamePathSoaWrapper") !=
-        std::string::npos);
-  CHECK(lowerStatementsExprSource.find("path == \"/soa\" \"_vector/ref\"") !=
-        std::string::npos);
-  CHECK(lowerStatementsExprSource.find("path == \"/soa\" \"_vector/count_ref\"") !=
-        std::string::npos);
-  CHECK(lowerStatementsExprSource.find("path == \"/soa\" \"_vector/reserve\"") !=
-        std::string::npos);
-  CHECK(lowerStatementsExprSource.find("path == \"/soa\" \"_vector/push\"") !=
-        std::string::npos);
-  CHECK(lowerStatementsExprSource.find("isSamePathSoaHelperPath(rawPath)") !=
-        std::string::npos);
-  CHECK(uninitializedStructInferenceSource.find(
-            "soa_paths::isExperimentalColumnarVectorSpecializedTypePath(normalizedReceiverStruct)") !=
-        std::string::npos);
-  CHECK(uninitializedStructInferenceSource.find(
-            "normalizedReceiverStruct.rfind(\"/std/collections/experimental_soa_vector/SoaVector__\", 0) != 0") ==
-        std::string::npos);
-  CHECK(setupTypeMethodTargetHelpersSource.find(
-            "auto isRawBuiltinSoaVectorReceiverTarget = [&](const std::string &candidate)") !=
-        std::string::npos);
-  CHECK(setupTypeMethodTargetHelpersSource.find(
-            "semantics::isExperimentalColumnarVectorTypePath(normalized)") ==
-        std::string::npos);
-  CHECK(operatorCollectionMutationHelpersSource.find(
-            "auto canonicalizeLegacySoaRefHelperPath = [](const std::string &path)") ==
-        std::string::npos);
-  CHECK(operatorCollectionMutationHelpersSource.find(
-            "soa_paths::canonicalizeLegacySoaRefHelperPath(samePathCallee->fullPath)") !=
-        std::string::npos);
-  CHECK(operatorCollectionMutationHelpersSource.find(
-            "const std::string canonicalPath =") !=
-        std::string::npos);
-  CHECK(operatorCollectionMutationHelpersSource.find(
-            "soa_paths::canonicalizeLegacySoaRefHelperPath(path)") !=
-        std::string::npos);
-  CHECK(operatorCollectionMutationHelpersSource.find(
-            "soa_paths::isExperimentalSoaRefLikeHelperPath(canonicalPath)") !=
-        std::string::npos);
-  CHECK(operatorCollectionMutationHelpersSource.find(
-            "soa_paths::isExperimentalColumnarVectorSpecializedTypePath(structPath)") !=
-        std::string::npos);
-  CHECK(operatorCollectionMutationHelpersSource.find(
-            "std::string normalizedInternalSoaStorageLeaf(std::string structPath)") !=
-        std::string::npos);
-  CHECK(operatorCollectionMutationHelpersSource.find(
-            "areCompatibleInternalSoaStoragePaths(lhs, rhs)") !=
-        std::string::npos);
-  CHECK(operatorCollectionMutationHelpersSource.find(
-            "structPath.rfind(\"/std/collections/internal_soa_storage/\", 0) == 0") ==
-        std::string::npos);
-  CHECK(operatorCollectionMutationHelpersSource.find(
-            "structPath.rfind(\"/std/collections/experimental_soa_vector/SoaVector__\", 0) == 0") ==
-        std::string::npos);
-  CHECK(operatorCollectionMutationHelpersSource.find(
-            "canonicalPath.rfind(\"/std/collections/soa_vector/ref\", 0) == 0") ==
-        std::string::npos);
-  CHECK(operatorCollectionMutationHelpersSource.find(
-            "canonicalPath.rfind(\"/std/collections/experimental_soa_vector/soaVectorRef\", 0) == 0") ==
-        std::string::npos);
-  CHECK(operatorCollectionMutationHelpersSource.find(
-            "soa_paths::isCanonicalSoaRefLikeHelperPath(canonicalPath)") !=
-        std::string::npos);
-  CHECK(operatorCollectionMutationHelpersSource.find(
-            "path.rfind(\"/std/collections/soa_vector/ref\", 0) == 0") ==
-        std::string::npos);
-  CHECK(operatorCollectionMutationHelpersSource.find(
-            "samePathCallee->fullPath.rfind(\"/soa_vector/ref\", 0) == 0") ==
-        std::string::npos);
-  CHECK(operatorCollectionMutationHelpersSource.find(
-            "normalizedMethodName == \"std/collections/soa_vector/ref\"") ==
-        std::string::npos);
-  CHECK(operatorCollectionMutationHelpersSource.find(
-            "normalizedMethodName == \"soa_vector/ref\"") ==
-        std::string::npos);
-  CHECK(operatorCollectionMutationHelpersSource.find("normalizedMethodName != \"ref\"") ==
-        std::string::npos);
-  CHECK(operatorCollectionMutationHelpersSource.find(
-            "const std::string methodPath = \"/\" + normalizedMethodName;") !=
-        std::string::npos);
-  CHECK(operatorCollectionMutationHelpersSource.find(
-            "const std::string canonicalMethodPath =") !=
-        std::string::npos);
-  CHECK(operatorCollectionMutationHelpersSource.find(
-            "soa_paths::isLegacyOrCanonicalSoaHelperPath(canonicalMethodPath, \"ref\")") !=
-        std::string::npos);
-  CHECK(operatorCollectionMutationHelpersSource.find(
-            "methodPath.rfind(\"/std/collections/\" \"soa\" \"_vector/\", 0) == 0") !=
-        std::string::npos);
-  const size_t collectionStringLiteralPos =
-      operatorCollectionMutationHelpersSource.find("if (elemKind == LocalInfo::ValueKind::String) {");
-  REQUIRE(collectionStringLiteralPos != std::string::npos);
-  const size_t collectionStringGraphKindPos = operatorCollectionMutationHelpersSource.find(
-      "const LocalInfo::ValueKind argKind = inferExprKind(arg, localsIn);",
-      collectionStringLiteralPos);
-  const size_t collectionStringTablePos =
-      operatorCollectionMutationHelpersSource.find("resolveStringTableTarget(arg, localsIn",
-                                                   collectionStringLiteralPos);
-  REQUIRE(collectionStringGraphKindPos != std::string::npos);
-  REQUIRE(collectionStringTablePos != std::string::npos);
-  CHECK(collectionStringGraphKindPos < collectionStringTablePos);
+  emittedInlineCalls = 0;
+  error.clear();
+  CHECK(primec::ir_lowerer::tryEmitInlineCallWithCountFallbacks(
+            importedCall,
+            [](const primec::Expr &) { return false; },
+            [](const primec::Expr &) { return false; },
+            [](const primec::Expr &) { return false; },
+            [](const primec::Expr &) -> const primec::Definition * { return nullptr; },
+            [&](const primec::Expr &expr) {
+              return primec::ir_lowerer::resolveDefinitionCall(
+                  expr, defMap, adapters.resolveExprPath);
+            },
+            [&](const primec::Expr &expr, const primec::Definition &definition) {
+              CHECK(expr.name == "importedAlias");
+              CHECK(&definition == &importedDef);
+              ++emittedInlineCalls;
+              return true;
+            },
+            error) == InlineResult::Emitted);
+  CHECK(error.empty());
+  CHECK(emittedInlineCalls == 1);
 
-  CHECK(operatorCollectionMutationHelpersSource.find("auto emitExperimentalVectorElementStore =") ==
-        std::string::npos);
-  const size_t vectorStringLiteralStorePos =
-      operatorCollectionMutationHelpersSource.find("if (isVectorLike) {", collectionStringTablePos);
-  REQUIRE(vectorStringLiteralStorePos != std::string::npos);
-  CHECK(collectionStringTablePos < vectorStringLiteralStorePos);
+  primec::Expr tailCall = importedCall;
+  primec::Expr returnCall;
+  returnCall.kind = primec::Expr::Kind::Call;
+  returnCall.name = "return";
+  returnCall.args = {tailCall};
 
-  CHECK(operatorCollectionMutationHelpersSource.find(
-            "if (i % 2 == 0 && keyKind == LocalInfo::ValueKind::String) {") ==
-        std::string::npos);
-  CHECK(operatorCollectionMutationHelpersSource.find(
-            "if (i % 2 == 1 && valueKind == LocalInfo::ValueKind::String) {") ==
-        std::string::npos);
-  CHECK(operatorCollectionMutationHelpersSource.find(
-            "if (builtin == \"map\") {\n"
-            "      handled = false;\n"
-            "      return true;\n"
-            "    }") != std::string::npos);
-  CHECK(inlineDispatchSource.find("ResolvedInlineCallResult emitResolvedInlineDefinitionCall(") !=
-        std::string::npos);
-  CHECK(inlineDispatchSource.find("InlineCallDispatchResult tryEmitInlineCallWithCountFallbacks(") !=
-        std::string::npos);
-  CHECK(inlineDispatchSource.find("InlineCallDispatchResult tryEmitInlineCallDispatchWithLocals(") !=
-        std::string::npos);
-  CHECK(inlineDispatchSource.find("const auto firstCountFallbackResult = tryEmitNonMethodCountFallback(") !=
-        std::string::npos);
-  CHECK(inlineDispatchSource.find("auto emitCanonicalInlineDefinitionCall = [&](const Expr &callExpr, const Definition &callee) {") !=
-        std::string::npos);
-  CHECK(inlineDispatchSource.find("UnsupportedNativeCallResult emitUnsupportedNativeCallDiagnostic(") ==
-        std::string::npos);
-
-  CHECK(countAccessClassifiersSource.find("bool isCanonicalSoaToAosHelperCall(const Expr &expr)") ==
-        std::string::npos);
-  CHECK(countAccessClassifiersSource.find("#include \"primec/SoaPathHelpers.h\"") !=
-        std::string::npos);
-  CHECK(countAccessHelpersSource.find("#include \"primec/SoaPathHelpers.h\"") !=
-        std::string::npos);
-  CHECK(countAccessClassifiersSource.find("soa_paths::collectionPath(folderName)") !=
-        std::string::npos);
-  CHECK(countAccessClassifiersSource.find("soa_paths::publicSoaFolder()") !=
-        std::string::npos);
-  CHECK(countAccessClassifiersSource.find("soa_paths::legacySoaFolder()") !=
-        std::string::npos);
-  CHECK(countAccessHelpersSource.find(
-            "soa_paths::collectionPath(soa_paths::experimentalSoaFolder(),") !=
-        std::string::npos);
-  CHECK(countAccessHelpersSource.find("soa_paths::soaBackingTypeName()") !=
-        std::string::npos);
-  CHECK(countAccessClassifiersSource.find("\"std/collections/soa\"") == std::string::npos);
-  CHECK(countAccessClassifiersSource.find("\"std/collections/soa_vector\"") == std::string::npos);
-  CHECK(countAccessClassifiersSource.find("std/collections/soa_vector/to_aos") == std::string::npos);
-  CHECK(countAccessClassifiersSource.find("\"soa_vector\"") == std::string::npos);
-  CHECK(countAccessClassifiersSource.find("\"to_aos\"") == std::string::npos);
-  CHECK(countAccessHelpersSource.find("\"/std/collections/experimental_soa_vector/SoaVector\"") ==
-        std::string::npos);
-  CHECK(countAccessHelpersSource.find("\"soa_vector\"") == std::string::npos);
-
-  CHECK(astCallPathHelpersSource.find("bool isCanonicalCollectionHelperCall(") != std::string::npos);
-  CHECK(astCallPathHelpersSource.find("std/collections/soa_vector/to_aos") == std::string::npos);
-
-  CHECK(nativeTailDispatchSource.find("bool getUnsupportedVectorHelperName(const Expr &expr, std::string &helperName)") ==
-        std::string::npos);
-  CHECK(nativeTailDispatchSource.find("UnsupportedNativeCallResult emitUnsupportedNativeCallDiagnostic(") !=
-        std::string::npos);
-  CHECK(nativeTailDispatchSource.find("NativeCallTailDispatchResult tryEmitNativeCallTailDispatch(") !=
-        std::string::npos);
-  CHECK(nativeTailDispatchSource.find("NativeCallTailDispatchResult tryEmitNativeCallTailDispatchWithLocals(") !=
-        std::string::npos);
-  CHECK(nativeTailDispatchSource.find("const auto countAccessResult = tryEmitCountAccessCall(") !=
-        std::string::npos);
-  CHECK(tailDispatchSource.find("auto stripGeneratedLeafSuffix = [](std::string helperPath)") !=
-        std::string::npos);
-  CHECK(tailDispatchSource.find("return findByPath(canonicalPath);") !=
-        std::string::npos);
-  CHECK(countAccessHelpersSource.find("bool isExplicitPublishedVectorMetadataCall(const Expr &expr,") !=
-        std::string::npos);
-  CHECK(countAccessClassifiersSource.find("canonicalCollectionMemberPath(\"vector\", name)") ==
-        std::string::npos);
-  CHECK(countAccessHelpersSource.find("canonicalCollectionMemberPrefix(\"vector\")") !=
-        std::string::npos);
-  CHECK(countAccessClassifiersSource.find("std/collections/vector/") == std::string::npos);
-  CHECK(countAccessHelpersSource.find("std/collections/vector/") == std::string::npos);
-  CHECK(countAccessClassifiersSource.find("std/collections/experimental_vector") ==
-        std::string::npos);
-  CHECK(countAccessHelpersSource.find("std/collections/experimental_vector") ==
-        std::string::npos);
-  CHECK(countAccessClassifiersSource.find("\"/vector/\"") == std::string::npos);
-  CHECK(countAccessHelpersSource.find("\"/vector/\"") == std::string::npos);
-  CHECK(countAccessHelpersSource.find("vectorCount") == std::string::npos);
-  CHECK(countAccessHelpersSource.find("vectorCapacity") == std::string::npos);
-  CHECK(countAccessHelpersSource.find("isVectorCountTarget(expr.args.front(), localsIn)") !=
-        std::string::npos);
-  const size_t staticStringCountPos =
-      countAccessHelpersSource.find("StringCountCallEmitResult tryEmitStringCountCall(");
-  REQUIRE(staticStringCountPos != std::string::npos);
-  const size_t staticStringCountGraphKindPos = countAccessHelpersSource.find(
-      "const LocalInfo::ValueKind targetKind = inferExprKind(target, localsIn);",
-      staticStringCountPos);
-  const size_t staticStringCountTablePos =
-      countAccessHelpersSource.find("resolveStringTableTarget(target, localsIn",
-                                    staticStringCountPos);
-  REQUIRE(staticStringCountGraphKindPos != std::string::npos);
-  REQUIRE(staticStringCountTablePos != std::string::npos);
-  CHECK(staticStringCountGraphKindPos < staticStringCountTablePos);
-  CHECK(countAccessHelpersSource.find("targetKind != LocalInfo::ValueKind::Unknown",
-                                      staticStringCountGraphKindPos) != std::string::npos);
-  CHECK(countAccessHelpersSource.find("targetKind != LocalInfo::ValueKind::String",
-                                      staticStringCountGraphKindPos) != std::string::npos);
-  const size_t stringCallBindingGuardPos =
-      stringCallHelpersSource.find("binding.inferredKind != LocalInfo::ValueKind::Unknown");
-  const size_t stringCallBindingStringCheckPos =
-      stringCallHelpersSource.find("if (!binding.isString || binding.source == StringCallSource::None)");
-  REQUIRE(stringCallBindingGuardPos != std::string::npos);
-  REQUIRE(stringCallBindingStringCheckPos != std::string::npos);
-  CHECK(stringCallBindingGuardPos < stringCallBindingStringCheckPos);
-  const size_t stringCallLookupInferencePos =
-      stringCallHelpersSource.find("binding.inferredKind = inferCallValueKind(nameExpr);");
-  const size_t stringCallLookupLocalKindPos =
-      stringCallHelpersSource.find("binding.isString = (it->second.valueKind == LocalInfo::ValueKind::String)");
-  REQUIRE(stringCallLookupInferencePos != std::string::npos);
-  REQUIRE(stringCallLookupLocalKindPos != std::string::npos);
-  CHECK(stringCallLookupInferencePos < stringCallLookupLocalKindPos);
-  const size_t printNameGraphKindPos = lowerStatementsExprSource.find(
-      "const LocalInfo::ValueKind printNameKind = inferExprKind(arg, localsIn);");
-  const size_t printNameLocalStringPos = lowerStatementsExprSource.find(
-      "it->second.valueKind == LocalInfo::ValueKind::String",
-      printNameGraphKindPos);
-  REQUIRE(printNameGraphKindPos != std::string::npos);
-  REQUIRE(printNameLocalStringPos != std::string::npos);
-  CHECK(printNameGraphKindPos < printNameLocalStringPos);
-  CHECK(lowerStatementsExprSource.find("printNameKind == LocalInfo::ValueKind::Unknown",
-                                       printNameGraphKindPos) != std::string::npos);
-  CHECK(lowerStatementsExprSource.find("printNameKind == LocalInfo::ValueKind::String",
-                                       printNameGraphKindPos) != std::string::npos);
-  CHECK(nativeTailDispatchSource.find("bool isExplicitDirectVectorCountCall(") !=
-        std::string::npos);
-  CHECK(nativeTailDispatchSource.find("!isExplicitDirectVectorCountCall(semanticProgram, expr) &&") !=
-        std::string::npos);
-  CHECK(nativeTailDispatchSource.find("count_access_detail::isUnqualifiedCollectionBuiltinName(expr, \"count\")") !=
-        std::string::npos);
-  CHECK(nativeTailDispatchSource.find("!isNamedArgumentVectorTemporary(expr.args.front()))") !=
-        std::string::npos);
-  CHECK(countAccessClassifiersSource.find("bool isUnqualifiedCollectionBuiltinName(const Expr &expr, const char *name)") !=
-        std::string::npos);
-  CHECK(countAccessClassifiersSource.find("bool isExplicitCanonicalVectorReadHelperCall(") ==
-        std::string::npos);
-  CHECK(countAccessClassifiersSource.find("isExplicitCanonicalVectorReadHelperCall(expr, name)") ==
-        std::string::npos);
-  CHECK(countAccessClassifiersSource.find("isExplicitRemovedCountLikeAliasCall(expr, name)") ==
-        std::string::npos);
-  CHECK(countAccessClassifiersSource.find("resolveVectorHelperAliasName(expr, aliasName)") ==
-        std::string::npos);
-  CHECK(countAccessClassifiersSource.find("bool isKeyValueBuiltinName(") ==
-        std::string::npos);
-  CHECK(countAccessClassifiersSource.find(
-            "resolveKeyValueHelperAliasName(expr, aliasName) && aliasName == name") ==
-        std::string::npos);
-  CHECK(builtinNameHelpersSource.find("auto unrootedStdlibVectorHelperPath =") !=
-        std::string::npos);
-  CHECK(builtinNameHelpersSource.find(
-            "StdlibSurfaceId::CollectionsManifestSurface0, helperName") !=
-        std::string::npos);
-  CHECK(nativeTailDispatchSource.find("isExplicitPublishedVectorCountCall(expr)") ==
-        std::string::npos);
-  CHECK(nativeTailDispatchSource.find("resolvePublishedNativeTailHelperName(") !=
-        std::string::npos);
-  CHECK(nativeTailDispatchSource.find("resolvePublishedNativeTailVectorHelperName(") !=
-        std::string::npos);
-  CHECK(nativeTailDispatchSource.find("semanticDirectCallMatchesVectorHelperSurface(") !=
-        std::string::npos);
-  CHECK(builtinNameHelpersSource.find("std/collections/vector/") == std::string::npos);
-  CHECK(builtinNameHelpersSource.find("std/collections/experimental_vector") ==
-        std::string::npos);
-  CHECK(builtinNameHelpersSource.find(
-            "matchLegacyAccessAlias(scopedName, \"std/collections/experimental_map/\")") ==
-        std::string::npos);
-  CHECK(builtinNameHelpersSource.find("std/collections/experimental_map/entry") ==
-        std::string::npos);
-  CHECK(builtinNameHelpersSource.find("vectorAt") == std::string::npos);
-  CHECK(builtinNameHelpersSource.find("vectorPush") == std::string::npos);
-  CHECK(callResolutionSource.find("std/collections/experimental_vector") ==
-        std::string::npos);
-  CHECK(callResolutionSource.find("vectorHelperSurfaceMetadata()") !=
-        std::string::npos);
-  CHECK(nativeTailDispatchSource.find("std/collections/experimental_vector") ==
-        std::string::npos);
-  CHECK(nativeTailDispatchSource.find("StdlibSurfaceId::CollectionsManifestSurface0") ==
-        std::string::npos);
-  CHECK(inlineDispatchSource.find("collectionWrapperAlias(\"vector\", \"Count\")") !=
-        std::string::npos);
-  CHECK(inlineDispatchSource.find("experimentalCollectionMemberPath(\"vector\", \"vector\")") !=
-        std::string::npos);
-  CHECK(inlineCallContextHelpersSource.find("collectionWrapperAlias(\"vector\", \"InitSlot\")") !=
-        std::string::npos);
-  CHECK(lowerEmitExprSource.find("collectionWrapperAlias(\"vector\", \"Push\")") ==
-        std::string::npos);
-  CHECK(lowerInlineCallsSource.find("collectionWrapperAlias(\"vector\", \"New\")") !=
-        std::string::npos);
-  CHECK(statementCallEmissionSource.find("statementCallVectorHelperMetadata()") ==
-        std::string::npos);
-  CHECK(statementCallEmissionSource.find("metadata->id != vectorMetadata->id") ==
-        std::string::npos);
-  CHECK(statementCallEmissionSource.find("collectionWrapperAlias(\"vector\", \"Push\")") ==
-        std::string::npos);
-  CHECK(statementCallEmissionSource.find(
-            "experimentalCollectionTypePath(\"vector\", \"Vector\")") ==
-        std::string::npos);
-  CHECK(statementCallEmissionSource.find(
-            "experimentalCollectionTypePath(\"vec\" \"tor\", \"Vector\")") !=
-        std::string::npos);
-  CHECK(lowerStatementsCallsStepSource.find("collectionWrapperAlias(\"vector\", \"Push\")") ==
-        std::string::npos);
-  CHECK(lowerStatementsCallsStepSource.find(
-            "experimentalCollectionMemberRoot(\"vector\", false)") ==
-        std::string::npos);
-  CHECK(lowerStatementsBindingsSource.find("collectionWrapperAlias(\"vector\", \"New\")") !=
-        std::string::npos);
-  CHECK(lowerStatementsBindingsSource.find(
-            "experimentalCollectionTypePath(\"vector\", \"Vector\")") ==
-        std::string::npos);
-  CHECK(lowerStatementsBindingsSource.find(
-            "experimentalCollectionTypePath(\"vec\" \"tor\", \"Vector\")") !=
-        std::string::npos);
-  CHECK(lowerStatementsExprSource.find(
-            "experimentalCollectionMemberPath(\"vector\", \"vector\")") !=
-        std::string::npos);
-  CHECK(lowerStatementsExprSource.find(
-            "experimentalCollectionTypePath(\"vector\", \"Vector\")") ==
-        std::string::npos);
-  CHECK(lowerStatementsExprSource.find(
-            "experimentalCollectionTypePath(\"vec\" \"tor\", \"Vector\")") !=
-        std::string::npos);
-  CHECK(lowerStatementsLoopsSource.find(
-            "experimentalCollectionMemberRoot(\"vector\")") ==
-        std::string::npos);
-  CHECK(lowerStatementsLoopsSource.find(
-            "experimentalCollectionMemberRoot(\"vec\" \"tor\")") !=
-        std::string::npos);
-  CHECK(operatorCollectionMutationHelpersSource.find(
-            "collectionTypePath(\"vector\")") !=
-        std::string::npos);
-  CHECK(tailDispatchSource.find("matchesGeneratedSpecializedType(") !=
-        std::string::npos);
-  CHECK(emitExprTryHelpersSource.find("matchesGeneratedSpecializedType(") !=
-        std::string::npos);
-  CHECK(inlineDispatchSource.find("std/collections/vector/") == std::string::npos);
-  CHECK(inlineDispatchSource.find("std/collections/experimental_vector") ==
-        std::string::npos);
-  CHECK(inlineCallContextHelpersSource.find("std/collections/vector/") ==
-        std::string::npos);
-  CHECK(inlineCallContextHelpersSource.find("std/collections/experimental_vector") ==
-        std::string::npos);
-  CHECK(inlineParamHelpersSource.find("std/collections/experimental_vector") ==
-        std::string::npos);
-  CHECK(inlineStructArgHelpersSource.find("std/collections/experimental_vector") ==
-        std::string::npos);
-  CHECK(lowerEmitExprSource.find("std/collections/vector/") == std::string::npos);
-  CHECK(lowerEmitExprSource.find("std/collections/experimental_vector") ==
-        std::string::npos);
-  CHECK(lowerInlineCallsSource.find("std/collections/vector/") == std::string::npos);
-  CHECK(lowerInlineCallsSource.find("std/collections/experimental_vector") ==
-        std::string::npos);
-  CHECK(statementCallEmissionSource.find("std/collections/vector/") ==
-        std::string::npos);
-  CHECK(statementCallEmissionSource.find("std/collections/experimental_vector") ==
-        std::string::npos);
-  CHECK(statementCallEmissionSource.find("StdlibSurfaceId::CollectionsManifestSurface0") ==
-        std::string::npos);
-  CHECK(statementCallEmissionSource.find("vectorPush") == std::string::npos);
-  CHECK(lowerStatementsBindingsSource.find("std/collections/experimental_vector") ==
-        std::string::npos);
-  CHECK(lowerStatementsBindingsSource.find("vectorNew") == std::string::npos);
-  CHECK(lowerStatementsCallsStepSource.find("std/collections/experimental_vector") ==
-        std::string::npos);
-  CHECK(lowerStatementsCallsStepSource.find("vectorPush") == std::string::npos);
-  CHECK(lowerStatementsExprSource.find("std/collections/vector/") ==
-        std::string::npos);
-  CHECK(lowerStatementsExprSource.find("std/collections/experimental_vector") ==
-        std::string::npos);
-  CHECK(lowerStatementsExprSource.find("path.rfind(\"/map/\", 0) == 0") ==
-        std::string::npos);
-  CHECK(lowerStatementsExprSource.find(
-            "path.rfind(\"/std/collections/experimental_map/\", 0) == 0") ==
-        std::string::npos);
-  CHECK(lowerStatementsExprSource.find("rawPath.rfind(\"/map/\", 0) == 0") ==
-        std::string::npos);
-  CHECK(lowerStatementsExprSource.find(
-            "rawPath.rfind(\"/std/collections/experimental_map/\", 0) == 0") ==
-        std::string::npos);
-  CHECK(lowerStatementsExprSource.find("resolvedExprPath.rfind(\"/map/\", 0) == 0") ==
-        std::string::npos);
-  CHECK(lowerStatementsExprSource.find("directCallee->fullPath.rfind(\"/map/\", 0) == 0") ==
-        std::string::npos);
-  CHECK(lowerStatementsExprSource.find(
-            "directCallee->fullPath.rfind(\"/std/collections/experimental_map/\", 0) == 0") ==
-        std::string::npos);
-  CHECK(lowerStatementsExprSource.find("std/collections/experimental_map/entry") ==
-        std::string::npos);
-  CHECK(lowerStatementsExprSource.find("/std/collections/experimental_map/mapInsert") ==
-        std::string::npos);
-  CHECK(lowerStatementsLoopsSource.find("std/collections/experimental_vector") ==
-        std::string::npos);
-  CHECK(operatorCollectionMutationHelpersSource.find("std/collections/vector/") ==
-        std::string::npos);
-  CHECK(operatorCollectionMutationHelpersSource.find("std/collections/experimental_vector") ==
-        std::string::npos);
-  CHECK(tailDispatchSource.find("std/collections/experimental_vector") ==
-        std::string::npos);
-  CHECK(tailDispatchSource.find("/std/collections/experimental_map/mapCount") ==
-        std::string::npos);
-  CHECK(tailDispatchSource.find("/std/collections/experimental_map/mapContains") ==
-        std::string::npos);
-  CHECK(tailDispatchSource.find("/std/collections/experimental_map/mapTryAt") ==
-        std::string::npos);
-  CHECK(tailDispatchSource.find("/std/collections/experimental_map/mapAt") ==
-        std::string::npos);
-  CHECK(tailDispatchSource.find("/std/collections/experimental_map/mapInsert") ==
-        std::string::npos);
-  CHECK(emitExprTryHelpersSource.find("std/collections/experimental_vector") ==
-        std::string::npos);
-  CHECK(nativeTailDispatchSource.find("const auto unsupportedCallResult = emitUnsupportedNativeCallDiagnosticImpl(") !=
-        std::string::npos);
-  CHECK(nativeTailDispatchSource.find("resolvePublishedNativeTailKeyValueHelperName(") !=
-        std::string::npos);
-  CHECK(nativeTailDispatchSource.find("semanticKeyValueAccessHelperKeepsBuiltinReturn(") !=
-        std::string::npos);
-  CHECK(nativeTailDispatchSource.find("resolvePublishedNativeTailMapHelperName(") ==
-        std::string::npos);
-  CHECK(nativeTailDispatchSource.find("semanticMapAccessHelperKeepsBuiltinReturn(") ==
-        std::string::npos);
-  CHECK(nativeTailDispatchSource.find("isDirectExperimentalMapAccessImplementationCall") ==
-        std::string::npos);
-  CHECK(nativeTailDispatchSource.find(
-            "rawPath.rfind(\"/std/collections/experimental_map/\", 0) != 0") ==
-        std::string::npos);
-  CHECK(nativeTailDispatchSource.find("if (!emitBuiltinArrayAccess(accessName,") !=
-        std::string::npos);
-  CHECK(tailDispatchSource.find("return resolveTailDispatchDirectHelperDefinition(callExpr);") !=
-        std::string::npos);
-  CHECK(operatorMemoryPointerHelpersSource.find("getBuiltinArrayAccessName(candidate, accessName)") !=
-        std::string::npos);
-  CHECK(operatorMemoryPointerHelpersSource.find("candidate.name == \"at\" || candidate.name == \"at_unsafe\"") ==
-        std::string::npos);
+  primec::Definition entryDef;
+  entryDef.fullPath = "/main";
+  entryDef.statements = {returnCall};
+  const auto entrySetup = primec::ir_lowerer::buildEntryCallResolutionSetup(
+      entryDef, false, defMap, importAliases);
+  CHECK(entrySetup.hasTailExecution);
 }
 
 TEST_CASE("ir lowerer vector type layout traces use generic collection helpers") {
@@ -1283,165 +289,99 @@ TEST_CASE("ir lowerer vector type layout traces use generic collection helpers")
   checkNoDirectVectorSurfaceTrace(declaredCollectionSource);
 }
 
-TEST_CASE("native tail and late collection helper metadata dispatch stays source locked") {
-  auto readText = [](const std::filesystem::path &path) {
-    std::ifstream file(path);
-    CHECK(file.is_open());
-    if (!file.is_open()) {
-      return std::string{};
-    }
-    return std::string((std::istreambuf_iterator<char>(file)),
-                       std::istreambuf_iterator<char>());
+TEST_CASE("ir lowerer collection dispatch metadata resolves through public contracts") {
+  const auto *vectorMetadata = primec::ir_lowerer::vectorHelperSurfaceMetadata();
+  const auto *mapMetadata = primec::ir_lowerer::keyValueHelperSurfaceMetadata();
+  const auto *mapConstructorMetadata =
+      primec::ir_lowerer::keyValueConstructorSurfaceMetadata();
+  REQUIRE(vectorMetadata != nullptr);
+  REQUIRE(mapMetadata != nullptr);
+  REQUIRE(mapConstructorMetadata != nullptr);
+
+  auto expectSurfaceMember = [](std::string_view path,
+                                primec::StdlibSurfaceId surfaceId,
+                                std::string_view expectedMember) {
+    std::string memberName;
+    CHECK(primec::ir_lowerer::resolvePublishedStdlibSurfaceMemberName(
+        path, surfaceId, memberName));
+    CHECK(memberName == expectedMember);
+    CHECK(primec::ir_lowerer::isPublishedStdlibSurfaceLoweringPath(path,
+                                                                   surfaceId));
+    CHECK(primec::ir_lowerer::isCanonicalPublishedStdlibSurfaceHelperPath(
+        path, surfaceId));
   };
-  const std::filesystem::path repoRoot =
-      std::filesystem::exists(std::filesystem::path("src")) ? std::filesystem::path(".")
-                                                            : std::filesystem::path("..");
 
-  const std::filesystem::path setupHelpersHeaderPath =
-      repoRoot / "src" / "ir_lowerer" / "IrLowererSetupTypeCollectionHelpers.h";
-  const std::filesystem::path setupHelpersSourcePath =
-      repoRoot / "src" / "ir_lowerer" / "IrLowererSetupTypeCollectionHelpers.cpp";
-  const std::filesystem::path collectionHelpersPath =
-      repoRoot / "src" / "ir_lowerer" / "IrLowererLowerEmitExprCollectionHelpers.h";
-  const std::filesystem::path tailDispatchPath =
-      repoRoot / "src" / "ir_lowerer" / "IrLowererLowerEmitExprTailDispatch.h";
-  const std::filesystem::path nativeTailDispatchPath =
-      repoRoot / "src" / "ir_lowerer" / "IrLowererNativeTailDispatch.cpp";
+  expectSurfaceMember("/std/collections/vector/count", vectorMetadata->id, "count");
+  expectSurfaceMember("/std/collections/vector/at_unsafe",
+                      vectorMetadata->id,
+                      "at_unsafe");
+  expectSurfaceMember("/std/collections/map/contains", mapMetadata->id, "contains");
+  expectSurfaceMember("/std/collections/map/tryAt", mapMetadata->id, "tryAt");
+  expectSurfaceMember("/std/collections/map/map",
+                      mapConstructorMetadata->id,
+                      "map");
 
-  REQUIRE(std::filesystem::exists(setupHelpersHeaderPath));
-  REQUIRE(std::filesystem::exists(setupHelpersSourcePath));
-  REQUIRE(std::filesystem::exists(collectionHelpersPath));
-  REQUIRE(std::filesystem::exists(tailDispatchPath));
-  REQUIRE(std::filesystem::exists(nativeTailDispatchPath));
+  std::string memberName = "stale";
+  CHECK_FALSE(primec::ir_lowerer::resolvePublishedStdlibSurfaceMemberName(
+      "/std/collections/experimental_vector/vectorCount__t1",
+      vectorMetadata->id,
+      memberName));
+  CHECK(memberName.empty());
 
-  const std::string setupHelpersHeader = readText(setupHelpersHeaderPath);
-  const std::string setupHelpersSource = readText(setupHelpersSourcePath);
-  const std::string collectionHelpersSource = readText(collectionHelpersPath);
-  const std::string tailDispatchSource = readText(tailDispatchPath);
-  const std::string nativeTailDispatchSource = readText(nativeTailDispatchPath);
+  primec::SemanticProgram semanticProgram;
+  const primec::SymbolId vectorAtPathId =
+      primec::semanticProgramInternCallTargetString(semanticProgram,
+                                                    "/std/collections/vector/at");
+  semanticProgram.publishedRoutingLookups.directCallTargetIdsByExpr.insert_or_assign(
+      7101, vectorAtPathId);
+  semanticProgram.publishedRoutingLookups.directCallStdlibSurfaceIdsByExpr.insert_or_assign(
+      7101, vectorMetadata->id);
 
-  CHECK(setupHelpersHeader.find("#include \"primec/StdlibSurfaceRegistry.h\"") !=
-        std::string::npos);
-  CHECK(setupHelpersHeader.find("bool resolvePublishedStdlibSurfaceMemberName(") !=
-        std::string::npos);
-  CHECK(setupHelpersHeader.find("bool resolvePublishedStdlibSurfaceMemberToken(") !=
-        std::string::npos);
-  CHECK(setupHelpersHeader.find("bool resolvePublishedStdlibSurfaceExprMemberName(") !=
-        std::string::npos);
-  CHECK(setupHelpersHeader.find("bool resolvePublishedSemanticStdlibSurfaceMemberName(") !=
-        std::string::npos);
-  CHECK(setupHelpersHeader.find("bool isPublishedStdlibSurfaceLoweringPath(") !=
-        std::string::npos);
-  CHECK(setupHelpersHeader.find("bool isCanonicalPublishedStdlibSurfaceHelperPath(") !=
-        std::string::npos);
-  CHECK(setupHelpersSource.find("findPublishedStdlibSurfaceMetadata(") !=
-        std::string::npos);
-  CHECK(setupHelpersSource.find("rebuildScopedCollectionHelperPath(") !=
-        std::string::npos);
-  CHECK(setupHelpersSource.find("matchesRegistrySpellingSet(metadata->loweringSpellings, path)") !=
-        std::string::npos);
-  CHECK(setupHelpersSource.find("resolveStdlibSurfaceMemberName(*metadata, normalizedToken)") !=
-        std::string::npos);
-  CHECK(setupHelpersSource.find("resolveStdlibSurfaceMemberName(*metadata, path)") !=
-        std::string::npos);
-  CHECK(setupHelpersSource.find("resolvePublishedStdlibSurfaceExprMemberName(") !=
-        std::string::npos);
-  CHECK(setupHelpersSource.find("findSemanticProductBridgePathChoiceStdlibSurfaceId(semanticProgram, expr)") !=
-        std::string::npos);
-  CHECK(setupHelpersSource.find("findSemanticProductMethodCallStdlibSurfaceId(semanticProgram, expr)") !=
-        std::string::npos);
-  CHECK(setupHelpersSource.find("findSemanticProductDirectCallStdlibSurfaceId(semanticProgram, expr)") !=
-        std::string::npos);
-  CHECK(setupHelpersSource.find("resolvePublishedSemanticStdlibSurfaceMemberName(") !=
-        std::string::npos);
-  CHECK(setupHelpersSource.find("normalizedPath.rfind(\"/soa_vector/\", 0) == 0") ==
-        std::string::npos);
-  CHECK(setupHelpersSource.find("\"/std/collections/soa_vector/\" +") ==
-        std::string::npos);
-  CHECK(setupHelpersSource.find(
-            "normalizedPath.rfind(\"/std/collections/soa_vector/\", 0) == 0") ==
-        std::string::npos);
-  CHECK(setupHelpersSource.find("\"/soa_vector/\" +") ==
-        std::string::npos);
-  CHECK(collectionHelpersSource.find("resolvePublishedStdlibSurfaceMemberName(") !=
-        std::string::npos);
-  CHECK(collectionHelpersSource.find("resolvePublishedStdlibSurfaceExprMemberName(") !=
-        std::string::npos);
-  CHECK(collectionHelpersSource.find("resolvePublishedSemanticStdlibSurfaceMemberName(") !=
-        std::string::npos);
-  CHECK(collectionHelpersSource.find("callResolutionAdapters.semanticProgram") !=
-        std::string::npos);
-  CHECK(collectionHelpersSource.find("keyValueConstructorSurfaceMetadataForLowerEmitExpr()") !=
-        std::string::npos);
-  CHECK(collectionHelpersSource.find("primec::StdlibSurfaceId::CollectionsManifestSurface1") !=
-        std::string::npos);
-  CHECK(collectionHelpersSource.find("auto resolveMaterializedCollectionHelperName =") !=
-        std::string::npos);
-  CHECK(collectionHelpersSource.find("auto resolvePublishedLateCollectionMemberName =") !=
-        std::string::npos);
-  CHECK(collectionHelpersSource.find("auto resolvePublishedLateVectorMemberName =") !=
-        std::string::npos);
-  CHECK(collectionHelpersSource.find("vectorHelperSurfaceMetadata()") !=
-        std::string::npos);
-  CHECK(collectionHelpersSource.find("primec::StdlibSurfaceId::CollectionsManifestSurface0") ==
-        std::string::npos);
-  CHECK(collectionHelpersSource.find("isPublishedStdlibSurfaceLoweringPath(") !=
-        std::string::npos);
-  CHECK(collectionHelpersSource.find("StdlibSurfaceId::CollectionsMapHelpers") ==
-        std::string::npos);
-  CHECK(collectionHelpersSource.find("StdlibSurfaceId::CollectionsMapConstructors") ==
-        std::string::npos);
-  CHECK(collectionHelpersSource.find("keyValueHelperSurfaceMetadata()") !=
-        std::string::npos);
-  CHECK(collectionHelpersSource.find("keyValueConstructorSurfaceMetadata()") !=
-        std::string::npos);
-  CHECK(collectionHelpersSource.find("findStdlibSurfaceMetadataByBridgeKey(\"collections.vector_helpers\")") ==
-        std::string::npos);
-  CHECK(collectionHelpersSource.find("findStdlibSurfaceMetadataByBridgeKey(\"collections.map_helpers\")") ==
-        std::string::npos);
-  CHECK(collectionHelpersSource.find("\"collections.map_constructors\"") ==
-        std::string::npos);
-  CHECK(tailDispatchSource.find("resolvePublishedStdlibSurfaceMemberName(") !=
-        std::string::npos);
-  CHECK(tailDispatchSource.find("resolvePublishedSemanticStdlibSurfaceMemberName(") !=
-        std::string::npos);
-  CHECK(tailDispatchSource.find("tailDispatchKeyValueHelperSurfaceId()") !=
-        std::string::npos);
-  CHECK(tailDispatchSource.find("tailDispatchMapHelperSurfaceId()") ==
-        std::string::npos);
-  CHECK(tailDispatchSource.find("keyValueHelperSurfaceMetadata()") !=
-        std::string::npos);
-  CHECK(tailDispatchSource.find("findStdlibSurfaceMetadataByBridgeKey(\n"
-                                "              \"collections.map_helpers\")") ==
-        std::string::npos);
-  CHECK(tailDispatchSource.find("hasPublishedSemanticKeyValueSurface(callExpr)") !=
-        std::string::npos);
-  CHECK(tailDispatchSource.find("hasPublishedSemanticMapSurface(callExpr)") ==
-        std::string::npos);
-  CHECK(tailDispatchSource.find("isTailDispatchKeyValueImportAliasHelperPath(rawPath, helperName)") !=
-        std::string::npos);
-  CHECK(tailDispatchSource.find("isTailDispatchMapImportAliasHelperPath(rawPath, helperName)") ==
-        std::string::npos);
-  CHECK(tailDispatchSource.find("StdlibSurfaceId::CollectionsMapHelpers") ==
-        std::string::npos);
-  CHECK(tailDispatchSource.find("rawPath.rfind(\"/\" + std::string(\"map\") + \"/\", 0)") ==
-        std::string::npos);
-  CHECK(tailDispatchSource.find(
-            "helperName == \"tryAt\" || helperName == \"at\" ||\n"
-            "               helperName == \"at_unsafe\" || helperName == \"insert\" ||") !=
-        std::string::npos);
-  CHECK(tailDispatchSource.find("isPublishedStdlibSurfaceLoweringPath(") !=
-        std::string::npos);
-  CHECK(tailDispatchSource.find("isCanonicalPublishedStdlibSurfaceHelperPath(") !=
-        std::string::npos);
-  CHECK(nativeTailDispatchSource.find("resolvePublishedStdlibSurfaceMemberName(") !=
-        std::string::npos);
-  CHECK(nativeTailDispatchSource.find("resolvePublishedSemanticStdlibSurfaceMemberName(") !=
-        std::string::npos);
-  CHECK(nativeTailDispatchSource.find("findSemanticProductDirectCallStdlibSurfaceId(semanticProgram, expr)") !=
-        std::string::npos);
-  CHECK(nativeTailDispatchSource.find("isCanonicalPublishedStdlibSurfaceHelperPath(") !=
-        std::string::npos);
+  const primec::SymbolId mapContainsPathId =
+      primec::semanticProgramInternCallTargetString(semanticProgram,
+                                                    "/std/collections/map/contains");
+  semanticProgram.publishedRoutingLookups.methodCallTargetIdsByExpr.insert_or_assign(
+      7102, mapContainsPathId);
+  semanticProgram.publishedRoutingLookups.methodCallStdlibSurfaceIdsByExpr.insert_or_assign(
+      7102, mapMetadata->id);
+
+  const primec::SymbolId mapTryAtPathId =
+      primec::semanticProgramInternCallTargetString(semanticProgram,
+                                                    "/std/collections/map/tryAt");
+  semanticProgram.publishedRoutingLookups.bridgePathChoiceIdsByExpr.insert_or_assign(
+      7103, mapTryAtPathId);
+  semanticProgram.publishedRoutingLookups.bridgePathChoiceStdlibSurfaceIdsByExpr.insert_or_assign(
+      7103, mapMetadata->id);
+
+  auto expectSemanticSurfaceMember = [&](uint64_t semanticNodeId,
+                                         primec::StdlibSurfaceId surfaceId,
+                                         std::string_view expectedMember) {
+    primec::Expr callExpr;
+    callExpr.kind = primec::Expr::Kind::Call;
+    callExpr.semanticNodeId = semanticNodeId;
+    std::string semanticMember;
+    CHECK(primec::ir_lowerer::resolvePublishedSemanticStdlibSurfaceMemberName(
+        &semanticProgram, callExpr, surfaceId, semanticMember));
+    CHECK(semanticMember == expectedMember);
+  };
+
+  expectSemanticSurfaceMember(7101, vectorMetadata->id, "at");
+  expectSemanticSurfaceMember(7102, mapMetadata->id, "contains");
+  expectSemanticSurfaceMember(7103, mapMetadata->id, "tryAt");
+
+  primec::Expr wrongSurfaceCall;
+  wrongSurfaceCall.kind = primec::Expr::Kind::Call;
+  wrongSurfaceCall.semanticNodeId = 7102;
+  memberName = "stale";
+  CHECK_FALSE(primec::ir_lowerer::resolvePublishedSemanticStdlibSurfaceMemberName(
+      &semanticProgram, wrongSurfaceCall, vectorMetadata->id, memberName));
+  CHECK(memberName.empty());
+
+  primec::Expr nonCallExpr;
+  nonCallExpr.kind = primec::Expr::Kind::Name;
+  nonCallExpr.semanticNodeId = 7101;
+  CHECK_FALSE(primec::ir_lowerer::resolvePublishedSemanticStdlibSurfaceMemberName(
+      &semanticProgram, nonCallExpr, vectorMetadata->id, memberName));
 }
 
 namespace {

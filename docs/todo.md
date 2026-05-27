@@ -65,7 +65,6 @@ This file is the live open-work queue for PrimeStruct.
 ### Ready Now
 
 - TODO-4613: Retire semantic-validator private source locks | track: semantic-source-lock-retirement | surface: semantic validator source-lock tests
-- TODO-4614: Retire IR-lowerer call-helper source locks | track: lowerer-call-source-lock-retirement | surface: IR-lowerer call-helper source-lock tests
 - TODO-4615: Retire emitter private source locks | track: emitter-source-lock-retirement | surface: emitter source-lock tests
 - TODO-4606: Specify capability-parameterized views | track: capability-view-docs | surface: docs view model
 
@@ -128,21 +127,20 @@ This file is the live open-work queue for PrimeStruct.
 ### Execution Queue
 
 1. TODO-4613: Retire semantic-validator private source locks
-2. TODO-4614: Retire IR-lowerer call-helper source locks
-3. TODO-4615: Retire emitter private source locks
-4. TODO-4606: Specify capability-parameterized views
-5. TODO-4607: Publish initial array extent facts
-6. TODO-4608: Add checked array slice construction
-7. TODO-4609: Reject escaping local array slices
-8. TODO-4610: Add forward cursor traversal API
-9. TODO-4611: Add reverse cursor traversal API
-10. TODO-4612: Add safe extent and cursor code examples
-11. TODO-4616: Make semantic validation manifest executable
-12. TODO-4617: Add semantic preflight missing-fact diagnostics
-13. TODO-4618: Fail closed on stale CT-eval requirement facts
-14. TODO-4619: Gate runtime reflection by backend profile
-15. TODO-4620: Index expanded-source segments for diagnostics
-16. TODO-4621: Classify unsupported variadic-pack diagnostics
+2. TODO-4615: Retire emitter private source locks
+3. TODO-4606: Specify capability-parameterized views
+4. TODO-4607: Publish initial array extent facts
+5. TODO-4608: Add checked array slice construction
+6. TODO-4609: Reject escaping local array slices
+7. TODO-4610: Add forward cursor traversal API
+8. TODO-4611: Add reverse cursor traversal API
+9. TODO-4612: Add safe extent and cursor code examples
+10. TODO-4616: Make semantic validation manifest executable
+11. TODO-4617: Add semantic preflight missing-fact diagnostics
+12. TODO-4618: Fail closed on stale CT-eval requirement facts
+13. TODO-4619: Gate runtime reflection by backend profile
+14. TODO-4620: Index expanded-source segments for diagnostics
+15. TODO-4621: Classify unsupported variadic-pack diagnostics
 
 ### Task Blocks
 
@@ -332,28 +330,6 @@ This file is the live open-work queue for PrimeStruct.
   - stop_rule: Stop once the validator source-delegation source lock is
     retired and covered; do not split or reorganize semantic validator
     fragments in this leaf.
-
-- [ ] TODO-4614: Retire IR-lowerer call-helper source locks
-  - owner: ai
-  - created_at: 2026-05-27
-  - phase: Architecture hardening
-  - parallel_track: lowerer-call-source-lock-retirement
-  - scope: Replace the temporary IR-lowerer call-helper and dispatch-wrapper
-    source locks with public helper-contract, emitted-IR, or deterministic
-    diagnostic coverage so the active tests stop reading private
-    `src/ir_lowerer/*` files to guard those split points.
-  - implementation_notes: Start with the lowerer rows in
-    `docs/source_lock_inventory.md`, the matching source-lock tests under
-    `tests/unit/`, and the narrow
-    `include/primec/testing/IrLowerer*Contracts.h` surfaces.
-  - acceptance:
-    - The lowerer source-lock inventory row no longer lists call-helper or
-      dispatch-wrapper delegation checks that read private lowerer source.
-    - Replacement tests fail on public emitted IR, lowerer helper contracts, or
-      stable diagnostics instead of private implementation text.
-    - Include-layer validation passes without adding a new allowlist entry.
-  - stop_rule: Stop after the call-helper/dispatch-wrapper source-lock family
-    is retired; leave unrelated lowerer source-lock families to later leaves.
 
 - [ ] TODO-4615: Retire emitter private source locks
   - owner: ai

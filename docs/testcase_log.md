@@ -4,6 +4,23 @@
 - none
 
 ## Recent Test Runs
+- 2026-05-27 21:14 CEST | pass | mode: release + include-layer |
+  command:
+  `cmake -S . -B build-release -DCMAKE_BUILD_TYPE=Release -DCMAKE_EXPORT_COMPILE_COMMANDS=ON`;
+  `cmake --build build-release --target PrimeStruct_backend_ir_tests PrimeStruct_compile_run_tests -j 1`;
+  `cd build-release && ./PrimeStruct_compile_run_tests --test-case="todo queue and skipped doctest debt stay source locked" --no-skip`;
+  `cmake --build build-release --target PrimeStruct_backend_ir_tests -j 1`;
+  `cd build-release && ./PrimeStruct_backend_ir_tests --test-case="ir lowerer call-helper contracts replace source delegation locks,ir lowerer collection dispatch metadata resolves through public contracts,ir lowerer native tail wrapper leaves temporary vector receiver to helper lowering,ir lowerer call helpers dispatch buffer and native tail wrappers,ir lowerer call helpers resolve and validate map access targets,ir lowerer call helpers resolve and validate array vector access targets" --no-skip`;
+  `git diff --check`;
+  `PYTHONDONTWRITEBYTECODE=1 python3 scripts/check_include_layers.py`
+  | failures: none | notes: TODO-4614 focused validation passed after
+  replacing lowerer call-helper/dispatch-wrapper source locks. Parent
+  configured the worker release build, rebuilt the selected test binaries,
+  passed the TODO docs-lock case (1 case / 554 assertions), and reran the
+  focused backend IR slice successfully (6 cases / 248 assertions). The first
+  backend IR attempt exposed stale expectations for legacy experimental-map
+  struct paths in the nearby public map-access helper test; the expectations
+  now match the public key/value target and wrapped-state contract.
 - 2026-05-27 21:14 CEST | pass | mode: release + docs/source-lock |
   command:
   `cmake --build build-release --target PrimeStruct_compile_run_tests -j 1`;

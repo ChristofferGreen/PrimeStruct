@@ -37,6 +37,34 @@ Finished items are periodically archived here from `docs/todo.md`; section heade
     heap intrinsic signature changes and FFI adapter implementation remain
     later code leaves.
 
+- [x] TODO-4614: Retire IR-lowerer call-helper source locks
+  - owner: ai
+  - created_at: 2026-05-27
+  - finished_at: 2026-05-27
+  - phase: Architecture hardening
+  - parallel_track: lowerer-call-source-lock-retirement
+  - scope: Replaced the temporary IR-lowerer call-helper and
+    dispatch-wrapper source locks with public helper-contract coverage and
+    deterministic wrapper-dispatch behavior.
+  - outcome:
+    - Added a narrow `IrLowererCollectionSurfaceContracts.h` testing surface
+      for published collection helper metadata lookup contracts.
+    - Replaced call-helper delegation assertions that read private lowerer
+      sources with public call-resolution, inline-dispatch, tail-candidate, and
+      stable diagnostic checks.
+    - Replaced dispatch-wrapper source-text checks with collection surface
+      metadata contracts and a public temporary-receiver native-tail dispatch
+      behavior check.
+    - Reclassified the lowerer source-lock inventory row so the remaining
+      lowerer private-source locks are limited to later setup-entry,
+      source-composition, VM helper, collection-surface, and type-layout work.
+  - validation:
+    - Focused static checks and the selected release-mode lowerer/docs-lock
+      test slices were run for this worker; see the commit report for exact
+      commands and results.
+  - stop_rule: Stopped after the call-helper/dispatch-wrapper source-lock
+    family was retired, leaving unrelated lowerer source-lock families open.
+
 - [x] TODO-4604: Specify requirement contract phase split
   - owner: ai
   - created_at: 2026-05-27

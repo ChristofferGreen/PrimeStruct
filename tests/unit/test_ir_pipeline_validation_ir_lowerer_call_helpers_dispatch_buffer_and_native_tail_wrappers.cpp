@@ -1,4 +1,5 @@
 #include "test_ir_pipeline_validation_helpers.h"
+#include "primec/testing/IrLowererCollectionSurfaceContracts.h"
 
 TEST_SUITE_BEGIN("primestruct.ir.pipeline.validation");
 
@@ -418,7 +419,7 @@ TEST_CASE("ir lowerer call helpers resolve and validate map access targets") {
   experimentalMapName.name = "experimentalValues";
   resolved = primec::ir_lowerer::resolveCollectionPairTypeInfo(experimentalMapName, locals);
   CHECK(resolved.isKeyValueTarget);
-  CHECK(resolved.structTypeName == "/std/collections/experimental_map/Map");
+  CHECK(resolved.structTypeName.empty());
 
   primec::ir_lowerer::LocalInfo mapArgsInfo;
   mapArgsInfo.kind = primec::ir_lowerer::LocalInfo::Kind::Array;
@@ -471,7 +472,7 @@ TEST_CASE("ir lowerer call helpers resolve and validate map access targets") {
   CHECK(resolved.keyValueKeyKind == primec::ir_lowerer::LocalInfo::ValueKind::Bool);
   CHECK(resolved.keyValueValueKind == primec::ir_lowerer::LocalInfo::ValueKind::Int32);
   CHECK(resolved.isWrappedKeyValueTarget);
-  CHECK(resolved.structTypeName == "/std/collections/experimental_map/Map");
+  CHECK(resolved.structTypeName.empty());
 
   primec::Expr mapPtrDeref;
   mapPtrDeref.kind = primec::Expr::Kind::Call;
@@ -507,7 +508,7 @@ TEST_CASE("ir lowerer call helpers resolve and validate map access targets") {
   CHECK(resolved.keyValueKeyKind == primec::ir_lowerer::LocalInfo::ValueKind::Int32);
   CHECK(resolved.keyValueValueKind == primec::ir_lowerer::LocalInfo::ValueKind::Bool);
   CHECK(resolved.isWrappedKeyValueTarget);
-  CHECK(resolved.structTypeName == "/std/collections/experimental_map/Map");
+  CHECK(resolved.structTypeName.empty());
 
   primec::Expr mapPtrArgsDeref;
   mapPtrArgsDeref.kind = primec::Expr::Kind::Call;
@@ -1001,60 +1002,74 @@ TEST_CASE("ir lowerer call helpers resolve and validate array vector access targ
   CHECK(error.empty());
 }
 
-TEST_CASE("ir lowerer temporary vector receiver reject guards stdlib wrapper constructors") {
-  auto readText = [](const std::filesystem::path &path) {
-    std::ifstream file(path);
-    CHECK(file.is_open());
-    if (!file.is_open()) {
-      return std::string{};
-    }
-    return std::string((std::istreambuf_iterator<char>(file)),
-                       std::istreambuf_iterator<char>());
+TEST_CASE("ir lowerer native tail wrapper leaves temporary vector receiver to helper lowering") {
+  using NativeResult = primec::ir_lowerer::NativeCallTailDispatchResult;
+  using LocalInfo = primec::ir_lowerer::LocalInfo;
+
+  primec::ir_lowerer::LocalMap locals;
+  LocalInfo vectorInfo{};
+  vectorInfo.kind = LocalInfo::Kind::Vector;
+  vectorInfo.index = 11;
+  vectorInfo.valueKind = LocalInfo::ValueKind::Unknown;
+  locals.emplace("vec", vectorInfo);
+
+  primec::Expr vecName;
+  vecName.kind = primec::Expr::Kind::Name;
+  vecName.name = "vec";
+
+  primec::Expr twoLiteral;
+  twoLiteral.kind = primec::Expr::Kind::Literal;
+  twoLiteral.literalValue = 2;
+
+  primec::Expr tempReceiverCall;
+  tempReceiverCall.kind = primec::Expr::Kind::Call;
+  tempReceiverCall.name = "wrapValues";
+  tempReceiverCall.args = {vecName};
+
+  primec::Expr tempReceiverAccessExpr;
+  tempReceiverAccessExpr.kind = primec::Expr::Kind::Call;
+  tempReceiverAccessExpr.name = "at_unsafe";
+  tempReceiverAccessExpr.isMethodCall = true;
+  tempReceiverAccessExpr.args = {tempReceiverCall, twoLiteral};
+
+  std::vector<primec::IrInstruction> instructions;
+  auto emitInstruction = [&](primec::IrOpcode op, uint64_t imm) {
+    instructions.push_back({op, imm});
+  };
+  auto instructionCount = [&]() { return instructions.size(); };
+  auto patchInstructionImm = [&](size_t index, uint64_t imm) {
+    instructions.at(index).imm = imm;
   };
 
-  const std::filesystem::path repoRoot =
-      std::filesystem::exists(std::filesystem::path("src"))
-          ? std::filesystem::path(".")
-          : std::filesystem::path("..");
-  const std::filesystem::path collectionHelpersPath =
-      repoRoot / "src" / "ir_lowerer" / "IrLowererLowerEmitExprCollectionHelpers.h";
-
-  REQUIRE(std::filesystem::exists(collectionHelpersPath));
-  const std::string source = readText(collectionHelpersPath);
-
-  CHECK(source.find("resolvePublishedLateCollectionMemberName(") !=
-        std::string::npos);
-  CHECK(source.find("primec::StdlibSurfaceId::CollectionsManifestSurface1") !=
-        std::string::npos);
-  CHECK(source.find("ir_lowerer::resolvePublishedStdlibSurfaceMemberName(") !=
-        std::string::npos);
-  CHECK(source.find("constructorName") != std::string::npos);
-  CHECK(source.find("matchesVectorConstructorPath(\"/std/collections/vector/vector\")") ==
-        std::string::npos);
-  CHECK(source.find("auto rejectCanonicalVectorTemporaryReceiverExpr = [&](const Expr &callExpr) -> bool {") !=
-        std::string::npos);
-  CHECK(source.find("if (rejectCanonicalVectorTemporaryReceiverExpr(expr)) {") !=
-        std::string::npos);
-  CHECK(source.find("auto resolveCollectionExprDirectDefinition =") !=
-        std::string::npos);
-  CHECK(source.find("auto findDirectHelperDefinition = [&](const std::string &path)") !=
-        std::string::npos);
-  CHECK(source.find("matchesGeneratedLeafDefinition(candidatePath, \"__t\", 3)") !=
-        std::string::npos);
-  CHECK(source.find("matchesGeneratedLeafDefinition(candidatePath, \"__ov\", 4)") !=
-        std::string::npos);
-  CHECK(source.find("const Definition *receiverDef =") !=
-        std::string::npos);
-  CHECK(source.find("resolveCollectionExprDirectDefinition(*receiverExpr)") !=
-        std::string::npos);
-  CHECK(source.find("auto tryPopulateFromSemanticQueryFact = [&]() {") ==
-        std::string::npos);
-  CHECK(source.find("findSemanticProductQueryFactBySemanticId(*semanticIndex, targetCallExpr)") ==
-        std::string::npos);
-  CHECK(source.find("bindingType.rfind(\"/std/collections/experimental_vector/Vector__\", 0) == 0") ==
-        std::string::npos);
-  CHECK(source.find("targetInfoOut.elemKind = ir_lowerer::valueKindFromTypeName(collectionArgs.front())") !=
-        std::string::npos);
+  int nextTempLocal = 100;
+  std::string error;
+  CHECK(primec::ir_lowerer::tryEmitNativeCallTailDispatchWithLocals(
+            tempReceiverAccessExpr,
+            locals,
+            [](const primec::Expr &, std::string &) { return false; },
+            [](const std::string &) { return true; },
+            [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return false; },
+            [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return false; },
+            [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return false; },
+            [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return false; },
+            [](const primec::Expr &, const primec::ir_lowerer::LocalMap &, int32_t &, size_t &) {
+              return false;
+            },
+            [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return true; },
+            [](const primec::Expr &, std::string &) { return false; },
+            [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) {
+              return LocalInfo::ValueKind::Int32;
+            },
+            [&]() { return nextTempLocal++; },
+            []() {},
+            []() {},
+            []() {},
+            instructionCount,
+            emitInstruction,
+            patchInstructionImm,
+            error) == NativeResult::NotHandled);
+  CHECK(error.empty());
+  CHECK(instructions.empty());
 }
 
 TEST_SUITE_END();

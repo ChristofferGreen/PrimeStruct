@@ -1939,7 +1939,6 @@ TEST_CASE("todo queue and skipped doctest debt stay source locked") {
         std::string::npos);
   CHECK(todo.find("### Ready Now\n\n"
                   "- TODO-4613: Retire semantic-validator private source locks | track: semantic-source-lock-retirement | surface: semantic validator source-lock tests\n"
-                  "- TODO-4614: Retire IR-lowerer call-helper source locks | track: lowerer-call-source-lock-retirement | surface: IR-lowerer call-helper source-lock tests\n"
                   "- TODO-4615: Retire emitter private source locks | track: emitter-source-lock-retirement | surface: emitter source-lock tests\n"
                   "- TODO-4606: Specify capability-parameterized views | track: capability-view-docs | surface: docs view model\n\n"
                   "### Immediate Next 10") !=
@@ -1961,6 +1960,10 @@ TEST_CASE("todo queue and skipped doctest debt stay source locked") {
   CHECK(todo.find("- [ ] TODO-4579: Enforce zero map/vector compiler-knowledge traces") ==
         std::string::npos);
   CHECK(todo.find("- [ ] TODO-4603: Remove IR-lowerer vector-literal compiler traces") ==
+        std::string::npos);
+  CHECK(todo.find("- TODO-4614: Retire IR-lowerer call-helper source locks") ==
+        std::string::npos);
+  CHECK(todo.find("- [ ] TODO-4614: Retire IR-lowerer call-helper source locks") ==
         std::string::npos);
   CHECK(todo.find("- [ ] TODO-4598: Migrate semantics collection surface lookups") ==
         std::string::npos);
@@ -2022,9 +2025,9 @@ TEST_CASE("todo queue and skipped doctest debt stay source locked") {
         std::string::npos);
   CHECK(todo.find("### Execution Queue\n\n"
                   "1. TODO-4613: Retire semantic-validator private source locks\n"
-                  "2. TODO-4614: Retire IR-lowerer call-helper source locks\n"
-                  "3. TODO-4615: Retire emitter private source locks\n"
-                  "4. TODO-4606: Specify capability-parameterized views") !=
+                  "2. TODO-4615: Retire emitter private source locks\n"
+                  "3. TODO-4606: Specify capability-parameterized views\n"
+                  "4. TODO-4607: Publish initial array extent facts") !=
         std::string::npos);
   CHECK(todo.find("### Task Blocks\n\n"
                   "- [ ] TODO-4606: Specify capability-parameterized views") !=
@@ -2085,6 +2088,10 @@ TEST_CASE("todo queue and skipped doctest debt stay source locked") {
         std::string::npos);
   CHECK(todoFinished.find("scans production\n"
                           "      `src/ir_lowerer/` `.cpp`/`.h` files for `VectorLiteral`,") !=
+        std::string::npos);
+  CHECK(todoFinished.find("TODO-4614: Retire IR-lowerer call-helper source locks") !=
+        std::string::npos);
+  CHECK(todoFinished.find("public helper-contract coverage") !=
         std::string::npos);
   CHECK(todoFinished.find("TODO-4598: Migrate semantics collection surface lookups") !=
         std::string::npos);
