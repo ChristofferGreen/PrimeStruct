@@ -162,6 +162,8 @@ def budget_path_specs(repo_root: Path) -> list[BudgetPathSpec]:
                      Path("benchmarks/semantic_memory/semantic_product_index_parity_evidence.json")),
       BudgetPathSpec("semantic_memory", "semantic_product_index_report",
                      Path("benchmarks/semantic_memory/semantic_product_index_math_star_repro_report.json")),
+      BudgetPathSpec("source_location_mapping", "expanded_source_segment_lookup_budget",
+                     Path("benchmarks/source_location_mapper_lookup_budget.json")),
   ]
 
   for build_dir in sorted(repo_root.glob("build-release*")):

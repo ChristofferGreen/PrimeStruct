@@ -2,9 +2,12 @@
 
 #include "primec/CompilePipeline.h"
 #include "primec/CliDriver.h"
+#include "primec/SourceLocationMapper.h"
 
 #include <algorithm>
+#include <string>
 #include <string_view>
+#include <vector>
 
 namespace {
 const primec::SourceUnit *findUnitByPath(const primec::ExpandedSource &source,
@@ -181,6 +184,139 @@ TEST_CASE("expanded source ledger records generated import separators") {
   CHECK(segment->originalStartLine == 0);
   CHECK(segment->originalStartColumn == 0);
   CHECK(expanded.text.find("LEDGER_NO_TRAILING_NEWLINE\n\n// LEDGER_AFTER") != std::string::npos);
+}
+
+TEST_CASE("expanded source diagnostic mapper indexes many segment lookups") {
+  constexpr std::size_t SegmentCount = 384;
+  primec::ExpandedSource expanded;
+  expanded.units.reserve(SegmentCount);
+  expanded.segments.reserve(SegmentCount);
+
+  for (std::size_t index = 0; index < SegmentCount; ++index) {
+    const int line = static_cast<int>(index) + 1;
+    expanded.units.push_back(primec::SourceUnit{
+        .id = index,
+        .kind = primec::SourceUnitKind::Import,
+        .displayPath = "segment_" + std::to_string(index) + ".prime",
+        .moduleKey = "/segment/" + std::to_string(index),
+        .flattenedStartLine = line,
+        .flattenedStartColumn = 1,
+        .flattenedEndLine = line,
+        .flattenedEndColumn = 12,
+        .originalStartLine = 1000 + line,
+        .originalStartColumn = 3,
+    });
+    expanded.segments.push_back(primec::SourceSegment{
+        .unitId = index,
+        .flattenedStartLine = line,
+        .flattenedStartColumn = 1,
+        .flattenedEndLine = line,
+        .flattenedEndColumn = 12,
+        .originalStartLine = 1000 + line,
+        .originalStartColumn = 3,
+    });
+  }
+
+  primec::SourceLocationMapper mapper(expanded);
+  const auto beforeStats = mapper.lookupStats();
+  CHECK(beforeStats.indexedSegmentCount == SegmentCount);
+  CHECK(beforeStats.lineBucketCount == SegmentCount);
+  CHECK(beforeStats.indexedLookupCount == 0);
+
+  std::vector<primec::DiagnosticSinkRecord> records;
+  records.reserve(SegmentCount);
+  for (std::size_t index = SegmentCount; index > 0; --index) {
+    const int line = static_cast<int>(index);
+    primec::DiagnosticSinkRecord record;
+    record.message = "diagnostic " + std::to_string(index);
+    record.primarySpan = primec::DiagnosticSpan{
+        .file = "expanded.prime",
+        .line = line,
+        .column = 1,
+        .endLine = line,
+        .endColumn = 2,
+    };
+    record.hasPrimarySpan = true;
+    records.push_back(std::move(record));
+  }
+
+  mapper.mapAndSortDiagnosticRecordsToSourceUnits(records);
+  REQUIRE(records.size() == SegmentCount);
+  for (std::size_t index = 0; index < SegmentCount; ++index) {
+    const int originalLine = 1001 + static_cast<int>(index);
+    CHECK(records[index].primarySpan.file ==
+          "segment_" + std::to_string(index) + ".prime");
+    CHECK(records[index].primarySpan.line == originalLine);
+    CHECK(records[index].primarySpan.column == 3);
+    CHECK(records[index].primarySpan.endLine == originalLine);
+    CHECK(records[index].primarySpan.endColumn == 4);
+  }
+
+  const auto &afterStats = mapper.lookupStats();
+  CHECK(afterStats.indexedLookupCount == SegmentCount * 3);
+  CHECK(afterStats.segmentCandidateVisitCount == afterStats.indexedLookupCount);
+  CHECK(afterStats.maxSegmentCandidatesVisitedPerLookup == 1);
+  CHECK(afterStats.segmentCandidateVisitCount <
+        SegmentCount * SegmentCount / 4);
+}
+
+TEST_CASE("expanded source diagnostic mapper preserves closed endpoint fallback") {
+  primec::ExpandedSource expanded;
+  expanded.units.push_back(primec::SourceUnit{
+      .id = 0,
+      .kind = primec::SourceUnitKind::Primary,
+      .displayPath = "first.prime",
+      .moduleKey = "/first",
+      .flattenedStartLine = 1,
+      .flattenedStartColumn = 1,
+      .flattenedEndLine = 1,
+      .flattenedEndColumn = 7,
+      .originalStartLine = 20,
+      .originalStartColumn = 1,
+  });
+  expanded.units.push_back(primec::SourceUnit{
+      .id = 1,
+      .kind = primec::SourceUnitKind::Import,
+      .displayPath = "second.prime",
+      .moduleKey = "/second",
+      .flattenedStartLine = 1,
+      .flattenedStartColumn = 7,
+      .flattenedEndLine = 1,
+      .flattenedEndColumn = 10,
+      .originalStartLine = 40,
+      .originalStartColumn = 1,
+  });
+  expanded.segments.push_back(primec::SourceSegment{
+      .unitId = 0,
+      .flattenedStartLine = 1,
+      .flattenedStartColumn = 1,
+      .flattenedEndLine = 1,
+      .flattenedEndColumn = 7,
+      .originalStartLine = 20,
+      .originalStartColumn = 1,
+  });
+  expanded.segments.push_back(primec::SourceSegment{
+      .unitId = 1,
+      .flattenedStartLine = 1,
+      .flattenedStartColumn = 7,
+      .flattenedEndLine = 1,
+      .flattenedEndColumn = 10,
+      .originalStartLine = 40,
+      .originalStartColumn = 1,
+  });
+
+  primec::SourceLocationMapper mapper(expanded);
+  const auto mappedBoundary = mapper.mapExpandedSourceLocation(1, 7);
+  REQUIRE(mappedBoundary.has_value());
+  CHECK(mappedBoundary->file == "second.prime");
+  CHECK(mappedBoundary->line == 40);
+  CHECK(mappedBoundary->column == 1);
+
+  const auto mappedClosedEnd = mapper.mapExpandedSourceLocation(1, 10);
+  REQUIRE(mappedClosedEnd.has_value());
+  CHECK(mappedClosedEnd->file == "second.prime");
+  CHECK(mappedClosedEnd->line == 40);
+  CHECK(mappedClosedEnd->column == 4);
 }
 
 TEST_CASE("compile pipeline exposes stdlib auto include source units") {

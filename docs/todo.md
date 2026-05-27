@@ -64,9 +64,10 @@ This file is the live open-work queue for PrimeStruct.
 
 ### Ready Now
 
-- TODO-4620: Index expanded-source segments for diagnostics | track: expanded-source-diagnostic-index | surface: source location mapper
 - TODO-4607: Publish initial array extent facts | track: array-extent-facts | surface: semantic product extent facts
 - TODO-4617: Add semantic preflight missing-fact diagnostics | track: semantic-product-preflight-diagnostics | surface: semantic product preflight facts
+- TODO-4618: Fail closed on stale CT-eval requirement facts | track: ct-eval-requirement-fail-closed | surface: CT-eval requirement facts
+- TODO-4621: Classify unsupported variadic-pack diagnostics | track: variadic-pack-diagnostic-tier | surface: lowerer/backend diagnostics
 
 ### Immediate Next 10
 
@@ -75,8 +76,6 @@ This file is the live open-work queue for PrimeStruct.
 - TODO-4610: Add forward cursor traversal API
 - TODO-4611: Add reverse cursor traversal API
 - TODO-4612: Add safe extent and cursor code examples
-- TODO-4618: Fail closed on stale CT-eval requirement facts
-- TODO-4621: Classify unsupported variadic-pack diagnostics
 
 ### Priority Lanes
 
@@ -107,13 +106,15 @@ This file is the live open-work queue for PrimeStruct.
   TODO-4589 added the architecture health dashboard. TODO-4594 completed the
   semantic unknown-call diagnostic stability slice. TODO-4616 made the
   semantic validation manifest executable. TODO-4619 completed the runtime
-  reflection backend-profile capability gate.
+  reflection backend-profile capability gate. TODO-4620 completed indexed
+  expanded-source diagnostic lookup.
 - Architecture review hardening: TODO-4613 through TODO-4616 retired the
   temporary semantic/lowerer/emitter source locks and made the semantic
   validation manifest executable. TODO-4619 completed the second backend
-  capability gate. TODO-4617, TODO-4618, TODO-4620, and TODO-4621 remain for
-  semantic-product stale/missing diagnostics, expanded-source diagnostic lookup
-  indexing, and one lowerer/backend diagnostic stability-tier promotion.
+  capability gate, and TODO-4620 completed deterministic indexed
+  expanded-source diagnostic lookup. TODO-4617, TODO-4618, and TODO-4621
+  remain for semantic-product stale/missing diagnostics and one lowerer/backend
+  diagnostic stability-tier promotion.
 - Safe array extents and capability views: TODO-4604 completed the requirement
   contract phase split, and TODO-4605 completed the non-null safe pointer
   optionality model. TODO-4606 specified the capability-parameterized
@@ -126,16 +127,15 @@ This file is the live open-work queue for PrimeStruct.
 
 ### Execution Queue
 
-1. TODO-4620: Index expanded-source segments for diagnostics
-2. TODO-4607: Publish initial array extent facts
-3. TODO-4617: Add semantic preflight missing-fact diagnostics
-4. TODO-4608: Add checked array slice construction
-5. TODO-4609: Reject escaping local array slices
-6. TODO-4610: Add forward cursor traversal API
-7. TODO-4611: Add reverse cursor traversal API
-8. TODO-4612: Add safe extent and cursor code examples
-9. TODO-4618: Fail closed on stale CT-eval requirement facts
-10. TODO-4621: Classify unsupported variadic-pack diagnostics
+1. TODO-4607: Publish initial array extent facts
+2. TODO-4617: Add semantic preflight missing-fact diagnostics
+3. TODO-4618: Fail closed on stale CT-eval requirement facts
+4. TODO-4621: Classify unsupported variadic-pack diagnostics
+5. TODO-4608: Add checked array slice construction
+6. TODO-4609: Reject escaping local array slices
+7. TODO-4610: Add forward cursor traversal API
+8. TODO-4611: Add reverse cursor traversal API
+9. TODO-4612: Add safe extent and cursor code examples
 
 ### Task Blocks
 
@@ -306,6 +306,7 @@ This file is the live open-work queue for PrimeStruct.
   - owner: ai
   - created_at: 2026-05-27
   - phase: Architecture hardening
+  - parallel_track: ct-eval-requirement-fail-closed
   - scope: Make compile-time requirement evaluation reject incomplete, missing,
     or stale `requirementPredicateFacts` from the semantic product instead of
     degrading into ordinary no-match or syntax-derived behavior.
@@ -324,32 +325,11 @@ This file is the live open-work queue for PrimeStruct.
   - stop_rule: Stop once CT-eval fails closed on requirement-predicate fact
     completeness; do not implement new requirement syntax in this leaf.
 
-- [ ] TODO-4620: Index expanded-source segments for diagnostics
-  - owner: ai
-  - created_at: 2026-05-27
-  - phase: Architecture hardening
-  - parallel_track: expanded-source-diagnostic-index
-  - scope: Replace the linear expanded-source segment lookup used for
-    diagnostic source mapping with a deterministic indexed lookup so large
-    generated or expanded sources avoid repeated full segment scans.
-  - implementation_notes: Start with `include/primec/SourceLocationMapper.h`,
-    `src/SourceLocationMapper.cpp`, `include/primec/ExpandedSource.h`, and the
-    expanded-source provenance tests. Keep the index deterministic and local to
-    source mapping.
-  - acceptance:
-    - Source mapping results remain byte-for-byte stable for existing
-      diagnostics and expanded-source tests.
-    - A focused synthetic many-segment test proves lookup uses the indexed
-      path and does not scan every segment for each mapped diagnostic.
-    - The architecture health dashboard or focused benchmark notes the lookup
-      budget improvement or guards against an obvious regression.
-  - stop_rule: Stop once expanded-source diagnostic lookup is indexed and
-    covered; do not redesign expanded-source provenance records in this leaf.
-
 - [ ] TODO-4621: Classify unsupported variadic-pack diagnostics
   - owner: ai
   - created_at: 2026-05-27
   - phase: Architecture hardening
+  - parallel_track: variadic-pack-diagnostic-tier
   - scope: Promote one existing lowerer/backend unsupported variadic-pack
     diagnostic into the diagnostic stability-tier contract, including stable
     message text, primary span, and notes where applicable.

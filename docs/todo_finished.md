@@ -6,6 +6,35 @@ Legend:
 Finished items are periodically archived here from `docs/todo.md`; section headers record the archive date.
 
 **Todo Completion (May 27, 2026)**
+- [x] TODO-4620: Index expanded-source segments for diagnostics
+  - owner: ai
+  - created_at: 2026-05-27
+  - finished_at: 2026-05-27
+  - phase: Architecture hardening
+  - parallel_track: expanded-source-diagnostic-index
+  - scope: Replaced the linear expanded-source segment lookup used for
+    diagnostic source mapping with a deterministic indexed lookup so large
+    generated or expanded sources avoid repeated full segment scans.
+  - outcome:
+    - Added a reusable `SourceLocationMapper` that builds deterministic
+      per-line segment buckets and reuses that index across diagnostic record
+      sorting plus span remapping.
+    - Kept the legacy free mapper functions as compatibility wrappers while
+      moving bulk diagnostic mapping onto one shared indexed mapper instance.
+    - Added synthetic many-segment source mapping coverage that proves mapped
+      diagnostics visit one candidate segment per lookup instead of scanning
+      the full segment list.
+    - Added
+      `benchmarks/source_location_mapper_lookup_budget.json` and registered it
+      in the architecture health dashboard budget inventory as a regression
+      guard for expanded-source segment lookup.
+  - validation:
+    - Focused source mapper, dashboard, docs/source-lock, and static
+      validation were selected for this worker; see the commit report for
+      exact commands and results.
+  - stop_rule: Stopped after expanded-source diagnostic lookup was indexed and
+    covered without redesigning expanded-source provenance records.
+
 - [x] TODO-4619: Gate runtime reflection by backend profile
   - owner: ai
   - created_at: 2026-05-27

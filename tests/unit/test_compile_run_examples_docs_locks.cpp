@@ -2024,9 +2024,10 @@ TEST_CASE("todo queue and skipped doctest debt stay source locked") {
                   "  coverage snapshots in this file.") !=
         std::string::npos);
   CHECK(todo.find("### Ready Now\n\n"
-                  "- TODO-4620: Index expanded-source segments for diagnostics | track: expanded-source-diagnostic-index | surface: source location mapper\n"
                   "- TODO-4607: Publish initial array extent facts | track: array-extent-facts | surface: semantic product extent facts\n"
-                  "- TODO-4617: Add semantic preflight missing-fact diagnostics | track: semantic-product-preflight-diagnostics | surface: semantic product preflight facts\n\n"
+                  "- TODO-4617: Add semantic preflight missing-fact diagnostics | track: semantic-product-preflight-diagnostics | surface: semantic product preflight facts\n"
+                  "- TODO-4618: Fail closed on stale CT-eval requirement facts | track: ct-eval-requirement-fail-closed | surface: CT-eval requirement facts\n"
+                  "- TODO-4621: Classify unsupported variadic-pack diagnostics | track: variadic-pack-diagnostic-tier | surface: lowerer/backend diagnostics\n\n"
                   "### Immediate Next 10") !=
         std::string::npos);
   CHECK(todo.find("- TODO-4604: Specify requirement contract phase split") ==
@@ -2127,10 +2128,10 @@ TEST_CASE("todo queue and skipped doctest debt stay source locked") {
                   "  reference/slice view model in the normative docs. TODO-4607 through") !=
         std::string::npos);
   CHECK(todo.find("### Execution Queue\n\n"
-                  "1. TODO-4620: Index expanded-source segments for diagnostics\n"
-                  "2. TODO-4607: Publish initial array extent facts\n"
-                  "3. TODO-4617: Add semantic preflight missing-fact diagnostics\n"
-                  "4. TODO-4608: Add checked array slice construction") !=
+                  "1. TODO-4607: Publish initial array extent facts\n"
+                  "2. TODO-4617: Add semantic preflight missing-fact diagnostics\n"
+                  "3. TODO-4618: Fail closed on stale CT-eval requirement facts\n"
+                  "4. TODO-4621: Classify unsupported variadic-pack diagnostics") !=
         std::string::npos);
   CHECK(todo.find("- TODO-4613: Retire semantic-validator private source locks | track: "
                   "semantic-source-lock-retirement") ==
@@ -2260,6 +2261,16 @@ TEST_CASE("todo queue and skipped doctest debt stay source locked") {
         std::string::npos);
   CHECK(todoFinished.find("source-unit identity to\n"
                           "      instruction source-map entries") != std::string::npos);
+  CHECK(todoFinished.find("TODO-4620: Index expanded-source segments for diagnostics") !=
+        std::string::npos);
+  CHECK(todoFinished.find("per-line segment buckets") !=
+        std::string::npos);
+  CHECK(todoFinished.find("source_location_mapper_lookup_budget.json") !=
+        std::string::npos);
+  CHECK(todo.find("- [ ] TODO-4620: Index expanded-source segments for diagnostics") ==
+        std::string::npos);
+  CHECK(todo.find("- TODO-4620: Index expanded-source segments for diagnostics | track:") ==
+        std::string::npos);
   CHECK(todo.find("TODO-4592: Map parser and semantic diagnostics through source units") ==
         std::string::npos);
   CHECK(todo.find("TODO-4593: Carry source-unit provenance into IR and VM debug maps") ==

@@ -94,6 +94,8 @@ def write_minimal_repo(repo_root: Path, *, with_budget_artifacts: bool) -> None:
         "{}\n", encoding="utf-8")
     (repo_root / "benchmarks" / "semantic_memory" /
      "semantic_product_index_parity_evidence.json").write_text("{}\n", encoding="utf-8")
+    (repo_root / "benchmarks" / "source_location_mapper_lookup_budget.json").write_text(
+        "{}\n", encoding="utf-8")
     (repo_root / "build-release" / "benchmarks").mkdir(parents=True)
     (repo_root / "build-release" / "graph_budget_report.json").write_text(
         "{}\n", encoding="utf-8")
@@ -128,6 +130,7 @@ def test_representative_parsing(module, scratch_parent: Path | None) -> None:
     ]
     available_paths = {entry["path"] for entry in report["budget_summaries"]["available"]}
     assert "benchmarks/type_graph_budget_baseline.json" in available_paths
+    assert "benchmarks/source_location_mapper_lookup_budget.json" in available_paths
     assert "build-release/graph_budget_report.json" in available_paths
 
     text = module.format_text(report)
@@ -135,6 +138,7 @@ def test_representative_parsing(module, scratch_parent: Path | None) -> None:
     assert "Include-layer allowlist: 2 entries" in text
     assert "Semantic-product fact families: 3 total" in text
     assert "graph:build-release_graph_budget_report" in text
+    assert "source_location_mapping:expanded_source_segment_lookup_budget" in text
 
 
 def test_missing_optional_artifacts(module, scratch_parent: Path | None) -> None:
@@ -146,6 +150,7 @@ def test_missing_optional_artifacts(module, scratch_parent: Path | None) -> None
     assert report["budget_summaries"]["available"] == []
     missing_paths = {entry["path"] for entry in report["budget_summaries"]["missing_optional"]}
     assert "benchmarks/type_graph_budget_baseline.json" in missing_paths
+    assert "benchmarks/source_location_mapper_lookup_budget.json" in missing_paths
     assert "benchmarks/semantic_memory_baseline_report.json" in missing_paths
 
     text = module.format_text(report)
