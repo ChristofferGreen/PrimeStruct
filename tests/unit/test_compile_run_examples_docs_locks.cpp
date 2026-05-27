@@ -1827,10 +1827,21 @@ TEST_CASE("todo queue and skipped doctest debt stay source locked") {
                   "  coverage snapshots in this file.") !=
         std::string::npos);
   CHECK(todo.find("### Ready Now\n\n"
-                  "- TODO-4579: Enforce zero map/vector compiler-knowledge traces | track: "
-                  "map-vector-zero-gate") !=
+                  "- TODO-4601: Remove final map helper classifier trace | track: "
+                  "map-helper-zero") !=
+        std::string::npos);
+  CHECK(todo.find("- TODO-4602: Remove semantic vector-literal compiler traces | track: "
+                  "semantic-vector-literal-zero") !=
+        std::string::npos);
+  CHECK(todo.find("- TODO-4603: Remove IR-lowerer vector-literal compiler traces | track: "
+                  "lowerer-vector-literal-zero") !=
+        std::string::npos);
+  CHECK(todo.find("- TODO-4579: Enforce zero map/vector compiler-knowledge traces | track: "
+                  "map-vector-zero-gate") ==
         std::string::npos);
   CHECK(todo.find("- [ ] TODO-4598: Migrate semantics collection surface lookups") ==
+        std::string::npos);
+  CHECK(todo.find("- [ ] TODO-4599: Migrate emitter collection surface lookups") ==
         std::string::npos);
   CHECK(todo.find("- [ ] TODO-4600: Migrate IR lowerer collection surface lookups") ==
         std::string::npos);
@@ -1867,7 +1878,7 @@ TEST_CASE("todo queue and skipped doctest debt stay source locked") {
   CHECK(todo.find("- TODO-4574: Remove vector count/access compiler classifiers | track: vector-helper-classifier-deletion") ==
         std::string::npos);
   CHECK(todo.find("### Immediate Next 10\n\n"
-                  "No additional leaf tasks queued.") !=
+                  "- TODO-4579: Enforce zero map/vector compiler-knowledge traces") !=
         std::string::npos);
   CHECK(todo.find("### Priority Lanes") != std::string::npos);
   CHECK(todo.find("Source-unit provenance ledger: TODO-4592 completed parser/semantic") ==
@@ -1887,6 +1898,9 @@ TEST_CASE("todo queue and skipped doctest debt stay source locked") {
                   "  surface, TODO-4571 added the compiler-knowledge inventory categories") !=
         std::string::npos);
   CHECK(todo.find("### Execution Queue\n\n"
+                  "- TODO-4601: Remove final map helper classifier trace\n"
+                  "- TODO-4602: Remove semantic vector-literal compiler traces\n"
+                  "- TODO-4603: Remove IR-lowerer vector-literal compiler traces\n"
                   "- TODO-4579: Enforce zero map/vector compiler-knowledge traces") !=
         std::string::npos);
   CHECK(todo.find("- TODO-4599: Migrate emitter collection surface lookups | track: "
