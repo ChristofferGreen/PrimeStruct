@@ -4,6 +4,19 @@
 - none
 
 ## Recent Test Runs
+- 2026-05-27 17:47 CEST | pass | mode: release + script | command:
+  `cmake -S . -B build-release -DCMAKE_BUILD_TYPE=Release -DCMAKE_EXPORT_COMPILE_COMMANDS=ON`;
+  `cmake --build build-release --target PrimeStruct_compile_run_tests -j 1`;
+  `cd build-release && ./PrimeStruct_compile_run_tests --test-case="todo queue and skipped doctest debt stay source locked" --no-skip`;
+  `cd build-release && ctest --output-on-failure -R '^PrimeStruct_map_vector_compiler_knowledge_zero_audit(_self_test)?$'`;
+  `python3 scripts/check_map_vector_compiler_knowledge.py --root . --enforce-zero`;
+  `PYTHONDONTWRITEBYTECODE=1 python3 tests/scripts/test_check_map_vector_compiler_knowledge.py --repo-root .`;
+  `python3 -m py_compile scripts/check_map_vector_compiler_knowledge.py tests/scripts/test_check_map_vector_compiler_knowledge.py`;
+  `git diff --check`
+  | failures: none | notes: root validation after merging TODO-4579
+  passed. The release target rebuild passed, the TODO docs-lock case passed
+  1 case / 548 assertions, both zero-audit CTest entries passed, and the
+  broad `--enforce-zero` checker reported zero traces.
 - 2026-05-27 16:27 CEST | pass | mode: release + script | command:
   `cmake -S . -B build-release -DCMAKE_BUILD_TYPE=Release -DCMAKE_EXPORT_COMPILE_COMMANDS=ON`;
   `cmake --build build-release --target PrimeStruct_compile_run_tests -j 1`;
