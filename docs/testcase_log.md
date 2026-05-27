@@ -4,6 +4,17 @@
 None currently recorded.
 
 ## Recent Test Runs
+- 2026-05-27 13:31 CEST | pass | mode: release | command:
+  `cmake --build build-release --target PrimeStruct_backend_ir_tests PrimeStruct_semantics_tests PrimeStruct_compile_run_tests PrimeStruct_misc_tests -j 1`;
+  `cd build-release && ./PrimeStruct_backend_ir_tests --test-case="semantics validator infer source delegation stays stable,semantics validator passes source delegation stays stable,semantics validator stdlib bridge helper routing stays stable,compile pipeline publishes an initial semantic product shell" --no-skip`;
+  `cd build-release && ./PrimeStruct_semantics_tests --test-case="semantic product publishes graph-backed collection helper direct-call facts,semantic product publishes graph-backed collection constructor local-auto surface ids,semantic product publishes vector map and soa_vector collection specializations,semantic product keeps vector and map bridge parity" --no-skip`;
+  `cd build-release && ./PrimeStruct_compile_run_tests --test-case="todo queue and skipped doctest debt stay source locked" --no-skip`;
+  `cd build-release && ./PrimeStruct_misc_tests --test-case="canonical map surface owns standalone stdlib implementation" --no-skip`
+  | failures: none | notes: parent heavy validation passed the affected
+  release target rebuild, backend IR source-lock slice (3 cases / 746
+  assertions), semantic-product collection slices (4 cases / 90 assertions),
+  TODO docs lock (1 case / 525 assertions), and canonical map ownership lock
+  (1 case / 2310 assertions).
 - 2026-05-27 13:29 CEST | pass | mode: release | command:
   `cmake --build build-release --target primec PrimeStruct_compile_run_tests -j 1`;
   `cd build-release && ./PrimeStruct_compile_run_tests --test-case="todo queue and skipped doctest debt stay source locked,compiles native bare map count through canonical helper,compiles native bare map at through canonical helper,compiles native bare map at_unsafe through canonical helper,compiles and runs native bare map contains through canonical helper,rejects native bare map count without imported canonical helper,rejects native bare map contains call without imported canonical helper,compiles and runs stdlib namespaced vector helpers in C++ emitter,C++ emitter mutator rewrite keeps known vector receiver leading names" --no-skip`
@@ -26,6 +37,23 @@ None currently recorded.
   `cd build-release && ./PrimeStruct_backend_ir_tests --test-case="ir lowerer collection surfaces avoid bridge-key literals,native tail and late collection helper metadata dispatch stays source locked,ir lowerer vector type layout traces use generic collection helpers,ir lowerer materialized collection receivers use published helper queries" --no-skip`
   | failures: none | notes: selected backend IR source-lock rerun passed
   4 cases / 384 assertions after updating stale source-lock expectations.
+- 2026-05-27 13:15 CEST | fail | mode: release | command:
+  `cd build-release && ./PrimeStruct_backend_ir_tests --test-case="semantics validator infer source delegation stays stable,semantics validator passes source delegation stays stable,semantics validator stdlib bridge helper routing stays stable,compile pipeline publishes an initial semantic product shell" --no-skip`
+  | failures: `semantics validator stdlib bridge helper routing stays stable`
+  | notes: parent heavy rerun selected 3 cases, with 2 passing and 1 failing.
+  The failing source-lock had 13 stale string assertions around KeyValue helper
+  routing and split retired SoA path literals.
+- 2026-05-27 13:15 CEST | pass | mode: release | command:
+  `cmake --build build-release --target PrimeStruct_backend_ir_tests PrimeStruct_semantics_tests PrimeStruct_compile_run_tests PrimeStruct_misc_tests -j 1`
+  | failures: none | notes: parent heavy rerun rebuilt the focused release
+  targets after adding the missing semantics helper include.
+- 2026-05-27 12:20 CEST | fail | mode: release | command:
+  `cmake -S . -B build-release -DCMAKE_BUILD_TYPE=Release -DCMAKE_EXPORT_COMPILE_COMMANDS=ON`;
+  `cmake --build build-release --target PrimeStruct_backend_ir_tests PrimeStruct_semantics_tests PrimeStruct_compile_run_tests PrimeStruct_misc_tests -j 1`
+  | failures: `primec_frontend_lib` semantics compile | notes: configure
+  passed, then build failed before focused doctest slices on missing
+  declaration for `keyValueHelperSurfaceMetadataLocal()` in
+  `SemanticsValidatorInferMethodResolutionHelpers.cpp`.
 - 2026-05-27 12:15 CEST | fail | mode: release | command:
   `cmake -S . -B build-release -DCMAKE_BUILD_TYPE=Release -DCMAKE_EXPORT_COMPILE_COMMANDS=ON`;
   `cmake --build build-release --target PrimeStruct_backend_ir_tests -j 1`;
@@ -9000,6 +9028,18 @@ None currently recorded.
   `cd build-release && ./PrimeStruct_backend_ir_tests --test-case="ir lowerer collection surfaces avoid bridge-key literals,native tail and late collection helper metadata dispatch stays source locked,ir lowerer vector type layout traces use generic collection helpers,ir lowerer materialized collection receivers use published helper queries" --no-skip`
   | notes: backend IR source-lock slice passed 4 cases / 384 assertions
   after stale lowerer source-lock expectations were updated.
+- [x] `semantics validator stdlib bridge helper routing stays stable` |
+  resolved: 2026-05-27 13:31 CEST | validating command:
+  `cmake --build build-release --target PrimeStruct_backend_ir_tests PrimeStruct_semantics_tests PrimeStruct_compile_run_tests PrimeStruct_misc_tests -j 1`;
+  `cd build-release && ./PrimeStruct_backend_ir_tests --test-case="semantics validator infer source delegation stays stable,semantics validator passes source delegation stays stable,semantics validator stdlib bridge helper routing stays stable,compile pipeline publishes an initial semantic product shell" --no-skip`
+  | notes: source-lock expectations now match the generic KeyValue helper
+  routing and split retired SoA path literals.
+- [x] `primec_frontend_lib` semantics compile | resolved:
+  2026-05-27 13:15 CEST | validating command:
+  `cmake --build build-release --target PrimeStruct_backend_ir_tests PrimeStruct_semantics_tests PrimeStruct_compile_run_tests PrimeStruct_misc_tests -j 1`
+  | notes: adding the missing semantics collection surface helper include made
+  `keyValueHelperSurfaceMetadataLocal()` visible to
+  `SemanticsValidatorInferMethodResolutionHelpers.cpp`.
 - [x] `spinning cube native window host sample compiles and validates args
   deterministically` | resolved: 2026-05-26 15:23 CEST | validating
   command: `./scripts/compile.sh --release` | notes: the previous

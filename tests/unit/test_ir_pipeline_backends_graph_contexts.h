@@ -1351,13 +1351,13 @@ TEST_CASE("compile pipeline publishes an initial semantic product shell") {
         std::string::npos);
   CHECK(semanticsSnapshots.find("isMapCollectionSurfaceMetadata(*metadata)") !=
         std::string::npos);
-  CHECK(semanticsSnapshots.find("findStdlibSurfaceMetadataByBridgeKey(bridgeKey)") !=
+  CHECK(semanticsSnapshots.find("matchesStdlibSurfaceMetadata(") !=
         std::string::npos);
   CHECK(semanticsSnapshots.find(
-            "matchesStdlibSurfaceBridgeKey(metadata, \"collections.map_helpers\")") !=
+            "matchesStdlibSurfaceMetadata(metadata, keyValueHelperSurfaceMetadataLocal())") !=
         std::string::npos);
   CHECK(semanticsSnapshots.find(
-            "matchesStdlibSurfaceBridgeKey(metadata, \"collections.map_constructors\")") !=
+            "keyValueConstructorSurfaceMetadataLocal()") !=
         std::string::npos);
   CHECK(semanticsSnapshots.find("resolveStdlibSurfaceMemberName(*metadata, resolvedPath)") !=
         std::string::npos);

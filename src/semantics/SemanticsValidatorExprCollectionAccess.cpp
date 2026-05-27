@@ -30,7 +30,7 @@ bool isSoaReceiverStructPath(const std::string &structPath) {
 }
 
 const StdlibSurfaceMetadata *collectionAccessKeyValueHelperMetadata() {
-  return findStdlibSurfaceMetadataByBridgeKey("collections.map_helpers");
+  return keyValueHelperSurfaceMetadataLocal();
 }
 
 std::string canonicalKeyValueHelperPathLocal(std::string_view helperName) {

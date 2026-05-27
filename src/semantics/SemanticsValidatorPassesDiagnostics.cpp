@@ -50,7 +50,7 @@ bool isCanonicalKeyValueAccessHelperPath(std::string_view path) {
     normalizedPath.erase(suffix);
   }
   const StdlibSurfaceMetadata *metadata =
-      findStdlibSurfaceMetadataByBridgeKey("collections.map_helpers");
+      keyValueHelperSurfaceMetadataLocal();
   if (metadata == nullptr) {
     return false;
   }

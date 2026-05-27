@@ -84,7 +84,7 @@ bool hasExplicitDefinitionFamilyPath(
 }
 
 const StdlibSurfaceMetadata *keyValueHelperSurfaceMetadataLocal() {
-  return findStdlibSurfaceMetadataByBridgeKey("collections.map_helpers");
+  return ::keyValueHelperSurfaceMetadataLocal();
 }
 
 std::string canonicalKeyValueHelperRootPathLocal() {

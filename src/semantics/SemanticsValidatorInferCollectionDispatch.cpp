@@ -6,7 +6,7 @@ namespace {
 
 const StdlibSurfaceMetadata *
 keyValueHelperSurfaceMetadataForInferCollectionDispatch() {
-  return findStdlibSurfaceMetadataByBridgeKey("collections.map_helpers");
+  return keyValueHelperSurfaceMetadataLocal();
 }
 
 bool resolveKeyValueHelperResolvedPathForInferCollectionDispatch(

@@ -42,7 +42,7 @@ std::string keyValueCollectionMarkerPathForInferStructReturn() {
 }
 
 const StdlibSurfaceMetadata *keyValueHelperSurfaceMetadataForInferStructReturn() {
-  return findStdlibSurfaceMetadataByBridgeKey("collections.map_helpers");
+  return keyValueHelperSurfaceMetadataLocal();
 }
 
 std::string unrootedKeyValueHelperPrefixForInferStructReturn() {

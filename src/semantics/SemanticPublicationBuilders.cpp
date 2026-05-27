@@ -716,12 +716,14 @@ void publishCollectionSpecializationForBinding(
   entry.semanticNodeId = bindingEntry.semanticNodeId;
   entry.provenanceHandle = bindingEntry.provenanceHandle;
   if (entry.collectionFamily == "vector") {
-    const auto *helperMetadata =
-        findStdlibSurfaceMetadataByBridgeKey("collections.vector_helpers");
-    entry.helperSurfaceId = helperMetadata == nullptr
-                                ? StdlibSurfaceId::CollectionsManifestSurface0
-                                : helperMetadata->id;
-    entry.constructorSurfaceId = StdlibSurfaceId::CollectionsManifestSurface1;
+    if (const auto *helperMetadata = vectorHelperSurfaceMetadataLocal();
+        helperMetadata != nullptr) {
+      entry.helperSurfaceId = helperMetadata->id;
+    }
+    if (const auto *constructorMetadata = vectorConstructorSurfaceMetadataLocal();
+        constructorMetadata != nullptr) {
+      entry.constructorSurfaceId = constructorMetadata->id;
+    }
   } else if (entry.collectionFamily == "soa" "_vector") {
     entry.helperSurfaceId = StdlibSurfaceId::CollectionsColumnarHelpers;
     entry.constructorSurfaceId = StdlibSurfaceId::CollectionsColumnarConstructors;

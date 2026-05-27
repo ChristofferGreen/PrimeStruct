@@ -1536,17 +1536,14 @@
             "inline bool isStdNamespacedVectorCompatibilityHelperPath(") !=
         std::string::npos);
   CHECK(semanticsCollectionCompatibilityInternalSource.find(
-            "findStdlibSurfaceMetadata(StdlibSurfaceId::CollectionsManifestSurface0)") !=
+            "vectorHelperSurfaceMetadataLocal()") !=
         std::string::npos);
   CHECK(semanticsCollectionCompatibilityInternalSource.find(
             "metadata->canonicalPath) + \"/\" +\n"
             "                        std::string(helperName),") !=
         std::string::npos);
   CHECK(semanticsCollectionHelperRewritesSource.find(
-            "if (helperName == \"at\" || helperName == \"at_unsafe\") {\n"
-            "    return canonicalCollectionHelperPath(\n"
-            "        StdlibSurfaceId::CollectionsManifestSurface0, helperName);\n"
-            "  }") !=
+            "return canonicalCollectionHelperPath(metadata->id, helperName);") !=
         std::string::npos);
   CHECK(semanticsCollectionCompatibilityInternalSource.find(
             "return metadata != nullptr &&\n"
@@ -5960,7 +5957,7 @@
             "resolvedPath.rfind(\"/std/collections/map/at\", 0)") ==
         std::string::npos);
   CHECK(semanticsExprNamedArgumentBuiltinsSource.find(
-            "findStdlibSurfaceMetadataByBridgeKey(\"collections.map_helpers\")") !=
+            "keyValueHelperSurfaceMetadataLocal()") !=
         std::string::npos);
   CHECK(semanticsExprNamedArgumentBuiltinsSource.find(
             "isCanonicalMapAccessHelperResolvedPath(resolvedPath)") !=

@@ -29,7 +29,7 @@ bool isRemovedKeyValueCompatibilityHelper(std::string_view helperName) {
 }
 
 const StdlibSurfaceMetadata *keyValueHelperSurfaceMetadataForBodyArguments() {
-  return findStdlibSurfaceMetadataByBridgeKey("collections.map_helpers");
+  return keyValueHelperSurfaceMetadataLocal();
 }
 
 std::string_view resolveKeyValueHelperPathMemberName(std::string_view path) {

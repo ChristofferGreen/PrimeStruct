@@ -152,14 +152,15 @@ std::string snapshotKey(std::string_view first,
          "\x1f" + std::string(fifth);
 }
 
-bool matchesStdlibSurfaceBridgeKey(const StdlibSurfaceMetadata &metadata,
-                                   std::string_view bridgeKey) {
-  return &metadata == findStdlibSurfaceMetadataByBridgeKey(bridgeKey);
+bool matchesStdlibSurfaceMetadata(const StdlibSurfaceMetadata &metadata,
+                                  const StdlibSurfaceMetadata *expectedMetadata) {
+  return expectedMetadata != nullptr && &metadata == expectedMetadata;
 }
 
 bool isMapCollectionSurfaceMetadata(const StdlibSurfaceMetadata &metadata) {
-  return matchesStdlibSurfaceBridgeKey(metadata, "collections.map_helpers") ||
-         matchesStdlibSurfaceBridgeKey(metadata, "collections.map_constructors");
+  return matchesStdlibSurfaceMetadata(metadata, keyValueHelperSurfaceMetadataLocal()) ||
+         matchesStdlibSurfaceMetadata(metadata,
+                                      keyValueConstructorSurfaceMetadataLocal());
 }
 
 std::optional<std::pair<std::string, std::string>>

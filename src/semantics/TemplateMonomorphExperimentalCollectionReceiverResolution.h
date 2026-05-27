@@ -537,7 +537,7 @@ bool resolvesCollectionVectorValueReceiver(const Expr *receiverExpr,
 }
 
 const StdlibSurfaceMetadata *templateMonomorphKeyValueHelperSurfaceMetadata() {
-  return primec::findStdlibSurfaceMetadataByBridgeKey("collections.map_helpers");
+  return keyValueHelperSurfaceMetadataLocal();
 }
 
 bool resolveTemplateMonomorphKeyValueHelperName(

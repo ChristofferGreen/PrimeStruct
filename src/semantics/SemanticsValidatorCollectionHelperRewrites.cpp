@@ -41,7 +41,7 @@ bool allowsArrayVectorCompatibilitySuffix(const std::string &suffix) {
 }
 
 const StdlibSurfaceMetadata *collectionRewriteKeyValueHelperMetadata() {
-  return findStdlibSurfaceMetadataByBridgeKey("collections.map_helpers");
+  return keyValueHelperSurfaceMetadataLocal();
 }
 
 std::string canonicalPublishedVectorHelperTarget(std::string_view helperName) {

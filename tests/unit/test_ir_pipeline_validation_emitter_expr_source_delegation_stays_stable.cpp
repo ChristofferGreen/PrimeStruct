@@ -834,7 +834,7 @@ TEST_CASE("template monomorph source delegation stays stable") {
             "def.fullPath.rfind(\"/std/collections/map/\", 0)") ==
         std::string::npos);
   CHECK(templateMonomorphImplicitTemplateInferenceSource.find(
-            "findStdlibSurfaceMetadataByBridgeKey(\"collections.map_helpers\")") !=
+            "keyValueHelperSurfaceMetadataLocal()") !=
         std::string::npos);
   CHECK(templateMonomorphImplicitTemplateInferenceSource.find(
             "findStdlibSurfaceMetadataByResolvedPath(path)") !=

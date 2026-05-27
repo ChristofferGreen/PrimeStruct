@@ -9,7 +9,7 @@ namespace {
 
 const StdlibSurfaceMetadata *
 keyValueHelperSurfaceMetadataForEffectFreeCollections() {
-  return findStdlibSurfaceMetadataByBridgeKey("collections.map_helpers");
+  return keyValueHelperSurfaceMetadataLocal();
 }
 
 std::string canonicalKeyValueHelperPathLocal(std::string_view helperName) {

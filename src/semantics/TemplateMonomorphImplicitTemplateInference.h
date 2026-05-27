@@ -29,7 +29,7 @@ bool inferBindingTypeForMonomorph(const Expr &initializer,
 
 bool isStdlibMapHelperDefinitionPath(std::string_view path) {
   const StdlibSurfaceMetadata *metadata =
-      findStdlibSurfaceMetadataByBridgeKey("collections.map_helpers");
+      keyValueHelperSurfaceMetadataLocal();
   const StdlibSurfaceMetadata *resolvedMetadata =
       findStdlibSurfaceMetadataByResolvedPath(path);
   return metadata != nullptr && resolvedMetadata != nullptr &&

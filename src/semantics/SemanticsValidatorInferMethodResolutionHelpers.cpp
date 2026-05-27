@@ -1,5 +1,6 @@
 #include "SemanticsValidator.h"
 
+#include "StdlibCollectionSurfaceHelpers.h"
 #include "primec/StdlibSurfaceRegistry.h"
 
 #include <algorithm>
@@ -82,7 +83,7 @@ void appendSurfaceExactHelperFallbacks(std::vector<std::string> &out,
 }
 
 const StdlibSurfaceMetadata *keyValueHelperSurfaceMetadataForInferMethodResolution() {
-  return findStdlibSurfaceMetadataByBridgeKey("collections.map_helpers");
+  return keyValueHelperSurfaceMetadataLocal();
 }
 
 std::string canonicalKeyValueHelperPathForInferMethodResolution(

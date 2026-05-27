@@ -59,7 +59,7 @@ bool isUnqualifiedCollectionAccessCall(const Expr &candidate,
 }
 
 const StdlibSurfaceMetadata *preDispatchKeyValueHelperSurfaceMetadata() {
-  return findStdlibSurfaceMetadataByBridgeKey("collections.map_helpers");
+  return keyValueHelperSurfaceMetadataLocal();
 }
 
 std::string canonicalKeyValueHelperPathLocal(std::string_view helperName) {

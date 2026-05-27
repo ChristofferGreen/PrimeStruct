@@ -9,7 +9,7 @@ namespace primec::semantics {
 namespace {
 
 const StdlibSurfaceMetadata *lateFallbackKeyValueHelperSurfaceMetadata() {
-  return findStdlibSurfaceMetadataByBridgeKey("collections.map_helpers");
+  return keyValueHelperSurfaceMetadataLocal();
 }
 
 bool resolveLateFallbackKeyValueHelperName(std::string path,

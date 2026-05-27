@@ -10,7 +10,7 @@ namespace {
 
 bool isCanonicalKeyValueAccessHelperResolvedPath(std::string_view resolvedPath) {
   const auto *metadata =
-      findStdlibSurfaceMetadataByBridgeKey("collections.map_helpers");
+      keyValueHelperSurfaceMetadataLocal();
   if (metadata == nullptr) {
     return false;
   }

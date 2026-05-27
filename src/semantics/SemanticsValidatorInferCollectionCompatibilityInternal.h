@@ -63,11 +63,11 @@ enum class RemovedCollectionHelperFamily {
 }
 
 [[maybe_unused]] const StdlibSurfaceMetadata *vectorHelperSurfaceMetadata() {
-  return findStdlibSurfaceMetadataByBridgeKey("collections.vector_helpers");
+  return vectorHelperSurfaceMetadataLocal();
 }
 
 [[maybe_unused]] const StdlibSurfaceMetadata *vectorConstructorSurfaceMetadata() {
-  return findStdlibSurfaceMetadataByBridgeKey("collections.vector_constructors");
+  return vectorConstructorSurfaceMetadataLocal();
 }
 
 [[maybe_unused]] bool resolvePublishedCollectionHelperMemberToken(

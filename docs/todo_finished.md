@@ -5,6 +5,38 @@ Legend:
 
 Finished items are periodically archived here from `docs/todo.md`; section headers record the archive date.
 
+**Todo Completion (May 27, 2026)**
+- [x] TODO-4598: Migrate semantics collection surface lookups
+  - owner: ai
+  - created_at: 2026-05-27
+  - finished_at: 2026-05-27
+  - phase: Map/vector compiler-independence
+  - parallel_track: stdlib-registry-semantics
+  - depends_on: TODO-4597
+  - inventory_categories: `stdlib-bridge-key`
+  - scope: Removed hard-coded `collections.vector_*` and
+    `collections.map_*` bridge-key lookups from production semantics code by
+    routing map/vector collection surface queries through subsystem-local
+    helpers backed by generic `StdlibSurfaceRegistry` canonical-path metadata.
+  - outcome:
+    - Added collection helper/constructor metadata adapters in
+      `src/semantics/StdlibCollectionSurfaceHelpers.h` that resolve
+      map/vector surfaces by canonical path plus expected surface shape.
+    - Updated semantics call-path, semantic-product publication, snapshot,
+      template-monomorph, collection dispatch, diagnostic, and collection
+      rewrite sites to reuse those adapters instead of calling
+      `findStdlibSurfaceMetadataByBridgeKey(...)` with map/vector bridge
+      keys.
+    - Updated focused source-lock coverage so semantics stays free of the
+      four map/vector bridge-key literals while semantic-product dumps and
+      facts still retain the registry-owned bridge-key values.
+  - validation:
+    - Focused validation was run in release mode for the semantics/source-lock
+      slices selected by the TODO worker; see the commit report for exact
+      commands and results.
+  - stop_rule: Stopped once semantics bridge-key traces were removed without
+    touching emitter or IR-lowerer bridge-key migrations.
+
 **Todo Completion (May 26, 2026)**
 - [x] TODO-4569: Present scene-rendered UI through software surface bridge
   - owner: ai

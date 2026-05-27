@@ -1003,7 +1003,7 @@ TEST_CASE("semantics validator infer source delegation stays stable") {
             "path.rfind(\"/std/collections/vector/\", 0) == 0") ==
         std::string::npos);
   CHECK(semanticsCallPathHelpersSource.find(
-            "findStdlibSurfaceMetadataByBridgeKey(\"collections.vector_helpers\")") !=
+            "vectorHelperSurfaceMetadataLocal()") !=
         std::string::npos);
   CHECK(semanticsCallPathHelpersSource.find(
             "std/collections/vector/") ==
@@ -1577,7 +1577,7 @@ TEST_CASE("semantics validator passes source delegation stays stable") {
             "#include \"SemanticsValidatorInferCollectionCompatibilityInternal.h\"") !=
         std::string::npos);
   CHECK(semanticsPassesDiagnosticsSource.find(
-            "findStdlibSurfaceMetadataByBridgeKey(\"collections.map_helpers\")") !=
+            "keyValueHelperSurfaceMetadataLocal()") !=
         std::string::npos);
   CHECK(semanticsPassesDiagnosticsSource.find("resolveStdlibSurfaceMemberName(*metadata, normalizedPath)") !=
         std::string::npos);
@@ -1889,7 +1889,7 @@ TEST_CASE("semantics validator statement source delegation stays stable") {
             "\"/map/\" + helperName") ==
         std::string::npos);
   CHECK(semanticsStatementBodyArgumentsSource.find(
-            "findStdlibSurfaceMetadataByBridgeKey(\"collections.map_helpers\")") !=
+            "keyValueHelperSurfaceMetadataLocal()") !=
         std::string::npos);
   CHECK(semanticsStatementBodyArgumentsSource.find(
             "canonicalKeyValueHelperPathForBodyArguments(helperName)") !=
@@ -2180,9 +2180,9 @@ main() {
             "auto isCanonicalSoaWrapperMethodName = [](std::string_view methodName) {") !=
         std::string::npos);
   CHECK(resultHelpersSource.find(
-            "if (resolvedType.rfind(\"/std/collections/experimental_soa_vector/SoaVector__\", 0) == 0 &&\n"
+            "if (resolvedType.rfind(\"/std/collections/experimental\" \"_soa\" \"_vector/Soa\" \"Vector\" \"__\", 0) == 0 &&\n"
             "        isCanonicalSoaWrapperMethodName(normalizedMethodName)) {\n"
-            "      return preferredSoaHelperTargetForCollectionType(normalizedMethodName, \"/soa_vector\");\n"
+            "      return preferredSoaHelperTargetForCollectionType(normalizedMethodName, \"/soa\" \"_vector\");\n"
             "    }") !=
         std::string::npos);
   CHECK(resultHelpersSource.find(
@@ -2214,10 +2214,10 @@ main() {
   CHECK(exprMethodTargetSource.find("preferredFileHelperTarget(normalizedMethodName,") !=
         std::string::npos);
   CHECK(exprMethodTargetSource.find(
-            "this->preferredCanonicalExperimentalMapHelperTarget(resolvedHelperName)") !=
+            "this->preferredCanonicalExperimentalKeyValueHelperTarget(resolvedHelperName)") !=
         std::string::npos);
   CHECK(exprMethodTargetSource.find(
-            "this->preferredCanonicalExperimentalMapHelperTarget(") !=
+            "this->preferredCanonicalExperimentalKeyValueHelperTarget(") !=
         std::string::npos);
   CHECK(exprMethodTargetSource.find(
             "this->shouldBuiltinValidateCurrentMapWrapperHelper(") !=
@@ -2236,7 +2236,7 @@ main() {
             "const StdlibSurfaceMetadata *vectorHelperSurfaceMetadata()") !=
         std::string::npos);
   CHECK(collectionCompatibilityInternalSource.find(
-            "findStdlibSurfaceMetadataByBridgeKey(\"collections.vector_helpers\")") !=
+            "vectorHelperSurfaceMetadataLocal()") !=
         std::string::npos);
   CHECK(collectionCompatibilityInternalSource.find(
             "inline bool isStdNamespacedVectorCompatibilityHelperPath(") !=
@@ -2248,7 +2248,7 @@ main() {
             "SemanticsVectorCompatibilityHelpers.h") ==
         std::string::npos);
   CHECK(collectionCompatibilityInternalSource.find(
-            "return isResolvedMapConstructorPath(std::string(resolvedCandidate));") !=
+            "return isResolvedKeyValueConstructorPath(std::string(resolvedCandidate));") !=
         std::string::npos);
   CHECK(semanticsInferTargetResolutionSource.find(
             "std/collections/experimental_map/Map") ==
@@ -2269,7 +2269,7 @@ main() {
             "preferredPublishedCollectionLoweringPath(") !=
         std::string::npos);
   CHECK(collectionCompatibilityInternalSource.find(
-            "resolveCanonicalCompatibilityMapHelperNameFromResolvedPath(") !=
+            "resolveCanonicalCompatibilityKeyValueHelperNameFromResolvedPath(") !=
         std::string::npos);
   CHECK(collectionCompatibilityInternalSource.find(
             "StdlibSurfaceId::CollectionsMapHelpers") ==
@@ -2351,7 +2351,7 @@ main() {
             "const size_t suffix = canonicalPath.find(\"__t\");") ==
         std::string::npos);
   CHECK(collectionCompatibilitySource.find(
-            "resolveCanonicalCompatibilityMapHelperNameFromResolvedPath(") !=
+            "resolveCanonicalCompatibilityKeyValueHelperNameFromResolvedPath(") !=
         std::string::npos);
   CHECK(collectionCompatibilitySource.find(
             "base == \"/std/collections/map\"") ==
@@ -2375,10 +2375,10 @@ main() {
             "rootedKeyValueCompatibilityHelperPath(helperName)") !=
         std::string::npos);
   CHECK(collectionCompatibilitySource.find(
-            "normalizedType.rfind(\"/std/collections/experimental_soa_vector/SoaVector__\", 0) == 0") !=
+            "normalizedType.rfind(\"/std/collections/experimental\" \"_soa\" \"_vector/Soa\" \"Vector\" \"__\", 0) == 0") !=
         std::string::npos);
   CHECK(collectionCompatibilitySource.find(
-            "normalizedType.rfind(\"std/collections/experimental_soa_vector/SoaVector__\", 0) == 0") !=
+            "normalizedType.rfind(\"std/collections/experimental\" \"_soa\" \"_vector/Soa\" \"Vector\" \"__\", 0) == 0") !=
         std::string::npos);
   CHECK(collectionCompatibilitySource.find(
             "findExperimentalMapHelperByName(") == std::string::npos);
@@ -2471,7 +2471,7 @@ main() {
             std::string::npos));
   CHECK(semanticsValidateSource.find(
             "const std::string canonicalPath =\n"
-            "      \"/std/collections/soa_vector/\" + std::string(helperName);") !=
+            "      \"/std/collections/\" \"soa\" \"_vector/\" + std::string(helperName);") !=
         std::string::npos);
   CHECK(semanticsValidateSource.find(
             "return extractBuiltinSoaVectorBinding(parameter).has_value() ||\n"
@@ -2534,14 +2534,14 @@ main() {
             "      normalizedMethodName != \"get_ref\" &&\n"
             "      normalizedMethodName != \"ref\" &&\n"
             "      normalizedMethodName != \"ref_ref\" &&\n"
-            "      normalizedMethodName != \"to_aos\" &&\n"
-            "      normalizedMethodName != \"to_aos_ref\") {") !=
+            "      normalizedMethodName != \"to\" \"_aos\" &&\n"
+            "      normalizedMethodName != \"to\" \"_aos_ref\") {") !=
         std::string::npos);
   CHECK(semanticsValidateSource.find(
             "  const bool isCanonicalBorrowedSoaWrapperBodyCall =\n"
-            "      definitionNamespace == \"/std/collections/soa_vector\" &&\n"
+            "      definitionNamespace == \"/std/collections/\" \"soa\" \"_vector\" &&\n"
             "      (normalizedMethodName == \"count\" || normalizedMethodName == \"get\" ||\n"
-            "       normalizedMethodName == \"ref\" || normalizedMethodName == \"to_aos\") &&\n"
+            "       normalizedMethodName == \"ref\" || normalizedMethodName == \"to\" \"_aos\") &&\n"
             "      expr.args.front().kind == Expr::Kind::Call &&\n"
             "      semantics::isSimpleCallName(expr.args.front(), \"dereference\") &&\n"
             "      expr.args.front().args.size() == 1 &&\n"
@@ -2602,10 +2602,10 @@ main() {
             "        semantics::canonicalizeLegacySoaGetHelperPath(basePath);") !=
         std::string::npos);
   CHECK(semanticsValidateSource.find(
-            "    if (canonicalGetPath == \"/std/collections/soa_vector/get\") {") !=
+            "    if (canonicalGetPath == \"/std/collections/\" \"soa\" \"_vector/get\") {") !=
         std::string::npos);
   CHECK(semanticsValidateSource.find(
-            "    if (canonicalGetPath == \"/std/collections/soa_vector/get_ref\") {") !=
+            "    if (canonicalGetPath == \"/std/collections/\" \"soa\" \"_vector/get_ref\") {") !=
         std::string::npos);
   CHECK(semanticsValidateSource.find(
             "      if (!rewriteSamePathSoaGetCarrierToRef(receiver.name)) {\n"

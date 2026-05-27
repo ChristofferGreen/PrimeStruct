@@ -11,7 +11,7 @@ bool isCanonicalKeyValueAccessHelperName(const std::string &helperName) {
 }
 
 const StdlibSurfaceMetadata *keyValueHelperSurfaceMetadataForDispatchSetup() {
-  return findStdlibSurfaceMetadataByBridgeKey("collections.map_helpers");
+  return keyValueHelperSurfaceMetadataLocal();
 }
 
 bool resolveDispatchSetupKeyValueHelperPath(std::string_view path,

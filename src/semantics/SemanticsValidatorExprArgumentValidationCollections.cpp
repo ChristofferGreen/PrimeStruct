@@ -25,7 +25,7 @@ std::string stripGeneratedHelperSuffix(std::string path) {
 
 const StdlibSurfaceMetadata *
 keyValueHelperSurfaceMetadataForArgumentValidation() {
-  return findStdlibSurfaceMetadataByBridgeKey("collections.map_helpers");
+  return keyValueHelperSurfaceMetadataLocal();
 }
 
 std::string canonicalKeyValueHelperPathForArgumentValidation(

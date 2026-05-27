@@ -22,7 +22,7 @@ bool isCanonicalKeyValueMethodHelper(std::string_view helperName) {
 
 std::string canonicalKeyValueMethodHelperTarget(std::string_view helperName) {
   const StdlibSurfaceMetadata *metadata =
-      findStdlibSurfaceMetadataByBridgeKey("collections.map_helpers");
+      keyValueHelperSurfaceMetadataLocal();
   if (metadata == nullptr) {
     return {};
   }

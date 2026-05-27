@@ -1865,7 +1865,7 @@ TEST_CASE("canonical map surface owns standalone stdlib implementation") {
   CHECK(inferMethodResolutionHelpersSource.find("\"/std/collections/map/\" + selectedHelperName") ==
         std::string::npos);
   CHECK(inferMethodResolutionHelpersSource.find(
-            "findStdlibSurfaceMetadataByBridgeKey(\"collections.map_helpers\")") !=
+            "keyValueHelperSurfaceMetadataLocal()") !=
         std::string::npos);
   CHECK(inferMethodResolutionHelpersSource.find(
             "mapHelperSurfaceMetadataForInferMethodResolution") ==
@@ -2146,7 +2146,7 @@ TEST_CASE("canonical map surface owns standalone stdlib implementation") {
   CHECK(exprPreDispatchDirectCallsSource.find("\"/map/\" +") ==
         std::string::npos);
   CHECK(exprPreDispatchDirectCallsSource.find(
-            "findStdlibSurfaceMetadataByBridgeKey(\"collections.map_helpers\")") !=
+            "keyValueHelperSurfaceMetadataLocal()") !=
         std::string::npos);
   CHECK(exprPreDispatchDirectCallsSource.find(
             "resolvePreDispatchKeyValueHelperMemberToken(") !=
@@ -2487,7 +2487,7 @@ TEST_CASE("canonical map surface owns standalone stdlib implementation") {
   CHECK(effectFreeCollectionsSource.find("stdMapPrefix") ==
         std::string::npos);
   CHECK(effectFreeCollectionsSource.find(
-            "findStdlibSurfaceMetadataByBridgeKey(\"collections.map_helpers\")") !=
+            "keyValueHelperSurfaceMetadataLocal()") !=
         std::string::npos);
   CHECK(effectFreeCollectionsSource.find(
             "keyValueHelperSurfaceMetadataForEffectFreeCollections(") !=
@@ -2650,7 +2650,7 @@ TEST_CASE("canonical map surface owns standalone stdlib implementation") {
   CHECK(inferCollectionDispatchSource.find("resolvedMapHelperName") ==
         std::string::npos);
   CHECK(inferCollectionDispatchSource.find(
-            "findStdlibSurfaceMetadataByBridgeKey(\"collections.map_helpers\")") !=
+            "keyValueHelperSurfaceMetadataLocal()") !=
         std::string::npos);
   CHECK(inferCollectionDispatchSource.find(
             "keyValueHelperSurfaceMetadataForInferCollectionDispatch(") !=
@@ -2852,7 +2852,7 @@ TEST_CASE("canonical map surface owns standalone stdlib implementation") {
   CHECK(inferCollectionDispatchSetupSource.find("StdlibSurfaceId::CollectionsMapHelpers") ==
         std::string::npos);
   CHECK(inferCollectionDispatchSetupSource.find(
-            "findStdlibSurfaceMetadataByBridgeKey(\"collections.map_helpers\")") !=
+            "keyValueHelperSurfaceMetadataLocal()") !=
         std::string::npos);
   CHECK(inferCollectionDispatchSetupSource.find(
             "keyValueHelperSurfaceMetadataForDispatchSetup()") !=
@@ -3727,7 +3727,7 @@ TEST_CASE("canonical map surface owns standalone stdlib implementation") {
   CHECK(passesDiagnosticsSource.find("isVisibleCanonicalKeyValueAccessBuiltin") !=
         std::string::npos);
   CHECK(argumentValidationCollectionsSource.find(
-            "findStdlibSurfaceMetadataByBridgeKey(\"collections.map_helpers\")") !=
+            "keyValueHelperSurfaceMetadataLocal()") !=
         std::string::npos);
   CHECK(argumentValidationCollectionsSource.find(
             "keyValueHelperSurfaceMetadataForArgumentValidation(") !=
@@ -4020,7 +4020,7 @@ TEST_CASE("canonical map surface owns standalone stdlib implementation") {
             "canonicalStdlibKeyValueContainsPathForResolvedMethod(") !=
         std::string::npos);
   CHECK(collectionAccessSource.find(
-            "findStdlibSurfaceMetadataByBridgeKey(\"collections.map_helpers\")") !=
+            "keyValueHelperSurfaceMetadataLocal()") !=
         std::string::npos);
   CHECK(countCapacityMapBuiltinSource.find("/std/collections/map/count") ==
         std::string::npos);

@@ -292,7 +292,7 @@
             "\"/std/collections/map/\" + normalizedMethodName") ==
         std::string::npos);
   CHECK(semanticsExprLateUnknownTargetFallbacksSource.find(
-            "findStdlibSurfaceMetadataByBridgeKey(\"collections.map_helpers\")") !=
+            "keyValueHelperSurfaceMetadataLocal()") !=
         std::string::npos);
   CHECK(semanticsExprLateUnknownTargetFallbacksSource.find(
             "canonicalMapMethodHelperTarget(normalizedMethodName)") !=

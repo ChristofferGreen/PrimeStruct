@@ -114,8 +114,41 @@ inline bool isQualifiedExperimentalKeyValueBackingTypeName(std::string_view type
          isExperimentalCollectionBackingTypeName("map", "Map", normalized);
 }
 
+inline const primec::StdlibSurfaceMetadata *collectionSurfaceMetadataByCanonicalPathLocal(
+    std::string_view canonicalPath,
+    primec::StdlibSurfaceShape expectedShape) {
+  const primec::StdlibSurfaceMetadata *metadata =
+      primec::findStdlibSurfaceMetadataByCanonicalPath(canonicalPath);
+  if (metadata == nullptr ||
+      metadata->domain != primec::StdlibSurfaceDomain::Collections ||
+      metadata->shape != expectedShape) {
+    return nullptr;
+  }
+  return metadata;
+}
+
+inline const primec::StdlibSurfaceMetadata *collectionHelperSurfaceMetadataLocal(
+    std::string_view canonicalPath) {
+  return collectionSurfaceMetadataByCanonicalPathLocal(
+      canonicalPath, primec::StdlibSurfaceShape::HelperFamily);
+}
+
+inline const primec::StdlibSurfaceMetadata *collectionConstructorSurfaceMetadataLocal(
+    std::string_view canonicalPath) {
+  return collectionSurfaceMetadataByCanonicalPathLocal(
+      canonicalPath, primec::StdlibSurfaceShape::ConstructorFamily);
+}
+
+inline const primec::StdlibSurfaceMetadata *vectorHelperSurfaceMetadataLocal() {
+  return collectionHelperSurfaceMetadataLocal("/std/collections/vector");
+}
+
+inline const primec::StdlibSurfaceMetadata *vectorConstructorSurfaceMetadataLocal() {
+  return collectionConstructorSurfaceMetadataLocal("/std/collections/vector/vector");
+}
+
 inline const primec::StdlibSurfaceMetadata *keyValueHelperSurfaceMetadataLocal() {
-  return primec::findStdlibSurfaceMetadataByBridgeKey("collections.map_helpers");
+  return collectionHelperSurfaceMetadataLocal("/std/collections/map");
 }
 
 inline std::string keyValueBackingTypePathLocal() {
@@ -125,8 +158,7 @@ inline std::string keyValueBackingTypePathLocal() {
 }
 
 inline const primec::StdlibSurfaceMetadata *keyValueConstructorSurfaceMetadataLocal() {
-  return primec::findStdlibSurfaceMetadataByBridgeKey(
-      "collections.map_constructors");
+  return collectionConstructorSurfaceMetadataLocal("/std/collections/map/map");
 }
 
 inline bool stripStdlibSurfaceRootedMemberName(std::string_view rawPath,
@@ -323,10 +355,14 @@ inline bool isResolvedVectorConstructorHelperPath(const std::string &rawPath) {
   if (normalizedPath.rfind("/std/collections/", 0) != 0) {
     return false;
   }
+  const primec::StdlibSurfaceMetadata *metadata =
+      vectorConstructorSurfaceMetadataLocal();
+  if (metadata == nullptr) {
+    return false;
+  }
   std::string memberName;
-  return resolveCollectionConstructorMemberPath(
-             primec::StdlibSurfaceId::CollectionsManifestSurface1,
-             normalizedPath, memberName) &&
+  return resolveCollectionConstructorMemberPath(*metadata, normalizedPath,
+                                                memberName) &&
          memberName != "vector";
 }
 
@@ -335,10 +371,14 @@ inline bool isResolvedExperimentalVectorConstructorPath(const std::string &rawPa
   if (normalizedPath.rfind(experimentalCollectionConstructorRootLocal("vector"), 0) != 0) {
     return false;
   }
+  const primec::StdlibSurfaceMetadata *metadata =
+      vectorConstructorSurfaceMetadataLocal();
+  if (metadata == nullptr) {
+    return false;
+  }
   std::string memberName;
-  return resolveCollectionConstructorMemberPath(
-      primec::StdlibSurfaceId::CollectionsManifestSurface1, normalizedPath,
-      memberName);
+  return resolveCollectionConstructorMemberPath(*metadata, normalizedPath,
+                                                memberName);
 }
 
 inline std::string preferredCollectionConstructorSpelling(
@@ -389,20 +429,18 @@ inline std::string metadataBackedExperimentalVectorConstructorCompatibilityPath(
   if (normalizedPath.rfind(experimentalCollectionConstructorRootLocal("vector"), 0) == 0) {
     return {};
   }
-  std::string memberName;
-  if (!resolveCollectionConstructorMemberPath(
-          primec::StdlibSurfaceId::CollectionsManifestSurface1,
-          normalizedPath, memberName) ||
-      memberName == "vector") {
-    return {};
-  }
-  const primec::StdlibSurfaceMetadata *metadata = primec::findStdlibSurfaceMetadata(
-      primec::StdlibSurfaceId::CollectionsManifestSurface1);
+  const primec::StdlibSurfaceMetadata *metadata =
+      vectorConstructorSurfaceMetadataLocal();
   if (metadata == nullptr) {
     return {};
   }
+  std::string memberName;
+  if (!resolveCollectionConstructorMemberPath(*metadata, normalizedPath,
+                                              memberName) ||
+      memberName == "vector") {
+    return {};
+  }
   return preferredCollectionConstructorSpelling(
-      primec::StdlibSurfaceId::CollectionsManifestSurface1, memberName,
-      metadata->compatibilitySpellings,
+      metadata->id, memberName, metadata->compatibilitySpellings,
       experimentalCollectionConstructorRootLocal("vector"));
 }

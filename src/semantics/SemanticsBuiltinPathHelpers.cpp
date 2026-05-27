@@ -1,5 +1,6 @@
 #include "SemanticsHelpers.h"
 
+#include "StdlibCollectionSurfaceHelpers.h"
 #include "primec/SoaPathHelpers.h"
 #include "primec/StdlibSurfaceRegistry.h"
 
@@ -158,7 +159,7 @@ std::string pathWithoutLeadingSlash(std::string path) {
 }
 
 const primec::StdlibSurfaceMetadata *keyValueHelperSurfaceMetadataLocal() {
-  return primec::findStdlibSurfaceMetadataByBridgeKey("collections.map_helpers");
+  return ::keyValueHelperSurfaceMetadataLocal();
 }
 
 bool stripStdlibSurfaceRootedMemberNameLocal(std::string_view rawPath,

@@ -1,4 +1,5 @@
 #include "SemanticsHelpers.h"
+#include "StdlibCollectionSurfaceHelpers.h"
 
 #include "primec/StdlibSurfaceRegistry.h"
 
@@ -28,7 +29,7 @@ bool resolveCanonicalVectorHelperMemberName(std::string_view path,
                                             std::string &memberNameOut) {
   memberNameOut.clear();
   const StdlibSurfaceMetadata *metadata =
-      findStdlibSurfaceMetadataByBridgeKey("collections.vector_helpers");
+      vectorHelperSurfaceMetadataLocal();
   if (metadata == nullptr) {
     return false;
   }
@@ -61,7 +62,7 @@ bool resolveKeyValueHelperMemberName(std::string_view path,
                                      std::string &memberNameOut) {
   memberNameOut.clear();
   const StdlibSurfaceMetadata *metadata =
-      findStdlibSurfaceMetadataByBridgeKey("collections.map_helpers");
+      keyValueHelperSurfaceMetadataLocal();
   if (metadata == nullptr) {
     return false;
   }
