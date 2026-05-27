@@ -4,6 +4,20 @@
 - none
 
 ## Recent Test Runs
+- 2026-05-28 00:23 CEST | pass | mode: release | command:
+  `cmake --build build-release --target PrimeStruct_compile_run_tests PrimeStruct_backend_runtime_tests PrimeStruct_misc_tests PrimeStruct_semantics_tests -j 1`;
+  `cd build-release && ./PrimeStruct_compile_run_tests --test-case="capability parameterized views docs stay source locked,todo queue and skipped doctest debt stay source locked,reflection codegen helper runtime stays aligned across backends" --no-skip`;
+  `cd build-release && ./PrimeStruct_backend_runtime_tests --test-case="backend capability registry describes runtime capability availability,backend capability query routes graphics runtime substrate by target profile,backend capability query routes runtime reflection by target profile,ir preparation rejects runtime reflection before unsupported backend lowering,compile pipeline publishes an initial semantic product shell" --no-skip`;
+  `cd build-release && ./PrimeStruct_misc_tests --test-case="expanded source ledger records primary direct nested and directory imports,expanded source ledger records generated import separators,expanded source diagnostic mapper indexes many segment lookups,expanded source diagnostic mapper preserves closed endpoint fallback" --no-skip`;
+  `cd build-release && ./PrimeStruct_semantics_tests --test-case="semantic validation pass manifest pins ordered pipeline phases,semantic validation pass manifest classifies compatibility and facts,semantic validation pass manifest exposes public handoff boundaries" --no-skip`;
+  `PYTHONDONTWRITEBYTECODE=1 python3 tests/scripts/test_architecture_health_dashboard.py --repo-root . --scratch-dir build-release/architecture_health_dashboard_scratch`;
+  `git diff --check`
+  | failures: none | notes: root validation after serially merging
+  TODO-4606, TODO-4616, TODO-4619, and TODO-4620 plus final queue
+  preparation passed. Compile-run passed 3 cases / 622 assertions, backend
+  runtime passed 5 cases / 352 assertions, misc passed 4 cases / 1999
+  assertions, semantics passed 3 cases / 62 assertions, and dashboard plus
+  whitespace checks passed.
 - 2026-05-28 00:01 CEST | pass | mode: release | command:
   `cmake --build build-release --target PrimeStruct_backend_runtime_tests -j 1`;
   `cd build-release && ./PrimeStruct_backend_runtime_tests --test-case="compile pipeline publishes an initial semantic product shell" --no-skip`

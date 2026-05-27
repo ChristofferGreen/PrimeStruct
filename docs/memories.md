@@ -4,6 +4,17 @@ This file stores durable session-derived facts that are useful in later work. Ke
 
 ## Active Memories
 
+### backend-runtime-holds-semantic-product-shell-lock
+- Updated: 2026-05-28
+- Tags: tests, semantic-product, backend-runtime
+- Fact: The `compile pipeline publishes an initial semantic product shell`
+  source-lock case belongs to `PrimeStruct_backend_runtime_tests`, not
+  `PrimeStruct_backend_ir_tests`.
+- Evidence: A focused TODO-4616 rerun matched zero cases in
+  `PrimeStruct_backend_ir_tests`, then the same test-case filter ran and
+  passed in `PrimeStruct_backend_runtime_tests` after the source-lock
+  expectation was corrected.
+
 ### canonical-map-count-fallbacks-use-visible-helpers
 - Updated: 2026-05-04
 - Tags: semantics, collections, diagnostics
