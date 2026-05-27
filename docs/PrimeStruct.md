@@ -14,6 +14,8 @@ At a glance:
 Related design notes:
 - `docs/MemoryCapabilities.md` sketches a capability-checked memory-safety direction where ownership, references,
   effects, escape control, and unsafe raw-address authority share one inherited-authority model.
+- `docs/SafeArrayExtentViews.md` records a non-normative design direction for known array extents, runtime
+  preconditions, slices, and borrowed views inspired by Nagle's safe-array proposal for C.
 
 ### Source-processing pipeline
 1. **Import resolver:** first pass walks the raw text and expands every `import<...>` source entry so the compiler
