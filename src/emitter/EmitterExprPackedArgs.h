@@ -106,11 +106,14 @@
               normalizedName.erase(normalizedName.begin());
             }
             std::string vectorAccessMemberName;
+            const auto *vectorHelperMetadata =
+                emitterCollectionSurfaceMetadata(EmitterCollectionSurface::VectorHelpers);
             const bool isVectorAccessName =
                 normalizedName == "at" || normalizedName == "at_unsafe" ||
-                (resolvePublishedCollectionSurfacePathMemberName(
+                (vectorHelperMetadata != nullptr &&
+                 resolvePublishedCollectionSurfacePathMemberName(
                      normalizedName,
-                     "collections.vector_helpers",
+                     *vectorHelperMetadata,
                      false,
                      vectorAccessMemberName) &&
                  (vectorAccessMemberName == "at" ||

@@ -37,6 +37,45 @@ Finished items are periodically archived here from `docs/todo.md`; section heade
   - stop_rule: Stopped once semantics bridge-key traces were removed without
     touching emitter or IR-lowerer bridge-key migrations.
 
+- [x] TODO-4599: Migrate emitter collection surface lookups
+  - owner: ai
+  - created_at: 2026-05-27
+  - finished_at: 2026-05-27
+  - phase: Map/vector compiler-independence
+  - parallel_track: stdlib-registry-emitter
+  - depends_on: TODO-4597
+  - inventory_categories: `stdlib-bridge-key`
+  - scope: Removed hard-coded `collections.vector_*` and
+    `collections.map_*` bridge-key lookups from production emitter code by
+    routing vector/map collection surface decisions through generic
+    `StdlibSurfaceMetadata` resolved from canonical collection surface paths.
+  - outcome:
+    - Added an emitter-local collection surface metadata wrapper for vector
+      helper/constructor and key-value helper/constructor surfaces.
+    - Updated builtin call-path, method-resolution, setup-return inference,
+      collection expression, packed-args, lambda-body, and helper code to
+      pass `StdlibSurfaceMetadata` directly instead of map/vector bridge keys.
+    - Production `src/emitter/` no longer contains the assigned
+      `collections.vector_helpers`, `collections.vector_constructors`,
+      `collections.map_helpers`, or `collections.map_constructors` literals.
+    - Expanded emitter source-lock coverage to scan all production emitter
+      `.cpp`/`.h` files for the assigned bridge-key literals.
+  - validation:
+    - Local release configure passed:
+      `cmake -S . -B build-release -DCMAKE_BUILD_TYPE=Release -DCMAKE_EXPORT_COMPILE_COMMANDS=ON`.
+    - Local release emitter source-lock target rebuild passed:
+      `cmake --build build-release --target PrimeStruct_backend_ir_tests -j 1`.
+    - Local release emitter source-lock slice passed 3 cases / 747
+      assertions:
+      `cd build-release && ./PrimeStruct_backend_ir_tests --test-case="emitter collection helper metadata delegation stays source locked,emitter collection fallback helpers stay scoped path aware,emitter builtin collection inference source stays canonical" --no-skip`.
+    - Local release C++ emitter target rebuild passed:
+      `cmake --build build-release --target primec PrimeStruct_compile_run_tests -j 1`.
+    - Local release C++ emitter and TODO docs slice passed 5 cases / 631
+      assertions:
+      `cd build-release && ./PrimeStruct_compile_run_tests --test-case="todo queue and skipped doctest debt stay source locked,compiles and runs shared vector conformance harness in C++ emitter,compiles and runs stdlib namespaced vector helpers in C++ emitter,C++ emitter mutator rewrite keeps known vector receiver leading names,C++ emitter compiles stdlib namespaced map access and count helpers" --no-skip`.
+  - stop_rule: Stopped once emitter bridge-key traces were removed without
+    touching semantics or IR-lowerer bridge-key migrations.
+
 **Todo Completion (May 26, 2026)**
 - [x] TODO-4569: Present scene-rendered UI through software surface bridge
   - owner: ai

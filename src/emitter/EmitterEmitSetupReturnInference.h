@@ -342,9 +342,11 @@
         if ((receiverStruct == "/vector" || receiverStruct == "/array" || receiverStruct == "/string") &&
             (methodName == "at" || methodName == "at_unsafe")) {
           const std::string canonicalCandidate =
-              publishedCollectionSurfaceHelperPath(
-                  "collections.vector_helpers",
-                  methodName);
+              vectorHelperMetadata == nullptr
+                  ? std::string{}
+                  : publishedCollectionSurfaceHelperPath(
+                        *vectorHelperMetadata,
+                        methodName);
           for (auto it = candidates.begin(); it != candidates.end();) {
             if (*it == canonicalCandidate) {
               it = candidates.erase(it);

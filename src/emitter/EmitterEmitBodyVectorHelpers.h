@@ -1,10 +1,13 @@
         std::string vectorHelper;
         if (getVectorMutatorName(stmt, nameMap, vectorHelper)) {
           std::string explicitRequestedVectorHelperName;
+          const auto *vectorHelperMetadata =
+              emitterCollectionSurfaceMetadata(EmitterCollectionSurface::VectorHelpers);
           const std::string explicitRequestedVectorHelperPath =
-              (!stmt.isMethodCall && resolvePublishedCollectionSurfacePathMemberName(
+              (!stmt.isMethodCall && vectorHelperMetadata != nullptr &&
+               resolvePublishedCollectionSurfacePathMemberName(
                                          resolveExprPath(stmt),
-                                         "collections.vector_helpers",
+                                         *vectorHelperMetadata,
                                          false,
                                          explicitRequestedVectorHelperName))
                   ? resolveExprPath(stmt)

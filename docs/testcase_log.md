@@ -1,9 +1,40 @@
 # Testcase Log
 
 ## Current Known Failures
-None currently recorded.
+- none
 
 ## Recent Test Runs
+- 2026-05-27 13:37 CEST | pass | mode: release | command:
+  `cmake --build build-release --target primec PrimeStruct_compile_run_tests -j 1`;
+  `cd build-release && ./PrimeStruct_compile_run_tests --test-case="todo queue and skipped doctest debt stay source locked,compiles and runs shared vector conformance harness in C++ emitter,compiles and runs stdlib namespaced vector helpers in C++ emitter,C++ emitter mutator rewrite keeps known vector receiver leading names,C++ emitter compiles stdlib namespaced map access and count helpers" --no-skip`
+  | failures: none | notes: parent rerun passed the final TODO-4599
+  compile-run validation slice, 5 selected cases / 631 assertions, after the
+  cross-slice canonical map reference fixture was removed.
+- 2026-05-27 13:37 CEST | fail | mode: release | command:
+  `cmake --build build-release --target primec PrimeStruct_compile_run_tests -j 1`;
+  `cd build-release && ./PrimeStruct_compile_run_tests --test-case="todo queue and skipped doctest debt stay source locked,compiles and runs shared vector conformance harness in C++ emitter,compiles and runs stdlib namespaced vector helpers in C++ emitter,C++ emitter mutator rewrite keeps known vector receiver leading names,C++ emitter compiles stdlib namespaced map helpers on canonical map references" --no-skip`
+  | failures:
+  `C++ emitter compiles stdlib namespaced map helpers on canonical map references`
+  | notes: target rebuild passed; compile-run slice passed 4 of 5 selected
+  cases, then the map-reference fixture failed in semantics with PSC1005
+  `unknown call target: count` for `ref.count()`. The case is a cross-slice
+  dependency on the root semantics migration and was removed from this worker.
+- 2026-05-27 13:34 CEST | fail | mode: release | command:
+  `cmake --build build-release --target primec PrimeStruct_compile_run_tests -j 1`;
+  `cd build-release && ./PrimeStruct_compile_run_tests --test-case="todo queue and skipped doctest debt stay source locked,compiles and runs shared vector conformance harness in C++ emitter,compiles and runs stdlib namespaced vector helpers in C++ emitter,C++ emitter mutator rewrite keeps known vector receiver leading names,C++ emitter compiles stdlib namespaced map helpers on canonical map references" --no-skip`
+  | failures:
+  `C++ emitter compiles stdlib namespaced map helpers on canonical map references`
+  | notes: target rebuild passed; compile-run slice passed 4 of 5 selected
+  cases, then the map-reference fixture could not run the expected generated
+  executable because the file was absent after the C++ executable compile path.
+- 2026-05-27 13:31 CEST | fail | mode: release | command:
+  `cmake --build build-release --target primec PrimeStruct_compile_run_tests -j 1`;
+  `cd build-release && ./PrimeStruct_compile_run_tests --test-case="todo queue and skipped doctest debt stay source locked,compiles and runs shared vector conformance harness in C++ emitter,compiles and runs stdlib namespaced vector helpers in C++ emitter,C++ emitter mutator rewrite keeps known vector receiver leading names,C++ emitter compiles stdlib namespaced map helpers on canonical map references" --no-skip`
+  | failures:
+  `C++ emitter compiles stdlib namespaced map helpers on canonical map references`
+  | notes: target rebuild passed; compile-run slice passed 4 of 5 selected
+  cases, then failed the map-reference fixture with C++ IR lowering rejecting
+  direct expression call `/std/collections/map/count_ref`.
 - 2026-05-27 13:31 CEST | pass | mode: release | command:
   `cmake --build build-release --target PrimeStruct_backend_ir_tests PrimeStruct_semantics_tests PrimeStruct_compile_run_tests PrimeStruct_misc_tests -j 1`;
   `cd build-release && ./PrimeStruct_backend_ir_tests --test-case="semantics validator infer source delegation stays stable,semantics validator passes source delegation stays stable,semantics validator stdlib bridge helper routing stays stable,compile pipeline publishes an initial semantic product shell" --no-skip`;
@@ -37,6 +68,15 @@ None currently recorded.
   `cd build-release && ./PrimeStruct_backend_ir_tests --test-case="ir lowerer collection surfaces avoid bridge-key literals,native tail and late collection helper metadata dispatch stays source locked,ir lowerer vector type layout traces use generic collection helpers,ir lowerer materialized collection receivers use published helper queries" --no-skip`
   | failures: none | notes: selected backend IR source-lock rerun passed
   4 cases / 384 assertions after updating stale source-lock expectations.
+- 2026-05-27 13:21 CEST | fail | mode: release | command:
+  `cmake --build build-release --target primec PrimeStruct_compile_run_tests -j 1`;
+  `cd build-release && ./PrimeStruct_compile_run_tests --test-case="todo queue and skipped doctest debt stay source locked,compiles and runs shared vector conformance harness in C++ emitter,compiles and runs stdlib namespaced vector helpers in C++ emitter,C++ emitter mutator rewrite keeps known vector receiver leading names,C++ emitter compiles stdlib namespaced map helpers on canonical map references" --no-skip`
+  | failures:
+  `C++ emitter compiles stdlib namespaced map helpers on canonical map references`
+  | notes: target rebuild passed after the fixture switched to explicit
+  reference helpers; compile-run slice passed 4 of 5 selected cases, then
+  failed before executable production with native backend EXE IR lowering
+  rejecting expression call `/std/collections/map/count_ref`.
 - 2026-05-27 13:15 CEST | fail | mode: release | command:
   `cd build-release && ./PrimeStruct_backend_ir_tests --test-case="semantics validator infer source delegation stays stable,semantics validator passes source delegation stays stable,semantics validator stdlib bridge helper routing stays stable,compile pipeline publishes an initial semantic product shell" --no-skip`
   | failures: `semantics validator stdlib bridge helper routing stays stable`
@@ -63,6 +103,18 @@ None currently recorded.
   | notes: build passed; selected backend IR source-lock slice failed on stale
   `collectionMemberPath("map", "map")` and `helperName = callExpr.name`
   expectations.
+- 2026-05-27 11:53 CEST | fail | mode: release | command:
+  `cmake -S . -B build-release -DCMAKE_BUILD_TYPE=Release -DCMAKE_EXPORT_COMPILE_COMMANDS=ON`;
+  `cmake --build build-release --target PrimeStruct_backend_ir_tests -j 1`;
+  `cd build-release && ./PrimeStruct_backend_ir_tests --test-case="emitter collection helper metadata delegation stays source locked,emitter collection fallback helpers stay scoped path aware,emitter builtin collection inference source stays canonical" --no-skip`;
+  `cmake --build build-release --target primec PrimeStruct_compile_run_tests -j 1`;
+  `cd build-release && ./PrimeStruct_compile_run_tests --test-case="todo queue and skipped doctest debt stay source locked,compiles and runs shared vector conformance harness in C++ emitter,compiles and runs stdlib namespaced vector helpers in C++ emitter,C++ emitter mutator rewrite keeps known vector receiver leading names,C++ emitter compiles stdlib namespaced map helpers on canonical map references" --no-skip`
+  | failures:
+  `C++ emitter compiles stdlib namespaced map helpers on canonical map references`
+  | notes: configure and both focused target rebuilds passed; backend IR
+  source-lock slice passed 3 cases / 747 assertions; compile-run slice passed
+  4 of 5 selected cases, then failed the map-reference helper fixture with
+  semantic PSC1005 `unknown call target: /std/collections/map/count`.
 - 2026-05-27 10:30 CEST | pass | mode: release | command:
   `cmake --build build-release --target PrimeStruct_compile_run_tests -j 1`;
   `cd build-release && ./PrimeStruct_compile_run_tests --test-case="todo queue and skipped doctest debt stay source locked" --no-skip`
@@ -9017,6 +9069,13 @@ None currently recorded.
 - 2026-05-12 17:28 local | fail | mode: release | command: `./scripts/compile.sh --release` | failures: 146 CTest targets | notes: baseline after preflight checkpoint failed; stabilization blocks TODO work
 
 ## Resolved Failures
+- [x] `C++ emitter compiles stdlib namespaced map helpers on canonical map
+  references` | resolved: 2026-05-27 13:37 CEST | validating command:
+  `cd build-release && ./PrimeStruct_compile_run_tests --test-case="todo queue and skipped doctest debt stay source locked,compiles and runs shared vector conformance harness in C++ emitter,compiles and runs stdlib namespaced vector helpers in C++ emitter,C++ emitter mutator rewrite keeps known vector receiver leading names,C++ emitter compiles stdlib namespaced map access and count helpers" --no-skip`
+  | notes: the standalone emitter branch does not include the root semantics
+  migration for canonical map reference method sugar, so the cross-slice
+  fixture was removed and the final emitter-owned map helper slice passed
+  5 cases / 631 assertions.
 - [x] `canonical map surface owns standalone stdlib implementation`
   | resolved: 2026-05-27 13:29 CEST | validating command:
   `cd build-release && ./PrimeStruct_misc_tests --test-case="canonical map surface owns standalone stdlib implementation" --no-skip`

@@ -1,12 +1,15 @@
-  constexpr std::string_view CollectionFallbackVectorHelperSurfaceBridgeKey =
-      "collections.vector_helpers";
+  const auto *collectionFallbackVectorHelperMetadata =
+      emitterCollectionSurfaceMetadata(EmitterCollectionSurface::VectorHelpers);
   auto collectionFallbackVectorHelperMemberName = [&](const Expr &candidate,
                                                       bool includeImportAliases)
       -> std::string {
+    if (collectionFallbackVectorHelperMetadata == nullptr) {
+      return "";
+    }
     std::string memberName;
     if (!resolvePublishedCollectionSurfacePathMemberName(
             resolveExprPath(candidate),
-            CollectionFallbackVectorHelperSurfaceBridgeKey,
+            *collectionFallbackVectorHelperMetadata,
             includeImportAliases,
             memberName)) {
       return "";

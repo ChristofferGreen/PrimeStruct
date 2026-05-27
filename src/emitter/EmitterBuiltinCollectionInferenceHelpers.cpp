@@ -1,5 +1,6 @@
 #include "EmitterBuiltinCallPathHelpersInternal.h"
 #include "EmitterBuiltinCollectionInferenceInternal.h"
+#include "EmitterCollectionSurfaceMetadata.h"
 #include "EmitterHelpers.h"
 #include "../semantics/SemanticsHelpers.h"
 #include "primec/AstCallPathHelpers.h"
@@ -155,7 +156,7 @@ bool isExplicitMapCountNameLocal(const Expr &expr) {
     resolved.insert(resolved.begin(), '/');
   }
   const StdlibSurfaceMetadata *metadata =
-      findStdlibSurfaceMetadataByBridgeKey("collections.map_helpers");
+      emitterCollectionSurfaceMetadata(EmitterCollectionSurface::KeyValueHelpers);
   return metadata != nullptr &&
          resolveStdlibSurfaceMemberName(*metadata, resolved) == "count";
 }

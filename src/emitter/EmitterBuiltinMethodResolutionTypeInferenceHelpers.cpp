@@ -2,14 +2,12 @@
 
 #include "EmitterBuiltinCallPathHelpersInternal.h"
 #include "EmitterBuiltinCollectionInferenceInternal.h"
+#include "EmitterCollectionSurfaceMetadata.h"
 
 #include <functional>
 
 namespace primec::emitter {
 namespace {
-
-constexpr std::string_view VectorHelperSurfaceBridgeKey = "collections.vector_helpers";
-constexpr std::string_view KeyValueHelperSurfaceBridgeKey = "collections.map_helpers";
 
 std::string resolvedCollectionHelperName(const Expr &candidate) {
   std::string normalized = resolveExprPath(candidate);
@@ -37,9 +35,12 @@ bool isVectorCountCapacityHelperMemberName(std::string_view memberName) {
 
 std::string vectorHelperMemberNameFromPath(std::string_view path) {
   std::string memberName;
-  if (!resolvePublishedCollectionSurfacePathMemberName(
+  const auto *metadata =
+      emitterCollectionSurfaceMetadata(EmitterCollectionSurface::VectorHelpers);
+  if (metadata == nullptr ||
+      !resolvePublishedCollectionSurfacePathMemberName(
           path,
-          VectorHelperSurfaceBridgeKey,
+          *metadata,
           false,
           memberName)) {
     return "";
@@ -52,15 +53,19 @@ std::string vectorHelperMemberNameFromExpr(const Expr &candidate) {
 }
 
 std::string vectorHelperPath(std::string_view memberName) {
-  return publishedCollectionSurfaceHelperPath(
-      VectorHelperSurfaceBridgeKey,
-      memberName);
+  const auto *metadata =
+      emitterCollectionSurfaceMetadata(EmitterCollectionSurface::VectorHelpers);
+  return metadata == nullptr ? std::string{}
+                             : publishedCollectionSurfaceHelperPath(*metadata,
+                                                                    memberName);
 }
 
 std::string keyValueHelperPath(std::string_view memberName) {
-  return publishedCollectionSurfaceHelperPath(
-      KeyValueHelperSurfaceBridgeKey,
-      memberName);
+  const auto *metadata =
+      emitterCollectionSurfaceMetadata(EmitterCollectionSurface::KeyValueHelpers);
+  return metadata == nullptr ? std::string{}
+                             : publishedCollectionSurfaceHelperPath(*metadata,
+                                                                    memberName);
 }
 
 std::string keyValueHelperMemberNameFromPath(std::string_view path) {

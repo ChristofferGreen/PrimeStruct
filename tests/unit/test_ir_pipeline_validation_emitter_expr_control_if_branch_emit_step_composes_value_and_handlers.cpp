@@ -612,7 +612,8 @@ TEST_CASE("emitter builtin collection inference source stays canonical") {
   CHECK(source.find("std/collections/soa_vector/to_aos") == std::string::npos);
   CHECK(source.find("isSimpleCallName(target, \"to_aos\")") == std::string::npos);
   CHECK(source.find("normalized == \"map/count\"") == std::string::npos);
-  CHECK(source.find("findStdlibSurfaceMetadataByBridgeKey(\"collections.map_helpers\")") !=
+  CHECK(source.find(
+            "emitterCollectionSurfaceMetadata(EmitterCollectionSurface::KeyValueHelpers)") !=
         std::string::npos);
   CHECK(source.find("resolveStdlibSurfaceMemberName(*metadata, resolved) == \"count\"") !=
         std::string::npos);

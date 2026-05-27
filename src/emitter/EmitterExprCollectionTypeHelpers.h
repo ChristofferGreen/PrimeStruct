@@ -13,17 +13,20 @@
     }
     return "";
   };
-  constexpr std::string_view CollectionTypeVectorHelperSurfaceBridgeKey =
-      "collections.vector_helpers";
-  constexpr std::string_view CollectionTypeKeyValueHelperSurfaceBridgeKey =
-      "collections.map_helpers";
+  const auto *collectionTypeVectorHelperMetadata =
+      emitterCollectionSurfaceMetadata(EmitterCollectionSurface::VectorHelpers);
+  const auto *collectionTypeKeyValueHelperMetadata =
+      emitterCollectionSurfaceMetadata(EmitterCollectionSurface::KeyValueHelpers);
   auto collectionTypeVectorHelperMemberName = [&](std::string_view path,
                                                   bool includeImportAliases)
       -> std::string {
+    if (collectionTypeVectorHelperMetadata == nullptr) {
+      return "";
+    }
     std::string memberName;
     if (!resolvePublishedCollectionSurfacePathMemberName(
             path,
-            CollectionTypeVectorHelperSurfaceBridgeKey,
+            *collectionTypeVectorHelperMetadata,
             includeImportAliases,
             memberName)) {
       return "";
@@ -31,8 +34,11 @@
     return memberName;
   };
   auto collectionTypeVectorHelperPath = [&](std::string_view memberName) {
+    if (collectionTypeVectorHelperMetadata == nullptr) {
+      return std::string{};
+    }
     return publishedCollectionSurfaceHelperPath(
-        CollectionTypeVectorHelperSurfaceBridgeKey,
+        *collectionTypeVectorHelperMetadata,
         memberName);
   };
   auto isCollectionTypeVectorAccessHelper = [](std::string_view memberName) {
@@ -48,10 +54,13 @@
   auto collectionTypeKeyValueHelperMemberName = [&](std::string_view path,
                                                     bool includeImportAliases)
       -> std::string {
+    if (collectionTypeKeyValueHelperMetadata == nullptr) {
+      return "";
+    }
     std::string memberName;
     if (!resolvePublishedCollectionSurfacePathMemberName(
             path,
-            CollectionTypeKeyValueHelperSurfaceBridgeKey,
+            *collectionTypeKeyValueHelperMetadata,
             includeImportAliases,
             memberName)) {
       return "";
@@ -241,9 +250,10 @@
       return "";
     }
     std::string memberName;
-    if (!resolvePublishedCollectionSurfacePathMemberName(
+    if (collectionTypeVectorHelperMetadata == nullptr ||
+        !resolvePublishedCollectionSurfacePathMemberName(
             resolveExprPath(candidate),
-            CollectionTypeVectorHelperSurfaceBridgeKey,
+            *collectionTypeVectorHelperMetadata,
             true,
             memberName)) {
       memberName = resolveExprPath(candidate);

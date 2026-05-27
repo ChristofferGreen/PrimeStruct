@@ -1,4 +1,5 @@
 #include "EmitterBuiltinCallPathHelpersInternal.h"
+#include "EmitterCollectionSurfaceMetadata.h"
 #include "EmitterHelpers.h"
 
 #include "primec/StdlibSurfaceRegistry.h"
@@ -8,8 +9,6 @@
 namespace primec::emitter {
 
 namespace {
-
-constexpr std::string_view VectorHelperSurfaceBridgeKey = "collections.vector_helpers";
 
 std::string_view trimLeadingSlash(std::string_view text) {
   return !text.empty() && text.front() == '/' ? text.substr(1) : text;
@@ -27,7 +26,7 @@ bool resolveCanonicalVectorHelperMemberName(std::string_view path,
                                             std::string &memberNameOut) {
   memberNameOut.clear();
   const StdlibSurfaceMetadata *metadata =
-      findStdlibSurfaceMetadataByBridgeKey(VectorHelperSurfaceBridgeKey);
+      emitterCollectionSurfaceMetadata(EmitterCollectionSurface::VectorHelpers);
   if (metadata == nullptr || metadata->canonicalPath.empty()) {
     return false;
   }

@@ -7,8 +7,8 @@
 #include <unordered_map>
 #include <vector>
 
+#include "EmitterCollectionSurfaceMetadata.h"
 #include "primec/Emitter.h"
-#include "primec/StdlibSurfaceRegistry.h"
 
 namespace primec::emitter {
 
@@ -53,7 +53,7 @@ inline bool isRemovedKeyValueDirectCallResultCompatibilityHelperName(std::string
 
 inline std::string_view keyValueHelperNameFromPath(std::string_view path) {
   const StdlibSurfaceMetadata *metadata =
-      findStdlibSurfaceMetadataByBridgeKey("collections.map_helpers");
+      emitterCollectionSurfaceMetadata(EmitterCollectionSurface::KeyValueHelpers);
   if (metadata == nullptr) {
     return {};
   }

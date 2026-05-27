@@ -2750,7 +2750,7 @@ TEST_CASE("template monomorph source delegation stays stable") {
             "      }") !=
         std::string::npos);
   CHECK(collectionTypeHelpersSource.find(
-            "constexpr std::string_view CollectionTypeKeyValueHelperSurfaceBridgeKey =") !=
+            "collectionTypeKeyValueHelperMetadata") !=
         std::string::npos);
   CHECK(collectionTypeHelpersSource.find(
             "auto collectionTypeKeyValueHelperMemberName = [&](std::string_view path,") !=
@@ -3074,14 +3074,40 @@ TEST_CASE("emitter collection helper metadata delegation stays source locked") {
   const std::string helperTypesSource = readText(helperTypesPath);
   const std::string exprControlCallPathStepSource = readText(exprControlCallPathStepPath);
 
+  const std::filesystem::path emitterRoot = repoRoot / "src" / "emitter";
+  REQUIRE(std::filesystem::exists(emitterRoot));
+  const char *assignedCollectionBridgeKeys[] = {
+      "collections.vector_helpers",
+      "collections.vector_constructors",
+      "collections.map_helpers",
+      "collections.map_constructors",
+  };
+  for (const auto &entry : std::filesystem::recursive_directory_iterator(emitterRoot)) {
+    if (!entry.is_regular_file()) {
+      continue;
+    }
+    const std::filesystem::path sourcePath = entry.path();
+    if (sourcePath.extension() != ".cpp" && sourcePath.extension() != ".h") {
+      continue;
+    }
+    const std::string source = readText(sourcePath);
+    for (const char *bridgeKey : assignedCollectionBridgeKeys) {
+      CAPTURE(sourcePath.string());
+      CAPTURE(bridgeKey);
+      CHECK(source.find(bridgeKey) == std::string::npos);
+    }
+  }
+
   CHECK(metadataHeaderSource.find("bool resolvePublishedCollectionSurfaceMemberToken(") !=
-        std::string::npos);
-  CHECK(metadataHeaderSource.find(
-            "const StdlibSurfaceMetadata *findPublishedCollectionHelperSurfaceMetadataByBridgeKey(") !=
         std::string::npos);
   CHECK(metadataHeaderSource.find("bool resolvePublishedCollectionSurfacePathMemberName(") !=
         std::string::npos);
+  CHECK(metadataHeaderSource.find("const StdlibSurfaceMetadata &metadata") !=
+        std::string::npos);
   CHECK(metadataHeaderSource.find("std::string publishedCollectionSurfaceHelperPath(") !=
+        std::string::npos);
+  CHECK(metadataHeaderSource.find(
+            "findPublishedCollectionHelperSurfaceMetadataByBridgeKey") ==
         std::string::npos);
   CHECK(metadataHeaderSource.find("bool resolvePublishedCollectionSurfaceExprMemberName(") !=
         std::string::npos);
@@ -3094,22 +3120,23 @@ TEST_CASE("emitter collection helper metadata delegation stays source locked") {
   CHECK(helperHeaderSource.find("kCanonicalMapPrefix") == std::string::npos);
   CHECK(helperHeaderSource.find("\"std/collections/map/\"") == std::string::npos);
   CHECK(helperHeaderSource.find(
-            "findStdlibSurfaceMetadataByBridgeKey(\"collections.map_helpers\")") !=
+            "emitterCollectionSurfaceMetadata(EmitterCollectionSurface::KeyValueHelpers)") !=
         std::string::npos);
   CHECK(collectionInferenceHelpersSource.find("\"std/collections/map/count\"") ==
         std::string::npos);
   CHECK(collectionInferenceHelpersSource.find(
-            "findStdlibSurfaceMetadataByBridgeKey(\"collections.map_helpers\")") !=
+            "emitterCollectionSurfaceMetadata(EmitterCollectionSurface::KeyValueHelpers)") !=
         std::string::npos);
 
   CHECK(metadataHelpersSource.find("findPublishedCollectionSurfaceMetadata(") !=
         std::string::npos);
   CHECK(metadataHelpersSource.find(
-            "findPublishedCollectionHelperSurfaceMetadataByBridgeKey(") !=
+            "publishedCollectionHelperSurfaceMetadata(") !=
         std::string::npos);
   CHECK(metadataHelpersSource.find("publishedCollectionSurfaceHelperPath(") !=
         std::string::npos);
-  CHECK(metadataHelpersSource.find("collections.vector_helpers") !=
+  CHECK(metadataHelpersSource.find(
+            "emitterCollectionSurfaceMetadata(EmitterCollectionSurface::VectorHelpers)") !=
         std::string::npos);
   CHECK(metadataHelpersSource.find("collectionSurfaceMemberPathUsesKnownPrefix(") !=
         std::string::npos);
@@ -3152,7 +3179,7 @@ TEST_CASE("emitter collection helper metadata delegation stays source locked") {
   CHECK(callPathHelpersSource.find("canonicalVectorHelperPathForSuffix(") !=
         std::string::npos);
   CHECK(callPathHelpersSource.find(
-            "findStdlibSurfaceMetadataByBridgeKey(\"collections.vector_helpers\")") !=
+            "emitterCollectionSurfaceMetadata(EmitterCollectionSurface::VectorHelpers)") !=
         std::string::npos);
   CHECK(callPathHelpersSource.find(
             "resolvedPath.rfind(\"/std/collections/vector/\", 0) == 0") ==
@@ -3224,7 +3251,7 @@ TEST_CASE("emitter collection helper metadata delegation stays source locked") {
   CHECK(emitSetupReturnInferenceSource.find("StdlibSurfaceId::CollectionsManifestSurface0") ==
         std::string::npos);
 
-  CHECK(emitSetupReturnInferenceCollectionsSource.find("VectorHelperSurfaceBridgeKey") !=
+  CHECK(emitSetupReturnInferenceCollectionsSource.find("vectorHelperMetadata") !=
         std::string::npos);
   CHECK(emitSetupReturnInferenceCollectionsSource.find("resolveVectorHelperMemberName(") !=
         std::string::npos);
@@ -3277,9 +3304,9 @@ TEST_CASE("emitter collection helper metadata delegation stays source locked") {
             "StdlibSurfaceId::CollectionsManifestSurface0") ==
         std::string::npos);
 
-  CHECK(helperBuiltinsSource.find("findStdlibSurfaceMetadataByBridgeKey(") !=
+  CHECK(helperBuiltinsSource.find("emitterCollectionSurfaceMetadata(") !=
         std::string::npos);
-  CHECK(helperBuiltinsSource.find("collections.vector_helpers") !=
+  CHECK(helperBuiltinsSource.find("EmitterCollectionSurface::VectorHelpers") !=
         std::string::npos);
   CHECK(helperBuiltinsSource.find("std/collections/vector/") ==
         std::string::npos);
@@ -3324,7 +3351,7 @@ TEST_CASE("emitter collection fallback helpers stay scoped path aware") {
   CHECK(fallbackHelpersSource.find(
             "resolvePublishedCollectionSurfacePathMemberName(\n"
             "            resolveExprPath(candidate),\n"
-            "            CollectionFallbackVectorHelperSurfaceBridgeKey") !=
+            "            *collectionFallbackVectorHelperMetadata") !=
         std::string::npos);
   CHECK(fallbackHelpersSource.find("std/collections/map/") ==
         std::string::npos);

@@ -1,5 +1,6 @@
 #include "EmitterBuiltinCallPathHelpersInternal.h"
 #include "EmitterBuiltinMethodResolutionTypeInferenceInternal.h"
+#include "EmitterCollectionSurfaceMetadata.h"
 #include "EmitterHelpers.h"
 
 #include <string_view>
@@ -10,14 +11,9 @@ using BindingInfo = Emitter::BindingInfo;
 
 namespace {
 
-constexpr std::string_view VectorHelperSurfaceBridgeKey = "collections.vector_helpers";
-constexpr std::string_view KeyValueHelperSurfaceBridgeKey = "collections.map_helpers";
-
-std::string publishedSurfaceHelperPathForRawMethodName(std::string_view bridgeKey,
+std::string publishedSurfaceHelperPathForRawMethodName(const StdlibSurfaceMetadata &metadata,
                                                        std::string_view rawMethodName) {
-  const auto *metadata =
-      findPublishedCollectionHelperSurfaceMetadataByBridgeKey(bridgeKey);
-  if (metadata == nullptr || rawMethodName.empty()) {
+  if (rawMethodName.empty()) {
     return {};
   }
   std::string normalizedRaw(rawMethodName);
@@ -27,7 +23,7 @@ std::string publishedSurfaceHelperPathForRawMethodName(std::string_view bridgeKe
   std::string memberName;
   if (!resolvePublishedCollectionSurfacePathMemberName(
           normalizedRaw,
-          bridgeKey,
+          metadata,
           true,
           memberName)) {
     return {};
@@ -45,11 +41,11 @@ std::string publishedSurfaceHelperPathForRawMethodName(std::string_view bridgeKe
     }
     return normalizedRoot + "/" + memberName;
   };
-  if (std::string canonicalPath = pathForRoot(metadata->canonicalPath);
+  if (std::string canonicalPath = pathForRoot(metadata.canonicalPath);
       !canonicalPath.empty()) {
     return canonicalPath;
   }
-  for (const std::string_view alias : metadata->importAliasSpellings) {
+  for (const std::string_view alias : metadata.importAliasSpellings) {
     if (std::string aliasPath = pathForRoot(alias); !aliasPath.empty()) {
       return aliasPath;
     }
@@ -256,18 +252,24 @@ bool resolveMethodCallPath(const Expr &call,
   if (!normalizedMethodName.empty() && normalizedMethodName.front() == '/') {
     normalizedMethodName.erase(normalizedMethodName.begin());
   }
+  const auto *vectorHelperMetadata =
+      emitterCollectionSurfaceMetadata(EmitterCollectionSurface::VectorHelpers);
+  const auto *keyValueHelperMetadata =
+      emitterCollectionSurfaceMetadata(EmitterCollectionSurface::KeyValueHelpers);
   std::string explicitVectorMethodName;
   const bool isExplicitStdlibVectorMethod =
+      vectorHelperMetadata != nullptr &&
       resolvePublishedCollectionSurfacePathMemberName(
           normalizedMethodName,
-          VectorHelperSurfaceBridgeKey,
+          *vectorHelperMetadata,
           false,
           explicitVectorMethodName);
   std::string explicitMapMethodName;
   const bool isExplicitMapMethod =
+      keyValueHelperMetadata != nullptr &&
       resolvePublishedCollectionSurfacePathMemberName(
           normalizedMethodName,
-          KeyValueHelperSurfaceBridgeKey,
+          *keyValueHelperMetadata,
           true,
           explicitMapMethodName);
   const bool isExplicitStdlibSoaMethod =
@@ -284,9 +286,8 @@ bool resolveMethodCallPath(const Expr &call,
   }
   if (isExplicitStdlibVectorMethod) {
     const std::string explicitPath =
-        publishedCollectionSurfaceHelperPath(
-            VectorHelperSurfaceBridgeKey,
-            normalizedMethodName);
+        publishedCollectionSurfaceHelperPath(*vectorHelperMetadata,
+                                             normalizedMethodName);
     if (hasDefinitionOrMetadata(metadataView, explicitPath)) {
       resolvedOut = explicitPath;
       return true;
@@ -625,9 +626,11 @@ bool resolveMethodCallPath(const Expr &call,
     const bool isCapacityLikeMethod = normalizedMethodName == "capacity";
     if (isCountLikeMethod || isCapacityLikeMethod) {
       const std::string canonicalPath =
-          publishedCollectionSurfaceHelperPath(
-              VectorHelperSurfaceBridgeKey,
-              normalizedMethodName);
+          vectorHelperMetadata == nullptr
+              ? std::string{}
+              : publishedCollectionSurfaceHelperPath(
+                    *vectorHelperMetadata,
+                    normalizedMethodName);
       if (canonicalPath.empty()) {
         return false;
       }
@@ -660,15 +663,14 @@ bool resolveMethodCallPath(const Expr &call,
       return true;
     }
   }
-  if (normalizeBindingTypeName(resolvedType) == "map") {
+  if (normalizeBindingTypeName(resolvedType) == "map" &&
+      keyValueHelperMetadata != nullptr) {
     const std::string explicitMapPath =
-        publishedSurfaceHelperPathForRawMethodName(
-            KeyValueHelperSurfaceBridgeKey,
-            call.name);
+        publishedSurfaceHelperPathForRawMethodName(*keyValueHelperMetadata,
+                                                   call.name);
     const std::string canonicalPath =
-        publishedCollectionSurfaceHelperPath(
-            KeyValueHelperSurfaceBridgeKey,
-            normalizedMethodName);
+        publishedCollectionSurfaceHelperPath(*keyValueHelperMetadata,
+                                             normalizedMethodName);
     const bool isCollectionPairHelperMethod =
         isCanonicalKeyValueHelperName(normalizedMethodName);
     const bool isRemovedKeyValueSlashMethod =

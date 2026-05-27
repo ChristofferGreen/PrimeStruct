@@ -3,27 +3,28 @@
            suffix != "push" && suffix != "pop" && suffix != "reserve" && suffix != "clear" &&
            suffix != "remove_at" && suffix != "remove_swap";
   };
-  constexpr std::string_view VectorHelperSurfaceBridgeKey = "collections.vector_helpers";
-  constexpr std::string_view KeyValueHelperSurfaceBridgeKey = "collections.map_helpers";
+  const auto *vectorHelperMetadata =
+      emitterCollectionSurfaceMetadata(EmitterCollectionSurface::VectorHelpers);
+  const auto *keyValueHelperMetadata =
+      emitterCollectionSurfaceMetadata(EmitterCollectionSurface::KeyValueHelpers);
   auto vectorHelperPath = [&](std::string_view helperName) {
-    const auto *metadata =
-        findPublishedCollectionHelperSurfaceMetadataByBridgeKey(
-            VectorHelperSurfaceBridgeKey);
-    if (metadata == nullptr || helperName.empty()) {
+    if (vectorHelperMetadata == nullptr || helperName.empty()) {
       return std::string{};
     }
-    return std::string(metadata->canonicalPath) + "/" + std::string(helperName);
+    return std::string(vectorHelperMetadata->canonicalPath) + "/" +
+           std::string(helperName);
   };
   auto keyValueHelperPath = [&](std::string_view helperName) {
+    if (keyValueHelperMetadata == nullptr) {
+      return std::string{};
+    }
     return publishedCollectionSurfaceHelperPath(
-        KeyValueHelperSurfaceBridgeKey,
+        *keyValueHelperMetadata,
         helperName);
   };
-  auto surfaceHelperPathForRawMethodName = [&](std::string_view bridgeKey,
+  auto surfaceHelperPathForRawMethodName = [&](const StdlibSurfaceMetadata &metadata,
                                                std::string_view rawMethodName) {
-    const auto *metadata =
-        findPublishedCollectionHelperSurfaceMetadataByBridgeKey(bridgeKey);
-    if (metadata == nullptr || rawMethodName.empty()) {
+    if (rawMethodName.empty()) {
       return std::string{};
     }
     std::string normalizedRaw(rawMethodName);
@@ -33,7 +34,7 @@
     std::string memberName;
     if (!resolvePublishedCollectionSurfacePathMemberName(
             normalizedRaw,
-            bridgeKey,
+            metadata,
             true,
             memberName)) {
       return std::string{};
@@ -51,11 +52,11 @@
       }
       return normalizedRoot + "/" + memberName;
     };
-    if (std::string canonicalPath = pathForRoot(metadata->canonicalPath);
+    if (std::string canonicalPath = pathForRoot(metadata.canonicalPath);
         !canonicalPath.empty()) {
       return canonicalPath;
     }
-    for (const std::string_view alias : metadata->importAliasSpellings) {
+    for (const std::string_view alias : metadata.importAliasSpellings) {
       if (std::string aliasPath = pathForRoot(alias); !aliasPath.empty()) {
         return aliasPath;
       }
@@ -68,9 +69,10 @@
   auto resolveVectorHelperMemberName = [&](std::string_view path,
                                            bool includeImportAliases,
                                            std::string &memberNameOut) {
-    return resolvePublishedCollectionSurfacePathMemberName(
+    return vectorHelperMetadata != nullptr &&
+           resolvePublishedCollectionSurfacePathMemberName(
         path,
-        VectorHelperSurfaceBridgeKey,
+        *vectorHelperMetadata,
         includeImportAliases,
         memberNameOut);
   };
@@ -98,9 +100,10 @@
         return methodName.substr(arrayPrefix.size());
       }
       std::string vectorMemberName;
-      if (resolvePublishedCollectionSurfacePathMemberName(
+      if (vectorHelperMetadata != nullptr &&
+          resolvePublishedCollectionSurfacePathMemberName(
               methodName,
-              "collections.vector_helpers",
+              *vectorHelperMetadata,
               true,
               vectorMemberName)) {
         return vectorMemberName;
@@ -108,9 +111,10 @@
     }
     if (isMapReceiverStruct(receiverStruct)) {
       std::string keyValueMemberName;
-      if (resolvePublishedCollectionSurfacePathMemberName(
+      if (keyValueHelperMetadata != nullptr &&
+          resolvePublishedCollectionSurfacePathMemberName(
               methodName,
-              KeyValueHelperSurfaceBridgeKey,
+              *keyValueHelperMetadata,
               true,
               keyValueMemberName)) {
         return keyValueMemberName;
@@ -141,12 +145,14 @@
       return candidates;
     }
     if (isMapReceiverStruct(receiverStruct)) {
-      if (const std::string explicitMapPath =
-              surfaceHelperPathForRawMethodName(
-                  KeyValueHelperSurfaceBridgeKey,
-                  rawMethodName);
-          !explicitMapPath.empty()) {
-        return {explicitMapPath};
+      if (keyValueHelperMetadata != nullptr) {
+        if (const std::string explicitMapPath =
+                surfaceHelperPathForRawMethodName(
+                    *keyValueHelperMetadata,
+                    rawMethodName);
+            !explicitMapPath.empty()) {
+          return {explicitMapPath};
+        }
       }
       const bool isCollectionPairHelperMethod =
           isCanonicalKeyValueHelperName(methodName);

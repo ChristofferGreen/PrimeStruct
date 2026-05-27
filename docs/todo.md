@@ -64,11 +64,11 @@ This file is the live open-work queue for PrimeStruct.
 
 ### Ready Now
 
-- TODO-4599: Migrate emitter collection surface lookups | track: stdlib-registry-emitter | primary surface: emitter collection surface lookup helpers
+- TODO-4579: Enforce zero map/vector compiler-knowledge traces | track: map-vector-zero-gate | primary surface: compiler-knowledge inventory gate
 
 ### Immediate Next 10
 
-- TODO-4579: Enforce zero map/vector compiler-knowledge traces
+No additional leaf tasks queued.
 
 ### Priority Lanes
 
@@ -87,9 +87,9 @@ This file is the live open-work queue for PrimeStruct.
   TODO-4576 and TODO-4577 removed map/vector backing classifiers. TODO-4578
   was split into TODO-4597 registry foundation plus TODO-4598, TODO-4599, and
   TODO-4600 subsystem migrations; TODO-4597 completed the generic registry
-  IDs, TODO-4598 completed the semantics migration, TODO-4600 completed the
-  IR-lowerer migration, and the remaining emitter migration joins at
-  TODO-4579.
+  IDs, TODO-4598 completed the semantics migration, TODO-4599 completed the
+  emitter migration, TODO-4600 completed the IR-lowerer migration, and the
+  compiler-knowledge zero gate is ready at TODO-4579.
 - Architecture hardening backlog: TODO-4586 completed parser diagnostic
   stability tiers. TODO-4587 completed the shared compile-time/runtime VM
   kernel boundary. TODO-4588 added the IR-preparation phase manifest.
@@ -98,41 +98,16 @@ This file is the live open-work queue for PrimeStruct.
 
 ### Execution Queue
 
-- TODO-4599: Migrate emitter collection surface lookups
 - TODO-4579: Enforce zero map/vector compiler-knowledge traces
 
 ### Task Blocks
-
-- [ ] TODO-4599: Migrate emitter collection surface lookups
-  - owner: ai
-  - created_at: 2026-05-27
-  - phase: Map/vector compiler-independence
-  - parallel_track: stdlib-registry-emitter
-  - depends_on: TODO-4597
-  - inventory_categories: `stdlib-bridge-key`
-  - scope: Remove hard-coded `collections.vector_*` and `collections.map_*`
-    bridge-key lookups from production emitter code by using generic
-    collection surface metadata lookups.
-  - implementation_notes: Start with `src/emitter/EmitterBuiltinCallPathHelpers.cpp`,
-    `src/emitter/EmitterBuiltinMethodResolution*`,
-    `src/emitter/EmitterEmitSetupReturnInference*`, and
-    `src/emitter/EmitterExprCollection*`.
-  - acceptance:
-    - Production `src/emitter/` no longer contains
-      `collections.vector_helpers`, `collections.vector_constructors`,
-      `collections.map_helpers`, or `collections.map_constructors`.
-    - Existing vector import, vector helper, and map helper C++ emitter
-      compile-run coverage still passes.
-    - Source-lock tests prove emitter code no longer depends on map/vector
-      bridge-key literals.
-  - stop_rule: Stop once emitter bridge-key traces are removed without touching
-    semantics or IR-lowerer bridge-key migrations.
 
 - [ ] TODO-4579: Enforce zero map/vector compiler-knowledge traces
   - owner: ai
   - created_at: 2026-05-24
   - phase: Map/vector compiler-independence
-  - depends_on: TODO-4571, TODO-4598, TODO-4599
+  - parallel_track: map-vector-zero-gate
+  - depends_on: TODO-4571, TODO-4598, TODO-4599, TODO-4600
   - inventory_categories: all categories reported by
     `scripts/check_map_vector_compiler_knowledge.py`
   - scope: Turn the broad compiler-knowledge inventory into the release-gate

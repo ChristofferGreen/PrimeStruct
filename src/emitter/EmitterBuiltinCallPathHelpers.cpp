@@ -1,5 +1,6 @@
 #include "EmitterBuiltinCallPathHelpersInternal.h"
 #include "EmitterBuiltinMethodResolutionTypeInferenceInternal.h"
+#include "EmitterCollectionSurfaceMetadata.h"
 #include "EmitterHelpers.h"
 #include "primec/StringLiteral.h"
 
@@ -9,16 +10,13 @@
 namespace primec::emitter {
 
 namespace {
-constexpr std::string_view KeyValueHelperSurfaceBridgeKey = "collections.map_helpers";
-constexpr std::string_view KeyValueConstructorSurfaceBridgeKey =
-    "collections.map_constructors";
 
 const StdlibSurfaceMetadata *keyValueHelperSurfaceMetadataLocal() {
-  return findStdlibSurfaceMetadataByBridgeKey(KeyValueHelperSurfaceBridgeKey);
+  return emitterCollectionSurfaceMetadata(EmitterCollectionSurface::KeyValueHelpers);
 }
 
 const StdlibSurfaceMetadata *keyValueConstructorSurfaceMetadataLocal() {
-  return findStdlibSurfaceMetadataByBridgeKey(KeyValueConstructorSurfaceBridgeKey);
+  return emitterCollectionSurfaceMetadata(EmitterCollectionSurface::KeyValueConstructors);
 }
 
 std::string keyValueConstructorAliasToken() {
@@ -187,9 +185,14 @@ bool extractKeyValueCollectionTypesLocal(const BindingInfo &binding,
 
 bool allowsArrayVectorCompatibilitySuffix(const std::string &suffix) {
   std::string canonicalMemberName;
+  const auto *metadata =
+      emitterCollectionSurfaceMetadata(EmitterCollectionSurface::VectorHelpers);
+  if (metadata == nullptr) {
+    return true;
+  }
   return !resolvePublishedCollectionSurfaceMemberToken(
       suffix,
-      StdlibSurfaceId::CollectionsManifestSurface0,
+      metadata->id,
       canonicalMemberName);
 }
 
@@ -203,7 +206,7 @@ std::string normalizedExprPath(const Expr &expr) {
 
 bool isCanonicalVectorHelperExprPath(const Expr &expr) {
   const auto *metadata =
-      findStdlibSurfaceMetadataByBridgeKey("collections.vector_helpers");
+      emitterCollectionSurfaceMetadata(EmitterCollectionSurface::VectorHelpers);
   if (metadata == nullptr) {
     return false;
   }
@@ -264,7 +267,8 @@ bool resolveStdlibSurfaceExprMemberNameLocal(const Expr &expr,
     memberNameOut.assign(memberName);
     return true;
   }
-  if (metadata.bridgeKey == KeyValueHelperSurfaceBridgeKey &&
+  if (isEmitterCollectionSurfaceMetadata(
+          metadata, EmitterCollectionSurface::KeyValueHelpers) &&
       normalizedPath.rfind("/std/collections/Map", 0) == 0) {
     const std::string memberToken =
         normalizedPath.substr(std::string("/std/collections/Map").size());
@@ -317,15 +321,20 @@ bool resolvePublishedVectorHelperExprMemberName(const Expr &expr,
   if (!isCanonicalVectorHelperExprPath(expr)) {
     return false;
   }
+  const auto *metadata =
+      emitterCollectionSurfaceMetadata(EmitterCollectionSurface::VectorHelpers);
+  if (metadata == nullptr) {
+    return false;
+  }
   return resolvePublishedCollectionSurfaceExprMemberName(
-      expr, StdlibSurfaceId::CollectionsManifestSurface0, memberNameOut);
+      expr, metadata->id, memberNameOut);
 }
 
 bool resolvePublishedVectorConstructorExprMemberName(
     const Expr &expr,
     std::string &memberNameOut) {
   const auto *metadata =
-      findStdlibSurfaceMetadataByBridgeKey("collections.vector_constructors");
+      emitterCollectionSurfaceMetadata(EmitterCollectionSurface::VectorConstructors);
   if (metadata == nullptr) {
     return false;
   }
@@ -335,12 +344,12 @@ bool resolvePublishedVectorConstructorExprMemberName(
     return false;
   }
   return resolvePublishedCollectionSurfaceExprMemberName(
-      expr, StdlibSurfaceId::CollectionsManifestSurface1, memberNameOut);
+      expr, metadata->id, memberNameOut);
 }
 
 std::string canonicalVectorHelperPathForSuffix(const std::string &suffix) {
   const auto *metadata =
-      findStdlibSurfaceMetadataByBridgeKey("collections.vector_helpers");
+      emitterCollectionSurfaceMetadata(EmitterCollectionSurface::VectorHelpers);
   if (metadata == nullptr) {
     return "";
   }
