@@ -97,6 +97,18 @@ def main() -> int:
             return 1
         if not assert_contains(clean.stdout, "0 traces observed", "clean inventory"):
             return 1
+        clean_zero = run_checker(repo_root, clean_root, "--enforce-zero")
+        if clean_zero.returncode != 0:
+            print("Clean inventory should satisfy broad zero mode", file=sys.stderr)
+            print(clean_zero.stdout, end="")
+            print(clean_zero.stderr, end="", file=sys.stderr)
+            return 1
+        if not assert_contains(
+            clean_zero.stdout,
+            "Map/vector compiler-knowledge zero audit passed.",
+            "clean zero audit",
+        ):
+            return 1
         clean_map_helper_zero = run_checker(
             repo_root,
             clean_root,

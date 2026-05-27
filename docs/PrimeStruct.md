@@ -4059,6 +4059,11 @@ language/runtime-owned, which remain hybrid, and which should move fully into st
 
 - `vector<T>` and `map<K, V>` therefore still appear in the portable type set today, but that
   should not be read as a permanent compiler-owned collection contract.
+- Final map/vector compiler-knowledge invariant: release validation runs the
+  broad zero audit over production C++ so map/vector semantics and
+  implementation stay in stdlib `.prime` plus `.psmeta` metadata files, while
+  C++ treats them as ordinary included stdlib code on generic substrate rather
+  than as type-specific compiler branches.
 - `soa<T>` is the promoted stdlib-owned public collection spelling over the
   current SoA backing identity. `soa_vector<T>` and direct experimental SoA
   imports are rejected compatibility spellings, not ordinary public API.

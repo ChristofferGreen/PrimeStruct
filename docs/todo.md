@@ -64,8 +64,6 @@ This file is the live open-work queue for PrimeStruct.
 
 ### Ready Now
 
-- TODO-4579: Enforce zero map/vector compiler-knowledge traces | track: map-vector-zero-gate | primary surface: release validation inventory gate
-
 ### Immediate Next 10
 
 ### Priority Lanes
@@ -88,9 +86,9 @@ This file is the live open-work queue for PrimeStruct.
   IDs, TODO-4598 completed the semantics migration, TODO-4599 completed the
   emitter migration, TODO-4600 completed the IR-lowerer migration, and
   TODO-4601 removed the final map-helper classifier trace. TODO-4602 removed
-  semantic vector-literal diagnostic traces, and TODO-4603 completed the
-  IR-lowerer vector-literal cleanup. TODO-4579 is now the final ready zero
-  gate to wire into release validation.
+  semantic vector-literal diagnostic traces, TODO-4603 completed the
+  IR-lowerer vector-literal cleanup, and TODO-4579 wired the broad zero audit
+  into release validation.
 - Architecture hardening backlog: TODO-4586 completed parser diagnostic
   stability tiers. TODO-4587 completed the shared compile-time/runtime VM
   kernel boundary. TODO-4588 added the IR-preparation phase manifest.
@@ -99,40 +97,4 @@ This file is the live open-work queue for PrimeStruct.
 
 ### Execution Queue
 
-- TODO-4579: Enforce zero map/vector compiler-knowledge traces
-
 ### Task Blocks
-
-- [ ] TODO-4579: Enforce zero map/vector compiler-knowledge traces
-  - owner: ai
-  - created_at: 2026-05-24
-  - phase: Map/vector compiler-independence
-  - parallel_track: map-vector-zero-gate
-  - depends_on: TODO-4571, TODO-4598, TODO-4599, TODO-4600, TODO-4601,
-    TODO-4602, TODO-4603
-  - inventory_categories: all categories reported by
-    `scripts/check_map_vector_compiler_knowledge.py`
-  - scope: Turn the broad compiler-knowledge inventory into the final
-    release-gate zero audit now that the trace deletion leaves have landed.
-  - implementation_notes: Start from the TODO-4571 audit script and wire its
-    `--enforce-zero` mode into CTest/CMake now that TODO-4601, TODO-4602,
-    and TODO-4603 removed the remaining nonzero categories. Keep existing
-    narrow surface-trace scripts only if they still catch a distinct
-    regression; otherwise replace them with the broader zero gate and
-    self-tests.
-  - acceptance:
-    - Routine release validation fails on any production C++ map/vector
-      compiler-knowledge trace, including bridge keys, helper recognizers,
-      literal paths, backing-layout classifiers, and map/vector-specific
-      stdlib registry names.
-    - The gate explicitly ignores ordinary C++ containers (`std::map`,
-      `std::vector`), source-map terminology, tests, docs, and stdlib
-      `.prime`/`.psmeta` files.
-    - C++ tests may still mention map/vector to test stdlib behavior, but
-      production compiler/runtime code no longer contains PrimeStruct
-      map/vector special cases.
-    - `docs/todo.md` and `docs/PrimeStruct.md` state the final invariant:
-      map/vector semantics and implementation live in stdlib `.prime` and
-      metadata files, while C++ treats them as ordinary included stdlib code.
-  - stop_rule: Stop once the zero gate is wired into routine validation and
-    focused map/vector stdlib tests plus the new audit pass.

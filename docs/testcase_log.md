@@ -4,6 +4,22 @@
 - none
 
 ## Recent Test Runs
+- 2026-05-27 16:27 CEST | pass | mode: release + script | command:
+  `cmake -S . -B build-release -DCMAKE_BUILD_TYPE=Release -DCMAKE_EXPORT_COMPILE_COMMANDS=ON`;
+  `cmake --build build-release --target PrimeStruct_compile_run_tests -j 1`;
+  `cd build-release && ./PrimeStruct_compile_run_tests --test-case="todo queue and skipped doctest debt stay source locked" --no-skip`;
+  `cd build-release && ctest --output-on-failure -R '^PrimeStruct_map_vector_compiler_knowledge_zero_audit(_self_test)?$'`;
+  `python3 scripts/check_map_vector_compiler_knowledge.py --root . --enforce-zero`;
+  `PYTHONDONTWRITEBYTECODE=1 python3 tests/scripts/test_check_map_vector_compiler_knowledge.py --repo-root .`;
+  `python3 -m py_compile scripts/check_map_vector_compiler_knowledge.py tests/scripts/test_check_map_vector_compiler_knowledge.py`;
+  `git diff --check`
+  | failures: none | notes: TODO-4579 focused validation passed. Parent
+  heavy turn configured the worker release build, rebuilt
+  `PrimeStruct_compile_run_tests`, passed the TODO docs-lock case
+  1 case / 548 assertions, and passed both zero-audit CTest entries. Worker
+  script checks confirmed the broad zero audit reports zero traces, the
+  checker self-test and bytecode compile pass, and the diff has no whitespace
+  errors.
 - 2026-05-27 16:17 CEST | pass | mode: release + script | command:
   `cmake --build build-release --target primec primevm PrimeStruct_backend_ir_tests PrimeStruct_semantics_tests PrimeStruct_misc_tests PrimeStruct_compile_run_tests -j 1`;
   `cd build-release && ./PrimeStruct_backend_ir_tests --test-case="ir lowerer constructor metadata helpers retire duplicated constructor tables,ir lowerer collection surfaces avoid bridge-key literals,ir lowerer canonical map contains and tryAt rewrites stay recognized,ir lowerer vector type layout traces use generic collection helpers,ir lowerer materialized collection receivers use published helper queries,ir lowerer collection literal diagnostics avoid vector-literal traces" --no-skip`;

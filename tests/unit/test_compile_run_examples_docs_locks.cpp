@@ -1829,8 +1829,7 @@ TEST_CASE("todo queue and skipped doctest debt stay source locked") {
                   "  coverage snapshots in this file.") !=
         std::string::npos);
   CHECK(todo.find("### Ready Now\n\n"
-                  "- TODO-4579: Enforce zero map/vector compiler-knowledge traces | track: "
-                  "map-vector-zero-gate") !=
+                  "### Immediate Next 10") !=
         std::string::npos);
   CHECK(todo.find("- TODO-4601: Remove final map helper classifier trace | track: "
                   "map-helper-zero") ==
@@ -1842,7 +1841,9 @@ TEST_CASE("todo queue and skipped doctest debt stay source locked") {
                   "lowerer-vector-literal-zero") ==
         std::string::npos);
   CHECK(todo.find("- TODO-4579: Enforce zero map/vector compiler-knowledge traces | track: "
-                  "map-vector-zero-gate") !=
+                  "map-vector-zero-gate") ==
+        std::string::npos);
+  CHECK(todo.find("- [ ] TODO-4579: Enforce zero map/vector compiler-knowledge traces") ==
         std::string::npos);
   CHECK(todo.find("- [ ] TODO-4603: Remove IR-lowerer vector-literal compiler traces") ==
         std::string::npos);
@@ -1905,7 +1906,7 @@ TEST_CASE("todo queue and skipped doctest debt stay source locked") {
                   "  surface, TODO-4571 added the compiler-knowledge inventory categories") !=
         std::string::npos);
   CHECK(todo.find("### Execution Queue\n\n"
-                  "- TODO-4579: Enforce zero map/vector compiler-knowledge traces") !=
+                  "### Task Blocks") !=
         std::string::npos);
   CHECK(todo.find("- TODO-4599: Migrate emitter collection surface lookups | track: "
                   "stdlib-registry-emitter") ==
@@ -1920,6 +1921,12 @@ TEST_CASE("todo queue and skipped doctest debt stay source locked") {
         std::string::npos);
   CHECK(todoFinished.find("Routed vector collection-literal diagnostic subjects through\n"
                           "      `collection literal` wording") !=
+        std::string::npos);
+  CHECK(todoFinished.find("TODO-4579: Enforce zero map/vector compiler-knowledge traces") !=
+        std::string::npos);
+  CHECK(todoFinished.find("PrimeStruct_map_vector_compiler_knowledge_zero_audit") !=
+        std::string::npos);
+  CHECK(todoFinished.find("broad `--enforce-zero` audit") !=
         std::string::npos);
   CHECK(todo.find("- TODO-4569: Present scene-rendered UI through software surface bridge") ==
         std::string::npos);

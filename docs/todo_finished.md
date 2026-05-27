@@ -6,6 +6,39 @@ Legend:
 Finished items are periodically archived here from `docs/todo.md`; section headers record the archive date.
 
 **Todo Completion (May 27, 2026)**
+- [x] TODO-4579: Enforce zero map/vector compiler-knowledge traces
+  - owner: ai
+  - created_at: 2026-05-24
+  - finished_at: 2026-05-27
+  - phase: Map/vector compiler-independence
+  - parallel_track: map-vector-zero-gate
+  - depends_on: TODO-4571, TODO-4598, TODO-4599, TODO-4600, TODO-4601,
+    TODO-4602, TODO-4603
+  - inventory_categories: all categories reported by
+    `scripts/check_map_vector_compiler_knowledge.py`
+  - scope: Turned the broad compiler-knowledge inventory into the final
+    release-gate zero audit now that the trace deletion leaves have landed.
+  - outcome:
+    - Renamed the CTest gate to
+      `PrimeStruct_map_vector_compiler_knowledge_zero_audit` and wired it to
+      run the broad `--enforce-zero` audit over tracked production C++.
+    - Removed the redundant `map-helper-classifier` category-only CTest gate;
+      the broad zero audit now covers helper classifiers, bridge keys,
+      literal paths, backing classifiers, and stdlib registry IDs together.
+    - Tightened the checker self-test so a clean synthetic tree proves broad
+      zero mode passes, while the existing bad synthetic tree still proves
+      broad zero mode rejects production map/vector compiler knowledge.
+    - Documented the final invariant that map/vector semantics and
+      implementation live in stdlib `.prime` plus `.psmeta` metadata while
+      production C++ treats them as ordinary included stdlib code on generic
+      substrate.
+  - validation:
+    - Focused script validation and the selected release-mode docs-lock and
+      CTest zero-audit slices were run for this worker; see the commit report
+      for exact commands and results.
+  - stop_rule: Stopped once the zero gate was wired into routine validation and
+    focused map/vector stdlib tests plus the new audit pass were selected.
+
 - [x] TODO-4601: Remove final map helper classifier trace
   - owner: ai
   - created_at: 2026-05-27
