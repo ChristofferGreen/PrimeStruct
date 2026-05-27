@@ -2024,7 +2024,6 @@ TEST_CASE("todo queue and skipped doctest debt stay source locked") {
                   "  coverage snapshots in this file.") !=
         std::string::npos);
   CHECK(todo.find("### Ready Now\n\n"
-                  "- TODO-4619: Gate runtime reflection by backend profile | track: runtime-reflection-profile-gate | surface: backend profile/runtime reflection preflight\n"
                   "- TODO-4620: Index expanded-source segments for diagnostics | track: expanded-source-diagnostic-index | surface: source location mapper\n"
                   "- TODO-4607: Publish initial array extent facts | track: array-extent-facts | surface: semantic product extent facts\n"
                   "- TODO-4617: Add semantic preflight missing-fact diagnostics | track: semantic-product-preflight-diagnostics | surface: semantic product preflight facts\n\n"
@@ -2065,6 +2064,10 @@ TEST_CASE("todo queue and skipped doctest debt stay source locked") {
   CHECK(todo.find("- TODO-4616: Make semantic validation manifest executable | track:") ==
         std::string::npos);
   CHECK(todo.find("- [ ] TODO-4616: Make semantic validation manifest executable") ==
+        std::string::npos);
+  CHECK(todo.find("- TODO-4619: Gate runtime reflection by backend profile | track:") ==
+        std::string::npos);
+  CHECK(todo.find("- [ ] TODO-4619: Gate runtime reflection by backend profile") ==
         std::string::npos);
   CHECK(todo.find("- TODO-4569: Present scene-rendered UI through software surface bridge | track: "
                   "ui-scene-presentation") ==
@@ -2124,10 +2127,10 @@ TEST_CASE("todo queue and skipped doctest debt stay source locked") {
                   "  reference/slice view model in the normative docs. TODO-4607 through") !=
         std::string::npos);
   CHECK(todo.find("### Execution Queue\n\n"
-                  "1. TODO-4619: Gate runtime reflection by backend profile\n"
-                  "2. TODO-4620: Index expanded-source segments for diagnostics\n"
-                  "3. TODO-4607: Publish initial array extent facts\n"
-                  "4. TODO-4617: Add semantic preflight missing-fact diagnostics") !=
+                  "1. TODO-4620: Index expanded-source segments for diagnostics\n"
+                  "2. TODO-4607: Publish initial array extent facts\n"
+                  "3. TODO-4617: Add semantic preflight missing-fact diagnostics\n"
+                  "4. TODO-4608: Add checked array slice construction") !=
         std::string::npos);
   CHECK(todo.find("- TODO-4613: Retire semantic-validator private source locks | track: "
                   "semantic-source-lock-retirement") ==
@@ -2174,6 +2177,10 @@ TEST_CASE("todo queue and skipped doctest debt stay source locked") {
         std::string::npos);
   CHECK(todoFinished.find("expression-emitter private source lock was\n"
                           "    retired without refactoring backend emitter ownership") !=
+        std::string::npos);
+  CHECK(todoFinished.find("TODO-4619: Gate runtime reflection by backend profile") !=
+        std::string::npos);
+  CHECK(todoFinished.find("Added `RuntimeReflection` to the backend capability profile") !=
         std::string::npos);
   CHECK(todoFinished.find("TODO-4613: Retire semantic-validator private source locks") !=
         std::string::npos);

@@ -1,6 +1,7 @@
 #include "primec/IrPreparation.h"
 
 #include "primec/AstMemory.h"
+#include "primec/IrBackendProfiles.h"
 #include "primec/IrInliner.h"
 #include "primec/IrLowerer.h"
 #include "primec/IrValidation.h"
@@ -28,6 +29,28 @@ void emitPostIrPreparationAstHeapEstimate(const Program &program) {
             << "}\n";
 }
 
+bool validateRuntimeReflectionBackendSupport(const SemanticProgram &semanticProgram,
+                                             const Options &options,
+                                             std::string &error) {
+  const std::string_view reflectionPath =
+      semanticProgramLookupPublishedLowererRuntimeReflectionPath(semanticProgram);
+  if (reflectionPath.empty()) {
+    return true;
+  }
+
+  const IrBackendCapabilitySupport support =
+      queryIrBackendCapabilitySupport(options, IrBackendCapability::RuntimeReflection);
+  if (support.supported) {
+    return true;
+  }
+
+  const std::string targetName =
+      support.targetName.empty() ? "selected" : std::string(support.targetName);
+  error = "runtime reflection support unavailable for " + targetName + " target: " +
+          std::string(reflectionPath);
+  return false;
+}
+
 } // namespace
 
 const std::vector<IrPreparationPhaseManifestEntry> &irPreparationPhaseManifest() {
@@ -37,8 +60,8 @@ const std::vector<IrPreparationPhaseManifestEntry> &irPreparationPhaseManifest()
        IrPreparationPhaseOwnership::CompilePipelineAstAndSemanticProduct,
        IrPreparationPhaseAction::ValidatesOnly,
        false,
-       "program AST, semantic product pointer, options, and validation target",
-       "a missing semantic product invalidates IR preparation before lowering; no IR module is owned",
+       "program AST, semantic product pointer, options, backend capability profile, and validation target",
+       "a missing semantic product or unsupported runtime-reflection capability invalidates IR preparation before lowering; no IR module is owned",
        "prepareIrModule callers and lowerer preflight"},
       {"lower-semantic-product-to-ir",
        IrPreparationPhaseOwnership::CompilePipelineAstAndSemanticProduct,
@@ -99,6 +122,12 @@ bool prepareIrModule(Program &program,
   if (semanticProgram == nullptr) {
     failure.stage = IrPreparationFailureStage::Lowering;
     failure.message = "semantic product is required for IR preparation";
+    diagnosticSink.setSummary(failure.message);
+    return false;
+  }
+  if (!validateRuntimeReflectionBackendSupport(*semanticProgram, options, error)) {
+    failure.stage = IrPreparationFailureStage::Lowering;
+    failure.message = std::move(error);
     diagnosticSink.setSummary(failure.message);
     return false;
   }

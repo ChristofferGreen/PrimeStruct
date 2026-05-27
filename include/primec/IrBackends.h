@@ -36,6 +36,7 @@ struct IrBackendEmitResult {
 
 enum class IrBackendCapability : uint32_t {
   GraphicsRuntimeSubstrate = 1u << 0,
+  RuntimeReflection = 1u << 1,
 };
 
 struct IrBackendCapabilityProfile {

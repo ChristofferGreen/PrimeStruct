@@ -6,6 +6,34 @@ Legend:
 Finished items are periodically archived here from `docs/todo.md`; section headers record the archive date.
 
 **Todo Completion (May 27, 2026)**
+- [x] TODO-4619: Gate runtime reflection by backend profile
+  - owner: ai
+  - created_at: 2026-05-27
+  - finished_at: 2026-05-27
+  - phase: Architecture hardening
+  - parallel_track: runtime-reflection-profile-gate
+  - scope: Added one non-graphics backend capability gate for runtime
+    reflection support, advertised it through `IrBackendProfiles`, and routed
+    the published runtime-reflection preflight fact through IR preparation
+    before backend-specific lowering runs.
+  - outcome:
+    - Added `RuntimeReflection` to the backend capability profile alongside
+      the existing graphics runtime substrate capability.
+    - Marked host-style VM/native/IR/C++/EXE profiles as runtime-reflection
+      capable while keeping Wasm, GLSL, and SPIR-V profiles unsupported.
+    - Added an IR-preparation preflight check that rejects a residual
+      runtime-reflection path for unsupported targets with a deterministic
+      target-profile diagnostic before lowerer entry setup can report a
+      backend-surface-specific failure.
+    - Expanded backend-profile and IR-preparation tests to lock both the new
+      capability registry surface and the unsupported-backend preflight
+      diagnostic.
+  - validation:
+    - Focused backend registry and TODO docs-lock validation was selected for
+      this worker; see the commit report for exact commands.
+  - stop_rule: Stopped after one real runtime-reflection capability gate was
+    enforced; broader backend-profile modeling remains outside this leaf.
+
 - [x] TODO-4616: Make semantic validation manifest executable
   - owner: ai
   - created_at: 2026-05-27

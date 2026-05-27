@@ -296,7 +296,7 @@ TEST_CASE("emit kind aliases resolve to canonical ir backend kinds") {
   CHECK(primec::resolveIrBackendEmitKind("unknown") == "unknown");
 }
 
-TEST_CASE("backend capability registry describes graphics runtime substrate availability") {
+TEST_CASE("backend capability registry describes runtime capability availability") {
   auto signatureFor = [](const primec::IrBackendCapabilityProfile &profile) {
     std::string signature = profile.emitKind;
     signature += ":";
@@ -308,9 +308,27 @@ TEST_CASE("backend capability registry describes graphics runtime substrate avai
     signature += ":";
     signature += profile.targetName;
     signature += ":";
+    std::vector<std::string_view> capabilities;
     const bool supportsGraphicsRuntime = primec::irBackendCapabilityProfileSupports(
         profile, primec::IrBackendCapability::GraphicsRuntimeSubstrate);
-    signature += supportsGraphicsRuntime ? "graphics-runtime" : "-";
+    if (supportsGraphicsRuntime) {
+      capabilities.push_back("graphics-runtime");
+    }
+    const bool supportsRuntimeReflection = primec::irBackendCapabilityProfileSupports(
+        profile, primec::IrBackendCapability::RuntimeReflection);
+    if (supportsRuntimeReflection) {
+      capabilities.push_back("runtime-reflection");
+    }
+    if (capabilities.empty()) {
+      signature += "-";
+    } else {
+      for (std::size_t i = 0; i < capabilities.size(); ++i) {
+        if (i != 0) {
+          signature += ",";
+        }
+        signature += capabilities[i];
+      }
+    }
     return signature;
   };
 
@@ -320,19 +338,19 @@ TEST_CASE("backend capability registry describes graphics runtime substrate avai
   }
 
   const std::vector<std::string> expected = {
-      "vm:-:vm:graphics-runtime",
-      "native:-:native:graphics-runtime",
-      "ir:-:ir:graphics-runtime",
+      "vm:-:vm:graphics-runtime,runtime-reflection",
+      "native:-:native:graphics-runtime,runtime-reflection",
+      "ir:-:ir:graphics-runtime,runtime-reflection",
       "wasm:wasi:wasm-wasi:-",
       "wasm:browser:wasm-browser:-",
       "glsl:-:glsl:-",
       "glsl-ir:-:glsl:-",
       "spirv:-:spirv:-",
       "spirv-ir:-:spirv:-",
-      "cpp:-:cpp:graphics-runtime",
-      "cpp-ir:-:cpp-ir:graphics-runtime",
-      "exe:-:exe:graphics-runtime",
-      "exe-ir:-:exe-ir:graphics-runtime",
+      "cpp:-:cpp:graphics-runtime,runtime-reflection",
+      "cpp-ir:-:cpp-ir:graphics-runtime,runtime-reflection",
+      "exe:-:exe:graphics-runtime,runtime-reflection",
+      "exe-ir:-:exe-ir:graphics-runtime,runtime-reflection",
   };
 
   CHECK(actual == expected);
@@ -379,6 +397,70 @@ TEST_CASE("backend capability query routes graphics runtime substrate by target 
   const primec::IrBackendCapabilitySupport spirvSupport = graphicsSupportFor("spirv");
   CHECK_FALSE(spirvSupport.supported);
   CHECK(spirvSupport.targetName == "spirv");
+}
+
+TEST_CASE("backend capability query routes runtime reflection by target profile") {
+  auto reflectionSupportFor = [](std::string_view emitKind, std::string_view wasmProfile = "wasi") {
+    primec::Options options;
+    options.emitKind = std::string(emitKind);
+    options.wasmProfile = std::string(wasmProfile);
+    return primec::queryIrBackendCapabilitySupport(
+        options, primec::IrBackendCapability::RuntimeReflection);
+  };
+
+  const primec::IrBackendCapabilitySupport vmSupport = reflectionSupportFor("vm");
+  CHECK(vmSupport.supported);
+  CHECK(vmSupport.targetName == "vm");
+
+  const primec::IrBackendCapabilitySupport nativeSupport = reflectionSupportFor("native");
+  CHECK(nativeSupport.supported);
+  CHECK(nativeSupport.targetName == "native");
+
+  const primec::IrBackendCapabilitySupport cppAliasSupport = reflectionSupportFor("cpp");
+  CHECK(cppAliasSupport.supported);
+  CHECK(cppAliasSupport.targetName == "cpp");
+
+  const primec::IrBackendCapabilitySupport exeIrSupport = reflectionSupportFor("exe-ir");
+  CHECK(exeIrSupport.supported);
+  CHECK(exeIrSupport.targetName == "exe-ir");
+
+  const primec::IrBackendCapabilitySupport wasmBrowserSupport =
+      reflectionSupportFor("wasm", "browser");
+  CHECK_FALSE(wasmBrowserSupport.supported);
+  CHECK(wasmBrowserSupport.targetName == "wasm-browser");
+
+  const primec::IrBackendCapabilitySupport wasmWasiSupport = reflectionSupportFor("wasm");
+  CHECK_FALSE(wasmWasiSupport.supported);
+  CHECK(wasmWasiSupport.targetName == "wasm-wasi");
+
+  const primec::IrBackendCapabilitySupport glslAliasSupport = reflectionSupportFor("glsl-ir");
+  CHECK_FALSE(glslAliasSupport.supported);
+  CHECK(glslAliasSupport.targetName == "glsl");
+
+  const primec::IrBackendCapabilitySupport spirvSupport = reflectionSupportFor("spirv");
+  CHECK_FALSE(spirvSupport.supported);
+  CHECK(spirvSupport.targetName == "spirv");
+}
+
+TEST_CASE("ir preparation rejects runtime reflection before unsupported backend lowering") {
+  primec::Program program;
+  primec::SemanticProgram semanticProgram;
+  semanticProgram.publishedLowererPreflightFacts.firstRuntimeReflectionPathId =
+      primec::semanticProgramInternCallTargetString(semanticProgram, "/meta/type_name");
+
+  primec::Options options;
+  options.emitKind = "wasm";
+  options.wasmProfile = "browser";
+  options.entryPath = "/main";
+
+  primec::IrModule ir;
+  primec::IrPreparationFailure failure;
+  CHECK_FALSE(primec::prepareIrModule(
+      program, &semanticProgram, options, primec::IrValidationTarget::WasmBrowser, ir, failure));
+  CHECK(failure.stage == primec::IrPreparationFailureStage::Lowering);
+  CHECK(failure.message ==
+        "runtime reflection support unavailable for wasm-browser target: /meta/type_name");
+  CHECK(failure.diagnosticInfo.message == failure.message);
 }
 
 TEST_CASE("all production primec emit kinds route through ir backend resolution") {

@@ -11,20 +11,24 @@ namespace {
 
 constexpr uint32_t GraphicsRuntimeSubstrateCapabilityMask =
     static_cast<uint32_t>(IrBackendCapability::GraphicsRuntimeSubstrate);
+constexpr uint32_t RuntimeReflectionCapabilityMask =
+    static_cast<uint32_t>(IrBackendCapability::RuntimeReflection);
+constexpr uint32_t HostRuntimeCapabilityMask =
+    GraphicsRuntimeSubstrateCapabilityMask | RuntimeReflectionCapabilityMask;
 
 constexpr std::array<IrBackendCapabilityProfile, 13> CapabilityProfiles = {{
     {.emitKind = "vm",
      .wasmProfile = "",
      .targetName = "vm",
-     .capabilities = GraphicsRuntimeSubstrateCapabilityMask},
+     .capabilities = HostRuntimeCapabilityMask},
     {.emitKind = "native",
      .wasmProfile = "",
      .targetName = "native",
-     .capabilities = GraphicsRuntimeSubstrateCapabilityMask},
+     .capabilities = HostRuntimeCapabilityMask},
     {.emitKind = "ir",
      .wasmProfile = "",
      .targetName = "ir",
-     .capabilities = GraphicsRuntimeSubstrateCapabilityMask},
+     .capabilities = HostRuntimeCapabilityMask},
     {.emitKind = "wasm", .wasmProfile = "wasi", .targetName = "wasm-wasi", .capabilities = 0},
     {.emitKind = "wasm", .wasmProfile = "browser", .targetName = "wasm-browser", .capabilities = 0},
     {.emitKind = "glsl", .wasmProfile = "", .targetName = "glsl", .capabilities = 0},
@@ -34,19 +38,19 @@ constexpr std::array<IrBackendCapabilityProfile, 13> CapabilityProfiles = {{
     {.emitKind = "cpp",
      .wasmProfile = "",
      .targetName = "cpp",
-     .capabilities = GraphicsRuntimeSubstrateCapabilityMask},
+     .capabilities = HostRuntimeCapabilityMask},
     {.emitKind = "cpp-ir",
      .wasmProfile = "",
      .targetName = "cpp-ir",
-     .capabilities = GraphicsRuntimeSubstrateCapabilityMask},
+     .capabilities = HostRuntimeCapabilityMask},
     {.emitKind = "exe",
      .wasmProfile = "",
      .targetName = "exe",
-     .capabilities = GraphicsRuntimeSubstrateCapabilityMask},
+     .capabilities = HostRuntimeCapabilityMask},
     {.emitKind = "exe-ir",
      .wasmProfile = "",
      .targetName = "exe-ir",
-     .capabilities = GraphicsRuntimeSubstrateCapabilityMask},
+     .capabilities = HostRuntimeCapabilityMask},
 }};
 
 std::string_view effectiveWasmProfile(std::string_view wasmProfile) {

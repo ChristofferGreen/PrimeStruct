@@ -64,7 +64,6 @@ This file is the live open-work queue for PrimeStruct.
 
 ### Ready Now
 
-- TODO-4619: Gate runtime reflection by backend profile | track: runtime-reflection-profile-gate | surface: backend profile/runtime reflection preflight
 - TODO-4620: Index expanded-source segments for diagnostics | track: expanded-source-diagnostic-index | surface: source location mapper
 - TODO-4607: Publish initial array extent facts | track: array-extent-facts | surface: semantic product extent facts
 - TODO-4617: Add semantic preflight missing-fact diagnostics | track: semantic-product-preflight-diagnostics | surface: semantic product preflight facts
@@ -107,13 +106,14 @@ This file is the live open-work queue for PrimeStruct.
   kernel boundary. TODO-4588 added the IR-preparation phase manifest.
   TODO-4589 added the architecture health dashboard. TODO-4594 completed the
   semantic unknown-call diagnostic stability slice. TODO-4616 made the
-  semantic validation manifest executable.
+  semantic validation manifest executable. TODO-4619 completed the runtime
+  reflection backend-profile capability gate.
 - Architecture review hardening: TODO-4613 through TODO-4616 retired the
   temporary semantic/lowerer/emitter source locks and made the semantic
-  validation manifest executable. TODO-4617 through TODO-4621 remain for
-  semantic-product stale/missing diagnostics, a second backend capability gate,
-  expanded-source diagnostic lookup indexing, and one lowerer/backend
-  diagnostic stability-tier promotion.
+  validation manifest executable. TODO-4619 completed the second backend
+  capability gate. TODO-4617, TODO-4618, TODO-4620, and TODO-4621 remain for
+  semantic-product stale/missing diagnostics, expanded-source diagnostic lookup
+  indexing, and one lowerer/backend diagnostic stability-tier promotion.
 - Safe array extents and capability views: TODO-4604 completed the requirement
   contract phase split, and TODO-4605 completed the non-null safe pointer
   optionality model. TODO-4606 specified the capability-parameterized
@@ -126,17 +126,16 @@ This file is the live open-work queue for PrimeStruct.
 
 ### Execution Queue
 
-1. TODO-4619: Gate runtime reflection by backend profile
-2. TODO-4620: Index expanded-source segments for diagnostics
-3. TODO-4607: Publish initial array extent facts
-4. TODO-4617: Add semantic preflight missing-fact diagnostics
-5. TODO-4608: Add checked array slice construction
-6. TODO-4609: Reject escaping local array slices
-7. TODO-4610: Add forward cursor traversal API
-8. TODO-4611: Add reverse cursor traversal API
-9. TODO-4612: Add safe extent and cursor code examples
-10. TODO-4618: Fail closed on stale CT-eval requirement facts
-11. TODO-4621: Classify unsupported variadic-pack diagnostics
+1. TODO-4620: Index expanded-source segments for diagnostics
+2. TODO-4607: Publish initial array extent facts
+3. TODO-4617: Add semantic preflight missing-fact diagnostics
+4. TODO-4608: Add checked array slice construction
+5. TODO-4609: Reject escaping local array slices
+6. TODO-4610: Add forward cursor traversal API
+7. TODO-4611: Add reverse cursor traversal API
+8. TODO-4612: Add safe extent and cursor code examples
+9. TODO-4618: Fail closed on stale CT-eval requirement facts
+10. TODO-4621: Classify unsupported variadic-pack diagnostics
 
 ### Task Blocks
 
@@ -324,29 +323,6 @@ This file is the live open-work queue for PrimeStruct.
       positive CT-eval coverage still passes.
   - stop_rule: Stop once CT-eval fails closed on requirement-predicate fact
     completeness; do not implement new requirement syntax in this leaf.
-
-- [ ] TODO-4619: Gate runtime reflection by backend profile
-  - owner: ai
-  - created_at: 2026-05-27
-  - phase: Architecture hardening
-  - parallel_track: runtime-reflection-profile-gate
-  - scope: Add one non-graphics backend capability gate for runtime reflection
-    support, advertise it through `IrBackendProfiles`, and route an existing
-    runtime-reflection preflight path through the profile check before
-    lowering.
-  - implementation_notes: Start with `include/primec/IrBackendProfiles.h`,
-    `src/IrBackendProfiles.cpp`, `src/IrPreparation.cpp`, and any lowerer
-    preflight checks that consume runtime reflection ids.
-  - acceptance:
-    - Backend profiles expose a named runtime-reflection capability in addition
-      to the existing graphics-runtime substrate capability.
-    - A backend without the capability rejects a runtime-reflection-dependent
-      program with a deterministic diagnostic before backend-specific lowering.
-    - A backend with the capability keeps the existing runtime-reflection
-      coverage passing.
-  - stop_rule: Stop after one real runtime-reflection capability gate is
-    enforced; do not expand the profile model to every documented construct in
-    this leaf.
 
 - [ ] TODO-4620: Index expanded-source segments for diagnostics
   - owner: ai
