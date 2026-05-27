@@ -6,6 +6,37 @@ Legend:
 Finished items are periodically archived here from `docs/todo.md`; section headers record the archive date.
 
 **Todo Completion (May 27, 2026)**
+- [x] TODO-4605: Specify non-null pointer optionality
+  - owner: ai
+  - created_at: 2026-05-27
+  - finished_at: 2026-05-27
+  - phase: Safe array extents and views
+  - parallel_track: safe-pointer-docs
+  - depends_on: TODO-4604
+  - scope: Updated the pointer/reference and memory-capability design docs so
+    safe `Pointer<T>` means a valid non-null pointer, optional or fallible
+    pointer production uses `Maybe<Pointer<T>>` or
+    `Result<Pointer<T>, ErrorT>`, and raw/foreign nullable addresses remain an
+    unsafe/FFI adapter concern.
+  - outcome:
+    - Documented `Pointer<T>` as valid non-null storage identity in safe code,
+      with no safe `null` inhabitant or ordinary nullable-address meaning.
+    - Added allocation and FFI design examples that return
+      `Maybe<Pointer<T>>`, `Result<Pointer<T>, AllocError>`, or
+      `Result<Pointer<T>, FfiError>` when valid storage may be absent.
+    - Marked the current implementation boundary: heap intrinsics still return
+      bare `Pointer<T>` values, while safe fallible wrappers or intrinsic
+      signature changes remain future implementation work.
+    - Added source-lock coverage spanning `docs/PrimeStruct.md`,
+      `docs/MemoryCapabilities.md`, and `docs/SafeArrayExtentViews.md`.
+    - Promoted TODO-4606 as the next safe-array docs leaf.
+  - validation:
+    - Focused docs/source-lock validation was selected for this worker; see
+      `docs/testcase_log.md` and the commit report for exact commands.
+  - stop_rule: Stopped after the documented safe pointer model was consistent;
+    heap intrinsic signature changes and FFI adapter implementation remain
+    later code leaves.
+
 - [x] TODO-4604: Specify requirement contract phase split
   - owner: ai
   - created_at: 2026-05-27

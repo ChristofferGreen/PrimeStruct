@@ -4,6 +4,23 @@
 - none
 
 ## Recent Test Runs
+- 2026-05-27 21:14 CEST | pass | mode: release + docs/source-lock |
+  command:
+  `cmake --build build-release --target PrimeStruct_compile_run_tests -j 1`;
+  `cd build-release && ./PrimeStruct_compile_run_tests --test-case="safe pointer optionality docs stay source locked,todo queue and skipped doctest debt stay source locked" --no-skip`
+  | failures: none | notes: parent rerun rebuilt the focused release
+  target and passed the TODO-4605 docs/TODO source-lock slice, 2 cases /
+  573 assertions.
+- 2026-05-27 20:13 CEST | fail | mode: release + docs/source-lock |
+  command:
+  `cmake -S . -B build-release -DCMAKE_BUILD_TYPE=Release -DCMAKE_EXPORT_COMPILE_COMMANDS=ON`;
+  `cmake --build build-release --target PrimeStruct_compile_run_tests -j 1`;
+  `cd build-release && ./PrimeStruct_compile_run_tests --test-case="safe pointer optionality docs stay source locked,todo queue and skipped doctest debt stay source locked" --no-skip`
+  | failures: `safe pointer optionality docs stay source locked`;
+  `todo queue and skipped doctest debt stay source locked` | notes: parent
+  configured the missing build dir and rebuilt successfully; focused doctest
+  failed on one line-wrap-sensitive MemoryCapabilities source-lock and stale
+  TODO queue expectations.
 - 2026-05-27 19:45 CEST | pass | mode: release + docs/source-lock |
   command:
   `cmake --build build-release --target PrimeStruct_compile_run_tests -j 1`;
@@ -9193,6 +9210,16 @@
 - 2026-05-12 17:28 local | fail | mode: release | command: `./scripts/compile.sh --release` | failures: 146 CTest targets | notes: baseline after preflight checkpoint failed; stabilization blocks TODO work
 
 ## Resolved Failures
+- [x] `safe pointer optionality docs stay source locked` | resolved:
+  2026-05-27 21:14 CEST | validating command:
+  `cd build-release && ./PrimeStruct_compile_run_tests --test-case="safe pointer optionality docs stay source locked,todo queue and skipped doctest debt stay source locked" --no-skip`
+  | notes: source-lock now matches the wrapped MemoryCapabilities non-null
+  pointer optionality text.
+- [x] `todo queue and skipped doctest debt stay source locked` | resolved:
+  2026-05-27 21:14 CEST | validating command:
+  `cd build-release && ./PrimeStruct_compile_run_tests --test-case="safe pointer optionality docs stay source locked,todo queue and skipped doctest debt stay source locked" --no-skip`
+  | notes: TODO queue source-lock now matches TODO-4605 completion and
+  TODO-4606 promotion.
 - [x] `TODO-4603 compile-run from-AOS diagnostic expectations` | resolved:
   2026-05-27 15:52 CEST | validating command:
   `cd build-release && ./PrimeStruct_compile_run_tests --test-case="todo queue and skipped doctest debt stay source locked,rejects native vector literal above local dynamic limit,rejects vm vector literal above local dynamic limit,native rejects experimental soa_vector stdlib from-aos helper before typed bindings support,rejects experimental soa_vector stdlib from-aos helper in C++ emitter before typed bindings support,keeps native stdlib wrapper vector constructor explicit Vector mismatch contract,keeps stdlib wrapper vector constructor explicit Vector mismatch contract in C++ emitter" --no-skip`

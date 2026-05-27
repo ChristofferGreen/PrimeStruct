@@ -133,6 +133,16 @@ Maybe<Pointer<T>>
 Result<Pointer<T>, AllocError>
 ```
 
+Allocation examples should therefore use fallible wrappers instead of treating
+null as a safe pointer value:
+
+```prime
+[return<Result<Pointer<T>, AllocError>>]
+try_alloc_slots<T>([u64] count) {
+  // body elided
+}
+```
+
 In this model, `Pointer<T>` is a valid, non-null pointer value in safe code.
 A caller must unwrap `Maybe<Pointer<T>>` or handle `Result<Pointer<T>, E>` before
 using the pointer.
@@ -148,6 +158,12 @@ around an untrusted foreign address should validate it at the boundary and
 return `Maybe<Pointer<T>>` or `Result<Pointer<T>, E>`. If a raw-address type such
 as `RawPointer<T>` remains in the language, it should be treated as unsafe
 adapter material, not as the normal nullable-pointer surface.
+
+Current implementation boundary: the heap allocation intrinsics documented in
+`docs/PrimeStruct.md` still return bare `Pointer<T>` values. This design note
+specifies the safe model; later implementation leaves should either change
+those intrinsic signatures or add safe fallible wrappers without making null an
+ordinary `Pointer<T>` inhabitant.
 
 ## Unified Views
 

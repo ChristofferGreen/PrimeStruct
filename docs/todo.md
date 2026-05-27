@@ -64,14 +64,13 @@ This file is the live open-work queue for PrimeStruct.
 
 ### Ready Now
 
-- TODO-4605: Specify non-null pointer optionality | track: safe-pointer-docs | surface: docs pointer/reference model
 - TODO-4613: Retire semantic-validator private source locks | track: semantic-source-lock-retirement | surface: semantic validator source-lock tests
 - TODO-4614: Retire IR-lowerer call-helper source locks | track: lowerer-call-source-lock-retirement | surface: IR-lowerer call-helper source-lock tests
 - TODO-4615: Retire emitter private source locks | track: emitter-source-lock-retirement | surface: emitter source-lock tests
+- TODO-4606: Specify capability-parameterized views | track: capability-view-docs | surface: docs view model
 
 ### Immediate Next 10
 
-- TODO-4606: Specify capability-parameterized views
 - TODO-4607: Publish initial array extent facts
 - TODO-4608: Add checked array slice construction
 - TODO-4609: Reject escaping local array slices
@@ -81,6 +80,7 @@ This file is the live open-work queue for PrimeStruct.
 - TODO-4616: Make semantic validation manifest executable
 - TODO-4617: Add semantic preflight missing-fact diagnostics
 - TODO-4618: Fail closed on stale CT-eval requirement facts
+- TODO-4619: Gate runtime reflection by backend profile
 
 ### Priority Lanes
 
@@ -117,65 +117,40 @@ This file is the live open-work queue for PrimeStruct.
   gate, index expanded-source diagnostic lookup, and promote one lowerer or
   backend diagnostic into the stability-tier contract.
 - Safe array extents and capability views: TODO-4604 completed the requirement
-  contract phase split. TODO-4605 through TODO-4612 remain from the agreed
-  backlog in `docs/SafeArrayExtentViews.md`: non-null safe pointers,
-  capability-parameterized references and slices, semantic extent facts,
-  checked slices, conservative view escapes, cursor traversal with
+  contract phase split, and TODO-4605 completed the non-null safe pointer
+  optionality model. TODO-4606 through TODO-4612 remain from the agreed
+  backlog in `docs/SafeArrayExtentViews.md`: capability-parameterized
+  references and slices, semantic extent facts, checked slices, conservative
+  view escapes, cursor traversal with
   `limit(...)` / `reverse_limit(...)` boundaries, and style-aligned examples
   once the surface is specified.
 
 ### Execution Queue
 
-1. TODO-4605: Specify non-null pointer optionality
-2. TODO-4613: Retire semantic-validator private source locks
-3. TODO-4614: Retire IR-lowerer call-helper source locks
-4. TODO-4615: Retire emitter private source locks
-5. TODO-4606: Specify capability-parameterized views
-6. TODO-4607: Publish initial array extent facts
-7. TODO-4608: Add checked array slice construction
-8. TODO-4609: Reject escaping local array slices
-9. TODO-4610: Add forward cursor traversal API
-10. TODO-4611: Add reverse cursor traversal API
-11. TODO-4612: Add safe extent and cursor code examples
-12. TODO-4616: Make semantic validation manifest executable
-13. TODO-4617: Add semantic preflight missing-fact diagnostics
-14. TODO-4618: Fail closed on stale CT-eval requirement facts
-15. TODO-4619: Gate runtime reflection by backend profile
-16. TODO-4620: Index expanded-source segments for diagnostics
-17. TODO-4621: Classify unsupported variadic-pack diagnostics
+1. TODO-4613: Retire semantic-validator private source locks
+2. TODO-4614: Retire IR-lowerer call-helper source locks
+3. TODO-4615: Retire emitter private source locks
+4. TODO-4606: Specify capability-parameterized views
+5. TODO-4607: Publish initial array extent facts
+6. TODO-4608: Add checked array slice construction
+7. TODO-4609: Reject escaping local array slices
+8. TODO-4610: Add forward cursor traversal API
+9. TODO-4611: Add reverse cursor traversal API
+10. TODO-4612: Add safe extent and cursor code examples
+11. TODO-4616: Make semantic validation manifest executable
+12. TODO-4617: Add semantic preflight missing-fact diagnostics
+13. TODO-4618: Fail closed on stale CT-eval requirement facts
+14. TODO-4619: Gate runtime reflection by backend profile
+15. TODO-4620: Index expanded-source segments for diagnostics
+16. TODO-4621: Classify unsupported variadic-pack diagnostics
 
 ### Task Blocks
-
-- [ ] TODO-4605: Specify non-null pointer optionality
-  - owner: ai
-  - created_at: 2026-05-27
-  - phase: Safe array extents and views
-  - parallel_track: safe-pointer-docs
-  - depends_on: TODO-4604
-  - scope: Update the pointer/reference and memory-capability design docs so
-    safe `Pointer<T>` means a valid non-null pointer, optional or fallible
-    pointer production uses `Maybe<Pointer<T>>` or
-    `Result<Pointer<T>, ErrorT>`, and raw/foreign nullable addresses remain an
-    unsafe/FFI adapter concern.
-  - implementation_notes: Start with `docs/PrimeStruct.md`,
-    `docs/MemoryCapabilities.md`, and `docs/SafeArrayExtentViews.md`. Keep
-    current implementation limits clearly marked if heap intrinsics still
-    return bare `Pointer<T>`.
-  - acceptance:
-    - Docs no longer imply that safe `Pointer<T>` has null as an ordinary
-      inhabitant.
-    - Allocation and FFI design examples use `Maybe<Pointer<T>>` or
-      `Result<Pointer<T>, ErrorT>` when a valid pointer may not be produced.
-    - Source-lock tests cover the non-null safe pointer invariant and the
-      optional-pointer spelling.
-  - stop_rule: Stop after the documented safe pointer model is consistent;
-    leave heap intrinsic signature changes and FFI adapter implementation to
-    later code leaves.
 
 - [ ] TODO-4606: Specify capability-parameterized views
   - owner: ai
   - created_at: 2026-05-27
   - phase: Safe array extents and views
+  - parallel_track: capability-view-docs
   - depends_on: TODO-4605
   - scope: Promote the unified view model from `docs/SafeArrayExtentViews.md`
     into the normative design docs: `Reference<T, Capability>` is the

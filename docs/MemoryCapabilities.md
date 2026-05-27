@@ -397,6 +397,35 @@ This gives unsafe interop a clear boundary:
 - raw address code requires explicit `addr`
 - unchecked aliasing or lifetime promises require `unsafe`
 
+## Safe Pointer Optionality
+
+Safe pointer optionality follows the same rule as capability authority: a
+`Pointer<T>` value in safe code names valid non-null storage, not an ordinary
+nullable address. An API that might fail to produce storage should expose that
+fact in the return type before any pointer can be used:
+
+```prime
+[return<Result<Pointer<T>, AllocError>> needs<write(arena)>]
+try_allocate<T>([Reference<Region> mut] arena) {
+  // body elided
+}
+```
+
+Optional production uses the same spelling when absence is not an error:
+
+```prime
+[unsafe return<Maybe<Pointer<T>>> needs<addr(foreign)>]
+checked_foreign_pointer<T>([RawPointer<T>] raw) {
+  // validate raw before returning some(pointer)
+}
+```
+
+A raw or foreign address may still be nullable or otherwise invalid, but that
+uncertainty belongs to `RawPointer<T>` and unsafe/FFI adapter code. Validation
+at the boundary should return `Maybe<Pointer<T>>` or
+`Result<Pointer<T>, FfiError>` instead of letting a nullable address masquerade
+as safe `Pointer<T>`.
+
 ## Concurrency
 
 Data-race freedom should fall out of the same model.

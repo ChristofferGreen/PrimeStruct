@@ -5117,6 +5117,13 @@ bad_set() {
 
 ## Pointers & References
 - **Explicit envelopes:** `Pointer<T>`, `Reference<T>` mirror C++ semantics; no implicit conversions.
+- **Safe pointer optionality:** in safe code, `Pointer<T>` is a valid non-null storage identity, not an ordinary
+  nullable address. There is no safe `null` pointer inhabitant; `0x0` remains just a numeric value. A safe API that
+  might not produce a valid pointer must expose that possibility as `Maybe<Pointer<T>>` or
+  `Result<Pointer<T>, ErrorT>` before callers can dereference, borrow, or construct views from it. `Reference<T>`
+  inherits this invariant because it is initialized from a valid storage location or pointer. Raw or foreign nullable
+  addresses remain unsafe adapter material, such as `RawPointer<T>` plus an FFI validation wrapper; converting one into
+  `Pointer<T>` or `Reference<T>` requires boundary validation that returns `Maybe` or `Result` on failure.
 - **Qualifiers:** `restrict<T>` is allowed on bindings and parameters only; it must match the binding type (including
   template args) and acts as an explicit type constraint. There is no `readonly` qualifier yet; use `mut` to opt into
   mutation.
@@ -5155,6 +5162,9 @@ bad_set() {
   `realloc` now lowers onto `HeapRealloc` on VM/native/IR-to-C++ backends, VM/IR-to-C++ runtimes reject dereferences
   into freed heap ranges deterministically, and `realloc` preserves slot payloads across successful growth/shrink
   reallocation while treating counts as element counts rather than raw bytes.
+  Current implementation boundary: the built-in heap intrinsics still return bare `Pointer<T>` values in the
+  compiler/runtime. The safe API direction for allocation that can fail is a stdlib wrapper returning
+  `Maybe<Pointer<T>>` or `Result<Pointer<T>, AllocError>` rather than treating null as a valid `Pointer<T>`.
 - **Checked pointer element access:** `/std/intrinsics/memory/at(ptr, index, count)` returns the same `Pointer<T>`
   target type as `ptr` after checked element-wise pointer arithmetic. It is recognized only in qualified
   `/std/intrinsics/memory/*` form, takes no template arguments, rejects named/block arguments, requires `ptr` to be a

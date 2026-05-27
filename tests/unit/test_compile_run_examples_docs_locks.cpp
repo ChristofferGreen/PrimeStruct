@@ -1778,6 +1778,62 @@ TEST_CASE("generic requirement predicate surface stays source locked") {
         std::string::npos);
 }
 
+TEST_CASE("safe pointer optionality docs stay source locked") {
+  const std::filesystem::path primeStructPath = resolveRepoPath("docs/PrimeStruct.md");
+  const std::filesystem::path memoryCapabilitiesPath =
+      resolveRepoPath("docs/MemoryCapabilities.md");
+  const std::filesystem::path safeArrayExtentViewsPath =
+      resolveRepoPath("docs/SafeArrayExtentViews.md");
+  REQUIRE(std::filesystem::exists(primeStructPath));
+  REQUIRE(std::filesystem::exists(memoryCapabilitiesPath));
+  REQUIRE(std::filesystem::exists(safeArrayExtentViewsPath));
+
+  const std::string primeStructDoc = readFile(primeStructPath.string());
+  const std::string memoryCapabilitiesDoc =
+      readFile(memoryCapabilitiesPath.string());
+  const std::string safeArrayExtentViewsDoc =
+      readFile(safeArrayExtentViewsPath.string());
+
+  CHECK(primeStructDoc.find("in safe code, `Pointer<T>` is a valid non-null storage identity") !=
+        std::string::npos);
+  CHECK(primeStructDoc.find("must expose that possibility as `Maybe<Pointer<T>>` or\n"
+                            "  `Result<Pointer<T>, ErrorT>`") !=
+        std::string::npos);
+  CHECK(primeStructDoc.find("Raw or foreign nullable\n"
+                            "  addresses remain unsafe adapter material") !=
+        std::string::npos);
+  CHECK(primeStructDoc.find("the built-in heap intrinsics still return bare `Pointer<T>` values") !=
+        std::string::npos);
+  CHECK(primeStructDoc.find("`Maybe<Pointer<T>>` or `Result<Pointer<T>, AllocError>`") !=
+        std::string::npos);
+
+  CHECK(memoryCapabilitiesDoc.find("`Pointer<T>` value in safe code names valid non-null storage") !=
+        std::string::npos);
+  CHECK(memoryCapabilitiesDoc.find("[return<Result<Pointer<T>, AllocError>> needs<write(arena)>]") !=
+        std::string::npos);
+  CHECK(memoryCapabilitiesDoc.find("[unsafe return<Maybe<Pointer<T>>> needs<addr(foreign)>]") !=
+        std::string::npos);
+  CHECK(memoryCapabilitiesDoc.find("that\n"
+                                   "uncertainty belongs to `RawPointer<T>` and unsafe/FFI adapter code") !=
+        std::string::npos);
+  CHECK(memoryCapabilitiesDoc.find("`Result<Pointer<T>, FfiError>` instead of letting a nullable address masquerade\n"
+                                   "as safe `Pointer<T>`.") !=
+        std::string::npos);
+
+  CHECK(safeArrayExtentViewsDoc.find("Maybe<Pointer<T>>\n"
+                                     "Result<Pointer<T>, AllocError>") !=
+        std::string::npos);
+  CHECK(safeArrayExtentViewsDoc.find("[return<Result<Pointer<T>, AllocError>>]") !=
+        std::string::npos);
+  CHECK(safeArrayExtentViewsDoc.find("`Pointer<T>` is a valid, non-null pointer value in safe code") !=
+        std::string::npos);
+  CHECK(safeArrayExtentViewsDoc.find("return `Maybe<Pointer<T>>` or `Result<Pointer<T>, E>`") !=
+        std::string::npos);
+  CHECK(safeArrayExtentViewsDoc.find("later implementation leaves should either change\n"
+                                     "those intrinsic signatures or add safe fallible wrappers") !=
+        std::string::npos);
+}
+
 TEST_CASE("task spawn wait prototype docs stay source locked") {
   const std::filesystem::path primeStructPath =
       resolveRepoPath("docs/PrimeStruct.md");
@@ -1882,10 +1938,10 @@ TEST_CASE("todo queue and skipped doctest debt stay source locked") {
                   "  coverage snapshots in this file.") !=
         std::string::npos);
   CHECK(todo.find("### Ready Now\n\n"
-                  "- TODO-4605: Specify non-null pointer optionality | track: safe-pointer-docs | surface: docs pointer/reference model\n"
                   "- TODO-4613: Retire semantic-validator private source locks | track: semantic-source-lock-retirement | surface: semantic validator source-lock tests\n"
                   "- TODO-4614: Retire IR-lowerer call-helper source locks | track: lowerer-call-source-lock-retirement | surface: IR-lowerer call-helper source-lock tests\n"
-                  "- TODO-4615: Retire emitter private source locks | track: emitter-source-lock-retirement | surface: emitter source-lock tests\n\n"
+                  "- TODO-4615: Retire emitter private source locks | track: emitter-source-lock-retirement | surface: emitter source-lock tests\n"
+                  "- TODO-4606: Specify capability-parameterized views | track: capability-view-docs | surface: docs view model\n\n"
                   "### Immediate Next 10") !=
         std::string::npos);
   CHECK(todo.find("- TODO-4604: Specify requirement contract phase split") ==
@@ -1945,7 +2001,7 @@ TEST_CASE("todo queue and skipped doctest debt stay source locked") {
   CHECK(todo.find("- TODO-4574: Remove vector count/access compiler classifiers | track: vector-helper-classifier-deletion") ==
         std::string::npos);
   CHECK(todo.find("### Immediate Next 10\n\n"
-                  "- TODO-4606: Specify capability-parameterized views") !=
+                  "- TODO-4607: Publish initial array extent facts") !=
         std::string::npos);
   CHECK(todo.find("### Priority Lanes") != std::string::npos);
   CHECK(todo.find("Source-unit provenance ledger: TODO-4592 completed parser/semantic") ==
@@ -1965,13 +2021,23 @@ TEST_CASE("todo queue and skipped doctest debt stay source locked") {
                   "  surface, TODO-4571 added the compiler-knowledge inventory categories") !=
         std::string::npos);
   CHECK(todo.find("### Execution Queue\n\n"
-                  "1. TODO-4605: Specify non-null pointer optionality\n"
-                  "2. TODO-4613: Retire semantic-validator private source locks\n"
-                  "3. TODO-4614: Retire IR-lowerer call-helper source locks\n"
-                  "4. TODO-4615: Retire emitter private source locks") !=
+                  "1. TODO-4613: Retire semantic-validator private source locks\n"
+                  "2. TODO-4614: Retire IR-lowerer call-helper source locks\n"
+                  "3. TODO-4615: Retire emitter private source locks\n"
+                  "4. TODO-4606: Specify capability-parameterized views") !=
         std::string::npos);
   CHECK(todo.find("### Task Blocks\n\n"
-                  "- [ ] TODO-4605: Specify non-null pointer optionality") !=
+                  "- [ ] TODO-4606: Specify capability-parameterized views") !=
+        std::string::npos);
+  CHECK(todo.find("- TODO-4605: Specify non-null pointer optionality | track:") ==
+        std::string::npos);
+  CHECK(todo.find("- [ ] TODO-4605: Specify non-null pointer optionality") ==
+        std::string::npos);
+  CHECK(todoFinished.find("TODO-4605: Specify non-null pointer optionality") !=
+        std::string::npos);
+  CHECK(todoFinished.find("Documented `Pointer<T>` as valid non-null storage identity in safe code") !=
+        std::string::npos);
+  CHECK(todoFinished.find("Promoted TODO-4606 as the next safe-array docs leaf") !=
         std::string::npos);
   CHECK(todo.find("- TODO-4599: Migrate emitter collection surface lookups | track: "
                   "stdlib-registry-emitter") ==
