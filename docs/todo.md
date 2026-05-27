@@ -64,10 +64,13 @@ This file is the live open-work queue for PrimeStruct.
 
 ### Ready Now
 
-- TODO-4578: Generalize stdlib surface registry away from map/vector IDs | track: stdlib-registry-generalization | primary surface: stdlib surface registry metadata
+- TODO-4597: Add generic collection surface registry IDs | track: stdlib-registry-foundation | primary surface: stdlib surface registry metadata
 
 ### Immediate Next 10
 
+- TODO-4598: Migrate semantics collection surface lookups
+- TODO-4599: Migrate emitter collection surface lookups
+- TODO-4600: Migrate IR lowerer collection surface lookups
 - TODO-4579: Enforce zero map/vector compiler-knowledge traces
 
 ### Priority Lanes
@@ -84,8 +87,9 @@ This file is the live open-work queue for PrimeStruct.
   guide deletion scope, and TODO-4573 removed compiler-owned map literal
   lowering. TODO-4575 removed map helper/access classifiers, and vector path
   TODO-4572 and TODO-4574 completed the public helper classifier deletions.
-  TODO-4576 and TODO-4577 removed map/vector backing classifiers; join at
-  TODO-4578 -> TODO-4579.
+  TODO-4576 and TODO-4577 removed map/vector backing classifiers. TODO-4578
+  was split into TODO-4597 registry foundation plus TODO-4598, TODO-4599, and
+  TODO-4600 subsystem migrations; join at TODO-4579.
 - Architecture hardening backlog: TODO-4586 completed parser diagnostic
   stability tiers. TODO-4587 completed the shared compile-time/runtime VM
   kernel boundary. TODO-4588 added the IR-preparation phase manifest.
@@ -94,49 +98,128 @@ This file is the live open-work queue for PrimeStruct.
 
 ### Execution Queue
 
-- TODO-4578: Generalize stdlib surface registry away from map/vector IDs
+- TODO-4597: Add generic collection surface registry IDs
+- TODO-4598: Migrate semantics collection surface lookups
+- TODO-4599: Migrate emitter collection surface lookups
+- TODO-4600: Migrate IR lowerer collection surface lookups
 - TODO-4579: Enforce zero map/vector compiler-knowledge traces
 
 ### Task Blocks
 
-- [ ] TODO-4578: Generalize stdlib surface registry away from map/vector IDs
+- [ ] TODO-4597: Add generic collection surface registry IDs
   - owner: ai
-  - created_at: 2026-05-24
+  - created_at: 2026-05-27
   - phase: Map/vector compiler-independence
-  - parallel_track: stdlib-registry-generalization
+  - parallel_track: stdlib-registry-foundation
   - depends_on: TODO-4576, TODO-4577
   - inventory_categories: `stdlib-bridge-key`, `stdlib-registry-id`
-  - scope: Remove map/vector-specific C++ stdlib surface IDs, helper APIs,
-    and bridge-key branches so C++ treats stdlib surface metadata as generic
-    manifest data instead of named collection knowledge.
+  - scope: Replace public map/vector-specific collection surface enum IDs and
+    positional manifest slots with generic collection manifest surface IDs and
+    metadata-centric lookup helpers that subsystem migrations can share.
   - implementation_notes: Start with `include/primec/StdlibSurfaceRegistry.h`,
     `src/StdlibSurfaceRegistry.cpp`, `stdlib/std/collections/surfaces.psmeta`,
-    `StdlibCollectionSurfaceHelpers.h`, and all callers of
-    `findStdlibSurfaceMetadataByBridgeKey("collections.vector_helpers")` or
-    `findStdlibSurfaceMetadataByBridgeKey("collections.map_helpers")`.
-    Keep a generic manifest loader/resolver if compiler phases still need
-    import/visibility metadata, but remove public enum constants and helper
-    functions whose names encode map or vector.
+    and the smallest caller/test set needed to remove public
+    `CollectionsVector*` / `CollectionsMap*` IDs. Keep the existing bridge-key
+    lookup API available for follow-up migrations, but make collection manifest
+    records data-driven by manifest `id`, `domain`, and `shape` rather than
+    C++ slot names.
   - acceptance:
     - `StdlibSurfaceId` and registry helper APIs no longer contain
       map/vector-specific names such as `CollectionsVector*` or
       `CollectionsMap*`.
-    - Production C++ no longer hard-codes `collections.vector_helpers`,
-      `collections.vector_constructors`, `collections.map_helpers`, or
-      `collections.map_constructors`.
+    - The `stdlib-registry-id` inventory category reports zero production
+      traces while the bridge-key category is left to TODO-4598 through
+      TODO-4600.
     - Map/vector import visibility and helper resolution still work through
       generic manifest data loaded from `.psmeta` or equivalent stdlib-owned
       files.
     - Focused tests prove adding or renaming a stdlib collection surface only
-      requires stdlib metadata/test updates, not new C++ enum/API branches.
-  - stop_rule: Stop once map/vector stdlib metadata is data-driven from the
-    compiler's point of view and focused map/vector import/helper tests pass.
+      requires stdlib metadata/test updates, not new C++ enum branches.
+  - stop_rule: Stop once generic registry IDs are in place, focused registry
+    and map/vector import/helper tests pass, and the remaining production
+    bridge-key traces are isolated for TODO-4598 through TODO-4600.
+
+- [ ] TODO-4598: Migrate semantics collection surface lookups
+  - owner: ai
+  - created_at: 2026-05-27
+  - phase: Map/vector compiler-independence
+  - parallel_track: stdlib-registry-semantics
+  - depends_on: TODO-4597
+  - inventory_categories: `stdlib-bridge-key`
+  - scope: Remove hard-coded `collections.vector_*` and `collections.map_*`
+    bridge-key lookups from production semantics code by using the generic
+    collection surface lookup helpers introduced by TODO-4597.
+  - implementation_notes: Start with `src/semantics/StdlibCollectionSurfaceHelpers.h`,
+    `src/semantics/SemanticPublicationBuilders.cpp`,
+    `src/semantics/SemanticsCallPathHelpers.cpp`, and
+    `src/semantics/SemanticsValidator*Collection*` files that still call
+    `findStdlibSurfaceMetadataByBridgeKey(...)` with map/vector keys.
+  - acceptance:
+    - Production `src/semantics/` no longer contains
+      `collections.vector_helpers`, `collections.vector_constructors`,
+      `collections.map_helpers`, or `collections.map_constructors`.
+    - Semantic-product publication still emits the same stdlib surface bridge
+      keys in dumps and facts for map/vector helper and constructor calls.
+    - Focused semantics and semantic-product source-lock tests pass.
+  - stop_rule: Stop once semantics bridge-key traces are removed without
+    touching emitter or IR-lowerer bridge-key migrations.
+
+- [ ] TODO-4599: Migrate emitter collection surface lookups
+  - owner: ai
+  - created_at: 2026-05-27
+  - phase: Map/vector compiler-independence
+  - parallel_track: stdlib-registry-emitter
+  - depends_on: TODO-4597
+  - inventory_categories: `stdlib-bridge-key`
+  - scope: Remove hard-coded `collections.vector_*` and `collections.map_*`
+    bridge-key lookups from production emitter code by using generic
+    collection surface metadata lookups.
+  - implementation_notes: Start with `src/emitter/EmitterBuiltinCallPathHelpers.cpp`,
+    `src/emitter/EmitterBuiltinMethodResolution*`,
+    `src/emitter/EmitterEmitSetupReturnInference*`, and
+    `src/emitter/EmitterExprCollection*`.
+  - acceptance:
+    - Production `src/emitter/` no longer contains
+      `collections.vector_helpers`, `collections.vector_constructors`,
+      `collections.map_helpers`, or `collections.map_constructors`.
+    - Existing vector import, vector helper, and map helper C++ emitter
+      compile-run coverage still passes.
+    - Source-lock tests prove emitter code no longer depends on map/vector
+      bridge-key literals.
+  - stop_rule: Stop once emitter bridge-key traces are removed without touching
+    semantics or IR-lowerer bridge-key migrations.
+
+- [ ] TODO-4600: Migrate IR lowerer collection surface lookups
+  - owner: ai
+  - created_at: 2026-05-27
+  - phase: Map/vector compiler-independence
+  - parallel_track: stdlib-registry-lowerer
+  - depends_on: TODO-4597
+  - inventory_categories: `stdlib-bridge-key`
+  - scope: Remove hard-coded `collections.vector_*` and `collections.map_*`
+    bridge-key lookups from production IR-lowerer code by using generic
+    collection surface metadata lookups.
+  - implementation_notes: Start with `src/ir_lowerer/IrLowererCallResolution.cpp`,
+    `src/ir_lowerer/IrLowererCountAccessHelpers.cpp`,
+    `src/ir_lowerer/IrLowererSetupTypeCollectionHelpers.cpp`,
+    `src/ir_lowerer/IrLowererLowerEmitExpr*`, and
+    `src/ir_lowerer/IrLowererLowerStatements*`.
+  - acceptance:
+    - Production `src/ir_lowerer/` no longer contains
+      `collections.vector_helpers`, `collections.vector_constructors`,
+      `collections.map_helpers`, or `collections.map_constructors`.
+    - Existing IR lowerer and C++/native map/vector helper coverage still
+      passes.
+    - Source-lock tests prove lowerer code no longer depends on map/vector
+      bridge-key literals.
+  - stop_rule: Stop once IR-lowerer bridge-key traces are removed without
+    touching semantics or emitter bridge-key migrations.
 
 - [ ] TODO-4579: Enforce zero map/vector compiler-knowledge traces
   - owner: ai
   - created_at: 2026-05-24
   - phase: Map/vector compiler-independence
-  - depends_on: TODO-4571, TODO-4578
+  - depends_on: TODO-4571, TODO-4598, TODO-4599, TODO-4600
   - inventory_categories: all categories reported by
     `scripts/check_map_vector_compiler_knowledge.py`
   - scope: Turn the broad compiler-knowledge inventory into the release-gate

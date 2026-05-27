@@ -4,6 +4,13 @@
 None currently recorded.
 
 ## Recent Test Runs
+- 2026-05-27 10:30 CEST | pass | mode: release | command:
+  `cmake --build build-release --target PrimeStruct_compile_run_tests -j 1`;
+  `cd build-release && ./PrimeStruct_compile_run_tests --test-case="todo queue and skipped doctest debt stay source locked" --no-skip`
+  | failures: none | notes: parent-side TODO parallelization review split
+  TODO-4578 into the serial registry foundation leaf plus follow-on semantics,
+  emitter, and IR-lowerer bridge-key cleanup leaves. The source-lock case
+  passed 1 case / 523 assertions.
 - 2026-05-27 10:17 CEST | pass | mode: release | command:
   `cmake --build build-release --target PrimeStruct_backend_ir_tests -j 1`;
   `cd build-release && ./PrimeStruct_backend_ir_tests --test-case="ir lowerer call helpers source delegation stays stable,semantics validator expr source delegation stays stable,ir lowerer statement call emission source delegation stays stable" --no-skip`;

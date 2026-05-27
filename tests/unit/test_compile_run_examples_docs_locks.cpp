@@ -1823,8 +1823,8 @@ TEST_CASE("todo queue and skipped doctest debt stay source locked") {
                   "  coverage snapshots in this file.") !=
         std::string::npos);
   CHECK(todo.find("### Ready Now\n\n"
-                  "- TODO-4578: Generalize stdlib surface registry away from map/vector IDs | track: "
-                  "stdlib-registry-generalization") !=
+                  "- TODO-4597: Add generic collection surface registry IDs | track: "
+                  "stdlib-registry-foundation") !=
         std::string::npos);
   CHECK(todo.find("- TODO-4569: Present scene-rendered UI through software surface bridge | track: "
                   "ui-scene-presentation") ==
@@ -1859,6 +1859,9 @@ TEST_CASE("todo queue and skipped doctest debt stay source locked") {
   CHECK(todo.find("- TODO-4574: Remove vector count/access compiler classifiers | track: vector-helper-classifier-deletion") ==
         std::string::npos);
   CHECK(todo.find("### Immediate Next 10\n\n"
+                  "- TODO-4598: Migrate semantics collection surface lookups\n"
+                  "- TODO-4599: Migrate emitter collection surface lookups\n"
+                  "- TODO-4600: Migrate IR lowerer collection surface lookups\n"
                   "- TODO-4579: Enforce zero map/vector compiler-knowledge traces") !=
         std::string::npos);
   CHECK(todo.find("### Priority Lanes") != std::string::npos);
@@ -1879,7 +1882,11 @@ TEST_CASE("todo queue and skipped doctest debt stay source locked") {
                   "  surface, TODO-4571 added the compiler-knowledge inventory categories") !=
         std::string::npos);
   CHECK(todo.find("### Execution Queue\n\n"
-                  "- TODO-4578: Generalize stdlib surface registry away from map/vector IDs") !=
+                  "- TODO-4597: Add generic collection surface registry IDs\n"
+                  "- TODO-4598: Migrate semantics collection surface lookups\n"
+                  "- TODO-4599: Migrate emitter collection surface lookups\n"
+                  "- TODO-4600: Migrate IR lowerer collection surface lookups\n"
+                  "- TODO-4579: Enforce zero map/vector compiler-knowledge traces") !=
         std::string::npos);
   CHECK(todo.find("- TODO-4569: Present scene-rendered UI through software surface bridge") ==
         std::string::npos);
