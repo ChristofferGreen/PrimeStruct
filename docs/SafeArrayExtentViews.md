@@ -266,6 +266,21 @@ boundary, matching the invariant:
 start(values) <= cursor < limit(values)
 ```
 
+Reverse traversal uses the symmetric exclusive boundary before the first
+element:
+
+```text
+reverse_start(values) // last position, or reverse_limit(values) when empty
+reverse_limit(values) // one-before-first sentinel, never readable
+```
+
+Forward and reverse traversal should therefore use the same half-open shape:
+
+```text
+start(values) <= forward_cursor < limit(values)
+reverse_limit(values) < reverse_cursor <= reverse_start(values)
+```
+
 Reserve `first(values)` and `last(values)` for element-oriented helpers. Since
 empty collections have no first or last element, those helpers should return
 `Maybe<Cursor<T, Capability>>`.
