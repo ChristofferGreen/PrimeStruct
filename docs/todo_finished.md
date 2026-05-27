@@ -91,6 +91,33 @@ Finished items are periodically archived here from `docs/todo.md`; section heade
     retired without refactoring backend emitter ownership beyond the covered
     block-argument expression family.
 
+- [x] TODO-4613: Retire semantic-validator private source locks
+  - owner: ai
+  - created_at: 2026-05-27
+  - finished_at: 2026-05-27
+  - phase: Architecture hardening
+  - parallel_track: semantic-source-lock-retirement
+  - scope: Replaced the temporary semantic-validator delegation source locks
+    with public semantic-product contract coverage so active tests no longer
+    read private `src/semantics/*.h` or `src/semantics/*.cpp` fragments just to
+    prove validator split points.
+  - outcome:
+    - Removed the private semantic-validator source-lock test and its unused
+      expression-fragment lock headers.
+    - Added focused public semantic-product checks for validator inference
+      routing facts and stdlib helper surface routing IDs.
+    - Removed the semantic-validator row from
+      `docs/source_lock_inventory.md` because no active source-lock test now
+      depends on those private semantics fragment filenames.
+  - validation:
+    - Parent release-mode validation rebuilt `PrimeStruct_backend_ir_tests`
+      and passed the focused backend IR semantic-product slice covering the
+      retired semantic-validator source-lock replacement.
+    - Repo-local include-layer and whitespace checks passed in this worker.
+  - stop_rule: Stopped once the validator source-delegation source lock was
+    retired and covered without splitting or reorganizing semantic validator
+    fragments.
+
 - [x] TODO-4604: Specify requirement contract phase split
   - owner: ai
   - created_at: 2026-05-27

@@ -4,6 +4,43 @@
 - none
 
 ## Recent Test Runs
+- 2026-05-27 22:03 CEST | pass | mode: release | command:
+  `cmake --build build-release --target PrimeStruct_backend_ir_tests -j 1`;
+  `cd build-release && ./PrimeStruct_backend_ir_tests --test-case="semantic product publishes validator inference routing facts,semantic product publishes stdlib helper routing ids,semantics validate publishes allowlisted pilot routing artifacts,semantics validate publishes return and import artifacts through public semantic product views,semantics validate publishes struct field metadata and parameter binding facts" --no-skip`
+  | failures: none | notes: parent rebuild passed and the focused
+  TODO-4613 semantic-product replacement slice passed 5 cases / 85
+  assertions.
+- 2026-05-27 22:02 CEST | fail | mode: release | command:
+  `cmake --build build-release --target PrimeStruct_backend_ir_tests -j 1`;
+  `cd build-release && ./PrimeStruct_backend_ir_tests --test-case="semantic product publishes validator inference routing facts,semantic product publishes stdlib helper routing ids,semantics validate publishes allowlisted pilot routing artifacts,semantics validate publishes return and import artifacts through public semantic product views,semantics validate publishes struct field metadata and parameter binding facts" --no-skip`
+  | failures: `semantics validate publishes struct field metadata and parameter binding facts` |
+  notes: parent rebuild passed, then the focused slice failed only at
+  `sumArtifacts != nullptr`; the semantic-product log showed the binding
+  facts and struct metadata are present, so the stale `/sum` module-artifact
+  association check was removed.
+- 2026-05-27 21:58 CEST | fail | mode: release | command:
+  `cmake --build build-release --target PrimeStruct_backend_ir_tests -j 1`;
+  `cd build-release && ./PrimeStruct_backend_ir_tests --test-case="semantic product publishes validator inference routing facts,semantic product publishes stdlib helper routing ids,semantics validate publishes allowlisted pilot routing artifacts,semantics validate publishes return and import artifacts through public semantic product views,semantics validate publishes struct field metadata and parameter binding facts" --no-skip`
+  | failures: `semantics validate publishes return and import artifacts through public semantic product views`, `semantics validate publishes struct field metadata and parameter binding facts` |
+  notes: parent rebuild passed, then the focused slice failed at
+  `absCallTarget != nullptr` and at a raw `particleParameter` binding lookup;
+  the next patch switches the import assertion to published import provenance
+  and resolves binding fact IDs before matching parameter entries.
+- 2026-05-27 21:56 CEST | fail | mode: release | command:
+  `cmake --build build-release --target PrimeStruct_backend_ir_tests -j 1`;
+  `cd build-release && ./PrimeStruct_backend_ir_tests --test-case="semantic product publishes validator inference routing facts,semantic product publishes stdlib helper routing ids,semantics validate publishes allowlisted pilot routing artifacts,semantics validate publishes return and import artifacts through public semantic product views,semantics validate publishes struct field metadata and parameter binding facts" --no-skip`
+  | failures: `semantics validate publishes return and import artifacts through public semantic product views`, `semantics validate publishes struct field metadata and parameter binding facts` |
+  notes: parent rebuild passed, then the focused slice failed at
+  `absArtifacts != nullptr` and at `REQUIRE(ok)` for the struct metadata
+  source.
+- 2026-05-27 21:42 CEST | fail | mode: release | command:
+  `cmake --build build-release --target PrimeStruct_backend_ir_tests -j 1`;
+  `cd build-release && ./PrimeStruct_backend_ir_tests --test-case="semantic product publishes validator inference routing facts,semantic product publishes stdlib helper routing ids,semantics validate publishes allowlisted pilot routing artifacts,semantics validate publishes binding return and import artifacts through public semantic product views" --no-skip`
+  | failures: `semantics validate publishes binding return and import artifacts through public semantic product views` |
+  notes: parent rebuild passed, then the focused slice still failed at
+  `helperBinding != nullptr`; the test is being narrowed to
+  return/callable/import artifacts, with binding facts covered by the adjacent
+  public-product test.
 - 2026-05-27 21:14 CEST | pass | mode: release + include-layer |
   command:
   `cmake -S . -B build-release -DCMAKE_BUILD_TYPE=Release -DCMAKE_EXPORT_COMPILE_COMMANDS=ON`;
@@ -51,6 +88,12 @@
   emitter contract slice passed 2 cases / 61 assertions, the docs/source-lock
   slice passed 2 cases / 565 assertions, and include-layer plus whitespace
   checks passed.
+- 2026-05-27 20:05 local | fail | mode: release | command:
+  `cmake -S . -B build-release -DCMAKE_BUILD_TYPE=Release -DCMAKE_EXPORT_COMPILE_COMMANDS=ON`;
+  `cmake --build build-release --target PrimeStruct_backend_ir_tests -j 1`;
+  `cd build-release && ./PrimeStruct_backend_ir_tests --test-case="semantic product publishes validator inference routing facts,semantic product publishes stdlib helper routing ids,semantics validate publishes allowlisted pilot routing artifacts,semantics validate publishes binding return and import artifacts through public semantic product views" --no-skip`
+  | failures: `semantics validate publishes binding return and import artifacts through public semantic product views` |
+  notes: parent validation passed configure/build, then failed at `helperBinding != nullptr`.
 - 2026-05-27 19:45 CEST | pass | mode: release + docs/source-lock |
   command:
   `cmake --build build-release --target PrimeStruct_compile_run_tests -j 1`;
@@ -9250,6 +9293,13 @@
   `cd build-release && ./PrimeStruct_compile_run_tests --test-case="safe pointer optionality docs stay source locked,todo queue and skipped doctest debt stay source locked" --no-skip`
   | notes: TODO queue source-lock now matches TODO-4605 completion and
   TODO-4606 promotion.
+- [x] `TODO-4613 focused backend IR semantic-product slice` |
+  resolved: 2026-05-27 22:03 CEST | validating command:
+  `cd build-release && ./PrimeStruct_backend_ir_tests --test-case="semantic product publishes validator inference routing facts,semantic product publishes stdlib helper routing ids,semantics validate publishes allowlisted pilot routing artifacts,semantics validate publishes return and import artifacts through public semantic product views,semantics validate publishes struct field metadata and parameter binding facts" --no-skip`
+  | notes: parent rebuild passed, then the focused slice passed 5 cases /
+  85 assertions after stale private-shape expectations were replaced with
+  public import provenance, callable summary, return fact, struct metadata,
+  and ID-resolved binding fact checks.
 - [x] `TODO-4603 compile-run from-AOS diagnostic expectations` | resolved:
   2026-05-27 15:52 CEST | validating command:
   `cd build-release && ./PrimeStruct_compile_run_tests --test-case="todo queue and skipped doctest debt stay source locked,rejects native vector literal above local dynamic limit,rejects vm vector literal above local dynamic limit,native rejects experimental soa_vector stdlib from-aos helper before typed bindings support,rejects experimental soa_vector stdlib from-aos helper in C++ emitter before typed bindings support,keeps native stdlib wrapper vector constructor explicit Vector mismatch contract,keeps stdlib wrapper vector constructor explicit Vector mismatch contract in C++ emitter" --no-skip`

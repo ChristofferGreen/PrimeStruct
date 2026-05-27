@@ -64,7 +64,6 @@ This file is the live open-work queue for PrimeStruct.
 
 ### Ready Now
 
-- TODO-4613: Retire semantic-validator private source locks | track: semantic-source-lock-retirement | surface: semantic validator source-lock tests
 - TODO-4606: Specify capability-parameterized views | track: capability-view-docs | surface: docs view model
 
 ### Immediate Next 10
@@ -125,20 +124,19 @@ This file is the live open-work queue for PrimeStruct.
 
 ### Execution Queue
 
-1. TODO-4613: Retire semantic-validator private source locks
-2. TODO-4606: Specify capability-parameterized views
-3. TODO-4607: Publish initial array extent facts
-4. TODO-4608: Add checked array slice construction
-5. TODO-4609: Reject escaping local array slices
-6. TODO-4610: Add forward cursor traversal API
-7. TODO-4611: Add reverse cursor traversal API
-8. TODO-4612: Add safe extent and cursor code examples
-9. TODO-4616: Make semantic validation manifest executable
-10. TODO-4617: Add semantic preflight missing-fact diagnostics
-11. TODO-4618: Fail closed on stale CT-eval requirement facts
-12. TODO-4619: Gate runtime reflection by backend profile
-13. TODO-4620: Index expanded-source segments for diagnostics
-14. TODO-4621: Classify unsupported variadic-pack diagnostics
+1. TODO-4606: Specify capability-parameterized views
+2. TODO-4607: Publish initial array extent facts
+3. TODO-4608: Add checked array slice construction
+4. TODO-4609: Reject escaping local array slices
+5. TODO-4610: Add forward cursor traversal API
+6. TODO-4611: Add reverse cursor traversal API
+7. TODO-4612: Add safe extent and cursor code examples
+8. TODO-4616: Make semantic validation manifest executable
+9. TODO-4617: Add semantic preflight missing-fact diagnostics
+10. TODO-4618: Fail closed on stale CT-eval requirement facts
+11. TODO-4619: Gate runtime reflection by backend profile
+12. TODO-4620: Index expanded-source segments for diagnostics
+13. TODO-4621: Classify unsupported variadic-pack diagnostics
 
 ### Task Blocks
 
@@ -304,30 +302,6 @@ This file is the live open-work queue for PrimeStruct.
       until the corresponding implementation leaves land.
   - stop_rule: Stop once the example guide and source-lock coverage are
     updated; do not implement missing language features in this leaf.
-
-- [ ] TODO-4613: Retire semantic-validator private source locks
-  - owner: ai
-  - created_at: 2026-05-27
-  - phase: Architecture hardening
-  - parallel_track: semantic-source-lock-retirement
-  - scope: Replace the temporary semantic-validator delegation source locks
-    with public semantic-product, type-resolution graph, or deterministic
-    diagnostic contract coverage so active tests no longer read private
-    `src/semantics/*.h` or `src/semantics/*.cpp` fragments just to prove
-    validator split points.
-  - implementation_notes: Start with the semantic-validator rows in
-    `docs/source_lock_inventory.md`, the matching tests under `tests/unit/`,
-    and any existing public helpers under `include/primec/testing/`.
-  - acceptance:
-    - The semantic-validator row in `docs/source_lock_inventory.md` is
-      removed or reclassified because delegation coverage no longer depends on
-      private semantics source text.
-    - Replacement coverage proves one observable public contract: a published
-      semantic fact, type-resolution graph shape, or stable diagnostic.
-    - Include-layer validation passes without adding a new allowlist entry.
-  - stop_rule: Stop once the validator source-delegation source lock is
-    retired and covered; do not split or reorganize semantic validator
-    fragments in this leaf.
 
 - [ ] TODO-4616: Make semantic validation manifest executable
   - owner: ai

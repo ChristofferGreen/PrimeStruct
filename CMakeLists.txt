@@ -621,7 +621,7 @@ if(PRIMESTRUCT_BUILD_TESTS)
     tests/unit/test_ir_pipeline_validation_emitter_expr_control_if_branch_emit_step_composes_value_and_handlers.cpp
     tests/unit/test_ir_pipeline_validation_emitter_expr_source_delegation_stays_stable.cpp
     tests/unit/test_ir_pipeline_validation_semantics_validate_source_delegation_stays_stable.cpp
-    tests/unit/test_ir_pipeline_validation_semantics_validator_infer_source_delegation_stays_stable.cpp
+    tests/unit/test_ir_pipeline_validation_semantics_validator_public_contracts.cpp
     tests/unit/test_ir_pipeline_validation_ir_lowerer_call_helpers_source_delegation_stays_stable.cpp
     tests/unit/test_ir_pipeline_validation_ir_lowerer_call_helpers_build_bundled_entry_call_setup.cpp
     tests/unit/test_ir_pipeline_validation_ir_lowerer_struct_field_binding_helpers_resolve_layout_bindings.cpp

@@ -1947,7 +1947,6 @@ TEST_CASE("todo queue and skipped doctest debt stay source locked") {
                   "  coverage snapshots in this file.") !=
         std::string::npos);
   CHECK(todo.find("### Ready Now\n\n"
-                  "- TODO-4613: Retire semantic-validator private source locks | track: semantic-source-lock-retirement | surface: semantic validator source-lock tests\n"
                   "- TODO-4606: Specify capability-parameterized views | track: capability-view-docs | surface: docs view model\n\n"
                   "### Immediate Next 10") !=
         std::string::npos);
@@ -2036,10 +2035,15 @@ TEST_CASE("todo queue and skipped doctest debt stay source locked") {
                   "  surface, TODO-4571 added the compiler-knowledge inventory categories") !=
         std::string::npos);
   CHECK(todo.find("### Execution Queue\n\n"
-                  "1. TODO-4613: Retire semantic-validator private source locks\n"
-                  "2. TODO-4606: Specify capability-parameterized views\n"
-                  "3. TODO-4607: Publish initial array extent facts\n"
-                  "4. TODO-4608: Add checked array slice construction") !=
+                  "1. TODO-4606: Specify capability-parameterized views\n"
+                  "2. TODO-4607: Publish initial array extent facts\n"
+                  "3. TODO-4608: Add checked array slice construction\n"
+                  "4. TODO-4609: Reject escaping local array slices") !=
+        std::string::npos);
+  CHECK(todo.find("- TODO-4613: Retire semantic-validator private source locks | track: "
+                  "semantic-source-lock-retirement") ==
+        std::string::npos);
+  CHECK(todo.find("- [ ] TODO-4613: Retire semantic-validator private source locks") ==
         std::string::npos);
   CHECK(todo.find("### Task Blocks\n\n"
                   "- [ ] TODO-4606: Specify capability-parameterized views") !=
@@ -2069,6 +2073,10 @@ TEST_CASE("todo queue and skipped doctest debt stay source locked") {
         std::string::npos);
   CHECK(todoFinished.find("expression-emitter private source lock was\n"
                           "    retired without refactoring backend emitter ownership") !=
+        std::string::npos);
+  CHECK(todoFinished.find("TODO-4613: Retire semantic-validator private source locks") !=
+        std::string::npos);
+  CHECK(todoFinished.find("Removed the private semantic-validator source-lock test") !=
         std::string::npos);
   CHECK(todoFinished.find("TODO-4602: Remove semantic vector-literal compiler traces") !=
         std::string::npos);

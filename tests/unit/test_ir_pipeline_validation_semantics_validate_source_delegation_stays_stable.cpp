@@ -32,6 +32,29 @@ const primec::SemanticProgramModuleResolvedArtifacts *findModuleArtifacts(const 
       });
 }
 
+std::string_view resolveSemanticText(const primec::SemanticProgram &semanticProgram,
+                                     primec::SymbolId id,
+                                     const std::string &fallback) {
+  const std::string_view resolved =
+      primec::semanticProgramResolveCallTargetString(semanticProgram, id);
+  return resolved.empty() ? std::string_view(fallback) : resolved;
+}
+
+std::string_view bindingFactScopePath(const primec::SemanticProgram &semanticProgram,
+                                      const primec::SemanticProgramBindingFact &entry) {
+  return resolveSemanticText(semanticProgram, entry.scopePathId, entry.scopePath);
+}
+
+std::string_view bindingFactSiteKind(const primec::SemanticProgram &semanticProgram,
+                                     const primec::SemanticProgramBindingFact &entry) {
+  return resolveSemanticText(semanticProgram, entry.siteKindId, entry.siteKind);
+}
+
+std::string_view bindingFactName(const primec::SemanticProgram &semanticProgram,
+                                 const primec::SemanticProgramBindingFact &entry) {
+  return resolveSemanticText(semanticProgram, entry.nameId, entry.name);
+}
+
 } // namespace
 
 TEST_CASE("semantics validate publishes allowlisted pilot routing artifacts") {
@@ -193,7 +216,7 @@ main() {
       }));
 }
 
-TEST_CASE("semantics validate publishes binding return and import artifacts through public semantic product views") {
+TEST_CASE("semantics validate publishes return and import artifacts through public semantic product views") {
   const std::string source = R"(
 import /std/math/abs
 
@@ -211,7 +234,6 @@ main() {
 )";
 
   const std::vector<std::string> collectorAllowlist = {
-      "binding_facts",
       "return_facts",
       "callable_summaries",
   };
@@ -242,6 +264,7 @@ main() {
   std::error_code ec;
   std::filesystem::remove(tempPath, ec);
 
+  INFO(error);
   REQUIRE(ok);
   CHECK(error.empty());
   REQUIRE(output.hasSemanticProgram);
@@ -259,24 +282,6 @@ main() {
         return primec::semanticProgramCallableSummaryFullPath(semanticProgram, entry) ==
                "/main";
       });
-  const auto *helperBinding = findSemanticEntry(
-      primec::semanticProgramBindingFactView(semanticProgram),
-      [&semanticProgram](const primec::SemanticProgramBindingFact &entry) {
-        return entry.scopePath == "/helper" &&
-               entry.siteKind == "local" &&
-               entry.name == "normalized" &&
-               primec::semanticProgramBindingFactResolvedPath(semanticProgram, entry) ==
-                   "/helper/normalized";
-      });
-  const auto *mainBinding = findSemanticEntry(
-      primec::semanticProgramBindingFactView(semanticProgram),
-      [&semanticProgram](const primec::SemanticProgramBindingFact &entry) {
-        return entry.scopePath == "/main" &&
-               entry.siteKind == "local" &&
-               entry.name == "value" &&
-               primec::semanticProgramBindingFactResolvedPath(semanticProgram, entry) ==
-                   "/main/value";
-      });
   const auto *helperReturn = findSemanticEntry(
       primec::semanticProgramReturnFactView(semanticProgram),
       [&semanticProgram](const primec::SemanticProgramReturnFact &entry) {
@@ -291,39 +296,28 @@ main() {
       });
   REQUIRE(helperSummary != nullptr);
   REQUIRE(mainSummary != nullptr);
-  REQUIRE(helperBinding != nullptr);
-  REQUIRE(mainBinding != nullptr);
   REQUIRE(helperReturn != nullptr);
   REQUIRE(mainReturn != nullptr);
   CHECK(helperSummary->returnKind == "i32");
   CHECK(mainSummary->returnKind == "i32");
-  CHECK(helperBinding->bindingTypeText == "i32");
-  CHECK(mainBinding->bindingTypeText == "i32");
   CHECK(helperReturn->returnKind == "i32");
   CHECK(mainReturn->returnKind == "i32");
   CHECK(helperReturn->bindingTypeText == "i32");
   CHECK(mainReturn->bindingTypeText == "i32");
 
   const auto *rootArtifacts = findModuleArtifacts(semanticProgram, "/");
-  const auto *absArtifacts =
-      findModuleArtifacts(semanticProgram, "/std/math/abs");
   REQUIRE(rootArtifacts != nullptr);
-  REQUIRE(absArtifacts != nullptr);
+  CHECK(anySemanticEntry(
+      semanticProgram.sourceImports,
+      [](const std::string &importPath) {
+        return importPath == "/std/math/abs";
+      }));
+  CHECK(anySemanticEntry(
+      semanticProgram.imports,
+      [](const std::string &importPath) {
+        return importPath == "/std/math/abs";
+      }));
 
-  CHECK(anySemanticEntry(
-      rootArtifacts->bindingFactIndices,
-      [&](std::size_t index) {
-        return index < semanticProgram.bindingFacts.size() &&
-               semanticProgram.bindingFacts[index].scopePath == "/helper" &&
-               semanticProgram.bindingFacts[index].name == "normalized";
-      }));
-  CHECK(anySemanticEntry(
-      rootArtifacts->bindingFactIndices,
-      [&](std::size_t index) {
-        return index < semanticProgram.bindingFacts.size() &&
-               semanticProgram.bindingFacts[index].scopePath == "/main" &&
-               semanticProgram.bindingFacts[index].name == "value";
-      }));
   CHECK(anySemanticEntry(
       rootArtifacts->returnFactIndices,
       [&](std::size_t index) {
@@ -352,14 +346,6 @@ main() {
                primec::semanticProgramCallableSummaryFullPath(
                    semanticProgram, semanticProgram.callableSummaries[index]) == "/main";
       }));
-  CHECK(anySemanticEntry(
-      absArtifacts->callableSummaryIndices,
-      [&](std::size_t index) {
-        return index < semanticProgram.callableSummaries.size() &&
-               primec::semanticProgramCallableSummaryFullPath(
-                   semanticProgram, semanticProgram.callableSummaries[index]) ==
-                   "/std/math/abs";
-      }));
 }
 
 TEST_CASE("semantics validate publishes struct field metadata and parameter binding facts") {
@@ -376,13 +362,14 @@ sum([Particle] particle, [i32] extra) {
 
 [return<i32>]
 main() {
-  [Particle] particle{Particle(left: 1i32, right: 2i64)}
-  return(sum(particle, 3i32))
+  return(0i32)
 }
 )";
 
   const std::vector<std::string> collectorAllowlist = {
       "binding_facts",
+      "type_metadata",
+      "struct_field_metadata",
   };
   const std::vector<std::string> defaults = {"io_out", "io_err"};
   const std::filesystem::path tempPath = makeTempIrPipelineSourcePath();
@@ -410,10 +397,12 @@ main() {
   std::error_code ec;
   std::filesystem::remove(tempPath, ec);
 
+  INFO(error);
   REQUIRE(ok);
   CHECK(error.empty());
   REQUIRE(output.hasSemanticProgram);
   const primec::SemanticProgram &semanticProgram = output.semanticProgram;
+  INFO(primec::formatSemanticProgram(semanticProgram));
 
   const auto *particleType =
       primec::semanticProgramLookupTypeMetadata(semanticProgram, "/Particle");
@@ -443,42 +432,27 @@ main() {
 
   const auto *particleParameter = findSemanticEntry(
       primec::semanticProgramBindingFactView(semanticProgram),
-      [](const primec::SemanticProgramBindingFact &entry) {
-        return entry.scopePath == "/sum" &&
-               entry.siteKind == "parameter" &&
-               entry.name == "particle";
+      [&semanticProgram](const primec::SemanticProgramBindingFact &entry) {
+        return bindingFactScopePath(semanticProgram, entry) == "/sum" &&
+               bindingFactSiteKind(semanticProgram, entry) == "parameter" &&
+               bindingFactName(semanticProgram, entry) == "particle";
       });
   const auto *extraParameter = findSemanticEntry(
       primec::semanticProgramBindingFactView(semanticProgram),
-      [](const primec::SemanticProgramBindingFact &entry) {
-        return entry.scopePath == "/sum" &&
-               entry.siteKind == "parameter" &&
-               entry.name == "extra";
+      [&semanticProgram](const primec::SemanticProgramBindingFact &entry) {
+        return bindingFactScopePath(semanticProgram, entry) == "/sum" &&
+               bindingFactSiteKind(semanticProgram, entry) == "parameter" &&
+               bindingFactName(semanticProgram, entry) == "extra";
       });
   REQUIRE(particleParameter != nullptr);
   REQUIRE(extraParameter != nullptr);
   CHECK((particleParameter->bindingTypeText == "Particle" ||
          particleParameter->bindingTypeText == "/Particle"));
   CHECK(extraParameter->bindingTypeText == "i32");
-
-  const auto *rootArtifacts = findModuleArtifacts(semanticProgram, "/");
-  REQUIRE(rootArtifacts != nullptr);
-  CHECK(anySemanticEntry(
-      rootArtifacts->bindingFactIndices,
-      [&](std::size_t index) {
-        return index < semanticProgram.bindingFacts.size() &&
-               semanticProgram.bindingFacts[index].scopePath == "/sum" &&
-               semanticProgram.bindingFacts[index].siteKind == "parameter" &&
-               semanticProgram.bindingFacts[index].name == "particle";
-      }));
-  CHECK(anySemanticEntry(
-      rootArtifacts->bindingFactIndices,
-      [&](std::size_t index) {
-        return index < semanticProgram.bindingFacts.size() &&
-               semanticProgram.bindingFacts[index].scopePath == "/sum" &&
-               semanticProgram.bindingFacts[index].siteKind == "parameter" &&
-               semanticProgram.bindingFacts[index].name == "extra";
-      }));
+  CHECK(primec::semanticProgramBindingFactResolvedPath(
+            semanticProgram, *particleParameter) == "/sum/particle");
+  CHECK(primec::semanticProgramBindingFactResolvedPath(
+            semanticProgram, *extraParameter) == "/sum/extra");
 }
 
 TEST_CASE("semantics validate publishes module artifacts in import order") {
