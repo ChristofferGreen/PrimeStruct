@@ -64,10 +64,10 @@ This file is the live open-work queue for PrimeStruct.
 
 ### Ready Now
 
-- TODO-4616: Make semantic validation manifest executable | track: semantic-manifest-execution | surface: semantic validation manifest
 - TODO-4619: Gate runtime reflection by backend profile | track: runtime-reflection-profile-gate | surface: backend profile/runtime reflection preflight
 - TODO-4620: Index expanded-source segments for diagnostics | track: expanded-source-diagnostic-index | surface: source location mapper
 - TODO-4607: Publish initial array extent facts | track: array-extent-facts | surface: semantic product extent facts
+- TODO-4617: Add semantic preflight missing-fact diagnostics | track: semantic-product-preflight-diagnostics | surface: semantic product preflight facts
 
 ### Immediate Next 10
 
@@ -76,7 +76,6 @@ This file is the live open-work queue for PrimeStruct.
 - TODO-4610: Add forward cursor traversal API
 - TODO-4611: Add reverse cursor traversal API
 - TODO-4612: Add safe extent and cursor code examples
-- TODO-4617: Add semantic preflight missing-fact diagnostics
 - TODO-4618: Fail closed on stale CT-eval requirement facts
 - TODO-4621: Classify unsupported variadic-pack diagnostics
 
@@ -107,13 +106,14 @@ This file is the live open-work queue for PrimeStruct.
   stability tiers. TODO-4587 completed the shared compile-time/runtime VM
   kernel boundary. TODO-4588 added the IR-preparation phase manifest.
   TODO-4589 added the architecture health dashboard. TODO-4594 completed the
-  semantic unknown-call diagnostic stability slice.
-- Architecture review hardening: TODO-4613 through TODO-4621 capture the
-  concrete follow-ups from the latest architecture review: retire temporary
-  private source locks, make the semantic validation manifest executable, add
-  semantic-product stale/missing diagnostics, add a second backend capability
-  gate, index expanded-source diagnostic lookup, and promote one lowerer or
-  backend diagnostic into the stability-tier contract.
+  semantic unknown-call diagnostic stability slice. TODO-4616 made the
+  semantic validation manifest executable.
+- Architecture review hardening: TODO-4613 through TODO-4616 retired the
+  temporary semantic/lowerer/emitter source locks and made the semantic
+  validation manifest executable. TODO-4617 through TODO-4621 remain for
+  semantic-product stale/missing diagnostics, a second backend capability gate,
+  expanded-source diagnostic lookup indexing, and one lowerer/backend
+  diagnostic stability-tier promotion.
 - Safe array extents and capability views: TODO-4604 completed the requirement
   contract phase split, and TODO-4605 completed the non-null safe pointer
   optionality model. TODO-4606 specified the capability-parameterized
@@ -126,18 +126,17 @@ This file is the live open-work queue for PrimeStruct.
 
 ### Execution Queue
 
-1. TODO-4616: Make semantic validation manifest executable
-2. TODO-4619: Gate runtime reflection by backend profile
-3. TODO-4620: Index expanded-source segments for diagnostics
-4. TODO-4607: Publish initial array extent facts
+1. TODO-4619: Gate runtime reflection by backend profile
+2. TODO-4620: Index expanded-source segments for diagnostics
+3. TODO-4607: Publish initial array extent facts
+4. TODO-4617: Add semantic preflight missing-fact diagnostics
 5. TODO-4608: Add checked array slice construction
 6. TODO-4609: Reject escaping local array slices
 7. TODO-4610: Add forward cursor traversal API
 8. TODO-4611: Add reverse cursor traversal API
 9. TODO-4612: Add safe extent and cursor code examples
-10. TODO-4617: Add semantic preflight missing-fact diagnostics
-11. TODO-4618: Fail closed on stale CT-eval requirement facts
-12. TODO-4621: Classify unsupported variadic-pack diagnostics
+10. TODO-4618: Fail closed on stale CT-eval requirement facts
+11. TODO-4621: Classify unsupported variadic-pack diagnostics
 
 ### Task Blocks
 
@@ -280,36 +279,11 @@ This file is the live open-work queue for PrimeStruct.
   - stop_rule: Stop once the example guide and source-lock coverage are
     updated; do not implement missing language features in this leaf.
 
-- [ ] TODO-4616: Make semantic validation manifest executable
-  - owner: ai
-  - created_at: 2026-05-27
-  - phase: Architecture hardening
-  - parallel_track: semantic-manifest-execution
-  - scope: Make `semanticValidationPassManifest()` the executable authority for
-    semantic validation pass dispatch instead of keeping the manifest as
-    metadata beside a separate string-name runner.
-  - implementation_notes: Start with
-    `include/primec/SemanticValidationPlan.h`,
-    `src/semantics/SemanticValidationPlan.cpp`, and the
-    `Semantics::validate` pass loop in `src/semantics/SemanticsValidate.cpp`.
-    A typed pass id, runner callback, or checked switch is acceptable if the
-    manifest remains the single order/ownership source.
-  - acceptance:
-    - Semantic validation order and execution are derived from the manifest,
-      and the ad hoc `pass.name == ...` dispatch chain is deleted or reduced to
-      a checked compatibility shim with no independent ordering authority.
-    - Adding a pass to the manifest without runner coverage fails a focused
-      test or compile-time contract.
-    - Existing manifest source-lock coverage still proves AST mutation
-      ownership and semantic-product publication boundaries.
-  - stop_rule: Stop once the manifest drives pass execution; do not split pass
-    implementations or change pass order except where required by the manifest
-    handoff.
-
 - [ ] TODO-4617: Add semantic preflight missing-fact diagnostics
   - owner: ai
   - created_at: 2026-05-27
   - phase: Architecture hardening
+  - parallel_track: semantic-product-preflight-diagnostics
   - scope: Add deterministic missing/stale diagnostics for
     `publishedLowererPreflightFacts` so lowerer effect setup fails closed when
     software numeric type or runtime reflection preflight ids are absent,

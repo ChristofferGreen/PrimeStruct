@@ -6,6 +6,38 @@ Legend:
 Finished items are periodically archived here from `docs/todo.md`; section headers record the archive date.
 
 **Todo Completion (May 27, 2026)**
+- [x] TODO-4616: Make semantic validation manifest executable
+  - owner: ai
+  - created_at: 2026-05-27
+  - finished_at: 2026-05-27
+  - phase: Architecture hardening
+  - parallel_track: semantic-manifest-execution
+  - scope: Made `semanticValidationPassManifest()` the executable authority
+    for semantic validation pass dispatch instead of keeping the manifest as
+    metadata beside a separate string-name runner.
+  - outcome:
+    - Added typed `SemanticValidationPassId` values to the validation manifest
+      and routed `Semantics::validate` through one manifest-driven dispatcher
+      from pre-validator rewrites through validator execution,
+      post-validator canonicalization, node-id assignment, and
+      semantic-product publication.
+    - Replaced the ad hoc `pass.name == ...` dispatch chain with a checked
+      `switch (pass.id)` runner and manifest shape validation for duplicate
+      names/ids, validator ordering, and publication ordering.
+    - Expanded manifest tests to lock ordered executable pass ids and unique
+      runner coverage, so duplicate/reused ids fail focused tests and new ids
+      without switch coverage fail the warning-as-error build contract.
+    - Updated the semantic-product source-lock coverage so node-id assignment
+      and collector invalidation are proven through the manifest executor.
+    - Promoted TODO-4617 as the next semantic-product diagnostics follow-up.
+  - validation:
+    - Focused release validation was selected for the manifest semantics tests,
+      backend IR semantic-product source-lock slice, docs-lock slice,
+      include-layer checker, and whitespace check; see `docs/testcase_log.md`
+      and the commit report for exact commands.
+  - stop_rule: Stopped once the manifest drove validation execution without
+    splitting pass implementations or intentionally changing pass order.
+
 - [x] TODO-4606: Specify capability-parameterized views
   - owner: ai
   - created_at: 2026-05-27

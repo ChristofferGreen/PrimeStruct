@@ -2024,10 +2024,10 @@ TEST_CASE("todo queue and skipped doctest debt stay source locked") {
                   "  coverage snapshots in this file.") !=
         std::string::npos);
   CHECK(todo.find("### Ready Now\n\n"
-                  "- TODO-4616: Make semantic validation manifest executable | track: semantic-manifest-execution | surface: semantic validation manifest\n"
                   "- TODO-4619: Gate runtime reflection by backend profile | track: runtime-reflection-profile-gate | surface: backend profile/runtime reflection preflight\n"
                   "- TODO-4620: Index expanded-source segments for diagnostics | track: expanded-source-diagnostic-index | surface: source location mapper\n"
-                  "- TODO-4607: Publish initial array extent facts | track: array-extent-facts | surface: semantic product extent facts\n\n"
+                  "- TODO-4607: Publish initial array extent facts | track: array-extent-facts | surface: semantic product extent facts\n"
+                  "- TODO-4617: Add semantic preflight missing-fact diagnostics | track: semantic-product-preflight-diagnostics | surface: semantic product preflight facts\n\n"
                   "### Immediate Next 10") !=
         std::string::npos);
   CHECK(todo.find("- TODO-4604: Specify requirement contract phase split") ==
@@ -2061,6 +2061,10 @@ TEST_CASE("todo queue and skipped doctest debt stay source locked") {
   CHECK(todo.find("- TODO-4615: Retire emitter private source locks | track:") ==
         std::string::npos);
   CHECK(todo.find("- [ ] TODO-4615: Retire emitter private source locks") ==
+        std::string::npos);
+  CHECK(todo.find("- TODO-4616: Make semantic validation manifest executable | track:") ==
+        std::string::npos);
+  CHECK(todo.find("- [ ] TODO-4616: Make semantic validation manifest executable") ==
         std::string::npos);
   CHECK(todo.find("- TODO-4569: Present scene-rendered UI through software surface bridge | track: "
                   "ui-scene-presentation") ==
@@ -2120,10 +2124,10 @@ TEST_CASE("todo queue and skipped doctest debt stay source locked") {
                   "  reference/slice view model in the normative docs. TODO-4607 through") !=
         std::string::npos);
   CHECK(todo.find("### Execution Queue\n\n"
-                  "1. TODO-4616: Make semantic validation manifest executable\n"
-                  "2. TODO-4619: Gate runtime reflection by backend profile\n"
-                  "3. TODO-4620: Index expanded-source segments for diagnostics\n"
-                  "4. TODO-4607: Publish initial array extent facts") !=
+                  "1. TODO-4619: Gate runtime reflection by backend profile\n"
+                  "2. TODO-4620: Index expanded-source segments for diagnostics\n"
+                  "3. TODO-4607: Publish initial array extent facts\n"
+                  "4. TODO-4617: Add semantic preflight missing-fact diagnostics") !=
         std::string::npos);
   CHECK(todo.find("- TODO-4613: Retire semantic-validator private source locks | track: "
                   "semantic-source-lock-retirement") ==
@@ -2174,6 +2178,12 @@ TEST_CASE("todo queue and skipped doctest debt stay source locked") {
   CHECK(todoFinished.find("TODO-4613: Retire semantic-validator private source locks") !=
         std::string::npos);
   CHECK(todoFinished.find("Removed the private semantic-validator source-lock test") !=
+        std::string::npos);
+  CHECK(todoFinished.find("TODO-4616: Make semantic validation manifest executable") !=
+        std::string::npos);
+  CHECK(todoFinished.find("Added typed `SemanticValidationPassId` values") !=
+        std::string::npos);
+  CHECK(todoFinished.find("Promoted TODO-4617 as the next semantic-product diagnostics follow-up") !=
         std::string::npos);
   CHECK(todoFinished.find("TODO-4602: Remove semantic vector-literal compiler traces") !=
         std::string::npos);

@@ -1751,12 +1751,15 @@ Current inspection-surface relationship:
 Current semantic validation pass manifest:
 - The authoritative `Semantics::validate` pass order is
   `semanticValidationPassManifest()` in `include/primec/SemanticValidationPlan.h`.
-  The manifest records each pass name, pass kind, input/output ownership, action
-  (`MutatesAst`, `ValidatesOnly`, or `PublishesFacts`), and whether the pass is
-  a compatibility rewrite.
-- The pre-validator AST pass runner consumes the manifest through the
-  `validator-passes` boundary, so adding, removing, or reordering a semantic AST
-  rewrite requires changing the manifest and the matching runner together.
+  The manifest records each pass name, executable pass id, pass kind,
+  input/output ownership, action (`MutatesAst`, `ValidatesOnly`, or
+  `PublishesFacts`), and whether the pass is a compatibility rewrite.
+- `Semantics::validate` executes that manifest directly from pre-validator
+  rewrites through validator fact collection, post-validator canonicalization,
+  stable node-id assignment, and semantic-product publication. Adding a pass
+  requires a manifest entry with a unique executable pass id and switch runner
+  coverage; duplicate ids fail focused manifest coverage and new ids without
+  switch coverage fail the warning-as-error build contract.
 - Compatibility rewrites are explicitly marked in the manifest. Core
   canonicalization passes, template monomorphization, validator fact collection,
   omitted-struct initializer rewriting, semantic-node-id assignment, and final

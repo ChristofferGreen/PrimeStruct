@@ -4,6 +4,31 @@
 - none
 
 ## Recent Test Runs
+- 2026-05-28 00:01 CEST | pass | mode: release | command:
+  `cmake --build build-release --target PrimeStruct_backend_runtime_tests -j 1`;
+  `cd build-release && ./PrimeStruct_backend_runtime_tests --test-case="compile pipeline publishes an initial semantic product shell" --no-skip`
+  | failures: none | notes: parent rebuild and corrected backend-runtime
+  semantic-product source-lock slice passed, 1 case / 315 assertions.
+- 2026-05-27 23:41 CEST | fail | mode: release | command:
+  `cd build-release && ./PrimeStruct_backend_runtime_tests --test-case="compile pipeline publishes an initial semantic product shell" --no-skip`
+  | failures: `compile pipeline publishes an initial semantic product shell`
+  | notes: parent reran the corrected backend-runtime slice after the build,
+  semantics manifest slice, and TODO docs-lock slice passed; failure was the
+  stale source-lock expectation for `publishSemanticProgramAfterValidation`.
+- 2026-05-27 23:41 CEST | pass | mode: release | command:
+  `cmake --build build-release --target PrimeStruct_semantics_tests PrimeStruct_backend_ir_tests PrimeStruct_compile_run_tests -j 1`;
+  `cd build-release && ./PrimeStruct_semantics_tests --test-case="semantic validation pass manifest pins ordered pipeline phases,semantic validation pass manifest classifies compatibility and facts,semantic validation pass manifest exposes public handoff boundaries" --no-skip`;
+  `cd build-release && ./PrimeStruct_compile_run_tests --test-case="todo queue and skipped doctest debt stay source locked" --no-skip`
+  | failures: none | notes: parent rebuild passed after explicit aggregate
+  initialization; focused semantics manifest slice passed 3 cases / 62
+  assertions and TODO docs-lock slice passed 1 case / 573 assertions.
+- 2026-05-27 22:49 CEST | fail | mode: release | command:
+  `cmake --build build-release --target PrimeStruct_semantics_tests PrimeStruct_backend_ir_tests PrimeStruct_compile_run_tests -j 1`
+  | failures: TODO-4616 focused release build | notes: parent rebuild failed
+  compiling `src/semantics/SemanticsValidate.cpp` because
+  `SemanticValidationManifestExecutionState manifestState` did not explicitly
+  initialize `validator` and `validationCounters`; the initializer now covers
+  all fields.
 - 2026-05-27 22:46 CEST | pass | mode: release + docs/source-lock |
   command:
   `cmake -S . -B build-release -DCMAKE_BUILD_TYPE=Release -DCMAKE_EXPORT_COMPILE_COMMANDS=ON`;
@@ -9303,6 +9328,18 @@
 - 2026-05-12 17:28 local | fail | mode: release | command: `./scripts/compile.sh --release` | failures: 146 CTest targets | notes: baseline after preflight checkpoint failed; stabilization blocks TODO work
 
 ## Resolved Failures
+- [x] `compile pipeline publishes an initial semantic product shell` |
+  resolved: 2026-05-28 00:01 CEST | validating command:
+  `cd build-release && ./PrimeStruct_backend_runtime_tests --test-case="compile pipeline publishes an initial semantic product shell" --no-skip`
+  | notes: source-lock now expects
+  `publishSemanticProgramAfterValidation` to receive `state.program` through
+  the manifest executor.
+- [x] `TODO-4616 focused release build` | resolved:
+  2026-05-27 23:41 CEST | validating command:
+  `cmake --build build-release --target PrimeStruct_semantics_tests PrimeStruct_backend_ir_tests PrimeStruct_compile_run_tests -j 1`
+  | notes: parent rebuild passed after explicit initialization covered
+  `SemanticValidationManifestExecutionState::validator` and
+  `validationCounters`.
 - [x] `safe pointer optionality docs stay source locked` | resolved:
   2026-05-27 21:14 CEST | validating command:
   `cd build-release && ./PrimeStruct_compile_run_tests --test-case="safe pointer optionality docs stay source locked,todo queue and skipped doctest debt stay source locked" --no-skip`

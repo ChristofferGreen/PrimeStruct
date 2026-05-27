@@ -1195,7 +1195,8 @@ TEST_CASE("compile pipeline publishes an initial semantic product shell") {
         std::string::npos);
   CHECK(semanticPublicationBuildersSource.find("freezeSemanticProgramPublishedStorage(state.semanticProgram);") !=
         std::string::npos);
-  CHECK(semanticsValidate.find("semantics::publishSemanticProgramAfterValidation(program,") !=
+  CHECK(semanticsValidate.find("semantics::publishSemanticProgramAfterValidation(\n"
+                               "        state.program,") !=
         std::string::npos);
   CHECK(semanticsValidate.find("#include \"SemanticsValidationPublicationOrchestration.h\"") !=
         std::string::npos);
@@ -1398,11 +1399,16 @@ TEST_CASE("compile pipeline publishes an initial semantic product shell") {
         semanticsSnapshots.find("collectPilotRoutingSemanticProductFacts()"));
   CHECK(semanticsSnapshots.find("forEachResolvedNonMethodCallSnapshot(") <
         semanticsSnapshots.find("takeCollectedBridgePathChoicesForSemanticProduct()"));
-  CHECK(semanticsValidate.find("semantics::assignSemanticNodeIds(program);") != std::string::npos);
-  CHECK(semanticsValidate.find("validator.invalidatePilotRoutingSemanticCollectors();") !=
+  CHECK(semanticsValidate.find("runSemanticValidationManifest(manifestState)") !=
         std::string::npos);
-  CHECK(semanticsValidate.find("semantics::assignSemanticNodeIds(program);") <
-        semanticsValidate.find("validator.invalidatePilotRoutingSemanticCollectors();"));
+  CHECK(semanticsValidate.find("switch (pass.id)") != std::string::npos);
+  CHECK(semanticsValidate.find("pass.name ==") == std::string::npos);
+  CHECK(semanticsValidate.find("semantics::assignSemanticNodeIds(state.program);") !=
+        std::string::npos);
+  CHECK(semanticsValidate.find("state.validator->invalidatePilotRoutingSemanticCollectors();") !=
+        std::string::npos);
+  CHECK(semanticsValidate.find("semantics::assignSemanticNodeIds(state.program);") <
+        semanticsValidate.find("state.validator->invalidatePilotRoutingSemanticCollectors();"));
   CHECK(semanticPublicationBuildersSource.find("ensureModuleResolvedArtifacts(snapshotEntry.definitionPath).returnFactIndices.push_back(") !=
         std::string::npos);
   CHECK(semanticPublicationBuildersSource.find("ensureModuleResolvedArtifacts(snapshotEntry.scopePath).localAutoFactIndices.push_back(") !=

@@ -55,6 +55,37 @@ struct SemanticValidationPlan {
   SemanticValidationExecutionSlice executionSlice;
 };
 
+enum class SemanticValidationPassId {
+  SemanticTransformRules,
+  ExperimentalGfxConstructors,
+  ReflectionGeneratedHelpers,
+  BuiltinSoaConversionMethods,
+  BuiltinSoaToAosCalls,
+  BuiltinSoaHelperReturnMetadata,
+  BuiltinSoaAccessCalls,
+  BuiltinSoaCountCalls,
+  BuiltinSoaMutatorCalls,
+  ExperimentalSoaInlineBorrowMethods,
+  ExperimentalSoaSamePathHelperMethods,
+  ExperimentalSoaToAosMethods,
+  ExperimentalSoaFieldViewIndexes,
+  ExperimentalSoaFieldViewHelpers,
+  ExperimentalSoaFieldViewCarrierIndexes,
+  ExperimentalSoaFieldViewAssignTargets,
+  BorrowedExperimentalMapMethods,
+  ExperimentalMapValueMethods,
+  BuiltinMapInsertMethods,
+  CompileTimeBranchPruning,
+  TemplateMonomorphization,
+  CompileTimeSpecializedBranchPruning,
+  ReflectionMetadataQueries,
+  ConvertConstructors,
+  ValidatorPasses,
+  OmittedStructInitializers,
+  SemanticNodeIdAssignment,
+  SemanticProductPublication,
+};
+
 enum class SemanticValidationPassKind {
   CoreCanonicalization,
   CompatibilityRewrite,
@@ -77,6 +108,7 @@ enum class SemanticValidationPassAction {
 
 struct SemanticValidationPassManifestEntry {
   std::string_view name;
+  SemanticValidationPassId id;
   SemanticValidationPassKind kind =
       SemanticValidationPassKind::CoreCanonicalization;
   SemanticValidationPassOwnership inputOwnership =

@@ -131,8 +131,10 @@ build and layout solidify.
 ## Semantics pipeline note
 - `Semantics::validate` pass order and ownership metadata are declared by
   `semanticValidationPassManifest()` in `include/primec/SemanticValidationPlan.h`.
-  Update that manifest whenever semantic validation order, AST mutation ownership,
-  compatibility-rewrite status, or semantic-product publication boundaries change.
+  The manifest is the executable dispatch authority, so update it and add typed
+  pass-id runner coverage whenever semantic validation order, AST mutation
+  ownership, compatibility-rewrite status, or semantic-product publication
+  boundaries change.
   When changing diagnostics, keep in mind template inference runs before the main validator.
 - Rewrites that depend on implicit template inference (e.g., sugar that introduces templated calls)
   must run before template monomorphization.

@@ -56,6 +56,16 @@ std::vector<std::string> manifestPassNames() {
   return names;
 }
 
+std::vector<primec::semantics::SemanticValidationPassId> manifestPassIds() {
+  std::vector<primec::semantics::SemanticValidationPassId> ids;
+  const auto &manifest = primec::semantics::semanticValidationPassManifest();
+  ids.reserve(manifest.size());
+  for (const auto &entry : manifest) {
+    ids.push_back(entry.id);
+  }
+  return ids;
+}
+
 const primec::semantics::SemanticValidationPassManifestEntry *findManifestPass(
     std::string_view name) {
   const auto &manifest = primec::semantics::semanticValidationPassManifest();
@@ -71,6 +81,7 @@ const primec::semantics::SemanticValidationPassManifestEntry *findManifestPass(
 } // namespace
 
 TEST_CASE("semantic validation pass manifest pins ordered pipeline phases") {
+  using PassId = primec::semantics::SemanticValidationPassId;
   const std::vector<std::string> expectedNames = {
       "semantic-transform-rules",
       "experimental-gfx-constructors",
@@ -102,9 +113,41 @@ TEST_CASE("semantic validation pass manifest pins ordered pipeline phases") {
       "semantic-product-publication",
   };
   CHECK(manifestPassNames() == expectedNames);
+  CHECK(manifestPassIds() ==
+        std::vector<PassId>{
+            PassId::SemanticTransformRules,
+            PassId::ExperimentalGfxConstructors,
+            PassId::ReflectionGeneratedHelpers,
+            PassId::BuiltinSoaConversionMethods,
+            PassId::BuiltinSoaToAosCalls,
+            PassId::BuiltinSoaHelperReturnMetadata,
+            PassId::BuiltinSoaAccessCalls,
+            PassId::BuiltinSoaCountCalls,
+            PassId::BuiltinSoaMutatorCalls,
+            PassId::ExperimentalSoaInlineBorrowMethods,
+            PassId::ExperimentalSoaSamePathHelperMethods,
+            PassId::ExperimentalSoaToAosMethods,
+            PassId::ExperimentalSoaFieldViewIndexes,
+            PassId::ExperimentalSoaFieldViewHelpers,
+            PassId::ExperimentalSoaFieldViewCarrierIndexes,
+            PassId::ExperimentalSoaFieldViewAssignTargets,
+            PassId::BorrowedExperimentalMapMethods,
+            PassId::ExperimentalMapValueMethods,
+            PassId::BuiltinMapInsertMethods,
+            PassId::CompileTimeBranchPruning,
+            PassId::TemplateMonomorphization,
+            PassId::CompileTimeSpecializedBranchPruning,
+            PassId::ReflectionMetadataQueries,
+            PassId::ConvertConstructors,
+            PassId::ValidatorPasses,
+            PassId::OmittedStructInitializers,
+            PassId::SemanticNodeIdAssignment,
+            PassId::SemanticProductPublication,
+        });
 
   const auto *first = findManifestPass("semantic-transform-rules");
   REQUIRE(first != nullptr);
+  CHECK(first->id == PassId::SemanticTransformRules);
   CHECK(first->inputOwnership ==
         primec::semantics::SemanticValidationPassOwnership::AstSyntax);
   CHECK(first->outputOwnership ==
@@ -130,6 +173,8 @@ TEST_CASE("semantic validation pass manifest classifies compatibility and facts"
 
   const auto *validator = findManifestPass("validator-passes");
   REQUIRE(validator != nullptr);
+  CHECK(validator->id ==
+        primec::semantics::SemanticValidationPassId::ValidatorPasses);
   CHECK(validator->kind ==
         primec::semantics::SemanticValidationPassKind::Validation);
   CHECK(validator->outputOwnership ==
@@ -139,6 +184,8 @@ TEST_CASE("semantic validation pass manifest classifies compatibility and facts"
 
   const auto *publication = findManifestPass("semantic-product-publication");
   REQUIRE(publication != nullptr);
+  CHECK(publication->id ==
+        primec::semantics::SemanticValidationPassId::SemanticProductPublication);
   CHECK(publication->kind ==
         primec::semantics::SemanticValidationPassKind::Publication);
   CHECK(publication->outputOwnership ==
@@ -149,8 +196,13 @@ TEST_CASE("semantic validation pass manifest exposes public handoff boundaries")
   const auto &manifest = primec::semantics::semanticValidationPassManifest();
   REQUIRE_FALSE(manifest.empty());
 
+  std::vector<primec::semantics::SemanticValidationPassId> seenExecutableIds;
   std::vector<std::string> factPublishingPasses;
   for (const auto &pass : manifest) {
+    CHECK(std::find(seenExecutableIds.begin(),
+                    seenExecutableIds.end(),
+                    pass.id) == seenExecutableIds.end());
+    seenExecutableIds.push_back(pass.id);
     if (pass.action ==
         primec::semantics::SemanticValidationPassAction::PublishesFacts) {
       factPublishingPasses.emplace_back(pass.name);

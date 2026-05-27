@@ -24,6 +24,7 @@
 #include <functional>
 #include <iterator>
 #include <limits>
+#include <memory>
 #include <optional>
 #include <sstream>
 #include <string>
@@ -7316,121 +7317,292 @@ bool rewriteCompileTimeIfBranches(Program &program,
   return true;
 }
 
-bool runSemanticValidationManifestAstPass(
-    const semantics::SemanticValidationPassManifestEntry &pass,
-    Program &program,
-    const std::string &entryPath,
-    const std::vector<std::string> &semanticTransforms,
-    std::string &error) {
-  if (pass.name == "semantic-transform-rules") {
-    return semantics::applySemanticTransforms(program, semanticTransforms, error);
+struct SemanticValidationManifestExecutionState {
+  Program &program;
+  const std::string &entryPath;
+  std::string &error;
+  const std::vector<std::string> &defaultEffects;
+  const std::vector<std::string> &entryDefaultEffects;
+  const std::vector<std::string> &semanticTransforms;
+  SemanticDiagnosticInfo *diagnosticInfo = nullptr;
+  bool collectDiagnostics = false;
+  SemanticProgram *semanticProgramOut = nullptr;
+  const SemanticProductBuildConfig *semanticProductBuildConfig = nullptr;
+  const semantics::SemanticValidationBenchmarkRuntime &benchmarkRuntime;
+  semantics::SemanticValidationBenchmarkPhase &validationBenchmark;
+  semantics::SemanticValidatorLifetimeBenchmark &validatorLifetimeBenchmark;
+  std::unique_ptr<semantics::SemanticsValidator> validator;
+  semantics::SemanticsValidator::ValidationCounters validationCounters;
+  bool validatorPassCompleted = false;
+  bool semanticProductPublicationCompleted = false;
+};
+
+bool validateSemanticValidationManifestExecutableShape(std::string &error) {
+  const auto &manifest = semantics::semanticValidationPassManifest();
+  if (manifest.empty()) {
+    error = "semantic validation manifest is empty";
+    return false;
   }
-  if (pass.name == "experimental-gfx-constructors") {
-    return semantics::rewriteExperimentalGfxConstructors(program, error);
-  }
-  if (pass.name == "reflection-generated-helpers") {
-    return semantics::rewriteReflectionGeneratedHelpers(program, error);
-  }
-  if (pass.name == "builtin-soa-conversion-methods") {
-    return rewriteBuiltinSoaConversionMethods(program, error);
-  }
-  if (pass.name == "builtin-soa-to-aos-calls") {
-    return rewriteBuiltinSoaToAosCalls(program, error);
-  }
-  if (pass.name == "builtin-soa-helper-return-metadata") {
-    return validateBuiltinSoaHelperReturnMetadataRequirements(program, error);
-  }
-  if (pass.name == "builtin-soa-access-calls") {
-    return rewriteBuiltinSoaAccessCalls(program, error);
-  }
-  if (pass.name == "builtin-soa-count-calls") {
-    return rewriteBuiltinSoaCountCalls(program, error);
-  }
-  if (pass.name == "builtin-soa-mutator-calls") {
-    return rewriteBuiltinSoaMutatorCalls(program, error);
-  }
-  if (pass.name == "experimental-soa-inline-borrow-methods") {
-    return rewriteExperimentalSoaInlineBorrowMethods(program, error);
-  }
-  if (pass.name == "experimental-soa-same-path-helper-methods") {
-    return rewriteExperimentalSoaSamePathHelperMethods(program, error);
-  }
-  if (pass.name == "experimental-soa-to-aos-methods") {
-    return rewriteExperimentalSoaToAosMethods(program, error);
-  }
-  if (pass.name == "experimental-soa-field-view-indexes") {
-    return rewriteExperimentalSoaFieldViewIndexes(program, error);
-  }
-  if (pass.name == "experimental-soa-field-view-helpers") {
-    return rewriteExperimentalSoaFieldViewHelpers(program, error);
-  }
-  if (pass.name == "experimental-soa-field-view-carrier-indexes") {
-    return rewriteExperimentalSoaFieldViewCarrierIndexes(program, error);
-  }
-  if (pass.name == "experimental-soa-field-view-assign-targets") {
-    return rewriteExperimentalSoaFieldViewAssignTargets(program, error);
-  }
-  if (pass.name == "borrowed-experimental-map-methods") {
-    return rewriteBorrowedExperimentalKeyValueMethods(program, error);
-  }
-  if (pass.name == "experimental-map-value-methods") {
-    return rewriteExperimentalKeyValueValueMethods(program, error);
-  }
-  if (pass.name == "builtin-map-insert-methods") {
-    return rewriteBuiltinKeyValueInsertMethods(program, error);
-  }
-  if (pass.name == "template-monomorphization") {
-    try {
-      if (!semantics::monomorphizeTemplates(program, entryPath, error)) {
-        return false;
-      }
-      return semantics::rewriteReflectionGeneratedHelpersForPackSpecializations(
-          program, error);
-    } catch (const std::exception &ex) {
-      error = std::string("template monomorphization exception: ") + ex.what();
+
+  std::vector<semantics::SemanticValidationPassId> ids;
+  std::vector<std::string_view> names;
+  bool sawValidator = false;
+  bool sawPublication = false;
+  for (const auto &pass : manifest) {
+    if (pass.name.empty()) {
+      error = "semantic validation manifest contains an unnamed pass";
       return false;
     }
-  }
-  if (pass.name == "reflection-metadata-queries") {
-    return semantics::rewriteReflectionMetadataQueries(program, error);
-  }
-  if (pass.name == "convert-constructors") {
-    return semantics::rewriteConvertConstructors(program, error);
-  }
-  if (pass.name == "compile-time-branch-pruning") {
-    return rewriteCompileTimeIfBranches(program, true, error);
-  }
-  if (pass.name == "compile-time-specialized-branch-pruning") {
-    return rewriteCompileTimeIfBranches(program, false, error);
-  }
-
-  error = "semantic validation manifest has no pre-validator runner for pass: " +
-          std::string(pass.name);
-  return false;
-}
-
-bool runSemanticValidationManifestAstPasses(
-    Program &program,
-    const std::string &entryPath,
-    const std::vector<std::string> &semanticTransforms,
-    std::string &error) {
-  for (const auto &pass : semantics::semanticValidationPassManifest()) {
-    if (pass.name == "validator-passes") {
-      return true;
-    }
-    if (pass.kind == semantics::SemanticValidationPassKind::Validation ||
-        pass.kind == semantics::SemanticValidationPassKind::Publication) {
-      error = "semantic validation manifest reached unexpected boundary before validator: " +
+    if (std::find(names.begin(), names.end(), pass.name) != names.end()) {
+      error = "semantic validation manifest has duplicate pass name: " +
               std::string(pass.name);
       return false;
     }
-    if (!runSemanticValidationManifestAstPass(
-            pass, program, entryPath, semanticTransforms, error)) {
+    names.push_back(pass.name);
+    if (std::find(ids.begin(), ids.end(), pass.id) != ids.end()) {
+      error = "semantic validation manifest has duplicate executable pass id: " +
+              std::string(pass.name);
+      return false;
+    }
+    ids.push_back(pass.id);
+
+    if (sawPublication) {
+      error = "semantic validation manifest has pass after publication: " +
+              std::string(pass.name);
+      return false;
+    }
+    if (pass.kind == semantics::SemanticValidationPassKind::Publication &&
+        !sawValidator) {
+      error = "semantic validation manifest reached publication before validator: " +
+              std::string(pass.name);
+      return false;
+    }
+    if (pass.id == semantics::SemanticValidationPassId::ValidatorPasses) {
+      if (pass.kind != semantics::SemanticValidationPassKind::Validation) {
+        error = "semantic validation manifest validator pass has wrong kind";
+        return false;
+      }
+      sawValidator = true;
+    } else if (pass.kind == semantics::SemanticValidationPassKind::Validation) {
+      error = "semantic validation manifest has unexpected validation pass: " +
+              std::string(pass.name);
+      return false;
+    }
+    if (pass.id == semantics::SemanticValidationPassId::SemanticProductPublication) {
+      if (pass.kind != semantics::SemanticValidationPassKind::Publication) {
+        error = "semantic validation manifest publication pass has wrong kind";
+        return false;
+      }
+      sawPublication = true;
+    } else if (pass.kind == semantics::SemanticValidationPassKind::Publication) {
+      error = "semantic validation manifest has unexpected publication pass: " +
+              std::string(pass.name);
       return false;
     }
   }
-  error = "semantic validation manifest is missing validator-passes";
+
+  if (!sawValidator) {
+    error = "semantic validation manifest is missing validator-passes";
+    return false;
+  }
+  if (!sawPublication) {
+    error = "semantic validation manifest is missing semantic-product-publication";
+    return false;
+  }
+  return true;
+}
+
+bool runSemanticValidationManifestValidatorPass(
+    SemanticValidationManifestExecutionState &state) {
+  if (state.validator != nullptr || state.validatorPassCompleted) {
+    state.error = "semantic validation manifest attempted to run validator twice";
+    return false;
+  }
+
+  state.validatorLifetimeBenchmark.captureBefore();
+  state.validationBenchmark.captureBefore();
+  state.validator = std::make_unique<semantics::SemanticsValidator>(
+      state.program,
+      state.entryPath,
+      state.error,
+      state.defaultEffects,
+      state.entryDefaultEffects,
+      state.diagnosticInfo,
+      state.collectDiagnostics,
+      state.benchmarkRuntime.definitionValidationWorkerCount,
+      state.benchmarkRuntime.hasPhaseCounters(),
+      state.benchmarkRuntime.disableMethodTargetMemoization,
+      state.benchmarkRuntime.graphLocalAutoLegacyKeyShadow,
+      state.benchmarkRuntime.graphLocalAutoLegacySideChannelShadow,
+      state.benchmarkRuntime.disableGraphLocalAutoDependencyScratchPmr);
+  try {
+    if (!state.validator->run()) {
+      return false;
+    }
+  } catch (const std::exception &ex) {
+    state.error = std::string("semantic validator exception: ") + ex.what();
+    return false;
+  }
+
+  state.validationCounters = state.validator->validationCounters();
+  eraseCompileTimeTypeBindings(state.program);
+  state.validatorPassCompleted = true;
+  return true;
+}
+
+bool runSemanticValidationManifestPublicationPass(
+    SemanticValidationManifestExecutionState &state) {
+  if (!state.validatorPassCompleted || state.validator == nullptr) {
+    state.error =
+        "semantic validation manifest reached publication without validator state";
+    return false;
+  }
+  if (state.semanticProductPublicationCompleted) {
+    state.error =
+        "semantic validation manifest attempted to publish semantic product twice";
+    return false;
+  }
+
+  semantics::SemanticPublicationSurface publicationSurface;
+  if (state.semanticProgramOut != nullptr) {
+    publicationSurface =
+        state.validator->takeSemanticPublicationSurfaceForSemanticProduct(
+            state.semanticProductBuildConfig);
+  }
+  semantics::maybeRelieveSemanticAllocatorPressure();
+  state.validationBenchmark.captureAfter();
+  state.validatorLifetimeBenchmark.captureAfterRun();
+  if (state.semanticProgramOut != nullptr) {
+    semantics::publishSemanticProgramAfterValidation(
+        state.program,
+        state.entryPath,
+        std::move(publicationSurface),
+        state.semanticProductBuildConfig,
+        state.benchmarkRuntime,
+        *state.semanticProgramOut);
+  }
+  state.validator.reset();
+  state.semanticProductPublicationCompleted = true;
+  return true;
+}
+
+bool runSemanticValidationManifestPass(
+    const semantics::SemanticValidationPassManifestEntry &pass,
+    SemanticValidationManifestExecutionState &state) {
+  using PassId = semantics::SemanticValidationPassId;
+  switch (pass.id) {
+    case PassId::SemanticTransformRules:
+      return semantics::applySemanticTransforms(
+          state.program, state.semanticTransforms, state.error);
+    case PassId::ExperimentalGfxConstructors:
+      return semantics::rewriteExperimentalGfxConstructors(state.program, state.error);
+    case PassId::ReflectionGeneratedHelpers:
+      return semantics::rewriteReflectionGeneratedHelpers(state.program, state.error);
+    case PassId::BuiltinSoaConversionMethods:
+      return rewriteBuiltinSoaConversionMethods(state.program, state.error);
+    case PassId::BuiltinSoaToAosCalls:
+      return rewriteBuiltinSoaToAosCalls(state.program, state.error);
+    case PassId::BuiltinSoaHelperReturnMetadata:
+      return validateBuiltinSoaHelperReturnMetadataRequirements(
+          state.program, state.error);
+    case PassId::BuiltinSoaAccessCalls:
+      return rewriteBuiltinSoaAccessCalls(state.program, state.error);
+    case PassId::BuiltinSoaCountCalls:
+      return rewriteBuiltinSoaCountCalls(state.program, state.error);
+    case PassId::BuiltinSoaMutatorCalls:
+      return rewriteBuiltinSoaMutatorCalls(state.program, state.error);
+    case PassId::ExperimentalSoaInlineBorrowMethods:
+      return rewriteExperimentalSoaInlineBorrowMethods(state.program, state.error);
+    case PassId::ExperimentalSoaSamePathHelperMethods:
+      return rewriteExperimentalSoaSamePathHelperMethods(state.program, state.error);
+    case PassId::ExperimentalSoaToAosMethods:
+      return rewriteExperimentalSoaToAosMethods(state.program, state.error);
+    case PassId::ExperimentalSoaFieldViewIndexes:
+      return rewriteExperimentalSoaFieldViewIndexes(state.program, state.error);
+    case PassId::ExperimentalSoaFieldViewHelpers:
+      return rewriteExperimentalSoaFieldViewHelpers(state.program, state.error);
+    case PassId::ExperimentalSoaFieldViewCarrierIndexes:
+      return rewriteExperimentalSoaFieldViewCarrierIndexes(state.program, state.error);
+    case PassId::ExperimentalSoaFieldViewAssignTargets:
+      return rewriteExperimentalSoaFieldViewAssignTargets(state.program, state.error);
+    case PassId::BorrowedExperimentalMapMethods:
+      return rewriteBorrowedExperimentalKeyValueMethods(state.program, state.error);
+    case PassId::ExperimentalMapValueMethods:
+      return rewriteExperimentalKeyValueValueMethods(state.program, state.error);
+    case PassId::BuiltinMapInsertMethods:
+      return rewriteBuiltinKeyValueInsertMethods(state.program, state.error);
+    case PassId::CompileTimeBranchPruning:
+      return rewriteCompileTimeIfBranches(state.program, true, state.error);
+    case PassId::TemplateMonomorphization:
+      try {
+        if (!semantics::monomorphizeTemplates(
+                state.program, state.entryPath, state.error)) {
+          return false;
+        }
+        return semantics::rewriteReflectionGeneratedHelpersForPackSpecializations(
+            state.program, state.error);
+      } catch (const std::exception &ex) {
+        state.error = std::string("template monomorphization exception: ") +
+                      ex.what();
+        return false;
+      }
+    case PassId::CompileTimeSpecializedBranchPruning:
+      return rewriteCompileTimeIfBranches(state.program, false, state.error);
+    case PassId::ReflectionMetadataQueries:
+      return semantics::rewriteReflectionMetadataQueries(state.program, state.error);
+    case PassId::ConvertConstructors:
+      return semantics::rewriteConvertConstructors(state.program, state.error);
+    case PassId::ValidatorPasses:
+      return runSemanticValidationManifestValidatorPass(state);
+    case PassId::OmittedStructInitializers:
+      if (!state.validatorPassCompleted) {
+        state.error =
+            "semantic validation manifest reached omitted initializer rewrite before validator";
+        return false;
+      }
+      return rewriteOmittedStructInitializers(state.program, state.error);
+    case PassId::SemanticNodeIdAssignment:
+      if (!state.validatorPassCompleted || state.validator == nullptr) {
+        state.error =
+            "semantic validation manifest reached node-id assignment without validator state";
+        return false;
+      }
+      semantics::assignSemanticNodeIds(state.program);
+      state.validator->invalidatePilotRoutingSemanticCollectors();
+      return true;
+    case PassId::SemanticProductPublication:
+      return runSemanticValidationManifestPublicationPass(state);
+  }
+
+  state.error = "semantic validation manifest has no runner for pass: " +
+                std::string(pass.name);
   return false;
+}
+
+bool runSemanticValidationManifest(SemanticValidationManifestExecutionState &state) {
+  if (!validateSemanticValidationManifestExecutableShape(state.error)) {
+    return false;
+  }
+  for (const auto &pass : semantics::semanticValidationPassManifest()) {
+    if (state.semanticProductPublicationCompleted) {
+      state.error = "semantic validation manifest has pass after publication: " +
+                    std::string(pass.name);
+      return false;
+    }
+    if (!runSemanticValidationManifestPass(pass, state)) {
+      return false;
+    }
+  }
+  if (!state.validatorPassCompleted) {
+    state.error = "semantic validation manifest is missing validator-passes";
+    return false;
+  }
+  if (!state.semanticProductPublicationCompleted) {
+    state.error =
+        "semantic validation manifest is missing semantic-product-publication";
+    return false;
+  }
+  return true;
 }
 
 bool runSemanticValidation(Program &program,
@@ -7468,67 +7640,34 @@ bool runSemanticValidation(Program &program,
   } validationDiagnosticScope{diagnosticSink, error, validationSucceeded};
   const semantics::ScopedSemanticAllocatorReliefDisable scopedBenchmarkAllocatorReliefDisable(
       benchmarkRuntime.usesAllocatorSampling());
-  if (!runSemanticValidationManifestAstPasses(
-          program, entryPath, semanticTransforms, error)) {
-    return false;
-  }
   auto validatorLifetimeBenchmark = semantics::SemanticValidatorLifetimeBenchmark::fromEnvironment();
-  validatorLifetimeBenchmark.captureBefore();
-
-  semantics::SemanticsValidator::ValidationCounters validationCounters;
   semantics::SemanticValidationBenchmarkPhase validationBenchmark(benchmarkRuntime);
-  validationBenchmark.captureBefore();
-  {
-    semantics::SemanticsValidator validator(
-        program,
-        entryPath,
-        error,
-        defaultEffects,
-        entryDefaultEffects,
-        diagnosticInfo,
-        collectDiagnostics,
-        benchmarkRuntime.definitionValidationWorkerCount,
-        benchmarkRuntime.hasPhaseCounters(),
-        benchmarkRuntime.disableMethodTargetMemoization,
-        benchmarkRuntime.graphLocalAutoLegacyKeyShadow,
-        benchmarkRuntime.graphLocalAutoLegacySideChannelShadow,
-        benchmarkRuntime.disableGraphLocalAutoDependencyScratchPmr);
-    try {
-      if (!validator.run()) {
-        return false;
-      }
-    } catch (const std::exception &ex) {
-      error = std::string("semantic validator exception: ") + ex.what();
-      return false;
-    }
-    validationCounters = validator.validationCounters();
-    eraseCompileTimeTypeBindings(program);
-    if (!rewriteOmittedStructInitializers(program, error)) {
-      return false;
-    }
-    semantics::assignSemanticNodeIds(program);
-    validator.invalidatePilotRoutingSemanticCollectors();
-    semantics::SemanticPublicationSurface publicationSurface;
-    if (semanticProgramOut != nullptr) {
-      publicationSurface =
-          validator.takeSemanticPublicationSurfaceForSemanticProduct(
-              semanticProductBuildConfig);
-    }
-    semantics::maybeRelieveSemanticAllocatorPressure();
-    validationBenchmark.captureAfter();
-    validatorLifetimeBenchmark.captureAfterRun();
-    if (semanticProgramOut != nullptr) {
-      semantics::publishSemanticProgramAfterValidation(program,
-                                                       entryPath,
-                                                       std::move(publicationSurface),
-                                                       semanticProductBuildConfig,
-                                                       benchmarkRuntime,
-                                                       *semanticProgramOut);
-    }
+  SemanticValidationManifestExecutionState manifestState{
+      program,
+      entryPath,
+      error,
+      defaultEffects,
+      entryDefaultEffects,
+      semanticTransforms,
+      diagnosticInfo,
+      collectDiagnostics,
+      semanticProgramOut,
+      semanticProductBuildConfig,
+      benchmarkRuntime,
+      validationBenchmark,
+      validatorLifetimeBenchmark,
+      nullptr,
+      {},
+      false,
+      false,
+  };
+  if (!runSemanticValidationManifest(manifestState)) {
+    return false;
   }
 
   validatorLifetimeBenchmark.captureAfterDestroyAndReport();
-  validationBenchmark.publish(validationCounters.callsVisited, validationCounters.peakLocalMapSize);
+  validationBenchmark.publish(manifestState.validationCounters.callsVisited,
+                              manifestState.validationCounters.peakLocalMapSize);
   error.clear();
   validationSucceeded = true;
   return true;
