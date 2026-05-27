@@ -56,4 +56,22 @@ TEST_CASE("semantic unknown-call diagnostics stay source locked") {
   CHECK(otherSemanticContract.notes == primec::DiagnosticStabilityTier::Implementation);
 }
 
+TEST_CASE("lowering variadic reference-pack diagnostics stay source locked") {
+  const primec::DiagnosticStabilityContract contract =
+      primec::diagnosticStabilityContract(primec::DiagnosticCode::LoweringError,
+                                          primec::VariadicArgsReferenceForwardingDiagnosticMessage);
+  const primec::DiagnosticStabilityContract otherLoweringContract =
+      primec::diagnosticStabilityContract(primec::DiagnosticCode::LoweringError,
+                                          "native backend requires typed parameters on /main");
+
+  CHECK(primec::diagnosticCodeString(primec::DiagnosticCode::LoweringError) == "PSC2001");
+  CHECK(contract.code == primec::DiagnosticStabilityTier::Stable);
+  CHECK(contract.message == primec::DiagnosticStabilityTier::Stable);
+  CHECK(contract.primarySpan == primec::DiagnosticStabilityTier::Stable);
+  CHECK(contract.notes == primec::DiagnosticStabilityTier::Stable);
+  CHECK(otherLoweringContract.message == primec::DiagnosticStabilityTier::Implementation);
+  CHECK(otherLoweringContract.primarySpan == primec::DiagnosticStabilityTier::Implementation);
+  CHECK(otherLoweringContract.notes == primec::DiagnosticStabilityTier::Implementation);
+}
+
 TEST_SUITE_END();

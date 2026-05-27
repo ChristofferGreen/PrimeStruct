@@ -2025,8 +2025,7 @@ TEST_CASE("todo queue and skipped doctest debt stay source locked") {
         std::string::npos);
   CHECK(todo.find("### Ready Now\n\n"
                   "- TODO-4608: Add checked array slice construction | track: array-slice-construction | surface: safe array slice construction\n"
-                  "- TODO-4617: Add semantic preflight missing-fact diagnostics | track: semantic-product-preflight-diagnostics | surface: semantic product preflight facts\n"
-                  "- TODO-4621: Classify unsupported variadic-pack diagnostics | track: variadic-pack-diagnostic-tier | surface: lowerer/backend diagnostics\n\n"
+                  "\n"
                   "### Immediate Next 10") !=
         std::string::npos);
   CHECK(todo.find("- TODO-4604: Specify requirement contract phase split") ==
@@ -2065,6 +2064,10 @@ TEST_CASE("todo queue and skipped doctest debt stay source locked") {
         std::string::npos);
   CHECK(todo.find("- [ ] TODO-4616: Make semantic validation manifest executable") ==
         std::string::npos);
+  CHECK(todo.find("- TODO-4617: Add semantic preflight missing-fact diagnostics | track:") ==
+        std::string::npos);
+  CHECK(todo.find("- [ ] TODO-4617: Add semantic preflight missing-fact diagnostics") ==
+        std::string::npos);
   CHECK(todo.find("- TODO-4618: Fail closed on stale CT-eval requirement facts | track:") ==
         std::string::npos);
   CHECK(todo.find("- [ ] TODO-4618: Fail closed on stale CT-eval requirement facts") ==
@@ -2072,6 +2075,10 @@ TEST_CASE("todo queue and skipped doctest debt stay source locked") {
   CHECK(todo.find("- TODO-4619: Gate runtime reflection by backend profile | track:") ==
         std::string::npos);
   CHECK(todo.find("- [ ] TODO-4619: Gate runtime reflection by backend profile") ==
+        std::string::npos);
+  CHECK(todo.find("- TODO-4621: Classify unsupported variadic-pack diagnostics | track:") ==
+        std::string::npos);
+  CHECK(todo.find("- [ ] TODO-4621: Classify unsupported variadic-pack diagnostics") ==
         std::string::npos);
   CHECK(todo.find("- TODO-4569: Present scene-rendered UI through software surface bridge | track: "
                   "ui-scene-presentation") ==
@@ -2133,9 +2140,11 @@ TEST_CASE("todo queue and skipped doctest debt stay source locked") {
         std::string::npos);
   CHECK(todo.find("### Execution Queue\n\n"
                   "1. TODO-4608: Add checked array slice construction\n"
-                  "2. TODO-4617: Add semantic preflight missing-fact diagnostics\n"
-                  "3. TODO-4621: Classify unsupported variadic-pack diagnostics\n"
-                  "4. TODO-4608: Add checked array slice construction") !=
+                  "2. TODO-4609: Reject escaping local array slices\n"
+                  "3. TODO-4610: Add forward cursor traversal API\n"
+                  "4. TODO-4611: Add reverse cursor traversal API\n"
+                  "5. TODO-4612: Add safe extent and cursor code examples\n\n"
+                  "### Task Blocks") !=
         std::string::npos);
   CHECK(todo.find("- TODO-4613: Retire semantic-validator private source locks | track: "
                   "semantic-source-lock-retirement") ==
@@ -2203,10 +2212,16 @@ TEST_CASE("todo queue and skipped doctest debt stay source locked") {
         std::string::npos);
   CHECK(todoFinished.find("Promoted TODO-4617 as the next semantic-product diagnostics follow-up") !=
         std::string::npos);
+  CHECK(todoFinished.find("TODO-4617: Add semantic preflight missing-fact diagnostics") !=
+        std::string::npos);
   CHECK(todoFinished.find("TODO-4618: Fail closed on stale CT-eval requirement facts") !=
         std::string::npos);
   CHECK(todoFinished.find("rejects\n"
                           "      missing published facts, incomplete string-table ids") !=
+        std::string::npos);
+  CHECK(todoFinished.find("TODO-4621: Classify unsupported variadic-pack diagnostics") !=
+        std::string::npos);
+  CHECK(todoFinished.find("Promoted the lowerer/backend reference-pack forwarding diagnostic") !=
         std::string::npos);
   CHECK(todoFinished.find("TODO-4602: Remove semantic vector-literal compiler traces") !=
         std::string::npos);

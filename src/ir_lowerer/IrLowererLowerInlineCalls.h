@@ -591,6 +591,16 @@
               infoError.clear();
               return true;
             })) {
+      if (std::string_view(error) == VariadicArgsReferenceForwardingDiagnosticMessage) {
+        const Expr *diagnosticAnchor = &callExpr;
+        for (const Expr *packedArg : packedArgs) {
+          if (packedArg != nullptr) {
+            diagnosticAnchor = packedArg;
+            break;
+          }
+        }
+        captureLoweringDiagnosticPrimarySpan(*diagnosticAnchor);
+      }
       popInlineStack();
       return false;
     }

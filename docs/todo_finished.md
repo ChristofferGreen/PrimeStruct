@@ -90,6 +90,33 @@ Finished items are periodically archived here from `docs/todo.md`; section heade
   - stop_rule: Stopped once CT-eval fails closed on requirement-predicate fact
     completeness without adding new requirement syntax.
 
+- [x] TODO-4621: Classify unsupported variadic-pack diagnostics
+  - owner: ai
+  - created_at: 2026-05-27
+  - finished_at: 2026-05-28
+  - phase: Architecture hardening
+  - parallel_track: variadic-pack-diagnostic-tier
+  - scope: Promoted one existing lowerer/backend unsupported variadic-pack
+    diagnostic into the diagnostic stability-tier contract, including stable
+    message text, primary span, and notes.
+  - outcome:
+    - Promoted the lowerer/backend reference-pack forwarding diagnostic
+      `variadic args<Reference<T>> requires reference values or location(...)
+      forwarding` to stable message, primary-span, and notes tiers through the
+      message-aware `diagnosticStabilityContract(...)` overload.
+    - Added lowerer diagnostic span capture for that family, anchored on the
+      first forwarded pack argument when available.
+    - Added focused API and public diagnostics-path coverage for the stable
+      `PSC2001` code, exact message, source-unit mapped primary span, and
+      backend note.
+  - validation:
+    - Focused release validation was selected for the diagnostics-code,
+      backend IR public payload, C++ emitter reject, docs-lock, and whitespace
+      checks; see the commit report for exact commands.
+  - stop_rule: Stopped after exactly one lowerer/backend variadic diagnostic
+    was tiered and source-locked; additional variadic diagnostic families
+    remain outside this leaf.
+
 **Todo Completion (May 27, 2026)**
 
 - [x] TODO-4620: Index expanded-source segments for diagnostics

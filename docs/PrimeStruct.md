@@ -2052,6 +2052,10 @@ Diagnostic stability tiers:
 | Semantic unknown-call target / `DiagnosticCode::SemanticError` (`PSC1005`) | message | stable | The normalized structured `message` has the exact shape `unknown call target: <callee>`, where `<callee>` is the semantic call target text selected by resolution. |
 | Semantic unknown-call target / `DiagnosticCode::SemanticError` (`PSC1005`) | primary span | stable | `primary_span.file`, `line`, `column`, `end_line`, and `end_column` identify the source-unit-mapped call expression anchor. |
 | Semantic unknown-call target / `DiagnosticCode::SemanticError` (`PSC1005`) | notes | stable | CLI structured output includes `stage: semantic`. When the validator has an enclosing definition or execution source location, `related_spans` include the source-unit-mapped note label `definition: <path>` or `execution: <path>`. |
+| Lowerer variadic reference-pack forwarding / `DiagnosticCode::LoweringError` (`PSC2001`) | code | stable | `PSC2001` identifies IR-lowering/backend preparation failures in structured output; this row promotes only the reference-pack forwarding diagnostic named below. |
+| Lowerer variadic reference-pack forwarding / `DiagnosticCode::LoweringError` (`PSC2001`) | message | stable | The normalized structured `message` is exactly `variadic args<Reference<T>> requires reference values or location(...) forwarding`. |
+| Lowerer variadic reference-pack forwarding / `DiagnosticCode::LoweringError` (`PSC2001`) | primary span | stable | `primary_span.file`, `line`, `column`, `end_line`, and `end_column` identify the source-unit-mapped first forwarded pack argument when present; otherwise the call expression is used. |
+| Lowerer variadic reference-pack forwarding / `DiagnosticCode::LoweringError` (`PSC2001`) | notes | stable | CLI structured output includes the backend note `backend: <tag>` for the selected IR backend. This diagnostic currently publishes no related spans. |
 
 - Plain text prefixes, caret snippets, and parser recovery choices beyond the
   selected stable primary span remain implementation tier unless a focused

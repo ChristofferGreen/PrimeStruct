@@ -5,6 +5,7 @@
 #include <cstdint>
 #include <filesystem>
 #include <fstream>
+#include <sstream>
 #include <string>
 #include <string_view>
 #include <type_traits>
@@ -14,6 +15,7 @@
 
 #include "primec/AstMemory.h"
 #include "primec/CliDriver.h"
+#include "primec/Diagnostics.h"
 #include "primec/EmitKind.h"
 #include "primec/IrBackends.h"
 #include "primec/IrBackendProfiles.h"
@@ -9681,6 +9683,92 @@ main() {
   CHECK(baselineMapped->bindingTypeText == "Result<i32, FileError>");
   CHECK_FALSE(baselineMapped->initializerResolvedPath.empty());
   CHECK_FALSE(baselineMapped->initializerHasTry);
+}
+
+TEST_CASE("lowering variadic reference-pack diagnostic exposes stable public payload") {
+  const std::filesystem::path tempPath = makeTempIrPipelineSourcePath();
+  {
+    std::ofstream file(tempPath);
+    REQUIRE(file.good());
+    file << R"([return<i32>]
+score([args<Reference<i32>>] values) {
+  return(count(values))
+}
+
+[return<i32>]
+main() {
+  return(score(1i32, 2i32))
+}
+)";
+  }
+
+  primec::Options options;
+  options.inputPath = tempPath.string();
+  options.entryPath = "/main";
+  options.emitKind = "vm";
+  options.collectDiagnostics = true;
+  primec::addDefaultStdlibInclude(options.inputPath, options.importPaths);
+
+  primec::CompilePipelineOutput output;
+  primec::CompilePipelineDiagnosticInfo diagnosticInfo;
+  primec::CompilePipelineErrorStage errorStage =
+      primec::CompilePipelineErrorStage::None;
+  std::string error;
+  REQUIRE(primec::runCompilePipeline(options, output, errorStage, error, &diagnosticInfo));
+  CHECK(error.empty());
+  REQUIRE(output.hasSemanticProgram);
+
+  const primec::IrBackend *vmBackend = primec::findIrBackend("vm");
+  REQUIRE(vmBackend != nullptr);
+
+  primec::IrModule ir;
+  primec::IrPreparationFailure failure;
+  CHECK_FALSE(primec::prepareIrModule(output.program,
+                                      &output.semanticProgram,
+                                      options,
+                                      vmBackend->validationTarget(options),
+                                      ir,
+                                      failure,
+                                      &output.expandedSource));
+  CHECK(failure.stage == primec::IrPreparationFailureStage::Lowering);
+  CHECK(failure.message ==
+        std::string(primec::VariadicArgsReferenceForwardingDiagnosticMessage));
+  CHECK(failure.diagnosticInfo.message == failure.message);
+  REQUIRE(failure.diagnosticInfo.hasPrimarySpan);
+  CHECK(failure.diagnosticInfo.primarySpan.file ==
+        std::filesystem::absolute(tempPath).string());
+  CHECK(failure.diagnosticInfo.primarySpan.line == 8);
+  CHECK(failure.diagnosticInfo.primarySpan.column == 16);
+  CHECK(failure.diagnosticInfo.primarySpan.endLine == 8);
+  CHECK(failure.diagnosticInfo.primarySpan.endColumn == 16);
+  CHECK(failure.diagnosticInfo.relatedSpans.empty());
+
+  const primec::CliFailure cliFailure =
+      primec::describeIrPreparationFailure(failure, *vmBackend);
+  CHECK(cliFailure.code == primec::DiagnosticCode::LoweringError);
+  CHECK(cliFailure.notes == std::vector<std::string>{"backend: vm"});
+  REQUIRE(cliFailure.diagnosticInfo.has_value());
+
+  const primec::DiagnosticStabilityContract contract =
+      primec::diagnosticStabilityContract(cliFailure.code, cliFailure.message);
+  CHECK(contract.message == primec::DiagnosticStabilityTier::Stable);
+  CHECK(contract.primarySpan == primec::DiagnosticStabilityTier::Stable);
+  CHECK(contract.notes == primec::DiagnosticStabilityTier::Stable);
+
+  std::ostringstream err;
+  options.emitDiagnostics = true;
+  CHECK(primec::emitCliFailure(err, options, cliFailure) == 2);
+  const std::string publicJson = err.str();
+  CHECK(publicJson.find("\"code\":\"PSC2001\"") != std::string::npos);
+  CHECK(publicJson.find("\"message\":\"" +
+                        std::string(primec::VariadicArgsReferenceForwardingDiagnosticMessage) +
+                        "\"") != std::string::npos);
+  CHECK(publicJson.find("\"line\":8") != std::string::npos);
+  CHECK(publicJson.find("\"column\":16") != std::string::npos);
+  CHECK(publicJson.find("\"notes\":[\"backend: vm\"]") != std::string::npos);
+
+  std::error_code ec;
+  std::filesystem::remove(tempPath, ec);
 }
 
 TEST_CASE("cli driver maps ir preparation failures through backend diagnostics") {

@@ -106,6 +106,10 @@ bool isStableSemanticUnknownCallTargetDiagnostic(std::string_view message) {
   return message.rfind("unknown call target: ", 0) == 0;
 }
 
+bool isStableLoweringVariadicArgsReferenceForwardingDiagnostic(std::string_view message) {
+  return message == VariadicArgsReferenceForwardingDiagnosticMessage;
+}
+
 std::string spanFileText(const DiagnosticSpan &span) {
   if (!span.file.empty()) {
     return span.file;
@@ -237,6 +241,12 @@ DiagnosticStabilityContract diagnosticStabilityContract(DiagnosticCode code,
   DiagnosticStabilityContract contract = diagnosticStabilityContract(code);
   if (code == DiagnosticCode::SemanticError &&
       isStableSemanticUnknownCallTargetDiagnostic(message)) {
+    contract.message = DiagnosticStabilityTier::Stable;
+    contract.primarySpan = DiagnosticStabilityTier::Stable;
+    contract.notes = DiagnosticStabilityTier::Stable;
+  }
+  if (code == DiagnosticCode::LoweringError &&
+      isStableLoweringVariadicArgsReferenceForwardingDiagnostic(message)) {
     contract.message = DiagnosticStabilityTier::Stable;
     contract.primarySpan = DiagnosticStabilityTier::Stable;
     contract.notes = DiagnosticStabilityTier::Stable;

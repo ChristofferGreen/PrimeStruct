@@ -90,6 +90,9 @@ struct DiagnosticRecord {
   std::vector<std::string> notes;
 };
 
+inline constexpr std::string_view VariadicArgsReferenceForwardingDiagnosticMessage =
+    "variadic args<Reference<T>> requires reference values or location(...) forwarding";
+
 std::string diagnosticCodeString(DiagnosticCode code);
 
 std::string diagnosticStabilityTierString(DiagnosticStabilityTier tier);

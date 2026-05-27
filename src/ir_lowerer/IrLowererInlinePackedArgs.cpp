@@ -1,5 +1,7 @@
 #include "IrLowererInlinePackedArgs.h"
 
+#include "primec/Diagnostics.h"
+
 #include "IrLowererBindingTypeHelpers.h"
 #include "IrLowererFlowHelpers.h"
 #include "IrLowererHelpers.h"
@@ -310,7 +312,7 @@ bool emitInlinePackedCallParameter(
 
   const auto wrappedArgsForwardingError = [&](LocalInfo::Kind wrappedKind) -> std::string {
     if (wrappedKind == LocalInfo::Kind::Reference) {
-      return "variadic args<Reference<T>> requires reference values or location(...) forwarding";
+      return std::string(VariadicArgsReferenceForwardingDiagnosticMessage);
     }
     return "variadic args<Pointer<T>> requires pointer values or location(...) forwarding";
   };

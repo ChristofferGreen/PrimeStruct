@@ -65,7 +65,6 @@ This file is the live open-work queue for PrimeStruct.
 ### Ready Now
 
 - TODO-4608: Add checked array slice construction | track: array-slice-construction | surface: safe array slice construction
-- TODO-4621: Classify unsupported variadic-pack diagnostics | track: variadic-pack-diagnostic-tier | surface: lowerer/backend diagnostics
 
 ### Immediate Next 10
 
@@ -110,9 +109,9 @@ This file is the live open-work queue for PrimeStruct.
   validation manifest executable. TODO-4619 completed the second backend
   capability gate, and TODO-4620 completed deterministic indexed
   expanded-source diagnostic lookup. TODO-4617 completed preflight
-  stale/missing diagnostics, and TODO-4618 completed CT-eval
-  requirement-predicate fail-closed coverage, so TODO-4621 remains for one
-  lowerer/backend diagnostic stability-tier promotion.
+  stale/missing diagnostics, TODO-4618 completed CT-eval
+  requirement-predicate fail-closed coverage, and TODO-4621 completed one
+  lowerer/backend variadic diagnostic stability-tier promotion.
 - Safe array extents and capability views: TODO-4604 completed the requirement
   contract phase split, and TODO-4605 completed the non-null safe pointer
   optionality model. TODO-4606 specified the capability-parameterized
@@ -126,11 +125,10 @@ This file is the live open-work queue for PrimeStruct.
 ### Execution Queue
 
 1. TODO-4608: Add checked array slice construction
-2. TODO-4621: Classify unsupported variadic-pack diagnostics
-3. TODO-4609: Reject escaping local array slices
-4. TODO-4610: Add forward cursor traversal API
-5. TODO-4611: Add reverse cursor traversal API
-6. TODO-4612: Add safe extent and cursor code examples
+2. TODO-4609: Reject escaping local array slices
+3. TODO-4610: Add forward cursor traversal API
+4. TODO-4611: Add reverse cursor traversal API
+5. TODO-4612: Add safe extent and cursor code examples
 
 ### Task Blocks
 
@@ -250,27 +248,3 @@ This file is the live open-work queue for PrimeStruct.
       until the corresponding implementation leaves land.
   - stop_rule: Stop once the example guide and source-lock coverage are
     updated; do not implement missing language features in this leaf.
-
-- [ ] TODO-4621: Classify unsupported variadic-pack diagnostics
-  - owner: ai
-  - created_at: 2026-05-27
-  - phase: Architecture hardening
-  - parallel_track: variadic-pack-diagnostic-tier
-  - scope: Promote one existing lowerer/backend unsupported variadic-pack
-    diagnostic into the diagnostic stability-tier contract, including stable
-    message text, primary span, and notes where applicable.
-  - implementation_notes: Start with `include/primec/Diagnostics.h`,
-    `src/Diagnostics.cpp`, and the current variadic `args<T>` rejection tests
-    for unsupported string pointer/reference pack elements or unsupported
-    forwarding shapes.
-  - acceptance:
-    - The selected unsupported variadic-pack diagnostic has an explicit
-      `DiagnosticContract` tier and stable message/span expectations.
-    - A focused negative test asserts the stable diagnostic contract through
-      the public diagnostics path.
-    - Existing variadic positive coverage stays unchanged, and the task does
-      not open a new materialization path without a reproduced unsupported
-      non-string pack element.
-  - stop_rule: Stop after exactly one lowerer/backend variadic diagnostic is
-    tiered and source-locked; leave additional diagnostic families to later
-    leaves.

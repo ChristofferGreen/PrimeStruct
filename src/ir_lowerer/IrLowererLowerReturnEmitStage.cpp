@@ -197,6 +197,22 @@ bool runLowerReturnEmitStage(const LowerReturnEmitStageInput &input,
     instructionSourceRangesByFunction[functionName].push_back(range);
   };
 
+  DiagnosticSink diagnosticSink(input.diagnosticInfo);
+  auto captureLoweringDiagnosticPrimarySpan = [&](const Expr &expr) {
+    if (expr.sourceLine <= 0 || expr.sourceColumn <= 0) {
+      return;
+    }
+    DiagnosticSpan span;
+    span.line = expr.sourceLine;
+    span.column = expr.sourceColumn;
+    span.endLine = expr.sourceLine;
+    span.endColumn = expr.sourceColumn;
+    if (setupStage.expandedSource != nullptr) {
+      span = mapDiagnosticSpanToSourceUnit(*setupStage.expandedSource, span);
+    }
+    diagnosticSink.capturePrimarySpanIfUnset(span);
+  };
+
   using InlineContext = LowerReturnEmitInlineContext;
   auto *&activeInlineContext = stateOut.activeInlineContext;
   auto &inlineStack = stateOut.inlineStack;

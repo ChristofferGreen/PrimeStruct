@@ -185,6 +185,7 @@ bool IrLowerer::lower(const Program &program,
           {
               .setupStage = &setupStage,
               .onErrorByDef = &onErrorByDef,
+              .diagnosticInfo = diagnosticInfo,
               .consumeStage =
                   [&](ir_lowerer::LowerReturnEmitStageState &activeReturnEmitStage,
                       std::string &stageError) {

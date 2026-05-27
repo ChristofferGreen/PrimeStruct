@@ -17,6 +17,7 @@
 #include "IrLowererSetupTypeHelpers.h"
 #include "IrLowererStatementBindingHelpers.h"
 #include "IrLowererStringCallHelpers.h"
+#include "primec/Diagnostics.h"
 
 namespace primec::ir_lowerer {
 
@@ -49,6 +50,7 @@ struct LowerReturnEmitStageState;
 struct LowerReturnEmitStageInput {
   LowerSetupStageState *setupStage = nullptr;
   OnErrorByDefinition *onErrorByDef = nullptr;
+  DiagnosticSinkReport *diagnosticInfo = nullptr;
   std::function<bool(LowerReturnEmitStageState &, std::string &)> consumeStage;
 };
 
