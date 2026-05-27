@@ -4,6 +4,15 @@
 - none
 
 ## Recent Test Runs
+- 2026-05-27 19:45 CEST | pass | mode: release + docs/source-lock |
+  command:
+  `cmake --build build-release --target PrimeStruct_compile_run_tests -j 1`;
+  `cd build-release && ./PrimeStruct_compile_run_tests --test-case="generic requirement predicate surface stays source locked,todo queue and skipped doctest debt stay source locked" --no-skip`;
+  `git diff --check`
+  | failures: none | notes: root validation after merging TODO-4604 and
+  completing post-run TODO preparation passed. The selected doctest slice
+  passed 2 cases / 620 assertions and now source-locks the four-item
+  `Ready Now` parallel set.
 - 2026-05-27 19:40 CEST | pass | mode: release + docs/source-lock |
   command:
   `cmake -S . -B build-release -DCMAKE_BUILD_TYPE=Release -DCMAKE_EXPORT_COMPILE_COMMANDS=ON`;

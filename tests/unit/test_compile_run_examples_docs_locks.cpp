@@ -1882,7 +1882,10 @@ TEST_CASE("todo queue and skipped doctest debt stay source locked") {
                   "  coverage snapshots in this file.") !=
         std::string::npos);
   CHECK(todo.find("### Ready Now\n\n"
-                  "- TODO-4605: Specify non-null pointer optionality\n\n"
+                  "- TODO-4605: Specify non-null pointer optionality | track: safe-pointer-docs | surface: docs pointer/reference model\n"
+                  "- TODO-4613: Retire semantic-validator private source locks | track: semantic-source-lock-retirement | surface: semantic validator source-lock tests\n"
+                  "- TODO-4614: Retire IR-lowerer call-helper source locks | track: lowerer-call-source-lock-retirement | surface: IR-lowerer call-helper source-lock tests\n"
+                  "- TODO-4615: Retire emitter private source locks | track: emitter-source-lock-retirement | surface: emitter source-lock tests\n\n"
                   "### Immediate Next 10") !=
         std::string::npos);
   CHECK(todo.find("- TODO-4604: Specify requirement contract phase split") ==
@@ -1962,7 +1965,10 @@ TEST_CASE("todo queue and skipped doctest debt stay source locked") {
                   "  surface, TODO-4571 added the compiler-knowledge inventory categories") !=
         std::string::npos);
   CHECK(todo.find("### Execution Queue\n\n"
-                  "1. TODO-4605: Specify non-null pointer optionality") !=
+                  "1. TODO-4605: Specify non-null pointer optionality\n"
+                  "2. TODO-4613: Retire semantic-validator private source locks\n"
+                  "3. TODO-4614: Retire IR-lowerer call-helper source locks\n"
+                  "4. TODO-4615: Retire emitter private source locks") !=
         std::string::npos);
   CHECK(todo.find("### Task Blocks\n\n"
                   "- [ ] TODO-4605: Specify non-null pointer optionality") !=
