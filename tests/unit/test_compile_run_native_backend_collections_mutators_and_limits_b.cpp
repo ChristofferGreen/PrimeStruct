@@ -58,7 +58,7 @@ TEST_CASE("rejects native vector literal above local dynamic limit") {
   const std::string compileCmd =
       "./primec --emit=native " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
   CHECK(runCommand(compileCmd) == 2);
-  CHECK(readFile(errPath).find("vector literal exceeds local capacity limit (1024)") != std::string::npos);
+  CHECK(readFile(errPath).find("collection literal exceeds local capacity limit (1024)") != std::string::npos);
 }
 
 TEST_CASE("rejects native vector reserve beyond local dynamic limit") {

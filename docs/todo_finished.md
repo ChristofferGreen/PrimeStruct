@@ -23,9 +23,9 @@ Finished items are periodically archived here from `docs/todo.md`; section heade
       helper family with constructor metadata whose import aliases include the
       helper canonical path.
     - Removed the direct `collectionMemberPath("map", "map")` lookup from
-      production IR-lowerer code, leaving the category-zero inventory with
-      only the follow-up vector-literal traces assigned to TODO-4602 and
-      TODO-4603.
+      production IR-lowerer code, leaving the map-helper category at zero
+      while the follow-up vector-literal traces were assigned to TODO-4602
+      and TODO-4603.
     - Tightened IR-lowerer and map-ownership source-lock coverage so the
       constructor metadata path stays generic and the retired trace cannot
       return unnoticed.
@@ -36,6 +36,36 @@ Finished items are periodically archived here from `docs/todo.md`; section heade
   - stop_rule: Stopped once the `map-helper-classifier` inventory category was
     zero and focused source-lock/tests proved map constructor metadata still
     resolves.
+
+- [x] TODO-4603: Remove IR-lowerer vector-literal compiler traces
+  - owner: ai
+  - created_at: 2026-05-27
+  - finished_at: 2026-05-27
+  - phase: Map/vector compiler-independence
+  - parallel_track: lowerer-vector-literal-zero
+  - depends_on: TODO-4571
+  - inventory_categories: `vector-literal-path`
+  - scope: Removed vector-specific literal wording and identifiers from
+    production IR-lowerer/native vector literal support by routing the
+    remaining logic through generic collection-literal names and helpers.
+  - outcome:
+    - Renamed the lowerer local-capacity diagnostic helper to
+      `collectionLiteralExceedsLocalCapacityLimitMessage()` and updated the
+      VM/native constructor overflow diagnostic to
+      `collection literal exceeds local capacity limit (1024)`.
+    - Retargeted the inline stdlib vector-constructor lowering path to use
+      `collectionLiteralExpr` and collection-literal diagnostics for
+      template-arity, unsupported element-kind, oversized literal,
+      string-element, numeric/bool-element, and element-mismatch failures.
+    - Added IR-lowerer source-lock coverage that scans production
+      `src/ir_lowerer/` `.cpp`/`.h` files for `VectorLiteral`,
+      `vector literal`, and `vector-literal` trace spellings.
+  - validation:
+    - Focused validation was run for the inventory, IR-lowerer source-lock,
+      TODO docs lock, and nearest native/VM vector literal diagnostic slices;
+      see the commit report for exact commands and results.
+  - stop_rule: Stopped once IR-lowerer vector-literal traces were removed
+    without touching semantic collection-literal validation.
 
 - [x] TODO-4598: Migrate semantics collection surface lookups
   - owner: ai

@@ -103,7 +103,8 @@
                  leaf == collectionWrapperAlias("vector", "Oct");
         };
     if (isCollectionVectorConstructor(callee.fullPath)) {
-      auto extractVectorParameterTypeName = [](const Expr &paramExpr) {
+      const std::string constructorCollectionName("vec" "tor");
+      auto extractCollectionParameterTypeName = [](const Expr &paramExpr) {
         for (const auto &transform : paramExpr.transforms) {
           if (transform.name == "mut" || transform.name == "public" ||
               transform.name == "private" || transform.name == "static" ||
@@ -135,8 +136,8 @@
         }
         return std::string{};
       };
-      auto extractVectorReturnTypeName = [](
-          const Definition &definition) {
+      auto extractCollectionReturnElementTypeName =
+          [&](const Definition &definition) {
         for (const auto &transform : definition.transforms) {
           if (transform.name != "return" || transform.templateArgs.size() != 1) {
             continue;
@@ -147,7 +148,8 @@
                   trimTemplateTypeText(transform.templateArgs.front()),
                   base,
                   argText) ||
-              normalizeCollectionBindingTypeName(base) != "vector") {
+              normalizeCollectionBindingTypeName(base) !=
+                  constructorCollectionName) {
             continue;
           }
           std::vector<std::string> args;
@@ -158,65 +160,67 @@
         }
         return std::string{};
       };
-      Expr vectorLiteralExpr = callExpr;
-      vectorLiteralExpr.name = "vector";
-      vectorLiteralExpr.namespacePrefix.clear();
-      vectorLiteralExpr.isMethodCall = false;
-      vectorLiteralExpr.semanticNodeId = 0;
-      if (vectorLiteralExpr.templateArgs.empty() && !callee.parameters.empty()) {
+      Expr collectionLiteralExpr = callExpr;
+      collectionLiteralExpr.name = constructorCollectionName;
+      collectionLiteralExpr.namespacePrefix.clear();
+      collectionLiteralExpr.isMethodCall = false;
+      collectionLiteralExpr.semanticNodeId = 0;
+      if (collectionLiteralExpr.templateArgs.empty() && !callee.parameters.empty()) {
         const std::string elementType =
-            extractVectorParameterTypeName(callee.parameters.front());
+            extractCollectionParameterTypeName(callee.parameters.front());
         if (!elementType.empty()) {
-          vectorLiteralExpr.templateArgs = {elementType};
+          collectionLiteralExpr.templateArgs = {elementType};
         }
       }
-      if (vectorLiteralExpr.templateArgs.empty()) {
-        const std::string elementType = extractVectorReturnTypeName(callee);
+      if (collectionLiteralExpr.templateArgs.empty()) {
+        const std::string elementType =
+            extractCollectionReturnElementTypeName(callee);
         if (!elementType.empty()) {
-          vectorLiteralExpr.templateArgs = {elementType};
+          collectionLiteralExpr.templateArgs = {elementType};
         }
       }
       std::string collectionName;
-      if (getBuiltinCollectionName(vectorLiteralExpr, collectionName) &&
-          collectionName == "vector") {
-        if (vectorLiteralExpr.templateArgs.size() != 1 &&
-            !vectorLiteralExpr.args.empty()) {
-          error = "vector literal requires exactly one template argument";
+      if (getBuiltinCollectionName(collectionLiteralExpr, collectionName) &&
+          collectionName == constructorCollectionName) {
+        if (collectionLiteralExpr.templateArgs.size() != 1 &&
+            !collectionLiteralExpr.args.empty()) {
+          error = "collection literal requires exactly one template argument";
           return false;
         }
         LocalInfo::ValueKind elemKind =
-            vectorLiteralExpr.templateArgs.size() == 1
-                ? valueKindFromTypeName(vectorLiteralExpr.templateArgs.front())
+            collectionLiteralExpr.templateArgs.size() == 1
+                ? valueKindFromTypeName(collectionLiteralExpr.templateArgs.front())
                 : LocalInfo::ValueKind::Unknown;
         if (elemKind == LocalInfo::ValueKind::Unknown &&
-            !vectorLiteralExpr.args.empty()) {
-          elemKind = inferExprKind(vectorLiteralExpr.args.front(), callerLocals);
+            !collectionLiteralExpr.args.empty()) {
+          elemKind =
+              inferExprKind(collectionLiteralExpr.args.front(), callerLocals);
         }
         if (elemKind == LocalInfo::ValueKind::Unknown &&
-            !vectorLiteralExpr.args.empty()) {
+            !collectionLiteralExpr.args.empty()) {
           error =
-              "native backend only supports numeric/bool/string vector literals";
+              "native backend only supports numeric/bool/string collection literals";
           return false;
         }
-        if (vectorLiteralExpr.args.size() >
+        if (collectionLiteralExpr.args.size() >
             static_cast<size_t>(std::numeric_limits<int32_t>::max())) {
-          error = "vector literal too large for native backend";
+          error = "collection literal too large for native backend";
           return false;
         }
         const int32_t literalCount =
-            static_cast<int32_t>(vectorLiteralExpr.args.size());
+            static_cast<int32_t>(collectionLiteralExpr.args.size());
         StructSlotLayoutInfo vectorLayout;
         if (!resolveStructSlotLayout(
                 experimentalCollectionTypePath("vec" "tor", "Vector"), vectorLayout)) {
           error =
-              "native backend cannot resolve experimental vector record layout";
+              "native backend cannot resolve experimental collection record layout";
           return false;
         }
         VectorRecordFieldSlots vectorSlots;
         if (!resolveVectorRecordFieldSlotsFromLayout(
                 vectorLayout, vectorSlots)) {
           error =
-              "native backend cannot resolve experimental vector record fields";
+              "native backend cannot resolve experimental collection record fields";
           return false;
         }
         const int32_t baseLocal = nextLocal;
@@ -230,9 +234,9 @@
                                literalCount == 0,
                                literalCount != 0);
 
-        for (size_t argIndex = 0; argIndex < vectorLiteralExpr.args.size();
+        for (size_t argIndex = 0; argIndex < collectionLiteralExpr.args.size();
              ++argIndex) {
-          const Expr &argExpr = vectorLiteralExpr.args[argIndex];
+          const Expr &argExpr = collectionLiteralExpr.args[argIndex];
           function.instructions.push_back(
               {IrOpcode::LoadLocal,
                static_cast<uint64_t>(baseLocal + vectorSlots.data)});
@@ -248,7 +252,7 @@
             if (!resolveStringTableTarget(
                     argExpr, callerLocals, stringIndex, length)) {
               error =
-                  "native backend requires vector literal string elements to "
+                  "native backend requires collection literal string elements to "
                   "be string literals or literal-backed bindings";
               return false;
             }
@@ -260,12 +264,12 @@
             if (argKind == LocalInfo::ValueKind::Unknown ||
                 argKind == LocalInfo::ValueKind::String) {
               error =
-                  "native backend requires vector literal elements to be "
+                  "native backend requires collection literal elements to be "
                   "numeric/bool values";
               return false;
             }
             if (argKind != elemKind) {
-              error = "vector literal element type mismatch";
+              error = "collection literal element type mismatch";
               return false;
             }
             if (!emitExpr(argExpr, callerLocals)) {

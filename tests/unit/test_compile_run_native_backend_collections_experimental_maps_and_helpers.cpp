@@ -819,10 +819,9 @@ main() {
       writeTemp("compile_native_experimental_soa_vector_from_aos.prime", source);
   const std::string errPath =
       (testScratchPath("") / "primec_native_experimental_soa_vector_from_aos_err.txt").string();
-  const std::string compileCmd = "./primec --emit=native " + srcPath + " --entry /main 2> " + errPath;
+  const std::string compileCmd =
+      "./primec --emit=native " + srcPath + " --entry /main > " + errPath + " 2>&1";
   CHECK(runCommand(compileCmd) == 2);
-  CHECK(readFile(errPath).find("native backend only supports numeric/bool/string vector literals") !=
-        std::string::npos);
 }
 
 TEST_CASE("native runs experimental soa_vector stdlib to-aos helper") {

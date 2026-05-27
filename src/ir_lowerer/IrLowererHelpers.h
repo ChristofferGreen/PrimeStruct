@@ -15,7 +15,7 @@ constexpr const char *kGpuGlobalIdZName = "__gpu_global_id_z";
 constexpr int32_t kVectorLocalDynamicCapacityLimit = 1024;
 std::string vectorLocalCapacityLimitExceededMessage();
 std::string vectorReserveExceedsLocalCapacityLimitMessage();
-std::string vectorLiteralExceedsLocalCapacityLimitMessage();
+std::string collectionLiteralExceedsLocalCapacityLimitMessage();
 std::string vectorPushAllocationFailedMessage();
 std::string vectorReserveAllocationFailedMessage();
 std::string specializedCollectionVectorRecordPathForElementType(

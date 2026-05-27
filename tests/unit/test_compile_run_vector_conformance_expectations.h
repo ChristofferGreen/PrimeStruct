@@ -216,12 +216,12 @@ inline void expectStdlibWrapperVectorConstructorExplicitVectorBindingConformance
 }
 
 inline void expectStdlibWrapperVectorConstructorExplicitVectorBindingMismatchContract(const std::string &emitMode) {
-  if (emitMode == "native") {
+  if (emitMode == "native" || emitMode == "exe") {
     expectVectorConformanceCompileReject(
         makeStdlibWrapperVectorConstructorExplicitVectorBindingMismatchSource(),
         "vector_wrapper_constructor_explicit_vector_binding_mismatch_" + emitMode,
         emitMode,
-        "vector literal element type mismatch");
+        "collection literal element type mismatch");
     return;
   }
 

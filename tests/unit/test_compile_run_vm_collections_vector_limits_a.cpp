@@ -464,7 +464,7 @@ TEST_CASE("rejects vm vector literal above local dynamic limit") {
   const std::string errPath = (std::filesystem::temp_directory_path() / "primec_vm_vector_literal_limit_err.txt").string();
   const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main 2> " + errPath;
   CHECK(runCommand(runCmd) == 2);
-  CHECK(readFile(errPath).find("vector literal exceeds local capacity limit (1024)") != std::string::npos);
+  CHECK(readFile(errPath).find("collection literal exceeds local capacity limit (1024)") != std::string::npos);
 }
 
 TEST_CASE("rejects vm vector reserve beyond local dynamic limit") {

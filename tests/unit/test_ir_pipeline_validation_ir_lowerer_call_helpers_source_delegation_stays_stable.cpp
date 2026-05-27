@@ -5406,4 +5406,61 @@ TEST_CASE("ir lowerer collection surfaces avoid bridge-key literals") {
         std::string::npos);
 }
 
+TEST_CASE("ir lowerer collection literal diagnostics avoid vector-literal traces") {
+  auto readText = [](const std::filesystem::path &path) {
+    std::ifstream file(path);
+    CHECK(file.is_open());
+    if (!file.is_open()) {
+      return std::string{};
+    }
+    return std::string((std::istreambuf_iterator<char>(file)),
+                       std::istreambuf_iterator<char>());
+  };
+  const std::filesystem::path repoRoot =
+      std::filesystem::exists(std::filesystem::path("src"))
+          ? std::filesystem::path(".")
+          : std::filesystem::path("..");
+  const std::filesystem::path lowererRoot = repoRoot / "src" / "ir_lowerer";
+  REQUIRE(std::filesystem::exists(lowererRoot));
+
+  std::vector<std::string> violations;
+  const std::vector<std::string> prohibited = {
+      "VectorLiteral",
+      "vector literal",
+      "vector-literal",
+  };
+  for (const auto &entry : std::filesystem::recursive_directory_iterator(lowererRoot)) {
+    if (!entry.is_regular_file()) {
+      continue;
+    }
+    const std::string extension = entry.path().extension().string();
+    if (extension != ".cpp" && extension != ".h") {
+      continue;
+    }
+    const std::string source = readText(entry.path());
+    for (const std::string &needle : prohibited) {
+      if (source.find(needle) != std::string::npos) {
+        violations.push_back(
+            entry.path().lexically_relative(repoRoot).generic_string() + ": " + needle);
+      }
+    }
+  }
+
+  INFO("IR lowerer vector-literal trace violations:");
+  for (const std::string &violation : violations) {
+    INFO(violation);
+  }
+  CHECK(violations.empty());
+
+  const std::string helpersSource = readText(lowererRoot / "IrLowererHelpers.cpp");
+  const std::string inlineCallsSource =
+      readText(lowererRoot / "IrLowererLowerInlineCalls.h");
+  CHECK(helpersSource.find("collectionLiteralExceedsLocalCapacityLimitMessage()") !=
+        std::string::npos);
+  CHECK(inlineCallsSource.find("Expr collectionLiteralExpr = callExpr;") !=
+        std::string::npos);
+  CHECK(inlineCallsSource.find("native backend only supports numeric/bool/string collection literals") !=
+        std::string::npos);
+}
+
 TEST_SUITE_END();

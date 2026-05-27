@@ -153,8 +153,9 @@ std::string vectorReserveExceedsLocalCapacityLimitMessage() {
   return "vector reserve exceeds local capacity limit (" + std::to_string(kVectorLocalDynamicCapacityLimit) + ")";
 }
 
-std::string vectorLiteralExceedsLocalCapacityLimitMessage() {
-  return "vector literal exceeds local capacity limit (" + std::to_string(kVectorLocalDynamicCapacityLimit) + ")";
+std::string collectionLiteralExceedsLocalCapacityLimitMessage() {
+  return "collection literal exceeds local capacity limit (" +
+         std::to_string(kVectorLocalDynamicCapacityLimit) + ")";
 }
 
 std::string vectorPushAllocationFailedMessage() {

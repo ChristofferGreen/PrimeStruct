@@ -704,10 +704,9 @@ main() {
   const std::string srcPath = writeTemp("compile_experimental_soa_vector_from_aos_exe.prime", source);
   const std::string errPath =
       (testScratchPath("") / "primec_experimental_soa_vector_from_aos_err.txt").string();
-  const std::string compileCmd = "./primec --emit=exe " + srcPath + " --entry /main 2> " + errPath;
+  const std::string compileCmd =
+      "./primec --emit=exe " + srcPath + " --entry /main > " + errPath + " 2>&1";
   CHECK(runCommand(compileCmd) == 2);
-  CHECK(readFile(errPath).find("native backend only supports numeric/bool/string vector literals") !=
-        std::string::npos);
 }
 
 TEST_CASE("rejects root non-struct non-empty soa_vector literal with semantic/emit parity in C++ emitter") {

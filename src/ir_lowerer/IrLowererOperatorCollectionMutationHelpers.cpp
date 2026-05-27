@@ -348,18 +348,18 @@ bool emitConversionsAndCallsCollectionAndMutationExpr(
           return false;
         }
       }
-      const bool isEmptyOpaqueVectorLiteral =
+      const bool isEmptyOpaqueCollectionLiteral =
           builtin == "vector" && elemKind == LocalInfo::ValueKind::Unknown &&
           expr.args.empty();
       if (!isSoaVector && elemKind == LocalInfo::ValueKind::Unknown &&
-          !isEmptyOpaqueVectorLiteral) {
+          !isEmptyOpaqueCollectionLiteral) {
         error = "native backend only supports numeric/bool/string " + builtin + " literals";
         return false;
       }
 
       const int32_t literalCount = static_cast<int32_t>(expr.args.size());
       if (!isSoaVector && isVectorLike && literalCount > kVectorLocalDynamicCapacityLimit) {
-        error = vectorLiteralExceedsLocalCapacityLimitMessage();
+        error = collectionLiteralExceedsLocalCapacityLimitMessage();
         return false;
       }
       const int32_t storageCapacity =
@@ -400,7 +400,7 @@ bool emitConversionsAndCallsCollectionAndMutationExpr(
             literalCount,
             literalCount,
             heapAllocSlots,
-            (isSoaVector && literalCount == 0) || isEmptyOpaqueVectorLiteral,
+            (isSoaVector && literalCount == 0) || isEmptyOpaqueCollectionLiteral,
             literalCount != 0);
       } else {
         nextLocal += 1 + storageCapacity;
@@ -413,7 +413,7 @@ bool emitConversionsAndCallsCollectionAndMutationExpr(
         if (isSoaStructLiteral) {
           const std::string argStructPath = inferStructExprPath(arg, localsIn);
           if (argStructPath.empty() || !areCompatibleStructPaths(argStructPath, soaStructPath)) {
-            error = "soa" "_vector literal element type mismatch";
+            error = "collection literal element type mismatch";
             return false;
           }
           const int32_t destPtrLocal = allocTempLocal();

@@ -64,11 +64,9 @@ This file is the live open-work queue for PrimeStruct.
 
 ### Ready Now
 
-- TODO-4603: Remove IR-lowerer vector-literal compiler traces | track: lowerer-vector-literal-zero | primary surface: native vector literal lowering diagnostics
+- TODO-4579: Enforce zero map/vector compiler-knowledge traces | track: map-vector-zero-gate | primary surface: release validation inventory gate
 
 ### Immediate Next 10
-
-- TODO-4579: Enforce zero map/vector compiler-knowledge traces
 
 ### Priority Lanes
 
@@ -90,8 +88,9 @@ This file is the live open-work queue for PrimeStruct.
   IDs, TODO-4598 completed the semantics migration, TODO-4599 completed the
   emitter migration, TODO-4600 completed the IR-lowerer migration, and
   TODO-4601 removed the final map-helper classifier trace. TODO-4602 removed
-  semantic vector-literal diagnostic traces, and TODO-4603 remains before the
-  final TODO-4579 release-gate switch lands.
+  semantic vector-literal diagnostic traces, and TODO-4603 completed the
+  IR-lowerer vector-literal cleanup. TODO-4579 is now the final ready zero
+  gate to wire into release validation.
 - Architecture hardening backlog: TODO-4586 completed parser diagnostic
   stability tiers. TODO-4587 completed the shared compile-time/runtime VM
   kernel boundary. TODO-4588 added the IR-preparation phase manifest.
@@ -100,31 +99,9 @@ This file is the live open-work queue for PrimeStruct.
 
 ### Execution Queue
 
-- TODO-4603: Remove IR-lowerer vector-literal compiler traces
 - TODO-4579: Enforce zero map/vector compiler-knowledge traces
 
 ### Task Blocks
-
-- [ ] TODO-4603: Remove IR-lowerer vector-literal compiler traces
-  - owner: ai
-  - created_at: 2026-05-27
-  - phase: Map/vector compiler-independence
-  - parallel_track: lowerer-vector-literal-zero
-  - depends_on: TODO-4571
-  - inventory_categories: `vector-literal-path`
-  - scope: Remove vector-specific literal wording and identifiers from
-    production IR-lowerer/native vector literal support by routing the
-    remaining logic through generic collection-literal names and helpers.
-  - implementation_notes: Start with `src/ir_lowerer/IrLowererHelpers.cpp`
-    and `src/ir_lowerer/IrLowererLowerInlineCalls.h`, where the inventory
-    currently reports native vector-literal diagnostics and lowering traces.
-  - acceptance:
-    - `python3 scripts/check_map_vector_compiler_knowledge.py --root .` no
-      longer reports `vector-literal-path` traces in `src/ir_lowerer/`.
-    - Focused native/IR-lowerer vector literal tests still pass.
-    - The change does not touch semantic collection-literal validation.
-  - stop_rule: Stop once IR-lowerer vector-literal traces are gone and the
-    nearest native/vector literal tests pass.
 
 - [ ] TODO-4579: Enforce zero map/vector compiler-knowledge traces
   - owner: ai
@@ -136,13 +113,13 @@ This file is the live open-work queue for PrimeStruct.
   - inventory_categories: all categories reported by
     `scripts/check_map_vector_compiler_knowledge.py`
   - scope: Turn the broad compiler-knowledge inventory into the final
-    release-gate zero audit after the remaining vector-literal trace deletion
-    leaves have landed.
+    release-gate zero audit now that the trace deletion leaves have landed.
   - implementation_notes: Start from the TODO-4571 audit script and wire its
-    `--enforce-zero` mode into CTest/CMake once TODO-4602 and TODO-4603
-    remove the current nonzero vector-literal categories. Keep existing narrow
-    surface-trace scripts only if they still catch a distinct regression;
-    otherwise replace them with the broader zero gate and self-tests.
+    `--enforce-zero` mode into CTest/CMake now that TODO-4601, TODO-4602,
+    and TODO-4603 removed the remaining nonzero categories. Keep existing
+    narrow surface-trace scripts only if they still catch a distinct
+    regression; otherwise replace them with the broader zero gate and
+    self-tests.
   - acceptance:
     - Routine release validation fails on any production C++ map/vector
       compiler-knowledge trace, including bridge keys, helper recognizers,

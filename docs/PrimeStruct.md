@@ -3322,7 +3322,7 @@ for(
   within the current `1024` dynamic-capacity ceiling and error once exceeded, and shrinking helpers (`pop`, `clear`,
   `remove_at`, `remove_swap`) work against that heap-backed record. Vector element access/mutation uses `data_ptr`
   indirection instead of fixed in-header element offsets. Vector constructors above the current VM/native local capacity
-  limit (`1024`) are rejected during lowering with `vector literal exceeds local capacity limit (1024)`,
+  limit (`1024`) are rejected during lowering with `collection literal exceeds local capacity limit (1024)`,
   and `reserve` with out-of-range or negative integer literal expressions (including folded signed/unsigned
   `plus`/`minus`/`negate`, such as `plus(1000i32, 25i32)`, `minus(1u64, 2u64)`, `plus(18446744073709551615u64, 1u64)`, or
   `negate(1i32)`) is also rejected at lowering time (`vector reserve exceeds local capacity limit (1024)` / `vector
@@ -5033,7 +5033,7 @@ bad_set() {
     memory)`) once the local dynamic-capacity limit (`1024`) is exceeded. `vector<T>{...}` construction and legacy
     `vector<T>(...)` compatibility construction above `1024` elements and out-of-range/negative folded `reserve`
     integer literal expressions are rejected at lowering time
-    (`vector literal exceeds local capacity limit (1024)` / `vector reserve exceeds local capacity limit (1024)` /
+    (`collection literal exceeds local capacity limit (1024)` / `vector reserve exceeds local capacity limit (1024)` /
     `vector reserve expects non-negative capacity` / `vector reserve literal expression overflow`). Folded literal
     support currently covers `plus`/`minus`/`negate` expression trees, and both signed and unsigned fold-overflow paths
     emit `vector reserve literal expression overflow`.
