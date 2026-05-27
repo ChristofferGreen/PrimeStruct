@@ -1574,25 +1574,46 @@ TEST_CASE("generic requirement predicate surface stays source locked") {
   const std::filesystem::path primeStructPath = resolveRepoPath("docs/PrimeStruct.md");
   const std::filesystem::path syntaxSpecPath =
       resolveRepoPath("docs/PrimeStruct_SyntaxSpec.md");
+  const std::filesystem::path codeExamplesPath =
+      resolveRepoPath("docs/CodeExamples.md");
+  const std::filesystem::path safeArrayExtentViewsPath =
+      resolveRepoPath("docs/SafeArrayExtentViews.md");
   const std::filesystem::path todoFinishedPath =
       resolveRepoPath("docs/todo_finished.md");
   REQUIRE(std::filesystem::exists(primeStructPath));
   REQUIRE(std::filesystem::exists(syntaxSpecPath));
+  REQUIRE(std::filesystem::exists(codeExamplesPath));
+  REQUIRE(std::filesystem::exists(safeArrayExtentViewsPath));
   REQUIRE(std::filesystem::exists(todoFinishedPath));
 
   const std::string primeStructDoc = readFile(primeStructPath.string());
   const std::string syntaxSpec = readFile(syntaxSpecPath.string());
+  const std::string codeExamplesDoc = readFile(codeExamplesPath.string());
+  const std::string safeArrayExtentViewsDoc =
+      readFile(safeArrayExtentViewsPath.string());
   const std::string todoFinished = readFile(todoFinishedPath.string());
 
-  CHECK(primeStructDoc.find("Requirements are definition transforms, not body statements") !=
+  CHECK(primeStructDoc.find(
+            "Requirements and contracts are definition transforms, not body statements") !=
         std::string::npos);
-  CHECK(primeStructDoc.find("[require(typeof<left> == i32, typeof<right> == i32)]") !=
+  CHECK(primeStructDoc.find("`require<...>` is the forced compile-time requirement form.") !=
         std::string::npos);
-  CHECK(primeStructDoc.find("duplicate require transform; combine predicates into one require(...)") !=
+  CHECK(primeStructDoc.find("[require<typeof<left> == i32, typeof<right> == i32>]") !=
         std::string::npos);
-  CHECK(primeStructDoc.find("`typeof<left>` is a compile-time\n"
-                            "  query because it uses the compile-time argument channel; `typeof(left)`\n"
-                            "  remains an ordinary runtime call shape") !=
+  CHECK(primeStructDoc.find("`require(...)` is the runtime-capable contract form.") !=
+        std::string::npos);
+  CHECK(primeStructDoc.find("[require(count(dst) == count(src))]") !=
+        std::string::npos);
+  CHECK(primeStructDoc.find("A definition may carry at most one `require<...>` transform and at most one\n"
+                            "  `require(...)` transform.") !=
+        std::string::npos);
+  CHECK(primeStructDoc.find("Current implementation boundary: the parser and semantic validator still\n"
+                            "  accept legacy `[require(...)]`") !=
+        std::string::npos);
+  CHECK(primeStructDoc.find("`typeof<left>` is a compile-time query because") !=
+        std::string::npos);
+  CHECK(primeStructDoc.find("`typeof(left)` remains an ordinary\n"
+                            "  runtime call shape and is never compile-time requirement syntax.") !=
         std::string::npos);
   CHECK(primeStructDoc.find("`/std/meta/type_equals<A, B>()`") !=
         std::string::npos);
@@ -1627,23 +1648,55 @@ TEST_CASE("generic requirement predicate surface stays source locked") {
                             "  substitution failure by accident.") !=
         std::string::npos);
 
-  CHECK(syntaxSpec.find("[require(typeof<left> == typeof<right>, "
-                        "meta.has_trait<typeof<left>>(Additive))]") !=
+  CHECK(syntaxSpec.find("[require<typeof<left> == typeof<right>, "
+                        "meta.has_trait<typeof<left>>(Additive)>]") !=
         std::string::npos);
-  CHECK(syntaxSpec.find("They live with the callable signature, run during\n"
-                        "  semantic validation before final IR lowering, and do not create runtime\n"
-                        "  values visible to the function body.") !=
+  CHECK(syntaxSpec.find("They live with the callable signature, run") !=
         std::string::npos);
-  CHECK(syntaxSpec.find("A repeated transform is rejected with\n"
-                        "  `duplicate require transform; combine predicates into one require(...)`.") !=
+  CHECK(syntaxSpec.find("publish facts rather\n"
+                        "  than ordinary values visible to the function body.") !=
+        std::string::npos);
+  CHECK(syntaxSpec.find("`require<...>` is forced compile-time requirement syntax.") !=
+        std::string::npos);
+  CHECK(syntaxSpec.find("`require(...)` is contract syntax over values.") !=
+        std::string::npos);
+  CHECK(syntaxSpec.find("A definition has at most one `require<...>` transform and at most one\n"
+                        "  `require(...)` transform.") !=
         std::string::npos);
   CHECK(syntaxSpec.find("`typeof(left)` remains an ordinary runtime\n"
-                        "  call-shaped expression and is not a requirement primitive.") !=
+                        "  call-shaped expression and is not a compile-time requirement primitive.") !=
         std::string::npos);
-  CHECK(syntaxSpec.find("simple comparisons over\n"
-                        "  compile-time values such as `N > 0`") !=
+  CHECK(syntaxSpec.find("comma-separated conjunction through `require<...>`, builtin predicate calls,\n"
+                        "  user-defined compile-time predicates, and simple comparisons over\n"
+                        "  compile-time values such as `N > 0`.") !=
+        std::string::npos);
+  CHECK(syntaxSpec.find("legacy `[require(...)]` is still accepted\n"
+                        "  as transition syntax for compile-time generic requirements.") !=
         std::string::npos);
   CHECK(syntaxSpec.find("User-defined predicates distinguish `false` from invalid evaluation") !=
+        std::string::npos);
+  CHECK(codeExamplesDoc.find(
+            "Use `require<...>` for caller-visible compile-time obligations") !=
+        std::string::npos);
+  CHECK(codeExamplesDoc.find(
+            "Use `require(...)` only for pure runtime-capable contracts") !=
+        std::string::npos);
+  CHECK(codeExamplesDoc.find(
+            "Preferred phase-split spelling uses `require<...>` for these compile-time-only\n"
+            "facts:") != std::string::npos);
+  CHECK(codeExamplesDoc.find(
+            "Transition-only current compiler spelling still uses `require(...)` for the\n"
+            "same compile-time requirement facts") != std::string::npos);
+  CHECK(safeArrayExtentViewsDoc.find(
+            "require<...>   // compile-time requirement, no runtime fallback") !=
+        std::string::npos);
+  CHECK(safeArrayExtentViewsDoc.find(
+            "require(...)   // contract: prove statically if possible, otherwise check") !=
+        std::string::npos);
+  CHECK(safeArrayExtentViewsDoc.find(
+            "New specification\n"
+            "prose should use `require<...>` for the forced compile-time form and reserve\n"
+            "`require(...)` for contracts that may be proven or checked at runtime.") !=
         std::string::npos);
   CHECK(primeStructDoc.find("The first implemented user-predicate slice evaluates pure zero-runtime-argument\n"
                             "  predicates whose bodies return a literal source `bool`.") !=
@@ -1829,7 +1882,10 @@ TEST_CASE("todo queue and skipped doctest debt stay source locked") {
                   "  coverage snapshots in this file.") !=
         std::string::npos);
   CHECK(todo.find("### Ready Now\n\n"
+                  "- TODO-4605: Specify non-null pointer optionality\n\n"
                   "### Immediate Next 10") !=
+        std::string::npos);
+  CHECK(todo.find("- TODO-4604: Specify requirement contract phase split") ==
         std::string::npos);
   CHECK(todo.find("- TODO-4601: Remove final map helper classifier trace | track: "
                   "map-helper-zero") ==
@@ -1886,7 +1942,7 @@ TEST_CASE("todo queue and skipped doctest debt stay source locked") {
   CHECK(todo.find("- TODO-4574: Remove vector count/access compiler classifiers | track: vector-helper-classifier-deletion") ==
         std::string::npos);
   CHECK(todo.find("### Immediate Next 10\n\n"
-                  "### Priority Lanes") !=
+                  "- TODO-4606: Specify capability-parameterized views") !=
         std::string::npos);
   CHECK(todo.find("### Priority Lanes") != std::string::npos);
   CHECK(todo.find("Source-unit provenance ledger: TODO-4592 completed parser/semantic") ==
@@ -1906,7 +1962,10 @@ TEST_CASE("todo queue and skipped doctest debt stay source locked") {
                   "  surface, TODO-4571 added the compiler-knowledge inventory categories") !=
         std::string::npos);
   CHECK(todo.find("### Execution Queue\n\n"
-                  "### Task Blocks") !=
+                  "1. TODO-4605: Specify non-null pointer optionality") !=
+        std::string::npos);
+  CHECK(todo.find("### Task Blocks\n\n"
+                  "- [ ] TODO-4605: Specify non-null pointer optionality") !=
         std::string::npos);
   CHECK(todo.find("- TODO-4599: Migrate emitter collection surface lookups | track: "
                   "stdlib-registry-emitter") ==

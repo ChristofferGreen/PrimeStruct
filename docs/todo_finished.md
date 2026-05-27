@@ -6,6 +6,32 @@ Legend:
 Finished items are periodically archived here from `docs/todo.md`; section headers record the archive date.
 
 **Todo Completion (May 27, 2026)**
+- [x] TODO-4604: Specify requirement contract phase split
+  - owner: ai
+  - created_at: 2026-05-27
+  - finished_at: 2026-05-27
+  - phase: Safe array extents and views
+  - parallel_track: requirement-contracts
+  - scope: Updated the normative docs/source-lock contract so `require<...>`
+    is the forced compile-time requirement form and `require(...)` is the
+    runtime-capable contract form that is proven statically when possible and
+    otherwise lowered to a deterministic runtime precondition check when pure
+    and runtime-checkable.
+  - outcome:
+    - Source-locked the phase split across `docs/PrimeStruct.md`,
+      `docs/CodeExamples.md`, `docs/SafeArrayExtentViews.md`, and
+      `docs/PrimeStruct_SyntaxSpec.md`.
+    - Kept legacy compile-time `require(...)` examples explicitly marked as
+      transition-only current compiler spelling until parser support for
+      `require<...>` lands.
+    - Promoted TODO-4605 as the next ready safe-array leaf after completing
+      the requirement/contract docs slice.
+  - validation:
+    - Focused docs/source-lock validation was selected for this worker; see
+      `docs/testcase_log.md` and the commit report for exact commands.
+  - stop_rule: Stopped once the docs and source locks described the phase split
+    consistently without implementing parser or semantic behavior.
+
 - [x] TODO-4579: Enforce zero map/vector compiler-knowledge traces
   - owner: ai
   - created_at: 2026-05-24

@@ -15,7 +15,9 @@ Related design notes:
 - `docs/MemoryCapabilities.md` sketches a capability-checked memory-safety direction where ownership, references,
   effects, escape control, and unsafe raw-address authority share one inherited-authority model.
 - `docs/SafeArrayExtentViews.md` records a non-normative design direction for known array extents, runtime
-  preconditions, slices, and borrowed views inspired by Nagle's safe-array proposal for C.
+  preconditions, slices, and borrowed views inspired by Nagle's safe-array proposal for C. Its
+  `require<...>` / `require(...)` phase split is now the language direction recorded below; the
+  remaining extent and view surfaces are still design notes until their TODO leaves land.
 
 ### Source-processing pipeline
 1. **Import resolver:** first pass walks the raw text and expands every `import<...>` source entry so the compiler
@@ -1052,26 +1054,56 @@ Procedural compile-time genericity contract:
 - A returnable pair helper should instead return a caller-visible generic type
   such as `Pair<LeftT, RightT>` or another explicitly named public shape.
   Function-local generated types are for implementation-local storage.
-- Requirements are definition transforms, not body statements or standalone
-  compile-time commands. Keeping them in transform position makes them part of
-  the callable signature, lets overload filtering inspect them before the body
-  is type-checked for a specialization, and reuses the `<...>` compile-time
-  argument channel for type facts and constants.
-- Requirement transforms should use a single readable transform with a
+- Requirements and contracts are definition transforms, not body statements or
+  standalone compile-time commands. Keeping them in transform position makes
+  boundary obligations part of the callable signature and lets overload
+  filtering, semantic validation, and lowering consume the facts at the right
+  phase.
+- `require<...>` is the forced compile-time requirement form. It uses the
+  `<...>` compile-time argument channel, participates in specialization and
+  overload viability, publishes compile-time requirement facts during semantic
+  validation, and never emits runtime code. If a `require<...>` predicate is
+  not knowable at compile time, the constrained definition is non-viable or the
+  call site gets a compile-time diagnostic.
+- `require(...)` is the runtime-capable contract form. The compiler first tries
+  to prove the predicate from semantic facts. If it cannot prove the predicate
+  but the expression is pure and runtime-checkable, lowering emits a runtime
+  precondition check. If the expression is neither statically provable nor
+  runtime-checkable, semantic validation rejects it. Whether proven or checked,
+  a successful contract publishes an assumed body fact for downstream semantic
+  and lowering consumers.
+- Compile-time requirement transforms should use one readable
   comma-separated predicate list, for example
-  `[require(typeof<left> == i32, typeof<right> == i32)]`. Repeated
-  `[require(...)]` transforms are rejected with
-  `duplicate require transform; combine predicates into one require(...)`.
-  The readable expression form rewrites into builtin compile-time predicates,
-  such as `/std/meta/type_equals<typeof<left>, i32>()`, before semantic
-  validation publishes requirement facts. `typeof<left>` is a compile-time
-  query because it uses the compile-time argument channel; `typeof(left)`
-  remains an ordinary runtime call shape and is never requirement syntax.
-- The v1 requirement expression grammar should stay intentionally small:
-  equality, inequality, comma-separated conjunction through `require(...)`,
+  `[require<typeof<left> == i32, typeof<right> == i32>]`. The readable
+  expression form rewrites into builtin compile-time predicates, such as
+  `/std/meta/type_equals<typeof<left>, i32>()`, before semantic validation
+  publishes requirement facts. `typeof<left>` is a compile-time query because
+  it uses the compile-time argument channel; `typeof(left)` remains an ordinary
+  runtime call shape and is never compile-time requirement syntax.
+- Contract transforms also use one readable comma-separated predicate list, for
+  example `[require(count(dst) == count(src))]`. They may read parameters,
+  constants, `count(...)`, and other safe value facts, but may not allocate,
+  mutate, perform IO, spawn tasks, or depend on backend-only effects. Runtime
+  precondition failure must be deterministic; the exact failure transport is a
+  runtime contract detail outside this compile-time requirement split.
+- A definition may carry at most one `require<...>` transform and at most one
+  `require(...)` transform. Multiple predicates for the same phase are written
+  as comma-separated entries inside the matching transform, not as repeated
+  transforms.
+- Current implementation boundary: the parser and semantic validator still
+  accept legacy `[require(...)]` as transition syntax for compile-time generic
+  requirements. That spelling has no runtime fallback today and should be read
+  as the old compile-time requirement form in checked-in executable examples
+  until parser support for `require<...>` lands. New specification prose should
+  use `require<...>` for forced compile-time requirements and reserve
+  `require(...)` for runtime-capable contracts.
+- The v1 compile-time requirement grammar should stay intentionally small:
+  equality, inequality, comma-separated conjunction through `require<...>`,
   builtin predicates, user-defined compile-time predicates, and simple
-  comparisons over compile-time values such as `N > 0`. Avoid arbitrary
-  boolean algebra until the semantic-product representation is proven stable.
+  comparisons over compile-time values such as `N > 0`. Contract-form
+  `require(...)` is likewise restricted to pure, deterministic, runtime-safe
+  predicates. Avoid arbitrary boolean algebra until the semantic-product
+  representation is proven stable.
 - The initial builtin predicate families are:
   - `/std/meta/type_equals<A, B>()` and
     `/std/meta/type_not_equals<A, B>()` for type equality and inequality.
@@ -1232,11 +1264,15 @@ Procedural compile-time genericity contract:
   `ElemT`, `LeftT`, `RightT`, and value-level names such as `N`.
 - High-level generic examples should follow the style section in
   `docs/CodeExamples.md`: use plain inference for pass-through helpers,
-  `require(...)` for caller-visible obligations, compile-time value facts for
-  values such as lengths, `ct_if(...)` only when a branch must be pruned before
-  validation, local generated structs for non-escaping storage, and explicit
-  template arguments when the call site intentionally selects a public type or
-  compile-time value. Runnable examples live in
+  `require<...>` for forced compile-time obligations, `require(...)` for pure
+  runtime-capable contracts that may be proven or checked, compile-time value
+  facts for values such as lengths, `ct_if(...)` only when a branch must be
+  pruned before validation, local generated structs for non-escaping storage,
+  and explicit template arguments when the call site intentionally selects a
+  public type or compile-time value. The current checked-in generic
+  requirement example still uses legacy transition `require(...)` because this
+  TODO specifies the phase split without implementing parser behavior. Runnable
+  examples live in
   `examples/2.Inference/generic_identity.prime`,
   `examples/2.Inference/generic_pair_design.prime`, and
   `examples/2.Inference/generic_requirements_design.prime`.
@@ -4409,9 +4445,9 @@ sum([i32] left, [i32] right) {
 Existing transform-style trait constraints such as `[Additive<i32>]` remain
 source-compatible compatibility vocabulary. New procedural generic code should
 prefer the requirement predicate vocabulary, for example
-`[require(meta.has_trait<typeof<value>>(Additive))]`, so trait checks compose
+`[require<meta.has_trait<typeof<value>>(Additive)>]`, so trait checks compose
 with type equality, construction, lifecycle, field/member, and compile-time
-value predicates in one `require(...)` transform.
+value predicates in one `require<...>` transform.
 
 ### Parametric Types
 - Type parameters are explicit in signatures or implicit via `auto` in signatures.

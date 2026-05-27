@@ -794,10 +794,10 @@ make_pair(left, right) {
 ```
 
 Planned requirement transforms extend that model with readable compile-time
-predicates:
+predicates through the forced compile-time `require<...>` form:
 
 ```prime
-[require(typeof<left> == i32, typeof<right> == i32)]
+[require<typeof<left> == i32, typeof<right> == i32>]
 add(left, right) {
   return(left + right)
 }
@@ -806,30 +806,40 @@ add(left, right) {
 Capability and trait checks use the same single transform:
 
 ```prime
-[require(typeof<left> == typeof<right>, meta.has_trait<typeof<left>>(Additive))]
+[require<typeof<left> == typeof<right>, meta.has_trait<typeof<left>>(Additive)>]
 add_same(left, right) {
   return(left + right)
 }
 ```
 
 Requirement rules:
-- Requirements are definition transforms, not body statements or standalone
-  compile-time commands. They live with the callable signature, run during
-  semantic validation before final IR lowering, and do not create runtime
-  values visible to the function body.
-- A definition has at most one `require(...)` transform. Multiple requirements
-  are written as comma-separated predicates inside that transform, not as
-  repeated `[require(...)]` transforms. A repeated transform is rejected with
-  `duplicate require transform; combine predicates into one require(...)`.
+- Requirements and contracts are definition transforms, not body statements or
+  standalone compile-time commands. They live with the callable signature, run
+  during semantic validation before final IR lowering, and publish facts rather
+  than ordinary values visible to the function body.
+- `require<...>` is forced compile-time requirement syntax. It participates in
+  specialization and overload viability and never emits runtime code. A
+  predicate that cannot be evaluated from compile-time facts is a diagnostic or
+  a non-viable constrained candidate.
+- `require(...)` is contract syntax over values. The compiler first tries to
+  prove the predicate from semantic facts; when that fails and the expression
+  is pure and runtime-checkable, lowering emits a deterministic runtime
+  precondition check. A contract that is neither provable nor
+  runtime-checkable is rejected.
+- A definition has at most one `require<...>` transform and at most one
+  `require(...)` transform. Multiple predicates for the same phase are written
+  as comma-separated entries inside that transform, not as repeated transforms.
+  Repeating the same phase is rejected with a diagnostic that asks the user to
+  combine predicates into one matching `require` transform.
 - The source predicate language favors readable expressions. During
   canonicalization, readable type predicates rewrite into builtin compile-time
   predicates; for example `typeof<left> == i32` rewrites to a form such as
   `/std/meta/type_equals<typeof<left>, i32>()` before semantic validation.
   `typeof<left>` is the compile-time type query because it uses the
   compile-time argument channel. `typeof(left)` remains an ordinary runtime
-  call-shaped expression and is not a requirement primitive.
+  call-shaped expression and is not a compile-time requirement primitive.
 - The v1 predicate grammar is deliberately narrow: equality, inequality,
-  comma-separated conjunction through `require(...)`, builtin predicate calls,
+  comma-separated conjunction through `require<...>`, builtin predicate calls,
   user-defined compile-time predicates, and simple comparisons over
   compile-time values such as `N > 0`. General boolean expression algebra is
   deferred until the semantic-product fact model is stable.
@@ -858,6 +868,11 @@ Requirement rules:
   User-defined requirement predicates use the same compile-time execution model
   and return ordinary `bool` at the source level; semantic validation wraps
   `true` and `false` into typed requirement facts.
+- Contract-form `require(...)` is restricted to pure, deterministic predicates
+  that can be proven from semantic facts or checked at runtime. It may read
+  parameters, constants, `count(...)`, and other safe value facts, but may not
+  allocate, mutate, perform IO, spawn tasks, or depend on backend-only effects.
+  Successful contracts publish assumed body facts for downstream consumers.
 - Builtin predicates live under `/std/meta/*`. Readable requirement syntax may
   canonicalize to those helpers or compiler-recognized facts, but user code
   should not define public helpers that collide with `/std/meta/*` names.
@@ -969,6 +984,11 @@ Requirement rules:
   cache keys include predicate/helper identity, compile-time arguments, visible
   imports and semantic facts, active compile-time effects, and the
   language/semantic-product version.
+- Current implementation boundary: legacy `[require(...)]` is still accepted
+  as transition syntax for compile-time generic requirements. It has no runtime
+  fallback today. Specification prose should use `require<...>` for forced
+  compile-time requirements and reserve `require(...)` for runtime-capable
+  contracts while parser and semantic migration TODOs catch up.
 - Generic public examples should use consistent type-parameter names such as
   `T`, `ElemT`, `LeftT`, and `RightT`, plus value-level names such as `N`.
 
@@ -981,7 +1001,7 @@ error: requirement failed for call to `add_i32`
 failed requirement:
   --> main.prime:1:31
    |
-1  | [require(typeof<left> == i32, typeof<right> == i32)]
+1  | [require<typeof<left> == i32, typeof<right> == i32>]
    |                               ^^^^^^^^^^^^^^^^^^^^
 
 facts:
@@ -1024,7 +1044,7 @@ evaluation.
 
 help: declare the effect on the definition:
       [effects<compiletime>(file_read)]
-      [require(file_exists<"schema.prime">)]
+      [require<file_exists<"schema.prime">>]
       load_schema() { ... }
 ```
 
@@ -1035,7 +1055,7 @@ error: requirement failed for `make_buffer<0>`
 failed requirement:
   --> main.prime:1:10
    |
-1  | [require(N > 0)]
+1  | [require<N > 0>]
    |          ^^^^^
 
 facts:

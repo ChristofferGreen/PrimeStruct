@@ -64,11 +64,10 @@ This file is the live open-work queue for PrimeStruct.
 
 ### Ready Now
 
-- TODO-4604: Specify requirement contract phase split
+- TODO-4605: Specify non-null pointer optionality
 
 ### Immediate Next 10
 
-- TODO-4605: Specify non-null pointer optionality
 - TODO-4606: Specify capability-parameterized views
 - TODO-4607: Publish initial array extent facts
 - TODO-4608: Add checked array slice construction
@@ -113,60 +112,35 @@ This file is the live open-work queue for PrimeStruct.
   semantic-product stale/missing diagnostics, add a second backend capability
   gate, index expanded-source diagnostic lookup, and promote one lowerer or
   backend diagnostic into the stability-tier contract.
-- Safe array extents and capability views: TODO-4604 through TODO-4612 capture
-  the agreed backlog from `docs/SafeArrayExtentViews.md`: requirement
-  contracts, non-null safe pointers, capability-parameterized references and
-  slices, semantic extent facts, checked slices, conservative view escapes,
-  cursor traversal with `limit(...)` / `reverse_limit(...)` boundaries, and
-  style-aligned examples once the surface is specified.
+- Safe array extents and capability views: TODO-4604 completed the requirement
+  contract phase split. TODO-4605 through TODO-4612 remain from the agreed
+  backlog in `docs/SafeArrayExtentViews.md`: non-null safe pointers,
+  capability-parameterized references and slices, semantic extent facts,
+  checked slices, conservative view escapes, cursor traversal with
+  `limit(...)` / `reverse_limit(...)` boundaries, and style-aligned examples
+  once the surface is specified.
 
 ### Execution Queue
 
-1. TODO-4604: Specify requirement contract phase split
-2. TODO-4605: Specify non-null pointer optionality
-3. TODO-4606: Specify capability-parameterized views
-4. TODO-4607: Publish initial array extent facts
-5. TODO-4608: Add checked array slice construction
-6. TODO-4609: Reject escaping local array slices
-7. TODO-4610: Add forward cursor traversal API
-8. TODO-4611: Add reverse cursor traversal API
-9. TODO-4612: Add safe extent and cursor code examples
-10. TODO-4613: Retire semantic-validator private source locks
-11. TODO-4614: Retire IR-lowerer call-helper source locks
-12. TODO-4615: Retire emitter private source locks
-13. TODO-4616: Make semantic validation manifest executable
-14. TODO-4617: Add semantic preflight missing-fact diagnostics
-15. TODO-4618: Fail closed on stale CT-eval requirement facts
-16. TODO-4619: Gate runtime reflection by backend profile
-17. TODO-4620: Index expanded-source segments for diagnostics
-18. TODO-4621: Classify unsupported variadic-pack diagnostics
+1. TODO-4605: Specify non-null pointer optionality
+2. TODO-4606: Specify capability-parameterized views
+3. TODO-4607: Publish initial array extent facts
+4. TODO-4608: Add checked array slice construction
+5. TODO-4609: Reject escaping local array slices
+6. TODO-4610: Add forward cursor traversal API
+7. TODO-4611: Add reverse cursor traversal API
+8. TODO-4612: Add safe extent and cursor code examples
+9. TODO-4613: Retire semantic-validator private source locks
+10. TODO-4614: Retire IR-lowerer call-helper source locks
+11. TODO-4615: Retire emitter private source locks
+12. TODO-4616: Make semantic validation manifest executable
+13. TODO-4617: Add semantic preflight missing-fact diagnostics
+14. TODO-4618: Fail closed on stale CT-eval requirement facts
+15. TODO-4619: Gate runtime reflection by backend profile
+16. TODO-4620: Index expanded-source segments for diagnostics
+17. TODO-4621: Classify unsupported variadic-pack diagnostics
 
 ### Task Blocks
-
-- [ ] TODO-4604: Specify requirement contract phase split
-  - owner: ai
-  - created_at: 2026-05-27
-  - phase: Safe array extents and views
-  - parallel_track: requirement-contracts
-  - scope: Update the normative language docs and example-style guidance so
-    `require<...>` is the forced compile-time requirement form and
-    `require(...)` is the contract form that is proven statically when
-    possible and otherwise emits a runtime precondition check when pure and
-    runtime-checkable.
-  - implementation_notes: Start with `docs/PrimeStruct.md`,
-    `docs/CodeExamples.md`, and the docs/source-lock tests that currently
-    describe `require(...)` as compile-time-only syntax. Keep
-    `docs/SafeArrayExtentViews.md` aligned with the final wording.
-  - acceptance:
-    - Docs clearly distinguish compile-time-only requirement viability from
-      runtime-capable contracts.
-    - Existing compile-time requirement examples are migrated or explicitly
-      marked as legacy/proposed-transition syntax.
-    - Source-lock coverage proves `docs/PrimeStruct.md`,
-      `docs/CodeExamples.md`, and `docs/SafeArrayExtentViews.md` agree on the
-      phase split.
-  - stop_rule: Stop once the docs and source locks describe the phase split
-    consistently; do not implement parser or semantic behavior in this leaf.
 
 - [ ] TODO-4605: Specify non-null pointer optionality
   - owner: ai

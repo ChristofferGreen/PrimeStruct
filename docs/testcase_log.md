@@ -4,6 +4,16 @@
 - none
 
 ## Recent Test Runs
+- 2026-05-27 19:40 CEST | pass | mode: release + docs/source-lock |
+  command:
+  `cmake -S . -B build-release -DCMAKE_BUILD_TYPE=Release -DCMAKE_EXPORT_COMPILE_COMMANDS=ON`;
+  `cmake --build build-release --target PrimeStruct_compile_run_tests -j 1`;
+  `cd build-release && ./PrimeStruct_compile_run_tests --test-case="generic requirement predicate surface stays source locked,todo queue and skipped doctest debt stay source locked" --no-skip`;
+  `git diff --check`
+  | failures: none | notes: TODO-4604 focused validation passed after
+  refreshing the requirement/contract docs source-lock and TODO queue lock.
+  The selected doctest slice passed 2 cases / 620 assertions, and whitespace
+  validation passed.
 - 2026-05-27 17:47 CEST | pass | mode: release + script | command:
   `cmake -S . -B build-release -DCMAKE_BUILD_TYPE=Release -DCMAKE_EXPORT_COMPILE_COMMANDS=ON`;
   `cmake --build build-release --target PrimeStruct_compile_run_tests -j 1`;

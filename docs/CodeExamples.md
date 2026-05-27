@@ -116,9 +116,12 @@ Good generic examples follow these conventions:
   integer facts such as lengths or small capacities.
 - Keep `[type]` locals near the value they describe. Prefer
   `[type] ElemT { typeof<value> }` over repeating a long computed type.
-- Use `require(...)` for caller-visible obligations such as same-type
-  arithmetic, positive length facts, construction support, or selected
-  overload viability.
+- Use `require<...>` for caller-visible compile-time obligations such as
+  same-type arithmetic, positive length facts, construction support, or
+  selected overload viability.
+- Use `require(...)` only for pure runtime-capable contracts that the compiler
+  should prove statically when possible and otherwise lower to deterministic
+  precondition checks when the predicate can be checked at runtime.
 - Use `ct_if(...)` only when one branch must disappear before validation or
   lowering. Ordinary runtime `if` is clearer when both branches are valid
   runtime code.
@@ -172,6 +175,25 @@ Use requirements when an unconstrained helper would fail later with a generic
 body diagnostic. The requirement puts the obligation at the call boundary and
 lets diagnostics name the failed predicate.
 
+Preferred phase-split spelling uses `require<...>` for these compile-time-only
+facts:
+
+```prime
+[return<T> require<N > 0>]
+require_length<N,T>([T] value) {
+  return(value)
+}
+
+[return<T> require<typeof<left> == typeof<right>, N > 0>]
+add_same<N,T>([T] left, [T] right) {
+  return(plus(left, right))
+}
+```
+
+Transition-only current compiler spelling still uses `require(...)` for the
+same compile-time requirement facts until parser support for `require<...>`
+lands:
+
 ```prime
 [return<T> require(N > 0)]
 require_length<N,T>([T] value) {
@@ -196,7 +218,9 @@ optional_i32<T>([T] value) {
 This style keeps value facts (`N > 0`), same-type facts
 (`typeof<left> == typeof<right>`), and type-directed branching visible in the
 source order where the function uses them. The checked-in executable example
-lives at `examples/2.Inference/generic_requirements_design.prime`.
+lives at `examples/2.Inference/generic_requirements_design.prime` and is
+intentionally transition-only because this style guide specifies the phase
+split before the parser implements `require<...>`.
 
 ### Constrained Overloads
 
@@ -205,16 +229,21 @@ requirement. If both candidates can be viable, prefer clearer names instead of
 depending on specificity ranking.
 
 ```prime
-[return<i32> require(type_equals<typeof<value>, i64>())]
+[return<i32> require<typeof<value> == i64>]
 classify<T>([T] value) {
   return(1i32)
 }
 
-[return<i32> require(type_equals<typeof<value>, i32>())]
+[return<i32> require<typeof<value> == i32>]
 classify<T>([T] value) {
   return(plus(value, 1i32))
 }
 ```
+
+If the current compiler needs to execute the overload example before
+`require<...>` lands, spell those two transforms with legacy
+`require(type_equals<...>())` and treat that spelling as transition syntax, not
+the long-term contract form.
 
 ## AST Transform Hook Declarations
 

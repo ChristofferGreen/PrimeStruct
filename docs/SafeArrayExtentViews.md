@@ -1,6 +1,9 @@
 # Safe Array Extents And Views
 
-Status: design note, not yet implemented.
+Status: design note, not yet implemented. The `require<...>` /
+`require(...)` phase split in this note has been promoted into the normative
+language direction in `docs/PrimeStruct.md`; the remaining safe-array extent
+and view surfaces still need their own implementation leaves.
 
 This note records the current PrimeStruct design direction after reviewing John
 Nagle's "Safe arrays and pointers for C through compatible additions to the
@@ -33,16 +36,19 @@ unsafe or FFI boundaries.
 
 ## Requirements And Contracts
 
-We agreed on a phase distinction that should be considered for future syntax:
+PrimeStruct uses a phase distinction between forced compile-time requirements
+and runtime-capable contracts:
 
 ```prime
 require<...>   // compile-time requirement, no runtime fallback
 require(...)   // contract: prove statically if possible, otherwise check
 ```
 
-This is a design direction, not current implemented syntax. Current docs use
-`require(...)` for compile-time requirements. If this direction is adopted, the
-requirement syntax section needs a deliberate migration.
+This is the language direction, but not all parser and semantic behavior is
+implemented yet. Current executable generic examples may still use legacy
+transition `require(...)` for compile-time requirements. New specification
+prose should use `require<...>` for the forced compile-time form and reserve
+`require(...)` for contracts that may be proven or checked at runtime.
 
 `require<...>` is the forced compile-time form. It is evaluated during semantic
 validation from compile-time facts, can participate in specialization and
@@ -415,8 +421,8 @@ behind FFI and unsafe boundaries.
 
 - Exact failure behavior for runtime checks emitted by contract-form
   `require(...)`.
-- Whether `require<...>` should replace current compile-time `require(...)` or
-  whether both forms need a migration window.
+- Parser and semantic migration details for retiring legacy compile-time
+  `require(...)` once `require<...>` is implemented.
 - Whether dependent fixed extents need syntax such as `array<T, N>`, even though
   current docs intentionally avoid that spelling.
 - Exact standard capability names and whether mutable views spell write
