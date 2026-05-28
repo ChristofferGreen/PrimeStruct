@@ -1216,6 +1216,21 @@ ArrayVectorAccessTargetInfo resolveArrayVectorAccessTargetInfo(
     return info;
   }
   if (target.kind == Expr::Kind::Call) {
+    if (!target.isMethodCall && isSimpleCallName(target, "slice") &&
+        target.args.size() == 3) {
+      ArrayVectorAccessTargetInfo sourceInfo = resolveArrayVectorAccessTargetInfo(
+          target.args.front(),
+          localsIn,
+          resolveCallArrayVectorAccessTargetInfo,
+          semanticProgram,
+          semanticIndex);
+      if (sourceInfo.isArrayOrVectorTarget && !sourceInfo.isVectorTarget) {
+        sourceInfo.isArgsPackTarget = false;
+        sourceInfo.argsPackElementKind = LocalInfo::Kind::Value;
+        info = sourceInfo;
+        return info;
+      }
+    }
     if (isSimpleCallName(target, "dereference") &&
         target.args.size() == 1 &&
         target.args.front().kind == Expr::Kind::Name) {

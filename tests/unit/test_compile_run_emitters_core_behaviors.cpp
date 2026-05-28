@@ -7,6 +7,20 @@
 
 TEST_SUITE_BEGIN("primestruct.compile.run.emitters.cpp");
 
+TEST_CASE("compiles and runs array slice count and indexed access in C++ emitter") {
+  const std::string source = R"(
+[return<int>]
+main() {
+  [array<i32>] values{array<i32>(4i32, 7i32, 9i32, 11i32)}
+  [array<i32>] window{slice(values, 1i32, 3i32)}
+  return(plus(count(window), window[1i32]))
+}
+)";
+  std::string exePath;
+  REQUIRE(buildCachedEmittedCppExecutableAtO0("cpp_array_slice", source, exePath));
+  CHECK(runCommand(quoteShellArg(exePath)) == 11);
+}
+
 TEST_CASE("C++ emitter serializes scene model source deterministically") {
   const std::string srcPath =
       writeTemp("emit_scene_model_descriptors_cpp.prime", sceneModelCppEmitterSource());

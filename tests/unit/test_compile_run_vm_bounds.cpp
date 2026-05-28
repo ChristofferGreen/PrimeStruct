@@ -35,6 +35,57 @@ main() {
   CHECK(runCommand(runCmd) == 107);
 }
 
+TEST_CASE("vm array slice count and indexed access use slice extent") {
+  const std::string source = R"(
+[return<int>]
+main() {
+  [array<i32>] values{array<i32>(4i32, 7i32, 9i32, 11i32)}
+  [array<i32>] window{slice(values, 1i32, 3i32)}
+  return(plus(count(window), window[1i32]))
+}
+)";
+  const std::string srcPath = writeTemp("vm_array_slice_count_access.prime", source);
+  const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main";
+  CHECK(runCommand(runCmd) == 11);
+}
+
+TEST_CASE("vm array slice checks runtime bounds at construction") {
+  const std::string source = R"(
+[return<int>]
+main() {
+  [array<i32>] values{array<i32>(4i32, 7i32)}
+  [i32] end{plus(count(values), 1i32)}
+  [array<i32>] window{slice(values, 0i32, end)}
+  return(count(window))
+}
+)";
+  const std::string srcPath = writeTemp("vm_array_slice_runtime_bounds.prime", source);
+  const std::string errPath =
+      (testScratchPath("") / "primec_vm_array_slice_runtime_bounds_err.txt").string();
+  const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main 2> " + errPath;
+  CHECK(runCommand(runCmd) == 3);
+  CHECK(readFile(errPath) == "array index out of bounds\n");
+}
+
+TEST_CASE("array slice rejects statically out-of-range literal ranges") {
+  const std::string source = R"(
+[return<int>]
+main() {
+  [array<i32>] window{slice(array<i32>(4i32, 7i32), 1i32, 3i32)}
+  return(count(window))
+}
+)";
+  const std::string srcPath = writeTemp("array_slice_static_bounds.prime", source);
+  const std::string errPath =
+      (testScratchPath("") / "primec_array_slice_static_bounds_err.txt").string();
+  const std::string compileCmd =
+      "./primec --emit=vm " + srcPath + " --entry /main > /dev/null 2> " + errPath;
+  CHECK(runCommand(compileCmd) == 2);
+  CHECK(readFile(errPath).find(
+            "slice range out of bounds: start=1, end=3, count=2") !=
+        std::string::npos);
+}
+
 TEST_CASE("vm array access rejects negative index") {
   const std::string source = R"(
 [return<int>]

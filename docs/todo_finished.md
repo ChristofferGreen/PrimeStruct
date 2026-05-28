@@ -6,6 +6,32 @@ Legend:
 Finished items are periodically archived here from `docs/todo.md`; section headers record the archive date.
 
 **Todo Completion (May 28, 2026)**
+- [x] TODO-4608: Add checked array slice construction
+  - owner: ai
+  - created_at: 2026-05-27
+  - finished_at: 2026-05-28
+  - phase: Safe array extents and views
+  - parallel_track: array-slice-construction
+  - depends_on: TODO-4607
+  - scope: Added the first checked `slice(values, start, end)` surface for
+    `array<T>` inputs, with `Reference<array<T>>` accepted through the same
+    array target classification path.
+  - outcome:
+    - Added semantic recognition and type inference for `slice(...)`,
+      including deterministic static diagnostics for literal out-of-range
+      construction.
+    - Published slice result extent facts as `end - start` when the
+      construction is visible from a local binding and retained static extent
+      publication for provable literal ranges.
+    - Lowered read-only slices as materialized array values in VM/native IR
+      and emitted C++ `ps_array_slice(...)` calls for the C++ backend path.
+  - validation:
+    - Added focused VM, native, C++ emitter, and semantic-product coverage for
+      valid slice count/indexing plus static and runtime bounds failures.
+  - stop_rule: Stopped after read-only array slices worked end to end; mutable
+    slices, vectors, cursor traversal, and conservative escape diagnostics
+    remain in follow-up TODOs.
+
 - [x] TODO-4607: Publish initial array extent facts
   - owner: ai
   - created_at: 2026-05-27

@@ -338,6 +338,16 @@
   out << "  prefix.insert(prefix.end(), suffix.begin(), suffix.end());\n";
   out << "  return prefix;\n";
   out << "}\n";
+  out << "template <typename T, typename Start, typename End>\n";
+  out << "static inline std::vector<T> ps_array_slice(const std::vector<T> &value, Start start, End end) {\n";
+  out << "  int64_t s = static_cast<int64_t>(start);\n";
+  out << "  int64_t e = static_cast<int64_t>(end);\n";
+  out << "  if (s < 0 || e < s || static_cast<size_t>(e) > value.size()) {\n";
+  out << "    std::fprintf(stderr, \"array index out of bounds\\n\");\n";
+  out << "    std::exit(3);\n";
+  out << "  }\n";
+  out << "  return std::vector<T>(value.begin() + s, value.begin() + e);\n";
+  out << "}\n";
   out << "template <typename T, typename Index>\n";
   out << "static inline const T &ps_array_at(const std::vector<T> &value, Index index) {\n";
   out << "  int64_t i = static_cast<int64_t>(index);\n";

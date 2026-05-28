@@ -590,6 +590,27 @@ bool SemanticsValidator::inferQueryExprTypeText(const Expr &expr,
       currentTypeTextOut = unwrapReferencePointerTypeText(wrappedTypeText);
       return !currentTypeTextOut.empty();
     }
+    if (!candidate.isMethodCall && isSimpleCallName(candidate, "slice") &&
+        candidate.args.size() == 3) {
+      std::string receiverTypeText;
+      if (!inferExprTypeText(candidate.args.front(), receiverTypeText)) {
+        return false;
+      }
+      std::string typeText =
+          normalizeBindingTypeName(unwrapReferencePointerTypeText(receiverTypeText));
+      std::string base;
+      std::string argText;
+      if (!splitTemplateTypeName(typeText, base, argText) ||
+          normalizeBindingTypeName(base) != "array") {
+        return false;
+      }
+      std::vector<std::string> args;
+      if (!splitTopLevelTemplateArgs(argText, args) || args.size() != 1) {
+        return false;
+      }
+      currentTypeTextOut = "array<" + normalizeBindingTypeName(args.front()) + ">";
+      return true;
+    }
     const std::string resolvedCandidate = resolveCalleePath(candidate);
     auto inferOldSurfaceSoaToAosTypeText = [&]() -> bool {
       if (candidate.args.size() != 1) {

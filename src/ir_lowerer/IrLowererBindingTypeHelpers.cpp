@@ -11,6 +11,7 @@
 #include <cctype>
 #include <optional>
 #include <string_view>
+#include <unordered_map>
 #include <utility>
 
 namespace primec::ir_lowerer {
@@ -296,6 +297,79 @@ std::string describeArrayExtentSite(const std::string &scopePath,
   const std::string displayName =
       targetName.empty() ? std::string("<unnamed>") : std::string(targetName);
   return scopePath + " -> " + std::string(siteKind) + " " + displayName;
+}
+
+std::string arrayExtentBindingResolvedPath(std::string_view scopePath,
+                                           std::string_view bindingName) {
+  if (scopePath.empty() || bindingName.empty()) {
+    return {};
+  }
+  if (bindingName.front() == '/') {
+    return std::string(bindingName);
+  }
+  std::string normalizedScope(scopePath);
+  if (!normalizedScope.empty() && normalizedScope.front() != '/') {
+    normalizedScope.insert(normalizedScope.begin(), '/');
+  }
+  if (!normalizedScope.empty() && normalizedScope.back() != '/') {
+    normalizedScope.push_back('/');
+  }
+  normalizedScope.append(bindingName);
+  return normalizedScope;
+}
+
+std::optional<int64_t> arrayExtentSignedLiteralValue(const Expr &expr) {
+  if (expr.kind != Expr::Kind::Literal || expr.isUnsigned) {
+    return std::nullopt;
+  }
+  if (expr.intWidth == 64) {
+    return static_cast<int64_t>(expr.literalValue);
+  }
+  return static_cast<int32_t>(expr.literalValue);
+}
+
+std::string arrayExtentOperandText(const Expr &expr) {
+  if (expr.kind == Expr::Kind::Name) {
+    return expr.name;
+  }
+  if (const auto literal = arrayExtentSignedLiteralValue(expr)) {
+    return std::to_string(*literal);
+  }
+  return "?";
+}
+
+std::string sliceExtentExpressionForBindingInitializer(const Expr &bindingExpr) {
+  if (bindingExpr.args.size() != 1) {
+    return {};
+  }
+  const Expr &initializer = bindingExpr.args.front();
+  if (initializer.kind != Expr::Kind::Call || initializer.isMethodCall ||
+      !isSimpleCallName(initializer, "slice") || initializer.args.size() != 3) {
+    return {};
+  }
+  return arrayExtentOperandText(initializer.args[2]) + " - " +
+         arrayExtentOperandText(initializer.args[1]);
+}
+
+void collectArrayExtentExpressionsForBindings(
+    const std::string &scopePath,
+    const std::vector<Expr> &exprs,
+    std::unordered_map<std::string, std::string> &extentExpressionsByResolvedPath) {
+  for (const Expr &expr : exprs) {
+    if (expr.isBinding) {
+      if (std::string extentExpression =
+              sliceExtentExpressionForBindingInitializer(expr);
+          !extentExpression.empty()) {
+        extentExpressionsByResolvedPath.insert_or_assign(
+            arrayExtentBindingResolvedPath(scopePath, expr.name),
+            std::move(extentExpression));
+      }
+    }
+    collectArrayExtentExpressionsForBindings(
+        scopePath, expr.args, extentExpressionsByResolvedPath);
+    collectArrayExtentExpressionsForBindings(
+        scopePath, expr.bodyArguments, extentExpressionsByResolvedPath);
+  }
 }
 
 LocalInfo::Kind bindingKindFromCollectionSpecialization(
@@ -1004,6 +1078,12 @@ bool validateSemanticProductArrayExtentCoverage(const Program &program,
   }
 
   const SemanticProductIndex semanticIndex = buildSemanticProductIndex(semanticProgram);
+  std::unordered_map<std::string, std::string> extentExpressionsByResolvedPath;
+  for (const auto &def : program.definitions) {
+    collectArrayExtentExpressionsForBindings(def.fullPath,
+                                             def.statements,
+                                             extentExpressionsByResolvedPath);
+  }
   auto requireTextMetadata = [&](SymbolId textId,
                                  const std::string &fallback,
                                  const std::string &expected,
@@ -1036,6 +1116,7 @@ bool validateSemanticProductArrayExtentCoverage(const Program &program,
                                      const std::string &expectedTargetResolvedPath,
                                      uint64_t expectedTargetSemanticNodeId,
                                      const std::string &expectedBindingTypeText,
+                                     const std::string &expectedExtentExpression,
                                      const std::string &siteDescription) {
     if (arrayFact == nullptr) {
       error = "missing semantic-product array extent fact: " + siteDescription;
@@ -1073,7 +1154,7 @@ bool validateSemanticProductArrayExtentCoverage(const Program &program,
                              siteDescription) ||
         !requireTextMetadata(arrayFact->extentExpressionId,
                              arrayFact->extentExpression,
-                             "count(" + expectedTargetName + ")",
+                             expectedExtentExpression,
                              "expression",
                              siteDescription)) {
       return false;
@@ -1113,6 +1194,12 @@ bool validateSemanticProductArrayExtentCoverage(const Program &program,
               siteDescription;
       return false;
     }
+    std::string expectedExtentExpression = "count(" + targetName + ")";
+    if (const auto extentExpression =
+            extentExpressionsByResolvedPath.find(targetResolvedPath);
+        extentExpression != extentExpressionsByResolvedPath.end()) {
+      expectedExtentExpression = extentExpression->second;
+    }
     const SemanticProgramArrayExtentFact *arrayFact =
         semanticProgramLookupPublishedArrayExtentFactBySemanticId(
             *semanticProgram, bindingFact.semanticNodeId);
@@ -1124,6 +1211,7 @@ bool validateSemanticProductArrayExtentCoverage(const Program &program,
                                    targetResolvedPath,
                                    bindingFact.semanticNodeId,
                                    bindingTypeText,
+                                   expectedExtentExpression,
                                    siteDescription);
   };
 
@@ -1191,6 +1279,7 @@ bool validateSemanticProductArrayExtentCoverage(const Program &program,
                                      targetResolvedPath,
                                      target->semanticNodeId,
                                      targetBindingTypeText,
+                                     "count(" + target->name + ")",
                                      siteDescription)) {
           return false;
         }

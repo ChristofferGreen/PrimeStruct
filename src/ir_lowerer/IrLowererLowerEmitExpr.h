@@ -1047,5 +1047,173 @@
         if (bufferBuiltinResult != ir_lowerer::BufferBuiltinDispatchResult::NotHandled) {
           return bufferBuiltinResult == ir_lowerer::BufferBuiltinDispatchResult::Emitted;
         }
+        if (!expr.isMethodCall && isSimpleCallName(expr, "slice") &&
+            expr.args.size() == 3) {
+          auto emitInstruction = [&](IrOpcode opcode, uint64_t imm) {
+            function.instructions.push_back({opcode, imm});
+          };
+          auto patchInstructionImm = [&](size_t instructionIndex, uint64_t imm) {
+            function.instructions[instructionIndex].imm = imm;
+          };
+          auto emitSliceBoundsFailureIfTrue = [&]() {
+            const size_t jumpOk = function.instructions.size();
+            emitInstruction(IrOpcode::JumpIfZero, 0);
+            emitArrayIndexOutOfBounds();
+            patchInstructionImm(jumpOk,
+                                static_cast<uint64_t>(function.instructions.size()));
+          };
+          const auto targetInfo = ir_lowerer::resolveArrayVectorAccessTargetInfo(
+              expr.args.front(),
+              localsIn,
+              {},
+              semanticProgram,
+              &callResolutionAdapters.semanticProductTargets.semanticIndex);
+          if (!targetInfo.isArrayOrVectorTarget || targetInfo.isVectorTarget) {
+            error = "slice requires array target";
+            return false;
+          }
+          const int32_t elementSlotCount =
+              targetInfo.elemSlotCount > 0 ? targetInfo.elemSlotCount : 1;
+          const int32_t ptrLocal = allocTempLocal();
+          if (!emitExpr(expr.args.front(), localsIn)) {
+            return false;
+          }
+          emitInstruction(IrOpcode::StoreLocal, static_cast<uint64_t>(ptrLocal));
+
+          const int32_t startLocal = allocTempLocal();
+          const ir_lowerer::LocalInfo::ValueKind startKind =
+              inferExprKind(expr.args[1], localsIn);
+          if (!emitExpr(expr.args[1], localsIn)) {
+            return false;
+          }
+          emitInstruction(IrOpcode::StoreLocal, static_cast<uint64_t>(startLocal));
+
+          const int32_t endLocal = allocTempLocal();
+          const ir_lowerer::LocalInfo::ValueKind endKind =
+              inferExprKind(expr.args[2], localsIn);
+          if (!emitExpr(expr.args[2], localsIn)) {
+            return false;
+          }
+          emitInstruction(IrOpcode::StoreLocal, static_cast<uint64_t>(endLocal));
+
+          const int32_t countLocal = allocTempLocal();
+          emitInstruction(IrOpcode::LoadLocal, static_cast<uint64_t>(ptrLocal));
+          emitInstruction(IrOpcode::LoadIndirect, 0);
+          emitInstruction(IrOpcode::StoreLocal, static_cast<uint64_t>(countLocal));
+
+          if (startKind != ir_lowerer::LocalInfo::ValueKind::UInt64) {
+            emitInstruction(IrOpcode::LoadLocal, static_cast<uint64_t>(startLocal));
+            emitInstruction(IrOpcode::PushI64, 0);
+            emitInstruction(IrOpcode::CmpLtI64, 0);
+            emitSliceBoundsFailureIfTrue();
+          }
+          if (endKind != ir_lowerer::LocalInfo::ValueKind::UInt64) {
+            emitInstruction(IrOpcode::LoadLocal, static_cast<uint64_t>(endLocal));
+            emitInstruction(IrOpcode::PushI64, 0);
+            emitInstruction(IrOpcode::CmpLtI64, 0);
+            emitSliceBoundsFailureIfTrue();
+          }
+
+          emitInstruction(IrOpcode::LoadLocal, static_cast<uint64_t>(endLocal));
+          emitInstruction(IrOpcode::LoadLocal, static_cast<uint64_t>(startLocal));
+          emitInstruction(startKind == ir_lowerer::LocalInfo::ValueKind::UInt64 ||
+                                  endKind == ir_lowerer::LocalInfo::ValueKind::UInt64
+                              ? IrOpcode::CmpLtU64
+                              : IrOpcode::CmpLtI64,
+                          0);
+          emitSliceBoundsFailureIfTrue();
+
+          emitInstruction(IrOpcode::LoadLocal, static_cast<uint64_t>(endLocal));
+          emitInstruction(IrOpcode::LoadLocal, static_cast<uint64_t>(countLocal));
+          emitInstruction(endKind == ir_lowerer::LocalInfo::ValueKind::UInt64
+                              ? IrOpcode::CmpGtU64
+                              : IrOpcode::CmpGtI64,
+                          0);
+          emitSliceBoundsFailureIfTrue();
+
+          const int32_t sliceLenLocal = allocTempLocal();
+          emitInstruction(IrOpcode::LoadLocal, static_cast<uint64_t>(endLocal));
+          emitInstruction(IrOpcode::LoadLocal, static_cast<uint64_t>(startLocal));
+          emitInstruction(IrOpcode::SubI64, 0);
+          emitInstruction(IrOpcode::StoreLocal, static_cast<uint64_t>(sliceLenLocal));
+
+          const int32_t totalCopySlotsLocal = allocTempLocal();
+          emitInstruction(IrOpcode::LoadLocal, static_cast<uint64_t>(sliceLenLocal));
+          emitInstruction(IrOpcode::PushI64, static_cast<uint64_t>(elementSlotCount));
+          emitInstruction(IrOpcode::MulI64, 0);
+          emitInstruction(IrOpcode::StoreLocal, static_cast<uint64_t>(totalCopySlotsLocal));
+
+          const int32_t slicePtrLocal = allocTempLocal();
+          emitInstruction(IrOpcode::LoadLocal, static_cast<uint64_t>(totalCopySlotsLocal));
+          emitInstruction(IrOpcode::PushI64, 1);
+          emitInstruction(IrOpcode::AddI64, 0);
+          emitInstruction(IrOpcode::HeapAlloc, 0);
+          emitInstruction(IrOpcode::StoreLocal, static_cast<uint64_t>(slicePtrLocal));
+
+          emitInstruction(IrOpcode::LoadLocal, static_cast<uint64_t>(slicePtrLocal));
+          emitInstruction(IrOpcode::LoadLocal, static_cast<uint64_t>(sliceLenLocal));
+          emitInstruction(IrOpcode::StoreIndirect, 0);
+          emitInstruction(IrOpcode::Pop, 0);
+
+          const int32_t sourceSlotOffsetLocal = allocTempLocal();
+          emitInstruction(IrOpcode::LoadLocal, static_cast<uint64_t>(startLocal));
+          emitInstruction(IrOpcode::PushI64, static_cast<uint64_t>(elementSlotCount));
+          emitInstruction(IrOpcode::MulI64, 0);
+          emitInstruction(IrOpcode::StoreLocal, static_cast<uint64_t>(sourceSlotOffsetLocal));
+
+          const int32_t copyIndexLocal = allocTempLocal();
+          emitInstruction(IrOpcode::PushI64, 0);
+          emitInstruction(IrOpcode::StoreLocal, static_cast<uint64_t>(copyIndexLocal));
+
+          const int32_t srcSlotPtrLocal = allocTempLocal();
+          const int32_t destSlotPtrLocal = allocTempLocal();
+          const int32_t copyValueLocal = allocTempLocal();
+          const size_t loopStart = function.instructions.size();
+          emitInstruction(IrOpcode::LoadLocal, static_cast<uint64_t>(copyIndexLocal));
+          emitInstruction(IrOpcode::LoadLocal, static_cast<uint64_t>(totalCopySlotsLocal));
+          emitInstruction(IrOpcode::CmpLtI64, 0);
+          const size_t jumpLoopEnd = function.instructions.size();
+          emitInstruction(IrOpcode::JumpIfZero, 0);
+
+          emitInstruction(IrOpcode::LoadLocal, static_cast<uint64_t>(ptrLocal));
+          emitInstruction(IrOpcode::LoadLocal,
+                          static_cast<uint64_t>(sourceSlotOffsetLocal));
+          emitInstruction(IrOpcode::LoadLocal, static_cast<uint64_t>(copyIndexLocal));
+          emitInstruction(IrOpcode::AddI64, 0);
+          emitInstruction(IrOpcode::PushI64, 1);
+          emitInstruction(IrOpcode::AddI64, 0);
+          emitInstruction(IrOpcode::PushI64, IrSlotBytes);
+          emitInstruction(IrOpcode::MulI64, 0);
+          emitInstruction(IrOpcode::AddI64, 0);
+          emitInstruction(IrOpcode::StoreLocal, static_cast<uint64_t>(srcSlotPtrLocal));
+
+          emitInstruction(IrOpcode::LoadLocal, static_cast<uint64_t>(slicePtrLocal));
+          emitInstruction(IrOpcode::LoadLocal, static_cast<uint64_t>(copyIndexLocal));
+          emitInstruction(IrOpcode::PushI64, 1);
+          emitInstruction(IrOpcode::AddI64, 0);
+          emitInstruction(IrOpcode::PushI64, IrSlotBytes);
+          emitInstruction(IrOpcode::MulI64, 0);
+          emitInstruction(IrOpcode::AddI64, 0);
+          emitInstruction(IrOpcode::StoreLocal, static_cast<uint64_t>(destSlotPtrLocal));
+
+          emitInstruction(IrOpcode::LoadLocal, static_cast<uint64_t>(srcSlotPtrLocal));
+          emitInstruction(IrOpcode::LoadIndirect, 0);
+          emitInstruction(IrOpcode::StoreLocal, static_cast<uint64_t>(copyValueLocal));
+          emitInstruction(IrOpcode::LoadLocal, static_cast<uint64_t>(destSlotPtrLocal));
+          emitInstruction(IrOpcode::LoadLocal, static_cast<uint64_t>(copyValueLocal));
+          emitInstruction(IrOpcode::StoreIndirect, 0);
+          emitInstruction(IrOpcode::Pop, 0);
+
+          emitInstruction(IrOpcode::LoadLocal, static_cast<uint64_t>(copyIndexLocal));
+          emitInstruction(IrOpcode::PushI64, 1);
+          emitInstruction(IrOpcode::AddI64, 0);
+          emitInstruction(IrOpcode::StoreLocal, static_cast<uint64_t>(copyIndexLocal));
+          emitInstruction(IrOpcode::Jump, static_cast<uint64_t>(loopStart));
+
+          patchInstructionImm(jumpLoopEnd,
+                              static_cast<uint64_t>(function.instructions.size()));
+          emitInstruction(IrOpcode::LoadLocal, static_cast<uint64_t>(slicePtrLocal));
+          return true;
+        }
         #include "IrLowererLowerEmitExprCollectionHelpers.h"
         #include "IrLowererLowerEmitExprTailDispatch.h"

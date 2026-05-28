@@ -217,34 +217,97 @@ const Expr *arrayExtentCountTarget(const Expr &expr) {
   return &expr.args.front();
 }
 
-std::optional<std::size_t> staticArrayExtentForBindingInitializer(const Expr &bindingExpr) {
+std::optional<int64_t> snapshotSignedLiteralValue(const Expr &expr) {
+  if (expr.kind != Expr::Kind::Literal || expr.isUnsigned) {
+    return std::nullopt;
+  }
+  if (expr.intWidth == 64) {
+    return static_cast<int64_t>(expr.literalValue);
+  }
+  return static_cast<int32_t>(expr.literalValue);
+}
+
+std::string snapshotExtentExprText(const Expr &expr) {
+  if (expr.kind == Expr::Kind::Name) {
+    return expr.name;
+  }
+  if (const auto literal = snapshotSignedLiteralValue(expr)) {
+    return std::to_string(*literal);
+  }
+  return "?";
+}
+
+std::optional<std::size_t> staticArrayExtentForBindingInitializer(
+    const std::string &scopePath,
+    const Expr &bindingExpr,
+    const std::unordered_map<std::string, std::size_t> &staticExtentsByResolvedPath,
+    std::string &extentExpressionOut) {
+  extentExpressionOut.clear();
   if (bindingExpr.args.size() != 1) {
     return std::nullopt;
   }
   const Expr &initializer = bindingExpr.args.front();
   std::string collectionName;
-  if (!getBuiltinCollectionName(initializer, collectionName) ||
-      collectionName != "array") {
+  if (getBuiltinCollectionName(initializer, collectionName) &&
+      collectionName == "array") {
+    return initializer.args.size();
+  }
+  if (initializer.kind != Expr::Kind::Call || initializer.isMethodCall ||
+      !isSimpleCallName(initializer, "slice") || initializer.args.size() != 3 ||
+      initializer.args.front().kind != Expr::Kind::Name) {
     return std::nullopt;
   }
-  return initializer.args.size();
+  const Expr &startExpr = initializer.args[1];
+  const Expr &endExpr = initializer.args[2];
+  extentExpressionOut =
+      snapshotExtentExprText(endExpr) + " - " + snapshotExtentExprText(startExpr);
+  const auto start = snapshotSignedLiteralValue(startExpr);
+  const auto end = snapshotSignedLiteralValue(endExpr);
+  if (!start.has_value() || !end.has_value() || *end < *start) {
+    return std::nullopt;
+  }
+  const std::string targetResolvedPath =
+      fallbackSnapshotBindingResolvedPath(scopePath, initializer.args.front().name);
+  const auto targetExtent = staticExtentsByResolvedPath.find(targetResolvedPath);
+  if (targetExtent == staticExtentsByResolvedPath.end() ||
+      *start < 0 ||
+      static_cast<std::size_t>(*end) > targetExtent->second) {
+    return std::nullopt;
+  }
+  return static_cast<std::size_t>(*end - *start);
 }
 
 void collectStaticArrayExtentsForBindings(
     const std::string &scopePath,
     const std::vector<Expr> &exprs,
-    std::unordered_map<std::string, std::size_t> &staticExtentsByResolvedPath) {
+    std::unordered_map<std::string, std::size_t> &staticExtentsByResolvedPath,
+    std::unordered_map<std::string, std::string> &extentExpressionsByResolvedPath) {
   for (const Expr &expr : exprs) {
     if (expr.isBinding) {
-      if (const std::optional<std::size_t> extent =
-              staticArrayExtentForBindingInitializer(expr);
-          extent.has_value()) {
-        staticExtentsByResolvedPath.insert_or_assign(
-            fallbackSnapshotBindingResolvedPath(scopePath, expr.name), *extent);
+      std::string extentExpression;
+      const std::optional<std::size_t> extent =
+          staticArrayExtentForBindingInitializer(
+              scopePath, expr, staticExtentsByResolvedPath, extentExpression);
+      if (extent.has_value() || !extentExpression.empty()) {
+        const std::string resolvedPath =
+            fallbackSnapshotBindingResolvedPath(scopePath, expr.name);
+        if (extent.has_value()) {
+          staticExtentsByResolvedPath.insert_or_assign(resolvedPath, *extent);
+        }
+        if (!extentExpression.empty()) {
+          extentExpressionsByResolvedPath.insert_or_assign(
+              resolvedPath, std::move(extentExpression));
+        }
       }
     }
-    collectStaticArrayExtentsForBindings(scopePath, expr.args, staticExtentsByResolvedPath);
-    collectStaticArrayExtentsForBindings(scopePath, expr.bodyArguments, staticExtentsByResolvedPath);
+    collectStaticArrayExtentsForBindings(scopePath,
+                                         expr.args,
+                                         staticExtentsByResolvedPath,
+                                         extentExpressionsByResolvedPath);
+    collectStaticArrayExtentsForBindings(scopePath,
+                                         expr.bodyArguments,
+                                         staticExtentsByResolvedPath,
+                                         extentExpressionsByResolvedPath);
   }
 }
 
@@ -2251,11 +2314,13 @@ std::vector<ArrayExtentFactSnapshotEntry>
 SemanticsValidator::arrayExtentFactSnapshotForSemanticProduct() {
   std::vector<ArrayExtentFactSnapshotEntry> entries;
   std::unordered_map<std::string, std::size_t> staticExtentsByResolvedPath;
+  std::unordered_map<std::string, std::string> extentExpressionsByResolvedPath;
 
   for (const auto &def : program_.definitions) {
     collectStaticArrayExtentsForBindings(def.fullPath,
                                          def.statements,
-                                         staticExtentsByResolvedPath);
+                                         staticExtentsByResolvedPath,
+                                         extentExpressionsByResolvedPath);
   }
 
   auto resolvedPathForBindingEntry = [](const BindingFactSnapshotEntry &entry) {
@@ -2289,7 +2354,13 @@ SemanticsValidator::arrayExtentFactSnapshotForSemanticProduct() {
     entry.targetResolvedPath = resolvedPath;
     entry.binding = bindingEntry.binding;
     entry.elementTypeText = shape.elementTypeText;
-    entry.extentExpression = "count(" + bindingEntry.name + ")";
+    if (const auto extentExpression =
+            extentExpressionsByResolvedPath.find(resolvedPath);
+        extentExpression != extentExpressionsByResolvedPath.end()) {
+      entry.extentExpression = extentExpression->second;
+    } else {
+      entry.extentExpression = "count(" + bindingEntry.name + ")";
+    }
     entry.isReference = shape.isReference;
     if (const auto staticExtent = staticExtentsByResolvedPath.find(resolvedPath);
         staticExtent != staticExtentsByResolvedPath.end()) {

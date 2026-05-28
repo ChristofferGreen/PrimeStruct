@@ -64,12 +64,11 @@ This file is the live open-work queue for PrimeStruct.
 
 ### Ready Now
 
-- TODO-4608: Add checked array slice construction | track: array-slice-construction | surface: safe array slice construction
+- TODO-4609: Reject escaping local array slices | track: array-slice-escape-diagnostics | surface: slice view lifetime diagnostics
+- TODO-4610: Add forward cursor traversal API | track: cursor-forward-traversal | surface: forward cursor traversal
 
 ### Immediate Next 10
 
-- TODO-4609: Reject escaping local array slices
-- TODO-4610: Add forward cursor traversal API
 - TODO-4611: Add reverse cursor traversal API
 - TODO-4612: Add safe extent and cursor code examples
 
@@ -116,49 +115,27 @@ This file is the live open-work queue for PrimeStruct.
   contract phase split, and TODO-4605 completed the non-null safe pointer
   optionality model. TODO-4606 specified the capability-parameterized
   reference/slice view model in the normative docs. TODO-4607 published the
-  initial semantic-product array extent facts. TODO-4608 through TODO-4612
-  remain from the agreed backlog in `docs/SafeArrayExtentViews.md`: checked
-  slices, conservative view escapes, cursor traversal with
+  initial semantic-product array extent facts, and TODO-4608 added the first
+  checked read-only array slice construction surface. TODO-4609 through
+  TODO-4612 remain from the agreed backlog in `docs/SafeArrayExtentViews.md`:
+  conservative view escapes, cursor traversal with
   `limit(...)` / `reverse_limit(...)` boundaries, and style-aligned examples
   once the surface is specified.
 
 ### Execution Queue
 
-1. TODO-4608: Add checked array slice construction
-2. TODO-4609: Reject escaping local array slices
-3. TODO-4610: Add forward cursor traversal API
-4. TODO-4611: Add reverse cursor traversal API
-5. TODO-4612: Add safe extent and cursor code examples
+1. TODO-4609: Reject escaping local array slices
+2. TODO-4610: Add forward cursor traversal API
+3. TODO-4611: Add reverse cursor traversal API
+4. TODO-4612: Add safe extent and cursor code examples
 
 ### Task Blocks
-
-- [ ] TODO-4608: Add checked array slice construction
-  - owner: ai
-  - created_at: 2026-05-27
-  - phase: Safe array extents and views
-  - parallel_track: array-slice-construction
-  - depends_on: TODO-4607
-  - scope: Add the first checked `slice(values, start, end)` surface for
-    `array<T>`/`Reference<array<T>>` inputs, publishing
-    `count(result) == end - start` plus provenance facts and emitting one
-    construction-time bounds check when the range is not statically proven.
-  - implementation_notes: Start with parser/semantic recognition for the
-    chosen slice helper path, semantic-product extent/view facts, and
-    VM/native/IR-to-C++ lowering for read-only array slices.
-  - acceptance:
-    - Valid array slices can be indexed and counted through VM/native and C++
-      emit paths.
-    - Static invalid ranges produce deterministic diagnostics; runtime ranges
-      emit deterministic construction-time bounds failures.
-    - Lowering uses the published slice extent fact for indexed access instead
-      of rechecking the original owner expression.
-  - stop_rule: Stop once read-only array slices work end to end; leave mutable
-    slices, vectors, and cursor traversal to later leaves.
 
 - [ ] TODO-4609: Reject escaping local array slices
   - owner: ai
   - created_at: 2026-05-27
   - phase: Safe array extents and views
+  - parallel_track: array-slice-escape-diagnostics
   - depends_on: TODO-4608
   - scope: Add the first conservative view lifetime diagnostic by rejecting a
     slice or reference view that escapes a local array owner through return,
@@ -179,6 +156,7 @@ This file is the live open-work queue for PrimeStruct.
   - owner: ai
   - created_at: 2026-05-27
   - phase: Safe array extents and views
+  - parallel_track: cursor-forward-traversal
   - depends_on: TODO-4608
   - scope: Add the first read-only forward cursor traversal API for arrays and
     vectors using `start(values)` as the first position and `limit(values)` as

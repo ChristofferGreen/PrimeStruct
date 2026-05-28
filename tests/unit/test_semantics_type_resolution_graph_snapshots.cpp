@@ -5277,7 +5277,9 @@ score([args<Reference<i32>>] refs) {
 [return<i32>]
 main() {
   [array<i32>] values{array<i32>{1i32, 2i32, 3i32}}
+  [array<i32>] window{slice(values, 1i32, 3i32)}
   [i32] localCount{count(values)}
+  [i32] windowCount{count(window)}
   [Reference<array<i32>>] ref{location(values)}
   return(consume(ref))
 }
@@ -5313,6 +5315,21 @@ main() {
   CHECK(localExtent->semanticNodeId == localExtent->targetSemanticNodeId);
   CHECK(primec::semanticProgramArrayExtentFactTargetResolvedPath(
             semanticProgram, *localExtent) == "/main/values");
+
+  const auto *sliceExtent = findSemanticEntry(
+      arrayExtentFacts,
+      [](const primec::SemanticProgramArrayExtentFact &entry) {
+        return entry.scopePath == "/main" &&
+               entry.siteKind == "local-value" &&
+               entry.targetName == "window";
+      });
+  REQUIRE(sliceExtent != nullptr);
+  CHECK(sliceExtent->bindingTypeText == "array<i32>");
+  CHECK(sliceExtent->elementTypeText == "i32");
+  CHECK(sliceExtent->extentExpression == "3 - 1");
+  CHECK_FALSE(sliceExtent->isReference);
+  CHECK(sliceExtent->hasStaticExtent);
+  CHECK(sliceExtent->staticExtent == 2);
 
   const auto *parameterExtent = findSemanticEntry(
       arrayExtentFacts,
@@ -5353,6 +5370,18 @@ main() {
   CHECK(localCountExtent->staticExtent == 3);
   CHECK(localCountExtent->targetSemanticNodeId != 0);
   CHECK(localCountExtent->semanticNodeId != localCountExtent->targetSemanticNodeId);
+
+  const auto *sliceCountExtent = findSemanticEntry(
+      arrayExtentFacts,
+      [](const primec::SemanticProgramArrayExtentFact &entry) {
+        return entry.scopePath == "/main" &&
+               entry.siteKind == "count-expression" &&
+               entry.targetName == "window";
+      });
+  REQUIRE(sliceCountExtent != nullptr);
+  CHECK(sliceCountExtent->bindingTypeText == "array<i32>");
+  CHECK(sliceCountExtent->hasStaticExtent);
+  CHECK(sliceCountExtent->staticExtent == 2);
 
   const auto *parameterCountExtent = findSemanticEntry(
       arrayExtentFacts,
