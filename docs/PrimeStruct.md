@@ -1830,15 +1830,17 @@ Current semantic-product dump contract:
   resolved targets, inferred types, effects, or helper-routing facts.
 
 Current semantic-product API/version contract:
-- `SemanticProductContractVersionCurrent` is `SemanticProductContractVersionV2`.
+- `SemanticProductContractVersionCurrent` is `SemanticProductContractVersionV3`.
+- Version 3 adds `arrayExtentFacts`, a semantic-product-owned dump/API family for array element-count facts on
+  local `array<T>` values, `array<T>` / `Reference<array<T>>` parameters, and direct `count(...)` expressions.
 - Version 2 is an API-only contract bump; it does not intentionally change the `semantic-product` text dump shape.
 - Version 2 adds fact-family ownership metadata through `semanticProgramFactFamilyInfos()`,
   `semanticProgramFactFamilyOwnership(...)`, `semanticProgramFactFamilyIsSemanticProductOwned(...)`, and
   `semanticProgramFactFamilyIsAstProvenanceOwned(...)`.
 - Fact-family ownership is split into:
   - `SemanticProduct`: lowering-facing facts owned by the semantic product, including resolved call/method/bridge
-    targets, callable summaries, type/field metadata, collection specializations, binding/return facts, local-auto
-    facts, query/try facts, `on_error` facts, and lowerer preflight facts.
+    targets, callable summaries, type/field metadata, collection specializations, array extent facts,
+    binding/return facts, local-auto facts, query/try facts, `on_error` facts, and lowerer preflight facts.
   - `AstProvenance`: syntax/body/provenance inventory that remains paired with the AST, currently source/import
     inventories plus definition/execution body inventories.
   - `DerivedIndex`: indexes and intern tables derived from semantic-product facts for deterministic lookup and

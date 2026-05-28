@@ -35,7 +35,7 @@ struct SemanticProductCompletenessCheck {
 
 struct SemanticProductContractManifest {
   uint32_t version = SemanticProductContractVersionCurrent;
-  const std::array<SemanticProductCompletenessCheck, 10> *checks = nullptr;
+  const std::array<SemanticProductCompletenessCheck, 11> *checks = nullptr;
 };
 
 bool validateDirectCallFactFamily(const SemanticProductCompletenessContext &context,
@@ -70,6 +70,13 @@ bool validateCollectionSpecializationFactFamily(
     const SemanticProductCompletenessContext &context,
     std::string &error) {
   return validateSemanticProductCollectionSpecializationCoverage(
+      context.program, context.semanticProgram, error);
+}
+
+bool validateArrayExtentFactFamily(
+    const SemanticProductCompletenessContext &context,
+    std::string &error) {
+  return validateSemanticProductArrayExtentCoverage(
       context.program, context.semanticProgram, error);
 }
 
@@ -180,7 +187,7 @@ bool validateOnErrorFactFamily(const SemanticProductCompletenessContext &context
   return true;
 }
 
-const std::array<SemanticProductCompletenessCheck, 10> kSemanticProductCompletenessMatrix = {{
+const std::array<SemanticProductCompletenessCheck, 11> kSemanticProductCompletenessMatrix = {{
     {"routing.direct-call", "directCallTargets[].resolvedPathId", validateDirectCallFactFamily},
     {"routing.bridge-path", "bridgePathChoices[].chosenPathId", validateBridgePathFactFamily},
     {"routing.method-call", "methodCallTargets[].resolvedPathId", validateMethodCallFactFamily},
@@ -188,6 +195,9 @@ const std::array<SemanticProductCompletenessCheck, 10> kSemanticProductCompleten
     {"type-shape.collection-specialization",
      "collectionSpecializations[].collectionFamily",
      validateCollectionSpecializationFactFamily},
+    {"type-shape.array-extent",
+     "arrayExtentFacts[].elementTypeText",
+     validateArrayExtentFactFamily},
     {"type-shape.local-auto", "localAutoFacts[].bindingTypeText", validateLocalAutoFactFamily},
     {"type-shape.struct-layout", "typeMetadata[] + structFieldMetadata[]", validateStructLayoutFactFamily},
     {"result-control.entry-args", "entryPath + bindingFacts[]", validateEntryParameterFactFamily},
@@ -195,8 +205,8 @@ const std::array<SemanticProductCompletenessCheck, 10> kSemanticProductCompleten
     {"result-control.metadata", "callableSummaries[].fullPathId", validateResultMetadataFactFamily},
 }};
 
-const SemanticProductContractManifest kSemanticProductContractManifestV2 = {
-    .version = SemanticProductContractVersionV2,
+const SemanticProductContractManifest kSemanticProductContractManifestV3 = {
+    .version = SemanticProductContractVersionV3,
     .checks = &kSemanticProductCompletenessMatrix,
 };
 
@@ -249,6 +259,10 @@ bool validateModuleResolvedArtifactIdentity(const SemanticProgram &semanticProgr
                                moduleKey,
                                module.collectionSpecializationIndices,
                                semanticProgram.collectionSpecializations.size()) ||
+        !validateFamilyIndices("type-shape.array-extent",
+                               moduleKey,
+                               module.arrayExtentFactIndices,
+                               semanticProgram.arrayExtentFacts.size()) ||
         !validateFamilyIndices("type-shape.local-auto",
                                moduleKey,
                                module.localAutoFactIndices,
@@ -284,16 +298,16 @@ bool validateSemanticProductCompletenessMatrix(const Program &program,
     return true;
   }
   if (semanticProgram->contractVersion !=
-      kSemanticProductContractManifestV2.version) {
+      kSemanticProductContractManifestV3.version) {
     error = "semantic-product contract version mismatch: expected " +
-            std::to_string(kSemanticProductContractManifestV2.version) + ", got " +
+            std::to_string(kSemanticProductContractManifestV3.version) + ", got " +
             std::to_string(semanticProgram->contractVersion);
     return false;
   }
   if (!validateModuleResolvedArtifactIdentity(*semanticProgram, error)) {
     return false;
   }
-  if (kSemanticProductContractManifestV2.checks == nullptr) {
+  if (kSemanticProductContractManifestV3.checks == nullptr) {
     error = "semantic-product contract manifest missing checks";
     return false;
   }
@@ -303,7 +317,7 @@ bool validateSemanticProductCompletenessMatrix(const Program &program,
       .entryDef = &entryDef,
       .semanticProgram = semanticProgram,
   };
-  for (const auto &check : *kSemanticProductContractManifestV2.checks) {
+  for (const auto &check : *kSemanticProductContractManifestV3.checks) {
     if (check.validate == nullptr) {
       continue;
     }

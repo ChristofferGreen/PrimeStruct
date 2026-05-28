@@ -5260,6 +5260,110 @@ TEST_CASE("semantic product publishes binding and return facts") {
   CHECK(pairReturnEntry->bindingTypeText == "Pair");
 }
 
+TEST_CASE("semantic product publishes array extent facts") {
+  const std::string source = R"(
+[return<i32>]
+consume([Reference<array<i32>>] values) {
+  [i32] viaParam{count(values)}
+  return(viaParam)
+}
+
+[return<i32>]
+main() {
+  [array<i32>] values{array<i32>{1i32, 2i32, 3i32}}
+  [i32] localCount{count(values)}
+  [Reference<array<i32>>] ref{location(values)}
+  return(consume(ref))
+}
+)";
+
+  auto program = parseProgram(source);
+  primec::Semantics semantics;
+  primec::SemanticProgram semanticProgram;
+  std::string error;
+  const std::vector<std::string> defaults = {"io_out", "io_err"};
+  REQUIRE_MESSAGE(
+      semantics.validate(program, "/main", error, defaults, defaults, {}, nullptr,
+                         false, &semanticProgram),
+      error);
+  CHECK(error.empty());
+
+  const auto arrayExtentFacts =
+      primec::semanticProgramArrayExtentFactView(semanticProgram);
+  const auto *localExtent = findSemanticEntry(
+      arrayExtentFacts,
+      [](const primec::SemanticProgramArrayExtentFact &entry) {
+        return entry.scopePath == "/main" &&
+               entry.siteKind == "local-value" &&
+               entry.targetName == "values";
+      });
+  REQUIRE(localExtent != nullptr);
+  CHECK(localExtent->bindingTypeText == "array<i32>");
+  CHECK(localExtent->elementTypeText == "i32");
+  CHECK(localExtent->extentExpression == "count(values)");
+  CHECK_FALSE(localExtent->isReference);
+  CHECK(localExtent->hasStaticExtent);
+  CHECK(localExtent->staticExtent == 3);
+  CHECK(localExtent->semanticNodeId == localExtent->targetSemanticNodeId);
+  CHECK(primec::semanticProgramArrayExtentFactTargetResolvedPath(
+            semanticProgram, *localExtent) == "/main/values");
+
+  const auto *parameterExtent = findSemanticEntry(
+      arrayExtentFacts,
+      [](const primec::SemanticProgramArrayExtentFact &entry) {
+        return entry.scopePath == "/consume" &&
+               entry.siteKind == "parameter-reference" &&
+               entry.targetName == "values";
+      });
+  REQUIRE(parameterExtent != nullptr);
+  CHECK(parameterExtent->bindingTypeText == "Reference<array<i32>>");
+  CHECK(parameterExtent->elementTypeText == "i32");
+  CHECK(parameterExtent->isReference);
+  CHECK_FALSE(parameterExtent->hasStaticExtent);
+
+  const auto *localCountExtent = findSemanticEntry(
+      arrayExtentFacts,
+      [](const primec::SemanticProgramArrayExtentFact &entry) {
+        return entry.scopePath == "/main" &&
+               entry.siteKind == "count-expression" &&
+               entry.targetName == "values";
+      });
+  REQUIRE(localCountExtent != nullptr);
+  CHECK(localCountExtent->bindingTypeText == "array<i32>");
+  CHECK(localCountExtent->hasStaticExtent);
+  CHECK(localCountExtent->staticExtent == 3);
+  CHECK(localCountExtent->targetSemanticNodeId != 0);
+  CHECK(localCountExtent->semanticNodeId != localCountExtent->targetSemanticNodeId);
+
+  const auto *parameterCountExtent = findSemanticEntry(
+      arrayExtentFacts,
+      [](const primec::SemanticProgramArrayExtentFact &entry) {
+        return entry.scopePath == "/consume" &&
+               entry.siteKind == "count-expression" &&
+               entry.targetName == "values";
+      });
+  REQUIRE(parameterCountExtent != nullptr);
+  CHECK(parameterCountExtent->bindingTypeText == "Reference<array<i32>>");
+  CHECK(parameterCountExtent->isReference);
+  CHECK_FALSE(parameterCountExtent->hasStaticExtent);
+  CHECK(parameterCountExtent->targetSemanticNodeId != 0);
+
+  const auto *lookupEntry =
+      primec::semanticProgramLookupPublishedArrayExtentFactBySemanticId(
+          semanticProgram, localCountExtent->semanticNodeId);
+  REQUIRE(lookupEntry != nullptr);
+  CHECK(lookupEntry->siteKind == "count-expression");
+  CHECK(lookupEntry->targetName == "values");
+
+  const std::string formatted = primec::formatSemanticProgram(semanticProgram);
+  CHECK(formatted.find("array_extent_facts[") != std::string::npos);
+  CHECK(formatted.find("site_kind=\"local-value\"") != std::string::npos);
+  CHECK(formatted.find("site_kind=\"parameter-reference\"") !=
+        std::string::npos);
+  CHECK(formatted.find("has_static_extent=true static_extent=3") !=
+        std::string::npos);
+}
+
 TEST_CASE("semantic product publishes graph-backed local auto query try and on_error facts") {
   const std::string source = R"(
 MyError {

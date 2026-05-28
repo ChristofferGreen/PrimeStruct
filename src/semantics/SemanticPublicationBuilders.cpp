@@ -508,6 +508,11 @@ struct CollectionSpecializationDraft {
   bool isPointer = false;
 };
 
+struct ArrayExtentDraft {
+  std::string elementTypeText;
+  bool isReference = false;
+};
+
 std::string collectionTypeRootForPublication(std::string_view collectionName,
                                              bool leadingSlash = false) {
   std::string root = leadingSlash ? "/" : "";
@@ -642,6 +647,37 @@ bool classifyCollectionSpecialization(std::string typeText,
       return true;
     }
     return false;
+  }
+}
+
+bool classifyArrayExtentBinding(std::string typeText, ArrayExtentDraft &draftOut) {
+  draftOut = {};
+  typeText = normalizeBindingTypeName(typeText);
+  while (true) {
+    std::string base;
+    std::string argText;
+    if (!splitTemplateTypeName(typeText, base, argText)) {
+      return false;
+    }
+    base = normalizeBindingTypeName(base);
+    if (base == "Reference") {
+      std::vector<std::string> args;
+      if (!splitTopLevelTemplateArgs(argText, args) || args.size() != 1) {
+        return false;
+      }
+      draftOut.isReference = true;
+      typeText = normalizeBindingTypeName(args.front());
+      continue;
+    }
+    if (base != "array") {
+      return false;
+    }
+    std::vector<std::string> args;
+    if (!splitTopLevelTemplateArgs(argText, args) || args.size() != 1) {
+      return false;
+    }
+    draftOut.elementTypeText = normalizeBindingTypeName(args.front());
+    return true;
   }
 }
 
@@ -1633,6 +1669,70 @@ void publishReturnFacts(
   }
 }
 
+void publishArrayExtentFacts(
+    SemanticPublicationBuilderState &state,
+    std::vector<ArrayExtentFactSnapshotEntry> arrayExtentFacts) {
+  if (arrayExtentFacts.empty()) {
+    return;
+  }
+  state.semanticProgram.arrayExtentFacts.reserve(arrayExtentFacts.size());
+  state.semanticProgram.publishedRoutingLookups.arrayExtentFactIndicesByExpr.reserve(
+      state.semanticProgram.publishedRoutingLookups.arrayExtentFactIndicesByExpr.size() +
+      arrayExtentFacts.size());
+  for (auto &snapshotEntry : arrayExtentFacts) {
+    const std::string bindingTypeText =
+        bindingTypeTextForSemanticProduct(snapshotEntry.binding);
+    ArrayExtentDraft draft;
+    if (!classifyArrayExtentBinding(bindingTypeText, draft)) {
+      continue;
+    }
+
+    SemanticProgramArrayExtentFact entry;
+    entry.scopePath = std::move(snapshotEntry.scopePath);
+    entry.siteKind = std::move(snapshotEntry.siteKind);
+    entry.targetName = std::move(snapshotEntry.targetName);
+    entry.targetResolvedPath = std::move(snapshotEntry.targetResolvedPath);
+    entry.bindingTypeText = bindingTypeText;
+    entry.elementTypeText = snapshotEntry.elementTypeText.empty()
+                                ? draft.elementTypeText
+                                : std::move(snapshotEntry.elementTypeText);
+    entry.extentExpression = std::move(snapshotEntry.extentExpression);
+    entry.isReference = snapshotEntry.isReference || draft.isReference;
+    entry.hasStaticExtent = snapshotEntry.hasStaticExtent;
+    entry.staticExtent = snapshotEntry.staticExtent;
+    entry.sourceLine = snapshotEntry.sourceLine;
+    entry.sourceColumn = snapshotEntry.sourceColumn;
+    entry.semanticNodeId = snapshotEntry.semanticNodeId;
+    entry.targetSemanticNodeId = snapshotEntry.targetSemanticNodeId;
+    entry.provenanceHandle = makeSemanticProvenanceHandle(snapshotEntry.semanticNodeId);
+    entry.scopePathId = semanticProgramInternCallTargetString(state.semanticProgram, entry.scopePath);
+    entry.siteKindId = semanticProgramInternCallTargetString(state.semanticProgram, entry.siteKind);
+    entry.targetNameId =
+        semanticProgramInternCallTargetString(state.semanticProgram, entry.targetName);
+    entry.targetResolvedPathId =
+        semanticProgramInternCallTargetString(state.semanticProgram, entry.targetResolvedPath);
+    entry.bindingTypeTextId =
+        semanticProgramInternCallTargetString(state.semanticProgram, entry.bindingTypeText);
+    entry.elementTypeTextId =
+        semanticProgramInternCallTargetString(state.semanticProgram, entry.elementTypeText);
+    entry.extentExpressionId =
+        semanticProgramInternCallTargetString(state.semanticProgram, entry.extentExpression);
+    const std::string_view moduleScopePath =
+        entry.scopePathId != InvalidSymbolId
+            ? semanticProgramResolveCallTargetString(state.semanticProgram, entry.scopePathId)
+            : std::string_view(entry.scopePath);
+    auto &module = state.ensureModuleResolvedArtifacts(moduleScopePath);
+    state.semanticProgram.arrayExtentFacts.push_back(std::move(entry));
+    const std::size_t entryIndex = state.semanticProgram.arrayExtentFacts.size() - 1;
+    const auto &publishedEntry = state.semanticProgram.arrayExtentFacts.back();
+    module.arrayExtentFactIndices.push_back(entryIndex);
+    if (publishedEntry.semanticNodeId != 0) {
+      state.semanticProgram.publishedRoutingLookups.arrayExtentFactIndicesByExpr
+          .insert_or_assign(publishedEntry.semanticNodeId, entryIndex);
+    }
+  }
+}
+
 void publishLocalAutoFacts(
     SemanticPublicationBuilderState &state,
     const std::vector<LocalAutoBindingSnapshotEntry> &localAutoFacts) {
@@ -1948,6 +2048,7 @@ void publishSemanticScopedFactFamilies(
     SemanticPublicationBuilderState &state,
     SemanticPublicationSurface &publicationSurface) {
   publishBindingFacts(state, std::move(publicationSurface.bindingFacts));
+  publishArrayExtentFacts(state, std::move(publicationSurface.arrayExtentFacts));
   publishReturnFacts(state, publicationSurface.returnFacts);
   publishLocalAutoFacts(state, publicationSurface.localAutoFacts);
   publishQueryFacts(state, std::move(publicationSurface.queryFacts));

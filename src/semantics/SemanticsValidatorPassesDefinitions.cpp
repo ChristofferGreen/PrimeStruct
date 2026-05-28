@@ -657,6 +657,8 @@ bool SemanticsValidator::validateDefinitions() {
                   result.publicationFacts.sumVariantMetadata);
       appendMoved(mergedWorkerPublicationFacts_.bindingFacts,
                   result.publicationFacts.bindingFacts);
+      appendMoved(mergedWorkerPublicationFacts_.arrayExtentFacts,
+                  result.publicationFacts.arrayExtentFacts);
       appendMoved(mergedWorkerPublicationFacts_.returnFacts,
                   result.publicationFacts.returnFacts);
       appendMoved(mergedWorkerPublicationFacts_.localAutoFacts,
@@ -807,6 +809,29 @@ bool SemanticsValidator::validateDefinitions() {
                        }
                        if (left.resolvedPath != right.resolvedPath) {
                          return left.resolvedPath < right.resolvedPath;
+                       }
+                       return left.semanticNodeId < right.semanticNodeId;
+                     });
+    std::stable_sort(mergedWorkerPublicationFacts_.arrayExtentFacts.begin(),
+                     mergedWorkerPublicationFacts_.arrayExtentFacts.end(),
+                     [](const auto &left, const auto &right) {
+                       if (left.scopePath != right.scopePath) {
+                         return left.scopePath < right.scopePath;
+                       }
+                       if (left.sourceLine != right.sourceLine) {
+                         return left.sourceLine < right.sourceLine;
+                       }
+                       if (left.sourceColumn != right.sourceColumn) {
+                         return left.sourceColumn < right.sourceColumn;
+                       }
+                       if (left.siteKind != right.siteKind) {
+                         return left.siteKind < right.siteKind;
+                       }
+                       if (left.targetName != right.targetName) {
+                         return left.targetName < right.targetName;
+                       }
+                       if (left.extentExpression != right.extentExpression) {
+                         return left.extentExpression < right.extentExpression;
                        }
                        return left.semanticNodeId < right.semanticNodeId;
                      });

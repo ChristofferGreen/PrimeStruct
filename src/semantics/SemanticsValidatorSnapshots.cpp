@@ -50,6 +50,16 @@ std::string fallbackSnapshotBindingResolvedPath(std::string_view scopePath,
   return normalizedScope;
 }
 
+std::string snapshotBindingTypeText(const BindingInfo &binding) {
+  if (binding.typeName.empty()) {
+    return {};
+  }
+  if (binding.typeTemplateArg.empty()) {
+    return binding.typeName;
+  }
+  return binding.typeName + "<" + binding.typeTemplateArg + ">";
+}
+
 template <typename Entry, typename PathForEntry>
 void appendEntriesForDefinitionPaths(std::vector<Entry> &out,
                                      std::vector<Entry> entries,
@@ -150,6 +160,88 @@ std::string snapshotKey(std::string_view first,
          std::to_string(sourceLine) + "\x1f" + std::to_string(sourceColumn) +
          "\x1f" + std::string(third) + "\x1f" + std::string(fourth) +
          "\x1f" + std::string(fifth);
+}
+
+struct SnapshotArrayExtentShape {
+  std::string elementTypeText;
+  bool isReference = false;
+};
+
+bool classifySnapshotArrayExtentBinding(const BindingInfo &binding,
+                                        SnapshotArrayExtentShape &shapeOut) {
+  shapeOut = {};
+  std::string typeText = normalizeBindingTypeName(snapshotBindingTypeText(binding));
+  while (true) {
+    std::string base;
+    std::string argText;
+    if (!splitTemplateTypeName(typeText, base, argText)) {
+      return false;
+    }
+    base = normalizeBindingTypeName(base);
+    if (base == "Reference") {
+      std::vector<std::string> args;
+      if (!splitTopLevelTemplateArgs(argText, args) || args.size() != 1) {
+        return false;
+      }
+      shapeOut.isReference = true;
+      typeText = normalizeBindingTypeName(args.front());
+      continue;
+    }
+    if (base != "array") {
+      return false;
+    }
+    std::vector<std::string> args;
+    if (!splitTopLevelTemplateArgs(argText, args) || args.size() != 1) {
+      return false;
+    }
+    shapeOut.elementTypeText = normalizeBindingTypeName(args.front());
+    return true;
+  }
+}
+
+const Expr *arrayExtentCountTarget(const Expr &expr) {
+  if (expr.kind != Expr::Kind::Call || expr.args.empty()) {
+    return nullptr;
+  }
+  std::string_view name = expr.name;
+  if (const std::size_t slash = name.find_last_of('/'); slash != std::string_view::npos) {
+    name.remove_prefix(slash + 1);
+  }
+  if (name != "count") {
+    return nullptr;
+  }
+  return &expr.args.front();
+}
+
+std::optional<std::size_t> staticArrayExtentForBindingInitializer(const Expr &bindingExpr) {
+  if (bindingExpr.args.size() != 1) {
+    return std::nullopt;
+  }
+  const Expr &initializer = bindingExpr.args.front();
+  std::string collectionName;
+  if (!getBuiltinCollectionName(initializer, collectionName) ||
+      collectionName != "array") {
+    return std::nullopt;
+  }
+  return initializer.args.size();
+}
+
+void collectStaticArrayExtentsForBindings(
+    const std::string &scopePath,
+    const std::vector<Expr> &exprs,
+    std::unordered_map<std::string, std::size_t> &staticExtentsByResolvedPath) {
+  for (const Expr &expr : exprs) {
+    if (expr.isBinding) {
+      if (const std::optional<std::size_t> extent =
+              staticArrayExtentForBindingInitializer(expr);
+          extent.has_value()) {
+        staticExtentsByResolvedPath.insert_or_assign(
+            fallbackSnapshotBindingResolvedPath(scopePath, expr.name), *extent);
+      }
+    }
+    collectStaticArrayExtentsForBindings(scopePath, expr.args, staticExtentsByResolvedPath);
+    collectStaticArrayExtentsForBindings(scopePath, expr.bodyArguments, staticExtentsByResolvedPath);
+  }
 }
 
 bool matchesStdlibSurfaceMetadata(const StdlibSurfaceMetadata &metadata,
@@ -960,6 +1052,13 @@ void SemanticsValidator::collectDefinitionPublicationFactsForStableRange(
         return entry.scopePath;
       });
   appendEntriesForDefinitionPaths(
+      out.arrayExtentFacts,
+      arrayExtentFactSnapshotForSemanticProduct(),
+      definitionPaths,
+      [](const ArrayExtentFactSnapshotEntry &entry) -> const std::string & {
+        return entry.scopePath;
+      });
+  appendEntriesForDefinitionPaths(
       out.returnFacts,
       returnFactSnapshotForSemanticProduct(),
       definitionPaths,
@@ -1014,6 +1113,7 @@ void SemanticsValidator::rebindMergedWorkerPublicationFactSemanticNodeIds() {
   auto freshSumTypeMetadata = sumTypeMetadataSnapshotForSemanticProduct();
   auto freshSumVariantMetadata = sumVariantMetadataSnapshotForSemanticProduct();
   auto freshBindingFacts = bindingFactSnapshotForSemanticProduct();
+  auto freshArrayExtentFacts = arrayExtentFactSnapshotForSemanticProduct();
   auto freshReturnFacts = returnFactSnapshotForSemanticProduct();
   auto freshLocalAutoFacts = localAutoFactSnapshotForSemanticProduct();
   auto freshQueryFacts = queryFactSnapshotForSemanticProduct();
@@ -1167,6 +1267,48 @@ void SemanticsValidator::rebindMergedWorkerPublicationFactSemanticNodeIds() {
       mergedWorkerPublicationFacts_.bindingFacts,
       std::move(freshBindingFacts),
       bindingFactSnapshotKey);
+  const auto arrayExtentFactSnapshotKey =
+      [](const ArrayExtentFactSnapshotEntry &entry) {
+        return snapshotKey(entry.scopePath,
+                           entry.siteKind,
+                           entry.sourceLine,
+                           entry.sourceColumn,
+                           entry.targetName,
+                           entry.targetResolvedPath,
+                           entry.extentExpression);
+      };
+  if (appendMissingEntriesBySnapshotKey(
+          mergedWorkerPublicationFacts_.arrayExtentFacts,
+          freshArrayExtentFacts,
+          arrayExtentFactSnapshotKey)) {
+    std::stable_sort(mergedWorkerPublicationFacts_.arrayExtentFacts.begin(),
+                     mergedWorkerPublicationFacts_.arrayExtentFacts.end(),
+                     [](const auto &left, const auto &right) {
+                       if (left.scopePath != right.scopePath) {
+                         return left.scopePath < right.scopePath;
+                       }
+                       if (left.sourceLine != right.sourceLine) {
+                         return left.sourceLine < right.sourceLine;
+                       }
+                       if (left.sourceColumn != right.sourceColumn) {
+                         return left.sourceColumn < right.sourceColumn;
+                       }
+                       if (left.siteKind != right.siteKind) {
+                         return left.siteKind < right.siteKind;
+                       }
+                       if (left.targetName != right.targetName) {
+                         return left.targetName < right.targetName;
+                       }
+                       if (left.extentExpression != right.extentExpression) {
+                         return left.extentExpression < right.extentExpression;
+                       }
+                       return left.semanticNodeId < right.semanticNodeId;
+                     });
+  }
+  rebindSemanticNodeIdsBySnapshotKey(
+      mergedWorkerPublicationFacts_.arrayExtentFacts,
+      std::move(freshArrayExtentFacts),
+      arrayExtentFactSnapshotKey);
   rebindSemanticNodeIdsBySnapshotKey(
       mergedWorkerPublicationFacts_.returnFacts,
       std::move(freshReturnFacts),
@@ -1595,6 +1737,11 @@ SemanticsValidator::takeSemanticPublicationSurfaceForSemanticProduct(
     surface.bindingFacts = useMergedWorkerPublicationFacts
                                ? mergedWorkerPublicationFacts_.bindingFacts
                                : bindingFactSnapshotForSemanticProduct();
+  }
+  if (isSemanticCollectorEnabled(buildConfig, "array_extent_facts")) {
+    surface.arrayExtentFacts = useMergedWorkerPublicationFacts
+                                   ? mergedWorkerPublicationFacts_.arrayExtentFacts
+                                   : arrayExtentFactSnapshotForSemanticProduct();
   }
   if (isSemanticCollectorEnabled(buildConfig, "return_facts")) {
     surface.returnFacts = useMergedWorkerPublicationFacts
@@ -2092,6 +2239,128 @@ SemanticsValidator::bindingFactSnapshotForSemanticProduct() {
       return left.name < right.name;
     }
     return left.resolvedPath < right.resolvedPath;
+  });
+  return entries;
+}
+
+std::vector<ArrayExtentFactSnapshotEntry>
+SemanticsValidator::arrayExtentFactSnapshotForSemanticProduct() {
+  std::vector<ArrayExtentFactSnapshotEntry> entries;
+  std::unordered_map<std::string, std::size_t> staticExtentsByResolvedPath;
+
+  for (const auto &def : program_.definitions) {
+    collectStaticArrayExtentsForBindings(def.fullPath,
+                                         def.statements,
+                                         staticExtentsByResolvedPath);
+  }
+
+  auto resolvedPathForBindingEntry = [](const BindingFactSnapshotEntry &entry) {
+    return entry.resolvedPath.empty()
+               ? fallbackSnapshotBindingResolvedPath(entry.scopePath, entry.name)
+               : entry.resolvedPath;
+  };
+
+  for (const auto &bindingEntry : bindingFactSnapshotForSemanticProduct()) {
+    SnapshotArrayExtentShape shape;
+    if (!classifySnapshotArrayExtentBinding(bindingEntry.binding, shape)) {
+      continue;
+    }
+
+    std::string siteKind;
+    if (bindingEntry.siteKind == "local" && !shape.isReference) {
+      siteKind = "local-value";
+    } else if (bindingEntry.siteKind == "parameter" && shape.isReference) {
+      siteKind = "parameter-reference";
+    } else if (bindingEntry.siteKind == "parameter" && !shape.isReference) {
+      siteKind = "parameter-value";
+    } else {
+      continue;
+    }
+
+    const std::string resolvedPath = resolvedPathForBindingEntry(bindingEntry);
+    ArrayExtentFactSnapshotEntry entry;
+    entry.scopePath = bindingEntry.scopePath;
+    entry.siteKind = std::move(siteKind);
+    entry.targetName = bindingEntry.name;
+    entry.targetResolvedPath = resolvedPath;
+    entry.binding = bindingEntry.binding;
+    entry.elementTypeText = shape.elementTypeText;
+    entry.extentExpression = "count(" + bindingEntry.name + ")";
+    entry.isReference = shape.isReference;
+    if (const auto staticExtent = staticExtentsByResolvedPath.find(resolvedPath);
+        staticExtent != staticExtentsByResolvedPath.end()) {
+      entry.hasStaticExtent = true;
+      entry.staticExtent = staticExtent->second;
+    }
+    entry.sourceLine = bindingEntry.sourceLine;
+    entry.sourceColumn = bindingEntry.sourceColumn;
+    entry.semanticNodeId = bindingEntry.semanticNodeId;
+    entry.targetSemanticNodeId = bindingEntry.semanticNodeId;
+    entries.push_back(std::move(entry));
+  }
+
+  forEachLocalAwareSnapshotCall(
+      [&](const Definition &def,
+          const std::vector<ParameterInfo> &defParams,
+          const Expr &expr,
+          const std::unordered_map<std::string, BindingInfo> &activeLocals) {
+        const Expr *target = arrayExtentCountTarget(expr);
+        if (target == nullptr || target->kind != Expr::Kind::Name) {
+          return;
+        }
+        const BindingInfo *targetBinding =
+            findBinding(defParams, activeLocals, target->name);
+        if (targetBinding == nullptr) {
+          return;
+        }
+        SnapshotArrayExtentShape shape;
+        if (!classifySnapshotArrayExtentBinding(*targetBinding, shape)) {
+          return;
+        }
+
+        const std::string resolvedPath =
+            fallbackSnapshotBindingResolvedPath(def.fullPath, target->name);
+        ArrayExtentFactSnapshotEntry entry;
+        entry.scopePath = def.fullPath;
+        entry.siteKind = "count-expression";
+        entry.targetName = target->name;
+        entry.targetResolvedPath = resolvedPath;
+        entry.binding = *targetBinding;
+        entry.elementTypeText = shape.elementTypeText;
+        entry.extentExpression = "count(" + target->name + ")";
+        entry.isReference = shape.isReference;
+        if (const auto staticExtent = staticExtentsByResolvedPath.find(resolvedPath);
+            staticExtent != staticExtentsByResolvedPath.end()) {
+          entry.hasStaticExtent = true;
+          entry.staticExtent = staticExtent->second;
+        }
+        entry.sourceLine = expr.sourceLine;
+        entry.sourceColumn = expr.sourceColumn;
+        entry.semanticNodeId = expr.semanticNodeId;
+        entry.targetSemanticNodeId = target->semanticNodeId;
+        entries.push_back(std::move(entry));
+      });
+
+  std::stable_sort(entries.begin(), entries.end(), [](const auto &left, const auto &right) {
+    if (left.scopePath != right.scopePath) {
+      return left.scopePath < right.scopePath;
+    }
+    if (left.sourceLine != right.sourceLine) {
+      return left.sourceLine < right.sourceLine;
+    }
+    if (left.sourceColumn != right.sourceColumn) {
+      return left.sourceColumn < right.sourceColumn;
+    }
+    if (left.siteKind != right.siteKind) {
+      return left.siteKind < right.siteKind;
+    }
+    if (left.targetName != right.targetName) {
+      return left.targetName < right.targetName;
+    }
+    if (left.extentExpression != right.extentExpression) {
+      return left.extentExpression < right.extentExpression;
+    }
+    return left.semanticNodeId < right.semanticNodeId;
   });
   return entries;
 }

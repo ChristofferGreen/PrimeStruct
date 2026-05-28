@@ -37,6 +37,7 @@ SEMANTIC_COLLECTOR_FAMILIES = (
     "sum_type_metadata",
     "sum_variant_metadata",
     "binding_facts",
+    "array_extent_facts",
     "return_facts",
     "local_auto_facts",
     "query_facts",

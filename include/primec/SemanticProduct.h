@@ -19,8 +19,9 @@ namespace primec {
 
 inline constexpr uint32_t SemanticProductContractVersionV1 = 1;
 inline constexpr uint32_t SemanticProductContractVersionV2 = 2;
+inline constexpr uint32_t SemanticProductContractVersionV3 = 3;
 inline constexpr uint32_t SemanticProductContractVersionCurrent =
-    SemanticProductContractVersionV2;
+    SemanticProductContractVersionV3;
 
 enum class SemanticProgramFactOwnership {
   AstProvenance,
@@ -201,6 +202,31 @@ struct SemanticProgramCollectionSpecialization {
   SymbolId structPathId = InvalidSymbolId;
   std::optional<StdlibSurfaceId> helperSurfaceId = std::nullopt;
   std::optional<StdlibSurfaceId> constructorSurfaceId = std::nullopt;
+};
+
+struct SemanticProgramArrayExtentFact {
+  std::string scopePath = {};
+  std::string siteKind = {};
+  std::string targetName = {};
+  std::string targetResolvedPath = {};
+  std::string bindingTypeText = {};
+  std::string elementTypeText = {};
+  std::string extentExpression = {};
+  bool isReference = false;
+  bool hasStaticExtent = false;
+  std::size_t staticExtent = 0;
+  int sourceLine = 0;
+  int sourceColumn = 0;
+  uint64_t semanticNodeId = 0;
+  uint64_t targetSemanticNodeId = 0;
+  uint64_t provenanceHandle = 0;
+  SymbolId scopePathId = InvalidSymbolId;
+  SymbolId siteKindId = InvalidSymbolId;
+  SymbolId targetNameId = InvalidSymbolId;
+  SymbolId targetResolvedPathId = InvalidSymbolId;
+  SymbolId bindingTypeTextId = InvalidSymbolId;
+  SymbolId elementTypeTextId = InvalidSymbolId;
+  SymbolId extentExpressionId = InvalidSymbolId;
 };
 
 struct SemanticProgramBindingFact {
@@ -419,6 +445,7 @@ struct SemanticProgramModuleResolvedArtifacts {
   std::vector<std::size_t> bindingFactIndices = {};
   std::vector<std::size_t> returnFactIndices = {};
   std::vector<std::size_t> collectionSpecializationIndices = {};
+  std::vector<std::size_t> arrayExtentFactIndices = {};
   std::vector<std::size_t> localAutoFactIndices = {};
   std::vector<std::size_t> queryFactIndices = {};
   std::vector<std::size_t> tryFactIndices = {};
@@ -442,6 +469,7 @@ struct SemanticProgramPublishedRoutingLookups {
   std::unordered_map<SymbolId, std::size_t> sumTypeMetadataIndicesByPathId = {};
   std::unordered_map<uint64_t, std::size_t> sumVariantMetadataIndicesBySumPathAndVariantNameId = {};
   std::unordered_map<uint64_t, std::size_t> collectionSpecializationIndicesByExpr = {};
+  std::unordered_map<uint64_t, std::size_t> arrayExtentFactIndicesByExpr = {};
   std::unordered_map<uint64_t, std::size_t> onErrorFactIndicesByDefinitionId = {};
   std::unordered_map<SymbolId, std::size_t> onErrorFactIndicesByDefinitionPathId = {};
   std::unordered_map<uint64_t, std::size_t> localAutoFactIndicesByExpr = {};
@@ -481,6 +509,7 @@ struct SemanticProgram {
   std::vector<SemanticProgramSumTypeMetadata> sumTypeMetadata = {};
   std::vector<SemanticProgramSumVariantMetadata> sumVariantMetadata = {};
   std::vector<SemanticProgramCollectionSpecialization> collectionSpecializations = {};
+  std::vector<SemanticProgramArrayExtentFact> arrayExtentFacts = {};
   std::vector<SemanticProgramBindingFact> bindingFacts = {};
   std::vector<SemanticProgramReturnFact> returnFacts = {};
   std::vector<SemanticProgramLocalAutoFact> localAutoFacts = {};
@@ -510,6 +539,8 @@ semanticProgramStructFieldMetadataView(const SemanticProgram &semanticProgram,
                                        std::string_view structPath);
 std::vector<const SemanticProgramCollectionSpecialization *>
 semanticProgramCollectionSpecializationView(const SemanticProgram &semanticProgram);
+std::vector<const SemanticProgramArrayExtentFact *>
+semanticProgramArrayExtentFactView(const SemanticProgram &semanticProgram);
 std::vector<const SemanticProgramBindingFact *>
 semanticProgramBindingFactView(const SemanticProgram &semanticProgram);
 std::vector<const SemanticProgramReturnFact *>
@@ -584,6 +615,10 @@ const SemanticProgramCollectionSpecialization *
 semanticProgramLookupPublishedCollectionSpecializationBySemanticId(
     const SemanticProgram &semanticProgram,
     uint64_t semanticNodeId);
+const SemanticProgramArrayExtentFact *
+semanticProgramLookupPublishedArrayExtentFactBySemanticId(
+    const SemanticProgram &semanticProgram,
+    uint64_t semanticNodeId);
 const SemanticProgramLocalAutoFact *semanticProgramLookupPublishedLocalAutoFactBySemanticId(
     const SemanticProgram &semanticProgram,
     uint64_t semanticNodeId);
@@ -618,6 +653,9 @@ std::string_view semanticProgramBindingFactResolvedPath(
 std::string_view semanticProgramReturnFactDefinitionPath(
     const SemanticProgram &semanticProgram,
     const SemanticProgramReturnFact &entry);
+std::string_view semanticProgramArrayExtentFactTargetResolvedPath(
+    const SemanticProgram &semanticProgram,
+    const SemanticProgramArrayExtentFact &entry);
 std::string_view semanticProgramLocalAutoFactInitializerResolvedPath(
     const SemanticProgram &semanticProgram,
     const SemanticProgramLocalAutoFact &entry);

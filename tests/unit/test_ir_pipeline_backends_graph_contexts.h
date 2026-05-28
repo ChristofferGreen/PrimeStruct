@@ -758,6 +758,8 @@ TEST_CASE("backend registry keeps semantic-product negative fixture families cov
   CHECK(registrySource.find("missing semantic-product binding fact:") != std::string::npos);
   CHECK(registrySource.find("missing semantic-product collection specialization:") !=
         std::string::npos);
+  CHECK(registrySource.find("missing semantic-product array extent fact:") !=
+        std::string::npos);
   CHECK(registrySource.find("missing semantic-product local-auto fact:") != std::string::npos);
   CHECK(registrySource.find("missing semantic-product return fact:") != std::string::npos);
   CHECK(registrySource.find("missing semantic-product callable result metadata:") != std::string::npos);
@@ -992,6 +994,8 @@ TEST_CASE("compile pipeline publishes an initial semantic product shell") {
         std::string::npos);
   CHECK(semanticProduct.find("SemanticProductContractVersionV2 = 2") !=
         std::string::npos);
+  CHECK(semanticProduct.find("SemanticProductContractVersionV3 = 3") !=
+        std::string::npos);
   CHECK(semanticProduct.find("enum class SemanticProgramFactOwnership") !=
         std::string::npos);
   CHECK(semanticProduct.find("struct SemanticProgramFactFamilyInfo") !=
@@ -1012,6 +1016,8 @@ TEST_CASE("compile pipeline publishes an initial semantic product shell") {
         std::string::npos);
   CHECK(semanticProduct.find("std::unordered_map<SymbolId, SymbolId> importAliasTargetPathIdsByNameId = {};") !=
         std::string::npos);
+  CHECK(semanticProduct.find("std::unordered_map<uint64_t, std::size_t> arrayExtentFactIndicesByExpr = {};") !=
+        std::string::npos);
   CHECK(semanticProduct.find("std::vector<std::size_t> directCallTargetIndices = {};") !=
         std::string::npos);
   CHECK(semanticProduct.find("std::vector<std::size_t> methodCallTargetIndices = {};") !=
@@ -1021,6 +1027,8 @@ TEST_CASE("compile pipeline publishes an initial semantic product shell") {
   CHECK(semanticProduct.find("std::vector<std::size_t> callableSummaryIndices = {};") !=
         std::string::npos);
   CHECK(semanticProduct.find("std::vector<std::size_t> bindingFactIndices = {};") !=
+        std::string::npos);
+  CHECK(semanticProduct.find("std::vector<std::size_t> arrayExtentFactIndices = {};") !=
         std::string::npos);
   CHECK(semanticProduct.find("std::vector<std::size_t> returnFactIndices = {};") !=
         std::string::npos);
@@ -1053,6 +1061,7 @@ TEST_CASE("compile pipeline publishes an initial semantic product shell") {
   CHECK(semanticProduct.find("std::vector<SemanticProgramReturnFact> returnFacts = {};") != std::string::npos);
   CHECK(semanticProduct.find("std::vector<SemanticProgramLocalAutoFact> localAutoFacts = {};") != std::string::npos);
   CHECK(semanticProduct.find("std::vector<SemanticProgramQueryFact> queryFacts = {};") != std::string::npos);
+  CHECK(semanticProduct.find("std::vector<SemanticProgramArrayExtentFact> arrayExtentFacts = {};") != std::string::npos);
   CHECK(semanticProduct.find("std::vector<SemanticProgramTryFact> tryFacts = {};") != std::string::npos);
   CHECK(semanticProduct.find("std::vector<SemanticProgramOnErrorFact> onErrorFacts = {};") != std::string::npos);
   CHECK(semanticProduct.find("semanticProgramLookupPublishedLowererSoftwareNumericType(") !=
@@ -1064,6 +1073,10 @@ TEST_CASE("compile pipeline publishes an initial semantic product shell") {
   CHECK(semanticProduct.find("semanticProgramBindingFactView(const SemanticProgram &semanticProgram);") !=
         std::string::npos);
   CHECK(semanticProduct.find("semanticProgramReturnFactView(const SemanticProgram &semanticProgram);") !=
+        std::string::npos);
+  CHECK(semanticProduct.find("semanticProgramArrayExtentFactView(const SemanticProgram &semanticProgram);") !=
+        std::string::npos);
+  CHECK(semanticProduct.find("semanticProgramLookupPublishedArrayExtentFactBySemanticId(") !=
         std::string::npos);
   CHECK(semanticProduct.find("semanticProgramOnErrorFactView(const SemanticProgram &semanticProgram);") !=
         std::string::npos);
@@ -1512,6 +1525,11 @@ TEST_CASE("compile pipeline publishes an initial semantic product shell") {
   CHECK(bindingTypeHelpersSource.find(
             "missing semantic-product collection specialization: ") !=
         std::string::npos);
+  CHECK(bindingTypeHelpersSource.find(
+            "bool validateSemanticProductArrayExtentCoverage(") !=
+        std::string::npos);
+  CHECK(bindingTypeHelpersSource.find("missing semantic-product array extent fact: ") !=
+        std::string::npos);
   CHECK(bindingTypeHelpersSource.find("bool validateSemanticProductLocalAutoCoverage(const Program &program,") !=
         std::string::npos);
   CHECK(bindingTypeHelpersSource.find("findSemanticProductLocalAutoFactBySemanticId(semanticIndex, expr)") !=
@@ -1571,6 +1589,8 @@ TEST_CASE("semantic-product consumer coverage matrix stays source locked") {
   const std::string matrix = readRepoFile("docs/SemanticProductConsumerMatrix.md");
   const std::string registryTests =
       readRepoFile("tests/unit/test_ir_pipeline_backends_registry.cpp");
+  const std::string snapshotTests =
+      readRepoFile("tests/unit/test_semantics_type_resolution_graph_snapshots.cpp");
   const std::string callHelperTests = readRepoFile(
       "tests/unit/test_ir_pipeline_validation_ir_lowerer_call_helpers_source_delegation_stays_stable.cpp");
 
@@ -1637,6 +1657,11 @@ TEST_CASE("semantic-product consumer coverage matrix stays source locked") {
                 "for-condition auto bindings use semantic-product binding facts",
                 registryTests,
                 "ir lowerer rejects missing semantic-product binding facts",
+                registryTests);
+  checkCoverage("arrayExtentFacts",
+                "semantic product publishes array extent facts",
+                snapshotTests,
+                "ir lowerer rejects missing semantic-product array extent facts",
                 registryTests);
   checkCoverage("queryFacts",
                 "native Result combinator sources use semantic-product query facts",

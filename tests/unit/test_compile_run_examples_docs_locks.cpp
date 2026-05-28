@@ -2024,7 +2024,7 @@ TEST_CASE("todo queue and skipped doctest debt stay source locked") {
                   "  coverage snapshots in this file.") !=
         std::string::npos);
   CHECK(todo.find("### Ready Now\n\n"
-                  "- TODO-4607: Publish initial array extent facts | track: array-extent-facts | surface: semantic product extent facts\n"
+                  "- TODO-4608: Add checked array slice construction | track: array-slice-construction | surface: safe array slice construction\n"
                   "- TODO-4617: Add semantic preflight missing-fact diagnostics | track: semantic-product-preflight-diagnostics | surface: semantic product preflight facts\n"
                   "- TODO-4618: Fail closed on stale CT-eval requirement facts | track: ct-eval-requirement-fail-closed | surface: CT-eval requirement facts\n"
                   "- TODO-4621: Classify unsupported variadic-pack diagnostics | track: variadic-pack-diagnostic-tier | surface: lowerer/backend diagnostics\n\n"
@@ -2103,7 +2103,7 @@ TEST_CASE("todo queue and skipped doctest debt stay source locked") {
   CHECK(todo.find("- TODO-4574: Remove vector count/access compiler classifiers | track: vector-helper-classifier-deletion") ==
         std::string::npos);
   CHECK(todo.find("### Immediate Next 10\n\n"
-                  "- TODO-4608: Add checked array slice construction") !=
+                  "- TODO-4609: Reject escaping local array slices") !=
         std::string::npos);
   CHECK(todo.find("### Priority Lanes") != std::string::npos);
   CHECK(todo.find("Source-unit provenance ledger: TODO-4592 completed parser/semantic") ==
@@ -2125,10 +2125,11 @@ TEST_CASE("todo queue and skipped doctest debt stay source locked") {
   CHECK(todo.find("Safe array extents and capability views: TODO-4604 completed the requirement\n"
                   "  contract phase split, and TODO-4605 completed the non-null safe pointer\n"
                   "  optionality model. TODO-4606 specified the capability-parameterized\n"
-                  "  reference/slice view model in the normative docs. TODO-4607 through") !=
+                  "  reference/slice view model in the normative docs. TODO-4607 published the\n"
+                  "  initial semantic-product array extent facts. TODO-4608 through TODO-4612") !=
         std::string::npos);
   CHECK(todo.find("### Execution Queue\n\n"
-                  "1. TODO-4607: Publish initial array extent facts\n"
+                  "1. TODO-4608: Add checked array slice construction\n"
                   "2. TODO-4617: Add semantic preflight missing-fact diagnostics\n"
                   "3. TODO-4618: Fail closed on stale CT-eval requirement facts\n"
                   "4. TODO-4621: Classify unsupported variadic-pack diagnostics") !=
@@ -2139,7 +2140,9 @@ TEST_CASE("todo queue and skipped doctest debt stay source locked") {
   CHECK(todo.find("- [ ] TODO-4613: Retire semantic-validator private source locks") ==
         std::string::npos);
   CHECK(todo.find("### Task Blocks\n\n"
-                  "- [ ] TODO-4607: Publish initial array extent facts") !=
+                  "- [ ] TODO-4608: Add checked array slice construction") !=
+        std::string::npos);
+  CHECK(todo.find("- [ ] TODO-4607: Publish initial array extent facts") ==
         std::string::npos);
   CHECK(todo.find("- TODO-4606: Specify capability-parameterized views | track:") ==
         std::string::npos);
@@ -2162,6 +2165,10 @@ TEST_CASE("todo queue and skipped doctest debt stay source locked") {
   CHECK(todoFinished.find("Documented `Slice<T, Capability>` as the runtime-count contiguous view\n"
                           "      shape") != std::string::npos);
   CHECK(todoFinished.find("Promoted TODO-4607 as the next safe-array semantic-product leaf") !=
+        std::string::npos);
+  CHECK(todoFinished.find("TODO-4607: Publish initial array extent facts") !=
+        std::string::npos);
+  CHECK(todoFinished.find("Added `SemanticProgramArrayExtentFact` plus deterministic dump") !=
         std::string::npos);
   CHECK(todo.find("- TODO-4599: Migrate emitter collection surface lookups | track: "
                   "stdlib-registry-emitter") ==

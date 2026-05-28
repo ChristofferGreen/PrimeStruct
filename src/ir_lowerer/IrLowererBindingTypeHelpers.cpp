@@ -163,11 +163,47 @@ struct ExpectedCollectionSpecialization {
   std::vector<std::string> templateArgs;
 };
 
+struct ExpectedArrayExtent {
+  std::string elementTypeText;
+  bool isReference = false;
+};
+
 std::string normalizeExpectedCollectionTemplateArg(std::string arg) {
   arg = normalizeCollectionBindingTypeName(trimTemplateTypeText(arg));
   const LocalInfo::ValueKind valueKind = valueKindFromTypeName(arg);
   const std::string normalizedValueType = typeNameForValueKind(valueKind);
   return normalizedValueType.empty() ? arg : normalizedValueType;
+}
+
+bool extractExpectedArrayExtent(std::string typeText,
+                                ExpectedArrayExtent &out,
+                                bool isReference = false) {
+  typeText = unwrapTopLevelUninitializedTypeText(trimTemplateTypeText(typeText));
+  if (typeText.empty()) {
+    return false;
+  }
+
+  std::string base;
+  std::string argText;
+  if (!splitTemplateTypeName(typeText, base, argText)) {
+    return false;
+  }
+  base = normalizeCollectionBindingTypeName(trimTemplateTypeText(base));
+  argText = trimTemplateTypeText(argText);
+  if (base == "Reference") {
+    return extractExpectedArrayExtent(argText, out, true);
+  }
+  if (base != "array") {
+    return false;
+  }
+
+  std::vector<std::string> args;
+  if (!splitTemplateArgs(argText, args) || args.size() != 1) {
+    return false;
+  }
+  out.elementTypeText = normalizeExpectedCollectionTemplateArg(args.front());
+  out.isReference = isReference;
+  return true;
 }
 
 bool extractExpectedCollectionSpecialization(std::string typeText,
@@ -220,6 +256,46 @@ bool collectionSpecializationMatchesExpected(
            entry.valueTypeText == expected.templateArgs[1];
   }
   return true;
+}
+
+std::string resolveSemanticTextOrFallback(const SemanticProgram &semanticProgram,
+                                          SymbolId textId,
+                                          const std::string &fallback) {
+  if (textId != InvalidSymbolId) {
+    const std::string_view resolved =
+        semanticProgramResolveCallTargetString(semanticProgram, textId);
+    if (!resolved.empty()) {
+      return std::string(resolved);
+    }
+  }
+  return fallback;
+}
+
+bool arrayExtentBindingSiteRequiresFact(std::string_view siteKind,
+                                        bool isReference) {
+  if (siteKind == "local") {
+    return !isReference;
+  }
+  return siteKind == "parameter" && isReference;
+}
+
+std::string expectedArrayExtentSiteKind(std::string_view bindingSiteKind,
+                                        bool isReference) {
+  if (bindingSiteKind == "local") {
+    return isReference ? "local-reference" : "local-value";
+  }
+  if (bindingSiteKind == "parameter") {
+    return isReference ? "parameter-reference" : "parameter-value";
+  }
+  return std::string(bindingSiteKind);
+}
+
+std::string describeArrayExtentSite(const std::string &scopePath,
+                                    std::string_view siteKind,
+                                    std::string_view targetName) {
+  const std::string displayName =
+      targetName.empty() ? std::string("<unnamed>") : std::string(targetName);
+  return scopePath + " -> " + std::string(siteKind) + " " + displayName;
 }
 
 LocalInfo::Kind bindingKindFromCollectionSpecialization(
@@ -908,6 +984,226 @@ bool validateSemanticProductCollectionSpecializationCoverage(
   for (const auto &def : program.definitions) {
     for (const auto &param : def.parameters) {
       if (!validateBindingExpr(def.fullPath, "parameter", param)) {
+        return false;
+      }
+    }
+    if (!validateExprs(def.fullPath, def.statements) ||
+        (def.returnExpr.has_value() && !validateExpr(def.fullPath, *def.returnExpr))) {
+      return false;
+    }
+  }
+
+  return true;
+}
+
+bool validateSemanticProductArrayExtentCoverage(const Program &program,
+                                                const SemanticProgram *semanticProgram,
+                                                std::string &error) {
+  if (semanticProgram == nullptr) {
+    return true;
+  }
+
+  const SemanticProductIndex semanticIndex = buildSemanticProductIndex(semanticProgram);
+  auto requireTextMetadata = [&](SymbolId textId,
+                                 const std::string &fallback,
+                                 const std::string &expected,
+                                 std::string_view fieldLabel,
+                                 const std::string &siteDescription) {
+    if (textId == InvalidSymbolId) {
+      error = "missing semantic-product array extent " +
+              std::string(fieldLabel) + " id: " + siteDescription;
+      return false;
+    }
+    const std::string actual =
+        resolveSemanticTextOrFallback(*semanticProgram, textId, fallback);
+    if (actual.empty()) {
+      error = "missing semantic-product array extent " +
+              std::string(fieldLabel) + " id: " + siteDescription;
+      return false;
+    }
+    if (!expected.empty() && actual != expected) {
+      error = "stale semantic-product array extent " +
+              std::string(fieldLabel) + " metadata: " + siteDescription;
+      return false;
+    }
+    return true;
+  };
+
+  auto validateArrayExtentFact = [&](const SemanticProgramArrayExtentFact *arrayFact,
+                                     const ExpectedArrayExtent &expected,
+                                     const std::string &expectedSiteKind,
+                                     const std::string &expectedTargetName,
+                                     const std::string &expectedTargetResolvedPath,
+                                     uint64_t expectedTargetSemanticNodeId,
+                                     const std::string &expectedBindingTypeText,
+                                     const std::string &siteDescription) {
+    if (arrayFact == nullptr) {
+      error = "missing semantic-product array extent fact: " + siteDescription;
+      return false;
+    }
+    if (arrayFact->isReference != expected.isReference ||
+        arrayFact->targetSemanticNodeId != expectedTargetSemanticNodeId) {
+      error = "stale semantic-product array extent fact: " + siteDescription;
+      return false;
+    }
+    if (!requireTextMetadata(arrayFact->siteKindId,
+                             arrayFact->siteKind,
+                             expectedSiteKind,
+                             "site kind",
+                             siteDescription) ||
+        !requireTextMetadata(arrayFact->targetNameId,
+                             arrayFact->targetName,
+                             expectedTargetName,
+                             "target name",
+                             siteDescription) ||
+        !requireTextMetadata(arrayFact->targetResolvedPathId,
+                             arrayFact->targetResolvedPath,
+                             expectedTargetResolvedPath,
+                             "target path",
+                             siteDescription) ||
+        !requireTextMetadata(arrayFact->bindingTypeTextId,
+                             arrayFact->bindingTypeText,
+                             expectedBindingTypeText,
+                             "binding type",
+                             siteDescription) ||
+        !requireTextMetadata(arrayFact->elementTypeTextId,
+                             arrayFact->elementTypeText,
+                             expected.elementTypeText,
+                             "element type",
+                             siteDescription) ||
+        !requireTextMetadata(arrayFact->extentExpressionId,
+                             arrayFact->extentExpression,
+                             "count(" + expectedTargetName + ")",
+                             "expression",
+                             siteDescription)) {
+      return false;
+    }
+    return true;
+  };
+
+  auto validateBindingFact = [&](const SemanticProgramBindingFact &bindingFact) {
+    const std::string bindingTypeText =
+        resolveSemanticBindingFactTypeText(semanticProgram, bindingFact);
+    ExpectedArrayExtent expected;
+    if (!extractExpectedArrayExtent(bindingTypeText, expected)) {
+      return true;
+    }
+    const std::string siteKind =
+        resolveSemanticTextOrFallback(*semanticProgram,
+                                      bindingFact.siteKindId,
+                                      bindingFact.siteKind);
+    if (!arrayExtentBindingSiteRequiresFact(siteKind, expected.isReference)) {
+      return true;
+    }
+    const std::string scopePath =
+        resolveSemanticTextOrFallback(*semanticProgram,
+                                      bindingFact.scopePathId,
+                                      bindingFact.scopePath);
+    const std::string targetName =
+        resolveSemanticTextOrFallback(*semanticProgram,
+                                      bindingFact.nameId,
+                                      bindingFact.name);
+    const std::string targetResolvedPath =
+        std::string(semanticProgramBindingFactResolvedPath(*semanticProgram,
+                                                           bindingFact));
+    const std::string siteDescription =
+        describeArrayExtentSite(scopePath, siteKind, targetName);
+    if (targetResolvedPath.empty()) {
+      error = "missing semantic-product array extent target path: " +
+              siteDescription;
+      return false;
+    }
+    const SemanticProgramArrayExtentFact *arrayFact =
+        semanticProgramLookupPublishedArrayExtentFactBySemanticId(
+            *semanticProgram, bindingFact.semanticNodeId);
+    return validateArrayExtentFact(arrayFact,
+                                   expected,
+                                   expectedArrayExtentSiteKind(siteKind,
+                                                               expected.isReference),
+                                   targetName,
+                                   targetResolvedPath,
+                                   bindingFact.semanticNodeId,
+                                   bindingTypeText,
+                                   siteDescription);
+  };
+
+  for (const auto *bindingFact : semanticProgramBindingFactView(*semanticProgram)) {
+    if (bindingFact != nullptr && !validateBindingFact(*bindingFact)) {
+      return false;
+    }
+  }
+
+  auto countTarget = [](const Expr &expr) -> const Expr * {
+    if (expr.kind != Expr::Kind::Call || expr.args.empty()) {
+      return nullptr;
+    }
+    std::string_view name = expr.name;
+    if (const std::size_t slash = name.find_last_of('/');
+        slash != std::string_view::npos) {
+      name.remove_prefix(slash + 1);
+    }
+    if (name != "count") {
+      return nullptr;
+    }
+    return &expr.args.front();
+  };
+
+  std::function<bool(const std::string &, const Expr &)> validateExpr;
+  auto validateExprs = [&](const std::string &scopePath, const std::vector<Expr> &exprs) {
+    for (const auto &expr : exprs) {
+      if (!validateExpr(scopePath, expr)) {
+        return false;
+      }
+    }
+    return true;
+  };
+
+  validateExpr = [&](const std::string &scopePath, const Expr &expr) {
+    if (const Expr *target = countTarget(expr);
+        target != nullptr && target->kind == Expr::Kind::Name &&
+        expr.semanticNodeId != 0) {
+      const SemanticProgramBindingFact *targetBindingFact =
+          findSemanticProductBindingFact(semanticIndex, *target);
+      const std::string targetBindingTypeText =
+          targetBindingFact != nullptr
+              ? resolveSemanticBindingFactTypeText(semanticProgram, *targetBindingFact)
+              : std::string{};
+      ExpectedArrayExtent expected;
+      if (targetBindingFact != nullptr &&
+          extractExpectedArrayExtent(targetBindingTypeText, expected)) {
+        const std::string targetResolvedPath =
+            std::string(semanticProgramBindingFactResolvedPath(*semanticProgram,
+                                                               *targetBindingFact));
+        const std::string siteDescription =
+            describeArrayExtentSite(scopePath, "count", target->name);
+        if (targetResolvedPath.empty()) {
+          error = "missing semantic-product array extent target path: " +
+                  siteDescription;
+          return false;
+        }
+        const SemanticProgramArrayExtentFact *arrayFact =
+            semanticProgramLookupPublishedArrayExtentFactBySemanticId(
+                *semanticProgram, expr.semanticNodeId);
+        if (!validateArrayExtentFact(arrayFact,
+                                     expected,
+                                     "count-expression",
+                                     target->name,
+                                     targetResolvedPath,
+                                     target->semanticNodeId,
+                                     targetBindingTypeText,
+                                     siteDescription)) {
+          return false;
+        }
+      }
+    }
+    return validateExprs(scopePath, expr.args) &&
+           validateExprs(scopePath, expr.bodyArguments);
+  };
+
+  for (const auto &def : program.definitions) {
+    for (const auto &param : def.parameters) {
+      if (!validateExprs(def.fullPath, param.args) ||
+          !validateExprs(def.fullPath, param.bodyArguments)) {
         return false;
       }
     }

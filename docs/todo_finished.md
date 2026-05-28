@@ -5,6 +5,34 @@ Legend:
 
 Finished items are periodically archived here from `docs/todo.md`; section headers record the archive date.
 
+**Todo Completion (May 28, 2026)**
+- [x] TODO-4607: Publish initial array extent facts
+  - owner: ai
+  - created_at: 2026-05-27
+  - finished_at: 2026-05-28
+  - phase: Safe array extents and views
+  - parallel_track: array-extent-facts
+  - depends_on: TODO-4606
+  - scope: Added the first semantic-product extent facts for existing
+    `array<T>` values, `Reference<array<T>>` parameters, and `count(...)`
+    expressions so downstream consumers can observe array element counts
+    without reconstructing them from AST syntax.
+  - outcome:
+    - Added `SemanticProgramArrayExtentFact` plus deterministic dump,
+      module-index, published lookup, and semantic-publication support for
+      array extent facts.
+    - Published local `array<T>` value facts, `array<T>` /
+      `Reference<array<T>>` parameter facts, and `count(...)` expression
+      facts, including static literal extents when available.
+    - Added lowerer preflight validation that fails closed when expected array
+      extent facts are absent or stale.
+  - validation:
+    - Focused semantic-product snapshot, lowerer fail-closed, source-lock, and
+      existing array count/indexing validation were selected for this worker;
+      see the commit report for exact commands and results.
+  - stop_rule: Stopped after array extent facts were published and covered
+    without implementing slices or cursor APIs.
+
 **Todo Completion (May 27, 2026)**
 - [x] TODO-4620: Index expanded-source segments for diagnostics
   - owner: ai

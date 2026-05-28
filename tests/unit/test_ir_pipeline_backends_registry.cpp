@@ -3329,7 +3329,7 @@ TEST_CASE("ir lowerer rejects semantic-product contract version mismatch") {
   std::string error;
 
   CHECK_FALSE(lowerer.lower(program, &semanticProgram, "/main", {}, {}, module, error, &diagnosticInfo));
-  CHECK(error == "semantic-product contract version mismatch: expected 2, got 3");
+  CHECK(error == "semantic-product contract version mismatch: expected 3, got 4");
   CHECK(diagnosticInfo.message == error);
 }
 
@@ -4316,6 +4316,59 @@ TEST_CASE("ir lowerer rejects missing semantic-product collection specialization
 
   CHECK_FALSE(lowerer.lower(program, &semanticProgram, "/main", {}, {}, module, error, &diagnosticInfo));
   CHECK(error == "missing semantic-product collection specialization: /main -> local values");
+  CHECK(diagnosticInfo.message == error);
+}
+
+TEST_CASE("ir lowerer rejects missing semantic-product array extent facts") {
+  primec::Program program;
+
+  primec::Definition mainDef;
+  mainDef.fullPath = "/main";
+  mainDef.semanticNodeId = 81;
+  primec::Transform returnTransform;
+  returnTransform.name = "return";
+  returnTransform.templateArgs.push_back("void");
+  mainDef.transforms.push_back(returnTransform);
+
+  primec::Expr bindingExpr;
+  bindingExpr.isBinding = true;
+  bindingExpr.name = "values";
+  bindingExpr.semanticNodeId = 43;
+  primec::Transform arrayTransform;
+  arrayTransform.name = "array";
+  arrayTransform.templateArgs = {"i32"};
+  bindingExpr.transforms.push_back(arrayTransform);
+  mainDef.statements.push_back(bindingExpr);
+  program.definitions.push_back(mainDef);
+
+  primec::SemanticProgram semanticProgram;
+  semanticProgram.entryPath = "/main";
+  addVoidCallableSummary(semanticProgram, 81);
+  semanticProgram.bindingFacts.push_back(primec::SemanticProgramBindingFact{
+      .scopePath = "/main",
+      .siteKind = "local",
+      .name = "values",
+      .bindingTypeText = "array<i32>",
+      .isMutable = false,
+      .isEntryArgString = false,
+      .isUnsafeReference = false,
+      .referenceRoot = "",
+      .sourceLine = 0,
+      .sourceColumn = 0,
+      .semanticNodeId = 43,
+      .provenanceHandle = 0,
+      .resolvedPathId =
+          primec::semanticProgramInternCallTargetString(semanticProgram, "/main/values"),
+  });
+  semanticProgram.publishedRoutingLookups.bindingFactIndicesByExpr.insert_or_assign(43, 0);
+
+  primec::IrLowerer lowerer;
+  primec::IrModule module;
+  primec::DiagnosticSinkReport diagnosticInfo;
+  std::string error;
+
+  CHECK_FALSE(lowerer.lower(program, &semanticProgram, "/main", {}, {}, module, error, &diagnosticInfo));
+  CHECK(error == "missing semantic-product array extent fact: /main -> local values");
   CHECK(diagnosticInfo.message == error);
 }
 
@@ -7553,9 +7606,10 @@ TEST_CASE("vm backend executes semantic-product prepared IR from compile pipelin
 
 TEST_CASE("semantic-product fact family ownership is explicit") {
   CHECK(primec::SemanticProductContractVersionCurrent ==
-        primec::SemanticProductContractVersionV2);
+        primec::SemanticProductContractVersionV3);
   CHECK(primec::semanticProgramFactFamilyIsSemanticProductOwned("directCallTargets"));
   CHECK(primec::semanticProgramFactFamilyIsSemanticProductOwned("bindingFacts"));
+  CHECK(primec::semanticProgramFactFamilyIsSemanticProductOwned("arrayExtentFacts"));
   CHECK(primec::semanticProgramFactFamilyIsSemanticProductOwned("onErrorFacts"));
   CHECK(primec::semanticProgramFactFamilyIsAstProvenanceOwned("definitions"));
   CHECK(primec::semanticProgramFactFamilyIsAstProvenanceOwned("executions"));
@@ -7564,7 +7618,7 @@ TEST_CASE("semantic-product fact family ownership is explicit") {
   CHECK_FALSE(primec::semanticProgramFactFamilyOwnership("unknownFacts").has_value());
 }
 
-TEST_CASE("vm backend conformance keeps semantic-product contract v2") {
+TEST_CASE("vm backend conformance keeps semantic-product contract v3") {
   const std::string source =
       "[return<i32>]\n"
       "main() {\n"

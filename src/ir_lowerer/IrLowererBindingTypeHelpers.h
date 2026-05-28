@@ -36,6 +36,9 @@ bool validateSemanticProductCollectionSpecializationCoverage(
     const Program &program,
     const SemanticProgram *semanticProgram,
     std::string &error);
+bool validateSemanticProductArrayExtentCoverage(const Program &program,
+                                                const SemanticProgram *semanticProgram,
+                                                std::string &error);
 BindingTypeAdapters makeBindingTypeAdapters(const SemanticProgram *semanticProgram = nullptr);
 
 std::string resolveSemanticProductTypeText(const SemanticProgram *semanticProgram,

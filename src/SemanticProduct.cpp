@@ -242,6 +242,9 @@ const std::vector<SemanticProgramFactFamilyInfo> &semanticProgramFactFamilyInfos
       {"collectionSpecializations",
        SemanticProgramFactOwnership::SemanticProduct,
        "published collection specialization facts"},
+      {"arrayExtentFacts",
+       SemanticProgramFactOwnership::SemanticProduct,
+       "published array extent facts"},
       {"bindingFacts",
        SemanticProgramFactOwnership::SemanticProduct,
        "published binding facts"},
@@ -635,6 +638,23 @@ semanticProgramLookupPublishedCollectionSpecializationBySemanticId(
   return nullptr;
 }
 
+const SemanticProgramArrayExtentFact *
+semanticProgramLookupPublishedArrayExtentFactBySemanticId(
+    const SemanticProgram &semanticProgram,
+    uint64_t semanticNodeId) {
+  if (semanticNodeId == 0) {
+    return nullptr;
+  }
+  if (const auto it =
+          semanticProgram.publishedRoutingLookups.arrayExtentFactIndicesByExpr.find(
+              semanticNodeId);
+      it != semanticProgram.publishedRoutingLookups.arrayExtentFactIndicesByExpr.end()) {
+    return lookupPublishedSemanticEntryByIndex(semanticProgram.arrayExtentFacts,
+                                               it->second);
+  }
+  return nullptr;
+}
+
 const SemanticProgramLocalAutoFact *semanticProgramLookupPublishedLocalAutoFactBySemanticId(
     const SemanticProgram &semanticProgram,
     uint64_t semanticNodeId) {
@@ -814,6 +834,12 @@ std::string_view semanticProgramReturnFactDefinitionPath(
     const SemanticProgram &semanticProgram,
     const SemanticProgramReturnFact &entry) {
   return semanticProgramResolveCallTargetString(semanticProgram, entry.definitionPathId);
+}
+
+std::string_view semanticProgramArrayExtentFactTargetResolvedPath(
+    const SemanticProgram &semanticProgram,
+    const SemanticProgramArrayExtentFact &entry) {
+  return semanticProgramResolveCallTargetString(semanticProgram, entry.targetResolvedPathId);
 }
 
 std::string_view semanticProgramLocalAutoFactInitializerResolvedPath(
@@ -1030,6 +1056,34 @@ semanticProgramCollectionSpecializationView(const SemanticProgram &semanticProgr
 
   entries.reserve(semanticProgram.collectionSpecializations.size());
   for (const auto &entry : semanticProgram.collectionSpecializations) {
+    entries.push_back(&entry);
+  }
+  return entries;
+}
+
+std::vector<const SemanticProgramArrayExtentFact *>
+semanticProgramArrayExtentFactView(const SemanticProgram &semanticProgram) {
+  std::vector<const SemanticProgramArrayExtentFact *> entries;
+  if (!semanticProgram.moduleResolvedArtifacts.empty()) {
+    size_t moduleEntryCount = 0;
+    for (const auto &module : semanticProgram.moduleResolvedArtifacts) {
+      moduleEntryCount += module.arrayExtentFactIndices.size();
+    }
+    entries.reserve(moduleEntryCount);
+    for (const auto &module : semanticProgram.moduleResolvedArtifacts) {
+      for (const std::size_t entryIndex : module.arrayExtentFactIndices) {
+        if (entryIndex < semanticProgram.arrayExtentFacts.size()) {
+          entries.push_back(&semanticProgram.arrayExtentFacts[entryIndex]);
+        }
+      }
+    }
+    if (!entries.empty() || semanticProgram.arrayExtentFacts.empty()) {
+      return entries;
+    }
+  }
+
+  entries.reserve(semanticProgram.arrayExtentFacts.size());
+  for (const auto &entry : semanticProgram.arrayExtentFacts) {
     entries.push_back(&entry);
   }
   return entries;
@@ -1503,6 +1557,45 @@ std::string formatSemanticProgram(const SemanticProgram &semanticProgram) {
                                   " provenance_handle=" +
                                   std::to_string(entry.provenanceHandle) + " source=" +
                                   quoteSemanticString(formatSemanticSourceLocation(entry.sourceLine, entry.sourceColumn)));
+  }
+  const auto arrayExtentFacts = semanticProgramArrayExtentFactView(semanticProgram);
+  for (size_t i = 0; i < arrayExtentFacts.size(); ++i) {
+    const auto &entry = *arrayExtentFacts[i];
+    const auto extentText = [&](SymbolId id, const std::string &fallback) -> std::string_view {
+      const std::string_view resolved = semanticProgramResolveCallTargetString(semanticProgram, id);
+      return resolved.empty() ? std::string_view(fallback) : resolved;
+    };
+    appendSemanticIndexedLine(out,
+                              "array_extent_facts",
+                              i,
+                              "scope_path=" +
+                                  quoteSemanticString(extentText(entry.scopePathId, entry.scopePath)) +
+                                  " site_kind=" +
+                                  quoteSemanticString(extentText(entry.siteKindId, entry.siteKind)) +
+                                  " target_name=" +
+                                  quoteSemanticString(extentText(entry.targetNameId, entry.targetName)) +
+                                  " target_resolved_path=" +
+                                  quoteSemanticString(extentText(entry.targetResolvedPathId,
+                                                                 entry.targetResolvedPath)) +
+                                  " binding_type_text=" +
+                                  quoteSemanticString(extentText(entry.bindingTypeTextId,
+                                                                 entry.bindingTypeText)) +
+                                  " element_type_text=" +
+                                  quoteSemanticString(extentText(entry.elementTypeTextId,
+                                                                 entry.elementTypeText)) +
+                                  " extent_expression=" +
+                                  quoteSemanticString(extentText(entry.extentExpressionId,
+                                                                 entry.extentExpression)) +
+                                  " is_reference=" +
+                                  formatSemanticBool(entry.isReference) + " has_static_extent=" +
+                                  formatSemanticBool(entry.hasStaticExtent) + " static_extent=" +
+                                  std::to_string(entry.staticExtent) +
+                                  " target_semantic_node_id=" +
+                                  std::to_string(entry.targetSemanticNodeId) +
+                                  " provenance_handle=" +
+                                  std::to_string(entry.provenanceHandle) + " source=" +
+                                  quoteSemanticString(formatSemanticSourceLocation(entry.sourceLine,
+                                                                                   entry.sourceColumn)));
   }
   const auto bindingFacts = semanticProgramBindingFactView(semanticProgram);
   for (size_t i = 0; i < bindingFacts.size(); ++i) {

@@ -66,6 +66,7 @@ struct SemanticProductIndexBuilder {
     buildQueryIndex(index);
     buildTryIndex(index);
     buildCollectionSpecializationIndex(index);
+    buildArrayExtentIndex(index);
     buildBindingIndex(index);
     return index;
   }
@@ -112,6 +113,12 @@ struct SemanticProductIndexBuilder {
         index.collectionSpecializationsByExpr,
         semanticProgram->publishedRoutingLookups.collectionSpecializationIndicesByExpr,
         semanticProgram->collectionSpecializations);
+  }
+
+  void buildArrayExtentIndex(SemanticProductIndex &index) const {
+    populateSemanticFactIndex(index.arrayExtentFactsByExpr,
+                              semanticProgram->publishedRoutingLookups.arrayExtentFactIndicesByExpr,
+                              semanticProgram->arrayExtentFacts);
   }
 };
 
@@ -599,6 +606,18 @@ const SemanticProgramCollectionSpecialization *findSemanticProductCollectionSpec
     const SemanticProductTargetAdapter &adapter,
     const Expr &expr) {
   return findSemanticProductCollectionSpecialization(adapter.semanticIndex, expr);
+}
+
+const SemanticProgramArrayExtentFact *findSemanticProductArrayExtentFact(
+    const SemanticProductIndex &semanticIndex,
+    const Expr &expr) {
+  return findExpressionScopedSemanticFact(semanticIndex.arrayExtentFactsByExpr, expr);
+}
+
+const SemanticProgramArrayExtentFact *findSemanticProductArrayExtentFact(
+    const SemanticProductTargetAdapter &adapter,
+    const Expr &expr) {
+  return findSemanticProductArrayExtentFact(adapter.semanticIndex, expr);
 }
 
 } // namespace primec::ir_lowerer

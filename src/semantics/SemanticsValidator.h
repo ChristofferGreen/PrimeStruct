@@ -81,6 +81,7 @@ public:
   std::vector<SumTypeMetadataSnapshotEntry> sumTypeMetadataSnapshotForSemanticProduct() const;
   std::vector<SumVariantMetadataSnapshotEntry> sumVariantMetadataSnapshotForSemanticProduct() const;
   std::vector<BindingFactSnapshotEntry> bindingFactSnapshotForSemanticProduct();
+  std::vector<ArrayExtentFactSnapshotEntry> arrayExtentFactSnapshotForSemanticProduct();
   std::vector<ReturnFactSnapshotEntry> returnFactSnapshotForSemanticProduct();
   std::vector<LocalAutoBindingSnapshotEntry> localAutoFactSnapshotForSemanticProduct() const;
   std::vector<QueryFactSnapshotEntry> queryFactSnapshotForSemanticProduct();

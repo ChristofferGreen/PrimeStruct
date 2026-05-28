@@ -64,14 +64,13 @@ This file is the live open-work queue for PrimeStruct.
 
 ### Ready Now
 
-- TODO-4607: Publish initial array extent facts | track: array-extent-facts | surface: semantic product extent facts
+- TODO-4608: Add checked array slice construction | track: array-slice-construction | surface: safe array slice construction
 - TODO-4617: Add semantic preflight missing-fact diagnostics | track: semantic-product-preflight-diagnostics | surface: semantic product preflight facts
 - TODO-4618: Fail closed on stale CT-eval requirement facts | track: ct-eval-requirement-fail-closed | surface: CT-eval requirement facts
 - TODO-4621: Classify unsupported variadic-pack diagnostics | track: variadic-pack-diagnostic-tier | surface: lowerer/backend diagnostics
 
 ### Immediate Next 10
 
-- TODO-4608: Add checked array slice construction
 - TODO-4609: Reject escaping local array slices
 - TODO-4610: Add forward cursor traversal API
 - TODO-4611: Add reverse cursor traversal API
@@ -118,54 +117,31 @@ This file is the live open-work queue for PrimeStruct.
 - Safe array extents and capability views: TODO-4604 completed the requirement
   contract phase split, and TODO-4605 completed the non-null safe pointer
   optionality model. TODO-4606 specified the capability-parameterized
-  reference/slice view model in the normative docs. TODO-4607 through
-  TODO-4612 remain from the agreed backlog in `docs/SafeArrayExtentViews.md`:
-  semantic extent facts, checked slices, conservative view escapes, cursor
-  traversal with
+  reference/slice view model in the normative docs. TODO-4607 published the
+  initial semantic-product array extent facts. TODO-4608 through TODO-4612
+  remain from the agreed backlog in `docs/SafeArrayExtentViews.md`: checked
+  slices, conservative view escapes, cursor traversal with
   `limit(...)` / `reverse_limit(...)` boundaries, and style-aligned examples
   once the surface is specified.
 
 ### Execution Queue
 
-1. TODO-4607: Publish initial array extent facts
+1. TODO-4608: Add checked array slice construction
 2. TODO-4617: Add semantic preflight missing-fact diagnostics
 3. TODO-4618: Fail closed on stale CT-eval requirement facts
 4. TODO-4621: Classify unsupported variadic-pack diagnostics
-5. TODO-4608: Add checked array slice construction
-6. TODO-4609: Reject escaping local array slices
-7. TODO-4610: Add forward cursor traversal API
-8. TODO-4611: Add reverse cursor traversal API
-9. TODO-4612: Add safe extent and cursor code examples
+5. TODO-4609: Reject escaping local array slices
+6. TODO-4610: Add forward cursor traversal API
+7. TODO-4611: Add reverse cursor traversal API
+8. TODO-4612: Add safe extent and cursor code examples
 
 ### Task Blocks
-
-- [ ] TODO-4607: Publish initial array extent facts
-  - owner: ai
-  - created_at: 2026-05-27
-  - phase: Safe array extents and views
-  - parallel_track: array-extent-facts
-  - depends_on: TODO-4606
-  - scope: Add the first semantic-product extent facts for existing
-    `array<T>` values, `Reference<array<T>>` parameters, and `count(...)`
-    expressions so downstream consumers can observe array element counts
-    without reconstructing them from AST syntax.
-  - implementation_notes: Start with `include/primec/SemanticProduct.h`,
-    `src/SemanticProduct.cpp`, semantic publication builders, and the
-    semantic-product dump/source-lock tests. Keep the first fact family limited
-    to arrays and existing count surfaces.
-  - acceptance:
-    - `semantic-product` dumps expose deterministic extent facts for local
-      array values and `Reference<array<T>>` parameters.
-    - A focused stale/missing test proves an IR-preparation or lowerer
-      consumer fails closed when an expected published extent fact is absent.
-    - Existing array count/indexing coverage still passes.
-  - stop_rule: Stop once array extent facts are published and covered; do not
-    implement slices or cursor APIs in this leaf.
 
 - [ ] TODO-4608: Add checked array slice construction
   - owner: ai
   - created_at: 2026-05-27
   - phase: Safe array extents and views
+  - parallel_track: array-slice-construction
   - depends_on: TODO-4607
   - scope: Add the first checked `slice(values, start, end)` surface for
     `array<T>`/`Reference<array<T>>` inputs, publishing

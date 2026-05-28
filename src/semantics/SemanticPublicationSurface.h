@@ -226,6 +226,23 @@ struct BindingFactSnapshotEntry {
   uint64_t semanticNodeId = 0;
 };
 
+struct ArrayExtentFactSnapshotEntry {
+  std::string scopePath;
+  std::string siteKind;
+  std::string targetName;
+  std::string targetResolvedPath;
+  BindingInfo binding;
+  std::string elementTypeText;
+  std::string extentExpression;
+  bool isReference = false;
+  bool hasStaticExtent = false;
+  size_t staticExtent = 0;
+  int sourceLine = 0;
+  int sourceColumn = 0;
+  uint64_t semanticNodeId = 0;
+  uint64_t targetSemanticNodeId = 0;
+};
+
 struct ReturnFactSnapshotEntry {
   std::string definitionPath;
   ReturnKind kind = ReturnKind::Unknown;
@@ -247,6 +264,7 @@ struct SemanticPublicationSurface {
   std::vector<SumTypeMetadataSnapshotEntry> sumTypeMetadata;
   std::vector<SumVariantMetadataSnapshotEntry> sumVariantMetadata;
   std::vector<BindingFactSnapshotEntry> bindingFacts;
+  std::vector<ArrayExtentFactSnapshotEntry> arrayExtentFacts;
   std::vector<ReturnFactSnapshotEntry> returnFacts;
   std::vector<LocalAutoBindingSnapshotEntry> localAutoFacts;
   std::vector<QueryFactSnapshotEntry> queryFacts;
