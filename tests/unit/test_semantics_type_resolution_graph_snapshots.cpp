@@ -5269,6 +5269,12 @@ consume([Reference<array<i32>>] values) {
 }
 
 [return<i32>]
+score([args<Reference<i32>>] refs) {
+  [i32] viaArgs{count(refs)}
+  return(viaArgs)
+}
+
+[return<i32>]
 main() {
   [array<i32>] values{array<i32>{1i32, 2i32, 3i32}}
   [i32] localCount{count(values)}
@@ -5321,6 +5327,19 @@ main() {
   CHECK(parameterExtent->isReference);
   CHECK_FALSE(parameterExtent->hasStaticExtent);
 
+  const auto *argsParameterExtent = findSemanticEntry(
+      arrayExtentFacts,
+      [](const primec::SemanticProgramArrayExtentFact &entry) {
+        return entry.scopePath == "/score" &&
+               entry.siteKind == "parameter-value" &&
+               entry.targetName == "refs";
+      });
+  REQUIRE(argsParameterExtent != nullptr);
+  CHECK(argsParameterExtent->bindingTypeText == "args<Reference<i32>>");
+  CHECK(argsParameterExtent->elementTypeText == "Reference<i32>");
+  CHECK_FALSE(argsParameterExtent->isReference);
+  CHECK_FALSE(argsParameterExtent->hasStaticExtent);
+
   const auto *localCountExtent = findSemanticEntry(
       arrayExtentFacts,
       [](const primec::SemanticProgramArrayExtentFact &entry) {
@@ -5347,6 +5366,20 @@ main() {
   CHECK(parameterCountExtent->isReference);
   CHECK_FALSE(parameterCountExtent->hasStaticExtent);
   CHECK(parameterCountExtent->targetSemanticNodeId != 0);
+
+  const auto *argsCountExtent = findSemanticEntry(
+      arrayExtentFacts,
+      [](const primec::SemanticProgramArrayExtentFact &entry) {
+        return entry.scopePath == "/score" &&
+               entry.siteKind == "count-expression" &&
+               entry.targetName == "refs";
+      });
+  REQUIRE(argsCountExtent != nullptr);
+  CHECK(argsCountExtent->bindingTypeText == "args<Reference<i32>>");
+  CHECK(argsCountExtent->elementTypeText == "Reference<i32>");
+  CHECK_FALSE(argsCountExtent->isReference);
+  CHECK_FALSE(argsCountExtent->hasStaticExtent);
+  CHECK(argsCountExtent->targetSemanticNodeId != 0);
 
   const auto *lookupEntry =
       primec::semanticProgramLookupPublishedArrayExtentFactBySemanticId(

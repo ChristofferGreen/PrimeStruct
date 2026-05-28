@@ -171,13 +171,17 @@ bool classifySnapshotArrayExtentBinding(const BindingInfo &binding,
                                         SnapshotArrayExtentShape &shapeOut) {
   shapeOut = {};
   std::string typeText = normalizeBindingTypeName(snapshotBindingTypeText(binding));
+  auto normalizeArrayExtentBase = [](std::string base) {
+    base = normalizeBindingTypeName(std::move(base));
+    return base == "args" ? std::string("array") : base;
+  };
   while (true) {
     std::string base;
     std::string argText;
     if (!splitTemplateTypeName(typeText, base, argText)) {
       return false;
     }
-    base = normalizeBindingTypeName(base);
+    base = normalizeArrayExtentBase(std::move(base));
     if (base == "Reference") {
       std::vector<std::string> args;
       if (!splitTopLevelTemplateArgs(argText, args) || args.size() != 1) {

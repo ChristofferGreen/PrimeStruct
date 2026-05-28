@@ -4,6 +4,18 @@ This file stores durable session-derived facts that are useful in later work. Ke
 
 ## Active Memories
 
+### array-extent-facts-cover-args-packs
+- Updated: 2026-05-28
+- Tags: semantics, semantic-product, variadic
+- Fact: Semantic-product array extent facts must classify `args<T>` as an
+  array-like count target so lowerer preflight does not mask variadic-pack
+  forwarding diagnostics.
+- Evidence: The merged TODO-4607/TODO-4621 root validation first reported
+  `missing semantic-product array extent fact: /score -> count values` for
+  `count(values)` inside an `args<Reference<i32>>` callee; after publishing
+  args-pack extent facts, the same C++ emitter path reached the expected
+  stable `PSC2001` diagnostic.
+
 ### backend-runtime-holds-semantic-product-shell-lock
 - Updated: 2026-05-28
 - Tags: tests, semantic-product, backend-runtime
