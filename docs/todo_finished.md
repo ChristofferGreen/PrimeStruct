@@ -61,6 +61,35 @@ Finished items are periodically archived here from `docs/todo.md`; section heade
   - stop_rule: Stopped after preflight facts fail closed with stable
     diagnostics; no new semantic-product fact families were added.
 
+- [x] TODO-4618: Fail closed on stale CT-eval requirement facts
+  - owner: ai
+  - created_at: 2026-05-27
+  - finished_at: 2026-05-28
+  - phase: Architecture hardening
+  - parallel_track: ct-eval-requirement-fail-closed
+  - scope: Made compile-time requirement evaluation reject incomplete,
+    missing, or stale `requirementPredicateFacts` from the semantic product
+    instead of degrading into ordinary no-match or syntax-derived behavior.
+  - outcome:
+    - Added a CT-eval requirement-predicate fact validator that rejects
+      missing published facts, incomplete string-table ids, stale resolved
+      metadata, and mismatched callable or argument identity before
+      evaluation runs.
+    - Routed the semantic compile-time host through a strict
+      requirement-predicate fact view so module artifact indexes define the
+      published fact set when present.
+    - Extended compile-time facade and callable preparation tests to cover
+      positive published-fact evaluation plus stale, missing, and incomplete
+      semantic-product requirement facts.
+    - Updated the semantic-product consumer matrix row for
+      `requirementPredicateFacts` with stale/missing coverage.
+  - validation:
+    - Focused compile-time and semantic-product source-lock validation was
+      selected for this worker; see the commit report for exact commands and
+      results.
+  - stop_rule: Stopped once CT-eval fails closed on requirement-predicate fact
+    completeness without adding new requirement syntax.
+
 **Todo Completion (May 27, 2026)**
 
 - [x] TODO-4620: Index expanded-source segments for diagnostics

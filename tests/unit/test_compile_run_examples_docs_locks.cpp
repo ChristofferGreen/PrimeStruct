@@ -2026,7 +2026,6 @@ TEST_CASE("todo queue and skipped doctest debt stay source locked") {
   CHECK(todo.find("### Ready Now\n\n"
                   "- TODO-4608: Add checked array slice construction | track: array-slice-construction | surface: safe array slice construction\n"
                   "- TODO-4617: Add semantic preflight missing-fact diagnostics | track: semantic-product-preflight-diagnostics | surface: semantic product preflight facts\n"
-                  "- TODO-4618: Fail closed on stale CT-eval requirement facts | track: ct-eval-requirement-fail-closed | surface: CT-eval requirement facts\n"
                   "- TODO-4621: Classify unsupported variadic-pack diagnostics | track: variadic-pack-diagnostic-tier | surface: lowerer/backend diagnostics\n\n"
                   "### Immediate Next 10") !=
         std::string::npos);
@@ -2065,6 +2064,10 @@ TEST_CASE("todo queue and skipped doctest debt stay source locked") {
   CHECK(todo.find("- TODO-4616: Make semantic validation manifest executable | track:") ==
         std::string::npos);
   CHECK(todo.find("- [ ] TODO-4616: Make semantic validation manifest executable") ==
+        std::string::npos);
+  CHECK(todo.find("- TODO-4618: Fail closed on stale CT-eval requirement facts | track:") ==
+        std::string::npos);
+  CHECK(todo.find("- [ ] TODO-4618: Fail closed on stale CT-eval requirement facts") ==
         std::string::npos);
   CHECK(todo.find("- TODO-4619: Gate runtime reflection by backend profile | track:") ==
         std::string::npos);
@@ -2131,8 +2134,8 @@ TEST_CASE("todo queue and skipped doctest debt stay source locked") {
   CHECK(todo.find("### Execution Queue\n\n"
                   "1. TODO-4608: Add checked array slice construction\n"
                   "2. TODO-4617: Add semantic preflight missing-fact diagnostics\n"
-                  "3. TODO-4618: Fail closed on stale CT-eval requirement facts\n"
-                  "4. TODO-4621: Classify unsupported variadic-pack diagnostics") !=
+                  "3. TODO-4621: Classify unsupported variadic-pack diagnostics\n"
+                  "4. TODO-4608: Add checked array slice construction") !=
         std::string::npos);
   CHECK(todo.find("- TODO-4613: Retire semantic-validator private source locks | track: "
                   "semantic-source-lock-retirement") ==
@@ -2199,6 +2202,11 @@ TEST_CASE("todo queue and skipped doctest debt stay source locked") {
   CHECK(todoFinished.find("Added typed `SemanticValidationPassId` values") !=
         std::string::npos);
   CHECK(todoFinished.find("Promoted TODO-4617 as the next semantic-product diagnostics follow-up") !=
+        std::string::npos);
+  CHECK(todoFinished.find("TODO-4618: Fail closed on stale CT-eval requirement facts") !=
+        std::string::npos);
+  CHECK(todoFinished.find("rejects\n"
+                          "      missing published facts, incomplete string-table ids") !=
         std::string::npos);
   CHECK(todoFinished.find("TODO-4602: Remove semantic vector-literal compiler traces") !=
         std::string::npos);

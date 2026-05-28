@@ -38,12 +38,9 @@ Coverage markers:
 | `localAutoFacts` | Semantic product | setup inference, binding type helpers, count/access helpers, collection receiver gates, inline native dispatch. | positive: `semantic-product local-auto call paths accept stdlib surface equivalents`; stale/missing: `semantic-product contract rejects missing local-auto facts across entry targets` | None. |
 | `queryFacts` | Semantic product | Result metadata helpers, `try(...)` emit, count/access helpers, sum helpers, inline native dispatch, collection mutations. | positive: `native Result combinator sources use semantic-product query facts`; stale/missing: `ir lowerer rejects stale semantic-product query facts` | None. |
 | `tryFacts` | Semantic product | Result metadata helpers, `try(...)` emit, uninitialized struct inference. | positive: `ir lowerer semantic-product adapter uses try semantic-id matches without path fallback`; stale/missing: `ir lowerer rejects stale semantic-product try result metadata` | None. |
-| `requirementPredicateFacts` | Semantic product | compile-time evaluation facade and callable CT-eval host. | positive: `compile-time evaluation facade wraps published requirement facts` | Add missing/stale requirement-predicate fact diagnostics once CT-eval rejects incomplete published facts instead of reporting ordinary no-match outcomes. |
+| `requirementPredicateFacts` | Semantic product | compile-time evaluation facade and callable CT-eval host. | positive: `compile-time evaluation facade wraps published requirement facts`; stale/missing: `compile-time evaluation rejects stale or missing requirementPredicateFacts` | None. |
 | `onErrorFacts` | Semantic product | on_error setup/lowering helpers, try result metadata validation, return-info helpers. | stale/missing: `ir lowerer rejects missing semantic-product on_error facts`; source-lock: `compile pipeline publishes an initial semantic product shell` | Add a positive on_error consumer test that proves semantic-product facts override stale callable summary text. |
 
 Concrete follow-up candidates from this first matrix:
 - `SPCM-FOLLOWUP-struct-fields`: add a direct stale/missing consumer test for
   `structFieldMetadata` at the field binding helper boundary.
-- `SPCM-FOLLOWUP-requirements`: add CT-eval stale/missing diagnostics for
-  incomplete `requirementPredicateFacts` once that path fails closed on
-  published semantic-product fact completeness.

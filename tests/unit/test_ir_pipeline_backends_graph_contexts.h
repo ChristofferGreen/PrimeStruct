@@ -1595,6 +1595,8 @@ TEST_CASE("semantic-product consumer coverage matrix stays source locked") {
       "tests/unit/test_ir_pipeline_validation_ir_lowerer_entry_setup_step_resolves_entry_metadata.cpp");
   const std::string callHelperTests = readRepoFile(
       "tests/unit/test_ir_pipeline_validation_ir_lowerer_call_helpers_source_delegation_stays_stable.cpp");
+  const std::string compileTimeFacadeTests =
+      readRepoFile("tests/unit/test_compile_time_evaluation_facade.cpp");
 
   const std::size_t familiesStart =
       semanticProductSource.find("static const std::vector<SemanticProgramFactFamilyInfo> Families = {");
@@ -1626,7 +1628,7 @@ TEST_CASE("semantic-product consumer coverage matrix stays source locked") {
   CHECK(matrix.find("Every row below is source-locked against `semanticProgramFactFamilyInfos()`") !=
         std::string::npos);
   CHECK(matrix.find("SPCM-FOLLOWUP-struct-fields") != std::string::npos);
-  CHECK(matrix.find("SPCM-FOLLOWUP-requirements") != std::string::npos);
+  CHECK(matrix.find("SPCM-FOLLOWUP-requirements") == std::string::npos);
 
   auto checkCoverage = [&](const std::string &factFamily,
                            const std::string &positiveTest,
@@ -1703,6 +1705,13 @@ TEST_CASE("semantic-product consumer coverage matrix stays source locked") {
   CHECK(registryTests.find("TEST_CASE(\"ir preparation rejects stale semantic-product "
                            "lowerer preflight runtime reflection ids\")") !=
         std::string::npos);
+
+  checkCoverage(
+      "requirementPredicateFacts",
+      "compile-time evaluation facade wraps published requirement facts",
+      compileTimeFacadeTests,
+      "compile-time evaluation rejects stale or missing requirementPredicateFacts",
+      compileTimeFacadeTests);
 }
 
 TEST_CASE("semantic snapshot shared traversal keeps direct and bridge ordering keys") {

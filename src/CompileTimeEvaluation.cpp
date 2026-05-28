@@ -28,11 +28,44 @@ std::string_view resolvedSemanticText(
   return resolved.empty() ? std::string_view(fallback) : resolved;
 }
 
-std::string_view resolvedRequirementFactText(
+std::vector<const SemanticProgramRequirementPredicateFact *>
+strictRequirementPredicateFactView(const SemanticProgram &semanticProgram) {
+  std::vector<const SemanticProgramRequirementPredicateFact *> entries;
+  if (!semanticProgram.moduleResolvedArtifacts.empty()) {
+    size_t moduleEntryCount = 0;
+    for (const auto &module : semanticProgram.moduleResolvedArtifacts) {
+      moduleEntryCount += module.requirementPredicateFactIndices.size();
+    }
+    entries.reserve(moduleEntryCount);
+    for (const auto &module : semanticProgram.moduleResolvedArtifacts) {
+      for (const std::size_t entryIndex :
+           module.requirementPredicateFactIndices) {
+        if (entryIndex < semanticProgram.requirementPredicateFacts.size()) {
+          entries.push_back(
+              &semanticProgram.requirementPredicateFacts[entryIndex]);
+        }
+      }
+    }
+    return entries;
+  }
+
+  entries.reserve(semanticProgram.requirementPredicateFacts.size());
+  for (const auto &entry : semanticProgram.requirementPredicateFacts) {
+    entries.push_back(&entry);
+  }
+  return entries;
+}
+
+bool isStrictRequirementPredicateFact(
     const SemanticProgram &semanticProgram,
-    SymbolId textId,
-    const std::string &fallback) {
-  return resolvedSemanticText(&semanticProgram, textId, fallback);
+    const SemanticProgramRequirementPredicateFact &fact) {
+  for (const auto *publishedFact :
+       strictRequirementPredicateFactView(semanticProgram)) {
+    if (publishedFact == &fact) {
+      return true;
+    }
+  }
+  return false;
 }
 
 CompileTimeEvaluationResultKind resultKindFromRequirementOutcome(
@@ -510,6 +543,220 @@ std::string requirementFactCacheMaterial(
 
 } // namespace
 
+std::string formatCompileTimeRequirementPredicateFactLookup(
+    std::string_view definitionPath,
+    std::string_view predicateName,
+    std::string_view sourceText) {
+  std::ostringstream out;
+  out << "definition "
+      << (definitionPath.empty() ? std::string_view("<any>")
+                                 : definitionPath);
+  out << ", predicate "
+      << (predicateName.empty() ? std::string_view("<any>")
+                                : predicateName);
+  if (!sourceText.empty()) {
+    out << ", source_text \"" << sourceText << '"';
+  }
+  return out.str();
+}
+
+std::string missingCompileTimeRequirementPredicateFactMessage(
+    std::string_view definitionPath,
+    std::string_view predicateName,
+    std::string_view sourceText) {
+  return "missing semantic-product requirementPredicateFacts fact: " +
+         formatCompileTimeRequirementPredicateFactLookup(definitionPath,
+                                                         predicateName,
+                                                         sourceText);
+}
+
+std::optional<std::string> validateCompileTimeRequirementPredicateFact(
+    const SemanticProgram *semanticProgram,
+    const SemanticProgramRequirementPredicateFact &fact,
+    std::string_view definitionPath,
+    std::string_view predicateName,
+    std::string_view sourceText) {
+  const std::string lookup = formatCompileTimeRequirementPredicateFactLookup(
+      definitionPath.empty() ? std::string_view(fact.definitionPath)
+                             : definitionPath,
+      predicateName.empty() ? std::string_view(fact.predicateName)
+                            : predicateName,
+      sourceText.empty() ? std::string_view(fact.sourceText) : sourceText);
+
+  auto incomplete = [&](std::string_view field) {
+    return std::string("incomplete semantic-product requirementPredicateFacts "
+                       "fact: missing ") +
+           std::string(field) + " for " + lookup;
+  };
+  auto missingId = [&](std::string_view field) {
+    return std::string("missing semantic-product requirementPredicateFacts ") +
+           std::string(field) + " id: " + lookup;
+  };
+  auto staleField = [&](std::string_view field,
+                        std::string_view expected,
+                        std::string_view resolved) {
+    return std::string("stale semantic-product requirementPredicateFacts ") +
+           std::string(field) + " metadata: expected \"" +
+           std::string(expected) + "\" resolved \"" + std::string(resolved) +
+           "\" for " + lookup;
+  };
+  auto validateRequiredTextField = [&](std::string_view field,
+                                       std::string_view text,
+                                       SymbolId textId)
+      -> std::optional<std::string> {
+    if (text.empty()) {
+      return incomplete(field);
+    }
+    if (semanticProgram == nullptr) {
+      return std::nullopt;
+    }
+    if (textId == InvalidSymbolId) {
+      return missingId(field);
+    }
+    const std::string_view resolved =
+        semanticProgramResolveCallTargetString(*semanticProgram, textId);
+    if (resolved.empty()) {
+      return missingId(field);
+    }
+    if (resolved != text) {
+      return staleField(field, text, resolved);
+    }
+    return std::nullopt;
+  };
+  auto validateOptionalTextField = [&](std::string_view field,
+                                       std::string_view text,
+                                       SymbolId textId)
+      -> std::optional<std::string> {
+    if (text.empty()) {
+      return std::nullopt;
+    }
+    if (semanticProgram == nullptr) {
+      return std::nullopt;
+    }
+    if (textId == InvalidSymbolId) {
+      return missingId(field);
+    }
+    const std::string_view resolved =
+        semanticProgramResolveCallTargetString(*semanticProgram, textId);
+    if (resolved.empty()) {
+      return missingId(field);
+    }
+    if (resolved != text) {
+      return staleField(field, text, resolved);
+    }
+    return std::nullopt;
+  };
+
+  if (semanticProgram != nullptr &&
+      !isStrictRequirementPredicateFact(*semanticProgram, fact)) {
+    return missingCompileTimeRequirementPredicateFactMessage(
+        definitionPath.empty() ? std::string_view(fact.definitionPath)
+                               : definitionPath,
+        predicateName.empty() ? std::string_view(fact.predicateName)
+                              : predicateName,
+        sourceText.empty() ? std::string_view(fact.sourceText) : sourceText);
+  }
+
+  if (auto error = validateRequiredTextField("definitionPath",
+                                             fact.definitionPath,
+                                             fact.definitionPathId)) {
+    return error;
+  }
+  if (auto error = validateRequiredTextField("predicateKind",
+                                             fact.predicateKind,
+                                             fact.predicateKindId)) {
+    return error;
+  }
+  if (auto error = validateRequiredTextField("predicateName",
+                                             fact.predicateName,
+                                             fact.predicateNameId)) {
+    return error;
+  }
+  if (auto error = validateOptionalTextField("relationOperator",
+                                             fact.relationOperator,
+                                             fact.relationOperatorId)) {
+    return error;
+  }
+  if (auto error = validateRequiredTextField("sourceText",
+                                             fact.sourceText,
+                                             fact.sourceTextId)) {
+    return error;
+  }
+  if (auto error = validateRequiredTextField("evaluationOutcome",
+                                             fact.evaluationOutcome,
+                                             fact.evaluationOutcomeId)) {
+    return error;
+  }
+  if (auto error = validateOptionalTextField("evaluationDiagnostic",
+                                             fact.evaluationDiagnostic,
+                                             fact.evaluationDiagnosticId)) {
+    return error;
+  }
+
+  if (!definitionPath.empty() && fact.definitionPath != definitionPath) {
+    return "stale semantic-product requirementPredicateFacts callable "
+           "identity: requested definition " +
+           std::string(definitionPath) + " but fact has " +
+           fact.definitionPath;
+  }
+  if (!predicateName.empty() && fact.predicateName != predicateName) {
+    return "stale semantic-product requirementPredicateFacts predicate "
+           "identity: requested predicate " +
+           std::string(predicateName) + " but fact has " + fact.predicateName;
+  }
+  if (!sourceText.empty() && fact.sourceText != sourceText) {
+    return "stale semantic-product requirementPredicateFacts argument "
+           "identity: requested source_text \"" +
+           std::string(sourceText) + "\" but fact has \"" + fact.sourceText +
+           "\"";
+  }
+
+  if (fact.compileTimeEffectIds.size() < fact.compileTimeEffects.size()) {
+    return "missing semantic-product requirementPredicateFacts "
+           "compileTimeEffect id: " +
+           lookup;
+  }
+  for (std::size_t i = 0; i < fact.compileTimeEffects.size(); ++i) {
+    if (auto error = validateRequiredTextField("compileTimeEffect",
+                                               fact.compileTimeEffects[i],
+                                               fact.compileTimeEffectIds[i])) {
+      return error;
+    }
+  }
+
+  for (std::size_t i = 0; i < fact.operands.size(); ++i) {
+    const auto &operand = fact.operands[i];
+    const std::string operandPrefix =
+        "operand " + std::to_string(i) + " ";
+    if (auto error = validateRequiredTextField(operandPrefix + "kind",
+                                               operand.kind,
+                                               operand.kindId)) {
+      return error;
+    }
+    if (auto error = validateRequiredTextField(operandPrefix + "text",
+                                               operand.text,
+                                               operand.textId)) {
+      return error;
+    }
+    if (auto error = validateRequiredTextField(operandPrefix + "stableHandle",
+                                               operand.stableHandle,
+                                               operand.stableHandleId)) {
+      return error;
+    }
+    const std::string expectedStableHandle =
+        operand.kind + ":" + operand.text;
+    if (operand.stableHandle != expectedStableHandle) {
+      return "stale semantic-product requirementPredicateFacts argument "
+             "identity: operand " +
+             std::to_string(i) + " expected stable_handle \"" +
+             expectedStableHandle + "\" but fact has \"" +
+             operand.stableHandle + "\"";
+    }
+  }
+
+  return std::nullopt;
+}
+
 CompileTimeEvaluationCacheKey buildCompileTimeEvaluationCacheKey(
     const CompileTimeHost &host,
     const SemanticProgram *semanticProgram,
@@ -550,9 +797,9 @@ CompileTimeEvaluationCacheKey buildCompileTimeEvaluationCacheKey(
 
     std::vector<std::string> requirementFactMaterials;
     requirementFactMaterials.reserve(
-        semanticProgramRequirementPredicateFactView(*semanticProgram).size());
+        strictRequirementPredicateFactView(*semanticProgram).size());
     for (const auto *entry :
-         semanticProgramRequirementPredicateFactView(*semanticProgram)) {
+         strictRequirementPredicateFactView(*semanticProgram)) {
       if (entry != nullptr) {
         requirementFactMaterials.push_back(
             requirementFactCacheMaterial(semanticProgram, *entry, "fact"));
@@ -630,24 +877,15 @@ bool SemanticProgramCompileTimeHost::allowEffect(
     return false;
   }
   for (const auto *fact :
-       semanticProgramRequirementPredicateFactView(semanticProgram_)) {
+       strictRequirementPredicateFactView(semanticProgram_)) {
     if (fact == nullptr) {
       continue;
     }
-    if (resolvedRequirementFactText(semanticProgram_,
-                                    fact->definitionPathId,
-                                    fact->definitionPath) != definitionPath) {
+    if (fact->definitionPath != definitionPath) {
       continue;
     }
     for (std::size_t i = 0; i < fact->compileTimeEffects.size(); ++i) {
-      const SymbolId effectId =
-          i < fact->compileTimeEffectIds.size()
-              ? fact->compileTimeEffectIds[i]
-              : InvalidSymbolId;
-      if (resolvedRequirementFactText(semanticProgram_,
-                                      effectId,
-                                      fact->compileTimeEffects[i]) ==
-          effectName) {
+      if (fact->compileTimeEffects[i] == effectName) {
         return true;
       }
     }
@@ -659,22 +897,19 @@ std::optional<std::string>
 SemanticProgramCompileTimeHost::describeSemanticFact(
     std::string_view factName) const {
   if (factName == "requirement_predicate_count") {
-    return std::to_string(semanticProgramRequirementPredicateFactView(
-                              semanticProgram_)
-                              .size());
+    return std::to_string(
+        strictRequirementPredicateFactView(semanticProgram_).size());
   }
   if (factName.rfind("requirement_predicate:", 0) == 0) {
     const std::string_view predicateName =
         factName.substr(std::string_view("requirement_predicate:").size());
     std::size_t count = 0;
     for (const auto *fact :
-         semanticProgramRequirementPredicateFactView(semanticProgram_)) {
+         strictRequirementPredicateFactView(semanticProgram_)) {
       if (fact == nullptr) {
         continue;
       }
-      if (resolvedRequirementFactText(semanticProgram_,
-                                      fact->predicateNameId,
-                                      fact->predicateName) == predicateName) {
+      if (fact->predicateName == predicateName) {
         ++count;
       }
     }
@@ -689,26 +924,20 @@ SemanticProgramCompileTimeHost::findRequirementPredicateFact(
     std::string_view predicateName,
     std::string_view sourceText) const {
   for (const auto *fact :
-       semanticProgramRequirementPredicateFactView(semanticProgram_)) {
+       strictRequirementPredicateFactView(semanticProgram_)) {
     if (fact == nullptr) {
       continue;
     }
     if (!definitionPath.empty() &&
-        resolvedRequirementFactText(semanticProgram_,
-                                    fact->definitionPathId,
-                                    fact->definitionPath) != definitionPath) {
+        fact->definitionPath != definitionPath) {
       continue;
     }
     if (!predicateName.empty() &&
-        resolvedRequirementFactText(semanticProgram_,
-                                    fact->predicateNameId,
-                                    fact->predicateName) != predicateName) {
+        fact->predicateName != predicateName) {
       continue;
     }
     if (!sourceText.empty() &&
-        resolvedRequirementFactText(semanticProgram_,
-                                    fact->sourceTextId,
-                                    fact->sourceText) != sourceText) {
+        fact->sourceText != sourceText) {
       continue;
     }
     return fact;
@@ -941,13 +1170,20 @@ CompileTimeEvaluationFacade::evaluateRequirementPredicate(
                                       : request.predicateName;
     return activeFacade.internalCompilerError(
         request.provenance,
-        "compile-time requirement evaluation requires a published predicate fact "
-        "for " +
-            predicateName);
+        missingCompileTimeRequirementPredicateFactMessage(
+            request.definitionPath, predicateName, request.sourceText));
   }
 
   const SemanticProgramRequirementPredicateFact &fact =
       *requirementPredicate;
+  if (const std::optional<std::string> invalidFact =
+          validateCompileTimeRequirementPredicateFact(semanticProgram,
+                                                     fact,
+                                                     request.definitionPath,
+                                                     request.predicateName,
+                                                     request.sourceText)) {
+    return activeFacade.internalCompilerError(request.provenance, *invalidFact);
+  }
   CompileTimeEvaluationProvenance provenance =
       compileTimeEvaluationProvenanceFromRequirement(fact);
   provenance.definitionPath = std::string(resolvedSemanticText(

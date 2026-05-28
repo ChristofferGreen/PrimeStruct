@@ -65,7 +65,6 @@ This file is the live open-work queue for PrimeStruct.
 ### Ready Now
 
 - TODO-4608: Add checked array slice construction | track: array-slice-construction | surface: safe array slice construction
-- TODO-4618: Fail closed on stale CT-eval requirement facts | track: ct-eval-requirement-fail-closed | surface: CT-eval requirement facts
 - TODO-4621: Classify unsupported variadic-pack diagnostics | track: variadic-pack-diagnostic-tier | surface: lowerer/backend diagnostics
 
 ### Immediate Next 10
@@ -111,9 +110,9 @@ This file is the live open-work queue for PrimeStruct.
   validation manifest executable. TODO-4619 completed the second backend
   capability gate, and TODO-4620 completed deterministic indexed
   expanded-source diagnostic lookup. TODO-4617 completed preflight
-  stale/missing diagnostics, so TODO-4618 and TODO-4621 remain for CT-eval
-  stale/missing diagnostics and one lowerer/backend diagnostic stability-tier
-  promotion.
+  stale/missing diagnostics, and TODO-4618 completed CT-eval
+  requirement-predicate fail-closed coverage, so TODO-4621 remains for one
+  lowerer/backend diagnostic stability-tier promotion.
 - Safe array extents and capability views: TODO-4604 completed the requirement
   contract phase split, and TODO-4605 completed the non-null safe pointer
   optionality model. TODO-4606 specified the capability-parameterized
@@ -127,12 +126,11 @@ This file is the live open-work queue for PrimeStruct.
 ### Execution Queue
 
 1. TODO-4608: Add checked array slice construction
-2. TODO-4618: Fail closed on stale CT-eval requirement facts
-3. TODO-4621: Classify unsupported variadic-pack diagnostics
-4. TODO-4609: Reject escaping local array slices
-5. TODO-4610: Add forward cursor traversal API
-6. TODO-4611: Add reverse cursor traversal API
-7. TODO-4612: Add safe extent and cursor code examples
+2. TODO-4621: Classify unsupported variadic-pack diagnostics
+3. TODO-4609: Reject escaping local array slices
+4. TODO-4610: Add forward cursor traversal API
+5. TODO-4611: Add reverse cursor traversal API
+6. TODO-4612: Add safe extent and cursor code examples
 
 ### Task Blocks
 
@@ -252,29 +250,6 @@ This file is the live open-work queue for PrimeStruct.
       until the corresponding implementation leaves land.
   - stop_rule: Stop once the example guide and source-lock coverage are
     updated; do not implement missing language features in this leaf.
-
-- [ ] TODO-4618: Fail closed on stale CT-eval requirement facts
-  - owner: ai
-  - created_at: 2026-05-27
-  - phase: Architecture hardening
-  - parallel_track: ct-eval-requirement-fail-closed
-  - scope: Make compile-time requirement evaluation reject incomplete, missing,
-    or stale `requirementPredicateFacts` from the semantic product instead of
-    degrading into ordinary no-match or syntax-derived behavior.
-  - implementation_notes: Start with
-    `docs/SemanticProductConsumerMatrix.md`,
-    `include/primec/CompileTimeEvaluation.h`,
-    `src/CompileTimeEvaluation.cpp`, and
-    `src/semantics/RequirementPredicateFacts.cpp`.
-  - acceptance:
-    - A missing published requirement-predicate fact produces a deterministic
-      CT-eval diagnostic naming the missing semantic fact family.
-    - A stale predicate fact with mismatched callable or argument identity is
-      rejected before evaluation.
-    - The consumer matrix row records the new stale/missing coverage and the
-      positive CT-eval coverage still passes.
-  - stop_rule: Stop once CT-eval fails closed on requirement-predicate fact
-    completeness; do not implement new requirement syntax in this leaf.
 
 - [ ] TODO-4621: Classify unsupported variadic-pack diagnostics
   - owner: ai

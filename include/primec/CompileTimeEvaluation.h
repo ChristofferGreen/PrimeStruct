@@ -172,6 +172,20 @@ CompileTimeEvaluationCacheKey buildCompileTimeEvaluationCacheKey(
     const SemanticProgramRequirementPredicateFact &fact,
     const CompileTimeEvaluationBudget &budget,
     std::string_view evaluatorPolicyVersion);
+std::string formatCompileTimeRequirementPredicateFactLookup(
+    std::string_view definitionPath,
+    std::string_view predicateName,
+    std::string_view sourceText = {});
+std::string missingCompileTimeRequirementPredicateFactMessage(
+    std::string_view definitionPath,
+    std::string_view predicateName,
+    std::string_view sourceText = {});
+std::optional<std::string> validateCompileTimeRequirementPredicateFact(
+    const SemanticProgram *semanticProgram,
+    const SemanticProgramRequirementPredicateFact &fact,
+    std::string_view definitionPath = {},
+    std::string_view predicateName = {},
+    std::string_view sourceText = {});
 
 class CompileTimeEvaluationFacade {
 public:

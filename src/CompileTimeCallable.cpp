@@ -313,14 +313,24 @@ CompileTimeCallablePrepareResult prepareCompileTimeCallable(
                                             request.sourceText);
   }
   if (fact == nullptr) {
-    const std::string predicateName =
-        request.predicateName.empty() ? std::string("<unknown>")
-                                      : request.predicateName;
     return makeRejectedResult(
         CompileTimeCallablePrepareStatus::MissingSemanticFact,
         facade,
         request.provenance,
-        "missing semantic fact for compile-time callable: " + predicateName);
+        missingCompileTimeRequirementPredicateFactMessage(
+            request.definitionPath, request.predicateName, request.sourceText));
+  }
+  if (const std::optional<std::string> invalidFact =
+          validateCompileTimeRequirementPredicateFact(semanticProgram,
+                                                     *fact,
+                                                     request.definitionPath,
+                                                     request.predicateName,
+                                                     request.sourceText)) {
+    return makeRejectedResult(
+        CompileTimeCallablePrepareStatus::MissingSemanticFact,
+        facade,
+        request.provenance,
+        *invalidFact);
   }
 
   CompileTimeEvaluationProvenance provenance =

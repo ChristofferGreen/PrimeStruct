@@ -36,6 +36,7 @@ primec::SemanticProgramRequirementPredicateFact makeRequirementFact(
     std::string diagnostic) {
   primec::SemanticProgramRequirementPredicateFact fact;
   fact.definitionPath = std::move(definitionPath);
+  fact.predicateKind = "predicate_call";
   fact.predicateName = std::move(predicateName);
   fact.sourceText = std::move(sourceText);
   fact.evaluationOutcome = std::move(outcome);
@@ -53,9 +54,56 @@ primec::SemanticProgramRequirementPredicateOperand makeOperand(
   primec::SemanticProgramRequirementPredicateOperand operand;
   operand.kind = std::move(kind);
   operand.text = std::move(text);
+  operand.stableHandle = operand.kind + ":" + operand.text;
   operand.sourceLine = 17;
   operand.sourceColumn = 9;
   return operand;
+}
+
+void internRequirementFact(primec::SemanticProgram &program,
+                           primec::SemanticProgramRequirementPredicateFact &fact) {
+  fact.definitionPathId =
+      primec::semanticProgramInternCallTargetString(program, fact.definitionPath);
+  fact.predicateKindId =
+      primec::semanticProgramInternCallTargetString(program, fact.predicateKind);
+  fact.predicateNameId =
+      primec::semanticProgramInternCallTargetString(program, fact.predicateName);
+  fact.relationOperatorId =
+      primec::semanticProgramInternCallTargetString(program, fact.relationOperator);
+  fact.sourceTextId =
+      primec::semanticProgramInternCallTargetString(program, fact.sourceText);
+  fact.compileTimeEffectIds.clear();
+  fact.compileTimeEffectIds.reserve(fact.compileTimeEffects.size());
+  for (const auto &effect : fact.compileTimeEffects) {
+    fact.compileTimeEffectIds.push_back(
+        primec::semanticProgramInternCallTargetString(program, effect));
+  }
+  fact.evaluationOutcomeId =
+      primec::semanticProgramInternCallTargetString(program, fact.evaluationOutcome);
+  fact.evaluationDiagnosticId =
+      primec::semanticProgramInternCallTargetString(program, fact.evaluationDiagnostic);
+  for (auto &operand : fact.operands) {
+    operand.kindId =
+        primec::semanticProgramInternCallTargetString(program, operand.kind);
+    operand.textId =
+        primec::semanticProgramInternCallTargetString(program, operand.text);
+    operand.stableHandleId =
+        primec::semanticProgramInternCallTargetString(program, operand.stableHandle);
+  }
+}
+
+void addRequirementFact(primec::SemanticProgram &program,
+                        primec::SemanticProgramRequirementPredicateFact fact) {
+  internRequirementFact(program, fact);
+  program.requirementPredicateFacts.push_back(std::move(fact));
+}
+
+void addCompileTimeEffect(primec::SemanticProgram &program,
+                          primec::SemanticProgramRequirementPredicateFact &fact,
+                          std::string effect) {
+  fact.compileTimeEffects.push_back(effect);
+  fact.compileTimeEffectIds.push_back(
+      primec::semanticProgramInternCallTargetString(program, effect));
 }
 
 std::filesystem::path repoRootPath() {
@@ -78,25 +126,25 @@ std::string readSourceFile(const std::filesystem::path &path) {
 
 primec::SemanticProgram makeRequirementProgram() {
   primec::SemanticProgram program;
-  program.requirementPredicateFacts.push_back(makeRequirementFact(
+  addRequirementFact(program, makeRequirementFact(
       "/generic/same",
       "/std/meta/type_equals",
       "/std/meta/type_equals<i32, i32>()",
       "satisfied",
       "types are equal: i32"));
-  program.requirementPredicateFacts.push_back(makeRequirementFact(
+  addRequirementFact(program, makeRequirementFact(
       "/generic/add",
       "/std/meta/has_trait",
       "/std/meta/has_trait<i32, Additive>()",
       "satisfied",
       "type supports Additive: i32"));
-  program.requirementPredicateFacts.push_back(makeRequirementFact(
+  addRequirementFact(program, makeRequirementFact(
       "/generic/field",
       "/std/meta/has_field",
       "/std/meta/has_field</Record, secret>()",
       "unsatisfied",
       "no visible field named secret on /Record"));
-  program.requirementPredicateFacts.push_back(makeRequirementFact(
+  addRequirementFact(program, makeRequirementFact(
       "/generic/bad",
       "/std/meta/unknown_predicate",
       "/std/meta/unknown_predicate<i32>()",
@@ -115,7 +163,7 @@ primec::SemanticProgram makeBudgetProgram() {
       "user predicate returned true");
   fact.operands.push_back(
       makeOperand("literal_compile_time_argument", "12345"));
-  program.requirementPredicateFacts.push_back(std::move(fact));
+  addRequirementFact(program, std::move(fact));
   return program;
 }
 
@@ -123,8 +171,9 @@ primec::SemanticProgram makeCacheProgram() {
   primec::SemanticProgram program = makeBudgetProgram();
   program.sourceImports = {"/project/b", "/project/a"};
   program.imports = {"/std/meta"};
-  program.requirementPredicateFacts.front().compileTimeEffects.push_back(
-      "file_read");
+  addCompileTimeEffect(program,
+                       program.requirementPredicateFacts.front(),
+                       "file_read");
   return program;
 }
 
@@ -135,7 +184,7 @@ primec::SemanticProgram makePredicateConformanceProgram() {
                      std::vector<primec::SemanticProgramRequirementPredicateOperand>
                          operands = {}) {
     fact.operands = std::move(operands);
-    program.requirementPredicateFacts.push_back(std::move(fact));
+    addRequirementFact(program, std::move(fact));
   };
 
   addFact(makeRequirementFact("/generic/value_true",
@@ -379,27 +428,29 @@ TEST_CASE("compiler-hosted CT facade evaluates published facts without backend a
 
 TEST_CASE("compile-time value predicates use shared VM kernel numeric API") {
   primec::SemanticProgram program;
-  program.requirementPredicateFacts.push_back(makeRequirementFact(
+  auto trueFact = makeRequirementFact(
       "/generic/kernel_true",
       "/std/meta/value_greater",
       "/std/meta/value_greater<4, 0>()",
       "unsatisfied",
-      "stale published outcome should not bypass kernel"));
-  program.requirementPredicateFacts.back().operands.push_back(
+      "stale published outcome should not bypass kernel");
+  trueFact.operands.push_back(
       makeOperand("literal_compile_time_argument", "4"));
-  program.requirementPredicateFacts.back().operands.push_back(
+  trueFact.operands.push_back(
       makeOperand("literal_compile_time_argument", "0"));
+  addRequirementFact(program, std::move(trueFact));
 
-  program.requirementPredicateFacts.push_back(makeRequirementFact(
+  auto falseFact = makeRequirementFact(
       "/generic/kernel_false",
       "/std/meta/value_less_equal",
       "/std/meta/value_less_equal<7, 3>()",
       "satisfied",
-      "stale published outcome should not bypass kernel"));
-  program.requirementPredicateFacts.back().operands.push_back(
+      "stale published outcome should not bypass kernel");
+  falseFact.operands.push_back(
       makeOperand("literal_compile_time_argument", "7"));
-  program.requirementPredicateFacts.back().operands.push_back(
+  falseFact.operands.push_back(
       makeOperand("literal_compile_time_argument", "3"));
+  addRequirementFact(program, std::move(falseFact));
 
   const primec::SemanticProgramCompileTimeHost host(program);
   const primec::CompileTimeEvaluationFacade facade(host);
@@ -492,7 +543,7 @@ TEST_CASE("compile-time VM facade stays source locked to compiler-host boundary"
 
 TEST_CASE("semantic CT host gates effects on phase-qualified metadata") {
   primec::SemanticProgram program;
-  program.requirementPredicateFacts.push_back(makeRequirementFact(
+  addRequirementFact(program, makeRequirementFact(
       "/generic/runtime",
       "/project/effectful",
       "/project/effectful()",
@@ -505,7 +556,7 @@ TEST_CASE("semantic CT host gates effects on phase-qualified metadata") {
                                              "satisfied",
                                              "compile-time effect allowed");
   compileTimeFact.compileTimeEffects.push_back("file_read");
-  program.requirementPredicateFacts.push_back(std::move(compileTimeFact));
+  addRequirementFact(program, std::move(compileTimeFact));
 
   const primec::SemanticProgramCompileTimeHost host(program);
   const primec::CompileTimeEvaluationFacade facade(host);
@@ -542,6 +593,7 @@ TEST_CASE("compile-time evaluation facade reports stable non-success categories"
 TEST_CASE("compile-time evaluation facade wraps published requirement facts") {
   primec::SemanticProgramRequirementPredicateFact fact;
   fact.definitionPath = "/example/use";
+  fact.predicateKind = "predicate_call";
   fact.predicateName = "/std/meta/has_trait";
   fact.sourceText = "require(meta.has_trait<T>(Additive))";
   fact.evaluationOutcome = "unsatisfied";
@@ -571,6 +623,93 @@ TEST_CASE("compile-time evaluation facade wraps published requirement facts") {
   CHECK(formatted.find("semantic_node_id 42") != std::string::npos);
   CHECK(formatted.find("provenance_handle 99") != std::string::npos);
   CHECK(formatted.find("trait Additive is absent") != std::string::npos);
+}
+
+TEST_CASE("compile-time evaluation rejects stale or missing requirementPredicateFacts") {
+  auto publishFirstFact = [](primec::SemanticProgram &program) {
+    primec::SemanticProgramModuleResolvedArtifacts artifacts;
+    artifacts.identity.moduleKey = "/generic/user";
+    artifacts.requirementPredicateFactIndices.push_back(0);
+    program.moduleResolvedArtifacts.push_back(std::move(artifacts));
+  };
+
+  primec::SemanticProgram missingProgram = makeBudgetProgram();
+  missingProgram.moduleResolvedArtifacts.emplace_back();
+  const primec::SemanticProgramCompileTimeHost missingHost(missingProgram);
+  const primec::CompileTimeEvaluationFacade missingFacade(missingHost);
+  primec::CompileTimeEvaluationRequest missingRequest;
+  missingRequest.definitionPath = "/generic/user";
+  missingRequest.predicateName = "/project/is_small";
+  missingRequest.sourceText = "/project/is_small<N>()";
+  const auto missing = missingFacade.evaluateRequirementPredicate(missingRequest);
+  CHECK(missing.kind ==
+        primec::CompileTimeEvaluationResultKind::InternalCompilerError);
+  CHECK(missing.message.find(
+            "missing semantic-product requirementPredicateFacts fact") !=
+        std::string::npos);
+  CHECK(missing.message.find("predicate /project/is_small") !=
+        std::string::npos);
+
+  primec::SemanticProgram staleCallableProgram = makeBudgetProgram();
+  publishFirstFact(staleCallableProgram);
+  const primec::SemanticProgramCompileTimeHost staleCallableHost(
+      staleCallableProgram);
+  const primec::CompileTimeEvaluationFacade staleCallableFacade(
+      staleCallableHost);
+  primec::CompileTimeEvaluationRequest staleCallableRequest;
+  staleCallableRequest.requirementPredicate =
+      &staleCallableProgram.requirementPredicateFacts.front();
+  staleCallableRequest.definitionPath = "/generic/other";
+  staleCallableRequest.predicateName = "/project/is_small";
+  staleCallableRequest.sourceText = "/project/is_small<N>()";
+  const auto staleCallable =
+      staleCallableFacade.evaluateRequirementPredicate(staleCallableRequest);
+  CHECK(staleCallable.kind ==
+        primec::CompileTimeEvaluationResultKind::InternalCompilerError);
+  CHECK(staleCallable.message.find(
+            "stale semantic-product requirementPredicateFacts callable "
+            "identity") != std::string::npos);
+
+  primec::SemanticProgram staleArgumentProgram = makeBudgetProgram();
+  publishFirstFact(staleArgumentProgram);
+  const primec::SemanticProgramCompileTimeHost staleArgumentHost(
+      staleArgumentProgram);
+  const primec::CompileTimeEvaluationFacade staleArgumentFacade(
+      staleArgumentHost);
+  primec::CompileTimeEvaluationRequest staleArgumentRequest;
+  staleArgumentRequest.requirementPredicate =
+      &staleArgumentProgram.requirementPredicateFacts.front();
+  staleArgumentRequest.definitionPath = "/generic/user";
+  staleArgumentRequest.predicateName = "/project/is_small";
+  staleArgumentRequest.sourceText = "/project/is_small<Other>()";
+  const auto staleArgument =
+      staleArgumentFacade.evaluateRequirementPredicate(staleArgumentRequest);
+  CHECK(staleArgument.kind ==
+        primec::CompileTimeEvaluationResultKind::InternalCompilerError);
+  CHECK(staleArgument.message.find(
+            "stale semantic-product requirementPredicateFacts argument "
+            "identity") != std::string::npos);
+
+  primec::SemanticProgram incompleteProgram = makeBudgetProgram();
+  publishFirstFact(incompleteProgram);
+  incompleteProgram.requirementPredicateFacts.front().predicateNameId =
+      primec::InvalidSymbolId;
+  const primec::SemanticProgramCompileTimeHost incompleteHost(
+      incompleteProgram);
+  const primec::CompileTimeEvaluationFacade incompleteFacade(incompleteHost);
+  primec::CompileTimeEvaluationRequest incompleteRequest;
+  incompleteRequest.requirementPredicate =
+      &incompleteProgram.requirementPredicateFacts.front();
+  incompleteRequest.definitionPath = "/generic/user";
+  incompleteRequest.predicateName = "/project/is_small";
+  incompleteRequest.sourceText = "/project/is_small<N>()";
+  const auto incomplete =
+      incompleteFacade.evaluateRequirementPredicate(incompleteRequest);
+  CHECK(incomplete.kind ==
+        primec::CompileTimeEvaluationResultKind::InternalCompilerError);
+  CHECK(incomplete.message.find(
+            "missing semantic-product requirementPredicateFacts predicateName "
+            "id") != std::string::npos);
 }
 
 TEST_CASE("compile-time evaluation facade enforces deterministic budgets") {
@@ -743,6 +882,11 @@ TEST_CASE("compile-time evaluation cache keys include invalidation material") {
   primec::SemanticProgram changedArgument = baseProgram;
   changedArgument.requirementPredicateFacts.front().operands.front().text =
       "67890";
+  changedArgument.requirementPredicateFacts.front()
+      .operands.front()
+      .stableHandle = "literal_compile_time_argument:67890";
+  internRequirementFact(changedArgument,
+                        changedArgument.requirementPredicateFacts.front());
   const FingerprintedSemanticHost changedArgumentHost(changedArgument,
                                                      "host-a");
   CHECK(primec::buildCompileTimeEvaluationCacheKey(
@@ -769,6 +913,7 @@ TEST_CASE("compile-time evaluation cache keys include invalidation material") {
   primec::SemanticProgram changedFact = baseProgram;
   changedFact.requirementPredicateFacts.front().evaluationDiagnostic =
       "changed diagnostic";
+  internRequirementFact(changedFact, changedFact.requirementPredicateFacts.front());
   const FingerprintedSemanticHost changedFactHost(changedFact, "host-a");
   CHECK(primec::buildCompileTimeEvaluationCacheKey(
             changedFactHost,
@@ -779,8 +924,9 @@ TEST_CASE("compile-time evaluation cache keys include invalidation material") {
             .digest != baseKey.digest);
 
   primec::SemanticProgram changedEffects = baseProgram;
-  changedEffects.requirementPredicateFacts.front().compileTimeEffects.push_back(
-      "net_read");
+  addCompileTimeEffect(changedEffects,
+                       changedEffects.requirementPredicateFacts.front(),
+                       "net_read");
   const FingerprintedSemanticHost changedEffectsHost(changedEffects, "host-a");
   CHECK(primec::buildCompileTimeEvaluationCacheKey(
             changedEffectsHost,

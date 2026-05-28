@@ -21,6 +21,7 @@ primec::SemanticProgramRequirementPredicateOperand makeOperand(
   primec::SemanticProgramRequirementPredicateOperand operand;
   operand.kind = std::move(kind);
   operand.text = std::move(text);
+  operand.stableHandle = operand.kind + ":" + operand.text;
   operand.sourceLine = line;
   operand.sourceColumn = column;
   return operand;
@@ -35,6 +36,7 @@ primec::SemanticProgramRequirementPredicateFact makeRequirementFact(
     std::string diagnostic = "prepared") {
   primec::SemanticProgramRequirementPredicateFact fact;
   fact.definitionPath = std::move(definitionPath);
+  fact.predicateKind = "predicate_call";
   fact.predicateName = std::move(predicateName);
   fact.sourceText = std::move(sourceText);
   fact.operands = std::move(operands);
@@ -50,6 +52,33 @@ primec::SemanticProgramRequirementPredicateFact makeRequirementFact(
 primec::SemanticProgram makeProgramWith(
     primec::SemanticProgramRequirementPredicateFact fact) {
   primec::SemanticProgram program;
+  fact.definitionPathId =
+      primec::semanticProgramInternCallTargetString(program, fact.definitionPath);
+  fact.predicateKindId =
+      primec::semanticProgramInternCallTargetString(program, fact.predicateKind);
+  fact.predicateNameId =
+      primec::semanticProgramInternCallTargetString(program, fact.predicateName);
+  fact.relationOperatorId =
+      primec::semanticProgramInternCallTargetString(program, fact.relationOperator);
+  fact.sourceTextId =
+      primec::semanticProgramInternCallTargetString(program, fact.sourceText);
+  fact.compileTimeEffectIds.reserve(fact.compileTimeEffects.size());
+  for (const auto &effect : fact.compileTimeEffects) {
+    fact.compileTimeEffectIds.push_back(
+        primec::semanticProgramInternCallTargetString(program, effect));
+  }
+  fact.evaluationOutcomeId =
+      primec::semanticProgramInternCallTargetString(program, fact.evaluationOutcome);
+  fact.evaluationDiagnosticId =
+      primec::semanticProgramInternCallTargetString(program, fact.evaluationDiagnostic);
+  for (auto &operand : fact.operands) {
+    operand.kindId =
+        primec::semanticProgramInternCallTargetString(program, operand.kind);
+    operand.textId =
+        primec::semanticProgramInternCallTargetString(program, operand.text);
+    operand.stableHandleId =
+        primec::semanticProgramInternCallTargetString(program, operand.stableHandle);
+  }
   program.requirementPredicateFacts.push_back(std::move(fact));
   return program;
 }
@@ -319,7 +348,8 @@ TEST_CASE("missing facts and preparation budgets fail before execution") {
         primec::CompileTimeCallablePrepareStatus::MissingSemanticFact);
   CHECK(missing.diagnostic.kind ==
         primec::CompileTimeEvaluationResultKind::InvalidEvaluation);
-  CHECK(missing.diagnostic.message.find("missing semantic fact") !=
+  CHECK(missing.diagnostic.message.find(
+            "missing semantic-product requirementPredicateFacts fact") !=
         std::string::npos);
 
   primec::SemanticProgram budgetProgram = makeProgramWith(makeRequirementFact(
@@ -345,6 +375,33 @@ TEST_CASE("missing facts and preparation budgets fail before execution") {
         primec::CompileTimeEvaluationResultKind::BudgetExhausted);
   CHECK(budget.diagnostic.message.find("budget exceeded") !=
         std::string::npos);
+}
+
+TEST_CASE("compile-time callable preparation rejects stale requirementPredicateFacts") {
+  primec::SemanticProgram program = makeProgramWith(makeRequirementFact(
+      "/generic/user",
+      "/project/is_small",
+      "/project/is_small<N>()",
+      {makeOperand("literal_compile_time_argument", "4")}));
+  const primec::SemanticProgramCompileTimeHost host(program);
+
+  primec::CompileTimeCallablePrepareRequest request =
+      makeRequest("/generic/user",
+                  "/project/is_small",
+                  "/project/is_small<Other>()");
+  request.requirementPredicate = &program.requirementPredicateFacts.front();
+
+  const primec::CompileTimeCallablePrepareResult result =
+      primec::prepareCompileTimeCallable(host, request);
+
+  CHECK_FALSE(result.prepared());
+  CHECK(result.status ==
+        primec::CompileTimeCallablePrepareStatus::MissingSemanticFact);
+  CHECK(result.diagnostic.kind ==
+        primec::CompileTimeEvaluationResultKind::InvalidEvaluation);
+  CHECK(result.diagnostic.message.find(
+            "stale semantic-product requirementPredicateFacts argument "
+            "identity") != std::string::npos);
 }
 
 TEST_SUITE_END();
