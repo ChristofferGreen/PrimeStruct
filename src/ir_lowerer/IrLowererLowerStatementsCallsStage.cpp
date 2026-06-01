@@ -61,6 +61,9 @@ bool runLowerStatementsCallsStage(const LowerStatementsCallsStageInput &input,
               .instructions = &input.function->instructions,
           },
           errorOut)) {
+    if (errorOut.empty()) {
+      errorOut = "lower statements entry execution failed without diagnostic";
+    }
     return false;
   }
 
@@ -84,10 +87,13 @@ bool runLowerStatementsCallsStage(const LowerStatementsCallsStageInput &input,
               .entryIndex = &input.outModule->entryIndex,
           },
           errorOut)) {
+    if (errorOut.empty()) {
+      errorOut = "lower statements function table failed without diagnostic";
+    }
     return false;
   }
 
-  return runLowerStatementsSourceMapStep(
+  const bool sourceMapLowered = runLowerStatementsSourceMapStep(
       {
           .functionSyntaxProvenanceByName = input.functionSyntaxProvenanceByName,
           .instructionSourceRangesByFunction = input.instructionSourceRangesByFunction,
@@ -95,6 +101,10 @@ bool runLowerStatementsCallsStage(const LowerStatementsCallsStageInput &input,
           .outModule = input.outModule,
       },
       errorOut);
+  if (!sourceMapLowered && errorOut.empty()) {
+    errorOut = "lower statements source map failed without diagnostic";
+  }
+  return sourceMapLowered;
 }
 
 } // namespace primec::ir_lowerer

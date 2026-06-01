@@ -753,11 +753,24 @@
             return false;
           }
           std::string accessName;
-          if (!getBuiltinArrayAccessName(callExpr, accessName) ||
-              (accessName != "at" && accessName != "at_unsafe")) {
+          if (!getBuiltinArrayAccessName(callExpr, accessName)) {
+            if (!resolveKeyValueHelperAliasName(callExpr, accessName)) {
+              return false;
+            }
+            if (accessName == "at_ref") {
+              accessName = "at";
+            } else if (accessName == "at_unsafe_ref") {
+              accessName = "at_unsafe";
+            }
+          }
+          if (accessName != "at" && accessName != "at_unsafe") {
             return false;
           }
-          if (resolveDefinitionCall(callExpr) != nullptr) {
+          if (const Definition *callee = resolveDefinitionCall(callExpr);
+              callee != nullptr &&
+              !ir_lowerer::isCanonicalPublishedStdlibSurfaceHelperPath(
+                  callee->fullPath,
+                  primec::StdlibSurfaceId::CollectionsManifestSurface0)) {
             return false;
           }
           if (callExpr.args.front().kind != Expr::Kind::Call) {

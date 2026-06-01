@@ -397,9 +397,17 @@ OperatorArithmeticEmitResult emitArithmeticOperatorExpr(const Expr &expr,
   }
   if ((leftPointer || rightPointer) ? !emitPointerOperand(expr.args[0], localsIn)
                                     : !emitExpr(expr.args[0], localsIn)) {
+    if (error.empty()) {
+      error = "left operand failed to lower for " + builtin + ": " +
+              expr.args[0].name;
+    }
     return OperatorArithmeticEmitResult::Error;
   }
   if (!emitExpr(expr.args[1], localsIn)) {
+    if (error.empty()) {
+      error = "right operand failed to lower for " + builtin + ": " +
+              expr.args[1].name;
+    }
     return OperatorArithmeticEmitResult::Error;
   }
   LocalInfo::ValueKind numericKind =

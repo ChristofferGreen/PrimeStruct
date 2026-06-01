@@ -90,20 +90,20 @@ bool parseSourceBreakpoints(const JsonValue *arguments,
       (void)jsonStringField(*source, "name", sourceUnit);
     }
   }
-  for (const JsonValue &entry : list->arrayValue) {
-    if (entry.kind != JsonValue::Kind::Object) {
+  for (const auto &entryPtr : list->arrayValue) {
+    if (entryPtr == nullptr || entryPtr->kind != JsonValue::Kind::Object) {
       error = "setBreakpoints entries must be objects";
       return false;
     }
     int64_t line = 0;
-    if (!jsonNumberField(entry, "line", line) || line <= 0) {
+    if (!jsonNumberField(*entryPtr, "line", line) || line <= 0) {
       error = "setBreakpoints entries require positive line";
       return false;
     }
     VmDebugAdapterSourceBreakpoint breakpoint;
     breakpoint.line = static_cast<uint32_t>(line);
     int64_t column = 0;
-    if (jsonNumberField(entry, "column", column) && column > 0) {
+    if (jsonNumberField(*entryPtr, "column", column) && column > 0) {
       breakpoint.column = static_cast<uint32_t>(column);
     }
     breakpoint.sourceUnit = sourceUnit;
@@ -131,15 +131,15 @@ bool parseInstructionBreakpoints(const JsonValue *arguments,
     return false;
   }
 
-  for (const JsonValue &entry : list->arrayValue) {
-    if (entry.kind != JsonValue::Kind::Object) {
+  for (const auto &entryPtr : list->arrayValue) {
+    if (entryPtr == nullptr || entryPtr->kind != JsonValue::Kind::Object) {
       error = "setInstructionBreakpoints entries must be objects";
       return false;
     }
     int64_t functionIndex = -1;
     int64_t instructionPointer = -1;
-    if (jsonNumberField(entry, "functionIndex", functionIndex) &&
-        jsonNumberField(entry, "instructionPointer", instructionPointer)) {
+    if (jsonNumberField(*entryPtr, "functionIndex", functionIndex) &&
+        jsonNumberField(*entryPtr, "instructionPointer", instructionPointer)) {
       if (functionIndex < 0 || instructionPointer < 0) {
         error = "setInstructionBreakpoints functionIndex/instructionPointer must be non-negative";
         return false;
@@ -150,7 +150,7 @@ bool parseInstructionBreakpoints(const JsonValue *arguments,
     }
 
     std::string instructionReference;
-    if (!jsonStringField(entry, "instructionReference", instructionReference)) {
+    if (!jsonStringField(*entryPtr, "instructionReference", instructionReference)) {
       error = "setInstructionBreakpoints entry requires functionIndex/instructionPointer or instructionReference";
       return false;
     }
@@ -160,7 +160,7 @@ bool parseInstructionBreakpoints(const JsonValue *arguments,
       return false;
     }
     int64_t offset = 0;
-    if (jsonNumberField(entry, "offset", offset)) {
+    if (jsonNumberField(*entryPtr, "offset", offset)) {
       if (offset < 0) {
         error = "instruction breakpoint offset must be non-negative";
         return false;

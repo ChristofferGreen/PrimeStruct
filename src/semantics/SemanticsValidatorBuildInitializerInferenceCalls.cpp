@@ -1009,6 +1009,15 @@ bool SemanticsValidator::inferCallInitializerBinding(const Expr &initializer,
             bindingOut.typeTemplateArg = initializerExprForInference->templateArgs.front();
           } else if (isKeyValueCollectionTypeName(collectionName) &&
                      initializerExprForInference->templateArgs.size() == 2) {
+            std::vector<std::string> collectionArgs;
+            if (!resolveCallCollectionTemplateArgs(*initializerExprForInference,
+                                                   "map",
+                                                   params,
+                                                   locals,
+                                                   collectionArgs) ||
+                collectionArgs.size() != 2) {
+              return false;
+            }
             const std::string keyValueAlias = mapCollectionAliasToken();
             if (keyValueAlias.empty()) {
               return false;

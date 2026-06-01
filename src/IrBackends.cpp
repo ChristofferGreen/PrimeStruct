@@ -435,6 +435,9 @@ public:
     IrToCppEmitter emitter;
     std::string cppSource;
     if (!emitter.emitSource(prunedModule, cppSource, error)) {
+      if (error.empty()) {
+        error = "ir-to-cpp failed without diagnostic";
+      }
       error = "ir-to-cpp failed: " + error;
       return false;
     }
@@ -487,6 +490,9 @@ public:
     IrToCppEmitter emitter;
     std::string cppSource;
     if (!emitter.emitSource(prunedModule, cppSource, error)) {
+      if (error.empty()) {
+        error = "ir-to-cpp failed without diagnostic";
+      }
       error = "ir-to-cpp failed: " + error;
       return false;
     }

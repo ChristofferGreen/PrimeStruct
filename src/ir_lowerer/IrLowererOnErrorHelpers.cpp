@@ -11,6 +11,24 @@
 namespace primec::ir_lowerer {
 namespace {
 
+bool validateOnErrorByDefinition(const OnErrorByDefinition &out, std::string &error) {
+  for (const auto &[path, handlerOpt] : out) {
+    if (path.empty()) {
+      error = "invalid on_error definition path";
+      return false;
+    }
+    if (!handlerOpt.has_value()) {
+      continue;
+    }
+    const OnErrorHandler &handler = *handlerOpt;
+    if (handler.errorType.empty() || handler.handlerPath.empty()) {
+      error = "invalid on_error handler payload: " + path;
+      return false;
+    }
+  }
+  return true;
+}
+
 bool validateSemanticProductCallableSummaryPathIds(const SemanticProgram &semanticProgram,
                                                    std::string &error) {
   const auto callableSummaries = semanticProgramCallableSummaryView(semanticProgram);
@@ -230,6 +248,9 @@ bool buildOnErrorByDefinition(const Program &program,
     }
     out.emplace(def.fullPath, std::move(handler));
   }
+  if (!validateOnErrorByDefinition(out, error)) {
+    return false;
+  }
   return true;
 }
 
@@ -275,7 +296,6 @@ bool buildEntryCallOnErrorSetup(const Program &program,
                                 const SemanticProgram *semanticProgram,
                                 EntryCallOnErrorSetup &out,
                                 std::string &error) {
-  out = {};
   const EntryCallResolutionSetup entryCallResolutionSetup = buildEntryCallResolutionSetup(
       entryDef, definitionReturnsVoid, defMap, importAliases, semanticProgram);
   out.callResolutionAdapters = entryCallResolutionSetup.adapters;
@@ -306,7 +326,6 @@ bool buildEntryCountCallOnErrorSetup(const Program &program,
                                      const SemanticProgram *semanticProgram,
                                      EntryCountCallOnErrorSetup &out,
                                      std::string &error) {
-  out = {};
   if (!buildEntryCountAccessSetup(entryDef, semanticProgram, out.countAccessSetup, error)) {
     return false;
   }

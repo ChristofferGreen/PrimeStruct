@@ -323,6 +323,8 @@ bool emitPrintAndFileInstruction(const IrInstruction &instruction,
       out << "        break;\n";
       return true;
     default:
+      error = "IrToCppEmitter unsupported print/file opcode at instruction " +
+              std::to_string(index);
       return false;
   }
 }

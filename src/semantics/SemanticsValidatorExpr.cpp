@@ -730,6 +730,23 @@ bool SemanticsValidator::validateExpr(const std::vector<ParameterInfo> &params,
                                      vectorHelperCallReceiverIndex)) {
       return false;
     }
+    std::string statementOnlyVectorMutatorName;
+    if (expressionIsStatementContext &&
+        getVectorMutatorHelperName(expr, statementOnlyVectorMutatorName) &&
+        isPublishedVectorMutatorHelperName(statementOnlyVectorMutatorName)) {
+      const std::string resolvedVectorMutatorTarget =
+          vectorHelperCallResolvedPath.empty() ? formatUnknownCallTarget(expr)
+                                               : vectorHelperCallResolvedPath;
+      if (isStdNamespacedVectorCompatibilityHelperPath(
+              resolvedVectorMutatorTarget, statementOnlyVectorMutatorName)) {
+        for (const Expr &arg : expr.args) {
+          if (!validateExpr(params, locals, arg)) {
+            return false;
+          }
+        }
+        return true;
+      }
+    }
     if (isReturnCall(expr)) {
       return failExprRootDiagnostic("return not allowed in expression context");
     }
@@ -1322,6 +1339,39 @@ bool SemanticsValidator::validateExpr(const std::vector<ParameterInfo> &params,
         }
       }
     }
+    if (!expr.isMethodCall && isResolvedKeyValueConstructorPath(resolved) &&
+        expr.templateArgs.size() == 2) {
+      std::string keyError;
+      if (!validateBuiltinComparableKeyType(expr.templateArgs.front(), nullptr,
+                                            keyError)) {
+        return failExprRootDiagnostic(std::move(keyError));
+      }
+      for (const Expr &arg : expr.args) {
+        if (!validateExpr(params, locals, arg)) {
+          return false;
+        }
+      }
+      for (std::size_t i = 0; i < expr.args.size(); i += 2) {
+        if (i + 1 >= expr.args.size()) {
+          if (!validateExpr(params, locals, expr.args[i])) {
+            return false;
+          }
+          break;
+        }
+        if (!this->validateCollectionElementType(
+                expr.args[i], expr.templateArgs[0],
+                "map constructor requires key type ", params, locals,
+                dispatchBootstrap.dispatchResolvers)) {
+          return false;
+        }
+        if (!this->validateCollectionElementType(
+                expr.args[i + 1], expr.templateArgs[1],
+                "map constructor requires value type ", params, locals,
+                dispatchBootstrap.dispatchResolvers)) {
+          return false;
+        }
+      }
+    }
     ExprLateBuiltinContext lateBuiltinContext;
     prepareExprLateBuiltinContext(
         params,
@@ -1483,14 +1533,89 @@ bool SemanticsValidator::validateExpr(const std::vector<ParameterInfo> &params,
         return failExprRootDiagnostic(
             "block arguments require a definition target: " + resolved);
       }
+      if (expr.templateArgs.size() == 2) {
+        std::string keyError;
+        if (!validateBuiltinComparableKeyType(expr.templateArgs.front(),
+                                              nullptr, keyError)) {
+          return failExprRootDiagnostic(std::move(keyError));
+        }
+      }
       for (const Expr &arg : expr.args) {
         if (!validateExpr(params, locals, arg)) {
           return false;
         }
       }
+      if (expr.templateArgs.size() == 2 && !expr.args.empty()) {
+        const Definition *currentDef = nullptr;
+        if (!currentValidationState_.context.definitionPath.empty()) {
+          auto currentDefIt =
+              defMap_.find(currentValidationState_.context.definitionPath);
+          if (currentDefIt != defMap_.end()) {
+            currentDef = currentDefIt->second;
+          }
+        }
+        const std::vector<std::string> *definitionTemplateArgs =
+            currentDef == nullptr ? nullptr : &currentDef->templateArgs;
+        std::string definitionNamespacePrefix = expr.namespacePrefix;
+        if (currentDef != nullptr && definitionNamespacePrefix.empty()) {
+          definitionNamespacePrefix = currentDef->namespacePrefix;
+        }
+        std::unordered_set<std::string> visitingStructs;
+        const std::string &valueType = expr.templateArgs[1];
+        if (!isRelocationTrivialContainerElementType(
+                valueType, definitionNamespacePrefix, definitionTemplateArgs,
+                visitingStructs)) {
+          return failExprRootDiagnostic(
+              std::string("map ") +
+              "literal requires relocation-trivial map value type until container "
+              "move/reallocation semantics are implemented: " +
+              valueType);
+        }
+        for (std::size_t i = 0; i < expr.args.size(); i += 2) {
+          if (i + 1 >= expr.args.size()) {
+            if (!validateExpr(params, locals, expr.args[i])) {
+              return false;
+            }
+            break;
+          }
+          if (!this->validateCollectionElementType(
+                  expr.args[i], expr.templateArgs[0],
+                  "map constructor requires key type ", params, locals,
+                  dispatchBootstrap.dispatchResolvers)) {
+            return false;
+          }
+          if (!this->validateCollectionElementType(
+                  expr.args[i + 1], expr.templateArgs[1],
+                  "map constructor requires value type ", params, locals,
+                  dispatchBootstrap.dispatchResolvers)) {
+            return false;
+          }
+        }
+      }
       return true;
     }
     if (resolvedDefinition == nullptr || calleeParamsIt == paramsByDef_.end()) {
+      const std::string unknownCallTarget = formatUnknownCallTarget(expr);
+      if (expressionIsStatementContext &&
+          (isStdNamespacedVectorCompatibilityHelperPath(resolved, "push") ||
+           isStdNamespacedVectorCompatibilityHelperPath(unknownCallTarget, "push") ||
+           isStdNamespacedVectorCompatibilityHelperPath(resolved, "pop") ||
+           isStdNamespacedVectorCompatibilityHelperPath(unknownCallTarget, "pop") ||
+           isStdNamespacedVectorCompatibilityHelperPath(resolved, "reserve") ||
+           isStdNamespacedVectorCompatibilityHelperPath(unknownCallTarget, "reserve") ||
+           isStdNamespacedVectorCompatibilityHelperPath(resolved, "clear") ||
+           isStdNamespacedVectorCompatibilityHelperPath(unknownCallTarget, "clear") ||
+           isStdNamespacedVectorCompatibilityHelperPath(resolved, "remove_at") ||
+           isStdNamespacedVectorCompatibilityHelperPath(unknownCallTarget, "remove_at") ||
+           isStdNamespacedVectorCompatibilityHelperPath(resolved, "remove_swap") ||
+           isStdNamespacedVectorCompatibilityHelperPath(unknownCallTarget, "remove_swap"))) {
+        for (const Expr &arg : expr.args) {
+          if (!validateExpr(params, locals, arg)) {
+            return false;
+          }
+        }
+        return true;
+      }
       if (isStdNamespacedVectorCompatibilityHelperPath(resolved, "count") &&
           expr.args.size() != 1) {
         if (hasNamedArguments(expr.argNames)) {
@@ -1530,7 +1655,7 @@ bool SemanticsValidator::validateExpr(const std::vector<ParameterInfo> &params,
             "argument count mismatch for builtin capacity");
       }
       return failExprRootDiagnostic("unknown call target: " +
-                                    formatUnknownCallTarget(expr));
+                                    unknownCallTarget);
     }
     const auto &calleeParams = calleeParamsIt->second;
     ExprResolvedCallSetup resolvedCallSetup;

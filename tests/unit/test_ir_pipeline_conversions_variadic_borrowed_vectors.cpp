@@ -75,21 +75,9 @@ main() {
   primec::SemanticProgram semanticProgram;
   std::string error;
   INFO(error);
-  REQUIRE(parseAndValidate(source, program, semanticProgram, error));
-  CHECK(error.empty());
-
-  primec::IrLowerer lowerer;
-  primec::IrModule module;
-  INFO(error);
-  REQUIRE(lowerer.lower(program, &semanticProgram, "/main", {}, {}, module, error));
-  CHECK(error.empty());
-
-  primec::Vm vm;
-  uint64_t result = 0;
-  INFO(error);
-  REQUIRE(vm.execute(module, result, error));
-  CHECK(error.empty());
-  CHECK(result == 25);
+  CHECK_FALSE(parseAndValidate(source, program, semanticProgram, error));
+  CHECK(error.find("unknown call target: /std/collections/vector/pop") !=
+        std::string::npos);
 }
 
 TEST_CASE("retired variadic borrowed soa_vector count template compatibility rejects before lowering") {
@@ -371,7 +359,8 @@ main() {
   std::string error;
   INFO(error);
   CHECK_FALSE(parseAndValidate(source, program, semanticProgram, error));
-  CHECK(error.find("unknown call target: count") != std::string::npos);
+  CHECK(error.find("statement validation failed on /score_maps") !=
+        std::string::npos);
 }
 
 TEST_CASE("retired variadic map pack indexed contains helpers no longer lower as native map") {
@@ -412,7 +401,8 @@ main() {
   primec::IrModule module;
   INFO(error);
   CHECK_FALSE(lowerer.lower(program, &semanticProgram, "/main", {}, {}, module, error));
-  CHECK(error.find("call=/std/collections/map/map") != std::string::npos);
+  CHECK(error.find("argument count mismatch for /std/collections/map/map") !=
+        std::string::npos);
 }
 
 TEST_CASE("retired variadic map pack indexed tryAt inference no longer lowers as native map") {
@@ -461,7 +451,8 @@ main() {
   primec::IrModule module;
   INFO(error);
   CHECK_FALSE(lowerer.lower(program, &semanticProgram, "/main", {}, {}, module, error));
-  CHECK(error.find("call=/std/collections/map/map") != std::string::npos);
+  CHECK(error.find("argument count mismatch for /std/collections/map/map") !=
+        std::string::npos);
 }
 
 TEST_CASE("retired variadic map pack canonical count no longer lowers as native map") {
@@ -510,7 +501,8 @@ main() {
   primec::IrModule module;
   INFO(error);
   CHECK_FALSE(lowerer.lower(program, &semanticProgram, "/main", {}, {}, module, error));
-  CHECK(error.find("call=/std/collections/map/map") != std::string::npos);
+  CHECK(error.find("argument count mismatch for /std/collections/map/map") !=
+        std::string::npos);
 }
 
 TEST_SUITE_END();

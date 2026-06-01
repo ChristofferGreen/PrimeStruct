@@ -214,6 +214,81 @@ bool Parser::parseTransformList(std::vector<Transform> &out) {
     args.push_back(std::move(argText));
     return true;
   };
+  auto parseRestrictTemplatePayload = [&](std::vector<std::string> &args,
+                                          std::vector<TemplateArgument> *detailsOut) -> bool {
+    auto skipCommentsOnly = [&]() {
+      while (tokens_[pos_].kind == TokenKind::Comment) {
+        ++pos_;
+      }
+    };
+    auto matchRaw = [&](TokenKind kind) -> bool {
+      skipCommentsOnly();
+      return tokens_[pos_].kind == kind;
+    };
+    auto expectRaw = [&](TokenKind kind, const std::string &message) -> bool {
+      if (matchRaw(TokenKind::Invalid)) {
+        return fail(describeInvalidToken(tokens_[pos_]));
+      }
+      if (!matchRaw(kind)) {
+        return fail(message);
+      }
+      ++pos_;
+      return true;
+    };
+
+    if (!expectRaw(TokenKind::LAngle, "expected '<'")) {
+      return false;
+    }
+
+    std::string payload;
+    int angleDepth = 1;
+    while (true) {
+      skipCommentsOnly();
+      if (matchRaw(TokenKind::Invalid)) {
+        return fail(describeInvalidToken(tokens_[pos_]));
+      }
+      if (matchRaw(TokenKind::End)) {
+        return fail("expected '>'");
+      }
+      if (matchRaw(TokenKind::LAngle)) {
+        if (pos_ + 1 < tokens_.size() && tokens_[pos_ + 1].kind == TokenKind::Equal) {
+          payload += "<=";
+          pos_ += 2;
+          continue;
+        }
+        payload.push_back('<');
+        ++pos_;
+        ++angleDepth;
+        continue;
+      }
+      if (matchRaw(TokenKind::RAngle)) {
+        if (pos_ + 1 < tokens_.size() && tokens_[pos_ + 1].kind == TokenKind::Equal) {
+          payload += ">=";
+          pos_ += 2;
+          continue;
+        }
+        if (angleDepth == 1) {
+          ++pos_;
+          break;
+        }
+        payload.push_back('>');
+        ++pos_;
+        --angleDepth;
+        continue;
+      }
+      payload += tokens_[pos_].text;
+      ++pos_;
+    }
+
+    if (payload.empty()) {
+      return fail("restrict transform requires a template argument");
+    }
+    args.push_back(std::move(payload));
+    if (detailsOut != nullptr) {
+      detailsOut->push_back(TemplateArgument::type(args.back()));
+    }
+    return true;
+  };
   auto allowFullTransformArguments = [&](TransformPhase phase, const std::string &name) {
     if (phase == TransformPhase::Text) {
       return false;
@@ -289,7 +364,11 @@ bool Parser::parseTransformList(std::vector<Transform> &out) {
     transform.sourceLine = name.line;
     transform.sourceColumn = name.column;
     if (match(TokenKind::LAngle)) {
-      if (!parseTemplateList(transform.templateArgs, &transform.templateArgDetails)) {
+      if (transform.name == "restrict") {
+        if (!parseRestrictTemplatePayload(transform.templateArgs, &transform.templateArgDetails)) {
+          return false;
+        }
+      } else if (!parseTemplateList(transform.templateArgs, &transform.templateArgDetails)) {
         return false;
       }
     }
@@ -350,7 +429,11 @@ bool Parser::parseTransformList(std::vector<Transform> &out) {
     transform.sourceLine = name.line;
     transform.sourceColumn = name.column;
     if (match(TokenKind::LAngle)) {
-      if (!parseTemplateList(transform.templateArgs, &transform.templateArgDetails)) {
+      if (transform.name == "restrict") {
+        if (!parseRestrictTemplatePayload(transform.templateArgs, &transform.templateArgDetails)) {
+          return false;
+        }
+      } else if (!parseTemplateList(transform.templateArgs, &transform.templateArgDetails)) {
         return false;
       }
     }

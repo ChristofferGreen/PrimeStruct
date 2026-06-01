@@ -104,6 +104,7 @@ bool SemanticsValidator::validateDefinitionBuildTransforms(
   bool sawCompute = false;
   bool sawUnsafe = false;
   bool sawRequire = false;
+  bool sawRestrict = false;
   bool sawWorkgroupSize = false;
   bool sawNoPadding = false;
   bool sawPlatformPadding = false;
@@ -267,10 +268,26 @@ bool SemanticsValidator::validateDefinitionBuildTransforms(
       break;
     }
     if (transform.name == "restrict") {
-      if (addTransformDiagnostic("restrict transform is only supported on bindings and parameters: " + def.fullPath)) {
-        return false;
+      if (sawRestrict) {
+        if (addTransformDiagnostic("duplicate restrict transform; combine predicates into one restrict<...>")) {
+          return false;
+        }
+        break;
       }
-      break;
+      sawRestrict = true;
+      if (transform.templateArgs.empty()) {
+        if (addTransformDiagnostic("restrict transform requires a template argument on " + def.fullPath)) {
+          return false;
+        }
+        break;
+      }
+      if (!transform.arguments.empty()) {
+        if (addTransformDiagnostic("restrict transform does not accept arguments on " + def.fullPath)) {
+          return false;
+        }
+        break;
+      }
+      continue;
     }
     if (transform.name == "return") {
       if (!transform.arguments.empty()) {

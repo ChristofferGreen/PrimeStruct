@@ -170,7 +170,13 @@ struct ExpectedArrayExtent {
 };
 
 std::string normalizeExpectedCollectionTemplateArg(std::string arg) {
-  arg = normalizeCollectionBindingTypeName(trimTemplateTypeText(arg));
+  arg = trimTemplateTypeText(arg);
+  std::string base;
+  std::string templateArgText;
+  if (splitTemplateTypeName(arg, base, templateArgText)) {
+    return arg;
+  }
+  arg = normalizeCollectionBindingTypeName(arg);
   const LocalInfo::ValueKind valueKind = valueKindFromTypeName(arg);
   const std::string normalizedValueType = typeNameForValueKind(valueKind);
   return normalizedValueType.empty() ? arg : normalizedValueType;

@@ -915,6 +915,9 @@ DirectCallStatementEmitResult tryEmitDirectCallStatement(
         error = priorError;
         return DirectCallStatementEmitResult::NotMatched;
       }
+      if (error.empty()) {
+        error = "missing semantic-product method-call target: " + directStmt.name;
+      }
       return DirectCallStatementEmitResult::Error;
     }
     if (callee) {

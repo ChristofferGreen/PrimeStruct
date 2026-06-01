@@ -343,7 +343,13 @@ bool isStringReturningKeyValueAccessAlias(
   const std::string resolvedPath =
       std::string(semanticProgramResolveCallTargetString(
           *semanticProgram, queryFact->resolvedPathId));
-  if (resolvedPath != "/at" && resolvedPath != "/at_unsafe") {
+  std::string accessName;
+  if (!getBuiltinArrayAccessName(expr, accessName) ||
+      (accessName != "at" && accessName != "at_unsafe")) {
+    return false;
+  }
+  if (resolvedPath != "/" + accessName &&
+      resolvedPath != nativeTailKeyValueHelperPath(accessName)) {
     return false;
   }
   const std::string queryType = trimTemplateTypeText(std::string(
@@ -787,6 +793,7 @@ NativeCallTailDispatchResult tryEmitNativeCallTailDispatch(
         accessName == "at" || accessName == "at_ref" ||
         accessName == "at_unsafe" || accessName == "at_unsafe_ref";
     if (expr.isMethodCall && isCollectionPairAccessName && !expr.args.empty() &&
+        accessName != "at" && accessName != "at_unsafe" &&
         resolveCollectionPairTypeInfo(
             expr.args.front(), localsIn, resolveCallCollectionPairTypeInfo)
             .isKeyValueTarget) {
@@ -924,6 +931,31 @@ NativeCallTailDispatchResult tryEmitNativeCallTailDispatch(
             !semanticKeyValueAccessHelperKeepsBuiltinReturn(
                 semanticProgram, nativeTailKeyValueHelperPath(accessName))))) {
         return NativeCallTailDispatchResult::NotHandled;
+      }
+    }
+    if ((accessName == "at" || accessName == "at_unsafe") &&
+        expr.args.size() == 2) {
+      const auto keyValueTargetInfo = resolveCollectionPairTypeInfo(
+          expr.args.front(), localsIn, resolveCallCollectionPairTypeInfo);
+      if (keyValueTargetInfo.isKeyValueTarget) {
+        if (!emitKeyValueLookupAccess(accessName,
+                                      keyValueTargetInfo.keyValueKeyKind,
+                                      keyValueTargetInfo.structTypeName,
+                                      expr.args.front(),
+                                      expr.args[1],
+                                      localsIn,
+                                      allocTempLocal,
+                                      emitExpr,
+                                      resolveStringTableTarget,
+                                      inferExprKind,
+                                      emitMapKeyNotFound,
+                                      instructionCount,
+                                      emitInstruction,
+                                      patchInstructionImm,
+                                      error)) {
+          return NativeCallTailDispatchResult::Error;
+        }
+        return NativeCallTailDispatchResult::Emitted;
       }
     }
     if (!emitBuiltinArrayAccess(accessName,

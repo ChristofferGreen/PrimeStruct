@@ -95,6 +95,13 @@ bool isExperimentalSoaVectorSpecializedStructPath(std::string_view path) {
          path.starts_with("Soa" "Vector" "__");
 }
 
+bool isBuiltinFileHandleMethodName(std::string_view methodName) {
+  return methodName == "write" || methodName == "write_line" ||
+         methodName == "write_byte" || methodName == "read_byte" ||
+         methodName == "write_bytes" || methodName == "flush" ||
+         methodName == "close";
+}
+
 std::string resolveSpecializedExperimentalSoaVectorStructPath(
     const std::string &typeText) {
   std::string normalized = trimTemplateTypeText(typeText);
@@ -591,6 +598,10 @@ const Definition *resolveMethodCallDefinitionFromExpr(
     }
     const std::string resolvedPath =
         findSemanticProductMethodCallTarget(semanticProgram, callExpr);
+    if (resolvedPath == "/std/collections/soa/to_aos") {
+      errorOut.clear();
+      return nullptr;
+    }
     if (resolvedPath.empty()) {
       const std::string directCallTarget =
           findSemanticProductDirectCallTarget(semanticProgram, callExpr);
@@ -622,6 +633,10 @@ const Definition *resolveMethodCallDefinitionFromExpr(
         errorOut =
             "semantic-product method-call target missing lowered definition: " +
             fallbackDirectTarget;
+        return nullptr;
+      }
+      if (isBuiltinFileHandleMethodName(extractMethodLeafName(explicitMethodPath))) {
+        errorOut.clear();
         return nullptr;
       }
       if (!allowsReceiverResolvedVectorMetadataFallback &&
@@ -706,14 +721,28 @@ const Definition *resolveMethodCallDefinitionFromExpr(
         errorOut.clear();
         return nullptr;
       }
-      if (allowsReceiverResolvedVectorMetadataFallback) {
+      if (preferredResolvedPath == "/string/count" &&
+          !requestsExplicitVectorCountMethod &&
+          (explicitMethodPath == "count" || explicitMethodPath == "/string/count")) {
         errorOut.clear();
-      } else {
-        errorOut =
-            "semantic-product method-call target missing lowered definition: " +
-            preferredResolvedPath;
         return nullptr;
       }
+      if (preferredResolvedPath == "/std/collections/soa/to_aos" &&
+          (explicitMethodPath == "to_aos" ||
+           explicitMethodPath == "/std/collections/soa/to_aos")) {
+        errorOut.clear();
+        return nullptr;
+      }
+      errorOut =
+          "semantic-product method-call target missing lowered definition: " +
+          preferredResolvedPath;
+      return nullptr;
+    }
+    if (errorOut.empty()) {
+      errorOut =
+          "semantic-product method-call target missing lowered definition: " +
+          (resolvedPath.empty() ? explicitMethodPath : resolvedPath);
+      return nullptr;
     }
   }
 

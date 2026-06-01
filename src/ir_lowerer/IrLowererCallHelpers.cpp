@@ -388,6 +388,12 @@ CountMethodFallbackResult tryEmitNonMethodCountFallback(
       error = priorError;
       continue;
     }
+    if (callee != nullptr && isAccessCall && isCollectionAccessReceiverExpr &&
+        receiverIndex < expr.args.size() &&
+        isCollectionAccessReceiverExpr(expr.args[receiverIndex])) {
+      error = priorError;
+      continue;
+    }
     const auto emitResult = emitResolvedInlineDefinitionCall(
         methodExpr, callee, emitInlineDefinitionCall, error);
     if (emitResult == ResolvedInlineCallResult::Emitted) {

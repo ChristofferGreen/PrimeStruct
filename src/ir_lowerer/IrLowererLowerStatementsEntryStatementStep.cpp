@@ -21,6 +21,9 @@ bool runLowerStatementsEntryStatementStep(const LowerStatementsEntryStatementSte
   const size_t startInstructionIndex = input.function->instructions.size();
   const Expr sourceStmt = stmt;
   if (!input.emitStatement(stmt)) {
+    if (errorOut.empty()) {
+      errorOut = "lower entry statement failed without diagnostic: " + stmt.name;
+    }
     return false;
   }
   input.appendInstructionSourceRange(

@@ -134,12 +134,12 @@ mutate_vectors([args<vector<i32>>] values) {
   [vector<i32> mut] head{values[0i32]}
   [vector<i32> mut] middle{values[1i32]}
   [vector<i32> mut] tail{values[2i32]}
-  head.push(9i32)
-  head.pop()
-  middle.reserve(6i32)
-  middle.clear()
-  tail.remove_at(1i32)
-  tail.remove_swap(0i32)
+  /std/collections/vector/push<i32>(head, 9i32)
+  /std/collections/vector/pop<i32>(head)
+  /std/collections/vector/reserve<i32>(middle, 6i32)
+  /std/collections/vector/clear<i32>(middle)
+  /std/collections/vector/remove_at<i32>(tail, 1i32)
+  /std/collections/vector/remove_swap<i32>(tail, 0i32)
   return(plus(/std/collections/vector/count(head),
               plus(/std/collections/vector/capacity(middle),
                    /std/collections/vector/count(tail))))

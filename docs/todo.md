@@ -38,7 +38,13 @@ This file is the live open-work queue for PrimeStruct.
 12. Treat disabled tests as debt: each retained `doctest::skip(true)` cluster
     must map to an active TODO leaf with a re-enable-or-delete outcome, or be
     removed once proven stale.
-13. When completing a task, mark it `[x]`, add `finished_at` plus a short
+13. Treat failing release-test cases as the top priority queue item: before
+    starting new implementation work, update `docs/failing_tests.md`, fix the
+    oldest reproducible failure first, and keep `docs/todo.md` aligned with the
+    active test-fix work.
+14. Every release test run must record any failing cases in
+    `docs/failing_tests.md` before broader work continues.
+15. When completing a task, mark it `[x]`, add `finished_at` plus a short
     evidence note, move the full block to `docs/todo_finished.md`, and remove
     it from this file.
 

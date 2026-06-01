@@ -258,3 +258,75 @@ Document how it helps compare lowering output.
 - Each workspace should use its own release build dir by default (e.g., `build-release-<agent>`). Use a debug build dir only when deeper debugging is specifically needed for that workspace.
 - Merge protocol: run the release validation path for that workspace first, commit, write a short summary in
   `workspaces/agent-<name>/MERGE.md`, then cherry-pick into root.
+
+## Test Fixing Workflow
+
+This repository follows a tight, repeatable workflow for reproducing, triaging,
+and fixing failing tests discovered in the release validation gate. Follow
+these steps when a release run fails:
+
+1. Reproduce the failure
+   - Run the canonical release gate: `./scripts/compile.sh --release` from the
+     repo root. This builds release artifacts into `build-release/` and runs
+     the full doctest/ctest suite.
+   - Collect the authoritative failing list and per-test output from
+     `build-release/Testing/Temporary/LastTestsFailed.log` and
+     `build-release/Testing/Temporary/LastTest.log`.
+
+2. Record failures
+   - Immediately add every failing case to `docs/failing_tests.md` with the
+     test location, test case name and the command that exposed it. Keep the
+     file up-to-date: remove an entry only after the fix is verified in a
+     release-mode run.
+
+3. Create a focused triage plan (use the agent TODO tool)
+   - Use the repository agent's task tracker (or `/memories/session/` plan) to
+     record a compact plan: reproduce a single failing case, gather a native
+     backtrace, implement a minimal fix, and re-run the failing binary.
+   - Always keep the plan small and verifiable (one failing case per plan
+     leaf when possible).
+
+4. Gather diagnostics
+   - For crashes (SIGSEGV), produce a native backtrace with `gdb` or
+     AddressSanitizer (ASAN). A helper is provided: `scripts/collect_backtrace.sh`
+     — run it with the same args you saw in the failing `LastTest.log`.
+   - Save backtrace artifacts alongside the failing test entry (e.g.,
+     `build-release/backtrace-<test>.txt`). Link them from
+     `docs/failing_tests.md` if helpful.
+
+5. Triage and implement a focused fix
+   - Use the backtrace + doctest output to identify the smallest, correct
+     change. Prefer guarding a dangling reference or null pointer over large
+     refactors unless the root cause requires it.
+   - Add or update unit tests when the fix closes a behavior gap.
+   - Keep changes minimal and localized; update `docs/failing_tests.md` and
+     `docs/todo.md` with intent and follow-up work as needed.
+
+6. Verify locally and in release mode
+   - First, run the affected doctest binary directly (e.g.,
+     `build-release/PrimeStruct_backend_ir_tests --test-suite=<suite> --first=<n> --last=<m>`)
+     to get quick feedback.
+   - Then run `./scripts/compile.sh --release` to validate the full release
+     gate. Avoid running heavy builds/tests in parallel with other heavy
+     tasks — follow the repo rule: no more than one heavy build/test at a
+     time.
+
+7. Commit and document
+   - Commit using the repository git commit conventions (imperative 50-char
+     subject, blank line, wrapped body at 72 chars). Include a short note in
+     `docs/failing_tests.md` and any relevant `workspaces/agent-*/MERGE.md`.
+
+8. Optional CI / follow-up
+   - If the fix requires follow-up performance or memory checks, run the
+     benchmark or coverage helpers (`./scripts/benchmark.sh`,
+     `./scripts/code_coverage.sh`). Attach results to the change when
+     relevant.
+
+Notes and best practices
+ - Prefer a precise native backtrace (gdb/ASAN) over speculative source-only
+   edits. Backtraces avoid wasting time on incorrect fixes.
+ - Use the `manage_todo_list` agent tool to keep triage steps visible and
+   checkpointed for reviewers.
+ - Keep `docs/failing_tests.md` minimal and authoritative; it is the single
+   source of truth for release-mode failures.
+

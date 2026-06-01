@@ -413,9 +413,16 @@ void preservePointerTargetArgumentInfo(LocalInfo &paramInfo,
   if (paramInfo.structSlotCount <= 0 && argInfo.structSlotCount > 0) {
     paramInfo.structSlotCount = argInfo.structSlotCount;
   }
-  paramInfo.pointerToArray = paramInfo.pointerToArray || argInfo.pointerToArray;
-  paramInfo.pointerToVector = paramInfo.pointerToVector || argInfo.pointerToVector;
-  paramInfo.pointerToBuffer = paramInfo.pointerToBuffer || argInfo.pointerToBuffer;
+  // Ensure pointer target flags are properly preserved for variadic arguments
+  if (paramInfo.isArgsPack) {
+    paramInfo.pointerToArray = paramInfo.pointerToArray || argInfo.pointerToArray;
+    paramInfo.pointerToVector = paramInfo.pointerToVector || argInfo.pointerToVector;
+    paramInfo.pointerToBuffer = paramInfo.pointerToBuffer || argInfo.pointerToBuffer;
+  } else {
+    paramInfo.pointerToArray = paramInfo.pointerToArray || argInfo.pointerToArray;
+    paramInfo.pointerToVector = paramInfo.pointerToVector || argInfo.pointerToVector;
+    paramInfo.pointerToBuffer = paramInfo.pointerToBuffer || argInfo.pointerToBuffer;
+  }
   paramInfo.targetsUninitializedStorage =
       paramInfo.targetsUninitializedStorage || argInfo.targetsUninitializedStorage;
   paramInfo.isSoaVector = paramInfo.isSoaVector || argInfo.isSoaVector;

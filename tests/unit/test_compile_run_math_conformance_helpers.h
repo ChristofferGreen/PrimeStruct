@@ -102,7 +102,7 @@ void compareLabeledOutputs(const std::vector<LabeledSample> &baseline, const std
 }
 
 [[maybe_unused]] void checkMathConformanceWithAllowlist(const std::string &source, const std::string &name,
-                                                        const std::unordered_set<std::string> &nativeAllowlist) {
+                                                        [[maybe_unused]] const std::unordered_set<std::string> &nativeAllowlist) {
   const std::string baseline = runMathConformance(source, name, "exe");
   const std::string vmOut = runMathConformance(source, name, "vm");
   CHECK(vmOut == baseline);

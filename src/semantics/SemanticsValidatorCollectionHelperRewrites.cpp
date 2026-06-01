@@ -287,6 +287,9 @@ std::string SemanticsValidator::preferredBareVectorHelperTarget(std::string_view
       canonicalVectorCompatibilityHelperPathOrFallback(helperName);
   if (isPublishedVectorMutatorHelperName(helperName)) {
     const std::string samePath = rootedVectorHelperPath(helperName);
+    if (hasVisibleVectorHelperFamily(canonical)) {
+      return canonical;
+    }
     if (hasVisibleVectorHelperFamily(samePath)) {
       return samePath;
     }

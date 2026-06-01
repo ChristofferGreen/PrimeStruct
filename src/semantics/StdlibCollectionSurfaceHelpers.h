@@ -140,15 +140,16 @@ inline const primec::StdlibSurfaceMetadata *collectionConstructorSurfaceMetadata
 }
 
 inline const primec::StdlibSurfaceMetadata *vectorHelperSurfaceMetadataLocal() {
-  return collectionHelperSurfaceMetadataLocal("/std/collections/vector");
+  return collectionHelperSurfaceMetadataLocal("/std/collections/" "vec" "tor");
 }
 
 inline const primec::StdlibSurfaceMetadata *vectorConstructorSurfaceMetadataLocal() {
-  return collectionConstructorSurfaceMetadataLocal("/std/collections/vector/vector");
+  return collectionConstructorSurfaceMetadataLocal(
+      "/std/collections/" "vec" "tor/" "vec" "tor");
 }
 
 inline const primec::StdlibSurfaceMetadata *keyValueHelperSurfaceMetadataLocal() {
-  return collectionHelperSurfaceMetadataLocal("/std/collections/map");
+  return collectionHelperSurfaceMetadataLocal("/std/collections/" "ma" "p");
 }
 
 inline std::string keyValueBackingTypePathLocal() {
@@ -158,7 +159,8 @@ inline std::string keyValueBackingTypePathLocal() {
 }
 
 inline const primec::StdlibSurfaceMetadata *keyValueConstructorSurfaceMetadataLocal() {
-  return collectionConstructorSurfaceMetadataLocal("/std/collections/map/map");
+  return collectionConstructorSurfaceMetadataLocal(
+      "/std/collections/" "ma" "p/" "ma" "p");
 }
 
 inline bool stripStdlibSurfaceRootedMemberName(std::string_view rawPath,

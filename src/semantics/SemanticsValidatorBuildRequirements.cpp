@@ -40,6 +40,7 @@ bool SemanticsValidator::validateRequirementPredicates() {
   };
   auto formatRequirementPredicateDiagnostic =
       [](const Definition &definition,
+         std::string_view transformName,
          int sourceLine,
          int sourceColumn,
          std::string_view argument,
@@ -63,7 +64,7 @@ bool SemanticsValidator::validateRequirementPredicates() {
           out << "invalid requirement predicate " << predicateName << '\n';
           out << "category: invalid requirement predicate evaluation\n";
         }
-        out << "require transform: " << definition.fullPath << " at "
+        out << transformName << " transform: " << definition.fullPath << " at "
             << sourceLine << ':' << sourceColumn << '\n';
         out << "predicate source: "
             << (fact.sourceText.empty() ? std::string(argument)
@@ -203,14 +204,16 @@ bool SemanticsValidator::validateRequirementPredicates() {
     populateCapabilityFacts(context);
 
     for (const auto &transform : definition.transforms) {
-      if (transform.name != "require") {
+      if (transform.name != "require" && transform.name != "restrict") {
         continue;
       }
       const int sourceLine =
           transform.sourceLine > 0 ? transform.sourceLine : definition.sourceLine;
       const int sourceColumn =
           transform.sourceColumn > 0 ? transform.sourceColumn : definition.sourceColumn;
-      for (const auto &argument : transform.arguments) {
+      const auto &predicateArgs =
+          transform.name == "restrict" ? transform.templateArgs : transform.arguments;
+      for (const auto &argument : predicateArgs) {
         RequirementPredicateFactDraft fact =
             buildRequirementPredicateFactDraft(argument,
                                                sourceLine,
@@ -226,6 +229,7 @@ bool SemanticsValidator::validateRequirementPredicates() {
         return failDefinitionDiagnostic(
             definition,
             formatRequirementPredicateDiagnostic(definition,
+                                                 transform.name,
                                                  sourceLine,
                                                  sourceColumn,
                                                  argument,

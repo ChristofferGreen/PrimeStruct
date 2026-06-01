@@ -846,7 +846,8 @@ bool isSourceMethodStringKeyValueAccessTarget(
   const std::string resolvedPath =
       std::string(semanticProgramResolveCallTargetString(
           *semanticProgram, queryFact->resolvedPathId));
-  if (resolvedPath != "/at" && resolvedPath != "/at_unsafe") {
+  if (resolvedPath != "/" + accessName &&
+      resolvedPath != canonicalKeyValueHelperPath(accessName)) {
     return false;
   }
   const std::string queryType =
@@ -1601,12 +1602,26 @@ CountAccessCallEmitResult tryEmitCountAccessCall(
       expr.args.size() == 1 &&
       isDynamicCollectionCountTargetFn != nullptr &&
       isDynamicCollectionCountTargetFn(expr.args.front(), localsIn);
+  const bool explicitPublishedVectorCountAccessTarget =
+      explicitPublishedVectorCountCall &&
+      expr.args.size() == 1 &&
+      ((isDynamicCollectionCountTargetFn != nullptr &&
+        isDynamicCollectionCountTargetFn(expr.args.front(), localsIn)) ||
+       (isDynamicVectorCountTargetFn != nullptr &&
+        isDynamicVectorCountTargetFn(expr.args.front(), localsIn)));
   if (explicitPublishedVectorCountCall &&
       !namedArgVectorTemporaryCountCall &&
-      !semanticBridgeCountAccessTarget) {
+      !semanticBridgeCountAccessTarget &&
+      !explicitPublishedVectorCountAccessTarget) {
     return CountAccessCallEmitResult::NotHandled;
   }
-  if (explicitPublishedVectorCapacityCall) {
+  const bool explicitPublishedVectorCapacityAccessTarget =
+      explicitPublishedVectorCapacityCall &&
+      expr.args.size() == 1 &&
+      isDynamicVectorCapacityTargetFn != nullptr &&
+      isDynamicVectorCapacityTargetFn(expr.args.front(), localsIn);
+  if (explicitPublishedVectorCapacityCall &&
+      !explicitPublishedVectorCapacityAccessTarget) {
     return CountAccessCallEmitResult::NotHandled;
   }
   if ((isExplicitRemovedCountLikeAliasCall(expr, "count") &&
@@ -1894,11 +1909,22 @@ CountAccessCallEmitResult tryEmitCountAccessCall(
     }
   }
 
+  const bool dynamicCollectionCountTarget =
+      expr.args.size() == 1 &&
+      isDynamicCollectionCountTargetFn &&
+      isDynamicCollectionCountTargetFn(expr.args.front(), localsIn);
+  const bool dynamicVectorCountTarget =
+      expr.args.size() == 1 &&
+      ((isDynamicVectorCountTargetFn &&
+        isDynamicVectorCountTargetFn(expr.args.front(), localsIn)) ||
+       isVectorCountTarget(expr.args.front(), localsIn));
   if ((count_access_detail::isUnqualifiedCollectionBuiltinName(expr, "count") ||
-       explicitPublishedVectorCountCall ||
        explicitPublishedKeyValueCountCall ||
-       resolvedVectorCountMethodBuiltinTarget) && expr.args.size() == 1 &&
-      isDynamicCollectionCountTargetFn && isDynamicCollectionCountTargetFn(expr.args.front(), localsIn)) {
+       resolvedVectorCountMethodBuiltinTarget ||
+       (explicitPublishedVectorCountCall && dynamicVectorCountTarget)) &&
+      expr.args.size() == 1 &&
+      (dynamicCollectionCountTarget ||
+       (explicitPublishedVectorCountCall && dynamicVectorCountTarget))) {
     if (inferExprKind &&
         inferExprKind(expr.args.front(), localsIn) == LocalInfo::ValueKind::String) {
       // String receivers can be dynamic call results; defer to string count emission.
@@ -2021,6 +2047,15 @@ CountAccessCallEmitResult tryEmitCountAccessCall(
       rewrittenStringTarget.namespacePrefix.clear();
       rewrittenStringTarget.name =
           canonicalKeyValueHelperPath(accessName);
+    } else if (semanticStringTarget == SemanticStringCountTargetResolution::String &&
+               rewrittenStringTarget.kind == Expr::Kind::Call &&
+               rewrittenStringTarget.args.size() == 2 &&
+               getBuiltinArrayAccessName(rewrittenStringTarget, accessName) &&
+               (accessName == "at" || accessName == "at_unsafe")) {
+      rewrittenStringTarget.isMethodCall = false;
+      rewrittenStringTarget.isFieldAccess = false;
+      rewrittenStringTarget.namespacePrefix.clear();
+      rewrittenStringTarget.name = canonicalKeyValueHelperPath(accessName);
     }
     if (!emitExpr(rewrittenStringTarget, localsIn)) {
       return CountAccessCallEmitResult::Error;

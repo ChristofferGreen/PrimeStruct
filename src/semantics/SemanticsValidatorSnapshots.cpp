@@ -1344,10 +1344,24 @@ void SemanticsValidator::rebindMergedWorkerPublicationFactSemanticNodeIds() {
                            entry.targetResolvedPath,
                            entry.extentExpression);
       };
+  const auto arrayExtentFactIdentityKey =
+      [](const ArrayExtentFactSnapshotEntry &entry) {
+        return snapshotKey(entry.scopePath,
+                           entry.siteKind,
+                           entry.sourceLine,
+                           entry.sourceColumn,
+                           entry.targetName);
+      };
+  const bool prunedArrayExtentFacts = pruneReplacedEntriesBySnapshotKey(
+      mergedWorkerPublicationFacts_.arrayExtentFacts,
+      freshArrayExtentFacts,
+      arrayExtentFactIdentityKey,
+      arrayExtentFactSnapshotKey);
   if (appendMissingEntriesBySnapshotKey(
           mergedWorkerPublicationFacts_.arrayExtentFacts,
           freshArrayExtentFacts,
-          arrayExtentFactSnapshotKey)) {
+          arrayExtentFactSnapshotKey) ||
+      prunedArrayExtentFacts) {
     std::stable_sort(mergedWorkerPublicationFacts_.arrayExtentFacts.begin(),
                      mergedWorkerPublicationFacts_.arrayExtentFacts.end(),
                      [](const auto &left, const auto &right) {
@@ -1504,12 +1518,15 @@ void SemanticsValidator::collectPilotRoutingSemanticProductFacts() {
   };
 
   collectDirectCallExpr = [&](const std::string &scopePath, const Expr &expr) {
-    if (expr.kind == Expr::Kind::Call && !expr.isMethodCall) {
+    if (expr.kind == Expr::Kind::Call) {
       std::string resolvedPath;
       if (isTaskWaitExpr(expr)) {
         resolvedPath = "/task/wait";
       } else {
         resolvedPath = preferredCollectionHelperResolvedPath(expr);
+      }
+      if (resolvedPath.empty() && expr.isMethodCall) {
+        resolvedPath = resolveCalleePath(expr);
       }
       if (resolvedPath.empty()) {
         resolvedPath = resolveCalleePath(expr);
@@ -1542,14 +1559,14 @@ void SemanticsValidator::collectPilotRoutingSemanticProductFacts() {
               expr.semanticNodeId,
           });
         }
-        collectedDirectCallTargets_.push_back(CollectedDirectCallTargetEntry{
-            scopePath,
-            expr.name,
-            std::move(resolvedPath),
-            expr.sourceLine,
+          collectedDirectCallTargets_.push_back(CollectedDirectCallTargetEntry{
+              scopePath,
+              expr.name,
+              std::move(resolvedPath),
+              expr.sourceLine,
             expr.sourceColumn,
-            expr.semanticNodeId,
-        });
+              expr.semanticNodeId,
+          });
       }
     }
     collectDirectCallExprs(scopePath, expr.args);

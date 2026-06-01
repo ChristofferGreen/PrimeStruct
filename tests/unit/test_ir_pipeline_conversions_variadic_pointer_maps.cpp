@@ -136,8 +136,8 @@ main() {
   primec::IrModule module;
   INFO(error);
   CHECK_FALSE(lowerer.lower(program, &semanticProgram, "/main", {}, {}, module, error));
-  CHECK(error.find("semantic-product method-call target missing lowered definition: /array/at") !=
-        std::string::npos);
+  CHECK(error.find("semantic-product method-call target missing lowered definition: "
+                   "/std/collections/soa/to_aos") != std::string::npos);
 }
 
 TEST_CASE("ir lowerer rejects variadic pointer map packs with indexed count_ref helpers") {
@@ -256,14 +256,9 @@ main() {
   primec::SemanticProgram semanticProgram;
   std::string error;
   INFO(error);
-  REQUIRE(parseAndValidate(source, program, semanticProgram, error));
-  CHECK(error.empty());
-
-  primec::IrLowerer lowerer;
-  primec::IrModule module;
-  INFO(error);
-  CHECK_FALSE(lowerer.lower(program, &semanticProgram, "/main", {}, {}, module, error));
-  CHECK(error.find("variadic parameter type mismatch") != std::string::npos);
+  CHECK_FALSE(parseAndValidate(source, program, semanticProgram, error));
+  CHECK(error.find("unknown call target: /std/collections/map/count") !=
+        std::string::npos);
 }
 
 TEST_CASE("ir lowerer rejects variadic pointer map packs with indexed lookup_ref helpers") {

@@ -2,6 +2,7 @@
 
 #include <cstdint>
 #include <istream>
+#include <memory>
 #include <optional>
 #include <ostream>
 #include <string>
@@ -30,8 +31,8 @@ struct JsonValue {
   bool boolValue = false;
   int64_t numberValue = 0;
   std::string stringValue;
-  std::vector<std::pair<std::string, JsonValue>> objectValue;
-  std::vector<JsonValue> arrayValue;
+  std::vector<std::pair<std::string, std::unique_ptr<JsonValue>>> objectValue;
+  std::vector<std::unique_ptr<JsonValue>> arrayValue;
 
   const JsonValue *find(std::string_view key) const;
 };

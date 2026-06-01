@@ -5,6 +5,7 @@
 #include <algorithm>
 #include <functional>
 #include <optional>
+#include <unordered_set>
 
 namespace primec::semantics {
 namespace {
@@ -614,6 +615,55 @@ bool SemanticsValidator::validateBindingStatement(const std::vector<ParameterInf
 
   if (initializer.kind == Expr::Kind::Call && isIfCall(initializer) &&
       !validateIfExpr(params, locals, initializer)) {
+    return false;
+  }
+
+  BindingInfo prevalidatedComparableInfo = info;
+  if (!hasExplicitType || explicitAutoType) {
+    (void)inferBindingTypeFromInitializer(
+        initializer, params, locals, prevalidatedComparableInfo, &stmt);
+  }
+  if (!validateBuiltinComparableKeyType(
+          prevalidatedComparableInfo, definitionTemplateArgs, error_)) {
+    return false;
+  }
+  auto validateMapConstructorInitializerRelocation = [&]() -> bool {
+    std::string keyType;
+    std::string valueType;
+    if (!extractKeyValueCollectionTypesFromTypeText(
+            expectedBindingTypeText(info), keyType, valueType) ||
+        initializer.kind != Expr::Kind::Call || initializer.args.empty()) {
+      return true;
+    }
+    std::string builtinCollectionName;
+    bool isMapConstructorInitializer =
+        getBuiltinCollectionName(initializer, builtinCollectionName) &&
+        builtinCollectionName == "map";
+    if (!isMapConstructorInitializer) {
+      std::string resolvedInitializerPath =
+          preferredCollectionHelperResolvedPath(initializer);
+      if (resolvedInitializerPath.empty()) {
+        resolvedInitializerPath = resolveCalleePath(initializer);
+      }
+      isMapConstructorInitializer =
+          isResolvedKeyValueConstructorPath(resolvedInitializerPath);
+    }
+    if (!isMapConstructorInitializer) {
+      return true;
+    }
+    std::unordered_set<std::string> visitingStructs;
+    if (isRelocationTrivialContainerElementType(
+            valueType, namespacePrefix, definitionTemplateArgs,
+            visitingStructs)) {
+      return true;
+    }
+    return failBindingDiagnostic(
+        std::string("map ") +
+        "literal requires relocation-trivial map value type until container "
+        "move/reallocation semantics are implemented: " +
+        valueType);
+  };
+  if (!validateMapConstructorInitializerRelocation()) {
     return false;
   }
 

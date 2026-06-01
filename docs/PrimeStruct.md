@@ -56,6 +56,10 @@ Pipeline operating rules:
 - Use `--no-text-transforms`, `--no-semantic-transforms`, or `--no-transforms` to disable transforms and require
   canonical syntax.
 - `--ir-inline` enables a post-validation IR inlining optimization pass before VM/native/IR emission.
+- Release validation failures are tracked in `docs/failing_tests.md`. Every
+  release test run must record newly failing doctest cases there before new
+  implementation work starts, and the TODO queue must prioritize fixing those
+  failures ahead of fresh feature work.
 
 ### Language levels (0.Concrete → 3.Surface)
 PrimeStruct is organized into four language levels. Each higher level desugars into the level below it.

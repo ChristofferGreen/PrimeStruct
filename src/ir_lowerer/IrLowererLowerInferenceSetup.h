@@ -48,6 +48,8 @@ struct LowerInferenceSetupBootstrapState {
   std::function<LocalInfo::ValueKind(const Expr &, const LocalMap &)> inferPointerTargetKind;
   const SemanticProgram *semanticProgram = nullptr;
   const SemanticProductIndex *semanticIndex = nullptr;
+  // Internal storage for inference-time errors referenced by nested setup callbacks
+  std::string inferenceError;
 };
 
 struct LowerInferenceSetupBootstrapInput {

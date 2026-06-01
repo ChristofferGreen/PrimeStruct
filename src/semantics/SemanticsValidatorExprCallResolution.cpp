@@ -501,8 +501,12 @@ std::string SemanticsValidator::resolveExprConcreteCallPath(
       std::all_of(expr.args.begin(), expr.args.end(), [&](const Expr &arg) {
         return isKeyValueEntryConstructorExpr(arg);
       });
-  const bool preferDirectKeyValueConstructorCandidate =
+  const bool hasVisibleKeyValueConstructorHelper =
       !keyValueConstructorBasePath.empty() &&
+      (hasDeclaredDefinitionPath(keyValueConstructorBasePath) ||
+       hasImportedDefinitionPath(keyValueConstructorBasePath));
+  const bool preferDirectKeyValueConstructorCandidate =
+      hasVisibleKeyValueConstructorHelper &&
       !expr.isMethodCall &&
       (usesFlatKeyValueConstructorArgs || usesEntryKeyValueConstructorArgs);
   auto buildBaseCandidates = [&](auto &baseCandidates) {
@@ -631,6 +635,9 @@ std::string SemanticsValidator::resolveExprConcreteCallPath(
       if (hasDefinitionFamilyPath(basePath)) {
         return basePath;
       }
+    }
+    if (!keyValueConstructorBasePath.empty() && !hasVisibleKeyValueConstructorHelper) {
+      return std::string{};
     }
     return baseCandidates.empty() ? candidatePath : baseCandidates.front();
   };

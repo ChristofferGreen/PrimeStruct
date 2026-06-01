@@ -106,7 +106,7 @@
   if (entryCallOnErrorSetup.hasTailExecution) {
     function.metadata.instrumentationFlags |= InstrumentationTailExecution;
   }
-  OnErrorByDefinition onErrorByDef = entryCallOnErrorSetup.onErrorByDefinition;
+  OnErrorByDefinition &onErrorByDef = entryCallOnErrorSetup.onErrorByDefinition;
 
   const auto &setupMathResolvers = setupLocalsOrchestration.setupMathResolvers;
   auto getMathBuiltinName = setupMathResolvers.getMathBuiltinName;

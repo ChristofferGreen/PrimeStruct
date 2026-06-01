@@ -417,6 +417,15 @@ std::string SemanticsValidator::resolveCalleePath(const Expr &expr) const {
         isRemovedKeyValueCompatibilityHelper(expr.name)) {
       return normalizedPrefix + "/" + expr.name;
     }
+    if (isKeyValueHelperNamespacePrefix(normalizedPrefix) && expr.name == "map") {
+      const std::string constructorPath = joinedPath(normalizedPrefix, expr.name);
+      if (hasDefinitionFamilyPath(constructorPath) ||
+          hasDeclaredDefinitionPath(constructorPath) ||
+          hasImportedDefinitionPath(constructorPath)) {
+        return rewriteCanonicalCollectionConstructorPath(constructorPath);
+      }
+      return {};
+    }
     if (const std::string *importAlias = lookupScopedImportAlias(expr.name);
         importAlias != nullptr) {
       return rewriteCanonicalCollectionConstructorPath(*importAlias);
@@ -434,6 +443,29 @@ std::string SemanticsValidator::resolveCalleePath(const Expr &expr) const {
         metadataBackedKeyValueConstructorAliasRewritePath(*importAlias);
     if (!constructorAlias.empty()) {
       return rewriteCanonicalCollectionConstructorPath(constructorAlias);
+    }
+    std::string accessName;
+    if (getBuiltinArrayAccessName(expr, accessName) &&
+        (accessName == "at" || accessName == "at_unsafe")) {
+      return rewriteCanonicalCollectionConstructorPath(*importAlias);
+    }
+  }
+  std::string accessName;
+  if ((getBuiltinArrayAccessName(expr, accessName) &&
+       (accessName == "at" || accessName == "at_unsafe")) ||
+      (expr.namespacePrefix.empty() &&
+       (expr.name == "at" || expr.name == "at_unsafe") &&
+       (accessName = expr.name, true))) {
+    const primec::StdlibSurfaceMetadata *metadata =
+        keyValueHelperSurfaceMetadataLocal();
+    if (metadata != nullptr) {
+      const std::string canonicalAccessPath =
+          canonicalCollectionHelperPath(metadata->id, accessName);
+      if (hasImportedDefinitionPath(canonicalAccessPath) ||
+          hasDeclaredDefinitionPath(canonicalAccessPath) ||
+          hasDefinitionFamilyPath(canonicalAccessPath)) {
+        return rewriteCanonicalCollectionConstructorPath(canonicalAccessPath);
+      }
     }
   }
 

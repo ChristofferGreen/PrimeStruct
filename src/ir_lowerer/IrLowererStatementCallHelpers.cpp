@@ -170,7 +170,6 @@ CallableDefinitionOrchestrationResult lowerCallableDefinitionOrchestration(
     const std::function<void()> &resetDefinitionLoweringState,
     const std::function<bool(const Definition &, int32_t &, LocalMap &, Expr &, std::string &)> &buildDefinitionCallContext,
     const std::function<bool(const Expr &, const Definition &, const LocalMap &, bool)> &emitInlineDefinitionCall,
-    const std::function<bool(const std::string &, const ReturnInfo &)> &appendReturnForDefinition,
     IrFunction &function,
     int32_t &nextLocal,
     std::vector<IrFunction> &outFunctions,
@@ -188,7 +187,6 @@ CallableDefinitionOrchestrationResult lowerCallableDefinitionOrchestration(
       resetDefinitionLoweringState,
       buildDefinitionCallContext,
       emitInlineDefinitionCall,
-      appendReturnForDefinition,
       function,
       nextLocal,
       outFunctions,
@@ -208,7 +206,6 @@ CallableDefinitionOrchestrationResult lowerCallableDefinitionOrchestration(
     const std::function<void()> &resetDefinitionLoweringState,
     const std::function<bool(const Definition &, int32_t &, LocalMap &, Expr &, std::string &)> &buildDefinitionCallContext,
     const std::function<bool(const Expr &, const Definition &, const LocalMap &, bool)> &emitInlineDefinitionCall,
-    const std::function<bool(const std::string &, const ReturnInfo &)> &appendReturnForDefinition,
     IrFunction &function,
     int32_t &nextLocal,
     std::vector<IrFunction> &outFunctions,
@@ -294,7 +291,7 @@ CallableDefinitionOrchestrationResult lowerCallableDefinitionOrchestration(
     if (!emitInlineDefinitionCall(callExpr, def, definitionLocals, !returnInfo.returnsVoid)) {
       return CallableDefinitionOrchestrationResult::Error;
     }
-    if (!appendReturnForDefinition(def.fullPath, returnInfo)) {
+    if (!emitReturnForDefinition(function.instructions, def.fullPath, returnInfo, error)) {
       return CallableDefinitionOrchestrationResult::Error;
     }
     outFunctions.push_back(std::move(function));
@@ -444,9 +441,6 @@ FunctionTableFinalizationResult finalizeEntryFunctionTableAndLowerCallables(
       resetDefinitionLoweringState,
       buildDefinitionCallContext,
       emitInlineDefinitionCall,
-      [&](const std::string &definitionPath, const ReturnInfo &returnInfo) {
-        return emitReturnForDefinition(entryFunction.instructions, definitionPath, returnInfo, error);
-      },
       entryFunction,
       nextLocal,
       outFunctions,

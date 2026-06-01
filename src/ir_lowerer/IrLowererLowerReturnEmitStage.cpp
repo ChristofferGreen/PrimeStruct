@@ -252,7 +252,7 @@ bool runLowerReturnEmitStage(const LowerReturnEmitStageInput &input,
 #include "IrLowererLowerStatementsExpr.h"
 #include "IrLowererLowerStatementsBindings.h"
 #include "IrLowererLowerStatementsLoops.h"
-    return ir_lowerer::runLowerStatementsCallsStep(
+    const bool lowered = ir_lowerer::runLowerStatementsCallsStep(
         {
             .semanticProgram = semanticProgram,
             .semanticIndex = &callResolutionAdapters.semanticProductTargets.semanticIndex,
@@ -303,6 +303,10 @@ bool runLowerReturnEmitStage(const LowerReturnEmitStageInput &input,
         stmt,
         localsIn,
         error);
+    if (!lowered && error.empty()) {
+      error = "IR lower return-emit statements call step failed without diagnostic";
+    }
+    return lowered;
   };
 
   if (input.consumeStage) {

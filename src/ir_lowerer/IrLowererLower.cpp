@@ -92,7 +92,7 @@ bool IrLowerer::lower(const Program &program,
     return false;
   }
 
-  ir_lowerer::LowerSetupStageState setupStage;
+  ir_lowerer::LowerSetupStageState setupStage{};
   if (!ir_lowerer::runLowerSetupStage(
           {
               .program = &program,
@@ -106,6 +106,9 @@ bool IrLowerer::lower(const Program &program,
           },
           setupStage,
           error)) {
+    if (error.empty()) {
+      error = "IR lowerer setup failed without diagnostic";
+    }
     return false;
   }
 
@@ -356,6 +359,9 @@ bool IrLowerer::lower(const Program &program,
           },
           returnEmitStage,
           error)) {
+    if (error.empty()) {
+      error = "IR lowering failed without diagnostic";
+    }
     return false;
   }
 

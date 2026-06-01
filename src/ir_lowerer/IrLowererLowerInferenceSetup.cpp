@@ -130,9 +130,12 @@ bool runLowerInferenceSetupBootstrap(const LowerInferenceSetupBootstrapInput &in
                                           isEntryArgsName,
                                           resolveExprPath,
                                           semanticProgram,
-                                          &stateOut,
-                                          &errorOut](const Expr &callExpr,
+                                          &stateOut](const Expr &callExpr,
                                                      const LocalMap &localsIn) -> const Definition * {
+    // Use a local temporary error string to avoid capturing the outer
+    // `errorOut` reference which would dangle after this function returns.
+    std::string localError;
+    (void)localError;
     return resolveMethodCallDefinitionFromExpr(callExpr,
                                                localsIn,
                                                isArrayCountCall,
@@ -145,7 +148,7 @@ bool runLowerInferenceSetupBootstrap(const LowerInferenceSetupBootstrapInput &in
                                                semanticProgram,
                                                stateOut.getReturnInfo,
                                                *defMap,
-                                               errorOut);
+                                               localError);
   };
   stateOut.resolveDefinitionCall = [defMap, resolveExprPath](const Expr &callExpr) -> const Definition * {
     return primec::ir_lowerer::resolveDefinitionCall(callExpr, *defMap, resolveExprPath);
@@ -283,7 +286,7 @@ bool runLowerInferenceSetup(const LowerInferenceSetupInput &input,
           {
               .defMap = input.defMap,
               .resolveExprPath = input.resolveExprPath,
-              .error = &errorOut,
+              .error = &stateOut.inferenceError,
           },
           stateOut,
           errorOut)) {
@@ -321,7 +324,7 @@ bool runLowerInferenceSetup(const LowerInferenceSetupInput &input,
           .isStringBinding = input.isStringBinding,
           .inferArrayElementKind = inferArrayElementKind,
           .lowerMatchToIf = input.lowerMatchToIf,
-          .error = &errorOut,
+          .error = &stateOut.inferenceError,
       },
       stateOut.getReturnInfo,
       errorOut);

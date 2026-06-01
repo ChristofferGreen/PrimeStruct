@@ -201,7 +201,11 @@ std::string encodeParsedJsonValue(const primec::vm_debug_dap_detail::JsonValue &
         if (i > 0) {
           out += ",";
         }
-        out += encodeParsedJsonValue(value.arrayValue[i]);
+        if (value.arrayValue[i] != nullptr) {
+          out += encodeParsedJsonValue(*value.arrayValue[i]);
+        } else {
+          out += "null";
+        }
       }
       out += "]";
       return out;
@@ -213,7 +217,11 @@ std::string encodeParsedJsonValue(const primec::vm_debug_dap_detail::JsonValue &
           out += ",";
         }
         out += std::string("\"") + primec::vm_debug_dap_detail::jsonEscape(value.objectValue[i].first) + "\":";
-        out += encodeParsedJsonValue(value.objectValue[i].second);
+        if (value.objectValue[i].second != nullptr) {
+          out += encodeParsedJsonValue(*value.objectValue[i].second);
+        } else {
+          out += "null";
+        }
       }
       out += "}";
       return out;

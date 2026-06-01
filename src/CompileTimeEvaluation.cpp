@@ -564,10 +564,15 @@ std::string missingCompileTimeRequirementPredicateFactMessage(
     std::string_view definitionPath,
     std::string_view predicateName,
     std::string_view sourceText) {
-  return "missing semantic-product requirementPredicateFacts fact: " +
-         formatCompileTimeRequirementPredicateFactLookup(definitionPath,
+  std::ostringstream out;
+  out << "missing semantic-product requirementPredicateFacts fact: compile-time evaluation requires a published predicate fact for "
+      << (predicateName.empty() ? std::string_view("<unknown>") : predicateName);
+  out << " (lookup: "
+      << formatCompileTimeRequirementPredicateFactLookup(definitionPath,
                                                          predicateName,
-                                                         sourceText);
+                                                         sourceText)
+      << ')';
+  return out.str();
 }
 
 std::optional<std::string> validateCompileTimeRequirementPredicateFact(

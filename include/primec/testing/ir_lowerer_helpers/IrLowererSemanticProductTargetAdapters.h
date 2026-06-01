@@ -20,6 +20,7 @@ struct SemanticProductIndex {
   std::unordered_map<uint64_t, const SemanticProgramQueryFact *> queryFactsByExpr;
   std::unordered_map<uint64_t, const SemanticProgramTryFact *> tryFactsByExpr;
   std::unordered_map<uint64_t, const SemanticProgramCollectionSpecialization *> collectionSpecializationsByExpr;
+  std::unordered_map<uint64_t, const SemanticProgramArrayExtentFact *> arrayExtentFactsByExpr;
   std::unordered_map<uint64_t, const SemanticProgramBindingFact *> bindingFactsByExpr;
 };
 

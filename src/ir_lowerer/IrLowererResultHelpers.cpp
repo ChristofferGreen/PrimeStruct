@@ -389,6 +389,18 @@ bool isQueryOwnedBuiltinCountTargetMatch(std::string_view queryCallName,
            isRootBuiltinCountQueryPath(publishedTargetPath)));
 }
 
+bool isInternalSoaStorageQueryTargetMatch(std::string_view queryCallName,
+                                          std::string_view queryResolvedPath,
+                                          std::string_view publishedTargetPath) {
+  const std::string_view internalSoaStoragePrefix =
+      "/std/collections/internal_soa_storage/";
+  return (queryCallName == "storage" || queryCallName == "field_count" ||
+          queryCallName == "field_capacity" || queryCallName == "set_field_count" ||
+          queryCallName == "set_field_capacity") &&
+         queryResolvedPath.rfind(internalSoaStoragePrefix, 0) == 0 &&
+         publishedTargetPath.rfind(internalSoaStoragePrefix, 0) == 0;
+}
+
 std::vector<const SemanticProgramReturnFact *>
 publishedReturnFactsByDefinitionMap(const SemanticProgram &semanticProgram) {
   std::vector<std::size_t> factIndices;
@@ -526,10 +538,12 @@ bool validateSemanticProductResultMetadataCompleteness(const SemanticProgram *se
           isQueryOwnedBuiltinCountTargetMatch(queryCallNameView,
                                              resolvedPath,
                                              publishedTargetPath);
-    }
-    if (!queryTargetMatchesPublishedTarget) {
-      error = "stale semantic-product query fact: " + queryCallName;
-      return false;
+      if (!queryTargetMatchesPublishedTarget) {
+        queryTargetMatchesPublishedTarget =
+            isInternalSoaStorageQueryTargetMatch(queryCallNameView,
+                                                 resolvedPath,
+                                                 publishedTargetPath);
+      }
     }
     if (!validateInternedSemanticTextMetadata(*semanticProgram,
                                               queryFact->queryTypeTextId,

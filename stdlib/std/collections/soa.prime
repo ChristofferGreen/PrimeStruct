@@ -1,6 +1,7 @@
 // Canonical public SoA helper namespace over the current SoaVector backing.
 import /std/collections/vector
 import /std/collections/internal_soa_vector
+import /std/collections/internal_soa_vector_conversions
 
 [public effects(heap_alloc), return<SoaVector<T>>]
 /std/collections/soa/soa<T>([args<T>] values) {

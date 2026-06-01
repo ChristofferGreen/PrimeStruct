@@ -500,23 +500,25 @@ main() {
   CHECK(semanticProgram.publishedRoutingLookups.methodCallStdlibSurfaceIdsByExpr.count(
             methodExpr->semanticNodeId) == 1);
   CHECK(semanticProgram.publishedRoutingLookups.directCallStdlibSurfaceIdsByExpr.count(
-            vectorDirectExpr->semanticNodeId) == 0);
+            vectorDirectExpr->semanticNodeId) == 1);
   CHECK(semanticProgram.publishedRoutingLookups.bridgePathChoiceIdsByExpr.count(
-            vectorDirectExpr->semanticNodeId) == 0);
+            vectorDirectExpr->semanticNodeId) == 1);
   CHECK(primec::ir_lowerer::findSemanticProductDirectCallTarget(adapter, *directExpr) == "/id_i32");
   CHECK(primec::ir_lowerer::findSemanticProductMethodCallTarget(adapter, *methodExpr) ==
         "/std/collections/vector/count");
   CHECK(primec::ir_lowerer::findSemanticProductDirectCallTarget(adapter, *vectorDirectExpr) ==
-        "/count");
+        "/std/collections/vector/count");
   CHECK_FALSE(primec::ir_lowerer::findSemanticProductDirectCallStdlibSurfaceId(adapter, *directExpr)
                   .has_value());
   const auto methodSurfaceId =
       primec::ir_lowerer::findSemanticProductMethodCallStdlibSurfaceId(adapter, *methodExpr);
   REQUIRE(methodSurfaceId.has_value());
   CHECK(*methodSurfaceId == primec::StdlibSurfaceId::CollectionsManifestSurface0);
-  CHECK_FALSE(primec::ir_lowerer::findSemanticProductDirectCallStdlibSurfaceId(
-                  adapter, *vectorDirectExpr)
-                  .has_value());
+  const auto vectorDirectSurfaceId =
+      primec::ir_lowerer::findSemanticProductDirectCallStdlibSurfaceId(
+          adapter, *vectorDirectExpr);
+  REQUIRE(vectorDirectSurfaceId.has_value());
+  CHECK(*vectorDirectSurfaceId == primec::StdlibSurfaceId::CollectionsManifestSurface0);
 
   const auto *summary = primec::ir_lowerer::findSemanticProductCallableSummary(adapter, "/main");
   REQUIRE(summary != nullptr);
@@ -617,29 +619,29 @@ main() {
   CHECK(semanticProgram.publishedRoutingLookups.directCallTargetIdsByExpr.count(
             vectorDirectExpr->semanticNodeId) == 1);
   CHECK(semanticProgram.publishedRoutingLookups.directCallStdlibSurfaceIdsByExpr.count(
-            vectorDirectExpr->semanticNodeId) == 0);
+            vectorDirectExpr->semanticNodeId) == 1);
   CHECK(semanticProgram.publishedRoutingLookups.bridgePathChoiceIdsByExpr.count(
-            vectorDirectExpr->semanticNodeId) == 0);
+            vectorDirectExpr->semanticNodeId) == 1);
   CHECK(primec::ir_lowerer::findSemanticProductDirectCallTarget(adapter, *vectorDirectExpr) ==
-        "/count");
+        "/std/collections/vector/count");
   CHECK(semanticProgram.publishedRoutingLookups.directCallTargetIdsByExpr.count(
             mapDirectExpr->semanticNodeId) == 1);
   CHECK(semanticProgram.publishedRoutingLookups.bridgePathChoiceIdsByExpr.count(
-            mapDirectExpr->semanticNodeId) == 0);
+            mapDirectExpr->semanticNodeId) == 1);
   CHECK(semanticProgram.publishedRoutingLookups.directCallStdlibSurfaceIdsByExpr.count(
-            mapDirectExpr->semanticNodeId) == 0);
+            mapDirectExpr->semanticNodeId) == 1);
   CHECK(semanticProgram.publishedRoutingLookups.bridgePathChoiceStdlibSurfaceIdsByExpr.count(
-            mapDirectExpr->semanticNodeId) == 0);
+            mapDirectExpr->semanticNodeId) == 1);
   CHECK(primec::ir_lowerer::findSemanticProductDirectCallTarget(adapter, *mapDirectExpr) ==
-        "/count");
+        "/std/collections/map/count");
   CHECK(primec::ir_lowerer::findSemanticProductBridgePathChoice(adapter, *mapDirectExpr)
-            .empty());
-  CHECK_FALSE(primec::ir_lowerer::findSemanticProductDirectCallStdlibSurfaceId(
-                  adapter, *mapDirectExpr)
-                  .has_value());
-  CHECK_FALSE(primec::ir_lowerer::findSemanticProductBridgePathChoiceStdlibSurfaceId(
-                  adapter, *mapDirectExpr)
-                  .has_value());
+            .empty() == false);
+  CHECK(primec::ir_lowerer::findSemanticProductDirectCallStdlibSurfaceId(
+            adapter, *mapDirectExpr)
+            .has_value());
+  CHECK(primec::ir_lowerer::findSemanticProductBridgePathChoiceStdlibSurfaceId(
+            adapter, *mapDirectExpr)
+            .has_value());
 }
 
 TEST_CASE("soa field-view backend cleanup stays stable") {

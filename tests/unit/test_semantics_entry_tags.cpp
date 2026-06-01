@@ -235,16 +235,21 @@ main() {
   CHECK(error.find("copy transform is only supported on bindings and parameters") != std::string::npos);
 }
 
-TEST_CASE("restrict tag rejects on definitions") {
+TEST_CASE("restrict tag accepts definition predicates") {
   const std::string source = R"(
-[restrict<i32> return<int>]
-main() {
+[restrict<value_less_equal<4, 5>()>]
+foo() {
   return(0i32)
+}
+
+[return<int>]
+main() {
+  return(foo())
 }
 )";
   std::string error;
-  CHECK_FALSE(validateProgram(source, "/main", error));
-  CHECK(error.find("restrict transform is only supported on bindings and parameters") != std::string::npos);
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
 }
 
 TEST_SUITE_END();

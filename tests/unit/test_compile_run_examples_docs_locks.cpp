@@ -437,7 +437,8 @@ TEST_CASE("graphics UI docs avoid inactive follow-up pointers") {
         std::string::npos);
   CHECK(primeStructDoc.find("No active TODO currently tracks platform/runtime consumption") !=
         std::string::npos);
-  CHECK(primeStructDoc.find("Add a concrete TODO before changing that UI runtime seam") !=
+  CHECK(primeStructDoc.find("Add a\n"
+                            "  concrete TODO before changing that UI runtime seam") !=
         std::string::npos);
   CHECK(primeStructDoc.find("broader backend/runtime follow-up work is still staged") ==
         std::string::npos);
@@ -2024,7 +2025,8 @@ TEST_CASE("todo queue and skipped doctest debt stay source locked") {
                   "  coverage snapshots in this file.") !=
         std::string::npos);
   CHECK(todo.find("### Ready Now\n\n"
-                  "- TODO-4608: Add checked array slice construction | track: array-slice-construction | surface: safe array slice construction\n"
+                  "- TODO-4609: Reject escaping local array slices | track: array-slice-escape-diagnostics | surface: slice view lifetime diagnostics\n"
+                  "- TODO-4610: Add forward cursor traversal API | track: cursor-forward-traversal | surface: forward cursor traversal\n"
                   "\n"
                   "### Immediate Next 10") !=
         std::string::npos);
@@ -2113,7 +2115,8 @@ TEST_CASE("todo queue and skipped doctest debt stay source locked") {
   CHECK(todo.find("- TODO-4574: Remove vector count/access compiler classifiers | track: vector-helper-classifier-deletion") ==
         std::string::npos);
   CHECK(todo.find("### Immediate Next 10\n\n"
-                  "- TODO-4609: Reject escaping local array slices") !=
+                  "- TODO-4611: Add reverse cursor traversal API\n"
+                  "- TODO-4612: Add safe extent and cursor code examples") !=
         std::string::npos);
   CHECK(todo.find("### Priority Lanes") != std::string::npos);
   CHECK(todo.find("Source-unit provenance ledger: TODO-4592 completed parser/semantic") ==
@@ -2136,14 +2139,15 @@ TEST_CASE("todo queue and skipped doctest debt stay source locked") {
                   "  contract phase split, and TODO-4605 completed the non-null safe pointer\n"
                   "  optionality model. TODO-4606 specified the capability-parameterized\n"
                   "  reference/slice view model in the normative docs. TODO-4607 published the\n"
-                  "  initial semantic-product array extent facts. TODO-4608 through TODO-4612") !=
+                  "  initial semantic-product array extent facts, and TODO-4608 added the first\n"
+                  "  checked read-only array slice construction surface. TODO-4609 through\n"
+                  "  TODO-4612") !=
         std::string::npos);
   CHECK(todo.find("### Execution Queue\n\n"
-                  "1. TODO-4608: Add checked array slice construction\n"
-                  "2. TODO-4609: Reject escaping local array slices\n"
-                  "3. TODO-4610: Add forward cursor traversal API\n"
-                  "4. TODO-4611: Add reverse cursor traversal API\n"
-                  "5. TODO-4612: Add safe extent and cursor code examples\n\n"
+                  "1. TODO-4609: Reject escaping local array slices\n"
+                  "2. TODO-4610: Add forward cursor traversal API\n"
+                  "3. TODO-4611: Add reverse cursor traversal API\n"
+                  "4. TODO-4612: Add safe extent and cursor code examples\n\n"
                   "### Task Blocks") !=
         std::string::npos);
   CHECK(todo.find("- TODO-4613: Retire semantic-validator private source locks | track: "
@@ -2152,7 +2156,7 @@ TEST_CASE("todo queue and skipped doctest debt stay source locked") {
   CHECK(todo.find("- [ ] TODO-4613: Retire semantic-validator private source locks") ==
         std::string::npos);
   CHECK(todo.find("### Task Blocks\n\n"
-                  "- [ ] TODO-4608: Add checked array slice construction") !=
+                  "- [ ] TODO-4609: Reject escaping local array slices") !=
         std::string::npos);
   CHECK(todo.find("- [ ] TODO-4607: Publish initial array extent facts") ==
         std::string::npos);
@@ -3217,7 +3221,9 @@ TEST_CASE("constructor-shaped compatibility inventory stays source locked") {
                             "are retained compatibility entry points") !=
         std::string::npos);
   CHECK(primeStructDoc.find(
-            "Legacy call-shaped `array<T>(...)`, `vector<T>(...)`, `map<K, V>(...)`,") !=
+            "Legacy call-shaped `array<T>(...)`, `vector<T>(...)`,\n"
+            "  canonical `/std/collections/vector/vector<T>(...)`, and\n"
+            "  `/std/collections/map/map<K, V>(...)` spellings remain compatibility helper") !=
         std::string::npos);
   CHECK(primeStructDoc.find(
             "`Maybe<T>` is now a stdlib-owned sum with `none` and `some` variants") !=

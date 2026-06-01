@@ -5,7 +5,6 @@ namespace primec::ir_lowerer {
 void populateSetupLocalsOrchestration(
     const EntryReturnRuntimeEntrySetupMathTypeStructAndUninitializedResolutionSetup &setup,
     SetupLocalsOrchestration &out) {
-  out = {};
   out.entryReturnConfig = setup.entryReturnConfig;
 
   const auto &runtimeEntrySetup =
@@ -14,7 +13,13 @@ void populateSetupLocalsOrchestration(
 
   const auto &entrySetup =
       runtimeEntrySetup.entrySetupMathTypeStructAndUninitializedResolutionSetup;
-  out.entryCountAccessSetup = entrySetup.entryCountCallOnErrorSetup.countAccessSetup;
+  out.entryCountAccessSetup.hasEntryArgs =
+      entrySetup.entryCountCallOnErrorSetup.countAccessSetup.hasEntryArgs;
+  out.entryCountAccessSetup.entryArgsName =
+      entrySetup.entryCountCallOnErrorSetup.countAccessSetup.entryArgsName;
+  out.entryCountAccessSetup.classifiers = makeCountAccessClassifiers(
+      out.entryCountAccessSetup.hasEntryArgs,
+      out.entryCountAccessSetup.entryArgsName);
   out.entryCallOnErrorSetup = entrySetup.entryCountCallOnErrorSetup.callOnErrorSetup;
 
   const auto &setupMathTypeStructAndUninitializedResolutionSetup =

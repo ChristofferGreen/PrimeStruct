@@ -120,6 +120,54 @@ bool SemanticsValidator::resolveCallCollectionTypePath(const Expr &target,
     typePathOut = "/vector";
     return true;
   }
+  auto inferCallArgumentTypeText = [&](const Expr &arg, std::string &typeTextOut) {
+    BindingInfo inferredBinding;
+    if (!inferBindingTypeFromInitializer(arg, params, locals, inferredBinding) &&
+        !tryInferBindingTypeFromInitializer(arg,
+                                           params,
+                                           locals,
+                                           inferredBinding,
+                                           hasAnyMathImport())) {
+      return false;
+    }
+    if (inferredBinding.typeName.empty()) {
+      return false;
+    }
+    typeTextOut = inferredBinding.typeTemplateArg.empty()
+                      ? inferredBinding.typeName
+                      : inferredBinding.typeName + "<" + inferredBinding.typeTemplateArg + ">";
+    return true;
+  };
+  auto validateExplicitMapTemplateArgs = [&](const std::vector<std::string> &declaredTemplateArgs) {
+    if (declaredTemplateArgs.size() != 2 || target.args.empty() || target.args.size() % 2 != 0) {
+      return true;
+    }
+    const std::string declaredKeyType = normalizeBindingTypeName(declaredTemplateArgs[0]);
+    const std::string declaredValueType = normalizeBindingTypeName(declaredTemplateArgs[1]);
+    for (size_t index = 0; index + 1 < target.args.size(); index += 2) {
+      std::string inferredKeyType;
+      std::string inferredValueType;
+      if (!inferCallArgumentTypeText(target.args[index], inferredKeyType) ||
+          !inferCallArgumentTypeText(target.args[index + 1], inferredValueType)) {
+        return false;
+      }
+      if (normalizeBindingTypeName(inferredKeyType) != declaredKeyType ||
+          normalizeBindingTypeName(inferredValueType) != declaredValueType) {
+        return false;
+      }
+    }
+    return true;
+  };
+  if (isDirectMapConstructorPath(resolvedTarget) ||
+      isDirectMapConstructorPath(explicitTarget)) {
+    if (target.templateArgs.size() == 2) {
+      if (!validateExplicitMapTemplateArgs(target.templateArgs)) {
+        return false;
+      }
+      typePathOut = "/map";
+      return true;
+    }
+  }
   for (const std::string *candidatePath : {&resolvedTarget, &explicitTarget}) {
     if (candidatePath->empty()) {
       continue;
@@ -268,6 +316,44 @@ bool SemanticsValidator::resolveCallCollectionTemplateArgs(const Expr &target,
                                      : binding.typeName + "<" + binding.typeTemplateArg + ">";
     return extractCollectionArgsFromType(typeText, extractCollectionArgsFromType);
   };
+  auto inferCallArgumentTypeText = [&](const Expr &arg, std::string &typeTextOut) {
+    BindingInfo inferredBinding;
+    if (!inferBindingTypeFromInitializer(arg, params, locals, inferredBinding) &&
+        !tryInferBindingTypeFromInitializer(arg,
+                                           params,
+                                           locals,
+                                           inferredBinding,
+                                           hasAnyMathImport())) {
+      return false;
+    }
+    if (inferredBinding.typeName.empty()) {
+      return false;
+    }
+    typeTextOut = inferredBinding.typeTemplateArg.empty()
+                      ? inferredBinding.typeName
+                      : inferredBinding.typeName + "<" + inferredBinding.typeTemplateArg + ">";
+    return true;
+  };
+  auto validateExplicitMapTemplateArgs = [&](const std::vector<std::string> &declaredTemplateArgs) {
+    if (declaredTemplateArgs.size() != 2 || target.args.empty() || target.args.size() % 2 != 0) {
+      return true;
+    }
+    const std::string declaredKeyType = normalizeBindingTypeName(declaredTemplateArgs[0]);
+    const std::string declaredValueType = normalizeBindingTypeName(declaredTemplateArgs[1]);
+    for (size_t index = 0; index + 1 < target.args.size(); index += 2) {
+      std::string inferredKeyType;
+      std::string inferredValueType;
+      if (!inferCallArgumentTypeText(target.args[index], inferredKeyType) ||
+          !inferCallArgumentTypeText(target.args[index + 1], inferredValueType)) {
+        return false;
+      }
+      if (normalizeBindingTypeName(inferredKeyType) != declaredKeyType ||
+          normalizeBindingTypeName(inferredValueType) != declaredValueType) {
+        return false;
+      }
+    }
+    return true;
+  };
   auto isRootKeyValueAliasPath = [](const std::string &path) {
     return path == "/map" ||
            path.rfind("/map__t", 0) == 0 ||
@@ -287,12 +373,26 @@ bool SemanticsValidator::resolveCallCollectionTemplateArgs(const Expr &target,
   const bool targetIsRootKeyValueAlias =
       isRootKeyValueAliasPath(resolvedTarget) ||
       isRootKeyValueAliasPath(explicitTarget);
+  if (expectedBase == "map" &&
+      (isDirectMapConstructorPath(resolvedTarget) ||
+       isDirectMapConstructorPath(explicitTarget)) &&
+      target.templateArgs.size() == 2) {
+    if (!validateExplicitMapTemplateArgs(target.templateArgs)) {
+      return false;
+    }
+    argsOut = target.templateArgs;
+    return true;
+  }
   std::string collectionName;
   if (!inferredNonCollectionTargetType &&
       getBuiltinCollectionName(target, collectionName) && collectionName == expectedBase) {
     const size_t expectedArgCount = expectedBase == "map" ? 2u : 1u;
     if (target.templateArgs.size() == expectedArgCount &&
         (expectedBase != "map" || !targetIsRootKeyValueAlias)) {
+      if (expectedBase == "map" &&
+          !validateExplicitMapTemplateArgs(target.templateArgs)) {
+        return false;
+      }
       argsOut = target.templateArgs;
       return true;
     }
@@ -313,6 +413,9 @@ bool SemanticsValidator::resolveCallCollectionTemplateArgs(const Expr &target,
       (isDirectMapConstructorPath(resolvedTarget) ||
        isDirectMapConstructorPath(explicitTarget)) &&
       target.templateArgs.size() == 2) {
+    if (!validateExplicitMapTemplateArgs(target.templateArgs)) {
+      return false;
+    }
     argsOut = target.templateArgs;
     return true;
   }

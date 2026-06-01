@@ -524,6 +524,10 @@ ReturnStatementEmitResult tryEmitReturnStatement(
     };
 
     if (!emitOpaqueReturnHandle(valueExpr) && !emitExpr(valueExpr, localsIn)) {
+      if (error.empty()) {
+        error = "return expression failed to lower without diagnostic: " +
+                valueExpr.name;
+      }
       return ReturnStatementEmitResult::Error;
     }
     if (shouldPackResultErrorReturn(valueExpr)) {
@@ -624,6 +628,10 @@ ReturnStatementEmitResult tryEmitReturnStatement(
   };
 
   if (!emitOpaqueReturnHandle(valueExpr) && !emitExpr(valueExpr, localsIn)) {
+    if (error.empty()) {
+      error = "return expression failed to lower without diagnostic: " +
+              valueExpr.name;
+    }
     return ReturnStatementEmitResult::Error;
   }
   if (shouldPackResultErrorReturn(valueExpr)) {

@@ -1655,7 +1655,9 @@ bool rewriteExpr(Expr &expr,
       }
     }
     if (!resolvesVectorFamilyPath && receiverFamily == "map" &&
-        (helperName == "count" || helperName == "count_ref")) {
+        (helperName == "count" || helperName == "count_ref" ||
+         helperName == "at" || helperName == "at_ref" ||
+         helperName == "at_unsafe" || helperName == "at_unsafe_ref")) {
       const std::string preferred =
           templateMonomorphCanonicalKeyValueHelperPath(helperName);
       if (hasVisibleStdCollectionsImportForPath(ctx, preferred) &&

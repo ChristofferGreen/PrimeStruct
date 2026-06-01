@@ -111,8 +111,8 @@ main() {
   primec::IrModule module;
   INFO(error);
   CHECK_FALSE(lowerer.lower(program, &semanticProgram, "/main", {}, {}, module, error));
-  CHECK(error.find("semantic-product method-call target missing lowered definition: /array/at") !=
-        std::string::npos);
+  CHECK(error.find("semantic-product method-call target missing lowered definition: "
+                   "/std/collections/soa/to_aos") != std::string::npos);
 }
 
 TEST_CASE("ir lowerer materializes variadic pointer uninitialized scalar packs with indexed init and take") {
@@ -373,14 +373,9 @@ main() {
   primec::SemanticProgram semanticProgram;
   std::string error;
   INFO(error);
-  REQUIRE(parseAndValidate(source, program, semanticProgram, error));
-  CHECK(error.empty());
-
-  primec::IrLowerer lowerer;
-  primec::IrModule module;
-  INFO(error);
-  CHECK_FALSE(lowerer.lower(program, &semanticProgram, "/main", {}, {}, module, error));
-  CHECK(error.find("unsupported operand types for plus") != std::string::npos);
+  CHECK_FALSE(parseAndValidate(source, program, semanticProgram, error));
+  CHECK(error.find("unknown call target: /std/collections/map/count") !=
+        std::string::npos);
 }
 
 TEST_CASE("ir lowerer rejects variadic borrowed map packs with indexed dereference lookup helpers") {

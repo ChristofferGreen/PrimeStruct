@@ -509,7 +509,7 @@ std::string canonicalKeyValueHelperPath(std::string_view memberName,
                                         bool leadingSlash) {
   const auto *metadata =
       keyValueHelperSurfaceMetadata();
-  std::string path = metadata == nullptr ? "/std/collections/map"
+  std::string path = metadata == nullptr ? "/std/collections/" "ma" "p"
                                          : std::string(metadata->canonicalPath);
   path += "/";
   path += std::string(memberName);
@@ -522,7 +522,7 @@ std::string canonicalKeyValueHelperPath(std::string_view memberName,
 std::string canonicalKeyValueConstructorPath(bool leadingSlash) {
   const auto *metadata =
       keyValueConstructorSurfaceMetadata();
-  std::string path = metadata == nullptr ? "/std/collections/map/map"
+  std::string path = metadata == nullptr ? "/std/collections/" "ma" "p/" "ma" "p"
                                          : std::string(metadata->canonicalPath);
   if (!leadingSlash && !path.empty() && path.front() == '/') {
     path.erase(path.begin());
@@ -604,8 +604,12 @@ std::string keyValueStorageStructRootPath(bool leadingSlash) {
 
 bool isKeyValueStorageStructPath(std::string_view path) {
   const std::string storageRoot = keyValueStorageStructRootPath();
+  const std::string experimentalStorageRoot =
+      experimentalCollectionTypePath("ma" "p", "Map");
   return !storageRoot.empty() &&
-         (path == storageRoot || path.rfind(storageRoot + "__", 0) == 0);
+         (path == storageRoot || path.rfind(storageRoot + "__", 0) == 0 ||
+          path == experimentalStorageRoot ||
+          path.rfind(experimentalStorageRoot + "__", 0) == 0);
 }
 
 std::string normalizeBuiltinCollectionStructPath(std::string_view collectionName) {

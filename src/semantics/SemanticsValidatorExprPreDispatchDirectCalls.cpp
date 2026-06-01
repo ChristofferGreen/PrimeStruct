@@ -193,7 +193,10 @@ bool isPublishedMapConstructorExpr(const Expr &candidate) {
   if (!normalizedName.empty() && normalizedName.front() != '/') {
     normalizedName.insert(normalizedName.begin(), '/');
   }
-  return isResolvedKeyValueConstructorPath(normalizedName);
+  const size_t slash = normalizedName.find_last_of('/');
+  const std::string memberName =
+      slash == std::string::npos ? normalizedName : normalizedName.substr(slash + 1);
+  return memberName == "map" || memberName.rfind("map__", 0) == 0;
 }
 
 std::string removedKeyValueCompatibilityHelperFromPath(std::string path) {
@@ -468,6 +471,77 @@ bool SemanticsValidator::validateExprPreDispatchDirectCalls(
   }
 
   const auto &dispatchBootstrap = *context.dispatchBootstrap;
+  const bool isExplicitRootMapConstructor =
+      isRootMapConstructorExpr(expr) && !expr.templateArgs.empty();
+  const bool isExplicitPublishedMapConstructor =
+      isPublishedMapConstructorExpr(expr) && !expr.templateArgs.empty();
+  if (isExplicitRootMapConstructor || isExplicitPublishedMapConstructor) {
+    if (expr.hasBodyArguments || !expr.bodyArguments.empty()) {
+      return failPreDispatchDirectCallDiagnostic(
+          "map constructor does not accept block arguments");
+    }
+    if (expr.templateArgs.size() != 2) {
+      return failPreDispatchDirectCallDiagnostic(
+          "map requires exactly two template arguments");
+    }
+    std::string keyError;
+    if (!validateBuiltinComparableKeyType(expr.templateArgs.front(), nullptr,
+                                          keyError)) {
+      return failPreDispatchDirectCallDiagnostic(std::move(keyError));
+    }
+    for (const auto &arg : expr.args) {
+      if (!validateExpr(params, locals, arg)) {
+        return false;
+      }
+    }
+    if (!expr.args.empty()) {
+      const Definition *currentDef = nullptr;
+      if (!currentValidationState_.context.definitionPath.empty()) {
+        auto currentDefIt =
+            defMap_.find(currentValidationState_.context.definitionPath);
+        if (currentDefIt != defMap_.end()) {
+          currentDef = currentDefIt->second;
+        }
+      }
+      const std::vector<std::string> *definitionTemplateArgs =
+          currentDef == nullptr ? nullptr : &currentDef->templateArgs;
+      std::string definitionNamespacePrefix = expr.namespacePrefix;
+      if (currentDef != nullptr && definitionNamespacePrefix.empty()) {
+        definitionNamespacePrefix = currentDef->namespacePrefix;
+      }
+      std::unordered_set<std::string> visitingStructs;
+      const std::string &valueType = expr.templateArgs[1];
+      if (!isRelocationTrivialContainerElementType(
+              valueType, definitionNamespacePrefix, definitionTemplateArgs,
+              visitingStructs)) {
+        return failPreDispatchDirectCallDiagnostic(
+            std::string("map ") +
+            "literal requires relocation-trivial map value type until container "
+            "move/reallocation semantics are implemented: " +
+            valueType);
+      }
+    }
+    for (std::size_t i = 0; i < expr.args.size(); i += 2) {
+      if (i + 1 >= expr.args.size()) {
+        if (!validateExpr(params, locals, expr.args[i])) {
+          return false;
+        }
+        break;
+      }
+      if (!this->validateCollectionElementType(
+              expr.args[i], expr.templateArgs[0],
+              "map constructor requires key type ", params, locals,
+              dispatchBootstrap.dispatchResolvers)) {
+        return false;
+      }
+      if (!this->validateCollectionElementType(
+              expr.args[i + 1], expr.templateArgs[1],
+              "map constructor requires value type ", params, locals,
+              dispatchBootstrap.dispatchResolvers)) {
+        return false;
+      }
+    }
+  }
   auto sourceMethodKeyValueHelperName = [](const Expr &candidate) -> std::string {
     if (candidate.kind != Expr::Kind::Call || candidate.isMethodCall ||
         !candidate.sourceIsMethodCall || !candidate.namespacePrefix.empty() ||
@@ -639,11 +713,51 @@ bool SemanticsValidator::validateExprPreDispatchDirectCalls(
     const std::string rootedBuiltinAccessAlias =
         rootedKeyValueAliasHelperPath(builtinAccessName);
     if (!builtinAccessName.empty() &&
+        isBareKeyValueAccessBuiltinSurface &&
+        dispatchBootstrap.dispatchResolvers.resolveMapTarget != nullptr) {
+      std::string keyValueKeyType;
+      std::string keyValueValueType;
+      if (dispatchBootstrap.dispatchResolvers.resolveMapTarget(
+              expr.args.front(), keyValueKeyType, keyValueValueType)) {
+        const Expr &keyExpr = expr.args[1];
+        if (!keyValueKeyType.empty()) {
+          if (normalizeBindingTypeName(keyValueKeyType) == "string") {
+            if (!this->isStringExprForArgumentValidation(
+                    keyExpr, dispatchBootstrap.dispatchResolvers)) {
+              return failPreDispatchDirectCallKeyValueKeyMismatch(
+                  builtinAccessName, keyValueKeyType, expr.args.front());
+            }
+          } else {
+            const ReturnKind keyKind =
+                returnKindForTypeName(normalizeBindingTypeName(keyValueKeyType));
+            if (keyKind != ReturnKind::Unknown) {
+              if (dispatchBootstrap.dispatchResolvers.resolveStringTarget(
+                      keyExpr)) {
+                return failPreDispatchDirectCallKeyValueKeyMismatch(
+                    builtinAccessName, keyValueKeyType, expr.args.front());
+              }
+              const ReturnKind indexKind =
+                  inferExprReturnKind(keyExpr, params, locals);
+              if (indexKind != ReturnKind::Unknown && indexKind != keyKind) {
+                return failPreDispatchDirectCallKeyValueKeyMismatch(
+                    builtinAccessName, keyValueKeyType, expr.args.front());
+              }
+            }
+          }
+        }
+        if (!validateExpr(params, locals, expr.args.front()) ||
+            !validateExpr(params, locals, expr.args[1])) {
+          return false;
+        }
+        handledOut = true;
+        return true;
+      }
+    }
+    if (!builtinAccessName.empty() &&
         !rootedBuiltinAccessAlias.empty() &&
         hasVisibleStdlibKeyValueAccessDefinition(builtinAccessName) &&
         (isBareKeyValueAccessBuiltinSurface ||
-         defMap_.find(builtinAccessPath) == defMap_.end()) &&
-        !hasDeclaredDefinitionPath(rootedBuiltinAccessAlias)) {
+         defMap_.find(builtinAccessPath) == defMap_.end())) {
       size_t receiverIndex = 0;
       size_t keyIndex = 1;
       const bool hasBareKeyValueOperands = this->bareKeyValueHelperOperandIndices(
@@ -655,10 +769,15 @@ bool SemanticsValidator::validateExprPreDispatchDirectCalls(
       std::string receiverTypeText;
       std::string keyValueKeyType;
       std::string keyValueValueType;
-      if (inferQueryExprTypeText(receiverExpr, params, locals,
-                                 receiverTypeText) &&
-          extractKeyValueCollectionTypesFromTypeText(receiverTypeText, keyValueKeyType,
-                                             keyValueValueType)) {
+      const bool receiverIsKeyValue =
+          (dispatchBootstrap.dispatchResolvers.resolveMapTarget != nullptr &&
+           dispatchBootstrap.dispatchResolvers.resolveMapTarget(
+               receiverExpr, keyValueKeyType, keyValueValueType)) ||
+          (inferQueryExprTypeText(receiverExpr, params, locals,
+                                  receiverTypeText) &&
+           extractKeyValueCollectionTypesFromTypeText(receiverTypeText, keyValueKeyType,
+                                                      keyValueValueType));
+      if (receiverIsKeyValue) {
         if (!keyValueKeyType.empty()) {
           if (normalizeBindingTypeName(keyValueKeyType) == "string") {
             if (!this->isStringExprForArgumentValidation(

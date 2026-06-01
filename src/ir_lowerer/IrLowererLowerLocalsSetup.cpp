@@ -45,8 +45,6 @@ bool runLowerLocalsSetup(
     const std::unordered_map<std::string, std::vector<LayoutFieldBinding>> &structFieldInfoByName,
     SetupLocalsOrchestration &setupLocalsOrchestrationOut,
     std::string &errorOut) {
-  setupLocalsOrchestrationOut = {};
-
   auto entryReturnRuntimeEntrySetupMathTypeStructAndUninitializedResolutionSetup =
       std::make_shared<EntryReturnRuntimeEntrySetupMathTypeStructAndUninitializedResolutionSetup>();
   if (!buildProgramEntryReturnRuntimeEntrySetupMathTypeStructAndUninitializedResolutionSetup(

@@ -20,7 +20,26 @@ bool runLowerSetupStage(const LowerSetupStageInput &input,
     return false;
   }
 
-  stateOut = LowerSetupStageState{};
+  stateOut.entryDef = nullptr;
+  stateOut.defMap.clear();
+  stateOut.structNames.clear();
+  stateOut.importAliases.clear();
+  stateOut.structFieldInfoByName.clear();
+  stateOut.function = {};
+  stateOut.sawReturn = false;
+  stateOut.locals.clear();
+  stateOut.nextLocal = 0;
+  stateOut.onErrorTempCounter = 0;
+  stateOut.stringTable.clear();
+  stateOut.loweredCallTargets.clear();
+  stateOut.instructionSourceRangesByFunction.clear();
+  stateOut.functionSyntaxProvenanceByName.clear();
+  stateOut.expandedSource = nullptr;
+  stateOut.fileScopeStack.clear();
+  stateOut.currentOnError.reset();
+  stateOut.currentReturnResult.reset();
+  stateOut.hasMathImport = false;
+  stateOut.inferenceSetupBootstrap = {};
   stateOut.expandedSource = input.expandedSource;
 
   uint64_t entryEffectMask = 0;

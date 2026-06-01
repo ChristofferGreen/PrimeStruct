@@ -232,6 +232,16 @@ bool SemanticsValidator::resolveExprCollectionAccessTarget(
       isBuiltinAccessName && context.isNamespacedMapHelperCall &&
       isCanonicalKeyValueAccessHelperName(context.namespacedHelper) &&
       defMap_.find(resolved) == defMap_.end();
+  auto isCollectionAccessReceiverExpr = [&](const Expr &candidate) -> bool {
+    std::string elemType;
+    return context.resolveVectorTarget(candidate, elemType) ||
+           context.resolveArrayTarget(candidate, elemType) ||
+           context.resolveStringTarget(candidate) ||
+           context.resolveMapTarget(candidate);
+  };
+  const bool hasBareCollectionAccessReceiver =
+      isBuiltinAccessName && !expr.args.empty() &&
+      isCollectionAccessReceiverExpr(expr.args.front());
   const std::string explicitRemovedMethodPath =
       explicitRemovedCollectionMethodPath(expr.name, expr.namespacePrefix);
   const bool preservesExplicitRemovedArrayAccessMethod =
@@ -276,7 +286,8 @@ bool SemanticsValidator::resolveExprCollectionAccessTarget(
 
   if (isBuiltinAccessName &&
       !(isStdNamespacedVectorAccessCall && hasNamedArguments(expr.argNames)) &&
-      (defMap_.find(resolved) == defMap_.end() || isNamespacedVectorAccessCall ||
+      (defMap_.find(resolved) == defMap_.end() || hasBareCollectionAccessReceiver ||
+       isNamespacedVectorAccessCall ||
        isNamespacedKeyValueAccessCall)) {
     handledOut = true;
     const bool hasNamedArgs = hasNamedArguments(expr.argNames);
@@ -309,13 +320,6 @@ bool SemanticsValidator::resolveExprCollectionAccessTarget(
       return hasDeclaredDefinitionPath(canonicalTarget) ||
              hasImportedDefinitionPath(canonicalTarget) ||
              isStdlibVectorAccessWrapperDefinition;
-    };
-    auto isCollectionAccessReceiverExpr = [&](const Expr &candidate) -> bool {
-      std::string elemType;
-      return context.resolveVectorTarget(candidate, elemType) ||
-             context.resolveArrayTarget(candidate, elemType) ||
-             context.resolveStringTarget(candidate) ||
-             context.resolveMapTarget(candidate);
     };
     const bool probePositionalReorderedReceiver =
         !hasNamedArgs && expr.args.size() > 1 &&

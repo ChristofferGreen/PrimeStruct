@@ -262,31 +262,6 @@ bool keepsBuiltinInlineReturnForPublishedKeyValueHelper(std::string_view helperN
   return true;
 }
 
-bool keepsBuiltinInlineReturnForPublishedVectorHelper(std::string_view helperName,
-                                                      const Definition &callee) {
-  std::string declaredReturnType;
-  if (!inferReceiverTypeFromDeclaredReturn(callee, declaredReturnType)) {
-    return true;
-  }
-  declaredReturnType = trimTemplateTypeText(declaredReturnType);
-  if (!declaredReturnType.empty() && declaredReturnType.front() == '/') {
-    declaredReturnType.erase(declaredReturnType.begin());
-  }
-  if (helperName == "count" || helperName == "capacity") {
-    return declaredReturnType == "int" || declaredReturnType == "i32";
-  }
-  if (helperName == "at" || helperName == "at_unsafe") {
-    return declaredReturnType == "bool" || declaredReturnType == "int" ||
-           declaredReturnType == "i8" || declaredReturnType == "i16" ||
-           declaredReturnType == "i32" || declaredReturnType == "i64" ||
-           declaredReturnType == "u8" || declaredReturnType == "u16" ||
-           declaredReturnType == "u32" || declaredReturnType == "u64" ||
-           declaredReturnType == "float" || declaredReturnType == "f32" ||
-           declaredReturnType == "f64" || declaredReturnType == "string";
-  }
-  return true;
-}
-
 bool isTypeNamespaceMethodCallForInlineEmit(const Expr &callExpr,
                                             const Definition &callee,
                                             const LocalMap &callerLocals) {
@@ -502,6 +477,10 @@ ResolvedInlineCallResult emitResolvedInlineDefinitionCall(
     return ResolvedInlineCallResult::Error;
   }
   if (!emitInlineDefinitionCall(callExpr, *callee)) {
+    if (error.empty()) {
+      error = "inline definition call failed without diagnostic: " +
+              callee->fullPath;
+    }
     return ResolvedInlineCallResult::Error;
   }
   return ResolvedInlineCallResult::Emitted;
@@ -582,6 +561,18 @@ InlineCallDispatchResult tryEmitInlineCallWithCountFallbacksImpl(
         resolveInlineCallPathWithoutFallbackProbes(expr);
     const std::string normalizedDirectCallPath =
         stripGeneratedInlineHelperSuffix(directCallPath);
+    std::string directCallLeaf = normalizedDirectCallPath;
+    if (const size_t slash = directCallLeaf.find_last_of('/');
+        slash != std::string::npos) {
+      directCallLeaf = directCallLeaf.substr(slash + 1);
+    }
+    if (directCallee != nullptr && expr.args.size() == 2 &&
+        isCanonicalPublishedInlineKeyValueHelperPath(directCallPath) &&
+        (directCallLeaf == "at" || directCallLeaf == "at_ref" ||
+         directCallLeaf == "at_unsafe" ||
+         directCallLeaf == "at_unsafe_ref")) {
+      return InlineCallDispatchResult::NotHandled;
+    }
     if (directCallee != nullptr &&
         isSoaVectorReceiverExpr != nullptr &&
         !expr.args.empty() &&
@@ -600,6 +591,7 @@ InlineCallDispatchResult tryEmitInlineCallWithCountFallbacksImpl(
           resolveVectorHelperAliasName(expr, directVectorHelperName) &&
           (directVectorHelperName == "at" ||
            directVectorHelperName == "at_unsafe")) {
+        return InlineCallDispatchResult::NotHandled;
         Expr methodExpr = expr;
         methodExpr.isMethodCall = true;
         methodExpr.isFieldAccess = false;
@@ -668,6 +660,10 @@ InlineCallDispatchResult tryEmitInlineCallWithCountFallbacksImpl(
     return InlineCallDispatchResult::Emitted;
   }
   if (firstCountFallbackResult == CountMethodFallbackResult::Error) {
+    if (error.empty()) {
+      error = "first count/access fallback failed without diagnostic: " +
+              expr.name;
+    }
     return InlineCallDispatchResult::Error;
   }
 
@@ -685,6 +681,15 @@ InlineCallDispatchResult tryEmitInlineCallWithCountFallbacksImpl(
         isBuiltinKeyValueTryAtName || isBuiltinKeyValueInsertName;
     const Definition *callee = resolveMethodCallDefinition(expr);
     if (callee != nullptr) {
+      if (expr.args.size() == 2 &&
+          (isSimpleCallName(expr, "at") ||
+           isSimpleCallName(expr, "at_unsafe")) &&
+          (callee->fullPath == rootCollectionMemberPath("vector", "at") ||
+           callee->fullPath == rootCollectionMemberPath("vector", "at_unsafe") ||
+           callee->fullPath == "/std/collections/vector/at" ||
+           callee->fullPath == "/std/collections/vector/at_unsafe")) {
+        return InlineCallDispatchResult::NotHandled;
+      }
       if (expr.args.size() == 1 &&
           expr.args.front().kind == Expr::Kind::Call &&
           callee->fullPath == canonicalKeyValueHelperPath("count")) {
@@ -739,6 +744,10 @@ InlineCallDispatchResult tryEmitInlineCallWithCountFallbacksImpl(
     return InlineCallDispatchResult::Emitted;
   }
   if (secondCountFallbackResult == CountMethodFallbackResult::Error) {
+    if (error.empty()) {
+      error = "second count/access fallback failed without diagnostic: " +
+              expr.name;
+    }
     return InlineCallDispatchResult::Error;
   }
 
@@ -986,11 +995,18 @@ InlineCallDispatchResult tryEmitInlineCallDispatchWithLocals(
     return false;
   };
   auto emitCanonicalInlineDefinitionCall = [&](const Expr &callExpr, const Definition &callee) {
+    bool emitted = false;
     if (isTypeNamespaceMethodCallForInlineEmit(callExpr, callee, localsIn)) {
       const Expr directCallExpr = makeInlineEmitDirectTypeNamespaceCall(callExpr, callee);
-      return emitInlineDefinitionCallFn(directCallExpr, callee, localsIn);
+      emitted = emitInlineDefinitionCallFn(directCallExpr, callee, localsIn);
+    } else {
+      emitted = emitInlineDefinitionCallFn(callExpr, callee, localsIn);
     }
-    return emitInlineDefinitionCallFn(callExpr, callee, localsIn);
+    if (!emitted && error.empty()) {
+      error = "canonical inline definition call failed without diagnostic: " +
+              callee.fullPath;
+    }
+    return emitted;
   };
   if (expr.isMethodCall && expr.args.size() == 1 &&
       isStringCountCallFn(expr, localsIn)) {
@@ -1178,18 +1194,6 @@ InlineCallDispatchResult tryEmitInlineCallDispatchWithLocals(
       std::string vectorHelperName;
       if (resolveVectorHelperAliasName(expr, vectorHelperName) &&
           (vectorHelperName == "at" || vectorHelperName == "at_unsafe")) {
-        const bool isExplicitCanonicalVectorHelper =
-            rawPath.rfind(collectionMemberRoot("vector"), 0) == 0 ||
-            rawPath.rfind(collectionMemberRoot("vector", false), 0) == 0;
-        if (isExplicitCanonicalVectorHelper) {
-          if (const Definition *callee = resolveDefinitionCallFn(expr);
-              callee != nullptr &&
-              !keepsBuiltinInlineReturnForPublishedVectorHelper(vectorHelperName, *callee)) {
-            return emitCanonicalInlineDefinitionCall(expr, *callee)
-                       ? InlineCallDispatchResult::Emitted
-                       : InlineCallDispatchResult::Error;
-          }
-        }
         return InlineCallDispatchResult::NotHandled;
       }
       const size_t rawLeafStart = rawPath.find_last_of('/');
@@ -1251,6 +1255,9 @@ InlineCallDispatchResult tryEmitInlineCallDispatchWithLocals(
           (directHelperName == "count" || directHelperName == "contains" ||
            directHelperName == "tryAt" || directHelperName == "at" ||
            directHelperName == "at_unsafe")) {
+        if (directHelperName == "at" || directHelperName == "at_unsafe") {
+          return InlineCallDispatchResult::NotHandled;
+        }
         if (directHelperName == "count" &&
             expr.args.front().kind == Expr::Kind::Call) {
           return InlineCallDispatchResult::NotHandled;
@@ -1517,6 +1524,32 @@ InlineCallDispatchResult tryEmitInlineCallDispatchWithLocals(
       const Definition *callee = resolveMethodCallDefinitionFn(methodExpr, localsIn);
       if (callee == nullptr) {
         error = priorError;
+        if (semanticProgram != nullptr) {
+          const std::string semanticTarget =
+              findSemanticProductMethodCallTarget(semanticProgram, methodExpr);
+          if (!semanticTarget.empty()) {
+            if (((semanticTarget == "/string/count" ||
+                  semanticTarget == "/std/collections/" "vec" "tor/count") &&
+                 methodExpr.args.size() == 1 &&
+                 isSimpleCallName(methodExpr, "count")) ||
+                (semanticTarget == "/std/collections/" "vec" "tor/capacity" &&
+                 methodExpr.args.size() == 1 &&
+                 isSimpleCallName(methodExpr, "capacity")) ||
+                ((semanticTarget == "/std/collections/" "vec" "tor/at" ||
+                  semanticTarget == "/std/collections/" "vec" "tor/at_unsafe") &&
+                 methodExpr.args.size() == 2 &&
+                 (isSimpleCallName(methodExpr, "at") ||
+                  isSimpleCallName(methodExpr, "at_unsafe"))) ||
+                (semanticTarget == "/std/collections/soa/to_aos" &&
+                 methodExpr.args.size() == 1 &&
+                 isSimpleCallName(methodExpr, "to_aos"))) {
+              continue;
+            }
+            error = "semantic-product method-call target missing lowered definition: " +
+                    semanticTarget;
+            return InlineCallDispatchResult::Error;
+          }
+        }
         continue;
       }
       if (methodExpr.args.size() == 1 &&
@@ -1626,6 +1659,29 @@ InlineCallDispatchResult tryEmitInlineCallDispatchWithLocals(
       (isPublishedKeyValueLocalName(expr.args[0]) ||
        isPublishedKeyValueLocalName(expr.args[1]))) {
     return InlineCallDispatchResult::NotHandled;
+  }
+  if (!expr.isMethodCall && expr.args.size() == 2) {
+    std::string keyValueAccessHelperName;
+    const std::string inlineCallPath =
+        resolveInlineCallPathWithoutFallbackProbes(expr);
+    std::string inlineCallLeaf = inlineCallPath;
+    if (const size_t slash = inlineCallLeaf.find_last_of('/');
+        slash != std::string::npos) {
+      inlineCallLeaf = inlineCallLeaf.substr(slash + 1);
+    }
+    const bool isKeyValueAccessHelper =
+        (resolveKeyValueHelperAliasName(expr, keyValueAccessHelperName) &&
+         (keyValueAccessHelperName == "at" ||
+          keyValueAccessHelperName == "at_ref" ||
+          keyValueAccessHelperName == "at_unsafe" ||
+          keyValueAccessHelperName == "at_unsafe_ref")) ||
+        (isCanonicalPublishedInlineKeyValueHelperPath(inlineCallPath) &&
+         (inlineCallLeaf == "at" || inlineCallLeaf == "at_ref" ||
+          inlineCallLeaf == "at_unsafe" ||
+          inlineCallLeaf == "at_unsafe_ref"));
+    if (isKeyValueAccessHelper) {
+      return InlineCallDispatchResult::NotHandled;
+    }
   }
   const auto inlineResult = tryEmitInlineCallWithCountFallbacksImpl(
       expr,
@@ -1753,6 +1809,33 @@ InlineCallDispatchResult tryEmitInlineCallDispatchWithLocals(
         return emitCanonicalInlineDefinitionCall(callExpr, callee);
       },
       error);
+  if (inlineResult == InlineCallDispatchResult::NotHandled &&
+      expr.isMethodCall && semanticProgram != nullptr) {
+    const std::string semanticTarget =
+        findSemanticProductMethodCallTarget(semanticProgram, expr);
+    if (!semanticTarget.empty()) {
+      if (((semanticTarget == "/string/count" ||
+            semanticTarget == "/std/collections/" "vec" "tor/count") &&
+           expr.args.size() == 1 &&
+           isSimpleCallName(expr, "count")) ||
+          (semanticTarget == "/std/collections/" "vec" "tor/capacity" &&
+           expr.args.size() == 1 &&
+           isSimpleCallName(expr, "capacity")) ||
+          ((semanticTarget == "/std/collections/" "vec" "tor/at" ||
+            semanticTarget == "/std/collections/" "vec" "tor/at_unsafe") &&
+           expr.args.size() == 2 &&
+           (isSimpleCallName(expr, "at") ||
+            isSimpleCallName(expr, "at_unsafe"))) ||
+          (semanticTarget == "/std/collections/soa/to_aos" &&
+           expr.args.size() == 1 &&
+           isSimpleCallName(expr, "to_aos"))) {
+        return inlineResult;
+      }
+      error = "semantic-product method-call target missing lowered definition: " +
+              semanticTarget;
+      return InlineCallDispatchResult::Error;
+    }
+  }
   return inlineResult;
 }
 

@@ -673,10 +673,6 @@ TEST_CASE("ir lowerer statement call helper orchestrates callable lowering") {
               function.instructions.push_back({primec::IrOpcode::PushI32, 9});
               return true;
             },
-            [&](const std::string &, const primec::ir_lowerer::ReturnInfo &) {
-              function.instructions.push_back({primec::IrOpcode::ReturnVoid, 0});
-              return true;
-            },
             function,
             nextLocal,
             outFunctions,
@@ -709,7 +705,6 @@ TEST_CASE("ir lowerer statement call helper orchestrates callable lowering") {
             [](const primec::Expr &, const primec::Definition &, const primec::ir_lowerer::LocalMap &, bool) {
               return true;
             },
-            [](const std::string &, const primec::ir_lowerer::ReturnInfo &) { return true; },
             function,
             nextLocal,
             outFunctions,
@@ -796,7 +791,6 @@ TEST_CASE("ir lowerer statement call helper prefers semantic callable inventory"
             [](const primec::Expr &, const primec::Definition &, const primec::ir_lowerer::LocalMap &, bool) {
               return true;
             },
-            [](const std::string &, const primec::ir_lowerer::ReturnInfo &) { return true; },
             function,
             nextLocal,
             outFunctions,

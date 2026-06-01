@@ -226,7 +226,7 @@ private:
       if (!parseValue(element, error)) {
         return false;
       }
-      out.arrayValue.push_back(std::move(element));
+      out.arrayValue.push_back(std::make_unique<JsonValue>(std::move(element)));
       skipWhitespace();
       if (consumeChar(']')) {
         return true;
@@ -263,7 +263,7 @@ private:
       if (!parseValue(value, error)) {
         return false;
       }
-      out.objectValue.push_back({std::move(key), std::move(value)});
+      out.objectValue.push_back({std::move(key), std::make_unique<JsonValue>(std::move(value))});
       skipWhitespace();
       if (consumeChar('}')) {
         return true;
@@ -383,8 +383,8 @@ const JsonValue *JsonValue::find(std::string_view key) const {
     return nullptr;
   }
   for (const auto &entry : objectValue) {
-    if (entry.first == key) {
-      return &entry.second;
+    if (entry.first == key && entry.second != nullptr) {
+      return entry.second.get();
     }
   }
   return nullptr;

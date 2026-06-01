@@ -119,7 +119,6 @@ bool buildEntryReturnRuntimeEntrySetupMathTypeStructAndUninitializedResolutionSe
     const EnumerateStructLayoutFieldsFn &enumerateStructLayoutFields,
     EntryReturnRuntimeEntrySetupMathTypeStructAndUninitializedResolutionSetup &out,
     std::string &error) {
-  out = {};
   if (!analyzeEntryReturnTransforms(entryDef, semanticProgram, entryPath, out.entryReturnConfig, error)) {
     return false;
   }
@@ -189,7 +188,6 @@ bool buildRuntimeEntrySetupMathTypeStructAndUninitializedResolutionSetup(
     const EnumerateStructLayoutFieldsFn &enumerateStructLayoutFields,
     RuntimeEntrySetupMathTypeStructAndUninitializedResolutionSetup &out,
     std::string &error) {
-  out = {};
   out.runtimeErrorAndStringLiteralSetup =
       makeRuntimeErrorAndStringLiteralSetup(stringTable, function, error, semanticProgram);
   if (!buildEntrySetupMathTypeStructAndUninitializedResolutionSetup(
@@ -249,7 +247,6 @@ bool buildEntrySetupMathTypeStructAndUninitializedResolutionSetup(
     const EnumerateStructLayoutFieldsFn &enumerateStructLayoutFields,
     EntrySetupMathTypeStructAndUninitializedResolutionSetup &out,
     std::string &error) {
-  out = {};
   if (!buildEntryCountCallOnErrorSetup(program,
                                         entryDef,
                                         definitionReturnsVoid,
@@ -310,7 +307,6 @@ bool buildSetupMathTypeStructAndUninitializedResolutionSetup(
     const InferStructExprPathFn &resolveExprPath,
     SetupMathTypeStructAndUninitializedResolutionSetup &out,
     std::string &error) {
-  out = {};
   out.setupMathAndBindingAdapters = makeSetupMathAndBindingAdapters(hasMathImport, semanticProgram);
   if (!buildSetupTypeStructAndUninitializedResolutionSetup(semanticProgram,
                                                            structNames,
@@ -356,7 +352,6 @@ bool buildSetupTypeStructAndUninitializedResolutionSetup(
     const InferStructExprPathFn &resolveExprPath,
     SetupTypeStructAndUninitializedResolutionSetup &out,
     std::string &error) {
-  out = {};
   out.setupTypeAndStructTypeAdapters = makeSetupTypeAndStructTypeAdapters(structNames, importAliases);
   const auto &structTypeResolutionAdapters = out.setupTypeAndStructTypeAdapters.structTypeResolutionAdapters;
   if (!buildStructAndUninitializedResolutionSetup(semanticProgram,
@@ -403,7 +398,6 @@ bool buildStructAndUninitializedResolutionSetup(
     const InferStructExprPathFn &resolveExprPath,
     StructAndUninitializedResolutionSetup &out,
     std::string &error) {
-  out = {};
   out.fieldIndexes =
       buildStructAndUninitializedFieldIndexes(structReserveHint, enumerateStructLayoutFields);
   out.structLayoutResolutionAdapters = makeStructLayoutResolutionAdaptersWithOwnedSlotState(

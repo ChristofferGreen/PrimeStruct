@@ -895,6 +895,64 @@
             metadataResult.has_value()) {
           return *metadataResult;
         }
+        auto emitVectorIndexedAccessBeforeInline = [&]() -> std::optional<bool> {
+          if (inlineDispatchExpr.kind != Expr::Kind::Call ||
+              inlineDispatchExpr.args.size() != 2) {
+            return std::nullopt;
+          }
+          std::string accessName;
+          const std::string resolvedAccessPath = resolveExprPath(inlineDispatchExpr);
+          if (!(getBuiltinArrayAccessName(inlineDispatchExpr, accessName) ||
+                resolveVectorHelperAliasName(inlineDispatchExpr, accessName) ||
+                (resolvedAccessPath == "/std/collections/vector/at" &&
+                 (accessName = "at", true)) ||
+                (resolvedAccessPath == "/std/collections/vector/at_unsafe" &&
+                 (accessName = "at_unsafe", true)))) {
+            return std::nullopt;
+          }
+          if (accessName != "at" && accessName != "at_unsafe") {
+            return std::nullopt;
+          }
+          const auto targetInfo =
+              ir_lowerer::resolveArrayVectorAccessTargetInfo(
+                  inlineDispatchExpr.args.front(),
+                  localsIn,
+                  {},
+                  semanticProgram,
+                  tailDispatchSemanticIndexPtr);
+          if (!targetInfo.isArrayOrVectorTarget || !targetInfo.isVectorTarget) {
+            return std::nullopt;
+          }
+          return ir_lowerer::emitArrayVectorIndexedAccess(
+              accessName,
+              inlineDispatchExpr.args.front(),
+              inlineDispatchExpr.args[1],
+              localsIn,
+              {},
+              [&](const Expr &indexExpr, const ir_lowerer::LocalMap &indexLocals) {
+                return inferExprKind(indexExpr, indexLocals);
+              },
+              [&]() { return allocTempLocal(); },
+              [&](const Expr &nestedExpr, const ir_lowerer::LocalMap &nestedLocals) {
+                return emitExpr(nestedExpr, nestedLocals);
+              },
+              [&]() { emitArrayIndexOutOfBounds(); },
+              [&]() { return function.instructions.size(); },
+              [&](IrOpcode op, uint64_t imm) {
+                function.instructions.push_back({op, imm});
+              },
+              [&](size_t indexToPatch, uint64_t target) {
+                function.instructions[indexToPatch].imm = target;
+              },
+              error,
+              semanticProgram,
+              tailDispatchSemanticIndexPtr);
+        };
+        if (const std::optional<bool> vectorAccessResult =
+                emitVectorIndexedAccessBeforeInline();
+            vectorAccessResult.has_value()) {
+          return *vectorAccessResult;
+        }
         const auto inlineDispatchResult = ir_lowerer::tryEmitInlineCallDispatchWithLocals(
             inlineDispatchExpr,
             localsIn,
@@ -926,6 +984,10 @@
           return true;
         }
         if (inlineDispatchResult == ir_lowerer::InlineCallDispatchResult::Error) {
+          if (error.empty()) {
+            error = "inline dispatch failed without diagnostic: " +
+                    inlineDispatchExpr.name;
+          }
           return false;
         }
         Expr nativeTailExpr = inlineDispatchExpr;
@@ -1508,4 +1570,26 @@
         }
         if (nativeTailResult == ir_lowerer::NativeCallTailDispatchResult::Error) {
           return false;
+        }
+        if (expr.isMethodCall && semanticProgram != nullptr) {
+          const std::string semanticTarget =
+              findSemanticProductMethodCallTarget(semanticProgram, expr);
+          if (!semanticTarget.empty()) {
+            if (((semanticTarget == "/string/count" ||
+                  semanticTarget == "/std/collections/" "vec" "tor/" "count") &&
+                 expr.args.size() == 1 &&
+                 isSimpleCallName(expr, "count")) ||
+                (semanticTarget == "/std/collections/" "vec" "tor/" "capacity" &&
+                 expr.args.size() == 1 &&
+                 isSimpleCallName(expr, "capacity")) ||
+                (semanticTarget == "/std/collections/soa/to_aos" &&
+                 expr.args.size() == 1 &&
+                 isSimpleCallName(expr, "to_aos"))) {
+              // Builtin bridge forms are emitted by fallback paths below.
+            } else {
+              error = "semantic-product method-call target missing lowered definition: " +
+                      semanticTarget;
+              return false;
+            }
+          }
         }

@@ -1,6 +1,7 @@
 TEST_SUITE_BEGIN("primestruct.ir.pipeline.serialization");
 
 namespace {
+[[maybe_unused]]
 std::filesystem::path irSerializationControlFlowPath(const std::string &relativePath) {
   return primec::testing::testScratchPath("ir_pipeline_serialization/" + relativePath);
 }

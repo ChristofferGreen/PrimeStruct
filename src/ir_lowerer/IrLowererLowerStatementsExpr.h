@@ -722,16 +722,24 @@
                 const std::string &resolvedCallPath,
                 bool &handledOut) -> bool {
           handledOut = false;
+          std::string builtinCollectionName;
+          const bool isBuiltinKeyValueConstructor =
+              getBuiltinCollectionName(callExpr, builtinCollectionName) &&
+              builtinCollectionName == "map";
           if (callExpr.isMethodCall ||
-              !isCanonicalKeyValueConstructorPath(resolvedCallPath)) {
+              (!isCanonicalKeyValueConstructorPath(resolvedCallPath) &&
+               !isBuiltinKeyValueConstructor)) {
             return true;
           }
           if (callExpr.templateArgs.size() != 2) {
             return true;
           }
+          const std::string diagnosticCallPath =
+              isBuiltinKeyValueConstructor ? canonicalKeyValueConstructorPath()
+                                           : resolvedCallPath;
           if ((callExpr.args.size() % 2) != 0) {
             error = "argument count mismatch for " +
-                    normalizeCollectionHelperPath(resolvedCallPath);
+                    normalizeCollectionHelperPath(diagnosticCallPath);
             handledOut = true;
             return false;
           }
@@ -1042,18 +1050,23 @@
                  directCallee->fullPath.rfind(experimentalCollectionMemberRoot("vec" "tor"), 0) == 0) &&
                 isDirectHelperDefinitionFamily(expr, *directCallee)) {
               std::string vectorHelperName;
-              const bool isMaterializableVectorMetadataReceiver =
-                  resolveVectorHelperAliasName(expr, vectorHelperName) &&
-                  expr.args.size() == 1 &&
-                  expr.args.front().kind == Expr::Kind::Call &&
-                  !expr.args.front().isFieldAccess &&
-                  resolveDirectHelperDefinition(expr.args.front()) != nullptr &&
-                  (vectorHelperName == "count" || vectorHelperName == "capacity");
-              const bool isDirectVectorBuiltin =
-                  (resolveBuiltinAccessName(expr, vectorHelperName) &&
-                   expr.args.size() == 2 &&
-                   (vectorHelperName == "at" || vectorHelperName == "at_unsafe")) ||
-                  isMaterializableVectorMetadataReceiver;
+	              const bool isMaterializableVectorMetadataReceiver =
+	                  resolveVectorHelperAliasName(expr, vectorHelperName) &&
+	                  expr.args.size() == 1 &&
+	                  expr.args.front().kind == Expr::Kind::Call &&
+	                  !expr.args.front().isFieldAccess &&
+	                  resolveDirectHelperDefinition(expr.args.front()) != nullptr &&
+	                  (vectorHelperName == "count" || vectorHelperName == "capacity");
+	              const bool isExplicitVectorMetadataHelper =
+	                  resolveVectorHelperAliasName(expr, vectorHelperName) &&
+	                  expr.args.size() == 1 &&
+	                  (vectorHelperName == "count" || vectorHelperName == "capacity");
+	              const bool isDirectVectorBuiltin =
+	                  (resolveBuiltinAccessName(expr, vectorHelperName) &&
+	                   expr.args.size() == 2 &&
+	                   (vectorHelperName == "at" || vectorHelperName == "at_unsafe")) ||
+	                  isMaterializableVectorMetadataReceiver ||
+	                  isExplicitVectorMetadataHelper;
               if (!isDirectVectorBuiltin) {
                 if (!emitInlineDefinitionCall(expr, *directCallee, localsIn, true)) {
                   return false;
@@ -1135,7 +1148,18 @@
                       semanticProgram,
                       &callResolutionAdapters.semanticProductTargets.semanticIndex)
                       .isKeyValueTarget;
-              if (!deferKeyValueCountToBuiltinEmitter) {
+              const bool deferKeyValueAccessToBuiltinEmitter =
+                  (helperName == "at" || helperName == "at_unsafe") &&
+                  expr.args.size() == 2 &&
+                  ir_lowerer::resolveCollectionPairTypeInfo(
+                      expr.args.front(),
+                      localsIn,
+                      {},
+                      semanticProgram,
+                      &callResolutionAdapters.semanticProductTargets.semanticIndex)
+                      .isKeyValueTarget;
+              if (!deferKeyValueCountToBuiltinEmitter &&
+                  !deferKeyValueAccessToBuiltinEmitter) {
                 if (!emitInlineDefinitionCall(expr, *directCallee, localsIn, true)) {
                   return false;
                 } else {
@@ -1145,6 +1169,16 @@
             }
             std::string accessName;
             std::string explicitKeyValueAccessHelperName;
+            std::string canonicalKeyValueAccessLeaf;
+            if (isCanonicalKeyValueHelperFamilyPath(rawPath)) {
+              const size_t leafStart = rawPath.find_last_of('/');
+              canonicalKeyValueAccessLeaf =
+                  leafStart == std::string::npos ? rawPath : rawPath.substr(leafStart + 1);
+              const size_t generatedSuffix = canonicalKeyValueAccessLeaf.find("__");
+              if (generatedSuffix != std::string::npos) {
+                canonicalKeyValueAccessLeaf.erase(generatedSuffix);
+              }
+            }
             const bool isExplicitCanonicalKeyValueAccess =
                 (getBuiltinArrayAccessName(expr, accessName) &&
                  expr.args.size() == 2 &&
@@ -1155,9 +1189,41 @@
                   explicitKeyValueAccessHelperName == "at_unsafe" ||
                   explicitKeyValueAccessHelperName == "at_unsafe_ref") &&
                  expr.args.size() == 2 &&
+                 isCanonicalKeyValueHelperFamilyPath(rawPath)) ||
+                ((canonicalKeyValueAccessLeaf == "at" ||
+                  canonicalKeyValueAccessLeaf == "at_ref" ||
+                  canonicalKeyValueAccessLeaf == "at_unsafe" ||
+                  canonicalKeyValueAccessLeaf == "at_unsafe_ref") &&
+                 expr.args.size() == 2 &&
                  isCanonicalKeyValueHelperFamilyPath(rawPath));
             if (isExplicitCanonicalKeyValueAccess &&
                 isDirectHelperDefinitionFamily(expr, *directCallee)) {
+              if (ir_lowerer::resolveCollectionPairTypeInfo(
+                      expr.args.front(),
+                      localsIn,
+                      {},
+                      semanticProgram,
+                      &callResolutionAdapters.semanticProductTargets.semanticIndex)
+                      .isKeyValueTarget) {
+                std::string builtinAccessName = accessName;
+                if (builtinAccessName.empty()) {
+                  builtinAccessName = explicitKeyValueAccessHelperName;
+                }
+                if (builtinAccessName.empty()) {
+                  builtinAccessName = canonicalKeyValueAccessLeaf;
+                }
+                if (builtinAccessName == "at_ref") {
+                  builtinAccessName = "at";
+                } else if (builtinAccessName == "at_unsafe_ref") {
+                  builtinAccessName = "at_unsafe";
+                }
+                Expr rewrittenExpr = expr;
+                rewrittenExpr.name = builtinAccessName;
+                rewrittenExpr.namespacePrefix.clear();
+                rewrittenExpr.semanticNodeId = 0;
+                rewrittenExpr.templateArgs.clear();
+                return emitExpr(rewrittenExpr, localsIn);
+              }
               error =
                   "native backend only supports arithmetic/comparison/clamp/min/max/abs/sign/saturate/convert/pointer/assign/increment/decrement calls in expressions (call=" +
                   resolveExprPath(expr) + ", name=" + expr.name +
@@ -1263,6 +1329,23 @@
             (resolveExprPath(expr) == "/string/count" ||
              isSimpleCallName(expr, "count"))) {
           const Expr &stringCountTarget = expr.args.front();
+          std::string stringAccessName;
+          if (stringCountTarget.kind == Expr::Kind::Call &&
+              stringCountTarget.args.size() == 2 &&
+              getBuiltinArrayAccessName(stringCountTarget, stringAccessName) &&
+              (stringAccessName == "at" || stringAccessName == "at_unsafe")) {
+            Expr rewrittenStringTarget = stringCountTarget;
+            rewrittenStringTarget.isMethodCall = false;
+            rewrittenStringTarget.isFieldAccess = false;
+            rewrittenStringTarget.namespacePrefix.clear();
+            rewrittenStringTarget.name =
+                canonicalKeyValueHelperPath(stringAccessName);
+            if (!emitExpr(rewrittenStringTarget, localsIn)) {
+              return false;
+            }
+            function.instructions.push_back({IrOpcode::LoadStringLength, 0});
+            return true;
+          }
           const bool hasDirectStringCountTarget =
               (stringCountTarget.kind == Expr::Kind::Name ||
                stringCountTarget.kind == Expr::Kind::StringLiteral) &&
@@ -1642,17 +1725,132 @@
             return true;
           }
         }
+        if (expr.isMethodCall && expr.args.size() == 2) {
+          std::string vectorAccessName;
+          if ((resolveVectorHelperAliasName(expr, vectorAccessName) ||
+               getBuiltinArrayAccessName(expr, vectorAccessName) ||
+               ((isSimpleCallName(expr, "at") ||
+                 isSimpleCallName(expr, "at_unsafe")) &&
+                (vectorAccessName = expr.name, true))) &&
+              (vectorAccessName == "at" || vectorAccessName == "at_unsafe")) {
+            const auto arrayVectorTargetInfo =
+                ir_lowerer::resolveArrayVectorAccessTargetInfo(
+                    expr.args.front(),
+                    localsIn,
+                    {},
+                    semanticProgram,
+                    &callResolutionAdapters.semanticProductTargets.semanticIndex);
+            const bool localVectorTarget =
+                expr.args.front().kind == Expr::Kind::Name &&
+                [&]() {
+                  auto localIt = localsIn.find(expr.args.front().name);
+                  return localIt != localsIn.end() &&
+                         (localIt->second.kind == LocalInfo::Kind::Vector ||
+                          localIt->second.referenceToVector ||
+                          localIt->second.pointerToVector ||
+                          isCollectionVectorRecordTypePath(localIt->second.structTypeName));
+                }();
+            if ((arrayVectorTargetInfo.isArrayOrVectorTarget &&
+                 arrayVectorTargetInfo.isVectorTarget) ||
+                localVectorTarget) {
+              return ir_lowerer::emitArrayVectorIndexedAccess(
+                  vectorAccessName,
+                  expr.args.front(),
+                  expr.args[1],
+                  localsIn,
+                  [&](const Expr &indexExpr, const LocalMap &indexLocals) {
+                    return inferExprKind(indexExpr, indexLocals);
+                  },
+                  [&]() { return allocTempLocal(); },
+                  [&](const Expr &nestedExpr, const LocalMap &nestedLocals) {
+                    return emitExpr(nestedExpr, nestedLocals);
+                  },
+                  [&]() { emitArrayIndexOutOfBounds(); },
+                  [&]() { return function.instructions.size(); },
+                  [&](IrOpcode op, uint64_t imm) {
+                    function.instructions.push_back({op, imm});
+                  },
+                  [&](size_t indexToPatch, uint64_t target) {
+                    function.instructions[indexToPatch].imm = target;
+                  },
+                  error);
+            }
+          }
+        }
+        if (!expr.isMethodCall && expr.args.size() == 2) {
+          std::string vectorAccessName;
+          const std::string vectorAccessPath = resolveExprPath(expr);
+          if ((resolveVectorHelperAliasName(expr, vectorAccessName) ||
+               getBuiltinArrayAccessName(expr, vectorAccessName) ||
+               (vectorAccessPath == "/std/collections/vector/at" &&
+                (vectorAccessName = "at", true)) ||
+               (vectorAccessPath == "/std/collections/vector/at_unsafe" &&
+                (vectorAccessName = "at_unsafe", true))) &&
+              (vectorAccessName == "at" || vectorAccessName == "at_unsafe")) {
+            return ir_lowerer::emitArrayVectorIndexedAccess(
+                vectorAccessName,
+                expr.args.front(),
+                expr.args[1],
+                localsIn,
+                {},
+                [&](const Expr &indexExpr, const LocalMap &indexLocals) {
+                  return inferExprKind(indexExpr, indexLocals);
+                },
+                [&]() { return allocTempLocal(); },
+                [&](const Expr &nestedExpr, const LocalMap &nestedLocals) {
+                  return emitExpr(nestedExpr, nestedLocals);
+                },
+                [&]() { emitArrayIndexOutOfBounds(); },
+                [&]() { return function.instructions.size(); },
+                [&](IrOpcode op, uint64_t imm) {
+                  function.instructions.push_back({op, imm});
+                },
+                [&](size_t indexToPatch, uint64_t target) {
+                  function.instructions[indexToPatch].imm = target;
+                },
+                error,
+                semanticProgram,
+                &callResolutionAdapters.semanticProductTargets.semanticIndex);
+          }
+        }
         std::string bareKeyValueAccessName;
+        const std::string bareKeyValueAccessPath = resolveExprPath(expr);
+        std::string bareKeyValueAccessLeaf = bareKeyValueAccessPath;
+        if (const size_t leafStart = bareKeyValueAccessLeaf.find_last_of('/');
+            leafStart != std::string::npos) {
+          bareKeyValueAccessLeaf = bareKeyValueAccessLeaf.substr(leafStart + 1);
+        }
+        if (const size_t generatedSuffix = bareKeyValueAccessLeaf.find("__");
+            generatedSuffix != std::string::npos) {
+          bareKeyValueAccessLeaf.erase(generatedSuffix);
+        }
+        const bool isCanonicalBareKeyValueAccess =
+            (bareKeyValueAccessPath.rfind("/std/collections/map/at", 0) == 0 ||
+             bareKeyValueAccessPath.rfind("std/collections/map/at", 0) == 0);
         if (!expr.isMethodCall &&
             expr.args.size() == 2 &&
             ((getBuiltinArrayAccessName(expr, bareKeyValueAccessName) &&
               (bareKeyValueAccessName == "at" ||
                bareKeyValueAccessName == "at_unsafe")) ||
+             (resolveKeyValueHelperAliasName(expr, bareKeyValueAccessName) &&
+              (bareKeyValueAccessName == "at" ||
+               bareKeyValueAccessName == "at_unsafe" ||
+               bareKeyValueAccessName == "at_ref" ||
+               bareKeyValueAccessName == "at_unsafe_ref")) ||
+             (isCanonicalBareKeyValueAccess &&
+              (bareKeyValueAccessName = bareKeyValueAccessLeaf, true)) ||
              ((isSimpleCallName(expr, "at") ||
                isSimpleCallName(expr, "at_unsafe")) &&
               (bareKeyValueAccessName = expr.name, true))) &&
             (bareKeyValueAccessName == "at" ||
-             bareKeyValueAccessName == "at_unsafe")) {
+             bareKeyValueAccessName == "at_ref" ||
+             bareKeyValueAccessName == "at_unsafe" ||
+             bareKeyValueAccessName == "at_unsafe_ref")) {
+          if (bareKeyValueAccessName == "at_ref") {
+            bareKeyValueAccessName = "at";
+          } else if (bareKeyValueAccessName == "at_unsafe_ref") {
+            bareKeyValueAccessName = "at_unsafe";
+          }
           auto resolveAccessTargetInfo = [&](const Expr &receiverExpr) {
             auto resolvedInfo =
                 ir_lowerer::resolveCollectionPairTypeInfo(
@@ -1675,15 +1873,79 @@
               receiverArgIndex = 1;
             }
           }
+          if (isCanonicalBareKeyValueAccess && !targetInfo.isKeyValueTarget) {
+            const auto arrayVectorTargetInfo =
+                ir_lowerer::resolveArrayVectorAccessTargetInfo(
+                    expr.args.front(),
+                    localsIn,
+                    {},
+                    semanticProgram,
+                    &callResolutionAdapters.semanticProductTargets.semanticIndex);
+            if (arrayVectorTargetInfo.isArrayOrVectorTarget) {
+              return ir_lowerer::emitArrayVectorIndexedAccess(
+                  bareKeyValueAccessName,
+                  expr.args.front(),
+                  expr.args[1],
+                  localsIn,
+                  [&](const Expr &indexExpr, const LocalMap &indexLocals) {
+                    return inferExprKind(indexExpr, indexLocals);
+                  },
+                  [&]() { return allocTempLocal(); },
+                  [&](const Expr &nestedExpr, const LocalMap &nestedLocals) {
+                    return emitExpr(nestedExpr, nestedLocals);
+                  },
+                  [&]() { emitArrayIndexOutOfBounds(); },
+                  [&]() { return function.instructions.size(); },
+                  [&](IrOpcode op, uint64_t imm) {
+                    function.instructions.push_back({op, imm});
+                  },
+                  [&](size_t indexToPatch, uint64_t target) {
+                    function.instructions[indexToPatch].imm = target;
+                  },
+                  error);
+            }
+          }
           if (targetInfo.isKeyValueTarget) {
             Expr accessExpr = expr;
             if (receiverArgIndex != 0 && accessExpr.args.size() > receiverArgIndex) {
               std::swap(accessExpr.args[0], accessExpr.args[receiverArgIndex]);
             }
+            if (bareKeyValueAccessName == "at" ||
+                bareKeyValueAccessName == "at_unsafe") {
+              if (!ir_lowerer::emitKeyValueLookupAccess(
+                      bareKeyValueAccessName,
+                      targetInfo.keyValueKeyKind,
+                      targetInfo.structTypeName,
+                      accessExpr.args.front(),
+                      accessExpr.args[1],
+                      localsIn,
+                      [&]() { return allocTempLocal(); },
+                      [&](const Expr &nestedExpr,
+                          const ir_lowerer::LocalMap &nestedLocals) {
+                        return emitExpr(nestedExpr, nestedLocals);
+                      },
+                      resolveStringTableTarget,
+                      [&](const Expr &nestedExpr,
+                          const ir_lowerer::LocalMap &nestedLocals) {
+                        return inferExprKind(nestedExpr, nestedLocals);
+                      },
+                      [&]() { emitMapKeyNotFound(); },
+                      [&]() { return function.instructions.size(); },
+                      [&](IrOpcode op, uint64_t imm) {
+                        function.instructions.push_back({op, imm});
+                      },
+                      [&](size_t indexToPatch, uint64_t target) {
+                        function.instructions[indexToPatch].imm = target;
+                      },
+                      error)) {
+                return false;
+              }
+              return true;
+            }
             const std::string priorError = error;
             if (const Definition *directCallee =
                     resolveDirectHelperDefinition(accessExpr);
-                directCallee != nullptr) {
+                directCallee != nullptr && !isCanonicalBareKeyValueAccess) {
               error = priorError;
               return emitInlineDefinitionCall(
                   accessExpr, *directCallee, localsIn, true);
@@ -1733,13 +1995,34 @@
                 return emitAccessMethodCall(*methodCallee);
               }
             }
-            error = priorError;
-            return emitExpr(methodExpr, localsIn);
-          }
-        }
-        error =
-            "native backend only supports arithmetic/comparison/clamp/min/max/abs/sign/saturate/convert/pointer/assign/increment/decrement calls in expressions (call=" +
-            resolveExprPath(expr) + ", name=" + expr.name +
+	            error = priorError;
+	            return emitExpr(methodExpr, localsIn);
+	          }
+	        }
+	        if (!expr.isMethodCall && expr.args.size() == 1) {
+	          std::string vectorMetadataHelperName;
+	          const std::string vectorMetadataPath = resolveExprPath(expr);
+	          if (((resolveVectorHelperAliasName(expr, vectorMetadataHelperName) &&
+	              (vectorMetadataHelperName == "count" ||
+	               vectorMetadataHelperName == "capacity")) ||
+	               (vectorMetadataPath == "/std/collections/" "vec" "tor/count" &&
+	                (vectorMetadataHelperName = "count", true)) ||
+	               (vectorMetadataPath == "/std/collections/" "vec" "tor/capacity" &&
+	                (vectorMetadataHelperName = "capacity", true)))) {
+	            if (!emitExpr(expr.args.front(), localsIn)) {
+	              return false;
+	            }
+	            if (vectorMetadataHelperName == "capacity") {
+	              function.instructions.push_back({IrOpcode::PushI64, IrSlotBytes});
+	              function.instructions.push_back({IrOpcode::AddI64, 0});
+	            }
+	            function.instructions.push_back({IrOpcode::LoadIndirect, 0});
+	            return true;
+	          }
+	        }
+	        error =
+	            "native backend only supports arithmetic/comparison/clamp/min/max/abs/sign/saturate/convert/pointer/assign/increment/decrement calls in expressions (call=" +
+	            resolveExprPath(expr) + ", name=" + expr.name +
             ", args=" + std::to_string(expr.args.size()) +
             ", method=" + std::string(expr.isMethodCall ? "true" : "false") + ")";
         return false;
