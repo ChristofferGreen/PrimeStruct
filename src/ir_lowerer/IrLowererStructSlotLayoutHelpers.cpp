@@ -22,16 +22,16 @@ bool isBuiltinVectorTypeName(const std::string &typeName) {
 }
 
 bool isBuiltinSoaVectorTypeName(const std::string &typeName) {
-  return typeName == "soa" "_vector" || typeName == "/soa" "_vector" ||
-         typeName == "std/collections/" "soa" "_vector" || typeName == "/std/collections/" "soa" "_vector";
+  return typeName == "soa_vector" || typeName == "/soa_vector" ||
+         typeName == "std/collections/soa_vector" || typeName == "/std/collections/soa_vector";
 }
 
 bool isExperimentalSoaVectorTypeName(const std::string &typeName) {
-  return typeName == "Soa" "Vector" ||
-         typeName == "std/collections/experimental" "_soa" "_vector/Soa" "Vector" ||
-         typeName == "/std/collections/experimental" "_soa" "_vector/Soa" "Vector" ||
-         typeName.rfind("std/collections/experimental" "_soa" "_vector/Soa" "Vector" "__", 0) == 0 ||
-         typeName.rfind("/std/collections/experimental" "_soa" "_vector/Soa" "Vector" "__", 0) == 0;
+  return typeName == "SoaVector" ||
+         typeName == "std/collections/experimental_soa_vector/SoaVector" ||
+         typeName == "/std/collections/experimental_soa_vector/SoaVector" ||
+         typeName.rfind("std/collections/experimental_soa_vector/SoaVector__", 0) == 0 ||
+         typeName.rfind("/std/collections/experimental_soa_vector/SoaVector__", 0) == 0;
 }
 
 bool isInternalSoaColumnTypeName(const std::string &typeName) {
@@ -116,8 +116,8 @@ std::string normalizeVectorStructPath(const std::string &typeName) {
 
 std::string internalSoaColumnStructPathForSoaVectorPath(
     const std::string &columnarVectorStructPath) {
-  const std::string slashPrefix = "/std/collections/experimental" "_soa" "_vector/Soa" "Vector";
-  const std::string noSlashPrefix = "std/collections/experimental" "_soa" "_vector/Soa" "Vector";
+  const std::string slashPrefix = "/std/collections/experimental_soa_vector/SoaVector";
+  const std::string noSlashPrefix = "std/collections/experimental_soa_vector/SoaVector";
   if (columnarVectorStructPath.rfind(slashPrefix, 0) == 0) {
     return "/std/collections/internal_soa_storage/SoaColumn" +
            columnarVectorStructPath.substr(slashPrefix.size());
@@ -137,8 +137,8 @@ std::string normalizeInternalSoaColumnStructPath(const std::string &structPath) 
 }
 
 std::string normalizeExperimentalSoaVectorStructPath(const std::string &structPath) {
-  if (structPath == "Soa" "Vector") {
-    return "/std/collections/experimental" "_soa" "_vector/Soa" "Vector";
+  if (structPath == "SoaVector") {
+    return "/std/collections/experimental_soa_vector/SoaVector";
   }
   return structPath.front() == '/' ? structPath : "/" + structPath;
 }
@@ -187,11 +187,11 @@ bool resolveSpecializedExperimentalSoaVectorStructPathFromTypeText(
   }
 
   std::string normalizedType = trimTemplateTypeText(typeText);
-  if (normalizedType.rfind("/std/collections/experimental" "_soa" "_vector/Soa" "Vector" "__", 0) == 0) {
+  if (normalizedType.rfind("/std/collections/experimental_soa_vector/SoaVector__", 0) == 0) {
     structPathOut = std::move(normalizedType);
     return true;
   }
-  if (normalizedType.rfind("std/collections/experimental" "_soa" "_vector/Soa" "Vector" "__", 0) == 0) {
+  if (normalizedType.rfind("std/collections/experimental_soa_vector/SoaVector__", 0) == 0) {
     structPathOut = "/" + normalizedType;
     return true;
   }
@@ -201,7 +201,7 @@ bool resolveSpecializedExperimentalSoaVectorStructPathFromTypeText(
   if (!splitTemplateTypeName(normalizedType, base, argText)) {
     return false;
   }
-  if (normalizeCollectionBindingTypeName(trimTemplateTypeText(base)) != "soa" "_vector") {
+  if (normalizeCollectionBindingTypeName(trimTemplateTypeText(base)) != "soa_vector") {
     return false;
   }
 
@@ -489,7 +489,7 @@ bool resolveStructSlotLayoutFromDefinitionFields(
         info.valueKind = elementKind;
         info.structPath = normalizeVectorStructPath(binding.typeName);
         info.slotCount = isCollectionVectorRecordTypeName(binding.typeName) ? 4 : 3;
-      } else if (normalizeCollectionBindingTypeName(binding.typeName) == "soa" "_vector") {
+      } else if (normalizeCollectionBindingTypeName(binding.typeName) == "soa_vector") {
         info.structPath = resolveSoaVectorFieldStructPath(binding.typeName, binding.typeTemplateArg);
         info.slotCount = 3;
       } else if (normalizeCollectionBindingTypeName(binding.typeName) == "Result") {
@@ -547,7 +547,7 @@ bool resolveStructSlotLayoutFromDefinitionFields(
         continue;
       }
       if (splitTemplateTypeName(binding.typeName, inlineTemplateBase, inlineTemplateArg) &&
-          normalizeCollectionBindingTypeName(inlineTemplateBase) == "soa" "_vector") {
+          normalizeCollectionBindingTypeName(inlineTemplateBase) == "soa_vector") {
         info.structPath = resolveSoaVectorFieldStructPath(inlineTemplateBase, inlineTemplateArg);
         info.slotCount = 3;
         layout.fields.push_back(info);
@@ -589,7 +589,7 @@ bool resolveStructSlotLayoutFromDefinitionFields(
         offset += info.slotCount;
         continue;
       }
-      if (normalizeCollectionBindingTypeName(binding.typeName) == "soa" "_vector") {
+      if (normalizeCollectionBindingTypeName(binding.typeName) == "soa_vector") {
         info.structPath = resolveSoaVectorFieldStructPath(binding.typeName, "");
         info.slotCount = 3;
         layout.fields.push_back(info);
@@ -1003,7 +1003,7 @@ void applyStructValueInfoFromBinding(const Expr &expr,
             normalizeCollectionBindingTypeName(trimTemplateTypeText(pointeeBase));
         if (normalizedPointeeBase == "Result" || normalizedPointeeBase == "File" ||
             normalizedPointeeBase == "array" || normalizedPointeeBase == "vector" ||
-            normalizedPointeeBase == "soa" "_vector" || normalizedPointeeBase == "map" ||
+            normalizedPointeeBase == "soa_vector" || normalizedPointeeBase == "map" ||
             normalizedPointeeBase == "Buffer") {
           return;
         }
@@ -1194,8 +1194,8 @@ std::string inferStructPathFromCallTarget(
     if (collectionName == "vector") {
       return "/vector";
     }
-    if (collectionName == "soa" "_vector") {
-      return "/soa" "_vector";
+    if (collectionName == "soa_vector") {
+      return "/soa_vector";
     }
   }
 
