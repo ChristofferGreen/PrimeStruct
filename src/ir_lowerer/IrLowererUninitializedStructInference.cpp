@@ -174,10 +174,10 @@ bool isForwardedKeyValueNewConstructor(const Expr &expr) {
 
 std::string normalizeUninitializedVectorStructPath(const std::string &typeName) {
   if (isBuiltinVectorTypeName(typeName)) {
-    return normalizeBuiltinCollectionStructPath("vec" "tor");
+    return normalizeBuiltinCollectionStructPath("vector");
   }
   if (typeName == "Vector") {
-    return experimentalCollectionTypePath("vec" "tor", "Vector");
+    return experimentalCollectionTypePath("vector", "Vector");
   }
   if (isExperimentalCollectionTypeName(typeName, "vector", "Vector")) {
     return normalizeExperimentalCollectionTypePath(typeName, "vector", "Vector");

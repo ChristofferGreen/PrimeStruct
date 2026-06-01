@@ -826,7 +826,7 @@
           if (callee == nullptr) {
             return false;
           }
-          const std::string prefix = experimentalCollectionMemberRoot("vec" "tor");
+          const std::string prefix = experimentalCollectionMemberRoot("vector");
           const std::string_view prefixView(prefix.data(), prefix.size());
           if (callee->fullPath.rfind(prefixView, 0) != 0) {
             return false;
@@ -848,7 +848,7 @@
                  leaf == collectionWrapperAlias("vector", "Oct");
         };
         if (!info.structTypeName.empty() &&
-            (info.structTypeName == experimentalCollectionTypePath("vec" "tor", "Vector") ||
+            (info.structTypeName == experimentalCollectionTypePath("vector", "Vector") ||
              matchesGeneratedSpecializedType(info.structTypeName, "vector", "Vector")) &&
             (isCollectionVectorConstructorCallee(initCallee) ||
              [&]() {

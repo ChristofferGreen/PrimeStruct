@@ -205,15 +205,15 @@ bool matchesGeneratedDefinitionFamilyPath(const std::string &candidatePath,
 
 bool blocksSyntheticCollectionFallbackDirectTarget(const std::string &targetPath) {
   const std::string normalized = normalizeCollectionHelperPath(targetPath);
-  return normalized.rfind(normalizeBuiltinCollectionStructPath("vec" "tor") + "/", 0) == 0 ||
+  return normalized.rfind(normalizeBuiltinCollectionStructPath("vector") + "/", 0) == 0 ||
          normalized.rfind(collectionMemberRoot("vector"), 0) == 0 ||
          normalized.rfind(keyValueCollectionAliasRoot() + "/", 0) == 0 ||
          normalized.rfind(collectionMemberRoot("map"), 0) == 0 ||
-         normalized.rfind("/soa" "_vector/", 0) == 0 ||
-         normalized.rfind("/std/collections/" "soa" "_vector/", 0) == 0 ||
-         normalized.rfind(experimentalCollectionMemberRoot("vec" "tor"), 0) == 0 ||
+         normalized.rfind("/soa_vector/", 0) == 0 ||
+         normalized.rfind("/std/collections/soa_vector/", 0) == 0 ||
+         normalized.rfind(experimentalCollectionMemberRoot("vector"), 0) == 0 ||
          normalized.rfind(experimentalCollectionMemberRoot("map"), 0) == 0 ||
-         normalized.rfind("/std/collections/experimental" "_soa" "_vector/", 0) == 0;
+         normalized.rfind("/std/collections/experimental_soa_vector/", 0) == 0;
 }
 
 bool isCollectionVectorMetadataMethodPath(const std::string &methodPath) {
@@ -586,7 +586,7 @@ const Definition *resolveMethodCallDefinitionFromExpr(
         (!canonicalVectorCountPath.empty() &&
          explicitMethodPath == canonicalVectorCountPath) ||
         explicitMethodPath ==
-            normalizeBuiltinCollectionStructPath("vec" "tor") + "/count";
+            normalizeBuiltinCollectionStructPath("vector") + "/count";
     if (callExpr.semanticNodeId == 0 &&
         (callExpr.sourceLine <= 0 || callExpr.sourceColumn <= 0 ||
          callExpr.name.empty()) &&
@@ -825,7 +825,7 @@ const Definition *resolveMethodCallDefinitionFromExpr(
       normalizedMethodName.erase(normalizedMethodName.begin());
     }
     const std::string rootedVectorPrefix =
-        normalizeBuiltinCollectionStructPath("vec" "tor").substr(1) + "/";
+        normalizeBuiltinCollectionStructPath("vector").substr(1) + "/";
     const std::string canonicalVectorPrefix =
         collectionMemberRoot("vector", false);
     if (normalizedMethodName.rfind(rootedVectorPrefix, 0) == 0) {

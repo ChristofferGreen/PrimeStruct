@@ -92,7 +92,7 @@ bool isNamespacedStdlibBuiltinAlias(const std::string &alias) {
          alias == "repeat" || alias == "try" || alias == "location" ||
          alias == "dereference" || alias == "count" ||
          alias == "count_ref" || alias == "capacity" ||
-         alias == "to" "_aos" || alias == "to" "_aos_ref" ||
+         alias == "to_aos" || alias == "to_aos_ref" ||
          alias == "push" || alias == "pop" || alias == "reserve" ||
          alias == "clear" || alias == "remove_at" ||
          alias == "remove_swap" || alias == "move" ||
@@ -106,7 +106,7 @@ bool isNamespacedStdlibBuiltinAlias(const std::string &alias) {
          alias == "ref_ref" || alias == "at" ||
          alias == "at_unsafe" || alias == "array" ||
          alias == "vector" || (!keyValueAlias.empty() && alias == keyValueAlias) ||
-         alias == "soa" "_vector" || alias == "convert" ||
+         alias == "soa_vector" || alias == "convert" ||
          alias == "clamp" || alias == "min" || alias == "max" ||
          alias == "lerp" || alias == "fma" || alias == "hypot" ||
          alias == "copysign" || alias == "radians" ||
@@ -140,9 +140,9 @@ std::string normalizeInternalSoaStorageBuiltinAlias(std::string name) {
       "std/collections/internal_soa_storage/",
       "std/collections/internal_buffer_checked/",
       "std/collections/internal_buffer_unchecked/",
-      "std/collections/experimental" "_soa" "_vector/",
-      "std/collections/experimental" "_soa" "_vector_conversions/",
-      "std/collections/" "soa" "_vector_conversions/",
+      "std/collections/experimental_soa_vector/",
+      "std/collections/experimental_soa_vector_conversions/",
+      "std/collections/soa_vector_conversions/",
       "std/collections/ContainerError/",
       "std/image/",
       "std/ui/",
@@ -167,7 +167,7 @@ std::string normalizeInternalSoaStorageBuiltinAlias(std::string name) {
     return alias;
   }
   const std::string experimentalVectorPrefix =
-      experimentalCollectionMemberRoot("vec" "tor");
+      experimentalCollectionMemberRoot("vector");
   if (name.rfind(experimentalVectorPrefix, 0) == 0) {
     std::string alias = name.substr(experimentalVectorPrefix.size());
     const size_t slash = alias.find_last_of('/');
@@ -563,13 +563,13 @@ bool getBuiltinArrayAccessName(const Expr &expr, std::string &out) {
   if (scopedName.rfind(collectionMemberRoot("vector"), 0) == 0) {
     return false;
   }
-  if (matchAccessAlias(scopedName, experimentalCollectionMemberRoot("vec" "tor"), "Vector")) {
+  if (matchAccessAlias(scopedName, experimentalCollectionMemberRoot("vector"), "Vector")) {
     return true;
   }
-  if (matchLegacyAccessAlias(scopedName, experimentalCollectionMemberRoot("vec" "tor"))) {
+  if (matchLegacyAccessAlias(scopedName, experimentalCollectionMemberRoot("vector"))) {
     return true;
   }
-  if (scopedName.rfind(experimentalCollectionMemberRoot("vec" "tor"), 0) == 0) {
+  if (scopedName.rfind(experimentalCollectionMemberRoot("vector"), 0) == 0) {
     return false;
   }
   if (matchLegacyAccessAlias(scopedName, "std/collections/internal_vector/")) {
@@ -578,11 +578,11 @@ bool getBuiltinArrayAccessName(const Expr &expr, std::string &out) {
   if (scopedName.rfind("std/collections/internal_vector/", 0) == 0) {
     return false;
   }
-  if (matchAccessAlias(scopedName, "std/collections/" "soa" "_vector/", "Soa" "Vector")) {
+  if (matchAccessAlias(scopedName, "std/collections/soa_vector/", "SoaVector")) {
     return true;
   }
-  if (scopedName.rfind("std/collections/" "soa" "_vector/", 0) == 0) {
-    std::string alias = scopedName.substr(std::string("std/collections/" "soa" "_vector/").size());
+  if (scopedName.rfind("std/collections/soa_vector/", 0) == 0) {
+    std::string alias = scopedName.substr(std::string("std/collections/soa_vector/").size());
     alias = stripGeneratedSuffix(std::move(alias));
     if (alias == "get" || alias == "get_ref") {
       out = alias;
@@ -590,8 +590,8 @@ bool getBuiltinArrayAccessName(const Expr &expr, std::string &out) {
     }
     return false;
   }
-  if (scopedName.rfind("soa" "_vector/", 0) == 0) {
-    std::string alias = scopedName.substr(std::string("soa" "_vector/").size());
+  if (scopedName.rfind("soa_vector/", 0) == 0) {
+    std::string alias = scopedName.substr(std::string("soa_vector/").size());
     alias = stripGeneratedSuffix(std::move(alias));
     if (alias == "get" || alias == "get_ref") {
       out = alias;
@@ -643,12 +643,12 @@ bool getBuiltinPointerName(const Expr &expr, std::string &out) {
   if (!rawName.empty() && rawName[0] == '/') {
     rawName.erase(0, 1);
   }
-  if (scopedName == "soa" "_vector/dereference" || scopedName == "soa" "_vector/location") {
-    if (scopedName == "soa" "_vector/dereference") {
+  if (scopedName == "soa_vector/dereference" || scopedName == "soa_vector/location") {
+    if (scopedName == "soa_vector/dereference") {
       out = "dereference";
       return true;
     }
-    if (scopedName == "soa" "_vector/location") {
+    if (scopedName == "soa_vector/location") {
       out = "location";
       return true;
     }
@@ -694,7 +694,7 @@ bool getBuiltinCollectionName(const Expr &expr, std::string &out) {
   }
   if (scopedName.rfind("std/collections/internal_soa_storage/", 0) == 0) {
     std::string alias = normalizeInternalSoaStorageBuiltinAlias(scopedName);
-    if (alias == "array" || alias == "soa" "_vector") {
+    if (alias == "array" || alias == "soa_vector") {
       out = alias;
       return true;
     }
@@ -706,7 +706,7 @@ bool getBuiltinCollectionName(const Expr &expr, std::string &out) {
   const std::string keyValueAlias = keyValueConstructorAliasToken();
   if (rawName == "array" || rawName == "vector" ||
       (!keyValueAlias.empty() && rawName == keyValueAlias) ||
-      rawName == "soa" "_vector") {
+      rawName == "soa_vector") {
     out = rawName;
     return true;
   }
@@ -732,7 +732,7 @@ bool getExperimentalVectorConstructorElementTypeAliasFromPath(
   if (!path.empty() && path.front() == '/') {
     path.erase(path.begin());
   }
-  const std::string prefix = experimentalCollectionMemberRoot("vec" "tor");
+  const std::string prefix = experimentalCollectionMemberRoot("vector");
   if (path.rfind(prefix, 0) != 0) {
     return false;
   }

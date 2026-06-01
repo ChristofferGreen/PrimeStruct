@@ -28,7 +28,7 @@ std::string experimentalCollectionTypePath(std::string_view collectionName,
 }
 
 bool isCollectionVectorRecordTypePath(std::string_view path) {
-  const std::string vectorTypePath = experimentalCollectionTypePath("vec" "tor", "Vector");
+  const std::string vectorTypePath = experimentalCollectionTypePath("vector", "Vector");
   return path == vectorTypePath || path.rfind(vectorTypePath + "__", 0) == 0;
 }
 

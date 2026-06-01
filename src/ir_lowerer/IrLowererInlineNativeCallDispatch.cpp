@@ -323,7 +323,7 @@ bool isPublicOrCompatibilitySoaToAosCall(const Expr &expr) {
 }
 
 bool isCollectionVectorRecordPath(std::string_view structTypeName) {
-  const std::string vectorTypePath = experimentalCollectionTypePath("vec" "tor", "Vector");
+  const std::string vectorTypePath = experimentalCollectionTypePath("vector", "Vector");
   return structTypeName == vectorTypePath ||
          matchesGeneratedSpecializedPath(structTypeName, vectorTypePath);
 }
@@ -799,9 +799,9 @@ InlineCallDispatchResult tryEmitInlineCallDispatchWithLocals(
   auto isInlineExperimentalVectorTypeName = [](std::string typeName) {
     typeName = trimTemplateTypeText(typeName);
     const std::string vectorTypePath =
-        experimentalCollectionTypePath("vec" "tor", "Vector", false);
+        experimentalCollectionTypePath("vector", "Vector", false);
     const std::string slashVectorTypePath =
-        experimentalCollectionTypePath("vec" "tor", "Vector");
+        experimentalCollectionTypePath("vector", "Vector");
     return typeName == "Vector" ||
            typeName == "/Vector" ||
            typeName == vectorTypePath ||

@@ -413,7 +413,7 @@ bool resolveVectorHelperAliasName(const Expr &expr, std::string &helperNameOut) 
   const std::string internalSoaVectorPrefix = "std/collections/internal_soa" "_vector/";
   const std::string experimentalSoaVectorPrefix = "std/collections/experimental" "_soa" "_vector/";
   const std::string experimentalVectorPrefix =
-      experimentalCollectionMemberRoot("vec" "tor", false);
+      experimentalCollectionMemberRoot("vector", false);
   if (normalized.rfind(arrayPrefix, 0) == 0) {
     helperNameOut = stripGeneratedHelperSuffix(normalized.substr(arrayPrefix.size()));
     if (isRemovedVectorCompatibilityHelper(helperNameOut)) {
@@ -509,7 +509,7 @@ std::string canonicalKeyValueHelperPath(std::string_view memberName,
                                         bool leadingSlash) {
   const auto *metadata =
       keyValueHelperSurfaceMetadata();
-  std::string path = metadata == nullptr ? "/std/collections/" "ma" "p"
+  std::string path = metadata == nullptr ? "/std/collections/map"
                                          : std::string(metadata->canonicalPath);
   path += "/";
   path += std::string(memberName);
@@ -522,7 +522,7 @@ std::string canonicalKeyValueHelperPath(std::string_view memberName,
 std::string canonicalKeyValueConstructorPath(bool leadingSlash) {
   const auto *metadata =
       keyValueConstructorSurfaceMetadata();
-  std::string path = metadata == nullptr ? "/std/collections/" "ma" "p/" "ma" "p"
+  std::string path = metadata == nullptr ? "/std/collections/map/map"
                                          : std::string(metadata->canonicalPath);
   if (!leadingSlash && !path.empty() && path.front() == '/') {
     path.erase(path.begin());
@@ -605,7 +605,7 @@ std::string keyValueStorageStructRootPath(bool leadingSlash) {
 bool isKeyValueStorageStructPath(std::string_view path) {
   const std::string storageRoot = keyValueStorageStructRootPath();
   const std::string experimentalStorageRoot =
-      experimentalCollectionTypePath("ma" "p", "Map");
+      experimentalCollectionTypePath("map", "Map");
   return !storageRoot.empty() &&
          (path == storageRoot || path.rfind(storageRoot + "__", 0) == 0 ||
           path == experimentalStorageRoot ||
@@ -637,7 +637,7 @@ std::string normalizeCollectionHelperPath(const std::string &path) {
     if (normalizedPath.rfind("array/", 0) == 0 ||
         normalizedPath.rfind(std::string("vector") + "/", 0) == 0 ||
         normalizedPath.rfind(collectionMemberRoot("vector", false), 0) == 0 ||
-        normalizedPath.rfind(experimentalCollectionMemberRoot("vec" "tor", false), 0) == 0 ||
+        normalizedPath.rfind(experimentalCollectionMemberRoot("vector", false), 0) == 0 ||
         normalizedPath.rfind(keyValueCollectionAliasRoot(false) + "/", 0) == 0 ||
         normalizedPath.rfind(collectionMemberRoot("map", false), 0) == 0) {
       normalizedPath.insert(normalizedPath.begin(), '/');
@@ -665,7 +665,7 @@ bool isExplicitRemovedVectorMethodAliasPath(const std::string &methodName) {
   const std::string arrayPrefix = "array/";
   const std::string stdVectorPrefix = collectionMemberRoot("vector", false);
   const std::string experimentalVectorPrefix =
-      experimentalCollectionMemberRoot("vec" "tor", false);
+      experimentalCollectionMemberRoot("vector", false);
   if (normalized.rfind(arrayPrefix, 0) == 0) {
     return isRemovedVectorCompatibilityHelper(stripGeneratedHelperSuffix(normalized.substr(arrayPrefix.size())));
   }

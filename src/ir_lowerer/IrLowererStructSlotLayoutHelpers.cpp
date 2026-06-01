@@ -100,13 +100,13 @@ std::string resolveStructSlotLookupPath(
 
 std::string normalizeVectorStructPath(const std::string &typeName) {
   if (isBuiltinVectorTypeName(typeName)) {
-    return normalizeBuiltinCollectionStructPath("vec" "tor");
+    return normalizeBuiltinCollectionStructPath("vector");
   }
   if (isBuiltinSoaVectorTypeName(typeName)) {
-    return "/soa" "_vector";
+    return "/soa_vector";
   }
   if (typeName == "Vector") {
-    return experimentalCollectionTypePath("vec" "tor", "Vector");
+    return experimentalCollectionTypePath("vector", "Vector");
   }
   if (isExperimentalCollectionTypeName(typeName, "vector", "Vector")) {
     return normalizeExperimentalCollectionTypePath(typeName, "vector", "Vector");
@@ -411,10 +411,10 @@ bool resolveStructSlotLayoutFromDefinitionFields(
     layout.totalSlots = 8;
     StructSlotFieldInfo keysField{
         "keys", 0, 4, LocalInfo::ValueKind::Unknown,
-        experimentalCollectionTypePath("vec" "tor", "Vector")};
+        experimentalCollectionTypePath("vector", "Vector")};
     StructSlotFieldInfo payloadsField{
         "payloads", 4, 4, LocalInfo::ValueKind::Unknown,
-        experimentalCollectionTypePath("vec" "tor", "Vector")};
+        experimentalCollectionTypePath("vector", "Vector")};
     applySpecializedExperimentalMapFieldLayout(
         structPath, "keys", collectStructLayoutFields, valueKindFromTypeName, keysField);
     applySpecializedExperimentalMapFieldLayout(

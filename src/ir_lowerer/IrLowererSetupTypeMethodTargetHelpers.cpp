@@ -19,7 +19,7 @@ const Definition *resolveMethodDefinitionFromReceiverTarget(
     normalizedMethodName.erase(normalizedMethodName.begin());
   }
   const std::string rootedVectorPrefix =
-      normalizeBuiltinCollectionStructPath("vec" "tor").substr(1) + "/";
+      normalizeBuiltinCollectionStructPath("vector").substr(1) + "/";
   const std::string canonicalVectorPrefix =
       collectionMemberRoot("vector", false);
   const std::string rootedKeyValuePrefix =
@@ -32,7 +32,7 @@ const Definition *resolveMethodDefinitionFromReceiverTarget(
     normalizedMethodName = normalizedMethodName.substr(std::string("array/").size());
   } else if (normalizedMethodName.rfind("std/collections/" "soa" "_vector/", 0) == 0) {
     normalizedMethodName =
-        normalizedMethodName.substr(std::string("std/collections/" "soa" "_vector/").size());
+        normalizedMethodName.substr(std::string("std/collections/soa_vector/").size());
   } else if (normalizedMethodName.rfind(canonicalVectorPrefix, 0) == 0) {
     normalizedMethodName = normalizedMethodName.substr(canonicalVectorPrefix.size());
   } else if (normalizedMethodName.rfind(rootedKeyValuePrefix, 0) == 0) {
@@ -58,7 +58,7 @@ const Definition *resolveMethodDefinitionFromReceiverTarget(
   const bool isExplicitArrayVectorMethod =
       normalizedOriginalMethodName.rfind("array/", 0) == 0;
   const bool isExplicitCanonicalSoaMethod =
-      normalizedOriginalMethodName.rfind("std/collections/" "soa" "_vector/", 0) == 0;
+      normalizedOriginalMethodName.rfind("std/collections/soa_vector/", 0) == 0;
   std::string normalizedTypeName = typeName;
   if (!normalizedTypeName.empty() && normalizedTypeName.front() == '/') {
     normalizedTypeName.erase(normalizedTypeName.begin());
@@ -76,13 +76,13 @@ const Definition *resolveMethodDefinitionFromReceiverTarget(
   };
   auto isRawBuiltinSoaVectorReceiverTarget = [&](const std::string &candidate) {
     const std::string normalized = stripReceiverPrefix(candidate);
-    return normalized == "soa" "_vector" || normalized.rfind("soa" "_vector<", 0) == 0 ||
-           normalized == "std/collections/" "soa" "_vector" ||
-           normalized.rfind("std/collections/" "soa" "_vector<", 0) == 0;
+    return normalized == "soa_vector" || normalized.rfind("soa_vector<", 0) == 0 ||
+           normalized == "std/collections/soa_vector" ||
+           normalized.rfind("std/collections/soa_vector<", 0) == 0;
   };
   auto isConcreteExperimentalSoaVectorReceiverTarget = [&](const std::string &candidate) {
     const std::string normalized = stripReceiverPrefix(candidate);
-    return normalized.rfind("std/collections/experimental" "_soa" "_vector/Soa" "Vector" "__", 0) == 0;
+    return normalized.rfind("std/collections/experimental_soa_vector/SoaVector__", 0) == 0;
   };
   auto isKeyValueReceiverTarget = [&](const std::string &candidate) {
     const std::string normalized = stripReceiverPrefix(candidate);
@@ -93,8 +93,8 @@ const Definition *resolveMethodDefinitionFromReceiverTarget(
     return candidate == "Buffer" || candidate == "std/gfx/Buffer" || candidate == "std/gfx/experimental/Buffer";
   };
   auto soaCanonicalHelperMismatchError = [&](const std::string &helperName) {
-    return std::string("struct parameter type mismatch for /std/collections/" "soa" "_vector/") + helperName +
-           " parameter values: expected /std/collections/experimental" "_soa" "_vector/Soa" "Vector" "__ specialization";
+    return std::string("struct parameter type mismatch for /std/collections/soa_vector/") + helperName +
+           " parameter values: expected /std/collections/experimental_soa_vector/SoaVector__ specialization";
   };
   auto shouldPreferCanonicalKeyValuePath = [&](const std::string &candidate) {
     return !isExplicitCompatibilityKeyValueMethodAlias && !isExplicitKeyValueContainsOrTryAtCompatibilityMethodAlias &&
@@ -201,17 +201,17 @@ const Definition *resolveMethodDefinitionFromReceiverTarget(
       return nullptr;
     }
     if (isExplicitCanonicalSoaMethod) {
-      return findMethodDefinitionByPath("/std/collections/" "soa" "_vector/" + normalizedMethodName);
+      return findMethodDefinitionByPath("/std/collections/soa_vector/" + normalizedMethodName);
     }
     if (isConcreteExperimentalSoaReceiver) {
-      if (normalizedMethodName == "to" "_aos") {
+      if (normalizedMethodName == "to_aos") {
         if (const Definition *rootedResolved =
-                findMethodDefinitionByPath("/to" "_aos")) {
+                findMethodDefinitionByPath("/to_aos")) {
           return rootedResolved;
         }
       }
     }
-    return findMethodDefinitionByPath("/std/collections/" "soa" "_vector/" + normalizedMethodName);
+    return findMethodDefinitionByPath("/std/collections/soa_vector/" + normalizedMethodName);
   };
   auto isCollectionVectorMetadataMethodName = [&]() {
     return normalizedMethodName == "field_count" ||
@@ -231,7 +231,7 @@ const Definition *resolveMethodDefinitionFromReceiverTarget(
       return nullptr;
     }
     const std::string specializedVectorPrefix =
-        experimentalCollectionTypePath("vec" "tor", "Vector", false) + "__";
+        experimentalCollectionTypePath("vector", "Vector", false) + "__";
     if (normalized.rfind(specializedVectorPrefix, 0) == 0) {
       if (const Definition *specializedDef =
               findMethodDefinitionByPath("/" + normalized + "/" + normalizedMethodName)) {
@@ -239,12 +239,12 @@ const Definition *resolveMethodDefinitionFromReceiverTarget(
       }
     }
     return findMethodDefinitionByPath(
-        experimentalCollectionTypePath("vec" "tor", "Vector") + "/" +
+        experimentalCollectionTypePath("vector", "Vector") + "/" +
         normalizedMethodName);
   };
   if (isExplicitVectorAliasMethod) {
     errorOut = "unknown method: " +
-               normalizeBuiltinCollectionStructPath("vec" "tor") + "/" +
+               normalizeBuiltinCollectionStructPath("vector") + "/" +
                normalizedMethodName;
     return nullptr;
   }
@@ -287,7 +287,7 @@ const Definition *resolveMethodDefinitionFromReceiverTarget(
         (shouldPreferCanonicalVectorPath(resolvedTypeWithoutSlash)
              ? collectionTypePath("vector")
              : (shouldPreferCanonicalSoaPath(resolvedTypeWithoutSlash)
-                    ? "/std/collections/" "soa" "_vector"
+                    ? "/std/collections/soa_vector"
              : (shouldPreferCanonicalKeyValuePath(resolvedTypeWithoutSlash)
                     ? collectionTypePath("map")
                     : normalizedResolvedTypePath)));
@@ -356,7 +356,7 @@ const Definition *resolveMethodDefinitionFromReceiverTarget(
       (shouldPreferCanonicalVectorPath(normalizedTypeName)
            ? collectionTypePath("vector")
            : (shouldPreferCanonicalSoaPath(normalizedTypeName)
-                  ? "/std/collections/" "soa" "_vector"
+                  ? "/std/collections/soa_vector"
            : (shouldPreferCanonicalKeyValuePath(normalizedTypeName)
                   ? collectionTypePath("map")
                   : "/" + normalizedTypeName)));

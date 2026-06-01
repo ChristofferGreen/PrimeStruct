@@ -75,8 +75,8 @@ bool isSpecializedExperimentalVectorTypeText(const std::string &typeText) {
 bool isCollectionVectorSurfaceBase(const std::string &typeText) {
   const std::string normalized = trimTemplateTypeText(typeText);
   return normalized == "Vector" ||
-         normalized == experimentalCollectionTypePath("vec" "tor", "Vector", false) ||
-         normalized == experimentalCollectionTypePath("vec" "tor", "Vector");
+         normalized == experimentalCollectionTypePath("vector", "Vector", false) ||
+         normalized == experimentalCollectionTypePath("vector", "Vector");
 }
 
 bool isSpecializedExperimentalSoaVectorStructPathText(const std::string &typeText) {

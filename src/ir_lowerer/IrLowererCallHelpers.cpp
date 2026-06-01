@@ -28,13 +28,13 @@ bool isGeneratedSinglePathSegmentWithPrefix(std::string_view path, std::string_v
 
 bool isGeneratedStdlibCollectionStructPath(std::string_view path) {
   const std::string experimentalVectorTypePrefix =
-      experimentalCollectionTypePath("vec" "tor", "Vector") + "__";
+      experimentalCollectionTypePath("vector", "Vector") + "__";
   const std::string keyValueStorageRoot = keyValueStorageStructRootPath();
   const std::string keyValueStorageTypePrefix = keyValueStorageRoot + "__";
   return isSinglePathSegmentWithPrefix(path, experimentalVectorTypePrefix) ||
          (!keyValueStorageRoot.empty() &&
           isSinglePathSegmentWithPrefix(path, keyValueStorageTypePrefix)) ||
-         isSinglePathSegmentWithPrefix(path, "/std/collections/experimental" "_soa" "_vector/Soa" "Vector" "__") ||
+         isSinglePathSegmentWithPrefix(path, "/std/collections/experimental_soa_vector/SoaVector__") ||
          isSinglePathSegmentWithPrefix(path, "/std/collections/internal_soa_storage/SoaColumn__") ||
          isSinglePathSegmentWithPrefix(path, "/std/collections/internal_soa_storage/SoaFieldView__") ||
          isGeneratedSinglePathSegmentWithPrefix(path, "/std/collections/internal_soa_storage/SoaColumns");
@@ -217,7 +217,7 @@ CountMethodFallbackResult tryEmitNonMethodCountFallback(
   };
   if (!expr.isMethodCall) {
     const std::string directHelperPath = resolveDirectHelperPath();
-    if (directHelperPath.rfind(experimentalCollectionMemberRoot("vec" "tor"), 0) == 0) {
+    if (directHelperPath.rfind(experimentalCollectionMemberRoot("vector"), 0) == 0) {
       return CountMethodFallbackResult::NotHandled;
     }
     if (isExplicitRemovedCountLikeAliasCall("count") ||

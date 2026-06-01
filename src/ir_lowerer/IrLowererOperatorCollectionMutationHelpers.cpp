@@ -52,12 +52,12 @@ bool isSpecializedExperimentalSoaVectorStructPath(const std::string &structPath)
 }
 
 bool isRawBuiltinSoaVectorStructPath(const std::string &structPath) {
-  return structPath == "/soa" "_vector" || structPath == "/std/collections/" "soa" "_vector";
+  return structPath == "/soa_vector" || structPath == "/std/collections/soa_vector";
 }
 
 std::string defaultVectorRecordStructPath(std::string_view builtin) {
-  if (builtin == "soa" "_vector") {
-    return collectionTypePath("soa" "_vector");
+  if (builtin == "soa_vector") {
+    return collectionTypePath("soa_vector");
   }
   return collectionTypePath("vector");
 }
@@ -325,7 +325,7 @@ bool emitConversionsAndCallsCollectionAndMutationExpr(
   handled = true;
   std::string builtin;
   if (getBuiltinCollectionName(expr, builtin)) {
-    if (builtin == "array" || builtin == "vector" || builtin == "soa" "_vector") {
+    if (builtin == "array" || builtin == "vector" || builtin == "soa_vector") {
       if (expr.templateArgs.size() != 1) {
         error = builtin + " literal requires exactly one template argument";
         return false;
@@ -335,7 +335,7 @@ bool emitConversionsAndCallsCollectionAndMutationExpr(
         return false;
       }
 
-      const bool isSoaVector = (builtin == "soa" "_vector");
+      const bool isSoaVector = (builtin == "soa_vector");
       const bool isVectorLike = (builtin == "vector" || isSoaVector);
       LocalInfo::ValueKind elemKind = valueKindFromTypeName(expr.templateArgs.front());
       const bool isSoaStructLiteral =
@@ -939,7 +939,7 @@ bool emitConversionsAndCallsCollectionAndMutationExpr(
         auto hasVisibleLegacySamePathSoaRef = [&](const Expr &callCandidate) {
           Expr samePathCandidate = callCandidate;
           samePathCandidate.isMethodCall = false;
-          samePathCandidate.name = "/soa" "_vector/ref";
+          samePathCandidate.name = "/soa_vector/ref";
           samePathCandidate.namespacePrefix.clear();
           if (const Definition *samePathCallee = context.resolveDefinitionCall(samePathCandidate);
               samePathCallee != nullptr) {
@@ -985,7 +985,7 @@ bool emitConversionsAndCallsCollectionAndMutationExpr(
         }
 
         const bool usesCanonicalStdlibMethodPath =
-            methodPath.rfind("/std/collections/" "soa" "_vector/", 0) == 0 &&
+            methodPath.rfind("/std/collections/soa_vector/", 0) == 0 &&
             soa_paths::isLegacyOrCanonicalSoaHelperPath(canonicalMethodPath, "ref");
         if (!usesCanonicalStdlibMethodPath && hasVisibleLegacySamePathSoaRef(candidate)) {
           return false;

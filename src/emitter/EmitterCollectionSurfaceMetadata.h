@@ -17,13 +17,13 @@ inline std::string_view emitterCollectionSurfaceCanonicalPath(
     EmitterCollectionSurface surface) {
   switch (surface) {
   case EmitterCollectionSurface::VectorHelpers:
-    return "/std/collections/" "vec" "tor";
+    return "/std/collections/vector";
   case EmitterCollectionSurface::VectorConstructors:
-    return "/std/collections/" "vec" "tor/" "vec" "tor";
+    return "/std/collections/vector/vector";
   case EmitterCollectionSurface::KeyValueHelpers:
-    return "/std/collections/" "ma" "p";
+    return "/std/collections/map";
   case EmitterCollectionSurface::KeyValueConstructors:
-    return "/std/collections/" "ma" "p/" "ma" "p";
+    return "/std/collections/map/map";
   }
   return {};
 }

@@ -10,7 +10,7 @@ namespace primec::ir_lowerer {
 namespace {
 
 bool isVectorCollectionStructPath(const std::string &structPath) {
-  return structPath == normalizeBuiltinCollectionStructPath("vec" "tor") ||
+  return structPath == normalizeBuiltinCollectionStructPath("vector") ||
          isExperimentalCollectionTypeName(structPath, "vector", "Vector");
 }
 

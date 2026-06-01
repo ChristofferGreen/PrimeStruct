@@ -40,7 +40,7 @@
               return path.rfind(typePath + "__", 0) == 0;
             };
         auto isCollectionVectorRecordTypePath = [&](std::string_view path) {
-          return path == experimentalCollectionTypePath("vec" "tor", "Vector") ||
+          return path == experimentalCollectionTypePath("vector", "Vector") ||
                  matchesGeneratedSpecializedType(path, "vector", "Vector");
         };
         auto matchesDirectHelperDefinitionFamilyPath =
@@ -410,7 +410,7 @@
         auto isDirectCollectionHelperPath = [&](const std::string &path) {
           return path.rfind("/array/", 0) == 0 ||
                  path.rfind(collectionMemberRoot("vector"), 0) == 0 ||
-                 path.rfind(experimentalCollectionMemberRoot("vec" "tor"), 0) == 0 ||
+                 path.rfind(experimentalCollectionMemberRoot("vector"), 0) == 0 ||
                  isCanonicalKeyValueHelperFamilyPath(path);
         };
         auto hasKeyValueEntryCtorArgs = [&](const Expr &callExpr) {
@@ -893,7 +893,7 @@
               candidates.push_back(receiverStructPath + "/" + expr.name);
             }
             candidates.push_back(
-                experimentalCollectionTypePath("vec" "tor", "Vector") + "/" +
+                experimentalCollectionTypePath("vector", "Vector") + "/" +
                 expr.name);
             for (const auto &candidate : candidates) {
               auto defIt = defMap.find(candidate);
@@ -1045,9 +1045,9 @@
               return true;
             }
             if ((rawPath.rfind(collectionMemberRoot("vector"), 0) == 0 ||
-                 rawPath.rfind(experimentalCollectionMemberRoot("vec" "tor"), 0) == 0 ||
+                 rawPath.rfind(experimentalCollectionMemberRoot("vector"), 0) == 0 ||
                  directCallee->fullPath.rfind(collectionMemberRoot("vector"), 0) == 0 ||
-                 directCallee->fullPath.rfind(experimentalCollectionMemberRoot("vec" "tor"), 0) == 0) &&
+                 directCallee->fullPath.rfind(experimentalCollectionMemberRoot("vector"), 0) == 0) &&
                 isDirectHelperDefinitionFamily(expr, *directCallee)) {
               std::string vectorHelperName;
 	              const bool isMaterializableVectorMetadataReceiver =

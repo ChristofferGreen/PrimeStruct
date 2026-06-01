@@ -16,7 +16,7 @@ std::string experimentalCollectionTypePath(std::string_view collectionName,
 }
 
 bool isVectorStructPath(const std::string &structPath) {
-  const std::string vectorTypePath = experimentalCollectionTypePath("vec" "tor", "Vector");
+  const std::string vectorTypePath = experimentalCollectionTypePath("vector", "Vector");
   return structPath == "/vector" || structPath == vectorTypePath ||
          structPath.rfind(vectorTypePath + "__", 0) == 0;
 }
