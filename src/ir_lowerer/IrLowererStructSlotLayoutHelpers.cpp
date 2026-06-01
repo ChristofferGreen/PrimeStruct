@@ -72,7 +72,9 @@ bool isExperimentalMapTypeName(const std::string &typeName) {
            typeName.rfind(keyValueRootNoSlash + "__", 0) == 0 ||
            typeName.rfind(keyValueRoot + "__", 0) == 0)) ||
          typeName == "/std/collections/map/MapValue" ||
-         typeName.find("/MapValue") != std::string::npos;
+         typeName.find("/MapValue") != std::string::npos ||
+         typeName == "/std/collections/internal_map/Map" ||
+         typeName.find("/internal_map/Map") != std::string::npos;
 }
 
 bool isMapTypeName(const std::string &typeName) {
