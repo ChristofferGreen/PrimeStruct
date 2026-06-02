@@ -265,13 +265,10 @@ main() {
   CHECK(arg.kind == primec::Expr::Kind::Call);
   CHECK(arg.name == "Vec2");
   CHECK_FALSE(arg.isBinding);
-  REQUIRE(arg.args.size() == 1);
-  CHECK(arg.args[0].kind == primec::Expr::Kind::Call);
-  CHECK(arg.args[0].name == "block");
-  CHECK(arg.args[0].hasBodyArguments);
-  REQUIRE(arg.args[0].bodyArguments.size() == 2);
-  CHECK(arg.args[0].bodyArguments[0].kind == primec::Expr::Kind::FloatLiteral);
-  CHECK(arg.args[0].bodyArguments[1].kind == primec::Expr::Kind::FloatLiteral);
+  CHECK(arg.isBraceConstructor);
+  REQUIRE(arg.args.size() == 2);
+  CHECK(arg.args[0].kind == primec::Expr::Kind::FloatLiteral);
+  CHECK(arg.args[1].kind == primec::Expr::Kind::FloatLiteral);
 }
 
 TEST_CASE("parses brace constructor in return expression") {

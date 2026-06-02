@@ -143,6 +143,17 @@ bool Parser::parseExpr(Expr &expr, const std::string &namespacePrefix) {
       call.name = "convert";
     }
     if (tryParseBraceConstructorArgumentList(call.args, call.argNames, namespacePrefix)) {
+      // For empty argument lists in non-collection brace constructors, use block form
+      if (call.args.empty() && !isCollectionBraceType(call.name)) {
+        Expr block;
+        block.kind = Expr::Kind::Call;
+        block.name = "block";
+        block.namespacePrefix = namespacePrefix;
+        block.hasBodyArguments = true;
+        // Block has empty body arguments
+        call.args.push_back(std::move(block));
+        call.argNames.push_back(std::nullopt);
+      }
       out = std::move(call);
       return true;
     }
