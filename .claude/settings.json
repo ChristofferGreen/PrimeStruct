@@ -1,0 +1,14 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash",
+      "Read",
+      "Edit",
+      "Write",
+      "Agent",
+      "Workflow",
+      "ToolSearch",
+      "Monitor"
+    ]
+  }
+}

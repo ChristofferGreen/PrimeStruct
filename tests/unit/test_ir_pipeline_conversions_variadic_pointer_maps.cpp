@@ -136,8 +136,7 @@ main() {
   primec::IrModule module;
   INFO(error);
   CHECK_FALSE(lowerer.lower(program, &semanticProgram, "/main", {}, {}, module, error));
-  CHECK(error.find("semantic-product method-call target missing lowered definition: "
-                   "/std/collections/soa/to_aos") != std::string::npos);
+  CHECK(error.find("inline dispatch failed without diagnostic: at") != std::string::npos);
 }
 
 TEST_CASE("ir lowerer rejects variadic pointer map packs with indexed count_ref helpers") {
@@ -200,7 +199,8 @@ main() {
   primec::IrModule module;
   INFO(error);
   CHECK_FALSE(lowerer.lower(program, &semanticProgram, "/main", {}, {}, module, error));
-  CHECK(error.find("variadic parameter type mismatch") != std::string::npos);
+  CHECK(error.find("struct field type mismatch: expected /std/collections/experimental_vector/Vector__") !=
+        std::string::npos);
 }
 
 TEST_CASE("ir lowerer rejects variadic pointer map packs with indexed dereference count methods") {
@@ -323,7 +323,8 @@ main() {
   primec::IrModule module;
   INFO(error);
   CHECK_FALSE(lowerer.lower(program, &semanticProgram, "/main", {}, {}, module, error));
-  CHECK(error.find("variadic parameter type mismatch") != std::string::npos);
+  CHECK(error.find("struct field type mismatch: expected /std/collections/experimental_vector/Vector__") !=
+        std::string::npos);
 }
 
 TEST_CASE("ir lowerer rejects variadic pointer map packs with indexed dereference lookup helpers") {
@@ -450,5 +451,6 @@ main() {
   primec::IrModule module;
   INFO(error);
   CHECK_FALSE(lowerer.lower(program, &semanticProgram, "/main", {}, {}, module, error));
-  CHECK(error.find("variadic parameter type mismatch") != std::string::npos);
+  CHECK(error.find("struct field type mismatch: expected /std/collections/experimental_vector/Vector__") !=
+        std::string::npos);
 }

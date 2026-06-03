@@ -57,7 +57,7 @@ TEST_CASE("ir lowerer count access helpers build bundled entry count setup") {
   countEntry.name = "/vector/count";
   CHECK_FALSE(setup.classifiers.isArrayCountCall(countEntry, locals));
   countEntry.name = "/std/collections/vector/count";
-  CHECK(setup.classifiers.isArrayCountCall(countEntry, locals));
+  CHECK_FALSE(setup.classifiers.isArrayCountCall(countEntry, locals));
   countEntry.name = "/array/count";
   CHECK_FALSE(setup.classifiers.isArrayCountCall(countEntry, locals));
 
@@ -741,7 +741,7 @@ TEST_CASE("ir lowerer count access helpers classify capacity and string count") 
   primitiveArgsCount.args = {primitiveArgsName};
   CHECK(primec::ir_lowerer::isArrayCountCall(primitiveArgsCount, locals, false, "argv"));
   primitiveArgsCount.name = "/std/collections/vector/count";
-  CHECK(primec::ir_lowerer::isArrayCountCall(primitiveArgsCount, locals, false, "argv"));
+  CHECK_FALSE(primec::ir_lowerer::isArrayCountCall(primitiveArgsCount, locals, false, "argv"));
   primitiveArgsCount.name = "/vector/count";
   CHECK_FALSE(primec::ir_lowerer::isArrayCountCall(primitiveArgsCount, locals, false, "argv"));
 

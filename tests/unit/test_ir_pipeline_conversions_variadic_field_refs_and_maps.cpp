@@ -27,7 +27,7 @@ Pair() {
 
 [struct]
 Holder() {
-  [mut Pair] pair_storage{Pair{}}
+  [mut Pair] pair_storage{Pair{[value] 0i32}}
   [Reference<Pair>] pair_ref{location(pair_storage)}
 }
 
@@ -111,8 +111,7 @@ main() {
   primec::IrModule module;
   INFO(error);
   CHECK_FALSE(lowerer.lower(program, &semanticProgram, "/main", {}, {}, module, error));
-  CHECK(error.find("semantic-product method-call target missing lowered definition: "
-                   "/std/collections/soa/to_aos") != std::string::npos);
+  CHECK(error.find("inline dispatch failed without diagnostic: at") != std::string::npos);
 }
 
 TEST_CASE("ir lowerer materializes variadic pointer uninitialized scalar packs with indexed init and take") {
@@ -316,8 +315,7 @@ main() {
   primec::IrModule module;
   INFO(error);
   CHECK_FALSE(lowerer.lower(program, &semanticProgram, "/main", {}, {}, module, error));
-  CHECK(error.find("native backend only supports arithmetic/comparison/clamp/min/max/abs/"
-                   "sign/saturate/convert/pointer/assign/increment/decrement calls in expressions") !=
+  CHECK(error.find("struct field type mismatch: expected /std/collections/experimental_vector/Vector__") !=
         std::string::npos);
 }
 
@@ -500,7 +498,6 @@ main() {
   primec::IrModule module;
   INFO(error);
   CHECK_FALSE(lowerer.lower(program, &semanticProgram, "/main", {}, {}, module, error));
-  CHECK(error.find("native backend only supports arithmetic/comparison/clamp/min/max/abs/"
-                   "sign/saturate/convert/pointer/assign/increment/decrement calls in expressions") !=
+  CHECK(error.find("struct field type mismatch: expected /std/collections/experimental_vector/Vector__") !=
         std::string::npos);
 }

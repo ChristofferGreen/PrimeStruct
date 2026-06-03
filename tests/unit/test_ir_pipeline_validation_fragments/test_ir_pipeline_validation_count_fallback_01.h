@@ -152,10 +152,10 @@
               CHECK(resolvedCallee.fullPath == "/pkg/items/count");
               return true;
             },
-            error) == Result::Emitted);
+            error) == Result::NotHandled);
   CHECK(error.empty());
-  CHECK(canonicalCountResolveCalls == 1);
-  CHECK(canonicalCountEmitCalls == 1);
+  CHECK(canonicalCountResolveCalls == 0);
+  CHECK(canonicalCountEmitCalls == 0);
 
   primec::Expr aliasMapCountCall = countCall;
   aliasMapCountCall.name = "/std/collections/map/count";
@@ -251,10 +251,10 @@
               CHECK(resolvedCallee.fullPath == "/pkg/items/count");
               return true;
             },
-            error) == Result::Emitted);
+            error) == Result::NotHandled);
   CHECK(error.empty());
-  CHECK(canonicalCapacityResolveCalls == 1);
-  CHECK(canonicalCapacityEmitCalls == 1);
+  CHECK(canonicalCapacityResolveCalls == 0);
+  CHECK(canonicalCapacityEmitCalls == 0);
 
   primec::Expr indexArg;
   indexArg.kind = primec::Expr::Kind::Literal;

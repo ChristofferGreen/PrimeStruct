@@ -2142,9 +2142,13 @@ bool SemanticsValidator::resolveMethodTarget(const std::vector<ParameterInfo> &p
           explicitKeyValueHelperPath.empty()
               ? canonicalKeyValueHelperPathLocal(helperName)
               : explicitKeyValueHelperPath;
+      const bool isBareBareMapCall =
+          !receiver.isMethodCall &&
+          (helperName == "count" || helperName == "count_ref");
+      const std::string errorTargetPath = isBareBareMapCall ? helperName : directPath;
       return failMethodTargetResolutionDiagnostic(
           receiver.isMethodCall ? "unknown method: " + directPath
-                                : "unknown call target: " + directPath);
+                                : "unknown call target: " + errorTargetPath);
     }
     if (hasDeclaredDefinitionPath(preferredKeyValueHelper) ||
         hasDefinitionFamilyPath(preferredKeyValueHelper)) {

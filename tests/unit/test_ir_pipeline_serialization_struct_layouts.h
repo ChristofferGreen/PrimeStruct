@@ -8,7 +8,7 @@ Thing() {
 
 [return<void>]
 main() {
-  Thing{}
+  [Thing] item{Thing{[value] 1i32, [count] 2i64}}
 }
 )";
   std::string error;
@@ -143,7 +143,7 @@ Vec3() {
 
 [return<Vec3>]
 makeCenter() {
-  return(Vec3{})
+  return(Vec3{[x] 1i32, [y] 2i32, [z] 3i32})
 }
 
 [struct]
@@ -154,7 +154,7 @@ Sphere() {
 
 [return<void>]
 main() {
-  Sphere{}
+  [Sphere] shape{Sphere{[center] makeCenter(), [radius] 4i32}}
 }
 )";
   std::string error;
@@ -187,7 +187,7 @@ Widget() {
 
 [return<void>]
 main() {
-  Widget{}
+  [Widget] item{Widget{[size] 1i32, [weight] 3i32}}
 }
 )";
   std::string error;
@@ -253,7 +253,7 @@ Payload() {
 
 [return<void>]
 main() {
-  Payload{}
+  [Payload] payload{Payload{[count] 1i32, [file] 2i64, [lane] 3i32, [plain] 4i32}}
 }
 )";
   std::string error;

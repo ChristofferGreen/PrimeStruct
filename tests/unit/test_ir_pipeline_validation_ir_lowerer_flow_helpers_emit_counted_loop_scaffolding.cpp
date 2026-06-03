@@ -1,11 +1,23 @@
 #include "test_ir_pipeline_validation_helpers.h"
 
+#include <filesystem>
 #include <fstream>
 
 namespace {
 
 std::string readTextFile(const std::string &path) {
   std::ifstream file(path);
+  if (!file.is_open()) {
+    const std::string marker = "PrimeStruct/";
+    const size_t markerPos = path.find(marker);
+    if (markerPos != std::string::npos) {
+      const std::filesystem::path repoRoot =
+          std::filesystem::path(__FILE__).parent_path().parent_path().parent_path();
+      const std::filesystem::path repoRelativePath =
+          path.substr(markerPos + marker.size());
+      file.open(repoRoot / repoRelativePath);
+    }
+  }
   REQUIRE(file.is_open());
   return std::string((std::istreambuf_iterator<char>(file)), std::istreambuf_iterator<char>());
 }

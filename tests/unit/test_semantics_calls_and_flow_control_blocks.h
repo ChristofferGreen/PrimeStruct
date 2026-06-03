@@ -305,7 +305,7 @@ main() {
   CHECK(error.find("if branches must return compatible types") != std::string::npos);
 }
 
-TEST_CASE("if rejects bare map at before branch compatibility") {
+TEST_CASE("if accepts bare map at before branch compatibility") {
   const std::string source = R"(
 [return<int>]
 at([map<i32, string>] values, [i32] key) {
@@ -313,15 +313,14 @@ at([map<i32, string>] values, [i32] key) {
 }
 
 [return<int>]
-main() {
-  [map<i32, string>] values{map<i32, string>(1i32, "one"utf8)}
-  return(if(true, then(){ at(values, 1i32) }, else(){ 2i32 }))
-}
+  main() {
+    [map<i32, string>] values{map<i32, string>(1i32, "one"utf8)}
+    return(if(true, then(){ at(values, 1i32) }, else(){ 2i32 }))
+  }
 )";
   std::string error;
-  CHECK_FALSE(validateProgram(source, "/main", error));
-  INFO(error);
-  CHECK(error.find("unknown call target: /std/collections/map/at") != std::string::npos);
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
 }
 
 TEST_CASE("labeled arguments accept bracket syntax") {

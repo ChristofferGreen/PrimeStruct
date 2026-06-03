@@ -44,7 +44,7 @@ main() {
   CHECK(error.find("unknown call target: /std/collections/vector/pop") != std::string::npos);
 }
 
-TEST_CASE("pop call keeps imported vector helper diagnostics before user helper") {
+TEST_CASE("pop call validates through imported vector helper before user helper") {
   const std::string source = R"(
 import /std/collections/*
 
@@ -58,10 +58,10 @@ main() {
   pop(values)
   return(count(values))
 }
-)";
+  )";
   std::string error;
-  CHECK_FALSE(validateProgram(source, "/main", error));
-  CHECK(error.find("pop requires mutable vector binding") != std::string::npos);
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
 }
 
 TEST_CASE("pop method keeps user-defined vector helper precedence") {
@@ -173,7 +173,7 @@ main() {
   CHECK(error.empty());
 }
 
-TEST_CASE("clear call keeps imported vector helper diagnostics before user helper") {
+TEST_CASE("clear call validates through imported vector helper before user helper") {
   const std::string source = R"(
 import /std/collections/*
 
@@ -187,10 +187,10 @@ main() {
   clear(values)
   return(count(values))
 }
-)";
+  )";
   std::string error;
-  CHECK_FALSE(validateProgram(source, "/main", error));
-  CHECK(error.find("clear requires mutable vector binding") != std::string::npos);
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
 }
 
 TEST_CASE("clear method keeps user-defined vector helper precedence") {
@@ -395,7 +395,7 @@ main() {
   CHECK(error.empty());
 }
 
-TEST_CASE("remove_at call keeps imported vector helper diagnostics before user helper") {
+TEST_CASE("remove_at call validates through imported vector helper before user helper") {
   const std::string source = R"(
 import /std/collections/*
 
@@ -409,10 +409,10 @@ main() {
   remove_at(values, 1i32)
   return(count(values))
 }
-)";
+  )";
   std::string error;
-  CHECK_FALSE(validateProgram(source, "/main", error));
-  CHECK(error.find("remove_at requires mutable vector binding") != std::string::npos);
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
 }
 
 TEST_CASE("remove_at method keeps user-defined vector helper precedence") {
@@ -590,7 +590,7 @@ main() {
   CHECK(error.empty());
 }
 
-TEST_CASE("remove_swap call keeps imported vector helper diagnostics before user helper") {
+TEST_CASE("remove_swap call validates through imported vector helper before user helper") {
   const std::string source = R"(
 import /std/collections/*
 
@@ -604,10 +604,10 @@ main() {
   remove_swap(values, 1i32)
   return(count(values))
 }
-)";
+  )";
   std::string error;
-  CHECK_FALSE(validateProgram(source, "/main", error));
-  CHECK(error.find("remove_swap requires mutable vector binding") != std::string::npos);
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
 }
 
 TEST_CASE("remove_swap method keeps user-defined vector helper precedence") {
@@ -630,7 +630,7 @@ main() {
   CHECK(error.empty());
 }
 
-TEST_CASE("vector helpers in expressions keep bare unknown target diagnostics") {
+TEST_CASE("vector helpers in expressions keep statement-only diagnostics") {
   struct HelperCase {
     const char *name;
     const char *args;
@@ -649,7 +649,8 @@ TEST_CASE("vector helpers in expressions keep bare unknown target diagnostics") 
         "}\n";
     std::string error;
     CHECK_FALSE(validateProgram(source, "/main", error));
-    CHECK(error.find("unknown call target: " + std::string(helper.name)) != std::string::npos);
+    CHECK(error.find(std::string(helper.name) + " is only supported as a statement") !=
+          std::string::npos);
   }
 }
 

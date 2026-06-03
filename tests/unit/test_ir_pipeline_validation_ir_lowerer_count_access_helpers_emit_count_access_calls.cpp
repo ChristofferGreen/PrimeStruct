@@ -162,12 +162,9 @@ TEST_CASE("ir lowerer count access helpers emit count access calls") {
             },
             [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return false; },
             [&](primec::IrOpcode op, uint64_t imm) { instructions.push_back({op, imm}); },
-            error) == Result::Emitted);
+            error) == Result::NotHandled);
   CHECK(error.empty());
-  REQUIRE(instructions.size() == 2);
-  CHECK(instructions[0].op == primec::IrOpcode::LoadLocal);
-  CHECK(instructions[0].imm == 3);
-  CHECK(instructions[1].op == primec::IrOpcode::LoadIndirect);
+  CHECK(instructions.empty());
 
   instructions.clear();
   error.clear();
@@ -258,15 +255,9 @@ TEST_CASE("ir lowerer count access helpers emit count access calls") {
             },
             [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return false; },
             [&](primec::IrOpcode op, uint64_t imm) { instructions.push_back({op, imm}); },
-            error) == Result::Emitted);
+            error) == Result::NotHandled);
   CHECK(error.empty());
-  REQUIRE(instructions.size() == 4);
-  CHECK(instructions[0].op == primec::IrOpcode::LoadLocal);
-  CHECK(instructions[0].imm == 5);
-  CHECK(instructions[1].op == primec::IrOpcode::PushI64);
-  CHECK(instructions[1].imm == 2ull * primec::IrSlotBytes);
-  CHECK(instructions[2].op == primec::IrOpcode::AddI64);
-  CHECK(instructions[3].op == primec::IrOpcode::LoadIndirect);
+  CHECK(instructions.empty());
 
   instructions.clear();
   error = "stale";
@@ -672,9 +663,12 @@ TEST_CASE("ir lowerer count access helpers emit count access calls") {
               return true;
             },
             [&](primec::IrOpcode op, uint64_t imm) { instructions.push_back({op, imm}); },
-            error) == Result::NotHandled);
-  CHECK(dynamicCountEmitExprCalls == 0);
-  CHECK(instructions.empty());
+            error) == Result::Emitted);
+  CHECK(dynamicCountEmitExprCalls == 1);
+  REQUIRE(instructions.size() == 2);
+  CHECK(instructions[0].op == primec::IrOpcode::PushI64);
+  CHECK(instructions[0].imm == 5);
+  CHECK(instructions[1].op == primec::IrOpcode::LoadIndirect);
 
   instructions.clear();
   error = "stale";
@@ -807,9 +801,15 @@ TEST_CASE("ir lowerer count access helpers emit count access calls") {
               return true;
             },
             [&](primec::IrOpcode op, uint64_t imm) { instructions.push_back({op, imm}); },
-            error) == Result::NotHandled);
-  CHECK(dynamicCapacityEmitExprCalls == 0);
-  CHECK(instructions.empty());
+            error) == Result::Emitted);
+  CHECK(dynamicCapacityEmitExprCalls == 1);
+  REQUIRE(instructions.size() == 4);
+  CHECK(instructions[0].op == primec::IrOpcode::AddressOfLocal);
+  CHECK(instructions[0].imm == 9);
+  CHECK(instructions[1].op == primec::IrOpcode::PushI64);
+  CHECK(instructions[1].imm == primec::IrSlotBytes);
+  CHECK(instructions[2].op == primec::IrOpcode::AddI64);
+  CHECK(instructions[3].op == primec::IrOpcode::LoadIndirect);
 
   instructions.clear();
   error.clear();
@@ -836,9 +836,15 @@ TEST_CASE("ir lowerer count access helpers emit count access calls") {
               return true;
             },
             [&](primec::IrOpcode op, uint64_t imm) { instructions.push_back({op, imm}); },
-            error) == Result::NotHandled);
-  CHECK(dynamicCapacityEmitExprCalls == 0);
-  CHECK(instructions.empty());
+            error) == Result::Emitted);
+  CHECK(dynamicCapacityEmitExprCalls == 1);
+  REQUIRE(instructions.size() == 4);
+  CHECK(instructions[0].op == primec::IrOpcode::AddressOfLocal);
+  CHECK(instructions[0].imm == 4);
+  CHECK(instructions[1].op == primec::IrOpcode::PushI64);
+  CHECK(instructions[1].imm == primec::IrSlotBytes);
+  CHECK(instructions[2].op == primec::IrOpcode::AddI64);
+  CHECK(instructions[3].op == primec::IrOpcode::LoadIndirect);
   callExpr.namespacePrefix.clear();
 
   instructions.clear();
@@ -876,10 +882,10 @@ TEST_CASE("ir lowerer count access helpers build count classifier adapters") {
   countEntry.args = {entryName};
   CHECK(isArrayCountCall(countEntry, locals));
   countEntry.namespacePrefix = "/std/collections/vector";
-  CHECK(isArrayCountCall(countEntry, locals));
+  CHECK_FALSE(isArrayCountCall(countEntry, locals));
   countEntry.namespacePrefix.clear();
   countEntry.name = "/std/collections/vector/count";
-  CHECK(isArrayCountCall(countEntry, locals));
+  CHECK_FALSE(isArrayCountCall(countEntry, locals));
   countEntry.name = "/vector/count";
   CHECK_FALSE(isArrayCountCall(countEntry, locals));
   countEntry.name = "/soa_vector/count";
@@ -973,7 +979,7 @@ TEST_CASE("ir lowerer count access helpers build count classifier adapters") {
   stringCount.args = {literal};
   CHECK(isStringCountCall(stringCount, locals));
   stringCount.name = "/std/collections/vector/count";
-  CHECK(isStringCountCall(stringCount, locals));
+  CHECK_FALSE(isStringCountCall(stringCount, locals));
 }
 
 TEST_CASE("ir lowerer count access helpers build bundled classifiers") {
@@ -991,10 +997,10 @@ TEST_CASE("ir lowerer count access helpers build bundled classifiers") {
   countEntry.args = {entryName};
   CHECK(classifiers.isArrayCountCall(countEntry, locals));
   countEntry.namespacePrefix = "/std/collections/vector";
-  CHECK(classifiers.isArrayCountCall(countEntry, locals));
+  CHECK_FALSE(classifiers.isArrayCountCall(countEntry, locals));
   countEntry.namespacePrefix.clear();
   countEntry.name = "/std/collections/vector/count";
-  CHECK(classifiers.isArrayCountCall(countEntry, locals));
+  CHECK_FALSE(classifiers.isArrayCountCall(countEntry, locals));
   countEntry.name = "/vector/count";
   CHECK_FALSE(classifiers.isArrayCountCall(countEntry, locals));
   countEntry.name = "/soa_vector/count";

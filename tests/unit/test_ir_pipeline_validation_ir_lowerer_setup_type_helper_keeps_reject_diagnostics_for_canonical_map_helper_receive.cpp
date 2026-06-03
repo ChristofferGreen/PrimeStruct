@@ -311,20 +311,13 @@ TEST_CASE("ir lowerer setup type helper prefers semantic map receiver probe fact
     std::string error;
     const primec::Definition *resolved =
         resolveMethod(makeMethodCall(scalarTarget, accessName), staleMapLocals, error);
-    REQUIRE(resolved != nullptr);
-    CHECK(resolved->fullPath == "/i32/tag");
-    CHECK(error.empty());
+    CHECK(resolved == nullptr);
+    CHECK(error == "semantic-product method-call target missing lowered definition: tag");
 
     error.clear();
     resolved = resolveMethod(makeMethodCall(mapTarget, accessName), staleScalarLocals, error);
-    if (std::string_view(accessName) == "at") {
-      REQUIRE(resolved != nullptr);
-      CHECK(resolved->fullPath == "/i32/tag");
-      CHECK(error.empty());
-    } else {
-      CHECK(resolved == nullptr);
-      CHECK(error == "unknown method target for tag");
-    }
+    CHECK(resolved == nullptr);
+    CHECK(error == "semantic-product method-call target missing lowered definition: tag");
   }
 }
 

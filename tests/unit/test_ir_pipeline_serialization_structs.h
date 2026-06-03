@@ -123,7 +123,7 @@ makeVec3([i32] x, [i32] y, [i32] z) {
 
 [return<int>]
 main() {
-  [Vec3 mut] sample{Vec3{}}
+  [Vec3 mut] sample{Vec3{[x] 0i32, [y] 0i32, [z] 0i32}}
   assign(sample, makeVec3(4i32, 5i32, 6i32))
   return(sample.z)
 }

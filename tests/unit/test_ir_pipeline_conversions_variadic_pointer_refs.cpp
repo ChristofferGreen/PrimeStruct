@@ -154,7 +154,7 @@ main() {
   primec::IrModule module;
   INFO(error);
   CHECK_FALSE(lowerer.lower(program, &semanticProgram, "/main", {}, {}, module, error));
-  CHECK(error.find("semantic-product method-call target missing lowered definition: /std/collections/soa/to_aos") !=
+  CHECK(error.find("inline dispatch failed without diagnostic: at") !=
         std::string::npos);
 }
 
@@ -233,7 +233,7 @@ main() {
   primec::IrModule module;
   INFO(error);
   CHECK_FALSE(lowerer.lower(program, &semanticProgram, "/main", {}, {}, module, error));
-  CHECK(error.find("semantic-product method-call target missing lowered definition: /std/collections/soa/to_aos") !=
+  CHECK(error.find("inline dispatch failed without diagnostic: at") !=
         std::string::npos);
 }
 
@@ -302,7 +302,7 @@ main() {
   primec::IrModule module;
   INFO(error);
   CHECK_FALSE(lowerer.lower(program, &semanticProgram, "/main", {}, {}, module, error));
-  CHECK(error.find("semantic-product method-call target missing lowered definition: /std/collections/soa/to_aos") !=
+  CHECK(error.find("inline dispatch failed without diagnostic: at") !=
         std::string::npos);
 }
 
@@ -381,7 +381,7 @@ main() {
   primec::IrModule module;
   INFO(error);
   CHECK_FALSE(lowerer.lower(program, &semanticProgram, "/main", {}, {}, module, error));
-  CHECK(error.find("semantic-product method-call target missing lowered definition: /std/collections/soa/to_aos") !=
+  CHECK(error.find("inline dispatch failed without diagnostic: at") !=
         std::string::npos);
 }
 
@@ -454,7 +454,7 @@ main() {
   primec::IrModule module;
   INFO(error);
   CHECK_FALSE(lowerer.lower(program, &semanticProgram, "/main", {}, {}, module, error));
-  CHECK(error.find("semantic-product method-call target missing lowered definition: /std/collections/soa/to_aos") !=
+  CHECK(error.find("inline dispatch failed without diagnostic: at") !=
         std::string::npos);
 }
 
@@ -537,7 +537,7 @@ main() {
   primec::IrModule module;
   INFO(error);
   CHECK_FALSE(lowerer.lower(program, &semanticProgram, "/main", {}, {}, module, error));
-  CHECK(error.find("semantic-product method-call target missing lowered definition: /std/collections/soa/to_aos") !=
+  CHECK(error.find("inline dispatch failed without diagnostic: at") !=
         std::string::npos);
 }
 
@@ -629,6 +629,6 @@ main() {
   primec::IrModule module;
   INFO(error);
   CHECK_FALSE(lowerer.lower(program, &semanticProgram, "/main", {}, {}, module, error));
-  CHECK(error.find("semantic-product method-call target missing lowered definition: /std/collections/soa/to_aos") !=
+  CHECK(error.find("inline dispatch failed without diagnostic: at") !=
         std::string::npos);
 }

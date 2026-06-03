@@ -767,11 +767,14 @@
             return false;
           }
           if (const Definition *callee = resolveDefinitionCall(callExpr);
-              callee != nullptr &&
-              !ir_lowerer::isCanonicalPublishedStdlibSurfaceHelperPath(
-                  callee->fullPath,
-                  primec::StdlibSurfaceId::CollectionsManifestSurface0)) {
-            return false;
+              callee != nullptr) {
+            const auto *metadata = keyValueHelperSurfaceMetadataForLowerEmitExpr();
+            if (metadata == nullptr ||
+                !ir_lowerer::isCanonicalPublishedStdlibSurfaceHelperPath(
+                    callee->fullPath,
+                    metadata->id)) {
+              return false;
+            }
           }
           if (callExpr.args.front().kind != Expr::Kind::Call) {
             const auto targetInfo =

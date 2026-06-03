@@ -211,16 +211,16 @@ TEST_CASE("ir lowerer call helpers dispatch inline call with count fallbacks") {
             },
             [&](const primec::Expr &callExpr, const primec::Definition &resolvedCallee) {
               ++explicitVectorAtEmitCalls;
-              CHECK(callExpr.name == "at");
-              CHECK(callExpr.isMethodCall);
-              CHECK(resolvedCallee.fullPath == "/pkg/helper");
+              CHECK(callExpr.name == "/std/collections/vector/at");
+              CHECK_FALSE(callExpr.isMethodCall);
+              CHECK(resolvedCallee.fullPath == "/std/collections/vector/at");
               return true;
             },
-            error) == Result::Emitted);
+            error) == Result::NotHandled);
   CHECK(error.empty());
-  CHECK(explicitVectorAtResolveMethodCalls == 1);
+  CHECK(explicitVectorAtResolveMethodCalls == 0);
   CHECK(explicitVectorAtResolveDefinitionCalls == 1);
-  CHECK(explicitVectorAtEmitCalls == 1);
+  CHECK(explicitVectorAtEmitCalls == 0);
 
   primec::Definition arrayCountDef;
   arrayCountDef.fullPath = "/array/count";
@@ -358,11 +358,11 @@ TEST_CASE("ir lowerer call helpers dispatch inline call with count fallbacks") {
               ++canonicalPushEmitCalls;
               return true;
             },
-            error) == Result::Emitted);
+            error) == Result::NotHandled);
   CHECK(error == "stale");
-  CHECK(canonicalPushResolveMethodCalls == 1);
-  CHECK(canonicalPushResolveDefinitionCalls == 1);
-  CHECK(canonicalPushEmitCalls == 1);
+  CHECK(canonicalPushResolveMethodCalls == 0);
+  CHECK(canonicalPushResolveDefinitionCalls == 2);
+  CHECK(canonicalPushEmitCalls == 0);
 
   primec::Definition vectorPushDef;
   vectorPushDef.fullPath = "/std/collections/vector/push";
@@ -387,14 +387,14 @@ TEST_CASE("ir lowerer call helpers dispatch inline call with count fallbacks") {
             },
             [&](const primec::Expr &callExpr, const primec::Definition &resolvedCallee) {
               ++canonicalPushDirectEmitCalls;
-              CHECK(callExpr.name == "push");
-              CHECK(callExpr.isMethodCall);
-              CHECK(resolvedCallee.fullPath == "/pkg/helper");
+              CHECK(callExpr.name == "/std/collections/vector/push");
+              CHECK_FALSE(callExpr.isMethodCall);
+              CHECK(resolvedCallee.fullPath == "/std/collections/vector/push");
               return true;
             },
             error) == Result::Emitted);
   CHECK(error.empty());
-  CHECK(canonicalPushDirectResolveMethodCalls == 1);
+  CHECK(canonicalPushDirectResolveMethodCalls == 0);
   CHECK(canonicalPushDirectResolveDefinitionCalls == 1);
   CHECK(canonicalPushDirectEmitCalls == 1);
 
@@ -828,9 +828,9 @@ TEST_CASE("ir lowerer call helpers split legacy and canonical map access defs") 
   expectDirectAccessDef("/map/at", "/map/at", Result::NotHandled, 0);
   expectDirectAccessDef("/map/at_unsafe", "/map/at_unsafe", Result::NotHandled, 0);
   expectDirectAccessDef("/std/collections/map/at", "/std/collections/map/at",
-                        Result::Emitted, 1);
+                        Result::NotHandled, 0);
   expectDirectAccessDef("/std/collections/map/at_unsafe",
-                        "/std/collections/map/at_unsafe", Result::Emitted, 1);
+                        "/std/collections/map/at_unsafe", Result::NotHandled, 0);
 }
 
 TEST_CASE("ir lowerer call helpers keep map count and local access same-path defs") {

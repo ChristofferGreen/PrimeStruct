@@ -194,16 +194,10 @@ TEST_CASE("ir lowerer vector type layout traces use generic collection helpers")
             "isBuiltinCollectionTypeName(name, \"vector\")") !=
         std::string::npos);
   CHECK(uninitializedStructSource.find(
-            "normalizeBuiltinCollectionStructPath(\"vector\")") ==
-        std::string::npos);
-  CHECK(uninitializedStructSource.find(
-            "normalizeBuiltinCollectionStructPath(\"vec\" \"tor\")") !=
+            "normalizeBuiltinCollectionStructPath(\"vector\")") !=
         std::string::npos);
   CHECK(structSlotLayoutSource.find(
-            "experimentalCollectionTypePath(\"vector\", \"Vector\")") ==
-        std::string::npos);
-  CHECK(structSlotLayoutSource.find(
-            "experimentalCollectionTypePath(\"vec\" \"tor\", \"Vector\")") !=
+            "experimentalCollectionTypePath(\"vector\", \"Vector\")") !=
         std::string::npos);
   CHECK(structReturnPathSource.find(
             "collectionWrapperAlias(\"vector\", \"New\")") !=

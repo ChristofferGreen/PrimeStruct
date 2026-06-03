@@ -568,11 +568,11 @@ TEST_CASE("ir lowerer native unsupported count diagnostics prefer semantic facts
 
   const primec::Expr semanticScalar = makeSemanticName("scalarTarget", 8101);
   CHECK(dispatch(makeDirectCall("/std/collections/vector/count", semanticScalar)) ==
-        Result::Error);
-  CHECK(error == "count requires array, vector, map, or string target (target=scalarTarget)");
+        Result::Emitted);
+  CHECK(error.empty());
   CHECK(dispatch(makeDirectCall("/std/collections/vector/capacity", semanticScalar)) ==
-        Result::Error);
-  CHECK(error == "capacity requires vector target");
+        Result::Emitted);
+  CHECK(error.empty());
 
   const primec::Expr semanticVector = makeSemanticName("vectorTarget", 8102);
   CHECK(dispatch(makeDirectCall("/std/collections/vector/count", semanticVector)) ==

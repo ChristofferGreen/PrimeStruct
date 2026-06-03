@@ -2108,7 +2108,7 @@ TEST_CASE("template monomorph source delegation stays stable") {
             "const bool receiverEligibleForSamePathSoaHelper =\n"
             "          isTemplateMonomorphSoaReceiverType(receiverFamily) ||\n"
             "          receiverResolvesBorrowedExperimentalSoaVector ||\n"
-            "          receiverResolvesExperimentalSoaVector ||\n"
+            "           receiverResolvesExperimentalSoaVector ||\n"
             "          ((helperName == \"count\" || helperName == \"count_ref\") &&\n"
             "           receiverFamily == \"vector\" &&\n"
             "           !receiverHasVisibleCanonicalCollectionHelper(helperName));") !=

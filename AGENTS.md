@@ -114,7 +114,10 @@ build and layout solidify.
 - **Lines-of-code helper:** `./scripts/lines_of_code.sh` reports line totals for `src/` and `include/`.
 - **Test-count helper:** `./scripts/test_count.sh` reports total defined `TEST_CASE` macros under `tests/` and, when test binaries exist, sums doctest `--count` output across `build-release/PrimeStruct_*_tests`.
 - **Top-lines helper:** `./scripts/top_lines_of_code.sh` reports the top files by line count across `src/`, `include/`, and `tests/` (default: top 10).
-- **CTest:** prefer running from `build-release/` via `ctest --output-on-failure`; use `build-debug/` when investigating failures in more detail.
+- **CTest:** prefer running from `build-release/` via `ctest --output-on-failure`
+  or from the repo root via `ctest --test-dir build-release`; do not assume
+  `build-release/ctest` exists. Use `build-debug/` when investigating failures
+  in more detail.
 - **Direct test binary runs:** prefer executing the matching release-mode doctest binary from `build-release/` so compile-run suites can resolve `./primec` correctly. Use `PrimeStruct_backend_ir_tests` for IR-lowering contract coverage, `PrimeStruct_backend_runtime_tests` for backend-registry/runtime adapter coverage, `PrimeStruct_compile_run_tests` for compile-run suites, or the corresponding narrower release binary for parser, semantics, text-filter, or misc slices. Switch to the matching `build-debug/` binary only when deeper debugging is needed.
 - **Focused backend rerun helper:** `scripts/rerun_backend_shard.sh vm-math`
   prints the release-mode `build-release/` cwd, matching
@@ -272,6 +275,9 @@ these steps when a release run fails:
    - Collect the authoritative failing list and per-test output from
      `build-release/Testing/Temporary/LastTestsFailed.log` and
      `build-release/Testing/Temporary/LastTest.log`.
+   - Treat `LastTestsFailed.log` as a reproduction pointer, not proof that a
+     failure is still active after focused reruns; confirm entries with a
+     targeted release-mode rerun before fixing or reporting them as current.
 
 2. Record failures
    - Immediately add every failing case to `docs/failing_tests.md` with the
@@ -329,4 +335,3 @@ Notes and best practices
    checkpointed for reviewers.
  - Keep `docs/failing_tests.md` minimal and authoritative; it is the single
    source of truth for release-mode failures.
-

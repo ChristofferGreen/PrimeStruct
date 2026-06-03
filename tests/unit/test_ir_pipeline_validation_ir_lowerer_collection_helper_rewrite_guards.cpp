@@ -22,7 +22,7 @@ TEST_CASE("ir lowerer collection helper rewrite guards explicit map defs") {
           ? std::filesystem::path(".")
           : std::filesystem::path("..");
   const std::filesystem::path collectionHelpersPath =
-      repoRoot / "src" / "ir_lowerer" / "IrLowererLowerEmitExprCollectionHelpers.h";
+      repoRoot / "src" / "ir_lowerer" / "IrLowererLowerEmitExprTailDispatch.h";
 
   REQUIRE(std::filesystem::exists(collectionHelpersPath));
   const std::string source = readText(collectionHelpersPath);
@@ -84,7 +84,7 @@ TEST_CASE("ir lowerer materialized collection receivers use published helper que
           ? std::filesystem::path(".")
           : std::filesystem::path("..");
   const std::filesystem::path collectionHelpersPath =
-      repoRoot / "src" / "ir_lowerer" / "IrLowererLowerEmitExprCollectionHelpers.h";
+      repoRoot / "src" / "ir_lowerer" / "IrLowererLowerEmitExprTailDispatch.h";
 
   REQUIRE(std::filesystem::exists(collectionHelpersPath));
   const std::string source = readText(collectionHelpersPath);
@@ -430,52 +430,46 @@ TEST_CASE("ir lowerer bare vector helper rewrites prefer semantic receiver facts
           ? std::filesystem::path(".")
           : std::filesystem::path("..");
   const std::filesystem::path collectionHelpersPath =
-      repoRoot / "src" / "ir_lowerer" / "IrLowererLowerEmitExprCollectionHelpers.h";
+      repoRoot / "src" / "ir_lowerer" / "IrLowererLowerEmitExprTailDispatch.h";
 
   REQUIRE(std::filesystem::exists(collectionHelpersPath));
   const std::string source = readText(collectionHelpersPath);
 
-  CHECK(source.find("auto tryPopulateLateArrayVectorTargetFromSemanticFacts =") !=
+  CHECK(source.find("auto tryPopulateArrayVectorFromSemanticReceiverFacts =") !=
         std::string::npos);
   CHECK(source.find("findSemanticProductCollectionSpecialization(\n"
-                    "                      callResolutionAdapters.semanticProductTargets.semanticIndex,") !=
+                    "                            semanticIndex, targetCallExpr)") !=
         std::string::npos);
   CHECK(source.find("collectionFact->elementTypeTextId") !=
         std::string::npos);
-  CHECK(source.find("findSemanticProductQueryFact(\n"
-                    "                          callResolutionAdapters.semanticProgram,") !=
+  CHECK(source.find("findSemanticProductQueryFact(semanticProgram, semanticIndex, targetCallExpr)") !=
         std::string::npos);
   CHECK(source.find("queryFact->bindingTypeTextId") !=
         std::string::npos);
   CHECK(source.find("queryFact->receiverBindingTypeTextId") !=
         std::string::npos);
   CHECK(source.find("findSemanticProductBindingFact(\n"
-                    "                          semanticIndex, targetExpr)") !=
+                    "                            semanticIndex, targetCallExpr)") !=
         std::string::npos);
   CHECK(source.find("findSemanticProductLocalAutoFact(\n"
-                    "                          callResolutionAdapters.semanticProgram,") !=
+                    "                            semanticProgram, semanticIndex, targetCallExpr)") !=
         std::string::npos);
 
   const size_t callbackSemanticFactUse =
-      source.find("if (tryPopulateLateArrayVectorTargetFromSemanticFacts(\n"
-                  "                        targetCallExpr, targetInfoOut, nullptr)) {");
+      source.find("if (tryPopulateArrayVectorFromSemanticReceiverFacts()) {");
   REQUIRE(callbackSemanticFactUse != std::string::npos);
   const size_t callbackDirectReturnInference =
       source.find("const Definition *callee =\n"
-                  "                    resolveCollectionExprDirectDefinition(targetCallExpr);",
+                  "                  resolveTailDispatchDirectHelperDefinition(targetCallExpr);",
                   callbackSemanticFactUse);
   REQUIRE(callbackDirectReturnInference != std::string::npos);
   CHECK(callbackSemanticFactUse < callbackDirectReturnInference);
 
-  const size_t methodSemanticFactUse =
-      source.find("tryPopulateLateArrayVectorTargetFromSemanticFacts(\n"
-                  "                    receiverCallExpr, semanticTargetInfo, &receiverCollectionArgs)");
-  REQUIRE(methodSemanticFactUse != std::string::npos);
-  const size_t methodDirectReturnInference =
-      source.find("resolveCollectionExprDirectDefinition(receiverCallExpr)",
-                  methodSemanticFactUse);
-  REQUIRE(methodDirectReturnInference != std::string::npos);
-  CHECK(methodSemanticFactUse < methodDirectReturnInference);
+  const size_t fieldInference =
+      source.find("if (targetCallExpr.isFieldAccess && targetCallExpr.args.size() == 1)",
+                  callbackSemanticFactUse);
+  REQUIRE(fieldInference != std::string::npos);
+  CHECK(callbackSemanticFactUse < fieldInference);
 }
 
 TEST_CASE("ir lowerer materialized collection receivers prefer semantic target facts") {
@@ -1073,12 +1067,16 @@ TEST_CASE("ir lowerer statement collection receiver gates use semantic product i
           : std::filesystem::path("..");
   const std::filesystem::path statementCallPath =
       repoRoot / "src" / "ir_lowerer" / "IrLowererStatementCallEmission.cpp";
+  const std::filesystem::path lowerStatementsPath =
+      repoRoot / "src" / "ir_lowerer" / "IrLowererLowerStatementsExpr.h";
   const std::filesystem::path callsStepPath =
       repoRoot / "src" / "ir_lowerer" / "IrLowererLowerStatementsCallsStep.cpp";
 
   REQUIRE(std::filesystem::exists(statementCallPath));
+  REQUIRE(std::filesystem::exists(lowerStatementsPath));
   REQUIRE(std::filesystem::exists(callsStepPath));
   const std::string statementSource = readText(statementCallPath);
+  const std::string lowerStatementsSource = readText(lowerStatementsPath);
   const std::string callsStepSource = readText(callsStepPath);
 
   CHECK(statementSource.find("resolveStatementCallSemanticTypeText(") !=
@@ -1089,7 +1087,7 @@ TEST_CASE("ir lowerer statement collection receiver gates use semantic product i
         std::string::npos);
   CHECK(statementSource.find("collectionFact->collectionFamilyId") !=
         std::string::npos);
-  CHECK(statementSource.find("collectionFact->elementTypeTextId") !=
+  CHECK(statementSource.find("collectionFact->elementTypeTextId") ==
         std::string::npos);
   CHECK(statementSource.find("collectionFact->keyTypeTextId") ==
         std::string::npos);
@@ -1101,16 +1099,17 @@ TEST_CASE("ir lowerer statement collection receiver gates use semantic product i
         statementSource.find("queryFact->bindingTypeText,"));
   CHECK(statementSource.find("queryFact->queryTypeTextId") <
         statementSource.find("queryFact->queryTypeText,"));
-  CHECK(statementSource.find("resolveStatementVectorReceiverTargetInfoFromSemanticFacts(") !=
+  CHECK(lowerStatementsSource.find("resolveArrayVectorAccessTargetInfo(\n"
+                                   "                      targetExpr,") !=
         std::string::npos);
-  const size_t semanticReceiverGate = statementSource.find(
-      "resolveStatementVectorReceiverTargetInfoFromSemanticFacts(");
-  const size_t canonicalResolver = statementSource.find(
-      "resolveArrayVectorAccessTargetInfo(callExpr.args[receiverIndex]",
-      semanticReceiverGate);
+  const size_t semanticReceiverGate = lowerStatementsSource.find(
+      "semanticProgram,\n"
+      "                      &callResolutionAdapters.semanticProductTargets.semanticIndex)");
   const size_t keyValueTargetGate =
-      statementSource.find("if (hasSemanticVectorFact) {",
-                           semanticReceiverGate);
+      lowerStatementsSource.find("const bool isSemanticKeyValueTarget =",
+                                 semanticReceiverGate);
+  const size_t canonicalResolver = lowerStatementsSource.find(
+      "return targetInfo.isArrayOrVectorTarget", keyValueTargetGate);
   REQUIRE(semanticReceiverGate != std::string::npos);
   REQUIRE(canonicalResolver != std::string::npos);
   REQUIRE(keyValueTargetGate != std::string::npos);
@@ -1192,32 +1191,39 @@ TEST_CASE("ir lowerer statement direct vector receiver fallbacks use semantic ta
           ? std::filesystem::path(".")
           : std::filesystem::path("..");
   const std::filesystem::path statementCallPath =
-      repoRoot / "src" / "ir_lowerer" / "IrLowererStatementCallEmission.cpp";
+      repoRoot / "src" / "ir_lowerer" / "IrLowererLowerStatementsExpr.h";
 
   REQUIRE(std::filesystem::exists(statementCallPath));
   const std::string source = readText(statementCallPath);
 
   const size_t explicitHelperFallback = source.find(
-      "resolveArrayVectorAccessTargetInfo(callExpr.args[receiverIndex],\n"
-      "                                           localsIn,\n"
-      "                                           {},\n"
-      "                                           semanticProgram,\n"
-      "                                           semanticIndex)");
+      "resolveArrayVectorAccessTargetInfo(\n"
+      "                  expr.args.front(),\n"
+      "                  localsIn,\n"
+      "                  resolveHelperReturnedArrayVectorAccessTargetInfo,\n"
+      "                  semanticProgram,\n"
+      "                  &callResolutionAdapters.semanticProductTargets.semanticIndex)");
   const size_t builtinReceiverFallback = source.find(
-      "resolveArrayVectorAccessTargetInfo(candidate,\n"
-      "                                           localsIn,\n"
-      "                                           {},\n"
-      "                                           semanticProgram,\n"
-      "                                           semanticIndex)");
+      "resolveArrayVectorAccessTargetInfo(\n"
+      "                    expr.args.front(),\n"
+      "                    localsIn,\n"
+      "                    {},\n"
+      "                    semanticProgram,\n"
+      "                    &callResolutionAdapters.semanticProductTargets.semanticIndex)");
   const size_t explicitSemanticGate = source.find(
-      "resolveStatementVectorReceiverTargetInfoFromSemanticFacts(\n"
-      "            callExpr.args[receiverIndex],");
+      "semanticProgram,\n"
+      "                  &callResolutionAdapters.semanticProductTargets.semanticIndex)",
+      explicitHelperFallback);
   const size_t builtinSemanticGate = source.find(
-      "resolveStatementVectorReceiverTargetInfoFromSemanticFacts(candidate,");
+      "semanticProgram,\n"
+      "                    &callResolutionAdapters.semanticProductTargets.semanticIndex)",
+      builtinReceiverFallback);
   const size_t explicitTargetGate =
-      source.find("return targetInfo.isVectorTarget;", explicitHelperFallback);
+      source.find("const bool isSemanticVectorTarget =",
+                  explicitHelperFallback);
   const size_t builtinTargetGate =
-      source.find("if (targetInfo.isVectorTarget) {", builtinReceiverFallback);
+      source.find("(arrayVectorTargetInfo.isArrayOrVectorTarget &&",
+                  builtinReceiverFallback);
 
   REQUIRE(explicitHelperFallback != std::string::npos);
   REQUIRE(builtinReceiverFallback != std::string::npos);
@@ -1225,13 +1231,11 @@ TEST_CASE("ir lowerer statement direct vector receiver fallbacks use semantic ta
   REQUIRE(builtinSemanticGate != std::string::npos);
   REQUIRE(explicitTargetGate != std::string::npos);
   REQUIRE(builtinTargetGate != std::string::npos);
-  CHECK(explicitSemanticGate < explicitHelperFallback);
+  CHECK(explicitHelperFallback < explicitSemanticGate);
   CHECK(explicitHelperFallback < explicitTargetGate);
-  CHECK(builtinSemanticGate < builtinReceiverFallback);
+  CHECK(builtinReceiverFallback < builtinSemanticGate);
   CHECK(builtinReceiverFallback < builtinTargetGate);
-  CHECK(source.find("resolveArrayVectorAccessTargetInfo(callExpr.args[receiverIndex], localsIn)") ==
-        std::string::npos);
-  CHECK(source.find("resolveArrayVectorAccessTargetInfo(candidate, localsIn)") ==
+  CHECK(source.find("resolveArrayVectorAccessTargetInfo(expr.args.front(), localsIn)") ==
         std::string::npos);
 }
 
@@ -1260,7 +1264,7 @@ TEST_CASE("ir lowerer inline dispatch map helper deferral uses semantic receiver
   const std::string inlineDispatchSource = readText(inlineDispatchPath);
   const std::string tailDispatchSource = readText(tailDispatchPath);
 
-  CHECK(inlineDispatchSource.find("const SemanticProductIndex semanticIndex = buildSemanticProductIndex(semanticProgram);") !=
+  CHECK(inlineDispatchSource.find("ownedSemanticIndex = buildSemanticProductIndex(semanticProgram);") !=
         std::string::npos);
   CHECK(inlineDispatchSource.find("auto resolveInlineSemanticTypeText =") !=
         std::string::npos);
@@ -1277,7 +1281,8 @@ TEST_CASE("ir lowerer inline dispatch map helper deferral uses semantic receiver
   CHECK(inlineDispatchSource.find("resolveCollectionPairTypeInfo(receiverExpr,") !=
         std::string::npos);
   CHECK(tailDispatchSource.find("error,\n"
-                                "            semanticProgram);") !=
+                                "            semanticProgram,\n"
+                                "            [&](const Expr &candidateExpr, const ir_lowerer::LocalMap &localMap)") !=
         std::string::npos);
 }
 
@@ -1541,7 +1546,7 @@ TEST_CASE("ir lowerer tail map insert rewrite uses semantic receiver facts first
   REQUIRE(std::filesystem::exists(tailDispatchPath));
   const std::string tailDispatchSource = readText(tailDispatchPath);
 
-  CHECK(tailDispatchSource.find("const SemanticProductIndex tailDispatchKeyValueSemanticIndex =") !=
+  CHECK(tailDispatchSource.find("const SemanticProductIndex *const tailDispatchKeyValueSemanticIndexPtr =") !=
         std::string::npos);
   CHECK(tailDispatchSource.find("tailDispatchKeyValueSemanticIndexPtr") !=
         std::string::npos);

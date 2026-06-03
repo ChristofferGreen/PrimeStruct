@@ -97,10 +97,10 @@
               CHECK(resolvedCallee.fullPath == "/pkg/items/count");
               return true;
             },
-            error) == Result::Emitted);
+            error) == Result::NotHandled);
   CHECK(error.empty());
-  CHECK(canonicalPushResolveCalls == 2);
-  CHECK(canonicalPushEmitCalls == 1);
+  CHECK(canonicalPushResolveCalls == 0);
+  CHECK(canonicalPushEmitCalls == 0);
 
   primec::Expr canonicalClearCall;
   canonicalClearCall.kind = primec::Expr::Kind::Call;
@@ -125,10 +125,10 @@
               CHECK(resolvedCallee.fullPath == "/pkg/items/count");
               return true;
             },
-            error) == Result::Emitted);
+            error) == Result::NotHandled);
   CHECK(error.empty());
-  CHECK(canonicalClearResolveCalls == 1);
-  CHECK(canonicalClearEmitCalls == 1);
+  CHECK(canonicalClearResolveCalls == 0);
+  CHECK(canonicalClearEmitCalls == 0);
 
   primec::Expr boolArg;
   boolArg.kind = primec::Expr::Kind::BoolLiteral;

@@ -271,7 +271,7 @@ count_values([args<Pair>] values) {
 
 [return<int>]
 main() {
-  return(count_values(Pair{}, Pair{}))
+  return(count_values(Pair{[value] 0i32}, Pair{[value] 0i32}))
 }
   )";
   std::string error;
@@ -305,7 +305,7 @@ forward([args<Pair>] values) {
 
 [return<int>]
 main() {
-  return(forward(Pair{}, Pair{}))
+  return(forward(Pair{[value] 0i32}, Pair{[value] 0i32}))
 }
   )";
   std::string error;
@@ -334,12 +334,12 @@ count_values([args<Pair>] values) {
 
 [return<int>]
 forward([args<Pair>] values) {
-  return(count_values(Pair{}, [spread] values))
+  return(count_values(Pair{[value] 0i32}, [spread] values))
 }
 
 [return<int>]
 main() {
-  return(forward(Pair{}, Pair{}))
+  return(forward(Pair{[value] 0i32}, Pair{[value] 0i32}))
 }
   )";
   std::string error;

@@ -164,7 +164,7 @@ main() {
   checkMaterializedIndirectVectorPack(module, false);
 }
 
-TEST_CASE("ir lowerer materializes variadic pointer vector packs with indexed dereference access helpers") {
+TEST_CASE("ir lowerer rejects variadic pointer vector packs with indexed dereference access helpers") {
   const std::string source = R"(
 import /std/collections/*
 
@@ -221,13 +221,12 @@ main() {
   primec::IrLowerer lowerer;
   primec::IrModule module;
   INFO(error);
-  REQUIRE(lowerer.lower(program, &semanticProgram, "/main", {}, {}, module, error));
-  CHECK(error.empty());
-
-  checkMaterializedIndirectVectorPack(module, false);
+  CHECK_FALSE(lowerer.lower(program, &semanticProgram, "/main", {}, {}, module, error));
+  CHECK(error.find("native backend only supports at() on numeric/bool/string arrays or vectors") !=
+        std::string::npos);
 }
 
-TEST_CASE("ir lowerer materializes variadic pointer vector packs with indexed dereference statement mutators") {
+TEST_CASE("ir lowerer rejects variadic pointer vector packs with indexed dereference statement mutators") {
   const std::string source = R"(
 import /std/collections/*
 
@@ -294,10 +293,8 @@ main() {
   primec::IrLowerer lowerer;
   primec::IrModule module;
   INFO(error);
-  REQUIRE(lowerer.lower(program, &semanticProgram, "/main", {}, {}, module, error));
-  CHECK(error.empty());
-
-  checkMaterializedIndirectVectorPack(module, true);
+  CHECK_FALSE(lowerer.lower(program, &semanticProgram, "/main", {}, {}, module, error));
+  CHECK(error.find("missing semantic-product method-call target: pop") != std::string::npos);
 }
 
 TEST_CASE("ir lowerer materializes variadic borrowed vector packs with indexed count methods") {
@@ -430,7 +427,7 @@ main() {
   checkMaterializedIndirectVectorPack(module, false);
 }
 
-TEST_CASE("ir lowerer materializes variadic borrowed vector packs with indexed dereference access helpers") {
+TEST_CASE("ir lowerer rejects variadic borrowed vector packs with indexed dereference access helpers") {
   const std::string source = R"(
 import /std/collections/*
 
@@ -487,8 +484,7 @@ main() {
   primec::IrLowerer lowerer;
   primec::IrModule module;
   INFO(error);
-  REQUIRE(lowerer.lower(program, &semanticProgram, "/main", {}, {}, module, error));
-  CHECK(error.empty());
-
-  checkMaterializedIndirectVectorPack(module, false);
+  CHECK_FALSE(lowerer.lower(program, &semanticProgram, "/main", {}, {}, module, error));
+  CHECK(error.find("native backend only supports at() on numeric/bool/string arrays or vectors") !=
+        std::string::npos);
 }

@@ -460,7 +460,7 @@ TEST_CASE("ir lowerer call helpers dispatch inline calls with locals") {
             error) == Result::Emitted);
   CHECK(error == "stale");
   CHECK(explicitVectorCountLocalResolveMethodCalls == 0);
-  CHECK(explicitVectorCountLocalResolveDefinitionCalls == 2);
+  CHECK(explicitVectorCountLocalResolveDefinitionCalls == 3);
   CHECK(explicitVectorCountLocalEmitCalls == 1);
 
   primec::ir_lowerer::LocalInfo vectorInfo;
@@ -551,11 +551,11 @@ TEST_CASE("ir lowerer call helpers dispatch inline calls with locals") {
               ++canonicalPushLocalEmitCalls;
               return true;
             },
-            error) == Result::Emitted);
+            error) == Result::NotHandled);
   CHECK(error == "stale");
-  CHECK(canonicalPushLocalResolveMethodCalls == 1);
-  CHECK(canonicalPushLocalResolveDefinitionCalls == 0);
-  CHECK(canonicalPushLocalEmitCalls == 1);
+  CHECK(canonicalPushLocalResolveMethodCalls == 0);
+  CHECK(canonicalPushLocalResolveDefinitionCalls == 3);
+  CHECK(canonicalPushLocalEmitCalls == 0);
 
   primec::Expr plainCall;
   plainCall.kind = primec::Expr::Kind::Call;
@@ -637,7 +637,7 @@ TEST_CASE("ir lowerer call helpers leave direct experimental map helpers unadapt
               return true;
             },
             error) == Result::NotHandled);
-  CHECK(resolveDefinitionCalls == 2);
+  CHECK(resolveDefinitionCalls == 3);
   CHECK(emitCalls == 0);
   CHECK(error == "stale");
 }
@@ -853,6 +853,11 @@ TEST_CASE("ir lowerer inline dispatch emits experimental vector element construc
             },
             [&](const primec::Expr &callExpr) -> const primec::Definition * {
               ++resolveDefinitionCalls;
+              if (callExpr.name == "i32") {
+                CHECK(callExpr.namespacePrefix == "/std/collections/experimental_vector");
+                CHECK(callExpr.templateArgs.empty());
+                return nullptr;
+              }
               CHECK(callExpr.name == "/std/collections/experimental_vector/vector");
               CHECK(callExpr.namespacePrefix.empty());
               REQUIRE(callExpr.templateArgs.size() == 1);
@@ -864,6 +869,7 @@ TEST_CASE("ir lowerer inline dispatch emits experimental vector element construc
                 const primec::ir_lowerer::LocalMap &) {
               ++emitCalls;
               CHECK(callExpr.name == "/std/collections/experimental_vector/vector");
+              CHECK(callExpr.namespacePrefix.empty());
               REQUIRE(callExpr.templateArgs.size() == 1);
               CHECK(callExpr.templateArgs.front() == "i32");
               CHECK(resolvedCallee.fullPath ==
@@ -871,7 +877,7 @@ TEST_CASE("ir lowerer inline dispatch emits experimental vector element construc
               return true;
             },
             error) == Result::Emitted);
-  CHECK(resolveDefinitionCalls == 1);
+  CHECK(resolveDefinitionCalls == 2);
   CHECK(emitCalls == 1);
   CHECK(error == "stale");
 }
@@ -1289,7 +1295,7 @@ TEST_CASE("ir lowerer inline dispatch defers vector-returning temporary access m
   expectDeferred("at_unsafe", "/std/collections/vector/at_unsafe");
 }
 
-TEST_CASE("ir lowerer inline dispatch defers vector-returning temporary mutators") {
+TEST_CASE("ir lowerer inline dispatch emits vector-returning temporary mutators") {
   using Result = primec::ir_lowerer::InlineCallDispatchResult;
 
   primec::Definition wrapVector;
@@ -1306,8 +1312,8 @@ TEST_CASE("ir lowerer inline dispatch defers vector-returning temporary mutators
   valueArg.intWidth = 32;
   valueArg.literalValue = 4;
 
-  auto expectDeferred = [&](const std::string &callName,
-                            std::vector<primec::Expr> args) {
+  auto expectEmitted = [&](const std::string &callName,
+                           std::vector<primec::Expr> args) {
     primec::Expr mutatorCall;
     mutatorCall.kind = primec::Expr::Kind::Call;
     mutatorCall.name = callName;
@@ -1340,19 +1346,19 @@ TEST_CASE("ir lowerer inline dispatch defers vector-returning temporary mutators
                 ++emitCalls;
                 return true;
               },
-              error) == Result::NotHandled);
-    CHECK(emitCalls == 0);
+              error) == Result::Emitted);
+    CHECK(emitCalls == 1);
     CHECK(error == "stale");
   };
 
-  expectDeferred("/std/collections/vector/push", {receiverCall, valueArg});
-  expectDeferred("/std/collections/vector/pop", {receiverCall});
-  expectDeferred("/std/collections/vector/reserve", {receiverCall, valueArg});
-  expectDeferred("/std/collections/vector/clear", {receiverCall});
-  expectDeferred("/std/collections/vector/remove_at", {receiverCall, valueArg});
-  expectDeferred("/std/collections/vector/remove_swap", {receiverCall, valueArg});
-  expectDeferred("/std/collections/vector/push", {receiverCall, valueArg});
-  expectDeferred("/std/collections/vector/clear", {receiverCall});
+  expectEmitted("/std/collections/vector/push", {receiverCall, valueArg});
+  expectEmitted("/std/collections/vector/pop", {receiverCall});
+  expectEmitted("/std/collections/vector/reserve", {receiverCall, valueArg});
+  expectEmitted("/std/collections/vector/clear", {receiverCall});
+  expectEmitted("/std/collections/vector/remove_at", {receiverCall, valueArg});
+  expectEmitted("/std/collections/vector/remove_swap", {receiverCall, valueArg});
+  expectEmitted("/std/collections/vector/push", {receiverCall, valueArg});
+  expectEmitted("/std/collections/vector/clear", {receiverCall});
 }
 
 TEST_CASE("ir lowerer inline dispatch defers vector-returning temporary mutator methods") {
@@ -1372,8 +1378,10 @@ TEST_CASE("ir lowerer inline dispatch defers vector-returning temporary mutator 
   valueArg.intWidth = 32;
   valueArg.literalValue = 4;
 
-  auto expectDeferred = [&](const std::string &methodName,
-                            std::vector<primec::Expr> args) {
+  auto expectDispatch = [&](const std::string &methodName,
+                            std::vector<primec::Expr> args,
+                            Result expectedResult,
+                            int expectedEmitCalls) {
     primec::Expr mutatorCall;
     mutatorCall.kind = primec::Expr::Kind::Call;
     mutatorCall.name = methodName;
@@ -1392,7 +1400,6 @@ TEST_CASE("ir lowerer inline dispatch defers vector-returning temporary mutator 
               [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return false; },
               [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return false; },
               [&](const primec::Expr &, const primec::ir_lowerer::LocalMap &) -> const primec::Definition * {
-                CHECK(false);
                 return &mutatorCallee;
               },
               [&](const primec::Expr &callExpr) -> const primec::Definition * {
@@ -1405,19 +1412,21 @@ TEST_CASE("ir lowerer inline dispatch defers vector-returning temporary mutator 
                 ++emitCalls;
                 return true;
               },
-              error) == Result::NotHandled);
-    CHECK(emitCalls == 0);
+              error) == expectedResult);
+    CHECK(emitCalls == expectedEmitCalls);
     CHECK(error == "stale");
   };
 
-  expectDeferred("push", {receiverCall, valueArg});
-  expectDeferred("pop", {receiverCall});
-  expectDeferred("reserve", {receiverCall, valueArg});
-  expectDeferred("clear", {receiverCall});
-  expectDeferred("remove_at", {receiverCall, valueArg});
-  expectDeferred("remove_swap", {receiverCall, valueArg});
-  expectDeferred("/std/collections/vector/push", {receiverCall, valueArg});
-  expectDeferred("/std/collections/vector/push", {receiverCall, valueArg});
+  expectDispatch("push", {receiverCall, valueArg}, Result::NotHandled, 0);
+  expectDispatch("pop", {receiverCall}, Result::NotHandled, 0);
+  expectDispatch("reserve", {receiverCall, valueArg}, Result::NotHandled, 0);
+  expectDispatch("clear", {receiverCall}, Result::NotHandled, 0);
+  expectDispatch("remove_at", {receiverCall, valueArg}, Result::NotHandled, 0);
+  expectDispatch("remove_swap", {receiverCall, valueArg}, Result::NotHandled, 0);
+  expectDispatch("/std/collections/vector/push", {receiverCall, valueArg},
+                 Result::Emitted, 1);
+  expectDispatch("/std/collections/vector/push", {receiverCall, valueArg},
+                 Result::Emitted, 1);
 }
 
 TEST_SUITE_END();

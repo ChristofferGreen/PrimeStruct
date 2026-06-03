@@ -16,11 +16,9 @@ main() {
   return(1i32)
 }
 )";
-  auto program = parseProgram(source);
-  primec::Semantics semantics;
   std::string error;
-  const std::vector<std::string> defaults = {"io_out", "io_err"};
-  REQUIRE(semantics.validate(program, "/main", error, defaults, defaults));
+  primec::Program program;
+  REQUIRE(validateProgramCapturingProgram(source, "/main", error, program));
   CHECK(error.empty());
 
   const primec::Definition *mainDef = nullptr;
@@ -37,7 +35,7 @@ main() {
   CHECK(mainDef->statements[1].isBraceConstructor);
   CHECK(mainDef->statements[1].name == "vector");
   CHECK_FALSE(mainDef->statements[2].isBraceConstructor);
-  CHECK(mainDef->statements[2].name == "map");
+  CHECK(mainDef->statements[2].name == "/std/collections/map/map__ov4__ta77c4e1cde0d2ba9");
 }
 
 TEST_CASE("collection literals reject labeled entries") {

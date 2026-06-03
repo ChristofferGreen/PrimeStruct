@@ -75,8 +75,14 @@ main() {
   primec::SemanticProgram semanticProgram;
   std::string error;
   INFO(error);
-  CHECK_FALSE(parseAndValidate(source, program, semanticProgram, error));
-  CHECK(error.find("unknown call target: /std/collections/vector/pop") !=
+  REQUIRE(parseAndValidate(source, program, semanticProgram, error));
+  CHECK(error.empty());
+
+  primec::IrLowerer lowerer;
+  primec::IrModule module;
+  INFO(error);
+  CHECK_FALSE(lowerer.lower(program, &semanticProgram, "/main", {}, {}, module, error));
+  CHECK(error.find("missing semantic-product method-call target: pop") !=
         std::string::npos);
 }
 
@@ -359,8 +365,7 @@ main() {
   std::string error;
   INFO(error);
   CHECK_FALSE(parseAndValidate(source, program, semanticProgram, error));
-  CHECK(error.find("statement validation failed on /score_maps") !=
-        std::string::npos);
+  CHECK(error.find("unknown call target: count") != std::string::npos);
 }
 
 TEST_CASE("retired variadic map pack indexed contains helpers no longer lower as native map") {
