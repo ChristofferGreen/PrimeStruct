@@ -22,7 +22,6 @@ recorded here manually before starting new implementation work.
 - Command: `ctest --test-dir build-debug --output-on-failure --parallel 11`
 - Result: `ctest` failed with status `8`.
 - Failing CTest cases:
-  - `623`: `PrimeStruct_primestruct_compile_run_smoke_core_paths_wasm_and_debug_60_60`
   - `624`: `PrimeStruct_primestruct_compile_run_smoke_core_paths_wasm_and_debug_61_61`
   - `625`: `PrimeStruct_primestruct_compile_run_smoke_core_paths_wasm_and_debug_62_62`
   - `673`: `PrimeStruct_primestruct_compile_run_vm_core_core_01a_01_05`
