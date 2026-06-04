@@ -173,7 +173,6 @@ recorded here manually before starting new implementation work.
   - `1603`: `PrimeStruct_primestruct_compile_run_vm_maps_map_helpers`
   - `1604`: `PrimeStruct_primestruct_compile_run_vm_uninitialized`
   - `1605`: `PrimeStruct_primestruct_compile_run_vm_maybe`
-  - `1606`: `PrimeStruct_primestruct_compile_run_vm_gpu`
   - `1607`: `PrimeStruct_primestruct_compile_run_benchmark_harness`
 <!-- compile.sh:failing-tests:end -->
 
