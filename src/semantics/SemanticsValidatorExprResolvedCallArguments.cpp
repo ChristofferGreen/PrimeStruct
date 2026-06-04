@@ -3,6 +3,7 @@
 #include "SemanticsValidatorInferCollectionCompatibilityInternal.h"
 
 #include <optional>
+#include <sstream>
 #include <string>
 #include <string_view>
 #include <vector>
@@ -451,10 +452,35 @@ bool SemanticsValidator::validateExprResolvedCallArguments(
   auto validateExplicitCanonicalKeyValueConstructorArguments = [&]() -> bool {
     if (context.resolvedDefinition == nullptr ||
         !isCanonicalMapConstructorResolvedPath(resolved) ||
-        expr.templateArgs.size() != 2 || orderedArgs.empty() ||
+        orderedArgs.empty() ||
         !packedArgs.empty() || orderedArgs.size() != expr.args.size() ||
         orderedArgs.size() % 2 != 0) {
       return true;
+    }
+
+    std::vector<std::string> effectiveTemplateArgs = expr.templateArgs;
+    if (effectiveTemplateArgs.size() != 2) {
+      const std::string &callName = expr.name;
+      const size_t anglePos = callName.find('<');
+      if (anglePos != std::string::npos) {
+        const size_t endAnglePos = callName.rfind('>');
+        if (endAnglePos != std::string::npos && endAnglePos > anglePos) {
+          std::string templateArgText = callName.substr(anglePos + 1, endAnglePos - anglePos - 1);
+          std::stringstream ss(templateArgText);
+          std::string arg;
+          effectiveTemplateArgs.clear();
+          while (std::getline(ss, arg, ',')) {
+            size_t start = arg.find_first_not_of(" \t");
+            size_t end = arg.find_last_not_of(" \t");
+            if (start != std::string::npos) {
+              effectiveTemplateArgs.push_back(arg.substr(start, end - start + 1));
+            }
+          }
+        }
+      }
+      if (effectiveTemplateArgs.size() != 2) {
+        return true;
+      }
     }
 
     for (size_t argIndex = 0; argIndex < orderedArgs.size(); ++argIndex) {
@@ -462,7 +488,7 @@ bool SemanticsValidator::validateExprResolvedCallArguments(
       if (arg == nullptr || arg->isSpread) {
         continue;
       }
-      const std::string &expectedTypeText = expr.templateArgs[argIndex % 2];
+      const std::string &expectedTypeText = effectiveTemplateArgs[argIndex % 2];
       std::string actualTypeText;
       if (keyValueConstructorArgumentMatchesExactType(*arg, expectedTypeText,
                                                       actualTypeText)) {

@@ -16,13 +16,60 @@ recorded here manually before starting new implementation work.
 ## Current Failures
 
 <!-- compile.sh:failing-tests:start -->
-- Last updated: `2026-06-03T06:13:29Z`
-- Build type: `Release`
-- Build dir: `build-release`
-- Command: `ctest --test-dir build-release --output-on-failure --parallel 11`
+- Last updated: `2026-06-04T01:39:33Z`
+- Build type: `Debug`
+- Build dir: `build-debug`
+- Command: `ctest --test-dir build-debug --output-on-failure --parallel 11`
 - Result: `ctest` failed with status `8`.
 - Failing CTest cases:
-  - `328`: `PrimeStruct_primestruct_semantics_calls_flow_collections_calls_flow_collections_291_300`
+  - `28`: `PrimeStruct_primestruct_ir_pipeline_serialization_cases_85_88`
+  - `59`: `PrimeStruct_primestruct_ir_pipeline_conversions_variadic_borrowed_vectors`
+  - `60`: `PrimeStruct_primestruct_ir_pipeline_conversions_variadic_collection_refs`
+  - `62`: `PrimeStruct_primestruct_ir_pipeline_conversions_variadic_field_refs_and_maps`
+  - `63`: `PrimeStruct_primestruct_ir_pipeline_conversions_variadic_pointer_maps`
+  - `64`: `PrimeStruct_primestruct_ir_pipeline_conversions_variadic_pointer_vectors`
+  - `87`: `PrimeStruct_primestruct_ir_pipeline_validation_cases_121_130`
+  - `95`: `PrimeStruct_primestruct_ir_pipeline_validation_cases_201_210`
+  - `171`: `PrimeStruct_primestruct_semantics_operators_matrix_and_shape_rules_shapes`
+  - `172`: `PrimeStruct_primestruct_semantics_operators_matrix_and_shape_rules_products`
+  - `173`: `PrimeStruct_primestruct_semantics_operators_scalar_and_mixed_numeric_rules_16_20`
+  - `174`: `PrimeStruct_primestruct_semantics_operators_scalar_and_mixed_numeric_rules_21_25`
+  - `227`: `PrimeStruct_primestruct_semantics_bindings_core_bindings_core_11_20`
+  - `240`: `PrimeStruct_primestruct_semantics_bindings_assignments_bindings_assignments_1_10`
+  - `241`: `PrimeStruct_primestruct_semantics_bindings_assignments_bindings_assignments_11_20`
+  - `265`: `PrimeStruct_primestruct_semantics_result_helpers_result_helpers_31_32`
+  - `266`: `PrimeStruct_primestruct_semantics_result_helpers_result_helpers_33_34`
+  - `287`: `PrimeStruct_primestruct_semantics_result_helpers_result_helpers_75_76`
+  - `302`: `PrimeStruct_primestruct_semantics_calls_flow_collections_calls_flow_collections_31_40`
+  - `303`: `PrimeStruct_primestruct_semantics_calls_flow_collections_calls_flow_collections_41_50`
+  - `304`: `PrimeStruct_primestruct_semantics_calls_flow_collections_calls_flow_collections_51_60`
+  - `305`: `PrimeStruct_primestruct_semantics_calls_flow_collections_calls_flow_collections_61_70`
+  - `306`: `PrimeStruct_primestruct_semantics_calls_flow_collections_calls_flow_collections_71_80`
+  - `308`: `PrimeStruct_primestruct_semantics_calls_flow_collections_calls_flow_collections_91_100`
+  - `309`: `PrimeStruct_primestruct_semantics_calls_flow_collections_calls_flow_collections_101_110`
+  - `310`: `PrimeStruct_primestruct_semantics_calls_flow_collections_calls_flow_collections_111_120`
+  - `311`: `PrimeStruct_primestruct_semantics_calls_flow_collections_calls_flow_collections_121_130`
+  - `312`: `PrimeStruct_primestruct_semantics_calls_flow_collections_calls_flow_collections_131_140`
+  - `313`: `PrimeStruct_primestruct_semantics_calls_flow_collections_calls_flow_collections_141_150`
+  - `314`: `PrimeStruct_primestruct_semantics_calls_flow_collections_calls_flow_collections_151_160`
+  - `315`: `PrimeStruct_primestruct_semantics_calls_flow_collections_calls_flow_collections_161_170`
+  - `316`: `PrimeStruct_primestruct_semantics_calls_flow_collections_calls_flow_collections_171_180`
+  - `317`: `PrimeStruct_primestruct_semantics_calls_flow_collections_calls_flow_collections_181_190`
+  - `318`: `PrimeStruct_primestruct_semantics_calls_flow_collections_calls_flow_collections_191_200`
+  - `319`: `PrimeStruct_primestruct_semantics_calls_flow_collections_calls_flow_collections_201_210`
+  - `320`: `PrimeStruct_primestruct_semantics_calls_flow_collections_calls_flow_collections_211_220`
+  - `321`: `PrimeStruct_primestruct_semantics_calls_flow_collections_calls_flow_collections_221_230`
+  - `322`: `PrimeStruct_primestruct_semantics_calls_flow_collections_calls_flow_collections_231_240`
+  - `323`: `PrimeStruct_primestruct_semantics_calls_flow_collections_calls_flow_collections_241_250`
+  - `325`: `PrimeStruct_primestruct_semantics_calls_flow_collections_calls_flow_collections_261_270`
+  - `326`: `PrimeStruct_primestruct_semantics_calls_flow_collections_calls_flow_collections_271_280`
+  - `329`: `PrimeStruct_primestruct_semantics_calls_flow_collections_calls_flow_collections_301_310`
+  - `330`: `PrimeStruct_primestruct_semantics_calls_flow_collections_calls_flow_collections_311_320`
+  - `331`: `PrimeStruct_primestruct_semantics_calls_flow_collections_calls_flow_collections_321_330`
+  - `332`: `PrimeStruct_primestruct_semantics_calls_flow_collections_calls_flow_collections_331_340`
+  - `333`: `PrimeStruct_primestruct_semantics_calls_flow_collections_calls_flow_collections_341_350`
+  - `334`: `PrimeStruct_primestruct_semantics_calls_flow_collections_calls_flow_collections_351_360`
+  - `335`: `PrimeStruct_primestruct_semantics_calls_flow_collections_calls_flow_collections_361_370`
   - `336`: `PrimeStruct_primestruct_semantics_calls_flow_collections_calls_flow_collections_371_380`
   - `337`: `PrimeStruct_primestruct_semantics_calls_flow_collections_calls_flow_collections_381_390`
   - `338`: `PrimeStruct_primestruct_semantics_calls_flow_collections_calls_flow_collections_391_400`
@@ -30,7 +77,9 @@ recorded here manually before starting new implementation work.
   - `340`: `PrimeStruct_primestruct_semantics_calls_flow_collections_calls_flow_collections_411_420`
   - `342`: `PrimeStruct_primestruct_semantics_calls_flow_collections_calls_flow_collections_431_440`
   - `343`: `PrimeStruct_primestruct_semantics_calls_flow_collections_calls_flow_collections_441_450`
+  - `344`: `PrimeStruct_primestruct_semantics_calls_flow_collections_calls_flow_collections_451_460`
   - `348`: `PrimeStruct_primestruct_semantics_calls_flow_collections_calls_flow_collections_491_500`
+  - `350`: `PrimeStruct_primestruct_semantics_calls_flow_collections_calls_flow_collections_511_520`
   - `357`: `PrimeStruct_primestruct_semantics_calls_flow_collections_calls_flow_collections_581_590`
   - `358`: `PrimeStruct_primestruct_semantics_calls_flow_collections_calls_flow_collections_591_600`
   - `359`: `PrimeStruct_primestruct_semantics_calls_flow_collections_calls_flow_collections_601_610`
@@ -38,8 +87,18 @@ recorded here manually before starting new implementation work.
   - `361`: `PrimeStruct_primestruct_semantics_calls_flow_collections_calls_flow_collections_621_630`
   - `362`: `PrimeStruct_primestruct_semantics_calls_flow_collections_calls_flow_collections_631_640`
   - `363`: `PrimeStruct_primestruct_semantics_calls_flow_collections_calls_flow_collections_641_650`
+  - `371`: `PrimeStruct_primestruct_semantics_calls_flow_collections_calls_flow_collections_721_730`
+  - `391`: `PrimeStruct_primestruct_semantics_calls_flow_comparisons_literals_calls_flow_comparisons_literals_1_10`
+  - `393`: `PrimeStruct_primestruct_semantics_calls_flow_comparisons_literals_calls_flow_comparisons_literals_21_30`
+  - `394`: `PrimeStruct_primestruct_semantics_calls_flow_comparisons_literals_calls_flow_comparisons_literals_31_40`
   - `403`: `PrimeStruct_primestruct_semantics_calls_flow_effects_calls_flow_effects_81_90`
-  - `549`: `PrimeStruct_primestruct_text_filters_pipeline_rewrites_cases_31_40`
+  - `577`: `PrimeStruct_primestruct_compile_run_smoke_core_paths_foundation_14_14`
+  - `618`: `PrimeStruct_primestruct_compile_run_smoke_core_paths_wasm_and_debug_55_55`
+  - `619`: `PrimeStruct_primestruct_compile_run_smoke_core_paths_wasm_and_debug_56_56`
+  - `620`: `PrimeStruct_primestruct_compile_run_smoke_core_paths_wasm_and_debug_57_57`
+  - `623`: `PrimeStruct_primestruct_compile_run_smoke_core_paths_wasm_and_debug_60_60`
+  - `624`: `PrimeStruct_primestruct_compile_run_smoke_core_paths_wasm_and_debug_61_61`
+  - `625`: `PrimeStruct_primestruct_compile_run_smoke_core_paths_wasm_and_debug_62_62`
   - `673`: `PrimeStruct_primestruct_compile_run_vm_core_core_01a_01_05`
   - `674`: `PrimeStruct_primestruct_compile_run_vm_core_core_01a_06_10_6_6`
   - `675`: `PrimeStruct_primestruct_compile_run_vm_core_core_01a_06_10_7_7`
@@ -51,12 +110,38 @@ recorded here manually before starting new implementation work.
   - `681`: `PrimeStruct_primestruct_compile_run_vm_core_core_01a_11_14_13_13`
   - `682`: `PrimeStruct_primestruct_compile_run_vm_core_core_01a_11_14_14_14`
   - `688`: `PrimeStruct_primestruct_compile_run_vm_core_core_01b_20_24`
+  - `689`: `PrimeStruct_primestruct_compile_run_vm_core_core_01b_25_28`
+  - `690`: `PrimeStruct_primestruct_compile_run_vm_core_core_02_29_36`
+  - `691`: `PrimeStruct_primestruct_compile_run_vm_core_core_02_37_44`
   - `692`: `PrimeStruct_primestruct_compile_run_vm_core_core_02_45_52`
+  - `699`: `PrimeStruct_primestruct_compile_run_vm_core_core_03a_57_63_62_62`
+  - `700`: `PrimeStruct_primestruct_compile_run_vm_core_core_03a_57_63_63_63`
   - `701`: `PrimeStruct_primestruct_compile_run_vm_core_core_03a_64_66`
   - `703`: `PrimeStruct_primestruct_compile_run_vm_core_core_03a_67_70_68_68`
   - `706`: `PrimeStruct_primestruct_compile_run_vm_core_core_03b_71_75_71_71`
   - `711`: `PrimeStruct_primestruct_compile_run_vm_core_core_03b_76_80`
+  - `721`: `PrimeStruct_primestruct_compile_run_vm_math_math_helpers_1_10_9_9`
   - `722`: `PrimeStruct_primestruct_compile_run_vm_math_math_helpers_1_10_10_10`
+  - `749`: `PrimeStruct_primestruct_compile_run_vm_outputs_ir_and_output_modes_basics_1_10_7_7`
+  - `750`: `PrimeStruct_primestruct_compile_run_vm_outputs_ir_and_output_modes_basics_1_10_8_8`
+  - `751`: `PrimeStruct_primestruct_compile_run_vm_outputs_ir_and_output_modes_basics_1_10_9_9`
+  - `752`: `PrimeStruct_primestruct_compile_run_vm_outputs_ir_and_output_modes_basics_1_10_10_10`
+  - `753`: `PrimeStruct_primestruct_compile_run_vm_outputs_ir_and_output_modes_basics_11_20_11_11`
+  - `754`: `PrimeStruct_primestruct_compile_run_vm_outputs_ir_and_output_modes_basics_11_20_12_12`
+  - `755`: `PrimeStruct_primestruct_compile_run_vm_outputs_ir_and_output_modes_basics_11_20_13_13`
+  - `756`: `PrimeStruct_primestruct_compile_run_vm_outputs_ir_and_output_modes_basics_11_20_14_14`
+  - `757`: `PrimeStruct_primestruct_compile_run_vm_outputs_ir_and_output_modes_basics_11_20_15_15`
+  - `758`: `PrimeStruct_primestruct_compile_run_vm_outputs_ir_and_output_modes_basics_11_20_16_16`
+  - `759`: `PrimeStruct_primestruct_compile_run_vm_outputs_ir_and_output_modes_basics_11_20_17_17`
+  - `760`: `PrimeStruct_primestruct_compile_run_vm_outputs_ir_and_output_modes_basics_11_20_18_18`
+  - `761`: `PrimeStruct_primestruct_compile_run_vm_outputs_ir_and_output_modes_basics_11_20_19_19`
+  - `762`: `PrimeStruct_primestruct_compile_run_vm_outputs_ir_and_output_modes_basics_11_20_20_20`
+  - `763`: `PrimeStruct_primestruct_compile_run_vm_outputs_ir_and_output_modes_basics_21_22_21_21`
+  - `764`: `PrimeStruct_primestruct_compile_run_vm_outputs_ir_and_output_modes_basics_21_22_22_22`
+  - `765`: `PrimeStruct_primestruct_compile_run_vm_outputs_ir_and_output_modes_emitters_23_32_23_23`
+  - `766`: `PrimeStruct_primestruct_compile_run_vm_outputs_ir_and_output_modes_emitters_23_32_24_24`
+  - `767`: `PrimeStruct_primestruct_compile_run_vm_outputs_ir_and_output_modes_emitters_23_32_25_25`
+  - `768`: `PrimeStruct_primestruct_compile_run_vm_outputs_ir_and_output_modes_emitters_23_32_26_26`
   - `820`: `PrimeStruct_primestruct_compile_run_vm_collections_alias_and_basics_1_10`
   - `821`: `PrimeStruct_primestruct_compile_run_vm_collections_alias_and_basics_11_20`
   - `822`: `PrimeStruct_primestruct_compile_run_vm_collections_alias_and_basics_21_30`
@@ -69,12 +154,23 @@ recorded here manually before starting new implementation work.
   - `834`: `PrimeStruct_primestruct_compile_run_vm_collections_stdlib_collection_shims_139_148`
   - `835`: `PrimeStruct_primestruct_compile_run_vm_collections_stdlib_collection_shims_149_158`
   - `836`: `PrimeStruct_primestruct_compile_run_vm_collections_stdlib_collection_shims_159_168`
+  - `838`: `PrimeStruct_primestruct_compile_run_vm_collections_stdlib_collection_shims_179_188`
+  - `839`: `PrimeStruct_primestruct_compile_run_vm_collections_stdlib_collection_shims_189_198`
+  - `840`: `PrimeStruct_primestruct_compile_run_vm_collections_stdlib_collection_shims_199_208`
+  - `841`: `PrimeStruct_primestruct_compile_run_vm_collections_stdlib_collection_shims_209_218`
+  - `842`: `PrimeStruct_primestruct_compile_run_vm_collections_stdlib_collection_shims_219_228`
+  - `843`: `PrimeStruct_primestruct_compile_run_vm_collections_stdlib_collection_shims_229_238`
+  - `844`: `PrimeStruct_primestruct_compile_run_vm_collections_stdlib_collection_shims_239_248`
+  - `845`: `PrimeStruct_primestruct_compile_run_vm_collections_stdlib_collection_shims_249_254`
+  - `846`: `PrimeStruct_primestruct_compile_run_vm_collections_user_shadow_and_receiver_precedence_255_264`
+  - `847`: `PrimeStruct_primestruct_compile_run_vm_collections_user_shadow_and_receiver_precedence_265_274`
+  - `848`: `PrimeStruct_primestruct_compile_run_vm_collections_user_shadow_and_receiver_precedence_275_284`
+  - `849`: `PrimeStruct_primestruct_compile_run_vm_collections_user_shadow_and_receiver_precedence_285_294`
   - `850`: `PrimeStruct_primestruct_compile_run_vm_collections_user_shadow_and_receiver_precedence_295_304`
   - `851`: `PrimeStruct_primestruct_compile_run_vm_collections_user_shadow_and_receiver_precedence_305_314`
   - `855`: `PrimeStruct_primestruct_compile_run_vm_collections_growth_limits_and_syntax_342_351`
   - `856`: `PrimeStruct_primestruct_compile_run_vm_collections_growth_limits_and_syntax_352_352`
   - `858`: `PrimeStruct_primestruct_compile_run_emitters_cpp_lambda_and_mutator_resolution_2_2`
-  - `860`: `PrimeStruct_primestruct_compile_run_emitters_cpp_lambda_and_mutator_resolution_4_4`
   - `861`: `PrimeStruct_primestruct_compile_run_emitters_cpp_lambda_and_mutator_resolution_5_5`
   - `862`: `PrimeStruct_primestruct_compile_run_emitters_cpp_lambda_and_mutator_resolution_6_6`
   - `871`: `PrimeStruct_primestruct_compile_run_emitters_cpp_lambda_and_mutator_resolution_15_15`
@@ -97,6 +193,7 @@ recorded here manually before starting new implementation work.
   - `913`: `PrimeStruct_primestruct_compile_run_emitters_cpp_collection_access_and_alias_forwarding_68_69`
   - `914`: `PrimeStruct_primestruct_compile_run_emitters_cpp_collection_access_and_alias_forwarding_70_71`
   - `920`: `PrimeStruct_primestruct_compile_run_emitters_cpp_collection_access_and_alias_forwarding_82_83`
+  - `923`: `PrimeStruct_primestruct_compile_run_emitters_cpp_collection_access_and_alias_forwarding_88_89`
   - `924`: `PrimeStruct_primestruct_compile_run_emitters_cpp_collection_access_and_alias_forwarding_90_91`
   - `925`: `PrimeStruct_primestruct_compile_run_emitters_cpp_collection_access_and_alias_forwarding_92_93`
   - `926`: `PrimeStruct_primestruct_compile_run_emitters_cpp_collection_access_and_alias_forwarding_94_95`
@@ -135,19 +232,33 @@ recorded here manually before starting new implementation work.
   - `1314`: `PrimeStruct_primestruct_compile_run_imports_operations_and_collections_75_76`
   - `1317`: `PrimeStruct_primestruct_compile_run_imports_operations_and_collections_81_81`
   - `1410`: `PrimeStruct_primestruct_compile_run_bindings_bindings_4_4`
+  - `1415`: `PrimeStruct_primestruct_compile_run_examples_examples_ir_and_spinning_cube_1_1`
+  - `1425`: `PrimeStruct_primestruct_compile_run_examples_examples_ir_and_spinning_cube_11_11`
+  - `1426`: `PrimeStruct_primestruct_compile_run_examples_examples_ir_and_spinning_cube_12_12`
+  - `1427`: `PrimeStruct_primestruct_compile_run_examples_examples_ir_and_spinning_cube_13_13`
+  - `1428`: `PrimeStruct_primestruct_compile_run_examples_examples_ir_and_spinning_cube_14_14`
+  - `1429`: `PrimeStruct_primestruct_compile_run_examples_examples_ir_and_spinning_cube_15_15`
+  - `1430`: `PrimeStruct_primestruct_compile_run_examples_examples_ir_and_spinning_cube_16_16`
   - `1433`: `PrimeStruct_primestruct_compile_run_examples_examples_ir_and_spinning_cube_19_19`
+  - `1434`: `PrimeStruct_primestruct_compile_run_examples_examples_ir_and_spinning_cube_20_20`
   - `1440`: `PrimeStruct_primestruct_compile_run_examples_examples_ir_and_spinning_cube_26_26`
+  - `1441`: `PrimeStruct_primestruct_compile_run_examples_spinning_cube_demo_script_27_27`
+  - `1442`: `PrimeStruct_primestruct_compile_run_examples_spinning_cube_demo_script_28_28`
   - `1560`: `PrimeStruct_primestruct_ir_pipeline_type_resolution_parity`
+  - `1561`: `PrimeStruct_primestruct_ir_pipeline_gpu`
   - `1563`: `PrimeStruct_primestruct_ir_pipeline_backends_registry`
   - `1583`: `PrimeStruct_vector_surface_traces`
   - `1591`: `PrimeStruct_map_vector_compiler_knowledge_zero_audit`
   - `1593`: `PrimeStruct_map_surface_strict_audit`
   - `1595`: `PrimeStruct_soa_surface_trace_zero_audit`
+  - `1598`: `PrimeStruct_graph_budget`
   - `1600`: `PrimeStruct_semantic_memory_definition_worker_parity`
   - `1601`: `PrimeStruct_semantic_memory_trend`
+  - `1602`: `PrimeStruct_primestruct_compile_run_vm_bounds_bounds_and_safety`
   - `1603`: `PrimeStruct_primestruct_compile_run_vm_maps_map_helpers`
   - `1604`: `PrimeStruct_primestruct_compile_run_vm_uninitialized`
   - `1605`: `PrimeStruct_primestruct_compile_run_vm_maybe`
+  - `1606`: `PrimeStruct_primestruct_compile_run_vm_gpu`
   - `1607`: `PrimeStruct_primestruct_compile_run_benchmark_harness`
 <!-- compile.sh:failing-tests:end -->
 
