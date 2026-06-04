@@ -304,6 +304,17 @@ bool emitInlineStructDefinitionArguments(const std::string &calleePath,
     if (argStruct.empty() && isExpectedStructBraceConstructor(*arg, field.structPath)) {
       argStruct = field.structPath;
     }
+    const bool isParameterlessConstructor =
+        argStruct.empty() &&
+        arg->kind == Expr::Kind::Call &&
+        !arg->isMethodCall &&
+        !arg->isFieldAccess &&
+        arg->args.empty() &&
+        arg->bodyArguments.empty() &&
+        !arg->name.empty();
+    if (isParameterlessConstructor) {
+      argStruct = field.structPath;
+    }
     const bool isUninitializedStructStorage =
         arg->kind == Expr::Kind::Call &&
         !arg->isMethodCall &&
