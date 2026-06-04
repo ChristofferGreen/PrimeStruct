@@ -549,53 +549,58 @@ bool SemanticsValidator::validateExprPreDispatchDirectCalls(
       return failPreDispatchDirectCallDiagnostic(
           "block arguments require a definition target: " + resolvedOut);
     }
-    if (expr.templateArgs.size() != 2 && expr.args.size() % 2 == 0) {
-    std::vector<std::string> mapTemplateArgs;
-    const std::string &callName = expr.name;
-    const size_t anglePos = callName.find('<');
-    if (anglePos != std::string::npos) {
-      const size_t endAnglePos = callName.rfind('>');
-      if (endAnglePos != std::string::npos && endAnglePos > anglePos) {
-        std::string templateArgText = callName.substr(anglePos + 1, endAnglePos - anglePos - 1);
-        std::stringstream ss(templateArgText);
-        std::string arg;
-        while (std::getline(ss, arg, ',')) {
-          size_t start = arg.find_first_not_of(" \t");
-          size_t end = arg.find_last_not_of(" \t");
-          if (start != std::string::npos) {
-            mapTemplateArgs.push_back(arg.substr(start, end - start + 1));
+    if (expr.args.size() % 2 == 0) {
+      std::vector<std::string> mapTemplateArgs;
+
+      if (expr.templateArgs.size() == 2) {
+        mapTemplateArgs = expr.templateArgs;
+      } else {
+        const std::string &callName = expr.name;
+        const size_t anglePos = callName.find('<');
+        if (anglePos != std::string::npos) {
+          const size_t endAnglePos = callName.rfind('>');
+          if (endAnglePos != std::string::npos && endAnglePos > anglePos) {
+            std::string templateArgText = callName.substr(anglePos + 1, endAnglePos - anglePos - 1);
+            std::stringstream ss(templateArgText);
+            std::string arg;
+            while (std::getline(ss, arg, ',')) {
+              size_t start = arg.find_first_not_of(" \t");
+              size_t end = arg.find_last_not_of(" \t");
+              if (start != std::string::npos) {
+                mapTemplateArgs.push_back(arg.substr(start, end - start + 1));
+              }
+            }
           }
         }
       }
-    }
 
-    if (mapTemplateArgs.size() == 2) {
-      for (const auto &arg : expr.args) {
-        if (!validateExpr(params, locals, arg)) {
-          return false;
+      if (mapTemplateArgs.size() == 2) {
+        for (const auto &arg : expr.args) {
+          if (!validateExpr(params, locals, arg)) {
+            return false;
+          }
+        }
+        for (std::size_t i = 0; i < expr.args.size(); i += 2) {
+          if (i + 1 >= expr.args.size()) {
+            break;
+          }
+          ReturnKind keyArgKind = inferExprReturnKind(expr.args[i], params, locals);
+          ReturnKind valueArgKind = inferExprReturnKind(expr.args[i + 1], params, locals);
+          ReturnKind expectedKeyKind = returnKindForTypeName(normalizeBindingTypeName(mapTemplateArgs[0]));
+          ReturnKind expectedValueKind = returnKindForTypeName(normalizeBindingTypeName(mapTemplateArgs[1]));
+
+          if (keyArgKind != ReturnKind::Unknown && expectedKeyKind != ReturnKind::Unknown &&
+              keyArgKind != expectedKeyKind) {
+            return failPreDispatchDirectCallDiagnostic(
+                "argument type mismatch for " + resolvedOut + " parameter key");
+          }
+          if (valueArgKind != ReturnKind::Unknown && expectedValueKind != ReturnKind::Unknown &&
+              valueArgKind != expectedValueKind) {
+            return failPreDispatchDirectCallDiagnostic(
+                "argument type mismatch for " + resolvedOut + " parameter value");
+          }
         }
       }
-      for (std::size_t i = 0; i < expr.args.size(); i += 2) {
-        if (i + 1 >= expr.args.size()) {
-          break;
-        }
-        ReturnKind keyArgKind = inferExprReturnKind(expr.args[i], params, locals);
-        ReturnKind valueArgKind = inferExprReturnKind(expr.args[i + 1], params, locals);
-        ReturnKind expectedKeyKind = returnKindForTypeName(normalizeBindingTypeName(mapTemplateArgs[0]));
-        ReturnKind expectedValueKind = returnKindForTypeName(normalizeBindingTypeName(mapTemplateArgs[1]));
-
-        if (keyArgKind != ReturnKind::Unknown && expectedKeyKind != ReturnKind::Unknown &&
-            keyArgKind != expectedKeyKind) {
-          return failPreDispatchDirectCallDiagnostic(
-              "argument type mismatch for " + resolvedOut + " parameter key");
-        }
-        if (valueArgKind != ReturnKind::Unknown && expectedValueKind != ReturnKind::Unknown &&
-            valueArgKind != expectedValueKind) {
-          return failPreDispatchDirectCallDiagnostic(
-              "argument type mismatch for " + resolvedOut + " parameter value");
-        }
-      }
-    }
     }
   }
 
