@@ -161,7 +161,6 @@ recorded here manually before starting new implementation work.
   - `1429`: `PrimeStruct_primestruct_compile_run_examples_examples_ir_and_spinning_cube_15_15`
   - `1430`: `PrimeStruct_primestruct_compile_run_examples_examples_ir_and_spinning_cube_16_16`
   - `1433`: `PrimeStruct_primestruct_compile_run_examples_examples_ir_and_spinning_cube_19_19`
-  - `1434`: `PrimeStruct_primestruct_compile_run_examples_examples_ir_and_spinning_cube_20_20`
   - `1440`: `PrimeStruct_primestruct_compile_run_examples_examples_ir_and_spinning_cube_26_26`
   - `1441`: `PrimeStruct_primestruct_compile_run_examples_spinning_cube_demo_script_27_27`
   - `1442`: `PrimeStruct_primestruct_compile_run_examples_spinning_cube_demo_script_28_28`
