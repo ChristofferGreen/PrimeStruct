@@ -328,8 +328,8 @@ bool emitInlineStructDefinitionArguments(const std::string &calleePath,
     if (argStruct.empty() && (isUninitializedStructStorage || isDefaultUninitializedStructStorage)) {
       argStruct = field.structPath;
     }
-    if (!isParameterlessConstructor && (argStruct.empty() ||
-        !isCompatibleInlineStructFieldPath(field.structPath, argStruct))) {
+    if (argStruct.empty() ||
+        !isCompatibleInlineStructFieldPath(field.structPath, argStruct)) {
       error = "struct field type mismatch: expected " + field.structPath + ", got " +
               (argStruct.empty() ? std::string("<unknown>") : argStruct) +
               " in " + calleePath + "::" + field.name;
