@@ -85,7 +85,6 @@ recorded here manually before starting new implementation work.
   - `843`: `PrimeStruct_primestruct_compile_run_vm_collections_stdlib_collection_shims_229_238`
   - `844`: `PrimeStruct_primestruct_compile_run_vm_collections_stdlib_collection_shims_239_248`
   - `845`: `PrimeStruct_primestruct_compile_run_vm_collections_stdlib_collection_shims_249_254`
-  - `846`: `PrimeStruct_primestruct_compile_run_vm_collections_user_shadow_and_receiver_precedence_255_264`
   - `847`: `PrimeStruct_primestruct_compile_run_vm_collections_user_shadow_and_receiver_precedence_265_274`
   - `848`: `PrimeStruct_primestruct_compile_run_vm_collections_user_shadow_and_receiver_precedence_275_284`
   - `849`: `PrimeStruct_primestruct_compile_run_vm_collections_user_shadow_and_receiver_precedence_285_294`
