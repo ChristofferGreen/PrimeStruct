@@ -479,7 +479,7 @@ bool SemanticsValidator::validateExprPreDispatchDirectCalls(
   if (isExplicitRootMapConstructor || isExplicitPublishedMapConstructor) {
     if (expr.hasBodyArguments || !expr.bodyArguments.empty()) {
       return failPreDispatchDirectCallDiagnostic(
-          "map constructor does not accept block arguments");
+          "block arguments require a definition target: " + resolvedOut);
     }
     if (expr.templateArgs.size() != 2) {
       return failPreDispatchDirectCallDiagnostic(
@@ -544,8 +544,12 @@ bool SemanticsValidator::validateExprPreDispatchDirectCalls(
     }
   }
 
-  if ((resolvedOut == "/std/collections/map/map" || resolvedOut == "/map") &&
-      expr.templateArgs.size() != 2 && expr.args.size() % 2 == 0) {
+  if ((resolvedOut == "/std/collections/map/map" || resolvedOut == "/map")) {
+    if (expr.hasBodyArguments || !expr.bodyArguments.empty()) {
+      return failPreDispatchDirectCallDiagnostic(
+          "block arguments require a definition target: " + resolvedOut);
+    }
+    if (expr.templateArgs.size() != 2 && expr.args.size() % 2 == 0) {
     std::vector<std::string> mapTemplateArgs;
     const std::string &callName = expr.name;
     const size_t anglePos = callName.find('<');
@@ -591,6 +595,7 @@ bool SemanticsValidator::validateExprPreDispatchDirectCalls(
               "argument type mismatch for " + resolvedOut + " parameter value");
         }
       }
+    }
     }
   }
 
