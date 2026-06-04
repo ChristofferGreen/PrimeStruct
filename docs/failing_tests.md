@@ -22,7 +22,6 @@ recorded here manually before starting new implementation work.
 - Command: `ctest --test-dir build-debug --output-on-failure --parallel 11`
 - Result: `ctest` failed with status `137`.
 - Failing CTest cases:
-  - `673`: `PrimeStruct_primestruct_compile_run_vm_core_core_01a_01_05`
 <!-- compile.sh:failing-tests:end -->
 
 ## Notes

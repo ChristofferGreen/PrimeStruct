@@ -304,6 +304,21 @@ bool emitInlineStructDefinitionArguments(const std::string &calleePath,
     if (argStruct.empty() && isExpectedStructBraceConstructor(*arg, field.structPath)) {
       argStruct = field.structPath;
     }
+    const bool isEmptyBraceBlockPlaceholder =
+        argStruct.empty() &&
+        arg->kind == Expr::Kind::Call &&
+        arg->name == "block" &&
+        arg->args.empty() &&
+        arg->bodyArguments.empty() &&
+        arg->hasBodyArguments &&
+        !param.args.empty();
+    if (isEmptyBraceBlockPlaceholder) {
+      arg = &param.args.front();
+      argStruct = inferStructExprPath(*arg, argLocals);
+      if (argStruct.empty() && isExpectedStructBraceConstructor(*arg, field.structPath)) {
+        argStruct = field.structPath;
+      }
+    }
     const bool isParameterlessConstructor =
         argStruct.empty() &&
         arg->kind == Expr::Kind::Call &&
