@@ -155,7 +155,6 @@ recorded here manually before starting new implementation work.
   - `1314`: `PrimeStruct_primestruct_compile_run_imports_operations_and_collections_75_76`
   - `1317`: `PrimeStruct_primestruct_compile_run_imports_operations_and_collections_81_81`
   - `1410`: `PrimeStruct_primestruct_compile_run_bindings_bindings_4_4`
-  - `1415`: `PrimeStruct_primestruct_compile_run_examples_examples_ir_and_spinning_cube_1_1`
   - `1425`: `PrimeStruct_primestruct_compile_run_examples_examples_ir_and_spinning_cube_11_11`
   - `1426`: `PrimeStruct_primestruct_compile_run_examples_examples_ir_and_spinning_cube_12_12`
   - `1427`: `PrimeStruct_primestruct_compile_run_examples_examples_ir_and_spinning_cube_13_13`
