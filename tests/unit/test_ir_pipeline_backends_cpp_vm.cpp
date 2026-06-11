@@ -26,8 +26,8 @@
 
 TEST_SUITE_BEGIN("primestruct.ir.pipeline.backends.cpp_vm");
 
-#include "test_ir_pipeline_backends_cpp_vm_a.h"
-#include "test_ir_pipeline_backends_cpp_vm_b.h"
-#include "test_ir_pipeline_backends_cpp_vm_c.h"
+#include "test_ir_pipeline_backends_cpp_vm_exec_module.h"
+#include "test_ir_pipeline_backends_cpp_vm_indirect_pointer.h"
+#include "test_ir_pipeline_backends_cpp_vm_file_read.h"
 
 TEST_SUITE_END();

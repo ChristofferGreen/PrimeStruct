@@ -337,7 +337,7 @@ TEST_CASE("graph type resolver pilot is wired through options and semantics infe
   const std::string primecMain = readTextFile(primecMainPath);
   const std::string primevmMain = readTextFile(primevmMainPath);
 
-#include "test_ir_pipeline_backends_graph_pilot_b.h"
-#include "test_ir_pipeline_backends_graph_pilot_c.h"
+#include "test_ir_pipeline_backends_graph_pilot_contexts.h"
+#include "test_ir_pipeline_backends_graph_pilot_utilities.h"
 
 TEST_SUITE_END();

@@ -26,6 +26,6 @@
 
 TEST_SUITE_BEGIN("primestruct.ir.pipeline.backends.glsl");
 
-#include "test_ir_pipeline_backends_glsl_a.h"
-#include "test_ir_pipeline_backends_glsl_b.h"
-#include "test_ir_pipeline_backends_glsl_c.h"
+#include "test_ir_pipeline_backends_glsl_source.h"
+#include "test_ir_pipeline_backends_glsl_narrowed_f64.h"
+#include "test_ir_pipeline_backends_glsl_file_close.h"

@@ -637,11 +637,11 @@ if(PRIMESTRUCT_BUILD_TESTS)
     tests/unit/test_ir_pipeline_validation_ir_lowerer_call_helpers_emit_builtin_array_access.cpp
     tests/unit/test_ir_pipeline_validation_ir_lowerer_call_helpers_emit_map_lookup_loop_search_scaffold.cpp
     tests/unit/test_ir_pipeline_validation_ir_lowerer_on_error_helpers_wire_definition_handlers.cpp
-    tests/unit/test_ir_pipeline_validation_ir_lowerer_uninitialized_type_helpers_build_bundled_program_entry_return_runtime_and_s.cpp
+    tests/unit/test_ir_pipeline_validation_ir_lowerer_uninitialized_type_helpers_build_bundled_program_entry_return_runtime_and_setup.cpp
     tests/unit/test_ir_pipeline_validation_ir_lowerer_setup_type_helper_resolves_method_definitions_from_receiver_targets.cpp
     tests/unit/test_ir_pipeline_validation_ir_lowerer_setup_type_helper_resolves_indexed_args_pack_pointer_map_receivers.cpp
     tests/unit/test_ir_pipeline_validation_ir_lowerer_setup_type_helper_allows_count_capacity_receiver_probing.cpp
-    tests/unit/test_ir_pipeline_validation_ir_lowerer_setup_type_helper_resolves_indexed_args_pack_struct_receiver_methods_from_e.cpp
+    tests/unit/test_ir_pipeline_validation_ir_lowerer_setup_type_helper_resolves_indexed_args_pack_struct_receiver_methods_from_variants.cpp
     tests/unit/test_ir_pipeline_validation_ir_lowerer_setup_type_helper_keeps_reject_diagnostics_for_canonical_map_helper_receive.cpp
     tests/unit/test_ir_pipeline_validation_ir_lowerer_setup_type_helper_rejects_wrapper_string_slash_method_access_primitive_fall.cpp
     tests/unit/test_ir_pipeline_validation_ir_lowerer_setup_type_helper_keeps_builtin_array_count_fallback_and_rejects_bare_vecto.cpp
@@ -780,38 +780,38 @@ if(PRIMESTRUCT_BUILD_TESTS)
     tests/unit/test_compile_run_native_backend_core_buffer_and_collection_wrappers.cpp
     tests/unit/test_compile_run_native_backend_core_error_and_file_variadics.cpp
     tests/unit/test_compile_run_native_backend_core_file_and_struct_variadics.cpp
-    tests/unit/test_compile_run_native_backend_core_image_io_a.cpp
-    tests/unit/test_compile_run_native_backend_core_image_io_b.cpp
-    tests/unit/test_compile_run_native_backend_core_image_io_c.cpp
-    tests/unit/test_compile_run_native_backend_core_image_io_d.cpp
+    tests/unit/test_compile_run_native_backend_core_image_io_ppm_buffer.cpp
+    tests/unit/test_compile_run_native_backend_core_image_io_png_grayscale_filters.cpp
+    tests/unit/test_compile_run_native_backend_core_image_io_png_advanced_filters.cpp
+    tests/unit/test_compile_run_native_backend_core_image_io_png_16bit_interlaced.cpp
     tests/unit/test_compile_run_native_backend_core_map_and_vector_variadics.cpp
     tests/unit/test_compile_run_native_backend_core_reference_and_uninitialized_variadics.cpp
     tests/unit/test_compile_run_native_backend_core_result_and_vector_variadics.cpp
     tests/unit/test_compile_run_native_backend_core_result_payloads_and_strings.cpp
     tests/unit/test_compile_run_native_backend_core_runtime_and_ir_paths.cpp
-    tests/unit/test_compile_run_native_backend_core_ui_layout_a.cpp
-    tests/unit/test_compile_run_native_backend_core_ui_layout_b.cpp
+    tests/unit/test_compile_run_native_backend_core_ui_layout_basic_call.cpp
+    tests/unit/test_compile_run_native_backend_core_ui_layout_scene_model.cpp
     tests/unit/test_compile_run_native_backend_core_vector_and_experimental_map_variadics.cpp
     tests/unit/test_compile_run_native_backend_collections.cpp
-    tests/unit/test_compile_run_native_backend_collections_alias_diagnostics_a.cpp
-    tests/unit/test_compile_run_native_backend_collections_alias_diagnostics_b.cpp
+    tests/unit/test_compile_run_native_backend_collections_alias_diagnostics_vector_wrapper.cpp
+    tests/unit/test_compile_run_native_backend_collections_alias_diagnostics_method_alias.cpp
     tests/unit/test_compile_run_native_backend_collections_arrays_and_aliases.cpp
     tests/unit/test_compile_run_native_backend_collections_auto_inferred_helper_precedence.cpp
     tests/unit/test_compile_run_native_backend_collections_canonical_count_shadows.cpp
     tests/unit/test_compile_run_native_backend_collections_canonical_map_helpers.cpp
     tests/unit/test_compile_run_native_backend_collections_experimental_maps_and_helpers.cpp
     tests/unit/test_compile_run_native_backend_collections_map_literals_and_string_keys.cpp
-    tests/unit/test_compile_run_native_backend_collections_mutators_and_limits_a.cpp
-    tests/unit/test_compile_run_native_backend_collections_mutators_and_limits_b.cpp
+    tests/unit/test_compile_run_native_backend_collections_mutators_and_limits_auto_inferred.cpp
+    tests/unit/test_compile_run_native_backend_collections_mutators_and_limits_reserve_shrink.cpp
     tests/unit/test_compile_run_native_backend_collections_shadow_precedence_and_counts.cpp
-    tests/unit/test_compile_run_native_backend_collections_shims_maps_a.cpp
-    tests/unit/test_compile_run_native_backend_collections_shims_maps_b.cpp
-    tests/unit/test_compile_run_native_backend_collections_shims_maps_c.cpp
+    tests/unit/test_compile_run_native_backend_collections_shims_maps_vector_method_access.cpp
+    tests/unit/test_compile_run_native_backend_collections_shims_maps_retired_at.cpp
+    tests/unit/test_compile_run_native_backend_collections_shims_maps_retired_sept.cpp
     tests/unit/test_compile_run_native_backend_collections_shims_vectors.cpp
-    tests/unit/test_compile_run_native_backend_collections_user_shadow_methods_a.cpp
-    tests/unit/test_compile_run_native_backend_collections_user_shadow_methods_b.cpp
-    tests/unit/test_compile_run_native_backend_collections_vector_alias_rejects_a.cpp
-    tests/unit/test_compile_run_native_backend_collections_vector_alias_rejects_b.cpp
+    tests/unit/test_compile_run_native_backend_collections_user_shadow_methods_array_at.cpp
+    tests/unit/test_compile_run_native_backend_collections_user_shadow_methods_vector_push.cpp
+    tests/unit/test_compile_run_native_backend_collections_vector_alias_rejects_capacity.cpp
+    tests/unit/test_compile_run_native_backend_collections_vector_alias_rejects_helper.cpp
     tests/unit/test_compile_run_native_backend_collections_wrapper_rejects_maps.cpp
     tests/unit/test_compile_run_native_backend_collections_wrapper_rejects_vectors.cpp
     tests/unit/test_compile_run_native_backend_collections_wrapper_shadow_precedence.cpp
@@ -842,28 +842,28 @@ if(PRIMESTRUCT_BUILD_TESTS)
     tests/unit/test_compile_run_smoke_core_wasm_wasi_png_write.cpp
     tests/unit/test_compile_run_text_filters.cpp
     tests/unit/test_compile_run_text_filters_core_lists.cpp
-    tests/unit/test_compile_run_text_filters_diagnostics_a.cpp
-    tests/unit/test_compile_run_text_filters_diagnostics_b.cpp
-    tests/unit/test_compile_run_text_filters_diagnostics_c.cpp
-    tests/unit/test_compile_run_text_filters_diagnostics_d.cpp
-    tests/unit/test_compile_run_text_filters_diagnostics_e.cpp
-    tests/unit/test_compile_run_text_filters_diagnostics_f.cpp
-    tests/unit/test_compile_run_text_filters_diagnostics_g.cpp
-    tests/unit/test_compile_run_text_filters_diagnostics_h.cpp
-    tests/unit/test_compile_run_text_filters_diagnostics_i.cpp
-    tests/unit/test_compile_run_text_filters_diagnostics_j.cpp
-    tests/unit/test_compile_run_text_filters_diagnostics_k.cpp
-    tests/unit/test_compile_run_text_filters_diagnostics_l.cpp
-    tests/unit/test_compile_run_text_filters_diagnostics_m.cpp
-    tests/unit/test_compile_run_text_filters_diagnostics_n.cpp
-    tests/unit/test_compile_run_text_filters_diagnostics_o.cpp
-    tests/unit/test_compile_run_text_filters_diagnostics_p.cpp
-    tests/unit/test_compile_run_text_filters_diagnostics_q.cpp
-    tests/unit/test_compile_run_text_filters_diagnostics_r.cpp
-    tests/unit/test_compile_run_text_filters_diagnostics_s.cpp
-    tests/unit/test_compile_run_text_filters_diagnostics_t.cpp
-    tests/unit/test_compile_run_text_filters_diagnostics_u.cpp
-    tests/unit/test_compile_run_text_filters_diagnostics_v.cpp
+    tests/unit/test_compile_run_text_filters_diagnostics_stable_multi_parse.cpp
+    tests/unit/test_compile_run_text_filters_diagnostics_intra_def_multi_semantic.cpp
+    tests/unit/test_compile_run_text_filters_diagnostics_wrapper_index_arg_type.cpp
+    tests/unit/test_compile_run_text_filters_diagnostics_wrapper_method_count_missing_arg.cpp
+    tests/unit/test_compile_run_text_filters_diagnostics_wrapper_count_call_pair_arg_shape.cpp
+    tests/unit/test_compile_run_text_filters_diagnostics_wrapper_count_mixed_shape.cpp
+    tests/unit/test_compile_run_text_filters_diagnostics_wrapper_method_mixed_shape.cpp
+    tests/unit/test_compile_run_text_filters_diagnostics_wrapper_count_call_pair_arg_type.cpp
+    tests/unit/test_compile_run_text_filters_diagnostics_wrapper_count_call_pair_arg_shape.cpp
+    tests/unit/test_compile_run_text_filters_diagnostics_wrapper_method_missing_arg.cpp
+    tests/unit/test_compile_run_text_filters_diagnostics_wrapper_count_extra_arg.cpp
+    tests/unit/test_compile_run_text_filters_diagnostics_stable_multi_semantic.cpp
+    tests/unit/test_compile_run_text_filters_diagnostics_exec_at_unsafe.cpp
+    tests/unit/test_compile_run_text_filters_diagnostics_exec_count_capacity.cpp
+    tests/unit/test_compile_run_text_filters_diagnostics_exec_method_count_capacity.cpp
+    tests/unit/test_compile_run_text_filters_diagnostics_exec_count_mixed_shape.cpp
+    tests/unit/test_compile_run_text_filters_diagnostics_exec_method_call_pair.cpp
+    tests/unit/test_compile_run_text_filters_diagnostics_exec_count_pair_arg_shape.cpp
+    tests/unit/test_compile_run_text_filters_diagnostics_exec_count_call_pair.cpp
+    tests/unit/test_compile_run_text_filters_diagnostics_exec_method_mixed_shape.cpp
+    tests/unit/test_compile_run_text_filters_diagnostics_exec_method_missing_arg.cpp
+    tests/unit/test_compile_run_text_filters_diagnostics_emit_structured_semantic.cpp
     tests/unit/test_compile_run_text_filters_dumps.cpp
     tests/unit/test_compile_run_text_filters_misc.cpp
     tests/unit/test_compile_run_text_filters_runtime_if.cpp
@@ -884,19 +884,19 @@ if(PRIMESTRUCT_BUILD_TESTS)
     tests/unit/test_compile_run_vm_collections_core_aliases.cpp
     tests/unit/test_compile_run_vm_collections_map_vector_shadows.cpp
     tests/unit/test_compile_run_vm_collections_map_wrapper_shadows.cpp
-    tests/unit/test_compile_run_vm_collections_method_aliases_a.cpp
-    tests/unit/test_compile_run_vm_collections_method_aliases_b.cpp
-    tests/unit/test_compile_run_vm_collections_shim_maps_a.cpp
-    tests/unit/test_compile_run_vm_collections_shim_maps_b.cpp
-    tests/unit/test_compile_run_vm_collections_shim_maps_c.cpp
-    tests/unit/test_compile_run_vm_collections_vector_aliases_a.cpp
-    tests/unit/test_compile_run_vm_collections_vector_aliases_b.cpp
-    tests/unit/test_compile_run_vm_collections_vector_limits_a.cpp
-    tests/unit/test_compile_run_vm_collections_vector_limits_b.cpp
+    tests/unit/test_compile_run_vm_collections_method_aliases_templated_wrapper.cpp
+    tests/unit/test_compile_run_vm_collections_method_aliases_field_expression.cpp
+    tests/unit/test_compile_run_vm_collections_shim_maps_vector_new.cpp
+    tests/unit/test_compile_run_vm_collections_shim_maps_reject_triple.cpp
+    tests/unit/test_compile_run_vm_collections_shim_maps_reject_quint.cpp
+    tests/unit/test_compile_run_vm_collections_vector_aliases_bare_map.cpp
+    tests/unit/test_compile_run_vm_collections_vector_aliases_template_forwarding.cpp
+    tests/unit/test_compile_run_vm_collections_vector_limits_pop_shadow.cpp
+    tests/unit/test_compile_run_vm_collections_vector_limits_push_limit.cpp
     tests/unit/test_compile_run_vm_collections_vector_shadow_access.cpp
-    tests/unit/test_compile_run_vm_collections_wrapper_temporaries_a.cpp
-    tests/unit/test_compile_run_vm_collections_wrapper_temporaries_b.cpp
-    tests/unit/test_compile_run_vm_collections_wrapper_temporaries_c.cpp
+    tests/unit/test_compile_run_vm_collections_wrapper_temporaries_reject_count.cpp
+    tests/unit/test_compile_run_vm_collections_wrapper_temporaries_user_shadow.cpp
+    tests/unit/test_compile_run_vm_collections_wrapper_temporaries_templated.cpp
     tests/unit/test_compile_run_vm_gpu.cpp
     tests/unit/test_compile_run_vm_maps.cpp
     tests/unit/test_compile_run_vm_math.cpp
@@ -1076,8 +1076,8 @@ if(PRIMESTRUCT_BUILD_TESTS)
     tests/unit/test_parser_basic_expr_forms.cpp
     tests/unit/test_parser_basic_literals.cpp
     tests/unit/test_parser_basic_parser_helpers.cpp
-    tests/unit/test_parser_basic_semantic_transforms_a.cpp
-    tests/unit/test_parser_basic_semantic_transforms_b.cpp
+    tests/unit/test_parser_basic_semantic_transforms_index_template.cpp
+    tests/unit/test_parser_basic_semantic_transforms_nested_indexed.cpp
     tests/unit/test_parser_basic_sugar.cpp
     tests/unit/test_parser_errors.cpp
     tests/unit/test_parser_errors_more_identifiers.cpp
