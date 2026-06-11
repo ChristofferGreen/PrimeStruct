@@ -26,7 +26,7 @@ static void expect_soa_vector_helper_return_shadow_reject(const std::string &sou
   CHECK(readFile(outPath).find(expectedDiagnostic) != std::string::npos);
 }
 
-TEST_CASE("rejects collection literals with map at in C++ emitter") {
+TEST_CASE("runs collection literals with map at in C++ emitter") {
   const std::string source = R"(
 import /std/collections/*
 
@@ -37,13 +37,12 @@ main() {
 }
 )";
   const std::string srcPath = writeTemp("compile_collections_exe.prime", source);
-  const std::string errPath = (testScratchPath("") / "primec_collections_exe.err").string();
+  const std::string exePath = (testScratchPath("") / "primec_collections_exe").string();
 
   const std::string compileCmd =
-      "./primec --emit=exe " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
-  CHECK(runCommand(compileCmd) == 2);
-  CHECK(readFile(errPath).find("native backend only supports at() on numeric/bool/string arrays or vectors") !=
-        std::string::npos);
+      "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main";
+  CHECK(runCommand(compileCmd) == 0);
+  CHECK(runCommand(exePath) == 50);
 }
 
 TEST_CASE("query-local auto vector helpers run in C++ emitter") {
@@ -159,8 +158,8 @@ main() {
   const std::string compileCmd =
       "./primec --emit=exe " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
   CHECK(runCommand(compileCmd) == 2);
-  CHECK(readFile(errPath).find("native backend only supports indexing into string literals or string bindings") !=
-        std::string::npos);
+  CHECK(readFile(errPath).find("native backend only supports arithmetic/comparison") != std::string::npos);
+  CHECK(readFile(errPath).find("call=/std/collections/map/at") != std::string::npos);
 }
 
 TEST_CASE("concise vector binding example runs in C++ emitter") {
@@ -891,7 +890,7 @@ Particle() {
 [effects(heap_alloc), return<int>]
 main() {
   [SoaVector<Particle> mut] values{soaVectorNew<Particle>()}
-  values.push(Particle(7i32))
+  soaVectorPush<Particle>(values, Particle(7i32))
   [vector<Particle>] unpacked{/std/collections/soa_vector/to_aos_ref<Particle>(location(values))}
   return(count(unpacked))
 }
@@ -1675,7 +1674,7 @@ main() {
         std::string::npos);
 }
 
-TEST_CASE("rejects experimental soa_vector single-field index syntax in C++ emitter") {
+TEST_CASE("runs experimental soa_vector single-field index syntax in C++ emitter") {
   const std::string source = R"(
 import /std/collections/soa/*
 import /std/collections/internal_soa_vector/*
@@ -1688,25 +1687,23 @@ ScalarBox() {
 [effects(heap_alloc), return<int>]
 main() {
   [SoaVector<ScalarBox> mut] values{soaVectorNew<ScalarBox>()}
-  values.push(ScalarBox(4i32))
-  values.push(ScalarBox(9i32))
+  soaVectorPush<ScalarBox>(values, ScalarBox(4i32))
+  soaVectorPush<ScalarBox>(values, ScalarBox(9i32))
   return(values.x()[1i32])
 }
 )";
   const std::string srcPath = writeTemp("compile_experimental_soa_vector_single_field_view_exe.prime", source);
-  const std::string errPath =
-      (testScratchPath("") / "primec_experimental_soa_vector_single_field_view_exe.err")
+  const std::string exePath =
+      (testScratchPath("") / "primec_experimental_soa_vector_single_field_view_exe")
           .string();
 
   const std::string compileCmd =
-      "./primec --emit=exe " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
-  CHECK(runCommand(compileCmd) == 2);
-  CHECK(readFile(errPath).find(
-            "missing semantic-product bridge-path choice: /main -> /std/collections/soa_vector/push") !=
-        std::string::npos);
+      "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main";
+  CHECK(runCommand(compileCmd) == 0);
+  CHECK(runCommand(exePath) == 9);
 }
 
-TEST_CASE("rejects experimental soa_vector reflected multi-field index syntax in C++ emitter") {
+TEST_CASE("runs experimental soa_vector reflected multi-field index syntax in C++ emitter") {
   const std::string source = R"(
 import /std/collections/soa/*
 import /std/collections/internal_soa_vector/*
@@ -1720,20 +1717,18 @@ Particle() {
 [effects(heap_alloc), return<int>]
 main() {
   [SoaVector<Particle> mut] values{soaVectorNew<Particle>()}
-  values.push(Particle(7i32, 8i32))
-  values.push(Particle(9i32, 12i32))
+  soaVectorPush<Particle>(values, Particle(7i32, 8i32))
+  soaVectorPush<Particle>(values, Particle(9i32, 12i32))
   return(values.y()[1i32])
 }
 )";
   const std::string srcPath = writeTemp("compile_experimental_soa_vector_field_view_exe.prime", source);
-  const std::string errPath =
-      (testScratchPath("") / "primec_experimental_soa_vector_field_view_exe.err").string();
+  const std::string exePath =
+      (testScratchPath("") / "primec_experimental_soa_vector_field_view_exe").string();
   const std::string compileCmd =
-      "./primec --emit=exe " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
-  CHECK(runCommand(compileCmd) == 2);
-  CHECK(readFile(errPath).find(
-            "missing semantic-product bridge-path choice: /main -> /std/collections/soa_vector/push") !=
-        std::string::npos);
+      "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main";
+  CHECK(runCommand(compileCmd) == 0);
+  CHECK(runCommand(exePath) == 12);
 }
 
 TEST_CASE("rejects experimental soa_vector mutating indexed field writes in C++ emitter") {
@@ -1775,7 +1770,7 @@ main() {
         std::string::npos);
 }
 
-TEST_CASE("rejects richer borrowed experimental soa_vector mutating indexed field writes in C++ emitter") {
+TEST_CASE("runs richer borrowed experimental soa_vector mutating indexed field writes in C++ emitter") {
   const std::string source = R"(
 import /std/collections/soa/*
 import /std/collections/internal_soa_vector/*
@@ -1794,8 +1789,8 @@ pickBorrowed([Reference<SoaVector<Particle>>] values) {
 [effects(heap_alloc), return<int>]
 main() {
   [SoaVector<Particle> mut] values{soaVectorNew<Particle>()}
-  values.push(Particle(7i32, 8i32))
-  values.push(Particle(9i32, 12i32))
+  soaVectorPush<Particle>(values, Particle(7i32, 8i32))
+  soaVectorPush<Particle>(values, Particle(9i32, 12i32))
   assign(dereference(pickBorrowed(location(values))).y()[1i32], 17i32)
   assign(y(location(pickBorrowed(location(values))))[0i32], 19i32)
   return(plus(dereference(pickBorrowed(location(values))).y()[1i32],
@@ -1805,19 +1800,17 @@ main() {
   const std::string srcPath = writeTemp(
       "compile_experimental_soa_vector_richer_borrowed_mutating_indexed_field_writes_exe.prime",
       source);
-  const std::string errPath =
+  const std::string exePath =
       (testScratchPath("") /
-       "primec_experimental_soa_vector_richer_borrowed_mutating_indexed_field_writes_exe.err")
+       "primec_experimental_soa_vector_richer_borrowed_mutating_indexed_field_writes_exe")
           .string();
   const std::string compileCmd =
-      "./primec --emit=exe " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
-  CHECK(runCommand(compileCmd) == 2);
-  CHECK(readFile(errPath).find(
-            "missing semantic-product bridge-path choice: /main -> /std/collections/soa_vector/push") !=
-        std::string::npos);
+      "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main";
+  CHECK(runCommand(compileCmd) == 0);
+  CHECK(runCommand(exePath) == 36);
 }
 
-TEST_CASE("rejects method-like borrowed experimental soa_vector mutating indexed field writes in C++ emitter") {
+TEST_CASE("runs method-like borrowed experimental soa_vector mutating indexed field writes in C++ emitter") {
   const std::string source = R"(
 import /std/collections/soa/*
 import /std/collections/internal_soa_vector/*
@@ -1839,8 +1832,8 @@ Holder() {}
 [effects(heap_alloc), return<int>]
 main() {
   [SoaVector<Particle> mut] values{soaVectorNew<Particle>()}
-  values.push(Particle(7i32, 8i32))
-  values.push(Particle(9i32, 12i32))
+  soaVectorPush<Particle>(values, Particle(7i32, 8i32))
+  soaVectorPush<Particle>(values, Particle(9i32, 12i32))
   [Holder] holder{Holder{}}
   assign(holder.pickBorrowed(location(values)).y()[1i32], 17i32)
   assign(y(holder.pickBorrowed(location(values)))[0i32], 19i32)
@@ -1857,19 +1850,17 @@ main() {
   const std::string srcPath = writeTemp(
       "compile_experimental_soa_vector_method_like_borrowed_mutating_indexed_field_writes_exe.prime",
       source);
-  const std::string errPath =
+  const std::string exePath =
       (testScratchPath("") /
-       "primec_experimental_soa_vector_method_like_borrowed_mutating_indexed_field_writes_exe.err")
+       "primec_experimental_soa_vector_method_like_borrowed_mutating_indexed_field_writes_exe")
           .string();
   const std::string compileCmd =
-      "./primec --emit=exe " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
-  CHECK(runCommand(compileCmd) == 2);
-  CHECK(readFile(errPath).find(
-            "missing semantic-product bridge-path choice: /main -> /std/collections/soa_vector/push") !=
-        std::string::npos);
+      "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main";
+  CHECK(runCommand(compileCmd) == 0);
+  CHECK(runCommand(exePath) == 104);
 }
 
-TEST_CASE("rejects borrowed experimental soa_vector reflected index syntax in C++ emitter") {
+TEST_CASE("runs borrowed experimental soa_vector reflected index syntax in C++ emitter") {
   const std::string source = R"(
 import /std/collections/soa/*
 import /std/collections/internal_soa_vector/*
@@ -1883,26 +1874,24 @@ Particle() {
 [effects(heap_alloc), return<int>]
 main() {
   [SoaVector<Particle> mut] values{soaVectorNew<Particle>()}
-  values.push(Particle(7i32, 8i32))
-  values.push(Particle(9i32, 12i32))
+  soaVectorPush<Particle>(values, Particle(7i32, 8i32))
+  soaVectorPush<Particle>(values, Particle(9i32, 12i32))
   [Reference<SoaVector<Particle>>] borrowed{location(values)}
   return(dereference(borrowed).y()[1i32])
 }
 )";
   const std::string srcPath =
       writeTemp("compile_experimental_soa_vector_borrowed_field_view_exe.prime", source);
-  const std::string errPath =
-      (testScratchPath("") / "primec_experimental_soa_vector_borrowed_field_view_exe.err")
+  const std::string exePath =
+      (testScratchPath("") / "primec_experimental_soa_vector_borrowed_field_view_exe")
           .string();
   const std::string compileCmd =
-      "./primec --emit=exe " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
-  CHECK(runCommand(compileCmd) == 2);
-  CHECK(readFile(errPath).find(
-            "missing semantic-product bridge-path choice: /main -> /std/collections/soa_vector/push") !=
-        std::string::npos);
+      "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main";
+  CHECK(runCommand(compileCmd) == 0);
+  CHECK(runCommand(exePath) == 12);
 }
 
-TEST_CASE("rejects borrowed local experimental soa_vector reflected index syntax in C++ emitter") {
+TEST_CASE("runs borrowed local experimental soa_vector reflected index syntax in C++ emitter") {
   const std::string source = R"(
 import /std/collections/soa/*
 import /std/collections/internal_soa_vector/*
@@ -1916,26 +1905,24 @@ Particle() {
 [effects(heap_alloc), return<int>]
 main() {
   [SoaVector<Particle> mut] values{soaVectorNew<Particle>()}
-  values.push(Particle(7i32, 8i32))
-  values.push(Particle(9i32, 12i32))
+  soaVectorPush<Particle>(values, Particle(7i32, 8i32))
+  soaVectorPush<Particle>(values, Particle(9i32, 12i32))
   [Reference<SoaVector<Particle>>] borrowed{location(values)}
   return(borrowed.y()[1i32])
 }
 )";
   const std::string srcPath =
       writeTemp("compile_experimental_soa_vector_borrowed_local_field_view_exe.prime", source);
-  const std::string errPath =
-      (testScratchPath("") / "primec_experimental_soa_vector_borrowed_local_field_view_exe.err")
+  const std::string exePath =
+      (testScratchPath("") / "primec_experimental_soa_vector_borrowed_local_field_view_exe")
           .string();
   const std::string compileCmd =
-      "./primec --emit=exe " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
-  CHECK(runCommand(compileCmd) == 2);
-  CHECK(readFile(errPath).find(
-            "missing semantic-product bridge-path choice: /main -> /std/collections/soa_vector/push") !=
-        std::string::npos);
+      "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main";
+  CHECK(runCommand(compileCmd) == 0);
+  CHECK(runCommand(exePath) == 12);
 }
 
-TEST_CASE("rejects borrowed helper-return experimental soa_vector reflected index syntax in C++ emitter") {
+TEST_CASE("runs borrowed helper-return experimental soa_vector reflected index syntax in C++ emitter") {
   const std::string source = R"(
 import /std/collections/soa/*
 import /std/collections/internal_soa_vector/*
@@ -1954,22 +1941,20 @@ pickBorrowed([Reference<SoaVector<Particle>>] values) {
 [effects(heap_alloc), return<int>]
 main() {
   [SoaVector<Particle> mut] values{soaVectorNew<Particle>()}
-  values.push(Particle(4i32, 6i32))
-  values.push(Particle(9i32, 12i32))
+  soaVectorPush<Particle>(values, Particle(4i32, 6i32))
+  soaVectorPush<Particle>(values, Particle(9i32, 12i32))
   return(pickBorrowed(location(values)).y()[1i32])
 }
 )";
   const std::string srcPath =
       writeTemp("compile_experimental_soa_vector_borrowed_return_field_view_exe.prime", source);
-  const std::string errPath =
-      (testScratchPath("") / "primec_experimental_soa_vector_borrowed_return_field_view_exe.err")
+  const std::string exePath =
+      (testScratchPath("") / "primec_experimental_soa_vector_borrowed_return_field_view_exe")
           .string();
   const std::string compileCmd =
-      "./primec --emit=exe " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
-  CHECK(runCommand(compileCmd) == 2);
-  CHECK(readFile(errPath).find(
-            "missing semantic-product bridge-path choice: /main -> /std/collections/soa_vector/push") !=
-        std::string::npos);
+      "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main";
+  CHECK(runCommand(compileCmd) == 0);
+  CHECK(runCommand(exePath) == 12);
 }
 
 TEST_CASE("rejects experimental soa_vector bare get and ref field access in C++ emitter") {
@@ -2398,7 +2383,7 @@ main() {
       "./primec --emit=exe " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
   CHECK(runCommand(compileCmd) == 2);
   CHECK(readFile(errPath).find(
-            "unknown method: /std/collections/experimental_soa_vector/SoaVector__") !=
+            "unknown method: /std/collections/soa/SoaVector__") !=
         std::string::npos);
 }
 

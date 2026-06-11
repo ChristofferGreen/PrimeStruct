@@ -1,3 +1,4 @@
+// soa-surface-audit: exempt
 #pragma once
 
 #include "StdlibCollectionSurfaceHelpers.h"
@@ -6,6 +7,7 @@
 #include <algorithm>
 #include <string>
 #include <string_view>
+#include "primec/StdlibCollectionPaths.h"
 
 namespace primec::semantics {
 namespace {
@@ -448,11 +450,11 @@ stripUnrootedCanonicalVectorCompatibilityPrefix(std::string_view path) {
 }
 
 [[maybe_unused]] std::string legacyExperimentalVectorCompatibilityPrefix() {
-  return "/std/collections/experimental_" + std::string("vector") + "/";
+  return collection_paths::modulePrefix(collection_paths::kExperimentalVectorFolder);
 }
 
 [[maybe_unused]] std::string legacyExperimentalKeyValueCompatibilityPrefix() {
-  return "/std/collections/experimental_" + std::string("map") + "/";
+  return collection_paths::modulePrefix(collection_paths::kExperimentalMapFolder);
 }
 
 [[maybe_unused]] std::string legacyExperimentalVectorCompatibilityRoot() {
@@ -464,7 +466,14 @@ stripUnrootedCanonicalVectorCompatibilityPrefix(std::string_view path) {
 }
 
 [[maybe_unused]] std::string legacyExperimentalVectorCompatibilityFamilyName() {
-  return "experimental_" + std::string("vector");
+  return collection_paths::experimentalFolder(collection_paths::kVectorFolder);
+}
+
+// The Vector type identity lives in the canonical vector module; helper and
+// constructor compatibility paths above remain experimental until their
+// retirement tasks.
+[[maybe_unused]] std::string canonicalVectorTypeIdentityPrefix() {
+  return collection_paths::modulePrefix(collection_paths::kVectorFolder);
 }
 
 [[maybe_unused]] std::string legacyExperimentalVectorCompatibilityConstructorPath() {
@@ -477,12 +486,12 @@ stripUnrootedCanonicalVectorCompatibilityPrefix(std::string_view path) {
 
 [[maybe_unused]] bool isLegacyExperimentalVectorCompatibilityPath(
     std::string_view path) {
-  return path == legacyExperimentalVectorCompatibilityPrefix() + "Vector";
+  return path == canonicalVectorTypeIdentityPrefix() + "Vector";
 }
 
 [[maybe_unused]] bool isLegacyExperimentalVectorCompatibilitySpecializedTypePath(
     std::string_view path) {
-  return path.rfind(legacyExperimentalVectorCompatibilityPrefix() +
+  return path.rfind(canonicalVectorTypeIdentityPrefix() +
                         std::string("Vector__"),
                     0) == 0;
 }
@@ -496,7 +505,7 @@ stripUnrootedCanonicalVectorCompatibilityPrefix(std::string_view path) {
 [[maybe_unused]] std::string legacyExperimentalVectorCompatibilityTypeText(
     const std::string &elemType,
     bool rooted = true) {
-  std::string prefix = legacyExperimentalVectorCompatibilityPrefix();
+  std::string prefix = canonicalVectorTypeIdentityPrefix();
   if (!rooted && !prefix.empty() && prefix.front() == '/') {
     prefix.erase(prefix.begin());
   }
@@ -551,7 +560,7 @@ legacyExperimentalVectorCompatibilityShorthandTypeText(
   if (helper.empty()) {
     return "";
   }
-  return "/std/collections/experimental_" + std::string("vector") + "/" +
+  return collection_paths::moduleRoot(collection_paths::kExperimentalFolderPrefix) + std::string("vector") + "/" +
          helper;
 }
 
@@ -583,7 +592,7 @@ resolveCanonicalCompatibilityKeyValueHelperNameFromResolvedPath(
     std::string_view resolvedPath,
     std::string &helperNameOut) {
   helperNameOut.clear();
-  if (resolvedPath.rfind("/std/collections/internal_map/", 0) == 0 ||
+  if (resolvedPath.rfind(collection_paths::modulePrefix(collection_paths::kInternalMapFolder), 0) == 0 ||
       resolvedPath.rfind(experimentalCollectionConstructorRootLocal("map"),
                          0) == 0) {
     return false;
@@ -707,15 +716,15 @@ resolveCanonicalCompatibilityKeyValueHelperNameFromResolvedPath(
             importPath.rfind(root, 0) == 0 &&
             importPath[root.size()] == '/');
   };
-  return matchesRoot("/std/collections/" "soa" "_vector") ||
-         matchesRoot("/std/collections/" "soa" "_vector_conversions") ||
-         matchesRoot("/std/collections/experimental" "_soa" "_vector") ||
-         matchesRoot("/std/collections/experimental" "_soa" "_vector_conversions");
+  return matchesRoot("/std/collections/soa_vector") ||
+         matchesRoot("/std/collections/soa_vector_conversions") ||
+         matchesRoot(collection_paths::moduleRoot(collection_paths::kExperimentalSoaVectorFolder)) ||
+         matchesRoot(collection_paths::moduleRoot(collection_paths::kExperimentalSoaVectorConversionsFolder));
 }
 
 [[maybe_unused]] std::string directRemovedSoaCompatibilityImportDiagnostic() {
-  return "direct import of retired soa" "_vector compatibility modules is not "
-         "supported; use /std/collections/" "soa/*";
+  return "direct import of retired soa_vector compatibility modules is not "
+         "supported; use /std/collections/soa/*";
 }
 
 [[maybe_unused]] bool

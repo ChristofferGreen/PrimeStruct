@@ -1,2 +1,0 @@
-// Retired compatibility conversion module.
-// Public SoA conversions now live under /std/collections/soa/*.

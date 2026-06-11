@@ -1,7 +1,9 @@
+// soa-surface-audit: exempt
 #include "SemanticPublicationBuilders.h"
 
 #include "RequirementPredicateFacts.h"
 #include "StdlibCollectionSurfaceHelpers.h"
+#include "primec/StdlibCollectionPaths.h"
 #include "primec/StdlibSurfaceRegistry.h"
 
 #include <algorithm>
@@ -524,12 +526,9 @@ std::string collectionTypeRootForPublication(std::string_view collectionName,
 std::string experimentalCollectionTypeForPublication(std::string_view collectionName,
                                                      std::string_view typeName,
                                                      bool leadingSlash = false) {
-  std::string root = leadingSlash ? "/" : "";
-  root += "std/collections/experimental_";
-  root += std::string(collectionName);
-  root += "/";
-  root += std::string(typeName);
-  return root;
+  const std::string folder = collection_paths::typeIdentityFolder(collectionName);
+  return leadingSlash ? collection_paths::memberPath(folder, typeName)
+                      : collection_paths::memberPathBare(folder, typeName);
 }
 
 bool matchesStdlibSurfaceRootForPublication(std::string_view typeName,
@@ -585,12 +584,15 @@ std::string normalizeCollectionSpecializationTypeName(std::string typeName) {
       isUnspecializedExperimentalKeyValueBackingTypeForPublication(typeName)) {
     return "map";
   }
-  if (typeName == "/soa" "_vector" || typeName == "std/collections/" "soa" "_vector" ||
-      typeName == "/std/collections/" "soa" "_vector" || typeName == "Soa" "Vector" ||
-      typeName == "/Soa" "Vector" ||
-      typeName == "std/collections/experimental" "_soa" "_vector/Soa" "Vector" ||
-      typeName == "/std/collections/experimental" "_soa" "_vector/Soa" "Vector") {
-    return "soa" "_vector";
+  if (typeName == "/soa_vector" ||
+      typeName == collection_paths::moduleRootBare(collection_paths::kLegacySoaVectorFolder) ||
+      typeName == collection_paths::moduleRoot(collection_paths::kLegacySoaVectorFolder) ||
+      typeName == collection_paths::kSoaVectorTypeName || typeName == "/SoaVector" ||
+      typeName == collection_paths::memberPathBare(collection_paths::kSoaFolder,
+                                                   collection_paths::kSoaVectorTypeName) ||
+      typeName == collection_paths::memberPath(collection_paths::kSoaFolder,
+                                               collection_paths::kSoaVectorTypeName)) {
+    return std::string(collection_paths::kLegacySoaVectorFolder);
   }
   return typeName;
 }
@@ -626,12 +628,12 @@ bool classifyCollectionSpecialization(std::string typeText,
       draftOut.valueTypeText = draftOut.elementTypeText;
       return true;
     }
-    if (base == "soa" "_vector") {
+    if (base == "soa_vector") {
       std::vector<std::string> args;
       if (!splitTopLevelTemplateArgs(argText, args) || args.size() != 1) {
         return false;
       }
-      draftOut.collectionFamily = "soa" "_vector";
+      draftOut.collectionFamily = "soa_vector";
       draftOut.elementTypeText = normalizeBindingTypeName(args.front());
       draftOut.valueTypeText = draftOut.elementTypeText;
       return true;
@@ -764,7 +766,7 @@ void publishCollectionSpecializationForBinding(
         constructorMetadata != nullptr) {
       entry.constructorSurfaceId = constructorMetadata->id;
     }
-  } else if (entry.collectionFamily == "soa" "_vector") {
+  } else if (entry.collectionFamily == "soa_vector") {
     entry.helperSurfaceId = StdlibSurfaceId::CollectionsColumnarHelpers;
     entry.constructorSurfaceId = StdlibSurfaceId::CollectionsColumnarConstructors;
   } else if (entry.collectionFamily == "map") {

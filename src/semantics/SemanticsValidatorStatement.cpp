@@ -1,3 +1,4 @@
+// soa-surface-audit: exempt
 #include "SemanticsValidator.h"
 #include "StdlibCollectionSurfaceHelpers.h"
 #include "SemanticsValidatorStatementLoopCountStep.h"
@@ -423,7 +424,7 @@ bool SemanticsValidator::validateStatement(const std::vector<ParameterInfo> &par
       expireReferenceBorrowsForRemainder(params, locals, stmt.bodyArguments, bodyIndex + 1);
     }
     auto isSoaOwnerBinding = [&](const BindingInfo &binding) -> bool {
-      if (binding.typeName == "soa" "_vector") {
+      if (binding.typeName == "soa_vector") {
         return true;
       }
       std::string elemType;
@@ -547,13 +548,13 @@ bool SemanticsValidator::validateStatement(const std::vector<ParameterInfo> &par
   }
   if (stmt.kind == Expr::Kind::Call && !stmt.isBinding && !stmt.isMethodCall &&
       isExperimentalSoaFieldViewHelperPath(resolveCalleePath(stmt)) &&
-      resolveCalleePath(stmt).rfind("/std/collections/" "soa" "_vector/soa" "VectorFieldView", 0) == 0) {
+      resolveCalleePath(stmt).rfind("/std/collections/soa_vector/soaVectorFieldView", 0) == 0) {
     if (hasNamedArguments(stmt.argNames)) {
       return failStatementDiagnostic("named arguments not supported for builtin calls");
     }
     if (stmt.args.size() != 2) {
       return failStatementDiagnostic(
-          "argument count mismatch for builtin soa" "VectorFieldView");
+          "argument count mismatch for builtin soaVectorFieldView");
     }
     return validateExpr(params, locals, stmt.args.front()) &&
            validateExpr(params, locals, stmt.args[1]);

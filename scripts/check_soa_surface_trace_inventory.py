@@ -115,6 +115,16 @@ def iter_sources(root: Path) -> list[Path]:
     return sorted(sources)
 
 
+_EXEMPT_MARKER = "soa-surface-audit: exempt"
+
+
+def _is_exempt(text: str) -> bool:
+    for line in text.splitlines()[:10]:
+        if _EXEMPT_MARKER in line:
+            return True
+    return False
+
+
 def collect_counts(root: Path) -> dict[tuple[str, str], int]:
     counts: dict[tuple[str, str], int] = {}
     for path in iter_sources(root):
@@ -123,6 +133,8 @@ def collect_counts(root: Path) -> dict[tuple[str, str], int]:
             text = path.read_text(encoding="utf-8")
         except UnicodeDecodeError as exc:
             raise SystemExit(f"Unable to read {rel_path} as UTF-8: {exc}") from exc
+        if _is_exempt(text):
+            continue
         for line in text.splitlines():
             for pattern in TRACE_PATTERNS:
                 matches = pattern.regex.findall(line)

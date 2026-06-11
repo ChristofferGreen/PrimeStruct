@@ -3,6 +3,7 @@
 #include "CondensationDag.h"
 #include "SemanticsHelpers.h"
 #include "TypeResolutionGraphPreparation.h"
+#include "primec/StdlibCollectionPaths.h"
 #include "primec/testing/SemanticsGraphHelpers.h"
 
 #include <algorithm>
@@ -464,9 +465,9 @@ private:
         if (!scopedPrefix.empty() && scopedPrefix.back() != '/') {
           scopedPrefix += "/";
         }
-        if (prefix == "/std/collections/internal_vector") {
-          const std::string vectorPath =
-              std::string("/std/collections/experimental_") + "vector" + "/Vector";
+        if (prefix == collection_paths::moduleRoot(collection_paths::kInternalVectorFolder)) {
+          const std::string vectorPath = collection_paths::memberPath(
+              collection_paths::kVectorFolder, collection_paths::kVectorTypeName);
           if (publicDefinitions_.count(std::string(vectorPath)) > 0) {
             importAliases_["Vector"] = vectorPath;
           }

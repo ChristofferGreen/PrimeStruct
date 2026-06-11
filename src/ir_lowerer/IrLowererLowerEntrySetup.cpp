@@ -9,6 +9,7 @@
 #include "IrLowererGpuEffects.h"
 #include "IrLowererLowerEffects.h"
 #include "IrLowererNativeEffects.h"
+#include "IrLowererRequirementContractHelpers.h"
 #include "IrLowererResultHelpers.h"
 #include "IrLowererStructLayoutHelpers.h"
 #include "IrLowererStructTypeHelpers.h"
@@ -357,6 +358,16 @@ bool runLowerEntrySetup(const Program &program,
   }
 
   if (!findEntryDefinition(program, entryPath, entryDefOut, error)) {
+    return false;
+  }
+  std::vector<RequirementContractCheck> entryContractChecks;
+  if (!collectRequirementContractChecks(*entryDefOut, entryContractChecks, error)) {
+    return false;
+  }
+  if (!entryContractChecks.empty()) {
+    error = "runtime require(...) contracts are not supported on the program "
+            "entry definition: " +
+            entryDefOut->fullPath + ": " + entryContractChecks.front().sourceText;
     return false;
   }
   const bool useNativeEffectSurface = validationTarget == IrValidationTarget::Native;

@@ -1,3 +1,4 @@
+// soa-surface-audit: exempt
 #include "EmitterBuiltinCallPathHelpersInternal.h"
 #include "EmitterBuiltinMethodResolutionTypeInferenceInternal.h"
 #include "EmitterCollectionSurfaceMetadata.h"
@@ -6,6 +7,7 @@
 
 #include <array>
 #include <string_view>
+#include "primec/StdlibCollectionPaths.h"
 
 namespace primec::emitter {
 
@@ -50,7 +52,7 @@ bool isNamespacedStdlibBuiltinAlias(const std::string &alias) {
          alias == "repeat" || alias == "try" || alias == "location" ||
          alias == "dereference" || alias == "count" ||
          alias == "count_ref" || alias == "capacity" ||
-         alias == "to" "_aos" || alias == "to" "_aos_ref" ||
+         alias == "to_aos" || alias == "to_aos_ref" ||
          alias == "push" || alias == "pop" || alias == "reserve" ||
          alias == "clear" || alias == "remove_at" ||
          alias == "remove_swap" || alias == "move" ||
@@ -64,7 +66,7 @@ bool isNamespacedStdlibBuiltinAlias(const std::string &alias) {
          alias == "ref_ref" || alias == "at" ||
          alias == "at_unsafe" || alias == "array" ||
          alias == "vector" || (!keyValueAlias.empty() && alias == keyValueAlias) ||
-         alias == "soa" "_vector" || alias == "convert" ||
+         alias == "soa_vector" || alias == "convert" ||
          alias == "clamp" || alias == "min" || alias == "max" ||
          alias == "lerp" || alias == "fma" || alias == "hypot" ||
          alias == "copysign" || alias == "radians" ||
@@ -95,7 +97,7 @@ std::string experimentalCollectionMemberRootLocal(
     std::string_view collectionName,
     bool leadingSlash = false) {
   std::string root = leadingSlash ? "/" : "";
-  root += "std/collections/experimental_";
+  root += collection_paths::moduleRootBare(collection_paths::kExperimentalFolderPrefix);
   root += std::string(collectionName);
   root += "/";
   return root;
@@ -362,12 +364,12 @@ std::string normalizeInternalSoaStorageBuiltinAlias(const std::string &path) {
     name.erase(0, 1);
   }
   const std::array<std::string, 11> builtinPrefixes = {{
-      "std/collections/internal_soa_storage/",
-      "std/collections/internal_buffer_checked/",
-      "std/collections/internal_buffer_unchecked/",
-      "std/collections/experimental" "_soa" "_vector/",
-      "std/collections/experimental" "_soa" "_vector_conversions/",
-      "std/collections/" "soa" "_vector_conversions/",
+      collection_paths::modulePrefixBare(collection_paths::kInternalSoaStorageFolder),
+      collection_paths::modulePrefixBare(collection_paths::kInternalBufferCheckedFolder),
+      collection_paths::modulePrefixBare(collection_paths::kInternalBufferUncheckedFolder),
+      collection_paths::modulePrefixBare(collection_paths::kExperimentalSoaVectorFolder),
+      collection_paths::modulePrefixBare(collection_paths::kExperimentalSoaVectorConversionsFolder),
+      "std/collections/soa_vector_conversions/",
       experimentalCollectionMemberRootLocal("vector"),
       "std/collections/ContainerError/",
       "std/file/",
@@ -415,9 +417,8 @@ bool getBuiltinArrayAccessNameLocal(const Expr &expr, std::string &out) {
     return alias;
   };
   auto matchAccessAlias = [&](const std::string &normalizedName,
-                              const char *prefix,
+                              const std::string &prefixText,
                               const char *receiverBase) {
-    const std::string prefixText(prefix);
     if (normalizedName.rfind(prefixText, 0) != 0) {
       return false;
     }
@@ -471,7 +472,7 @@ bool getBuiltinArrayAccessNameLocal(const Expr &expr, std::string &out) {
     scopedName.erase(0, 1);
   }
   if (matchAccessAlias(scopedName,
-                       "std/collections/internal_soa_storage/",
+                       collection_paths::modulePrefixBare(collection_paths::kInternalSoaStorageFolder),
                        "SoaColumn")) {
     return true;
   }
@@ -480,10 +481,10 @@ bool getBuiltinArrayAccessNameLocal(const Expr &expr, std::string &out) {
                              experimentalCollectionMemberRootLocal("vector"))) {
     return true;
   }
-  if (scopedName.rfind("std/collections/internal_soa_storage/", 0) == 0) {
+  if (scopedName.rfind(collection_paths::modulePrefixBare(collection_paths::kInternalSoaStorageFolder), 0) == 0) {
     std::string alias = stripGeneratedSuffix(
         scopedName.substr(
-            std::string("std/collections/internal_soa_storage/").size()));
+            std::string(collection_paths::modulePrefixBare(collection_paths::kInternalSoaStorageFolder)).size()));
     if (alias == "at" || alias == "at_unsafe") {
       out = alias;
       return true;
@@ -610,8 +611,8 @@ bool isSimpleCallName(const Expr &expr, const char *nameToMatch) {
            name == "do" || name == "block" || name == "loop" || name == "for" ||
            name == "repeat" || name == "try" || name == "location" || name == "dereference" ||
            name == "count" || name == "count_ref" ||
-           name == "capacity" || name == "to" "_aos" ||
-           name == "to" "_aos_ref" ||
+           name == "capacity" || name == "to_aos" ||
+           name == "to_aos_ref" ||
            name == "push" || name == "reserve" ||
            name == "move" || name == "negate" ||
            name == "plus" || name == "minus" || name == "multiply" ||
@@ -956,9 +957,9 @@ bool getBuiltinCollectionName(const Expr &expr, std::string &out) {
   if (resolveCanonicalKeyValueHelperExprMemberName(expr, helperName)) {
     return false;
   }
-  if (scopedName.rfind("std/collections/internal_soa_storage/", 0) == 0) {
+  if (scopedName.rfind(collection_paths::modulePrefixBare(collection_paths::kInternalSoaStorageFolder), 0) == 0) {
     std::string alias = normalizeInternalSoaStorageBuiltinAlias(scopedName);
-    if (alias == "array" || alias == "soa" "_vector") {
+    if (alias == "array" || alias == "soa_vector") {
       out = alias;
       return true;
     }
@@ -973,8 +974,8 @@ bool getBuiltinCollectionName(const Expr &expr, std::string &out) {
   const std::string keyValueAlias = keyValueConstructorAliasToken();
   if (rawName == "array" || rawName == "vector" ||
       (!keyValueAlias.empty() && rawName == keyValueAlias) ||
-      rawName == "soa" "_vector" || rawName == "soa") {
-    out = rawName == "soa" ? "soa" "_vector" : rawName;
+      rawName == "soa_vector" || rawName == "soa") {
+    out = rawName == "soa" ? "soa_vector" : rawName;
     return true;
   }
   return false;

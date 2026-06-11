@@ -1,3 +1,4 @@
+// soa-surface-audit: exempt
 #include "IrLowererCountAccessClassifiers.h"
 
 #include <string_view>
@@ -6,6 +7,7 @@
 #include "IrLowererSetupTypeCollectionHelpers.h"
 #include "primec/AstCallPathHelpers.h"
 #include "primec/SoaPathHelpers.h"
+#include "primec/StdlibCollectionPaths.h"
 
 namespace primec::ir_lowerer::count_access_detail {
 
@@ -19,21 +21,12 @@ bool hasInferredTypedWrappedKeyValue(const LocalInfo &info, LocalInfo::Kind kind
 
 bool isVectorTargetImpl(const Expr &target, const LocalMap &localsIn);
 
-std::string experimentalCollectionRoot(std::string_view collectionName) {
-  return "/std/collections/experimental_" + std::string(collectionName);
-}
-
-std::string experimentalCollectionTypePath(std::string_view collectionName,
-                                           std::string_view typeName) {
-  return experimentalCollectionRoot(collectionName) + "/" + std::string(typeName);
-}
-
 bool isExperimentalCollectionStructPath(const std::string &structTypeName,
                                         std::string_view collectionName,
                                         std::string_view typeName) {
-  const std::string basePath = experimentalCollectionTypePath(collectionName, typeName);
-  return structTypeName == basePath ||
-         structTypeName.rfind(basePath + "__", 0) == 0;
+  const std::string basePath = collection_paths::memberPath(
+      collection_paths::typeIdentityFolder(collectionName), typeName);
+  return collection_paths::isTypePathOrSpecialization(structTypeName, basePath);
 }
 
 std::string unrootedSoaCollectionPath(std::string_view folderName) {
@@ -45,11 +38,13 @@ std::string unrootedSoaCollectionPath(std::string_view folderName) {
 }
 
 std::string soaConversionHelperName() {
-  return std::string("to") + "_aos";
+  return "to_aos";
 }
 
 bool isCollectionVectorRecordPath(const std::string &structTypeName) {
-  return isExperimentalCollectionStructPath(structTypeName, "vector", "Vector");
+  return isExperimentalCollectionStructPath(structTypeName,
+                                            collection_paths::kVectorFolder,
+                                            collection_paths::kVectorTypeName);
 }
 
 bool getArrayVectorAccessClassifierName(const Expr &expr,

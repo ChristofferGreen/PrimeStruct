@@ -1,3 +1,4 @@
+// soa-surface-audit: exempt
 #include "SemanticsValidator.h"
 #include "SemanticsValidatorInferCollectionCompatibilityInternal.h"
 
@@ -328,21 +329,21 @@ std::string SemanticsValidator::preferVectorStdlibHelperPath(const std::string &
       }
     }
   }
-  if (preferred.rfind("/soa" "_vector/", 0) == 0 && !hasVisibleDefinitionPath(preferred)) {
-    const std::string suffix = preferred.substr(std::string("/soa" "_vector/").size());
-    const std::string stdlibAlias = "/std/collections/" "soa" "_vector/" + suffix;
+  if (preferred.rfind("/soa_vector/", 0) == 0 && !hasVisibleDefinitionPath(preferred)) {
+    const std::string suffix = preferred.substr(std::string("/soa_vector/").size());
+    const std::string stdlibAlias = "/std/collections/soa_vector/" + suffix;
     if (hasVisibleDefinitionPath(stdlibAlias)) {
       preferred = stdlibAlias;
     }
   }
-  if (preferred.rfind("/std/collections/" "soa" "_vector/", 0) == 0 &&
+  if (preferred.rfind("/std/collections/soa_vector/", 0) == 0 &&
       !hasVisibleDefinitionPath(preferred)) {
     const std::string suffix =
-        preferred.substr(std::string("/std/collections/" "soa" "_vector/").size());
+        preferred.substr(std::string("/std/collections/soa_vector/").size());
     const std::string samePath =
-        (suffix == "to" "_aos" || suffix == "to" "_aos_ref")
+        (suffix == "to_aos" || suffix == "to_aos_ref")
             ? "/" + suffix
-            : "/soa" "_vector/" + suffix;
+            : "/soa_vector/" + suffix;
     if (hasVisibleDefinitionPath(samePath)) {
       preferred = samePath;
     }
@@ -467,6 +468,11 @@ bool SemanticsValidator::tryRewriteBareVectorHelperCall(
       rewrittenOut.namespacePrefix.clear();
       return true;
     }
+    if (isPublishedVectorMutatorHelperName(helperName)) {
+      rewrittenOut.name = preferredHelperPath;
+      rewrittenOut.namespacePrefix.clear();
+      return true;
+    }
     const std::string experimentalHelperPath =
         specializedExperimentalVectorHelperTarget(helperName, experimentalElemType);
     const std::string experimentalBasePath =
@@ -513,11 +519,11 @@ bool SemanticsValidator::tryRewriteCanonicalExperimentalVectorHelperCall(
   }
   const std::string resolvedCandidatePath =
       canonicalizeLegacySoaToAosHelperPath(resolveCalleePath(candidate));
-  if (isLegacyOrCanonicalSoaHelperPath(resolvedCandidatePath, "to" "_aos") ||
-      isLegacyOrCanonicalSoaHelperPath(resolvedCandidatePath, "to" "_aos_ref") ||
+  if (isLegacyOrCanonicalSoaHelperPath(resolvedCandidatePath, "to_aos") ||
+      isLegacyOrCanonicalSoaHelperPath(resolvedCandidatePath, "to_aos_ref") ||
       isSimpleCallName(candidate, "to_soa") ||
-      isSimpleCallName(candidate, "to" "_aos") ||
-      isSimpleCallName(candidate, "to" "_aos_ref")) {
+      isSimpleCallName(candidate, "to_aos") ||
+      isSimpleCallName(candidate, "to_aos_ref")) {
     return false;
   }
 

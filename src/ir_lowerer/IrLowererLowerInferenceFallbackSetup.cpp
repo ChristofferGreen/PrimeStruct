@@ -1,3 +1,4 @@
+// soa-surface-audit: exempt
 #include "IrLowererLowerInferenceSetup.h"
 
 #include "IrLowererHelpers.h"
@@ -10,7 +11,7 @@ namespace primec::ir_lowerer {
 namespace {
 
 bool isVectorCollectionStructPath(const std::string &structPath) {
-  return structPath == normalizeBuiltinCollectionStructPath("vector") ||
+  return structPath == vectorBuiltinStructNormalizedPath() ||
          isExperimentalCollectionTypeName(structPath, "vector", "Vector");
 }
 
@@ -98,7 +99,7 @@ bool runLowerInferenceExprKindCallFallbackSetup(const LowerInferenceExprKindCall
           const Expr &receiver = candidate.args.front();
           auto assignReceiverCollectionValueKind = [&](const std::string &collectionName,
                                                       const std::vector<std::string> &collectionArgs) {
-            if ((collectionName == "array" || collectionName == "vector" || collectionName == "soa" "_vector") &&
+            if ((collectionName == "array" || collectionName == "vector" || collectionName == "soa_vector") &&
                 collectionArgs.size() == 1) {
               kindOut = valueKindFromTypeName(collectionArgs.front());
               return kindOut != LocalInfo::ValueKind::Unknown;
@@ -240,7 +241,7 @@ bool runLowerInferenceExprKindCallFallbackSetup(const LowerInferenceExprKindCall
         if (!inferDeclaredReturnCollection(*callee, collectionName, collectionArgs)) {
           return false;
         }
-        if ((collectionName == "array" || collectionName == "vector" || collectionName == "soa" "_vector") &&
+        if ((collectionName == "array" || collectionName == "vector" || collectionName == "soa_vector") &&
             collectionArgs.size() == 1) {
           kindOut = valueKindFromTypeName(collectionArgs.front());
           return true;

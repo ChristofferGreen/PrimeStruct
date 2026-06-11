@@ -1,3 +1,4 @@
+// soa-surface-audit: exempt
 #include "SemanticsValidator.h"
 #include "StdlibCollectionSurfaceHelpers.h"
 
@@ -132,12 +133,12 @@ bool SemanticsValidator::resolveLeadingNonCollectionAccessReceiverPath(
     return false;
   }
   if (isSimpleCallName(receiverExpr, "array") || isSimpleCallName(receiverExpr, "vector") ||
-      isSimpleCallName(receiverExpr, "map") || isSimpleCallName(receiverExpr, "soa" "_vector")) {
+      isSimpleCallName(receiverExpr, "map") || isSimpleCallName(receiverExpr, "soa_vector")) {
     return false;
   }
   const std::string resolvedReceiverPath = resolveCalleePath(receiverExpr);
   if (resolvedReceiverPath == "/array" || resolvedReceiverPath == "/vector" ||
-      isRootMapCollectionReceiverPath(resolvedReceiverPath) || resolvedReceiverPath == "/soa" "_vector") {
+      isRootMapCollectionReceiverPath(resolvedReceiverPath) || resolvedReceiverPath == "/soa_vector") {
     return false;
   }
   auto defIt = defMap_.find(resolvedReceiverPath);
@@ -203,7 +204,7 @@ bool SemanticsValidator::resolveDirectCallTemporaryAccessReceiverPath(
     return false;
   }
   if (isSimpleCallName(receiverExpr, "array") || isSimpleCallName(receiverExpr, "vector") ||
-      isSimpleCallName(receiverExpr, "map") || isSimpleCallName(receiverExpr, "soa" "_vector")) {
+      isSimpleCallName(receiverExpr, "map") || isSimpleCallName(receiverExpr, "soa_vector")) {
     return false;
   }
   const std::string resolvedReceiverPath = resolveCalleePath(receiverExpr);

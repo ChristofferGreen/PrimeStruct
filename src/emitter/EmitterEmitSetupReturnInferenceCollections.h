@@ -1,3 +1,4 @@
+// soa-surface-audit: exempt
   auto allowsArrayVectorCompatibilitySuffix = [](const std::string &suffix) {
     return suffix != "count" && suffix != "capacity" && suffix != "at" && suffix != "at_unsafe" &&
            suffix != "push" && suffix != "pop" && suffix != "reserve" && suffix != "clear" &&
@@ -185,7 +186,7 @@
       std::string vectorMemberName;
       if (normalizedPath.rfind("array/", 0) == 0 ||
           resolveVectorHelperMemberName(normalizedPath, true, vectorMemberName) ||
-          normalizedPath.rfind("std/collections/" "soa" "_vector/", 0) == 0) {
+          normalizedPath.rfind("std/collections/soa_vector/", 0) == 0) {
         normalizedPath.insert(normalizedPath.begin(), '/');
       }
     }

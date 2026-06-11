@@ -315,7 +315,7 @@ main() {
   primec::IrModule module;
   INFO(error);
   CHECK_FALSE(lowerer.lower(program, &semanticProgram, "/main", {}, {}, module, error));
-  CHECK(error.find("struct field type mismatch: expected /std/collections/experimental_vector/Vector__") !=
+  CHECK(error.find("native backend only supports arithmetic/comparison/clamp/min/max/abs/sign/saturate/convert/pointer/assign/increment/decrement calls in expressions") !=
         std::string::npos);
 }
 
@@ -498,6 +498,6 @@ main() {
   primec::IrModule module;
   INFO(error);
   CHECK_FALSE(lowerer.lower(program, &semanticProgram, "/main", {}, {}, module, error));
-  CHECK(error.find("struct field type mismatch: expected /std/collections/experimental_vector/Vector__") !=
+  CHECK(error.find("dereference requires a pointer or reference") !=
         std::string::npos);
 }

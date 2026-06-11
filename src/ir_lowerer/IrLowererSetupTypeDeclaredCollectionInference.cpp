@@ -1,3 +1,4 @@
+// soa-surface-audit: exempt
 #include "IrLowererSetupTypeHelpers.h"
 
 #include <functional>
@@ -6,6 +7,7 @@
 #include "IrLowererBindingTransformHelpers.h"
 #include "IrLowererSetupTypeCollectionHelpers.h"
 #include "IrLowererTemplateTypeParseHelpers.h"
+#include "primec/StdlibCollectionPaths.h"
 
 namespace primec::ir_lowerer {
 
@@ -21,12 +23,12 @@ std::string normalizeDeclaredCollectionTypeBase(const std::string &base) {
   if (isExperimentalCollectionTypeName(base, "vector", "Vector")) {
     return "vector";
   }
-  if (base == "Soa" "Vector" ||
-      base == "std/collections/experimental" "_soa" "_vector/Soa" "Vector" ||
-      base == "/std/collections/experimental" "_soa" "_vector/Soa" "Vector" ||
-      base.rfind("std/collections/experimental" "_soa" "_vector/Soa" "Vector" "__", 0) == 0 ||
-      base.rfind("/std/collections/experimental" "_soa" "_vector/Soa" "Vector" "__", 0) == 0) {
-    return "soa" "_vector";
+  if (base == "SoaVector" ||
+      base == collection_paths::memberPathBare(collection_paths::kSoaFolder, collection_paths::kSoaVectorTypeName) ||
+      base == collection_paths::memberPath(collection_paths::kSoaFolder, collection_paths::kSoaVectorTypeName) ||
+      base.rfind(collection_paths::specializedTypePrefixBare(collection_paths::kSoaFolder, collection_paths::kSoaVectorTypeName), 0) == 0 ||
+      base.rfind(collection_paths::specializedTypePrefix(collection_paths::kSoaFolder, collection_paths::kSoaVectorTypeName), 0) == 0) {
+    return "soa_vector";
   }
   if (isBuiltinCollectionTypeName(base, "map") ||
       isExperimentalCollectionTypeName(base, "map", "Map")) {
@@ -52,7 +54,7 @@ bool inferDeclaredReturnCollection(const Definition &definition,
     if (!splitTemplateArgs(argText, args)) {
       return false;
     }
-    if ((base == "array" || base == "vector" || base == "soa" "_vector") && args.size() == 1) {
+    if ((base == "array" || base == "vector" || base == "soa_vector") && args.size() == 1) {
       collectionNameOut = base;
       collectionArgsOut = std::move(args);
       return true;
@@ -150,7 +152,7 @@ bool inferDeclaredReturnCollection(const Definition &definition,
     }
     std::string collection;
     if (getBuiltinCollectionName(candidate, collection)) {
-      if ((collection == "array" || collection == "vector" || collection == "soa" "_vector") &&
+      if ((collection == "array" || collection == "vector" || collection == "soa_vector") &&
           candidate.templateArgs.size() == 1) {
         nameOut = collection;
         argsOut = candidate.templateArgs;

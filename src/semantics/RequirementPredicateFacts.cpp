@@ -1,3 +1,4 @@
+// soa-surface-audit: exempt
 #include "RequirementPredicateFacts.h"
 
 #include "primec/StringLiteral.h"
@@ -432,7 +433,7 @@ bool isPrimitiveOrBuiltinTypeName(std::string_view typeText) {
          normalized == "Pointer" || normalized == "Reference" ||
          normalized == "array" || normalized == "Buffer" ||
          normalized == "Maybe" || normalized == "Result" ||
-         normalized == "soa" "_vector" || normalized == "vector";
+         normalized == "soa_vector" || normalized == "vector";
 }
 
 std::string resolveNominalPath(const RequirementPredicateDefinitionContext &context,
@@ -661,6 +662,55 @@ ValueOperandResolution resolveValueOperand(
           0,
           "unsupported value operand for requirement predicate " +
               std::string(predicateName) + ": " + operand.text};
+}
+
+bool isRuntimeCountableContractParameterType(const BindingInfo &binding) {
+  const std::string normalized = normalizeBindingTypeName(binding.typeName);
+  return normalized == "vector" || normalized == "array" ||
+         normalized == "string";
+}
+
+bool isRuntimeIntegerContractParameterType(const BindingInfo &binding) {
+  if (!binding.typeTemplateArg.empty()) {
+    return false;
+  }
+  const std::string normalized = normalizeBindingTypeName(binding.typeName);
+  return normalized == "int" || normalized == "uint" || normalized == "i8" ||
+         normalized == "i16" || normalized == "i32" || normalized == "i64" ||
+         normalized == "u8" || normalized == "u16" || normalized == "u32" ||
+         normalized == "u64";
+}
+
+// Classifies an operand that is not a compile-time fact as a runtime-checkable
+// contract operand. Returns the runtime operand kind, or an empty string when
+// the operand cannot be checked by a deterministic runtime precondition.
+std::string runtimeContractOperandKind(
+    const RequirementPredicateDefinitionContext &context,
+    const RequirementPredicateOperandFact &operand) {
+  const std::string text = trimRequirementText(operand.text);
+  if (text.rfind("count(", 0) == 0 && text.size() > 7 && text.back() == ')') {
+    const std::string inner = trimRequirementText(
+        std::string_view(text).substr(6, text.size() - 7));
+    if (!isRequirementSymbolText(inner) ||
+        inner.find('/') != std::string::npos ||
+        inner.find('.') != std::string::npos ||
+        inner.find(':') != std::string::npos) {
+      return {};
+    }
+    if (const BindingInfo *binding = findParameterBinding(context, inner);
+        binding != nullptr &&
+        isRuntimeCountableContractParameterType(*binding)) {
+      return "runtime_count_of_parameter";
+    }
+    return {};
+  }
+  if (isRequirementSymbolText(text) && !isTemplateTypeParameter(context, text)) {
+    if (const BindingInfo *binding = findParameterBinding(context, text);
+        binding != nullptr && isRuntimeIntegerContractParameterType(*binding)) {
+      return "runtime_parameter_value";
+    }
+  }
+  return {};
 }
 
 std::string formatResolvedTypeFacts(const std::vector<TypeOperandResolution> &resolved) {
@@ -1130,10 +1180,21 @@ void evaluateBuiltinValuePredicate(RequirementPredicateFactDraft &fact,
   std::vector<ValueOperandResolution> resolved;
   resolved.reserve(fact.operands.size());
   bool deferred = false;
-  for (const auto &operand : fact.operands) {
+  std::vector<std::string> runtimeOperandKinds(fact.operands.size());
+  bool runtimeCheckable = false;
+  for (std::size_t operandIndex = 0; operandIndex < fact.operands.size();
+       ++operandIndex) {
+    const auto &operand = fact.operands[operandIndex];
     ValueOperandResolution resolution =
         resolveValueOperand(context, operand, fact.predicateName);
     if (resolution.status == ValueOperandStatus::Invalid) {
+      std::string runtimeKind = runtimeContractOperandKind(context, operand);
+      if (!runtimeKind.empty()) {
+        runtimeOperandKinds[operandIndex] = std::move(runtimeKind);
+        runtimeCheckable = true;
+        resolved.push_back({ValueOperandStatus::Resolved, 0, {}});
+        continue;
+      }
       fact.evaluationOutcome = "invalid_evaluation";
       fact.evaluationDiagnostic = std::move(resolution.diagnostic);
       return;
@@ -1147,6 +1208,21 @@ void evaluateBuiltinValuePredicate(RequirementPredicateFactDraft &fact,
     fact.evaluationOutcome = "invalid_evaluation";
     fact.evaluationDiagnostic =
         "requirement predicate evaluation deferred for unresolved value facts";
+    return;
+  }
+  if (runtimeCheckable) {
+    for (std::size_t operandIndex = 0; operandIndex < fact.operands.size();
+         ++operandIndex) {
+      if (runtimeOperandKinds[operandIndex].empty()) {
+        continue;
+      }
+      fact.operands[operandIndex].kind = runtimeOperandKinds[operandIndex];
+      fact.operands[operandIndex].stableHandle = requirementOperandStableHandle(
+          fact.operands[operandIndex].kind, fact.operands[operandIndex].text);
+    }
+    fact.evaluationOutcome = "runtime_contract";
+    fact.evaluationDiagnostic =
+        "contract deferred to runtime precondition check: " + fact.sourceText;
     return;
   }
 

@@ -629,7 +629,7 @@ TEST_CASE("C++ emitter helper resolves borrowed local soa_vector field methods t
   localTypes.emplace("borrowed", receiverInfo);
 
   primec::Definition concreteYDef;
-  concreteYDef.fullPath = "/std/collections/experimental_soa_vector/SoaVector__Particle/y";
+  concreteYDef.fullPath = "/std/collections/soa/SoaVector__Particle/y";
 
   std::unordered_map<std::string, const primec::Definition *> defMap = {
       {concreteYDef.fullPath, &concreteYDef},
@@ -669,7 +669,7 @@ TEST_CASE("C++ emitter helper resolves location and dereference soa_vector field
   localTypes.emplace("values", valuesInfo);
 
   primec::Definition concreteYDef;
-  concreteYDef.fullPath = "/std/collections/experimental_soa_vector/SoaVector__Particle/y";
+  concreteYDef.fullPath = "/std/collections/soa/SoaVector__Particle/y";
 
   std::unordered_map<std::string, const primec::Definition *> defMap = {
       {concreteYDef.fullPath, &concreteYDef},
@@ -809,7 +809,7 @@ TEST_CASE("C++ emitter helper resolves helper-return concrete soa_vector field m
   primec::Definition borrowDef;
   borrowDef.fullPath = "/pickBorrowed";
   primec::Definition concreteYDef;
-  concreteYDef.fullPath = "/std/collections/experimental_soa_vector/SoaVector__Particle/y";
+  concreteYDef.fullPath = "/std/collections/soa/SoaVector__Particle/y";
 
   std::unordered_map<std::string, const primec::Definition *> defMap = {
       {borrowDef.fullPath, &borrowDef},
@@ -819,7 +819,7 @@ TEST_CASE("C++ emitter helper resolves helper-return concrete soa_vector field m
   std::unordered_map<std::string, std::string> structTypeMap;
   std::unordered_map<std::string, primec::emitter::ReturnKind> returnKinds;
   std::unordered_map<std::string, std::string> returnStructs = {
-      {"/pickBorrowed", "/std/collections/experimental_soa_vector/SoaVector__Particle"},
+      {"/pickBorrowed", "/std/collections/soa/SoaVector__Particle"},
   };
 
   std::string resolved;
@@ -867,7 +867,7 @@ TEST_CASE("C++ emitter helper keeps helper-return soa_vector mutator shadows on 
   canonicalReserveDef.fullPath = "/std/collections/soa_vector/reserve";
   primec::Definition concretePushDef;
   concretePushDef.fullPath =
-      "/std/collections/experimental_soa_vector/SoaVector__Particle/push";
+      "/std/collections/soa/SoaVector__Particle/push";
 
   std::unordered_map<std::string, const primec::Definition *> defMap = {
       {borrowDef.fullPath, &borrowDef},
@@ -881,7 +881,7 @@ TEST_CASE("C++ emitter helper keeps helper-return soa_vector mutator shadows on 
   std::unordered_map<std::string, std::string> structTypeMap;
   std::unordered_map<std::string, primec::emitter::ReturnKind> returnKinds;
   std::unordered_map<std::string, std::string> returnStructs = {
-      {"/pickBorrowed", "/std/collections/experimental_soa_vector/SoaVector__Particle"},
+      {"/pickBorrowed", "/std/collections/soa/SoaVector__Particle"},
   };
 
   auto expectResolved = [&](const char *methodName, const char *expectedPath) {
@@ -935,10 +935,10 @@ TEST_CASE("C++ emitter helper keeps direct helper-return soa_vector mutator shad
   canonicalReserveDef.fullPath = "/std/collections/soa_vector/reserve";
   primec::Definition concretePushDef;
   concretePushDef.fullPath =
-      "/std/collections/experimental_soa_vector/SoaVector__Particle/push";
+      "/std/collections/soa/SoaVector__Particle/push";
   primec::Definition concreteReserveDef;
   concreteReserveDef.fullPath =
-      "/std/collections/experimental_soa_vector/SoaVector__Particle/reserve";
+      "/std/collections/soa/SoaVector__Particle/reserve";
 
   std::unordered_map<std::string, const primec::Definition *> defMap = {
       {cloneDef.fullPath, &cloneDef},
@@ -951,12 +951,12 @@ TEST_CASE("C++ emitter helper keeps direct helper-return soa_vector mutator shad
   };
   std::unordered_map<std::string, std::string> importAliases;
   std::unordered_map<std::string, std::string> structTypeMap = {
-      {"/std/collections/experimental_soa_vector/SoaVector__Particle",
-       "/std/collections/experimental_soa_vector/SoaVector__Particle"},
+      {"/std/collections/soa/SoaVector__Particle",
+       "/std/collections/soa/SoaVector__Particle"},
   };
   std::unordered_map<std::string, primec::emitter::ReturnKind> returnKinds;
   std::unordered_map<std::string, std::string> returnStructs = {
-      {"/cloneValues", "/std/collections/experimental_soa_vector/SoaVector__Particle"},
+      {"/cloneValues", "/std/collections/soa/SoaVector__Particle"},
   };
 
   auto expectResolved = [&](const char *methodName, const char *expectedPath) {
@@ -1020,10 +1020,10 @@ TEST_CASE("C++ emitter helper keeps nested helper-return soa_vector mutator shad
   canonicalReserveDef.fullPath = "/std/collections/soa_vector/reserve";
   primec::Definition concretePushDef;
   concretePushDef.fullPath =
-      "/std/collections/experimental_soa_vector/SoaVector__Particle/push";
+      "/std/collections/soa/SoaVector__Particle/push";
   primec::Definition concreteReserveDef;
   concreteReserveDef.fullPath =
-      "/std/collections/experimental_soa_vector/SoaVector__Particle/reserve";
+      "/std/collections/soa/SoaVector__Particle/reserve";
 
   std::unordered_map<std::string, const primec::Definition *> defMap = {
       {holderCloneDef.fullPath, &holderCloneDef},
@@ -1036,12 +1036,12 @@ TEST_CASE("C++ emitter helper keeps nested helper-return soa_vector mutator shad
   };
   std::unordered_map<std::string, std::string> importAliases;
   std::unordered_map<std::string, std::string> structTypeMap = {
-      {"/std/collections/experimental_soa_vector/SoaVector__Particle",
-       "/std/collections/experimental_soa_vector/SoaVector__Particle"},
+      {"/std/collections/soa/SoaVector__Particle",
+       "/std/collections/soa/SoaVector__Particle"},
   };
   std::unordered_map<std::string, primec::emitter::ReturnKind> returnKinds;
   std::unordered_map<std::string, std::string> returnStructs = {
-      {"/Holder/cloneValues", "/std/collections/experimental_soa_vector/SoaVector__Particle"},
+      {"/Holder/cloneValues", "/std/collections/soa/SoaVector__Particle"},
   };
 
   auto expectResolved = [&](const char *methodName, const char *expectedPath) {

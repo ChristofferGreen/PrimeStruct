@@ -16,12 +16,12 @@ recorded here manually before starting new implementation work.
 ## Current Failures
 
 <!-- compile.sh:failing-tests:start -->
-- Last updated: `2026-06-04T13:20:32Z`
-- Build type: `Debug`
-- Build dir: `build-debug`
-- Command: `ctest --test-dir build-debug --output-on-failure --parallel 11`
-- Result: `ctest` failed with status `137`.
-- Failing CTest cases:
+- Last updated: `2026-06-05T11:28:59Z`
+- Build type: `Release`
+- Build dir: `build-release`
+- Command: `ctest --test-dir build-release --output-on-failure --parallel 11`
+- Result: `ctest` passed.
+- Failing CTest cases: none
 <!-- compile.sh:failing-tests:end -->
 
 ## Notes

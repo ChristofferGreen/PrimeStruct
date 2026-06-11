@@ -194,7 +194,7 @@ TEST_CASE("ir lowerer bundled uninitialized adapters specialize vector local str
 
   const std::string inferredStructPath =
       adapters.inferStructExprPath(valuesExpr, locals);
-  CHECK(inferredStructPath.rfind("/std/collections/experimental_vector/Vector__", 0) == 0);
+  CHECK(inferredStructPath.rfind("/std/collections/vector/Vector__", 0) == 0);
 }
 
 TEST_CASE("ir lowerer binding transform helpers classify qualifiers and mutability") {
@@ -331,28 +331,28 @@ TEST_CASE("ir lowerer binding type helpers classify binding kind and string/file
   primec::Expr defaultExpr;
   CHECK(primec::ir_lowerer::bindingKindFromTransforms(defaultExpr) == primec::ir_lowerer::LocalInfo::Kind::Value);
   CHECK(primec::ir_lowerer::normalizeCollectionBindingTypeName(
-            "std/collections/experimental_soa_vector/SoaVector__Particle") ==
+            "std/collections/soa/SoaVector__Particle") ==
         "soa_vector");
   CHECK(primec::ir_lowerer::normalizeCollectionBindingTypeName(
-            "/std/collections/experimental_soa_vector/SoaVector__Particle") ==
+            "/std/collections/soa/SoaVector__Particle") ==
         "soa_vector");
   CHECK(primec::ir_lowerer::normalizeCollectionBindingTypeName("SoaVector__Particle") ==
         "soa_vector");
   CHECK(primec::ir_lowerer::normalizeCollectionBindingTypeName(
-            "std/collections/experimental_soa_vector/SoaVector") ==
+            "std/collections/soa/SoaVector") ==
         "soa_vector");
   CHECK(primec::ir_lowerer::normalizeCollectionBindingTypeName(
-            "/std/collections/experimental_soa_vector/SoaVector") ==
+            "/std/collections/soa/SoaVector") ==
         "soa_vector");
   CHECK(primec::ir_lowerer::normalizeCollectionBindingTypeName("SoaVector") ==
         "soa_vector");
   CHECK(primec::ir_lowerer::normalizeCollectionBindingTypeName("/SoaVector") ==
         "soa_vector");
   CHECK(primec::ir_lowerer::normalizeCollectionBindingTypeName(
-            "std/collections/experimental_soa_vector/SoaVector<Particle>") ==
+            "std/collections/soa/SoaVector<Particle>") ==
         "soa_vector");
   CHECK(primec::ir_lowerer::normalizeCollectionBindingTypeName(
-            "/std/collections/experimental_soa_vector/SoaVector<Particle>") ==
+            "/std/collections/soa/SoaVector<Particle>") ==
         "soa_vector");
   CHECK(primec::ir_lowerer::normalizeCollectionBindingTypeName("SoaVector<Particle>") ==
         "soa_vector");
@@ -857,7 +857,7 @@ TEST_CASE("ir lowerer binding type helpers prefer semantic collection specializa
   CHECK(soaInfo.referenceToVector);
   CHECK(soaInfo.isSoaVector);
   CHECK(soaInfo.structTypeName.rfind(
-            "/std/collections/experimental_soa_vector/SoaVector__", 0) == 0);
+            "/std/collections/soa/SoaVector__", 0) == 0);
   CHECK(soaInfo.valueKind == primec::ir_lowerer::LocalInfo::ValueKind::Unknown);
 }
 

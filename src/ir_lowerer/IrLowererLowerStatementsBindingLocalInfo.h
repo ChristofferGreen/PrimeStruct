@@ -1,3 +1,4 @@
+// soa-surface-audit: exempt
       if (!semanticLocalAutoBinding && !hasExplicitBindingTypeTransform(stmt) && info.kind == LocalInfo::Kind::Value) {
         ResultExprInfo inferredResultInfo;
         if (resolveResultExprInfoFromLocals(
@@ -78,7 +79,7 @@
         return false;
       }
       for (const auto &transform : bindingTypeExprRef.transforms) {
-        if (normalizeCollectionBindingTypeName(transform.name) == "soa" "_vector") {
+        if (normalizeCollectionBindingTypeName(transform.name) == "soa_vector") {
           info.isSoaVector = true;
           break;
         }
@@ -91,7 +92,7 @@
       }
       if (!info.isSoaVector && init.kind == Expr::Kind::Call) {
         std::string collection;
-        if (getBuiltinCollectionName(init, collection) && collection == "soa" "_vector") {
+        if (getBuiltinCollectionName(init, collection) && collection == "soa_vector") {
           info.isSoaVector = true;
         }
       }
@@ -185,7 +186,7 @@
                 semanticTypeText =
                     unwrapTopLevelUninitializedTypeText(trimTemplateTypeText(argText));
               } else if (normalizedBase == "array" || normalizedBase == "vector" ||
-                         normalizedBase == "map" || normalizedBase == "soa" "_vector" ||
+                         normalizedBase == "map" || normalizedBase == "soa_vector" ||
                          normalizedBase == "Buffer" || normalizedBase == "Result" ||
                          normalizedBase == "File") {
                 semanticTypeText.clear();

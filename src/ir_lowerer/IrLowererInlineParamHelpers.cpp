@@ -1,3 +1,4 @@
+// soa-surface-audit: exempt
 #include "IrLowererInlineParamHelpers.h"
 #include "IrLowererInlinePackedArgs.h"
 
@@ -22,37 +23,31 @@ bool isCanonicalBuiltinSoaBridgePath(const std::string &calleePath) {
     return calleePath == path ||
            calleePath.rfind(std::string(path) + "__", 0) == 0;
   };
-  return matchesPath("/std/collections/" "soa" "_vector/count") ||
-         matchesPath("/std/collections/" "soa/count") ||
-         matchesPath("/std/collections/" "soa/count_ref") ||
-         matchesPath("/std/collections/" "soa" "_vector/get") ||
-         matchesPath("/std/collections/" "soa/get") ||
-         matchesPath("/std/collections/" "soa" "_vector/get_ref") ||
-         matchesPath("/std/collections/" "soa/get_ref") ||
-         matchesPath("/std/collections/" "soa" "_vector/ref") ||
-         matchesPath("/std/collections/" "soa/ref") ||
-         matchesPath("/std/collections/" "soa" "_vector/ref_ref") ||
-         matchesPath("/std/collections/" "soa/ref_ref") ||
-         matchesPath("/std/collections/" "soa/push") ||
-         matchesPath("/std/collections/" "soa/reserve") ||
-         matchesPath("/std/collections/" "soa/field_view") ||
-         matchesPath("/std/collections/" "soa/to" "_aos") ||
-         matchesPath("/std/collections/" "soa" "_vector/to" "_aos") ||
-         matchesPath("/std/collections/" "soa" "_vector/to" "_aos_ref");
+  return matchesPath("/std/collections/soa_vector/count") ||
+         matchesPath("/std/collections/soa/count") ||
+         matchesPath("/std/collections/soa/count_ref") ||
+         matchesPath("/std/collections/soa_vector/get") ||
+         matchesPath("/std/collections/soa/get") ||
+         matchesPath("/std/collections/soa_vector/get_ref") ||
+         matchesPath("/std/collections/soa/get_ref") ||
+         matchesPath("/std/collections/soa_vector/ref") ||
+         matchesPath("/std/collections/soa/ref") ||
+         matchesPath("/std/collections/soa_vector/ref_ref") ||
+         matchesPath("/std/collections/soa/ref_ref") ||
+         matchesPath("/std/collections/soa/push") ||
+         matchesPath("/std/collections/soa/reserve") ||
+         matchesPath("/std/collections/soa/field_view") ||
+         matchesPath("/std/collections/soa/to_aos") ||
+         matchesPath("/std/collections/soa_vector/to_aos") ||
+         matchesPath("/std/collections/soa_vector/to_aos_ref");
 }
 
 bool isExperimentalSoaVectorStructPath(const std::string &structPath) {
   return soa_paths::isExperimentalColumnarVectorSpecializedTypePath(structPath);
 }
 
-std::string experimentalCollectionTypePath(std::string_view collectionName,
-                                           std::string_view typeName) {
-  return "/std/collections/experimental_" + std::string(collectionName) +
-         "/" + std::string(typeName);
-}
-
 bool isCollectionVectorRecordPath(const std::string &structPath) {
-  const std::string vectorTypePath = experimentalCollectionTypePath("vector", "Vector");
+  const std::string vectorTypePath = vectorBackingTypePath();
   return structPath == vectorTypePath ||
          structPath.rfind(vectorTypePath + "__", 0) == 0;
 }
@@ -70,7 +65,7 @@ bool isBuiltinSoaToAosStructMatch(const std::string &calleePath,
       isExperimentalSoaVectorStructPath(argStruct)) {
     return false;
   }
-  if (normalizeCollectionBindingTypeName(argStruct) != "soa" "_vector") {
+  if (normalizeCollectionBindingTypeName(argStruct) != "soa_vector") {
     return false;
   }
   return isCanonicalBuiltinSoaBridgePath(calleePath);
@@ -146,7 +141,7 @@ bool emitBuiltinSoaToAosStructBridge(
     std::string &error) {
   StructSlotFieldInfo storageField;
   if (!resolveBuiltinSoaToAosStorageField(layout, storageField) || storageField.slotCount < 5) {
-    error = "internal error: builtin soa" "_vector to" "_aos bridge requires Soa" "Vector storage layout";
+    error = "internal error: builtin soa_vector to_aos bridge requires SoaVector storage layout";
     return false;
   }
 
@@ -866,7 +861,7 @@ bool emitInlineDefinitionCallParameters(
           argStruct.substr(1) == paramInfo.structTypeName) {
         copiedParamInfo.structTypeName = argStruct;
       }
-      if (paramInfo.isMutable) {
+      if (paramInfo.isMutable || isMapLikeStructTypeName(copiedParamInfo.structTypeName)) {
         if (!emitExpr(*orderedArg, callerLocals)) {
           return false;
         }

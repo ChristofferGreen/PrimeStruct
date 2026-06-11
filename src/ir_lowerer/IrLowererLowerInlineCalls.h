@@ -4,8 +4,8 @@
                                  bool requireValue) -> bool {
     const auto isInternalSoaMetadataInlineHelper =
         [](std::string_view path, std::string_view fieldName) {
-          if (path.rfind("/std/collections/internal_soa_storage/SoaColumn", 0) != 0 &&
-              path.rfind("/std/collections/internal_soa_storage/SoaFieldView", 0) != 0) {
+          if (path.rfind(collection_paths::memberPath(collection_paths::kInternalSoaStorageFolder, collection_paths::kSoaColumnTypeName), 0) != 0 &&
+              path.rfind(collection_paths::memberPath(collection_paths::kInternalSoaStorageFolder, "SoaFieldView"), 0) != 0) {
             return false;
           }
           std::string leaf(path.substr(path.find_last_of('/') == std::string_view::npos
@@ -19,8 +19,8 @@
         };
     const auto isInternalSoaMetadataOwner =
         [](std::string_view path) {
-          if (path.rfind("/std/collections/internal_soa_storage/SoaColumn", 0) != 0 &&
-              path.rfind("/std/collections/internal_soa_storage/SoaFieldView", 0) != 0) {
+          if (path.rfind(collection_paths::memberPath(collection_paths::kInternalSoaStorageFolder, collection_paths::kSoaColumnTypeName), 0) != 0 &&
+              path.rfind(collection_paths::memberPath(collection_paths::kInternalSoaStorageFolder, "SoaFieldView"), 0) != 0) {
             return false;
           }
           const size_t leafStart = path.find_last_of('/');
@@ -54,16 +54,6 @@
     const auto collectionMemberRoot = [&](std::string_view collectionName) {
       return stdCollectionsRoot() + "/" + std::string(collectionName) + "/";
     };
-    const auto experimentalCollectionMemberRoot =
-        [&](std::string_view collectionName) {
-          return stdCollectionsRoot() + "/experimental_" +
-                 std::string(collectionName) + "/";
-        };
-    const auto experimentalCollectionTypePath =
-        [&](std::string_view collectionName, std::string_view typeName) {
-          return experimentalCollectionMemberRoot(collectionName) +
-                 std::string(typeName);
-        };
     const auto collectionWrapperAlias =
         [](std::string_view collectionName, std::string_view suffix) {
           return std::string(collectionName) + std::string(suffix);
@@ -73,10 +63,10 @@
           std::string leaf;
           const std::string canonicalVectorRoot = collectionMemberRoot("vector");
           const std::string experimentalVectorRoot =
-              experimentalCollectionMemberRoot("vector");
+              vectorBackingMemberRoot();
           for (const std::string &prefix :
                {canonicalVectorRoot,
-                std::string("/std/collections/internal_vector/"),
+                std::string(collection_paths::modulePrefix(collection_paths::kInternalVectorFolder)),
                 experimentalVectorRoot}) {
             if (path.rfind(prefix, 0) != 0) {
               continue;
@@ -211,7 +201,7 @@
             static_cast<int32_t>(collectionLiteralExpr.args.size());
         StructSlotLayoutInfo vectorLayout;
         if (!resolveStructSlotLayout(
-                experimentalCollectionTypePath("vector", "Vector"), vectorLayout)) {
+                vectorBackingTypePath(), vectorLayout)) {
           error =
               "native backend cannot resolve experimental collection record layout";
           return false;
@@ -615,11 +605,23 @@
       return false;
     }
 
+    if (!ir_lowerer::emitRequirementContractChecks(
+            callee,
+            function,
+            [&](const Expr &predicateExpr) {
+              return emitExpr(predicateExpr, calleeLocals);
+            },
+            internString,
+            error)) {
+      popInlineStack();
+      return false;
+    }
+
     const bool isGeneratedMapInsertHelper =
-        callee.fullPath == "/std/collections/internal_map/insertImpl" ||
-        callee.fullPath.rfind("/std/collections/internal_map/insertImpl__", 0) == 0 ||
-        callee.fullPath == "/std/collections/internal_map/insertRefImpl" ||
-        callee.fullPath.rfind("/std/collections/internal_map/insertRefImpl__", 0) == 0;
+        callee.fullPath == collection_paths::memberPath(collection_paths::kInternalMapFolder, "insertImpl") ||
+        callee.fullPath.rfind(collection_paths::specializedTypePrefix(collection_paths::kInternalMapFolder, "insertImpl"), 0) == 0 ||
+        callee.fullPath == collection_paths::memberPath(collection_paths::kInternalMapFolder, "insertRefImpl") ||
+        callee.fullPath.rfind(collection_paths::specializedTypePrefix(collection_paths::kInternalMapFolder, "insertRefImpl"), 0) == 0;
     if (isGeneratedMapInsertHelper) {
       auto extractParameterTypeName = [](const Expr &paramExpr) {
         for (const auto &transform : paramExpr.transforms) {

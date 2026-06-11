@@ -1,3 +1,4 @@
+// soa-surface-audit: exempt
 #include "SemanticsValidator.h"
 #include "SemanticsValidatorInferCollectionCompatibilityInternal.h"
 
@@ -321,8 +322,8 @@ bool SemanticsValidator::resolveVectorHelperMethodTarget(
       helperName = "get_ref";
     } else if (helperName == "ref") {
       helperName = "ref_ref";
-    } else if (helperName == "to" "_aos") {
-      helperName = "to" "_aos_ref";
+    } else if (helperName == "to_aos") {
+      helperName = "to_aos_ref";
     }
     return preferredSoaHelperTargetForCollectionType(
         helperName, internalSoaCollectionTypePath(true));
@@ -367,13 +368,13 @@ bool SemanticsValidator::resolveVectorHelperMethodTarget(
       (normalizedHelperName == "count" || normalizedHelperName == "count_ref" ||
        normalizedHelperName == "get" || normalizedHelperName == "get_ref" ||
        normalizedHelperName == "ref" || normalizedHelperName == "ref_ref" ||
-       normalizedHelperName == "to" "_aos" || normalizedHelperName == "to" "_aos_ref")) {
+       normalizedHelperName == "to_aos" || normalizedHelperName == "to_aos_ref")) {
     resolvedOut = preferredBorrowedSoaAccessHelperTarget(normalizedHelperName);
     return true;
   }
   if (resolveExperimentalSoaVectorReceiver(receiver, experimentalSoaElemType) &&
       (normalizedHelperName == "get" || normalizedHelperName == "ref" ||
-       normalizedHelperName == "to" "_aos" ||
+       normalizedHelperName == "to_aos" ||
        normalizedHelperName == "push" || normalizedHelperName == "reserve")) {
     resolvedOut =
         preferredSoaHelperTargetForCollectionType(normalizedHelperName,
@@ -386,7 +387,7 @@ bool SemanticsValidator::resolveVectorHelperMethodTarget(
        normalizedHelperName == "at" || normalizedHelperName == "at_unsafe" ||
        normalizedHelperName == "insert" ||
        normalizedHelperName == "get" || normalizedHelperName == "ref" ||
-       normalizedHelperName == "to" "_aos" ||
+       normalizedHelperName == "to_aos" ||
        normalizedHelperName == "push" || normalizedHelperName == "reserve")) {
     std::string collectionTypePath;
     if (resolveCallCollectionTypePath(receiver, params, locals, collectionTypePath)) {
@@ -400,7 +401,7 @@ bool SemanticsValidator::resolveVectorHelperMethodTarget(
       if (isInternalSoaCollectionTypePath(collectionTypePath) &&
           (normalizedHelperName == "count" || normalizedHelperName == "count_ref" ||
            normalizedHelperName == "get" || normalizedHelperName == "ref" ||
-           normalizedHelperName == "to" "_aos" ||
+           normalizedHelperName == "to_aos" ||
            normalizedHelperName == "push" || normalizedHelperName == "reserve")) {
         resolvedOut =
             preferredSoaHelperTargetForCollectionType(normalizedHelperName,
@@ -504,7 +505,7 @@ bool SemanticsValidator::resolveVectorHelperMethodTarget(
         (normalizedHelperName == "count" || normalizedHelperName == "count_ref" ||
          normalizedHelperName == "get" || normalizedHelperName == "get_ref" ||
          normalizedHelperName == "ref" || normalizedHelperName == "ref_ref" ||
-         normalizedHelperName == "to" "_aos" || normalizedHelperName == "to" "_aos_ref" ||
+         normalizedHelperName == "to_aos" || normalizedHelperName == "to_aos_ref" ||
          normalizedHelperName == "push" || normalizedHelperName == "reserve")) {
       resolvedOut =
           preferredSoaHelperTargetForCollectionType(normalizedHelperName,
@@ -513,6 +514,9 @@ bool SemanticsValidator::resolveVectorHelperMethodTarget(
     }
     if (tryResolveConcreteExperimentalSoaWrapperHelper(resolvedType)) {
       return true;
+    }
+    if (sumNames_.count(resolvedType) > 0) {
+      return false;
     }
     resolvedOut = resolvedType + "/" + normalizedHelperName;
     return true;
@@ -527,7 +531,7 @@ bool SemanticsValidator::resolveVectorHelperMethodTarget(
           (normalizedHelperName == "count" || normalizedHelperName == "count_ref" ||
            normalizedHelperName == "get" || normalizedHelperName == "get_ref" ||
            normalizedHelperName == "ref" || normalizedHelperName == "ref_ref" ||
-           normalizedHelperName == "to" "_aos" || normalizedHelperName == "to" "_aos_ref" ||
+           normalizedHelperName == "to_aos" || normalizedHelperName == "to_aos_ref" ||
            normalizedHelperName == "push" || normalizedHelperName == "reserve")) {
         resolvedOut =
             preferredSoaHelperTargetForCollectionType(normalizedHelperName,
@@ -736,6 +740,41 @@ bool SemanticsValidator::resolveExprVectorHelperCall(const std::vector<Parameter
            expr.name == vectorHelper &&
            classifyReceiverFamily(receiverCandidate) == "vector";
   };
+  auto stdlibWrapperVectorSugarReceiverIndex = [&]() -> size_t {
+    if (expr.args.empty()) {
+      return expr.args.size();
+    }
+    if (hasNamedArgs) {
+      for (size_t i = 0; i < expr.args.size(); ++i) {
+        if (i < expr.argNames.size() && expr.argNames[i].has_value() &&
+            *expr.argNames[i] == "values") {
+          return i;
+        }
+      }
+    }
+    return 0;
+  };
+  const bool isBarePublishedVectorMutator =
+      !expr.isMethodCall &&
+      expr.namespacePrefix.empty() &&
+      expr.name == vectorHelper &&
+      expr.name.find('/') == std::string::npos &&
+      isPublishedVectorMutatorHelperName(vectorHelper);
+  const bool isMethodPublishedVectorMutator =
+      expr.isMethodCall && isPublishedVectorMutatorHelperName(vectorHelper);
+  if ((isBarePublishedVectorMutator || isMethodPublishedVectorMutator) &&
+      !expr.args.empty()) {
+    const size_t receiverIndex = stdlibWrapperVectorSugarReceiverIndex();
+    if (receiverIndex < expr.args.size() &&
+        classifyReceiverFamily(expr.args[receiverIndex]) ==
+            legacyExperimentalVectorCompatibilityFamilyName()) {
+      return failVectorHelperDiagnostic(
+          "unknown call target: " +
+          (isMethodPublishedVectorMutator
+               ? vectorHelper
+               : canonicalVectorCompatibilityHelperPathOrFallback(vectorHelper)));
+    }
+  }
   if (isStdNamespacedVectorCompatibilityDirectCallSite &&
       !hasVisibleDefinitionPath(resolved) &&
       !isStdNamespacedVectorCountCapacityNamedArgException) {
@@ -889,6 +928,11 @@ bool SemanticsValidator::resolveExprVectorHelperCall(const std::vector<Parameter
         return true;
       }
       if (!requestsExplicitCollectionHelperNamespace && !resolvedReceiver) {
+        return true;
+      }
+      if (allowStatementOnlyMutator) {
+        hasResolutionOut = true;
+        resolvedPathOut = resolved;
         return true;
       }
       return failVectorHelperDiagnostic(vectorHelper + " is only supported as a statement");

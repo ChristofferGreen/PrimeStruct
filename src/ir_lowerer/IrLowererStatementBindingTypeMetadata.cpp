@@ -1,3 +1,4 @@
+// soa-surface-audit: exempt
 #include "IrLowererStatementBindingInternal.h"
 
 #include <algorithm>
@@ -116,7 +117,7 @@ bool resolveSpecializedExperimentalSoaVectorStructPath(const std::string &typeTe
       continue;
     }
 
-    if (normalizedBase != "soa" "_vector" || argList.empty()) {
+    if (normalizedBase != "soa_vector" || argList.empty()) {
       return false;
     }
 
@@ -193,7 +194,7 @@ bool extractResultValueTypeText(const std::string &typeText, std::string &valueT
 
 bool hasSoaVectorTypeTransform(const Expr &expr) {
   for (const auto &transform : expr.transforms) {
-    if (normalizeCollectionBindingTypeName(transform.name) == "soa" "_vector") {
+    if (normalizeCollectionBindingTypeName(transform.name) == "soa_vector") {
       return true;
     }
   }
@@ -376,7 +377,7 @@ void applyArgsPackElementMetadata(const std::string &typeText, LocalInfo &infoOu
       return;
     }
     if (splitTemplateTypeName(pointerTargetType, pointerBase, pointerArg) &&
-        normalizeCollectionBindingTypeName(pointerBase) == "soa" "_vector") {
+        normalizeCollectionBindingTypeName(pointerBase) == "soa_vector") {
       infoOut.pointerToVector = true;
       infoOut.isSoaVector = true;
       infoOut.valueKind = valueKindFromTypeName(trimTemplateTypeText(pointerArg));
@@ -533,7 +534,7 @@ void applyArgsPackElementMetadata(const std::string &typeText, LocalInfo &infoOu
       infoOut.valueKind = valueKindFromTypeName(trimTemplateTypeText(refArg));
       return;
     }
-    if (refBase == "soa" "_vector") {
+    if (refBase == "soa_vector") {
       infoOut.argsPackElementKind = LocalInfo::Kind::Reference;
       infoOut.referenceToVector = true;
       infoOut.isSoaVector = true;
@@ -577,7 +578,7 @@ void applyArgsPackElementMetadata(const std::string &typeText, LocalInfo &infoOu
     infoOut.valueKind = valueKindFromTypeName(trimTemplateTypeText(arg));
     return;
   }
-  if (base == "soa" "_vector") {
+  if (base == "soa_vector") {
     infoOut.argsPackElementKind = LocalInfo::Kind::Vector;
     infoOut.isSoaVector = true;
     infoOut.valueKind = valueKindFromTypeName(trimTemplateTypeText(arg));

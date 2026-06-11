@@ -26,7 +26,7 @@ TEST_CASE("ir lowerer call helpers dispatch buffer and native tail wrappers") {
   experimentalVectorInfo.index = 13;
   experimentalVectorInfo.valueKind = LocalInfo::ValueKind::Int32;
   experimentalVectorInfo.structTypeName =
-      "/std/collections/experimental_vector/Vector__t25a78a513414c3bf";
+      "/std/collections/vector/Vector__t25a78a513414c3bf";
   locals.emplace("experimentalVec", experimentalVectorInfo);
 
   LocalInfo soaInfo;
@@ -600,7 +600,7 @@ TEST_CASE("ir lowerer call helpers resolve and validate array vector access targ
   using Kind = primec::ir_lowerer::LocalInfo::ValueKind;
   using LocalInfo = primec::ir_lowerer::LocalInfo;
   const std::string soaVectorStructTypePrefix =
-      "/std/collections/experimental_soa_vector/SoaVector__";
+      "/std/collections/soa/SoaVector__";
 
   primec::ir_lowerer::LocalMap locals;
   LocalInfo arrayInfo;
@@ -617,7 +617,7 @@ TEST_CASE("ir lowerer call helpers resolve and validate array vector access targ
   experimentalVectorInfo.kind = LocalInfo::Kind::Value;
   experimentalVectorInfo.valueKind = Kind::Int32;
   experimentalVectorInfo.structTypeName =
-      "/std/collections/experimental_vector/Vector__t25a78a513414c3bf";
+      "/std/collections/vector/Vector__t25a78a513414c3bf";
   locals.emplace("experimentalVec", experimentalVectorInfo);
 
   LocalInfo refArrayInfo{};
@@ -746,7 +746,7 @@ TEST_CASE("ir lowerer call helpers resolve and validate array vector access targ
   CHECK(resolved.elemKind == Kind::Int32);
   CHECK(resolved.isVectorTarget);
   CHECK(resolved.structTypeName ==
-        "/std/collections/experimental_vector/Vector__t25a78a513414c3bf");
+        "/std/collections/vector/Vector__t25a78a513414c3bf");
 
   primec::Expr refArrName;
   refArrName.kind = primec::Expr::Kind::Name;

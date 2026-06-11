@@ -1,3 +1,4 @@
+// soa-surface-audit: exempt
 #include "SemanticsValidator.h"
 
 #include <functional>
@@ -26,7 +27,7 @@ bool SemanticsValidator::validateOmittedBindingInitializer(const Expr &binding,
         "omitted initializer requires explicit struct type: " + binding.name);
   }
   const std::string normalizedType = normalizeBindingTypeName(info.typeName);
-  if (normalizedType == "vector" || normalizedType == "soa" "_vector") {
+  if (normalizedType == "vector" || normalizedType == "soa_vector") {
     std::vector<std::string> args;
     if (!splitTopLevelTemplateArgs(info.typeTemplateArg, args) || args.size() != 1) {
       return failPassesOmittedInitializersDiagnostic(

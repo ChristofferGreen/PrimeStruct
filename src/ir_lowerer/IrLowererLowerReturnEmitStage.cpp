@@ -19,6 +19,7 @@
 #include "IrLowererLowerInlineCallStatementStep.h"
 #include "IrLowererLowerStatementsCallsStep.h"
 #include "IrLowererOnErrorHelpers.h"
+#include "IrLowererRequirementContractHelpers.h"
 #include "IrLowererOperatorArithmeticHelpers.h"
 #include "IrLowererOperatorArcHyperbolicHelpers.h"
 #include "IrLowererOperatorClampMinMaxTrigHelpers.h"

@@ -31,6 +31,24 @@
       }
       return nullptr;
     };
+    auto returnsMapLikeValue = [&](const Definition *callee) {
+      if (callee == nullptr) {
+        return false;
+      }
+      for (const auto &transform : callee->transforms) {
+        if (transform.name != "return" || transform.templateArgs.empty()) {
+          continue;
+        }
+        std::string base;
+        std::string argText;
+        const std::string returnType = trimTemplateTypeText(transform.templateArgs.front());
+        if (splitTemplateTypeName(returnType, base, argText)) {
+          return normalizeCollectionBindingTypeName(trimTemplateTypeText(base)) == "map";
+        }
+        return normalizeCollectionBindingTypeName(returnType) == "map";
+      }
+      return false;
+    };
     std::function<void(Expr &)> canonicalizeExplicitBuiltinKeyValueHelpers =
         [&](Expr &exprIn) {
           for (auto &argExpr : exprIn.args) {
@@ -160,7 +178,8 @@
     }();
     const bool declaredReturnIsReferenceHandle = declaredReturnBase == "Reference";
     const bool declaredReturnIsPointerLikeHandle =
-        declaredReturnBase == "Reference" || declaredReturnBase == "Pointer";
+        declaredReturnBase == "Reference" || declaredReturnBase == "Pointer" ||
+        declaredReturnBase == "map";
     if (!stmt.isBinding && stmt.kind == Expr::Kind::StringLiteral) {
       error = "native backend does not support string literal statements";
       return false;
@@ -533,6 +552,7 @@
       const bool semanticLocalAutoBinding = bindingTypeExpr != &stmt;
       const Expr &bindingTypeExprRef = *bindingTypeExpr;
 #include "IrLowererLowerStatementsBindingLocalInfo.h"
+#include "primec/StdlibCollectionPaths.h"
       auto applyWrappedStdlibResultSumBindingInfo = [&]() {
         if (info.kind != LocalInfo::Kind::Reference &&
             info.kind != LocalInfo::Kind::Pointer) {
@@ -801,15 +821,10 @@
             adoptStructInitializerCallee(*initCallee);
           }
         }
-        auto experimentalCollectionMemberRoot =
-            [](std::string_view collectionName) {
-              return "/std/collections/experimental_" +
-                     std::string(collectionName) + "/";
-            };
         auto experimentalCollectionTypePath =
             [&](std::string_view collectionName, std::string_view typeName) {
-              return experimentalCollectionMemberRoot(collectionName) +
-                     std::string(typeName);
+              return collection_paths::memberPath(
+                  collection_paths::typeIdentityFolder(collectionName), typeName);
             };
         auto collectionWrapperAlias =
             [](std::string_view collectionName, std::string_view suffix) {
@@ -826,7 +841,7 @@
           if (callee == nullptr) {
             return false;
           }
-          const std::string prefix = experimentalCollectionMemberRoot("vector");
+          const std::string prefix = vectorBackingMemberRoot();
           const std::string_view prefixView(prefix.data(), prefix.size());
           if (callee->fullPath.rfind(prefixView, 0) != 0) {
             return false;
@@ -848,7 +863,7 @@
                  leaf == collectionWrapperAlias("vector", "Oct");
         };
         if (!info.structTypeName.empty() &&
-            (info.structTypeName == experimentalCollectionTypePath("vector", "Vector") ||
+            (info.structTypeName == vectorBackingTypePath() ||
              matchesGeneratedSpecializedType(info.structTypeName, "vector", "Vector")) &&
             (isCollectionVectorConstructorCallee(initCallee) ||
              [&]() {
@@ -861,6 +876,32 @@
         if (!initStruct.empty() && initStruct != info.structTypeName) {
           error = "struct binding initializer type mismatch on " + stmt.name;
           return false;
+        }
+        // Builtin-storage key/value maps (constructed via `map<K, V>(...)` sugar
+        // without a stdlib constructor definition in scope) are materialized by
+        // `tryEmitBuiltinKeyValueConstructor` as a heap pointer to an inline
+        // [count, key, value, ...] region, not as a by-value map backing struct.
+        // Store that pointer in a single slot instead of struct-copying the
+        // map backing layout, which would read past the smaller builtin region.
+        if (hasKeyValueKinds(info) &&
+            init.kind == Expr::Kind::Call && !init.isMethodCall &&
+            (initCallee == nullptr ||
+             returnsMapLikeValue(initCallee) ||
+             !ir_lowerer::isStructDefinition(*initCallee)) &&
+            (initCallee != nullptr || init.templateArgs.size() == 2)) {
+          std::string builtinMapCollectionName;
+          if ((initCallee != nullptr && returnsMapLikeValue(initCallee)) ||
+              (getBuiltinCollectionName(init, builtinMapCollectionName) &&
+               builtinMapCollectionName == "map")) {
+            if (!emitExpr(init, localsIn)) {
+              return false;
+            }
+            info.index = nextLocal++;
+            localsIn.emplace(stmt.name, info);
+            function.instructions.push_back(
+                {IrOpcode::StoreLocal, static_cast<uint64_t>(info.index)});
+            return true;
+          }
         }
         StructSlotLayout layout;
         if (!resolveStructSlotLayout(info.structTypeName, layout)) {

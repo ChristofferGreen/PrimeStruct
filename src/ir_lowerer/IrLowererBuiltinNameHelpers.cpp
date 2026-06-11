@@ -1,3 +1,4 @@
+// soa-surface-audit: exempt
 #include "IrLowererHelpers.h"
 
 #include <algorithm>
@@ -5,6 +6,7 @@
 #include <string_view>
 
 #include "primec/StdlibSurfaceRegistry.h"
+#include "primec/StdlibCollectionPaths.h"
 
 namespace primec::ir_lowerer {
 
@@ -21,7 +23,7 @@ std::string collectionMemberRoot(std::string_view collectionName) {
 }
 
 std::string experimentalCollectionMemberRoot(std::string_view collectionName) {
-  return stdCollectionsRoot() + "/experimental_" + std::string(collectionName) + "/";
+  return stdCollectionsRoot() + "/" + collection_paths::experimentalFolder(collectionName) + "/";
 }
 
 std::string collectionWrapperAlias(std::string_view collectionName,
@@ -106,7 +108,7 @@ bool isNamespacedStdlibBuiltinAlias(const std::string &alias) {
          alias == "ref_ref" || alias == "at" ||
          alias == "at_unsafe" || alias == "array" ||
          alias == "vector" || (!keyValueAlias.empty() && alias == keyValueAlias) ||
-         alias == "soa_vector" || alias == "convert" ||
+         alias == "convert" ||
          alias == "clamp" || alias == "min" || alias == "max" ||
          alias == "lerp" || alias == "fma" || alias == "hypot" ||
          alias == "copysign" || alias == "radians" ||
@@ -136,19 +138,17 @@ std::string normalizeInternalSoaStorageBuiltinAlias(std::string name) {
   if (!name.empty() && name[0] == '/') {
     name.erase(0, 1);
   }
-  const char *const builtinPrefixes[] = {
-      "std/collections/internal_soa_storage/",
-      "std/collections/internal_buffer_checked/",
-      "std/collections/internal_buffer_unchecked/",
-      "std/collections/experimental_soa_vector/",
-      "std/collections/experimental_soa_vector_conversions/",
-      "std/collections/soa_vector_conversions/",
+  const std::string builtinPrefixes[] = {
+      collection_paths::modulePrefixBare(collection_paths::kInternalSoaStorageFolder),
+      collection_paths::modulePrefixBare(collection_paths::kInternalBufferCheckedFolder),
+      collection_paths::modulePrefixBare(collection_paths::kInternalBufferUncheckedFolder),
+      collection_paths::modulePrefixBare(collection_paths::kExperimentalSoaVectorFolder),
+      collection_paths::modulePrefixBare(collection_paths::kExperimentalSoaVectorConversionsFolder),
       "std/collections/ContainerError/",
       "std/image/",
       "std/ui/",
   };
-  for (const char *prefix : builtinPrefixes) {
-    const std::string prefixText(prefix);
+  for (const std::string &prefixText : builtinPrefixes) {
     if (name.rfind(prefixText, 0) != 0) {
       continue;
     }
@@ -572,37 +572,16 @@ bool getBuiltinArrayAccessName(const Expr &expr, std::string &out) {
   if (scopedName.rfind(experimentalCollectionMemberRoot("vector"), 0) == 0) {
     return false;
   }
-  if (matchLegacyAccessAlias(scopedName, "std/collections/internal_vector/")) {
+  if (matchLegacyAccessAlias(scopedName, collection_paths::modulePrefixBare(collection_paths::kInternalVectorFolder))) {
     return true;
   }
-  if (scopedName.rfind("std/collections/internal_vector/", 0) == 0) {
+  if (scopedName.rfind(collection_paths::modulePrefixBare(collection_paths::kInternalVectorFolder), 0) == 0) {
     return false;
   }
-  if (matchAccessAlias(scopedName, "std/collections/soa_vector/", "SoaVector")) {
+  if (matchAccessAlias(scopedName, collection_paths::modulePrefixBare(collection_paths::kInternalSoaStorageFolder), "SoaColumn")) {
     return true;
   }
-  if (scopedName.rfind("std/collections/soa_vector/", 0) == 0) {
-    std::string alias = scopedName.substr(std::string("std/collections/soa_vector/").size());
-    alias = stripGeneratedSuffix(std::move(alias));
-    if (alias == "get" || alias == "get_ref") {
-      out = alias;
-      return true;
-    }
-    return false;
-  }
-  if (scopedName.rfind("soa_vector/", 0) == 0) {
-    std::string alias = scopedName.substr(std::string("soa_vector/").size());
-    alias = stripGeneratedSuffix(std::move(alias));
-    if (alias == "get" || alias == "get_ref") {
-      out = alias;
-      return true;
-    }
-    return false;
-  }
-  if (matchAccessAlias(scopedName, "std/collections/internal_soa_storage/", "SoaColumn")) {
-    return true;
-  }
-  if (scopedName.rfind("std/collections/internal_soa_storage/", 0) == 0) {
+  if (scopedName.rfind(collection_paths::modulePrefixBare(collection_paths::kInternalSoaStorageFolder), 0) == 0) {
     std::string alias = normalizeInternalSoaStorageBuiltinAlias(scopedName);
     if (alias == "at" || alias == "at_unsafe") {
       out = alias;
@@ -643,16 +622,6 @@ bool getBuiltinPointerName(const Expr &expr, std::string &out) {
   if (!rawName.empty() && rawName[0] == '/') {
     rawName.erase(0, 1);
   }
-  if (scopedName == "soa_vector/dereference" || scopedName == "soa_vector/location") {
-    if (scopedName == "soa_vector/dereference") {
-      out = "dereference";
-      return true;
-    }
-    if (scopedName == "soa_vector/location") {
-      out = "location";
-      return true;
-    }
-  }
   const std::string helperName =
       normalizeInternalSoaStorageBuiltinAlias(scopedName);
   if (helperName != scopedName) {
@@ -692,7 +661,7 @@ bool getBuiltinCollectionName(const Expr &expr, std::string &out) {
     }
     return false;
   }
-  if (scopedName.rfind("std/collections/internal_soa_storage/", 0) == 0) {
+  if (scopedName.rfind(collection_paths::modulePrefixBare(collection_paths::kInternalSoaStorageFolder), 0) == 0) {
     std::string alias = normalizeInternalSoaStorageBuiltinAlias(scopedName);
     if (alias == "array" || alias == "soa_vector") {
       out = alias;

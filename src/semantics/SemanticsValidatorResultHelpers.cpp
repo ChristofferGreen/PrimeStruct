@@ -1,3 +1,4 @@
+// soa-surface-audit: exempt
 #include "SemanticsValidator.h"
 #include "StdlibCollectionSurfaceHelpers.h"
 #include "SemanticsValidatorExprCaptureSplitStep.h"
@@ -12,6 +13,7 @@
 #include <unordered_map>
 #include <utility>
 #include <vector>
+#include "primec/StdlibCollectionPaths.h"
 
 namespace primec::semantics {
 
@@ -710,7 +712,7 @@ bool SemanticsValidator::resolveResultTypeForExpr(const Expr &expr,
       return methodName == "count" || methodName == "count_ref" ||
              methodName == "get" || methodName == "get_ref" ||
              methodName == "ref" || methodName == "ref_ref" ||
-             methodName == "to" "_aos" || methodName == "to" "_aos_ref" ||
+             methodName == "to_aos" || methodName == "to_aos_ref" ||
              methodName == "push" || methodName == "reserve";
     };
     const std::string normalizedMethodName =
@@ -766,9 +768,9 @@ bool SemanticsValidator::resolveResultTypeForExpr(const Expr &expr,
     if (resolvedType.empty()) {
       return "";
     }
-    if (resolvedType.rfind("/std/collections/experimental" "_soa" "_vector/Soa" "Vector" "__", 0) == 0 &&
+    if (resolvedType.rfind(collection_paths::specializedTypePrefix(collection_paths::kSoaFolder, collection_paths::kSoaVectorTypeName), 0) == 0 &&
         isCanonicalSoaWrapperMethodName(normalizedMethodName)) {
-      return preferredSoaHelperTargetForCollectionType(normalizedMethodName, "/soa" "_vector");
+      return preferredSoaHelperTargetForCollectionType(normalizedMethodName, "/soa_vector");
     }
     return resolvedType + "/" + expr.name;
   };
@@ -1003,7 +1005,7 @@ bool SemanticsValidator::errorTypesMatch(const std::string &left,
       if (isResultTypeBaseName(base)) {
         return "Result<" + stripInnerWhitespace(arg) + ">";
       }
-      if (isBuiltinTemplateTypeName(base) || base == "array" || base == "vector" || base == "soa" "_vector" ||
+      if (isBuiltinTemplateTypeName(base) || base == "array" || base == "vector" || base == "soa_vector" ||
           base == "map" || base == "File") {
         return stripInnerWhitespace(normalized);
       }

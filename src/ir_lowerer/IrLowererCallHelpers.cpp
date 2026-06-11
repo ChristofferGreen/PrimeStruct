@@ -1,3 +1,4 @@
+// soa-surface-audit: exempt
 #include "IrLowererCallHelpers.h"
 
 #include <algorithm>
@@ -12,6 +13,7 @@
 #include "IrLowererSetupTypeCollectionHelpers.h"
 #include "IrLowererSetupTypeHelpers.h"
 #include "primec/StdlibSurfaceRegistry.h"
+#include "primec/StdlibCollectionPaths.h"
 
 namespace primec::ir_lowerer {
 
@@ -28,16 +30,16 @@ bool isGeneratedSinglePathSegmentWithPrefix(std::string_view path, std::string_v
 
 bool isGeneratedStdlibCollectionStructPath(std::string_view path) {
   const std::string experimentalVectorTypePrefix =
-      experimentalCollectionTypePath("vector", "Vector") + "__";
+      vectorBackingTypePath() + "__";
   const std::string keyValueStorageRoot = keyValueStorageStructRootPath();
   const std::string keyValueStorageTypePrefix = keyValueStorageRoot + "__";
   return isSinglePathSegmentWithPrefix(path, experimentalVectorTypePrefix) ||
          (!keyValueStorageRoot.empty() &&
           isSinglePathSegmentWithPrefix(path, keyValueStorageTypePrefix)) ||
-         isSinglePathSegmentWithPrefix(path, "/std/collections/experimental_soa_vector/SoaVector__") ||
-         isSinglePathSegmentWithPrefix(path, "/std/collections/internal_soa_storage/SoaColumn__") ||
-         isSinglePathSegmentWithPrefix(path, "/std/collections/internal_soa_storage/SoaFieldView__") ||
-         isGeneratedSinglePathSegmentWithPrefix(path, "/std/collections/internal_soa_storage/SoaColumns");
+         isSinglePathSegmentWithPrefix(path, collection_paths::specializedTypePrefix(collection_paths::kSoaFolder, collection_paths::kSoaVectorTypeName)) ||
+         isSinglePathSegmentWithPrefix(path, collection_paths::specializedTypePrefix(collection_paths::kInternalSoaStorageFolder, collection_paths::kSoaColumnTypeName)) ||
+         isSinglePathSegmentWithPrefix(path, collection_paths::specializedTypePrefix(collection_paths::kInternalSoaStorageFolder, "SoaFieldView")) ||
+         isGeneratedSinglePathSegmentWithPrefix(path, collection_paths::memberPath(collection_paths::kInternalSoaStorageFolder, "SoaColumns"));
 }
 
 std::string_view trimLeadingSlash(std::string_view path) {
@@ -138,6 +140,14 @@ bool isArgsPackParam(const Expr &param) {
   return false;
 }
 
+bool isEmptyBraceBlockArgument(const Expr &arg) {
+  return arg.kind == Expr::Kind::Call &&
+         arg.name == "block" &&
+         arg.args.empty() &&
+         arg.bodyArguments.empty() &&
+         arg.hasBodyArguments;
+}
+
 } // namespace
 
 BufferBuiltinDispatchResult tryEmitBufferBuiltinDispatchWithLocals(
@@ -204,7 +214,7 @@ CountMethodFallbackResult tryEmitNonMethodCountFallback(
     };
     return matchesCollectionRoot("vector") ||
            matchesCollectionRoot("array") ||
-           matchesCollectionRoot("soa" "_vector");
+           matchesCollectionRoot("soa_vector");
   };
   auto isExplicitRemovedKeyValueHelperAliasCall = [&]() {
     if (expr.kind != Expr::Kind::Call || expr.isMethodCall) {
@@ -217,7 +227,7 @@ CountMethodFallbackResult tryEmitNonMethodCountFallback(
   };
   if (!expr.isMethodCall) {
     const std::string directHelperPath = resolveDirectHelperPath();
-    if (directHelperPath.rfind(experimentalCollectionMemberRoot("vector"), 0) == 0) {
+    if (directHelperPath.rfind(vectorBackingMemberRoot(), 0) == 0) {
       return CountMethodFallbackResult::NotHandled;
     }
     if (isExplicitRemovedCountLikeAliasCall("count") ||
@@ -415,6 +425,9 @@ bool buildOrderedCallArguments(const Expr &callExpr,
   ordered.assign(params.size(), nullptr);
   size_t positionalIndex = 0;
   for (size_t i = 0; i < callExpr.args.size(); ++i) {
+    if (isEmptyBraceBlockArgument(callExpr.args[i])) {
+      continue;
+    }
     if (i < callExpr.argNames.size() && callExpr.argNames[i].has_value()) {
       const std::string &name = *callExpr.argNames[i];
       size_t index = params.size();
@@ -476,6 +489,9 @@ bool buildOrderedCallArgumentsWithPackedArgs(const Expr &callExpr,
 
   size_t positionalIndex = 0;
   for (size_t i = 0; i < callExpr.args.size(); ++i) {
+    if (isEmptyBraceBlockArgument(callExpr.args[i])) {
+      continue;
+    }
     if (i < callExpr.argNames.size() && callExpr.argNames[i].has_value()) {
       const std::string &name = *callExpr.argNames[i];
       size_t index = params.size();

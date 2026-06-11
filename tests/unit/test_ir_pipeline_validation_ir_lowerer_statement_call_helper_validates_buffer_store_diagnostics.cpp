@@ -1070,7 +1070,7 @@ TEST_CASE("ir lowerer experimental vector setters defer to method definitions") 
   };
 
   const std::string experimentalVectorType =
-      "/std/collections/experimental_vector/Vector__t25a78a513414c3bf";
+      "/std/collections/vector/Vector__t25a78a513414c3bf";
   addCollectionFact(7701, "collectionValues", experimentalVectorType);
   addBindingFact(7702, "bindingValues", "i32", experimentalVectorType);
   addLocalAutoFact(7703, "autoValues", "Reference<" + experimentalVectorType + ">");
@@ -1262,7 +1262,7 @@ TEST_CASE("ir lowerer SoA helper dispatch uses semantic receiver facts before st
   addCollectionFact(7601, "collectionValues", "soa_vector");
   addBindingFact(7602, "bindingValues", "Reference<soa_vector<Particle>>");
   addLocalAutoFact(7603, "autoValues", "Pointer<soa_vector<Particle>>");
-  addQueryFact(7604, "/std/collections/experimental_soa_vector/SoaVector__t8Particle");
+  addQueryFact(7604, "/std/collections/soa/SoaVector__t8Particle");
   addBindingFact(7605, "notASoa", "i32");
   const auto semanticIndex =
       primec::ir_lowerer::buildSemanticProductIndex(&semanticProgram);

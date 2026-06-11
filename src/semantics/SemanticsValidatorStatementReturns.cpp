@@ -1,3 +1,4 @@
+// soa-surface-audit: exempt
 #include "SemanticsValidator.h"
 
 #include "StdlibCollectionSurfaceHelpers.h"
@@ -339,7 +340,7 @@ bool SemanticsValidator::validateReturnStatement(const std::vector<ParameterInfo
            isLegacyOrCanonicalSoaHelperPath(resolvedPathCanonical,
                                             *soaAccessHelper));
       if (oldSurfaceCallShape &&
-          hasVisibleDefinitionPathForCurrentImports("/soa" "_vector/" +
+          hasVisibleDefinitionPathForCurrentImports("/soa_vector/" +
                                                     *soaAccessHelper)) {
         return false;
       }
@@ -1117,8 +1118,8 @@ bool SemanticsValidator::validateReturnStatement(const std::vector<ParameterInfo
                         canonicalVectorCompatibilityPrefixOrFallback())) {
               return "/vector";
             }
-            if (typePath == "/soa" "_vector" || typePath == "soa" "_vector") {
-              return "/soa" "_vector";
+            if (typePath == "/soa_vector" || typePath == "soa_vector") {
+              return "/soa_vector";
             }
             if (isKeyValueCollectionTypeName(typePath) || typePath == keyValueCollectionMarker ||
                 typePath == collectionTypePathLocal("map")) {

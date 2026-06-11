@@ -1,3 +1,4 @@
+// soa-surface-audit: exempt
 #include "IrLowererStructFieldBindingHelpers.h"
 
 #include <functional>
@@ -9,6 +10,7 @@
 #include "IrLowererStructLayoutHelpers.h"
 #include "IrLowererStructReturnPathHelpers.h"
 #include "IrLowererStructTypeHelpers.h"
+#include "primec/StdlibCollectionPaths.h"
 
 namespace primec::ir_lowerer {
 
@@ -19,16 +21,16 @@ bool isSpecializedExperimentalCollectionTypeName(const std::string &typeName) {
           typeName.find("__") != std::string::npos) ||
          (isExperimentalCollectionTypeName(typeName, "vector", "Vector") &&
           typeName.find("__") != std::string::npos) ||
-         typeName.rfind("std/collections/experimental" "_soa" "_vector/Soa" "Vector" "__", 0) == 0 ||
-         typeName.rfind("/std/collections/experimental" "_soa" "_vector/Soa" "Vector" "__", 0) == 0;
+         typeName.rfind(collection_paths::specializedTypePrefixBare(collection_paths::kSoaFolder, collection_paths::kSoaVectorTypeName), 0) == 0 ||
+         typeName.rfind(collection_paths::specializedTypePrefix(collection_paths::kSoaFolder, collection_paths::kSoaVectorTypeName), 0) == 0;
 }
 
 bool isExperimentalSoaVectorTypeName(const std::string &typeName) {
-  return typeName == "Soa" "Vector" ||
-         typeName == "std/collections/experimental" "_soa" "_vector/Soa" "Vector" ||
-         typeName == "/std/collections/experimental" "_soa" "_vector/Soa" "Vector" ||
-         typeName.rfind("std/collections/experimental" "_soa" "_vector/Soa" "Vector" "__", 0) == 0 ||
-         typeName.rfind("/std/collections/experimental" "_soa" "_vector/Soa" "Vector" "__", 0) == 0;
+  return typeName == "SoaVector" ||
+         typeName == collection_paths::memberPathBare(collection_paths::kSoaFolder, collection_paths::kSoaVectorTypeName) ||
+         typeName == collection_paths::memberPath(collection_paths::kSoaFolder, collection_paths::kSoaVectorTypeName) ||
+         typeName.rfind(collection_paths::specializedTypePrefixBare(collection_paths::kSoaFolder, collection_paths::kSoaVectorTypeName), 0) == 0 ||
+         typeName.rfind(collection_paths::specializedTypePrefix(collection_paths::kSoaFolder, collection_paths::kSoaVectorTypeName), 0) == 0;
 }
 
 LayoutFieldBinding layoutFieldBindingFromSemanticProduct(

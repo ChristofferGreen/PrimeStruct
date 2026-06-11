@@ -355,7 +355,7 @@ main() {
   const std::string error = readFile(errPath);
   CHECK(error.find("argument type mismatch for /std/collections/vector/at__") !=
         std::string::npos);
-  CHECK(error.find("parameter values: expected /std/collections/experimental_vector/Vector__") !=
+  CHECK(error.find("parameter values: expected /std/collections/vector/Vector__") !=
         std::string::npos);
   CHECK(error.find("got vector<i32>") != std::string::npos);
 }
@@ -395,7 +395,7 @@ main() {
   const std::string error = readFile(errPath);
   CHECK(error.find("argument type mismatch for /std/collections/vector/at_unsafe__") !=
         std::string::npos);
-  CHECK(error.find("parameter values: expected /std/collections/experimental_vector/Vector__") !=
+  CHECK(error.find("parameter values: expected /std/collections/vector/Vector__") !=
         std::string::npos);
   CHECK(error.find("got vector<i32>") != std::string::npos);
 }
@@ -437,7 +437,7 @@ main() {
   const std::string error = readFile(errPath);
   CHECK(error.find("argument type mismatch for /std/collections/vector/push__") !=
         std::string::npos);
-  CHECK(error.find("parameter values: expected /std/collections/experimental_vector/Vector__") !=
+  CHECK(error.find("parameter values: expected /std/collections/vector/Vector__") !=
         std::string::npos);
   CHECK(error.find("got vector<i32>") != std::string::npos);
 }
@@ -478,7 +478,7 @@ main() {
   const std::string error = readFile(errPath);
   CHECK(error.find("argument type mismatch for /std/collections/vector/pop__") !=
         std::string::npos);
-  CHECK(error.find("parameter values: expected /std/collections/experimental_vector/Vector__") !=
+  CHECK(error.find("parameter values: expected /std/collections/vector/Vector__") !=
         std::string::npos);
   CHECK(error.find("got vector<i32>") != std::string::npos);
 }
@@ -519,7 +519,7 @@ main() {
   const std::string error = readFile(errPath);
   CHECK(error.find("argument type mismatch for /std/collections/vector/reserve__") !=
         std::string::npos);
-  CHECK(error.find("parameter values: expected /std/collections/experimental_vector/Vector__") !=
+  CHECK(error.find("parameter values: expected /std/collections/vector/Vector__") !=
         std::string::npos);
   CHECK(error.find("got vector<i32>") != std::string::npos);
 }
@@ -560,7 +560,7 @@ main() {
   const std::string error = readFile(errPath);
   CHECK(error.find("argument type mismatch for /std/collections/vector/clear__") !=
         std::string::npos);
-  CHECK(error.find("parameter values: expected /std/collections/experimental_vector/Vector__") !=
+  CHECK(error.find("parameter values: expected /std/collections/vector/Vector__") !=
         std::string::npos);
   CHECK(error.find("got vector<i32>") != std::string::npos);
 }
@@ -601,7 +601,7 @@ main() {
   const std::string error = readFile(errPath);
   CHECK(error.find("argument type mismatch for /std/collections/vector/remove_at__") !=
         std::string::npos);
-  CHECK(error.find("parameter values: expected /std/collections/experimental_vector/Vector__") !=
+  CHECK(error.find("parameter values: expected /std/collections/vector/Vector__") !=
         std::string::npos);
   CHECK(error.find("got vector<i32>") != std::string::npos);
 }
@@ -643,7 +643,7 @@ main() {
   const std::string error = readFile(errPath);
   CHECK(error.find("argument type mismatch for /std/collections/vector/remove_swap__") !=
         std::string::npos);
-  CHECK(error.find("parameter values: expected /std/collections/experimental_vector/Vector__") !=
+  CHECK(error.find("parameter values: expected /std/collections/vector/Vector__") !=
         std::string::npos);
   CHECK(error.find("got vector<i32>") != std::string::npos);
 }

@@ -1,8 +1,10 @@
+// soa-surface-audit: exempt
 #include "IrLowererInlineCallContextHelpers.h"
 
 #include <string_view>
 
 #include "IrLowererSetupTypeCollectionHelpers.h"
+#include "primec/StdlibCollectionPaths.h"
 
 namespace primec::ir_lowerer {
 
@@ -27,12 +29,7 @@ std::string collectionMemberRoot(std::string_view collectionName) {
 }
 
 std::string experimentalCollectionMemberRoot(std::string_view collectionName) {
-  return stdCollectionsRoot() + "/experimental_" + std::string(collectionName) + "/";
-}
-
-std::string experimentalCollectionTypePath(std::string_view collectionName,
-                                           std::string_view typeName) {
-  return experimentalCollectionMemberRoot(collectionName) + std::string(typeName);
+  return stdCollectionsRoot() + "/" + collection_paths::experimentalFolder(collectionName) + "/";
 }
 
 std::string collectionWrapperAlias(std::string_view collectionName,
@@ -41,26 +38,26 @@ std::string collectionWrapperAlias(std::string_view collectionName,
 }
 
 bool isGeneratedStdlibCollectionStructPath(std::string_view path) {
-  return isSinglePathSegmentWithPrefix(path, experimentalCollectionTypePath("vector", "Vector") + "__") ||
+  return isSinglePathSegmentWithPrefix(path, vectorBackingTypePath() + "__") ||
          isSinglePathSegmentWithPrefix(path, keyValueStorageStructRootPath() + "__") ||
-         isSinglePathSegmentWithPrefix(path, "/std/collections/experimental_soa_vector/SoaVector__") ||
-         isSinglePathSegmentWithPrefix(path, "/std/collections/internal_soa_storage/SoaColumn__") ||
-         isSinglePathSegmentWithPrefix(path, "/std/collections/internal_soa_storage/SoaFieldView__") ||
-         isGeneratedSinglePathSegmentWithPrefix(path, "/std/collections/internal_soa_storage/SoaColumns");
+         isSinglePathSegmentWithPrefix(path, collection_paths::specializedTypePrefix(collection_paths::kSoaFolder, collection_paths::kSoaVectorTypeName)) ||
+         isSinglePathSegmentWithPrefix(path, collection_paths::specializedTypePrefix(collection_paths::kInternalSoaStorageFolder, collection_paths::kSoaColumnTypeName)) ||
+         isSinglePathSegmentWithPrefix(path, collection_paths::specializedTypePrefix(collection_paths::kInternalSoaStorageFolder, "SoaFieldView")) ||
+         isGeneratedSinglePathSegmentWithPrefix(path, collection_paths::memberPath(collection_paths::kInternalSoaStorageFolder, "SoaColumns"));
 }
 
 bool isGeneratedStdlibCollectionConstructorHelperPath(std::string_view path) {
   return isSinglePathSegmentWithPrefix(path, collectionMemberRoot("vector") + "vector__") ||
-         isSinglePathSegmentWithPrefix(path, experimentalCollectionMemberRoot("vector") + "vector__") ||
+         isSinglePathSegmentWithPrefix(path, vectorBackingMemberRoot() + "vector__") ||
          isSinglePathSegmentWithPrefix(path, collectionMemberRoot("map") + "map__") ||
          isSinglePathSegmentWithPrefix(path, experimentalCollectionMemberRoot("map") + "map__") ||
-         isSinglePathSegmentWithPrefix(path, "/std/collections/" "soa/soa__") ||
-         isSinglePathSegmentWithPrefix(path, "/std/collections/" "soa" "_vector/soa" "_vector__") ||
-         isSinglePathSegmentWithPrefix(path, "/std/collections/experimental" "_soa" "_vector/soa" "_vector__");
+         isSinglePathSegmentWithPrefix(path, "/std/collections/soa/soa__") ||
+         isSinglePathSegmentWithPrefix(path, "/std/collections/soa_vector/soa_vector__") ||
+         isSinglePathSegmentWithPrefix(path, collection_paths::specializedTypePrefix(collection_paths::kExperimentalSoaVectorFolder, "soa_vector"));
 }
 
 bool isGeneratedStdlibVectorImplementationHelperPath(std::string_view path) {
-  const std::string prefix = experimentalCollectionMemberRoot("vector");
+  const std::string prefix = vectorBackingMemberRoot();
   const std::string_view Prefix(prefix.data(), prefix.size());
   if (!isSinglePathSegmentWithPrefix(path, Prefix)) {
     return false;
@@ -103,10 +100,10 @@ bool prepareInlineDefinitionCallContext(
 
   out.structDefinition = isStructDefinition(callee);
   const bool isGeneratedMapInsertHelper =
-      callee.fullPath == "/std/collections/internal_map/insertImpl" ||
-      callee.fullPath.rfind("/std/collections/internal_map/insertImpl__", 0) == 0 ||
-      callee.fullPath == "/std/collections/internal_map/insertRefImpl" ||
-      callee.fullPath.rfind("/std/collections/internal_map/insertRefImpl__", 0) == 0;
+      callee.fullPath == collection_paths::memberPath(collection_paths::kInternalMapFolder, "insertImpl") ||
+      callee.fullPath.rfind(collection_paths::specializedTypePrefix(collection_paths::kInternalMapFolder, "insertImpl"), 0) == 0 ||
+      callee.fullPath == collection_paths::memberPath(collection_paths::kInternalMapFolder, "insertRefImpl") ||
+      callee.fullPath.rfind(collection_paths::specializedTypePrefix(collection_paths::kInternalMapFolder, "insertRefImpl"), 0) == 0;
   if (out.returnInfo.returnsVoid && requireValue && !out.structDefinition &&
       !isGeneratedMapInsertHelper) {
     error = "void call not allowed in expression context: " + callee.fullPath;

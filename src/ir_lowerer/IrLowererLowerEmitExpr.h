@@ -30,8 +30,8 @@
     };
     const auto experimentalCollectionMemberRoot =
         [&](std::string_view collectionName) {
-          return stdCollectionsRoot() + "/experimental_" +
-                 std::string(collectionName) + "/";
+          return stdCollectionsRoot() + "/" +
+                 collection_paths::experimentalFolder(collectionName) + "/";
         };
     const auto experimentalCollectionMemberPath =
         [&](std::string_view collectionName, std::string_view memberName) {
@@ -134,6 +134,49 @@
         return false;
       }
       case Expr::Kind::Call: {
+        auto isWrapperReturnedKeyValueAccessCall = [&](const Expr &candidate) {
+          if (candidate.kind != Expr::Kind::Call ||
+              candidate.args.size() < 2 ||
+              candidate.args.front().kind != Expr::Kind::Call) {
+            return false;
+          }
+          std::string helperName;
+          if (resolveKeyValueHelperAliasName(candidate, helperName)) {
+            return helperName == "at" || helperName == "at_unsafe" ||
+                   helperName == "at_ref" ||
+                   helperName == "at_unsafe_ref";
+          }
+          auto accessLeafMatches = [](std::string path) {
+            path = normalizeCollectionHelperPath(std::move(path));
+            const size_t leafStart = path.find_last_of('/');
+            std::string leaf =
+                leafStart == std::string::npos ? path : path.substr(leafStart + 1);
+            if (const size_t generatedSuffix = leaf.find("__");
+                generatedSuffix != std::string::npos) {
+              leaf.erase(generatedSuffix);
+            }
+            return leaf == "at" || leaf == "at_unsafe" ||
+                   leaf == "at_ref" || leaf == "at_unsafe_ref";
+          };
+          if (accessLeafMatches(candidate.name) ||
+              accessLeafMatches(resolveExprPath(candidate))) {
+            return true;
+          }
+          if (!candidate.namespacePrefix.empty()) {
+            std::string scoped = candidate.namespacePrefix;
+            if (!scoped.empty() && scoped.back() != '/') {
+              scoped.push_back('/');
+            }
+            scoped += candidate.name;
+            return accessLeafMatches(scoped);
+          }
+          return false;
+        };
+        if (expr.args.size() == 1 &&
+            isWrapperReturnedKeyValueAccessCall(expr.args.front())) {
+          error = "struct parameter type mismatch";
+          return false;
+        }
         if (!expr.isMethodCall && !expr.isFieldAccess && expr.transforms.empty() &&
             isSimpleCallName(expr, "wait") && expr.args.size() == 1 &&
             !expr.hasBodyArguments && expr.bodyArguments.empty() &&
@@ -353,7 +396,7 @@
               receiver.kind == Expr::Kind::Name && receiverLocalIt != localsIn.end() &&
               receiverLocalIt->second.usesBuiltinCollectionLayout &&
               receiverLocalIt->second.isSoaVector && expr.name == "storage" &&
-              fieldInfo.structPath.rfind("/std/collections/internal_soa_storage/SoaColumn__", 0) == 0;
+              fieldInfo.structPath.rfind(collection_paths::specializedTypePrefix(collection_paths::kInternalSoaStorageFolder, collection_paths::kSoaColumnTypeName), 0) == 0;
           if (isRawBuiltinSoaStorageFieldAccess) {
             StructSlotLayoutInfo storageLayout;
             if (!resolveStructSlotLayout(fieldInfo.structPath, storageLayout)) {

@@ -609,28 +609,28 @@ TEST_CASE("ir lowerer setup type helper rejects canonical soa access fallback to
             "get", "soa_vector", "", defMap, error) == nullptr);
   CHECK(error ==
         "struct parameter type mismatch for /std/collections/soa_vector/get parameter values: expected "
-        "/std/collections/experimental_soa_vector/SoaVector__ specialization");
+        "/std/collections/soa/SoaVector__ specialization");
 
   error.clear();
   CHECK(primec::ir_lowerer::resolveMethodDefinitionFromReceiverTarget(
             "get", "std/collections/soa_vector", "", defMap, error) == nullptr);
   CHECK(error ==
         "struct parameter type mismatch for /std/collections/soa_vector/get parameter values: expected "
-        "/std/collections/experimental_soa_vector/SoaVector__ specialization");
+        "/std/collections/soa/SoaVector__ specialization");
 
   error.clear();
   CHECK(primec::ir_lowerer::resolveMethodDefinitionFromReceiverTarget(
             "ref", "soa_vector", "", defMap, error) == nullptr);
   CHECK(error ==
         "struct parameter type mismatch for /std/collections/soa_vector/ref parameter values: expected "
-        "/std/collections/experimental_soa_vector/SoaVector__ specialization");
+        "/std/collections/soa/SoaVector__ specialization");
 
   error.clear();
   CHECK(primec::ir_lowerer::resolveMethodDefinitionFromReceiverTarget(
             "ref", "std/collections/soa_vector", "", defMap, error) == nullptr);
   CHECK(error ==
         "struct parameter type mismatch for /std/collections/soa_vector/ref parameter values: expected "
-        "/std/collections/experimental_soa_vector/SoaVector__ specialization");
+        "/std/collections/soa/SoaVector__ specialization");
 }
 
 TEST_CASE("ir lowerer setup type helper rejects canonical soa mutator fallback to rooted aliases") {
@@ -649,28 +649,28 @@ TEST_CASE("ir lowerer setup type helper rejects canonical soa mutator fallback t
             "push", "soa_vector", "", defMap, error) == nullptr);
   CHECK(error ==
         "struct parameter type mismatch for /std/collections/soa_vector/push parameter values: expected "
-        "/std/collections/experimental_soa_vector/SoaVector__ specialization");
+        "/std/collections/soa/SoaVector__ specialization");
 
   error.clear();
   CHECK(primec::ir_lowerer::resolveMethodDefinitionFromReceiverTarget(
             "push", "std/collections/soa_vector", "", defMap, error) == nullptr);
   CHECK(error ==
         "struct parameter type mismatch for /std/collections/soa_vector/push parameter values: expected "
-        "/std/collections/experimental_soa_vector/SoaVector__ specialization");
+        "/std/collections/soa/SoaVector__ specialization");
 
   error.clear();
   CHECK(primec::ir_lowerer::resolveMethodDefinitionFromReceiverTarget(
             "reserve", "soa_vector", "", defMap, error) == nullptr);
   CHECK(error ==
         "struct parameter type mismatch for /std/collections/soa_vector/reserve parameter values: expected "
-        "/std/collections/experimental_soa_vector/SoaVector__ specialization");
+        "/std/collections/soa/SoaVector__ specialization");
 
   error.clear();
   CHECK(primec::ir_lowerer::resolveMethodDefinitionFromReceiverTarget(
             "reserve", "std/collections/soa_vector", "", defMap, error) == nullptr);
   CHECK(error ==
         "struct parameter type mismatch for /std/collections/soa_vector/reserve parameter values: expected "
-        "/std/collections/experimental_soa_vector/SoaVector__ specialization");
+        "/std/collections/soa/SoaVector__ specialization");
 }
 
 TEST_CASE("ir lowerer setup type helper rejects canonical soa to_aos fallback to rooted alias") {
@@ -686,14 +686,14 @@ TEST_CASE("ir lowerer setup type helper rejects canonical soa to_aos fallback to
             "to_aos", "soa_vector", "", defMap, error) == nullptr);
   CHECK(error ==
         "struct parameter type mismatch for /std/collections/soa_vector/to_aos parameter values: expected "
-        "/std/collections/experimental_soa_vector/SoaVector__ specialization");
+        "/std/collections/soa/SoaVector__ specialization");
 
   error.clear();
   CHECK(primec::ir_lowerer::resolveMethodDefinitionFromReceiverTarget(
             "to_aos", "std/collections/soa_vector", "", defMap, error) == nullptr);
   CHECK(error ==
         "struct parameter type mismatch for /std/collections/soa_vector/to_aos parameter values: expected "
-        "/std/collections/experimental_soa_vector/SoaVector__ specialization");
+        "/std/collections/soa/SoaVector__ specialization");
 }
 
 TEST_CASE("ir lowerer setup type helper resolves name receiver targets") {

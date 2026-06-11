@@ -254,7 +254,7 @@ main() {
   const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main 2> " + errPath;
   CHECK(runCommand(runCmd) == 2);
   CHECK(readFile(errPath).find("struct parameter type mismatch") != std::string::npos);
-  CHECK(readFile(errPath).find("/std/collections/experimental_soa_vector/SoaVector__") !=
+  CHECK(readFile(errPath).find("/std/collections/soa/SoaVector__") !=
         std::string::npos);
 }
 

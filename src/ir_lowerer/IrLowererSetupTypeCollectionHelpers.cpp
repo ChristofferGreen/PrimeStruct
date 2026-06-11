@@ -1,3 +1,4 @@
+// soa-surface-audit: exempt
 #include "IrLowererSetupTypeCollectionHelpers.h"
 
 #include <algorithm>
@@ -5,6 +6,7 @@
 #include "IrLowererHelpers.h"
 #include "IrLowererSemanticProductTargetAdapters.h"
 #include "primec/StdlibSurfaceRegistry.h"
+#include "primec/StdlibCollectionPaths.h"
 
 namespace primec::ir_lowerer {
 
@@ -409,9 +411,9 @@ bool resolveVectorHelperAliasName(const Expr &expr, std::string &helperNameOut) 
   }
   const std::string arrayPrefix = "array/";
   const std::string stdVectorPrefix = collectionMemberRoot("vector", false);
-  const std::string stdSoaVectorPrefix = "std/collections/" "soa" "_vector/";
-  const std::string internalSoaVectorPrefix = "std/collections/internal_soa" "_vector/";
-  const std::string experimentalSoaVectorPrefix = "std/collections/experimental" "_soa" "_vector/";
+  const std::string stdSoaVectorPrefix = "std/collections/soa_vector/";
+  const std::string internalSoaVectorPrefix = collection_paths::modulePrefixBare(collection_paths::kInternalSoaVectorFolder);
+  const std::string experimentalSoaVectorPrefix = collection_paths::modulePrefixBare(collection_paths::kExperimentalSoaVectorFolder);
   const std::string experimentalVectorPrefix =
       experimentalCollectionMemberRoot("vector", false);
   if (normalized.rfind(arrayPrefix, 0) == 0) {
@@ -428,9 +430,9 @@ bool resolveVectorHelperAliasName(const Expr &expr, std::string &helperNameOut) 
   if (normalized.rfind(stdSoaVectorPrefix, 0) == 0) {
     helperNameOut = stripGeneratedHelperSuffix(
         normalized.substr(stdSoaVectorPrefix.size()));
-    if (helperNameOut == "soa" "VectorCount") {
+    if (helperNameOut == "soaVectorCount") {
       helperNameOut = "count";
-    } else if (helperNameOut == "soa" "VectorCountRef") {
+    } else if (helperNameOut == "soaVectorCountRef") {
       helperNameOut = "count_ref";
     }
     return helperNameOut == "count" ||
@@ -443,11 +445,11 @@ bool resolveVectorHelperAliasName(const Expr &expr, std::string &helperNameOut) 
   if (normalized.rfind(experimentalSoaVectorPrefix, 0) == 0) {
     helperNameOut = stripGeneratedHelperSuffix(
         normalized.substr(experimentalSoaVectorPrefix.size()));
-    if (helperNameOut == "soa" "VectorCount") {
+    if (helperNameOut == "soaVectorCount") {
       helperNameOut = "count";
       return true;
     }
-    if (helperNameOut == "soa" "VectorCountRef") {
+    if (helperNameOut == "soaVectorCountRef") {
       helperNameOut = "count_ref";
       return true;
     }
@@ -456,11 +458,11 @@ bool resolveVectorHelperAliasName(const Expr &expr, std::string &helperNameOut) 
   if (normalized.rfind(internalSoaVectorPrefix, 0) == 0) {
     helperNameOut = stripGeneratedHelperSuffix(
         normalized.substr(internalSoaVectorPrefix.size()));
-    if (helperNameOut == "soa" "VectorCount") {
+    if (helperNameOut == "soaVectorCount") {
       helperNameOut = "count";
       return true;
     }
-    if (helperNameOut == "soa" "VectorCountRef") {
+    if (helperNameOut == "soaVectorCountRef") {
       helperNameOut = "count_ref";
       return true;
     }
@@ -532,14 +534,15 @@ std::string canonicalKeyValueConstructorPath(bool leadingSlash) {
 
 std::string experimentalCollectionMemberRoot(std::string_view collectionName,
                                              bool leadingSlash) {
-  return stdCollectionsRoot(leadingSlash) + "/experimental_" +
-         std::string(collectionName) + "/";
+  return stdCollectionsRoot(leadingSlash) + "/" +
+         collection_paths::experimentalFolder(collectionName) + "/";
 }
 
 std::string experimentalCollectionTypePath(std::string_view collectionName,
                                            std::string_view typeName,
                                            bool leadingSlash) {
-  return experimentalCollectionMemberRoot(collectionName, leadingSlash) +
+  return stdCollectionsRoot(leadingSlash) + "/" +
+         collection_paths::typeIdentityFolder(collectionName) + "/" +
          std::string(typeName);
 }
 

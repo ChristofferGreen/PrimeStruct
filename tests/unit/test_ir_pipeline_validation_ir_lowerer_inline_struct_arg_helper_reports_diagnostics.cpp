@@ -67,7 +67,7 @@ TEST_CASE("ir lowerer inline struct arg helper reports diagnostics") {
 
 TEST_CASE("ir lowerer inline struct arg helper accepts compatible soa vector storage") {
   constexpr const char *SpecializedSoaVector =
-      "/std/collections/experimental_soa_vector/SoaVector__Particle";
+      "/std/collections/soa/SoaVector__Particle";
   const std::vector<std::pair<std::string, std::string>> compatiblePaths = {
       {SpecializedSoaVector, "/soa_vector"},
       {"/soa_vector", SpecializedSoaVector},

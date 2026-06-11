@@ -22,7 +22,7 @@ TEST_CASE("ir lowerer collection helper rewrite guards explicit map defs") {
           ? std::filesystem::path(".")
           : std::filesystem::path("..");
   const std::filesystem::path collectionHelpersPath =
-      repoRoot / "src" / "ir_lowerer" / "IrLowererLowerEmitExprTailDispatch.h";
+      repoRoot / "src" / "ir_lowerer" / "IrLowererLowerEmitExprCollectionHelpers.h";
 
   REQUIRE(std::filesystem::exists(collectionHelpersPath));
   const std::string source = readText(collectionHelpersPath);
@@ -84,7 +84,7 @@ TEST_CASE("ir lowerer materialized collection receivers use published helper que
           ? std::filesystem::path(".")
           : std::filesystem::path("..");
   const std::filesystem::path collectionHelpersPath =
-      repoRoot / "src" / "ir_lowerer" / "IrLowererLowerEmitExprTailDispatch.h";
+      repoRoot / "src" / "ir_lowerer" / "IrLowererLowerEmitExprCollectionHelpers.h";
 
   REQUIRE(std::filesystem::exists(collectionHelpersPath));
   const std::string source = readText(collectionHelpersPath);

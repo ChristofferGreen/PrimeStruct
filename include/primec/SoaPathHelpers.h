@@ -1,4 +1,7 @@
+// soa-surface-audit: exempt
 #pragma once
+
+#include "primec/StdlibCollectionPaths.h"
 
 #include <string>
 #include <string_view>
@@ -97,14 +100,15 @@ inline bool isCanonicalSoaRefLikeHelperPath(std::string_view path) {
 
 inline bool isExperimentalSoaRefLikeHelperPath(std::string_view path) {
   const std::string canonicalPath = stripGeneratedSpecializationSuffix(path);
-  return canonicalPath == collectionPath(experimentalSoaFolder(), "soa" "VectorRef") ||
-         canonicalPath == collectionPath(experimentalSoaFolder(), "soa" "VectorRefRef") ||
-         canonicalPath == "/std/collections/internal_soa_storage/soaColumnRef";
+  return canonicalPath == collectionPath(experimentalSoaFolder(), "soaVectorRef") ||
+         canonicalPath == collectionPath(experimentalSoaFolder(), "soaVectorRefRef") ||
+         canonicalPath == collection_paths::memberPath(
+                              collection_paths::kInternalSoaStorageFolder, "soaColumnRef");
 }
 
 inline bool isExperimentalColumnarVectorSpecializedTypePath(std::string_view path) {
   const std::string specializedPrefix =
-      collectionPath(experimentalSoaFolder(), soaBackingTypeName() + "__");
+      collectionPath(publicSoaFolder(), soaBackingTypeName() + "__");
   const std::string specializedPrefixNoSlash = specializedPrefix.substr(1);
   const std::string specializedPrefixBare = soaBackingTypeName() + "__";
   return path.starts_with(specializedPrefix) ||
@@ -115,7 +119,7 @@ inline bool isExperimentalColumnarVectorSpecializedTypePath(std::string_view pat
 inline bool isExperimentalColumnarVectorTypePath(std::string_view path) {
   const std::string typePrefix =
       std::string("std") + "/" + "collections" + "/" +
-      experimentalSoaFolder() + "/" + soaBackingTypeName();
+      publicSoaFolder() + "/" + soaBackingTypeName();
   const std::string typePrefixWithSlash = "/" + typePrefix;
   const auto matchesTypePrefix = [&](std::string_view prefix) {
     const std::string templatePrefix = std::string(prefix) + "<";

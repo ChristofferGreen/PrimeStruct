@@ -1,3 +1,4 @@
+// soa-surface-audit: exempt
 #include "SemanticsValidator.h"
 
 #include "SemanticsValidatorInferCollectionCompatibilityInternal.h"
@@ -66,7 +67,7 @@ bool SemanticsValidator::isDropTrivialContainerElementType(const std::string &ty
       return splitTopLevelTemplateArgs(argText, args) && args.size() == 1 &&
              isDropTrivialContainerElementType(args.front(), namespacePrefix, definitionTemplateArgs, visitingStructs);
     }
-    if (normalizedBase == "vector" || normalizedBase == "map" || normalizedBase == "soa" "_vector" ||
+    if (normalizedBase == "vector" || normalizedBase == "map" || normalizedBase == "soa_vector" ||
         normalizedBase == "uninitialized" || normalizedBase == "Buffer") {
       return false;
     }
@@ -157,7 +158,7 @@ bool SemanticsValidator::isRelocationTrivialContainerElementType(const std::stri
                                                      definitionTemplateArgs,
                                                      visitingStructs);
     }
-    if (normalizedBase == "vector" || normalizedBase == "map" || normalizedBase == "soa" "_vector" ||
+    if (normalizedBase == "vector" || normalizedBase == "map" || normalizedBase == "soa_vector" ||
         normalizedBase == "uninitialized" || normalizedBase == "Buffer") {
       return false;
     }

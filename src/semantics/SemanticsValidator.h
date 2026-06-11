@@ -519,6 +519,7 @@ private:
   std::vector<TryValueSnapshotEntry> tryValueSnapshotCache_;
   std::vector<CallBindingSnapshotEntry> callBindingSnapshotCache_;
   bool pilotRoutingSemanticCollectorsValid_ = false;
+  bool skipLocalAwareCallRefinement_ = false;
   bool mergedWorkerPublicationFactsValid_ = false;
   bool mergedWorkerPublicationFactSemanticNodeIdsCurrent_ = false;
   bool mergedWorkerPublicationSeedStringsValid_ = false;

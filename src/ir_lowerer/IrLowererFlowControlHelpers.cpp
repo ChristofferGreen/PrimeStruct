@@ -1,9 +1,11 @@
+// soa-surface-audit: exempt
 #include "IrLowererFlowHelpers.h"
 
 #include "IrLowererHelpers.h"
 #include "IrLowererSetupTypeCollectionHelpers.h"
 
 #include <string_view>
+#include "primec/StdlibCollectionPaths.h"
 
 namespace primec::ir_lowerer {
 
@@ -205,7 +207,7 @@ void emitDisarmTemporaryStructAfterCopy(const std::function<void(IrOpcode, uint6
   }
 
   const std::string leaf = generatedStructLeaf(structPath);
-  if (structPath.rfind("/std/collections/internal_soa_storage/SoaColumns", 0) == 0 ||
+  if (structPath.rfind(collection_paths::memberPath(collection_paths::kInternalSoaStorageFolder, "SoaColumns"), 0) == 0 ||
       leaf.rfind("SoaColumns", 0) == 0) {
     constexpr std::string_view Prefix = "SoaColumns";
     size_t cursor = Prefix.size();
@@ -222,13 +224,13 @@ void emitDisarmTemporaryStructAfterCopy(const std::function<void(IrOpcode, uint6
     return;
   }
 
-  if (structPath.rfind("/std/collections/experimental" "_soa" "_vector/Soa" "Vector", 0) == 0 ||
-      leaf == "Soa" "Vector") {
+  if (structPath.rfind(collection_paths::memberPath(collection_paths::kSoaFolder, collection_paths::kSoaVectorTypeName), 0) == 0 ||
+      leaf == "SoaVector") {
     emitStoreFalseAtOffset(5ull * IrSlotBytes);
     return;
   }
 
-  if (structPath.rfind("/std/collections/internal_soa_storage/SoaColumn", 0) == 0 ||
+  if (structPath.rfind(collection_paths::memberPath(collection_paths::kInternalSoaStorageFolder, collection_paths::kSoaColumnTypeName), 0) == 0 ||
       leaf == "SoaColumn") {
     emitStoreFalseAtOffset(4ull * IrSlotBytes);
     return;

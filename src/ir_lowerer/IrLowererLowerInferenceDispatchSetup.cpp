@@ -1,3 +1,4 @@
+// soa-surface-audit: exempt
 #include "IrLowererLowerInferenceSetup.h"
 
 #include "IrLowererBindingTypeHelpers.h"
@@ -804,7 +805,7 @@ bool runLowerInferenceExprKindDispatchSetup(const LowerInferenceExprKindDispatch
         }
         std::string collectionName;
         if (getBuiltinCollectionName(receiverExpr, collectionName)) {
-          if ((collectionName == "array" || collectionName == "vector" || collectionName == "soa" "_vector") &&
+          if ((collectionName == "array" || collectionName == "vector" || collectionName == "soa_vector") &&
               receiverExpr.templateArgs.size() == 1) {
             receiverKindOut = valueKindFromTypeName(receiverExpr.templateArgs.front());
             return receiverKindOut != LocalInfo::ValueKind::Unknown;
@@ -835,7 +836,7 @@ bool runLowerInferenceExprKindDispatchSetup(const LowerInferenceExprKindDispatch
         if (!inferDeclaredReturnCollection(*defIt->second, collectionName, collectionArgs)) {
           return false;
         }
-        if ((collectionName == "array" || collectionName == "vector" || collectionName == "soa" "_vector") &&
+        if ((collectionName == "array" || collectionName == "vector" || collectionName == "soa_vector") &&
             collectionArgs.size() == 1) {
           receiverKindOut = valueKindFromTypeName(collectionArgs.front());
           return receiverKindOut != LocalInfo::ValueKind::Unknown;

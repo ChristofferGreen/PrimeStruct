@@ -9,6 +9,7 @@
 #include "IrLowererSetupTypeHelpers.h"
 #include "IrLowererStructTypeHelpers.h"
 #include "IrLowererTemplateTypeParseHelpers.h"
+#include "primec/StdlibCollectionPaths.h"
 
 namespace primec::ir_lowerer {
 
@@ -31,7 +32,7 @@ bool isBareOrInternalSoaHelperCall(const Expr &expr, const char *helperName) {
   const std::string scopedCallPath = resolveScopedCallPath(expr);
   const std::string helperPath = helperName == nullptr ? std::string() : std::string(helperName);
   return scopedCallPath == "/" + helperPath ||
-         scopedCallPath == "/std/collections/internal_soa_storage/" + helperPath;
+         scopedCallPath == collection_paths::modulePrefix(collection_paths::kInternalSoaStorageFolder) + helperPath;
 }
 
 std::string normalizedLeafCallName(std::string name) {

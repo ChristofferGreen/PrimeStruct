@@ -1,3 +1,4 @@
+// soa-surface-audit: exempt
 #include "IrLowererSetupTypeHelpers.h"
 
 #include "IrLowererCallHelpers.h"
@@ -226,7 +227,7 @@ bool resolveMethodReceiverTypeFromLocalInfo(const LocalInfo &localInfo,
     return true;
   }
   if (localInfo.isSoaVector) {
-    typeNameOut = "soa" "_vector";
+    typeNameOut = "soa_vector";
     return true;
   }
   if (localInfo.kind == LocalInfo::Kind::Vector) {
@@ -248,7 +249,7 @@ bool resolveMethodReceiverTypeFromLocalInfo(const LocalInfo &localInfo,
       resolvedTypePathOut = localInfo.structTypeName;
     } else {
       typeNameOut = hasKeyValueKinds(localInfo) ? "map"
-                                             : (localInfo.referenceToVector ? (localInfo.isSoaVector ? "soa" "_vector"
+                                             : (localInfo.referenceToVector ? (localInfo.isSoaVector ? "soa_vector"
                                                                                                      : "vector")
                                                                             : (localInfo.referenceToBuffer ? "Buffer"
                                                                                                             : "array"));
@@ -260,7 +261,7 @@ bool resolveMethodReceiverTypeFromLocalInfo(const LocalInfo &localInfo,
     return true;
   }
   if (localInfo.kind == LocalInfo::Kind::Pointer && localInfo.pointerToVector) {
-    typeNameOut = localInfo.isSoaVector ? "soa" "_vector" : "vector";
+    typeNameOut = localInfo.isSoaVector ? "soa_vector" : "vector";
     return true;
   }
   if (localInfo.kind == LocalInfo::Kind::Pointer && hasKeyValueKinds(localInfo)) {
@@ -315,8 +316,8 @@ std::string resolveMethodReceiverTypeNameFromCallExpr(const Expr &receiverCallEx
     if (collection == "Buffer" && receiverCallExpr.templateArgs.size() == 1) {
       return "Buffer";
     }
-    if (collection == "soa" "_vector" && receiverCallExpr.templateArgs.size() == 1) {
-      return "soa" "_vector";
+    if (collection == "soa_vector" && receiverCallExpr.templateArgs.size() == 1) {
+      return "soa_vector";
     }
   }
   return typeNameForValueKind(inferredKind);
@@ -462,7 +463,7 @@ bool isSoaVectorReceiverExpr(const Expr &receiverExpr, const LocalMap &localsIn)
   }
   if (receiverExpr.kind == Expr::Kind::Call) {
     std::string collection;
-    if (getBuiltinCollectionName(receiverExpr, collection) && collection == "soa" "_vector") {
+    if (getBuiltinCollectionName(receiverExpr, collection) && collection == "soa_vector") {
       return true;
     }
     if (isSimpleCallName(receiverExpr, "dereference") && receiverExpr.args.size() == 1) {
@@ -580,7 +581,7 @@ bool resolveMethodReceiverTarget(const Expr &receiverExpr,
           return true;
         }
         if (isReferenceVector || isPointerVector) {
-          typeNameOut = localInfo.isSoaVector ? "soa" "_vector" : "vector";
+          typeNameOut = localInfo.isSoaVector ? "soa_vector" : "vector";
           return true;
         }
         if (receiverKind == LocalInfo::Kind::Value && hasKeyValueKinds(localInfo)) {
@@ -643,7 +644,7 @@ bool resolveMethodReceiverTarget(const Expr &receiverExpr,
             return true;
           }
           if (localIt->second.argsPackElementKind == LocalInfo::Kind::Vector) {
-            typeNameOut = localIt->second.isSoaVector ? "soa" "_vector" : "vector";
+            typeNameOut = localIt->second.isSoaVector ? "soa_vector" : "vector";
             return true;
           }
           if (localIt->second.argsPackElementKind == LocalInfo::Kind::Reference &&
@@ -658,12 +659,12 @@ bool resolveMethodReceiverTarget(const Expr &receiverExpr,
           }
           if (localIt->second.argsPackElementKind == LocalInfo::Kind::Reference &&
               localIt->second.referenceToVector) {
-            typeNameOut = localIt->second.isSoaVector ? "soa" "_vector" : "vector";
+            typeNameOut = localIt->second.isSoaVector ? "soa_vector" : "vector";
             return true;
           }
           if (localIt->second.argsPackElementKind == LocalInfo::Kind::Pointer &&
               localIt->second.pointerToVector) {
-            typeNameOut = localIt->second.isSoaVector ? "soa" "_vector" : "vector";
+            typeNameOut = localIt->second.isSoaVector ? "soa_vector" : "vector";
             return true;
           }
           if (localIt->second.argsPackElementKind == LocalInfo::Kind::Reference &&

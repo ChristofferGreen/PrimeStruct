@@ -81,6 +81,64 @@ TEST_CASE("ir lowerer call helpers order positional named and default args") {
   CHECK(ordered[2]->literalValue == 3);
 }
 
+TEST_CASE("ir lowerer call helpers skip empty brace block placeholders") {
+  primec::Expr emptyBlock;
+  emptyBlock.kind = primec::Expr::Kind::Call;
+  emptyBlock.name = "block";
+  emptyBlock.hasBodyArguments = true;
+
+  primec::Expr callExpr;
+  callExpr.kind = primec::Expr::Kind::Call;
+  callExpr.name = "demo";
+  callExpr.args = {emptyBlock};
+
+  primec::Expr param;
+  param.name = "field";
+  primec::Expr defaultValue;
+  defaultValue.kind = primec::Expr::Kind::Literal;
+  defaultValue.literalValue = 7;
+  param.args.push_back(defaultValue);
+
+  std::vector<const primec::Expr *> ordered;
+  std::string error;
+  REQUIRE(primec::ir_lowerer::buildOrderedCallArguments(
+      callExpr, {param}, ordered, error));
+  CHECK(error.empty());
+  REQUIRE(ordered.size() == 1);
+  REQUIRE(ordered[0] != nullptr);
+  CHECK(ordered[0]->literalValue == 7);
+}
+
+TEST_CASE("ir lowerer call helpers skip empty brace blocks before packed args") {
+  primec::Expr emptyBlock;
+  emptyBlock.kind = primec::Expr::Kind::Call;
+  emptyBlock.name = "block";
+  emptyBlock.hasBodyArguments = true;
+
+  primec::Expr callExpr;
+  callExpr.kind = primec::Expr::Kind::Call;
+  callExpr.name = "demo";
+  callExpr.args = {emptyBlock};
+
+  primec::Expr packedParam;
+  packedParam.name = "values";
+  primec::Transform argsTransform;
+  argsTransform.name = "args";
+  packedParam.transforms.push_back(argsTransform);
+
+  std::vector<const primec::Expr *> ordered;
+  std::vector<const primec::Expr *> packedArgs;
+  size_t packedParamIndex = 0;
+  std::string error;
+  REQUIRE(primec::ir_lowerer::buildOrderedCallArgumentsWithPackedArgs(
+      callExpr, {packedParam}, ordered, packedArgs, packedParamIndex, error));
+  CHECK(error.empty());
+  CHECK(packedParamIndex == 0);
+  CHECK(ordered.size() == 1);
+  CHECK(ordered[0] == nullptr);
+  CHECK(packedArgs.empty());
+}
+
 TEST_CASE("ir lowerer call helpers reject unknown named arg") {
   primec::Expr callExpr;
   callExpr.kind = primec::Expr::Kind::Call;
@@ -175,7 +233,7 @@ TEST_CASE("ir lowerer call helpers classify struct definitions") {
 
   primec::Definition generatedVectorStruct;
   generatedVectorStruct.fullPath =
-      "/std/collections/experimental_vector/Vector__ti32";
+      "/std/collections/vector/Vector__ti32";
   generatedVectorStruct.parameters.push_back(field);
   generatedVectorStruct.transforms.push_back(returnTransform);
   CHECK(primec::ir_lowerer::isStructDefinition(generatedVectorStruct));
@@ -567,11 +625,11 @@ TEST_CASE("ir lowerer struct field binding helpers extract explicit envelopes") 
   primec::Expr specializedSoaExpr;
   primec::Transform specializedSoaTransform;
   specializedSoaTransform.name =
-      "/std/collections/experimental_soa_vector/SoaVector__Particle";
+      "/std/collections/soa/SoaVector__Particle";
   specializedSoaExpr.transforms = {publicTransform, specializedSoaTransform};
   CHECK(primec::ir_lowerer::extractExplicitLayoutFieldBinding(specializedSoaExpr, binding));
   CHECK(binding.typeName ==
-        "/std/collections/experimental_soa_vector/SoaVector__Particle");
+        "/std/collections/soa/SoaVector__Particle");
   CHECK(binding.typeTemplateArg.empty());
 
   primec::Expr qualifierOnlyExpr;

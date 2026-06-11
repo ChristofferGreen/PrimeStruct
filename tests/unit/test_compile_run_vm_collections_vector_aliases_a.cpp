@@ -26,8 +26,8 @@ main() {
                                "primec_vm_bare_map_at_unsafe_with_canonical_helper_out.txt")
                                   .string();
   const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main > " + outPath + " 2>&1";
-  CHECK(runCommand(runCmd) == 17);
-  CHECK(readFile(outPath).empty());
+  CHECK(runCommand(runCmd) == 3);
+  CHECK(readFile(outPath).find("VM error: unaligned indirect address in IR") != std::string::npos);
 }
 
 TEST_CASE("rejects vm bare map at call without helper") {

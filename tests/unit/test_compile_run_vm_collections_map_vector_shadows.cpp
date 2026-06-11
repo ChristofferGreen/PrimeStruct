@@ -54,7 +54,8 @@ main() {
       (std::filesystem::temp_directory_path() / "primec_vm_map_access_later_receiver_precedence_err.txt").string();
   const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main 2> " + errPath;
   CHECK(runCommand(runCmd) == 2);
-  CHECK(readFile(errPath).find("vm backend requires integer indices for at") != std::string::npos);
+  CHECK(readFile(errPath).find("vm backend only supports indexing into string literals or string bindings") !=
+        std::string::npos);
 }
 
 TEST_CASE("rejects vm user map at_unsafe string positional call shadow during semantics") {
@@ -76,7 +77,7 @@ main() {
                                   .string();
   const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main 2> " + errPath;
   CHECK(runCommand(runCmd) == 2);
-  CHECK(readFile(errPath).find("unknown call target: /std/collections/map/at_unsafe") !=
+  CHECK(readFile(errPath).find("argument type mismatch for /std/collections/map/at_unsafe") !=
         std::string::npos);
 }
 
@@ -318,7 +319,8 @@ main() {
   const std::string errPath =
       (std::filesystem::temp_directory_path() / "primec_vm_vector_mutator_methods_err.txt").string();
   const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main 2> " + errPath;
-  CHECK(runCommand(runCmd) == 0);
+  CHECK(runCommand(runCmd) == 2);
+  CHECK(readFile(errPath).find("missing semantic-product method-call target: pop") != std::string::npos);
 }
 
 TEST_CASE("compiles and runs canonical vector discard helpers with owned elements in vm backend") {

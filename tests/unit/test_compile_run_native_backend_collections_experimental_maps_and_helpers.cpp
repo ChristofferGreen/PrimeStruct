@@ -2467,7 +2467,7 @@ main() {
       "./primec --emit=native " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
   CHECK(runCommand(compileCmd) == 2);
   CHECK(readFile(errPath).find(
-            "unknown method: /std/collections/experimental_soa_vector/SoaVector__") !=
+            "unknown method: /std/collections/soa/SoaVector__") !=
         std::string::npos);
   CHECK(readFile(errPath).find("soaVectorToAos") != std::string::npos);
 }

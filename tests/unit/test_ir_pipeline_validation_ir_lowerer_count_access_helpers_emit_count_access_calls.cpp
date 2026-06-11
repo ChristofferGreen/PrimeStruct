@@ -138,7 +138,7 @@ TEST_CASE("ir lowerer count access helpers emit count access calls") {
   experimentalVectorInfo.valueKind =
       primec::ir_lowerer::LocalInfo::ValueKind::Int32;
   experimentalVectorInfo.structTypeName =
-      "/std/collections/experimental_vector/Vector__t25a78a513414c3bf";
+      "/std/collections/vector/Vector__t25a78a513414c3bf";
   experimentalVectorLocals.emplace("values", experimentalVectorInfo);
 
   instructions.clear();
@@ -188,7 +188,7 @@ TEST_CASE("ir lowerer count access helpers emit count access calls") {
             [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return false; },
             [&](primec::IrOpcode op, uint64_t imm) { instructions.push_back({op, imm}); },
             error) == Result::Emitted);
-  CHECK(error.empty());
+  CHECK_EQ(error, "");
   REQUIRE(instructions.size() == 2);
   CHECK(instructions[0].op == primec::IrOpcode::LoadLocal);
   CHECK(instructions[0].imm == 3);
@@ -230,7 +230,7 @@ TEST_CASE("ir lowerer count access helpers emit count access calls") {
   experimentalSoaVectorInfo.index = 5;
   experimentalSoaVectorInfo.kind = primec::ir_lowerer::LocalInfo::Kind::Value;
   experimentalSoaVectorInfo.structTypeName =
-      "/std/collections/experimental_soa_vector/SoaVector__t25a78a513414c3bf";
+      "/std/collections/soa/SoaVector__t25a78a513414c3bf";
   experimentalSoaVectorLocals.emplace("values", experimentalSoaVectorInfo);
 
   instructions.clear();

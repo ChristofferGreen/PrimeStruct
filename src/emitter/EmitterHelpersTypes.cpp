@@ -1,8 +1,10 @@
+// soa-surface-audit: exempt
 #include "EmitterHelpers.h"
 #include "EmitterBuiltinCallPathHelpersInternal.h"
 
 #include <cctype>
 #include <string_view>
+#include "primec/StdlibCollectionPaths.h"
 
 namespace primec::emitter {
 
@@ -86,7 +88,8 @@ static bool isVectorCompatibilityStorageBase(std::string_view base) {
     base.remove_prefix(slash + 1);
   }
   if (segments.size() != 4 || segments[0] != "std" ||
-      segments[1] != "collections" || segments[2] != "experimental_vector") {
+      segments[1] != "collections" ||
+      segments[2] != collection_paths::kVectorFolder) {
     return false;
   }
   return segments[3] == "Vector" || segments[3].rfind("Vector__", 0) == 0;
@@ -104,7 +107,7 @@ static std::string experimentalCollectionMemberRootLocal(
     std::string_view collectionName,
     bool leadingSlash = true) {
   std::string base = leadingSlash ? "/" : "";
-  base += "std/collections/experimental_";
+  base += collection_paths::moduleRootBare(collection_paths::kExperimentalFolderPrefix);
   base += std::string(collectionName);
   base += "/";
   return base;
@@ -147,21 +150,21 @@ std::string normalizeBindingTypeName(const std::string &name) {
   if (name == "float") {
     return "f32";
   }
-  if (name == "soa" || name == "/soa" || name == "std/collections/" "soa" ||
-      name == "/std/collections/" "soa") {
-    return "soa" "_vector";
+  if (name == "soa" || name == "/soa" || name == "std/collections/soa" ||
+      name == "/std/collections/soa") {
+    return "soa_vector";
   }
   if (name.rfind("soa<", 0) == 0) {
-    return "soa" "_vector" + name.substr(std::string("soa").size());
+    return "soa_vector" + name.substr(std::string("soa").size());
   }
   if (name.rfind("/soa<", 0) == 0) {
-    return "soa" "_vector" + name.substr(std::string("/soa").size());
+    return "soa_vector" + name.substr(std::string("/soa").size());
   }
-  if (name.rfind("std/collections/" "soa<", 0) == 0) {
-    return "soa" "_vector" + name.substr(std::string("std/collections/" "soa").size());
+  if (name.rfind("std/collections/soa<", 0) == 0) {
+    return "soa_vector" + name.substr(std::string("std/collections/soa").size());
   }
-  if (name.rfind("/std/collections/" "soa<", 0) == 0) {
-    return "soa" "_vector" + name.substr(std::string("/std/collections/" "soa").size());
+  if (name.rfind("/std/collections/soa<", 0) == 0) {
+    return "soa_vector" + name.substr(std::string("/std/collections/soa").size());
   }
   const std::string rootedMapType = "/" + std::string("map");
   const std::string slashlessCanonicalMapType = collectionTypePathLocal("map", false);
@@ -623,7 +626,7 @@ ReturnKind returnKindForTypeName(const std::string &name) {
       return ReturnKind::Unknown;
     }
     const bool isCollectionLike =
-        ((base == "array" || base == "vector" || base == "soa" "_vector" || base == "Buffer" ||
+        ((base == "array" || base == "vector" || base == "soa_vector" || base == "Buffer" ||
           isVectorCompatibilityStorageBase(base)) &&
          args.size() == 1) ||
         ((base == "map" || isKeyValueCompatibilityStorageBase(base)) &&

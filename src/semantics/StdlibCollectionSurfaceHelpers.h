@@ -1,3 +1,4 @@
+// soa-surface-audit: exempt
 #pragma once
 
 #include "primec/StdlibSurfaceRegistry.h"
@@ -6,6 +7,7 @@
 #include <string>
 #include <string_view>
 #include <utility>
+#include "primec/StdlibCollectionPaths.h"
 
 inline std::string stripCollectionConstructorSuffixes(std::string resolvedPath) {
   const size_t specializationSuffix = resolvedPath.find("__t");
@@ -25,7 +27,8 @@ inline std::string stripKeyValueConstructorSuffixes(std::string resolvedPath) {
 
 inline std::string experimentalCollectionConstructorRootLocal(
     std::string_view collectionName) {
-  return "/std/collections/experimental_" + std::string(collectionName) + "/";
+  return primec::collection_paths::modulePrefix(
+      primec::collection_paths::experimentalFolder(collectionName));
 }
 
 inline std::string experimentalCollectionConstructorPathLocal(

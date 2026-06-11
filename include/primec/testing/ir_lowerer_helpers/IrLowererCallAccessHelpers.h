@@ -351,6 +351,12 @@ bool buildOrderedCallArguments(const Expr &callExpr,
                                const std::vector<Expr> &params,
                                std::vector<const Expr *> &ordered,
                                std::string &error);
+bool buildOrderedCallArgumentsWithPackedArgs(const Expr &callExpr,
+                                             const std::vector<Expr> &params,
+                                             std::vector<const Expr *> &ordered,
+                                             std::vector<const Expr *> &packedArgs,
+                                             size_t &packedParamIndex,
+                                             std::string &error);
 bool definitionHasTransform(const Definition &def, const std::string &transformName);
 bool isStructTransformName(const std::string &name);
 bool isStructDefinition(const Definition &def);

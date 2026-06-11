@@ -381,13 +381,8 @@
         popFileScope();
         return true;
       }
-      auto experimentalCollectionMemberRoot =
-          [](std::string_view collectionName) {
-            return "/std/collections/experimental_" +
-                   std::string(collectionName) + "/";
-          };
       if (!stmt.isMethodCall &&
-          stmt.name.rfind(experimentalCollectionMemberRoot("vector"), 0) == 0) {
+          stmt.name.rfind(vectorBackingMemberRoot(), 0) == 0) {
         if (const Definition *callee = resolveDefinitionCall(stmt)) {
           ReturnInfo info;
           if (!getReturnInfo(callee->fullPath, info)) {

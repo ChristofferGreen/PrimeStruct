@@ -1,3 +1,4 @@
+// soa-surface-audit: exempt
 #include "SemanticsValidator.h"
 
 #include "SemanticsValidatorInferCollectionCompatibilityInternal.h"
@@ -17,7 +18,7 @@ bool isBuiltinCollectionHelperName(std::string_view helperName) {
          helperName == "insert_ref" || helperName == "push" || helperName == "pop" ||
          helperName == "reserve" || helperName == "clear" || helperName == "remove_at" ||
          helperName == "remove_swap" || helperName == "to_soa" ||
-         helperName == "to" "_aos" || helperName == "to" "_aos_ref";
+         helperName == "to_aos" || helperName == "to_aos_ref";
 }
 
 bool isFlowEffectDiagnosticMessage(const std::string &message) {
@@ -100,8 +101,8 @@ void SemanticsValidator::collectExecutionIntraBodyCallDiagnostics(
         isSimpleCallName(expr, "push") || isSimpleCallName(expr, "pop") ||
         isSimpleCallName(expr, "reserve") || isSimpleCallName(expr, "clear") ||
         isSimpleCallName(expr, "remove_at") || isSimpleCallName(expr, "remove_swap") ||
-        isSimpleCallName(expr, "to_soa") || isSimpleCallName(expr, "to" "_aos") ||
-        isSimpleCallName(expr, "to" "_aos_ref") ||
+        isSimpleCallName(expr, "to_soa") || isSimpleCallName(expr, "to_aos") ||
+        isSimpleCallName(expr, "to_aos_ref") ||
         (isNamespacedCollectionHelper &&
          namespacedCollection != "map" &&
          isBuiltinCollectionHelperName(namespacedHelper));

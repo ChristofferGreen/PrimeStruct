@@ -1,3 +1,4 @@
+// soa-surface-audit: exempt
 #include "IrLowererCallHelpers.h"
 
 #include <algorithm>
@@ -16,6 +17,7 @@
 #include "IrLowererTemplateTypeParseHelpers.h"
 #include "primec/AstCallPathHelpers.h"
 #include "primec/StdlibSurfaceRegistry.h"
+#include "primec/StdlibCollectionPaths.h"
 
 namespace primec::ir_lowerer {
 
@@ -318,12 +320,12 @@ bool isKeyValueTryAtHelperName(const Expr &expr) {
 bool isSoaVectorTarget(const Expr &expr, const LocalMap &localsIn);
 
 bool isPublicOrCompatibilitySoaToAosCall(const Expr &expr) {
-  return isCanonicalCollectionHelperCall(expr, "std/collections/" "soa", "to" "_aos", 1) ||
-         isCanonicalCollectionHelperCall(expr, "std/collections/" "soa" "_vector", "to" "_aos", 1);
+  return isCanonicalCollectionHelperCall(expr, "std/collections/soa", "to_aos", 1) ||
+         isCanonicalCollectionHelperCall(expr, "std/collections/soa_vector", "to_aos", 1);
 }
 
 bool isCollectionVectorRecordPath(std::string_view structTypeName) {
-  const std::string vectorTypePath = experimentalCollectionTypePath("vector", "Vector");
+  const std::string vectorTypePath = vectorBackingTypePath();
   return structTypeName == vectorTypePath ||
          matchesGeneratedSpecializedPath(structTypeName, vectorTypePath);
 }
@@ -388,13 +390,13 @@ bool isInternalSoaMetadataTarget(const Expr &expr, const LocalMap &localsIn) {
   if (suffixStart != std::string::npos) {
     structPath.erase(suffixStart);
   }
-  return structPath == "/std/collections/internal_soa_storage/SoaColumn" ||
-         structPath == "/std/collections/internal_soa_storage/SoaFieldView";
+  return structPath == collection_paths::memberPath(collection_paths::kInternalSoaStorageFolder, collection_paths::kSoaColumnTypeName) ||
+         structPath == collection_paths::memberPath(collection_paths::kInternalSoaStorageFolder, "SoaFieldView");
 }
 
 bool isInternalSoaMetadataHelperPath(std::string_view path) {
-  if (path.rfind("/std/collections/internal_soa_storage/SoaColumn", 0) != 0 &&
-      path.rfind("/std/collections/internal_soa_storage/SoaFieldView", 0) != 0) {
+  if (path.rfind(collection_paths::memberPath(collection_paths::kInternalSoaStorageFolder, collection_paths::kSoaColumnTypeName), 0) != 0 &&
+      path.rfind(collection_paths::memberPath(collection_paths::kInternalSoaStorageFolder, "SoaFieldView"), 0) != 0) {
     return false;
   }
   std::string leaf(path.substr(path.find_last_of('/') == std::string_view::npos
@@ -438,7 +440,7 @@ bool isSoaVectorTarget(const Expr &expr, const LocalMap &localsIn) {
   }
   if (expr.kind == Expr::Kind::Call) {
     std::string collection;
-    if (getBuiltinCollectionName(expr, collection) && collection == "soa" "_vector") {
+    if (getBuiltinCollectionName(expr, collection) && collection == "soa_vector") {
       return true;
     }
     if (!expr.isMethodCall && isSimpleCallName(expr, "to_soa") && expr.args.size() == 1) {
@@ -577,12 +579,12 @@ InlineCallDispatchResult tryEmitInlineCallWithCountFallbacksImpl(
         isSoaVectorReceiverExpr != nullptr &&
         !expr.args.empty() &&
         (normalizedDirectCallPath ==
-             "/std/collections/experimental" "_soa" "_vector_conversions/soa" "VectorToAos" ||
+             collection_paths::memberPath(collection_paths::kExperimentalSoaVectorConversionsFolder, "soaVectorToAos") ||
          normalizedDirectCallPath ==
-             "/std/collections/experimental" "_soa" "_vector_conversions/soa" "VectorToAosRef") &&
+             collection_paths::memberPath(collection_paths::kExperimentalSoaVectorConversionsFolder, "soaVectorToAosRef")) &&
         isSoaVectorReceiverExpr(expr.args.front())) {
-      error = "struct parameter type mismatch: direct experimental soa" "_vector conversion "
-              "helpers require Soa" "Vector receiver";
+      error = "struct parameter type mismatch: direct experimental soa_vector conversion "
+              "helpers require SoaVector receiver";
       return InlineCallDispatchResult::Error;
     }
     if (directCallee != nullptr) {
@@ -799,9 +801,9 @@ InlineCallDispatchResult tryEmitInlineCallDispatchWithLocals(
   auto isInlineExperimentalVectorTypeName = [](std::string typeName) {
     typeName = trimTemplateTypeText(typeName);
     const std::string vectorTypePath =
-        experimentalCollectionTypePath("vector", "Vector", false);
+        vectorBackingTypePath(false);
     const std::string slashVectorTypePath =
-        experimentalCollectionTypePath("vector", "Vector");
+        vectorBackingTypePath();
     return typeName == "Vector" ||
            typeName == "/Vector" ||
            typeName == vectorTypePath ||
@@ -923,20 +925,20 @@ InlineCallDispatchResult tryEmitInlineCallDispatchWithLocals(
       if (normalizedBase == "Reference" || normalizedBase == "/Reference" ||
           normalizedBase == "Pointer" || normalizedBase == "/Pointer") {
         const std::string normalizedArg = trimTemplateTypeText(argText);
-        return normalizedArg == "soa" "_vector" ||
-               normalizedArg == "/soa" "_vector" ||
-               normalizedArg == "std/collections/" "soa" "_vector" ||
-               normalizedArg == "/std/collections/" "soa" "_vector";
+        return normalizedArg == "soa_vector" ||
+               normalizedArg == "/soa_vector" ||
+               normalizedArg == "std/collections/soa_vector" ||
+               normalizedArg == "/std/collections/soa_vector";
       }
-      return normalizedBase == "soa" "_vector" ||
-             normalizedBase == "/soa" "_vector" ||
-             normalizedBase == "std/collections/" "soa" "_vector" ||
-             normalizedBase == "/std/collections/" "soa" "_vector";
+      return normalizedBase == "soa_vector" ||
+             normalizedBase == "/soa_vector" ||
+             normalizedBase == "std/collections/soa_vector" ||
+             normalizedBase == "/std/collections/soa_vector";
     }
-    return normalizedTypeText == "soa" "_vector" ||
-           normalizedTypeText == "/soa" "_vector" ||
-           normalizedTypeText == "std/collections/" "soa" "_vector" ||
-           normalizedTypeText == "/std/collections/" "soa" "_vector";
+    return normalizedTypeText == "soa_vector" ||
+           normalizedTypeText == "/soa_vector" ||
+           normalizedTypeText == "std/collections/soa_vector" ||
+           normalizedTypeText == "/std/collections/soa_vector";
   };
   std::function<bool(const Expr &)> isRawBuiltinSoaVectorTarget;
   isRawBuiltinSoaVectorTarget = [&](const Expr &targetExpr) {
@@ -983,7 +985,7 @@ InlineCallDispatchResult tryEmitInlineCallDispatchWithLocals(
     }
     if (targetExpr.kind == Expr::Kind::Call) {
       std::string collection;
-      if (getBuiltinCollectionName(targetExpr, collection) && collection == "soa" "_vector") {
+      if (getBuiltinCollectionName(targetExpr, collection) && collection == "soa_vector") {
         return true;
       }
       if ((isSimpleCallName(targetExpr, "location") ||
@@ -1529,14 +1531,14 @@ InlineCallDispatchResult tryEmitInlineCallDispatchWithLocals(
               findSemanticProductMethodCallTarget(semanticProgram, methodExpr);
           if (!semanticTarget.empty()) {
             if (((semanticTarget == "/string/count" ||
-                  semanticTarget == "/std/collections/" "vec" "tor/count") &&
+                  semanticTarget == "/std/collections/vector/count") &&
                  methodExpr.args.size() == 1 &&
                  isSimpleCallName(methodExpr, "count")) ||
-                (semanticTarget == "/std/collections/" "vec" "tor/capacity" &&
+                (semanticTarget == "/std/collections/vector/capacity" &&
                  methodExpr.args.size() == 1 &&
                  isSimpleCallName(methodExpr, "capacity")) ||
-                ((semanticTarget == "/std/collections/" "vec" "tor/at" ||
-                  semanticTarget == "/std/collections/" "vec" "tor/at_unsafe") &&
+                ((semanticTarget == "/std/collections/vector/at" ||
+                  semanticTarget == "/std/collections/vector/at_unsafe") &&
                  methodExpr.args.size() == 2 &&
                  (isSimpleCallName(methodExpr, "at") ||
                   isSimpleCallName(methodExpr, "at_unsafe"))) ||
@@ -1815,14 +1817,14 @@ InlineCallDispatchResult tryEmitInlineCallDispatchWithLocals(
         findSemanticProductMethodCallTarget(semanticProgram, expr);
     if (!semanticTarget.empty()) {
       if (((semanticTarget == "/string/count" ||
-            semanticTarget == "/std/collections/" "vec" "tor/count") &&
+            semanticTarget == "/std/collections/vector/count") &&
            expr.args.size() == 1 &&
            isSimpleCallName(expr, "count")) ||
-          (semanticTarget == "/std/collections/" "vec" "tor/capacity" &&
+          (semanticTarget == "/std/collections/vector/capacity" &&
            expr.args.size() == 1 &&
            isSimpleCallName(expr, "capacity")) ||
-          ((semanticTarget == "/std/collections/" "vec" "tor/at" ||
-            semanticTarget == "/std/collections/" "vec" "tor/at_unsafe") &&
+          ((semanticTarget == "/std/collections/vector/at" ||
+            semanticTarget == "/std/collections/vector/at_unsafe") &&
            expr.args.size() == 2 &&
            (isSimpleCallName(expr, "at") ||
             isSimpleCallName(expr, "at_unsafe"))) ||

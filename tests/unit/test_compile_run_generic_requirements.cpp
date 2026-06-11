@@ -280,4 +280,165 @@ main() {
        "compile-time host effect"});
 }
 
+namespace {
+
+// Runtime contracts execute on the exe and vm paths on every platform; the
+// native backend consumes the same lowered IR but only builds on macOS.
+void expectExeAndVmExit(std::string_view nameStem,
+                        const std::string &source,
+                        int expectedExit) {
+  const std::string stem{nameStem};
+  const std::string srcPath = writeTemp(stem + ".prime", source);
+  const std::string exePath =
+      (testScratchPath("") / ("primec_" + stem + "_exe")).string();
+
+  const std::string compileCmd = "./primec --emit=exe " +
+                                 quoteShellArg(srcPath) + " -o " +
+                                 quoteShellArg(exePath) + " --entry /main";
+  CHECK(runCommand(compileCmd) == 0);
+  CHECK(runCommand(quoteShellArg(exePath)) == expectedExit);
+
+  const std::string vmCmd =
+      "./primec --emit=vm " + quoteShellArg(srcPath) + " --entry /main";
+  CHECK(runCommand(vmCmd) == expectedExit);
+}
+
+void expectVmRuntimeContractFailure(std::string_view nameStem,
+                                    const std::string &source,
+                                    const std::string &messageNeedle) {
+  const std::string stem{nameStem};
+  const std::string srcPath = writeTemp(stem + ".prime", source);
+  const std::string errPath =
+      (testScratchPath("") / ("primec_" + stem + "_err.txt")).string();
+  const std::string vmCmd = "./primec --emit=vm " + quoteShellArg(srcPath) +
+                            " --entry /main 2> " + quoteShellArg(errPath);
+  CHECK(runCommand(vmCmd) == 3);
+  const std::string error = readFile(errPath);
+  INFO(error);
+  CHECK(error.find(messageNeedle) != std::string::npos);
+}
+
+} // namespace
+
+TEST_CASE("runtime count contract admits callers it cannot prove statically") {
+  const std::string source = R"(
+import /std/collections/vector
+
+[return<int> require(count(values) > 0)]
+first_value([vector<int>] values) {
+  return(at(values, 0))
+}
+
+[return<int> effects(heap_alloc)]
+main() {
+  [vector<int> mut] values{}
+  push(values, 41)
+  push(values, 7)
+  return(minus(first_value(values), 34))
+}
+)";
+
+  expectExeAndVmExit("runtime_contract_count_pass", source, 7);
+}
+
+TEST_CASE("runtime count contract failure exits with the contract message") {
+  const std::string source = R"(
+import /std/collections/vector
+
+[return<int> require(count(values) > 0)]
+first_value([vector<int>] values) {
+  return(at(values, 0))
+}
+
+[return<int> effects(heap_alloc)]
+main() {
+  [vector<int> mut] values{}
+  return(first_value(values))
+}
+)";
+
+  expectExeAndVmExit("runtime_contract_count_fail", source, 3);
+  expectVmRuntimeContractFailure(
+      "runtime_contract_count_fail_message",
+      source,
+      "requirement contract failed on /first_value: "
+      "greater_than(count(values), 0i32)");
+}
+
+TEST_CASE("runtime integer parameter contracts check each call boundary") {
+  const std::string passSource = R"(
+[return<int> require(n > 0)]
+checked_div([int] total, [int] n) {
+  return(divide(total, n))
+}
+
+[return<int>]
+main() {
+  return(checked_div(12, 3))
+}
+)";
+
+  expectExeAndVmExit("runtime_contract_int_param_pass", passSource, 4);
+
+  const std::string failSource = R"(
+[return<int> require(n > 0)]
+checked_div([int] total, [int] n) {
+  return(divide(total, n))
+}
+
+[return<int>]
+main() {
+  return(checked_div(12, 0))
+}
+)";
+
+  expectExeAndVmExit("runtime_contract_int_param_fail", failSource, 3);
+  expectVmRuntimeContractFailure(
+      "runtime_contract_int_param_fail_message",
+      failSource,
+      "requirement contract failed on /checked_div: "
+      "greater_than(n, 0i32)");
+}
+
+TEST_CASE("runtime contracts stay rejected on the program entry definition") {
+  const std::string source = R"(
+[return<int> require(count(values) > 0)]
+main([array<string>] values) {
+  return(0)
+}
+)";
+
+  expectPrimecDiagnostic(
+      "runtime_contract_entry_rejected",
+      source,
+      {"runtime require(...) contracts are not supported on the program "
+       "entry definition: /main",
+       "greater_than(count(values), 0i32)"});
+}
+
+TEST_CASE("non-checkable runtime require operands stay compile-time errors") {
+  const std::string source = R"(
+[return<f32> require(scale > 0)]
+scaled([f32] scale) {
+  return(scale)
+}
+
+[return<int>]
+main() {
+  [f32] value{scaled(2.0f32)}
+  return(0i32)
+}
+)";
+
+  expectPrimecDiagnostic(
+      "runtime_contract_unsupported_operand",
+      source,
+      {"direct requirement check failed on /scaled",
+       "invalid requirement predicate /std/meta/value_greater",
+       "non-constant value operand for requirement predicate "
+       "/std/meta/value_greater: scale",
+       "hint: make the require(...) predicate a supported compile-time "
+       "predicate with available concrete facts."});
+}
+
 TEST_SUITE_END();

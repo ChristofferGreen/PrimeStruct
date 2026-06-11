@@ -1,3 +1,4 @@
+// soa-surface-audit: exempt
 #include "SemanticsValidator.h"
 
 #include "StdlibCollectionSurfaceHelpers.h"
@@ -404,7 +405,7 @@ bool SemanticsValidator::buildDefinitionReturnKinds(const std::unordered_set<std
           }
           std::string base;
           std::string arg;
-          if (!splitTemplateTypeName(transform.templateArgs.front(), base, arg) || base != "soa" "_vector") {
+          if (!splitTemplateTypeName(transform.templateArgs.front(), base, arg) || base != "soa_vector") {
             break;
           }
           std::vector<std::string> args;

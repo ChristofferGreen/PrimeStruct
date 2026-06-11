@@ -580,7 +580,7 @@ TEST_CASE("ir lowerer inline call context helper reports setup diagnostics") {
   CHECK(loweredCallTargets.empty());
 
   primec::Definition generatedVectorStruct;
-  generatedVectorStruct.fullPath = "/std/collections/experimental_vector/Vector__ti32";
+  generatedVectorStruct.fullPath = "/std/collections/vector/Vector__ti32";
   error.clear();
   inlineStack.clear();
   inlineStack.insert(generatedVectorStruct.fullPath);
@@ -662,7 +662,7 @@ TEST_CASE("ir lowerer inline call context helper reports setup diagnostics") {
   }
 
   primec::Definition generatedVectorMoveHelper;
-  generatedVectorMoveHelper.fullPath = "/std/collections/experimental_vector/Vector__ti32/Move";
+  generatedVectorMoveHelper.fullPath = "/std/collections/vector/Vector__ti32/Move";
   error.clear();
   inlineStack.clear();
   loweredCallTargets.clear();

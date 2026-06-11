@@ -150,7 +150,7 @@ main() {
   CHECK(runCommand(dumpCmd) == 0);
   const std::string ast = readFile(outPath);
   const size_t countPos =
-      ast.find("[public, return<i32>] /std/collections/experimental_soa_vector/SoaVector__");
+      ast.find("[public, return<i32>] /std/collections/soa/SoaVector__");
   CHECK(countPos != std::string::npos);
   CHECK(ast.find("/count()", countPos) != std::string::npos);
   CHECK(ast.find("/std/collections/internal_soa_storage/soaColumnCount", countPos) !=
@@ -423,7 +423,7 @@ main() {
       "./primec " + quoteShellArg(srcPath) + " --dump-stage ast-semantic > " + quoteShellArg(outPath);
   CHECK(runCommand(dumpCmd) == 0);
   const std::string ast = readFile(outPath);
-  CHECK(ast.find("[return</std/collections/experimental_soa_vector/SoaVector__") != std::string::npos);
+  CHECK(ast.find("[return</std/collections/soa/SoaVector__") != std::string::npos);
   CHECK(ast.find("/Holder/cloneValues()") != std::string::npos);
   CHECK(ast.find("return /std/collections/experimental_soa_vector/soaVectorSingle__") != std::string::npos);
   CHECK(ast.find("Particle(7)") != std::string::npos);

@@ -1,3 +1,4 @@
+// soa-surface-audit: exempt
 #include "SemanticsValidator.h"
 #include "SemanticsValidatorInferCollectionCompatibilityInternal.h"
 
@@ -78,7 +79,7 @@ ReturnKind SemanticsValidator::inferExprReturnKindImpl(const Expr &expr,
       }
       const std::string normalizedTypeName = normalizeBindingTypeName(paramBinding->typeName);
       if ((normalizedTypeName == "array" || normalizedTypeName == "vector" ||
-           normalizedTypeName == "soa" "_vector" || isKeyValueCollectionTypeName(normalizedTypeName)) &&
+           normalizedTypeName == "soa_vector" || isKeyValueCollectionTypeName(normalizedTypeName)) &&
           !paramBinding->typeTemplateArg.empty()) {
         return ReturnKind::Array;
       }
@@ -99,7 +100,7 @@ ReturnKind SemanticsValidator::inferExprReturnKindImpl(const Expr &expr,
     }
     const std::string normalizedTypeName = normalizeBindingTypeName(it->second.typeName);
     if ((normalizedTypeName == "array" || normalizedTypeName == "vector" ||
-         normalizedTypeName == "soa" "_vector" || isKeyValueCollectionTypeName(normalizedTypeName)) &&
+         normalizedTypeName == "soa_vector" || isKeyValueCollectionTypeName(normalizedTypeName)) &&
         !it->second.typeTemplateArg.empty()) {
       return ReturnKind::Array;
     }
@@ -162,7 +163,7 @@ ReturnKind SemanticsValidator::inferExprReturnKindImpl(const Expr &expr,
               hash *= 1099511628211ULL;
             }
             std::ostringstream out;
-            out << legacyExperimentalVectorCompatibilityPrefix()
+            out << canonicalVectorTypeIdentityPrefix()
                 << "Vector__t" << std::hex << hash;
             const std::string path = out.str();
             if (structNames_.count(path) == 0) {
@@ -330,7 +331,7 @@ ReturnKind SemanticsValidator::inferExprReturnKindImpl(const Expr &expr,
     const std::string resolvedCalleePath = preferVectorStdlibHelperPath(resolveCalleePath(expr));
     std::string collection;
     if (defMap_.find(resolvedCalleePath) == defMap_.end() && getBuiltinCollectionName(expr, collection)) {
-      if ((collection == "array" || collection == "vector" || collection == "soa" "_vector") &&
+      if ((collection == "array" || collection == "vector" || collection == "soa_vector") &&
           expr.templateArgs.size() == 1) {
         return ReturnKind::Array;
       }

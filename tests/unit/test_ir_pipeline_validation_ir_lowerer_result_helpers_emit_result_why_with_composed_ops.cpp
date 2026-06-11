@@ -464,7 +464,7 @@ TEST_CASE("ir lowerer flow helpers disarm soa storage temporaries after copy") {
   primec::ir_lowerer::emitDisarmTemporaryStructAfterCopy(
       [&](primec::IrOpcode op, uint64_t imm) { instructions.push_back({op, imm}); },
       12,
-      "/std/collections/experimental_soa_vector/SoaVector__tParticle");
+      "/std/collections/soa/SoaVector__tParticle");
   REQUIRE(instructions.size() == 6);
   checkDisarmAt(instructions, 0, 5u * primec::IrSlotBytes);
 

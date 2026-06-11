@@ -89,7 +89,7 @@ bool SemanticsValidator::resolveStructFieldReceiverPath(const std::vector<Parame
           hash *= 1099511628211ULL;
         }
         std::ostringstream out;
-        out << legacyExperimentalVectorCompatibilityPrefix() << "Vector__t"
+        out << canonicalVectorTypeIdentityPrefix() << "Vector__t"
             << std::hex << hash;
         const std::string path = out.str();
         if (structNames_.count(path) == 0) {

@@ -1,3 +1,4 @@
+// soa-surface-audit: exempt
 #pragma once
 
 bool isRemovedVectorCompatibilityHelper(const std::string &helperName) {
@@ -8,7 +9,7 @@ bool isRemovedVectorCompatibilityHelper(const std::string &helperName) {
 
 bool isRemovedBorrowedSoaCompatibilityHelper(std::string_view helperName) {
   return helperName == "count_ref" || helperName == "get_ref" ||
-         helperName == "ref_ref" || helperName == "to" "_aos_ref";
+         helperName == "ref_ref" || helperName == "to_aos_ref";
 }
 
 bool isRemovedKeyValueCompatibilityHelper(std::string_view helperName) {

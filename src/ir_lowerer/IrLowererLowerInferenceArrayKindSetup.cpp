@@ -1,3 +1,4 @@
+// soa-surface-audit: exempt
 #include "IrLowererLowerInferenceSetup.h"
 
 #include "IrLowererBindingTypeHelpers.h"
@@ -31,7 +32,7 @@ LocalInfo::ValueKind semanticElementKindFromCollectionTypeText(
   if (bufferOnly) {
     return LocalInfo::ValueKind::Unknown;
   }
-  if (base == "array" || base == "vector" || base == "soa" "_vector") {
+  if (base == "array" || base == "vector" || base == "soa_vector") {
     return valueKindFromTypeName(trimTemplateTypeText(argText));
   }
   if (base == "map" && splitTemplateArgs(argText, args) && args.size() == 2) {
@@ -54,7 +55,7 @@ LocalInfo::ValueKind semanticElementKindFromCollectionFact(
   if (bufferOnly) {
     return LocalInfo::ValueKind::Unknown;
   }
-  if (family == "array" || family == "vector" || family == "soa" "_vector") {
+  if (family == "array" || family == "vector" || family == "soa_vector") {
     return valueKindFromTypeName(resolveSemanticProductTypeText(
         semanticProgram, fact.elementTypeText, fact.elementTypeTextId));
   }

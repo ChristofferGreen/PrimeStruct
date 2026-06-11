@@ -1,3 +1,4 @@
+// soa-surface-audit: exempt
 #include "SemanticsValidator.h"
 
 #include "SemanticsValidatorInferCollectionCompatibilityInternal.h"
@@ -5,6 +6,7 @@
 #include <algorithm>
 #include <functional>
 #include <string_view>
+#include "primec/StdlibCollectionPaths.h"
 
 namespace primec::semantics {
 
@@ -70,11 +72,11 @@ bool SemanticsValidator::resolveInferMethodCallPath(
           normalizedMethodName.substr(unrootedVectorHelperPrefix().size());
     } else if (normalizedMethodName.rfind("array/", 0) == 0) {
       normalizedMethodName = normalizedMethodName.substr(std::string("array/").size());
-    } else if (normalizedMethodName.rfind("soa" "_vector/", 0) == 0) {
-      normalizedMethodName = normalizedMethodName.substr(std::string("soa" "_vector/").size());
-    } else if (normalizedMethodName.rfind("std/collections/" "soa" "_vector/", 0) == 0) {
+    } else if (normalizedMethodName.rfind("soa_vector/", 0) == 0) {
+      normalizedMethodName = normalizedMethodName.substr(std::string("soa_vector/").size());
+    } else if (normalizedMethodName.rfind("std/collections/soa_vector/", 0) == 0) {
       normalizedMethodName =
-          normalizedMethodName.substr(std::string("std/collections/" "soa" "_vector/").size());
+          normalizedMethodName.substr(std::string("std/collections/soa_vector/").size());
     } else if (isUnrootedCanonicalVectorCompatibilityPath(
                    normalizedMethodName)) {
       normalizedMethodName = std::string(
@@ -316,14 +318,14 @@ bool SemanticsValidator::resolveInferMethodCallPath(
     if (!explicitRemovedMethodPath.empty() && hasDefinitionPath(explicitRemovedMethodPath)) {
       if (((normalizedMethodName == "count" &&
             (collectionTypePath == "/vector" || collectionTypePath == "/array" ||
-             collectionTypePath == "/soa" "_vector" || collectionTypePath == "/string")) ||
+             collectionTypePath == "/soa_vector" || collectionTypePath == "/string")) ||
            (normalizedMethodName == "count_ref" &&
-            (collectionTypePath == "/soa" "_vector" || collectionTypePath == "/map")))) {
+            (collectionTypePath == "/soa_vector" || collectionTypePath == "/map")))) {
         resolvedOut = explicitRemovedMethodPath;
         return true;
       }
       if (normalizedMethodName == "capacity" &&
-          (collectionTypePath == "/vector" || collectionTypePath == "/soa" "_vector")) {
+          (collectionTypePath == "/vector" || collectionTypePath == "/soa_vector")) {
         resolvedOut = explicitRemovedMethodPath;
         return true;
       }
@@ -352,9 +354,9 @@ bool SemanticsValidator::resolveInferMethodCallPath(
         resolvedOut = canonicalVectorCompatibilityHelperPathOrFallback("count");
         return true;
       }
-      if (collectionTypePath == "/soa" "_vector") {
+      if (collectionTypePath == "/soa_vector") {
         resolvedOut = preferredSoaHelperTargetForCollectionType(normalizedMethodName,
-                                                                "/soa" "_vector");
+                                                                "/soa_vector");
         return true;
       }
       if (collectionTypePath == "/string" && normalizedMethodName == "count") {
@@ -443,42 +445,42 @@ bool SemanticsValidator::resolveInferMethodCallPath(
       return !resolvedOut.empty();
     }
     if ((normalizedMethodName == "get" || normalizedMethodName == "get_ref") &&
-        (collectionTypePath == "/soa" "_vector" ||
+        (collectionTypePath == "/soa_vector" ||
          (collectionTypePath == "/vector" &&
           usesSamePathSoaHelperTargetForCollectionType(normalizedMethodName, "/vector")))) {
       resolvedOut = preferredSoaHelperTargetForCollectionType(
           normalizedMethodName,
-          collectionTypePath == "/soa" "_vector" ? "/soa" "_vector" : "/vector");
+          collectionTypePath == "/soa_vector" ? "/soa_vector" : "/vector");
       return true;
     }
     if ((normalizedMethodName == "ref" || normalizedMethodName == "ref_ref") &&
-        (collectionTypePath == "/soa" "_vector" ||
+        (collectionTypePath == "/soa_vector" ||
          (collectionTypePath == "/vector" &&
           usesSamePathSoaHelperTargetForCollectionType(normalizedMethodName, "/vector")))) {
       resolvedOut = preferredSoaHelperTargetForCollectionType(
           normalizedMethodName,
-          collectionTypePath == "/soa" "_vector" ? "/soa" "_vector" : "/vector");
+          collectionTypePath == "/soa_vector" ? "/soa_vector" : "/vector");
       return true;
     }
     if ((normalizedMethodName == "push" || normalizedMethodName == "reserve") &&
-        (collectionTypePath == "/soa" "_vector" ||
+        (collectionTypePath == "/soa_vector" ||
          (collectionTypePath == "/vector" &&
           usesSamePathSoaHelperTargetForCollectionType(normalizedMethodName,
                                                        "/vector")))) {
       resolvedOut = preferredSoaHelperTargetForCollectionType(
           normalizedMethodName,
-          collectionTypePath == "/soa" "_vector" ? "/soa" "_vector" : "/vector");
+          collectionTypePath == "/soa_vector" ? "/soa_vector" : "/vector");
       return true;
     }
     if (normalizedMethodName == "to_soa" && collectionTypePath == "/vector") {
       resolvedOut = "/to_soa";
       return true;
     }
-    if ((normalizedMethodName == "to" "_aos" || normalizedMethodName == "to" "_aos_ref") &&
-        (collectionTypePath == "/soa" "_vector" || collectionTypePath == "/vector")) {
+    if ((normalizedMethodName == "to_aos" || normalizedMethodName == "to_aos_ref") &&
+        (collectionTypePath == "/soa_vector" || collectionTypePath == "/vector")) {
       resolvedOut = preferredSoaHelperTargetForCollectionType(
           normalizedMethodName,
-          collectionTypePath == "/soa" "_vector" ? "/soa" "_vector" : "/vector");
+          collectionTypePath == "/soa_vector" ? "/soa_vector" : "/vector");
       return true;
     }
     return false;
@@ -613,10 +615,10 @@ bool SemanticsValidator::resolveInferMethodCallPath(
       helperName = "get_ref";
     } else if (helperName == "ref") {
       helperName = "ref_ref";
-    } else if (helperName == "to" "_aos") {
-      helperName = "to" "_aos_ref";
+    } else if (helperName == "to_aos") {
+      helperName = "to_aos_ref";
     }
-    return preferredSoaHelperTargetForCollectionType(helperName, "/soa" "_vector");
+    return preferredSoaHelperTargetForCollectionType(helperName, "/soa_vector");
   };
   auto resolvesBorrowedExperimentalSoaReceiver = [&](const Expr &candidate) {
     const std::string previousError = error_;
@@ -634,29 +636,29 @@ bool SemanticsValidator::resolveInferMethodCallPath(
                                                  ignoredElemType);
   };
   auto preferredSoaToAosHelperTargetForReceiver = [&](const Expr &receiverExpr) {
-    if (normalizedMethodName == "to" "_aos" &&
+    if (normalizedMethodName == "to_aos" &&
         resolvesBorrowedExperimentalSoaReceiver(receiverExpr)) {
       return preferredBorrowedSoaAccessHelperTarget(normalizedMethodName);
     }
     return preferredSoaHelperTargetForCollectionType(normalizedMethodName,
-                                                    "/soa" "_vector");
+                                                    "/soa_vector");
   };
   auto isCanonicalSoaWrapperMethod = [&](std::string_view helperName) {
     return helperName == "count" || helperName == "count_ref" ||
            helperName == "get" || helperName == "get_ref" ||
            helperName == "ref" || helperName == "ref_ref" ||
-           helperName == "to" "_aos" || helperName == "to" "_aos_ref" ||
+           helperName == "to_aos" || helperName == "to_aos_ref" ||
            helperName == "push" || helperName == "reserve";
   };
   auto redirectConcreteExperimentalSoaMethodTarget = [&](const std::string &resolvedType) -> bool {
     const bool isConcreteExperimentalSoaReceiver =
-        resolvedType.rfind("/std/collections/experimental" "_soa" "_vector/Soa" "Vector" "__", 0) == 0;
+        resolvedType.rfind(collection_paths::specializedTypePrefix(collection_paths::kSoaFolder, collection_paths::kSoaVectorTypeName), 0) == 0;
     if (!isConcreteExperimentalSoaReceiver ||
         !isCanonicalSoaWrapperMethod(normalizedMethodName)) {
       return false;
     }
     resolvedOut = preferredSoaHelperTargetForCollectionType(normalizedMethodName,
-                                                            "/soa" "_vector");
+                                                            "/soa_vector");
     return true;
   };
   auto setIndexedArgsPackKeyValueMethodTarget = [&](const Expr &receiverExpr, const std::string &helperName) -> bool {
@@ -971,7 +973,7 @@ bool SemanticsValidator::resolveInferMethodCallPath(
     if ((normalizedMethodName == "count" || normalizedMethodName == "count_ref") &&
         resolveSoaVectorTarget(receiver, elemType)) {
       resolvedOut =
-          preferredSoaHelperTargetForCollectionType(normalizedMethodName, "/soa" "_vector");
+          preferredSoaHelperTargetForCollectionType(normalizedMethodName, "/soa_vector");
       return true;
     }
     if ((normalizedMethodName == "count" || normalizedMethodName == "count_ref") &&
@@ -997,7 +999,7 @@ bool SemanticsValidator::resolveInferMethodCallPath(
     if ((normalizedMethodName == "get" || normalizedMethodName == "get_ref") &&
         resolveSoaVectorTarget(receiver, elemType)) {
       resolvedOut =
-          preferredSoaHelperTargetForCollectionType(normalizedMethodName, "/soa" "_vector");
+          preferredSoaHelperTargetForCollectionType(normalizedMethodName, "/soa_vector");
       return true;
     }
     if ((normalizedMethodName == "get" || normalizedMethodName == "get_ref") &&
@@ -1016,7 +1018,7 @@ bool SemanticsValidator::resolveInferMethodCallPath(
     if ((normalizedMethodName == "ref" || normalizedMethodName == "ref_ref") &&
         resolveSoaVectorTarget(receiver, elemType)) {
       resolvedOut =
-          preferredSoaHelperTargetForCollectionType(normalizedMethodName, "/soa" "_vector");
+          preferredSoaHelperTargetForCollectionType(normalizedMethodName, "/soa_vector");
       return true;
     }
     if ((normalizedMethodName == "ref" || normalizedMethodName == "ref_ref") &&
@@ -1025,22 +1027,22 @@ bool SemanticsValidator::resolveInferMethodCallPath(
       resolvedOut = preferredBorrowedSoaAccessHelperTarget(normalizedMethodName);
       return true;
     }
-    if ((normalizedMethodName == "to" "_aos" || normalizedMethodName == "to" "_aos_ref") &&
+    if ((normalizedMethodName == "to_aos" || normalizedMethodName == "to_aos_ref") &&
         resolveVectorTarget(receiver, elemType)) {
       resolvedOut =
           preferredSoaHelperTargetForCollectionType(normalizedMethodName, "/vector");
       return true;
     }
-    if ((normalizedMethodName == "to" "_aos" || normalizedMethodName == "to" "_aos_ref") &&
+    if ((normalizedMethodName == "to_aos" || normalizedMethodName == "to_aos_ref") &&
         this->resolveSoaVectorOrExperimentalBorrowedReceiver(
             receiver, params, locals, resolveDirectReceiver, elemType)) {
       resolvedOut = preferredSoaToAosHelperTargetForReceiver(receiver);
       return true;
     }
-    if ((normalizedMethodName == "to" "_aos" || normalizedMethodName == "to" "_aos_ref") &&
+    if ((normalizedMethodName == "to_aos" || normalizedMethodName == "to_aos_ref") &&
         resolveSoaVectorTarget(receiver, elemType)) {
       resolvedOut =
-          preferredSoaHelperTargetForCollectionType(normalizedMethodName, "/soa" "_vector");
+          preferredSoaHelperTargetForCollectionType(normalizedMethodName, "/soa_vector");
       return true;
     }
     if (resolveSoaFieldViewMethodTarget(receiver)) {

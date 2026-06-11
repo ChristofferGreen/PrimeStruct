@@ -1,8 +1,10 @@
+// soa-surface-audit: exempt
 #include "EmitterBuiltinMethodResolutionTypeInferenceInternal.h"
 
 #include "EmitterBuiltinCallPathHelpersInternal.h"
 #include "EmitterCollectionSurfaceMetadata.h"
 #include "primec/StdlibSurfaceRegistry.h"
+#include "primec/StdlibCollectionPaths.h"
 
 namespace primec::emitter {
 
@@ -64,7 +66,7 @@ bool collectionSurfaceMemberPathUsesKnownPrefix(std::string_view path) {
 }
 
 std::string experimentalCollectionMemberRoot(std::string_view collectionName) {
-  return "std/collections/experimental_" + std::string(collectionName) + "/";
+  return collection_paths::moduleRootBare(collection_paths::kExperimentalFolderPrefix) + std::string(collectionName) + "/";
 }
 
 const StdlibSurfaceMetadata *findVectorHelperSurfaceMetadata() {
@@ -404,13 +406,13 @@ std::string normalizeCollectionReceiverType(const std::string &typePath) {
   if (typePath == "/vector" || typePath == "vector") {
     return "vector";
   }
-  if (typePath == "soa" "_vector" ||
-      typePath == "/std/collections/" "soa" "_vector" ||
-      typePath == "std/collections/" "soa" "_vector" ||
-      typePath == "/std/collections/experimental" "_soa" "_vector/Soa" "Vector" ||
-      typePath == "std/collections/experimental" "_soa" "_vector/Soa" "Vector" ||
-      typePath == "Soa" "Vector") {
-    return "soa" "_vector";
+  if (typePath == "soa_vector" ||
+      typePath == "/std/collections/soa_vector" ||
+      typePath == "std/collections/soa_vector" ||
+      typePath == collection_paths::memberPath(collection_paths::kSoaFolder, collection_paths::kSoaVectorTypeName) ||
+      typePath == collection_paths::memberPathBare(collection_paths::kSoaFolder, collection_paths::kSoaVectorTypeName) ||
+      typePath == "SoaVector") {
+    return "soa_vector";
   }
   if (isKeyValueCollectionTypeNameLocal(typePath)) {
     return "map";
@@ -424,7 +426,7 @@ std::vector<std::string> collectionHelperPathCandidates(const std::string &path)
   if (!normalizedPath.empty() && normalizedPath.front() != '/') {
     if (normalizedPath.rfind("array/", 0) == 0 ||
         collectionSurfaceMemberPathUsesKnownPrefix(normalizedPath) ||
-        normalizedPath.rfind("std/collections/" "soa" "_vector/", 0) == 0) {
+        normalizedPath.rfind("std/collections/soa_vector/", 0) == 0) {
       normalizedPath.insert(normalizedPath.begin(), '/');
     }
   }

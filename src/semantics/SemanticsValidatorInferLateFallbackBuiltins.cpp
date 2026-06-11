@@ -1,3 +1,4 @@
+// soa-surface-audit: exempt
 #include "SemanticsValidator.h"
 
 #include "SemanticsValidatorInferCollectionCompatibilityInternal.h"
@@ -168,8 +169,8 @@ ReturnKind SemanticsValidator::inferLateFallbackReturnKind(
 
   const auto resolvedIt = defMap_.find(context.resolved);
   if (!expr.isMethodCall &&
-      (isSimpleCallName(expr, "to_soa") || isSimpleCallName(expr, "to" "_aos") ||
-       isSimpleCallName(expr, "to" "_aos_ref")) &&
+      (isSimpleCallName(expr, "to_soa") || isSimpleCallName(expr, "to_aos") ||
+       isSimpleCallName(expr, "to_aos_ref")) &&
       expr.args.size() == 1 && resolvedIt == defMap_.end()) {
     std::string elemType;
     if (isSimpleCallName(expr, "to_soa")) {
@@ -251,7 +252,7 @@ ReturnKind SemanticsValidator::inferLateFallbackReturnKind(
                  resolveSoaVectorTarget(receiverCandidate, elemType)) {
         methodResolved =
             preferredSoaHelperTargetForCollectionType(helperName,
-                                                      "/soa" "_vector");
+                                                      "/soa_vector");
       } else if (resolveStringTarget != nullptr &&
                  resolveStringTarget(receiverCandidate)) {
         methodResolved = "/string/" + helperName;

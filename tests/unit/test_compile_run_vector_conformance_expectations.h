@@ -4,7 +4,8 @@ inline void expectVectorConformanceCompileReject(const std::string &source,
                                                  const std::string &nameStem,
                                                  const std::string &emitMode,
                                                  const std::string &expectedFragment,
-                                                 const std::string &requiredFragment = "");
+                                                 const std::string &requiredFragment = "",
+                                                 int expectedStatus = 2);
 
 inline std::string makeDirectExperimentalVectorImportRejectSource() {
   return R"(import /std/collections/experimental_vector/*
@@ -68,7 +69,8 @@ inline void expectVectorConformanceCompileReject(const std::string &source,
                                                  const std::string &nameStem,
                                                  const std::string &emitMode,
                                                  const std::string &expectedFragment,
-                                                 const std::string &requiredFragment) {
+                                                 const std::string &requiredFragment,
+                                                 int expectedStatus) {
   CAPTURE(nameStem);
   CAPTURE(emitMode);
   CAPTURE(expectedFragment);
@@ -84,7 +86,7 @@ inline void expectVectorConformanceCompileReject(const std::string &source,
                                   : "./primec --emit=" + emitMode + " " + quoteShellArg(srcPath) +
                                         " -o " + quoteShellArg(discardExePath) + " --entry /main > " +
                                         quoteShellArg(outPath) + " 2>&1";
-  CHECK(runCommand(command) == 2);
+  CHECK(runCommand(command) == expectedStatus);
   const std::string diagnostics = readFile(outPath);
   if (!requiredFragment.empty()) {
     CHECK(diagnostics.find(requiredFragment) != std::string::npos);
@@ -535,7 +537,9 @@ inline void expectCanonicalVectorIndexedRemovalOwnershipConformance(const std::s
         makeCanonicalVectorIndexedRemovalOwnershipConformanceSource(),
         "vector_indexed_removal_canonical_ownership_" + emitMode,
         emitMode,
-        "");
+        "VM error: invalid indirect address in IR",
+        "",
+        3);
     return;
   }
   if (emitMode == "exe") {
@@ -789,7 +793,9 @@ inline void expectBareVectorMutatorMethodImportRequirement(const std::string &em
       (testScratchPath("") /
        ("primec_vector_bare_" + helperName + "_method_import_requirement_" + emitMode + "_out.txt"))
           .string();
-  const std::string expected = "unknown method: /std/collections/vector/" + helperName;
+  const std::string expected = emitMode == "vm"
+                                   ? "unknown call target: /std/collections/vector/" + helperName
+                                   : "unknown method: /std/collections/vector/" + helperName;
 
   if (emitMode == "vm") {
     const std::string runCmd = "./primec --emit=vm " + quoteShellArg(srcPath) + " --entry /main > " +

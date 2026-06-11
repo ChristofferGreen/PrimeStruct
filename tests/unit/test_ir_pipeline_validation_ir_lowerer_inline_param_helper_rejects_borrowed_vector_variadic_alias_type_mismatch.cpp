@@ -152,7 +152,7 @@ TEST_CASE("ir lowerer inline param helper preserves borrowed soa_vector spread s
   sourceInfo.kind = primec::ir_lowerer::LocalInfo::Kind::Array;
   sourceInfo.valueKind = primec::ir_lowerer::LocalInfo::ValueKind::Unknown;
   sourceInfo.structTypeName =
-      "/std/collections/experimental_soa_vector/SoaVector__Particle";
+      "/std/collections/soa/SoaVector__Particle";
   sourceInfo.isArgsPack = true;
   sourceInfo.argsPackElementKind = primec::ir_lowerer::LocalInfo::Kind::Reference;
   sourceInfo.referenceToVector = true;
@@ -204,7 +204,7 @@ TEST_CASE("ir lowerer inline param helper preserves borrowed soa_vector spread s
   REQUIRE(calleeLocals.count("values") == 1u);
   const auto &valuesInfo = calleeLocals.at("values");
   CHECK(valuesInfo.structTypeName ==
-        "/std/collections/experimental_soa_vector/SoaVector__Particle");
+        "/std/collections/soa/SoaVector__Particle");
   CHECK(valuesInfo.isSoaVector);
   CHECK(valuesInfo.referenceToVector);
   CHECK(valuesInfo.argsPackElementCount == 2);

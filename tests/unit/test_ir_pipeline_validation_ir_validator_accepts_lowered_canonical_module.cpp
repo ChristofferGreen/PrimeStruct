@@ -1140,7 +1140,7 @@ TEST_CASE("ir lowerer access helper classifies namespaced access helpers") {
   primec::Expr specializedExperimentalVectorMethodAccessCall;
   specializedExperimentalVectorMethodAccessCall.kind = primec::Expr::Kind::Call;
   specializedExperimentalVectorMethodAccessCall.namespacePrefix =
-      "/std/collections/experimental_vector/Vector__t12345678";
+      "/std/collections/vector/Vector__t12345678";
   specializedExperimentalVectorMethodAccessCall.name = "at_unsafe";
 
   helperName.clear();

@@ -1,3 +1,4 @@
+// soa-surface-audit: exempt
 #include "IrLowererStatementBindingHelpers.h"
 
 #include <algorithm>
@@ -13,6 +14,7 @@
 #include "IrLowererSetupTypeCollectionHelpers.h"
 #include "IrLowererSetupTypeHelpers.h"
 #include "IrLowererTemplateTypeParseHelpers.h"
+#include "primec/StdlibCollectionPaths.h"
 
 namespace primec::ir_lowerer {
 
@@ -52,6 +54,19 @@ std::string resolveSemanticBindingTypeText(const SemanticProgram *semanticProgra
   return trimTemplateTypeText(bindingFact.bindingTypeText);
 }
 
+std::string resolveSemanticTryValueTypeText(const SemanticProgram *semanticProgram,
+                                            const SemanticProgramTryFact &tryFact) {
+  if (semanticProgram != nullptr && tryFact.valueTypeId != InvalidSymbolId) {
+    std::string resolvedTypeText = std::string(
+        semanticProgramResolveCallTargetString(*semanticProgram,
+                                               tryFact.valueTypeId));
+    if (!resolvedTypeText.empty()) {
+      return trimTemplateTypeText(resolvedTypeText);
+    }
+  }
+  return trimTemplateTypeText(tryFact.valueType);
+}
+
 std::string resolveSemanticCollectionSpecializationText(
     const SemanticProgram *semanticProgram,
     const std::string &fallback,
@@ -75,8 +90,8 @@ bool isSpecializedExperimentalVectorTypeText(const std::string &typeText) {
 bool isCollectionVectorSurfaceBase(const std::string &typeText) {
   const std::string normalized = trimTemplateTypeText(typeText);
   return normalized == "Vector" ||
-         normalized == experimentalCollectionTypePath("vector", "Vector", false) ||
-         normalized == experimentalCollectionTypePath("vector", "Vector");
+         normalized == vectorBackingTypePath(false) ||
+         normalized == vectorBackingTypePath();
 }
 
 bool isSpecializedExperimentalSoaVectorStructPathText(const std::string &typeText) {
@@ -84,7 +99,7 @@ bool isSpecializedExperimentalSoaVectorStructPathText(const std::string &typeTex
   if (!normalized.empty() && normalized.front() != '/') {
     normalized.insert(normalized.begin(), '/');
   }
-  return normalized.rfind("/std/collections/experimental_soa_vector/SoaVector__", 0) == 0;
+  return normalized.rfind(collection_paths::specializedTypePrefix(collection_paths::kSoaFolder, collection_paths::kSoaVectorTypeName), 0) == 0;
 }
 
 bool resolveSpecializedExperimentalVectorElementKind(const std::string &typeText,
@@ -640,6 +655,41 @@ bool populateBindingTypeInfoFromSemanticBindingFact(
   return true;
 }
 
+bool populateBindingTypeInfoFromSemanticTryFact(
+    const Expr &expr,
+    const ResolveDefinitionCallForStatementFn &resolveDefinitionCall,
+    const SemanticProgram *semanticProgram,
+    const SemanticProductIndex *semanticIndex,
+    StatementBindingTypeInfo &infoOut) {
+  if (semanticIndex == nullptr || expr.semanticNodeId == 0) {
+    if (semanticProgram == nullptr || expr.sourceLine == 0 ||
+        expr.sourceColumn == 0) {
+      return false;
+    }
+  }
+  const auto *tryFact = expr.semanticNodeId != 0
+                            ? findSemanticProductTryFact(
+                                  semanticProgram, *semanticIndex, expr)
+                            : nullptr;
+  if (tryFact == nullptr && semanticProgram != nullptr &&
+      expr.sourceLine != 0 && expr.sourceColumn != 0) {
+    for (const auto &candidate : semanticProgram->tryFacts) {
+      if (candidate.sourceLine == expr.sourceLine &&
+          candidate.sourceColumn == expr.sourceColumn) {
+        tryFact = &candidate;
+        break;
+      }
+    }
+  }
+  const std::string valueTypeText =
+      tryFact != nullptr
+          ? resolveSemanticTryValueTypeText(semanticProgram, *tryFact)
+          : std::string{};
+  return tryFact != nullptr && !valueTypeText.empty() &&
+         populateBindingTypeInfoFromTypeText(
+             valueTypeText, resolveDefinitionCall, infoOut);
+}
+
 bool inferExprBindingTypeInfo(const Expr &expr,
                               const LocalMap &localsIn,
                               const InferBindingExprKindFn &inferExprKind,
@@ -735,6 +785,11 @@ bool inferExprBindingTypeInfo(const Expr &expr,
   }
   if (expr.kind != Expr::Kind::Call) {
     return false;
+  }
+
+  if (populateBindingTypeInfoFromSemanticTryFact(
+          expr, resolveDefinitionCall, semanticProgram, semanticIndex, infoOut)) {
+    return true;
   }
 
   std::string collection;
@@ -866,6 +921,11 @@ StatementBindingTypeInfo inferStatementBindingTypeInfo(const Expr &stmt,
       populateBindingTypeInfoFromSemanticBindingFact(
           init, safeResolveDefinitionCall, semanticProgram, semanticIndex, semanticInitInfo);
   deferSurfaceStructTypeName(semanticInitInfo);
+  StatementBindingTypeInfo semanticTryInitInfo;
+  const bool hasSemanticTryInitInfo =
+      populateBindingTypeInfoFromSemanticTryFact(
+          init, safeResolveDefinitionCall, semanticProgram, semanticIndex, semanticTryInitInfo);
+  deferSurfaceStructTypeName(semanticTryInitInfo);
   if (!hasExplicitType && hasSemanticBindingInfo) {
     return semanticInfo;
   }
@@ -878,6 +938,9 @@ StatementBindingTypeInfo inferStatementBindingTypeInfo(const Expr &stmt,
         info.kind = it->second.kind;
       }
     } else if (init.kind == Expr::Kind::Call) {
+      if (hasSemanticTryInitInfo) {
+        info.kind = semanticTryInitInfo.kind;
+      }
       inferredInitValueKind = inferExprKind(init, localsIn);
       if (isPointerMemoryIntrinsicCall(init)) {
         info.kind = LocalInfo::Kind::Pointer;
@@ -1040,6 +1103,26 @@ StatementBindingTypeInfo inferStatementBindingTypeInfo(const Expr &stmt,
       }
       mergeStatementBindingAuxTypeInfo(semanticInfo, info);
     }
+    if (hasSemanticTryInitInfo) {
+      if (info.kind == LocalInfo::Kind::Value ||
+          (semanticTryInitInfo.kind == LocalInfo::Kind::Value &&
+           !semanticTryInitInfo.structTypeName.empty())) {
+        info.kind = semanticTryInitInfo.kind;
+      }
+      if (info.valueKind == LocalInfo::ValueKind::Unknown) {
+        info.valueKind = semanticTryInitInfo.valueKind;
+      }
+      if (info.keyValueKeyKind == LocalInfo::ValueKind::Unknown) {
+        info.keyValueKeyKind = semanticTryInitInfo.keyValueKeyKind;
+      }
+      if (info.keyValueValueKind == LocalInfo::ValueKind::Unknown) {
+        info.keyValueValueKind = semanticTryInitInfo.keyValueValueKind;
+      }
+      if (info.structTypeName.empty()) {
+        info.structTypeName = semanticTryInitInfo.structTypeName;
+      }
+      mergeStatementBindingAuxTypeInfo(semanticTryInitInfo, info);
+    }
     const LocalInfo::ValueKind declaredValueKind = bindingValueKind(stmt, info.kind);
     if (declaredValueKind != LocalInfo::ValueKind::Unknown) {
       info.valueKind = declaredValueKind;
@@ -1053,16 +1136,22 @@ StatementBindingTypeInfo inferStatementBindingTypeInfo(const Expr &stmt,
   }
 
   auto applySemanticInitializerInfo = [&]() {
-    if (!hasSemanticInitBindingInfo || semanticInitInfo.kind != info.kind) {
+    const StatementBindingTypeInfo *initializerInfo = nullptr;
+    if (hasSemanticInitBindingInfo && semanticInitInfo.kind == info.kind) {
+      initializerInfo = &semanticInitInfo;
+    } else if (hasSemanticTryInitInfo && semanticTryInitInfo.kind == info.kind) {
+      initializerInfo = &semanticTryInitInfo;
+    }
+    if (initializerInfo == nullptr) {
       return false;
     }
-    info.valueKind = semanticInitInfo.valueKind;
-    info.keyValueKeyKind = semanticInitInfo.keyValueKeyKind;
-    info.keyValueValueKind = semanticInitInfo.keyValueValueKind;
-    info.structTypeName = semanticInitInfo.structTypeName;
+    info.valueKind = initializerInfo->valueKind;
+    info.keyValueKeyKind = initializerInfo->keyValueKeyKind;
+    info.keyValueValueKind = initializerInfo->keyValueValueKind;
+    info.structTypeName = initializerInfo->structTypeName;
     info.usesBuiltinCollectionLayout =
-        info.usesBuiltinCollectionLayout || semanticInitInfo.usesBuiltinCollectionLayout;
-    mergeStatementBindingAuxTypeInfo(semanticInitInfo, info);
+        info.usesBuiltinCollectionLayout || initializerInfo->usesBuiltinCollectionLayout;
+    mergeStatementBindingAuxTypeInfo(*initializerInfo, info);
     return true;
   };
 

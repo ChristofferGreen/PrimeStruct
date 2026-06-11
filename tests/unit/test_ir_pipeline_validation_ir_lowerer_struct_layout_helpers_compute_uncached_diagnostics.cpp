@@ -208,7 +208,7 @@ TEST_CASE("ir lowerer struct layout coverage ignores generated collection helper
   returnTransform.templateArgs = {"i32"};
 
   for (const char *path : {
-           "/std/collections/experimental_vector/Vector__ti32/Move",
+           "/std/collections/vector/Vector__ti32/Move",
            "/std/collections/internal_soa_storage/SoaColumn__ti32/set_field_count",
            "/std/collections/internal_soa_storage/SoaColumns2__ti32_i64/field_count",
        }) {

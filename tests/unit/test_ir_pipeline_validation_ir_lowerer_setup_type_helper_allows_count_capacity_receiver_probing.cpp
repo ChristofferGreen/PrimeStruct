@@ -1051,7 +1051,7 @@ TEST_CASE("ir lowerer setup type helper prefers direct helper-return soa_vector 
   primec::Transform returnSoaVector;
   returnSoaVector.name = "return";
   returnSoaVector.templateArgs = {
-      "/std/collections/experimental_soa_vector/SoaVector__Particle"};
+      "/std/collections/soa/SoaVector__Particle"};
   cloneDef.transforms.push_back(returnSoaVector);
 
   primec::Definition aliasPushDef;
@@ -1064,10 +1064,10 @@ TEST_CASE("ir lowerer setup type helper prefers direct helper-return soa_vector 
   canonicalReserveDef.fullPath = "/std/collections/soa_vector/reserve";
   primec::Definition concretePushDef;
   concretePushDef.fullPath =
-      "/std/collections/experimental_soa_vector/SoaVector__Particle/push";
+      "/std/collections/soa/SoaVector__Particle/push";
   primec::Definition concreteReserveDef;
   concreteReserveDef.fullPath =
-      "/std/collections/experimental_soa_vector/SoaVector__Particle/reserve";
+      "/std/collections/soa/SoaVector__Particle/reserve";
 
   const std::unordered_map<std::string, const primec::Definition *> defMap = {
       {cloneDef.fullPath, &cloneDef},
@@ -1109,7 +1109,7 @@ TEST_CASE("ir lowerer setup type helper prefers direct helper-return soa_vector 
         [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return false; },
         [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return false; },
         {},
-        {"/std/collections/experimental_soa_vector/SoaVector__Particle"},
+        {"/std/collections/soa/SoaVector__Particle"},
         [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) {
           return primec::ir_lowerer::LocalInfo::ValueKind::Unknown;
         },
@@ -1135,7 +1135,7 @@ TEST_CASE("ir lowerer setup type helper prefers nested helper-return soa_vector 
   primec::Transform returnSoaVector;
   returnSoaVector.name = "return";
   returnSoaVector.templateArgs = {
-      "/std/collections/experimental_soa_vector/SoaVector__Particle"};
+      "/std/collections/soa/SoaVector__Particle"};
   holderCloneDef.transforms.push_back(returnSoaVector);
 
   primec::Definition aliasPushDef;
@@ -1148,10 +1148,10 @@ TEST_CASE("ir lowerer setup type helper prefers nested helper-return soa_vector 
   canonicalReserveDef.fullPath = "/std/collections/soa_vector/reserve";
   primec::Definition concretePushDef;
   concretePushDef.fullPath =
-      "/std/collections/experimental_soa_vector/SoaVector__Particle/push";
+      "/std/collections/soa/SoaVector__Particle/push";
   primec::Definition concreteReserveDef;
   concreteReserveDef.fullPath =
-      "/std/collections/experimental_soa_vector/SoaVector__Particle/reserve";
+      "/std/collections/soa/SoaVector__Particle/reserve";
 
   const std::unordered_map<std::string, const primec::Definition *> defMap = {
       {holderCloneDef.fullPath, &holderCloneDef},
@@ -1206,7 +1206,7 @@ TEST_CASE("ir lowerer setup type helper prefers nested helper-return soa_vector 
         [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return false; },
         [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return false; },
         {},
-        {"/Holder", "/std/collections/experimental_soa_vector/SoaVector__Particle"},
+        {"/Holder", "/std/collections/soa/SoaVector__Particle"},
         [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) {
           return primec::ir_lowerer::LocalInfo::ValueKind::Unknown;
         },

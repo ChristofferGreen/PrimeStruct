@@ -5,6 +5,270 @@ Legend:
 
 Finished items are periodically archived here from `docs/todo.md`; section headers record the archive date.
 
+**Todo Completion (June 11, 2026)**
+- [x] TODO-4630: Delete experimental collection shim modules and spellings
+  - owner: ai
+  - created_at: 2026-06-10
+  - finished_at: 2026-06-11
+  - phase: Collections naming and manifest retirement
+  - parallel_track: collections-shim-deletion
+  - depends_on: TODO-4628, TODO-4629
+  - scope: Delete the experimental collection shim modules now that the type
+    identities are canonical.
+  - outcome:
+    - `experimental_vector.prime` and `experimental_map.prime` (pure
+      rejected-direct-import shims) are deleted; the direct-import rejection
+      diagnostics are compiler-enforced, so all rejection tests pass
+      unchanged (test_semantics_imports 228/228), and the stdlib source
+      locks now assert the shim files stay deleted.
+    - Scope split recorded honestly: `experimental_soa_vector.prime` and
+      `experimental_soa_vector_conversions.prime` still carry the canonical
+      `SoaVector` struct block and live helper namespaces, so their
+      retirement folds into TODO-4633's SoA collapse (block updated); the
+      remaining `experimental_` spellings in tests refer to those live
+      helpers and likewise move with the merges (TODO-4631/4633).
+    - Evidence: docs-locks suite passes, semantics imports tests pass, and
+      runtime smokes are unchanged.
+  - stop_rule: Stopped once the deletable shims were gone; internal_*
+    collapse is TODO-4631 through TODO-4634.
+
+- [x] TODO-4629: Move SoaVector type identities to the canonical soa namespace
+  - owner: ai
+  - created_at: 2026-06-10
+  - finished_at: 2026-06-11
+  - phase: Collections naming and manifest retirement
+  - parallel_track: collections-soa-identity
+  - depends_on: TODO-4625, TODO-4626, TODO-4627
+  - scope: Move the `SoaVector` and SoA conversion identities from
+    `/std/collections/experimental_soa_vector` and
+    `/std/collections/experimental_soa_vector_conversions` to canonical
+    namespaces under `/std/collections/soa`, flip the corresponding TODO-4624
+    constants, and update stdlib wrappers, tests, and golden/IR snapshots.
+  - outcome:
+    - The `SoaVector<T>` struct now lives in a `namespace soa` block in
+      `experimental_soa_vector.prime` as a non-`[public]` struct; its
+      monomorphized spellings are `/std/collections/soa/SoaVector__t...`.
+      Keeping the struct non-public preserves the rejected-direct-import
+      posture for `/std/collections/soa/*` (import-prefix existence only
+      counts public definitions), which the soa wildcard rejection tests
+      lock, while classifiers and rooted paths keep the type fully usable.
+    - C++ migration was one scripted pair replacement
+      (`kExperimentalSoaVectorFolder, kSoaVectorTypeName` →
+      `kSoaFolder, kSoaVectorTypeName`; 61 sites in 25 files) plus
+      `typeIdentityFolder()` learning `soa_vector`→`soa`, two `soa_paths`
+      type predicates, and one duplicated local classifier; 26 test files
+      swept to the canonical spelling.
+    - Evidence: semantics suite identical to pre-change baseline (204 unique
+      failing names, 0 new/0 fixed), backend IR identical (94), imports at
+      the improved post-TODO-4628 count (47), docs-locks 48/48, SoA zero
+      audit and path identity proof pass, and runtime smokes
+      (single/push/get/count/to_aos) return correct values.
+  - stop_rule: Stopped once the SoA identities are canonical; shim deletion
+    is TODO-4630.
+
+- [x] TODO-4628: Move Vector type identity to the canonical vector namespace
+  - owner: ai
+  - created_at: 2026-06-10
+  - finished_at: 2026-06-11
+  - phase: Collections naming and manifest retirement
+  - parallel_track: collections-vector-identity
+  - depends_on: TODO-4625, TODO-4626, TODO-4627
+  - scope: Move the `Vector<T>` struct identity from
+    `/std/collections/experimental_vector` to its canonical namespace under
+    `/std/collections/vector`, flip the corresponding TODO-4624 constants, and
+    update stdlib wrappers, tests, and golden/IR snapshots.
+  - outcome:
+    - The `Vector<T>` struct now lives in a `namespace vector` block in
+      `internal_vector.prime` (implementation helpers stay in
+      `experimental_vector` until TODO-4631); monomorphized spellings are now
+      `/std/collections/vector/Vector__t...`, and `typeIdentityFolder()` in
+      `StdlibCollectionPaths.h` routes type-identity construction while
+      helper/constructor compatibility paths stay experimental.
+    - Fixed along the way: the collections text filter consumed
+      `namespace vector {` as a collection literal (keyword guard now applied
+      in `TextFilterPipelinePass.cpp`); the template monomorph rewrote
+      canonical `Vector{...}` struct literals into the wrapper constructor
+      (now guarded by definition existence in
+      `TemplateMonomorphTypeResolution.h`); the struct's `empty[value]`
+      bounds-trap resolved to the sibling `at` wrapper (now rooted
+      `/at(empty, value)`); and an uncommitted WIP early-inline branch in
+      `IrLowererLowerEmitExprTailDispatch.h` (absent at HEAD) routed canonical
+      `at()` calls into inlined stdlib reads of record-laid-out vectors,
+      producing wrong element values — the branch was removed to restore
+      HEAD-equivalent builtin routing.
+    - Evidence: semantics suite failing set identical to pre-change baseline
+      (204 unique names), backend IR suite identical (94), docs-locks 48/48,
+      SoA zero audit passes, path identity proof passes, runtime smokes match
+      pristine-HEAD behavior, and the imports suite improved from 51 to 47
+      failures (explicit-Vector-binding runtime tests that the WIP inline
+      branch had broken now pass).
+  - stop_rule: Stopped once the vector type identity is canonical; helper
+    namespace cleanup is TODO-4630/TODO-4631, SoA identities are TODO-4629.
+
+- [x] TODO-4626: Route IR-lowerer collection path literals through constants
+  - owner: ai
+  - created_at: 2026-06-10
+  - finished_at: 2026-06-11
+  - phase: Collections naming and manifest retirement
+  - parallel_track: collections-constants-lowerer
+  - depends_on: TODO-4624
+  - scope: Replace every hardcoded `experimental_` and `internal_` collection
+    path literal under `src/ir_lowerer/` with the TODO-4624 constants.
+  - outcome:
+    - 29 IR-lowerer files now route collection module spellings through
+      `primec::collection_paths`; `grep` finds no `experimental_` or
+      collection `internal_` string literal under `src/ir_lowerer/`.
+    - `const char *` prefix arrays became `const std::string` arrays, and one
+      `std::string_view` bound to a builder result became `std::string` to
+      avoid dangling.
+    - Evidence: full build clean; standalone assertion program proves every
+      replacement expression byte-identical to its original literal; backend
+      IR suite failing-test count is unchanged across the migration (94
+      pre-existing failures from unrelated in-progress semantics work, zero
+      new; spot-checked failure is a `parseAndValidate` behavior failure
+      upstream of lowering).
+  - stop_rule: Stopped at literal replacement; no resolved path values were
+    changed.
+
+- [x] TODO-4627: Route emitter and pipeline collection path literals through constants
+  - owner: ai
+  - created_at: 2026-06-10
+  - finished_at: 2026-06-11
+  - phase: Collections naming and manifest retirement
+  - parallel_track: collections-constants-emitter
+  - depends_on: TODO-4624
+  - scope: Replace every hardcoded `experimental_` and `internal_` collection
+    path literal in `src/emitter/`, `src/CompilePipeline.cpp`,
+    `src/IrPrinterHelpers.cpp`, and any remaining `src/` or `include/` files
+    with the TODO-4624 constants.
+  - outcome:
+    - Emitter, compile pipeline, IR printer, and `primec/SoaPathHelpers.h`
+      now route collection module spellings through
+      `primec::collection_paths`; outside `StdlibCollectionPaths.h`,
+      `grep` finds no `experimental_` or collection `internal_` string
+      literal anywhere in `src/` or `include/`.
+    - Evidence: full build clean; SoA surface trace zero audit passes with 0
+      production traces; backend IR suite failing-test set identical in count
+      (94) before and after the emitter migration; path identity proof
+      passes.
+  - stop_rule: Stopped at literal replacement; no resolved path values were
+    changed.
+
+**Todo Completion (June 10, 2026)**
+- [x] TODO-4625: Route semantics collection path literals through constants
+  - owner: ai
+  - created_at: 2026-06-10
+  - finished_at: 2026-06-10
+  - phase: Collections naming and manifest retirement
+  - parallel_track: collections-constants-semantics
+  - depends_on: TODO-4624
+  - scope: Replace every hardcoded `experimental_` and `internal_` collection
+    path literal under `src/semantics/` with the TODO-4624 constants.
+  - outcome:
+    - Roughly 20 semantics files now route collection module spellings through
+      `primec::collection_paths`; `grep` finds no `experimental_` or
+      collection `internal_` string literal under `src/semantics/`.
+    - `static constexpr std::string_view` path holders became function-local
+      `static const std::string`; headers without their own include blocks
+      receive the namespace from their includers, and
+      `StdlibCollectionSurfaceHelpers.h` (outside `namespace primec`) uses
+      explicit qualification.
+    - Evidence: `primec` and `PrimeStruct_semantics_tests` build clean, and a
+      standalone assertion program proved every replacement expression
+      byte-identical to the literal it replaced, so resolved paths are
+      unchanged by construction. The semantics suite failures present in this
+      working tree (204) predate this change and reflect unrelated
+      in-progress work; a spot-checked failure is a diagnostic-selection
+      mismatch, not a path-spelling change.
+  - stop_rule: Stopped at literal replacement; no resolved path values were
+    changed.
+
+- [x] TODO-4624: Add canonical collections path constants header
+  - owner: ai
+  - created_at: 2026-06-10
+  - finished_at: 2026-06-10
+  - phase: Collections naming and manifest retirement
+  - parallel_track: collections-path-constants
+  - scope: Add one shared C++ header defining named constants for every
+    `/std/collections` module root and mangled-type prefix used by the
+    compiler, and migrate one pilot consumer file to prove the shape.
+  - outcome:
+    - `include/primec/StdlibCollectionPaths.h` (`primec::collection_paths`)
+      now owns every collection module folder spelling (canonical,
+      experimental, internal, legacy), the backing type names, the `__`/`__t`
+      monomorphization suffixes, and rooted/bare path builders; the header is
+      `soa-surface-audit: exempt` like `SoaPathHelpers.h`.
+    - Pilot migration: `src/ir_lowerer/IrLowererCountAccessClassifiers.cpp`
+      dropped its local experimental path builders and now contains no raw
+      `/std/collections` literals.
+    - Evidence: `primec` and `PrimeStruct_backend_ir_tests` rebuild cleanly,
+      count-access suites pass 34/34, and the SoA surface trace zero audit
+      passes with 0 production traces.
+  - stop_rule: Stopped after the header and one pilot migration; subsystem
+    migrations are TODO-4625 through TODO-4627.
+
+- [x] TODO-4623: Delete retired collections stub modules
+  - owner: ai
+  - created_at: 2026-06-10
+  - finished_at: 2026-06-10
+  - phase: Collections naming and manifest retirement
+  - parallel_track: collections-stub-deletion
+  - scope: Delete the comment-only retired modules
+    `stdlib/std/collections/collections.prime`,
+    `stdlib/std/collections/soa_vector.prime`, and
+    `stdlib/std/collections/soa_vector_conversions.prime`, and repoint any
+    remaining `/std/collections/soa_vector/*` or `/std/collections/collections`
+    spellings in tests and scripts at the canonical `/std/collections/soa/*`
+    and `/std/collections/vector|map/*` helpers.
+  - outcome:
+    - The three comment-only stub files are deleted; wildcard imports of the
+      removed module paths are no-ops, so the legacy soa_vector compatibility
+      rejection tests keep their exact diagnostics and exit codes.
+    - The stdlib wrapper source-lock test now asserts the stub files stay
+      deleted instead of locking their retired-comment contents.
+    - Evidence: imports-operations suite failing-test set is byte-identical
+      with and without the stubs (51 pre-existing failures, zero new);
+      docs-locks suite passes 48/48 after lock realignment.
+  - stop_rule: Stopped after deleting the stubs and aligning the source locks;
+    compiler classifiers and tests that spell the legacy
+    `/std/collections/soa_vector` path belong to TODO-4624 through TODO-4630.
+
+- [x] TODO-4622: Implement first runtime require(...) contract slice
+  - owner: ai
+  - created_at: 2026-06-10
+  - finished_at: 2026-06-10
+  - phase: Safe array extents and views
+  - parallel_track: requirement-contracts
+  - depends_on: TODO-4604, TODO-4607
+  - scope: Implemented the first contract-form `require(...)` runtime slice:
+    value comparisons over integer parameters and `count(parameter)` for
+    array/vector/string parameters now classify as runtime contracts instead
+    of compile-time rejections and lower to deterministic call-boundary
+    precondition checks.
+  - outcome:
+    - Semantic validation classifies pure runtime-checkable value predicates
+      as `runtime_contract` facts, published through the existing
+      requirement-predicate fact family; compile-time-evaluable predicates
+      keep their previous satisfied/unsatisfied outcomes.
+    - Runtime contracts keep constrained overload candidates viable, stay
+      rejected in `restrict<...>` position and `ct_if` conditions, and remain
+      fail-closed in compile-time evaluation.
+    - The IR lowerer emits one precondition check per call boundary at inline
+      expansion, printing `requirement contract failed on <path>: <predicate>`
+      and exiting through the runtime-error path (exit code 3) on failure;
+      entry-definition runtime contracts are rejected deterministically at
+      lowering.
+  - validation:
+    - Added six runtime-contract cases to
+      `primestruct.compile.run.generic_requirements` covering pass/fail
+      execution on exe and vm backends, failure-message text, entry-definition
+      rejection, and non-checkable operand diagnostics; updated the managed
+      suite shard count.
+  - stop_rule: Stopped after count/integer-parameter comparisons checked at
+    runtime across exe/vm; static proof of extent relations, `==`/`!=` value
+    contract spellings, fact publication for bounds-check elimination, and
+    `require<...>` parser support remain follow-up leaves.
+
 **Todo Completion (May 28, 2026)**
 - [x] TODO-4608: Add checked array slice construction
   - owner: ai

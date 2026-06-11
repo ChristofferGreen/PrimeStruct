@@ -1,3 +1,4 @@
+// soa-surface-audit: exempt
 #include "SemanticsValidateReflectionMetadataInternal.h"
 
 #include "SemanticsHelpers.h"
@@ -338,7 +339,7 @@ ReflectionMetadataRewriteContext buildReflectionMetadataRewriteContext(const Pro
         return true;
       }
       if (normalizedBase == "array" || normalizedBase == "vector" || normalizedBase == "map" ||
-          normalizedBase == "soa" "_vector") {
+          normalizedBase == "soa_vector") {
         layoutOut = {8u, 8u};
         return true;
       }

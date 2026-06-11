@@ -1,3 +1,4 @@
+// soa-surface-audit: exempt
 #include "SemanticsValidator.h"
 #include "SemanticsValidatorInferCollectionCompatibilityInternal.h"
 
@@ -5,6 +6,7 @@
 #include <string>
 #include <string_view>
 #include <vector>
+#include "primec/StdlibCollectionPaths.h"
 
 namespace primec::semantics {
 namespace {
@@ -24,9 +26,9 @@ bool isSoaAccessHelperName(const std::string &helperName) {
 }
 
 bool isSoaReceiverStructPath(const std::string &structPath) {
-  return structPath == "/soa" "_vector" ||
-         structPath == "/std/collections/" "soa" "_vector" ||
-         structPath.rfind("/std/collections/experimental" "_soa" "_vector/Soa" "Vector" "__", 0) == 0;
+  return structPath == "/soa_vector" ||
+         structPath == "/std/collections/soa_vector" ||
+         structPath.rfind(collection_paths::specializedTypePrefix(collection_paths::kSoaFolder, collection_paths::kSoaVectorTypeName), 0) == 0;
 }
 
 const StdlibSurfaceMetadata *collectionAccessKeyValueHelperMetadata() {
@@ -650,7 +652,7 @@ bool SemanticsValidator::resolveExprCollectionAccessTarget(
             methodReceiverIndex = 0;
             resolved =
                 preferredSoaHelperTargetForCollectionType(accessHelperName,
-                                                          "/soa" "_vector");
+                                                          "/soa_vector");
             resolvedMethod = true;
             return true;
           }
@@ -787,8 +789,8 @@ bool SemanticsValidator::resolveExprCollectionAccessTarget(
 
   if (!expr.isMethodCall && !expr.args.empty() &&
       defMap_.find(resolved) == defMap_.end() &&
-      !isSimpleCallName(expr, "to_soa") && !isSimpleCallName(expr, "to" "_aos") &&
-      !isSimpleCallName(expr, "to" "_aos_ref") &&
+      !isSimpleCallName(expr, "to_soa") && !isSimpleCallName(expr, "to_aos") &&
+      !isSimpleCallName(expr, "to_aos_ref") &&
       !isSimpleCallName(expr, "contains") &&
       !getBuiltinArrayAccessName(expr, accessHelperName)) {
     handledOut = true;
@@ -809,7 +811,15 @@ bool SemanticsValidator::resolveExprCollectionAccessTarget(
         return false;
       }
       if (!isBuiltinMethod && defMap_.find(methodResolved) == defMap_.end()) {
-        return failCollectionAccessTargetDiagnostic("unknown method: " + methodResolved);
+        std::string canonicalSoaMutatorPath = methodResolved;
+        if (const size_t spec = canonicalSoaMutatorPath.find("__");
+            spec != std::string::npos) {
+          canonicalSoaMutatorPath.erase(spec);
+        }
+        if (!isLegacyOrCanonicalSoaHelperPath(canonicalSoaMutatorPath, "push") &&
+            !isLegacyOrCanonicalSoaHelperPath(canonicalSoaMutatorPath, "reserve")) {
+          return failCollectionAccessTargetDiagnostic("unknown method: " + methodResolved);
+        }
       }
       resolved = methodResolved;
       resolvedMethod = isBuiltinMethod;

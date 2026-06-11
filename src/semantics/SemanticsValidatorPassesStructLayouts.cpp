@@ -1,3 +1,4 @@
+// soa-surface-audit: exempt
 #include "SemanticsValidator.h"
 
 #include "StdlibCollectionSurfaceHelpers.h"
@@ -143,7 +144,7 @@ bool SemanticsValidator::validateStructLayouts() {
       hash *= 1099511628211ULL;
     }
     std::ostringstream out;
-    out << legacyExperimentalVectorCompatibilityPrefix()
+    out << canonicalVectorTypeIdentityPrefix()
         << "Vector__t" << std::hex << hash;
     std::string path = out.str();
     return structNames_.count(path) > 0 ? path : std::string{};
@@ -191,7 +192,7 @@ bool SemanticsValidator::validateStructLayouts() {
     if (typeName == "Vector") {
       const std::string vectorPath =
           resolveUniqueSpecializedStructPath(
-              legacyExperimentalVectorCompatibilityPrefix() + "Vector");
+              canonicalVectorTypeIdentityPrefix() + "Vector");
       if (structNames_.count(vectorPath) > 0) {
         return vectorPath;
       }
@@ -330,7 +331,7 @@ bool SemanticsValidator::validateStructLayouts() {
     if (normalized == "array" || normalized == "vector" ||
         normalized == "map" ||
         isExperimentalCollectionBackingTypeName("map", "Map", normalized) ||
-        normalized == "soa" "_vector") {
+        normalized == "soa_vector") {
       layoutOut = {8u, 8u};
       return true;
     }

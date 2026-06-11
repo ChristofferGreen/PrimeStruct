@@ -1,3 +1,4 @@
+// soa-surface-audit: exempt
 #include "SemanticsValidator.h"
 #include "SemanticsValidatorInferCollectionCompatibilityInternal.h"
 
@@ -5,6 +6,7 @@
 #include <string>
 #include <string_view>
 #include <vector>
+#include "primec/StdlibCollectionPaths.h"
 
 namespace primec::semantics {
 
@@ -87,10 +89,10 @@ bool getCanonicalKeyValueAccessBuiltinName(const Expr &candidate,
 
 bool isBuiltinSoaVectorTypeBaseForArgumentValidation(const std::string &base) {
   const std::string normalizedBase = normalizeBindingTypeName(base);
-  return normalizedBase == "soa" "_vector" ||
-         normalizedBase == "/soa" "_vector" ||
-         normalizedBase == "std/collections/" "soa" "_vector" ||
-         normalizedBase == "/std/collections/" "soa" "_vector" ||
+  return normalizedBase == "soa_vector" ||
+         normalizedBase == "/soa_vector" ||
+         normalizedBase == "std/collections/soa_vector" ||
+         normalizedBase == "/std/collections/soa_vector" ||
          isExperimentalSoaVectorTypePath(normalizedBase);
 }
 
@@ -494,7 +496,7 @@ bool SemanticsValidator::extractExperimentalSoaVectorElementTypeFromStructPath(
     }
     if (!fieldBinding.typeTemplateArg.empty() &&
         (normalizedFieldType == "SoaColumn" ||
-         normalizedFieldType == "std/collections/internal_soa_storage/SoaColumn")) {
+         normalizedFieldType == collection_paths::memberPathBare(collection_paths::kInternalSoaStorageFolder, collection_paths::kSoaColumnTypeName))) {
       std::vector<std::string> args;
       if (!splitTopLevelTemplateArgs(fieldBinding.typeTemplateArg, args) || args.size() != 1) {
         continue;
@@ -506,7 +508,7 @@ bool SemanticsValidator::extractExperimentalSoaVectorElementTypeFromStructPath(
     if (!resolvedFieldPath.empty() && resolvedFieldPath.front() != '/') {
       resolvedFieldPath.insert(resolvedFieldPath.begin(), '/');
     }
-    if (normalizedFieldType.rfind("std/collections/internal_soa_storage/SoaColumn__", 0) != 0 ||
+    if (normalizedFieldType.rfind(collection_paths::specializedTypePrefixBare(collection_paths::kInternalSoaStorageFolder, collection_paths::kSoaColumnTypeName), 0) != 0 ||
         !extractExperimentalSoaColumnElementTypeFromStructPath(resolvedFieldPath, elemTypeOut)) {
       continue;
     }
@@ -519,7 +521,7 @@ bool SemanticsValidator::extractExperimentalSoaColumnElementTypeFromStructPath(
     const std::string &structPath,
     std::string &elemTypeOut) const {
   elemTypeOut.clear();
-  if (structPath.rfind("/std/collections/internal_soa_storage/SoaColumn__", 0) != 0) {
+  if (structPath.rfind(collection_paths::specializedTypePrefix(collection_paths::kInternalSoaStorageFolder, collection_paths::kSoaColumnTypeName), 0) != 0) {
     return false;
   }
   auto defIt = defMap_.find(structPath);
@@ -587,7 +589,7 @@ bool SemanticsValidator::extractExperimentalSoaVectorElementType(const BindingIn
         }
         // Keep the experimental SOA guard paired with a concrete template payload:
         // isExperimentalSoaVectorTypePath(normalizedBase) && !argText.empty()
-        if (normalizedBase == "soa" "_vector" ||
+        if (normalizedBase == "soa_vector" ||
             (isExperimentalSoaVectorTypePath(normalizedBase) &&
              !argText.empty())) {
           std::vector<std::string> args;

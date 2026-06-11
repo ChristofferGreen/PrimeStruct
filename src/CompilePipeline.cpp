@@ -10,6 +10,7 @@
 #include "primec/Lexer.h"
 #include "primec/Parser.h"
 #include "primec/Semantics.h"
+#include "primec/StdlibCollectionPaths.h"
 #include "primec/SemanticsBenchmark.h"
 #include "primec/SourceLocationMapper.h"
 #include "primec/StdlibSurfaceRegistry.h"
@@ -807,7 +808,7 @@ bool appendStdlibModuleSources(const std::vector<std::string> &importPaths,
         }
         if (skipExperimentalCollectionsInBaseWildcard) {
           const std::string stem = entry.path().stem().string();
-          if (stem.rfind("experimental_", 0) == 0) {
+          if (stem.rfind(collection_paths::kExperimentalFolderPrefix, 0) == 0) {
             continue;
           }
         }

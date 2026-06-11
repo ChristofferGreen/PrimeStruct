@@ -1,3 +1,4 @@
+// soa-surface-audit: exempt
 #include "SemanticsValidator.h"
 
 #include "SemanticsValidatorInferCollectionCompatibilityInternal.h"
@@ -556,7 +557,7 @@ ReturnKind SemanticsValidator::inferPreDispatchCallReturnKind(
               typeName = normalizeBindingTypeName(it->second.typeName);
             }
           }
-          return typeName == "vector" || typeName == "soa" "_vector";
+          return typeName == "vector" || typeName == "soa_vector";
         };
         auto tryResolveReceiverIndex = [&](size_t index) -> std::optional<ReturnKind> {
           if (index >= expr.args.size()) {

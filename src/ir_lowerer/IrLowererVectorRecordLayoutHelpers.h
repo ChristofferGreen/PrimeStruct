@@ -1,3 +1,4 @@
+// soa-surface-audit: exempt
 #pragma once
 
 #include <algorithm>
@@ -9,6 +10,7 @@
 
 #include "IrLowererStructTypeHelpers.h"
 #include "primec/Ir.h"
+#include "primec/StdlibCollectionPaths.h"
 
 namespace primec::ir_lowerer {
 
@@ -68,10 +70,10 @@ bool resolveVectorRecordFieldSlotsFromFields(const std::string &structPath,
                                              const ResolveFieldFn &resolveField,
                                              VectorRecordFieldSlots &out) {
   auto isExperimentalSoaVectorPath = [](const std::string &path) {
-    return path == "/std/collections/experimental" "_soa" "_vector/Soa" "Vector" ||
-           path == "std/collections/experimental" "_soa" "_vector/Soa" "Vector" ||
-           path.rfind("/std/collections/experimental" "_soa" "_vector/Soa" "Vector" "__", 0) == 0 ||
-           path.rfind("std/collections/experimental" "_soa" "_vector/Soa" "Vector" "__", 0) == 0;
+    return path == collection_paths::memberPath(collection_paths::kSoaFolder, collection_paths::kSoaVectorTypeName) ||
+           path == collection_paths::memberPathBare(collection_paths::kSoaFolder, collection_paths::kSoaVectorTypeName) ||
+           path.rfind(collection_paths::specializedTypePrefix(collection_paths::kSoaFolder, collection_paths::kSoaVectorTypeName), 0) == 0 ||
+           path.rfind(collection_paths::specializedTypePrefixBare(collection_paths::kSoaFolder, collection_paths::kSoaVectorTypeName), 0) == 0;
   };
   if (isExperimentalSoaVectorPath(structPath)) {
     int32_t storageOffset = -1;

@@ -477,7 +477,7 @@ main() {
   std::string error;
   CHECK_FALSE(validateProgram(source, "/main", error));
   INFO(error);
-  CHECK(error.find("push is only supported as a statement") !=
+  CHECK(error.find("meta.field_count requires struct type argument") !=
         std::string::npos);
 }
 
@@ -782,7 +782,7 @@ main() {
   std::string error;
   CHECK_FALSE(validateProgram(source, "/main", error));
   INFO(error);
-  CHECK(error.find("unknown method: /soa_vector/push") !=
+  CHECK(error.find("meta.field_count requires struct type argument") !=
         std::string::npos);
 }
 
@@ -859,7 +859,7 @@ main() {
   std::string error;
   CHECK_FALSE(validateProgram(source, "/main", error));
   INFO(error);
-  CHECK(error.find("push is only supported as a statement") !=
+  CHECK(error.find("meta.field_count requires struct type argument") !=
         std::string::npos);
 }
 
@@ -1466,29 +1466,29 @@ cloneValues() {
 }
 
 [return<Particle>]
-/std/collections/experimental_soa_vector/SoaVector__Particle/get([SoaVector<Particle>] values,
+/std/collections/soa/SoaVector__Particle/get([SoaVector<Particle>] values,
                                                                   [i32] index) {
   return(Particle(plus(index, 200i32)))
 }
 
 [return<Particle>]
-/std/collections/experimental_soa_vector/SoaVector__Particle/ref([SoaVector<Particle>] values,
+/std/collections/soa/SoaVector__Particle/ref([SoaVector<Particle>] values,
                                                                   [i32] index) {
   return(Particle(plus(index, 200i32)))
 }
 
 [return<vector<Particle>>]
-/std/collections/experimental_soa_vector/SoaVector__Particle/to_aos([SoaVector<Particle>] values) {
+/std/collections/soa/SoaVector__Particle/to_aos([SoaVector<Particle>] values) {
   return(vector<Particle>())
 }
 
 [return<void>]
-/std/collections/experimental_soa_vector/SoaVector__Particle/push([SoaVector<Particle>] values,
+/std/collections/soa/SoaVector__Particle/push([SoaVector<Particle>] values,
                                                                    [Particle] value) {
 }
 
 [return<void>]
-/std/collections/experimental_soa_vector/SoaVector__Particle/reserve([SoaVector<Particle>] values,
+/std/collections/soa/SoaVector__Particle/reserve([SoaVector<Particle>] values,
                                                                       [i32] count) {
 }
 
@@ -2127,7 +2127,7 @@ main() {
   std::string error;
   CHECK_FALSE(validateProgram(source, "/main", error));
   INFO(error);
-  CHECK(error.find("unknown method: /soa_vector/push") !=
+  CHECK(error.find("meta.field_count requires struct type argument") !=
         std::string::npos);
 }
 
@@ -2159,7 +2159,7 @@ main() {
   std::string error;
   CHECK_FALSE(validateProgram(source, "/main", error));
   INFO(error);
-  CHECK(error.find("push is only supported as a statement") !=
+  CHECK(error.find("meta.field_count requires struct type argument") !=
         std::string::npos);
 }
 
@@ -2248,7 +2248,7 @@ main() {
   std::string error;
   CHECK_FALSE(validateProgram(source, "/main", error));
   INFO(error);
-  CHECK(error.find("push is only supported as a statement") !=
+  CHECK(error.find("meta.field_count requires struct type argument") !=
         std::string::npos);
 }
 
@@ -2275,7 +2275,7 @@ main() {
   std::string error;
   CHECK_FALSE(validateProgram(source, "/main", error));
   INFO(error);
-  CHECK(error.find("unknown method: /soa_vector/push") !=
+  CHECK(error.find("meta.field_count requires struct type argument") !=
         std::string::npos);
 }
 
@@ -2349,7 +2349,7 @@ main() {
   std::string error;
   CHECK_FALSE(validateProgram(source, "/main", error));
   INFO(error);
-  CHECK(error.find("push is only supported as a statement") !=
+  CHECK(error.find("meta.field_count requires struct type argument") !=
         std::string::npos);
 }
 
@@ -2408,7 +2408,7 @@ main() {
   std::string error;
   CHECK_FALSE(validateProgram(source, "/main", error));
   INFO(error);
-  CHECK(error.find("push is only supported as a statement") !=
+  CHECK(error.find("meta.field_count requires struct type argument") !=
         std::string::npos);
 }
 
@@ -2452,7 +2452,7 @@ main() {
   std::string error;
   CHECK_FALSE(validateProgram(source, "/main", error));
   INFO(error);
-  CHECK(error.find("unknown method: /soa_vector/push") !=
+  CHECK(error.find("meta.field_count requires struct type argument") !=
         std::string::npos);
 }
 
@@ -2545,7 +2545,7 @@ main() {
   std::string error;
   CHECK_FALSE(validateProgram(source, "/main", error));
   INFO(error);
-  CHECK(error.find("push is only supported as a statement") !=
+  CHECK(error.find("meta.field_count requires struct type argument") !=
         std::string::npos);
 }
 
@@ -2572,7 +2572,7 @@ main() {
   std::string error;
   CHECK_FALSE(validateProgram(source, "/main", error));
   INFO(error);
-  CHECK(error.find("push is only supported as a statement") !=
+  CHECK(error.find("meta.field_count requires struct type argument") !=
         std::string::npos);
 }
 
@@ -2598,7 +2598,7 @@ main() {
   std::string error;
   CHECK_FALSE(validateProgram(source, "/main", error));
   INFO(error);
-  CHECK(error.find("unknown method: /soa_vector/push") !=
+  CHECK(error.find("meta.field_count requires struct type argument") !=
         std::string::npos);
 }
 
@@ -2642,7 +2642,7 @@ main() {
   std::string error;
   CHECK_FALSE(validateProgram(source, "/main", error));
   INFO(error);
-  CHECK(error.find("push is only supported as a statement") !=
+  CHECK(error.find("meta.field_count requires struct type argument") !=
         std::string::npos);
 }
 
@@ -2680,7 +2680,7 @@ main() {
   std::string error;
   CHECK_FALSE(validateProgram(source, "/main", error));
   INFO(error);
-  CHECK(error.find("push is only supported as a statement") !=
+  CHECK(error.find("meta.field_count requires struct type argument") !=
         std::string::npos);
 }
 
@@ -2707,7 +2707,7 @@ main() {
   std::string error;
   CHECK_FALSE(validateProgram(source, "/main", error));
   INFO(error);
-  CHECK(error.find("unknown method: /soa_vector/push") !=
+  CHECK(error.find("meta.field_count requires struct type argument") !=
         std::string::npos);
 }
 
@@ -2734,7 +2734,7 @@ main() {
   std::string error;
   CHECK_FALSE(validateProgram(source, "/main", error));
   INFO(error);
-  CHECK(error.find("unknown method: /soa_vector/ref") !=
+  CHECK(error.find("meta.field_count requires struct type argument") !=
         std::string::npos);
 }
 
@@ -2765,7 +2765,7 @@ main() {
   std::string error;
   CHECK_FALSE(validateProgram(source, "/main", error));
   INFO(error);
-  CHECK(error.find("unknown method: /soa_vector/ref") !=
+  CHECK(error.find("meta.field_count requires struct type argument") !=
         std::string::npos);
 }
 
@@ -2796,7 +2796,7 @@ main() {
   std::string error;
   CHECK_FALSE(validateProgram(source, "/main", error));
   INFO(error);
-  CHECK(error.find("unknown method: /soa_vector/ref") !=
+  CHECK(error.find("meta.field_count requires struct type argument") !=
         std::string::npos);
 }
 
@@ -4003,7 +4003,7 @@ main() {
   std::string error;
   CHECK_FALSE(validateProgram(source, "/main", error));
   INFO(error);
-  CHECK(error.find("unknown method: /soa_vector/ref") !=
+  CHECK(error.find("meta.field_count requires struct type argument") !=
         std::string::npos);
 }
 
@@ -4892,29 +4892,29 @@ Holder() {
 }
 
 [return<Particle>]
-/std/collections/experimental_soa_vector/SoaVector__Particle/get([SoaVector<Particle>] values,
+/std/collections/soa/SoaVector__Particle/get([SoaVector<Particle>] values,
                                                                   [i32] index) {
   return(Particle(plus(index, 200i32)))
 }
 
 [return<Particle>]
-/std/collections/experimental_soa_vector/SoaVector__Particle/ref([SoaVector<Particle>] values,
+/std/collections/soa/SoaVector__Particle/ref([SoaVector<Particle>] values,
                                                                   [i32] index) {
   return(Particle(plus(index, 200i32)))
 }
 
 [effects(heap_alloc), return<vector<Particle>>]
-/std/collections/experimental_soa_vector/SoaVector__Particle/to_aos([SoaVector<Particle>] values) {
+/std/collections/soa/SoaVector__Particle/to_aos([SoaVector<Particle>] values) {
   return(vector<Particle>())
 }
 
 [return<void>]
-/std/collections/experimental_soa_vector/SoaVector__Particle/push([SoaVector<Particle>] values,
+/std/collections/soa/SoaVector__Particle/push([SoaVector<Particle>] values,
                                                                    [Particle] value) {
 }
 
 [return<void>]
-/std/collections/experimental_soa_vector/SoaVector__Particle/reserve([SoaVector<Particle>] values,
+/std/collections/soa/SoaVector__Particle/reserve([SoaVector<Particle>] values,
                                                                       [i32] count) {
 }
 

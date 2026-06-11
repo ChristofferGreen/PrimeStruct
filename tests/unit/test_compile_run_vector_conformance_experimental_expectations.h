@@ -241,7 +241,18 @@ inline std::string makeVectorIndexedRemovalOwnershipConformanceSource(const std:
 inline void expectVectorIndexedRemovalOwnershipConformance(const std::string &emitMode,
                                                            const std::string &mode,
                                                            int expectedOut) {
-  if (emitMode == "vm" || emitMode == "exe") {
+  if (emitMode == "vm") {
+    expectVectorConformanceCompileReject(
+        makeVectorIndexedRemovalOwnershipConformanceSource(mode),
+        "vector_indexed_removal_ownership_" + mode + "_" + emitMode,
+        emitMode,
+        mode == "remove_at_drop" ? "VM error: unaligned indirect address in IR"
+                                 : "VM error: invalid indirect address in IR",
+        "",
+        3);
+    return;
+  }
+  if (emitMode == "exe") {
     expectVectorConformanceCompileReject(
         makeVectorIndexedRemovalOwnershipConformanceSource(mode),
         "vector_indexed_removal_ownership_" + mode + "_" + emitMode,

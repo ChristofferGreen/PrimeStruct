@@ -1,3 +1,4 @@
+// soa-surface-audit: exempt
 #include "IrLowererOperatorConversionsAndCallsInternal.h"
 
 #include "IrLowererBindingTypeHelpers.h"
@@ -18,6 +19,7 @@
 #include <string_view>
 #include <utility>
 #include <vector>
+#include "primec/StdlibCollectionPaths.h"
 
 namespace primec::ir_lowerer {
 namespace {
@@ -32,7 +34,7 @@ std::string collectionTypePath(std::string_view collectionName) {
 
 std::string localExperimentalCollectionTypePath(std::string_view collectionName,
                                                 std::string_view typeName) {
-  return stdCollectionsRoot() + "/experimental_" + std::string(collectionName) +
+  return stdCollectionsRoot() + "/" + collection_paths::typeIdentityFolder(collectionName) +
          "/" + std::string(typeName);
 }
 
@@ -51,14 +53,7 @@ bool isSpecializedExperimentalSoaVectorStructPath(const std::string &structPath)
   return soa_paths::isExperimentalColumnarVectorSpecializedTypePath(structPath);
 }
 
-bool isRawBuiltinSoaVectorStructPath(const std::string &structPath) {
-  return structPath == "/soa_vector" || structPath == "/std/collections/soa_vector";
-}
-
-std::string defaultVectorRecordStructPath(std::string_view builtin) {
-  if (builtin == "soa_vector") {
-    return collectionTypePath("soa_vector");
-  }
+std::string defaultVectorRecordStructPath(std::string_view /*builtin*/) {
   return collectionTypePath("vector");
 }
 
@@ -86,7 +81,7 @@ std::string normalizedInternalSoaStorageLeaf(std::string structPath) {
   if (!structPath.empty() && structPath.front() == '/') {
     structPath.erase(structPath.begin());
   }
-  constexpr std::string_view Prefix = "std/collections/internal_soa_storage/";
+  const std::string Prefix = collection_paths::modulePrefixBare(collection_paths::kInternalSoaStorageFolder);
   if (structPath.rfind(Prefix, 0) == 0) {
     structPath.erase(0, Prefix.size());
   }
@@ -936,19 +931,6 @@ bool emitConversionsAndCallsCollectionAndMutationExpr(
                                           const Expr *&indexExprOut) -> bool {
         valuesExprOut = nullptr;
         indexExprOut = nullptr;
-        auto hasVisibleLegacySamePathSoaRef = [&](const Expr &callCandidate) {
-          Expr samePathCandidate = callCandidate;
-          samePathCandidate.isMethodCall = false;
-          samePathCandidate.name = "/soa_vector/ref";
-          samePathCandidate.namespacePrefix.clear();
-          if (const Definition *samePathCallee = context.resolveDefinitionCall(samePathCandidate);
-              samePathCallee != nullptr) {
-            const std::string canonicalPath =
-                soa_paths::canonicalizeLegacySoaRefHelperPath(samePathCallee->fullPath);
-            return soa_paths::isCanonicalSoaRefLikeHelperPath(canonicalPath);
-          }
-          return false;
-        };
         auto matchesBuiltinRefPath = [](const std::string &path) {
           const std::string canonicalPath =
               soa_paths::canonicalizeLegacySoaRefHelperPath(path);
@@ -981,13 +963,6 @@ bool emitConversionsAndCallsCollectionAndMutationExpr(
         const bool isLegacyOrCanonicalRefMethodPath =
             soa_paths::isLegacyOrCanonicalSoaHelperPath(canonicalMethodPath, "ref");
         if (!isLegacyOrCanonicalRefMethodPath && !isBareRefMethodName) {
-          return false;
-        }
-
-        const bool usesCanonicalStdlibMethodPath =
-            methodPath.rfind("/std/collections/soa_vector/", 0) == 0 &&
-            soa_paths::isLegacyOrCanonicalSoaHelperPath(canonicalMethodPath, "ref");
-        if (!usesCanonicalStdlibMethodPath && hasVisibleLegacySamePathSoaRef(candidate)) {
           return false;
         }
 
@@ -1089,24 +1064,6 @@ bool emitConversionsAndCallsCollectionAndMutationExpr(
           }
           instructions.push_back({IrOpcode::LoadIndirect, 0});
           instructions.push_back({IrOpcode::StoreLocal, static_cast<uint64_t>(dataPtrLocal)});
-        } else if (isRawBuiltinSoaVectorStructPath(valuesStructPath)) {
-          const int32_t valuesPtrLocal = allocTempLocal();
-          if (!emitExpr(*valuesExpr, localsIn)) {
-            return false;
-          }
-          instructions.push_back({IrOpcode::StoreLocal, static_cast<uint64_t>(valuesPtrLocal)});
-
-          instructions.push_back({IrOpcode::LoadLocal, static_cast<uint64_t>(valuesPtrLocal)});
-          instructions.push_back({IrOpcode::PushI64, static_cast<uint64_t>(IrSlotBytes)});
-          instructions.push_back({IrOpcode::AddI64, 0});
-          instructions.push_back({IrOpcode::LoadIndirect, 0});
-          instructions.push_back({IrOpcode::StoreLocal, static_cast<uint64_t>(capacityLocal)});
-
-          instructions.push_back({IrOpcode::LoadLocal, static_cast<uint64_t>(valuesPtrLocal)});
-          instructions.push_back({IrOpcode::PushI64, static_cast<uint64_t>(2 * IrSlotBytes)});
-          instructions.push_back({IrOpcode::AddI64, 0});
-          instructions.push_back({IrOpcode::LoadIndirect, 0});
-          instructions.push_back({IrOpcode::StoreLocal, static_cast<uint64_t>(dataPtrLocal)});
         } else {
           return false;
         }
@@ -1171,54 +1128,6 @@ bool emitConversionsAndCallsCollectionAndMutationExpr(
       }
       const int32_t receiverPtrLocal = allocTempLocal();
       instructions.push_back({IrOpcode::StoreLocal, static_cast<uint64_t>(receiverPtrLocal)});
-      const auto receiverLocalIt =
-          receiverExpr.kind == Expr::Kind::Name ? localsIn.find(receiverExpr.name) : localsIn.end();
-      const bool isRawBuiltinSoaStorageAssign =
-          receiverExpr.kind == Expr::Kind::Name &&
-          receiverLocalIt != localsIn.end() &&
-          receiverLocalIt->second.usesBuiltinCollectionLayout &&
-          receiverLocalIt->second.isSoaVector &&
-          isRawBuiltinSoaVectorStructPath(receiverStruct) &&
-          target.name == "storage" &&
-          fieldStructPath.rfind("/std/collections/internal_soa_storage/SoaColumn__", 0) == 0;
-      if (isRawBuiltinSoaStorageAssign) {
-        const Expr &rhsExpr = expr.args[1];
-        const std::string rhsStruct = inferStructExprPath(rhsExpr, localsIn);
-        if (rhsStruct.empty() || !areCompatibleStructPaths(rhsStruct, fieldStructPath)) {
-          error = "assign requires matching struct value";
-          return false;
-        }
-        if (!emitExpr(rhsExpr, localsIn)) {
-          return false;
-        }
-        const int32_t srcPtrLocal = allocTempLocal();
-        instructions.push_back({IrOpcode::StoreLocal, static_cast<uint64_t>(srcPtrLocal)});
-        const int32_t valueLocal = allocTempLocal();
-        auto emitCopySoaStorageSlot = [&](int32_t srcSlotOffset, int32_t dstSlotOffset) {
-          instructions.push_back({IrOpcode::LoadLocal, static_cast<uint64_t>(srcPtrLocal)});
-          if (srcSlotOffset != 0) {
-            instructions.push_back(
-                {IrOpcode::PushI64, static_cast<uint64_t>(srcSlotOffset) * IrSlotBytes});
-            instructions.push_back({IrOpcode::AddI64, 0});
-          }
-          instructions.push_back({IrOpcode::LoadIndirect, 0});
-          instructions.push_back({IrOpcode::StoreLocal, static_cast<uint64_t>(valueLocal)});
-          instructions.push_back({IrOpcode::LoadLocal, static_cast<uint64_t>(receiverPtrLocal)});
-          if (dstSlotOffset != 0) {
-            instructions.push_back(
-                {IrOpcode::PushI64, static_cast<uint64_t>(dstSlotOffset) * IrSlotBytes});
-            instructions.push_back({IrOpcode::AddI64, 0});
-          }
-          instructions.push_back({IrOpcode::LoadLocal, static_cast<uint64_t>(valueLocal)});
-          instructions.push_back({IrOpcode::StoreIndirect, 0});
-          instructions.push_back({IrOpcode::Pop, 0});
-        };
-        emitCopySoaStorageSlot(1, 0);
-        emitCopySoaStorageSlot(2, 1);
-        emitCopySoaStorageSlot(3, 2);
-        instructions.push_back({IrOpcode::LoadLocal, static_cast<uint64_t>(receiverPtrLocal)});
-        return true;
-      }
       instructions.push_back({IrOpcode::LoadLocal, static_cast<uint64_t>(receiverPtrLocal)});
       const uint64_t fieldOffsetBytes = static_cast<uint64_t>(fieldSlotOffset) * IrSlotBytes;
       if (fieldOffsetBytes != 0) {

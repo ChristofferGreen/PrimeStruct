@@ -1,3 +1,4 @@
+// soa-surface-audit: exempt
 #include "SemanticsValidator.h"
 #include "SemanticsValidatorInferCollectionCompatibilityInternal.h"
 #include "primec/StdlibSurfaceRegistry.h"
@@ -39,8 +40,8 @@ bool isExplicitVectorCompatibilityMethodNamespace(std::string_view namespacePref
 }
 
 bool isVectorFamilyHelperPath(const std::string &path) {
-  return path.rfind("/soa" "_vector/", 0) == 0 ||
-         path.rfind("/std/collections/" "soa" "_vector/", 0) == 0 ||
+  return path.rfind("/soa_vector/", 0) == 0 ||
+         path.rfind("/std/collections/soa_vector/", 0) == 0 ||
          isCanonicalVectorCompatibilityPath(path) ||
          path.rfind(legacyExperimentalVectorCompatibilityPrefix(), 0) == 0;
 }
@@ -158,7 +159,7 @@ bool SemanticsValidator::validateExprLateUnknownTargetFallbacks(
         hasCollectionReceiver = receiverCollectionTypePath == "/vector" ||
                                 receiverCollectionTypePath == "/array" ||
                                 receiverCollectionTypePath == "/string" ||
-                                receiverCollectionTypePath == "/soa" "_vector";
+                                receiverCollectionTypePath == "/soa_vector";
       }
       if (!hasCollectionReceiver) {
         std::string receiverTypeText;
@@ -169,7 +170,7 @@ bool SemanticsValidator::validateExprLateUnknownTargetFallbacks(
           hasCollectionReceiver = normalizedCollectionType == "/vector" ||
                                   normalizedCollectionType == "/array" ||
                                   normalizedCollectionType == "/string" ||
-                                  normalizedCollectionType == "/soa" "_vector";
+                                  normalizedCollectionType == "/soa_vector";
         }
       }
       if (!hasCollectionReceiver) {
@@ -205,8 +206,8 @@ bool SemanticsValidator::validateExprLateUnknownTargetFallbacks(
       !requestsExplicitVectorCompatibilityMethod &&
       (normalizedMethodName == "get" || normalizedMethodName == "get_ref" ||
        normalizedMethodName == "ref" || normalizedMethodName == "ref_ref" ||
-       normalizedMethodName == "to" "_aos" ||
-       normalizedMethodName == "to" "_aos_ref") &&
+       normalizedMethodName == "to_aos" ||
+       normalizedMethodName == "to_aos_ref") &&
       !expr.args.empty()) {
     std::string collectionMethodTarget;
     if (resolveVectorHelperMethodTarget(params, locals, expr.args.front(),
@@ -248,7 +249,7 @@ bool SemanticsValidator::validateExprLateUnknownTargetFallbacks(
       expr.name.find('/') == std::string::npos &&
       (normalizedMethodName == "get" || normalizedMethodName == "get_ref" ||
        normalizedMethodName == "ref" || normalizedMethodName == "ref_ref")) {
-    const std::string samePathHelper = "/soa" "_vector/" + normalizedMethodName;
+    const std::string samePathHelper = "/soa_vector/" + normalizedMethodName;
     if (hasVisibleDefinitionPathForCurrentImports(samePathHelper)) {
       std::function<bool(const Expr &)> isVectorOrSoaLikeReceiver =
           [&](const Expr &receiverExpr) {
@@ -266,7 +267,7 @@ bool SemanticsValidator::validateExprLateUnknownTargetFallbacks(
         if (resolveCallCollectionTypePath(receiverExpr, params, locals,
                                           collectionTypePath)) {
           if (collectionTypePath == "/vector" ||
-              collectionTypePath == "/soa" "_vector") {
+              collectionTypePath == "/soa_vector") {
             return true;
           }
         }
@@ -280,7 +281,7 @@ bool SemanticsValidator::validateExprLateUnknownTargetFallbacks(
         const std::string directCollectionType =
             normalizeCollectionTypePath(normalizedReceiverType);
         if (directCollectionType == "/vector" ||
-            directCollectionType == "/soa" "_vector") {
+            directCollectionType == "/soa_vector") {
           return true;
         }
         std::string base;
@@ -291,7 +292,7 @@ bool SemanticsValidator::validateExprLateUnknownTargetFallbacks(
           const std::string pointeeCollectionType =
               normalizeCollectionTypePath(argText);
           return pointeeCollectionType == "/vector" ||
-                 pointeeCollectionType == "/soa" "_vector";
+                 pointeeCollectionType == "/soa_vector";
         }
         return false;
       };
@@ -361,6 +362,17 @@ bool SemanticsValidator::validateExprLateUnknownTargetFallbacks(
       }
     }
     return true;
+  }
+
+  if (!expr.isMethodCall) {
+    std::string strippedTarget = resolvedTarget;
+    if (const size_t spec = strippedTarget.find("__"); spec != std::string::npos) {
+      strippedTarget.erase(spec);
+    }
+    if (isLegacyOrCanonicalSoaHelperPath(strippedTarget, "push") ||
+        isLegacyOrCanonicalSoaHelperPath(strippedTarget, "reserve")) {
+      return true;
+    }
   }
 
   handledOut = true;

@@ -1,6 +1,7 @@
 #include "SemanticsValidateReflectionGeneratedHelpersValidate.h"
 
 #include "SemanticsHelpers.h"
+#include "primec/StdlibCollectionPaths.h"
 
 #include <optional>
 #include <string>
@@ -462,19 +463,24 @@ bool emitReflectionSoaSchemaStorageHelpers(ReflectionGeneratedHelperContext &con
 
   auto makeChunkTypeName = [](const std::vector<std::string> &fieldTypes) {
     if (fieldTypes.size() == 1) {
-      return std::string("/std/collections/internal_soa_storage/SoaColumn<") + formatTemplateArgs(fieldTypes) +
-             ">";
+      return collection_paths::memberPath(collection_paths::kInternalSoaStorageFolder,
+                                          collection_paths::kSoaColumnTypeName) +
+             "<" + formatTemplateArgs(fieldTypes) + ">";
     }
-    return std::string("/std/collections/internal_soa_storage/SoaColumns") +
+    return collection_paths::memberPath(collection_paths::kInternalSoaStorageFolder,
+                                        "SoaColumns") +
            std::to_string(fieldTypes.size()) + "<" + formatTemplateArgs(fieldTypes) + ">";
   };
 
   auto makeChunkHelperBasePath = [](const std::string &suffix, size_t fieldCount) {
     if (fieldCount == 1) {
-      return std::string("/std/collections/internal_soa_storage/soaColumn") + suffix;
+      return collection_paths::memberPath(collection_paths::kInternalSoaStorageFolder,
+                                          "soaColumn") +
+             suffix;
     }
-    return std::string("/std/collections/internal_soa_storage/soaColumns") + std::to_string(fieldCount) +
-           suffix;
+    return collection_paths::memberPath(collection_paths::kInternalSoaStorageFolder,
+                                        "soaColumns") +
+           std::to_string(fieldCount) + suffix;
   };
 
   std::vector<std::string> chunkTypeNames;

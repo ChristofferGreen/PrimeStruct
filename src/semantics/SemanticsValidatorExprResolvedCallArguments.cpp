@@ -1,9 +1,9 @@
+// soa-surface-audit: exempt
 #include "SemanticsValidator.h"
 #include "StdlibCollectionSurfaceHelpers.h"
 #include "SemanticsValidatorInferCollectionCompatibilityInternal.h"
 
 #include <optional>
-#include <sstream>
 #include <string>
 #include <string_view>
 #include <vector>
@@ -14,6 +14,32 @@ namespace {
 
 bool isCanonicalMapConstructorResolvedPath(const std::string &resolvedPath) {
   return isResolvedCanonicalKeyValueConstructorPath(resolvedPath);
+}
+
+std::vector<std::string> explicitMapConstructorTemplateArgs(const Expr &expr) {
+  if (!expr.templateArgs.empty()) {
+    return expr.templateArgs;
+  }
+  auto parseSpelledTemplateArgs = [](const std::string &name) {
+    std::vector<std::string> parsed;
+    const size_t anglePos = name.find('<');
+    if (anglePos == std::string::npos) {
+      return parsed;
+    }
+    const size_t endAnglePos = name.rfind('>');
+    if (endAnglePos == std::string::npos || endAnglePos <= anglePos) {
+      return parsed;
+    }
+    const std::string templateArgText =
+        name.substr(anglePos + 1, endAnglePos - anglePos - 1);
+    (void)splitTopLevelTemplateArgs(templateArgText, parsed);
+    return parsed;
+  };
+  std::vector<std::string> parsed = parseSpelledTemplateArgs(expr.name);
+  if (!parsed.empty()) {
+    return parsed;
+  }
+  return parseSpelledTemplateArgs(expr.sourceName);
 }
 
 } // namespace
@@ -53,6 +79,21 @@ bool SemanticsValidator::validateExprResolvedCallArguments(
   } else if (context.hasMethodReceiverIndex &&
              context.methodReceiverIndex > 0 &&
              context.methodReceiverIndex < expr.args.size()) {
+    std::string calleeKeyType;
+    std::string calleeValueType;
+    const bool calleeFirstParamIsMap =
+        !context.calleeParams->empty() &&
+        extractKeyValueCollectionTypes(context.calleeParams->front().binding,
+                                       calleeKeyType, calleeValueType);
+    const std::string canonicalAtUnsafe =
+        metadataBackedCanonicalKeyValueHelperPath("at_unsafe");
+    if (!expr.isMethodCall &&
+        expr.name == "at_unsafe" &&
+        calleeFirstParamIsMap &&
+        !canonicalAtUnsafe.empty()) {
+      return failResolvedCallArgumentDiagnostic(
+          "argument type mismatch for " + canonicalAtUnsafe);
+    }
     reorderedCallExpr = expr;
     std::swap(reorderedCallExpr.args[0],
               reorderedCallExpr.args[context.methodReceiverIndex]);
@@ -151,7 +192,7 @@ bool SemanticsValidator::validateExprResolvedCallArguments(
         actualVectorSurface = "vector";
       } else if (dispatchResolvers.resolveSoaVectorTarget != nullptr &&
                  dispatchResolvers.resolveSoaVectorTarget(*arg, actualElemType)) {
-        actualVectorSurface = "soa" "_vector";
+        actualVectorSurface = "soa_vector";
       } else if (dispatchResolvers.resolveArrayTarget != nullptr &&
                  dispatchResolvers.resolveArrayTarget(*arg, actualElemType)) {
         actualVectorSurface = "array";
@@ -172,8 +213,8 @@ bool SemanticsValidator::validateExprResolvedCallArguments(
                       "/" + normalizedActualBase)) {
                 actualVectorSurface = "vector";
                 actualElemType = actualTypeArgs.front();
-              } else if (normalizedActualBase == "soa" "_vector") {
-                actualVectorSurface = "soa" "_vector";
+              } else if (normalizedActualBase == "soa_vector") {
+                actualVectorSurface = "soa_vector";
                 actualElemType = actualTypeArgs.front();
               } else if (normalizedActualBase == "array") {
                 actualVectorSurface = "array";
@@ -277,8 +318,8 @@ bool SemanticsValidator::validateExprResolvedCallArguments(
                                           const ParameterInfo &param) -> bool {
     if (const auto pendingPath =
             builtinSoaDirectPendingHelperPath(arg, params, locals)) {
-      if (pendingPath->find("/std/collections/" "soa" "_vector/ref") == 0 ||
-          pendingPath->find("/std/collections/" "soa/ref") == 0) {
+      if (pendingPath->find("/std/collections/soa_vector/ref") == 0 ||
+          pendingPath->find("/std/collections/soa/ref") == 0) {
         return failResolvedCallArgumentDiagnostic(
             soaUnavailableMethodDiagnostic(*pendingPath));
       }
@@ -458,29 +499,10 @@ bool SemanticsValidator::validateExprResolvedCallArguments(
       return true;
     }
 
-    std::vector<std::string> effectiveTemplateArgs = expr.templateArgs;
+    std::vector<std::string> effectiveTemplateArgs =
+        explicitMapConstructorTemplateArgs(expr);
     if (effectiveTemplateArgs.size() != 2) {
-      const std::string &callName = expr.name;
-      const size_t anglePos = callName.find('<');
-      if (anglePos != std::string::npos) {
-        const size_t endAnglePos = callName.rfind('>');
-        if (endAnglePos != std::string::npos && endAnglePos > anglePos) {
-          std::string templateArgText = callName.substr(anglePos + 1, endAnglePos - anglePos - 1);
-          std::stringstream ss(templateArgText);
-          std::string arg;
-          effectiveTemplateArgs.clear();
-          while (std::getline(ss, arg, ',')) {
-            size_t start = arg.find_first_not_of(" \t");
-            size_t end = arg.find_last_not_of(" \t");
-            if (start != std::string::npos) {
-              effectiveTemplateArgs.push_back(arg.substr(start, end - start + 1));
-            }
-          }
-        }
-      }
-      if (effectiveTemplateArgs.size() != 2) {
-        return true;
-      }
+      return true;
     }
 
     for (size_t argIndex = 0; argIndex < orderedArgs.size(); ++argIndex) {

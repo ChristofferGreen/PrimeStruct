@@ -680,6 +680,7 @@ std::string resolveCalleePath(const Expr &expr,
     const std::string vectorTypePath =
         canonicalVectorCompatibilityPrefixOrFallback() + "/Vector";
     if (resolvedPath == vectorTypePath &&
+        ctx.sourceDefs.count(vectorTypePath) == 0 &&
         (ctx.sourceDefs.count(vectorConstructorPath) > 0 ||
          ctx.helperOverloads.count(vectorConstructorPath) > 0)) {
       return vectorConstructorPath;

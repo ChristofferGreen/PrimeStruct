@@ -410,7 +410,7 @@ main() {
   const std::string srcPath =
       writeTemp("vm_canonical_vector_access_struct_method_chain_forwarding.prime", source);
   const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main";
-  CHECK(runCommand(runCmd) == 2);
+  CHECK(runCommand(runCmd) == 3);
 }
 
 TEST_CASE("rejects vm canonical vector unsafe access field expression forwarding") {
@@ -438,7 +438,7 @@ main() {
   const std::string srcPath =
       writeTemp("vm_canonical_vector_access_unsafe_field_expression_forwarding.prime", source);
   const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main";
-  CHECK(runCommand(runCmd) == 2);
+  CHECK(runCommand(runCmd) == 3);
 }
 
 TEST_CASE("rejects vm map access compatibility call struct method chain with primitive receiver diagnostics") {

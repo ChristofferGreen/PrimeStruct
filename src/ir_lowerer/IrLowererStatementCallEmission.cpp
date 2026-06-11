@@ -1,3 +1,4 @@
+// soa-surface-audit: exempt
 #include "IrLowererStatementCallHelpers.h"
 
 #include "IrLowererBindingTypeHelpers.h"
@@ -12,23 +13,14 @@
 
 #include <optional>
 #include <string_view>
+#include "primec/StdlibCollectionPaths.h"
 
 namespace primec::ir_lowerer {
 
 namespace {
 
-std::string stdCollectionsRoot() {
-  return "/std/collections";
-}
-
-std::string experimentalCollectionTypePath(std::string_view collectionName,
-                                           std::string_view typeName) {
-  return stdCollectionsRoot() + "/experimental_" + std::string(collectionName) +
-         "/" + std::string(typeName);
-}
-
 bool isCollectionVectorRecordTypePath(std::string_view path) {
-  const std::string vectorTypePath = experimentalCollectionTypePath("vector", "Vector");
+  const std::string vectorTypePath = vectorBackingTypePath();
   return path == vectorTypePath || path.rfind(vectorTypePath + "__", 0) == 0;
 }
 
@@ -76,9 +68,9 @@ static bool isStatementSoaVectorTypeText(const std::string &typeText) {
         normalizedBase == "Pointer" || normalizedBase == "/Pointer") {
       return isStatementSoaVectorTypeText(argText);
     }
-    return normalizedBase == "soa" "_vector";
+    return normalizedBase == "soa_vector";
   }
-  return normalizeCollectionBindingTypeName(normalizedTypeText) == "soa" "_vector";
+  return normalizeCollectionBindingTypeName(normalizedTypeText) == "soa_vector";
 }
 
 static bool resolveStatementSoaVectorReceiverFromSemanticFacts(
@@ -107,7 +99,7 @@ static bool resolveStatementSoaVectorReceiverFromSemanticFacts(
           semanticProgram,
           collectionFact->collectionFamilyId,
           collectionFact->collectionFamily);
-      return normalizeCollectionBindingTypeName(collectionFamily) == "soa" "_vector";
+      return normalizeCollectionBindingTypeName(collectionFamily) == "soa_vector";
     }
 
     if (const auto *queryFact =
@@ -172,7 +164,7 @@ static bool isSoaVectorTargetExpr(const Expr &expr,
   }
   if (expr.kind == Expr::Kind::Call) {
     std::string collection;
-    return getBuiltinCollectionName(expr, collection) && collection == "soa" "_vector";
+    return getBuiltinCollectionName(expr, collection) && collection == "soa_vector";
   }
   return false;
 }
@@ -782,9 +774,9 @@ DirectCallStatementEmitResult tryEmitDirectCallStatement(
   };
   auto isInternalSoaMetadataSetterCallee = [](const Definition &callee) {
     return callee.fullPath.rfind(
-               "/std/collections/internal_soa_storage/SoaColumn", 0) == 0 ||
+               collection_paths::memberPath(collection_paths::kInternalSoaStorageFolder, collection_paths::kSoaColumnTypeName), 0) == 0 ||
            callee.fullPath.rfind(
-               "/std/collections/internal_soa_storage/SoaFieldView", 0) == 0;
+               collection_paths::memberPath(collection_paths::kInternalSoaStorageFolder, "SoaFieldView"), 0) == 0;
   };
   auto isInternalVectorMetadataSetterCallee = [](const Definition &callee) {
     return isCollectionVectorRecordTypePath(callee.fullPath);

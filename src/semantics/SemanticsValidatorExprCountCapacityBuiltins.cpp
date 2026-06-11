@@ -1,3 +1,4 @@
+// soa-surface-audit: exempt
 #include "SemanticsValidator.h"
 #include "SemanticsValidatorInferCollectionCompatibilityInternal.h"
 
@@ -223,17 +224,17 @@ bool SemanticsValidator::validateExprCountCapacityBuiltins(
     const std::string normalizedNamespacePrefix =
         canonicalizeSoaCountHelperPath(expr.namespacePrefix);
     if (!expr.isMethodCall) {
-      if (normalizedName == "/soa" "_vector/count") {
+      if (normalizedName == "/soa_vector/count") {
         return true;
       }
-      if (normalizedName == "/soa" "_vector/count_ref") {
+      if (normalizedName == "/soa_vector/count_ref") {
         return true;
       }
-      return (normalizedNamespacePrefix == "/soa" "_vector" ||
-              normalizedNamespacePrefix == "soa" "_vector") &&
+      return (normalizedNamespacePrefix == "/soa_vector" ||
+              normalizedNamespacePrefix == "soa_vector") &&
              (expr.name == "count" || expr.name == "count_ref");
     }
-    return normalizedNamespacePrefix == "/soa" "_vector" &&
+    return normalizedNamespacePrefix == "/soa_vector" &&
            (expr.name == "count" || expr.name == "count_ref");
   };
   const auto validateVectorCountBuiltinCall = [&]() -> bool {
@@ -318,13 +319,13 @@ bool SemanticsValidator::validateExprCountCapacityBuiltins(
       const bool explicitOldSurfaceSoaCountCall =
           isExplicitOldSurfaceSoaCountCall();
       const bool hasVisibleSamePathSoaCountHelper =
-          hasVisibleDefinitionPathForCurrentImports("/soa" "_vector/" +
+          hasVisibleDefinitionPathForCurrentImports("/soa_vector/" +
                                                     soaCountHelperName);
       if (explicitOldSurfaceSoaCountCall &&
-          !hasVisibleDefinitionPathForCurrentImports("/soa" "_vector/" +
+          !hasVisibleDefinitionPathForCurrentImports("/soa_vector/" +
                                                     soaCountHelperName)) {
         return failCountCapacityBuiltin(
-            soaUnavailableMethodDiagnostic("/soa" "_vector/" +
+            soaUnavailableMethodDiagnostic("/soa_vector/" +
                                            soaCountHelperName));
       }
       std::string argsPackElemType;

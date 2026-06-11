@@ -762,7 +762,7 @@ TEST_CASE("ir lowerer statement binding helper preserves specialized vector stru
   nameExpr.kind = primec::Expr::Kind::Name;
   nameExpr.name = "pixels";
   CHECK(primec::ir_lowerer::inferStructPathFromNameExpr(nameExpr, locals)
-            .rfind("/std/collections/experimental_vector/Vector__", 0) == 0);
+            .rfind("/std/collections/vector/Vector__", 0) == 0);
 }
 
 TEST_CASE("ir lowerer statement binding helper recovers bool default parameter kind from builtin comparison") {

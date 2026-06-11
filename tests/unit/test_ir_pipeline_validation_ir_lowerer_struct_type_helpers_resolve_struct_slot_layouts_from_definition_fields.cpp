@@ -198,7 +198,7 @@ TEST_CASE("ir lowerer struct type helpers synthesize generated soa vector layout
   primec::ir_lowerer::StructSlotLayoutInfo layout;
   std::string error;
   REQUIRE(primec::ir_lowerer::resolveStructSlotLayoutFromDefinitionFields(
-      "/std/collections/experimental_soa_vector/SoaVector__t1234",
+      "/std/collections/soa/SoaVector__t1234",
       collectStructLayoutFields,
       resolveDefinitionNamespacePrefix,
       resolveStructTypeName,
@@ -208,7 +208,7 @@ TEST_CASE("ir lowerer struct type helpers synthesize generated soa vector layout
       layout,
       error));
   CHECK(error.empty());
-  CHECK(layout.structPath == "/std/collections/experimental_soa_vector/SoaVector__t1234");
+  CHECK(layout.structPath == "/std/collections/soa/SoaVector__t1234");
   CHECK(layout.totalSlots == 6);
   REQUIRE(layout.fields.size() == 1);
   CHECK(layout.fields[0].name == "storage");
@@ -653,7 +653,7 @@ TEST_CASE("ir lowerer struct type helpers report definition slot layout diagnost
     CHECK(layout.fields[0].slotOffset == 1);
     CHECK(layout.fields[0].slotCount == 3);
     CHECK(layout.fields[0].structPath.rfind(
-              "/std/collections/experimental_soa_vector/SoaVector__", 0) == 0);
+              "/std/collections/soa/SoaVector__", 0) == 0);
   }
 
   {

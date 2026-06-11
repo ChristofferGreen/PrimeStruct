@@ -12,7 +12,7 @@ list(APPEND PrimeStructManagedCompileRunSuites
 addPrimeStructManagedDoctestSuite("primestruct.compile.run.generic_requirements"
                                   TIMEOUT 900
                                   SHARD_PREFIX "generic_requirements"
-                                  TOTAL_CASES 6
+                                  TOTAL_CASES 12
                                   CASES_PER_SHARD 1)
 
 addPrimeStructManagedDoctestSuite("primestruct.compile.run.glsl"

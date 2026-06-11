@@ -377,7 +377,7 @@ log(1i32)
   CHECK(readFile(outPath).empty());
 }
 
-TEST_CASE("struct Create/Destroy helpers currently trip C++ emitter stack underflow at runtime") {
+TEST_CASE("struct Create/Destroy helpers do not trip C++ emitter stack underflow at runtime") {
   const std::string source = R"(
 [struct]
 Thing() {
@@ -408,9 +408,9 @@ main() {
   const std::string compileCmd = "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main";
   CHECK(runCommand(compileCmd) == 0);
   const std::string runCmd = exePath + " > " + outPath + " 2> " + errPath;
-  CHECK(runCommand(runCmd) == 1);
+  CHECK(runCommand(runCmd) == 0);
   CHECK(readFile(outPath).empty());
-  CHECK(readFile(errPath).find("IR stack underflow on pop") != std::string::npos);
+  CHECK(readFile(errPath).empty());
 }
 
 TEST_CASE("C++ emitter returns structs from functions") {

@@ -489,7 +489,7 @@ TEST_CASE(
 
   auto resolveStructSlotLayout =
       [](const std::string &structPath, primec::ir_lowerer::StructSlotLayoutInfo &layout) {
-        if (structPath != "/std/collections/experimental_soa_vector/SoaVector__Particle") {
+        if (structPath != "/std/collections/soa/SoaVector__Particle") {
           return false;
         }
         layout.structPath = structPath;
@@ -506,7 +506,7 @@ TEST_CASE(
   auto inferCallParameterLocalInfo =
       [](const primec::Expr &, primec::ir_lowerer::LocalInfo &infoOut, std::string &) {
         infoOut.kind = primec::ir_lowerer::LocalInfo::Kind::Value;
-        infoOut.structTypeName = "/std/collections/experimental_soa_vector/SoaVector__Particle";
+        infoOut.structTypeName = "/std/collections/soa/SoaVector__Particle";
         return true;
       };
 
@@ -674,7 +674,7 @@ TEST_CASE("ir lowerer inline param helper bridges builtin soa for canonical coun
 
   auto resolveStructSlotLayout =
       [](const std::string &structPath, primec::ir_lowerer::StructSlotLayoutInfo &layout) {
-        if (structPath != "/std/collections/experimental_soa_vector/SoaVector__Particle") {
+        if (structPath != "/std/collections/soa/SoaVector__Particle") {
           return false;
         }
         layout.structPath = structPath;
@@ -691,7 +691,7 @@ TEST_CASE("ir lowerer inline param helper bridges builtin soa for canonical coun
   auto inferCallParameterLocalInfo =
       [](const primec::Expr &, primec::ir_lowerer::LocalInfo &infoOut, std::string &) {
         infoOut.kind = primec::ir_lowerer::LocalInfo::Kind::Value;
-        infoOut.structTypeName = "/std/collections/experimental_soa_vector/SoaVector__Particle";
+        infoOut.structTypeName = "/std/collections/soa/SoaVector__Particle";
         return true;
       };
 

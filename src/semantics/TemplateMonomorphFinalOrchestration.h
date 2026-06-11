@@ -14,7 +14,7 @@ void buildImportAliases(Context &ctx) {
   ctx.stdlibScopedImportAliasTargets.clear();
   ctx.importAliasTargets.clear();
   const std::string InternalVectorTypePath =
-      legacyExperimentalVectorCompatibilityPrefix() + "Vector";
+      canonicalVectorTypeIdentityPrefix() + "Vector";
   const auto &directImportPaths = ctx.program.sourceImports.empty()
                                       ? ctx.program.imports
                                       : ctx.program.sourceImports;
@@ -180,7 +180,7 @@ void buildImportAliases(Context &ctx) {
     }
     if (isWildcard) {
       registerStdlibSurfaceWildcardAliases(ctx.directImportAliases, prefix);
-      if (prefix == "/std/collections/internal_vector") {
+      if (prefix == collection_paths::moduleRoot(collection_paths::kInternalVectorFolder)) {
         if (ctx.sourceDefs.count(InternalVectorTypePath) > 0) {
           registerDefinitionAlias(
               ctx.directImportAliases, "Vector", InternalVectorTypePath);
@@ -278,7 +278,7 @@ void buildImportAliases(Context &ctx) {
     }
     if (isWildcard) {
       registerStdlibSurfaceWildcardAliases(ctx.transitiveImportAliases, prefix);
-      if (prefix == "/std/collections/internal_vector") {
+      if (prefix == collection_paths::moduleRoot(collection_paths::kInternalVectorFolder)) {
         if (ctx.sourceDefs.count(InternalVectorTypePath) > 0) {
           registerDefinitionAlias(
               ctx.transitiveImportAliases, "Vector", InternalVectorTypePath);

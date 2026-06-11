@@ -416,7 +416,7 @@ bool extractExperimentalSoaVectorValueReceiverTemplateArgsFromTypeText(const std
     }
     if (fieldBinding.typeTemplateArg.empty() ||
         (normalizedFieldType != "SoaColumn" &&
-         normalizedFieldType != "std/collections/internal_soa_storage/SoaColumn")) {
+         normalizedFieldType != collection_paths::memberPathBare(collection_paths::kInternalSoaStorageFolder, collection_paths::kSoaColumnTypeName))) {
       continue;
     }
     return splitTopLevelTemplateArgs(fieldBinding.typeTemplateArg, templateArgsOut) &&
@@ -827,10 +827,11 @@ bool hasVisibleStdCollectionsImportForPath(const Context &ctx, const std::string
     return false;
   }
   const auto &importPaths = ctx.program.sourceImports.empty() ? ctx.program.imports : ctx.program.sourceImports;
-  if (path.rfind("/std/collections/internal_vector/", 0) == 0) {
+  if (path.rfind(collection_paths::modulePrefix(collection_paths::kInternalVectorFolder), 0) == 0) {
     for (const auto &importPath : importPaths) {
-      if (importPath == "/std/collections/internal_vector" ||
-          importPath == "/std/collections/internal_vector/*" ||
+      if (importPath == collection_paths::moduleRoot(collection_paths::kInternalVectorFolder) ||
+          importPath ==
+              collection_paths::modulePrefix(collection_paths::kInternalVectorFolder) + "*" ||
           importPath == path) {
         return true;
       }

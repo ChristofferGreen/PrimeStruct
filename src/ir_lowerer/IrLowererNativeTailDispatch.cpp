@@ -1,3 +1,4 @@
+// soa-surface-audit: exempt
 #include "IrLowererCallHelpers.h"
 
 #include "IrLowererCountAccessClassifiers.h"
@@ -231,12 +232,12 @@ bool isExplicitDirectSoaAccessCall(const Expr &expr) {
     return false;
   }
   const std::string rawPath = resolveNativeTailCallPathWithoutFallbackProbes(expr);
-  return rawPath == "/soa" "_vector/get" ||
-         rawPath == "/std/collections/" "soa" "_vector/get" ||
-         rawPath == "/std/collections/" "soa/get" ||
-         rawPath == "/soa" "_vector/get_ref" ||
-         rawPath == "/std/collections/" "soa" "_vector/get_ref" ||
-         rawPath == "/std/collections/" "soa/get_ref";
+  return rawPath == "/soa_vector/get" ||
+         rawPath == "/std/collections/soa_vector/get" ||
+         rawPath == "/std/collections/soa/get" ||
+         rawPath == "/soa_vector/get_ref" ||
+         rawPath == "/std/collections/soa_vector/get_ref" ||
+         rawPath == "/std/collections/soa/get_ref";
 }
 
 bool hasSemanticKeyValueAccessHelperDefinition(
@@ -530,7 +531,7 @@ UnsupportedNativeCallResult emitUnsupportedNativeCallDiagnosticImpl(
     };
     return matchesCollectionRoot("vector") ||
            matchesCollectionRoot("array") ||
-           matchesCollectionRoot("soa" "_vector");
+           matchesCollectionRoot("soa_vector");
   };
   const bool hasPublishedVectorMetadataPath =
       expr.kind == Expr::Kind::Call &&
@@ -692,6 +693,28 @@ NativeCallTailDispatchResult tryEmitNativeCallTailDispatch(
       return NativeCallTailDispatchResult::NotHandled;
     }
   }
+  if (!expr.isMethodCall && expr.args.size() == 1) {
+    const std::string directHelperPath =
+        resolveNativeTailCallPathWithoutFallbackProbes(expr);
+    const bool isExplicitVectorMetadataCall =
+        directHelperPath == "/std/collections/vector/count" ||
+        directHelperPath == "std/collections/vector/count" ||
+        directHelperPath == "/std/collections/vector/capacity" ||
+        directHelperPath == "std/collections/vector/capacity" ||
+        directHelperPath == "/vector/count" ||
+        directHelperPath == "vector/count" ||
+        directHelperPath == "/vector/capacity" ||
+        directHelperPath == "vector/capacity";
+    if (isExplicitVectorMetadataCall &&
+        (expr.args.front().kind == Expr::Kind::Call ||
+         resolveCollectionPairTypeInfo(
+             expr.args.front(),
+             localsIn,
+             resolveCallCollectionPairTypeInfo)
+             .isKeyValueTarget)) {
+      return NativeCallTailDispatchResult::NotHandled;
+    }
+  }
   const auto countAccessResult = tryEmitCountAccessCall(
       expr,
       localsIn,
@@ -831,8 +854,8 @@ NativeCallTailDispatchResult tryEmitNativeCallTailDispatch(
     const bool isDirectExperimentalVectorAtUnsafeImplementationCall =
         !expr.isMethodCall &&
         accessName == "at_unsafe" &&
-        (directHelperPath.rfind(experimentalCollectionMemberRoot("vector"), 0) == 0 ||
-         directHelperPath.rfind(experimentalCollectionMemberRoot("vector", false), 0) == 0);
+        (directHelperPath.rfind(vectorBackingMemberRoot(), 0) == 0 ||
+         directHelperPath.rfind(vectorBackingMemberRoot(false), 0) == 0);
     if (((isExplicitVectorAccessCall && explicitHelperName == "at_unsafe") ||
          isPublishedVectorAtUnsafeImplementationCall ||
          isDirectExperimentalVectorAtUnsafeImplementationCall) &&

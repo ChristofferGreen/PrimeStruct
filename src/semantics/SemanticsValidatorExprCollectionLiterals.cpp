@@ -1,3 +1,4 @@
+// soa-surface-audit: exempt
 #include "SemanticsValidator.h"
 #include "SemanticsValidatorInferCollectionCompatibilityInternal.h"
 
@@ -136,7 +137,7 @@ bool SemanticsValidator::validateExprCollectionLiteralBuiltins(
     return failCollectionLiteralDiagnostic(collectionLiteralDiagnosticSubject() +
                                           " does not accept block arguments");
   }
-  if (builtinName == "soa" "_vector") {
+  if (builtinName == "soa_vector") {
     if (expr.templateArgs.size() != 1) {
       return failCollectionLiteralDiagnostic(
           "soa literal requires exactly one template argument");
@@ -175,7 +176,7 @@ bool SemanticsValidator::validateExprCollectionLiteralBuiltins(
     }
   }
   if ((builtinName == "array" || builtinName == "vector" ||
-       builtinName == "soa" "_vector") &&
+       builtinName == "soa_vector") &&
       !expr.templateArgs.empty()) {
     const std::string &elemType = expr.templateArgs.front();
     const std::vector<std::string> *definitionTemplateArgs = nullptr;

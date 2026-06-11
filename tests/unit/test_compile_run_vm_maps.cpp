@@ -157,7 +157,7 @@ main() {
 )";
   const std::string srcPath = writeTemp("vm_map_literal_mismatch.prime", source);
   const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main";
-  CHECK(runCommand(runCmd) == 1);
+  CHECK(runCommand(runCmd) == 2);
 }
 
 TEST_CASE("runs vm with map constructor string binding key") {

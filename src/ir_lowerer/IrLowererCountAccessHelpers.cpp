@@ -21,6 +21,7 @@
 #include "primec/SemanticProduct.h"
 #include "primec/SoaPathHelpers.h"
 #include "primec/StdlibSurfaceRegistry.h"
+#include "primec/StdlibCollectionPaths.h"
 
 namespace primec::ir_lowerer {
 using count_access_detail::isDereferencedCollectionCountTarget;
@@ -86,13 +87,10 @@ std::string rootedCollectionMemberPath(std::string_view collectionName,
   return "/" + collectionMemberPath(collectionName, memberName);
 }
 
-std::string experimentalCollectionRoot(std::string_view collectionName) {
-  return "/std/collections/experimental_" + std::string(collectionName);
-}
-
 std::string experimentalCollectionTypePath(std::string_view collectionName,
                                            std::string_view typeName) {
-  return experimentalCollectionRoot(collectionName) + "/" + std::string(typeName);
+  return collection_paths::memberPath(
+      collection_paths::typeIdentityFolder(collectionName), typeName);
 }
 
 bool isExperimentalCollectionStructPath(const std::string &structTypeName,
@@ -294,7 +292,7 @@ bool isInternalVectorMetadataCall(const Expr &expr,
   if (!scopedPath.empty() && scopedPath.front() == '/') {
     scopedPath.erase(scopedPath.begin());
   }
-  constexpr std::string_view Prefix = "std/collections/internal_vector/";
+  const std::string Prefix = collection_paths::modulePrefixBare(collection_paths::kInternalVectorFolder);
   if (scopedPath.rfind(Prefix, 0) != 0 ||
       scopedPath.find('/', Prefix.size()) != std::string::npos) {
     return false;
@@ -396,7 +394,7 @@ std::string normalizedInternalSoaStorageMetadataLeaf(std::string structPath) {
   if (!structPath.empty() && structPath.front() == '/') {
     structPath.erase(structPath.begin());
   }
-  constexpr std::string_view Prefix = "std/collections/internal_soa_storage/";
+  const std::string Prefix = collection_paths::modulePrefixBare(collection_paths::kInternalSoaStorageFolder);
   if (structPath.rfind(Prefix, 0) == 0) {
     structPath.erase(0, Prefix.size());
   }
@@ -1533,6 +1531,20 @@ CountAccessCallEmitResult tryEmitCountAccessCall(
            expr.name == std::string(helperName) &&
            expr.args.size() == 1;
   };
+  if (isCountLikeCall()) {
+    const std::string receiverTypeText =
+        semanticMethodReceiverTypeText(semanticProgram, expr);
+    if (!receiverTypeText.empty()) {
+      SemanticCountTargetInfo receiverInfo;
+      if (classifySemanticCountTargetTypeText(receiverTypeText,
+                                              receiverInfo) &&
+          !receiverInfo.isString &&
+          !receiverInfo.isCollection) {
+        error = "native backend only supports entry argument indexing";
+        return CountAccessCallEmitResult::Error;
+      }
+    }
+  }
   const auto shouldDeferBareSimpleCountLikeCall = [&](std::string_view helperName) {
     if (!isBareSimpleCountLikeCall(helperName)) {
       return false;
@@ -1744,9 +1756,7 @@ CountAccessCallEmitResult tryEmitCountAccessCall(
         if (receiverInfo.isString) {
           return true;
         }
-        if (receiverInfo.isCollection) {
-          return false;
-        }
+        return false;
       }
     }
     const Expr &target = expr.args.front();
@@ -1756,6 +1766,16 @@ CountAccessCallEmitResult tryEmitCountAccessCall(
       return true;
     }
     if (semanticStringTarget == SemanticStringCountTargetResolution::NonString) {
+      return false;
+    }
+    const auto semanticStringKeyValueAccess =
+        classifySemanticStringKeyValueAccess(target, semanticProgram, semanticIndex);
+    if (semanticStringKeyValueAccess ==
+        SemanticStringKeyValueAccessResolution::StringKeyValueAccess) {
+      return true;
+    }
+    if (semanticStringKeyValueAccess ==
+        SemanticStringKeyValueAccessResolution::NonStringKeyValueAccess) {
       return false;
     }
     if (isSourceMethodStringKeyValueAccessTarget(target, semanticProgram, semanticIndex)) {
@@ -1816,12 +1836,27 @@ CountAccessCallEmitResult tryEmitCountAccessCall(
     if (target.name.find('/') == std::string::npos &&
         !hasExplicitStdKeyValueSourceSpelling(target) &&
         getBuiltinArrayAccessName(target, accessName) &&
-        (isSourceMethodStringKeyValueAccessTarget(target, semanticProgram, semanticIndex) ||
+        ([&]() {
+          const auto semanticStringKeyValueAccess =
+              classifySemanticStringKeyValueAccess(target, semanticProgram, semanticIndex);
+          if (semanticStringKeyValueAccess ==
+              SemanticStringKeyValueAccessResolution::StringKeyValueAccess) {
+            return true;
+          }
+          if (semanticStringKeyValueAccess ==
+              SemanticStringKeyValueAccessResolution::NonStringKeyValueAccess) {
+            return false;
+          }
+          return isSourceMethodStringKeyValueAccessTarget(target, semanticProgram, semanticIndex);
+        }() ||
          (publishedKeyValueAccessHelperReturnsString(semanticProgram, accessName) &&
           !target.args.empty() &&
           !isVectorCountTarget(target.args.front(), localsIn)))) {
       return emitRuntimeStringCountTarget();
     }
+  }
+  if (isRuntimeStringCountTarget()) {
+    return emitRuntimeStringCountTarget();
   }
   if (isArrayCountCallFn(expr, localsIn)) {
     if (count_access_detail::isUnqualifiedCollectionBuiltinName(expr, "count") &&
@@ -1925,8 +1960,14 @@ CountAccessCallEmitResult tryEmitCountAccessCall(
       expr.args.size() == 1 &&
       (dynamicCollectionCountTarget ||
        (explicitPublishedVectorCountCall && dynamicVectorCountTarget))) {
-    if (inferExprKind &&
-        inferExprKind(expr.args.front(), localsIn) == LocalInfo::ValueKind::String) {
+    const SemanticStringCountTargetResolution semanticStringTarget =
+        classifySemanticStringCountTarget(expr.args.front(),
+                                          semanticProgram,
+                                          semanticIndex);
+    if (semanticStringTarget == SemanticStringCountTargetResolution::String ||
+        (inferExprKind &&
+         inferExprKind(expr.args.front(), localsIn) ==
+             LocalInfo::ValueKind::String)) {
       // String receivers can be dynamic call results; defer to string count emission.
     } else {
       if (!emitDynamicVectorCount(expr.args.front())) {
@@ -1944,10 +1985,6 @@ CountAccessCallEmitResult tryEmitCountAccessCall(
       return CountAccessCallEmitResult::Error;
     }
     return CountAccessCallEmitResult::Emitted;
-  }
-
-  if (isRuntimeStringCountTarget()) {
-    return emitRuntimeStringCountTarget();
   }
 
   const auto stringCountResult = tryEmitStringCountCall(

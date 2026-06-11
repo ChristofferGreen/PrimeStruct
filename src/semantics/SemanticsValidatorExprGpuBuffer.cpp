@@ -273,7 +273,9 @@ bool SemanticsValidator::validateExprGpuBufferBuiltins(
     }
     return true;
   }
-  if (isSimpleCallName(expr, "buffer")) {
+  if (!expr.isMethodCall && isSimpleCallName(expr, "buffer") &&
+      expr.templateArgs.size() == 1 &&
+      defMap_.find(resolveCalleePath(expr)) == defMap_.end()) {
     handledOut = true;
     if (currentValidationState_.context.definitionIsCompute) {
       return failGpuBufferDiagnostic("buffer is not allowed in compute definitions");

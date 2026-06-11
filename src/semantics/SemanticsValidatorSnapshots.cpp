@@ -1,3 +1,4 @@
+// soa-surface-audit: exempt
 #include "SemanticsValidator.h"
 
 #include "SemanticsValidatorInferCollectionCompatibilityInternal.h"
@@ -369,28 +370,28 @@ collectionBridgeChoiceFromResolvedPath(const std::string &resolvedPath) {
       if (normalizedPath.starts_with(experimentalSoaPrefix)) {
         const std::string_view helperName = normalizedPath.substr(
             experimentalSoaPrefix.size());
-        if (helperName == "soa" "VectorCount") {
+        if (helperName == "soaVectorCount") {
           return "count";
         }
-        if (helperName == "soa" "VectorCountRef") {
+        if (helperName == "soaVectorCountRef") {
           return "count_ref";
         }
-        if (helperName == "soa" "VectorGet") {
+        if (helperName == "soaVectorGet") {
           return "get";
         }
-        if (helperName == "soa" "VectorGetRef") {
+        if (helperName == "soaVectorGetRef") {
           return "get_ref";
         }
-        if (helperName == "soa" "VectorRef") {
+        if (helperName == "soaVectorRef") {
           return "ref";
         }
-        if (helperName == "soa" "VectorRefRef") {
+        if (helperName == "soaVectorRefRef") {
           return "ref_ref";
         }
-        if (helperName == "soa" "VectorPush") {
+        if (helperName == "soaVectorPush") {
           return "push";
         }
-        if (helperName == "soa" "VectorReserve") {
+        if (helperName == "soaVectorReserve") {
           return "reserve";
         }
       }
@@ -400,11 +401,11 @@ collectionBridgeChoiceFromResolvedPath(const std::string &resolvedPath) {
       if (normalizedPath.starts_with(experimentalSoaConversionsPrefix)) {
         const std::string_view helperName = normalizedPath.substr(
             experimentalSoaConversionsPrefix.size());
-        if (helperName == "soa" "VectorToAos") {
-          return "to" "_aos";
+        if (helperName == "soaVectorToAos") {
+          return "to_aos";
         }
-        if (helperName == "soa" "VectorToAosRef") {
-          return "to" "_aos_ref";
+        if (helperName == "soaVectorToAosRef") {
+          return "to_aos_ref";
         }
       }
       return {};
@@ -1057,7 +1058,9 @@ void SemanticsValidator::collectDefinitionPublicationFactsForStableRange(
     definitionPaths.insert(program_.definitions[stableIndex].fullPath);
   }
 
+  skipLocalAwareCallRefinement_ = true;
   collectPilotRoutingSemanticProductFacts();
+  skipLocalAwareCallRefinement_ = false;
   appendEntriesForDefinitionPaths(
       out.directCallTargets,
       std::move(collectedDirectCallTargets_),
@@ -1240,27 +1243,79 @@ void SemanticsValidator::rebindMergedWorkerPublicationFactSemanticNodeIds() {
       mergedWorkerPublicationFacts_.directCallTargets,
       std::move(freshDirectCallTargets),
       directCallTargetSnapshotKey);
+  const auto methodCallTargetSnapshotKey = [](const CollectedMethodCallTargetEntry &entry) {
+    return snapshotKey(entry.scopePath,
+                       entry.methodName,
+                       entry.sourceLine,
+                       entry.sourceColumn,
+                       entry.resolvedPath);
+  };
+  if (appendMissingEntriesBySnapshotKey(
+          mergedWorkerPublicationFacts_.methodCallTargets,
+          freshMethodCallTargets,
+          methodCallTargetSnapshotKey)) {
+    std::stable_sort(mergedWorkerPublicationFacts_.methodCallTargets.begin(),
+                     mergedWorkerPublicationFacts_.methodCallTargets.end(),
+                     [](const auto &left, const auto &right) {
+                       if (left.scopePath != right.scopePath) {
+                         return left.scopePath < right.scopePath;
+                       }
+                       if (left.sourceLine != right.sourceLine) {
+                         return left.sourceLine < right.sourceLine;
+                       }
+                       if (left.sourceColumn != right.sourceColumn) {
+                         return left.sourceColumn < right.sourceColumn;
+                       }
+                       if (left.methodName != right.methodName) {
+                         return left.methodName < right.methodName;
+                       }
+                       return left.resolvedPath < right.resolvedPath;
+                     });
+  }
   rebindSemanticNodeIdsBySnapshotKey(
       mergedWorkerPublicationFacts_.methodCallTargets,
       std::move(freshMethodCallTargets),
-      [](const CollectedMethodCallTargetEntry &entry) {
-        return snapshotKey(entry.scopePath,
-                           entry.methodName,
-                           entry.sourceLine,
-                           entry.sourceColumn,
-                           entry.resolvedPath);
-      });
+      methodCallTargetSnapshotKey);
+  const auto bridgePathChoiceSnapshotKey = [](const CollectedBridgePathChoiceEntry &entry) {
+    return snapshotKey(entry.scopePath,
+                       entry.collectionFamily,
+                       entry.sourceLine,
+                       entry.sourceColumn,
+                       entry.helperName,
+                       entry.chosenPath);
+  };
+  if (appendMissingEntriesBySnapshotKey(
+          mergedWorkerPublicationFacts_.bridgePathChoices,
+          freshBridgePathChoices,
+          bridgePathChoiceSnapshotKey)) {
+    std::stable_sort(mergedWorkerPublicationFacts_.bridgePathChoices.begin(),
+                     mergedWorkerPublicationFacts_.bridgePathChoices.end(),
+                     [](const auto &left, const auto &right) {
+                       if (left.scopePath != right.scopePath) {
+                         return left.scopePath < right.scopePath;
+                       }
+                       if (left.sourceLine != right.sourceLine) {
+                         return left.sourceLine < right.sourceLine;
+                       }
+                       if (left.sourceColumn != right.sourceColumn) {
+                         return left.sourceColumn < right.sourceColumn;
+                       }
+                       if (left.collectionFamily != right.collectionFamily) {
+                         return left.collectionFamily < right.collectionFamily;
+                       }
+                       if (left.helperName != right.helperName) {
+                         return left.helperName < right.helperName;
+                       }
+                       if (left.chosenPath != right.chosenPath) {
+                         return left.chosenPath < right.chosenPath;
+                       }
+                       return left.semanticNodeId < right.semanticNodeId;
+                     });
+  }
   rebindSemanticNodeIdsBySnapshotKey(
       mergedWorkerPublicationFacts_.bridgePathChoices,
       std::move(freshBridgePathChoices),
-      [](const CollectedBridgePathChoiceEntry &entry) {
-        return snapshotKey(entry.scopePath,
-                           entry.collectionFamily,
-                           entry.sourceLine,
-                           entry.sourceColumn,
-                           entry.helperName,
-                           entry.chosenPath);
-      });
+      bridgePathChoiceSnapshotKey);
   rebindSemanticNodeIdsBySnapshotKey(
       mergedWorkerPublicationFacts_.typeMetadata,
       std::move(freshTypeMetadata),
@@ -1390,6 +1445,9 @@ void SemanticsValidator::rebindMergedWorkerPublicationFactSemanticNodeIds() {
       mergedWorkerPublicationFacts_.arrayExtentFacts,
       std::move(freshArrayExtentFacts),
       arrayExtentFactSnapshotKey);
+  for (auto &entry : mergedWorkerPublicationFacts_.arrayExtentFacts) {
+    entry.targetSemanticNodeId = entry.semanticNodeId;
+  }
   rebindSemanticNodeIdsBySnapshotKey(
       mergedWorkerPublicationFacts_.returnFacts,
       std::move(freshReturnFacts),
@@ -1518,15 +1576,12 @@ void SemanticsValidator::collectPilotRoutingSemanticProductFacts() {
   };
 
   collectDirectCallExpr = [&](const std::string &scopePath, const Expr &expr) {
-    if (expr.kind == Expr::Kind::Call) {
+    if (expr.kind == Expr::Kind::Call && !expr.isMethodCall) {
       std::string resolvedPath;
       if (isTaskWaitExpr(expr)) {
         resolvedPath = "/task/wait";
       } else {
         resolvedPath = preferredCollectionHelperResolvedPath(expr);
-      }
-      if (resolvedPath.empty() && expr.isMethodCall) {
-        resolvedPath = resolveCalleePath(expr);
       }
       if (resolvedPath.empty()) {
         resolvedPath = resolveCalleePath(expr);
@@ -1585,13 +1640,15 @@ void SemanticsValidator::collectPilotRoutingSemanticProductFacts() {
     }
   }
 
-  for (const auto &exec : program_.executions) {
-    ExecutionContextScope executionScope(*this, exec);
-    collectDirectCallExprs(exec.fullPath, exec.arguments);
+  if (!useMergedWorkerPublicationFacts) {
+    for (const auto &exec : program_.executions) {
+      ExecutionContextScope executionScope(*this, exec);
+      collectDirectCallExprs(exec.fullPath, exec.arguments);
       collectDirectCallExprs(exec.fullPath, exec.bodyArguments);
+    }
   }
 
-  if (!useMergedWorkerPublicationFacts) {
+  if (!useMergedWorkerPublicationFacts && !skipLocalAwareCallRefinement_) {
     forEachLocalAwareSnapshotCall(
         [&](const Definition &def,
             const std::vector<ParameterInfo> &defParams,
@@ -1601,24 +1658,33 @@ void SemanticsValidator::collectPilotRoutingSemanticProductFacts() {
             CallSnapshotData callData;
             if (inferCallSnapshotData(defParams, activeLocals, expr, callData) &&
                 !callData.resolvedPath.empty()) {
-              if (expr.semanticNodeId != 0) {
-                collectedDirectCallTargets_.erase(
-                    std::remove_if(
-                        collectedDirectCallTargets_.begin(),
-                        collectedDirectCallTargets_.end(),
-                        [&](const CollectedDirectCallTargetEntry &entry) {
+              collectedDirectCallTargets_.erase(
+                  std::remove_if(
+                      collectedDirectCallTargets_.begin(),
+                      collectedDirectCallTargets_.end(),
+                      [&](const CollectedDirectCallTargetEntry &entry) {
+                        if (expr.semanticNodeId != 0) {
                           return entry.semanticNodeId == expr.semanticNodeId;
-                        }),
-                    collectedDirectCallTargets_.end());
-                collectedBridgePathChoices_.erase(
-                    std::remove_if(
-                        collectedBridgePathChoices_.begin(),
-                        collectedBridgePathChoices_.end(),
-                        [&](const CollectedBridgePathChoiceEntry &entry) {
+                        }
+                        return entry.scopePath == def.fullPath &&
+                               entry.callName == expr.name &&
+                               entry.sourceLine == expr.sourceLine &&
+                               entry.sourceColumn == expr.sourceColumn;
+                      }),
+                  collectedDirectCallTargets_.end());
+              collectedBridgePathChoices_.erase(
+                  std::remove_if(
+                      collectedBridgePathChoices_.begin(),
+                      collectedBridgePathChoices_.end(),
+                      [&](const CollectedBridgePathChoiceEntry &entry) {
+                        if (expr.semanticNodeId != 0) {
                           return entry.semanticNodeId == expr.semanticNodeId;
-                        }),
-                    collectedBridgePathChoices_.end());
-              }
+                        }
+                        return entry.scopePath == def.fullPath &&
+                               entry.sourceLine == expr.sourceLine &&
+                               entry.sourceColumn == expr.sourceColumn;
+                      }),
+                  collectedBridgePathChoices_.end());
               if (const auto bridgeChoice =
                       collectionBridgeChoiceFromResolvedPath(callData.resolvedPath);
                   bridgeChoice.has_value()) {

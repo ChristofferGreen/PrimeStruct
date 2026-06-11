@@ -422,16 +422,14 @@ RequirementOverloadViability evaluateRequirementOverloadViability(
     const LocalTypeMap *locals,
     const std::vector<ParameterInfo> *params) {
   RequirementOverloadViability result;
-  if (!definitionHasRequireTransform(def)) {
-    result.decisive = true;
-    return result;
-  }
+  const bool hasRequireTransform = definitionHasRequireTransform(def);
   RequirementPredicateDefinitionContext requirementContext;
   requirementContext.definitionPath = def.fullPath;
   requirementContext.namespacePrefix = def.namespacePrefix;
   requirementContext.templateArgs = def.templateArgs;
   requirementContext.importAliases = ctx.importAliases;
 
+  std::vector<std::pair<std::string, std::string>> inferredTemplateParamTypes;
   for (std::size_t i = 0; i < def.parameters.size(); ++i) {
     ParameterInfo param;
     param.name = def.parameters[i].name;
@@ -443,11 +441,52 @@ RequirementOverloadViability evaluateRequirementOverloadViability(
           std::find(def.templateArgs.begin(),
                     def.templateArgs.end(),
                     param.binding.typeName) != def.templateArgs.end()) {
+        const std::string templateParamName = param.binding.typeName;
+        const std::string normalizedArgType = normalizeBindingTypeName(*argType);
+        auto inferredIt = std::find_if(
+            inferredTemplateParamTypes.begin(),
+            inferredTemplateParamTypes.end(),
+            [&](const auto &entry) {
+              return entry.first == templateParamName;
+            });
+        if (inferredIt == inferredTemplateParamTypes.end()) {
+          inferredTemplateParamTypes.emplace_back(templateParamName,
+                                                 normalizedArgType);
+        } else if (normalizeBindingTypeName(inferredIt->second) !=
+                   normalizedArgType) {
+          result.viable = false;
+          result.decisive = true;
+          result.diagnostics.push_back(
+              "implicit template arguments conflict for " +
+              templateParamName + ": expected " + inferredIt->second +
+              " got " + normalizedArgType);
+        }
         param.binding.typeName = *argType;
         param.binding.typeTemplateArg.clear();
+      } else if (argType.has_value()) {
+        const std::string expectedType =
+            normalizeBindingTypeName(param.binding.typeName);
+        const std::string actualType = normalizeBindingTypeName(*argType);
+        const ReturnKind expectedKind = returnKindForTypeName(expectedType);
+        const ReturnKind actualKind = returnKindForTypeName(actualType);
+        if (expectedKind != ReturnKind::Unknown &&
+            actualKind != ReturnKind::Unknown &&
+            expectedKind != actualKind) {
+          result.viable = false;
+          result.decisive = true;
+          result.diagnostics.push_back(
+              "argument type mismatch for " + def.fullPath +
+              " parameter " + param.name + ": expected " +
+              expectedType + " got " + actualType);
+        }
       }
     }
     requirementContext.params.push_back(std::move(param));
+  }
+
+  if (!hasRequireTransform) {
+    result.decisive = true;
+    return result;
   }
 
   for (const auto &transform : def.transforms) {
@@ -469,7 +508,8 @@ RequirementOverloadViability evaluateRequirementOverloadViability(
         continue;
       }
       result.decisive = true;
-      if (fact.evaluationOutcome == "satisfied") {
+      if (fact.evaluationOutcome == "satisfied" ||
+          fact.evaluationOutcome == "runtime_contract") {
         result.satisfiedDiagnostics.push_back(
             formatRequirementOverloadPredicateSummary(fact,
                                                       argument,

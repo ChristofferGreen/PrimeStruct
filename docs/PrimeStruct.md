@@ -1101,6 +1101,16 @@ Procedural compile-time genericity contract:
   until parser support for `require<...>` lands. New specification prose should
   use `require<...>` for forced compile-time requirements and reserve
   `require(...)` for runtime-capable contracts.
+- The first implemented runtime-contract slice covers `require(...)` value
+  comparisons whose operands are integer literals, integer parameters, or
+  `count(parameter)` over array, vector, and string parameters. Predicates the
+  compile-time evaluator can fully resolve keep their compile-time outcome;
+  predicates over runtime parameter facts lower to one deterministic
+  call-boundary precondition check that names the definition and predicate and
+  fails with the runtime-error exit path. Runtime contracts stay rejected on
+  the program entry definition, in `restrict<...>` position, and in `ct_if`
+  conditions, and non-checkable operands such as float parameters remain
+  compile-time diagnostics.
 - The v1 compile-time requirement grammar should stay intentionally small:
   equality, inequality, comma-separated conjunction through `require<...>`,
   builtin predicates, user-defined compile-time predicates, and simple

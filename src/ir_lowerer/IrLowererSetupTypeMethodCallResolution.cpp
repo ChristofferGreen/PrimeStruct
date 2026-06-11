@@ -1,3 +1,4 @@
+// soa-surface-audit: exempt
 #include "IrLowererSetupTypeHelpers.h"
 
 #include <functional>
@@ -10,6 +11,7 @@
 #include "IrLowererSetupTypeReceiverTargetHelpers.h"
 #include "IrLowererStructTypeHelpers.h"
 #include "IrLowererTemplateTypeParseHelpers.h"
+#include "primec/StdlibCollectionPaths.h"
 
 namespace primec::ir_lowerer {
 
@@ -90,9 +92,9 @@ std::string extractMethodLeafName(const std::string &methodPath) {
 }
 
 bool isExperimentalSoaVectorSpecializedStructPath(std::string_view path) {
-  return path.starts_with("/std/collections/experimental" "_soa" "_vector/Soa" "Vector" "__") ||
-         path.starts_with("std/collections/experimental" "_soa" "_vector/Soa" "Vector" "__") ||
-         path.starts_with("Soa" "Vector" "__");
+  return path.starts_with(collection_paths::specializedTypePrefix(collection_paths::kSoaFolder, collection_paths::kSoaVectorTypeName)) ||
+         path.starts_with(collection_paths::specializedTypePrefixBare(collection_paths::kSoaFolder, collection_paths::kSoaVectorTypeName)) ||
+         path.starts_with("SoaVector__");
 }
 
 bool isBuiltinFileHandleMethodName(std::string_view methodName) {
@@ -131,7 +133,7 @@ std::string resolveSpecializedExperimentalSoaVectorStructPath(
       continue;
     }
 
-    if (normalizedBase != "soa" "_vector" || argList.empty()) {
+    if (normalizedBase != "soa_vector" || argList.empty()) {
       return "";
     }
 
@@ -205,15 +207,13 @@ bool matchesGeneratedDefinitionFamilyPath(const std::string &candidatePath,
 
 bool blocksSyntheticCollectionFallbackDirectTarget(const std::string &targetPath) {
   const std::string normalized = normalizeCollectionHelperPath(targetPath);
-  return normalized.rfind(normalizeBuiltinCollectionStructPath("vector") + "/", 0) == 0 ||
+  return normalized.rfind(vectorBuiltinStructNormalizedPath() + "/", 0) == 0 ||
          normalized.rfind(collectionMemberRoot("vector"), 0) == 0 ||
          normalized.rfind(keyValueCollectionAliasRoot() + "/", 0) == 0 ||
          normalized.rfind(collectionMemberRoot("map"), 0) == 0 ||
-         normalized.rfind("/soa_vector/", 0) == 0 ||
-         normalized.rfind("/std/collections/soa_vector/", 0) == 0 ||
-         normalized.rfind(experimentalCollectionMemberRoot("vector"), 0) == 0 ||
+         normalized.rfind(vectorBackingMemberRoot(), 0) == 0 ||
          normalized.rfind(experimentalCollectionMemberRoot("map"), 0) == 0 ||
-         normalized.rfind("/std/collections/experimental_soa_vector/", 0) == 0;
+         normalized.rfind(collection_paths::modulePrefix(collection_paths::kExperimentalSoaVectorFolder), 0) == 0;
 }
 
 bool isCollectionVectorMetadataMethodPath(const std::string &methodPath) {
@@ -586,7 +586,7 @@ const Definition *resolveMethodCallDefinitionFromExpr(
         (!canonicalVectorCountPath.empty() &&
          explicitMethodPath == canonicalVectorCountPath) ||
         explicitMethodPath ==
-            normalizeBuiltinCollectionStructPath("vector") + "/count";
+            vectorBuiltinStructNormalizedPath() + "/count";
     if (callExpr.semanticNodeId == 0 &&
         (callExpr.sourceLine <= 0 || callExpr.sourceColumn <= 0 ||
          callExpr.name.empty()) &&
@@ -825,7 +825,7 @@ const Definition *resolveMethodCallDefinitionFromExpr(
       normalizedMethodName.erase(normalizedMethodName.begin());
     }
     const std::string rootedVectorPrefix =
-        normalizeBuiltinCollectionStructPath("vector").substr(1) + "/";
+        vectorBuiltinStructNormalizedPath().substr(1) + "/";
     const std::string canonicalVectorPrefix =
         collectionMemberRoot("vector", false);
     if (normalizedMethodName.rfind(rootedVectorPrefix, 0) == 0) {

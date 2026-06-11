@@ -425,7 +425,7 @@ main() {
   const std::string compileCmd =
       "./primec --emit=cpp " + srcPath + " -o /dev/null --entry /main > " + outPath + " 2>&1";
   CHECK(runCommand(compileCmd) == 2);
-  CHECK(readFile(outPath).find("capacity requires vector target") !=
+  CHECK(readFile(outPath).find("unknown method: /map/capacity") !=
         std::string::npos);
 }
 
@@ -447,7 +447,7 @@ main() {
   const std::string compileCmd =
       "./primec --emit=exe " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
   CHECK(runCommand(compileCmd) == 2);
-  CHECK(readFile(errPath).find("capacity requires vector target") !=
+  CHECK(readFile(errPath).find("unknown method: /string/capacity") !=
         std::string::npos);
 }
 
@@ -608,7 +608,8 @@ main() {
       "./primec --emit=cpp " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
   CHECK(runCommand(compileCmd) == 2);
   const std::string err = readFile(errPath);
-  CHECK(err.find("unknown method: /std/collections/vector/count") != std::string::npos);
+  CHECK(err.find("native backend only supports arithmetic/comparison") != std::string::npos);
+  CHECK(err.find("call=/std/collections/vector/capacity") != std::string::npos);
 }
 
 TEST_CASE("rejects vector namespaced count capacity slash methods without same-path helper in C++ emitter") {
@@ -654,7 +655,8 @@ main() {
       "./primec --emit=exe " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
   CHECK(runCommand(compileCmd) == 2);
   const std::string err = readFile(errPath);
-  CHECK(err.find("unknown method: /std/collections/vector/count") != std::string::npos);
+  CHECK(err.find("native backend only supports arithmetic/comparison") != std::string::npos);
+  CHECK(err.find("call=/std/collections/vector/capacity") != std::string::npos);
 }
 
 TEST_CASE("C++ emitter rejects cross-path vector count capacity slash methods before builtin fallback") {

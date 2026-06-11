@@ -1,9 +1,10 @@
 // Internal vector backing implementation behind canonical /std/collections/vector/*.
-// The compatibility type identity remains /std/collections/experimental_vector/Vector
-// until the later vector compatibility deletion tasks remove that seam.
+// The Vector type identity lives in the canonical /std/collections/vector namespace;
+// the implementation helpers below remain in the experimental_vector namespace until
+// the internal_vector merge task collapses them into the public module.
 namespace std {
   namespace collections {
-  namespace experimental_vector {
+  namespace vector {
   [public struct]
   Vector<T>() {
     [public i32] fieldCount
@@ -27,7 +28,7 @@ namespace std {
             greater_than(value, this.fieldCapacity)),
          then() {
            [array<i32>] empty{array<i32>()}
-           empty[value]
+           /at(empty, value)
          },
          else() { })
       assign(this.fieldCount, value)
@@ -40,7 +41,7 @@ namespace std {
             greater_than(value, 1073741823i32)),
          then() {
            [array<i32>] empty{array<i32>()}
-           empty[value]
+           /at(empty, value)
          },
          else() { })
       assign(this.fieldCapacity, value)
@@ -67,7 +68,7 @@ namespace std {
     Destroy() {
       if(this.ownsData,
         then() {
-           [Pointer<uninitialized<T>>] dataPtr{vectorDataPtr<T>(this)}
+           [Pointer<uninitialized<T>>] dataPtr{/std/collections/experimental_vector/vectorDataPtr<T>(this)}
            /std/collections/experimental_vector/vectorCheckShape<T>(this)
            /std/collections/experimental_vector/vectorDropRange<T>(this, this.fieldCount)
            /std/collections/internal_buffer_checked/bufferFreeUninitialized<T>(dataPtr)
@@ -78,9 +79,16 @@ namespace std {
          else() { })
     }
   }
+  }
+  }
+}
+
+namespace std {
+  namespace collections {
+  namespace experimental_vector {
 
   [return<Pointer<uninitialized<T>>>]
-  vectorSlotUnsafe<T>([Vector<T>] values, [i32] index) {
+  vectorSlotUnsafe<T>([/std/collections/vector/Vector<T>] values, [i32] index) {
     vectorCheckShape<T>(values)
     if(or(less_than(index, 0i32),
           not(less_than(index, values.field_capacity()))),
@@ -93,36 +101,36 @@ namespace std {
   }
 
   [return<Pointer<uninitialized<T>>>]
-  vectorDataPtr<T>([Vector<T>] values) {
+  vectorDataPtr<T>([/std/collections/vector/Vector<T>] values) {
     return(values.data)
   }
 
   [return<void>]
-  vectorInitSlot<T>([Vector<T> mut] values, [i32] index, [T] value) {
+  vectorInitSlot<T>([/std/collections/vector/Vector<T> mut] values, [i32] index, [T] value) {
     [Pointer<uninitialized<T>> mut] slot{vectorSlotUnsafe<T>(values, index)}
     init(dereference(slot), value)
   }
 
   [return<void>]
-  vectorDropSlot<T>([Vector<T> mut] values, [i32] index) {
+  vectorDropSlot<T>([/std/collections/vector/Vector<T> mut] values, [i32] index) {
     [Pointer<uninitialized<T>> mut] slot{vectorSlotUnsafe<T>(values, index)}
     drop(dereference(slot))
   }
 
   [return<T>]
-  vectorTakeSlot<T>([Vector<T> mut] values, [i32] index) {
+  vectorTakeSlot<T>([/std/collections/vector/Vector<T> mut] values, [i32] index) {
     [Pointer<uninitialized<T>> mut] slot{vectorSlotUnsafe<T>(values, index)}
     return(take(dereference(slot)))
   }
 
   [return<Reference<T>>]
-  vectorBorrowSlot<T>([Vector<T>] values, [i32] index) {
+  vectorBorrowSlot<T>([/std/collections/vector/Vector<T>] values, [i32] index) {
     [Pointer<uninitialized<T>>] slot{vectorSlotUnsafe<T>(values, index)}
     return(borrow(dereference(slot)))
   }
 
   [return<void>]
-  vectorDropRange<T>([Vector<T> mut] values, [i32] limit) {
+  vectorDropRange<T>([/std/collections/vector/Vector<T> mut] values, [i32] limit) {
     vectorCheckShape<T>(values)
     if(or(less_than(limit, 0i32),
           greater_than(limit, values.field_capacity())),
@@ -139,7 +147,7 @@ namespace std {
   }
 
   [effects(heap_alloc), return<void>]
-  vectorMovePrefixToBuffer<T>([Pointer<uninitialized<T>> mut] dst, [Vector<T> mut] values, [i32] limit) {
+  vectorMovePrefixToBuffer<T>([Pointer<uninitialized<T>> mut] dst, [/std/collections/vector/Vector<T> mut] values, [i32] limit) {
     [i32 mut] index{0i32}
     while(less_than(index, limit), do() {
       [Pointer<uninitialized<T>> mut] nextSlot{
@@ -149,13 +157,13 @@ namespace std {
     })
   }
 
-  [effects(heap_alloc), return<Vector<T>>]
+  [effects(heap_alloc), return</std/collections/vector/Vector<T>>]
   vectorAlloc<T>([i32] count, [i32] capacity) {
     [i32 mut] allocCount{capacity}
     if(equal(allocCount, 0i32),
        then() { assign(allocCount, 1i32) },
        else() { })
-    return(Vector<T>{
+    return(/std/collections/vector/Vector<T>{
         [fieldCount] count,
         [fieldCapacity] capacity,
         [data] /std/collections/internal_buffer_checked/bufferAlloc<uninitialized<T>>(allocCount),
@@ -163,7 +171,7 @@ namespace std {
   }
 
   [return<void>]
-  vectorCheckShape<T>([Vector<T>] values) {
+  vectorCheckShape<T>([/std/collections/vector/Vector<T>] values) {
     if(or(or(less_than(values.field_count(), 0i32),
              less_than(values.field_capacity(), 0i32)),
           or(greater_than(values.field_count(), values.field_capacity()),
@@ -176,7 +184,7 @@ namespace std {
   }
 
   [return<void>]
-  vectorCheckIndex<T>([Vector<T>] values, [i32] index) {
+  vectorCheckIndex<T>([/std/collections/vector/Vector<T>] values, [i32] index) {
     vectorCheckShape<T>(values)
     if(or(or(less_than(index, 0i32),
              not(less_than(index, values.field_count()))),
@@ -189,7 +197,7 @@ namespace std {
   }
 
   [effects(heap_alloc), return<void>]
-  vectorReserveInternal<T>([Vector<T> mut] values, [i32] capacity) {
+  vectorReserveInternal<T>([/std/collections/vector/Vector<T> mut] values, [i32] capacity) {
     vectorCheckShape<T>(values)
     if(less_than(capacity, 0i32),
        then() {
@@ -223,10 +231,10 @@ namespace std {
        else() { })
   }
 
-  [public effects(heap_alloc), return<Vector<T>>]
+  [public effects(heap_alloc), return</std/collections/vector/Vector<T>>]
   vector<T>([args<T>] values) {
     [i32] valueCount{values.count()}
-    [Vector<T> mut] out{vectorAlloc<T>(valueCount, valueCount)}
+    [/std/collections/vector/Vector<T> mut] out{vectorAlloc<T>(valueCount, valueCount)}
     [i32 mut] index{0i32}
     while(less_than(index, valueCount), do() {
       vectorInitSlot<T>(out, index, /at(values, index))
@@ -235,106 +243,106 @@ namespace std {
     return(out)
   }
 
-  [public effects(heap_alloc), return<Vector<T>>]
+  [public effects(heap_alloc), return</std/collections/vector/Vector<T>>]
   vectorNew<T>() {
     return(vector<T>())
   }
 
-  [public effects(heap_alloc), return<Vector<T>>]
+  [public effects(heap_alloc), return</std/collections/vector/Vector<T>>]
   vectorSingle<T>([T] value) {
     return(vector<T>(value))
   }
 
-  [public effects(heap_alloc), return<Vector<T>>]
+  [public effects(heap_alloc), return</std/collections/vector/Vector<T>>]
   vectorPair<T>([T] first, [T] second) {
     return(vector<T>(first, second))
   }
 
-  [public effects(heap_alloc), return<Vector<T>>]
+  [public effects(heap_alloc), return</std/collections/vector/Vector<T>>]
   vectorTriple<T>([T] first, [T] second, [T] third) {
     return(vector<T>(first, second, third))
   }
 
-  [public effects(heap_alloc), return<Vector<T>>]
+  [public effects(heap_alloc), return</std/collections/vector/Vector<T>>]
   vectorQuad<T>([T] first, [T] second, [T] third, [T] fourth) {
     return(vector<T>(first, second, third, fourth))
   }
 
-  [public effects(heap_alloc), return<Vector<T>>]
+  [public effects(heap_alloc), return</std/collections/vector/Vector<T>>]
   vectorQuint<T>([T] first, [T] second, [T] third, [T] fourth, [T] fifth) {
     return(vector<T>(first, second, third, fourth, fifth))
   }
 
-  [public effects(heap_alloc), return<Vector<T>>]
+  [public effects(heap_alloc), return</std/collections/vector/Vector<T>>]
   vectorSext<T>([T] first, [T] second, [T] third, [T] fourth, [T] fifth, [T] sixth) {
     return(vector<T>(first, second, third, fourth, fifth, sixth))
   }
 
-  [public effects(heap_alloc), return<Vector<T>>]
+  [public effects(heap_alloc), return</std/collections/vector/Vector<T>>]
   vectorSept<T>([T] first, [T] second, [T] third, [T] fourth, [T] fifth, [T] sixth, [T] seventh) {
     return(vector<T>(first, second, third, fourth, fifth, sixth, seventh))
   }
 
-  [public effects(heap_alloc), return<Vector<T>>]
+  [public effects(heap_alloc), return</std/collections/vector/Vector<T>>]
   vectorOct<T>([T] first, [T] second, [T] third, [T] fourth, [T] fifth, [T] sixth, [T] seventh, [T] eighth) {
     return(vector<T>(first, second, third, fourth, fifth, sixth, seventh, eighth))
   }
 
   [public return<i32>]
-  vectorCount<T>([Vector<T>] values) {
+  vectorCount<T>([/std/collections/vector/Vector<T>] values) {
     vectorCheckShape<T>(values)
     return(values.field_count())
   }
 
   [public return<i32>]
-  vectorCountRef<T>([Reference<Vector<T>>] values) {
-    [Vector<T>] materialized{values}
+  vectorCountRef<T>([Reference</std/collections/vector/Vector<T>>] values) {
+    [/std/collections/vector/Vector<T>] materialized{values}
     vectorCheckShape<T>(materialized)
     return(materialized.field_count())
   }
 
   [public return<i32>]
-  /std/collections/vector/count_ref<T>([Reference<Vector<T>>] values) {
+  /std/collections/vector/count_ref<T>([Reference</std/collections/vector/Vector<T>>] values) {
     return(vectorCountRef<T>(values))
   }
 
   [public return<i32>]
-  vectorCapacity<T>([Vector<T>] values) {
+  vectorCapacity<T>([/std/collections/vector/Vector<T>] values) {
     vectorCheckShape<T>(values)
     return(values.field_capacity())
   }
 
   [public return<i32>]
-  vectorCapacityRef<T>([Reference<Vector<T>>] values) {
-    [Vector<T>] materialized{values}
+  vectorCapacityRef<T>([Reference</std/collections/vector/Vector<T>>] values) {
+    [/std/collections/vector/Vector<T>] materialized{values}
     vectorCheckShape<T>(materialized)
     return(materialized.field_capacity())
   }
 
   [public return<i32>]
-  /std/collections/vector/capacity_ref<T>([Reference<Vector<T>>] values) {
+  /std/collections/vector/capacity_ref<T>([Reference</std/collections/vector/Vector<T>>] values) {
     return(vectorCapacityRef<T>(values))
   }
 
   [public return<bool>]
-  vectorIsEmptyRef<T>([Reference<Vector<T>>] values) {
-    [Vector<T>] materialized{values}
+  vectorIsEmptyRef<T>([Reference</std/collections/vector/Vector<T>>] values) {
+    [/std/collections/vector/Vector<T>] materialized{values}
     vectorCheckShape<T>(materialized)
     return(equal(materialized.field_count(), 0i32))
   }
 
   [public return<bool>]
-  /std/collections/vector/is_empty_ref<T>([Reference<Vector<T>>] values) {
+  /std/collections/vector/is_empty_ref<T>([Reference</std/collections/vector/Vector<T>>] values) {
     return(vectorIsEmptyRef<T>(values))
   }
 
   [public effects(heap_alloc), return<void>]
-  vectorReserve<T>([Vector<T> mut] values, [i32] capacity) {
+  vectorReserve<T>([/std/collections/vector/Vector<T> mut] values, [i32] capacity) {
     vectorReserveInternal<T>(values, capacity)
   }
 
   [public effects(heap_alloc), return<void>]
-  vectorPush<T>([Vector<T> mut] values, [T] value) {
+  vectorPush<T>([/std/collections/vector/Vector<T> mut] values, [T] value) {
     vectorCheckShape<T>(values)
     if(equal(values.field_count(), values.field_capacity()),
        then() {
@@ -354,7 +362,7 @@ namespace std {
   }
 
   [public effects(heap_alloc), return<void>]
-  vectorPop<T>([Vector<T> mut] values) {
+  vectorPop<T>([/std/collections/vector/Vector<T> mut] values) {
     vectorCheckShape<T>(values)
     if(equal(values.field_count(), 0i32),
        then() {
@@ -369,14 +377,14 @@ namespace std {
   }
 
   [public effects(heap_alloc), return<void>]
-  vectorClear<T>([Vector<T> mut] values) {
+  vectorClear<T>([/std/collections/vector/Vector<T> mut] values) {
     vectorCheckShape<T>(values)
     vectorDropRange<T>(values, values.field_count())
     assign(values.fieldCount, 0i32)
   }
 
   [public effects(heap_alloc), return<void>]
-  vectorRemoveAt<T>([Vector<T> mut] values, [i32] index) {
+  vectorRemoveAt<T>([/std/collections/vector/Vector<T> mut] values, [i32] index) {
     vectorCheckIndex<T>(values, index)
     [i32] lastIndex{plus(values.field_count(), -1i32)}
     vectorDropSlot<T>(values, index)
@@ -389,7 +397,7 @@ namespace std {
   }
 
   [public effects(heap_alloc), return<void>]
-  vectorRemoveSwap<T>([Vector<T> mut] values, [i32] index) {
+  vectorRemoveSwap<T>([/std/collections/vector/Vector<T> mut] values, [i32] index) {
     vectorCheckIndex<T>(values, index)
     [i32] lastIndex{plus(values.field_count(), -1i32)}
     if(less_than(index, lastIndex),
@@ -402,13 +410,13 @@ namespace std {
   }
 
   [public return<T>]
-  vectorAt<T>([Vector<T>] values, [i32] index) {
+  vectorAt<T>([/std/collections/vector/Vector<T>] values, [i32] index) {
     vectorCheckIndex<T>(values, index)
     return(dereference(vectorBorrowSlot<T>(values, index)))
   }
 
   [public return<T>]
-  vectorAtUnsafe<T>([Vector<T>] values, [i32] index) {
+  vectorAtUnsafe<T>([/std/collections/vector/Vector<T>] values, [i32] index) {
     return(dereference(vectorBorrowSlot<T>(values, index)))
   }
   }
@@ -418,78 +426,78 @@ namespace std {
 namespace std {
   namespace collections {
   namespace internal_vector {
-  [public effects(heap_alloc), return</std/collections/experimental_vector/Vector<T>>]
+  [public effects(heap_alloc), return</std/collections/vector/Vector<T>>]
   vector<T>([args<T>] values) {
     return(/std/collections/experimental_vector/vector<T>([spread] values))
   }
 
-  [public effects(heap_alloc), return</std/collections/experimental_vector/Vector<T>>]
+  [public effects(heap_alloc), return</std/collections/vector/Vector<T>>]
   vectorNew<T>() {
     return(/std/collections/experimental_vector/vectorNew<T>())
   }
 
-  [public effects(heap_alloc), return</std/collections/experimental_vector/Vector<T>>]
+  [public effects(heap_alloc), return</std/collections/vector/Vector<T>>]
   vectorSingle<T>([T] value) {
     return(/std/collections/experimental_vector/vectorSingle<T>(value))
   }
 
-  [public effects(heap_alloc), return</std/collections/experimental_vector/Vector<T>>]
+  [public effects(heap_alloc), return</std/collections/vector/Vector<T>>]
   vectorPair<T>([T] first, [T] second) {
     return(/std/collections/experimental_vector/vectorPair<T>(first, second))
   }
 
   [public return<i32>]
-  vectorCount<T>([/std/collections/experimental_vector/Vector<T>] values) {
+  vectorCount<T>([/std/collections/vector/Vector<T>] values) {
     return(/std/collections/experimental_vector/vectorCount<T>(values))
   }
 
   [public return<i32>]
-  vectorCapacity<T>([/std/collections/experimental_vector/Vector<T>] values) {
+  vectorCapacity<T>([/std/collections/vector/Vector<T>] values) {
     return(/std/collections/experimental_vector/vectorCapacity<T>(values))
   }
 
   [public effects(heap_alloc), return<void>]
-  vectorReserve<T>([/std/collections/experimental_vector/Vector<T> mut] values, [i32] capacity) {
+  vectorReserve<T>([/std/collections/vector/Vector<T> mut] values, [i32] capacity) {
     /std/collections/experimental_vector/vectorReserve<T>(values, capacity)
   }
 
   [public effects(heap_alloc), return<void>]
-  vectorPush<T>([/std/collections/experimental_vector/Vector<T> mut] values, [T] value) {
+  vectorPush<T>([/std/collections/vector/Vector<T> mut] values, [T] value) {
     /std/collections/experimental_vector/vectorPush<T>(values, value)
   }
 
   [public effects(heap_alloc), return<void>]
-  vectorPop<T>([/std/collections/experimental_vector/Vector<T> mut] values) {
+  vectorPop<T>([/std/collections/vector/Vector<T> mut] values) {
     /std/collections/experimental_vector/vectorPop<T>(values)
   }
 
   [public effects(heap_alloc), return<void>]
-  vectorClear<T>([/std/collections/experimental_vector/Vector<T> mut] values) {
+  vectorClear<T>([/std/collections/vector/Vector<T> mut] values) {
     /std/collections/experimental_vector/vectorClear<T>(values)
   }
 
   [public effects(heap_alloc), return<void>]
-  vectorRemoveAt<T>([/std/collections/experimental_vector/Vector<T> mut] values, [i32] index) {
+  vectorRemoveAt<T>([/std/collections/vector/Vector<T> mut] values, [i32] index) {
     /std/collections/experimental_vector/vectorRemoveAt<T>(values, index)
   }
 
   [public effects(heap_alloc), return<void>]
-  vectorRemoveSwap<T>([/std/collections/experimental_vector/Vector<T> mut] values, [i32] index) {
+  vectorRemoveSwap<T>([/std/collections/vector/Vector<T> mut] values, [i32] index) {
     /std/collections/experimental_vector/vectorRemoveSwap<T>(values, index)
   }
 
   [public return<T>]
-  vectorAt<T>([/std/collections/experimental_vector/Vector<T>] values, [i32] index) {
+  vectorAt<T>([/std/collections/vector/Vector<T>] values, [i32] index) {
     return(/std/collections/experimental_vector/vectorAt<T>(values, index))
   }
 
   [public return<T>]
-  vectorAtUnsafe<T>([/std/collections/experimental_vector/Vector<T>] values, [i32] index) {
+  vectorAtUnsafe<T>([/std/collections/vector/Vector<T>] values, [i32] index) {
     return(/std/collections/experimental_vector/vectorAtUnsafe<T>(values, index))
   }
 
   [public return<Reference<T>>]
-  vectorBorrowSlot<T>([/std/collections/experimental_vector/Vector<T>] values, [i32] index) {
+  vectorBorrowSlot<T>([/std/collections/vector/Vector<T>] values, [i32] index) {
     return(/std/collections/experimental_vector/vectorBorrowSlot<T>(values, index))
   }
   }

@@ -1,3 +1,4 @@
+// soa-surface-audit: exempt
 #include "IrLowererUninitializedTypeHelpers.h"
 
 #include <algorithm>
@@ -12,6 +13,7 @@
 #include "IrLowererStructFieldBindingHelpers.h"
 #include "IrLowererTemplateTypeParseHelpers.h"
 #include "primec/SoaPathHelpers.h"
+#include "primec/StdlibCollectionPaths.h"
 
 namespace primec::ir_lowerer {
 
@@ -174,10 +176,10 @@ bool isForwardedKeyValueNewConstructor(const Expr &expr) {
 
 std::string normalizeUninitializedVectorStructPath(const std::string &typeName) {
   if (isBuiltinVectorTypeName(typeName)) {
-    return normalizeBuiltinCollectionStructPath("vector");
+    return vectorBuiltinStructNormalizedPath();
   }
   if (typeName == "Vector") {
-    return experimentalCollectionTypePath("vector", "Vector");
+    return vectorBackingTypePath();
   }
   if (isExperimentalCollectionTypeName(typeName, "vector", "Vector")) {
     return normalizeExperimentalCollectionTypePath(typeName, "vector", "Vector");
@@ -219,7 +221,7 @@ std::string resolveSpecializedExperimentalSoaVectorStructPath(
       continue;
     }
 
-    if (normalizedBase != "soa" "_vector" || argList.empty()) {
+    if (normalizedBase != "soa_vector" || argList.empty()) {
       return "";
     }
 
@@ -276,7 +278,7 @@ std::string inferExperimentalSoaElementStructPathFromReceiverStruct(
     columnStructPath.insert(columnStructPath.begin(), '/');
   }
   if (columnStructPath.rfind(
-          "/std/collections/internal_soa_storage/SoaColumn__", 0) != 0) {
+          collection_paths::specializedTypePrefix(collection_paths::kInternalSoaStorageFolder, collection_paths::kSoaColumnTypeName), 0) != 0) {
     return "";
   }
 
@@ -614,7 +616,7 @@ std::string inferStructExprPathFromDefinitionMapByCallTargetWithFieldIndex(
           return true;
         }
         return scopedCallPath == "/" + helperText ||
-               scopedCallPath == "/std/collections/internal_soa_storage/" + helperText;
+               scopedCallPath == collection_paths::modulePrefix(collection_paths::kInternalSoaStorageFolder) + helperText;
       };
       if (!exprIn.isMethodCall && !exprIn.isFieldAccess &&
           isSimpleCallName(exprIn, "pick") && exprIn.args.size() == 1 &&

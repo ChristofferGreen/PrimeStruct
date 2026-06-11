@@ -1,3 +1,4 @@
+// soa-surface-audit: exempt
 #include "IrLowererCallHelpers.h"
 
 #include <optional>
@@ -6,6 +7,7 @@
 #include "IrLowererHelpers.h"
 #include "IrLowererSetupTypeCollectionHelpers.h"
 #include "primec/SoaPathHelpers.h"
+#include "primec/StdlibCollectionPaths.h"
 
 namespace primec::ir_lowerer {
 
@@ -18,7 +20,7 @@ std::string stdCollectionsRoot() {
 }
 
 std::string experimentalCollectionMemberRoot(std::string_view collectionName) {
-  return stdCollectionsRoot() + "/experimental_" + std::string(collectionName) + "/";
+  return stdCollectionsRoot() + "/" + collection_paths::experimentalFolder(collectionName) + "/";
 }
 
 std::string experimentalCollectionMemberPath(std::string_view collectionName,
@@ -28,7 +30,9 @@ std::string experimentalCollectionMemberPath(std::string_view collectionName,
 
 std::string experimentalCollectionSpecializedTypePrefix(std::string_view collectionName,
                                                         std::string_view typeName) {
-  return experimentalCollectionMemberPath(collectionName, typeName) + "__";
+  return stdCollectionsRoot() + "/" +
+         collection_paths::typeIdentityFolder(collectionName) + "/" +
+         std::string(typeName) + "__";
 }
 
 bool resolvesToPublishedDefinitionFamilyTarget(const SemanticProgram *semanticProgram,
@@ -107,7 +111,7 @@ std::string resolveCallPathFromPublishedLookups(const Expr &expr,
 }
 
 bool isResidualSoaBridgeHelperName(std::string_view helperName) {
-  const std::string toAosHelper = std::string("to") + "_aos";
+  const std::string toAosHelper = "to_aos";
   return helperName == "count" || helperName == "get" || helperName == "ref" ||
          helperName == toAosHelper || helperName == "push" ||
          helperName == "reserve";

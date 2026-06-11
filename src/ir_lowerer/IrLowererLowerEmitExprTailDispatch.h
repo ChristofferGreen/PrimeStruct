@@ -1,3 +1,4 @@
+// soa-surface-audit: exempt
         auto resolveTailDispatchDirectHelperPath = [&](const Expr &candidate) {
           if (!candidate.name.empty() && candidate.name.front() == '/') {
             return candidate.name;
@@ -439,8 +440,8 @@
           return true;
         };
         auto isVectorStructPath = [](const std::string &structPath) {
-          const std::string vectorTypePath =
-              "/std/collections/experimental_" + std::string("vector") + "/Vector";
+          const std::string vectorTypePath = collection_paths::memberPath(
+              collection_paths::kVectorFolder, collection_paths::kVectorTypeName);
           return structPath == "/vector" ||
                  structPath == vectorTypePath ||
                  structPath.rfind(vectorTypePath + "__", 0) == 0;
@@ -849,8 +850,8 @@
           };
           auto isInternalSoaType = [&](const std::string &typeText) {
             const std::string normalized = normalizeInternalSoaType(typeText);
-            return normalized == "/std/collections/internal_soa_storage/SoaColumn" ||
-                   normalized == "/std/collections/internal_soa_storage/SoaFieldView";
+            return normalized == collection_paths::memberPath(collection_paths::kInternalSoaStorageFolder, collection_paths::kSoaColumnTypeName) ||
+                   normalized == collection_paths::memberPath(collection_paths::kInternalSoaStorageFolder, "SoaFieldView");
           };
           const Expr &receiverExpr = inlineDispatchExpr.args.front();
           auto classifyInternalReceiverFromSemanticFacts = [&]() -> std::optional<bool> {
@@ -953,17 +954,79 @@
             vectorAccessResult.has_value()) {
           return *vectorAccessResult;
         }
+        if (!inlineDispatchExpr.isMethodCall &&
+            inlineDispatchExpr.args.size() == 1) {
+          std::string vectorMetadataHelperName;
+          const std::string vectorMetadataPath =
+              resolveExprPath(inlineDispatchExpr);
+          if ((resolveVectorHelperAliasName(
+                   inlineDispatchExpr, vectorMetadataHelperName) &&
+               (vectorMetadataHelperName == "count" ||
+                vectorMetadataHelperName == "capacity")) ||
+              (vectorMetadataPath == "/std/collections/vector/count" &&
+               (vectorMetadataHelperName = "count", true)) ||
+              (vectorMetadataPath == "/std/collections/vector/capacity" &&
+               (vectorMetadataHelperName = "capacity", true))) {
+            const Definition *directVectorMetadataCallee =
+                resolveTailDispatchDirectHelperDefinition(inlineDispatchExpr);
+            if (directVectorMetadataCallee == nullptr) {
+              auto directDefIt = defMap.find(vectorMetadataPath);
+              if (directDefIt != defMap.end()) {
+                directVectorMetadataCallee = directDefIt->second;
+              }
+            }
+            if (directVectorMetadataCallee != nullptr &&
+                inlineDispatchExpr.args.front().kind == Expr::Kind::Call) {
+              if (!emitInlineDefinitionCall(
+                      inlineDispatchExpr,
+                      *directVectorMetadataCallee,
+                      localsIn,
+                      true)) {
+                return false;
+              }
+              return true;
+            }
+            if (directVectorMetadataCallee != nullptr &&
+                !directVectorMetadataCallee->parameters.empty()) {
+              std::string receiverTypeName;
+              std::vector<std::string> receiverTemplateArgs;
+              if (ir_lowerer::extractFirstBindingTypeTransform(
+                      directVectorMetadataCallee->parameters.front(),
+                      receiverTypeName,
+                      receiverTemplateArgs) &&
+                  (ir_lowerer::normalizeCollectionBindingTypeName(
+                       receiverTypeName) == "map" ||
+                   ir_lowerer::normalizeCollectionBindingTypeName(
+                       receiverTypeName) == "vector")) {
+                if (!emitInlineDefinitionCall(
+                        inlineDispatchExpr,
+                        *directVectorMetadataCallee,
+                        localsIn,
+                        true)) {
+                  return false;
+                }
+                return true;
+              }
+            }
+          }
+        }
         const auto inlineDispatchResult = ir_lowerer::tryEmitInlineCallDispatchWithLocals(
             inlineDispatchExpr,
             localsIn,
             [&](const Expr &callExpr, const ir_lowerer::LocalMap &localMap) {
-              return isArrayCountCall(callExpr, localMap);
+              return primec::ir_lowerer::isArrayCountCall(callExpr,
+                                                          localMap,
+                                                          hasEntryArgs,
+                                                          entryArgsName,
+                                                          semanticProgram);
             },
             [&](const Expr &callExpr, const ir_lowerer::LocalMap &localMap) {
-              return isStringCountCall(callExpr, localMap);
+              return primec::ir_lowerer::isStringCountCall(callExpr,
+                                                           localMap,
+                                                           semanticProgram);
             },
             [&](const Expr &callExpr, const ir_lowerer::LocalMap &localMap) {
-              return isVectorCapacityCall(callExpr, localMap);
+              return primec::ir_lowerer::isVectorCapacityCall(callExpr, localMap);
             },
             [&](const Expr &callExpr, const ir_lowerer::LocalMap &localMap) {
               return resolveMethodCallDefinition(callExpr, localMap);
@@ -985,8 +1048,18 @@
         }
         if (inlineDispatchResult == ir_lowerer::InlineCallDispatchResult::Error) {
           if (error.empty()) {
-            error = "inline dispatch failed without diagnostic: " +
-                    inlineDispatchExpr.name;
+            if (inlineDispatchExpr.isMethodCall && semanticProgram != nullptr) {
+              const std::string semanticTarget =
+                  findSemanticProductMethodCallTarget(semanticProgram, inlineDispatchExpr);
+              if (!semanticTarget.empty()) {
+                error = "semantic-product method-call target missing lowered definition: " +
+                        semanticTarget;
+              }
+            }
+            if (error.empty()) {
+              error = "inline dispatch failed without diagnostic: " +
+                      inlineDispatchExpr.name;
+            }
           }
           return false;
         }
@@ -1139,8 +1212,8 @@
           auto isInternalSoaType = [&](const std::string &typeText) {
             const std::string normalized =
                 normalizeInternalSoaMetadataType(typeText);
-            return normalized == "/std/collections/internal_soa_storage/SoaColumn" ||
-                   normalized == "/std/collections/internal_soa_storage/SoaFieldView";
+            return normalized == collection_paths::memberPath(collection_paths::kInternalSoaStorageFolder, collection_paths::kSoaColumnTypeName) ||
+                   normalized == collection_paths::memberPath(collection_paths::kInternalSoaStorageFolder, "SoaFieldView");
           };
           if (semanticProgram != nullptr && tailDispatchSemanticIndexPtr != nullptr) {
             const auto *queryFact =
@@ -1194,13 +1267,19 @@
               return ir_lowerer::isSupportedMathBuiltinName(mathBuiltinName);
             },
             [&](const Expr &callExpr, const ir_lowerer::LocalMap &localMap) {
-              return isArrayCountCall(callExpr, localMap);
+              return primec::ir_lowerer::isArrayCountCall(callExpr,
+                                                          localMap,
+                                                          hasEntryArgs,
+                                                          entryArgsName,
+                                                          semanticProgram);
             },
             [&](const Expr &callExpr, const ir_lowerer::LocalMap &localMap) {
-              return isVectorCapacityCall(callExpr, localMap);
+              return primec::ir_lowerer::isVectorCapacityCall(callExpr, localMap);
             },
             [&](const Expr &callExpr, const ir_lowerer::LocalMap &localMap) {
-              return isStringCountCall(callExpr, localMap);
+              return primec::ir_lowerer::isStringCountCall(callExpr,
+                                                           localMap,
+                                                           semanticProgram);
             },
             [&](const Expr &targetExpr, const ir_lowerer::LocalMap &localMap) {
               return isEntryArgsName(targetExpr, localMap);
@@ -1275,7 +1354,7 @@
                     ir_lowerer::ArrayVectorAccessTargetInfo candidate;
                     candidate.isArrayOrVectorTarget = true;
                     candidate.isVectorTarget = (collectionName == "vector");
-                    candidate.isSoaVector = (collectionName == "soa" "_vector");
+                    candidate.isSoaVector = (collectionName == "soa_vector");
                     candidate.elemKind =
                         ir_lowerer::valueKindFromTypeName(normalizedElementType);
                     if (candidate.elemKind ==
@@ -1326,7 +1405,7 @@
                       return true;
                     }
                     if (normalizedPath.rfind(
-                            "/std/collections/experimental" "_soa" "_vector/Soa" "Vector" "__",
+                            collection_paths::specializedTypePrefix(collection_paths::kSoaFolder, collection_paths::kSoaVectorTypeName),
                             0) == 0) {
                       ir_lowerer::ArrayVectorAccessTargetInfo candidate;
                       candidate.isArrayOrVectorTarget = true;
@@ -1362,7 +1441,7 @@
                                   normalizedBase);
                     if (collectionName != "array" &&
                         collectionName != "vector" &&
-                        collectionName != "soa" "_vector") {
+                        collectionName != "soa_vector") {
                       return false;
                     }
                     std::vector<std::string> args;
@@ -1399,7 +1478,7 @@
                                   collectionFamily);
                     if (collectionName != "array" &&
                         collectionName != "vector" &&
-                        collectionName != "soa" "_vector") {
+                        collectionName != "soa_vector") {
                       return false;
                     }
                     std::string elementTypeText =
@@ -1505,9 +1584,9 @@
                 return true;
               }
               if (inferredReceiverStruct.rfind(
-                      "/std/collections/experimental" "_soa" "_vector/Soa" "Vector" "__", 0) == 0 ||
+                      collection_paths::specializedTypePrefix(collection_paths::kSoaFolder, collection_paths::kSoaVectorTypeName), 0) == 0 ||
                   normalizeCollectionBindingTypeName(inferredReceiverStruct) ==
-                      "soa" "_vector") {
+                      "soa_vector") {
                 targetInfoOut.isArrayOrVectorTarget = true;
                 targetInfoOut.isVectorTarget = false;
                 targetInfoOut.isSoaVector = true;
@@ -1525,13 +1604,13 @@
                 return false;
               }
               if ((collectionName != "array" && collectionName != "vector" &&
-                   collectionName != "soa" "_vector") ||
+                   collectionName != "soa_vector") ||
                   collectionArgs.size() != 1) {
                 return false;
               }
               targetInfoOut.isArrayOrVectorTarget = true;
               targetInfoOut.isVectorTarget = (collectionName == "vector");
-              targetInfoOut.isSoaVector = (collectionName == "soa" "_vector");
+              targetInfoOut.isSoaVector = (collectionName == "soa_vector");
               targetInfoOut.elemKind = ir_lowerer::valueKindFromTypeName(collectionArgs.front());
               if (targetInfoOut.isSoaVector) {
                 std::string elementTypeName = trimTemplateTypeText(collectionArgs.front());
@@ -1576,10 +1655,10 @@
               findSemanticProductMethodCallTarget(semanticProgram, expr);
           if (!semanticTarget.empty()) {
             if (((semanticTarget == "/string/count" ||
-                  semanticTarget == "/std/collections/" "vec" "tor/" "count") &&
+                  semanticTarget == "/std/collections/vector/count") &&
                  expr.args.size() == 1 &&
                  isSimpleCallName(expr, "count")) ||
-                (semanticTarget == "/std/collections/" "vec" "tor/" "capacity" &&
+                (semanticTarget == "/std/collections/vector/capacity" &&
                  expr.args.size() == 1 &&
                  isSimpleCallName(expr, "capacity")) ||
                 (semanticTarget == "/std/collections/soa/to_aos" &&

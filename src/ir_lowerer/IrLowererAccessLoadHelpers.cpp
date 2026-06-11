@@ -1,10 +1,17 @@
 #include "IrLowererCallHelpers.h"
 
 #include "IrLowererIndexKindHelpers.h"
+#include "IrLowererSetupTypeCollectionHelpers.h"
 
 namespace primec::ir_lowerer {
 
 namespace {
+
+bool usesVectorBackedKeyValueStorageLayout(std::string_view mapStructTypeName) {
+  const std::string path(mapStructTypeName);
+  const std::string experimentalRoot = mapBackingTypePath();
+  return path == experimentalRoot || path.rfind(experimentalRoot + "__", 0) == 0;
+}
 
 void emitExperimentalMapVectorDataPtrLoad(
     int32_t ptrLocal,
@@ -480,7 +487,7 @@ bool emitKeyValueLookupAccess(
     const std::function<void(IrOpcode, uint64_t)> &emitInstruction,
     const std::function<void(size_t, uint64_t)> &patchInstructionImm,
     std::string &error) {
-  if (isKeyValueStorageStructPath(mapStructTypeName)) {
+  if (usesVectorBackedKeyValueStorageLayout(mapStructTypeName)) {
     return emitExperimentalMapLookupAccess(
         accessName,
         keyValueKeyKind,
@@ -553,7 +560,7 @@ bool emitKeyValueLookupContains(
     const std::function<void(IrOpcode, uint64_t)> &emitInstruction,
     const std::function<void(size_t, uint64_t)> &patchInstructionImm,
     std::string &error) {
-  if (isKeyValueStorageStructPath(mapStructTypeName)) {
+  if (usesVectorBackedKeyValueStorageLayout(mapStructTypeName)) {
     return emitExperimentalMapLookupContains(
         keyValueKeyKind,
         targetExpr,
@@ -616,7 +623,7 @@ bool emitKeyValueLookupTryAt(
     const std::function<void(IrOpcode, uint64_t)> &emitInstruction,
     const std::function<void(size_t, uint64_t)> &patchInstructionImm,
     std::string &error) {
-  if (isKeyValueStorageStructPath(mapStructTypeName)) {
+  if (usesVectorBackedKeyValueStorageLayout(mapStructTypeName)) {
     return emitExperimentalMapLookupTryAt(
         keyValueKeyKind,
         targetExpr,

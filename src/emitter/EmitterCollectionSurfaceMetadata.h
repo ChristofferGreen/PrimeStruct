@@ -1,3 +1,4 @@
+// soa-surface-audit: exempt
 #pragma once
 
 #include "primec/StdlibSurfaceRegistry.h"

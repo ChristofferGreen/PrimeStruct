@@ -1,3 +1,4 @@
+// soa-surface-audit: exempt
 #include "SemanticsValidator.h"
 
 #include <array>
@@ -300,7 +301,7 @@ SemanticsValidator::BuiltinCollectionDispatchResolvers SemanticsValidator::makeB
   };
   auto resolveSoaVectorBinding = [this](const BindingInfo &binding, std::string &elemTypeOut) -> bool {
     elemTypeOut.clear();
-    if (binding.typeName != "soa" "_vector" || binding.typeTemplateArg.empty()) {
+    if (binding.typeName != "soa_vector" || binding.typeTemplateArg.empty()) {
       const std::string normalizedType = normalizeBindingTypeName(binding.typeName);
       if (normalizedType == "Reference" || normalizedType == "Pointer") {
         return false;
@@ -484,13 +485,13 @@ SemanticsValidator::BuiltinCollectionDispatchResolvers SemanticsValidator::makeB
       }
       const std::string resolvedTarget = resolveCalleePath(target);
       const bool matchesSoaToAosTarget =
-          ((target.isMethodCall && target.name == "to" "_aos") ||
-           (!target.isMethodCall && isSimpleCallName(target, "to" "_aos"))) ||
-          isCanonicalStdlibSoaHelperPath(resolvedTarget, "to" "_aos");
+          ((target.isMethodCall && target.name == "to_aos") ||
+           (!target.isMethodCall && isSimpleCallName(target, "to_aos"))) ||
+          isCanonicalStdlibSoaHelperPath(resolvedTarget, "to_aos");
       const bool matchesBorrowedSoaToAosTarget =
-          ((target.isMethodCall && target.name == "to" "_aos_ref") ||
-           (!target.isMethodCall && isSimpleCallName(target, "to" "_aos_ref"))) ||
-          isCanonicalStdlibSoaHelperPath(resolvedTarget, "to" "_aos_ref");
+          ((target.isMethodCall && target.name == "to_aos_ref") ||
+           (!target.isMethodCall && isSimpleCallName(target, "to_aos_ref"))) ||
+          isCanonicalStdlibSoaHelperPath(resolvedTarget, "to_aos_ref");
       if ((matchesSoaToAosTarget || matchesBorrowedSoaToAosTarget) &&
           target.args.size() == 1) {
         return lockedState->resolveSoaVectorTarget(target.args.front(), elemType);
@@ -612,22 +613,22 @@ SemanticsValidator::BuiltinCollectionDispatchResolvers SemanticsValidator::makeB
     if (target.kind == Expr::Kind::Call) {
       std::string indexedElemType;
       if (lockedState->resolveIndexedArgsPackElementType(target, indexedElemType) &&
-          extractCollectionElementType(indexedElemType, "soa" "_vector", elemType)) {
+          extractCollectionElementType(indexedElemType, "soa_vector", elemType)) {
         return true;
       }
       if (lockedState->resolveWrappedIndexedArgsPackElementType(target, indexedElemType) &&
-          extractCollectionElementType(indexedElemType, "soa" "_vector", elemType)) {
+          extractCollectionElementType(indexedElemType, "soa_vector", elemType)) {
         return true;
       }
       if (lockedState->resolveDereferencedIndexedArgsPackElementType(target, indexedElemType) &&
-          extractCollectionElementType(indexedElemType, "soa" "_vector", elemType)) {
+          extractCollectionElementType(indexedElemType, "soa_vector", elemType)) {
         return true;
       }
       std::string collectionTypePath;
       if (resolveCallCollectionTypePath(target, params, locals, collectionTypePath) &&
-          collectionTypePath == "/soa" "_vector") {
+          collectionTypePath == "/soa_vector") {
         std::vector<std::string> args;
-        if (resolveCallCollectionTemplateArgs(target, "soa" "_vector", params, locals, args) && args.size() == 1) {
+        if (resolveCallCollectionTemplateArgs(target, "soa_vector", params, locals, args) && args.size() == 1) {
           elemType = args.front();
           return true;
         }

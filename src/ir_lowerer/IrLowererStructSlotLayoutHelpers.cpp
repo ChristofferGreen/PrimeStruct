@@ -1,3 +1,4 @@
+// soa-surface-audit: exempt
 #include "IrLowererStructTypeHelpers.h"
 
 #include <algorithm>
@@ -12,6 +13,7 @@
 #include "IrLowererTemplateTypeParseHelpers.h"
 #include "IrLowererUninitializedTypeHelpers.h"
 #include "primec/StdlibSurfaceRegistry.h"
+#include "primec/StdlibCollectionPaths.h"
 
 namespace primec::ir_lowerer {
 
@@ -28,18 +30,18 @@ bool isBuiltinSoaVectorTypeName(const std::string &typeName) {
 
 bool isExperimentalSoaVectorTypeName(const std::string &typeName) {
   return typeName == "SoaVector" ||
-         typeName == "std/collections/experimental_soa_vector/SoaVector" ||
-         typeName == "/std/collections/experimental_soa_vector/SoaVector" ||
-         typeName.rfind("std/collections/experimental_soa_vector/SoaVector__", 0) == 0 ||
-         typeName.rfind("/std/collections/experimental_soa_vector/SoaVector__", 0) == 0;
+         typeName == collection_paths::memberPathBare(collection_paths::kSoaFolder, collection_paths::kSoaVectorTypeName) ||
+         typeName == collection_paths::memberPath(collection_paths::kSoaFolder, collection_paths::kSoaVectorTypeName) ||
+         typeName.rfind(collection_paths::specializedTypePrefixBare(collection_paths::kSoaFolder, collection_paths::kSoaVectorTypeName), 0) == 0 ||
+         typeName.rfind(collection_paths::specializedTypePrefix(collection_paths::kSoaFolder, collection_paths::kSoaVectorTypeName), 0) == 0;
 }
 
 bool isInternalSoaColumnTypeName(const std::string &typeName) {
   return typeName == "SoaColumn" ||
-         typeName == "std/collections/internal_soa_storage/SoaColumn" ||
-         typeName == "/std/collections/internal_soa_storage/SoaColumn" ||
-         typeName.rfind("std/collections/internal_soa_storage/SoaColumn__", 0) == 0 ||
-         typeName.rfind("/std/collections/internal_soa_storage/SoaColumn__", 0) == 0;
+         typeName == collection_paths::memberPathBare(collection_paths::kInternalSoaStorageFolder, collection_paths::kSoaColumnTypeName) ||
+         typeName == collection_paths::memberPath(collection_paths::kInternalSoaStorageFolder, collection_paths::kSoaColumnTypeName) ||
+         typeName.rfind(collection_paths::specializedTypePrefixBare(collection_paths::kInternalSoaStorageFolder, collection_paths::kSoaColumnTypeName), 0) == 0 ||
+         typeName.rfind(collection_paths::specializedTypePrefix(collection_paths::kInternalSoaStorageFolder, collection_paths::kSoaColumnTypeName), 0) == 0;
 }
 
 bool isCollectionVectorRecordTypeName(const std::string &typeName) {
@@ -73,8 +75,9 @@ bool isExperimentalMapTypeName(const std::string &typeName) {
            typeName.rfind(keyValueRoot + "__", 0) == 0)) ||
          typeName == "/std/collections/map/MapValue" ||
          typeName.find("/MapValue") != std::string::npos ||
-         typeName == "/std/collections/internal_map/Map" ||
-         typeName.find("/internal_map/Map") != std::string::npos;
+         typeName == collection_paths::memberPath(collection_paths::kInternalMapFolder, collection_paths::kMapTypeName) ||
+         typeName.find("/" + std::string(collection_paths::kInternalMapFolder) + "/" +
+                       std::string(collection_paths::kMapTypeName)) != std::string::npos;
 }
 
 bool isMapTypeName(const std::string &typeName) {
@@ -100,13 +103,13 @@ std::string resolveStructSlotLookupPath(
 
 std::string normalizeVectorStructPath(const std::string &typeName) {
   if (isBuiltinVectorTypeName(typeName)) {
-    return normalizeBuiltinCollectionStructPath("vector");
+    return vectorBuiltinStructNormalizedPath();
   }
   if (isBuiltinSoaVectorTypeName(typeName)) {
     return "/soa_vector";
   }
   if (typeName == "Vector") {
-    return experimentalCollectionTypePath("vector", "Vector");
+    return vectorBackingTypePath();
   }
   if (isExperimentalCollectionTypeName(typeName, "vector", "Vector")) {
     return normalizeExperimentalCollectionTypePath(typeName, "vector", "Vector");
@@ -116,29 +119,29 @@ std::string normalizeVectorStructPath(const std::string &typeName) {
 
 std::string internalSoaColumnStructPathForSoaVectorPath(
     const std::string &columnarVectorStructPath) {
-  const std::string slashPrefix = "/std/collections/experimental_soa_vector/SoaVector";
-  const std::string noSlashPrefix = "std/collections/experimental_soa_vector/SoaVector";
+  const std::string slashPrefix = collection_paths::memberPath(collection_paths::kSoaFolder, collection_paths::kSoaVectorTypeName);
+  const std::string noSlashPrefix = collection_paths::memberPathBare(collection_paths::kSoaFolder, collection_paths::kSoaVectorTypeName);
   if (columnarVectorStructPath.rfind(slashPrefix, 0) == 0) {
-    return "/std/collections/internal_soa_storage/SoaColumn" +
+    return collection_paths::memberPath(collection_paths::kInternalSoaStorageFolder, collection_paths::kSoaColumnTypeName) +
            columnarVectorStructPath.substr(slashPrefix.size());
   }
   if (columnarVectorStructPath.rfind(noSlashPrefix, 0) == 0) {
-    return "/std/collections/internal_soa_storage/SoaColumn" +
+    return collection_paths::memberPath(collection_paths::kInternalSoaStorageFolder, collection_paths::kSoaColumnTypeName) +
            columnarVectorStructPath.substr(noSlashPrefix.size());
   }
-  return "/std/collections/internal_soa_storage/SoaColumn";
+  return collection_paths::memberPath(collection_paths::kInternalSoaStorageFolder, collection_paths::kSoaColumnTypeName);
 }
 
 std::string normalizeInternalSoaColumnStructPath(const std::string &structPath) {
   if (structPath == "SoaColumn") {
-    return "/std/collections/internal_soa_storage/SoaColumn";
+    return collection_paths::memberPath(collection_paths::kInternalSoaStorageFolder, collection_paths::kSoaColumnTypeName);
   }
   return structPath.front() == '/' ? structPath : "/" + structPath;
 }
 
 std::string normalizeExperimentalSoaVectorStructPath(const std::string &structPath) {
   if (structPath == "SoaVector") {
-    return "/std/collections/experimental_soa_vector/SoaVector";
+    return collection_paths::memberPath(collection_paths::kSoaFolder, collection_paths::kSoaVectorTypeName);
   }
   return structPath.front() == '/' ? structPath : "/" + structPath;
 }
@@ -187,11 +190,11 @@ bool resolveSpecializedExperimentalSoaVectorStructPathFromTypeText(
   }
 
   std::string normalizedType = trimTemplateTypeText(typeText);
-  if (normalizedType.rfind("/std/collections/experimental_soa_vector/SoaVector__", 0) == 0) {
+  if (normalizedType.rfind(collection_paths::specializedTypePrefix(collection_paths::kSoaFolder, collection_paths::kSoaVectorTypeName), 0) == 0) {
     structPathOut = std::move(normalizedType);
     return true;
   }
-  if (normalizedType.rfind("std/collections/experimental_soa_vector/SoaVector__", 0) == 0) {
+  if (normalizedType.rfind(collection_paths::specializedTypePrefixBare(collection_paths::kSoaFolder, collection_paths::kSoaVectorTypeName), 0) == 0) {
     structPathOut = "/" + normalizedType;
     return true;
   }
@@ -411,10 +414,10 @@ bool resolveStructSlotLayoutFromDefinitionFields(
     layout.totalSlots = 8;
     StructSlotFieldInfo keysField{
         "keys", 0, 4, LocalInfo::ValueKind::Unknown,
-        experimentalCollectionTypePath("vector", "Vector")};
+        vectorBackingTypePath()};
     StructSlotFieldInfo payloadsField{
         "payloads", 4, 4, LocalInfo::ValueKind::Unknown,
-        experimentalCollectionTypePath("vector", "Vector")};
+        vectorBackingTypePath()};
     applySpecializedExperimentalMapFieldLayout(
         structPath, "keys", collectStructLayoutFields, valueKindFromTypeName, keysField);
     applySpecializedExperimentalMapFieldLayout(

@@ -1,6 +1,8 @@
+// soa-surface-audit: exempt
 #include "SemanticsHelpers.h"
 
 #include "StdlibCollectionSurfaceHelpers.h"
+#include "primec/StdlibCollectionPaths.h"
 
 #include <array>
 #include <cctype>
@@ -21,12 +23,9 @@ bool isBindingAuxTransformName(const std::string &name) {
 std::string experimentalCollectionTypePathLocal(std::string_view collectionName,
                                                 std::string_view typeName,
                                                 bool leadingSlash = false) {
-  std::string path = leadingSlash ? "/" : "";
-  path += "std/collections/experimental_";
-  path += std::string(collectionName);
-  path += "/";
-  path += std::string(typeName);
-  return path;
+  const std::string folder = collection_paths::typeIdentityFolder(collectionName);
+  return leadingSlash ? collection_paths::memberPath(folder, typeName)
+                      : collection_paths::memberPathBare(folder, typeName);
 }
 
 bool isExperimentalCollectionTypeBaseLocal(const std::string &base,
@@ -184,21 +183,21 @@ std::string normalizeBindingTypeName(const std::string &name) {
   if (name == "float") {
     return "f32";
   }
-  if (name == "soa" || name == "/soa" || name == "std/collections/" "soa" ||
-      name == "/std/collections/" "soa") {
-    return "soa" "_vector";
+  if (name == "soa" || name == "/soa" || name == "std/collections/soa" ||
+      name == "/std/collections/soa") {
+    return "soa_vector";
   }
   if (name.rfind("soa<", 0) == 0) {
-    return "soa" "_vector" + name.substr(std::string("soa").size());
+    return "soa_vector" + name.substr(std::string("soa").size());
   }
   if (name.rfind("/soa<", 0) == 0) {
-    return "soa" "_vector" + name.substr(std::string("/soa").size());
+    return "soa_vector" + name.substr(std::string("/soa").size());
   }
-  if (name.rfind("std/collections/" "soa<", 0) == 0) {
-    return "soa" "_vector" + name.substr(std::string("std/collections/" "soa").size());
+  if (name.rfind("std/collections/soa<", 0) == 0) {
+    return "soa_vector" + name.substr(std::string("std/collections/soa").size());
   }
-  if (name.rfind("/std/collections/" "soa<", 0) == 0) {
-    return "soa" "_vector" + name.substr(std::string("/std/collections/" "soa").size());
+  if (name.rfind("/std/collections/soa<", 0) == 0) {
+    return "soa_vector" + name.substr(std::string("/std/collections/soa").size());
   }
   if (name == "array") {
     return "array";
@@ -604,7 +603,7 @@ ReturnKind returnKindForTypeName(const std::string &name) {
       return ReturnKind::Unknown;
     }
     const bool isVectorLike =
-        (base == "array" || base == "vector" || base == "soa" "_vector" || base == "Buffer" ||
+        (base == "array" || base == "vector" || base == "soa_vector" || base == "Buffer" ||
          isExperimentalCollectionTypeBaseLocal(base, "vector", "Vector"));
     if (isVectorLike && args.size() == 1) {
       return ReturnKind::Array;

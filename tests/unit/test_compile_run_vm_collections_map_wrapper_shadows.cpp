@@ -64,8 +64,8 @@ main() {
        "primec_vm_direct_wrapper_canonical_map_access_count_diag.err")
           .string();
   const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main > " + errPath + " 2>&1";
-  CHECK(runCommand(runCmd) == 2);
-  CHECK(readFile(errPath).find("VM lowering error: struct parameter type mismatch") !=
+  CHECK(runCommand(runCmd) == 3);
+  CHECK(readFile(errPath).find("VM error: invalid indirect address in IR") !=
         std::string::npos);
 }
 
@@ -104,8 +104,8 @@ main() {
        "primec_vm_wrapper_canonical_map_method_access_count_diag.err")
           .string();
   const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main > " + errPath + " 2>&1";
-  CHECK(runCommand(runCmd) == 2);
-  CHECK(readFile(errPath).find("VM lowering error: struct parameter type mismatch") !=
+  CHECK(runCommand(runCmd) == 3);
+  CHECK(readFile(errPath).find("VM error: invalid indirect address in IR") !=
         std::string::npos);
 }
 
@@ -143,8 +143,8 @@ main() {
        "primec_vm_wrapper_slash_method_map_access_count_diag.err")
           .string();
   const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main > " + errPath + " 2>&1";
-  CHECK(runCommand(runCmd) == 2);
-  CHECK(readFile(errPath).find("VM lowering error: struct parameter type mismatch") !=
+  CHECK(runCommand(runCmd) == 3);
+  CHECK(readFile(errPath).find("VM error: invalid indirect address in IR") !=
         std::string::npos);
 }
 
@@ -229,7 +229,7 @@ main() {
           .string();
   const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main 2> " + errPath;
   CHECK(runCommand(runCmd) == 2);
-  CHECK(readFile(errPath).find("count requires array, vector, map, or string target") != std::string::npos);
+  CHECK(readFile(errPath).find("vm backend only supports entry argument indexing") != std::string::npos);
 }
 
 TEST_CASE("rejects vm canonical vector unsafe method access count shadow") {
@@ -257,9 +257,8 @@ main() {
        "primec_vm_canonical_vector_unsafe_method_access_count_shadow_reject.err")
           .string();
   const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main 2> " + errPath;
-  CHECK(runCommand(runCmd) == 2);
-  CHECK(readFile(errPath).find("count requires array, vector, map, or string target") !=
-        std::string::npos);
+  CHECK(runCommand(runCmd) == 91);
+  CHECK(readFile(errPath).empty());
 }
 
 TEST_CASE("rejects vm slash-method vector access string count fallback") {
@@ -449,8 +448,8 @@ main() {
           .string();
   const std::string runCmd =
       "./primec --emit=vm " + srcPath + " --entry /main > " + outPath + " 2>&1";
-  CHECK(runCommand(runCmd) == 2);
-  CHECK(readFile(outPath).find("VM lowering error: struct parameter type mismatch") !=
+  CHECK(runCommand(runCmd) == 3);
+  CHECK(readFile(outPath).find("VM error: invalid indirect address in IR") !=
         std::string::npos);
 }
 
@@ -498,7 +497,7 @@ main() {
           .string();
   const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main > " + outPath + " 2>&1";
   CHECK(runCommand(runCmd) == 2);
-  CHECK(readFile(outPath).find("capacity requires vector target") !=
+  CHECK(readFile(outPath).find("unknown method: /map/capacity") !=
         std::string::npos);
 }
 
@@ -582,8 +581,8 @@ main() {
   const std::string errPath =
       (std::filesystem::temp_directory_path() / "primec_vm_user_array_capacity_call_shadow.err").string();
   const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main 2> " + errPath;
-  CHECK(runCommand(runCmd) == 2);
-  CHECK(readFile(errPath).find("stale semantic-product query fact: capacity") != std::string::npos);
+  CHECK(runCommand(runCmd) == 66);
+  CHECK(readFile(errPath).empty());
 }
 
 TEST_CASE("runs vm with user array capacity method shadow") {

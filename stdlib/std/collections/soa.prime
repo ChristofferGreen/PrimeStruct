@@ -6,7 +6,7 @@ import /std/collections/internal_soa_vector_conversions
 [public effects(heap_alloc), return<SoaVector<T>>]
 /std/collections/soa/soa<T>([args<T>] values) {
   [mut] out{/std/collections/internal_soa_vector/soaVectorNew<T>()}
-  valueCount{/count(values)}
+  valueCount{values.count()}
   [mut] index{0i32}
   while(less_than(index, valueCount), do() {
     /std/collections/internal_soa_vector/soaVectorPush<T>(out, /at(values, index))

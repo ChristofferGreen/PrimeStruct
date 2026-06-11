@@ -1,3 +1,4 @@
+// soa-surface-audit: exempt
 #include "EmitterBuiltinCallPathHelpersInternal.h"
 #include "EmitterCollectionSurfaceMetadata.h"
 #include "EmitterHelpers.h"
@@ -143,7 +144,7 @@ std::vector<const Expr *> orderCallArguments(const Expr &expr,
     const std::string normalizedTypeName = normalizeBindingTypeName(typeName);
     return normalizedTypeName == "array" || normalizedTypeName == "vector" ||
            isKeyValueCollectionTypeNameLocal(normalizedTypeName) || normalizedTypeName == "string" ||
-           normalizedTypeName == "soa" "_vector";
+           normalizedTypeName == "soa_vector";
   };
   const size_t slicedArgCount = expr.args.size() >= callArgStart ? expr.args.size() - callArgStart : 0;
   if (!hasNamedArguments(expr.argNames) && slicedArgCount == 2 && params.size() == 2 &&

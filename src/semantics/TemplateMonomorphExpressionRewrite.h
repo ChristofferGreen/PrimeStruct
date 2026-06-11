@@ -1581,6 +1581,23 @@ bool rewriteExpr(Expr &expr,
         helperName = templateMonomorphSoaToAosHelperName(true);
       }
     }
+    const bool isBarePublishedVectorMutatorSugar =
+        !expr.isMethodCall &&
+        !resolvesVectorFamilyPath &&
+        expr.namespacePrefix.empty() &&
+        expr.name == helperName &&
+        expr.name.find('/') == std::string::npos &&
+        isPublishedVectorMutatorHelperName(helperName);
+    const bool isMethodPublishedVectorMutatorSugar =
+        expr.isMethodCall && isPublishedVectorMutatorHelperName(helperName);
+    if ((isBarePublishedVectorMutatorSugar ||
+         isMethodPublishedVectorMutatorSugar) &&
+        resolvesCollectionVectorValueReceiver(
+            receiverExpr, params, locals, allowMathBare, namespacePrefix, ctx)) {
+      error = "unknown call target: " +
+              canonicalVectorCompatibilityHelperPathOrFallback(helperName);
+      return path;
+    }
     if (receiverFamily == "vector" &&
         (helperName == "count" || helperName == "count_ref" ||
          helperName == "capacity")) {
@@ -2085,8 +2102,58 @@ bool rewriteExpr(Expr &expr,
       ctx.requirementOverloadSelectionError.clear();
       return false;
     }
+    if (!expr.isMethodCall &&
+        expr.templateArgs.size() == 2 &&
+        !expr.args.empty() &&
+        resolvedPath.find("__ov") == std::string::npos &&
+        isTemplateMonomorphMapConstructorCallPath(resolvedPath)) {
+      if (expr.args.size() % 2 != 0) {
+        error = "argument count mismatch for " + resolvedPath;
+        return false;
+      }
+      const std::string diagnosticPath =
+          keyValueConstructorSurfaceMetadataLocal() == nullptr
+              ? resolvedPath
+              : std::string(keyValueConstructorSurfaceMetadataLocal()->canonicalPath);
+      auto mapConstructorParameterName = [](std::size_t argIndex) {
+        static constexpr std::array<std::string_view, 8> Ordinals = {
+            "first", "second", "third", "fourth",
+            "fifth", "sixth", "seventh", "eighth"};
+        const std::size_t pairIndex = argIndex / 2;
+        const std::string ordinal =
+            pairIndex < Ordinals.size()
+                ? std::string(Ordinals[pairIndex])
+                : "arg" + std::to_string(pairIndex + 1);
+        return ordinal + (argIndex % 2 == 0 ? "Key" : "Value");
+      };
+      for (std::size_t argIndex = 0; argIndex < expr.args.size(); ++argIndex) {
+        const std::optional<std::string> actualType =
+            requirementOverloadArgumentTypeText(expr.args[argIndex], &locals, &params);
+        if (!actualType.has_value()) {
+          continue;
+        }
+        const std::string expectedType =
+            normalizeBindingTypeName(expr.templateArgs[argIndex % 2]);
+        const std::string normalizedActualType =
+            normalizeBindingTypeName(*actualType);
+        const ReturnKind expectedKind = returnKindForTypeName(expectedType);
+        const ReturnKind actualKind = returnKindForTypeName(normalizedActualType);
+        if (expectedKind == ReturnKind::Unknown ||
+            actualKind == ReturnKind::Unknown ||
+            expectedKind == actualKind) {
+          continue;
+        }
+        error = "argument type mismatch for " + diagnosticPath +
+                " parameter " + mapConstructorParameterName(argIndex) +
+                ": expected " + expectedType + " got " + normalizedActualType;
+        return false;
+      }
+    }
     const std::string preferredCollectionHelperPath =
         preferCanonicalStdlibCollectionHelperPath(resolvedPath);
+    if (!error.empty()) {
+      return false;
+    }
     if (preferredCollectionHelperPath != resolvedPath) {
       resolvedPath = preferredCollectionHelperPath;
       expr.name = preferredCollectionHelperPath;
@@ -2797,6 +2864,9 @@ bool rewriteExpr(Expr &expr,
           preserveExplicitCompatibilityTemplateMethodPath
               ? methodPath
               : preferCanonicalStdlibCollectionHelperPath(methodPath);
+      if (!error.empty()) {
+        return false;
+      }
       if (!preserveExplicitCompatibilityTemplateMethodPath &&
           preferredCollectionHelperMethodPath != methodPath) {
         methodPath = preferredCollectionHelperMethodPath;

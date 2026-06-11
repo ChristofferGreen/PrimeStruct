@@ -2604,12 +2604,12 @@ cloneValues() {
 }
 
 [return<void>]
-/std/collections/experimental_soa_vector/SoaVector__Particle/push([soa_vector<Particle>] values,
+/std/collections/soa/SoaVector__Particle/push([soa_vector<Particle>] values,
                                                                    [Particle] value) {
 }
 
 [return<void>]
-/std/collections/experimental_soa_vector/SoaVector__Particle/reserve([soa_vector<Particle>] values,
+/std/collections/soa/SoaVector__Particle/reserve([soa_vector<Particle>] values,
                                                                       [i32] count) {
 }
 
@@ -2654,7 +2654,7 @@ main() {
       [&semanticProgram](const primec::SemanticProgramMethodCallTarget *entry) {
         return entry->scopePath == "/main" && entry->methodName == "push" &&
                primec::semanticProgramMethodCallTargetResolvedPath(semanticProgram, *entry) ==
-                   "/std/collections/experimental_soa_vector/SoaVector__Particle/push";
+                   "/std/collections/soa/SoaVector__Particle/push";
       });
   CHECK_FALSE(choseConcreteExperimentalPush);
 }
@@ -2694,12 +2694,12 @@ Holder() {}
 }
 
 [return<void>]
-/std/collections/experimental_soa_vector/SoaVector__Particle/push([soa_vector<Particle>] values,
+/std/collections/soa/SoaVector__Particle/push([soa_vector<Particle>] values,
                                                                    [Particle] value) {
 }
 
 [return<void>]
-/std/collections/experimental_soa_vector/SoaVector__Particle/reserve([soa_vector<Particle>] values,
+/std/collections/soa/SoaVector__Particle/reserve([soa_vector<Particle>] values,
                                                                       [i32] count) {
 }
 
@@ -2745,7 +2745,7 @@ main() {
       [&semanticProgram](const primec::SemanticProgramMethodCallTarget *entry) {
         return entry->scopePath == "/main" && entry->methodName == "push" &&
                primec::semanticProgramMethodCallTargetResolvedPath(semanticProgram, *entry) ==
-                   "/std/collections/experimental_soa_vector/SoaVector__Particle/push";
+                   "/std/collections/soa/SoaVector__Particle/push";
       });
   CHECK_FALSE(choseConcreteExperimentalPush);
 }
@@ -2795,19 +2795,19 @@ Holder() {}
 }
 
 [return<Particle>]
-/std/collections/experimental_soa_vector/SoaVector__Particle/get([soa_vector<Particle>] values,
+/std/collections/soa/SoaVector__Particle/get([soa_vector<Particle>] values,
                                                                   [i32] index) {
   return(Particle(plus(index, 200i32)))
 }
 
 [return<Particle>]
-/std/collections/experimental_soa_vector/SoaVector__Particle/ref([soa_vector<Particle>] values,
+/std/collections/soa/SoaVector__Particle/ref([soa_vector<Particle>] values,
                                                                   [i32] index) {
   return(Particle(plus(index, 200i32)))
 }
 
 [return<vector<Particle>>]
-/std/collections/experimental_soa_vector/SoaVector__Particle/to_aos([soa_vector<Particle>] values) {
+/std/collections/soa/SoaVector__Particle/to_aos([soa_vector<Particle>] values) {
   return(vector<Particle>())
 }
 
@@ -2887,7 +2887,7 @@ main() {
       [&semanticProgram](const primec::SemanticProgramMethodCallTarget *entry) {
         return entry->scopePath == "/main" && entry->methodName == "get" &&
                primec::semanticProgramMethodCallTargetResolvedPath(semanticProgram, *entry) ==
-                   "/std/collections/experimental_soa_vector/SoaVector__Particle/get";
+                   "/std/collections/soa/SoaVector__Particle/get";
       });
   CHECK_FALSE(choseConcreteExperimentalGet);
 }
@@ -2935,19 +2935,19 @@ cloneValues() {
 }
 
 [return<Particle>]
-/std/collections/experimental_soa_vector/SoaVector__Particle/get([soa_vector<Particle>] values,
+/std/collections/soa/SoaVector__Particle/get([soa_vector<Particle>] values,
                                                                   [i32] index) {
   return(Particle(plus(index, 200i32)))
 }
 
 [return<Particle>]
-/std/collections/experimental_soa_vector/SoaVector__Particle/ref([soa_vector<Particle>] values,
+/std/collections/soa/SoaVector__Particle/ref([soa_vector<Particle>] values,
                                                                   [i32] index) {
   return(Particle(plus(index, 200i32)))
 }
 
 [return<vector<Particle>>]
-/std/collections/experimental_soa_vector/SoaVector__Particle/to_aos([soa_vector<Particle>] values) {
+/std/collections/soa/SoaVector__Particle/to_aos([soa_vector<Particle>] values) {
   return(vector<Particle>())
 }
 
@@ -3002,7 +3002,7 @@ main() {
       [&semanticProgram](const primec::SemanticProgramMethodCallTarget *entry) {
         return entry->scopePath == "/main" && entry->methodName == "get" &&
                primec::semanticProgramMethodCallTargetResolvedPath(semanticProgram, *entry) ==
-                   "/std/collections/experimental_soa_vector/SoaVector__Particle/get";
+                   "/std/collections/soa/SoaVector__Particle/get";
       });
   CHECK_FALSE(choseConcreteExperimentalGet);
 }
@@ -3484,12 +3484,12 @@ cloneValues() {
 }
 
 [return<void>]
-/std/collections/experimental_soa_vector/SoaVector__Particle/push([SoaVector<Particle>] values,
+/std/collections/soa/SoaVector__Particle/push([SoaVector<Particle>] values,
                                                                    [Particle] value) {
 }
 
 [return<void>]
-/std/collections/experimental_soa_vector/SoaVector__Particle/reserve([SoaVector<Particle>] values,
+/std/collections/soa/SoaVector__Particle/reserve([SoaVector<Particle>] values,
                                                                       [i32] count) {
 }
 
@@ -3556,7 +3556,7 @@ main() {
       [&semanticProgram](const primec::SemanticProgramMethodCallTarget *entry) {
         return entry->scopePath == "/main" && entry->methodName == "push" &&
                primec::semanticProgramMethodCallTargetResolvedPath(semanticProgram, *entry) ==
-                   "/std/collections/experimental_soa_vector/SoaVector__Particle/push";
+                   "/std/collections/soa/SoaVector__Particle/push";
       });
   CHECK_FALSE(choseConcreteExperimentalPush);
 }
@@ -3964,29 +3964,29 @@ cloneValues() {
 }
 
 [return<Particle>]
-/std/collections/experimental_soa_vector/SoaVector__Particle/get([soa_vector<Particle>] values,
+/std/collections/soa/SoaVector__Particle/get([soa_vector<Particle>] values,
                                                                   [i32] index) {
   return(Particle(plus(index, 200i32)))
 }
 
 [return<Particle>]
-/std/collections/experimental_soa_vector/SoaVector__Particle/ref([soa_vector<Particle>] values,
+/std/collections/soa/SoaVector__Particle/ref([soa_vector<Particle>] values,
                                                                   [i32] index) {
   return(Particle(plus(index, 200i32)))
 }
 
 [return<vector<Particle>>]
-/std/collections/experimental_soa_vector/SoaVector__Particle/to_aos([soa_vector<Particle>] values) {
+/std/collections/soa/SoaVector__Particle/to_aos([soa_vector<Particle>] values) {
   return(vector<Particle>())
 }
 
 [return<void>]
-/std/collections/experimental_soa_vector/SoaVector__Particle/push([soa_vector<Particle>] values,
+/std/collections/soa/SoaVector__Particle/push([soa_vector<Particle>] values,
                                                                    [Particle] value) {
 }
 
 [return<void>]
-/std/collections/experimental_soa_vector/SoaVector__Particle/reserve([soa_vector<Particle>] values,
+/std/collections/soa/SoaVector__Particle/reserve([soa_vector<Particle>] values,
                                                                       [i32] count) {
 }
 
@@ -4058,7 +4058,7 @@ main() {
       [&semanticProgram](const primec::SemanticProgramDirectCallTarget *entry) {
         return entry->scopePath == "/main" &&
                resolveDirectCallPath(semanticProgram, *entry) ==
-                   "/std/collections/experimental_soa_vector/SoaVector__Particle/push";
+                   "/std/collections/soa/SoaVector__Particle/push";
       });
   CHECK_FALSE(choseConcreteExperimentalPush);
 }
@@ -4128,29 +4128,29 @@ Holder() {}
 }
 
 [return<Particle>]
-/std/collections/experimental_soa_vector/SoaVector__Particle/get([soa_vector<Particle>] values,
+/std/collections/soa/SoaVector__Particle/get([soa_vector<Particle>] values,
                                                                   [i32] index) {
   return(Particle(plus(index, 200i32)))
 }
 
 [return<Particle>]
-/std/collections/experimental_soa_vector/SoaVector__Particle/ref([soa_vector<Particle>] values,
+/std/collections/soa/SoaVector__Particle/ref([soa_vector<Particle>] values,
                                                                   [i32] index) {
   return(Particle(plus(index, 200i32)))
 }
 
 [return<vector<Particle>>]
-/std/collections/experimental_soa_vector/SoaVector__Particle/to_aos([soa_vector<Particle>] values) {
+/std/collections/soa/SoaVector__Particle/to_aos([soa_vector<Particle>] values) {
   return(vector<Particle>())
 }
 
 [return<void>]
-/std/collections/experimental_soa_vector/SoaVector__Particle/push([soa_vector<Particle>] values,
+/std/collections/soa/SoaVector__Particle/push([soa_vector<Particle>] values,
                                                                    [Particle] value) {
 }
 
 [return<void>]
-/std/collections/experimental_soa_vector/SoaVector__Particle/reserve([soa_vector<Particle>] values,
+/std/collections/soa/SoaVector__Particle/reserve([soa_vector<Particle>] values,
                                                                       [i32] count) {
 }
 
@@ -4223,7 +4223,7 @@ main() {
       [&semanticProgram](const primec::SemanticProgramDirectCallTarget *entry) {
         return entry->scopePath == "/main" &&
                resolveDirectCallPath(semanticProgram, *entry) ==
-                   "/std/collections/experimental_soa_vector/SoaVector__Particle/push";
+                   "/std/collections/soa/SoaVector__Particle/push";
       });
   CHECK_FALSE(choseConcreteExperimentalPush);
 }

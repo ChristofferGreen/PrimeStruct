@@ -206,6 +206,9 @@ void SemanticsValidator::bumpLocalBindingMemoRevision(const void *localsIdentity
 
 std::string SemanticsValidator::formatUnknownCallTarget(const Expr &expr) const {
   if (!isSlashlessKeyValueHelperName(expr.name)) {
+    if (expr.sourceIsMethodCall && expr.name.find('/') != std::string::npos) {
+      return expr.name.substr(expr.name.find_last_of('/') + 1);
+    }
     return expr.name;
   }
   const std::string resolved = resolveCalleePath(expr);

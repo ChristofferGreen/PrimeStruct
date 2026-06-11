@@ -621,16 +621,16 @@ TEST_CASE("emitter builtin collection inference source stays canonical") {
         std::string::npos);
   CHECK(source.find("normalized == \"SoaVector\"") ==
         std::string::npos);
-  CHECK(source.find("normalized == \"std/collections/experimental_soa_vector/SoaVector\"") ==
+  CHECK(source.find("normalized == \"std/collections/soa/SoaVector\"") ==
         std::string::npos);
   CHECK(source.find("normalized.rfind(\"SoaVector<\", 0) == 0") ==
         std::string::npos);
-  CHECK(source.find("normalized.rfind(\"std/collections/experimental_soa_vector/SoaVector<\", 0) == 0") ==
+  CHECK(source.find("normalized.rfind(\"std/collections/soa/SoaVector<\", 0) == 0") ==
         std::string::npos);
   CHECK(source.find("normalized.rfind(\"SoaVector__\", 0) == 0") ==
         std::string::npos);
   CHECK(source.find(
-            "normalized.rfind(\"std/collections/experimental_soa_vector/SoaVector__\", 0) == 0") ==
+            "normalized.rfind(\"std/collections/soa/SoaVector__\", 0) == 0") ==
         std::string::npos);
   CHECK(source.find("std/collections/soa_vector/get") == std::string::npos);
   CHECK(source.find("std/collections/soa_vector/ref") == std::string::npos);
@@ -1502,16 +1502,16 @@ TEST_CASE("soa pending diagnostics route through shared semantics helpers") {
             "normalizedBase == \"SoaVector\" ||") ==
         std::string::npos);
   CHECK(exprArgumentValidationCollectionsSource.find(
-            "normalizedBase == \"std/collections/experimental_soa_vector/SoaVector\"") ==
+            "normalizedBase == \"std/collections/soa/SoaVector\"") ==
         std::string::npos);
   CHECK(exprArgumentValidationCollectionsSource.find(
             "isExperimentalSoaVectorSpecializedTypePath(normalizedResolvedPath)") !=
         std::string::npos);
   CHECK(exprArgumentValidationCollectionsSource.find(
-            "structPath.rfind(\"/std/collections/experimental_soa_vector/SoaVector__\", 0) != 0") ==
+            "structPath.rfind(\"/std/collections/soa/SoaVector__\", 0) != 0") ==
         std::string::npos);
   CHECK(exprArgumentValidationCollectionsSource.find(
-            "normalizedResolvedPath.rfind(\"std/collections/experimental_soa_vector/SoaVector__\", 0) != 0") ==
+            "normalizedResolvedPath.rfind(\"std/collections/soa/SoaVector__\", 0) != 0") ==
         std::string::npos);
   CHECK(exprArgumentValidationCollectionsSource.find(
             "auto withPreservedError = [&](const std::function<bool()> &fn)") !=

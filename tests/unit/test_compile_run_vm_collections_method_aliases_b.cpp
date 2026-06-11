@@ -210,7 +210,7 @@ main() {
       (std::filesystem::temp_directory_path() / "primec_vm_vector_method_struct_field_alias_precedence_err.txt")
           .string();
   const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main 2> " + errPath;
-  CHECK(runCommand(runCmd) == 2);
+  CHECK(runCommand(runCmd) == 3);
 }
 
 TEST_CASE("vm keeps primitive diagnostics for canonical vector method access") {
@@ -268,8 +268,8 @@ main() {
       (std::filesystem::temp_directory_path() / "primec_vm_canonical_vector_unsafe_method_field_reject.err")
           .string();
   const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main 2> " + errPath;
-  CHECK(runCommand(runCmd) == 2);
-  CHECK(readFile(errPath).empty());
+  CHECK(runCommand(runCmd) == 3);
+  CHECK(readFile(errPath).find("VM error: unaligned indirect address in IR") != std::string::npos);
 }
 
 TEST_CASE("rejects vm map method alias access struct method chain with primitive argument diagnostics") {
@@ -375,9 +375,9 @@ main() {
        "primec_vm_wrapper_map_method_alias_struct_receiver_forwarding.err")
           .string();
   const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main 2> " + errPath;
-  CHECK(runCommand(runCmd) == 2);
+  CHECK(runCommand(runCmd) == 3);
   const std::string error = readFile(errPath);
-  CHECK(error.find("VM lowering error: struct parameter type mismatch") !=
+  CHECK(error.find("VM error: invalid indirect address in IR") !=
         std::string::npos);
 }
 

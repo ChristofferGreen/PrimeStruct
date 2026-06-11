@@ -2694,7 +2694,7 @@ TEST_CASE("template monomorph source delegation stays stable") {
             "isExperimentalSoaVectorSpecializedTypePath(normalizedResolvedPath)") !=
         std::string::npos);
   CHECK(templateMonomorphExperimentalCollectionReceiverResolutionSource.find(
-            "normalizedResolvedPath.rfind(\"std/collections/experimental_soa_vector/SoaVector__\", 0) != 0") ==
+            "normalizedResolvedPath.rfind(\"std/collections/soa/SoaVector__\", 0) != 0") ==
         std::string::npos);
   CHECK(templateMonomorphExpressionRewriteSource.find(
             "isExperimentalSoaVectorPublicHelperPath(resolvedPath)") !=
@@ -2712,10 +2712,10 @@ TEST_CASE("template monomorph source delegation stays stable") {
             "normalizedBase.rfind(\"SoaVector__\", 0) == 0") ==
         std::string::npos);
   CHECK(templateMonomorphExpressionRewriteSource.find(
-            "normalizedResolvedPath.rfind(\"std/collections/experimental_soa_vector/SoaVector__\", 0) != 0") ==
+            "normalizedResolvedPath.rfind(\"std/collections/soa/SoaVector__\", 0) != 0") ==
         std::string::npos);
   CHECK(templateMonomorphExpressionRewriteSource.find(
-            "normalizedBase.rfind(\"std/collections/experimental_soa_vector/SoaVector__\", 0) == 0") ==
+            "normalizedBase.rfind(\"std/collections/soa/SoaVector__\", 0) == 0") ==
         std::string::npos);
   CHECK(templateMonomorphExpressionRewriteSource.find(
             "resolvedPath.rfind(\"/std/collections/experimental_soa_vector_conversions/\", 0)") ==
@@ -2859,7 +2859,7 @@ TEST_CASE("template monomorph source delegation stays stable") {
             "isExplicitRootedVectorFallbackReference(") ==
         std::string::npos);
   CHECK(templateMonomorphCollectionCompatibilityPathsSource.find(
-            "value == \"std/collections/experimental_soa_vector/SoaVector\" || value == \"SoaVector\"") ==
+            "value == \"std/collections/soa/SoaVector\" || value == \"SoaVector\"") ==
         std::string::npos);
   CHECK(templateMonomorphExpressionRewriteSource.find(
             "methodPath.rfind(\"/std/collections/experimental_soa_vector_conversions/\", 0)") ==

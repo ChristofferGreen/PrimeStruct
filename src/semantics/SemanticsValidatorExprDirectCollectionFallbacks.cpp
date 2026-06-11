@@ -47,8 +47,11 @@ bool SemanticsValidator::validateExprDirectCollectionFallbacks(
     const Expr &receiverExpr = expr.args[receiverIndex];
     std::string elemType;
     const bool isVectorReceiver =
-        dispatchResolvers.resolveVectorTarget != nullptr &&
-        dispatchResolvers.resolveVectorTarget(receiverExpr, elemType);
+        (dispatchResolvers.resolveVectorTarget != nullptr &&
+         dispatchResolvers.resolveVectorTarget(receiverExpr, elemType)) ||
+        (dispatchResolvers.resolveCollectionVectorValueTarget != nullptr &&
+         dispatchResolvers.resolveCollectionVectorValueTarget(receiverExpr,
+                                                              elemType));
     std::string keyType;
     std::string valueType;
     const bool isNonVectorCollectionReceiver =
@@ -70,7 +73,7 @@ bool SemanticsValidator::validateExprDirectCollectionFallbacks(
         if (!hasDeclaredDefinitionPath(canonicalPath) &&
             !hasImportedDefinitionPath(canonicalPath)) {
           return failDirectCollectionFallbackDiagnostic(
-              "unknown method: " + canonicalPath);
+              "unknown call target: " + canonicalPath);
         }
         if ((vectorMutatorHelper == "reserve" ||
              vectorMutatorHelper == "remove_at" ||
@@ -111,8 +114,11 @@ bool SemanticsValidator::validateExprDirectCollectionFallbacks(
     const Expr &receiverExpr = expr.args.front();
     std::string elemType;
     const bool isVectorReceiver =
-        dispatchResolvers.resolveVectorTarget != nullptr &&
-        dispatchResolvers.resolveVectorTarget(receiverExpr, elemType);
+        (dispatchResolvers.resolveVectorTarget != nullptr &&
+         dispatchResolvers.resolveVectorTarget(receiverExpr, elemType)) ||
+        (dispatchResolvers.resolveCollectionVectorValueTarget != nullptr &&
+         dispatchResolvers.resolveCollectionVectorValueTarget(receiverExpr,
+                                                              elemType));
     std::string keyType;
     std::string valueType;
     const bool isNonVectorCollectionReceiver =
@@ -138,7 +144,7 @@ bool SemanticsValidator::validateExprDirectCollectionFallbacks(
       if (!hasDeclaredDefinitionPath(methodTarget) &&
           !hasImportedDefinitionPath(methodTarget)) {
         return failDirectCollectionFallbackDiagnostic(
-            "unknown method: " + canonicalPath);
+            "unknown call target: " + canonicalPath);
       }
       if ((vectorMutatorHelper == "reserve" ||
            vectorMutatorHelper == "remove_at" ||

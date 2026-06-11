@@ -2027,6 +2027,7 @@ TEST_CASE("todo queue and skipped doctest debt stay source locked") {
   CHECK(todo.find("### Ready Now\n\n"
                   "- TODO-4609: Reject escaping local array slices | track: array-slice-escape-diagnostics | surface: slice view lifetime diagnostics\n"
                   "- TODO-4610: Add forward cursor traversal API | track: cursor-forward-traversal | surface: forward cursor traversal\n"
+                  "- TODO-4631: Merge internal_vector into the public vector module | track: collections-internal-vector-merge | surface: stdlib internal_vector module and goldens\n"
                   "\n"
                   "### Immediate Next 10") !=
         std::string::npos);
@@ -2136,8 +2137,10 @@ TEST_CASE("todo queue and skipped doctest debt stay source locked") {
                   "  surface, TODO-4571 added the compiler-knowledge inventory categories") !=
         std::string::npos);
   CHECK(todo.find("Safe array extents and capability views: TODO-4604 completed the requirement\n"
-                  "  contract phase split, and TODO-4605 completed the non-null safe pointer\n"
-                  "  optionality model. TODO-4606 specified the capability-parameterized\n"
+                  "  contract phase split, TODO-4622 implemented the first contract-form\n"
+                  "  `require(...)` runtime slice (integer-parameter and `count(parameter)`\n"
+                  "  comparisons lower to deterministic call-boundary checks), and TODO-4605\n"
+                  "  completed the non-null safe pointer optionality model. TODO-4606 specified the capability-parameterized\n"
                   "  reference/slice view model in the normative docs. TODO-4607 published the\n"
                   "  initial semantic-product array extent facts, and TODO-4608 added the first\n"
                   "  checked read-only array slice construction surface. TODO-4609 through\n"
@@ -2147,8 +2150,13 @@ TEST_CASE("todo queue and skipped doctest debt stay source locked") {
                   "1. TODO-4609: Reject escaping local array slices\n"
                   "2. TODO-4610: Add forward cursor traversal API\n"
                   "3. TODO-4611: Add reverse cursor traversal API\n"
-                  "4. TODO-4612: Add safe extent and cursor code examples\n\n"
-                  "### Task Blocks") !=
+                  "4. TODO-4612: Add safe extent and cursor code examples\n"
+                  "5. TODO-4631: Merge internal_vector into the public vector module\n"
+                  "6. TODO-4632: Merge internal_map into the public map module\n"
+                  "7. TODO-4633: Collapse internal SoA modules into soa and soa_storage\n"
+                  "8. TODO-4634: Rename internal buffer modules to canonical buffer names\n"
+                  "9. TODO-4635: Derive the collection surface registry from stdlib declarations\n"
+                  "10. TODO-4636: Delete surfaces.psmeta and its parity scaffolding\n") !=
         std::string::npos);
   CHECK(todo.find("- TODO-4613: Retire semantic-validator private source locks | track: "
                   "semantic-source-lock-retirement") ==
@@ -4282,15 +4290,15 @@ TEST_CASE("small stdlib wrappers stay source locked to inferred locals") {
   REQUIRE(std::filesystem::exists(codeExamplesPath));
   REQUIRE(std::filesystem::exists(maybeStdlibPath));
   REQUIRE(std::filesystem::exists(vectorStdlibPath));
-  REQUIRE(std::filesystem::exists(collectionsStdlibPath));
+  CHECK(!std::filesystem::exists(collectionsStdlibPath));
   REQUIRE(std::filesystem::exists(mapStdlibPath));
   REQUIRE(std::filesystem::exists(internalMapStdlibPath));
-  REQUIRE(std::filesystem::exists(experimentalVectorStdlibPath));
+  CHECK(!std::filesystem::exists(experimentalVectorStdlibPath));
   REQUIRE(std::filesystem::exists(internalVectorStdlibPath));
-  REQUIRE(std::filesystem::exists(experimentalMapStdlibPath));
-  REQUIRE(std::filesystem::exists(soaWrapperPath));
+  CHECK(!std::filesystem::exists(experimentalMapStdlibPath));
+  CHECK(!std::filesystem::exists(soaWrapperPath));
   REQUIRE(std::filesystem::exists(soaPublicPath));
-  REQUIRE(std::filesystem::exists(soaConversionsPath));
+  CHECK(!std::filesystem::exists(soaConversionsPath));
   REQUIRE(std::filesystem::exists(internalSoaVectorPath));
   REQUIRE(std::filesystem::exists(internalSoaConversionsPath));
   REQUIRE(std::filesystem::exists(experimentalSoaVectorPath));
@@ -4299,15 +4307,10 @@ TEST_CASE("small stdlib wrappers stay source locked to inferred locals") {
   const std::string codeExamples = readFile(codeExamplesPath.string());
   const std::string maybeStdlib = readFile(maybeStdlibPath.string());
   const std::string vectorStdlib = readFile(vectorStdlibPath.string());
-  const std::string collectionsStdlib = readFile(collectionsStdlibPath.string());
   const std::string mapStdlib = readFile(mapStdlibPath.string());
   const std::string internalMapStdlib = readFile(internalMapStdlibPath.string());
-  const std::string experimentalVectorStdlib = readFile(experimentalVectorStdlibPath.string());
   const std::string internalVectorStdlib = readFile(internalVectorStdlibPath.string());
-  const std::string experimentalMapStdlib = readFile(experimentalMapStdlibPath.string());
-  const std::string soaWrapper = readFile(soaWrapperPath.string());
   const std::string soaPublic = readFile(soaPublicPath.string());
-  const std::string soaConversions = readFile(soaConversionsPath.string());
   const std::string internalSoaVector = readFile(internalSoaVectorPath.string());
   const std::string internalSoaConversions = readFile(internalSoaConversionsPath.string());
   const std::string experimentalSoaVector = readFile(experimentalSoaVectorPath.string());
@@ -4371,22 +4374,6 @@ TEST_CASE("small stdlib wrappers stay source locked to inferred locals") {
   CHECK(vectorStdlib.find("[i32] valueCount{values.count()}") == std::string::npos);
   CHECK(vectorStdlib.find("[i32 mut] index{0i32}") == std::string::npos);
 
-  CHECK(collectionsStdlib.find("Retired compatibility umbrella.") != std::string::npos);
-  CHECK(collectionsStdlib.find("Public map helpers now live under /std/collections/map/*.") !=
-        std::string::npos);
-  CHECK(collectionsStdlib.find("vectorCount<T>") == std::string::npos);
-  CHECK(collectionsStdlib.find("vectorCapacity<T>") == std::string::npos);
-  CHECK(collectionsStdlib.find("vectorPush<T>") == std::string::npos);
-  CHECK(collectionsStdlib.find("vectorAt<T>") == std::string::npos);
-  CHECK(collectionsStdlib.find("vectorSingle<T>") == std::string::npos);
-  CHECK(collectionsStdlib.find("vectorPair<T>") == std::string::npos);
-  CHECK(collectionsStdlib.find("mapCount") == std::string::npos);
-  CHECK(collectionsStdlib.find("mapContains") == std::string::npos);
-  CHECK(collectionsStdlib.find("mapTryAt") == std::string::npos);
-  CHECK(collectionsStdlib.find("mapAt") == std::string::npos);
-  CHECK(collectionsStdlib.find("mapInsert") == std::string::npos);
-  CHECK(collectionsStdlib.find("[public") == std::string::npos);
-
   CHECK(mapStdlib.find(
             "// Standalone canonical stdlib-owned map implementation.") !=
         std::string::npos);
@@ -4413,13 +4400,6 @@ TEST_CASE("small stdlib wrappers stay source locked to inferred locals") {
   CHECK(mapStdlib.find("/std/collections/internal_map/mapNew<K, V>()") ==
         std::string::npos);
 
-  CHECK(experimentalVectorStdlib.find("// Rejected direct-import shim for the legacy experimental vector namespace.") !=
-        std::string::npos);
-  CHECK(experimentalVectorStdlib.find(
-            "// Canonical wrappers route through /std/collections/internal_vector/*.") !=
-        std::string::npos);
-  CHECK(experimentalVectorStdlib.find("import /std/collections/internal_vector/*") !=
-        std::string::npos);
   CHECK(internalVectorStdlib.find("// Internal vector backing implementation behind canonical /std/collections/vector/*.") !=
         std::string::npos);
   CHECK(internalVectorStdlib.find("namespace internal_vector") != std::string::npos);
@@ -4428,14 +4408,6 @@ TEST_CASE("small stdlib wrappers stay source locked to inferred locals") {
         std::string::npos);
   CHECK(internalVectorStdlib.find("/std/collections/internal_vector/vectorPush<T>(values, value)") ==
         std::string::npos);
-  CHECK(experimentalMapStdlib.find("// Rejected direct-import shim for the legacy experimental map namespace.") !=
-        std::string::npos);
-  CHECK(experimentalMapStdlib.find(
-            "// Canonical wrappers route through /std/collections/internal_map/*.") !=
-        std::string::npos);
-  CHECK(experimentalMapStdlib.find("import /std/collections/internal_map/*") !=
-        std::string::npos);
-  CHECK(experimentalMapStdlib.find("[Vector<K>] keys{this.keys}") == std::string::npos);
   CHECK(internalMapStdlib.find("[Vector<K>] keys{this.keys}") != std::string::npos);
   CHECK(internalMapStdlib.find(
             "// Internal map backing implementation behind canonical /std/collections/map/*.") !=
@@ -4444,38 +4416,6 @@ TEST_CASE("small stdlib wrappers stay source locked to inferred locals") {
             "// Vector storage comes from the internal vector backing module.") !=
         std::string::npos);
   CHECK(internalMapStdlib.find("return(/std/collections/internal_vector/vectorCount<K>(keys))") !=
-        std::string::npos);
-  CHECK(experimentalMapStdlib.find("import /std/collections/experimental_vector/*") ==
-        std::string::npos);
-  CHECK(experimentalMapStdlib.find("return(/std/collections/map/count<K, V>(this))") == std::string::npos);
-
-  CHECK(soaWrapper.find("// Retired compatibility module.") !=
-        std::string::npos);
-  CHECK(soaWrapper.find("Public SoA helpers now live under /std/collections/soa/*.") !=
-        std::string::npos);
-  CHECK(soaWrapper.find("import /std/collections/internal_soa_vector/*") ==
-        std::string::npos);
-  CHECK(soaWrapper.find("import /std/collections/experimental_soa_vector/*") ==
-        std::string::npos);
-  CHECK(soaWrapper.find("valueCount{/count(values)}") == std::string::npos);
-  CHECK(soaWrapper.find("/std/collections/internal_soa_vector/soaVectorNew<T>()") ==
-        std::string::npos);
-  CHECK(soaWrapper.find("/std/collections/internal_soa_vector/soaVectorPush<T>(out, /at(values, index))") ==
-        std::string::npos);
-  CHECK(soaWrapper.find("/std/collections/experimental_soa_vector/soaVectorNew<T>()") ==
-        std::string::npos);
-  CHECK(soaWrapper.find("/std/collections/experimental_soa_vector/soaVectorPush<T>(out, values[index])") ==
-        std::string::npos);
-  CHECK(soaWrapper.find("/std/collections/soa_vector/soaVectorNew<T>()") == std::string::npos);
-  CHECK(soaWrapper.find("/std/collections/soa_vector/soaVectorSingle<T>([T] value)") ==
-        std::string::npos);
-  CHECK(soaWrapper.find("/std/collections/soa_vector/soaVectorFromAos<T>([vector<T>] values)") ==
-        std::string::npos);
-  CHECK(soaWrapper.find("/std/collections/soa_vector/soaVectorCount<T>([SoaVector<T>] values)") ==
-        std::string::npos);
-  CHECK(soaWrapper.find("/std/collections/soa_vector/soaVectorFieldView<Struct, Field>(") ==
-        std::string::npos);
-  CHECK(soaWrapper.find("/std/collections/soa_vector/soaVectorPush<T>([SoaVector<T> mut] values, [T] value)") ==
         std::string::npos);
 
   CHECK(soaPublic.find(
@@ -4525,44 +4465,6 @@ TEST_CASE("small stdlib wrappers stay source locked to inferred locals") {
                                "    /std/collections/internal_soa_storage/soaColumnPush<T>(storage, value)") !=
         std::string::npos);
 
-  CHECK(soaConversions.find("// Retired compatibility conversion module.") !=
-        std::string::npos);
-  CHECK(soaConversions.find("Public SoA conversions now live under /std/collections/soa/*.") !=
-        std::string::npos);
-  CHECK(soaConversions.find("import /std/collections/soa_vector/*") ==
-        std::string::npos);
-  CHECK(soaConversions.find("import /std/collections/internal_soa_vector_conversions/*") ==
-        std::string::npos);
-  CHECK(soaConversions.find("import /std/collections/experimental_soa_vector/*") ==
-        std::string::npos);
-  CHECK(soaConversions.find("/std/collections/soa_vector_conversions/soaVectorToAos<T>(") ==
-        std::string::npos);
-  CHECK(soaConversions.find("/std/collections/soa_vector_conversions/soaVectorToAosRef<T>(") ==
-        std::string::npos);
-  CHECK(soaConversions.find("    [SoaVector<T>] values) {") ==
-        std::string::npos);
-  CHECK(soaConversions.find("    [Reference<SoaVector<T>>] values) {") ==
-        std::string::npos);
-  CHECK(soaConversions.find(
-            "return(/std/collections/internal_soa_vector_conversions/soaVectorToAos<T>(values))") ==
-        std::string::npos);
-  CHECK(soaConversions.find(
-            "return(/std/collections/internal_soa_vector_conversions/soaVectorToAosRef<T>(values))") ==
-        std::string::npos);
-  CHECK(soaConversions.find("valueCount{/std/collections/soa_vector/count<T>(values)}") ==
-        std::string::npos);
-  CHECK(soaConversions.find("valueCount{/std/collections/soa_vector/count_ref<T>(values)}") ==
-        std::string::npos);
-  CHECK(soaConversions.find("[vector<T> mut] out{vector<T>()}") == std::string::npos);
-  CHECK(soaConversions.find("[mut] index{0i32}") == std::string::npos);
-  CHECK(soaConversions.find("[i32] valueCount{/std/collections/soa_vector/count<T>(values)}") ==
-        std::string::npos);
-  CHECK(soaConversions.find("[i32] valueCount{/std/collections/soa_vector/count_ref<T>(values)}") ==
-        std::string::npos);
-  CHECK(soaConversions.find("[mut] out{vector<T>()}") == std::string::npos);
-  CHECK(soaConversions.find("[i32 mut] index{0i32}") == std::string::npos);
-  CHECK(soaConversions.find("/std/collections/experimental_soa_vector/SoaVector<T>") ==
-        std::string::npos);
   CHECK(internalSoaConversions.find(
             "// Internal conversion adapter behind canonical /std/collections/soa/*.") !=
         std::string::npos);

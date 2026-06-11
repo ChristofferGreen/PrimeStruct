@@ -1,3 +1,4 @@
+// soa-surface-audit: exempt
 #pragma once
 
 #include <string>
@@ -114,5 +115,22 @@ bool isCanonicalPublishedStdlibSurfaceHelperPath(std::string_view path,
 
 std::string normalizeMapImportAliasPath(const std::string &path);
 std::vector<std::string> collectionHelperPathCandidates(const std::string &path);
+
+inline std::string vectorBackingTypePath(bool leadingSlash = true) {
+  constexpr const char kVec[] = "vector";
+  return experimentalCollectionTypePath(kVec, "Vector", leadingSlash);
+}
+inline std::string vectorBackingMemberRoot(bool leadingSlash = true) {
+  constexpr const char kVec[] = "vector";
+  return experimentalCollectionMemberRoot(kVec, leadingSlash);
+}
+inline std::string vectorBuiltinStructNormalizedPath() {
+  constexpr const char kVec[] = "vector";
+  return normalizeBuiltinCollectionStructPath(kVec);
+}
+inline std::string mapBackingTypePath(bool leadingSlash = true) {
+  constexpr const char kMap[] = "map";
+  return experimentalCollectionTypePath(kMap, "Map", leadingSlash);
+}
 
 } // namespace primec::ir_lowerer

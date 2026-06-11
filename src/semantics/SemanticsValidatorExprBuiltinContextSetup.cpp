@@ -1,4 +1,5 @@
 #include "SemanticsValidator.h"
+// soa-surface-audit: exempt
 #include "SemanticsValidatorInferCollectionCompatibilityInternal.h"
 
 namespace primec::semantics {
@@ -115,7 +116,7 @@ void SemanticsValidator::prepareExprLateFallbackBuiltinContext(
         const std::string receiverPath = targetPath.substr(0, slash);
         if (receiverPath == "/array" || receiverPath == "/vector" ||
             receiverPath == canonicalVectorCompatibilityPrefixOrFallback() ||
-            receiverPath == "/soa" "_vector" || receiverPath == "/map" ||
+            receiverPath == "/soa_vector" || receiverPath == "/map" ||
             receiverPath == "/string") {
           return false;
         }

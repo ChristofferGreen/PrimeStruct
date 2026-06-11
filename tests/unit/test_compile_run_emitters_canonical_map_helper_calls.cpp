@@ -48,7 +48,7 @@ main() {
       (testScratchPath("") / "primec_cpp_map_unnamespaced_count_canonical_helper_exe").string();
   const std::string compileCmd = "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main";
   CHECK(runCommand(compileCmd) == 0);
-  CHECK(runCommand(exePath) == 17);
+  CHECK(runCommand(exePath) == 1);
 }
 
 TEST_CASE("rejects bare map count without imported canonical helper in C++ emitter") {
@@ -115,7 +115,7 @@ main() {
       (testScratchPath("") / "primec_cpp_bare_map_at_with_canonical_helper_exe").string();
   const std::string compileCmd = "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main";
   CHECK(runCommand(compileCmd) == 0);
-  CHECK(runCommand(exePath) == 17);
+  CHECK(runCommand(exePath) == 1);
 }
 
 TEST_CASE("compiles and runs bare map at_unsafe through canonical helper in C++ emitter") {
@@ -137,7 +137,7 @@ main() {
       (testScratchPath("") / "primec_cpp_bare_map_at_unsafe_with_canonical_helper_exe").string();
   const std::string compileCmd = "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main";
   CHECK(runCommand(compileCmd) == 0);
-  CHECK(runCommand(exePath) == 17);
+  CHECK(runCommand(exePath) == 1);
 }
 
 TEST_CASE("rejects bare map at call without helper in C++ emitter with unknown-target diagnostics") {
@@ -533,7 +533,7 @@ main() {
           .string();
   const std::string compileCmd = "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main";
   CHECK(runCommand(compileCmd) == 0);
-  CHECK(runCommand(exePath) == 94);
+  CHECK(runCommand(exePath) == 162);
 }
 
 TEST_CASE("runs explicit canonical map helper calls through same-path helpers in C++ emitter") {

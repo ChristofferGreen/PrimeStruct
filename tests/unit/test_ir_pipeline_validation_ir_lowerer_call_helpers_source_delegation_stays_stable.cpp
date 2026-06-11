@@ -979,13 +979,13 @@ TEST_CASE("ir lowerer call helpers prefer explicit experimental vector helpers o
   primec::Definition vectorHelper;
   vectorHelper.fullPath = "/std/collections/experimental_vector/vector__t25a78a513414c3bf";
   primec::Definition vectorStruct;
-  vectorStruct.fullPath = "/std/collections/experimental_vector/Vector__t25a78a513414c3bf";
+  vectorStruct.fullPath = "/std/collections/vector/Vector__t25a78a513414c3bf";
   const std::unordered_map<std::string, const primec::Definition *> defMap = {
       {vectorHelper.fullPath, &vectorHelper},
       {vectorStruct.fullPath, &vectorStruct},
   };
   auto resolver = [](const primec::Expr &) {
-    return std::string("/std/collections/experimental_vector/Vector__t25a78a513414c3bf");
+    return std::string("/std/collections/vector/Vector__t25a78a513414c3bf");
   };
 
   primec::Expr directCall;
@@ -1433,14 +1433,14 @@ TEST_CASE("ir lowerer semantic-product adapter rejects call-target source lookup
   semanticProgram.methodCallTargets.push_back(primec::SemanticProgramMethodCallTarget{
       .scopePath = "/main",
       .methodName = "at",
-      .receiverTypeText = "/std/collections/experimental_vector/Vector__t25a78a513414c3bf",
+      .receiverTypeText = "/std/collections/vector/Vector__t25a78a513414c3bf",
       .sourceLine = 11,
       .sourceColumn = 15,
       .semanticNodeId = 244,
       .scopePathId = primec::semanticProgramInternCallTargetString(semanticProgram, "/main"),
       .methodNameId = primec::semanticProgramInternCallTargetString(semanticProgram, "at"),
       .receiverTypeTextId = primec::semanticProgramInternCallTargetString(
-          semanticProgram, "/std/collections/experimental_vector/Vector__t25a78a513414c3bf"),
+          semanticProgram, "/std/collections/vector/Vector__t25a78a513414c3bf"),
       .resolvedPathId =
           primec::semanticProgramInternCallTargetString(semanticProgram, "/std/collections/vector/at"),
       .stdlibSurfaceId = primec::StdlibSurfaceId::CollectionsManifestSurface0,

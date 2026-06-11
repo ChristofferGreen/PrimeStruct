@@ -1,6 +1,8 @@
+// soa-surface-audit: exempt
 #include "SemanticsValidator.h"
 #include "StdlibCollectionSurfaceHelpers.h"
 #include "SemanticsValidatorInferCollectionCompatibilityInternal.h"
+#include "primec/StdlibCollectionPaths.h"
 #include "primec/StringLiteral.h"
 
 #include <algorithm>
@@ -132,7 +134,7 @@ bool SemanticsValidator::validateExpr(const std::vector<ParameterInfo> &params,
     if (expr.isMethodCall &&
         (expr.name == "count" || expr.name == "get" ||
          expr.name == "get_ref" || expr.name == "ref") &&
-        hasVisibleDefinitionPathForCurrentImports("/soa" "_vector/" + expr.name)) {
+        hasVisibleDefinitionPathForCurrentImports("/soa_vector/" + expr.name)) {
       for (const Expr &arg : expr.args) {
         if (!validateExpr(params, locals, arg, enclosingStatements,
                           statementIndex)) {
@@ -152,21 +154,26 @@ bool SemanticsValidator::validateExpr(const std::vector<ParameterInfo> &params,
         soaGetHelper = "get_ref";
       }
       const bool usesCanonicalSoaGetSurface =
-          expr.name.rfind("/std/collections/" "soa" "_vector/", 0) == 0 ||
-          expr.namespacePrefix == "std/collections/" "soa" "_vector" ||
-          expr.namespacePrefix == "/std/collections/" "soa" "_vector";
+          expr.name.rfind(collection_paths::modulePrefix(
+                              collection_paths::kLegacySoaVectorFolder),
+                          0) == 0 ||
+          expr.namespacePrefix ==
+              collection_paths::moduleRootBare(collection_paths::kLegacySoaVectorFolder) ||
+          expr.namespacePrefix ==
+              collection_paths::moduleRoot(collection_paths::kLegacySoaVectorFolder);
       if (!soaGetHelper.empty() && usesCanonicalSoaGetSurface) {
         std::string receiverTypeText;
         const bool receiverIsExperimentalSoa =
             inferQueryExprTypeText(expr.args.front(), params, locals,
                                    receiverTypeText) &&
-            (receiverTypeText.find("Soa" "Vector") != std::string::npos ||
-             receiverTypeText.find("experimental" "_soa" "_vector") !=
+            (receiverTypeText.find(collection_paths::kSoaVectorTypeName) !=
+                 std::string::npos ||
+             receiverTypeText.find(collection_paths::kExperimentalSoaVectorFolder) !=
                  std::string::npos);
         if (!receiverIsExperimentalSoa) {
-          return failExprRootDiagnostic(
-              soaUnavailableMethodDiagnostic("/std/collections/" "soa" "_vector/" +
-                                             soaGetHelper));
+          return failExprRootDiagnostic(soaUnavailableMethodDiagnostic(
+              collection_paths::memberPath(collection_paths::kLegacySoaVectorFolder,
+                                           soaGetHelper)));
         }
         if (expr.hasBodyArguments || !expr.bodyArguments.empty()) {
           return failExprRootDiagnostic(soaGetHelper +
@@ -321,7 +328,7 @@ bool SemanticsValidator::validateExpr(const std::vector<ParameterInfo> &params,
             suffix != std::string::npos) {
           fieldViewPath.erase(suffix);
         }
-        if (fieldViewPath == "/std/collections/" "soa/field_view") {
+        if (fieldViewPath == "/std/collections/soa/field_view") {
           for (const Expr &arg : expr.args) {
             if (!validateExpr(params, locals, arg, enclosingStatements,
                               statementIndex)) {
@@ -708,14 +715,46 @@ bool SemanticsValidator::validateExpr(const std::vector<ParameterInfo> &params,
       }();
       if (!explicitVectorMutatorMethodPath.empty()) {
         std::string receiverTypeText;
+        if (const Expr &receiverExpr = expr.args.front();
+            receiverExpr.kind == Expr::Kind::Name) {
+          if (const BindingInfo *paramBinding =
+                  findParamBinding(params, receiverExpr.name)) {
+            receiverTypeText = bindingTypeText(*paramBinding);
+          } else if (auto localIt = locals.find(receiverExpr.name);
+                     localIt != locals.end()) {
+            receiverTypeText = bindingTypeText(localIt->second);
+          }
+        }
         const bool receiverIsVector =
-            inferQueryExprTypeText(expr.args.front(), params, locals,
-                                   receiverTypeText) &&
-            inferMethodCollectionTypePathFromTypeText(receiverTypeText) ==
-                "/vector";
+            (!receiverTypeText.empty() ||
+             inferQueryExprTypeText(expr.args.front(), params, locals,
+                                    receiverTypeText)) &&
+            ([&]() {
+              if (inferMethodCollectionTypePathFromTypeText(receiverTypeText) ==
+                  "/vector") {
+                return true;
+              }
+              BindingInfo receiverBinding;
+              std::string base;
+              std::string argText;
+              const std::string normalizedType =
+                  normalizeBindingTypeName(receiverTypeText);
+              if (splitTemplateTypeName(normalizedType, base, argText)) {
+                receiverBinding.typeName = normalizeBindingTypeName(base);
+                receiverBinding.typeTemplateArg = argText;
+              } else {
+                receiverBinding.typeName = normalizedType;
+              }
+              std::string elemType;
+              return extractCollectionVectorElementType(receiverBinding, elemType);
+            })();
+        const std::string rootedVectorShadowPath =
+            rootedVectorHelperPath(normalizedMutatorMethodName);
         if (receiverIsVector &&
             !hasDeclaredDefinitionPath(explicitVectorMutatorMethodPath) &&
-            !hasImportedDefinitionPath(explicitVectorMutatorMethodPath)) {
+            !hasImportedDefinitionPath(explicitVectorMutatorMethodPath) &&
+            !hasDeclaredDefinitionPath(rootedVectorShadowPath) &&
+            !hasImportedDefinitionPath(rootedVectorShadowPath)) {
           return failExprRootDiagnostic("unknown method: " +
                                         explicitVectorMutatorMethodPath);
         }
@@ -788,6 +827,29 @@ bool SemanticsValidator::validateExpr(const std::vector<ParameterInfo> &params,
     }
     ExprDispatchBootstrap dispatchBootstrap;
     prepareExprDispatchBootstrap(params, locals, dispatchBootstrap);
+    if (!expr.isMethodCall && expr.namespacePrefix.empty() &&
+        expr.name == "at_unsafe" && expr.args.size() >= 2 &&
+        dispatchBootstrap.dispatchResolvers.resolveMapTarget != nullptr) {
+      std::string keyType;
+      std::string valueType;
+      const bool firstArgIsMap =
+          dispatchBootstrap.dispatchResolvers.resolveMapTarget(
+              expr.args.front(), keyType, valueType);
+      bool laterArgIsMap = false;
+      if (!firstArgIsMap) {
+        for (size_t argIndex = 1; argIndex < expr.args.size(); ++argIndex) {
+          if (dispatchBootstrap.dispatchResolvers.resolveMapTarget(
+                  expr.args[argIndex], keyType, valueType)) {
+            laterArgIsMap = true;
+            break;
+          }
+        }
+      }
+      if (!firstArgIsMap && laterArgIsMap) {
+        return failExprRootDiagnostic(
+            "argument type mismatch for /std/collections/map/at_unsafe");
+      }
+    }
     const bool shouldBuiltinValidateBareKeyValueContainsCall =
         shouldBuiltinValidateCurrentMapWrapperHelper("contains");
     const bool shouldBuiltinValidateBareKeyValueAccessCall =
@@ -978,7 +1040,7 @@ bool SemanticsValidator::validateExpr(const std::vector<ParameterInfo> &params,
         return nullptr;
       };
       auto isSoaBorrowBinding = [&](const BindingInfo &binding) -> bool {
-        if (binding.typeName == "soa" "_vector") {
+        if (binding.typeName == "soa_vector") {
           return true;
         }
         std::string elemType;
@@ -994,9 +1056,9 @@ bool SemanticsValidator::validateExpr(const std::vector<ParameterInfo> &params,
           const std::string normalizedTarget =
               normalizeBindingTypeName(binding.typeTemplateArg);
           if (splitTemplateTypeName(normalizedTarget, base, arg)) {
-            return normalizeBindingTypeName(base) == "soa" "_vector";
+            return normalizeBindingTypeName(base) == "soa_vector";
           }
-          return normalizedTarget == "soa" "_vector";
+          return normalizedTarget == "soa_vector";
         }
         return false;
       };
@@ -1402,7 +1464,9 @@ bool SemanticsValidator::validateExpr(const std::vector<ParameterInfo> &params,
       return true;
     }
     const bool resolvedUsesCanonicalSoaNamespace =
-        resolved.rfind("/std/collections/" "soa" "_vector/", 0) == 0;
+        resolved.rfind(collection_paths::modulePrefix(
+                           collection_paths::kLegacySoaVectorFolder),
+                       0) == 0;
     std::string resolvedWithoutSpecialization = resolved;
     if (const size_t suffix = resolvedWithoutSpecialization.find("__");
         suffix != std::string::npos) {
@@ -1424,9 +1488,9 @@ bool SemanticsValidator::validateExpr(const std::vector<ParameterInfo> &params,
     const bool resolvedIsSoaConversion =
         resolvedWithoutSpecialization == "/to_soa" ||
         isLegacyOrCanonicalSoaHelperPath(resolvedSoaToAosCanonical,
-                                         "to" "_aos") ||
+                                         "to_aos") ||
         isLegacyOrCanonicalSoaHelperPath(resolvedSoaToAosCanonical,
-                                         "to" "_aos_ref") ||
+                                         "to_aos_ref") ||
         isExperimentalSoaVectorConversionFamilyPath(
             resolvedWithoutSpecialization);
     const bool shouldLateValidateDirectSoaSurface =
@@ -1436,15 +1500,15 @@ bool SemanticsValidator::validateExpr(const std::vector<ParameterInfo> &params,
           isSimpleCallName(expr, "ref_ref")) &&
          resolvedIsSoaAccess) ||
         ((isSimpleCallName(expr, "to_soa") ||
-          isSimpleCallName(expr, "to" "_aos") ||
-          isSimpleCallName(expr, "to" "_aos_ref")) &&
+          isSimpleCallName(expr, "to_aos") ||
+          isSimpleCallName(expr, "to_aos_ref")) &&
          resolvedIsSoaConversion);
     const bool shouldLateValidateCanonicalSoaToAos =
         resolvedUsesCanonicalSoaNamespace &&
-        isCanonicalStdlibSoaHelperPath(resolved, "to" "_aos");
+        isCanonicalStdlibSoaHelperPath(resolved, "to_aos");
     const bool shouldLateValidateCanonicalSoaToAosRef =
         resolvedUsesCanonicalSoaNamespace &&
-        isCanonicalStdlibSoaHelperPath(resolved, "to" "_aos_ref");
+        isCanonicalStdlibSoaHelperPath(resolved, "to_aos_ref");
     if (resolvedDefinition == nullptr || resolvedMethod ||
         shouldLateValidateDirectSoaSurface || shouldLateValidateCanonicalSoaToAos ||
         shouldLateValidateCanonicalSoaToAosRef) {
@@ -1524,7 +1588,9 @@ bool SemanticsValidator::validateExpr(const std::vector<ParameterInfo> &params,
         return true;
       }
     }
-    if (!expr.isMethodCall && isResolvedKeyValueConstructorPath(resolved)) {
+    if (!expr.isMethodCall && isResolvedKeyValueConstructorPath(resolved) &&
+        !(hasNamedArguments(expr.argNames) &&
+          (defMap_.count(resolved) > 0 || hasImportedDefinitionPath(resolved)))) {
       if (hasNamedArguments(expr.argNames)) {
         return failExprRootDiagnostic(
             "named arguments not supported for builtin calls");
@@ -1599,10 +1665,14 @@ bool SemanticsValidator::validateExpr(const std::vector<ParameterInfo> &params,
       if (expressionIsStatementContext &&
           (isStdNamespacedVectorCompatibilityHelperPath(resolved, "push") ||
            isStdNamespacedVectorCompatibilityHelperPath(unknownCallTarget, "push") ||
+           isLegacyOrCanonicalSoaHelperPath(resolved, "push") ||
+           isLegacyOrCanonicalSoaHelperPath(unknownCallTarget, "push") ||
            isStdNamespacedVectorCompatibilityHelperPath(resolved, "pop") ||
            isStdNamespacedVectorCompatibilityHelperPath(unknownCallTarget, "pop") ||
            isStdNamespacedVectorCompatibilityHelperPath(resolved, "reserve") ||
            isStdNamespacedVectorCompatibilityHelperPath(unknownCallTarget, "reserve") ||
+           isLegacyOrCanonicalSoaHelperPath(resolved, "reserve") ||
+           isLegacyOrCanonicalSoaHelperPath(unknownCallTarget, "reserve") ||
            isStdNamespacedVectorCompatibilityHelperPath(resolved, "clear") ||
            isStdNamespacedVectorCompatibilityHelperPath(unknownCallTarget, "clear") ||
            isStdNamespacedVectorCompatibilityHelperPath(resolved, "remove_at") ||

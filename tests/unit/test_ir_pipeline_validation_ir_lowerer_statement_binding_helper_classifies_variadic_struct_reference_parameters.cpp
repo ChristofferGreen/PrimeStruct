@@ -5,7 +5,7 @@ TEST_SUITE_BEGIN("primestruct.ir.pipeline.validation");
 namespace {
 
 constexpr const char *kExperimentalSoaVectorStructTypePrefix =
-    "/std/collections/experimental_soa_vector/SoaVector__";
+    "/std/collections/soa/SoaVector__";
 const std::string kSpecializedExperimentalSoaVectorStructType =
     std::string(kExperimentalSoaVectorStructTypePrefix) + "specialized";
 
@@ -414,7 +414,7 @@ TEST_CASE("ir lowerer statement binding helper classifies variadic borrowed impo
   CHECK(info.referenceToVector);
   CHECK(info.isSoaVector);
   CHECK(info.structTypeName.rfind(
-            "/std/collections/experimental_soa_vector/SoaVector__", 0) == 0);
+            "/std/collections/soa/SoaVector__", 0) == 0);
   CHECK(info.valueKind == primec::ir_lowerer::LocalInfo::ValueKind::Unknown);
 }
 
@@ -455,7 +455,7 @@ TEST_CASE("ir lowerer statement binding helper classifies variadic pointer impor
   CHECK(info.pointerToVector);
   CHECK(info.isSoaVector);
   CHECK(info.structTypeName.rfind(
-            "/std/collections/experimental_soa_vector/SoaVector__", 0) == 0);
+            "/std/collections/soa/SoaVector__", 0) == 0);
   CHECK(info.valueKind == primec::ir_lowerer::LocalInfo::ValueKind::Unknown);
 }
 
@@ -629,7 +629,7 @@ main() {
   CHECK(info.isSoaVector);
   CHECK(
       info.structTypeName.rfind(
-          "/std/collections/experimental_soa_vector/SoaVector__", 0) == 0);
+          "/std/collections/soa/SoaVector__", 0) == 0);
 }
 
 TEST_CASE("ir lowerer statement binding helper uses semantic-product args-pack binding types") {
@@ -857,7 +857,7 @@ TEST_CASE("ir lowerer statement binding helper preserves inferred borrowed soa_v
   CHECK(info.referenceToVector);
   CHECK(info.isSoaVector);
   CHECK(info.structTypeName.rfind(
-            "/std/collections/experimental_soa_vector/SoaVector__", 0) == 0);
+            "/std/collections/soa/SoaVector__", 0) == 0);
   CHECK(info.valueKind == primec::ir_lowerer::LocalInfo::ValueKind::Unknown);
 }
 
@@ -950,7 +950,7 @@ TEST_CASE("ir lowerer statement binding helper classifies explicit soa_vector lo
 
   CHECK(info.kind == primec::ir_lowerer::LocalInfo::Kind::Vector);
   CHECK(info.structTypeName.rfind(
-            "/std/collections/experimental_soa_vector/SoaVector__", 0) == 0);
+            "/std/collections/soa/SoaVector__", 0) == 0);
   CHECK(info.valueKind == primec::ir_lowerer::LocalInfo::ValueKind::Unknown);
 }
 
@@ -1018,7 +1018,7 @@ TEST_CASE(
   CHECK(info.kind == primec::ir_lowerer::LocalInfo::Kind::Vector);
   CHECK(info.isSoaVector);
   CHECK(info.structTypeName.rfind(
-            "/std/collections/experimental_soa_vector/SoaVector__", 0) == 0);
+            "/std/collections/soa/SoaVector__", 0) == 0);
 }
 
 TEST_CASE(
@@ -1085,7 +1085,7 @@ TEST_CASE(
   CHECK(info.kind == primec::ir_lowerer::LocalInfo::Kind::Vector);
   CHECK(info.isSoaVector);
   CHECK(info.structTypeName.rfind(
-            "/std/collections/experimental_soa_vector/SoaVector__", 0) == 0);
+            "/std/collections/soa/SoaVector__", 0) == 0);
 }
 
 TEST_CASE(
@@ -1143,7 +1143,7 @@ main() {
   CHECK(info.referenceToVector);
   CHECK(info.isSoaVector);
   CHECK(info.structTypeName.rfind(
-            "/std/collections/experimental_soa_vector/SoaVector__", 0) == 0);
+            "/std/collections/soa/SoaVector__", 0) == 0);
 }
 
 TEST_CASE(
@@ -1272,7 +1272,7 @@ main([array<string>] args) {
       {},
       [&](const primec::Expr &expr) -> const primec::Definition * {
         if (!expr.name.empty() &&
-            expr.name.rfind("/std/collections/experimental_vector/Vector__", 0) == 0) {
+            expr.name.rfind("/std/collections/vector/Vector__", 0) == 0) {
           return findDefinitionByPath(program, expr.name);
         }
         return nullptr;
@@ -1342,7 +1342,7 @@ main() {
   CHECK(info.kind == primec::ir_lowerer::LocalInfo::Kind::Vector);
   CHECK(info.valueKind == primec::ir_lowerer::LocalInfo::ValueKind::Int32);
   CHECK(info.structTypeName.rfind(
-            "/std/collections/experimental_vector/Vector__", 0) == 0);
+            "/std/collections/vector/Vector__", 0) == 0);
 }
 
 TEST_CASE("ir lowerer statement binding helper leaves explicit bare struct locals unresolved") {

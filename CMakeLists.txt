@@ -340,6 +340,7 @@ set(PRIMESTRUCT_IR_SOURCES
   src/ir_lowerer/IrLowererOperatorMemoryPointerHelpers.cpp
   src/ir_lowerer/IrLowererOperatorPowAbsSignHelpers.cpp
   src/ir_lowerer/IrLowererOperatorSaturateRoundingRootsHelpers.cpp
+  src/ir_lowerer/IrLowererRequirementContractHelpers.cpp
   src/ir_lowerer/IrLowererReturnInferenceHelpers.cpp
   src/ir_lowerer/IrLowererResultMetadataHelpers.cpp
   src/ir_lowerer/IrLowererResultHelpers.cpp

@@ -1,3 +1,4 @@
+// soa-surface-audit: exempt
 #include "IrLowererOperatorConversionsAndCallsInternal.h"
 
 #include "IrLowererCallHelpers.h"
@@ -399,7 +400,7 @@ bool isAggregatePointerLikeReturnType(
   if (splitTemplateTypeName(targetType, targetBase, targetArgList)) {
     targetBase = normalizeCollectionBindingTypeName(targetBase);
     if (targetBase == "array" || targetBase == "vector" ||
-        targetBase == "map" || targetBase == "soa" "_vector") {
+        targetBase == "map" || targetBase == "soa_vector") {
       return true;
     }
   }

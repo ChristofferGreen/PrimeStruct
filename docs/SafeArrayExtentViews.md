@@ -1,10 +1,14 @@
 # Safe Array Extents And Views
 
-Status: design note, not yet implemented. The `require<...>` /
+Status: design note, partially implemented. The `require<...>` /
 `require(...)` phase split and unified capability view model in this note have
 been promoted into the normative language direction in `docs/PrimeStruct.md`;
 the remaining safe-array extent and view implementation work still needs its
-own leaves.
+own leaves. The first contract-form `require(...)` runtime slice is
+implemented: value comparisons over integer parameters and
+`count(parameter)` for array/vector/string parameters lower to a
+deterministic call-boundary precondition check when they cannot be proven at
+compile time. Parser support for `require<...>` is still pending.
 
 This note records the current PrimeStruct design direction after reviewing John
 Nagle's "Safe arrays and pointers for C through compatible additions to the

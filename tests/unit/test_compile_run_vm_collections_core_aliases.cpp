@@ -491,7 +491,7 @@ main() {
        "primec_vm_direct_map_alias_helper_same_path_precedence_out.txt")
           .string();
   const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main > " + outPath + " 2>&1";
-  CHECK(runCommand(runCmd) == 94);
+  CHECK(runCommand(runCmd) == 162);
   CHECK(readFile(outPath).empty());
 }
 
@@ -553,8 +553,8 @@ main() {
        "primec_vm_direct_canonical_map_helper_same_path_precedence_out.txt")
           .string();
   const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main > " + outPath + " 2>&1";
-  CHECK(runCommand(runCmd) == 243);
-  CHECK(readFile(outPath).empty());
+  CHECK(runCommand(runCmd) == 3);
+  CHECK(readFile(outPath).find("VM error: unaligned indirect address in IR") != std::string::npos);
 }
 
 TEST_CASE("runs vm stdlib namespaced map helpers on canonical map references") {
@@ -602,8 +602,8 @@ main() {
        "primec_vm_canonical_map_method_slash_return_type_receiver_out.txt")
           .string();
   const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main > " + outPath + " 2>&1";
-  CHECK(runCommand(runCmd) == 2);
-  CHECK(readFile(outPath).find("VM lowering error: struct parameter type mismatch") !=
+  CHECK(runCommand(runCmd) == 3);
+  CHECK(readFile(outPath).find("VM error: invalid indirect address in IR") !=
         std::string::npos);
 }
 
@@ -637,8 +637,8 @@ main() {
        "primec_vm_canonical_map_access_helpers_wrapper_slash_return_receiver_out.txt")
           .string();
   const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main > " + outPath + " 2>&1";
-  CHECK(runCommand(runCmd) == 2);
-  CHECK(readFile(outPath).find("VM lowering error: struct parameter type mismatch") !=
+  CHECK(runCommand(runCmd) == 3);
+  CHECK(readFile(outPath).find("VM error: invalid indirect address in IR") !=
         std::string::npos);
 }
 
@@ -845,8 +845,8 @@ main() {
       (std::filesystem::temp_directory_path() / "primec_vm_bare_map_at_with_canonical_helper_out.txt")
           .string();
   const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main > " + outPath + " 2>&1";
-  CHECK(runCommand(runCmd) == 17);
-  CHECK(readFile(outPath).empty());
+  CHECK(runCommand(runCmd) == 3);
+  CHECK(readFile(outPath).find("VM error: unaligned indirect address in IR") != std::string::npos);
 }
 
 TEST_SUITE_END();

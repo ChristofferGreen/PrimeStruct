@@ -11,6 +11,7 @@
 #include <optional>
 #include <string_view>
 #include <vector>
+#include "primec/StdlibCollectionPaths.h"
 
 namespace primec::ir_lowerer {
 
@@ -392,8 +393,8 @@ bool isQueryOwnedBuiltinCountTargetMatch(std::string_view queryCallName,
 bool isInternalSoaStorageQueryTargetMatch(std::string_view queryCallName,
                                           std::string_view queryResolvedPath,
                                           std::string_view publishedTargetPath) {
-  const std::string_view internalSoaStoragePrefix =
-      "/std/collections/internal_soa_storage/";
+  const std::string internalSoaStoragePrefix =
+      collection_paths::modulePrefix(collection_paths::kInternalSoaStorageFolder);
   return (queryCallName == "storage" || queryCallName == "field_count" ||
           queryCallName == "field_capacity" || queryCallName == "set_field_count" ||
           queryCallName == "set_field_capacity") &&
@@ -544,6 +545,10 @@ bool validateSemanticProductResultMetadataCompleteness(const SemanticProgram *se
                                                  resolvedPath,
                                                  publishedTargetPath);
       }
+    }
+    if (!queryTargetMatchesPublishedTarget) {
+      error = "stale semantic-product query fact: " + queryCallName;
+      return false;
     }
     if (!validateInternedSemanticTextMetadata(*semanticProgram,
                                               queryFact->queryTypeTextId,

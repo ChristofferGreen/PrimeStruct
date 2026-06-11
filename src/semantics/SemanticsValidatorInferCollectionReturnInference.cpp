@@ -1,3 +1,4 @@
+// soa-surface-audit: exempt
 #include "SemanticsValidator.h"
 
 #include <algorithm>
@@ -28,7 +29,7 @@ bool extractBuiltinSoaVectorElementTypeFromTypeTextForQueryInference(
     return false;
   }
   base = normalizeBindingTypeName(base);
-  if ((base == "soa" "_vector" || isExperimentalSoaVectorTypePath(base)) &&
+  if ((base == "soa_vector" || isExperimentalSoaVectorTypePath(base)) &&
       !argText.empty()) {
     std::vector<std::string> args;
     if (!splitTopLevelTemplateArgs(argText, args) || args.size() != 1) {
@@ -46,7 +47,7 @@ bool extractBuiltinSoaVectorElementTypeFromTypeTextForQueryInference(
     return false;
   }
   wrappedBase = normalizeBindingTypeName(wrappedBase);
-  if ((wrappedBase != "soa" "_vector" && !isExperimentalSoaVectorTypePath(wrappedBase)) ||
+  if ((wrappedBase != "soa_vector" && !isExperimentalSoaVectorTypePath(wrappedBase)) ||
       wrappedArgText.empty()) {
     return false;
   }
@@ -114,7 +115,7 @@ bool SemanticsValidator::inferDefinitionReturnBinding(const Definition &def, Bin
     }
     if (base == "Pointer" || base == "Reference" || base == "Result" ||
         base == "Buffer" || base == "uninitialized" || base == "array" ||
-        base == "vector" || base == "soa" "_vector" || base == "Task" ||
+        base == "vector" || base == "soa_vector" || base == "Task" ||
         isKeyValueCollectionTypeName(base) ||
         base == "Vector" ||
         isLegacyExperimentalVectorCompatibilityPath("/" + base) ||
@@ -359,25 +360,25 @@ bool SemanticsValidator::inferQueryExprTypeText(const Expr &expr,
     }
     const std::string resolvedCandidate = resolveCalleePath(candidate);
     const bool isBareToAosCall =
-        isSimpleCallName(candidate, "to" "_aos") ||
-        isSimpleCallName(candidate, "to" "_aos_ref");
+        isSimpleCallName(candidate, "to_aos") ||
+        isSimpleCallName(candidate, "to_aos_ref");
     const bool isRootToAosDirectCall =
-        resolvedCandidate == "/to" "_aos" ||
-        resolvedCandidate == "/to" "_aos_ref";
+        resolvedCandidate == "/to_aos" ||
+        resolvedCandidate == "/to_aos_ref";
     const bool isRootToAosMethodCall =
         candidate.isMethodCall &&
-        (candidate.name == "to" "_aos" || candidate.name == "to" "_aos_ref" ||
-         candidate.name == "/to" "_aos" || candidate.name == "/to" "_aos_ref");
+        (candidate.name == "to_aos" || candidate.name == "to_aos_ref" ||
+         candidate.name == "/to_aos" || candidate.name == "/to_aos_ref");
     if (!isBareToAosCall && !isRootToAosDirectCall && !isRootToAosMethodCall) {
       return false;
     }
     const std::string samePathHelper =
-        (resolvedCandidate == "/to" "_aos_ref" ||
-         isSimpleCallName(candidate, "to" "_aos_ref") ||
-         candidate.name == "to" "_aos_ref" ||
-         candidate.name == "/to" "_aos_ref")
-            ? "/to" "_aos_ref"
-            : "/to" "_aos";
+        (resolvedCandidate == "/to_aos_ref" ||
+         isSimpleCallName(candidate, "to_aos_ref") ||
+         candidate.name == "to_aos_ref" ||
+         candidate.name == "/to_aos_ref")
+            ? "/to_aos_ref"
+            : "/to_aos";
     if (hasVisibleDefinitionPathForCurrentImports(samePathHelper)) {
       return false;
     }
@@ -617,25 +618,25 @@ bool SemanticsValidator::inferQueryExprTypeText(const Expr &expr,
         return false;
       }
       const bool isBareToAosCall =
-          isSimpleCallName(candidate, "to" "_aos") ||
-          isSimpleCallName(candidate, "to" "_aos_ref");
+          isSimpleCallName(candidate, "to_aos") ||
+          isSimpleCallName(candidate, "to_aos_ref");
       const bool isRootToAosDirectCall =
-          resolvedCandidate == "/to" "_aos" ||
-          resolvedCandidate == "/to" "_aos_ref";
+          resolvedCandidate == "/to_aos" ||
+          resolvedCandidate == "/to_aos_ref";
       const bool isRootToAosMethodCall =
           candidate.isMethodCall &&
-          (candidate.name == "to" "_aos" || candidate.name == "to" "_aos_ref" ||
-           candidate.name == "/to" "_aos" || candidate.name == "/to" "_aos_ref");
+          (candidate.name == "to_aos" || candidate.name == "to_aos_ref" ||
+           candidate.name == "/to_aos" || candidate.name == "/to_aos_ref");
       if (!isBareToAosCall && !isRootToAosDirectCall && !isRootToAosMethodCall) {
         return false;
       }
       const std::string samePathHelper =
-          (resolvedCandidate == "/to" "_aos_ref" ||
-           isSimpleCallName(candidate, "to" "_aos_ref") ||
-           candidate.name == "to" "_aos_ref" ||
-           candidate.name == "/to" "_aos_ref")
-              ? "/to" "_aos_ref"
-              : "/to" "_aos";
+          (resolvedCandidate == "/to_aos_ref" ||
+           isSimpleCallName(candidate, "to_aos_ref") ||
+           candidate.name == "to_aos_ref" ||
+           candidate.name == "/to_aos_ref")
+              ? "/to_aos_ref"
+              : "/to_aos";
       if (hasVisibleDefinitionPathForCurrentImports(samePathHelper)) {
         return false;
       }
@@ -694,7 +695,7 @@ bool SemanticsValidator::inferQueryExprTypeText(const Expr &expr,
             (candidate.isMethodCall && candidate.name == *soaAccessHelper) ||
             isLegacyOrCanonicalSoaHelperPath(resolvedSoaCanonical,
                                              *soaAccessHelper)));
-      if (!(hasVisibleDefinitionPathForCurrentImports("/soa" "_vector/" +
+      if (!(hasVisibleDefinitionPathForCurrentImports("/soa_vector/" +
                                                       *soaAccessHelper) &&
             oldSurfaceCallShape)) {
         std::string elemType;
@@ -936,7 +937,7 @@ bool SemanticsValidator::inferQueryExprTypeText(const Expr &expr,
       if (preferResolvedCollectionDefinition) {
         // Imported stdlib collection constructors should infer from their declared return type
         // instead of collapsing to the legacy builtin collection surface.
-      } else if ((collection == "array" || collection == "vector" || collection == "soa" "_vector") &&
+      } else if ((collection == "array" || collection == "vector" || collection == "soa_vector") &&
                  candidate.templateArgs.size() == 1) {
         currentTypeTextOut = collection + "<" + candidate.templateArgs.front() + ">";
         return true;
@@ -971,25 +972,25 @@ bool SemanticsValidator::inferQueryExprTypeText(const Expr &expr,
           return helperName == "count" || helperName == "count_ref" ||
                  helperName == "get" || helperName == "get_ref" ||
                  helperName == "ref" || helperName == "ref_ref" ||
-                 helperName == "to" "_aos" || helperName == "to" "_aos_ref" ||
+                 helperName == "to_aos" || helperName == "to_aos_ref" ||
                  helperName == "push" || helperName == "reserve";
         };
-        if ((normalizedPrefix == "soa" "_vector" ||
-             normalizedPrefix == "std/collections/" "soa" "_vector") &&
+        if ((normalizedPrefix == "soa_vector" ||
+             normalizedPrefix == "std/collections/soa_vector") &&
             isSupportedSoaHelper(normalizedName)) {
           return normalizedName;
         }
-        if (normalizedName.rfind("soa" "_vector/", 0) == 0) {
+        if (normalizedName.rfind("soa_vector/", 0) == 0) {
           const std::string helperName =
-              normalizedName.substr(std::string("soa" "_vector/").size());
+              normalizedName.substr(std::string("soa_vector/").size());
           if (isSupportedSoaHelper(helperName)) {
             return helperName;
           }
         }
-        if (normalizedName.rfind("std/collections/" "soa" "_vector/", 0) == 0) {
+        if (normalizedName.rfind("std/collections/soa_vector/", 0) == 0) {
           const std::string helperName =
               normalizedName.substr(
-                  std::string("std/collections/" "soa" "_vector/").size());
+                  std::string("std/collections/soa_vector/").size());
           if (isSupportedSoaHelper(helperName)) {
             return helperName;
           }
@@ -999,7 +1000,7 @@ bool SemanticsValidator::inferQueryExprTypeText(const Expr &expr,
       if (const std::string helperName = explicitLegacyOrCanonicalSoaHelperName();
           !helperName.empty()) {
         return preferredSoaHelperTargetForCollectionType(helperName,
-                                                         "/soa" "_vector");
+                                                         "/soa_vector");
       }
       return {};
     };

@@ -56,6 +56,10 @@ bool SemanticsValidator::validateRequirementPredicates() {
           out << "requirement predicate not satisfied: " << predicateName
               << '\n';
           out << "category: unsatisfied requirement predicate\n";
+        } else if (fact.evaluationOutcome == "runtime_contract") {
+          out << "runtime contract predicate not allowed here: "
+              << predicateName << '\n';
+          out << "category: runtime contract in compile-time-only context\n";
         } else if (fact.evaluationOutcome == "denied_effect") {
           out << "compile-time effect opt-in rejected: " << predicateName
               << '\n';
@@ -87,6 +91,10 @@ bool SemanticsValidator::validateRequirementPredicates() {
         if (unsatisfied) {
           out << "hint: pass values or types that satisfy the require(...) "
                  "predicate, or relax the constrained definition.";
+        } else if (fact.evaluationOutcome == "runtime_contract") {
+          out << "hint: restrict<...> predicates must be compile-time "
+                 "evaluable; use require(...) for runtime-checkable "
+                 "contracts.";
         } else if (fact.evaluationOutcome == "denied_effect") {
           out << "hint: add effects<compiletime>(...) for the required "
                  "compile-time host effect, or make the predicate pure.";
@@ -224,6 +232,10 @@ bool SemanticsValidator::validateRequirementPredicates() {
           continue;
         }
         if (fact.evaluationOutcome == "satisfied") {
+          continue;
+        }
+        if (fact.evaluationOutcome == "runtime_contract" &&
+            transform.name == "require") {
           continue;
         }
         return failDefinitionDiagnostic(

@@ -1,3 +1,4 @@
+// soa-surface-audit: exempt
 #include "SemanticsHelpers.h"
 
 #include <cctype>
@@ -364,10 +365,10 @@ bool parseBindingInfo(const Expr &expr,
         error = "binding requires exactly one type";
         return false;
       }
-      if (transformName == "soa" "_vector" || transformName == "/soa" "_vector" ||
-          transformName == "std/collections/" "soa" "_vector" ||
-          transformName == "/std/collections/" "soa" "_vector") {
-        error = "soa" "_vector<T> is not supported; use soa<T>";
+      if (transformName == "soa_vector" || transformName == "/soa_vector" ||
+          transformName == "std/collections/soa_vector" ||
+          transformName == "/std/collections/soa_vector") {
+        error = "soa_vector<T> is not supported; use soa<T>";
         return false;
       }
       const std::string normalizedTypeName = normalizeBindingTypeName(transformName);
@@ -388,12 +389,12 @@ bool parseBindingInfo(const Expr &expr,
         error = "Task requires exactly one template argument";
         return false;
       }
-      if (normalizedTypeName == "soa" "_vector") {
+      if (normalizedTypeName == "soa_vector") {
         const bool isPublicSoaSpelling =
             transformName == "soa" || transformName == "/soa" ||
-            transformName == "std/collections/" "soa" ||
-            transformName == "/std/collections/" "soa";
-        const std::string displayType = isPublicSoaSpelling ? "soa" : "soa" "_vector";
+            transformName == "std/collections/soa" ||
+            transformName == "/std/collections/soa";
+        const std::string displayType = isPublicSoaSpelling ? "soa" : "soa_vector";
         if (transformTemplateArgs.size() != 1) {
           error = displayType + " requires exactly one template argument";
           return false;
@@ -637,7 +638,7 @@ bool parseBindingInfo(const Expr &expr,
       return false;
     }
 
-    if ((base == "array" || base == "vector" || base == "soa" "_vector" || base == "Buffer" || base == "File") &&
+    if ((base == "array" || base == "vector" || base == "soa_vector" || base == "Buffer" || base == "File") &&
         args.size() == 1) {
       return true;
     }

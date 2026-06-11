@@ -1,3 +1,4 @@
+// soa-surface-audit: exempt
 #include "SemanticsValidator.h"
 
 #include "StdlibCollectionSurfaceHelpers.h"
@@ -165,12 +166,12 @@ std::string SemanticsValidator::inferMethodCollectionTypePathFromTypeText(
   if (!splitTopLevelTemplateArgs(argText, args)) {
     return {};
   }
-  if ((base == "array" || base == "vector" || base == "soa" "_vector" || base == "Buffer") &&
+  if ((base == "array" || base == "vector" || base == "soa_vector" || base == "Buffer") &&
       args.size() == 1) {
     return "/" + base;
   }
   if (isExperimentalSoaVectorTypePath(base) && args.size() == 1) {
-    return "/soa" "_vector";
+    return "/soa_vector";
   }
   if (isKeyValueCollectionTypeName(base) && args.size() == 2) {
     return "/map";

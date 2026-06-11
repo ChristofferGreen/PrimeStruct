@@ -735,7 +735,7 @@ TEST_CASE("ir lowerer inline param helper materializes direct pointer imported S
   leftInfo.pointerToVector = true;
   leftInfo.isSoaVector = true;
   leftInfo.structTypeName =
-      "/std/collections/experimental_soa_vector/SoaVector__Particle";
+      "/std/collections/soa/SoaVector__Particle";
   callerLocals.emplace("left", leftInfo);
 
   primec::ir_lowerer::LocalInfo rightInfo = leftInfo;
@@ -763,7 +763,7 @@ TEST_CASE("ir lowerer inline param helper materializes direct pointer imported S
         infoOut.pointerToVector = true;
         infoOut.isSoaVector = true;
         infoOut.structTypeName =
-            "/std/collections/experimental_soa_vector/SoaVector__Particle";
+            "/std/collections/soa/SoaVector__Particle";
         return true;
       },
       [](const primec::Expr &) { return false; },
@@ -798,7 +798,7 @@ TEST_CASE("ir lowerer inline param helper materializes direct pointer imported S
   CHECK(calleeLocals.at("values").isSoaVector);
   CHECK(calleeLocals.at("values").argsPackElementCount == 2);
   CHECK(calleeLocals.at("values").structTypeName ==
-        "/std/collections/experimental_soa_vector/SoaVector__Particle");
+        "/std/collections/soa/SoaVector__Particle");
   REQUIRE(instructions.size() == 8u);
   CHECK(instructions[0].op == primec::IrOpcode::PushI32);
   CHECK(instructions[0].imm == 2u);

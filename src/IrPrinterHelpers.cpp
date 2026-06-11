@@ -3,6 +3,7 @@
 #include <cctype>
 #include <sstream>
 #include <string_view>
+#include "primec/StdlibCollectionPaths.h"
 
 namespace primec::ir_printer {
 
@@ -380,12 +381,9 @@ const char *returnTypeName(ReturnKind kind) {
 std::string experimentalCollectionTypePath(std::string_view collectionName,
                                            std::string_view typeName,
                                            bool leadingSlash = false) {
-  std::string path = leadingSlash ? "/" : "";
-  path += "std/collections/experimental_";
-  path += std::string(collectionName);
-  path += "/";
-  path += std::string(typeName);
-  return path;
+  const std::string folder = collection_paths::typeIdentityFolder(collectionName);
+  return leadingSlash ? collection_paths::memberPath(folder, typeName)
+                      : collection_paths::memberPathBare(folder, typeName);
 }
 
 bool isExperimentalCollectionTypeBase(const std::string &base,

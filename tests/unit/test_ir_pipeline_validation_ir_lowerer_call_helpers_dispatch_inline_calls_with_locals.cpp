@@ -891,7 +891,7 @@ TEST_CASE("ir lowerer inline dispatch defers experimental vector count methods")
   experimentalVectorInfo.valueKind =
       primec::ir_lowerer::LocalInfo::ValueKind::Int32;
   experimentalVectorInfo.structTypeName =
-      "/std/collections/experimental_vector/Vector__t25a78a513414c3bf";
+      "/std/collections/vector/Vector__t25a78a513414c3bf";
   locals.emplace("values", experimentalVectorInfo);
 
   primec::Expr receiver;
@@ -942,7 +942,7 @@ TEST_CASE("ir lowerer inline dispatch defers experimental vector capacity method
   experimentalVectorInfo.valueKind =
       primec::ir_lowerer::LocalInfo::ValueKind::Int32;
   experimentalVectorInfo.structTypeName =
-      "/std/collections/experimental_vector/Vector__t25a78a513414c3bf";
+      "/std/collections/vector/Vector__t25a78a513414c3bf";
   locals.emplace("values", experimentalVectorInfo);
 
   primec::Expr receiver;

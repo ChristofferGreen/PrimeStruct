@@ -164,11 +164,11 @@ TEST_CASE("ir lowerer struct type helpers infer name-expression struct paths") {
 
   nameExpr.name = "values";
   CHECK(primec::ir_lowerer::inferStructPathFromNameExpr(nameExpr, locals)
-            .rfind("/std/collections/experimental_vector/Vector__", 0) == 0);
+            .rfind("/std/collections/vector/Vector__", 0) == 0);
 
   nameExpr.name = "valuesRef";
   CHECK(primec::ir_lowerer::inferStructPathFromNameExpr(nameExpr, locals)
-            .rfind("/std/collections/experimental_vector/Vector__", 0) == 0);
+            .rfind("/std/collections/vector/Vector__", 0) == 0);
 
   nameExpr.name = "file";
   CHECK(primec::ir_lowerer::inferStructPathFromNameExpr(nameExpr, locals).empty());

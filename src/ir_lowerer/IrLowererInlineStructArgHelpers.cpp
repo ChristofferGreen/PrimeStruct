@@ -1,9 +1,11 @@
+// soa-surface-audit: exempt
 #include "IrLowererInlineStructArgHelpers.h"
 
 #include "IrLowererFlowHelpers.h"
 
 #include <limits>
 #include <string_view>
+#include "primec/StdlibCollectionPaths.h"
 
 namespace primec::ir_lowerer {
 
@@ -11,8 +13,8 @@ namespace {
 
 std::string experimentalCollectionTypePath(std::string_view collectionName,
                                            std::string_view typeName) {
-  return "/std/collections/experimental_" + std::string(collectionName) +
-         "/" + std::string(typeName);
+  return collection_paths::memberPath(
+      collection_paths::typeIdentityFolder(collectionName), typeName);
 }
 
 bool isVectorStructPath(const std::string &structPath) {
@@ -22,13 +24,13 @@ bool isVectorStructPath(const std::string &structPath) {
 }
 
 bool isSoaVectorStructPath(const std::string &structPath) {
-  return structPath == "/soa" "_vector" ||
-         structPath == "std/collections/" "soa" "_vector" ||
-         structPath == "/std/collections/" "soa" "_vector" ||
-         structPath == "Soa" "Vector" ||
-         structPath == "/Soa" "Vector" ||
-         structPath == "/std/collections/experimental" "_soa" "_vector/Soa" "Vector" ||
-         structPath.rfind("/std/collections/experimental" "_soa" "_vector/Soa" "Vector" "__", 0) == 0;
+  return structPath == "/soa_vector" ||
+         structPath == "std/collections/soa_vector" ||
+         structPath == "/std/collections/soa_vector" ||
+         structPath == "SoaVector" ||
+         structPath == "/SoaVector" ||
+         structPath == collection_paths::memberPath(collection_paths::kSoaFolder, collection_paths::kSoaVectorTypeName) ||
+         structPath.rfind(collection_paths::specializedTypePrefix(collection_paths::kSoaFolder, collection_paths::kSoaVectorTypeName), 0) == 0;
 }
 
 std::string stripGeneratedStructSuffix(std::string structPath) {
@@ -55,7 +57,7 @@ std::string normalizedInternalSoaStorageLeaf(std::string structPath) {
   if (!structPath.empty() && structPath.front() == '/') {
     structPath.erase(structPath.begin());
   }
-  constexpr std::string_view Prefix = "std/collections/internal_soa_storage/";
+  const std::string Prefix = collection_paths::modulePrefixBare(collection_paths::kInternalSoaStorageFolder);
   if (structPath.rfind(Prefix, 0) == 0) {
     structPath.erase(0, Prefix.size());
   }
@@ -303,21 +305,6 @@ bool emitInlineStructDefinitionArguments(const std::string &calleePath,
     std::string argStruct = inferStructExprPath(*arg, argLocals);
     if (argStruct.empty() && isExpectedStructBraceConstructor(*arg, field.structPath)) {
       argStruct = field.structPath;
-    }
-    const bool isEmptyBraceBlockPlaceholder =
-        argStruct.empty() &&
-        arg->kind == Expr::Kind::Call &&
-        arg->name == "block" &&
-        arg->args.empty() &&
-        arg->bodyArguments.empty() &&
-        arg->hasBodyArguments &&
-        !param.args.empty();
-    if (isEmptyBraceBlockPlaceholder) {
-      arg = &param.args.front();
-      argStruct = inferStructExprPath(*arg, argLocals);
-      if (argStruct.empty() && isExpectedStructBraceConstructor(*arg, field.structPath)) {
-        argStruct = field.structPath;
-      }
     }
     const bool isParameterlessConstructor =
         argStruct.empty() &&

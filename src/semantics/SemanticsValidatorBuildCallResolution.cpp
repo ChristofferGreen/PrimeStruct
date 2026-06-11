@@ -142,6 +142,43 @@ std::string SemanticsValidator::resolveCalleePath(const Expr &expr) const {
     (void)inserted;
     return std::string(insertIt->second);
   };
+  auto equalsIgnoreAsciiCase = [](std::string_view left,
+                                  std::string_view right) {
+    if (left.size() != right.size()) {
+      return false;
+    }
+    for (size_t i = 0; i < left.size(); ++i) {
+      const auto leftChar = static_cast<unsigned char>(left[i]);
+      const auto rightChar = static_cast<unsigned char>(right[i]);
+      if (std::tolower(leftChar) != std::tolower(rightChar)) {
+        return false;
+      }
+    }
+    return true;
+  };
+  auto caseInsensitiveRootStructPathForName =
+      [&](std::string_view name) -> std::string {
+    std::string match;
+    for (const std::string &structPath : structNames_) {
+      if (structPath.empty() || structPath.front() != '/') {
+        continue;
+      }
+      const size_t nextSlash = structPath.find('/', 1);
+      if (nextSlash != std::string::npos) {
+        continue;
+      }
+      const std::string_view leaf(structPath.data() + 1,
+                                  structPath.size() - 1);
+      if (!equalsIgnoreAsciiCase(leaf, name)) {
+        continue;
+      }
+      if (!match.empty() && match != structPath) {
+        return {};
+      }
+      match = structPath;
+    }
+    return match;
+  };
   auto normalizedPrefixPath = [&](std::string_view namespacePrefix) -> std::string {
     if (!hasScopedOwner) {
       std::string normalizedPrefix(namespacePrefix);
@@ -437,6 +474,15 @@ std::string SemanticsValidator::resolveCalleePath(const Expr &expr) const {
     return rewriteCanonicalCollectionConstructorPath(joinedPath(normalizedPrefix, expr.name));
   }
 
+  const std::string root = rootedPathForName(expr.name);
+  if (hasDefinitionFamilyPath(root)) {
+    return rewriteCanonicalCollectionConstructorPath(root);
+  }
+  if (const std::string caseInsensitiveRoot =
+          caseInsensitiveRootStructPathForName(expr.name);
+      !caseInsensitiveRoot.empty() && hasDefinitionFamilyPath(caseInsensitiveRoot)) {
+    return rewriteCanonicalCollectionConstructorPath(caseInsensitiveRoot);
+  }
   if (const std::string *importAlias = lookupScopedImportAlias(expr.name);
       importAlias != nullptr) {
     const std::string constructorAlias =
@@ -469,10 +515,6 @@ std::string SemanticsValidator::resolveCalleePath(const Expr &expr) const {
     }
   }
 
-  const std::string root = rootedPathForName(expr.name);
-  if (hasDefinitionFamilyPath(root)) {
-    return rewriteCanonicalCollectionConstructorPath(root);
-  }
   if (const std::string *importAlias = lookupScopedImportAlias(expr.name);
       importAlias != nullptr) {
     return rewriteCanonicalCollectionConstructorPath(*importAlias);

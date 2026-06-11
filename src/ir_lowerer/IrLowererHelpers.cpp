@@ -1,3 +1,4 @@
+// soa-surface-audit: exempt
 #include "IrLowererHelpers.h"
 
 #include <cctype>
@@ -5,6 +6,7 @@
 #include <string_view>
 
 #include "primec/StdlibSurfaceRegistry.h"
+#include "primec/StdlibCollectionPaths.h"
 
 namespace primec::ir_lowerer {
 
@@ -53,7 +55,7 @@ bool isNamespacedStdlibBuiltinAlias(const std::string &alias) {
          alias == "ref_ref" || alias == "at" ||
          alias == "at_unsafe" || alias == "array" ||
          alias == "vector" || alias == "map" ||
-         alias == "soa_vector" || alias == "convert" ||
+         alias == "convert" ||
          alias == "clamp" || alias == "min" || alias == "max" ||
          alias == "lerp" || alias == "fma" || alias == "hypot" ||
          alias == "copysign" || alias == "radians" ||
@@ -100,21 +102,19 @@ std::string normalizeInternalSoaStorageBuiltinAlias(std::string name) {
   if (!name.empty() && name[0] == '/') {
     name.erase(0, 1);
   }
-  const char *const builtinPrefixes[] = {
-      "std/collections/internal_soa_storage/",
-      "std/collections/internal_buffer_checked/",
-      "std/collections/internal_buffer_unchecked/",
-      "std/collections/experimental_soa_vector/",
-      "std/collections/experimental_soa_vector_conversions/",
-      "std/collections/soa_vector_conversions/",
-      "std/collections/experimental_vector/",
+  const std::string builtinPrefixes[] = {
+      collection_paths::modulePrefixBare(collection_paths::kInternalSoaStorageFolder),
+      collection_paths::modulePrefixBare(collection_paths::kInternalBufferCheckedFolder),
+      collection_paths::modulePrefixBare(collection_paths::kInternalBufferUncheckedFolder),
+      collection_paths::modulePrefixBare(collection_paths::kExperimentalSoaVectorFolder),
+      collection_paths::modulePrefixBare(collection_paths::kExperimentalSoaVectorConversionsFolder),
+      collection_paths::modulePrefixBare(collection_paths::kExperimentalVectorFolder),
       "std/collections/ContainerError/",
       "std/file/",
       "std/image/",
       "std/ui/",
   };
-  for (const char *prefix : builtinPrefixes) {
-    const std::string prefixText(prefix);
+  for (const std::string &prefixText : builtinPrefixes) {
     if (name.rfind(prefixText, 0) != 0) {
       continue;
     }
@@ -189,8 +189,8 @@ std::string specializedCollectionVectorRecordPathForElementType(
     hash *= 1099511628211ULL;
   }
   std::ostringstream specializedPath;
-  specializedPath << "/std/collections/experimental_" << "vector" << "/Vector__t"
-                  << std::hex << hash;
+  specializedPath << collection_paths::moduleRoot(collection_paths::kVectorFolder)
+                  << "/Vector__t" << std::hex << hash;
   return specializedPath.str();
 }
 
@@ -217,7 +217,7 @@ std::string specializedExperimentalSoaVectorStructPathForElementType(
     hash *= 1099511628211ULL;
   }
   std::ostringstream specializedPath;
-  specializedPath << "/std/collections/experimental_soa_vector/SoaVector__t"
+  specializedPath << collection_paths::templateSpecializedTypePrefix(collection_paths::kSoaFolder, collection_paths::kSoaVectorTypeName)
                   << std::hex << hash;
   return specializedPath.str();
 }

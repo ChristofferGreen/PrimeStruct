@@ -66,6 +66,9 @@ bool applyPass(const std::string &input,
 	      if (index + nameLen < input.size() && isTokenChar(input[index + nameLen])) {
 	        continue;
 	      }
+	      if (hasNonOperandKeywordBefore(index)) {
+	        continue;
+	      }
 	      size_t pos = index + nameLen;
 	      while (pos < input.size() && std::isspace(static_cast<unsigned char>(input[pos]))) {
 	        ++pos;

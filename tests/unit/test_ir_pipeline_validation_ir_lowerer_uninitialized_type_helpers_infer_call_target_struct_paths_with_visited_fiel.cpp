@@ -177,7 +177,7 @@ TEST_CASE("ir lowerer uninitialized type helpers infer wrapped experimental soa 
 
   CHECK(primec::ir_lowerer::inferStructReturnPathFromDefinition(
             helperDef, resolveStructTypeName, inferStructExprPath) ==
-        "/std/collections/experimental_soa_vector/SoaVector__pkg/Particle");
+        "/std/collections/soa/SoaVector__pkg/Particle");
 }
 
 TEST_CASE("ir lowerer uninitialized type helpers infer definition return paths by call target field index") {
@@ -522,7 +522,7 @@ TEST_CASE("ir lowerer uninitialized type helpers specialize explicit vector retu
   primec::ir_lowerer::LocalMap locals;
 
   const std::string inferredStructPath = inferStructExprPath(callExpr, locals);
-  CHECK(inferredStructPath.rfind("/std/collections/experimental_vector/Vector__", 0) == 0);
+  CHECK(inferredStructPath.rfind("/std/collections/vector/Vector__", 0) == 0);
 }
 
 TEST_CASE("ir lowerer uninitialized type helpers infer dereference expression struct paths") {
@@ -557,7 +557,7 @@ TEST_CASE("ir lowerer uninitialized type helpers infer dereference expression st
 
 TEST_CASE("ir lowerer uninitialized type helpers only infer namespaced internal SoA helper struct paths for location-style probes") {
   primec::Definition soaVectorDef;
-  soaVectorDef.fullPath = "/std/collections/experimental_soa_vector/SoaVector__tc123";
+  soaVectorDef.fullPath = "/std/collections/soa/SoaVector__tc123";
   soaVectorDef.namespacePrefix = "/std/collections/experimental_soa_vector";
   primec::Expr storageBinding;
   storageBinding.kind = primec::Expr::Kind::Name;
@@ -686,7 +686,7 @@ TEST_CASE(
             resolveExprPath,
             fieldIndex,
             resolveStructFieldSlot) ==
-        "/std/collections/experimental_soa_vector/SoaVector__Particle");
+        "/std/collections/soa/SoaVector__Particle");
 
   primec::Expr pickBorrowedExpr;
   pickBorrowedExpr.kind = primec::Expr::Kind::Call;
@@ -699,7 +699,7 @@ TEST_CASE(
             resolveExprPath,
             fieldIndex,
             resolveStructFieldSlot) ==
-        "/std/collections/experimental_soa_vector/SoaVector__Particle");
+        "/std/collections/soa/SoaVector__Particle");
 
   CHECK(primec::ir_lowerer::inferStructExprPathFromDefinitionMapByCallTargetWithFieldIndex(
             cloneValuesExpr,
@@ -709,7 +709,7 @@ TEST_CASE(
             resolveExprPathWithoutSlash,
             fieldIndex,
             resolveStructFieldSlot) ==
-        "/std/collections/experimental_soa_vector/SoaVector__Particle");
+        "/std/collections/soa/SoaVector__Particle");
 
   CHECK(primec::ir_lowerer::inferStructExprPathFromDefinitionMapByCallTargetWithFieldIndex(
             pickBorrowedExpr,
@@ -719,7 +719,7 @@ TEST_CASE(
             resolveExprPathWithoutSlash,
             fieldIndex,
             resolveStructFieldSlot) ==
-        "/std/collections/experimental_soa_vector/SoaVector__Particle");
+        "/std/collections/soa/SoaVector__Particle");
 }
 
 TEST_CASE("ir lowerer uninitialized type helpers find field template args") {

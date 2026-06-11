@@ -174,7 +174,7 @@ TEST_CASE("ir lowerer call helpers emit builtin array access") {
   primec::ir_lowerer::LocalInfo vectorInfo;
   vectorInfo.kind = primec::ir_lowerer::LocalInfo::Kind::Value;
   vectorInfo.valueKind = Kind::Int32;
-  vectorInfo.structTypeName = "/std/collections/experimental_vector/Vector__t25a78a513414c3bf";
+  vectorInfo.structTypeName = "/std/collections/vector/Vector__t25a78a513414c3bf";
   locals.clear();
   locals.emplace("v", vectorInfo);
   const auto vectorTargetInfo = primec::ir_lowerer::resolveArrayVectorAccessTargetInfo(
@@ -183,7 +183,7 @@ TEST_CASE("ir lowerer call helpers emit builtin array access") {
   CHECK(vectorTargetInfo.isArrayOrVectorTarget);
   CHECK(vectorTargetInfo.isVectorTarget);
   CHECK(vectorTargetInfo.structTypeName ==
-        "/std/collections/experimental_vector/Vector__t25a78a513414c3bf");
+        "/std/collections/vector/Vector__t25a78a513414c3bf");
   int arrayIndexOutOfBoundsCalls = 0;
   int nextLocal = 20;
   auto emitVectorAccessExpr = [&](const primec::Expr &expr, const primec::ir_lowerer::LocalMap &) {

@@ -1,3 +1,4 @@
+// soa-surface-audit: exempt
 #include "SemanticsValidator.h"
 
 #include "SemanticsValidatorInferCollectionCompatibilityInternal.h"
@@ -6,6 +7,7 @@
 #include <functional>
 #include <optional>
 #include <unordered_set>
+#include "primec/StdlibCollectionPaths.h"
 
 namespace primec::semantics {
 namespace {
@@ -33,9 +35,9 @@ bool isExperimentalSoaColumnBindingType(const BindingInfo &binding) {
     normalized.erase(normalized.begin());
   }
   return normalized == "SoaColumn" ||
-         normalized == "std/collections/internal_soa_storage/SoaColumn" ||
+         normalized == collection_paths::memberPathBare(collection_paths::kInternalSoaStorageFolder, collection_paths::kSoaColumnTypeName) ||
          normalized.rfind(
-             "std/collections/internal_soa_storage/SoaColumn__", 0) == 0;
+             collection_paths::specializedTypePrefixBare(collection_paths::kInternalSoaStorageFolder, collection_paths::kSoaColumnTypeName), 0) == 0;
 }
 
 std::string referenceRootForBorrowBinding(const std::string &bindingName, const BindingInfo &binding) {
@@ -464,20 +466,20 @@ bool SemanticsValidator::validateBindingStatement(const std::vector<ParameterInf
     const bool isRootToAosHelper =
         isSoaConversionSurfaceSpelling(normalizedCallPrefix,
                                        normalizedCallName) ||
-        isLegacyOrCanonicalSoaHelperPath(resolvedCallPath, "to" "_aos") ||
-        isLegacyOrCanonicalSoaHelperPath(resolvedCallPath, "to" "_aos_ref");
+        isLegacyOrCanonicalSoaHelperPath(resolvedCallPath, "to_aos") ||
+        isLegacyOrCanonicalSoaHelperPath(resolvedCallPath, "to_aos_ref");
     if (!isRootToAosHelper) {
       return false;
     }
     const bool isBorrowedToAosHelper =
-        isLegacyOrCanonicalSoaHelperPath(resolvedCallPath, "to" "_aos_ref");
+        isLegacyOrCanonicalSoaHelperPath(resolvedCallPath, "to_aos_ref");
     const std::string helperPath =
-        isBorrowedToAosHelper ? "/to" "_aos_ref" : "/to" "_aos";
+        isBorrowedToAosHelper ? "/to_aos_ref" : "/to_aos";
     const std::string canonicalHelperPath =
         isBorrowedToAosHelper
-            ? compatibilitySoaHelperTargetPath("to" "_aos_ref")
-            : compatibilitySoaHelperTargetPath("to" "_aos");
-    const std::string publicHelperPath = publicSoaHelperTargetPath("to" "_aos");
+            ? compatibilitySoaHelperTargetPath("to_aos_ref")
+            : compatibilitySoaHelperTargetPath("to_aos");
+    const std::string publicHelperPath = publicSoaHelperTargetPath("to_aos");
     auto hasExplicitSourceImportPath = [&](const std::string &path) {
       for (const auto &importPath : program_.sourceImports) {
         if (importPath == path) {

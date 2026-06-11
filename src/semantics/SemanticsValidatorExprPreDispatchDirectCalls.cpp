@@ -2,9 +2,9 @@
 #include "SemanticsValidatorInferCollectionCompatibilityInternal.h"
 
 #include <optional>
-#include <sstream>
 #include <string_view>
 #include <utility>
+#include <vector>
 
 namespace primec::semantics {
 namespace {
@@ -198,6 +198,32 @@ bool isPublishedMapConstructorExpr(const Expr &candidate) {
   const std::string memberName =
       slash == std::string::npos ? normalizedName : normalizedName.substr(slash + 1);
   return memberName == "map" || memberName.rfind("map__", 0) == 0;
+}
+
+std::vector<std::string> explicitMapConstructorTemplateArgs(const Expr &candidate) {
+  if (!candidate.templateArgs.empty()) {
+    return candidate.templateArgs;
+  }
+  auto parseSpelledTemplateArgs = [](const std::string &name) {
+    std::vector<std::string> parsed;
+    const size_t anglePos = name.find('<');
+    if (anglePos == std::string::npos) {
+      return parsed;
+    }
+    const size_t endAnglePos = name.rfind('>');
+    if (endAnglePos == std::string::npos || endAnglePos <= anglePos) {
+      return parsed;
+    }
+    const std::string templateArgText =
+        name.substr(anglePos + 1, endAnglePos - anglePos - 1);
+    (void)splitTopLevelTemplateArgs(templateArgText, parsed);
+    return parsed;
+  };
+  std::vector<std::string> parsed = parseSpelledTemplateArgs(candidate.name);
+  if (!parsed.empty()) {
+    return parsed;
+  }
+  return parseSpelledTemplateArgs(candidate.sourceName);
 }
 
 std::string removedKeyValueCompatibilityHelperFromPath(std::string path) {
@@ -473,21 +499,26 @@ bool SemanticsValidator::validateExprPreDispatchDirectCalls(
 
   const auto &dispatchBootstrap = *context.dispatchBootstrap;
   const bool isExplicitRootMapConstructor =
-      isRootMapConstructorExpr(expr) && !expr.templateArgs.empty();
+      isRootMapConstructorExpr(expr);
   const bool isExplicitPublishedMapConstructor =
-      isPublishedMapConstructorExpr(expr) && !expr.templateArgs.empty();
-  if (isExplicitRootMapConstructor || isExplicitPublishedMapConstructor) {
+      isPublishedMapConstructorExpr(expr);
+  const std::vector<std::string> mapConstructorTemplateArgs =
+      (isExplicitRootMapConstructor || isExplicitPublishedMapConstructor)
+          ? explicitMapConstructorTemplateArgs(expr)
+          : std::vector<std::string>{};
+  if ((isExplicitRootMapConstructor || isExplicitPublishedMapConstructor) &&
+      !mapConstructorTemplateArgs.empty()) {
     if (expr.hasBodyArguments || !expr.bodyArguments.empty()) {
       return failPreDispatchDirectCallDiagnostic(
           "block arguments require a definition target: " + resolvedOut);
     }
-    if (expr.templateArgs.size() != 2) {
+    if (mapConstructorTemplateArgs.size() != 2) {
       return failPreDispatchDirectCallDiagnostic(
           "map requires exactly two template arguments");
     }
     std::string keyError;
-    if (!validateBuiltinComparableKeyType(expr.templateArgs.front(), nullptr,
-                                          keyError)) {
+    if (!validateBuiltinComparableKeyType(mapConstructorTemplateArgs.front(),
+                                          nullptr, keyError)) {
       return failPreDispatchDirectCallDiagnostic(std::move(keyError));
     }
     for (const auto &arg : expr.args) {
@@ -511,7 +542,7 @@ bool SemanticsValidator::validateExprPreDispatchDirectCalls(
         definitionNamespacePrefix = currentDef->namespacePrefix;
       }
       std::unordered_set<std::string> visitingStructs;
-      const std::string &valueType = expr.templateArgs[1];
+      const std::string &valueType = mapConstructorTemplateArgs[1];
       if (!isRelocationTrivialContainerElementType(
               valueType, definitionNamespacePrefix, definitionTemplateArgs,
               visitingStructs)) {
@@ -530,74 +561,67 @@ bool SemanticsValidator::validateExprPreDispatchDirectCalls(
         break;
       }
       if (!this->validateCollectionElementType(
-              expr.args[i], expr.templateArgs[0],
-              "map constructor requires key type ", params, locals,
+              expr.args[i], mapConstructorTemplateArgs[0],
+              "argument type mismatch for " +
+                  canonicalKeyValueHelperPathLocal("map") +
+                  " parameter key: expected ",
+              params, locals,
               dispatchBootstrap.dispatchResolvers)) {
         return false;
       }
       if (!this->validateCollectionElementType(
-              expr.args[i + 1], expr.templateArgs[1],
-              "map constructor requires value type ", params, locals,
+              expr.args[i + 1], mapConstructorTemplateArgs[1],
+              "argument type mismatch for " +
+                  canonicalKeyValueHelperPathLocal("map") +
+                  " parameter value: expected ",
+              params, locals,
               dispatchBootstrap.dispatchResolvers)) {
         return false;
       }
     }
   }
 
-  if ((resolvedOut == "/std/collections/map/map" || resolvedOut == "/map")) {
-    if (expr.hasBodyArguments || !expr.bodyArguments.empty()) {
-      return failPreDispatchDirectCallDiagnostic(
-          "block arguments require a definition target: " + resolvedOut);
-    }
-    if (expr.args.size() % 2 == 0) {
-      std::vector<std::string> mapTemplateArgs;
+  {
+    if (isResolvedKeyValueConstructorPath(resolvedOut)) {
+      if (expr.hasBodyArguments || !expr.bodyArguments.empty()) {
+        return failPreDispatchDirectCallDiagnostic(
+            "block arguments require a definition target: " + resolvedOut);
+      }
+      if (expr.args.size() % 2 == 0) {
+        std::vector<std::string> mapTemplateArgs =
+            explicitMapConstructorTemplateArgs(expr);
 
-      if (expr.templateArgs.size() == 2) {
-        mapTemplateArgs = expr.templateArgs;
-      } else {
-        const std::string &callName = expr.name;
-        const size_t anglePos = callName.find('<');
-        if (anglePos != std::string::npos) {
-          const size_t endAnglePos = callName.rfind('>');
-          if (endAnglePos != std::string::npos && endAnglePos > anglePos) {
-            std::string templateArgText = callName.substr(anglePos + 1, endAnglePos - anglePos - 1);
-            std::stringstream ss(templateArgText);
-            std::string arg;
-            while (std::getline(ss, arg, ',')) {
-              size_t start = arg.find_first_not_of(" \t");
-              size_t end = arg.find_last_not_of(" \t");
-              if (start != std::string::npos) {
-                mapTemplateArgs.push_back(arg.substr(start, end - start + 1));
-              }
+        if (mapTemplateArgs.size() == 2) {
+          for (const auto &arg : expr.args) {
+            if (!validateExpr(params, locals, arg)) {
+              return false;
             }
           }
-        }
-      }
+          for (std::size_t i = 0; i < expr.args.size(); i += 2) {
+            if (i + 1 >= expr.args.size()) {
+              break;
+            }
+            ReturnKind keyArgKind = inferExprReturnKind(expr.args[i], params, locals);
+            ReturnKind valueArgKind =
+                inferExprReturnKind(expr.args[i + 1], params, locals);
+            ReturnKind expectedKeyKind =
+                returnKindForTypeName(normalizeBindingTypeName(mapTemplateArgs[0]));
+            ReturnKind expectedValueKind =
+                returnKindForTypeName(normalizeBindingTypeName(mapTemplateArgs[1]));
 
-      if (mapTemplateArgs.size() == 2) {
-        for (const auto &arg : expr.args) {
-          if (!validateExpr(params, locals, arg)) {
-            return false;
-          }
-        }
-        for (std::size_t i = 0; i < expr.args.size(); i += 2) {
-          if (i + 1 >= expr.args.size()) {
-            break;
-          }
-          ReturnKind keyArgKind = inferExprReturnKind(expr.args[i], params, locals);
-          ReturnKind valueArgKind = inferExprReturnKind(expr.args[i + 1], params, locals);
-          ReturnKind expectedKeyKind = returnKindForTypeName(normalizeBindingTypeName(mapTemplateArgs[0]));
-          ReturnKind expectedValueKind = returnKindForTypeName(normalizeBindingTypeName(mapTemplateArgs[1]));
-
-          if (keyArgKind != ReturnKind::Unknown && expectedKeyKind != ReturnKind::Unknown &&
-              keyArgKind != expectedKeyKind) {
-            return failPreDispatchDirectCallDiagnostic(
-                "argument type mismatch for " + resolvedOut + " parameter key");
-          }
-          if (valueArgKind != ReturnKind::Unknown && expectedValueKind != ReturnKind::Unknown &&
-              valueArgKind != expectedValueKind) {
-            return failPreDispatchDirectCallDiagnostic(
-                "argument type mismatch for " + resolvedOut + " parameter value");
+            if (keyArgKind != ReturnKind::Unknown &&
+                expectedKeyKind != ReturnKind::Unknown &&
+                keyArgKind != expectedKeyKind) {
+              return failPreDispatchDirectCallDiagnostic(
+                  "argument type mismatch for " + resolvedOut + " parameter key");
+            }
+            if (valueArgKind != ReturnKind::Unknown &&
+                expectedValueKind != ReturnKind::Unknown &&
+                valueArgKind != expectedValueKind) {
+              return failPreDispatchDirectCallDiagnostic(
+                  "argument type mismatch for " + resolvedOut +
+                  " parameter value");
+            }
           }
         }
       }
@@ -719,6 +743,12 @@ bool SemanticsValidator::validateExprPreDispatchDirectCalls(
         this->keyValueHelperReceiverIndex(expr, dispatchBootstrap.dispatchResolvers);
     if (receiverIndex < expr.args.size()) {
       const Expr &receiverExpr = expr.args[receiverIndex];
+      if (receiverExpr.kind == Expr::Kind::Call &&
+          !isRootMapConstructorExpr(receiverExpr) &&
+          !isPublishedMapConstructorExpr(receiverExpr) &&
+          !validateExpr(params, locals, receiverExpr)) {
+        return false;
+      }
       std::string keyType;
       std::string valueType;
       const bool isExperimentalKeyValueTarget =

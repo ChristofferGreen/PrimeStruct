@@ -169,7 +169,7 @@ ProcessAllocationSample captureProcessAllocationSample() {
 #elif defined(__linux__)
   const struct mallinfo2 info = mallinfo2();
   sample.valid = true;
-  sample.allocationCount = info.ordblks > 0 ? static_cast<uint64_t>(info.ordblks) : 0;
+  sample.allocationCount = info.uordblks > 0 ? static_cast<uint64_t>(info.uordblks) : 0;
   sample.allocatedBytes = info.uordblks > 0 ? static_cast<uint64_t>(info.uordblks) : 0;
 #endif
   return sample;

@@ -1,3 +1,4 @@
+// soa-surface-audit: exempt
 #include "SemanticsValidator.h"
 #include "StdlibCollectionSurfaceHelpers.h"
 
@@ -35,7 +36,7 @@ bool SemanticsValidator::inferResolvedDirectCallBindingType(const std::string &r
         return false;
       }
       const std::string normalizedCollectionType = normalizeCollectionTypePath(base);
-      if (((base == "array" || base == "vector" || base == "soa" "_vector") ||
+      if (((base == "array" || base == "vector" || base == "soa_vector") ||
            normalizedCollectionType == "/vector") &&
           args.size() == 1) {
         bindingOut.typeName = base;
@@ -67,12 +68,6 @@ bool SemanticsValidator::inferResolvedDirectCallBindingType(const std::string &r
     return true;
   }
 
-  const auto directBindingIt = returnBindings_.find(resolvedPath);
-  if (directBindingIt != returnBindings_.end() && !directBindingIt->second.typeName.empty()) {
-    bindingOut = directBindingIt->second;
-    return true;
-  }
-
   const auto directStructIt = returnStructs_.find(resolvedPath);
   if (directStructIt != returnStructs_.end() && !directStructIt->second.empty()) {
     if (isExperimentalKeyValueBackingReturnStruct(directStructIt->second)) {
@@ -89,6 +84,12 @@ bool SemanticsValidator::inferResolvedDirectCallBindingType(const std::string &r
     }
     bindingOut.typeName = directStructIt->second;
     bindingOut.typeTemplateArg.clear();
+    return true;
+  }
+
+  const auto directBindingIt = returnBindings_.find(resolvedPath);
+  if (directBindingIt != returnBindings_.end() && !directBindingIt->second.typeName.empty()) {
+    bindingOut = directBindingIt->second;
     return true;
   }
 

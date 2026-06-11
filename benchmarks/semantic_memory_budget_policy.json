@@ -23,30 +23,30 @@
     {
       "fixture": "inline_math_body",
       "phase": "ast-semantic",
-      "baseline_worst_peak_rss_bytes": 9060352,
-      "soft_max_worst_peak_rss_bytes": 9513370,
-      "max_worst_peak_rss_bytes": 9966388
+      "baseline_worst_peak_rss_bytes": 19476480,
+      "soft_max_worst_peak_rss_bytes": 23371776,
+      "max_worst_peak_rss_bytes": 25319424
     },
     {
       "fixture": "inline_math_body",
       "phase": "semantic-product",
-      "baseline_worst_peak_rss_bytes": 9060352,
-      "soft_max_worst_peak_rss_bytes": 9513370,
-      "max_worst_peak_rss_bytes": 9966388
+      "baseline_worst_peak_rss_bytes": 19476480,
+      "soft_max_worst_peak_rss_bytes": 23371776,
+      "max_worst_peak_rss_bytes": 25319424
     },
     {
       "fixture": "math_star_repro",
       "phase": "ast-semantic",
-      "baseline_worst_peak_rss_bytes": 9060352,
-      "soft_max_worst_peak_rss_bytes": 9513370,
-      "max_worst_peak_rss_bytes": 9966388
+      "baseline_worst_peak_rss_bytes": 15826944,
+      "soft_max_worst_peak_rss_bytes": 18992332,
+      "max_worst_peak_rss_bytes": 20575027
     },
     {
       "fixture": "math_star_repro",
       "phase": "semantic-product",
-      "baseline_worst_peak_rss_bytes": 9060352,
-      "soft_max_worst_peak_rss_bytes": 9513370,
-      "max_worst_peak_rss_bytes": 9966388
+      "baseline_worst_peak_rss_bytes": 15699968,
+      "soft_max_worst_peak_rss_bytes": 18839961,
+      "max_worst_peak_rss_bytes": 20409958
     },
     {
       "fixture": "math_vector",
@@ -79,16 +79,16 @@
     {
       "fixture": "no_import",
       "phase": "ast-semantic",
-      "baseline_worst_peak_rss_bytes": 9060352,
-      "soft_max_worst_peak_rss_bytes": 9513370,
-      "max_worst_peak_rss_bytes": 9966388
+      "baseline_worst_peak_rss_bytes": 15704064,
+      "soft_max_worst_peak_rss_bytes": 18844876,
+      "max_worst_peak_rss_bytes": 20415283
     },
     {
       "fixture": "no_import",
       "phase": "semantic-product",
-      "baseline_worst_peak_rss_bytes": 9060352,
-      "soft_max_worst_peak_rss_bytes": 9513370,
-      "max_worst_peak_rss_bytes": 9966388
+      "baseline_worst_peak_rss_bytes": 15708160,
+      "soft_max_worst_peak_rss_bytes": 18849792,
+      "max_worst_peak_rss_bytes": 20420608
     },
     {
       "fixture": "non_math_large_include",
@@ -107,44 +107,44 @@
     {
       "fixture": "scale_1x",
       "phase": "ast-semantic",
-      "baseline_worst_peak_rss_bytes": 9060352,
-      "soft_max_worst_peak_rss_bytes": 9513370,
-      "max_worst_peak_rss_bytes": 9966388
+      "baseline_worst_peak_rss_bytes": 16289792,
+      "soft_max_worst_peak_rss_bytes": 19547750,
+      "max_worst_peak_rss_bytes": 21176729
     },
     {
       "fixture": "scale_1x",
       "phase": "semantic-product",
-      "baseline_worst_peak_rss_bytes": 9060352,
-      "soft_max_worst_peak_rss_bytes": 9513370,
-      "max_worst_peak_rss_bytes": 9966388
+      "baseline_worst_peak_rss_bytes": 16289792,
+      "soft_max_worst_peak_rss_bytes": 19547750,
+      "max_worst_peak_rss_bytes": 21176729
     },
     {
       "fixture": "scale_2x",
       "phase": "ast-semantic",
-      "baseline_worst_peak_rss_bytes": 9060352,
-      "soft_max_worst_peak_rss_bytes": 9513370,
-      "max_worst_peak_rss_bytes": 9966388
+      "baseline_worst_peak_rss_bytes": 16289792,
+      "soft_max_worst_peak_rss_bytes": 19547750,
+      "max_worst_peak_rss_bytes": 21176729
     },
     {
       "fixture": "scale_2x",
       "phase": "semantic-product",
-      "baseline_worst_peak_rss_bytes": 9060352,
-      "soft_max_worst_peak_rss_bytes": 9797632,
-      "max_worst_peak_rss_bytes": 10287514
+      "baseline_worst_peak_rss_bytes": 16289792,
+      "soft_max_worst_peak_rss_bytes": 19547750,
+      "max_worst_peak_rss_bytes": 21176729
     },
     {
       "fixture": "scale_4x",
       "phase": "ast-semantic",
-      "baseline_worst_peak_rss_bytes": 9060352,
-      "soft_max_worst_peak_rss_bytes": 9814016,
-      "max_worst_peak_rss_bytes": 10304717
+      "baseline_worst_peak_rss_bytes": 16289792,
+      "soft_max_worst_peak_rss_bytes": 19547750,
+      "max_worst_peak_rss_bytes": 21176729
     },
     {
       "fixture": "scale_4x",
       "phase": "semantic-product",
-      "baseline_worst_peak_rss_bytes": 9060352,
-      "soft_max_worst_peak_rss_bytes": 10059776,
-      "max_worst_peak_rss_bytes": 10562765
+      "baseline_worst_peak_rss_bytes": 16326656,
+      "soft_max_worst_peak_rss_bytes": 19591987,
+      "max_worst_peak_rss_bytes": 21224652
     }
   ]
 }

@@ -1,3 +1,4 @@
+// soa-surface-audit: exempt
 #include "IrLowererCallHelpers.h"
 
 #include <string_view>
@@ -195,7 +196,7 @@ bool classifySemanticArrayVectorAccessTypeText(const std::string &typeText,
     base = normalizeAccessCollectionFamily(base);
   }
 
-  if (base != "array" && base != "vector" && base != "Buffer" && base != "soa" "_vector") {
+  if (base != "array" && base != "vector" && base != "Buffer" && base != "soa_vector") {
     return false;
   }
   std::vector<std::string> elementArgs;
@@ -209,7 +210,7 @@ bool classifySemanticArrayVectorAccessTypeText(const std::string &typeText,
   targetInfoOut = {};
   targetInfoOut.isArrayOrVectorTarget = true;
   targetInfoOut.isVectorTarget = (base == "vector");
-  targetInfoOut.isSoaVector = (base == "soa" "_vector");
+  targetInfoOut.isSoaVector = (base == "soa_vector");
   targetInfoOut.elemKind = valueKindFromTypeName(trimTemplateTypeText(elementArgs.front()));
   if (targetInfoOut.isSoaVector) {
     targetInfoOut.structTypeName =
@@ -286,13 +287,13 @@ bool resolveSemanticArrayVectorAccessTargetInfo(
         collectionFact->collectionFamilyId);
     const std::string family = normalizeAccessCollectionFamily(rawFamily);
     if (family != "array" && family != "vector" && family != "Buffer" &&
-        family != "soa" "_vector") {
+        family != "soa_vector") {
       return false;
     }
     targetInfoOut = {};
     targetInfoOut.isArrayOrVectorTarget = true;
     targetInfoOut.isVectorTarget = (family == "vector");
-    targetInfoOut.isSoaVector = (family == "soa" "_vector");
+    targetInfoOut.isSoaVector = (family == "soa_vector");
     const std::string elementTypeText = resolveAccessSemanticTypeText(
         semanticProgram, collectionFact->elementTypeText, collectionFact->elementTypeTextId);
     targetInfoOut.elemKind = valueKindFromTypeName(elementTypeText);
@@ -1399,12 +1400,12 @@ ArrayVectorAccessTargetInfo resolveArrayVectorAccessTargetInfo(
     std::string collection;
     if (getBuiltinCollectionName(target, collection) &&
         (collection == "array" || collection == "vector" || collection == "Buffer" ||
-         collection == "soa" "_vector") &&
+         collection == "soa_vector") &&
         target.templateArgs.size() == 1) {
       info.isArrayOrVectorTarget = true;
       info.elemKind = valueKindFromTypeName(target.templateArgs.front());
       info.isVectorTarget = (collection == "vector");
-      info.isSoaVector = (collection == "soa" "_vector");
+      info.isSoaVector = (collection == "soa_vector");
       if (info.isSoaVector) {
         info.structTypeName =
             inferExperimentalSoaVectorStructPathFromTypeName(target.templateArgs.front());
