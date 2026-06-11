@@ -55,7 +55,7 @@ main() {
 }
 
 TEST_CASE(
-    "primec collect-diagnostics keeps user wrapper method count capacity pair mixed-shape reverse diagnostics in definition scope") {
+    "primec collect-diagnostics keeps user wrapper method count capacity pair") {
   const std::string source = R"(
 [return<map<i32, i32>>]
 wrapMap() {
@@ -110,7 +110,7 @@ main() {
 }
 
 TEST_CASE(
-    "primevm collect-diagnostics keeps user wrapper method count capacity pair mixed-shape reverse diagnostics in definition scope") {
+    "primevm collect-diagnostics keeps user wrapper method count capacity pair") {
   const std::string source = R"(
 [return<map<i32, i32>>]
 wrapMap() {

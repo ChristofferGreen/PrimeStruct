@@ -715,7 +715,7 @@ main() {
 }
 
 TEST_CASE(
-    "native rejects experimental soa_vector stdlib wide structs on pending width boundary across imported/direct/helper-return forms") {
+    "native rejects experimental soa_vector stdlib wide structs on pending width") {
   const std::string source = R"(
 import /std/collections/soa/*
 import /std/collections/internal_soa_vector/*

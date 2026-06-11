@@ -3,7 +3,7 @@
 TEST_SUITE_BEGIN("primestruct.compile.run.text_filters");
 
 TEST_CASE(
-    "primec collect-diagnostics keeps user wrapper count capacity call-pair mixed-shape reverse diagnostics in definition scope") {
+    "primec collect-diagnostics keeps user wrapper count capacity call-pair") {
   const std::string source = R"(
 [return<map<i32, i32>>]
 wrapMap() {
@@ -58,7 +58,7 @@ main() {
 }
 
 TEST_CASE(
-    "primevm collect-diagnostics keeps user wrapper count capacity call-pair mixed-shape reverse diagnostics in definition scope") {
+    "primevm collect-diagnostics keeps user wrapper count capacity call-pair") {
   const std::string source = R"(
 [return<map<i32, i32>>]
 wrapMap() {
@@ -425,7 +425,7 @@ main() {
 }
 
 TEST_CASE(
-    "primec collect-diagnostics keeps user wrapper method count capacity pair arg-type reverse diagnostics in definition scope") {
+    "primec collect-diagnostics keeps user wrapper method count capacity pair") {
   const std::string source = R"(
 [return<map<i32, i32>>]
 wrapMap() {
@@ -481,7 +481,7 @@ main() {
 }
 
 TEST_CASE(
-    "primevm collect-diagnostics keeps user wrapper method count capacity pair arg-type reverse diagnostics in definition scope") {
+    "primevm collect-diagnostics keeps user wrapper method count capacity pair") {
   const std::string source = R"(
 [return<map<i32, i32>>]
 wrapMap() {

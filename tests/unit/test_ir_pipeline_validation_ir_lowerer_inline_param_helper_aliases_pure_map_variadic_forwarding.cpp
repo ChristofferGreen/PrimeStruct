@@ -466,7 +466,7 @@ TEST_CASE("ir lowerer inline param helper materializes mixed struct variadic for
 }
 
 TEST_CASE(
-    "ir lowerer inline param helper bridges canonical builtin soa helpers while rejecting direct experimental conversion helpers") {
+    "ir lowerer inline param helper bridges canonical builtin soa helpers while") {
   primec::Expr valuesParam;
   valuesParam.kind = primec::Expr::Kind::Name;
   valuesParam.isBinding = true;
