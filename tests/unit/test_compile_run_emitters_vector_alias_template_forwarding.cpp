@@ -627,7 +627,7 @@ main() {
   CHECK(runCommand(compileCmd) == 2);
 }
 
-TEST_CASE("compiles and runs array alias count through same-path helper in C++ emitter") {
+TEST_CASE("array alias count through same-path helper in C++ emitter") {
   const std::string source = R"(
 [return<int>]
 /array/count([vector<i32>] values, [bool] marker) {
@@ -653,7 +653,7 @@ main() {
   CHECK(runCommand(exePath) == 46);
 }
 
-TEST_CASE("compiles and runs array alias capacity through same-path helper in C++ emitter") {
+TEST_CASE("array alias capacity through same-path helper in C++ emitter") {
   const std::string source = R"(
 [return<int>]
 /array/capacity([vector<i32>] values, [bool] marker) {
@@ -679,7 +679,7 @@ main() {
   CHECK(runCommand(exePath) == 48);
 }
 
-TEST_CASE("compiles and runs array alias at through same-path helper in C++ emitter") {
+TEST_CASE("array alias at through same-path helper in C++ emitter") {
   const std::string source = R"(
 [return<int>]
 /array/at([vector<i32>] values, [i32] index, [bool] marker) {
@@ -705,7 +705,7 @@ main() {
   CHECK(runCommand(exePath) == 48);
 }
 
-TEST_CASE("compiles and runs array alias at_unsafe through same-path helper in C++ emitter") {
+TEST_CASE("array alias at_unsafe through same-path helper in C++ emitter") {
   const std::string source = R"(
 [return<int>]
 /array/at_unsafe([vector<i32>] values, [i32] index, [bool] marker) {

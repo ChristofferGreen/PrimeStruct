@@ -323,11 +323,11 @@ main() {
   CHECK(readFile(errPath).find("missing semantic-product method-call target: pop") != std::string::npos);
 }
 
-TEST_CASE("compiles and runs canonical vector discard helpers with owned elements in vm backend") {
+TEST_CASE("canonical vector discard helpers with owned elements in vm backend") {
   expectCanonicalVectorDiscardOwnershipConformance("vm");
 }
 
-TEST_CASE("compiles and runs canonical vector indexed removal helpers with owned elements in vm backend") {
+TEST_CASE("canonical vector indexed removal helpers with owned elements in vm backend") {
   expectCanonicalVectorIndexedRemovalOwnershipConformance("vm");
 }
 

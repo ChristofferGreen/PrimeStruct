@@ -113,7 +113,7 @@ main() {
   CHECK(readFile(outPath).find("return type mismatch: expected i32") != std::string::npos);
 }
 
-TEST_CASE("compiles and runs native auto-inferred std namespaced vector push canonical definition") {
+TEST_CASE("native auto-inferred std namespaced vector push canonical definition") {
   const std::string source = R"(
 [effects(heap_alloc), return<bool>]
 /std/collections/vector/push([vector<i32> mut] values, [string] value) {
@@ -545,7 +545,7 @@ main() {
   CHECK(runCommand(exePath) == 12);
 }
 
-TEST_CASE("compiles and runs native std namespaced capacity expression canonical fallback") {
+TEST_CASE("native std namespaced capacity expression canonical fallback") {
   const std::string source = R"(
 [effects(heap_alloc), return<bool>]
 /std/collections/vector/capacity([vector<i32>] values) {

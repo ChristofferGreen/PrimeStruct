@@ -192,7 +192,7 @@ main() {
         std::string::npos);
 }
 
-TEST_CASE("compiles and runs native public soa count helper on public wrapper") {
+TEST_CASE("native public soa count helper on public wrapper") {
   const std::string source = R"(
 import /std/collections/soa/*
 
@@ -217,7 +217,7 @@ main() {
   CHECK(runCommand(exePath) == 2);
 }
 
-TEST_CASE("compiles and runs native public soa get helper") {
+TEST_CASE("native public soa get helper") {
   const std::string source = R"(
 import /std/collections/soa/*
 
@@ -319,7 +319,7 @@ main() {
         std::string::npos);
 }
 
-TEST_CASE("compiles and runs native public soa ref helper") {
+TEST_CASE("native public soa ref helper") {
   const std::string source = R"(
 import /std/collections/soa/*
 
@@ -344,7 +344,7 @@ main() {
   CHECK(runCommand(exePath) == 9);
 }
 
-TEST_CASE("compiles and runs native public soa mutator helpers") {
+TEST_CASE("native public soa mutator helpers") {
   const std::string source = R"(
 import /std/collections/soa/*
 
@@ -3012,7 +3012,7 @@ main() {
         std::string::npos);
 }
 
-TEST_CASE("compiles and runs native experimental soa storage helpers") {
+TEST_CASE("native experimental soa storage helpers") {
   const std::string source = R"(
 import /std/collections/internal_soa_storage/*
 
@@ -3040,7 +3040,7 @@ main() {
   CHECK(runCommand(exePath) == 14);
 }
 
-TEST_CASE("compiles and runs native experimental soa storage borrowed ref helper") {
+TEST_CASE("native experimental soa storage borrowed ref helper") {
   const std::string source = R"(
 import /std/collections/internal_soa_storage/*
 
@@ -3063,7 +3063,7 @@ main() {
   CHECK(runCommand(exePath) == 7);
 }
 
-TEST_CASE("compiles and runs native experimental soa storage borrowed view helper") {
+TEST_CASE("native experimental soa storage borrowed view helper") {
   const std::string source = R"(
 import /std/collections/internal_soa_storage/*
 
@@ -3112,7 +3112,7 @@ main() {
   CHECK(readFile(errPath) == "array index out of bounds\n");
 }
 
-TEST_CASE("compiles and runs native experimental two-column soa storage helpers") {
+TEST_CASE("native experimental two-column soa storage helpers") {
   const std::string source = R"(
 import /std/collections/internal_soa_storage/*
 
@@ -3141,7 +3141,7 @@ main() {
   CHECK(runCommand(exePath) == 24);
 }
 
-TEST_CASE("compiles and runs native experimental three-column soa storage helpers") {
+TEST_CASE("native experimental three-column soa storage helpers") {
   const std::string source = R"(
 import /std/collections/internal_soa_storage/*
 
@@ -3171,7 +3171,7 @@ main() {
   CHECK(runCommand(exePath) == 60);
 }
 
-TEST_CASE("compiles and runs native experimental four-column soa storage helpers") {
+TEST_CASE("native experimental four-column soa storage helpers") {
   const std::string source = R"(
 import /std/collections/internal_soa_storage/*
 
@@ -3202,7 +3202,7 @@ main() {
   CHECK(runCommand(exePath) == 105);
 }
 
-TEST_CASE("compiles and runs native experimental five-column soa storage helpers") {
+TEST_CASE("native experimental five-column soa storage helpers") {
   const std::string source = R"(
 import /std/collections/internal_soa_storage/*
 
@@ -3234,7 +3234,7 @@ main() {
   CHECK(runCommand(exePath) == 176);
 }
 
-TEST_CASE("compiles and runs native experimental six-column soa storage helpers") {
+TEST_CASE("native experimental six-column soa storage helpers") {
   const std::string source = R"(
 import /std/collections/internal_soa_storage/*
 
@@ -3267,7 +3267,7 @@ main() {
   CHECK(runCommand(exePath) == 189);
 }
 
-TEST_CASE("compiles and runs native experimental seven-column soa storage helpers") {
+TEST_CASE("native experimental seven-column soa storage helpers") {
   const std::string source = R"(
 import /std/collections/internal_soa_storage/*
 
@@ -3301,7 +3301,7 @@ main() {
   CHECK(runCommand(exePath) == 212);
 }
 
-TEST_CASE("compiles and runs native experimental eight-column soa storage helpers") {
+TEST_CASE("native experimental eight-column soa storage helpers") {
   const std::string source = R"(
 import /std/collections/internal_soa_storage/*
 
@@ -3336,7 +3336,7 @@ main() {
   CHECK(runCommand(exePath) == 231);
 }
 
-TEST_CASE("compiles and runs native experimental nine-column soa storage helpers") {
+TEST_CASE("native experimental nine-column soa storage helpers") {
   const std::string source = R"(
 import /std/collections/internal_soa_storage/*
 
@@ -3367,7 +3367,7 @@ main() {
   CHECK(runCommand(exePath) == 45);
 }
 
-TEST_CASE("compiles and runs native experimental ten-column soa storage helpers") {
+TEST_CASE("native experimental ten-column soa storage helpers") {
   const std::string source = R"(
 import /std/collections/internal_soa_storage/*
 
@@ -3399,7 +3399,7 @@ main() {
   CHECK(runCommand(exePath) == 74);
 }
 
-TEST_CASE("compiles and runs native experimental eleven-column soa storage helpers") {
+TEST_CASE("native experimental eleven-column soa storage helpers") {
   const std::string source = R"(
 import /std/collections/internal_soa_storage/*
 
@@ -3425,7 +3425,7 @@ main() {
   CHECK(runCommand(exePath) == 34);
 }
 
-TEST_CASE("compiles and runs native experimental twelve-column soa storage helpers") {
+TEST_CASE("native experimental twelve-column soa storage helpers") {
   const std::string source = R"(
 import /std/collections/internal_soa_storage/*
 
@@ -3451,7 +3451,7 @@ main() {
   CHECK(runCommand(exePath) == 47);
 }
 
-TEST_CASE("compiles and runs native experimental thirteen-column soa storage helpers") {
+TEST_CASE("native experimental thirteen-column soa storage helpers") {
   const std::string source = R"(
 import /std/collections/internal_soa_storage/*
 
@@ -3477,7 +3477,7 @@ main() {
   CHECK(runCommand(exePath) == 49);
 }
 
-TEST_CASE("compiles and runs native experimental fourteen-column soa storage helpers") {
+TEST_CASE("native experimental fourteen-column soa storage helpers") {
   const std::string source = R"(
 import /std/collections/internal_soa_storage/*
 
@@ -3503,7 +3503,7 @@ main() {
   CHECK(runCommand(exePath) == 53);
 }
 
-TEST_CASE("compiles and runs native experimental fifteen-column soa storage helpers") {
+TEST_CASE("native experimental fifteen-column soa storage helpers") {
   const std::string source = R"(
 import /std/collections/internal_soa_storage/*
 
@@ -3530,7 +3530,7 @@ main() {
 }
 
 
-TEST_CASE("compiles and runs native experimental sixteen-column soa storage helpers") {
+TEST_CASE("native experimental sixteen-column soa storage helpers") {
   const std::string source = R"(
 import /std/collections/internal_soa_storage/*
 
@@ -3598,19 +3598,19 @@ TEST_CASE("rejects native ownership-sensitive experimental map value methods") {
   expectExperimentalMapOwnershipMethodConformance("native");
 }
 
-TEST_CASE("compiles and runs native helper-wrapped inferred experimental map returns") {
+TEST_CASE("native helper-wrapped inferred experimental map returns") {
   expectWrappedInferredExperimentalMapReturnConformance("native");
 }
 
-TEST_CASE("compiles and runs native helper-wrapped experimental map parameters") {
+TEST_CASE("native helper-wrapped experimental map parameters") {
   expectWrappedExperimentalMapParameterConformance("native");
 }
 
-TEST_CASE("compiles and runs native helper-wrapped experimental map bindings") {
+TEST_CASE("native helper-wrapped experimental map bindings") {
   expectWrappedExperimentalMapBindingConformance("native");
 }
 
-TEST_CASE("compiles and runs native helper-wrapped experimental map assignment RHS values") {
+TEST_CASE("native helper-wrapped experimental map assignment RHS values") {
   expectWrappedExperimentalMapAssignConformance("native");
 }
 
@@ -3626,15 +3626,15 @@ TEST_CASE("rejects native canonical namespaced map constructors through explicit
   expectCanonicalMapNamespaceExperimentalParameterConformance("native");
 }
 
-TEST_CASE("compiles and runs native wrapper map constructors on explicit experimental map bindings") {
+TEST_CASE("native wrapper map constructors on explicit experimental map bindings") {
   expectWrapperMapConstructorExperimentalBindingConformance("native");
 }
 
-TEST_CASE("compiles and runs native wrapper map constructors through explicit experimental map returns") {
+TEST_CASE("native wrapper map constructors through explicit experimental map returns") {
   expectWrapperMapConstructorExperimentalReturnConformance("native");
 }
 
-TEST_CASE("compiles and runs native wrapper map constructors through explicit experimental map parameters") {
+TEST_CASE("native wrapper map constructors through explicit experimental map parameters") {
   expectWrapperMapConstructorExperimentalParameterConformance("native");
 }
 
@@ -3646,11 +3646,11 @@ TEST_CASE("rejects native experimental map variadic constructor type mismatch") 
   expectExperimentalMapVariadicConstructorMismatchReject("native");
 }
 
-TEST_CASE("compiles and runs native experimental map constructor assignments") {
+TEST_CASE("native experimental map constructor assignments") {
   expectExperimentalMapAssignConformance("native");
 }
 
-TEST_CASE("compiles and runs native implicit map auto constructor inference") {
+TEST_CASE("native implicit map auto constructor inference") {
   expectImplicitMapAutoInferenceConformance("native");
 }
 
@@ -3658,11 +3658,11 @@ TEST_CASE("rejects native inferred experimental map returns") {
   expectInferredExperimentalMapReturnConformance("native");
 }
 
-TEST_CASE("compiles and runs native block inferred experimental map returns") {
+TEST_CASE("native block inferred experimental map returns") {
   expectBlockInferredExperimentalMapReturnConformance("native");
 }
 
-TEST_CASE("compiles and runs native auto block inferred experimental map returns") {
+TEST_CASE("native auto block inferred experimental map returns") {
   expectAutoBlockInferredExperimentalMapReturnConformance("native");
 }
 
@@ -3698,11 +3698,11 @@ TEST_CASE("rejects native helper-wrapped inferred experimental map default param
   expectWrappedInferredExperimentalMapDefaultParameterConformance("native");
 }
 
-TEST_CASE("compiles and runs native experimental map helper receivers") {
+TEST_CASE("native experimental map helper receivers") {
   expectExperimentalMapHelperReceiverConformance("native");
 }
 
-TEST_CASE("compiles and runs native helper-wrapped experimental map helper receivers") {
+TEST_CASE("native helper-wrapped experimental map helper receivers") {
   expectWrappedExperimentalMapHelperReceiverConformance("native");
 }
 
@@ -3714,27 +3714,27 @@ TEST_CASE("rejects native helper-wrapped experimental map method receivers") {
   expectWrappedExperimentalMapMethodReceiverConformance("native");
 }
 
-TEST_CASE("compiles and runs native experimental map field assignments") {
+TEST_CASE("native experimental map field assignments") {
   expectExperimentalMapFieldAssignConformance("native");
 }
 
-TEST_CASE("compiles and runs native dereferenced experimental map storage references") {
+TEST_CASE("native dereferenced experimental map storage references") {
   expectExperimentalMapStorageReferenceConformance("native");
 }
 
-TEST_CASE("compiles and runs native helper-wrapped Result.ok experimental map result struct fields") {
+TEST_CASE("native helper-wrapped Result.ok experimental map result struct fields") {
   expectWrappedExperimentalMapResultFieldAssignConformance("native");
 }
 
-TEST_CASE("compiles and runs native helper-wrapped dereferenced Result.ok experimental map result struct fields") {
+TEST_CASE("native helper-wrapped dereferenced Result.ok experimental map result struct fields") {
   expectWrappedExperimentalMapResultDerefFieldAssignConformance("native");
 }
 
-TEST_CASE("compiles and runs native helper-wrapped experimental map struct storage fields") {
+TEST_CASE("native helper-wrapped experimental map struct storage fields") {
   expectWrappedExperimentalMapStorageFieldConformance("native");
 }
 
-TEST_CASE("compiles and runs native helper-wrapped dereferenced experimental map struct storage fields") {
+TEST_CASE("native helper-wrapped dereferenced experimental map struct storage fields") {
   expectWrappedExperimentalMapStorageDerefFieldConformance("native");
 }
 
@@ -3750,11 +3750,11 @@ TEST_CASE("rejects native experimental map methods") {
   expectExperimentalMapMethodConformance("native");
 }
 
-TEST_CASE("compiles and runs native borrowed experimental map helpers") {
+TEST_CASE("native borrowed experimental map helpers") {
   expectExperimentalMapReferenceHelperConformance("native");
 }
 
-TEST_CASE("compiles and runs native public borrowed map wrappers") {
+TEST_CASE("native public borrowed map wrappers") {
   expectPublicMapReferenceWrapperConformance("native");
 }
 
@@ -3762,7 +3762,7 @@ TEST_CASE("rejects native borrowed experimental map methods") {
   expectExperimentalMapReferenceMethodConformance("native");
 }
 
-TEST_CASE("compiles and runs native experimental map inserts") {
+TEST_CASE("native experimental map inserts") {
   expectExperimentalMapInsertConformance("native");
 }
 
@@ -3786,31 +3786,31 @@ TEST_CASE("rejects native builtin canonical map insert overwrites") {
   expectBuiltinCanonicalMapInsertOverwriteConformance("native");
 }
 
-TEST_CASE("compiles and runs native builtin canonical map non-local growth") {
+TEST_CASE("native builtin canonical map non-local growth") {
   expectBuiltinCanonicalMapInsertNonLocalGrowthConformance("native");
 }
 
-TEST_CASE("compiles and runs native builtin canonical map nested non-local growth") {
+TEST_CASE("native builtin canonical map nested non-local growth") {
   expectBuiltinCanonicalMapInsertNestedNonLocalGrowthConformance("native");
 }
 
-TEST_CASE("compiles and runs native builtin canonical map helper-return borrowed method inserts") {
+TEST_CASE("native builtin canonical map helper-return borrowed method inserts") {
   expectBuiltinCanonicalMapInsertHelperReturnBorrowedMethodConformance("native");
 }
 
-TEST_CASE("compiles and runs native builtin canonical map struct-field initializer") {
+TEST_CASE("native builtin canonical map struct-field initializer") {
   expectBuiltinCanonicalMapStructFieldInitializerConformance("native");
 }
 
-TEST_CASE("compiles and runs native builtin canonical map direct insert on helper-return value receivers") {
+TEST_CASE("native builtin canonical map direct insert on helper-return value receivers") {
   expectBuiltinCanonicalMapInsertHelperReturnValueDirectConformance("native");
 }
 
-TEST_CASE("compiles and runs native builtin canonical map method insert on helper-return value receivers") {
+TEST_CASE("native builtin canonical map method insert on helper-return value receivers") {
   expectBuiltinCanonicalMapInsertHelperReturnValueMethodConformance("native");
 }
 
-TEST_CASE("compiles and runs native builtin canonical map direct insert on borrowed holder field receivers") {
+TEST_CASE("native builtin canonical map direct insert on borrowed holder field receivers") {
   expectBuiltinCanonicalMapInsertBorrowedHolderFieldDirectConformance("native");
 }
 
@@ -3818,7 +3818,7 @@ TEST_CASE("rejects native canonical map constructor ownership growth") {
   expectCanonicalMapNamespaceOwnershipReject("native");
 }
 
-TEST_CASE("compiles and runs native experimental map bracket access") {
+TEST_CASE("native experimental map bracket access") {
   expectExperimentalMapIndexConformance("native");
 }
 
@@ -3868,11 +3868,11 @@ TEST_CASE("rejects native canonical namespaced vector helpers") {
   expectCanonicalVectorNamespaceConformance("native");
 }
 
-TEST_CASE("compiles and runs native canonical namespaced vector helpers on explicit Vector bindings") {
+TEST_CASE("native canonical namespaced vector helpers on explicit Vector bindings") {
   expectCanonicalVectorNamespaceExplicitVectorBindingConformance("native");
 }
 
-TEST_CASE("compiles and runs native stdlib wrapper vector helpers on explicit Vector bindings") {
+TEST_CASE("native stdlib wrapper vector helpers on explicit Vector bindings") {
   expectStdlibWrapperVectorHelperExplicitVectorBindingConformance("native");
 }
 
@@ -3880,7 +3880,7 @@ TEST_CASE("rejects native stdlib wrapper vector helper explicit Vector mismatch"
   expectStdlibWrapperVectorHelperExplicitVectorBindingMismatchReject("native");
 }
 
-TEST_CASE("compiles and runs native stdlib wrapper vector constructors on explicit Vector bindings") {
+TEST_CASE("native stdlib wrapper vector constructors on explicit Vector bindings") {
   expectStdlibWrapperVectorConstructorExplicitVectorBindingConformance("native");
 }
 
@@ -3888,7 +3888,7 @@ TEST_CASE("keeps native stdlib wrapper vector constructor explicit Vector mismat
   expectStdlibWrapperVectorConstructorExplicitVectorBindingMismatchContract("native");
 }
 
-TEST_CASE("compiles and runs native stdlib wrapper vector constructors on inferred auto bindings") {
+TEST_CASE("native stdlib wrapper vector constructors on inferred auto bindings") {
   expectStdlibWrapperVectorConstructorAutoInferenceConformance("native");
 }
 
@@ -3912,7 +3912,7 @@ TEST_CASE("rejects native canonical namespaced vector constructor temporaries") 
   expectCanonicalVectorNamespaceTemporaryReceiverConformance("native");
 }
 
-TEST_CASE("compiles and runs native canonical namespaced vector explicit builtin bindings") {
+TEST_CASE("native canonical namespaced vector explicit builtin bindings") {
   expectCanonicalVectorNamespaceExplicitBindingConformance("native");
 }
 
@@ -3920,7 +3920,7 @@ TEST_CASE("rejects native canonical namespaced vector named-argument temporaries
   expectCanonicalVectorNamespaceNamedArgsTemporaryReceiverConformance("native");
 }
 
-TEST_CASE("compiles and runs native canonical namespaced vector named-argument explicit builtin bindings") {
+TEST_CASE("native canonical namespaced vector named-argument explicit builtin bindings") {
   expectCanonicalVectorNamespaceNamedArgsExplicitBindingConformance("native");
 }
 
@@ -3930,18 +3930,18 @@ TEST_CASE("rejects native canonical namespaced vector mutators without imported 
   expectCanonicalVectorRemoveSwapImportRequirement("native");
 }
 
-TEST_CASE("compiles and runs native experimental vector helper runtime contracts") {
+TEST_CASE("native experimental vector helper runtime contracts") {
   expectExperimentalVectorRuntimeContracts("native");
 }
 
-TEST_CASE("compiles and runs native experimental vector ownership-sensitive helpers") {
+TEST_CASE("native experimental vector ownership-sensitive helpers") {
   expectExperimentalVectorOwnershipContracts("native");
 }
 
-TEST_CASE("compiles and runs native canonical vector helpers on experimental vector receivers") {
+TEST_CASE("native canonical vector helpers on experimental vector receivers") {
   expectExperimentalVectorCanonicalHelperRoutingConformance("native");
 }
-TEST_CASE("compiles and runs native vector pop empty runtime contract") {
+TEST_CASE("native vector pop empty runtime contract") {
   SUBCASE("call") {
     expectVectorPopEmptyRuntimeContract("native", false);
   }
@@ -3951,7 +3951,7 @@ TEST_CASE("compiles and runs native vector pop empty runtime contract") {
   }
 }
 
-TEST_CASE("compiles and runs native vector index runtime contract") {
+TEST_CASE("native vector index runtime contract") {
   expectVectorIndexRuntimeContract("native", "access_call");
   expectVectorIndexRuntimeContract("native", "access_method");
   expectVectorIndexRuntimeContract("native", "access_bracket");
@@ -3961,11 +3961,11 @@ TEST_CASE("compiles and runs native vector index runtime contract") {
   expectVectorIndexRuntimeContract("native", "remove_swap_method");
 }
 
-TEST_CASE("compiles and runs native imported container error contract conformance") {
+TEST_CASE("native imported container error contract conformance") {
   expectContainerErrorConformance("native");
 }
 
-TEST_CASE("compiles and runs native checked pointer conformance harness for imported .prime helpers") {
+TEST_CASE("native checked pointer conformance harness for imported .prime helpers") {
   expectCheckedPointerHelperSurfaceConformance("native");
   expectCheckedPointerGrowthConformance("native");
   expectCheckedPointerUninitializedPrefixMoveConformance("native");
@@ -3973,7 +3973,7 @@ TEST_CASE("compiles and runs native checked pointer conformance harness for impo
   expectCheckedPointerUninitializedOutOfBoundsConformance("native");
 }
 
-TEST_CASE("compiles and runs native templated stdlib vector wrapper temporary call forms") {
+TEST_CASE("native templated stdlib vector wrapper temporary call forms") {
   const std::string source = R"(
 import /std/collections/*
 
@@ -4002,7 +4002,7 @@ main() {
   CHECK(runCommand(exePath) == 11);
 }
 
-TEST_CASE("compiles and runs native templated stdlib vector wrapper temporary methods in expressions") {
+TEST_CASE("native templated stdlib vector wrapper temporary methods in expressions") {
   const std::string source = R"(
 import /std/collections/*
 

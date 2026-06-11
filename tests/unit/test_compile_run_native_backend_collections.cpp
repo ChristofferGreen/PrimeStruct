@@ -3,7 +3,7 @@
 
 TEST_SUITE_BEGIN("primestruct.compile.run.native_backend.collections");
 
-TEST_CASE("compiles and runs native array slice count and indexed access") {
+TEST_CASE("native array slice count and indexed access") {
   const std::string source = R"(
 [return<int>]
 main() {

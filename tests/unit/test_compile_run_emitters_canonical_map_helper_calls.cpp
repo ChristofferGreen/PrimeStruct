@@ -29,7 +29,7 @@ main() {
   CHECK(errors.find("unknown call target: /std/collections/map/at") != std::string::npos);
 }
 
-TEST_CASE("compiles and runs bare map count through canonical helper in C++ emitter") {
+TEST_CASE("bare map count through canonical helper in C++ emitter") {
   const std::string source = R"(
 [effects(heap_alloc), return<int>]
 /std/collections/map/count([map<i32, i32>] values) {
@@ -96,7 +96,7 @@ main() {
         std::string::npos);
 }
 
-TEST_CASE("compiles and runs bare map at through canonical helper in C++ emitter") {
+TEST_CASE("bare map at through canonical helper in C++ emitter") {
   const std::string source = R"(
 [effects(heap_alloc), return<int>]
 /std/collections/map/at([map<i32, i32>] values, [i32] index) {
@@ -118,7 +118,7 @@ main() {
   CHECK(runCommand(exePath) == 1);
 }
 
-TEST_CASE("compiles and runs bare map at_unsafe through canonical helper in C++ emitter") {
+TEST_CASE("bare map at_unsafe through canonical helper in C++ emitter") {
   const std::string source = R"(
 [effects(heap_alloc), return<int>]
 /std/collections/map/at_unsafe([map<i32, i32>] values, [i32] index) {
@@ -225,7 +225,7 @@ main() {
   CHECK(readFile(errPath).find("unknown call target: /std/collections/map/at_unsafe") != std::string::npos);
 }
 
-TEST_CASE("compiles and runs canonical vector at through imported stdlib helper in C++ emitter") {
+TEST_CASE("canonical vector at through imported stdlib helper in C++ emitter") {
   const std::string source = R"(
 import /std/collections/*
 
@@ -260,7 +260,7 @@ main() {
   CHECK(readFile(errPath).find("unknown call target: /std/collections/vector/at") != std::string::npos);
 }
 
-TEST_CASE("compiles and runs canonical vector at_unsafe through imported stdlib helper in C++ emitter") {
+TEST_CASE("canonical vector at_unsafe through imported stdlib helper in C++ emitter") {
   const std::string source = R"(
 import /std/collections/*
 
@@ -296,7 +296,7 @@ main() {
   CHECK(readFile(errPath).find("unknown call target: /std/collections/vector/at_unsafe") != std::string::npos);
 }
 
-TEST_CASE("compiles and runs map unnamespaced contains through canonical helper in C++ emitter") {
+TEST_CASE("map unnamespaced contains through canonical helper in C++ emitter") {
   const std::string source = R"(
 [effects(heap_alloc), return<bool>]
 /std/collections/map/contains([map<i32, i32>] values, [i32] key) {
@@ -345,7 +345,7 @@ main() {
   CHECK(!readFile(errPath).empty());
 }
 
-TEST_CASE("compiles and runs map unnamespaced contains preferring canonical helper over compatibility alias in C++ emitter") {
+TEST_CASE("map unnamespaced contains preferring canonical helper over compatibility alias in C++ emitter") {
   const std::string source = R"(
 [effects(heap_alloc), return<bool>]
 /std/collections/map/contains([map<i32, i32>] values, [i32] key) {
@@ -480,7 +480,7 @@ main() {
   CHECK(readFile(errPath).find("missing on_error for ? usage") != std::string::npos);
 }
 
-TEST_CASE("compiles and runs explicit map helper calls while canonical map access stays authoritative in C++ emitter") {
+TEST_CASE("explicit map helper calls while canonical map access stays authoritative in C++ emitter") {
   const std::string source = R"(
 import /std/collections/*
 
@@ -658,7 +658,7 @@ main() {
         std::string::npos);
 }
 
-TEST_CASE("compiles and runs same-path direct map tryAt struct method chain through alias helper in C++ emitter") {
+TEST_CASE("same-path direct map tryAt struct method chain through alias helper in C++ emitter") {
   const std::string source = R"(
 CanonicalMarker {
   [i32] value
@@ -711,7 +711,7 @@ main() {
   CHECK(readFile(outPath).empty());
 }
 
-TEST_CASE("compiles and runs canonical direct map tryAt struct method chain in C++ emitter") {
+TEST_CASE("canonical direct map tryAt struct method chain in C++ emitter") {
   const std::string source = R"(
 CanonicalMarker {
   [i32] value
@@ -933,7 +933,7 @@ main() {
   CHECK(readFile(errPath).find("unknown call target: /std/collections/map/contains") != std::string::npos);
 }
 
-TEST_CASE("compiles and runs bare map contains struct method chain through canonical helper in C++ emitter") {
+TEST_CASE("bare map contains struct method chain through canonical helper in C++ emitter") {
   const std::string source = R"(
 Marker {
   [i32] value
@@ -1022,7 +1022,7 @@ main() {
         std::string::npos);
 }
 
-TEST_CASE("compiles and runs bare map tryAt struct method chain through canonical helper in C++ emitter") {
+TEST_CASE("bare map tryAt struct method chain through canonical helper in C++ emitter") {
   const std::string source = R"(
 Marker {
   [i32] value

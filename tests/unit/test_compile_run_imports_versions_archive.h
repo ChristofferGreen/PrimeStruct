@@ -1,4 +1,4 @@
-TEST_CASE("compiles and runs archive import expansion") {
+TEST_CASE("archive import expansion") {
   if (!hasZipTools()) {
     return;
   }
@@ -31,7 +31,7 @@ TEST_CASE("compiles and runs archive import expansion") {
   CHECK(runCommand(exePath) == 5);
 }
 
-TEST_CASE("compiles and runs exact versioned archive import expansion") {
+TEST_CASE("exact versioned archive import expansion") {
   if (!hasZipTools()) {
     return;
   }
@@ -73,7 +73,7 @@ TEST_CASE("compiles and runs exact versioned archive import expansion") {
   CHECK(runCommand(exePath) == 5);
 }
 
-TEST_CASE("compiles and runs newest archive import expansion") {
+TEST_CASE("newest archive import expansion") {
   if (!hasZipTools()) {
     return;
   }

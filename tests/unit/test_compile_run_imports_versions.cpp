@@ -2,7 +2,7 @@
 
 TEST_SUITE_BEGIN("primestruct.compile.run.imports");
 
-TEST_CASE("compiles and runs versioned import expansion with relative import entry") {
+TEST_CASE("versioned import expansion with relative import entry") {
   const std::filesystem::path includeRoot =
       testScratchPath("") / "primec_tests" / "include_root_versioned_relative";
   std::filesystem::remove_all(includeRoot);
@@ -47,7 +47,7 @@ TEST_CASE("compiles and runs versioned import expansion with relative import ent
   CHECK(runCommand(nativePath) == 7);
 }
 
-TEST_CASE("compiles and runs exact versioned import expansion") {
+TEST_CASE("exact versioned import expansion") {
   const std::filesystem::path includeRoot =
       testScratchPath("") / "primec_tests" / "include_root_versioned_exact";
   std::filesystem::remove_all(includeRoot);
@@ -120,7 +120,7 @@ TEST_CASE("rejects version-first legacy include alias expansion") {
   CHECK(readFile(errPath) == "Import error: legacy include<...> is no longer supported; use import<...>\n");
 }
 
-TEST_CASE("compiles and runs versioned import expansion with quoted import entries") {
+TEST_CASE("versioned import expansion with quoted import entries") {
   const std::filesystem::path includeRoot =
       testScratchPath("") / "primec_tests" / "include_root_versioned_quoted";
   std::filesystem::remove_all(includeRoot);
@@ -165,7 +165,7 @@ TEST_CASE("compiles and runs versioned import expansion with quoted import entri
   CHECK(runCommand(nativePath) == 7);
 }
 
-TEST_CASE("compiles and runs import expansion with comments") {
+TEST_CASE("import expansion with comments") {
   const std::filesystem::path includeRoot =
       testScratchPath("") / "primec_tests" / "include_root_versioned_comments";
   std::filesystem::remove_all(includeRoot);
@@ -210,7 +210,7 @@ TEST_CASE("compiles and runs import expansion with comments") {
   CHECK(runCommand(nativePath) == 7);
 }
 
-TEST_CASE("compiles and runs duplicate imports once") {
+TEST_CASE("duplicate imports once") {
   const std::filesystem::path includeRoot =
       testScratchPath("") / "primec_tests" / "include_root_duplicate";
   std::filesystem::remove_all(includeRoot);
@@ -248,7 +248,7 @@ TEST_CASE("compiles and runs duplicate imports once") {
   CHECK(runCommand(nativePath) == 9);
 }
 
-TEST_CASE("compiles and runs versioned import with single quotes") {
+TEST_CASE("versioned import with single quotes") {
   const std::filesystem::path includeRoot =
       testScratchPath("") / "primec_tests" / "include_root_versioned_single_quotes";
   std::filesystem::remove_all(includeRoot);
@@ -293,7 +293,7 @@ TEST_CASE("compiles and runs versioned import with single quotes") {
   CHECK(runCommand(nativePath) == 8);
 }
 
-TEST_CASE("compiles and runs versioned import with major-only selector") {
+TEST_CASE("versioned import with major-only selector") {
   const std::filesystem::path includeRoot =
       testScratchPath("") / "primec_tests" / "include_root_versioned_major_only";
   std::filesystem::remove_all(includeRoot);
@@ -345,7 +345,7 @@ TEST_CASE("compiles and runs versioned import with major-only selector") {
   CHECK(runCommand(nativePath) == 7);
 }
 
-TEST_CASE("compiles and runs versioned import with minor selector") {
+TEST_CASE("versioned import with minor selector") {
   const std::filesystem::path includeRoot =
       testScratchPath("") / "primec_tests" / "include_root_versioned_minor_only";
   std::filesystem::remove_all(includeRoot);
@@ -397,7 +397,7 @@ TEST_CASE("compiles and runs versioned import with minor selector") {
   CHECK(runCommand(nativePath) == 8);
 }
 
-TEST_CASE("compiles and runs versioned import expansion with multiple import entries") {
+TEST_CASE("versioned import expansion with multiple import entries") {
   const std::filesystem::path includeRoot =
       testScratchPath("") / "primec_tests" / "include_root_versioned_multi";
   std::filesystem::remove_all(includeRoot);
@@ -520,7 +520,7 @@ TEST_CASE("rejects missing versioned import in compile") {
   CHECK(readFile(errPath).find("Import error: import version not found") != std::string::npos);
 }
 
-TEST_CASE("compiles and runs versioned import expansion with mixed quoted and relative entries") {
+TEST_CASE("versioned import expansion with mixed quoted and relative entries") {
   const std::filesystem::path includeRoot =
       testScratchPath("") / "primec_tests" / "include_root_versioned_mixed";
   std::filesystem::remove_all(includeRoot);

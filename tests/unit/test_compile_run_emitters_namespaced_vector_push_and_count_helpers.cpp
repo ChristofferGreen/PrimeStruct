@@ -31,7 +31,7 @@ main() {
   CHECK(readFile(errPath).find("unknown call target: /vector/push") != std::string::npos);
 }
 
-TEST_CASE("compiles and runs auto-inferred std namespaced vector push canonical precedence in C++ emitter") {
+TEST_CASE("auto-inferred std namespaced vector push canonical precedence in C++ emitter") {
   const std::string source = R"(
 [effects(heap_alloc), return<int>]
 /vector/push([vector<i32> mut] values, [string] value) {
@@ -67,7 +67,7 @@ main() {
   CHECK(runCommand(exePath) == 0);
 }
 
-TEST_CASE("compiles and runs auto-inferred std namespaced vector push canonical definition in C++ emitter") {
+TEST_CASE("auto-inferred std namespaced vector push canonical definition in C++ emitter") {
   const std::string source = R"(
 [effects(heap_alloc), return<bool>]
 /std/collections/vector/push([vector<i32> mut] values, [string] value) {
@@ -156,7 +156,7 @@ main() {
   CHECK(runCommand(exePath) == 0);
 }
 
-TEST_CASE("compiles and runs std namespaced count expression canonical precedence in C++ emitter") {
+TEST_CASE("std namespaced count expression canonical precedence in C++ emitter") {
   const std::string source = R"(
 [effects(heap_alloc), return<int>]
 /vector/count([vector<i32>] values) {
@@ -293,7 +293,7 @@ main() {
   CHECK(runCommand(compileCmd) == 2);
 }
 
-TEST_CASE("compiles and runs std namespaced capacity expression canonical precedence in C++ emitter") {
+TEST_CASE("std namespaced capacity expression canonical precedence in C++ emitter") {
   const std::string source = R"(
 [effects(heap_alloc), return<int>]
 /vector/capacity([vector<i32>] values) {
@@ -323,7 +323,7 @@ main() {
   CHECK(runCommand(exePath) == 0);
 }
 
-TEST_CASE("compiles and runs std namespaced capacity expression canonical fallback in C++ emitter") {
+TEST_CASE("std namespaced capacity expression canonical fallback in C++ emitter") {
   const std::string source = R"(
 [effects(heap_alloc), return<bool>]
 /std/collections/vector/capacity([vector<i32>] values) {
@@ -420,7 +420,7 @@ main() {
         std::string::npos);
 }
 
-TEST_CASE("compiles and runs auto-inferred std namespaced access helper canonical precedence in C++ emitter") {
+TEST_CASE("auto-inferred std namespaced access helper canonical precedence in C++ emitter") {
   const std::string source = R"(
 [effects(heap_alloc), return<int>]
 /vector/at([vector<i32>] values, [i32] index) {
@@ -450,7 +450,7 @@ main() {
   CHECK(runCommand(exePath) == 0);
 }
 
-TEST_CASE("compiles and runs auto-inferred std namespaced access helper canonical definition in C++ emitter") {
+TEST_CASE("auto-inferred std namespaced access helper canonical definition in C++ emitter") {
   const std::string source = R"(
 [effects(heap_alloc), return<bool>]
 /std/collections/vector/at([vector<i32>] values, [i32] index) {
@@ -477,7 +477,7 @@ main() {
   CHECK(runCommand(exePath) == 0);
 }
 
-TEST_CASE("compiles and runs wrapper std namespaced access helper named receiver in C++ emitter") {
+TEST_CASE("wrapper std namespaced access helper named receiver in C++ emitter") {
   const std::string source = R"(
 [effects(heap_alloc), return<vector<i32>>]
 wrapVector() {
@@ -506,7 +506,7 @@ main() {
   CHECK(runCommand(exePath) == 32);
 }
 
-TEST_CASE("compiles and runs std collections /std/collections/vector/at wrapper in C++ emitter") {
+TEST_CASE("std collections /std/collections/vector/at wrapper in C++ emitter") {
   const std::string source = R"(
 import /std/collections/*
 

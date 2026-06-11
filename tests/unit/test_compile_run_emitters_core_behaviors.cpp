@@ -7,7 +7,7 @@
 
 TEST_SUITE_BEGIN("primestruct.compile.run.emitters.cpp");
 
-TEST_CASE("compiles and runs array slice count and indexed access in C++ emitter") {
+TEST_CASE("array slice count and indexed access in C++ emitter") {
   const std::string source = R"(
 [return<int>]
 main() {
@@ -38,7 +38,7 @@ TEST_CASE("C++ emitter serializes scene model source deterministically") {
   CHECK(readFile(cppPathA) == readFile(cppPathB));
 }
 
-TEST_CASE("compiles and runs chained method calls in C++ emitter") {
+TEST_CASE("chained method calls in C++ emitter") {
   const std::string source = R"(
 namespace i32 {
   [return<int>]

@@ -5,7 +5,7 @@
 #if PRIMESTRUCT_NATIVE_CORE_ENABLED
 TEST_SUITE_BEGIN("primestruct.compile.run.native_backend.core");
 
-TEST_CASE("compiles and runs native void call with string param") {
+TEST_CASE("native void call with string param") {
   const std::string source = R"(
 [return<void> effects(io_out)]
 echo([string] msg) {
@@ -29,7 +29,7 @@ main() {
   CHECK(readFile(outPath) == "alpha\n");
 }
 
-TEST_CASE("compiles and runs native string indexing") {
+TEST_CASE("native string indexing") {
   const std::string source = R"(
 [return<int>]
 main() {
@@ -49,7 +49,7 @@ main() {
   CHECK(runCommand(exePath) == (97 + 98 + 3));
 }
 
-TEST_CASE("compiles and runs native string parameter indexing") {
+TEST_CASE("native string parameter indexing") {
   const std::string source = R"(
 [return<i32>]
 pick([string] text, [i32] index) {
@@ -69,7 +69,7 @@ main() {
   CHECK(runCommand(exePath) == 98);
 }
 
-TEST_CASE("compiles and runs native software renderer command serialization deterministically") {
+TEST_CASE("native software renderer command serialization deterministically") {
   const std::string source = R"(
 import /std/ui/*
 import /std/math/*
@@ -120,7 +120,7 @@ main() {
   CHECK(readFile(outPath) == "1,2,2,9,2,4,30,40,6,12,34,56,255,1,11,7,9,14,255,240,0,255,3,72,105,33\n");
 }
 
-TEST_CASE("compiles and runs native software renderer clip stack serialization deterministically") {
+TEST_CASE("native software renderer clip stack serialization deterministically") {
   const std::string source = R"(
 import /std/ui/*
 import /std/math/*
@@ -178,7 +178,7 @@ main() {
         "1,6,3,4,1,2,20,10,1,11,7,9,14,255,240,0,255,3,72,105,33,3,4,3,4,5,6,2,9,8,9,10,11,2,1,2,3,4,4,0,4,0\n");
 }
 
-TEST_CASE("compiles and runs native two-pass layout tree serialization deterministically") {
+TEST_CASE("native two-pass layout tree serialization deterministically") {
   const std::string source = R"(
 import /std/ui/*
 import /std/math/*
@@ -224,7 +224,7 @@ main() {
         "1,6,2,-1,24,36,10,20,50,40,1,0,20,5,12,22,46,5,2,0,12,14,12,30,46,14,1,2,8,4,13,31,44,4,1,2,10,6,13,37,44,6,1,0,6,7,12,47,46,7\n");
 }
 
-TEST_CASE("compiles and runs native two-pass layout empty root deterministically") {
+TEST_CASE("native two-pass layout empty root deterministically") {
   const std::string source = R"(
 import /std/ui/*
 import /std/math/*
@@ -264,7 +264,7 @@ main() {
   CHECK(readFile(outPath) == "1,1,2,-1,11,13,3,5,11,13\n");
 }
 
-TEST_CASE("compiles and runs native basic widget controls through layout deterministically") {
+TEST_CASE("native basic widget controls through layout deterministically") {
   const std::string source = R"(
 import /std/ui/*
 import /std/math/*
@@ -331,7 +331,7 @@ main() {
         "1,5,1,10,6,7,10,1,2,3,255,2,72,105,2,9,6,19,28,16,4,10,20,30,255,1,10,9,22,10,250,251,252,255,2,71,111,2,9,6,37,28,14,3,40,50,60,255,1,11,8,39,10,200,210,220,255,3,97,98,99\n");
 }
 
-TEST_CASE("compiles and runs native panel container widget deterministically") {
+TEST_CASE("native panel container widget deterministically") {
   const std::string source = R"(
 import /std/ui/*
 import /std/math/*
@@ -403,7 +403,7 @@ main() {
         "1,9,1,11,5,6,10,1,2,3,255,3,84,111,112,2,9,5,18,26,31,4,8,9,10,255,3,4,7,20,22,27,2,9,7,20,22,14,3,20,30,40,255,1,10,9,22,10,200,201,202,255,2,71,111,2,9,7,35,22,12,2,50,60,70,255,1,11,8,36,10,210,211,212,255,3,97,98,99,4,0,1,9,5,51,10,1,2,3,255,1,33\n");
 }
 
-TEST_CASE("compiles and runs native empty panel container stays balanced deterministically") {
+TEST_CASE("native empty panel container stays balanced deterministically") {
   const std::string source = R"(
 import /std/ui/*
 import /std/math/*

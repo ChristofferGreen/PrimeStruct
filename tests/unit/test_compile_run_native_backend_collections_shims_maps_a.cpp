@@ -284,7 +284,7 @@ main() {
         std::string::npos);
 }
 
-TEST_CASE("compiles and runs native stdlib collection shim vector single") {
+TEST_CASE("native stdlib collection shim vector single") {
   const std::string source = R"(
 import /std/collections/*
 
@@ -303,7 +303,7 @@ main() {
   CHECK(runCommand(exePath) == 15);
 }
 
-TEST_CASE("compiles and runs native stdlib collection shim vector new") {
+TEST_CASE("native stdlib collection shim vector new") {
   const std::string source = R"(
 import /std/collections/*
 
@@ -352,7 +352,7 @@ main() {
   CHECK(runCommand(compileCmd) == 0);
 }
 
-TEST_CASE("compiles and runs native stdlib collection shim vector pair") {
+TEST_CASE("native stdlib collection shim vector pair") {
   const std::string source = R"(
 import /std/collections/*
 
@@ -386,7 +386,7 @@ main() {
   CHECK(runCommand(compileCmd) == 0);
 }
 
-TEST_CASE("compiles and runs native stdlib collection shim vector triple") {
+TEST_CASE("native stdlib collection shim vector triple") {
   const std::string source = R"(
 import /std/collections/*
 
@@ -420,7 +420,7 @@ main() {
   CHECK(runCommand(compileCmd) == 0);
 }
 
-TEST_CASE("compiles and runs native stdlib collection shim vector quad") {
+TEST_CASE("native stdlib collection shim vector quad") {
   const std::string source = R"(
 import /std/collections/*
 
@@ -454,7 +454,7 @@ main() {
   CHECK(runCommand(compileCmd) == 0);
 }
 
-TEST_CASE("compiles and runs native stdlib collection shim map single") {
+TEST_CASE("native stdlib collection shim map single") {
   const std::string source = R"(
 import /std/collections/*
 
@@ -504,7 +504,7 @@ main() {
   CHECK(runCommand(compileCmd) == 2);
 }
 
-TEST_CASE("compiles and runs native stdlib collection shim map new") {
+TEST_CASE("native stdlib collection shim map new") {
   const std::string source = R"(
 import /std/collections/*
 
@@ -523,7 +523,7 @@ main() {
   CHECK(runCommand(exePath) == 1);
 }
 
-TEST_CASE("compiles and runs native stdlib collection shim map new string key envelope") {
+TEST_CASE("native stdlib collection shim map new string key envelope") {
   const std::string source = R"(
 import /std/collections/*
 
@@ -573,7 +573,7 @@ main() {
   CHECK(runCommand(compileCmd) == 2);
 }
 
-TEST_CASE("compiles and runs native stdlib collection shim map count") {
+TEST_CASE("native stdlib collection shim map count") {
   const std::string source = R"(
 import /std/collections/*
 
@@ -592,7 +592,7 @@ main() {
   CHECK(runCommand(exePath) == 12);
 }
 
-TEST_CASE("compiles and runs native stdlib collection shim map count string keys") {
+TEST_CASE("native stdlib collection shim map count string keys") {
   const std::string source = R"(
 import /std/collections/*
 

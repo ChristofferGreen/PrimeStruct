@@ -1931,7 +1931,7 @@ log_file_error([FileError] err) {
 }
 
 
-TEST_CASE("compiles and runs void main with local binding") {
+TEST_CASE("void main with local binding") {
   const std::string source = R"(
 [return<void>]
 main() {
@@ -3009,7 +3009,7 @@ main() {
   }
 }
 
-TEST_CASE("compiles and runs explicit void return") {
+TEST_CASE("explicit void return") {
   const std::string source = R"(
 [return<void>]
 main() {
@@ -3046,7 +3046,7 @@ log_file_error([FileError] err) {
   CHECK(runCommand(exePath) == 0);
 }
 
-TEST_CASE("compiles and runs implicit void main") {
+TEST_CASE("implicit void main") {
   const std::string source = R"(
 main() {
   [i32] value{1i32}
@@ -3061,7 +3061,7 @@ main() {
   CHECK(runCommand(exePath) == 0);
 }
 
-TEST_CASE("compiles and runs argv count") {
+TEST_CASE("argv count") {
   const std::string source = R"(
 [return<int>]
 main([array<string>] args) {
@@ -3077,7 +3077,7 @@ main([array<string>] args) {
   CHECK(runCommand(exePath + " alpha beta") == 3);
 }
 
-TEST_CASE("compiles and runs argv count helper") {
+TEST_CASE("argv count helper") {
   const std::string source = R"(
 [return<int>]
 main([array<string>] args) {
@@ -3093,7 +3093,7 @@ main([array<string>] args) {
   CHECK(runCommand(exePath + " alpha beta") == 3);
 }
 
-TEST_CASE("compiles and runs argv error output in C++ emitter") {
+TEST_CASE("argv error output in C++ emitter") {
   const std::string source = R"(
 [return<int> effects(io_err)]
 main([array<string>] args) {
@@ -3112,7 +3112,7 @@ main([array<string>] args) {
   CHECK(readFile(errPath) == "alpha\n");
 }
 
-TEST_CASE("compiles and runs argv error output without newline in C++ emitter") {
+TEST_CASE("argv error output without newline in C++ emitter") {
   const std::string source = R"(
 [return<int> effects(io_err)]
 main([array<string>] args) {
@@ -3132,7 +3132,7 @@ main([array<string>] args) {
   CHECK(readFile(errPath) == "alpha");
 }
 
-TEST_CASE("compiles and runs argv error output u64 index in C++ emitter") {
+TEST_CASE("argv error output u64 index in C++ emitter") {
   const std::string source = R"(
 [return<int> effects(io_err)]
 main([array<string>] args) {
@@ -3155,7 +3155,7 @@ main([array<string>] args) {
   CHECK(readFile(errPath) == "alpha");
 }
 
-TEST_CASE("compiles and runs argv unsafe error output in C++ emitter") {
+TEST_CASE("argv unsafe error output in C++ emitter") {
   const std::string source = R"(
 [return<int> effects(io_err)]
 main([array<string>] args) {
@@ -3178,7 +3178,7 @@ main([array<string>] args) {
   CHECK(readFile(errPath) == "alpha");
 }
 
-TEST_CASE("compiles and runs argv unsafe line error output in C++ emitter") {
+TEST_CASE("argv unsafe line error output in C++ emitter") {
   const std::string source = R"(
 [return<int> effects(io_err)]
 main([array<string>] args) {
@@ -3202,7 +3202,7 @@ main([array<string>] args) {
   CHECK(readFile(errPath) == "alpha\n");
 }
 
-TEST_CASE("compiles and runs argv print in C++ emitter") {
+TEST_CASE("argv print in C++ emitter") {
   const std::string source = R"(
 [return<int> effects(io_out)]
 main([array<string>] args) {
@@ -3225,7 +3225,7 @@ main([array<string>] args) {
   CHECK(readFile(outPath) == "alpha\nbeta\n");
 }
 
-TEST_CASE("compiles and runs argv print without newline in C++ emitter") {
+TEST_CASE("argv print without newline in C++ emitter") {
   const std::string source = R"(
 [return<int> effects(io_out)]
 main([array<string>] args) {
@@ -3248,7 +3248,7 @@ main([array<string>] args) {
   CHECK(readFile(outPath) == "alpha");
 }
 
-TEST_CASE("compiles and runs argv print with u64 index in C++ emitter") {
+TEST_CASE("argv print with u64 index in C++ emitter") {
   const std::string source = R"(
 [return<int> effects(io_out)]
 main([array<string>] args) {
@@ -3270,7 +3270,7 @@ main([array<string>] args) {
   CHECK(readFile(outPath) == "alpha\n");
 }
 
-TEST_CASE("compiles and runs argv unsafe access in C++ emitter") {
+TEST_CASE("argv unsafe access in C++ emitter") {
   const std::string source = R"(
 [return<int> effects(io_out)]
 main([array<string>] args) {
@@ -3293,7 +3293,7 @@ main([array<string>] args) {
   CHECK(readFile(outPath) == "alpha\nbeta\n");
 }
 
-TEST_CASE("compiles and runs argv unsafe access with u64 index in C++ emitter") {
+TEST_CASE("argv unsafe access with u64 index in C++ emitter") {
   const std::string source = R"(
 [return<int> effects(io_out)]
 main([array<string>] args) {
@@ -3315,7 +3315,7 @@ main([array<string>] args) {
   CHECK(readFile(outPath) == "alpha\n");
 }
 
-TEST_CASE("compiles and runs three-element array literal") {
+TEST_CASE("three-element array literal") {
   const std::string source = R"(
 [return<int>]
 main() {
@@ -3330,7 +3330,7 @@ main() {
   CHECK(runCommand(exePath) == 3);
 }
 
-TEST_CASE("compiles and runs array literal count method") {
+TEST_CASE("array literal count method") {
   const std::string source = R"(
 [return<int>]
 main() {
@@ -3345,7 +3345,7 @@ main() {
   CHECK(runCommand(exePath) == 3);
 }
 
-TEST_CASE("compiles and runs array literal unsafe access") {
+TEST_CASE("array literal unsafe access") {
   const std::string source = R"(
 [return<int>]
 main() {
@@ -3360,7 +3360,7 @@ main() {
   CHECK(runCommand(exePath) == 7);
 }
 
-TEST_CASE("compiles and runs array count helper") {
+TEST_CASE("array count helper") {
   const std::string source = R"(
 [return<int>]
 main() {
@@ -3376,7 +3376,7 @@ main() {
   CHECK(runCommand(exePath) == 3);
 }
 
-TEST_CASE("compiles and runs array literal count helper") {
+TEST_CASE("array literal count helper") {
   const std::string source = R"(
 [return<int>]
 main() {
@@ -3392,7 +3392,7 @@ main() {
   CHECK(runCommand(exePath) == 3);
 }
 
-TEST_CASE("compiles and runs literal method call in C++ emitter") {
+TEST_CASE("literal method call in C++ emitter") {
   const std::string source = R"(
 namespace i32 {
   [return<int>]

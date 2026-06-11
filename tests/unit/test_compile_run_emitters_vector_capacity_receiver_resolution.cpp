@@ -672,7 +672,7 @@ main() {
         std::string::npos);
 }
 
-TEST_CASE("compiles and runs wrapper bare vector count through imported stdlib helper in C++ emitter") {
+TEST_CASE("wrapper bare vector count through imported stdlib helper in C++ emitter") {
   const std::string source = R"(
 import /std/collections/*
 

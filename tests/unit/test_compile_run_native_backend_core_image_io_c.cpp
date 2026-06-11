@@ -5,7 +5,7 @@
 #if PRIMESTRUCT_NATIVE_CORE_ENABLED
 TEST_SUITE_BEGIN("primestruct.compile.run.native_backend.core");
 
-TEST_CASE("compiles and runs native png read for stored paeth-filter rgba inputs") {
+TEST_CASE("native png read for stored paeth-filter rgba inputs") {
   const std::string inPath =
       (testScratchPath("") / "primec_native_image_read_paeth_rgba.png").string();
   {
@@ -91,7 +91,7 @@ main() {
         "85\n");
 }
 
-TEST_CASE("compiles and runs native png read for fixed-huffman backreference rgb inputs") {
+TEST_CASE("native png read for fixed-huffman backreference rgb inputs") {
   const std::string inPath = (testScratchPath("") / "primec_native_image_read_fixed.png").string();
   {
     const std::vector<unsigned char> pngBytes = withValidPngCrcs({
@@ -168,7 +168,7 @@ main() {
         "30\n");
 }
 
-TEST_CASE("compiles and runs native png read for dynamic-huffman literal rgb inputs") {
+TEST_CASE("native png read for dynamic-huffman literal rgb inputs") {
   const std::string inPath =
       (testScratchPath("") / "primec_native_image_read_dynamic_literal.png").string();
   {
@@ -242,7 +242,7 @@ main() {
         "60\n");
 }
 
-TEST_CASE("compiles and runs native png read for dynamic-huffman backreference rgb inputs") {
+TEST_CASE("native png read for dynamic-huffman backreference rgb inputs") {
   const std::string inPath =
       (testScratchPath("") / "primec_native_image_read_dynamic_backref.png").string();
   {
@@ -367,7 +367,7 @@ main() {
         "0\n");
 }
 
-TEST_CASE("compiles and runs native png read for sub-filter indexed-color inputs") {
+TEST_CASE("native png read for sub-filter indexed-color inputs") {
   const std::string inPath =
       (testScratchPath("") / "primec_native_image_read_indexed_sub.png").string();
   {
@@ -498,7 +498,7 @@ main() {
         "0\n");
 }
 
-TEST_CASE("compiles and runs native png read for 2-bit indexed-color inputs") {
+TEST_CASE("native png read for 2-bit indexed-color inputs") {
   const std::string inPath =
       (testScratchPath("") / "primec_native_image_read_indexed2.png").string();
   {

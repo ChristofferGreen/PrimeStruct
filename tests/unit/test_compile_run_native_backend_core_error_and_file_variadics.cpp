@@ -215,7 +215,7 @@ main() {
 }
 
 #if defined(EACCES)
-TEST_CASE("compiles and runs native FileError.why mapping") {
+TEST_CASE("native FileError.why mapping") {
   const std::string source =
       "[return<Result<FileError>>]\n"
       "make_error() {\n"

@@ -9,7 +9,7 @@
 #if PRIMESTRUCT_NATIVE_COLLECTIONS_ENABLED
 TEST_SUITE_BEGIN("primestruct.compile.run.native_backend.collections");
 
-TEST_CASE("compiles and runs native stdlib collection shim access helpers") {
+TEST_CASE("native stdlib collection shim access helpers") {
   const std::string source = R"(
 import /std/collections/*
 
@@ -33,7 +33,7 @@ main() {
   CHECK(runCommand(exePath) == 32);
 }
 
-TEST_CASE("compiles and runs native stdlib collection shim capacity helper") {
+TEST_CASE("native stdlib collection shim capacity helper") {
   const std::string source = R"(
 import /std/collections/*
 
@@ -53,7 +53,7 @@ main() {
   CHECK(runCommand(exePath) == 4);
 }
 
-TEST_CASE("compiles and runs native stdlib collection shim vector capacity") {
+TEST_CASE("native stdlib collection shim vector capacity") {
   const std::string source = R"(
 import /std/collections/*
 
@@ -88,7 +88,7 @@ main() {
   CHECK(runCommand(compileCmd) == 2);
 }
 
-TEST_CASE("compiles and runs native stdlib collection shim vector count") {
+TEST_CASE("native stdlib collection shim vector count") {
   const std::string source = R"(
 import /std/collections/*
 
@@ -122,7 +122,7 @@ main() {
   CHECK(runCommand(compileCmd) == 2);
 }
 
-TEST_CASE("compiles and runs native stdlib collection shim vector at") {
+TEST_CASE("native stdlib collection shim vector at") {
   const std::string source = R"(
 import /std/collections/*
 
@@ -156,7 +156,7 @@ main() {
   CHECK(runCommand(compileCmd) == 2);
 }
 
-TEST_CASE("compiles and runs native stdlib collection shim vector at unsafe") {
+TEST_CASE("native stdlib collection shim vector at unsafe") {
   const std::string source = R"(
 import /std/collections/*
 
@@ -192,7 +192,7 @@ main() {
   CHECK(runCommand(compileCmd) == 2);
 }
 
-TEST_CASE("compiles and runs native stdlib collection shim vector push") {
+TEST_CASE("native stdlib collection shim vector push") {
   const std::string source = R"(
 import /std/collections/*
 
@@ -229,7 +229,7 @@ main() {
   CHECK(runCommand(compileCmd) == 2);
 }
 
-TEST_CASE("compiles and runs native stdlib collection shim vector pop") {
+TEST_CASE("native stdlib collection shim vector pop") {
   const std::string source = R"(
 import /std/collections/*
 
@@ -265,7 +265,7 @@ main() {
   CHECK(runCommand(compileCmd) == 2);
 }
 
-TEST_CASE("compiles and runs native stdlib collection shim vector reserve") {
+TEST_CASE("native stdlib collection shim vector reserve") {
   const std::string source = R"(
 import /std/collections/*
 
@@ -302,7 +302,7 @@ main() {
   CHECK(runCommand(compileCmd) == 2);
 }
 
-TEST_CASE("compiles and runs native stdlib collection shim vector clear") {
+TEST_CASE("native stdlib collection shim vector clear") {
   const std::string source = R"(
 import /std/collections/*
 
@@ -338,7 +338,7 @@ main() {
   CHECK(runCommand(compileCmd) == 2);
 }
 
-TEST_CASE("compiles and runs native stdlib collection shim vector remove at") {
+TEST_CASE("native stdlib collection shim vector remove at") {
   const std::string source = R"(
 import /std/collections/*
 
@@ -376,7 +376,7 @@ main() {
   CHECK(runCommand(compileCmd) == 2);
 }
 
-TEST_CASE("compiles and runs native stdlib collection shim vector remove swap") {
+TEST_CASE("native stdlib collection shim vector remove swap") {
   const std::string source = R"(
 import /std/collections/*
 
@@ -414,7 +414,7 @@ main() {
   CHECK(runCommand(compileCmd) == 2);
 }
 
-TEST_CASE("compiles and runs native stdlib collection shim vector mutators") {
+TEST_CASE("native stdlib collection shim vector mutators") {
   const std::string source = R"(
 import /std/collections/*
 
@@ -444,7 +444,7 @@ main() {
   CHECK(runCommand(exePath) == 8);
 }
 
-TEST_CASE("compiles and runs native bare vector capacity through imported stdlib helper") {
+TEST_CASE("native bare vector capacity through imported stdlib helper") {
   const std::string source = R"(
 import /std/collections/*
 
@@ -481,7 +481,7 @@ main() {
   CHECK(readFile(errPath).find("unknown call target: /std/collections/vector/capacity") != std::string::npos);
 }
 
-TEST_CASE("compiles and runs native bare vector capacity method without imported helper") {
+TEST_CASE("native bare vector capacity method without imported helper") {
   const std::string source = R"(
 [effects(heap_alloc), return<int>]
 main() {
@@ -522,7 +522,7 @@ main() {
   CHECK(readFile(errPath).find("unknown method: /vector/capacity") != std::string::npos);
 }
 
-TEST_CASE("compiles and runs native bare vector capacity after pop through imported stdlib helper") {
+TEST_CASE("native bare vector capacity after pop through imported stdlib helper") {
   const std::string source = R"(
 import /std/collections/*
 

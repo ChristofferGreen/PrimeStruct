@@ -150,7 +150,7 @@ main() {
   CHECK(runCommand(compileCmd) == 2);
 }
 
-TEST_CASE("compiles and runs stdlib namespaced vector helpers in C++ emitter") {
+TEST_CASE("stdlib namespaced vector helpers in C++ emitter") {
   const std::string source = R"(
 import /std/collections/*
 

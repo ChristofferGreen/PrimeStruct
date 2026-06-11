@@ -6,7 +6,7 @@
 
 TEST_SUITE_BEGIN("primestruct.compile.run.emitters.cpp");
 
-TEST_CASE("compiles and runs repeat loop") {
+TEST_CASE("repeat loop") {
   const std::string source = R"(
 [return<int>]
 main() {
@@ -25,7 +25,7 @@ main() {
   CHECK(runCommand(exePath) == 6);
 }
 
-TEST_CASE("compiles and runs loop while for sugar") {
+TEST_CASE("loop while for sugar") {
   const std::string source = R"(
 [return<int>]
 main() {
@@ -52,7 +52,7 @@ main() {
   CHECK(runCommand(exePath) == 6);
 }
 
-TEST_CASE("compiles and runs for binding condition") {
+TEST_CASE("for binding condition") {
   const std::string source = R"(
 [return<int>]
 main() {
@@ -71,7 +71,7 @@ main() {
   CHECK(runCommand(exePath) == 6);
 }
 
-TEST_CASE("compiles and runs shared_scope loops") {
+TEST_CASE("shared_scope loops") {
   const std::string source = R"(
 [return<int>]
 main() {
@@ -99,7 +99,7 @@ main() {
   CHECK(runCommand(exePath) == 5);
 }
 
-TEST_CASE("compiles and runs shared_scope for binding condition") {
+TEST_CASE("shared_scope for binding condition") {
   const std::string source = R"(
 [return<int>]
 main() {
@@ -121,7 +121,7 @@ main() {
   CHECK(runCommand(exePath) == 6);
 }
 
-TEST_CASE("compiles and runs shared_scope while loop") {
+TEST_CASE("shared_scope while loop") {
   const std::string source = R"(
 [return<int>]
 main() {
@@ -145,7 +145,7 @@ main() {
   CHECK(runCommand(exePath) == 6);
 }
 
-TEST_CASE("compiles and runs increment decrement sugar") {
+TEST_CASE("increment decrement sugar") {
   const std::string source = R"(
 [return<int>]
 main() {
@@ -163,7 +163,7 @@ main() {
   CHECK(runCommand(exePath) == 1);
 }
 
-TEST_CASE("compiles and runs brace constructor value") {
+TEST_CASE("brace constructor value") {
   const std::string source = R"(
 [return<int>]
 pick([i32] value) {
@@ -184,7 +184,7 @@ main() {
   CHECK(runCommand(exePath) == 3);
 }
 
-TEST_CASE("compiles and runs nested definition call") {
+TEST_CASE("nested definition call") {
   const std::string source = R"(
 [return<int>]
 main() {
@@ -204,7 +204,7 @@ main() {
   CHECK(runCommand(exePath) == 5);
 }
 
-TEST_CASE("compiles and runs paired map constructor") {
+TEST_CASE("paired map constructor") {
   const std::string source = R"(
 import /std/collections/*
 

@@ -2,7 +2,7 @@
 
 TEST_SUITE_BEGIN("primestruct.compile.run.imports");
 
-TEST_CASE("compiles and runs import inside namespace") {
+TEST_CASE("import inside namespace") {
   const std::string libPath =
       writeTemp("compile_namespace_lib.prime", "[return<int>]\nhelper(){ return(9i32) }\n");
   const std::string source =
@@ -29,7 +29,7 @@ TEST_CASE("compiles and runs import inside namespace") {
   CHECK(runCommand(nativePath) == 9);
 }
 
-TEST_CASE("compiles and runs import with import aliases") {
+TEST_CASE("import with import aliases") {
   const std::string libSource = R"(
 namespace lib {
   [public return<int>]
@@ -61,7 +61,7 @@ namespace lib {
   CHECK(runCommand(nativePath) == 7);
 }
 
-TEST_CASE("compiles and runs block expression with multiline body") {
+TEST_CASE("block expression with multiline body") {
   const std::string source = R"(
 [return<int>]
 main() {
@@ -88,7 +88,7 @@ main() {
   CHECK(runCommand(nativePath) == 3);
 }
 
-TEST_CASE("compiles and runs block expression return value") {
+TEST_CASE("block expression return value") {
   const std::string source = R"(
 [return<int>]
 main() {
@@ -114,7 +114,7 @@ main() {
   CHECK(runCommand(nativePath) == 7);
 }
 
-TEST_CASE("compiles and runs block expression early return") {
+TEST_CASE("block expression early return") {
   const std::string source = R"(
 [return<int>]
 main() {
@@ -142,7 +142,7 @@ main() {
   CHECK(runCommand(nativePath) == 3);
 }
 
-TEST_CASE("compiles and runs block binding inference for method calls") {
+TEST_CASE("block binding inference for method calls") {
   const std::string source = R"(
 namespace i64 {
   [return<i64>]
@@ -177,7 +177,7 @@ main() {
   CHECK(runCommand(nativePath) == 4);
 }
 
-TEST_CASE("compiles and runs block binding inference for mixed if numeric types") {
+TEST_CASE("block binding inference for mixed if numeric types") {
   const std::string source = R"(
 [return<int> effects(io_out)]
 main() {
@@ -199,7 +199,7 @@ main() {
   CHECK(readFile(outPath) == "5000000000\n");
 }
 
-TEST_CASE("compiles and runs operator rewrite") {
+TEST_CASE("operator rewrite") {
   const std::string source = R"(
 [return<int>]
 main() {
@@ -214,7 +214,7 @@ main() {
   CHECK(runCommand(exePath) == 3);
 }
 
-TEST_CASE("compiles and runs operator rewrite with calls") {
+TEST_CASE("operator rewrite with calls") {
   const std::string source = R"(
 [return<int>]
 helper() {
@@ -234,7 +234,7 @@ main() {
   CHECK(runCommand(exePath) == 7);
 }
 
-TEST_CASE("compiles and runs operator rewrite with parentheses") {
+TEST_CASE("operator rewrite with parentheses") {
   const std::string source = R"(
 [return<int>]
 main() {
@@ -249,7 +249,7 @@ main() {
   CHECK(runCommand(exePath) == 9);
 }
 
-TEST_CASE("compiles and runs operator rewrite with unary minus operand") {
+TEST_CASE("operator rewrite with unary minus operand") {
   const std::string source = R"(
 [return<int>]
 main() {
@@ -280,7 +280,7 @@ main() {
   CHECK(runCommand(compileCmd) == 2);
 }
 
-TEST_CASE("compiles and runs short-circuit and") {
+TEST_CASE("short-circuit and") {
   const std::string source = R"(
 [return<int>]
 main() {
@@ -298,7 +298,7 @@ main() {
   CHECK(runCommand(exePath) == 0);
 }
 
-TEST_CASE("compiles and runs short-circuit or") {
+TEST_CASE("short-circuit or") {
   const std::string source = R"(
 [return<int>]
 main() {
@@ -316,7 +316,7 @@ main() {
   CHECK(runCommand(exePath) == 0);
 }
 
-TEST_CASE("compiles and runs numeric boolean ops") {
+TEST_CASE("numeric boolean ops") {
   const std::string source = R"(
 [return<bool>]
 main() {
@@ -331,7 +331,7 @@ main() {
   CHECK(runCommand(exePath) == 1);
 }
 
-TEST_CASE("compiles and runs convert<bool>") {
+TEST_CASE("convert<bool>") {
   const std::string source = R"(
 [return<bool>]
 main() {
@@ -346,7 +346,7 @@ main() {
   CHECK(runCommand(exePath) == 0);
 }
 
-TEST_CASE("compiles and runs convert<i64>") {
+TEST_CASE("convert<i64>") {
   const std::string source = R"(
 [return<i64>]
 main() {
@@ -361,7 +361,7 @@ main() {
   CHECK(runCommand(exePath) == 9);
 }
 
-TEST_CASE("compiles and runs convert<u64>") {
+TEST_CASE("convert<u64>") {
   const std::string source = R"(
 [return<u64>]
 main() {
@@ -376,7 +376,7 @@ main() {
   CHECK(runCommand(exePath) == 10);
 }
 
-TEST_CASE("compiles and runs convert<bool> from u64") {
+TEST_CASE("convert<bool> from u64") {
   const std::string source = R"(
 [return<bool>]
 main() {
@@ -391,7 +391,7 @@ main() {
   CHECK(runCommand(exePath) == 1);
 }
 
-TEST_CASE("compiles and runs convert<bool> from negative i64") {
+TEST_CASE("convert<bool> from negative i64") {
   const std::string source = R"(
 [return<bool>]
 main() {
@@ -406,7 +406,7 @@ main() {
   CHECK(runCommand(exePath) == 1);
 }
 
-TEST_CASE("compiles and runs pointer helpers") {
+TEST_CASE("pointer helpers") {
   const std::string source = R"(
 [return<int>]
 main() {
@@ -422,7 +422,7 @@ main() {
   CHECK(runCommand(exePath) == 4);
 }
 
-TEST_CASE("compiles and runs pointer plus helper") {
+TEST_CASE("pointer plus helper") {
   const std::string source = R"(
 [return<int>]
 main() {
@@ -438,7 +438,7 @@ main() {
   CHECK(runCommand(exePath) == 5);
 }
 
-TEST_CASE("compiles and runs pointer plus on reference") {
+TEST_CASE("pointer plus on reference") {
   const std::string source = R"(
 [return<int>]
 main() {
@@ -455,7 +455,7 @@ main() {
   CHECK(runCommand(exePath) == 8);
 }
 
-TEST_CASE("compiles and runs pointer minus helper") {
+TEST_CASE("pointer minus helper") {
   const std::string source = R"(
 [return<int>]
 main() {
@@ -472,7 +472,7 @@ main() {
   CHECK(runCommand(exePath) == 9);
 }
 
-TEST_CASE("compiles and runs pointer minus u64 offset") {
+TEST_CASE("pointer minus u64 offset") {
   const std::string source = R"(
 [return<int>]
 main() {

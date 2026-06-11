@@ -6,7 +6,7 @@
 #if PRIMESTRUCT_NATIVE_CORE_ENABLED
 TEST_SUITE_BEGIN("primestruct.compile.run.native_backend.core");
 
-TEST_CASE("compiles and runs native scene model authoring deterministically") {
+TEST_CASE("native scene model authoring deterministically") {
   const std::string srcPath =
       writeTemp("compile_native_scene_model_descriptors.prime", sceneModelNativeDescriptorSource());
   const std::string exePath =
@@ -18,7 +18,7 @@ TEST_CASE("compiles and runs native scene model authoring deterministically") {
   CHECK(runCommand(quoteShellArg(exePath)) == 14);
 }
 
-TEST_CASE("compiles and runs native ui scene adapter deterministically") {
+TEST_CASE("native ui scene adapter deterministically") {
   const std::string srcPath =
       writeTemp("compile_native_ui_scene_adapter.prime", uiSceneAdapterSource());
   const std::string exePath =
@@ -34,7 +34,7 @@ TEST_CASE("compiles and runs native ui scene adapter deterministically") {
   CHECK(readFile(outPath) == expectedUiSceneAdapterOutput());
 }
 
-TEST_CASE("compiles and runs native composite login form deterministically") {
+TEST_CASE("native composite login form deterministically") {
   const std::string source = R"(
 import /std/ui/*
 import /std/math/*
@@ -109,7 +109,7 @@ main() {
         "1,10,2,9,7,8,38,55,4,9,8,7,255,3,4,9,10,34,51,1,13,9,10,10,1,2,3,255,5,76,111,103,105,110,2,9,9,21,34,12,3,20,30,40,255,1,13,10,22,10,200,201,202,255,5,97,108,105,99,101,2,9,9,34,34,12,3,20,30,40,255,1,14,10,35,10,200,201,202,255,6,115,101,99,114,101,116,2,9,9,47,34,14,3,50,60,70,255,1,10,11,49,10,250,251,252,255,2,71,111,4,0\n");
 }
 
-TEST_CASE("compiles and runs native html adapter login form deterministically") {
+TEST_CASE("native html adapter login form deterministically") {
   const std::string source = R"(
 import /std/ui/*
 import /std/math/*
@@ -187,7 +187,7 @@ main() {
         "1,8,1,12,1,0,7,8,38,55,2,4,9,8,7,255,2,17,2,1,9,10,34,10,10,1,2,3,255,5,76,111,103,105,110,4,23,3,1,9,21,34,12,10,1,3,20,30,40,255,200,201,202,255,5,97,108,105,99,101,5,13,3,2,10,117,115,101,114,95,105,110,112,117,116,4,24,4,1,9,34,34,12,10,1,3,20,30,40,255,200,201,202,255,6,115,101,99,114,101,116,5,13,4,2,10,112,97,115,115,95,105,110,112,117,116,3,20,5,1,9,47,34,14,10,2,3,50,60,70,255,250,251,252,255,2,71,111,5,15,5,1,12,115,117,98,109,105,116,95,99,108,105,99,107\n");
 }
 
-TEST_CASE("compiles and runs native ui event stream deterministically") {
+TEST_CASE("native ui event stream deterministically") {
   const std::string source = R"(
 import /std/ui/*
 import /std/math/*
@@ -246,7 +246,7 @@ main() {
         "1,5,1,5,3,7,-1,20,30,2,5,5,7,1,20,30,3,5,5,7,1,21,31,4,4,3,13,3,1,5,4,3,13,1,0\n");
 }
 
-TEST_CASE("compiles and runs native ui ime event stream deterministically") {
+TEST_CASE("native ui ime event stream deterministically") {
   const std::string source = R"(
 import /std/ui/*
 import /std/math/*
@@ -302,7 +302,7 @@ main() {
         "1,2,6,7,3,1,4,3,97,108,124,7,9,3,-1,-1,5,97,108,105,99,101\n");
 }
 
-TEST_CASE("compiles and runs native ui resize and focus event stream deterministically") {
+TEST_CASE("native ui resize and focus event stream deterministically") {
   const std::string source = R"(
 import /std/ui/*
 import /std/math/*
@@ -358,7 +358,7 @@ main() {
   CHECK(readFile(outPath) == "1,3,8,3,1,40,57,9,3,3,0,0,10,3,3,0,0\n");
 }
 
-TEST_CASE("compiles and runs native large frame") {
+TEST_CASE("native large frame") {
   std::ostringstream source;
   source << "[return<int>]\n";
   source << "main() {\n";

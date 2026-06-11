@@ -2,7 +2,7 @@
 
 TEST_SUITE_BEGIN("primestruct.compile.run.bindings");
 
-TEST_CASE("compiles and runs empty void main") {
+TEST_CASE("empty void main") {
   const std::string source = R"(
 [return<void>]
 main() {
@@ -16,7 +16,7 @@ main() {
   CHECK(runCommand(exePath) == 0);
 }
 
-TEST_CASE("compiles and runs local binding") {
+TEST_CASE("local binding") {
   const std::string source = R"(
 [return<int>]
 main() {
@@ -32,7 +32,7 @@ main() {
   CHECK(runCommand(exePath) == 5);
 }
 
-TEST_CASE("compiles and runs bare zero-arg calls") {
+TEST_CASE("bare zero-arg calls") {
   const std::string source = R"(
 [return<int>]
 forty() {
@@ -60,7 +60,7 @@ main() {
   CHECK(runCommand(exePath) == 41);
 }
 
-TEST_CASE("compiles and runs typeof type locals") {
+TEST_CASE("typeof type locals") {
   const std::string source = R"(
 [struct]
 Holder() {
@@ -95,7 +95,7 @@ main() {
   CHECK(runCommand(exePath) == 10);
 }
 
-TEST_CASE("compiles and runs local generated struct") {
+TEST_CASE("local generated struct") {
   const std::string source = R"(
 [return<int>]
 sum_pair([i32] left, [i32] right) {
@@ -179,7 +179,7 @@ main() {
   CHECK(runCommand(exePath) == 7);
 }
 
-TEST_CASE("compiles and runs assign to mutable binding") {
+TEST_CASE("assign to mutable binding") {
   const std::string source = R"(
 [return<int>]
 main() {
@@ -196,7 +196,7 @@ main() {
   CHECK(runCommand(exePath) == 6);
 }
 
-TEST_CASE("compiles and runs assign to reference") {
+TEST_CASE("assign to reference") {
   const std::string source = R"(
 [return<int>]
 main() {
@@ -214,7 +214,7 @@ main() {
   CHECK(runCommand(exePath) == 9);
 }
 
-TEST_CASE("compiles and runs location on reference") {
+TEST_CASE("location on reference") {
   const std::string source = R"(
 [return<int>]
 main() {
@@ -232,7 +232,7 @@ main() {
   CHECK(runCommand(exePath) == 8);
 }
 
-TEST_CASE("compiles and runs reference arithmetic") {
+TEST_CASE("reference arithmetic") {
   const std::string source = R"(
 [return<int>]
 main() {
@@ -250,7 +250,7 @@ main() {
   CHECK(runCommand(exePath) == 7);
 }
 
-TEST_CASE("compiles and runs array reference helpers") {
+TEST_CASE("array reference helpers") {
   const std::string source = R"(
 [return<int>]
 main() {

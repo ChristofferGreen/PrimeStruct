@@ -3,7 +3,7 @@
 #if defined(__APPLE__) && (defined(__arm64__) || defined(__aarch64__))
 TEST_SUITE_BEGIN("primestruct.compile.run.native_backend.math_numeric");
 
-TEST_CASE("compiles and runs native clamp") {
+TEST_CASE("native clamp") {
   const std::string source = R"(
 import /std/math/*
 [return<int>]
@@ -19,7 +19,7 @@ main() {
   CHECK(runCommand(exePath) == 6);
 }
 
-TEST_CASE("compiles and runs native clamp i64") {
+TEST_CASE("native clamp i64") {
   const std::string source = R"(
 import /std/math/*
 [return<bool>]
@@ -35,7 +35,7 @@ main() {
   CHECK(runCommand(exePath) == 1);
 }
 
-TEST_CASE("compiles and runs native math abs/sign/min/max") {
+TEST_CASE("native math abs/sign/min/max") {
   const std::string source = R"(
 import /std/math/*
 [return<int>]
@@ -55,7 +55,7 @@ main() {
   CHECK(runCommand(exePath) == 13);
 }
 
-TEST_CASE("compiles and runs native qualified math names") {
+TEST_CASE("native qualified math names") {
   const std::string source = R"(
 [return<int>]
 main() {
@@ -76,7 +76,7 @@ main() {
   CHECK(runCommand(exePath) == 16);
 }
 
-TEST_CASE("compiles and runs native math saturate/lerp") {
+TEST_CASE("native math saturate/lerp") {
   const std::string source = R"(
 import /std/math/*
 [return<int>]
@@ -96,7 +96,7 @@ main() {
   CHECK(runCommand(exePath) == 11);
 }
 
-TEST_CASE("compiles and runs native math clamp") {
+TEST_CASE("native math clamp") {
   const std::string source = R"(
 import /std/math/*
 [return<int>]
@@ -115,7 +115,7 @@ main() {
   CHECK(runCommand(exePath) == 7);
 }
 
-TEST_CASE("compiles and runs native math pow") {
+TEST_CASE("native math pow") {
   const std::string source = R"(
 import /std/math/*
 [return<int>]
@@ -132,7 +132,7 @@ main() {
   CHECK(runCommand(exePath) == 64);
 }
 
-TEST_CASE("compiles and runs native math pow rejects negative exponent") {
+TEST_CASE("native math pow rejects negative exponent") {
   const std::string source = R"(
 import /std/math/*
 [return<int>]
@@ -153,7 +153,7 @@ main() {
   CHECK(readFile(errPath) == "pow exponent must be non-negative\n");
 }
 
-TEST_CASE("compiles and runs native math constant conversions") {
+TEST_CASE("native math constant conversions") {
   const std::string source = R"(
 import /std/math/*
 [return<int>]
@@ -170,7 +170,7 @@ main() {
   CHECK(runCommand(exePath) == 11);
 }
 
-TEST_CASE("compiles and runs native math constants") {
+TEST_CASE("native math constants") {
   const std::string source = R"(
 import /std/math/*
 [return<int>]
@@ -188,7 +188,7 @@ main() {
   CHECK(runCommand(exePath) == 12);
 }
 
-TEST_CASE("compiles and runs native math predicates") {
+TEST_CASE("native math predicates") {
   const std::string source = R"(
 import /std/math/*
 [return<int>]
@@ -210,7 +210,7 @@ main() {
   CHECK(runCommand(exePath) == 3);
 }
 
-TEST_CASE("compiles and runs native math rounding") {
+TEST_CASE("native math rounding") {
   const std::string source = R"(
 import /std/math/*
 [return<int>]
@@ -235,7 +235,7 @@ main() {
   CHECK(runCommand(exePath) == 6);
 }
 
-TEST_CASE("compiles and runs native math roots") {
+TEST_CASE("native math roots") {
   const std::string source = R"(
 import /std/math/*
 [return<int>]
@@ -254,7 +254,7 @@ main() {
   CHECK(runCommand(exePath) == 6);
 }
 
-TEST_CASE("compiles and runs native math fma/hypot") {
+TEST_CASE("native math fma/hypot") {
   const std::string source = R"(
 import /std/math/*
 [return<int>]
@@ -273,7 +273,7 @@ main() {
   CHECK(runCommand(exePath) == 11);
 }
 
-TEST_CASE("compiles and runs native math copysign") {
+TEST_CASE("native math copysign") {
   const std::string source = R"(
 import /std/math/*
 [return<int>]
@@ -292,7 +292,7 @@ main() {
   CHECK(runCommand(exePath) == 1);
 }
 
-TEST_CASE("compiles and runs native math angle helpers") {
+TEST_CASE("native math angle helpers") {
   const std::string source = R"(
 import /std/math/*
 [return<int>]
@@ -311,7 +311,7 @@ main() {
   CHECK(runCommand(exePath) == 58);
 }
 
-TEST_CASE("compiles and runs native math trig helpers") {
+TEST_CASE("native math trig helpers") {
   const std::string source = R"(
 import /std/math/*
 [return<int>]
@@ -333,7 +333,7 @@ main() {
   CHECK(runCommand(exePath) == 2);
 }
 
-TEST_CASE("compiles and runs native sin range reduction") {
+TEST_CASE("native sin range reduction") {
   const std::string source = R"(
 import /std/math/*
 [return<int>]
@@ -355,7 +355,7 @@ main() {
   CHECK(runCommand(exePath) == 1);
 }
 
-TEST_CASE("compiles and runs native sin pi accuracy") {
+TEST_CASE("native sin pi accuracy") {
   const std::string source = R"(
 import /std/math/*
 [return<int>]
@@ -377,7 +377,7 @@ main() {
   CHECK(runCommand(exePath) == 1);
 }
 
-TEST_CASE("compiles and runs native math arc trig helpers") {
+TEST_CASE("native math arc trig helpers") {
   const std::string source = R"(
 import /std/math/*
 [return<int>]
@@ -397,7 +397,7 @@ main() {
   CHECK(runCommand(exePath) == 1);
 }
 
-TEST_CASE("compiles and runs native math exp/log") {
+TEST_CASE("native math exp/log") {
   const std::string source = R"(
 import /std/math/*
 [return<int>]
@@ -420,7 +420,7 @@ main() {
   CHECK(runCommand(exePath) == 4);
 }
 
-TEST_CASE("compiles and runs native math hyperbolic") {
+TEST_CASE("native math hyperbolic") {
   const std::string source = R"(
 import /std/math/*
 [return<int>]
@@ -463,7 +463,7 @@ main() {
         std::string::npos);
 }
 
-TEST_CASE("compiles and runs native float pow") {
+TEST_CASE("native float pow") {
   const std::string source = R"(
 import /std/math/*
 [return<int>]
@@ -480,7 +480,7 @@ main() {
   CHECK(runCommand(exePath) == 8);
 }
 
-TEST_CASE("compiles and runs native i64 arithmetic") {
+TEST_CASE("native i64 arithmetic") {
   const std::string source = R"(
 [return<bool>]
 main() {
@@ -495,7 +495,7 @@ main() {
   CHECK(runCommand(exePath) == 1);
 }
 
-TEST_CASE("compiles and runs native u64 division") {
+TEST_CASE("native u64 division") {
   const std::string source = R"(
 [return<bool>]
 main() {
@@ -510,7 +510,7 @@ main() {
   CHECK(runCommand(exePath) == 1);
 }
 
-TEST_CASE("compiles and runs native u64 comparison") {
+TEST_CASE("native u64 comparison") {
   const std::string source = R"(
 [return<bool>]
 main() {
@@ -525,7 +525,7 @@ main() {
   CHECK(runCommand(exePath) == 1);
 }
 
-TEST_CASE("compiles and runs native bool return") {
+TEST_CASE("native bool return") {
   const std::string source = R"(
 [return<bool>]
 main() {
@@ -540,7 +540,7 @@ main() {
   CHECK(runCommand(exePath) == 1);
 }
 
-TEST_CASE("compiles and runs native bool comparison with i32") {
+TEST_CASE("native bool comparison with i32") {
   const std::string source = R"(
 [return<bool>]
 main() {
@@ -556,7 +556,7 @@ main() {
   CHECK(runCommand(exePath) == 1);
 }
 
-TEST_CASE("compiles and runs native implicit void main") {
+TEST_CASE("native implicit void main") {
   const std::string source = R"(
 main() {
   [i32] value{1i32}
@@ -570,7 +570,7 @@ main() {
   CHECK(runCommand(exePath) == 0);
 }
 
-TEST_CASE("compiles and runs native boolean ops") {
+TEST_CASE("native boolean ops") {
   const std::string source = R"(
 [return<bool>]
 main() {
@@ -585,7 +585,7 @@ main() {
   CHECK(runCommand(exePath) == 1);
 }
 
-TEST_CASE("compiles and runs native numeric boolean ops") {
+TEST_CASE("native numeric boolean ops") {
   const std::string source = R"(
 [return<bool>]
 main() {
@@ -600,7 +600,7 @@ main() {
   CHECK(runCommand(exePath) == 1);
 }
 
-TEST_CASE("compiles and runs native short-circuit and") {
+TEST_CASE("native short-circuit and") {
   const std::string source = R"(
 [return<int>]
 main() {
@@ -618,7 +618,7 @@ main() {
   CHECK(runCommand(exePath) == 0);
 }
 
-TEST_CASE("compiles and runs native short-circuit or") {
+TEST_CASE("native short-circuit or") {
   const std::string source = R"(
 [return<int>]
 main() {

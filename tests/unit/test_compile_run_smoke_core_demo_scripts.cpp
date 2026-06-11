@@ -295,7 +295,7 @@ main([array<string>] args) {
   CHECK(readFile(outPath) == "alpha\n");
 }
 
-TEST_CASE("compiles and runs with line comments after expressions") {
+TEST_CASE("with line comments after expressions") {
   const std::string source = R"(
 [return<int>]
 main() {
@@ -319,7 +319,7 @@ main() {
   CHECK(runCommand(nativePath) == 7);
 }
 
-TEST_CASE("compiles and runs string count and indexing in C++ emitter") {
+TEST_CASE("string count and indexing in C++ emitter") {
   const std::string source = R"(
 [return<int>]
 main() {
@@ -338,7 +338,7 @@ main() {
   CHECK(runCommand(exePath) == (97 + 98 + 3));
 }
 
-TEST_CASE("compiles and runs single-quoted strings in C++ emitter") {
+TEST_CASE("single-quoted strings in C++ emitter") {
   const std::string source = R"(
 [return<int>]
 main() {
@@ -357,7 +357,7 @@ main() {
   CHECK(runCommand(exePath) == (107 + 118 + 9));
 }
 
-TEST_CASE("compiles and runs method calls via type namespaces") {
+TEST_CASE("method calls via type namespaces") {
   const std::string source = R"(
 namespace i32 {
   [return<int>]
@@ -387,7 +387,7 @@ main() {
   CHECK(runCommand(nativePath) == 2);
 }
 
-TEST_CASE("compiles and runs count forwarding to method") {
+TEST_CASE("count forwarding to method") {
   const std::string source = R"(
 namespace i32 {
   [return<int>]
@@ -417,7 +417,7 @@ main() {
   CHECK(runCommand(nativePath) == 7);
 }
 
-TEST_CASE("compiles and runs method call on constructor") {
+TEST_CASE("method call on constructor") {
   const std::string source = R"(
 [struct]
 Foo() {
@@ -450,7 +450,7 @@ main() {
   CHECK(runCommand(nativePath) == 9);
 }
 
-TEST_CASE("compiles and runs call with body block") {
+TEST_CASE("call with body block") {
   const std::string source = R"(
 [return<int>]
 sum([i32] a, [i32] b) {
@@ -480,7 +480,7 @@ main() {
   CHECK(runCommand(nativePath) == 12);
 }
 
-TEST_CASE("compiles and runs templated method call") {
+TEST_CASE("templated method call") {
   const std::string source = R"(
 namespace i32 {
   [return<int>]
@@ -510,7 +510,7 @@ main() {
   CHECK(runCommand(nativePath) == 3);
 }
 
-TEST_CASE("compiles and runs block expression") {
+TEST_CASE("block expression") {
   const std::string source = R"(
 [return<int>]
 main() {
@@ -536,7 +536,7 @@ main() {
   CHECK(runCommand(nativePath) == 7);
 }
 
-TEST_CASE("compiles and runs boolean ops with conversions") {
+TEST_CASE("boolean ops with conversions") {
   const std::string source = R"(
 [return<bool>]
 main() {
@@ -559,7 +559,7 @@ main() {
   CHECK(runCommand(nativePath) == 1);
 }
 
-TEST_CASE("compiles and runs integer width converts") {
+TEST_CASE("integer width converts") {
   const std::string source = R"(
 [return<bool>]
 main() {
@@ -583,7 +583,7 @@ main() {
   CHECK(runCommand(nativePath) == 1);
 }
 
-TEST_CASE("compiles and runs convert bool from negative integer") {
+TEST_CASE("convert bool from negative integer") {
   const std::string source = R"(
 [return<bool>]
 main() {
@@ -607,7 +607,7 @@ main() {
   CHECK(runCommand(nativePath) == 1);
 }
 
-TEST_CASE("compiles and runs boolean ops short-circuit") {
+TEST_CASE("boolean ops short-circuit") {
   const std::string source = R"(
 [return<int>]
 main() {

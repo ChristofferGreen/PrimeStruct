@@ -204,7 +204,7 @@ main() {
         std::string::npos);
 }
 
-TEST_CASE("compiles and runs lerp in C++ emitter") {
+TEST_CASE("lerp in C++ emitter") {
   const std::string source = R"(
 import /std/math/*
 [return<int>]
@@ -220,7 +220,7 @@ main() {
   CHECK(runCommand(exePath) == 6);
 }
 
-TEST_CASE("compiles and runs math-qualified clamp in C++ emitter") {
+TEST_CASE("math-qualified clamp in C++ emitter") {
   const std::string source = R"(
 [return<int>]
 main() {
@@ -235,7 +235,7 @@ main() {
   CHECK(runCommand(exePath) == 6);
 }
 
-TEST_CASE("compiles and runs math-qualified trig in C++ emitter") {
+TEST_CASE("math-qualified trig in C++ emitter") {
   const std::string source = R"(
 [return<int>]
 main() {
@@ -250,7 +250,7 @@ main() {
   CHECK(runCommand(exePath) == 0);
 }
 
-TEST_CASE("compiles and runs math-qualified min/max in C++ emitter") {
+TEST_CASE("math-qualified min/max in C++ emitter") {
   const std::string source = R"(
 [return<int>]
 main() {
@@ -265,7 +265,7 @@ main() {
   CHECK(runCommand(exePath) == 6);
 }
 
-TEST_CASE("compiles and runs math-qualified constants in C++ emitter") {
+TEST_CASE("math-qualified constants in C++ emitter") {
   const std::string source = R"(
 [return<int>]
 main() {
@@ -280,7 +280,7 @@ main() {
   CHECK(runCommand(exePath) == 11);
 }
 
-TEST_CASE("compiles and runs imported math constants in C++ emitter") {
+TEST_CASE("imported math constants in C++ emitter") {
   const std::string source = R"(
 import /std/math/*
 [return<int>]
@@ -296,7 +296,7 @@ main() {
   CHECK(runCommand(exePath) == 11);
 }
 
-TEST_CASE("compiles and runs rounding builtins in C++ emitter") {
+TEST_CASE("rounding builtins in C++ emitter") {
   const std::string source = R"(
 import /std/math/*
 [return<int>]
@@ -315,7 +315,7 @@ main() {
   CHECK(runCommand(exePath) == 11);
 }
 
-TEST_CASE("compiles and runs convert<bool> from float in C++ emitter") {
+TEST_CASE("convert<bool> from float in C++ emitter") {
   const std::string source = R"(
 [return<int>]
 main() {
@@ -330,7 +330,7 @@ main() {
   CHECK(runCommand(exePath) == 1);
 }
 
-TEST_CASE("compiles and runs string comparisons in C++ emitter") {
+TEST_CASE("string comparisons in C++ emitter") {
   const std::string source = R"(
 [return<int>]
 main() {
@@ -347,7 +347,7 @@ main() {
   CHECK(runCommand(compileCmd) == 2);
 }
 
-TEST_CASE("compiles and runs string map values in C++ emitter") {
+TEST_CASE("string map values in C++ emitter") {
   const std::string source = R"(
 [return<int>]
 main() {
@@ -365,7 +365,7 @@ main() {
   CHECK(runCommand(compileCmd) == 2);
 }
 
-TEST_CASE("compiles and runs power/log builtins in C++ emitter") {
+TEST_CASE("power/log builtins in C++ emitter") {
   const std::string source = R"(
 import /std/math/*
 [return<int>]
@@ -390,7 +390,7 @@ main() {
   CHECK(runCommand(exePath) == 25);
 }
 
-TEST_CASE("compiles and runs integer pow negative exponent in C++ emitter") {
+TEST_CASE("integer pow negative exponent in C++ emitter") {
   const std::string source = R"(
 import /std/math/*
 [return<int>]
@@ -411,7 +411,7 @@ main() {
   CHECK(readFile(errPath) == "pow exponent must be non-negative\n");
 }
 
-TEST_CASE("compiles and runs trig builtins in C++ emitter") {
+TEST_CASE("trig builtins in C++ emitter") {
   const std::string source = R"(
 import /std/math/*
 [return<int>]
@@ -441,7 +441,7 @@ main() {
   CHECK(runCommand(exePath) == 181);
 }
 
-TEST_CASE("compiles and runs hyperbolic builtins in C++ emitter") {
+TEST_CASE("hyperbolic builtins in C++ emitter") {
   const std::string source = R"(
 import /std/math/*
 [return<int>]
@@ -464,7 +464,7 @@ main() {
   CHECK(runCommand(exePath) == 1);
 }
 
-TEST_CASE("compiles and runs float utils in C++ emitter") {
+TEST_CASE("float utils in C++ emitter") {
   const std::string source = R"(
 import /std/math/*
 [return<int>]
@@ -483,7 +483,7 @@ main() {
   CHECK(runCommand(exePath) == 10);
 }
 
-TEST_CASE("compiles and runs float predicates in C++ emitter") {
+TEST_CASE("float predicates in C++ emitter") {
   const std::string source = R"(
 import /std/math/*
 [return<int>]
@@ -506,7 +506,7 @@ main() {
   CHECK(runCommand(exePath) == 3);
 }
 
-TEST_CASE("compiles and runs import aliases in C++ emitter") {
+TEST_CASE("import aliases in C++ emitter") {
   const std::string source = R"(
 import /util
 namespace util {
@@ -528,7 +528,7 @@ main() {
   CHECK(runCommand(exePath) == 5);
 }
 
-TEST_CASE("compiles and runs math constants in C++ emitter") {
+TEST_CASE("math constants in C++ emitter") {
   const std::string source = R"(
 import /std/math/*
 [return<int>]
@@ -547,7 +547,7 @@ main() {
   CHECK(runCommand(exePath) == 12);
 }
 
-TEST_CASE("compiles and runs array unsafe access in C++ emitter") {
+TEST_CASE("array unsafe access in C++ emitter") {
   const std::string source = R"(
 [return<int>]
 main() {
@@ -563,7 +563,7 @@ main() {
   CHECK(runCommand(exePath) == 7);
 }
 
-TEST_CASE("compiles and runs array unsafe access with u64 index in C++ emitter") {
+TEST_CASE("array unsafe access with u64 index in C++ emitter") {
   const std::string source = R"(
 [return<int>]
 main() {
@@ -579,11 +579,11 @@ main() {
   CHECK(runCommand(exePath) == 7);
 }
 
-TEST_CASE("compiles and runs canonical vector discard helpers with owned elements in C++ emitter") {
+TEST_CASE("canonical vector discard helpers with owned elements in C++ emitter") {
   expectCanonicalVectorDiscardOwnershipConformance("exe");
 }
 
-TEST_CASE("compiles and runs canonical vector indexed removal helpers with owned elements in C++ emitter") {
+TEST_CASE("canonical vector indexed removal helpers with owned elements in C++ emitter") {
   expectCanonicalVectorIndexedRemovalOwnershipConformance("exe");
 }
 

@@ -161,7 +161,7 @@ main() {
   CHECK(runCommand(compileCmd) == 2);
 }
 
-TEST_CASE("compiles and runs native array alias count through same-path helper") {
+TEST_CASE("native array alias count through same-path helper") {
   const std::string source = R"(
 [return<int>]
 /array/count([vector<i32>] values, [bool] marker) {
@@ -188,7 +188,7 @@ main() {
   CHECK(runCommand(exePath) == 46);
 }
 
-TEST_CASE("compiles and runs native array alias capacity through same-path helper") {
+TEST_CASE("native array alias capacity through same-path helper") {
   const std::string source = R"(
 [return<int>]
 /array/capacity([vector<i32>] values, [bool] marker) {
@@ -215,7 +215,7 @@ main() {
   CHECK(runCommand(exePath) == 48);
 }
 
-TEST_CASE("compiles and runs native array alias at through same-path helper") {
+TEST_CASE("native array alias at through same-path helper") {
   const std::string source = R"(
 [return<int>]
 /array/at([vector<i32>] values, [i32] index, [bool] marker) {
@@ -242,7 +242,7 @@ main() {
   CHECK(runCommand(exePath) == 48);
 }
 
-TEST_CASE("compiles and runs native array alias at_unsafe through same-path helper") {
+TEST_CASE("native array alias at_unsafe through same-path helper") {
   const std::string source = R"(
 [return<int>]
 /array/at_unsafe([vector<i32>] values, [i32] index, [bool] marker) {
@@ -269,7 +269,7 @@ main() {
   CHECK(runCommand(exePath) == 50);
 }
 
-TEST_CASE("compiles and runs native array alias slash-method helpers through same-path helpers") {
+TEST_CASE("native array alias slash-method helpers through same-path helpers") {
   const std::string source = R"(
 Marker {
   [i32] value
@@ -354,7 +354,7 @@ main() {
         std::string::npos);
 }
 
-TEST_CASE("compiles and runs native vector namespaced mutator alias") {
+TEST_CASE("native vector namespaced mutator alias") {
   const std::string source = R"(
 import /std/collections/*
 
@@ -396,7 +396,7 @@ main() {
   CHECK(readFile(errPath).find("unknown call target: /vector/count") != std::string::npos);
 }
 
-TEST_CASE("compiles and runs native vector access checks bounds") {
+TEST_CASE("native vector access checks bounds") {
   const std::string source = R"(
 import /std/collections/*
 
@@ -417,7 +417,7 @@ main() {
   CHECK(readFile(errPath) == "array index out of bounds\n");
 }
 
-TEST_CASE("compiles and runs native vector access rejects negative index") {
+TEST_CASE("native vector access rejects negative index") {
   const std::string source = R"(
 import /std/collections/*
 
@@ -455,7 +455,7 @@ main() {
   CHECK(runCommand(exePath) == 3);
 }
 
-TEST_CASE("compiles and runs native vector method call") {
+TEST_CASE("native vector method call") {
   const std::string source = R"(
 import /std/collections/*
 
@@ -501,7 +501,7 @@ main() {
         std::string::npos);
 }
 
-TEST_CASE("compiles and runs native bare vector at through imported stdlib helper") {
+TEST_CASE("native bare vector at through imported stdlib helper") {
   const std::string source = R"(
 import /std/collections/*
 
@@ -580,7 +580,7 @@ main() {
   CHECK(readFile(errPath).find("unknown method: /std/collections/vector/at") != std::string::npos);
 }
 
-TEST_CASE("compiles and runs native bare vector at_unsafe through imported stdlib helper") {
+TEST_CASE("native bare vector at_unsafe through imported stdlib helper") {
   const std::string source = R"(
 import /std/collections/*
 
@@ -662,7 +662,7 @@ main() {
         std::string::npos);
 }
 
-TEST_CASE("compiles and runs native bare vector count through imported stdlib helper") {
+TEST_CASE("native bare vector count through imported stdlib helper") {
   const std::string source = R"(
 import /std/collections/*
 
@@ -842,7 +842,7 @@ main() {
   CHECK(readFile(errPath).find("unknown method: /array/capacity") != std::string::npos);
 }
 
-TEST_CASE("compiles and runs native stdlib collection shim helpers") {
+TEST_CASE("native stdlib collection shim helpers") {
   const std::string source = R"(
 import /std/collections/*
 
@@ -866,7 +866,7 @@ main() {
   CHECK(runCommand(exePath) == 2);
 }
 
-TEST_CASE("compiles and runs native stdlib collection shim multi constructors") {
+TEST_CASE("native stdlib collection shim multi constructors") {
   const std::string source = R"(
 import /std/collections/*
 
@@ -888,7 +888,7 @@ main() {
   CHECK(runCommand(exePath) == 52);
 }
 
-TEST_CASE("compiles and runs native templated stdlib collection return envelopes") {
+TEST_CASE("native templated stdlib collection return envelopes") {
   const std::string source = R"(
 import /std/collections/*
 

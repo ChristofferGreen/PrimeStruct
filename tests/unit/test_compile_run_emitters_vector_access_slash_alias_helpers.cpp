@@ -6,7 +6,7 @@
 
 TEST_SUITE_BEGIN("primestruct.compile.run.emitters.cpp");
 
-TEST_CASE("compiles and runs vector namespaced access slash methods through explicit alias helpers in C++ emitter") {
+TEST_CASE("vector namespaced access slash methods through explicit alias helpers in C++ emitter") {
   const std::string source = R"(
 [effects(heap_alloc), return<int>]
 /vector/at([vector<i32>] values, [i32] index) {

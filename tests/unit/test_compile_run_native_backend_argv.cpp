@@ -3,7 +3,7 @@
 #if defined(__APPLE__) && (defined(__arm64__) || defined(__aarch64__))
 TEST_SUITE_BEGIN("primestruct.compile.run.native_backend.argv");
 
-TEST_CASE("compiles and runs native argv count") {
+TEST_CASE("native argv count") {
   const std::string source = R"(
 [return<int>]
 main([array<string>] args) {
@@ -19,7 +19,7 @@ main([array<string>] args) {
   CHECK(runCommand(exePath + " alpha beta") == 3);
 }
 
-TEST_CASE("compiles and runs native argv count helper") {
+TEST_CASE("native argv count helper") {
   const std::string source = R"(
 [return<int>]
 main([array<string>] args) {
@@ -35,7 +35,7 @@ main([array<string>] args) {
   CHECK(runCommand(exePath + " alpha beta") == 3);
 }
 
-TEST_CASE("compiles and runs native argv error output") {
+TEST_CASE("native argv error output") {
   const std::string source = R"(
 [return<int> effects(io_err)]
 main([array<string>] args) {
@@ -54,7 +54,7 @@ main([array<string>] args) {
   CHECK(readFile(errPath) == "alpha\n");
 }
 
-TEST_CASE("compiles and runs native argv error output without newline") {
+TEST_CASE("native argv error output without newline") {
   const std::string source = R"(
 [return<int> effects(io_err)]
 main([array<string>] args) {
@@ -75,7 +75,7 @@ main([array<string>] args) {
   CHECK(readFile(errPath) == "alpha");
 }
 
-TEST_CASE("compiles and runs native argv error output u64 index") {
+TEST_CASE("native argv error output u64 index") {
   const std::string source = R"(
 [return<int> effects(io_err)]
 main([array<string>] args) {
@@ -96,7 +96,7 @@ main([array<string>] args) {
   CHECK(readFile(errPath) == "alpha");
 }
 
-TEST_CASE("compiles and runs native argv unsafe error output") {
+TEST_CASE("native argv unsafe error output") {
   const std::string source = R"(
 [return<int> effects(io_err)]
 main([array<string>] args) {
@@ -117,7 +117,7 @@ main([array<string>] args) {
   CHECK(readFile(errPath) == "alpha");
 }
 
-TEST_CASE("compiles and runs native argv unsafe line error output") {
+TEST_CASE("native argv unsafe line error output") {
   const std::string source = R"(
 [return<int> effects(io_err)]
 main([array<string>] args) {
@@ -138,7 +138,7 @@ main([array<string>] args) {
   CHECK(readFile(errPath) == "alpha\n");
 }
 
-TEST_CASE("compiles and runs native argv access helpers") {
+TEST_CASE("native argv access helpers") {
   const std::string source = R"(
 [return<int> effects(io_out)]
 main([array<string>] args) {
@@ -161,7 +161,7 @@ main([array<string>] args) {
   CHECK(readFile(outPath) == "aa\nbbb\ncccc\n");
 }
 
-TEST_CASE("compiles and runs native argv line output") {
+TEST_CASE("native argv line output") {
   const std::string source = R"(
 [return<int> effects(io_out)]
 main([array<string>] args) {
@@ -180,7 +180,7 @@ main([array<string>] args) {
   CHECK(readFile(outPath) == "beta\n");
 }
 
-TEST_CASE("compiles and runs native argv inline string binding") {
+TEST_CASE("native argv inline string binding") {
   const std::string source = R"(
 [return<int> effects(io_out)]
 main([array<string>] args) {

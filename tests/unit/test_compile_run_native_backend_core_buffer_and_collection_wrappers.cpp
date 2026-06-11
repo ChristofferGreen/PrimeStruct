@@ -178,7 +178,7 @@ main() {
   CHECK(runCommand(exePath) == 1);
 }
 
-TEST_CASE("compiles and runs native float arithmetic") {
+TEST_CASE("native float arithmetic") {
   const std::string source = R"(
 [return<int>]
 main() {
@@ -196,7 +196,7 @@ main() {
   CHECK(runCommand(exePath) == 7);
 }
 
-TEST_CASE("compiles and runs native image api contract deterministically") {
+TEST_CASE("native image api contract deterministically") {
   const std::string source = R"(
 import /std/image/*
 import /std/collections/*

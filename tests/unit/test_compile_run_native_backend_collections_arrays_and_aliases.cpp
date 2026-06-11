@@ -9,7 +9,7 @@
 #if PRIMESTRUCT_NATIVE_COLLECTIONS_ENABLED
 TEST_SUITE_BEGIN("primestruct.compile.run.native_backend.collections");
 
-TEST_CASE("compiles and runs native array literals") {
+TEST_CASE("native array literals") {
   const std::string source = R"(
 [return<int>]
 main() {
@@ -25,7 +25,7 @@ main() {
   CHECK(runCommand(exePath) == 7);
 }
 
-TEST_CASE("compiles and runs native array access with u64 index") {
+TEST_CASE("native array access with u64 index") {
   const std::string source = R"(
 [return<int>]
 main() {
@@ -41,7 +41,7 @@ main() {
   CHECK(runCommand(exePath) == 7);
 }
 
-TEST_CASE("compiles and runs native array access rejects negative index") {
+TEST_CASE("native array access rejects negative index") {
   const std::string source = R"(
 [return<int>]
 main() {
@@ -60,7 +60,7 @@ main() {
   CHECK(readFile(errPath) == "array index out of bounds\n");
 }
 
-TEST_CASE("compiles and runs native array unsafe access") {
+TEST_CASE("native array unsafe access") {
   const std::string source = R"(
 [return<int>]
 main() {
@@ -76,7 +76,7 @@ main() {
   CHECK(runCommand(exePath) == 7);
 }
 
-TEST_CASE("compiles and runs native array unsafe access with u64 index") {
+TEST_CASE("native array unsafe access with u64 index") {
   const std::string source = R"(
 [return<int>]
 main() {
@@ -92,7 +92,7 @@ main() {
   CHECK(runCommand(exePath) == 7);
 }
 
-TEST_CASE("compiles and runs native array literal count method") {
+TEST_CASE("native array literal count method") {
   const std::string source = R"(
 [return<int>]
 main() {
@@ -108,7 +108,7 @@ main() {
   CHECK(runCommand(exePath) == 3);
 }
 
-TEST_CASE("compiles and runs native array literal unsafe access") {
+TEST_CASE("native array literal unsafe access") {
   const std::string source = R"(
 [return<int>]
 main() {
@@ -124,7 +124,7 @@ main() {
   CHECK(runCommand(exePath) == 7);
 }
 
-TEST_CASE("compiles and runs native array count helper") {
+TEST_CASE("native array count helper") {
   const std::string source = R"(
 [return<int>]
 main() {
@@ -141,7 +141,7 @@ main() {
   CHECK(runCommand(exePath) == 3);
 }
 
-TEST_CASE("compiles and runs native array literal count helper") {
+TEST_CASE("native array literal count helper") {
   const std::string source = R"(
 [return<int>]
 main() {
@@ -157,7 +157,7 @@ main() {
   CHECK(runCommand(exePath) == 3);
 }
 
-TEST_CASE("compiles and runs native vector literals") {
+TEST_CASE("native vector literals") {
   const std::string source = R"(
 import /std/collections/*
 
@@ -175,7 +175,7 @@ main() {
   CHECK(runCommand(exePath) == 7);
 }
 
-TEST_CASE("compiles and runs native stdlib namespaced vector builtin aliases") {
+TEST_CASE("native stdlib namespaced vector builtin aliases") {
   const std::string source = R"(
 import /std/collections/*
 
@@ -198,7 +198,7 @@ main() {
   CHECK(runCommand(exePath) == 9);
 }
 
-TEST_CASE("compiles and runs native namespaced wrapper string access method chain compatibility fallback") {
+TEST_CASE("native namespaced wrapper string access method chain compatibility fallback") {
   const std::string source = R"(
 import /std/collections/*
 
@@ -321,7 +321,7 @@ main() {
   CHECK(runCommand(compileCmd) == 2);
 }
 
-TEST_CASE("compiles and runs native unchecked pointer conformance harness for imported .prime helpers") {
+TEST_CASE("native unchecked pointer conformance harness for imported .prime helpers") {
   expectUncheckedPointerHelperSurfaceConformance("native");
   expectUncheckedPointerGrowthConformance("native");
 }

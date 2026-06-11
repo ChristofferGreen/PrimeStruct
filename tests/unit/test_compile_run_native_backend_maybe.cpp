@@ -36,7 +36,7 @@ main() {
 
 TEST_SUITE_BEGIN("primestruct.compile.run.native_backend.maybe");
 
-TEST_CASE("compiles and runs native Maybe some and pick") {
+TEST_CASE("native Maybe some and pick") {
   const std::string source = R"(
 import /std/maybe/*
 
@@ -63,7 +63,7 @@ main() {
   CHECK(runCommand(exePath) == 2);
 }
 
-TEST_CASE("compiles and runs native Maybe none and helper methods") {
+TEST_CASE("native Maybe none and helper methods") {
   const std::string source = R"(
 import /std/maybe/*
 
@@ -97,7 +97,7 @@ main() {
   CHECK(runCommand(exePath) == 7);
 }
 
-TEST_CASE("compiles and runs native Maybe present variant payload") {
+TEST_CASE("native Maybe present variant payload") {
   const std::string source = R"(
 import /std/maybe/*
 

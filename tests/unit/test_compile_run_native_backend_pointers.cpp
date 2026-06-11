@@ -3,7 +3,7 @@
 #if defined(__APPLE__) && (defined(__arm64__) || defined(__aarch64__))
 TEST_SUITE_BEGIN("primestruct.compile.run.native_backend.pointers");
 
-TEST_CASE("compiles and runs native hello world example") {
+TEST_CASE("native hello world example") {
   const std::filesystem::path repoRoot = std::filesystem::current_path().parent_path();
   const std::string srcPath = (repoRoot / "examples" / "0.Concrete" / "hello_world.prime").string();
   const std::string exePath = (testScratchPath("") / "primec_native_hello_world_exe").string();
@@ -16,7 +16,7 @@ TEST_CASE("compiles and runs native hello world example") {
   CHECK(readFile(outPath) == "Hello, world!\n");
 }
 
-TEST_CASE("compiles and runs native pointer plus offsets") {
+TEST_CASE("native pointer plus offsets") {
   const std::string source = R"(
 [return<int>]
 main() {
@@ -33,7 +33,7 @@ main() {
   CHECK(runCommand(exePath) == 9);
 }
 
-TEST_CASE("compiles and runs native pointer plus on reference") {
+TEST_CASE("native pointer plus on reference") {
   const std::string source = R"(
 [return<int>]
 main() {
@@ -51,7 +51,7 @@ main() {
   CHECK(runCommand(exePath) == 9);
 }
 
-TEST_CASE("compiles and runs native pointer minus offsets") {
+TEST_CASE("native pointer minus offsets") {
   const std::string source = R"(
 [return<int>]
 main() {
@@ -68,7 +68,7 @@ main() {
   CHECK(runCommand(exePath) == 4);
 }
 
-TEST_CASE("compiles and runs native pointer minus u64 offsets") {
+TEST_CASE("native pointer minus u64 offsets") {
   const std::string source = R"(
 [return<int>]
 main() {
@@ -85,7 +85,7 @@ main() {
   CHECK(runCommand(exePath) == 4);
 }
 
-TEST_CASE("compiles and runs native pointer minus negative i64 offsets") {
+TEST_CASE("native pointer minus negative i64 offsets") {
   const std::string source = R"(
 [return<int>]
 main() {
@@ -102,7 +102,7 @@ main() {
   CHECK(runCommand(exePath) == 9);
 }
 
-TEST_CASE("compiles and runs native pointer plus u64 offsets") {
+TEST_CASE("native pointer plus u64 offsets") {
   const std::string source = R"(
 [return<int>]
 main() {
@@ -119,7 +119,7 @@ main() {
   CHECK(runCommand(exePath) == 9);
 }
 
-TEST_CASE("compiles and runs native pointer plus negative i64 offsets") {
+TEST_CASE("native pointer plus negative i64 offsets") {
   const std::string source = R"(
 [return<int>]
 main() {
@@ -136,7 +136,7 @@ main() {
   CHECK(runCommand(exePath) == 4);
 }
 
-TEST_CASE("compiles and runs native references") {
+TEST_CASE("native references") {
   const std::string source = R"(
 [return<int>]
 main() {
@@ -154,7 +154,7 @@ main() {
   CHECK(runCommand(exePath) == 7);
 }
 
-TEST_CASE("compiles and runs native location on reference") {
+TEST_CASE("native location on reference") {
   const std::string source = R"(
 [return<int>]
 main() {
@@ -172,7 +172,7 @@ main() {
   CHECK(runCommand(exePath) == 8);
 }
 
-TEST_CASE("compiles and runs native heap alloc intrinsic") {
+TEST_CASE("native heap alloc intrinsic") {
   const std::string source = R"(
 [return<int> effects(heap_alloc)]
 main() {
@@ -189,7 +189,7 @@ main() {
   CHECK(runCommand(exePath) == 9);
 }
 
-TEST_CASE("compiles and runs native heap free intrinsic") {
+TEST_CASE("native heap free intrinsic") {
   const std::string source = R"(
 [return<int> effects(heap_alloc)]
 main() {
@@ -208,7 +208,7 @@ main() {
   CHECK(runCommand(exePath) == 9);
 }
 
-TEST_CASE("compiles and runs native heap realloc intrinsic") {
+TEST_CASE("native heap realloc intrinsic") {
   const std::string source = R"(
 [return<int> effects(heap_alloc)]
 main() {
@@ -229,7 +229,7 @@ main() {
   CHECK(runCommand(exePath) == 13);
 }
 
-TEST_CASE("compiles and runs native checked memory at intrinsic") {
+TEST_CASE("native checked memory at intrinsic") {
   const std::string source = R"(
 [return<int> effects(heap_alloc)]
 main() {
@@ -250,7 +250,7 @@ main() {
   CHECK(runCommand(exePath) == 13);
 }
 
-TEST_CASE("compiles and runs native unchecked memory at intrinsic") {
+TEST_CASE("native unchecked memory at intrinsic") {
   const std::string source = R"(
 [return<int> effects(heap_alloc)]
 main() {
@@ -271,7 +271,7 @@ main() {
   CHECK(runCommand(exePath) == 13);
 }
 
-TEST_CASE("compiles and runs native reference arithmetic") {
+TEST_CASE("native reference arithmetic") {
   const std::string source = R"(
 [return<int>]
 main() {

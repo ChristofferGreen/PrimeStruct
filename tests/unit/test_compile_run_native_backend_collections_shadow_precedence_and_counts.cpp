@@ -18,7 +18,7 @@ TEST_CASE("native bare vector mutator methods reject without imported helpers") 
   expectBareVectorMutatorMethodImportRequirement("native", "remove_swap", "1i32");
 }
 
-TEST_CASE("compiles and runs native builtin array count before user method shadow") {
+TEST_CASE("native builtin array count before user method shadow") {
   const std::string source = R"(
 [return<int>]
 /array/count([array<i32>] values) {
@@ -40,7 +40,7 @@ main() {
   CHECK(runCommand(exePath) == 2);
 }
 
-TEST_CASE("compiles and runs native builtin array count before user call shadow") {
+TEST_CASE("native builtin array count before user call shadow") {
   const std::string source = R"(
 [return<int>]
 /array/count([array<i32>] values) {
@@ -112,7 +112,7 @@ main() {
   CHECK(readFile(outPath).find("unknown call target: /std/collections/map/count") != std::string::npos);
 }
 
-TEST_CASE("compiles and runs native canonical map sugar with current precedence before compatibility aliases") {
+TEST_CASE("native canonical map sugar with current precedence before compatibility aliases") {
   const std::string source = R"(
 [return<int>]
 /map/count([map<i32, i32>] values) {
@@ -238,7 +238,7 @@ main() {
         std::string::npos);
 }
 
-TEST_CASE("compiles and runs native canonical map access non-string shadow before compatibility aliases") {
+TEST_CASE("native canonical map access non-string shadow before compatibility aliases") {
   const std::string source = R"(
 [return<string>]
 /map/at([map<i32, string>] values, [i32] key) {
@@ -288,7 +288,7 @@ main() {
   CHECK(runCommand(exePath) == 10);
 }
 
-TEST_CASE("compiles and runs native explicit map helper calls through same-path aliases") {
+TEST_CASE("native explicit map helper calls through same-path aliases") {
   const std::string source = R"(
 import /std/collections/*
 
@@ -459,7 +459,7 @@ main() {
   CHECK(readFile(outPath).find("argument count mismatch for /map/count") != std::string::npos);
 }
 
-TEST_CASE("compiles and runs native map compatibility explicit-template count call with canonical templated helper present") {
+TEST_CASE("native map compatibility explicit-template count call with canonical templated helper present") {
   const std::string source = R"(
 [return<int>]
 /map/count<K, V>([map<K, V>] values, [bool] marker) {
@@ -638,7 +638,7 @@ main() {
   CHECK(readFile(outPath).find("argument count mismatch for /std/collections/map/count") != std::string::npos);
 }
 
-TEST_CASE("compiles and runs native canonical implicit-template map count call with wrapper slash return envelope") {
+TEST_CASE("native canonical implicit-template map count call with wrapper slash return envelope") {
   const std::string source = R"(
 [return<int>]
 /std/collections/map/count<K, V>([map<K, V>] values, [bool] marker) {
@@ -667,7 +667,7 @@ main() {
   CHECK(runCommand(exePath) == 96);
 }
 
-TEST_CASE("compiles and runs native builtin string count before user call shadow") {
+TEST_CASE("native builtin string count before user call shadow") {
   const std::string source = R"(
 [return<int>]
 /string/count([string] values) {
@@ -689,7 +689,7 @@ main() {
   CHECK(runCommand(exePath) == 3);
 }
 
-TEST_CASE("compiles and runs native user string count method shadow") {
+TEST_CASE("native user string count method shadow") {
   const std::string source = R"(
 [return<int>]
 /string/count([string] values) {
@@ -798,7 +798,7 @@ main() {
         std::string::npos);
 }
 
-TEST_CASE("compiles and runs native user string count method shadow on wrapper-returned canonical map access") {
+TEST_CASE("native user string count method shadow on wrapper-returned canonical map access") {
   const std::string source = R"(
 [return<int>]
 /string/count([string] values) {

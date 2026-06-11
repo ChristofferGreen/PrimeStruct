@@ -5,7 +5,7 @@
 TEST_SUITE_BEGIN("primestruct.compile.run.smoke");
 
 
-TEST_CASE("compiles and runs import after definitions") {
+TEST_CASE("import after definitions") {
   const std::string source = R"(
 namespace util {
   [public return<int>]
@@ -78,7 +78,7 @@ main() {
   CHECK(readFile(errPath).find("unknown call target: inc") != std::string::npos);
 }
 
-TEST_CASE("compiles and runs fully-qualified nested call") {
+TEST_CASE("fully-qualified nested call") {
   const std::string source = R"(
 namespace pkg {
   namespace util {
@@ -110,7 +110,7 @@ main() {
   CHECK(runCommand(nativePath) == 4);
 }
 
-TEST_CASE("compiles and runs method call with fully-qualified definition") {
+TEST_CASE("method call with fully-qualified definition") {
   const std::string source = R"(
 [return<int>]
 /i32/inc([i32] self, [i32] extra) {
@@ -139,7 +139,7 @@ main() {
   CHECK(runCommand(nativePath) == 4);
 }
 
-TEST_CASE("compiles and runs repeat with bool count") {
+TEST_CASE("repeat with bool count") {
   const std::string source = R"(
 [return<int>]
 main() {
@@ -169,7 +169,7 @@ main() {
   CHECK(runCommand(nativePath) == 2);
 }
 
-TEST_CASE("compiles and runs repeat with non-positive count") {
+TEST_CASE("repeat with non-positive count") {
   const std::string source = R"(
 [return<int>]
 main() {
@@ -200,7 +200,7 @@ main() {
   CHECK(runCommand(nativePath) == 5);
 }
 
-TEST_CASE("compiles and runs pathspace builtins as no-ops") {
+TEST_CASE("pathspace builtins as no-ops") {
   const std::string source = R"(
 [return<int> effects(pathspace_notify, pathspace_insert, pathspace_take, pathspace_bind, pathspace_schedule)]
 main() {
@@ -233,7 +233,7 @@ main() {
   CHECK(runCommand(nativePath) == 0);
 }
 
-TEST_CASE("compiles and runs binding without explicit type") {
+TEST_CASE("binding without explicit type") {
   const std::string source = R"(
 [return<int>]
 main() {
@@ -258,7 +258,7 @@ main() {
   CHECK(runCommand(nativePath) == 3);
 }
 
-TEST_CASE("compiles and runs binding inferring i64") {
+TEST_CASE("binding inferring i64") {
   const std::string source = R"(
 [return<int>]
 main() {
@@ -283,7 +283,7 @@ main() {
   CHECK(runCommand(nativePath) == 3);
 }
 
-TEST_CASE("compiles and runs binding inferring u64") {
+TEST_CASE("binding inferring u64") {
   const std::string source = R"(
 [return<int>]
 main() {
@@ -308,7 +308,7 @@ main() {
   CHECK(runCommand(nativePath) == 3);
 }
 
-TEST_CASE("compiles and runs binding inferring array type") {
+TEST_CASE("binding inferring array type") {
   const std::string source = R"(
 [return<int>]
 main() {
@@ -333,7 +333,7 @@ main() {
   CHECK(runCommand(nativePath) == 3);
 }
 
-TEST_CASE("compiles and runs array bracket sugar") {
+TEST_CASE("array bracket sugar") {
   const std::string source = R"(
 [return<int>]
 main() {
@@ -358,7 +358,7 @@ main() {
   CHECK(runCommand(nativePath) == 3);
 }
 
-TEST_CASE("compiles and runs indexing into array bracket literal") {
+TEST_CASE("indexing into array bracket literal") {
   const std::string source = R"(
 [return<int>]
 main() {
@@ -382,7 +382,7 @@ main() {
   CHECK(runCommand(nativePath) == 9);
 }
 
-TEST_CASE("compiles and runs binding inferring map type") {
+TEST_CASE("binding inferring map type") {
   const std::string source = R"(
 import /std/collections/*
 
@@ -408,7 +408,7 @@ main() {
   CHECK(runCommand(nativePath) == 0);
 }
 
-TEST_CASE("compiles and runs map count") {
+TEST_CASE("map count") {
   const std::string source = R"(
 import /std/collections/*
 
@@ -435,7 +435,7 @@ main() {
 }
 
 
-TEST_CASE("compiles and runs map indexing") {
+TEST_CASE("map indexing") {
   const std::string source = R"(
 import /std/collections/*
 
@@ -461,7 +461,7 @@ main() {
   CHECK(runCommand(nativePath) == 20);
 }
 
-TEST_CASE("compiles and runs map indexing with u64 keys") {
+TEST_CASE("map indexing with u64 keys") {
   const std::string source = R"(
 import /std/collections/*
 
@@ -487,7 +487,7 @@ main() {
   CHECK(runCommand(nativePath) == 7);
 }
 
-TEST_CASE("compiles and runs string-keyed map indexing in C++ emitter") {
+TEST_CASE("string-keyed map indexing in C++ emitter") {
   const std::string source = R"(
 import /std/collections/*
 
@@ -620,7 +620,7 @@ main() {
   CHECK(nativeErr.find("^") != std::string::npos);
 }
 
-TEST_CASE("compiles and runs binding inference feeding method call") {
+TEST_CASE("binding inference feeding method call") {
   const std::string source = R"(
 namespace i64 {
   [return<i64>]

@@ -9,7 +9,7 @@
 #if PRIMESTRUCT_NATIVE_COLLECTIONS_ENABLED
 TEST_SUITE_BEGIN("primestruct.compile.run.native_backend.collections");
 
-TEST_CASE("compiles and runs native vector push helper") {
+TEST_CASE("native vector push helper") {
   const std::string source = R"(
 import /std/collections/*
 
@@ -30,7 +30,7 @@ main() {
   CHECK(runCommand(exePath) == 12);
 }
 
-TEST_CASE("compiles and runs native vector mutator method calls") {
+TEST_CASE("native vector mutator method calls") {
   const std::string source = R"(
 import /std/collections/*
 
@@ -55,7 +55,7 @@ main() {
   CHECK(runCommand(exePath) == 0);
 }
 
-TEST_CASE("compiles and runs native user push helper shadow") {
+TEST_CASE("native user push helper shadow") {
   const std::string source = R"(
 [return<int>]
 push([i32] left, [i32] right) {
@@ -77,7 +77,7 @@ main() {
   CHECK(runCommand(exePath) == 7);
 }
 
-TEST_CASE("compiles and runs native user vector constructor shadow") {
+TEST_CASE("native user vector constructor shadow") {
   const std::string source = R"(
 [return<int>]
 vector([i32] value) {
@@ -98,7 +98,7 @@ main() {
   CHECK(runCommand(exePath) == 9);
 }
 
-TEST_CASE("compiles and runs native user array constructor shadow") {
+TEST_CASE("native user array constructor shadow") {
   const std::string source = R"(
 [return<int>]
 array([i32] value) {
@@ -119,7 +119,7 @@ main() {
   CHECK(runCommand(exePath) == 9);
 }
 
-TEST_CASE("compiles and runs native user map constructor shadow") {
+TEST_CASE("native user map constructor shadow") {
   const std::string source = R"(
 [return<int>]
 map([i32] key, [i32] value) {
@@ -191,7 +191,7 @@ main() {
   CHECK(readFile(errPath).find("named arguments not supported for builtin calls") != std::string::npos);
 }
 
-TEST_CASE("compiles and runs native namespaced vector count named arguments through imported stdlib helper") {
+TEST_CASE("native namespaced vector count named arguments through imported stdlib helper") {
   const std::string source = R"(
 import /std/collections/*
 
@@ -210,7 +210,7 @@ main() {
   CHECK(runCommand(exePath) == 2);
 }
 
-TEST_CASE("compiles and runs native namespaced vector capacity named arguments through imported stdlib helper") {
+TEST_CASE("native namespaced vector capacity named arguments through imported stdlib helper") {
   const std::string source = R"(
 import /std/collections/*
 
@@ -289,7 +289,7 @@ main() {
         std::string::npos);
 }
 
-TEST_CASE("compiles and runs native user map constructor block shadow") {
+TEST_CASE("native user map constructor block shadow") {
   const std::string source = R"(
 [return<int>]
 map([i32] key, [i32] value) {
@@ -314,7 +314,7 @@ main() {
   CHECK(runCommand(exePath) == 7);
 }
 
-TEST_CASE("compiles and runs native user vector constructor block shadow") {
+TEST_CASE("native user vector constructor block shadow") {
   const std::string source = R"(
 [return<int>]
 vector([i32] value) {
@@ -339,7 +339,7 @@ main() {
   CHECK(runCommand(exePath) == 4);
 }
 
-TEST_CASE("compiles and runs native user array constructor block shadow") {
+TEST_CASE("native user array constructor block shadow") {
   const std::string source = R"(
 [return<int>]
 array([i32] value) {
@@ -364,7 +364,7 @@ main() {
   CHECK(runCommand(exePath) == 5);
 }
 
-TEST_CASE("compiles and runs native user vector push call shadow") {
+TEST_CASE("native user vector push call shadow") {
   const std::string source = R"(
 import /std/collections/*
 
@@ -413,7 +413,7 @@ main() {
   CHECK(readFile(errPath).find("push requires vector binding") != std::string::npos);
 }
 
-TEST_CASE("compiles and runs native std namespaced reordered mutator compatibility helper shadow") {
+TEST_CASE("native std namespaced reordered mutator compatibility helper shadow") {
   const std::string source = R"(
 import /std/collections/*
 
@@ -438,7 +438,7 @@ main() {
   CHECK(runCommand(exePath) == 2);
 }
 
-TEST_CASE("compiles and runs native user vector push bool positional call shadow") {
+TEST_CASE("native user vector push bool positional call shadow") {
   const std::string source = R"(
 import /std/collections/*
 
@@ -463,7 +463,7 @@ main() {
   CHECK(runCommand(exePath) == 2);
 }
 
-TEST_CASE("compiles and runs native user vector push call named shadow") {
+TEST_CASE("native user vector push call named shadow") {
   const std::string source = R"(
 import /std/collections/*
 
@@ -487,7 +487,7 @@ main() {
   CHECK(runCommand(exePath) == 2);
 }
 
-TEST_CASE("compiles and runs native user vector push method shadow") {
+TEST_CASE("native user vector push method shadow") {
   const std::string source = R"(
 import /std/collections/*
 
@@ -511,7 +511,7 @@ main() {
   CHECK(runCommand(exePath) == 2);
 }
 
-TEST_CASE("compiles and runs native user vector push call expression shadow") {
+TEST_CASE("native user vector push call expression shadow") {
   const std::string source = R"(
 [effects(heap_alloc), return<int>]
 /vector/push([vector<i32> mut] values, [i32] value) {

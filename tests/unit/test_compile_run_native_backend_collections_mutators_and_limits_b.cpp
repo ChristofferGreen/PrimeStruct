@@ -9,7 +9,7 @@
 #if PRIMESTRUCT_NATIVE_COLLECTIONS_ENABLED
 TEST_SUITE_BEGIN("primestruct.compile.run.native_backend.collections");
 
-TEST_CASE("compiles and runs native vector reserve past former local dynamic limit") {
+TEST_CASE("native vector reserve past former local dynamic limit") {
   const std::string source = R"(
 import /std/collections/*
 
@@ -82,7 +82,7 @@ main() {
   CHECK(readFile(errPath).find("vector reserve exceeds local capacity limit (1024)") != std::string::npos);
 }
 
-TEST_CASE("compiles and runs native vector push past former local dynamic limit") {
+TEST_CASE("native vector push past former local dynamic limit") {
   const std::string source = R"(
 import /std/collections/*
 
@@ -347,7 +347,7 @@ main() {
   CHECK(readFile(errPath) == "vector push allocation failed (out of memory)\n");
 }
 
-TEST_CASE("compiles and runs native vector shrink helpers") {
+TEST_CASE("native vector shrink helpers") {
   const std::string source = R"(
 import /std/collections/*
 

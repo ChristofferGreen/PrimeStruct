@@ -273,7 +273,7 @@ main() {
         std::string::npos);
 }
 
-TEST_CASE("compiles and runs public soa count helper on public wrapper in C++ emitter") {
+TEST_CASE("public soa count helper on public wrapper in C++ emitter") {
   const std::string source = R"(
 import /std/collections/soa/*
 
@@ -298,7 +298,7 @@ main() {
   CHECK(runCommand(exePath) == 2);
 }
 
-TEST_CASE("compiles and runs public soa get helper in C++ emitter") {
+TEST_CASE("public soa get helper in C++ emitter") {
   const std::string source = R"(
 import /std/collections/soa/*
 
@@ -399,7 +399,7 @@ main() {
         std::string::npos);
 }
 
-TEST_CASE("compiles and runs public soa ref helper in C++ emitter") {
+TEST_CASE("public soa ref helper in C++ emitter") {
   const std::string source = R"(
 import /std/collections/soa/*
 
@@ -424,7 +424,7 @@ main() {
   CHECK(runCommand(exePath) == 9);
 }
 
-TEST_CASE("compiles and runs public soa mutator helpers in C++ emitter") {
+TEST_CASE("public soa mutator helpers in C++ emitter") {
   const std::string source = R"(
 import /std/collections/soa/*
 
@@ -1233,7 +1233,7 @@ main() {
       "missing semantic-product bridge-path choice: /main -> /soa_vector/get");
 }
 
-TEST_CASE("compiles and runs vector-target old-explicit soa mutator shadows in C++ emitter") {
+TEST_CASE("vector-target old-explicit soa mutator shadows in C++ emitter") {
   const std::string source = R"(
 [return<int>]
 /soa_vector/push([vector<i32>] values, [i32] value) {
@@ -1261,7 +1261,7 @@ main() {
   CHECK(runCommand(exePath) == 10);
 }
 
-TEST_CASE("compiles and runs vector-target method soa mutator shadows in C++ emitter") {
+TEST_CASE("vector-target method soa mutator shadows in C++ emitter") {
   const std::string source = R"(
 [return<int>]
 /soa_vector/push([vector<i32>] values, [i32] value) {
@@ -2159,7 +2159,7 @@ main() {
         std::string::npos);
 }
 
-TEST_CASE("compiles and runs borrowed helper-return soa_vector ref_ref same-path helper in C++ emitter compatibility") {
+TEST_CASE("borrowed helper-return soa_vector ref_ref same-path helper in C++ emitter compatibility") {
   const std::string source = R"(
 import /std/collections/*
 import /std/collections/soa/*
@@ -2927,7 +2927,7 @@ main() {
         std::string::npos);
 }
 
-TEST_CASE("compiles and runs experimental soa storage helpers in C++ emitter") {
+TEST_CASE("experimental soa storage helpers in C++ emitter") {
   const std::string source = R"(
 import /std/collections/internal_soa_storage/*
 
@@ -2954,7 +2954,7 @@ main() {
   CHECK(runCommand(exePath) == 14);
 }
 
-TEST_CASE("compiles and runs experimental soa storage borrowed ref helper in C++ emitter") {
+TEST_CASE("experimental soa storage borrowed ref helper in C++ emitter") {
   const std::string source = R"(
 import /std/collections/internal_soa_storage/*
 
@@ -2976,7 +2976,7 @@ main() {
   CHECK(runCommand(exePath) == 7);
 }
 
-TEST_CASE("compiles and runs experimental soa storage borrowed view helper in C++ emitter") {
+TEST_CASE("experimental soa storage borrowed view helper in C++ emitter") {
   const std::string source = R"(
 import /std/collections/internal_soa_storage/*
 
@@ -3024,7 +3024,7 @@ main() {
   CHECK(readFile(errPath) == "array index out of bounds\n");
 }
 
-TEST_CASE("compiles and runs experimental two-column soa storage helpers in C++ emitter") {
+TEST_CASE("experimental two-column soa storage helpers in C++ emitter") {
   const std::string source = R"(
 import /std/collections/internal_soa_storage/*
 
@@ -3052,7 +3052,7 @@ main() {
   CHECK(runCommand(exePath) == 24);
 }
 
-TEST_CASE("compiles and runs experimental three-column soa storage helpers in C++ emitter") {
+TEST_CASE("experimental three-column soa storage helpers in C++ emitter") {
   const std::string source = R"(
 import /std/collections/internal_soa_storage/*
 
@@ -3081,7 +3081,7 @@ main() {
   CHECK(runCommand(exePath) == 60);
 }
 
-TEST_CASE("compiles and runs experimental four-column soa storage helpers in C++ emitter") {
+TEST_CASE("experimental four-column soa storage helpers in C++ emitter") {
   const std::string source = R"(
 import /std/collections/internal_soa_storage/*
 
@@ -3111,7 +3111,7 @@ main() {
   CHECK(runCommand(exePath) == 105);
 }
 
-TEST_CASE("compiles and runs experimental five-column soa storage helpers in C++ emitter") {
+TEST_CASE("experimental five-column soa storage helpers in C++ emitter") {
   const std::string source = R"(
 import /std/collections/internal_soa_storage/*
 
@@ -3142,7 +3142,7 @@ main() {
   CHECK(runCommand(exePath) == 176);
 }
 
-TEST_CASE("compiles and runs experimental six-column soa storage helpers in C++ emitter") {
+TEST_CASE("experimental six-column soa storage helpers in C++ emitter") {
   const std::string source = R"(
 import /std/collections/internal_soa_storage/*
 
@@ -3174,7 +3174,7 @@ main() {
   CHECK(runCommand(exePath) == 189);
 }
 
-TEST_CASE("compiles and runs experimental seven-column soa storage helpers in C++ emitter") {
+TEST_CASE("experimental seven-column soa storage helpers in C++ emitter") {
   const std::string source = R"(
 import /std/collections/internal_soa_storage/*
 
@@ -3207,7 +3207,7 @@ main() {
   CHECK(runCommand(exePath) == 212);
 }
 
-TEST_CASE("compiles and runs experimental eight-column soa storage helpers in C++ emitter") {
+TEST_CASE("experimental eight-column soa storage helpers in C++ emitter") {
   const std::string source = R"(
 import /std/collections/internal_soa_storage/*
 
@@ -3241,7 +3241,7 @@ main() {
   CHECK(runCommand(exePath) == 231);
 }
 
-TEST_CASE("compiles and runs experimental nine-column soa storage helpers in C++ emitter") {
+TEST_CASE("experimental nine-column soa storage helpers in C++ emitter") {
   const std::string source = R"(
 import /std/collections/internal_soa_storage/*
 
@@ -3271,7 +3271,7 @@ main() {
   CHECK(runCommand(exePath) == 45);
 }
 
-TEST_CASE("compiles and runs experimental ten-column soa storage helpers in C++ emitter") {
+TEST_CASE("experimental ten-column soa storage helpers in C++ emitter") {
   const std::string source = R"(
 import /std/collections/internal_soa_storage/*
 
@@ -3489,79 +3489,79 @@ main() {
         std::string::npos);
 }
 
-TEST_CASE("compiles and runs canonical namespaced map helpers on experimental map values in C++ emitter") {
+TEST_CASE("canonical namespaced map helpers on experimental map values in C++ emitter") {
   expectCanonicalMapNamespaceExperimentalValueConformance("exe");
 }
 
-TEST_CASE("compiles and runs wrapper map helpers on experimental map values in C++ emitter") {
+TEST_CASE("wrapper map helpers on experimental map values in C++ emitter") {
   expectWrapperMapHelperExperimentalValueConformance("exe");
 }
 
-TEST_CASE("compiles and runs ownership-sensitive experimental map value methods in C++ emitter") {
+TEST_CASE("ownership-sensitive experimental map value methods in C++ emitter") {
   expectExperimentalMapOwnershipMethodConformance("exe");
 }
 
-TEST_CASE("compiles and runs helper-wrapped inferred experimental map returns in C++ emitter") {
+TEST_CASE("helper-wrapped inferred experimental map returns in C++ emitter") {
   expectWrappedInferredExperimentalMapReturnConformance("exe");
 }
 
-TEST_CASE("compiles and runs helper-wrapped experimental map parameters in C++ emitter") {
+TEST_CASE("helper-wrapped experimental map parameters in C++ emitter") {
   expectWrappedExperimentalMapParameterConformance("exe");
 }
 
-TEST_CASE("compiles and runs helper-wrapped experimental map bindings in C++ emitter") {
+TEST_CASE("helper-wrapped experimental map bindings in C++ emitter") {
   expectWrappedExperimentalMapBindingConformance("exe");
 }
 
-TEST_CASE("compiles and runs helper-wrapped experimental map assignment RHS values in C++ emitter") {
+TEST_CASE("helper-wrapped experimental map assignment RHS values in C++ emitter") {
   expectWrappedExperimentalMapAssignConformance("exe");
 }
 
-TEST_CASE("compiles and runs canonical namespaced map constructors on explicit experimental map bindings in C++ emitter") {
+TEST_CASE("canonical namespaced map constructors on explicit experimental map bindings in C++ emitter") {
   expectCanonicalMapNamespaceExperimentalConstructorConformance("exe");
 }
 
-TEST_CASE("compiles and runs canonical namespaced map constructors through explicit experimental map returns in C++ emitter") {
+TEST_CASE("canonical namespaced map constructors through explicit experimental map returns in C++ emitter") {
   expectCanonicalMapNamespaceExperimentalReturnConformance("exe");
 }
 
-TEST_CASE("compiles and runs canonical namespaced map constructors through explicit experimental map parameters in C++ emitter") {
+TEST_CASE("canonical namespaced map constructors through explicit experimental map parameters in C++ emitter") {
   expectCanonicalMapNamespaceExperimentalParameterConformance("exe");
 }
 
-TEST_CASE("compiles and runs wrapper map constructors on explicit experimental map bindings in C++ emitter") {
+TEST_CASE("wrapper map constructors on explicit experimental map bindings in C++ emitter") {
   expectWrapperMapConstructorExperimentalBindingConformance("exe");
 }
 
-TEST_CASE("compiles and runs wrapper map constructors through explicit experimental map returns in C++ emitter") {
+TEST_CASE("wrapper map constructors through explicit experimental map returns in C++ emitter") {
   expectWrapperMapConstructorExperimentalReturnConformance("exe");
 }
 
-TEST_CASE("compiles and runs wrapper map constructors through explicit experimental map parameters in C++ emitter") {
+TEST_CASE("wrapper map constructors through explicit experimental map parameters in C++ emitter") {
   expectWrapperMapConstructorExperimentalParameterConformance("exe");
 }
 
-TEST_CASE("compiles and runs experimental map constructor assignments in C++ emitter") {
+TEST_CASE("experimental map constructor assignments in C++ emitter") {
   expectExperimentalMapAssignConformance("exe");
 }
 
-TEST_CASE("compiles and runs implicit map auto constructor inference in C++ emitter") {
+TEST_CASE("implicit map auto constructor inference in C++ emitter") {
   expectImplicitMapAutoInferenceConformance("exe");
 }
 
-TEST_CASE("compiles and runs inferred experimental map returns in C++ emitter") {
+TEST_CASE("inferred experimental map returns in C++ emitter") {
   expectInferredExperimentalMapReturnConformance("exe");
 }
 
-TEST_CASE("compiles and runs block inferred experimental map returns in C++ emitter") {
+TEST_CASE("block inferred experimental map returns in C++ emitter") {
   expectBlockInferredExperimentalMapReturnConformance("exe");
 }
 
-TEST_CASE("compiles and runs auto block inferred experimental map returns in C++ emitter") {
+TEST_CASE("auto block inferred experimental map returns in C++ emitter") {
   expectAutoBlockInferredExperimentalMapReturnConformance("exe");
 }
 
-TEST_CASE("compiles and runs inferred experimental map call receivers in C++ emitter") {
+TEST_CASE("inferred experimental map call receivers in C++ emitter") {
   expectInferredExperimentalMapCallReceiverConformance("exe");
 }
 
@@ -3569,35 +3569,35 @@ TEST_CASE("rejects explicit experimental map struct field constructors in C++ em
   expectExperimentalMapStructFieldConformance("exe");
 }
 
-TEST_CASE("compiles and runs inferred experimental map struct fields in C++ emitter") {
+TEST_CASE("inferred experimental map struct fields in C++ emitter") {
   expectInferredExperimentalMapStructFieldConformance("exe");
 }
 
-TEST_CASE("compiles and runs helper-wrapped inferred experimental map struct fields in C++ emitter") {
+TEST_CASE("helper-wrapped inferred experimental map struct fields in C++ emitter") {
   expectWrappedInferredExperimentalMapStructFieldConformance("exe");
 }
 
-TEST_CASE("compiles and runs experimental map method parameters in C++ emitter") {
+TEST_CASE("experimental map method parameters in C++ emitter") {
   expectExperimentalMapMethodParameterConformance("exe");
 }
 
-TEST_CASE("compiles and runs inferred experimental map parameters in C++ emitter") {
+TEST_CASE("inferred experimental map parameters in C++ emitter") {
   expectInferredExperimentalMapParameterConformance("exe");
 }
 
-TEST_CASE("compiles and runs inferred experimental map default parameters in C++ emitter") {
+TEST_CASE("inferred experimental map default parameters in C++ emitter") {
   expectInferredExperimentalMapDefaultParameterConformance("exe");
 }
 
-TEST_CASE("compiles and runs helper-wrapped inferred experimental map default parameters in C++ emitter") {
+TEST_CASE("helper-wrapped inferred experimental map default parameters in C++ emitter") {
   expectWrappedInferredExperimentalMapDefaultParameterConformance("exe");
 }
 
-TEST_CASE("compiles and runs experimental map helper receivers in C++ emitter") {
+TEST_CASE("experimental map helper receivers in C++ emitter") {
   expectExperimentalMapHelperReceiverConformance("exe");
 }
 
-TEST_CASE("compiles and runs helper-wrapped experimental map helper receivers in C++ emitter") {
+TEST_CASE("helper-wrapped experimental map helper receivers in C++ emitter") {
   expectWrappedExperimentalMapHelperReceiverConformance("exe");
 }
 
@@ -3609,27 +3609,27 @@ TEST_CASE("runs helper-wrapped experimental map method receivers in C++ emitter"
   expectWrappedExperimentalMapMethodReceiverConformance("exe");
 }
 
-TEST_CASE("compiles and runs experimental map field assignments through canonical helper access in C++ emitter") {
+TEST_CASE("experimental map field assignments through canonical helper access in C++ emitter") {
   expectExperimentalMapFieldAssignConformance("exe");
 }
 
-TEST_CASE("compiles and runs dereferenced experimental map storage references in C++ emitter") {
+TEST_CASE("dereferenced experimental map storage references in C++ emitter") {
   expectExperimentalMapStorageReferenceConformance("exe");
 }
 
-TEST_CASE("compiles and runs helper-wrapped Result.ok experimental map result struct fields in C++ emitter") {
+TEST_CASE("helper-wrapped Result.ok experimental map result struct fields in C++ emitter") {
   expectWrappedExperimentalMapResultFieldAssignConformance("exe");
 }
 
-TEST_CASE("compiles and runs helper-wrapped dereferenced Result.ok experimental map result struct fields in C++ emitter") {
+TEST_CASE("helper-wrapped dereferenced Result.ok experimental map result struct fields in C++ emitter") {
   expectWrappedExperimentalMapResultDerefFieldAssignConformance("exe");
 }
 
-TEST_CASE("compiles and runs helper-wrapped experimental map struct storage fields in C++ emitter") {
+TEST_CASE("helper-wrapped experimental map struct storage fields in C++ emitter") {
   expectWrappedExperimentalMapStorageFieldConformance("exe");
 }
 
-TEST_CASE("compiles and runs helper-wrapped dereferenced experimental map struct storage fields in C++ emitter") {
+TEST_CASE("helper-wrapped dereferenced experimental map struct storage fields in C++ emitter") {
   expectWrappedExperimentalMapStorageDerefFieldConformance("exe");
 }
 
@@ -3637,75 +3637,75 @@ TEST_CASE("rejects canonical namespaced map helpers on borrowed experimental map
   expectCanonicalMapNamespaceExperimentalReferenceConformance("exe");
 }
 
-TEST_CASE("compiles and runs canonical namespaced map _ref helpers on borrowed experimental map values in C++ emitter") {
+TEST_CASE("canonical namespaced map _ref helpers on borrowed experimental map values in C++ emitter") {
   expectCanonicalMapNamespaceExperimentalBorrowedRefConformance("exe");
 }
 
-TEST_CASE("compiles and runs experimental map methods on bound map values in C++ emitter") {
+TEST_CASE("experimental map methods on bound map values in C++ emitter") {
   expectExperimentalMapMethodConformance("exe");
 }
 
-TEST_CASE("compiles and runs borrowed experimental map helpers in C++ emitter") {
+TEST_CASE("borrowed experimental map helpers in C++ emitter") {
   expectExperimentalMapReferenceHelperConformance("exe");
 }
 
-TEST_CASE("compiles and runs public borrowed map wrappers in C++ emitter") {
+TEST_CASE("public borrowed map wrappers in C++ emitter") {
   expectPublicMapReferenceWrapperConformance("exe");
 }
 
-TEST_CASE("compiles and runs borrowed experimental map methods in C++ emitter") {
+TEST_CASE("borrowed experimental map methods in C++ emitter") {
   expectExperimentalMapReferenceMethodConformance("exe");
 }
 
-TEST_CASE("compiles and runs experimental map inserts in C++ emitter") {
+TEST_CASE("experimental map inserts in C++ emitter") {
   expectExperimentalMapInsertConformance("exe");
 }
 
-TEST_CASE("compiles and runs experimental map ownership-sensitive values in C++ emitter") {
+TEST_CASE("experimental map ownership-sensitive values in C++ emitter") {
   expectExperimentalMapOwnershipConformance("exe");
 }
 
-TEST_CASE("compiles and runs canonical namespaced map inserts on explicit experimental map bindings in C++ emitter") {
+TEST_CASE("canonical namespaced map inserts on explicit experimental map bindings in C++ emitter") {
   expectCanonicalMapNamespaceExperimentalInsertConformance("exe");
 }
 
-TEST_CASE("compiles and runs builtin canonical map first-growth inserts in C++ emitter") {
+TEST_CASE("builtin canonical map first-growth inserts in C++ emitter") {
   expectBuiltinCanonicalMapInsertFirstGrowthConformance("exe");
 }
 
-TEST_CASE("compiles and runs builtin canonical map repeated-growth inserts in C++ emitter") {
+TEST_CASE("builtin canonical map repeated-growth inserts in C++ emitter") {
   expectBuiltinCanonicalMapInsertRepeatedGrowthConformance("exe");
 }
 
-TEST_CASE("compiles and runs builtin canonical map insert overwrites in C++ emitter") {
+TEST_CASE("builtin canonical map insert overwrites in C++ emitter") {
   expectBuiltinCanonicalMapInsertOverwriteConformance("exe");
 }
 
-TEST_CASE("compiles and runs builtin canonical map non-local growth in C++ emitter") {
+TEST_CASE("builtin canonical map non-local growth in C++ emitter") {
   expectBuiltinCanonicalMapInsertNonLocalGrowthConformance("exe");
 }
 
-TEST_CASE("compiles and runs builtin canonical map nested non-local growth in C++ emitter") {
+TEST_CASE("builtin canonical map nested non-local growth in C++ emitter") {
   expectBuiltinCanonicalMapInsertNestedNonLocalGrowthConformance("exe");
 }
 
-TEST_CASE("compiles and runs builtin canonical map helper-return borrowed method inserts in C++ emitter") {
+TEST_CASE("builtin canonical map helper-return borrowed method inserts in C++ emitter") {
   expectBuiltinCanonicalMapInsertHelperReturnBorrowedMethodConformance("exe");
 }
 
-TEST_CASE("compiles and runs builtin canonical map struct-field initializer in C++ emitter") {
+TEST_CASE("builtin canonical map struct-field initializer in C++ emitter") {
   expectBuiltinCanonicalMapStructFieldInitializerConformance("exe");
 }
 
-TEST_CASE("compiles and runs builtin canonical map direct insert on helper-return value receivers in C++ emitter") {
+TEST_CASE("builtin canonical map direct insert on helper-return value receivers in C++ emitter") {
   expectBuiltinCanonicalMapInsertHelperReturnValueDirectConformance("exe");
 }
 
-TEST_CASE("compiles and runs builtin canonical map method insert on helper-return value receivers in C++ emitter") {
+TEST_CASE("builtin canonical map method insert on helper-return value receivers in C++ emitter") {
   expectBuiltinCanonicalMapInsertHelperReturnValueMethodConformance("exe");
 }
 
-TEST_CASE("compiles and runs builtin canonical map direct insert on borrowed holder field receivers in C++ emitter") {
+TEST_CASE("builtin canonical map direct insert on borrowed holder field receivers in C++ emitter") {
   expectBuiltinCanonicalMapInsertBorrowedHolderFieldDirectConformance("exe");
 }
 
@@ -3717,19 +3717,19 @@ TEST_CASE("rejects experimental map bracket access in C++ emitter") {
   expectExperimentalMapIndexConformance("exe");
 }
 
-TEST_CASE("compiles and runs shared vector conformance harness in C++ emitter") {
+TEST_CASE("shared vector conformance harness in C++ emitter") {
   expectSharedVectorConformanceHarness("exe");
 }
 
-TEST_CASE("compiles and runs canonical namespaced vector helpers in C++ emitter") {
+TEST_CASE("canonical namespaced vector helpers in C++ emitter") {
   expectCanonicalVectorNamespaceConformance("exe");
 }
 
-TEST_CASE("compiles and runs canonical namespaced vector helpers on explicit Vector bindings in C++ emitter") {
+TEST_CASE("canonical namespaced vector helpers on explicit Vector bindings in C++ emitter") {
   expectCanonicalVectorNamespaceExplicitVectorBindingConformance("exe");
 }
 
-TEST_CASE("compiles and runs stdlib wrapper vector helpers on explicit Vector bindings in C++ emitter") {
+TEST_CASE("stdlib wrapper vector helpers on explicit Vector bindings in C++ emitter") {
   expectStdlibWrapperVectorHelperExplicitVectorBindingConformance("exe");
 }
 
@@ -3737,7 +3737,7 @@ TEST_CASE("rejects stdlib wrapper vector helper explicit Vector mismatch in C++ 
   expectStdlibWrapperVectorHelperExplicitVectorBindingMismatchReject("exe");
 }
 
-TEST_CASE("compiles and runs stdlib wrapper vector constructors on explicit Vector bindings in C++ emitter") {
+TEST_CASE("stdlib wrapper vector constructors on explicit Vector bindings in C++ emitter") {
   expectStdlibWrapperVectorConstructorExplicitVectorBindingConformance("exe");
 }
 
@@ -3745,7 +3745,7 @@ TEST_CASE("keeps stdlib wrapper vector constructor explicit Vector mismatch cont
   expectStdlibWrapperVectorConstructorExplicitVectorBindingMismatchContract("exe");
 }
 
-TEST_CASE("compiles and runs stdlib wrapper vector constructors on inferred auto bindings in C++ emitter") {
+TEST_CASE("stdlib wrapper vector constructors on inferred auto bindings in C++ emitter") {
   expectStdlibWrapperVectorConstructorAutoInferenceConformance("exe");
 }
 
@@ -3787,7 +3787,7 @@ TEST_CASE("rejects canonical namespaced vector mutators without imported helpers
   expectCanonicalVectorRemoveSwapImportRequirement("exe");
 }
 
-TEST_CASE("compiles and runs bare vector count and capacity through imported stdlib helpers in C++ emitter") {
+TEST_CASE("bare vector count and capacity through imported stdlib helpers in C++ emitter") {
   const std::string source = R"(
 import /std/collections/*
 
@@ -3806,7 +3806,7 @@ main() {
   CHECK(runCommand(exePath) == 6);
 }
 
-TEST_CASE("compiles and runs bare vector access through imported stdlib helpers in C++ emitter") {
+TEST_CASE("bare vector access through imported stdlib helpers in C++ emitter") {
   const std::string source = R"(
 import /std/collections/*
 
@@ -3871,18 +3871,18 @@ TEST_CASE("bare vector mutators reject without imported helpers in C++ emitter")
   expectBareVectorMutatorImportRequirement("exe", "remove_swap", "values, 1i32");
 }
 
-TEST_CASE("compiles and runs experimental vector helper runtime contracts in C++ emitter") {
+TEST_CASE("experimental vector helper runtime contracts in C++ emitter") {
   expectExperimentalVectorRuntimeContracts("exe");
 }
 
-TEST_CASE("compiles and runs experimental vector ownership-sensitive helpers in C++ emitter") {
+TEST_CASE("experimental vector ownership-sensitive helpers in C++ emitter") {
   expectExperimentalVectorOwnershipContracts("exe");
 }
 
-TEST_CASE("compiles and runs canonical vector helpers on experimental vector receivers in C++ emitter") {
+TEST_CASE("canonical vector helpers on experimental vector receivers in C++ emitter") {
   expectExperimentalVectorCanonicalHelperRoutingConformance("exe");
 }
-TEST_CASE("compiles and runs vector pop empty runtime contract in C++ emitter") {
+TEST_CASE("vector pop empty runtime contract in C++ emitter") {
   SUBCASE("call") {
     expectVectorPopEmptyRuntimeContract("exe", false);
   }
@@ -3892,7 +3892,7 @@ TEST_CASE("compiles and runs vector pop empty runtime contract in C++ emitter") 
   }
 }
 
-TEST_CASE("compiles and runs vector index runtime contract in C++ emitter") {
+TEST_CASE("vector index runtime contract in C++ emitter") {
   expectVectorIndexRuntimeContract("exe", "access_call");
   expectVectorIndexRuntimeContract("exe", "access_method");
   expectVectorIndexRuntimeContract("exe", "access_bracket");
@@ -3902,17 +3902,17 @@ TEST_CASE("compiles and runs vector index runtime contract in C++ emitter") {
   expectVectorIndexRuntimeContract("exe", "remove_swap_method");
 }
 
-TEST_CASE("compiles and runs container error contract conformance in C++ emitter") {
+TEST_CASE("container error contract conformance in C++ emitter") {
   expectContainerErrorConformance("exe");
 }
 
-TEST_CASE("compiles and runs checked pointer conformance harness in C++ emitter") {
+TEST_CASE("checked pointer conformance harness in C++ emitter") {
   expectCheckedPointerHelperSurfaceConformance("exe");
   expectCheckedPointerGrowthConformance("exe");
   expectCheckedPointerOutOfBoundsConformance("exe");
 }
 
-TEST_CASE("compiles and runs unchecked pointer conformance harness in C++ emitter") {
+TEST_CASE("unchecked pointer conformance harness in C++ emitter") {
   expectUncheckedPointerHelperSurfaceConformance("exe");
   expectUncheckedPointerGrowthConformance("exe");
 }
@@ -3961,7 +3961,7 @@ execute_repeat(2i32) {
   CHECK(runCommand(compileCmd) == 2);
 }
 
-TEST_CASE("compiles and runs pointer plus u64 offset") {
+TEST_CASE("pointer plus u64 offset") {
   const std::string source = R"(
 [return<int>]
 main() {
@@ -3977,7 +3977,7 @@ main() {
   CHECK(runCommand(exePath) == 5);
 }
 
-TEST_CASE("compiles and runs i64 literals") {
+TEST_CASE("i64 literals") {
   const std::string source = R"(
 [return<i64>]
 main() {
@@ -3992,7 +3992,7 @@ main() {
   CHECK(runCommand(exePath) == 9);
 }
 
-TEST_CASE("compiles and runs u64 literals") {
+TEST_CASE("u64 literals") {
   const std::string source = R"(
 [return<u64>]
 main() {
@@ -4007,7 +4007,7 @@ main() {
   CHECK(runCommand(exePath) == 10);
 }
 
-TEST_CASE("compiles and runs assignment operator rewrite") {
+TEST_CASE("assignment operator rewrite") {
   const std::string source = R"(
 [return<int>]
 main() {
@@ -4024,7 +4024,7 @@ main() {
   CHECK(runCommand(exePath) == 2);
 }
 
-TEST_CASE("compiles and runs comparison operator rewrite") {
+TEST_CASE("comparison operator rewrite") {
   const std::string source = R"(
 [return<bool>]
 main() {
@@ -4039,7 +4039,7 @@ main() {
   CHECK(runCommand(exePath) == 1);
 }
 
-TEST_CASE("compiles and runs less_than operator rewrite") {
+TEST_CASE("less_than operator rewrite") {
   const std::string source = R"(
 [return<bool>]
 main() {
@@ -4054,7 +4054,7 @@ main() {
   CHECK(runCommand(exePath) == 1);
 }
 
-TEST_CASE("compiles and runs greater_equal operator rewrite") {
+TEST_CASE("greater_equal operator rewrite") {
   const std::string source = R"(
 [return<bool>]
 main() {
@@ -4069,7 +4069,7 @@ main() {
   CHECK(runCommand(exePath) == 1);
 }
 
-TEST_CASE("compiles and runs less_equal operator rewrite") {
+TEST_CASE("less_equal operator rewrite") {
   const std::string source = R"(
 [return<bool>]
 main() {
@@ -4084,7 +4084,7 @@ main() {
   CHECK(runCommand(exePath) == 1);
 }
 
-TEST_CASE("compiles and runs and operator rewrite") {
+TEST_CASE("and operator rewrite") {
   const std::string source = R"(
 [return<bool>]
 main() {
@@ -4099,7 +4099,7 @@ main() {
   CHECK(runCommand(exePath) == 1);
 }
 
-TEST_CASE("compiles and runs or operator rewrite") {
+TEST_CASE("or operator rewrite") {
   const std::string source = R"(
 [return<bool>]
 main() {
@@ -4114,7 +4114,7 @@ main() {
   CHECK(runCommand(exePath) == 1);
 }
 
-TEST_CASE("compiles and runs not operator rewrite") {
+TEST_CASE("not operator rewrite") {
   const std::string source = R"(
 [return<bool>]
 main() {
@@ -4129,7 +4129,7 @@ main() {
   CHECK(runCommand(exePath) == 1);
 }
 
-TEST_CASE("compiles and runs not operator with parentheses") {
+TEST_CASE("not operator with parentheses") {
   const std::string source = R"(
 [return<bool>]
 main() {
@@ -4144,7 +4144,7 @@ main() {
   CHECK(runCommand(exePath) == 1);
 }
 
-TEST_CASE("compiles and runs unary minus operator rewrite") {
+TEST_CASE("unary minus operator rewrite") {
   const std::string source = R"(
 [return<int>]
 main() {
@@ -4160,7 +4160,7 @@ main() {
   CHECK(runCommand(exePath) == 2);
 }
 
-TEST_CASE("compiles and runs equality operator rewrite") {
+TEST_CASE("equality operator rewrite") {
   const std::string source = R"(
 [return<bool>]
 main() {
@@ -4175,7 +4175,7 @@ main() {
   CHECK(runCommand(exePath) == 1);
 }
 
-TEST_CASE("compiles and runs not_equal operator rewrite") {
+TEST_CASE("not_equal operator rewrite") {
   const std::string source = R"(
 [return<bool>]
 main() {

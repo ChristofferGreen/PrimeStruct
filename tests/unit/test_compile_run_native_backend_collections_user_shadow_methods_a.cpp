@@ -9,7 +9,7 @@
 #if PRIMESTRUCT_NATIVE_COLLECTIONS_ENABLED
 TEST_SUITE_BEGIN("primestruct.compile.run.native_backend.collections");
 
-TEST_CASE("compiles and runs native user array at method shadow") {
+TEST_CASE("native user array at method shadow") {
   const std::string source = R"(
 [return<int>]
 /array/at([array<i32>] values, [i32] index) {
@@ -31,7 +31,7 @@ main() {
   CHECK(runCommand(exePath) == 63);
 }
 
-TEST_CASE("compiles and runs native user array at_unsafe call shadow") {
+TEST_CASE("native user array at_unsafe call shadow") {
   const std::string source = R"(
 [return<int>]
 /array/at_unsafe([array<i32>] values, [i32] index) {
@@ -53,7 +53,7 @@ main() {
   CHECK(runCommand(exePath) == 85);
 }
 
-TEST_CASE("compiles and runs native user array at_unsafe method shadow") {
+TEST_CASE("native user array at_unsafe method shadow") {
   const std::string source = R"(
 [return<int>]
 /array/at_unsafe([array<i32>] values, [i32] index) {
@@ -75,7 +75,7 @@ main() {
   CHECK(runCommand(exePath) == 86);
 }
 
-TEST_CASE("compiles and runs native user map at_unsafe call shadow") {
+TEST_CASE("native user map at_unsafe call shadow") {
   const std::string source = R"(
 [return<int>]
 /map/at_unsafe([map<i32, i32>] values, [i32] key) {
@@ -97,7 +97,7 @@ main() {
   CHECK(runCommand(exePath) == 2);
 }
 
-TEST_CASE("compiles and runs native user map at_unsafe method shadow") {
+TEST_CASE("native user map at_unsafe method shadow") {
   const std::string source = R"(
 [return<int>]
 /map/at_unsafe([map<i32, i32>] values, [i32] key) {
@@ -119,7 +119,7 @@ main() {
   CHECK(runCommand(exePath) == 2);
 }
 
-TEST_CASE("compiles and runs native user map at call shadow") {
+TEST_CASE("native user map at call shadow") {
   const std::string source = R"(
 [return<int>]
 /map/at([map<i32, i32>] values, [i32] key) {
@@ -141,7 +141,7 @@ main() {
   CHECK(runCommand(exePath) == 2);
 }
 
-TEST_CASE("compiles and runs native user map at string positional call shadow") {
+TEST_CASE("native user map at string positional call shadow") {
   const std::string source = R"(
 [return<int>]
 /map/at([map<string, i32>] values, [string] key) {
@@ -163,7 +163,7 @@ main() {
   CHECK(runCommand(compileCmd) == 2);
 }
 
-TEST_CASE("compiles and runs native map access preferring later map receiver over string") {
+TEST_CASE("native map access preferring later map receiver over string") {
   const std::string source = R"(
 [return<int>]
 /map/at([map<string, i32>] values, [string] key) {
@@ -190,7 +190,7 @@ main() {
   CHECK(runCommand(compileCmd) == 2);
 }
 
-TEST_CASE("compiles and runs native user map at_unsafe string positional call shadow") {
+TEST_CASE("native user map at_unsafe string positional call shadow") {
   const std::string source = R"(
 [return<int>]
 /map/at_unsafe([map<string, i32>] values, [string] key) {
@@ -213,7 +213,7 @@ main() {
   CHECK(runCommand(compileCmd) == 2);
 }
 
-TEST_CASE("compiles and runs native user map at method shadow") {
+TEST_CASE("native user map at method shadow") {
   const std::string source = R"(
 [return<int>]
 /map/at([map<i32, i32>] values, [i32] key) {
@@ -259,11 +259,11 @@ main() {
         std::string::npos);
 }
 
-TEST_CASE("compiles and runs canonical vector discard helpers with owned elements in native backend") {
+TEST_CASE("canonical vector discard helpers with owned elements in native backend") {
   expectCanonicalVectorDiscardOwnershipConformance("native");
 }
 
-TEST_CASE("compiles and runs canonical vector indexed removal helpers with owned elements in native backend") {
+TEST_CASE("canonical vector indexed removal helpers with owned elements in native backend") {
   expectCanonicalVectorIndexedRemovalOwnershipConformance("native");
 }
 
@@ -382,7 +382,7 @@ main() {
         std::string::npos);
 }
 
-TEST_CASE("compiles and runs native user vector at method shadow") {
+TEST_CASE("native user vector at method shadow") {
   const std::string source = R"(
 [effects(heap_alloc), return<int>]
 /vector/at([vector<i32>] values, [i32] index) {
@@ -405,7 +405,7 @@ main() {
   CHECK(runCommand(exePath) == 69);
 }
 
-TEST_CASE("compiles and runs native user string at_unsafe call shadow") {
+TEST_CASE("native user string at_unsafe call shadow") {
   const std::string source = R"(
 [return<int>]
 /string/at_unsafe([string] values, [i32] index) {
@@ -427,7 +427,7 @@ main() {
   CHECK(runCommand(exePath) == 71);
 }
 
-TEST_CASE("compiles and runs native user string at_unsafe method shadow") {
+TEST_CASE("native user string at_unsafe method shadow") {
   const std::string source = R"(
 [return<int>]
 /string/at_unsafe([string] values, [i32] index) {
@@ -473,7 +473,7 @@ main() {
         std::string::npos);
 }
 
-TEST_CASE("compiles and runs native user vector at_unsafe method shadow") {
+TEST_CASE("native user vector at_unsafe method shadow") {
   const std::string source = R"(
 [effects(heap_alloc), return<int>]
 /vector/at_unsafe([vector<i32>] values, [i32] index) {
@@ -496,7 +496,7 @@ main() {
   CHECK(runCommand(exePath) == 82);
 }
 
-TEST_CASE("compiles and runs native user string at call shadow") {
+TEST_CASE("native user string at call shadow") {
   const std::string source = R"(
 [return<int>]
 /string/at([string] values, [i32] index) {
@@ -518,7 +518,7 @@ main() {
   CHECK(runCommand(exePath) == 83);
 }
 
-TEST_CASE("compiles and runs native user string at method shadow") {
+TEST_CASE("native user string at method shadow") {
   const std::string source = R"(
 [return<int>]
 /string/at([string] values, [i32] index) {

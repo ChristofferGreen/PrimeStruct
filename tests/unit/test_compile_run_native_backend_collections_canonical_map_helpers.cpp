@@ -9,7 +9,7 @@
 #if PRIMESTRUCT_NATIVE_COLLECTIONS_ENABLED
 TEST_SUITE_BEGIN("primestruct.compile.run.native_backend.collections");
 
-TEST_CASE("compiles and runs native stdlib namespaced map reference access helpers") {
+TEST_CASE("native stdlib namespaced map reference access helpers") {
   const std::string source = R"(
 import /std/collections/map
 
@@ -128,7 +128,7 @@ main() {
         std::string::npos);
 }
 
-TEST_CASE("compiles and runs native explicit canonical map typed bindings with builtin helpers") {
+TEST_CASE("native explicit canonical map typed bindings with builtin helpers") {
   const std::string source = R"(
 import /std/collections/*
 
@@ -461,7 +461,7 @@ main() {
         std::string::npos);
 }
 
-TEST_CASE("compiles and runs native bare map contains through canonical helper") {
+TEST_CASE("native bare map contains through canonical helper") {
   const std::string source = R"(
 [effects(heap_alloc), return<bool>]
 /std/collections/map/contains([map<i32, i32>] values, [i32] key) {
@@ -576,7 +576,7 @@ main() {
   CHECK(readFile(outPath).find("unknown call target: /std/collections/map/at") != std::string::npos);
 }
 
-TEST_CASE("compiles and runs native map namespaced at method compatibility alias") {
+TEST_CASE("native map namespaced at method compatibility alias") {
   const std::string source = R"(
 [effects(heap_alloc), return<int>]
 /std/collections/map/at([map<i32, i32>] values, [i32] index) {

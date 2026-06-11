@@ -2,7 +2,7 @@
 
 TEST_SUITE_BEGIN("primestruct.compile.run.text_filters");
 
-TEST_CASE("compiles and runs with comments") {
+TEST_CASE("with comments") {
   const std::string source = R"(
 // comment at top
 [return<int>]
@@ -27,7 +27,7 @@ main() {
   CHECK(runCommand(nativePath) == 4);
 }
 
-TEST_CASE("compiles and runs block expression with outer scope capture") {
+TEST_CASE("block expression with outer scope capture") {
   const std::string source = R"(
 [return<int>]
 main() {
@@ -52,7 +52,7 @@ main() {
   CHECK(runCommand(nativePath) == 6);
 }
 
-TEST_CASE("compiles and runs greater_than") {
+TEST_CASE("greater_than") {
   const std::string source = R"(
 [return<bool>]
 main() {
@@ -67,7 +67,7 @@ main() {
   CHECK(runCommand(exePath) == 1);
 }
 
-TEST_CASE("compiles and runs less_than") {
+TEST_CASE("less_than") {
   const std::string source = R"(
 [return<bool>]
 main() {
@@ -82,7 +82,7 @@ main() {
   CHECK(runCommand(exePath) == 1);
 }
 
-TEST_CASE("compiles and runs equal") {
+TEST_CASE("equal") {
   const std::string source = R"(
 [return<bool>]
 main() {
@@ -97,7 +97,7 @@ main() {
   CHECK(runCommand(exePath) == 1);
 }
 
-TEST_CASE("compiles and runs not_equal") {
+TEST_CASE("not_equal") {
   const std::string source = R"(
 [return<bool>]
 main() {
@@ -112,7 +112,7 @@ main() {
   CHECK(runCommand(exePath) == 1);
 }
 
-TEST_CASE("compiles and runs min") {
+TEST_CASE("min") {
   const std::string source = R"(
 import /std/math/*
 [return<int>]
@@ -128,7 +128,7 @@ main() {
   CHECK(runCommand(exePath) == 2);
 }
 
-TEST_CASE("compiles and runs max f32") {
+TEST_CASE("max f32") {
   const std::string source = R"(
 import /std/math/*
 [return<int>]
@@ -144,7 +144,7 @@ main() {
   CHECK(runCommand(exePath) == 2);
 }
 
-TEST_CASE("compiles and runs abs") {
+TEST_CASE("abs") {
   const std::string source = R"(
 import /std/math/*
 [return<int>]
@@ -160,7 +160,7 @@ main() {
   CHECK(runCommand(exePath) == 7);
 }
 
-TEST_CASE("compiles and runs sign f32") {
+TEST_CASE("sign f32") {
   const std::string source = R"(
 import /std/math/*
 [return<int>]
@@ -176,7 +176,7 @@ main() {
   CHECK(runCommand(exePath) == 0);
 }
 
-TEST_CASE("compiles and runs saturate f32") {
+TEST_CASE("saturate f32") {
   const std::string source = R"(
 import /std/math/*
 [return<int>]
@@ -192,7 +192,7 @@ main() {
   CHECK(runCommand(exePath) == 1);
 }
 
-TEST_CASE("compiles and runs clamp") {
+TEST_CASE("clamp") {
   const std::string source = R"(
 import /std/math/*
 [return<int>]
@@ -208,7 +208,7 @@ main() {
   CHECK(runCommand(exePath) == 4);
 }
 
-TEST_CASE("compiles and runs clamp i64") {
+TEST_CASE("clamp i64") {
   const std::string source = R"(
 import /std/math/*
 [return<i64>]
@@ -224,7 +224,7 @@ main() {
   CHECK(runCommand(exePath) == 6);
 }
 
-TEST_CASE("compiles and runs clamp mixed i32/i64") {
+TEST_CASE("clamp mixed i32/i64") {
   const std::string source = R"(
 import /std/math/*
 [return<i64>]
@@ -240,7 +240,7 @@ main() {
   CHECK(runCommand(exePath) == 6);
 }
 
-TEST_CASE("compiles and runs clamp u64") {
+TEST_CASE("clamp u64") {
   const std::string source = R"(
 import /std/math/*
 [return<u64>]
@@ -256,7 +256,7 @@ main() {
   CHECK(runCommand(exePath) == 6);
 }
 
-TEST_CASE("compiles and runs clamp f32") {
+TEST_CASE("clamp f32") {
   const std::string source = R"(
 import /std/math/*
 [return<int>]
@@ -272,7 +272,7 @@ main() {
   CHECK(runCommand(exePath) == 1);
 }
 
-TEST_CASE("compiles and runs clamp f64") {
+TEST_CASE("clamp f64") {
   const std::string source = R"(
 import /std/math/*
 [return<int>]
@@ -288,7 +288,7 @@ main() {
   CHECK(runCommand(exePath) == 2);
 }
 
-TEST_CASE("compiles and runs boolean literal") {
+TEST_CASE("boolean literal") {
   const std::string source = R"(
 [return<bool>]
 main() {
@@ -303,7 +303,7 @@ main() {
   CHECK(runCommand(exePath) == 1);
 }
 
-TEST_CASE("compiles and runs bool return") {
+TEST_CASE("bool return") {
   const std::string source = R"(
 [return<bool>]
 main() {
@@ -318,7 +318,7 @@ main() {
   CHECK(runCommand(exePath) == 1);
 }
 
-TEST_CASE("compiles and runs bool comparison") {
+TEST_CASE("bool comparison") {
   const std::string source = R"(
 [return<bool>]
 main() {
@@ -333,7 +333,7 @@ main() {
   CHECK(runCommand(exePath) == 1);
 }
 
-TEST_CASE("compiles and runs bool and signed int comparison") {
+TEST_CASE("bool and signed int comparison") {
   const std::string source = R"(
 [return<bool>]
 main() {
@@ -362,7 +362,7 @@ main() {
   CHECK(runCommand(compileCmd) == 2);
 }
 
-TEST_CASE("compiles and runs string binding") {
+TEST_CASE("string binding") {
   const std::string source = R"(
 [return<int>]
 main() {
@@ -382,7 +382,7 @@ main() {
   CHECK(readFile(cppPath).find("const const char *") == std::string::npos);
 }
 
-TEST_CASE("compiles and runs two-element array literal") {
+TEST_CASE("two-element array literal") {
   const std::string source = R"(
 [return<int>]
 main() {
@@ -397,7 +397,7 @@ main() {
   CHECK(runCommand(exePath) == 2);
 }
 
-TEST_CASE("compiles and runs flat map constructor") {
+TEST_CASE("flat map constructor") {
   const std::string source = R"(
 import /std/collections/*
 
@@ -415,7 +415,7 @@ main() {
   CHECK(runCommand(exePath) == 4);
 }
 
-TEST_CASE("compiles and runs map entry constructor") {
+TEST_CASE("map entry constructor") {
   const std::string source = R"(
 import /std/collections/*
 
@@ -434,7 +434,7 @@ main() {
   CHECK(runCommand(exePath) == 4);
 }
 
-TEST_CASE("compiles and runs canonical map constructor") {
+TEST_CASE("canonical map constructor") {
   const std::string source = R"(
 import /std/collections/*
 
@@ -452,7 +452,7 @@ main() {
   CHECK(runCommand(exePath) == 4);
 }
 
-TEST_CASE("compiles and runs named-arg call") {
+TEST_CASE("named-arg call") {
   const std::string source = R"(
 [return<int>]
 add([i32] a, [i32] b) {
@@ -473,7 +473,7 @@ main() {
 }
 
 
-TEST_CASE("compiles and runs convert builtin") {
+TEST_CASE("convert builtin") {
   const std::string source = R"(
 [return<int>]
 main() {
@@ -488,7 +488,7 @@ main() {
   CHECK(runCommand(exePath) == 1);
 }
 
-TEST_CASE("compiles and runs mixed named args") {
+TEST_CASE("mixed named args") {
   const std::string source = R"(
 [return<int>]
 sum3([i32] a, [i32] b, [i32] c) {
@@ -508,7 +508,7 @@ main() {
   CHECK(runCommand(exePath) == 6);
 }
 
-TEST_CASE("compiles and runs interleaved named args") {
+TEST_CASE("interleaved named args") {
   const std::string source = R"(
 [return<int>]
 sum3([i32] a, [i32] b, [i32] c) {
@@ -528,7 +528,7 @@ main() {
   CHECK(runCommand(exePath) == 6);
 }
 
-TEST_CASE("compiles and runs reordered named args") {
+TEST_CASE("reordered named args") {
   const std::string source = R"(
 [return<int>]
 pack([i32] a, [i32] b, [i32] c) {
@@ -548,7 +548,7 @@ main() {
   CHECK(runCommand(exePath) == 123);
 }
 
-TEST_CASE("compiles and runs map constructor with named-arg value") {
+TEST_CASE("map constructor with named-arg value") {
   const std::string source = R"(
 import /std/collections/*
 
@@ -571,7 +571,7 @@ main() {
   CHECK(runCommand(exePath) == 5);
 }
 
-TEST_CASE("compiles and runs if statement sugar") {
+TEST_CASE("if statement sugar") {
   const std::string source = R"(
 [return<int>]
 main() {
@@ -592,7 +592,7 @@ main() {
   CHECK(runCommand(exePath) == 9);
 }
 
-TEST_CASE("compiles and runs early return in if") {
+TEST_CASE("early return in if") {
   const std::string source = R"(
 [return<int>]
 main() {

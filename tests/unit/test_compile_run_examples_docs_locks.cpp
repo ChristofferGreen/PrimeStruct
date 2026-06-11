@@ -1232,9 +1232,9 @@ TEST_CASE("soa compatibility fixture migration boundary stays source locked") {
   const std::string cppParity = readFile(cppParityPath.string());
   const std::string vmParity = readFile(vmParityPath.string());
   const std::string nativeParity = readFile(nativeParityPath.string());
-  CHECK(cppParity.find("TEST_CASE(\"compiles and runs public soa count helper") !=
+  CHECK(cppParity.find("TEST_CASE(\"public soa count helper") !=
         std::string::npos);
-  CHECK(cppParity.find("TEST_CASE(\"compiles and runs canonical soa_vector count helper") ==
+  CHECK(cppParity.find("TEST_CASE(\"canonical soa_vector count helper") ==
         std::string::npos);
   CHECK(cppParity.find("TEST_CASE(\"public soa to_aos explicit helper is a vector target") !=
         std::string::npos);
@@ -1242,10 +1242,10 @@ TEST_CASE("soa compatibility fixture migration boundary stays source locked") {
         std::string::npos);
   CHECK(vmParity.find("TEST_CASE(\"runs vm canonical soa_vector count helper") ==
         std::string::npos);
-  CHECK(nativeParity.find("TEST_CASE(\"compiles and runs native public soa count helper") !=
+  CHECK(nativeParity.find("TEST_CASE(\"native public soa count helper") !=
         std::string::npos);
   CHECK(nativeParity.find(
-            "TEST_CASE(\"compiles and runs native canonical soa_vector count helper") ==
+            "TEST_CASE(\"native canonical soa_vector count helper") ==
         std::string::npos);
 }
 

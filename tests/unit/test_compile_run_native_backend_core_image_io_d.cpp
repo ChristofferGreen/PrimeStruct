@@ -5,7 +5,7 @@
 #if PRIMESTRUCT_NATIVE_CORE_ENABLED
 TEST_SUITE_BEGIN("primestruct.compile.run.native_backend.core");
 
-TEST_CASE("compiles and runs native png read for 16-bit rgb inputs") {
+TEST_CASE("native png read for 16-bit rgb inputs") {
   const std::string inPath =
       (testScratchPath("") / "primec_native_image_read_rgb16_sub.png").string();
   {
@@ -77,7 +77,7 @@ main() {
         "171\n");
 }
 
-TEST_CASE("compiles and runs native png read for 16-bit rgba inputs") {
+TEST_CASE("native png read for 16-bit rgba inputs") {
   const std::string inPath =
       (testScratchPath("") / "primec_native_image_read_rgba16_sub.png").string();
   {
@@ -150,7 +150,7 @@ main() {
         "137\n");
 }
 
-TEST_CASE("compiles and runs native png read for 16-bit grayscale-alpha inputs") {
+TEST_CASE("native png read for 16-bit grayscale-alpha inputs") {
   const std::string inPath =
       (testScratchPath("") / "primec_native_image_read_gray_alpha_16_sub.png").string();
   {
@@ -222,7 +222,7 @@ main() {
         "109\n");
 }
 
-TEST_CASE("compiles and runs native png read for Adam7 interlaced rgb inputs") {
+TEST_CASE("native png read for Adam7 interlaced rgb inputs") {
   const std::string inPath =
       (testScratchPath("") / "primec_native_image_read_interlaced_rgb.png").string();
   {
@@ -352,7 +352,7 @@ main() {
         "148\n");
 }
 
-TEST_CASE("compiles and runs native png read for Adam7 interlaced indexed-color inputs") {
+TEST_CASE("native png read for Adam7 interlaced indexed-color inputs") {
   const std::string inPath =
       (testScratchPath("") / "primec_native_image_read_interlaced_indexed.png").string();
   {
@@ -543,7 +543,7 @@ main() {
         "0\n");
 }
 
-TEST_CASE("compiles and runs native png read for optional plte and split idat inputs") {
+TEST_CASE("native png read for optional plte and split idat inputs") {
   const std::string inPath =
       (testScratchPath("") / "primec_native_image_read_plte_split_idat.png").string();
   {

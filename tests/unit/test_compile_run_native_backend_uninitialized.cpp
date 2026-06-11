@@ -3,7 +3,7 @@
 #if defined(__APPLE__) && (defined(__arm64__) || defined(__aarch64__))
 TEST_SUITE_BEGIN("primestruct.compile.run.native_backend.uninitialized");
 
-TEST_CASE("compiles and runs native uninitialized local storage") {
+TEST_CASE("native uninitialized local storage") {
   const std::string source = R"(
 [return<int>]
 main() {
@@ -25,7 +25,7 @@ main() {
   CHECK(runCommand(exePath) == 5);
 }
 
-TEST_CASE("compiles and runs native uninitialized string storage") {
+TEST_CASE("native uninitialized string storage") {
   const std::string source = R"(
 [return<int> effects(io_out)]
 main() {
@@ -52,7 +52,7 @@ main() {
         std::string::npos);
 }
 
-TEST_CASE("compiles and runs native pointer-backed uninitialized storage") {
+TEST_CASE("native pointer-backed uninitialized storage") {
   const std::string source = R"(
 [effects(heap_alloc), return<int>]
 main() {
@@ -74,7 +74,7 @@ main() {
   CHECK(runCommand(exePath) == 7);
 }
 
-TEST_CASE("compiles and runs native reference-backed uninitialized storage") {
+TEST_CASE("native reference-backed uninitialized storage") {
   const std::string source = R"(
 [return<int>]
 main() {
@@ -95,7 +95,7 @@ main() {
   CHECK(runCommand(exePath) == 7);
 }
 
-TEST_CASE("compiles and runs native pointer-backed uninitialized struct storage") {
+TEST_CASE("native pointer-backed uninitialized struct storage") {
   const std::string source = R"(
 [struct]
 Pair() {
@@ -123,7 +123,7 @@ main() {
   CHECK(runCommand(exePath) == 9);
 }
 
-TEST_CASE("compiles and runs native uninitialized struct field") {
+TEST_CASE("native uninitialized struct field") {
   const std::string source = R"(
 [struct]
 Box() {

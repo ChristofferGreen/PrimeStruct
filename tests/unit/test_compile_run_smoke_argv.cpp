@@ -5,7 +5,7 @@
 TEST_SUITE_BEGIN("primestruct.compile.run.smoke");
 
 
-TEST_CASE("compiles and runs binding inference from if expression feeding method call") {
+TEST_CASE("binding inference from if expression feeding method call") {
   const std::string source = R"(
 namespace i64 {
   [return<i64>]
@@ -38,7 +38,7 @@ main() {
   CHECK(runCommand(nativePath) == 4);
 }
 
-TEST_CASE("compiles and runs binding inference from mixed if branches") {
+TEST_CASE("binding inference from mixed if branches") {
   const std::string source = R"(
 namespace i64 {
   [return<i64>]
@@ -70,7 +70,7 @@ main() {
   CHECK(runCommand(nativePath) == 6);
 }
 
-TEST_CASE("compiles and runs parameter inferring i64 from default initializer") {
+TEST_CASE("parameter inferring i64 from default initializer") {
   const std::string source = R"(
 [return<i64>]
 id([mut] value{3i64}) {
@@ -99,7 +99,7 @@ main() {
   CHECK(runCommand(nativePath) == 3);
 }
 
-TEST_CASE("compiles and runs map constructor preserving assignment value") {
+TEST_CASE("map constructor preserving assignment value") {
   const std::string source = R"(
 import /std/collections/*
 

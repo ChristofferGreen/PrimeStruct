@@ -1,4 +1,4 @@
-TEST_CASE("compiles and runs native convert") {
+TEST_CASE("native convert") {
   const std::string source = R"(
 [return<int>]
 main() {
@@ -13,7 +13,7 @@ main() {
   CHECK(runCommand(exePath) == 1);
 }
 
-TEST_CASE("compiles and runs native convert bool") {
+TEST_CASE("native convert bool") {
   const std::string source = R"(
 [return<bool>]
 main() {
@@ -28,7 +28,7 @@ main() {
   CHECK(runCommand(exePath) == 0);
 }
 
-TEST_CASE("compiles and runs native convert bool from integers") {
+TEST_CASE("native convert bool from integers") {
   const std::string source = R"(
 [return<int>]
 main() {
@@ -46,7 +46,7 @@ main() {
   CHECK(runCommand(exePath) == 2);
 }
 
-TEST_CASE("compiles and runs native convert i64") {
+TEST_CASE("native convert i64") {
   const std::string source = R"(
 [return<bool>]
 main() {
@@ -61,7 +61,7 @@ main() {
   CHECK(runCommand(exePath) == 1);
 }
 
-TEST_CASE("compiles and runs native convert u64") {
+TEST_CASE("native convert u64") {
   const std::string source = R"(
 [return<bool>]
 main() {
@@ -76,7 +76,7 @@ main() {
   CHECK(runCommand(exePath) == 1);
 }
 
-TEST_CASE("compiles and runs native integer width convert") {
+TEST_CASE("native integer width convert") {
   const std::string source = R"(
 [return<bool>]
 main() {
@@ -91,7 +91,7 @@ main() {
   CHECK(runCommand(exePath) == 1);
 }
 
-TEST_CASE("compiles and runs native float literals") {
+TEST_CASE("native float literals") {
   const std::string source = R"(
 [return<int>]
 main() {
@@ -106,7 +106,7 @@ main() {
   CHECK(runCommand(exePath) == 3);
 }
 
-TEST_CASE("compiles and runs native float bindings") {
+TEST_CASE("native float bindings") {
   const std::string source = R"(
 [return<int>]
 main() {
@@ -153,7 +153,7 @@ main() {
   CHECK(runCommand(compileCmd) == 2);
 }
 
-TEST_CASE("compiles and runs native support-matrix math nominal helpers") {
+TEST_CASE("native support-matrix math nominal helpers") {
   const std::string source = R"(
 import /std/math/*
 
@@ -182,7 +182,7 @@ main() {
   CHECK(runCommand(exePath) == 9);
 }
 
-TEST_CASE("compiles and runs native quaternion reference multiply and rotation") {
+TEST_CASE("native quaternion reference multiply and rotation") {
   const std::string source = R"(
 import /std/math/*
 
@@ -207,7 +207,7 @@ main() {
   CHECK(runCommand(exePath) == 7);
 }
 
-TEST_CASE("compiles and runs native matrix composition order references with tolerance") {
+TEST_CASE("native matrix composition order references with tolerance") {
   const std::string source = R"(
 import /std/math/*
 
@@ -246,7 +246,7 @@ main() {
   CHECK(runCommand(exePath) == 1);
 }
 
-TEST_CASE("compiles and runs native matrix arithmetic helpers with tolerance") {
+TEST_CASE("native matrix arithmetic helpers with tolerance") {
   const std::string source = R"(
 import /std/math/*
 
@@ -317,7 +317,7 @@ main() {
   CHECK(runCommand(exePath) == 1);
 }
 
-TEST_CASE("compiles and runs native quaternion arithmetic helpers with tolerance") {
+TEST_CASE("native quaternion arithmetic helpers with tolerance") {
   const std::string source = R"(
 import /std/math/*
 

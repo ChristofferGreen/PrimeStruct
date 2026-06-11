@@ -4,7 +4,7 @@
 
 TEST_SUITE_BEGIN("primestruct.compile.run.smoke");
 
-TEST_CASE("compiles and runs simple main") {
+TEST_CASE("simple main") {
   const std::string source = R"(
 [return<int>]
 main() {
@@ -21,7 +21,7 @@ main() {
   CHECK(runCommand(runVmCmd) == 7);
 }
 
-TEST_CASE("compiles and runs float arithmetic in VM") {
+TEST_CASE("float arithmetic in VM") {
   const std::string source = R"(
 [return<int>]
 main() {
@@ -37,7 +37,7 @@ main() {
   CHECK(runCommand(runVmCmd) == 7);
 }
 
-TEST_CASE("compiles and runs primitive brace constructors") {
+TEST_CASE("primitive brace constructors") {
   const std::string source = R"(
 [return<bool>]
 truthy() {

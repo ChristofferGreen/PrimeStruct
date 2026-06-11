@@ -32,7 +32,7 @@ main() {
   CHECK(err.find("unknown call target: /vector/capacity") != std::string::npos);
 }
 
-TEST_CASE("compiles and runs wrapper explicit vector count capacity aliases through same-path helpers in C++ emitter") {
+TEST_CASE("wrapper explicit vector count capacity aliases through same-path helpers in C++ emitter") {
   const std::string source = R"(
 [return<int>]
 /vector/count([vector<i32>] values) {
@@ -67,7 +67,7 @@ main() {
   CHECK(runCommand(exePath) == 37);
 }
 
-TEST_CASE("compiles and runs local explicit vector count capacity calls through same-path helpers in C++ emitter") {
+TEST_CASE("local explicit vector count capacity calls through same-path helpers in C++ emitter") {
   const std::string source = R"(
 [return<int>]
 /vector/count([vector<i32>] values) {
@@ -493,7 +493,7 @@ main() {
   CHECK(readFile(errPath).find("unknown method: /array/capacity") != std::string::npos);
 }
 
-TEST_CASE("compiles and runs vector alias count capacity slash methods in C++ emitter") {
+TEST_CASE("vector alias count capacity slash methods in C++ emitter") {
   const std::string source = R"(
 [effects(heap_alloc), return<int>]
 /vector/count([vector<i32>] values) {
@@ -535,7 +535,7 @@ main() {
   CHECK(runCommand(exePath) == 110);
 }
 
-TEST_CASE("compiles and runs stdlib namespaced vector count capacity slash methods in C++ emitter") {
+TEST_CASE("stdlib namespaced vector count capacity slash methods in C++ emitter") {
   const std::string source = R"(
 [effects(heap_alloc), return<int>]
 /std/collections/vector/count([vector<i32>] values) {
@@ -723,7 +723,7 @@ main() {
   CHECK(readFile(errPath).find("unknown method: /vector/count") != std::string::npos);
 }
 
-TEST_CASE("compiles and runs stdlib namespaced vector access slash methods in C++ emitter") {
+TEST_CASE("stdlib namespaced vector access slash methods in C++ emitter") {
   const std::string source = R"(
 [effects(heap_alloc), return<int>]
 /std/collections/vector/at([vector<i32>] values, [i32] index) {

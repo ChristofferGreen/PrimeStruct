@@ -9,7 +9,7 @@
 #if PRIMESTRUCT_NATIVE_COLLECTIONS_ENABLED
 TEST_SUITE_BEGIN("primestruct.compile.run.native_backend.collections");
 
-TEST_CASE("compiles and runs native user wrapper temporary at_unsafe shadow precedence") {
+TEST_CASE("native user wrapper temporary at_unsafe shadow precedence") {
   const std::string source = R"(
 [return<map<i32, i32>>]
 wrapMap() {
@@ -188,7 +188,7 @@ main() {
   CHECK(runCommand(compileCmd) == 2);
 }
 
-TEST_CASE("compiles and runs native user wrapper temporary at shadow precedence") {
+TEST_CASE("native user wrapper temporary at shadow precedence") {
   const std::string source = R"(
 [return<map<i32, i32>>]
 wrapMap() {
@@ -226,7 +226,7 @@ main() {
   CHECK(readFile(errPath).find("unknown call target: /std/collections/map/at") != std::string::npos);
 }
 
-TEST_CASE("compiles and runs native user wrapper temporary count capacity shadow precedence") {
+TEST_CASE("native user wrapper temporary count capacity shadow precedence") {
   const std::string source = R"(
 [return<map<i32, i32>>]
 wrapMap() {
@@ -314,7 +314,7 @@ main() {
   CHECK(runCommand(compileCmd) == 2);
 }
 
-TEST_CASE("compiles and runs native user wrapper temporary index shadow precedence") {
+TEST_CASE("native user wrapper temporary index shadow precedence") {
   const std::string source = R"(
 [return<map<i32, i32>>]
 wrapMap() {
@@ -351,7 +351,7 @@ main() {
   CHECK(readFile(errPath).find("unknown call target: /std/collections/map/at") != std::string::npos);
 }
 
-TEST_CASE("compiles and runs native user wrapper temporary syntax parity shadow precedence") {
+TEST_CASE("native user wrapper temporary syntax parity shadow precedence") {
   const std::string source = R"(
 [return<map<i32, i32>>]
 wrapMap() {

@@ -28,7 +28,7 @@ void expectNativeCompileReject(const std::string &srcPath,
 
 TEST_SUITE_BEGIN("primestruct.compile.run.native_backend.collections");
 
-TEST_CASE("compiles and runs native collection syntax parity expression access forms") {
+TEST_CASE("native collection syntax parity expression access forms") {
   const std::string source = R"(
 import /std/collections/*
 
@@ -56,7 +56,7 @@ main() {
   CHECK(runCommand(exePath) == 166);
 }
 
-TEST_CASE("compiles and runs native vector literal count helper") {
+TEST_CASE("native vector literal count helper") {
   const std::string source = R"(
 import /std/collections/*
 
@@ -74,7 +74,7 @@ main() {
   CHECK(runCommand(exePath) == 3);
 }
 
-TEST_CASE("compiles and runs native collection constructor parity expression access") {
+TEST_CASE("native collection constructor parity expression access") {
   const std::string source = R"(
 import /std/collections/*
 
@@ -111,7 +111,7 @@ main() {
       "native backend only supports at() on numeric/bool/string arrays or vectors");
 }
 
-TEST_CASE("compiles and runs native map count helper") {
+TEST_CASE("native map count helper") {
   const std::string source = R"(
 import /std/collections/*
 
@@ -129,7 +129,7 @@ main() {
   CHECK(runCommand(exePath) == 2);
 }
 
-TEST_CASE("compiles and runs native map method call") {
+TEST_CASE("native map method call") {
   const std::string source = R"(
 import /std/collections/*
 
@@ -153,7 +153,7 @@ main() {
   CHECK(runCommand(exePath) == 2);
 }
 
-TEST_CASE("compiles and runs native map at helper") {
+TEST_CASE("native map at helper") {
   const std::string source = R"(
 import /std/collections/*
 
@@ -171,7 +171,7 @@ main() {
   CHECK(runCommand(exePath) == 4);
 }
 
-TEST_CASE("compiles and runs native map indexing sugar") {
+TEST_CASE("native map indexing sugar") {
   const std::string source = R"(
 import /std/collections/*
 
@@ -189,7 +189,7 @@ main() {
   CHECK(runCommand(exePath) == 4);
 }
 
-TEST_CASE("compiles and runs native map at_unsafe helper") {
+TEST_CASE("native map at_unsafe helper") {
   const std::string source = R"(
 import /std/collections/*
 
@@ -207,7 +207,7 @@ main() {
   CHECK(runCommand(exePath) == 2);
 }
 
-TEST_CASE("compiles and runs native bool map access helpers") {
+TEST_CASE("native bool map access helpers") {
   const std::string source = R"(
 import /std/collections/*
 
@@ -225,7 +225,7 @@ main() {
   CHECK(runCommand(exePath) == 3);
 }
 
-TEST_CASE("compiles and runs native u64 map access helpers") {
+TEST_CASE("native u64 map access helpers") {
   const std::string source = R"(
 import /std/collections/*
 
@@ -243,7 +243,7 @@ main() {
   CHECK(runCommand(exePath) == 12);
 }
 
-TEST_CASE("compiles and runs native map at missing key") {
+TEST_CASE("native map at missing key") {
   const std::string source = R"(
 import /std/collections/*
 
@@ -265,7 +265,7 @@ main() {
   CHECK(readFile(errPath) == "array index out of bounds\n");
 }
 
-TEST_CASE("compiles and runs native typed map binding") {
+TEST_CASE("native typed map binding") {
   const std::string source = R"(
 [effects(heap_alloc), return<int>]
 main() {

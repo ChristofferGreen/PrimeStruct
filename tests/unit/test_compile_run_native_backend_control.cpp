@@ -3,7 +3,7 @@
 #if defined(__APPLE__) && (defined(__arm64__) || defined(__aarch64__))
 TEST_SUITE_BEGIN("primestruct.compile.run.native_backend.control");
 
-TEST_CASE("compiles and runs native void executable") {
+TEST_CASE("native void executable") {
   const std::string source = R"(
 [return<void>]
 main() {
@@ -18,7 +18,7 @@ main() {
   CHECK(runCommand(exePath) == 0);
 }
 
-TEST_CASE("compiles and runs native explicit void return") {
+TEST_CASE("native explicit void return") {
   const std::string source = R"(
 [return<void>]
 main() {
@@ -33,7 +33,7 @@ main() {
   CHECK(runCommand(exePath) == 0);
 }
 
-TEST_CASE("compiles and runs native locals") {
+TEST_CASE("native locals") {
   const std::string source = R"(
 [return<int>]
 main() {
@@ -50,7 +50,7 @@ main() {
   CHECK(runCommand(exePath) == 5);
 }
 
-TEST_CASE("compiles and runs native if/else") {
+TEST_CASE("native if/else") {
   const std::string source = R"(
 [return<int>]
 main() {
@@ -70,7 +70,7 @@ main() {
   CHECK(runCommand(exePath) == 9);
 }
 
-TEST_CASE("compiles and runs native repeat loop") {
+TEST_CASE("native repeat loop") {
   const std::string source = R"(
 [return<int>]
 main() {
@@ -89,7 +89,7 @@ main() {
   CHECK(runCommand(exePath) == 6);
 }
 
-TEST_CASE("compiles and runs native for binding condition") {
+TEST_CASE("native for binding condition") {
   const std::string source = R"(
 [return<int>]
 main() {
@@ -109,7 +109,7 @@ main() {
   CHECK(runCommand(exePath) == 6);
 }
 
-TEST_CASE("compiles and runs native shared_scope for binding condition") {
+TEST_CASE("native shared_scope for binding condition") {
   const std::string source = R"(
 [return<int>]
 main() {
@@ -132,7 +132,7 @@ main() {
   CHECK(runCommand(exePath) == 6);
 }
 
-TEST_CASE("compiles and runs native shared_scope while loop") {
+TEST_CASE("native shared_scope while loop") {
   const std::string source = R"(
 [return<int>]
 main() {
@@ -157,7 +157,7 @@ main() {
   CHECK(runCommand(exePath) == 6);
 }
 
-TEST_CASE("compiles and runs native pointer helpers") {
+TEST_CASE("native pointer helpers") {
   const std::string source = R"(
 [return<int>]
 main() {
@@ -175,7 +175,7 @@ main() {
   CHECK(runCommand(exePath) == 6);
 }
 
-TEST_CASE("compiles and runs native pointer plus") {
+TEST_CASE("native pointer plus") {
   const std::string source = R"(
 [return<int>]
 main() {
@@ -191,7 +191,7 @@ main() {
   CHECK(runCommand(exePath) == 5);
 }
 
-TEST_CASE("compiles and runs native print output") {
+TEST_CASE("native print output") {
   const std::string source = R"(
 [return<int>]
 main() {
@@ -369,7 +369,7 @@ main() {
   CHECK(readFile(errPath).find("print_line requires io_out effect") != std::string::npos);
 }
 
-TEST_CASE("compiles and runs native implicit utf8 strings") {
+TEST_CASE("native implicit utf8 strings") {
   const std::string source = R"(
 [return<int> effects(io_out)]
 main() {
@@ -390,7 +390,7 @@ main() {
   CHECK(readFile(outPath) == "implicit\n");
 }
 
-TEST_CASE("compiles and runs native implicit utf8 single-quoted strings") {
+TEST_CASE("native implicit utf8 single-quoted strings") {
   const std::string source = R"(
 [return<int> effects(io_out)]
 main() {
@@ -411,7 +411,7 @@ main() {
   CHECK(readFile(outPath) == "implicit\n");
 }
 
-TEST_CASE("compiles and runs native escaped utf8 strings") {
+TEST_CASE("native escaped utf8 strings") {
   const std::string source = R"(
 [return<int> effects(io_out)]
 main() {
@@ -432,7 +432,7 @@ main() {
   CHECK(readFile(outPath) == "line\nnext\n");
 }
 
-TEST_CASE("compiles and runs native raw utf8 single-quoted strings") {
+TEST_CASE("native raw utf8 single-quoted strings") {
   const std::string source = R"(
 [return<int> effects(io_out)]
 main() {
@@ -453,7 +453,7 @@ main() {
   CHECK(readFile(outPath) == "line\\nnext\n");
 }
 
-TEST_CASE("compiles and runs native string binding print") {
+TEST_CASE("native string binding print") {
   const std::string source = R"(
 [return<int> effects(io_out)]
 main() {
@@ -473,7 +473,7 @@ main() {
   CHECK(readFile(outPath) == "hi\n");
 }
 
-TEST_CASE("compiles and runs native raw string literal output") {
+TEST_CASE("native raw string literal output") {
   const std::string source = R"(
 [return<int> effects(io_out)]
 main() {
@@ -494,7 +494,7 @@ main() {
   CHECK(readFile(outPath) == "line\\\\nnext\n");
 }
 
-TEST_CASE("compiles and runs native raw single-quoted string output") {
+TEST_CASE("native raw single-quoted string output") {
   const std::string source = R"(
 [return<int> effects(io_out)]
 main() {
@@ -516,7 +516,7 @@ main() {
 }
 
 
-TEST_CASE("compiles and runs native string binding copy") {
+TEST_CASE("native string binding copy") {
   const std::string source = R"(
 [return<int> effects(io_out)]
 main() {
@@ -537,7 +537,7 @@ main() {
   CHECK(readFile(outPath) == "hey\n");
 }
 
-TEST_CASE("compiles and runs native string count and indexing") {
+TEST_CASE("native string count and indexing") {
   const std::string source = R"(
 [return<int>]
 main() {
@@ -557,7 +557,7 @@ main() {
   CHECK(runCommand(exePath) == (97 + 98 + 3));
 }
 
-TEST_CASE("compiles and runs native string access checks bounds") {
+TEST_CASE("native string access checks bounds") {
   const std::string source = R"(
 [return<int>]
 main() {
@@ -576,7 +576,7 @@ main() {
   CHECK(readFile(errPath) == "string index out of bounds\n");
 }
 
-TEST_CASE("compiles and runs native string access rejects negative index") {
+TEST_CASE("native string access rejects negative index") {
   const std::string source = R"(
 [return<int>]
 main() {

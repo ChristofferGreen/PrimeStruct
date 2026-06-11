@@ -503,7 +503,7 @@ main() {
   CHECK(readFile(errPath).find("unknown method: /vector/at") != std::string::npos);
 }
 
-TEST_CASE("compiles and runs native wrapper-returned vector access string count fallback") {
+TEST_CASE("native wrapper-returned vector access string count fallback") {
   const std::string source = R"(
 [return<int>]
 /string/count([string] values) {
@@ -583,7 +583,7 @@ main() {
   CHECK(readFile(errPath).find("unknown call target: /vector/at") != std::string::npos);
 }
 
-TEST_CASE("compiles and runs native user vector count method shadow") {
+TEST_CASE("native user vector count method shadow") {
   const std::string source = R"(
 [effects(heap_alloc), return<int>]
 /vector/count([vector<i32>] values) {
@@ -686,7 +686,7 @@ main() {
         std::string::npos);
 }
 
-TEST_CASE("compiles and runs native canonical slash vector count same-path helper on array receiver") {
+TEST_CASE("native canonical slash vector count same-path helper on array receiver") {
   const std::string source = R"(
 [return<array<i32>>]
 wrapArray() {
@@ -741,7 +741,7 @@ main() {
         std::string::npos);
 }
 
-TEST_CASE("compiles and runs native canonical slash vector count same-path helper on string receiver") {
+TEST_CASE("native canonical slash vector count same-path helper on string receiver") {
   const std::string source = R"(
 [return<string>]
 wrapText() {
@@ -823,7 +823,7 @@ main() {
         std::string::npos);
 }
 
-TEST_CASE("compiles and runs native user vector capacity method shadow") {
+TEST_CASE("native user vector capacity method shadow") {
   const std::string source = R"(
 [effects(heap_alloc), return<int>]
 /vector/capacity([vector<i32>] values) {
@@ -846,7 +846,7 @@ main() {
   CHECK(runCommand(exePath) == 2);
 }
 
-TEST_CASE("compiles and runs native user vector count call shadow") {
+TEST_CASE("native user vector count call shadow") {
   const std::string source = R"(
 [effects(heap_alloc), return<int>]
 /vector/count([vector<i32>] values) {
@@ -868,7 +868,7 @@ main() {
   CHECK(runCommand(exePath) == 97);
 }
 
-TEST_CASE("compiles and runs native user vector capacity call shadow") {
+TEST_CASE("native user vector capacity call shadow") {
   const std::string source = R"(
 [effects(heap_alloc), return<int>]
 /vector/capacity([vector<i32>] values) {
@@ -912,7 +912,7 @@ main() {
   CHECK(runCommand(compileCmd) == 2);
 }
 
-TEST_CASE("compiles and runs native user array capacity method shadow") {
+TEST_CASE("native user array capacity method shadow") {
   const std::string source = R"(
 [return<int>]
 /array/capacity([array<i32>] values) {
@@ -934,7 +934,7 @@ main() {
   CHECK(runCommand(exePath) == 65);
 }
 
-TEST_CASE("compiles and runs native user array at call shadow") {
+TEST_CASE("native user array at call shadow") {
   const std::string source = R"(
 [return<int>]
 /array/at([array<i32>] values, [i32] index) {

@@ -86,7 +86,7 @@ main() {
          diagnostics.find("expected i32") != std::string::npos));
 }
 
-TEST_CASE("compiles and runs native auto-inferred std namespaced access helper canonical definition") {
+TEST_CASE("native auto-inferred std namespaced access helper canonical definition") {
   const std::string source = R"(
 [effects(heap_alloc), return<bool>]
 /std/collections/vector/at([vector<i32>] values, [i32] index) {
@@ -138,7 +138,7 @@ main() {
   CHECK(readFile(outPath).find("pop requires mutable vector binding") != std::string::npos);
 }
 
-TEST_CASE("compiles and runs native user vector pop method shadow") {
+TEST_CASE("native user vector pop method shadow") {
   const std::string source = R"(
 import /std/collections/*
 
@@ -162,7 +162,7 @@ main() {
   CHECK(runCommand(exePath) == 1);
 }
 
-TEST_CASE("compiles and runs native user vector reserve call shadow") {
+TEST_CASE("native user vector reserve call shadow") {
   const std::string source = R"(
 import /std/collections/*
 
@@ -186,7 +186,7 @@ main() {
   CHECK(runCommand(exePath) == 2);
 }
 
-TEST_CASE("compiles and runs native user vector reserve method shadow") {
+TEST_CASE("native user vector reserve method shadow") {
   const std::string source = R"(
 import /std/collections/*
 
@@ -235,7 +235,7 @@ main() {
   CHECK(readFile(outPath).find("clear requires mutable vector binding") != std::string::npos);
 }
 
-TEST_CASE("compiles and runs native user vector clear method shadow") {
+TEST_CASE("native user vector clear method shadow") {
   const std::string source = R"(
 import /std/collections/*
 
@@ -284,7 +284,7 @@ main() {
   CHECK(readFile(outPath).find("remove_at requires mutable vector binding") != std::string::npos);
 }
 
-TEST_CASE("compiles and runs native user vector remove_at method shadow") {
+TEST_CASE("native user vector remove_at method shadow") {
   const std::string source = R"(
 import /std/collections/*
 
@@ -333,7 +333,7 @@ main() {
   CHECK(readFile(outPath).find("remove_swap requires mutable vector binding") != std::string::npos);
 }
 
-TEST_CASE("compiles and runs native indexed vector assign") {
+TEST_CASE("native indexed vector assign") {
   const std::string source = R"(
 import /std/collections/*
 
@@ -354,7 +354,7 @@ main() {
   CHECK(runCommand(exePath) == 7);
 }
 
-TEST_CASE("compiles and runs native user vector remove_swap method shadow") {
+TEST_CASE("native user vector remove_swap method shadow") {
   const std::string source = R"(
 import /std/collections/*
 
@@ -458,7 +458,7 @@ main() {
   CHECK(runCommand(exePath) == 12);
 }
 
-TEST_CASE("compiles and runs native vector literal at local dynamic limit") {
+TEST_CASE("native vector literal at local dynamic limit") {
   auto buildVectorLiteralArgs = [](int count) {
     std::string args;
     args.reserve(static_cast<size_t>(count) * 6);

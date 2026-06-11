@@ -47,7 +47,7 @@ main() {
   CHECK(runCommand(exePath) == 7);
 }
 
-TEST_CASE("compiles and runs native ppm read for ascii p3 inputs") {
+TEST_CASE("native ppm read for ascii p3 inputs") {
   const std::string inPath = (testScratchPath("") / "primec_native_image_read.ppm").string();
   {
     std::ofstream file(inPath, std::ios::binary);
@@ -104,7 +104,7 @@ main() {
         "128\n");
 }
 
-TEST_CASE("compiles and runs native ppm read for binary p6 inputs") {
+TEST_CASE("native ppm read for binary p6 inputs") {
   const std::string inPath = (testScratchPath("") / "primec_native_image_read_p6.ppm").string();
   {
     std::ofstream file(inPath, std::ios::binary);
@@ -300,7 +300,7 @@ main() {
         "0\n");
 }
 
-TEST_CASE("compiles and runs native ppm write for ascii p3 outputs") {
+TEST_CASE("native ppm write for ascii p3 outputs") {
   const std::filesystem::path outPath = testScratchPath("") / "primec_native_image_write.ppm";
   std::error_code ec;
   std::filesystem::remove(outPath, ec);
@@ -370,7 +370,7 @@ main() {
   CHECK(!std::filesystem::exists(outPath));
 }
 
-TEST_CASE("compiles and runs native png write for deterministic rgb outputs") {
+TEST_CASE("native png write for deterministic rgb outputs") {
   const std::filesystem::path outPath = testScratchPath("") / "primec_native_image_write.png";
   std::error_code ec;
   std::filesystem::remove(outPath, ec);
@@ -489,7 +489,7 @@ main() {
   CHECK(!std::filesystem::exists(pngOutPath));
 }
 
-TEST_CASE("compiles and runs native png read for stored rgb inputs") {
+TEST_CASE("native png read for stored rgb inputs") {
   const std::string inPath = (testScratchPath("") / "primec_native_image_read.png").string();
   {
     const std::vector<unsigned char> pngBytes = withValidPngCrcs({
@@ -553,7 +553,7 @@ main() {
         "0\n");
 }
 
-TEST_CASE("compiles and runs native png read for sub-filter grayscale inputs") {
+TEST_CASE("native png read for sub-filter grayscale inputs") {
   const std::string inPath = (testScratchPath("") / "primec_native_image_read_gray_sub.png").string();
   {
     const std::vector<unsigned char> pngBytes = withValidPngCrcs({

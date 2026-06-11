@@ -1102,7 +1102,7 @@ main() {
   CHECK(readFile(outPath) == "8\n5\n");
 }
 
-TEST_CASE("compiles and runs native direct type namespace string helpers") {
+TEST_CASE("native direct type namespace string helpers") {
   const std::string source = R"(
 [struct]
 GfxError() {

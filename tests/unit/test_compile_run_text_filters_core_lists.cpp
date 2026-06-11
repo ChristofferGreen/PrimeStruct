@@ -3,7 +3,7 @@
 TEST_SUITE_BEGIN("primestruct.compile.run.text_filters");
 
 
-TEST_CASE("compiles and runs implicit i32 suffix") {
+TEST_CASE("implicit i32 suffix") {
   const std::string source = R"(
 [return<int>]
 main() {
@@ -30,7 +30,7 @@ main() {
   CHECK(runCommand(nativePath) == 8);
 }
 
-TEST_CASE("compiles and runs increment/decrement sugar") {
+TEST_CASE("increment/decrement sugar") {
   const std::string source = R"(
 [return<int>]
 main() {
@@ -543,7 +543,7 @@ main() {
   CHECK(readFile(primevmErrPath).find("Argument error: unknown option: --text-filters\n") != std::string::npos);
 }
 
-TEST_CASE("compiles and runs implicit i32 via transform list") {
+TEST_CASE("implicit i32 via transform list") {
   const std::string source = R"(
 [return<int>]
 main() {
@@ -559,7 +559,7 @@ main() {
   CHECK(runCommand(exePath) == 9);
 }
 
-TEST_CASE("compiles and runs implicit i32 via transform list in primevm") {
+TEST_CASE("implicit i32 via transform list in primevm") {
   const std::string source = R"(
 [return<int>]
 main() {

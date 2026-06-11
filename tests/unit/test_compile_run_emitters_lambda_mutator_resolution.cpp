@@ -345,7 +345,7 @@ main() {
       {"argument type mismatch for /vector/push parameter value: expected bool got i32"});
 }
 
-TEST_CASE("compiles and runs import alias in C++ emitter") {
+TEST_CASE("import alias in C++ emitter") {
   const std::string source = R"(
 import /util
 namespace util {
@@ -367,7 +367,7 @@ main() {
   CHECK(runCommand(exePath) == 7);
 }
 
-TEST_CASE("compiles and runs array method calls in C++ emitter") {
+TEST_CASE("array method calls in C++ emitter") {
   const std::string source = R"(
 [return<int>]
 /array/first([array<i32>] items) {
@@ -388,7 +388,7 @@ main() {
   CHECK(runCommand(exePath) == 7);
 }
 
-TEST_CASE("compiles and runs array index sugar") {
+TEST_CASE("array index sugar") {
   const std::string source = R"(
 [return<int>]
 main() {
@@ -404,7 +404,7 @@ main() {
   CHECK(runCommand(exePath) == 7);
 }
 
-TEST_CASE("compiles and runs argv helpers in C++ emitter") {
+TEST_CASE("argv helpers in C++ emitter") {
   const std::string source = R"(
 [return<int> effects(io_out)]
 main([array<string>] args) {
@@ -424,7 +424,7 @@ main([array<string>] args) {
   CHECK(readFile(outPath) == "alpha\n");
 }
 
-TEST_CASE("compiles and runs array index sugar with u64") {
+TEST_CASE("array index sugar with u64") {
   const std::string source = R"(
 [return<int>]
 main() {
@@ -440,7 +440,7 @@ main() {
   CHECK(runCommand(exePath) == 7);
 }
 
-TEST_CASE("compiles and runs vector helpers in C++ emitter") {
+TEST_CASE("vector helpers in C++ emitter") {
   const std::string source = R"(
 import /std/collections/*
 
@@ -465,7 +465,7 @@ main() {
   CHECK(runCommand(exePath) == 0);
 }
 
-TEST_CASE("compiles and runs canonical vector mutators over imported user shadow helpers in C++ emitter") {
+TEST_CASE("canonical vector mutators over imported user shadow helpers in C++ emitter") {
   const std::string source = R"(
 import /std/collections/*
 
@@ -533,7 +533,7 @@ main() {
   CHECK(runCommand(compileCmd) == 2);
 }
 
-TEST_CASE("compiles and runs canonical vector mutator named calls over imported user shadow helpers in C++ emitter") {
+TEST_CASE("canonical vector mutator named calls over imported user shadow helpers in C++ emitter") {
   const std::string source = R"(
 import /std/collections/*
 

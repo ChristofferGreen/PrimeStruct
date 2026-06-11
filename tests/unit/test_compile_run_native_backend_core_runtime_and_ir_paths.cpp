@@ -120,7 +120,7 @@ main() {
         "0\n");
 }
 
-TEST_CASE("compiles and runs if expression in native backend") {
+TEST_CASE("if expression in native backend") {
   const std::string source = R"(
 [return<int>]
 main() {
@@ -135,7 +135,7 @@ main() {
   CHECK(runCommand(exePath) == 9);
 }
 
-TEST_CASE("compiles and runs match cases in native backend") {
+TEST_CASE("match cases in native backend") {
   const std::string source = R"(
 [return<int>]
 main() {
@@ -151,7 +151,7 @@ main() {
   CHECK(runCommand(exePath) == 20);
 }
 
-TEST_CASE("compiles and runs native definition call") {
+TEST_CASE("native definition call") {
   const std::string source = R"(
 [return<int>]
 inc([i32] x) {
@@ -227,7 +227,7 @@ main() {
   CHECK(runCommand(exePath) == 48);
 }
 
-TEST_CASE("compiles and runs native method call") {
+TEST_CASE("native method call") {
   const std::string source = R"(
 namespace i32 {
   [return<int>]
@@ -250,7 +250,7 @@ main() {
   CHECK(runCommand(exePath) == 6);
 }
 
-TEST_CASE("compiles and runs native method count call") {
+TEST_CASE("native method count call") {
   const std::string source = R"(
 namespace i32 {
   [return<int>]
@@ -273,7 +273,7 @@ main() {
   CHECK(runCommand(exePath) == 5);
 }
 
-TEST_CASE("compiles and runs native literal method call") {
+TEST_CASE("native literal method call") {
   const std::string source = R"(
 namespace i32 {
   [return<int>]
@@ -295,7 +295,7 @@ main() {
   CHECK(runCommand(exePath) == 2);
 }
 
-TEST_CASE("compiles and runs native chained method calls") {
+TEST_CASE("native chained method calls") {
   const std::string source = R"(
 namespace i32 {
   [return<int>]
@@ -327,7 +327,7 @@ main() {
   CHECK(runCommand(exePath) == 4);
 }
 
-TEST_CASE("compiles and runs native Result.why hooks") {
+TEST_CASE("native Result.why hooks") {
   const std::string source = R"(
 [struct]
 MyError() {

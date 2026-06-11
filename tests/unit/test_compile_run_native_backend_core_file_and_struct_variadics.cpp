@@ -5,7 +5,7 @@
 #if PRIMESTRUCT_NATIVE_CORE_ENABLED
 TEST_SUITE_BEGIN("primestruct.compile.run.native_backend.core");
 
-TEST_CASE("compiles and runs native file io") {
+TEST_CASE("native file io") {
   const std::string outPath = (testScratchPath("") / "primec_native_file_io.txt").string();
   auto escape = [](const std::string &text) {
     std::string out;
@@ -45,7 +45,7 @@ TEST_CASE("compiles and runs native file io") {
   CHECK(readFile(outPath) == "Hello 123 world\n\nABC");
 }
 
-TEST_CASE("compiles and runs native file read_byte with deterministic eof") {
+TEST_CASE("native file read_byte with deterministic eof") {
   const std::string inPath = (testScratchPath("") / "primec_native_file_read_byte.txt").string();
   {
     std::ofstream file(inPath, std::ios::binary);
@@ -355,7 +355,7 @@ main() {
   CHECK(readFile(outPath) == "1\n2\n1\n2\n");
 }
 
-TEST_CASE("compiles and runs native mutable scalar helper copy-back") {
+TEST_CASE("native mutable scalar helper copy-back") {
   const std::string source = R"(
 [return<void>]
 set42([i32 mut] value) {
@@ -382,7 +382,7 @@ main() {
   CHECK(readFile(outPath) == "42\n");
 }
 
-TEST_CASE("compiles and runs native executable") {
+TEST_CASE("native executable") {
   const std::string source = R"(
 [return<int>]
 main() {

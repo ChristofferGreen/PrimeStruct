@@ -2,7 +2,7 @@
 
 TEST_SUITE_BEGIN("primestruct.compile.run.text_filters");
 
-TEST_CASE("compiles and runs implicit utf8 suffix by default") {
+TEST_CASE("implicit utf8 suffix by default") {
   const std::string source = R"(
 [return<int> effects(io_out)]
 main() {
@@ -26,7 +26,7 @@ main() {
   CHECK(runCommand(nativePath) == 0);
 }
 
-TEST_CASE("compiles and runs implicit hex literal") {
+TEST_CASE("implicit hex literal") {
   const std::string source = R"(
 [return<int>]
 main() {
@@ -42,7 +42,7 @@ main() {
   CHECK(runCommand(exePath) == 42);
 }
 
-TEST_CASE("compiles and runs float binding") {
+TEST_CASE("float binding") {
   const std::string source = R"(
 [return<int>]
 main() {
@@ -59,7 +59,7 @@ main() {
   CHECK(runCommand(exePath) == 3);
 }
 
-TEST_CASE("compiles and runs single-letter float suffix") {
+TEST_CASE("single-letter float suffix") {
   const std::string source = R"(
 [return<int>]
 main() {
@@ -74,7 +74,7 @@ main() {
   CHECK(runCommand(exePath) == 1);
 }
 
-TEST_CASE("compiles and runs float comparison") {
+TEST_CASE("float comparison") {
   const std::string source = R"(
 [return<bool>]
 main() {
@@ -89,7 +89,7 @@ main() {
   CHECK(runCommand(exePath) == 1);
 }
 
-TEST_CASE("compiles and runs string comparison") {
+TEST_CASE("string comparison") {
   const std::string source = R"(
 [return<bool>]
 main() {
@@ -182,7 +182,7 @@ main() {
   CHECK(runCommand(compileCmd) == 2);
 }
 
-TEST_CASE("compiles and runs pointer operator sugar") {
+TEST_CASE("pointer operator sugar") {
   const std::string source = R"(
 [return<int>]
 main() {
@@ -232,7 +232,7 @@ main() {
   CHECK(runCommand(exePath) == 8);
 }
 
-TEST_CASE("compiles and runs if") {
+TEST_CASE("if") {
   const std::string source = R"(
 [return<int>]
 main() {
@@ -252,7 +252,7 @@ main() {
   CHECK(runCommand(exePath) == 9);
 }
 
-TEST_CASE("compiles and runs if expression") {
+TEST_CASE("if expression") {
   const std::string source = R"(
 [return<int>]
 main() {
@@ -279,7 +279,7 @@ main() {
   CHECK(runCommand(runVmCmd) == 9);
 }
 
-TEST_CASE("compiles and runs if block sugar in return expression") {
+TEST_CASE("if block sugar in return expression") {
   const std::string source = R"(
 [return<int>]
 main() {
@@ -302,7 +302,7 @@ main() {
   CHECK(runCommand(nativePath) == 4);
 }
 
-TEST_CASE("compiles and runs if expr block statements") {
+TEST_CASE("if expr block statements") {
   const std::string source = R"(
 [return<int>]
 main() {
@@ -326,7 +326,7 @@ main() {
   CHECK(runCommand(nativePath) == 5);
 }
 
-TEST_CASE("compiles and runs lazy if expression taking then branch") {
+TEST_CASE("lazy if expression taking then branch") {
   const std::string source = R"(
 [return<int>]
 main() {
@@ -360,7 +360,7 @@ main() {
   CHECK(readFile(errPath).empty());
 }
 
-TEST_CASE("compiles and runs lazy if expression taking else branch") {
+TEST_CASE("lazy if expression taking else branch") {
   const std::string source = R"(
 [return<int>]
 main() {

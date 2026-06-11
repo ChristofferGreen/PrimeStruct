@@ -254,7 +254,7 @@ main() {
   CHECK(runCommand(runCmd) == 2);
 }
 
-TEST_CASE("compiles and runs vm array alias count through same-path helper") {
+TEST_CASE("vm array alias count through same-path helper") {
   const std::string source = R"(
 [return<int>]
 /array/count([vector<i32>] values, [bool] marker) {
@@ -276,7 +276,7 @@ main() {
   CHECK(runCommand(runCmd) == 46);
 }
 
-TEST_CASE("compiles and runs vm array alias capacity through same-path helper") {
+TEST_CASE("vm array alias capacity through same-path helper") {
   const std::string source = R"(
 [return<int>]
 /array/capacity([vector<i32>] values, [bool] marker) {
@@ -298,7 +298,7 @@ main() {
   CHECK(runCommand(runCmd) == 48);
 }
 
-TEST_CASE("compiles and runs vm array alias at through same-path helper") {
+TEST_CASE("vm array alias at through same-path helper") {
   const std::string source = R"(
 [return<int>]
 /array/at([vector<i32>] values, [i32] index, [bool] marker) {
@@ -320,7 +320,7 @@ main() {
   CHECK(runCommand(runCmd) == 48);
 }
 
-TEST_CASE("compiles and runs vm array alias at_unsafe through same-path helper") {
+TEST_CASE("vm array alias at_unsafe through same-path helper") {
   const std::string source = R"(
 [return<int>]
 /array/at_unsafe([vector<i32>] values, [i32] index, [bool] marker) {
@@ -342,7 +342,7 @@ main() {
   CHECK(runCommand(runCmd) == 50);
 }
 
-TEST_CASE("compiles and runs vm array alias slash-method helpers through same-path helpers") {
+TEST_CASE("vm array alias slash-method helpers through same-path helpers") {
   const std::string source = R"(
 Marker {
   [i32] value

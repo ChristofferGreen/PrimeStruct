@@ -266,7 +266,7 @@ main() {
   CHECK(runCommand(compileCmd) == 2);
 }
 
-TEST_CASE("compiles and runs native stdlib collection shim vector quint constructor") {
+TEST_CASE("native stdlib collection shim vector quint constructor") {
   const std::string source = R"(
 import /std/collections/*
 
@@ -301,7 +301,7 @@ main() {
   CHECK(runCommand(compileCmd) == 2);
 }
 
-TEST_CASE("compiles and runs native stdlib collection shim vector sext constructor") {
+TEST_CASE("native stdlib collection shim vector sext constructor") {
   const std::string source = R"(
 import /std/collections/*
 
@@ -336,7 +336,7 @@ main() {
   CHECK(runCommand(compileCmd) == 2);
 }
 
-TEST_CASE("compiles and runs native stdlib collection shim vector sept constructor") {
+TEST_CASE("native stdlib collection shim vector sept constructor") {
   const std::string source = R"(
 import /std/collections/*
 
@@ -371,7 +371,7 @@ main() {
   CHECK(runCommand(compileCmd) == 2);
 }
 
-TEST_CASE("compiles and runs native stdlib collection shim vector oct constructor") {
+TEST_CASE("native stdlib collection shim vector oct constructor") {
   const std::string source = R"(
 import /std/collections/*
 

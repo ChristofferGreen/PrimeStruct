@@ -170,7 +170,7 @@ main() {
         "Native lowering error: native backend does not support effect: global_write on /main\n");
 }
 
-TEST_CASE("compiles and runs namespace entry") {
+TEST_CASE("namespace entry") {
   const std::string source = R"(
 namespace demo {
   [return<int>]
@@ -188,7 +188,7 @@ namespace demo {
   CHECK(runCommand(exePath) == 9);
 }
 
-TEST_CASE("compiles and runs native import alias in namespace") {
+TEST_CASE("native import alias in namespace") {
   const std::string source = R"(
 import /util
 namespace util {
@@ -213,7 +213,7 @@ namespace demo {
   CHECK(runCommand(exePath) == 7);
 }
 
-TEST_CASE("compiles and runs native import alias") {
+TEST_CASE("native import alias") {
   const std::string source = R"(
 import /util
 namespace util {
@@ -236,7 +236,7 @@ main() {
   CHECK(runCommand(exePath) == 5);
 }
 
-TEST_CASE("compiles and runs native with multiple imports") {
+TEST_CASE("native with multiple imports") {
   const std::string source = R"(
 import /util, /std/math/*
 namespace util {
@@ -259,7 +259,7 @@ main() {
   CHECK(runCommand(exePath) == 8);
 }
 
-TEST_CASE("compiles and runs import expansion") {
+TEST_CASE("import expansion") {
   const std::string libPath = writeTemp("compile_lib.prime", "[return<int>]\nhelper(){ return(5i32) }\n");
   const std::string source = "import<\"" + libPath + "\">\n[return<int>]\nmain(){ return(helper()) }\n";
   const std::string srcPath = writeTemp("compile_include.prime", source);
@@ -314,7 +314,7 @@ TEST_CASE("emit-diagnostics reports legacy include alias rejection payload") {
   CHECK(primevmDiagnostics.find("Import error: ") == std::string::npos);
 }
 
-TEST_CASE("compiles and runs single-quoted import expansion") {
+TEST_CASE("single-quoted import expansion") {
   const std::string libPath = writeTemp("compile_lib_single.prime", "[return<int>]\nhelper(){ return(6i32) }\n");
   const std::string source = "import<'" + libPath + "'>\n[return<int>]\nmain(){ return(helper()) }\n";
   const std::string srcPath = writeTemp("compile_include_single.prime", source);
@@ -325,7 +325,7 @@ TEST_CASE("compiles and runs single-quoted import expansion") {
   CHECK(runCommand(exePath) == 6);
 }
 
-TEST_CASE("compiles and runs with duplicate imports ignored") {
+TEST_CASE("with duplicate imports ignored") {
   const std::string libPath = writeTemp("compile_lib_dupe.prime", "[return<int>]\nhelper(){ return(5i32) }\n");
   const std::string source = "import<\"" + libPath + "\">\nimport<\"" + libPath +
                              "\">\n[return<int>]\nmain(){ return(helper()) }\n";
@@ -347,7 +347,7 @@ TEST_CASE("rejects import path with suffix") {
   CHECK(readFile(errPath) == "Import error: import path cannot have suffix\n");
 }
 
-TEST_CASE("compiles and runs unquoted import expansion") {
+TEST_CASE("unquoted import expansion") {
   const std::filesystem::path includeRoot =
       testScratchPath("") / "primec_tests" / "include_root_unquoted";
   std::filesystem::create_directories(includeRoot);
@@ -369,7 +369,7 @@ TEST_CASE("compiles and runs unquoted import expansion") {
   CHECK(runCommand(exePath) == 5);
 }
 
-TEST_CASE("compiles and runs unquoted import expansion with -I") {
+TEST_CASE("unquoted import expansion with -I") {
   const std::filesystem::path importRoot =
       testScratchPath("") / "primec_tests" / "import_root_short_flag";
   std::filesystem::remove_all(importRoot);
@@ -506,7 +506,7 @@ main() {
   CHECK(primevmBareDiagnostics.find("Usage: primevm") == std::string::npos);
 }
 
-TEST_CASE("compiles and runs versioned import expansion") {
+TEST_CASE("versioned import expansion") {
   const std::filesystem::path includeRoot =
       testScratchPath("") / "primec_tests" / "include_root_versioned";
   std::filesystem::remove_all(includeRoot);
@@ -549,7 +549,7 @@ TEST_CASE("compiles and runs versioned import expansion") {
   CHECK(runCommand(nativePath) == 7);
 }
 
-TEST_CASE("compiles and runs versioned import with version first") {
+TEST_CASE("versioned import with version first") {
   const std::filesystem::path includeRoot =
       testScratchPath("") / "primec_tests" / "include_root_versioned_first";
   std::filesystem::remove_all(includeRoot);

@@ -5,7 +5,7 @@
 #if PRIMESTRUCT_NATIVE_CORE_ENABLED
 TEST_SUITE_BEGIN("primestruct.compile.run.native_backend.core");
 
-TEST_CASE("compiles and runs native png read for sub-filter grayscale-alpha inputs") {
+TEST_CASE("native png read for sub-filter grayscale-alpha inputs") {
   const std::string inPath =
       (testScratchPath("") / "primec_native_image_read_gray_alpha_sub.png").string();
   {
@@ -77,7 +77,7 @@ main() {
         "30\n");
 }
 
-TEST_CASE("compiles and runs native png read for 1-bit grayscale inputs") {
+TEST_CASE("native png read for 1-bit grayscale inputs") {
   const std::string inPath = (testScratchPath("") / "primec_native_image_read_gray1.png").string();
   {
     const std::vector<unsigned char> pngBytes = withValidPngCrcs({
@@ -147,7 +147,7 @@ main() {
         "255\n");
 }
 
-TEST_CASE("compiles and runs native png read for 4-bit grayscale inputs") {
+TEST_CASE("native png read for 4-bit grayscale inputs") {
   const std::string inPath = (testScratchPath("") / "primec_native_image_read_gray4.png").string();
   {
     const std::vector<unsigned char> pngBytes = withValidPngCrcs({
@@ -217,7 +217,7 @@ main() {
         "238\n");
 }
 
-TEST_CASE("compiles and runs native png read for 16-bit grayscale inputs") {
+TEST_CASE("native png read for 16-bit grayscale inputs") {
   const std::string inPath =
       (testScratchPath("") / "primec_native_image_read_gray16_sub.png").string();
   {
@@ -289,7 +289,7 @@ main() {
         "127\n");
 }
 
-TEST_CASE("compiles and runs native png read for stored sub-filter rgb inputs") {
+TEST_CASE("native png read for stored sub-filter rgb inputs") {
   const std::string inPath = (testScratchPath("") / "primec_native_image_read_sub.png").string();
   {
     const std::vector<unsigned char> pngBytes = withValidPngCrcs({
@@ -360,7 +360,7 @@ main() {
         "90\n");
 }
 
-TEST_CASE("compiles and runs native png read for stored up-filter rgb inputs") {
+TEST_CASE("native png read for stored up-filter rgb inputs") {
   const std::string inPath = (testScratchPath("") / "primec_native_image_read_up.png").string();
   {
     const std::vector<unsigned char> pngBytes = withValidPngCrcs({
@@ -431,7 +431,7 @@ main() {
         "39\n");
 }
 
-TEST_CASE("compiles and runs native png read for stored average-filter rgb inputs") {
+TEST_CASE("native png read for stored average-filter rgb inputs") {
   const std::string inPath =
       (testScratchPath("") / "primec_native_image_read_average.png").string();
   {
@@ -504,7 +504,7 @@ main() {
         "39\n");
 }
 
-TEST_CASE("compiles and runs native png read for stored paeth-filter rgb inputs") {
+TEST_CASE("native png read for stored paeth-filter rgb inputs") {
   const std::string inPath = (testScratchPath("") / "primec_native_image_read_paeth.png").string();
   {
     const std::vector<unsigned char> pngBytes = withValidPngCrcs({

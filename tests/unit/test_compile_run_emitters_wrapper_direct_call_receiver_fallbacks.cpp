@@ -6,7 +6,7 @@
 
 TEST_SUITE_BEGIN("primestruct.compile.run.emitters.cpp");
 
-TEST_CASE("compiles and runs wrapper canonical direct-call struct method chain forwarding in C++ emitter") {
+TEST_CASE("wrapper canonical direct-call struct method chain forwarding in C++ emitter") {
   const std::string source = R"(
 Marker {
   [i32] value
@@ -461,7 +461,7 @@ main() {
   CHECK(readFile(errPath).find("capacity requires vector target") != std::string::npos);
 }
 
-TEST_CASE("compiles and runs std math vector and color types") {
+TEST_CASE("std math vector and color types") {
   const std::string source = R"(
 import /std/math/*
 
@@ -491,7 +491,7 @@ main() {
   CHECK(runCommand(exePath) == 36);
 }
 
-TEST_CASE("compiles and runs std math matrix types") {
+TEST_CASE("std math matrix types") {
   const std::string source = R"(
 import /std/math/*
 
@@ -522,7 +522,7 @@ main() {
   CHECK(runCommand(exePath) == 44);
 }
 
-TEST_CASE("compiles and runs std math quaternion type") {
+TEST_CASE("std math quaternion type") {
   const std::string source = R"(
 import /std/math/*
 
@@ -543,7 +543,7 @@ main() {
   CHECK(runCommand(exePath) == 1);
 }
 
-TEST_CASE("compiles and runs std math quat_to_mat3 helper") {
+TEST_CASE("std math quat_to_mat3 helper") {
   const std::string source = R"(
 import /std/math/*
 
@@ -562,7 +562,7 @@ main() {
   CHECK(runCommand(exePath) == 3);
 }
 
-TEST_CASE("compiles and runs std math quat_to_mat4 helper") {
+TEST_CASE("std math quat_to_mat4 helper") {
   const std::string source = R"(
 import /std/math/*
 
@@ -581,7 +581,7 @@ main() {
   CHECK(runCommand(exePath) == 4);
 }
 
-TEST_CASE("compiles and runs std math mat3_to_quat helper") {
+TEST_CASE("std math mat3_to_quat helper") {
   const std::string source = R"(
 import /std/math/*
 
@@ -604,7 +604,7 @@ main() {
   CHECK(runCommand(exePath) == 1);
 }
 
-TEST_CASE("compiles and runs C++ support-matrix math nominal helpers") {
+TEST_CASE("C++ support-matrix math nominal helpers") {
   const std::string source = R"(
 import /std/math/*
 
@@ -633,7 +633,7 @@ main() {
   CHECK(runCommand(exePath) == 9);
 }
 
-TEST_CASE("compiles and runs C++ quaternion reference multiply and rotation") {
+TEST_CASE("C++ quaternion reference multiply and rotation") {
   const std::string source = R"(
 import /std/math/*
 
@@ -657,7 +657,7 @@ main() {
   CHECK(runCommand(exePath) == 7);
 }
 
-TEST_CASE("compiles and runs C++ matrix composition order references with tolerance") {
+TEST_CASE("C++ matrix composition order references with tolerance") {
   const std::string source = R"(
 import /std/math/*
 
