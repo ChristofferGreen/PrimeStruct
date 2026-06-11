@@ -396,7 +396,7 @@ main() {
   CHECK(result == 4);
 }
 
-TEST_CASE("pointer plus accepts i64 offsets") {
+TEST_CASE("ir pipeline pointer plus accepts i64 offsets") {
   const std::string source = R"(
 [return<int>]
 main() {

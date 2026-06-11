@@ -705,7 +705,7 @@ main() {
   CHECK(runCommand(runCmd) == 4);
 }
 
-TEST_CASE("runs vm with map at_unsafe helper") {
+TEST_CASE("vector aliases vm map at_unsafe helper") {
   const std::string source = R"(
 import /std/collections/*
 

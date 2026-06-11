@@ -577,7 +577,7 @@ main() {
         std::string::npos);
 }
 
-TEST_CASE("rejects vm vector method alias access struct method chain with array receiver diagnostics") {
+TEST_CASE("rejects vm vector method alias struct method chain with array receiver diagnostics") {
   const std::string source = R"(
 Marker {
   [i32] value
@@ -713,7 +713,7 @@ main() {
   CHECK(readFile(errPath).find("unknown method: /array/at") != std::string::npos);
 }
 
-TEST_CASE("rejects vm vector method alias access struct method chain with array receiver diagnostics") {
+TEST_CASE("rejects vm vector method alias scalar method chain with array receiver diagnostics") {
   const std::string source = R"(
 Marker {
   [i32] value

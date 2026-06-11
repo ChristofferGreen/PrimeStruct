@@ -719,7 +719,7 @@ main() {
   CHECK(readFile(errPath).find("unknown method: /vector/push") != std::string::npos);
 }
 
-TEST_CASE("C++ emitter rejects canonical vector mutator methods with alias-only helper before emission") {
+TEST_CASE("slash alias C++ emitter rejects canonical vector mutator methods with alias-only helper before emission") {
   const std::string source = R"(
 [effects(heap_alloc)]
 /vector/push([vector<i32> mut] values, [i32] value) {

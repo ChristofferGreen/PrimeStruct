@@ -168,7 +168,7 @@ main() {
   CHECK(error.find("block expression does not accept arguments") != std::string::npos);
 }
 
-TEST_CASE("block expression requires a value") {
+TEST_CASE("parsed block expression requires a value") {
   const std::string source = R"(
 [return<int>]
 main() {

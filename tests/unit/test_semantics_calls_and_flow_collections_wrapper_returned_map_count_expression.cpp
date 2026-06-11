@@ -158,7 +158,7 @@ main() {
   CHECK(error.empty());
 }
 
-TEST_CASE("vector stdlib namespaced capacity expression keeps canonical precedence") {
+TEST_CASE("wrapper vector stdlib namespaced capacity expression keeps canonical precedence") {
   const std::string source = R"(
 [effects(heap_alloc), return<int>]
 /vector/capacity([vector<i32>] values) {
@@ -182,7 +182,7 @@ main() {
   CHECK(error.find("expected i32") != std::string::npos);
 }
 
-TEST_CASE("vector stdlib namespaced capacity expression keeps return mismatch diagnostics") {
+TEST_CASE("wrapper vector stdlib namespaced capacity expression keeps return mismatch diagnostics") {
   const std::string source = R"(
 [effects(heap_alloc), return<int>]
 /vector/capacity([vector<i32>] values) {

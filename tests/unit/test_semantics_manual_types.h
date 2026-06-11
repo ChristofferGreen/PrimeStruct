@@ -405,7 +405,7 @@ TEST_CASE("block expression yields last expression") {
   CHECK(error.empty());
 }
 
-TEST_CASE("block expression requires a value") {
+TEST_CASE("manual AST block expression requires a value") {
   primec::Program program;
   primec::Expr blockCall = makeCall("block");
   blockCall.hasBodyArguments = true;

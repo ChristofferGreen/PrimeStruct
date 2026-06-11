@@ -1358,7 +1358,7 @@ main() {
   CHECK(error.empty());
 }
 
-TEST_CASE("pointer plus accepts i64 offsets") {
+TEST_CASE("semantics pointer plus accepts i64 offsets") {
   const std::string source = R"(
 [return<int>]
 main() {
