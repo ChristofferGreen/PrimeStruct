@@ -1,4 +1,0 @@
-// Rejected direct-import shim for the legacy experimental vector namespace.
-// Canonical wrappers route through /std/collections/internal_vector/*.
-// Ordinary public examples should import /std/collections/vector/* instead.
-import /std/collections/internal_vector/*
