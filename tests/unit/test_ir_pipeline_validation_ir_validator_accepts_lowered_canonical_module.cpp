@@ -2004,7 +2004,7 @@ main() {
   CHECK(error.empty());
 }
 
-TEST_CASE("nested struct-body soa_vector constructor-bearing helper returns lower through direct and bound expressions compatibility") {
+TEST_CASE("nested struct-body soa_vector constructor-bearing helper returns lower through") {
   const std::string source = R"(
 import /std/collections/*
 import /std/collections/soa/*

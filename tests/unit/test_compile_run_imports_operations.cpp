@@ -799,7 +799,7 @@ main() {
         std::string::npos);
 }
 
-TEST_CASE("no-import root soa_vector to_aos bare and direct helper forms reject SoaVector-only canonical helper contract in C++ emitter") {
+TEST_CASE("no-import root soa_vector to_aos bare and direct helper forms reject") {
   const std::string source = R"(
 [struct reflect]
 Particle() {

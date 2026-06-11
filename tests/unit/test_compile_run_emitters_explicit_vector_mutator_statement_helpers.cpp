@@ -576,7 +576,7 @@ main() {
         std::string::npos);
 }
 
-TEST_CASE("C++ emitter keeps canonical map unknown-target diagnostics on direct-call wrapper-returned canonical map reference access") {
+TEST_CASE("C++ emitter keeps canonical map unknown-target diagnostics on direct-call") {
   const std::string source = R"(
 [return<Reference</std/collections/map<i32, i32>>>]
 borrowMap([Reference</std/collections/map<i32, i32>>] values) {

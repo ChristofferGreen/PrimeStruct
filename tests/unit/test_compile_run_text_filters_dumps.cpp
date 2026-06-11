@@ -1302,7 +1302,7 @@ main() {
         std::string::npos);
 }
 
-TEST_CASE("dump ast-semantic rewrites direct return inline location method-like borrowed helper-return experimental soa_vector reads") {
+TEST_CASE("dump ast-semantic rewrites direct return inline location method-like borrowed") {
   const std::string source = R"(
 import /std/collections/*
 import /std/collections/soa/*

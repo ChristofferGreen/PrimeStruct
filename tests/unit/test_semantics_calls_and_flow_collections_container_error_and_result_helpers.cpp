@@ -1577,7 +1577,7 @@ main() {
         std::string::npos);
 }
 
-TEST_CASE("experimental soa_vector direct return inline location method-like borrowed helper-return reads reject retired helper path") {
+TEST_CASE("experimental soa_vector direct return inline location method-like borrowed") {
   const std::string source = R"(
 import /std/collections/*
 import /std/collections/soa/*
@@ -2882,7 +2882,7 @@ main() {
   CHECK(error.find("push is only supported as a statement") != std::string::npos);
 }
 
-TEST_CASE("experimental soa_vector stdlib reflected inline location borrowed helper-return index syntax reports field_count diagnostic") {
+TEST_CASE("experimental soa_vector stdlib reflected inline location borrowed helper-return") {
   const std::string source = R"(
 import /std/collections/soa/*
 import /std/collections/internal_soa_vector/*
@@ -4365,7 +4365,7 @@ main() {
   CHECK(error.empty());
 }
 
-TEST_CASE("ref method fallback keeps same-path helper shadow for auto inference through struct helper return receivers compatibility") {
+TEST_CASE("ref method fallback keeps same-path helper shadow for auto inference through") {
   const std::string source = R"(
 import /std/collections/*
 import /std/collections/soa/*
@@ -5515,7 +5515,7 @@ main() {
   CHECK(error.empty());
 }
 
-TEST_CASE("to_aos method fallback keeps same-path helper shadow for auto inference through struct helper return receivers compatibility") {
+TEST_CASE("to_aos method fallback keeps same-path helper shadow for auto inference through") {
   const std::string source = R"(
 import /std/collections/*
 import /std/collections/soa/*

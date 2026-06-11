@@ -9179,7 +9179,7 @@ TEST_CASE("compile pipeline benchmark worker-count equivalence keeps /std/math/*
   CHECK(singleWorkerMessages.size() >= 2);
 }
 
-TEST_CASE("compile pipeline benchmark worker-count equivalence keeps semantic-product families stable despite formatting variance across 1,2,4 workers") {
+TEST_CASE("compile pipeline benchmark worker-count equivalence keeps semantic-product") {
   const std::filesystem::path tempPath = makeTempIrPipelineSourcePath();
   {
     std::ofstream file(tempPath);

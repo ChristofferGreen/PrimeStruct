@@ -442,7 +442,7 @@ main() {
   expectCppVectorCountCompatibilityTypeMismatchReject(compileCmd);
 }
 
-TEST_CASE("rejects vector alias compatibility template forwarding when unknown expected meets vector envelope binding in C++ emitter") {
+TEST_CASE("rejects vector alias compatibility template forwarding when unknown expected") {
   const std::string source = R"(
 Marker() {}
 

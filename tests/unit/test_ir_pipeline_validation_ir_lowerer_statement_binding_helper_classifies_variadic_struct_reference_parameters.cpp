@@ -497,7 +497,7 @@ TEST_CASE("ir lowerer statement binding helper classifies variadic soa_vector pa
   CHECK(info.valueKind == primec::ir_lowerer::LocalInfo::ValueKind::Unknown);
 }
 
-TEST_CASE("ir lowerer statement binding helper keeps specialized experimental soa_vector references as plain references without semantic surface metadata") {
+TEST_CASE("ir lowerer statement binding helper keeps specialized experimental soa_vector") {
   primec::Expr param;
   param.name = "values";
   primec::Transform referenceTransform;
