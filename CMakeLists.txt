@@ -546,10 +546,10 @@ if(PRIMESTRUCT_BUILD_TESTS)
 
   add_executable(PrimeStruct_misc_tests
     tests/unit/test_main.cpp
-    tests/unit/test_import_resolver.cpp
-    tests/unit/test_import_resolver_versions.cpp
-    tests/unit/test_import_errors.cpp
-    tests/unit/test_import_multiple.cpp
+    tests/unit/import_resolver/test_import_resolver.cpp
+    tests/unit/import_resolver/test_import_resolver_versions.cpp
+    tests/unit/import_resolver/test_import_errors.cpp
+    tests/unit/import_resolver/test_import_multiple.cpp
     tests/unit/test_stdlib_map_ownership.cpp
     tests/unit/test_ast_ir_dump.cpp
     tests/unit/test_ast_ir_dump_inference.cpp
@@ -566,9 +566,9 @@ if(PRIMESTRUCT_BUILD_TESTS)
 
   add_executable(PrimeStruct_compile_time_tests
     tests/unit/test_main.cpp
-    tests/unit/test_compile_time_callable.cpp
-    tests/unit/test_compile_time_evaluation_facade.cpp
-    tests/unit/test_compile_time_value.cpp
+    tests/unit/compile_time/test_compile_time_callable.cpp
+    tests/unit/compile_time/test_compile_time_evaluation_facade.cpp
+    tests/unit/compile_time/test_compile_time_value.cpp
   )
   target_include_directories(PrimeStruct_compile_time_tests PRIVATE third_party ${CMAKE_SOURCE_DIR})
   target_link_libraries(PrimeStruct_compile_time_tests PRIVATE primec_frontend_lib)
@@ -719,7 +719,7 @@ if(PRIMESTRUCT_BUILD_TESTS)
     tests/unit/ir_pipeline/test_ir_pipeline_backends_graph_utilities.cpp
     tests/unit/ir_pipeline/test_ir_pipeline_backends_glsl.cpp
     tests/unit/ir_pipeline/test_ir_pipeline_backends_registry.cpp
-    tests/unit/test_vm_debug_session.cpp
+    tests/unit/vm/test_vm_debug_session.cpp
     tests/unit/ir_pipeline/test_ir_pipeline_external_tooling.cpp
     tests/unit/ir_pipeline/test_ir_pipeline_to_cpp.cpp
     tests/unit/ir_pipeline/test_ir_pipeline_to_glsl.cpp
@@ -918,8 +918,8 @@ if(PRIMESTRUCT_BUILD_TESTS)
     tests/unit/ir_pipeline/test_ir_pipeline_to_cpp.cpp
     tests/unit/ir_pipeline/test_ir_pipeline_to_glsl.cpp
     tests/unit/ir_pipeline/test_ir_pipeline_to_glsl_runtime.cpp
-    tests/unit/test_vm_debug_session.cpp
-    tests/unit/test_vm_execution_kernel_boundary.cpp
+    tests/unit/vm/test_vm_debug_session.cpp
+    tests/unit/vm/test_vm_execution_kernel_boundary.cpp
   )
 
   set(PrimeStructCompileRunTestSources)
@@ -1054,13 +1054,13 @@ if(PRIMESTRUCT_BUILD_TESTS)
 
   add_executable(PrimeStruct_text_filter_tests
     tests/unit/test_main.cpp
-    tests/unit/test_text_filter_helpers.cpp
-    tests/unit/test_text_filter_transform_rules.cpp
-    tests/unit/test_text_filter_pipeline_basics.cpp
-    tests/unit/test_text_filter_pipeline_rewrites.cpp
-    tests/unit/test_text_filter_pipeline_implicit_utf8.cpp
-    tests/unit/test_text_filter_pipeline_implicit_i32.cpp
-    tests/unit/test_text_filter_pipeline_collections.cpp
+    tests/unit/text_filter/test_text_filter_helpers.cpp
+    tests/unit/text_filter/test_text_filter_transform_rules.cpp
+    tests/unit/text_filter/test_text_filter_pipeline_basics.cpp
+    tests/unit/text_filter/test_text_filter_pipeline_rewrites.cpp
+    tests/unit/text_filter/test_text_filter_pipeline_implicit_utf8.cpp
+    tests/unit/text_filter/test_text_filter_pipeline_implicit_i32.cpp
+    tests/unit/text_filter/test_text_filter_pipeline_collections.cpp
   )
   target_include_directories(PrimeStruct_text_filter_tests PRIVATE third_party ${CMAKE_SOURCE_DIR})
   target_link_libraries(PrimeStruct_text_filter_tests PRIVATE primec_frontend_lib)
@@ -1068,24 +1068,24 @@ if(PRIMESTRUCT_BUILD_TESTS)
 
   add_executable(PrimeStruct_parser_tests
     tests/unit/test_main.cpp
-    tests/unit/test_parser_basic_block_control_flow.cpp
-    tests/unit/test_parser_basic_control_flow.cpp
-    tests/unit/test_parser_basic_definitions_core.cpp
-    tests/unit/test_parser_basic_definition_execution.cpp
-    tests/unit/test_parser_basic_definition_transforms.cpp
-    tests/unit/test_parser_basic_expr_forms.cpp
-    tests/unit/test_parser_basic_literals.cpp
-    tests/unit/test_parser_basic_parser_helpers.cpp
-    tests/unit/test_parser_basic_semantic_transforms_index_template.cpp
-    tests/unit/test_parser_basic_semantic_transforms_nested_indexed.cpp
-    tests/unit/test_parser_basic_sugar.cpp
-    tests/unit/test_parser_errors.cpp
-    tests/unit/test_parser_errors_more_identifiers.cpp
-    tests/unit/test_parser_errors_more_punctuation.cpp
-    tests/unit/test_parser_errors_more_literals.cpp
-    tests/unit/test_parser_errors_more_named_args.cpp
-    tests/unit/test_parser_errors_more_transforms.cpp
-    tests/unit/test_parser_errors_more_transforms_canonical.cpp
+    tests/unit/parser/test_parser_basic_block_control_flow.cpp
+    tests/unit/parser/test_parser_basic_control_flow.cpp
+    tests/unit/parser/test_parser_basic_definitions_core.cpp
+    tests/unit/parser/test_parser_basic_definition_execution.cpp
+    tests/unit/parser/test_parser_basic_definition_transforms.cpp
+    tests/unit/parser/test_parser_basic_expr_forms.cpp
+    tests/unit/parser/test_parser_basic_literals.cpp
+    tests/unit/parser/test_parser_basic_parser_helpers.cpp
+    tests/unit/parser/test_parser_basic_semantic_transforms_index_template.cpp
+    tests/unit/parser/test_parser_basic_semantic_transforms_nested_indexed.cpp
+    tests/unit/parser/test_parser_basic_sugar.cpp
+    tests/unit/parser/test_parser_errors.cpp
+    tests/unit/parser/test_parser_errors_more_identifiers.cpp
+    tests/unit/parser/test_parser_errors_more_punctuation.cpp
+    tests/unit/parser/test_parser_errors_more_literals.cpp
+    tests/unit/parser/test_parser_errors_more_named_args.cpp
+    tests/unit/parser/test_parser_errors_more_transforms.cpp
+    tests/unit/parser/test_parser_errors_more_transforms_canonical.cpp
     tests/unit/test_execution_parsing.cpp
     tests/unit/test_execution_whitespace.cpp
     tests/unit/test_template_parsing.cpp
