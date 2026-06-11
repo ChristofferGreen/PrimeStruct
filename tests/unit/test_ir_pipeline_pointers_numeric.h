@@ -1,4 +1,4 @@
-TEST_CASE("ir lowers clamp") {
+TEST_CASE("ir lowers clamp with i32 operands") {
   const std::string source = R"(
 import /std/math/*
 [return<int>]
@@ -27,7 +27,7 @@ main() {
   CHECK(result == 4);
 }
 
-TEST_CASE("ir lowers min") {
+TEST_CASE("ir lowers min with i32 operands") {
   const std::string source = R"(
 import /std/math/*
 [return<int>]
@@ -56,7 +56,7 @@ main() {
   CHECK(result == 2);
 }
 
-TEST_CASE("ir lowers max u64") {
+TEST_CASE("ir lowers max with u64 operands") {
   const std::string source = R"(
 import /std/math/*
 [return<u64>]
@@ -114,7 +114,7 @@ main() {
   CHECK(result == 7);
 }
 
-TEST_CASE("ir lowers abs") {
+TEST_CASE("ir lowers abs with i32 operand") {
   const std::string source = R"(
 import /std/math/*
 [return<int>]
@@ -143,7 +143,7 @@ main() {
   CHECK(result == 5);
 }
 
-TEST_CASE("ir lowers sign") {
+TEST_CASE("ir lowers sign with i32 operand") {
   const std::string source = R"(
 import /std/math/*
 [return<int>]
@@ -234,7 +234,7 @@ main() {
   CHECK(result == 1);
 }
 
-TEST_CASE("ir lowers clamp u64") {
+TEST_CASE("ir lowers clamp with u64 operands") {
   const std::string source = R"(
 import /std/math/*
 [return<u64>]

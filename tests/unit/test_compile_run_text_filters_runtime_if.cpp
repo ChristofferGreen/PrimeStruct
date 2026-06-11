@@ -232,7 +232,7 @@ main() {
   CHECK(runCommand(exePath) == 8);
 }
 
-TEST_CASE("if") {
+TEST_CASE("text filter rewrites if expression") {
   const std::string source = R"(
 [return<int>]
 main() {

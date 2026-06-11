@@ -164,7 +164,7 @@ main() {
   CHECK(readFile(errPath) == "string index out of bounds\n");
 }
 
-TEST_CASE("runs program in vm") {
+TEST_CASE("vm runs hello world entry point") {
   const std::string source = R"(
 [return<int>]
 main() {

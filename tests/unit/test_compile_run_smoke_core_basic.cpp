@@ -4,7 +4,7 @@
 
 TEST_SUITE_BEGIN("primestruct.compile.run.smoke");
 
-TEST_CASE("simple main") {
+TEST_CASE("runs simple void main program") {
   const std::string source = R"(
 [return<int>]
 main() {

@@ -1,6 +1,6 @@
 #include "test_parser_basic_helpers.h"
 
-TEST_CASE("parses loop form") {
+TEST_CASE("parses while loop form with body and condition") {
   const std::string source = R"(
 [return<int>]
 main() {
@@ -23,7 +23,7 @@ main() {
   REQUIRE(loopCall.args[1].bodyArguments.size() == 1);
 }
 
-TEST_CASE("parses while form") {
+TEST_CASE("parses while loop form with body and condition") {
   const std::string source = R"(
 [return<int>]
 main() {
@@ -44,7 +44,7 @@ main() {
   CHECK(loopCall.args[1].name == "do");
 }
 
-TEST_CASE("parses for form") {
+TEST_CASE("parses for loop form with init condition and step") {
   const std::string source = R"(
 [return<int>]
 main() {
