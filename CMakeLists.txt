@@ -66,7 +66,7 @@ set(PRIMESTRUCT_SUPPORT_SOURCES
   src/TempPaths.cpp
   src/TransformRules.cpp
   src/TransformRegistry.cpp
-  src/VmKernelBoundary.cpp
+  src/runtime/VmKernelBoundary.cpp
 )
 
 set(PRIMESTRUCT_FRONTEND_SOURCES
@@ -458,21 +458,21 @@ set(PRIMESTRUCT_CODEGEN_SOURCES
 
 set(PRIMESTRUCT_RUNTIME_SOURCES
   src/Vm.cpp
-  src/VmDebugHelpers.cpp
-  src/VmDebugSession.cpp
-  src/VmDebugSessionInstruction.cpp
-  src/VmDebugSessionInstructionNumeric.cpp
-  src/VmDebugSessionSetup.cpp
-  src/VmControlFlowOpcodeShared.cpp
-  src/VmExecution.cpp
-  src/VmExecutionKernel.cpp
-  src/VmExecutionNumeric.cpp
-  src/VmNumericOpcodeShared.cpp
-  src/VmHeapHelpers.cpp
-  src/VmIoHelpers.cpp
-  src/VmDebugAdapter.cpp
-  src/VmDebugDap.cpp
-  src/VmDebugDapProtocol.cpp
+  src/runtime/VmDebugHelpers.cpp
+  src/runtime/VmDebugSession.cpp
+  src/runtime/VmDebugSessionInstruction.cpp
+  src/runtime/VmDebugSessionInstructionNumeric.cpp
+  src/runtime/VmDebugSessionSetup.cpp
+  src/runtime/VmControlFlowOpcodeShared.cpp
+  src/runtime/VmExecution.cpp
+  src/runtime/VmExecutionKernel.cpp
+  src/runtime/VmExecutionNumeric.cpp
+  src/runtime/VmNumericOpcodeShared.cpp
+  src/runtime/VmHeapHelpers.cpp
+  src/runtime/VmIoHelpers.cpp
+  src/runtime/VmDebugAdapter.cpp
+  src/runtime/VmDebugDap.cpp
+  src/runtime/VmDebugDapProtocol.cpp
 )
 
 set(PRIMESTRUCT_BACKEND_REGISTRY_SOURCES

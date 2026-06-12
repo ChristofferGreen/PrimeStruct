@@ -7,7 +7,7 @@
 #include "primec/OptionsParser.h"
 #include "primec/Vm.h"
 #include "primec/VmDebugDap.h"
-#include "VmDebugDapProtocol.h"
+#include "runtime/VmDebugDapProtocol.h"
 
 #include <cctype>
 #include <cstdint>
