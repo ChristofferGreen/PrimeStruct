@@ -1203,7 +1203,7 @@ TEST_CASE("ir lowerer access helper classifies namespaced access helpers") {
   primec::Expr rootedInternalVectorAccessCall;
   rootedInternalVectorAccessCall.kind = primec::Expr::Kind::Call;
   rootedInternalVectorAccessCall.name =
-      "/std/collections/internal_vector/vectorAt__t12345678";
+      "/std/collections/vector/vectorAt__t12345678";
 
   helperName.clear();
   CHECK(primec::ir_lowerer::getBuiltinArrayAccessName(

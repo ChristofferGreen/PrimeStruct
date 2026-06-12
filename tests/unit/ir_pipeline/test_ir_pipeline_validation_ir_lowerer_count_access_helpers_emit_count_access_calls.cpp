@@ -168,7 +168,7 @@ TEST_CASE("ir lowerer count access helpers emit count access calls") {
 
   instructions.clear();
   error.clear();
-  callExpr.name = "/std/collections/internal_vector/vectorCount__t25a78a513414c3bf";
+  callExpr.name = "/std/collections/vector/vectorCount__t25a78a513414c3bf";
   CHECK(primec::ir_lowerer::tryEmitCountAccessCall(
             callExpr,
             experimentalVectorLocals,
@@ -196,7 +196,7 @@ TEST_CASE("ir lowerer count access helpers emit count access calls") {
 
   instructions.clear();
   error.clear();
-  callExpr.name = "/std/collections/internal_vector/vectorCapacity__t25a78a513414c3bf";
+  callExpr.name = "/std/collections/vector/vectorCapacity__t25a78a513414c3bf";
   CHECK(primec::ir_lowerer::tryEmitCountAccessCall(
             callExpr,
             experimentalVectorLocals,

@@ -80,15 +80,7 @@ namespace std {
          },
          else() { })
     }
-  }
-  }
-  }
-}
 
-namespace std {
-  namespace collections {
-  // Implementation helpers (internal)
-  namespace vector {
 
   [return<Pointer<uninitialized<T>>>]
   vectorSlotUnsafe<T>([/std/collections/vector/Vector<T>] values, [i32] index) {

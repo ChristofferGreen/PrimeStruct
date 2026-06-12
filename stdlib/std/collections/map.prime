@@ -2,7 +2,7 @@
 // This module intentionally does not import the retired native map implementation.
 import /std/collections/equality/*
 import /std/collections/errors/*
-import /std/collections/internal_vector/*
+import /std/collections/vector/*
 
 namespace std {
   namespace collections {
@@ -15,19 +15,19 @@ namespace std {
 
   [public struct]
   MapValue<K, V>() {
-    [public Vector<K> mut] keys{/std/collections/internal_vector/vector<K>()}
-    [public Vector<V> mut] payloads{/std/collections/internal_vector/vector<V>()}
+    [public Vector<K> mut] keys{/std/collections/vector/vector<K>()}
+    [public Vector<V> mut] payloads{/std/collections/vector/vector<V>()}
 
     [public return<i32>]
     mapCount() {
       [Vector<K>] keys{this.keys}
-      return(/std/collections/internal_vector/vectorCount<K>(keys))
+      return(/std/collections/vector/vectorCount<K>(keys))
     }
 
     [public return<bool> Comparable<K>]
     mapContains([K] key) {
       [Vector<K>] keys{this.keys}
-      [i32] limit{/std/collections/internal_vector/vectorCount<K>(keys)}
+      [i32] limit{/std/collections/vector/vectorCount<K>(keys)}
       return(/less_than(
           /std/collections/map/findIndex<K, V>(this, key),
           limit))
@@ -38,9 +38,9 @@ namespace std {
       [i32] index{/std/collections/map/findIndex<K, V>(this, key)}
       [Vector<V>] payloads{this.payloads}
       [Vector<K>] keys{this.keys}
-      [i32] limit{/std/collections/internal_vector/vectorCount<K>(keys)}
+      [i32] limit{/std/collections/vector/vectorCount<K>(keys)}
       if(/less_than(index, limit),
-         then() { return(Result.ok(/std/collections/internal_vector/vectorAtUnsafe<V>(payloads, index))) },
+         then() { return(Result.ok(/std/collections/vector/vectorAtUnsafe<V>(payloads, index))) },
          else() { return(/std/collections/ContainerError/result<V>(/std/collections/ContainerError/missingKey())) })
     }
 
@@ -49,16 +49,16 @@ namespace std {
       [i32] index{/std/collections/map/findIndex<K, V>(this, key)}
       [Vector<V>] payloads{this.payloads}
       [Vector<K>] keys{this.keys}
-      [i32] limit{/std/collections/internal_vector/vectorCount<K>(keys)}
+      [i32] limit{/std/collections/vector/vectorCount<K>(keys)}
       if(/less_than(index, limit),
-         then() { return(/std/collections/internal_vector/vectorAtUnsafe<V>(payloads, index)) },
-         else() { return(/std/collections/internal_vector/vectorAt<V>(payloads, index)) })
+         then() { return(/std/collections/vector/vectorAtUnsafe<V>(payloads, index)) },
+         else() { return(/std/collections/vector/vectorAt<V>(payloads, index)) })
     }
 
     [public return<V> Comparable<K>]
     mapAtUnsafe([K] key) {
       [Vector<V>] payloads{this.payloads}
-      return(/std/collections/internal_vector/vectorAtUnsafe<V>(
+      return(/std/collections/vector/vectorAtUnsafe<V>(
           payloads,
           /std/collections/map/findIndex<K, V>(this, key)))
     }
@@ -68,15 +68,15 @@ namespace std {
       [i32] index{/std/collections/map/findIndex<K, V>(this, key)}
       [Vector<K> mut] keys{this.keys}
       [Vector<V> mut] payloads{this.payloads}
-      [i32] limit{/std/collections/internal_vector/vectorCount<K>(keys)}
+      [i32] limit{/std/collections/vector/vectorCount<K>(keys)}
       if(/less_than(index, limit),
          then() {
            /std/collections/map/overwriteSlot<V>(payloads, index, value)
            assign(this.payloads, payloads)
          },
          else() {
-           /std/collections/internal_vector/vectorPush<K>(keys, key)
-           /std/collections/internal_vector/vectorPush<V>(payloads, value)
+           /std/collections/vector/vectorPush<K>(keys, key)
+           /std/collections/vector/vectorPush<V>(payloads, value)
            assign(this.keys, keys)
            assign(this.payloads, payloads)
          })
@@ -86,8 +86,8 @@ namespace std {
     Move([Reference<Self>] other) {
       assign(this.keys, other.keys)
       assign(this.payloads, other.payloads)
-      assign(other.keys, /std/collections/internal_vector/vector<K>())
-      assign(other.payloads, /std/collections/internal_vector/vector<V>())
+      assign(other.keys, /std/collections/vector/vector<K>())
+      assign(other.payloads, /std/collections/vector/vector<V>())
     }
   }
 
@@ -291,13 +291,13 @@ namespace std {
   [public return<i32>]
   mapCount<K, V>([MapValue<K, V>] entries) {
     [Vector<K>] keys{entries.keys}
-    return(/std/collections/internal_vector/vectorCount<K>(keys))
+    return(/std/collections/vector/vectorCount<K>(keys))
   }
 
   [public return<i32>]
   mapCountRef<K, V>([Reference<MapValue<K, V>>] entries) {
     [Vector<K>] keys{entries.keys}
-    return(/std/collections/internal_vector/vectorCount<K>(keys))
+    return(/std/collections/vector/vectorCount<K>(keys))
   }
 
   [public return<i32>]
@@ -314,9 +314,9 @@ namespace std {
   findIndex<K, V>([MapValue<K, V>] entries, [K] key) {
     [i32 mut] index{0i32}
     [Vector<K>] keys{entries.keys}
-    [i32] limit{/std/collections/internal_vector/vectorCount<K>(keys)}
+    [i32] limit{/std/collections/vector/vectorCount<K>(keys)}
     while(/less_than(index, limit), do() {
-      if(/std/collections/map/keysEqual<K>(/std/collections/internal_vector/vectorAt<K>(keys, index), key),
+      if(/std/collections/map/keysEqual<K>(/std/collections/vector/vectorAt<K>(keys, index), key),
          then() { return(index) },
          else() { })
       increment(index)
@@ -328,9 +328,9 @@ namespace std {
   findIndexRef<K, V>([Reference<MapValue<K, V>>] entries, [K] key) {
     [i32 mut] index{0i32}
     [Vector<K>] keys{entries.keys}
-    [i32] limit{/std/collections/internal_vector/vectorCount<K>(keys)}
+    [i32] limit{/std/collections/vector/vectorCount<K>(keys)}
     while(/less_than(index, limit), do() {
-      if(/std/collections/map/keysEqual<K>(/std/collections/internal_vector/vectorAt<K>(keys, index), key),
+      if(/std/collections/map/keysEqual<K>(/std/collections/vector/vectorAt<K>(keys, index), key),
          then() { return(index) },
          else() { })
       increment(index)
@@ -340,7 +340,7 @@ namespace std {
 
   [return<void>]
   overwriteSlot<T>([Vector<T> mut] values, [i32] index, [T] value) {
-    [Reference<T> mut] slot{/std/collections/internal_vector/vectorBorrowSlot<T>(values, index)}
+    [Reference<T> mut] slot{/std/collections/vector/vectorBorrowSlot<T>(values, index)}
     assign(dereference(slot), value)
   }
 
@@ -355,8 +355,8 @@ namespace std {
          assign(entries.payloads, payloads)
        },
        else() {
-         /std/collections/internal_vector/vectorPush<K>(keys, key)
-         /std/collections/internal_vector/vectorPush<V>(payloads, value)
+         /std/collections/vector/vectorPush<K>(keys, key)
+         /std/collections/vector/vectorPush<V>(payloads, value)
          assign(entries.keys, keys)
          assign(entries.payloads, payloads)
        })
@@ -373,8 +373,8 @@ namespace std {
          assign(entries.payloads, payloads)
        },
        else() {
-         /std/collections/internal_vector/vectorPush<K>(keys, key)
-         /std/collections/internal_vector/vectorPush<V>(payloads, value)
+         /std/collections/vector/vectorPush<K>(keys, key)
+         /std/collections/vector/vectorPush<V>(payloads, value)
          assign(entries.keys, keys)
          assign(entries.payloads, payloads)
          })
@@ -391,8 +391,8 @@ namespace std {
          assign(entries.payloads, payloads)
        },
        else() {
-         /std/collections/internal_vector/vectorPush<K>(keys, key)
-         /std/collections/internal_vector/vectorPush<V>(payloads, value)
+         /std/collections/vector/vectorPush<K>(keys, key)
+         /std/collections/vector/vectorPush<V>(payloads, value)
          assign(entries.keys, keys)
          assign(entries.payloads, payloads)
        })
@@ -406,7 +406,7 @@ namespace std {
   [public return<bool> Comparable<K>]
   mapContains<K, V>([MapValue<K, V>] entries, [K] key) {
     [Vector<K>] keys{entries.keys}
-    [i32] limit{/std/collections/internal_vector/vectorCount<K>(keys)}
+    [i32] limit{/std/collections/vector/vectorCount<K>(keys)}
     return(/less_than(
         /std/collections/map/findIndex<K, V>(entries, key),
         limit))
@@ -415,7 +415,7 @@ namespace std {
   [public return<bool> Comparable<K>]
   mapContainsRef<K, V>([Reference<MapValue<K, V>>] entries, [K] key) {
     [Vector<K>] keys{entries.keys}
-    [i32] limit{/std/collections/internal_vector/vectorCount<K>(keys)}
+    [i32] limit{/std/collections/vector/vectorCount<K>(keys)}
     return(/less_than(
         /std/collections/map/findIndexRef<K, V>(entries, key),
         limit))
@@ -436,9 +436,9 @@ namespace std {
     [i32] index{/std/collections/map/findIndex<K, V>(entries, key)}
     [Vector<V>] payloads{entries.payloads}
     [Vector<K>] keys{entries.keys}
-    [i32] limit{/std/collections/internal_vector/vectorCount<K>(keys)}
+    [i32] limit{/std/collections/vector/vectorCount<K>(keys)}
     if(/less_than(index, limit),
-       then() { return(Result.ok(/std/collections/internal_vector/vectorAtUnsafe<V>(payloads, index))) },
+       then() { return(Result.ok(/std/collections/vector/vectorAtUnsafe<V>(payloads, index))) },
        else() { return(/std/collections/ContainerError/result<V>(/std/collections/ContainerError/missingKey())) })
   }
 
@@ -447,9 +447,9 @@ namespace std {
     [i32] index{/std/collections/map/findIndexRef<K, V>(entries, key)}
     [Vector<V>] payloads{entries.payloads}
     [Vector<K>] keys{entries.keys}
-    [i32] limit{/std/collections/internal_vector/vectorCount<K>(keys)}
+    [i32] limit{/std/collections/vector/vectorCount<K>(keys)}
     if(/less_than(index, limit),
-       then() { return(Result.ok(/std/collections/internal_vector/vectorAtUnsafe<V>(payloads, index))) },
+       then() { return(Result.ok(/std/collections/vector/vectorAtUnsafe<V>(payloads, index))) },
        else() { return(/std/collections/ContainerError/result<V>(/std/collections/ContainerError/missingKey())) })
   }
 
@@ -468,10 +468,10 @@ namespace std {
     [i32] index{/std/collections/map/findIndex<K, V>(entries, key)}
     [Vector<V>] payloads{entries.payloads}
     [Vector<K>] keys{entries.keys}
-    [i32] limit{/std/collections/internal_vector/vectorCount<K>(keys)}
+    [i32] limit{/std/collections/vector/vectorCount<K>(keys)}
     if(/less_than(index, limit),
-       then() { return(/std/collections/internal_vector/vectorAtUnsafe<V>(payloads, index)) },
-       else() { return(/std/collections/internal_vector/vectorAt<V>(payloads, index)) })
+       then() { return(/std/collections/vector/vectorAtUnsafe<V>(payloads, index)) },
+       else() { return(/std/collections/vector/vectorAt<V>(payloads, index)) })
   }
 
   [public return<V> Comparable<K>]
@@ -479,10 +479,10 @@ namespace std {
     [i32] index{/std/collections/map/findIndexRef<K, V>(entries, key)}
     [Vector<V>] payloads{entries.payloads}
     [Vector<K>] keys{entries.keys}
-    [i32] limit{/std/collections/internal_vector/vectorCount<K>(keys)}
+    [i32] limit{/std/collections/vector/vectorCount<K>(keys)}
     if(/less_than(index, limit),
-       then() { return(/std/collections/internal_vector/vectorAtUnsafe<V>(payloads, index)) },
-       else() { return(/std/collections/internal_vector/vectorAt<V>(payloads, index)) })
+       then() { return(/std/collections/vector/vectorAtUnsafe<V>(payloads, index)) },
+       else() { return(/std/collections/vector/vectorAt<V>(payloads, index)) })
   }
 
   [public return<V> Comparable<K>]
@@ -498,7 +498,7 @@ namespace std {
   [public return<V> Comparable<K>]
   mapAtUnsafe<K, V>([MapValue<K, V>] entries, [K] key) {
     [Vector<V>] payloads{entries.payloads}
-    return(/std/collections/internal_vector/vectorAtUnsafe<V>(
+    return(/std/collections/vector/vectorAtUnsafe<V>(
         payloads,
         /std/collections/map/findIndex<K, V>(entries, key)))
   }
@@ -506,7 +506,7 @@ namespace std {
   [public return<V> Comparable<K>]
   mapAtUnsafeRef<K, V>([Reference<MapValue<K, V>>] entries, [K] key) {
     [Vector<V>] payloads{entries.payloads}
-    return(/std/collections/internal_vector/vectorAtUnsafe<V>(
+    return(/std/collections/vector/vectorAtUnsafe<V>(
         payloads,
         /std/collections/map/findIndexRef<K, V>(entries, key)))
   }

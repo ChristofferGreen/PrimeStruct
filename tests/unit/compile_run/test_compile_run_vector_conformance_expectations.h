@@ -895,7 +895,7 @@ inline void expectVectorHelperRuntimeContract(const std::string &emitMode,
       (testScratchPath("") /
        ("primec_vector_helper_runtime_" + slug + "_" + mode + "_" + emitMode + "_err.txt"))
           .string();
-  const bool internalVectorPath = importPath == "/std/collections/internal_vector/*";
+  const bool internalVectorPath = importPath == "/std/collections/vector/*";
   std::string expectedError;
   if (emitMode != "vm" && internalVectorPath) {
     expectedError = "array index out of bounds\n";

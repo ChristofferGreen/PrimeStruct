@@ -729,7 +729,7 @@ TEST_CASE("stdlib de-experimentalization policy docs stay source locked") {
   CHECK(primeStructDoc.find("Canonical `/std/collections/map/*` is now the sole public namespaced map contract.") !=
         std::string::npos);
   CHECK(primeStructDoc.find(
-            "`/std/collections/internal_vector/*` family owns the internal backing adapter behind that") !=
+            "`/std/collections/vector/*` family owns the internal backing adapter behind that") !=
         std::string::npos);
   CHECK(primeStructDoc.find(
             "`/std/collections/experimental_map/*` is\n"
@@ -737,9 +737,9 @@ TEST_CASE("stdlib de-experimentalization policy docs stay source locked") {
         std::string::npos);
   CHECK(primeStructDoc.find("no `experimental` namespace counts as canonical public API") !=
         std::string::npos);
-  CHECK(primeStructDoc.find("| `/std/collections/internal_vector/*` | Internal substrate/helper namespace | Internal vector backing adapter used by canonical `/std/collections/vector/*`; it preserves the current compatibility `Vector<T>` type identity until the final vector surface audit. | TODO-4373 |") !=
+  CHECK(primeStructDoc.find("| `/std/collections/vector/*` | Internal substrate/helper namespace | Internal vector backing adapter used by canonical `/std/collections/vector/*`; it preserves the current compatibility `Vector<T>` type identity until the final vector surface audit. | TODO-4373 |") !=
         std::string::npos);
-  CHECK(primeStructDoc.find("| `/std/collections/experimental_vector/*` | Rejected compatibility namespace | Direct source imports are rejected; the shim remains only as legacy forwarding storage identity behind `/std/collections/internal_vector/*` until the final vector surface audit. | TODO-4373 |") !=
+  CHECK(primeStructDoc.find("| `/std/collections/experimental_vector/*` | Rejected compatibility namespace | Direct source imports are rejected; the shim remains only as legacy forwarding storage identity behind `/std/collections/vector/*` until the final vector surface audit. | TODO-4373 |") !=
         std::string::npos);
   CHECK(primeStructDoc.find("| `/std/collections/experimental_map/*` | Rejected compatibility namespace | Direct source imports are rejected; the shim remains only as legacy forwarding storage identity behind `/std/collections/map/*` until the final map surface audit. | TODO-4464 |") !=
         std::string::npos);
@@ -4345,8 +4345,8 @@ TEST_CASE("small stdlib wrappers stay source locked to inferred locals") {
   CHECK(vectorStdlib.find(
             "// Canonical public wrapper layer over the internal_vector implementation module.") !=
         std::string::npos);
-  CHECK(vectorStdlib.find("import /std/collections/internal_vector/*") != std::string::npos);
-  CHECK(vectorStdlib.find("[mut] result{/std/collections/internal_vector/vector<T>()}") !=
+  CHECK(vectorStdlib.find("import /std/collections/vector/*") != std::string::npos);
+  CHECK(vectorStdlib.find("[mut] result{/std/collections/vector/vector<T>()}") !=
         std::string::npos);
   CHECK(vectorStdlib.find("valueCount{values.count()}") != std::string::npos);
   CHECK(vectorStdlib.find("[mut] index{0i32}") != std::string::npos);
@@ -4356,20 +4356,20 @@ TEST_CASE("small stdlib wrappers stay source locked to inferred locals") {
         std::string::npos);
   CHECK(vectorStdlib.find("/std/collections/vector/push<T>(result, second)") !=
         std::string::npos);
-  CHECK(vectorStdlib.find("/std/collections/internal_vector/vectorCount<T>(values)") !=
+  CHECK(vectorStdlib.find("/std/collections/vector/vectorCount<T>(values)") !=
         std::string::npos);
-  CHECK(vectorStdlib.find("/std/collections/internal_vector/vectorPush<T>(values, value)") !=
+  CHECK(vectorStdlib.find("/std/collections/vector/vectorPush<T>(values, value)") !=
         std::string::npos);
-  CHECK(vectorStdlib.find("/std/collections/internal_vector/vectorAt<T>(values, index)") !=
+  CHECK(vectorStdlib.find("/std/collections/vector/vectorAt<T>(values, index)") !=
         std::string::npos);
   CHECK(vectorStdlib.find("/std/collections/experimental_vector/") == std::string::npos);
   CHECK(vectorStdlib.find("/std/collections/experimental_vector/vectorPair<T>(first, second)") ==
         std::string::npos);
   CHECK(vectorStdlib.find("/std/collections/experimental_vector/vectorPush<T>(out, values[index])") ==
         std::string::npos);
-  CHECK(vectorStdlib.find("[mut] out{/std/collections/internal_vector/vector<T>()}") ==
+  CHECK(vectorStdlib.find("[mut] out{/std/collections/vector/vector<T>()}") ==
         std::string::npos);
-  CHECK(vectorStdlib.find("[Vector<T> mut] out{/std/collections/internal_vector/vector<T>()}") ==
+  CHECK(vectorStdlib.find("[Vector<T> mut] out{/std/collections/vector/vector<T>()}") ==
         std::string::npos);
   CHECK(vectorStdlib.find("[i32] valueCount{values.count()}") == std::string::npos);
   CHECK(vectorStdlib.find("[i32 mut] index{0i32}") == std::string::npos);
@@ -4377,7 +4377,7 @@ TEST_CASE("small stdlib wrappers stay source locked to inferred locals") {
   CHECK(mapStdlib.find(
             "// Standalone canonical stdlib-owned map implementation.") !=
         std::string::npos);
-  CHECK(mapStdlib.find("import /std/collections/internal_vector/*") !=
+  CHECK(mapStdlib.find("import /std/collections/vector/*") !=
         std::string::npos);
   CHECK(mapStdlib.find("import /std/collections/internal_map") == std::string::npos);
   CHECK(mapStdlib.find("import /std/collections/experimental_map") == std::string::npos);
@@ -4406,7 +4406,7 @@ TEST_CASE("small stdlib wrappers stay source locked to inferred locals") {
   CHECK(internalVectorStdlib.find("[public struct]\n  Vector<T>()") != std::string::npos);
   CHECK(internalVectorStdlib.find("[i32] valueCount{values.count()}") !=
         std::string::npos);
-  CHECK(internalVectorStdlib.find("/std/collections/internal_vector/vectorPush<T>(values, value)") ==
+  CHECK(internalVectorStdlib.find("/std/collections/vector/vectorPush<T>(values, value)") ==
         std::string::npos);
   CHECK(internalMapStdlib.find("[Vector<K>] keys{this.keys}") != std::string::npos);
   CHECK(internalMapStdlib.find(
@@ -4415,7 +4415,7 @@ TEST_CASE("small stdlib wrappers stay source locked to inferred locals") {
   CHECK(internalMapStdlib.find(
             "// Vector storage comes from the internal vector backing module.") !=
         std::string::npos);
-  CHECK(internalMapStdlib.find("return(/std/collections/internal_vector/vectorCount<K>(keys))") !=
+  CHECK(internalMapStdlib.find("return(/std/collections/vector/vectorCount<K>(keys))") !=
         std::string::npos);
 
   CHECK(soaPublic.find(

@@ -73,7 +73,7 @@ main() {
 
 TEST_CASE("experimental vector ownership-sensitive helpers accept non-trivial elements") {
   const std::string source = R"(
-import /std/collections/internal_vector/*
+import /std/collections/vector/*
 
 [struct]
 Owned() {
@@ -110,7 +110,7 @@ main() {
 TEST_CASE("canonical vector helpers route experimental vector receivers onto stdlib vector storage") {
   const std::string source = R"(
 import /std/collections/*
-import /std/collections/internal_vector/*
+import /std/collections/vector/*
 
 [struct]
 Owned() {
@@ -158,7 +158,7 @@ main() {
 TEST_CASE("canonical vector pop method requires visible canonical helper") {
   const std::string source = R"(
 import /std/collections/*
-import /std/collections/internal_vector/*
+import /std/collections/vector/*
 
 [struct]
 Owned() {
@@ -191,7 +191,7 @@ main() {
 TEST_CASE("canonical vector indexed removal helpers require visible canonical helpers") {
   const std::string source = R"(
 import /std/collections/*
-import /std/collections/internal_vector/*
+import /std/collections/vector/*
 
 [struct]
 Owned() {
@@ -228,7 +228,7 @@ main() {
 
 TEST_CASE("canonical vector count helper validates with internal vector import") {
   const std::string source = R"(
-import /std/collections/internal_vector/*
+import /std/collections/vector/*
 
 [effects(heap_alloc), return<int>]
 main() {
@@ -704,7 +704,7 @@ main() {
 TEST_CASE("pop allows non-drop-trivial vector element types") {
   const std::string source = R"(
 import /std/collections/*
-import /std/collections/internal_vector/*
+import /std/collections/vector/*
 
 [struct]
 Owned() {

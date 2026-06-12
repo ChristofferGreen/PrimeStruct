@@ -136,7 +136,7 @@ main() {
 
 TEST_CASE("internal vector wildcard import preserves backing Vector identity") {
   const std::string source = R"(
-import /std/collections/internal_vector/*
+import /std/collections/vector/*
 
 [effects(heap_alloc), return<int>]
 main() {

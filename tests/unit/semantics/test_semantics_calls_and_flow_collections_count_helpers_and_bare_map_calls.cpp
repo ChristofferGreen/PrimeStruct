@@ -860,7 +860,7 @@ TEST_CASE("canonical stdlib map helpers use standalone stdlib implementation") {
         std::string::npos);
   CHECK(source.find("insert_ref<K, V>([Reference<MapValue<K, V>> mut] entries") !=
         std::string::npos);
-  CHECK(source.find("/std/collections/internal_vector/") !=
+  CHECK(source.find("/std/collections/vector/") !=
         std::string::npos);
 
   CHECK(source.find("return(/std/collections/map/count<K, V>(values))") ==

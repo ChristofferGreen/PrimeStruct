@@ -571,7 +571,7 @@ TEST_CASE("canonical map surface owns standalone stdlib implementation") {
   REQUIRE(!accessTargetResolutionSource.empty());
 
   CHECK(mapSource.find("import /std/collections/map/*") == std::string::npos);
-  CHECK(mapSource.find("import /std/collections/internal_vector/*") != std::string::npos);
+  CHECK(mapSource.find("import /std/collections/vector/*") != std::string::npos);
   CHECK(mapSource.find("import /std/collections/map2") == std::string::npos);
   CHECK(mapSource.find("/std/collections/map2/") == std::string::npos);
   CHECK(mapSource.find("map2") == std::string::npos);

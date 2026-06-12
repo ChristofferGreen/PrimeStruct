@@ -31,7 +31,7 @@ inline void expectExperimentalVectorVariadicConstructorMismatchReject(const std:
     expectVectorConformanceCompileReject(makeExperimentalVectorVariadicConstructorMismatchSource(),
                                          "experimental_vector_variadic_ctor_mismatch",
                                          emitMode,
-                                         "/std/collections/internal_vector/vector",
+                                         "/std/collections/vector/vector",
                                          "argument type mismatch");
     return;
   }
@@ -44,7 +44,7 @@ inline void expectExperimentalVectorVariadicConstructorMismatchReject(const std:
 
 inline std::string makeExperimentalVectorMoveOwnershipSource() {
   std::string source;
-  source += "import /std/collections/internal_vector/*\n\n";
+  source += "import /std/collections/vector/*\n\n";
   source += "[effects(heap_alloc), return<Vector<i32>>]\n";
   source += "wrapValues([i32] first, [i32] second) {\n";
   source += "  return(vector<i32>(first, second))\n";
@@ -69,7 +69,7 @@ inline void expectExperimentalVectorMoveOwnershipConformance(const std::string &
 
 inline std::string makeExperimentalVectorCountRefConformanceSource() {
   std::string source;
-  source += "import /std/collections/internal_vector/*\n";
+  source += "import /std/collections/vector/*\n";
   source += "\n";
   source += "[effects(heap_alloc), return<int>]\n";
   source += "main() {\n";
@@ -89,7 +89,7 @@ inline void expectExperimentalVectorCountRefConformance(const std::string &emitM
 
 inline std::string makeExperimentalVectorCapacityRefConformanceSource() {
   std::string source;
-  source += "import /std/collections/internal_vector/*\n";
+  source += "import /std/collections/vector/*\n";
   source += "\n";
   source += "[effects(heap_alloc), return<int>]\n";
   source += "main() {\n";
@@ -109,7 +109,7 @@ inline void expectExperimentalVectorCapacityRefConformance(const std::string &em
 
 inline std::string makeExperimentalVectorIsEmptyRefConformanceSource() {
   std::string source;
-  source += "import /std/collections/internal_vector/*\n";
+  source += "import /std/collections/vector/*\n";
   source += "\n";
   source += "[effects(heap_alloc), return<int>]\n";
   source += "main() {\n";
@@ -138,7 +138,7 @@ inline void expectExperimentalVectorIsEmptyRefConformance(const std::string &emi
 
 inline std::string makeExperimentalVectorCountRefAfterPushConformanceSource() {
   std::string source;
-  source += "import /std/collections/internal_vector/*\n";
+  source += "import /std/collections/vector/*\n";
   source += "\n";
   source += "[effects(heap_alloc), return<int>]\n";
   source += "main() {\n";
@@ -159,7 +159,7 @@ inline void expectExperimentalVectorCountRefAfterPushConformance(const std::stri
 
 inline std::string makeExperimentalVectorCapacityRefAfterReserveConformanceSource() {
   std::string source;
-  source += "import /std/collections/internal_vector/*\n";
+  source += "import /std/collections/vector/*\n";
   source += "\n";
   source += "[effects(heap_alloc), return<int>]\n";
   source += "main() {\n";
@@ -183,7 +183,7 @@ inline std::string makeVectorIndexedRemovalOwnershipConformanceSource(const std:
   std::string source;
   source += "import /std/collections/*\n\n";
   if (validateWithInternalTake) {
-    source += "import /std/collections/internal_vector/*\n\n";
+    source += "import /std/collections/vector/*\n\n";
   }
   if (mode == "remove_at_drop") {
     source += "[struct]\n";

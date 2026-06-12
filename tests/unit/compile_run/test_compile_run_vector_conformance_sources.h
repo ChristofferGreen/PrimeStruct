@@ -4,14 +4,14 @@ inline std::string vectorHelperConformanceImportSlug(const std::string &importPa
   if (importPath == "/std/collections/*") {
     return "stdlib";
   }
-  if (importPath == "/std/collections/internal_vector/*") {
+  if (importPath == "/std/collections/vector/*") {
     return "internal_vector";
   }
   return "custom";
 }
 
 inline bool isInternalVectorImport(const std::string &importPath) {
-  return importPath == "/std/collections/internal_vector/*";
+  return importPath == "/std/collections/vector/*";
 }
 
 inline std::string vectorConformanceType(const std::string &importPath,
@@ -119,7 +119,7 @@ inline std::string makeVectorShrinkRemoveConformanceSource(const std::string &im
 inline std::string makeCanonicalVectorDiscardOwnershipConformanceSource() {
   std::string source;
   source += "import /std/collections/*\n\n";
-  source += "import /std/collections/internal_vector/*\n\n";
+  source += "import /std/collections/vector/*\n\n";
   source += "[struct]\n";
   source += "Owned() {\n";
   source += "  [i32 mut] value{0i32}\n\n";
@@ -144,7 +144,7 @@ inline std::string makeCanonicalVectorDiscardOwnershipConformanceSource() {
 inline std::string makeCanonicalVectorIndexedRemovalOwnershipConformanceSource() {
   std::string source;
   source += "import /std/collections/*\n\n";
-  source += "import /std/collections/internal_vector/*\n\n";
+  source += "import /std/collections/vector/*\n\n";
   source += "[struct]\n";
   source += "Owned() {\n";
   source += "  [i32 mut] value{0i32}\n\n";
@@ -188,7 +188,7 @@ inline std::string makeVectorTypeMismatchRejectSource(const std::string &importP
 
 inline std::string makeExperimentalVectorVariadicConstructorSource() {
   std::string source;
-  source += "import /std/collections/internal_vector/*\n\n";
+  source += "import /std/collections/vector/*\n\n";
   source += "[effects(heap_alloc), return<Vector<T>>]\n";
   source += "wrapVector<T>([T] first, [T] second, [T] third) {\n";
   source += "  return(vector<T>(first, second, third))\n";
@@ -206,7 +206,7 @@ inline std::string makeExperimentalVectorVariadicConstructorSource() {
 
 inline std::string makeExperimentalVectorVariadicConstructorMismatchSource() {
   std::string source;
-  source += "import /std/collections/internal_vector/*\n\n";
+  source += "import /std/collections/vector/*\n\n";
   source += "[effects(heap_alloc), return<int>]\n";
   source += "main() {\n";
   source += "  [Vector<i32>] values{vector<i32>(1i32, false)}\n";
@@ -269,7 +269,7 @@ inline std::string makeCanonicalVectorNamespaceConformanceSource() {
 inline std::string makeCanonicalVectorNamespaceExplicitVectorBindingSource() {
   std::string source;
   source += "import /std/collections/*\n";
-  source += "import /std/collections/internal_vector/*\n\n";
+  source += "import /std/collections/vector/*\n\n";
   source += "[effects(heap_alloc), return<int>]\n";
   source += "main() {\n";
   source += "  [Vector<i32> mut] grown{/std/collections/vector/vector<i32>()}\n";
@@ -297,7 +297,7 @@ inline std::string makeCanonicalVectorNamespaceExplicitVectorBindingSource() {
 inline std::string makeStdlibWrapperVectorHelperExplicitVectorBindingSource() {
   std::string source;
   source += "import /std/collections/*\n";
-  source += "import /std/collections/internal_vector/*\n\n";
+  source += "import /std/collections/vector/*\n\n";
   source += "[effects(heap_alloc), return<int>]\n";
   source += "main() {\n";
   source += "  [Vector<i32> mut] values{/std/collections/vector/vector<i32>(4i32, 5i32)}\n";
@@ -322,7 +322,7 @@ inline std::string makeStdlibWrapperVectorHelperExplicitVectorBindingSource() {
 inline std::string makeStdlibWrapperVectorHelperExplicitVectorBindingMismatchSource() {
   std::string source;
   source += "import /std/collections/*\n";
-  source += "import /std/collections/internal_vector/*\n\n";
+  source += "import /std/collections/vector/*\n\n";
   source += "[effects(heap_alloc), return<int>]\n";
   source += "main() {\n";
   source += "  [Vector<i32>] values{/std/collections/vector/vector<i32>(4i32, 5i32)}\n";
@@ -334,7 +334,7 @@ inline std::string makeStdlibWrapperVectorHelperExplicitVectorBindingMismatchSou
 inline std::string makeStdlibWrapperVectorConstructorExplicitVectorBindingSource() {
   std::string source;
   source += "import /std/collections/*\n";
-  source += "import /std/collections/internal_vector/*\n\n";
+  source += "import /std/collections/vector/*\n\n";
   source += "[return<T> effects(heap_alloc)]\n";
   source += "wrapValues<T>([T] values) {\n";
   source += "  return(values)\n";
@@ -369,7 +369,7 @@ inline std::string makeStdlibWrapperVectorConstructorExplicitVectorBindingSource
 inline std::string makeStdlibWrapperVectorConstructorExplicitVectorBindingMismatchSource() {
   std::string source;
   source += "import /std/collections/*\n";
-  source += "import /std/collections/internal_vector/*\n\n";
+  source += "import /std/collections/vector/*\n\n";
   source += "[return<T> effects(heap_alloc)]\n";
   source += "wrapValues<T>([T] values) {\n";
   source += "  return(values)\n";
@@ -389,7 +389,7 @@ inline std::string makeStdlibWrapperVectorConstructorExplicitVectorBindingMismat
 inline std::string makeStdlibWrapperVectorConstructorAutoInferenceSource() {
   std::string source;
   source += "import /std/collections/*\n";
-  source += "import /std/collections/internal_vector/*\n\n";
+  source += "import /std/collections/vector/*\n\n";
   source += "[return<T> effects(heap_alloc)]\n";
   source += "wrapValues<T>([T] values) {\n";
   source += "  return(values)\n";
@@ -425,7 +425,7 @@ inline std::string makeStdlibWrapperVectorConstructorAutoInferenceSource() {
 inline std::string makePortableStdlibVectorConstructorAutoInferenceSource() {
   std::string source;
   source += "import /std/collections/*\n";
-  source += "import /std/collections/internal_vector/*\n\n";
+  source += "import /std/collections/vector/*\n\n";
   source += "[return<auto> effects(heap_alloc)]\n";
   source += "buildValues([bool] wrapped) {\n";
   source += "  if(wrapped,\n";
@@ -452,7 +452,7 @@ inline std::string makePortableStdlibVectorConstructorAutoInferenceSource() {
 inline std::string makeStdlibWrapperVectorConstructorAutoInferenceMismatchSource() {
   std::string source;
   source += "import /std/collections/*\n";
-  source += "import /std/collections/internal_vector/*\n\n";
+  source += "import /std/collections/vector/*\n\n";
   source += "[return<T> effects(heap_alloc)]\n";
   source += "wrapValues<T>([T] values) {\n";
   source += "  return(values)\n";
@@ -468,7 +468,7 @@ inline std::string makeStdlibWrapperVectorConstructorAutoInferenceMismatchSource
 inline std::string makeStdlibWrapperVectorConstructorReceiverConformanceSource() {
   std::string source;
   source += "import /std/collections/*\n";
-  source += "import /std/collections/internal_vector/*\n\n";
+  source += "import /std/collections/vector/*\n\n";
   source += "[return<T> effects(heap_alloc)]\n";
   source += "wrapValues<T>([T] values) {\n";
   source += "  return(values)\n";
@@ -491,7 +491,7 @@ inline std::string makeStdlibWrapperVectorConstructorReceiverConformanceSource()
 inline std::string makeStdlibWrapperVectorConstructorHelperReceiverMismatchSource() {
   std::string source;
   source += "import /std/collections/*\n";
-  source += "import /std/collections/internal_vector/*\n\n";
+  source += "import /std/collections/vector/*\n\n";
   source += "[effects(heap_alloc), return<int>]\n";
   source += "main() {\n";
   source += "  return(/std/collections/vector/count(/std/collections/vector/vector(2i32, false)))\n";
@@ -502,7 +502,7 @@ inline std::string makeStdlibWrapperVectorConstructorHelperReceiverMismatchSourc
 inline std::string makeStdlibWrapperVectorConstructorMethodReceiverMismatchSource() {
   std::string source;
   source += "import /std/collections/*\n";
-  source += "import /std/collections/internal_vector/*\n\n";
+  source += "import /std/collections/vector/*\n\n";
   source += "[effects(heap_alloc), return<int>]\n";
   source += "main() {\n";
   source += "  return(/std/collections/vector/vector(2i32, false).count())\n";

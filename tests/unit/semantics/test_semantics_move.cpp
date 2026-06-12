@@ -35,7 +35,7 @@ main() {
 
 TEST_CASE("move marks experimental vector binding as moved") {
   const std::string source = R"(
-import /std/collections/internal_vector/*
+import /std/collections/vector/*
 
 [effects(heap_alloc), return<int>]
 main() {
@@ -51,7 +51,7 @@ main() {
 
 TEST_CASE("assign reinitializes moved experimental vector binding") {
   const std::string source = R"(
-import /std/collections/internal_vector/*
+import /std/collections/vector/*
 
 [effects(heap_alloc), return<int>]
 main() {
