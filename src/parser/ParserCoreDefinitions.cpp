@@ -146,6 +146,29 @@ bool Parser::parseNamespace(std::vector<Definition> &defs, std::vector<Execution
       continue;
     }
     if (match(TokenKind::KeywordImport)) {
+      // Skip import statements - they are handled by the import resolver
+      // before parsing. Allow them anywhere for language flexibility.
+      do {
+        skipComments();
+        consume(TokenKind::Identifier, "expected import path");
+        skipComments();
+        if (match(TokenKind::Star)) {
+          expect(TokenKind::Star, "expected '*'");
+        }
+        skipComments();
+        while (match(TokenKind::Comma) || match(TokenKind::Semicolon)) {
+          if (match(TokenKind::Comma)) {
+            expect(TokenKind::Comma, "expected ','");
+          } else {
+            expect(TokenKind::Semicolon, "expected ';'");
+          }
+          skipComments();
+        }
+      } while (pos_ < tokens_.size() && tokens_[pos_].kind == TokenKind::Identifier &&
+               !tokens_[pos_].text.empty() && tokens_[pos_].text[0] == '/');
+      continue;
+    }
+    if (match(TokenKind::KeywordImport)) {
       return fail("import statements must appear at the top level");
     }
     if (match(TokenKind::KeywordNamespace)) {
