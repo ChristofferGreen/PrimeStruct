@@ -72,7 +72,6 @@ This file is the live open-work queue for PrimeStruct.
 
 - TODO-4609: Reject escaping local array slices | track: array-slice-escape-diagnostics | surface: slice view lifetime diagnostics
 - TODO-4610: Add forward cursor traversal API | track: cursor-forward-traversal | surface: forward cursor traversal
-- TODO-4631: Merge internal_vector into the public vector module | track: collections-internal-vector-merge | surface: stdlib internal_vector module and goldens
 
 ### Immediate Next 10
 
@@ -182,22 +181,21 @@ This file is the live open-work queue for PrimeStruct.
 2. TODO-4610: Add forward cursor traversal API
 3. TODO-4611: Add reverse cursor traversal API
 4. TODO-4612: Add safe extent and cursor code examples
-5. TODO-4631: Merge internal_vector into the public vector module
-6. TODO-4632: Merge internal_map into the public map module
-7. TODO-4633: Collapse internal SoA modules into soa and soa_storage
-8. TODO-4634: Rename internal buffer modules to canonical buffer names
-9. TODO-4635: Derive the collection surface registry from stdlib declarations
-10. TODO-4636: Delete surfaces.psmeta and its parity scaffolding
-11. TODO-4637: Move `ir_pipeline` test shard into subdirectory
-12. TODO-4638: Move `compile_run` test shard into subdirectory
-13. TODO-4639: Move `semantics` test shard into subdirectory
-14. TODO-4640: Move remaining test shards into subdirectories
-15. TODO-4641: Group `include/primec/` headers by pipeline stage
-16. TODO-4642: Consolidate loose top-level `src/` files into directories
-17. TODO-4643: Fix 8 duplicate test names across files
-18. TODO-4644: Rewrite 53 overlong test names (>120 chars)
-19. TODO-4645: Drop `compiles and runs` prefix from ~740 test names
-20. TODO-4646: Tighten 12 vague/short test names
+5. TODO-4632: Merge internal_map into the public map module
+6. TODO-4633: Collapse internal SoA modules into soa and soa_storage
+7. TODO-4634: Rename internal buffer modules to canonical buffer names
+8. TODO-4635: Derive the collection surface registry from stdlib declarations
+9. TODO-4636: Delete surfaces.psmeta and its parity scaffolding
+10. TODO-4637: Move `ir_pipeline` test shard into subdirectory
+11. TODO-4638: Move `compile_run` test shard into subdirectory
+12. TODO-4639: Move `semantics` test shard into subdirectory
+13. TODO-4640: Move remaining test shards into subdirectories
+14. TODO-4641: Group `include/primec/` headers by pipeline stage
+15. TODO-4642: Consolidate loose top-level `src/` files into directories
+16. TODO-4643: Fix 8 duplicate test names across files
+17. TODO-4644: Rewrite 53 overlong test names (>120 chars)
+18. TODO-4645: Drop `compiles and runs` prefix from ~740 test names
+19. TODO-4646: Tighten 12 vague/short test names
 21. TODO-4647: Rename 63 opaque shard files with topic suffixes
 22. TODO-4648: Split `SemanticsValidate.cpp` into focused compilation units
 23. TODO-4649: Convert IR lowerer include-only `.h` fragments to `.h/.cpp` pairs
@@ -306,9 +304,10 @@ This file is the live open-work queue for PrimeStruct.
   - stop_rule: Stop once the example guide and source-lock coverage are
     updated; do not implement missing language features in this leaf.
 
-- [ ] TODO-4631: Merge internal_vector into the public vector module
+- [x] TODO-4631: Merge internal_vector into the public vector module
   - owner: ai
   - created_at: 2026-06-10
+  - finished_at: 2026-06-12
   - phase: Collections naming and manifest retirement
   - parallel_track: collections-internal-vector-merge
   - depends_on: TODO-4630
@@ -326,6 +325,9 @@ This file is the live open-work queue for PrimeStruct.
     - Release tests pass.
   - stop_rule: Stop at the vector merge; map and SoA merges are TODO-4632 and
     TODO-4633.
+  - evidence: Merged 505-line internal_vector.prime into vector.prime. Updated
+    StdlibCollectionPaths.h (removed kInternalVectorFolder). Updated 8 source
+    files to use kVectorFolder. Deleted internal_vector.prime.
 
 - [ ] TODO-4632: Merge internal_map into the public map module
   - owner: ai
