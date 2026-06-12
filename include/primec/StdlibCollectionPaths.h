@@ -36,9 +36,10 @@ inline constexpr std::string_view kLegacySoaVectorFolder = "soa_vector";
 inline constexpr std::string_view kLegacySoaVectorConversionsFolder =
     "soa_vector_conversions";
 
-// --- Internal implementation folders (collapse: TODO-4631..TODO-4634) ------
+// --- Internal implementation folders (collapse: TODO-4632..TODO-4634) ------
 
-inline constexpr std::string_view kInternalVectorFolder = "internal_vector";
+// internal_vector has been merged into vector (TODO-4631 done)
+// internal_map and others still need collapsing
 inline constexpr std::string_view kInternalMapFolder = "internal_map";
 inline constexpr std::string_view kInternalSoaVectorFolder = "internal_soa_vector";
 inline constexpr std::string_view kInternalSoaVectorConversionsFolder =

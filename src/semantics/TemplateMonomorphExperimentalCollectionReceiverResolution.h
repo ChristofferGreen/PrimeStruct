@@ -827,11 +827,11 @@ bool hasVisibleStdCollectionsImportForPath(const Context &ctx, const std::string
     return false;
   }
   const auto &importPaths = ctx.program.sourceImports.empty() ? ctx.program.imports : ctx.program.sourceImports;
-  if (path.rfind(collection_paths::modulePrefix(collection_paths::kInternalVectorFolder), 0) == 0) {
+  if (path.rfind(collection_paths::modulePrefix(collection_paths::kVectorFolder), 0) == 0) {
     for (const auto &importPath : importPaths) {
-      if (importPath == collection_paths::moduleRoot(collection_paths::kInternalVectorFolder) ||
+      if (importPath == collection_paths::moduleRoot(collection_paths::kVectorFolder) ||
           importPath ==
-              collection_paths::modulePrefix(collection_paths::kInternalVectorFolder) + "*" ||
+              collection_paths::modulePrefix(collection_paths::kVectorFolder) + "*" ||
           importPath == path) {
         return true;
       }

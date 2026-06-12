@@ -243,9 +243,9 @@ bool SemanticsValidator::hasImportedDefinitionPath(const std::string &path) cons
           isCanonicalVectorCompatibilityPath(canonicalPath)) {
         return true;
       }
-      if ((importPath == collection_paths::moduleRoot(collection_paths::kInternalVectorFolder) ||
+      if ((importPath == collection_paths::moduleRoot(collection_paths::kVectorFolder) ||
            importPath ==
-               collection_paths::modulePrefix(collection_paths::kInternalVectorFolder) + "*") &&
+               collection_paths::modulePrefix(collection_paths::kVectorFolder) + "*") &&
           isCanonicalVectorCompatibilityPath(canonicalPath)) {
         return true;
       }

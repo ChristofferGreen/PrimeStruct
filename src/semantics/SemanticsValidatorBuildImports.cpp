@@ -238,7 +238,7 @@ bool SemanticsValidator::buildImportAliases() {
   auto registerInternalVectorWildcardAliases =
       [&](const std::string &prefix,
           std::unordered_map<std::string, std::string> &targetAliases) {
-        if (prefix != collection_paths::moduleRoot(collection_paths::kInternalVectorFolder)) {
+        if (prefix != collection_paths::moduleRoot(collection_paths::kVectorFolder)) {
           return false;
         }
         const std::string vectorPath =

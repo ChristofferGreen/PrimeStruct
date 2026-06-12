@@ -292,7 +292,7 @@ bool isInternalVectorMetadataCall(const Expr &expr,
   if (!scopedPath.empty() && scopedPath.front() == '/') {
     scopedPath.erase(scopedPath.begin());
   }
-  const std::string Prefix = collection_paths::modulePrefixBare(collection_paths::kInternalVectorFolder);
+  const std::string Prefix = collection_paths::modulePrefixBare(collection_paths::kVectorFolder);
   if (scopedPath.rfind(Prefix, 0) != 0 ||
       scopedPath.find('/', Prefix.size()) != std::string::npos) {
     return false;

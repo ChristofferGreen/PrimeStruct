@@ -465,7 +465,7 @@ private:
         if (!scopedPrefix.empty() && scopedPrefix.back() != '/') {
           scopedPrefix += "/";
         }
-        if (prefix == collection_paths::moduleRoot(collection_paths::kInternalVectorFolder)) {
+        if (prefix == collection_paths::moduleRoot(collection_paths::kVectorFolder)) {
           const std::string vectorPath = collection_paths::memberPath(
               collection_paths::kVectorFolder, collection_paths::kVectorTypeName);
           if (publicDefinitions_.count(std::string(vectorPath)) > 0) {

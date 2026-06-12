@@ -66,7 +66,7 @@
               vectorBackingMemberRoot();
           for (const std::string &prefix :
                {canonicalVectorRoot,
-                std::string(collection_paths::modulePrefix(collection_paths::kInternalVectorFolder)),
+                std::string(collection_paths::modulePrefix(collection_paths::kVectorFolder)),
                 experimentalVectorRoot}) {
             if (path.rfind(prefix, 0) != 0) {
               continue;

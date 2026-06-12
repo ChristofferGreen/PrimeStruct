@@ -180,7 +180,7 @@ void buildImportAliases(Context &ctx) {
     }
     if (isWildcard) {
       registerStdlibSurfaceWildcardAliases(ctx.directImportAliases, prefix);
-      if (prefix == collection_paths::moduleRoot(collection_paths::kInternalVectorFolder)) {
+      if (prefix == collection_paths::moduleRoot(collection_paths::kVectorFolder)) {
         if (ctx.sourceDefs.count(InternalVectorTypePath) > 0) {
           registerDefinitionAlias(
               ctx.directImportAliases, "Vector", InternalVectorTypePath);
@@ -278,7 +278,7 @@ void buildImportAliases(Context &ctx) {
     }
     if (isWildcard) {
       registerStdlibSurfaceWildcardAliases(ctx.transitiveImportAliases, prefix);
-      if (prefix == collection_paths::moduleRoot(collection_paths::kInternalVectorFolder)) {
+      if (prefix == collection_paths::moduleRoot(collection_paths::kVectorFolder)) {
         if (ctx.sourceDefs.count(InternalVectorTypePath) > 0) {
           registerDefinitionAlias(
               ctx.transitiveImportAliases, "Vector", InternalVectorTypePath);

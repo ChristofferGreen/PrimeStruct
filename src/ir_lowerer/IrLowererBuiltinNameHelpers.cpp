@@ -572,10 +572,10 @@ bool getBuiltinArrayAccessName(const Expr &expr, std::string &out) {
   if (scopedName.rfind(experimentalCollectionMemberRoot("vector"), 0) == 0) {
     return false;
   }
-  if (matchLegacyAccessAlias(scopedName, collection_paths::modulePrefixBare(collection_paths::kInternalVectorFolder))) {
+  if (matchLegacyAccessAlias(scopedName, collection_paths::modulePrefixBare(collection_paths::kVectorFolder))) {
     return true;
   }
-  if (scopedName.rfind(collection_paths::modulePrefixBare(collection_paths::kInternalVectorFolder), 0) == 0) {
+  if (scopedName.rfind(collection_paths::modulePrefixBare(collection_paths::kVectorFolder), 0) == 0) {
     return false;
   }
   if (matchAccessAlias(scopedName, collection_paths::modulePrefixBare(collection_paths::kInternalSoaStorageFolder), "SoaColumn")) {
