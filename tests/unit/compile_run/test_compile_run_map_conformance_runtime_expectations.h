@@ -820,7 +820,7 @@ inline void expectCanonicalMapNamespaceAccessShadow(const std::string &emitMode)
 inline std::string makeExperimentalMapTryAtStringConformanceSource() {
   std::string source;
   source += "import /std/collections/*\n";
-  source += "import /std/collections/internal_map/*\n\n";
+  source += "import /std/collections/map/*\n\n";
   source += "[effects(io_err)]\n";
   source += "unexpectedMapTryAtStringError([ContainerError] err) {\n";
   source += "  [Result<ContainerError>] status{err.code}\n";
@@ -867,7 +867,7 @@ inline void expectExperimentalMapTryAtStringConformance(const std::string &emitM
 
 inline std::string makeExperimentalMapAtMissingConformanceSource() {
   std::string source;
-  source += "import /std/collections/internal_map/*\n\n";
+  source += "import /std/collections/map/*\n\n";
   source += "[return<int>]\n";
   source += "main() {\n";
   source += "  [Map<i32, i32>] values{mapPair<i32, i32>(11i32, 7i32, 22i32, 9i32)}\n";
@@ -904,7 +904,7 @@ inline void expectExperimentalMapAtMissingConformance(const std::string &emitMod
 
 inline std::string makeExperimentalMapStringKeyRejectSource(const std::string &mode) {
   std::string source;
-  source += "import /std/collections/internal_map/*\n\n";
+  source += "import /std/collections/map/*\n\n";
   source += "[return<int>]\n";
   source += "main([array<string>] args) {\n";
   source += "  [string] key{args[0i32]}\n";

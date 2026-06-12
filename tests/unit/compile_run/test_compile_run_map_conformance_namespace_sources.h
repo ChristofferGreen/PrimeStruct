@@ -3,7 +3,7 @@
 inline std::string makeCanonicalMapNamespaceExperimentalBorrowedRefConformanceSource() {
   std::string source;
   source += "import /std/collections/*\n";
-  source += "import /std/collections/internal_map/*\n\n";
+  source += "import /std/collections/map/*\n\n";
   source += "[effects(io_err)]\n";
   source += "unexpectedCanonicalExperimentalMapBorrowedRefError([ContainerError] err) {\n";
   source += "  [Result<ContainerError>] status{err.code}\n";

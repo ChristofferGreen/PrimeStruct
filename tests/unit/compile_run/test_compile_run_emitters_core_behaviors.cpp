@@ -315,7 +315,7 @@ main() {
 TEST_CASE("C++ emitter rejects experimental map custom comparable struct keys") {
   const std::string source = R"(
 import /std/collections/*
-import /std/collections/internal_map/*
+import /std/collections/map/*
 
 [struct]
 Key() {

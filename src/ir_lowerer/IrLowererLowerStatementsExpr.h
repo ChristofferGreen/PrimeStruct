@@ -2044,7 +2044,7 @@
               resolveKeyValueHelperMemberName(exprPath, resolvedKeyValueInsertHelperName) &&
               (resolvedKeyValueInsertHelperName == "insert" ||
                resolvedKeyValueInsertHelperName == "insert_ref")) ||
-             exprPath.rfind(collection_paths::memberPath(collection_paths::kInternalMapFolder, "insert"), 0) == 0)) {
+             exprPath.rfind(collection_paths::memberPath(collection_paths::kMapFolder, "insert"), 0) == 0)) {
           if (const Definition *directCallee = resolveDirectHelperDefinition(expr);
               directCallee != nullptr) {
             if (!emitInlineDefinitionCall(expr, *directCallee, localsIn, true)) {

@@ -570,13 +570,13 @@ TEST_CASE("canonical map surface owns standalone stdlib implementation") {
   REQUIRE(!inlineCallContextSource.empty());
   REQUIRE(!accessTargetResolutionSource.empty());
 
-  CHECK(mapSource.find("import /std/collections/internal_map/*") == std::string::npos);
+  CHECK(mapSource.find("import /std/collections/map/*") == std::string::npos);
   CHECK(mapSource.find("import /std/collections/internal_vector/*") != std::string::npos);
   CHECK(mapSource.find("import /std/collections/map2") == std::string::npos);
   CHECK(mapSource.find("/std/collections/map2/") == std::string::npos);
   CHECK(mapSource.find("map2") == std::string::npos);
   CHECK(mapSource.find("/std/collections/experimental_map/") == std::string::npos);
-  CHECK(mapSource.find("/std/collections/internal_map/insertImpl") == std::string::npos);
+  CHECK(mapSource.find("/std/collections/map/insertImpl") == std::string::npos);
   CHECK(mapSource.find("insert_builtin") == std::string::npos);
   CHECK(mapSource.find("Reference<Map<K, V>>") == std::string::npos);
   CHECK(mapSource.find("Reference<map<K, V>>") == std::string::npos);
@@ -587,7 +587,7 @@ TEST_CASE("canonical map surface owns standalone stdlib implementation") {
   CHECK(mapSource.find("entries[index]") == std::string::npos);
   CHECK(mapSource.find("[K] eighthKey, [V] eighthValue") != std::string::npos);
 
-  CHECK(experimentalSource.find("import /std/collections/internal_map/*") != std::string::npos);
+  CHECK(experimentalSource.find("import /std/collections/map/*") != std::string::npos);
   CHECK(experimentalSource.find("namespace experimental_map") == std::string::npos);
   CHECK(experimentalSource.find("mapFindIndex") == std::string::npos);
   CHECK(experimentalSource.find("mapOverwriteSlot") == std::string::npos);
@@ -4889,7 +4889,7 @@ TEST_CASE("canonical map surface owns standalone stdlib implementation") {
   CHECK(accessTargetResolutionSource.find(
             "resolveStdlibSurfaceMemberName(*metadata, metadata->canonicalPath)") !=
         std::string::npos);
-  CHECK(statementLowererSource.find("callee->fullPath.rfind(\"/std/collections/internal_map/insertImpl__\", 0)") ==
+  CHECK(statementLowererSource.find("callee->fullPath.rfind(\"/std/collections/map/insertImpl__\", 0)") ==
         std::string::npos);
   CHECK(statementLowererSource.find("canonicalStatementKeyValueHelperPath(\"insert\")") ==
         std::string::npos);

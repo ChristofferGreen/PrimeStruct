@@ -550,7 +550,7 @@ main() {
           "query_map_receiver_type_text",
           R"(
 import /std/collections/*
-import /std/collections/internal_map/*
+import /std/collections/map/*
 
 [return<auto> effects(heap_alloc)]
 selectValues() {
@@ -571,7 +571,7 @@ main() {
           "infer_map_value_return_kind",
           R"(
 import /std/collections/*
-import /std/collections/internal_map/*
+import /std/collections/map/*
 
 [return<auto> effects(heap_alloc)]
 selectValues() {

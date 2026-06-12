@@ -100,10 +100,10 @@ bool prepareInlineDefinitionCallContext(
 
   out.structDefinition = isStructDefinition(callee);
   const bool isGeneratedMapInsertHelper =
-      callee.fullPath == collection_paths::memberPath(collection_paths::kInternalMapFolder, "insertImpl") ||
-      callee.fullPath.rfind(collection_paths::specializedTypePrefix(collection_paths::kInternalMapFolder, "insertImpl"), 0) == 0 ||
-      callee.fullPath == collection_paths::memberPath(collection_paths::kInternalMapFolder, "insertRefImpl") ||
-      callee.fullPath.rfind(collection_paths::specializedTypePrefix(collection_paths::kInternalMapFolder, "insertRefImpl"), 0) == 0;
+      callee.fullPath == collection_paths::memberPath(collection_paths::kMapFolder, "insertImpl") ||
+      callee.fullPath.rfind(collection_paths::specializedTypePrefix(collection_paths::kMapFolder, "insertImpl"), 0) == 0 ||
+      callee.fullPath == collection_paths::memberPath(collection_paths::kMapFolder, "insertRefImpl") ||
+      callee.fullPath.rfind(collection_paths::specializedTypePrefix(collection_paths::kMapFolder, "insertRefImpl"), 0) == 0;
   if (out.returnInfo.returnsVoid && requireValue && !out.structDefinition &&
       !isGeneratedMapInsertHelper) {
     error = "void call not allowed in expression context: " + callee.fullPath;

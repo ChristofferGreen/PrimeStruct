@@ -4,7 +4,7 @@ inline std::string makeExperimentalMapStructFieldConformanceSource() {
   std::string source;
   source += "import /std/collections/*\n";
   source += "import /std/collections/map/*\n";
-  source += "import /std/collections/internal_map/*\n\n";
+  source += "import /std/collections/map/*\n\n";
   source += "[struct]\n";
   source += "Holder() {\n";
   source += "  [Map<string, i32>] primary{}\n";
@@ -33,7 +33,7 @@ inline std::string makeInferredExperimentalMapStructFieldConformanceSource() {
   std::string source;
   source += "import /std/collections/*\n";
   source += "import /std/collections/map/*\n";
-  source += "import /std/collections/internal_map/*\n\n";
+  source += "import /std/collections/map/*\n\n";
   source += "[struct]\n";
   source += "Holder() {\n";
   source += "  primary{mapNew<string, i32>()}\n";
@@ -54,7 +54,7 @@ inline std::string makeWrappedInferredExperimentalMapStructFieldConformanceSourc
   std::string source;
   source += "import /std/collections/*\n";
   source += "import /std/collections/map/*\n";
-  source += "import /std/collections/internal_map/*\n\n";
+  source += "import /std/collections/map/*\n\n";
   source += "[return<T> effects(heap_alloc)]\n";
   source += "wrapValues<T>([T] values) {\n";
   source += "  return(values)\n";
@@ -80,7 +80,7 @@ inline std::string makeExperimentalMapMethodParameterConformanceSource() {
   std::string source;
   source += "import /std/collections/*\n";
   source += "import /std/collections/map/*\n";
-  source += "import /std/collections/internal_map/*\n\n";
+  source += "import /std/collections/map/*\n\n";
   source += "Holder() {}\n\n";
   source += "[return<int> effects(io_out, heap_alloc)]\n";
   source += "/Holder/score([Holder] self, [Map<string, i32>] values) {\n";
@@ -108,7 +108,7 @@ inline std::string makeInferredExperimentalMapParameterConformanceSource() {
   std::string source;
   source += "import /std/collections/*\n";
   source += "import /std/collections/map/*\n";
-  source += "import /std/collections/internal_map/*\n\n";
+  source += "import /std/collections/map/*\n\n";
   source += "Holder() {}\n\n";
   source += "[return<int> effects(io_out, heap_alloc)]\n";
   source += "scoreValues([auto mut] values) {\n";
@@ -146,7 +146,7 @@ inline std::string makeInferredExperimentalMapDefaultParameterConformanceSource(
   std::string source;
   source += "import /std/collections/*\n";
   source += "import /std/collections/map/*\n";
-  source += "import /std/collections/internal_map/*\n\n";
+  source += "import /std/collections/map/*\n\n";
   source += "[return<int> effects(io_out, heap_alloc)]\n";
   source += "scoreValues([auto mut] values{mapNew<string, i32>()}) {\n";
   source += "  /std/collections/map/insert<string, i32>(values, \"left\"raw_utf8, 4i32)\n";
@@ -184,7 +184,7 @@ inline std::string makeWrappedInferredExperimentalMapDefaultParameterConformance
   std::string source;
   source += "import /std/collections/*\n";
   source += "import /std/collections/map/*\n";
-  source += "import /std/collections/internal_map/*\n\n";
+  source += "import /std/collections/map/*\n\n";
   source += "Holder() {}\n\n";
   source += "[return<T> effects(heap_alloc)]\n";
   source += "wrapValues<T>([T] values) {\n";
@@ -233,7 +233,7 @@ inline std::string makeExperimentalMapHelperReceiverConformanceSource() {
   std::string source;
   source += "import /std/collections/*\n";
   source += "import /std/collections/map/*\n";
-  source += "import /std/collections/internal_map/*\n\n";
+  source += "import /std/collections/map/*\n\n";
   source += "[effects(io_err)]\n";
   source += "unexpectedExperimentalMapHelperReceiverError([ContainerError] err) {\n";
   source += "  [Result<ContainerError>] status{err.code}\n";
@@ -272,7 +272,7 @@ inline std::string makeExperimentalMapMethodReceiverConformanceSource() {
   std::string source;
   source += "import /std/collections/*\n";
   source += "import /std/collections/map/*\n";
-  source += "import /std/collections/internal_map/*\n\n";
+  source += "import /std/collections/map/*\n\n";
   source += "[effects(io_err)]\n";
   source += "unexpectedExperimentalMapMethodReceiverError([ContainerError] err) {\n";
   source += "  [Result<ContainerError>] status{err.code}\n";
@@ -296,7 +296,7 @@ inline std::string makeWrappedExperimentalMapMethodReceiverConformanceSource() {
   std::string source;
   source += "import /std/collections/*\n";
   source += "import /std/collections/map/*\n";
-  source += "import /std/collections/internal_map/*\n\n";
+  source += "import /std/collections/map/*\n\n";
   source += "[return<T> effects(heap_alloc)]\n";
   source += "wrapValues<T>([T] values) {\n";
   source += "  return(values)\n";
@@ -330,7 +330,7 @@ inline std::string makeWrappedExperimentalMapHelperReceiverConformanceSource() {
   std::string source;
   source += "import /std/collections/*\n";
   source += "import /std/collections/map/*\n";
-  source += "import /std/collections/internal_map/*\n\n";
+  source += "import /std/collections/map/*\n\n";
   source += "[return<T> effects(heap_alloc)]\n";
   source += "wrapValues<T>([T] values) {\n";
   source += "  return(values)\n";
@@ -362,7 +362,7 @@ inline std::string makeExperimentalMapFieldAssignConformanceSource() {
   std::string source;
   source += "import /std/collections/*\n";
   source += "import /std/collections/map/*\n";
-  source += "import /std/collections/internal_map/*\n\n";
+  source += "import /std/collections/map/*\n\n";
   source += "Holder() {\n";
   source += "  [Map<string, i32> mut] primary{mapNew<string, i32>()}\n";
   source += "  [Map<string, i32> mut] secondary{mapNew<string, i32>()}\n";

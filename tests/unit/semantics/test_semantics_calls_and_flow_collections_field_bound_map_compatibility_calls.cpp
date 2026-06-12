@@ -55,7 +55,7 @@ main() {
 TEST_CASE("stdlib map constructor assignments accept explicit canonical map struct fields") {
   const std::string source = R"(
 import /std/collections/*
-import /std/collections/internal_map/*
+import /std/collections/map/*
 
 Holder() {
   [map<string, i32> mut] primary{/std/collections/map/map<string, i32>("seed"raw_utf8, 0i32)}
@@ -79,7 +79,7 @@ main() {
 TEST_CASE("stdlib map constructor assignments keep mismatch diagnostics on canonical map struct fields") {
   const std::string source = R"(
 import /std/collections/*
-import /std/collections/internal_map/*
+import /std/collections/map/*
 
 Holder() {
   [map<string, i32> mut] values{/std/collections/map/map<string, i32>("seed"raw_utf8, 0i32)}
@@ -100,7 +100,7 @@ main() {
 TEST_CASE("helper-wrapped map constructor assignments accept inferred canonical map struct fields") {
   const std::string source = R"(
 import /std/collections/*
-import /std/collections/internal_map/*
+import /std/collections/map/*
 
 [return<T> effects(heap_alloc)]
 wrapValues<T>([T] values) {
@@ -126,7 +126,7 @@ main() {
 TEST_CASE("helper-wrapped map constructor assignments keep mismatch diagnostics on inferred canonical map struct fields") {
   const std::string source = R"(
 import /std/collections/*
-import /std/collections/internal_map/*
+import /std/collections/map/*
 
 [return<T> effects(heap_alloc)]
 wrapValues<T>([T] values) {
@@ -152,7 +152,7 @@ main() {
 TEST_CASE("helper-wrapped Result.ok payload assignments accept explicit canonical map result struct fields") {
   const std::string source = R"(
 import /std/collections/*
-import /std/collections/internal_map/*
+import /std/collections/map/*
 
 [return<T> effects(heap_alloc)]
 wrapStatus<T>([T] status) {
@@ -189,7 +189,7 @@ main() {
 TEST_CASE("helper-wrapped Result.ok payload assignments keep mismatch diagnostics on explicit canonical map result struct fields") {
   const std::string source = R"(
 import /std/collections/*
-import /std/collections/internal_map/*
+import /std/collections/map/*
 
 [return<T> effects(heap_alloc)]
 wrapStatus<T>([T] status) {
@@ -224,7 +224,7 @@ main() {
 TEST_CASE("helper-wrapped map constructor assignments accept dereferenced canonical map struct fields") {
   const std::string source = R"(
 import /std/collections/*
-import /std/collections/internal_map/*
+import /std/collections/map/*
 
 [return<T> effects(heap_alloc)]
 wrapValues<T>([T] values) {
@@ -258,7 +258,7 @@ main() {
 TEST_CASE("helper-wrapped dereferenced map field assignments keep mismatch diagnostics") {
   const std::string source = R"(
 import /std/collections/*
-import /std/collections/internal_map/*
+import /std/collections/map/*
 
 [return<T> effects(heap_alloc)]
 wrapValues<T>([T] values) {
@@ -292,7 +292,7 @@ main() {
 TEST_CASE("helper-wrapped Result.ok assignments accept dereferenced canonical result map struct fields") {
   const std::string source = R"(
 import /std/collections/*
-import /std/collections/internal_map/*
+import /std/collections/map/*
 
 [return<T> effects(heap_alloc)]
 wrapStatus<T>([T] status) {
@@ -335,7 +335,7 @@ main() {
 TEST_CASE("helper-wrapped dereferenced Result.ok field assignments keep mismatch diagnostics") {
   const std::string source = R"(
 import /std/collections/*
-import /std/collections/internal_map/*
+import /std/collections/map/*
 
 [return<T> effects(heap_alloc)]
 wrapStatus<T>([T] status) {
@@ -376,7 +376,7 @@ main() {
 TEST_CASE("stdlib namespaced map helpers keep Comparable diagnostics on canonical map value receivers") {
   const std::string source = R"(
 import /std/collections/*
-import /std/collections/internal_map/*
+import /std/collections/map/*
 
 [struct]
 Key() {

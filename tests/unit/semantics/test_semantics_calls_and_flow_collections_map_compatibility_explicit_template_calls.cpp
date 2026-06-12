@@ -652,7 +652,7 @@ TEST_CASE("explicit canonical map access helpers accept canonical map values") {
   const std::string source = R"(
 import /std/collections/*
 import /std/collections/map/*
-import /std/collections/internal_map/*
+import /std/collections/map/*
 
 [effects(heap_alloc), return<int>]
 main() {

@@ -303,7 +303,7 @@ main() {
 
 TEST_CASE("experimental map custom comparable struct keys keep canonical map helper diagnostics") {
   const std::string source = R"(
-import /std/collections/internal_map/*
+import /std/collections/map/*
 
 [struct]
 Key() {
@@ -340,7 +340,7 @@ main() {
 
 TEST_CASE("experimental map method-call sugar keeps missing Map helper diagnostics") {
   const std::string source = R"(
-import /std/collections/internal_map/*
+import /std/collections/map/*
 
 [return<int> effects(heap_alloc)]
 main() {
@@ -379,7 +379,7 @@ main() {
 TEST_CASE("public stdlib map Ref wrappers validate through canonical borrowed helpers") {
   const std::string source = R"(
 import /std/collections/*
-import /std/collections/internal_map/*
+import /std/collections/map/*
 
 [return<int> effects(heap_alloc)]
 main() {
@@ -484,7 +484,7 @@ main() {
 TEST_CASE("canonical namespaced map insert validates on explicit experimental map bindings") {
   const std::string source = R"(
 import /std/collections/*
-import /std/collections/internal_map/*
+import /std/collections/map/*
 
 [struct]
 Owned() {
@@ -965,7 +965,7 @@ TEST_CASE("experimental map direct-import shim stays retired") {
   const std::string source = readText(experimentalMapStdlibPath);
 
   CHECK(source.find("Rejected direct-import shim") != std::string::npos);
-  CHECK(source.find("import /std/collections/internal_map/*") != std::string::npos);
+  CHECK(source.find("import /std/collections/map/*") != std::string::npos);
   CHECK(source.find("[public struct]") == std::string::npos);
   CHECK(source.find("/std/collections/map/count_ref") == std::string::npos);
   CHECK(source.find("/std/collections/map/insert_ref") == std::string::npos);
@@ -1026,7 +1026,7 @@ TEST_CASE("experimental map direct-import shim stays retired") {
 
 TEST_CASE("experimental map bracket access stays unsupported on value and borrowed call receivers") {
   const std::string source = R"(
-import /std/collections/internal_map/*
+import /std/collections/map/*
 
 [return<Reference<Map<string, i32>>>]
 borrowExperimentalMap([Reference<Map<string, i32>>] values) {
@@ -1047,7 +1047,7 @@ main() {
 
 TEST_CASE("wrapper-returned experimental map bracket access stays unsupported") {
   const std::string source = R"(
-import /std/collections/internal_map/*
+import /std/collections/map/*
 
 [effects(heap_alloc), return<Map<i32, string>>]
 wrapMap() {
@@ -1067,7 +1067,7 @@ main() {
 
 TEST_CASE("experimental map bracket access on borrowed calls fails before key diagnostics") {
   const std::string source = R"(
-import /std/collections/internal_map/*
+import /std/collections/map/*
 
 [return<Reference<Map<string, i32>>>]
 borrowExperimentalMap([Reference<Map<string, i32>>] values) {

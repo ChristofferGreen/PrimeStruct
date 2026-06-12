@@ -255,7 +255,7 @@ bool SemanticsValidator::buildImportAliases() {
   auto registerInternalMapWildcardAliases =
       [&](const std::string &prefix,
           std::unordered_map<std::string, std::string> &targetAliases) {
-        if (prefix != collection_paths::moduleRoot(collection_paths::kInternalMapFolder)) {
+        if (prefix != collection_paths::moduleRoot(collection_paths::kMapFolder)) {
           return false;
         }
         const std::string scopedPrefix = legacyExperimentalKeyValueCompatibilityPrefix();
@@ -318,11 +318,11 @@ bool SemanticsValidator::buildImportAliases() {
           const std::string &aliasName,
           const std::string &existingAliasPath,
           const std::string &candidatePath) {
-        if (prefix != collection_paths::moduleRoot(collection_paths::kInternalMapFolder)) {
+        if (prefix != collection_paths::moduleRoot(collection_paths::kMapFolder)) {
           return false;
         }
         return existingAliasPath == legacyExperimentalKeyValueCompatibilityPrefix() + aliasName &&
-               candidatePath == collection_paths::modulePrefix(collection_paths::kInternalMapFolder) + aliasName;
+               candidatePath == collection_paths::modulePrefix(collection_paths::kMapFolder) + aliasName;
       };
   auto isMetadataBackedWildcardAliasDefinition =
       [&](const std::string &prefix,

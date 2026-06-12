@@ -592,7 +592,7 @@ resolveCanonicalCompatibilityKeyValueHelperNameFromResolvedPath(
     std::string_view resolvedPath,
     std::string &helperNameOut) {
   helperNameOut.clear();
-  if (resolvedPath.rfind(collection_paths::modulePrefix(collection_paths::kInternalMapFolder), 0) == 0 ||
+  if (resolvedPath.rfind(collection_paths::modulePrefix(collection_paths::kMapFolder), 0) == 0 ||
       resolvedPath.rfind(experimentalCollectionConstructorRootLocal("map"),
                          0) == 0) {
     return false;

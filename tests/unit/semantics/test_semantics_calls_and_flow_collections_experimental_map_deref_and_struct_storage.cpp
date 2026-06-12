@@ -26,7 +26,7 @@ void checkInitValueTypeMismatch(const std::string &error) {
 TEST_CASE("helper-wrapped Result.ok dereferenced canonical result storage keeps init mismatch") {
   const std::string source = R"(
 import /std/collections/*
-import /std/collections/internal_map/*
+import /std/collections/map/*
 
 [return<T> effects(heap_alloc)]
 wrapStatus<T>([T] status) {
@@ -58,7 +58,7 @@ main() {
 TEST_CASE("map constructors keep arg-pack count when soa helpers are imported compatibility") {
   const std::string source = R"(
 import /std/collections/*
-import /std/collections/internal_map/*
+import /std/collections/map/*
 import /std/collections/soa/*
 
 [return<T> effects(heap_alloc)]
@@ -83,7 +83,7 @@ main() {
 TEST_CASE("map constructor mismatch wins over imported soa count alias compatibility") {
   const std::string source = R"(
 import /std/collections/*
-import /std/collections/internal_map/*
+import /std/collections/map/*
 import /std/collections/soa/*
 
 [return<T> effects(heap_alloc)]
@@ -107,7 +107,7 @@ main() {
 TEST_CASE("helper-wrapped dereferenced Result.ok storage keeps mismatch diagnostics") {
   const std::string source = R"(
 import /std/collections/*
-import /std/collections/internal_map/*
+import /std/collections/map/*
 
 [return<T> effects(heap_alloc)]
 wrapStatus<T>([T] status) {
@@ -138,7 +138,7 @@ main() {
 TEST_CASE("helper-wrapped map constructors on canonical map struct storage keep init mismatch") {
   const std::string source = R"(
 import /std/collections/*
-import /std/collections/internal_map/*
+import /std/collections/map/*
 
 [return<T> effects(heap_alloc)]
 wrapValues<T>([T] values) {
@@ -168,7 +168,7 @@ main() {
 TEST_CASE("helper-wrapped map struct storage fields keep mismatch diagnostics") {
   const std::string source = R"(
 import /std/collections/*
-import /std/collections/internal_map/*
+import /std/collections/map/*
 
 [return<T> effects(heap_alloc)]
 wrapValues<T>([T] values) {
@@ -196,7 +196,7 @@ main() {
 TEST_CASE("helper-wrapped Result.ok canonical result struct storage keeps init mismatch") {
   const std::string source = R"(
 import /std/collections/*
-import /std/collections/internal_map/*
+import /std/collections/map/*
 
 [return<T> effects(heap_alloc)]
 wrapStatus<T>([T] status) {
@@ -226,7 +226,7 @@ main() {
 TEST_CASE("helper-wrapped Result.ok struct storage fields keep mismatch diagnostics") {
   const std::string source = R"(
 import /std/collections/*
-import /std/collections/internal_map/*
+import /std/collections/map/*
 
 [return<T> effects(heap_alloc)]
 wrapStatus<T>([T] status) {
@@ -255,7 +255,7 @@ main() {
 TEST_CASE("helper-wrapped map constructors on dereferenced canonical map storage keep init mismatch") {
   const std::string source = R"(
 import /std/collections/*
-import /std/collections/internal_map/*
+import /std/collections/map/*
 
 [return<T> effects(heap_alloc)]
 wrapValues<T>([T] values) {
@@ -291,7 +291,7 @@ main() {
 TEST_CASE("helper-wrapped dereferenced map struct storage fields keep mismatch diagnostics") {
   const std::string source = R"(
 import /std/collections/*
-import /std/collections/internal_map/*
+import /std/collections/map/*
 
 [return<T> effects(heap_alloc)]
 wrapValues<T>([T] values) {
@@ -325,7 +325,7 @@ main() {
 TEST_CASE("map constructors accept dereferenced canonical map storage references") {
   const std::string source = R"(
 import /std/collections/*
-import /std/collections/internal_map/*
+import /std/collections/map/*
 
 [effects(heap_alloc), return<int>]
 main() {
@@ -347,7 +347,7 @@ main() {
 TEST_CASE("dereferenced canonical map storage references keep mismatch diagnostics") {
   const std::string source = R"(
 import /std/collections/*
-import /std/collections/internal_map/*
+import /std/collections/map/*
 
 [effects(heap_alloc), return<int>]
 main() {
@@ -367,7 +367,7 @@ main() {
 TEST_CASE("helper-wrapped Result.ok dereferenced result struct storage keeps init mismatch") {
   const std::string source = R"(
 import /std/collections/*
-import /std/collections/internal_map/*
+import /std/collections/map/*
 
 [return<T> effects(heap_alloc)]
 wrapStatus<T>([T] status) {
@@ -403,7 +403,7 @@ main() {
 TEST_CASE("helper-wrapped dereferenced Result.ok struct storage fields keep mismatch diagnostics") {
   const std::string source = R"(
 import /std/collections/*
-import /std/collections/internal_map/*
+import /std/collections/map/*
 
 [return<T> effects(heap_alloc)]
 wrapStatus<T>([T] status) {
@@ -438,7 +438,7 @@ main() {
 TEST_CASE("helper-wrapped Result.ok payloads infer canonical result auto bindings") {
   const std::string source = R"(
 import /std/collections/*
-import /std/collections/internal_map/*
+import /std/collections/map/*
 
 [return<T> effects(heap_alloc)]
 wrapStatus<T>([T] status) {
@@ -461,7 +461,7 @@ main() {
 TEST_CASE("helper-wrapped Result.ok auto binding inference keeps template conflict diagnostics") {
   const std::string source = R"(
 import /std/collections/*
-import /std/collections/internal_map/*
+import /std/collections/map/*
 
 [return<T> effects(heap_alloc)]
 wrapStatus<T>([T] status) {
@@ -484,7 +484,7 @@ main() {
 TEST_CASE("stdlib wrapper map constructor accepts explicit canonical map returns") {
   const std::string source = R"(
 import /std/collections/*
-import /std/collections/internal_map/*
+import /std/collections/map/*
 
 [effects(io_err)]
 unexpectedWrapperCanonicalMapReturnError([ContainerError] err) {
@@ -518,7 +518,7 @@ main() {
 TEST_CASE("stdlib wrapper map constructor keeps mismatch diagnostics on explicit canonical map returns") {
   const std::string source = R"(
 import /std/collections/*
-import /std/collections/internal_map/*
+import /std/collections/map/*
 
 [return<map<string, i32>> effects(heap_alloc)]
 buildValues() {
@@ -540,7 +540,7 @@ main() {
 TEST_CASE("stdlib wrapper map constructor accepts explicit canonical map parameters") {
   const std::string source = R"(
 import /std/collections/*
-import /std/collections/internal_map/*
+import /std/collections/map/*
 
 [effects(io_err)]
 unexpectedWrapperCanonicalMapParameterError([ContainerError] err) {
@@ -573,7 +573,7 @@ main() {
 TEST_CASE("stdlib wrapper map constructor keeps mismatch diagnostics on explicit canonical map parameters") {
   const std::string source = R"(
 import /std/collections/*
-import /std/collections/internal_map/*
+import /std/collections/map/*
 
 [effects(heap_alloc), return<int>]
 scoreValues([map<string, i32>] values) {
@@ -594,7 +594,7 @@ main() {
 TEST_CASE("map constructor assigns into explicit canonical map targets") {
   const std::string source = R"(
 import /std/collections/*
-import /std/collections/internal_map/*
+import /std/collections/map/*
 
 [effects(io_err)]
 unexpectedCanonicalMapAssignError([ContainerError] err) {
@@ -638,7 +638,7 @@ main() {
 TEST_CASE("canonical map constructor assignment keeps mismatch diagnostics on explicit canonical map bindings") {
   const std::string source = R"(
 import /std/collections/*
-import /std/collections/internal_map/*
+import /std/collections/map/*
 
 [effects(heap_alloc), return<int>]
 main() {
@@ -656,7 +656,7 @@ main() {
 TEST_CASE("wrapper map constructor assignment keeps mismatch diagnostics on explicit canonical map parameters") {
   const std::string source = R"(
 import /std/collections/*
-import /std/collections/internal_map/*
+import /std/collections/map/*
 
 [effects(heap_alloc), return<int>]
 replaceValues([map<string, i32> mut] values) {
@@ -679,7 +679,7 @@ main() {
 TEST_CASE("helper-wrapped map constructor assignments accept explicit canonical map targets") {
   const std::string source = R"(
 import /std/collections/*
-import /std/collections/internal_map/*
+import /std/collections/map/*
 
 [return<T> effects(heap_alloc)]
 wrapValues<T>([T] values) {
@@ -701,7 +701,7 @@ main() {
 TEST_CASE("helper-wrapped map constructor assignments keep mismatch diagnostics on explicit canonical map targets") {
   const std::string source = R"(
 import /std/collections/*
-import /std/collections/internal_map/*
+import /std/collections/map/*
 
 [return<T> effects(heap_alloc)]
 wrapValues<T>([T] values) {
@@ -724,7 +724,7 @@ main() {
 TEST_CASE("implicit map constructors infer canonical auto locals and auto returns") {
   const std::string source = R"(
 import /std/collections/*
-import /std/collections/internal_map/*
+import /std/collections/map/*
 
 [return<auto> effects(heap_alloc)]
 buildValues() {

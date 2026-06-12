@@ -741,7 +741,7 @@ TEST_CASE("stdlib de-experimentalization policy docs stay source locked") {
         std::string::npos);
   CHECK(primeStructDoc.find("| `/std/collections/experimental_vector/*` | Rejected compatibility namespace | Direct source imports are rejected; the shim remains only as legacy forwarding storage identity behind `/std/collections/internal_vector/*` until the final vector surface audit. | TODO-4373 |") !=
         std::string::npos);
-  CHECK(primeStructDoc.find("| `/std/collections/experimental_map/*` | Rejected compatibility namespace | Direct source imports are rejected; the shim remains only as legacy forwarding storage identity behind `/std/collections/internal_map/*` until the final map surface audit. | TODO-4464 |") !=
+  CHECK(primeStructDoc.find("| `/std/collections/experimental_map/*` | Rejected compatibility namespace | Direct source imports are rejected; the shim remains only as legacy forwarding storage identity behind `/std/collections/map/*` until the final map surface audit. | TODO-4464 |") !=
         std::string::npos);
   CHECK(primeStructDoc.find("| `/std/gfx/experimental/*` | Temporary compatibility namespace | Legacy compatibility shim over canonical `/std/gfx/*`; no longer part of the public gfx contract and retained only for targeted compatibility coverage while the residual seam remains importable. | none |") !=
         std::string::npos);
@@ -4395,9 +4395,9 @@ TEST_CASE("small stdlib wrappers stay source locked to inferred locals") {
   CHECK(mapStdlib.find("/std/collections/map/mapCount<K, V>") !=
         std::string::npos);
   CHECK(mapStdlib.find("[MapValue<K, V> mut] values") == std::string::npos);
-  CHECK(mapStdlib.find("[map<K, V> mut] out{/std/collections/internal_map/mapNew<K, V>()}") ==
+  CHECK(mapStdlib.find("[map<K, V> mut] out{/std/collections/map/mapNew<K, V>()}") ==
         std::string::npos);
-  CHECK(mapStdlib.find("/std/collections/internal_map/mapNew<K, V>()") ==
+  CHECK(mapStdlib.find("/std/collections/map/mapNew<K, V>()") ==
         std::string::npos);
 
   CHECK(internalVectorStdlib.find("// Internal vector backing implementation behind canonical /std/collections/vector/*.") !=

@@ -3825,7 +3825,7 @@ TEST_CASE("native experimental map bracket access") {
 TEST_CASE("rejects native experimental map custom comparable struct keys") {
   const std::string source = R"(
 import /std/collections/*
-import /std/collections/internal_map/*
+import /std/collections/map/*
 
 [struct]
 Key() {
