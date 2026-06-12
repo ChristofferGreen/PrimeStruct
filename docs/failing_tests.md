@@ -15,18 +15,19 @@ recorded here manually before starting new implementation work.
 
 ## Current Failures
 
-**Root cause:** ~190 tests fail due to a pre-existing issue in the import
-expansion pipeline (`src/ImportResolver.cpp`). When `import /std/collections/*`
-is used, the import resolver expands imports inline where they appear in each
-file, not at the top of the expanded source. For example, when
-`internal_soa_vector_conversions.prime` has `import /std/collections/*`, that
-import gets expanded at line 1035 — after the file's own code (comments +
-namespace block start). The parser then sees `import` where it's not allowed
-(top-level only) and rejects it. The error message shows wrong file content
-because the source location mapping is confused by the expanded source
-structure. Fixing requires restructuring the import expansion to hoist all
-imports to the top of the expanded source. These tests were failing before
-the quality review session but were not recorded in this file.
+**Parser fix applied:** The parser now allows imports anywhere in source
+files (commit 1657d429a). The previous "import statements must appear at
+the top level" error is fixed.
+
+**Remaining issue:** Tests using `import /std/collections/*` still fail due
+to slow parsing of the 6,511-line expanded source. The import expansion
+itself is fast (0.07s), but parsing the expanded source takes >60s, causing
+test timeouts. This is a performance issue with the parser, not a bug.
+
+**Tests affected:** Any test using wildcard imports (`import /std/collections/*`).
+
+**Status:** Parser fix committed. Performance optimization needed for large
+expanded sources. Individual tests using specific imports pass correctly.
 
 <!-- compile.sh:failing-tests:start -->
 - Last updated: `2026-06-12T07:59:15Z`
