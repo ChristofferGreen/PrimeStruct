@@ -719,7 +719,12 @@ if(PRIMESTRUCT_BUILD_TESTS)
     tests/unit/ir_pipeline/test_ir_pipeline_backends_graph_pilot.cpp
     tests/unit/ir_pipeline/test_ir_pipeline_backends_graph_utilities.cpp
     tests/unit/ir_pipeline/test_ir_pipeline_backends_glsl.cpp
-    tests/unit/ir_pipeline/test_ir_pipeline_backends_registry.cpp
+    tests/unit/ir_pipeline/test_ir_pipeline_backends_registry_1.cpp
+tests/unit/ir_pipeline/test_ir_pipeline_backends_registry_2.cpp
+tests/unit/ir_pipeline/test_ir_pipeline_backends_registry_3.cpp
+tests/unit/ir_pipeline/test_ir_pipeline_backends_registry_4.cpp
+tests/unit/ir_pipeline/test_ir_pipeline_backends_registry_5.cpp
+tests/unit/ir_pipeline/test_ir_pipeline_backends_registry_6.cpp
     tests/unit/vm/test_vm_debug_session.cpp
     tests/unit/ir_pipeline/test_ir_pipeline_external_tooling.cpp
     tests/unit/ir_pipeline/test_ir_pipeline_to_cpp.cpp
@@ -915,7 +920,12 @@ if(PRIMESTRUCT_BUILD_TESTS)
     tests/unit/ir_pipeline/test_ir_pipeline_backends_graph_pilot.cpp
     tests/unit/ir_pipeline/test_ir_pipeline_backends_graph_utilities.cpp
     tests/unit/ir_pipeline/test_ir_pipeline_backends_glsl.cpp
-    tests/unit/ir_pipeline/test_ir_pipeline_backends_registry.cpp
+    tests/unit/ir_pipeline/test_ir_pipeline_backends_registry_1.cpp
+tests/unit/ir_pipeline/test_ir_pipeline_backends_registry_2.cpp
+tests/unit/ir_pipeline/test_ir_pipeline_backends_registry_3.cpp
+tests/unit/ir_pipeline/test_ir_pipeline_backends_registry_4.cpp
+tests/unit/ir_pipeline/test_ir_pipeline_backends_registry_5.cpp
+tests/unit/ir_pipeline/test_ir_pipeline_backends_registry_6.cpp
     tests/unit/ir_pipeline/test_ir_pipeline_to_cpp.cpp
     tests/unit/ir_pipeline/test_ir_pipeline_to_glsl.cpp
     tests/unit/ir_pipeline/test_ir_pipeline_to_glsl_runtime.cpp
