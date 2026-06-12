@@ -15,12 +15,18 @@ recorded here manually before starting new implementation work.
 
 ## Current Failures
 
-**Root cause:** ~190 tests fail due to a pre-existing compiler bug in the
-import expansion pipeline. When `import /std/collections/*` is used, the import
-expansion system produces a misleading error message (shows wrong file content).
-This is NOT caused by recent changes — it requires investigation of the import
-expansion code in `src/ImportResolver.cpp` or the parser. These tests were
-failing before the quality review session but were not recorded in this file.
+**Root cause:** ~190 tests fail due to a pre-existing issue in the import
+expansion pipeline (`src/ImportResolver.cpp`). When `import /std/collections/*`
+is used, the import resolver expands imports inline where they appear in each
+file, not at the top of the expanded source. For example, when
+`internal_soa_vector_conversions.prime` has `import /std/collections/*`, that
+import gets expanded at line 1035 — after the file's own code (comments +
+namespace block start). The parser then sees `import` where it's not allowed
+(top-level only) and rejects it. The error message shows wrong file content
+because the source location mapping is confused by the expanded source
+structure. Fixing requires restructuring the import expansion to hoist all
+imports to the top of the expanded source. These tests were failing before
+the quality review session but were not recorded in this file.
 
 <!-- compile.sh:failing-tests:start -->
 - Last updated: `2026-06-12T07:59:15Z`
