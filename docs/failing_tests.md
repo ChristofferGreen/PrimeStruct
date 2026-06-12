@@ -15,6 +15,13 @@ recorded here manually before starting new implementation work.
 
 ## Current Failures
 
+**Root cause:** ~190 tests fail due to a pre-existing compiler bug in the
+import expansion pipeline. When `import /std/collections/*` is used, the import
+expansion system produces a misleading error message (shows wrong file content).
+This is NOT caused by recent changes — it requires investigation of the import
+expansion code in `src/ImportResolver.cpp` or the parser. These tests were
+failing before the quality review session but were not recorded in this file.
+
 <!-- compile.sh:failing-tests:start -->
 - Last updated: `2026-06-12T07:59:15Z`
 - Build type: `Release`
