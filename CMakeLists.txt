@@ -457,7 +457,7 @@ set(PRIMESTRUCT_CODEGEN_SOURCES
 )
 
 set(PRIMESTRUCT_RUNTIME_SOURCES
-  src/Vm.cpp
+  src/runtime/Vm.cpp
   src/runtime/VmDebugHelpers.cpp
   src/runtime/VmDebugSession.cpp
   src/runtime/VmDebugSessionInstruction.cpp
@@ -600,7 +600,7 @@ if(PRIMESTRUCT_BUILD_TESTS)
                        PROPERTIES TIMEOUT 120 LABELS "parallel-safe")
 
   set(PrimeStructBackendAllTestSources
-    tests/unit/test_ir_pipeline.cpp
+    tests/unit/ir_pipeline/test_ir_pipeline.cpp
     tests/unit/ir_pipeline/test_ir_pipeline_serialization_calls.cpp
     tests/unit/ir_pipeline/test_ir_pipeline_serialization_control_flow.cpp
     tests/unit/ir_pipeline/test_ir_pipeline_serialization_structs.cpp
@@ -719,12 +719,7 @@ if(PRIMESTRUCT_BUILD_TESTS)
     tests/unit/ir_pipeline/test_ir_pipeline_backends_graph_pilot.cpp
     tests/unit/ir_pipeline/test_ir_pipeline_backends_graph_utilities.cpp
     tests/unit/ir_pipeline/test_ir_pipeline_backends_glsl.cpp
-    tests/unit/ir_pipeline/test_ir_pipeline_backends_registry_1.cpp
-tests/unit/ir_pipeline/test_ir_pipeline_backends_registry_2.cpp
-tests/unit/ir_pipeline/test_ir_pipeline_backends_registry_3.cpp
-tests/unit/ir_pipeline/test_ir_pipeline_backends_registry_4.cpp
-tests/unit/ir_pipeline/test_ir_pipeline_backends_registry_5.cpp
-tests/unit/ir_pipeline/test_ir_pipeline_backends_registry_6.cpp
+    tests/unit/ir_pipeline/test_ir_pipeline_backends_registry.cpp
     tests/unit/vm/test_vm_debug_session.cpp
     tests/unit/ir_pipeline/test_ir_pipeline_external_tooling.cpp
     tests/unit/ir_pipeline/test_ir_pipeline_to_cpp.cpp
@@ -920,12 +915,7 @@ tests/unit/ir_pipeline/test_ir_pipeline_backends_registry_6.cpp
     tests/unit/ir_pipeline/test_ir_pipeline_backends_graph_pilot.cpp
     tests/unit/ir_pipeline/test_ir_pipeline_backends_graph_utilities.cpp
     tests/unit/ir_pipeline/test_ir_pipeline_backends_glsl.cpp
-    tests/unit/ir_pipeline/test_ir_pipeline_backends_registry_1.cpp
-tests/unit/ir_pipeline/test_ir_pipeline_backends_registry_2.cpp
-tests/unit/ir_pipeline/test_ir_pipeline_backends_registry_3.cpp
-tests/unit/ir_pipeline/test_ir_pipeline_backends_registry_4.cpp
-tests/unit/ir_pipeline/test_ir_pipeline_backends_registry_5.cpp
-tests/unit/ir_pipeline/test_ir_pipeline_backends_registry_6.cpp
+    tests/unit/ir_pipeline/test_ir_pipeline_backends_registry.cpp
     tests/unit/ir_pipeline/test_ir_pipeline_to_cpp.cpp
     tests/unit/ir_pipeline/test_ir_pipeline_to_glsl.cpp
     tests/unit/ir_pipeline/test_ir_pipeline_to_glsl_runtime.cpp
@@ -967,7 +957,7 @@ tests/unit/ir_pipeline/test_ir_pipeline_backends_registry_6.cpp
 
   add_executable(PrimeStruct_semantics_tests
     tests/unit/test_main.cpp
-    tests/unit/test_semantics.cpp
+    tests/unit/semantics/test_semantics.cpp
     tests/unit/semantics/test_semantics_capabilities.cpp
     tests/unit/semantics/test_semantics_capabilities_builtins.cpp
     tests/unit/semantics/test_semantics_capabilities_lifecycle.cpp
