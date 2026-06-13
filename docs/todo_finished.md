@@ -24165,3 +24165,17 @@ Moved from `docs/todo.md` during unfinished-only cleanup:
     Found 3 collection-specific gaps: `size` (alias for count),
     `to_aos_ref` (borrowed variant), `soa_vector` (legacy alias).
     70+ language/math builtins correctly excluded from manifest scope.
+
+- [x] TODO-4657: Add borrowed receiver variant metadata to manifest
+  - owner: ai
+  - created_at: 2026-06-13
+  - finished_at: 2026-06-13
+  - phase: Collection decoupling - Phase 1
+  - parallel_track: collection-decoupling
+  - depends_on: TODO-4656
+  - scope: Add borrowed_variant entries to manifest schema.
+  - evidence: Added borrowedVariants field to StdlibSurfaceMetadata,
+    added borrowed_variant parsing to manifest loader, added
+    count->count_ref, get->get_ref, ref->ref_ref, to_aos->to_aos_ref
+    to SOA surface in surfaces.psmeta. Added findBorrowedVariant()
+    lookup function. Build and IR validation tests pass.

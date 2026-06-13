@@ -213,25 +213,24 @@ This file is the live open-work queue for PrimeStruct.
 27. TODO-4653: Add dedicated IrPrinter unit tests
 28. TODO-4654: Add [public] annotations to stdlib modules
 29. TODO-4655: Add compile-run tests for language level examples
-30. TODO-4657: Add borrowed receiver variant metadata to manifest
-31. TODO-4658: Migrate method target resolution helper name sets to manifest
-32. TODO-4659: Migrate IR lowerer builtin name helpers to manifest
-33. TODO-4660: Migrate emitter builtin call path helpers to manifest
-34. TODO-4661: Migrate SOA to_aos compatibility spelling to manifest
-35. TODO-4662: Design type-category annotation syntax for .prime
-36. TODO-4663: Implement type-category predicate in semantic validator
-37. TODO-4664: Annotate stdlib collection types with category declarations
-38. TODO-4665: Migrate SemanticsValidatorExprVectorHelpers to predicate queries
-39. TODO-4666: Migrate IrLowererStructSlotLayoutHelpers to predicate queries
-40. TODO-4667: Migrate EmitterBuiltinCollectionInferenceHelpers to predicate queries
-41. TODO-4668: Audit slot layout branching for .prime struct coverage
-42. TODO-4669: Implement generic vector slot count from .prime fields
-43. TODO-4670: Remove collection-specific slot layout helpers
-44. TODO-4671: Remove isVectorTypeName and isMapTypeName after migration
-45. TODO-4672: Migrate isRemovedKeyValueCompatibilityHelper to manifest
-46. TODO-4673: Migrate method dispatch chains in MethodTargetResolution
-47. TODO-4674: Migrate SOA helper routing beyond to_aos
-48. TODO-4675: Migrate ContainerError hardcoded paths to manifest
+30. TODO-4658: Migrate method target resolution helper name sets to manifest
+31. TODO-4659: Migrate IR lowerer builtin name helpers to manifest
+32. TODO-4660: Migrate emitter builtin call path helpers to manifest
+33. TODO-4661: Migrate SOA to_aos compatibility spelling to manifest
+34. TODO-4662: Design type-category annotation syntax for .prime
+35. TODO-4663: Implement type-category predicate in semantic validator
+36. TODO-4664: Annotate stdlib collection types with category declarations
+37. TODO-4665: Migrate SemanticsValidatorExprVectorHelpers to predicate queries
+38. TODO-4666: Migrate IrLowererStructSlotLayoutHelpers to predicate queries
+39. TODO-4667: Migrate EmitterBuiltinCollectionInferenceHelpers to predicate queries
+40. TODO-4668: Audit slot layout branching for .prime struct coverage
+41. TODO-4669: Implement generic vector slot count from .prime fields
+42. TODO-4670: Remove collection-specific slot layout helpers
+43. TODO-4671: Remove isVectorTypeName and isMapTypeName after migration
+44. TODO-4672: Migrate isRemovedKeyValueCompatibilityHelper to manifest
+45. TODO-4673: Migrate method dispatch chains in MethodTargetResolution
+46. TODO-4674: Migrate SOA helper routing beyond to_aos
+47. TODO-4675: Migrate ContainerError hardcoded paths to manifest
 
 ### Task Blocks
 
@@ -871,31 +870,6 @@ This file is the live open-work queue for PrimeStruct.
     - `./scripts/compile.sh --release` passes.
   - stop_rule: Stop once all examples are covered; do not add new examples
     in this leaf.
-
-- [ ] TODO-4657: Add borrowed receiver variant metadata to manifest
-  - owner: ai
-  - created_at: 2026-06-13
-  - phase: Collection decoupling - Phase 1
-  - parallel_track: collection-decoupling
-  - depends_on: TODO-4656
-  - scope: The `_ref` suffix routing (e.g., `count` -> `count_ref`,
-    `at` -> `at_ref`, `to_aos` -> `to_aos_ref`) is hardcoded in
-    `SemanticsValidatorExprMethodTargetResolution.cpp` (lines 511,
-    1000, 1867, 1965) and `TemplateMonomorphExpressionRewrite.h`
-    (lines 1371-1440). Add `borrowed_variant` entries to the
-    manifest schema so the compiler can look up the borrowed
-    receiver variant instead of hardcoding the mapping.
-  - implementation_notes: The `StdlibSurfaceMemberAlias` struct
-    already exists in `include/primec/StdlibSurfaceRegistry.h`.
-    Extend it with a `borrowedVariant` field. Update the manifest
-    parser in `StdlibSurfaceRegistry.cpp` to read the new entries.
-  - acceptance:
-    - `surfaces.psmeta` declares borrowed variants for all
-      applicable members
-    - `StdlibSurfaceRegistry` reads and exposes the new entries
-    - At least one hardcoded `count_ref` / `to_aos_ref` routing
-      replaced with manifest lookup
-  - stop_rule: manifest extended and one call site migrated
 
 - [ ] TODO-4658: Migrate method target resolution helper name sets to manifest
   - owner: ai
