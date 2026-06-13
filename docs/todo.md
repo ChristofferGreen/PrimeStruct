@@ -213,21 +213,20 @@ This file is the live open-work queue for PrimeStruct.
 27. TODO-4653: Add dedicated IrPrinter unit tests
 28. TODO-4654: Add [public] annotations to stdlib modules
 29. TODO-4655: Add compile-run tests for language level examples
-30. TODO-4661: Migrate SOA to_aos compatibility spelling to manifest
-33. TODO-4662: Design type-category annotation syntax for .prime
-34. TODO-4663: Implement type-category predicate in semantic validator
-35. TODO-4664: Annotate stdlib collection types with category declarations
-36. TODO-4665: Migrate SemanticsValidatorExprVectorHelpers to predicate queries
-37. TODO-4666: Migrate IrLowererStructSlotLayoutHelpers to predicate queries
-38. TODO-4667: Migrate EmitterBuiltinCollectionInferenceHelpers to predicate queries
-39. TODO-4668: Audit slot layout branching for .prime struct coverage
-40. TODO-4669: Implement generic vector slot count from .prime fields
-41. TODO-4670: Remove collection-specific slot layout helpers
-42. TODO-4671: Remove isVectorTypeName and isMapTypeName after migration
-43. TODO-4672: Migrate isRemovedKeyValueCompatibilityHelper to manifest
-44. TODO-4673: Migrate method dispatch chains in MethodTargetResolution
-45. TODO-4674: Migrate SOA helper routing beyond to_aos
-46. TODO-4675: Migrate ContainerError hardcoded paths to manifest
+30. TODO-4662: Design type-category annotation syntax for .prime
+31. TODO-4663: Implement type-category predicate in semantic validator
+32. TODO-4664: Annotate stdlib collection types with category declarations
+33. TODO-4665: Migrate SemanticsValidatorExprVectorHelpers to predicate queries
+34. TODO-4666: Migrate IrLowererStructSlotLayoutHelpers to predicate queries
+35. TODO-4667: Migrate EmitterBuiltinCollectionInferenceHelpers to predicate queries
+36. TODO-4668: Audit slot layout branching for .prime struct coverage
+37. TODO-4669: Implement generic vector slot count from .prime fields
+38. TODO-4670: Remove collection-specific slot layout helpers
+39. TODO-4671: Remove isVectorTypeName and isMapTypeName after migration
+40. TODO-4672: Migrate isRemovedKeyValueCompatibilityHelper to manifest
+41. TODO-4673: Migrate method dispatch chains in MethodTargetResolution
+42. TODO-4674: Migrate SOA helper routing beyond to_aos
+43. TODO-4675: Migrate ContainerError hardcoded paths to manifest
 
 ### Task Blocks
 
@@ -867,32 +866,6 @@ This file is the live open-work queue for PrimeStruct.
     - `./scripts/compile.sh --release` passes.
   - stop_rule: Stop once all examples are covered; do not add new examples
     in this leaf.
-
-- [ ] TODO-4661: Migrate SOA to_aos compatibility spelling to manifest
-  - owner: ai
-  - created_at: 2026-06-13
-  - phase: Collection decoupling - Phase 1
-  - parallel_track: collection-decoupling
-  - depends_on: TODO-4657
-  - scope: The `to_aos` / `to_aos_ref` compatibility spelling
-    routing in `SemanticsValidate.cpp` at lines 1976
-    (`compatibilitySoaHelperTargetPath("to_aos")`), 3262, 3272,
-    3319 (more `to_aos` calls), and 3911 (`to_aos_ref` call) is
-    hardcoded. Add `compatibility_spelling` entries to the
-    manifest for the SOA surface so these lookups are
-    manifest-driven. This is the first of several SOA routing
-    sites; start with the `to_aos` family only.
-  - implementation_notes: The `StdlibSurfaceMemberAlias` struct
-    can be extended with a `compatibilitySpellings` vector. The
-    manifest parser in `StdlibSurfaceRegistry.cpp` already reads
-    `lowering_spelling` entries; add a parallel
-    `compatibility_spelling` reader.
-  - acceptance:
-    - Manifest declares compatibility spellings for `to_aos` and
-      `to_aos_ref`
-    - `SemanticsValidate.cpp` lines 1976 and 3262 use manifest lookup
-    - SOA tests pass
-  - stop_rule: to_aos routing migrated and tests pass
 
 - [ ] TODO-4662: Design type-category annotation syntax for .prime
   - owner: ai

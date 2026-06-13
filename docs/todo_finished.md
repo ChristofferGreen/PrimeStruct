@@ -24216,3 +24216,18 @@ Moved from `docs/todo.md` during unfinished-only cleanup:
     isNamespacedStdlibBuiltinAlias with manifest lookup.
   - evidence: Same pattern as TODO-4659. Build passes.
     Commit 6da05aec1.
+
+- [x] TODO-4661: Migrate SOA to_aos compatibility spelling to manifest
+  - owner: ai
+  - created_at: 2026-06-13
+  - finished_at: 2026-06-13
+  - phase: Collection decoupling - Phase 1
+  - parallel_track: collection-decoupling
+  - depends_on: TODO-4657
+  - scope: Add compatibility_spelling entries to SOA surface.
+  - evidence: Added 12 compatibility_spelling entries to
+    CollectionsColumnarHelpers in surfaces.psmeta for legacy
+    soa_vector paths. Added findCompatibilitySpelling and
+    resolveCompatibilitySpellingToCanonicalPath to registry.
+    Migrated one to_aos call site in SemanticsValidate.cpp line
+    3262. Build and IR validation tests pass. Commit c23525d71.
