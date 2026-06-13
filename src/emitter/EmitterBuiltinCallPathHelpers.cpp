@@ -43,6 +43,12 @@ bool isScopedBuiltinControlAlias(const std::string &name) {
 
 bool isNamespacedStdlibBuiltinAlias(const std::string &alias) {
   const std::string keyValueAlias = keyValueConstructorAliasToken();
+  for (const auto &metadata : stdlibSurfaceRegistry()) {
+    if (metadata.domain == StdlibSurfaceDomain::Collections &&
+        isStdlibSurfaceMemberName(metadata.id, alias)) {
+      return true;
+    }
+  }
   return alias == "assign" || alias == "if" || alias == "while" ||
          alias == "take" || alias == "borrow" || alias == "init" ||
          alias == "drop" || alias == "increment" ||
@@ -50,22 +56,15 @@ bool isNamespacedStdlibBuiltinAlias(const std::string &alias) {
          alias == "then" || alias == "else" || alias == "do" ||
          alias == "block" || alias == "loop" || alias == "for" ||
          alias == "repeat" || alias == "try" || alias == "location" ||
-         alias == "dereference" || alias == "count" ||
-         alias == "count_ref" || alias == "capacity" ||
-         alias == "to_aos" || alias == "to_aos_ref" ||
-         alias == "push" || alias == "pop" || alias == "reserve" ||
-         alias == "clear" || alias == "remove_at" ||
-         alias == "remove_swap" || alias == "move" ||
+         alias == "dereference" || alias == "move" ||
          alias == "negate" || alias == "plus" || alias == "minus" ||
          alias == "multiply" || alias == "divide" ||
          alias == "greater_than" || alias == "less_than" ||
          alias == "equal" || alias == "not_equal" ||
          alias == "greater_equal" || alias == "less_equal" ||
          alias == "and" || alias == "or" || alias == "not" ||
-         alias == "get" || alias == "get_ref" || alias == "ref" ||
-         alias == "ref_ref" || alias == "at" ||
-         alias == "at_unsafe" || alias == "array" ||
-         alias == "vector" || (!keyValueAlias.empty() && alias == keyValueAlias) ||
+         alias == "array" || alias == "vector" ||
+         (!keyValueAlias.empty() && alias == keyValueAlias) ||
          alias == "soa_vector" || alias == "convert" ||
          alias == "clamp" || alias == "min" || alias == "max" ||
          alias == "lerp" || alias == "fma" || alias == "hypot" ||
