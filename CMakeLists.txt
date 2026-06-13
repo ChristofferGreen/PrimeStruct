@@ -1126,6 +1126,7 @@ if(PRIMESTRUCT_BUILD_TESTS)
     primestruct.scene.renderer
     primestruct.semantics.manual
     primestruct.stdlib.map_ownership
+    primestruct.ir_printer
     primestruct.diagnostics.codes
   )
 

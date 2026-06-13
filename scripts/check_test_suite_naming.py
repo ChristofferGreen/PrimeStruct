@@ -15,15 +15,15 @@ NUMERIC_SUFFIX_RE = re.compile(r'.*_[0-9]+$')
 TEST_SOURCE_SUFFIXES = {'.cpp', '.h'}
 
 EXPECTED_FILE_SUITES = {
-    'tests/unit/test_compile_run_vm_bounds.cpp': 'primestruct.compile.run.vm.bounds',
-    'tests/unit/test_compile_run_vm_maps.cpp': 'primestruct.compile.run.vm.maps',
-    'tests/unit/test_compile_run_vm_math.cpp': 'primestruct.compile.run.vm.math',
-    'tests/unit/test_compile_run_vm_outputs.cpp': 'primestruct.compile.run.vm.outputs',
-    'tests/unit/test_ir_pipeline_backends.cpp': 'primestruct.ir.pipeline.backends.core',
-    'tests/unit/test_ir_pipeline_backends_graph_pilot.cpp': 'primestruct.ir.pipeline.backends.core',
-    'tests/unit/test_ir_pipeline_backends_glsl.cpp': 'primestruct.ir.pipeline.backends.glsl',
-    'tests/unit/test_ir_pipeline_backends_cpp_vm.cpp': 'primestruct.ir.pipeline.backends.cpp_vm',
-    'tests/unit/test_ir_pipeline_backends_registry.cpp': 'primestruct.ir.pipeline.backends.registry',
+    'tests/unit/compile_run/test_compile_run_vm_bounds.cpp': 'primestruct.compile.run.vm.bounds',
+    'tests/unit/compile_run/test_compile_run_vm_maps.cpp': 'primestruct.compile.run.vm.maps',
+    'tests/unit/compile_run/test_compile_run_vm_math.cpp': 'primestruct.compile.run.vm.math',
+    'tests/unit/compile_run/test_compile_run_vm_outputs.cpp': 'primestruct.compile.run.vm.outputs',
+    'tests/unit/ir_pipeline/test_ir_pipeline_backends.cpp': 'primestruct.ir.pipeline.backends.core',
+    'tests/unit/ir_pipeline/test_ir_pipeline_backends_graph_pilot.cpp': 'primestruct.ir.pipeline.backends.core',
+    'tests/unit/ir_pipeline/test_ir_pipeline_backends_glsl.cpp': 'primestruct.ir.pipeline.backends.glsl',
+    'tests/unit/ir_pipeline/test_ir_pipeline_backends_cpp_vm.cpp': 'primestruct.ir.pipeline.backends.cpp_vm',
+    'tests/unit/ir_pipeline/test_ir_pipeline_backends_registry.cpp': 'primestruct.ir.pipeline.backends.registry',
 }
 
 
@@ -48,14 +48,18 @@ def iter_test_sources(root: Path) -> list[Path]:
         return []
 
     sources: list[Path] = []
-    for path in sorted(unit_dir.iterdir()):
-        if not path.is_file():
-            continue
-        if not path.name.startswith('test_'):
-            continue
-        if path.suffix not in TEST_SOURCE_SUFFIXES:
-            continue
-        sources.append(path)
+    for path in sorted(unit_dir.glob('*')):
+        if path.is_dir():
+            for child in sorted(path.iterdir()):
+                if not child.is_file():
+                    continue
+                if not child.name.startswith('test_'):
+                    continue
+                if child.suffix not in TEST_SOURCE_SUFFIXES:
+                    continue
+                sources.append(child)
+        elif path.is_file() and path.name.startswith('test_') and path.suffix in TEST_SOURCE_SUFFIXES:
+            sources.append(path)
     return sources
 
 
@@ -108,10 +112,10 @@ def check_expected_file_suite_alignment(root: Path, violations: list[str]) -> No
 
 def check_vm_collections_splitout(root: Path, violations: list[str]) -> None:
     expected_suite = 'primestruct.compile.run.vm.collections'
-    unit_dir = root / 'tests' / 'unit'
-    wrapper = unit_dir / 'test_compile_run_vm_collections.cpp'
+    compile_run_dir = root / 'tests' / 'unit' / 'compile_run'
+    wrapper = compile_run_dir / 'test_compile_run_vm_collections.cpp'
     if not wrapper.exists():
-        violations.append('tests/unit/test_compile_run_vm_collections.cpp: expected helper wrapper file is missing')
+        violations.append('tests/unit/compile_run/test_compile_run_vm_collections.cpp: expected helper wrapper file is missing')
         return
 
     wrapper_rel = normalize_path(wrapper.relative_to(root))
@@ -126,10 +130,10 @@ def check_vm_collections_splitout(root: Path, violations: list[str]) -> None:
             f'{wrapper_rel}: expected helper-only wrapper with no TEST_CASE definitions after split-out'
         )
 
-    shard_paths = sorted(unit_dir.glob('test_compile_run_vm_collections_*.cpp'))
+    shard_paths = sorted(compile_run_dir.glob('test_compile_run_vm_collections_*.cpp'))
     if not shard_paths:
         violations.append(
-            'tests/unit/test_compile_run_vm_collections_*.cpp: expected at least one split-out collections shard'
+            'tests/unit/compile_run/test_compile_run_vm_collections_*.cpp: expected at least one split-out collections shard'
         )
         return
 
@@ -146,7 +150,7 @@ def check_vm_collections_splitout(root: Path, violations: list[str]) -> None:
                 f'{shard_rel}: split-out collections shard should contain TEST_CASE definitions'
             )
 
-    for vm_source in sorted(unit_dir.glob('test_compile_run_vm_*.cpp')):
+    for vm_source in sorted(compile_run_dir.glob('test_compile_run_vm_*.cpp')):
         if vm_source == wrapper:
             continue
         if vm_source.name.startswith('test_compile_run_vm_collections_'):
