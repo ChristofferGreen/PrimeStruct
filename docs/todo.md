@@ -174,6 +174,14 @@ This file is the live open-work queue for PrimeStruct.
   (TODO-4653). Add `[public]` annotations to style-aligned stdlib modules
   (TODO-4654). Add compile-run tests for all language level examples
   (TODO-4655). Full analysis at `docs/FileLayoutRestructuring.md`.
+- Collection decoupling: move hardcoded collection knowledge from C++ to
+  .prime files. ~75 production files have special-cased vector/map/soa
+  logic. Phase 1 extends the surface manifest for method routing (TODO-4656
+  through TODO-4661, TODO-4672 through TODO-4675). Phase 2 adds type-category
+  declarations (TODO-4662 through TODO-4667, each targeting one file). Phase 3
+  makes slot layout generic (TODO-4668 through TODO-4670). TODO-4671 cleans up
+  dead helpers. Full design document at
+  `docs/CollectionDecoupling.md`.
 
 ### Execution Queue
 
@@ -205,6 +213,26 @@ This file is the live open-work queue for PrimeStruct.
 27. TODO-4653: Add dedicated IrPrinter unit tests
 28. TODO-4654: Add [public] annotations to stdlib modules
 29. TODO-4655: Add compile-run tests for language level examples
+30. TODO-4656: Audit surfaces.psmeta manifest coverage
+31. TODO-4657: Add borrowed receiver variant metadata to manifest
+32. TODO-4658: Migrate method target resolution helper name sets to manifest
+33. TODO-4659: Migrate IR lowerer builtin name helpers to manifest
+34. TODO-4660: Migrate emitter builtin call path helpers to manifest
+35. TODO-4661: Migrate SOA to_aos compatibility spelling to manifest
+36. TODO-4662: Design type-category annotation syntax for .prime
+37. TODO-4663: Implement type-category predicate in semantic validator
+38. TODO-4664: Annotate stdlib collection types with category declarations
+39. TODO-4665: Migrate SemanticsValidatorExprVectorHelpers to predicate queries
+40. TODO-4666: Migrate IrLowererStructSlotLayoutHelpers to predicate queries
+41. TODO-4667: Migrate EmitterBuiltinCollectionInferenceHelpers to predicate queries
+42. TODO-4668: Audit slot layout branching for .prime struct coverage
+43. TODO-4669: Implement generic vector slot count from .prime fields
+44. TODO-4670: Remove collection-specific slot layout helpers
+45. TODO-4671: Remove isVectorTypeName and isMapTypeName after migration
+46. TODO-4672: Migrate isRemovedKeyValueCompatibilityHelper to manifest
+47. TODO-4673: Migrate method dispatch chains in MethodTargetResolution
+48. TODO-4674: Migrate SOA helper routing beyond to_aos
+49. TODO-4675: Migrate ContainerError hardcoded paths to manifest
 
 ### Task Blocks
 
@@ -844,3 +872,414 @@ This file is the live open-work queue for PrimeStruct.
     - `./scripts/compile.sh --release` passes.
   - stop_rule: Stop once all examples are covered; do not add new examples
     in this leaf.
+
+- [ ] TODO-4656: Audit surfaces.psmeta manifest coverage
+  - owner: ai
+  - created_at: 2026-06-13
+  - phase: Collection decoupling - Phase 1
+  - parallel_track: collection-decoupling
+  - scope: Compare the member names declared in
+    `stdlib/std/collections/surfaces.psmeta` against the hardcoded
+    helper name sets in `SemanticsValidatorExprMethodTargetResolution.cpp`
+    (lines 17-22 `isRemovedVectorCompatibilityHelper`, lines 24-32
+    `isRemovedKeyValueCompatibilityHelper`), `IrLowererBuiltinNameHelpers.cpp`
+    (lines 87-126 `isNamespacedStdlibBuiltinAlias`), and
+    `EmitterBuiltinCallPathHelpers.cpp` (lines 45-84
+    `isNamespacedStdlibBuiltinAlias`). Produce a gap list of names
+    present in C++ but absent from the manifest.
+  - implementation_notes: Search for the hardcoded name sets using
+    grep for the string literals "count", "push", "at_unsafe",
+    "reserve", "pop", "clear", "remove_at", "remove_swap",
+    "count_ref", "at_ref", "at_unsafe_ref", "insert", "insert_ref"
+    in the three target files. Cross-reference with the manifest.
+  - acceptance:
+    - Gap list document produced with exact line references
+    - Each missing name categorized as: member, alias, or
+      lowering_spelling
+  - stop_rule: gap list complete
+
+- [ ] TODO-4657: Add borrowed receiver variant metadata to manifest
+  - owner: ai
+  - created_at: 2026-06-13
+  - phase: Collection decoupling - Phase 1
+  - parallel_track: collection-decoupling
+  - depends_on: TODO-4656
+  - scope: The `_ref` suffix routing (e.g., `count` -> `count_ref`,
+    `at` -> `at_ref`, `to_aos` -> `to_aos_ref`) is hardcoded in
+    `SemanticsValidatorExprMethodTargetResolution.cpp` (lines 511,
+    1000, 1867, 1965) and `TemplateMonomorphExpressionRewrite.h`
+    (lines 1371-1440). Add `borrowed_variant` entries to the
+    manifest schema so the compiler can look up the borrowed
+    receiver variant instead of hardcoding the mapping.
+  - implementation_notes: The `StdlibSurfaceMemberAlias` struct
+    already exists in `include/primec/StdlibSurfaceRegistry.h`.
+    Extend it with a `borrowedVariant` field. Update the manifest
+    parser in `StdlibSurfaceRegistry.cpp` to read the new entries.
+  - acceptance:
+    - `surfaces.psmeta` declares borrowed variants for all
+      applicable members
+    - `StdlibSurfaceRegistry` reads and exposes the new entries
+    - At least one hardcoded `count_ref` / `to_aos_ref` routing
+      replaced with manifest lookup
+  - stop_rule: manifest extended and one call site migrated
+
+- [ ] TODO-4658: Migrate method target resolution helper name sets to manifest
+  - owner: ai
+  - created_at: 2026-06-13
+  - phase: Collection decoupling - Phase 1
+  - parallel_track: collection-decoupling
+  - depends_on: TODO-4657
+  - scope: Replace the hardcoded method name sets at
+    `SemanticsValidatorExprMethodTargetResolution.cpp` lines 17-22
+    (`isRemovedVectorCompatibilityHelper`: "count", "capacity", "at",
+    "at_unsafe", "push", "pop", "reserve", "clear", "remove_at",
+    "remove_swap") with a `StdlibSurfaceRegistry` query. This is
+    the first of two compatibility helper name sets in this file;
+    the vector set is the smaller one.
+  - implementation_notes: Add a `hasReadOnlyMember(surfaceId, name)`
+    query to `StdlibSurfaceRegistry` that checks the manifest's
+    read-only member list. Replace the hardcoded set with this
+    query. The `findStdlibSurfaceMetadata()` function provides the
+    entry point.
+  - acceptance:
+    - Hardcoded set at lines 17-22 removed
+    - Vector compatibility helper check uses registry query
+    - Semantics tests pass
+  - stop_rule: set removed and tests pass
+
+- [ ] TODO-4659: Migrate IR lowerer builtin name helpers to manifest
+  - owner: ai
+  - created_at: 2026-06-13
+  - phase: Collection decoupling - Phase 1
+  - parallel_track: collection-decoupling
+  - depends_on: TODO-4657
+  - scope: Replace the hardcoded alias set in
+    `IrLowererBuiltinNameHelpers.cpp` (lines 87-126
+    `isNamespacedStdlibBuiltinAlias`) with manifest-driven lookup. The `isNamespacedStdlibBuiltinAlias()`
+    function should query the registry instead of matching against
+    a hardcoded string set.
+  - acceptance:
+    - Hardcoded alias set at lines 87-126 removed
+    - `isNamespacedStdlibBuiltinAlias()` uses registry lookup
+    - IR pipeline tests pass
+  - stop_rule: alias set removed and tests pass
+
+- [ ] TODO-4660: Migrate emitter builtin call path helpers to manifest
+  - owner: ai
+  - created_at: 2026-06-13
+  - phase: Collection decoupling - Phase 1
+  - parallel_track: collection-decoupling
+  - depends_on: TODO-4657
+  - scope: Replace the hardcoded alias set in
+    `EmitterBuiltinCallPathHelpers.cpp` (lines 45-84
+    `isNamespacedStdlibBuiltinAlias`) with manifest-driven lookup.
+  - acceptance:
+    - Hardcoded alias set at lines 45-84 removed
+    - Emitter uses registry for call path resolution
+    - Compile-run tests pass
+  - stop_rule: alias set removed and tests pass
+
+- [ ] TODO-4661: Migrate SOA to_aos compatibility spelling to manifest
+  - owner: ai
+  - created_at: 2026-06-13
+  - phase: Collection decoupling - Phase 1
+  - parallel_track: collection-decoupling
+  - depends_on: TODO-4657
+  - scope: The `to_aos` / `to_aos_ref` compatibility spelling
+    routing in `SemanticsValidate.cpp` at lines 1976
+    (`compatibilitySoaHelperTargetPath("to_aos")`), 3262, 3272,
+    3319 (more `to_aos` calls), and 3911 (`to_aos_ref` call) is
+    hardcoded. Add `compatibility_spelling` entries to the
+    manifest for the SOA surface so these lookups are
+    manifest-driven. This is the first of several SOA routing
+    sites; start with the `to_aos` family only.
+  - implementation_notes: The `StdlibSurfaceMemberAlias` struct
+    can be extended with a `compatibilitySpellings` vector. The
+    manifest parser in `StdlibSurfaceRegistry.cpp` already reads
+    `lowering_spelling` entries; add a parallel
+    `compatibility_spelling` reader.
+  - acceptance:
+    - Manifest declares compatibility spellings for `to_aos` and
+      `to_aos_ref`
+    - `SemanticsValidate.cpp` lines 1976 and 3262 use manifest lookup
+    - SOA tests pass
+  - stop_rule: to_aos routing migrated and tests pass
+
+- [ ] TODO-4662: Design type-category annotation syntax for .prime
+  - owner: ai
+  - created_at: 2026-06-13
+  - phase: Collection decoupling - Phase 2
+  - parallel_track: collection-decoupling
+  - scope: Design a `.prime` annotation syntax for declaring type
+    categories (e.g., `[collection_type]`, `[key_value_type]`).
+    The design must integrate with the existing `has_trait`
+    predicate system in `RequirementPredicateFacts.cpp` and the
+    struct transform system. Produce a spec with examples showing
+    how `Vector<T>`, `Map<K,V>`, and `SoaVector<T>` would declare
+    their categories.
+  - implementation_notes: The existing traits (`Additive`,
+    `Multiplicative`, `Comparable`, `Indexable`) are registered in
+    `RequirementPredicateFacts.cpp`. The new categories should
+    follow the same pattern. Consider whether categories should be
+    separate from traits or unified.
+  - acceptance:
+    - Spec document with syntax examples
+    - Integration points with `has_trait` identified
+    - Migration path for `isVectorTypeName()` / `isMapTypeName()`
+      call sites described
+  - stop_rule: spec complete
+
+- [ ] TODO-4663: Implement type-category predicate in semantic validator
+  - owner: ai
+  - created_at: 2026-06-13
+  - phase: Collection decoupling - Phase 2
+  - parallel_track: collection-decoupling
+  - depends_on: TODO-4662
+  - scope: Implement the type-category predicate so that `.prime`
+    structs annotated with the new syntax are queryable via the
+    existing `has_trait` system. The predicate should replace
+    direct string comparisons against type names.
+  - acceptance:
+    - New predicate registered in `RequirementPredicateFacts.cpp`
+    - `.prime` structs with the annotation are recognized
+    - At least one `isVectorTypeName()` call site replaced with
+      predicate query
+  - stop_rule: predicate works and one call site migrated
+
+- [ ] TODO-4664: Annotate stdlib collection types with category declarations
+  - owner: ai
+  - created_at: 2026-06-13
+  - phase: Collection decoupling - Phase 2
+  - parallel_track: collection-decoupling
+  - depends_on: TODO-4663
+  - scope: Add the type-category annotations to `Vector<T>` in
+    `vector.prime`, `MapValue<K,V>` in `map.prime`, `SoaVector<T>` in
+    `experimental_soa_vector.prime`, and `SoaColumn<T>` in
+    `internal_soa_storage.prime`.
+  - acceptance:
+    - All four types annotated
+    - `has_trait<T>(Collection)` returns true for annotated types
+    - Existing tests pass
+  - stop_rule: annotations added and tests pass
+
+- [ ] TODO-4665: Migrate SemanticsValidatorExprVectorHelpers to predicate queries
+  - owner: ai
+  - created_at: 2026-06-13
+  - phase: Collection decoupling - Phase 2
+  - parallel_track: collection-decoupling
+  - depends_on: TODO-4664
+  - scope: Replace `isKeyValueCollectionTypeName()` and
+    `specializedExperimentalVectorHelperTarget()` calls in
+    `SemanticsValidatorExprVectorHelpers.cpp` (lines 89, 362,
+    487, 549) with predicate-based queries using the new
+    type-category system. This file has 4 call sites for
+    collection type recognition.
+  - acceptance:
+    - All 4 collection type recognition call sites replaced with
+      predicate queries
+    - Semantics tests pass
+  - stop_rule: 4 call sites migrated and tests pass
+
+- [ ] TODO-4666: Migrate IrLowererStructSlotLayoutHelpers to predicate queries
+  - owner: ai
+  - created_at: 2026-06-13
+  - phase: Collection decoupling - Phase 2
+  - parallel_track: collection-decoupling
+  - depends_on: TODO-4664
+  - scope: Replace `isVectorTypeName()` and `isMapTypeName()`
+    calls in `IrLowererStructSlotLayoutHelpers.cpp` (lines 485,
+    507, 544, 561, 588, 602) with predicate-based queries. Also
+    replace the bare `"Vector"` string comparison at line 111.
+    This file has the densest concentration of type recognition
+    in the IR lowerer (6 function calls + 1 string comparison).
+  - acceptance:
+    - All 6 function calls + 1 string comparison replaced with
+      predicate queries
+    - `isVectorTypeName()` and `isMapTypeName()` function
+      definitions in this file removed (no remaining callers)
+    - Backend IR tests pass
+  - stop_rule: 9 call sites migrated and tests pass
+
+- [ ] TODO-4667: Migrate EmitterBuiltinCollectionInferenceHelpers to predicate queries
+  - owner: ai
+  - created_at: 2026-06-13
+  - phase: Collection decoupling - Phase 2
+  - parallel_track: collection-decoupling
+  - depends_on: TODO-4664
+  - scope: Replace `isCollectionVectorValue()`,
+    `isKeyValueStorageValue()`, and `isArrayValue()` calls in
+    `EmitterBuiltinCollectionInferenceHelpers.cpp` (lines 55-166,
+    169, 208-229, 225, 244-246) with predicate-based queries.
+    This file is the single source of these three functions and
+    contains their definitions plus all internal call sites.
+  - acceptance:
+    - Function definitions replaced with predicate queries
+    - No hardcoded type name comparisons remain in this file
+    - Compile-run tests pass
+  - stop_rule: functions migrated and tests pass
+
+- [ ] TODO-4668: Audit slot layout branching for .prime struct coverage
+  - owner: ai
+  - created_at: 2026-06-13
+  - phase: Collection decoupling - Phase 3
+  - parallel_track: collection-decoupling
+  - scope: Read `IrLowererStructSlotLayoutHelpers.cpp` and catalog
+    every `isVectorTypeName()` / `isMapTypeName()` branch. For each
+    branch, determine whether the `.prime` struct's field
+    declarations contain enough information to compute the same
+    layout generically. Identify any branches that require
+    information not present in `.prime` declarations.
+  - acceptance:
+    - Branch catalog with line numbers
+    - For each branch: "computable from .prime" or "needs new
+      .prime metadata" with justification
+  - stop_rule: catalog complete
+
+- [ ] TODO-4669: Implement generic vector slot count from .prime fields
+  - owner: ai
+  - created_at: 2026-06-13
+  - phase: Collection decoupling - Phase 3
+  - parallel_track: collection-decoupling
+  - depends_on: TODO-4668
+  - scope: Replace the Vector-name resolution branches in
+    `IrLowererStructSlotLayoutHelpers.cpp` `normalizeVectorStructPath()`
+    (lines 111-115: `if (typeName == "Vector")` and
+    `isExperimentalCollectionTypeName(typeName, "vector", "Vector")`)
+    with a generic computation that reads the `.prime` struct's
+    field declarations. The `Vector<T>` struct in `vector.prime`
+    has 4 fields: `fieldCount` (i32), `fieldCapacity` (i32),
+    `data` (Pointer), `ownsData` (bool). The resolver should
+    count these fields and compute slot count from their types.
+  - implementation_notes: The `.prime` struct's fields are
+    available in `ctx.program.definitions`. Look up the struct by
+    path, iterate its `statements` (which are field bindings),
+    and compute slot count from each field's binding type.
+    `Pointer<T>` maps to 1 slot, `i32` maps to 1 slot, `bool`
+    maps to 1 slot.
+  - acceptance:
+    - `isVectorTypeName()` branch at lines 111-115 removed
+    - Slot count computed from `.prime` Vector struct fields
+    - Backend IR tests pass
+  - stop_rule: branch removed and tests pass
+
+- [ ] TODO-4670: Remove collection-specific slot layout helpers
+  - owner: ai
+  - created_at: 2026-06-13
+  - phase: Collection decoupling - Phase 3
+  - parallel_track: collection-decoupling
+  - depends_on: TODO-4669
+  - scope: Delete `isVectorTypeName()`, `isMapTypeName()` from
+    `IrLowererStructSlotLayoutHelpers.cpp` and verify no other
+    files reference them for slot layout purposes.
+  - acceptance:
+    - Functions deleted
+    - No remaining references for slot layout
+    - All tests pass
+  - stop_rule: functions deleted and tests pass
+
+- [ ] TODO-4671: Remove isVectorTypeName and isMapTypeName after migration
+  - owner: ai
+  - created_at: 2026-06-13
+  - phase: Collection decoupling - Cleanup
+  - parallel_track: collection-decoupling
+  - depends_on: TODO-4665, TODO-4666, TODO-4669, TODO-4670
+  - scope: After TODO-4665 (semantics), TODO-4666 (IR lowerer
+    slot layout), TODO-4669 (generic slot count), and TODO-4670
+    (slot layout helpers) are complete, verify that
+    `isVectorTypeName()` and `isMapTypeName()` have no remaining
+    callers. If so, delete their definitions from
+    `IrLowererStructSlotLayoutHelpers.cpp`. If other callers
+    remain, file follow-up TODOs for each.
+  - implementation_notes: Use grep to find all callers before
+    deleting. The functions are defined at lines 51-53
+    (`isVectorTypeName`) and 83-85 (`isMapTypeName`) of
+    `IrLowererStructSlotLayoutHelpers.cpp`.
+  - acceptance:
+    - `grep -rn isVectorTypeName src/` returns zero results
+    - `grep -rn isMapTypeName src/` returns zero results
+    - Functions deleted from source
+    - Full test suite passes
+  - stop_rule: functions deleted and grep clean
+
+- [ ] TODO-4672: Migrate isRemovedKeyValueCompatibilityHelper to manifest
+  - owner: ai
+  - created_at: 2026-06-13
+  - phase: Collection decoupling - Phase 1
+  - parallel_track: collection-decoupling
+  - depends_on: TODO-4657
+  - scope: Replace the hardcoded method name set at
+    `SemanticsValidatorExprMethodTargetResolution.cpp` lines 24-32
+    (`isRemovedKeyValueCompatibilityHelper`: "count", "count_ref",
+    "size", "contains", "contains_ref", "tryAt", "tryAt_ref", "at",
+    "at_ref", "at_unsafe", "at_unsafe_ref", "insert", "insert_ref")
+    with a `StdlibSurfaceRegistry` query. This is the companion to
+    TODO-4658 which handles the vector set.
+  - acceptance:
+    - Hardcoded set at lines 24-32 removed
+    - Key-value compatibility helper check uses registry query
+    - Semantics tests pass
+  - stop_rule: set removed and tests pass
+
+- [ ] TODO-4673: Migrate method dispatch chains in MethodTargetResolution
+  - owner: ai
+  - created_at: 2026-06-13
+  - phase: Collection decoupling - Phase 1
+  - parallel_track: collection-decoupling
+  - depends_on: TODO-4658, TODO-4672
+  - scope: Replace the hardcoded method name chains at
+    `SemanticsValidatorExprMethodTargetResolution.cpp` line 130
+    (`isReadOnlyCollectionMemberHelperName`: "count", "count_ref",
+    "at", "at_ref", "at_unsafe", "at_unsafe_ref") and lines
+    3328-3331 (method name matching for "at", "at_unsafe", "push",
+    "pop", "reserve", "clear", "remove_at", "remove_swap") with
+    manifest-driven queries.
+  - acceptance:
+    - Hardcoded chains at lines 130 and 3328-3331 removed
+    - Method dispatch uses registry lookup
+    - Semantics tests pass
+  - stop_rule: chains removed and tests pass
+
+- [ ] TODO-4674: Migrate SOA helper routing beyond to_aos
+  - owner: ai
+  - created_at: 2026-06-13
+  - phase: Collection decoupling - Phase 1
+  - parallel_track: collection-decoupling
+  - depends_on: TODO-4661
+  - scope: After TODO-4661 migrates the `to_aos`/`to_aos_ref`
+    routing, migrate the remaining SOA helper routing in
+    `SemanticsBuiltinPathHelpers.cpp` (lines 931-978: hardcoded
+    `soaVectorCount`, `soaVectorCountRef`, `soaVectorGet`,
+    `soaVectorGetRef`, `soaVectorRef`, `soaVectorRefRef`,
+    `soaVectorPush`, `soaVectorReserve` path comparisons) and
+    `SemanticsValidate.cpp` (lines 3835-3895: `soaVectorNew`,
+    `soaVectorSingle`, `soaVectorFromAos` path construction).
+    These should be driven by the SOA surface manifest entries.
+  - acceptance:
+    - Hardcoded SOA helper names in `SemanticsBuiltinPathHelpers.cpp`
+      lines 931-978 replaced with manifest lookup
+    - At least the `soaVectorNew`/`soaVectorSingle` routing in
+      `SemanticsValidate.cpp` lines 3835-3895 replaced
+    - SOA tests pass
+  - stop_rule: two files migrated and tests pass
+
+- [ ] TODO-4675: Migrate ContainerError hardcoded paths to manifest
+  - owner: ai
+  - created_at: 2026-06-13
+  - phase: Collection decoupling - Phase 1
+  - parallel_track: collection-decoupling
+  - depends_on: TODO-4657
+  - scope: The `ContainerError` type has hardcoded paths across
+    12+ files. Start with the IR lowerer: replace the hardcoded
+    `/std/collections/ContainerError/why` and
+    `/std/collections/ContainerError/status` path lookups in
+    `IrLowererResultHelpers.cpp` (lines 71-73, 1414, 1456) and
+    `IrLowererPackedResultHelpers.cpp` (lines 148-150) with
+    manifest-driven resolution. The `StdlibSurfaceRegistry` already
+    has a `CollectionsContainerErrorHelpers` entry; extend it with
+    the `why` and `status` member paths.
+  - acceptance:
+    - `IrLowererResultHelpers.cpp` lines 71-73 use manifest lookup
+    - `IrLowererPackedResultHelpers.cpp` lines 148-150 use manifest
+      lookup
+    - Backend IR tests pass
+  - stop_rule: two files migrated and tests pass
