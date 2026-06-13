@@ -223,8 +223,7 @@ This file is the live open-work queue for PrimeStruct.
 37. TODO-4669: Implement generic vector slot count from .prime fields
 38. TODO-4670: Remove collection-specific slot layout helpers
 39. TODO-4671: Remove isVectorTypeName and isMapTypeName after migration
-40. TODO-4674: Migrate SOA helper routing beyond to_aos
-41. TODO-4675: Migrate ContainerError hardcoded paths to manifest
+40. TODO-4675: Migrate ContainerError hardcoded paths to manifest
 
 ### Task Blocks
 
@@ -1060,29 +1059,6 @@ This file is the live open-work queue for PrimeStruct.
     - Functions deleted from source
     - Full test suite passes
   - stop_rule: functions deleted and grep clean
-
-- [ ] TODO-4674: Migrate SOA helper routing beyond to_aos
-  - owner: ai
-  - created_at: 2026-06-13
-  - phase: Collection decoupling - Phase 1
-  - parallel_track: collection-decoupling
-  - depends_on: TODO-4661
-  - scope: After TODO-4661 migrates the `to_aos`/`to_aos_ref`
-    routing, migrate the remaining SOA helper routing in
-    `SemanticsBuiltinPathHelpers.cpp` (lines 931-978: hardcoded
-    `soaVectorCount`, `soaVectorCountRef`, `soaVectorGet`,
-    `soaVectorGetRef`, `soaVectorRef`, `soaVectorRefRef`,
-    `soaVectorPush`, `soaVectorReserve` path comparisons) and
-    `SemanticsValidate.cpp` (lines 3835-3895: `soaVectorNew`,
-    `soaVectorSingle`, `soaVectorFromAos` path construction).
-    These should be driven by the SOA surface manifest entries.
-  - acceptance:
-    - Hardcoded SOA helper names in `SemanticsBuiltinPathHelpers.cpp`
-      lines 931-978 replaced with manifest lookup
-    - At least the `soaVectorNew`/`soaVectorSingle` routing in
-      `SemanticsValidate.cpp` lines 3835-3895 replaced
-    - SOA tests pass
-  - stop_rule: two files migrated and tests pass
 
 - [ ] TODO-4675: Migrate ContainerError hardcoded paths to manifest
   - owner: ai

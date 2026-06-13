@@ -24257,3 +24257,18 @@ Moved from `docs/todo.md` during unfinished-only cleanup:
     10-string vector method check with
     isStdlibSurfaceMemberName(CollectionsManifestSurface0).
     Build and IR validation tests pass. Commit 9891c1c2d.
+
+- [x] TODO-4674: Migrate SOA helper routing beyond to_aos
+  - owner: ai
+  - created_at: 2026-06-13
+  - finished_at: 2026-06-13
+  - phase: Collection decoupling - Phase 1
+  - parallel_track: collection-decoupling
+  - depends_on: TODO-4661
+  - scope: Migrate SOA helper routing in two files.
+  - evidence: Replaced push/reserve checks in
+    isExperimentalSoaGrowthHelperPath with
+    isStdlibSurfaceMemberName(CollectionsColumnarHelpers). Replaced
+    8-string SOA method name check in SemanticsValidate.cpp with
+    same manifest lookup. Updated source inspection test.
+    Build and IR validation tests pass. Commits 7ae81eb75, a59c940f4.
