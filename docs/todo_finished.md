@@ -24191,3 +24191,28 @@ Moved from `docs/todo.md` during unfinished-only cleanup:
   - evidence: Replaced 10-string hardcoded set with
     isStdlibSurfaceMemberName(CollectionsManifestSurface0, helperName).
     Build and IR validation tests pass. Commit e2d87214c.
+
+- [x] TODO-4659: Migrate IR lowerer builtin name helpers to manifest
+  - owner: ai
+  - created_at: 2026-06-13
+  - finished_at: 2026-06-13
+  - phase: Collection decoupling - Phase 1
+  - parallel_track: collection-decoupling
+  - depends_on: TODO-4657
+  - scope: Replace hardcoded collection-specific names in
+    isNamespacedStdlibBuiltinAlias with manifest lookup.
+  - evidence: Added manifest loop checking all collection surfaces
+    before falling through to hardcoded language/math builtins.
+    Build and IR validation tests pass. Commit 63c2c4e0c.
+
+- [x] TODO-4660: Migrate emitter builtin call path helpers to manifest
+  - owner: ai
+  - created_at: 2026-06-13
+  - finished_at: 2026-06-13
+  - phase: Collection decoupling - Phase 1
+  - parallel_track: collection-decoupling
+  - depends_on: TODO-4657
+  - scope: Replace hardcoded collection-specific names in
+    isNamespacedStdlibBuiltinAlias with manifest lookup.
+  - evidence: Same pattern as TODO-4659. Build passes.
+    Commit 6da05aec1.

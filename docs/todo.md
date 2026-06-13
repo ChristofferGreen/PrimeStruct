@@ -213,9 +213,7 @@ This file is the live open-work queue for PrimeStruct.
 27. TODO-4653: Add dedicated IrPrinter unit tests
 28. TODO-4654: Add [public] annotations to stdlib modules
 29. TODO-4655: Add compile-run tests for language level examples
-30. TODO-4659: Migrate IR lowerer builtin name helpers to manifest
-31. TODO-4660: Migrate emitter builtin call path helpers to manifest
-32. TODO-4661: Migrate SOA to_aos compatibility spelling to manifest
+30. TODO-4661: Migrate SOA to_aos compatibility spelling to manifest
 33. TODO-4662: Design type-category annotation syntax for .prime
 34. TODO-4663: Implement type-category predicate in semantic validator
 35. TODO-4664: Annotate stdlib collection types with category declarations
@@ -869,38 +867,6 @@ This file is the live open-work queue for PrimeStruct.
     - `./scripts/compile.sh --release` passes.
   - stop_rule: Stop once all examples are covered; do not add new examples
     in this leaf.
-
-- [ ] TODO-4659: Migrate IR lowerer builtin name helpers to manifest- [ ] TODO-4659: Migrate IR lowerer builtin name helpers to manifest
-  - owner: ai
-  - created_at: 2026-06-13
-  - phase: Collection decoupling - Phase 1
-  - parallel_track: collection-decoupling
-  - depends_on: TODO-4657
-  - scope: Replace the hardcoded alias set in
-    `IrLowererBuiltinNameHelpers.cpp` (lines 87-126
-    `isNamespacedStdlibBuiltinAlias`) with manifest-driven lookup. The `isNamespacedStdlibBuiltinAlias()`
-    function should query the registry instead of matching against
-    a hardcoded string set.
-  - acceptance:
-    - Hardcoded alias set at lines 87-126 removed
-    - `isNamespacedStdlibBuiltinAlias()` uses registry lookup
-    - IR pipeline tests pass
-  - stop_rule: alias set removed and tests pass
-
-- [ ] TODO-4660: Migrate emitter builtin call path helpers to manifest
-  - owner: ai
-  - created_at: 2026-06-13
-  - phase: Collection decoupling - Phase 1
-  - parallel_track: collection-decoupling
-  - depends_on: TODO-4657
-  - scope: Replace the hardcoded alias set in
-    `EmitterBuiltinCallPathHelpers.cpp` (lines 45-84
-    `isNamespacedStdlibBuiltinAlias`) with manifest-driven lookup.
-  - acceptance:
-    - Hardcoded alias set at lines 45-84 removed
-    - Emitter uses registry for call path resolution
-    - Compile-run tests pass
-  - stop_rule: alias set removed and tests pass
 
 - [ ] TODO-4661: Migrate SOA to_aos compatibility spelling to manifest
   - owner: ai
