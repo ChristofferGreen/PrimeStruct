@@ -250,6 +250,7 @@ struct ManifestSurfaceRecord {
   StringListStore compatibilitySpellings;
   StringListStore loweringSpellings;
   MemberAliasStore memberAliases;
+  MemberAliasStore borrowedVariants;
 };
 
 struct ManifestSurfaceData {
@@ -263,6 +264,7 @@ struct ManifestSurfaceData {
   StringListStore compatibilitySpellings;
   StringListStore loweringSpellings;
   MemberAliasStore memberAliases;
+  MemberAliasStore borrowedVariants;
 
   void refreshViews() {
     memberNames.refreshViews();
@@ -271,6 +273,7 @@ struct ManifestSurfaceData {
     compatibilitySpellings.refreshViews();
     loweringSpellings.refreshViews();
     memberAliases.refreshViews();
+    borrowedVariants.refreshViews();
   }
 };
 
@@ -319,6 +322,15 @@ void appendManifestValue(ManifestSurfaceRecord &record,
     const std::size_t separatorPos = value.find(separator);
     if (separatorPos != std::string::npos) {
       record.memberAliases.values.push_back({
+          trimAscii(std::string_view(value).substr(0, separatorPos)),
+          trimAscii(std::string_view(value).substr(separatorPos + separator.size())),
+      });
+    }
+  } else if (key == "borrowed_variant") {
+    const std::string separator = "->";
+    const std::size_t separatorPos = value.find(separator);
+    if (separatorPos != std::string::npos) {
+      record.borrowedVariants.values.push_back({
           trimAscii(std::string_view(value).substr(0, separatorPos)),
           trimAscii(std::string_view(value).substr(separatorPos + separator.size())),
       });
@@ -458,6 +470,7 @@ const std::array<StdlibSurfaceMetadata, 11> Registry = {{
         .importAliasSpellings = FileHelperImportAliases,
         .compatibilitySpellings = FileHelperCompatibilitySpellings,
         .loweringSpellings = FileHelperLoweringSpellings,
+        .borrowedVariants = {},
     },
     {
         .id = StdlibSurfaceId::FileErrorHelpers,
@@ -473,6 +486,7 @@ const std::array<StdlibSurfaceMetadata, 11> Registry = {{
         .importAliasSpellings = FileErrorImportAliases,
         .compatibilitySpellings = FileErrorCompatibilitySpellings,
         .loweringSpellings = FileErrorLoweringSpellings,
+        .borrowedVariants = {},
     },
     {
         .id = collectionSurfaceId(0),
@@ -488,6 +502,7 @@ const std::array<StdlibSurfaceMetadata, 11> Registry = {{
         .importAliasSpellings = CollectionsSurfaces.vectorHelpers.importAliasSpellings.views,
         .compatibilitySpellings = CollectionsSurfaces.vectorHelpers.compatibilitySpellings.views,
         .loweringSpellings = CollectionsSurfaces.vectorHelpers.loweringSpellings.views,
+        .borrowedVariants = CollectionsSurfaces.vectorHelpers.borrowedVariants.views,
     },
     {
         .id = collectionSurfaceId(1),
@@ -503,6 +518,7 @@ const std::array<StdlibSurfaceMetadata, 11> Registry = {{
         .importAliasSpellings = CollectionsSurfaces.vectorConstructors.importAliasSpellings.views,
         .compatibilitySpellings = CollectionsSurfaces.vectorConstructors.compatibilitySpellings.views,
         .loweringSpellings = CollectionsSurfaces.vectorConstructors.loweringSpellings.views,
+        .borrowedVariants = CollectionsSurfaces.vectorConstructors.borrowedVariants.views,
     },
     {
         .id = collectionSurfaceId(2),
@@ -518,6 +534,7 @@ const std::array<StdlibSurfaceMetadata, 11> Registry = {{
         .importAliasSpellings = CollectionsSurfaces.mapHelpers.importAliasSpellings.views,
         .compatibilitySpellings = CollectionsSurfaces.mapHelpers.compatibilitySpellings.views,
         .loweringSpellings = CollectionsSurfaces.mapHelpers.loweringSpellings.views,
+        .borrowedVariants = CollectionsSurfaces.mapHelpers.borrowedVariants.views,
     },
     {
         .id = collectionSurfaceId(3),
@@ -533,6 +550,7 @@ const std::array<StdlibSurfaceMetadata, 11> Registry = {{
         .importAliasSpellings = CollectionsSurfaces.mapConstructors.importAliasSpellings.views,
         .compatibilitySpellings = CollectionsSurfaces.mapConstructors.compatibilitySpellings.views,
         .loweringSpellings = CollectionsSurfaces.mapConstructors.loweringSpellings.views,
+        .borrowedVariants = CollectionsSurfaces.mapConstructors.borrowedVariants.views,
     },
     {
         .id = collectionSurfaceId(4),
@@ -548,6 +566,7 @@ const std::array<StdlibSurfaceMetadata, 11> Registry = {{
         .importAliasSpellings = CollectionsSurfaces.soaHelpers.importAliasSpellings.views,
         .compatibilitySpellings = CollectionsSurfaces.soaHelpers.compatibilitySpellings.views,
         .loweringSpellings = CollectionsSurfaces.soaHelpers.loweringSpellings.views,
+        .borrowedVariants = CollectionsSurfaces.soaHelpers.borrowedVariants.views,
     },
     {
         .id = collectionSurfaceId(5),
@@ -563,6 +582,7 @@ const std::array<StdlibSurfaceMetadata, 11> Registry = {{
         .importAliasSpellings = CollectionsSurfaces.soaConstructors.importAliasSpellings.views,
         .compatibilitySpellings = CollectionsSurfaces.soaConstructors.compatibilitySpellings.views,
         .loweringSpellings = CollectionsSurfaces.soaConstructors.loweringSpellings.views,
+        .borrowedVariants = CollectionsSurfaces.soaConstructors.borrowedVariants.views,
     },
     {
         .id = StdlibSurfaceId::CollectionsContainerErrorHelpers,
@@ -578,6 +598,7 @@ const std::array<StdlibSurfaceMetadata, 11> Registry = {{
         .importAliasSpellings = CollectionsContainerErrorImportAliases,
         .compatibilitySpellings = CollectionsContainerErrorCompatibilitySpellings,
         .loweringSpellings = CollectionsContainerErrorLoweringSpellings,
+        .borrowedVariants = {},
     },
     {
         .id = StdlibSurfaceId::GfxBufferHelpers,
@@ -593,6 +614,7 @@ const std::array<StdlibSurfaceMetadata, 11> Registry = {{
         .importAliasSpellings = GfxBufferImportAliases,
         .compatibilitySpellings = GfxBufferCompatibilitySpellings,
         .loweringSpellings = GfxBufferLoweringSpellings,
+        .borrowedVariants = {},
     },
     {
         .id = StdlibSurfaceId::GfxErrorHelpers,
@@ -608,6 +630,7 @@ const std::array<StdlibSurfaceMetadata, 11> Registry = {{
         .importAliasSpellings = GfxErrorImportAliases,
         .compatibilitySpellings = GfxErrorCompatibilitySpellings,
         .loweringSpellings = GfxErrorLoweringSpellings,
+        .borrowedVariants = {},
     },
 }};
 
@@ -805,6 +828,23 @@ bool isStdlibSurfaceMemberName(StdlibSurfaceId id, std::string_view memberName) 
 bool isStdlibSurfaceStatementMemberName(StdlibSurfaceId id, std::string_view memberName) {
   const auto *metadata = findStdlibSurfaceMetadata(id);
   return metadata != nullptr && matchesAny(metadata->statementMemberNames, memberName);
+}
+
+std::string_view findBorrowedVariant(const StdlibSurfaceMetadata &metadata, std::string_view memberName) {
+  for (const auto &variant : metadata.borrowedVariants) {
+    if (variant.spelling == memberName) {
+      return variant.memberName;
+    }
+  }
+  return {};
+}
+
+std::string_view findBorrowedVariant(StdlibSurfaceId id, std::string_view memberName) {
+  const auto *metadata = findStdlibSurfaceMetadata(id);
+  if (metadata == nullptr) {
+    return {};
+  }
+  return findBorrowedVariant(*metadata, memberName);
 }
 
 const StdlibSurfaceMetadata *findStdlibSurfaceMetadataBySpelling(std::string_view spelling) {

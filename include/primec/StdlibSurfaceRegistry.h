@@ -51,6 +51,7 @@ struct StdlibSurfaceMetadata {
   std::span<const std::string_view> importAliasSpellings;
   std::span<const std::string_view> compatibilitySpellings;
   std::span<const std::string_view> loweringSpellings;
+  std::span<const StdlibSurfaceMemberAlias> borrowedVariants;
 };
 
 std::span<const StdlibSurfaceMetadata> stdlibSurfaceRegistry();
@@ -70,5 +71,7 @@ std::string stdlibSurfacePreferredSpellingForMember(StdlibSurfaceId id,
 bool stdlibSurfaceMatchesSpelling(const StdlibSurfaceMetadata &metadata, std::string_view spelling);
 bool isStdlibSurfaceMemberName(StdlibSurfaceId id, std::string_view memberName);
 bool isStdlibSurfaceStatementMemberName(StdlibSurfaceId id, std::string_view memberName);
+std::string_view findBorrowedVariant(const StdlibSurfaceMetadata &metadata, std::string_view memberName);
+std::string_view findBorrowedVariant(StdlibSurfaceId id, std::string_view memberName);
 
 } // namespace primec
