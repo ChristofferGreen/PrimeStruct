@@ -24231,3 +24231,15 @@ Moved from `docs/todo.md` during unfinished-only cleanup:
     resolveCompatibilitySpellingToCanonicalPath to registry.
     Migrated one to_aos call site in SemanticsValidate.cpp line
     3262. Build and IR validation tests pass. Commit c23525d71.
+
+- [x] TODO-4672: Migrate isRemovedKeyValueCompatibilityHelper to manifest
+  - owner: ai
+  - created_at: 2026-06-13
+  - finished_at: 2026-06-13
+  - phase: Collection decoupling - Phase 1
+  - parallel_track: collection-decoupling
+  - depends_on: TODO-4657
+  - scope: Replace hardcoded 12-string set with manifest lookup.
+  - evidence: Replaced with isStdlibSurfaceMemberName(CollectionsManifestSurface2)
+    plus size fallback. Added /std/collections/map/size as compatibility_spelling.
+    Build and IR validation tests pass. Commit da5b299d9.

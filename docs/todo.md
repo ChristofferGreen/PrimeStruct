@@ -223,8 +223,7 @@ This file is the live open-work queue for PrimeStruct.
 37. TODO-4669: Implement generic vector slot count from .prime fields
 38. TODO-4670: Remove collection-specific slot layout helpers
 39. TODO-4671: Remove isVectorTypeName and isMapTypeName after migration
-40. TODO-4672: Migrate isRemovedKeyValueCompatibilityHelper to manifest
-41. TODO-4673: Migrate method dispatch chains in MethodTargetResolution
+40. TODO-4673: Migrate method dispatch chains in MethodTargetResolution
 42. TODO-4674: Migrate SOA helper routing beyond to_aos
 43. TODO-4675: Migrate ContainerError hardcoded paths to manifest
 
@@ -1062,25 +1061,6 @@ This file is the live open-work queue for PrimeStruct.
     - Functions deleted from source
     - Full test suite passes
   - stop_rule: functions deleted and grep clean
-
-- [ ] TODO-4672: Migrate isRemovedKeyValueCompatibilityHelper to manifest
-  - owner: ai
-  - created_at: 2026-06-13
-  - phase: Collection decoupling - Phase 1
-  - parallel_track: collection-decoupling
-  - depends_on: TODO-4657
-  - scope: Replace the hardcoded method name set at
-    `SemanticsValidatorExprMethodTargetResolution.cpp` lines 24-32
-    (`isRemovedKeyValueCompatibilityHelper`: "count", "count_ref",
-    "size", "contains", "contains_ref", "tryAt", "tryAt_ref", "at",
-    "at_ref", "at_unsafe", "at_unsafe_ref", "insert", "insert_ref")
-    with a `StdlibSurfaceRegistry` query. This is the companion to
-    TODO-4658 which handles the vector set.
-  - acceptance:
-    - Hardcoded set at lines 24-32 removed
-    - Key-value compatibility helper check uses registry query
-    - Semantics tests pass
-  - stop_rule: set removed and tests pass
 
 - [ ] TODO-4673: Migrate method dispatch chains in MethodTargetResolution
   - owner: ai
