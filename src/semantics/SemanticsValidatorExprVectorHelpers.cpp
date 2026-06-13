@@ -920,17 +920,27 @@ bool SemanticsValidator::resolveExprVectorHelperCall(const std::vector<Parameter
         namespacedCollection == "vector" ||
         isCompatibilitySoaSurfaceNamespace(namespacedCollection);
     if (!isStdNamespacedVectorCompatibilityDirectCallSite) {
+      // When the definition is missing, check whether the first argument is a
+      // plain vector receiver. Soa_vector helpers are incompatible with plain
+      // vector<T> targets, so reject them even in statement context rather than
+      // silently accepting and letting IR lowering fail later.
+      auto firstArgIsVectorFamily = [&]() -> bool {
+        if (expr.args.empty()) {
+          return false;
+        }
+        return classifyReceiverFamily(expr.args.front()) == "vector";
+      };
       const bool isExplicitOldSoaMethodSurface =
           expr.isMethodCall &&
           (isCompatibilitySoaSurfaceNamespace(expr.namespacePrefix) ||
            splitSoaSurfaceHelperPath(expr.name, nullptr, nullptr));
-      if (isExplicitOldSoaMethodSurface) {
+      if (isExplicitOldSoaMethodSurface && !firstArgIsVectorFamily()) {
         return true;
       }
       if (!requestsExplicitCollectionHelperNamespace && !resolvedReceiver) {
         return true;
       }
-      if (allowStatementOnlyMutator) {
+      if (allowStatementOnlyMutator && !firstArgIsVectorFamily()) {
         hasResolutionOut = true;
         resolvedPathOut = resolved;
         return true;

@@ -1242,9 +1242,23 @@ ArrayVectorAccessTargetInfo resolveArrayVectorAccessTargetInfo(
         return info;
       }
     }
+    auto resolveArrayOrVectorAccessName = [](const Expr &accessExpr,
+                                             std::string &accessNameOut) {
+      if (getBuiltinArrayAccessName(accessExpr, accessNameOut)) {
+        return true;
+      }
+      std::string vectorHelperName;
+      if (resolveVectorHelperAliasName(accessExpr, vectorHelperName) &&
+          (vectorHelperName == "at" || vectorHelperName == "at_unsafe")) {
+        accessNameOut = vectorHelperName;
+        return true;
+      }
+      return false;
+    };
+
     auto resolveDereferencedArgsPackTarget = [&](const Expr &derefTarget) {
       std::string derefAccessName;
-      if (!(getBuiltinArrayAccessName(derefTarget, derefAccessName) && derefTarget.args.size() == 2)) {
+      if (!(resolveArrayOrVectorAccessName(derefTarget, derefAccessName) && derefTarget.args.size() == 2)) {
         return false;
       }
 
@@ -1331,7 +1345,7 @@ ArrayVectorAccessTargetInfo resolveArrayVectorAccessTargetInfo(
         (isExplicitKeyValueAccessHelperPath(scopedTargetPath) ||
          isAliasKeyValueArgsPackAccess) &&
         target.args.size() == 2;
-    if ((getBuiltinArrayAccessName(target, accessName) && target.args.size() == 2) ||
+    if ((resolveArrayOrVectorAccessName(target, accessName) && target.args.size() == 2) ||
         isExplicitKeyValueArgsPackAccess) {
       const Expr &accessReceiver = target.args.front();
       if (accessReceiver.kind == Expr::Kind::Name) {

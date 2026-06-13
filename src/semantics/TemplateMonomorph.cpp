@@ -1,3 +1,4 @@
+#include <cstdio>
 #include "SemanticsHelpers.h"
 #include "RequirementPredicateFacts.h"
 #include "StdlibCollectionSurfaceHelpers.h"

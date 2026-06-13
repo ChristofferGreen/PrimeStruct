@@ -1,4 +1,5 @@
 // soa-surface-audit: exempt
+#include <cstdio>
 #include "primec/Semantics.h"
 #include "primec/SemanticsBenchmark.h"
 #include "primec/SemanticValidationPlan.h"
@@ -7585,16 +7586,70 @@ bool runSemanticValidationManifest(SemanticValidationManifestExecutionState &sta
   if (!validateSemanticValidationManifestExecutableShape(state.error)) {
     return false;
   }
+
+  using PassKind = semantics::SemanticValidationPassKind;
+
+  // Internal stdlib modules (internal_*) are in canonical form and never need
+  // compatibility rewrites. Deferring them from those passes avoids redundant
+  // AST traversals on thousands of internal definitions per pass — the
+  // 4,842-line internal_soa_storage.prime alone adds >30s on wildcard imports
+  // like `import /std/collections/*` without this filter.
+  auto isInternalStdlibDef = [](const Definition &def) {
+    return def.namespacePrefix.find("/internal_") != std::string::npos;
+  };
+
+  std::vector<Definition> deferredInternalDefs;
+  bool internalDefsInProgram = true;
+
+  auto deferInternalDefs = [&]() {
+    if (!internalDefsInProgram) {
+      return;
+    }
+    auto &defs = state.program.definitions;
+    auto pivot = std::stable_partition(defs.begin(), defs.end(),
+                                       [&](const Definition &def) {
+                                         return !isInternalStdlibDef(def);
+                                       });
+    if (pivot == defs.end()) {
+      return;
+    }
+    deferredInternalDefs.insert(deferredInternalDefs.end(),
+                                std::make_move_iterator(pivot),
+                                std::make_move_iterator(defs.end()));
+    defs.erase(pivot, defs.end());
+    internalDefsInProgram = false;
+  };
+
+  auto restoreInternalDefs = [&]() {
+    if (internalDefsInProgram || deferredInternalDefs.empty()) {
+      return;
+    }
+    auto &defs = state.program.definitions;
+    defs.insert(defs.end(),
+                std::make_move_iterator(deferredInternalDefs.begin()),
+                std::make_move_iterator(deferredInternalDefs.end()));
+    deferredInternalDefs.clear();
+    internalDefsInProgram = true;
+  };
+
   for (const auto &pass : semantics::semanticValidationPassManifest()) {
     if (state.semanticProductPublicationCompleted) {
       state.error = "semantic validation manifest has pass after publication: " +
                     std::string(pass.name);
       return false;
     }
+    if (pass.kind == PassKind::CompatibilityRewrite) {
+      deferInternalDefs();
+    } else {
+      restoreInternalDefs();
+    }
     if (!runSemanticValidationManifestPass(pass, state)) {
       return false;
     }
   }
+
+  restoreInternalDefs();
+
   if (!state.validatorPassCompleted) {
     state.error = "semantic validation manifest is missing validator-passes";
     return false;

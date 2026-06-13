@@ -215,6 +215,7 @@ bool Parser::parseExpr(Expr &expr, const std::string &namespacePrefix) {
     if (match(TokenKind::KeywordImport)) {
       // Skip import statements in expression context - they are handled
       // by the import resolver before parsing. Allow them anywhere.
+      expect(TokenKind::KeywordImport, "expected 'import'");
       do {
         skipComments();
         consume(TokenKind::Identifier, "expected import path");

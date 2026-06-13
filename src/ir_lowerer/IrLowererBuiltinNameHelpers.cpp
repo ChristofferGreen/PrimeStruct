@@ -655,8 +655,12 @@ bool getBuiltinCollectionName(const Expr &expr, std::string &out) {
   }
   if (scopedName.rfind(collectionMemberRoot("vector"), 0) == 0) {
     std::string alias = scopedName.substr(collectionMemberRoot("vector").size());
-    if (alias == "vector") {
-      out = "vector";
+    const size_t generatedSuffix = alias.find("__");
+    if (generatedSuffix != std::string::npos) {
+      alias.erase(generatedSuffix);
+    }
+    if (alias == "vector" || alias == "array") {
+      out = alias;
       return true;
     }
     return false;

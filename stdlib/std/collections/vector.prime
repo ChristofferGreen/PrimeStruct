@@ -81,6 +81,7 @@ namespace std {
          else() { })
     }
 
+  }
 
   [return<Pointer<uninitialized<T>>>]
   vectorSlotUnsafe<T>([/std/collections/vector/Vector<T>] values, [i32] index) {
@@ -89,7 +90,7 @@ namespace std {
           not(less_than(index, values.field_capacity()))),
        then() {
          [array<i32>] empty{array<i32>()}
-         empty[index]
+         /at(empty, index)
        },
        else() { })
     return(/std/collections/internal_buffer_unchecked/bufferOffsetUnsafe<uninitialized<T>>(values.data, index))
@@ -131,7 +132,7 @@ namespace std {
           greater_than(limit, values.field_capacity())),
        then() {
          [array<i32>] empty{array<i32>()}
-         empty[limit]
+         /at(empty, limit)
        },
        else() { })
     [i32 mut] index{0i32}
@@ -173,7 +174,7 @@ namespace std {
              greater_than(values.field_capacity(), 1073741823i32))),
        then() {
          [array<i32>] empty{array<i32>()}
-         empty[0i32]
+         /at(empty, 0i32)
        },
        else() { })
   }
@@ -186,7 +187,7 @@ namespace std {
           not(less_than(index, values.field_capacity()))),
        then() {
          [array<i32>] empty{array<i32>()}
-         empty[index]
+         /at(empty, index)
        },
        else() { })
   }
@@ -197,13 +198,13 @@ namespace std {
     if(less_than(capacity, 0i32),
        then() {
          [array<i32>] empty{array<i32>()}
-         empty[capacity]
+         /at(empty, capacity)
        },
        else() { })
     if(greater_than(capacity, 1073741823i32),
        then() {
          [array<i32>] empty{array<i32>()}
-         empty[capacity]
+         /at(empty, capacity)
        },
        else() { })
     if(not(greater_than(capacity, 1073741823i32)),
@@ -362,7 +363,7 @@ namespace std {
     if(equal(values.field_count(), 0i32),
        then() {
          [array<i32>] empty{array<i32>()}
-         empty[0i32]
+         /at(empty, 0i32)
        },
        else() {
          [i32] lastIndex{plus(values.field_count(), -1i32)}

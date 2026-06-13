@@ -182,6 +182,12 @@ const Definition *resolveMethodDefinitionFromReceiverTarget(
         !isCanonicalSoaWrapperMethodName(normalizedMethodName)) {
       return nullptr;
     }
+    if (normalizedMethodName == "push" || normalizedMethodName == "reserve") {
+      if (const Definition *canonicalResolved =
+              findMethodDefinitionByPath("/std/collections/soa_vector/" + normalizedMethodName)) {
+        return canonicalResolved;
+      }
+    }
     if (normalizedMethodName == "to_aos") {
       if (const Definition *rootedResolved =
               findMethodDefinitionByPath("/to_aos")) {

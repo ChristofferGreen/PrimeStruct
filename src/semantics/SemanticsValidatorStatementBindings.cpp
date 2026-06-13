@@ -1066,7 +1066,18 @@ bool SemanticsValidator::validateBindingStatement(const std::vector<ParameterInf
             legacyExperimentalVectorCompatibilityPrefix() +
                 std::string("vector") + "SlotUnsafe",
             0) == 0;
-    if ((isSoaColumnSlotUnsafe || isVectorSlotUnsafe) && !expr.args.empty()) {
+    auto isCanonicalVectorSlotUnsafe = [](std::string path) {
+      const size_t specializationSuffix = path.find("__");
+      if (specializationSuffix != std::string::npos) {
+        path.erase(specializationSuffix);
+      }
+      return path.rfind(collection_paths::memberPath(collection_paths::kVectorFolder,
+                                                    "vectorSlotUnsafe"),
+                        0) == 0;
+    };
+    if ((isSoaColumnSlotUnsafe || isVectorSlotUnsafe ||
+         isCanonicalVectorSlotUnsafe(resolvedCallPath)) &&
+        !expr.args.empty()) {
       std::string storageRoot;
       if (!resolveStorageRootExpr(expr.args.front(), storageRoot) || storageRoot.empty()) {
         return false;

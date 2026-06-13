@@ -389,8 +389,16 @@ bool rewriteMonomorphizedDefinitions(Context &ctx,
     if (isPathUnderTemplateRoot(clone.fullPath, templateRoots)) {
       continue;
     }
-    if (!rewriteDefinition(clone, SubstMap{}, {}, ctx, error)) {
-      return false;
+    // Concrete (non-template) internal stdlib definitions are already in canonical
+    // form — their template siblings get instantiated on demand. Skip the full
+    // rewrite pass for these to avoid O(n) traversals over thousands of bodies.
+    const bool isConcreteInternal =
+        def.templateArgs.empty() &&
+        def.namespacePrefix.find("/internal_") != std::string::npos;
+    if (!isConcreteInternal) {
+      if (!rewriteDefinition(clone, SubstMap{}, {}, ctx, error)) {
+        return false;
+      }
     }
     if (ctx.outputPaths.insert(clone.fullPath).second) {
       ctx.outputDefs.push_back(std::move(clone));

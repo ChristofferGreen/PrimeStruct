@@ -721,8 +721,7 @@ std::string SemanticsValidator::directKeyValueHelperCompatibilityPath(
   if (!metadataBackedKeyValueHelperRootAliasMethodName(explicitPath).empty()) {
     return removedPath;
   }
-  if (resolvedCompatibilityHelper &&
-      matchesResolvedPath(resolvedPath, canonicalPath)) {
+  if (matchesResolvedPath(resolvedPath, canonicalPath)) {
     return "";
   }
   auto canonicalAccessHelperReturnsStruct = [&]() {

@@ -146,8 +146,9 @@ bool Parser::parseNamespace(std::vector<Definition> &defs, std::vector<Execution
       continue;
     }
     if (match(TokenKind::KeywordImport)) {
-      // Skip import statements - they are handled by the import resolver
-      // before parsing. Allow them anywhere for language flexibility.
+      // Skip import statements inside namespaces - they are handled by the
+      // import resolver before parsing. Allow them anywhere for flexibility.
+      expect(TokenKind::KeywordImport, "expected 'import'");
       do {
         skipComments();
         consume(TokenKind::Identifier, "expected import path");
@@ -167,9 +168,6 @@ bool Parser::parseNamespace(std::vector<Definition> &defs, std::vector<Execution
       } while (pos_ < tokens_.size() && tokens_[pos_].kind == TokenKind::Identifier &&
                !tokens_[pos_].text.empty() && tokens_[pos_].text[0] == '/');
       continue;
-    }
-    if (match(TokenKind::KeywordImport)) {
-      return fail("import statements must appear at the top level");
     }
     if (match(TokenKind::KeywordNamespace)) {
       if (!parseNamespace(defs, execs)) {

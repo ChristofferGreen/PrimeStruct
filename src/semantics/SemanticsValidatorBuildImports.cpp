@@ -32,6 +32,14 @@ bool stdlibSurfaceMatchesImportAliasPath(const StdlibSurfaceMetadata &metadata,
              metadata.importAliasSpellings.end();
 }
 
+bool stdlibSurfaceMatchesWildcardRoot(const StdlibSurfaceMetadata &metadata,
+                                      const std::string_view importRoot) {
+  return metadata.canonicalImportRoot == importRoot ||
+         metadata.canonicalPath == importRoot ||
+         std::find(metadata.importAliasSpellings.begin(), metadata.importAliasSpellings.end(), importRoot) !=
+             metadata.importAliasSpellings.end();
+}
+
 const StdlibSurfaceMetadata *findStdlibSurfaceImportAliasMetadata(const std::string_view importPath) {
   const StdlibSurfaceMetadata *bestMatch = nullptr;
   int bestPriority = -1;
@@ -102,7 +110,7 @@ const StdlibSurfaceMetadata *findStdlibSurfaceWildcardAliasMetadata(const std::s
   const StdlibSurfaceMetadata *bestMatch = nullptr;
   int bestPriority = -1;
   for (const StdlibSurfaceMetadata &metadata : stdlibSurfaceRegistry()) {
-    if (metadata.canonicalImportRoot != importRoot) {
+    if (!stdlibSurfaceMatchesWildcardRoot(metadata, importRoot)) {
       continue;
     }
     if (std::find(metadata.importAliasSpellings.begin(),
@@ -201,25 +209,32 @@ bool SemanticsValidator::buildImportAliases() {
   auto registerStdlibSurfaceWildcardAliases =
       [&](const std::string &prefix,
           std::unordered_map<std::string, std::string> &targetAliases) {
+    bool sawAlias = false;
     for (const StdlibSurfaceMetadata &metadata : stdlibSurfaceRegistry()) {
-      if (metadata.canonicalImportRoot != prefix) {
+      if (!stdlibSurfaceMatchesWildcardRoot(metadata, prefix)) {
         continue;
       }
-      for (const std::string_view spelling : metadata.importAliasSpellings) {
-        if (spelling.empty() || spelling.front() == '/') {
-          continue;
+      if (metadata.canonicalImportRoot == prefix) {
+        for (const std::string_view spelling : metadata.importAliasSpellings) {
+          if (spelling.empty() || spelling.front() == '/') {
+            continue;
+          }
+          const StdlibSurfaceMetadata *preferred =
+              findStdlibSurfaceWildcardAliasMetadata(prefix, spelling);
+          if (preferred != &metadata) {
+            continue;
+          }
+          const std::string aliasName(spelling);
+          const std::string aliasPath(preferred->canonicalPath);
+          targetAliases[aliasName] = aliasPath;
+          importAliases_[aliasName] = aliasPath;
+          sawAlias = true;
         }
-        const StdlibSurfaceMetadata *preferred =
-            findStdlibSurfaceWildcardAliasMetadata(prefix, spelling);
-        if (preferred != &metadata) {
-          continue;
-        }
-        const std::string aliasName(spelling);
-        const std::string aliasPath(preferred->canonicalPath);
-        targetAliases[aliasName] = aliasPath;
-        importAliases_[aliasName] = aliasPath;
+        continue;
       }
+      sawAlias = true;
     }
+    return sawAlias;
   };
   auto registerCanonicalSoaVectorWildcardAliases =
       [&](const std::string &prefix, std::unordered_map<std::string, std::string> &) {
@@ -378,7 +393,8 @@ bool SemanticsValidator::buildImportAliases() {
       prefix = importPath;
     }
     if (isWildcard) {
-      registerStdlibSurfaceWildcardAliases(prefix, directImportAliases_);
+      const bool sawStdlibSurfaceWildcardAliases =
+          registerStdlibSurfaceWildcardAliases(prefix, directImportAliases_);
       bool sawCanonicalSoaVectorWildcardAliases =
           registerCanonicalSoaVectorWildcardAliases(prefix, directImportAliases_);
       bool sawInternalVectorWildcardAliases =
@@ -387,8 +403,8 @@ bool SemanticsValidator::buildImportAliases() {
           registerInternalMapWildcardAliases(prefix, directImportAliases_);
       const std::string scopedPrefix = prefix + "/";
       bool sawImmediateDefinition =
-          sawCanonicalSoaVectorWildcardAliases || sawInternalVectorWildcardAliases ||
-          sawInternalMapWildcardAliases;
+          sawStdlibSurfaceWildcardAliases || sawCanonicalSoaVectorWildcardAliases ||
+          sawInternalVectorWildcardAliases || sawInternalMapWildcardAliases;
       bool importError = false;
       std::vector<std::string> matchingPaths;
       matchingPaths.reserve(defMap_.size());

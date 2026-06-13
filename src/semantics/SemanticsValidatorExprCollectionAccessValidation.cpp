@@ -409,7 +409,7 @@ bool SemanticsValidator::validateExprCollectionAccessFallbacks(
       return failCollectionAccessDiagnostic(
           "named arguments not supported for builtin calls");
     }
-    if (!expr.templateArgs.empty()) {
+    if (!expr.templateArgs.empty() && !context.isStdNamespacedVectorAccessCall) {
       if (context.isStdNamespacedMapAccessCall ||
           isCanonicalKeyValueAccessResolvedPath(resolved)) {
         std::string diagnosticTarget = resolved;
