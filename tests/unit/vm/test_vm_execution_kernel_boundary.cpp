@@ -204,13 +204,13 @@ TEST_CASE("vm execution kernel avoids runtime-only dependencies") {
   const std::filesystem::path headerPath =
       repoRoot / "include" / "primec" / "VmExecutionKernel.h";
   const std::filesystem::path sourcePath =
-      repoRoot / "src" / "VmExecutionKernel.cpp";
+      repoRoot / "src" / "runtime" / "VmExecutionKernel.cpp";
   const std::filesystem::path numericSharedPath =
-      repoRoot / "src" / "VmNumericOpcodeShared.cpp";
+      repoRoot / "src" / "runtime" / "VmNumericOpcodeShared.cpp";
   const std::filesystem::path kernelBoundaryHeaderPath =
       repoRoot / "include" / "primec" / "VmKernelBoundary.h";
   const std::filesystem::path kernelBoundarySourcePath =
-      repoRoot / "src" / "VmKernelBoundary.cpp";
+      repoRoot / "src" / "runtime" / "VmKernelBoundary.cpp";
   REQUIRE(std::filesystem::exists(headerPath));
   REQUIRE(std::filesystem::exists(sourcePath));
   REQUIRE(std::filesystem::exists(numericSharedPath));

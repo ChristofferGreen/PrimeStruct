@@ -96,8 +96,6 @@ TEST_SUITE_BEGIN("primestruct.stdlib.map_ownership");
 
 TEST_CASE("canonical map surface owns standalone stdlib implementation") {
   const std::string mapSource = readText(collectionsFile("map.prime"));
-  const std::string experimentalSource = readText(collectionsFile("experimental_map.prime"));
-  const std::string internalSource = readText(collectionsFile("internal_map.prime"));
   const std::string surfacesSource = readText(collectionsFile("surfaces.psmeta"));
   const std::string registrySource = readText(repoRoot() / "src" / "StdlibSurfaceRegistry.cpp");
   const std::string publicationBuildersSource =
@@ -454,8 +452,8 @@ TEST_CASE("canonical map surface owns standalone stdlib implementation") {
 
   REQUIRE(!mapSource.empty());
   CHECK_FALSE(std::filesystem::exists(collectionsFile("map2.prime")));
-  REQUIRE(!experimentalSource.empty());
-  REQUIRE(!internalSource.empty());
+  CHECK_FALSE(std::filesystem::exists(collectionsFile("experimental_map.prime")));
+  CHECK_FALSE(std::filesystem::exists(collectionsFile("internal_map.prime")));
   REQUIRE(!surfacesSource.empty());
   REQUIRE(!registrySource.empty());
   REQUIRE(!publicationBuildersSource.empty());
@@ -586,30 +584,6 @@ TEST_CASE("canonical map surface owns standalone stdlib implementation") {
   CHECK(mapSource.find("[args<Entry<K, V>>] entries") == std::string::npos);
   CHECK(mapSource.find("entries[index]") == std::string::npos);
   CHECK(mapSource.find("[K] eighthKey, [V] eighthValue") != std::string::npos);
-
-  CHECK(experimentalSource.find("import /std/collections/map/*") != std::string::npos);
-  CHECK(experimentalSource.find("namespace experimental_map") == std::string::npos);
-  CHECK(experimentalSource.find("mapFindIndex") == std::string::npos);
-  CHECK(experimentalSource.find("mapOverwriteSlot") == std::string::npos);
-  CHECK(experimentalSource.find("[public struct]") == std::string::npos);
-
-  CHECK(internalSource.find("mapFindIndex") != std::string::npos);
-  CHECK(internalSource.find("mapOverwriteSlot") != std::string::npos);
-  const auto internalNamespacePos = internalSource.find("namespace internal_map");
-  CHECK(internalNamespacePos != std::string::npos);
-  CHECK(internalSource.find("namespace experimental_map") != std::string::npos);
-  CHECK(internalSource.find("insertImpl<K, V>") != std::string::npos);
-
-  REQUIRE(internalNamespacePos != std::string::npos);
-  const std::string internalNamespace = internalSource.substr(internalNamespacePos);
-  CHECK(internalNamespace.find("findIndexImpl<K, V>") != std::string::npos);
-  CHECK(internalNamespace.find("borrowedFindIndexImpl<K, V>") != std::string::npos);
-  CHECK(internalNamespace.find("overwriteSlotImpl<V>") != std::string::npos);
-  CHECK(internalNamespace.find("containerErrorResult<V>(containerMissingKey())") != std::string::npos);
-  CHECK(internalNamespace.find("/std/collections/experimental_map/mapContains") == std::string::npos);
-  CHECK(internalNamespace.find("/std/collections/experimental_map/mapTryAt") == std::string::npos);
-  CHECK(internalNamespace.find("/std/collections/experimental_map/mapAt") == std::string::npos);
-  CHECK(internalNamespace.find("/std/collections/experimental_map/mapInsert") == std::string::npos);
 
   CHECK(surfacesSource.find("id = CollectionsMapHelpers") != std::string::npos);
   CHECK(surfacesSource.find("id = CollectionsMapConstructors") != std::string::npos);

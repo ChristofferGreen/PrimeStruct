@@ -529,7 +529,7 @@ TEST_CASE("compile-time VM facade stays source locked to compiler-host boundary"
   CHECK(kernelBoundaryHeader.find("primec/Vm.h") == std::string::npos);
 
   const std::string cmake = readSourceFile(repoRoot / "CMakeLists.txt");
-  CHECK(cmake.find("src/VmKernelBoundary.cpp") != std::string::npos);
+  CHECK(cmake.find("src/runtime/VmKernelBoundary.cpp") != std::string::npos);
   CHECK(cmake.find("src/CompileTimeEvaluation.cpp") != std::string::npos);
   CHECK(cmake.find("src/CompileTimeCallable.cpp") != std::string::npos);
   CHECK(cmake.find("target_link_libraries(PrimeStruct_compile_time_tests "

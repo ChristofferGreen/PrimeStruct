@@ -547,7 +547,7 @@ TEST_CASE("cmake splits primec library into subsystem targets") {
   CHECK(cmake.find("set(PRIMESTRUCT_CODEGEN_SOURCES") != std::string::npos);
   CHECK(cmake.find("set(PRIMESTRUCT_RUNTIME_SOURCES") != std::string::npos);
   CHECK(cmake.find("set(PRIMESTRUCT_BACKEND_REGISTRY_SOURCES") != std::string::npos);
-  CHECK(cmake.find("src/VmKernelBoundary.cpp") != std::string::npos);
+  CHECK(cmake.find("src/runtime/VmKernelBoundary.cpp") != std::string::npos);
   CHECK(cmake.find("src/IrBackendProfiles.cpp") != std::string::npos);
   CHECK(cmake.find("src/semantics/SemanticsValidateConvertConstructors.cpp") != std::string::npos);
   CHECK(cmake.find("src/semantics/SemanticsValidateExperimentalGfxConstructors.cpp") != std::string::npos);

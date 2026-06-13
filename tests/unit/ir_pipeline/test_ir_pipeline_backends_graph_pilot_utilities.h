@@ -262,7 +262,7 @@
         std::string::npos);
   CHECK(validatorInfer.find("const bool isBuiltinGet = isSimpleCallName(expr, \"get\");") !=
         std::string::npos);
-  CHECK(validatorInfer.find("isSimpleCallName(expr, \"to_soa\") || isSimpleCallName(expr, \"to\" \"_aos\")") !=
+  CHECK(validatorInfer.find("isSimpleCallName(expr, \"to_soa\") || isSimpleCallName(expr, \"to_aos\")") !=
         std::string::npos);
   CHECK(validatorInfer.find("if (getBuiltinGpuName(expr, builtinName)) {") !=
         std::string::npos);

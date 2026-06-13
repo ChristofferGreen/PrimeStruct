@@ -194,10 +194,10 @@ TEST_CASE("ir lowerer vector type layout traces use generic collection helpers")
             "isBuiltinCollectionTypeName(name, \"vector\")") !=
         std::string::npos);
   CHECK(uninitializedStructSource.find(
-            "normalizeBuiltinCollectionStructPath(\"vector\")") !=
+            "normalizeExperimentalCollectionTypePath(typeName, \"vector\", \"Vector\")") !=
         std::string::npos);
   CHECK(structSlotLayoutSource.find(
-            "experimentalCollectionTypePath(\"vector\", \"Vector\")") !=
+            "normalizeExperimentalCollectionTypePath(typeName, \"vector\", \"Vector\")") !=
         std::string::npos);
   CHECK(structReturnPathSource.find(
             "collectionWrapperAlias(\"vector\", \"New\")") !=
@@ -738,12 +738,12 @@ TEST_CASE("vm heap helpers source delegation stays stable") {
       std::filesystem::exists(std::filesystem::path("src")) ? std::filesystem::path(".")
                                                             : std::filesystem::path("..");
 
-  const std::filesystem::path vmPath = repoRoot / "src" / "Vm.cpp";
-  const std::filesystem::path vmExecutionPath = repoRoot / "src" / "VmExecution.cpp";
+  const std::filesystem::path vmPath = repoRoot / "src" / "runtime" / "Vm.cpp";
+  const std::filesystem::path vmExecutionPath = repoRoot / "src" / "runtime" / "VmExecution.cpp";
   const std::filesystem::path vmDebugSessionInstructionPath =
-      repoRoot / "src" / "VmDebugSessionInstruction.cpp";
-  const std::filesystem::path vmHeapHelpersPath = repoRoot / "src" / "VmHeapHelpers.cpp";
-  const std::filesystem::path vmHeapHelpersHeaderPath = repoRoot / "src" / "VmHeapHelpers.h";
+      repoRoot / "src" / "runtime" / "VmDebugSessionInstruction.cpp";
+  const std::filesystem::path vmHeapHelpersPath = repoRoot / "src" / "runtime" / "VmHeapHelpers.cpp";
+  const std::filesystem::path vmHeapHelpersHeaderPath = repoRoot / "src" / "runtime" / "VmHeapHelpers.h";
   REQUIRE(std::filesystem::exists(vmPath));
   REQUIRE(std::filesystem::exists(vmExecutionPath));
   REQUIRE(std::filesystem::exists(vmDebugSessionInstructionPath));
@@ -811,12 +811,12 @@ TEST_CASE("vm numeric opcode helpers source delegation stays stable") {
       std::filesystem::exists(std::filesystem::path("src")) ? std::filesystem::path(".")
                                                             : std::filesystem::path("..");
 
-  const std::filesystem::path vmExecutionNumericPath = repoRoot / "src" / "VmExecutionNumeric.cpp";
-  const std::filesystem::path vmDebugNumericPath = repoRoot / "src" / "VmDebugSessionInstructionNumeric.cpp";
-  const std::filesystem::path vmNumericSharedPath = repoRoot / "src" / "VmNumericOpcodeShared.cpp";
-  const std::filesystem::path vmNumericSharedHeaderPath = repoRoot / "src" / "VmNumericOpcodeShared.h";
+  const std::filesystem::path vmExecutionNumericPath = repoRoot / "src" / "runtime" / "VmExecutionNumeric.cpp";
+  const std::filesystem::path vmDebugNumericPath = repoRoot / "src" / "runtime" / "VmDebugSessionInstructionNumeric.cpp";
+  const std::filesystem::path vmNumericSharedPath = repoRoot / "src" / "runtime" / "VmNumericOpcodeShared.cpp";
+  const std::filesystem::path vmNumericSharedHeaderPath = repoRoot / "src" / "runtime" / "VmNumericOpcodeShared.h";
   const std::filesystem::path vmKernelBoundaryPath =
-      repoRoot / "src" / "VmKernelBoundary.cpp";
+      repoRoot / "src" / "runtime" / "VmKernelBoundary.cpp";
   const std::filesystem::path vmKernelBoundaryHeaderPath =
       repoRoot / "include" / "primec" / "VmKernelBoundary.h";
   REQUIRE(std::filesystem::exists(vmExecutionNumericPath));
@@ -875,15 +875,15 @@ TEST_CASE("vm control flow opcode helpers source delegation stays stable") {
       std::filesystem::exists(std::filesystem::path("src")) ? std::filesystem::path(".")
                                                             : std::filesystem::path("..");
 
-  const std::filesystem::path vmExecutionPath = repoRoot / "src" / "VmExecution.cpp";
+  const std::filesystem::path vmExecutionPath = repoRoot / "src" / "runtime" / "VmExecution.cpp";
   const std::filesystem::path vmExecutionKernelPath =
-      repoRoot / "src" / "VmExecutionKernel.cpp";
+      repoRoot / "src" / "runtime" / "VmExecutionKernel.cpp";
   const std::filesystem::path vmDebugInstructionPath =
-      repoRoot / "src" / "VmDebugSessionInstruction.cpp";
+      repoRoot / "src" / "runtime" / "VmDebugSessionInstruction.cpp";
   const std::filesystem::path vmControlFlowSharedPath =
-      repoRoot / "src" / "VmControlFlowOpcodeShared.cpp";
+      repoRoot / "src" / "runtime" / "VmControlFlowOpcodeShared.cpp";
   const std::filesystem::path vmControlFlowSharedHeaderPath =
-      repoRoot / "src" / "VmControlFlowOpcodeShared.h";
+      repoRoot / "src" / "runtime" / "VmControlFlowOpcodeShared.h";
   REQUIRE(std::filesystem::exists(vmExecutionPath));
   REQUIRE(std::filesystem::exists(vmExecutionKernelPath));
   REQUIRE(std::filesystem::exists(vmDebugInstructionPath));
