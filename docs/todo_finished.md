@@ -24243,3 +24243,17 @@ Moved from `docs/todo.md` during unfinished-only cleanup:
   - evidence: Replaced with isStdlibSurfaceMemberName(CollectionsManifestSurface2)
     plus size fallback. Added /std/collections/map/size as compatibility_spelling.
     Build and IR validation tests pass. Commit da5b299d9.
+
+- [x] TODO-4673: Migrate method dispatch chains in MethodTargetResolution
+  - owner: ai
+  - created_at: 2026-06-13
+  - finished_at: 2026-06-13
+  - phase: Collection decoupling - Phase 1
+  - parallel_track: collection-decoupling
+  - depends_on: TODO-4658, TODO-4672
+  - scope: Replace isCanonicalMapBuiltinMethodHelper and vector method name checks.
+  - evidence: Replaced 11-string map helper set with
+    isStdlibSurfaceMemberName(CollectionsManifestSurface2). Replaced
+    10-string vector method check with
+    isStdlibSurfaceMemberName(CollectionsManifestSurface0).
+    Build and IR validation tests pass. Commit 9891c1c2d.

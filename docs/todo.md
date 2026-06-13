@@ -223,9 +223,8 @@ This file is the live open-work queue for PrimeStruct.
 37. TODO-4669: Implement generic vector slot count from .prime fields
 38. TODO-4670: Remove collection-specific slot layout helpers
 39. TODO-4671: Remove isVectorTypeName and isMapTypeName after migration
-40. TODO-4673: Migrate method dispatch chains in MethodTargetResolution
-42. TODO-4674: Migrate SOA helper routing beyond to_aos
-43. TODO-4675: Migrate ContainerError hardcoded paths to manifest
+40. TODO-4674: Migrate SOA helper routing beyond to_aos
+41. TODO-4675: Migrate ContainerError hardcoded paths to manifest
 
 ### Task Blocks
 
@@ -1061,25 +1060,6 @@ This file is the live open-work queue for PrimeStruct.
     - Functions deleted from source
     - Full test suite passes
   - stop_rule: functions deleted and grep clean
-
-- [ ] TODO-4673: Migrate method dispatch chains in MethodTargetResolution
-  - owner: ai
-  - created_at: 2026-06-13
-  - phase: Collection decoupling - Phase 1
-  - parallel_track: collection-decoupling
-  - depends_on: TODO-4658, TODO-4672
-  - scope: Replace the hardcoded method name chains at
-    `SemanticsValidatorExprMethodTargetResolution.cpp` line 130
-    (`isReadOnlyCollectionMemberHelperName`: "count", "count_ref",
-    "at", "at_ref", "at_unsafe", "at_unsafe_ref") and lines
-    3328-3331 (method name matching for "at", "at_unsafe", "push",
-    "pop", "reserve", "clear", "remove_at", "remove_swap") with
-    manifest-driven queries.
-  - acceptance:
-    - Hardcoded chains at lines 130 and 3328-3331 removed
-    - Method dispatch uses registry lookup
-    - Semantics tests pass
-  - stop_rule: chains removed and tests pass
 
 - [ ] TODO-4674: Migrate SOA helper routing beyond to_aos
   - owner: ai
