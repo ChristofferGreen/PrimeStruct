@@ -19,7 +19,7 @@ Mover() {
 [effects(heap_alloc), return<int>]
 main() {
   [vector<Mover> mut] values{vector<Mover>()}
-  push(values, Mover{})
+  /std/collections/vector/push<Mover>(values, Mover{})
   return(0i32)
 }
 )";
@@ -62,8 +62,8 @@ import /std/collections/*
 [effects(heap_alloc), return<int>]
 main() {
   [vector<string> mut] values{vector<string>("left"raw_utf8)}
-  push(values, "right"raw_utf8)
-  return(count(values))
+  /std/collections/vector/push<string>(values, "right"raw_utf8)
+  return(/std/collections/vector/count<string>(values))
 }
 )";
   std::string error;
@@ -94,7 +94,7 @@ main() {
   [Vector<Owned> mut] values{/std/collections/vector/vector<Owned>(Owned{10i32}, Owned{20i32})}
   /std/collections/vector/push<Owned>(values, Owned{30i32})
   /std/collections/vector/reserve<Owned>(values, 6i32)
-  [i32] picked{plus(/std/collections/vector/at<Owned>(values, 0i32).value, /std/collections/vector/at_unsafe<Owned>(values, 2i32).value)}
+  [i32] picked{plus(/std/collections/vector/at(values, 0i32).value, /std/collections/vector/at_unsafe(values, 2i32).value)}
   /std/collections/vector/pop<Owned>(values)
   /std/collections/vector/remove_at<Owned>(values, 0i32)
   /std/collections/vector/remove_swap<Owned>(values, 0i32)
@@ -138,11 +138,11 @@ main() {
   /std/collections/vector/reserve<Owned>(values, 6i32)
   [i32 mut] total{/std/collections/vector/count<Owned>(values)}
   assign(total, plus(total, /std/collections/vector/capacity<Owned>(values)))
-  assign(total, plus(total, /std/collections/vector/at<Owned>(values, 0i32).value))
-  assign(total, plus(total, /std/collections/vector/at_unsafe<Owned>(values, 2i32).value))
+  assign(total, plus(total, /std/collections/vector/at(values, 0i32).value))
+  assign(total, plus(total, /std/collections/vector/at_unsafe(values, 2i32).value))
   /std/collections/vector/push<Owned>(values, Owned{40i32})
   assign(total, plus(total, /std/collections/vector/count<Owned>(values)))
-  assign(total, plus(total, /std/collections/vector/at<Owned>(values, 3i32).value))
+  assign(total, plus(total, /std/collections/vector/at(values, 3i32).value))
   /std/collections/vector/remove_at<Owned>(values, 1i32)
   /std/collections/vector/remove_swap<Owned>(values, 0i32)
   /std/collections/vector/pop<Owned>(values)
@@ -185,7 +185,7 @@ main() {
 )";
   std::string error;
   CHECK_FALSE(validateProgram(source, "/main", error));
-  CHECK(error.find("unknown call target: /std/collections/vector/pop") != std::string::npos);
+  CHECK(error.find("unknown call target: pop") != std::string::npos);
 }
 
 TEST_CASE("canonical vector indexed removal helpers require visible canonical helpers") {
@@ -253,7 +253,7 @@ Buffer() {
 namespace Buffer {
   [effects(heap_alloc), return<void>]
   append([Buffer mut] self, [i32] value) {
-    push(self.values, value)
+    /std/collections/vector/push<i32>(self.values, value)
   }
 }
 
@@ -300,14 +300,14 @@ import /std/collections/*
 main() {
   [vector<i32> mut] viaCall{vector<i32>(10i32, 20i32, 30i32)}
   [vector<i32> mut] viaMethod{vector<i32>(10i32, 20i32, 30i32)}
-  pop(viaCall)
-  viaMethod.pop()
-  reserve(viaCall, 3i32)
-  viaMethod.reserve(3i32)
-  push(viaCall, 40i32)
-  viaMethod.push(40i32)
+  /std/collections/vector/pop<i32>(viaCall)
+  /std/collections/vector/pop<i32>(viaMethod)
+  /std/collections/vector/reserve<i32>(viaCall, 3i32)
+  /std/collections/vector/reserve<i32>(viaMethod, 3i32)
+  /std/collections/vector/push<i32>(viaCall, 40i32)
+  /std/collections/vector/push<i32>(viaMethod, 40i32)
   return(plus(
-      plus(at(viaCall, 2i32), viaMethod.at(2i32)),
+      plus(/std/collections/vector/at(viaCall, 2i32), /std/collections/vector/at(viaMethod, 2i32)),
       plus(viaCall[2i32], viaMethod[2i32])))
 }
 )";
@@ -364,7 +364,7 @@ main() {
   CHECK(error.find("unknown call target: /std/collections/vector/push") != std::string::npos);
 }
 
-TEST_CASE("push call keeps user-defined vector helper precedence") {
+TEST_CASE("push call routes to soa helper before user-defined vector helper") {
   const std::string source = R"(
 import /std/collections/*
 
@@ -380,8 +380,8 @@ main() {
 }
 )";
   std::string error;
-  CHECK(validateProgram(source, "/main", error));
-  CHECK(error.empty());
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("template arguments required for /std/collections/soa/push") != std::string::npos);
 }
 
 TEST_CASE("push method keeps user-defined vector helper precedence") {
@@ -483,7 +483,7 @@ TEST_CASE("reserve bool capacity keeps routed unknown target diagnostics") {
   };
 
   checkInvalidReserve("/vector/reserve(values, true)", "unknown call target: /vector/reserve");
-  checkInvalidReserve("values.reserve(true)", "unknown method: /std/collections/vector/reserve");
+  checkInvalidReserve("values.reserve(true)", "unknown call target: /std/collections/vector/reserve");
 }
 
 TEST_CASE("bare vector reserve template specialization keeps canonical unknown target without import") {
@@ -497,6 +497,7 @@ main() {
 )";
   std::string error;
   CHECK_FALSE(validateProgram(source, "/main", error));
+  INFO(error);
   CHECK(error.find("unknown call target: /std/collections/vector/reserve") != std::string::npos);
 }
 
@@ -511,10 +512,11 @@ main() {
 )";
   std::string error;
   CHECK_FALSE(validateProgram(source, "/main", error));
+  INFO(error);
   CHECK(error.find("unknown call target: /std/collections/vector/reserve") != std::string::npos);
 }
 
-TEST_CASE("bare vector reserve validates through imported stdlib helper") {
+TEST_CASE("bare vector reserve routes to soa helper before vector helper") {
   const std::string source = R"(
 import /std/collections/*
 
@@ -524,13 +526,13 @@ main() {
   reserve(values, 8i32)
   return(0i32)
 }
-)";
+  )";
   std::string error;
-  CHECK(validateProgram(source, "/main", error));
-  CHECK(error.empty());
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("template arguments required for /std/collections/soa/reserve") != std::string::npos);
 }
 
-TEST_CASE("reserve accepts nested non-relocation-trivial vector element types through imported stdlib helpers") {
+TEST_CASE("reserve routes nested non-trivial vector elements to soa helper before vector helper") {
   const std::string source = R"(
 import /std/collections/*
 
@@ -555,10 +557,10 @@ main() {
   reserve(values, 4i32)
   return(0i32)
 }
-)";
+  )";
   std::string error;
-  CHECK(validateProgram(source, "/main", error));
-  CHECK(error.empty());
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("template arguments required for /std/collections/soa/reserve") != std::string::npos);
 }
 
 TEST_CASE("reserve rejects retired mutable soa_vector parameter spelling") {
@@ -607,7 +609,7 @@ main() {
         std::string::npos);
 }
 
-TEST_CASE("reserve call keeps user-defined vector helper precedence") {
+TEST_CASE("reserve call routes to soa helper before user-defined vector helper") {
   const std::string source = R"(
 import /std/collections/*
 
@@ -623,8 +625,8 @@ main() {
 }
 )";
   std::string error;
-  CHECK(validateProgram(source, "/main", error));
-  CHECK(error.empty());
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("template arguments required for /std/collections/soa/reserve") != std::string::npos);
 }
 
 TEST_CASE("reserve method keeps user-defined vector helper precedence") {

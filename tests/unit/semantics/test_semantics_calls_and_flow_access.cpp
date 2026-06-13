@@ -265,7 +265,7 @@ main() {
   CHECK(error.empty());
 }
 
-TEST_CASE("map method calls resolve to definitions") {
+TEST_CASE("map method calls reject retired count helper definitions") {
   const std::string source = R"(
 [return<int>]
 /map/size([map<i32, i32>] items) {
@@ -282,14 +282,13 @@ main() {
   [map<i32, i32>] items{map<i32, i32>(1i32, 2i32)}
   return(items.size())
 }
-)";
+  )";
   std::string error;
-  CHECK(validateProgram(source, "/main", error));
-  INFO(error);
-  CHECK(error.empty());
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("unknown call target: /map/count") != std::string::npos);
 }
 
-TEST_CASE("imported map size method calls resolve to local definitions") {
+TEST_CASE("imported map size method calls reject retired count helper definitions") {
   const std::string source = R"(
 import /std/collections/*
 
@@ -305,8 +304,8 @@ main() {
 }
 )";
   std::string error;
-  CHECK(validateProgram(source, "/main", error));
-  CHECK(error.empty());
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("unknown call target: /map/count") != std::string::npos);
 }
 
 TEST_CASE("rooted map helper aliases use ordinary explicit path diagnostics") {

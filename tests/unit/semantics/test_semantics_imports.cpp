@@ -1029,7 +1029,7 @@ main() {
   CHECK(error.empty());
 }
 
-TEST_CASE("exact collection imports keep bare bridge aliases") {
+TEST_CASE("exact collection imports reject retired bare map bridge aliases") {
   const std::string source = R"(
 import /std/collections/map
 import /std/collections/ContainerError
@@ -1043,8 +1043,8 @@ main() {
 }
 )";
   std::string error;
-  CHECK(validateProgram(source, "/main", error));
-  CHECK(error.empty());
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("unknown call target: /map/count") != std::string::npos);
 }
 
 TEST_CASE("exact map imports keep canonical wrapper access helpers visible") {

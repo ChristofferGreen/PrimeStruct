@@ -393,14 +393,14 @@ main() {
   CHECK(result == 1);
 }
 
-TEST_CASE("ir lowerer rejects direct string-keyed map constructor lowering") {
+TEST_CASE("ir lowerer rejects stdlib string-keyed map helper lowering") {
   const std::string source = R"(
 import /std/collections/*
 
 [effects(heap_alloc), return<int>]
 main() {
-  [map<string, i32>] values{/std/collections/map/map<string, i32>("a"raw_utf8, 1i32, "b"raw_utf8, 2i32)}
-  return(plus(/std/collections/map/count(values), /std/collections/map/at(values, "b"raw_utf8)))
+  [/std/collections/map/MapValue<string, i32>] values{/std/collections/map/map<string, i32>("a"raw_utf8, 1i32, "b"raw_utf8, 2i32)}
+  return(plus(/std/collections/map/count<string, i32>(values), /std/collections/map/mapAt<string, i32>(values, "b"raw_utf8)))
 }
 )";
   primec::Program program;
@@ -413,7 +413,7 @@ main() {
   primec::IrModule module;
   const bool lowered = lowerer.lower(program, &semanticProgram, "/main", {}, {}, module, error);
   CHECK_FALSE(lowered);
-  CHECK(error.find("native backend only supports indexing into string literals or string bindings") !=
+  CHECK(error.find("native backend only supports arithmetic/comparison") !=
         std::string::npos);
 }
 

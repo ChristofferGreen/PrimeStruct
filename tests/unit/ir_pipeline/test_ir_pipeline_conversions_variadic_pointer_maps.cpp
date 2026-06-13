@@ -136,7 +136,8 @@ main() {
   primec::IrModule module;
   INFO(error);
   CHECK_FALSE(lowerer.lower(program, &semanticProgram, "/main", {}, {}, module, error));
-  CHECK(error.find("inline dispatch failed without diagnostic: at") != std::string::npos);
+  CHECK(error.find("semantic-product method-call target missing lowered definition: /array/at") !=
+        std::string::npos);
 }
 
 TEST_CASE("ir lowerer rejects variadic pointer map packs with indexed count_ref helpers") {
@@ -192,14 +193,8 @@ main() {
   primec::SemanticProgram semanticProgram;
   std::string error;
   INFO(error);
-  REQUIRE(parseAndValidate(source, program, semanticProgram, error));
-  CHECK(error.empty());
-
-  primec::IrLowerer lowerer;
-  primec::IrModule module;
-  INFO(error);
-  CHECK_FALSE(lowerer.lower(program, &semanticProgram, "/main", {}, {}, module, error));
-  CHECK(error.find("variadic parameter type mismatch") != std::string::npos);
+  CHECK_FALSE(parseAndValidate(source, program, semanticProgram, error));
+  CHECK(error.find("unknown call target: /map/count_ref") != std::string::npos);
 }
 
 TEST_CASE("ir lowerer rejects variadic pointer map packs with indexed dereference count methods") {
@@ -256,8 +251,7 @@ main() {
   std::string error;
   INFO(error);
   CHECK_FALSE(parseAndValidate(source, program, semanticProgram, error));
-  CHECK(error.find("unknown call target: /std/collections/map/count") !=
-        std::string::npos);
+  CHECK(error.find("unknown call target: /map/count") != std::string::npos);
 }
 
 TEST_CASE("ir lowerer rejects variadic pointer map packs with indexed lookup_ref helpers") {
@@ -315,14 +309,8 @@ main() {
   primec::SemanticProgram semanticProgram;
   std::string error;
   INFO(error);
-  REQUIRE(parseAndValidate(source, program, semanticProgram, error));
-  CHECK(error.empty());
-
-  primec::IrLowerer lowerer;
-  primec::IrModule module;
-  INFO(error);
-  CHECK_FALSE(lowerer.lower(program, &semanticProgram, "/main", {}, {}, module, error));
-  CHECK(error.find("variadic parameter type mismatch") != std::string::npos);
+  CHECK_FALSE(parseAndValidate(source, program, semanticProgram, error));
+  CHECK(error.find("unknown call target: /map/contains_ref") != std::string::npos);
 }
 
 TEST_CASE("ir lowerer rejects variadic pointer map packs with indexed dereference lookup helpers") {
@@ -381,8 +369,7 @@ main() {
   std::string error;
   INFO(error);
   CHECK_FALSE(parseAndValidate(source, program, semanticProgram, error));
-  CHECK(error.find("unknown call target: /std/collections/map/contains") !=
-        std::string::npos);
+  CHECK(error.find("unknown call target: /map/contains") != std::string::npos);
 }
 
 TEST_CASE("ir lowerer rejects variadic pointer map packs with indexed helper inference") {
@@ -442,12 +429,6 @@ main() {
   primec::SemanticProgram semanticProgram;
   std::string error;
   INFO(error);
-  REQUIRE(parseAndValidate(source, program, semanticProgram, error));
-  CHECK(error.empty());
-
-  primec::IrLowerer lowerer;
-  primec::IrModule module;
-  INFO(error);
-  CHECK_FALSE(lowerer.lower(program, &semanticProgram, "/main", {}, {}, module, error));
-  CHECK(error.find("variadic parameter type mismatch") != std::string::npos);
+  CHECK_FALSE(parseAndValidate(source, program, semanticProgram, error));
+  CHECK(error.find("unknown call target: /map/tryAt") != std::string::npos);
 }

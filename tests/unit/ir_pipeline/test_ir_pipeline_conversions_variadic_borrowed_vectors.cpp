@@ -368,7 +368,7 @@ main() {
   CHECK(error.find("unknown call target: count") != std::string::npos);
 }
 
-TEST_CASE("retired variadic map pack indexed contains helpers no longer lower as native map") {
+TEST_CASE("retired variadic map pack indexed contains rejects before lowering") {
   const std::string source = R"(
 import /std/collections/*
 
@@ -399,18 +399,11 @@ main() {
   primec::SemanticProgram semanticProgram;
   std::string error;
   INFO(error);
-  REQUIRE(parseAndValidate(source, program, semanticProgram, error));
-  CHECK(error.empty());
-
-  primec::IrLowerer lowerer;
-  primec::IrModule module;
-  INFO(error);
-  CHECK_FALSE(lowerer.lower(program, &semanticProgram, "/main", {}, {}, module, error));
-  CHECK(error.find("argument count mismatch for /std/collections/map/map") !=
-        std::string::npos);
+  CHECK_FALSE(parseAndValidate(source, program, semanticProgram, error));
+  CHECK(error.find("unknown call target: /map/contains") != std::string::npos);
 }
 
-TEST_CASE("retired variadic map pack indexed tryAt inference no longer lowers as native map") {
+TEST_CASE("retired variadic map pack indexed tryAt rejects before lowering") {
   const std::string source = R"(
 import /std/collections/*
 
@@ -449,18 +442,11 @@ main() {
   primec::SemanticProgram semanticProgram;
   std::string error;
   INFO(error);
-  REQUIRE(parseAndValidate(source, program, semanticProgram, error));
-  CHECK(error.empty());
-
-  primec::IrLowerer lowerer;
-  primec::IrModule module;
-  INFO(error);
-  CHECK_FALSE(lowerer.lower(program, &semanticProgram, "/main", {}, {}, module, error));
-  CHECK(error.find("argument count mismatch for /std/collections/map/map") !=
-        std::string::npos);
+  CHECK_FALSE(parseAndValidate(source, program, semanticProgram, error));
+  CHECK(error.find("unknown call target: /map/tryAt") != std::string::npos);
 }
 
-TEST_CASE("retired variadic map pack canonical count no longer lowers as native map") {
+TEST_CASE("retired variadic map pack canonical count rejects before lowering") {
   const std::string source = R"(
 import /std/collections/*
 import /std/collections/map/*
@@ -499,15 +485,8 @@ main() {
   primec::SemanticProgram semanticProgram;
   std::string error;
   INFO(error);
-  REQUIRE(parseAndValidate(source, program, semanticProgram, error));
-  CHECK(error.empty());
-
-  primec::IrLowerer lowerer;
-  primec::IrModule module;
-  INFO(error);
-  CHECK_FALSE(lowerer.lower(program, &semanticProgram, "/main", {}, {}, module, error));
-  CHECK(error.find("argument count mismatch for /std/collections/map/map") !=
-        std::string::npos);
+  CHECK_FALSE(parseAndValidate(source, program, semanticProgram, error));
+  CHECK(error.find("unknown call target: /map/count") != std::string::npos);
 }
 
 TEST_SUITE_END();

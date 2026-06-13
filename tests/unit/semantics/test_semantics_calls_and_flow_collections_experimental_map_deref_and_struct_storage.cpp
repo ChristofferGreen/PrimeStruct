@@ -55,7 +55,7 @@ main() {
   checkInitValueTypeMismatch(error);
 }
 
-TEST_CASE("map constructors keep arg-pack count when soa helpers are imported compatibility") {
+TEST_CASE("map constructors keep retired count diagnostics when soa helpers are imported compatibility") {
   const std::string source = R"(
 import /std/collections/*
 import /std/collections/map/*
@@ -75,9 +75,9 @@ main() {
 }
 )";
   std::string error;
-  CHECK(validateProgram(source, "/main", error));
+  CHECK_FALSE(validateProgram(source, "/main", error));
   INFO(error);
-  CHECK(error.empty());
+  CHECK(error.find("unknown call target: /map/count") != std::string::npos);
 }
 
 TEST_CASE("map constructor mismatch wins over imported soa count alias compatibility") {
@@ -322,7 +322,7 @@ main() {
   checkStdlibMapPairConstructorMismatch(error);
 }
 
-TEST_CASE("map constructors accept dereferenced canonical map storage references") {
+TEST_CASE("map constructors report retired count diagnostics on dereferenced canonical map storage references") {
   const std::string source = R"(
 import /std/collections/*
 import /std/collections/map/*
@@ -339,9 +339,9 @@ main() {
 }
 )";
   std::string error;
-  CHECK(validateProgram(source, "/main", error));
+  CHECK_FALSE(validateProgram(source, "/main", error));
   INFO(error);
-  CHECK(error.empty());
+  CHECK(error.find("unknown call target: /map/count") != std::string::npos);
 }
 
 TEST_CASE("dereferenced canonical map storage references keep mismatch diagnostics") {
@@ -481,7 +481,7 @@ main() {
   checkStdlibMapPairConstructorMismatch(error);
 }
 
-TEST_CASE("stdlib wrapper map constructor accepts explicit canonical map returns") {
+TEST_CASE("stdlib wrapper map constructor reports retired tryAt diagnostics on explicit canonical map returns") {
   const std::string source = R"(
 import /std/collections/*
 import /std/collections/map/*
@@ -511,11 +511,11 @@ main() {
 }
 )";
   std::string error;
-  CHECK(validateProgram(source, "/main", error));
-  CHECK(error.empty());
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("unknown call target: /map/tryAt") != std::string::npos);
 }
 
-TEST_CASE("stdlib wrapper map constructor keeps mismatch diagnostics on explicit canonical map returns") {
+TEST_CASE("stdlib wrapper map constructor reports retired count diagnostics on explicit canonical map returns") {
   const std::string source = R"(
 import /std/collections/*
 import /std/collections/map/*
@@ -534,10 +534,10 @@ main() {
   std::string error;
   CHECK_FALSE(validateProgram(source, "/main", error));
   INFO(error);
-  checkStdlibMapPairConstructorMismatch(error);
+  CHECK(error.find("unknown call target: /map/count") != std::string::npos);
 }
 
-TEST_CASE("stdlib wrapper map constructor accepts explicit canonical map parameters") {
+TEST_CASE("stdlib wrapper map constructor reports retired tryAt diagnostics on explicit canonical map parameters") {
   const std::string source = R"(
 import /std/collections/*
 import /std/collections/map/*
@@ -566,11 +566,11 @@ main() {
 }
 )";
   std::string error;
-  CHECK(validateProgram(source, "/main", error));
-  CHECK(error.empty());
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("unknown call target: /map/tryAt") != std::string::npos);
 }
 
-TEST_CASE("stdlib wrapper map constructor keeps mismatch diagnostics on explicit canonical map parameters") {
+TEST_CASE("stdlib wrapper map constructor reports retired count diagnostics on explicit canonical map parameters") {
   const std::string source = R"(
 import /std/collections/*
 import /std/collections/map/*
@@ -588,10 +588,10 @@ main() {
   std::string error;
   CHECK_FALSE(validateProgram(source, "/main", error));
   INFO(error);
-  checkStdlibMapPairConstructorMismatch(error);
+  CHECK(error.find("unknown call target: /map/count") != std::string::npos);
 }
 
-TEST_CASE("map constructor assigns into explicit canonical map targets") {
+TEST_CASE("map constructor assignments report retired tryAt diagnostics on explicit canonical map targets") {
   const std::string source = R"(
 import /std/collections/*
 import /std/collections/map/*
@@ -631,8 +631,8 @@ main() {
 }
 )";
   std::string error;
-  CHECK(validateProgram(source, "/main", error));
-  CHECK(error.empty());
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("unknown call target: /map/tryAt") != std::string::npos);
 }
 
 TEST_CASE("canonical map constructor assignment keeps mismatch diagnostics on explicit canonical map bindings") {
@@ -721,7 +721,7 @@ main() {
   checkStdlibMapPairConstructorMismatch(error);
 }
 
-TEST_CASE("implicit map constructors infer canonical auto locals and auto returns") {
+TEST_CASE("implicit map constructors report retired insert diagnostics on canonical auto locals and auto returns") {
   const std::string source = R"(
 import /std/collections/*
 import /std/collections/map/*
@@ -751,9 +751,9 @@ main() {
 }
 )";
   std::string error;
-  CHECK(validateProgram(source, "/main", error));
+  CHECK_FALSE(validateProgram(source, "/main", error));
   INFO(error);
-  CHECK(error.empty());
+  CHECK(error.find("unknown call target: /map/insert") != std::string::npos);
 }
 
 TEST_SUITE_END();

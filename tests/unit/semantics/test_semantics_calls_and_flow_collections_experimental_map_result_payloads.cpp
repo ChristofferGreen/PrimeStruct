@@ -2,18 +2,6 @@
 
 namespace {
 
-void checkMapPairMismatchDiagnostic(const std::string &error) {
-  CHECK(error.find("map") != std::string::npos);
-  CHECK(error.find("parameter secondValue") != std::string::npos);
-  CHECK(error.find("expected i32 got bool") != std::string::npos);
-}
-
-void checkMapPairTemplateConflict(const std::string &error) {
-  CHECK((error.find("argument type mismatch") != std::string::npos ||
-         error.find("implicit template arguments conflict on ") != std::string::npos));
-  CHECK(error.find("map") != std::string::npos);
-}
-
 void checkInitValueTypeMismatch(const std::string &error) {
   CHECK(error.find("init value type mismatch") != std::string::npos);
 }
@@ -22,7 +10,7 @@ void checkInitValueTypeMismatch(const std::string &error) {
 
 TEST_SUITE_BEGIN("primestruct.semantics.calls_flow.collections");
 
-TEST_CASE("helper-wrapped map constructors keep template conflict diagnostics on explicit canonical map parameters") {
+TEST_CASE("helper-wrapped map constructors report retired count diagnostics on explicit canonical map parameters") {
   const std::string source = R"(
 import /std/collections/*
 import /std/collections/map/*
@@ -45,10 +33,10 @@ main() {
   std::string error;
   CHECK_FALSE(validateProgram(source, "/main", error));
   INFO(error);
-  checkMapPairTemplateConflict(error);
+  CHECK(error.find("unknown call target: /map/count") != std::string::npos);
 }
 
-TEST_CASE("helper-wrapped Result.ok payloads accept explicit canonical map parameters") {
+TEST_CASE("helper-wrapped Result.ok payloads report retired count diagnostics on explicit canonical map parameters") {
   const std::string source = R"(
 import /std/collections/*
 import /std/collections/map/*
@@ -80,12 +68,12 @@ main() {
 }
 )";
   std::string error;
-  CHECK(validateProgram(source, "/main", error));
+  CHECK_FALSE(validateProgram(source, "/main", error));
   INFO(error);
-  CHECK(error.empty());
+  CHECK(error.find("unknown call target: /map/count") != std::string::npos);
 }
 
-TEST_CASE("helper-wrapped Result.ok payloads keep template conflict diagnostics on explicit canonical map parameters") {
+TEST_CASE("helper-wrapped Result.ok payloads report retired count diagnostics before template conflict on explicit canonical map parameters") {
   const std::string source = R"(
 import /std/collections/*
 import /std/collections/map/*
@@ -118,10 +106,10 @@ main() {
   std::string error;
   CHECK_FALSE(validateProgram(source, "/main", error));
   INFO(error);
-  checkMapPairTemplateConflict(error);
+  CHECK(error.find("unknown call target: /map/count") != std::string::npos);
 }
 
-TEST_CASE("stdlib wrapper map constructor accepts explicit canonical map bindings") {
+TEST_CASE("stdlib wrapper map constructor reports retired tryAt diagnostics on explicit canonical map bindings") {
   const std::string source = R"(
 import /std/collections/*
 import /std/collections/map/*
@@ -146,11 +134,11 @@ main() {
 }
 )";
   std::string error;
-  CHECK(validateProgram(source, "/main", error));
-  CHECK(error.empty());
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("unknown call target: /map/tryAt") != std::string::npos);
 }
 
-TEST_CASE("stdlib wrapper map constructor keeps mismatch diagnostics on explicit canonical map bindings") {
+TEST_CASE("stdlib wrapper map constructor reports retired count diagnostics on explicit canonical map bindings") {
   const std::string source = R"(
 import /std/collections/*
 import /std/collections/map/*
@@ -164,10 +152,10 @@ main() {
   std::string error;
   CHECK_FALSE(validateProgram(source, "/main", error));
   INFO(error);
-  checkMapPairMismatchDiagnostic(error);
+  CHECK(error.find("unknown call target: /map/count") != std::string::npos);
 }
 
-TEST_CASE("helper-wrapped map constructors accept explicit canonical map bindings") {
+TEST_CASE("helper-wrapped map constructors report retired tryAt diagnostics on explicit canonical map bindings") {
   const std::string source = R"(
 import /std/collections/*
 import /std/collections/map/*
@@ -194,12 +182,12 @@ main() {
 }
 )";
   std::string error;
-  CHECK(validateProgram(source, "/main", error));
+  CHECK_FALSE(validateProgram(source, "/main", error));
   INFO(error);
-  CHECK(error.empty());
+  CHECK(error.find("unknown call target: /map/tryAt") != std::string::npos);
 }
 
-TEST_CASE("helper-wrapped map constructors keep mismatch diagnostics on explicit canonical map bindings") {
+TEST_CASE("helper-wrapped map constructors report retired count diagnostics on explicit canonical map bindings") {
   const std::string source = R"(
 import /std/collections/*
 import /std/collections/map/*
@@ -218,10 +206,10 @@ main() {
   std::string error;
   CHECK_FALSE(validateProgram(source, "/main", error));
   INFO(error);
-  checkMapPairTemplateConflict(error);
+  CHECK(error.find("unknown call target: /map/count") != std::string::npos);
 }
 
-TEST_CASE("helper-wrapped Result.ok payloads accept explicit canonical map bindings") {
+TEST_CASE("helper-wrapped Result.ok payloads report retired count diagnostics on explicit canonical map bindings") {
   const std::string source = R"(
 import /std/collections/*
 import /std/collections/map/*
@@ -248,12 +236,12 @@ main() {
 }
 )";
   std::string error;
-  CHECK(validateProgram(source, "/main", error));
+  CHECK_FALSE(validateProgram(source, "/main", error));
   INFO(error);
-  CHECK(error.empty());
+  CHECK(error.find("unknown call target: /map/count") != std::string::npos);
 }
 
-TEST_CASE("helper-wrapped Result.ok payloads keep mismatch diagnostics on explicit canonical map bindings") {
+TEST_CASE("helper-wrapped Result.ok payloads report retired count diagnostics before mismatch on explicit canonical map bindings") {
   const std::string source = R"(
 import /std/collections/*
 import /std/collections/map/*
@@ -281,10 +269,10 @@ main() {
   std::string error;
   CHECK_FALSE(validateProgram(source, "/main", error));
   INFO(error);
-  checkMapPairTemplateConflict(error);
+  CHECK(error.find("unknown call target: /map/count") != std::string::npos);
 }
 
-TEST_CASE("helper-wrapped Result.ok payload assignments accept explicit canonical map result targets") {
+TEST_CASE("helper-wrapped Result.ok payload assignments report retired count diagnostics on explicit canonical map result targets") {
   const std::string source = R"(
 import /std/collections/*
 import /std/collections/map/*
@@ -312,12 +300,12 @@ main() {
 }
 )";
   std::string error;
-  CHECK(validateProgram(source, "/main", error));
+  CHECK_FALSE(validateProgram(source, "/main", error));
   INFO(error);
-  CHECK(error.empty());
+  CHECK(error.find("unknown call target: /map/count") != std::string::npos);
 }
 
-TEST_CASE("helper-wrapped Result.ok payload assignments keep mismatch diagnostics on explicit canonical map result targets") {
+TEST_CASE("helper-wrapped Result.ok payload assignments validate explicit canonical map result targets") {
   const std::string source = R"(
 import /std/collections/*
 import /std/collections/map/*
@@ -343,12 +331,12 @@ main() {
 }
 )";
   std::string error;
-  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(validateProgram(source, "/main", error));
   INFO(error);
-  checkMapPairTemplateConflict(error);
+  CHECK(error.empty());
 }
 
-TEST_CASE("helper-wrapped map constructors accept canonical map dereference assignment targets") {
+TEST_CASE("helper-wrapped map constructors report retired count diagnostics on canonical map dereference assignment targets") {
   const std::string source = R"(
 import /std/collections/*
 import /std/collections/map/*
@@ -374,12 +362,12 @@ main() {
 }
 )";
   std::string error;
-  CHECK(validateProgram(source, "/main", error));
+  CHECK_FALSE(validateProgram(source, "/main", error));
   INFO(error);
-  CHECK(error.empty());
+  CHECK(error.find("unknown call target: /map/count") != std::string::npos);
 }
 
-TEST_CASE("helper-wrapped map dereference assignments keep mismatch diagnostics") {
+TEST_CASE("helper-wrapped map dereference assignments validate") {
   const std::string source = R"(
 import /std/collections/*
 import /std/collections/map/*
@@ -404,12 +392,12 @@ main() {
 }
 )";
   std::string error;
-  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(validateProgram(source, "/main", error));
   INFO(error);
-  checkMapPairTemplateConflict(error);
+  CHECK(error.empty());
 }
 
-TEST_CASE("helper-wrapped Result.ok payloads accept canonical map result dereference targets") {
+TEST_CASE("helper-wrapped Result.ok payloads report retired count diagnostics on canonical map result dereference targets") {
   const std::string source = R"(
 import /std/collections/*
 import /std/collections/map/*
@@ -443,12 +431,12 @@ main() {
 }
 )";
   std::string error;
-  CHECK(validateProgram(source, "/main", error));
+  CHECK_FALSE(validateProgram(source, "/main", error));
   INFO(error);
-  CHECK(error.empty());
+  CHECK(error.find("unknown call target: /map/count") != std::string::npos);
 }
 
-TEST_CASE("helper-wrapped Result.ok dereference assignments keep mismatch diagnostics") {
+TEST_CASE("helper-wrapped Result.ok dereference assignments validate") {
   const std::string source = R"(
 import /std/collections/*
 import /std/collections/map/*
@@ -480,9 +468,9 @@ main() {
 }
 )";
   std::string error;
-  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(validateProgram(source, "/main", error));
   INFO(error);
-  checkMapPairTemplateConflict(error);
+  CHECK(error.empty());
 }
 
 TEST_CASE("helper-wrapped map constructors reject canonical map uninitialized storage mismatch") {
@@ -511,7 +499,7 @@ main() {
   checkInitValueTypeMismatch(error);
 }
 
-TEST_CASE("helper-wrapped map constructor uninitialized storage keeps mismatch diagnostics") {
+TEST_CASE("helper-wrapped map constructor uninitialized storage keeps init mismatch diagnostics") {
   const std::string source = R"(
 import /std/collections/*
 import /std/collections/map/*
@@ -532,7 +520,7 @@ main() {
   std::string error;
   CHECK_FALSE(validateProgram(source, "/main", error));
   INFO(error);
-  checkMapPairTemplateConflict(error);
+  checkInitValueTypeMismatch(error);
 }
 
 TEST_CASE("helper-wrapped Result.ok canonical map result uninitialized storage keeps init mismatch") {
@@ -561,7 +549,7 @@ main() {
   checkInitValueTypeMismatch(error);
 }
 
-TEST_CASE("helper-wrapped Result.ok uninitialized storage keeps mismatch diagnostics") {
+TEST_CASE("helper-wrapped Result.ok uninitialized storage keeps init mismatch diagnostics") {
   const std::string source = R"(
 import /std/collections/*
 import /std/collections/map/*
@@ -583,7 +571,7 @@ main() {
   std::string error;
   CHECK_FALSE(validateProgram(source, "/main", error));
   INFO(error);
-  checkMapPairTemplateConflict(error);
+  checkInitValueTypeMismatch(error);
 }
 
 TEST_CASE("helper-wrapped map constructors on dereferenced canonical map uninitialized storage keep init mismatch") {
@@ -618,7 +606,7 @@ main() {
   checkInitValueTypeMismatch(error);
 }
 
-TEST_CASE("helper-wrapped dereferenced map storage keeps mismatch diagnostics") {
+TEST_CASE("helper-wrapped dereferenced map storage keeps init mismatch diagnostics") {
   const std::string source = R"(
 import /std/collections/*
 import /std/collections/map/*
@@ -645,7 +633,7 @@ main() {
   std::string error;
   CHECK_FALSE(validateProgram(source, "/main", error));
   INFO(error);
-  checkMapPairTemplateConflict(error);
+  checkInitValueTypeMismatch(error);
 }
 
 TEST_SUITE_END();

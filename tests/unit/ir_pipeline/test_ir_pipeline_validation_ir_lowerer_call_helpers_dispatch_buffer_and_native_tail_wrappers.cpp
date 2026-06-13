@@ -850,7 +850,7 @@ TEST_CASE("ir lowerer call helpers resolve and validate array vector access targ
 
     primec::Expr accessExpr;
     accessExpr.kind = primec::Expr::Kind::Call;
-    accessExpr.name = "/std/collections/vector/vectorAt";
+    accessExpr.name = "/std/collections/vector/at";
     accessExpr.args = {receiverName, indexExpr};
 
     primec::Expr derefExpr;

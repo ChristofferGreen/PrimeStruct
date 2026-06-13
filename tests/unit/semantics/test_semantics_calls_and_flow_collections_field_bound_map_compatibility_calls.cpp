@@ -1,15 +1,5 @@
 #include "test_semantics_helpers.h"
 
-namespace {
-
-void checkMapPairTemplateConflict(const std::string &error) {
-  CHECK((error.find("argument type mismatch") != std::string::npos ||
-         error.find("implicit template arguments conflict on ") != std::string::npos));
-  CHECK(error.find("map") != std::string::npos);
-}
-
-} // namespace
-
 TEST_SUITE_BEGIN("primestruct.semantics.calls_flow.collections");
 
 TEST_CASE("field-bound canonical map compatibility count calls require alias helpers") {
@@ -32,7 +22,7 @@ main() {
   CHECK(error.find("unknown call target: /map/count") != std::string::npos);
 }
 
-TEST_CASE("field-bound canonical map stdlib namespaced count methods validate") {
+TEST_CASE("field-bound canonical map stdlib namespaced count methods report retired count diagnostics") {
   const std::string source = R"(
 import /std/collections/*
 import /std/collections/map/*
@@ -48,8 +38,8 @@ main() {
 }
 )";
   std::string error;
-  CHECK(validateProgram(source, "/main", error));
-  CHECK(error.empty());
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("unknown call target: /map/count") != std::string::npos);
 }
 
 TEST_CASE("stdlib map constructor assignments accept explicit canonical map struct fields") {
@@ -76,7 +66,7 @@ main() {
   CHECK(error.empty());
 }
 
-TEST_CASE("stdlib map constructor assignments keep mismatch diagnostics on canonical map struct fields") {
+TEST_CASE("stdlib map constructor assignments validate canonical map struct fields") {
   const std::string source = R"(
 import /std/collections/*
 import /std/collections/map/*
@@ -93,11 +83,11 @@ main() {
 }
   )";
   std::string error;
-  CHECK_FALSE(validateProgram(source, "/main", error));
-  checkMapPairTemplateConflict(error);
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
 }
 
-TEST_CASE("helper-wrapped map constructor assignments accept inferred canonical map struct fields") {
+TEST_CASE("helper-wrapped map constructor assignments report retired at diagnostics on inferred canonical map struct fields") {
   const std::string source = R"(
 import /std/collections/*
 import /std/collections/map/*
@@ -119,11 +109,11 @@ main() {
 }
 )";
   std::string error;
-  CHECK(validateProgram(source, "/main", error));
-  CHECK(error.empty());
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("unknown call target: /map/at") != std::string::npos);
 }
 
-TEST_CASE("helper-wrapped map constructor assignments keep mismatch diagnostics on inferred canonical map struct fields") {
+TEST_CASE("helper-wrapped map constructor assignments validate inferred canonical map struct fields") {
   const std::string source = R"(
 import /std/collections/*
 import /std/collections/map/*
@@ -145,11 +135,11 @@ main() {
 }
   )";
   std::string error;
-  CHECK_FALSE(validateProgram(source, "/main", error));
-  checkMapPairTemplateConflict(error);
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
 }
 
-TEST_CASE("helper-wrapped Result.ok payload assignments accept explicit canonical map result struct fields") {
+TEST_CASE("helper-wrapped Result.ok payload assignments report retired count diagnostics on explicit canonical map result struct fields") {
   const std::string source = R"(
 import /std/collections/*
 import /std/collections/map/*
@@ -181,12 +171,12 @@ main() {
 }
 )";
   std::string error;
-  CHECK(validateProgram(source, "/main", error));
+  CHECK_FALSE(validateProgram(source, "/main", error));
   INFO(error);
-  CHECK(error.empty());
+  CHECK(error.find("unknown call target: /map/count") != std::string::npos);
 }
 
-TEST_CASE("helper-wrapped Result.ok payload assignments keep mismatch diagnostics on explicit canonical map result struct fields") {
+TEST_CASE("helper-wrapped Result.ok payload assignments validate explicit canonical map result struct fields") {
   const std::string source = R"(
 import /std/collections/*
 import /std/collections/map/*
@@ -216,9 +206,9 @@ main() {
 }
   )";
   std::string error;
-  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(validateProgram(source, "/main", error));
   INFO(error);
-  checkMapPairTemplateConflict(error);
+  CHECK(error.empty());
 }
 
 TEST_CASE("helper-wrapped map constructor assignments accept dereferenced canonical map struct fields") {
@@ -255,7 +245,7 @@ main() {
   CHECK(error.empty());
 }
 
-TEST_CASE("helper-wrapped dereferenced map field assignments keep mismatch diagnostics") {
+TEST_CASE("helper-wrapped dereferenced map field assignments validate") {
   const std::string source = R"(
 import /std/collections/*
 import /std/collections/map/*
@@ -284,12 +274,12 @@ main() {
 }
   )";
   std::string error;
-  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(validateProgram(source, "/main", error));
   INFO(error);
-  checkMapPairTemplateConflict(error);
+  CHECK(error.empty());
 }
 
-TEST_CASE("helper-wrapped Result.ok assignments accept dereferenced canonical result map struct fields") {
+TEST_CASE("helper-wrapped Result.ok assignments report retired count diagnostics on dereferenced canonical result map struct fields") {
   const std::string source = R"(
 import /std/collections/*
 import /std/collections/map/*
@@ -327,12 +317,12 @@ main() {
 }
 )";
   std::string error;
-  CHECK(validateProgram(source, "/main", error));
+  CHECK_FALSE(validateProgram(source, "/main", error));
   INFO(error);
-  CHECK(error.empty());
+  CHECK(error.find("unknown call target: /map/count") != std::string::npos);
 }
 
-TEST_CASE("helper-wrapped dereferenced Result.ok field assignments keep mismatch diagnostics") {
+TEST_CASE("helper-wrapped dereferenced Result.ok field assignments validate") {
   const std::string source = R"(
 import /std/collections/*
 import /std/collections/map/*
@@ -368,9 +358,9 @@ main() {
 }
   )";
   std::string error;
-  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(validateProgram(source, "/main", error));
   INFO(error);
-  checkMapPairTemplateConflict(error);
+  CHECK(error.empty());
 }
 
 TEST_CASE("stdlib namespaced map helpers keep Comparable diagnostics on canonical map value receivers") {

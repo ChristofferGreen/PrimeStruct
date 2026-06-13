@@ -1886,8 +1886,7 @@ main() {
 )";
   std::string error;
   CHECK_FALSE(validateProgram(source, "/main", error));
-  CHECK(error.find("unknown call target: /std/collections/vector/at") !=
-        std::string::npos);
+  CHECK(error.find("unknown call target: at") != std::string::npos);
 }
 
 TEST_SUITE_END();

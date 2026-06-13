@@ -250,13 +250,13 @@ TEST_CASE("ir lowerer direct soa wrapper dispatch uses canonical wrapper probes 
 
   const std::string wrapperHelperSource =
       source.substr(wrapperHelper, wrapperEnd - wrapperHelper);
-  CHECK(wrapperHelperSource.find("\"/std/collections/\" \"soa\" \"_vector/\"") !=
+  CHECK(wrapperHelperSource.find("\"/std/collections/soa_vector/\"") !=
         std::string::npos);
-  CHECK(wrapperHelperSource.find("\"/std/collections/experimental\" \"_soa\" "
-                                 "\"_vector/soa\" \"Vector\"") !=
+  CHECK(wrapperHelperSource.find(
+            "collection_paths::memberPath(collection_paths::kExperimentalSoaVectorFolder, \"soaVector\")") !=
         std::string::npos);
-  CHECK(wrapperHelperSource.find("\"/std/collections/experimental\" \"_soa\" "
-                                 "\"_vector_conversions/soa\" \"Vector\"") !=
+  CHECK(wrapperHelperSource.find(
+            "collection_paths::memberPath(collection_paths::kExperimentalSoaVectorConversionsFolder, \"soaVector\")") !=
         std::string::npos);
   CHECK(wrapperHelperSource.find("\"/soa_vector/") == std::string::npos);
   CHECK(wrapperHelperSource.find("\"/to_aos\"") == std::string::npos);
@@ -2023,7 +2023,8 @@ TEST_CASE("ir lowerer late expression fallback guards explicit map helper defs")
         std::string::npos);
   CHECK(source.find("auto findDirectInternalSoaDefinition = [&](const std::string &rawPath)") !=
         std::string::npos);
-  CHECK(source.find("path.rfind(\"/std/collections/internal_soa_storage/\", 0) != 0") !=
+  CHECK(source.find(
+            "path.rfind(collection_paths::modulePrefix(collection_paths::kInternalSoaStorageFolder), 0) != 0") !=
         std::string::npos);
   CHECK(source.find("auto findDirectStructDefinition = [&](const Expr &callExpr) -> const Definition * {") !=
         std::string::npos);
@@ -2045,7 +2046,8 @@ TEST_CASE("ir lowerer late expression fallback guards explicit map helper defs")
         std::string::npos);
   CHECK(source.find("if (ir_lowerer::isStructDefinition(*directCallee)) {") !=
         std::string::npos);
-  CHECK(source.find("directCallee->fullPath.rfind(\"/std/collections/internal_soa_storage/\", 0) == 0 &&") !=
+  CHECK(source.find(
+            "directCallee->fullPath.rfind(collection_paths::modulePrefix(collection_paths::kInternalSoaStorageFolder), 0) == 0 &&") !=
         std::string::npos);
   CHECK(source.find("isInternalSoaHelperFamilyPath(directCallee->fullPath)) {") !=
         std::string::npos);

@@ -52,7 +52,7 @@ main() {
   CHECK(error.empty());
 }
 
-TEST_CASE("canonical stdlib map returns are allowed") {
+TEST_CASE("canonical stdlib map returns report retired map helper diagnostics") {
   const std::string source = R"(
 [return<int>]
 /std/collections/map/count<K, V>([map<K, V>] values) {
@@ -71,8 +71,8 @@ main() {
 }
 )";
   std::string error;
-  CHECK(validateProgram(source, "/main", error));
-  CHECK(error.empty());
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("unknown call target: /map/count") != std::string::npos);
 }
 
 TEST_CASE("vector return rejects wrong template arity") {

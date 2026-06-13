@@ -512,7 +512,7 @@ main() {
   CHECK(readFile(outPath).find("argument count mismatch for /std/collections/map/count") != std::string::npos);
 }
 
-TEST_CASE("rejects vm canonical implicit-template map count expression call with wrapper slash return envelope") {
+TEST_CASE("runs vm canonical implicit-template map count expression call with wrapper slash return envelope") {
   const std::string source = R"(
 [return<int>]
 /std/collections/map/count<K, V>([map<K, V>] values, [bool] marker) {
@@ -531,14 +531,8 @@ main() {
 )";
   const std::string srcPath =
       writeTemp("vm_canonical_map_count_implicit_template_wrapper_slash_return_envelope.prime", source);
-  const std::string outPath =
-      (std::filesystem::temp_directory_path() /
-       "primec_vm_canonical_map_count_implicit_template_wrapper_slash_return_envelope_out.txt")
-          .string();
-  const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main > " + outPath + " 2>&1";
-  CHECK(runCommand(runCmd) == 3);
-  CHECK(readFile(outPath).find("VM error: invalid indirect address in IR") !=
-        std::string::npos);
+  const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main";
+  CHECK(runCommand(runCmd) == 96);
 }
 
 TEST_CASE("runs vm with builtin string count before user call shadow") {
@@ -577,7 +571,7 @@ main() {
   CHECK(runCommand(runCmd) == 95);
 }
 
-TEST_CASE("rejects vm canonical map reference string access without imported canonical helper") {
+TEST_CASE("runs vm canonical map reference string access without imported canonical helper") {
   const std::string source = R"(
 [return<int>]
 /string/count([string] values) {
@@ -592,13 +586,8 @@ main() {
 }
   )";
   const std::string srcPath = writeTemp("vm_user_string_count_method_shadow_map_reference_access.prime", source);
-  const std::string errPath =
-      (std::filesystem::temp_directory_path() /
-       "primec_vm_user_string_count_method_shadow_map_reference_access.err")
-          .string();
-  const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main 2> " + errPath;
-  CHECK(runCommand(runCmd) == 3);
-  CHECK(readFile(errPath).find("map key not found") != std::string::npos);
+  const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main";
+  CHECK(runCommand(runCmd) == 91);
 }
 
 TEST_CASE("rejects vm builtin count on canonical map reference string access without imported helper") {

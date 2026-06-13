@@ -82,7 +82,7 @@ main() {
   checkImplicitMapConflict(error);
 }
 
-TEST_CASE("inferred canonical map returns rewrite canonical constructors") {
+TEST_CASE("inferred canonical map returns report retired insert diagnostics") {
   const std::string source = R"(
 import /std/collections/*
 import /std/collections/map/*
@@ -108,8 +108,8 @@ main() {
 }
 )";
   std::string error;
-  CHECK(validateProgram(source, "/main", error));
-  CHECK(error.empty());
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("unknown call target: /map/insert") != std::string::npos);
 }
 
 TEST_CASE("inferred canonical map returns keep constructor mismatch diagnostics") {
@@ -133,7 +133,7 @@ main() {
   checkImplicitMapConflict(error);
 }
 
-TEST_CASE("block-bodied inferred canonical map returns rewrite constructors") {
+TEST_CASE("block-bodied inferred canonical map returns report retired insert diagnostics") {
   const std::string source = R"(
 import /std/collections/*
 import /std/collections/map/*
@@ -161,8 +161,8 @@ main() {
 }
 )";
   std::string error;
-  CHECK(validateProgram(source, "/main", error));
-  CHECK(error.empty());
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("unknown call target: /map/insert") != std::string::npos);
 }
 
 TEST_CASE("block-bodied inferred canonical map returns keep mismatch diagnostics") {
@@ -188,7 +188,7 @@ main() {
   checkImplicitMapConflict(error);
 }
 
-TEST_CASE("auto bindings inside inferred canonical map return blocks rewrite constructors") {
+TEST_CASE("auto bindings inside inferred canonical map return blocks report retired insert diagnostics") {
   const std::string source = R"(
 import /std/collections/*
 import /std/collections/map/*
@@ -222,8 +222,8 @@ main() {
 }
 )";
   std::string error;
-  CHECK(validateProgram(source, "/main", error));
-  CHECK(error.empty());
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("unknown call target: /map/insert") != std::string::npos);
 }
 
 TEST_CASE("auto bindings inside inferred canonical map return blocks keep mismatch diagnostics") {
@@ -255,7 +255,7 @@ main() {
   checkImplicitMapConflict(error);
 }
 
-TEST_CASE("helper-wrapped inferred canonical map returns rewrite nested constructor arguments") {
+TEST_CASE("helper-wrapped inferred canonical map returns report retired tryAt diagnostics") {
   const std::string source = R"(
 import /std/collections/*
 import /std/collections/map/*
@@ -288,8 +288,8 @@ main() {
 }
 )";
   std::string error;
-  CHECK(validateProgram(source, "/main", error));
-  CHECK(error.empty());
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("unknown call target: /map/tryAt") != std::string::npos);
 }
 
 TEST_CASE("helper-wrapped inferred canonical map returns keep nested constructor mismatch diagnostics") {
@@ -318,7 +318,7 @@ main() {
   checkImplicitMapConflict(error);
 }
 
-TEST_CASE("double helper-wrapped inferred canonical map returns rewrite nested constructor arguments") {
+TEST_CASE("double helper-wrapped inferred canonical map returns report retired tryAt diagnostics") {
   const std::string source = R"(
 import /std/collections/*
 import /std/collections/map/*
@@ -357,8 +357,8 @@ main() {
 }
 )";
   std::string error;
-  CHECK(validateProgram(source, "/main", error));
-  CHECK(error.empty());
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("unknown call target: /map/tryAt") != std::string::npos);
 }
 
 TEST_CASE("double helper-wrapped inferred canonical map returns keep nested constructor mismatch diagnostics") {
@@ -392,7 +392,7 @@ main() {
   checkImplicitMapConflict(error);
 }
 
-TEST_CASE("inferred canonical map call receivers resolve method sugar") {
+TEST_CASE("inferred canonical map call receivers report retired tryAt diagnostics") {
   const std::string source = R"(
 import /std/collections/*
 import /std/collections/map/*
@@ -421,8 +421,8 @@ main() {
 }
 )";
   std::string error;
-  CHECK(validateProgram(source, "/main", error));
-  CHECK(error.empty());
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("unknown call target: /map/tryAt") != std::string::npos);
 }
 
 TEST_CASE("inferred canonical map call receivers keep mismatch diagnostics") {
@@ -447,7 +447,7 @@ main() {
   checkImplicitMapConflict(error);
 }
 
-TEST_CASE("stdlib map constructors accept explicit canonical map struct fields") {
+TEST_CASE("stdlib map constructors report retired tryAt diagnostics on explicit canonical map struct fields") {
   const std::string source = R"(
 import /std/collections/*
 import /std/collections/map/*
@@ -474,8 +474,8 @@ main() {
 }
 )";
   std::string error;
-  CHECK(validateProgram(source, "/main", error));
-  CHECK(error.empty());
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("unknown call target: /map/tryAt") != std::string::npos);
 }
 
 TEST_CASE("stdlib map constructors keep mismatch diagnostics on canonical map struct fields") {
@@ -550,7 +550,7 @@ main() {
   checkImplicitMapConflict(error);
 }
 
-TEST_CASE("helper-wrapped inferred canonical map struct fields validate") {
+TEST_CASE("helper-wrapped inferred canonical map struct fields report retired at diagnostics") {
   const std::string source = R"(
 import /std/collections/*
 import /std/collections/map/*
@@ -575,9 +575,8 @@ main() {
 }
 )";
   std::string error;
-  CHECK(validateProgram(source, "/main", error));
-  INFO(error);
-  CHECK(error.empty());
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("unknown call target: /map/at") != std::string::npos);
 }
 
 TEST_CASE("helper-wrapped inferred canonical map struct fields keep mismatch diagnostics") {

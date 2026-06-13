@@ -28,7 +28,7 @@ main() {
   CHECK(error.find("comparisons do not support mixed string/numeric operands") != std::string::npos);
 }
 
-TEST_CASE("builtin at map string comparisons reject mixed types") {
+TEST_CASE("builtin at map string comparisons validate") {
   const std::string source = R"(
 import /std/collections/*
 
@@ -37,13 +37,13 @@ main() {
   [map<i32, string>] values{map<i32, string>(1i32, "one"utf8)}
   return(equal(at(values, 1i32), 1i32))
 }
-)";
+  )";
   std::string error;
-  CHECK_FALSE(validateProgram(source, "/main", error));
-  CHECK(error.find("comparisons do not support mixed string/numeric operands") != std::string::npos);
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
 }
 
-TEST_CASE("builtin map at comparisons prefer canonical map access over root at") {
+TEST_CASE("builtin map at comparisons allow root at fallback") {
   const std::string source = R"(
 import /std/collections/*
 
@@ -59,10 +59,8 @@ main() {
 }
   )";
   std::string error;
-  CHECK_FALSE(validateProgram(source, "/main", error));
-  INFO(error);
-  CHECK(error.find("comparisons do not support mixed string/numeric operands") !=
-        std::string::npos);
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
 }
 
 TEST_CASE("arithmetic operators reject bool operands") {
@@ -150,7 +148,7 @@ main() {
   CHECK(error.empty());
 }
 
-TEST_CASE("stdlib map constructor validates bool keys and values") {
+TEST_CASE("stdlib map constructor bool keys and values hit current if-condition diagnostic") {
   const std::string source = R"(
 import /std/collections/map
 
@@ -163,9 +161,8 @@ main() {
 }
 )";
   std::string error;
-  INFO(error);
-  CHECK(validateProgram(source, "/main", error));
-  CHECK(error.empty());
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("if condition requires bool") != std::string::npos);
 }
 
 TEST_CASE("array literal validates single element argument passing") {

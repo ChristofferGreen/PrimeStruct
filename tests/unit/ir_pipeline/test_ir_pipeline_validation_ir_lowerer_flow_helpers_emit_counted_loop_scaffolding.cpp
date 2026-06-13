@@ -12,7 +12,11 @@ std::string readTextFile(const std::string &path) {
     const size_t markerPos = path.find(marker);
     if (markerPos != std::string::npos) {
       const std::filesystem::path repoRoot =
-          std::filesystem::path(__FILE__).parent_path().parent_path().parent_path();
+          std::filesystem::path(__FILE__)
+              .parent_path()
+              .parent_path()
+              .parent_path()
+              .parent_path();
       const std::filesystem::path repoRelativePath =
           path.substr(markerPos + marker.size());
       file.open(repoRoot / repoRelativePath);

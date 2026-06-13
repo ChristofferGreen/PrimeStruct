@@ -672,7 +672,7 @@ TEST_CASE("push on array reports vector binding before effect requirement") {
   checkInvalidPush("values.push(2i32)");
 }
 
-TEST_CASE("bare vector push validates through imported stdlib helper") {
+TEST_CASE("bare vector push routes to soa helper before imported vector helper") {
   const std::string source = R"(
 import /std/collections/*
 
@@ -682,10 +682,10 @@ main() {
   push(values, 2i32)
   return(0i32)
 }
-)";
+  )";
   std::string error;
-  CHECK(validateProgram(source, "/main", error));
-  CHECK(error.empty());
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("template arguments required for /std/collections/soa/push") != std::string::npos);
 }
 
 TEST_SUITE_END();

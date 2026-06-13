@@ -73,9 +73,10 @@ execute_repeat([count] 2i32)
   CHECK(error.empty());
 }
 
-TEST_CASE("execution validates imported canonical map helper arguments") {
+TEST_CASE("execution reports retired map helper diagnostics for canonical helper arguments") {
   const std::string source = R"(
 import /std/collections/*
+import /std/collections/map/*
 [return<int>]
 main() {
   return(1i32)
@@ -86,12 +87,12 @@ execute_repeat([i32] count) {
   return()
 }
 
-[effects(heap_alloc)]
+  [effects(heap_alloc)]
 execute_repeat(/std/collections/map/count(map<i32, i32>(1i32, 2i32)))
 )";
   std::string error;
-  CHECK(validateProgram(source, "/main", error));
-  CHECK(error.empty());
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("unknown call target: /map/count") != std::string::npos);
 }
 
 TEST_CASE("execution rejects unknown named argument") {

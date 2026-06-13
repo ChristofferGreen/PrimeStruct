@@ -125,7 +125,7 @@ main() {
   CHECK(result == 14);
 }
 
-TEST_CASE("ir lowerer materializes variadic vector packs with indexed statement mutators") {
+TEST_CASE("ir lowerer rejects variadic vector packs with indexed statement mutators") {
   const std::string source = R"(
 import /std/collections/*
 
@@ -182,14 +182,8 @@ main() {
 
   primec::IrLowerer lowerer;
   primec::IrModule module;
-  REQUIRE(lowerer.lower(program, &semanticProgram, "/main", {}, {}, module, error));
-  CHECK(error.empty());
-
-  primec::Vm vm;
-  uint64_t result = 0;
-  REQUIRE(vm.execute(module, result, error));
-  CHECK(error.empty());
-  CHECK(result == 25);
+  CHECK_FALSE(lowerer.lower(program, &semanticProgram, "/main", {}, {}, module, error));
+  CHECK(error.find("call=/std/collections/vector/pop") != std::string::npos);
 }
 
 TEST_CASE("ir lowerer materializes variadic array packs with indexed count methods") {

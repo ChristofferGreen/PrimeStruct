@@ -98,11 +98,12 @@ TEST_CASE("ir lowerer call helpers skip empty brace block placeholders") {
   defaultValue.kind = primec::Expr::Kind::Literal;
   defaultValue.literalValue = 7;
   param.args.push_back(defaultValue);
+  const std::vector<primec::Expr> params = {param};
 
   std::vector<const primec::Expr *> ordered;
   std::string error;
   REQUIRE(primec::ir_lowerer::buildOrderedCallArguments(
-      callExpr, {param}, ordered, error));
+      callExpr, params, ordered, error));
   CHECK(error.empty());
   REQUIRE(ordered.size() == 1);
   REQUIRE(ordered[0] != nullptr);

@@ -33,9 +33,12 @@ import /std/collections/*
 [return<int> effects(io_out, heap_alloc)]
 main() {
   [vector<i32>] values{vector<i32>(4i32, 7i32, 9i32)}
-  print_line(/std/collections/vector/count<i32>(values))
-  print_line(/std/collections/vector/at<i32>(values, 1i32))
-  print_line(/std/collections/vector/at<i32>(values, 2i32))
+  [i32] countVal{/std/collections/vector/count(values)}
+  [i32] midVal{/std/collections/vector/at<i32>(values, 1i32)}
+  [i32] tailVal{/std/collections/vector/at<i32>(values, 2i32)}
+  print_line(countVal)
+  print_line(midVal)
+  print_line(tailVal)
   return(/std/collections/vector/at<i32>(values, 0i32))
 }
 )";
@@ -128,7 +131,7 @@ main() {
   const std::string runCmd =
       "./primec --emit=vm " + srcPath + " --entry /main > " + quoteShellArg(outPath) + " 2>&1";
   CHECK(runCommand(runCmd) == 2);
-  CHECK(readFile(outPath).find("unknown call target: /std/collections/vector/at") != std::string::npos);
+  CHECK(readFile(outPath).find("unknown call target: at") != std::string::npos);
 }
 
 TEST_CASE("vm keeps slash-method wrapper string access i32 diagnostics") {
@@ -552,9 +555,8 @@ main() {
       (std::filesystem::temp_directory_path() /
        "primec_vm_direct_canonical_map_helper_same_path_precedence_out.txt")
           .string();
-  const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main > " + outPath + " 2>&1";
-  CHECK(runCommand(runCmd) == 3);
-  CHECK(readFile(outPath).find("VM error: unaligned indirect address in IR") != std::string::npos);
+  const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main";
+  CHECK(runCommand(runCmd) == 243);
 }
 
 TEST_CASE("runs vm stdlib namespaced map helpers on canonical map references") {
@@ -579,7 +581,7 @@ main() {
   CHECK(readFile(outPath).empty());
 }
 
-TEST_CASE("rejects vm canonical map method with slash return type receiver") {
+TEST_CASE("runs vm canonical map method with slash return type receiver") {
   const std::string source = R"(
 [effects(heap_alloc), return<int>]
 /std/collections/map/count([map<i32, i32>] values) {
@@ -597,17 +599,11 @@ main() {
 }
 )";
   const std::string srcPath = writeTemp("vm_canonical_map_method_slash_return_type_receiver.prime", source);
-  const std::string outPath =
-      (std::filesystem::temp_directory_path() /
-       "primec_vm_canonical_map_method_slash_return_type_receiver_out.txt")
-          .string();
-  const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main > " + outPath + " 2>&1";
-  CHECK(runCommand(runCmd) == 3);
-  CHECK(readFile(outPath).find("VM error: invalid indirect address in IR") !=
-        std::string::npos);
+  const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main";
+  CHECK(runCommand(runCmd) == 73);
 }
 
-TEST_CASE("rejects vm canonical map access direct calls on wrapper slash return receiver") {
+TEST_CASE("runs vm canonical map access direct calls on wrapper slash return receiver") {
   const std::string source = R"(
 [effects(heap_alloc), return<int>]
 /std/collections/map/at([map<i32, i32>] values, [i32] key) {
@@ -632,14 +628,8 @@ main() {
 )";
   const std::string srcPath =
       writeTemp("vm_canonical_map_access_helpers_wrapper_slash_return_receiver.prime", source);
-  const std::string outPath =
-      (std::filesystem::temp_directory_path() /
-       "primec_vm_canonical_map_access_helpers_wrapper_slash_return_receiver_out.txt")
-          .string();
-  const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main > " + outPath + " 2>&1";
-  CHECK(runCommand(runCmd) == 3);
-  CHECK(readFile(outPath).find("VM error: invalid indirect address in IR") !=
-        std::string::npos);
+  const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main";
+  CHECK(runCommand(runCmd) == 166);
 }
 
 TEST_CASE("rejects vm canonical map access helper key mismatch on wrapper slash return receiver") {
@@ -841,12 +831,8 @@ main() {
 }
 )";
   const std::string srcPath = writeTemp("vm_bare_map_at_with_canonical_helper.prime", source);
-  const std::string outPath =
-      (std::filesystem::temp_directory_path() / "primec_vm_bare_map_at_with_canonical_helper_out.txt")
-          .string();
-  const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main > " + outPath + " 2>&1";
-  CHECK(runCommand(runCmd) == 3);
-  CHECK(readFile(outPath).find("VM error: unaligned indirect address in IR") != std::string::npos);
+  const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main";
+  CHECK(runCommand(runCmd) == 17);
 }
 
 TEST_SUITE_END();

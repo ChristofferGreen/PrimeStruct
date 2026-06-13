@@ -286,7 +286,7 @@ TEST_CASE("remove_at bool index keeps routed unknown target diagnostics") {
   };
 
   checkInvalidRemoveAt("/vector/remove_at(values, true)", "unknown call target: /vector/remove_at");
-  checkInvalidRemoveAt("values.remove_at(true)", "unknown method: /std/collections/vector/remove_at");
+  checkInvalidRemoveAt("values.remove_at(true)", "unknown call target: /std/collections/vector/remove_at");
 }
 
 TEST_CASE("bare vector remove_at template specialization keeps canonical unknown target without import") {
@@ -349,8 +349,8 @@ Owned() {
 [effects(heap_alloc), return<int>]
 main() {
   [vector<Owned> mut] values{vector<Owned>()}
-  push(values, Owned{})
-  push(values, Owned{9i32})
+  /std/collections/vector/push<Owned>(values, Owned{})
+  /std/collections/vector/push<Owned>(values, Owned{9i32})
   remove_at(values, 0i32)
   return(plus(count(values), at(values, 0i32).value))
 }
@@ -383,8 +383,8 @@ Wrapper() {
 [effects(heap_alloc), return<int>]
 main() {
   [vector<Wrapper> mut] values{vector<Wrapper>()}
-  push(values, Wrapper{Mover{1i32}})
-  push(values, Wrapper{Mover{7i32}})
+  /std/collections/vector/push<Wrapper>(values, Wrapper{Mover{1i32}})
+  /std/collections/vector/push<Wrapper>(values, Wrapper{Mover{7i32}})
   remove_at(values, 0i32)
   return(plus(count(values), at_unsafe(values, 0i32).value.value))
 }
@@ -467,7 +467,7 @@ TEST_CASE("remove_swap bool index keeps routed unknown target diagnostics") {
 
   checkInvalidRemoveSwap("/vector/remove_swap(values, true)", "unknown call target: /vector/remove_swap");
   checkInvalidRemoveSwap("values.remove_swap(true)",
-                         "unknown method: /std/collections/vector/remove_swap");
+                         "unknown call target: /std/collections/vector/remove_swap");
 }
 
 TEST_CASE("vector remove_swap alias keeps rooted unknown target without helper") {
@@ -527,8 +527,8 @@ Owned() {
 [effects(heap_alloc), return<int>]
 main() {
   [vector<Owned> mut] values{vector<Owned>()}
-  push(values, Owned{})
-  push(values, Owned{9i32})
+  /std/collections/vector/push<Owned>(values, Owned{})
+  /std/collections/vector/push<Owned>(values, Owned{9i32})
   remove_swap(values, 0i32)
   return(plus(count(values), at(values, 0i32).value))
 }
@@ -561,8 +561,8 @@ Wrapper() {
 [effects(heap_alloc), return<int>]
 main() {
   [vector<Wrapper> mut] values{vector<Wrapper>()}
-  push(values, Wrapper{Mover{1i32}})
-  push(values, Wrapper{Mover{7i32}})
+  /std/collections/vector/push<Wrapper>(values, Wrapper{Mover{1i32}})
+  /std/collections/vector/push<Wrapper>(values, Wrapper{Mover{7i32}})
   remove_swap(values, 0i32)
   return(plus(count(values), at_unsafe(values, 0i32).value.value))
 }

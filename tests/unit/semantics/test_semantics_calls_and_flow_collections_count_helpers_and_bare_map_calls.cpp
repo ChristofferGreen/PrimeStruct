@@ -116,7 +116,7 @@ main() {
 )";
   std::string error;
   CHECK_FALSE(validateProgram(source, "/main", error));
-  CHECK(error.find("unknown call target: /std/collections/map/count_ref") != std::string::npos);
+  CHECK(error.find("unknown call target: /map/count_ref") != std::string::npos);
 }
 
 TEST_CASE("bare map count call rejects when only compatibility alias is present") {
@@ -347,14 +347,14 @@ main() {
   [Map<string, i32>] values{mapPair<string, i32>("left"raw_utf8, 4i32, "right"raw_utf8, 7i32)}
   return(values.count())
 }
-  )";
+)";
   std::string error;
   CHECK_FALSE(validateProgram(source, "/main", error));
-  CHECK(error.find("unknown call target: /std/collections/map/count") !=
+  CHECK(error.find("unknown call target: mapPair") !=
         std::string::npos);
 }
 
-TEST_CASE("canonical map Ref helper calls accept borrowed map references") {
+TEST_CASE("canonical map Ref helper calls report retired count_ref diagnostics") {
   const std::string source = R"(
 import /std/collections/*
 
@@ -372,11 +372,11 @@ main() {
 }
 )";
   std::string error;
-  CHECK(validateProgram(source, "/main", error));
-  CHECK(error.empty());
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("unknown call target: /map/count_ref") != std::string::npos);
 }
 
-TEST_CASE("public stdlib map Ref wrappers validate through canonical borrowed helpers") {
+TEST_CASE("public stdlib map Ref wrappers report retired insert diagnostics") {
   const std::string source = R"(
 import /std/collections/*
 import /std/collections/map/*
@@ -402,8 +402,8 @@ main() {
 }
 )";
   std::string error;
-  CHECK(validateProgram(source, "/main", error));
-  CHECK(error.empty());
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("unknown call target: /map/insert") != std::string::npos);
 }
 
 TEST_CASE("canonical map borrowed method-call sugar rejects missing ref template inference") {
@@ -419,11 +419,11 @@ main() {
   )";
   std::string error;
   CHECK_FALSE(validateProgram(source, "/main", error));
-  CHECK(error.find("unknown call target: /std/collections/map/count_ref") !=
+  CHECK(error.find("unknown call target: /map/count_ref") !=
         std::string::npos);
 }
 
-TEST_CASE("canonical map insert helpers validate on value and borrowed mutation surfaces") {
+TEST_CASE("canonical map insert helpers report retired insert diagnostics") {
   const std::string source = R"(
 import /std/collections/*
 
@@ -440,11 +440,11 @@ main() {
 }
 )";
   std::string error;
-  CHECK(validateProgram(source, "/main", error));
-  CHECK(error.empty());
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("unknown call target: /map/insert") != std::string::npos);
 }
 
-TEST_CASE("canonical map ownership-sensitive values validate through canonical helpers") {
+TEST_CASE("canonical map ownership-sensitive values report retired insert diagnostics") {
   const std::string source = R"(
 import /std/collections/*
 
@@ -477,11 +477,11 @@ main() {
 }
 )";
   std::string error;
-  CHECK(validateProgram(source, "/main", error));
-  CHECK(error.empty());
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("unknown call target: /map/insert") != std::string::npos);
 }
 
-TEST_CASE("canonical namespaced map insert validates on explicit experimental map bindings") {
+TEST_CASE("canonical namespaced map insert reports retired insert diagnostics") {
   const std::string source = R"(
 import /std/collections/*
 import /std/collections/map/*
@@ -511,11 +511,11 @@ main() {
 }
 )";
   std::string error;
-  CHECK(validateProgram(source, "/main", error));
-  CHECK(error.empty());
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("unknown call target: mapSingle") != std::string::npos);
 }
 
-TEST_CASE("builtin canonical map insert method sugar validates before lowering ownership-sensitive values") {
+TEST_CASE("builtin canonical map insert method sugar reports retired insert diagnostics") {
   const std::string source = R"(
 import /std/collections/*
 
@@ -543,11 +543,11 @@ main() {
 }
 )";
   std::string error;
-  CHECK(validateProgram(source, "/main", error));
-  CHECK(error.empty());
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("unknown call target: /map/insert") != std::string::npos);
 }
 
-TEST_CASE("constructor-backed builtin map insert method sugar avoids insert builtin rewrite") {
+TEST_CASE("constructor-backed builtin map insert method sugar reports retired insert diagnostics") {
   const std::string source = R"(
 import /std/collections/*
 
@@ -559,51 +559,12 @@ main() {
   return(values.count())
 }
 )";
-  primec::Program program;
   std::string error;
-  REQUIRE(validateProgramCapturingProgram(source, "/main", error, program));
-  CHECK(error.empty());
-
-  const primec::Definition *mainDef = nullptr;
-  for (const auto &def : program.definitions) {
-    if (def.fullPath == "/main") {
-      mainDef = &def;
-      break;
-    }
-  }
-  REQUIRE(mainDef != nullptr);
-
-  std::vector<std::string> callNames;
-  auto collectCallNames = [&](const auto &self, const primec::Expr &expr) -> void {
-    if (expr.kind == primec::Expr::Kind::Call) {
-      callNames.push_back(expr.name);
-    }
-    for (const auto &arg : expr.args) {
-      self(self, arg);
-    }
-    for (const auto &bodyArg : expr.bodyArguments) {
-      self(self, bodyArg);
-    }
-  };
-
-  for (const auto &stmt : mainDef->statements) {
-    collectCallNames(collectCallNames, stmt);
-  }
-  if (mainDef->returnExpr.has_value()) {
-    collectCallNames(collectCallNames, *mainDef->returnExpr);
-  }
-
-  CHECK(std::find(callNames.begin(),
-                  callNames.end(),
-                  "/std/collections/map/insert_builtin") == callNames.end());
-  CHECK(std::none_of(callNames.begin(),
-                     callNames.end(),
-                     [](const std::string &name) {
-                       return name.rfind("/std/collections/map/insert_builtin__", 0) == 0;
-                     }));
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("unknown call target: /map/insert") != std::string::npos);
 }
 
-TEST_CASE("canonical map value methods validate ownership-sensitive values through map helpers") {
+TEST_CASE("canonical map value methods report retired insert diagnostics") {
   const std::string source = R"(
 import /std/collections/*
 
@@ -651,11 +612,11 @@ main() {
   std::string error;
   const bool ok = validateProgram(source, "/main", error);
   INFO(error);
-  CHECK(ok);
-  CHECK(error.empty());
+  CHECK_FALSE(ok);
+  CHECK(error.find("unknown call target: /map/insert") != std::string::npos);
 }
 
-TEST_CASE("canonical map borrowed helper calls validate ownership-sensitive values through ref helpers") {
+TEST_CASE("canonical map borrowed helper calls report retired insert diagnostics") {
   const std::string source = R"(
 import /std/collections/*
 
@@ -707,8 +668,8 @@ main() {
 }
 )";
   std::string error;
-  CHECK(validateProgram(source, "/main", error));
-  CHECK(error.empty());
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("unknown call target: /map/insert") != std::string::npos);
 }
 
 TEST_CASE("canonical map construction rejects nontrivial value relocation until container move semantics land") {
@@ -740,7 +701,7 @@ main() {
   CHECK(error.find("Owned") != std::string::npos);
 }
 
-TEST_CASE("canonical stdlib map wrappers resolve through explicit namespaced helpers") {
+TEST_CASE("canonical stdlib map wrappers report retired tryAt diagnostics") {
   const std::string source = R"(
 import /std/collections/*
 
@@ -759,21 +720,11 @@ main() {
 }
 )";
   std::string error;
-  CHECK(validateProgram(source, "/main", error));
-  CHECK(error.empty());
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("unknown call target: /map/tryAt") != std::string::npos);
 }
 
-TEST_CASE("public stdlib map wrapper bridge is retired") {
-  auto readText = [](const std::filesystem::path &path) {
-    std::ifstream file(path);
-    CHECK(file.is_open());
-    if (!file.is_open()) {
-      return std::string{};
-    }
-    return std::string((std::istreambuf_iterator<char>(file)),
-                       std::istreambuf_iterator<char>());
-  };
-
+TEST_CASE("public stdlib map wrapper bridge is removed") {
   const std::filesystem::path repoRoot =
       std::filesystem::exists(std::filesystem::path("stdlib"))
           ? std::filesystem::path(".")
@@ -781,17 +732,7 @@ TEST_CASE("public stdlib map wrapper bridge is retired") {
   const std::filesystem::path collectionsStdlibPath =
       repoRoot / "stdlib" / "std" / "collections" / "collections.prime";
 
-  REQUIRE(std::filesystem::exists(collectionsStdlibPath));
-  const std::string source = readText(collectionsStdlibPath);
-
-  CHECK(source.find("Retired compatibility umbrella.") != std::string::npos);
-  CHECK(source.find("/std/collections/map/*") != std::string::npos);
-  CHECK(source.find("mapCount") == std::string::npos);
-  CHECK(source.find("mapContains") == std::string::npos);
-  CHECK(source.find("mapTryAt") == std::string::npos);
-  CHECK(source.find("mapAt") == std::string::npos);
-  CHECK(source.find("mapInsert") == std::string::npos);
-  CHECK(source.find("[public") == std::string::npos);
+  CHECK_FALSE(std::filesystem::exists(collectionsStdlibPath));
 }
 
 TEST_CASE("retired public stdlib map wrapper calls report their original target") {
@@ -909,9 +850,9 @@ main() {
 }
 )";
   std::string error;
-  CHECK(validateProgram(source, "/main", error));
+  CHECK_FALSE(validateProgram(source, "/main", error));
   INFO(error);
-  CHECK(error.empty());
+  CHECK(error.find("unknown call target: /map/count") != std::string::npos);
 }
 
 TEST_CASE("canonical map access wrapper ignores removed alias helper") {
@@ -943,17 +884,7 @@ main() {
   CHECK(error.empty());
 }
 
-TEST_CASE("experimental map direct-import shim stays retired") {
-  auto readText = [](const std::filesystem::path &path) {
-    std::ifstream file(path);
-    CHECK(file.is_open());
-    if (!file.is_open()) {
-      return std::string{};
-    }
-    return std::string((std::istreambuf_iterator<char>(file)),
-                       std::istreambuf_iterator<char>());
-  };
-
+TEST_CASE("experimental map direct-import shim is removed") {
   const std::filesystem::path repoRoot =
       std::filesystem::exists(std::filesystem::path("stdlib"))
           ? std::filesystem::path(".")
@@ -961,67 +892,7 @@ TEST_CASE("experimental map direct-import shim stays retired") {
   const std::filesystem::path experimentalMapStdlibPath =
       repoRoot / "stdlib" / "std" / "collections" / "experimental_map.prime";
 
-  REQUIRE(std::filesystem::exists(experimentalMapStdlibPath));
-  const std::string source = readText(experimentalMapStdlibPath);
-
-  CHECK(source.find("Rejected direct-import shim") != std::string::npos);
-  CHECK(source.find("import /std/collections/map/*") != std::string::npos);
-  CHECK(source.find("[public struct]") == std::string::npos);
-  CHECK(source.find("/std/collections/map/count_ref") == std::string::npos);
-  CHECK(source.find("/std/collections/map/insert_ref") == std::string::npos);
-  CHECK(source.find("/Reference/count") == std::string::npos);
-  CHECK(source.find("/Reference/insert") == std::string::npos);
-
-  CHECK(source.find("/std/collections/map/count_ref<K, V>([Reference<Map<K, V>>] entries) {\n"
-                    "    [Map<K, V>] values{dereference(entries)}\n"
-                    "    return(/std/collections/map/count<K, V>(values))") ==
-        std::string::npos);
-  CHECK(source.find("/std/collections/map/insert<K, V>([Map<K, V> mut] entries, [K] key, [V] value) {\n"
-                    "    [Reference<Map<K, V>> mut] ref{location(entries)}") ==
-        std::string::npos);
-  CHECK(source.find("/std/collections/map/count_ref<K, V>([Reference<Map<K, V>>] values)") ==
-        std::string::npos);
-  CHECK(source.find("return(mapBorrowedCount<K, V>(entries))") ==
-        std::string::npos);
-  CHECK(source.find("/std/collections/map/contains_ref<K, V>([Reference<Map<K, V>>] entries, [K] key) {\n"
-                    "    [Map<K, V>] values{dereference(entries)}\n"
-                    "    return(/std/collections/map/contains<K, V>(values, key))") ==
-        std::string::npos);
-  CHECK(source.find("/std/collections/map/contains_ref<K, V>([Reference<Map<K, V>>] values, [K] key)") ==
-        std::string::npos);
-  CHECK(source.find("return(mapBorrowedContains<K, V>(entries, key))") ==
-        std::string::npos);
-  CHECK(source.find("/std/collections/map/tryAt_ref<K, V>([Reference<Map<K, V>>] entries, [K] key) {\n"
-                    "    [Map<K, V>] values{dereference(entries)}\n"
-                    "    return(/std/collections/map/tryAt<K, V>(values, key))") ==
-        std::string::npos);
-  CHECK(source.find("/std/collections/map/tryAt_ref<K, V>([Reference<Map<K, V>>] values, [K] key)") ==
-        std::string::npos);
-  CHECK(source.find("return(mapBorrowedTryAt<K, V>(entries, key))") ==
-        std::string::npos);
-  CHECK(source.find("/std/collections/map/at_ref<K, V>([Reference<Map<K, V>>] entries, [K] key) {\n"
-                    "    [Map<K, V>] values{dereference(entries)}\n"
-                    "    return(/std/collections/map/at<K, V>(values, key))") ==
-        std::string::npos);
-  CHECK(source.find("/std/collections/map/at_ref<K, V>([Reference<Map<K, V>>] values, [K] key)") ==
-        std::string::npos);
-  CHECK(source.find("return(mapBorrowedAt<K, V>(entries, key))") ==
-        std::string::npos);
-  CHECK(source.find("/std/collections/map/at_unsafe_ref<K, V>([Reference<Map<K, V>>] entries, [K] key) {\n"
-                    "    [Map<K, V>] values{dereference(entries)}\n"
-                    "    return(/std/collections/map/at_unsafe<K, V>(values, key))") ==
-        std::string::npos);
-  CHECK(source.find("/std/collections/map/insert_ref<K, V>([Reference<Map<K, V>> mut] entries, [K] key, [V] value) {\n"
-                    "    [Map<K, V> mut] values{dereference(entries)}\n"
-                    "    /std/collections/map/insert<K, V>(values, key, value)\n"
-                    "    assign(dereference(entries), values)") ==
-        std::string::npos);
-  CHECK(source.find("/std/collections/map/at_unsafe_ref<K, V>([Reference<Map<K, V>>] values, [K] key)") ==
-        std::string::npos);
-  CHECK(source.find("/std/collections/map/insert_ref<K, V>([Reference<Map<K, V>> mut] values, [K] key, [V] value)") ==
-        std::string::npos);
-  CHECK(source.find("return(mapBorrowedAtUnsafe<K, V>(entries, key))") ==
-        std::string::npos);
+  CHECK_FALSE(std::filesystem::exists(experimentalMapStdlibPath));
 }
 
 TEST_CASE("experimental map bracket access stays unsupported on value and borrowed call receivers") {
