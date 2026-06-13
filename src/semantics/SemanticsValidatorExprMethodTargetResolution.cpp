@@ -15,10 +15,7 @@ namespace primec::semantics {
 namespace {
 
 bool isRemovedVectorCompatibilityHelper(std::string_view helperName) {
-  return helperName == "count" || helperName == "capacity" || helperName == "at" ||
-         helperName == "at_unsafe" || helperName == "push" || helperName == "pop" ||
-         helperName == "reserve" || helperName == "clear" || helperName == "remove_at" ||
-         helperName == "remove_swap";
+  return isStdlibSurfaceMemberName(StdlibSurfaceId::CollectionsManifestSurface0, helperName);
 }
 
 bool isRemovedKeyValueCompatibilityHelper(std::string_view helperName) {
