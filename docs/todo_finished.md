@@ -24151,3 +24151,17 @@ Moved from `docs/todo.md` during unfinished-only cleanup:
     IR-lowerer map/vector bridge-key lookups with those accessors; updated
     lowerer source-lock coverage to assert the bridge-key literals are absent;
     and left semantics/emitter bridge-key migrations to their sibling leaves.
+
+- [x] TODO-4656: Audit surfaces.psmeta manifest coverage
+  - owner: ai
+  - created_at: 2026-06-13
+  - finished_at: 2026-06-13
+  - phase: Collection decoupling - Phase 1
+  - parallel_track: collection-decoupling
+  - scope: Compare the member names declared in
+    `stdlib/std/collections/surfaces.psmeta` against the hardcoded
+    helper name sets in three C++ files.
+  - evidence: Gap list produced at `docs/TODO-4656-manifest-gap-list.md`.
+    Found 3 collection-specific gaps: `size` (alias for count),
+    `to_aos_ref` (borrowed variant), `soa_vector` (legacy alias).
+    70+ language/math builtins correctly excluded from manifest scope.
