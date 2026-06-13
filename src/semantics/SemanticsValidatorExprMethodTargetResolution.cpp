@@ -19,13 +19,8 @@ bool isRemovedVectorCompatibilityHelper(std::string_view helperName) {
 }
 
 bool isRemovedKeyValueCompatibilityHelper(std::string_view helperName) {
-  return helperName == "count" || helperName == "count_ref" ||
-         helperName == "size" ||
-         helperName == "contains" || helperName == "contains_ref" ||
-         helperName == "tryAt" || helperName == "tryAt_ref" ||
-         helperName == "at" || helperName == "at_ref" ||
-         helperName == "at_unsafe" || helperName == "at_unsafe_ref" ||
-         helperName == "insert" || helperName == "insert_ref";
+  return isStdlibSurfaceMemberName(StdlibSurfaceId::CollectionsManifestSurface2, helperName) ||
+         helperName == "size";
 }
 
 std::string canonicalKeyValueHelperPathLocal(std::string_view helperName) {

@@ -86,6 +86,7 @@ lowering_spelling = /std/collections/map/at_unsafe
 lowering_spelling = /std/collections/map/at_unsafe_ref
 lowering_spelling = /std/collections/map/insert
 lowering_spelling = /std/collections/map/insert_ref
+compatibility_spelling = /std/collections/map/size
 
 [surface]
 id = CollectionsMapConstructors
