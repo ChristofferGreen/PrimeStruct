@@ -176,8 +176,8 @@ This file is the live open-work queue for PrimeStruct.
   (TODO-4655). Full analysis at `docs/FileLayoutRestructuring.md`.
 - Collection decoupling: move hardcoded collection knowledge from C++ to
   .prime files. ~75 production files have special-cased vector/map/soa
-  logic. Phase 1 extends the surface manifest for method routing (TODO-4656
-  through TODO-4661, TODO-4672 through TODO-4675). Phase 2 adds type-category
+  logic. Phase 1 (manifest extension) complete: TODO-4656 through
+  TODO-4661, TODO-4672 through TODO-4675 done. Phase 2 adds type-category
   declarations (TODO-4662 through TODO-4667, each targeting one file). Phase 3
   makes slot layout generic (TODO-4668 through TODO-4670). TODO-4671 cleans up
   dead helpers. Full design document at
@@ -223,7 +223,6 @@ This file is the live open-work queue for PrimeStruct.
 37. TODO-4669: Implement generic vector slot count from .prime fields
 38. TODO-4670: Remove collection-specific slot layout helpers
 39. TODO-4671: Remove isVectorTypeName and isMapTypeName after migration
-40. TODO-4675: Migrate ContainerError hardcoded paths to manifest
 
 ### Task Blocks
 
@@ -1059,25 +1058,3 @@ This file is the live open-work queue for PrimeStruct.
     - Functions deleted from source
     - Full test suite passes
   - stop_rule: functions deleted and grep clean
-
-- [ ] TODO-4675: Migrate ContainerError hardcoded paths to manifest
-  - owner: ai
-  - created_at: 2026-06-13
-  - phase: Collection decoupling - Phase 1
-  - parallel_track: collection-decoupling
-  - depends_on: TODO-4657
-  - scope: The `ContainerError` type has hardcoded paths across
-    12+ files. Start with the IR lowerer: replace the hardcoded
-    `/std/collections/ContainerError/why` and
-    `/std/collections/ContainerError/status` path lookups in
-    `IrLowererResultHelpers.cpp` (lines 71-73, 1414, 1456) and
-    `IrLowererPackedResultHelpers.cpp` (lines 148-150) with
-    manifest-driven resolution. The `StdlibSurfaceRegistry` already
-    has a `CollectionsContainerErrorHelpers` entry; extend it with
-    the `why` and `status` member paths.
-  - acceptance:
-    - `IrLowererResultHelpers.cpp` lines 71-73 use manifest lookup
-    - `IrLowererPackedResultHelpers.cpp` lines 148-150 use manifest
-      lookup
-    - Backend IR tests pass
-  - stop_rule: two files migrated and tests pass

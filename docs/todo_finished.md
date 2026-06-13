@@ -24272,3 +24272,17 @@ Moved from `docs/todo.md` during unfinished-only cleanup:
     8-string SOA method name check in SemanticsValidate.cpp with
     same manifest lookup. Updated source inspection test.
     Build and IR validation tests pass. Commits 7ae81eb75, a59c940f4.
+
+- [x] TODO-4675: Migrate ContainerError hardcoded paths to manifest
+  - owner: ai
+  - created_at: 2026-06-13
+  - finished_at: 2026-06-13
+  - phase: Collection decoupling - Phase 1
+  - parallel_track: collection-decoupling
+  - depends_on: TODO-4657
+  - scope: Replace hardcoded ContainerError paths in IR lowerer.
+  - evidence: Replaced hardcoded /std/collections/ContainerError
+    path checks in IrLowererResultHelpers.cpp and
+    IrLowererPackedResultHelpers.cpp with manifest-driven
+    resolution via CollectionsContainerErrorHelpers. Build and
+    IR validation tests pass. Commit 86acc9444.
