@@ -119,12 +119,7 @@ bool isRootedKeyValueHelperAliasPathForMethodTargets(std::string_view rawPath) {
 }
 
 bool isCanonicalMapBuiltinMethodHelper(std::string_view helperName) {
-  return helperName == "count" || helperName == "count_ref" ||
-         helperName == "contains" || helperName == "contains_ref" ||
-         helperName == "tryAt" || helperName == "tryAt_ref" ||
-         helperName == "at" || helperName == "at_ref" ||
-         helperName == "at_unsafe" || helperName == "at_unsafe_ref" ||
-         helperName == "insert";
+  return isStdlibSurfaceMemberName(StdlibSurfaceId::CollectionsManifestSurface2, helperName);
 }
 
 std::string experimentalKeyValueBackingLeafForMethodTargets(std::string typeName) {
@@ -3316,11 +3311,7 @@ bool SemanticsValidator::resolveMethodTarget(const std::vector<ParameterInfo> &p
       return ok;
     }
   }
-  if ((normalizedMethodName == "count" || normalizedMethodName == "capacity" ||
-       normalizedMethodName == "at" || normalizedMethodName == "at_unsafe" ||
-       normalizedMethodName == "push" || normalizedMethodName == "pop" ||
-       normalizedMethodName == "reserve" || normalizedMethodName == "clear" ||
-       normalizedMethodName == "remove_at" || normalizedMethodName == "remove_swap")) {
+  if (isStdlibSurfaceMemberName(StdlibSurfaceId::CollectionsManifestSurface0, normalizedMethodName)) {
     std::string vectorMethodTarget;
     if (resolveVectorHelperMethodTarget(params, locals, receiver, normalizedMethodName,
                                         vectorMethodTarget)) {
