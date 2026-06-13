@@ -253,10 +253,13 @@ bool Parser::isDefinitionSignature(bool *paramsAreIdentifiers) const {
       }
       if (braceDepth == 0) {
         if (kind == TokenKind::LBracket) {
-          identifiersOnly = false;
           const bool atArgStart = (prevAtDepth1 == TokenKind::LParen || prevAtDepth1 == TokenKind::Comma);
           if (atArgStart && isBindingParamBracket(tokens_, index)) {
             sawBindingSyntax = true;
+          } else {
+            identifiersOnly = false;
+            if (!sawBindingSyntax)
+              return false;
           }
         } else if (kind == TokenKind::Identifier) {
           const bool atArgStart = (prevAtDepth1 == TokenKind::LParen || prevAtDepth1 == TokenKind::Comma);
@@ -267,9 +270,13 @@ bool Parser::isDefinitionSignature(bool *paramsAreIdentifiers) const {
         } else if (kind == TokenKind::Ellipsis) {
           if (prevAtDepth1 != TokenKind::Identifier) {
             identifiersOnly = false;
+            if (!sawBindingSyntax)
+              return false;
           }
         } else if (kind != TokenKind::Identifier && kind != TokenKind::Comma) {
           identifiersOnly = false;
+          if (!sawBindingSyntax)
+            return false;
         }
         prevAtDepth1 = kind;
       }
@@ -328,10 +335,13 @@ bool Parser::isDefinitionSignatureAllowNoReturn(bool *paramsAreIdentifiers) cons
       }
       if (braceDepth == 0) {
         if (kind == TokenKind::LBracket) {
-          identifiersOnly = false;
           const bool atArgStart = (prevAtDepth1 == TokenKind::LParen || prevAtDepth1 == TokenKind::Comma);
           if (atArgStart && isBindingParamBracket(tokens_, index)) {
             sawBindingSyntax = true;
+          } else {
+            identifiersOnly = false;
+            if (!sawBindingSyntax)
+              return false;
           }
         } else if (kind == TokenKind::Identifier) {
           const bool atArgStart = (prevAtDepth1 == TokenKind::LParen || prevAtDepth1 == TokenKind::Comma);
@@ -342,9 +352,13 @@ bool Parser::isDefinitionSignatureAllowNoReturn(bool *paramsAreIdentifiers) cons
         } else if (kind == TokenKind::Ellipsis) {
           if (prevAtDepth1 != TokenKind::Identifier) {
             identifiersOnly = false;
+            if (!sawBindingSyntax)
+              return false;
           }
         } else if (kind != TokenKind::Identifier && kind != TokenKind::Comma) {
           identifiersOnly = false;
+          if (!sawBindingSyntax)
+            return false;
         }
         prevAtDepth1 = kind;
       }
