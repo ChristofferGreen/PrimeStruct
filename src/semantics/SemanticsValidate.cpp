@@ -3843,14 +3843,7 @@ bool normalizeExperimentalSoaBorrowedHelperMethodCall(
     }
     return name;
   }();
-  if (normalizedMethodName != "count" &&
-      normalizedMethodName != "count_ref" &&
-      normalizedMethodName != "get" &&
-      normalizedMethodName != "get_ref" &&
-      normalizedMethodName != "ref" &&
-      normalizedMethodName != "ref_ref" &&
-      normalizedMethodName != "to_aos" &&
-      normalizedMethodName != "to_aos_ref") {
+  if (!isStdlibSurfaceMemberName(StdlibSurfaceId::CollectionsColumnarHelpers, normalizedMethodName)) {
     return false;
   }
   const bool isCanonicalBorrowedSoaWrapperBodyCall =
