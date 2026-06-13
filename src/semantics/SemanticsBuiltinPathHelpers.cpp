@@ -966,14 +966,14 @@ bool isExperimentalSoaGrowthHelperPath(std::string_view path) {
   if (canonicalPath.starts_with(compatibilitySoaPrefix)) {
     const std::string_view helperName =
         std::string_view(canonicalPath).substr(compatibilitySoaPrefix.size());
-    return helperName == "push" || helperName == "reserve" ||
+    return isStdlibSurfaceMemberName(StdlibSurfaceId::CollectionsColumnarHelpers, helperName) ||
            helperName == "soaVectorPush" ||
            helperName == "soaVectorReserve";
   }
   if (canonicalPath.starts_with(experimentalSoaPrefix)) {
     const std::string_view helperName =
         std::string_view(canonicalPath).substr(experimentalSoaPrefix.size());
-    return helperName == "push" || helperName == "reserve" ||
+    return isStdlibSurfaceMemberName(StdlibSurfaceId::CollectionsColumnarHelpers, helperName) ||
            helperName == "soaVectorPush" ||
            helperName == "soaVectorReserve";
   }

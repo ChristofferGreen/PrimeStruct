@@ -877,7 +877,7 @@ TEST_CASE("soa pending diagnostics route through shared semantics helpers") {
             "                              collection_paths::kInternalSoaStorageFolder, \"soaColumnRef\")") !=
         std::string::npos);
   CHECK(builtinPathHelpersSource.find(
-            "helperName == \"push\" || helperName == \"reserve\" ||") !=
+            "isStdlibSurfaceMemberName(StdlibSurfaceId::CollectionsColumnarHelpers, helperName)") !=
         std::string::npos);
   CHECK(builtinPathHelpersSource.find(
             "helperName == \"soaVectorPush\" ||") !=
