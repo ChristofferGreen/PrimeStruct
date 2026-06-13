@@ -8,6 +8,7 @@
 #include "IrLowererSetupTypeHelpers.h"
 #include "IrLowererStatementBindingHelpers.h"
 #include "IrLowererTemplateTypeParseHelpers.h"
+#include "primec/StdlibSurfaceRegistry.h"
 
 namespace primec::ir_lowerer {
 
@@ -145,9 +146,12 @@ bool resolveSemanticProductResultOkPayloadInfo(
     out.isFileHandle = true;
     return true;
   }
-  if (bindingTypeText == "ContainerError" ||
-      bindingTypeText == "/std/collections/ContainerError") {
-    out.structType = "/std/collections/ContainerError";
+  const auto *containerErrorMetadata =
+      findStdlibSurfaceMetadata(StdlibSurfaceId::CollectionsContainerErrorHelpers);
+  if (containerErrorMetadata != nullptr &&
+      (bindingTypeText == "ContainerError" ||
+       bindingTypeText == containerErrorMetadata->canonicalPath)) {
+    out.structType = std::string(containerErrorMetadata->canonicalPath);
     return true;
   }
   if (bindingTypeText == "ImageError" ||

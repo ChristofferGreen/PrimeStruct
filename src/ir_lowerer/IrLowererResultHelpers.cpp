@@ -6,6 +6,7 @@
 #include "IrLowererSemanticProductTargetAdapters.h"
 #include "IrLowererSetupTypeHelpers.h"
 #include "IrLowererTemplateTypeParseHelpers.h"
+#include "primec/StdlibSurfaceRegistry.h"
 
 #include <algorithm>
 #include <optional>
@@ -68,9 +69,12 @@ bool applySemanticResultValueTypeText(const std::string &valueTypeText, ResultEx
     out.valueIsFileHandle = true;
     return true;
   }
-  if (trimmedValueType == "ContainerError" ||
-      trimmedValueType == "/std/collections/ContainerError") {
-    out.valueStructType = "/std/collections/ContainerError";
+  const auto *containerErrorMetadata =
+      findStdlibSurfaceMetadata(StdlibSurfaceId::CollectionsContainerErrorHelpers);
+  if (containerErrorMetadata != nullptr &&
+      (trimmedValueType == "ContainerError" ||
+       trimmedValueType == containerErrorMetadata->canonicalPath)) {
+    out.valueStructType = std::string(containerErrorMetadata->canonicalPath);
     return true;
   }
   if (trimmedValueType == "ImageError" ||
