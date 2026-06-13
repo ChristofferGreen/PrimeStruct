@@ -847,6 +847,37 @@ std::string_view findBorrowedVariant(StdlibSurfaceId id, std::string_view member
   return findBorrowedVariant(*metadata, memberName);
 }
 
+std::string resolveCompatibilitySpellingToCanonicalPath(std::string_view compatibilitySpelling) {
+  const auto *metadata = findStdlibSurfaceMetadataBySpelling(compatibilitySpelling);
+  if (metadata == nullptr) {
+    return std::string(compatibilitySpelling);
+  }
+  const std::string_view canonicalPrefix = metadata->canonicalPath;
+  const std::string compatStr(compatibilitySpelling);
+  const std::string canonicalStr(canonicalPrefix);
+  const size_t lastSlash = compatStr.find_last_of('/');
+  if (lastSlash != std::string::npos && lastSlash + 1 < compatStr.size()) {
+    const std::string_view memberName = std::string_view(compatibilitySpelling).substr(lastSlash + 1);
+    return canonicalStr + "/" + std::string(memberName);
+  }
+  return std::string(compatibilitySpelling);
+}
+
+std::string findCompatibilitySpelling(StdlibSurfaceId id, std::string_view memberName) {
+  const auto *metadata = findStdlibSurfaceMetadata(id);
+  if (metadata == nullptr) {
+    return {};
+  }
+  const std::string canonicalSuffix = "/" + std::string(memberName);
+  for (const auto &spelling : metadata->compatibilitySpellings) {
+    if (spelling.size() >= canonicalSuffix.size() &&
+        spelling.substr(spelling.size() - canonicalSuffix.size()) == canonicalSuffix) {
+      return std::string(spelling);
+    }
+  }
+  return {};
+}
+
 const StdlibSurfaceMetadata *findStdlibSurfaceMetadataBySpelling(std::string_view spelling) {
   const auto it = std::find_if(
       Registry.begin(), Registry.end(), [spelling](const StdlibSurfaceMetadata &metadata) {

@@ -73,5 +73,7 @@ bool isStdlibSurfaceMemberName(StdlibSurfaceId id, std::string_view memberName);
 bool isStdlibSurfaceStatementMemberName(StdlibSurfaceId id, std::string_view memberName);
 std::string_view findBorrowedVariant(const StdlibSurfaceMetadata &metadata, std::string_view memberName);
 std::string_view findBorrowedVariant(StdlibSurfaceId id, std::string_view memberName);
+std::string resolveCompatibilitySpellingToCanonicalPath(std::string_view compatibilitySpelling);
+std::string findCompatibilitySpelling(StdlibSurfaceId id, std::string_view memberName);
 
 } // namespace primec

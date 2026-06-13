@@ -3259,7 +3259,7 @@ void rewriteExperimentalSoaToAosMethodExpr(
   if (hasVisibleCanonicalToAosHelper) {
     expr.isMethodCall = false;
     expr.isFieldAccess = false;
-    expr.name = semantics::compatibilitySoaHelperTargetPath("to_aos");
+  expr.name = findCompatibilitySpelling(StdlibSurfaceId::CollectionsColumnarHelpers, "to_aos");
     expr.namespacePrefix.clear();
     if (canonicalReceiverExpr.has_value()) {
       expr.args.front() = *canonicalReceiverExpr;
