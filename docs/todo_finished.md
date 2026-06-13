@@ -24179,3 +24179,15 @@ Moved from `docs/todo.md` during unfinished-only cleanup:
     count->count_ref, get->get_ref, ref->ref_ref, to_aos->to_aos_ref
     to SOA surface in surfaces.psmeta. Added findBorrowedVariant()
     lookup function. Build and IR validation tests pass.
+
+- [x] TODO-4658: Migrate method target resolution helper name sets to manifest
+  - owner: ai
+  - created_at: 2026-06-13
+  - finished_at: 2026-06-13
+  - phase: Collection decoupling - Phase 1
+  - parallel_track: collection-decoupling
+  - depends_on: TODO-4657
+  - scope: Replace isRemovedVectorCompatibilityHelper hardcoded set.
+  - evidence: Replaced 10-string hardcoded set with
+    isStdlibSurfaceMemberName(CollectionsManifestSurface0, helperName).
+    Build and IR validation tests pass. Commit e2d87214c.
