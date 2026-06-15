@@ -179,9 +179,9 @@ This file is the live open-work queue for PrimeStruct.
   logic. Phase 1 (manifest extension) complete: TODO-4656 through
   TODO-4661, TODO-4672 through TODO-4675 done. Phase 2 (type-category
   declarations) complete: TODO-4662 through TODO-4667 done. Phase 3
-  makes slot layout generic (TODO-4668 through TODO-4670). TODO-4671 cleans up
-  dead helpers. Full design document at
-  `docs/CollectionDecoupling.md`.
+  (generic slot layout): TODO-4668 and TODO-4669 done. Remaining: TODO-4670
+  (remove old alias branches when ready), TODO-4671 (cleanup dead helpers).
+  Full design document at `docs/CollectionDecoupling.md`.
 
 ### Execution Queue
 
@@ -213,10 +213,8 @@ This file is the live open-work queue for PrimeStruct.
 27. TODO-4653: Add dedicated IrPrinter unit tests
 28. TODO-4654: Add [public] annotations to stdlib modules
 29. TODO-4655: Add compile-run tests for language level examples
-30. TODO-4668: Audit slot layout branching for .prime struct coverage
-31. TODO-4669: Implement generic vector slot count from .prime fields
-32. TODO-4670: Remove collection-specific slot layout helpers
-33. TODO-4671: Remove isVectorTypeName and isMapTypeName after migration
+30. TODO-4670: Remove collection-specific slot layout helpers (old alias branches)
+31. TODO-4671: Remove isVectorTypeName and isMapTypeName after migration
 
 ### Task Blocks
 
@@ -857,85 +855,38 @@ This file is the live open-work queue for PrimeStruct.
   - stop_rule: Stop once all examples are covered; do not add new examples
     in this leaf.
 
-- [ ] TODO-4668: Audit slot layout branching for .prime struct coverage
+- [ ] TODO-4670: Remove old vector/soa-vector alias early-exit branches
   - owner: ai
   - created_at: 2026-06-13
   - phase: Collection decoupling - Phase 3
   - parallel_track: collection-decoupling
-  - scope: Read `IrLowererStructSlotLayoutHelpers.cpp` and catalog
-    every `isVectorTypeName()` / `isMapTypeName()` branch. For each
-    branch, determine whether the `.prime` struct's field
-    declarations contain enough information to compute the same
-    layout generically. Identify any branches that require
-    information not present in `.prime` declarations.
+  - depends_on: TODO-4623, TODO-4624 (alias removal from TODO-4623..4636)
+  - scope: Remove `isBuiltinVectorTypeName` and `isBuiltinSoaVectorTypeName`
+    early-exit branches from `resolveStructSlotLayoutFromDefinitionFields`
+    in `IrLowererStructSlotLayoutHelpers.cpp`. These 3-slot hardcoded layouts
+    handle old aliases (`vector`, `/vector`, `soa_vector`, `/soa_vector`).
+    They can only be removed once TODO-4623..4636 retires these aliases so
+    no code paths reach these branches.
   - acceptance:
-    - Branch catalog with line numbers
-    - For each branch: "computable from .prime" or "needs new
-      .prime metadata" with justification
-  - stop_rule: catalog complete
-
-- [ ] TODO-4669: Implement generic vector slot count from .prime fields
-  - owner: ai
-  - created_at: 2026-06-13
-  - phase: Collection decoupling - Phase 3
-  - parallel_track: collection-decoupling
-  - depends_on: TODO-4668
-  - scope: Replace the Vector-name resolution branches in
-    `IrLowererStructSlotLayoutHelpers.cpp` `normalizeVectorStructPath()`
-    (lines 111-115: `if (typeName == "Vector")` and
-    `isExperimentalCollectionTypeName(typeName, "vector", "Vector")`)
-    with a generic computation that reads the `.prime` struct's
-    field declarations. The `Vector<T>` struct in `vector.prime`
-    has 4 fields: `fieldCount` (i32), `fieldCapacity` (i32),
-    `data` (Pointer), `ownsData` (bool). The resolver should
-    count these fields and compute slot count from their types.
-  - implementation_notes: The `.prime` struct's fields are
-    available in `ctx.program.definitions`. Look up the struct by
-    path, iterate its `statements` (which are field bindings),
-    and compute slot count from each field's binding type.
-    `Pointer<T>` maps to 1 slot, `i32` maps to 1 slot, `bool`
-    maps to 1 slot.
-  - acceptance:
-    - `isVectorTypeName()` branch at lines 111-115 removed
-    - Slot count computed from `.prime` Vector struct fields
-    - Backend IR tests pass
-  - stop_rule: branch removed and tests pass
-
-- [ ] TODO-4670: Remove collection-specific slot layout helpers
-  - owner: ai
-  - created_at: 2026-06-13
-  - phase: Collection decoupling - Phase 3
-  - parallel_track: collection-decoupling
-  - depends_on: TODO-4669
-  - scope: Delete `isVectorTypeName()`, `isMapTypeName()` from
-    `IrLowererStructSlotLayoutHelpers.cpp` and verify no other
-    files reference them for slot layout purposes.
-  - acceptance:
-    - Functions deleted
-    - No remaining references for slot layout
+    - Both branches deleted
+    - `isBuiltinVectorTypeName` and `isBuiltinSoaVectorTypeName` helpers
+      have no remaining callers in this file
     - All tests pass
-  - stop_rule: functions deleted and tests pass
+  - stop_rule: branches deleted and tests pass
 
 - [ ] TODO-4671: Remove isVectorTypeName and isMapTypeName after migration
   - owner: ai
   - created_at: 2026-06-13
   - phase: Collection decoupling - Cleanup
   - parallel_track: collection-decoupling
-  - depends_on: TODO-4665, TODO-4666, TODO-4669, TODO-4670
-  - scope: After TODO-4665 (semantics), TODO-4666 (IR lowerer
-    slot layout), TODO-4669 (generic slot count), and TODO-4670
-    (slot layout helpers) are complete, verify that
-    `isVectorTypeName()` and `isMapTypeName()` have no remaining
-    callers. If so, delete their definitions from
-    `IrLowererStructSlotLayoutHelpers.cpp`. If other callers
-    remain, file follow-up TODOs for each.
-  - implementation_notes: Use grep to find all callers before
-    deleting. The functions are defined at lines 51-53
-    (`isVectorTypeName`) and 83-85 (`isMapTypeName`) of
-    `IrLowererStructSlotLayoutHelpers.cpp`.
+  - depends_on: TODO-4665, TODO-4666, TODO-4670
+  - scope: After TODO-4666 (IR lowerer slot layout) and TODO-4670
+    (old alias branches) are complete, verify that `isVectorTypeName()`,
+    `isMapTypeName()`, `isBuiltinVectorTypeName`, `isBuiltinSoaVectorTypeName`,
+    `isInternalSoaColumnTypeName`, and `isExperimentalSoaVectorTypeName` have
+    no remaining callers. Delete dead helpers.
   - acceptance:
-    - `grep -rn isVectorTypeName src/` returns zero results
-    - `grep -rn isMapTypeName src/` returns zero results
-    - Functions deleted from source
+    - Dead helper functions removed from `IrLowererStructSlotLayoutHelpers.cpp`
+    - No unused collection helper functions remain
     - Full test suite passes
-  - stop_rule: functions deleted and grep clean
+  - stop_rule: dead code removed and tests pass

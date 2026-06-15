@@ -24376,3 +24376,29 @@ Moved from `docs/todo.md` during unfinished-only cleanup:
     `EmitterCollectionSurface::VectorConstructors` / `KeyValueConstructors`. Added
     `isSurfaceAliasTypeName`, `isSurfaceCollectionName`, `isVectorCollectionBindingLocal`
     helpers. Bare-map count and at compile-run tests pass.
+
+- [x] TODO-4668: Audit slot layout branching for .prime struct coverage
+  - owner: ai
+  - created_at: 2026-06-13
+  - finished_at: 2026-06-15
+  - phase: Collection decoupling - Phase 3
+  - parallel_track: collection-decoupling
+  - scope: Catalog every early-exit branch in slot layout resolver.
+  - evidence: Cataloged 5 branches: isBuiltinVectorTypeName and isBuiltinSoaVectorTypeName (old
+    aliases, 3-slot, tied to TODO-4623..4636), isInternalSoaColumnTypeName (5-slot, matches
+    definition-based output), isExperimentalSoaVectorTypeName (6-slot, matches definition-based
+    output), isMapValueTypeName (already a fallback). Audit complete.
+
+- [x] TODO-4669: Implement generic vector slot count from .prime fields
+  - owner: ai
+  - created_at: 2026-06-13
+  - finished_at: 2026-06-15
+  - phase: Collection decoupling - Phase 3
+  - parallel_track: collection-decoupling
+  - depends_on: TODO-4668
+  - scope: Move SoaColumn/SoaVector to definition-first layout.
+  - evidence: Moved isInternalSoaColumnTypeName and isExperimentalSoaVectorTypeName from
+    early-exit position to inside the !resolvedLayoutDefinition fallback block in
+    IrLowererStructSlotLayoutHelpers.cpp. Definition-based path now runs first for canonical
+    SoaColumn and SoaVector types; fallback fires only when stdlib is not imported.
+    All 10 struct slot layout tests pass; 23 pre-existing SOA failures unchanged.

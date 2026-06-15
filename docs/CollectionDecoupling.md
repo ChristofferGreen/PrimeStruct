@@ -409,9 +409,10 @@ branching on known type names.
 
 ### Phase 3: Generic Slot Layout
 
-- [ ] TODO-4668: Audit slot layout branching for .prime struct coverage
+- [x] TODO-4668: Audit slot layout branching for .prime struct coverage
   - owner: ai
   - created_at: 2026-06-13
+  - finished_at: 2026-06-15
   - phase: Phase 3 - Generic Slot Layout
   - scope: Read `IrLowererStructSlotLayoutHelpers.cpp` and catalog
     every `isVectorTypeName()` / `isMapTypeName()` branch. For each
@@ -424,10 +425,21 @@ branching on known type names.
     - For each branch: "computable from .prime" or "needs new
       .prime metadata" with justification
   - stop_rule: catalog complete
+  - evidence: Cataloged 5 early-exit branches in `resolveStructSlotLayoutFromDefinitionFields`:
+    (1) `isBuiltinVectorTypeName` (3-slot, old alias) — NOT computable from .prime safely; layout
+    differs from canonical 5-slot definition path; tied to alias removal (TODO-4623..4636). KEEP.
+    (2) `isBuiltinSoaVectorTypeName` (3-slot, old alias) — same as above. KEEP.
+    (3) `isInternalSoaColumnTypeName` (5-slot, canonical path) — matches definition-based output;
+    .prime has 4 fields (count:i32, capacity:i32, data:Pointer, ownsData:bool) → 1+4=5 slots.
+    MOVE TO FALLBACK (done in TODO-4669).
+    (4) `isExperimentalSoaVectorTypeName` (6-slot, canonical path) — matches definition-based output;
+    .prime has 1 field (storage:SoaColumn<T>) → 1+5=6 slots. MOVE TO FALLBACK (done in TODO-4669).
+    (5) `isMapValueTypeName` (11-slot fallback) — already post-definition-lookup fallback. KEEP.
 
-- [ ] TODO-4669: Implement generic vector slot count from .prime fields
+- [x] TODO-4669: Implement generic vector slot count from .prime fields
   - owner: ai
   - created_at: 2026-06-13
+  - finished_at: 2026-06-15
   - phase: Phase 3 - Generic Slot Layout
   - depends_on: TODO-4668
   - scope: Modify the slot layout resolver to count slots from
@@ -440,6 +452,11 @@ branching on known type names.
     - Slot count computed from `.prime` field declarations
     - All backend IR tests pass
   - stop_rule: branches removed and tests pass
+  - evidence: Moved `isInternalSoaColumnTypeName` and `isExperimentalSoaVectorTypeName` early-exit
+    branches to after definition lookup fails (inside `!resolvedLayoutDefinition` block) in
+    `IrLowererStructSlotLayoutHelpers.cpp`. Definition-based path now takes priority for
+    SoaColumn/SoaVector when stdlib is loaded; fallback only fires for isolated tests without
+    stdlib (same pattern as `isMapValueTypeName`). All 10 struct slot layout tests pass.
 
 - [ ] TODO-4670: Remove collection-specific slot layout helpers
   - owner: ai

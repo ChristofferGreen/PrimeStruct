@@ -274,27 +274,6 @@ bool resolveStructSlotLayoutFromDefinitionFields(
     out = layout;
     return true;
   }
-  if (isInternalSoaColumnTypeName(structPath)) {
-    StructSlotLayoutInfo layout;
-    layout.structPath = normalizeInternalSoaColumnStructPath(structPath);
-    layout.totalSlots = 5;
-    layout.fields.push_back({"count", 1, 1, LocalInfo::ValueKind::Int32, ""});
-    layout.fields.push_back({"capacity", 2, 1, LocalInfo::ValueKind::Int32, ""});
-    layout.fields.push_back({"data", 3, 1, LocalInfo::ValueKind::Int64, ""});
-    layout.fields.push_back({"ownsData", 4, 1, LocalInfo::ValueKind::Bool, ""});
-    out = layout;
-    return true;
-  }
-  if (isExperimentalSoaVectorTypeName(structPath)) {
-    StructSlotLayoutInfo layout;
-    layout.structPath = normalizeExperimentalSoaVectorStructPath(structPath);
-    const std::string storageStructPath =
-        internalSoaColumnStructPathForSoaVectorPath(layout.structPath);
-    layout.totalSlots = 6;
-    layout.fields.push_back({"storage", 1, 5, LocalInfo::ValueKind::Unknown, storageStructPath});
-    out = layout;
-    return true;
-  }
   auto cached = layoutCache.find(structPath);
   if (cached != layoutCache.end()) {
     out = cached->second;
@@ -319,9 +298,9 @@ bool resolveStructSlotLayoutFromDefinitionFields(
     }
   }
   if (!resolvedLayoutDefinition) {
-    // Fallback for MapValue<K,V> when its definition isn't in defMap (e.g. stdlib not imported).
-    // MapValue has keys: Vector<K> and payloads: Vector<V>; Vector<T> uses 5 slots (1-indexed).
-    // Only applied when neither the specialized nor the base definition path is available.
+    // Fallbacks for collection types whose definitions may not be in defMap
+    // (e.g. stdlib not imported in isolated unit tests). Applied only after
+    // both specialized and unspecialized definition lookup has failed.
     if (isMapValueTypeName(structPath)) {
       const std::string vectorPath = vectorBackingTypePath();
       StructSlotLayoutInfo layout;
@@ -329,6 +308,31 @@ bool resolveStructSlotLayoutFromDefinitionFields(
       layout.totalSlots = 11;
       layout.fields.push_back({"keys", 1, 5, LocalInfo::ValueKind::Unknown, vectorPath});
       layout.fields.push_back({"payloads", 6, 5, LocalInfo::ValueKind::Unknown, vectorPath});
+      layoutCache.emplace(structPath, layout);
+      out = layout;
+      layoutStack.erase(structPath);
+      return true;
+    }
+    if (isInternalSoaColumnTypeName(structPath)) {
+      StructSlotLayoutInfo layout;
+      layout.structPath = normalizeInternalSoaColumnStructPath(structPath);
+      layout.totalSlots = 5;
+      layout.fields.push_back({"count", 1, 1, LocalInfo::ValueKind::Int32, ""});
+      layout.fields.push_back({"capacity", 2, 1, LocalInfo::ValueKind::Int32, ""});
+      layout.fields.push_back({"data", 3, 1, LocalInfo::ValueKind::Int64, ""});
+      layout.fields.push_back({"ownsData", 4, 1, LocalInfo::ValueKind::Bool, ""});
+      layoutCache.emplace(structPath, layout);
+      out = layout;
+      layoutStack.erase(structPath);
+      return true;
+    }
+    if (isExperimentalSoaVectorTypeName(structPath)) {
+      StructSlotLayoutInfo layout;
+      layout.structPath = normalizeExperimentalSoaVectorStructPath(structPath);
+      const std::string storageStructPath =
+          internalSoaColumnStructPathForSoaVectorPath(layout.structPath);
+      layout.totalSlots = 6;
+      layout.fields.push_back({"storage", 1, 5, LocalInfo::ValueKind::Unknown, storageStructPath});
       layoutCache.emplace(structPath, layout);
       out = layout;
       layoutStack.erase(structPath);
