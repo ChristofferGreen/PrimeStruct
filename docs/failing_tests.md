@@ -29,15 +29,13 @@ recorded here manually before starting new implementation work.
 - ~~`bare map at through canonical helper in C++ emitter`~~ — **FIXED** 2026-06-15:
   Same fix as bare map count above.
 
-- Command:
-  `build-release/PrimeStruct_backend_ir_tests --test-suite=primestruct.ir.pipeline.validation --test-case="ir lowerer struct type helpers*"`
-- Failed cases:
-  - `ir lowerer struct type helpers infer name-expression struct paths`
-  - `ir lowerer struct type helpers infer args-pack indexed field-access paths`
-- Note: This broad doctest filter was run while validating the
-  collection slot-layout migration. The failures are outside the
-  slot-layout helper case and need focused triage before being
-  removed from this registry.
+- ~~`ir lowerer struct type helpers infer name-expression struct paths`~~ — **FIXED** 2026-06-15:
+  Added key-value local struct path inference in `inferStructPathFromNameExpr` in
+  `IrLowererStructTypeHelpers.cpp`.
+
+- ~~`ir lowerer struct type helpers infer args-pack indexed field-access paths`~~ — **FIXED** 2026-06-15:
+  Fixed `inferStructPathFromFieldAccessCall` to only accept `at`/`at_unsafe` calls as
+  valid args-pack indexed access patterns in `IrLowererStructTypeHelpers.cpp`.
 
 - Command:
   `build-release/primec --emit=ir build-release/stdlib_soa_trait_repro.prime -o build-release/stdlib_soa_trait_repro.psir`
