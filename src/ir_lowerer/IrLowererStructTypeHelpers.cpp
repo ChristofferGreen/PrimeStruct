@@ -648,6 +648,23 @@ std::string inferStructPathFromNameExpr(const Expr &expr, const LocalMap &locals
   if (isVectorLikeLocal) {
     return inferVectorLikeStructPathFromLocalInfo(localIt->second);
   }
+  const bool isKeyValueLocal =
+      localIt->second.kind == LocalInfo::Kind::Value &&
+      localIt->second.keyValueKeyKind != LocalInfo::ValueKind::Unknown &&
+      localIt->second.keyValueValueKind != LocalInfo::ValueKind::Unknown;
+  if (isKeyValueLocal) {
+    if (!localIt->second.structTypeName.empty()) {
+      return localIt->second.structTypeName;
+    }
+    const std::string keyType = scalarKindTypeName(localIt->second.keyValueKeyKind);
+    const std::string valueType = scalarKindTypeName(localIt->second.keyValueValueKind);
+    if (!keyType.empty() && !valueType.empty()) {
+      const std::string storageRoot = keyValueStorageStructRootPath();
+      if (!storageRoot.empty()) {
+        return storageRoot + templateSpecializationSuffixForStructType(keyType + ", " + valueType);
+      }
+    }
+  }
   if (!localIt->second.structTypeName.empty()) {
     return localIt->second.structTypeName;
   }
@@ -665,16 +682,38 @@ std::string inferStructPathFromFieldAccessCall(
 
   std::string receiverStruct = inferStructExprPath(expr.args.front(), localsIn);
   if (receiverStruct.empty()) {
-    std::string accessName;
     const Expr &receiver = expr.args.front();
     if (receiver.kind == Expr::Kind::Call &&
-        getBuiltinArrayAccessName(receiver, accessName) &&
         receiver.args.size() == 2 &&
         receiver.args.front().kind == Expr::Kind::Name) {
       const auto localIt = localsIn.find(receiver.args.front().name);
       if (localIt != localsIn.end() && localIt->second.isArgsPack &&
           !localIt->second.structTypeName.empty()) {
-        receiverStruct = localIt->second.structTypeName;
+        std::string rawName = receiver.name;
+        const size_t lastSlash = rawName.rfind('/');
+        if (lastSlash != std::string::npos) {
+          rawName = rawName.substr(lastSlash + 1);
+        }
+        const size_t generatedMarker = rawName.rfind("__");
+        if (generatedMarker != std::string::npos) {
+          rawName = rawName.substr(0, generatedMarker);
+        }
+        if (rawName == "at" || rawName == "at_unsafe") {
+          receiverStruct = localIt->second.structTypeName;
+        }
+      }
+    }
+    if (receiverStruct.empty()) {
+      std::string accessName;
+      if (receiver.kind == Expr::Kind::Call &&
+          getBuiltinArrayAccessName(receiver, accessName) &&
+          receiver.args.size() == 2 &&
+          receiver.args.front().kind == Expr::Kind::Name) {
+        const auto localIt = localsIn.find(receiver.args.front().name);
+        if (localIt != localsIn.end() && localIt->second.isArgsPack &&
+            !localIt->second.structTypeName.empty()) {
+          receiverStruct = localIt->second.structTypeName;
+        }
       }
     }
   }

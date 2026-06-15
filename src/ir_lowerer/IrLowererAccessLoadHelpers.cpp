@@ -972,7 +972,12 @@ void emitArrayVectorAccessLoad(
   if (accessName == "at" || (accessName == "at_unsafe" && isVectorTarget)) {
     const int32_t countLocal = allocTempLocal();
     emitInstruction(IrOpcode::LoadLocal, static_cast<uint64_t>(ptrLocal));
+    // Vector<T> uses 1-indexed layout: slot 0=header, slot 1=count, slot 2=capacity, slot 3=data.
+    // at: check index < count (slot 1), at_unsafe: check index < capacity (slot 2).
     if (accessName == "at_unsafe") {
+      emitInstruction(IrOpcode::PushI64, static_cast<uint64_t>(2 * IrSlotBytes));
+      emitInstruction(IrOpcode::AddI64, 0);
+    } else if (isVectorTarget) {
       emitInstruction(IrOpcode::PushI64, static_cast<uint64_t>(IrSlotBytes));
       emitInstruction(IrOpcode::AddI64, 0);
     }
@@ -1002,7 +1007,7 @@ void emitArrayVectorAccessLoad(
   if (isVectorTarget) {
     basePtrLocal = allocTempLocal();
     emitInstruction(IrOpcode::LoadLocal, static_cast<uint64_t>(ptrLocal));
-    emitInstruction(IrOpcode::PushI64, static_cast<uint64_t>(2 * IrSlotBytes));
+    emitInstruction(IrOpcode::PushI64, static_cast<uint64_t>(3 * IrSlotBytes));  // data at slot 3
     emitInstruction(IrOpcode::AddI64, 0);
     emitInstruction(IrOpcode::LoadIndirect, 0);
     emitInstruction(IrOpcode::StoreLocal, static_cast<uint64_t>(basePtrLocal));
