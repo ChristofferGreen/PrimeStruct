@@ -141,6 +141,8 @@
   std::string preferredCanonicalExperimentalVectorHelperTarget(std::string_view helperName) const;
   std::string specializedExperimentalVectorHelperTarget(std::string_view helperName,
                                                         const std::string &elemType) const;
+  std::string categoryCollectionVectorHelperTarget(std::string_view helperName,
+                                                   const std::string &elemType) const;
   std::string_view rootedVectorHelperPrefix() const;
   std::string_view unrootedVectorHelperPrefix() const;
   std::string rootedVectorHelperPath(std::string_view helperName) const;

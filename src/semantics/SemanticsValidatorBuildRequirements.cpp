@@ -24,6 +24,25 @@ bool SemanticsValidator::validateRequirementPredicates() {
   auto isStaticField = [&](const Expr &stmt) {
     return hasTransform(stmt.transforms, "static");
   };
+  auto appendStructCategoryTraits =
+      [&](RequirementPredicateDefinitionContext &context, const Definition &definition) {
+        for (const auto &transform : definition.transforms) {
+          std::vector<std::string> traitNames;
+          if (transform.name == "collection_type") {
+            traitNames.push_back("Collection");
+          } else if (transform.name == "key_value_type") {
+            traitNames.push_back("Collection");
+            traitNames.push_back("KeyValue");
+          }
+          for (const auto &traitName : traitNames) {
+            RequirementPredicateDefinitionContext::StructTraitFact trait;
+            trait.structPath = definition.fullPath;
+            trait.traitName = traitName;
+            trait.isPrivate = hasTransform(definition.transforms, "private");
+            context.structTraits.push_back(std::move(trait));
+          }
+        }
+      };
   auto compileTimeEffectsForDefinition = [](const Definition &definition) {
     std::vector<std::string> effects;
     for (const Transform &transform : definition.transforms) {
@@ -131,6 +150,7 @@ bool SemanticsValidator::validateRequirementPredicates() {
   auto populateCapabilityFacts = [&](RequirementPredicateDefinitionContext &context) {
     context.callables.clear();
     context.structFields.clear();
+    context.structTraits.clear();
     context.callables.reserve(program_.definitions.size());
     for (const auto &candidate : program_.definitions) {
       auto paramsIt = paramsByDef_.find(candidate.fullPath);
@@ -167,6 +187,7 @@ bool SemanticsValidator::validateRequirementPredicates() {
       if (structNames_.count(candidate.fullPath) == 0) {
         continue;
       }
+      appendStructCategoryTraits(context, candidate);
       for (const auto &stmt : candidate.statements) {
         if (!stmt.isBinding || isStaticField(stmt) ||
             isCompileTimeTypeBinding(stmt)) {

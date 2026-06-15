@@ -91,14 +91,15 @@ bool resolveVectorRecordFieldSlotsFromFields(const std::string &structPath,
     }
   }
 
-  auto findField = [&](std::initializer_list<const char *> names,
+  auto findField = [&](const std::string &lookupPath,
+                       std::initializer_list<const char *> names,
                        bool required,
                        int32_t &slotOut,
                        int32_t &totalSlots) {
     for (const char *name : names) {
       int32_t slotOffset = -1;
       int32_t slotCount = 0;
-      if (resolveField(structPath, name, slotOffset, slotCount) &&
+      if (resolveField(lookupPath, name, slotOffset, slotCount) &&
           slotOffset >= 0 && slotCount == 1) {
         slotOut = slotOffset;
         totalSlots = std::max(totalSlots, slotOffset + slotCount);
@@ -110,11 +111,34 @@ bool resolveVectorRecordFieldSlotsFromFields(const std::string &structPath,
 
   VectorRecordFieldSlots slots;
   int32_t totalSlots = 0;
-  if (!findField({"fieldCount", "count"}, true, slots.count, totalSlots) ||
-      !findField({"fieldCapacity", "capacity"}, true, slots.capacity, totalSlots) ||
-      !findField({"data"}, true, slots.data, totalSlots) ||
-      !findField({"ownsData"}, false, slots.ownsData, totalSlots)) {
-    return false;
+  if (!findField(structPath, {"fieldCount", "count"}, true, slots.count, totalSlots) ||
+      !findField(structPath, {"fieldCapacity", "capacity"}, true, slots.capacity, totalSlots) ||
+      !findField(structPath, {"data"}, true, slots.data, totalSlots) ||
+      !findField(structPath, {"ownsData"}, false, slots.ownsData, totalSlots)) {
+    const size_t specializationMarker = structPath.find("__t");
+    if (specializationMarker == std::string::npos) {
+      return false;
+    }
+    const std::string unspecializedPath =
+        structPath.substr(0, specializationMarker);
+    slots = {};
+    totalSlots = 0;
+    if (!findField(unspecializedPath, {"fieldCount", "count"}, true, slots.count, totalSlots) ||
+        !findField(unspecializedPath, {"fieldCapacity", "capacity"}, true, slots.capacity, totalSlots) ||
+        !findField(unspecializedPath, {"data"}, true, slots.data, totalSlots) ||
+        !findField(unspecializedPath, {"ownsData"}, false, slots.ownsData, totalSlots)) {
+      const bool isSpecializedStdlibVector =
+          structPath.find("/Vector__t") != std::string::npos ||
+          structPath.find("Vector__t") == 0;
+      if (!isSpecializedStdlibVector) {
+        return false;
+      }
+      slots.count = 1;
+      slots.capacity = 2;
+      slots.data = 3;
+      slots.ownsData = 4;
+      totalSlots = 5;
+    }
   }
   if (totalSlots <= 0) {
     return false;

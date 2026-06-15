@@ -4,7 +4,7 @@ import /std/collections/internal_buffer_unchecked/*
 namespace std {
   namespace collections {
   namespace internal_soa_storage {
-  [public struct]
+  [public struct collection_type]
   SoaColumn<T>() {
     [public i32] count
     [public i32] capacity

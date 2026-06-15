@@ -615,6 +615,14 @@ const Definition *resolveMethodCallDefinitionFromExpr(
           !directCallTarget.empty()
               ? directCallTarget
               : (!bridgePathChoice.empty() ? bridgePathChoice : sourceMatchedBridgePathChoice);
+      if (!fallbackDirectTarget.empty() &&
+          (isSimpleCallName(callExpr, "at") || isSimpleCallName(callExpr, "at_unsafe")) &&
+          blocksSyntheticCollectionFallbackDirectTarget(fallbackDirectTarget)) {
+        if (const Definition *resolvedDef = resolveLoweredDefinitionPath(fallbackDirectTarget);
+            resolvedDef != nullptr && !resolvedDef->statements.empty()) {
+          return resolvedDef;
+        }
+      }
       const bool directTargetKeepsSyntheticCollectionFallback =
           !fallbackDirectTarget.empty() &&
           (((isSimpleCallName(callExpr, "count") ||

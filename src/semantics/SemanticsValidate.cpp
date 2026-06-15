@@ -6761,6 +6761,22 @@ makeCompileTimeIfRequirementContext(
     if (structNames.count(candidate.fullPath) == 0) {
       continue;
     }
+    for (const Transform &transform : candidate.transforms) {
+      std::vector<std::string> traitNames;
+      if (transform.name == "collection_type") {
+        traitNames.push_back("Collection");
+      } else if (transform.name == "key_value_type") {
+        traitNames.push_back("Collection");
+        traitNames.push_back("KeyValue");
+      }
+      for (const std::string &traitName : traitNames) {
+        semantics::RequirementPredicateDefinitionContext::StructTraitFact trait;
+        trait.structPath = candidate.fullPath;
+        trait.traitName = traitName;
+        trait.isPrivate = isTransformNamed(candidate.transforms, "private");
+        context.structTraits.push_back(std::move(trait));
+      }
+    }
     for (const Expr &stmt : candidate.statements) {
       if (!stmt.isBinding || isTransformNamed(stmt.transforms, "static") ||
           semantics::isCompileTimeTypeBinding(stmt)) {

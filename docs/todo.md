@@ -177,8 +177,8 @@ This file is the live open-work queue for PrimeStruct.
 - Collection decoupling: move hardcoded collection knowledge from C++ to
   .prime files. ~75 production files have special-cased vector/map/soa
   logic. Phase 1 (manifest extension) complete: TODO-4656 through
-  TODO-4661, TODO-4672 through TODO-4675 done. Phase 2 adds type-category
-  declarations (TODO-4662 through TODO-4667, each targeting one file). Phase 3
+  TODO-4661, TODO-4672 through TODO-4675 done. Phase 2 (type-category
+  declarations) complete: TODO-4662 through TODO-4667 done. Phase 3
   makes slot layout generic (TODO-4668 through TODO-4670). TODO-4671 cleans up
   dead helpers. Full design document at
   `docs/CollectionDecoupling.md`.
@@ -213,16 +213,10 @@ This file is the live open-work queue for PrimeStruct.
 27. TODO-4653: Add dedicated IrPrinter unit tests
 28. TODO-4654: Add [public] annotations to stdlib modules
 29. TODO-4655: Add compile-run tests for language level examples
-30. TODO-4662: Design type-category annotation syntax for .prime
-31. TODO-4663: Implement type-category predicate in semantic validator
-32. TODO-4664: Annotate stdlib collection types with category declarations
-33. TODO-4665: Migrate SemanticsValidatorExprVectorHelpers to predicate queries
-34. TODO-4666: Migrate IrLowererStructSlotLayoutHelpers to predicate queries
-35. TODO-4667: Migrate EmitterBuiltinCollectionInferenceHelpers to predicate queries
-36. TODO-4668: Audit slot layout branching for .prime struct coverage
-37. TODO-4669: Implement generic vector slot count from .prime fields
-38. TODO-4670: Remove collection-specific slot layout helpers
-39. TODO-4671: Remove isVectorTypeName and isMapTypeName after migration
+30. TODO-4668: Audit slot layout branching for .prime struct coverage
+31. TODO-4669: Implement generic vector slot count from .prime fields
+32. TODO-4670: Remove collection-specific slot layout helpers
+33. TODO-4671: Remove isVectorTypeName and isMapTypeName after migration
 
 ### Task Blocks
 
@@ -862,119 +856,6 @@ This file is the live open-work queue for PrimeStruct.
     - `./scripts/compile.sh --release` passes.
   - stop_rule: Stop once all examples are covered; do not add new examples
     in this leaf.
-
-- [ ] TODO-4662: Design type-category annotation syntax for .prime
-  - owner: ai
-  - created_at: 2026-06-13
-  - phase: Collection decoupling - Phase 2
-  - parallel_track: collection-decoupling
-  - scope: Design a `.prime` annotation syntax for declaring type
-    categories (e.g., `[collection_type]`, `[key_value_type]`).
-    The design must integrate with the existing `has_trait`
-    predicate system in `RequirementPredicateFacts.cpp` and the
-    struct transform system. Produce a spec with examples showing
-    how `Vector<T>`, `Map<K,V>`, and `SoaVector<T>` would declare
-    their categories.
-  - implementation_notes: The existing traits (`Additive`,
-    `Multiplicative`, `Comparable`, `Indexable`) are registered in
-    `RequirementPredicateFacts.cpp`. The new categories should
-    follow the same pattern. Consider whether categories should be
-    separate from traits or unified.
-  - acceptance:
-    - Spec document with syntax examples
-    - Integration points with `has_trait` identified
-    - Migration path for `isVectorTypeName()` / `isMapTypeName()`
-      call sites described
-  - stop_rule: spec complete
-
-- [ ] TODO-4663: Implement type-category predicate in semantic validator
-  - owner: ai
-  - created_at: 2026-06-13
-  - phase: Collection decoupling - Phase 2
-  - parallel_track: collection-decoupling
-  - depends_on: TODO-4662
-  - scope: Implement the type-category predicate so that `.prime`
-    structs annotated with the new syntax are queryable via the
-    existing `has_trait` system. The predicate should replace
-    direct string comparisons against type names.
-  - acceptance:
-    - New predicate registered in `RequirementPredicateFacts.cpp`
-    - `.prime` structs with the annotation are recognized
-    - At least one `isVectorTypeName()` call site replaced with
-      predicate query
-  - stop_rule: predicate works and one call site migrated
-
-- [ ] TODO-4664: Annotate stdlib collection types with category declarations
-  - owner: ai
-  - created_at: 2026-06-13
-  - phase: Collection decoupling - Phase 2
-  - parallel_track: collection-decoupling
-  - depends_on: TODO-4663
-  - scope: Add the type-category annotations to `Vector<T>` in
-    `vector.prime`, `MapValue<K,V>` in `map.prime`, `SoaVector<T>` in
-    `experimental_soa_vector.prime`, and `SoaColumn<T>` in
-    `internal_soa_storage.prime`.
-  - acceptance:
-    - All four types annotated
-    - `has_trait<T>(Collection)` returns true for annotated types
-    - Existing tests pass
-  - stop_rule: annotations added and tests pass
-
-- [ ] TODO-4665: Migrate SemanticsValidatorExprVectorHelpers to predicate queries
-  - owner: ai
-  - created_at: 2026-06-13
-  - phase: Collection decoupling - Phase 2
-  - parallel_track: collection-decoupling
-  - depends_on: TODO-4664
-  - scope: Replace `isKeyValueCollectionTypeName()` and
-    `specializedExperimentalVectorHelperTarget()` calls in
-    `SemanticsValidatorExprVectorHelpers.cpp` (lines 89, 362,
-    487, 549) with predicate-based queries using the new
-    type-category system. This file has 4 call sites for
-    collection type recognition.
-  - acceptance:
-    - All 4 collection type recognition call sites replaced with
-      predicate queries
-    - Semantics tests pass
-  - stop_rule: 4 call sites migrated and tests pass
-
-- [ ] TODO-4666: Migrate IrLowererStructSlotLayoutHelpers to predicate queries
-  - owner: ai
-  - created_at: 2026-06-13
-  - phase: Collection decoupling - Phase 2
-  - parallel_track: collection-decoupling
-  - depends_on: TODO-4664
-  - scope: Replace `isVectorTypeName()` and `isMapTypeName()`
-    calls in `IrLowererStructSlotLayoutHelpers.cpp` (lines 485,
-    507, 544, 561, 588, 602) with predicate-based queries. Also
-    replace the bare `"Vector"` string comparison at line 111.
-    This file has the densest concentration of type recognition
-    in the IR lowerer (6 function calls + 1 string comparison).
-  - acceptance:
-    - All 6 function calls + 1 string comparison replaced with
-      predicate queries
-    - `isVectorTypeName()` and `isMapTypeName()` function
-      definitions in this file removed (no remaining callers)
-    - Backend IR tests pass
-  - stop_rule: 9 call sites migrated and tests pass
-
-- [ ] TODO-4667: Migrate EmitterBuiltinCollectionInferenceHelpers to predicate queries
-  - owner: ai
-  - created_at: 2026-06-13
-  - phase: Collection decoupling - Phase 2
-  - parallel_track: collection-decoupling
-  - depends_on: TODO-4664
-  - scope: Replace `isCollectionVectorValue()`,
-    `isKeyValueStorageValue()`, and `isArrayValue()` calls in
-    `EmitterBuiltinCollectionInferenceHelpers.cpp` (lines 55-166,
-    169, 208-229, 225, 244-246) with predicate-based queries.
-    This file is the single source of these three functions and
-    contains their definitions plus all internal call sites.
-  - acceptance:
-    - Function definitions replaced with predicate queries
-    - No hardcoded type name comparisons remain in this file
-    - Compile-run tests pass
-  - stop_rule: functions migrated and tests pass
 
 - [ ] TODO-4668: Audit slot layout branching for .prime struct coverage
   - owner: ai

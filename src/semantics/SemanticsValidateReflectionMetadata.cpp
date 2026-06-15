@@ -298,6 +298,21 @@ bool rewriteReflectionMetadataQueries(Program &program, std::string &error) {
                                  const std::string &canonicalType,
                                  const std::string &structPath,
                                  const std::optional<std::string> &elemCanonicalType) {
+    if (traitName == "Collection" || traitName == "KeyValue") {
+      const Definition *targetDef = resolveDefinitionTarget(canonicalType, structPath, "");
+      if (targetDef == nullptr) {
+        return false;
+      }
+      for (const auto &transform : targetDef->transforms) {
+        if (transform.name == "collection_type" && traitName == "Collection") {
+          return true;
+        }
+        if (transform.name == "key_value_type") {
+          return true;
+        }
+      }
+      return false;
+    }
     if (traitName == "Additive") {
       if (isNumericTraitType(canonicalType)) {
         return true;
@@ -482,7 +497,10 @@ bool rewriteReflectionMetadataQueries(Program &program, std::string &error) {
       const bool isMultiplicative = traitName == "Multiplicative";
       const bool isComparable = traitName == "Comparable";
       const bool isIndexable = traitName == "Indexable";
-      if (!isAdditive && !isMultiplicative && !isComparable && !isIndexable) {
+      const bool isCollection = traitName == "Collection";
+      const bool isKeyValue = traitName == "KeyValue";
+      if (!isAdditive && !isMultiplicative && !isComparable && !isIndexable &&
+          !isCollection && !isKeyValue) {
         error = "meta.has_trait does not support trait: " + traitName;
         return false;
       }

@@ -13,7 +13,7 @@ namespace std {
     [public V] value
   }
 
-  [public struct]
+  [public struct key_value_type]
   MapValue<K, V>() {
     [public Vector<K> mut] keys{/std/collections/vector/vector<K>()}
     [public Vector<V> mut] payloads{/std/collections/vector/vector<V>()}

@@ -199,7 +199,7 @@ inline std::string makeVectorIndexedRemovalOwnershipConformanceSource(const std:
     source += "  /std/collections/vector/push<Owned>(values, Owned(9i32))\n";
     source += "  /std/collections/vector/remove_at<Owned>(values, 0i32)\n";
     if (validateWithInternalTake) {
-      source += "  [Owned] survivor{/std/collections/experimental_vector/vectorTakeSlot<Owned>(values, 0i32)}\n";
+      source += "  [Owned] survivor{/std/collections/vector/vectorTakeSlot<Owned>(values, 0i32)}\n";
       source += "  return(plus(/std/collections/vector/count<Owned>(values), survivor.value))\n";
     } else {
       source += "  return(plus(/std/collections/vector/count<Owned>(values),\n";
@@ -228,7 +228,7 @@ inline std::string makeVectorIndexedRemovalOwnershipConformanceSource(const std:
   source += "  /std/collections/vector/push<Wrapper>(values, Wrapper(Mover(7i32)))\n";
   source += "  /std/collections/vector/remove_swap<Wrapper>(values, 0i32)\n";
   if (validateWithInternalTake) {
-    source += "  [Wrapper] survivor{/std/collections/experimental_vector/vectorTakeSlot<Wrapper>(values, 0i32)}\n";
+    source += "  [Wrapper] survivor{/std/collections/vector/vectorTakeSlot<Wrapper>(values, 0i32)}\n";
     source += "  return(plus(/std/collections/vector/count<Wrapper>(values), survivor.value.value))\n";
   } else {
     source += "  return(plus(/std/collections/vector/count<Wrapper>(values),\n";

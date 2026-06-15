@@ -297,6 +297,64 @@ bool SemanticsValidator::hasDefinitionPath(const std::string &path) const {
   return false;
 }
 
+bool SemanticsValidator::typeHasCollectionCategoryTrait(
+    const std::string &typeName,
+    const std::string &namespacePrefix,
+    std::string_view traitName) const {
+  if (traitName != "Collection" && traitName != "KeyValue") {
+    return false;
+  }
+  std::string normalizedType = normalizeBindingTypeName(typeName);
+  if (normalizedType.empty()) {
+    return false;
+  }
+  std::string base;
+  std::string argText;
+  if (splitTemplateTypeName(normalizedType, base, argText)) {
+    normalizedType = normalizeBindingTypeName(base);
+  }
+  const std::string lookupNamespace = [&]() -> std::string {
+    if (!namespacePrefix.empty()) {
+      return namespacePrefix;
+    }
+    const std::string &definitionPath = currentValidationState_.context.definitionPath;
+    const size_t slash = definitionPath.find_last_of('/');
+    if (slash == std::string::npos || slash == 0) {
+      return {};
+    }
+    return definitionPath.substr(0, slash);
+  }();
+  std::string resolvedType = resolveTypePath(normalizedType, lookupNamespace);
+  if (structNames_.count(resolvedType) == 0 && defMap_.count(resolvedType) == 0) {
+    auto importIt = importAliases_.find(normalizedType);
+    if (importIt != importAliases_.end()) {
+      resolvedType = importIt->second;
+    }
+  }
+  if (resolvedType.empty()) {
+    return false;
+  }
+  auto defIt = defMap_.find(resolvedType);
+  if (defIt == defMap_.end() || defIt->second == nullptr) {
+    const size_t specializationSuffix = resolvedType.find("__");
+    if (specializationSuffix != std::string::npos) {
+      defIt = defMap_.find(resolvedType.substr(0, specializationSuffix));
+    }
+  }
+  if (defIt == defMap_.end() || defIt->second == nullptr) {
+    return false;
+  }
+  for (const auto &transform : defIt->second->transforms) {
+    if (transform.name == "collection_type" && traitName == "Collection") {
+      return true;
+    }
+    if (transform.name == "key_value_type") {
+      return true;
+    }
+  }
+  return false;
+}
+
 std::string SemanticsValidator::preferredExperimentalKeyValueHelperTarget(
     std::string_view helperName) const {
   const std::string prefix = experimentalCollectionConstructorRootLocal("map");
@@ -478,6 +536,12 @@ std::string SemanticsValidator::specializedExperimentalVectorHelperTarget(
     }
   }
   return basePath;
+}
+
+std::string SemanticsValidator::categoryCollectionVectorHelperTarget(
+    std::string_view helperName,
+    const std::string &elemType) const {
+  return specializedExperimentalVectorHelperTarget(helperName, elemType);
 }
 
 bool SemanticsValidator::canonicalExperimentalVectorHelperPath(

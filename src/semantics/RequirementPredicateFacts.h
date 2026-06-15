@@ -31,6 +31,12 @@ struct RequirementPredicateDefinitionContext {
     bool isPrivate = false;
   };
 
+  struct StructTraitFact {
+    std::string structPath;
+    std::string traitName;
+    bool isPrivate = false;
+  };
+
   std::string definitionPath;
   std::string namespacePrefix;
   std::vector<ParameterInfo> params;
@@ -41,6 +47,7 @@ struct RequirementPredicateDefinitionContext {
   std::unordered_map<std::string, std::string> importAliases;
   std::vector<CallableFact> callables;
   std::vector<StructFieldFact> structFields;
+  std::vector<StructTraitFact> structTraits;
 };
 
 struct RequirementPredicateOperandFact {

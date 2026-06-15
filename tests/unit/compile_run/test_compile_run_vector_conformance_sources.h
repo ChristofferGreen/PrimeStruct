@@ -161,12 +161,12 @@ inline std::string makeCanonicalVectorIndexedRemovalOwnershipConformanceSource()
   source += "  /std/collections/vector/push<Owned>(removed, Owned(4i32))\n";
   source += "  /std/collections/vector/push<Owned>(removed, Owned(9i32))\n";
   source += "  /std/collections/vector/remove_at<Owned>(removed, 0i32)\n";
-  source += "  [Owned] removedSurvivor{/std/collections/experimental_vector/vectorTakeSlot<Owned>(removed, 0i32)}\n";
+  source += "  [Owned] removedSurvivor{/std/collections/vector/vectorTakeSlot<Owned>(removed, 0i32)}\n";
   source += "  [Vector<Wrapper> mut] swapped{/std/collections/vector/vector<Wrapper>()}\n";
   source += "  /std/collections/vector/push<Wrapper>(swapped, Wrapper(Owned(1i32)))\n";
   source += "  /std/collections/vector/push<Wrapper>(swapped, Wrapper(Owned(7i32)))\n";
   source += "  /std/collections/vector/remove_swap<Wrapper>(swapped, 0i32)\n";
-  source += "  [Wrapper] swappedSurvivor{/std/collections/experimental_vector/vectorTakeSlot<Wrapper>(swapped, 0i32)}\n";
+  source += "  [Wrapper] swappedSurvivor{/std/collections/vector/vectorTakeSlot<Wrapper>(swapped, 0i32)}\n";
   source += "  return(plus(\n";
   source += "      plus(/std/collections/vector/count<Owned>(removed), removedSurvivor.value),\n";
   source += "      plus(/std/collections/vector/count<Wrapper>(swapped),\n";

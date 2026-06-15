@@ -115,6 +115,8 @@ bool SemanticsValidator::validateDefinitionBuildTransforms(
   bool sawReflect = false;
   bool sawGenerate = false;
   bool sawSum = false;
+  bool sawCollectionType = false;
+  bool sawKeyValueType = false;
   bool hasReturnTransform = false;
   const bool collectTransformDiagnostics =
       transformDiagnosticRecords != nullptr && shouldCollectStructuredDiagnostics();
@@ -545,6 +547,28 @@ bool SemanticsValidator::validateDefinitionBuildTransforms(
       if (definitionTransformError) {
         break;
       }
+    } else if (transform.name == "collection_type" || transform.name == "key_value_type") {
+      bool &seenCategory =
+          transform.name == "collection_type" ? sawCollectionType : sawKeyValueType;
+      if (seenCategory) {
+        if (addTransformDiagnostic("duplicate " + transform.name + " transform on " + def.fullPath)) {
+          return false;
+        }
+        break;
+      }
+      seenCategory = true;
+      if (!transform.templateArgs.empty()) {
+        if (addTransformDiagnostic(transform.name + " transform does not accept template arguments on " + def.fullPath)) {
+          return false;
+        }
+        break;
+      }
+      if (!transform.arguments.empty()) {
+        if (addTransformDiagnostic(transform.name + " transform does not accept arguments on " + def.fullPath)) {
+          return false;
+        }
+        break;
+      }
     } else if (isStructTransformName(transform.name)) {
       if (!transform.templateArgs.empty()) {
         if (addTransformDiagnostic("struct transform does not accept template arguments on " + def.fullPath)) {
@@ -745,6 +769,12 @@ bool SemanticsValidator::validateDefinitionBuildTransforms(
   }
   if ((sawReflect || sawGenerate) && !isStruct && !isFieldOnlyStruct) {
     if (addTransformDiagnostic("reflection transforms are only valid on struct definitions: " + def.fullPath)) {
+      return false;
+    }
+    return true;
+  }
+  if ((sawCollectionType || sawKeyValueType) && !isStruct && !isFieldOnlyStruct) {
+    if (addTransformDiagnostic("collection category transforms are only valid on struct definitions: " + def.fullPath)) {
       return false;
     }
     return true;

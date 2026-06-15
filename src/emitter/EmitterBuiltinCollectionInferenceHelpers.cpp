@@ -35,6 +35,62 @@ bool isSoaVectorTypeNameLocal(const std::string &typeName) {
   return splitTemplateTypeName(normalized, base, arg) && isSoaVectorTypeNameLocal(base);
 }
 
+bool isSurfaceAliasTypeName(const std::string &typeName,
+                            EmitterCollectionSurface surface) {
+  const std::string normalized = normalizeBindingTypeName(typeName);
+  const StdlibSurfaceMetadata *metadata =
+      emitterCollectionSurfaceMetadata(surface);
+  if (metadata != nullptr) {
+    if (!metadata->backingTypeName.empty() &&
+        normalizeBindingTypeName(std::string(metadata->backingTypeName)) ==
+            normalized) {
+      return true;
+    }
+    for (std::string_view alias : metadata->importAliasSpellings) {
+      if (normalizeBindingTypeName(std::string(alias)) == normalized) {
+        return true;
+      }
+    }
+  }
+  return false;
+}
+
+bool isSurfaceCollectionName(const std::string &collectionName,
+                             EmitterCollectionSurface surface) {
+  return isSurfaceAliasTypeName(collectionName, surface);
+}
+
+bool bindingBaseAndTemplateArg(const BindingInfo &binding,
+                               std::string &baseOut,
+                               std::string &argOut) {
+  baseOut = normalizeBindingTypeName(binding.typeName);
+  argOut = binding.typeTemplateArg;
+  if (baseOut != "Reference") {
+    return !baseOut.empty();
+  }
+  if (argOut.empty()) {
+    return false;
+  }
+  std::string referencedBase;
+  std::string referencedArg;
+  if (splitTemplateTypeName(argOut, referencedBase, referencedArg)) {
+    baseOut = normalizeBindingTypeName(referencedBase);
+    argOut = referencedArg;
+    return !baseOut.empty();
+  }
+  baseOut = normalizeBindingTypeName(argOut);
+  argOut.clear();
+  return !baseOut.empty();
+}
+
+bool isVectorCollectionBindingLocal(const BindingInfo &binding) {
+  std::string base;
+  std::string arg;
+  return bindingBaseAndTemplateArg(binding, base, arg) &&
+         isSurfaceAliasTypeName(base,
+                                EmitterCollectionSurface::VectorConstructors);
+}
+
 bool isSoaVectorBindingLocal(const BindingInfo &binding) {
   if (isSoaVectorTypeNameLocal(binding.typeName)) {
     return true;
@@ -85,21 +141,13 @@ bool isCollectionVectorValueLocal(const Expr &target,
     if (it == localTypes.end()) {
       return false;
     }
-    if (it->second.typeName == "vector") {
-      return true;
-    }
-    if (it->second.typeName == "Reference") {
-      std::string base;
-      std::string arg;
-      if (splitTemplateTypeName(it->second.typeTemplateArg, base, arg)) {
-        return base == "vector";
-      }
-    }
-    return false;
+    return isVectorCollectionBindingLocal(it->second);
   }
   if (target.kind == Expr::Kind::Call) {
     std::string collection;
-    if (getBuiltinCollectionName(target, collection) && collection == "vector") {
+    if (getBuiltinCollectionName(target, collection) &&
+        isSurfaceCollectionName(
+            collection, EmitterCollectionSurface::VectorConstructors)) {
       return target.templateArgs.size() == 1;
     }
     if (isPublicOrCompatibilitySoaToAosCall(target)) {
@@ -117,21 +165,25 @@ bool isArrayValue(const Expr &target, const std::unordered_map<std::string, Bind
     if (it == localTypes.end()) {
       return false;
     }
-    if (it->second.typeName == "array" || it->second.typeName == "vector" || it->second.typeName == "args") {
+    if (it->second.typeName == "array" || it->second.typeName == "args" ||
+        isVectorCollectionBindingLocal(it->second)) {
       return true;
     }
     if (it->second.typeName == "Reference") {
       std::string base;
       std::string arg;
       if (splitTemplateTypeName(it->second.typeTemplateArg, base, arg)) {
-        return base == "array" || base == "vector" || base == "args";
+        return base == "array" || base == "args";
       }
     }
     return false;
   }
   if (target.kind == Expr::Kind::Call) {
     std::string collection;
-    return getBuiltinCollectionName(target, collection) && (collection == "array" || collection == "vector") &&
+    return getBuiltinCollectionName(target, collection) &&
+           (collection == "array" ||
+            isSurfaceCollectionName(
+                collection, EmitterCollectionSurface::VectorConstructors)) &&
            target.templateArgs.size() == 1;
   }
   return false;
@@ -178,7 +230,10 @@ bool isKeyValueStorageValue(const Expr &target, const std::unordered_map<std::st
   }
   if (target.kind == Expr::Kind::Call) {
     std::string collection;
-    return getBuiltinCollectionName(target, collection) && collection == "map" && target.templateArgs.size() == 2;
+    return getBuiltinCollectionName(target, collection) &&
+           isSurfaceCollectionName(
+               collection, EmitterCollectionSurface::KeyValueConstructors) &&
+           target.templateArgs.size() == 2;
   }
   return false;
 }
@@ -269,11 +324,16 @@ bool inferCollectionElementTypeNameFromBinding(const BindingInfo &binding, std::
       templateArg.clear();
     }
   }
-  if ((typeName == "array" || typeName == "vector" || typeName == "args") && !templateArg.empty()) {
+  if ((typeName == "array" || typeName == "args" ||
+       isSurfaceAliasTypeName(typeName,
+                              EmitterCollectionSurface::VectorConstructors)) &&
+      !templateArg.empty()) {
     typeOut = normalizeBindingTypeName(templateArg);
     return true;
   }
-  if (isKeyValueCollectionTypeNameLocal(typeName) && !templateArg.empty()) {
+  if (isSurfaceAliasTypeName(typeName,
+                             EmitterCollectionSurface::KeyValueConstructors) &&
+      !templateArg.empty()) {
     std::string keyType;
     if (extractKeyValueCollectionTypesLocal(binding, keyType, typeOut)) {
       typeOut = normalizeBindingTypeName(typeOut);
@@ -302,11 +362,16 @@ bool inferCollectionElementTypeNameFromExpr(const Expr &expr,
     if (!getBuiltinCollectionName(expr, collectionName)) {
       return false;
     }
-    if ((collectionName == "array" || collectionName == "vector") && expr.templateArgs.size() == 1) {
+    if ((collectionName == "array" ||
+         isSurfaceCollectionName(collectionName,
+                                 EmitterCollectionSurface::VectorConstructors)) &&
+        expr.templateArgs.size() == 1) {
       typeOut = normalizeBindingTypeName(expr.templateArgs.front());
       return true;
     }
-    if (collectionName == "map" && expr.templateArgs.size() == 2) {
+    if (isSurfaceCollectionName(collectionName,
+                                EmitterCollectionSurface::KeyValueConstructors) &&
+        expr.templateArgs.size() == 2) {
       typeOut = normalizeBindingTypeName(expr.templateArgs[1]);
       return true;
     }

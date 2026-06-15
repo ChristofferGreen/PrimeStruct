@@ -961,6 +961,10 @@ NativeCallTailDispatchResult tryEmitNativeCallTailDispatch(
       const auto keyValueTargetInfo = resolveCollectionPairTypeInfo(
           expr.args.front(), localsIn, resolveCallCollectionPairTypeInfo);
       if (keyValueTargetInfo.isKeyValueTarget) {
+        if (keyValueTargetInfo.structTypeName.empty() ||
+            isKeyValueStorageStructPath(keyValueTargetInfo.structTypeName)) {
+          return NativeCallTailDispatchResult::NotHandled;
+        }
         if (!emitKeyValueLookupAccess(accessName,
                                       keyValueTargetInfo.keyValueKeyKind,
                                       keyValueTargetInfo.structTypeName,

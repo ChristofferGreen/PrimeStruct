@@ -22,8 +22,8 @@ main() {
 }
 )";
   std::string error;
-  CHECK(validateProgram(source, "/main", error));
-  CHECK(error.empty());
+  CHECK_MESSAGE(validateProgram(source, "/main", error), error);
+  CHECK_MESSAGE(error.empty(), error);
 }
 
 TEST_CASE("meta path core type primitives validate") {
@@ -643,6 +643,58 @@ main() {
   [bool] i32Additive{/meta/has_trait<i32>(Additive)}
   [bool] arrayIndexable{meta.has_trait<array<i32>, i32>("Indexable"utf8)}
   [bool] stringIndexable{/meta/has_trait<string, i32>(Indexable)}
+  return(0i32)
+}
+)";
+  std::string error;
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
+}
+
+TEST_CASE("has_trait recognizes collection category annotations") {
+  const std::string source = R"(
+[struct collection_type]
+Bag<T>() {
+  [i32] count{0i32}
+}
+
+[struct key_value_type]
+Table<K, V>() {
+  [Bag<K>] keys{Bag<K>{}}
+  [Bag<V>] values{Bag<V>{}}
+}
+
+[struct collection_type]
+BagI32() {
+  [i32] count{0i32}
+}
+
+[struct key_value_type]
+TableI32() {
+  [BagI32] keys{BagI32{}}
+  [BagI32] values{BagI32{}}
+}
+
+[return<i32> require(has_trait<BagI32>(Collection))]
+needsCollection([BagI32] values) {
+  return(values.count)
+}
+
+[return<i32> require(has_trait<TableI32>(KeyValue))]
+needsKeyValue([TableI32] values) {
+  return(values.keys.count)
+}
+
+[return<int>]
+main() {
+  [BagI32] bag{BagI32{}}
+  [TableI32] table{TableI32{}}
+  [bool] bagCollection{meta.has_trait<Bag<i32>>(Collection)}
+  [bool] bagKeyValue{meta.has_trait<Bag<i32>>(KeyValue)}
+  [bool] tableCollection{meta.has_trait<Table<i32, i32>>(Collection)}
+  [bool] tableKeyValue{meta.has_trait<Table<i32, i32>>(KeyValue)}
+  [i32] count{needsCollection(bag)}
+  [i32] keyCount{needsKeyValue(table)}
   return(0i32)
 }
 )";

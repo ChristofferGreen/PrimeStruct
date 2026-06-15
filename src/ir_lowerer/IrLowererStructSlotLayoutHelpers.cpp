@@ -11,8 +11,6 @@
 #include "IrLowererSetupTypeCollectionHelpers.h"
 #include "IrLowererSetupTypeHelpers.h"
 #include "IrLowererTemplateTypeParseHelpers.h"
-#include "IrLowererUninitializedTypeHelpers.h"
-#include "primec/StdlibSurfaceRegistry.h"
 #include "primec/StdlibCollectionPaths.h"
 
 namespace primec::ir_lowerer {
@@ -44,44 +42,11 @@ bool isInternalSoaColumnTypeName(const std::string &typeName) {
          typeName.rfind(collection_paths::specializedTypePrefix(collection_paths::kInternalSoaStorageFolder, collection_paths::kSoaColumnTypeName), 0) == 0;
 }
 
-bool isCollectionVectorRecordTypeName(const std::string &typeName) {
-  return isExperimentalCollectionTypeName(typeName, "vector", "Vector");
-}
-
-bool isVectorTypeName(const std::string &typeName) {
-  return isBuiltinVectorTypeName(typeName) || isCollectionVectorRecordTypeName(typeName);
-}
-
-bool isBuiltinMapTypeName(const std::string &typeName) {
-  return isBuiltinCollectionTypeName(typeName, "map");
-}
-
-bool isExperimentalMapTypeName(const std::string &typeName) {
-  const std::string experimentalKeyValueType = keyValueStorageStructRootPath(false);
-  const std::string rootedExperimentalKeyValueType = keyValueStorageStructRootPath();
-  const auto *metadata = keyValueHelperSurfaceMetadata();
-  const std::string keyValueRoot =
-      metadata == nullptr ? std::string{} : stdlibSurfaceBackingTypePath(*metadata);
-  const std::string keyValueRootNoSlash =
-      !keyValueRoot.empty() && keyValueRoot.front() == '/' ? keyValueRoot.substr(1) : keyValueRoot;
-  return typeName == experimentalKeyValueType ||
-         typeName == rootedExperimentalKeyValueType ||
-         typeName.rfind(experimentalKeyValueType + "__", 0) == 0 ||
-         typeName.rfind(rootedExperimentalKeyValueType + "__", 0) == 0 ||
-         (!keyValueRoot.empty() &&
-          (typeName == keyValueRootNoSlash ||
-           typeName == keyValueRoot ||
-           typeName.rfind(keyValueRootNoSlash + "__", 0) == 0 ||
-           typeName.rfind(keyValueRoot + "__", 0) == 0)) ||
-         typeName == "/std/collections/map/MapValue" ||
-         typeName.find("/MapValue") != std::string::npos ||
-         typeName == collection_paths::memberPath(collection_paths::kMapFolder, collection_paths::kMapTypeName) ||
-         typeName.find("/" + std::string(collection_paths::kMapFolder) + "/" +
-                       std::string(collection_paths::kMapTypeName)) != std::string::npos;
-}
-
-bool isMapTypeName(const std::string &typeName) {
-  return isBuiltinMapTypeName(typeName) || isExperimentalMapTypeName(typeName);
+bool isMapValueTypeName(const std::string &typeName) {
+  // Matches /std/collections/map/MapValue and specialized forms MapValue__t<hash>
+  return typeName.find("/MapValue") != std::string::npos ||
+         typeName == collection_paths::memberPath(collection_paths::kMapFolder, "MapValue") ||
+         typeName.rfind(collection_paths::memberPath(collection_paths::kMapFolder, "MapValue") + "__", 0) == 0;
 }
 
 bool isKnownStdUiStructAlias(const std::string &typeName) {
@@ -108,13 +73,15 @@ std::string normalizeVectorStructPath(const std::string &typeName) {
   if (isBuiltinSoaVectorTypeName(typeName)) {
     return "/soa_vector";
   }
-  if (typeName == "Vector") {
-    return vectorBackingTypePath();
-  }
-  if (isExperimentalCollectionTypeName(typeName, "vector", "Vector")) {
-    return normalizeExperimentalCollectionTypePath(typeName, "vector", "Vector");
-  }
   return typeName;
+}
+
+std::string unspecializedStructPathForLayoutLookup(const std::string &structPath) {
+  const size_t specializationMarker = structPath.find("__t");
+  if (specializationMarker == std::string::npos) {
+    return {};
+  }
+  return structPath.substr(0, specializationMarker);
 }
 
 std::string internalSoaColumnStructPathForSoaVectorPath(
@@ -151,21 +118,6 @@ std::string buildTemplatedTypeName(const std::string &typeName, const std::strin
     return trimTemplateTypeText(typeName);
   }
   return trimTemplateTypeText(typeName) + "<" + typeTemplateArg + ">";
-}
-
-bool resolveSpecializedKeyValueStorageStructPath(const std::string &typeName,
-                                                 const std::string &,
-                                                 std::string &structPathOut) {
-  structPathOut.clear();
-  std::string normalizedType = trimTemplateTypeText(typeName);
-  if (!normalizedType.empty() && normalizedType.front() != '/') {
-    normalizedType.insert(normalizedType.begin(), '/');
-  }
-  if (isKeyValueStorageStructPath(normalizedType)) {
-    structPathOut = std::move(normalizedType);
-    return true;
-  }
-  return false;
 }
 
 bool resolveSpecializedExperimentalSoaVectorStructPathFromTypeText(
@@ -235,90 +187,36 @@ std::string resolveSoaVectorFieldStructPath(const std::string &typeName,
   return normalizeVectorStructPath(typeName);
 }
 
-bool resolveCollectionVectorElementKindFromLayoutFields(
-    const std::string &vectorStructPath,
+bool resolveNestedStructLayout(
+    const std::string &fieldTypeText,
+    const std::string &namespacePrefix,
     const CollectStructLayoutFieldsFn &collectStructLayoutFields,
+    const ResolveDefinitionNamespacePrefixByPathFn &resolveDefinitionNamespacePrefix,
+    const ResolveStructTypeNameFn &resolveStructTypeName,
     const ValueKindFromTypeNameFn &valueKindFromTypeName,
-    LocalInfo::ValueKind &kindOut) {
-  kindOut = LocalInfo::ValueKind::Unknown;
-  std::vector<StructLayoutFieldInfo> vectorFields;
-  if (!collectStructLayoutFields(vectorStructPath, vectorFields)) {
+    StructSlotLayoutCache &layoutCache,
+    std::unordered_set<std::string> &layoutStack,
+    StructSlotFieldInfo &info,
+    std::string &error) {
+  std::string nestedStruct;
+  if (!resolveStructTypeName(fieldTypeText, namespacePrefix, nestedStruct)) {
     return false;
   }
-  for (const auto &field : vectorFields) {
-    if (field.name != "data") {
-      continue;
-    }
-    std::string pointerBase = field.typeName;
-    std::string pointerArg = field.typeTemplateArg;
-    if (pointerArg.empty()) {
-      splitTemplateTypeName(field.typeName, pointerBase, pointerArg);
-    }
-    if (normalizeCollectionBindingTypeName(trimTemplateTypeText(pointerBase)) !=
-        "Pointer") {
-      return false;
-    }
-    std::vector<std::string> pointerArgs;
-    if (!splitTemplateArgs(pointerArg, pointerArgs) ||
-        pointerArgs.size() != 1) {
-      return false;
-    }
-    std::string elementType = trimTemplateTypeText(pointerArgs.front());
-    if (!extractTopLevelUninitializedTypeText(elementType, elementType)) {
-      return false;
-    }
-    kindOut = valueKindFromTypeName(elementType);
-    return kindOut != LocalInfo::ValueKind::Unknown;
+  StructSlotLayoutInfo nestedLayout;
+  if (!resolveStructSlotLayoutFromDefinitionFields(nestedStruct,
+                                                   collectStructLayoutFields,
+                                                   resolveDefinitionNamespacePrefix,
+                                                   resolveStructTypeName,
+                                                   valueKindFromTypeName,
+                                                   layoutCache,
+                                                   layoutStack,
+                                                   nestedLayout,
+                                                   error)) {
+    return false;
   }
-  return false;
-}
-
-std::string resolveCollectionVectorFieldStructPath(
-    const StructLayoutFieldInfo &field) {
-  if (!isCollectionVectorRecordTypeName(field.typeName)) {
-    return normalizeVectorStructPath(field.typeName);
-  }
-  if (!field.typeTemplateArg.empty()) {
-    return specializedCollectionVectorRecordPathForElementType(
-        trimTemplateTypeText(field.typeTemplateArg));
-  }
-  return normalizeVectorStructPath(field.typeName);
-}
-
-void applySpecializedExperimentalMapFieldLayout(
-    const std::string &structPath,
-    const std::string &fieldName,
-    const CollectStructLayoutFieldsFn &collectStructLayoutFields,
-    const ValueKindFromTypeNameFn &valueKindFromTypeName,
-    StructSlotFieldInfo &fieldInfo) {
-  if (!isKeyValueStorageStructPath(structPath)) {
-    return;
-  }
-  std::vector<StructLayoutFieldInfo> fields;
-  if (!collectStructLayoutFields(structPath, fields)) {
-    return;
-  }
-  for (const auto &field : fields) {
-    if (field.name != fieldName || !isCollectionVectorRecordTypeName(field.typeName)) {
-      continue;
-    }
-    fieldInfo.structPath = resolveCollectionVectorFieldStructPath(field);
-    if (!field.typeTemplateArg.empty()) {
-      fieldInfo.valueKind = valueKindFromTypeName(field.typeTemplateArg);
-    }
-    if (fieldInfo.valueKind == LocalInfo::ValueKind::Unknown &&
-        !fieldInfo.structPath.empty()) {
-      LocalInfo::ValueKind elementKind = LocalInfo::ValueKind::Unknown;
-      if (resolveCollectionVectorElementKindFromLayoutFields(
-              fieldInfo.structPath,
-              collectStructLayoutFields,
-              valueKindFromTypeName,
-              elementKind)) {
-        fieldInfo.valueKind = elementKind;
-      }
-    }
-    return;
-  }
+  info.structPath = nestedStruct;
+  info.slotCount = nestedLayout.totalSlots;
+  return true;
 }
 
 } // namespace
@@ -376,17 +274,6 @@ bool resolveStructSlotLayoutFromDefinitionFields(
     out = layout;
     return true;
   }
-  if (isCollectionVectorRecordTypeName(structPath)) {
-    StructSlotLayoutInfo layout;
-    layout.structPath = normalizeVectorStructPath(structPath);
-    layout.totalSlots = 4;
-    layout.fields.push_back({"fieldCount", 0, 1, LocalInfo::ValueKind::Int32, ""});
-    layout.fields.push_back({"fieldCapacity", 1, 1, LocalInfo::ValueKind::Int32, ""});
-    layout.fields.push_back({"data", 2, 1, LocalInfo::ValueKind::Int64, ""});
-    layout.fields.push_back({"ownsData", 3, 1, LocalInfo::ValueKind::Bool, ""});
-    out = layout;
-    return true;
-  }
   if (isInternalSoaColumnTypeName(structPath)) {
     StructSlotLayoutInfo layout;
     layout.structPath = normalizeInternalSoaColumnStructPath(structPath);
@@ -408,26 +295,6 @@ bool resolveStructSlotLayoutFromDefinitionFields(
     out = layout;
     return true;
   }
-  if (isExperimentalMapTypeName(structPath)) {
-    StructSlotLayoutInfo layout;
-    layout.structPath = structPath;
-    layout.totalSlots = 8;
-    StructSlotFieldInfo keysField{
-        "keys", 0, 4, LocalInfo::ValueKind::Unknown,
-        vectorBackingTypePath()};
-    StructSlotFieldInfo payloadsField{
-        "payloads", 4, 4, LocalInfo::ValueKind::Unknown,
-        vectorBackingTypePath()};
-    applySpecializedExperimentalMapFieldLayout(
-        structPath, "keys", collectStructLayoutFields, valueKindFromTypeName, keysField);
-    applySpecializedExperimentalMapFieldLayout(
-        structPath, "payloads", collectStructLayoutFields, valueKindFromTypeName, payloadsField);
-    layout.fields.push_back(std::move(keysField));
-    layout.fields.push_back(std::move(payloadsField));
-    out = layout;
-    return true;
-  }
-
   auto cached = layoutCache.find(structPath);
   if (cached != layoutCache.end()) {
     out = cached->second;
@@ -438,15 +305,42 @@ bool resolveStructSlotLayoutFromDefinitionFields(
     return false;
   }
 
+  std::string layoutDefinitionPath = structPath;
   std::string namespacePrefix;
-  if (!resolveDefinitionNamespacePrefix(structPath, namespacePrefix)) {
+  bool resolvedLayoutDefinition =
+      resolveDefinitionNamespacePrefix(layoutDefinitionPath, namespacePrefix);
+  if (!resolvedLayoutDefinition) {
+    const std::string unspecializedPath =
+        unspecializedStructPathForLayoutLookup(structPath);
+    if (!unspecializedPath.empty() &&
+        resolveDefinitionNamespacePrefix(unspecializedPath, namespacePrefix)) {
+      layoutDefinitionPath = unspecializedPath;
+      resolvedLayoutDefinition = true;
+    }
+  }
+  if (!resolvedLayoutDefinition) {
+    // Fallback for MapValue<K,V> when its definition isn't in defMap (e.g. stdlib not imported).
+    // MapValue has keys: Vector<K> and payloads: Vector<V>; Vector<T> uses 5 slots (1-indexed).
+    // Only applied when neither the specialized nor the base definition path is available.
+    if (isMapValueTypeName(structPath)) {
+      const std::string vectorPath = vectorBackingTypePath();
+      StructSlotLayoutInfo layout;
+      layout.structPath = structPath;
+      layout.totalSlots = 11;
+      layout.fields.push_back({"keys", 1, 5, LocalInfo::ValueKind::Unknown, vectorPath});
+      layout.fields.push_back({"payloads", 6, 5, LocalInfo::ValueKind::Unknown, vectorPath});
+      layoutCache.emplace(structPath, layout);
+      out = layout;
+      layoutStack.erase(structPath);
+      return true;
+    }
     error = "native backend cannot resolve struct layout: " + structPath;
     layoutStack.erase(structPath);
     return false;
   }
 
   std::vector<StructLayoutFieldInfo> fields;
-  if (!collectStructLayoutFields(structPath, fields)) {
+  if (!collectStructLayoutFields(layoutDefinitionPath, fields)) {
     // Zero-field structs may not produce any enumerated field entries.
     // At this point the definition path already resolved, so treat this as
     // an empty struct layout instead of an error.
@@ -482,7 +376,7 @@ bool resolveStructSlotLayoutFromDefinitionFields(
     info.name = binding.name;
     info.slotOffset = offset;
     if (!binding.typeTemplateArg.empty()) {
-      if (isVectorTypeName(binding.typeName)) {
+      if (isBuiltinVectorTypeName(binding.typeName)) {
         const LocalInfo::ValueKind elementKind = valueKindFromTypeName(binding.typeTemplateArg);
         if (elementKind == LocalInfo::ValueKind::Unknown) {
           error = "native backend only supports numeric/bool/string vector fields on " + structPath;
@@ -491,7 +385,7 @@ bool resolveStructSlotLayoutFromDefinitionFields(
         }
         info.valueKind = elementKind;
         info.structPath = normalizeVectorStructPath(binding.typeName);
-        info.slotCount = isCollectionVectorRecordTypeName(binding.typeName) ? 4 : 3;
+        info.slotCount = 3;
       } else if (normalizeCollectionBindingTypeName(binding.typeName) == "soa_vector") {
         info.structPath = resolveSoaVectorFieldStructPath(binding.typeName, binding.typeTemplateArg);
         info.slotCount = 3;
@@ -504,47 +398,37 @@ bool resolveStructSlotLayoutFromDefinitionFields(
         }
         info.valueKind = (args.size() == 1) ? LocalInfo::ValueKind::Int32 : LocalInfo::ValueKind::Int64;
         info.slotCount = 1;
-      } else if (isMapTypeName(binding.typeName)) {
-        std::string nestedStruct;
-        if (!resolveSpecializedKeyValueStorageStructPath(binding.typeName, binding.typeTemplateArg, nestedStruct) &&
-            !resolveStructTypeName(buildTemplatedTypeName(binding.typeName, binding.typeTemplateArg),
-                                   namespacePrefix,
-                                   nestedStruct)) {
-          error = "native backend does not support struct field type: " + binding.typeName + " on " + structPath;
-          layoutStack.erase(structPath);
-          return false;
-        }
-        StructSlotLayoutInfo nestedLayout;
-        if (!resolveStructSlotLayoutFromDefinitionFields(nestedStruct,
-                                                         collectStructLayoutFields,
-                                                         resolveDefinitionNamespacePrefix,
-                                                         resolveStructTypeName,
-                                                         valueKindFromTypeName,
-                                                         layoutCache,
-                                                         layoutStack,
-                                                         nestedLayout,
-                                                         error)) {
-          layoutStack.erase(structPath);
-          return false;
-        }
-        info.structPath = nestedStruct;
-        info.slotCount = nestedLayout.totalSlots;
       } else if (binding.typeName == "Pointer" || binding.typeName == "Reference") {
         info.valueKind = LocalInfo::ValueKind::Int64;
         info.slotCount = 1;
       } else {
-        error = "native backend does not support templated struct fields on " + structPath;
-        layoutStack.erase(structPath);
-        return false;
+        const std::string fieldTypeText =
+            buildTemplatedTypeName(binding.typeName, binding.typeTemplateArg);
+        if (!resolveNestedStructLayout(fieldTypeText,
+                                       namespacePrefix,
+                                       collectStructLayoutFields,
+                                       resolveDefinitionNamespacePrefix,
+                                       resolveStructTypeName,
+                                       valueKindFromTypeName,
+                                       layoutCache,
+                                       layoutStack,
+                                       info,
+                                       error)) {
+          if (error.empty()) {
+            error = "native backend does not support templated struct fields on " + structPath;
+          }
+          layoutStack.erase(structPath);
+          return false;
+        }
       }
     } else {
       std::string inlineTemplateBase;
       std::string inlineTemplateArg;
       if (splitTemplateTypeName(binding.typeName, inlineTemplateBase, inlineTemplateArg) &&
-          isVectorTypeName(inlineTemplateBase)) {
+          isBuiltinVectorTypeName(inlineTemplateBase)) {
         info.valueKind = valueKindFromTypeName(inlineTemplateArg);
         info.structPath = normalizeVectorStructPath(inlineTemplateBase);
-        info.slotCount = isCollectionVectorRecordTypeName(inlineTemplateBase) ? 4 : 3;
+        info.slotCount = 3;
         layout.fields.push_back(info);
         offset += info.slotCount;
         continue;
@@ -558,36 +442,23 @@ bool resolveStructSlotLayoutFromDefinitionFields(
         continue;
       }
       if (splitTemplateTypeName(binding.typeName, inlineTemplateBase, inlineTemplateArg) &&
-          isMapTypeName(inlineTemplateBase)) {
-        std::string nestedStruct;
-        if (!resolveSpecializedKeyValueStorageStructPath(inlineTemplateBase, inlineTemplateArg, nestedStruct) &&
-            !resolveStructTypeName(binding.typeName, namespacePrefix, nestedStruct)) {
-          error = "native backend does not support struct field type: " + binding.typeName + " on " + structPath;
-          layoutStack.erase(structPath);
-          return false;
-        }
-        StructSlotLayoutInfo nestedLayout;
-        if (!resolveStructSlotLayoutFromDefinitionFields(nestedStruct,
-                                                         collectStructLayoutFields,
-                                                         resolveDefinitionNamespacePrefix,
-                                                         resolveStructTypeName,
-                                                         valueKindFromTypeName,
-                                                         layoutCache,
-                                                         layoutStack,
-                                                         nestedLayout,
-                                                         error)) {
-          layoutStack.erase(structPath);
-          return false;
-        }
-        info.structPath = nestedStruct;
-        info.slotCount = nestedLayout.totalSlots;
+          resolveNestedStructLayout(binding.typeName,
+                                    namespacePrefix,
+                                    collectStructLayoutFields,
+                                    resolveDefinitionNamespacePrefix,
+                                    resolveStructTypeName,
+                                    valueKindFromTypeName,
+                                    layoutCache,
+                                    layoutStack,
+                                    info,
+                                    error)) {
         layout.fields.push_back(info);
         offset += info.slotCount;
         continue;
       }
-      if (isVectorTypeName(binding.typeName)) {
+      if (isBuiltinVectorTypeName(binding.typeName)) {
         info.structPath = normalizeVectorStructPath(binding.typeName);
-        info.slotCount = isCollectionVectorRecordTypeName(binding.typeName) ? 4 : 3;
+        info.slotCount = 3;
         layout.fields.push_back(info);
         offset += info.slotCount;
         continue;
@@ -595,33 +466,6 @@ bool resolveStructSlotLayoutFromDefinitionFields(
       if (normalizeCollectionBindingTypeName(binding.typeName) == "soa_vector") {
         info.structPath = resolveSoaVectorFieldStructPath(binding.typeName, "");
         info.slotCount = 3;
-        layout.fields.push_back(info);
-        offset += info.slotCount;
-        continue;
-      }
-      if (isMapTypeName(binding.typeName)) {
-        std::string nestedStruct;
-        if (!resolveSpecializedKeyValueStorageStructPath(binding.typeName, "", nestedStruct) &&
-            !resolveStructTypeName(binding.typeName, namespacePrefix, nestedStruct)) {
-          error = "native backend does not support struct field type: " + binding.typeName + " on " + structPath;
-          layoutStack.erase(structPath);
-          return false;
-        }
-        StructSlotLayoutInfo nestedLayout;
-        if (!resolveStructSlotLayoutFromDefinitionFields(nestedStruct,
-                                                         collectStructLayoutFields,
-                                                         resolveDefinitionNamespacePrefix,
-                                                         resolveStructTypeName,
-                                                         valueKindFromTypeName,
-                                                         layoutCache,
-                                                         layoutStack,
-                                                         nestedLayout,
-                                                         error)) {
-          layoutStack.erase(structPath);
-          return false;
-        }
-        info.structPath = nestedStruct;
-        info.slotCount = nestedLayout.totalSlots;
         layout.fields.push_back(info);
         offset += info.slotCount;
         continue;

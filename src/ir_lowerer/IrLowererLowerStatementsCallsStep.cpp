@@ -21,8 +21,13 @@ bool isNamedArgument(const Expr &expr, size_t index, std::string_view name) {
 }
 
 bool isVectorMutationHelperName(std::string_view helperName) {
-  return helperName == "push" || helperName == "reserve" ||
+  return helperName == "push" || helperName == "pop" ||
+         helperName == "reserve" || helperName == "clear" ||
          helperName == "remove_at" || helperName == "remove_swap";
+}
+
+bool isVectorNoPayloadHelperName(std::string_view helperName) {
+  return helperName == "pop" || helperName == "clear";
 }
 
 bool isVectorIndexedRemovalHelperName(std::string_view helperName) {
@@ -75,6 +80,7 @@ bool resolveVectorMutationHelperName(const SemanticProgram *semanticProgram,
           directHelperPath,
           StdlibSurfaceId::CollectionsManifestSurface0,
           helperNameOut)) {
+    isSemanticMatchOut = true;
     return isVectorMutationHelperName(helperNameOut);
   }
 
@@ -162,6 +168,73 @@ VectorMutationStatementEmitResult tryEmitCanonicalVectorMutationStatement(
   if (!resolveVectorMutationHelperName(
           input.semanticProgram, stmt, helperName, isSemanticMatch)) {
     return VectorMutationStatementEmitResult::NotMatched;
+  }
+
+  if (isVectorNoPayloadHelperName(helperName)) {
+    if (stmt.isMethodCall) {
+      errorOut = "missing semantic-product method-call target: " + helperName;
+      return VectorMutationStatementEmitResult::Error;
+    }
+    if (stmt.args.size() != 1) {
+      return VectorMutationStatementEmitResult::NotMatched;
+    }
+    const Expr *valuesArg = &stmt.args[0];
+    const ArrayVectorAccessTargetInfo targetInfo =
+        resolveArrayVectorAccessTargetInfo(*valuesArg,
+                                           localsIn,
+                                           {},
+                                           input.semanticProgram,
+                                           input.semanticIndex);
+    if (!targetInfo.isArrayOrVectorTarget) {
+      return VectorMutationStatementEmitResult::NotMatched;
+    }
+    if (!targetInfo.isVectorTarget || targetInfo.isSoaVector ||
+        targetInfo.isKeyValueTarget || targetInfo.isWrappedKeyValueTarget) {
+      errorOut = helperName + " requires vector binding";
+      return VectorMutationStatementEmitResult::Error;
+    }
+    if (!isSemanticMatch || targetInfo.elemSlotCount > 1) {
+      return VectorMutationStatementEmitResult::NotMatched;
+    }
+
+    const int32_t valuesPtrLocal = input.allocTempLocal();
+    if (!input.emitExpr(*valuesArg, localsIn)) {
+      return VectorMutationStatementEmitResult::Error;
+    }
+    instructions.push_back({IrOpcode::StoreLocal, static_cast<uint64_t>(valuesPtrLocal)});
+
+    if (helperName == "clear") {
+      instructions.push_back({IrOpcode::LoadLocal, static_cast<uint64_t>(valuesPtrLocal)});
+      instructions.push_back({IrOpcode::PushI32, 0});
+      instructions.push_back({IrOpcode::StoreIndirect, 0});
+      instructions.push_back({IrOpcode::Pop, 0});
+      return VectorMutationStatementEmitResult::Emitted;
+    }
+
+    // pop: trap if empty, then decrement count
+    if (!input.emitVectorPopOnEmpty) {
+      return VectorMutationStatementEmitResult::NotMatched;
+    }
+    const int32_t countLocal = input.allocTempLocal();
+    instructions.push_back({IrOpcode::LoadLocal, static_cast<uint64_t>(valuesPtrLocal)});
+    instructions.push_back({IrOpcode::LoadIndirect, 0});
+    instructions.push_back({IrOpcode::StoreLocal, static_cast<uint64_t>(countLocal)});
+
+    instructions.push_back({IrOpcode::LoadLocal, static_cast<uint64_t>(countLocal)});
+    instructions.push_back({IrOpcode::PushI32, 0});
+    instructions.push_back({IrOpcode::CmpEqI32, 0});
+    const size_t okJump = instructions.size();
+    instructions.push_back({IrOpcode::JumpIfZero, 0});
+    input.emitVectorPopOnEmpty();
+    instructions[okJump].imm = static_cast<uint64_t>(instructions.size());
+
+    instructions.push_back({IrOpcode::LoadLocal, static_cast<uint64_t>(valuesPtrLocal)});
+    instructions.push_back({IrOpcode::LoadLocal, static_cast<uint64_t>(countLocal)});
+    instructions.push_back({IrOpcode::PushI32, 1});
+    instructions.push_back({IrOpcode::SubI32, 0});
+    instructions.push_back({IrOpcode::StoreIndirect, 0});
+    instructions.push_back({IrOpcode::Pop, 0});
+    return VectorMutationStatementEmitResult::Emitted;
   }
 
   const Expr *valuesArg = nullptr;

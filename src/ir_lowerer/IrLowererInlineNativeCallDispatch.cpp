@@ -689,7 +689,9 @@ InlineCallDispatchResult tryEmitInlineCallWithCountFallbacksImpl(
           (callee->fullPath == rootCollectionMemberPath("vector", "at") ||
            callee->fullPath == rootCollectionMemberPath("vector", "at_unsafe") ||
            callee->fullPath == "/std/collections/vector/at" ||
-           callee->fullPath == "/std/collections/vector/at_unsafe")) {
+           callee->fullPath == "/std/collections/vector/at_unsafe") &&
+          callee->statements.empty() && !callee->hasReturnStatement &&
+          !callee->returnExpr.has_value()) {
         return InlineCallDispatchResult::NotHandled;
       }
       if (expr.args.size() == 1 &&
@@ -1606,8 +1608,15 @@ InlineCallDispatchResult tryEmitInlineCallDispatchWithLocals(
   }
   if (expr.isMethodCall && expr.args.size() == 2) {
     std::string accessName;
-    if (getBuiltinArrayAccessName(expr, accessName) && accessName == "at" &&
+    if (getBuiltinArrayAccessName(expr, accessName) &&
+        (accessName == "at" || accessName == "at_unsafe") &&
         isSemanticOrLegacyVectorTarget(expr.args.front())) {
+      if (const Definition *overrideCallee = resolveMethodCallDefinitionFn(expr, localsIn);
+          overrideCallee != nullptr && !overrideCallee->statements.empty()) {
+        return emitCanonicalInlineDefinitionCall(expr, *overrideCallee)
+                   ? InlineCallDispatchResult::Emitted
+                   : InlineCallDispatchResult::Error;
+      }
       return InlineCallDispatchResult::NotHandled;
     }
   }

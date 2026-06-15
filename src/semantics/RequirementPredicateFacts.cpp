@@ -810,6 +810,21 @@ bool fieldFactIsVisibleFromRequirementDefinition(
   return isVisibleFromRequirementDefinition(context, field.structPath, field.isPrivate);
 }
 
+bool hasAnnotatedStructTrait(const RequirementPredicateDefinitionContext &context,
+                             std::string_view structPath,
+                             std::string_view traitName) {
+  if (structPath.empty()) {
+    return false;
+  }
+  for (const auto &trait : context.structTraits) {
+    if (trait.structPath == structPath && trait.traitName == traitName &&
+        isVisibleFromRequirementDefinition(context, trait.structPath, trait.isPrivate)) {
+      return true;
+    }
+  }
+  return false;
+}
+
 std::vector<RequirementPredicateDefinitionContext::CallableFact>
 visibleCallableMatches(const RequirementPredicateDefinitionContext &context,
                        std::string_view requestedPath) {
@@ -1317,7 +1332,10 @@ void evaluateHasTraitPredicate(RequirementPredicateFactDraft &fact,
   const bool isMultiplicative = traitName == "Multiplicative";
   const bool isComparable = traitName == "Comparable";
   const bool isIndexable = traitName == "Indexable";
-  if (!isAdditive && !isMultiplicative && !isComparable && !isIndexable) {
+  const bool isCollection = traitName == "Collection";
+  const bool isKeyValue = traitName == "KeyValue";
+  if (!isAdditive && !isMultiplicative && !isComparable && !isIndexable &&
+      !isCollection && !isKeyValue) {
     fact.evaluationOutcome = "invalid_evaluation";
     fact.evaluationDiagnostic =
         "requirement predicate /std/meta/has_trait does not support trait: " +
@@ -1342,7 +1360,12 @@ void evaluateHasTraitPredicate(RequirementPredicateFactDraft &fact,
   bool satisfied = false;
   std::string requirementText;
   const std::string typePath = typePathForCanonical(target.canonicalType);
-  if (isAdditive) {
+  if (isCollection || isKeyValue) {
+    requirementText = std::string("[") +
+                      (isCollection ? "collection_type" : "key_value_type") +
+                      "] struct annotation";
+    satisfied = hasAnnotatedStructTrait(context, target.canonicalType, traitName);
+  } else if (isAdditive) {
     std::vector<TypeOperandResolution> callTypes = {target, target};
     requirementText = callableDisplaySignature("plus", callTypes, 2, target.canonicalType);
     if (isNumericTraitType(target.canonicalType)) {

@@ -1690,6 +1690,9 @@ bool rewriteExpr(Expr &expr,
           ctx.sourceDefs.count(preferred) > 0) {
         return preferred;
       }
+      if (isPublishedVectorMutatorHelperName(helperName)) {
+        return preferred;
+      }
     }
     return path;
   };
@@ -2638,7 +2641,9 @@ bool rewriteExpr(Expr &expr,
           templateMonomorphPublicSoaHelperPrefix().size());
       const std::string vectorPath =
           canonicalVectorCompatibilityHelperPathOrFallback(helperName);
-      if (ctx.sourceDefs.count(vectorPath) > 0) {
+      if (ctx.sourceDefs.count(vectorPath) > 0 ||
+          (isPublishedVectorMutatorHelperName(helperName) &&
+           hasVisibleStdCollectionsImportForPath(ctx, publicSoaMutatorPath))) {
         resolvedPath = vectorPath;
         expr.name = vectorPath;
         expr.namespacePrefix.clear();

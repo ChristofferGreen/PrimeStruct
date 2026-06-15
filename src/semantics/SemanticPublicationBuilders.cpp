@@ -1124,6 +1124,22 @@ RequirementPredicateDefinitionContext makeRequirementPredicateDefinitionContext(
     if (context.structNames.count(candidate.fullPath) == 0) {
       continue;
     }
+    for (const auto &transform : candidate.transforms) {
+      std::vector<std::string> traitNames;
+      if (transform.name == "collection_type") {
+        traitNames.push_back("Collection");
+      } else if (transform.name == "key_value_type") {
+        traitNames.push_back("Collection");
+        traitNames.push_back("KeyValue");
+      }
+      for (const auto &traitName : traitNames) {
+        RequirementPredicateDefinitionContext::StructTraitFact trait;
+        trait.structPath = candidate.fullPath;
+        trait.traitName = traitName;
+        trait.isPrivate = hasTransform(candidate.transforms, "private");
+        context.structTraits.push_back(std::move(trait));
+      }
+    }
     for (const auto &stmt : candidate.statements) {
       if (!stmt.isBinding || hasTransform(stmt.transforms, "static") ||
           isCompileTimeTypeBinding(stmt)) {

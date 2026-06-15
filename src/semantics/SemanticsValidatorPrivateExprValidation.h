@@ -418,6 +418,9 @@
                                             const std::unordered_map<std::string, BindingInfo> &locals,
                                             bool &handled);
   std::string normalizeCollectionTypePath(const std::string &typePath) const;
+  bool typeHasCollectionCategoryTrait(const std::string &typeName,
+                                      const std::string &namespacePrefix,
+                                      std::string_view traitName) const;
   bool hasDefinitionPath(const std::string &path) const;
   bool hasImportedDefinitionPath(const std::string &path) const;
   bool isStaticHelperDefinition(const Definition &def) const;

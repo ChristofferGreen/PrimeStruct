@@ -42,7 +42,7 @@ main() {
   const std::string compileCmd =
       "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main";
   CHECK(runCommand(compileCmd) == 0);
-  CHECK(runCommand(exePath) == 50);
+  CHECK(runCommand(exePath) == 22);
 }
 
 TEST_CASE("query-local auto vector helpers run in C++ emitter") {

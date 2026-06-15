@@ -24286,3 +24286,93 @@ Moved from `docs/todo.md` during unfinished-only cleanup:
     IrLowererPackedResultHelpers.cpp with manifest-driven
     resolution via CollectionsContainerErrorHelpers. Build and
     IR validation tests pass. Commit 86acc9444.
+
+- [x] TODO-4665: Migrate SemanticsValidatorExprVectorHelpers to predicate queries
+  - owner: ai
+  - created_at: 2026-06-13
+  - finished_at: 2026-06-15
+  - phase: Collection decoupling - Phase 2
+  - parallel_track: collection-decoupling
+  - depends_on: TODO-4664
+  - scope: Replace `isKeyValueCollectionTypeName()` and
+    `specializedExperimentalVectorHelperTarget()` calls in
+    `SemanticsValidatorExprVectorHelpers.cpp` with predicate-backed
+    type-category queries.
+  - evidence: Added `typeHasCollectionCategoryTrait()` on
+    `SemanticsValidator`, migrated vector helper receiver
+    classification and key-value dispatch to `collection_type` /
+    `key_value_type` trait checks, and removed this file's direct
+    `specializedExperimentalVectorHelperTarget()` calls.
+    Release tests passed: `has_trait*`, `vector method calls resolve to
+    definitions`, and `map method precedence now rejects omitted
+    initializer through Create effectfulness gate`.
+
+- [x] TODO-4662: Design type-category annotation syntax for .prime
+  - owner: ai
+  - created_at: 2026-06-13
+  - finished_at: 2026-06-15
+  - phase: Collection decoupling - Phase 2
+  - parallel_track: collection-decoupling
+  - scope: Design `.prime` annotation syntax for declaring type categories.
+  - evidence: Spec written in Phase 2 section of `docs/CollectionDecoupling.md`:
+    `[collection_type]` and `[key_value_type]` definition-level marker transforms;
+    integrated with `has_trait<T>(Collection)` / `has_trait<T>(KeyValue)` predicates;
+    migration path via `typeHasCollectionCategoryTrait()` helper documented.
+
+- [x] TODO-4663: Implement type-category predicate in semantic validator
+  - owner: ai
+  - created_at: 2026-06-13
+  - finished_at: 2026-06-15
+  - phase: Collection decoupling - Phase 2
+  - parallel_track: collection-decoupling
+  - depends_on: TODO-4662
+  - scope: Implement type-category predicate queryable via `has_trait` system.
+  - evidence: Added `StructTraitFact` to `RequirementPredicateDefinitionContext`;
+    extended `evaluateHasTraitPredicate` in `RequirementPredicateFacts.cpp` with
+    `Collection` and `KeyValue` trait arms; added `hasAnnotatedStructTrait` helper;
+    wired publishing in `SemanticPublicationBuilders.cpp` and population in
+    `SemanticsValidatorBuildRequirements.cpp`. Test "has_trait recognizes collection
+    category annotations" passes.
+
+- [x] TODO-4664: Annotate stdlib collection types with category declarations
+  - owner: ai
+  - created_at: 2026-06-13
+  - finished_at: 2026-06-15
+  - phase: Collection decoupling - Phase 2
+  - parallel_track: collection-decoupling
+  - depends_on: TODO-4663
+  - scope: Add type-category annotations to Vector, MapValue, SoaVector, SoaColumn.
+  - evidence: `[public struct collection_type]` added to `vector.prime`,
+    `[public struct key_value_type]` added to `map.prime`,
+    `[struct collection_type]` added to `experimental_soa_vector.prime`,
+    `[public struct collection_type]` added to `internal_soa_storage.prime`.
+    Semantics test "has_trait recognizes collection category annotations" passes.
+
+- [x] TODO-4666: Migrate IrLowererStructSlotLayoutHelpers to predicate queries
+  - owner: ai
+  - created_at: 2026-06-13
+  - finished_at: 2026-06-15
+  - phase: Collection decoupling - Phase 2
+  - parallel_track: collection-decoupling
+  - depends_on: TODO-4664
+  - scope: Replace `isVectorTypeName()` / `isMapTypeName()` calls in IR lowerer files.
+  - evidence: Replaced calls in `IrLowererStructSlotLayoutHelpers.cpp`,
+    `IrLowererSetupTypeMethodCallResolution.cpp`, `IrLowererVectorRecordLayoutHelpers.h`,
+    `IrLowererLowerStatementsCallsStep.cpp`, and `IrLowererLowerEmitExprTailDispatch.h`
+    with surface-based and trait-based helpers. Added `isMapValueTypeName` fallback for
+    MapValue when stdlib is not imported. All 10 struct slot layout tests pass. Bare map
+    count/at compile-run tests pass.
+
+- [x] TODO-4667: Migrate EmitterBuiltinCollectionInferenceHelpers to predicate queries
+  - owner: ai
+  - created_at: 2026-06-13
+  - finished_at: 2026-06-15
+  - phase: Collection decoupling - Phase 2
+  - parallel_track: collection-decoupling
+  - depends_on: TODO-4664
+  - scope: Replace hardcoded collection type-name checks in emitter with surface-based queries.
+  - evidence: Replaced `"vector"` / `"map"` string checks in
+    `EmitterBuiltinCollectionInferenceHelpers.cpp` with surface-alias lookups via
+    `EmitterCollectionSurface::VectorConstructors` / `KeyValueConstructors`. Added
+    `isSurfaceAliasTypeName`, `isSurfaceCollectionName`, `isVectorCollectionBindingLocal`
+    helpers. Bare-map count and at compile-run tests pass.

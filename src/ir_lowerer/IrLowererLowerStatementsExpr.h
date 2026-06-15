@@ -2247,8 +2247,9 @@
             if (receiverArgIndex != 0 && accessExpr.args.size() > receiverArgIndex) {
               std::swap(accessExpr.args[0], accessExpr.args[receiverArgIndex]);
             }
-            if (bareKeyValueAccessName == "at" ||
-                bareKeyValueAccessName == "at_unsafe") {
+            if ((bareKeyValueAccessName == "at" ||
+                 bareKeyValueAccessName == "at_unsafe") &&
+                !ir_lowerer::isKeyValueStorageStructPath(targetInfo.structTypeName)) {
               if (accessExpr.args.front().kind == Expr::Kind::Call &&
                   !inferStructExprPath(expr, localsIn).empty()) {
                 error = "struct parameter type mismatch";

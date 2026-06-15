@@ -378,6 +378,18 @@ bool emitConversionsAndCallsCollectionAndMutationExpr(
             };
         if (!resolveVectorRecordFieldSlotsFromFields(
                 vectorStructPath, resolveVectorField, vectorSlots)) {
+          const bool isSpecializedStdlibVector =
+              vectorStructPath.find("/Vector__t") != std::string::npos ||
+              vectorStructPath.find("Vector__t") == 0;
+          if (isSpecializedStdlibVector) {
+            vectorSlots.count = 0;
+            vectorSlots.capacity = 1;
+            vectorSlots.data = 2;
+            vectorSlots.ownsData = -1;
+            vectorSlots.totalSlots = 3;
+          }
+        }
+        if (vectorSlots.totalSlots <= 0) {
           error = "native backend cannot resolve vector record layout: " +
                   vectorStructPath;
           return false;

@@ -91,6 +91,183 @@ TEST_CASE("ir lowerer struct type helpers resolve struct slot layouts from defin
   CHECK(slot.structPath == "/pkg/Inner");
 }
 
+TEST_CASE("ir lowerer struct type helpers derive collection record slots from fields") {
+  using ValueKind = primec::ir_lowerer::LocalInfo::ValueKind;
+  const std::string vectorPath = "/std/collections/vector/Vector__ti32";
+  const std::string stringVectorPath = "/std/collections/vector/Vector__tstring";
+  const std::string mapPath = "/std/collections/map/MapValue__ti32__string";
+  auto collectStructLayoutFields = [&](const std::string &structPath,
+                                       std::vector<primec::ir_lowerer::StructLayoutFieldInfo> &out) {
+    out.clear();
+    if (structPath == vectorPath) {
+      out.push_back({"fieldCount", "i32", "", false});
+      out.push_back({"fieldCapacity", "i32", "", false});
+      out.push_back({"data", "Pointer", "uninitialized<i32>", false});
+      out.push_back({"ownsData", "bool", "", false});
+      return true;
+    }
+    if (structPath == stringVectorPath) {
+      out.push_back({"fieldCount", "i32", "", false});
+      out.push_back({"fieldCapacity", "i32", "", false});
+      out.push_back({"data", "Pointer", "uninitialized<string>", false});
+      out.push_back({"ownsData", "bool", "", false});
+      return true;
+    }
+    if (structPath == mapPath) {
+      out.push_back({"keys", "Vector", "i32", false});
+      out.push_back({"payloads", "Vector", "string", false});
+      return true;
+    }
+    return false;
+  };
+  auto resolveDefinitionNamespacePrefix = [&](const std::string &structPath,
+                                              std::string &namespacePrefixOut) {
+    if (structPath == vectorPath || structPath == stringVectorPath) {
+      namespacePrefixOut = "/std/collections/vector";
+      return true;
+    }
+    if (structPath == mapPath) {
+      namespacePrefixOut = "/std/collections/map";
+      return true;
+    }
+    return false;
+  };
+  auto resolveStructTypeName = [&](const std::string &typeName,
+                                   const std::string &,
+                                   std::string &resolvedOut) {
+    if (typeName == "Vector<i32>") {
+      resolvedOut = vectorPath;
+      return true;
+    }
+    if (typeName == "Vector<string>") {
+      resolvedOut = stringVectorPath;
+      return true;
+    }
+    return false;
+  };
+  auto valueKindFromTypeName = [](const std::string &typeName) {
+    if (typeName == "i32") {
+      return ValueKind::Int32;
+    }
+    if (typeName == "bool") {
+      return ValueKind::Bool;
+    }
+    if (typeName == "string") {
+      return ValueKind::String;
+    }
+    return ValueKind::Unknown;
+  };
+
+  primec::ir_lowerer::StructSlotLayoutCache layoutCache;
+  std::unordered_set<std::string> layoutStack;
+  std::string error;
+
+  primec::ir_lowerer::StructSlotLayoutInfo vectorLayout;
+  REQUIRE(primec::ir_lowerer::resolveStructSlotLayoutFromDefinitionFields(vectorPath,
+                                                                           collectStructLayoutFields,
+                                                                           resolveDefinitionNamespacePrefix,
+                                                                           resolveStructTypeName,
+                                                                           valueKindFromTypeName,
+                                                                           layoutCache,
+                                                                           layoutStack,
+                                                                           vectorLayout,
+                                                                           error));
+  CHECK(error.empty());
+  CHECK(vectorLayout.totalSlots == 5);
+  REQUIRE(vectorLayout.fields.size() == 4);
+  CHECK(vectorLayout.fields[0].name == "fieldCount");
+  CHECK(vectorLayout.fields[0].slotOffset == 1);
+  CHECK(vectorLayout.fields[2].name == "data");
+  CHECK(vectorLayout.fields[2].valueKind == ValueKind::Int64);
+  CHECK(vectorLayout.fields[3].name == "ownsData");
+  CHECK(vectorLayout.fields[3].valueKind == ValueKind::Bool);
+
+  primec::ir_lowerer::StructSlotLayoutInfo mapLayout;
+  REQUIRE(primec::ir_lowerer::resolveStructSlotLayoutFromDefinitionFields(mapPath,
+                                                                           collectStructLayoutFields,
+                                                                           resolveDefinitionNamespacePrefix,
+                                                                           resolveStructTypeName,
+                                                                           valueKindFromTypeName,
+                                                                           layoutCache,
+                                                                           layoutStack,
+                                                                           mapLayout,
+                                                                           error));
+  CHECK(error.empty());
+  CHECK(mapLayout.totalSlots == 11);
+  REQUIRE(mapLayout.fields.size() == 2);
+  CHECK(mapLayout.fields[0].name == "keys");
+  CHECK(mapLayout.fields[0].slotOffset == 1);
+  CHECK(mapLayout.fields[0].slotCount == 5);
+  CHECK(mapLayout.fields[0].structPath == vectorPath);
+  CHECK(mapLayout.fields[1].name == "payloads");
+  CHECK(mapLayout.fields[1].slotOffset == 6);
+  CHECK(mapLayout.fields[1].slotCount == 5);
+  CHECK(mapLayout.fields[1].structPath == stringVectorPath);
+}
+
+TEST_CASE("ir lowerer struct type helpers resolve specialized vector layout from base fields") {
+  using ValueKind = primec::ir_lowerer::LocalInfo::ValueKind;
+  const std::string vectorPath = "/std/collections/vector/Vector__t25a78a513414c3bf";
+  const std::string baseVectorPath = "/std/collections/vector/Vector";
+  auto collectStructLayoutFields = [&](const std::string &structPath,
+                                       std::vector<primec::ir_lowerer::StructLayoutFieldInfo> &out) {
+    out.clear();
+    if (structPath != baseVectorPath) {
+      return false;
+    }
+    out.push_back({"fieldCount", "i32", "", false});
+    out.push_back({"fieldCapacity", "i32", "", false});
+    out.push_back({"data", "Pointer", "uninitialized<i32>", false});
+    out.push_back({"ownsData", "bool", "", false});
+    return true;
+  };
+  auto resolveDefinitionNamespacePrefix = [&](const std::string &structPath,
+                                              std::string &namespacePrefixOut) {
+    if (structPath != baseVectorPath) {
+      return false;
+    }
+    namespacePrefixOut = "/std/collections/vector";
+    return true;
+  };
+  auto resolveStructTypeName = [](const std::string &,
+                                  const std::string &,
+                                  std::string &) {
+    return false;
+  };
+  auto valueKindFromTypeName = [](const std::string &typeName) {
+    if (typeName == "i32") {
+      return ValueKind::Int32;
+    }
+    if (typeName == "bool") {
+      return ValueKind::Bool;
+    }
+    return ValueKind::Unknown;
+  };
+
+  primec::ir_lowerer::StructSlotLayoutCache layoutCache;
+  std::unordered_set<std::string> layoutStack;
+  primec::ir_lowerer::StructSlotLayoutInfo layout;
+  std::string error;
+  REQUIRE(primec::ir_lowerer::resolveStructSlotLayoutFromDefinitionFields(
+      vectorPath,
+      collectStructLayoutFields,
+      resolveDefinitionNamespacePrefix,
+      resolveStructTypeName,
+      valueKindFromTypeName,
+      layoutCache,
+      layoutStack,
+      layout,
+      error));
+  CHECK(error.empty());
+  CHECK(layout.structPath == vectorPath);
+  CHECK(layout.totalSlots == 5);
+  REQUIRE(layout.fields.size() == 4);
+  CHECK(layout.fields[0].slotOffset == 1);
+  CHECK(layout.fields[2].name == "data");
+  CHECK(layout.fields[2].slotOffset == 3);
+  CHECK(layout.fields[3].name == "ownsData");
+}
+
 TEST_CASE("ir lowerer struct type helpers resolve struct slots from definition field index") {
   using ValueKind = primec::ir_lowerer::LocalInfo::ValueKind;
   const primec::ir_lowerer::StructLayoutFieldIndex fieldIndex =

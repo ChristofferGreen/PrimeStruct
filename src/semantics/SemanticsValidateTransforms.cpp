@@ -27,7 +27,8 @@ bool isNonTypeTransformName(const std::string &name) {
          name == "static" || name == "single_type_to_return" || name == "stack" || name == "heap" ||
          name == "buffer" || name == "spawn" || name == "ast" || name == "reflect" ||
          name == "generate" || name == "Additive" || name == "Multiplicative" ||
-         name == "Comparable" || name == "Indexable";
+         name == "Comparable" || name == "Indexable" || name == "collection_type" ||
+         name == "key_value_type";
 }
 
 bool isSingleTypeReturnCandidate(const Transform &transform) {

@@ -2,6 +2,7 @@
 #include "SemanticsValidator.h"
 #include "SemanticsValidatorInferCollectionCompatibilityInternal.h"
 
+#include <functional>
 #include <string>
 #include <vector>
 
@@ -48,14 +49,16 @@ bool isStdNamespacedVectorDirectCallReceiverCompatible(
 
 bool isVectorHelperReceiverName(const Expr &candidate,
                                 const std::vector<ParameterInfo> &params,
-                                const std::unordered_map<std::string, BindingInfo> &locals);
+                                const std::unordered_map<std::string, BindingInfo> &locals,
+                                const std::function<bool(const BindingInfo &)> &isCollectionTraitBinding);
 
 bool shouldProbePositionalReorderedVectorHelperReceiver(
     const Expr &expr,
     bool isStdNamespacedVectorCompatibilityDirectCallSite,
     bool hasNamedArgs,
     const std::vector<ParameterInfo> &params,
-    const std::unordered_map<std::string, BindingInfo> &locals) {
+    const std::unordered_map<std::string, BindingInfo> &locals,
+    const std::function<bool(const BindingInfo &)> &isCollectionTraitBinding) {
   return !isStdNamespacedVectorCompatibilityDirectCallSite &&
          !hasNamedArgs && expr.args.size() > 1 &&
          (expr.args.front().kind == Expr::Kind::Literal ||
@@ -63,30 +66,38 @@ bool shouldProbePositionalReorderedVectorHelperReceiver(
           expr.args.front().kind == Expr::Kind::FloatLiteral ||
           expr.args.front().kind == Expr::Kind::StringLiteral ||
           (expr.args.front().kind == Expr::Kind::Name &&
-           !isVectorHelperReceiverName(expr.args.front(), params, locals)));
+           !isVectorHelperReceiverName(expr.args.front(), params, locals,
+                                       isCollectionTraitBinding)));
 }
 
 bool isVectorHelperReceiverName(const Expr &candidate,
                                 const std::vector<ParameterInfo> &params,
-                                const std::unordered_map<std::string, BindingInfo> &locals) {
+                                const std::unordered_map<std::string, BindingInfo> &locals,
+                                const std::function<bool(const BindingInfo &)> &isCollectionTraitBinding) {
   if (candidate.kind != Expr::Kind::Name) {
     return false;
   }
-  std::string typeName;
+  BindingInfo binding;
   for (const auto &param : params) {
     if (param.name == candidate.name) {
-      typeName = normalizeBindingTypeName(param.binding.typeName);
+      binding = param.binding;
       break;
     }
   }
-  if (typeName.empty()) {
+  if (binding.typeName.empty()) {
     auto it = locals.find(candidate.name);
     if (it != locals.end()) {
-      typeName = normalizeBindingTypeName(it->second.typeName);
+      binding = it->second;
     }
   }
+  if (binding.typeName.empty()) {
+    return false;
+  }
+  if (isCollectionTraitBinding(binding)) {
+    return true;
+  }
+  const std::string typeName = normalizeBindingTypeName(binding.typeName);
   return typeName == "vector" || isInternalSoaCollectionTypeName(typeName) ||
-         typeName == "Vector" ||
          isLegacyExperimentalVectorCompatibilityTypePath(typeName) ||
          isLegacyExperimentalVectorCompatibilityTypePath("/" + typeName);
 }
@@ -172,6 +183,12 @@ bool SemanticsValidator::resolveVectorHelperMethodTarget(
     }
     return isRootKeyValueAliasPath(resolveCalleePath(candidate)) ||
            isRootKeyValueAliasPath(explicitCallPath(candidate));
+  };
+  auto bindingHasCollectionTrait = [&](const BindingInfo &binding,
+                                       const std::string &namespacePrefix,
+                                       std::string_view traitName) {
+    return typeHasCollectionCategoryTrait(binding.typeName, namespacePrefix,
+                                          traitName);
   };
   auto resolveCollectionVectorReceiver = [&](const Expr &candidate,
                                                std::string &elemTypeOut) -> bool {
@@ -359,8 +376,8 @@ bool SemanticsValidator::resolveVectorHelperMethodTarget(
     if (tryResolvePublishedVectorAccessHelper(normalizedHelperName)) {
       return true;
     }
-    resolvedOut = specializedExperimentalVectorHelperTarget(normalizedHelperName,
-                                                            experimentalElemType);
+    resolvedOut = categoryCollectionVectorHelperTarget(normalizedHelperName,
+                                                       experimentalElemType);
     return true;
   }
   std::string experimentalSoaElemType;
@@ -480,11 +497,14 @@ bool SemanticsValidator::resolveVectorHelperMethodTarget(
     if (resolvedType.empty()) {
       return false;
     }
+    const bool receiverHasKeyValueTrait =
+        typeHasCollectionCategoryTrait(typeName, receiver.namespacePrefix,
+                                       "KeyValue");
     if (resolvedType == "/vector" &&
         tryResolveVectorReceiverSamePathSoaHelper(normalizedHelperName)) {
       return true;
     }
-    if ((resolvedType == "/map" || isKeyValueCollectionTypeName(normalizedTypeName)) &&
+    if ((resolvedType == "/map" || receiverHasKeyValueTrait) &&
         (normalizedHelperName == "count" || normalizedHelperName == "count_ref" ||
          normalizedHelperName == "size" ||
          normalizedHelperName == "contains" || normalizedHelperName == "contains_ref" ||
@@ -542,12 +562,14 @@ bool SemanticsValidator::resolveVectorHelperMethodTarget(
         BindingInfo receiverBinding;
         receiverBinding.typeName = resolvedType;
         std::string experimentalElemType;
-        if (extractCollectionVectorElementType(receiverBinding, experimentalElemType)) {
+        if (bindingHasCollectionTrait(receiverBinding, receiver.namespacePrefix,
+                                      "Collection") &&
+            extractCollectionVectorElementType(receiverBinding, experimentalElemType)) {
           if (tryResolvePublishedVectorAccessHelper(normalizedHelperName)) {
             return true;
           }
-          resolvedOut = specializedExperimentalVectorHelperTarget(normalizedHelperName,
-                                                                  experimentalElemType);
+          resolvedOut = categoryCollectionVectorHelperTarget(normalizedHelperName,
+                                                             experimentalElemType);
           return true;
         }
       }
@@ -590,6 +612,10 @@ bool SemanticsValidator::resolveExprVectorHelperCall(const std::vector<Parameter
   if (!getVectorMutatorHelperName(expr, vectorHelper)) {
     return true;
   }
+  auto isCollectionTraitBinding = [&](const BindingInfo &binding) {
+    return typeHasCollectionCategoryTrait(
+        binding.typeName, expr.namespacePrefix, "Collection");
+  };
   auto hasVisibleDefinitionPath = [&](const std::string &path) {
     if (hasImportedDefinitionPath(path) ||
         hasDeclaredDefinitionPath(path)) {
@@ -642,6 +668,16 @@ bool SemanticsValidator::resolveExprVectorHelperCall(const std::vector<Parameter
     std::string elemType;
     std::string keyType;
     std::string valueType;
+    if (typeHasCollectionCategoryTrait(receiverBinding.typeName,
+                                       expr.namespacePrefix,
+                                       "KeyValue")) {
+      return "map";
+    }
+    if (typeHasCollectionCategoryTrait(receiverBinding.typeName,
+                                       expr.namespacePrefix,
+                                       "Collection")) {
+      return legacyExperimentalVectorCompatibilityFamilyName();
+    }
     if (extractCollectionVectorElementType(receiverBinding, elemType)) {
       return legacyExperimentalVectorCompatibilityFamilyName();
     }
@@ -898,7 +934,7 @@ bool SemanticsValidator::resolveExprVectorHelperCall(const std::vector<Parameter
       }
       if (!shouldProbePositionalReorderedVectorHelperReceiver(
               expr, isStdNamespacedVectorCompatibilityDirectCallSite,
-              hasNamedArgs, params, locals)) {
+              hasNamedArgs, params, locals, isCollectionTraitBinding)) {
         return false;
       }
       return tryResolveRemainingReceivers(1);

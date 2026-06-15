@@ -7,7 +7,7 @@ import /std/collections/internal_buffer_unchecked/*
 namespace std {
   namespace collections {
   namespace vector {
-  [public struct]
+  [public struct collection_type]
   Vector<T>() {
     [public i32] fieldCount
     [public i32] fieldCapacity
