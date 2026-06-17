@@ -47,8 +47,11 @@ inline constexpr std::string_view kLegacySoaVectorConversionsFolder =
 inline constexpr std::string_view kInternalSoaVectorFolder = kSoaFolder;
 inline constexpr std::string_view kInternalSoaStorageFolder = "soa_storage";
 inline constexpr std::string_view kSoaStorageFolder = "soa_storage";
-inline constexpr std::string_view kInternalBufferCheckedFolder = "internal_buffer_checked";
-inline constexpr std::string_view kInternalBufferUncheckedFolder = "internal_buffer_unchecked";
+inline constexpr std::string_view kBufferCheckedFolder = "buffer_checked";
+inline constexpr std::string_view kBufferUncheckedFolder = "buffer_unchecked";
+// internal_buffer_checked/unchecked renamed to buffer_checked/unchecked (TODO-4634 done)
+inline constexpr std::string_view kInternalBufferCheckedFolder = kBufferCheckedFolder;
+inline constexpr std::string_view kInternalBufferUncheckedFolder = kBufferUncheckedFolder;
 
 // --- Backing type names ------------------------------------------------------
 

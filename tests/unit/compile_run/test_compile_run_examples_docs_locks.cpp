@@ -748,7 +748,7 @@ TEST_CASE("stdlib de-experimentalization policy docs stay source locked") {
         std::string::npos);
   CHECK(primeStructDoc.find("| `/std/gfx/experimental/*` | Temporary compatibility namespace | Legacy compatibility shim over canonical `/std/gfx/*`; no longer part of the public gfx contract and retained only for targeted compatibility coverage while the residual seam remains importable. | none |") !=
         std::string::npos);
-  CHECK(primeStructDoc.find("| `/std/collections/internal_buffer_checked/*` | Internal substrate/helper namespace | Explicitly internal checked buffer plumbing for container conformance and memory-wrapper flows, not a stable user-facing stdlib API. | none |") !=
+  CHECK(primeStructDoc.find("| `/std/collections/buffer_checked/*` | Internal substrate/helper namespace | Explicitly internal checked buffer plumbing for container conformance and memory-wrapper flows, not a stable user-facing stdlib API. Renamed from `internal_buffer_checked` in TODO-4634. | none |") !=
         std::string::npos);
   CHECK(primeStructDoc.find("Canonical and bare statement calls to vector mutators such\n"
                             "    as `push`, `pop`, `reserve`, `clear`, `remove_at`, and `remove_swap`") !=
@@ -2142,7 +2142,7 @@ TEST_CASE("todo queue and skipped doctest debt stay source locked") {
   CHECK(todo.find("### Immediate Next 10\n\n"
                   "- TODO-4611: Add reverse cursor traversal API\n"
                   "- TODO-4612: Add safe extent and cursor code examples\n"
-                  "- TODO-4634: Rename internal buffer modules to canonical buffer names") !=
+                  "- TODO-4635: Derive the collection surface registry from stdlib declarations") !=
         std::string::npos);
   CHECK(todo.find("### Priority Lanes") != std::string::npos);
   CHECK(todo.find("Source-unit provenance ledger: TODO-4592 completed parser/semantic") ==
@@ -2176,10 +2176,9 @@ TEST_CASE("todo queue and skipped doctest debt stay source locked") {
                   "2. TODO-4610: Add forward cursor traversal API\n"
                   "3. TODO-4611: Add reverse cursor traversal API\n"
                   "4. TODO-4612: Add safe extent and cursor code examples\n"
-                  "5. TODO-4634: Rename internal buffer modules to canonical buffer names\n"
-                  "6. TODO-4635: Derive the collection surface registry from stdlib declarations\n"
-                  "7. TODO-4636: Delete surfaces.psmeta and its parity scaffolding\n"
-                  "8. TODO-4637: Move `ir_pipeline` test shard into subdirectory\n") !=
+                  "5. TODO-4635: Derive the collection surface registry from stdlib declarations\n"
+                  "6. TODO-4636: Delete surfaces.psmeta and its parity scaffolding\n"
+                  "7. TODO-4637: Move `ir_pipeline` test shard into subdirectory\n") !=
         std::string::npos);
   CHECK(todo.find("- TODO-4613: Retire semantic-validator private source locks | track: "
                   "semantic-source-lock-retirement") ==
@@ -4371,7 +4370,7 @@ TEST_CASE("small stdlib wrappers stay source locked to inferred locals") {
   CHECK(vectorStdlib.find(
             "// Canonical vector module with merged implementation.") !=
         std::string::npos);
-  CHECK(vectorStdlib.find("import /std/collections/internal_buffer_checked/*") != std::string::npos);
+  CHECK(vectorStdlib.find("import /std/collections/buffer_checked/*") != std::string::npos);
   // vector<T> constructor uses alloc+initSlot pattern with typed locals (merged from internal_vector)
   CHECK(vectorStdlib.find("[i32] valueCount{values.count()}") != std::string::npos);
   CHECK(vectorStdlib.find("[i32 mut] index{0i32}") != std::string::npos);

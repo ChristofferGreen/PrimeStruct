@@ -482,7 +482,7 @@ TEST_CASE("ir lowerer helper keeps bare pointer builtins inside namespaced stdli
   namespacedCheckedDereferenceCall.kind = primec::Expr::Kind::Call;
   namespacedCheckedDereferenceCall.name = "dereference";
   namespacedCheckedDereferenceCall.namespacePrefix =
-      "/std/collections/internal_buffer_checked";
+      "/std/collections/buffer_checked";
   CHECK(primec::ir_lowerer::getBuiltinPointerName(
       namespacedCheckedDereferenceCall, builtin));
   CHECK(builtin == "dereference");
@@ -494,7 +494,7 @@ TEST_CASE("ir lowerer helper keeps bare pointer builtins inside namespaced stdli
   namespacedUncheckedLocationCall.kind = primec::Expr::Kind::Call;
   namespacedUncheckedLocationCall.name = "location";
   namespacedUncheckedLocationCall.namespacePrefix =
-      "/std/collections/internal_buffer_unchecked";
+      "/std/collections/buffer_unchecked";
   CHECK(primec::ir_lowerer::getBuiltinPointerName(
       namespacedUncheckedLocationCall, builtin));
   CHECK(builtin == "location");
@@ -702,7 +702,7 @@ TEST_CASE("shared return helpers keep scoped stdlib and custom paths builtin") {
   namespacedBufferReturnCall.kind = primec::Expr::Kind::Call;
   namespacedBufferReturnCall.name = "return";
   namespacedBufferReturnCall.namespacePrefix =
-      "/std/collections/internal_buffer_checked";
+      "/std/collections/buffer_checked";
   CHECK(primec::ir_lowerer::isReturnCall(namespacedBufferReturnCall));
   CHECK(primec::emitter::isReturnCall(namespacedBufferReturnCall));
 
@@ -852,7 +852,7 @@ TEST_CASE("shared return helpers keep scoped stdlib and custom paths builtin") {
   namespacedSoaPlusCall.kind = primec::Expr::Kind::Call;
   namespacedSoaPlusCall.name = "plus";
   namespacedSoaPlusCall.namespacePrefix =
-      "/std/collections/internal_buffer_checked";
+      "/std/collections/buffer_checked";
   CHECK(primec::ir_lowerer::isSimpleCallName(namespacedSoaPlusCall, "plus"));
   CHECK(primec::emitter::isSimpleCallName(namespacedSoaPlusCall, "plus"));
 
@@ -1513,7 +1513,7 @@ TEST_CASE("shared helper bodies keep scoped stdlib builtins normalized") {
   namespacedCheckedPlusCall.kind = primec::Expr::Kind::Call;
   namespacedCheckedPlusCall.name = "plus";
   namespacedCheckedPlusCall.namespacePrefix =
-      "/std/collections/internal_buffer_checked";
+      "/std/collections/buffer_checked";
 
   std::string builtinName;
   CHECK(primec::ir_lowerer::getBuiltinOperatorName(
@@ -1523,7 +1523,7 @@ TEST_CASE("shared helper bodies keep scoped stdlib builtins normalized") {
   primec::Expr rootedCheckedPlusCall;
   rootedCheckedPlusCall.kind = primec::Expr::Kind::Call;
   rootedCheckedPlusCall.name =
-      "/std/collections/internal_buffer_checked/plus";
+      "/std/collections/buffer_checked/plus";
   CHECK(primec::ir_lowerer::getBuiltinOperatorName(
       rootedCheckedPlusCall, builtinName));
   CHECK(builtinName == "plus");
@@ -1536,7 +1536,7 @@ TEST_CASE("shared helper bodies keep scoped stdlib builtins normalized") {
   namespacedUncheckedPlusCall.kind = primec::Expr::Kind::Call;
   namespacedUncheckedPlusCall.name = "plus";
   namespacedUncheckedPlusCall.namespacePrefix =
-      "/std/collections/internal_buffer_unchecked";
+      "/std/collections/buffer_unchecked";
 
   CHECK(primec::ir_lowerer::getBuiltinOperatorName(
       namespacedUncheckedPlusCall, builtinName));

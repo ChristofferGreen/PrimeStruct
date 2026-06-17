@@ -77,7 +77,7 @@ This file is the live open-work queue for PrimeStruct.
 
 - TODO-4611: Add reverse cursor traversal API
 - TODO-4612: Add safe extent and cursor code examples
-- TODO-4634: Rename internal buffer modules to canonical buffer names
+- TODO-4635: Derive the collection surface registry from stdlib declarations
 
 ### Priority Lanes
 
@@ -147,7 +147,7 @@ This file is the live open-work queue for PrimeStruct.
   SoaVector identity to `/std/collections/soa/SoaVector`, and TODO-4630 deleted the
   deletable shims),
   collapse the `internal_*` modules into their public modules with visibility
-  instead of naming as the boundary (TODO-4631 through TODO-4633 done; TODO-4634 remaining), and finally
+  instead of naming as the boundary (TODO-4631 through TODO-4634 done), and finally
   derive the surface registry from stdlib declarations and delete the psmeta
   manifest (TODO-4635, TODO-4636).
 - File layout restructuring: restructure the flat file layouts in
@@ -189,29 +189,28 @@ This file is the live open-work queue for PrimeStruct.
 2. TODO-4610: Add forward cursor traversal API
 3. TODO-4611: Add reverse cursor traversal API
 4. TODO-4612: Add safe extent and cursor code examples
-5. TODO-4634: Rename internal buffer modules to canonical buffer names
-6. TODO-4635: Derive the collection surface registry from stdlib declarations
-7. TODO-4636: Delete surfaces.psmeta and its parity scaffolding
-8. TODO-4637: Move `ir_pipeline` test shard into subdirectory
-9. TODO-4638: Move `compile_run` test shard into subdirectory
-10. TODO-4639: Move `semantics` test shard into subdirectory
-12. TODO-4640: Move remaining test shards into subdirectories
-13. TODO-4641: Group `include/primec/` headers by pipeline stage
-14. TODO-4642: Consolidate loose top-level `src/` files into directories
-15. TODO-4643: Fix 8 duplicate test names across files
-16. TODO-4644: Rewrite 53 overlong test names (>120 chars)
-17. TODO-4645: Drop `compiles and runs` prefix from ~740 test names
-18. TODO-4646: Tighten 12 vague/short test names
-19. TODO-4647: Rename 63 opaque shard files with topic suffixes
-20. TODO-4648: Split `SemanticsValidate.cpp` into focused compilation units
-21. TODO-4649: Convert IR lowerer include-only `.h` fragments to `.h/.cpp` pairs
-22. TODO-4650: Convert `TemplateMonomorph*.h` semantics fragments to `.h/.cpp` pairs
-23. TODO-4651: Split oversized test files (10K+ lines, 100+ tests)
-24. TODO-4652: Split oversized single test case bodies (>1000 lines)
-25. TODO-4653: Add dedicated IrPrinter unit tests
-26. TODO-4654: Add [public] annotations to stdlib modules
-27. TODO-4655: Add compile-run tests for language level examples
-28. TODO-4670: Remove collection-specific slot layout helpers (old alias branches)
+5. TODO-4635: Derive the collection surface registry from stdlib declarations
+6. TODO-4636: Delete surfaces.psmeta and its parity scaffolding
+7. TODO-4637: Move `ir_pipeline` test shard into subdirectory
+8. TODO-4638: Move `compile_run` test shard into subdirectory
+9. TODO-4639: Move `semantics` test shard into subdirectory
+10. TODO-4640: Move remaining test shards into subdirectories
+11. TODO-4641: Group `include/primec/` headers by pipeline stage
+12. TODO-4642: Consolidate loose top-level `src/` files into directories
+13. TODO-4643: Fix 8 duplicate test names across files
+14. TODO-4644: Rewrite 53 overlong test names (>120 chars)
+15. TODO-4645: Drop `compiles and runs` prefix from ~740 test names
+16. TODO-4646: Tighten 12 vague/short test names
+17. TODO-4647: Rename 63 opaque shard files with topic suffixes
+18. TODO-4648: Split `SemanticsValidate.cpp` into focused compilation units
+19. TODO-4649: Convert IR lowerer include-only `.h` fragments to `.h/.cpp` pairs
+20. TODO-4650: Convert `TemplateMonomorph*.h` semantics fragments to `.h/.cpp` pairs
+21. TODO-4651: Split oversized test files (10K+ lines, 100+ tests)
+22. TODO-4652: Split oversized single test case bodies (>1000 lines)
+23. TODO-4653: Add dedicated IrPrinter unit tests
+24. TODO-4654: Add [public] annotations to stdlib modules
+25. TODO-4655: Add compile-run tests for language level examples
+26. TODO-4670: Remove collection-specific slot layout helpers (old alias branches)
 29. TODO-4671: Remove isVectorTypeName and isMapTypeName after migration
 
 ### Task Blocks
@@ -312,20 +311,6 @@ This file is the live open-work queue for PrimeStruct.
   - stop_rule: Stop once the example guide and source-lock coverage are
     updated; do not implement missing language features in this leaf.
 
-- [ ] TODO-4634: Rename internal buffer modules to canonical buffer names
-  - owner: ai
-  - created_at: 2026-06-10
-  - phase: Collections naming and manifest retirement
-  - depends_on: TODO-4630
-  - scope: Rename `internal_buffer_checked.prime` and
-    `internal_buffer_unchecked.prime` to `buffer_checked.prime` and
-    `buffer_unchecked.prime` (or one `buffer.prime` if the split carries no
-    value), with non-`[public]` helpers; flip constants and update tests.
-  - acceptance:
-    - No `internal_buffer` spelling remains in stdlib, src, or tests.
-    - Release tests pass.
-  - stop_rule: Stop at the rename; do not change buffer semantics in this
-    leaf.
 
 - [ ] TODO-4635: Derive the collection surface registry from stdlib declarations
   - owner: ai

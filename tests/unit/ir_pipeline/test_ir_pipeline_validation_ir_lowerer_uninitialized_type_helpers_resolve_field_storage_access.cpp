@@ -405,7 +405,7 @@ TEST_CASE("ir lowerer uninitialized type helpers resolve pointer helper storage 
 
   primec::Expr bufferOffset;
   bufferOffset.kind = primec::Expr::Kind::Call;
-  bufferOffset.name = "/std/collections/internal_buffer_unchecked/bufferOffsetUnsafe";
+  bufferOffset.name = "/std/collections/buffer_unchecked/bufferOffsetUnsafe";
   bufferOffset.args = {ptrName, indexExpr};
   primec::Expr derefOffset;
   derefOffset.kind = primec::Expr::Kind::Call;

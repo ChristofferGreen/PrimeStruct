@@ -1,12 +1,12 @@
 #pragma once
 
 inline std::string checkedPointerConformanceImportPath() {
-  return "/std/collections/internal_buffer_checked/*";
+  return "/std/collections/buffer_checked/*";
 }
 
 inline std::string makeCheckedPointerHelperSurfaceSource() {
   return R"(
-import /std/collections/internal_buffer_checked/*
+import /std/collections/buffer_checked/*
 
 [effects(io_out, heap_alloc), return<int>]
 main() {
@@ -26,7 +26,7 @@ main() {
 
 inline std::string makeCheckedPointerGrowthSource() {
   return R"(
-import /std/collections/internal_buffer_checked/*
+import /std/collections/buffer_checked/*
 
 [effects(io_out, heap_alloc), return<int>]
 main() {
@@ -49,8 +49,8 @@ main() {
 
 inline std::string makeCheckedPointerUninitializedPrefixMoveSource() {
   return R"(
-import /std/collections/internal_buffer_checked/*
-import /std/collections/internal_buffer_unchecked/*
+import /std/collections/buffer_checked/*
+import /std/collections/buffer_unchecked/*
 
 [struct]
 Token() {
@@ -103,7 +103,7 @@ main() {
 
 inline std::string makeCheckedPointerOutOfBoundsSource() {
   return R"(
-import /std/collections/internal_buffer_checked/*
+import /std/collections/buffer_checked/*
 
 [effects(heap_alloc), return<int>]
 main() {
@@ -115,7 +115,7 @@ main() {
 
 inline std::string makeCheckedPointerUninitializedOutOfBoundsSource() {
   return R"(
-import /std/collections/internal_buffer_checked/*
+import /std/collections/buffer_checked/*
 
 [struct]
 Token() {

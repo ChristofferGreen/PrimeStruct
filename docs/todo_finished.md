@@ -6,6 +6,27 @@ Legend:
 Finished items are periodically archived here from `docs/todo.md`; section headers record the archive date.
 
 **Todo Completion (June 17, 2026)**
+- [x] TODO-4634: Rename internal buffer modules to canonical buffer names
+  - owner: ai
+  - created_at: 2026-06-10
+  - finished_at: 2026-06-17
+  - phase: Collections naming and manifest retirement
+  - depends_on: TODO-4630
+  - scope: Rename `internal_buffer_checked.prime` and `internal_buffer_unchecked.prime`
+    to `buffer_checked.prime` and `buffer_unchecked.prime` with updated namespace names.
+  - acceptance:
+    - No `internal_buffer` spelling remains in stdlib, src, or tests.
+    - Release tests pass.
+  - stop_rule: Stop at the rename; do not change buffer semantics in this leaf.
+  - evidence: Deleted `internal_buffer_checked.prime` and `internal_buffer_unchecked.prime`.
+    Created `buffer_checked.prime` (namespace `buffer_checked`) and
+    `buffer_unchecked.prime` (namespace `buffer_unchecked`). Updated
+    `StdlibCollectionPaths.h` constants with aliases. Updated `vector.prime` and
+    `soa_storage.prime` imports and call paths. Fixed all `internal_buffer` references
+    in `tests/unit/ir_pipeline/` and `tests/unit/compile_run/` files, PrimeStruct.md
+    table rows, and source-lock test assertions. Also fixed stale `internal_soa_storage`
+    references in `test_ir_pipeline_backends_architecture.h` missed in TODO-4633.
+
 - [x] TODO-4633: Collapse internal SoA modules into soa and soa_storage
   - owner: ai
   - created_at: 2026-06-10

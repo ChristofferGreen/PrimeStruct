@@ -1,12 +1,12 @@
 #pragma once
 
 inline std::string uncheckedPointerConformanceImportPath() {
-  return "/std/collections/internal_buffer_unchecked/*";
+  return "/std/collections/buffer_unchecked/*";
 }
 
 inline std::string makeUncheckedPointerHelperSurfaceSource() {
   return R"(
-import /std/collections/internal_buffer_unchecked/*
+import /std/collections/buffer_unchecked/*
 
 [effects(io_out, heap_alloc), return<int>]
 main() {
@@ -26,7 +26,7 @@ main() {
 
 inline std::string makeUncheckedPointerGrowthSource() {
   return R"(
-import /std/collections/internal_buffer_unchecked/*
+import /std/collections/buffer_unchecked/*
 
 [effects(io_out, heap_alloc), return<int>]
 main() {

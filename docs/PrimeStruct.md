@@ -4308,8 +4308,8 @@ Current `stdlib/std` experimental and internal module classification:
 | `/std/gfx/experimental/*` | Temporary compatibility namespace | Legacy compatibility shim over canonical `/std/gfx/*`; no longer part of the public gfx contract and retained only for targeted compatibility coverage while the residual seam remains importable. | none |
 | `/std/collections/experimental_soa_vector/*` | Retired compatibility namespace | Retired and merged into `/std/collections/soa/*` (TODO-4633); direct source imports are rejected. Ordinary code must use `/std/collections/soa/*`. | none |
 | `/std/collections/experimental_soa_vector_conversions/*` | Retired compatibility namespace | Retired and merged into `/std/collections/soa/*` (TODO-4633); direct source imports are rejected. Conversion helpers are now part of `/std/collections/soa/*`. | none |
-| `/std/collections/internal_buffer_checked/*` | Internal substrate/helper namespace | Explicitly internal checked buffer plumbing for container conformance and memory-wrapper flows, not a stable user-facing stdlib API. | none |
-| `/std/collections/internal_buffer_unchecked/*` | Internal substrate/helper namespace | Explicitly internal unchecked buffer plumbing for container conformance and memory-wrapper flows, not a stable user-facing stdlib API. | none |
+| `/std/collections/buffer_checked/*` | Internal substrate/helper namespace | Explicitly internal checked buffer plumbing for container conformance and memory-wrapper flows, not a stable user-facing stdlib API. Renamed from `internal_buffer_checked` in TODO-4634. | none |
+| `/std/collections/buffer_unchecked/*` | Internal substrate/helper namespace | Explicitly internal unchecked buffer plumbing for container conformance and memory-wrapper flows, not a stable user-facing stdlib API. Renamed from `internal_buffer_unchecked` in TODO-4634. | none |
 | `/std/collections/soa_storage/*` | Internal substrate/helper namespace | Explicitly internal SoA storage/layout plumbing used by wrappers and lowering bridges, not a canonical surface contract. Renamed from `internal_soa_storage` in TODO-4633. | none |
 
 The policy implication is immediate: vector/map/gfx/SoA work should prefer
@@ -5222,8 +5222,8 @@ bad_set() {
   `Pointer<T>`, and requires `index` to be an integer (`i32`, `i64`, or `u64`). Lowering scales the element offset by
   the pointee slot width just like checked `at(...)`, but performs no bounds check; this is the intended primitive for
   relocation/growth code paths in future stdlib-owned containers.
-- **Internal pointer-helper shims:** `/std/collections/internal_buffer_checked/*` and
-  `/std/collections/internal_buffer_unchecked/*` are explicit internal `.prime` helper namespaces used for
+- **Internal pointer-helper shims:** `/std/collections/buffer_checked/*` and
+  `/std/collections/buffer_unchecked/*` are explicit internal `.prime` helper namespaces used for
   container-conformance work. They wrap the qualified memory intrinsics into small alloc/grow/free plus
   checked/unchecked offset, read, and write helpers so future stdlib `vector`/`map` implementations can be proven
   through import-driven VM/native/C++ tests without presenting those helpers as candidate public collection APIs.

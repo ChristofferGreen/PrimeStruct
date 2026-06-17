@@ -3944,13 +3944,13 @@ TEST_CASE("ir lowerer call helpers leave experimental map helper calls ordinary"
 TEST_CASE("ir lowerer call helpers prefer specialized rooted raw defs when semantic rooted rewrites miss") {
   primec::Definition specializedHelperDef;
   specializedHelperDef.fullPath =
-      "/std/collections/internal_buffer_checked/bufferAlloc__t1234";
+      "/std/collections/buffer_checked/bufferAlloc__t1234";
   const std::unordered_map<std::string, const primec::Definition *> defMap = {
       {specializedHelperDef.fullPath, &specializedHelperDef},
   };
 
   const auto resolveExprPath = [&](const primec::Expr &) {
-    return std::string("/std/collections/internal_buffer_checked/bufferAlloc");
+    return std::string("/std/collections/buffer_checked/bufferAlloc");
   };
 
   primec::Expr allocCall;

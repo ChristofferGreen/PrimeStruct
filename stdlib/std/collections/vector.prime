@@ -1,6 +1,6 @@
 // Canonical vector module with merged implementation.
-import /std/collections/internal_buffer_checked/*
-import /std/collections/internal_buffer_unchecked/*
+import /std/collections/buffer_checked/*
+import /std/collections/buffer_unchecked/*
 
 // Internal vector backing implementation behind canonical /std/collections/vector/*.
 // Canonical vector module with merged implementation from internal_vector.
@@ -11,7 +11,7 @@ namespace std {
   Vector<T>() {
     [public i32] fieldCount
     [public i32] fieldCapacity
-    [public Pointer<uninitialized<T>>] data{/std/collections/internal_buffer_checked/bufferAlloc<uninitialized<T>>(1i32)}
+    [public Pointer<uninitialized<T>>] data{/std/collections/buffer_checked/bufferAlloc<uninitialized<T>>(1i32)}
     [bool mut] ownsData{true}
 
     [return<i32>]
@@ -73,7 +73,7 @@ namespace std {
            [Pointer<uninitialized<T>>] dataPtr{/std/collections/vector/vectorDataPtr<T>(this)}
            /std/collections/vector/vectorCheckShape<T>(this)
            /std/collections/vector/vectorDropRange<T>(this, this.fieldCount)
-           /std/collections/internal_buffer_checked/bufferFreeUninitialized<T>(dataPtr)
+           /std/collections/buffer_checked/bufferFreeUninitialized<T>(dataPtr)
            assign(this.ownsData, false)
            assign(this.fieldCount, 0i32)
            assign(this.fieldCapacity, 0i32)
@@ -93,7 +93,7 @@ namespace std {
          /at(empty, index)
        },
        else() { })
-    return(/std/collections/internal_buffer_unchecked/bufferOffsetUnsafe<uninitialized<T>>(values.data, index))
+    return(/std/collections/buffer_unchecked/bufferOffsetUnsafe<uninitialized<T>>(values.data, index))
   }
 
   [return<Pointer<uninitialized<T>>>]
@@ -147,7 +147,7 @@ namespace std {
     [i32 mut] index{0i32}
     while(less_than(index, limit), do() {
       [Pointer<uninitialized<T>> mut] nextSlot{
-          /std/collections/internal_buffer_unchecked/bufferOffsetUnsafe<uninitialized<T>>(dst, index)}
+          /std/collections/buffer_unchecked/bufferOffsetUnsafe<uninitialized<T>>(dst, index)}
       init(dereference(nextSlot), vectorTakeSlot<T>(values, index))
       increment(index)
     })
@@ -162,7 +162,7 @@ namespace std {
     return(/std/collections/vector/Vector<T>{
         [fieldCount] count,
         [fieldCapacity] capacity,
-        [data] /std/collections/internal_buffer_checked/bufferAlloc<uninitialized<T>>(allocCount),
+        [data] /std/collections/buffer_checked/bufferAlloc<uninitialized<T>>(allocCount),
         [ownsData] true})
   }
 
@@ -216,9 +216,9 @@ namespace std {
                  then() { assign(allocCount, 1i32) },
                  else() { })
               [Pointer<uninitialized<T>> mut] grown{
-                  /std/collections/internal_buffer_checked/bufferAlloc<uninitialized<T>>(allocCount)}
+                  /std/collections/buffer_checked/bufferAlloc<uninitialized<T>>(allocCount)}
               vectorMovePrefixToBuffer<T>(grown, values, values.field_count())
-              /std/collections/internal_buffer_checked/bufferFreeUninitialized<T>(values.data)
+              /std/collections/buffer_checked/bufferFreeUninitialized<T>(values.data)
               assign(values.data, grown)
               assign(values.fieldCapacity, capacity)
             },

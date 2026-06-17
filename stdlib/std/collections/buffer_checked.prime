@@ -1,6 +1,6 @@
 namespace std {
   namespace collections {
-  namespace internal_buffer_checked {
+  namespace buffer_checked {
   [public effects(heap_alloc), return<Pointer<T>>]
   bufferAlloc<T>([i32] count) {
     return(/std/intrinsics/memory/alloc<T>(count))

@@ -753,7 +753,7 @@ TEST_CASE("ir lowerer arithmetic helper allows scoped buffer byte offsets on the
   primec::Expr expr;
   expr.kind = primec::Expr::Kind::Call;
   expr.name = "plus";
-  expr.namespacePrefix = "/std/collections/internal_buffer_unchecked";
+  expr.namespacePrefix = "/std/collections/buffer_unchecked";
   expr.args = {left, right};
 
   std::vector<primec::IrInstruction> instructions;

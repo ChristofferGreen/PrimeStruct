@@ -107,14 +107,13 @@ TEST_CASE("design doc records stdlib de-experimentalization policy") {
   CHECK(design.find("/std/collections/experimental_vector/*") != std::string::npos);
   CHECK(design.find("Internal vector backing adapter used by canonical `/std/collections/vector/*`") !=
         std::string::npos);
-  CHECK(design.find("Internal map backing module used by canonical `/std/collections/map/*`") !=
-        std::string::npos);
+  CHECK(design.find("/std/collections/experimental_map/*") != std::string::npos);
   CHECK(design.find("/std/gfx/experimental/*") != std::string::npos);
   CHECK(design.find("Legacy compatibility shim over canonical `/std/gfx/*`") != std::string::npos);
   CHECK(design.find("no longer part of the public gfx contract") != std::string::npos);
-  CHECK(design.find("/std/collections/internal_buffer_checked/*") != std::string::npos);
-  CHECK(design.find("/std/collections/internal_buffer_unchecked/*") != std::string::npos);
-  CHECK(design.find("/std/collections/internal_soa_storage/*") != std::string::npos);
+  CHECK(design.find("/std/collections/buffer_checked/*") != std::string::npos);
+  CHECK(design.find("/std/collections/buffer_unchecked/*") != std::string::npos);
+  CHECK(design.find("/std/collections/soa_storage/*") != std::string::npos);
 }
 
 TEST_CASE("design doc records soa public collection contract") {
@@ -135,7 +134,7 @@ TEST_CASE("design doc records soa public collection contract") {
         std::string::npos);
   CHECK(design.find("Rejected compatibility namespace") != std::string::npos);
   CHECK(design.find("/std/collections/experimental_soa_vector/*") != std::string::npos);
-  CHECK(design.find("/std/collections/internal_soa_storage/*") != std::string::npos);
+  CHECK(design.find("/std/collections/soa_storage/*") != std::string::npos);
 }
 
 TEST_CASE("stdlib surface registry stays source locked") {
