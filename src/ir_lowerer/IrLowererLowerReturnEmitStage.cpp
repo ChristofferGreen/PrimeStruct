@@ -281,6 +281,10 @@ bool runLowerReturnEmitStage(const LowerReturnEmitStageInput &input,
             .isVectorCapacityCall = [&](const Expr &callExpr, const LocalMap &callLocals) {
               return isVectorCapacityCall(callExpr, callLocals);
             },
+            .resolveStructSlotLayout =
+                [&](const std::string &structPath, StructSlotLayoutInfo &layoutOut) {
+                  return resolveStructSlotLayout(structPath, layoutOut);
+                },
             .resolveMethodCallDefinition = [&](const Expr &callExpr, const LocalMap &callLocals) {
               return resolveMethodCallDefinition(callExpr, callLocals);
             },

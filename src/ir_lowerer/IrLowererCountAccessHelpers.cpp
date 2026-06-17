@@ -1654,15 +1654,33 @@ CountAccessCallEmitResult tryEmitCountAccessCall(
   const auto emitDynamicVectorCount = [&](const Expr &target) {
     if (target.kind == Expr::Kind::Name) {
       auto it = localsIn.find(target.name);
-      if (it != localsIn.end() &&
-          !it->second.isArgsPack &&
-          (isExperimentalSoaVectorStructLocal(it->second) ||
-           (it->second.isSoaVector && !it->second.usesBuiltinCollectionLayout))) {
-        emitInstruction(IrOpcode::LoadLocal, static_cast<uint64_t>(it->second.index));
-        emitInstruction(IrOpcode::PushI64, 2ull * IrSlotBytes);
-        emitInstruction(IrOpcode::AddI64, 0);
-        emitInstruction(IrOpcode::LoadIndirect, 0);
-        return true;
+      if (it != localsIn.end() && !it->second.isArgsPack) {
+        if (isExperimentalSoaVectorStructLocal(it->second) ||
+            (it->second.isSoaVector && !it->second.usesBuiltinCollectionLayout)) {
+          emitInstruction(IrOpcode::LoadLocal, static_cast<uint64_t>(it->second.index));
+          emitInstruction(IrOpcode::PushI64, 2ull * IrSlotBytes);
+          emitInstruction(IrOpcode::AddI64, 0);
+          emitInstruction(IrOpcode::LoadIndirect, 0);
+          return true;
+        }
+        // Canonical vector: count (fieldCount) is at slot 1 after the implicit type tag at slot 0.
+        if (it->second.kind == LocalInfo::Kind::Vector && !it->second.isSoaVector) {
+          emitInstruction(IrOpcode::LoadLocal, static_cast<uint64_t>(it->second.index));
+          emitInstruction(IrOpcode::PushI64, IrSlotBytes);
+          emitInstruction(IrOpcode::AddI64, 0);
+          emitInstruction(IrOpcode::LoadIndirect, 0);
+          return true;
+        }
+        const std::string canonicalVecPath = vectorBackingTypePath();
+        if (it->second.kind == LocalInfo::Kind::Value &&
+            (it->second.structTypeName == canonicalVecPath ||
+             it->second.structTypeName.rfind(canonicalVecPath + "__", 0) == 0)) {
+          emitInstruction(IrOpcode::LoadLocal, static_cast<uint64_t>(it->second.index));
+          emitInstruction(IrOpcode::PushI64, IrSlotBytes);
+          emitInstruction(IrOpcode::AddI64, 0);
+          emitInstruction(IrOpcode::LoadIndirect, 0);
+          return true;
+        }
       }
     }
     if (!emitDynamicVectorHeaderBase(target)) {
@@ -1672,6 +1690,25 @@ CountAccessCallEmitResult tryEmitCountAccessCall(
     return true;
   };
   const auto emitDynamicVectorCapacity = [&](const Expr &target) {
+    if (target.kind == Expr::Kind::Name) {
+      auto it = localsIn.find(target.name);
+      if (it != localsIn.end() && !it->second.isArgsPack) {
+        // Canonical vector: capacity (fieldCapacity) is at slot 2 after type tag (0) and count (1).
+        const std::string canonicalVecPath = vectorBackingTypePath();
+        const bool isCanonicalVectorLocal =
+            (it->second.kind == LocalInfo::Kind::Vector && !it->second.isSoaVector) ||
+            (it->second.kind == LocalInfo::Kind::Value &&
+             (it->second.structTypeName == canonicalVecPath ||
+              it->second.structTypeName.rfind(canonicalVecPath + "__", 0) == 0));
+        if (isCanonicalVectorLocal) {
+          emitInstruction(IrOpcode::LoadLocal, static_cast<uint64_t>(it->second.index));
+          emitInstruction(IrOpcode::PushI64, 2ull * IrSlotBytes);
+          emitInstruction(IrOpcode::AddI64, 0);
+          emitInstruction(IrOpcode::LoadIndirect, 0);
+          return true;
+        }
+      }
+    }
     if (!emitDynamicVectorHeaderBase(target)) {
       return false;
     }
@@ -1875,6 +1912,26 @@ CountAccessCallEmitResult tryEmitCountAccessCall(
       }
       if (it != localsIn.end() && it->second.isArgsPack) {
         emitInstruction(IrOpcode::LoadLocal, static_cast<uint64_t>(it->second.index));
+        emitInstruction(IrOpcode::LoadIndirect, 0);
+        return CountAccessCallEmitResult::Emitted;
+      }
+      // Canonical vector: count (fieldCount) is at slot 1, not slot 0.
+      if (it != localsIn.end() && !it->second.isArgsPack &&
+          it->second.kind == LocalInfo::Kind::Vector && !it->second.isSoaVector) {
+        emitInstruction(IrOpcode::LoadLocal, static_cast<uint64_t>(it->second.index));
+        emitInstruction(IrOpcode::PushI64, IrSlotBytes);
+        emitInstruction(IrOpcode::AddI64, 0);
+        emitInstruction(IrOpcode::LoadIndirect, 0);
+        return CountAccessCallEmitResult::Emitted;
+      }
+      const std::string canonicalVecPath = vectorBackingTypePath();
+      if (it != localsIn.end() && !it->second.isArgsPack &&
+          it->second.kind == LocalInfo::Kind::Value &&
+          (it->second.structTypeName == canonicalVecPath ||
+           it->second.structTypeName.rfind(canonicalVecPath + "__", 0) == 0)) {
+        emitInstruction(IrOpcode::LoadLocal, static_cast<uint64_t>(it->second.index));
+        emitInstruction(IrOpcode::PushI64, IrSlotBytes);
+        emitInstruction(IrOpcode::AddI64, 0);
         emitInstruction(IrOpcode::LoadIndirect, 0);
         return CountAccessCallEmitResult::Emitted;
       }

@@ -24,6 +24,17 @@ bool isCollectionVectorRecordTypePath(std::string_view path) {
   return path == vectorTypePath || path.rfind(vectorTypePath + "__", 0) == 0;
 }
 
+std::string resolveVectorSurfaceImplementationPath(std::string_view memberName) {
+  const std::string root = collectionMemberRoot("vector");
+  if (memberName == "push") return root + "vectorPush";
+  if (memberName == "pop") return root + "vectorPop";
+  if (memberName == "reserve") return root + "vectorReserve";
+  if (memberName == "clear") return root + "vectorClear";
+  if (memberName == "remove_at") return root + "vectorRemoveAt";
+  if (memberName == "remove_swap") return root + "vectorRemoveSwap";
+  return {};
+}
+
 std::string resolveStatementCallPathWithoutFallbackProbes(const Expr &expr) {
   if (!expr.name.empty() && expr.name.front() == '/') {
     return expr.name;
@@ -721,10 +732,30 @@ DirectCallStatementEmitResult tryEmitDirectCallStatement(
     }
     const std::string resolvedTarget =
         findSemanticProductDirectCallTarget(semanticProgram, callExpr);
-    if (resolvedTarget.empty()) {
-      return nullptr;
+    if (!resolvedTarget.empty()) {
+      if (const Definition *callee = resolveGeneratedDefinitionPath(callExpr, resolvedTarget);
+          callee != nullptr) {
+        return callee;
+      }
     }
-    return resolveGeneratedDefinitionPath(callExpr, resolvedTarget);
+    // For canonical vector surface helper paths (e.g. /std/collections/vector/push),
+    // the implementation function has a different name (e.g. vectorPush). Try that.
+    {
+      std::string memberName;
+      if (isCanonicalPublishedStdlibSurfaceHelperPath(
+              rawPath, StdlibSurfaceId::CollectionsManifestSurface0) &&
+          resolvePublishedStdlibSurfaceMemberName(
+              rawPath, StdlibSurfaceId::CollectionsManifestSurface0, memberName)) {
+        const std::string implPath = resolveVectorSurfaceImplementationPath(memberName);
+        if (!implPath.empty()) {
+          if (const Definition *callee = resolveGeneratedDefinitionPath(callExpr, implPath);
+              callee != nullptr) {
+            return callee;
+          }
+        }
+      }
+    }
+    return nullptr;
   };
   auto resolveMethodStatementDefinition = [&](const Expr &callExpr) -> const Definition * {
     if (const Definition *callee = resolveMethodCallDefinition(callExpr, localsIn);

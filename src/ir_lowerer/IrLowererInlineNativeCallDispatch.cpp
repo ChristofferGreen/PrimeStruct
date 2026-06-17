@@ -1446,12 +1446,23 @@ InlineCallDispatchResult tryEmitInlineCallDispatchWithLocals(
 
   bool deferVectorReturningMutatorCall = false;
   auto isVectorMutatorCallName = [&](const Expr &callExpr) {
-    return isUnqualifiedCollectionBuiltinName(callExpr, "push") ||
-           isUnqualifiedCollectionBuiltinName(callExpr, "pop") ||
-           isUnqualifiedCollectionBuiltinName(callExpr, "reserve") ||
-           isUnqualifiedCollectionBuiltinName(callExpr, "clear") ||
-           isUnqualifiedCollectionBuiltinName(callExpr, "remove_at") ||
-           isUnqualifiedCollectionBuiltinName(callExpr, "remove_swap");
+    if (isUnqualifiedCollectionBuiltinName(callExpr, "push") ||
+        isUnqualifiedCollectionBuiltinName(callExpr, "pop") ||
+        isUnqualifiedCollectionBuiltinName(callExpr, "reserve") ||
+        isUnqualifiedCollectionBuiltinName(callExpr, "clear") ||
+        isUnqualifiedCollectionBuiltinName(callExpr, "remove_at") ||
+        isUnqualifiedCollectionBuiltinName(callExpr, "remove_swap")) {
+      return true;
+    }
+    // Qualified canonical vector mutator calls (e.g. /std/collections/vector/push)
+    // emitted by inlined stdlib functions like to_aos.
+    std::string resolvedName;
+    if (resolveVectorHelperAliasName(callExpr, resolvedName)) {
+      return resolvedName == "push" || resolvedName == "pop" ||
+             resolvedName == "reserve" || resolvedName == "clear" ||
+             resolvedName == "remove_at" || resolvedName == "remove_swap";
+    }
+    return false;
   };
   auto tryEmitVectorMutatorCallFormExpr = [&]() {
     const bool isVectorMutatorCall = isVectorMutatorCallName(expr);

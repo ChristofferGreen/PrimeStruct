@@ -6,6 +6,7 @@
 #include <vector>
 
 #include "IrLowererStatementCallHelpers.h"
+#include "IrLowererStructTypeHelpers.h"
 
 namespace primec::ir_lowerer {
 
@@ -28,6 +29,7 @@ struct LowerStatementsCallsStepInput {
   std::function<bool(const Expr &, const LocalMap &)> isArrayCountCall;
   std::function<bool(const Expr &, const LocalMap &)> isStringCountCall;
   std::function<bool(const Expr &, const LocalMap &)> isVectorCapacityCall;
+  ResolveStructSlotLayoutFn resolveStructSlotLayout;
   std::function<const Definition *(const Expr &, const LocalMap &)> resolveMethodCallDefinition;
   std::function<const Definition *(const Expr &)> resolveDefinitionCall;
   std::function<bool(const std::string &, ReturnInfo &)> getReturnInfo;

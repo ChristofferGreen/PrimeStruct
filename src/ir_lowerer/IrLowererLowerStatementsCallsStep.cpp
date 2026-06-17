@@ -3,6 +3,7 @@
 #include <string_view>
 
 #include "IrLowererCallHelpers.h"
+#include "IrLowererFlowHelpers.h"
 #include "IrLowererSetupTypeCollectionHelpers.h"
 
 namespace primec::ir_lowerer {
@@ -205,6 +206,8 @@ VectorMutationStatementEmitResult tryEmitCanonicalVectorMutationStatement(
 
     if (helperName == "clear") {
       instructions.push_back({IrOpcode::LoadLocal, static_cast<uint64_t>(valuesPtrLocal)});
+      instructions.push_back({IrOpcode::PushI64, IrSlotBytes});
+      instructions.push_back({IrOpcode::AddI64, 0});
       instructions.push_back({IrOpcode::PushI32, 0});
       instructions.push_back({IrOpcode::StoreIndirect, 0});
       instructions.push_back({IrOpcode::Pop, 0});
@@ -217,6 +220,8 @@ VectorMutationStatementEmitResult tryEmitCanonicalVectorMutationStatement(
     }
     const int32_t countLocal = input.allocTempLocal();
     instructions.push_back({IrOpcode::LoadLocal, static_cast<uint64_t>(valuesPtrLocal)});
+    instructions.push_back({IrOpcode::PushI64, IrSlotBytes});
+    instructions.push_back({IrOpcode::AddI64, 0});
     instructions.push_back({IrOpcode::LoadIndirect, 0});
     instructions.push_back({IrOpcode::StoreLocal, static_cast<uint64_t>(countLocal)});
 
@@ -229,6 +234,8 @@ VectorMutationStatementEmitResult tryEmitCanonicalVectorMutationStatement(
     instructions[okJump].imm = static_cast<uint64_t>(instructions.size());
 
     instructions.push_back({IrOpcode::LoadLocal, static_cast<uint64_t>(valuesPtrLocal)});
+    instructions.push_back({IrOpcode::PushI64, IrSlotBytes});
+    instructions.push_back({IrOpcode::AddI64, 0});
     instructions.push_back({IrOpcode::LoadLocal, static_cast<uint64_t>(countLocal)});
     instructions.push_back({IrOpcode::PushI32, 1});
     instructions.push_back({IrOpcode::SubI32, 0});
@@ -261,10 +268,6 @@ VectorMutationStatementEmitResult tryEmitCanonicalVectorMutationStatement(
   if (!isSemanticMatch) {
     return VectorMutationStatementEmitResult::NotMatched;
   }
-  if (targetInfo.elemSlotCount > 1) {
-    return VectorMutationStatementEmitResult::NotMatched;
-  }
-
   const LocalInfo::ValueKind payloadKind = input.inferExprKind(*payloadArg, localsIn);
   if (isVectorIndexedRemovalHelperName(helperName)) {
     if (stmt.isMethodCall && payloadKind != LocalInfo::ValueKind::Int32) {
@@ -280,12 +283,34 @@ VectorMutationStatementEmitResult tryEmitCanonicalVectorMutationStatement(
     }
     return VectorMutationStatementEmitResult::NotMatched;
   }
+
+  // elemSlotCountForBuffer: slots per element in the backing buffer.
+  // For primitive elements this is 1; for struct elements it's the struct's totalSlots.
+  // Must be resolved before defining lambdas that capture it.
+  int32_t elemSlotCountForBuffer = 1;
   if (helperName == "push") {
-    if (payloadKind == LocalInfo::ValueKind::Unknown ||
-        payloadKind == LocalInfo::ValueKind::String ||
-        (targetInfo.elemKind != LocalInfo::ValueKind::Unknown &&
-         targetInfo.elemKind != payloadKind)) {
-      return VectorMutationStatementEmitResult::NotMatched;
+    if (payloadKind == LocalInfo::ValueKind::Unknown) {
+      // Struct push: resolve the element slot count from the payload struct layout.
+      if (!input.inferStructExprPath || !input.resolveStructSlotLayout) {
+        return VectorMutationStatementEmitResult::NotMatched;
+      }
+      const std::string payloadStructPath = input.inferStructExprPath(*payloadArg, localsIn);
+      if (payloadStructPath.empty()) {
+        return VectorMutationStatementEmitResult::NotMatched;
+      }
+      StructSlotLayoutInfo payloadLayout;
+      if (!input.resolveStructSlotLayout(payloadStructPath, payloadLayout) ||
+          payloadLayout.totalSlots <= 0) {
+        return VectorMutationStatementEmitResult::NotMatched;
+      }
+      elemSlotCountForBuffer = payloadLayout.totalSlots;
+    } else {
+      // Primitive push: check type compatibility.
+      if (payloadKind == LocalInfo::ValueKind::String ||
+          (targetInfo.elemKind != LocalInfo::ValueKind::Unknown &&
+           targetInfo.elemKind != payloadKind)) {
+        return VectorMutationStatementEmitResult::NotMatched;
+      }
     }
   }
 
@@ -317,9 +342,9 @@ VectorMutationStatementEmitResult tryEmitCanonicalVectorMutationStatement(
   auto emitVectorShapeChecks = [&](int32_t valuesPtrLocal,
                                    int32_t countLocal,
                                    int32_t capacityLocal) {
-    emitFieldLoad(valuesPtrLocal, 0);
-    instructions.push_back({IrOpcode::StoreLocal, static_cast<uint64_t>(countLocal)});
     emitFieldLoad(valuesPtrLocal, 1);
+    instructions.push_back({IrOpcode::StoreLocal, static_cast<uint64_t>(countLocal)});
+    emitFieldLoad(valuesPtrLocal, 2);
     instructions.push_back({IrOpcode::StoreLocal, static_cast<uint64_t>(capacityLocal)});
 
     instructions.push_back({IrOpcode::LoadLocal, static_cast<uint64_t>(countLocal)});
@@ -343,13 +368,17 @@ VectorMutationStatementEmitResult tryEmitCanonicalVectorMutationStatement(
     emitTrapIfStackTrue(input.emitVectorCapacityExceeded);
   };
   auto emitReallocDataToCapacity = [&](int32_t valuesPtrLocal, int32_t capacityLocal) {
-    emitFieldAddress(valuesPtrLocal, 2);
-    emitFieldLoad(valuesPtrLocal, 2);
+    emitFieldAddress(valuesPtrLocal, 3);
+    emitFieldLoad(valuesPtrLocal, 3);
     instructions.push_back({IrOpcode::LoadLocal, static_cast<uint64_t>(capacityLocal)});
+    if (elemSlotCountForBuffer > 1) {
+      instructions.push_back({IrOpcode::PushI32, static_cast<uint64_t>(elemSlotCountForBuffer)});
+      instructions.push_back({IrOpcode::MulI32, 0});
+    }
     instructions.push_back({IrOpcode::HeapRealloc, 0});
     instructions.push_back({IrOpcode::StoreIndirect, 0});
     instructions.push_back({IrOpcode::Pop, 0});
-    emitFieldStoreFromLocal(valuesPtrLocal, 1, capacityLocal);
+    emitFieldStoreFromLocal(valuesPtrLocal, 2, capacityLocal);
   };
 
   const int32_t valuesPtrLocal = input.allocTempLocal();
@@ -419,16 +448,27 @@ VectorMutationStatementEmitResult tryEmitCanonicalVectorMutationStatement(
   emitReallocDataToCapacity(valuesPtrLocal, nextCapacityLocal);
   instructions[skipGrowJump].imm = static_cast<uint64_t>(instructions.size());
 
-  emitFieldLoad(valuesPtrLocal, 2);
-  instructions.push_back({IrOpcode::LoadLocal, static_cast<uint64_t>(countLocal)});
-  instructions.push_back({IrOpcode::PushI32, IrSlotBytesI32});
-  instructions.push_back({IrOpcode::MulI32, 0});
-  instructions.push_back({IrOpcode::AddI64, 0});
-  instructions.push_back({IrOpcode::LoadLocal, static_cast<uint64_t>(payloadLocal)});
-  instructions.push_back({IrOpcode::StoreIndirect, 0});
-  instructions.push_back({IrOpcode::Pop, 0});
+  if (elemSlotCountForBuffer > 1) {
+    const int32_t targetAddrLocal = input.allocTempLocal();
+    emitFieldLoad(valuesPtrLocal, 3);
+    instructions.push_back({IrOpcode::LoadLocal, static_cast<uint64_t>(countLocal)});
+    instructions.push_back({IrOpcode::PushI32, static_cast<uint64_t>(elemSlotCountForBuffer * IrSlotBytesI32)});
+    instructions.push_back({IrOpcode::MulI32, 0});
+    instructions.push_back({IrOpcode::AddI64, 0});
+    instructions.push_back({IrOpcode::StoreLocal, static_cast<uint64_t>(targetAddrLocal)});
+    emitStructCopyFromPtrs(instructions, targetAddrLocal, payloadLocal, elemSlotCountForBuffer);
+  } else {
+    emitFieldLoad(valuesPtrLocal, 3);
+    instructions.push_back({IrOpcode::LoadLocal, static_cast<uint64_t>(countLocal)});
+    instructions.push_back({IrOpcode::PushI32, IrSlotBytesI32});
+    instructions.push_back({IrOpcode::MulI32, 0});
+    instructions.push_back({IrOpcode::AddI64, 0});
+    instructions.push_back({IrOpcode::LoadLocal, static_cast<uint64_t>(payloadLocal)});
+    instructions.push_back({IrOpcode::StoreIndirect, 0});
+    instructions.push_back({IrOpcode::Pop, 0});
+  }
 
-  emitFieldAddress(valuesPtrLocal, 0);
+  emitFieldAddress(valuesPtrLocal, 1);
   instructions.push_back({IrOpcode::LoadLocal, static_cast<uint64_t>(countLocal)});
   instructions.push_back({IrOpcode::PushI32, 1});
   instructions.push_back({IrOpcode::AddI32, 0});

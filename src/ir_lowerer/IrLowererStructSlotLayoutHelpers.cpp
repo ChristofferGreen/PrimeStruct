@@ -338,6 +338,23 @@ bool resolveStructSlotLayoutFromDefinitionFields(
       layoutStack.erase(structPath);
       return true;
     }
+    {
+      const std::string canonicalVectorPath = vectorBackingTypePath();
+      if (structPath == canonicalVectorPath ||
+          structPath.rfind(canonicalVectorPath + "__", 0) == 0) {
+        StructSlotLayoutInfo layout;
+        layout.structPath = structPath;
+        layout.totalSlots = 5;
+        layout.fields.push_back({"fieldCount", 1, 1, LocalInfo::ValueKind::Int32, ""});
+        layout.fields.push_back({"fieldCapacity", 2, 1, LocalInfo::ValueKind::Int32, ""});
+        layout.fields.push_back({"data", 3, 1, LocalInfo::ValueKind::Int64, ""});
+        layout.fields.push_back({"ownsData", 4, 1, LocalInfo::ValueKind::Bool, ""});
+        layoutCache.emplace(structPath, layout);
+        out = layout;
+        layoutStack.erase(structPath);
+        return true;
+      }
+    }
     error = "native backend cannot resolve struct layout: " + structPath;
     layoutStack.erase(structPath);
     return false;

@@ -18,7 +18,10 @@ namespace primec::ir_lowerer {
 namespace {
 
 bool isCollectionVectorRecordPath(const std::string &structTypeName) {
-  return isExperimentalCollectionTypeName(structTypeName, "vector", "Vector");
+  const std::string vectorTypePath = vectorBackingTypePath();
+  return structTypeName == vectorTypePath ||
+         structTypeName.rfind(vectorTypePath + "__", 0) == 0 ||
+         isExperimentalCollectionTypeName(structTypeName, "vector", "Vector");
 }
 
 std::string resolveScopedCallPath(const Expr &expr) {
