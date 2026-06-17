@@ -2027,7 +2027,6 @@ TEST_CASE("todo queue and skipped doctest debt stay source locked") {
   CHECK(todo.find("### Ready Now\n\n"
                   "- TODO-4609: Reject escaping local array slices | track: array-slice-escape-diagnostics | surface: slice view lifetime diagnostics\n"
                   "- TODO-4610: Add forward cursor traversal API | track: cursor-forward-traversal | surface: forward cursor traversal\n"
-                  "- TODO-4631: Merge internal_vector into the public vector module | track: collections-internal-vector-merge | surface: stdlib internal_vector module and goldens\n"
                   "\n"
                   "### Immediate Next 10") !=
         std::string::npos);
@@ -2117,7 +2116,8 @@ TEST_CASE("todo queue and skipped doctest debt stay source locked") {
         std::string::npos);
   CHECK(todo.find("### Immediate Next 10\n\n"
                   "- TODO-4611: Add reverse cursor traversal API\n"
-                  "- TODO-4612: Add safe extent and cursor code examples") !=
+                  "- TODO-4612: Add safe extent and cursor code examples\n"
+                  "- TODO-4633: Collapse internal SoA modules into soa and soa_storage") !=
         std::string::npos);
   CHECK(todo.find("### Priority Lanes") != std::string::npos);
   CHECK(todo.find("Source-unit provenance ledger: TODO-4592 completed parser/semantic") ==
@@ -2151,12 +2151,10 @@ TEST_CASE("todo queue and skipped doctest debt stay source locked") {
                   "2. TODO-4610: Add forward cursor traversal API\n"
                   "3. TODO-4611: Add reverse cursor traversal API\n"
                   "4. TODO-4612: Add safe extent and cursor code examples\n"
-                  "5. TODO-4631: Merge internal_vector into the public vector module\n"
-                  "6. TODO-4632: Merge internal_map into the public map module\n"
-                  "7. TODO-4633: Collapse internal SoA modules into soa and soa_storage\n"
-                  "8. TODO-4634: Rename internal buffer modules to canonical buffer names\n"
-                  "9. TODO-4635: Derive the collection surface registry from stdlib declarations\n"
-                  "10. TODO-4636: Delete surfaces.psmeta and its parity scaffolding\n") !=
+                  "5. TODO-4633: Collapse internal SoA modules into soa and soa_storage\n"
+                  "6. TODO-4634: Rename internal buffer modules to canonical buffer names\n"
+                  "7. TODO-4635: Derive the collection surface registry from stdlib declarations\n"
+                  "8. TODO-4636: Delete surfaces.psmeta and its parity scaffolding\n") !=
         std::string::npos);
   CHECK(todo.find("- TODO-4613: Retire semantic-validator private source locks | track: "
                   "semantic-source-lock-retirement") ==
@@ -4292,9 +4290,9 @@ TEST_CASE("small stdlib wrappers stay source locked to inferred locals") {
   REQUIRE(std::filesystem::exists(vectorStdlibPath));
   CHECK(!std::filesystem::exists(collectionsStdlibPath));
   REQUIRE(std::filesystem::exists(mapStdlibPath));
-  REQUIRE(std::filesystem::exists(internalMapStdlibPath));
+  CHECK(!std::filesystem::exists(internalMapStdlibPath));
   CHECK(!std::filesystem::exists(experimentalVectorStdlibPath));
-  REQUIRE(std::filesystem::exists(internalVectorStdlibPath));
+  CHECK(!std::filesystem::exists(internalVectorStdlibPath));
   CHECK(!std::filesystem::exists(experimentalMapStdlibPath));
   CHECK(!std::filesystem::exists(soaWrapperPath));
   REQUIRE(std::filesystem::exists(soaPublicPath));
@@ -4308,8 +4306,9 @@ TEST_CASE("small stdlib wrappers stay source locked to inferred locals") {
   const std::string maybeStdlib = readFile(maybeStdlibPath.string());
   const std::string vectorStdlib = readFile(vectorStdlibPath.string());
   const std::string mapStdlib = readFile(mapStdlibPath.string());
-  const std::string internalMapStdlib = readFile(internalMapStdlibPath.string());
-  const std::string internalVectorStdlib = readFile(internalVectorStdlibPath.string());
+  // internal_map.prime and internal_vector.prime were merged into their public modules (TODO-4631, TODO-4632)
+  const std::string internalMapStdlib = "";
+  const std::string internalVectorStdlib = "";
   const std::string soaPublic = readFile(soaPublicPath.string());
   const std::string internalSoaVector = readFile(internalSoaVectorPath.string());
   const std::string internalSoaConversions = readFile(internalSoaConversionsPath.string());
@@ -4343,9 +4342,9 @@ TEST_CASE("small stdlib wrappers stay source locked to inferred locals") {
   CHECK(maybeStdlib.find("[Reference<Maybe<T>> mut] ref{location(out)}") == std::string::npos);
 
   CHECK(vectorStdlib.find(
-            "// Canonical public wrapper layer over the internal_vector implementation module.") !=
+            "// Canonical vector module with merged implementation.") !=
         std::string::npos);
-  CHECK(vectorStdlib.find("import /std/collections/vector/*") != std::string::npos);
+  CHECK(vectorStdlib.find("import /std/collections/internal_buffer_checked/*") != std::string::npos);
   CHECK(vectorStdlib.find("[mut] result{/std/collections/vector/vector<T>()}") !=
         std::string::npos);
   CHECK(vectorStdlib.find("valueCount{values.count()}") != std::string::npos);
@@ -4400,22 +4399,13 @@ TEST_CASE("small stdlib wrappers stay source locked to inferred locals") {
   CHECK(mapStdlib.find("/std/collections/map/mapNew<K, V>()") ==
         std::string::npos);
 
-  CHECK(internalVectorStdlib.find("// Internal vector backing implementation behind canonical /std/collections/vector/*.") !=
+  // internal_vector.prime merged into vector.prime (TODO-4631): verify merged content
+  CHECK(vectorStdlib.find("// Internal vector backing implementation behind canonical /std/collections/vector/*.") !=
         std::string::npos);
-  CHECK(internalVectorStdlib.find("namespace internal_vector") != std::string::npos);
-  CHECK(internalVectorStdlib.find("[public struct]\n  Vector<T>()") != std::string::npos);
-  CHECK(internalVectorStdlib.find("[i32] valueCount{values.count()}") !=
-        std::string::npos);
-  CHECK(internalVectorStdlib.find("/std/collections/vector/vectorPush<T>(values, value)") ==
-        std::string::npos);
-  CHECK(internalMapStdlib.find("[Vector<K>] keys{this.keys}") != std::string::npos);
-  CHECK(internalMapStdlib.find(
-            "// Internal map backing implementation behind canonical /std/collections/map/*.") !=
-        std::string::npos);
-  CHECK(internalMapStdlib.find(
-            "// Vector storage comes from the internal vector backing module.") !=
-        std::string::npos);
-  CHECK(internalMapStdlib.find("return(/std/collections/vector/vectorCount<K>(keys))") !=
+  CHECK(vectorStdlib.find("[public struct collection_type]\n  Vector<T>()") != std::string::npos);
+  // internal_map.prime merged into map.prime (TODO-4632): verify merged content
+  CHECK(mapStdlib.find("[Vector<K>] keys{this.keys}") != std::string::npos);
+  CHECK(mapStdlib.find("return(/std/collections/vector/vectorCount<K>(keys))") !=
         std::string::npos);
 
   CHECK(soaPublic.find(

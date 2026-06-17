@@ -77,7 +77,7 @@ This file is the live open-work queue for PrimeStruct.
 
 - TODO-4611: Add reverse cursor traversal API
 - TODO-4612: Add safe extent and cursor code examples
-- TODO-4632: Merge internal_map into the public map module
+- TODO-4633: Collapse internal SoA modules into soa and soa_storage
 
 ### Priority Lanes
 
@@ -189,32 +189,31 @@ This file is the live open-work queue for PrimeStruct.
 2. TODO-4610: Add forward cursor traversal API
 3. TODO-4611: Add reverse cursor traversal API
 4. TODO-4612: Add safe extent and cursor code examples
-5. TODO-4632: Merge internal_map into the public map module
-6. TODO-4633: Collapse internal SoA modules into soa and soa_storage
-7. TODO-4634: Rename internal buffer modules to canonical buffer names
-8. TODO-4635: Derive the collection surface registry from stdlib declarations
-9. TODO-4636: Delete surfaces.psmeta and its parity scaffolding
-10. TODO-4637: Move `ir_pipeline` test shard into subdirectory
-11. TODO-4638: Move `compile_run` test shard into subdirectory
-12. TODO-4639: Move `semantics` test shard into subdirectory
-13. TODO-4640: Move remaining test shards into subdirectories
-14. TODO-4641: Group `include/primec/` headers by pipeline stage
-15. TODO-4642: Consolidate loose top-level `src/` files into directories
-16. TODO-4643: Fix 8 duplicate test names across files
-17. TODO-4644: Rewrite 53 overlong test names (>120 chars)
-18. TODO-4645: Drop `compiles and runs` prefix from ~740 test names
-19. TODO-4646: Tighten 12 vague/short test names
-21. TODO-4647: Rename 63 opaque shard files with topic suffixes
-22. TODO-4648: Split `SemanticsValidate.cpp` into focused compilation units
-23. TODO-4649: Convert IR lowerer include-only `.h` fragments to `.h/.cpp` pairs
-24. TODO-4650: Convert `TemplateMonomorph*.h` semantics fragments to `.h/.cpp` pairs
-25. TODO-4651: Split oversized test files (10K+ lines, 100+ tests)
-26. TODO-4652: Split oversized single test case bodies (>1000 lines)
-27. TODO-4653: Add dedicated IrPrinter unit tests
-28. TODO-4654: Add [public] annotations to stdlib modules
-29. TODO-4655: Add compile-run tests for language level examples
-30. TODO-4670: Remove collection-specific slot layout helpers (old alias branches)
-31. TODO-4671: Remove isVectorTypeName and isMapTypeName after migration
+5. TODO-4633: Collapse internal SoA modules into soa and soa_storage
+6. TODO-4634: Rename internal buffer modules to canonical buffer names
+7. TODO-4635: Derive the collection surface registry from stdlib declarations
+8. TODO-4636: Delete surfaces.psmeta and its parity scaffolding
+9. TODO-4637: Move `ir_pipeline` test shard into subdirectory
+10. TODO-4638: Move `compile_run` test shard into subdirectory
+11. TODO-4639: Move `semantics` test shard into subdirectory
+12. TODO-4640: Move remaining test shards into subdirectories
+13. TODO-4641: Group `include/primec/` headers by pipeline stage
+14. TODO-4642: Consolidate loose top-level `src/` files into directories
+15. TODO-4643: Fix 8 duplicate test names across files
+16. TODO-4644: Rewrite 53 overlong test names (>120 chars)
+17. TODO-4645: Drop `compiles and runs` prefix from ~740 test names
+18. TODO-4646: Tighten 12 vague/short test names
+19. TODO-4647: Rename 63 opaque shard files with topic suffixes
+20. TODO-4648: Split `SemanticsValidate.cpp` into focused compilation units
+21. TODO-4649: Convert IR lowerer include-only `.h` fragments to `.h/.cpp` pairs
+22. TODO-4650: Convert `TemplateMonomorph*.h` semantics fragments to `.h/.cpp` pairs
+23. TODO-4651: Split oversized test files (10K+ lines, 100+ tests)
+24. TODO-4652: Split oversized single test case bodies (>1000 lines)
+25. TODO-4653: Add dedicated IrPrinter unit tests
+26. TODO-4654: Add [public] annotations to stdlib modules
+27. TODO-4655: Add compile-run tests for language level examples
+28. TODO-4670: Remove collection-specific slot layout helpers (old alias branches)
+29. TODO-4671: Remove isVectorTypeName and isMapTypeName after migration
 
 ### Task Blocks
 
@@ -313,46 +312,6 @@ This file is the live open-work queue for PrimeStruct.
       until the corresponding implementation leaves land.
   - stop_rule: Stop once the example guide and source-lock coverage are
     updated; do not implement missing language features in this leaf.
-
-- [x] TODO-4631: Merge internal_vector into the public vector module
-  - owner: ai
-  - created_at: 2026-06-10
-  - finished_at: 2026-06-12
-  - phase: Collections naming and manifest retirement
-  - parallel_track: collections-internal-vector-merge
-  - depends_on: TODO-4630
-  - scope: Fold `stdlib/std/collections/internal_vector.prime` into
-    `vector.prime`, keeping implementation helpers non-`[public]` so
-    visibility, not the `internal_` naming convention, is the boundary; flip
-    constants and update tests.
-  - implementation_notes: If the compiler does not yet reject user imports of
-    non-public stdlib paths, add or verify that enforcement as the first step
-    of this leaf.
-  - acceptance:
-    - `internal_vector.prime` is deleted and `internal_vector` appears nowhere
-      in stdlib, src, or tests.
-    - Implementation-only helpers are not importable from user code.
-    - Release tests pass.
-  - stop_rule: Stop at the vector merge; map and SoA merges are TODO-4632 and
-    TODO-4633.
-  - evidence: Merged 505-line internal_vector.prime into vector.prime. Updated
-    StdlibCollectionPaths.h (removed kInternalVectorFolder). Updated 8 source
-    files to use kVectorFolder. Deleted internal_vector.prime.
-
-- [ ] TODO-4632: Merge internal_map into the public map module
-  - owner: ai
-  - created_at: 2026-06-10
-  - phase: Collections naming and manifest retirement
-  - depends_on: TODO-4630
-  - scope: Fold `stdlib/std/collections/internal_map.prime` into `map.prime`
-    with non-`[public]` implementation helpers; flip constants and update
-    tests.
-  - acceptance:
-    - `internal_map.prime` is deleted and `internal_map` appears nowhere in
-      stdlib, src, or tests.
-    - Release tests pass.
-  - stop_rule: Stop at the map merge; do not restructure the map data layout
-    in this leaf.
 
 - [ ] TODO-4633: Collapse internal SoA modules into soa and soa_storage
   - owner: ai

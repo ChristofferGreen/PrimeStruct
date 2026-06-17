@@ -5,6 +5,54 @@ Legend:
 
 Finished items are periodically archived here from `docs/todo.md`; section headers record the archive date.
 
+**Todo Completion (June 17, 2026)**
+- [x] TODO-4632: Merge internal_map into the public map module
+  - owner: ai
+  - created_at: 2026-06-10
+  - finished_at: 2026-06-17
+  - phase: Collections naming and manifest retirement
+  - depends_on: TODO-4630
+  - scope: Fold `stdlib/std/collections/internal_map.prime` into `map.prime`
+    with non-`[public]` implementation helpers; flip constants and update
+    tests.
+  - acceptance:
+    - `internal_map.prime` is deleted and `internal_map` appears nowhere in
+      stdlib, src, or tests.
+    - Release tests pass.
+  - stop_rule: Stop at the map merge; do not restructure the map data layout
+    in this leaf.
+  - evidence: Deleted `internal_map.prime` (already done in prior commit).
+    Removed `registerInternalMapWildcardAliases` and
+    `isInternalMapLegacyWildcardAliasDefinition` legacy compatibility shims
+    from `SemanticsValidatorBuildImports.cpp` (these were registering aliases
+    to the now-deleted `experimental_map` path, blocking correct map/* wildcard
+    alias resolution). Cleaned up stale comments in `StdlibCollectionPaths.h`.
+
+- [x] TODO-4631: Merge internal_vector into the public vector module
+  - owner: ai
+  - created_at: 2026-06-10
+  - finished_at: 2026-06-12
+  - phase: Collections naming and manifest retirement
+  - parallel_track: collections-internal-vector-merge
+  - depends_on: TODO-4630
+  - scope: Fold `stdlib/std/collections/internal_vector.prime` into
+    `vector.prime`, keeping implementation helpers non-`[public]` so
+    visibility, not the `internal_` naming convention, is the boundary; flip
+    constants and update tests.
+  - implementation_notes: If the compiler does not yet reject user imports of
+    non-public stdlib paths, add or verify that enforcement as the first step
+    of this leaf.
+  - acceptance:
+    - `internal_vector.prime` is deleted and `internal_vector` appears nowhere
+      in stdlib, src, or tests.
+    - Implementation-only helpers are not importable from user code.
+    - Release tests pass.
+  - stop_rule: Stop at the vector merge; map and SoA merges are TODO-4632 and
+    TODO-4633.
+  - evidence: Merged 505-line internal_vector.prime into vector.prime. Updated
+    StdlibCollectionPaths.h (removed kInternalVectorFolder). Updated 8 source
+    files to use kVectorFolder. Deleted internal_vector.prime.
+
 **Todo Completion (June 11, 2026)**
 - [x] TODO-4630: Delete experimental collection shim modules and spellings
   - owner: ai
