@@ -6,6 +6,30 @@ Legend:
 Finished items are periodically archived here from `docs/todo.md`; section headers record the archive date.
 
 **Todo Completion (June 17, 2026)**
+- [x] TODO-4633: Collapse internal SoA modules into soa and soa_storage
+  - owner: ai
+  - created_at: 2026-06-10
+  - finished_at: 2026-06-17
+  - phase: Collections naming and manifest retirement
+  - depends_on: TODO-4630
+  - scope: Fold `internal_soa_vector.prime`, `internal_soa_vector_conversions.prime`,
+    `experimental_soa_vector.prime`, and `experimental_soa_vector_conversions.prime`
+    into a single `soa.prime`; rename `internal_soa_storage.prime` to
+    `soa_storage.prime` with updated namespace.
+  - acceptance:
+    - No `internal_soa_vector`, `internal_soa_vector_conversions`, or
+      `internal_soa_storage` spelling remains in stdlib, src, or tests.
+    - Release tests pass.
+  - stop_rule: Stop at the SoA collapse; buffer modules are TODO-4634.
+  - evidence: Deleted `internal_soa_vector.prime`, `internal_soa_vector_conversions.prime`,
+    `experimental_soa_vector.prime`, `experimental_soa_vector_conversions.prime`, and
+    `internal_soa_storage.prime`. Created `soa.prime` (merged implementation) and
+    `soa_storage.prime` (renamed with `soa_storage` namespace and `[public struct
+    collection_type]` on `SoaColumn<T>`). Updated `StdlibCollectionPaths.h` constants
+    to alias old folder names to new paths. Fixed `isDirectRemovedSoaCompatibilityImportPath`
+    to use string literals instead of aliased constants. Updated docs, reflection runtime
+    test, and source-lock tests throughout.
+
 - [x] TODO-4632: Merge internal_map into the public map module
   - owner: ai
   - created_at: 2026-06-10

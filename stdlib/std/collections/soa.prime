@@ -1,15 +1,190 @@
-// Canonical public SoA helper namespace over the current SoaVector backing.
-import /std/collections/vector
-import /std/collections/internal_soa_vector
-import /std/collections/internal_soa_vector_conversions
+// Canonical standalone SoA module with merged implementation.
+import /std/collections/vector/*
+import /std/collections/soa_storage/*
+
+// Internal SoA backing implementation behind canonical /std/collections/soa/*.
+// Merged from internal_soa_vector, internal_soa_vector_conversions, and
+// experimental_soa_vector (TODO-4633).
+namespace std {
+  namespace collections {
+  namespace soa {
+  [struct collection_type]
+  SoaVector<T>() {
+    [public SoaColumn<T> mut] storage{/std/collections/soa_storage/soaColumnNew<T>()}
+
+    [public return<i32>]
+    count() {
+      /std/collections/soa/soaVectorValidateType<T>()
+      [SoaColumn<T>] storage{this.storage}
+      return(/std/collections/soa_storage/soaColumnCount<T>(storage))
+    }
+
+    [public return<T>]
+    get([i32] index) {
+      /std/collections/soa/soaVectorValidateType<T>()
+      return(/std/collections/soa/soaVectorGet<T>(this, index))
+    }
+
+    [public return<Reference<T>>]
+    ref([i32] index) {
+      /std/collections/soa/soaVectorValidateType<T>()
+      return(/std/collections/soa/soaVectorRef<T>(this, index))
+    }
+
+    [public mut effects(heap_alloc), return<void>]
+    reserve([i32] capacity) {
+      /std/collections/soa/soaVectorValidateType<T>()
+      /std/collections/soa/soaVectorReserve<T>(this, capacity)
+    }
+
+    [public mut effects(heap_alloc), return<void>]
+    push([T] value) {
+      /std/collections/soa/soaVectorValidateType<T>()
+      /std/collections/soa/soaVectorPush<T>(this, value)
+    }
+
+  }
+
+  [return<void>]
+  soaVectorValidateType<T>() {
+    [i32] fieldCount{/std/collections/soa_storage/soaSupportedFieldCount<T>()}
+  }
+
+  [public effects(heap_alloc), return</std/collections/soa/SoaVector<T>>]
+  soaVectorNew<T>() {
+    soaVectorValidateType<T>()
+    return(/std/collections/soa/SoaVector<T>{})
+  }
+
+  [public effects(heap_alloc), return</std/collections/soa/SoaVector<T>>]
+  soaVectorSingle<T>([T] value) {
+    soaVectorValidateType<T>()
+    [/std/collections/soa/SoaVector<T> mut] out{soaVectorNew<T>()}
+    [SoaColumn<T> mut] storage{out.storage}
+    /std/collections/soa_storage/soaColumnPush<T>(storage, value)
+    assign(out.storage, storage)
+    return(out)
+  }
+
+  [public effects(heap_alloc), return</std/collections/soa/SoaVector<T>>]
+  soaVectorFromAos<T>([vector<T>] values) {
+    soaVectorValidateType<T>()
+    [/std/collections/soa/SoaVector<T> mut] out{soaVectorNew<T>()}
+    [SoaColumn<T> mut] storage{out.storage}
+    [i32] valueCount{/std/collections/vector/count<T>(values)}
+    [i32 mut] index{0i32}
+    /std/collections/soa_storage/soaColumnReserve<T>(storage, valueCount)
+    while(less_than(index, valueCount), do() {
+      /std/collections/soa_storage/soaColumnPush<T>(
+          storage, /std/collections/vector/at<T>(values, index))
+      increment(index)
+    })
+    assign(out.storage, storage)
+    return(out)
+  }
+
+  [public return<i32>]
+  soaVectorCount<T>([/std/collections/soa/SoaVector<T>] values) {
+    soaVectorValidateType<T>()
+    [SoaColumn<T>] storage{values.storage}
+    return(/std/collections/soa_storage/soaColumnCount<T>(storage))
+  }
+
+  [public return<i32>]
+  soaVectorCountRef<T>([Reference</std/collections/soa/SoaVector<T>>] values) {
+    soaVectorValidateType<T>()
+    [SoaColumn<T>] storage{values.storage}
+    return(/std/collections/soa_storage/soaColumnCount<T>(storage))
+  }
+
+  [public return<T>]
+  soaVectorGet<T>([/std/collections/soa/SoaVector<T>] values, [i32] index) {
+    soaVectorValidateType<T>()
+    [SoaColumn<T>] storage{values.storage}
+    return(/std/collections/soa_storage/soaColumnRead<T>(storage, index))
+  }
+
+  [public return<T>]
+  soaVectorGetRef<T>([Reference</std/collections/soa/SoaVector<T>>] values, [i32] index) {
+    soaVectorValidateType<T>()
+    [SoaColumn<T>] storage{values.storage}
+    return(/std/collections/soa_storage/soaColumnRead<T>(storage, index))
+  }
+
+  [public return<Reference<T>>]
+  soaVectorRef<T>([/std/collections/soa/SoaVector<T>] values, [i32] index) {
+    soaVectorValidateType<T>()
+    [SoaColumn<T>] storage{values.storage}
+    return(/std/collections/soa_storage/soaColumnRef<T>(storage, index))
+  }
+
+  [public return<Reference<T>>]
+  soaVectorRefRef<T>([Reference</std/collections/soa/SoaVector<T>>] values, [i32] index) {
+    soaVectorValidateType<T>()
+    [SoaColumn<T>] storage{values.storage}
+    return(/std/collections/soa_storage/soaColumnRef<T>(storage, index))
+  }
+
+  [public return<SoaFieldView<Field>>]
+  soaVectorFieldView<Struct, Field>([/std/collections/soa/SoaVector<Struct>] values, [i32] fieldIndex) {
+    soaVectorValidateType<Struct>()
+    [SoaColumn<Struct>] storage{values.storage}
+    return(/std/collections/soa_storage/soaColumnFieldViewUnsafe<Struct, Field>(storage, fieldIndex))
+  }
+
+  [public effects(heap_alloc), return<void>]
+  soaVectorReserve<T>([/std/collections/soa/SoaVector<T> mut] values, [i32] capacity) {
+    soaVectorValidateType<T>()
+    [SoaColumn<T> mut] storage{values.storage}
+    /std/collections/soa_storage/soaColumnReserve<T>(storage, capacity)
+    assign(values.storage, storage)
+  }
+
+  [public effects(heap_alloc), return<void>]
+  soaVectorPush<T>([/std/collections/soa/SoaVector<T> mut] values, [T] value) {
+    soaVectorValidateType<T>()
+    [SoaColumn<T> mut] storage{values.storage}
+    /std/collections/soa_storage/soaColumnPush<T>(storage, value)
+    assign(values.storage, storage)
+  }
+
+  [public effects(heap_alloc), return<vector<T>>]
+  soaVectorToAos<T>([SoaVector<T>] values) {
+    valueCount{/std/collections/soa/count<T>(values)}
+    [vector<T> mut] out{vector<T>()}
+    [mut] index{0i32}
+    while(less_than(index, valueCount), do() {
+      /std/collections/vector/push<T>(
+          out, /std/collections/soa/get<T>(values, index))
+      increment(index)
+    })
+    return(out)
+  }
+
+  [public effects(heap_alloc), return<vector<T>>]
+  soaVectorToAosRef<T>([Reference<SoaVector<T>>] values) {
+    valueCount{/std/collections/soa/count_ref<T>(values)}
+    [vector<T> mut] out{vector<T>()}
+    [mut] index{0i32}
+    while(less_than(index, valueCount), do() {
+      /std/collections/vector/push<T>(
+          out, /std/collections/soa/get_ref<T>(values, index))
+      increment(index)
+    })
+    return(out)
+  }
+
+  }
+  }
+}
 
 [public effects(heap_alloc), return<SoaVector<T>>]
 /std/collections/soa/soa<T>([args<T>] values) {
-  [mut] out{/std/collections/internal_soa_vector/soaVectorNew<T>()}
+  [mut] out{/std/collections/soa/soaVectorNew<T>()}
   valueCount{values.count()}
   [mut] index{0i32}
   while(less_than(index, valueCount), do() {
-    /std/collections/internal_soa_vector/soaVectorPush<T>(out, /at(values, index))
+    /std/collections/soa/soaVectorPush<T>(out, /at(values, index))
     increment(index)
   })
   return(out)
@@ -17,61 +192,61 @@ import /std/collections/internal_soa_vector_conversions
 
 [public effects(heap_alloc), return<SoaVector<T>>]
 /std/collections/soa/single<T>([T] value) {
-  return(/std/collections/internal_soa_vector/soaVectorSingle<T>(value))
+  return(/std/collections/soa/soaVectorSingle<T>(value))
 }
 
 [public effects(heap_alloc), return<SoaVector<T>>]
 /std/collections/soa/from_aos<T>([vector<T>] values) {
-  return(/std/collections/internal_soa_vector/soaVectorFromAos<T>(values))
+  return(/std/collections/soa/soaVectorFromAos<T>(values))
 }
 
 [public return<i32>]
 /std/collections/soa/count<T>([SoaVector<T>] values) {
-  return(/std/collections/internal_soa_vector/soaVectorCount<T>(values))
+  return(/std/collections/soa/soaVectorCount<T>(values))
 }
 
 [public return<i32>]
 /std/collections/soa/count_ref<T>([Reference<SoaVector<T>>] values) {
-  return(/std/collections/internal_soa_vector/soaVectorCountRef<T>(values))
+  return(/std/collections/soa/soaVectorCountRef<T>(values))
 }
 
 [public return<T>]
 /std/collections/soa/get<T>([SoaVector<T>] values, [i32] index) {
-  return(/std/collections/internal_soa_vector/soaVectorGet<T>(values, index))
+  return(/std/collections/soa/soaVectorGet<T>(values, index))
 }
 
 [public return<T>]
 /std/collections/soa/get_ref<T>([Reference<SoaVector<T>>] values, [i32] index) {
-  return(/std/collections/internal_soa_vector/soaVectorGetRef<T>(values, index))
+  return(/std/collections/soa/soaVectorGetRef<T>(values, index))
 }
 
 [public return<Reference<T>>]
 /std/collections/soa/ref<T>([SoaVector<T>] values, [i32] index) {
-  return(/std/collections/internal_soa_vector/soaVectorRef<T>(values, index))
+  return(/std/collections/soa/soaVectorRef<T>(values, index))
 }
 
 [public return<Reference<T>>]
 /std/collections/soa/ref_ref<T>([Reference<SoaVector<T>>] values, [i32] index) {
-  return(/std/collections/internal_soa_vector/soaVectorRefRef<T>(values, index))
+  return(/std/collections/soa/soaVectorRefRef<T>(values, index))
 }
 
 [public return<SoaFieldView<Field>>]
 /std/collections/soa/field_view<Struct, Field>(
     [SoaVector<Struct>] values, [i32] fieldIndex) {
-  return(/std/collections/internal_soa_vector/soaVectorFieldView<Struct, Field>(values, fieldIndex))
+  return(/std/collections/soa/soaVectorFieldView<Struct, Field>(values, fieldIndex))
 }
 
 [public effects(heap_alloc), return<void>]
 /std/collections/soa/reserve<T>([SoaVector<T> mut] values, [i32] capacity) {
-  /std/collections/internal_soa_vector/soaVectorReserve<T>(values, capacity)
+  /std/collections/soa/soaVectorReserve<T>(values, capacity)
 }
 
 [public effects(heap_alloc), return<void>]
 /std/collections/soa/push<T>([SoaVector<T> mut] values, [T] value) {
-  /std/collections/internal_soa_vector/soaVectorPush<T>(values, value)
+  /std/collections/soa/soaVectorPush<T>(values, value)
 }
 
 [public effects(heap_alloc), return<vector<T>>]
 /std/collections/soa/to_aos<T>([SoaVector<T>] values) {
-  return(/std/collections/internal_soa_vector_conversions/soaVectorToAos<T>(values))
+  return(/std/collections/soa/soaVectorToAos<T>(values))
 }

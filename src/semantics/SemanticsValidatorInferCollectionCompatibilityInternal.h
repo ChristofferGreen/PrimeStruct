@@ -718,8 +718,10 @@ resolveCanonicalCompatibilityKeyValueHelperNameFromResolvedPath(
   };
   return matchesRoot("/std/collections/soa_vector") ||
          matchesRoot("/std/collections/soa_vector_conversions") ||
-         matchesRoot(collection_paths::moduleRoot(collection_paths::kExperimentalSoaVectorFolder)) ||
-         matchesRoot(collection_paths::moduleRoot(collection_paths::kExperimentalSoaVectorConversionsFolder));
+         matchesRoot("/std/collections/experimental_soa_vector") ||
+         matchesRoot("/std/collections/experimental_soa_vector_conversions") ||
+         matchesRoot("/std/collections/internal_soa_vector") ||
+         matchesRoot("/std/collections/internal_soa_vector_conversions");
 }
 
 [[maybe_unused]] std::string directRemovedSoaCompatibilityImportDiagnostic() {

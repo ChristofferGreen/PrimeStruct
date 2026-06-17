@@ -77,7 +77,7 @@ This file is the live open-work queue for PrimeStruct.
 
 - TODO-4611: Add reverse cursor traversal API
 - TODO-4612: Add safe extent and cursor code examples
-- TODO-4633: Collapse internal SoA modules into soa and soa_storage
+- TODO-4634: Rename internal buffer modules to canonical buffer names
 
 ### Priority Lanes
 
@@ -147,7 +147,7 @@ This file is the live open-work queue for PrimeStruct.
   SoaVector identity to `/std/collections/soa/SoaVector`, and TODO-4630 deleted the
   deletable shims),
   collapse the `internal_*` modules into their public modules with visibility
-  instead of naming as the boundary (TODO-4631 through TODO-4634), and finally
+  instead of naming as the boundary (TODO-4631 through TODO-4633 done; TODO-4634 remaining), and finally
   derive the surface registry from stdlib declarations and delete the psmeta
   manifest (TODO-4635, TODO-4636).
 - File layout restructuring: restructure the flat file layouts in
@@ -189,13 +189,12 @@ This file is the live open-work queue for PrimeStruct.
 2. TODO-4610: Add forward cursor traversal API
 3. TODO-4611: Add reverse cursor traversal API
 4. TODO-4612: Add safe extent and cursor code examples
-5. TODO-4633: Collapse internal SoA modules into soa and soa_storage
-6. TODO-4634: Rename internal buffer modules to canonical buffer names
-7. TODO-4635: Derive the collection surface registry from stdlib declarations
-8. TODO-4636: Delete surfaces.psmeta and its parity scaffolding
-9. TODO-4637: Move `ir_pipeline` test shard into subdirectory
-10. TODO-4638: Move `compile_run` test shard into subdirectory
-11. TODO-4639: Move `semantics` test shard into subdirectory
+5. TODO-4634: Rename internal buffer modules to canonical buffer names
+6. TODO-4635: Derive the collection surface registry from stdlib declarations
+7. TODO-4636: Delete surfaces.psmeta and its parity scaffolding
+8. TODO-4637: Move `ir_pipeline` test shard into subdirectory
+9. TODO-4638: Move `compile_run` test shard into subdirectory
+10. TODO-4639: Move `semantics` test shard into subdirectory
 12. TODO-4640: Move remaining test shards into subdirectories
 13. TODO-4641: Group `include/primec/` headers by pipeline stage
 14. TODO-4642: Consolidate loose top-level `src/` files into directories
@@ -312,28 +311,6 @@ This file is the live open-work queue for PrimeStruct.
       until the corresponding implementation leaves land.
   - stop_rule: Stop once the example guide and source-lock coverage are
     updated; do not implement missing language features in this leaf.
-
-- [ ] TODO-4633: Collapse internal SoA modules into soa and soa_storage
-  - owner: ai
-  - created_at: 2026-06-10
-  - phase: Collections naming and manifest retirement
-  - depends_on: TODO-4630
-  - scope: Fold `internal_soa_vector.prime`,
-    `internal_soa_vector_conversions.prime`, and the remaining
-    `experimental_soa_vector.prime` / `experimental_soa_vector_conversions.prime`
-    contents (the canonical `SoaVector` struct block plus the experimental
-    helper namespaces deferred from TODO-4630) into `soa.prime`, and rename
-    `internal_soa_storage.prime` to `soa_storage.prime` with updated
-    namespaces; flip constants and update tests.
-  - implementation_notes: `internal_soa_storage.prime` is roughly 250 KB and
-    no generator for it was found under `scripts/`; confirm whether it is
-    generated elsewhere before moving it, and prefer a rename over a merge for
-    that file.
-  - acceptance:
-    - No `internal_soa_vector`, `internal_soa_vector_conversions`, or
-      `internal_soa_storage` spelling remains in stdlib, src, or tests.
-    - Release tests pass.
-  - stop_rule: Stop at the SoA collapse; buffer modules are TODO-4634.
 
 - [ ] TODO-4634: Rename internal buffer modules to canonical buffer names
   - owner: ai

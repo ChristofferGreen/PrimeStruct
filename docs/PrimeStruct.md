@@ -3430,7 +3430,7 @@ for(
     Builtin empty-vector `pop` runtime aborts and checked vector indexing/removal aborts now use the same `"container
     empty"` / `"container index out of bounds"` wording across VM/native/C++ flows.
   - Canonical `/std/collections/vector/*` is now the sole public namespaced vector contract. The
-    `/std/collections/internal_vector/*` family owns the internal backing adapter behind that
+    `/std/collections/vector/*` family owns the internal backing adapter behind that
     public contract, while direct `/std/collections/experimental_vector/*`
     source imports are rejected. The legacy experimental shim remains only as
     forwarding storage identity behind the internal backing adapter. That
@@ -4302,18 +4302,15 @@ Current `stdlib/std` experimental and internal module classification:
 
 | Namespace family | Current role | Current interpretation | Follow-up |
 | --- | --- | --- | --- |
-| `/std/collections/internal_vector/*` | Internal substrate/helper namespace | Internal vector backing adapter used by canonical `/std/collections/vector/*`; it preserves the current compatibility `Vector<T>` type identity until the final vector surface audit. | TODO-4373 |
-| `/std/collections/experimental_vector/*` | Rejected compatibility namespace | Direct source imports are rejected; the shim remains only as legacy forwarding storage identity behind `/std/collections/internal_vector/*` until the final vector surface audit. | TODO-4373 |
-| `/std/collections/internal_map/*` | Internal substrate/helper namespace | Internal map backing module used by canonical `/std/collections/map/*`; it preserves the current compatibility `Map<K, V>` type identity until the final map surface audit. | TODO-4464 |
-| `/std/collections/experimental_map/*` | Rejected compatibility namespace | Direct source imports are rejected; the shim remains only as legacy forwarding storage identity behind `/std/collections/internal_map/*` until the final map surface audit. | TODO-4464 |
+| `/std/collections/vector/*` | Internal substrate/helper namespace | Internal vector backing adapter used by canonical `/std/collections/vector/*`; it preserves the current compatibility `Vector<T>` type identity until the final vector surface audit. | TODO-4373 |
+| `/std/collections/experimental_vector/*` | Rejected compatibility namespace | Direct source imports are rejected; the shim remains only as legacy forwarding storage identity behind `/std/collections/vector/*` until the final vector surface audit. | TODO-4373 |
+| `/std/collections/experimental_map/*` | Rejected compatibility namespace | Direct source imports are rejected; the shim remains only as legacy forwarding storage identity behind `/std/collections/map/*` until the final map surface audit. | TODO-4464 |
 | `/std/gfx/experimental/*` | Temporary compatibility namespace | Legacy compatibility shim over canonical `/std/gfx/*`; no longer part of the public gfx contract and retained only for targeted compatibility coverage while the residual seam remains importable. | none |
-| `/std/collections/experimental_soa_vector/*` | Rejected compatibility namespace | Direct source imports are rejected; the shim remains only behind internal SoA implementation adapters and targeted rejection coverage. Ordinary code must use `/std/collections/soa/*`. | none |
-| `/std/collections/experimental_soa_vector_conversions/*` | Rejected compatibility namespace | Direct source imports are rejected; canonical conversions route through `/std/collections/soa/*` and the internal conversion adapter. | none |
+| `/std/collections/experimental_soa_vector/*` | Retired compatibility namespace | Retired and merged into `/std/collections/soa/*` (TODO-4633); direct source imports are rejected. Ordinary code must use `/std/collections/soa/*`. | none |
+| `/std/collections/experimental_soa_vector_conversions/*` | Retired compatibility namespace | Retired and merged into `/std/collections/soa/*` (TODO-4633); direct source imports are rejected. Conversion helpers are now part of `/std/collections/soa/*`. | none |
 | `/std/collections/internal_buffer_checked/*` | Internal substrate/helper namespace | Explicitly internal checked buffer plumbing for container conformance and memory-wrapper flows, not a stable user-facing stdlib API. | none |
 | `/std/collections/internal_buffer_unchecked/*` | Internal substrate/helper namespace | Explicitly internal unchecked buffer plumbing for container conformance and memory-wrapper flows, not a stable user-facing stdlib API. | none |
-| `/std/collections/internal_soa_vector/*` | Internal substrate/helper namespace | Internal SoA wrapper implementation adapter used by canonical `/std/collections/soa/*`; it is not a public import surface. It still preserves the current compatibility `SoaVector<T>` type identity behind the promoted public wrapper surface. | none |
-| `/std/collections/internal_soa_vector_conversions/*` | Internal substrate/helper namespace | Internal SoA conversion implementation adapter used by canonical `/std/collections/soa/*` conversion helpers; it is not a public import surface. | none |
-| `/std/collections/internal_soa_storage/*` | Internal substrate/helper namespace | Explicitly internal SoA storage/layout plumbing used by wrappers and lowering bridges, not a canonical surface contract. | none |
+| `/std/collections/soa_storage/*` | Internal substrate/helper namespace | Explicitly internal SoA storage/layout plumbing used by wrappers and lowering bridges, not a canonical surface contract. Renamed from `internal_soa_storage` in TODO-4633. | none |
 
 The policy implication is immediate: vector/map/gfx/SoA work should prefer
 canonical non-`experimental` namespaces in docs and compiler authority, while
@@ -4352,16 +4349,14 @@ uses a distinct structure-of-arrays substrate and field-view invalidation model.
   `/std/collections/experimental_soa_vector*` direct imports reject with a
   stable diagnostic pointing users to `/std/collections/soa/*`. `soa_vector<T>`
   type spelling also rejects in favor of `soa<T>`.
-- **Internal substrate namespaces:** `/std/collections/internal_soa_vector/*`
-  owns ordinary canonical wrapper implementation forwarding,
-  `/std/collections/internal_soa_vector_conversions/*` owns ordinary canonical
-  conversion implementation forwarding, while
-  `/std/collections/internal_soa_storage/*` stays implementation-facing
-  storage/layout plumbing. None of these are public APIs. The internal wrapper
-  adapter still preserves the compatibility `SoaVector<T>` type identity behind
-  the promoted public wrapper surface. The inline-parameter and direct lowerer
-  wrapper-dispatch bridges no longer use rooted `/soa_vector/*`, `/to_aos`, or
-  `/to_aos_ref` spellings as hidden raw fallbacks.
+- **Internal substrate:** Implementation helpers are consolidated into
+  `/std/collections/soa/*` (merged from `internal_soa_vector`,
+  `internal_soa_vector_conversions`, `experimental_soa_vector`, and
+  `experimental_soa_vector_conversions` in TODO-4633) and
+  `/std/collections/soa_storage/*` (renamed from `internal_soa_storage` in
+  TODO-4633). None of these are public APIs. The inline-parameter and direct
+  lowerer wrapper-dispatch bridges no longer use rooted `/soa_vector/*`,
+  `/to_aos`, or `/to_aos_ref` spellings as hidden raw fallbacks.
 - **Promoted contract:** public behavior is owned by canonical stdlib surfaces
   and the remaining compiler/runtime pieces are generic substrate rather than
   SoA-specific compatibility paths:
@@ -4380,8 +4375,7 @@ uses a distinct structure-of-arrays substrate and field-view invalidation model.
     construction/read/ref/mutator, field-view, and conversion programs where
     each backend supports the feature; unsupported paths reject explicitly
     instead of falling back to hidden raw-builtin behavior.
-  - `/std/collections/internal_soa_vector/*` and
-    `/std/collections/internal_soa_storage/*` remain implementation-only;
+  - `/std/collections/soa_storage/*` remains implementation-only;
     direct old SoA compatibility imports are rejected.
 
 ### Generic SoA Substrate Boundary
@@ -4402,12 +4396,12 @@ the generic layout and storage primitives that the stdlib wrapper still needs.
   byte-addressable field-slot addressing, borrow-root provenance, and
   invalidation tracking may remain compiler/runtime-owned when they are generic
   over reflected storage rather than public collection helper names.
-- **Internal `.prime` substrate fixtures:** `/std/collections/internal_soa_storage/*`
+- **Internal `.prime` substrate fixtures:** `/std/collections/soa_storage/*`
   owns `SoaColumn<T>`, `SoaColumnsN<...>`, `SoaFieldView<T>`,
   `soaColumnFieldSlotUnsafe<Struct, Field>(...)`, and field-view read/ref/write
-  helpers. Reflection runtime coverage imports that internal storage module to
-  exercise generated `SoaSchema*` and `SoaSchemaStorage` helpers without using
-  public `soa_vector` collection helpers.
+  helpers. Reflection runtime coverage imports that storage module to exercise
+  generated `SoaSchema*` and `SoaSchemaStorage` helpers without using public
+  `soa_vector` collection helpers.
 - **Rejected compatibility names:** `soa_vector<T>`,
   `/std/collections/soa_vector/*`, rooted `/soa_vector/*`, `SoaVector<T>`,
   `soaVector*`, and direct experimental SoA imports are no longer public

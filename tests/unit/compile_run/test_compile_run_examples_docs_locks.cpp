@@ -237,9 +237,11 @@ TEST_CASE("vector dynamic-storage docs lock completed first slice") {
   std::filesystem::path todoPath = std::filesystem::path("..") / "docs" / "todo.md";
   std::filesystem::path todoFinishedPath = std::filesystem::path("..") / "docs" / "todo_finished.md";
   std::filesystem::path vmVectorLimitsPath =
-      std::filesystem::path("..") / "tests" / "unit" / "test_compile_run_vm_collections_vector_limits_a.cpp";
-  std::filesystem::path nativeVectorLimitsPath = std::filesystem::path("..") / "tests" / "unit" /
-                                                 "test_compile_run_native_backend_collections_mutators_and_limits_a.cpp";
+      std::filesystem::path("..") / "tests" / "unit" / "compile_run" /
+      "test_compile_run_vm_collections_vector_limits_pop_shadow.cpp";
+  std::filesystem::path nativeVectorLimitsPath =
+      std::filesystem::path("..") / "tests" / "unit" / "compile_run" /
+      "test_compile_run_native_backend_collections_mutators_and_limits_auto_inferred.cpp";
   if (!std::filesystem::exists(primeStructPath)) {
     primeStructPath = std::filesystem::current_path() / "docs" / "PrimeStruct.md";
   }
@@ -253,12 +255,13 @@ TEST_CASE("vector dynamic-storage docs lock completed first slice") {
     todoFinishedPath = std::filesystem::current_path() / "docs" / "todo_finished.md";
   }
   if (!std::filesystem::exists(vmVectorLimitsPath)) {
-    vmVectorLimitsPath =
-        std::filesystem::current_path() / "tests" / "unit" / "test_compile_run_vm_collections_vector_limits_a.cpp";
+    vmVectorLimitsPath = std::filesystem::current_path() / "tests" / "unit" / "compile_run" /
+                         "test_compile_run_vm_collections_vector_limits_pop_shadow.cpp";
   }
   if (!std::filesystem::exists(nativeVectorLimitsPath)) {
-    nativeVectorLimitsPath = std::filesystem::current_path() / "tests" / "unit" /
-                             "test_compile_run_native_backend_collections_mutators_and_limits_a.cpp";
+    nativeVectorLimitsPath =
+        std::filesystem::current_path() / "tests" / "unit" / "compile_run" /
+        "test_compile_run_native_backend_collections_mutators_and_limits_auto_inferred.cpp";
   }
   REQUIRE(std::filesystem::exists(primeStructPath));
   REQUIRE(std::filesystem::exists(syntaxSpecPath));
@@ -805,24 +808,27 @@ TEST_CASE("stdlib de-experimentalization policy docs stay source locked") {
 TEST_CASE("generic contiguous buffer substrate docs and coverage stay source locked") {
   std::filesystem::path primeStructPath = std::filesystem::path("..") / "docs" / "PrimeStruct.md";
   std::filesystem::path checkedPointerHelpersPath =
-      std::filesystem::path("..") / "tests" / "unit" / "test_compile_run_checked_pointer_conformance_helpers.h";
+      std::filesystem::path("..") / "tests" / "unit" / "compile_run" /
+      "test_compile_run_checked_pointer_conformance_helpers.h";
   std::filesystem::path vmCompatTestPath =
-      std::filesystem::path("..") / "tests" / "unit" / "test_compile_run_vm_collections_wrapper_temporaries_a.cpp";
-  std::filesystem::path nativeCompatTestPath = std::filesystem::path("..") / "tests" / "unit" /
-                                               "test_compile_run_native_backend_collections_experimental_maps_and_helpers.cpp";
+      std::filesystem::path("..") / "tests" / "unit" / "compile_run" /
+      "test_compile_run_vm_collections_wrapper_temporaries_reject_count.cpp";
+  std::filesystem::path nativeCompatTestPath =
+      std::filesystem::path("..") / "tests" / "unit" / "compile_run" /
+      "test_compile_run_native_backend_collections_experimental_maps_and_helpers.cpp";
   if (!std::filesystem::exists(primeStructPath)) {
     primeStructPath = std::filesystem::current_path() / "docs" / "PrimeStruct.md";
   }
   if (!std::filesystem::exists(checkedPointerHelpersPath)) {
-    checkedPointerHelpersPath =
-        std::filesystem::current_path() / "tests" / "unit" / "test_compile_run_checked_pointer_conformance_helpers.h";
+    checkedPointerHelpersPath = std::filesystem::current_path() / "tests" / "unit" / "compile_run" /
+                                "test_compile_run_checked_pointer_conformance_helpers.h";
   }
   if (!std::filesystem::exists(vmCompatTestPath)) {
-    vmCompatTestPath =
-        std::filesystem::current_path() / "tests" / "unit" / "test_compile_run_vm_collections_wrapper_temporaries_a.cpp";
+    vmCompatTestPath = std::filesystem::current_path() / "tests" / "unit" / "compile_run" /
+                       "test_compile_run_vm_collections_wrapper_temporaries_reject_count.cpp";
   }
   if (!std::filesystem::exists(nativeCompatTestPath)) {
-    nativeCompatTestPath = std::filesystem::current_path() / "tests" / "unit" /
+    nativeCompatTestPath = std::filesystem::current_path() / "tests" / "unit" / "compile_run" /
                            "test_compile_run_native_backend_collections_experimental_maps_and_helpers.cpp";
   }
   REQUIRE(std::filesystem::exists(primeStructPath));
@@ -867,14 +873,18 @@ TEST_CASE("soa public collection docs stay source locked") {
   std::filesystem::path todoFinishedPath = std::filesystem::path("..") / "docs" / "todo_finished.md";
   std::filesystem::path experimentalSoaVectorPath =
       std::filesystem::path("..") / "stdlib" / "std" / "collections" / "experimental_soa_vector.prime";
+  std::filesystem::path soaPath =
+      std::filesystem::path("..") / "stdlib" / "std" / "collections" / "soa.prime";
   std::filesystem::path soaExamplePath =
       std::filesystem::path("..") / "examples" / "3.Surface" / "soa_ecs.prime";
   std::filesystem::path cppCompatTestPath =
-      std::filesystem::path("..") / "tests" / "unit" / "test_compile_run_imports_operations.cpp";
+      std::filesystem::path("..") / "tests" / "unit" / "compile_run" / "test_compile_run_imports_operations.cpp";
   std::filesystem::path vmCompatTestPath =
-      std::filesystem::path("..") / "tests" / "unit" / "test_compile_run_vm_collections_wrapper_temporaries_a.cpp";
-  std::filesystem::path nativeCompatTestPath = std::filesystem::path("..") / "tests" / "unit" /
-                                               "test_compile_run_native_backend_collections_experimental_maps_and_helpers.cpp";
+      std::filesystem::path("..") / "tests" / "unit" / "compile_run" /
+      "test_compile_run_vm_collections_wrapper_temporaries_reject_count.cpp";
+  std::filesystem::path nativeCompatTestPath =
+      std::filesystem::path("..") / "tests" / "unit" / "compile_run" /
+      "test_compile_run_native_backend_collections_experimental_maps_and_helpers.cpp";
   if (!std::filesystem::exists(codeExamplesPath)) {
     codeExamplesPath = std::filesystem::current_path() / "docs" / "CodeExamples.md";
   }
@@ -894,19 +904,22 @@ TEST_CASE("soa public collection docs stay source locked") {
     experimentalSoaVectorPath =
         std::filesystem::current_path() / "stdlib" / "std" / "collections" / "experimental_soa_vector.prime";
   }
+  if (!std::filesystem::exists(soaPath)) {
+    soaPath = std::filesystem::current_path() / "stdlib" / "std" / "collections" / "soa.prime";
+  }
   if (!std::filesystem::exists(soaExamplePath)) {
     soaExamplePath = std::filesystem::current_path() / "examples" / "3.Surface" / "soa_ecs.prime";
   }
   if (!std::filesystem::exists(cppCompatTestPath)) {
-    cppCompatTestPath =
-        std::filesystem::current_path() / "tests" / "unit" / "test_compile_run_imports_operations.cpp";
+    cppCompatTestPath = std::filesystem::current_path() / "tests" / "unit" / "compile_run" /
+                        "test_compile_run_imports_operations.cpp";
   }
   if (!std::filesystem::exists(vmCompatTestPath)) {
-    vmCompatTestPath = std::filesystem::current_path() / "tests" / "unit" /
-                       "test_compile_run_vm_collections_wrapper_temporaries_a.cpp";
+    vmCompatTestPath = std::filesystem::current_path() / "tests" / "unit" / "compile_run" /
+                       "test_compile_run_vm_collections_wrapper_temporaries_reject_count.cpp";
   }
   if (!std::filesystem::exists(nativeCompatTestPath)) {
-    nativeCompatTestPath = std::filesystem::current_path() / "tests" / "unit" /
+    nativeCompatTestPath = std::filesystem::current_path() / "tests" / "unit" / "compile_run" /
                            "test_compile_run_native_backend_collections_experimental_maps_and_helpers.cpp";
   }
   REQUIRE(std::filesystem::exists(codeExamplesPath));
@@ -914,7 +927,9 @@ TEST_CASE("soa public collection docs stay source locked") {
   REQUIRE(std::filesystem::exists(syntaxSpecPath));
   REQUIRE(std::filesystem::exists(todoPath));
   REQUIRE(std::filesystem::exists(todoFinishedPath));
-  REQUIRE(std::filesystem::exists(experimentalSoaVectorPath));
+  // experimental_soa_vector.prime retired and merged into soa.prime (TODO-4633)
+  CHECK(!std::filesystem::exists(experimentalSoaVectorPath));
+  REQUIRE(std::filesystem::exists(soaPath));
   REQUIRE(std::filesystem::exists(soaExamplePath));
   REQUIRE(std::filesystem::exists(cppCompatTestPath));
   REQUIRE(std::filesystem::exists(vmCompatTestPath));
@@ -925,7 +940,7 @@ TEST_CASE("soa public collection docs stay source locked") {
   const std::string syntaxSpecDoc = readFile(syntaxSpecPath.string());
   const std::string todo = readFile(todoPath.string());
   const std::string todoFinished = readFile(todoFinishedPath.string());
-  const std::string experimentalSoaVector = readFile(experimentalSoaVectorPath.string());
+  const std::string soaStdlib = readFile(soaPath.string());
   const std::string soaExample = readFile(soaExamplePath.string());
   const std::string cppCompatTest = readFile(cppCompatTestPath.string());
   const std::string vmCompatTest = readFile(vmCompatTestPath.string());
@@ -944,32 +959,29 @@ TEST_CASE("soa public collection docs stay source locked") {
         std::string::npos);
   CHECK(primeStructDoc.find("`examples/3.Surface/soa_ecs.prime`") !=
         std::string::npos);
-  CHECK(primeStructDoc.find("| `/std/collections/experimental_soa_vector/*` | Rejected compatibility namespace |") !=
+  // experimental_soa_vector* rows updated to "Retired" after TODO-4633 merge
+  CHECK(primeStructDoc.find("| `/std/collections/experimental_soa_vector/*` | Retired compatibility namespace |") !=
         std::string::npos);
-  CHECK(primeStructDoc.find("Direct source imports are rejected; the shim remains only behind internal SoA implementation adapters") !=
+  CHECK(primeStructDoc.find("Retired and merged into `/std/collections/soa/*` (TODO-4633)") !=
         std::string::npos);
-  CHECK(primeStructDoc.find("| `/std/collections/internal_soa_vector/*` | Internal substrate/helper namespace |") !=
+  // internal_soa_vector* rows removed after TODO-4633 merge
+  CHECK(primeStructDoc.find("| `/std/collections/internal_soa_vector/*` |") ==
         std::string::npos);
-  CHECK(primeStructDoc.find("Internal SoA wrapper implementation adapter used by canonical") !=
+  CHECK(primeStructDoc.find("| `/std/collections/internal_soa_vector_conversions/*` |") ==
         std::string::npos);
-  CHECK(primeStructDoc.find("| `/std/collections/internal_soa_vector_conversions/*` | Internal substrate/helper namespace |") !=
-        std::string::npos);
-  CHECK(primeStructDoc.find("Internal SoA conversion implementation adapter used by canonical") !=
-        std::string::npos);
-  CHECK(primeStructDoc.find("/std/collections/internal_soa_storage/*") != std::string::npos);
-  CHECK(primeStructDoc.find("Direct source imports are rejected; canonical conversions route through") !=
-        std::string::npos);
+  // internal_soa_storage renamed to soa_storage after TODO-4633
+  CHECK(primeStructDoc.find("/std/collections/soa_storage/*") != std::string::npos);
+  CHECK(primeStructDoc.find("/std/collections/internal_soa_storage/*") == std::string::npos);
   CHECK(primeStructDoc.find("This section is the scope reference for the promoted `soa<T>` public") !=
         std::string::npos);
   CHECK(primeStructDoc.find("Focused rejection tests keep their diagnostics stable") !=
         std::string::npos);
   CHECK(primeStructDoc.find("**Rejected compatibility seams:** `/std/collections/soa_vector*`") !=
         std::string::npos);
-  CHECK(primeStructDoc.find("**Internal substrate namespaces:** `/std/collections/internal_soa_vector/*`") !=
-        std::string::npos);
-  CHECK(primeStructDoc.find("owns ordinary canonical wrapper implementation forwarding") !=
-        std::string::npos);
-  CHECK(primeStructDoc.find("`/std/collections/internal_soa_vector_conversions/*` owns ordinary canonical") !=
+  // Internal substrate section updated to reflect TODO-4633 merge
+  CHECK(primeStructDoc.find("**Internal substrate:**") != std::string::npos);
+  CHECK(primeStructDoc.find("merged from `internal_soa_vector`") != std::string::npos);
+  CHECK(primeStructDoc.find("**Internal substrate namespaces:** `/std/collections/internal_soa_vector/*`") ==
         std::string::npos);
   CHECK(primeStructDoc.find("**Promoted contract:** public behavior is owned by canonical stdlib surfaces") !=
         std::string::npos);
@@ -1093,18 +1105,12 @@ TEST_CASE("soa public collection docs stay source locked") {
         std::string::npos);
   CHECK(soaExample.find("import /std/collections/experimental_soa_vector_conversions/*") ==
         std::string::npos);
-  CHECK(experimentalSoaVector.find(
-            "// Rejected direct-import shim behind canonical /std/collections/soa/*.") !=
+  // experimental_soa_vector.prime retired (TODO-4633): check merged soa.prime content instead
+  CHECK(soaStdlib.find("// Canonical standalone SoA module with merged implementation.") !=
         std::string::npos);
-  CHECK(experimentalSoaVector.find(
-            "// Internal adapters may import this file while public source imports reject.") !=
-        std::string::npos);
-  CHECK(experimentalSoaVector.find(
-            "// Canonical wrappers route through /std/collections/internal_soa_vector/*.") !=
-        std::string::npos);
-  CHECK(experimentalSoaVector.find(
-            "// Ordinary public examples should import /std/collections/soa/* instead.") !=
-        std::string::npos);
+  CHECK(soaStdlib.find("import /std/collections/soa_storage/*") != std::string::npos);
+  CHECK(soaStdlib.find("import /std/collections/internal_soa_vector") == std::string::npos);
+  CHECK(soaStdlib.find("import /std/collections/experimental_soa_vector") == std::string::npos);
   CHECK(cppCompatTest.find("TEST_CASE(\"rejects experimental soa_vector stdlib helpers in C++ emitter\")") !=
         std::string::npos);
   CHECK(cppCompatTest.find("import /std/collections/experimental_soa_vector/*") !=
@@ -1120,12 +1126,13 @@ TEST_CASE("soa public collection docs stay source locked") {
 }
 
 TEST_CASE("legacy soa_vector compatibility rejection matrix stays source locked") {
-  const std::filesystem::path cppParityPath =
-      resolveRepoPath(std::filesystem::path("tests") / "unit" / "test_compile_run_imports_operations.cpp");
+  const std::filesystem::path cppParityPath = resolveRepoPath(
+      std::filesystem::path("tests") / "unit" / "compile_run" / "test_compile_run_imports_operations.cpp");
   const std::filesystem::path vmParityPath = resolveRepoPath(
-      std::filesystem::path("tests") / "unit" / "test_compile_run_vm_collections_wrapper_temporaries_a.cpp");
+      std::filesystem::path("tests") / "unit" / "compile_run" /
+      "test_compile_run_vm_collections_wrapper_temporaries_reject_count.cpp");
   const std::filesystem::path nativeParityPath = resolveRepoPath(
-      std::filesystem::path("tests") / "unit" /
+      std::filesystem::path("tests") / "unit" / "compile_run" /
       "test_compile_run_native_backend_collections_experimental_maps_and_helpers.cpp");
   REQUIRE(std::filesystem::exists(cppParityPath));
   REQUIRE(std::filesystem::exists(vmParityPath));
@@ -1196,12 +1203,13 @@ main() {
 TEST_CASE("soa compatibility fixture migration boundary stays source locked") {
   const std::filesystem::path testsPath = resolveUnitTestsPath();
   const std::filesystem::path examplesPath = resolveRepoPath("examples");
-  const std::filesystem::path cppParityPath =
-      resolveRepoPath(std::filesystem::path("tests") / "unit" / "test_compile_run_imports_operations.cpp");
+  const std::filesystem::path cppParityPath = resolveRepoPath(
+      std::filesystem::path("tests") / "unit" / "compile_run" / "test_compile_run_imports_operations.cpp");
   const std::filesystem::path vmParityPath = resolveRepoPath(
-      std::filesystem::path("tests") / "unit" / "test_compile_run_vm_collections_wrapper_temporaries_a.cpp");
+      std::filesystem::path("tests") / "unit" / "compile_run" /
+      "test_compile_run_vm_collections_wrapper_temporaries_reject_count.cpp");
   const std::filesystem::path nativeParityPath = resolveRepoPath(
-      std::filesystem::path("tests") / "unit" /
+      std::filesystem::path("tests") / "unit" / "compile_run" /
       "test_compile_run_native_backend_collections_experimental_maps_and_helpers.cpp");
   REQUIRE(std::filesystem::exists(testsPath));
   REQUIRE(std::filesystem::exists(examplesPath));
@@ -1314,24 +1322,29 @@ TEST_CASE("generic soa substrate boundary stays source locked") {
       resolveRepoPath(std::filesystem::path("docs") / "todo.md");
   const std::filesystem::path todoFinishedPath =
       resolveRepoPath(std::filesystem::path("docs") / "todo_finished.md");
+  // internal_soa_storage.prime renamed to soa_storage.prime (TODO-4633)
   const std::filesystem::path internalStoragePath =
       resolveRepoPath(std::filesystem::path("stdlib") / "std" / "collections" /
                       "internal_soa_storage.prime");
+  const std::filesystem::path soaStoragePath =
+      resolveRepoPath(std::filesystem::path("stdlib") / "std" / "collections" /
+                      "soa_storage.prime");
   const std::filesystem::path reflectionRuntimePath =
       resolveRepoPath(std::filesystem::path("tests") / "unit" /
-                      "test_compile_run_reflection_codegen_runtime.cpp");
+                      "compile_run" / "test_compile_run_reflection_codegen_runtime.cpp");
   REQUIRE(std::filesystem::exists(primeStructPath));
   REQUIRE(std::filesystem::exists(syntaxSpecPath));
   REQUIRE(std::filesystem::exists(todoPath));
   REQUIRE(std::filesystem::exists(todoFinishedPath));
-  REQUIRE(std::filesystem::exists(internalStoragePath));
+  CHECK(!std::filesystem::exists(internalStoragePath));
+  REQUIRE(std::filesystem::exists(soaStoragePath));
   REQUIRE(std::filesystem::exists(reflectionRuntimePath));
 
   const std::string primeStructDoc = readFile(primeStructPath.string());
   const std::string syntaxSpecDoc = readFile(syntaxSpecPath.string());
   const std::string todo = readFile(todoPath.string());
   const std::string todoFinished = readFile(todoFinishedPath.string());
-  const std::string internalStorage = readFile(internalStoragePath.string());
+  const std::string internalStorage = readFile(soaStoragePath.string());
   const std::string reflectionRuntime = readFile(reflectionRuntimePath.string());
 
   CHECK(primeStructDoc.find("### Generic SoA Substrate Boundary") !=
@@ -1359,7 +1372,8 @@ TEST_CASE("generic soa substrate boundary stays source locked") {
   CHECK(todoFinished.find("TODO-4306: Stabilize generic SoA substrate boundaries") !=
         std::string::npos);
 
-  CHECK(internalStorage.find("[public struct]\n  SoaColumn<T>()") !=
+  // soa_storage.prime (renamed from internal_soa_storage in TODO-4633): verify key content
+  CHECK(internalStorage.find("[public struct collection_type]\n  SoaColumn<T>()") !=
         std::string::npos);
   CHECK(internalStorage.find("[public struct]\n  SoaFieldView<T>()") !=
         std::string::npos);
@@ -1374,12 +1388,17 @@ TEST_CASE("generic soa substrate boundary stays source locked") {
   CHECK(internalStorage.find("/std/collections/soa_vector/") == std::string::npos);
   CHECK(internalStorage.find("soaVectorNew") == std::string::npos);
   CHECK(internalStorage.find("SoaVector<T>") == std::string::npos);
+  CHECK(internalStorage.find("namespace internal_soa_storage") == std::string::npos);
+  CHECK(internalStorage.find("namespace soa_storage") != std::string::npos);
 
   CHECK(reflectionRuntime.find("reflection SoaSchema helper runtime stays aligned across backends") !=
         std::string::npos);
   CHECK(reflectionRuntime.find("reflection SoaSchema storage helper runtime stays aligned across backends") !=
         std::string::npos);
-  CHECK(reflectionRuntime.find("import /std/collections/internal_soa_storage/*") !=
+  // reflection test updated to import soa_storage/* (TODO-4633)
+  CHECK(reflectionRuntime.find("import /std/collections/soa_storage/*") !=
+        std::string::npos);
+  CHECK(reflectionRuntime.find("import /std/collections/internal_soa_storage/*") ==
         std::string::npos);
   CHECK(reflectionRuntime.find("SoaSchemaStorageReserve(storage, 5i32)") !=
         std::string::npos);
@@ -1394,7 +1413,8 @@ TEST_CASE("canonical soa example stays source locked") {
       std::filesystem::path("..") / "examples" / "3.Surface" / "soa_vector_ecs.prime";
   std::filesystem::path examplesReadmePath = std::filesystem::path("..") / "examples" / "README.md";
   std::filesystem::path exampleSweepPath =
-      std::filesystem::path("..") / "tests" / "unit" / "test_compile_run_bindings_and_examples.cpp";
+      std::filesystem::path("..") / "tests" / "unit" / "compile_run" /
+      "test_compile_run_bindings_and_examples.cpp";
   if (!std::filesystem::exists(examplePath)) {
     examplePath = std::filesystem::current_path() / "examples" / "3.Surface" / "soa_ecs.prime";
   }
@@ -1406,7 +1426,7 @@ TEST_CASE("canonical soa example stays source locked") {
     examplesReadmePath = std::filesystem::current_path() / "examples" / "README.md";
   }
   if (!std::filesystem::exists(exampleSweepPath)) {
-    exampleSweepPath = std::filesystem::current_path() / "tests" / "unit" /
+    exampleSweepPath = std::filesystem::current_path() / "tests" / "unit" / "compile_run" /
                        "test_compile_run_bindings_and_examples.cpp";
   }
   REQUIRE(std::filesystem::exists(examplePath));
@@ -1989,10 +2009,12 @@ TEST_CASE("task spawn wait prototype docs stay source locked") {
 TEST_CASE("todo queue and skipped doctest debt stay source locked") {
   std::filesystem::path todoPath = std::filesystem::path("..") / "docs" / "todo.md";
   std::filesystem::path todoFinishedPath = std::filesystem::path("..") / "docs" / "todo_finished.md";
-  std::filesystem::path vmMathPath = std::filesystem::path("..") / "tests" / "unit" / "test_compile_run_vm_math.cpp";
-  std::filesystem::path vmMapsPath = std::filesystem::path("..") / "tests" / "unit" / "test_compile_run_vm_maps.cpp";
+  std::filesystem::path vmMathPath =
+      std::filesystem::path("..") / "tests" / "unit" / "compile_run" / "test_compile_run_vm_math.cpp";
+  std::filesystem::path vmMapsPath =
+      std::filesystem::path("..") / "tests" / "unit" / "compile_run" / "test_compile_run_vm_maps.cpp";
   std::filesystem::path examplesDocsPath =
-      std::filesystem::path("..") / "tests" / "unit" / "test_compile_run_examples_docs.cpp";
+      std::filesystem::path("..") / "tests" / "unit" / "compile_run" / "test_compile_run_examples_docs.cpp";
   if (!std::filesystem::exists(todoPath)) {
     todoPath = std::filesystem::current_path() / "docs" / "todo.md";
   }
@@ -2000,13 +2022,16 @@ TEST_CASE("todo queue and skipped doctest debt stay source locked") {
     todoFinishedPath = std::filesystem::current_path() / "docs" / "todo_finished.md";
   }
   if (!std::filesystem::exists(vmMathPath)) {
-    vmMathPath = std::filesystem::current_path() / "tests" / "unit" / "test_compile_run_vm_math.cpp";
+    vmMathPath =
+        std::filesystem::current_path() / "tests" / "unit" / "compile_run" / "test_compile_run_vm_math.cpp";
   }
   if (!std::filesystem::exists(vmMapsPath)) {
-    vmMapsPath = std::filesystem::current_path() / "tests" / "unit" / "test_compile_run_vm_maps.cpp";
+    vmMapsPath =
+        std::filesystem::current_path() / "tests" / "unit" / "compile_run" / "test_compile_run_vm_maps.cpp";
   }
   if (!std::filesystem::exists(examplesDocsPath)) {
-    examplesDocsPath = std::filesystem::current_path() / "tests" / "unit" / "test_compile_run_examples_docs.cpp";
+    examplesDocsPath =
+        std::filesystem::current_path() / "tests" / "unit" / "compile_run" / "test_compile_run_examples_docs.cpp";
   }
   REQUIRE(std::filesystem::exists(todoPath));
   REQUIRE(std::filesystem::exists(todoFinishedPath));
@@ -2117,7 +2142,7 @@ TEST_CASE("todo queue and skipped doctest debt stay source locked") {
   CHECK(todo.find("### Immediate Next 10\n\n"
                   "- TODO-4611: Add reverse cursor traversal API\n"
                   "- TODO-4612: Add safe extent and cursor code examples\n"
-                  "- TODO-4633: Collapse internal SoA modules into soa and soa_storage") !=
+                  "- TODO-4634: Rename internal buffer modules to canonical buffer names") !=
         std::string::npos);
   CHECK(todo.find("### Priority Lanes") != std::string::npos);
   CHECK(todo.find("Source-unit provenance ledger: TODO-4592 completed parser/semantic") ==
@@ -2151,10 +2176,10 @@ TEST_CASE("todo queue and skipped doctest debt stay source locked") {
                   "2. TODO-4610: Add forward cursor traversal API\n"
                   "3. TODO-4611: Add reverse cursor traversal API\n"
                   "4. TODO-4612: Add safe extent and cursor code examples\n"
-                  "5. TODO-4633: Collapse internal SoA modules into soa and soa_storage\n"
-                  "6. TODO-4634: Rename internal buffer modules to canonical buffer names\n"
-                  "7. TODO-4635: Derive the collection surface registry from stdlib declarations\n"
-                  "8. TODO-4636: Delete surfaces.psmeta and its parity scaffolding\n") !=
+                  "5. TODO-4634: Rename internal buffer modules to canonical buffer names\n"
+                  "6. TODO-4635: Derive the collection surface registry from stdlib declarations\n"
+                  "7. TODO-4636: Delete surfaces.psmeta and its parity scaffolding\n"
+                  "8. TODO-4637: Move `ir_pipeline` test shard into subdirectory\n") !=
         std::string::npos);
   CHECK(todo.find("- TODO-4613: Retire semantic-validator private source locks | track: "
                   "semantic-source-lock-retirement") ==
@@ -3193,14 +3218,14 @@ TEST_CASE("constructor-shaped compatibility inventory stays source locked") {
   const std::filesystem::path syntaxSpecPath =
       resolveRepoPath("docs/PrimeStruct_SyntaxSpec.md");
   const std::filesystem::path fileLowererPath = resolveRepoPath(
-      "tests/unit/"
+      "tests/unit/ir_pipeline/"
       "test_ir_pipeline_validation_ir_lowerer_inference_get_return_info_step_reports_missing_definitions.cpp");
   const std::filesystem::path gfxSemanticsPath =
-      resolveRepoPath("tests/unit/test_semantics_imports_gfx.h");
+      resolveRepoPath("tests/unit/semantics/test_semantics_imports_gfx.h");
   const std::filesystem::path maybeSemanticsPath =
-      resolveRepoPath("tests/unit/test_semantics_maybe.cpp");
+      resolveRepoPath("tests/unit/semantics/test_semantics_maybe.cpp");
   const std::filesystem::path collectionSnapshotPath =
-      resolveRepoPath("tests/unit/test_semantics_type_resolution_graph_snapshots.cpp");
+      resolveRepoPath("tests/unit/semantics/test_semantics_type_resolution_graph_snapshots.cpp");
   REQUIRE(std::filesystem::exists(primeStructPath));
   REQUIRE(std::filesystem::exists(syntaxSpecPath));
   REQUIRE(std::filesystem::exists(fileLowererPath));
@@ -4297,10 +4322,11 @@ TEST_CASE("small stdlib wrappers stay source locked to inferred locals") {
   CHECK(!std::filesystem::exists(soaWrapperPath));
   REQUIRE(std::filesystem::exists(soaPublicPath));
   CHECK(!std::filesystem::exists(soaConversionsPath));
-  REQUIRE(std::filesystem::exists(internalSoaVectorPath));
-  REQUIRE(std::filesystem::exists(internalSoaConversionsPath));
-  REQUIRE(std::filesystem::exists(experimentalSoaVectorPath));
-  REQUIRE(std::filesystem::exists(experimentalSoaConversionsPath));
+  // internal_soa_vector*, experimental_soa_vector* merged into soa.prime (TODO-4633)
+  CHECK(!std::filesystem::exists(internalSoaVectorPath));
+  CHECK(!std::filesystem::exists(internalSoaConversionsPath));
+  CHECK(!std::filesystem::exists(experimentalSoaVectorPath));
+  CHECK(!std::filesystem::exists(experimentalSoaConversionsPath));
 
   const std::string codeExamples = readFile(codeExamplesPath.string());
   const std::string maybeStdlib = readFile(maybeStdlibPath.string());
@@ -4310,10 +4336,11 @@ TEST_CASE("small stdlib wrappers stay source locked to inferred locals") {
   const std::string internalMapStdlib = "";
   const std::string internalVectorStdlib = "";
   const std::string soaPublic = readFile(soaPublicPath.string());
-  const std::string internalSoaVector = readFile(internalSoaVectorPath.string());
-  const std::string internalSoaConversions = readFile(internalSoaConversionsPath.string());
-  const std::string experimentalSoaVector = readFile(experimentalSoaVectorPath.string());
-  const std::string experimentalSoaConversions = readFile(experimentalSoaConversionsPath.string());
+  // internal_soa_vector*, experimental_soa_vector* merged into soa.prime (TODO-4633)
+  const std::string internalSoaVector = "";
+  const std::string internalSoaConversions = "";
+  const std::string experimentalSoaVector = "";
+  const std::string experimentalSoaConversions = "";
 
   CHECK(codeExamples.find("Internal implementation, bridge, or substrate-oriented code:") !=
         std::string::npos);
@@ -4345,33 +4372,35 @@ TEST_CASE("small stdlib wrappers stay source locked to inferred locals") {
             "// Canonical vector module with merged implementation.") !=
         std::string::npos);
   CHECK(vectorStdlib.find("import /std/collections/internal_buffer_checked/*") != std::string::npos);
-  CHECK(vectorStdlib.find("[mut] result{/std/collections/vector/vector<T>()}") !=
+  // vector<T> constructor uses alloc+initSlot pattern with typed locals (merged from internal_vector)
+  CHECK(vectorStdlib.find("[i32] valueCount{values.count()}") != std::string::npos);
+  CHECK(vectorStdlib.find("[i32 mut] index{0i32}") != std::string::npos);
+  CHECK(vectorStdlib.find("vectorAlloc<T>(valueCount, valueCount)") != std::string::npos);
+  CHECK(vectorStdlib.find("vectorInitSlot<T>(out, index, /at(values, index))") != std::string::npos);
+  // Internal helpers defined directly; short-named push/count/at wrappers removed in merge (TODO-4632)
+  CHECK(vectorStdlib.find("vectorCount<T>([/std/collections/vector/Vector<T>] values)") !=
         std::string::npos);
-  CHECK(vectorStdlib.find("valueCount{values.count()}") != std::string::npos);
-  CHECK(vectorStdlib.find("[mut] index{0i32}") != std::string::npos);
-  CHECK(vectorStdlib.find("/std/collections/vector/push<T>(result, /at(values, index))") !=
+  CHECK(vectorStdlib.find("vectorPush<T>([/std/collections/vector/Vector<T> mut] values, [T] value)") !=
         std::string::npos);
-  CHECK(vectorStdlib.find("/std/collections/vector/push<T>(result, first)") !=
+  CHECK(vectorStdlib.find("vectorAt<T>([/std/collections/vector/Vector<T>] values, [i32] index)") !=
         std::string::npos);
-  CHECK(vectorStdlib.find("/std/collections/vector/push<T>(result, second)") !=
+  // Old short-named wrapper call expressions gone (compiler manifest handles dispatch)
+  CHECK(vectorStdlib.find("/std/collections/vector/push<T>(result, /at(values, index))") ==
         std::string::npos);
-  CHECK(vectorStdlib.find("/std/collections/vector/vectorCount<T>(values)") !=
-        std::string::npos);
-  CHECK(vectorStdlib.find("/std/collections/vector/vectorPush<T>(values, value)") !=
-        std::string::npos);
-  CHECK(vectorStdlib.find("/std/collections/vector/vectorAt<T>(values, index)") !=
-        std::string::npos);
+  CHECK(vectorStdlib.find("/std/collections/vector/push<T>(result, first)") == std::string::npos);
+  CHECK(vectorStdlib.find("/std/collections/vector/push<T>(result, second)") == std::string::npos);
+  // No experimental_vector references
   CHECK(vectorStdlib.find("/std/collections/experimental_vector/") == std::string::npos);
   CHECK(vectorStdlib.find("/std/collections/experimental_vector/vectorPair<T>(first, second)") ==
         std::string::npos);
   CHECK(vectorStdlib.find("/std/collections/experimental_vector/vectorPush<T>(out, values[index])") ==
         std::string::npos);
-  CHECK(vectorStdlib.find("[mut] out{/std/collections/vector/vector<T>()}") ==
-        std::string::npos);
+  // No old untyped inferred-local forms (replaced by typed merged implementation)
+  CHECK(vectorStdlib.find("[mut] result{/std/collections/vector/vector<T>()}") == std::string::npos);
+  CHECK(vectorStdlib.find("[mut] index{0i32}") == std::string::npos);
+  CHECK(vectorStdlib.find("[mut] out{/std/collections/vector/vector<T>()}") == std::string::npos);
   CHECK(vectorStdlib.find("[Vector<T> mut] out{/std/collections/vector/vector<T>()}") ==
         std::string::npos);
-  CHECK(vectorStdlib.find("[i32] valueCount{values.count()}") == std::string::npos);
-  CHECK(vectorStdlib.find("[i32 mut] index{0i32}") == std::string::npos);
 
   CHECK(mapStdlib.find(
             "// Standalone canonical stdlib-owned map implementation.") !=
@@ -4408,16 +4437,18 @@ TEST_CASE("small stdlib wrappers stay source locked to inferred locals") {
   CHECK(mapStdlib.find("return(/std/collections/vector/vectorCount<K>(keys))") !=
         std::string::npos);
 
-  CHECK(soaPublic.find(
-            "// Canonical public SoA helper namespace over the current SoaVector backing.") !=
+  // soa.prime merged from internal_soa_vector*, experimental_soa_vector* (TODO-4633)
+  CHECK(soaPublic.find("// Canonical standalone SoA module with merged implementation.") !=
         std::string::npos);
-  CHECK(soaPublic.find("import /std/collections/internal_soa_vector") !=
+  CHECK(soaPublic.find("import /std/collections/soa_storage/*") !=
+        std::string::npos);
+  CHECK(soaPublic.find("import /std/collections/internal_soa_vector") ==
         std::string::npos);
   CHECK(soaPublic.find("import /std/collections/experimental_soa_vector/*") ==
         std::string::npos);
   CHECK(soaPublic.find("/std/collections/soa/soa<T>([args<T>] values)") !=
         std::string::npos);
-  CHECK(soaPublic.find("/std/collections/internal_soa_vector/soaVectorPush<T>(out, /at(values, index))") !=
+  CHECK(soaPublic.find("/std/collections/soa/soaVectorPush<T>(out, /at(values, index))") !=
         std::string::npos);
   CHECK(soaPublic.find("/std/collections/soa/single<T>([T] value)") !=
         std::string::npos);
@@ -4435,82 +4466,29 @@ TEST_CASE("small stdlib wrappers stay source locked to inferred locals") {
         std::string::npos);
   CHECK(soaPublic.find("/std/collections/soa/to_aos<T>([SoaVector<T>] values)") !=
         std::string::npos);
-  CHECK(soaPublic.find("return(/std/collections/internal_soa_vector_conversions/soaVectorToAos<T>(values))") !=
+  CHECK(soaPublic.find("return(/std/collections/soa/soaVectorToAos<T>(values))") !=
         std::string::npos);
 
-  CHECK(internalSoaVector.find(
-            "// Internal implementation adapter behind canonical /std/collections/soa/*.") !=
-        std::string::npos);
-  CHECK(internalSoaVector.find(
-            "// targeted compatibility surface.") !=
-        std::string::npos);
-  CHECK(internalSoaVector.find("namespace internal_soa_vector") !=
-        std::string::npos);
-  CHECK(internalSoaVector.find("import /std/collections/experimental_soa_vector/*") !=
-        std::string::npos);
-  CHECK(internalSoaVector.find("[SoaColumn<T>] storage{values.storage}\n"
-                               "    return(/std/collections/internal_soa_storage/soaColumnCount<T>(storage))") !=
-        std::string::npos);
-  CHECK(internalSoaVector.find("[SoaColumn<T> mut] storage{values.storage}\n"
-                               "    /std/collections/internal_soa_storage/soaColumnPush<T>(storage, value)") !=
-        std::string::npos);
-
-  CHECK(internalSoaConversions.find(
-            "// Internal conversion adapter behind canonical /std/collections/soa/*.") !=
-        std::string::npos);
-  CHECK(internalSoaConversions.find("namespace internal_soa_vector_conversions") !=
-        std::string::npos);
-  CHECK(internalSoaConversions.find("import /std/collections/internal_soa_vector/*") !=
-        std::string::npos);
-  CHECK(internalSoaConversions.find("import /std/collections/soa/*") !=
-        std::string::npos);
-  CHECK(internalSoaConversions.find("import /std/collections/soa_vector/*") ==
-        std::string::npos);
-  CHECK(internalSoaConversions.find("import /std/collections/experimental_soa_vector/*") ==
-        std::string::npos);
-  CHECK(internalSoaConversions.find("soaVectorToAos<T>([SoaVector<T>] values)") !=
-        std::string::npos);
-  CHECK(internalSoaConversions.find("soaVectorToAosRef<T>([Reference<SoaVector<T>>] values)") !=
-        std::string::npos);
-  CHECK(internalSoaConversions.find("valueCount{/std/collections/soa/count<T>(values)}") !=
-        std::string::npos);
-  CHECK(internalSoaConversions.find("/std/collections/soa/get<T>(values, index)") !=
-        std::string::npos);
-  CHECK(internalSoaConversions.find("valueCount{/std/collections/soa/count_ref<T>(values)}") !=
-        std::string::npos);
-  CHECK(internalSoaConversions.find("/std/collections/soa/get_ref<T>(values, index)") !=
-        std::string::npos);
-  CHECK(internalSoaConversions.find("/std/collections/soa_vector/count<T>(values)") ==
-        std::string::npos);
-  CHECK(internalSoaConversions.find("/std/collections/soa_vector/get<T>(values, index)") ==
-        std::string::npos);
-  CHECK(internalSoaConversions.find("/std/collections/soa_vector/count_ref<T>(values)") ==
-        std::string::npos);
-  CHECK(internalSoaConversions.find("/std/collections/soa_vector/get_ref<T>(values, index)") ==
-        std::string::npos);
-  CHECK(internalSoaConversions.find("[vector<T> mut] out{vector<T>()}") != std::string::npos);
-  CHECK(internalSoaConversions.find("[mut] index{0i32}") != std::string::npos);
-  CHECK(experimentalSoaVector.find(
-            "// Rejected direct-import shim behind canonical /std/collections/soa/*.") !=
-        std::string::npos);
-  CHECK(experimentalSoaVector.find(
-            "// Internal adapters may import this file while public source imports reject.") !=
-        std::string::npos);
-  CHECK(experimentalSoaVector.find(
-            "// Canonical wrappers route through /std/collections/internal_soa_vector/*.") !=
-        std::string::npos);
-  CHECK(experimentalSoaVector.find(
-            "// Ordinary public examples should import /std/collections/soa/* instead.") !=
-        std::string::npos);
-  CHECK(experimentalSoaConversions.find(
-            "// Rejected direct-import conversion shim for legacy experimental SoA paths.") !=
-        std::string::npos);
-  CHECK(experimentalSoaConversions.find(
-            "// Internal adapters may import this file while public source imports reject.") !=
-        std::string::npos);
-  CHECK(experimentalSoaConversions.find(
-            "// Canonical conversions route through /std/collections/internal_soa_vector_conversions/*.") !=
-        std::string::npos);
+  // internal_soa_vector*, internal_soa_vector_conversions*, experimental_soa_vector*
+  // all merged into soa.prime (TODO-4633): verify these old paths are absent from soa.prime
+  CHECK(soaPublic.find("namespace internal_soa_vector") == std::string::npos);
+  CHECK(soaPublic.find("namespace experimental_soa_vector") == std::string::npos);
+  CHECK(soaPublic.find("/std/collections/internal_soa_storage/") == std::string::npos);
+  CHECK(soaPublic.find("/std/collections/internal_soa_vector/") == std::string::npos);
+  CHECK(soaPublic.find("/std/collections/experimental_soa_vector/") == std::string::npos);
+  // verify AoS conversion helpers are now directly in soa.prime
+  CHECK(soaPublic.find("soaVectorToAos<T>([SoaVector<T>] values)") != std::string::npos);
+  CHECK(soaPublic.find("soaVectorToAosRef<T>([Reference<SoaVector<T>>] values)") != std::string::npos);
+  CHECK(soaPublic.find("valueCount{/std/collections/soa/count<T>(values)}") != std::string::npos);
+  CHECK(soaPublic.find("/std/collections/soa/get<T>(values, index)") != std::string::npos);
+  CHECK(soaPublic.find("valueCount{/std/collections/soa/count_ref<T>(values)}") != std::string::npos);
+  CHECK(soaPublic.find("/std/collections/soa/get_ref<T>(values, index)") != std::string::npos);
+  // internalSoaVector, internalSoaConversions, experimentalSoaVector, experimentalSoaConversions
+  // are all empty strings after TODO-4633 merge
+  CHECK(internalSoaVector.empty());
+  CHECK(internalSoaConversions.empty());
+  CHECK(experimentalSoaVector.empty());
+  CHECK(experimentalSoaConversions.empty());
 }
 
 TEST_CASE("ppm image workflows keep explicit read locals") {
