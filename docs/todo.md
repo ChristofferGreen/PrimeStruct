@@ -77,7 +77,7 @@ This file is the live open-work queue for PrimeStruct.
 
 - TODO-4611: Add reverse cursor traversal API
 - TODO-4612: Add safe extent and cursor code examples
-- TODO-4635: Derive the collection surface registry from stdlib declarations
+- TODO-4636: Delete surfaces.psmeta and its parity scaffolding
 
 ### Priority Lanes
 
@@ -189,14 +189,13 @@ This file is the live open-work queue for PrimeStruct.
 2. TODO-4610: Add forward cursor traversal API
 3. TODO-4611: Add reverse cursor traversal API
 4. TODO-4612: Add safe extent and cursor code examples
-5. TODO-4635: Derive the collection surface registry from stdlib declarations
-6. TODO-4636: Delete surfaces.psmeta and its parity scaffolding
-7. TODO-4637: Move `ir_pipeline` test shard into subdirectory
-8. TODO-4638: Move `compile_run` test shard into subdirectory
-9. TODO-4639: Move `semantics` test shard into subdirectory
-10. TODO-4640: Move remaining test shards into subdirectories
-11. TODO-4641: Group `include/primec/` headers by pipeline stage
-12. TODO-4642: Consolidate loose top-level `src/` files into directories
+5. TODO-4636: Delete surfaces.psmeta and its parity scaffolding
+6. TODO-4637: Move `ir_pipeline` test shard into subdirectory
+7. TODO-4638: Move `compile_run` test shard into subdirectory
+8. TODO-4639: Move `semantics` test shard into subdirectory
+9. TODO-4640: Move remaining test shards into subdirectories
+10. TODO-4641: Group `include/primec/` headers by pipeline stage
+11. TODO-4642: Consolidate loose top-level `src/` files into directories
 13. TODO-4643: Fix 8 duplicate test names across files
 14. TODO-4644: Rewrite 53 overlong test names (>120 chars)
 15. TODO-4645: Drop `compiles and runs` prefix from ~740 test names
@@ -312,7 +311,7 @@ This file is the live open-work queue for PrimeStruct.
     updated; do not implement missing language features in this leaf.
 
 
-- [ ] TODO-4635: Derive the collection surface registry from stdlib declarations
+- [x] TODO-4635: Derive the collection surface registry from stdlib declarations
   - owner: ai
   - created_at: 2026-06-10
   - phase: Collections naming and manifest retirement

@@ -6,6 +6,34 @@ Legend:
 Finished items are periodically archived here from `docs/todo.md`; section headers record the archive date.
 
 **Todo Completion (June 17, 2026)**
+- [x] TODO-4635: Derive the collection surface registry from stdlib declarations
+  - owner: ai
+  - created_at: 2026-06-10
+  - finished_at: 2026-06-17
+  - phase: Collections naming and manifest retirement
+  - depends_on: TODO-4631, TODO-4632, TODO-4633, TODO-4634
+  - scope: Teach `StdlibSurfaceRegistry` to build collection surface metadata
+    (member names, statement members, import-alias spellings, lowering
+    spellings) from the parsed `[public]` stdlib declarations instead of
+    `stdlib/std/collections/surfaces.psmeta`.
+  - acceptance:
+    - Registry contents derived from stdlib declarations are parity-checked
+      identical to the manifest-derived contents.
+    - Release tests pass with the derived registry active.
+  - stop_rule: Stop once derivation plus parity check land; manifest deletion
+    is TODO-4636.
+  - evidence: Added 10 short-named rooted-path wrapper functions to
+    `stdlib/std/collections/vector.prime` (count, capacity, push, pop, reserve,
+    clear, remove_at, remove_swap, at, at_unsafe) following the soa/map pattern,
+    removing 3 dead `_ref` variants. Added `scanStdlibPublicFunctions`,
+    `deriveCollectionsSurfaces`, and `deriveAndVerifyCollectionsSurfaces` to
+    `src/StdlibSurfaceRegistry.cpp`; the derived registry is now the primary
+    source with a parity check against the loaded manifest (zero mismatches
+    across all 6 surfaces for all 4 tracked fields: member_names,
+    statement_member_names, import_alias_spellings, lowering_spellings).
+    Updated source-lock assertions in `test_ir_pipeline_backends_architecture.h`
+    and execution queue in `test_compile_run_examples_docs_locks.cpp`.
+
 - [x] TODO-4634: Rename internal buffer modules to canonical buffer names
   - owner: ai
   - created_at: 2026-06-10
