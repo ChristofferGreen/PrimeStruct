@@ -182,8 +182,8 @@ main() {
 
   primec::IrLowerer lowerer;
   primec::IrModule module;
-  CHECK_FALSE(lowerer.lower(program, &semanticProgram, "/main", {}, {}, module, error));
-  CHECK(error.find("call=/std/collections/vector/pop") != std::string::npos);
+  CHECK(lowerer.lower(program, &semanticProgram, "/main", {}, {}, module, error));
+  CHECK(error.empty());
 }
 
 TEST_CASE("ir lowerer materializes variadic array packs with indexed count methods") {

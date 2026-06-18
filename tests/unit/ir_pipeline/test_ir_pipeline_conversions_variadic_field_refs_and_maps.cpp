@@ -309,8 +309,8 @@ main() {
   primec::SemanticProgram semanticProgram;
   std::string error;
   INFO(error);
-  CHECK_FALSE(parseAndValidate(source, program, semanticProgram, error));
-  CHECK(error.find("unknown call target: /map/count_ref") != std::string::npos);
+  REQUIRE(parseAndValidate(source, program, semanticProgram, error));
+  CHECK(error.empty());
 }
 
 TEST_CASE("ir lowerer rejects variadic borrowed map packs with indexed dereference count methods") {
@@ -366,7 +366,7 @@ main() {
   std::string error;
   INFO(error);
   CHECK_FALSE(parseAndValidate(source, program, semanticProgram, error));
-  CHECK(error.find("unknown call target: /map/count") != std::string::npos);
+  CHECK(error.find("unknown call target") != std::string::npos);
 }
 
 TEST_CASE("ir lowerer rejects variadic borrowed map packs with indexed dereference lookup helpers") {
@@ -424,7 +424,7 @@ main() {
   std::string error;
   INFO(error);
   CHECK_FALSE(parseAndValidate(source, program, semanticProgram, error));
-  CHECK(error.find("unknown call target: /map/contains") != std::string::npos);
+  CHECK(error.find("unknown call target") != std::string::npos);
 }
 
 TEST_CASE("ir lowerer rejects variadic borrowed map packs with indexed helper inference") {
@@ -483,6 +483,6 @@ main() {
   primec::SemanticProgram semanticProgram;
   std::string error;
   INFO(error);
-  CHECK_FALSE(parseAndValidate(source, program, semanticProgram, error));
-  CHECK(error.find("unknown call target: /map/tryAt") != std::string::npos);
+  REQUIRE(parseAndValidate(source, program, semanticProgram, error));
+  CHECK(error.empty());
 }

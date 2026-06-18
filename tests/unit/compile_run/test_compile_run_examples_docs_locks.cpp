@@ -612,7 +612,8 @@ TEST_CASE("vector map bridge boundary docs stay source locked") {
   CHECK(primeStructDoc.find("**Stdlib-owned surface metadata:** canonical vector and map\n"
                             "  helper/import/constructor metadata") !=
         std::string::npos);
-  CHECK(primeStructDoc.find("`stdlib/std/collections/surfaces.psmeta`") !=
+  CHECK(primeStructDoc.find("TODO-4635 deleted\n"
+                            "  `stdlib/std/collections/surfaces.psmeta`") !=
         std::string::npos);
   CHECK(primeStructDoc.find("**Migration-only seams:** rooted `/map/*` spellings plus") !=
         std::string::npos);
@@ -645,8 +646,9 @@ TEST_CASE("vector map bridge boundary docs stay source locked") {
                             "  monomorphization still asks the registry for preferred experimental\n"
                             "  vector/SoA") !=
         std::string::npos);
-  CHECK(primeStructDoc.find("SoA public helper, constructor, import-alias, field-view, and conversion\n"
-                            "  metadata now lives in `stdlib/std/collections/surfaces.psmeta`") !=
+  CHECK(primeStructDoc.find("SoA public helper, constructor,\n"
+                            "  import-alias, field-view, and conversion metadata is derived from\n"
+                            "  `[public]` stdlib declarations by `StdlibSurfaceRegistry`") !=
         std::string::npos);
   CHECK(primeStructDoc.find("it no longer owns SoA public collection member lists") !=
         std::string::npos);
@@ -2142,7 +2144,7 @@ TEST_CASE("todo queue and skipped doctest debt stay source locked") {
   CHECK(todo.find("### Immediate Next 10\n\n"
                   "- TODO-4611: Add reverse cursor traversal API\n"
                   "- TODO-4612: Add safe extent and cursor code examples\n"
-                  "- TODO-4636: Delete surfaces.psmeta and its parity scaffolding") !=
+                  "- TODO-4637: Move `ir_pipeline` test shard into subdirectory") !=
         std::string::npos);
   CHECK(todo.find("### Priority Lanes") != std::string::npos);
   CHECK(todo.find("Source-unit provenance ledger: TODO-4592 completed parser/semantic") ==
@@ -2176,8 +2178,8 @@ TEST_CASE("todo queue and skipped doctest debt stay source locked") {
                   "2. TODO-4610: Add forward cursor traversal API\n"
                   "3. TODO-4611: Add reverse cursor traversal API\n"
                   "4. TODO-4612: Add safe extent and cursor code examples\n"
-                  "5. TODO-4636: Delete surfaces.psmeta and its parity scaffolding\n"
-                  "6. TODO-4637: Move `ir_pipeline` test shard into subdirectory\n") !=
+                  "5. TODO-4637: Move `ir_pipeline` test shard into subdirectory\n"
+                  "6. TODO-4638: Move `compile_run` test shard into subdirectory\n") !=
         std::string::npos);
   CHECK(todo.find("- TODO-4613: Retire semantic-validator private source locks | track: "
                   "semantic-source-lock-retirement") ==

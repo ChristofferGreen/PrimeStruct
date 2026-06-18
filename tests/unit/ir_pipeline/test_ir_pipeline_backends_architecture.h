@@ -76,8 +76,8 @@ TEST_CASE("design doc records vector map bridge contract") {
                     "  vector/SoA") !=
         std::string::npos);
   CHECK(design.find("SoA public helper, constructor,\n"
-                    "  import-alias, field-view, conversion, and retained compatibility metadata\n"
-                    "  now lives in `stdlib/std/collections/surfaces.psmeta`") !=
+                    "  import-alias, field-view, and conversion metadata is derived from\n"
+                    "  `[public]` stdlib declarations by `StdlibSurfaceRegistry`") !=
         std::string::npos);
   CHECK(design.find("it no longer owns SoA public collection member lists") !=
         std::string::npos);
@@ -142,8 +142,6 @@ TEST_CASE("stdlib surface registry stays source locked") {
   std::filesystem::path cmakePath = cwd / "CMakeLists.txt";
   std::filesystem::path headerPath = cwd / "include" / "primec" / "StdlibSurfaceRegistry.h";
   std::filesystem::path sourcePath = cwd / "src" / "StdlibSurfaceRegistry.cpp";
-  std::filesystem::path collectionManifestPath =
-      cwd / "stdlib" / "std" / "collections" / "surfaces.psmeta";
   if (!std::filesystem::exists(cmakePath)) {
     cmakePath = cwd.parent_path() / "CMakeLists.txt";
   }
@@ -153,20 +151,14 @@ TEST_CASE("stdlib surface registry stays source locked") {
   if (!std::filesystem::exists(sourcePath)) {
     sourcePath = cwd.parent_path() / "src" / "StdlibSurfaceRegistry.cpp";
   }
-  if (!std::filesystem::exists(collectionManifestPath)) {
-    collectionManifestPath = cwd.parent_path() / "stdlib" / "std" / "collections" /
-                             "surfaces.psmeta";
-  }
 
   REQUIRE(std::filesystem::exists(cmakePath));
   REQUIRE(std::filesystem::exists(headerPath));
   REQUIRE(std::filesystem::exists(sourcePath));
-  REQUIRE(std::filesystem::exists(collectionManifestPath));
 
   const std::string cmake = readTextFile(cmakePath);
   const std::string header = readTextFile(headerPath);
   const std::string source = readTextFile(sourcePath);
-  const std::string collectionManifest = readTextFile(collectionManifestPath);
 
   CHECK(cmake.find("src/StdlibSurfaceRegistry.cpp") != std::string::npos);
 
@@ -207,12 +199,12 @@ TEST_CASE("stdlib surface registry stays source locked") {
   CHECK(source.find("\"/file_error/why\"") != std::string::npos);
 
   CHECK(source.find("StdlibSurfaceId::CollectionsManifestSurface0") != std::string::npos);
-  CHECK(source.find("loadCollectionsManifestSurfaces()") != std::string::npos);
-  CHECK(source.find("surfaces.psmeta") != std::string::npos);
+  CHECK(source.find("loadCollectionsManifestSurfaces()") == std::string::npos);
+  CHECK(source.find("surfaces.psmeta") == std::string::npos);
   CHECK(source.find("resolveMetadataMemberName(") != std::string::npos);
   CHECK(source.find("deriveCollectionsSurfaces(") != std::string::npos);
   CHECK(source.find("scanStdlibPublicFunctions(") != std::string::npos);
-  CHECK(source.find("deriveAndVerifyCollectionsSurfaces(") != std::string::npos);
+  CHECK(source.find("deriveAndVerifyCollectionsSurfaces(") == std::string::npos);
   CHECK(source.find("\"/std/collections/vector\"") != std::string::npos);
   CHECK(source.find("\"/vector/count\"") == std::string::npos);
   CHECK(source.find("\"/vector/remove_swap\"") == std::string::npos);
@@ -226,34 +218,8 @@ TEST_CASE("stdlib surface registry stays source locked") {
   CHECK(source.find("\"vectorSingle\"") == std::string::npos);
   CHECK(source.find("\"/std/collections/experimental_vector/vectorPair\"") ==
         std::string::npos);
-  CHECK(collectionManifest.find("id = CollectionsVectorHelpers") != std::string::npos);
-  CHECK(collectionManifest.find("bridge_key = collections.vector_helpers") != std::string::npos);
-  CHECK(collectionManifest.find("canonical_path = /std/collections/vector") !=
-        std::string::npos);
-  CHECK(collectionManifest.find("lowering_spelling = /std/collections/vector/remove_swap") !=
-        std::string::npos);
-  CHECK(collectionManifest.find("compatibility_spelling = /vector/remove_swap") ==
-        std::string::npos);
-  CHECK(collectionManifest.find("compatibility_spelling = /std/collections/vectorRemoveSwap") ==
-        std::string::npos);
-  CHECK(collectionManifest.find("member_name = remove_swap") != std::string::npos);
-  CHECK(collectionManifest.find(
-            "compatibility_spelling = /std/collections/experimental_vector/vectorRemoveSwap") ==
-        std::string::npos);
-  CHECK(collectionManifest.find("member_alias = vectorRemoveSwap") == std::string::npos);
-  CHECK(collectionManifest.find("id = CollectionsVectorConstructors") !=
-        std::string::npos);
-  CHECK(collectionManifest.find("bridge_key = collections.vector_constructors") !=
-        std::string::npos);
-  CHECK(collectionManifest.find("canonical_path = /std/collections/vector/vector") !=
-        std::string::npos);
-  CHECK(collectionManifest.find("member_name = vector") != std::string::npos);
-  CHECK(collectionManifest.find("member_name = vectorSingle") == std::string::npos);
-  CHECK(collectionManifest.find("lowering_spelling = /std/collections/vectorSingle") ==
-        std::string::npos);
-  CHECK(collectionManifest.find(
-            "compatibility_spelling = /std/collections/experimental_vector/vectorPair") ==
-        std::string::npos);
+  CHECK(source.find("\"collections.vector_helpers\"") != std::string::npos);
+  CHECK(source.find("\"collections.vector_constructors\"") != std::string::npos);
 
   CHECK(source.find("StdlibSurfaceId::CollectionsMapHelpers") == std::string::npos);
   CHECK(source.find(".id = collectionSurfaceId(2)") != std::string::npos);
@@ -282,33 +248,6 @@ TEST_CASE("stdlib surface registry stays source locked") {
   CHECK(source.find("\"mapOct\"") == std::string::npos);
   CHECK(source.find("\"/std/collections/experimental_map/mapOct\"") ==
         std::string::npos);
-  CHECK(collectionManifest.find("id = CollectionsMapHelpers") != std::string::npos);
-  CHECK(collectionManifest.find("bridge_key = collections.map_helpers") !=
-        std::string::npos);
-  CHECK(collectionManifest.find("canonical_path = /std/collections/map") !=
-        std::string::npos);
-  CHECK(collectionManifest.find("member_name = count_ref") != std::string::npos);
-  CHECK(collectionManifest.find("member_name = insert_ref") != std::string::npos);
-  CHECK(collectionManifest.find("member_alias = mapAtUnsafe -> at_unsafe") ==
-        std::string::npos);
-  CHECK(collectionManifest.find("import_alias_spelling = /map") == std::string::npos);
-  CHECK(collectionManifest.find("compatibility_spelling = /map/count") ==
-        std::string::npos);
-  CHECK(collectionManifest.find(
-            "lowering_spelling = /std/collections/experimental_map/mapInsertRef") ==
-        std::string::npos);
-  CHECK(collectionManifest.find("id = CollectionsMapConstructors") !=
-        std::string::npos);
-  CHECK(collectionManifest.find("bridge_key = collections.map_constructors") !=
-        std::string::npos);
-  CHECK(collectionManifest.find("canonical_path = /std/collections/map/map") !=
-        std::string::npos);
-  CHECK(collectionManifest.find("member_name = mapOct") == std::string::npos);
-  CHECK(collectionManifest.find("lowering_spelling = /std/collections/mapNew") ==
-        std::string::npos);
-  CHECK(collectionManifest.find(
-            "compatibility_spelling = /std/collections/experimental_map/mapOct") ==
-        std::string::npos);
 
   CHECK(source.find("StdlibSurfaceId::CollectionsColumnarHelpers") == std::string::npos);
   CHECK(source.find(".id = collectionSurfaceId(4)") != std::string::npos);
@@ -323,39 +262,12 @@ TEST_CASE("stdlib surface registry stays source locked") {
         std::string::npos);
   CHECK(source.find("\"/std/collections/experimental_soa_vector_conversions/soaVectorToAos\"") ==
         std::string::npos);
-  CHECK(collectionManifest.find("id = CollectionsColumnarHelpers") != std::string::npos);
-  CHECK(collectionManifest.find("bridge_key = collections.soa_helpers") !=
-        std::string::npos);
-  CHECK(collectionManifest.find("import_alias_spelling = /std/collections/soa") !=
-        std::string::npos);
-  CHECK(collectionManifest.find("lowering_spelling = /std/collections/soa/field_view") !=
-        std::string::npos);
-  CHECK(collectionManifest.find("compatibility_spelling = /soa_vector/to_aos") ==
-        std::string::npos);
-  CHECK(collectionManifest.find("member_alias = soaVectorGetRef -> get_ref") ==
-        std::string::npos);
-  CHECK(collectionManifest.find(
-            "compatibility_spelling = /std/collections/experimental_soa_vector/soaVectorPush") ==
-        std::string::npos);
-  CHECK(collectionManifest.find(
-            "compatibility_spelling = "
-            "/std/collections/experimental_soa_vector_conversions/soaVectorToAos") ==
-        std::string::npos);
 
   CHECK(source.find("StdlibSurfaceId::CollectionsColumnarConstructors") !=
         std::string::npos);
   CHECK(source.find("\"collections.soa_constructors\"") != std::string::npos);
   CHECK(source.find("\"/std/collections/soa_vector/soa_vector\"") == std::string::npos);
   CHECK(source.find("\"/std/collections/experimental_soa_vector/soaVectorNew\"") ==
-        std::string::npos);
-  CHECK(collectionManifest.find("id = CollectionsColumnarConstructors") !=
-        std::string::npos);
-  CHECK(collectionManifest.find("bridge_key = collections.soa_constructors") !=
-        std::string::npos);
-  CHECK(collectionManifest.find("lowering_spelling = /std/collections/soa/soa") !=
-        std::string::npos);
-  CHECK(collectionManifest.find(
-            "compatibility_spelling = /std/collections/experimental_soa_vector/soaVectorNew") ==
         std::string::npos);
 
   CHECK(source.find("StdlibSurfaceId::CollectionsContainerErrorHelpers") != std::string::npos);

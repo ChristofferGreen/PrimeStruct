@@ -37,6 +37,24 @@ recorded here manually before starting new implementation work.
   Fixed `inferStructPathFromFieldAccessCall` to only accept `at`/`at_unsafe` calls as
   valid args-pack indexed access patterns in `IrLowererStructTypeHelpers.cpp`.
 
+- ~~IR pipeline validation cases 97, 111~~ — **FIXED** 2026-06-17:
+  Updated `emitBuiltinArrayAccess` and `emitArrayVectorAccessLoad` test expectations
+  for 1-indexed vector slot layout (count at slot 1, capacity at slot 2, data at slot 3).
+  Instruction counts changed from 26→28 and 22→24 for the `at` vector path.
+
+- ~~IR pipeline validation cases 125, 129~~ — **FIXED** 2026-06-17:
+  Updated source delegation stability tests to reflect collection decoupling changes.
+  `normalizeExperimentalCollectionTypePath` removed from `IrLowererStructSlotLayoutHelpers.cpp`.
+  `count(values)` now rewritten to method call with exact imports.
+
+- ~~IR pipeline conversions variadic_collection_refs, variadic_field_refs_and_maps, variadic_pointer_maps~~ — **FIXED** 2026-06-17:
+  Map helpers (`count_ref`, `contains`, `contains_ref`, `tryAt`, `count`) now resolved
+  through collection registry. Updated tests to expect success or use generic error patterns.
+
+- ~~Semantics executions case 5, transforms case 4~~ — **FIXED** 2026-06-17:
+  Map count helper `/std/collections/map/count` now resolved through collection registry.
+  Updated tests from `CHECK_FALSE(validateProgram(...))` to `REQUIRE(validateProgram(...))`.
+
 - Command:
   `build-release/primec --emit=ir build-release/stdlib_soa_trait_repro.prime -o build-release/stdlib_soa_trait_repro.psir`
 - Failed case:

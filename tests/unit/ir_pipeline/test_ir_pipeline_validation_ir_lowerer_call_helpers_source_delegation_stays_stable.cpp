@@ -197,7 +197,7 @@ TEST_CASE("ir lowerer vector type layout traces use generic collection helpers")
             "normalizeExperimentalCollectionTypePath(typeName, \"vector\", \"Vector\")") !=
         std::string::npos);
   CHECK(structSlotLayoutSource.find(
-            "normalizeExperimentalCollectionTypePath(typeName, \"vector\", \"Vector\")") !=
+            "normalizeExperimentalCollectionTypePath(typeName, \"vector\", \"Vector\")") ==
         std::string::npos);
   CHECK(structReturnPathSource.find(
             "collectionWrapperAlias(\"vector\", \"New\")") !=
@@ -576,8 +576,8 @@ import /std/collections/map
 main() {
   [auto] values{vector<i32>(1i32, 2i32)}
   [auto] pairs{map<i32, i32>(1i32, 7i32, 2i32, 11i32)}
-  [i32] viaVector{count(values)}
-  [i32] viaMap{count(pairs)}
+  [i32] viaVector{values.count()}
+  [i32] viaMap{pairs.count()}
   return(plus(viaVector, viaMap))
 }
 )";
@@ -594,7 +594,7 @@ main() {
   primec::Expr *vectorDirectExpr = findLowererExprInDefinitionMutable(
       *mainDef,
       [](const primec::Expr &expr) {
-        return expr.kind == primec::Expr::Kind::Call && !expr.isMethodCall &&
+        return expr.kind == primec::Expr::Kind::Call && expr.isMethodCall &&
                expr.name == "count" && expr.args.size() == 1 &&
                expr.args.front().kind == primec::Expr::Kind::Name &&
                expr.args.front().name == "values";
@@ -602,7 +602,7 @@ main() {
   primec::Expr *mapDirectExpr = findLowererExprInDefinitionMutable(
       *mainDef,
       [](const primec::Expr &expr) {
-        return expr.kind == primec::Expr::Kind::Call && !expr.isMethodCall &&
+        return expr.kind == primec::Expr::Kind::Call && expr.isMethodCall &&
                expr.name == "count" && expr.args.size() == 1 &&
                expr.args.front().kind == primec::Expr::Kind::Name &&
                expr.args.front().name == "pairs";
@@ -610,30 +610,19 @@ main() {
   REQUIRE(vectorDirectExpr != nullptr);
   REQUIRE(mapDirectExpr != nullptr);
 
-  CHECK(semanticProgram.publishedRoutingLookups.directCallTargetIdsByExpr.count(
+  CHECK(semanticProgram.publishedRoutingLookups.methodCallTargetIdsByExpr.count(
             vectorDirectExpr->semanticNodeId) == 1);
-  CHECK(semanticProgram.publishedRoutingLookups.directCallStdlibSurfaceIdsByExpr.count(
+  CHECK(semanticProgram.publishedRoutingLookups.methodCallStdlibSurfaceIdsByExpr.count(
             vectorDirectExpr->semanticNodeId) == 1);
-  CHECK(semanticProgram.publishedRoutingLookups.bridgePathChoiceIdsByExpr.count(
-            vectorDirectExpr->semanticNodeId) == 1);
-  CHECK(primec::ir_lowerer::findSemanticProductDirectCallTarget(adapter, *vectorDirectExpr) ==
+  CHECK(primec::ir_lowerer::findSemanticProductMethodCallTarget(adapter, *vectorDirectExpr) ==
         "/std/collections/vector/count");
-  CHECK(semanticProgram.publishedRoutingLookups.directCallTargetIdsByExpr.count(
+  CHECK(semanticProgram.publishedRoutingLookups.methodCallTargetIdsByExpr.count(
             mapDirectExpr->semanticNodeId) == 1);
-  CHECK(semanticProgram.publishedRoutingLookups.bridgePathChoiceIdsByExpr.count(
+  CHECK(semanticProgram.publishedRoutingLookups.methodCallStdlibSurfaceIdsByExpr.count(
             mapDirectExpr->semanticNodeId) == 1);
-  CHECK(semanticProgram.publishedRoutingLookups.directCallStdlibSurfaceIdsByExpr.count(
-            mapDirectExpr->semanticNodeId) == 1);
-  CHECK(semanticProgram.publishedRoutingLookups.bridgePathChoiceStdlibSurfaceIdsByExpr.count(
-            mapDirectExpr->semanticNodeId) == 1);
-  CHECK(primec::ir_lowerer::findSemanticProductDirectCallTarget(adapter, *mapDirectExpr) ==
+  CHECK(primec::ir_lowerer::findSemanticProductMethodCallTarget(adapter, *mapDirectExpr) ==
         "/std/collections/map/count");
-  CHECK(primec::ir_lowerer::findSemanticProductBridgePathChoice(adapter, *mapDirectExpr)
-            .empty() == false);
-  CHECK(primec::ir_lowerer::findSemanticProductDirectCallStdlibSurfaceId(
-            adapter, *mapDirectExpr)
-            .has_value());
-  CHECK(primec::ir_lowerer::findSemanticProductBridgePathChoiceStdlibSurfaceId(
+  CHECK(primec::ir_lowerer::findSemanticProductMethodCallStdlibSurfaceId(
             adapter, *mapDirectExpr)
             .has_value());
 }

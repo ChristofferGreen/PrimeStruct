@@ -77,7 +77,7 @@ This file is the live open-work queue for PrimeStruct.
 
 - TODO-4611: Add reverse cursor traversal API
 - TODO-4612: Add safe extent and cursor code examples
-- TODO-4636: Delete surfaces.psmeta and its parity scaffolding
+- TODO-4637: Move `ir_pipeline` test shard into subdirectory
 
 ### Priority Lanes
 
@@ -189,28 +189,27 @@ This file is the live open-work queue for PrimeStruct.
 2. TODO-4610: Add forward cursor traversal API
 3. TODO-4611: Add reverse cursor traversal API
 4. TODO-4612: Add safe extent and cursor code examples
-5. TODO-4636: Delete surfaces.psmeta and its parity scaffolding
-6. TODO-4637: Move `ir_pipeline` test shard into subdirectory
-7. TODO-4638: Move `compile_run` test shard into subdirectory
-8. TODO-4639: Move `semantics` test shard into subdirectory
-9. TODO-4640: Move remaining test shards into subdirectories
-10. TODO-4641: Group `include/primec/` headers by pipeline stage
-11. TODO-4642: Consolidate loose top-level `src/` files into directories
-13. TODO-4643: Fix 8 duplicate test names across files
-14. TODO-4644: Rewrite 53 overlong test names (>120 chars)
-15. TODO-4645: Drop `compiles and runs` prefix from ~740 test names
-16. TODO-4646: Tighten 12 vague/short test names
-17. TODO-4647: Rename 63 opaque shard files with topic suffixes
-18. TODO-4648: Split `SemanticsValidate.cpp` into focused compilation units
-19. TODO-4649: Convert IR lowerer include-only `.h` fragments to `.h/.cpp` pairs
-20. TODO-4650: Convert `TemplateMonomorph*.h` semantics fragments to `.h/.cpp` pairs
-21. TODO-4651: Split oversized test files (10K+ lines, 100+ tests)
-22. TODO-4652: Split oversized single test case bodies (>1000 lines)
-23. TODO-4653: Add dedicated IrPrinter unit tests
-24. TODO-4654: Add [public] annotations to stdlib modules
-25. TODO-4655: Add compile-run tests for language level examples
-26. TODO-4670: Remove collection-specific slot layout helpers (old alias branches)
-29. TODO-4671: Remove isVectorTypeName and isMapTypeName after migration
+5. TODO-4637: Move `ir_pipeline` test shard into subdirectory
+6. TODO-4638: Move `compile_run` test shard into subdirectory
+7. TODO-4639: Move `semantics` test shard into subdirectory
+8. TODO-4640: Move remaining test shards into subdirectories
+9. TODO-4641: Group `include/primec/` headers by pipeline stage
+10. TODO-4642: Consolidate loose top-level `src/` files into directories
+11. TODO-4643: Fix 8 duplicate test names across files
+12. TODO-4644: Rewrite 53 overlong test names (>120 chars)
+13. TODO-4645: Drop `compiles and runs` prefix from ~740 test names
+14. TODO-4646: Tighten 12 vague/short test names
+15. TODO-4647: Rename 63 opaque shard files with topic suffixes
+16. TODO-4648: Split `SemanticsValidate.cpp` into focused compilation units
+17. TODO-4649: Convert IR lowerer include-only `.h` fragments to `.h/.cpp` pairs
+18. TODO-4650: Convert `TemplateMonomorph*.h` semantics fragments to `.h/.cpp` pairs
+19. TODO-4651: Split oversized test files (10K+ lines, 100+ tests)
+20. TODO-4652: Split oversized single test case bodies (>1000 lines)
+21. TODO-4653: Add dedicated IrPrinter unit tests
+22. TODO-4654: Add [public] annotations to stdlib modules
+23. TODO-4655: Add compile-run tests for language level examples
+24. TODO-4670: Remove collection-specific slot layout helpers (old alias branches)
+25. TODO-4671: Remove isVectorTypeName and isMapTypeName after migration
 
 ### Task Blocks
 
@@ -333,7 +332,7 @@ This file is the live open-work queue for PrimeStruct.
   - stop_rule: Stop once derivation plus parity check land; manifest deletion
     is TODO-4636.
 
-- [ ] TODO-4636: Delete surfaces.psmeta and its parity scaffolding
+- [x] TODO-4636: Delete surfaces.psmeta and its parity scaffolding
   - owner: ai
   - created_at: 2026-06-10
   - phase: Collections naming and manifest retirement

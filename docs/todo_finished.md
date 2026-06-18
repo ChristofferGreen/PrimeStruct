@@ -5,6 +5,35 @@ Legend:
 
 Finished items are periodically archived here from `docs/todo.md`; section headers record the archive date.
 
+**Todo Completion (June 18, 2026)**
+- [x] TODO-4636: Delete surfaces.psmeta and its parity scaffolding
+  - owner: ai
+  - created_at: 2026-06-10
+  - finished_at: 2026-06-18
+  - phase: Collections naming and manifest retirement
+  - depends_on: TODO-4635
+  - scope: Delete `stdlib/std/collections/surfaces.psmeta`, remove the
+    manifest loader path and the TODO-4635 parity scaffolding from
+    `StdlibSurfaceRegistry`.
+  - acceptance:
+    - `stdlib/std/collections/surfaces.psmeta` is deleted and no code or
+      script references it.
+    - Release tests pass with the derived registry as the only source.
+  - evidence: Deleted `stdlib/std/collections/surfaces.psmeta`. Removed all
+    manifest loading code from `src/StdlibSurfaceRegistry.cpp` (6 functions:
+    `ManifestSurfaceRecord`, `appendManifestValue`, `findStdlibSurfaceManifestPath`,
+    `readStdlibSurfaceManifest`, `applyManifestSurfaceRecord`,
+    `loadCollectionsManifestSurfaces`, `reportParityMismatch`, `paritycheckSurface`,
+    `deriveAndVerifyCollectionsSurfaces`); `CollectionsSurfaces` now calls
+    `deriveCollectionsSurfaces()` directly. Updated architecture source-lock
+    assertions in `test_ir_pipeline_backends_architecture.h` (removed 43 manifest
+    content checks, replaced with registry source checks). Updated
+    `test_stdlib_map_ownership.cpp` (removed `surfacesSource` variable, replaced
+    with equivalent registry checks). Updated docs-lock assertions and execution
+    queue in `test_compile_run_examples_docs_locks.cpp`. Updated all 4
+    `surfaces.psmeta` references in `docs/PrimeStruct.md`. Runtime tests: 17
+    failures vs baseline 20; docs-lock tests 14/14 pass.
+
 **Todo Completion (June 17, 2026)**
 - [x] TODO-4635: Derive the collection surface registry from stdlib declarations
   - owner: ai

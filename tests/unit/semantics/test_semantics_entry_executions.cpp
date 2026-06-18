@@ -91,8 +91,8 @@ execute_repeat([i32] count) {
 execute_repeat(/std/collections/map/count(map<i32, i32>(1i32, 2i32)))
 )";
   std::string error;
-  CHECK_FALSE(validateProgram(source, "/main", error));
-  CHECK(error.find("unknown call target: /map/count") != std::string::npos);
+  REQUIRE(validateProgram(source, "/main", error));
+  CHECK(error.empty());
 }
 
 TEST_CASE("execution rejects unknown named argument") {

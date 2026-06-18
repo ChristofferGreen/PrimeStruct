@@ -4194,9 +4194,9 @@ re-defining it piecemeal.
   spellings plus removed-helper diagnostics, semantic surface IDs, and lowerer
   dispatch metadata.
 - **Stdlib-owned surface metadata:** canonical vector and map
-  helper/import/constructor metadata is declared in
-  `stdlib/std/collections/surfaces.psmeta` and consumed by
-  `StdlibSurfaceRegistry` through generic manifest loading. Production C++
+  helper/import/constructor metadata is derived from `[public]` stdlib
+  declarations by `StdlibSurfaceRegistry` (TODO-4635 deleted
+  `stdlib/std/collections/surfaces.psmeta`). Production C++
   keeps the surface ids and registry APIs, but the canonical collection member
   lists, import aliases, lowering spellings, and vector mutator helper subset
   live with the stdlib collection source. Old vector compatibility spellings are
@@ -4242,10 +4242,11 @@ re-defining it piecemeal.
   spellings. Template
   monomorphization still asks the registry for preferred experimental
   vector/SoA helper spellings instead of carrying bespoke
-  canonical-to-experimental helper maps. SoA public helper, constructor, import-alias, field-view, and conversion
-  metadata now lives in `stdlib/std/collections/surfaces.psmeta` and is
-  consumed through the generic `StdlibSurfaceRegistry` manifest path. The
-  `soa<T>` public surface is declared there without old `soa_vector`, rooted
+  canonical-to-experimental helper maps. SoA public helper, constructor,
+  import-alias, field-view, and conversion metadata is derived from
+  `[public]` stdlib declarations by `StdlibSurfaceRegistry` (TODO-4635
+  replaced `stdlib/std/collections/surfaces.psmeta`). The
+  `soa<T>` public surface is declared in stdlib without old `soa_vector`, rooted
   `/soa_vector`, mixed-helper, experimental wrapper, or conversion-helper
   compatibility spellings. The registry keeps surface ids and generic APIs in C++,
   but it no longer owns SoA public collection member lists, import aliases,
@@ -4340,11 +4341,9 @@ uses a distinct structure-of-arrays substrate and field-view invalidation model.
   in the test source. The canonical ECS example lives at
   `examples/3.Surface/soa_ecs.prime`.
 - **Stdlib-owned surface metadata:** canonical `soa` helper/import/constructor,
-  field-view, and conversion metadata is declared in
-  `stdlib/std/collections/surfaces.psmeta` and loaded through the generic
-  `StdlibSurfaceRegistry` manifest code. Generic compiler/runtime SoA substrate
-  metadata remains separate and is not encoded in that public collection
-  surface manifest.
+  field-view, and conversion metadata is derived from `[public]` stdlib
+  declarations by `StdlibSurfaceRegistry`. Generic compiler/runtime SoA substrate
+  metadata remains separate.
 - **Rejected compatibility seams:** `/std/collections/soa_vector*` and
   `/std/collections/experimental_soa_vector*` direct imports reject with a
   stable diagnostic pointing users to `/std/collections/soa/*`. `soa_vector<T>`
@@ -4388,8 +4387,7 @@ the generic layout and storage primitives that the stdlib wrapper still needs.
   `soa<T>` and import `/std/collections/soa/*`. Public construction,
   count/get/ref, push/reserve, field-view, conversion helper names, import
   aliases, and compatibility spelling rejection belong in stdlib wrapper
-  modules, `stdlib/std/collections/surfaces.psmeta`, or focused
-  diagnostics, not in compiler-owned policy.
+  modules or focused diagnostics, not in compiler-owned policy.
 - **Allowed compiler/runtime substrate:** field-layout/codegen/introspection,
   generated `SoaSchema*` metadata, `SoaColumn<T>` column storage,
   `SoaFieldView<T>` non-owning field views, checked-buffer allocation/growth,
