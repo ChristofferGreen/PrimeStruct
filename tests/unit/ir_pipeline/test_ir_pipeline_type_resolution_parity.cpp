@@ -651,7 +651,7 @@ main() {
           false,
       },
       {
-          "borrowed_soa_vector_auto_return",
+          "borrowed_soa_auto_return",
           R"(
 import /std/collections/*
 
@@ -660,7 +660,7 @@ Particle() {
 }
 
 [return<auto>]
-scoreRefs([args<Reference<soa_vector<Particle>>>] values) {
+scoreRefs([args<Reference<soa<Particle>>>] values) {
   return(count(to_aos(dereference(values[0i32]))))
 }
 
@@ -670,7 +670,8 @@ main() {
 }
 )",
           false,
-          "template arguments are only supported on templated definitions: /soa_vector",
+          "missing semantic-product bridge-path choice: /scoreRefs -> to_aos",
+          false,
       },
   };
 

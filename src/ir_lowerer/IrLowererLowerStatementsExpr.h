@@ -1,4 +1,5 @@
 // soa-surface-audit: exempt
+// collection-surface-audit: exempt
         auto resolveDirectHelperPath = [&](const Expr &callExpr) {
           if (!callExpr.name.empty() && callExpr.name.front() == '/') {
             return callExpr.name;
@@ -525,13 +526,13 @@
         };
         auto isSamePathSoaHelperPath = [&](const std::string &path) {
           const std::string normalizedPath = stripGeneratedHelperSuffix(path);
-          return normalizedPath.rfind("/soa_vector/", 0) == 0 ||
+          return normalizedPath.rfind("/soa/", 0) == 0 ||
                  normalizedPath == "/to_aos" ||
                  normalizedPath == "/to_aos_ref";
         };
         auto isSoaWrapperHelperFamilyPath = [&](const std::string &path) {
           const std::string normalizedPath = stripGeneratedHelperSuffix(path);
-          return normalizedPath.rfind("/std/collections/soa_vector/", 0) == 0 ||
+          return normalizedPath.rfind("/std/collections/soa/", 0) == 0 ||
                  normalizedPath.rfind(collection_paths::memberPath(collection_paths::kExperimentalSoaVectorFolder, "soaVector"), 0) == 0 ||
                  normalizedPath.rfind(collection_paths::memberPath(collection_paths::kExperimentalSoaVectorConversionsFolder, "soaVector"), 0) == 0;
         };
@@ -561,35 +562,35 @@
             return directSoaWrapper;
           }
           auto canonicalSamePathSoaWrapper = [](const std::string &path) {
-            if (path == "/soa_vector/count") {
-              return std::string("/std/collections/soa_vector/count");
+            if (path == "/soa/count") {
+              return std::string("/std/collections/soa/count");
             }
-            if (path == "/soa_vector/count_ref") {
-              return std::string("/std/collections/soa_vector/count_ref");
+            if (path == "/soa/count_ref") {
+              return std::string("/std/collections/soa/count_ref");
             }
-            if (path == "/soa_vector/get") {
-              return std::string("/std/collections/soa_vector/get");
+            if (path == "/soa/get") {
+              return std::string("/std/collections/soa/get");
             }
-            if (path == "/soa_vector/get_ref") {
-              return std::string("/std/collections/soa_vector/get_ref");
+            if (path == "/soa/get_ref") {
+              return std::string("/std/collections/soa/get_ref");
             }
-            if (path == "/soa_vector/ref") {
-              return std::string("/std/collections/soa_vector/ref");
+            if (path == "/soa/ref") {
+              return std::string("/std/collections/soa/ref");
             }
-            if (path == "/soa_vector/ref_ref") {
-              return std::string("/std/collections/soa_vector/ref_ref");
+            if (path == "/soa/ref_ref") {
+              return std::string("/std/collections/soa/ref_ref");
             }
-            if (path == "/soa_vector/reserve") {
-              return std::string("/std/collections/soa_vector/reserve");
+            if (path == "/soa/reserve") {
+              return std::string("/std/collections/soa/reserve");
             }
-            if (path == "/soa_vector/push") {
-              return std::string("/std/collections/soa_vector/push");
+            if (path == "/soa/push") {
+              return std::string("/std/collections/soa/push");
             }
             if (path == "/to_aos") {
-              return std::string("/std/collections/soa_vector/to_aos");
+              return std::string("/std/collections/soa/to_aos");
             }
             if (path == "/to_aos_ref") {
-              return std::string("/std/collections/soa_vector/to_aos_ref");
+              return std::string("/std/collections/soa/to_aos_ref");
             }
             return std::string{};
           };
@@ -604,14 +605,30 @@
           if (isExperimentalSoaToAosCall && !callExpr.args.empty()) {
             const std::string receiverStruct =
                 inferStructExprPath(callExpr.args.front(), localsIn);
-            if (normalizeCollectionBindingTypeName(receiverStruct) == "soa_vector") {
+            if (normalizeCollectionBindingTypeName(receiverStruct) == "soa") {
               if (const Definition *canonicalSoaToAos =
-                      findDirectHelperDefinition("/std/collections/soa_vector/to_aos")) {
+                      findDirectHelperDefinition("/std/collections/soa/to_aos")) {
                 return canonicalSoaToAos;
               }
             }
           }
           return nullptr;
+        };
+        auto resolveSemanticCallTargetPath = [&](const Expr &callExpr) {
+          if (semanticProgram == nullptr || callExpr.sourceLine == 0 ||
+              callExpr.sourceColumn == 0) {
+            return std::string{};
+          }
+          for (const auto &queryFact : semanticProgram->queryFacts) {
+            if (queryFact.sourceLine != callExpr.sourceLine ||
+                queryFact.sourceColumn != callExpr.sourceColumn ||
+                queryFact.resolvedPathId == InvalidSymbolId) {
+              continue;
+            }
+            return std::string(semanticProgramResolveCallTargetString(
+                *semanticProgram, queryFact.resolvedPathId));
+          }
+          return std::string{};
         };
         auto findDirectEntryKeyValueConstructorDefinition = [&](const Expr &callExpr)
             -> const Definition * {
@@ -745,7 +762,7 @@
               if (inferredReceiverStruct.rfind(
                       collection_paths::specializedTypePrefix(collection_paths::kSoaFolder, collection_paths::kSoaVectorTypeName), 0) == 0 ||
                   normalizeCollectionBindingTypeName(inferredReceiverStruct) ==
-                      "soa_vector") {
+                      "soa") {
                 targetInfoOut.isArrayOrVectorTarget = true;
                 targetInfoOut.isVectorTarget = false;
                 targetInfoOut.isSoaVector = true;
@@ -765,13 +782,13 @@
                 return false;
               }
               if ((collectionName != "array" && collectionName != "vector" &&
-                   collectionName != "soa_vector") ||
+                   collectionName != "soa") ||
                   collectionArgs.size() != 1) {
                 return false;
               }
               targetInfoOut.isArrayOrVectorTarget = true;
               targetInfoOut.isVectorTarget = (collectionName == "vector");
-              targetInfoOut.isSoaVector = (collectionName == "soa_vector");
+              targetInfoOut.isSoaVector = (collectionName == "soa");
               targetInfoOut.elemKind =
                   ir_lowerer::valueKindFromTypeName(collectionArgs.front());
               if (targetInfoOut.isSoaVector) {
@@ -894,8 +911,20 @@
             }
           }
           const Definition *directCallee = resolveDefinitionCall(expr);
+          if (const std::string semanticResolvedPath =
+                  resolveSemanticCallTargetPath(expr);
+              !semanticResolvedPath.empty() &&
+              isSamePathSoaHelperPath(semanticResolvedPath) &&
+              (directCallee == nullptr ||
+               !isSamePathSoaHelperPath(directCallee->fullPath))) {
+            if (const Definition *semanticSoaHelper =
+                    findDirectHelperDefinition(semanticResolvedPath)) {
+              directCallee = semanticSoaHelper;
+            }
+          }
           if (directCallee != nullptr &&
-              isSoaWrapperHelperFamilyPath(rawPath)) {
+              isSoaWrapperHelperFamilyPath(rawPath) &&
+              !isSamePathSoaHelperPath(directCallee->fullPath)) {
             if (const Definition *preferredSoaWrapper =
                     findDirectSoaWrapperDefinition(expr, rawPath)) {
               directCallee = preferredSoaWrapper;
@@ -1472,6 +1501,48 @@
           }
         }
 
+        auto semanticQueryExprReturnsString = [&](const Expr &candidate) {
+          if (semanticProgram == nullptr) {
+            return false;
+          }
+          const auto *queryFact = ir_lowerer::findSemanticProductQueryFact(
+              semanticProgram,
+              callResolutionAdapters.semanticProductTargets.semanticIndex,
+              candidate);
+          if (queryFact == nullptr) {
+            return false;
+          }
+          const std::string queryType = resolveSemanticProductTypeText(
+              semanticProgram, queryFact->queryTypeText,
+              queryFact->queryTypeTextId);
+          const std::string bindingType = resolveSemanticProductTypeText(
+              semanticProgram, queryFact->bindingTypeText,
+              queryFact->bindingTypeTextId);
+          return queryType == "string" || queryType == "/string" ||
+                 bindingType == "string" || bindingType == "/string";
+        };
+        if (expr.isMethodCall && expr.args.size() == 1 &&
+            (findSemanticProductMethodCallTarget(semanticProgram, expr) ==
+                 "/string/count" ||
+             (isSimpleCallName(expr, "count") &&
+              semanticQueryExprReturnsString(expr.args.front())))) {
+          if (const Definition *stringCountCallee =
+                  findDirectHelperDefinition("/string/count");
+              stringCountCallee != nullptr) {
+            Expr directStringCountExpr = expr;
+            directStringCountExpr.isMethodCall = false;
+            directStringCountExpr.isFieldAccess = false;
+            directStringCountExpr.namespacePrefix.clear();
+            directStringCountExpr.name = "/string/count";
+            directStringCountExpr.semanticNodeId = 0;
+            if (!emitInlineDefinitionCall(
+                    directStringCountExpr, *stringCountCallee, localsIn, true)) {
+              return false;
+            }
+            return true;
+          }
+        }
+
         if (expr.isMethodCall && expr.args.size() == 1 &&
             (resolveExprPath(expr) == "/string/count" ||
              isSimpleCallName(expr, "count"))) {
@@ -1552,8 +1623,14 @@
               stringCountCallee = findDirectHelperDefinition("/string/count");
             }
             if (stringCountCallee != nullptr) {
+              Expr directStringCountExpr = expr;
+              directStringCountExpr.isMethodCall = false;
+              directStringCountExpr.isFieldAccess = false;
+              directStringCountExpr.namespacePrefix.clear();
+              directStringCountExpr.name = "/string/count";
+              directStringCountExpr.semanticNodeId = 0;
               if (!emitInlineDefinitionCall(
-                      expr, *stringCountCallee, localsIn, true)) {
+                      directStringCountExpr, *stringCountCallee, localsIn, true)) {
                 return false;
               }
               return true;
@@ -1767,7 +1844,7 @@
                   structPath.rfind(collection_paths::specializedTypePrefix(collection_paths::kSoaFolder, collection_paths::kSoaVectorTypeName), 0) == 0;
               return targetInfo.isArrayOrVectorTarget || structPath == "/array" ||
                      structPath == "/vector" || structPath == "/Buffer" || structPath == "/map" ||
-                     structPath == "/soa_vector" || isCollectionVectorTarget ||
+                     structPath == "/soa" || isCollectionVectorTarget ||
                      isExperimentalKeyValueTarget || isSemanticKeyValueTarget ||
                      isExperimentalSoaVectorTarget;
             },
@@ -2247,9 +2324,8 @@
             if (receiverArgIndex != 0 && accessExpr.args.size() > receiverArgIndex) {
               std::swap(accessExpr.args[0], accessExpr.args[receiverArgIndex]);
             }
-            if ((bareKeyValueAccessName == "at" ||
-                 bareKeyValueAccessName == "at_unsafe") &&
-                !ir_lowerer::isKeyValueStorageStructPath(targetInfo.structTypeName)) {
+            if (bareKeyValueAccessName == "at" ||
+                bareKeyValueAccessName == "at_unsafe") {
               if (accessExpr.args.front().kind == Expr::Kind::Call &&
                   !inferStructExprPath(expr, localsIn).empty()) {
                 error = "struct parameter type mismatch";

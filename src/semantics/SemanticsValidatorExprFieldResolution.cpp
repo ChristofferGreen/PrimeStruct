@@ -317,6 +317,38 @@ bool SemanticsValidator::resolveStructFieldReceiverPath(const std::vector<Parame
         }
       }
     }
+    if (structPathOut.empty() && receiverExpr.args.size() == 2) {
+      auto mapAccessHelperName = [&]() {
+        std::string path = resolveCalleePath(receiverExpr);
+        if (path.empty() && !receiverExpr.name.empty()) {
+          path = receiverExpr.name;
+        }
+        const size_t slash = path.find_last_of('/');
+        std::string helperName =
+            slash == std::string::npos ? path : path.substr(slash + 1);
+        if (const size_t suffix = helperName.find("__");
+            suffix != std::string::npos) {
+          helperName.erase(suffix);
+        }
+        return helperName;
+      }();
+      if (mapAccessHelperName == "at" || mapAccessHelperName == "at_ref" ||
+          mapAccessHelperName == "at_unsafe" ||
+          mapAccessHelperName == "at_unsafe_ref") {
+        const BuiltinCollectionDispatchResolvers dispatchResolvers =
+            makeBuiltinCollectionDispatchResolvers(params, locals);
+        std::string keyType;
+        std::string valueType;
+        if ((dispatchResolvers.resolveMapTarget != nullptr &&
+             dispatchResolvers.resolveMapTarget(receiverExpr.args.front(), keyType, valueType)) ||
+            (dispatchResolvers.resolveKeyValueTarget != nullptr &&
+             dispatchResolvers.resolveKeyValueTarget(receiverExpr.args.front(), keyType, valueType))) {
+          const std::string unwrappedValueType =
+              unwrapReferencePointerTypeText(normalizeBindingTypeName(valueType));
+          (void)resolveStructPathFromType(unwrappedValueType, receiverNamespace, structPathOut);
+        }
+      }
+    }
     if (structPathOut.empty()) {
       std::string inferredStruct = inferStructReturnPath(receiverExpr, params, locals);
       if (!inferredStruct.empty() && structNames_.count(inferredStruct) > 0) {

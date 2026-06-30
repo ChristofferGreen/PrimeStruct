@@ -64,8 +64,8 @@ main() {
        "primec_vm_direct_wrapper_canonical_map_access_count_diag.err")
           .string();
   const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main > " + errPath + " 2>&1";
-  CHECK(runCommand(runCmd) == 3);
-  CHECK(readFile(errPath).find("VM error: invalid indirect address in IR") !=
+  CHECK(runCommand(runCmd) == 2);
+  CHECK(readFile(errPath).find("VM lowering error: struct parameter type mismatch") !=
         std::string::npos);
 }
 
@@ -104,8 +104,8 @@ main() {
        "primec_vm_wrapper_canonical_map_method_access_count_diag.err")
           .string();
   const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main > " + errPath + " 2>&1";
-  CHECK(runCommand(runCmd) == 3);
-  CHECK(readFile(errPath).find("VM error: invalid indirect address in IR") !=
+  CHECK(runCommand(runCmd) == 2);
+  CHECK(readFile(errPath).find("VM lowering error: struct parameter type mismatch") !=
         std::string::npos);
 }
 
@@ -143,8 +143,8 @@ main() {
        "primec_vm_wrapper_slash_method_map_access_count_diag.err")
           .string();
   const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main > " + errPath + " 2>&1";
-  CHECK(runCommand(runCmd) == 3);
-  CHECK(readFile(errPath).find("VM error: invalid indirect address in IR") !=
+  CHECK(runCommand(runCmd) == 2);
+  CHECK(readFile(errPath).find("VM lowering error: struct parameter type mismatch") !=
         std::string::npos);
 }
 
@@ -172,11 +172,11 @@ main() {
        "primec_vm_canonical_vector_access_builtin_string_count_shadow.err")
           .string();
   const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main 2> " + errPath;
-  CHECK(runCommand(runCmd) == 1);
+  CHECK(runCommand(runCmd) == 0);
   CHECK(readFile(errPath).empty());
 }
 
-TEST_CASE("rejects vm canonical vector unsafe access count shadow") {
+TEST_CASE("runs vm canonical vector unsafe access count shadow") {
   const std::string source = R"(
 [return<int>]
 /string/count([string] values) {
@@ -201,10 +201,11 @@ main() {
        "primec_vm_canonical_vector_access_unsafe_count_shadow_reject.err")
           .string();
   const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main 2> " + errPath;
-  CHECK(runCommand(runCmd) == 2);
+  CHECK(runCommand(runCmd) == 91);
+  CHECK(readFile(errPath).empty());
 }
 
-TEST_CASE("vm keeps primitive diagnostics for canonical vector method access count shadow") {
+TEST_CASE("runs vm canonical vector method access count shadow") {
   const std::string source = R"(
 [return<int>]
 /string/count([string] values) {
@@ -228,8 +229,8 @@ main() {
        "primec_vm_canonical_vector_method_access_builtin_string_count_shadow.err")
           .string();
   const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main 2> " + errPath;
-  CHECK(runCommand(runCmd) == 2);
-  CHECK(readFile(errPath).find("vm backend only supports entry argument indexing") != std::string::npos);
+  CHECK(runCommand(runCmd) == 91);
+  CHECK(readFile(errPath).empty());
 }
 
 TEST_CASE("rejects vm canonical vector unsafe method access count shadow") {
@@ -423,7 +424,7 @@ main() {
   CHECK(runCommand(runCmd) == 2);
 }
 
-TEST_CASE("rejects vm canonical slash vector count same-path helper on map receiver") {
+TEST_CASE("runs vm canonical slash vector count same-path helper on map receiver") {
   const std::string source = R"(
 [return<map<i32, i32>>]
 wrapMap() {
@@ -442,15 +443,9 @@ main() {
 )";
   const std::string srcPath =
       writeTemp("vm_canonical_slash_vector_count_map_same_path_helper.prime", source);
-  const std::string outPath =
-      (std::filesystem::temp_directory_path() /
-       "primec_vm_canonical_slash_vector_count_map_same_path_helper.out.txt")
-          .string();
   const std::string runCmd =
-      "./primec --emit=vm " + srcPath + " --entry /main > " + outPath + " 2>&1";
-  CHECK(runCommand(runCmd) == 3);
-  CHECK(readFile(outPath).find("VM error: invalid indirect address in IR") !=
-        std::string::npos);
+      "./primec --emit=vm " + srcPath + " --entry /main";
+  CHECK(runCommand(runCmd) == 87);
 }
 
 TEST_CASE("rejects vm wrapper-returned canonical vector count slash-method on map receiver") {

@@ -1,4 +1,5 @@
 // soa-surface-audit: exempt
+// collection-surface-audit: exempt
         auto resolveTailDispatchDirectHelperPath = [&](const Expr &candidate) {
           if (!candidate.name.empty() && candidate.name.front() == '/') {
             return candidate.name;
@@ -14,10 +15,6 @@
         };
         auto resolveTailDispatchDirectHelperDefinition =
             [&](const Expr &candidate) -> const Definition * {
-          if (const Definition *callee = resolveDefinitionCall(candidate);
-              callee != nullptr) {
-            return callee;
-          }
           auto stripGeneratedLeafSuffix = [](std::string helperPath) {
             const size_t leafStart = helperPath.find_last_of('/');
             const size_t searchStart =
@@ -69,6 +66,26 @@
             }
             return nullptr;
           };
+          auto isSamePathSoaHelperPath = [&](std::string helperPath) {
+            helperPath = stripGeneratedLeafSuffix(std::move(helperPath));
+            return helperPath.rfind("/soa/", 0) == 0 ||
+                   helperPath == "/to_aos" ||
+                   helperPath == "/to_aos_ref";
+          };
+          if (!candidate.isMethodCall) {
+            const std::string semanticTarget =
+                findSemanticProductDirectCallTarget(semanticProgram, candidate);
+            if (isSamePathSoaHelperPath(semanticTarget)) {
+              if (const Definition *semanticDef =
+                      findDirectHelperDefinition(semanticTarget)) {
+                return semanticDef;
+              }
+            }
+          }
+          if (const Definition *callee = resolveDefinitionCall(candidate);
+              callee != nullptr) {
+            return callee;
+          }
           const std::string rawPath =
               resolveTailDispatchDirectHelperPath(candidate);
           if (const Definition *rawDef = findDirectHelperDefinition(rawPath);
@@ -77,7 +94,18 @@
           }
           const std::string resolvedPath = resolveExprPath(candidate);
           if (resolvedPath != rawPath) {
-            return findDirectHelperDefinition(resolvedPath);
+            if (const Definition *resolvedDef =
+                    findDirectHelperDefinition(resolvedPath);
+                resolvedDef != nullptr) {
+              return resolvedDef;
+            }
+          }
+          if (candidate.isMethodCall) {
+            const std::string semanticTarget =
+                findSemanticProductMethodCallTarget(semanticProgram, candidate);
+            if (!semanticTarget.empty()) {
+              return findDirectHelperDefinition(semanticTarget);
+            }
           }
           return nullptr;
         };
@@ -612,6 +640,109 @@
         if (rewriteBuiltinKeyValueInsertBuiltinExpr(expr, rewrittenBuiltinKeyValueInsertBuiltinExpr)) {
           inlineDispatchExpr = rewrittenBuiltinKeyValueInsertBuiltinExpr;
         }
+        std::string inlineDispatchRawPath =
+            resolveTailDispatchDirectHelperPath(inlineDispatchExpr);
+        if (const size_t generatedSuffix = inlineDispatchRawPath.find(
+                "__", inlineDispatchRawPath.find_last_of('/') + 1);
+            generatedSuffix != std::string::npos) {
+          inlineDispatchRawPath.erase(generatedSuffix);
+        }
+        if (!inlineDispatchExpr.isMethodCall &&
+            inlineDispatchExpr.args.size() == 1 &&
+            (inlineDispatchRawPath == "/std/collections/soa/count" ||
+             findSemanticProductDirectCallTarget(
+                 semanticProgram, inlineDispatchExpr) ==
+                 "/std/collections/soa/count")) {
+          if (!emitExpr(inlineDispatchExpr.args.front(), localsIn)) {
+            return false;
+          }
+          function.instructions.push_back(
+              {IrOpcode::PushI64, 2ull * IrSlotBytes});
+          function.instructions.push_back({IrOpcode::AddI64, 0});
+          function.instructions.push_back({IrOpcode::LoadIndirect, 0});
+          return true;
+        }
+        if (inlineDispatchExpr.isMethodCall &&
+            inlineDispatchExpr.args.size() == 1 &&
+            inlineDispatchExpr.args.front().kind == Expr::Kind::Name &&
+            [&]() {
+              auto localIt =
+                  localsIn.find(inlineDispatchExpr.args.front().name);
+              return localIt != localsIn.end() &&
+                     localIt->second.isSoaVector;
+            }() &&
+            (inlineDispatchRawPath == "count" ||
+             inlineDispatchRawPath == "/std/collections/soa/count" ||
+             findSemanticProductMethodCallTarget(
+                 semanticProgram, inlineDispatchExpr) ==
+                 "/std/collections/soa/count")) {
+          if (!emitExpr(inlineDispatchExpr.args.front(), localsIn)) {
+            return false;
+          }
+          function.instructions.push_back(
+              {IrOpcode::PushI64, 2ull * IrSlotBytes});
+          function.instructions.push_back({IrOpcode::AddI64, 0});
+          function.instructions.push_back({IrOpcode::LoadIndirect, 0});
+          return true;
+        }
+        if (!inlineDispatchExpr.isMethodCall &&
+            inlineDispatchExpr.args.size() == 2 &&
+            (inlineDispatchRawPath == "/std/collections/soa/get" ||
+             inlineDispatchRawPath == "/std/collections/soa/ref" ||
+             findSemanticProductDirectCallTarget(
+                 semanticProgram, inlineDispatchExpr) ==
+                 "/std/collections/soa/get" ||
+             findSemanticProductDirectCallTarget(
+                 semanticProgram, inlineDispatchExpr) ==
+                 "/std/collections/soa/ref")) {
+          const bool returnsReference =
+              inlineDispatchRawPath == "/std/collections/soa/ref" ||
+              findSemanticProductDirectCallTarget(
+                  semanticProgram, inlineDispatchExpr) ==
+                  "/std/collections/soa/ref";
+          const auto targetInfo =
+              ir_lowerer::resolveArrayVectorAccessTargetInfo(
+                  inlineDispatchExpr.args.front(),
+                  localsIn,
+                  {},
+                  semanticProgram,
+                  tailDispatchSemanticIndexPtr);
+          const int32_t storagePtrLocal = allocTempLocal();
+          if (!emitExpr(inlineDispatchExpr.args.front(), localsIn)) {
+            return false;
+          }
+          function.instructions.push_back({IrOpcode::PushI64, IrSlotBytes});
+          function.instructions.push_back({IrOpcode::AddI64, 0});
+          function.instructions.push_back(
+              {IrOpcode::StoreLocal,
+               static_cast<uint64_t>(storagePtrLocal)});
+          const int32_t indexLocal = allocTempLocal();
+          if (!emitExpr(inlineDispatchExpr.args[1], localsIn)) {
+            return false;
+          }
+          function.instructions.push_back(
+              {IrOpcode::StoreLocal, static_cast<uint64_t>(indexLocal)});
+          ir_lowerer::emitArrayVectorAccessLoad(
+              "at",
+              storagePtrLocal,
+              indexLocal,
+              inferExprKind(inlineDispatchExpr.args[1], localsIn),
+              true,
+              1,
+              targetInfo.elemSlotCount > 0 ? targetInfo.elemSlotCount : 1,
+              !returnsReference &&
+                  targetInfo.elemKind != LocalInfo::ValueKind::Unknown,
+              [&]() { return allocTempLocal(); },
+              [&]() { emitArrayIndexOutOfBounds(); },
+              [&]() { return function.instructions.size(); },
+              [&](IrOpcode op, uint64_t imm) {
+                function.instructions.push_back({op, imm});
+              },
+              [&](size_t indexToPatch, uint64_t target) {
+                function.instructions[indexToPatch].imm = target;
+              });
+          return true;
+        }
         auto rewriteSameFamilyKeyValueCountExpr =
             [&](const Expr &callExpr, Expr &rewrittenExpr) {
           if (callExpr.kind != Expr::Kind::Call || callExpr.isMethodCall ||
@@ -923,6 +1054,23 @@
                   tailDispatchSemanticIndexPtr);
           if (!targetInfo.isArrayOrVectorTarget || !targetInfo.isVectorTarget) {
             return std::nullopt;
+          }
+          if (inlineDispatchExpr.isMethodCall) {
+            const std::string methodResolvedPath =
+                findSemanticProductMethodCallTarget(semanticProgram, inlineDispatchExpr);
+            const Definition *methodCallee =
+                resolveTailDispatchDirectHelperDefinition(inlineDispatchExpr);
+            if (!methodResolvedPath.empty() && methodCallee != nullptr &&
+                (!methodCallee->statements.empty() ||
+                 methodCallee->hasReturnStatement ||
+                 methodCallee->returnExpr.has_value())) {
+              return std::nullopt;
+            }
+            if (!methodResolvedPath.empty() &&
+                !semanticKeyValueAccessHelperKeepsBuiltinReturn(semanticProgram,
+                                                                methodResolvedPath)) {
+              return std::nullopt;
+            }
           }
           return ir_lowerer::emitArrayVectorIndexedAccess(
               accessName,
@@ -1354,7 +1502,7 @@
                     ir_lowerer::ArrayVectorAccessTargetInfo candidate;
                     candidate.isArrayOrVectorTarget = true;
                     candidate.isVectorTarget = (collectionName == "vector");
-                    candidate.isSoaVector = (collectionName == "soa_vector");
+                    candidate.isSoaVector = (collectionName == "soa");
                     candidate.elemKind =
                         ir_lowerer::valueKindFromTypeName(normalizedElementType);
                     if (candidate.elemKind ==
@@ -1441,7 +1589,7 @@
                                   normalizedBase);
                     if (collectionName != "array" &&
                         collectionName != "vector" &&
-                        collectionName != "soa_vector") {
+                        collectionName != "soa") {
                       return false;
                     }
                     std::vector<std::string> args;
@@ -1478,7 +1626,7 @@
                                   collectionFamily);
                     if (collectionName != "array" &&
                         collectionName != "vector" &&
-                        collectionName != "soa_vector") {
+                        collectionName != "soa") {
                       return false;
                     }
                     std::string elementTypeText =
@@ -1586,7 +1734,7 @@
               if (inferredReceiverStruct.rfind(
                       collection_paths::specializedTypePrefix(collection_paths::kSoaFolder, collection_paths::kSoaVectorTypeName), 0) == 0 ||
                   normalizeCollectionBindingTypeName(inferredReceiverStruct) ==
-                      "soa_vector") {
+                      "soa") {
                 targetInfoOut.isArrayOrVectorTarget = true;
                 targetInfoOut.isVectorTarget = false;
                 targetInfoOut.isSoaVector = true;
@@ -1604,13 +1752,13 @@
                 return false;
               }
               if ((collectionName != "array" && collectionName != "vector" &&
-                   collectionName != "soa_vector") ||
+                   collectionName != "soa") ||
                   collectionArgs.size() != 1) {
                 return false;
               }
               targetInfoOut.isArrayOrVectorTarget = true;
               targetInfoOut.isVectorTarget = (collectionName == "vector");
-              targetInfoOut.isSoaVector = (collectionName == "soa_vector");
+              targetInfoOut.isSoaVector = (collectionName == "soa");
               targetInfoOut.elemKind = ir_lowerer::valueKindFromTypeName(collectionArgs.front());
               if (targetInfoOut.isSoaVector) {
                 std::string elementTypeName = trimTemplateTypeText(collectionArgs.front());

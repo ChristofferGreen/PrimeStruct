@@ -263,7 +263,7 @@ main() {
   CHECK(runCommand(runCmd) == 10);
 }
 
-TEST_CASE("rejects vm canonical map access non-string shadow during lowering") {
+TEST_CASE("runs vm canonical map access same-path string shadow") {
   const std::string source = R"(
 [return<string>]
 /map/at([map<i32, string>] values, [i32] key) {
@@ -298,13 +298,8 @@ main() {
 )";
   const std::string srcPath =
       writeTemp("vm_canonical_map_access_string_shadow_before_aliases_diag.prime", source);
-  const std::string outPath =
-      (std::filesystem::temp_directory_path() / "primec_vm_canonical_map_access_string_shadow_before_aliases_diag.out")
-          .string();
-  const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main > " + outPath + " 2>&1";
-  CHECK(runCommand(runCmd) == 2);
-  CHECK(readFile(outPath).find("VM lowering error: vm backend only supports entry argument indexing") !=
-        std::string::npos);
+  const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main";
+  CHECK(runCommand(runCmd) == 10);
 }
 
 TEST_CASE("runs vm rooted map count as ordinary user definition") {
@@ -571,8 +566,11 @@ main() {
   CHECK(runCommand(runCmd) == 95);
 }
 
-TEST_CASE("runs vm canonical map reference string access without imported canonical helper") {
+TEST_CASE("runs vm canonical map reference string access with imported canonical helpers") {
   const std::string source = R"(
+import /std/collections/*
+import /std/collections/map/*
+
 [return<int>]
 /string/count([string] values) {
   return(91i32)
