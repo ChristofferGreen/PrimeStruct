@@ -535,6 +535,15 @@ std::string SemanticsValidator::resolveExprConcreteCallPath(
               canonicalSamePathSoaHelperBase(candidatePath);
           !preferredTemplateBearingSamePathCandidate.empty() &&
           pathExists(preferredTemplateBearingSamePathCandidate)) {
+        const size_t lastSlash = preferredTemplateBearingSamePathCandidate.rfind('/');
+        if (lastSlash != std::string::npos) {
+          const std::string helperName =
+              preferredTemplateBearingSamePathCandidate.substr(lastSlash + 1);
+          const std::string samePathOverridePath = samePathSoaHelperTargetPath(helperName);
+          if (hasDefinitionFamilyPath(samePathOverridePath)) {
+            return samePathOverridePath;
+          }
+        }
         return preferredTemplateBearingSamePathCandidate;
       }
     }
@@ -553,49 +562,49 @@ std::string SemanticsValidator::resolveExprConcreteCallPath(
         canonicalCountPath = compatibilitySoaHelperTargetPath("count_ref");
       }
       if (isCanonicalStdlibSoaHelperPath(canonicalCountPath, "count") &&
-          pathExists(samePathSoaHelperTargetPath("count"))) {
+          hasDefinitionFamilyPath(samePathSoaHelperTargetPath("count"))) {
         return samePathSoaHelperTargetPath("count");
       }
       if (isCanonicalStdlibSoaHelperPath(canonicalCountPath, "count_ref") &&
-          pathExists(samePathSoaHelperTargetPath("count_ref"))) {
+          hasDefinitionFamilyPath(samePathSoaHelperTargetPath("count_ref"))) {
         return samePathSoaHelperTargetPath("count_ref");
       }
       const std::string canonicalGetPath =
           canonicalizeLegacySoaGetHelperPath(candidatePath);
       if (isCanonicalStdlibSoaHelperPath(canonicalGetPath, "get") &&
-          pathExists(samePathSoaHelperTargetPath("get"))) {
+          hasDefinitionFamilyPath(samePathSoaHelperTargetPath("get"))) {
         return samePathSoaHelperTargetPath("get");
       }
       if (isCanonicalStdlibSoaHelperPath(canonicalGetPath, "get_ref") &&
-          pathExists(samePathSoaHelperTargetPath("get_ref"))) {
+          hasDefinitionFamilyPath(samePathSoaHelperTargetPath("get_ref"))) {
         return samePathSoaHelperTargetPath("get_ref");
       }
       const std::string canonicalRefPath =
           canonicalizeLegacySoaRefHelperPath(candidatePath);
       if (isCanonicalStdlibSoaHelperPath(canonicalRefPath, "ref") &&
-          pathExists(samePathSoaHelperTargetPath("ref"))) {
+          hasDefinitionFamilyPath(samePathSoaHelperTargetPath("ref"))) {
         return samePathSoaHelperTargetPath("ref");
       }
       if (isCanonicalStdlibSoaHelperPath(canonicalRefPath, "ref_ref") &&
-          pathExists(samePathSoaHelperTargetPath("ref_ref"))) {
+          hasDefinitionFamilyPath(samePathSoaHelperTargetPath("ref_ref"))) {
         return samePathSoaHelperTargetPath("ref_ref");
       }
       const std::string canonicalToAosPath =
           canonicalizeLegacySoaToAosHelperPath(candidatePath);
       if (isCanonicalStdlibSoaHelperPath(canonicalToAosPath, "to_aos") &&
-          pathExists("/to_aos")) {
+          hasDefinitionFamilyPath("/to_aos")) {
         return "/to_aos";
       }
       if (isCanonicalStdlibSoaHelperPath(canonicalToAosPath, "to_aos_ref") &&
-          pathExists("/to_aos_ref")) {
+          hasDefinitionFamilyPath("/to_aos_ref")) {
         return "/to_aos_ref";
       }
       if (isCanonicalStdlibSoaHelperPath(candidatePath, "push") &&
-          pathExists(samePathSoaHelperTargetPath("push"))) {
+          hasDefinitionFamilyPath(samePathSoaHelperTargetPath("push"))) {
         return samePathSoaHelperTargetPath("push");
       }
       if (isCanonicalStdlibSoaHelperPath(candidatePath, "reserve") &&
-          pathExists(samePathSoaHelperTargetPath("reserve"))) {
+          hasDefinitionFamilyPath(samePathSoaHelperTargetPath("reserve"))) {
         return samePathSoaHelperTargetPath("reserve");
       }
       return {};
@@ -620,6 +629,18 @@ std::string SemanticsValidator::resolveExprConcreteCallPath(
         canonicalSamePathSoaHelperBase(candidatePath);
     if (!samePathSoaCandidateBase.empty() &&
         hasDefinitionFamilyPath(samePathSoaCandidateBase)) {
+      if (!expr.isMethodCall) {
+        const size_t lastSlash = samePathSoaCandidateBase.rfind('/');
+        if (lastSlash != std::string::npos) {
+          const std::string helperName = samePathSoaCandidateBase.substr(lastSlash + 1);
+          const std::string userSamePathOverride = samePathSoaHelperTargetPath(helperName);
+          if (!userSamePathOverride.empty() &&
+              userSamePathOverride != samePathSoaCandidateBase &&
+              hasDefinitionFamilyPath(userSamePathOverride)) {
+            return userSamePathOverride;
+          }
+        }
+      }
       return samePathSoaCandidateBase;
     }
     for (const auto &basePath : baseCandidates) {

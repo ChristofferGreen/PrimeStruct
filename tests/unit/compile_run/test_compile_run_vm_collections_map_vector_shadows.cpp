@@ -320,7 +320,7 @@ main() {
       (std::filesystem::temp_directory_path() / "primec_vm_vector_mutator_methods_err.txt").string();
   const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main 2> " + errPath;
   CHECK(runCommand(runCmd) == 2);
-  CHECK(readFile(errPath).find("missing semantic-product method-call target: pop") != std::string::npos);
+  CHECK(readFile(errPath).find("missing semantic-product method-call target: remove_at") != std::string::npos);
 }
 
 TEST_CASE("canonical vector discard helpers with owned elements in vm backend") {

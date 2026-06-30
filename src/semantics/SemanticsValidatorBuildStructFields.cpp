@@ -409,8 +409,8 @@ bool SemanticsValidator::validateSoaVectorElementFieldEnvelopes(const std::strin
         }
         activeStructs.erase(structDef.fullPath);
         return failSoaFieldEnvelopeDiagnostic(
-            "soa" "_vector field envelope is unsupported on " + fieldPath +
-            ": " + fieldType);
+            "soa field envelope is unsupported on " + fieldPath + ": " +
+            fieldType);
       }
       if (fieldBinding.typeTemplateArg.empty() && !isPrimitiveBindingTypeName(normalizedFieldType)) {
         const std::string nestedStructPath = resolveStructPath(fieldBinding.typeName, structDef.namespacePrefix);

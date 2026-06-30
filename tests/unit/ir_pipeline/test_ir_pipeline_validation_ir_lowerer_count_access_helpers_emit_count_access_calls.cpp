@@ -189,10 +189,13 @@ TEST_CASE("ir lowerer count access helpers emit count access calls") {
             [&](primec::IrOpcode op, uint64_t imm) { instructions.push_back({op, imm}); },
             error) == Result::Emitted);
   CHECK_EQ(error, "");
-  REQUIRE(instructions.size() == 2);
+  REQUIRE(instructions.size() == 4);
   CHECK(instructions[0].op == primec::IrOpcode::LoadLocal);
   CHECK(instructions[0].imm == 3);
-  CHECK(instructions[1].op == primec::IrOpcode::LoadIndirect);
+  CHECK(instructions[1].op == primec::IrOpcode::PushI64);
+  CHECK(instructions[1].imm == 16);
+  CHECK(instructions[2].op == primec::IrOpcode::AddI64);
+  CHECK(instructions[3].op == primec::IrOpcode::LoadIndirect);
 
   instructions.clear();
   error.clear();
@@ -221,7 +224,7 @@ TEST_CASE("ir lowerer count access helpers emit count access calls") {
   CHECK(instructions[0].op == primec::IrOpcode::LoadLocal);
   CHECK(instructions[0].imm == 3);
   CHECK(instructions[1].op == primec::IrOpcode::PushI64);
-  CHECK(instructions[1].imm == primec::IrSlotBytes);
+  CHECK(instructions[1].imm == 32);
   CHECK(instructions[2].op == primec::IrOpcode::AddI64);
   CHECK(instructions[3].op == primec::IrOpcode::LoadIndirect);
 
@@ -235,7 +238,7 @@ TEST_CASE("ir lowerer count access helpers emit count access calls") {
 
   instructions.clear();
   error.clear();
-  callExpr.name = "/std/collections/soa_vector/soaVectorCount";
+  callExpr.name = "/std/collections/soa/soaVectorCount";
   callExpr.isMethodCall = false;
   CHECK(primec::ir_lowerer::tryEmitCountAccessCall(
             callExpr,
@@ -352,7 +355,7 @@ TEST_CASE("ir lowerer count access helpers emit count access calls") {
   soaColumnInfo.index = 4;
   soaColumnInfo.kind = primec::ir_lowerer::LocalInfo::Kind::Value;
   soaColumnInfo.structTypeName =
-      "/std/collections/internal_soa_storage/SoaColumn__ti32";
+      "/std/collections/soa_storage/SoaColumn__ti32";
   soaStorageLocals.emplace("values", soaColumnInfo);
 
   instructions.clear();
@@ -474,7 +477,7 @@ TEST_CASE("ir lowerer count access helpers emit count access calls") {
   instructions.clear();
   error.clear();
   callExpr.isMethodCall = false;
-  callExpr.name = "/std/collections/internal_soa_storage/SoaColumn/field_capacity";
+  callExpr.name = "/std/collections/soa_storage/SoaColumn/field_capacity";
   int scopedSoaFieldCapacityEmitExprCalls = 0;
   CHECK(primec::ir_lowerer::tryEmitCountAccessCall(
             callExpr,
@@ -888,7 +891,7 @@ TEST_CASE("ir lowerer count access helpers build count classifier adapters") {
   CHECK_FALSE(isArrayCountCall(countEntry, locals));
   countEntry.name = "/vector/count";
   CHECK_FALSE(isArrayCountCall(countEntry, locals));
-  countEntry.name = "/soa_vector/count";
+  countEntry.name = "/soa/count";
   CHECK_FALSE(isArrayCountCall(countEntry, locals));
   primec::Expr namedArgVectorTemporary;
   namedArgVectorTemporary.kind = primec::Expr::Kind::Call;
@@ -931,7 +934,7 @@ TEST_CASE("ir lowerer count access helpers build count classifier adapters") {
   CHECK_FALSE(isVectorCapacityCall(capacityCall, locals));
 
   for (const char *soaToAosPath : {"/std/collections/soa/to_aos__t0",
-                                   "/std/collections/soa_vector/to_aos__t0"}) {
+                                   "/std/collections/soa/to_aos__t0"}) {
     primec::Expr canonicalToAosCall;
     canonicalToAosCall.kind = primec::Expr::Kind::Call;
     canonicalToAosCall.name = soaToAosPath;
@@ -1003,7 +1006,7 @@ TEST_CASE("ir lowerer count access helpers build bundled classifiers") {
   CHECK_FALSE(classifiers.isArrayCountCall(countEntry, locals));
   countEntry.name = "/vector/count";
   CHECK_FALSE(classifiers.isArrayCountCall(countEntry, locals));
-  countEntry.name = "/soa_vector/count";
+  countEntry.name = "/soa/count";
   CHECK_FALSE(classifiers.isArrayCountCall(countEntry, locals));
   primec::Expr namedArgVectorTemporary;
   namedArgVectorTemporary.kind = primec::Expr::Kind::Call;
@@ -1045,7 +1048,7 @@ TEST_CASE("ir lowerer count access helpers build bundled classifiers") {
   capacityCall.name = "/vector/capacity";
   CHECK_FALSE(classifiers.isVectorCapacityCall(capacityCall, locals));
   for (const char *soaToAosPath : {"/std/collections/soa/to_aos__t0",
-                                   "/std/collections/soa_vector/to_aos__t0"}) {
+                                   "/std/collections/soa/to_aos__t0"}) {
     primec::Expr canonicalToAosCall;
     canonicalToAosCall.kind = primec::Expr::Kind::Call;
     canonicalToAosCall.name = soaToAosPath;

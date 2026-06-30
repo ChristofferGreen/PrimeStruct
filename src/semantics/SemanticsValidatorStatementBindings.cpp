@@ -355,6 +355,16 @@ bool SemanticsValidator::validateBindingStatement(const std::vector<ParameterInf
                         &currentValidationState_.compileTimeTypeLocals)) {
     return false;
   }
+  std::string parsedSoaElementType;
+  if (extractExperimentalSoaVectorElementType(info, parsedSoaElementType) &&
+      isSoaVectorStructElementType(parsedSoaElementType,
+                                   namespacePrefix,
+                                   structNames_,
+                                   importAliases_) &&
+      !validateSoaVectorElementFieldEnvelopes(parsedSoaElementType,
+                                              namespacePrefix)) {
+    return false;
+  }
 
   const bool hasExplicitType = hasExplicitBindingTypeTransform(stmt);
   const bool explicitAutoType = hasExplicitType && normalizeBindingTypeName(info.typeName) == "auto";

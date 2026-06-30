@@ -135,7 +135,7 @@ ReturnKind getReturnKind(const Definition &def,
       if (!splitTopLevelTemplateArgs(arg, args)) {
         return false;
       }
-      if (base == "array" || base == "vector" || base == "soa_vector" ||
+      if (base == "array" || base == "vector" || base == "soa" ||
           base == "Buffer" || base == "Reference" || base == "Pointer" ||
           base == "uninitialized" || base == "Task") {
         return args.size() == 1 && isAllowedCollectionTypeArg(args.front());
@@ -211,7 +211,7 @@ ReturnKind getReturnKind(const Definition &def,
         }
         return ReturnKind::Array;
       }
-      if (splitTemplateTypeName(normalizedType, base, arg) && base == "soa_vector") {
+      if (splitTemplateTypeName(normalizedType, base, arg) && base == "soa") {
         std::vector<std::string> args;
         if (!splitTopLevelTemplateArgs(arg, args) || args.size() != 1) {
           error = "soa return type requires exactly one template argument on " + def.fullPath;
@@ -227,7 +227,7 @@ ReturnKind getReturnKind(const Definition &def,
         error = "array return type requires exactly one template argument on " + def.fullPath;
         return ReturnKind::Unknown;
       }
-      if (normalizedType == "soa_vector") {
+      if (normalizedType == "soa") {
         error = "soa return type requires exactly one template argument on " + def.fullPath;
         return ReturnKind::Unknown;
       }

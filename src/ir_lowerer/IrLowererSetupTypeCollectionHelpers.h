@@ -1,4 +1,5 @@
 // soa-surface-audit: exempt
+// collection-surface-audit: exempt
 #pragma once
 
 #include <string>

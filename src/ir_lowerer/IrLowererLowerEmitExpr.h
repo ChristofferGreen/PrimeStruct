@@ -396,6 +396,11 @@
               receiver.kind == Expr::Kind::Name && receiverLocalIt != localsIn.end() &&
               receiverLocalIt->second.usesBuiltinCollectionLayout &&
               receiverLocalIt->second.isSoaVector && expr.name == "storage" &&
+              receiverLocalIt->second.structTypeName.rfind(
+                  collection_paths::memberPath(
+                      collection_paths::kSoaFolder,
+                      collection_paths::kSoaVectorTypeName),
+                  0) != 0 &&
               fieldInfo.structPath.rfind(collection_paths::specializedTypePrefix(collection_paths::kInternalSoaStorageFolder, collection_paths::kSoaColumnTypeName), 0) == 0;
           if (isRawBuiltinSoaStorageFieldAccess) {
             StructSlotLayoutInfo storageLayout;

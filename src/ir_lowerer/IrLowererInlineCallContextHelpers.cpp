@@ -52,8 +52,8 @@ bool isGeneratedStdlibCollectionConstructorHelperPath(std::string_view path) {
          isSinglePathSegmentWithPrefix(path, collectionMemberRoot("map") + "map__") ||
          isSinglePathSegmentWithPrefix(path, experimentalCollectionMemberRoot("map") + "map__") ||
          isSinglePathSegmentWithPrefix(path, "/std/collections/soa/soa__") ||
-         isSinglePathSegmentWithPrefix(path, "/std/collections/soa_vector/soa_vector__") ||
-         isSinglePathSegmentWithPrefix(path, collection_paths::specializedTypePrefix(collection_paths::kExperimentalSoaVectorFolder, "soa_vector"));
+         isSinglePathSegmentWithPrefix(path, "/std/collections/soa/soa__") ||
+         isSinglePathSegmentWithPrefix(path, collection_paths::specializedTypePrefix(collection_paths::kExperimentalSoaVectorFolder, "soa"));
 }
 
 bool isGeneratedStdlibVectorImplementationHelperPath(std::string_view path) {

@@ -2493,6 +2493,10 @@ bool SemanticsValidator::resolveMethodTarget(const std::vector<ParameterInfo> &p
             preferredSoaHelperTargetForCollectionType(normalizedMethodName,
                                                       internalSoaCollectionTypePath(true)));
       }
+      if (collectionTypePath == "/soa") {
+        return setCollectionMethodTarget(
+            preferredSoaHelperTargetForCollectionType(normalizedMethodName, "/soa"));
+      }
       if (normalizedMethodName == "count" && collectionTypePath == "/string") {
         return setCollectionMethodTarget("/string/count");
       }
@@ -2880,8 +2884,7 @@ bool SemanticsValidator::resolveMethodTarget(const std::vector<ParameterInfo> &p
     }
     if (resolveSoaVectorTarget(receiver, elemType)) {
       return setCollectionMethodTarget(
-          preferredSoaHelperTargetForCollectionType(normalizedMethodName,
-                                                    internalSoaCollectionTypePath(true)));
+          preferredSoaHelperTargetForCollectionType(normalizedMethodName, "/soa"));
     }
     if ((normalizedMethodName == "count" || normalizedMethodName == "count_ref") &&
         this->resolveSoaVectorOrExperimentalBorrowedReceiver(

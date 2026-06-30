@@ -1,4 +1,5 @@
 // soa-surface-audit: exempt
+// collection-surface-audit: exempt
 // Canonical owner of every /std/collections module spelling used by the
 // compiler. All production code must route collection module roots, member
 // paths, and mangled-type prefixes through these helpers instead of repeating
@@ -29,20 +30,20 @@ inline constexpr std::string_view kErrorsFolder = "errors";
 inline constexpr std::string_view kExperimentalFolderPrefix = "experimental_";
 inline constexpr std::string_view kExperimentalVectorFolder = "experimental_vector";
 inline constexpr std::string_view kExperimentalMapFolder = "experimental_map";
-// experimental_soa_vector merged into soa (TODO-4633 done)
+// experimental_soa merged into soa (TODO-4633 done)
 inline constexpr std::string_view kExperimentalSoaVectorFolder = kSoaFolder;
-// experimental_soa_vector_conversions merged into soa (TODO-4633 done)
+// experimental_soa merged into soa (TODO-4633 done)
 inline constexpr std::string_view kExperimentalSoaVectorConversionsFolder = kSoaFolder;
-inline constexpr std::string_view kLegacySoaVectorFolder = "soa_vector";
+inline constexpr std::string_view kLegacySoaVectorFolder = "soa";
 inline constexpr std::string_view kLegacySoaVectorConversionsFolder =
-    "soa_vector_conversions";
+    "soa";
 
 // --- Internal implementation folders (collapse: TODO-4634) -----------------
 
 // internal_vector merged into vector (TODO-4631 done)
 // internal_map merged into map (TODO-4632 done)
-// internal_soa_vector merged into soa (TODO-4633 done)
-// internal_soa_vector_conversions merged into soa (TODO-4633 done)
+// internal_soa merged into soa (TODO-4633 done)
+// internal_soa merged into soa (TODO-4633 done)
 // internal_soa_storage renamed to soa_storage (TODO-4633 done)
 inline constexpr std::string_view kInternalSoaVectorFolder = kSoaFolder;
 inline constexpr std::string_view kInternalSoaStorageFolder = "soa_storage";

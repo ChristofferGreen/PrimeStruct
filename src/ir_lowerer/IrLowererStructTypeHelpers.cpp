@@ -65,7 +65,7 @@ std::string inferVectorLikeStructPathFromLocalInfo(const LocalInfo &localInfo) {
       trimTemplateTypeText(localInfo.structTypeName);
   if (localInfo.isSoaVector) {
     if (normalizedStructTypeName.empty()) {
-      return "/soa_vector";
+      return "/soa";
     }
 
     std::string normalizedStructPath = normalizedStructTypeName;
@@ -76,8 +76,8 @@ std::string inferVectorLikeStructPathFromLocalInfo(const LocalInfo &localInfo) {
       return normalizedStructPath;
     }
     if (normalizeCollectionBindingTypeName(normalizedStructTypeName) ==
-        "soa_vector") {
-      return "/soa_vector";
+        "soa") {
+      return "/soa";
     }
 
     std::string elementType = normalizedStructTypeName;

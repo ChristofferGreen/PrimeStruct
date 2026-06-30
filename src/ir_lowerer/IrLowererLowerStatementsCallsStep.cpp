@@ -172,10 +172,6 @@ VectorMutationStatementEmitResult tryEmitCanonicalVectorMutationStatement(
   }
 
   if (isVectorNoPayloadHelperName(helperName)) {
-    if (stmt.isMethodCall) {
-      errorOut = "missing semantic-product method-call target: " + helperName;
-      return VectorMutationStatementEmitResult::Error;
-    }
     if (stmt.args.size() != 1) {
       return VectorMutationStatementEmitResult::NotMatched;
     }

@@ -551,11 +551,10 @@ TEST_CASE("ir lowerer call helpers dispatch inline calls with locals") {
               ++canonicalPushLocalEmitCalls;
               return true;
             },
-            error) == Result::NotHandled);
-  CHECK(error == "stale");
-  CHECK(canonicalPushLocalResolveMethodCalls == 0);
-  CHECK(canonicalPushLocalResolveDefinitionCalls == 3);
-  CHECK(canonicalPushLocalEmitCalls == 0);
+            error) == Result::Emitted);
+  CHECK(canonicalPushLocalResolveMethodCalls == 1);
+  CHECK(canonicalPushLocalResolveDefinitionCalls == 1);
+  CHECK(canonicalPushLocalEmitCalls == 1);
 
   primec::Expr plainCall;
   plainCall.kind = primec::Expr::Kind::Call;
@@ -1346,8 +1345,8 @@ TEST_CASE("ir lowerer inline dispatch emits vector-returning temporary mutators"
                 ++emitCalls;
                 return true;
               },
-              error) == Result::Emitted);
-    CHECK(emitCalls == 1);
+              error) == Result::NotHandled);
+    CHECK(emitCalls == 0);
     CHECK(error == "stale");
   };
 
@@ -1424,9 +1423,9 @@ TEST_CASE("ir lowerer inline dispatch defers vector-returning temporary mutator 
   expectDispatch("remove_at", {receiverCall, valueArg}, Result::NotHandled, 0);
   expectDispatch("remove_swap", {receiverCall, valueArg}, Result::NotHandled, 0);
   expectDispatch("/std/collections/vector/push", {receiverCall, valueArg},
-                 Result::Emitted, 1);
+                 Result::NotHandled, 0);
   expectDispatch("/std/collections/vector/push", {receiverCall, valueArg},
-                 Result::Emitted, 1);
+                 Result::NotHandled, 0);
 }
 
 TEST_SUITE_END();

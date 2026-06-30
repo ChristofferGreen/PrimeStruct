@@ -788,7 +788,7 @@ TEST_CASE("ir lowerer count access helpers classify capacity and string count") 
   soaValuesName.name = "soaValues";
   primec::Expr toAosCall;
   toAosCall.kind = primec::Expr::Kind::Call;
-  toAosCall.name = "/std/collections/soa_vector/to_aos";
+  toAosCall.name = "/std/collections/soa/to_aos";
   toAosCall.args = {soaValuesName};
   capacityCall.args = {toAosCall};
   CHECK_FALSE(primec::ir_lowerer::isVectorCapacityCall(capacityCall, locals));
@@ -1137,7 +1137,7 @@ TEST_CASE("ir lowerer count access helpers defer canonical runtime string facts"
   CHECK(instructions.empty());
 }
 
-TEST_CASE("ir lowerer call helpers lower soa_vector count calls") {
+TEST_CASE("ir lowerer call helpers lower soa count calls") {
   using Result = primec::ir_lowerer::NativeCallTailDispatchResult;
   using LocalInfo = primec::ir_lowerer::LocalInfo;
 

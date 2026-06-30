@@ -283,7 +283,7 @@ TEST_CASE("ir lowerer setup type helper resolves dereferenced indexed args-pack 
   CHECK(error.empty());
 }
 
-TEST_CASE("ir lowerer setup type helper resolves indexed args-pack pointer soa_vector receivers") {
+TEST_CASE("ir lowerer setup type helper resolves indexed args-pack pointer soa receivers") {
   using LocalInfo = primec::ir_lowerer::LocalInfo;
   using ValueKind = LocalInfo::ValueKind;
 
@@ -323,7 +323,7 @@ TEST_CASE("ir lowerer setup type helper resolves indexed args-pack pointer soa_v
                                                         typeName,
                                                         resolvedTypePath,
                                                         error));
-  CHECK(typeName == "soa_vector");
+  CHECK(typeName == "soa");
   CHECK(resolvedTypePath.empty());
   CHECK(error.empty());
 }
@@ -477,7 +477,7 @@ TEST_CASE("ir lowerer setup type helper resolves dereferenced indexed args-pack 
   CHECK(error.empty());
 }
 
-TEST_CASE("ir lowerer setup type helper keeps borrowed local soa_vector receivers distinct from vector") {
+TEST_CASE("ir lowerer setup type helper keeps borrowed local soa receivers distinct from vector") {
   using LocalInfo = primec::ir_lowerer::LocalInfo;
   using ValueKind = LocalInfo::ValueKind;
 
@@ -521,7 +521,7 @@ TEST_CASE("ir lowerer setup type helper keeps borrowed local soa_vector receiver
       typeName,
       resolvedTypePath,
       error));
-  CHECK(typeName == "soa_vector");
+  CHECK(typeName == "soa");
   CHECK(resolvedTypePath.empty());
   CHECK(error.empty());
 
@@ -541,7 +541,7 @@ TEST_CASE("ir lowerer setup type helper keeps borrowed local soa_vector receiver
       typeName,
       resolvedTypePath,
       error));
-  CHECK(typeName == "soa_vector");
+  CHECK(typeName == "soa");
   CHECK(resolvedTypePath.empty());
   CHECK(error.empty());
 }

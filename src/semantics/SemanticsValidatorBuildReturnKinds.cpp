@@ -405,7 +405,7 @@ bool SemanticsValidator::buildDefinitionReturnKinds(const std::unordered_set<std
           }
           std::string base;
           std::string arg;
-          if (!splitTemplateTypeName(transform.templateArgs.front(), base, arg) || base != "soa_vector") {
+          if (!splitTemplateTypeName(transform.templateArgs.front(), base, arg) || base != "soa") {
             break;
           }
           std::vector<std::string> args;

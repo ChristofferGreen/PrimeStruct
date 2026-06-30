@@ -68,7 +68,7 @@ TEST_CASE("ir lowerer inline param helper rejects borrowed vector variadic alias
   CHECK(instructions.empty());
 }
 
-TEST_CASE("ir lowerer inline param helper rejects borrowed soa_vector variadic alias type mismatch") {
+TEST_CASE("ir lowerer inline param helper rejects borrowed soa variadic alias type mismatch") {
   primec::Expr valuesParam;
   valuesParam.kind = primec::Expr::Kind::Name;
   valuesParam.isBinding = true;
@@ -135,7 +135,7 @@ TEST_CASE("ir lowerer inline param helper rejects borrowed soa_vector variadic a
   CHECK(instructions.empty());
 }
 
-TEST_CASE("ir lowerer inline param helper preserves borrowed soa_vector spread struct metadata") {
+TEST_CASE("ir lowerer inline param helper preserves borrowed soa spread struct metadata") {
   primec::Expr valuesParam;
   valuesParam.kind = primec::Expr::Kind::Name;
   valuesParam.isBinding = true;

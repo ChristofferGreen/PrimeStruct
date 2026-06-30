@@ -26,8 +26,8 @@ bool isSoaAccessHelperName(const std::string &helperName) {
 }
 
 bool isSoaReceiverStructPath(const std::string &structPath) {
-  return structPath == "/soa_vector" ||
-         structPath == "/std/collections/soa_vector" ||
+  return structPath == "/soa" ||
+         structPath == "/std/collections/soa" ||
          structPath.rfind(collection_paths::specializedTypePrefix(collection_paths::kSoaFolder, collection_paths::kSoaVectorTypeName), 0) == 0;
 }
 
@@ -652,7 +652,7 @@ bool SemanticsValidator::resolveExprCollectionAccessTarget(
             methodReceiverIndex = 0;
             resolved =
                 preferredSoaHelperTargetForCollectionType(accessHelperName,
-                                                          "/soa_vector");
+                                                          "/soa");
             resolvedMethod = true;
             return true;
           }

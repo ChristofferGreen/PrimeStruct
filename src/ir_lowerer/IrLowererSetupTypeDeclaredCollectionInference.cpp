@@ -28,7 +28,7 @@ std::string normalizeDeclaredCollectionTypeBase(const std::string &base) {
       base == collection_paths::memberPath(collection_paths::kSoaFolder, collection_paths::kSoaVectorTypeName) ||
       base.rfind(collection_paths::specializedTypePrefixBare(collection_paths::kSoaFolder, collection_paths::kSoaVectorTypeName), 0) == 0 ||
       base.rfind(collection_paths::specializedTypePrefix(collection_paths::kSoaFolder, collection_paths::kSoaVectorTypeName), 0) == 0) {
-    return "soa_vector";
+    return "soa";
   }
   if (isBuiltinCollectionTypeName(base, "map") ||
       isExperimentalCollectionTypeName(base, "map", "Map")) {
@@ -54,7 +54,7 @@ bool inferDeclaredReturnCollection(const Definition &definition,
     if (!splitTemplateArgs(argText, args)) {
       return false;
     }
-    if ((base == "array" || base == "vector" || base == "soa_vector") && args.size() == 1) {
+    if ((base == "array" || base == "vector" || base == "soa") && args.size() == 1) {
       collectionNameOut = base;
       collectionArgsOut = std::move(args);
       return true;
@@ -152,7 +152,7 @@ bool inferDeclaredReturnCollection(const Definition &definition,
     }
     std::string collection;
     if (getBuiltinCollectionName(candidate, collection)) {
-      if ((collection == "array" || collection == "vector" || collection == "soa_vector") &&
+      if ((collection == "array" || collection == "vector" || collection == "soa") &&
           candidate.templateArgs.size() == 1) {
         nameOut = collection;
         argsOut = candidate.templateArgs;

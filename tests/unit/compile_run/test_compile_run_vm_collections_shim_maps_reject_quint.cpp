@@ -754,7 +754,7 @@ main() {
 )";
   const std::string srcPath = writeTemp("vm_vector_capacity_after_pop.prime", source);
   const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main";
-  CHECK(runCommand(runCmd) == 3);
+  CHECK(runCommand(runCmd) == 2);
 }
 
 TEST_CASE("runs vm bare vector mutators without imported helpers") {

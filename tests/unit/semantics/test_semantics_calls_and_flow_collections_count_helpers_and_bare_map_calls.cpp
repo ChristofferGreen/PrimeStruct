@@ -354,7 +354,7 @@ main() {
         std::string::npos);
 }
 
-TEST_CASE("canonical map Ref helper calls report retired count_ref diagnostics") {
+TEST_CASE("canonical map Ref helper calls validate") {
   const std::string source = R"(
 import /std/collections/*
 
@@ -372,11 +372,11 @@ main() {
 }
 )";
   std::string error;
-  CHECK_FALSE(validateProgram(source, "/main", error));
-  CHECK(error.find("unknown call target: /map/count_ref") != std::string::npos);
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
 }
 
-TEST_CASE("public stdlib map Ref wrappers report retired insert diagnostics") {
+TEST_CASE("public stdlib map Ref wrappers validate") {
   const std::string source = R"(
 import /std/collections/*
 import /std/collections/map/*
@@ -402,8 +402,8 @@ main() {
 }
 )";
   std::string error;
-  CHECK_FALSE(validateProgram(source, "/main", error));
-  CHECK(error.find("unknown call target: /map/insert") != std::string::npos);
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
 }
 
 TEST_CASE("canonical map borrowed method-call sugar rejects missing ref template inference") {
@@ -419,11 +419,11 @@ main() {
   )";
   std::string error;
   CHECK_FALSE(validateProgram(source, "/main", error));
-  CHECK(error.find("unknown call target: /map/count_ref") !=
+  CHECK(error.find("unknown call target") !=
         std::string::npos);
 }
 
-TEST_CASE("canonical map insert helpers report retired insert diagnostics") {
+TEST_CASE("canonical map insert helpers validate") {
   const std::string source = R"(
 import /std/collections/*
 
@@ -440,11 +440,11 @@ main() {
 }
 )";
   std::string error;
-  CHECK_FALSE(validateProgram(source, "/main", error));
-  CHECK(error.find("unknown call target: /map/insert") != std::string::npos);
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
 }
 
-TEST_CASE("canonical map ownership-sensitive values report retired insert diagnostics") {
+TEST_CASE("canonical map ownership-sensitive values validate") {
   const std::string source = R"(
 import /std/collections/*
 
@@ -477,8 +477,8 @@ main() {
 }
 )";
   std::string error;
-  CHECK_FALSE(validateProgram(source, "/main", error));
-  CHECK(error.find("unknown call target: /map/insert") != std::string::npos);
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
 }
 
 TEST_CASE("canonical namespaced map insert reports retired insert diagnostics") {
@@ -515,7 +515,7 @@ main() {
   CHECK(error.find("unknown call target: mapSingle") != std::string::npos);
 }
 
-TEST_CASE("builtin canonical map insert method sugar reports retired insert diagnostics") {
+TEST_CASE("builtin canonical map insert method sugar validates") {
   const std::string source = R"(
 import /std/collections/*
 
@@ -543,11 +543,11 @@ main() {
 }
 )";
   std::string error;
-  CHECK_FALSE(validateProgram(source, "/main", error));
-  CHECK(error.find("unknown call target: /map/insert") != std::string::npos);
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
 }
 
-TEST_CASE("constructor-backed builtin map insert method sugar reports retired insert diagnostics") {
+TEST_CASE("constructor-backed builtin map insert method sugar validates") {
   const std::string source = R"(
 import /std/collections/*
 
@@ -560,8 +560,8 @@ main() {
 }
 )";
   std::string error;
-  CHECK_FALSE(validateProgram(source, "/main", error));
-  CHECK(error.find("unknown call target: /map/insert") != std::string::npos);
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
 }
 
 TEST_CASE("canonical map value methods report retired insert diagnostics") {
@@ -613,10 +613,10 @@ main() {
   const bool ok = validateProgram(source, "/main", error);
   INFO(error);
   CHECK_FALSE(ok);
-  CHECK(error.find("unknown call target: /map/insert") != std::string::npos);
+  CHECK(error.find("unknown call target: /map/at") != std::string::npos);
 }
 
-TEST_CASE("canonical map borrowed helper calls report retired insert diagnostics") {
+TEST_CASE("canonical map borrowed helper calls validate") {
   const std::string source = R"(
 import /std/collections/*
 
@@ -668,8 +668,8 @@ main() {
 }
 )";
   std::string error;
-  CHECK_FALSE(validateProgram(source, "/main", error));
-  CHECK(error.find("unknown call target: /map/insert") != std::string::npos);
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
 }
 
 TEST_CASE("canonical map construction rejects nontrivial value relocation until container move semantics land") {
@@ -701,7 +701,7 @@ main() {
   CHECK(error.find("Owned") != std::string::npos);
 }
 
-TEST_CASE("canonical stdlib map wrappers report retired tryAt diagnostics") {
+TEST_CASE("canonical stdlib map wrappers validate") {
   const std::string source = R"(
 import /std/collections/*
 
@@ -720,8 +720,8 @@ main() {
 }
 )";
   std::string error;
-  CHECK_FALSE(validateProgram(source, "/main", error));
-  CHECK(error.find("unknown call target: /map/tryAt") != std::string::npos);
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
 }
 
 TEST_CASE("public stdlib map wrapper bridge is removed") {
@@ -783,7 +783,7 @@ TEST_CASE("canonical stdlib map helpers use standalone stdlib implementation") {
   CHECK(source.find("Standalone canonical stdlib-owned map implementation.") !=
         std::string::npos);
   CHECK(source.find("internal_map") == std::string::npos);
-  CHECK(source.find("[public struct]\n  MapValue<K, V>()") !=
+  CHECK(source.find("[public struct key_value_type]\n  MapValue<K, V>()") !=
         std::string::npos);
   CHECK(source.find("mapCount<K, V>([MapValue<K, V>] entries)") !=
         std::string::npos);
@@ -826,7 +826,7 @@ TEST_CASE("canonical stdlib map helpers use standalone stdlib implementation") {
         std::string::npos);
 }
 
-TEST_CASE("canonical map count wrapper ignores removed alias helper") {
+TEST_CASE("canonical map count wrapper resolves independently of removed alias helper") {
   const std::string source = R"(
 [effects(heap_alloc), return<bool>]
 /map/count<K, V>([map<K, V>] values) {
@@ -850,9 +850,9 @@ main() {
 }
 )";
   std::string error;
-  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(validateProgram(source, "/main", error));
   INFO(error);
-  CHECK(error.find("unknown call target: /map/count") != std::string::npos);
+  CHECK(error.empty());
 }
 
 TEST_CASE("canonical map access wrapper ignores removed alias helper") {

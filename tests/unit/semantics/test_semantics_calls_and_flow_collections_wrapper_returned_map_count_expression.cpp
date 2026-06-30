@@ -662,18 +662,18 @@ Particle() {
 }
 
 [effects(heap_alloc), return<int>]
-/soa_vector/get([soa_vector<Particle>] values, [vector<i32>] index) {
+/soa/get([soa<Particle>] values, [vector<i32>] index) {
   return(13i32)
 }
 
 [effects(heap_alloc), return<bool>]
-/vector/get([vector<i32>] values, [soa_vector<Particle>] index) {
+/vector/get([vector<i32>] values, [soa<Particle>] index) {
   return(false)
 }
 
 [effects(heap_alloc), return<int>]
 main() {
-  [soa_vector<Particle>] values{soa_vector<Particle>()}
+  [soa<Particle>] values{soa<Particle>()}
   [vector<i32>] index{vector<i32>(0i32)}
   [auto] inferred{get([index] index, [values] values)}
   return(inferred)

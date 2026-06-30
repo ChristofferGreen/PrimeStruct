@@ -433,7 +433,7 @@ bool isPrimitiveOrBuiltinTypeName(std::string_view typeText) {
          normalized == "Pointer" || normalized == "Reference" ||
          normalized == "array" || normalized == "Buffer" ||
          normalized == "Maybe" || normalized == "Result" ||
-         normalized == "soa_vector" || normalized == "vector";
+         normalized == "soa" || normalized == "vector";
 }
 
 std::string resolveNominalPath(const RequirementPredicateDefinitionContext &context,

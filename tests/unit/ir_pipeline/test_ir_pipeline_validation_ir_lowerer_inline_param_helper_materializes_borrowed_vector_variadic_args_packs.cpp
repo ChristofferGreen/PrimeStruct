@@ -158,7 +158,7 @@ TEST_CASE("ir lowerer inline param helper aliases pure borrowed vector variadic 
   CHECK(instructions[1].imm == 2u);
 }
 
-TEST_CASE("ir lowerer inline param helper materializes borrowed soa_vector variadic args packs") {
+TEST_CASE("ir lowerer inline param helper materializes borrowed soa variadic args packs") {
   primec::Expr valuesParam;
   valuesParam.kind = primec::Expr::Kind::Name;
   valuesParam.isBinding = true;
@@ -241,7 +241,7 @@ TEST_CASE("ir lowerer inline param helper materializes borrowed soa_vector varia
   CHECK(instructions[7].imm == 3u);
 }
 
-TEST_CASE("ir lowerer inline param helper aliases pure borrowed soa_vector variadic forwarding") {
+TEST_CASE("ir lowerer inline param helper aliases pure borrowed soa variadic forwarding") {
   primec::Expr valuesParam;
   valuesParam.kind = primec::Expr::Kind::Name;
   valuesParam.isBinding = true;
@@ -425,7 +425,7 @@ TEST_CASE("ir lowerer inline param helper materializes direct borrowed imported 
   CHECK(instructions[7].imm == 3u);
 }
 
-TEST_CASE("ir lowerer inline param helper materializes mixed borrowed soa_vector variadic forwarding") {
+TEST_CASE("ir lowerer inline param helper materializes mixed borrowed soa variadic forwarding") {
   primec::Expr valuesParam;
   valuesParam.kind = primec::Expr::Kind::Name;
   valuesParam.isBinding = true;
@@ -517,7 +517,7 @@ TEST_CASE("ir lowerer inline param helper materializes mixed borrowed soa_vector
   CHECK_FALSE(instructions.empty());
 }
 
-TEST_CASE("ir lowerer inline param helper materializes soa_vector variadic args packs") {
+TEST_CASE("ir lowerer inline param helper materializes soa variadic args packs") {
   primec::Expr valuesParam;
   valuesParam.kind = primec::Expr::Kind::Name;
   valuesParam.isBinding = true;
@@ -599,7 +599,7 @@ TEST_CASE("ir lowerer inline param helper materializes soa_vector variadic args 
   CHECK(instructions[7].imm == 3u);
 }
 
-TEST_CASE("ir lowerer inline param helper aliases pure soa_vector variadic forwarding") {
+TEST_CASE("ir lowerer inline param helper aliases pure soa variadic forwarding") {
   primec::Expr valuesParam;
   valuesParam.kind = primec::Expr::Kind::Name;
   valuesParam.isBinding = true;
@@ -675,7 +675,7 @@ TEST_CASE("ir lowerer inline param helper aliases pure soa_vector variadic forwa
   CHECK(instructions[1].imm == 2u);
 }
 
-TEST_CASE("ir lowerer inline param helper rejects soa_vector variadic alias type mismatch") {
+TEST_CASE("ir lowerer inline param helper rejects soa variadic alias type mismatch") {
   primec::Expr valuesParam;
   valuesParam.kind = primec::Expr::Kind::Name;
   valuesParam.isBinding = true;

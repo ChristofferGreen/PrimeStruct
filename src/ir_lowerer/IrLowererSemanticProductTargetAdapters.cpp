@@ -1,5 +1,7 @@
 #include "IrLowererSemanticProductTargetAdapters.h"
 
+#include "IrLowererTemplateTypeParseHelpers.h"
+
 #include <optional>
 
 namespace primec::ir_lowerer {
@@ -618,6 +620,39 @@ const SemanticProgramArrayExtentFact *findSemanticProductArrayExtentFact(
     const SemanticProductTargetAdapter &adapter,
     const Expr &expr) {
   return findSemanticProductArrayExtentFact(adapter.semanticIndex, expr);
+}
+
+bool semanticKeyValueAccessHelperKeepsBuiltinReturn(
+    const SemanticProgram *semanticProgram,
+    std::string_view helperPath) {
+  if (semanticProgram == nullptr || helperPath.empty()) {
+    return true;
+  }
+  const auto pathId =
+      semanticProgramLookupCallTargetStringId(*semanticProgram, helperPath);
+  if (!pathId.has_value()) {
+    return true;
+  }
+  const SemanticProgramReturnFact *returnFact =
+      semanticProgramLookupPublishedReturnFactByDefinitionPathId(
+          *semanticProgram, *pathId);
+  if (returnFact == nullptr) {
+    return true;
+  }
+  std::string structPath =
+      returnFact->structPathId != InvalidSymbolId
+          ? std::string(semanticProgramResolveCallTargetString(
+                *semanticProgram, returnFact->structPathId))
+          : returnFact->structPath;
+  structPath = trimTemplateTypeText(structPath);
+  if (!structPath.empty() && structPath.front() == '/') {
+    structPath.erase(structPath.begin());
+  }
+  if (structPath.empty()) {
+    return true;
+  }
+  return structPath == "map" || structPath == "vector" ||
+         structPath == "array";
 }
 
 } // namespace primec::ir_lowerer

@@ -433,7 +433,7 @@ TEST_CASE("ir lowerer conversions helper assigns compatible internal soa storage
   primec::ir_lowerer::LocalInfo storageInfo;
   storageInfo.kind = primec::ir_lowerer::LocalInfo::Kind::Value;
   storageInfo.valueKind = primec::ir_lowerer::LocalInfo::ValueKind::Unknown;
-  storageInfo.structTypeName = "/std/collections/internal_soa_storage/SoaColumn__ti32";
+  storageInfo.structTypeName = "/std/collections/soa_storage/SoaColumn__ti32";
   storageInfo.index = 7;
   storageInfo.isMutable = true;
   locals.emplace("storage", storageInfo);
@@ -475,7 +475,7 @@ TEST_CASE("ir lowerer conversions helper assigns compatible internal soa storage
       },
       [](const std::string &, const std::string &, std::string &) { return false; },
       [](const std::string &structPath, int32_t &slotCount) {
-        if (structPath == "/std/collections/internal_soa_storage/SoaColumn__ti32") {
+        if (structPath == "/std/collections/soa_storage/SoaColumn__ti32") {
           slotCount = 3;
           return true;
         }
@@ -532,7 +532,7 @@ TEST_CASE("ir lowerer conversions helper rejects incompatible internal soa stora
   primec::ir_lowerer::LocalInfo storageInfo;
   storageInfo.kind = primec::ir_lowerer::LocalInfo::Kind::Value;
   storageInfo.valueKind = primec::ir_lowerer::LocalInfo::ValueKind::Unknown;
-  storageInfo.structTypeName = "/std/collections/internal_soa_storage/SoaColumn__ti32";
+  storageInfo.structTypeName = "/std/collections/soa_storage/SoaColumn__ti32";
   storageInfo.index = 7;
   storageInfo.isMutable = true;
   locals.emplace("storage", storageInfo);
@@ -560,7 +560,7 @@ TEST_CASE("ir lowerer conversions helper rejects incompatible internal soa stora
       [](const std::string &) { return primec::ir_lowerer::LocalInfo::ValueKind::Unknown; },
       [](const std::string &, std::string &) { return false; },
       [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) {
-        return std::string("/std/collections/internal_soa_storage/SoaColumns2__ti32_i32");
+        return std::string("/std/collections/soa_storage/SoaColumns2__ti32_i32");
       },
       [](const std::string &, const std::string &, std::string &) { return false; },
       [](const std::string &, int32_t &) { return false; },

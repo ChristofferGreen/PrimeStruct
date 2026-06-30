@@ -294,7 +294,7 @@ main() {
   primec::IrModule module;
   INFO(error);
   CHECK_FALSE(lowerer.lower(program, &semanticProgram, "/main", {}, {}, module, error));
-  CHECK(error.find("missing semantic-product method-call target: pop") != std::string::npos);
+  CHECK(error.find("missing semantic-product method-call target: remove_at") != std::string::npos);
 }
 
 TEST_CASE("ir lowerer materializes variadic borrowed vector packs with indexed count methods") {

@@ -182,4 +182,7 @@ const SemanticProgramArrayExtentFact *findSemanticProductArrayExtentFact(
     const SemanticProductTargetAdapter &adapter,
     const Expr &expr);
 
+bool semanticKeyValueAccessHelperKeepsBuiltinReturn(const SemanticProgram *semanticProgram,
+                                                    std::string_view helperPath);
+
 } // namespace primec::ir_lowerer

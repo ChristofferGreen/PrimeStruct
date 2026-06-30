@@ -1,4 +1,5 @@
 // soa-surface-audit: exempt
+// collection-surface-audit: exempt
 #include "EmitterBuiltinMethodResolutionTypeInferenceInternal.h"
 
 #include "EmitterBuiltinCallPathHelpersInternal.h"
@@ -406,13 +407,13 @@ std::string normalizeCollectionReceiverType(const std::string &typePath) {
   if (typePath == "/vector" || typePath == "vector") {
     return "vector";
   }
-  if (typePath == "soa_vector" ||
-      typePath == "/std/collections/soa_vector" ||
-      typePath == "std/collections/soa_vector" ||
+  if (typePath == "soa" ||
+      typePath == "/std/collections/soa" ||
+      typePath == "std/collections/soa" ||
       typePath == collection_paths::memberPath(collection_paths::kSoaFolder, collection_paths::kSoaVectorTypeName) ||
       typePath == collection_paths::memberPathBare(collection_paths::kSoaFolder, collection_paths::kSoaVectorTypeName) ||
       typePath == "SoaVector") {
-    return "soa_vector";
+    return "soa";
   }
   if (isKeyValueCollectionTypeNameLocal(typePath)) {
     return "map";
@@ -426,7 +427,7 @@ std::vector<std::string> collectionHelperPathCandidates(const std::string &path)
   if (!normalizedPath.empty() && normalizedPath.front() != '/') {
     if (normalizedPath.rfind("array/", 0) == 0 ||
         collectionSurfaceMemberPathUsesKnownPrefix(normalizedPath) ||
-        normalizedPath.rfind("std/collections/soa_vector/", 0) == 0) {
+        normalizedPath.rfind("std/collections/soa/", 0) == 0) {
       normalizedPath.insert(normalizedPath.begin(), '/');
     }
   }

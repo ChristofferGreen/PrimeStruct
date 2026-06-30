@@ -166,12 +166,12 @@ std::string SemanticsValidator::inferMethodCollectionTypePathFromTypeText(
   if (!splitTopLevelTemplateArgs(argText, args)) {
     return {};
   }
-  if ((base == "array" || base == "vector" || base == "soa_vector" || base == "Buffer") &&
+  if ((base == "array" || base == "vector" || base == "soa" || base == "Buffer") &&
       args.size() == 1) {
     return "/" + base;
   }
   if (isExperimentalSoaVectorTypePath(base) && args.size() == 1) {
-    return "/soa_vector";
+    return "/soa";
   }
   if (isKeyValueCollectionTypeName(base) && args.size() == 2) {
     return "/map";

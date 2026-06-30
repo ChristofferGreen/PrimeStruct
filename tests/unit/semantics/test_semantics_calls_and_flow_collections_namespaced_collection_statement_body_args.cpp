@@ -508,7 +508,7 @@ main() {
   CHECK(error.empty());
 }
 
-TEST_CASE("bare map helper statement body arguments reject retired count before mismatch diagnostics") {
+TEST_CASE("bare map helper statement body arguments keep argument count diagnostics") {
   const std::string source = R"(
 [return<int>]
 /std/collections/map/count([map<i32, i32>] values) {
@@ -524,10 +524,12 @@ main() {
 )";
   std::string error;
   CHECK_FALSE(validateProgram(source, "/main", error));
-  CHECK(error.find("unknown call target: /map/count") != std::string::npos);
+  INFO(error);
+  CHECK(error.find("argument count mismatch for /std/collections/map/count") !=
+        std::string::npos);
 }
 
-TEST_CASE("wrapper-returned bare map helper statement body arguments reject retired count") {
+TEST_CASE("wrapper-returned bare map helper statement body arguments validate") {
   const std::string source = R"(
 [return<map<i32, i32>>]
 wrapValues() {
@@ -546,11 +548,11 @@ main() {
 }
   )";
   std::string error;
-  CHECK_FALSE(validateProgram(source, "/main", error));
-  CHECK(error.find("unknown call target: /map/count") != std::string::npos);
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
 }
 
-TEST_CASE("wrapper-returned bare map helper statement body arguments reject retired count before mismatch diagnostics") {
+TEST_CASE("wrapper-returned bare map helper statement body arguments keep argument count diagnostics") {
   const std::string source = R"(
 [return<map<i32, i32>>]
 wrapValues() {
@@ -570,7 +572,9 @@ main() {
   )";
   std::string error;
   CHECK_FALSE(validateProgram(source, "/main", error));
-  CHECK(error.find("unknown call target: /map/count") != std::string::npos);
+  INFO(error);
+  CHECK(error.find("argument count mismatch for /std/collections/map/count") !=
+        std::string::npos);
 }
 
 TEST_CASE("reference-wrapped map helper receiver statement body arguments use canonical ref helper target") {
@@ -623,7 +627,7 @@ main() {
         std::string::npos);
 }
 
-TEST_CASE("map namespaced count method statement body arguments reject retired count") {
+TEST_CASE("map namespaced count method statement body arguments validate") {
   const std::string source = R"(
 [return<int>]
 /std/collections/map/count([map<i32, i32>] values, [bool] marker) {
@@ -638,8 +642,8 @@ main() {
 }
 )";
   std::string error;
-  CHECK_FALSE(validateProgram(source, "/main", error));
-  CHECK(error.find("unknown call target: /map/count") != std::string::npos);
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
 }
 
 TEST_CASE("map namespaced at method statement body arguments validate through canonical helper") {

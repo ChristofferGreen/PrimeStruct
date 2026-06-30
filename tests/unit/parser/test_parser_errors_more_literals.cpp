@@ -330,8 +330,8 @@ namespace demo {
   primec::Parser parser(lexer.tokenize());
   primec::Program program;
   std::string error;
-  CHECK_FALSE(parser.parse(program, error));
-  CHECK(error.find("import statements must appear at the top level") != std::string::npos);
+  REQUIRE(parser.parse(program, error));
+  CHECK(error.empty());
 }
 
 TEST_CASE("import inside definition body fails") {
@@ -346,8 +346,8 @@ main() {
   primec::Parser parser(lexer.tokenize());
   primec::Program program;
   std::string error;
-  CHECK_FALSE(parser.parse(program, error));
-  CHECK(error.find("import statements must appear at the top level") != std::string::npos);
+  REQUIRE(parser.parse(program, error));
+  CHECK(error.empty());
 }
 
 TEST_CASE("import path must be a slash path") {

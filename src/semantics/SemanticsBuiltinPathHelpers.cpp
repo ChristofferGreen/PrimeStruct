@@ -259,7 +259,7 @@ std::string samePathSoaHelperTargetPath(std::string_view helperName) {
   if (helperName == "to_aos" || helperName == "to_aos_ref") {
     return "/" + std::string(helperName);
   }
-  return "/" + soa_paths::legacySoaFolder() + "/" + std::string(helperName);
+  return "/" + soa_paths::publicSoaFolder() + "/" + std::string(helperName);
 }
 
 std::string publicSoaHelperTargetPath(std::string_view helperName) {

@@ -94,9 +94,9 @@ main() {
   CHECK(runCommand(methodCmd) == 17);
 }
 
-TEST_CASE("rejects vm experimental soa_vector stdlib helpers") {
+TEST_CASE("rejects vm experimental soa stdlib helpers") {
   const std::string source = R"(
-import /std/collections/experimental_soa_vector/*
+import /std/collections/experimental_soa/*
 
 [struct reflect]
 Particle() {
@@ -109,18 +109,18 @@ main() {
   return(plus(values.count(), soaVectorCount<Particle>(values)))
 }
 )";
-  const std::string srcPath = writeTemp("vm_experimental_soa_vector_helpers.prime", source);
+  const std::string srcPath = writeTemp("vm_experimental_soa_helpers.prime", source);
   const std::string errPath =
-      (testScratchPath("") / "primec_vm_experimental_soa_vector_helpers_err.txt").string();
+      (testScratchPath("") / "primec_vm_experimental_soa_helpers_err.txt").string();
   const std::string runCmd =
       "./primec --emit=vm " + srcPath + " --entry /main 2> " + errPath;
   CHECK(runCommand(runCmd) == 2);
   CHECK(readFile(errPath).find(
-            "direct import of retired soa_vector compatibility modules is not supported; use /std/collections/soa/*") !=
+            "direct import of retired soa compatibility modules is not supported; use /std/collections/soa/*") !=
         std::string::npos);
 }
 
-TEST_CASE("rejects vm raw soa_vector type spelling") {
+TEST_CASE("rejects vm raw soa type spelling") {
   const std::string source = R"(
 import /std/collections/soa/*
 
@@ -131,17 +131,17 @@ Particle() {
 
 [effects(heap_alloc), return<int>]
 main() {
-  [soa_vector<Particle>] values{soa<Particle>()}
+  [soa<Particle>] values{soa<Particle>()}
   return(count(values))
 }
 )";
-  const std::string srcPath = writeTemp("vm_raw_soa_vector_type_reject.prime", source);
+  const std::string srcPath = writeTemp("vm_raw_soa_type_reject.prime", source);
   const std::string errPath =
-      (testScratchPath("") / "primec_vm_raw_soa_vector_type_reject_err.txt").string();
+      (testScratchPath("") / "primec_vm_raw_soa_type_reject_err.txt").string();
   const std::string runCmd =
       "./primec --emit=vm " + srcPath + " --entry /main 2> " + errPath;
   CHECK(runCommand(runCmd) == 2);
-  CHECK(readFile(errPath).find("soa_vector<T> is not supported; use soa<T>") !=
+  CHECK(readFile(errPath).find("soa<T> is not a valid type; use SoaVector<T>") !=
         std::string::npos);
 }
 
@@ -488,11 +488,11 @@ main() {
   CHECK(runCommand(runCmd) == 18);
 }
 
-TEST_CASE("vm legacy soa_vector compatibility helpers reject") {
+TEST_CASE("vm legacy soa compatibility helpers reject") {
   const std::string source = R"(
 import /std/collections/*
-import /std/collections/soa_vector/*
-import /std/collections/soa_vector_conversions/*
+import /std/collections/soa/*
+import /std/collections/soa_conversions/*
 
 [struct reflect]
 Particle() {
@@ -513,15 +513,15 @@ main() {
 }
 )";
   const std::string srcPath =
-      writeTemp("vm_wildcard_legacy_soa_vector_compatibility_helpers.prime", source);
+      writeTemp("vm_wildcard_legacy_soa_compatibility_helpers.prime", source);
   const std::string errPath =
-      (testScratchPath("") / "primec_vm_wildcard_legacy_soa_vector_compatibility_helpers_err.txt")
+      (testScratchPath("") / "primec_vm_wildcard_legacy_soa_compatibility_helpers_err.txt")
           .string();
   const std::string runCmd =
       "./primec --emit=vm " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
   CHECK(runCommand(runCmd) == 2);
   CHECK(readFile(errPath).find(
-            "direct import of retired soa_vector compatibility modules is not supported; use /std/collections/soa/*") !=
+            "direct import of retired soa compatibility modules is not supported; use /std/collections/soa/*") !=
         std::string::npos);
 }
 
@@ -550,10 +550,10 @@ main() {
 }
 
 TEST_CASE(
-    "vm rejects experimental soa_vector stdlib wide structs on pending width") {
+    "vm rejects experimental soa stdlib wide structs on pending width") {
   const std::string source = R"(
 import /std/collections/soa/*
-import /std/collections/internal_soa_vector/*
+import /std/collections/internal_soa/*
 
 [struct reflect]
 Particle17() {
@@ -584,8 +584,8 @@ runImported() {
 
 [effects(heap_alloc), return<int>]
 runDirectCanonical() {
-  [SoaVector<Particle17>] values{/std/collections/experimental_soa_vector/soaVectorNew<Particle17>()}
-  return(/std/collections/experimental_soa_vector/soaVectorCount<Particle17>(values))
+  [SoaVector<Particle17>] values{/std/collections/experimental_soa/soaVectorNew<Particle17>()}
+  return(/std/collections/experimental_soa/soaVectorCount<Particle17>(values))
 }
 
 [return<SoaVector<Particle17>> effects(heap_alloc)]
@@ -598,13 +598,13 @@ runHelperReturn() {
   return(soaVectorCount<Particle17>(makeWideValues()))
 }
 )";
-  const std::string srcPath = writeTemp("vm_experimental_soa_vector_wide_pending_forms.prime", source);
+  const std::string srcPath = writeTemp("vm_experimental_soa_wide_pending_forms.prime", source);
   const std::string importedErrPath =
-      (testScratchPath("") / "primec_vm_experimental_soa_vector_wide_pending_imported_err.txt").string();
+      (testScratchPath("") / "primec_vm_experimental_soa_wide_pending_imported_err.txt").string();
   const std::string directErrPath =
-      (testScratchPath("") / "primec_vm_experimental_soa_vector_wide_pending_direct_err.txt").string();
+      (testScratchPath("") / "primec_vm_experimental_soa_wide_pending_direct_err.txt").string();
   const std::string helperReturnErrPath =
-      (testScratchPath("") / "primec_vm_experimental_soa_vector_wide_pending_helper_return_err.txt").string();
+      (testScratchPath("") / "primec_vm_experimental_soa_wide_pending_helper_return_err.txt").string();
 
   const std::string runImportedCmd =
       "./primec --emit=vm " + srcPath + " --entry /runImported 2> " + importedErrPath;
@@ -622,11 +622,11 @@ runHelperReturn() {
   CHECK(readFile(helperReturnErrPath) == "array index out of bounds\n");
 }
 
-TEST_CASE("vm rejects experimental soa_vector stdlib from-aos helper before typed bindings support") {
+TEST_CASE("vm rejects experimental soa stdlib from-aos helper before typed bindings support") {
   const std::string source = R"(
 import /std/collections/*
 import /std/collections/soa/*
-import /std/collections/internal_soa_vector/*
+import /std/collections/internal_soa/*
 
 [struct reflect]
 Particle() {
@@ -640,22 +640,22 @@ main() {
   return(soaVectorCount<Particle>(packed))
 }
 )";
-  const std::string srcPath = writeTemp("vm_experimental_soa_vector_from_aos.prime", source);
+  const std::string srcPath = writeTemp("vm_experimental_soa_from_aos.prime", source);
   const std::string errPath =
-      (testScratchPath("") / "primec_vm_experimental_soa_vector_from_aos_err.txt").string();
+      (testScratchPath("") / "primec_vm_experimental_soa_from_aos_err.txt").string();
   const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main 2> " + errPath;
   CHECK(runCommand(runCmd) == 2);
   CHECK(readFile(errPath).find("vm backend only supports numeric/bool/string vector literals") !=
         std::string::npos);
 }
 
-TEST_CASE("vm runs experimental soa_vector stdlib to-aos helper") {
+TEST_CASE("vm runs experimental soa stdlib to-aos helper") {
   const std::string source = R"(
 import /std/collections/*
 import /std/collections/soa/*
-import /std/collections/internal_soa_vector/*
+import /std/collections/internal_soa/*
 import /std/collections/soa/*
-import /std/collections/internal_soa_vector_conversions/*
+import /std/collections/internal_soa_conversions/*
 
 [struct reflect]
 Particle() {
@@ -669,18 +669,18 @@ main() {
   return(count(unpacked))
 }
 )";
-  const std::string srcPath = writeTemp("vm_experimental_soa_vector_to_aos.prime", source);
+  const std::string srcPath = writeTemp("vm_experimental_soa_to_aos.prime", source);
   const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main";
   CHECK(runCommand(runCmd) == 0);
 }
 
-TEST_CASE("vm runs experimental soa_vector stdlib to-aos method on wrapper surface") {
+TEST_CASE("vm runs experimental soa stdlib to-aos method on wrapper surface") {
   const std::string source = R"(
 import /std/collections/*
 import /std/collections/soa/*
-import /std/collections/internal_soa_vector/*
+import /std/collections/internal_soa/*
 import /std/collections/soa/*
-import /std/collections/internal_soa_vector_conversions/*
+import /std/collections/internal_soa_conversions/*
 
 [struct reflect]
 Particle() {
@@ -694,12 +694,12 @@ main() {
   return(count(unpacked))
 }
 )";
-  const std::string srcPath = writeTemp("vm_experimental_soa_vector_to_aos_method.prime", source);
+  const std::string srcPath = writeTemp("vm_experimental_soa_to_aos_method.prime", source);
   const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main";
   CHECK(runCommand(runCmd) == 0);
 }
 
-TEST_CASE("vm no-import root soa_vector to_aos bare and direct helper forms reject SoaVector-only canonical helper contract") {
+TEST_CASE("vm no-import root soa to_aos bare and direct helper forms reject SoaVector-only canonical helper contract") {
   const std::string source = R"(
 [struct reflect]
 Particle() {
@@ -708,20 +708,20 @@ Particle() {
 
 [effects(heap_alloc), return<int>]
 main() {
-  [soa_vector<Particle>] values{soa_vector<Particle>()}
+  [soa<Particle>] values{soa<Particle>()}
   [vector<Particle>] unpackedA{to_aos(values)}
   [vector<Particle>] unpackedB{/to_aos(values)}
   return(plus(count(unpackedA), count(unpackedB)))
 }
 )";
-  const std::string srcPath = writeTemp("vm_root_soa_vector_to_aos_forms.prime", source);
-  const std::string errPath = (testScratchPath("") / "primec_vm_root_soa_vector_to_aos_forms_err.txt").string();
+  const std::string srcPath = writeTemp("vm_root_soa_to_aos_forms.prime", source);
+  const std::string errPath = (testScratchPath("") / "primec_vm_root_soa_to_aos_forms_err.txt").string();
   const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main 2> " + errPath;
   CHECK(runCommand(runCmd) == 2);
   CHECK(readFile(errPath).find("binding initializer type mismatch") != std::string::npos);
 }
 
-TEST_CASE("vm no-import root soa_vector to_aos method helper forms reject SoaVector-only canonical helper contract") {
+TEST_CASE("vm no-import root soa to_aos method helper forms reject SoaVector-only canonical helper contract") {
   const std::string source = R"(
 [struct reflect]
 Particle() {
@@ -730,21 +730,21 @@ Particle() {
 
 [effects(heap_alloc), return<int>]
 main() {
-  [soa_vector<Particle>] values{soa_vector<Particle>()}
+  [soa<Particle>] values{soa<Particle>()}
   [vector<Particle>] unpackedA{values.to_aos()}
   [vector<Particle>] unpackedB{values./to_aos()}
   return(plus(count(unpackedA), count(unpackedB)))
 }
 )";
-  const std::string srcPath = writeTemp("vm_root_soa_vector_to_aos_method_forms.prime", source);
+  const std::string srcPath = writeTemp("vm_root_soa_to_aos_method_forms.prime", source);
   const std::string errPath =
-      (testScratchPath("") / "primec_vm_root_soa_vector_to_aos_method_forms_err.txt").string();
+      (testScratchPath("") / "primec_vm_root_soa_to_aos_method_forms_err.txt").string();
   const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main 2> " + errPath;
   CHECK(runCommand(runCmd) == 2);
   CHECK(readFile(errPath).find("binding initializer type mismatch") != std::string::npos);
 }
 
-TEST_CASE("vm materializes non-empty root soa_vector struct literals") {
+TEST_CASE("vm materializes non-empty root soa struct literals") {
   const std::string source = R"(
 [struct reflect]
 Particle() {
@@ -753,34 +753,34 @@ Particle() {
 
 [effects(heap_alloc), return<int>]
 main() {
-  [soa_vector<Particle>] values{soa_vector<Particle>(Particle(7i32), Particle(9i32))}
+  [soa<Particle>] values{soa<Particle>(Particle(7i32), Particle(9i32))}
   return(count(values))
 }
 )";
-  const std::string srcPath = writeTemp("vm_root_soa_vector_non_empty_literal.prime", source);
+  const std::string srcPath = writeTemp("vm_root_soa_non_empty_literal.prime", source);
   const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main";
   CHECK(runCommand(runCmd) == 2);
 }
 
-TEST_CASE("vm rejects non-empty root soa_vector literals with unsupported element envelopes") {
+TEST_CASE("vm rejects non-empty root soa literals with unsupported element envelopes") {
   const std::string source = R"(
 [effects(heap_alloc), return<int>]
 main() {
-  [soa_vector<i32>] values{soa_vector<i32>(1i32, 2i32)}
+  [soa<i32>] values{soa<i32>(1i32, 2i32)}
   return(0i32)
 }
 )";
-  const std::string srcPath = writeTemp("vm_root_soa_vector_non_struct_literal.prime", source);
+  const std::string srcPath = writeTemp("vm_root_soa_non_struct_literal.prime", source);
   const std::string errPath =
-      (testScratchPath("") / "primec_vm_root_soa_vector_non_struct_literal_err.txt").string();
+      (testScratchPath("") / "primec_vm_root_soa_non_struct_literal_err.txt").string();
   const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main 2> " + errPath;
   CHECK(runCommand(runCmd) == 2);
   const std::string error = readFile(errPath);
-  CHECK(error.find("soa_vector requires struct element type") != std::string::npos);
+  CHECK(error.find("soa requires struct element type") != std::string::npos);
   CHECK(error.find("stage: semantic") != std::string::npos);
 }
 
-TEST_CASE("vm materializes non-empty root soa_vector literals above former local capacity limit") {
+TEST_CASE("vm materializes non-empty root soa literals above former local capacity limit") {
   auto buildParticleLiteralArgs = [](int count) {
     std::string args;
     args.reserve(static_cast<size_t>(count) * 20);
@@ -800,23 +800,23 @@ TEST_CASE("vm materializes non-empty root soa_vector literals above former local
       "}\n\n"
       "[effects(heap_alloc), return<int>]\n"
       "main() {\n"
-      "  [soa_vector<Particle>] values{soa_vector<Particle>(") +
+      "  [soa<Particle>] values{soa<Particle>(") +
                              buildParticleLiteralArgs(257) +
                              ")}\n"
                              "  return(0i32)\n"
                              "}\n";
-  const std::string srcPath = writeTemp("vm_root_soa_vector_literal_limit_overflow.prime", source);
+  const std::string srcPath = writeTemp("vm_root_soa_literal_limit_overflow.prime", source);
   const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main";
   CHECK(runCommand(runCmd) == 0);
 }
 
-TEST_CASE("vm runs experimental soa_vector stdlib non-empty to-aos helper") {
+TEST_CASE("vm runs experimental soa stdlib non-empty to-aos helper") {
   const std::string source = R"(
 import /std/collections/*
 import /std/collections/soa/*
-import /std/collections/internal_soa_vector/*
+import /std/collections/internal_soa/*
 import /std/collections/soa/*
-import /std/collections/internal_soa_vector_conversions/*
+import /std/collections/internal_soa_conversions/*
 
 [struct reflect]
 Particle() {
@@ -830,18 +830,18 @@ main() {
   return(count(unpacked))
 }
 )";
-  const std::string srcPath = writeTemp("vm_experimental_soa_vector_to_aos_non_empty.prime", source);
+  const std::string srcPath = writeTemp("vm_experimental_soa_to_aos_non_empty.prime", source);
   const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main";
   CHECK(runCommand(runCmd) == 1);
 }
 
-TEST_CASE("vm runs experimental soa_vector stdlib non-empty to-aos method on wrapper state") {
+TEST_CASE("vm runs experimental soa stdlib non-empty to-aos method on wrapper state") {
   const std::string source = R"(
 import /std/collections/*
 import /std/collections/soa/*
-import /std/collections/internal_soa_vector/*
+import /std/collections/internal_soa/*
 import /std/collections/soa/*
-import /std/collections/internal_soa_vector_conversions/*
+import /std/collections/internal_soa_conversions/*
 
 [struct reflect]
 Particle() {
@@ -855,15 +855,15 @@ main() {
   return(count(unpacked))
 }
 )";
-  const std::string srcPath = writeTemp("vm_experimental_soa_vector_to_aos_non_empty_method.prime", source);
+  const std::string srcPath = writeTemp("vm_experimental_soa_to_aos_non_empty_method.prime", source);
   const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main";
   CHECK(runCommand(runCmd) == 1);
 }
 
-TEST_CASE("runs vm experimental soa_vector stdlib get helper") {
+TEST_CASE("runs vm experimental soa stdlib get helper") {
   const std::string source = R"(
 import /std/collections/soa/*
-import /std/collections/internal_soa_vector/*
+import /std/collections/internal_soa/*
 
 [struct reflect]
 Particle() {
@@ -877,15 +877,15 @@ main() {
   return(value.x)
 }
 )";
-  const std::string srcPath = writeTemp("vm_experimental_soa_vector_get.prime", source);
+  const std::string srcPath = writeTemp("vm_experimental_soa_get.prime", source);
   const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main";
   CHECK(runCommand(runCmd) == 7);
 }
 
-TEST_CASE("runs vm experimental soa_vector stdlib get method") {
+TEST_CASE("runs vm experimental soa stdlib get method") {
   const std::string source = R"(
 import /std/collections/soa/*
-import /std/collections/internal_soa_vector/*
+import /std/collections/internal_soa/*
 
 [struct reflect]
 Particle() {
@@ -899,16 +899,16 @@ main() {
   return(value.x)
 }
 )";
-  const std::string srcPath = writeTemp("vm_experimental_soa_vector_get_method.prime", source);
+  const std::string srcPath = writeTemp("vm_experimental_soa_get_method.prime", source);
   const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main";
   CHECK(runCommand(runCmd) == 7);
 }
 
-TEST_CASE("runs vm bare soa_vector get helper through helper return compatibility") {
+TEST_CASE("runs vm bare soa get helper through helper return compatibility") {
   const std::string source = R"(
 import /std/collections/*
 import /std/collections/soa/*
-import /std/collections/internal_soa_vector/*
+import /std/collections/internal_soa/*
 
 [struct reflect]
 Particle() {
@@ -927,16 +927,16 @@ main() {
   return(get(cloneValues(), 0i32).x)
 }
 )";
-  const std::string srcPath = writeTemp("vm_experimental_soa_vector_get_helper_return.prime", source);
+  const std::string srcPath = writeTemp("vm_experimental_soa_get_helper_return.prime", source);
   const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main";
   CHECK(runCommand(runCmd) == 7);
 }
 
-TEST_CASE("runs vm global helper-return soa_vector method shadows compatibility") {
+TEST_CASE("runs vm global helper-return soa method shadows compatibility") {
   const std::string source = R"(
 import /std/collections/*
 import /std/collections/soa/*
-import /std/collections/internal_soa_vector/*
+import /std/collections/internal_soa/*
 
 [struct reflect]
 Particle() {
@@ -949,27 +949,27 @@ cloneValues() {
 }
 
 [return<int>]
-/soa_vector/count([SoaVector<Particle>] values) {
+/soa/count([SoaVector<Particle>] values) {
   return(11i32)
 }
 
 [return<Particle>]
-/soa_vector/get([SoaVector<Particle>] values, [int] index) {
+/soa/get([SoaVector<Particle>] values, [int] index) {
   return(Particle(23i32))
 }
 
 [return<Particle>]
-/soa_vector/ref([SoaVector<Particle>] values, [int] index) {
+/soa/ref([SoaVector<Particle>] values, [int] index) {
   return(Particle(29i32))
 }
 
 [return<int>]
-/soa_vector/push([SoaVector<Particle>] values, [Particle] value) {
+/soa/push([SoaVector<Particle>] values, [Particle] value) {
   return(value.x)
 }
 
 [return<int>]
-/soa_vector/reserve([SoaVector<Particle>] values, [int] count) {
+/soa/reserve([SoaVector<Particle>] values, [int] count) {
   return(count)
 }
 
@@ -984,16 +984,16 @@ main() {
 }
 )";
   const std::string srcPath =
-      writeTemp("vm_experimental_soa_vector_method_shadow_global_helper_return.prime", source);
+      writeTemp("vm_experimental_soa_method_shadow_global_helper_return.prime", source);
   const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main";
   CHECK(runCommand(runCmd) == 131);
 }
 
-TEST_CASE("runs vm method-like helper-return soa_vector method shadows compatibility") {
+TEST_CASE("runs vm method-like helper-return soa method shadows compatibility") {
   const std::string source = R"(
 import /std/collections/*
 import /std/collections/soa/*
-import /std/collections/internal_soa_vector/*
+import /std/collections/internal_soa/*
 
 [struct reflect]
 Particle() {
@@ -1009,27 +1009,27 @@ Holder() {}
 }
 
 [return<int>]
-/soa_vector/count([SoaVector<Particle>] values) {
+/soa/count([SoaVector<Particle>] values) {
   return(11i32)
 }
 
 [return<Particle>]
-/soa_vector/get([SoaVector<Particle>] values, [int] index) {
+/soa/get([SoaVector<Particle>] values, [int] index) {
   return(Particle(23i32))
 }
 
 [return<Particle>]
-/soa_vector/ref([SoaVector<Particle>] values, [int] index) {
+/soa/ref([SoaVector<Particle>] values, [int] index) {
   return(Particle(29i32))
 }
 
 [return<int>]
-/soa_vector/push([SoaVector<Particle>] values, [Particle] value) {
+/soa/push([SoaVector<Particle>] values, [Particle] value) {
   return(value.x)
 }
 
 [return<int>]
-/soa_vector/reserve([SoaVector<Particle>] values, [int] count) {
+/soa/reserve([SoaVector<Particle>] values, [int] count) {
   return(count)
 }
 
@@ -1045,7 +1045,7 @@ main() {
 }
 )";
   const std::string srcPath =
-      writeTemp("vm_experimental_soa_vector_method_shadow_method_like_helper_return.prime", source);
+      writeTemp("vm_experimental_soa_method_shadow_method_like_helper_return.prime", source);
   const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main";
   CHECK(runCommand(runCmd) == 131);
 }
@@ -1053,19 +1053,19 @@ main() {
 TEST_CASE("runs vm vector-target old-explicit soa mutator shadows") {
   const std::string source = R"(
 [return<int>]
-/soa_vector/push([vector<i32>] values, [i32] value) {
+/soa/push([vector<i32>] values, [i32] value) {
   return(value)
 }
 
 [return<int>]
-/soa_vector/reserve([vector<i32>] values, [i32] count) {
+/soa/reserve([vector<i32>] values, [i32] count) {
   return(count)
 }
 
 [effects(heap_alloc), return<int>]
 main() {
   [vector<i32>] values{vector<i32>(1i32, 2i32, 3i32)}
-  return(plus(values./soa_vector/push(4i32), values./soa_vector/reserve(6i32)))
+  return(plus(values./soa/push(4i32), values./soa/reserve(6i32)))
 }
 )";
   const std::string srcPath =
@@ -1077,12 +1077,12 @@ main() {
 TEST_CASE("runs vm vector-target method soa mutator shadows") {
   const std::string source = R"(
 [return<int>]
-/soa_vector/push([vector<i32>] values, [i32] value) {
+/soa/push([vector<i32>] values, [i32] value) {
   return(value)
 }
 
 [return<int>]
-/soa_vector/reserve([vector<i32>] values, [i32] count) {
+/soa/reserve([vector<i32>] values, [i32] count) {
   return(count)
 }
 
@@ -1122,10 +1122,10 @@ main() {
   CHECK(runCommand(runCmd) == 27);
 }
 
-TEST_CASE("runs vm nested struct-body soa_vector constructor-bearing helper returns compatibility") {
+TEST_CASE("runs vm nested struct-body soa constructor-bearing helper returns compatibility") {
   const std::string source = R"(
 import /std/collections/soa/*
-import /std/collections/internal_soa_vector/*
+import /std/collections/internal_soa/*
 
 [struct reflect]
 Particle() {
@@ -1146,16 +1146,16 @@ main() {
 }
 )";
   const std::string srcPath =
-      writeTemp("vm_nested_struct_body_soa_vector_constructor_helper.prime", source);
+      writeTemp("vm_nested_struct_body_soa_constructor_helper.prime", source);
   const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main";
   CHECK(runCommand(runCmd) == 0);
 }
 
-TEST_CASE("runs vm nested struct-body soa_vector direct and bound helper expressions compatibility") {
+TEST_CASE("runs vm nested struct-body soa direct and bound helper expressions compatibility") {
   const std::string source = R"(
 import /std/collections/*
 import /std/collections/soa/*
-import /std/collections/internal_soa_vector/*
+import /std/collections/internal_soa/*
 
 [struct reflect]
 Particle() {
@@ -1180,16 +1180,16 @@ main() {
 }
 )";
   const std::string srcPath =
-      writeTemp("vm_nested_struct_body_soa_vector_direct_bound_helpers.prime", source);
+      writeTemp("vm_nested_struct_body_soa_direct_bound_helpers.prime", source);
   const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main";
   CHECK(runCommand(runCmd) == 16);
 }
 
-TEST_CASE("runs vm nested struct-body soa_vector method shadows compatibility") {
+TEST_CASE("runs vm nested struct-body soa method shadows compatibility") {
   const std::string source = R"(
 import /std/collections/*
 import /std/collections/soa/*
-import /std/collections/internal_soa_vector/*
+import /std/collections/internal_soa/*
 
 [struct reflect]
 Particle() {
@@ -1205,27 +1205,27 @@ Holder() {
 }
 
 [return<i32>]
-/soa_vector/count([SoaVector<Particle>] values) {
+/soa/count([SoaVector<Particle>] values) {
   return(13i32)
 }
 
 [return<Particle>]
-/soa_vector/get([SoaVector<Particle>] values, [i32] index) {
+/soa/get([SoaVector<Particle>] values, [i32] index) {
   return(Particle(23i32))
 }
 
 [return<Particle>]
-/soa_vector/ref([SoaVector<Particle>] values, [i32] index) {
+/soa/ref([SoaVector<Particle>] values, [i32] index) {
   return(Particle(29i32))
 }
 
 [return<i32>]
-/soa_vector/push([SoaVector<Particle>] values, [Particle] value) {
+/soa/push([SoaVector<Particle>] values, [Particle] value) {
   return(31i32)
 }
 
 [return<i32>]
-/soa_vector/reserve([SoaVector<Particle>] values, [i32] capacity) {
+/soa/reserve([SoaVector<Particle>] values, [i32] capacity) {
   return(37i32)
 }
 
@@ -1249,16 +1249,16 @@ main() {
 }
 )";
   const std::string srcPath =
-      writeTemp("vm_nested_struct_body_soa_vector_method_shadows.prime", source);
+      writeTemp("vm_nested_struct_body_soa_method_shadows.prime", source);
   const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main";
   CHECK(runCommand(runCmd) == 134);
 }
 
-TEST_CASE("runs vm explicit method-like helper-return experimental soa_vector to_aos shadow") {
+TEST_CASE("runs vm explicit method-like helper-return experimental soa to_aos shadow") {
   const std::string source = R"(
 import /std/collections/*
 import /std/collections/soa/*
-import /std/collections/internal_soa_vector/*
+import /std/collections/internal_soa/*
 
 [struct reflect]
 Particle() {
@@ -1288,15 +1288,15 @@ main() {
 }
 )";
   const std::string srcPath =
-      writeTemp("vm_experimental_soa_vector_explicit_method_like_to_aos_shadow.prime", source);
+      writeTemp("vm_experimental_soa_explicit_method_like_to_aos_shadow.prime", source);
   const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main";
   CHECK(runCommand(runCmd) == 1);
 }
 
-TEST_CASE("vm runs experimental soa_vector stdlib ref helper") {
+TEST_CASE("vm runs experimental soa stdlib ref helper") {
   const std::string source = R"(
 import /std/collections/soa/*
-import /std/collections/internal_soa_vector/*
+import /std/collections/internal_soa/*
 
 [struct reflect]
 Particle() {
@@ -1310,15 +1310,15 @@ main() {
   return(value.x)
 }
 )";
-  const std::string srcPath = writeTemp("vm_experimental_soa_vector_ref.prime", source);
+  const std::string srcPath = writeTemp("vm_experimental_soa_ref.prime", source);
   const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main";
   CHECK(runCommand(runCmd) == 7);
 }
 
-TEST_CASE("vm runs experimental soa_vector stdlib ref method") {
+TEST_CASE("vm runs experimental soa stdlib ref method") {
   const std::string source = R"(
 import /std/collections/soa/*
-import /std/collections/internal_soa_vector/*
+import /std/collections/internal_soa/*
 
 [struct reflect]
 Particle() {
@@ -1332,15 +1332,15 @@ main() {
   return(value.x)
 }
 )";
-  const std::string srcPath = writeTemp("vm_experimental_soa_vector_ref_method.prime", source);
+  const std::string srcPath = writeTemp("vm_experimental_soa_ref_method.prime", source);
   const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main";
   CHECK(runCommand(runCmd) == 7);
 }
 
-TEST_CASE("vm runs experimental soa_vector ref pass-through and return") {
+TEST_CASE("vm runs experimental soa ref pass-through and return") {
   const std::string source = R"(
 import /std/collections/soa/*
-import /std/collections/internal_soa_vector/*
+import /std/collections/internal_soa/*
 
 [struct reflect]
 Particle() {
@@ -1364,15 +1364,15 @@ main() {
   return(value.x)
 }
 )";
-  const std::string srcPath = writeTemp("vm_experimental_soa_vector_ref_passthrough.prime", source);
+  const std::string srcPath = writeTemp("vm_experimental_soa_ref_passthrough.prime", source);
   const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main";
   CHECK(runCommand(runCmd) == 7);
 }
 
-TEST_CASE("runs vm experimental soa_vector stdlib push and reserve helpers") {
+TEST_CASE("runs vm experimental soa stdlib push and reserve helpers") {
   const std::string source = R"(
 import /std/collections/soa/*
-import /std/collections/internal_soa_vector/*
+import /std/collections/internal_soa/*
 
 [struct reflect]
 Particle() {
@@ -1389,15 +1389,15 @@ main() {
   return(plus(soaVectorCount<Particle>(values), second.x))
 }
 )";
-  const std::string srcPath = writeTemp("vm_experimental_soa_vector_push_helpers.prime", source);
+  const std::string srcPath = writeTemp("vm_experimental_soa_push_helpers.prime", source);
   const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main";
   CHECK(runCommand(runCmd) == 11);
 }
 
-TEST_CASE("runs vm experimental soa_vector stdlib push and reserve methods") {
+TEST_CASE("runs vm experimental soa stdlib push and reserve methods") {
   const std::string source = R"(
 import /std/collections/soa/*
-import /std/collections/internal_soa_vector/*
+import /std/collections/internal_soa/*
 
 [struct reflect]
 Particle() {
@@ -1414,15 +1414,15 @@ main() {
   return(plus(values.count(), second.x))
 }
 )";
-  const std::string srcPath = writeTemp("vm_experimental_soa_vector_push_method.prime", source);
+  const std::string srcPath = writeTemp("vm_experimental_soa_push_method.prime", source);
   const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main";
   CHECK(runCommand(runCmd) == 11);
 }
 
-TEST_CASE("vm runs experimental soa_vector single-field index syntax") {
+TEST_CASE("vm runs experimental soa single-field index syntax") {
   const std::string source = R"(
 import /std/collections/soa/*
-import /std/collections/internal_soa_vector/*
+import /std/collections/internal_soa/*
 
 [struct reflect]
 ScalarBox() {
@@ -1437,15 +1437,15 @@ main() {
   return(values.x()[1i32])
 }
 )";
-  const std::string srcPath = writeTemp("vm_experimental_soa_vector_single_field_view.prime", source);
+  const std::string srcPath = writeTemp("vm_experimental_soa_single_field_view.prime", source);
   const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main";
   CHECK(runCommand(runCmd) == 9);
 }
 
-TEST_CASE("vm runs experimental soa_vector reflected multi-field index syntax") {
+TEST_CASE("vm runs experimental soa reflected multi-field index syntax") {
   const std::string source = R"(
 import /std/collections/soa/*
-import /std/collections/internal_soa_vector/*
+import /std/collections/internal_soa/*
 
 [struct reflect]
 Particle() {
@@ -1461,16 +1461,16 @@ main() {
   return(values.y()[1i32])
 }
 )";
-  const std::string srcPath = writeTemp("vm_experimental_soa_vector_field_view.prime", source);
+  const std::string srcPath = writeTemp("vm_experimental_soa_field_view.prime", source);
   const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main";
   CHECK(runCommand(runCmd) == 12);
 }
 
-TEST_CASE("vm runs experimental soa_vector mutating indexed field writes") {
+TEST_CASE("vm runs experimental soa mutating indexed field writes") {
   const std::string source = R"(
 import /std/collections/*
 import /std/collections/soa/*
-import /std/collections/internal_soa_vector/*
+import /std/collections/internal_soa/*
 
 [struct reflect]
 Particle() {
@@ -1493,15 +1493,15 @@ main() {
 }
 )";
   const std::string srcPath =
-      writeTemp("vm_experimental_soa_vector_mutating_indexed_field_writes.prime", source);
+      writeTemp("vm_experimental_soa_mutating_indexed_field_writes.prime", source);
   const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main";
   CHECK(runCommand(runCmd) == 52);
 }
 
-TEST_CASE("vm runs richer borrowed experimental soa_vector mutating indexed field writes") {
+TEST_CASE("vm runs richer borrowed experimental soa mutating indexed field writes") {
   const std::string source = R"(
 import /std/collections/soa/*
-import /std/collections/internal_soa_vector/*
+import /std/collections/internal_soa/*
 
 [struct reflect]
 Particle() {
@@ -1526,16 +1526,16 @@ main() {
 }
 )";
   const std::string srcPath = writeTemp(
-      "vm_experimental_soa_vector_richer_borrowed_mutating_indexed_field_writes.prime",
+      "vm_experimental_soa_richer_borrowed_mutating_indexed_field_writes.prime",
       source);
   const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main";
   CHECK(runCommand(runCmd) == 36);
 }
 
-TEST_CASE("vm runs method-like borrowed experimental soa_vector mutating indexed field writes") {
+TEST_CASE("vm runs method-like borrowed experimental soa mutating indexed field writes") {
   const std::string source = R"(
 import /std/collections/soa/*
-import /std/collections/internal_soa_vector/*
+import /std/collections/internal_soa/*
 
 [struct reflect]
 Particle() {
@@ -1570,16 +1570,16 @@ main() {
 }
 )";
   const std::string srcPath = writeTemp(
-      "vm_experimental_soa_vector_method_like_borrowed_mutating_indexed_field_writes.prime",
+      "vm_experimental_soa_method_like_borrowed_mutating_indexed_field_writes.prime",
       source);
   const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main";
   CHECK(runCommand(runCmd) == 104);
 }
 
-TEST_CASE("vm runs borrowed experimental soa_vector reflected index syntax") {
+TEST_CASE("vm runs borrowed experimental soa reflected index syntax") {
   const std::string source = R"(
 import /std/collections/soa/*
-import /std/collections/internal_soa_vector/*
+import /std/collections/internal_soa/*
 
 [struct reflect]
 Particle() {
@@ -1596,16 +1596,16 @@ main() {
   return(dereference(borrowed).y()[1i32])
 }
 )";
-  const std::string srcPath = writeTemp("vm_experimental_soa_vector_borrowed_field_view.prime", source);
+  const std::string srcPath = writeTemp("vm_experimental_soa_borrowed_field_view.prime", source);
   const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main";
   CHECK(runCommand(runCmd) == 12);
 }
 
-TEST_CASE("vm runs experimental soa_vector bare get and ref field access") {
+TEST_CASE("vm runs experimental soa bare get and ref field access") {
   const std::string source = R"(
 import /std/collections/*
 import /std/collections/soa/*
-import /std/collections/internal_soa_vector/*
+import /std/collections/internal_soa/*
 
 [struct reflect]
 Particle() {
@@ -1621,15 +1621,15 @@ main() {
   return(plus(ref(values, 0i32).y, get(values, 1i32).y))
 }
 )";
-  const std::string srcPath = writeTemp("vm_experimental_soa_vector_bare_ref_field_access.prime", source);
+  const std::string srcPath = writeTemp("vm_experimental_soa_bare_ref_field_access.prime", source);
   const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main";
   CHECK(runCommand(runCmd) == 20);
 }
 
-TEST_CASE("vm runs borrowed local experimental soa_vector reflected index syntax") {
+TEST_CASE("vm runs borrowed local experimental soa reflected index syntax") {
   const std::string source = R"(
 import /std/collections/soa/*
-import /std/collections/internal_soa_vector/*
+import /std/collections/internal_soa/*
 
 [struct reflect]
 Particle() {
@@ -1647,15 +1647,15 @@ main() {
 }
 )";
   const std::string srcPath =
-      writeTemp("vm_experimental_soa_vector_borrowed_local_field_view.prime", source);
+      writeTemp("vm_experimental_soa_borrowed_local_field_view.prime", source);
   const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main";
   CHECK(runCommand(runCmd) == 12);
 }
 
-TEST_CASE("vm runs borrowed helper-return experimental soa_vector reflected index syntax") {
+TEST_CASE("vm runs borrowed helper-return experimental soa reflected index syntax") {
   const std::string source = R"(
 import /std/collections/soa/*
-import /std/collections/internal_soa_vector/*
+import /std/collections/internal_soa/*
 
 [struct reflect]
 Particle() {
@@ -1677,15 +1677,15 @@ main() {
 }
 )";
   const std::string srcPath =
-      writeTemp("vm_experimental_soa_vector_borrowed_return_field_view.prime", source);
+      writeTemp("vm_experimental_soa_borrowed_return_field_view.prime", source);
   const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main";
   CHECK(runCommand(runCmd) == 12);
 }
 
-TEST_CASE("vm runs experimental soa_vector reflected call-form index syntax") {
+TEST_CASE("vm runs experimental soa reflected call-form index syntax") {
   const std::string source = R"(
 import /std/collections/soa/*
-import /std/collections/internal_soa_vector/*
+import /std/collections/internal_soa/*
 
 [struct reflect]
 Particle() {
@@ -1720,15 +1720,15 @@ main() {
 }
 )";
   const std::string srcPath =
-      writeTemp("vm_experimental_soa_vector_call_form_field_view.prime", source);
+      writeTemp("vm_experimental_soa_call_form_field_view.prime", source);
   const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main";
   CHECK(runCommand(runCmd) == 36);
 }
 
-TEST_CASE("vm runs experimental soa_vector inline location borrow index syntax") {
+TEST_CASE("vm runs experimental soa inline location borrow index syntax") {
   const std::string source = R"(
 import /std/collections/soa/*
-import /std/collections/internal_soa_vector/*
+import /std/collections/internal_soa/*
 
 [struct reflect]
 Particle() {
@@ -1757,15 +1757,15 @@ main() {
 }
 )";
   const std::string srcPath =
-      writeTemp("vm_experimental_soa_vector_inline_location_field_view.prime", source);
+      writeTemp("vm_experimental_soa_inline_location_field_view.prime", source);
   const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main";
   CHECK(runCommand(runCmd) == 40);
 }
 
-TEST_CASE("vm runs dereferenced borrowed helper-return experimental soa_vector reflected index syntax") {
+TEST_CASE("vm runs dereferenced borrowed helper-return experimental soa reflected index syntax") {
   const std::string source = R"(
 import /std/collections/soa/*
-import /std/collections/internal_soa_vector/*
+import /std/collections/internal_soa/*
 
 [struct reflect]
 Particle() {
@@ -1787,16 +1787,16 @@ main() {
 }
 )";
   const std::string srcPath =
-      writeTemp("vm_experimental_soa_vector_dereferenced_borrowed_return_field_view.prime", source);
+      writeTemp("vm_experimental_soa_dereferenced_borrowed_return_field_view.prime", source);
   const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main";
   CHECK(runCommand(runCmd) == 12);
 }
 
-TEST_CASE("vm runs borrowed helper-return experimental soa_vector get/ref methods") {
+TEST_CASE("vm runs borrowed helper-return experimental soa get/ref methods") {
   const std::string source = R"(
 import /std/collections/*
 import /std/collections/soa/*
-import /std/collections/internal_soa_vector/*
+import /std/collections/internal_soa/*
 
 [struct reflect]
 Particle() {
@@ -1819,16 +1819,16 @@ main() {
 }
 )";
   const std::string srcPath =
-      writeTemp("vm_experimental_soa_vector_borrowed_return_get_ref.prime", source);
+      writeTemp("vm_experimental_soa_borrowed_return_get_ref.prime", source);
   const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main";
   CHECK(runCommand(runCmd) == 16);
 }
 
-TEST_CASE("vm runs borrowed helper-return soa_vector ref_ref same-path helper compatibility") {
+TEST_CASE("vm runs borrowed helper-return soa ref_ref same-path helper compatibility") {
   const std::string source = R"(
 import /std/collections/*
 import /std/collections/soa/*
-import /std/collections/internal_soa_vector/*
+import /std/collections/internal_soa/*
 
 [struct reflect]
 Particle() {
@@ -1841,7 +1841,7 @@ pickBorrowed([Reference<SoaVector<Particle>>] values) {
 }
 
 [return<int>]
-/soa_vector/ref_ref([Reference<SoaVector<Particle>>] values, [int] index) {
+/soa/ref_ref([Reference<SoaVector<Particle>>] values, [int] index) {
   return(19i32)
 }
 
@@ -1853,13 +1853,13 @@ main() {
 }
 )";
   const std::string srcPath =
-      writeTemp("vm_experimental_soa_vector_borrowed_return_ref_ref_same_path.prime",
+      writeTemp("vm_experimental_soa_borrowed_return_ref_ref_same_path.prime",
                 source);
   const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main";
   CHECK(runCommand(runCmd) == 38);
 }
 
-TEST_CASE("vm runs builtin helper-return soa_vector ref_ref same-path helper") {
+TEST_CASE("vm runs builtin helper-return soa ref_ref same-path helper") {
   const std::string source = R"(
 import /std/collections/*
 
@@ -1868,37 +1868,37 @@ Particle() {
   [i32] x{1i32}
 }
 
-[effects(heap_alloc), return<soa_vector<Particle>>]
+[effects(heap_alloc), return<soa<Particle>>]
 cloneValues() {
-  return(soa_vector<Particle>())
+  return(soa<Particle>())
 }
 
 [effects(heap_alloc), return<int>]
-/soa_vector/ref_ref([soa_vector<Particle>] values, [vector<i32>] index) {
+/soa/ref_ref([soa<Particle>] values, [vector<i32>] index) {
   return(17i32)
 }
 
 [effects(heap_alloc), return<int>]
 main() {
   [vector<i32>] idx{vector<i32>(0i32)}
-  [soa_vector<Particle>] values{cloneValues()}
+  [soa<Particle>] values{cloneValues()}
   return(plus(ref_ref(values, idx),
               plus(values.ref_ref(idx), ref_ref(cloneValues(), idx))))
 }
 )";
   const std::string srcPath =
-      writeTemp("vm_builtin_soa_vector_ref_ref_same_path.prime", source);
+      writeTemp("vm_builtin_soa_ref_ref_same_path.prime", source);
   const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main";
   CHECK(runCommand(runCmd) == 51);
 }
 
-TEST_CASE("vm runs borrowed local experimental soa_vector read-only methods") {
+TEST_CASE("vm runs borrowed local experimental soa read-only methods") {
   const std::string source = R"(
 import /std/collections/*
 import /std/collections/soa/*
-import /std/collections/internal_soa_vector/*
+import /std/collections/internal_soa/*
 import /std/collections/soa/*
-import /std/collections/internal_soa_vector_conversions/*
+import /std/collections/internal_soa_conversions/*
 
 [struct reflect]
 Particle() {
@@ -1925,18 +1925,18 @@ main() {
 }
 )";
   const std::string srcPath =
-      writeTemp("vm_experimental_soa_vector_borrowed_local_methods.prime", source);
+      writeTemp("vm_experimental_soa_borrowed_local_methods.prime", source);
   const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main";
   CHECK(runCommand(runCmd) == 38);
 }
 
-TEST_CASE("vm runs inline location experimental soa_vector read-only methods") {
+TEST_CASE("vm runs inline location experimental soa read-only methods") {
   const std::string source = R"(
 import /std/collections/*
 import /std/collections/soa/*
-import /std/collections/internal_soa_vector/*
+import /std/collections/internal_soa/*
 import /std/collections/soa/*
-import /std/collections/internal_soa_vector_conversions/*
+import /std/collections/internal_soa_conversions/*
 
 [struct reflect]
 Particle() {
@@ -1964,18 +1964,18 @@ main() {
 }
 )";
   const std::string srcPath =
-      writeTemp("vm_experimental_soa_vector_inline_location_methods.prime", source);
+      writeTemp("vm_experimental_soa_inline_location_methods.prime", source);
   const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main";
   CHECK(runCommand(runCmd) == 40);
 }
 
-TEST_CASE("vm runs borrowed helper-return experimental soa_vector helper surfaces") {
+TEST_CASE("vm runs borrowed helper-return experimental soa helper surfaces") {
   const std::string source = R"(
 import /std/collections/*
 import /std/collections/soa/*
-import /std/collections/internal_soa_vector/*
+import /std/collections/internal_soa/*
 import /std/collections/soa/*
-import /std/collections/internal_soa_vector_conversions/*
+import /std/collections/internal_soa_conversions/*
 
 [struct reflect]
 Particle() {
@@ -2006,16 +2006,16 @@ main() {
 }
 )";
   const std::string srcPath =
-      writeTemp("vm_experimental_soa_vector_borrowed_return_methods.prime", source);
+      writeTemp("vm_experimental_soa_borrowed_return_methods.prime", source);
   const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main";
   CHECK(runCommand(runCmd) == 38);
 }
 
-TEST_CASE("vm runs method-like borrowed helper-return experimental soa_vector helper surfaces") {
+TEST_CASE("vm runs method-like borrowed helper-return experimental soa helper surfaces") {
   const std::string source = R"(
 import /std/collections/*
 import /std/collections/soa/*
-import /std/collections/internal_soa_vector/*
+import /std/collections/internal_soa/*
 
 [struct reflect]
 Particle() {
@@ -2055,18 +2055,18 @@ main() {
 }
 )";
   const std::string srcPath =
-      writeTemp("vm_experimental_soa_vector_method_like_borrowed_return_helpers.prime", source);
+      writeTemp("vm_experimental_soa_method_like_borrowed_return_helpers.prime", source);
   const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main";
   CHECK(runCommand(runCmd) == 85);
 }
 
-TEST_CASE("vm runs direct return borrowed helper-return experimental soa_vector reads") {
+TEST_CASE("vm runs direct return borrowed helper-return experimental soa reads") {
   const std::string source = R"(
 import /std/collections/*
 import /std/collections/soa/*
-import /std/collections/internal_soa_vector/*
+import /std/collections/internal_soa/*
 import /std/collections/soa/*
-import /std/collections/internal_soa_vector_conversions/*
+import /std/collections/internal_soa_conversions/*
 
 [struct reflect]
 Particle() {
@@ -2096,18 +2096,18 @@ main() {
 }
 )";
   const std::string srcPath = writeTemp(
-      "vm_experimental_soa_vector_direct_return_borrowed_return_reads.prime", source);
+      "vm_experimental_soa_direct_return_borrowed_return_reads.prime", source);
   const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main";
   CHECK(runCommand(runCmd) == 55);
 }
 
-TEST_CASE("vm runs direct return method-like borrowed helper-return experimental soa_vector reads") {
+TEST_CASE("vm runs direct return method-like borrowed helper-return experimental soa reads") {
   const std::string source = R"(
 import /std/collections/*
 import /std/collections/soa/*
-import /std/collections/internal_soa_vector/*
+import /std/collections/internal_soa/*
 import /std/collections/soa/*
-import /std/collections/internal_soa_vector_conversions/*
+import /std/collections/internal_soa_conversions/*
 
 [struct reflect]
 Particle() {
@@ -2141,18 +2141,18 @@ main() {
 }
 )";
   const std::string srcPath = writeTemp(
-      "vm_experimental_soa_vector_direct_return_method_like_borrowed_return_reads.prime", source);
+      "vm_experimental_soa_direct_return_method_like_borrowed_return_reads.prime", source);
   const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main";
   CHECK(runCommand(runCmd) == 55);
 }
 
-TEST_CASE("vm runs direct return inline location borrowed helper-return experimental soa_vector reads") {
+TEST_CASE("vm runs direct return inline location borrowed helper-return experimental soa reads") {
   const std::string source = R"(
 import /std/collections/*
 import /std/collections/soa/*
-import /std/collections/internal_soa_vector/*
+import /std/collections/internal_soa/*
 import /std/collections/soa/*
-import /std/collections/internal_soa_vector_conversions/*
+import /std/collections/internal_soa_conversions/*
 
 [struct reflect]
 Particle() {
@@ -2182,19 +2182,19 @@ main() {
 }
 )";
   const std::string srcPath = writeTemp(
-      "vm_experimental_soa_vector_direct_return_inline_location_borrowed_return_reads.prime",
+      "vm_experimental_soa_direct_return_inline_location_borrowed_return_reads.prime",
       source);
   const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main";
   CHECK(runCommand(runCmd) == 52);
 }
 
-TEST_CASE("vm runs inline location method-like borrowed helper-return experimental soa_vector helpers") {
+TEST_CASE("vm runs inline location method-like borrowed helper-return experimental soa helpers") {
   const std::string source = R"(
 import /std/collections/*
 import /std/collections/soa/*
-import /std/collections/internal_soa_vector/*
+import /std/collections/internal_soa/*
 import /std/collections/soa/*
-import /std/collections/internal_soa_vector_conversions/*
+import /std/collections/internal_soa_conversions/*
 
 [struct reflect]
 Particle() {
@@ -2252,18 +2252,18 @@ main() {
 }
 )";
   const std::string srcPath = writeTemp(
-      "vm_experimental_soa_vector_inline_location_method_like_borrowed_return_helpers.prime", source);
+      "vm_experimental_soa_inline_location_method_like_borrowed_return_helpers.prime", source);
   const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main";
   CHECK(runCommand(runCmd) == 147);
 }
 
-TEST_CASE("vm runs direct return inline location method-like borrowed helper-return experimental soa_vector reads") {
+TEST_CASE("vm runs direct return inline location method-like borrowed helper-return experimental soa reads") {
   const std::string source = R"(
 import /std/collections/*
 import /std/collections/soa/*
-import /std/collections/internal_soa_vector/*
+import /std/collections/internal_soa/*
 import /std/collections/soa/*
-import /std/collections/internal_soa_vector_conversions/*
+import /std/collections/internal_soa_conversions/*
 
 [struct reflect]
 Particle() {
@@ -2297,19 +2297,19 @@ main() {
 }
 )";
   const std::string srcPath = writeTemp(
-      "vm_experimental_soa_vector_direct_return_inline_location_method_like_borrowed_return_reads.prime",
+      "vm_experimental_soa_direct_return_inline_location_method_like_borrowed_return_reads.prime",
       source);
   const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main";
   CHECK(runCommand(runCmd) == 52);
 }
 
-TEST_CASE("vm runs inline location borrowed helper-return experimental soa_vector helpers") {
+TEST_CASE("vm runs inline location borrowed helper-return experimental soa helpers") {
   const std::string source = R"(
 import /std/collections/*
 import /std/collections/soa/*
-import /std/collections/internal_soa_vector/*
+import /std/collections/internal_soa/*
 import /std/collections/soa/*
-import /std/collections/internal_soa_vector_conversions/*
+import /std/collections/internal_soa_conversions/*
 
 [struct reflect]
 Particle() {
@@ -2357,14 +2357,14 @@ main() {
 }
 )";
   const std::string srcPath =
-      writeTemp("vm_experimental_soa_vector_inline_location_borrowed_return_helpers.prime", source);
+      writeTemp("vm_experimental_soa_inline_location_borrowed_return_helpers.prime", source);
   const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main";
   CHECK(runCommand(runCmd) == 116);
 }
 
 TEST_CASE("runs vm experimental soa storage helpers") {
   const std::string source = R"(
-import /std/collections/internal_soa_storage/*
+import /std/collections/soa_storage/*
 
 [effects(heap_alloc), return<int>]
 main() {
@@ -2380,14 +2380,14 @@ main() {
   return(plus(total, soaColumnCount<i32>(values)))
 }
 )";
-  const std::string srcPath = writeTemp("vm_internal_soa_storage.prime", source);
+  const std::string srcPath = writeTemp("vm_soa_storage.prime", source);
   const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main";
   CHECK(runCommand(runCmd) == 14);
 }
 
 TEST_CASE("runs vm experimental soa storage borrowed ref helper") {
   const std::string source = R"(
-import /std/collections/internal_soa_storage/*
+import /std/collections/soa_storage/*
 
 [effects(heap_alloc), return<int>]
 main() {
@@ -2398,14 +2398,14 @@ main() {
   return(plus(dereference(borrowed), soaColumnCount<i32>(values)))
 }
 )";
-  const std::string srcPath = writeTemp("vm_internal_soa_storage_ref.prime", source);
+  const std::string srcPath = writeTemp("vm_soa_storage_ref.prime", source);
   const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main";
   CHECK(runCommand(runCmd) == 7);
 }
 
 TEST_CASE("runs vm experimental soa storage borrowed view helper") {
   const std::string source = R"(
-import /std/collections/internal_soa_storage/*
+import /std/collections/soa_storage/*
 
 [effects(heap_alloc), return<int>]
 main() {
@@ -2417,14 +2417,14 @@ main() {
   return(plus(soaColumnRead<i32>(view, 1i32), soaColumnCount<i32>(values)))
 }
 )";
-  const std::string srcPath = writeTemp("vm_internal_soa_storage_view.prime", source);
+  const std::string srcPath = writeTemp("vm_soa_storage_view.prime", source);
   const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main";
   CHECK(runCommand(runCmd) == 9);
 }
 
 TEST_CASE("rejects vm experimental soa storage reserve overflow") {
   const std::string source = R"(
-import /std/collections/internal_soa_storage/*
+import /std/collections/soa_storage/*
 
 [effects(heap_alloc), return<int>]
 main() {
@@ -2433,9 +2433,9 @@ main() {
   return(0i32)
 }
 )";
-  const std::string srcPath = writeTemp("vm_internal_soa_storage_reserve_overflow.prime", source);
+  const std::string srcPath = writeTemp("vm_soa_storage_reserve_overflow.prime", source);
   const std::string errPath =
-      (testScratchPath("") / "primec_vm_internal_soa_storage_reserve_overflow_err.txt").string();
+      (testScratchPath("") / "primec_vm_soa_storage_reserve_overflow_err.txt").string();
   const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main 2> " + errPath;
   CHECK(runCommand(runCmd) == 3);
   CHECK(readFile(errPath) == "array index out of bounds\n");
@@ -2443,7 +2443,7 @@ main() {
 
 TEST_CASE("runs vm experimental two-column soa storage helpers") {
   const std::string source = R"(
-import /std/collections/internal_soa_storage/*
+import /std/collections/soa_storage/*
 
 [effects(heap_alloc), return<int>]
 main() {
@@ -2460,14 +2460,14 @@ main() {
   return(plus(total, soaColumns2Count<i32, i32>(values)))
 }
 )";
-  const std::string srcPath = writeTemp("vm_internal_soa_storage_two_columns.prime", source);
+  const std::string srcPath = writeTemp("vm_soa_storage_two_columns.prime", source);
   const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main";
   CHECK(runCommand(runCmd) == 24);
 }
 
 TEST_CASE("runs vm experimental three-column soa storage helpers") {
   const std::string source = R"(
-import /std/collections/internal_soa_storage/*
+import /std/collections/soa_storage/*
 
 [effects(heap_alloc), return<int>]
 main() {
@@ -2485,14 +2485,14 @@ main() {
   return(plus(total, soaColumns3Count<i32, i32, i32>(values)))
 }
 )";
-  const std::string srcPath = writeTemp("vm_internal_soa_storage_three_columns.prime", source);
+  const std::string srcPath = writeTemp("vm_soa_storage_three_columns.prime", source);
   const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main";
   CHECK(runCommand(runCmd) == 60);
 }
 
 TEST_CASE("runs vm experimental four-column soa storage helpers") {
   const std::string source = R"(
-import /std/collections/internal_soa_storage/*
+import /std/collections/soa_storage/*
 
 [effects(heap_alloc), return<int>]
 main() {
@@ -2511,14 +2511,14 @@ main() {
   return(plus(total, soaColumns4Count<i32, i32, i32, i32>(values)))
 }
 )";
-  const std::string srcPath = writeTemp("vm_internal_soa_storage_four_columns.prime", source);
+  const std::string srcPath = writeTemp("vm_soa_storage_four_columns.prime", source);
   const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main";
   CHECK(runCommand(runCmd) == 105);
 }
 
 TEST_CASE("runs vm experimental five-column soa storage helpers") {
   const std::string source = R"(
-import /std/collections/internal_soa_storage/*
+import /std/collections/soa_storage/*
 
 [effects(heap_alloc), return<int>]
 main() {
@@ -2538,14 +2538,14 @@ main() {
   return(plus(total, soaColumns5Count<i32, i32, i32, i32, i32>(values)))
 }
 )";
-  const std::string srcPath = writeTemp("vm_internal_soa_storage_five_columns.prime", source);
+  const std::string srcPath = writeTemp("vm_soa_storage_five_columns.prime", source);
   const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main";
   CHECK(runCommand(runCmd) == 176);
 }
 
 TEST_CASE("runs vm experimental six-column soa storage helpers") {
   const std::string source = R"(
-import /std/collections/internal_soa_storage/*
+import /std/collections/soa_storage/*
 
 [effects(heap_alloc), return<int>]
 main() {
@@ -2566,14 +2566,14 @@ main() {
   return(plus(total, soaColumns6Count<i32, i32, i32, i32, i32, i32>(values)))
 }
 )";
-  const std::string srcPath = writeTemp("vm_internal_soa_storage_six_columns.prime", source);
+  const std::string srcPath = writeTemp("vm_soa_storage_six_columns.prime", source);
   const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main";
   CHECK(runCommand(runCmd) == 189);
 }
 
 TEST_CASE("runs vm experimental seven-column soa storage helpers") {
   const std::string source = R"(
-import /std/collections/internal_soa_storage/*
+import /std/collections/soa_storage/*
 
 [effects(heap_alloc), return<int>]
 main() {
@@ -2595,14 +2595,14 @@ main() {
   return(plus(total, soaColumns7Count<i32, i32, i32, i32, i32, i32, i32>(values)))
 }
 )";
-  const std::string srcPath = writeTemp("vm_internal_soa_storage_seven_columns.prime", source);
+  const std::string srcPath = writeTemp("vm_soa_storage_seven_columns.prime", source);
   const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main";
   CHECK(runCommand(runCmd) == 212);
 }
 
 TEST_CASE("runs vm experimental eight-column soa storage helpers") {
   const std::string source = R"(
-import /std/collections/internal_soa_storage/*
+import /std/collections/soa_storage/*
 
 [effects(heap_alloc), return<int>]
 main() {
@@ -2625,14 +2625,14 @@ main() {
   return(plus(total, soaColumns8Count<i32, i32, i32, i32, i32, i32, i32, i32>(values)))
 }
 )";
-  const std::string srcPath = writeTemp("vm_internal_soa_storage_eight_columns.prime", source);
+  const std::string srcPath = writeTemp("vm_soa_storage_eight_columns.prime", source);
   const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main";
   CHECK(runCommand(runCmd) == 231);
 }
 
 TEST_CASE("runs vm experimental nine-column soa storage helpers") {
   const std::string source = R"(
-import /std/collections/internal_soa_storage/*
+import /std/collections/soa_storage/*
 
 [effects(heap_alloc), return<int>]
 main() {
@@ -2651,14 +2651,14 @@ main() {
   return(plus(total, soaColumns9Count<i32, i32, i32, i32, i32, i32, i32, i32, i32>(values)))
 }
 )";
-  const std::string srcPath = writeTemp("vm_internal_soa_storage_nine_columns.prime", source);
+  const std::string srcPath = writeTemp("vm_soa_storage_nine_columns.prime", source);
   const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main";
   CHECK(runCommand(runCmd) == 45);
 }
 
 TEST_CASE("runs vm experimental ten-column soa storage helpers") {
   const std::string source = R"(
-import /std/collections/internal_soa_storage/*
+import /std/collections/soa_storage/*
 
 [effects(heap_alloc), return<int>]
 main() {
@@ -2678,14 +2678,14 @@ main() {
   return(plus(total, soaColumns10Count<i32, i32, i32, i32, i32, i32, i32, i32, i32, i32>(values)))
 }
 )";
-  const std::string srcPath = writeTemp("vm_internal_soa_storage_ten_columns.prime", source);
+  const std::string srcPath = writeTemp("vm_soa_storage_ten_columns.prime", source);
   const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main";
   CHECK(runCommand(runCmd) == 74);
 }
 
 TEST_CASE("runs vm experimental eleven-column soa storage helpers") {
   const std::string source = R"(
-import /std/collections/internal_soa_storage/*
+import /std/collections/soa_storage/*
 
 [effects(heap_alloc), return<int>]
 main() {
@@ -2699,14 +2699,14 @@ main() {
   return(total)
 }
 )";
-  const std::string srcPath = writeTemp("vm_internal_soa_storage_eleven_columns.prime", source);
+  const std::string srcPath = writeTemp("vm_soa_storage_eleven_columns.prime", source);
   const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main";
   CHECK(runCommand(runCmd) == 34);
 }
 
 TEST_CASE("runs vm experimental twelve-column soa storage helpers") {
   const std::string source = R"(
-import /std/collections/internal_soa_storage/*
+import /std/collections/soa_storage/*
 
 [effects(heap_alloc), return<int>]
 main() {
@@ -2720,14 +2720,14 @@ main() {
   return(total)
 }
 )";
-  const std::string srcPath = writeTemp("vm_internal_soa_storage_twelve_columns.prime", source);
+  const std::string srcPath = writeTemp("vm_soa_storage_twelve_columns.prime", source);
   const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main";
   CHECK(runCommand(runCmd) == 47);
 }
 
 TEST_CASE("runs vm experimental thirteen-column soa storage helpers") {
   const std::string source = R"(
-import /std/collections/internal_soa_storage/*
+import /std/collections/soa_storage/*
 
 [effects(heap_alloc), return<int>]
 main() {
@@ -2741,14 +2741,14 @@ main() {
   return(total)
 }
 )";
-  const std::string srcPath = writeTemp("vm_internal_soa_storage_thirteen_columns.prime", source);
+  const std::string srcPath = writeTemp("vm_soa_storage_thirteen_columns.prime", source);
   const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main";
   CHECK(runCommand(runCmd) == 49);
 }
 
 TEST_CASE("runs vm experimental fourteen-column soa storage helpers") {
   const std::string source = R"(
-import /std/collections/internal_soa_storage/*
+import /std/collections/soa_storage/*
 
 [effects(heap_alloc), return<int>]
 main() {
@@ -2762,14 +2762,14 @@ main() {
   return(total)
 }
 )";
-  const std::string srcPath = writeTemp("vm_internal_soa_storage_fourteen_columns.prime", source);
+  const std::string srcPath = writeTemp("vm_soa_storage_fourteen_columns.prime", source);
   const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main";
   CHECK(runCommand(runCmd) == 53);
 }
 
 TEST_CASE("runs vm experimental fifteen-column soa storage helpers") {
   const std::string source = R"(
-import /std/collections/internal_soa_storage/*
+import /std/collections/soa_storage/*
 
 [effects(heap_alloc), return<int>]
 main() {
@@ -2783,7 +2783,7 @@ main() {
   return(total)
 }
 )";
-  const std::string srcPath = writeTemp("vm_internal_soa_storage_fifteen_columns.prime", source);
+  const std::string srcPath = writeTemp("vm_soa_storage_fifteen_columns.prime", source);
   const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main";
   CHECK(runCommand(runCmd) == 59);
 }
@@ -2791,7 +2791,7 @@ main() {
 
 TEST_CASE("runs vm experimental sixteen-column soa storage helpers") {
   const std::string source = R"(
-import /std/collections/internal_soa_storage/*
+import /std/collections/soa_storage/*
 
 [effects(heap_alloc), return<int>]
 main() {
@@ -2805,7 +2805,7 @@ main() {
   return(total)
 }
 )";
-  const std::string srcPath = writeTemp("vm_internal_soa_storage_sixteen_columns.prime", source);
+  const std::string srcPath = writeTemp("vm_soa_storage_sixteen_columns.prime", source);
   const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main";
   CHECK(runCommand(runCmd) == 143);
 }

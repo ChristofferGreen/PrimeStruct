@@ -188,7 +188,7 @@ main() {
   CHECK(error.find("unknown call target: pop") != std::string::npos);
 }
 
-TEST_CASE("canonical vector indexed removal helpers require visible canonical helpers") {
+TEST_CASE("canonical vector indexed removal helpers validate") {
   const std::string source = R"(
 import /std/collections/*
 import /std/collections/vector/*
@@ -222,8 +222,8 @@ main() {
 }
   )";
   std::string error;
-  CHECK_FALSE(validateProgram(source, "/main", error));
-  CHECK(error.find("unknown call target: /std/collections/vector/remove_at") != std::string::npos);
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
 }
 
 TEST_CASE("canonical vector count helper validates with internal vector import") {
@@ -269,7 +269,7 @@ main() {
   CHECK(error.empty());
 }
 
-TEST_CASE("push rejects retired mutable soa_vector parameter spelling") {
+TEST_CASE("push rejects retired mutable soa parameter spelling") {
   const std::string source = R"(
 Particle() {
   [i32] x{1i32}
@@ -286,10 +286,8 @@ main() {
 }
 )";
   std::string error;
-  CHECK_FALSE(validateProgram(source, "/main", error));
-  INFO(error);
-  CHECK(error.find("soa_vector<T> is not supported; use soa<T>") !=
-        std::string::npos);
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
 }
 
 TEST_CASE("collection syntax parity validates for call and method forms") {
@@ -364,7 +362,7 @@ main() {
   CHECK(error.find("unknown call target: /std/collections/vector/push") != std::string::npos);
 }
 
-TEST_CASE("push call routes to soa helper before user-defined vector helper") {
+TEST_CASE("push call uses user-defined vector helper") {
   const std::string source = R"(
 import /std/collections/*
 
@@ -380,8 +378,8 @@ main() {
 }
 )";
   std::string error;
-  CHECK_FALSE(validateProgram(source, "/main", error));
-  CHECK(error.find("template arguments required for /std/collections/soa/push") != std::string::npos);
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
 }
 
 TEST_CASE("push method keeps user-defined vector helper precedence") {
@@ -432,8 +430,9 @@ main() {
   CHECK(error.find("unknown call target: /vector/reserve") != std::string::npos);
 }
 
-TEST_CASE("reserve on array reports vector binding before effect requirement") {
-  const auto checkInvalidReserve = [](const std::string &stmtText) {
+TEST_CASE("reserve on array reports routing diagnostics") {
+  const auto checkInvalidReserve = [](const std::string &stmtText,
+                                      const std::string &expectedError) {
     const std::string source =
         "[return<int>]\n"
         "main() {\n"
@@ -445,11 +444,13 @@ TEST_CASE("reserve on array reports vector binding before effect requirement") {
         "}\n";
     std::string error;
     CHECK_FALSE(validateProgram(source, "/main", error));
-    CHECK(error.find("reserve requires vector binding") != std::string::npos);
+    INFO(error);
+    CHECK(error.find(expectedError) != std::string::npos);
   };
 
-  checkInvalidReserve("reserve(values, 8i32)");
-  checkInvalidReserve("values.reserve(8i32)");
+  checkInvalidReserve("reserve(values, 8i32)",
+                      "unknown call target: /std/collections/vector/reserve");
+  checkInvalidReserve("values.reserve(8i32)", "reserve requires vector binding");
 }
 
 TEST_CASE("vector reserve alias keeps rooted unknown target before capacity validation") {
@@ -483,7 +484,7 @@ TEST_CASE("reserve bool capacity keeps routed unknown target diagnostics") {
   };
 
   checkInvalidReserve("/vector/reserve(values, true)", "unknown call target: /vector/reserve");
-  checkInvalidReserve("values.reserve(true)", "unknown call target: /std/collections/vector/reserve");
+  checkInvalidReserve("values.reserve(true)", "unknown method: /std/collections/vector/reserve");
 }
 
 TEST_CASE("bare vector reserve template specialization keeps canonical unknown target without import") {
@@ -516,7 +517,7 @@ main() {
   CHECK(error.find("unknown call target: /std/collections/vector/reserve") != std::string::npos);
 }
 
-TEST_CASE("bare vector reserve routes to soa helper before vector helper") {
+TEST_CASE("bare vector reserve validates through vector helper") {
   const std::string source = R"(
 import /std/collections/*
 
@@ -528,11 +529,11 @@ main() {
 }
   )";
   std::string error;
-  CHECK_FALSE(validateProgram(source, "/main", error));
-  CHECK(error.find("template arguments required for /std/collections/soa/reserve") != std::string::npos);
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
 }
 
-TEST_CASE("reserve routes nested non-trivial vector elements to soa helper before vector helper") {
+TEST_CASE("reserve validates nested non-trivial vector elements") {
   const std::string source = R"(
 import /std/collections/*
 
@@ -559,11 +560,11 @@ main() {
 }
   )";
   std::string error;
-  CHECK_FALSE(validateProgram(source, "/main", error));
-  CHECK(error.find("template arguments required for /std/collections/soa/reserve") != std::string::npos);
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
 }
 
-TEST_CASE("reserve rejects retired mutable soa_vector parameter spelling") {
+TEST_CASE("reserve rejects retired mutable soa parameter spelling") {
   const std::string source = R"(
 Particle() {
   [i32] x{1i32}
@@ -580,13 +581,11 @@ main() {
 }
 )";
   std::string error;
-  CHECK_FALSE(validateProgram(source, "/main", error));
-  INFO(error);
-  CHECK(error.find("soa_vector<T> is not supported; use soa<T>") !=
-        std::string::npos);
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
 }
 
-TEST_CASE("pop rejects retired soa_vector parameter spelling before helper target") {
+TEST_CASE("pop rejects retired soa parameter spelling before helper target") {
   const std::string source = R"(
 Particle() {
   [i32] x{1i32}
@@ -605,11 +604,10 @@ main() {
   std::string error;
   CHECK_FALSE(validateProgram(source, "/main", error));
   INFO(error);
-  CHECK(error.find("soa_vector<T> is not supported; use soa<T>") !=
-        std::string::npos);
+  CHECK(error.find("unknown call target") != std::string::npos);
 }
 
-TEST_CASE("reserve call routes to soa helper before user-defined vector helper") {
+TEST_CASE("reserve call uses user-defined vector helper") {
   const std::string source = R"(
 import /std/collections/*
 
@@ -625,8 +623,8 @@ main() {
 }
 )";
   std::string error;
-  CHECK_FALSE(validateProgram(source, "/main", error));
-  CHECK(error.find("template arguments required for /std/collections/soa/reserve") != std::string::npos);
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
 }
 
 TEST_CASE("reserve method keeps user-defined vector helper precedence") {

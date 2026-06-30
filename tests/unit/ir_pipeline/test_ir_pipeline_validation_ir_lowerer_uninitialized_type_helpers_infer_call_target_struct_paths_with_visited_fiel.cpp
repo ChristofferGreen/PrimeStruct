@@ -169,7 +169,7 @@ TEST_CASE("ir lowerer uninitialized type helpers infer wrapped experimental soa 
 
   primec::Transform returnTransform;
   returnTransform.name = "return";
-  returnTransform.templateArgs = {"Reference<soa_vector</pkg/Particle>>"};
+  returnTransform.templateArgs = {"Reference<soa</pkg/Particle>>"};
   helperDef.transforms.push_back(returnTransform);
 
   auto resolveStructTypeName = [](const std::string &, const std::string &, std::string &) { return false; };
@@ -558,19 +558,19 @@ TEST_CASE("ir lowerer uninitialized type helpers infer dereference expression st
 TEST_CASE("ir lowerer uninitialized type helpers only infer namespaced internal SoA helper struct paths for location-style probes") {
   primec::Definition soaVectorDef;
   soaVectorDef.fullPath = "/std/collections/soa/SoaVector__tc123";
-  soaVectorDef.namespacePrefix = "/std/collections/experimental_soa_vector";
+  soaVectorDef.namespacePrefix = "/std/collections/experimental_soa";
   primec::Expr storageBinding;
   storageBinding.kind = primec::Expr::Kind::Name;
   storageBinding.isBinding = true;
   storageBinding.name = "storage";
   primec::Transform storageType;
-  storageType.name = "/std/collections/internal_soa_storage/SoaColumn__tc999";
+  storageType.name = "/std/collections/soa_storage/SoaColumn__tc999";
   storageBinding.transforms = {storageType};
   soaVectorDef.statements = {storageBinding};
 
   primec::Definition soaColumnDef;
-  soaColumnDef.fullPath = "/std/collections/internal_soa_storage/SoaColumn__tc999";
-  soaColumnDef.namespacePrefix = "/std/collections/internal_soa_storage";
+  soaColumnDef.fullPath = "/std/collections/soa_storage/SoaColumn__tc999";
+  soaColumnDef.namespacePrefix = "/std/collections/soa_storage";
   primec::Expr dataBinding;
   dataBinding.kind = primec::Expr::Kind::Name;
   dataBinding.isBinding = true;
@@ -613,7 +613,7 @@ TEST_CASE("ir lowerer uninitialized type helpers only infer namespaced internal 
   primec::Expr locationExpr;
   locationExpr.kind = primec::Expr::Kind::Call;
   locationExpr.name = "location";
-  locationExpr.namespacePrefix = "/std/collections/internal_soa_storage";
+  locationExpr.namespacePrefix = "/std/collections/soa_storage";
   locationExpr.args = {ptrExpr};
   CHECK(primec::ir_lowerer::inferStructExprPathFromDefinitionMapByCallTargetWithFieldIndex(
             locationExpr, locals, defMap, resolveStructTypeName, resolveExprPath, fieldIndex, resolveStructFieldSlot) ==
@@ -628,7 +628,7 @@ TEST_CASE("ir lowerer uninitialized type helpers only infer namespaced internal 
   primec::Expr refExpr;
   refExpr.kind = primec::Expr::Kind::Call;
   refExpr.name = "ref";
-  refExpr.namespacePrefix = "/std/collections/internal_soa_storage";
+  refExpr.namespacePrefix = "/std/collections/soa_storage";
   refExpr.args = {columnsExpr, indexExpr};
   CHECK(primec::ir_lowerer::inferStructExprPathFromDefinitionMapByCallTargetWithFieldIndex(
             refExpr, locals, defMap, resolveStructTypeName, resolveExprPath, fieldIndex, resolveStructFieldSlot)
@@ -636,7 +636,7 @@ TEST_CASE("ir lowerer uninitialized type helpers only infer namespaced internal 
 }
 
 TEST_CASE(
-    "ir lowerer uninitialized type helpers infer helper return experimental soa_vector struct paths") {
+    "ir lowerer uninitialized type helpers infer helper return experimental soa struct paths") {
   primec::Definition cloneValuesDef;
   cloneValuesDef.fullPath = "/cloneValues";
   primec::Transform cloneReturn;

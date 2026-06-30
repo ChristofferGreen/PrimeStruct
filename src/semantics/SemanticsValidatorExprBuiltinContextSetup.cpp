@@ -116,7 +116,7 @@ void SemanticsValidator::prepareExprLateFallbackBuiltinContext(
         const std::string receiverPath = targetPath.substr(0, slash);
         if (receiverPath == "/array" || receiverPath == "/vector" ||
             receiverPath == canonicalVectorCompatibilityPrefixOrFallback() ||
-            receiverPath == "/soa_vector" || receiverPath == "/map" ||
+            receiverPath == "/soa" || receiverPath == "/map" ||
             receiverPath == "/string") {
           return false;
         }

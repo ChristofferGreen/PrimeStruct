@@ -447,7 +447,7 @@ TEST_CASE("ir lowerer flow helpers disarm soa storage temporaries after copy") {
   primec::ir_lowerer::emitDisarmTemporaryStructAfterCopy(
       [&](primec::IrOpcode op, uint64_t imm) { instructions.push_back({op, imm}); },
       12,
-      "/std/collections/internal_soa_storage/SoaColumn__ti32");
+      "/std/collections/soa_storage/SoaColumn__ti32");
   REQUIRE(instructions.size() == 6);
   checkDisarmAt(instructions, 0, 4u * primec::IrSlotBytes);
 
@@ -455,7 +455,7 @@ TEST_CASE("ir lowerer flow helpers disarm soa storage temporaries after copy") {
   primec::ir_lowerer::emitDisarmTemporaryStructAfterCopy(
       [&](primec::IrOpcode op, uint64_t imm) { instructions.push_back({op, imm}); },
       12,
-      "/std/collections/internal_soa_storage/SoaColumns2__ti32_i32");
+      "/std/collections/soa_storage/SoaColumns2__ti32_i32");
   REQUIRE(instructions.size() == 12);
   checkDisarmAt(instructions, 0, 5u * primec::IrSlotBytes);
   checkDisarmAt(instructions, 6, 10u * primec::IrSlotBytes);

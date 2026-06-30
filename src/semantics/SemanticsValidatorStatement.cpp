@@ -424,7 +424,7 @@ bool SemanticsValidator::validateStatement(const std::vector<ParameterInfo> &par
       expireReferenceBorrowsForRemainder(params, locals, stmt.bodyArguments, bodyIndex + 1);
     }
     auto isSoaOwnerBinding = [&](const BindingInfo &binding) -> bool {
-      if (binding.typeName == "soa_vector") {
+      if (binding.typeName == "soa") {
         return true;
       }
       std::string elemType;
@@ -548,7 +548,7 @@ bool SemanticsValidator::validateStatement(const std::vector<ParameterInfo> &par
   }
   if (stmt.kind == Expr::Kind::Call && !stmt.isBinding && !stmt.isMethodCall &&
       isExperimentalSoaFieldViewHelperPath(resolveCalleePath(stmt)) &&
-      resolveCalleePath(stmt).rfind("/std/collections/soa_vector/soaVectorFieldView", 0) == 0) {
+      resolveCalleePath(stmt).rfind("/std/collections/soa/soaVectorFieldView", 0) == 0) {
     if (hasNamedArguments(stmt.argNames)) {
       return failStatementDiagnostic("named arguments not supported for builtin calls");
     }

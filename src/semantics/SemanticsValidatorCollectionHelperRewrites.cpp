@@ -329,21 +329,21 @@ std::string SemanticsValidator::preferVectorStdlibHelperPath(const std::string &
       }
     }
   }
-  if (preferred.rfind("/soa_vector/", 0) == 0 && !hasVisibleDefinitionPath(preferred)) {
-    const std::string suffix = preferred.substr(std::string("/soa_vector/").size());
-    const std::string stdlibAlias = "/std/collections/soa_vector/" + suffix;
+  if (preferred.rfind("/soa/", 0) == 0 && !hasVisibleDefinitionPath(preferred)) {
+    const std::string suffix = preferred.substr(std::string("/soa/").size());
+    const std::string stdlibAlias = "/std/collections/soa/" + suffix;
     if (hasVisibleDefinitionPath(stdlibAlias)) {
       preferred = stdlibAlias;
     }
   }
-  if (preferred.rfind("/std/collections/soa_vector/", 0) == 0 &&
+  if (preferred.rfind("/std/collections/soa/", 0) == 0 &&
       !hasVisibleDefinitionPath(preferred)) {
     const std::string suffix =
-        preferred.substr(std::string("/std/collections/soa_vector/").size());
+        preferred.substr(std::string("/std/collections/soa/").size());
     const std::string samePath =
         (suffix == "to_aos" || suffix == "to_aos_ref")
             ? "/" + suffix
-            : "/soa_vector/" + suffix;
+            : "/soa/" + suffix;
     if (hasVisibleDefinitionPath(samePath)) {
       preferred = samePath;
     }

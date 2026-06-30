@@ -317,7 +317,7 @@ TEST_CASE("ir lowerer struct layout helpers classify binding type layout") {
   CHECK(error.empty());
 
   primec::ir_lowerer::LayoutFieldBinding soaVectorType;
-  soaVectorType.typeName = "soa_vector";
+  soaVectorType.typeName = "soa";
   soaVectorType.typeTemplateArg = "Particle";
   CHECK(primec::ir_lowerer::classifyBindingTypeLayout(soaVectorType, layout, structTypeName, error));
   CHECK(layout.sizeBytes == 8u);

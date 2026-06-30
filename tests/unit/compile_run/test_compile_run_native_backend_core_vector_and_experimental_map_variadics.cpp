@@ -368,151 +368,151 @@ main() {
                             "native backend only supports arithmetic/comparison", "call=/at");
 }
 
-TEST_CASE("native rejects variadic borrowed soa_vector packs with indexed count methods") {
+TEST_CASE("native rejects variadic borrowed soa packs with indexed count methods") {
   const std::string source = R"(
 Particle() {
   [i32] x{1i32}
 }
 
 [return<int>]
-score_refs([args<Reference<soa_vector<Particle>>>] values) {
-  [soa_vector<Particle>] head{dereference(at(values, 0i32))}
-  [soa_vector<Particle>] tail{dereference(at(values, 2i32))}
+score_refs([args<Reference<soa<Particle>>>] values) {
+  [soa<Particle>] head{dereference(at(values, 0i32))}
+  [soa<Particle>] tail{dereference(at(values, 2i32))}
   return(plus(count(values), plus(count(head), count(tail))))
 }
 
 [return<int>]
-forward([args<Reference<soa_vector<Particle>>>] values) {
+forward([args<Reference<soa<Particle>>>] values) {
   return(score_refs([spread] values))
 }
 
 [effects(heap_alloc), return<int>]
-forward_mixed([args<Reference<soa_vector<Particle>>>] values) {
-  [soa_vector<Particle>] extra{soa_vector<Particle>()}
-  [Reference<soa_vector<Particle>>] extra_ref{location(extra)}
+forward_mixed([args<Reference<soa<Particle>>>] values) {
+  [soa<Particle>] extra{soa<Particle>()}
+  [Reference<soa<Particle>>] extra_ref{location(extra)}
   return(score_refs(extra_ref, [spread] values))
 }
 
 [effects(heap_alloc), return<int>]
 main() {
-  [soa_vector<Particle>] a0{soa_vector<Particle>()}
-  [soa_vector<Particle>] a1{soa_vector<Particle>()}
-  [soa_vector<Particle>] a2{soa_vector<Particle>()}
-  [Reference<soa_vector<Particle>>] r0{location(a0)}
-  [Reference<soa_vector<Particle>>] r1{location(a1)}
-  [Reference<soa_vector<Particle>>] r2{location(a2)}
+  [soa<Particle>] a0{soa<Particle>()}
+  [soa<Particle>] a1{soa<Particle>()}
+  [soa<Particle>] a2{soa<Particle>()}
+  [Reference<soa<Particle>>] r0{location(a0)}
+  [Reference<soa<Particle>>] r1{location(a1)}
+  [Reference<soa<Particle>>] r2{location(a2)}
 
-  [soa_vector<Particle>] b0{soa_vector<Particle>()}
-  [soa_vector<Particle>] b1{soa_vector<Particle>()}
-  [soa_vector<Particle>] b2{soa_vector<Particle>()}
-  [Reference<soa_vector<Particle>>] s0{location(b0)}
-  [Reference<soa_vector<Particle>>] s1{location(b1)}
-  [Reference<soa_vector<Particle>>] s2{location(b2)}
+  [soa<Particle>] b0{soa<Particle>()}
+  [soa<Particle>] b1{soa<Particle>()}
+  [soa<Particle>] b2{soa<Particle>()}
+  [Reference<soa<Particle>>] s0{location(b0)}
+  [Reference<soa<Particle>>] s1{location(b1)}
+  [Reference<soa<Particle>>] s2{location(b2)}
 
-  [soa_vector<Particle>] c0{soa_vector<Particle>()}
-  [soa_vector<Particle>] c1{soa_vector<Particle>()}
-  [Reference<soa_vector<Particle>>] t0{location(c0)}
-  [Reference<soa_vector<Particle>>] t1{location(c1)}
+  [soa<Particle>] c0{soa<Particle>()}
+  [soa<Particle>] c1{soa<Particle>()}
+  [Reference<soa<Particle>>] t0{location(c0)}
+  [Reference<soa<Particle>>] t1{location(c1)}
 
   return(plus(score_refs(r0, r1, r2),
               plus(forward(s0, s1, s2),
                    forward_mixed(t0, t1))))
 }
 )";
-  const std::string srcPath = writeTemp("compile_native_variadic_args_borrowed_soa_vector.prime", source);
-  expectNativeCompileReject(srcPath, "primec_native_variadic_args_borrowed_soa_vector.err",
-                            "template arguments are only supported on templated definitions: /soa_vector");
+  const std::string srcPath = writeTemp("compile_native_variadic_args_borrowed_soa.prime", source);
+  expectNativeCompileReject(srcPath, "primec_native_variadic_args_borrowed_soa.err",
+                            "template arguments are only supported on templated definitions: /soa");
 }
 
-TEST_CASE("native rejects variadic pointer soa_vector packs with indexed count methods") {
+TEST_CASE("native rejects variadic pointer soa packs with indexed count methods") {
   const std::string source = R"(
 Particle() {
   [i32] x{1i32}
 }
 
 [return<int>]
-score_ptrs([args<Pointer<soa_vector<Particle>>>] values) {
-  [soa_vector<Particle>] head{dereference(at(values, 0i32))}
-  [soa_vector<Particle>] tail{dereference(at(values, 2i32))}
+score_ptrs([args<Pointer<soa<Particle>>>] values) {
+  [soa<Particle>] head{dereference(at(values, 0i32))}
+  [soa<Particle>] tail{dereference(at(values, 2i32))}
   return(plus(count(values), plus(count(head), count(tail))))
 }
 
 [return<int>]
-forward([args<Pointer<soa_vector<Particle>>>] values) {
+forward([args<Pointer<soa<Particle>>>] values) {
   return(score_ptrs([spread] values))
 }
 
 [effects(heap_alloc), return<int>]
-forward_mixed([args<Pointer<soa_vector<Particle>>>] values) {
-  [soa_vector<Particle>] extra{soa_vector<Particle>()}
-  [Pointer<soa_vector<Particle>>] extra_ptr{location(extra)}
+forward_mixed([args<Pointer<soa<Particle>>>] values) {
+  [soa<Particle>] extra{soa<Particle>()}
+  [Pointer<soa<Particle>>] extra_ptr{location(extra)}
   return(score_ptrs(extra_ptr, [spread] values))
 }
 
 [effects(heap_alloc), return<int>]
 main() {
-  [soa_vector<Particle>] a0{soa_vector<Particle>()}
-  [soa_vector<Particle>] a1{soa_vector<Particle>()}
-  [soa_vector<Particle>] a2{soa_vector<Particle>()}
-  [Pointer<soa_vector<Particle>>] r0{location(a0)}
-  [Pointer<soa_vector<Particle>>] r1{location(a1)}
-  [Pointer<soa_vector<Particle>>] r2{location(a2)}
+  [soa<Particle>] a0{soa<Particle>()}
+  [soa<Particle>] a1{soa<Particle>()}
+  [soa<Particle>] a2{soa<Particle>()}
+  [Pointer<soa<Particle>>] r0{location(a0)}
+  [Pointer<soa<Particle>>] r1{location(a1)}
+  [Pointer<soa<Particle>>] r2{location(a2)}
 
-  [soa_vector<Particle>] b0{soa_vector<Particle>()}
-  [soa_vector<Particle>] b1{soa_vector<Particle>()}
-  [soa_vector<Particle>] b2{soa_vector<Particle>()}
-  [Pointer<soa_vector<Particle>>] s0{location(b0)}
-  [Pointer<soa_vector<Particle>>] s1{location(b1)}
-  [Pointer<soa_vector<Particle>>] s2{location(b2)}
+  [soa<Particle>] b0{soa<Particle>()}
+  [soa<Particle>] b1{soa<Particle>()}
+  [soa<Particle>] b2{soa<Particle>()}
+  [Pointer<soa<Particle>>] s0{location(b0)}
+  [Pointer<soa<Particle>>] s1{location(b1)}
+  [Pointer<soa<Particle>>] s2{location(b2)}
 
-  [soa_vector<Particle>] c0{soa_vector<Particle>()}
-  [soa_vector<Particle>] c1{soa_vector<Particle>()}
-  [Pointer<soa_vector<Particle>>] t0{location(c0)}
-  [Pointer<soa_vector<Particle>>] t1{location(c1)}
+  [soa<Particle>] c0{soa<Particle>()}
+  [soa<Particle>] c1{soa<Particle>()}
+  [Pointer<soa<Particle>>] t0{location(c0)}
+  [Pointer<soa<Particle>>] t1{location(c1)}
 
   return(plus(score_ptrs(r0, r1, r2),
               plus(forward(s0, s1, s2),
                    forward_mixed(t0, t1))))
 }
 )";
-  const std::string srcPath = writeTemp("compile_native_variadic_args_pointer_soa_vector.prime", source);
-  expectNativeCompileReject(srcPath, "primec_native_variadic_args_pointer_soa_vector.err",
-                            "template arguments are only supported on templated definitions: /soa_vector");
+  const std::string srcPath = writeTemp("compile_native_variadic_args_pointer_soa.prime", source);
+  expectNativeCompileReject(srcPath, "primec_native_variadic_args_pointer_soa.err",
+                            "template arguments are only supported on templated definitions: /soa");
 }
 
-TEST_CASE("native rejects variadic soa_vector packs with indexed count methods") {
+TEST_CASE("native rejects variadic soa packs with indexed count methods") {
   const std::string source = R"(
 Particle() {
   [i32] x{1i32}
 }
 
 [return<int>]
-score_soas([args<soa_vector<Particle>>] values) {
-  [soa_vector<Particle>] head{values[0i32]}
-  [soa_vector<Particle>] tail{values[2i32]}
+score_soas([args<soa<Particle>>] values) {
+  [soa<Particle>] head{values[0i32]}
+  [soa<Particle>] tail{values[2i32]}
   return(plus(count(values), plus(count(head), count(tail))))
 }
 
 [return<int>]
-forward([args<soa_vector<Particle>>] values) {
+forward([args<soa<Particle>>] values) {
   return(score_soas([spread] values))
 }
 
 [effects(heap_alloc), return<int>]
-forward_mixed([args<soa_vector<Particle>>] values) {
-  return(score_soas(soa_vector<Particle>(), [spread] values))
+forward_mixed([args<soa<Particle>>] values) {
+  return(score_soas(soa<Particle>(), [spread] values))
 }
 
 [effects(heap_alloc), return<int>]
 main() {
-  return(plus(score_soas(soa_vector<Particle>(), soa_vector<Particle>(), soa_vector<Particle>()),
-              plus(forward(soa_vector<Particle>(), soa_vector<Particle>(), soa_vector<Particle>()),
-                   forward_mixed(soa_vector<Particle>(), soa_vector<Particle>()))))
+  return(plus(score_soas(soa<Particle>(), soa<Particle>(), soa<Particle>()),
+              plus(forward(soa<Particle>(), soa<Particle>(), soa<Particle>()),
+                   forward_mixed(soa<Particle>(), soa<Particle>()))))
 }
 )";
-  const std::string srcPath = writeTemp("compile_native_variadic_args_soa_vector.prime", source);
-  expectNativeCompileReject(srcPath, "primec_native_variadic_args_soa_vector.err",
-                            "template arguments are only supported on templated definitions: /soa_vector");
+  const std::string srcPath = writeTemp("compile_native_variadic_args_soa.prime", source);
+  expectNativeCompileReject(srcPath, "primec_native_variadic_args_soa.err",
+                            "template arguments are only supported on templated definitions: /soa");
 }
 
 TEST_CASE("native rejects variadic map packs with indexed count methods") {

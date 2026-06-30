@@ -73,7 +73,7 @@ bool SemanticsValidator::validateExprDirectCollectionFallbacks(
         if (!hasDeclaredDefinitionPath(canonicalPath) &&
             !hasImportedDefinitionPath(canonicalPath)) {
           return failDirectCollectionFallbackDiagnostic(
-              "unknown call target: " + canonicalPath);
+              "unknown method: " + canonicalPath);
         }
         if ((vectorMutatorHelper == "reserve" ||
              vectorMutatorHelper == "remove_at" ||
@@ -144,7 +144,9 @@ bool SemanticsValidator::validateExprDirectCollectionFallbacks(
       if (!hasDeclaredDefinitionPath(methodTarget) &&
           !hasImportedDefinitionPath(methodTarget)) {
         return failDirectCollectionFallbackDiagnostic(
-            "unknown call target: " + canonicalPath);
+            (expr.sourceIsMethodCall ? "unknown method: "
+                                     : "unknown call target: ") +
+            canonicalPath);
       }
       if ((vectorMutatorHelper == "reserve" ||
            vectorMutatorHelper == "remove_at" ||

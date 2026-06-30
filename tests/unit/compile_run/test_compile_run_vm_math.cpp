@@ -207,27 +207,13 @@ main() {
   [Mat4] doubled4{multiply(base4, 2.0f32)}
   [Mat4] restored4{divide(doubled4, 2i32)}
   [f32] tolerance{0.0001f32}
-  [f32] totalError{
-    abs(sum2.m00 - 1.5f32) +
-    abs(sum2.m01 - 1.0f32) +
-    abs(sum2.m10 - 4.5f32) +
-    abs(sum2.m11 - 6.0f32) +
-    abs(div2.m00 - 0.75f32) +
-    abs(div2.m11 - 3.0f32) +
-    abs(diff3.m00 - 0.5f32) +
-    abs(diff3.m12 - 3.0f32) +
-    abs(diff3.m22 - 4.5f32) +
-    abs(scaledLeft3.m00 - 2.0f32) +
-    abs(scaledLeft3.m12 - 12.0f32) +
-    abs(scaledLeft3.m22 - 18.0f32) +
-    abs(scaledRight4.m00 - 0.5f32) +
-    abs(scaledRight4.m13 - 4.0f32) +
-    abs(scaledRight4.m31 - 7.0f32) +
-    abs(restored4.m00 - 1.0f32) +
-    abs(restored4.m12 - 7.0f32) +
-    abs(restored4.m30 - 13.0f32) +
-    abs(restored4.m33 - 16.0f32)
-  }
+  [f32] sum2Error{abs(sum2.m00 - 1.5f32) + abs(sum2.m01 - 1.0f32) + abs(sum2.m10 - 4.5f32) + abs(sum2.m11 - 6.0f32)}
+  [f32] div2Error{abs(div2.m00 - 0.75f32) + abs(div2.m11 - 3.0f32)}
+  [f32] diff3Error{abs(diff3.m00 - 0.5f32) + abs(diff3.m12 - 3.0f32) + abs(diff3.m22 - 4.5f32)}
+  [f32] scaledLeft3Error{abs(scaledLeft3.m00 - 2.0f32) + abs(scaledLeft3.m12 - 12.0f32) + abs(scaledLeft3.m22 - 18.0f32)}
+  [f32] scaledRight4Error{abs(scaledRight4.m00 - 0.5f32) + abs(scaledRight4.m13 - 4.0f32) + abs(scaledRight4.m31 - 7.0f32)}
+  [f32] restored4Error{abs(restored4.m00 - 1.0f32) + abs(restored4.m12 - 7.0f32) + abs(restored4.m30 - 13.0f32) + abs(restored4.m33 - 16.0f32)}
+  [f32] totalError{sum2Error + div2Error + diff3Error + scaledLeft3Error + scaledRight4Error + restored4Error}
   return(convert<int>(totalError <= tolerance))
 }
 )";
@@ -256,28 +242,12 @@ main() {
   [Quat] scaledRight{multiply(base, 0.5f32)}
   [Quat] divided{divide(sum, 2i32)}
   [f32] tolerance{0.0001f32}
-  [f32] totalError{
-    abs(sum.x - 1.5f32) +
-    abs(sum.y - 1.0f32) +
-    abs(sum.z - 4.5f32) +
-    abs(sum.w - 6.0f32) +
-    abs(diff.x - 0.5f32) +
-    abs(diff.y - 3.0f32) +
-    abs(diff.z - 1.5f32) +
-    abs(diff.w - 2.0f32) +
-    abs(scaledLeft.x - 2.0f32) +
-    abs(scaledLeft.y - 4.0f32) +
-    abs(scaledLeft.z - 6.0f32) +
-    abs(scaledLeft.w - 8.0f32) +
-    abs(scaledRight.x - 0.5f32) +
-    abs(scaledRight.y - 1.0f32) +
-    abs(scaledRight.z - 1.5f32) +
-    abs(scaledRight.w - 2.0f32) +
-    abs(divided.x - 0.75f32) +
-    abs(divided.y - 0.5f32) +
-    abs(divided.z - 2.25f32) +
-    abs(divided.w - 3.0f32)
-  }
+  [f32] sumError{abs(sum.x - 1.5f32) + abs(sum.y - 1.0f32) + abs(sum.z - 4.5f32) + abs(sum.w - 6.0f32)}
+  [f32] diffError{abs(diff.x - 0.5f32) + abs(diff.y - 3.0f32) + abs(diff.z - 1.5f32) + abs(diff.w - 2.0f32)}
+  [f32] scaledLeftError{abs(scaledLeft.x - 2.0f32) + abs(scaledLeft.y - 4.0f32) + abs(scaledLeft.z - 6.0f32) + abs(scaledLeft.w - 8.0f32)}
+  [f32] scaledRightError{abs(scaledRight.x - 0.5f32) + abs(scaledRight.y - 1.0f32) + abs(scaledRight.z - 1.5f32) + abs(scaledRight.w - 2.0f32)}
+  [f32] dividedError{abs(divided.x - 0.75f32) + abs(divided.y - 0.5f32) + abs(divided.z - 2.25f32) + abs(divided.w - 3.0f32)}
+  [f32] totalError{sumError + diffError + scaledLeftError + scaledRightError + dividedError}
   return(convert<int>(totalError <= tolerance))
 }
 )";

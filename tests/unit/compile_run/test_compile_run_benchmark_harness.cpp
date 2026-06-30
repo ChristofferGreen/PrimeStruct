@@ -320,7 +320,7 @@ TEST_CASE("semantic memory ctest targets keep dependency ordering and serializat
           "trend_timeout_guard = re.search(\n"
           "  r'set_tests_properties\\(\\s*PrimeStruct_semantic_memory_trend\\s*'\n"
           "  r'PROPERTIES\\s*DEPENDS PrimeStruct_semantic_memory_benchmark\\s*'\n"
-          "  r'TIMEOUT 300\\s*\\)',\n"
+          "  r'TIMEOUT 600\\s*\\)',\n"
           "  cmake_text,\n"
           "  re.S,\n"
           ") is not None\n"

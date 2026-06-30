@@ -391,7 +391,7 @@ TEST_CASE("ir lowerer struct type helpers synthesize generated soa vector layout
   CHECK(layout.fields[0].name == "storage");
   CHECK(layout.fields[0].slotOffset == 1);
   CHECK(layout.fields[0].slotCount == 5);
-  CHECK(layout.fields[0].structPath == "/std/collections/internal_soa_storage/SoaColumn__t1234");
+  CHECK(layout.fields[0].structPath == "/std/collections/soa_storage/SoaColumn__t1234");
 
   primec::ir_lowerer::StructSlotLayoutInfo storageLayout;
   REQUIRE(primec::ir_lowerer::resolveStructSlotLayoutFromDefinitionFields(
@@ -404,7 +404,7 @@ TEST_CASE("ir lowerer struct type helpers synthesize generated soa vector layout
       layoutStack,
       storageLayout,
       error));
-  CHECK(storageLayout.structPath == "/std/collections/internal_soa_storage/SoaColumn__t1234");
+  CHECK(storageLayout.structPath == "/std/collections/soa_storage/SoaColumn__t1234");
   CHECK(storageLayout.totalSlots == 5);
   REQUIRE(storageLayout.fields.size() == 4);
   CHECK(storageLayout.fields[0].name == "count");
@@ -773,7 +773,7 @@ TEST_CASE("ir lowerer struct type helpers report definition slot layout diagnost
                                         std::vector<primec::ir_lowerer::StructLayoutFieldInfo> &out) {
       out.clear();
       if (structPath == "/pkg/SoaHolder") {
-        out.push_back({"storage", "soa_vector", "Particle", false});
+        out.push_back({"storage", "soa", "Particle", false});
         return true;
       }
       return false;
@@ -797,7 +797,7 @@ TEST_CASE("ir lowerer struct type helpers report definition slot layout diagnost
     CHECK(layout.fields[0].name == "storage");
     CHECK(layout.fields[0].slotOffset == 1);
     CHECK(layout.fields[0].slotCount == 3);
-    CHECK(layout.fields[0].structPath == "/soa_vector");
+    CHECK(layout.fields[0].structPath == "/soa");
   }
 
   {

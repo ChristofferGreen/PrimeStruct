@@ -23,23 +23,23 @@ bool isCanonicalBuiltinSoaBridgePath(const std::string &calleePath) {
     return calleePath == path ||
            calleePath.rfind(std::string(path) + "__", 0) == 0;
   };
-  return matchesPath("/std/collections/soa_vector/count") ||
+  return matchesPath("/std/collections/soa/count") ||
          matchesPath("/std/collections/soa/count") ||
          matchesPath("/std/collections/soa/count_ref") ||
-         matchesPath("/std/collections/soa_vector/get") ||
          matchesPath("/std/collections/soa/get") ||
-         matchesPath("/std/collections/soa_vector/get_ref") ||
+         matchesPath("/std/collections/soa/get") ||
          matchesPath("/std/collections/soa/get_ref") ||
-         matchesPath("/std/collections/soa_vector/ref") ||
+         matchesPath("/std/collections/soa/get_ref") ||
          matchesPath("/std/collections/soa/ref") ||
-         matchesPath("/std/collections/soa_vector/ref_ref") ||
+         matchesPath("/std/collections/soa/ref") ||
+         matchesPath("/std/collections/soa/ref_ref") ||
          matchesPath("/std/collections/soa/ref_ref") ||
          matchesPath("/std/collections/soa/push") ||
          matchesPath("/std/collections/soa/reserve") ||
          matchesPath("/std/collections/soa/field_view") ||
          matchesPath("/std/collections/soa/to_aos") ||
-         matchesPath("/std/collections/soa_vector/to_aos") ||
-         matchesPath("/std/collections/soa_vector/to_aos_ref");
+         matchesPath("/std/collections/soa/to_aos") ||
+         matchesPath("/std/collections/soa/to_aos_ref");
 }
 
 bool isExperimentalSoaVectorStructPath(const std::string &structPath) {
@@ -65,7 +65,7 @@ bool isBuiltinSoaToAosStructMatch(const std::string &calleePath,
       isExperimentalSoaVectorStructPath(argStruct)) {
     return false;
   }
-  if (normalizeCollectionBindingTypeName(argStruct) != "soa_vector") {
+  if (normalizeCollectionBindingTypeName(argStruct) != "soa") {
     return false;
   }
   return isCanonicalBuiltinSoaBridgePath(calleePath);
@@ -141,7 +141,7 @@ bool emitBuiltinSoaToAosStructBridge(
     std::string &error) {
   StructSlotFieldInfo storageField;
   if (!resolveBuiltinSoaToAosStorageField(layout, storageField) || storageField.slotCount < 5) {
-    error = "internal error: builtin soa_vector to_aos bridge requires SoaVector storage layout";
+    error = "internal error: builtin soa to_aos bridge requires SoaVector storage layout";
     return false;
   }
 

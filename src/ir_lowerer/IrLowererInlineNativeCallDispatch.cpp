@@ -1,4 +1,5 @@
 // soa-surface-audit: exempt
+// collection-surface-audit: exempt
 #include "IrLowererCallHelpers.h"
 
 #include <algorithm>
@@ -321,7 +322,7 @@ bool isSoaVectorTarget(const Expr &expr, const LocalMap &localsIn);
 
 bool isPublicOrCompatibilitySoaToAosCall(const Expr &expr) {
   return isCanonicalCollectionHelperCall(expr, "std/collections/soa", "to_aos", 1) ||
-         isCanonicalCollectionHelperCall(expr, "std/collections/soa_vector", "to_aos", 1);
+         isCanonicalCollectionHelperCall(expr, "std/collections/soa", "to_aos", 1);
 }
 
 bool isCollectionVectorRecordPath(std::string_view structTypeName) {
@@ -440,7 +441,7 @@ bool isSoaVectorTarget(const Expr &expr, const LocalMap &localsIn) {
   }
   if (expr.kind == Expr::Kind::Call) {
     std::string collection;
-    if (getBuiltinCollectionName(expr, collection) && collection == "soa_vector") {
+    if (getBuiltinCollectionName(expr, collection) && collection == "soa") {
       return true;
     }
     if (!expr.isMethodCall && isSimpleCallName(expr, "to_soa") && expr.args.size() == 1) {
@@ -579,11 +580,11 @@ InlineCallDispatchResult tryEmitInlineCallWithCountFallbacksImpl(
         isSoaVectorReceiverExpr != nullptr &&
         !expr.args.empty() &&
         (normalizedDirectCallPath ==
-             collection_paths::memberPath(collection_paths::kExperimentalSoaVectorConversionsFolder, "soaVectorToAos") ||
+             "/std/collections/experimental_soa_conversions/soaVectorToAos" ||
          normalizedDirectCallPath ==
-             collection_paths::memberPath(collection_paths::kExperimentalSoaVectorConversionsFolder, "soaVectorToAosRef")) &&
+             "/std/collections/experimental_soa_conversions/soaVectorToAosRef") &&
         isSoaVectorReceiverExpr(expr.args.front())) {
-      error = "struct parameter type mismatch: direct experimental soa_vector conversion "
+      error = "struct parameter type mismatch: direct experimental soa conversion "
               "helpers require SoaVector receiver";
       return InlineCallDispatchResult::Error;
     }
@@ -719,6 +720,18 @@ InlineCallDispatchResult tryEmitInlineCallWithCountFallbacksImpl(
     error.clear();
   }
 
+  {
+    std::string builtinCollectionName;
+    std::string rawName = expr.name;
+    if (!rawName.empty() && rawName[0] == '/') {
+      rawName = rawName.substr(rawName.rfind('/') + 1);
+    }
+    const bool isMonomorphized = rawName.find("__") != std::string::npos;
+    if (!isMonomorphized && !expr.isMethodCall && directCallee == nullptr &&
+        getBuiltinCollectionName(expr, builtinCollectionName)) {
+      return InlineCallDispatchResult::NotHandled;
+    }
+  }
   if (const Definition *callee =
           directCallee != nullptr ? directCallee : resolveDefinitionCall(expr)) {
     if (expr.args.size() == 1 &&
@@ -927,20 +940,20 @@ InlineCallDispatchResult tryEmitInlineCallDispatchWithLocals(
       if (normalizedBase == "Reference" || normalizedBase == "/Reference" ||
           normalizedBase == "Pointer" || normalizedBase == "/Pointer") {
         const std::string normalizedArg = trimTemplateTypeText(argText);
-        return normalizedArg == "soa_vector" ||
-               normalizedArg == "/soa_vector" ||
-               normalizedArg == "std/collections/soa_vector" ||
-               normalizedArg == "/std/collections/soa_vector";
+        return normalizedArg == "soa" ||
+               normalizedArg == "/soa" ||
+               normalizedArg == "std/collections/soa" ||
+               normalizedArg == "/std/collections/soa";
       }
-      return normalizedBase == "soa_vector" ||
-             normalizedBase == "/soa_vector" ||
-             normalizedBase == "std/collections/soa_vector" ||
-             normalizedBase == "/std/collections/soa_vector";
+      return normalizedBase == "soa" ||
+             normalizedBase == "/soa" ||
+             normalizedBase == "std/collections/soa" ||
+             normalizedBase == "/std/collections/soa";
     }
-    return normalizedTypeText == "soa_vector" ||
-           normalizedTypeText == "/soa_vector" ||
-           normalizedTypeText == "std/collections/soa_vector" ||
-           normalizedTypeText == "/std/collections/soa_vector";
+    return normalizedTypeText == "soa" ||
+           normalizedTypeText == "/soa" ||
+           normalizedTypeText == "std/collections/soa" ||
+           normalizedTypeText == "/std/collections/soa";
   };
   std::function<bool(const Expr &)> isRawBuiltinSoaVectorTarget;
   isRawBuiltinSoaVectorTarget = [&](const Expr &targetExpr) {
@@ -987,7 +1000,7 @@ InlineCallDispatchResult tryEmitInlineCallDispatchWithLocals(
     }
     if (targetExpr.kind == Expr::Kind::Call) {
       std::string collection;
-      if (getBuiltinCollectionName(targetExpr, collection) && collection == "soa_vector") {
+      if (getBuiltinCollectionName(targetExpr, collection) && collection == "soa") {
         return true;
       }
       if ((isSimpleCallName(targetExpr, "location") ||
@@ -1012,20 +1025,33 @@ InlineCallDispatchResult tryEmitInlineCallDispatchWithLocals(
     }
     return emitted;
   };
+  const bool isSemanticStringCountMethod =
+      expr.isMethodCall && expr.args.size() == 1 &&
+      semanticProgram != nullptr &&
+      findSemanticProductMethodCallTarget(semanticProgram, expr) ==
+          "/string/count";
   if (expr.isMethodCall && expr.args.size() == 1 &&
-      isStringCountCallFn(expr, localsIn)) {
+      (isStringCountCallFn(expr, localsIn) || isSemanticStringCountMethod)) {
     const Definition *stringCountCallee =
         resolveMethodCallDefinitionFn(expr, localsIn);
     if (stringCountCallee == nullptr) {
       Expr directStringCountExpr = expr;
       directStringCountExpr.isMethodCall = false;
+      directStringCountExpr.isFieldAccess = false;
       directStringCountExpr.namespacePrefix.clear();
       directStringCountExpr.name = "/string/count";
+      directStringCountExpr.semanticNodeId = 0;
       stringCountCallee = resolveDefinitionCallFn(directStringCountExpr);
     }
     if (stringCountCallee != nullptr &&
         stringCountCallee->fullPath == "/string/count") {
-      return emitCanonicalInlineDefinitionCall(expr, *stringCountCallee)
+      Expr directStringCountExpr = expr;
+      directStringCountExpr.isMethodCall = false;
+      directStringCountExpr.isFieldAccess = false;
+      directStringCountExpr.namespacePrefix.clear();
+      directStringCountExpr.name = "/string/count";
+      directStringCountExpr.semanticNodeId = 0;
+      return emitCanonicalInlineDefinitionCall(directStringCountExpr, *stringCountCallee)
                  ? InlineCallDispatchResult::Emitted
                  : InlineCallDispatchResult::Error;
     }
@@ -1543,29 +1569,48 @@ InlineCallDispatchResult tryEmitInlineCallDispatchWithLocals(
           const std::string semanticTarget =
               findSemanticProductMethodCallTarget(semanticProgram, methodExpr);
           if (!semanticTarget.empty()) {
-            if (((semanticTarget == "/string/count" ||
-                  semanticTarget == "/std/collections/vector/count") &&
-                 methodExpr.args.size() == 1 &&
-                 isSimpleCallName(methodExpr, "count")) ||
-                (semanticTarget == "/std/collections/vector/capacity" &&
-                 methodExpr.args.size() == 1 &&
-                 isSimpleCallName(methodExpr, "capacity")) ||
-                ((semanticTarget == "/std/collections/vector/at" ||
-                  semanticTarget == "/std/collections/vector/at_unsafe") &&
-                 methodExpr.args.size() == 2 &&
-                 (isSimpleCallName(methodExpr, "at") ||
-                  isSimpleCallName(methodExpr, "at_unsafe"))) ||
-                (semanticTarget == "/std/collections/soa/to_aos" &&
-                 methodExpr.args.size() == 1 &&
-                 isSimpleCallName(methodExpr, "to_aos"))) {
+            if (semanticTarget == "/string/count" &&
+                methodExpr.args.size() == 1 &&
+                isSimpleCallName(methodExpr, "count")) {
+              Expr directCall = methodExpr;
+              directCall.isMethodCall = false;
+              directCall.isFieldAccess = false;
+              directCall.namespacePrefix.clear();
+              directCall.name = semanticTarget;
+              directCall.semanticNodeId = 0;
+              callee = resolveDefinitionCallFn(directCall);
+            }
+            if (callee == nullptr &&
+                (((semanticTarget == "/string/count" ||
+                   semanticTarget == "/std/collections/vector/count") &&
+                  methodExpr.args.size() == 1 &&
+                  isSimpleCallName(methodExpr, "count")) ||
+                 (semanticTarget == "/std/collections/vector/capacity" &&
+                  methodExpr.args.size() == 1 &&
+                  isSimpleCallName(methodExpr, "capacity")) ||
+                 semanticTarget == "/std/collections/soa/count" ||
+                 ((semanticTarget == "/std/collections/vector/at" ||
+                   semanticTarget == "/std/collections/vector/at_unsafe") &&
+                  methodExpr.args.size() == 2 &&
+                  (isSimpleCallName(methodExpr, "at") ||
+                   isSimpleCallName(methodExpr, "at_unsafe"))) ||
+                 (semanticTarget == "/std/collections/soa/to_aos" &&
+                  methodExpr.args.size() == 1 &&
+                  isSimpleCallName(methodExpr, "to_aos")))) {
               continue;
             }
+            if (callee != nullptr) {
+              error = priorError;
+            } else {
             error = "semantic-product method-call target missing lowered definition: " +
                     semanticTarget;
             return InlineCallDispatchResult::Error;
+            }
           }
         }
-        continue;
+        if (callee == nullptr) {
+          continue;
+        }
       }
       if (methodExpr.args.size() == 1 &&
           isInternalSoaMetadataHelperPath(callee->fullPath)) {
@@ -1824,6 +1869,20 @@ InlineCallDispatchResult tryEmitInlineCallDispatchWithLocals(
             isInternalSoaMetadataHelperPath(callee->fullPath)) {
           return static_cast<const Definition *>(nullptr);
         }
+        if (callee == nullptr && callExpr.isMethodCall &&
+            semanticProgram != nullptr) {
+          const std::string semanticTarget =
+              findSemanticProductMethodCallTarget(semanticProgram, callExpr);
+          if (semanticTarget == "/string/count") {
+            Expr directCall = callExpr;
+            directCall.isMethodCall = false;
+            directCall.isFieldAccess = false;
+            directCall.namespacePrefix.clear();
+            directCall.name = semanticTarget;
+            directCall.semanticNodeId = 0;
+            callee = resolveDefinitionCallFn(directCall);
+          }
+        }
         return callee;
       },
       [&](const Expr &callExpr) { return resolveDefinitionCallFn(callExpr); },
@@ -1843,6 +1902,7 @@ InlineCallDispatchResult tryEmitInlineCallDispatchWithLocals(
           (semanticTarget == "/std/collections/vector/capacity" &&
            expr.args.size() == 1 &&
            isSimpleCallName(expr, "capacity")) ||
+          semanticTarget == "/std/collections/soa/count" ||
           ((semanticTarget == "/std/collections/vector/at" ||
             semanticTarget == "/std/collections/vector/at_unsafe") &&
            expr.args.size() == 2 &&

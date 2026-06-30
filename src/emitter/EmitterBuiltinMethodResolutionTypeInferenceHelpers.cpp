@@ -101,10 +101,10 @@ bool isSoaVectorReceiverTypeNameLocal(const std::string &typeName) {
   if (!normalized.empty() && normalized.front() == '/') {
     normalized.erase(normalized.begin());
   }
-  if (normalized == "soa_vector" || normalized == "SoaVector" ||
-      normalized == "std/collections/soa_vector" ||
+  if (normalized == "soa" || normalized == "SoaVector" ||
+      normalized == "std/collections/soa" ||
       normalized == collection_paths::memberPathBare(collection_paths::kSoaFolder, collection_paths::kSoaVectorTypeName) ||
-      normalized.rfind("soa_vector<", 0) == 0 ||
+      normalized.rfind("soa<", 0) == 0 ||
       normalized.rfind("SoaVector<", 0) == 0 ||
       normalized.rfind(collection_paths::memberPathBare(
                            collection_paths::kSoaFolder,
@@ -124,7 +124,7 @@ std::string inferCollectionReceiverTypeFromTypeText(const std::string &typeText)
   bool borrowed = false;
   while (true) {
     if (isSoaVectorReceiverTypeNameLocal(normalizedType)) {
-      return borrowed ? "soa_vector_ref" : "soa_vector";
+      return borrowed ? "soa_ref" : "soa";
     }
     std::string base;
     std::string arg;
@@ -505,8 +505,8 @@ std::string inferMethodResolutionPrimitiveTypeName(
         if (getBuiltinPointerOperator(candidateExpr, pointerOp) &&
             candidateExpr.args.size() == 1) {
           const std::string pointeeType = inferPrimitiveTypeName(candidateExpr.args.front());
-          if (pointeeType == "soa_vector" || pointeeType == "soa_vector_ref") {
-            return pointerOp == '&' ? "soa_vector_ref" : "soa_vector";
+          if (pointeeType == "soa" || pointeeType == "soa_ref") {
+            return pointerOp == '&' ? "soa_ref" : "soa";
           }
         }
         if (candidateExpr.isMethodCall) {

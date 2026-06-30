@@ -22,6 +22,9 @@ bool SemanticsValidator::validateExprCollectionLiteralBuiltins(
   if (!getBuiltinCollectionName(expr, builtinName)) {
     return true;
   }
+  if (builtinName == internalSoaCollectionTypeName()) {
+    builtinName = "soa";
+  }
 
   auto resolveOwnershipContext =
       [&](std::string &namespacePrefixOut,
@@ -137,7 +140,7 @@ bool SemanticsValidator::validateExprCollectionLiteralBuiltins(
     return failCollectionLiteralDiagnostic(collectionLiteralDiagnosticSubject() +
                                           " does not accept block arguments");
   }
-  if (builtinName == "soa_vector") {
+  if (builtinName == "soa") {
     if (expr.templateArgs.size() != 1) {
       return failCollectionLiteralDiagnostic(
           "soa literal requires exactly one template argument");
@@ -176,7 +179,7 @@ bool SemanticsValidator::validateExprCollectionLiteralBuiltins(
     }
   }
   if ((builtinName == "array" || builtinName == "vector" ||
-       builtinName == "soa_vector") &&
+       builtinName == "soa") &&
       !expr.templateArgs.empty()) {
     const std::string &elemType = expr.templateArgs.front();
     const std::vector<std::string> *definitionTemplateArgs = nullptr;

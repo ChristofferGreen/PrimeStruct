@@ -1221,7 +1221,7 @@ TEST_CASE("ir lowerer SoA helper dispatch uses semantic receiver facts before st
         .elementTypeText = "Particle",
         .semanticNodeId = semanticNodeId,
         .collectionFamilyId = internType(collectionFamily),
-        .bindingTypeTextId = internType("soa_vector<Particle>"),
+        .bindingTypeTextId = internType("soa<Particle>"),
         .elementTypeTextId = internType("Particle"),
     });
     semanticProgram.publishedRoutingLookups
@@ -1259,9 +1259,9 @@ TEST_CASE("ir lowerer SoA helper dispatch uses semantic receiver facts before st
     });
     semanticProgram.publishedRoutingLookups.queryFactIndicesByExpr[semanticNodeId] = factIndex;
   };
-  addCollectionFact(7601, "collectionValues", "soa_vector");
-  addBindingFact(7602, "bindingValues", "Reference<soa_vector<Particle>>");
-  addLocalAutoFact(7603, "autoValues", "Pointer<soa_vector<Particle>>");
+  addCollectionFact(7601, "collectionValues", "soa");
+  addBindingFact(7602, "bindingValues", "Reference<soa<Particle>>");
+  addLocalAutoFact(7603, "autoValues", "Pointer<soa<Particle>>");
   addQueryFact(7604, "/std/collections/soa/SoaVector__t8Particle");
   addBindingFact(7605, "notASoa", "i32");
   const auto semanticIndex =
@@ -1281,7 +1281,7 @@ TEST_CASE("ir lowerer SoA helper dispatch uses semantic receiver facts before st
   addStaleLocalSoa("notASoa");
 
   primec::Definition countDef;
-  countDef.fullPath = "/std/collections/soa_vector/count";
+  countDef.fullPath = "/std/collections/soa/count";
 
   auto emitSoaCount = [&](const primec::Expr &stmt,
                           bool &forwardedWasMethod,
@@ -1315,7 +1315,7 @@ TEST_CASE("ir lowerer SoA helper dispatch uses semantic receiver facts before st
           ++inlineCalls;
           CHECK(callExpr.isMethodCall);
           CHECK(callExpr.name == "count");
-          CHECK(callee.fullPath == "/std/collections/soa_vector/count");
+          CHECK(callee.fullPath == "/std/collections/soa/count");
           CHECK_FALSE(expectValue);
           return true;
         },
@@ -6601,7 +6601,7 @@ TEST_CASE("ir lowerer statement call helper emits direct calls") {
   soaLocals.emplace("values", soaValuesInfo);
 
   primec::Definition soaFieldDef;
-  soaFieldDef.fullPath = "/soa_vector/x";
+  soaFieldDef.fullPath = "/soa/x";
   int methodResolutionCalls = 0;
   int definitionResolutionCalls = 0;
   inlineCalls = 0;
@@ -6631,7 +6631,7 @@ TEST_CASE("ir lowerer statement call helper emits direct calls") {
                 bool expectValue) {
               ++inlineCalls;
               CHECK(callExpr.isMethodCall);
-              CHECK(callee.fullPath == "/soa_vector/x");
+              CHECK(callee.fullPath == "/soa/x");
               CHECK(localsIn.find("values") != localsIn.end());
               CHECK_FALSE(expectValue);
               return true;

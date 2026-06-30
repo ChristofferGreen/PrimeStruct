@@ -115,12 +115,15 @@ def iter_sources(root: Path) -> list[Path]:
     return sorted(sources)
 
 
-_EXEMPT_MARKER = "soa-surface-audit: exempt"
+_EXEMPT_MARKERS = (
+    "soa-surface-audit: exempt",
+    "collection-surface-audit: exempt",
+)
 
 
 def _is_exempt(text: str) -> bool:
     for line in text.splitlines()[:10]:
-        if _EXEMPT_MARKER in line:
+        if any(marker in line for marker in _EXEMPT_MARKERS):
             return True
     return False
 

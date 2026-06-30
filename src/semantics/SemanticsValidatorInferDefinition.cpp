@@ -98,7 +98,7 @@ bool SemanticsValidator::recordDefinitionInferredReturn(
         return false;
       }
     }
-    if (normalizeBindingTypeName(receiverBinding.typeName) != "soa_vector" ||
+    if (normalizeBindingTypeName(receiverBinding.typeName) != "soa" ||
         receiverBinding.typeTemplateArg.empty()) {
       return false;
     }
@@ -178,7 +178,7 @@ bool SemanticsValidator::recordDefinitionInferredReturn(
     if (exprKind == ReturnKind::Unknown && hasExprBinding) {
       const std::string normalizedTypeName = normalizeBindingTypeName(exprBinding.typeName);
       if ((normalizedTypeName == "array" || normalizedTypeName == "vector" ||
-           normalizedTypeName == "soa_vector" || isKeyValueCollectionTypeName(normalizedTypeName)) &&
+           normalizedTypeName == "soa" || isKeyValueCollectionTypeName(normalizedTypeName)) &&
           !exprBinding.typeTemplateArg.empty()) {
         exprKind = ReturnKind::Array;
       } else {

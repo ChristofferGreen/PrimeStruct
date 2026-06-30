@@ -1,4 +1,5 @@
 // soa-surface-audit: exempt
+// collection-surface-audit: exempt
 #include "IrLowererFlowHelpers.h"
 
 #include "IrLowererHelpers.h"
@@ -201,6 +202,11 @@ void emitDisarmTemporaryStructAfterCopy(const std::function<void(IrOpcode, uint6
     return leaf;
   };
 
+  if (structPath.rfind("/std/collections/vector/Vector", 0) == 0) {
+    emitStoreFalseAtOffset(4ull * IrSlotBytes);
+    return;
+  }
+
   if (isExperimentalCollectionTypeName(structPath, "vector", "Vector")) {
     emitStoreFalseAtOffset(3ull * IrSlotBytes);
     return;
@@ -233,6 +239,12 @@ void emitDisarmTemporaryStructAfterCopy(const std::function<void(IrOpcode, uint6
   if (structPath.rfind(collection_paths::memberPath(collection_paths::kInternalSoaStorageFolder, collection_paths::kSoaColumnTypeName), 0) == 0 ||
       leaf == "SoaColumn") {
     emitStoreFalseAtOffset(4ull * IrSlotBytes);
+    return;
+  }
+
+  if (structPath.rfind("/std/collections/map/MapValue", 0) == 0) {
+    emitStoreFalseAtOffset(5ull * IrSlotBytes);
+    emitStoreFalseAtOffset(10ull * IrSlotBytes);
     return;
   }
 

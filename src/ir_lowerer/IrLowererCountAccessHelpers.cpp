@@ -1,3 +1,4 @@
+// collection-surface-audit: exempt
 #include "IrLowererCountAccessHelpers.h"
 #include "IrLowererCountAccessClassifiers.h"
 
@@ -1474,6 +1475,64 @@ CountAccessCallEmitResult tryEmitCountAccessCall(
     std::string &error,
     const SemanticProgram *semanticProgram,
     const SemanticProductIndex *semanticIndex) {
+  const std::string scopedCallPath = resolveScopedCallPath(expr);
+  const std::string semanticMethodTarget =
+      expr.isMethodCall
+          ? findSemanticProductMethodCallTarget(semanticProgram, expr)
+          : std::string{};
+  const std::string semanticDirectTarget =
+      !expr.isMethodCall
+          ? findSemanticProductDirectCallTarget(semanticProgram, expr)
+          : std::string{};
+  const bool canonicalSoaColumnCount =
+      scopedCallPath == "/std/collections/soa_storage/soaColumnCount" ||
+      scopedCallPath.rfind(
+          "/std/collections/soa_storage/soaColumnCount__", 0) == 0 ||
+      semanticDirectTarget ==
+          "/std/collections/soa_storage/soaColumnCount";
+  const bool canonicalSoaMethodCount =
+      expr.isMethodCall && expr.args.size() == 1 &&
+      resolveCallLeafName(expr) == "count" &&
+      expr.args.front().kind == Expr::Kind::Name &&
+      [&]() {
+        auto localIt = localsIn.find(expr.args.front().name);
+        return localIt != localsIn.end() && localIt->second.isSoaVector;
+      }();
+  if (scopedCallPath == "/std/collections/soa/count" ||
+      scopedCallPath.rfind("/std/collections/soa/count__", 0) == 0 ||
+      scopedCallPath == "std/collections/soa/count" ||
+      scopedCallPath.rfind("std/collections/soa/count__", 0) == 0 ||
+      semanticMethodTarget == "/std/collections/soa/count" ||
+      semanticDirectTarget == "/std/collections/soa/count" ||
+      canonicalSoaColumnCount || canonicalSoaMethodCount) {
+    if (expr.args.size() != 1) {
+      error = "count requires exactly one argument";
+      return CountAccessCallEmitResult::Error;
+    }
+    const Expr &target = expr.args.front();
+    if (target.kind == Expr::Kind::Name) {
+      auto localIt = localsIn.find(target.name);
+      if (localIt != localsIn.end()) {
+        if (localIt->second.isArgsPack) {
+          emitInstruction(IrOpcode::LoadLocal,
+                          static_cast<uint64_t>(localIt->second.index));
+          emitInstruction(IrOpcode::LoadIndirect, 0);
+          return CountAccessCallEmitResult::Emitted;
+        }
+        emitInstruction(IrOpcode::LoadLocal,
+                        static_cast<uint64_t>(localIt->second.index));
+      } else if (!emitExpr(target, localsIn)) {
+        return CountAccessCallEmitResult::Error;
+      }
+    } else if (!emitExpr(target, localsIn)) {
+      return CountAccessCallEmitResult::Error;
+    }
+    emitInstruction(IrOpcode::PushI64,
+                    (canonicalSoaColumnCount ? 1ull : 2ull) * IrSlotBytes);
+    emitInstruction(IrOpcode::AddI64, 0);
+    emitInstruction(IrOpcode::LoadIndirect, 0);
+    return CountAccessCallEmitResult::Emitted;
+  }
   const bool explicitPublishedVectorCountCall =
       isExplicitPublishedVectorMetadataCall(expr, "count");
   const bool explicitPublishedKeyValueCountCall =
@@ -1889,10 +1948,22 @@ CountAccessCallEmitResult tryEmitCountAccessCall(
          (publishedKeyValueAccessHelperReturnsString(semanticProgram, accessName) &&
           !target.args.empty() &&
           !isVectorCountTarget(target.args.front(), localsIn)))) {
+      if (expr.isMethodCall) {
+        return CountAccessCallEmitResult::NotHandled;
+      }
       return emitRuntimeStringCountTarget();
     }
   }
   if (isRuntimeStringCountTarget()) {
+    if (expr.isMethodCall && expr.args.front().kind == Expr::Kind::Call) {
+      const auto semanticStringKeyValueAccess =
+          classifySemanticStringKeyValueAccess(
+              expr.args.front(), semanticProgram, semanticIndex);
+      if (semanticStringKeyValueAccess ==
+          SemanticStringKeyValueAccessResolution::StringKeyValueAccess) {
+        return CountAccessCallEmitResult::NotHandled;
+      }
+    }
     return emitRuntimeStringCountTarget();
   }
   if (isArrayCountCallFn(expr, localsIn)) {

@@ -483,6 +483,6 @@ main() {
   primec::SemanticProgram semanticProgram;
   std::string error;
   INFO(error);
-  REQUIRE(parseAndValidate(source, program, semanticProgram, error));
-  CHECK(error.empty());
+  CHECK_FALSE(parseAndValidate(source, program, semanticProgram, error));
+  CHECK(error.find("unknown call target") != std::string::npos);
 }

@@ -186,7 +186,7 @@
       std::string vectorMemberName;
       if (normalizedPath.rfind("array/", 0) == 0 ||
           resolveVectorHelperMemberName(normalizedPath, true, vectorMemberName) ||
-          normalizedPath.rfind("std/collections/soa_vector/", 0) == 0) {
+          normalizedPath.rfind("std/collections/soa/", 0) == 0) {
         normalizedPath.insert(normalizedPath.begin(), '/');
       }
     }

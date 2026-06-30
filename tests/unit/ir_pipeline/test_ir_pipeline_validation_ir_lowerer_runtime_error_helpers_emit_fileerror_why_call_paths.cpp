@@ -548,11 +548,11 @@ TEST_CASE("ir lowerer builtin root helper rejects root namespace paths without i
   CHECK(builtinName.empty());
 }
 
-TEST_CASE("ir lowerer pointer helper resolves parser-shaped soa_vector builtins") {
+TEST_CASE("ir lowerer pointer helper resolves parser-shaped soa builtins") {
   primec::Expr dereferenceCall;
   dereferenceCall.kind = primec::Expr::Kind::Call;
   dereferenceCall.name = "dereference";
-  dereferenceCall.namespacePrefix = "soa_vector";
+  dereferenceCall.namespacePrefix = "soa";
 
   std::string builtinName;
   CHECK(primec::ir_lowerer::getBuiltinPointerName(dereferenceCall, builtinName));
@@ -561,7 +561,7 @@ TEST_CASE("ir lowerer pointer helper resolves parser-shaped soa_vector builtins"
   primec::Expr locationCall;
   locationCall.kind = primec::Expr::Kind::Call;
   locationCall.name = "location";
-  locationCall.namespacePrefix = "soa_vector";
+  locationCall.namespacePrefix = "soa";
 
   CHECK(primec::ir_lowerer::getBuiltinPointerName(locationCall, builtinName));
   CHECK(builtinName == "location");

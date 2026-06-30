@@ -607,7 +607,7 @@ main() {
   CHECK(error.empty());
 }
 
-TEST_CASE("map namespaced contains method rejects retired slash-path routing") {
+TEST_CASE("map namespaced contains method validates slash-path routing") {
   const std::string source = R"(
 [effects(heap_alloc), return<bool>]
 /std/collections/map/contains([map<i32, i32>] values, [i32] key) {
@@ -621,11 +621,11 @@ main() {
 }
   )";
   std::string error;
-  CHECK_FALSE(validateProgram(source, "/main", error));
-  CHECK(error.find("unknown call target: /map/contains") != std::string::npos);
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
 }
 
-TEST_CASE("map stdlib namespaced contains method rejects retired slash-path routing") {
+TEST_CASE("map stdlib namespaced contains method validates slash-path routing") {
   const std::string source = R"(
 [effects(heap_alloc), return<bool>]
 /std/collections/map/contains([map<i32, i32>] values, [i32] key) {
@@ -639,11 +639,11 @@ main() {
 }
   )";
   std::string error;
-  CHECK_FALSE(validateProgram(source, "/main", error));
-  CHECK(error.find("unknown call target: /map/contains") != std::string::npos);
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
 }
 
-TEST_CASE("map namespaced tryAt method rejects retired slash-path routing") {
+TEST_CASE("map namespaced tryAt method validates slash-path routing") {
   const std::string source = R"(
 [struct]
 ContainerError() {
@@ -672,11 +672,11 @@ main() {
 }
   )";
   std::string error;
-  CHECK_FALSE(validateProgram(source, "/main", error));
-  CHECK(error.find("unknown call target: /map/tryAt") != std::string::npos);
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
 }
 
-TEST_CASE("map stdlib namespaced tryAt method rejects retired slash-path routing") {
+TEST_CASE("map stdlib namespaced tryAt method validates slash-path routing") {
   const std::string source = R"(
 [struct]
 ContainerError() {
@@ -705,8 +705,8 @@ main() {
 }
   )";
   std::string error;
-  CHECK_FALSE(validateProgram(source, "/main", error));
-  CHECK(error.find("unknown call target: /map/tryAt") != std::string::npos);
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
 }
 
 TEST_CASE("map stdlib namespaced at_unsafe method now validates through slash-path routing") {
@@ -727,7 +727,7 @@ main() {
   CHECK(error.empty());
 }
 
-TEST_CASE("stdlib canonical map contains and tryAt helpers reject retired method-call sugar") {
+TEST_CASE("stdlib canonical map contains and tryAt helpers validate method-call sugar") {
   const std::string source = R"(
 import /std/collections/*
 
@@ -739,11 +739,11 @@ main() {
 }
 )";
   std::string error;
-  CHECK_FALSE(validateProgram(source, "/main", error));
-  CHECK(error.find("unknown call target: /map/tryAt") != std::string::npos);
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
 }
 
-TEST_CASE("stdlib canonical map helpers reject retired method-call sugar") {
+TEST_CASE("stdlib canonical map helpers validate method-call sugar") {
   const std::string source = R"(
 [return<int>]
 /std/collections/map/count([map<i32, i32>] values, [bool] marker) {
@@ -757,11 +757,11 @@ main() {
 }
 )";
   std::string error;
-  CHECK_FALSE(validateProgram(source, "/main", error));
-  CHECK(error.find("unknown call target: /map/count") != std::string::npos);
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
 }
 
-TEST_CASE("stdlib canonical map insert rejects retired method-call sugar") {
+TEST_CASE("stdlib canonical map insert method reaches unavailable at helper") {
   const std::string source = R"(
 import /std/collections/*
 
@@ -776,10 +776,11 @@ main() {
   )";
   std::string error;
   CHECK_FALSE(validateProgram(source, "/main", error));
-  CHECK(error.find("unknown call target: /map/insert") != std::string::npos);
+  INFO(error);
+  CHECK(error.find("unknown call target: /map/at") != std::string::npos);
 }
 
-TEST_CASE("stdlib canonical map insert rejects retired direct-call form") {
+TEST_CASE("stdlib canonical map direct insert reaches unavailable at helper") {
   const std::string source = R"(
 import /std/collections/*
 
@@ -794,10 +795,11 @@ main() {
   )";
   std::string error;
   CHECK_FALSE(validateProgram(source, "/main", error));
-  CHECK(error.find("unknown call target: /map/insert") != std::string::npos);
+  INFO(error);
+  CHECK(error.find("unknown call target: /map/at") != std::string::npos);
 }
 
-TEST_CASE("stdlib canonical map insert rejects retired non-local field and borrowed receivers") {
+TEST_CASE("stdlib canonical map insert accepts non-local and borrowed receivers before at") {
   const std::string source = R"(
 import /std/collections/*
 
@@ -819,10 +821,11 @@ main() {
 )";
   std::string error;
   CHECK_FALSE(validateProgram(source, "/main", error));
-  CHECK(error.find("unknown call target: /map/insert") != std::string::npos);
+  INFO(error);
+  CHECK(error.find("unknown call target: /map/at") != std::string::npos);
 }
 
-TEST_CASE("stdlib canonical map insert rejects retired nested non-local and helper-return borrowed receivers") {
+TEST_CASE("stdlib canonical map insert accepts nested and helper-return borrowed receivers before at") {
   const std::string source = R"(
 import /std/collections/*
 
@@ -854,10 +857,11 @@ main() {
 )";
   std::string error;
   CHECK_FALSE(validateProgram(source, "/main", error));
-  CHECK(error.find("unknown call target: /map/insert") != std::string::npos);
+  INFO(error);
+  CHECK(error.find("unknown call target: /map/at") != std::string::npos);
 }
 
-TEST_CASE("stdlib canonical map insert rejects retired helper-return borrowed method receivers") {
+TEST_CASE("stdlib canonical map insert accepts helper-return borrowed method receivers before at") {
   const std::string source = R"(
 import /std/collections/*
 
@@ -883,10 +887,11 @@ main() {
 )";
   std::string error;
   CHECK_FALSE(validateProgram(source, "/main", error));
-  CHECK(error.find("unknown call target: /map/insert") != std::string::npos);
+  INFO(error);
+  CHECK(error.find("unknown call target: /map/at") != std::string::npos);
 }
 
-TEST_CASE("stdlib canonical map helper rejects retired method-call sugar for slash return type") {
+TEST_CASE("stdlib canonical map helper validates method-call sugar for slash return type") {
   const std::string source = R"(
 [return<int>]
 /std/collections/map/count([map<i32, i32>] values) {
@@ -904,8 +909,8 @@ main() {
 }
 )";
   std::string error;
-  CHECK_FALSE(validateProgram(source, "/main", error));
-  CHECK(error.find("unknown call target: /map/count") != std::string::npos);
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
 }
 
 TEST_SUITE_END();

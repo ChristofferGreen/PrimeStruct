@@ -1043,8 +1043,8 @@ main() {
 }
 )";
   std::string error;
-  CHECK_FALSE(validateProgram(source, "/main", error));
-  CHECK(error.find("unknown call target: /map/count") != std::string::npos);
+  REQUIRE(validateProgram(source, "/main", error));
+  CHECK(error.empty());
 }
 
 TEST_CASE("exact map imports keep canonical wrapper access helpers visible") {

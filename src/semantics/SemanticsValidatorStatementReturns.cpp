@@ -340,7 +340,7 @@ bool SemanticsValidator::validateReturnStatement(const std::vector<ParameterInfo
            isLegacyOrCanonicalSoaHelperPath(resolvedPathCanonical,
                                             *soaAccessHelper));
       if (oldSurfaceCallShape &&
-          hasVisibleDefinitionPathForCurrentImports("/soa_vector/" +
+          hasVisibleDefinitionPathForCurrentImports("/soa/" +
                                                     *soaAccessHelper)) {
         return false;
       }
@@ -1118,8 +1118,8 @@ bool SemanticsValidator::validateReturnStatement(const std::vector<ParameterInfo
                         canonicalVectorCompatibilityPrefixOrFallback())) {
               return "/vector";
             }
-            if (typePath == "/soa_vector" || typePath == "soa_vector") {
-              return "/soa_vector";
+            if (typePath == "/soa" || typePath == "soa") {
+              return "/soa";
             }
             if (isKeyValueCollectionTypeName(typePath) || typePath == keyValueCollectionMarker ||
                 typePath == collectionTypePathLocal("map")) {

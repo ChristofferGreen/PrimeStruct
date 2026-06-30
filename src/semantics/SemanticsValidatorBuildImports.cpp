@@ -237,11 +237,29 @@ bool SemanticsValidator::buildImportAliases() {
     return sawAlias;
   };
   auto registerCanonicalSoaVectorWildcardAliases =
-      [&](const std::string &prefix, std::unordered_map<std::string, std::string> &) {
-        if (prefix != "/std/collections/soa_vector") {
+      [&](const std::string &prefix, std::unordered_map<std::string, std::string> &targetAliases) {
+        if (prefix != collection_paths::moduleRoot(collection_paths::kSoaFolder)) {
           return false;
         }
         bool sawAlias = false;
+        const std::string soaVectorPath = collection_paths::memberPath(
+            collection_paths::kSoaFolder, collection_paths::kSoaVectorTypeName);
+        const std::string soaVectorTypeName(collection_paths::kSoaVectorTypeName);
+        const std::string soaVectorPrefix = soaVectorPath + "__";
+        auto defIt = defMap_.find(soaVectorPath);
+        if (defIt == defMap_.end() || defIt->second == nullptr) {
+          for (const auto &[path, defPtr] : defMap_) {
+            if (defPtr != nullptr && path.rfind(soaVectorPrefix, 0) == 0) {
+              defIt = defMap_.find(path);
+              break;
+            }
+          }
+        }
+        if (defIt != defMap_.end() && defIt->second != nullptr) {
+          targetAliases[soaVectorTypeName] = soaVectorPath;
+          importAliases_[soaVectorTypeName] = soaVectorPath;
+          sawAlias = true;
+        }
         static const std::array<std::string_view, 10> kHelpers = {
             "count", "get", "ref", "count_ref", "get_ref",
             "ref_ref", "reserve", "push", "to_aos", "to_aos_ref"};
@@ -269,7 +287,7 @@ bool SemanticsValidator::buildImportAliases() {
       };
   auto shouldPublishMergedImportAlias = [&](std::string_view aliasName,
                                             std::string_view targetPath) {
-    return !(targetPath.rfind("/std/collections/soa_vector/", 0) == 0 &&
+    return !(targetPath.rfind("/std/collections/soa/", 0) == 0 &&
              isCanonicalSoaVectorHelperAliasName(aliasName));
   };
   auto isMetadataBackedWildcardAliasDefinition =

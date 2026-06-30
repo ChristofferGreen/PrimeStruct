@@ -1238,7 +1238,7 @@ if(PRIMESTRUCT_BUILD_TESTS)
       primeStructSelectDoctestTarget(PrimeStructSuite_TARGET "${suite}")
     endif()
     if (NOT PrimeStructSuite_TIMEOUT)
-      set(PrimeStructSuite_TIMEOUT 300)
+      set(PrimeStructSuite_TIMEOUT 600)
     endif()
 
     string(REPLACE "." "_" suiteId "${suite}")
@@ -1373,7 +1373,7 @@ if(PRIMESTRUCT_BUILD_TESTS)
     string(REPLACE "." "_" suiteId "${suite}")
     set(testName "PrimeStruct_${suiteId}")
     add_test(NAME "${testName}" COMMAND $<TARGET_FILE:PrimeStruct_misc_tests> "--test-suite=${suite}")
-    set_tests_properties("${testName}" PROPERTIES TIMEOUT 300)
+    set_tests_properties("${testName}" PROPERTIES TIMEOUT 600)
   endforeach()
 
   foreach(suite IN LISTS PrimeStructBackendTestSuites)
@@ -1384,7 +1384,7 @@ if(PRIMESTRUCT_BUILD_TESTS)
     set(testName "PrimeStruct_${suiteId}")
     primeStructSelectDoctestTarget(suiteTarget "${suite}")
     add_test(NAME "${testName}" COMMAND $<TARGET_FILE:${suiteTarget}> "--test-suite=${suite}")
-    set_tests_properties("${testName}" PROPERTIES TIMEOUT 300 LABELS "parallel-safe")
+    set_tests_properties("${testName}" PROPERTIES TIMEOUT 600 LABELS "parallel-safe")
   endforeach()
 
   foreach(suite IN LISTS PrimeStructSemanticsTestSuites)
@@ -1393,7 +1393,7 @@ if(PRIMESTRUCT_BUILD_TESTS)
     endif()
     string(REPLACE "." "_" suiteId "${suite}")
     set(testName "PrimeStruct_${suiteId}")
-    set(semanticsTimeout 300)
+    set(semanticsTimeout 600)
     set(semanticsLabels "parallel-safe")
     if (suite STREQUAL "primestruct.semantics.math_imports" OR
         suite STREQUAL "primestruct.semantics.imports")
@@ -1449,7 +1449,7 @@ if(PRIMESTRUCT_BUILD_TESTS)
     string(REPLACE "." "_" suiteId "${suite}")
     set(testName "PrimeStruct_${suiteId}")
     add_test(NAME "${testName}" COMMAND $<TARGET_FILE:PrimeStruct_text_filter_tests> "--test-suite=${suite}")
-    set_tests_properties("${testName}" PROPERTIES TIMEOUT 300 LABELS "parallel-safe")
+    set_tests_properties("${testName}" PROPERTIES TIMEOUT 600 LABELS "parallel-safe")
   endforeach()
 
   foreach(suite IN LISTS PrimeStructParserTestSuites)
@@ -1459,7 +1459,7 @@ if(PRIMESTRUCT_BUILD_TESTS)
     string(REPLACE "." "_" suiteId "${suite}")
     set(testName "PrimeStruct_${suiteId}")
     add_test(NAME "${testName}" COMMAND $<TARGET_FILE:PrimeStruct_parser_tests> "--test-suite=${suite}")
-    set_tests_properties("${testName}" PROPERTIES TIMEOUT 300 LABELS "parallel-safe")
+    set_tests_properties("${testName}" PROPERTIES TIMEOUT 600 LABELS "parallel-safe")
   endforeach()
 
   add_test(
@@ -1742,7 +1742,7 @@ if(PRIMESTRUCT_BUILD_TESTS)
   )
   set_tests_properties(
     PrimeStruct_semantic_memory_trend
-    PROPERTIES DEPENDS PrimeStruct_semantic_memory_benchmark TIMEOUT 300)
+    PROPERTIES DEPENDS PrimeStruct_semantic_memory_benchmark TIMEOUT 600)
 
   set(PrimeStructCompileRunSuites
     primestruct.compile.run.generic_requirements

@@ -231,7 +231,7 @@ LocalInfo::ValueKind inferArrayElementValueKind(
 
     std::string collection;
     if (getBuiltinCollectionName(expr, collection)) {
-      if ((collection == "array" || collection == "vector" || collection == "soa_vector") &&
+      if ((collection == "array" || collection == "vector" || collection == "soa") &&
           expr.templateArgs.size() == 1) {
         return valueKindFromTypeName(expr.templateArgs.front());
       }

@@ -40,17 +40,17 @@ Particle {
 }
 
 [effects(heap_alloc), return<void>]
-/vector/push([vector<i32> mut] values, [soa_vector<Particle>] value) {
+/vector/push([vector<i32> mut] values, [soa<Particle>] value) {
 }
 
 [effects(heap_alloc), return<void>]
-/soa_vector/push([soa_vector<Particle> mut] values, [i32] value) {
+/soa/push([soa<Particle> mut] values, [i32] value) {
 }
 
 [effects(heap_alloc), return<int>]
 main() {
   [vector<i32> mut] values{vector<i32>(1i32)}
-  [soa_vector<Particle>] payload{soa_vector<Particle>()}
+  [soa<Particle>] payload{soa<Particle>()}
   push([value] payload, [values] values)
   return(0i32)
 }
@@ -67,13 +67,13 @@ Particle {
 }
 
 [effects(heap_alloc), return<void>]
-/soa_vector/push([vector<i32> mut] values, [soa_vector<Particle>] value) {
+/soa/push([vector<i32> mut] values, [soa<Particle>] value) {
 }
 
 [effects(heap_alloc), return<int>]
 main() {
   [vector<i32> mut] values{vector<i32>(1i32)}
-  [soa_vector<Particle>] payload{soa_vector<Particle>()}
+  [soa<Particle>] payload{soa<Particle>()}
   push([value] payload, [values] values)
   return(count(values))
 }

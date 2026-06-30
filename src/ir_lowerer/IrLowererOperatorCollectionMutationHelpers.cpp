@@ -53,7 +53,11 @@ bool isSpecializedExperimentalSoaVectorStructPath(const std::string &structPath)
   return soa_paths::isExperimentalColumnarVectorSpecializedTypePath(structPath);
 }
 
-std::string defaultVectorRecordStructPath(std::string_view /*builtin*/) {
+std::string defaultVectorRecordStructPath(std::string_view builtin) {
+  if (builtin == "soa") {
+    return collection_paths::memberPath(collection_paths::kSoaFolder,
+                                        collection_paths::kSoaVectorTypeName);
+  }
   return collectionTypePath("vector");
 }
 
@@ -320,8 +324,10 @@ bool emitConversionsAndCallsCollectionAndMutationExpr(
   handled = true;
   std::string builtin;
   if (getBuiltinCollectionName(expr, builtin)) {
-    if (builtin == "array" || builtin == "vector" || builtin == "soa_vector") {
-      if (expr.templateArgs.size() != 1) {
+    if (builtin == "array" || builtin == "vector" || builtin == "soa") {
+      const bool isSoaVector = (builtin == "soa");
+      const bool allowEmptyTemplateArgs = isSoaVector && expr.args.empty() && expr.templateArgs.empty();
+      if (expr.templateArgs.size() != 1 && !allowEmptyTemplateArgs) {
         error = builtin + " literal requires exactly one template argument";
         return false;
       }
@@ -330,9 +336,8 @@ bool emitConversionsAndCallsCollectionAndMutationExpr(
         return false;
       }
 
-      const bool isSoaVector = (builtin == "soa_vector");
       const bool isVectorLike = (builtin == "vector" || isSoaVector);
-      LocalInfo::ValueKind elemKind = valueKindFromTypeName(expr.templateArgs.front());
+      LocalInfo::ValueKind elemKind = expr.templateArgs.empty() ? LocalInfo::ValueKind::Unknown : valueKindFromTypeName(expr.templateArgs.front());
       const bool isSoaStructLiteral =
           isSoaVector && !expr.args.empty() && elemKind == LocalInfo::ValueKind::Unknown;
       std::string soaStructPath;
@@ -382,11 +387,11 @@ bool emitConversionsAndCallsCollectionAndMutationExpr(
               vectorStructPath.find("/Vector__t") != std::string::npos ||
               vectorStructPath.find("Vector__t") == 0;
           if (isSpecializedStdlibVector) {
-            vectorSlots.count = 0;
-            vectorSlots.capacity = 1;
-            vectorSlots.data = 2;
-            vectorSlots.ownsData = -1;
-            vectorSlots.totalSlots = 3;
+            vectorSlots.count = 1;
+            vectorSlots.capacity = 2;
+            vectorSlots.data = 3;
+            vectorSlots.ownsData = 4;
+            vectorSlots.totalSlots = 5;
           }
         }
         if (vectorSlots.totalSlots <= 0) {
@@ -400,6 +405,12 @@ bool emitConversionsAndCallsCollectionAndMutationExpr(
         if (isSoaStructLiteral) {
           heapAllocSlots *= soaStructSlotCount;
         }
+        // Empty soa literals must allocate at least 1 slot to match soaColumnNew's
+        // invariant (soaColumnReserve/soaColumnDestroy free data unconditionally).
+        const bool isSoaEmptyLiteral = isSoaVector && literalCount == 0;
+        if (isSoaEmptyLiteral) {
+          heapAllocSlots = 1;
+        }
         emitVectorRecordHeader(
             instructions,
             baseLocal,
@@ -407,8 +418,8 @@ bool emitConversionsAndCallsCollectionAndMutationExpr(
             literalCount,
             literalCount,
             heapAllocSlots,
-            (isSoaVector && literalCount == 0) || isEmptyOpaqueCollectionLiteral,
-            literalCount != 0);
+            !isSoaEmptyLiteral && isEmptyOpaqueCollectionLiteral,
+            isSoaEmptyLiteral || literalCount != 0);
       } else {
         nextLocal += 1 + storageCapacity;
         instructions.push_back({IrOpcode::PushI32, static_cast<uint64_t>(literalCount)});
@@ -862,6 +873,10 @@ bool emitConversionsAndCallsCollectionAndMutationExpr(
       if (accessName == "at") {
         const int32_t countLocal = allocTempLocal();
         instructions.push_back({IrOpcode::LoadLocal, static_cast<uint64_t>(ptrLocal)});
+        if (targetInfo.isVectorTarget) {
+          instructions.push_back({IrOpcode::PushI64, IrSlotBytes});
+          instructions.push_back({IrOpcode::AddI64, 0});
+        }
         instructions.push_back({IrOpcode::LoadIndirect, 0});
         instructions.push_back({IrOpcode::StoreLocal, static_cast<uint64_t>(countLocal)});
 
@@ -888,7 +903,7 @@ bool emitConversionsAndCallsCollectionAndMutationExpr(
       if (targetInfo.isVectorTarget) {
         basePtrLocal = allocTempLocal();
         instructions.push_back({IrOpcode::LoadLocal, static_cast<uint64_t>(ptrLocal)});
-        instructions.push_back({IrOpcode::PushI64, static_cast<uint64_t>(2 * IrSlotBytes)});
+        instructions.push_back({IrOpcode::PushI64, static_cast<uint64_t>(3 * IrSlotBytes)});
         instructions.push_back({IrOpcode::AddI64, 0});
         instructions.push_back({IrOpcode::LoadIndirect, 0});
         instructions.push_back({IrOpcode::StoreLocal, static_cast<uint64_t>(basePtrLocal)});

@@ -1,4 +1,5 @@
 // soa-surface-audit: exempt
+// collection-surface-audit: exempt
 #include "IrLowererCallHelpers.h"
 
 #include "IrLowererCountAccessClassifiers.h"
@@ -232,11 +233,11 @@ bool isExplicitDirectSoaAccessCall(const Expr &expr) {
     return false;
   }
   const std::string rawPath = resolveNativeTailCallPathWithoutFallbackProbes(expr);
-  return rawPath == "/soa_vector/get" ||
-         rawPath == "/std/collections/soa_vector/get" ||
+  return rawPath == "/soa/get" ||
          rawPath == "/std/collections/soa/get" ||
-         rawPath == "/soa_vector/get_ref" ||
-         rawPath == "/std/collections/soa_vector/get_ref" ||
+         rawPath == "/std/collections/soa/get" ||
+         rawPath == "/soa/get_ref" ||
+         rawPath == "/std/collections/soa/get_ref" ||
          rawPath == "/std/collections/soa/get_ref";
 }
 
@@ -282,38 +283,6 @@ bool hasSemanticKeyValueAccessHelperDefinition(
   return false;
 }
 
-bool semanticKeyValueAccessHelperKeepsBuiltinReturn(
-    const SemanticProgram *semanticProgram,
-    std::string_view helperPath) {
-  if (semanticProgram == nullptr || helperPath.empty()) {
-    return true;
-  }
-  const auto pathId =
-      semanticProgramLookupCallTargetStringId(*semanticProgram, helperPath);
-  if (!pathId.has_value()) {
-    return true;
-  }
-  const SemanticProgramReturnFact *returnFact =
-      semanticProgramLookupPublishedReturnFactByDefinitionPathId(
-          *semanticProgram, *pathId);
-  if (returnFact == nullptr) {
-    return true;
-  }
-  std::string structPath =
-      returnFact->structPathId != InvalidSymbolId
-          ? std::string(semanticProgramResolveCallTargetString(
-                *semanticProgram, returnFact->structPathId))
-          : returnFact->structPath;
-  structPath = trimTemplateTypeText(structPath);
-  if (!structPath.empty() && structPath.front() == '/') {
-    structPath.erase(structPath.begin());
-  }
-  if (structPath.empty()) {
-    return true;
-  }
-  return structPath == "map" || structPath == "vector" ||
-         structPath == "array";
-}
 
 const SemanticProgramQueryFact *findSourceKeyValueAccessAliasQueryFact(
     const SemanticProgram *semanticProgram,
@@ -531,7 +500,7 @@ UnsupportedNativeCallResult emitUnsupportedNativeCallDiagnosticImpl(
     };
     return matchesCollectionRoot("vector") ||
            matchesCollectionRoot("array") ||
-           matchesCollectionRoot("soa_vector");
+           matchesCollectionRoot("soa");
   };
   const bool hasPublishedVectorMetadataPath =
       expr.kind == Expr::Kind::Call &&
@@ -983,6 +952,19 @@ NativeCallTailDispatchResult tryEmitNativeCallTailDispatch(
           return NativeCallTailDispatchResult::Error;
         }
         return NativeCallTailDispatchResult::Emitted;
+      }
+    }
+    if (expr.isMethodCall &&
+        (accessName == "at" || accessName == "at_unsafe") &&
+        arrayVectorTargetInfo.isVectorTarget &&
+        !arrayVectorTargetInfo.isSoaVector &&
+        !arrayVectorTargetInfo.isKeyValueTarget) {
+      const std::string methodResolvedPath =
+          findSemanticProductMethodCallTarget(semanticProgram, expr);
+      if (!methodResolvedPath.empty() &&
+          !semanticKeyValueAccessHelperKeepsBuiltinReturn(semanticProgram,
+                                                          methodResolvedPath)) {
+        return NativeCallTailDispatchResult::NotHandled;
       }
     }
     if (!emitBuiltinArrayAccess(accessName,

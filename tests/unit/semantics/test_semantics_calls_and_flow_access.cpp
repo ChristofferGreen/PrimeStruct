@@ -284,8 +284,8 @@ main() {
 }
   )";
   std::string error;
-  CHECK_FALSE(validateProgram(source, "/main", error));
-  CHECK(error.find("unknown call target: /map/count") != std::string::npos);
+  REQUIRE(validateProgram(source, "/main", error));
+  CHECK(error.empty());
 }
 
 TEST_CASE("imported map size method calls reject retired count helper definitions") {
@@ -304,8 +304,8 @@ main() {
 }
 )";
   std::string error;
-  CHECK_FALSE(validateProgram(source, "/main", error));
-  CHECK(error.find("unknown call target: /map/count") != std::string::npos);
+  REQUIRE(validateProgram(source, "/main", error));
+  CHECK(error.empty());
 }
 
 TEST_CASE("rooted map helper aliases use ordinary explicit path diagnostics") {

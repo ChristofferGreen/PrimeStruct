@@ -89,6 +89,15 @@ bool resolveVectorRecordFieldSlotsFromFields(const std::string &structPath,
       out = slots;
       return true;
     }
+    // Fallback when the SoaVector struct is not in scope (e.g. IR-only tests without
+    // stdlib imports). SoaVector layout: [type_tag, SoaColumn[type_tag, count, cap,
+    // data, ownsData]] — so storage starts at slot 1 and SoaColumn.count is at +1.
+    out.count = 2;
+    out.capacity = 3;
+    out.data = 4;
+    out.ownsData = 5;
+    out.totalSlots = 6;
+    return true;
   }
 
   auto findField = [&](const std::string &lookupPath,

@@ -242,7 +242,7 @@ TEST_CASE("emitter primitive return inference keeps scoped builtin control calls
   primec::Expr namespacedAssignCall;
   namespacedAssignCall.kind = primec::Expr::Kind::Call;
   namespacedAssignCall.name = "assign";
-  namespacedAssignCall.namespacePrefix = "/std/collections/internal_soa_storage";
+  namespacedAssignCall.namespacePrefix = "/std/collections/soa_storage";
   namespacedAssignCall.args = {lhs, rhs};
   CHECK(primec::emitter::inferPrimitiveReturnKind(
             namespacedAssignCall, localTypes, returnKinds, false) ==
@@ -263,7 +263,7 @@ TEST_CASE("emitter primitive return inference keeps scoped builtin control calls
   primec::Expr generatedIfCall;
   generatedIfCall.kind = primec::Expr::Kind::Call;
   generatedIfCall.name =
-      "/std/collections/internal_soa_storage/SoaColumn__tabcdef01/if";
+      "/std/collections/soa_storage/SoaColumn__tabcdef01/if";
   generatedIfCall.args = {cond, thenExpr, elseExpr};
   CHECK(primec::emitter::inferPrimitiveReturnKind(
             generatedIfCall, localTypes, returnKinds, false) ==

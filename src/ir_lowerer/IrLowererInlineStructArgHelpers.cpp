@@ -1,4 +1,5 @@
 // soa-surface-audit: exempt
+// collection-surface-audit: exempt
 #include "IrLowererInlineStructArgHelpers.h"
 
 #include "IrLowererFlowHelpers.h"
@@ -24,9 +25,9 @@ bool isVectorStructPath(const std::string &structPath) {
 }
 
 bool isSoaVectorStructPath(const std::string &structPath) {
-  return structPath == "/soa_vector" ||
-         structPath == "std/collections/soa_vector" ||
-         structPath == "/std/collections/soa_vector" ||
+  return structPath == "/soa" ||
+         structPath == "std/collections/soa" ||
+         structPath == "/std/collections/soa" ||
          structPath == "SoaVector" ||
          structPath == "/SoaVector" ||
          structPath == collection_paths::memberPath(collection_paths::kSoaFolder, collection_paths::kSoaVectorTypeName) ||

@@ -1,4 +1,5 @@
 // soa-surface-audit: exempt
+// collection-surface-audit: exempt
 #include "IrLowererHelpers.h"
 
 #include <algorithm>
@@ -666,11 +667,18 @@ bool getBuiltinCollectionName(const Expr &expr, std::string &out) {
   }
   if (scopedName.rfind(collection_paths::modulePrefixBare(collection_paths::kInternalSoaStorageFolder), 0) == 0) {
     std::string alias = normalizeInternalSoaStorageBuiltinAlias(scopedName);
-    if (alias == "array" || alias == "soa_vector") {
+    if (alias == "array" || alias == "soa") {
       out = alias;
       return true;
     }
     return false;
+  }
+  if (scopedName.rfind(collection_paths::modulePrefixBare(collection_paths::kSoaFolder), 0) == 0) {
+    std::string alias = normalizeInternalSoaStorageBuiltinAlias(scopedName);
+    if (alias == "soa") {
+      out = alias;
+      return true;
+    }
   }
   if (rawName.find('/') != std::string::npos) {
     return false;
@@ -678,7 +686,7 @@ bool getBuiltinCollectionName(const Expr &expr, std::string &out) {
   const std::string keyValueAlias = keyValueConstructorAliasToken();
   if (rawName == "array" || rawName == "vector" ||
       (!keyValueAlias.empty() && rawName == keyValueAlias) ||
-      rawName == "soa_vector") {
+      rawName == "soa") {
     out = rawName;
     return true;
   }

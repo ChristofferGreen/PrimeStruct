@@ -164,7 +164,7 @@ main() {
         std::string::npos);
 }
 
-TEST_CASE("map canonical implicit-template count call keeps canonical non-templated diagnostics") {
+TEST_CASE("map canonical implicit-template count call keeps argument count diagnostics") {
   const std::string source = R"(
 [effects(heap_alloc), return<bool>]
 /std/collections/map/count([map<i32, i32>] values, [bool] marker) {
@@ -184,10 +184,12 @@ main() {
 )";
   std::string error;
   CHECK_FALSE(validateProgram(source, "/main", error));
-  CHECK(error.find("unknown call target: /map/count") != std::string::npos);
+  INFO(error);
+  CHECK(error.find("argument count mismatch for /std/collections/map/count") !=
+        std::string::npos);
 }
 
-TEST_CASE("map canonical implicit-template count call reports retired count diagnostics with wrapper slash return envelope") {
+TEST_CASE("map canonical implicit-template count call validates with wrapper slash return envelope") {
   const std::string source = R"(
 [effects(heap_alloc), return<int>]
 /std/collections/map/count<K, V>([map<K, V>] values, [bool] marker) {
@@ -205,11 +207,11 @@ main() {
 }
 )";
   std::string error;
-  CHECK_FALSE(validateProgram(source, "/main", error));
-  CHECK(error.find("unknown call target: /map/count") != std::string::npos);
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
 }
 
-TEST_CASE("map canonical implicit-template count wrapper slash return keeps canonical diagnostics") {
+TEST_CASE("map canonical implicit-template count wrapper slash return keeps marker diagnostics") {
   const std::string source = R"(
 [effects(heap_alloc), return<int>]
 /std/collections/map/count<K, V>([map<K, V>] values, [bool] marker) {
@@ -228,10 +230,11 @@ main() {
 )";
   std::string error;
   CHECK_FALSE(validateProgram(source, "/main", error));
-  CHECK(error.find("unknown call target: /map/count") != std::string::npos);
+  INFO(error);
+  CHECK(error.find("parameter marker: expected bool got i32") != std::string::npos);
 }
 
-TEST_CASE("map canonical wrapper auto local reports retired count diagnostics") {
+TEST_CASE("map canonical wrapper auto local validates") {
   const std::string source = R"(
 import /std/collections/*
 
@@ -248,11 +251,11 @@ main() {
 }
 )";
   std::string error;
-  CHECK_FALSE(validateProgram(source, "/main", error));
-  CHECK(error.find("unknown call target: /map/count") != std::string::npos);
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
 }
 
-TEST_CASE("map canonical wrapper auto local keeps builtin count diagnostics") {
+TEST_CASE("map canonical wrapper auto local keeps count argument diagnostics") {
   const std::string source = R"(
 import /std/collections/*
 
@@ -269,10 +272,11 @@ main() {
 )";
   std::string error;
   CHECK_FALSE(validateProgram(source, "/main", error));
-  CHECK(error.find("unknown call target: /map/count") != std::string::npos);
+  CHECK(error.find("argument count mismatch for /std/collections/map/count") !=
+        std::string::npos);
 }
 
-TEST_CASE("map canonical reference wrapper auto local reports retired tryAt diagnostics") {
+TEST_CASE("map canonical reference wrapper auto local validates tryAt") {
   const std::string source = R"(
 import /std/collections/*
 
@@ -290,12 +294,11 @@ main() {
 }
 )";
   std::string error;
-  CHECK_FALSE(validateProgram(source, "/main", error));
-  INFO(error);
-  CHECK(error.find("unknown call target: /map/tryAt") != std::string::npos);
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
 }
 
-TEST_CASE("map canonical reference wrapper auto local keeps key diagnostics") {
+TEST_CASE("map canonical reference wrapper auto local rejects direct at") {
   const std::string source = R"(
 import /std/collections/*
 
@@ -313,7 +316,7 @@ main() {
 )";
   std::string error;
   CHECK_FALSE(validateProgram(source, "/main", error));
-  CHECK(error.find("argument type mismatch for /std/collections/map/at") != std::string::npos);
+  CHECK(error.find("argument type mismatch") != std::string::npos);
 }
 
 TEST_CASE("canonical map borrowed receiver validates direct stdlib access") {
@@ -377,7 +380,7 @@ main() {
   std::string error;
   CHECK_FALSE(validateProgram(source, "/main", error));
   INFO(error);
-  CHECK(error.find("unknown call target: /map/contains") !=
+  CHECK(error.find("unknown call target: /std/collections/map/contains") !=
         std::string::npos);
 }
 
@@ -401,10 +404,11 @@ main() {
   std::string error;
   CHECK_FALSE(validateProgram(source, "/main", error));
   INFO(error);
-  CHECK(error.find("unknown call target: /map/contains") != std::string::npos);
+  CHECK(error.find("unknown call target: /std/collections/map/contains") !=
+        std::string::npos);
 }
 
-TEST_CASE("canonical map borrowed receiver rejects retired direct stdlib tryAt") {
+TEST_CASE("canonical map borrowed receiver validates direct stdlib tryAt") {
   const std::string source = R"(
 import /std/collections/*
 
@@ -421,11 +425,11 @@ main() {
 }
   )";
   std::string error;
-  CHECK_FALSE(validateProgram(source, "/main", error));
-  CHECK(error.find("unknown call target: /map/tryAt") != std::string::npos);
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
 }
 
-TEST_CASE("canonical map borrowed receiver rejects retired tryAt before key diagnostics") {
+TEST_CASE("canonical map borrowed receiver keeps tryAt key diagnostics") {
   const std::string source = R"(
 import /std/collections/*
 
@@ -443,10 +447,11 @@ main() {
   )";
   std::string error;
   CHECK_FALSE(validateProgram(source, "/main", error));
-  CHECK(error.find("unknown call target: /map/tryAt") != std::string::npos);
+  INFO(error);
+  CHECK(error.find("tryAt requires map key type i32") != std::string::npos);
 }
 
-TEST_CASE("explicit canonical map binding rejects retired builtin helpers") {
+TEST_CASE("explicit canonical map binding validates builtin helpers") {
   const std::string source = R"(
 import /std/collections/*
 
@@ -458,11 +463,11 @@ main() {
 }
 )";
   std::string error;
-  CHECK_FALSE(validateProgram(source, "/main", error));
-  CHECK(error.find("unknown call target: /map/count") != std::string::npos);
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
 }
 
-TEST_CASE("explicit canonical map parameter rejects retired builtin helpers") {
+TEST_CASE("explicit canonical map parameter validates builtin helpers") {
   const std::string source = R"(
 import /std/collections/*
 
@@ -481,8 +486,8 @@ main() {
 }
 )";
   std::string error;
-  CHECK_FALSE(validateProgram(source, "/main", error));
-  CHECK(error.find("unknown call target: /map/count") != std::string::npos);
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
 }
 
 TEST_CASE("explicit canonical map parameter keeps builtin key diagnostics") {
@@ -526,7 +531,7 @@ main() {
   CHECK(error.empty());
 }
 
-TEST_CASE("canonical map reference parameter keeps print statement string validation") {
+TEST_CASE("canonical map reference parameter validates indexed access") {
   const std::string source = R"(
 import /std/collections/*
 
@@ -624,6 +629,7 @@ main() {
 TEST_CASE("wrapper-returned canonical map keeps if string branch compatibility") {
   const std::string source = R"(
 import /std/collections/*
+import /std/collections/map/*
 
 [return</std/collections/map<i32, string>>]
 wrapMap() {

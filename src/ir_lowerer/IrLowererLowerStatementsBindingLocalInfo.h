@@ -79,7 +79,7 @@
         return false;
       }
       for (const auto &transform : bindingTypeExprRef.transforms) {
-        if (normalizeCollectionBindingTypeName(transform.name) == "soa_vector") {
+        if (normalizeCollectionBindingTypeName(transform.name) == "soa") {
           info.isSoaVector = true;
           break;
         }
@@ -92,7 +92,7 @@
       }
       if (!info.isSoaVector && init.kind == Expr::Kind::Call) {
         std::string collection;
-        if (getBuiltinCollectionName(init, collection) && collection == "soa_vector") {
+        if (getBuiltinCollectionName(init, collection) && collection == "soa") {
           info.isSoaVector = true;
         }
       }
@@ -186,7 +186,7 @@
                 semanticTypeText =
                     unwrapTopLevelUninitializedTypeText(trimTemplateTypeText(argText));
               } else if (normalizedBase == "array" || normalizedBase == "vector" ||
-                         normalizedBase == "map" || normalizedBase == "soa_vector" ||
+                         normalizedBase == "map" || normalizedBase == "soa" ||
                          normalizedBase == "Buffer" || normalizedBase == "Result" ||
                          normalizedBase == "File") {
                 semanticTypeText.clear();

@@ -29,7 +29,7 @@ bool extractBuiltinSoaVectorElementTypeFromTypeTextForQueryInference(
     return false;
   }
   base = normalizeBindingTypeName(base);
-  if ((base == "soa_vector" || isExperimentalSoaVectorTypePath(base)) &&
+  if ((base == "soa" || isExperimentalSoaVectorTypePath(base)) &&
       !argText.empty()) {
     std::vector<std::string> args;
     if (!splitTopLevelTemplateArgs(argText, args) || args.size() != 1) {
@@ -47,7 +47,7 @@ bool extractBuiltinSoaVectorElementTypeFromTypeTextForQueryInference(
     return false;
   }
   wrappedBase = normalizeBindingTypeName(wrappedBase);
-  if ((wrappedBase != "soa_vector" && !isExperimentalSoaVectorTypePath(wrappedBase)) ||
+  if ((wrappedBase != "soa" && !isExperimentalSoaVectorTypePath(wrappedBase)) ||
       wrappedArgText.empty()) {
     return false;
   }
@@ -115,7 +115,7 @@ bool SemanticsValidator::inferDefinitionReturnBinding(const Definition &def, Bin
     }
     if (base == "Pointer" || base == "Reference" || base == "Result" ||
         base == "Buffer" || base == "uninitialized" || base == "array" ||
-        base == "vector" || base == "soa_vector" || base == "Task" ||
+        base == "vector" || base == "soa" || base == "Task" ||
         isKeyValueCollectionTypeName(base) ||
         base == "Vector" ||
         isLegacyExperimentalVectorCompatibilityPath("/" + base) ||
@@ -695,7 +695,7 @@ bool SemanticsValidator::inferQueryExprTypeText(const Expr &expr,
             (candidate.isMethodCall && candidate.name == *soaAccessHelper) ||
             isLegacyOrCanonicalSoaHelperPath(resolvedSoaCanonical,
                                              *soaAccessHelper)));
-      if (!(hasVisibleDefinitionPathForCurrentImports("/soa_vector/" +
+      if (!(hasVisibleDefinitionPathForCurrentImports("/soa/" +
                                                       *soaAccessHelper) &&
             oldSurfaceCallShape)) {
         std::string elemType;
@@ -937,7 +937,7 @@ bool SemanticsValidator::inferQueryExprTypeText(const Expr &expr,
       if (preferResolvedCollectionDefinition) {
         // Imported stdlib collection constructors should infer from their declared return type
         // instead of collapsing to the legacy builtin collection surface.
-      } else if ((collection == "array" || collection == "vector" || collection == "soa_vector") &&
+      } else if ((collection == "array" || collection == "vector" || collection == "soa") &&
                  candidate.templateArgs.size() == 1) {
         currentTypeTextOut = collection + "<" + candidate.templateArgs.front() + ">";
         return true;
@@ -975,22 +975,22 @@ bool SemanticsValidator::inferQueryExprTypeText(const Expr &expr,
                  helperName == "to_aos" || helperName == "to_aos_ref" ||
                  helperName == "push" || helperName == "reserve";
         };
-        if ((normalizedPrefix == "soa_vector" ||
-             normalizedPrefix == "std/collections/soa_vector") &&
+        if ((normalizedPrefix == "soa" ||
+             normalizedPrefix == "std/collections/soa") &&
             isSupportedSoaHelper(normalizedName)) {
           return normalizedName;
         }
-        if (normalizedName.rfind("soa_vector/", 0) == 0) {
+        if (normalizedName.rfind("soa/", 0) == 0) {
           const std::string helperName =
-              normalizedName.substr(std::string("soa_vector/").size());
+              normalizedName.substr(std::string("soa/").size());
           if (isSupportedSoaHelper(helperName)) {
             return helperName;
           }
         }
-        if (normalizedName.rfind("std/collections/soa_vector/", 0) == 0) {
+        if (normalizedName.rfind("std/collections/soa/", 0) == 0) {
           const std::string helperName =
               normalizedName.substr(
-                  std::string("std/collections/soa_vector/").size());
+                  std::string("std/collections/soa/").size());
           if (isSupportedSoaHelper(helperName)) {
             return helperName;
           }
@@ -1000,7 +1000,7 @@ bool SemanticsValidator::inferQueryExprTypeText(const Expr &expr,
       if (const std::string helperName = explicitLegacyOrCanonicalSoaHelperName();
           !helperName.empty()) {
         return preferredSoaHelperTargetForCollectionType(helperName,
-                                                         "/soa_vector");
+                                                         "/soa");
       }
       return {};
     };

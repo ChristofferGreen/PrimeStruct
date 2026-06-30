@@ -2,7 +2,7 @@
 
 TEST_SUITE_BEGIN("primestruct.ir.pipeline.validation");
 
-TEST_CASE("ir lowerer inline param helper materializes pointer soa_vector variadic args packs") {
+TEST_CASE("ir lowerer inline param helper materializes pointer soa variadic args packs") {
   primec::Expr valuesParam;
   valuesParam.kind = primec::Expr::Kind::Name;
   valuesParam.isBinding = true;
@@ -79,7 +79,7 @@ TEST_CASE("ir lowerer inline param helper materializes pointer soa_vector variad
   REQUIRE(instructions.size() == 6u);
 }
 
-TEST_CASE("ir lowerer inline param helper aliases pure pointer soa_vector variadic forwarding") {
+TEST_CASE("ir lowerer inline param helper aliases pure pointer soa variadic forwarding") {
   primec::Expr valuesParam;
   valuesParam.kind = primec::Expr::Kind::Name;
   valuesParam.isBinding = true;
@@ -156,7 +156,7 @@ TEST_CASE("ir lowerer inline param helper aliases pure pointer soa_vector variad
   CHECK(instructions[1].imm == 2u);
 }
 
-TEST_CASE("ir lowerer inline param helper materializes mixed pointer soa_vector variadic forwarding") {
+TEST_CASE("ir lowerer inline param helper materializes mixed pointer soa variadic forwarding") {
   primec::Expr valuesParam;
   valuesParam.kind = primec::Expr::Kind::Name;
   valuesParam.isBinding = true;
@@ -387,7 +387,7 @@ TEST_CASE("ir lowerer inline param helper rejects pointer vector variadic alias 
   CHECK(instructions.empty());
 }
 
-TEST_CASE("ir lowerer inline param helper rejects pointer soa_vector variadic alias type mismatch") {
+TEST_CASE("ir lowerer inline param helper rejects pointer soa variadic alias type mismatch") {
   primec::Expr valuesParam;
   valuesParam.kind = primec::Expr::Kind::Name;
   valuesParam.isBinding = true;

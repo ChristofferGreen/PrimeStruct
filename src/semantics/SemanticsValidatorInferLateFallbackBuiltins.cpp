@@ -252,7 +252,7 @@ ReturnKind SemanticsValidator::inferLateFallbackReturnKind(
                  resolveSoaVectorTarget(receiverCandidate, elemType)) {
         methodResolved =
             preferredSoaHelperTargetForCollectionType(helperName,
-                                                      "/soa_vector");
+                                                      "/soa");
       } else if (resolveStringTarget != nullptr &&
                  resolveStringTarget(receiverCandidate)) {
         methodResolved = "/string/" + helperName;

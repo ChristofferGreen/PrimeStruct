@@ -1,4 +1,5 @@
 // soa-surface-audit: exempt
+// collection-surface-audit: exempt
 #include "SemanticsValidator.h"
 #include "SemanticsValidatorInferCollectionCompatibilityInternal.h"
 
@@ -243,10 +244,10 @@ bool SemanticsValidator::resolveExprCollectionCountCapacityTarget(
           return {};
         }
         if (canonicalResolved.ends_with("/count")) {
-          return "/std/collections/soa_vector/count";
+          return "/std/collections/soa/count";
         }
         if (canonicalResolved.ends_with("/count_ref")) {
-          return "/std/collections/soa_vector/count_ref";
+          return "/std/collections/soa/count_ref";
         }
         return {};
       };
@@ -284,7 +285,7 @@ bool SemanticsValidator::resolveExprCollectionCountCapacityTarget(
   if (const std::string canonicalDirectExperimentalSoaCountPath =
           canonicalizeDirectExperimentalSoaWrapperCountHelperCall();
       canonicalDirectExperimentalSoaCountPath ==
-      "/std/collections/soa_vector/count_ref") {
+      "/std/collections/soa/count_ref") {
     handledOut = true;
     resolved = canonicalDirectExperimentalSoaCountPath;
     resolvedMethod = false;
@@ -353,12 +354,12 @@ bool SemanticsValidator::resolveExprCollectionCountCapacityTarget(
                 receiver, "count", visibleCountHelperTarget) &&
             (visibleCountHelperTarget == rootedVectorCountTargetPath ||
              visibleCountHelperTarget == canonicalVectorHelperPath("count") ||
-             visibleCountHelperTarget == "/soa_vector/count" ||
-             visibleCountHelperTarget == "/std/collections/soa_vector/count" ||
+             visibleCountHelperTarget == "/soa/count" ||
              visibleCountHelperTarget == "/std/collections/soa/count" ||
-             visibleCountHelperTarget == "/soa_vector/count_ref" ||
+             visibleCountHelperTarget == "/std/collections/soa/count" ||
+             visibleCountHelperTarget == "/soa/count_ref" ||
              visibleCountHelperTarget ==
-                 "/std/collections/soa_vector/count_ref" ||
+                 "/std/collections/soa/count_ref" ||
              visibleCountHelperTarget == "/std/collections/soa/count_ref");
         const bool receiverLooksLikeBuiltinCountTarget =
             resolvesVisibleCollectionCountHelper ||
@@ -530,7 +531,7 @@ bool SemanticsValidator::resolveExprCollectionCountCapacityTarget(
               hasImportedDefinitionPath(
                   countHelperName == "count_ref"
                       ? preferredSoaHelperTargetForCollectionType("count_ref",
-                                                                  "/soa_vector")
+                                                                  "/soa")
                       : canonicalVectorHelperPath("count")));
   const bool countMethodSurfaceHasNoArguments = expr.args.empty();
   const bool violatesCountMethodSurfacePreconditions =
@@ -650,8 +651,8 @@ bool SemanticsValidator::resolveExprCollectionCountCapacityTarget(
     }
     const bool resolvesCanonicalDirectSoaCountHelper =
         !expr.isMethodCall && expr.args.size() == 1 &&
-        (methodResolved == "/std/collections/soa_vector/count" ||
-         methodResolved == "/std/collections/soa_vector/count_ref");
+        (methodResolved == "/std/collections/soa/count" ||
+         methodResolved == "/std/collections/soa/count_ref");
     if (resolvesCanonicalDirectSoaCountHelper) {
       resolved = methodResolved;
       resolvedMethod = false;

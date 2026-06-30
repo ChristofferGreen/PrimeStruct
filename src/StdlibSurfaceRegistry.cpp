@@ -1,3 +1,4 @@
+// collection-surface-audit: exempt
 #include "primec/StdlibSurfaceRegistry.h"
 
 #include <algorithm>

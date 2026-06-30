@@ -331,7 +331,7 @@ bool SemanticsValidator::validateStructLayouts() {
     if (normalized == "array" || normalized == "vector" ||
         normalized == "map" ||
         isExperimentalCollectionBackingTypeName("map", "Map", normalized) ||
-        normalized == "soa_vector") {
+        normalized == "soa") {
       layoutOut = {8u, 8u};
       return true;
     }

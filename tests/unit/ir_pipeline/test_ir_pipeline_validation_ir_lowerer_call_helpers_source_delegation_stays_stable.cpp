@@ -262,11 +262,11 @@ TEST_CASE("ir lowerer vector type layout traces use generic collection helpers")
         std::string::npos);
   CHECK(methodTargetSource.find("isExplicitSoaAliasMethod") ==
         std::string::npos);
-  CHECK(methodTargetSource.find("normalizedMethodName.rfind(\"soa_vector/\", 0)") ==
+  CHECK(methodTargetSource.find("normalizedMethodName.rfind(\"soa/\", 0)") ==
         std::string::npos);
-  CHECK(methodTargetSource.find("path.rfind(\"/soa_vector/\", 0) == 0") ==
+  CHECK(methodTargetSource.find("path.rfind(\"/soa/\", 0) == 0") ==
         std::string::npos);
-  CHECK(methodTargetSource.find("const std::string samePathAlias = \"/soa_vector/\"") ==
+  CHECK(methodTargetSource.find("const std::string samePathAlias = \"/soa/\"") ==
         std::string::npos);
   CHECK(methodCallSource.find("pruneRemovedMapCompatibilityReceiverPaths") ==
         std::string::npos);
@@ -456,6 +456,7 @@ main() {
   primec::Program program;
   primec::SemanticProgram semanticProgram;
   std::string error;
+  INFO(error);
   REQUIRE(parseAndValidate(source, program, semanticProgram, error, {"io_out", "io_err"}));
   CHECK(error.empty());
 
@@ -537,6 +538,7 @@ main() {
   primec::Program program;
   primec::SemanticProgram semanticProgram;
   std::string error;
+  INFO(error);
   REQUIRE(parseAndValidate(source, program, semanticProgram, error, {"io_out", "io_err"}));
   CHECK(error.empty());
 
@@ -544,7 +546,7 @@ main() {
       primec::semanticProgramCollectionSpecializationView(semanticProgram),
       [](const primec::SemanticProgramCollectionSpecialization &entry) {
         return entry.scopePath == "/main" && entry.name == "values" &&
-               entry.collectionFamily == "soa_vector";
+               entry.collectionFamily == "soa";
       });
   REQUIRE(collectionEntry != nullptr);
   REQUIRE(collectionEntry->constructorSurfaceId.has_value());
@@ -659,25 +661,25 @@ TEST_CASE("soa field-view backend cleanup stays stable") {
   const std::string nativeTailDispatchSource = readText(nativeTailDispatchPath);
 
   CHECK(emitterCollectionInferenceSource.find("field_view") == std::string::npos);
-  CHECK(emitterCollectionInferenceSource.find("unknown method: /std/collections/soa_vector/field_view/") ==
+  CHECK(emitterCollectionInferenceSource.find("unknown method: /std/collections/soa/field_view/") ==
         std::string::npos);
-  CHECK(emitterCollectionInferenceSource.find("unknown method: /std/collections/soa_vector/ref") ==
+  CHECK(emitterCollectionInferenceSource.find("unknown method: /std/collections/soa/ref") ==
         std::string::npos);
   CHECK(emitterCollectionInferenceSource.find("soaVectorGet") == std::string::npos);
   CHECK(emitterCollectionInferenceSource.find("soaVectorRef") == std::string::npos);
 
   CHECK(inlineDispatchSource.find("field_view") == std::string::npos);
-  CHECK(inlineDispatchSource.find("unknown method: /std/collections/soa_vector/field_view/") ==
+  CHECK(inlineDispatchSource.find("unknown method: /std/collections/soa/field_view/") ==
         std::string::npos);
-  CHECK(inlineDispatchSource.find("unknown method: /std/collections/soa_vector/ref") ==
+  CHECK(inlineDispatchSource.find("unknown method: /std/collections/soa/ref") ==
         std::string::npos);
   CHECK(inlineDispatchSource.find("soaVectorGet") == std::string::npos);
   CHECK(inlineDispatchSource.find("soaVectorRef") == std::string::npos);
 
   CHECK(countAccessClassifiersSource.find("field_view") == std::string::npos);
-  CHECK(countAccessClassifiersSource.find("unknown method: /std/collections/soa_vector/field_view/") ==
+  CHECK(countAccessClassifiersSource.find("unknown method: /std/collections/soa/field_view/") ==
         std::string::npos);
-  CHECK(countAccessClassifiersSource.find("unknown method: /std/collections/soa_vector/ref") ==
+  CHECK(countAccessClassifiersSource.find("unknown method: /std/collections/soa/ref") ==
         std::string::npos);
   CHECK(countAccessClassifiersSource.find("soaVectorGet") == std::string::npos);
   CHECK(countAccessClassifiersSource.find("soaVectorRef") == std::string::npos);
@@ -691,9 +693,9 @@ TEST_CASE("soa field-view backend cleanup stays stable") {
         std::string::npos);
 
   CHECK(nativeTailDispatchSource.find("field_view") == std::string::npos);
-  CHECK(nativeTailDispatchSource.find("unknown method: /std/collections/soa_vector/field_view/") ==
+  CHECK(nativeTailDispatchSource.find("unknown method: /std/collections/soa/field_view/") ==
         std::string::npos);
-  CHECK(nativeTailDispatchSource.find("unknown method: /std/collections/soa_vector/ref") ==
+  CHECK(nativeTailDispatchSource.find("unknown method: /std/collections/soa/ref") ==
         std::string::npos);
   CHECK(nativeTailDispatchSource.find("soaVectorGet") == std::string::npos);
   CHECK(nativeTailDispatchSource.find("soaVectorRef") == std::string::npos);

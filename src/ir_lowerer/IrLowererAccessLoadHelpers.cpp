@@ -1,7 +1,9 @@
+// collection-surface-audit: exempt
 #include "IrLowererCallHelpers.h"
 
 #include "IrLowererIndexKindHelpers.h"
 #include "IrLowererSetupTypeCollectionHelpers.h"
+#include "primec/StdlibCollectionPaths.h"
 
 namespace primec::ir_lowerer {
 
@@ -10,7 +12,17 @@ namespace {
 bool usesVectorBackedKeyValueStorageLayout(std::string_view mapStructTypeName) {
   const std::string path(mapStructTypeName);
   const std::string experimentalRoot = mapBackingTypePath();
-  return path == experimentalRoot || path.rfind(experimentalRoot + "__", 0) == 0;
+  const std::string canonicalRoot =
+      collection_paths::memberPath(collection_paths::kMapFolder, "MapValue");
+  return path == experimentalRoot || path.rfind(experimentalRoot + "__", 0) == 0 ||
+         path == canonicalRoot || path.rfind(canonicalRoot + "__", 0) == 0;
+}
+
+bool usesCanonicalMapValueStorageLayout(std::string_view mapStructTypeName) {
+  const std::string path(mapStructTypeName);
+  const std::string canonicalRoot =
+      collection_paths::memberPath(collection_paths::kMapFolder, "MapValue");
+  return path == canonicalRoot || path.rfind(canonicalRoot + "__", 0) == 0;
 }
 
 void emitExperimentalMapVectorDataPtrLoad(
@@ -58,6 +70,8 @@ KeyValueLookupLoopLocals emitExperimentalMapLookupLoopSearchScaffold(
     int32_t ptrLocal,
     int32_t keyLocal,
     LocalInfo::ValueKind keyValueKeyKind,
+    int32_t countSlotOffset,
+    int32_t keysDataSlotOffset,
     const std::function<int32_t()> &allocTempLocal,
     const std::function<size_t()> &instructionCount,
     const std::function<void(IrOpcode, uint64_t)> &emitInstruction,
@@ -65,11 +79,17 @@ KeyValueLookupLoopLocals emitExperimentalMapLookupLoopSearchScaffold(
   KeyValueLookupLoopLocals locals;
   locals.countLocal = allocTempLocal();
   emitInstruction(IrOpcode::LoadLocal, static_cast<uint64_t>(ptrLocal));
+  if (countSlotOffset != 0) {
+    emitInstruction(IrOpcode::PushI64,
+                    static_cast<uint64_t>(countSlotOffset * IrSlotBytes));
+    emitInstruction(IrOpcode::AddI64, 0);
+  }
   emitInstruction(IrOpcode::LoadIndirect, 0);
   emitInstruction(IrOpcode::StoreLocal, static_cast<uint64_t>(locals.countLocal));
 
   const int32_t keysDataPtrLocal = allocTempLocal();
-  emitExperimentalMapVectorDataPtrLoad(ptrLocal, 2, keysDataPtrLocal, emitInstruction);
+  emitExperimentalMapVectorDataPtrLoad(
+      ptrLocal, keysDataSlotOffset, keysDataPtrLocal, emitInstruction);
 
   locals.indexLocal = allocTempLocal();
   emitInstruction(IrOpcode::PushI32, 0);
@@ -101,6 +121,9 @@ bool emitExperimentalMapLookupAccess(
     LocalInfo::ValueKind keyValueKeyKind,
     const Expr &targetExpr,
     const Expr &lookupKeyExpr,
+    int32_t countSlotOffset,
+    int32_t keysDataSlotOffset,
+    int32_t payloadDataSlotOffset,
     const LocalMap &localsIn,
     const std::function<int32_t()> &allocTempLocal,
     const std::function<bool(const Expr &, const LocalMap &)> &emitExpr,
@@ -139,7 +162,9 @@ bool emitExperimentalMapLookupAccess(
   }
 
   const auto loopLocals = emitExperimentalMapLookupLoopSearchScaffold(
-      ptrLocal, keyLocal, keyValueKeyKind, allocTempLocal, instructionCount, emitInstruction, patchInstructionImm);
+      ptrLocal, keyLocal, keyValueKeyKind, countSlotOffset,
+      keysDataSlotOffset, allocTempLocal, instructionCount, emitInstruction,
+      patchInstructionImm);
   if (accessName == "at") {
     emitKeyValueLookupAtKeyNotFoundGuard(
         loopLocals.indexLocal,
@@ -151,7 +176,8 @@ bool emitExperimentalMapLookupAccess(
   }
 
   const int32_t payloadDataPtrLocal = allocTempLocal();
-  emitExperimentalMapVectorDataPtrLoad(ptrLocal, 6, payloadDataPtrLocal, emitInstruction);
+  emitExperimentalMapVectorDataPtrLoad(
+      ptrLocal, payloadDataSlotOffset, payloadDataPtrLocal, emitInstruction);
   emitExperimentalMapPayloadLoad(payloadDataPtrLocal, loopLocals.indexLocal, emitInstruction);
   return true;
 }
@@ -160,6 +186,8 @@ bool emitExperimentalMapLookupContains(
     LocalInfo::ValueKind keyValueKeyKind,
     const Expr &targetExpr,
     const Expr &lookupKeyExpr,
+    int32_t countSlotOffset,
+    int32_t keysDataSlotOffset,
     const LocalMap &localsIn,
     const std::function<int32_t()> &allocTempLocal,
     const std::function<bool(const Expr &, const LocalMap &)> &emitExpr,
@@ -197,7 +225,9 @@ bool emitExperimentalMapLookupContains(
   }
 
   const auto loopLocals = emitExperimentalMapLookupLoopSearchScaffold(
-      ptrLocal, keyLocal, keyValueKeyKind, allocTempLocal, instructionCount, emitInstruction, patchInstructionImm);
+      ptrLocal, keyLocal, keyValueKeyKind, countSlotOffset,
+      keysDataSlotOffset, allocTempLocal, instructionCount, emitInstruction,
+      patchInstructionImm);
   emitKeyValueLookupContainsResult(loopLocals.indexLocal, loopLocals.countLocal, emitInstruction);
   return true;
 }
@@ -206,6 +236,9 @@ bool emitExperimentalMapLookupTryAt(
     LocalInfo::ValueKind keyValueKeyKind,
     const Expr &targetExpr,
     const Expr &lookupKeyExpr,
+    int32_t countSlotOffset,
+    int32_t keysDataSlotOffset,
+    int32_t payloadDataSlotOffset,
     const LocalMap &localsIn,
     const std::function<int32_t()> &allocTempLocal,
     const std::function<bool(const Expr &, const LocalMap &)> &emitExpr,
@@ -243,7 +276,9 @@ bool emitExperimentalMapLookupTryAt(
   }
 
   const auto loopLocals = emitExperimentalMapLookupLoopSearchScaffold(
-      ptrLocal, keyLocal, keyValueKeyKind, allocTempLocal, instructionCount, emitInstruction, patchInstructionImm);
+      ptrLocal, keyLocal, keyValueKeyKind, countSlotOffset,
+      keysDataSlotOffset, allocTempLocal, instructionCount, emitInstruction,
+      patchInstructionImm);
 
   emitInstruction(IrOpcode::LoadLocal, static_cast<uint64_t>(loopLocals.indexLocal));
   emitInstruction(IrOpcode::LoadLocal, static_cast<uint64_t>(loopLocals.countLocal));
@@ -258,7 +293,8 @@ bool emitExperimentalMapLookupTryAt(
   const size_t foundIndex = instructionCount();
   patchInstructionImm(jumpFound, static_cast<uint64_t>(foundIndex));
   const int32_t payloadDataPtrLocal = allocTempLocal();
-  emitExperimentalMapVectorDataPtrLoad(ptrLocal, 6, payloadDataPtrLocal, emitInstruction);
+  emitExperimentalMapVectorDataPtrLoad(
+      ptrLocal, payloadDataSlotOffset, payloadDataPtrLocal, emitInstruction);
   emitExperimentalMapPayloadLoad(payloadDataPtrLocal, loopLocals.indexLocal, emitInstruction);
 
   const size_t endIndex = instructionCount();
@@ -488,11 +524,16 @@ bool emitKeyValueLookupAccess(
     const std::function<void(size_t, uint64_t)> &patchInstructionImm,
     std::string &error) {
   if (usesVectorBackedKeyValueStorageLayout(mapStructTypeName)) {
+    const bool canonicalLayout =
+        usesCanonicalMapValueStorageLayout(mapStructTypeName);
     return emitExperimentalMapLookupAccess(
         accessName,
         keyValueKeyKind,
         targetExpr,
         lookupKeyExpr,
+        canonicalLayout ? 2 : 0,
+        canonicalLayout ? 4 : 2,
+        canonicalLayout ? 9 : 6,
         localsIn,
         allocTempLocal,
         emitExpr,
@@ -561,10 +602,14 @@ bool emitKeyValueLookupContains(
     const std::function<void(size_t, uint64_t)> &patchInstructionImm,
     std::string &error) {
   if (usesVectorBackedKeyValueStorageLayout(mapStructTypeName)) {
+    const bool canonicalLayout =
+        usesCanonicalMapValueStorageLayout(mapStructTypeName);
     return emitExperimentalMapLookupContains(
         keyValueKeyKind,
         targetExpr,
         lookupKeyExpr,
+        canonicalLayout ? 2 : 0,
+        canonicalLayout ? 4 : 2,
         localsIn,
         allocTempLocal,
         emitExpr,
@@ -624,10 +669,15 @@ bool emitKeyValueLookupTryAt(
     const std::function<void(size_t, uint64_t)> &patchInstructionImm,
     std::string &error) {
   if (usesVectorBackedKeyValueStorageLayout(mapStructTypeName)) {
+    const bool canonicalLayout =
+        usesCanonicalMapValueStorageLayout(mapStructTypeName);
     return emitExperimentalMapLookupTryAt(
         keyValueKeyKind,
         targetExpr,
         lookupKeyExpr,
+        canonicalLayout ? 2 : 0,
+        canonicalLayout ? 4 : 2,
+        canonicalLayout ? 9 : 6,
         localsIn,
         allocTempLocal,
         emitExpr,

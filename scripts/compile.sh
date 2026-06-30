@@ -163,7 +163,7 @@ if [[ "$SKIP_TESTS" -eq 1 ]]; then
   exit 0
 fi
 
-DEFAULT_CTEST_JOBS=11
+DEFAULT_CTEST_JOBS=$(detect_jobs)
 CTEST_JOBS="${CTEST_PARALLEL_LEVEL:-$DEFAULT_CTEST_JOBS}"
 set +e
 ctest --test-dir "$BUILD_DIR" --output-on-failure --parallel "$CTEST_JOBS"

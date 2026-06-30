@@ -1,4 +1,5 @@
 // soa-surface-audit: exempt
+// collection-surface-audit: exempt
 #include "IrLowererStatementCallHelpers.h"
 
 #include "IrLowererBindingTypeHelpers.h"
@@ -79,9 +80,9 @@ static bool isStatementSoaVectorTypeText(const std::string &typeText) {
         normalizedBase == "Pointer" || normalizedBase == "/Pointer") {
       return isStatementSoaVectorTypeText(argText);
     }
-    return normalizedBase == "soa_vector";
+    return normalizedBase == "soa";
   }
-  return normalizeCollectionBindingTypeName(normalizedTypeText) == "soa_vector";
+  return normalizeCollectionBindingTypeName(normalizedTypeText) == "soa";
 }
 
 static bool resolveStatementSoaVectorReceiverFromSemanticFacts(
@@ -110,7 +111,7 @@ static bool resolveStatementSoaVectorReceiverFromSemanticFacts(
           semanticProgram,
           collectionFact->collectionFamilyId,
           collectionFact->collectionFamily);
-      return normalizeCollectionBindingTypeName(collectionFamily) == "soa_vector";
+      return normalizeCollectionBindingTypeName(collectionFamily) == "soa";
     }
 
     if (const auto *queryFact =
@@ -175,7 +176,7 @@ static bool isSoaVectorTargetExpr(const Expr &expr,
   }
   if (expr.kind == Expr::Kind::Call) {
     std::string collection;
-    return getBuiltinCollectionName(expr, collection) && collection == "soa_vector";
+    return getBuiltinCollectionName(expr, collection) && collection == "soa";
   }
   return false;
 }
@@ -833,11 +834,11 @@ DirectCallStatementEmitResult tryEmitDirectCallStatement(
                constructorName) &&
            constructorName != "entry";
   };
-  auto metadataCountSlotOffset = [&](const Definition &callee) {
-    return isInternalVectorMetadataSetterCallee(callee) ? 0 : 1;
+  auto metadataCountSlotOffset = [&](const Definition & /*callee*/) {
+    return 1;
   };
-  auto metadataCapacitySlotOffset = [&](const Definition &callee) {
-    return isInternalVectorMetadataSetterCallee(callee) ? 1 : 2;
+  auto metadataCapacitySlotOffset = [&](const Definition & /*callee*/) {
+    return 2;
   };
   Expr directStmt = stmt;
 

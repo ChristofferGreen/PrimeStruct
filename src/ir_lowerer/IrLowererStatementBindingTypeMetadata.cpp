@@ -117,7 +117,7 @@ bool resolveSpecializedExperimentalSoaVectorStructPath(const std::string &typeTe
       continue;
     }
 
-    if (normalizedBase != "soa_vector" || argList.empty()) {
+    if (normalizedBase != "soa" || argList.empty()) {
       return false;
     }
 
@@ -194,7 +194,7 @@ bool extractResultValueTypeText(const std::string &typeText, std::string &valueT
 
 bool hasSoaVectorTypeTransform(const Expr &expr) {
   for (const auto &transform : expr.transforms) {
-    if (normalizeCollectionBindingTypeName(transform.name) == "soa_vector") {
+    if (normalizeCollectionBindingTypeName(transform.name) == "soa") {
       return true;
     }
   }
@@ -377,7 +377,7 @@ void applyArgsPackElementMetadata(const std::string &typeText, LocalInfo &infoOu
       return;
     }
     if (splitTemplateTypeName(pointerTargetType, pointerBase, pointerArg) &&
-        normalizeCollectionBindingTypeName(pointerBase) == "soa_vector") {
+        normalizeCollectionBindingTypeName(pointerBase) == "soa") {
       infoOut.pointerToVector = true;
       infoOut.isSoaVector = true;
       infoOut.valueKind = valueKindFromTypeName(trimTemplateTypeText(pointerArg));
@@ -534,7 +534,7 @@ void applyArgsPackElementMetadata(const std::string &typeText, LocalInfo &infoOu
       infoOut.valueKind = valueKindFromTypeName(trimTemplateTypeText(refArg));
       return;
     }
-    if (refBase == "soa_vector") {
+    if (refBase == "soa") {
       infoOut.argsPackElementKind = LocalInfo::Kind::Reference;
       infoOut.referenceToVector = true;
       infoOut.isSoaVector = true;
@@ -578,7 +578,7 @@ void applyArgsPackElementMetadata(const std::string &typeText, LocalInfo &infoOu
     infoOut.valueKind = valueKindFromTypeName(trimTemplateTypeText(arg));
     return;
   }
-  if (base == "soa_vector") {
+  if (base == "soa") {
     infoOut.argsPackElementKind = LocalInfo::Kind::Vector;
     infoOut.isSoaVector = true;
     infoOut.valueKind = valueKindFromTypeName(trimTemplateTypeText(arg));

@@ -32,7 +32,7 @@ LocalInfo::ValueKind semanticElementKindFromCollectionTypeText(
   if (bufferOnly) {
     return LocalInfo::ValueKind::Unknown;
   }
-  if (base == "array" || base == "vector" || base == "soa_vector") {
+  if (base == "array" || base == "vector" || base == "soa") {
     return valueKindFromTypeName(trimTemplateTypeText(argText));
   }
   if (base == "map" && splitTemplateArgs(argText, args) && args.size() == 2) {
@@ -55,7 +55,7 @@ LocalInfo::ValueKind semanticElementKindFromCollectionFact(
   if (bufferOnly) {
     return LocalInfo::ValueKind::Unknown;
   }
-  if (family == "array" || family == "vector" || family == "soa_vector") {
+  if (family == "array" || family == "vector" || family == "soa") {
     return valueKindFromTypeName(resolveSemanticProductTypeText(
         semanticProgram, fact.elementTypeText, fact.elementTypeTextId));
   }

@@ -65,7 +65,7 @@ bool isNamespacedStdlibBuiltinAlias(const std::string &alias) {
          alias == "and" || alias == "or" || alias == "not" ||
          alias == "array" || alias == "vector" ||
          (!keyValueAlias.empty() && alias == keyValueAlias) ||
-         alias == "soa_vector" || alias == "convert" ||
+         alias == "soa" || alias == "convert" ||
          alias == "clamp" || alias == "min" || alias == "max" ||
          alias == "lerp" || alias == "fma" || alias == "hypot" ||
          alias == "copysign" || alias == "radians" ||
@@ -368,7 +368,7 @@ std::string normalizeInternalSoaStorageBuiltinAlias(const std::string &path) {
       collection_paths::modulePrefixBare(collection_paths::kInternalBufferUncheckedFolder),
       collection_paths::modulePrefixBare(collection_paths::kExperimentalSoaVectorFolder),
       collection_paths::modulePrefixBare(collection_paths::kExperimentalSoaVectorConversionsFolder),
-      "std/collections/soa_vector_conversions/",
+      "std/collections/soa/",
       experimentalCollectionMemberRootLocal("vector"),
       "std/collections/ContainerError/",
       "std/file/",
@@ -958,7 +958,7 @@ bool getBuiltinCollectionName(const Expr &expr, std::string &out) {
   }
   if (scopedName.rfind(collection_paths::modulePrefixBare(collection_paths::kInternalSoaStorageFolder), 0) == 0) {
     std::string alias = normalizeInternalSoaStorageBuiltinAlias(scopedName);
-    if (alias == "array" || alias == "soa_vector") {
+    if (alias == "array" || alias == "soa") {
       out = alias;
       return true;
     }
@@ -973,8 +973,8 @@ bool getBuiltinCollectionName(const Expr &expr, std::string &out) {
   const std::string keyValueAlias = keyValueConstructorAliasToken();
   if (rawName == "array" || rawName == "vector" ||
       (!keyValueAlias.empty() && rawName == keyValueAlias) ||
-      rawName == "soa_vector" || rawName == "soa") {
-    out = rawName == "soa" ? "soa_vector" : rawName;
+      rawName == "soa" || rawName == "soa") {
+    out = rawName == "soa" ? "soa" : rawName;
     return true;
   }
   return false;

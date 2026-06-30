@@ -305,13 +305,13 @@ TEST_CASE("ir lowerer statement call helper updates referenced soa metadata rece
   valuesInfo.index = 4;
   valuesInfo.kind = primec::ir_lowerer::LocalInfo::Kind::Reference;
   valuesInfo.structTypeName =
-      "/std/collections/internal_soa_storage/SoaColumn__Particle";
+      "/std/collections/soa_storage/SoaColumn__Particle";
   primec::ir_lowerer::LocalMap locals;
   locals.emplace("values", valuesInfo);
 
   primec::Definition callee;
   callee.fullPath =
-      "/std/collections/internal_soa_storage/SoaColumn/set_field_count";
+      "/std/collections/soa_storage/SoaColumn/set_field_count";
 
   std::vector<primec::IrInstruction> instructions;
   std::string error;

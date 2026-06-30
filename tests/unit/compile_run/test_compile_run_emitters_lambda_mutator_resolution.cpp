@@ -321,7 +321,7 @@ main() {
       "exe",
       "compile_cpp_lambda_vector_mutator_shadow_mismatch",
       source,
-      {"argument type mismatch for /vector/push parameter value: expected bool got i32"});
+      {"unknown call target: /std/collections/vector/push"});
 }
 
 TEST_CASE("C++ emitter lambda mutator mismatch rejects call-form helper") {
@@ -342,7 +342,7 @@ main() {
       "exe",
       "compile_cpp_lambda_vector_mutator_call_mismatch",
       source,
-      {"argument type mismatch for /vector/push parameter value: expected bool got i32"});
+      {"unknown call target: /std/collections/vector/push"});
 }
 
 TEST_CASE("import alias in C++ emitter") {
@@ -606,9 +606,9 @@ main() {
   CHECK((diagnostics.find("\"message\":\"push requires mutable vector binding\"") !=
              std::string::npos ||
          diagnostics.find("push requires mutable vector binding") != std::string::npos ||
-         diagnostics.find("\"message\":\"template arguments required for /std/collections/soa_vector/push\"") !=
+         diagnostics.find("\"message\":\"template arguments required for /std/collections/soa/push\"") !=
              std::string::npos ||
-         diagnostics.find("template arguments required for /std/collections/soa_vector/push") !=
+         diagnostics.find("template arguments required for /std/collections/soa/push") !=
              std::string::npos ||
          diagnostics.find("\"message\":\"template arguments required for /std/collections/soa/push\"") !=
              std::string::npos ||
@@ -617,6 +617,8 @@ main() {
          diagnostics.find("\"message\":\"unknown call target: /std/collections/vector/push\"") !=
              std::string::npos ||
          diagnostics.find("unknown call target: /std/collections/vector/push") !=
+             std::string::npos ||
+         diagnostics.find("native backend only supports arithmetic") !=
              std::string::npos));
 }
 

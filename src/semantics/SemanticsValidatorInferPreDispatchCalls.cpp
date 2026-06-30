@@ -557,7 +557,7 @@ ReturnKind SemanticsValidator::inferPreDispatchCallReturnKind(
               typeName = normalizeBindingTypeName(it->second.typeName);
             }
           }
-          return typeName == "vector" || typeName == "soa_vector";
+          return typeName == "vector" || typeName == "soa";
         };
         auto tryResolveReceiverIndex = [&](size_t index) -> std::optional<ReturnKind> {
           if (index >= expr.args.size()) {

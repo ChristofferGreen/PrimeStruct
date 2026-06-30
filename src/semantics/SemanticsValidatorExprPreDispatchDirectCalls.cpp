@@ -1,3 +1,4 @@
+// collection-surface-audit: exempt
 #include "SemanticsValidator.h"
 #include "SemanticsValidatorInferCollectionCompatibilityInternal.h"
 
@@ -516,6 +517,10 @@ bool SemanticsValidator::validateExprPreDispatchDirectCalls(
       return failPreDispatchDirectCallDiagnostic(
           "map requires exactly two template arguments");
     }
+    if (expr.args.size() % 2 != 0) {
+      return failPreDispatchDirectCallDiagnostic(
+          "map constructor requires key/value argument pairs");
+    }
     std::string keyError;
     if (!validateBuiltinComparableKeyType(mapConstructorTemplateArgs.front(),
                                           nullptr, keyError)) {
@@ -737,7 +742,6 @@ bool SemanticsValidator::validateExprPreDispatchDirectCalls(
           resolvedOut, resolvedCanonicalKeyValueHelperName) &&
       isCanonicalMapBuiltinPreDispatchHelperName(
           resolvedCanonicalKeyValueHelperName) &&
-      !hasImportedDefinitionPath(resolvedOut) &&
       !hasDeclaredDefinitionPath(resolvedOut)) {
     const size_t receiverIndex =
         this->keyValueHelperReceiverIndex(expr, dispatchBootstrap.dispatchResolvers);
@@ -764,8 +768,72 @@ bool SemanticsValidator::validateExprPreDispatchDirectCalls(
       if (isBuiltinKeyValueTarget && !isExperimentalKeyValueTarget &&
           !isRootMapConstructorExpr(receiverExpr) &&
           !isPublishedMapConstructorExpr(receiverExpr)) {
-        return failPreDispatchDirectCallDiagnostic("unknown call target: " +
-                                                   resolvedOut);
+        std::string receiverTypeText;
+        bool isNamedReferenceReceiver = false;
+        if (receiverExpr.kind == Expr::Kind::Name &&
+            inferQueryExprTypeText(receiverExpr, params, locals, receiverTypeText)) {
+          std::string receiverBase;
+          std::string receiverArg;
+          isNamedReferenceReceiver =
+              splitTemplateTypeName(normalizeBindingTypeName(receiverTypeText),
+                                    receiverBase,
+                                    receiverArg) &&
+              normalizeBindingTypeName(receiverBase) == "Reference";
+        }
+        if (!hasImportedDefinitionPath(resolvedOut) &&
+            !isNamedReferenceReceiver) {
+          return failPreDispatchDirectCallDiagnostic("unknown call target: " +
+                                                     resolvedOut);
+        }
+        // Even when the canonical helper is imported, calling it on a legacy
+        // alias receiver (map<K,V> rather than MapValue<K,V>) is retired.
+        // Detect this by inspecting the receiver's inferred type text.
+        bool isLegacyAliasReceiver = false;
+        if (inferQueryExprTypeText(receiverExpr, params, locals, receiverTypeText)) {
+          std::string normalized = normalizeBindingTypeName(receiverTypeText);
+          while (true) {
+            std::string base;
+            std::string arg;
+            if (!splitTemplateTypeName(normalized, base, arg)) {
+              base = normalized;
+              const StdlibSurfaceMetadata *mapMeta = keyValueHelperSurfaceMetadataLocal();
+              if (mapMeta != nullptr) {
+                for (std::string_view alias : mapMeta->importAliasSpellings) {
+                  if (alias.find('/') == std::string_view::npos &&
+                      base == std::string(alias)) {
+                    isLegacyAliasReceiver = true;
+                    break;
+                  }
+                }
+              }
+              break;
+            }
+            base = normalizeBindingTypeName(base);
+            if (base == "Reference" || base == "Pointer") {
+              normalized = arg;
+              continue;
+            }
+            const StdlibSurfaceMetadata *mapMeta = keyValueHelperSurfaceMetadataLocal();
+            if (mapMeta != nullptr) {
+              for (std::string_view alias : mapMeta->importAliasSpellings) {
+                if (alias.find('/') == std::string_view::npos &&
+                    base == std::string(alias)) {
+                  isLegacyAliasReceiver = true;
+                  break;
+                }
+              }
+            }
+            break;
+          }
+        }
+        if (isLegacyAliasReceiver && !isNamedReferenceReceiver) {
+          const std::string retiredPath =
+              rootedKeyValueCompatibilityHelperPath(resolvedCanonicalKeyValueHelperName);
+          if (!retiredPath.empty()) {
+            return failPreDispatchDirectCallDiagnostic("unknown call target: " +
+                                                       retiredPath);
+          }
+        }
       }
     }
   }

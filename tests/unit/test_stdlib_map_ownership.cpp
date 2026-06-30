@@ -4319,7 +4319,7 @@ TEST_CASE("canonical map surface owns standalone stdlib implementation") {
         std::string::npos);
   CHECK(uninitializedStructInferenceSource.find(
             "isSpecializedExperimentalKeyValueStructPath") != std::string::npos);
-  CHECK(structSlotLayoutSource.find("isBuiltinCollectionTypeName(typeName, \"map\")") !=
+  CHECK(structSlotLayoutSource.find("isBuiltinCollectionTypeName(typeName, \"map\")") ==
         std::string::npos);
   CHECK(structSlotLayoutSource.find("experimentalMapType") == std::string::npos);
   CHECK(structSlotLayoutSource.find("rootedExperimentalMapType") ==
@@ -4328,12 +4328,12 @@ TEST_CASE("canonical map surface owns standalone stdlib implementation") {
   CHECK(structSlotLayoutSource.find("mapValueRootNoSlash") == std::string::npos);
   CHECK(structSlotLayoutSource.find("resolveExperimentalMapConstructorStructPath") ==
         std::string::npos);
-  CHECK(structSlotLayoutSource.find("experimentalKeyValueType") !=
+  CHECK(structSlotLayoutSource.find("experimentalKeyValueType") ==
         std::string::npos);
-  CHECK(structSlotLayoutSource.find("rootedExperimentalKeyValueType") !=
+  CHECK(structSlotLayoutSource.find("rootedExperimentalKeyValueType") ==
         std::string::npos);
-  CHECK(structSlotLayoutSource.find("keyValueRoot") != std::string::npos);
-  CHECK(structSlotLayoutSource.find("keyValueRootNoSlash") !=
+  CHECK(structSlotLayoutSource.find("keyValueRoot") == std::string::npos);
+  CHECK(structSlotLayoutSource.find("keyValueRootNoSlash") ==
         std::string::npos);
   CHECK(structSlotLayoutSource.find(
             "resolveExperimentalKeyValueConstructorStructPath") != std::string::npos);

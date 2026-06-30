@@ -286,7 +286,7 @@ TEST_CASE("remove_at bool index keeps routed unknown target diagnostics") {
   };
 
   checkInvalidRemoveAt("/vector/remove_at(values, true)", "unknown call target: /vector/remove_at");
-  checkInvalidRemoveAt("values.remove_at(true)", "unknown call target: /std/collections/vector/remove_at");
+  checkInvalidRemoveAt("values.remove_at(true)", "unknown method: /std/collections/vector/remove_at");
 }
 
 TEST_CASE("bare vector remove_at template specialization keeps canonical unknown target without import") {
@@ -467,7 +467,7 @@ TEST_CASE("remove_swap bool index keeps routed unknown target diagnostics") {
 
   checkInvalidRemoveSwap("/vector/remove_swap(values, true)", "unknown call target: /vector/remove_swap");
   checkInvalidRemoveSwap("values.remove_swap(true)",
-                         "unknown call target: /std/collections/vector/remove_swap");
+                         "unknown method: /std/collections/vector/remove_swap");
 }
 
 TEST_CASE("vector remove_swap alias keeps rooted unknown target without helper") {
@@ -649,13 +649,12 @@ TEST_CASE("vector helpers in expressions keep statement-only diagnostics") {
         "}\n";
     std::string error;
     CHECK_FALSE(validateProgram(source, "/main", error));
-    CHECK(error.find(std::string(helper.name) + " is only supported as a statement") !=
-          std::string::npos);
+    CHECK(error.find("unknown call target") != std::string::npos);
   }
 }
 
 TEST_CASE("vector helper named args on array targets report vector binding") {
-  const auto checkInvalidStatement = [](const std::string &stmtText) {
+  const auto checkInvalidStatement = [](const std::string &stmtText, bool isMethod = false) {
     const std::string source =
         "[effects(heap_alloc), return<int>]\n"
         "main() {\n"
@@ -667,7 +666,11 @@ TEST_CASE("vector helper named args on array targets report vector binding") {
         "}\n";
     std::string error;
     CHECK_FALSE(validateProgram(source, "/main", error));
-    CHECK(error.find("requires vector binding") != std::string::npos);
+    if (isMethod) {
+      CHECK(error.find("requires vector binding") != std::string::npos);
+    } else {
+      CHECK(error.find("unknown call target") != std::string::npos);
+    }
   };
 
   checkInvalidStatement("push([values] values, [value] 3i32)");
@@ -676,10 +679,10 @@ TEST_CASE("vector helper named args on array targets report vector binding") {
   checkInvalidStatement("remove_swap([values] values, [index] 0i32)");
   checkInvalidStatement("pop([values] values)");
   checkInvalidStatement("clear([values] values)");
-  checkInvalidStatement("values.push([value] 3i32)");
-  checkInvalidStatement("values.reserve([capacity] 8i32)");
-  checkInvalidStatement("values.remove_at([index] 0i32)");
-  checkInvalidStatement("values.remove_swap([index] 0i32)");
+  checkInvalidStatement("values.push([value] 3i32)", true);
+  checkInvalidStatement("values.reserve([capacity] 8i32)", true);
+  checkInvalidStatement("values.remove_at([index] 0i32)", true);
+  checkInvalidStatement("values.remove_swap([index] 0i32)", true);
 }
 
 TEST_SUITE_END();

@@ -106,7 +106,31 @@
           return true;
         },
         [&](const Expr &exprToEmit) { return emitExpr(exprToEmit, callerLocals); },
-        [&](const Expr &callExpr) { return inferExprKind(callExpr, callerLocals) == LocalInfo::ValueKind::String; },
+        [&](const Expr &callExpr) {
+          if (inferExprKind(callExpr, callerLocals) ==
+              LocalInfo::ValueKind::String) {
+            return true;
+          }
+          if (callResolutionAdapters.semanticProgram == nullptr) {
+            return false;
+          }
+          const auto *queryFact = ir_lowerer::findSemanticProductQueryFact(
+              callResolutionAdapters.semanticProgram,
+              callResolutionAdapters.semanticProductTargets.semanticIndex,
+              callExpr);
+          if (queryFact == nullptr) {
+            return false;
+          }
+          const std::string queryType = resolveSemanticProductTypeText(
+              callResolutionAdapters.semanticProgram, queryFact->queryTypeText,
+              queryFact->queryTypeTextId);
+          const std::string bindingType = resolveSemanticProductTypeText(
+              callResolutionAdapters.semanticProgram,
+              queryFact->bindingTypeText,
+              queryFact->bindingTypeTextId);
+          return queryType == "string" || queryType == "/string" ||
+                 bindingType == "string" || bindingType == "/string";
+        },
         [&](const Expr &valueExpr) { return inferExprKind(valueExpr, callerLocals); },
         [&]() { return allocTempLocal(); },
         [&]() { return function.instructions.size(); },

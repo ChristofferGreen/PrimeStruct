@@ -283,7 +283,7 @@ TEST_CASE("ir lowerer call helpers emit builtin array access") {
   CHECK(instructions[4].op == primec::IrOpcode::LoadLocal);
   CHECK(instructions[4].imm == 20);
   CHECK(instructions[5].op == primec::IrOpcode::PushI64);
-  CHECK(instructions[5].imm == primec::IrSlotBytesI32);
+  CHECK(instructions[5].imm == 32);
   CHECK(instructions[6].op == primec::IrOpcode::AddI64);
   CHECK(instructions[7].op == primec::IrOpcode::LoadIndirect);
   CHECK(instructions[8].op == primec::IrOpcode::StoreLocal);

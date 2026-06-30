@@ -23,7 +23,7 @@ bool extractBuiltinSoaVectorElementTypeFromTypeText(const std::string &typeText,
     return false;
   }
   base = normalizeBindingTypeName(base);
-  if (base == "soa_vector" && !argText.empty()) {
+  if (base == "soa" && !argText.empty()) {
     elemTypeOut = argText;
     return true;
   }
@@ -36,7 +36,7 @@ bool extractBuiltinSoaVectorElementTypeFromTypeText(const std::string &typeText,
     return false;
   }
   wrappedBase = normalizeBindingTypeName(wrappedBase);
-  if (wrappedBase != "soa_vector" || wrappedArgText.empty()) {
+  if (wrappedBase != "soa" || wrappedArgText.empty()) {
     return false;
   }
   elemTypeOut = wrappedArgText;
@@ -99,7 +99,7 @@ bool SemanticsValidator::inferCollectionBindingFromExpr(const Expr &expr,
   }
   std::string collection;
   if (getBuiltinCollectionName(expr, collection)) {
-    if ((collection == "array" || collection == "vector" || collection == "soa_vector") &&
+    if ((collection == "array" || collection == "vector" || collection == "soa") &&
         expr.templateArgs.size() == 1) {
       bindingOut.typeName = collection;
       bindingOut.typeTemplateArg = expr.templateArgs.front();
@@ -134,7 +134,7 @@ bool SemanticsValidator::inferCollectionBindingFromExpr(const Expr &expr,
     if (!splitTopLevelTemplateArgs(argText, args)) {
       return false;
     }
-    if ((base == "array" || base == "vector" || base == "soa_vector") && args.size() == 1) {
+    if ((base == "array" || base == "vector" || base == "soa") && args.size() == 1) {
       bindingOut.typeName = base;
       bindingOut.typeTemplateArg = argText;
       return true;
@@ -166,7 +166,7 @@ bool SemanticsValidator::inferBuiltinCollectionValueBinding(const Expr &expr,
     const bool isBuiltinOrExperimentalVector =
         normalizedTypeName == "array" ||
         normalizedTypeName == "vector" ||
-        normalizedTypeName == "soa_vector" ||
+        normalizedTypeName == "soa" ||
         normalizedTypeName == "Vector" ||
         isLegacyExperimentalVectorCompatibilityPath(normalizedTypeName) ||
         isLegacyExperimentalVectorCompatibilityPath("/" + normalizedTypeName);
@@ -185,7 +185,7 @@ bool SemanticsValidator::inferBuiltinCollectionValueBinding(const Expr &expr,
       const bool isWrappedBuiltinOrExperimentalVector =
           base == "array" ||
           base == "vector" ||
-          base == "soa_vector" ||
+          base == "soa" ||
           base == "Vector" ||
           isLegacyExperimentalVectorCompatibilityPath(base) ||
           isLegacyExperimentalVectorCompatibilityPath("/" + base);
@@ -667,7 +667,7 @@ bool SemanticsValidator::inferCallInitializerBinding(const Expr &initializer,
       if (!inferReceiverBinding(receiver, receiverBinding)) {
         return false;
       }
-      if (normalizeBindingTypeName(receiverBinding.typeName) == "soa_vector" &&
+      if (normalizeBindingTypeName(receiverBinding.typeName) == "soa" &&
           !receiverBinding.typeTemplateArg.empty()) {
         elemTypeOut = receiverBinding.typeTemplateArg;
         return true;
@@ -1004,7 +1004,7 @@ bool SemanticsValidator::inferCallInitializerBinding(const Expr &initializer,
         std::string collectionName;
         if (initializerExprForInference != nullptr &&
             getBuiltinCollectionName(*initializerExprForInference, collectionName)) {
-          if ((collectionName == "array" || collectionName == "vector" || collectionName == "soa_vector") &&
+          if ((collectionName == "array" || collectionName == "vector" || collectionName == "soa") &&
               initializerExprForInference->templateArgs.size() == 1) {
             bindingOut.typeName = collectionName;
             bindingOut.typeTemplateArg = initializerExprForInference->templateArgs.front();

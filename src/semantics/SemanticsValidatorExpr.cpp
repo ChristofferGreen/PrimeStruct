@@ -1,4 +1,5 @@
 // soa-surface-audit: exempt
+// collection-surface-audit: exempt
 #include "SemanticsValidator.h"
 #include "StdlibCollectionSurfaceHelpers.h"
 #include "SemanticsValidatorInferCollectionCompatibilityInternal.h"
@@ -134,7 +135,7 @@ bool SemanticsValidator::validateExpr(const std::vector<ParameterInfo> &params,
     if (expr.isMethodCall &&
         (expr.name == "count" || expr.name == "get" ||
          expr.name == "get_ref" || expr.name == "ref") &&
-        hasVisibleDefinitionPathForCurrentImports("/soa_vector/" + expr.name)) {
+        hasVisibleDefinitionPathForCurrentImports("/soa/" + expr.name)) {
       for (const Expr &arg : expr.args) {
         if (!validateExpr(params, locals, arg, enclosingStatements,
                           statementIndex)) {
@@ -1040,7 +1041,7 @@ bool SemanticsValidator::validateExpr(const std::vector<ParameterInfo> &params,
         return nullptr;
       };
       auto isSoaBorrowBinding = [&](const BindingInfo &binding) -> bool {
-        if (binding.typeName == "soa_vector") {
+        if (binding.typeName == "soa") {
           return true;
         }
         std::string elemType;
@@ -1056,9 +1057,9 @@ bool SemanticsValidator::validateExpr(const std::vector<ParameterInfo> &params,
           const std::string normalizedTarget =
               normalizeBindingTypeName(binding.typeTemplateArg);
           if (splitTemplateTypeName(normalizedTarget, base, arg)) {
-            return normalizeBindingTypeName(base) == "soa_vector";
+            return normalizeBindingTypeName(base) == "soa";
           }
-          return normalizedTarget == "soa_vector";
+          return normalizedTarget == "soa";
         }
         return false;
       };

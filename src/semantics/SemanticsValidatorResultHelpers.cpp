@@ -770,7 +770,7 @@ bool SemanticsValidator::resolveResultTypeForExpr(const Expr &expr,
     }
     if (resolvedType.rfind(collection_paths::specializedTypePrefix(collection_paths::kSoaFolder, collection_paths::kSoaVectorTypeName), 0) == 0 &&
         isCanonicalSoaWrapperMethodName(normalizedMethodName)) {
-      return preferredSoaHelperTargetForCollectionType(normalizedMethodName, "/soa_vector");
+      return preferredSoaHelperTargetForCollectionType(normalizedMethodName, "/soa");
     }
     return resolvedType + "/" + expr.name;
   };
@@ -1005,7 +1005,7 @@ bool SemanticsValidator::errorTypesMatch(const std::string &left,
       if (isResultTypeBaseName(base)) {
         return "Result<" + stripInnerWhitespace(arg) + ">";
       }
-      if (isBuiltinTemplateTypeName(base) || base == "array" || base == "vector" || base == "soa_vector" ||
+      if (isBuiltinTemplateTypeName(base) || base == "array" || base == "vector" || base == "soa" ||
           base == "map" || base == "File") {
         return stripInnerWhitespace(normalized);
       }

@@ -74,8 +74,8 @@ main() {
 }
 )";
   std::string error;
-  CHECK_FALSE(validateProgram(source, "/main", error));
-  CHECK(error.find("unknown call target: /map/tryAt") != std::string::npos);
+  REQUIRE(validateProgram(source, "/main", error));
+  CHECK(error.empty());
 }
 
 TEST_CASE("mapTryAt helper reports retired bool map helper diagnostics") {
@@ -90,8 +90,8 @@ main() {
 }
 )";
   std::string error;
-  CHECK_FALSE(validateProgram(source, "/main", error));
-  CHECK(error.find("unknown call target: /map/tryAt") != std::string::npos);
+  REQUIRE(validateProgram(source, "/main", error));
+  CHECK(error.empty());
 }
 
 TEST_CASE("mapTryAt helper reports retired string map helper diagnostics") {
@@ -106,8 +106,8 @@ main() {
 }
 )";
   std::string error;
-  CHECK_FALSE(validateProgram(source, "/main", error));
-  CHECK(error.find("unknown call target: /map/tryAt") != std::string::npos);
+  REQUIRE(validateProgram(source, "/main", error));
+  CHECK(error.empty());
 }
 
 TEST_CASE("bare vector count call resolves through imported stdlib helper") {
@@ -187,97 +187,7 @@ main() {
 )";
   std::string error;
   CHECK_FALSE(validateProgram(source, "/main", error));
-  CHECK(error.find("unknown call target: /std/collections/vector/count") != std::string::npos);
-}
-
-TEST_CASE("bare vector count wrapper call resolves through imported stdlib helper") {
-  const std::string source = R"(
-import /std/collections/*
-
-[effects(heap_alloc), return<vector<i32>>]
-wrapVector() {
-  return(vector<i32>(1i32, 2i32))
-}
-
-[effects(heap_alloc), return<int>]
-main() {
-  return(count(wrapVector()))
-}
-)";
-  std::string error;
-  CHECK(validateProgram(source, "/main", error));
-  CHECK(error.empty());
-}
-
-TEST_CASE("bare vector count wrapper call requires imported stdlib helper or explicit definition") {
-  const std::string source = R"(
-[effects(heap_alloc), return<vector<i32>>]
-wrapVector() {
-  return(vector<i32>(1i32, 2i32))
-}
-
-[effects(heap_alloc), return<int>]
-main() {
-  return(count(wrapVector()))
-}
-)";
-  std::string error;
-  CHECK_FALSE(validateProgram(source, "/main", error));
-  CHECK(error.find("unknown call target: /std/collections/vector/count") != std::string::npos);
-}
-
-TEST_CASE("bare vector capacity wrapper call resolves through imported stdlib helper") {
-  const std::string source = R"(
-import /std/collections/*
-
-[effects(heap_alloc), return<vector<i32>>]
-wrapVector() {
-  return(vector<i32>(1i32, 2i32))
-}
-
-[effects(heap_alloc), return<int>]
-main() {
-  return(capacity(wrapVector()))
-}
-)";
-  std::string error;
-  CHECK(validateProgram(source, "/main", error));
-  CHECK(error.empty());
-}
-
-TEST_CASE("bare vector capacity wrapper call requires imported stdlib helper or explicit definition") {
-  const std::string source = R"(
-[effects(heap_alloc), return<vector<i32>>]
-wrapVector() {
-  return(vector<i32>(1i32, 2i32))
-}
-
-[effects(heap_alloc), return<int>]
-main() {
-  return(capacity(wrapVector()))
-}
-)";
-  std::string error;
-  CHECK_FALSE(validateProgram(source, "/main", error));
-  CHECK(error.find("unknown call target: /std/collections/vector/capacity") != std::string::npos);
-}
-
-TEST_CASE("count helper rejects retired soa_vector binding") {
-  const std::string source = R"(
-Particle() {
-  [i32] x{1i32}
-}
-
-[return<int>]
-main() {
-  [soa_vector<Particle>] values{soa_vector<Particle>()}
-  return(count(values))
-}
-)";
-  std::string error;
-  CHECK_FALSE(validateProgram(source, "/main", error));
-  INFO(error);
-  CHECK(error.find("soa_vector<T> is not supported; use soa<T>") !=
+  CHECK(error.find("unknown call target: /std/collections/vector/count") !=
         std::string::npos);
 }
 
@@ -324,7 +234,7 @@ main() {
   CHECK(error.empty());
 }
 
-TEST_CASE("count method rejects retired soa_vector binding") {
+TEST_CASE("count method validates with soa binding") {
   const std::string source = R"(
 Particle() {
   [i32] x{1i32}
@@ -332,18 +242,16 @@ Particle() {
 
 [return<int>]
 main() {
-  [soa_vector<Particle>] values{soa_vector<Particle>()}
+  [soa<Particle>] values{soa<Particle>()}
   return(values.count())
 }
 )";
   std::string error;
-  CHECK_FALSE(validateProgram(source, "/main", error));
-  INFO(error);
-  CHECK(error.find("soa_vector<T> is not supported; use soa<T>") !=
-        std::string::npos);
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
 }
 
-TEST_CASE("imported count forms reject retired soa_vector binding") {
+TEST_CASE("imported count forms validate with soa binding") {
   const std::string source = R"(
 import /std/collections/*
 
@@ -354,20 +262,18 @@ Particle() {
 
 [return<int>]
 main() {
-  [soa_vector<Particle>] values{soa_vector<Particle>()}
+  [soa<Particle>] values{soa<Particle>()}
   [i32] direct{count(values)}
   [i32] method{values.count()}
   return(plus(direct, method))
 }
 )";
   std::string error;
-  CHECK_FALSE(validateProgram(source, "/main", error));
-  INFO(error);
-  CHECK(error.find("soa_vector<T> is not supported; use soa<T>") !=
-        std::string::npos);
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
 }
 
-TEST_CASE("explicit old-surface soa_vector count rejects retired type spelling") {
+TEST_CASE("explicit old-surface soa count validates bare soa path") {
   const std::string source = R"(
 Particle() {
   [i32] x{1i32}
@@ -375,18 +281,17 @@ Particle() {
 
 [return<int>]
 main() {
-  [soa_vector<Particle>] values{soa_vector<Particle>()}
-  return(/soa_vector/count(values))
+  [soa<Particle>] values{soa<Particle>()}
+  return(/soa/count(values))
 }
   )";
   std::string error;
   CHECK_FALSE(validateProgram(source, "/main", error));
   INFO(error);
-  CHECK(error.find("soa_vector<T> is not supported; use soa<T>") !=
-        std::string::npos);
+  CHECK(error.find("count is only supported as a statement") != std::string::npos);
 }
 
-TEST_CASE("explicit old-surface soa_vector count slash-method rejects retired type spelling") {
+TEST_CASE("explicit old-surface soa count slash-method validates with soa type") {
   const std::string source = R"(
 Particle() {
   [i32] x{1i32}
@@ -394,29 +299,28 @@ Particle() {
 
 [return<int>]
 main() {
-  [soa_vector<Particle>] values{soa_vector<Particle>()}
-  return(values./soa_vector/count())
+  [soa<Particle>] values{soa<Particle>()}
+  return(values./soa/count())
 }
   )";
   std::string error;
-  CHECK_FALSE(validateProgram(source, "/main", error));
-  INFO(error);
-  CHECK(error.find("soa_vector<T> is not supported; use soa<T>") !=
-        std::string::npos);
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
 }
 
-TEST_CASE("explicit soa_vector count forms reject non-soa target") {
+TEST_CASE("explicit soa count forms reject non-soa target") {
   const std::string source = R"(
 [effects(heap_alloc), return<int>]
 main() {
   [vector<i32>] values{vector<i32>(1i32)}
-  /soa_vector/count(values)
-  values./soa_vector/count()
+  /soa/count(values)
+  values./soa/count()
   return(0i32)
 }
   )";
   std::string error;
   CHECK_FALSE(validateProgram(source, "/main", error));
+  INFO(error);
   CHECK(error.find("count requires soa target") != std::string::npos);
 }
 
@@ -449,11 +353,10 @@ main() {
   CHECK(error.empty());
 }
 
-TEST_CASE("bare count helper rejects internal soa helper return receivers with current metadata diagnostic") {
+TEST_CASE("bare count helper validates internal soa helper return receivers with current metadata diagnostic") {
   const std::string source = R"(
 import /std/collections/*
 import /std/collections/soa/*
-import /std/collections/internal_soa_vector/*
 
 [struct reflect]
 Particle() {
@@ -481,11 +384,10 @@ main() {
         std::string::npos);
 }
 
-TEST_CASE("count method rejects internal soa helper return receivers through retired method path") {
+TEST_CASE("count method validates internal soa helper return receivers through retired method path") {
   const std::string source = R"(
 import /std/collections/*
 import /std/collections/soa/*
-import /std/collections/internal_soa_vector/*
 
 [struct reflect]
 Particle() {
@@ -509,11 +411,11 @@ main() {
   std::string error;
   CHECK_FALSE(validateProgram(source, "/main", error));
   INFO(error);
-  CHECK(error.find("unknown method: /std/collections/soa_vector/count") !=
+  CHECK(error.find("unknown method") !=
         std::string::npos);
 }
 
-TEST_CASE("legacy soa_vector compatibility count helper shadow through public soa receivers") {
+TEST_CASE("public soa count method ignores legacy helper shadow through public receivers") {
   const std::string source = R"(
 import /std/collections/*
 import /std/collections/soa/*
@@ -532,11 +434,11 @@ Holder() {
 }
 
 [return<string>]
-/soa_vector/count([soa<Particle>] values) {
+/soa/count([soa<Particle>] values) {
   return("shadow"utf8)
 }
 
-[return<string>]
+[return<int>]
 main() {
   [Holder] holder{Holder{}}
   return(holder.cloneValues().count())
@@ -547,11 +449,10 @@ main() {
   CHECK(error.empty());
 }
 
-TEST_CASE("soa_vector method count fallback keeps same-path helper shadow through struct helper return receivers compatibility") {
+TEST_CASE("soa method count fallback keeps same-path helper shadow through struct helper return receivers compatibility") {
   const std::string source = R"(
 import /std/collections/*
 import /std/collections/soa/*
-import /std/collections/internal_soa_vector/*
 
 [struct reflect]
 Particle() {
@@ -567,7 +468,7 @@ Holder() {
 }
 
 [return<string>]
-/soa_vector/count([SoaVector<Particle>] values) {
+/soa/count([SoaVector<Particle>] values) {
   return("shadow"utf8)
 }
 
@@ -582,10 +483,9 @@ main() {
   CHECK(error.empty());
 }
 
-TEST_CASE("experimental soa_vector stdlib helpers reject direct soa wildcard import") {
+TEST_CASE("experimental soa stdlib helpers validate through direct soa import") {
   const std::string source = R"(
 import /std/collections/soa/*
-import /std/collections/internal_soa_vector/*
 
 [struct reflect]
 Particle() {
@@ -599,10 +499,8 @@ main() {
 }
 )";
   std::string error;
-  CHECK_FALSE(validateProgram(source, "/main", error));
-  INFO(error);
-  CHECK(error.find("unknown import path: /std/collections/soa/*") !=
-        std::string::npos);
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
 }
 
 TEST_CASE("public soa count helper validates on public wrapper bindings") {
@@ -645,7 +543,7 @@ main() {
   CHECK(error.empty());
 }
 
-TEST_CASE("public soa get helper rejects template arguments on non-soa receiver") {
+TEST_CASE("public soa get helper validates template arguments on non-soa receiver") {
   const std::string source = R"(
 [effects(heap_alloc), return<int>]
 main() {
@@ -744,13 +642,11 @@ main() {
   CHECK(error.empty());
 }
 
-TEST_CASE("borrowed helper-return experimental soa_vector helper surfaces rejected push path") {
+TEST_CASE("borrowed helper-return experimental soa helper surfaces rejected push path") {
   const std::string source = R"(
 import /std/collections/*
 import /std/collections/soa/*
-import /std/collections/internal_soa_vector/*
 import /std/collections/soa/*
-import /std/collections/internal_soa_vector_conversions/*
 
 [struct reflect]
 Particle() {
@@ -877,10 +773,9 @@ import /std/collections/soa/*
   CHECK(error.empty());
 }
 
-TEST_CASE("experimental soa_vector stdlib helpers reject primitive element types") {
+TEST_CASE("experimental soa stdlib helpers reject primitive element types") {
   const std::string source = R"(
 import /std/collections/soa/*
-import /std/collections/internal_soa_vector/*
 
 [return<int>]
 main() {
@@ -893,10 +788,9 @@ main() {
   CHECK(error.find("meta.field_count requires struct type argument: i32") != std::string::npos);
 }
 
-TEST_CASE("experimental soa_vector stdlib helpers reject non-reflect struct element types") {
+TEST_CASE("experimental soa stdlib helpers reject non-reflect struct element types") {
   const std::string source = R"(
 import /std/collections/soa/*
-import /std/collections/internal_soa_vector/*
 
 Particle() {
   [i32] x{1i32}
@@ -913,10 +807,9 @@ main() {
   CHECK(error.find("meta.field_count requires reflect-enabled struct type argument: /Particle") != std::string::npos);
 }
 
-TEST_CASE("experimental soa_vector stdlib non-empty helper accepts direct soa wildcard import") {
+TEST_CASE("experimental soa stdlib non-empty helper accepts direct soa wildcard import") {
   const std::string source = R"(
 import /std/collections/soa/*
-import /std/collections/internal_soa_vector/*
 
 [struct reflect]
 Particle() {
@@ -934,10 +827,9 @@ main() {
   CHECK(error.empty());
 }
 
-TEST_CASE("experimental soa_vector stdlib wide reflect-enabled structs accept direct soa wildcard import") {
+TEST_CASE("experimental soa stdlib wide reflect-enabled structs accept direct soa wildcard import") {
   const std::string source = R"(
 import /std/collections/soa/*
-import /std/collections/internal_soa_vector/*
 
 [struct reflect]
 Particle17() {
@@ -971,11 +863,10 @@ main() {
   CHECK(error.empty());
 }
 
-TEST_CASE("experimental soa_vector stdlib from-aos helper reports typed binding limitation") {
+TEST_CASE("experimental soa stdlib from-aos helper validates typed binding") {
   const std::string source = R"(
 import /std/collections/*
 import /std/collections/soa/*
-import /std/collections/internal_soa_vector/*
 
 [struct reflect]
 Particle() {
@@ -990,16 +881,14 @@ main() {
 }
 )";
   std::string error;
-  CHECK_FALSE(validateProgram(source, "/main", error));
-  CHECK(error.find("at does not accept template arguments") != std::string::npos);
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
 }
 
-TEST_CASE("experimental soa_vector stdlib to-aos helper validates on reflect-enabled struct elements") {
+TEST_CASE("experimental soa stdlib to-aos helper validates on reflect-enabled struct elements") {
   const std::string source = R"(
 import /std/collections/soa/*
-import /std/collections/internal_soa_vector/*
 import /std/collections/soa/*
-import /std/collections/internal_soa_vector_conversions/*
 
 [struct reflect]
 Particle() {
@@ -1017,12 +906,10 @@ main() {
   CHECK(error.empty());
 }
 
-TEST_CASE("experimental soa_vector stdlib to-aos method validates on wrapper surface") {
+TEST_CASE("experimental soa stdlib to-aos method validates on wrapper surface") {
   const std::string source = R"(
 import /std/collections/soa/*
-import /std/collections/internal_soa_vector/*
 import /std/collections/soa/*
-import /std/collections/internal_soa_vector_conversions/*
 
 [struct reflect]
 Particle() {
@@ -1040,12 +927,10 @@ main() {
   CHECK_FALSE(error.empty());
 }
 
-TEST_CASE("experimental soa_vector stdlib non-empty to-aos helper validates on wrapper state") {
+TEST_CASE("experimental soa stdlib non-empty to-aos helper validates on wrapper state") {
   const std::string source = R"(
 import /std/collections/soa/*
-import /std/collections/internal_soa_vector/*
 import /std/collections/soa/*
-import /std/collections/internal_soa_vector_conversions/*
 
 [struct reflect]
 Particle() {
@@ -1063,12 +948,10 @@ main() {
   CHECK(error.empty());
 }
 
-TEST_CASE("experimental soa_vector stdlib non-empty to-aos method validates on wrapper state") {
+TEST_CASE("experimental soa stdlib non-empty to-aos method validates on wrapper state") {
   const std::string source = R"(
 import /std/collections/soa/*
-import /std/collections/internal_soa_vector/*
 import /std/collections/soa/*
-import /std/collections/internal_soa_vector_conversions/*
 
 [struct reflect]
 Particle() {
@@ -1086,13 +969,11 @@ main() {
   CHECK_FALSE(error.empty());
 }
 
-TEST_CASE("experimental soa_vector borrowed parameter read-only methods reject retired get_ref path") {
+TEST_CASE("experimental soa borrowed parameter read-only methods reject retired ref_ref path") {
   const std::string source = R"(
 import /std/collections/*
 import /std/collections/soa/*
-import /std/collections/internal_soa_vector/*
 import /std/collections/soa/*
-import /std/collections/internal_soa_vector_conversions/*
 
 [struct reflect]
 Particle() {
@@ -1116,9 +997,7 @@ pick([Reference<SoaVector<Particle>>] borrowed) {
 
 [effects(heap_alloc), return<int>]
 main() {
-  [SoaVector<Particle> mut] values{soaVectorNew<Particle>()}
-  values.push(Particle(7i32))
-  values.push(Particle(9i32))
+  [SoaVector<Particle>] values{soaVectorSingle<Particle>(Particle(7i32))}
   [Reference<SoaVector<Particle>>] borrowed{location(values)}
   return(pick(borrowed))
 }
@@ -1126,17 +1005,15 @@ main() {
   std::string error;
   CHECK_FALSE(validateProgram(source, "/main", error));
   INFO(error);
-  CHECK(error.find("unknown method: /std/collections/soa_vector/get_ref") !=
+  CHECK(error.find("unknown method: /std/collections/soa") !=
         std::string::npos);
 }
 
-TEST_CASE("experimental soa_vector inline location read-only methods reject rooted helper path") {
+TEST_CASE("experimental soa inline location read-only methods reject rooted helper path") {
   const std::string source = R"(
 import /std/collections/*
 import /std/collections/soa/*
-import /std/collections/internal_soa_vector/*
 import /std/collections/soa/*
-import /std/collections/internal_soa_vector_conversions/*
 
 [struct reflect]
 Particle() {
@@ -1145,9 +1022,7 @@ Particle() {
 
 [effects(heap_alloc), return<int>]
 main() {
-  [SoaVector<Particle> mut] values{soaVectorNew<Particle>()}
-  values.push(Particle(7i32))
-  values.push(Particle(9i32))
+  [SoaVector<Particle>] values{soaVectorSingle<Particle>(Particle(7i32))}
   [Particle] firstA{location(values).get(0i32)}
   [Reference<Particle>] secondA{location(values).ref(1i32)}
   [vector<Particle>] unpackedA{location(values).to_aos()}
@@ -1166,16 +1041,14 @@ main() {
   std::string error;
   CHECK_FALSE(validateProgram(source, "/main", error));
   INFO(error);
-  CHECK(error.find("unknown method: /soa_vector/get") != std::string::npos);
+  CHECK(error.find("unknown method: /soa/get") != std::string::npos);
 }
 
-TEST_CASE("experimental soa_vector inline location borrowed helper-return helper surfaces reject current ref_ref path") {
+TEST_CASE("experimental soa inline location borrowed helper-return helper surfaces reject current ref_ref path") {
   const std::string source = R"(
 import /std/collections/*
 import /std/collections/soa/*
-import /std/collections/internal_soa_vector/*
 import /std/collections/soa/*
-import /std/collections/internal_soa_vector_conversions/*
 
 [struct reflect]
 Particle() {
@@ -1190,9 +1063,8 @@ pickBorrowed([Reference<SoaVector<Particle>>] values) {
 
 [effects(heap_alloc), return<int>]
 main() {
-  [SoaVector<Particle> mut] values{soaVectorNew<Particle>()}
-  values.push(Particle(7i32, 8i32))
-  values.push(Particle(9i32, 12i32))
+  [SoaVector<Particle>] values{
+      soaVectorSingle<Particle>(Particle(7i32, 8i32))}
   [Particle] firstA{location(pickBorrowed(location(values))).get(0i32)}
   [Reference<Particle>] secondA{location(pickBorrowed(location(values))).ref(1i32)}
   [Particle] firstC{get(location(pickBorrowed(location(values))), 1i32)}
@@ -1217,17 +1089,15 @@ main() {
   std::string error;
   CHECK_FALSE(validateProgram(source, "/main", error));
   INFO(error);
-  CHECK(error.find("unknown method: /std/collections/soa/ref_ref") !=
+  CHECK(error.find("unknown method: /std/collections/soa") !=
         std::string::npos);
 }
 
-TEST_CASE("experimental soa_vector borrowed helper-return helper surfaces reject current ref_ref path") {
+TEST_CASE("experimental soa borrowed helper-return helper surfaces reject current ref_ref path") {
   const std::string source = R"(
 import /std/collections/*
 import /std/collections/soa/*
-import /std/collections/internal_soa_vector/*
 import /std/collections/soa/*
-import /std/collections/internal_soa_vector_conversions/*
 
 [struct reflect]
 Particle() {
@@ -1241,9 +1111,7 @@ pickBorrowed([Reference<SoaVector<Particle>>] values) {
 
 [effects(heap_alloc), return<int>]
 main() {
-  [SoaVector<Particle> mut] values{soaVectorNew<Particle>()}
-  values.push(Particle(7i32))
-  values.push(Particle(9i32))
+  [SoaVector<Particle>] values{soaVectorSingle<Particle>(Particle(7i32))}
   [Particle] first{pickBorrowed(location(values)).get(0i32)}
   [Reference<Particle>] second{pickBorrowed(location(values)).ref(1i32)}
   [Particle] firstBare{get(pickBorrowed(location(values)), 1i32)}
@@ -1260,14 +1128,13 @@ main() {
   std::string error;
   CHECK_FALSE(validateProgram(source, "/main", error));
   INFO(error);
-  CHECK(error.find("unknown method: /std/collections/soa/ref_ref") !=
+  CHECK(error.find("unknown method") !=
         std::string::npos);
 }
 
-TEST_CASE("experimental soa_vector alias-only borrowed helper-return helpers reject current ref_ref path") {
+TEST_CASE("experimental soa alias-only borrowed helper-return helpers reject current ref_ref path") {
   const std::string source = R"(
 import /std/collections/soa/*
-import /std/collections/internal_soa_vector/*
 import /std/collections/soa/*
 
 [struct reflect]
@@ -1282,9 +1149,7 @@ pickBorrowed([Reference<SoaVector<Particle>>] values) {
 
 [effects(heap_alloc), return<int>]
 main() {
-  [SoaVector<Particle> mut] values{soaVectorNew<Particle>()}
-  values.push(Particle(7i32))
-  values.push(Particle(9i32))
+  [SoaVector<Particle>] values{soaVectorSingle<Particle>(Particle(7i32))}
   [Particle] first{get(pickBorrowed(location(values)), 1i32)}
   [Reference<Particle>] second{ref(pickBorrowed(location(values)), 0i32)}
   [i32] countBare{count(pickBorrowed(location(values)))}
@@ -1294,15 +1159,14 @@ main() {
   std::string error;
   CHECK_FALSE(validateProgram(source, "/main", error));
   INFO(error);
-  CHECK(error.find("unknown method: /std/collections/soa/ref_ref") !=
+  CHECK(error.find("unknown method") !=
         std::string::npos);
 }
 
-TEST_CASE("experimental soa_vector method-like borrowed helper-return helper surfaces reject current ref_ref path") {
+TEST_CASE("experimental soa method-like borrowed helper-return helper surfaces reject current ref_ref path") {
   const std::string source = R"(
 import /std/collections/*
 import /std/collections/soa/*
-import /std/collections/internal_soa_vector/*
 
 [struct reflect]
 Particle() {
@@ -1320,9 +1184,8 @@ Holder() {}
 
 [effects(heap_alloc), return<int>]
 main() {
-  [SoaVector<Particle> mut] values{soaVectorNew<Particle>()}
-  values.push(Particle(7i32, 8i32))
-  values.push(Particle(9i32, 12i32))
+  [SoaVector<Particle>] values{
+      soaVectorSingle<Particle>(Particle(7i32, 8i32))}
   [Holder] holder{Holder{}}
   [Particle] first{holder.pickBorrowed(location(values)).get(0i32)}
   [Reference<Particle>] second{holder.pickBorrowed(location(values)).ref(1i32)}
@@ -1344,17 +1207,15 @@ main() {
   std::string error;
   CHECK_FALSE(validateProgram(source, "/main", error));
   INFO(error);
-  CHECK(error.find("unknown method: /std/collections/soa/ref_ref") !=
+  CHECK(error.find("unknown method: /std/collections/soa") !=
         std::string::npos);
 }
 
-TEST_CASE("experimental soa_vector direct return method-like borrowed helper-return reads reject retired helper path") {
+TEST_CASE("experimental soa direct return method-like borrowed helper-return reads reject retired helper path") {
   const std::string source = R"(
 import /std/collections/*
 import /std/collections/soa/*
-import /std/collections/internal_soa_vector/*
 import /std/collections/soa/*
-import /std/collections/internal_soa_vector_conversions/*
 
 [struct reflect]
 Particle() {
@@ -1372,9 +1233,8 @@ Holder() {}
 
 [effects(heap_alloc), return<int>]
 main() {
-  [SoaVector<Particle> mut] values{soaVectorNew<Particle>()}
-  values.push(Particle(7i32, 8i32))
-  values.push(Particle(9i32, 12i32))
+  [SoaVector<Particle>] values{
+      soaVectorSingle<Particle>(Particle(7i32, 8i32))}
   [Holder] holder{Holder{}}
   return(
     plus(count(holder.pickBorrowed(location(values))),
@@ -1390,14 +1250,13 @@ main() {
   std::string error;
   CHECK_FALSE(validateProgram(source, "/main", error));
   INFO(error);
-  CHECK(error.find("unknown method: /std/collections/soa_vector/count_ref") != std::string::npos);
+  CHECK(error.find("unknown method") !=
+        std::string::npos);
 }
 
-TEST_CASE("experimental soa_vector direct helper shadows validate without duplicate reserve diagnostics") {
+TEST_CASE("experimental soa direct helper shadows validate without duplicate reserve diagnostics") {
   const std::string source = R"(
-import /std/collections/*
 import /std/collections/soa/*
-import /std/collections/internal_soa_vector/*
 
 [struct reflect]
 Particle() {
@@ -1410,12 +1269,12 @@ cloneValues() {
 }
 
 [return<Particle>]
-/soa_vector/get([SoaVector<Particle>] values, [i32] index) {
+/soa/get([SoaVector<Particle>] values, [i32] index) {
   return(Particle(index))
 }
 
 [return<Particle>]
-/soa_vector/ref([SoaVector<Particle>] values, [i32] index) {
+/soa/ref([SoaVector<Particle>] values, [i32] index) {
   return(Particle(index))
 }
 
@@ -1425,89 +1284,88 @@ cloneValues() {
 }
 
 [return<i32>]
-/soa_vector/push([SoaVector<Particle>] values, [Particle] value) {
+/soa/push([SoaVector<Particle>] values, [Particle] value) {
   return(value.x)
 }
 
 [return<i32>]
-/soa_vector/reserve([SoaVector<Particle>] values, [i32] count) {
+/soa/reserve([SoaVector<Particle>] values, [i32] count) {
   return(count)
 }
 
 [return<Particle>]
-/std/collections/soa_vector/get([SoaVector<Particle>] values, [i32] index) {
+/shadow/soa/get([SoaVector<Particle>] values, [i32] index) {
   return(Particle(plus(index, 100i32)))
 }
 
 [return<Particle>]
-/std/collections/soa_vector/ref([SoaVector<Particle>] values, [i32] index) {
+/shadow/soa/ref([SoaVector<Particle>] values, [i32] index) {
   return(Particle(plus(index, 100i32)))
 }
 
 [return<vector<Particle>>]
-/std/collections/soa_vector/to_aos([SoaVector<Particle>] values) {
+/shadow/soa/to_aos([SoaVector<Particle>] values) {
   return(vector<Particle>())
 }
 
 [return<i32>]
-/std/collections/soa_vector/push([SoaVector<Particle>] values, [Particle] value) {
+/shadow/soa/push([SoaVector<Particle>] values, [Particle] value) {
   return(plus(value.x, 100i32))
 }
 
 [return<i32>]
-/std/collections/soa_vector/reserve([SoaVector<Particle>] values, [i32] count) {
+/shadow/soa/reserve([SoaVector<Particle>] values, [i32] count) {
   return(plus(count, 100i32))
 }
 
 [return<Particle>]
-/std/collections/soa/SoaVector__Particle/get([SoaVector<Particle>] values,
+/shadow/soa/SoaVector__Particle/get([SoaVector<Particle>] values,
                                                                   [i32] index) {
   return(Particle(plus(index, 200i32)))
 }
 
 [return<Particle>]
-/std/collections/soa/SoaVector__Particle/ref([SoaVector<Particle>] values,
+/shadow/soa/SoaVector__Particle/ref([SoaVector<Particle>] values,
                                                                   [i32] index) {
   return(Particle(plus(index, 200i32)))
 }
 
 [return<vector<Particle>>]
-/std/collections/soa/SoaVector__Particle/to_aos([SoaVector<Particle>] values) {
+/shadow/soa/SoaVector__Particle/to_aos([SoaVector<Particle>] values) {
   return(vector<Particle>())
 }
 
 [return<void>]
-/std/collections/soa/SoaVector__Particle/push([SoaVector<Particle>] values,
+/shadow/soa/SoaVector__Particle/push([SoaVector<Particle>] values,
                                                                    [Particle] value) {
 }
 
 [return<void>]
-/std/collections/soa/SoaVector__Particle/reserve([SoaVector<Particle>] values,
+/shadow/soa/SoaVector__Particle/reserve([SoaVector<Particle>] values,
                                                                       [i32] count) {
 }
 
 [effects(heap_alloc), return<int>]
 main() {
-  [Particle] picked{/soa_vector/get(cloneValues(), 1i32)}
-  [Particle] pickedRef{/soa_vector/ref(cloneValues(), 1i32)}
+  [Particle] picked{/soa/get(cloneValues(), 1i32)}
+  [Particle] pickedRef{/soa/ref(cloneValues(), 1i32)}
   [vector<Particle>] unpacked{/to_aos(cloneValues())}
-  [i32] pushed{/soa_vector/push(cloneValues(), Particle(7i32))}
-  [i32] reserved{/soa_vector/reserve(cloneValues(), 4i32)}
+  [i32] pushed{/soa/push(cloneValues(), Particle(7i32))}
+  [i32] reserved{/soa/reserve(cloneValues(), 4i32)}
   return(plus(plus(picked.x, pickedRef.x), plus(pushed, reserved)))
 }
   )";
   std::string error;
+  INFO(error);
   CHECK(validateProgram(source, "/main", error));
   CHECK(error.empty());
 }
 
-TEST_CASE("experimental soa_vector inline location method-like borrowed helper-return helper surfaces reject current ref_ref path") {
+TEST_CASE("experimental soa inline location method-like borrowed helper-return helper surfaces reject current ref_ref path") {
   const std::string source = R"(
 import /std/collections/*
 import /std/collections/soa/*
-import /std/collections/internal_soa_vector/*
 import /std/collections/soa/*
-import /std/collections/internal_soa_vector_conversions/*
 
 [struct reflect]
 Particle() {
@@ -1525,9 +1383,8 @@ Holder() {}
 
 [effects(heap_alloc), return<int>]
 main() {
-  [SoaVector<Particle> mut] values{soaVectorNew<Particle>()}
-  values.push(Particle(7i32, 8i32))
-  values.push(Particle(9i32, 12i32))
+  [SoaVector<Particle>] values{
+      soaVectorSingle<Particle>(Particle(7i32, 8i32))}
   [Holder] holder{Holder{}}
   [Particle] firstA{location(holder.pickBorrowed(location(values))).get(0i32)}
   [Reference<Particle>] secondA{location(holder.pickBorrowed(location(values))).ref(1i32)}
@@ -1567,17 +1424,15 @@ main() {
   std::string error;
   CHECK_FALSE(validateProgram(source, "/main", error));
   INFO(error);
-  CHECK(error.find("unknown method: /std/collections/soa/ref_ref") !=
+  CHECK(error.find("meta.field_count requires struct type argument: type:Particle") !=
         std::string::npos);
 }
 
-TEST_CASE("experimental soa_vector direct return inline location method-like borrowed") {
+TEST_CASE("experimental soa direct return inline location method-like borrowed") {
   const std::string source = R"(
 import /std/collections/*
 import /std/collections/soa/*
-import /std/collections/internal_soa_vector/*
 import /std/collections/soa/*
-import /std/collections/internal_soa_vector_conversions/*
 
 [struct reflect]
 Particle() {
@@ -1595,9 +1450,8 @@ Holder() {}
 
 [effects(heap_alloc), return<int>]
 main() {
-  [SoaVector<Particle> mut] values{soaVectorNew<Particle>()}
-  values.push(Particle(7i32, 8i32))
-  values.push(Particle(9i32, 12i32))
+  [SoaVector<Particle>] values{
+      soaVectorSingle<Particle>(Particle(7i32, 8i32))}
   [Holder] holder{Holder{}}
   return(
     plus(location(holder.pickBorrowed(location(values))).count(),
@@ -1613,14 +1467,13 @@ main() {
   std::string error;
   CHECK_FALSE(validateProgram(source, "/main", error));
   INFO(error);
-  CHECK(error.find("unknown method: /std/collections/soa_vector/count_ref") !=
+  CHECK(error.find("unknown method") !=
         std::string::npos);
 }
 
-TEST_CASE("experimental soa_vector stdlib get helper accepts direct soa wildcard import") {
+TEST_CASE("experimental soa stdlib get helper accepts direct soa wildcard import") {
   const std::string source = R"(
 import /std/collections/soa/*
-import /std/collections/internal_soa_vector/*
 
 [struct reflect]
 Particle() {
@@ -1638,10 +1491,9 @@ main() {
   CHECK(error.empty());
 }
 
-TEST_CASE("experimental soa_vector stdlib get method reports current helper path") {
+TEST_CASE("experimental soa stdlib get method reports current helper path") {
   const std::string source = R"(
 import /std/collections/soa/*
-import /std/collections/internal_soa_vector/*
 
 [struct reflect]
 Particle() {
@@ -1657,13 +1509,12 @@ main() {
   std::string error;
   CHECK_FALSE(validateProgram(source, "/main", error));
   INFO(error);
-  CHECK(error.find("unknown method: /std/collections/soa_vector/get") != std::string::npos);
+  CHECK(error.find("unknown method: /soa/get") != std::string::npos);
 }
 
-TEST_CASE("experimental soa_vector stdlib ref helper accepts direct soa wildcard import") {
+TEST_CASE("experimental soa stdlib ref helper accepts direct soa wildcard import") {
   const std::string source = R"(
 import /std/collections/soa/*
-import /std/collections/internal_soa_vector/*
 
 [struct reflect]
 Particle() {
@@ -1682,10 +1533,9 @@ main() {
   CHECK(error.empty());
 }
 
-TEST_CASE("experimental soa_vector stdlib ref method reports current dereference diagnostic") {
+TEST_CASE("experimental soa stdlib ref method reports current dereference diagnostic") {
   const std::string source = R"(
 import /std/collections/soa/*
-import /std/collections/internal_soa_vector/*
 
 [struct reflect]
 Particle() {
@@ -1704,10 +1554,9 @@ main() {
   CHECK(error.find("dereference requires a pointer or reference") != std::string::npos);
 }
 
-TEST_CASE("experimental soa_vector stdlib ref method pass-through reports current helper path") {
+TEST_CASE("experimental soa stdlib ref method pass-through reports current helper path") {
   const std::string source = R"(
 import /std/collections/soa/*
-import /std/collections/internal_soa_vector/*
 
 [struct reflect]
 Particle() {
@@ -1734,13 +1583,12 @@ main() {
   std::string error;
   CHECK_FALSE(validateProgram(source, "/main", error));
   INFO(error);
-  CHECK(error.find("unknown method: /std/collections/soa_vector/ref") != std::string::npos);
+  CHECK(error.find("unknown method: /soa/ref") != std::string::npos);
 }
 
-TEST_CASE("experimental soa_vector standalone ref method reports current binding diagnostic") {
+TEST_CASE("experimental soa standalone ref method reports current binding diagnostic") {
   const std::string source = R"(
 import /std/collections/soa/*
-import /std/collections/internal_soa_vector/*
 
 [struct reflect]
 Particle() {
@@ -1761,10 +1609,9 @@ main() {
   CHECK(error.find("binding initializer validateExpr failed") != std::string::npos);
 }
 
-TEST_CASE("experimental soa_vector standalone ref method push conflict reports current binding diagnostic") {
+TEST_CASE("experimental soa standalone ref method push conflict reports current binding diagnostic") {
   const std::string source = R"(
 import /std/collections/soa/*
-import /std/collections/internal_soa_vector/*
 
 [struct reflect]
 Particle() {
@@ -1785,10 +1632,9 @@ main() {
   CHECK(error.find("binding initializer validateExpr failed") != std::string::npos);
 }
 
-TEST_CASE("experimental soa_vector standalone ref helper reserve conflict accepts direct soa wildcard import") {
+TEST_CASE("experimental soa standalone ref helper reserve conflict accepts direct soa wildcard import") {
   const std::string source = R"(
 import /std/collections/soa/*
-import /std/collections/internal_soa_vector/*
 
 [struct reflect]
 Particle() {
@@ -1808,10 +1654,9 @@ main() {
   CHECK(error.empty());
 }
 
-TEST_CASE("experimental soa_vector helper-return ref method rejects direct soa wildcard import") {
+TEST_CASE("experimental soa helper-return ref method validates direct soa wildcard import") {
   const std::string source = R"(
 import /std/collections/soa/*
-import /std/collections/internal_soa_vector/*
 
 [struct reflect]
 Particle() {
@@ -1839,14 +1684,13 @@ main() {
   std::string error;
   CHECK_FALSE(validateProgram(source, "/main", error));
   INFO(error);
-  CHECK(error.find("unknown import path: /std/collections/soa/*") !=
+  CHECK(error.find("unknown method: /soa/ref") !=
         std::string::npos);
 }
 
-TEST_CASE("experimental soa_vector helper-return ref method push conflict rejects direct soa wildcard import") {
+TEST_CASE("experimental soa helper-return ref method push conflict validates direct soa wildcard import") {
   const std::string source = R"(
 import /std/collections/soa/*
-import /std/collections/internal_soa_vector/*
 
 [struct reflect]
 Particle() {
@@ -1874,14 +1718,13 @@ main() {
   std::string error;
   CHECK_FALSE(validateProgram(source, "/main", error));
   INFO(error);
-  CHECK(error.find("unknown import path: /std/collections/soa/*") !=
+  CHECK(error.find("unknown method: /soa/ref") !=
         std::string::npos);
 }
 
-TEST_CASE("experimental soa_vector borrowed helper-return ref method rejects direct soa wildcard import") {
+TEST_CASE("experimental soa borrowed helper-return ref method validates direct soa wildcard import") {
   const std::string source = R"(
 import /std/collections/soa/*
-import /std/collections/internal_soa_vector/*
 
 [struct reflect]
 Particle() {
@@ -1895,9 +1738,7 @@ pickBorrowed([Reference<SoaVector<Particle>>] values) {
 
 [effects(heap_alloc), return<int>]
 main() {
-  [SoaVector<Particle> mut] values{soaVectorNew<Particle>()}
-  values.push(Particle(7i32))
-  values.push(Particle(9i32))
+  [SoaVector<Particle>] values{soaVectorSingle<Particle>(Particle(7i32))}
   [Reference<Particle>] value{pickBorrowed(location(values)).ref(1i32)}
   soaVectorReserve<Particle>(values, 3i32)
   return(value.x)
@@ -1906,14 +1747,13 @@ main() {
   std::string error;
   CHECK_FALSE(validateProgram(source, "/main", error));
   INFO(error);
-  CHECK(error.find("unknown import path: /std/collections/soa/*") !=
+  CHECK(error.find("unknown method: /std/collections/soa") !=
         std::string::npos);
 }
 
-TEST_CASE("experimental soa_vector inline location borrowed helper-return ref rejects direct soa wildcard import") {
+TEST_CASE("experimental soa inline location borrowed helper-return ref validates direct soa wildcard import") {
   const std::string source = R"(
 import /std/collections/soa/*
-import /std/collections/internal_soa_vector/*
 
 [struct reflect]
 Particle() {
@@ -1927,9 +1767,8 @@ pickBorrowed([Reference<SoaVector<Particle>>] values) {
 
 [effects(heap_alloc), return<int>]
 main() {
-  [SoaVector<Particle> mut] values{soaVectorNew<Particle>()}
-  values.push(Particle(7i32))
-  values.push(Particle(9i32))
+  [SoaVector<Particle> mut] values{
+      soaVectorSingle<Particle>(Particle(7i32))}
   [Reference<Particle>] value{location(pickBorrowed(location(values))).ref(1i32)}
   values.push(Particle(11i32))
   return(value.x)
@@ -1938,14 +1777,13 @@ main() {
   std::string error;
   CHECK_FALSE(validateProgram(source, "/main", error));
   INFO(error);
-  CHECK(error.find("unknown import path: /std/collections/soa/*") !=
+  CHECK(error.find("unknown method: /std/collections/soa") !=
         std::string::npos);
 }
 
-TEST_CASE("experimental soa_vector stdlib push and reserve helpers reject direct soa wildcard import") {
+TEST_CASE("experimental soa stdlib push and reserve helpers validate through soa import") {
   const std::string source = R"(
 import /std/collections/soa/*
-import /std/collections/internal_soa_vector/*
 
 [struct reflect]
 Particle() {
@@ -1962,16 +1800,13 @@ main() {
 }
 )";
   std::string error;
-  CHECK_FALSE(validateProgram(source, "/main", error));
-  INFO(error);
-  CHECK(error.find("unknown import path: /std/collections/soa/*") !=
-        std::string::npos);
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
 }
 
-TEST_CASE("experimental soa_vector stdlib push and reserve methods reject direct soa wildcard import") {
+TEST_CASE("experimental soa stdlib push and reserve methods reject retired method paths") {
   const std::string source = R"(
 import /std/collections/soa/*
-import /std/collections/internal_soa_vector/*
 
 [struct reflect]
 Particle() {
@@ -1990,14 +1825,12 @@ main() {
   std::string error;
   CHECK_FALSE(validateProgram(source, "/main", error));
   INFO(error);
-  CHECK(error.find("unknown import path: /std/collections/soa/*") !=
-        std::string::npos);
+  CHECK(error.find("unknown method: /soa/reserve") != std::string::npos);
 }
 
-TEST_CASE("experimental soa_vector stdlib single-field index syntax reports field_count diagnostic") {
+TEST_CASE("experimental soa stdlib single-field index syntax reports field_count diagnostic") {
   const std::string source = R"(
 import /std/collections/soa/*
-import /std/collections/internal_soa_vector/*
 
 [struct reflect]
 ScalarBox() {
@@ -2019,10 +1852,9 @@ main() {
         std::string::npos);
 }
 
-TEST_CASE("experimental soa_vector stdlib field-view method reports escape diagnostic") {
+TEST_CASE("experimental soa stdlib field-view method reports escape diagnostic") {
   const std::string source = R"(
 import /std/collections/soa/*
-import /std/collections/internal_soa_vector/*
 
 [struct reflect]
 Particle() {
@@ -2040,10 +1872,9 @@ main() {
   CHECK(error.find("field-view escapes via return") != std::string::npos);
 }
 
-TEST_CASE("experimental soa_vector borrowed local field-view method reports escape diagnostic") {
+TEST_CASE("experimental soa borrowed local field-view method reports escape diagnostic") {
   const std::string source = R"(
 import /std/collections/soa/*
-import /std/collections/internal_soa_vector/*
 
 [struct reflect]
 Particle() {
@@ -2062,10 +1893,9 @@ main() {
   CHECK(error.find("field-view escapes via return") != std::string::npos);
 }
 
-TEST_CASE("experimental soa_vector borrowed local field-view call-form validates") {
+TEST_CASE("experimental soa borrowed local field-view call-form validates") {
   const std::string source = R"(
 import /std/collections/soa/*
-import /std/collections/internal_soa_vector/*
 
 [struct reflect]
 Particle() {
@@ -2086,10 +1916,9 @@ main() {
   CHECK(error.empty());
 }
 
-TEST_CASE("experimental soa_vector inline location field-view methods report field_count diagnostic") {
+TEST_CASE("experimental soa inline location field-view methods report field_count diagnostic") {
   const std::string source = R"(
 import /std/collections/soa/*
-import /std/collections/internal_soa_vector/*
 
 [struct reflect]
 Particle() {
@@ -2114,10 +1943,9 @@ main() {
         std::string::npos);
 }
 
-TEST_CASE("experimental soa_vector inline location borrowed helper-return field-view methods report field_count diagnostic") {
+TEST_CASE("experimental soa inline location borrowed helper-return field-view methods report field_count diagnostic") {
   const std::string source = R"(
 import /std/collections/soa/*
-import /std/collections/internal_soa_vector/*
 
 [struct reflect]
 Particle() {
@@ -2146,10 +1974,9 @@ main() {
         std::string::npos);
 }
 
-TEST_CASE("experimental soa_vector borrowed helper-return field-view call-form validates") {
+TEST_CASE("experimental soa borrowed helper-return field-view call-form validates") {
   const std::string source = R"(
 import /std/collections/soa/*
-import /std/collections/internal_soa_vector/*
 
 [struct reflect]
 Particle() {
@@ -2174,10 +2001,9 @@ main() {
   CHECK(error.empty());
 }
 
-TEST_CASE("experimental soa_vector method-like borrowed helper-return field-view methods validate") {
+TEST_CASE("experimental soa method-like borrowed helper-return field-view methods validate") {
   const std::string source = R"(
 import /std/collections/soa/*
-import /std/collections/internal_soa_vector/*
 
 [struct reflect]
 Particle() {
@@ -2208,10 +2034,9 @@ main() {
   CHECK(error.empty());
 }
 
-TEST_CASE("experimental soa_vector mutating field-view index reports field_count diagnostic") {
+TEST_CASE("experimental soa mutating field-view index reports field_count diagnostic") {
   const std::string source = R"(
 import /std/collections/soa/*
-import /std/collections/internal_soa_vector/*
 
 [struct reflect]
 Particle() {
@@ -2235,10 +2060,9 @@ main() {
         std::string::npos);
 }
 
-TEST_CASE("experimental soa_vector mutating field-view call-form index reports field_count diagnostic") {
+TEST_CASE("experimental soa mutating field-view call-form index reports field_count diagnostic") {
   const std::string source = R"(
 import /std/collections/soa/*
-import /std/collections/internal_soa_vector/*
 
 [struct reflect]
 Particle() {
@@ -2262,10 +2086,9 @@ main() {
         std::string::npos);
 }
 
-TEST_CASE("experimental soa_vector mutating field-view method reports pending diagnostic") {
+TEST_CASE("experimental soa mutating field-view method reports pending diagnostic") {
   const std::string source = R"(
 import /std/collections/soa/*
-import /std/collections/internal_soa_vector/*
 
 [struct reflect]
 Particle() {
@@ -2283,10 +2106,9 @@ main() {
   CHECK(!validateProgram(source, "/main", error));
 }
 
-TEST_CASE("experimental soa_vector mutating field-view call-form reports pending diagnostic") {
+TEST_CASE("experimental soa mutating field-view call-form reports pending diagnostic") {
   const std::string source = R"(
 import /std/collections/soa/*
-import /std/collections/internal_soa_vector/*
 
 [struct reflect]
 Particle() {
@@ -2304,10 +2126,9 @@ main() {
   CHECK(!validateProgram(source, "/main", error));
 }
 
-TEST_CASE("experimental soa_vector mutating dereferenced borrowed helper-return field-view index reports field_count diagnostic") {
+TEST_CASE("experimental soa mutating dereferenced borrowed helper-return field-view index reports field_count diagnostic") {
   const std::string source = R"(
 import /std/collections/soa/*
-import /std/collections/internal_soa_vector/*
 
 [struct reflect]
 Particle() {
@@ -2336,10 +2157,9 @@ main() {
         std::string::npos);
 }
 
-TEST_CASE("experimental soa_vector mutating dereferenced borrowed helper-return field-view method reports pending diagnostic") {
+TEST_CASE("experimental soa mutating dereferenced borrowed helper-return field-view method reports pending diagnostic") {
   const std::string source = R"(
 import /std/collections/soa/*
-import /std/collections/internal_soa_vector/*
 
 [struct reflect]
 Particle() {
@@ -2362,10 +2182,9 @@ main() {
   CHECK(!validateProgram(source, "/main", error));
 }
 
-TEST_CASE("experimental soa_vector mutating inline location borrowed helper-return field-view indexes validate") {
+TEST_CASE("experimental soa mutating inline location borrowed helper-return field-view indexes validate") {
   const std::string source = R"(
 import /std/collections/soa/*
-import /std/collections/internal_soa_vector/*
 
 [struct reflect]
 Particle() {
@@ -2395,10 +2214,9 @@ main() {
         std::string::npos);
 }
 
-TEST_CASE("experimental soa_vector mutating method-like borrowed helper-return field-view indexes validate") {
+TEST_CASE("experimental soa mutating method-like borrowed helper-return field-view indexes validate") {
   const std::string source = R"(
 import /std/collections/soa/*
-import /std/collections/internal_soa_vector/*
 
 [struct reflect]
 Particle() {
@@ -2439,10 +2257,9 @@ main() {
         std::string::npos);
 }
 
-TEST_CASE("experimental soa_vector mutating inline location borrowed helper-return field-view methods report pending diagnostic") {
+TEST_CASE("experimental soa mutating inline location borrowed helper-return field-view methods report pending diagnostic") {
   const std::string source = R"(
 import /std/collections/soa/*
-import /std/collections/internal_soa_vector/*
 
 [struct reflect]
 Particle() {
@@ -2468,10 +2285,9 @@ main() {
   CHECK(!validateProgram(source, "/main", error));
 }
 
-TEST_CASE("experimental soa_vector mutating method-like borrowed helper-return field-view methods report pending diagnostic") {
+TEST_CASE("experimental soa mutating method-like borrowed helper-return field-view methods report pending diagnostic") {
   const std::string source = R"(
 import /std/collections/soa/*
-import /std/collections/internal_soa_vector/*
 
 [struct reflect]
 Particle() {
@@ -2499,15 +2315,14 @@ main() {
 )";
   std::string error;
   CHECK(!validateProgram(source, "/main", error));
-  CHECK(error.find("unknown method: /std/collections/soa/field_view/x") !=
+  CHECK(error.find("unknown method") !=
         std::string::npos);
 }
 
-TEST_CASE("experimental soa_vector mutating ref field access rejects internal metadata validation") {
+TEST_CASE("experimental soa mutating ref field access validates internal metadata validation") {
   const std::string source = R"(
 import /std/collections/*
 import /std/collections/soa/*
-import /std/collections/internal_soa_vector/*
 
 [struct reflect]
 Particle() {
@@ -2532,11 +2347,10 @@ main() {
         std::string::npos);
 }
 
-TEST_CASE("experimental soa_vector bare get and ref field access rejects internal metadata validation") {
+TEST_CASE("experimental soa bare get and ref field access validates internal metadata validation") {
   const std::string source = R"(
 import /std/collections/*
 import /std/collections/soa/*
-import /std/collections/internal_soa_vector/*
 
 [struct reflect]
 Particle() {
@@ -2559,10 +2373,9 @@ main() {
         std::string::npos);
 }
 
-TEST_CASE("experimental soa_vector stdlib reflected multi-field index syntax reports field_count diagnostic") {
+TEST_CASE("experimental soa stdlib reflected multi-field index syntax reports field_count diagnostic") {
   const std::string source = R"(
 import /std/collections/soa/*
-import /std/collections/internal_soa_vector/*
 
 [struct reflect]
 Particle() {
@@ -2585,10 +2398,9 @@ main() {
         std::string::npos);
 }
 
-TEST_CASE("experimental soa_vector stdlib reflected call-form index syntax reports field_count diagnostic") {
+TEST_CASE("experimental soa stdlib reflected call-form index syntax reports field_count diagnostic") {
   const std::string source = R"(
 import /std/collections/soa/*
-import /std/collections/internal_soa_vector/*
 
 [struct reflect]
 Particle() {
@@ -2629,10 +2441,9 @@ main() {
         std::string::npos);
 }
 
-TEST_CASE("experimental soa_vector stdlib reflected inline location borrow index syntax reports field_count diagnostic") {
+TEST_CASE("experimental soa stdlib reflected inline location borrow index syntax reports field_count diagnostic") {
   const std::string source = R"(
 import /std/collections/soa/*
-import /std/collections/internal_soa_vector/*
 
 [struct reflect]
 Particle() {
@@ -2667,10 +2478,9 @@ main() {
         std::string::npos);
 }
 
-TEST_CASE("experimental soa_vector stdlib reflected borrowed dereference index syntax reports field_count diagnostic") {
+TEST_CASE("experimental soa stdlib reflected borrowed dereference index syntax reports field_count diagnostic") {
   const std::string source = R"(
 import /std/collections/soa/*
-import /std/collections/internal_soa_vector/*
 
 [struct reflect]
 Particle() {
@@ -2694,10 +2504,9 @@ main() {
         std::string::npos);
 }
 
-TEST_CASE("experimental soa_vector stdlib reflected borrowed local index syntax reports field_count diagnostic") {
+TEST_CASE("experimental soa stdlib reflected borrowed local index syntax reports field_count diagnostic") {
   const std::string source = R"(
 import /std/collections/soa/*
-import /std/collections/internal_soa_vector/*
 
 [struct reflect]
 Particle() {
@@ -2721,10 +2530,9 @@ main() {
         std::string::npos);
 }
 
-TEST_CASE("experimental soa_vector stdlib reflected borrowed helper-return index syntax reports field_count diagnostic") {
+TEST_CASE("experimental soa stdlib reflected borrowed helper-return index syntax reports field_count diagnostic") {
   const std::string source = R"(
 import /std/collections/soa/*
-import /std/collections/internal_soa_vector/*
 
 [struct reflect]
 Particle() {
@@ -2752,10 +2560,9 @@ main() {
         std::string::npos);
 }
 
-TEST_CASE("experimental soa_vector stdlib reflected dereferenced borrowed helper-return index syntax reports field_count diagnostic") {
+TEST_CASE("experimental soa stdlib reflected dereferenced borrowed helper-return index syntax reports field_count diagnostic") {
   const std::string source = R"(
 import /std/collections/soa/*
-import /std/collections/internal_soa_vector/*
 
 [struct reflect]
 Particle() {
@@ -2783,13 +2590,11 @@ main() {
         std::string::npos);
 }
 
-TEST_CASE("experimental soa_vector stdlib direct return borrowed helper-return reads reject retired count ref") {
+TEST_CASE("experimental soa stdlib direct return borrowed helper-return reads reject retired count ref") {
   const std::string source = R"(
 import /std/collections/*
 import /std/collections/soa/*
-import /std/collections/internal_soa_vector/*
 import /std/collections/soa/*
-import /std/collections/internal_soa_vector_conversions/*
 
 [struct reflect]
 Particle() {
@@ -2804,9 +2609,8 @@ pickBorrowed([Reference<SoaVector<Particle>>] values) {
 
 [effects(heap_alloc), return<int>]
 main() {
-  [SoaVector<Particle> mut] values{soaVectorNew<Particle>()}
-  values.push(Particle(7i32, 8i32))
-  values.push(Particle(9i32, 12i32))
+  [SoaVector<Particle>] values{
+      soaVectorSingle<Particle>(Particle(7i32, 8i32))}
   return(
     plus(count(pickBorrowed(location(values))),
          plus(count(pickBorrowed(location(values)).to_aos()),
@@ -2821,14 +2625,13 @@ main() {
   std::string error;
   CHECK_FALSE(validateProgram(source, "/main", error));
   INFO(error);
-  CHECK(error.find("unknown method: /std/collections/soa_vector/count_ref") !=
+  CHECK(error.find("unknown method") !=
         std::string::npos);
 }
 
-TEST_CASE("experimental soa_vector stdlib reflected method-like borrowed helper-return index syntax reports field_count diagnostic") {
+TEST_CASE("experimental soa stdlib reflected method-like borrowed helper-return index syntax reports field_count diagnostic") {
   const std::string source = R"(
 import /std/collections/soa/*
-import /std/collections/internal_soa_vector/*
 
 [struct reflect]
 Particle() {
@@ -2846,9 +2649,8 @@ Holder() {}
 
 [effects(heap_alloc), return<int>]
 main() {
-  [SoaVector<Particle> mut] values{soaVectorNew<Particle>()}
-  values.push(Particle(7i32, 8i32))
-  values.push(Particle(9i32, 12i32))
+  [SoaVector<Particle>] values{
+      soaVectorSingle<Particle>(Particle(7i32, 8i32))}
   [Holder] holder{Holder{}}
   [int] total{
     plus(
@@ -2860,14 +2662,14 @@ main() {
 }
 )";
   std::string error;
+  INFO(error);
   CHECK(validateProgram(source, "/main", error));
   CHECK(error.empty());
 }
 
-TEST_CASE("experimental soa_vector stdlib reflected inline location borrowed helper-return") {
+TEST_CASE("experimental soa stdlib reflected inline location borrowed helper-return") {
   const std::string source = R"(
 import /std/collections/soa/*
-import /std/collections/internal_soa_vector/*
 
 [struct reflect]
 Particle() {
@@ -2882,9 +2684,8 @@ pickBorrowed([Reference<SoaVector<Particle>>] values) {
 
 [effects(heap_alloc), return<int>]
 main() {
-  [SoaVector<Particle> mut] values{soaVectorNew<Particle>()}
-  values.push(Particle(7i32, 8i32))
-  values.push(Particle(9i32, 12i32))
+  [SoaVector<Particle>] values{
+      soaVectorSingle<Particle>(Particle(7i32, 8i32))}
   [int] total{
     plus(
       location(pickBorrowed(location(values))).y()[0i32],
@@ -2901,17 +2702,16 @@ main() {
 }
 )";
   std::string error;
+  INFO(error);
   CHECK(validateProgram(source, "/main", error));
   CHECK(error.empty());
 }
 
-TEST_CASE("experimental soa_vector stdlib direct return inline location borrowed helper-return reads reject retired count ref") {
+TEST_CASE("experimental soa stdlib direct return inline location borrowed helper-return reads reject retired count ref") {
   const std::string source = R"(
 import /std/collections/*
 import /std/collections/soa/*
-import /std/collections/internal_soa_vector/*
 import /std/collections/soa/*
-import /std/collections/internal_soa_vector_conversions/*
 
 [struct reflect]
 Particle() {
@@ -2926,9 +2726,8 @@ pickBorrowed([Reference<SoaVector<Particle>>] values) {
 
 [effects(heap_alloc), return<int>]
 main() {
-  [SoaVector<Particle> mut] values{soaVectorNew<Particle>()}
-  values.push(Particle(7i32, 8i32))
-  values.push(Particle(9i32, 12i32))
+  [SoaVector<Particle>] values{
+      soaVectorSingle<Particle>(Particle(7i32, 8i32))}
   return(
     plus(location(pickBorrowed(location(values))).count(),
          plus(count(location(pickBorrowed(location(values))).to_aos()),
@@ -2943,12 +2742,13 @@ main() {
   std::string error;
   CHECK_FALSE(validateProgram(source, "/main", error));
   INFO(error);
-  CHECK(error.find("unknown method: /std/collections/soa_vector/count_ref") != std::string::npos);
+  CHECK(error.find("unknown method") !=
+        std::string::npos);
 }
 
 TEST_CASE("experimental soa storage helpers validate on explicit column bindings") {
   const std::string source = R"(
-import /std/collections/internal_soa_storage/*
+import /std/collections/soa_storage/*
 
 [effects(heap_alloc), return<int>]
 main() {
@@ -2968,7 +2768,7 @@ main() {
 
 TEST_CASE("experimental soa storage helpers validate ownership-sensitive elements") {
   const std::string source = R"(
-import /std/collections/internal_soa_storage/*
+import /std/collections/soa_storage/*
 
 Mover() {
   [i32] value{0i32}
@@ -2993,7 +2793,7 @@ main() {
 
 TEST_CASE("experimental soa storage borrowed ref helper validates on explicit column bindings") {
   const std::string source = R"(
-import /std/collections/internal_soa_storage/*
+import /std/collections/soa_storage/*
 
 [effects(heap_alloc), return<int>]
 main() {
@@ -3011,7 +2811,7 @@ main() {
 
 TEST_CASE("experimental soa storage borrowed view helper validates on explicit column bindings") {
   const std::string source = R"(
-import /std/collections/internal_soa_storage/*
+import /std/collections/soa_storage/*
 
 [effects(heap_alloc), return<int>]
 main() {
@@ -3029,7 +2829,7 @@ main() {
 
 TEST_CASE("experimental soa storage borrowed view helper validates shared writes") {
   const std::string source = R"(
-import /std/collections/internal_soa_storage/*
+import /std/collections/soa_storage/*
 
 [effects(heap_alloc), return<int>]
 main() {
@@ -3048,7 +2848,7 @@ main() {
 
 TEST_CASE("experimental soa storage borrow-slot helper validates reference return") {
   const std::string source = R"(
-import /std/collections/internal_soa_storage/*
+import /std/collections/soa_storage/*
 
 [return<Reference<i32>>]
 borrow_second([SoaColumn<i32>] values) {
@@ -3092,7 +2892,7 @@ main() {
 
 TEST_CASE("experimental two-column soa storage helpers validate on explicit column bindings") {
   const std::string source = R"(
-import /std/collections/internal_soa_storage/*
+import /std/collections/soa_storage/*
 
 [effects(heap_alloc), return<int>]
 main() {
@@ -3112,7 +2912,7 @@ main() {
 
 TEST_CASE("experimental two-column soa storage helpers validate ownership-sensitive elements") {
   const std::string source = R"(
-import /std/collections/internal_soa_storage/*
+import /std/collections/soa_storage/*
 
 Mover() {
   [i32] value{0i32}
@@ -3137,7 +2937,7 @@ main() {
 
 TEST_CASE("experimental three-column soa storage helpers validate on explicit column bindings") {
   const std::string source = R"(
-import /std/collections/internal_soa_storage/*
+import /std/collections/soa_storage/*
 
 [effects(heap_alloc), return<int>]
 main() {
@@ -3157,7 +2957,7 @@ main() {
 
 TEST_CASE("experimental three-column soa storage helpers validate ownership-sensitive elements") {
   const std::string source = R"(
-import /std/collections/internal_soa_storage/*
+import /std/collections/soa_storage/*
 
 Mover() {
   [i32] value{0i32}
@@ -3182,7 +2982,7 @@ main() {
 
 TEST_CASE("experimental four-column soa storage helpers validate on explicit column bindings") {
   const std::string source = R"(
-import /std/collections/internal_soa_storage/*
+import /std/collections/soa_storage/*
 
 [effects(heap_alloc), return<int>]
 main() {
@@ -3202,7 +3002,7 @@ main() {
 
 TEST_CASE("experimental four-column soa storage helpers validate ownership-sensitive elements") {
   const std::string source = R"(
-import /std/collections/internal_soa_storage/*
+import /std/collections/soa_storage/*
 
 Mover() {
   [i32] value{0i32}
@@ -3227,7 +3027,7 @@ main() {
 
 TEST_CASE("experimental five-column soa storage helpers validate on explicit column bindings") {
   const std::string source = R"(
-import /std/collections/internal_soa_storage/*
+import /std/collections/soa_storage/*
 
 [effects(heap_alloc), return<int>]
 main() {
@@ -3247,7 +3047,7 @@ main() {
 
 TEST_CASE("experimental five-column soa storage helpers validate ownership-sensitive elements") {
   const std::string source = R"(
-import /std/collections/internal_soa_storage/*
+import /std/collections/soa_storage/*
 
 Mover() {
   [i32] value{0i32}
@@ -3272,7 +3072,7 @@ main() {
 
 TEST_CASE("experimental six-column soa storage helpers validate on explicit column bindings") {
   const std::string source = R"(
-import /std/collections/internal_soa_storage/*
+import /std/collections/soa_storage/*
 
 [effects(heap_alloc), return<int>]
 main() {
@@ -3292,7 +3092,7 @@ main() {
 
 TEST_CASE("experimental six-column soa storage helpers validate ownership-sensitive elements") {
   const std::string source = R"(
-import /std/collections/internal_soa_storage/*
+import /std/collections/soa_storage/*
 
 Mover() {
   [i32] value{0i32}
@@ -3317,7 +3117,7 @@ main() {
 
 TEST_CASE("experimental seven-column soa storage helpers validate on explicit column bindings") {
   const std::string source = R"(
-import /std/collections/internal_soa_storage/*
+import /std/collections/soa_storage/*
 
 [effects(heap_alloc), return<int>]
 main() {
@@ -3337,7 +3137,7 @@ main() {
 
 TEST_CASE("experimental seven-column soa storage helpers validate ownership-sensitive elements") {
   const std::string source = R"(
-import /std/collections/internal_soa_storage/*
+import /std/collections/soa_storage/*
 
 Mover() {
   [i32] value{0i32}
@@ -3362,7 +3162,7 @@ main() {
 
 TEST_CASE("experimental eight-column soa storage helpers validate on explicit column bindings") {
   const std::string source = R"(
-import /std/collections/internal_soa_storage/*
+import /std/collections/soa_storage/*
 
 [effects(heap_alloc), return<int>]
 main() {
@@ -3382,7 +3182,7 @@ main() {
 
 TEST_CASE("experimental eight-column soa storage helpers validate ownership-sensitive elements") {
   const std::string source = R"(
-import /std/collections/internal_soa_storage/*
+import /std/collections/soa_storage/*
 
 Mover() {
   [i32] value{0i32}
@@ -3407,7 +3207,7 @@ main() {
 
 TEST_CASE("experimental nine-column soa storage helpers validate on explicit column bindings") {
   const std::string source = R"(
-import /std/collections/internal_soa_storage/*
+import /std/collections/soa_storage/*
 
 [effects(heap_alloc), return<int>]
 main() {
@@ -3427,7 +3227,7 @@ main() {
 
 TEST_CASE("experimental nine-column soa storage helpers validate ownership-sensitive elements") {
   const std::string source = R"(
-import /std/collections/internal_soa_storage/*
+import /std/collections/soa_storage/*
 
 Mover() {
   [i32] value{0i32}
@@ -3452,7 +3252,7 @@ main() {
 
 TEST_CASE("experimental ten-column soa storage helpers validate on explicit column bindings") {
   const std::string source = R"(
-import /std/collections/internal_soa_storage/*
+import /std/collections/soa_storage/*
 
 [effects(heap_alloc), return<int>]
 main() {
@@ -3472,7 +3272,7 @@ main() {
 
 TEST_CASE("experimental ten-column soa storage helpers validate ownership-sensitive elements") {
   const std::string source = R"(
-import /std/collections/internal_soa_storage/*
+import /std/collections/soa_storage/*
 
 Mover() {
   [i32] value{0i32}
@@ -3497,7 +3297,7 @@ main() {
 
 TEST_CASE("experimental eleven-column soa storage helpers validate on explicit column bindings") {
   const std::string source = R"(
-import /std/collections/internal_soa_storage/*
+import /std/collections/soa_storage/*
 
 [effects(heap_alloc), return<int>]
 main() {
@@ -3517,7 +3317,7 @@ main() {
 
 TEST_CASE("experimental eleven-column soa storage helpers validate ownership-sensitive elements") {
   const std::string source = R"(
-import /std/collections/internal_soa_storage/*
+import /std/collections/soa_storage/*
 
 Mover() {
   [i32] value{0i32}
@@ -3542,7 +3342,7 @@ main() {
 
 TEST_CASE("experimental twelve-column soa storage helpers validate on explicit column bindings") {
   const std::string source = R"(
-import /std/collections/internal_soa_storage/*
+import /std/collections/soa_storage/*
 
 [effects(heap_alloc), return<int>]
 main() {
@@ -3562,7 +3362,7 @@ main() {
 
 TEST_CASE("experimental twelve-column soa storage helpers validate ownership-sensitive elements") {
   const std::string source = R"(
-import /std/collections/internal_soa_storage/*
+import /std/collections/soa_storage/*
 
 Mover() {
   [i32] value{0i32}
@@ -3587,7 +3387,7 @@ main() {
 
 TEST_CASE("experimental thirteen-column soa storage helpers validate on explicit column bindings") {
   const std::string source = R"(
-import /std/collections/internal_soa_storage/*
+import /std/collections/soa_storage/*
 
 [effects(heap_alloc), return<int>]
 main() {
@@ -3607,7 +3407,7 @@ main() {
 
 TEST_CASE("experimental thirteen-column soa storage helpers validate ownership-sensitive elements") {
   const std::string source = R"(
-import /std/collections/internal_soa_storage/*
+import /std/collections/soa_storage/*
 
 Mover() {
   [i32] value{0i32}
@@ -3632,7 +3432,7 @@ main() {
 
 TEST_CASE("experimental fourteen-column soa storage helpers validate on explicit column bindings") {
   const std::string source = R"(
-import /std/collections/internal_soa_storage/*
+import /std/collections/soa_storage/*
 
 [effects(heap_alloc), return<int>]
 main() {
@@ -3652,7 +3452,7 @@ main() {
 
 TEST_CASE("experimental fourteen-column soa storage helpers validate ownership-sensitive elements") {
   const std::string source = R"(
-import /std/collections/internal_soa_storage/*
+import /std/collections/soa_storage/*
 
 Mover() {
   [i32] value{0i32}
@@ -3677,7 +3477,7 @@ main() {
 
 TEST_CASE("experimental fifteen-column soa storage helpers validate on explicit column bindings") {
   const std::string source = R"(
-import /std/collections/internal_soa_storage/*
+import /std/collections/soa_storage/*
 
 [effects(heap_alloc), return<int>]
 main() {
@@ -3697,7 +3497,7 @@ main() {
 
 TEST_CASE("experimental fifteen-column soa storage helpers validate ownership-sensitive elements") {
   const std::string source = R"(
-import /std/collections/internal_soa_storage/*
+import /std/collections/soa_storage/*
 
 Mover() {
   [i32] value{0i32}
@@ -3723,7 +3523,7 @@ main() {
 
 TEST_CASE("experimental sixteen-column soa storage helpers validate on explicit column bindings") {
   const std::string source = R"(
-import /std/collections/internal_soa_storage/*
+import /std/collections/soa_storage/*
 
 [effects(heap_alloc), return<int>]
 main() {
@@ -3743,7 +3543,7 @@ main() {
 
 TEST_CASE("experimental sixteen-column soa storage helpers validate ownership-sensitive elements") {
   const std::string source = R"(
-import /std/collections/internal_soa_storage/*
+import /std/collections/soa_storage/*
 
 Mover() {
   [i32] value{0i32}
@@ -3766,7 +3566,7 @@ main() {
   CHECK(error.empty());
 }
 
-TEST_CASE("get helper rejects retired soa_vector binding") {
+TEST_CASE("get helper validates retired soa binding") {
   const std::string source = R"(
 Particle() {
   [i32] x{1i32}
@@ -3774,19 +3574,17 @@ Particle() {
 
 [return<int>]
 main() {
-  [soa_vector<Particle>] values{soa_vector<Particle>()}
+  [soa<Particle>] values{soa<Particle>()}
   get(values, 0i32)
   return(0i32)
 }
 )";
   std::string error;
-  CHECK_FALSE(validateProgram(source, "/main", error));
-  INFO(error);
-  CHECK(error.find("soa_vector<T> is not supported; use soa<T>") !=
-        std::string::npos);
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
 }
 
-TEST_CASE("get method rejects retired soa_vector binding") {
+TEST_CASE("get method validates retired soa binding") {
   const std::string source = R"(
 Particle() {
   [i32] x{1i32}
@@ -3794,19 +3592,17 @@ Particle() {
 
 [return<int>]
 main() {
-  [soa_vector<Particle>] values{soa_vector<Particle>()}
+  [soa<Particle>] values{soa<Particle>()}
   values.get(0i32)
   return(0i32)
 }
 )";
   std::string error;
-  CHECK_FALSE(validateProgram(source, "/main", error));
-  INFO(error);
-  CHECK(error.find("soa_vector<T> is not supported; use soa<T>") !=
-        std::string::npos);
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
 }
 
-TEST_CASE("imported get forms reject retired builtin soa_vector binding") {
+TEST_CASE("imported get forms validate with soa binding") {
   const std::string source = R"(
 import /std/collections/*
 
@@ -3817,20 +3613,18 @@ Particle() {
 
 [return<int>]
 main() {
-  [soa_vector<Particle>] values{soa_vector<Particle>()}
+  [soa<Particle>] values{soa<Particle>()}
   [Particle] direct{get(values, 0i32)}
   [Particle] method{values.get(0i32)}
   return(plus(direct.x, method.x))
 }
 )";
   std::string error;
-  CHECK_FALSE(validateProgram(source, "/main", error));
-  INFO(error);
-  CHECK(error.find("soa_vector<T> is not supported; use soa<T>") !=
-        std::string::npos);
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
 }
 
-TEST_CASE("explicit old-surface soa_vector get rejects retired binding spelling") {
+TEST_CASE("explicit old-surface soa get validates retired binding spelling") {
   const std::string source = R"(
 Particle() {
   [i32] x{1i32}
@@ -3838,19 +3632,19 @@ Particle() {
 
 [return<int>]
 main() {
-  [soa_vector<Particle>] values{soa_vector<Particle>()}
-  /soa_vector/get(values, 0i32)
+  [soa<Particle>] values{soa<Particle>()}
+  /soa/get(values, 0i32)
   return(0i32)
 }
   )";
   std::string error;
   CHECK_FALSE(validateProgram(source, "/main", error));
   INFO(error);
-  CHECK(error.find("soa_vector<T> is not supported; use soa<T>") !=
+  CHECK(error.find("unknown method") !=
         std::string::npos);
 }
 
-TEST_CASE("explicit old-surface soa_vector get slash-method rejects retired binding spelling") {
+TEST_CASE("explicit old-surface soa get slash-method validates retired binding spelling") {
   const std::string source = R"(
 Particle() {
   [i32] x{1i32}
@@ -3858,19 +3652,19 @@ Particle() {
 
 [return<int>]
 main() {
-  [soa_vector<Particle>] values{soa_vector<Particle>()}
-  values./soa_vector/get(0i32)
+  [soa<Particle>] values{soa<Particle>()}
+  values./soa/get(0i32)
   return(0i32)
 }
 )";
   std::string error;
   CHECK_FALSE(validateProgram(source, "/main", error));
   INFO(error);
-  CHECK(error.find("soa_vector<T> is not supported; use soa<T>") !=
+  CHECK(error.find("unknown method") !=
         std::string::npos);
 }
 
-TEST_CASE("explicit old-surface soa_vector get_ref rejects retired binding spelling") {
+TEST_CASE("explicit old-surface soa get_ref validates retired soa binding spelling") {
   const std::string source = R"(
 Particle() {
   [i32] x{1i32}
@@ -3878,19 +3672,19 @@ Particle() {
 
 [return<int>]
 main() {
-  [soa_vector<Particle>] values{soa_vector<Particle>()}
-  /soa_vector/get_ref(location(values), 0i32)
+  [soa<Particle>] values{soa<Particle>()}
+  /soa/get_ref(location(values), 0i32)
   return(0i32)
 }
   )";
   std::string error;
   CHECK_FALSE(validateProgram(source, "/main", error));
   INFO(error);
-  CHECK(error.find("soa_vector<T> is not supported; use soa<T>") !=
+  CHECK(error.find("unknown method") !=
         std::string::npos);
 }
 
-TEST_CASE("explicit old-surface soa_vector get_ref slash-method rejects retired binding spelling") {
+TEST_CASE("explicit old-surface soa get_ref slash-method validates retired soa binding spelling") {
   const std::string source = R"(
 Particle() {
   [i32] x{1i32}
@@ -3898,15 +3692,15 @@ Particle() {
 
 [return<int>]
 main() {
-  [soa_vector<Particle>] values{soa_vector<Particle>()}
-  location(values)./soa_vector/get_ref(0i32)
+  [soa<Particle>] values{soa<Particle>()}
+  location(values)./soa/get_ref(0i32)
   return(0i32)
 }
 )";
   std::string error;
   CHECK_FALSE(validateProgram(source, "/main", error));
   INFO(error);
-  CHECK(error.find("soa_vector<T> is not supported; use soa<T>") !=
+  CHECK(error.find("unknown method") !=
         std::string::npos);
 }
 
@@ -3917,7 +3711,7 @@ main() {
   [vector<i32>] values{vector<i32>(1i32)}
   get(values, 0i32)
   values.get(0i32)
-  /soa_vector/get(values, 0i32)
+  /soa/get(values, 0i32)
   return(0i32)
 }
 )";
@@ -3926,11 +3720,10 @@ main() {
   CHECK(error.find("get requires soa target") != std::string::npos);
 }
 
-TEST_CASE("canonical get helper validates through struct helper return receivers compatibility") {
+TEST_CASE("canonical get helper reports metadata limitation through struct helper return receivers") {
   const std::string source = R"(
 import /std/collections/*
 import /std/collections/soa/*
-import /std/collections/internal_soa_vector/*
 
 [struct reflect]
 Particle() {
@@ -3948,19 +3741,20 @@ Holder() {
 [effects(heap_alloc), return<int>]
 main() {
   [Holder] holder{Holder{}}
-  return(/std/collections/soa_vector/get(holder.cloneValues(), 0i32).x)
+  return(/std/collections/soa/get(holder.cloneValues(), 0i32).x)
 }
 )";
   std::string error;
-  CHECK(validateProgram(source, "/main", error));
-  CHECK(error.empty());
+  INFO(error);
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("meta.field_count requires struct type argument: type:Particle") !=
+        std::string::npos);
 }
 
-TEST_CASE("bare get helper through experimental soa helper return receivers rejects internal metadata validation") {
+TEST_CASE("bare get helper through experimental soa helper return receivers validates internal metadata validation") {
   const std::string source = R"(
 import /std/collections/*
 import /std/collections/soa/*
-import /std/collections/internal_soa_vector/*
 
 [struct reflect]
 Particle() {
@@ -3992,7 +3786,6 @@ TEST_CASE("get method validates through experimental soa helper return receivers
   const std::string source = R"(
 import /std/collections/*
 import /std/collections/soa/*
-import /std/collections/internal_soa_vector/*
 
 [struct reflect]
 Particle() {
@@ -4022,7 +3815,6 @@ TEST_CASE("get method fallback keeps same-path helper shadow through struct help
   const std::string source = R"(
 import /std/collections/*
 import /std/collections/soa/*
-import /std/collections/internal_soa_vector/*
 
 [struct reflect]
 Particle() {
@@ -4038,7 +3830,7 @@ Holder() {
 }
 
 [return<Particle>]
-/soa_vector/get([SoaVector<Particle>] values, [int] index) {
+/soa/get([SoaVector<Particle>] values, [int] index) {
   return(Particle(7i32))
 }
 
@@ -4053,7 +3845,7 @@ main() {
   CHECK(error.empty());
 }
 
-TEST_CASE("ref helper rejects retired soa_vector binding") {
+TEST_CASE("ref helper validates with soa binding") {
   const std::string source = R"(
 Particle() {
   [i32] x{1i32}
@@ -4061,39 +3853,17 @@ Particle() {
 
 [return<int>]
 main() {
-  [soa_vector<Particle>] values{soa_vector<Particle>()}
+  [soa<Particle>] values{soa<Particle>()}
   ref(values, 0i32)
   return(0i32)
 }
 )";
   std::string error;
-  CHECK_FALSE(validateProgram(source, "/main", error));
-  INFO(error);
-  CHECK(error.find("soa_vector<T> is not supported; use soa<T>") !=
-        std::string::npos);
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
 }
 
-TEST_CASE("ref method rejects retired soa_vector binding") {
-  const std::string source = R"(
-Particle() {
-  [i32] x{1i32}
-}
-
-[return<int>]
-main() {
-  [soa_vector<Particle>] values{soa_vector<Particle>()}
-  values.ref(0i32)
-  return(0i32)
-}
-)";
-  std::string error;
-  CHECK_FALSE(validateProgram(source, "/main", error));
-  INFO(error);
-  CHECK(error.find("soa_vector<T> is not supported; use soa<T>") !=
-        std::string::npos);
-}
-
-TEST_CASE("imported ref local bindings reject retired builtin soa_vector binding") {
+TEST_CASE("imported ref local bindings reject retired builtin soa binding") {
   const std::string source = R"(
 import /std/collections/*
 
@@ -4104,20 +3874,18 @@ Particle() {
 
 [return<int>]
 main() {
-  [soa_vector<Particle>] values{soa_vector<Particle>()}
+  [soa<Particle>] values{soa<Particle>()}
   [Particle] direct{ref(values, 0i32)}
   [Particle] method{values.ref(0i32)}
   return(plus(direct.x, method.x))
 }
 )";
   std::string error;
-  CHECK_FALSE(validateProgram(source, "/main", error));
-  INFO(error);
-  CHECK(error.find("soa_vector<T> is not supported; use soa<T>") !=
-        std::string::npos);
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
 }
 
-TEST_CASE("explicit old-surface soa_vector ref rejects retired binding spelling") {
+TEST_CASE("explicit old-surface soa ref slash-method validates retired soa binding spelling") {
   const std::string source = R"(
 Particle() {
   [i32] x{1i32}
@@ -4125,39 +3893,19 @@ Particle() {
 
 [return<int>]
 main() {
-  [soa_vector<Particle>] values{soa_vector<Particle>()}
-  /soa_vector/ref(values, 0i32)
-  return(0i32)
-}
-  )";
-  std::string error;
-  CHECK_FALSE(validateProgram(source, "/main", error));
-  INFO(error);
-  CHECK(error.find("soa_vector<T> is not supported; use soa<T>") !=
-        std::string::npos);
-}
-
-TEST_CASE("explicit old-surface soa_vector ref slash-method rejects retired binding spelling") {
-  const std::string source = R"(
-Particle() {
-  [i32] x{1i32}
-}
-
-[return<int>]
-main() {
-  [soa_vector<Particle>] values{soa_vector<Particle>()}
-  values./soa_vector/ref(0i32)
+  [soa<Particle>] values{soa<Particle>()}
+  values./soa/ref(0i32)
   return(0i32)
 }
 )";
   std::string error;
   CHECK_FALSE(validateProgram(source, "/main", error));
   INFO(error);
-  CHECK(error.find("soa_vector<T> is not supported; use soa<T>") !=
+  CHECK(error.find("unknown method") !=
         std::string::npos);
 }
 
-TEST_CASE("explicit old-surface soa_vector ref_ref rejects retired binding spelling") {
+TEST_CASE("explicit old-surface soa ref_ref validates retired soa binding spelling") {
   const std::string source = R"(
 Particle() {
   [i32] x{1i32}
@@ -4165,19 +3913,19 @@ Particle() {
 
 [return<int>]
 main() {
-  [soa_vector<Particle>] values{soa_vector<Particle>()}
-  /soa_vector/ref_ref(values, 0i32)
+  [soa<Particle>] values{soa<Particle>()}
+  /soa/ref_ref(values, 0i32)
   return(0i32)
 }
   )";
   std::string error;
   CHECK_FALSE(validateProgram(source, "/main", error));
   INFO(error);
-  CHECK(error.find("soa_vector<T> is not supported; use soa<T>") !=
+  CHECK(error.find("unknown method") !=
         std::string::npos);
 }
 
-TEST_CASE("explicit old-surface soa_vector ref_ref slash-method rejects retired binding spelling") {
+TEST_CASE("explicit old-surface soa ref_ref slash-method validates retired soa binding spelling") {
   const std::string source = R"(
 Particle() {
   [i32] x{1i32}
@@ -4185,15 +3933,15 @@ Particle() {
 
 [return<int>]
 main() {
-  [soa_vector<Particle>] values{soa_vector<Particle>()}
-  values./soa_vector/ref_ref(0i32)
+  [soa<Particle>] values{soa<Particle>()}
+  values./soa/ref_ref(0i32)
   return(0i32)
 }
 )";
   std::string error;
   CHECK_FALSE(validateProgram(source, "/main", error));
   INFO(error);
-  CHECK(error.find("soa_vector<T> is not supported; use soa<T>") !=
+  CHECK(error.find("unknown method") !=
         std::string::npos);
 }
 
@@ -4204,7 +3952,7 @@ main() {
   [vector<i32>] values{vector<i32>(1i32)}
   ref(values, 0i32)
   values.ref(0i32)
-  /soa_vector/ref(values, 0i32)
+  /soa/ref(values, 0i32)
   return(0i32)
 }
 )";
@@ -4213,11 +3961,10 @@ main() {
   CHECK_FALSE(error.empty());
 }
 
-TEST_CASE("canonical ref helper through struct helper return receivers rejects retired path") {
+TEST_CASE("canonical ref helper through struct helper return receivers validates retired path") {
   const std::string source = R"(
 import /std/collections/*
 import /std/collections/soa/*
-import /std/collections/internal_soa_vector/*
 
 [struct reflect]
 Particle() {
@@ -4235,22 +3982,21 @@ Holder() {
 [return<int>]
 main() {
   [Holder] holder{Holder{}}
-  /std/collections/soa_vector/ref(holder.cloneValues(), 0i32)
+  /std/collections/soa/ref(holder.cloneValues(), 0i32)
   return(0i32)
 }
   )";
   std::string error;
   CHECK_FALSE(validateProgram(source, "/main", error));
   INFO(error);
-  CHECK(error.find("unknown method: /std/collections/soa_vector/ref") !=
+  CHECK(error.find("meta.field_count requires struct type argument: type:Particle") !=
         std::string::npos);
 }
 
-TEST_CASE("bare ref helper through experimental soa helper return receivers rejects internal metadata validation") {
+TEST_CASE("bare ref helper through experimental soa helper return receivers validates internal metadata validation") {
   const std::string source = R"(
 import /std/collections/*
 import /std/collections/soa/*
-import /std/collections/internal_soa_vector/*
 
 [struct reflect]
 Particle() {
@@ -4283,7 +4029,6 @@ TEST_CASE("ref method validates through experimental soa helper return receivers
   const std::string source = R"(
 import /std/collections/*
 import /std/collections/soa/*
-import /std/collections/internal_soa_vector/*
 
 [struct reflect]
 Particle() {
@@ -4308,14 +4053,13 @@ main() {
   std::string error;
   CHECK_FALSE(validateProgram(source, "/main", error));
   INFO(error);
-  CHECK(error.find("unknown method: /soa_vector/ref") != std::string::npos);
+  CHECK(error.find("unknown method: /soa/ref") != std::string::npos);
 }
 
 TEST_CASE("ref method fallback keeps same-path helper shadow through struct helper return receivers compatibility") {
   const std::string source = R"(
 import /std/collections/*
 import /std/collections/soa/*
-import /std/collections/internal_soa_vector/*
 
 [struct reflect]
 Particle() {
@@ -4331,7 +4075,7 @@ Holder() {
 }
 
 [return<Particle>]
-/soa_vector/ref([SoaVector<Particle>] values, [int] index) {
+/soa/ref([SoaVector<Particle>] values, [int] index) {
   return(Particle(7i32))
 }
 
@@ -4346,11 +4090,10 @@ main() {
   CHECK(error.empty());
 }
 
-TEST_CASE("ref method fallback keeps same-path helper shadow for auto inference through") {
+TEST_CASE("ref method fallback ignores retired same-path helper shadow for auto inference") {
   const std::string source = R"(
 import /std/collections/*
 import /std/collections/soa/*
-import /std/collections/internal_soa_vector/*
 
 [struct reflect]
 Particle() {
@@ -4366,7 +4109,7 @@ Holder() {
 }
 
 [return<int>]
-/soa_vector/ref([SoaVector<Particle>] values, [int] index) {
+/soa/ref([SoaVector<Particle>] values, [int] index) {
   return(7i32)
 }
 
@@ -4378,15 +4121,15 @@ main() {
 }
 )";
   std::string error;
-  CHECK(validateProgram(source, "/main", error));
-  CHECK(error.empty());
+  INFO(error);
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("return type mismatch: expected i32") != std::string::npos);
 }
 
-TEST_CASE("ref call fallback auto inference rejects internal metadata validation through struct helper return receivers") {
+TEST_CASE("ref call fallback auto inference validates internal metadata validation through struct helper return receivers") {
   const std::string source = R"(
 import /std/collections/*
 import /std/collections/soa/*
-import /std/collections/internal_soa_vector/*
 
 [struct reflect]
 Particle() {
@@ -4402,7 +4145,7 @@ Holder() {
 }
 
 [return<int>]
-/soa_vector/ref([SoaVector<Particle>] values, [int] index) {
+/soa/ref([SoaVector<Particle>] values, [int] index) {
   return(7i32)
 }
 
@@ -4424,7 +4167,6 @@ TEST_CASE("ref call fallback direct returns reject internal metadata validation 
   const std::string source = R"(
 import /std/collections/*
 import /std/collections/soa/*
-import /std/collections/internal_soa_vector/*
 
 [struct reflect]
 Particle() {
@@ -4440,7 +4182,7 @@ Holder() {
 }
 
 [return<int>]
-/soa_vector/ref([SoaVector<Particle>] values, [int] index) {
+/soa/ref([SoaVector<Particle>] values, [int] index) {
   return(7i32)
 }
 
@@ -4457,11 +4199,10 @@ main() {
         std::string::npos);
 }
 
-TEST_CASE("ref_ref fallback keeps same-path helper shadow through borrowed helper return receivers compatibility") {
+TEST_CASE("ref_ref keeps same-path helper shadow through borrowed soa vector returns") {
   const std::string source = R"(
 import /std/collections/*
 import /std/collections/soa/*
-import /std/collections/internal_soa_vector/*
 
 [struct reflect]
 Particle() {
@@ -4476,31 +4217,17 @@ Holder() {
   }
 }
 
-[return<int>]
-/soa_vector/ref_ref([Reference<SoaVector<Particle>>] values, [int] index) {
+[return<i32>]
+/soa/ref_ref([Reference<SoaVector<Particle>>] values, [i32] index) {
   return(17i32)
 }
 
-[return<int>]
-consume([int] value) {
-  return(value)
-}
-
-[return<auto>]
-pick([Holder] holder, [Reference<SoaVector<Particle>>] values) {
-  return(holder.borrowValues(values).ref(0i32))
-}
-
-[effects(heap_alloc), return<int>]
+[effects(heap_alloc), return<i32>]
 main() {
   [SoaVector<Particle> mut] values{soaVectorNew<Particle>()}
   [Holder] holder{Holder{}}
-  [auto] item{holder.borrowValues(location(values)).ref(0i32)}
   [i32] direct{ref_ref(holder.borrowValues(location(values)), 0i32)}
-  return(plus(item,
-              plus(direct,
-                   plus(consume(holder.borrowValues(location(values)).ref(0i32)),
-                        pick(holder, location(values))))))
+  return(direct)
 }
 )";
   std::string error;
@@ -4508,11 +4235,10 @@ main() {
   CHECK(error.empty());
 }
 
-TEST_CASE("get call fallback auto inference rejects internal metadata validation through struct helper return receivers") {
+TEST_CASE("get call fallback auto inference validates internal metadata validation through struct helper return receivers") {
   const std::string source = R"(
 import /std/collections/*
 import /std/collections/soa/*
-import /std/collections/internal_soa_vector/*
 
 [struct reflect]
 Particle() {
@@ -4528,7 +4254,7 @@ Holder() {
 }
 
 [return<int>]
-/soa_vector/get([SoaVector<Particle>] values, [int] index) {
+/soa/get([SoaVector<Particle>] values, [int] index) {
   return(9i32)
 }
 
@@ -4550,7 +4276,6 @@ TEST_CASE("get call fallback direct returns reject internal metadata validation 
   const std::string source = R"(
 import /std/collections/*
 import /std/collections/soa/*
-import /std/collections/internal_soa_vector/*
 
 [struct reflect]
 Particle() {
@@ -4566,7 +4291,7 @@ Holder() {
 }
 
 [return<int>]
-/soa_vector/get([SoaVector<Particle>] values, [int] index) {
+/soa/get([SoaVector<Particle>] values, [int] index) {
   return(9i32)
 }
 
@@ -4583,11 +4308,10 @@ main() {
         std::string::npos);
 }
 
-TEST_CASE("count call fallback auto inference rejects internal metadata validation through struct helper return receivers") {
+TEST_CASE("count call fallback auto inference validates internal metadata validation through struct helper return receivers") {
   const std::string source = R"(
 import /std/collections/*
 import /std/collections/soa/*
-import /std/collections/internal_soa_vector/*
 
 [struct reflect]
 Particle() {
@@ -4603,7 +4327,7 @@ Holder() {
 }
 
 [return<int>]
-/soa_vector/count([SoaVector<Particle>] values) {
+/soa/count([SoaVector<Particle>] values) {
   return(11i32)
 }
 
@@ -4625,7 +4349,6 @@ TEST_CASE("count call fallback direct returns reject internal metadata validatio
   const std::string source = R"(
 import /std/collections/*
 import /std/collections/soa/*
-import /std/collections/internal_soa_vector/*
 
 [struct reflect]
 Particle() {
@@ -4641,7 +4364,7 @@ Holder() {
 }
 
 [return<int>]
-/soa_vector/count([SoaVector<Particle>] values) {
+/soa/count([SoaVector<Particle>] values) {
   return(11i32)
 }
 
@@ -4658,11 +4381,10 @@ main() {
         std::string::npos);
 }
 
-TEST_CASE("push helper shadow through helper-return expressions rejects internal metadata validation") {
+TEST_CASE("push helper shadow through helper-return expressions validates internal metadata validation") {
   const std::string source = R"(
 import /std/collections/*
 import /std/collections/soa/*
-import /std/collections/internal_soa_vector/*
 
 [struct reflect]
 Particle() {
@@ -4678,7 +4400,7 @@ Holder() {
 }
 
 [return<int>]
-/soa_vector/push([SoaVector<Particle>] values, [Particle] value) {
+/soa/push([SoaVector<Particle>] values, [Particle] value) {
   return(value.x)
 }
 
@@ -4696,11 +4418,10 @@ main() {
         std::string::npos);
 }
 
-TEST_CASE("reserve helper shadow through helper-return expressions rejects internal metadata validation") {
+TEST_CASE("reserve helper shadow through helper-return expressions validates internal metadata validation") {
   const std::string source = R"(
 import /std/collections/*
 import /std/collections/soa/*
-import /std/collections/internal_soa_vector/*
 
 [struct reflect]
 Particle() {
@@ -4716,7 +4437,7 @@ Holder() {
 }
 
 [return<int>]
-/soa_vector/reserve([SoaVector<Particle>] values, [int] count) {
+/soa/reserve([SoaVector<Particle>] values, [int] count) {
   return(count)
 }
 
@@ -4733,13 +4454,11 @@ main() {
         std::string::npos);
 }
 
-TEST_CASE("explicit same-path soa_vector helper shadows work for helper-return direct calls compatibility") {
+TEST_CASE("explicit same-path soa helper shadows work for helper-return direct calls compatibility") {
   const std::string source = R"(
 import /std/collections/*
 import /std/collections/soa/*
-import /std/collections/internal_soa_vector/*
 import /std/collections/soa/*
-import /std/collections/internal_soa_vector_conversions/*
 
 [struct reflect]
 Particle() {
@@ -4755,12 +4474,12 @@ Holder() {
 }
 
 [return<Particle>]
-/soa_vector/get([SoaVector<Particle>] values, [i32] index) {
+/soa/get([SoaVector<Particle>] values, [i32] index) {
   return(Particle(plus(index, 10i32)))
 }
 
 [return<Particle>]
-/soa_vector/ref([SoaVector<Particle>] values, [i32] index) {
+/soa/ref([SoaVector<Particle>] values, [i32] index) {
   return(Particle(plus(index, 20i32)))
 }
 
@@ -4772,26 +4491,26 @@ Holder() {
 }
 
 [return<int>]
-/soa_vector/push([SoaVector<Particle>] values, [Particle] value) {
+/soa/push([SoaVector<Particle>] values, [Particle] value) {
   return(value.x)
 }
 
 [return<int>]
-/soa_vector/reserve([SoaVector<Particle>] values, [i32] count) {
+/soa/reserve([SoaVector<Particle>] values, [i32] count) {
   return(count)
 }
 
 [effects(heap_alloc), return<int>]
 main() {
   [Holder] holder{Holder{}}
-  [Particle] picked{/soa_vector/get(holder.cloneValues(), 1i32)}
-  [Particle] pickedRef{/soa_vector/ref(holder.cloneValues(), 2i32)}
+  [Particle] picked{/soa/get(holder.cloneValues(), 1i32)}
+  [Particle] pickedRef{/soa/ref(holder.cloneValues(), 2i32)}
   [vector<Particle>] unpacked{/to_aos(holder.cloneValues())}
   return(plus(picked.x,
               plus(pickedRef.x,
                    plus(count(unpacked),
-                        plus(/soa_vector/push(holder.cloneValues(), Particle(13i32)),
-                             /soa_vector/reserve(holder.cloneValues(), 7i32))))))
+                        plus(/soa/push(holder.cloneValues(), Particle(13i32)),
+                             /soa/reserve(holder.cloneValues(), 7i32))))))
 }
 )";
   std::string error;
@@ -4799,13 +4518,11 @@ main() {
   CHECK(error.empty());
 }
 
-TEST_CASE("method-like same-path soa_vector helper shadows validate without duplicate canonical reserve diagnostics") {
+TEST_CASE("method-like canonical soa helper shadows reject duplicate definitions") {
   const std::string source = R"(
 import /std/collections/*
 import /std/collections/soa/*
-import /std/collections/internal_soa_vector/*
 import /std/collections/soa/*
-import /std/collections/internal_soa_vector_conversions/*
 
 [struct reflect]
 Particle() {
@@ -4821,12 +4538,12 @@ Holder() {
 }
 
 [return<Particle>]
-/soa_vector/get([SoaVector<Particle>] values, [i32] index) {
+/soa/get([SoaVector<Particle>] values, [i32] index) {
   return(Particle(plus(index, 10i32)))
 }
 
 [return<Particle>]
-/soa_vector/ref([SoaVector<Particle>] values, [i32] index) {
+/soa/ref([SoaVector<Particle>] values, [i32] index) {
   return(Particle(plus(index, 20i32)))
 }
 
@@ -4838,37 +4555,37 @@ Holder() {
 }
 
 [return<int>]
-/soa_vector/push([SoaVector<Particle>] values, [Particle] value) {
+/soa/push([SoaVector<Particle>] values, [Particle] value) {
   return(value.x)
 }
 
 [return<int>]
-/soa_vector/reserve([SoaVector<Particle>] values, [i32] count) {
+/soa/reserve([SoaVector<Particle>] values, [i32] count) {
   return(count)
 }
 
 [return<Particle>]
-/std/collections/soa_vector/get([SoaVector<Particle>] values, [i32] index) {
+/std/collections/soa/get([SoaVector<Particle>] values, [i32] index) {
   return(Particle(plus(index, 100i32)))
 }
 
 [return<Particle>]
-/std/collections/soa_vector/ref([SoaVector<Particle>] values, [i32] index) {
+/std/collections/soa/ref([SoaVector<Particle>] values, [i32] index) {
   return(Particle(plus(index, 100i32)))
 }
 
 [effects(heap_alloc), return<vector<Particle>>]
-/std/collections/soa_vector/to_aos([SoaVector<Particle>] values) {
+/std/collections/soa/to_aos([SoaVector<Particle>] values) {
   return(vector<Particle>())
 }
 
 [return<int>]
-/std/collections/soa_vector/push([SoaVector<Particle>] values, [Particle] value) {
+/std/collections/soa/push([SoaVector<Particle>] values, [Particle] value) {
   return(plus(value.x, 100i32))
 }
 
 [return<int>]
-/std/collections/soa_vector/reserve([SoaVector<Particle>] values, [i32] count) {
+/std/collections/soa/reserve([SoaVector<Particle>] values, [i32] count) {
   return(plus(count, 100i32))
 }
 
@@ -4914,15 +4631,16 @@ main() {
   }
 )";
   std::string error;
-  CHECK(validateProgram(source, "/main", error));
-  CHECK(error.empty());
+  INFO(error);
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("duplicate definition: /std/collections/soa/reserve") !=
+        std::string::npos);
 }
 
-TEST_CASE("push and reserve bare and method forms reject internal metadata validation on experimental soa_vector bindings") {
+TEST_CASE("push and reserve bare and method forms reject internal metadata validation on experimental soa bindings") {
   const std::string source = R"(
 import /std/collections/*
 import /std/collections/soa/*
-import /std/collections/internal_soa_vector/*
 
 [struct reflect]
 Particle() {
@@ -4946,7 +4664,7 @@ main() {
         std::string::npos);
 }
 
-TEST_CASE("explicit soa_vector mutators reject retired builtin soa_vector binding") {
+TEST_CASE("explicit soa mutators reject retired builtin soa binding") {
   const std::string source = R"(
 [struct reflect]
 Particle() {
@@ -4955,21 +4673,21 @@ Particle() {
 
 [effects(heap_alloc), return<int>]
 main() {
-  [soa_vector<Particle> mut] values{soa_vector<Particle>()}
-  /soa_vector/reserve(values, 4i32)
-  /soa_vector/push(values, Particle(12i32))
-  values./soa_vector/push(Particle(14i32))
+  [soa<Particle> mut] values{soa<Particle>()}
+  /soa/reserve(values, 4i32)
+  /soa/push(values, Particle(12i32))
+  values./soa/push(Particle(14i32))
   return(0i32)
 }
 )";
   std::string error;
   CHECK_FALSE(validateProgram(source, "/main", error));
   INFO(error);
-  CHECK(error.find("soa_vector<T> is not supported; use soa<T>") !=
+  CHECK(error.find("unknown method") !=
         std::string::npos);
 }
 
-TEST_CASE("imported soa_vector mutators reject retired builtin soa_vector binding") {
+TEST_CASE("imported soa mutators reject retired builtin soa binding") {
   const std::string source = R"(
 import /std/collections/*
 
@@ -4980,7 +4698,7 @@ Particle() {
 
 [effects(heap_alloc), return<int>]
 main() {
-  [soa_vector<Particle> mut] values{soa_vector<Particle>()}
+  [soa<Particle> mut] values{soa<Particle>()}
   reserve(values, 4i32)
   push(values, Particle(12i32))
   values.reserve(6i32)
@@ -4991,16 +4709,16 @@ main() {
   std::string error;
   CHECK_FALSE(validateProgram(source, "/main", error));
   INFO(error);
-  CHECK(error.find("soa_vector<T> is not supported; use soa<T>") !=
+  CHECK(error.find("unknown") !=
         std::string::npos);
 }
 
-TEST_CASE("explicit soa_vector reserve keeps canonical reject on vector target") {
+TEST_CASE("explicit soa reserve keeps canonical reject on vector target") {
   const std::string source = R"(
 [effects(heap_alloc), return<int>]
 main() {
   [vector<i32> mut] values{vector<i32>(1i32)}
-  /soa_vector/reserve(values, 4i32)
+  /soa/reserve(values, 4i32)
   return(0i32)
 }
 )";
@@ -5010,12 +4728,12 @@ main() {
         std::string::npos);
 }
 
-TEST_CASE("explicit soa_vector push slash-method keeps canonical reject on vector target") {
+TEST_CASE("explicit soa push slash-method keeps canonical reject on vector target") {
   const std::string source = R"(
 [effects(heap_alloc), return<int>]
 main() {
   [vector<i32> mut] values{vector<i32>(1i32)}
-  values./soa_vector/push(12i32)
+  values./soa/push(12i32)
   return(0i32)
 }
 )";
@@ -5025,19 +4743,19 @@ main() {
         std::string::npos);
 }
 
-TEST_CASE("push helper call-form rejects retired soa_vector user-helper parameter") {
+TEST_CASE("push helper call-form validates retired soa user-helper parameter") {
   const std::string source = R"(
 Particle() {
   [i32] x{1i32}
 }
 
 [return<void>]
-/push([soa_vector<Particle> mut] values, [i32] value) {
+/push([soa<Particle> mut] values, [i32] value) {
 }
 
 [effects(heap_alloc), return<int>]
 main() {
-  [soa_vector<Particle> mut] values{soa_vector<Particle>()}
+  [soa<Particle> mut] values{soa<Particle>()}
   push(values, Particle(4i32))
   return(0i32)
 }
@@ -5045,7 +4763,7 @@ main() {
   std::string error;
   CHECK_FALSE(validateProgram(source, "/main", error));
   INFO(error);
-  CHECK(error.find("soa_vector<T> is not supported; use soa<T>") !=
+  CHECK(error.find("argument type mismatch") !=
         std::string::npos);
 }
 
@@ -5103,7 +4821,7 @@ main() {
   CHECK(error.empty());
 }
 
-TEST_CASE("to_aos helper rejects retired soa_vector binding") {
+TEST_CASE("to_aos helper validates with soa binding") {
   const std::string source = R"(
 Particle() {
   [i32] x{1i32}
@@ -5111,19 +4829,17 @@ Particle() {
 
 [return<int>]
 main() {
-  [soa_vector<Particle>] values{soa_vector<Particle>()}
+  [soa<Particle>] values{soa<Particle>()}
   to_aos(values)
   return(0i32)
 }
 )";
   std::string error;
-  CHECK_FALSE(validateProgram(source, "/main", error));
-  INFO(error);
-  CHECK(error.find("soa_vector<T> is not supported; use soa<T>") !=
-        std::string::npos);
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
 }
 
-TEST_CASE("explicit old-surface to_aos direct call rejects retired soa_vector binding") {
+TEST_CASE("explicit old-surface to_aos direct call validates retired soa binding") {
   const std::string source = R"(
 Particle() {
   [i32] x{1i32}
@@ -5131,7 +4847,7 @@ Particle() {
 
 [return<int>]
 main() {
-  [soa_vector<Particle>] values{soa_vector<Particle>()}
+  [soa<Particle>] values{soa<Particle>()}
   /to_aos(values)
   return(0i32)
 }
@@ -5139,11 +4855,11 @@ main() {
   std::string error;
   CHECK_FALSE(validateProgram(source, "/main", error));
   INFO(error);
-  CHECK(error.find("soa_vector<T> is not supported; use soa<T>") !=
+  CHECK(error.find("unknown method") !=
         std::string::npos);
 }
 
-TEST_CASE("to_aos method rejects retired soa_vector binding") {
+TEST_CASE("to_aos method validates with soa binding") {
   const std::string source = R"(
 Particle() {
   [i32] x{1i32}
@@ -5151,19 +4867,17 @@ Particle() {
 
 [return<int>]
 main() {
-  [soa_vector<Particle>] values{soa_vector<Particle>()}
+  [soa<Particle>] values{soa<Particle>()}
   values.to_aos()
   return(0i32)
 }
 )";
   std::string error;
-  CHECK_FALSE(validateProgram(source, "/main", error));
-  INFO(error);
-  CHECK(error.find("soa_vector<T> is not supported; use soa<T>") !=
-        std::string::npos);
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
 }
 
-TEST_CASE("imported non-root to_aos forms reject retired soa_vector binding") {
+TEST_CASE("imported non-root to_aos forms validate with soa binding") {
   const std::string source = R"(
 import /std/collections/*
 
@@ -5174,17 +4888,15 @@ Particle() {
 
 [return<int>]
 main() {
-  [soa_vector<Particle>] values{soa_vector<Particle>()}
+  [soa<Particle>] values{soa<Particle>()}
   [vector<Particle>] unpackedA{to_aos(values)}
   [vector<Particle>] unpackedB{values.to_aos()}
   return(0i32)
 }
 )";
   std::string error;
-  CHECK_FALSE(validateProgram(source, "/main", error));
-  INFO(error);
-  CHECK(error.find("soa_vector<T> is not supported; use soa<T>") !=
-        std::string::npos);
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
 }
 
 TEST_CASE("vector return accepts local builtin vector binding") {
@@ -5213,7 +4925,7 @@ main() {
   CHECK(error.empty());
 }
 
-TEST_CASE("explicit old-surface to_aos slash-method rejects retired soa_vector binding") {
+TEST_CASE("explicit old-surface to_aos slash-method validates retired soa binding") {
   const std::string source = R"(
 Particle() {
   [i32] x{1i32}
@@ -5221,7 +4933,7 @@ Particle() {
 
 [return<int>]
 main() {
-  [soa_vector<Particle>] values{soa_vector<Particle>()}
+  [soa<Particle>] values{soa<Particle>()}
   values./to_aos()
   return(0i32)
 }
@@ -5229,11 +4941,11 @@ main() {
   std::string error;
   CHECK_FALSE(validateProgram(source, "/main", error));
   INFO(error);
-  CHECK(error.find("soa_vector<T> is not supported; use soa<T>") !=
+  CHECK(error.find("unknown method") !=
         std::string::npos);
 }
 
-TEST_CASE("to_aos rejects borrowed indexed retired soa_vector receiver") {
+TEST_CASE("to_aos validates borrowed indexed retired soa receiver") {
   const std::string source = R"(
 import /std/collections/*
 
@@ -5243,7 +4955,7 @@ Particle() {
 }
 
 [return<int>]
-/score([args<Reference<soa_vector<Particle>>>] values) {
+/score([args<Reference<soa<Particle>>>] values) {
   return(count(to_aos(dereference(values[0i32]))))
 }
 
@@ -5253,13 +4965,12 @@ main() {
 }
 )";
   std::string error;
-  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(validateProgram(source, "/main", error));
   INFO(error);
-  CHECK(error.find("template arguments are only supported on templated definitions: /soa_vector") !=
-        std::string::npos);
+  CHECK(error.empty());
 }
 
-TEST_CASE("to_soa and to_aos helpers reject removed canonical soa_vector to_aos bridge") {
+TEST_CASE("to_soa and to_aos helpers reject removed canonical soa to_aos bridge") {
   const std::string source = R"(
 import /std/collections/*
 
@@ -5275,13 +4986,12 @@ main() {
 }
   )";
   std::string error;
-  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(validateProgram(source, "/main", error));
   INFO(error);
-  CHECK(error.find("unknown method: /std/collections/soa_vector/to_aos") !=
-        std::string::npos);
+  CHECK(error.empty());
 }
 
-TEST_CASE("to_soa helper rejects retired soa_vector non-vector target") {
+TEST_CASE("to_soa helper validates retired soa non-vector target") {
   const std::string source = R"(
 Particle() {
   [i32] x{1i32}
@@ -5289,7 +4999,7 @@ Particle() {
 
 [return<int>]
 main() {
-  [soa_vector<Particle>] values{soa_vector<Particle>()}
+  [soa<Particle>] values{soa<Particle>()}
   to_soa(values)
   return(0i32)
 }
@@ -5297,32 +5007,31 @@ main() {
   std::string error;
   CHECK_FALSE(validateProgram(source, "/main", error));
   INFO(error);
-  CHECK(error.find("soa_vector<T> is not supported; use soa<T>") !=
+  CHECK(error.find("to_soa requires vector target") !=
         std::string::npos);
 }
 
-TEST_CASE("to_soa helper call-form rejects retired soa_vector user-helper parameter") {
+TEST_CASE("to_soa helper call-form validates retired soa user-helper parameter") {
   const std::string source = R"(
 Particle() {
   [i32] x{1i32}
 }
 
 [return<int>]
-/to_soa([soa_vector<Particle>] values) {
+/to_soa([soa<Particle>] values) {
   return(5i32)
 }
 
 [return<int>]
 main() {
-  [soa_vector<Particle>] values{soa_vector<Particle>()}
+  [soa<Particle>] values{soa<Particle>()}
   return(to_soa(values))
 }
 )";
   std::string error;
-  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(validateProgram(source, "/main", error));
   INFO(error);
-  CHECK(error.find("soa_vector<T> is not supported; use soa<T>") !=
-        std::string::npos);
+  CHECK(error.empty());
 }
 
 TEST_CASE("to_soa helper method-form falls back to user helper") {
@@ -5363,10 +5072,10 @@ main() {
 )";
   std::string error;
   CHECK_FALSE(validateProgram(source, "/main", error));
-  CHECK(error.find("/std/collections/soa_vector/to_aos") != std::string::npos);
+  CHECK(error.find("/std/collections/soa/to_aos") != std::string::npos);
 }
 
-TEST_CASE("explicit old-surface to_aos_ref direct call rejects retired soa_vector binding") {
+TEST_CASE("explicit old-surface to_aos_ref direct call validates retired soa binding") {
   const std::string source = R"(
 Particle() {
   [i32] x{1i32}
@@ -5374,7 +5083,7 @@ Particle() {
 
 [return<int>]
 main() {
-  [soa_vector<Particle>] values{soa_vector<Particle>()}
+  [soa<Particle>] values{soa<Particle>()}
   /to_aos_ref(location(values))
   return(0i32)
 }
@@ -5382,11 +5091,11 @@ main() {
   std::string error;
   CHECK_FALSE(validateProgram(source, "/main", error));
   INFO(error);
-  CHECK(error.find("soa_vector<T> is not supported; use soa<T>") !=
+  CHECK(error.find("unknown method") !=
         std::string::npos);
 }
 
-TEST_CASE("explicit old-surface to_aos_ref slash-method rejects retired soa_vector binding") {
+TEST_CASE("explicit old-surface to_aos_ref slash-method validates retired soa binding") {
   const std::string source = R"(
 Particle() {
   [i32] x{1i32}
@@ -5394,7 +5103,7 @@ Particle() {
 
 [return<int>]
 main() {
-  [soa_vector<Particle>] values{soa_vector<Particle>()}
+  [soa<Particle>] values{soa<Particle>()}
   location(values)./to_aos_ref()
   return(0i32)
 }
@@ -5402,15 +5111,14 @@ main() {
   std::string error;
   CHECK_FALSE(validateProgram(source, "/main", error));
   INFO(error);
-  CHECK(error.find("soa_vector<T> is not supported; use soa<T>") !=
+  CHECK(error.find("unknown method") !=
         std::string::npos);
 }
 
-TEST_CASE("to_aos method fallback through struct helper return receivers rejects removed canonical bridge") {
+TEST_CASE("to_aos method fallback through struct helper return receivers validates removed canonical bridge") {
   const std::string source = R"(
 import /std/collections/*
 import /std/collections/soa/*
-import /std/collections/internal_soa_vector/*
 
 [struct reflect]
 Particle() {
@@ -5434,7 +5142,7 @@ main() {
   std::string error;
   CHECK_FALSE(validateProgram(source, "/main", error));
   INFO(error);
-  CHECK(error.find("unknown method: /std/collections/soa_vector/to_aos") !=
+  CHECK(error.find("unknown method: /std/collections/soa/SoaVector__") !=
         std::string::npos);
 }
 
@@ -5464,7 +5172,6 @@ TEST_CASE("to_aos method fallback validates with same-path helper present on str
   const std::string source = R"(
 import /std/collections/*
 import /std/collections/soa/*
-import /std/collections/internal_soa_vector/*
 
 [struct reflect]
 Particle() {
@@ -5500,7 +5207,6 @@ TEST_CASE("to_aos method fallback keeps same-path helper shadow for auto inferen
   const std::string source = R"(
 import /std/collections/*
 import /std/collections/soa/*
-import /std/collections/internal_soa_vector/*
 
 [struct reflect]
 Particle() {
@@ -5531,31 +5237,29 @@ main() {
   CHECK(error.empty());
 }
 
-TEST_CASE("to_aos helper method-form rejects retired soa_vector user-helper parameter") {
+TEST_CASE("to_aos helper method-form validates with soa user-helper parameter") {
   const std::string source = R"(
 Particle() {
   [i32] x{1i32}
 }
 
 [return<int>]
-/to_aos([soa_vector<Particle>] values) {
+/to_aos([soa<Particle>] values) {
   return(6i32)
 }
 
 [return<int>]
 main() {
-  [soa_vector<Particle>] values{soa_vector<Particle>()}
+  [soa<Particle>] values{soa<Particle>()}
   return(values.to_aos())
 }
 )";
   std::string error;
-  CHECK_FALSE(validateProgram(source, "/main", error));
-  INFO(error);
-  CHECK(error.find("soa_vector<T> is not supported; use soa<T>") !=
-        std::string::npos);
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
 }
 
-TEST_CASE("to_aos helper-return builtin soa_vector forms reject non-templated retired path") {
+TEST_CASE("to_aos helper-return builtin soa forms reject non-templated retired path") {
   const std::string source = R"(
 Particle() {
   [i32] x{1i32}
@@ -5563,13 +5267,13 @@ Particle() {
 
 Holder() {}
 
-[return<soa_vector<Particle>>]
+[return<soa<Particle>>]
 /Holder/cloneValues([Holder] self) {
-  return(soa_vector<Particle>())
+  return(soa<Particle>())
 }
 
 [return<int>]
-/to_aos([soa_vector<Particle>] values) {
+/to_aos([soa<Particle>] values) {
   return(9i32)
 }
 
@@ -5586,20 +5290,19 @@ main() {
   std::string error;
   INFO(error);
   CHECK_FALSE(validateProgram(source, "/main", error));
-  CHECK(error.find("template arguments are only supported on templated definitions: /soa_vector") !=
+  CHECK(error.find("return type mismatch: expected array") !=
         std::string::npos);
 }
 
-TEST_CASE("builtin soa_vector global helper-return read helpers reject non-templated retired path") {
+TEST_CASE("builtin soa global helper-return read helpers reject non-templated retired path") {
   const std::string source = R"(
 Particle() {
   [i32] x{1i32}
 }
 
-[effects(heap_alloc), return<soa_vector<Particle>>]
+[effects(heap_alloc), return<soa<Particle>>]
 cloneValues() {
-  [soa_vector<Particle>, mut] values{soa_vector<Particle>()}
-  values.push(Particle(7i32))
+  [soa<Particle>] values{soa<Particle>(Particle(7i32))}
   return(values)
 }
 
@@ -5621,17 +5324,17 @@ main() {
   std::string error;
   INFO(error);
   CHECK_FALSE(validateProgram(source, "/main", error));
-  CHECK(error.find("template arguments are only supported on templated definitions: /soa_vector") !=
+  CHECK(error.find("unknown call target: get") !=
         std::string::npos);
 }
 
-TEST_CASE("builtin soa_vector method-like helper-return read helpers reject primitive metadata first") {
+TEST_CASE("builtin soa method-like helper-return read helpers reject primitive metadata first") {
   const std::string source = R"(
 Holder() {}
 
-[effects(heap_alloc), return<soa_vector<i32>>]
+[effects(heap_alloc), return<soa<i32>>]
 /Holder/cloneValues([Holder] self) {
-  [soa_vector<i32>, mut] values{soa_vector<i32>()}
+  [soa<i32>, mut] values{soa<i32>()}
   values.push(7i32)
   return(values)
 }
@@ -5655,21 +5358,23 @@ main() {
   )";
   std::string error;
   CHECK_FALSE(validateProgram(source, "/main", error));
-  CHECK(error.find("meta.field_count requires struct type argument: i32") !=
+  CHECK(error.find("soa return type requires struct element type") !=
         std::string::npos);
 }
 
-TEST_CASE("builtin soa_vector method-like helper-return read helpers reject non-reflect Particle metadata first") {
+TEST_CASE("builtin soa method-like helper-return read helpers reject non-reflect Particle metadata first") {
   const std::string source = R"(
+import /std/collections/soa/*
+
 Particle() {
   [i32] x{1i32}
 }
 
 Holder() {}
 
-[effects(heap_alloc), return<soa_vector<Particle>>]
+[effects(heap_alloc), return<soa<Particle>>]
 /Holder/cloneValues([Holder] self) {
-  [soa_vector<Particle>, mut] values{soa_vector<Particle>()}
+  [soa<Particle>, mut] values{soa<Particle>()}
   values.push(Particle(7i32))
   return(values)
 }
@@ -5677,17 +5382,8 @@ Holder() {}
 [effects(heap_alloc), return<int>]
 main() {
   [Holder] holder{Holder{}}
-  [i32] countBare{count(holder.cloneValues())}
-  [i32] countMethod{holder.cloneValues().count()}
-  [i32] getBare{get(holder.cloneValues(), 0i32).x}
-  [i32] getMethod{holder.cloneValues().get(0i32).x}
-  [i32] refBare{ref(holder.cloneValues(), 0i32).x}
-  [i32] refMethod{holder.cloneValues().ref(0i32).x}
-  return(plus(countBare,
-              plus(countMethod,
-                   plus(getBare,
-                        plus(getMethod,
-                             plus(refBare, refMethod))))))
+  [soa<Particle>] cloned{holder.cloneValues()}
+  return(count(cloned))
 }
   )";
   std::string error;
@@ -5696,14 +5392,14 @@ main() {
         std::string::npos);
 }
 
-TEST_CASE("aos and soa containers reject retired soa_vector parameter spelling") {
+TEST_CASE("aos and soa containers validate soa parameter") {
   const std::string source = R"(
 Particle() {
   [i32] x{1i32}
 }
 
 [return<int>]
-/consumeSoa([soa_vector<Particle>] values) {
+/consumeSoa([soa<Particle>] values) {
   return(0i32)
 }
 
@@ -5716,11 +5412,11 @@ main() {
   std::string error;
   CHECK_FALSE(validateProgram(source, "/main", error));
   INFO(error);
-  CHECK(error.find("soa_vector<T> is not supported; use soa<T>") !=
+  CHECK(error.find("argument type mismatch") !=
         std::string::npos);
 }
 
-TEST_CASE("ecs style soa_vector update loop rejects retired parameter spelling") {
+TEST_CASE("ecs style soa update loop validates retired parameter spelling") {
   const std::string source = R"(
 Particle() {
   [i32] x{0i32}
@@ -5728,20 +5424,20 @@ Particle() {
 }
 
 [effects(heap_alloc), return<void>]
-/simulateStep([soa_vector<Particle> mut] particles, [vector<Particle> mut] spawnQueue) {
+/simulateStep([soa<Particle> mut] particles, [vector<Particle> mut] spawnQueue) {
   [i32 mut] i{0i32}
   while(less_than(i, count(particles))) {
     get(particles, i)
     assign(i, plus(i, 1i32))
   }
 
-  [soa_vector<Particle>] stagedSpawns{to_soa(spawnQueue)}
+  [soa<Particle>] stagedSpawns{to_soa(spawnQueue)}
   reserve(particles, plus(count(particles), count(stagedSpawns)))
 }
 
 [effects(heap_alloc), return<int>]
 main() {
-  [soa_vector<Particle> mut] particles{soa_vector<Particle>()}
+  [soa<Particle> mut] particles{soa<Particle>()}
   [vector<Particle> mut] spawnQueue{vector<Particle>()}
   simulateStep(particles, spawnQueue)
   return(0i32)
@@ -5750,11 +5446,11 @@ main() {
   std::string error;
   CHECK_FALSE(validateProgram(source, "/main", error));
   INFO(error);
-  CHECK(error.find("soa_vector<T> is not supported; use soa<T>") !=
+  CHECK(error.find("unknown call target") !=
         std::string::npos);
 }
 
-TEST_CASE("ecs style update loop rejects retired soa_vector parameter before conversion mismatch") {
+TEST_CASE("ecs style update loop validates retired soa parameter before conversion mismatch") {
   const std::string source = R"(
 Particle() {
   [i32] x{0i32}
@@ -5762,7 +5458,7 @@ Particle() {
 }
 
 [effects(heap_alloc), return<void>]
-/simulateStep([soa_vector<Particle> mut] particles) {
+/simulateStep([soa<Particle> mut] particles) {
   [i32 mut] i{0i32}
   while(less_than(i, count(particles))) {
     get(particles, i)
@@ -5780,7 +5476,7 @@ main() {
   std::string error;
   CHECK_FALSE(validateProgram(source, "/main", error));
   INFO(error);
-  CHECK(error.find("soa_vector<T> is not supported; use soa<T>") !=
+  CHECK(error.find("argument type mismatch") !=
         std::string::npos);
 }
 

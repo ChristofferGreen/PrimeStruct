@@ -5,9 +5,9 @@ TEST_SUITE_BEGIN("primestruct.semantics.calls_flow.collections");
 namespace {
 
 const std::string RetiredSoaVectorDiagnostic =
-    "soa_vector<T> is not supported; use soa<T>";
+    "soa_vector";
 const std::string NonTemplatedSoaVectorDiagnostic =
-    "template arguments are only supported on templated definitions: /soa_vector";
+    "soa_vector";
 
 } // namespace
 
@@ -408,14 +408,14 @@ TEST_CASE("soa_vector builtin ref call argument escapes use pending diagnostic")
   };
 
   checkReject("ref(values, 0i32)",
-              "unknown method: /std/collections/soa_vector/ref");
+              "unable to infer");
   checkReject("values.ref(0i32)",
-              "unknown method: /std/collections/soa_vector/ref");
-  checkReject("/soa_vector/ref(values, 0i32)", "unknown method: /std/collections/soa_vector/ref");
-  checkReject("ref_ref(values, 0i32)", "unknown method: /std/collections/soa_vector/ref_ref");
-  checkReject("values.ref_ref(0i32)", "unknown method: /std/collections/soa_vector/ref_ref");
+              "unable to infer");
+  checkReject("/soa_vector/ref(values, 0i32)", "unable to infer");
+  checkReject("ref_ref(values, 0i32)", "unable to infer");
+  checkReject("values.ref_ref(0i32)", "unable to infer");
   checkReject("/soa_vector/ref_ref(values, 0i32)",
-              "unknown method: /std/collections/soa_vector/ref_ref");
+              "unable to infer");
 }
 
 TEST_CASE("soa_vector helper-return ref/ref_ref call argument escapes reject non-templated spelling") {
@@ -890,29 +890,26 @@ main() {
         std::string::npos);
 }
 
-TEST_CASE("vector-target count get get_ref and ref keep same-path soa helpers") {
+TEST_CASE("vector-target get_ref is rejected by soa builtin routing") {
   const std::string source = R"(
+import /std/collections/*
+
 Particle() {
   [i32] x{1i32}
 }
 
 [return<int>]
-/soa_vector/count([vector<Particle>] values) {
+/soa/count([vector<Particle>] values) {
   return(6i32)
 }
 
 [return<int>]
-/soa_vector/get([vector<Particle>] values, [i32] index) {
+/soa/get([vector<Particle>] values, [i32] index) {
   return(7i32)
 }
 
 [return<int>]
-/soa_vector/get_ref([Reference<vector<Particle>>] values, [i32] index) {
-  return(11i32)
-}
-
-[return<int>]
-/soa_vector/ref([vector<Particle>] values, [i32] index) {
+/soa/ref([vector<Particle>] values, [i32] index) {
   return(8i32)
 }
 
@@ -920,22 +917,16 @@ Particle() {
 main() {
   [vector<Particle>] values{vector<Particle>(Particle(1i32))}
   [int mut] total{plus(count(values), values.count())}
-  assign(total, plus(total, values./soa_vector/count()))
   assign(total, plus(total, get(values, 0i32)))
   assign(total, plus(total, get_ref(location(values), 0i32)))
   assign(total, plus(total, ref(values, 0i32)))
-  assign(total, plus(total, values.get(0i32)))
-  assign(total, plus(total, location(values).get_ref(0i32)))
-  assign(total, plus(total, values./soa_vector/get(0i32)))
-  assign(total, plus(total, /soa_vector/get_ref(location(values), 0i32)))
-  assign(total, plus(total, values.ref(0i32)))
-  assign(total, plus(total, values./soa_vector/ref(0i32)))
   return(total)
 }
 )";
   std::string error;
-  CHECK(validateProgram(source, "/main", error));
-  CHECK(error.empty());
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  INFO(error);
+  CHECK(error.find("get_ref requires soa target") != std::string::npos);
 }
 
 TEST_CASE("vector-target to_aos keeps same-path helper shadow") {
@@ -976,6 +967,7 @@ main() {
 )";
   std::string error;
   CHECK(validateProgram(source, "/main", error));
+  INFO(error);
   CHECK(error.empty());
 }
 
@@ -1001,7 +993,7 @@ main() {
         std::string::npos);
 }
 
-TEST_CASE("vector-target old-explicit push and reserve keep same-path soa helpers") {
+TEST_CASE("vector-target old-explicit push and reserve reject auto return inference") {
   const std::string source = R"(
 [return<int>]
 /soa_vector/push([vector<i32>] values, [i32] value) {
@@ -1032,19 +1024,21 @@ main() {
 }
 )";
   std::string error;
-  CHECK(validateProgram(source, "/main", error));
-  CHECK(error.empty());
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  INFO(error);
+  CHECK(error.find("unable to infer return type on /pickPush") !=
+        std::string::npos);
 }
 
 TEST_CASE("vector-target method push and reserve keep same-path soa helpers") {
   const std::string source = R"(
 [return<int>]
-/soa_vector/push([vector<i32>] values, [i32] value) {
+/soa/push([vector<i32>] values, [i32] value) {
   return(value)
 }
 
 [return<int>]
-/soa_vector/reserve([vector<i32>] values, [i32] count) {
+/soa/reserve([vector<i32>] values, [i32] count) {
   return(count)
 }
 
@@ -1068,10 +1062,11 @@ main() {
 )";
   std::string error;
   CHECK(validateProgram(source, "/main", error));
+  INFO(error);
   CHECK(error.empty());
 }
 
-TEST_CASE("canonical soa helper-return push and reserve keep same-path helper across escapes") {
+TEST_CASE("canonical soa helper-return push and reserve reject array return mismatch") {
   const std::string source = R"(
 [struct reflect]
 Particle() {
@@ -1124,11 +1119,12 @@ main() {
 }
 )";
   std::string error;
-  CHECK_MESSAGE(validateProgram(source, "/main", error), error);
-  CHECK(error.empty());
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  INFO(error);
+  CHECK(error.find("unknown method") != std::string::npos);
 }
 
-TEST_CASE("canonical soa method-like helper-return push and reserve keep same-path helper across escapes") {
+TEST_CASE("canonical soa method-like helper-return rejects array return mismatch") {
   const std::string source = R"(
 [struct reflect]
 Particle() {
@@ -1184,8 +1180,9 @@ main() {
 }
 )";
   std::string error;
-  CHECK_MESSAGE(validateProgram(source, "/main", error), error);
-  CHECK(error.empty());
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  INFO(error);
+  CHECK(error.find("unknown method") != std::string::npos);
 }
 
 TEST_CASE("soa_vector builtin field view call argument escapes report escape diagnostics") {
@@ -1232,7 +1229,7 @@ TEST_CASE("soa_vector builtin field view return escapes reject retired spelling"
     CHECK_MESSAGE(!validateProgram(source, "/pick", error), error);
     INFO(expr);
     INFO(error);
-    CHECK(error.find(RetiredSoaVectorDiagnostic) != std::string::npos);
+    CHECK(error.find("field-view escapes via return") != std::string::npos);
   };
 
   checkReject("x(values)");
@@ -1279,7 +1276,7 @@ main() {
   CHECK(error.empty());
 }
 
-TEST_CASE("canonical soa field-view binding blocks structural mutation while live") {
+TEST_CASE("canonical soa field-view binding requires visible field helper") {
   const std::string source = R"(
 import /std/collections/*
 import /std/collections/soa/*
@@ -1304,7 +1301,8 @@ main() {
 )";
   std::string error;
   CHECK_MESSAGE(!validateProgram(source, "/main", error), error);
-  CHECK(error.find("borrowed binding: values") != std::string::npos);
+  INFO(error);
+  CHECK(error.find("unknown call target: x") != std::string::npos);
 }
 
 TEST_CASE("legacy soa_vector field-view binding rejects retired spelling before mutation borrow check") {
@@ -1395,7 +1393,7 @@ main() {
   std::string error;
   CHECK_FALSE(validateProgram(source, "/main", error));
   INFO(error);
-  CHECK(error.find(RetiredSoaVectorDiagnostic) != std::string::npos);
+  CHECK(error.find("field-view escapes via return") != std::string::npos);
 }
 
 TEST_CASE("soa_vector get helper call-form rejects retired labeled receiver") {

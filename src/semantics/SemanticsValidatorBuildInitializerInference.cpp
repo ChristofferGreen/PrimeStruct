@@ -225,7 +225,7 @@ std::optional<std::string> SemanticsValidator::builtinSoaAccessHelperName(
 
   auto isDirectSoaVectorTarget = [&](const Expr &target) {
     auto isDirectSoaBinding = [&](const BindingInfo &binding) {
-      if (normalizeBindingTypeName(binding.typeName) == "soa_vector") {
+      if (normalizeBindingTypeName(binding.typeName) == "soa") {
         return true;
       }
       std::string elemType;
@@ -241,7 +241,7 @@ std::optional<std::string> SemanticsValidator::builtinSoaAccessHelperName(
     }
     std::string builtinCollection;
     return getBuiltinCollectionName(target, builtinCollection) &&
-           builtinCollection == "soa_vector";
+           builtinCollection == "soa";
   };
 
   std::string normalizedName = candidate.name;
@@ -406,7 +406,7 @@ bool SemanticsValidator::isBuiltinSoaFieldViewExpr(
     if (!inferSoaReceiverBinding(receiver, receiverBinding)) {
       return false;
     }
-    if (normalizeBindingTypeName(receiverBinding.typeName) == "soa_vector" &&
+    if (normalizeBindingTypeName(receiverBinding.typeName) == "soa" &&
         !receiverBinding.typeTemplateArg.empty()) {
       elemTypeOut = receiverBinding.typeTemplateArg;
       return true;
@@ -560,7 +560,7 @@ std::optional<std::string> SemanticsValidator::builtinSoaDirectPendingHelperPath
       const Expr &receiverExpr = candidate.args.front();
       auto extractReceiverStructType = [&](const BindingInfo &binding)
           -> std::optional<std::string> {
-        if (normalizeBindingTypeName(binding.typeName) == "soa_vector" &&
+        if (normalizeBindingTypeName(binding.typeName) == "soa" &&
             !binding.typeTemplateArg.empty()) {
           return binding.typeTemplateArg;
         }
@@ -704,7 +704,7 @@ std::optional<std::string> SemanticsValidator::builtinSoaDirectPendingHelperPath
       }
     }
     if (binding == nullptr ||
-        normalizeBindingTypeName(binding->typeName) != "soa_vector" ||
+        normalizeBindingTypeName(binding->typeName) != "soa" ||
         binding->typeTemplateArg.empty()) {
       return std::nullopt;
     }
@@ -760,7 +760,7 @@ std::optional<std::string> SemanticsValidator::builtinSoaDirectPendingHelperPath
       return publicSoaHelperTargetPath(*soaAccessHelper);
     }
     return preferredSoaHelperTargetForCollectionType(*soaAccessHelper,
-                                                     "/soa_vector");
+                                                     "/soa");
   }
   return std::nullopt;
 }
@@ -820,9 +820,6 @@ std::string SemanticsValidator::preferredSoaHelperTargetForCollectionType(
   const std::string preferredTarget =
       preferredSoaHelperTargetForCurrentImports(helperName);
   if (preferredTarget != samePath) {
-    if (preferredTarget == publicPath && !wantsInternalSoaCollection) {
-      return canonicalPath;
-    }
     return preferredTarget;
   }
   const bool hasVisibleSamePathHelper =
@@ -864,6 +861,12 @@ std::string SemanticsValidator::preferredSoaHelperTargetForCollectionType(
   if (resolvedCollectionType == collectionTypePath ||
       (wantsInternalSoaCollection &&
        isInternalSoaCollectionTypePath(resolvedCollectionType))) {
+    if (!wantsInternalSoaCollection) {
+      const std::string normalizedRcvr = normalizeBindingTypeName(receiverTypeText);
+      if (normalizedRcvr == "soa" || normalizedRcvr.rfind("soa<", 0) == 0) {
+        return publicPath;
+      }
+    }
     return samePath;
   }
   if (wantsInternalSoaCollection && isSoaReadRefHelperName(helper) &&
@@ -1002,7 +1005,7 @@ bool SemanticsValidator::canonicalizeInferredCollectionBinding(
     if (!getBuiltinCollectionName(candidate, collectionName)) {
       return false;
     }
-    if ((collectionName == "array" || collectionName == "vector" || collectionName == "soa_vector") &&
+    if ((collectionName == "array" || collectionName == "vector" || collectionName == "soa") &&
         candidate.templateArgs.size() == 1) {
       bindingOut.typeName = collectionName;
       bindingOut.typeTemplateArg = candidate.templateArgs.front();

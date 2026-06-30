@@ -400,7 +400,7 @@ bool isAggregatePointerLikeReturnType(
   if (splitTemplateTypeName(targetType, targetBase, targetArgList)) {
     targetBase = normalizeCollectionBindingTypeName(targetBase);
     if (targetBase == "array" || targetBase == "vector" ||
-        targetBase == "map" || targetBase == "soa_vector") {
+        targetBase == "map" || targetBase == "soa") {
       return true;
     }
   }

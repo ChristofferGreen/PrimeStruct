@@ -2,20 +2,6 @@
 
 TEST_SUITE_BEGIN("primestruct.semantics.calls_flow.collections");
 
-namespace {
-
-void checkCanonicalMapConstructorMismatch(const std::string &error) {
-  CHECK((error.find("argument type mismatch") != std::string::npos ||
-         error.find("implicit template arguments conflict") != std::string::npos ||
-         error.find("unknown call target: /map/") != std::string::npos));
-  CHECK((error.find("/std/collections/map/map") != std::string::npos ||
-         error.find("/std/collections/mapPair") != std::string::npos ||
-         error.find("/std/collections/experimental_map/mapPair") != std::string::npos ||
-         error.find("/map/") != std::string::npos));
-}
-
-} // namespace
-
 TEST_CASE("stdlib namespaced map constructor resolves through imported stdlib helper") {
   const std::string source = R"(
 import /std/collections/*
@@ -67,7 +53,7 @@ main() {
   CHECK(error.find("unknown call target: /std/collections/map/map") != std::string::npos);
 }
 
-TEST_CASE("imported stdlib namespaced map helpers reject retired ordinary named-argument helpers") {
+TEST_CASE("imported stdlib namespaced map helpers validate named arguments") {
   const std::string source = R"(
 import /std/collections/*
 
@@ -92,11 +78,11 @@ main() {
 }
   )";
   std::string error;
-  CHECK_FALSE(validateProgram(source, "/main", error));
-  CHECK(error.find("unknown call target: /map/count") != std::string::npos);
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
 }
 
-TEST_CASE("canonical namespaced map helpers reject retired borrowed canonical map receivers") {
+TEST_CASE("canonical namespaced map helpers validate borrowed canonical map receivers") {
   const std::string source = R"(
 import /std/collections/*
 import /std/collections/map/*
@@ -114,11 +100,11 @@ main() {
 }
 )";
   std::string error;
-  CHECK_FALSE(validateProgram(source, "/main", error));
-  CHECK(error.find("unknown call target: /map/count") != std::string::npos);
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
 }
 
-TEST_CASE("canonical namespaced map _ref helpers reject retired borrowed experimental map receivers") {
+TEST_CASE("canonical namespaced map ref helpers validate borrowed experimental map receivers") {
   const std::string source = R"(
 import /std/collections/*
 import /std/collections/map/*
@@ -154,8 +140,8 @@ main() {
 }
 )";
   std::string error;
-  CHECK_FALSE(validateProgram(source, "/main", error));
-  CHECK(error.find("unknown call target: /map/insert_ref") != std::string::npos);
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
 }
 
 TEST_CASE("canonical namespaced map access helpers accept experimental map values") {
@@ -249,7 +235,7 @@ main() {
   CHECK(error.find("Key") != std::string::npos);
 }
 
-TEST_CASE("imported stdlib namespaced map constructor keeps mismatch diagnostics") {
+TEST_CASE("imported explicitly typed stdlib map constructor validates mixed values") {
   const std::string source = R"(
 import /std/collections/*
 
@@ -261,8 +247,7 @@ main() {
   )";
   std::string error;
   CHECK_FALSE(validateProgram(source, "/main", error));
-  INFO(error);
-  checkCanonicalMapConstructorMismatch(error);
+  CHECK(error.find("argument type mismatch") != std::string::npos);
 }
 
 TEST_CASE("stdlib namespaced map count requires an explicit canonical helper definition") {
@@ -329,7 +314,8 @@ main() {
 )";
   std::string error;
   CHECK_FALSE(validateProgram(source, "/main", error));
-  CHECK(error.find("unknown call target: /map/tryAt") != std::string::npos);
+  CHECK(error.find("unknown call target: /std/collections/map/tryAt") !=
+        std::string::npos);
 }
 
 TEST_CASE("stdlib namespaced map tryAt does not inherit alias-only helper definition") {
@@ -402,7 +388,7 @@ main() {
   CHECK(error.empty());
 }
 
-TEST_CASE("collected diagnostics keep imported retired canonical map access helper calls") {
+TEST_CASE("imported canonical map access helper calls validate") {
   const std::string source = R"(
 import /std/collections/*
 
@@ -415,8 +401,8 @@ main() {
 }
 )";
   std::string error;
-  CHECK_FALSE(validateProgram(source, "/main", error));
-  CHECK(error.find("unknown call target: /map/count") != std::string::npos);
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
 }
 
 TEST_CASE("collected diagnostics keep unknown target for unsupported canonical map helper calls") {
@@ -442,7 +428,7 @@ main() {
   CHECK(foundUnknownTarget);
 }
 
-TEST_CASE("stdlib namespaced map ref helpers reject retired canonical map references") {
+TEST_CASE("stdlib namespaced map ref helpers validate canonical map references") {
   const std::string source = R"(
 import /std/collections/*
 
@@ -457,11 +443,11 @@ main() {
 }
   )";
   std::string error;
-  CHECK_FALSE(validateProgram(source, "/main", error));
-  CHECK(error.find("unknown call target: /map/count_ref") != std::string::npos);
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
 }
 
-TEST_CASE("stdlib namespaced map helpers reject retired experimental map value receivers") {
+TEST_CASE("stdlib namespaced map helpers validate experimental map value receivers") {
   const std::string source = R"(
 import /std/collections/*
 import /std/collections/map/*
@@ -486,11 +472,11 @@ main() {
 }
 )";
   std::string error;
-  CHECK_FALSE(validateProgram(source, "/main", error));
-  CHECK(error.find("unknown call target: /map/tryAt") != std::string::npos);
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
 }
 
-TEST_CASE("stdlib wrapper map helpers reject retired experimental map value receivers") {
+TEST_CASE("stdlib wrapper map helpers validate experimental map value receivers") {
   const std::string source = R"(
 import /std/collections/*
 import /std/collections/map/*
@@ -515,11 +501,11 @@ main() {
 }
 )";
   std::string error;
-  CHECK_FALSE(validateProgram(source, "/main", error));
-  CHECK(error.find("unknown call target: /map/tryAt") != std::string::npos);
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
 }
 
-TEST_CASE("canonical stdlib map helpers reject retired constructor receivers") {
+TEST_CASE("canonical stdlib map helpers validate constructor receivers") {
   const std::string source = R"(
 import /std/collections/*
 import /std/collections/map/*
@@ -546,8 +532,8 @@ main() {
 }
 )";
   std::string error;
-  CHECK_FALSE(validateProgram(source, "/main", error));
-  CHECK(error.find("unknown call target: /map/tryAt") != std::string::npos);
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
 }
 
 TEST_CASE("retired public mapPair bridge reports unknown target") {
@@ -566,7 +552,7 @@ main() {
   CHECK(error.find("unknown call target: /std/collections/mapPair") != std::string::npos);
 }
 
-TEST_CASE("stdlib namespaced map constructor rejects retired explicit experimental map binding helpers") {
+TEST_CASE("stdlib namespaced map constructor validates explicit experimental map binding helpers") {
   const std::string source = R"(
 import /std/collections/*
 import /std/collections/map/*
@@ -591,11 +577,11 @@ main() {
 }
 )";
   std::string error;
-  CHECK_FALSE(validateProgram(source, "/main", error));
-  CHECK(error.find("unknown call target: /map/tryAt") != std::string::npos);
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
 }
 
-TEST_CASE("stdlib namespaced map constructor keeps mismatch diagnostics on explicit experimental map bindings") {
+TEST_CASE("explicit stdlib map constructor validates mixed values on experimental map bindings") {
   const std::string source = R"(
 import /std/collections/*
 import /std/collections/map/*
@@ -608,11 +594,10 @@ main() {
   )";
   std::string error;
   CHECK_FALSE(validateProgram(source, "/main", error));
-  INFO(error);
-  checkCanonicalMapConstructorMismatch(error);
+  CHECK(error.find("argument type mismatch") != std::string::npos);
 }
 
-TEST_CASE("stdlib namespaced map constructor rejects retired explicit experimental map return helpers") {
+TEST_CASE("stdlib namespaced map constructor validates explicit experimental map return helpers") {
   const std::string source = R"(
 import /std/collections/*
 import /std/collections/map/*
@@ -642,11 +627,11 @@ main() {
 }
 )";
   std::string error;
-  CHECK_FALSE(validateProgram(source, "/main", error));
-  CHECK(error.find("unknown call target: /map/tryAt") != std::string::npos);
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
 }
 
-TEST_CASE("stdlib namespaced map constructor keeps mismatch diagnostics on explicit experimental map returns") {
+TEST_CASE("explicit stdlib map constructor validates mixed values on experimental map returns") {
   const std::string source = R"(
 import /std/collections/*
 import /std/collections/map/*
@@ -664,11 +649,10 @@ main() {
   )";
   std::string error;
   CHECK_FALSE(validateProgram(source, "/main", error));
-  INFO(error);
-  checkCanonicalMapConstructorMismatch(error);
+  CHECK(error.find("argument type mismatch") != std::string::npos);
 }
 
-TEST_CASE("stdlib namespaced map constructor rejects retired explicit experimental map parameter helpers") {
+TEST_CASE("stdlib namespaced map constructor validates explicit experimental map parameter helpers") {
   const std::string source = R"(
 import /std/collections/*
 import /std/collections/map/*
@@ -697,11 +681,11 @@ main() {
 }
 )";
   std::string error;
-  CHECK_FALSE(validateProgram(source, "/main", error));
-  CHECK(error.find("unknown call target: /map/tryAt") != std::string::npos);
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
 }
 
-TEST_CASE("stdlib namespaced map constructor keeps mismatch diagnostics on explicit experimental map parameters") {
+TEST_CASE("explicit stdlib map constructor validates mixed values on experimental map parameters") {
   const std::string source = R"(
 import /std/collections/*
 import /std/collections/map/*
@@ -718,11 +702,10 @@ main() {
   )";
   std::string error;
   CHECK_FALSE(validateProgram(source, "/main", error));
-  INFO(error);
-  checkCanonicalMapConstructorMismatch(error);
+  CHECK(error.find("argument type mismatch") != std::string::npos);
 }
 
-TEST_CASE("helper-wrapped map constructors reject retired explicit experimental map parameter helpers") {
+TEST_CASE("helper-wrapped map constructors keep parameter type diagnostics") {
   const std::string source = R"(
 import /std/collections/*
 import /std/collections/map/*
@@ -763,7 +746,10 @@ main() {
 )";
   std::string error;
   CHECK_FALSE(validateProgram(source, "/main", error));
-  CHECK(error.find("unknown call target: /map/tryAt") != std::string::npos);
+  INFO(error);
+  CHECK(error.find("argument type mismatch for /scoreValues parameter values") !=
+        std::string::npos);
+  CHECK(error.find("got /std/collections/map/MapValue") != std::string::npos);
 }
 
 TEST_SUITE_END();

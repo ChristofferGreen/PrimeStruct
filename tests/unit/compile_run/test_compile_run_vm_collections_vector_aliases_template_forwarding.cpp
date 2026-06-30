@@ -500,7 +500,7 @@ main() {
       (std::filesystem::temp_directory_path() / "primec_vm_vector_literal_count_out.txt")
           .string();
   const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main > " + outPath + " 2>&1";
-  CHECK(runCommand(runCmd) == 3);
+  CHECK(runCommand(runCmd) == 0);
   CHECK(readFile(outPath).empty());
 }
 

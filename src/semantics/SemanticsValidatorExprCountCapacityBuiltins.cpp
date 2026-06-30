@@ -224,17 +224,17 @@ bool SemanticsValidator::validateExprCountCapacityBuiltins(
     const std::string normalizedNamespacePrefix =
         canonicalizeSoaCountHelperPath(expr.namespacePrefix);
     if (!expr.isMethodCall) {
-      if (normalizedName == "/soa_vector/count") {
+      if (normalizedName == "/soa/count") {
         return true;
       }
-      if (normalizedName == "/soa_vector/count_ref") {
+      if (normalizedName == "/soa/count_ref") {
         return true;
       }
-      return (normalizedNamespacePrefix == "/soa_vector" ||
-              normalizedNamespacePrefix == "soa_vector") &&
+      return (normalizedNamespacePrefix == "/soa" ||
+              normalizedNamespacePrefix == "soa") &&
              (expr.name == "count" || expr.name == "count_ref");
     }
-    return normalizedNamespacePrefix == "/soa_vector" &&
+    return normalizedNamespacePrefix == "/soa" &&
            (expr.name == "count" || expr.name == "count_ref");
   };
   const auto validateVectorCountBuiltinCall = [&]() -> bool {
@@ -319,13 +319,13 @@ bool SemanticsValidator::validateExprCountCapacityBuiltins(
       const bool explicitOldSurfaceSoaCountCall =
           isExplicitOldSurfaceSoaCountCall();
       const bool hasVisibleSamePathSoaCountHelper =
-          hasVisibleDefinitionPathForCurrentImports("/soa_vector/" +
+          hasVisibleDefinitionPathForCurrentImports("/soa/" +
                                                     soaCountHelperName);
       if (explicitOldSurfaceSoaCountCall &&
-          !hasVisibleDefinitionPathForCurrentImports("/soa_vector/" +
+          !hasVisibleDefinitionPathForCurrentImports("/soa/" +
                                                     soaCountHelperName)) {
         return failCountCapacityBuiltin(
-            soaUnavailableMethodDiagnostic("/soa_vector/" +
+            soaUnavailableMethodDiagnostic("/soa/" +
                                            soaCountHelperName));
       }
       std::string argsPackElemType;

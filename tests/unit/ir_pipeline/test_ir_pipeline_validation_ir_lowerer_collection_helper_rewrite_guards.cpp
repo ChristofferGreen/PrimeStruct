@@ -250,7 +250,7 @@ TEST_CASE("ir lowerer direct soa wrapper dispatch uses canonical wrapper probes 
 
   const std::string wrapperHelperSource =
       source.substr(wrapperHelper, wrapperEnd - wrapperHelper);
-  CHECK(wrapperHelperSource.find("\"/std/collections/soa_vector/\"") !=
+  CHECK(wrapperHelperSource.find("\"/std/collections/soa/\"") !=
         std::string::npos);
   CHECK(wrapperHelperSource.find(
             "collection_paths::memberPath(collection_paths::kExperimentalSoaVectorFolder, \"soaVector\")") !=
@@ -258,7 +258,7 @@ TEST_CASE("ir lowerer direct soa wrapper dispatch uses canonical wrapper probes 
   CHECK(wrapperHelperSource.find(
             "collection_paths::memberPath(collection_paths::kExperimentalSoaVectorConversionsFolder, \"soaVector\")") !=
         std::string::npos);
-  CHECK(wrapperHelperSource.find("\"/soa_vector/") == std::string::npos);
+  CHECK(wrapperHelperSource.find("\"/soa/") == std::string::npos);
   CHECK(wrapperHelperSource.find("\"/to_aos\"") == std::string::npos);
   CHECK(wrapperHelperSource.find("\"/to_aos_ref\"") == std::string::npos);
 

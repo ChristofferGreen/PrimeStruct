@@ -551,7 +551,7 @@ TEST_CASE("C++ emitter helper handles parser-shaped canonical vector count capac
   expectResolved("capacity");
 }
 
-TEST_CASE("C++ emitter helper resolves borrowed soa_vector receiver methods to canonical ref helpers") {
+TEST_CASE("C++ emitter helper resolves borrowed soa receiver methods to canonical ref helpers") {
   primec::Expr receiver;
   receiver.kind = primec::Expr::Kind::Name;
   receiver.name = "borrowed";
@@ -568,13 +568,13 @@ TEST_CASE("C++ emitter helper resolves borrowed soa_vector receiver methods to c
   localTypes.emplace("borrowed", receiverInfo);
 
   primec::Definition countRefDef;
-  countRefDef.fullPath = "/std/collections/soa_vector/count_ref";
+  countRefDef.fullPath = "/std/collections/soa/count_ref";
   primec::Definition getRefDef;
-  getRefDef.fullPath = "/std/collections/soa_vector/get_ref";
+  getRefDef.fullPath = "/std/collections/soa/get_ref";
   primec::Definition refRefDef;
-  refRefDef.fullPath = "/std/collections/soa_vector/ref_ref";
+  refRefDef.fullPath = "/std/collections/soa/ref_ref";
   primec::Definition toAosRefDef;
-  toAosRefDef.fullPath = "/std/collections/soa_vector/to_aos_ref";
+  toAosRefDef.fullPath = "/std/collections/soa/to_aos_ref";
 
   std::unordered_map<std::string, const primec::Definition *> defMap = {
       {countRefDef.fullPath, &countRefDef},
@@ -601,7 +601,7 @@ TEST_CASE("C++ emitter helper resolves borrowed soa_vector receiver methods to c
     std::string resolved;
     CHECK(primec::emitter::resolveMethodCallPath(
         call, defMap, localTypes, importAliases, structTypeMap, returnKinds, returnStructs, resolved));
-    CHECK(resolved == std::string("/std/collections/soa_vector/") + expectedSuffix);
+    CHECK(resolved == std::string("/std/collections/soa/") + expectedSuffix);
   };
 
   expectResolved("count", "count_ref");
@@ -610,7 +610,7 @@ TEST_CASE("C++ emitter helper resolves borrowed soa_vector receiver methods to c
   expectResolved("to_aos", "to_aos_ref");
 }
 
-TEST_CASE("C++ emitter helper resolves borrowed local soa_vector field methods through concrete specialization metadata") {
+TEST_CASE("C++ emitter helper resolves borrowed local soa field methods through concrete specialization metadata") {
   primec::Expr receiver;
   receiver.kind = primec::Expr::Kind::Name;
   receiver.name = "borrowed";
@@ -645,7 +645,7 @@ TEST_CASE("C++ emitter helper resolves borrowed local soa_vector field methods t
   CHECK(resolved == concreteYDef.fullPath);
 }
 
-TEST_CASE("C++ emitter helper resolves location and dereference soa_vector field methods through concrete specialization metadata") {
+TEST_CASE("C++ emitter helper resolves location and dereference soa field methods through concrete specialization metadata") {
   primec::Expr values;
   values.kind = primec::Expr::Kind::Name;
   values.name = "values";
@@ -697,7 +697,7 @@ TEST_CASE("C++ emitter helper resolves location and dereference soa_vector field
   expectResolved(dereferenceCall);
 }
 
-TEST_CASE("C++ emitter helper resolves helper-return soa_vector borrow methods to canonical ref helpers") {
+TEST_CASE("C++ emitter helper resolves helper-return soa borrow methods to canonical ref helpers") {
   primec::Expr values;
   values.kind = primec::Expr::Kind::Name;
   values.name = "values";
@@ -733,13 +733,13 @@ TEST_CASE("C++ emitter helper resolves helper-return soa_vector borrow methods t
   borrowDef.transforms.push_back(returnTransform);
 
   primec::Definition countRefDef;
-  countRefDef.fullPath = "/std/collections/soa_vector/count_ref";
+  countRefDef.fullPath = "/std/collections/soa/count_ref";
   primec::Definition getRefDef;
-  getRefDef.fullPath = "/std/collections/soa_vector/get_ref";
+  getRefDef.fullPath = "/std/collections/soa/get_ref";
   primec::Definition refRefDef;
-  refRefDef.fullPath = "/std/collections/soa_vector/ref_ref";
+  refRefDef.fullPath = "/std/collections/soa/ref_ref";
   primec::Definition toAosRefDef;
-  toAosRefDef.fullPath = "/std/collections/soa_vector/to_aos_ref";
+  toAosRefDef.fullPath = "/std/collections/soa/to_aos_ref";
 
   std::unordered_map<std::string, const primec::Definition *> defMap = {
       {borrowDef.fullPath, &borrowDef},
@@ -767,7 +767,7 @@ TEST_CASE("C++ emitter helper resolves helper-return soa_vector borrow methods t
     std::string resolved;
     CHECK(primec::emitter::resolveMethodCallPath(
         call, defMap, localTypes, importAliases, structTypeMap, returnKinds, returnStructs, resolved));
-    CHECK(resolved == std::string("/std/collections/soa_vector/") + expectedSuffix);
+    CHECK(resolved == std::string("/std/collections/soa/") + expectedSuffix);
   };
 
   expectResolved("count", "count_ref");
@@ -776,7 +776,7 @@ TEST_CASE("C++ emitter helper resolves helper-return soa_vector borrow methods t
   expectResolved("to_aos", "to_aos_ref");
 }
 
-TEST_CASE("C++ emitter helper resolves helper-return concrete soa_vector field methods through return-struct metadata") {
+TEST_CASE("C++ emitter helper resolves helper-return concrete soa field methods through return-struct metadata") {
   primec::Expr values;
   values.kind = primec::Expr::Kind::Name;
   values.name = "values";
@@ -828,7 +828,7 @@ TEST_CASE("C++ emitter helper resolves helper-return concrete soa_vector field m
   CHECK(resolved == concreteYDef.fullPath);
 }
 
-TEST_CASE("C++ emitter helper keeps helper-return soa_vector mutator shadows on wrapper paths") {
+TEST_CASE("C++ emitter helper keeps helper-return soa mutator shadows on wrapper paths") {
   primec::Expr values;
   values.kind = primec::Expr::Kind::Name;
   values.name = "values";
@@ -858,13 +858,13 @@ TEST_CASE("C++ emitter helper keeps helper-return soa_vector mutator shadows on 
   primec::Definition borrowDef;
   borrowDef.fullPath = "/pickBorrowed";
   primec::Definition aliasPushDef;
-  aliasPushDef.fullPath = "/soa_vector/push";
+  aliasPushDef.fullPath = "/soa/push";
   primec::Definition aliasReserveDef;
-  aliasReserveDef.fullPath = "/soa_vector/reserve";
+  aliasReserveDef.fullPath = "/soa/reserve";
   primec::Definition canonicalPushDef;
-  canonicalPushDef.fullPath = "/std/collections/soa_vector/push";
+  canonicalPushDef.fullPath = "/std/collections/soa/push";
   primec::Definition canonicalReserveDef;
-  canonicalReserveDef.fullPath = "/std/collections/soa_vector/reserve";
+  canonicalReserveDef.fullPath = "/std/collections/soa/reserve";
   primec::Definition concretePushDef;
   concretePushDef.fullPath =
       "/std/collections/soa/SoaVector__Particle/push";
@@ -908,11 +908,11 @@ TEST_CASE("C++ emitter helper keeps helper-return soa_vector mutator shadows on 
     CHECK(resolved == expectedPath);
   };
 
-  expectResolved("push", "/soa_vector/push");
-  expectResolved("reserve", "/soa_vector/reserve");
+  expectResolved("push", "/soa/push");
+  expectResolved("reserve", "/soa/reserve");
 }
 
-TEST_CASE("C++ emitter helper keeps direct helper-return soa_vector mutator shadows on wrapper paths") {
+TEST_CASE("C++ emitter helper keeps direct helper-return soa mutator shadows on wrapper paths") {
   primec::Expr cloneCall;
   cloneCall.kind = primec::Expr::Kind::Call;
   cloneCall.name = "cloneValues";
@@ -926,13 +926,13 @@ TEST_CASE("C++ emitter helper keeps direct helper-return soa_vector mutator shad
   primec::Definition cloneDef;
   cloneDef.fullPath = "/cloneValues";
   primec::Definition aliasPushDef;
-  aliasPushDef.fullPath = "/soa_vector/push";
+  aliasPushDef.fullPath = "/soa/push";
   primec::Definition aliasReserveDef;
-  aliasReserveDef.fullPath = "/soa_vector/reserve";
+  aliasReserveDef.fullPath = "/soa/reserve";
   primec::Definition canonicalPushDef;
-  canonicalPushDef.fullPath = "/std/collections/soa_vector/push";
+  canonicalPushDef.fullPath = "/std/collections/soa/push";
   primec::Definition canonicalReserveDef;
-  canonicalReserveDef.fullPath = "/std/collections/soa_vector/reserve";
+  canonicalReserveDef.fullPath = "/std/collections/soa/reserve";
   primec::Definition concretePushDef;
   concretePushDef.fullPath =
       "/std/collections/soa/SoaVector__Particle/push";
@@ -983,11 +983,11 @@ TEST_CASE("C++ emitter helper keeps direct helper-return soa_vector mutator shad
     CHECK(resolved == expectedPath);
   };
 
-  expectResolved("push", "/soa_vector/push");
-  expectResolved("reserve", "/soa_vector/reserve");
+  expectResolved("push", "/soa/push");
+  expectResolved("reserve", "/soa/reserve");
 }
 
-TEST_CASE("C++ emitter helper keeps nested helper-return soa_vector mutator shadows on wrapper paths") {
+TEST_CASE("C++ emitter helper keeps nested helper-return soa mutator shadows on wrapper paths") {
   primec::Expr holderName;
   holderName.kind = primec::Expr::Kind::Name;
   holderName.name = "holder";
@@ -1011,13 +1011,13 @@ TEST_CASE("C++ emitter helper keeps nested helper-return soa_vector mutator shad
   primec::Definition holderCloneDef;
   holderCloneDef.fullPath = "/Holder/cloneValues";
   primec::Definition aliasPushDef;
-  aliasPushDef.fullPath = "/soa_vector/push";
+  aliasPushDef.fullPath = "/soa/push";
   primec::Definition aliasReserveDef;
-  aliasReserveDef.fullPath = "/soa_vector/reserve";
+  aliasReserveDef.fullPath = "/soa/reserve";
   primec::Definition canonicalPushDef;
-  canonicalPushDef.fullPath = "/std/collections/soa_vector/push";
+  canonicalPushDef.fullPath = "/std/collections/soa/push";
   primec::Definition canonicalReserveDef;
-  canonicalReserveDef.fullPath = "/std/collections/soa_vector/reserve";
+  canonicalReserveDef.fullPath = "/std/collections/soa/reserve";
   primec::Definition concretePushDef;
   concretePushDef.fullPath =
       "/std/collections/soa/SoaVector__Particle/push";
@@ -1068,8 +1068,8 @@ TEST_CASE("C++ emitter helper keeps nested helper-return soa_vector mutator shad
     CHECK(resolved == expectedPath);
   };
 
-  expectResolved("push", "/soa_vector/push");
-  expectResolved("reserve", "/soa_vector/reserve");
+  expectResolved("push", "/soa/push");
+  expectResolved("reserve", "/soa/reserve");
 }
 
 TEST_CASE("C++ emitter helper handles cross-path vector slash count capacity fallback") {

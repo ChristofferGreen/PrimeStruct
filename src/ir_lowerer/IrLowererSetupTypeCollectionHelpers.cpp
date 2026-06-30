@@ -1,4 +1,5 @@
 // soa-surface-audit: exempt
+// collection-surface-audit: exempt
 #include "IrLowererSetupTypeCollectionHelpers.h"
 
 #include <algorithm>
@@ -411,7 +412,7 @@ bool resolveVectorHelperAliasName(const Expr &expr, std::string &helperNameOut) 
   }
   const std::string arrayPrefix = "array/";
   const std::string stdVectorPrefix = collectionMemberRoot("vector", false);
-  const std::string stdSoaVectorPrefix = "std/collections/soa_vector/";
+  const std::string stdSoaVectorPrefix = "std/collections/soa/";
   const std::string internalSoaVectorPrefix = collection_paths::modulePrefixBare(collection_paths::kInternalSoaVectorFolder);
   const std::string experimentalSoaVectorPrefix = collection_paths::modulePrefixBare(collection_paths::kExperimentalSoaVectorFolder);
   const std::string experimentalVectorPrefix =

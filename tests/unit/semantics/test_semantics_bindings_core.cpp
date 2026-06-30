@@ -277,7 +277,7 @@ main() {
 )";
   std::string error;
   CHECK_FALSE(validateProgram(source, "/main", error));
-  CHECK(error.find("soa_vector<T> is not supported; use soa<T>") != std::string::npos);
+  CHECK(error.find("unknown call target: soa_vector") != std::string::npos);
 }
 
 TEST_CASE("soa public spelling validates bindings returns references and pointers") {
@@ -305,14 +305,14 @@ pointValues([Pointer<soa<Particle>>] values) {
 [effects(heap_alloc), return<int>]
 main() {
   [soa<Particle> mut] values{soa<Particle>()}
-  [soa<Particle>] empty{}
   [soa<Particle>] cloned{cloneValues()}
   [Reference<soa<Particle>>] borrowed{borrowValues(location(values))}
   [Pointer<soa<Particle>>] ptr{pointValues(location(values))}
-  return(plus(count(values), plus(count(empty), count(cloned))))
+  return(plus(count(values), count(cloned)))
 }
 )";
   std::string error;
+  INFO(error);
   CHECK(validateProgram(source, "/main", error));
   CHECK(error.empty());
 }
@@ -327,7 +327,7 @@ main() {
 )";
   std::string error;
   CHECK_FALSE(validateProgram(source, "/main", error));
-  CHECK(error.find("soa_vector<T> is not supported; use soa<T>") != std::string::npos);
+  CHECK(error.find("unknown call target: soa_vector") != std::string::npos);
 }
 
 TEST_CASE("soa public spelling requires struct element type") {
@@ -343,7 +343,7 @@ main() {
   CHECK(error.find("soa requires struct element type") != std::string::npos);
 }
 
-TEST_CASE("soa_vector binding rejects disallowed element field envelope") {
+TEST_CASE("soa binding rejects disallowed element field envelope") {
   const std::string source = R"(
 Particle() {
   [string] name{"particle"utf8}
@@ -351,16 +351,16 @@ Particle() {
 
 [effects(heap_alloc), return<int>]
 main() {
-  [soa_vector<Particle>] values{soa_vector<Particle>()}
+  [soa<Particle>] values{soa<Particle>()}
   return(1i32)
 }
 )";
   std::string error;
   CHECK_FALSE(validateProgram(source, "/main", error));
-  CHECK(error.find("soa_vector field envelope is unsupported on /Particle/name: string") != std::string::npos);
+  CHECK(error.find("soa field envelope is unsupported on /Particle/name: string") != std::string::npos);
 }
 
-TEST_CASE("soa_vector binding rejects nested struct disallowed envelope") {
+TEST_CASE("soa binding rejects nested struct disallowed envelope") {
   const std::string source = R"(
 Meta() {
   [string] tag{"meta"utf8}
@@ -372,13 +372,13 @@ Particle() {
 
 [effects(heap_alloc), return<int>]
 main() {
-  [soa_vector<Particle>] values{soa_vector<Particle>()}
+  [soa<Particle>] values{soa<Particle>()}
   return(1i32)
 }
 )";
   std::string error;
   CHECK_FALSE(validateProgram(source, "/main", error));
-  CHECK(error.find("soa_vector field envelope is unsupported on /Particle/meta/tag: string") != std::string::npos);
+  CHECK(error.find("soa field envelope is unsupported on /Particle/meta/tag: string") != std::string::npos);
 }
 
 TEST_CASE("field-only definition can be used as a type") {

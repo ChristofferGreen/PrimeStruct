@@ -1501,9 +1501,9 @@ TEST_CASE("compile pipeline publishes an initial semantic product shell") {
         std::string::npos);
   CHECK(irCallResolution.find("soa_paths::collectionPath(soa_paths::legacySoaFolder())") !=
         std::string::npos);
-  CHECK(irCallResolution.find("\"/std/collections/soa_vector/\"") ==
+  CHECK(irCallResolution.find("\"/std/collections/soa/\"") ==
         std::string::npos);
-  CHECK(irCallResolution.find("\"soa_vector\"") == std::string::npos);
+  CHECK(irCallResolution.find("\"soa\"") == std::string::npos);
   CHECK(irCallResolution.find("\"to_aos\"") == std::string::npos);
   CHECK(irCallResolution.find("isResidualBridgeHelperPath(fallbackResolvedPath) &&") ==
         std::string::npos);

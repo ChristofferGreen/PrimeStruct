@@ -200,8 +200,12 @@
         const int32_t literalCount =
             static_cast<int32_t>(collectionLiteralExpr.args.size());
         StructSlotLayoutInfo vectorLayout;
-        if (!resolveStructSlotLayout(
-                vectorBackingTypePath(), vectorLayout)) {
+        std::string vectorStructPath =
+            inferStructExprPath(callExpr, callerLocals);
+        if (vectorStructPath.empty()) {
+          vectorStructPath = vectorBackingTypePath();
+        }
+        if (!resolveStructSlotLayout(vectorStructPath, vectorLayout)) {
           error =
               "native backend cannot resolve experimental collection record layout";
           return false;

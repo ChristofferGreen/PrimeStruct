@@ -62,25 +62,25 @@ TEST_CASE("ir lowerer setup type helper resolves method definitions from receive
   primec::Definition stdMapAtDef;
   stdMapAtDef.fullPath = "/std/collections/map/at";
   primec::Definition soaGetDef;
-  soaGetDef.fullPath = "/soa_vector/get";
+  soaGetDef.fullPath = "/soa/get";
   primec::Definition stdSoaGetDef;
-  stdSoaGetDef.fullPath = "/std/collections/soa_vector/get";
+  stdSoaGetDef.fullPath = "/std/collections/soa/get";
   primec::Definition soaRefDef;
-  soaRefDef.fullPath = "/soa_vector/ref";
+  soaRefDef.fullPath = "/soa/ref";
   primec::Definition stdSoaRefDef;
-  stdSoaRefDef.fullPath = "/std/collections/soa_vector/ref";
+  stdSoaRefDef.fullPath = "/std/collections/soa/ref";
   primec::Definition soaPushDef;
-  soaPushDef.fullPath = "/soa_vector/push";
+  soaPushDef.fullPath = "/soa/push";
   primec::Definition stdSoaPushDef;
-  stdSoaPushDef.fullPath = "/std/collections/soa_vector/push";
+  stdSoaPushDef.fullPath = "/std/collections/soa/push";
   primec::Definition soaReserveDef;
-  soaReserveDef.fullPath = "/soa_vector/reserve";
+  soaReserveDef.fullPath = "/soa/reserve";
   primec::Definition stdSoaReserveDef;
-  stdSoaReserveDef.fullPath = "/std/collections/soa_vector/reserve";
+  stdSoaReserveDef.fullPath = "/std/collections/soa/reserve";
   primec::Definition rootedToAosDef;
   rootedToAosDef.fullPath = "/to_aos";
   primec::Definition stdSoaToAosDef;
-  stdSoaToAosDef.fullPath = "/std/collections/soa_vector/to_aos";
+  stdSoaToAosDef.fullPath = "/std/collections/soa/to_aos";
   primec::Definition bufferCountDef;
   bufferCountDef.fullPath = "/std/gfx/Buffer/count";
   primec::Definition bufferEmptyDef;
@@ -118,16 +118,16 @@ TEST_CASE("ir lowerer setup type helper resolves method definitions from receive
       {"/std/collections/map/tryAt", &stdMapTryAtDef},
       {"/map/at", &mapAtDef},
       {"/std/collections/map/at", &stdMapAtDef},
-      {"/soa_vector/get", &soaGetDef},
-      {"/std/collections/soa_vector/get", &stdSoaGetDef},
-      {"/soa_vector/ref", &soaRefDef},
-      {"/std/collections/soa_vector/ref", &stdSoaRefDef},
-      {"/soa_vector/push", &soaPushDef},
-      {"/std/collections/soa_vector/push", &stdSoaPushDef},
-      {"/soa_vector/reserve", &soaReserveDef},
-      {"/std/collections/soa_vector/reserve", &stdSoaReserveDef},
+      {"/soa/get", &soaGetDef},
+      {"/std/collections/soa/get", &stdSoaGetDef},
+      {"/soa/ref", &soaRefDef},
+      {"/std/collections/soa/ref", &stdSoaRefDef},
+      {"/soa/push", &soaPushDef},
+      {"/std/collections/soa/push", &stdSoaPushDef},
+      {"/soa/reserve", &soaReserveDef},
+      {"/std/collections/soa/reserve", &stdSoaReserveDef},
       {"/to_aos", &rootedToAosDef},
-      {"/std/collections/soa_vector/to_aos", &stdSoaToAosDef},
+      {"/std/collections/soa/to_aos", &stdSoaToAosDef},
       {"/std/gfx/Buffer/count", &bufferCountDef},
       {"/std/gfx/Buffer/empty", &bufferEmptyDef},
       {"/pkg/Ctor/length", &structMethodDef},
@@ -329,43 +329,43 @@ TEST_CASE("ir lowerer setup type helper resolves method definitions from receive
   CHECK(error.empty());
 
   CHECK(primec::ir_lowerer::resolveMethodDefinitionFromReceiverTarget(
-            "get", "soa_vector", "", defMap, error) == &stdSoaGetDef);
+            "get", "soa", "", defMap, error) == &stdSoaGetDef);
   CHECK(error.empty());
 
   CHECK(primec::ir_lowerer::resolveMethodDefinitionFromReceiverTarget(
-            "get", "std/collections/soa_vector", "", defMap, error) == &stdSoaGetDef);
+            "get", "std/collections/soa", "", defMap, error) == &stdSoaGetDef);
   CHECK(error.empty());
 
   CHECK(primec::ir_lowerer::resolveMethodDefinitionFromReceiverTarget(
-            "ref", "soa_vector", "", defMap, error) == &stdSoaRefDef);
+            "ref", "soa", "", defMap, error) == &stdSoaRefDef);
   CHECK(error.empty());
 
   CHECK(primec::ir_lowerer::resolveMethodDefinitionFromReceiverTarget(
-            "ref", "std/collections/soa_vector", "", defMap, error) == &stdSoaRefDef);
+            "ref", "std/collections/soa", "", defMap, error) == &stdSoaRefDef);
   CHECK(error.empty());
 
   CHECK(primec::ir_lowerer::resolveMethodDefinitionFromReceiverTarget(
-            "push", "soa_vector", "", defMap, error) == &stdSoaPushDef);
+            "push", "soa", "", defMap, error) == &stdSoaPushDef);
   CHECK(error.empty());
 
   CHECK(primec::ir_lowerer::resolveMethodDefinitionFromReceiverTarget(
-            "push", "std/collections/soa_vector", "", defMap, error) == &stdSoaPushDef);
+            "push", "std/collections/soa", "", defMap, error) == &stdSoaPushDef);
   CHECK(error.empty());
 
   CHECK(primec::ir_lowerer::resolveMethodDefinitionFromReceiverTarget(
-            "reserve", "soa_vector", "", defMap, error) == &stdSoaReserveDef);
+            "reserve", "soa", "", defMap, error) == &stdSoaReserveDef);
   CHECK(error.empty());
 
   CHECK(primec::ir_lowerer::resolveMethodDefinitionFromReceiverTarget(
-            "reserve", "std/collections/soa_vector", "", defMap, error) == &stdSoaReserveDef);
+            "reserve", "std/collections/soa", "", defMap, error) == &stdSoaReserveDef);
   CHECK(error.empty());
 
   CHECK(primec::ir_lowerer::resolveMethodDefinitionFromReceiverTarget(
-            "to_aos", "soa_vector", "", defMap, error) == &stdSoaToAosDef);
+            "to_aos", "soa", "", defMap, error) == &stdSoaToAosDef);
   CHECK(error.empty());
 
   CHECK(primec::ir_lowerer::resolveMethodDefinitionFromReceiverTarget(
-            "to_aos", "std/collections/soa_vector", "", defMap, error) == &stdSoaToAosDef);
+            "to_aos", "std/collections/soa", "", defMap, error) == &stdSoaToAosDef);
   CHECK(error.empty());
 
   CHECK(primec::ir_lowerer::resolveMethodDefinitionFromReceiverTarget(
@@ -386,17 +386,17 @@ TEST_CASE("ir lowerer setup type helper normalizes helper-return SoaVector colle
   cloneDef.transforms.push_back(returnSoaVector);
 
   primec::Definition aliasGetDef;
-  aliasGetDef.fullPath = "/soa_vector/get";
+  aliasGetDef.fullPath = "/soa/get";
   primec::Definition aliasRefDef;
-  aliasRefDef.fullPath = "/soa_vector/ref";
+  aliasRefDef.fullPath = "/soa/ref";
   primec::Definition rootedToAosDef;
   rootedToAosDef.fullPath = "/to_aos";
   primec::Definition canonicalGetDef;
-  canonicalGetDef.fullPath = "/std/collections/soa_vector/get";
+  canonicalGetDef.fullPath = "/std/collections/soa/get";
   primec::Definition canonicalRefDef;
-  canonicalRefDef.fullPath = "/std/collections/soa_vector/ref";
+  canonicalRefDef.fullPath = "/std/collections/soa/ref";
   primec::Definition canonicalToAosDef;
-  canonicalToAosDef.fullPath = "/std/collections/soa_vector/to_aos";
+  canonicalToAosDef.fullPath = "/std/collections/soa/to_aos";
 
   const std::unordered_map<std::string, const primec::Definition *> defMap = {
       {cloneDef.fullPath, &cloneDef},
@@ -595,81 +595,81 @@ TEST_CASE("ir lowerer setup type helper rejects canonical vector receiver fallba
 
 TEST_CASE("ir lowerer setup type helper rejects canonical soa access fallback to rooted aliases") {
   primec::Definition soaGetDef;
-  soaGetDef.fullPath = "/soa_vector/get";
+  soaGetDef.fullPath = "/soa/get";
   primec::Definition soaRefDef;
-  soaRefDef.fullPath = "/soa_vector/ref";
+  soaRefDef.fullPath = "/soa/ref";
   std::string error;
 
   const std::unordered_map<std::string, const primec::Definition *> defMap = {
-      {"/soa_vector/get", &soaGetDef},
-      {"/soa_vector/ref", &soaRefDef},
+      {"/soa/get", &soaGetDef},
+      {"/soa/ref", &soaRefDef},
   };
 
   CHECK(primec::ir_lowerer::resolveMethodDefinitionFromReceiverTarget(
-            "get", "soa_vector", "", defMap, error) == nullptr);
+            "get", "soa", "", defMap, error) == nullptr);
   CHECK(error ==
-        "struct parameter type mismatch for /std/collections/soa_vector/get parameter values: expected "
+        "struct parameter type mismatch for /std/collections/soa/get parameter values: expected "
         "/std/collections/soa/SoaVector__ specialization");
 
   error.clear();
   CHECK(primec::ir_lowerer::resolveMethodDefinitionFromReceiverTarget(
-            "get", "std/collections/soa_vector", "", defMap, error) == nullptr);
+            "get", "std/collections/soa", "", defMap, error) == nullptr);
   CHECK(error ==
-        "struct parameter type mismatch for /std/collections/soa_vector/get parameter values: expected "
+        "struct parameter type mismatch for /std/collections/soa/get parameter values: expected "
         "/std/collections/soa/SoaVector__ specialization");
 
   error.clear();
   CHECK(primec::ir_lowerer::resolveMethodDefinitionFromReceiverTarget(
-            "ref", "soa_vector", "", defMap, error) == nullptr);
+            "ref", "soa", "", defMap, error) == nullptr);
   CHECK(error ==
-        "struct parameter type mismatch for /std/collections/soa_vector/ref parameter values: expected "
+        "struct parameter type mismatch for /std/collections/soa/ref parameter values: expected "
         "/std/collections/soa/SoaVector__ specialization");
 
   error.clear();
   CHECK(primec::ir_lowerer::resolveMethodDefinitionFromReceiverTarget(
-            "ref", "std/collections/soa_vector", "", defMap, error) == nullptr);
+            "ref", "std/collections/soa", "", defMap, error) == nullptr);
   CHECK(error ==
-        "struct parameter type mismatch for /std/collections/soa_vector/ref parameter values: expected "
+        "struct parameter type mismatch for /std/collections/soa/ref parameter values: expected "
         "/std/collections/soa/SoaVector__ specialization");
 }
 
 TEST_CASE("ir lowerer setup type helper rejects canonical soa mutator fallback to rooted aliases") {
   primec::Definition soaPushDef;
-  soaPushDef.fullPath = "/soa_vector/push";
+  soaPushDef.fullPath = "/soa/push";
   primec::Definition soaReserveDef;
-  soaReserveDef.fullPath = "/soa_vector/reserve";
+  soaReserveDef.fullPath = "/soa/reserve";
   std::string error;
 
   const std::unordered_map<std::string, const primec::Definition *> defMap = {
-      {"/soa_vector/push", &soaPushDef},
-      {"/soa_vector/reserve", &soaReserveDef},
+      {"/soa/push", &soaPushDef},
+      {"/soa/reserve", &soaReserveDef},
   };
 
   CHECK(primec::ir_lowerer::resolveMethodDefinitionFromReceiverTarget(
-            "push", "soa_vector", "", defMap, error) == nullptr);
+            "push", "soa", "", defMap, error) == nullptr);
   CHECK(error ==
-        "struct parameter type mismatch for /std/collections/soa_vector/push parameter values: expected "
+        "struct parameter type mismatch for /std/collections/soa/push parameter values: expected "
         "/std/collections/soa/SoaVector__ specialization");
 
   error.clear();
   CHECK(primec::ir_lowerer::resolveMethodDefinitionFromReceiverTarget(
-            "push", "std/collections/soa_vector", "", defMap, error) == nullptr);
+            "push", "std/collections/soa", "", defMap, error) == nullptr);
   CHECK(error ==
-        "struct parameter type mismatch for /std/collections/soa_vector/push parameter values: expected "
+        "struct parameter type mismatch for /std/collections/soa/push parameter values: expected "
         "/std/collections/soa/SoaVector__ specialization");
 
   error.clear();
   CHECK(primec::ir_lowerer::resolveMethodDefinitionFromReceiverTarget(
-            "reserve", "soa_vector", "", defMap, error) == nullptr);
+            "reserve", "soa", "", defMap, error) == nullptr);
   CHECK(error ==
-        "struct parameter type mismatch for /std/collections/soa_vector/reserve parameter values: expected "
+        "struct parameter type mismatch for /std/collections/soa/reserve parameter values: expected "
         "/std/collections/soa/SoaVector__ specialization");
 
   error.clear();
   CHECK(primec::ir_lowerer::resolveMethodDefinitionFromReceiverTarget(
-            "reserve", "std/collections/soa_vector", "", defMap, error) == nullptr);
+            "reserve", "std/collections/soa", "", defMap, error) == nullptr);
   CHECK(error ==
-        "struct parameter type mismatch for /std/collections/soa_vector/reserve parameter values: expected "
+        "struct parameter type mismatch for /std/collections/soa/reserve parameter values: expected "
         "/std/collections/soa/SoaVector__ specialization");
 }
 
@@ -683,16 +683,16 @@ TEST_CASE("ir lowerer setup type helper rejects canonical soa to_aos fallback to
   };
 
   CHECK(primec::ir_lowerer::resolveMethodDefinitionFromReceiverTarget(
-            "to_aos", "soa_vector", "", defMap, error) == nullptr);
+            "to_aos", "soa", "", defMap, error) == nullptr);
   CHECK(error ==
-        "struct parameter type mismatch for /std/collections/soa_vector/to_aos parameter values: expected "
+        "struct parameter type mismatch for /std/collections/soa/to_aos parameter values: expected "
         "/std/collections/soa/SoaVector__ specialization");
 
   error.clear();
   CHECK(primec::ir_lowerer::resolveMethodDefinitionFromReceiverTarget(
-            "to_aos", "std/collections/soa_vector", "", defMap, error) == nullptr);
+            "to_aos", "std/collections/soa", "", defMap, error) == nullptr);
   CHECK(error ==
-        "struct parameter type mismatch for /std/collections/soa_vector/to_aos parameter values: expected "
+        "struct parameter type mismatch for /std/collections/soa/to_aos parameter values: expected "
         "/std/collections/soa/SoaVector__ specialization");
 }
 
@@ -939,7 +939,7 @@ TEST_CASE("ir lowerer setup type helper resolves indexed args-pack vector receiv
   CHECK(error.empty());
 }
 
-TEST_CASE("ir lowerer setup type helper resolves indexed args-pack soa_vector receivers") {
+TEST_CASE("ir lowerer setup type helper resolves indexed args-pack soa receivers") {
   using LocalInfo = primec::ir_lowerer::LocalInfo;
   using ValueKind = LocalInfo::ValueKind;
 
@@ -978,7 +978,7 @@ TEST_CASE("ir lowerer setup type helper resolves indexed args-pack soa_vector re
                                                         typeName,
                                                         resolvedTypePath,
                                                         error));
-  CHECK(typeName == "soa_vector");
+  CHECK(typeName == "soa");
   CHECK(resolvedTypePath.empty());
   CHECK(error.empty());
 }

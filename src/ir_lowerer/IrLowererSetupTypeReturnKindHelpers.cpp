@@ -81,11 +81,11 @@ bool classifySemanticReturnKindCollectionTypeText(
     return classifySemanticReturnKindCollectionTypeText(args.front(), infoOut);
   }
   if ((base == "array" || base == "vector" || base == "Buffer" ||
-       base == "soa_vector") &&
+       base == "soa") &&
       args.size() == 1) {
     infoOut.arrayVectorInfo.isArrayOrVectorTarget = true;
     infoOut.arrayVectorInfo.isVectorTarget = base == "vector";
-    infoOut.arrayVectorInfo.isSoaVector = base == "soa_vector";
+    infoOut.arrayVectorInfo.isSoaVector = base == "soa";
     infoOut.arrayVectorInfo.elemKind = valueKindFromTypeName(args.front());
     return true;
   }
@@ -107,10 +107,10 @@ bool classifySemanticReturnKindCollectionSpecialization(
                                      fact.collectionFamily,
                                      fact.collectionFamilyId));
   if (family == "array" || family == "vector" || family == "Buffer" ||
-      family == "soa_vector") {
+      family == "soa") {
     infoOut.arrayVectorInfo.isArrayOrVectorTarget = true;
     infoOut.arrayVectorInfo.isVectorTarget = family == "vector";
-    infoOut.arrayVectorInfo.isSoaVector = family == "soa_vector";
+    infoOut.arrayVectorInfo.isSoaVector = family == "soa";
     infoOut.arrayVectorInfo.elemKind =
         valueKindFromTypeName(resolveSemanticProductTypeText(
             semanticProgram, fact.elementTypeText, fact.elementTypeTextId));
@@ -436,7 +436,7 @@ bool resolveMethodCallReturnKind(const Expr &methodCallExpr,
         if (!inferDeclaredReturnCollection(*receiverDef, collectionName, collectionArgs)) {
           return false;
         }
-        if ((collectionName == "array" || collectionName == "vector" || collectionName == "soa_vector") &&
+        if ((collectionName == "array" || collectionName == "vector" || collectionName == "soa") &&
             collectionArgs.size() == 1) {
           declaredKindOut = valueKindFromTypeName(collectionArgs.front());
           return declaredKindOut != LocalInfo::ValueKind::Unknown;

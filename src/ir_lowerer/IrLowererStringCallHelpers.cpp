@@ -45,12 +45,14 @@ StringCallEmitResult emitLiteralOrBindingStringCallValue(const Expr &arg,
       error = "native backend requires string arguments to use string literals, bindings, or entry args";
       return StringCallEmitResult::Error;
     }
-    if (!binding.isString || binding.source == StringCallSource::None) {
+    if (!binding.isString) {
       error = "native backend requires string arguments to use string literals, bindings, or entry args";
       return StringCallEmitResult::Error;
     }
     emitInstruction(IrOpcode::LoadLocal, static_cast<uint64_t>(binding.localIndex));
-    sourceOut = binding.source;
+    sourceOut = binding.source == StringCallSource::None
+                    ? StringCallSource::RuntimeIndex
+                    : binding.source;
     stringIndexOut = binding.stringIndex;
     argvCheckedOut = binding.argvChecked;
     return StringCallEmitResult::Handled;
@@ -73,6 +75,7 @@ StringCallEmitResult emitCallStringCallValue(const Expr &arg,
                                              StringCallSource &sourceOut,
                                              bool &argvCheckedOut,
                                              std::string &error) {
+  (void)inferCallReturnsString;
   if (arg.kind != Expr::Kind::Call) {
     return StringCallEmitResult::NotHandled;
   }
@@ -84,10 +87,6 @@ StringCallEmitResult emitCallStringCallValue(const Expr &arg,
       return StringCallEmitResult::Error;
     }
     if (!isEntryArgsName(arg.args.front())) {
-      if (!inferCallReturnsString(arg)) {
-        error = "native backend only supports entry argument indexing";
-        return StringCallEmitResult::Error;
-      }
       if (!emitExpr(arg)) {
         return StringCallEmitResult::Error;
       }
@@ -134,10 +133,6 @@ StringCallEmitResult emitCallStringCallValue(const Expr &arg,
     return StringCallEmitResult::Handled;
   }
 
-  if (!inferCallReturnsString(arg)) {
-    error = "native backend requires string arguments to use string literals, bindings, or entry args";
-    return StringCallEmitResult::Error;
-  }
   if (!emitExpr(arg)) {
     return StringCallEmitResult::Error;
   }

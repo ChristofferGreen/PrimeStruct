@@ -296,11 +296,15 @@ import /std/collections/*
 
 [return<int>]
 main() {
-  [map<i32, string>] values{map<i32, string>(1i32, "one"utf8)}
-  return(if(true, then(){ at(values, 1i32) }, else(){ 2i32 }))
+  [/std/collections/map/MapValue<i32, string>] values{
+      map<i32, string>(1i32, "one"utf8)}
+  return(if(true,
+            then(){ /std/collections/map/at<i32, string>(values, 1i32) },
+            else(){ 2i32 }))
 }
 )";
   std::string error;
+  INFO(error);
   CHECK_FALSE(validateProgram(source, "/main", error));
   CHECK(error.find("if branches must return compatible types") != std::string::npos);
 }

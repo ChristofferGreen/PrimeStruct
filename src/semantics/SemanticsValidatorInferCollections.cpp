@@ -301,7 +301,7 @@ SemanticsValidator::BuiltinCollectionDispatchResolvers SemanticsValidator::makeB
   };
   auto resolveSoaVectorBinding = [this](const BindingInfo &binding, std::string &elemTypeOut) -> bool {
     elemTypeOut.clear();
-    if (binding.typeName != "soa_vector" || binding.typeTemplateArg.empty()) {
+    if (binding.typeName != "soa" || binding.typeTemplateArg.empty()) {
       const std::string normalizedType = normalizeBindingTypeName(binding.typeName);
       if (normalizedType == "Reference" || normalizedType == "Pointer") {
         return false;
@@ -613,22 +613,22 @@ SemanticsValidator::BuiltinCollectionDispatchResolvers SemanticsValidator::makeB
     if (target.kind == Expr::Kind::Call) {
       std::string indexedElemType;
       if (lockedState->resolveIndexedArgsPackElementType(target, indexedElemType) &&
-          extractCollectionElementType(indexedElemType, "soa_vector", elemType)) {
+          extractCollectionElementType(indexedElemType, "soa", elemType)) {
         return true;
       }
       if (lockedState->resolveWrappedIndexedArgsPackElementType(target, indexedElemType) &&
-          extractCollectionElementType(indexedElemType, "soa_vector", elemType)) {
+          extractCollectionElementType(indexedElemType, "soa", elemType)) {
         return true;
       }
       if (lockedState->resolveDereferencedIndexedArgsPackElementType(target, indexedElemType) &&
-          extractCollectionElementType(indexedElemType, "soa_vector", elemType)) {
+          extractCollectionElementType(indexedElemType, "soa", elemType)) {
         return true;
       }
       std::string collectionTypePath;
       if (resolveCallCollectionTypePath(target, params, locals, collectionTypePath) &&
-          collectionTypePath == "/soa_vector") {
+          collectionTypePath == "/soa") {
         std::vector<std::string> args;
-        if (resolveCallCollectionTemplateArgs(target, "soa_vector", params, locals, args) && args.size() == 1) {
+        if (resolveCallCollectionTemplateArgs(target, "soa", params, locals, args) && args.size() == 1) {
           elemType = args.front();
           return true;
         }

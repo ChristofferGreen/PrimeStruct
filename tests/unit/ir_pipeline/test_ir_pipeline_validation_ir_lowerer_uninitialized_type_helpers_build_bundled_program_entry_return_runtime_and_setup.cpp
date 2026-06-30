@@ -354,7 +354,7 @@ TEST_CASE("ir lowerer setup type helper resolves method receiver local targets")
   soaVectorLocal.valueKind = LocalInfo::ValueKind::Unknown;
   soaVectorLocal.isSoaVector = true;
   CHECK(primec::ir_lowerer::resolveMethodReceiverTypeFromLocalInfo(soaVectorLocal, typeName, resolvedTypePath));
-  CHECK(typeName == "soa_vector");
+  CHECK(typeName == "soa");
   CHECK(resolvedTypePath.empty());
 
   LocalInfo referenceArrayLocal;
@@ -461,10 +461,10 @@ TEST_CASE("ir lowerer setup type helper resolves method receiver call targets") 
 
   primec::Expr soaVectorCall;
   soaVectorCall.kind = primec::Expr::Kind::Call;
-  soaVectorCall.name = "soa_vector";
+  soaVectorCall.name = "soa";
   soaVectorCall.templateArgs = {"Particle"};
   CHECK(primec::ir_lowerer::resolveMethodReceiverTypeNameFromCallExpr(soaVectorCall, ValueKind::Unknown) ==
-        "soa_vector");
+        "soa");
 }
 
 TEST_CASE("ir lowerer setup type helper falls back for method receiver call targets") {

@@ -716,16 +716,14 @@ resolveCanonicalCompatibilityKeyValueHelperNameFromResolvedPath(
             importPath.rfind(root, 0) == 0 &&
             importPath[root.size()] == '/');
   };
-  return matchesRoot("/std/collections/soa_vector") ||
-         matchesRoot("/std/collections/soa_vector_conversions") ||
-         matchesRoot("/std/collections/experimental_soa_vector") ||
-         matchesRoot("/std/collections/experimental_soa_vector_conversions") ||
-         matchesRoot("/std/collections/internal_soa_vector") ||
-         matchesRoot("/std/collections/internal_soa_vector_conversions");
+  return matchesRoot("/std/collections/experimental_soa") ||
+         matchesRoot("/std/collections/experimental_soa_conversions") ||
+         matchesRoot("/std/collections/internal_soa") ||
+         matchesRoot("/std/collections/internal_soa_conversions");
 }
 
 [[maybe_unused]] std::string directRemovedSoaCompatibilityImportDiagnostic() {
-  return "direct import of retired soa_vector compatibility modules is not "
+  return "direct import of retired soa compatibility modules is not "
          "supported; use /std/collections/soa/*";
 }
 

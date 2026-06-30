@@ -562,7 +562,7 @@ main() {
   CHECK_FALSE(error.empty());
 }
 
-TEST_CASE("graph type resolver shares borrowed indexed collection plumbing for soa_vector auto returns") {
+TEST_CASE("graph type resolver shares borrowed indexed collection plumbing for soa auto returns") {
   const std::string source = R"(
 import /std/collections/*
 
@@ -571,7 +571,7 @@ Particle() {
 }
 
 [return<auto>]
-scoreRefs([args<Reference<soa_vector<Particle>>>] values) {
+scoreRefs([args<Reference<soa<Particle>>>] values) {
   return(count(to_aos(dereference(values[0i32]))))
 }
 

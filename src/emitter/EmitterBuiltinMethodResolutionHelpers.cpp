@@ -63,17 +63,17 @@ std::string inferSoaReceiverTypeFromBinding(const BindingInfo &binding) {
       if (!normalized.empty() && normalized.front() == '/') {
         normalized.erase(normalized.begin());
       }
-      if (normalized == "soa_vector" || normalized == "SoaVector" ||
-          normalized == "std/collections/soa_vector" ||
+      if (normalized == "soa" || normalized == "SoaVector" ||
+          normalized == "std/collections/soa" ||
           normalized == collection_paths::memberPathBare(collection_paths::kSoaFolder, collection_paths::kSoaVectorTypeName) ||
-          normalized.rfind("soa_vector<", 0) == 0 ||
+          normalized.rfind("soa<", 0) == 0 ||
           normalized.rfind("SoaVector<", 0) == 0 ||
           normalized.rfind(collection_paths::memberPathBare(
                                collection_paths::kSoaFolder,
                                collection_paths::kSoaVectorTypeName) +
                                "<",
                            0) == 0) {
-        return borrowed ? "soa_vector_ref" : "soa_vector";
+        return borrowed ? "soa_ref" : "soa";
       }
       std::string base;
       std::string arg;
@@ -136,9 +136,9 @@ std::string inferConcreteExperimentalSoaStructPathFromTypeText(std::string typeT
       normalized = normalizeBindingTypeName(arg);
       continue;
     }
-    if (base == "SoaVector" || base == "soa_vector" ||
+    if (base == "SoaVector" || base == "soa" ||
         base == collection_paths::memberPathBare(collection_paths::kSoaFolder, collection_paths::kSoaVectorTypeName) ||
-        base == "std/collections/soa_vector") {
+        base == "std/collections/soa") {
       std::string normalizedArg = normalizeBindingTypeName(arg);
       if (!normalizedArg.empty() && normalizedArg.front() == '/') {
         normalizedArg.erase(normalizedArg.begin());
@@ -279,14 +279,14 @@ bool resolveMethodCallPath(const Expr &call,
           true,
           explicitMapMethodName);
   const bool isExplicitStdlibSoaMethod =
-      normalizedMethodName.rfind("std/collections/soa_vector/", 0) == 0;
+      normalizedMethodName.rfind("std/collections/soa/", 0) == 0;
   if (normalizedMethodName.rfind("array/", 0) == 0) {
     normalizedMethodName = normalizedMethodName.substr(std::string("array/").size());
   } else if (isExplicitStdlibVectorMethod) {
     normalizedMethodName = explicitVectorMethodName;
-  } else if (normalizedMethodName.rfind("std/collections/soa_vector/", 0) == 0) {
+  } else if (normalizedMethodName.rfind("std/collections/soa/", 0) == 0) {
     normalizedMethodName =
-        normalizedMethodName.substr(std::string("std/collections/soa_vector/").size());
+        normalizedMethodName.substr(std::string("std/collections/soa/").size());
   } else if (isExplicitMapMethod) {
     normalizedMethodName = explicitMapMethodName;
   }
@@ -464,8 +464,8 @@ bool resolveMethodCallPath(const Expr &call,
     if (it != localTypes.end()) {
       const std::string inferredSoaType = inferSoaReceiverTypeFromBinding(it->second);
       if (!inferredSoaType.empty()) {
-        borrowedSoaReceiver = inferredSoaType == "soa_vector_ref";
-        typeName = "soa_vector";
+        borrowedSoaReceiver = inferredSoaType == "soa_ref";
+        typeName = "soa";
       } else {
         typeName = it->second.typeName;
       }
@@ -541,7 +541,7 @@ bool resolveMethodCallPath(const Expr &call,
     if (hasStructPath(resolved)) {
       if (isConcreteExperimentalSoaVectorStructPath(resolved) &&
           isCanonicalSoaWrapperMethodName(normalizedMethodName)) {
-        typeName = "soa_vector";
+        typeName = "soa";
       } else {
         resolvedOut = normalizeResolvedPath(resolved) + "/" + normalizedMethodName;
         return true;
@@ -553,9 +553,9 @@ bool resolveMethodCallPath(const Expr &call,
       return true;
     }
     typeName = inferMethodResolutionPrimitiveTypeName(receiver, metadataView, localTypes);
-    if (typeName == "soa_vector_ref") {
+    if (typeName == "soa_ref") {
       borrowedSoaReceiver = true;
-      typeName = "soa_vector";
+      typeName = "soa";
     }
   } else {
     resolvedOut = resolveConcreteSoaStructMethodPathFromReceiver(
@@ -564,9 +564,9 @@ bool resolveMethodCallPath(const Expr &call,
       return true;
     }
     typeName = inferMethodResolutionPrimitiveTypeName(receiver, metadataView, localTypes);
-    if (typeName == "soa_vector_ref") {
+    if (typeName == "soa_ref") {
       borrowedSoaReceiver = true;
-      typeName = "soa_vector";
+      typeName = "soa";
     }
   }
 
@@ -651,12 +651,12 @@ bool resolveMethodCallPath(const Expr &call,
       return true;
     }
   }
-  if (isConcreteSoaWrapperReceiver || resolvedType == "/soa_vector" ||
-      resolvedType == "soa_vector") {
+  if (isConcreteSoaWrapperReceiver || resolvedType == "/soa" ||
+      resolvedType == "soa") {
     const std::string helperName =
         borrowedSoaReceiver ? borrowedSoaMethodName(normalizedMethodName)
                             : normalizedMethodName;
-    const std::string canonicalPath = "/std/collections/soa_vector/" + helperName;
+    const std::string canonicalPath = "/std/collections/soa/" + helperName;
     if (isExplicitStdlibSoaMethod) {
       if (!hasDefinitionOrMetadata(metadataView, canonicalPath)) {
         return false;

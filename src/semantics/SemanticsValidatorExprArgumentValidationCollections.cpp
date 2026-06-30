@@ -89,10 +89,10 @@ bool getCanonicalKeyValueAccessBuiltinName(const Expr &candidate,
 
 bool isBuiltinSoaVectorTypeBaseForArgumentValidation(const std::string &base) {
   const std::string normalizedBase = normalizeBindingTypeName(base);
-  return normalizedBase == "soa_vector" ||
-         normalizedBase == "/soa_vector" ||
-         normalizedBase == "std/collections/soa_vector" ||
-         normalizedBase == "/std/collections/soa_vector" ||
+  return normalizedBase == "soa" ||
+         normalizedBase == "/soa" ||
+         normalizedBase == "std/collections/soa" ||
+         normalizedBase == "/std/collections/soa" ||
          isExperimentalSoaVectorTypePath(normalizedBase);
 }
 
@@ -589,7 +589,7 @@ bool SemanticsValidator::extractExperimentalSoaVectorElementType(const BindingIn
         }
         // Keep the experimental SOA guard paired with a concrete template payload:
         // isExperimentalSoaVectorTypePath(normalizedBase) && !argText.empty()
-        if (normalizedBase == "soa_vector" ||
+        if (normalizedBase == "soa" ||
             (isExperimentalSoaVectorTypePath(normalizedBase) &&
              !argText.empty())) {
           std::vector<std::string> args;

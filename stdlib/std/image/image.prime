@@ -1,6 +1,6 @@
 import /std/math/*
 import /std/file/*
-import /std/collections/*
+import /std/collections/vector
 
 [public return<string>]
 /ImageError/why([/std/image/ImageError] err) {

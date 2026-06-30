@@ -1390,7 +1390,7 @@ main() {
   CHECK(viaStd.initializerDirectCallReturnKindText == "i32");
 }
 
-TEST_CASE("type resolution local binding snapshot rejects imported rooted soa_vector to_aos helper return without same-path helper") {
+TEST_CASE("type resolution local binding snapshot rejects imported rooted soa to_aos helper return without same-path helper") {
   const std::string source = R"(
 import /std/collections/*
 
@@ -1400,9 +1400,9 @@ Particle() {
 
 Holder() {}
 
-[return<soa_vector<Particle>>]
+[return<soa<Particle>>]
 /Holder/cloneValues([Holder] self) {
-  return(soa_vector<Particle>())
+  return(soa<Particle>())
 }
 
 [return<int>]
@@ -1421,7 +1421,7 @@ main() {
         std::string::npos);
 }
 
-TEST_CASE("type resolution local binding snapshot keeps rooted soa_vector to_aos helper return with same-path helper") {
+TEST_CASE("type resolution local binding snapshot keeps rooted soa to_aos helper return with same-path helper") {
   const std::string source = R"(
 import /std/collections/*
 
@@ -1431,13 +1431,13 @@ Particle() {
 
 Holder() {}
 
-[return<soa_vector<Particle>>]
+[return<soa<Particle>>]
 /Holder/cloneValues([Holder] self) {
-  return(soa_vector<Particle>())
+  return(soa<Particle>())
 }
 
 [return<i32>]
-/to_aos([soa_vector<Particle>] values) {
+/to_aos([soa<Particle>] values) {
   return(29i32)
 }
 

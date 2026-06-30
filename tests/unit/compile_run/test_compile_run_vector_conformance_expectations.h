@@ -793,9 +793,7 @@ inline void expectBareVectorMutatorMethodImportRequirement(const std::string &em
       (testScratchPath("") /
        ("primec_vector_bare_" + helperName + "_method_import_requirement_" + emitMode + "_out.txt"))
           .string();
-  const std::string expected = emitMode == "vm"
-                                   ? "unknown call target: /std/collections/vector/" + helperName
-                                   : "unknown method: /std/collections/vector/" + helperName;
+  const std::string expected = "unknown method: /std/collections/vector/" + helperName;
 
   if (emitMode == "vm") {
     const std::string runCmd = "./primec --emit=vm " + quoteShellArg(srcPath) + " --entry /main > " +

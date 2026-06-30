@@ -214,7 +214,7 @@ CountMethodFallbackResult tryEmitNonMethodCountFallback(
     };
     return matchesCollectionRoot("vector") ||
            matchesCollectionRoot("array") ||
-           matchesCollectionRoot("soa_vector");
+           matchesCollectionRoot("soa");
   };
   auto isExplicitRemovedKeyValueHelperAliasCall = [&]() {
     if (expr.kind != Expr::Kind::Call || expr.isMethodCall) {

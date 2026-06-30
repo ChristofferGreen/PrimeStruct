@@ -232,8 +232,8 @@ bool validateArrayVectorAccessTargetInfo(const ArrayVectorAccessTargetInfo &targ
         "args<Struct>/args<map<K, V>>/args<Pointer<T>>/args<Reference<T>>/"
         "args<Pointer<Struct>>/args<Reference<Struct>>/"
         "args<Pointer<map<K, V>>>/args<Reference<map<K, V>>>/args<vector<T>>/"
-        "args<Pointer<vector<T>>>/args<Reference<vector<T>>>/args<Pointer<soa" "_vector<T>>>/"
-        "args<Reference<soa" "_vector<T>>> packs";
+        "args<Pointer<vector<T>>>/args<Reference<vector<T>>>/args<Pointer<soa<T>>>/"
+        "args<Reference<soa<T>>> packs";
     return false;
   }
   return true;

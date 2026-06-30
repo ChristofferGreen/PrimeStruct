@@ -518,7 +518,7 @@ bool runLowerInferenceReturnInfoSetupImpl(const LowerInferenceReturnInfoSetupInp
           infoInOut.kind = elementKind;
           return true;
         };
-        if ((collectionName == "array" || collectionName == "vector" || collectionName == "soa_vector") &&
+        if ((collectionName == "array" || collectionName == "vector" || collectionName == "soa") &&
             collectionArgs.size() == 1 && assignCollectionReturnInfo(valueKindFromTypeName(collectionArgs.front()))) {
           if (infoInOut.kind == LocalInfo::ValueKind::String) {
             errorOut = "native backend does not support string array return types on " + definition.fullPath;

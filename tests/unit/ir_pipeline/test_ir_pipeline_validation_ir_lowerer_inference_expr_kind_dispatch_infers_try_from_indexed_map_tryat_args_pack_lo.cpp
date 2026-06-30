@@ -2118,6 +2118,7 @@ TEST_CASE("ir lowerer statements/calls step emits assign-or-expr fallback") {
           .isArrayCountCall = [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return false; },
           .isStringCountCall = [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return false; },
           .isVectorCapacityCall = [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return false; },
+          .resolveStructSlotLayout = {},
           .resolveMethodCallDefinition =
               [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) {
                 return static_cast<const primec::Definition *>(nullptr);

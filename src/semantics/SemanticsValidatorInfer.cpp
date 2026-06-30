@@ -79,7 +79,7 @@ ReturnKind SemanticsValidator::inferExprReturnKindImpl(const Expr &expr,
       }
       const std::string normalizedTypeName = normalizeBindingTypeName(paramBinding->typeName);
       if ((normalizedTypeName == "array" || normalizedTypeName == "vector" ||
-           normalizedTypeName == "soa_vector" || isKeyValueCollectionTypeName(normalizedTypeName)) &&
+           normalizedTypeName == "soa" || isKeyValueCollectionTypeName(normalizedTypeName)) &&
           !paramBinding->typeTemplateArg.empty()) {
         return ReturnKind::Array;
       }
@@ -100,7 +100,7 @@ ReturnKind SemanticsValidator::inferExprReturnKindImpl(const Expr &expr,
     }
     const std::string normalizedTypeName = normalizeBindingTypeName(it->second.typeName);
     if ((normalizedTypeName == "array" || normalizedTypeName == "vector" ||
-         normalizedTypeName == "soa_vector" || isKeyValueCollectionTypeName(normalizedTypeName)) &&
+         normalizedTypeName == "soa" || isKeyValueCollectionTypeName(normalizedTypeName)) &&
         !it->second.typeTemplateArg.empty()) {
       return ReturnKind::Array;
     }
@@ -331,7 +331,7 @@ ReturnKind SemanticsValidator::inferExprReturnKindImpl(const Expr &expr,
     const std::string resolvedCalleePath = preferVectorStdlibHelperPath(resolveCalleePath(expr));
     std::string collection;
     if (defMap_.find(resolvedCalleePath) == defMap_.end() && getBuiltinCollectionName(expr, collection)) {
-      if ((collection == "array" || collection == "vector" || collection == "soa_vector") &&
+      if ((collection == "array" || collection == "vector" || collection == "soa") &&
           expr.templateArgs.size() == 1) {
         return ReturnKind::Array;
       }

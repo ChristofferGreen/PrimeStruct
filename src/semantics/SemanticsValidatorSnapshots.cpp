@@ -1587,6 +1587,17 @@ void SemanticsValidator::collectPilotRoutingSemanticProductFacts() {
         resolvedPath = resolveCalleePath(expr);
       }
       if (!resolvedPath.empty()) {
+        std::string soaHelperName;
+        bool usesPublicSurface = false;
+        if (splitSoaSurfaceHelperPath(resolvedPath, &soaHelperName, &usesPublicSurface) &&
+            usesPublicSurface) {
+          const std::string preferred = preferredSoaHelperTargetForCurrentImports(soaHelperName);
+          if (!preferred.empty() && preferred != resolvedPath) {
+            resolvedPath = preferred;
+          }
+        }
+      }
+      if (!resolvedPath.empty()) {
         std::string canonicalResolvedPath = resolvedPath;
         if (const size_t suffix = canonicalResolvedPath.find("__t");
             suffix != std::string::npos &&

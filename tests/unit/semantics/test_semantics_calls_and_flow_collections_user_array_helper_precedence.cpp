@@ -652,8 +652,9 @@ main() {
   CHECK(error.find("unknown call target: /vector/push") != std::string::npos);
 }
 
-TEST_CASE("push on array reports vector binding before effect requirement") {
-  const auto checkInvalidPush = [](const std::string &stmtText) {
+TEST_CASE("push on array reports routing diagnostics") {
+  const auto checkInvalidPush = [](const std::string &stmtText,
+                                   const std::string &expectedError) {
     const std::string source =
         "[return<int>]\n"
         "main() {\n"
@@ -665,14 +666,16 @@ TEST_CASE("push on array reports vector binding before effect requirement") {
         "}\n";
     std::string error;
     CHECK_FALSE(validateProgram(source, "/main", error));
-    CHECK(error.find("push requires vector binding") != std::string::npos);
+    INFO(error);
+    CHECK(error.find(expectedError) != std::string::npos);
   };
 
-  checkInvalidPush("push(values, 2i32)");
-  checkInvalidPush("values.push(2i32)");
+  checkInvalidPush("push(values, 2i32)",
+                   "unknown call target: /std/collections/vector/push");
+  checkInvalidPush("values.push(2i32)", "push requires vector binding");
 }
 
-TEST_CASE("bare vector push routes to soa helper before imported vector helper") {
+TEST_CASE("bare vector push validates through imported vector helper") {
   const std::string source = R"(
 import /std/collections/*
 
@@ -684,8 +687,8 @@ main() {
 }
   )";
   std::string error;
-  CHECK_FALSE(validateProgram(source, "/main", error));
-  CHECK(error.find("template arguments required for /std/collections/soa/push") != std::string::npos);
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
 }
 
 TEST_SUITE_END();

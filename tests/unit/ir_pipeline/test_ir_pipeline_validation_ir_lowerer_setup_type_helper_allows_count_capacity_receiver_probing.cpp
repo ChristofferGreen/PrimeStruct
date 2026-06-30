@@ -1045,7 +1045,7 @@ TEST_CASE("ir lowerer setup type helper resolves canonical map methods from gene
   CHECK(error.empty());
 }
 
-TEST_CASE("ir lowerer setup type helper prefers direct helper-return soa_vector mutator wrappers") {
+TEST_CASE("ir lowerer setup type helper prefers direct helper-return soa mutator wrappers") {
   primec::Definition cloneDef;
   cloneDef.fullPath = "/cloneValues";
   primec::Transform returnSoaVector;
@@ -1055,13 +1055,13 @@ TEST_CASE("ir lowerer setup type helper prefers direct helper-return soa_vector 
   cloneDef.transforms.push_back(returnSoaVector);
 
   primec::Definition aliasPushDef;
-  aliasPushDef.fullPath = "/soa_vector/push";
+  aliasPushDef.fullPath = "/soa/push";
   primec::Definition aliasReserveDef;
-  aliasReserveDef.fullPath = "/soa_vector/reserve";
+  aliasReserveDef.fullPath = "/soa/reserve";
   primec::Definition canonicalPushDef;
-  canonicalPushDef.fullPath = "/std/collections/soa_vector/push";
+  canonicalPushDef.fullPath = "/std/collections/soa/push";
   primec::Definition canonicalReserveDef;
-  canonicalReserveDef.fullPath = "/std/collections/soa_vector/reserve";
+  canonicalReserveDef.fullPath = "/std/collections/soa/reserve";
   primec::Definition concretePushDef;
   concretePushDef.fullPath =
       "/std/collections/soa/SoaVector__Particle/push";
@@ -1129,7 +1129,7 @@ TEST_CASE("ir lowerer setup type helper prefers direct helper-return soa_vector 
   expectResolvedMethod("reserve", {cloneCall, capacityExpr}, &canonicalReserveDef);
 }
 
-TEST_CASE("ir lowerer setup type helper prefers nested helper-return soa_vector mutator wrappers") {
+TEST_CASE("ir lowerer setup type helper prefers nested helper-return soa mutator wrappers") {
   primec::Definition holderCloneDef;
   holderCloneDef.fullPath = "/Holder/cloneValues";
   primec::Transform returnSoaVector;
@@ -1139,13 +1139,13 @@ TEST_CASE("ir lowerer setup type helper prefers nested helper-return soa_vector 
   holderCloneDef.transforms.push_back(returnSoaVector);
 
   primec::Definition aliasPushDef;
-  aliasPushDef.fullPath = "/soa_vector/push";
+  aliasPushDef.fullPath = "/soa/push";
   primec::Definition aliasReserveDef;
-  aliasReserveDef.fullPath = "/soa_vector/reserve";
+  aliasReserveDef.fullPath = "/soa/reserve";
   primec::Definition canonicalPushDef;
-  canonicalPushDef.fullPath = "/std/collections/soa_vector/push";
+  canonicalPushDef.fullPath = "/std/collections/soa/push";
   primec::Definition canonicalReserveDef;
-  canonicalReserveDef.fullPath = "/std/collections/soa_vector/reserve";
+  canonicalReserveDef.fullPath = "/std/collections/soa/reserve";
   primec::Definition concretePushDef;
   concretePushDef.fullPath =
       "/std/collections/soa/SoaVector__Particle/push";

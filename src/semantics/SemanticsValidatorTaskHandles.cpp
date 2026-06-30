@@ -184,7 +184,7 @@ ReturnKind SemanticsValidator::taskResultReturnKind(
   std::string arg;
   if (splitTemplateTypeName(normalized, base, arg)) {
     base = normalizeBindingTypeName(base);
-    if (base == "array" || base == "vector" || base == "soa_vector" ||
+    if (base == "array" || base == "vector" || base == "soa" ||
         base == "Buffer" || base == "Result" || base == "Maybe" ||
         base == "tuple" || base == "std/tuple/tuple" ||
         base == "/std/tuple/tuple" || isKeyValueCollectionTypeName(base)) {

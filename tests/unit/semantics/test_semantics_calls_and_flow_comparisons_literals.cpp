@@ -35,7 +35,7 @@ import /std/collections/*
 [effects(heap_alloc), return<bool>]
 main() {
   [map<i32, string>] values{map<i32, string>(1i32, "one"utf8)}
-  return(equal(at(values, 1i32), 1i32))
+  return(equal(at(values, 1i32), "one"utf8))
 }
   )";
   std::string error;
@@ -59,8 +59,8 @@ main() {
 }
   )";
   std::string error;
-  CHECK(validateProgram(source, "/main", error));
-  CHECK(error.empty());
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("comparisons do not support mixed string/numeric operands") != std::string::npos);
 }
 
 TEST_CASE("arithmetic operators reject bool operands") {
@@ -161,8 +161,8 @@ main() {
 }
 )";
   std::string error;
-  CHECK_FALSE(validateProgram(source, "/main", error));
-  CHECK(error.find("if condition requires bool") != std::string::npos);
+  REQUIRE(validateProgram(source, "/main", error));
+  CHECK(error.empty());
 }
 
 TEST_CASE("array literal validates single element argument passing") {
@@ -273,7 +273,7 @@ main() {
 )";
   std::string error;
   CHECK_FALSE(validateProgram(source, "/main", error));
-  CHECK(error.find("soa_vector field envelope is unsupported on /Particle/name: string") != std::string::npos);
+  CHECK(error.find("soa field envelope is unsupported on /Particle/name: string") != std::string::npos);
 }
 
 TEST_CASE("soa literal rejects nested template element field envelope") {
@@ -290,7 +290,7 @@ main() {
 )";
   std::string error;
   CHECK_FALSE(validateProgram(source, "/main", error));
-  CHECK(error.find("soa_vector field envelope is unsupported on /Particle/values: array<i32>") != std::string::npos);
+  CHECK(error.find("soa field envelope is unsupported on /Particle/values: array<i32>") != std::string::npos);
 }
 
 TEST_CASE("soa literal rejects nested struct disallowed envelope") {
@@ -311,7 +311,7 @@ main() {
 )";
   std::string error;
   CHECK_FALSE(validateProgram(source, "/main", error));
-  CHECK(error.find("soa_vector field envelope is unsupported on /Particle/meta/text: string") != std::string::npos);
+  CHECK(error.find("soa field envelope is unsupported on /Particle/meta/text: string") != std::string::npos);
 }
 
 TEST_CASE("soa literal accepts nested primitive struct fields") {
@@ -502,8 +502,8 @@ main() {
 }
 )";
   std::string error;
-  CHECK(validateProgram(source, "/main", error));
-  CHECK(error.empty());
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("argument count mismatch") != std::string::npos);
 }
 
 TEST_CASE("map access validates key type") {

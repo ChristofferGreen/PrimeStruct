@@ -818,6 +818,18 @@ bool SemanticsValidator::resolveExprVectorHelperCall(const std::vector<Parameter
   }
   if (isStdNamespacedVectorCompatibilityMethodCallSite(
           expr, resolved, namespacedCollection, namespacedHelper)) {
+    std::string explicitMethodPath = expr.name;
+    if (!expr.namespacePrefix.empty() &&
+        (explicitMethodPath.empty() || explicitMethodPath.front() != '/')) {
+      explicitMethodPath = expr.namespacePrefix + "/" + explicitMethodPath;
+    }
+    if (!hasVisibleDefinitionPath(explicitMethodPath)) {
+      return failVectorHelperDiagnostic("unknown method: " +
+                                        diagnosticCallTarget());
+    }
+    hasResolutionOut = true;
+    resolvedPathOut = explicitMethodPath;
+    receiverIndexOut = 0;
     return true;
   }
   if (isStdNamespacedVectorCompatibilityDirectCallSite &&
@@ -981,6 +993,9 @@ bool SemanticsValidator::resolveExprVectorHelperCall(const std::vector<Parameter
         resolvedPathOut = resolved;
         return true;
       }
+      if (firstArgIsVectorFamily() && (vectorHelper == "count" || vectorHelper == "count_ref")) {
+        return failVectorHelperDiagnostic(vectorHelper + " requires soa target");
+      }
       return failVectorHelperDiagnostic(vectorHelper + " is only supported as a statement");
     }
     return true;
@@ -988,6 +1003,20 @@ bool SemanticsValidator::resolveExprVectorHelperCall(const std::vector<Parameter
 
   if (expr.isMethodCall &&
       (vectorHelper == "at" || vectorHelper == "at_unsafe")) {
+    std::string explicitMethodPath = expr.name;
+    if (!expr.namespacePrefix.empty() &&
+        (explicitMethodPath.empty() || explicitMethodPath.front() != '/')) {
+      explicitMethodPath = expr.namespacePrefix + "/" + explicitMethodPath;
+    }
+    if (explicitMethodPath.empty()) {
+      explicitMethodPath = resolved;
+    }
+    if (hasDeclaredDefinitionPath(explicitMethodPath) ||
+        hasImportedDefinitionPath(explicitMethodPath)) {
+      hasResolutionOut = true;
+      resolvedPathOut = explicitMethodPath;
+      receiverIndexOut = resolvedReceiverIndex;
+    }
     return true;
   }
 

@@ -238,7 +238,7 @@ bool resolveSpecializedExperimentalSoaVectorStructPath(const std::string &typeTe
       continue;
     }
 
-    if (normalizedBase != "soa_vector" || argList.empty()) {
+    if (normalizedBase != "soa" || argList.empty()) {
       return false;
     }
 
@@ -401,7 +401,7 @@ bool populateBindingTypeInfoFromTypeText(
     infoOut.structTypeName.clear();
     return true;
   }
-  if (normalizedBase == "array" || normalizedBase == "vector" || normalizedBase == "soa_vector") {
+  if (normalizedBase == "array" || normalizedBase == "vector" || normalizedBase == "soa") {
     const std::string elementType = trimTemplateTypeText(argText);
     if (normalizedBase == "vector" && isCollectionVectorSurfaceBase(base)) {
       infoOut.kind = LocalInfo::Kind::Value;
@@ -412,7 +412,7 @@ bool populateBindingTypeInfoFromTypeText(
     }
     infoOut.kind = normalizedBase == "array" ? LocalInfo::Kind::Array : LocalInfo::Kind::Vector;
     infoOut.valueKind = valueKindFromTypeName(elementType);
-    if (normalizedBase == "soa_vector") {
+    if (normalizedBase == "soa") {
       infoOut.isSoaVector = true;
       resolveSpecializedExperimentalSoaVectorStructPath(normalizedTypeText,
                                                         infoOut.structTypeName);
@@ -500,7 +500,7 @@ bool populateBindingTypeInfoFromTypeText(
         }
         return true;
       }
-      if (normalizedTargetBase == "soa_vector") {
+      if (normalizedTargetBase == "soa") {
         if (infoOut.kind == LocalInfo::Kind::Reference) {
           infoOut.referenceToVector = true;
         } else {
@@ -794,13 +794,13 @@ bool inferExprBindingTypeInfo(const Expr &expr,
 
   std::string collection;
   if (getBuiltinCollectionName(expr, collection)) {
-    if ((collection == "array" || collection == "vector" || collection == "soa_vector") &&
+    if ((collection == "array" || collection == "vector" || collection == "soa") &&
         expr.templateArgs.size() == 1) {
       infoOut.kind = collection == "array" ? LocalInfo::Kind::Array : LocalInfo::Kind::Vector;
-      infoOut.usesBuiltinCollectionLayout = (collection == "soa_vector");
+      infoOut.usesBuiltinCollectionLayout = (collection == "soa");
       const std::string elementType = trimTemplateTypeText(expr.templateArgs.front());
       infoOut.valueKind = valueKindFromTypeName(elementType);
-      if (collection == "soa_vector") {
+      if (collection == "soa") {
         resolveSpecializedExperimentalSoaVectorStructPath(
             expr.name + "<" + elementType + ">", infoOut.structTypeName);
       } else {
@@ -1054,7 +1054,7 @@ StatementBindingTypeInfo inferStatementBindingTypeInfo(const Expr &stmt,
       if (!explicitTemplateArgs.empty()) {
         explicitTypeText += "<" + joinTemplateArgsText(explicitTemplateArgs) + ">";
       }
-      if (normalizeCollectionBindingTypeName(explicitTypeName) == "soa_vector" &&
+      if (normalizeCollectionBindingTypeName(explicitTypeName) == "soa" &&
           info.structTypeName.empty()) {
         resolveSpecializedExperimentalSoaVectorStructPath(
             explicitTypeText, info.structTypeName);
@@ -1508,7 +1508,7 @@ bool inferCallParameterLocalInfo(const Expr &param,
       }
       if (transform.name == "Pointer" &&
           splitTemplateTypeName(targetType, wrappedBase, wrappedArg) &&
-          normalizeCollectionBindingTypeName(wrappedBase) == "soa_vector") {
+          normalizeCollectionBindingTypeName(wrappedBase) == "soa") {
         infoOut.pointerToVector = true;
         infoOut.isSoaVector = true;
         const std::string elementType = trimTemplateTypeText(wrappedArg);
@@ -1660,7 +1660,7 @@ bool inferCallParameterLocalInfo(const Expr &param,
         (!infoOut.isSoaVector &&
          isSpecializedExperimentalVectorTypeText(infoOut.structTypeName));
     if (!preserveSpecializedCollectionStruct) {
-      infoOut.structTypeName = infoOut.isSoaVector ? "/soa_vector" : "/vector";
+      infoOut.structTypeName = infoOut.isSoaVector ? "/soa" : "/vector";
     }
   }
   if (infoOut.kind == LocalInfo::Kind::Value && !infoOut.structTypeName.empty()) {

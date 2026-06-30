@@ -192,7 +192,7 @@ void analyzeDeclaredReturnTransforms(const Definition &def,
         info.returnsVoid = false;
         return true;
       }
-      if (base == "soa_vector") {
+      if (base == "soa") {
         std::vector<std::string> args;
         if (!splitTemplateArgs(arg, args) || args.size() != 1) {
           info.returnsArray = false;
@@ -222,7 +222,7 @@ void analyzeDeclaredReturnTransforms(const Definition &def,
         std::string innerArg;
         if (splitTemplateTypeName(innerType, innerBase, innerArg)) {
           innerBase = normalizeDeclaredCollectionTypeBase(innerBase);
-          if (innerBase == "array" || innerBase == "vector" || innerBase == "map" || innerBase == "soa_vector") {
+          if (innerBase == "array" || innerBase == "vector" || innerBase == "map" || innerBase == "soa") {
             currentType = innerType;
             continue;
           }

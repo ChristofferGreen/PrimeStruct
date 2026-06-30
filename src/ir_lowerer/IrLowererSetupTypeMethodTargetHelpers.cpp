@@ -184,7 +184,7 @@ const Definition *resolveMethodDefinitionFromReceiverTarget(
     }
     if (normalizedMethodName == "push" || normalizedMethodName == "reserve") {
       if (const Definition *canonicalResolved =
-              findMethodDefinitionByPath("/std/collections/soa_vector/" + normalizedMethodName)) {
+              findMethodDefinitionByPath("/std/collections/soa/" + normalizedMethodName)) {
         return canonicalResolved;
       }
     }

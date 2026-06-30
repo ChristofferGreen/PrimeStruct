@@ -702,7 +702,7 @@ TEST_CASE("ir lowerer inline param helper aliases pure pointer vector variadic f
   CHECK(instructions[1].imm == 2u);
 }
 
-TEST_CASE("ir lowerer inline param helper aliases pointer to soa_vector variadic forwarding") {
+TEST_CASE("ir lowerer inline param helper aliases pointer to soa variadic forwarding") {
   primec::Expr valuesParam;
   valuesParam.kind = primec::Expr::Kind::Name;
   valuesParam.isBinding = true;

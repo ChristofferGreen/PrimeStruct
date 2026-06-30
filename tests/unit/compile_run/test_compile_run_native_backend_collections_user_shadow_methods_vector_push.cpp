@@ -266,7 +266,7 @@ main() {
   CHECK(readFile(errPath).find("unknown call target: /vector/at_unsafe") != std::string::npos);
 }
 
-TEST_CASE("rejects native namespaced vector count with soa_vector literal target") {
+TEST_CASE("rejects native namespaced vector count with soa literal target") {
   const std::string source = R"(
 Particle() {
   [i32] x{1i32}
@@ -274,13 +274,13 @@ Particle() {
 
 [effects(heap_alloc), return<int>]
 main() {
-  [soa_vector<Particle>] values{soa_vector<Particle>()}
+  [soa<Particle>] values{soa<Particle>()}
   return(/std/collections/vector/count(values))
 }
 )";
-  const std::string srcPath = writeTemp("native_namespaced_vector_count_soa_vector_target.prime", source);
+  const std::string srcPath = writeTemp("native_namespaced_vector_count_soa_target.prime", source);
   const std::string errPath =
-      (testScratchPath("") / "primec_native_namespaced_vector_count_soa_vector_target_err.txt")
+      (testScratchPath("") / "primec_native_namespaced_vector_count_soa_target_err.txt")
           .string();
   const std::string compileCmd =
       "./primec --emit=native " + srcPath + " -o /dev/null --entry /main 2> " + errPath;

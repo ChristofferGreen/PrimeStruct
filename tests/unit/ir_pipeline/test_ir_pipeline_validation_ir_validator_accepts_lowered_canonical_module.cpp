@@ -256,14 +256,14 @@ TEST_CASE("ir lowerer gpu effects unit rejects published runtime reflection pref
         "gpu backend requires compile-time reflection query elimination before IR emission: /meta/type_name");
 }
 
-TEST_CASE("ir lowerer helper classifies soa_vector as collection builtin") {
+TEST_CASE("ir lowerer helper classifies soa as collection builtin") {
   primec::Expr soaVectorCall;
   soaVectorCall.kind = primec::Expr::Kind::Call;
-  soaVectorCall.name = "soa_vector";
+  soaVectorCall.name = "soa";
 
   std::string builtin;
   CHECK(primec::ir_lowerer::getBuiltinCollectionName(soaVectorCall, builtin));
-  CHECK(builtin == "soa_vector");
+  CHECK(builtin == "soa");
 }
 
 TEST_CASE("ir lowerer helper rejects array namespaced vector constructor alias builtin") {
@@ -354,7 +354,7 @@ TEST_CASE("ir lowerer helper keeps bare array builtin inside namespaced stdlib i
   primec::Expr namespacedArrayCall;
   namespacedArrayCall.kind = primec::Expr::Kind::Call;
   namespacedArrayCall.name = "array";
-  namespacedArrayCall.namespacePrefix = "/std/collections/internal_soa_storage";
+  namespacedArrayCall.namespacePrefix = "/std/collections/soa_storage";
 
   std::string builtin;
   CHECK(primec::ir_lowerer::getBuiltinCollectionName(namespacedArrayCall, builtin));
@@ -364,20 +364,20 @@ TEST_CASE("ir lowerer helper keeps bare array builtin inside namespaced stdlib i
 
   primec::Expr namespacedSoaVectorCall;
   namespacedSoaVectorCall.kind = primec::Expr::Kind::Call;
-  namespacedSoaVectorCall.name = "soa_vector";
+  namespacedSoaVectorCall.name = "soa";
   namespacedSoaVectorCall.namespacePrefix =
-      "/std/collections/internal_soa_storage";
+      "/std/collections/soa_storage";
 
   CHECK(primec::ir_lowerer::getBuiltinCollectionName(
       namespacedSoaVectorCall, builtin));
-  CHECK(builtin == "soa_vector");
+  CHECK(builtin == "soa");
   CHECK(primec::emitter::getBuiltinCollectionName(
       namespacedSoaVectorCall, builtin));
-  CHECK(builtin == "soa_vector");
+  CHECK(builtin == "soa");
 
   primec::Expr rootedArrayCall;
   rootedArrayCall.kind = primec::Expr::Kind::Call;
-  rootedArrayCall.name = "/std/collections/internal_soa_storage/array";
+  rootedArrayCall.name = "/std/collections/soa_storage/array";
 
   CHECK(primec::ir_lowerer::getBuiltinCollectionName(rootedArrayCall, builtin));
   CHECK(builtin == "array");
@@ -386,17 +386,17 @@ TEST_CASE("ir lowerer helper keeps bare array builtin inside namespaced stdlib i
 
   primec::Expr rootedSoaVectorCall;
   rootedSoaVectorCall.kind = primec::Expr::Kind::Call;
-  rootedSoaVectorCall.name = "/std/collections/internal_soa_storage/soa_vector";
+  rootedSoaVectorCall.name = "/std/collections/soa_storage/soa";
 
   CHECK(primec::ir_lowerer::getBuiltinCollectionName(rootedSoaVectorCall, builtin));
-  CHECK(builtin == "soa_vector");
+  CHECK(builtin == "soa");
   CHECK(primec::emitter::getBuiltinCollectionName(rootedSoaVectorCall, builtin));
-  CHECK(builtin == "soa_vector");
+  CHECK(builtin == "soa");
 
   primec::Expr generatedArrayCall;
   generatedArrayCall.kind = primec::Expr::Kind::Call;
   generatedArrayCall.name =
-      "/std/collections/internal_soa_storage/SoaColumns11__tabcdef01/array";
+      "/std/collections/soa_storage/SoaColumns11__tabcdef01/array";
   CHECK(primec::ir_lowerer::getBuiltinCollectionName(generatedArrayCall, builtin));
   CHECK(builtin == "array");
   CHECK(primec::emitter::getBuiltinCollectionName(generatedArrayCall, builtin));
@@ -405,18 +405,18 @@ TEST_CASE("ir lowerer helper keeps bare array builtin inside namespaced stdlib i
   primec::Expr generatedSoaVectorCall;
   generatedSoaVectorCall.kind = primec::Expr::Kind::Call;
   generatedSoaVectorCall.name =
-      "/std/collections/internal_soa_storage/SoaColumn__tabcdef01/soa_vector";
+      "/std/collections/soa_storage/SoaColumn__tabcdef01/soa";
   CHECK(primec::ir_lowerer::getBuiltinCollectionName(generatedSoaVectorCall, builtin));
-  CHECK(builtin == "soa_vector");
+  CHECK(builtin == "soa");
   CHECK(primec::emitter::getBuiltinCollectionName(generatedSoaVectorCall, builtin));
-  CHECK(builtin == "soa_vector");
+  CHECK(builtin == "soa");
 }
 
 TEST_CASE("ir lowerer helper keeps bare pointer builtins inside namespaced stdlib internals") {
   primec::Expr namespacedDereferenceCall;
   namespacedDereferenceCall.kind = primec::Expr::Kind::Call;
   namespacedDereferenceCall.name = "dereference";
-  namespacedDereferenceCall.namespacePrefix = "/std/collections/internal_soa_storage";
+  namespacedDereferenceCall.namespacePrefix = "/std/collections/soa_storage";
 
   std::string builtin;
   CHECK(primec::ir_lowerer::getBuiltinPointerName(
@@ -430,7 +430,7 @@ TEST_CASE("ir lowerer helper keeps bare pointer builtins inside namespaced stdli
   primec::Expr rootedDereferenceCall;
   rootedDereferenceCall.kind = primec::Expr::Kind::Call;
   rootedDereferenceCall.name =
-      "/std/collections/internal_soa_storage/dereference";
+      "/std/collections/soa_storage/dereference";
 
   CHECK(primec::ir_lowerer::getBuiltinPointerName(
       rootedDereferenceCall, builtin));
@@ -442,7 +442,7 @@ TEST_CASE("ir lowerer helper keeps bare pointer builtins inside namespaced stdli
   primec::Expr namespacedLocationCall;
   namespacedLocationCall.kind = primec::Expr::Kind::Call;
   namespacedLocationCall.name = "location";
-  namespacedLocationCall.namespacePrefix = "/std/collections/internal_soa_storage";
+  namespacedLocationCall.namespacePrefix = "/std/collections/soa_storage";
 
   CHECK(primec::ir_lowerer::getBuiltinPointerName(
       namespacedLocationCall, builtin));
@@ -453,7 +453,7 @@ TEST_CASE("ir lowerer helper keeps bare pointer builtins inside namespaced stdli
 
   primec::Expr rootedLocationCall;
   rootedLocationCall.kind = primec::Expr::Kind::Call;
-  rootedLocationCall.name = "/std/collections/internal_soa_storage/location";
+  rootedLocationCall.name = "/std/collections/soa_storage/location";
 
   CHECK(primec::ir_lowerer::getBuiltinPointerName(
       rootedLocationCall, builtin));
@@ -465,7 +465,7 @@ TEST_CASE("ir lowerer helper keeps bare pointer builtins inside namespaced stdli
   primec::Expr generatedDereferenceCall;
   generatedDereferenceCall.kind = primec::Expr::Kind::Call;
   generatedDereferenceCall.name =
-      "/std/collections/internal_soa_storage/SoaColumn__tabcdef01/dereference";
+      "/std/collections/soa_storage/SoaColumn__tabcdef01/dereference";
   CHECK(primec::ir_lowerer::getBuiltinPointerName(
       generatedDereferenceCall, builtin));
   CHECK(builtin == "dereference");
@@ -473,7 +473,7 @@ TEST_CASE("ir lowerer helper keeps bare pointer builtins inside namespaced stdli
   primec::Expr generatedLocationCall;
   generatedLocationCall.kind = primec::Expr::Kind::Call;
   generatedLocationCall.name =
-      "/std/collections/internal_soa_storage/SoaColumn__tabcdef01/location";
+      "/std/collections/soa_storage/SoaColumn__tabcdef01/location";
   CHECK(primec::ir_lowerer::getBuiltinPointerName(
       generatedLocationCall, builtin));
   CHECK(builtin == "location");
@@ -507,7 +507,7 @@ TEST_CASE("ir lowerer helper keeps bare array access builtins inside namespaced 
   primec::Expr namespacedAtCall;
   namespacedAtCall.kind = primec::Expr::Kind::Call;
   namespacedAtCall.name = "at";
-  namespacedAtCall.namespacePrefix = "/std/collections/internal_soa_storage";
+  namespacedAtCall.namespacePrefix = "/std/collections/soa_storage";
 
   std::string builtin;
   CHECK(primec::ir_lowerer::getBuiltinArrayAccessName(
@@ -519,7 +519,7 @@ TEST_CASE("ir lowerer helper keeps bare array access builtins inside namespaced 
 
   primec::Expr rootedAtCall;
   rootedAtCall.kind = primec::Expr::Kind::Call;
-  rootedAtCall.name = "/std/collections/internal_soa_storage/at";
+  rootedAtCall.name = "/std/collections/soa_storage/at";
 
   CHECK(primec::ir_lowerer::getBuiltinArrayAccessName(
       rootedAtCall, builtin));
@@ -531,7 +531,7 @@ TEST_CASE("ir lowerer helper keeps bare array access builtins inside namespaced 
   primec::Expr namespacedAtUnsafeCall;
   namespacedAtUnsafeCall.kind = primec::Expr::Kind::Call;
   namespacedAtUnsafeCall.name = "at_unsafe";
-  namespacedAtUnsafeCall.namespacePrefix = "/std/collections/internal_soa_storage";
+  namespacedAtUnsafeCall.namespacePrefix = "/std/collections/soa_storage";
 
   CHECK(primec::ir_lowerer::getBuiltinArrayAccessName(
       namespacedAtUnsafeCall, builtin));
@@ -543,7 +543,7 @@ TEST_CASE("ir lowerer helper keeps bare array access builtins inside namespaced 
   primec::Expr rootedAtUnsafeCall;
   rootedAtUnsafeCall.kind = primec::Expr::Kind::Call;
   rootedAtUnsafeCall.name =
-      "/std/collections/internal_soa_storage/at_unsafe";
+      "/std/collections/soa_storage/at_unsafe";
 
   CHECK(primec::ir_lowerer::getBuiltinArrayAccessName(
       rootedAtUnsafeCall, builtin));
@@ -555,7 +555,7 @@ TEST_CASE("ir lowerer helper keeps bare array access builtins inside namespaced 
   primec::Expr specializedInternalSoaColumnAccessCall;
   specializedInternalSoaColumnAccessCall.kind = primec::Expr::Kind::Call;
   specializedInternalSoaColumnAccessCall.name =
-      "/std/collections/internal_soa_storage/SoaColumn__tabcdef01/at";
+      "/std/collections/soa_storage/SoaColumn__tabcdef01/at";
 
   CHECK(primec::emitter::getBuiltinArrayAccessNameLocal(
       specializedInternalSoaColumnAccessCall, builtin));
@@ -565,19 +565,19 @@ TEST_CASE("ir lowerer helper keeps bare array access builtins inside namespaced 
 TEST_CASE("simple-call helpers keep rooted and namespaced internal soa storage bare builtins") {
   primec::Expr rootedAssignCall;
   rootedAssignCall.kind = primec::Expr::Kind::Call;
-  rootedAssignCall.name = "/std/collections/internal_soa_storage/assign";
+  rootedAssignCall.name = "/std/collections/soa_storage/assign";
   CHECK(primec::ir_lowerer::isSimpleCallName(rootedAssignCall, "assign"));
   CHECK(primec::emitter::isSimpleCallName(rootedAssignCall, "assign"));
 
   primec::Expr rootedIfCall;
   rootedIfCall.kind = primec::Expr::Kind::Call;
-  rootedIfCall.name = "/std/collections/internal_soa_storage/if";
+  rootedIfCall.name = "/std/collections/soa_storage/if";
   CHECK(primec::ir_lowerer::isSimpleCallName(rootedIfCall, "if"));
   CHECK(primec::emitter::isSimpleCallName(rootedIfCall, "if"));
 
   primec::Expr rootedTakeCall;
   rootedTakeCall.kind = primec::Expr::Kind::Call;
-  rootedTakeCall.name = "/std/collections/internal_soa_storage/take";
+  rootedTakeCall.name = "/std/collections/soa_storage/take";
   CHECK(primec::ir_lowerer::isSimpleCallName(rootedTakeCall, "take"));
   CHECK(primec::emitter::isSimpleCallName(rootedTakeCall, "take"));
 
@@ -585,7 +585,7 @@ TEST_CASE("simple-call helpers keep rooted and namespaced internal soa storage b
     primec::Expr expr;
     expr.kind = primec::Expr::Kind::Call;
     expr.name = name;
-    expr.namespacePrefix = "/std/collections/internal_soa_storage";
+    expr.namespacePrefix = "/std/collections/soa_storage";
     return expr;
   };
 
@@ -613,31 +613,31 @@ TEST_CASE("simple-call helpers keep rooted and namespaced internal soa storage b
   primec::Expr generatedAssignCall;
   generatedAssignCall.kind = primec::Expr::Kind::Call;
   generatedAssignCall.name =
-      "/std/collections/internal_soa_storage/SoaColumn__tabcdef01/assign";
+      "/std/collections/soa_storage/SoaColumn__tabcdef01/assign";
   CHECK(primec::ir_lowerer::isSimpleCallName(generatedAssignCall, "assign"));
 
   primec::Expr generatedIfCall;
   generatedIfCall.kind = primec::Expr::Kind::Call;
   generatedIfCall.name =
-      "/std/collections/internal_soa_storage/SoaColumn__tabcdef01/if";
+      "/std/collections/soa_storage/SoaColumn__tabcdef01/if";
   CHECK(primec::ir_lowerer::isSimpleCallName(generatedIfCall, "if"));
 
   primec::Expr generatedTakeCall;
   generatedTakeCall.kind = primec::Expr::Kind::Call;
   generatedTakeCall.name =
-      "/std/collections/internal_soa_storage/SoaColumn__tabcdef01/take";
+      "/std/collections/soa_storage/SoaColumn__tabcdef01/take";
   CHECK(primec::ir_lowerer::isSimpleCallName(generatedTakeCall, "take"));
 
   primec::Expr generatedLocationCall;
   generatedLocationCall.kind = primec::Expr::Kind::Call;
   generatedLocationCall.name =
-      "/std/collections/internal_soa_storage/SoaColumn__tabcdef01/location";
+      "/std/collections/soa_storage/SoaColumn__tabcdef01/location";
   CHECK(primec::ir_lowerer::isSimpleCallName(generatedLocationCall, "location"));
 
   primec::Expr generatedDereferenceCall;
   generatedDereferenceCall.kind = primec::Expr::Kind::Call;
   generatedDereferenceCall.name =
-      "/std/collections/internal_soa_storage/SoaColumn__tabcdef01/dereference";
+      "/std/collections/soa_storage/SoaColumn__tabcdef01/dereference";
   CHECK(primec::ir_lowerer::isSimpleCallName(
       generatedDereferenceCall, "dereference"));
 }
@@ -647,13 +647,13 @@ TEST_CASE("emitter builtin assign keeps internal soa storage helper paths") {
 
   primec::Expr rootedAssignCall;
   rootedAssignCall.kind = primec::Expr::Kind::Call;
-  rootedAssignCall.name = "/std/collections/internal_soa_storage/assign";
+  rootedAssignCall.name = "/std/collections/soa_storage/assign";
   CHECK(primec::emitter::isBuiltinAssign(rootedAssignCall, nameMap));
 
   primec::Expr namespacedAssignCall;
   namespacedAssignCall.kind = primec::Expr::Kind::Call;
   namespacedAssignCall.name = "assign";
-  namespacedAssignCall.namespacePrefix = "/std/collections/internal_soa_storage";
+  namespacedAssignCall.namespacePrefix = "/std/collections/soa_storage";
   CHECK(primec::emitter::isBuiltinAssign(namespacedAssignCall, nameMap));
 }
 
@@ -663,37 +663,37 @@ TEST_CASE("emitter control helpers keep internal soa storage helper paths") {
   primec::Expr namespacedIfCall;
   namespacedIfCall.kind = primec::Expr::Kind::Call;
   namespacedIfCall.name = "if";
-  namespacedIfCall.namespacePrefix = "/std/collections/internal_soa_storage";
+  namespacedIfCall.namespacePrefix = "/std/collections/soa_storage";
   CHECK(primec::emitter::isBuiltinIf(namespacedIfCall, nameMap));
 
   primec::Expr namespacedBlockCall;
   namespacedBlockCall.kind = primec::Expr::Kind::Call;
   namespacedBlockCall.name = "block";
-  namespacedBlockCall.namespacePrefix = "/std/collections/internal_soa_storage";
+  namespacedBlockCall.namespacePrefix = "/std/collections/soa_storage";
   CHECK(primec::emitter::isBuiltinBlock(namespacedBlockCall, nameMap));
 
   primec::Expr namespacedWhileCall;
   namespacedWhileCall.kind = primec::Expr::Kind::Call;
   namespacedWhileCall.name = "while";
-  namespacedWhileCall.namespacePrefix = "/std/collections/internal_soa_storage";
+  namespacedWhileCall.namespacePrefix = "/std/collections/soa_storage";
   CHECK(primec::emitter::isWhileCall(namespacedWhileCall));
 
   primec::Expr generatedIfCall;
   generatedIfCall.kind = primec::Expr::Kind::Call;
   generatedIfCall.name =
-      "/std/collections/internal_soa_storage/SoaColumn__tabcdef01/if";
+      "/std/collections/soa_storage/SoaColumn__tabcdef01/if";
   CHECK(primec::emitter::isBuiltinIf(generatedIfCall, nameMap));
 
   primec::Expr generatedLoopCall;
   generatedLoopCall.kind = primec::Expr::Kind::Call;
   generatedLoopCall.name =
-      "/std/collections/internal_soa_storage/SoaColumns2__tabcdef01/loop";
+      "/std/collections/soa_storage/SoaColumns2__tabcdef01/loop";
   CHECK(primec::emitter::isLoopCall(generatedLoopCall));
 
   primec::Expr generatedReturnCall;
   generatedReturnCall.kind = primec::Expr::Kind::Call;
   generatedReturnCall.name =
-      "/std/collections/internal_soa_storage/SoaColumns2__tabcdef01/return";
+      "/std/collections/soa_storage/SoaColumns2__tabcdef01/return";
   CHECK(primec::emitter::isReturnCall(generatedReturnCall));
 }
 
@@ -710,7 +710,7 @@ TEST_CASE("shared return helpers keep scoped stdlib and custom paths builtin") {
   namespacedSoaVectorReturnCall.kind = primec::Expr::Kind::Call;
   namespacedSoaVectorReturnCall.name = "return";
   namespacedSoaVectorReturnCall.namespacePrefix =
-      "/std/collections/experimental_soa_vector";
+      "/std/collections/experimental_soa";
   CHECK(primec::ir_lowerer::isReturnCall(namespacedSoaVectorReturnCall));
   CHECK(primec::emitter::isReturnCall(namespacedSoaVectorReturnCall));
 
@@ -724,7 +724,7 @@ TEST_CASE("shared return helpers keep scoped stdlib and custom paths builtin") {
   namespacedSoaWhileCall.kind = primec::Expr::Kind::Call;
   namespacedSoaWhileCall.name = "while";
   namespacedSoaWhileCall.namespacePrefix =
-      "/std/collections/experimental_soa_vector";
+      "/std/collections/experimental_soa";
   CHECK(primec::ir_lowerer::isWhileCall(namespacedSoaWhileCall));
   CHECK(primec::emitter::isWhileCall(namespacedSoaWhileCall));
 
@@ -732,7 +732,7 @@ TEST_CASE("shared return helpers keep scoped stdlib and custom paths builtin") {
   namespacedSoaDoCall.kind = primec::Expr::Kind::Call;
   namespacedSoaDoCall.name = "do";
   namespacedSoaDoCall.namespacePrefix =
-      "/std/collections/experimental_soa_vector";
+      "/std/collections/experimental_soa";
   CHECK(primec::ir_lowerer::isSimpleCallName(namespacedSoaDoCall, "do"));
   CHECK(primec::emitter::isSimpleCallName(namespacedSoaDoCall, "do"));
 
@@ -740,7 +740,7 @@ TEST_CASE("shared return helpers keep scoped stdlib and custom paths builtin") {
   namespacedSoaAssignCall.kind = primec::Expr::Kind::Call;
   namespacedSoaAssignCall.name = "assign";
   namespacedSoaAssignCall.namespacePrefix =
-      "/std/collections/experimental_soa_vector";
+      "/std/collections/experimental_soa";
   CHECK(primec::ir_lowerer::isSimpleCallName(namespacedSoaAssignCall, "assign"));
   CHECK(primec::emitter::isSimpleCallName(namespacedSoaAssignCall, "assign"));
 
@@ -748,7 +748,7 @@ TEST_CASE("shared return helpers keep scoped stdlib and custom paths builtin") {
   namespacedSoaIncrementCall.kind = primec::Expr::Kind::Call;
   namespacedSoaIncrementCall.name = "increment";
   namespacedSoaIncrementCall.namespacePrefix =
-      "/std/collections/experimental_soa_vector";
+      "/std/collections/experimental_soa";
   CHECK(primec::ir_lowerer::isSimpleCallName(namespacedSoaIncrementCall, "increment"));
   CHECK(primec::emitter::isSimpleCallName(namespacedSoaIncrementCall, "increment"));
 
@@ -756,7 +756,7 @@ TEST_CASE("shared return helpers keep scoped stdlib and custom paths builtin") {
   namespacedSoaLocationCall.kind = primec::Expr::Kind::Call;
   namespacedSoaLocationCall.name = "location";
   namespacedSoaLocationCall.namespacePrefix =
-      "/std/collections/experimental_soa_vector";
+      "/std/collections/experimental_soa";
   CHECK(primec::ir_lowerer::isSimpleCallName(namespacedSoaLocationCall, "location"));
   CHECK(primec::emitter::isSimpleCallName(namespacedSoaLocationCall, "location"));
 
@@ -764,7 +764,7 @@ TEST_CASE("shared return helpers keep scoped stdlib and custom paths builtin") {
   namespacedSoaDereferenceCall.kind = primec::Expr::Kind::Call;
   namespacedSoaDereferenceCall.name = "dereference";
   namespacedSoaDereferenceCall.namespacePrefix =
-      "/std/collections/experimental_soa_vector";
+      "/std/collections/experimental_soa";
   CHECK(primec::ir_lowerer::isSimpleCallName(namespacedSoaDereferenceCall, "dereference"));
   CHECK(primec::emitter::isSimpleCallName(namespacedSoaDereferenceCall, "dereference"));
 
@@ -772,7 +772,7 @@ TEST_CASE("shared return helpers keep scoped stdlib and custom paths builtin") {
   namespacedSoaGetCall.kind = primec::Expr::Kind::Call;
   namespacedSoaGetCall.name = "get";
   namespacedSoaGetCall.namespacePrefix =
-      "/std/collections/experimental_soa_vector";
+      "/std/collections/experimental_soa";
   CHECK(primec::ir_lowerer::isSimpleCallName(namespacedSoaGetCall, "get"));
   CHECK(primec::emitter::isSimpleCallName(namespacedSoaGetCall, "get"));
 
@@ -780,7 +780,7 @@ TEST_CASE("shared return helpers keep scoped stdlib and custom paths builtin") {
   namespacedSoaRefCall.kind = primec::Expr::Kind::Call;
   namespacedSoaRefCall.name = "ref";
   namespacedSoaRefCall.namespacePrefix =
-      "/std/collections/experimental_soa_vector";
+      "/std/collections/experimental_soa";
   CHECK(primec::ir_lowerer::isSimpleCallName(namespacedSoaRefCall, "ref"));
   CHECK(primec::emitter::isSimpleCallName(namespacedSoaRefCall, "ref"));
 
@@ -788,7 +788,7 @@ TEST_CASE("shared return helpers keep scoped stdlib and custom paths builtin") {
   namespacedSoaGetRefCall.kind = primec::Expr::Kind::Call;
   namespacedSoaGetRefCall.name = "get_ref";
   namespacedSoaGetRefCall.namespacePrefix =
-      "/std/collections/soa_vector";
+      "/std/collections/soa";
   CHECK(primec::ir_lowerer::isSimpleCallName(namespacedSoaGetRefCall, "get_ref"));
   CHECK(primec::emitter::isSimpleCallName(namespacedSoaGetRefCall, "get_ref"));
 
@@ -796,7 +796,7 @@ TEST_CASE("shared return helpers keep scoped stdlib and custom paths builtin") {
   namespacedSoaCountRefCall.kind = primec::Expr::Kind::Call;
   namespacedSoaCountRefCall.name = "count_ref";
   namespacedSoaCountRefCall.namespacePrefix =
-      "/std/collections/soa_vector";
+      "/std/collections/soa";
   CHECK(primec::ir_lowerer::isSimpleCallName(namespacedSoaCountRefCall, "count_ref"));
   CHECK(primec::emitter::isSimpleCallName(namespacedSoaCountRefCall, "count_ref"));
 
@@ -804,7 +804,7 @@ TEST_CASE("shared return helpers keep scoped stdlib and custom paths builtin") {
   namespacedSoaCountCall.kind = primec::Expr::Kind::Call;
   namespacedSoaCountCall.name = "count";
   namespacedSoaCountCall.namespacePrefix =
-      "/std/collections/experimental_soa_vector";
+      "/std/collections/experimental_soa";
   CHECK(primec::ir_lowerer::isSimpleCallName(namespacedSoaCountCall, "count"));
   CHECK(primec::emitter::isSimpleCallName(namespacedSoaCountCall, "count"));
 
@@ -812,7 +812,7 @@ TEST_CASE("shared return helpers keep scoped stdlib and custom paths builtin") {
   namespacedSoaToAosCall.kind = primec::Expr::Kind::Call;
   namespacedSoaToAosCall.name = "to_aos";
   namespacedSoaToAosCall.namespacePrefix =
-      "/std/collections/experimental_soa_vector_conversions";
+      "/std/collections/experimental_soa_conversions";
   CHECK(primec::ir_lowerer::isSimpleCallName(namespacedSoaToAosCall, "to_aos"));
   CHECK(primec::emitter::isSimpleCallName(namespacedSoaToAosCall, "to_aos"));
 
@@ -820,7 +820,7 @@ TEST_CASE("shared return helpers keep scoped stdlib and custom paths builtin") {
   namespacedSoaToAosRefCall.kind = primec::Expr::Kind::Call;
   namespacedSoaToAosRefCall.name = "to_aos_ref";
   namespacedSoaToAosRefCall.namespacePrefix =
-      "/std/collections/soa_vector_conversions";
+      "/std/collections/soa_conversions";
   CHECK(primec::ir_lowerer::isSimpleCallName(namespacedSoaToAosRefCall, "to_aos_ref"));
   CHECK(primec::emitter::isSimpleCallName(namespacedSoaToAosRefCall, "to_aos_ref"));
 
@@ -828,7 +828,7 @@ TEST_CASE("shared return helpers keep scoped stdlib and custom paths builtin") {
   namespacedSoaRefRefCall.kind = primec::Expr::Kind::Call;
   namespacedSoaRefRefCall.name = "ref_ref";
   namespacedSoaRefRefCall.namespacePrefix =
-      "/std/collections/soa_vector";
+      "/std/collections/soa";
   CHECK(primec::ir_lowerer::isSimpleCallName(namespacedSoaRefRefCall, "ref_ref"));
   CHECK(primec::emitter::isSimpleCallName(namespacedSoaRefRefCall, "ref_ref"));
 
@@ -836,7 +836,7 @@ TEST_CASE("shared return helpers keep scoped stdlib and custom paths builtin") {
   namespacedSoaPushCall.kind = primec::Expr::Kind::Call;
   namespacedSoaPushCall.name = "push";
   namespacedSoaPushCall.namespacePrefix =
-      "/std/collections/experimental_soa_vector";
+      "/std/collections/experimental_soa";
   CHECK(primec::ir_lowerer::isSimpleCallName(namespacedSoaPushCall, "push"));
   CHECK(primec::emitter::isSimpleCallName(namespacedSoaPushCall, "push"));
 
@@ -844,7 +844,7 @@ TEST_CASE("shared return helpers keep scoped stdlib and custom paths builtin") {
   namespacedSoaReserveCall.kind = primec::Expr::Kind::Call;
   namespacedSoaReserveCall.name = "reserve";
   namespacedSoaReserveCall.namespacePrefix =
-      "/std/collections/experimental_soa_vector";
+      "/std/collections/experimental_soa";
   CHECK(primec::ir_lowerer::isSimpleCallName(namespacedSoaReserveCall, "reserve"));
   CHECK(primec::emitter::isSimpleCallName(namespacedSoaReserveCall, "reserve"));
 
@@ -860,7 +860,7 @@ TEST_CASE("shared return helpers keep scoped stdlib and custom paths builtin") {
   namespacedSoaLessThanCall.kind = primec::Expr::Kind::Call;
   namespacedSoaLessThanCall.name = "less_than";
   namespacedSoaLessThanCall.namespacePrefix =
-      "/std/collections/experimental_soa_vector";
+      "/std/collections/experimental_soa";
   CHECK(primec::ir_lowerer::isSimpleCallName(namespacedSoaLessThanCall, "less_than"));
   CHECK(primec::emitter::isSimpleCallName(namespacedSoaLessThanCall, "less_than"));
 }
@@ -871,25 +871,25 @@ TEST_CASE("emitter helpers keep generated internal soa helper paths builtin") {
   primec::Expr generatedAssignCall;
   generatedAssignCall.kind = primec::Expr::Kind::Call;
   generatedAssignCall.name =
-      "/std/collections/internal_soa_storage/SoaColumn__tabcdef01/assign";
+      "/std/collections/soa_storage/SoaColumn__tabcdef01/assign";
   CHECK(primec::emitter::isBuiltinAssign(generatedAssignCall, nameMap));
 
   primec::Expr generatedIfCall;
   generatedIfCall.kind = primec::Expr::Kind::Call;
   generatedIfCall.name =
-      "/std/collections/internal_soa_storage/SoaColumn__tabcdef01/if";
+      "/std/collections/soa_storage/SoaColumn__tabcdef01/if";
   CHECK(primec::emitter::isSimpleCallName(generatedIfCall, "if"));
 
   primec::Expr generatedTakeCall;
   generatedTakeCall.kind = primec::Expr::Kind::Call;
   generatedTakeCall.name =
-      "/std/collections/internal_soa_storage/SoaColumn__tabcdef01/take";
+      "/std/collections/soa_storage/SoaColumn__tabcdef01/take";
   CHECK(primec::emitter::isSimpleCallName(generatedTakeCall, "take"));
 
   primec::Expr generatedDereferenceCall;
   generatedDereferenceCall.kind = primec::Expr::Kind::Call;
   generatedDereferenceCall.name =
-      "/std/collections/internal_soa_storage/SoaColumn__tabcdef01/dereference";
+      "/std/collections/soa_storage/SoaColumn__tabcdef01/dereference";
   CHECK(primec::emitter::isSimpleCallName(
       generatedDereferenceCall, "dereference"));
   char pointerOp = '\0';
@@ -900,14 +900,14 @@ TEST_CASE("emitter helpers keep generated internal soa helper paths builtin") {
   primec::Expr generatedLocationCall;
   generatedLocationCall.kind = primec::Expr::Kind::Call;
   generatedLocationCall.name =
-      "/std/collections/internal_soa_storage/SoaColumn__tabcdef01/location";
+      "/std/collections/soa_storage/SoaColumn__tabcdef01/location";
   CHECK(primec::emitter::isSimpleCallName(
       generatedLocationCall, "location"));
 
   primec::Expr generatedPlusCall;
   generatedPlusCall.kind = primec::Expr::Kind::Call;
   generatedPlusCall.name =
-      "/std/collections/internal_soa_storage/SoaColumns2__tabcdef01/plus";
+      "/std/collections/soa_storage/SoaColumns2__tabcdef01/plus";
   char op = '\0';
   CHECK(primec::emitter::getBuiltinOperator(generatedPlusCall, op));
   CHECK(op == '+');
@@ -915,7 +915,7 @@ TEST_CASE("emitter helpers keep generated internal soa helper paths builtin") {
   primec::Expr generatedLessThanCall;
   generatedLessThanCall.kind = primec::Expr::Kind::Call;
   generatedLessThanCall.name =
-      "/std/collections/internal_soa_storage/SoaColumns2__tabcdef01/less_than";
+      "/std/collections/soa_storage/SoaColumns2__tabcdef01/less_than";
   const char *comparison = nullptr;
   CHECK(primec::emitter::getBuiltinComparison(
       generatedLessThanCall, comparison));
@@ -924,7 +924,7 @@ TEST_CASE("emitter helpers keep generated internal soa helper paths builtin") {
   primec::Expr generatedIncrementCall;
   generatedIncrementCall.kind = primec::Expr::Kind::Call;
   generatedIncrementCall.name =
-      "/std/collections/internal_soa_storage/SoaColumn__tabcdef01/increment";
+      "/std/collections/soa_storage/SoaColumn__tabcdef01/increment";
   std::string mutation;
   CHECK(primec::emitter::getBuiltinMutationName(
       generatedIncrementCall, mutation));
@@ -985,16 +985,16 @@ TEST_CASE("shared simple-call helpers reject removed array count alias") {
 
 TEST_CASE("semantics removed-alias helpers reject rooted vector spellings") {
   CHECK(primec::semantics::isExplicitRemovedCollectionCallAlias("/array/push"));
-  CHECK(primec::semantics::isExplicitRemovedCollectionCallAlias("/soa_vector/count_ref"));
+  CHECK(primec::semantics::isExplicitRemovedCollectionCallAlias("/soa/count_ref"));
   CHECK_FALSE(primec::semantics::isExplicitRemovedCollectionCallAlias("/vector/push"));
 
   CHECK(primec::semantics::isExplicitRemovedCollectionMethodAlias("/array", "/array/push"));
   CHECK(primec::semantics::isExplicitRemovedCollectionMethodAlias(
       "/vector", "/std/collections/vector/push"));
   CHECK(primec::semantics::isExplicitRemovedCollectionMethodAlias(
-      "/soa_vector", "/soa_vector/count_ref"));
+      "/soa", "/soa/count_ref"));
   CHECK(primec::semantics::isExplicitRemovedCollectionMethodAlias(
-      "/std/collections/soa_vector", "/std/collections/soa_vector/get_ref"));
+      "/std/collections/soa", "/std/collections/soa/get_ref"));
   CHECK_FALSE(primec::semantics::isExplicitRemovedCollectionMethodAlias("/vector", "/vector/push"));
 }
 
@@ -1111,7 +1111,7 @@ TEST_CASE("ir lowerer access helper classifies namespaced access helpers") {
 
   primec::Expr rootedCanonicalSoaGetCall;
   rootedCanonicalSoaGetCall.kind = primec::Expr::Kind::Call;
-  rootedCanonicalSoaGetCall.name = "/std/collections/soa_vector/get";
+  rootedCanonicalSoaGetCall.name = "/std/collections/soa/get";
 
   helperName.clear();
   CHECK(primec::ir_lowerer::getBuiltinArrayAccessName(
@@ -1120,7 +1120,7 @@ TEST_CASE("ir lowerer access helper classifies namespaced access helpers") {
 
   primec::Expr namespacedCanonicalSoaGetRefCall;
   namespacedCanonicalSoaGetRefCall.kind = primec::Expr::Kind::Call;
-  namespacedCanonicalSoaGetRefCall.namespacePrefix = "/std/collections/soa_vector";
+  namespacedCanonicalSoaGetRefCall.namespacePrefix = "/std/collections/soa";
   namespacedCanonicalSoaGetRefCall.name = "get_ref";
 
   helperName.clear();
@@ -1130,7 +1130,7 @@ TEST_CASE("ir lowerer access helper classifies namespaced access helpers") {
 
   primec::Expr rootedLegacySoaGetCall;
   rootedLegacySoaGetCall.kind = primec::Expr::Kind::Call;
-  rootedLegacySoaGetCall.name = "/soa_vector/get";
+  rootedLegacySoaGetCall.name = "/soa/get";
 
   helperName.clear();
   CHECK(primec::ir_lowerer::getBuiltinArrayAccessName(
@@ -1213,7 +1213,7 @@ TEST_CASE("ir lowerer access helper classifies namespaced access helpers") {
   primec::Expr namespacedExperimentalSoaStorageAccessCall;
   namespacedExperimentalSoaStorageAccessCall.kind = primec::Expr::Kind::Call;
   namespacedExperimentalSoaStorageAccessCall.namespacePrefix =
-      "/std/collections/internal_soa_storage";
+      "/std/collections/soa_storage";
   namespacedExperimentalSoaStorageAccessCall.name = "at_unsafe";
 
   helperName.clear();
@@ -1224,7 +1224,7 @@ TEST_CASE("ir lowerer access helper classifies namespaced access helpers") {
   primec::Expr specializedExperimentalSoaColumnAccessCall;
   specializedExperimentalSoaColumnAccessCall.kind = primec::Expr::Kind::Call;
   specializedExperimentalSoaColumnAccessCall.namespacePrefix =
-      "/std/collections/internal_soa_storage/SoaColumn__tabcdef01";
+      "/std/collections/soa_storage/SoaColumn__tabcdef01";
   specializedExperimentalSoaColumnAccessCall.name = "at";
 
   helperName.clear();
@@ -1261,7 +1261,7 @@ TEST_CASE("ir lowerer stdlib surface metadata rejects experimental map lowering 
             *canonicalMapMetadata, "/std/collections/map/at_unsafe") == "at_unsafe");
 
   const auto *soaGetRefMetadata = primec::findStdlibSurfaceMetadataByResolvedPath(
-      "/std/collections/experimental_soa_vector/soaVectorGetRef");
+      "/std/collections/experimental_soa/soaVectorGetRef");
   CHECK(soaGetRefMetadata == nullptr);
 
   const auto *publicSoaFieldViewMetadata =
@@ -1484,7 +1484,7 @@ TEST_CASE("emitter helpers keep parser-shaped std math builtins") {
 TEST_CASE("emitter helpers keep internal soa builtins under rooted and namespaced paths") {
   primec::Expr rootedPlusCall;
   rootedPlusCall.kind = primec::Expr::Kind::Call;
-  rootedPlusCall.name = "/std/collections/internal_soa_storage/plus";
+  rootedPlusCall.name = "/std/collections/soa_storage/plus";
 
   char op = '\0';
   CHECK(primec::emitter::getBuiltinOperator(rootedPlusCall, op));
@@ -1493,7 +1493,7 @@ TEST_CASE("emitter helpers keep internal soa builtins under rooted and namespace
   primec::Expr namespacedLessThanCall;
   namespacedLessThanCall.kind = primec::Expr::Kind::Call;
   namespacedLessThanCall.name = "less_than";
-  namespacedLessThanCall.namespacePrefix = "/std/collections/internal_soa_storage";
+  namespacedLessThanCall.namespacePrefix = "/std/collections/soa_storage";
 
   const char *comparison = nullptr;
   CHECK(primec::emitter::getBuiltinComparison(namespacedLessThanCall, comparison));
@@ -1501,7 +1501,7 @@ TEST_CASE("emitter helpers keep internal soa builtins under rooted and namespace
 
   primec::Expr rootedIncrementCall;
   rootedIncrementCall.kind = primec::Expr::Kind::Call;
-  rootedIncrementCall.name = "/std/collections/internal_soa_storage/increment";
+  rootedIncrementCall.name = "/std/collections/soa_storage/increment";
 
   std::string mutation;
   CHECK(primec::emitter::getBuiltinMutationName(rootedIncrementCall, mutation));
@@ -1548,7 +1548,7 @@ TEST_CASE("shared helper bodies keep scoped stdlib builtins normalized") {
   namespacedSoaLessThanCall.kind = primec::Expr::Kind::Call;
   namespacedSoaLessThanCall.name = "less_than";
   namespacedSoaLessThanCall.namespacePrefix =
-      "/std/collections/experimental_soa_vector";
+      "/std/collections/experimental_soa";
 
   CHECK(primec::ir_lowerer::getBuiltinComparisonName(
       namespacedSoaLessThanCall, builtinName));
@@ -1557,7 +1557,7 @@ TEST_CASE("shared helper bodies keep scoped stdlib builtins normalized") {
   primec::Expr rootedSoaLessThanCall;
   rootedSoaLessThanCall.kind = primec::Expr::Kind::Call;
   rootedSoaLessThanCall.name =
-      "/std/collections/experimental_soa_vector/less_than";
+      "/std/collections/experimental_soa/less_than";
   CHECK(primec::ir_lowerer::getBuiltinComparisonName(
       rootedSoaLessThanCall, builtinName));
   CHECK(builtinName == "less_than");
@@ -1571,7 +1571,7 @@ TEST_CASE("shared helper bodies keep scoped stdlib builtins normalized") {
   namespacedSoaIncrementCall.kind = primec::Expr::Kind::Call;
   namespacedSoaIncrementCall.name = "increment";
   namespacedSoaIncrementCall.namespacePrefix =
-      "/std/collections/experimental_soa_vector";
+      "/std/collections/experimental_soa";
 
   std::string mutation;
   CHECK(primec::emitter::getBuiltinMutationName(
@@ -1582,7 +1582,7 @@ TEST_CASE("shared helper bodies keep scoped stdlib builtins normalized") {
   namespacedSoaMoveCall.kind = primec::Expr::Kind::Call;
   namespacedSoaMoveCall.name = "move";
   namespacedSoaMoveCall.namespacePrefix =
-      "/std/collections/experimental_soa_vector";
+      "/std/collections/experimental_soa";
 
   CHECK(primec::ir_lowerer::isSimpleCallName(
       namespacedSoaMoveCall, "move"));
@@ -1593,7 +1593,7 @@ TEST_CASE("shared helper bodies keep scoped stdlib builtins normalized") {
   namespacedSoaConversionsLessThanCall.kind = primec::Expr::Kind::Call;
   namespacedSoaConversionsLessThanCall.name = "less_than";
   namespacedSoaConversionsLessThanCall.namespacePrefix =
-      "/std/collections/experimental_soa_vector_conversions";
+      "/std/collections/experimental_soa_conversions";
 
   CHECK(primec::ir_lowerer::getBuiltinComparisonName(
       namespacedSoaConversionsLessThanCall, builtinName));
@@ -1607,7 +1607,7 @@ TEST_CASE("shared helper bodies keep scoped stdlib builtins normalized") {
       primec::Expr::Kind::Call;
   namespacedCanonicalSoaConversionsIncrementCall.name = "increment";
   namespacedCanonicalSoaConversionsIncrementCall.namespacePrefix =
-      "/std/collections/soa_vector_conversions";
+      "/std/collections/soa_conversions";
 
   CHECK(primec::ir_lowerer::isSimpleCallName(
       namespacedCanonicalSoaConversionsIncrementCall, "increment"));
@@ -1728,7 +1728,7 @@ TEST_CASE("emitter collection inference keeps namespaced internal soa builtins o
   primec::Expr namespacedCountCall;
   namespacedCountCall.kind = primec::Expr::Kind::Call;
   namespacedCountCall.name = "count";
-  namespacedCountCall.namespacePrefix = "/std/collections/internal_soa_storage";
+  namespacedCountCall.namespacePrefix = "/std/collections/soa_storage";
 
   primec::Expr itemsName;
   itemsName.kind = primec::Expr::Kind::Name;
@@ -1745,7 +1745,7 @@ TEST_CASE("emitter collection inference keeps namespaced internal soa builtins o
   primec::Expr namespacedCapacityCall;
   namespacedCapacityCall.kind = primec::Expr::Kind::Call;
   namespacedCapacityCall.name = "capacity";
-  namespacedCapacityCall.namespacePrefix = "/std/collections/internal_soa_storage";
+  namespacedCapacityCall.namespacePrefix = "/std/collections/soa_storage";
 
   primec::Expr valuesName;
   valuesName.kind = primec::Expr::Kind::Name;
@@ -1761,7 +1761,7 @@ TEST_CASE("emitter collection inference keeps namespaced internal soa builtins o
   primec::Expr namespacedAtCall;
   namespacedAtCall.kind = primec::Expr::Kind::Call;
   namespacedAtCall.name = "at";
-  namespacedAtCall.namespacePrefix = "/std/collections/internal_soa_storage";
+  namespacedAtCall.namespacePrefix = "/std/collections/soa_storage";
 
   primec::Expr textName;
   textName.kind = primec::Expr::Kind::Name;
@@ -1780,7 +1780,7 @@ TEST_CASE("emitter collection inference keeps namespaced internal soa builtins o
   primec::Expr namespacedStringCountCall;
   namespacedStringCountCall.kind = primec::Expr::Kind::Call;
   namespacedStringCountCall.name = "count";
-  namespacedStringCountCall.namespacePrefix = "/std/collections/internal_soa_storage";
+  namespacedStringCountCall.namespacePrefix = "/std/collections/soa_storage";
   namespacedStringCountCall.args.push_back(textName);
 
   CHECK(primec::emitter::isStringCountCall(namespacedStringCountCall, localTypes));
@@ -1916,7 +1916,7 @@ main() {
   CHECK(cpp.find("ps_array_count(") != std::string::npos);
 }
 
-TEST_CASE("semantics accepts and lowerer emits empty soa_vector literals") {
+TEST_CASE("semantics accepts and lowerer emits empty soa literals") {
   const std::string source = R"(
 Particle() {
   [i32] x{1i32}
@@ -1924,7 +1924,7 @@ Particle() {
 
 [return<i32>]
 main() {
-  [soa_vector<Particle>] values{soa_vector<Particle>()}
+  [soa<Particle>] values{soa<Particle>()}
   return(0i32)
 }
 )";
@@ -1971,11 +1971,11 @@ main() {
   CHECK(error.empty());
 }
 
-TEST_CASE("bare soa_vector count helper lowers through wrapper return routing compatibility") {
+TEST_CASE("bare soa count helper lowers through wrapper return routing compatibility") {
   const std::string source = R"(
 import /std/collections/*
 import /std/collections/soa/*
-import /std/collections/internal_soa_vector/*
+import /std/collections/internal_soa/*
 
 [struct reflect]
 Particle() {
@@ -2004,11 +2004,11 @@ main() {
   CHECK(error.empty());
 }
 
-TEST_CASE("nested struct-body soa_vector constructor-bearing helper returns lower through") {
+TEST_CASE("nested struct-body soa constructor-bearing helper returns lower through") {
   const std::string source = R"(
 import /std/collections/*
 import /std/collections/soa/*
-import /std/collections/internal_soa_vector/*
+import /std/collections/internal_soa/*
 
 [struct reflect]
 Particle() {
@@ -2043,11 +2043,11 @@ main() {
   CHECK(error.empty());
 }
 
-TEST_CASE("bare soa_vector get helper lowers through wrapper return routing compatibility") {
+TEST_CASE("bare soa get helper lowers through wrapper return routing compatibility") {
   const std::string source = R"(
 import /std/collections/*
 import /std/collections/soa/*
-import /std/collections/internal_soa_vector/*
+import /std/collections/internal_soa/*
 
 [struct reflect]
 Particle() {
@@ -2078,7 +2078,7 @@ main() {
   CHECK(error.empty());
 }
 
-TEST_CASE("ir lowerer lowers non-empty soa_vector literals through substrate helper routing") {
+TEST_CASE("ir lowerer lowers non-empty soa literals through substrate helper routing") {
   const std::string source = R"(
 Particle() {
   [i32] x{1i32}
@@ -2086,7 +2086,7 @@ Particle() {
 
 [return<int> effects(heap_alloc)]
 main() {
-  [soa_vector<Particle>] values{soa_vector<Particle>(Particle(1i32))}
+  [soa<Particle>] values{soa<Particle>(Particle(1i32))}
   return(0i32)
 }
 )";
@@ -2113,10 +2113,10 @@ Particle() {
 
 [return<void>]
 main() {
-  [soa_vector<Particle>] values{soa_vector<Particle>()}
+  [soa<Particle>] values{soa<Particle>()}
   [Particle] valueA{get(values, 0i32)}
   [Particle] valueB{values.get(0i32)}
-  [Particle] valueC{/soa_vector/get(values, 0i32)}
+  [Particle] valueC{/soa/get(values, 0i32)}
 }
 )";
   primec::Program program;
@@ -2138,7 +2138,7 @@ main() {
   [vector<i32>] values{vector<i32>()}
   [i32] valueA{get(values, 0i32)}
   [i32] valueB{values.get(0i32)}
-  [i32] valueC{/soa_vector/get(values, 0i32)}
+  [i32] valueC{/soa/get(values, 0i32)}
 }
 )";
   primec::Program program;
@@ -2157,17 +2157,17 @@ Particle() {
 
 [return<void>]
 main() {
-  [soa_vector<Particle>] values{soa_vector<Particle>()}
+  [soa<Particle>] values{soa<Particle>()}
   [Particle] valueA{ref(values, 0i32)}
   [Particle] valueB{values.ref(0i32)}
-  [Particle] valueC{/soa_vector/ref(values, 0i32)}
+  [Particle] valueC{/soa/ref(values, 0i32)}
 }
 )";
   primec::Program program;
   primec::SemanticProgram semanticProgram;
   std::string error;
   CHECK_FALSE(parseAndValidate(source, program, semanticProgram, error));
-  CHECK(error.find("unknown method: /std/collections/soa_vector/ref") != std::string::npos);
+  CHECK(error.find("unknown method: /std/collections/soa/ref") != std::string::npos);
 }
 
 TEST_CASE("root ref vector receiver rejects non-soa target") {
@@ -2177,14 +2177,14 @@ main() {
   [vector<i32>] values{vector<i32>()}
   [i32] valueA{ref(values, 0i32)}
   [i32] valueB{values.ref(0i32)}
-  [i32] valueC{/soa_vector/ref(values, 0i32)}
+  [i32] valueC{/soa/ref(values, 0i32)}
 }
 )";
   primec::Program program;
   primec::SemanticProgram semanticProgram;
   std::string error;
   CHECK_FALSE(parseAndValidate(source, program, semanticProgram, error));
-  CHECK(error.find("unknown method: /std/collections/soa_vector/ref") != std::string::npos);
+  CHECK(error.find("unknown method: /std/collections/soa/ref") != std::string::npos);
 }
 
 TEST_CASE("semantics accepts to_soa before lowerer rejection") {
@@ -2269,22 +2269,22 @@ main() {
   CHECK_FALSE(error.empty());
 }
 
-TEST_CASE("semantics rejects explicit soa_vector reserve on vector target through canonical helper path") {
+TEST_CASE("semantics rejects explicit soa reserve on vector target through canonical helper path") {
   const std::string source = R"(
 [effects(heap_alloc), return<void>]
 main() {
   [vector<i32> mut] values{vector<i32>(1i32)}
-  /soa_vector/reserve(values, 4i32)
+  /soa/reserve(values, 4i32)
 }
 )";
   primec::Program program;
   primec::SemanticProgram semanticProgram;
   std::string error;
   CHECK_FALSE(parseAndValidate(source, program, semanticProgram, error));
-  CHECK(error.find("/std/collections/soa_vector/reserve") != std::string::npos);
+  CHECK(error.find("/std/collections/soa/reserve") != std::string::npos);
 }
 
-TEST_CASE("explicit soa_vector mutators lower through canonical helper routing") {
+TEST_CASE("explicit soa mutators lower through canonical helper routing") {
   const std::string source = R"(
 Particle() {
   [i32] x{1i32}
@@ -2292,8 +2292,8 @@ Particle() {
 
 [effects(heap_alloc), return<void>]
 main() {
-  [soa_vector<Particle> mut] values{soa_vector<Particle>()}
-  /soa_vector/reserve(values, 4i32)
+  [soa<Particle> mut] values{soa<Particle>()}
+  /soa/reserve(values, 4i32)
 }
 )";
   primec::Program program;
@@ -2317,7 +2317,7 @@ Particle() {
 
 [return<void>]
 main() {
-  [soa_vector<Particle>] values{soa_vector<Particle>()}
+  [soa<Particle>] values{soa<Particle>()}
   [vector<Particle>] unpackedA{to_aos(values)}
   [vector<Particle>] unpackedB{/to_aos(values)}
 }
@@ -2340,7 +2340,7 @@ Particle() {
 
 [return<void>]
 main() {
-  [soa_vector<Particle>] values{soa_vector<Particle>()}
+  [soa<Particle>] values{soa<Particle>()}
   [vector<Particle>] unpackedA{to_aos(values)}
   [vector<Particle>] unpackedB{/to_aos(values)}
 }
@@ -2366,7 +2366,7 @@ Particle() {
 
 [return<void>]
 main() {
-  [soa_vector<Particle>] values{soa_vector<Particle>()}
+  [soa<Particle>] values{soa<Particle>()}
   [vector<Particle>] unpackedA{values.to_aos()}
   [vector<Particle>] unpackedB{values./to_aos()}
 }
@@ -2389,7 +2389,7 @@ Particle() {
 
 [return<void>]
 main() {
-  [soa_vector<Particle>] values{soa_vector<Particle>()}
+  [soa<Particle>] values{soa<Particle>()}
   [vector<Particle>] unpackedA{values.to_aos()}
   [vector<Particle>] unpackedB{values./to_aos()}
 }
@@ -2406,7 +2406,7 @@ main() {
   CHECK_FALSE(error.empty());
 }
 
-TEST_CASE("imported builtin soa_vector bare helper forms lower through canonical helper routing") {
+TEST_CASE("imported builtin soa bare helper forms lower through canonical helper routing") {
   const std::string source = R"(
 import /std/collections/*
 
@@ -2417,7 +2417,7 @@ Particle() {
 
 [effects(heap_alloc), return<int>]
 main() {
-  [soa_vector<Particle> mut] values{soa_vector<Particle>()}
+  [soa<Particle> mut] values{soa<Particle>()}
   reserve(values, 2i32)
   push(values, Particle(4i32))
   [i32] total{count(values)}
@@ -2438,7 +2438,7 @@ main() {
   CHECK(error.empty());
 }
 
-TEST_CASE("imported builtin soa_vector method access forms stop in semantics on borrowed-view pending diagnostic") {
+TEST_CASE("imported builtin soa method access forms stop in semantics on borrowed-view pending diagnostic") {
   const std::string source = R"(
 import /std/collections/*
 
@@ -2449,7 +2449,7 @@ Particle() {
 
 [return<int>]
 main() {
-  [soa_vector<Particle>] values{soa_vector<Particle>()}
+  [soa<Particle>] values{soa<Particle>()}
   [Particle] first{values.get(0i32)}
   [Particle] second{values.ref(0i32)}
   return(plus(first.x, second.x))
@@ -2460,7 +2460,7 @@ main() {
   std::string error;
   const bool parsed = parseAndValidate(source, program, semanticProgram, error);
   if (!parsed) {
-    CHECK((error.find("unknown method: /std/collections/soa_vector/ref") !=
+    CHECK((error.find("unknown method: /std/collections/soa/ref") !=
            std::string::npos ||
            error.find("field access requires struct receiver") !=
                std::string::npos));
@@ -2469,7 +2469,7 @@ main() {
   }
 }
 
-TEST_CASE("imported builtin soa_vector method mutators lower through canonical helper routing") {
+TEST_CASE("imported builtin soa method mutators lower through canonical helper routing") {
   const std::string source = R"(
 import /std/collections/*
 
@@ -2480,7 +2480,7 @@ Particle() {
 
 [effects(heap_alloc), return<int>]
 main() {
-  [soa_vector<Particle> mut] values{soa_vector<Particle>()}
+  [soa<Particle> mut] values{soa<Particle>()}
   values.reserve(2i32)
   values.push(Particle(4i32))
   return(values.get(0i32).x)
@@ -2491,7 +2491,7 @@ main() {
   std::string error;
   const bool parsed = parseAndValidate(source, program, semanticProgram, error);
   if (!parsed) {
-    CHECK((error.find("unknown method: /std/collections/soa_vector/ref") !=
+    CHECK((error.find("unknown method: /std/collections/soa/ref") !=
            std::string::npos ||
            error.find("field access requires struct receiver") !=
                std::string::npos));
@@ -2509,7 +2509,7 @@ TEST_CASE("canonical experimental wrapper to_aos slash-method lowers successfull
   const std::string source = R"(
 import /std/collections/*
 import /std/collections/soa/*
-import /std/collections/internal_soa_vector/*
+import /std/collections/internal_soa/*
 
 [struct reflect]
 Particle() {
@@ -2519,7 +2519,7 @@ Particle() {
 [return<int>]
 main() {
   [SoaVector<Particle>] values{soaVectorSingle<Particle>(Particle(9i32))}
-  [vector<Particle>] unpacked{values./std/collections/soa_vector/to_aos()}
+  [vector<Particle>] unpacked{values./std/collections/soa/to_aos()}
   return(count(unpacked))
 }
 )";
@@ -2539,9 +2539,9 @@ TEST_CASE("borrowed helper-return experimental wrapper lowers through conversion
   const std::string source = R"(
 import /std/collections/*
 import /std/collections/soa/*
-import /std/collections/internal_soa_vector/*
+import /std/collections/internal_soa/*
 import /std/collections/soa/*
-import /std/collections/internal_soa_vector_conversions/*
+import /std/collections/internal_soa_conversions/*
 
 [struct reflect]
 Particle() {
@@ -2559,7 +2559,7 @@ main() {
   values.push(Particle(7i32))
   values.push(Particle(9i32))
   [vector<Particle>] unpacked{
-      /std/collections/experimental_soa_vector_conversions/soaVectorToAosRef<Particle>(
+      /std/collections/experimental_soa_conversions/soaVectorToAosRef<Particle>(
           pickBorrowed(location(values)))}
   return(count(unpacked))
 }
@@ -2582,9 +2582,9 @@ TEST_CASE("borrowed helper-return experimental wrapper bare conversion alias low
   const std::string source = R"(
 import /std/collections/*
 import /std/collections/soa/*
-import /std/collections/internal_soa_vector/*
+import /std/collections/internal_soa/*
 import /std/collections/soa/*
-import /std/collections/internal_soa_vector_conversions/*
+import /std/collections/internal_soa_conversions/*
 
 [struct reflect]
 Particle() {
@@ -2634,7 +2634,7 @@ Particle() {
 
 [return<void>]
 main() {
-  [soa_vector<Particle>] values{soa_vector<Particle>()}
+  [soa<Particle>] values{soa<Particle>()}
   [vector<Particle>] unpacked{to_aos(values)}
 }
 )";
@@ -2664,17 +2664,17 @@ main() {
   primec::SemanticProgram semanticProgram;
   std::string error;
   CHECK_FALSE(parseAndValidate(source, program, semanticProgram, error));
-  CHECK(error.find("/std/collections/soa_vector/to_aos") != std::string::npos);
+  CHECK(error.find("/std/collections/soa/to_aos") != std::string::npos);
 }
 
-TEST_CASE("semantics rejects soa_vector field-view before lowerer") {
+TEST_CASE("semantics rejects soa field-view before lowerer") {
   const std::string source = R"(
 Particle() {
   [i32] x{1i32}
 }
 
 [return<void>]
-/use([soa_vector<Particle>] values) {
+/use([soa<Particle>] values) {
   values.x()
 }
 )";
@@ -2682,17 +2682,17 @@ Particle() {
   primec::SemanticProgram semanticProgram;
   std::string error;
   CHECK_FALSE(parseAndValidate(source, program, semanticProgram, error));
-  CHECK(error == "unknown method: /std/collections/soa_vector/field_view/x");
+  CHECK(error == "unknown method: /std/collections/soa/field_view/x");
 }
 
-TEST_CASE("semantics rejects soa_vector field-view call-form before lowerer") {
+TEST_CASE("semantics rejects soa field-view call-form before lowerer") {
   const std::string source = R"(
 Particle() {
   [i32] x{1i32}
 }
 
 [return<void>]
-/use([soa_vector<Particle>] values) {
+/use([soa<Particle>] values) {
   x(values)
 }
 )";
@@ -2700,17 +2700,17 @@ Particle() {
   primec::SemanticProgram semanticProgram;
   std::string error;
   CHECK_FALSE(parseAndValidate(source, program, semanticProgram, error));
-  CHECK(error == "unknown method: /std/collections/soa_vector/field_view/x");
+  CHECK(error == "unknown method: /std/collections/soa/field_view/x");
 }
 
-TEST_CASE("semantics rejects soa_vector field-view direct-call index shape before lowerer") {
+TEST_CASE("semantics rejects soa field-view direct-call index shape before lowerer") {
   const std::string source = R"(
 Particle() {
   [i32] x{1i32}
 }
 
 [return<void>]
-/use([soa_vector<Particle>] values) {
+/use([soa<Particle>] values) {
   values.x(0i32)
 }
 )";
@@ -2718,17 +2718,17 @@ Particle() {
   primec::SemanticProgram semanticProgram;
   std::string error;
   CHECK_FALSE(parseAndValidate(source, program, semanticProgram, error));
-  CHECK(error == "unknown method: /std/collections/soa_vector/field_view/x");
+  CHECK(error == "unknown method: /std/collections/soa/field_view/x");
 }
 
-TEST_CASE("semantics rejects soa_vector field-view call-form index shape before lowerer") {
+TEST_CASE("semantics rejects soa field-view call-form index shape before lowerer") {
   const std::string source = R"(
 Particle() {
   [i32] x{1i32}
 }
 
 [return<void>]
-/use([soa_vector<Particle>] values) {
+/use([soa<Particle>] values) {
   x(values, 0i32)
 }
 )";
@@ -2736,17 +2736,17 @@ Particle() {
   primec::SemanticProgram semanticProgram;
   std::string error;
   CHECK_FALSE(parseAndValidate(source, program, semanticProgram, error));
-  CHECK(error == "unknown method: /std/collections/soa_vector/field_view/x");
+  CHECK(error == "unknown method: /std/collections/soa/field_view/x");
 }
 
-TEST_CASE("semantics rejects soa_vector get method named args before lowerer") {
+TEST_CASE("semantics rejects soa get method named args before lowerer") {
   const std::string source = R"(
 Particle() {
   [i32] x{1i32}
 }
 
 [return<void>]
-/use([soa_vector<Particle>] values) {
+/use([soa<Particle>] values) {
   values.get([index] 0i32)
 }
 )";
@@ -2757,14 +2757,14 @@ Particle() {
   CHECK(error == "named arguments not supported for builtin calls");
 }
 
-TEST_CASE("semantics rejects soa_vector ref method named args before lowerer") {
+TEST_CASE("semantics rejects soa ref method named args before lowerer") {
   const std::string source = R"(
 Particle() {
   [i32] x{1i32}
 }
 
 [return<void>]
-/use([soa_vector<Particle>] values) {
+/use([soa<Particle>] values) {
   values.ref([index] 0i32)
 }
 )";

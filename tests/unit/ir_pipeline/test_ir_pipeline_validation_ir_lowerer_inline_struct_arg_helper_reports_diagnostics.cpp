@@ -69,12 +69,12 @@ TEST_CASE("ir lowerer inline struct arg helper accepts compatible soa vector sto
   constexpr const char *SpecializedSoaVector =
       "/std/collections/soa/SoaVector__Particle";
   const std::vector<std::pair<std::string, std::string>> compatiblePaths = {
-      {SpecializedSoaVector, "/soa_vector"},
-      {"/soa_vector", SpecializedSoaVector},
-      {SpecializedSoaVector, "/std/collections/soa_vector"},
-      {"/std/collections/soa_vector", SpecializedSoaVector},
-      {"/soa_vector", "/std/collections/soa_vector"},
-      {"/std/collections/soa_vector", "SoaVector"},
+      {SpecializedSoaVector, "/soa"},
+      {"/soa", SpecializedSoaVector},
+      {SpecializedSoaVector, "/std/collections/soa"},
+      {"/std/collections/soa", SpecializedSoaVector},
+      {"/soa", "/std/collections/soa"},
+      {"/std/collections/soa", "SoaVector"},
   };
 
   for (const auto &[fieldStructPath, argStructPath] : compatiblePaths) {
@@ -150,15 +150,15 @@ TEST_CASE("ir lowerer inline struct arg helper accepts compatible soa vector sto
 
 TEST_CASE("ir lowerer inline struct arg helper accepts internal soa storage aliases") {
   const std::vector<std::pair<std::string, std::string>> compatiblePaths = {
-      {"/std/collections/internal_soa_storage/SoaColumn__ti32", "SoaColumn"},
-      {"SoaColumn", "/std/collections/internal_soa_storage/SoaColumn__ti32"},
-      {"/std/collections/internal_soa_storage/SoaColumn__ti32", "SoaColumn<i32>"},
-      {"SoaColumn<i32>", "/std/collections/internal_soa_storage/SoaColumn__ti32"},
-      {"/std/collections/internal_soa_storage/SoaColumns2__ti32_i64", "SoaColumns2"},
-      {"/std/collections/internal_soa_storage/SoaColumns2__ti32_i64",
+      {"/std/collections/soa_storage/SoaColumn__ti32", "SoaColumn"},
+      {"SoaColumn", "/std/collections/soa_storage/SoaColumn__ti32"},
+      {"/std/collections/soa_storage/SoaColumn__ti32", "SoaColumn<i32>"},
+      {"SoaColumn<i32>", "/std/collections/soa_storage/SoaColumn__ti32"},
+      {"/std/collections/soa_storage/SoaColumns2__ti32_i64", "SoaColumns2"},
+      {"/std/collections/soa_storage/SoaColumns2__ti32_i64",
        "SoaColumns2<i32, i64>"},
-      {"SoaFieldView", "/std/collections/internal_soa_storage/SoaFieldView__ti32"},
-      {"SoaFieldView<i32>", "/std/collections/internal_soa_storage/SoaFieldView__ti32"},
+      {"SoaFieldView", "/std/collections/soa_storage/SoaFieldView__ti32"},
+      {"SoaFieldView<i32>", "/std/collections/soa_storage/SoaFieldView__ti32"},
   };
 
   for (const auto &[fieldStructPath, argStructPath] : compatiblePaths) {
@@ -423,7 +423,7 @@ TEST_CASE("ir lowerer inline struct arg helper rejects incompatible internal soa
   field.name = "storage";
   field.slotOffset = 1;
   field.slotCount = 4;
-  field.structPath = "/std/collections/internal_soa_storage/SoaColumn__ti32";
+  field.structPath = "/std/collections/soa_storage/SoaColumn__ti32";
   layout.fields.push_back(field);
 
   int32_t nextLocal = 20;
@@ -443,7 +443,7 @@ TEST_CASE("ir lowerer inline struct arg helper rejects incompatible internal soa
         return primec::ir_lowerer::LocalInfo::ValueKind::Unknown;
       },
       [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) {
-        return std::string("/std/collections/internal_soa_storage/SoaColumns2__ti32_i32");
+        return std::string("/std/collections/soa_storage/SoaColumns2__ti32_i32");
       },
       [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) {
         return true;

@@ -338,12 +338,12 @@ TEST_CASE("ir lowerer statement binding helper classifies variadic pointer vecto
   CHECK(info.valueKind == primec::ir_lowerer::LocalInfo::ValueKind::Int32);
 }
 
-TEST_CASE("ir lowerer statement binding helper classifies variadic pointer soa_vector parameters") {
+TEST_CASE("ir lowerer statement binding helper classifies variadic pointer soa parameters") {
   primec::Expr param;
   param.name = "values";
   primec::Transform argsTransform;
   argsTransform.name = "args";
-  argsTransform.templateArgs.push_back("Pointer<soa_vector<Particle>>");
+  argsTransform.templateArgs.push_back("Pointer<soa<Particle>>");
   param.transforms.push_back(argsTransform);
 
   primec::ir_lowerer::LocalInfo info;
@@ -459,12 +459,12 @@ TEST_CASE("ir lowerer statement binding helper classifies variadic pointer impor
   CHECK(info.valueKind == primec::ir_lowerer::LocalInfo::ValueKind::Unknown);
 }
 
-TEST_CASE("ir lowerer statement binding helper classifies variadic soa_vector parameters") {
+TEST_CASE("ir lowerer statement binding helper classifies variadic soa parameters") {
   primec::Expr param;
   param.name = "values";
   primec::Transform argsTransform;
   argsTransform.name = "args";
-  argsTransform.templateArgs.push_back("soa_vector<Particle>");
+  argsTransform.templateArgs.push_back("soa<Particle>");
   param.transforms.push_back(argsTransform);
 
   primec::ir_lowerer::LocalInfo info;
@@ -497,7 +497,7 @@ TEST_CASE("ir lowerer statement binding helper classifies variadic soa_vector pa
   CHECK(info.valueKind == primec::ir_lowerer::LocalInfo::ValueKind::Unknown);
 }
 
-TEST_CASE("ir lowerer statement binding helper keeps specialized experimental soa_vector") {
+TEST_CASE("ir lowerer statement binding helper keeps specialized experimental soa") {
   primec::Expr param;
   param.name = "values";
   primec::Transform referenceTransform;
@@ -538,11 +538,11 @@ TEST_CASE("ir lowerer statement binding helper keeps specialized experimental so
 
 TEST_CASE(
     "ir lowerer statement binding helper classifies parsed variadic borrowed "
-    "imported soa_vector parameters") {
+    "imported soa parameters") {
   const std::string source = R"(
 import /std/collections/*
 import /std/collections/soa/*
-import /std/collections/internal_soa_vector/*
+import /std/collections/internal_soa/*
 
 [struct reflect]
 Particle() {
@@ -580,7 +580,7 @@ main() {
   REQUIRE(bindingFact != nullptr);
   const bool hasSoaVectorText =
       bindingFact->bindingTypeText.find("SoaVector") != std::string::npos ||
-      bindingFact->bindingTypeText.find("soa_vector") != std::string::npos;
+      bindingFact->bindingTypeText.find("soa") != std::string::npos;
   CHECK(hasSoaVectorText);
   const bool hasRawElementType = !scoreRefs->parameters.front().transforms.empty() &&
                                  !scoreRefs->parameters.front().transforms.front().templateArgs.empty();
@@ -591,7 +591,7 @@ main() {
     INFO("rawElementTypeText=" << rawElementTypeText);
     const bool rawHasSoaVectorText =
         rawElementTypeText.find("SoaVector") != std::string::npos ||
-        rawElementTypeText.find("soa_vector") != std::string::npos;
+        rawElementTypeText.find("soa") != std::string::npos;
     CHECK(rawHasSoaVectorText);
   }
   CHECK_FALSE(bindingTypeAdapters.isStringBinding(scoreRefs->parameters.front()));
@@ -813,7 +813,7 @@ TEST_CASE("ir lowerer statement binding helper rejects incomplete semantic args-
   CHECK(error == "incomplete semantic-product args-pack binding type: values");
 }
 
-TEST_CASE("ir lowerer statement binding helper preserves inferred borrowed soa_vector return metadata") {
+TEST_CASE("ir lowerer statement binding helper preserves inferred borrowed soa return metadata") {
   primec::Definition callee;
   callee.fullPath = "/pkg/slice_ref";
   primec::Transform returnTransform;
@@ -910,7 +910,7 @@ TEST_CASE("ir lowerer statement binding helper preserves inferred borrowed map r
   CHECK(info.structTypeName.empty());
 }
 
-TEST_CASE("ir lowerer statement binding helper classifies explicit soa_vector locals with specialized struct paths compatibility") {
+TEST_CASE("ir lowerer statement binding helper classifies explicit soa locals with specialized struct paths compatibility") {
   primec::Expr stmt;
   stmt.kind = primec::Expr::Kind::Call;
   stmt.isBinding = true;
@@ -955,7 +955,7 @@ TEST_CASE("ir lowerer statement binding helper classifies explicit soa_vector lo
 }
 
 TEST_CASE(
-    "ir lowerer statement binding helper preserves indexed borrowed soa_vector "
+    "ir lowerer statement binding helper preserves indexed borrowed soa "
     "args-pack dereference struct paths") {
   using LocalInfo = primec::ir_lowerer::LocalInfo;
 
@@ -1022,7 +1022,7 @@ TEST_CASE(
 }
 
 TEST_CASE(
-    "ir lowerer statement binding helper preserves indexed pointer soa_vector "
+    "ir lowerer statement binding helper preserves indexed pointer soa "
     "args-pack dereference struct paths") {
   using LocalInfo = primec::ir_lowerer::LocalInfo;
 
@@ -1090,11 +1090,11 @@ TEST_CASE(
 
 TEST_CASE(
     "ir lowerer statement binding helper classifies parsed borrowed imported "
-    "soa_vector locals") {
+    "soa locals") {
   const std::string source = R"(
 import /std/collections/*
 import /std/collections/soa/*
-import /std/collections/internal_soa_vector/*
+import /std/collections/internal_soa/*
 
 [struct reflect]
 Particle() {

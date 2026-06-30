@@ -365,12 +365,6 @@ bool parseBindingInfo(const Expr &expr,
         error = "binding requires exactly one type";
         return false;
       }
-      if (transformName == "soa_vector" || transformName == "/soa_vector" ||
-          transformName == "std/collections/soa_vector" ||
-          transformName == "/std/collections/soa_vector") {
-        error = "soa_vector<T> is not supported; use soa<T>";
-        return false;
-      }
       const std::string normalizedTypeName = normalizeBindingTypeName(transformName);
       if ((normalizedTypeName == "array" || normalizedTypeName == "vector" || normalizedTypeName == "Buffer") &&
           transformTemplateArgs.size() != 1) {
@@ -389,18 +383,13 @@ bool parseBindingInfo(const Expr &expr,
         error = "Task requires exactly one template argument";
         return false;
       }
-      if (normalizedTypeName == "soa_vector") {
-        const bool isPublicSoaSpelling =
-            transformName == "soa" || transformName == "/soa" ||
-            transformName == "std/collections/soa" ||
-            transformName == "/std/collections/soa";
-        const std::string displayType = isPublicSoaSpelling ? "soa" : "soa_vector";
+      if (normalizedTypeName == "soa") {
         if (transformTemplateArgs.size() != 1) {
-          error = displayType + " requires exactly one template argument";
+          error = "soa requires exactly one template argument";
           return false;
         }
         if (!isSoaVectorStructElementType(transformTemplateArgs.front(), namespacePrefix, structTypes, importAliases)) {
-          error = displayType + " requires struct element type";
+          error = "soa requires struct element type";
           return false;
         }
         typeName = normalizedTypeName;
@@ -638,7 +627,7 @@ bool parseBindingInfo(const Expr &expr,
       return false;
     }
 
-    if ((base == "array" || base == "vector" || base == "soa_vector" || base == "Buffer" || base == "File") &&
+    if ((base == "array" || base == "vector" || base == "soa" || base == "Buffer" || base == "File") &&
         args.size() == 1) {
       return true;
     }

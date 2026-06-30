@@ -125,10 +125,10 @@ main() {
   CHECK(ast.find("this.payloads", payloadsDestroyPos) != std::string::npos);
 }
 
-TEST_CASE("dump ast-semantic shows experimental soa_vector wrapper count runtime") {
+TEST_CASE("dump ast-semantic shows experimental soa wrapper count runtime") {
   const std::string source = R"(
 import /std/collections/soa/*
-import /std/collections/internal_soa_vector/*
+import /std/collections/internal_soa/*
 
 [struct reflect]
 Particle() {
@@ -141,9 +141,9 @@ main() {
   return(values.count())
 }
 )";
-  const std::string srcPath = writeTemp("compile_dump_ast_semantic_experimental_soa_vector_count.prime", source);
+  const std::string srcPath = writeTemp("compile_dump_ast_semantic_experimental_soa_count.prime", source);
   const std::string outPath =
-      (testScratchPath("") / "primec_dump_ast_semantic_experimental_soa_vector_count.txt").string();
+      (testScratchPath("") / "primec_dump_ast_semantic_experimental_soa_count.txt").string();
 
   const std::string dumpCmd =
       "./primec " + quoteShellArg(srcPath) + " --dump-stage ast-semantic > " + quoteShellArg(outPath);
@@ -153,17 +153,17 @@ main() {
       ast.find("[public, return<i32>] /std/collections/soa/SoaVector__");
   CHECK(countPos != std::string::npos);
   CHECK(ast.find("/count()", countPos) != std::string::npos);
-  CHECK(ast.find("/std/collections/internal_soa_storage/soaColumnCount", countPos) !=
+  CHECK(ast.find("/std/collections/soa_storage/soaColumnCount", countPos) !=
         std::string::npos);
   CHECK(ast.find("this.storage", countPos) != std::string::npos);
   CHECK(ast.find("countValue", countPos) == std::string::npos);
-  CHECK(ast.find("/soa_vector/count(this.storage)", countPos) == std::string::npos);
+  CHECK(ast.find("/soa/count(this.storage)", countPos) == std::string::npos);
 }
 
-TEST_CASE("dump ast-semantic keeps canonical soa_vector get helper path compatibility") {
+TEST_CASE("dump ast-semantic keeps canonical soa get helper path compatibility") {
   const std::string source = R"(
 import /std/collections/soa/*
-import /std/collections/internal_soa_vector/*
+import /std/collections/internal_soa/*
 
 [struct reflect]
 Particle() {
@@ -173,12 +173,12 @@ Particle() {
 [effects(heap_alloc), return<int>]
 main() {
   [SoaVector<Particle>] values{soaVectorSingle<Particle>(Particle(7i32))}
-  return(/std/collections/soa_vector/get<Particle>(values, 0i32).x)
+  return(/std/collections/soa/get<Particle>(values, 0i32).x)
 }
 )";
-  const std::string srcPath = writeTemp("compile_dump_ast_semantic_canonical_soa_vector_get.prime", source);
+  const std::string srcPath = writeTemp("compile_dump_ast_semantic_canonical_soa_get.prime", source);
   const std::string outPath =
-      (testScratchPath("") / "primec_dump_ast_semantic_canonical_soa_vector_get.txt").string();
+      (testScratchPath("") / "primec_dump_ast_semantic_canonical_soa_get.txt").string();
 
   const std::string dumpCmd =
       "./primec " + quoteShellArg(srcPath) + " --dump-stage ast-semantic > " + quoteShellArg(outPath);
@@ -186,15 +186,15 @@ main() {
   const std::string ast = readFile(outPath);
   const size_t mainPos = ast.find("/main()");
   CHECK(mainPos != std::string::npos);
-  CHECK(ast.find("/std/collections/soa_vector/get__", mainPos) != std::string::npos);
-  CHECK(ast.find("return /std/collections/soa_vector/get__", mainPos) != std::string::npos);
+  CHECK(ast.find("/std/collections/soa/get__", mainPos) != std::string::npos);
+  CHECK(ast.find("return /std/collections/soa/get__", mainPos) != std::string::npos);
 }
 
-TEST_CASE("dump ast-semantic rewrites bare soa_vector get helper on helper return compatibility") {
+TEST_CASE("dump ast-semantic rewrites bare soa get helper on helper return compatibility") {
   const std::string source = R"(
 import /std/collections/*
 import /std/collections/soa/*
-import /std/collections/internal_soa_vector/*
+import /std/collections/internal_soa/*
 
 [struct reflect]
 Particle() {
@@ -212,9 +212,9 @@ main() {
 }
 )";
   const std::string srcPath =
-      writeTemp("compile_dump_ast_semantic_experimental_soa_vector_get_helper_return.prime", source);
+      writeTemp("compile_dump_ast_semantic_experimental_soa_get_helper_return.prime", source);
   const std::string outPath =
-      (testScratchPath("") / "primec_dump_ast_semantic_experimental_soa_vector_get_helper_return.txt")
+      (testScratchPath("") / "primec_dump_ast_semantic_experimental_soa_get_helper_return.txt")
           .string();
 
   const std::string dumpCmd =
@@ -223,18 +223,18 @@ main() {
   const std::string ast = readFile(outPath);
   const size_t mainPos = ast.find("/main()");
   CHECK(mainPos != std::string::npos);
-  CHECK(ast.find("/std/collections/soa_vector/get_ref__", mainPos) !=
+  CHECK(ast.find("/std/collections/soa/get_ref__", mainPos) !=
         std::string::npos);
-  CHECK(ast.find("return /std/collections/soa_vector/get_ref__", mainPos) !=
+  CHECK(ast.find("return /std/collections/soa/get_ref__", mainPos) !=
         std::string::npos);
   CHECK(ast.find("return get(", mainPos) == std::string::npos);
 }
 
-TEST_CASE("dump ast-semantic rewrites global helper-return soa_vector method shadows to same-path helpers compatibility") {
+TEST_CASE("dump ast-semantic rewrites global helper-return soa method shadows to same-path helpers compatibility") {
   const std::string source = R"(
 import /std/collections/*
 import /std/collections/soa/*
-import /std/collections/internal_soa_vector/*
+import /std/collections/internal_soa/*
 
 [struct reflect]
 Particle() {
@@ -247,27 +247,27 @@ cloneValues() {
 }
 
 [return<int>]
-/soa_vector/count([SoaVector<Particle>] values) {
+/soa/count([SoaVector<Particle>] values) {
   return(11i32)
 }
 
 [return<Particle>]
-/soa_vector/get([SoaVector<Particle>] values, [int] index) {
+/soa/get([SoaVector<Particle>] values, [int] index) {
   return(Particle(23i32))
 }
 
 [return<Particle>]
-/soa_vector/ref([SoaVector<Particle>] values, [int] index) {
+/soa/ref([SoaVector<Particle>] values, [int] index) {
   return(Particle(29i32))
 }
 
 [return<int>]
-/soa_vector/push([SoaVector<Particle>] values, [Particle] value) {
+/soa/push([SoaVector<Particle>] values, [Particle] value) {
   return(value.x)
 }
 
 [return<int>]
-/soa_vector/reserve([SoaVector<Particle>] values, [int] count) {
+/soa/reserve([SoaVector<Particle>] values, [int] count) {
   return(count)
 }
 
@@ -282,11 +282,11 @@ main() {
 }
 )";
   const std::string srcPath =
-      writeTemp("compile_dump_ast_semantic_experimental_soa_vector_method_shadow_global_helper_return.prime",
+      writeTemp("compile_dump_ast_semantic_experimental_soa_method_shadow_global_helper_return.prime",
                 source);
   const std::string outPath =
       (testScratchPath("") /
-       "primec_dump_ast_semantic_experimental_soa_vector_method_shadow_global_helper_return.txt")
+       "primec_dump_ast_semantic_experimental_soa_method_shadow_global_helper_return.txt")
           .string();
 
   const std::string dumpCmd =
@@ -295,11 +295,11 @@ main() {
   const std::string ast = readFile(outPath);
   const size_t mainPos = ast.find("/main()");
   CHECK(mainPos != std::string::npos);
-  CHECK(ast.find("/soa_vector/count(", mainPos) != std::string::npos);
-  CHECK(ast.find("/soa_vector/get(", mainPos) != std::string::npos);
-  CHECK(ast.find("/soa_vector/ref(", mainPos) != std::string::npos);
-  CHECK(ast.find("/soa_vector/push(", mainPos) != std::string::npos);
-  CHECK(ast.find("/soa_vector/reserve(", mainPos) != std::string::npos);
+  CHECK(ast.find("/soa/count(", mainPos) != std::string::npos);
+  CHECK(ast.find("/soa/get(", mainPos) != std::string::npos);
+  CHECK(ast.find("/soa/ref(", mainPos) != std::string::npos);
+  CHECK(ast.find("/soa/push(", mainPos) != std::string::npos);
+  CHECK(ast.find("/soa/reserve(", mainPos) != std::string::npos);
   CHECK(ast.find(".count(", mainPos) == std::string::npos);
   CHECK(ast.find(".get(", mainPos) == std::string::npos);
   CHECK(ast.find(".ref(", mainPos) == std::string::npos);
@@ -307,11 +307,11 @@ main() {
   CHECK(ast.find(".reserve(", mainPos) == std::string::npos);
 }
 
-TEST_CASE("dump ast-semantic rewrites method-like helper-return soa_vector method shadows to same-path helpers compatibility") {
+TEST_CASE("dump ast-semantic rewrites method-like helper-return soa method shadows to same-path helpers compatibility") {
   const std::string source = R"(
 import /std/collections/*
 import /std/collections/soa/*
-import /std/collections/internal_soa_vector/*
+import /std/collections/internal_soa/*
 
 [struct reflect]
 Particle() {
@@ -327,27 +327,27 @@ Holder() {}
 }
 
 [return<int>]
-/soa_vector/count([SoaVector<Particle>] values) {
+/soa/count([SoaVector<Particle>] values) {
   return(11i32)
 }
 
 [return<Particle>]
-/soa_vector/get([SoaVector<Particle>] values, [int] index) {
+/soa/get([SoaVector<Particle>] values, [int] index) {
   return(Particle(23i32))
 }
 
 [return<Particle>]
-/soa_vector/ref([SoaVector<Particle>] values, [int] index) {
+/soa/ref([SoaVector<Particle>] values, [int] index) {
   return(Particle(29i32))
 }
 
 [return<int>]
-/soa_vector/push([SoaVector<Particle>] values, [Particle] value) {
+/soa/push([SoaVector<Particle>] values, [Particle] value) {
   return(value.x)
 }
 
 [return<int>]
-/soa_vector/reserve([SoaVector<Particle>] values, [int] count) {
+/soa/reserve([SoaVector<Particle>] values, [int] count) {
   return(count)
 }
 
@@ -363,11 +363,11 @@ main() {
 }
 )";
   const std::string srcPath =
-      writeTemp("compile_dump_ast_semantic_experimental_soa_vector_method_shadow_method_like_helper_return.prime",
+      writeTemp("compile_dump_ast_semantic_experimental_soa_method_shadow_method_like_helper_return.prime",
                 source);
   const std::string outPath =
       (testScratchPath("") /
-       "primec_dump_ast_semantic_experimental_soa_vector_method_shadow_method_like_helper_return.txt")
+       "primec_dump_ast_semantic_experimental_soa_method_shadow_method_like_helper_return.txt")
           .string();
 
   const std::string dumpCmd =
@@ -376,11 +376,11 @@ main() {
   const std::string ast = readFile(outPath);
   const size_t mainPos = ast.find("/main()");
   CHECK(mainPos != std::string::npos);
-  CHECK(ast.find("/soa_vector/count(/Holder/cloneValues(holder))", mainPos) != std::string::npos);
-  CHECK(ast.find("/soa_vector/get(/Holder/cloneValues(holder), 0)", mainPos) != std::string::npos);
-  CHECK(ast.find("/soa_vector/ref(/Holder/cloneValues(holder), 0)", mainPos) != std::string::npos);
-  CHECK(ast.find("/soa_vector/push(/Holder/cloneValues(holder), value)", mainPos) != std::string::npos);
-  CHECK(ast.find("/soa_vector/reserve(/Holder/cloneValues(holder), 37)", mainPos) != std::string::npos);
+  CHECK(ast.find("/soa/count(/Holder/cloneValues(holder))", mainPos) != std::string::npos);
+  CHECK(ast.find("/soa/get(/Holder/cloneValues(holder), 0)", mainPos) != std::string::npos);
+  CHECK(ast.find("/soa/ref(/Holder/cloneValues(holder), 0)", mainPos) != std::string::npos);
+  CHECK(ast.find("/soa/push(/Holder/cloneValues(holder), value)", mainPos) != std::string::npos);
+  CHECK(ast.find("/soa/reserve(/Holder/cloneValues(holder), 37)", mainPos) != std::string::npos);
   CHECK(ast.find(".count(", mainPos) == std::string::npos);
   CHECK(ast.find(".get(", mainPos) == std::string::npos);
   CHECK(ast.find(".ref(", mainPos) == std::string::npos);
@@ -388,10 +388,10 @@ main() {
   CHECK(ast.find(".reserve(", mainPos) == std::string::npos);
 }
 
-TEST_CASE("dump ast-semantic accepts nested struct-body soa_vector constructor-bearing helper returns compatibility") {
+TEST_CASE("dump ast-semantic accepts nested struct-body soa constructor-bearing helper returns compatibility") {
   const std::string source = R"(
 import /std/collections/soa/*
-import /std/collections/internal_soa_vector/*
+import /std/collections/internal_soa/*
 
 [struct reflect]
 Particle() {
@@ -412,11 +412,11 @@ main() {
 }
 )";
   const std::string srcPath =
-      writeTemp("compile_dump_ast_semantic_nested_struct_body_soa_vector_constructor_helper.prime",
+      writeTemp("compile_dump_ast_semantic_nested_struct_body_soa_constructor_helper.prime",
                 source);
   const std::string outPath =
       (testScratchPath("") /
-       "primec_dump_ast_semantic_nested_struct_body_soa_vector_constructor_helper.txt")
+       "primec_dump_ast_semantic_nested_struct_body_soa_constructor_helper.txt")
           .string();
 
   const std::string dumpCmd =
@@ -425,15 +425,15 @@ main() {
   const std::string ast = readFile(outPath);
   CHECK(ast.find("[return</std/collections/soa/SoaVector__") != std::string::npos);
   CHECK(ast.find("/Holder/cloneValues()") != std::string::npos);
-  CHECK(ast.find("return /std/collections/experimental_soa_vector/soaVectorSingle__") != std::string::npos);
+  CHECK(ast.find("return /std/collections/experimental_soa/soaVectorSingle__") != std::string::npos);
   CHECK(ast.find("Particle(7)") != std::string::npos);
 }
 
-TEST_CASE("dump ast-semantic rewrites nested struct-body soa_vector method shadows to same-path helpers compatibility") {
+TEST_CASE("dump ast-semantic rewrites nested struct-body soa method shadows to same-path helpers compatibility") {
   const std::string source = R"(
 import /std/collections/*
 import /std/collections/soa/*
-import /std/collections/internal_soa_vector/*
+import /std/collections/internal_soa/*
 
 [struct reflect]
 Particle() {
@@ -449,27 +449,27 @@ Holder() {
 }
 
 [return<i32>]
-/soa_vector/count([SoaVector<Particle>] values) {
+/soa/count([SoaVector<Particle>] values) {
   return(13i32)
 }
 
 [return<Particle>]
-/soa_vector/get([SoaVector<Particle>] values, [i32] index) {
+/soa/get([SoaVector<Particle>] values, [i32] index) {
   return(Particle(23i32))
 }
 
 [return<Particle>]
-/soa_vector/ref([SoaVector<Particle>] values, [i32] index) {
+/soa/ref([SoaVector<Particle>] values, [i32] index) {
   return(Particle(29i32))
 }
 
 [return<i32>]
-/soa_vector/push([SoaVector<Particle>] values, [Particle] value) {
+/soa/push([SoaVector<Particle>] values, [Particle] value) {
   return(31i32)
 }
 
 [return<i32>]
-/soa_vector/reserve([SoaVector<Particle>] values, [i32] capacity) {
+/soa/reserve([SoaVector<Particle>] values, [i32] capacity) {
   return(37i32)
 }
 
@@ -493,11 +493,11 @@ main() {
 }
 )";
   const std::string srcPath =
-      writeTemp("compile_dump_ast_semantic_nested_struct_body_soa_vector_method_shadows.prime",
+      writeTemp("compile_dump_ast_semantic_nested_struct_body_soa_method_shadows.prime",
                 source);
   const std::string outPath =
       (testScratchPath("") /
-       "primec_dump_ast_semantic_nested_struct_body_soa_vector_method_shadows.txt")
+       "primec_dump_ast_semantic_nested_struct_body_soa_method_shadows.txt")
           .string();
 
   const std::string dumpCmd =
@@ -506,11 +506,11 @@ main() {
   const std::string ast = readFile(outPath);
   const size_t mainPos = ast.find("/main()");
   CHECK(mainPos != std::string::npos);
-  CHECK(ast.find("/soa_vector/count(/Holder/cloneValues(holder))", mainPos) != std::string::npos);
-  CHECK(ast.find("/soa_vector/get(/Holder/cloneValues(holder), 0)", mainPos) != std::string::npos);
-  CHECK(ast.find("/soa_vector/ref(/Holder/cloneValues(holder), 0)", mainPos) != std::string::npos);
-  CHECK(ast.find("/soa_vector/push(/Holder/cloneValues(holder), Particle(1))", mainPos) != std::string::npos);
-  CHECK(ast.find("/soa_vector/reserve(/Holder/cloneValues(holder), 4)", mainPos) != std::string::npos);
+  CHECK(ast.find("/soa/count(/Holder/cloneValues(holder))", mainPos) != std::string::npos);
+  CHECK(ast.find("/soa/get(/Holder/cloneValues(holder), 0)", mainPos) != std::string::npos);
+  CHECK(ast.find("/soa/ref(/Holder/cloneValues(holder), 0)", mainPos) != std::string::npos);
+  CHECK(ast.find("/soa/push(/Holder/cloneValues(holder), Particle(1))", mainPos) != std::string::npos);
+  CHECK(ast.find("/soa/reserve(/Holder/cloneValues(holder), 4)", mainPos) != std::string::npos);
   CHECK(ast.find("/to_aos(/Holder/cloneValues(holder))", mainPos) != std::string::npos);
   CHECK(ast.find(".count(", mainPos) == std::string::npos);
   CHECK(ast.find(".get(", mainPos) == std::string::npos);
@@ -520,10 +520,10 @@ main() {
   CHECK(ast.find(".to_aos(", mainPos) == std::string::npos);
 }
 
-TEST_CASE("dump ast-semantic rewrites experimental soa_vector reflected field index syntax") {
+TEST_CASE("dump ast-semantic rewrites experimental soa reflected field index syntax") {
   const std::string source = R"(
 import /std/collections/soa/*
-import /std/collections/internal_soa_vector/*
+import /std/collections/internal_soa/*
 
 [struct reflect]
 Particle() {
@@ -540,9 +540,9 @@ main() {
 }
 )";
   const std::string srcPath =
-      writeTemp("compile_dump_ast_semantic_experimental_soa_vector_field_view.prime", source);
+      writeTemp("compile_dump_ast_semantic_experimental_soa_field_view.prime", source);
   const std::string outPath =
-      (testScratchPath("") / "primec_dump_ast_semantic_experimental_soa_vector_field_view.txt")
+      (testScratchPath("") / "primec_dump_ast_semantic_experimental_soa_field_view.txt")
           .string();
 
   const std::string dumpCmd =
@@ -551,17 +551,17 @@ main() {
   const std::string ast = readFile(outPath);
   const size_t mainPos = ast.find("/main()");
   CHECK(mainPos != std::string::npos);
-  CHECK(ast.find("/std/collections/soa_vector/get_ref__", mainPos) !=
+  CHECK(ast.find("/std/collections/soa/get_ref__", mainPos) !=
         std::string::npos);
   CHECK(ast.find(".y", mainPos) != std::string::npos);
   CHECK(ast.find("values.y()[", mainPos) == std::string::npos);
 }
 
-TEST_CASE("dump ast-semantic rewrites experimental soa_vector mutating field index targets to soaVectorRef") {
+TEST_CASE("dump ast-semantic rewrites experimental soa mutating field index targets to soaVectorRef") {
   const std::string source = R"(
 import /std/collections/*
 import /std/collections/soa/*
-import /std/collections/internal_soa_vector/*
+import /std/collections/internal_soa/*
 
 [struct reflect]
 Particle() {
@@ -580,11 +580,11 @@ main() {
 }
 )";
   const std::string srcPath =
-      writeTemp("compile_dump_ast_semantic_experimental_soa_vector_mutating_field_view.prime",
+      writeTemp("compile_dump_ast_semantic_experimental_soa_mutating_field_view.prime",
                 source);
   const std::string outPath =
       (testScratchPath("") /
-       "primec_dump_ast_semantic_experimental_soa_vector_mutating_field_view.txt")
+       "primec_dump_ast_semantic_experimental_soa_mutating_field_view.txt")
           .string();
 
   const std::string dumpCmd =
@@ -593,17 +593,17 @@ main() {
   const std::string ast = readFile(outPath);
   const size_t mainPos = ast.find("/main()");
   CHECK(mainPos != std::string::npos);
-  CHECK(ast.find("/std/collections/experimental_soa_vector/soaVectorRef__", mainPos) !=
+  CHECK(ast.find("/std/collections/experimental_soa/soaVectorRef__", mainPos) !=
         std::string::npos);
   CHECK(ast.find("assign(values.y()[1]", mainPos) == std::string::npos);
   CHECK(ast.find("assign(y(values)[0]", mainPos) == std::string::npos);
   CHECK(ast.find(".y", mainPos) != std::string::npos);
 }
 
-TEST_CASE("dump ast-semantic rewrites richer borrowed experimental soa_vector mutating field index targets to soaVectorRef") {
+TEST_CASE("dump ast-semantic rewrites richer borrowed experimental soa mutating field index targets to soaVectorRef") {
   const std::string source = R"(
 import /std/collections/soa/*
-import /std/collections/internal_soa_vector/*
+import /std/collections/internal_soa/*
 
 [struct reflect]
 Particle() {
@@ -628,11 +628,11 @@ main() {
 }
 )";
   const std::string srcPath = writeTemp(
-      "compile_dump_ast_semantic_experimental_soa_vector_richer_borrowed_mutating_field_view.prime",
+      "compile_dump_ast_semantic_experimental_soa_richer_borrowed_mutating_field_view.prime",
       source);
   const std::string outPath =
       (testScratchPath("") /
-       "primec_dump_ast_semantic_experimental_soa_vector_richer_borrowed_mutating_field_view.txt")
+       "primec_dump_ast_semantic_experimental_soa_richer_borrowed_mutating_field_view.txt")
           .string();
 
   const std::string dumpCmd =
@@ -641,7 +641,7 @@ main() {
   const std::string ast = readFile(outPath);
   const size_t mainPos = ast.find("/main()");
   CHECK(mainPos != std::string::npos);
-  CHECK(ast.find("/std/collections/experimental_soa_vector/soaVectorRef__", mainPos) !=
+  CHECK(ast.find("/std/collections/experimental_soa/soaVectorRef__", mainPos) !=
         std::string::npos);
   CHECK(ast.find("assign(dereference(pickBorrowed(location(values))).y()[1]", mainPos) ==
         std::string::npos);
@@ -650,10 +650,10 @@ main() {
   CHECK(ast.find(".y", mainPos) != std::string::npos);
 }
 
-TEST_CASE("dump ast-semantic rewrites method-like borrowed experimental soa_vector mutating field index targets to soaVectorRef") {
+TEST_CASE("dump ast-semantic rewrites method-like borrowed experimental soa mutating field index targets to soaVectorRef") {
   const std::string source = R"(
 import /std/collections/soa/*
-import /std/collections/internal_soa_vector/*
+import /std/collections/internal_soa/*
 
 [struct reflect]
 Particle() {
@@ -688,11 +688,11 @@ main() {
 }
 )";
   const std::string srcPath = writeTemp(
-      "compile_dump_ast_semantic_experimental_soa_vector_method_like_borrowed_mutating_field_view.prime",
+      "compile_dump_ast_semantic_experimental_soa_method_like_borrowed_mutating_field_view.prime",
       source);
   const std::string outPath =
       (testScratchPath("") /
-       "primec_dump_ast_semantic_experimental_soa_vector_method_like_borrowed_mutating_field_view.txt")
+       "primec_dump_ast_semantic_experimental_soa_method_like_borrowed_mutating_field_view.txt")
           .string();
 
   const std::string dumpCmd =
@@ -701,7 +701,7 @@ main() {
   const std::string ast = readFile(outPath);
   const size_t mainPos = ast.find("/main()");
   CHECK(mainPos != std::string::npos);
-  CHECK(ast.find("/std/collections/experimental_soa_vector/soaVectorRef__", mainPos) !=
+  CHECK(ast.find("/std/collections/experimental_soa/soaVectorRef__", mainPos) !=
         std::string::npos);
   CHECK(ast.find("assign(holder.pickBorrowed(location(values)).y()[1]", mainPos) == std::string::npos);
   CHECK(ast.find("assign(y(holder.pickBorrowed(location(values)))[0]", mainPos) == std::string::npos);
@@ -712,10 +712,10 @@ main() {
   CHECK(ast.find(".y", mainPos) != std::string::npos);
 }
 
-TEST_CASE("dump ast-semantic rewrites borrowed experimental soa_vector reflected field index syntax") {
+TEST_CASE("dump ast-semantic rewrites borrowed experimental soa reflected field index syntax") {
   const std::string source = R"(
 import /std/collections/soa/*
-import /std/collections/internal_soa_vector/*
+import /std/collections/internal_soa/*
 
 [struct reflect]
 Particle() {
@@ -733,9 +733,9 @@ main() {
 }
 )";
   const std::string srcPath =
-      writeTemp("compile_dump_ast_semantic_borrowed_experimental_soa_vector_field_view.prime", source);
+      writeTemp("compile_dump_ast_semantic_borrowed_experimental_soa_field_view.prime", source);
   const std::string outPath =
-      (testScratchPath("") / "primec_dump_ast_semantic_borrowed_experimental_soa_vector_field_view.txt")
+      (testScratchPath("") / "primec_dump_ast_semantic_borrowed_experimental_soa_field_view.txt")
           .string();
 
   const std::string dumpCmd =
@@ -744,16 +744,16 @@ main() {
   const std::string ast = readFile(outPath);
   const size_t mainPos = ast.find("/main()");
   CHECK(mainPos != std::string::npos);
-  CHECK(ast.find("/std/collections/soa_vector/get_ref__", mainPos) !=
+  CHECK(ast.find("/std/collections/soa/get_ref__", mainPos) !=
         std::string::npos);
   CHECK(ast.find(".y", mainPos) != std::string::npos);
   CHECK(ast.find("dereference(borrowed).y()[", mainPos) == std::string::npos);
 }
 
-TEST_CASE("dump ast-semantic rewrites borrowed local experimental soa_vector reflected field index syntax") {
+TEST_CASE("dump ast-semantic rewrites borrowed local experimental soa reflected field index syntax") {
   const std::string source = R"(
 import /std/collections/soa/*
-import /std/collections/internal_soa_vector/*
+import /std/collections/internal_soa/*
 
 [struct reflect]
 Particle() {
@@ -771,11 +771,11 @@ main() {
 }
 )";
   const std::string srcPath =
-      writeTemp("compile_dump_ast_semantic_borrowed_local_experimental_soa_vector_field_view.prime",
+      writeTemp("compile_dump_ast_semantic_borrowed_local_experimental_soa_field_view.prime",
                 source);
   const std::string outPath =
       (testScratchPath("") /
-       "primec_dump_ast_semantic_borrowed_local_experimental_soa_vector_field_view.txt")
+       "primec_dump_ast_semantic_borrowed_local_experimental_soa_field_view.txt")
           .string();
 
   const std::string dumpCmd =
@@ -784,16 +784,16 @@ main() {
   const std::string ast = readFile(outPath);
   const size_t mainPos = ast.find("/main()");
   CHECK(mainPos != std::string::npos);
-  CHECK(ast.find("/std/collections/soa_vector/get_ref__", mainPos) !=
+  CHECK(ast.find("/std/collections/soa/get_ref__", mainPos) !=
         std::string::npos);
   CHECK(ast.find(".y", mainPos) != std::string::npos);
   CHECK(ast.find("borrowed.y()[", mainPos) == std::string::npos);
 }
 
-TEST_CASE("dump ast-semantic rewrites borrowed helper-return experimental soa_vector reflected field index syntax") {
+TEST_CASE("dump ast-semantic rewrites borrowed helper-return experimental soa reflected field index syntax") {
   const std::string source = R"(
 import /std/collections/soa/*
-import /std/collections/internal_soa_vector/*
+import /std/collections/internal_soa/*
 
 [struct reflect]
 Particle() {
@@ -815,11 +815,11 @@ main() {
 }
 )";
   const std::string srcPath =
-      writeTemp("compile_dump_ast_semantic_borrowed_return_experimental_soa_vector_field_view.prime",
+      writeTemp("compile_dump_ast_semantic_borrowed_return_experimental_soa_field_view.prime",
                 source);
   const std::string outPath =
       (testScratchPath("") /
-       "primec_dump_ast_semantic_borrowed_return_experimental_soa_vector_field_view.txt")
+       "primec_dump_ast_semantic_borrowed_return_experimental_soa_field_view.txt")
           .string();
 
   const std::string dumpCmd =
@@ -828,16 +828,16 @@ main() {
   const std::string ast = readFile(outPath);
   const size_t mainPos = ast.find("/main()");
   CHECK(mainPos != std::string::npos);
-  CHECK(ast.find("/std/collections/soa_vector/get_ref__", mainPos) !=
+  CHECK(ast.find("/std/collections/soa/get_ref__", mainPos) !=
         std::string::npos);
   CHECK(ast.find(".y", mainPos) != std::string::npos);
   CHECK(ast.find("pickBorrowed(location(values)).y()[", mainPos) == std::string::npos);
 }
 
-TEST_CASE("dump ast-semantic rewrites experimental soa_vector reflected call-form field index syntax") {
+TEST_CASE("dump ast-semantic rewrites experimental soa reflected call-form field index syntax") {
   const std::string source = R"(
 import /std/collections/soa/*
-import /std/collections/internal_soa_vector/*
+import /std/collections/internal_soa/*
 
 [struct reflect]
 Particle() {
@@ -872,10 +872,10 @@ main() {
 }
 )";
   const std::string srcPath =
-      writeTemp("compile_dump_ast_semantic_call_form_experimental_soa_vector_field_view.prime", source);
+      writeTemp("compile_dump_ast_semantic_call_form_experimental_soa_field_view.prime", source);
   const std::string outPath =
       (testScratchPath("") /
-       "primec_dump_ast_semantic_call_form_experimental_soa_vector_field_view.txt")
+       "primec_dump_ast_semantic_call_form_experimental_soa_field_view.txt")
           .string();
 
   const std::string dumpCmd =
@@ -884,7 +884,7 @@ main() {
   const std::string ast = readFile(outPath);
   const size_t mainPos = ast.find("/main()");
   CHECK(mainPos != std::string::npos);
-  CHECK(ast.find("/std/collections/soa_vector/get_ref__", mainPos) !=
+  CHECK(ast.find("/std/collections/soa/get_ref__", mainPos) !=
         std::string::npos);
   CHECK(ast.find(".y", mainPos) != std::string::npos);
   CHECK(ast.find("y(values)[", mainPos) == std::string::npos);
@@ -893,10 +893,10 @@ main() {
   CHECK(ast.find("y(dereference(pickBorrowed(location(values))))[", mainPos) == std::string::npos);
 }
 
-TEST_CASE("dump ast-semantic rewrites experimental soa_vector inline location borrow field index syntax") {
+TEST_CASE("dump ast-semantic rewrites experimental soa inline location borrow field index syntax") {
   const std::string source = R"(
 import /std/collections/soa/*
-import /std/collections/internal_soa_vector/*
+import /std/collections/internal_soa/*
 
 [struct reflect]
 Particle() {
@@ -925,11 +925,11 @@ main() {
 }
 )";
   const std::string srcPath =
-      writeTemp("compile_dump_ast_semantic_inline_location_experimental_soa_vector_field_view.prime",
+      writeTemp("compile_dump_ast_semantic_inline_location_experimental_soa_field_view.prime",
                 source);
   const std::string outPath =
       (testScratchPath("") /
-       "primec_dump_ast_semantic_inline_location_experimental_soa_vector_field_view.txt")
+       "primec_dump_ast_semantic_inline_location_experimental_soa_field_view.txt")
           .string();
 
   const std::string dumpCmd =
@@ -938,7 +938,7 @@ main() {
   const std::string ast = readFile(outPath);
   const size_t mainPos = ast.find("/main()");
   CHECK(mainPos != std::string::npos);
-  CHECK(ast.find("/std/collections/soa_vector/get_ref__", mainPos) !=
+  CHECK(ast.find("/std/collections/soa/get_ref__", mainPos) !=
         std::string::npos);
   CHECK(ast.find(".y", mainPos) != std::string::npos);
   CHECK(ast.find("location(values).y()[", mainPos) == std::string::npos);
@@ -947,10 +947,10 @@ main() {
   CHECK(ast.find("y(dereference(location(values)))[", mainPos) == std::string::npos);
 }
 
-TEST_CASE("dump ast-semantic rewrites dereferenced borrowed helper-return experimental soa_vector reflected field index syntax") {
+TEST_CASE("dump ast-semantic rewrites dereferenced borrowed helper-return experimental soa reflected field index syntax") {
   const std::string source = R"(
 import /std/collections/soa/*
-import /std/collections/internal_soa_vector/*
+import /std/collections/internal_soa/*
 
 [struct reflect]
 Particle() {
@@ -972,11 +972,11 @@ main() {
 }
 )";
   const std::string srcPath = writeTemp(
-      "compile_dump_ast_semantic_dereferenced_borrowed_return_experimental_soa_vector_field_view.prime",
+      "compile_dump_ast_semantic_dereferenced_borrowed_return_experimental_soa_field_view.prime",
       source);
   const std::string outPath =
       (testScratchPath("") /
-       "primec_dump_ast_semantic_dereferenced_borrowed_return_experimental_soa_vector_field_view.txt")
+       "primec_dump_ast_semantic_dereferenced_borrowed_return_experimental_soa_field_view.txt")
           .string();
 
   const std::string dumpCmd =
@@ -985,16 +985,16 @@ main() {
   const std::string ast = readFile(outPath);
   const size_t mainPos = ast.find("/main()");
   CHECK(mainPos != std::string::npos);
-  CHECK(ast.find("/std/collections/soa_vector/get_ref__", mainPos) !=
+  CHECK(ast.find("/std/collections/soa/get_ref__", mainPos) !=
         std::string::npos);
 CHECK(ast.find(".y", mainPos) != std::string::npos);
 CHECK(ast.find("dereference(pickBorrowed(location(values))).y()[", mainPos) == std::string::npos);
 }
 
-TEST_CASE("dump ast-semantic rewrites method-like borrowed helper-return experimental soa_vector helpers") {
+TEST_CASE("dump ast-semantic rewrites method-like borrowed helper-return experimental soa helpers") {
   const std::string source = R"(
 import /std/collections/soa/*
-import /std/collections/internal_soa_vector/*
+import /std/collections/internal_soa/*
 
 [struct reflect]
 Particle() {
@@ -1027,11 +1027,11 @@ main() {
 }
 )";
   const std::string srcPath = writeTemp(
-      "compile_dump_ast_semantic_method_like_borrowed_return_experimental_soa_vector_helpers.prime",
+      "compile_dump_ast_semantic_method_like_borrowed_return_experimental_soa_helpers.prime",
       source);
   const std::string outPath =
       (testScratchPath("") /
-       "primec_dump_ast_semantic_method_like_borrowed_return_experimental_soa_vector_helpers.txt")
+       "primec_dump_ast_semantic_method_like_borrowed_return_experimental_soa_helpers.txt")
           .string();
 
   const std::string dumpCmd =
@@ -1047,20 +1047,20 @@ main() {
   CHECK(ast.find("/Holder/pickBorrowed(holder, location(values))", mainPos) != std::string::npos);
   CHECK(ast.find("holder.pickBorrowed(location(values)).y()[", mainPos) == std::string::npos);
   CHECK(ast.find("y(holder.pickBorrowed(location(values)))[", mainPos) == std::string::npos);
-  CHECK(ast.find("/std/collections/soa_vector/get_ref__", mainPos) !=
+  CHECK(ast.find("/std/collections/soa/get_ref__", mainPos) !=
         std::string::npos);
-  CHECK(ast.find("/std/collections/soa_vector/ref_ref__", mainPos) !=
+  CHECK(ast.find("/std/collections/soa/ref_ref__", mainPos) !=
         std::string::npos);
   CHECK(ast.find(".y", mainPos) != std::string::npos);
 }
 
-TEST_CASE("dump ast-semantic rewrites inline location method-like borrowed helper-return experimental soa_vector helpers") {
+TEST_CASE("dump ast-semantic rewrites inline location method-like borrowed helper-return experimental soa helpers") {
   const std::string source = R"(
 import /std/collections/*
 import /std/collections/soa/*
-import /std/collections/internal_soa_vector/*
+import /std/collections/internal_soa/*
 import /std/collections/soa/*
-import /std/collections/internal_soa_vector_conversions/*
+import /std/collections/internal_soa_conversions/*
 
 [struct reflect]
 Particle() {
@@ -1113,11 +1113,11 @@ main() {
 }
 )";
   const std::string srcPath = writeTemp(
-      "compile_dump_ast_semantic_inline_location_method_like_borrowed_return_experimental_soa_vector_helpers.prime",
+      "compile_dump_ast_semantic_inline_location_method_like_borrowed_return_experimental_soa_helpers.prime",
       source);
   const std::string outPath =
       (testScratchPath("") /
-       "primec_dump_ast_semantic_inline_location_method_like_borrowed_return_experimental_soa_vector_helpers.txt")
+       "primec_dump_ast_semantic_inline_location_method_like_borrowed_return_experimental_soa_helpers.txt")
           .string();
 
   const std::string dumpCmd =
@@ -1153,24 +1153,24 @@ main() {
         std::string::npos);
   CHECK(ast.find("/Holder/pickBorrowed(holder, location(values))", mainPos) !=
         std::string::npos);
-  CHECK(ast.find("/std/collections/soa_vector/count_ref__", mainPos) !=
+  CHECK(ast.find("/std/collections/soa/count_ref__", mainPos) !=
         std::string::npos);
-  CHECK(ast.find("/std/collections/soa_vector/to_aos_ref__", mainPos) !=
+  CHECK(ast.find("/std/collections/soa/to_aos_ref__", mainPos) !=
         std::string::npos);
-  CHECK(ast.find("/std/collections/soa_vector/get_ref__", mainPos) !=
+  CHECK(ast.find("/std/collections/soa/get_ref__", mainPos) !=
         std::string::npos);
-  CHECK(ast.find("/std/collections/soa_vector/ref_ref__", mainPos) !=
+  CHECK(ast.find("/std/collections/soa/ref_ref__", mainPos) !=
         std::string::npos);
   CHECK(ast.find(".y", mainPos) != std::string::npos);
 }
 
-TEST_CASE("dump ast-semantic rewrites direct return method-like borrowed helper-return experimental soa_vector reads") {
+TEST_CASE("dump ast-semantic rewrites direct return method-like borrowed helper-return experimental soa reads") {
   const std::string source = R"(
 import /std/collections/*
 import /std/collections/soa/*
-import /std/collections/internal_soa_vector/*
+import /std/collections/internal_soa/*
 import /std/collections/soa/*
-import /std/collections/internal_soa_vector_conversions/*
+import /std/collections/internal_soa_conversions/*
 
 [struct reflect]
 Particle() {
@@ -1226,23 +1226,23 @@ main() {
   CHECK(ast.find("y(holder.pickBorrowed(location(values)))[", mainPos) == std::string::npos);
   CHECK(ast.find("/Holder/pickBorrowed(holder, location(values))", mainPos) !=
         std::string::npos);
-  CHECK(ast.find("/std/collections/soa_vector/count_ref__", mainPos) !=
+  CHECK(ast.find("/std/collections/soa/count_ref__", mainPos) !=
         std::string::npos);
-  CHECK(ast.find("/std/collections/soa_vector/to_aos_ref__", mainPos) !=
+  CHECK(ast.find("/std/collections/soa/to_aos_ref__", mainPos) !=
         std::string::npos);
-  CHECK(ast.find("/std/collections/soa_vector/get_ref__", mainPos) !=
+  CHECK(ast.find("/std/collections/soa/get_ref__", mainPos) !=
         std::string::npos);
-  CHECK(ast.find("/std/collections/soa_vector/ref_ref__", mainPos) !=
+  CHECK(ast.find("/std/collections/soa/ref_ref__", mainPos) !=
         std::string::npos);
 }
 
-TEST_CASE("dump ast-semantic rewrites direct return borrowed helper-return experimental soa_vector reads") {
+TEST_CASE("dump ast-semantic rewrites direct return borrowed helper-return experimental soa reads") {
   const std::string source = R"(
 import /std/collections/*
 import /std/collections/soa/*
-import /std/collections/internal_soa_vector/*
+import /std/collections/internal_soa/*
 import /std/collections/soa/*
-import /std/collections/internal_soa_vector_conversions/*
+import /std/collections/internal_soa_conversions/*
 
 [struct reflect]
 Particle() {
@@ -1292,13 +1292,13 @@ main() {
   CHECK(ast.find("pickBorrowed(location(values)).y()[", mainPos) == std::string::npos);
   CHECK(ast.find("y(pickBorrowed(location(values)))[", mainPos) == std::string::npos);
   CHECK(ast.find("/pickBorrowed(location(values))", mainPos) != std::string::npos);
-  CHECK(ast.find("/std/collections/soa_vector/count_ref__", mainPos) !=
+  CHECK(ast.find("/std/collections/soa/count_ref__", mainPos) !=
         std::string::npos);
-  CHECK(ast.find("/std/collections/soa_vector/to_aos_ref__", mainPos) !=
+  CHECK(ast.find("/std/collections/soa/to_aos_ref__", mainPos) !=
         std::string::npos);
-  CHECK(ast.find("/std/collections/soa_vector/get_ref__", mainPos) !=
+  CHECK(ast.find("/std/collections/soa/get_ref__", mainPos) !=
         std::string::npos);
-  CHECK(ast.find("/std/collections/soa_vector/ref_ref__", mainPos) !=
+  CHECK(ast.find("/std/collections/soa/ref_ref__", mainPos) !=
         std::string::npos);
 }
 
@@ -1306,9 +1306,9 @@ TEST_CASE("dump ast-semantic rewrites direct return inline location method-like 
   const std::string source = R"(
 import /std/collections/*
 import /std/collections/soa/*
-import /std/collections/internal_soa_vector/*
+import /std/collections/internal_soa/*
 import /std/collections/soa/*
-import /std/collections/internal_soa_vector_conversions/*
+import /std/collections/internal_soa_conversions/*
 
 [struct reflect]
 Particle() {
@@ -1371,23 +1371,23 @@ main() {
         std::string::npos);
   CHECK(ast.find("/Holder/pickBorrowed(holder, location(values))", mainPos) !=
         std::string::npos);
-  CHECK(ast.find("/std/collections/soa_vector/count_ref__", mainPos) !=
+  CHECK(ast.find("/std/collections/soa/count_ref__", mainPos) !=
         std::string::npos);
-  CHECK(ast.find("/std/collections/soa_vector/to_aos_ref__", mainPos) !=
+  CHECK(ast.find("/std/collections/soa/to_aos_ref__", mainPos) !=
         std::string::npos);
-  CHECK(ast.find("/std/collections/soa_vector/get_ref__", mainPos) !=
+  CHECK(ast.find("/std/collections/soa/get_ref__", mainPos) !=
         std::string::npos);
-  CHECK(ast.find("/std/collections/soa_vector/ref_ref__", mainPos) !=
+  CHECK(ast.find("/std/collections/soa/ref_ref__", mainPos) !=
         std::string::npos);
 }
 
-TEST_CASE("dump ast-semantic rewrites direct return inline location borrowed helper-return experimental soa_vector reads") {
+TEST_CASE("dump ast-semantic rewrites direct return inline location borrowed helper-return experimental soa reads") {
   const std::string source = R"(
 import /std/collections/*
 import /std/collections/soa/*
-import /std/collections/internal_soa_vector/*
+import /std/collections/internal_soa/*
 import /std/collections/soa/*
-import /std/collections/internal_soa_vector_conversions/*
+import /std/collections/internal_soa_conversions/*
 
 [struct reflect]
 Particle() {
@@ -1441,17 +1441,17 @@ main() {
   CHECK(ast.find("y(dereference(location(pickBorrowed(location(values)))))[", mainPos) ==
         std::string::npos);
   CHECK(ast.find("/pickBorrowed(location(values))", mainPos) != std::string::npos);
-  CHECK(ast.find("/std/collections/soa_vector/count_ref__", mainPos) !=
+  CHECK(ast.find("/std/collections/soa/count_ref__", mainPos) !=
         std::string::npos);
-  CHECK(ast.find("/std/collections/soa_vector/to_aos_ref__", mainPos) !=
+  CHECK(ast.find("/std/collections/soa/to_aos_ref__", mainPos) !=
         std::string::npos);
-  CHECK(ast.find("/std/collections/soa_vector/get_ref__", mainPos) !=
+  CHECK(ast.find("/std/collections/soa/get_ref__", mainPos) !=
         std::string::npos);
-  CHECK(ast.find("/std/collections/soa_vector/ref_ref__", mainPos) !=
+  CHECK(ast.find("/std/collections/soa/ref_ref__", mainPos) !=
         std::string::npos);
 }
 
-TEST_CASE("dump ast-semantic rewrites builtin soa_vector count forms to canonical helper path") {
+TEST_CASE("dump ast-semantic rewrites builtin soa count forms to canonical helper path") {
   const std::string source = R"(
 [struct reflect]
 Particle() {
@@ -1460,14 +1460,14 @@ Particle() {
 
 [return<int>]
 main() {
-  [soa_vector<Particle>] values{soa_vector<Particle>()}
-  [int] total{plus(count(values), plus(/soa_vector/count(values), values./soa_vector/count()))}
+  [soa<Particle>] values{soa<Particle>()}
+  [int] total{plus(count(values), plus(/soa/count(values), values./soa/count()))}
   return(total)
 }
 )";
-  const std::string srcPath = writeTemp("compile_dump_ast_semantic_builtin_soa_vector_count.prime", source);
+  const std::string srcPath = writeTemp("compile_dump_ast_semantic_builtin_soa_count.prime", source);
   const std::string outPath =
-      (testScratchPath("") / "primec_dump_ast_semantic_builtin_soa_vector_count.txt").string();
+      (testScratchPath("") / "primec_dump_ast_semantic_builtin_soa_count.txt").string();
 
   const std::string dumpCmd =
       "./primec " + quoteShellArg(srcPath) + " --dump-stage ast-semantic > " + quoteShellArg(outPath);
@@ -1475,13 +1475,13 @@ main() {
   const std::string ast = readFile(outPath);
   const size_t mainPos = ast.find("/main()");
   CHECK(mainPos != std::string::npos);
-  CHECK(ast.find("/std/collections/soa_vector/count__", mainPos) != std::string::npos);
-  CHECK(ast.find("return /std/collections/soa_vector/count__", mainPos) == std::string::npos);
-  CHECK(ast.find("/soa_vector/count(values)", mainPos) == std::string::npos);
-  CHECK(ast.find("values./soa_vector/count()", mainPos) == std::string::npos);
+  CHECK(ast.find("/std/collections/soa/count__", mainPos) != std::string::npos);
+  CHECK(ast.find("return /std/collections/soa/count__", mainPos) == std::string::npos);
+  CHECK(ast.find("/soa/count(values)", mainPos) == std::string::npos);
+  CHECK(ast.find("values./soa/count()", mainPos) == std::string::npos);
 }
 
-TEST_CASE("dump ast-semantic rewrites imported builtin soa_vector to_aos forms to canonical helper path") {
+TEST_CASE("dump ast-semantic rewrites imported builtin soa to_aos forms to canonical helper path") {
   const std::string source = R"(
 import /std/collections/*
 
@@ -1492,15 +1492,15 @@ Particle() {
 
 [return<int>]
 main() {
-  [soa_vector<Particle>] values{soa_vector<Particle>()}
+  [soa<Particle>] values{soa<Particle>()}
   [vector<Particle>] unpackedA{to_aos(values)}
   [vector<Particle>] unpackedB{values.to_aos()}
   return(0i32)
 }
 )";
-  const std::string srcPath = writeTemp("compile_dump_ast_semantic_builtin_soa_vector_to_aos.prime", source);
+  const std::string srcPath = writeTemp("compile_dump_ast_semantic_builtin_soa_to_aos.prime", source);
   const std::string outPath =
-      (testScratchPath("") / "primec_dump_ast_semantic_builtin_soa_vector_to_aos.txt").string();
+      (testScratchPath("") / "primec_dump_ast_semantic_builtin_soa_to_aos.txt").string();
 
   const std::string dumpCmd =
       "./primec " + quoteShellArg(srcPath) + " --dump-stage ast-semantic > " + quoteShellArg(outPath);
@@ -1508,14 +1508,14 @@ main() {
   const std::string ast = readFile(outPath);
   const size_t mainPos = ast.find("/main()");
   CHECK(mainPos != std::string::npos);
-  CHECK(ast.find("/std/collections/soa_vector/to_aos__", mainPos) != std::string::npos);
-  CHECK(ast.find("/std/collections/experimental_soa_vector_conversions/soaVectorToAos__", mainPos) ==
+  CHECK(ast.find("/std/collections/soa/to_aos__", mainPos) != std::string::npos);
+  CHECK(ast.find("/std/collections/experimental_soa_conversions/soaVectorToAos__", mainPos) ==
         std::string::npos);
   CHECK(ast.find("/to_aos(values)", mainPos) == std::string::npos);
   CHECK(ast.find("values.to_aos()", mainPos) == std::string::npos);
 }
 
-TEST_CASE("dump ast-semantic rewrites no-import builtin soa_vector to_aos forms to canonical helper path") {
+TEST_CASE("dump ast-semantic rewrites no-import builtin soa to_aos forms to canonical helper path") {
   const std::string source = R"(
 [struct reflect]
 Particle() {
@@ -1524,16 +1524,16 @@ Particle() {
 
 [return<int>]
 main() {
-  [soa_vector<Particle>] values{soa_vector<Particle>()}
+  [soa<Particle>] values{soa<Particle>()}
   [vector<Particle>] unpackedA{to_aos(values)}
   [vector<Particle>] unpackedB{values.to_aos()}
   return(0i32)
 }
 )";
   const std::string srcPath =
-      writeTemp("compile_dump_ast_semantic_root_builtin_soa_vector_to_aos.prime", source);
+      writeTemp("compile_dump_ast_semantic_root_builtin_soa_to_aos.prime", source);
   const std::string outPath =
-      (testScratchPath("") / "primec_dump_ast_semantic_root_builtin_soa_vector_to_aos.txt").string();
+      (testScratchPath("") / "primec_dump_ast_semantic_root_builtin_soa_to_aos.txt").string();
 
   const std::string dumpCmd =
       "./primec " + quoteShellArg(srcPath) + " --dump-stage ast-semantic > " + quoteShellArg(outPath);
@@ -1541,8 +1541,8 @@ main() {
   const std::string ast = readFile(outPath);
   const size_t mainPos = ast.find("/main()");
   CHECK(mainPos != std::string::npos);
-  CHECK(ast.find("/std/collections/soa_vector/to_aos__", mainPos) != std::string::npos);
-  CHECK(ast.find("/std/collections/experimental_soa_vector_conversions/soaVectorToAos__", mainPos) ==
+  CHECK(ast.find("/std/collections/soa/to_aos__", mainPos) != std::string::npos);
+  CHECK(ast.find("/std/collections/experimental_soa_conversions/soaVectorToAos__", mainPos) ==
         std::string::npos);
   CHECK(ast.find("to_aos(values)", mainPos) == std::string::npos);
   CHECK(ast.find("/to_aos(values)", mainPos) == std::string::npos);
@@ -1592,20 +1592,20 @@ main() {
 TEST_CASE("dump ast-semantic rewrites vector-target old-explicit mutator shadows to direct helper path") {
   const std::string source = R"(
 [return<int>]
-/soa_vector/push([vector<i32>] values, [i32] value) {
+/soa/push([vector<i32>] values, [i32] value) {
   return(value)
 }
 
 [return<int>]
-/soa_vector/reserve([vector<i32>] values, [i32] count) {
+/soa/reserve([vector<i32>] values, [i32] count) {
   return(count)
 }
 
 [effects(heap_alloc), return<int>]
 main() {
   [vector<i32>] values{vector<i32>(1i32, 2i32, 3i32)}
-  [int] pushed{values./soa_vector/push(4i32)}
-  [int] reserved{values./soa_vector/reserve(6i32)}
+  [int] pushed{values./soa/push(4i32)}
+  [int] reserved{values./soa/reserve(6i32)}
   return(plus(pushed, reserved))
 }
 )";
@@ -1620,21 +1620,21 @@ main() {
   const std::string ast = readFile(outPath);
   const size_t mainPos = ast.find("/main()");
   CHECK(mainPos != std::string::npos);
-  CHECK(ast.find("[int] pushed{/soa_vector/push(values, 4)}", mainPos) != std::string::npos);
-  CHECK(ast.find("[int] reserved{/soa_vector/reserve(values, 6)}", mainPos) != std::string::npos);
-  CHECK(ast.find("values./soa_vector/push(4)", mainPos) == std::string::npos);
-  CHECK(ast.find("values./soa_vector/reserve(6)", mainPos) == std::string::npos);
+  CHECK(ast.find("[int] pushed{/soa/push(values, 4)}", mainPos) != std::string::npos);
+  CHECK(ast.find("[int] reserved{/soa/reserve(values, 6)}", mainPos) != std::string::npos);
+  CHECK(ast.find("values./soa/push(4)", mainPos) == std::string::npos);
+  CHECK(ast.find("values./soa/reserve(6)", mainPos) == std::string::npos);
 }
 
 TEST_CASE("dump ast-semantic rewrites vector-target method mutator shadows to direct helper path") {
   const std::string source = R"(
 [return<int>]
-/soa_vector/push([vector<i32>] values, [i32] value) {
+/soa/push([vector<i32>] values, [i32] value) {
   return(value)
 }
 
 [return<int>]
-/soa_vector/reserve([vector<i32>] values, [i32] count) {
+/soa/reserve([vector<i32>] values, [i32] count) {
   return(count)
 }
 
@@ -1657,17 +1657,17 @@ main() {
   const std::string ast = readFile(outPath);
   const size_t mainPos = ast.find("/main()");
   CHECK(mainPos != std::string::npos);
-  CHECK(ast.find("[int] pushed{/soa_vector/push(values, 4)}", mainPos) != std::string::npos);
-  CHECK(ast.find("[int] reserved{/soa_vector/reserve(values, 6)}", mainPos) != std::string::npos);
+  CHECK(ast.find("[int] pushed{/soa/push(values, 4)}", mainPos) != std::string::npos);
+  CHECK(ast.find("[int] reserved{/soa/reserve(values, 6)}", mainPos) != std::string::npos);
   CHECK(ast.find("values.push(4)", mainPos) == std::string::npos);
   CHECK(ast.find("values.reserve(6)", mainPos) == std::string::npos);
 }
 
-TEST_CASE("dump ast-semantic keeps direct canonical experimental soa_vector to_aos helper path") {
+TEST_CASE("dump ast-semantic keeps direct canonical experimental soa to_aos helper path") {
   const std::string source = R"(
 import /std/collections/*
 import /std/collections/soa/*
-import /std/collections/internal_soa_vector/*
+import /std/collections/internal_soa/*
 
 [struct reflect]
 Particle() {
@@ -1677,14 +1677,14 @@ Particle() {
 [effects(heap_alloc), return<int>]
 main() {
   [SoaVector<Particle>] values{soaVectorSingle<Particle>(Particle(7i32))}
-  [vector<Particle>] unpacked{/std/collections/soa_vector/to_aos<Particle>(values)}
+  [vector<Particle>] unpacked{/std/collections/soa/to_aos<Particle>(values)}
   return(count(unpacked))
 }
 )";
   const std::string srcPath =
-      writeTemp("compile_dump_ast_semantic_direct_canonical_experimental_soa_vector_to_aos.prime", source);
+      writeTemp("compile_dump_ast_semantic_direct_canonical_experimental_soa_to_aos.prime", source);
   const std::string outPath =
-      (testScratchPath("") / "primec_dump_ast_semantic_direct_canonical_experimental_soa_vector_to_aos.txt")
+      (testScratchPath("") / "primec_dump_ast_semantic_direct_canonical_experimental_soa_to_aos.txt")
           .string();
 
   const std::string dumpCmd =
@@ -1693,17 +1693,17 @@ main() {
   const std::string ast = readFile(outPath);
   const size_t mainPos = ast.find("/main()");
   CHECK(mainPos != std::string::npos);
-  CHECK(ast.find("/std/collections/soa_vector/to_aos__", mainPos) != std::string::npos);
-  CHECK(ast.find("/std/collections/experimental_soa_vector_conversions/soaVectorToAos__", mainPos) ==
+  CHECK(ast.find("/std/collections/soa/to_aos__", mainPos) != std::string::npos);
+  CHECK(ast.find("/std/collections/experimental_soa_conversions/soaVectorToAos__", mainPos) ==
         std::string::npos);
 }
 
-TEST_CASE("dump ast-semantic canonical soa_vector to_aos helper body uses canonical count/get loop compatibility") {
+TEST_CASE("dump ast-semantic canonical soa to_aos helper body uses canonical count/get loop compatibility") {
   const std::string source = R"(
 import /std/collections/*
 import /std/collections/soa/*
 import /std/collections/soa/*
-import /std/collections/internal_soa_vector_conversions/*
+import /std/collections/internal_soa_conversions/*
 
 [struct reflect]
 Particle() {
@@ -1713,37 +1713,37 @@ Particle() {
 [effects(heap_alloc), return<int>]
 main() {
   [auto] values{soaVectorSingle<Particle>(Particle(7i32))}
-  [vector<Particle>] unpacked{/std/collections/soa_vector/to_aos<Particle>(values)}
+  [vector<Particle>] unpacked{/std/collections/soa/to_aos<Particle>(values)}
   return(count(unpacked))
 }
 )";
   const std::string srcPath =
-      writeTemp("compile_dump_ast_semantic_canonical_soa_vector_to_aos_body.prime", source);
+      writeTemp("compile_dump_ast_semantic_canonical_soa_to_aos_body.prime", source);
   const std::string outPath =
-      (testScratchPath("") / "primec_dump_ast_semantic_canonical_soa_vector_to_aos_body.txt").string();
+      (testScratchPath("") / "primec_dump_ast_semantic_canonical_soa_to_aos_body.txt").string();
 
   const std::string dumpCmd =
       "./primec " + quoteShellArg(srcPath) + " --dump-stage ast-semantic > " + quoteShellArg(outPath);
   CHECK(runCommand(dumpCmd) == 0);
   const std::string ast = readFile(outPath);
-  const size_t helperPos = ast.find("/std/collections/soa_vector/to_aos__");
+  const size_t helperPos = ast.find("/std/collections/soa/to_aos__");
   const size_t mainPos = ast.find("/main()");
   REQUIRE(helperPos != std::string::npos);
   REQUIRE(mainPos != std::string::npos);
   REQUIRE(helperPos < mainPos);
   const std::string helperBlock = ast.substr(helperPos, mainPos - helperPos);
-  CHECK(helperBlock.find("/std/collections/soa_vector/count__") != std::string::npos);
-  CHECK(helperBlock.find("/std/collections/soa_vector/get__") != std::string::npos);
-  CHECK(helperBlock.find("/std/collections/experimental_soa_vector_conversions/soaVectorToAos__") ==
+  CHECK(helperBlock.find("/std/collections/soa/count__") != std::string::npos);
+  CHECK(helperBlock.find("/std/collections/soa/get__") != std::string::npos);
+  CHECK(helperBlock.find("/std/collections/experimental_soa_conversions/soaVectorToAos__") ==
         std::string::npos);
 }
 
-TEST_CASE("dump ast-semantic canonical soa_vector to_aos_ref helper body uses canonical count_ref/get_ref loop compatibility") {
+TEST_CASE("dump ast-semantic canonical soa to_aos_ref helper body uses canonical count_ref/get_ref loop compatibility") {
   const std::string source = R"(
 import /std/collections/*
 import /std/collections/soa/*
 import /std/collections/soa/*
-import /std/collections/internal_soa_vector_conversions/*
+import /std/collections/internal_soa_conversions/*
 
 [struct reflect]
 Particle() {
@@ -1754,37 +1754,37 @@ Particle() {
 main() {
   [auto mut] values{soaVectorNew<Particle>()}
   values.push(Particle(7i32))
-  [vector<Particle>] unpacked{/std/collections/soa_vector/to_aos_ref<Particle>(location(values))}
+  [vector<Particle>] unpacked{/std/collections/soa/to_aos_ref<Particle>(location(values))}
   return(count(unpacked))
 }
 )";
   const std::string srcPath =
-      writeTemp("compile_dump_ast_semantic_canonical_soa_vector_to_aos_ref_body.prime", source);
+      writeTemp("compile_dump_ast_semantic_canonical_soa_to_aos_ref_body.prime", source);
   const std::string outPath =
-      (testScratchPath("") / "primec_dump_ast_semantic_canonical_soa_vector_to_aos_ref_body.txt").string();
+      (testScratchPath("") / "primec_dump_ast_semantic_canonical_soa_to_aos_ref_body.txt").string();
 
   const std::string dumpCmd =
       "./primec " + quoteShellArg(srcPath) + " --dump-stage ast-semantic > " + quoteShellArg(outPath);
   CHECK(runCommand(dumpCmd) == 0);
   const std::string ast = readFile(outPath);
-  const size_t helperPos = ast.find("/std/collections/soa_vector/to_aos_ref__");
+  const size_t helperPos = ast.find("/std/collections/soa/to_aos_ref__");
   const size_t mainPos = ast.find("/main()");
   REQUIRE(helperPos != std::string::npos);
   REQUIRE(mainPos != std::string::npos);
   REQUIRE(helperPos < mainPos);
   const std::string helperBlock = ast.substr(helperPos, mainPos - helperPos);
-  CHECK(helperBlock.find("/std/collections/soa_vector/count_ref__") != std::string::npos);
-  CHECK(helperBlock.find("/std/collections/soa_vector/get_ref__") != std::string::npos);
-  CHECK(helperBlock.find("/std/collections/soa_vector/to_aos__") == std::string::npos);
-  CHECK(helperBlock.find("/std/collections/experimental_soa_vector_conversions/soaVectorToAosRef__") ==
+  CHECK(helperBlock.find("/std/collections/soa/count_ref__") != std::string::npos);
+  CHECK(helperBlock.find("/std/collections/soa/get_ref__") != std::string::npos);
+  CHECK(helperBlock.find("/std/collections/soa/to_aos__") == std::string::npos);
+  CHECK(helperBlock.find("/std/collections/experimental_soa_conversions/soaVectorToAosRef__") ==
         std::string::npos);
 }
 
-TEST_CASE("dump ast-semantic keeps imported experimental soa_vector to_aos helper path") {
+TEST_CASE("dump ast-semantic keeps imported experimental soa to_aos helper path") {
   const std::string source = R"(
 import /std/collections/*
 import /std/collections/soa/*
-import /std/collections/internal_soa_vector/*
+import /std/collections/internal_soa/*
 
 [struct reflect]
 Particle() {
@@ -1799,9 +1799,9 @@ main() {
 }
 )";
   const std::string srcPath =
-      writeTemp("compile_dump_ast_semantic_imported_experimental_soa_vector_to_aos.prime", source);
+      writeTemp("compile_dump_ast_semantic_imported_experimental_soa_to_aos.prime", source);
   const std::string outPath =
-      (testScratchPath("") / "primec_dump_ast_semantic_imported_experimental_soa_vector_to_aos.txt")
+      (testScratchPath("") / "primec_dump_ast_semantic_imported_experimental_soa_to_aos.txt")
           .string();
 
   const std::string dumpCmd =
@@ -1810,19 +1810,19 @@ main() {
   const std::string ast = readFile(outPath);
   const size_t mainPos = ast.find("/main()");
   CHECK(mainPos != std::string::npos);
-  CHECK(ast.find("/std/collections/soa_vector/to_aos__", mainPos) != std::string::npos);
-  CHECK(ast.find("/std/collections/experimental_soa_vector_conversions/soaVectorToAos__", mainPos) ==
+  CHECK(ast.find("/std/collections/soa/to_aos__", mainPos) != std::string::npos);
+  CHECK(ast.find("/std/collections/experimental_soa_conversions/soaVectorToAos__", mainPos) ==
         std::string::npos);
   CHECK(ast.find("to_aos(values)", mainPos) == std::string::npos);
 }
 
-TEST_CASE("dump ast-semantic rewrites borrowed helper-return experimental soa_vector to_aos") {
+TEST_CASE("dump ast-semantic rewrites borrowed helper-return experimental soa to_aos") {
   const std::string source = R"(
 import /std/collections/*
 import /std/collections/soa/*
-import /std/collections/internal_soa_vector/*
+import /std/collections/internal_soa/*
 import /std/collections/soa/*
-import /std/collections/internal_soa_vector_conversions/*
+import /std/collections/internal_soa_conversions/*
 
 [struct reflect]
 Particle() {
@@ -1844,9 +1844,9 @@ main() {
 }
 )";
   const std::string srcPath =
-      writeTemp("compile_dump_ast_semantic_borrowed_return_experimental_soa_vector_to_aos.prime", source);
+      writeTemp("compile_dump_ast_semantic_borrowed_return_experimental_soa_to_aos.prime", source);
   const std::string outPath =
-      (testScratchPath("") / "primec_dump_ast_semantic_borrowed_return_experimental_soa_vector_to_aos.txt")
+      (testScratchPath("") / "primec_dump_ast_semantic_borrowed_return_experimental_soa_to_aos.txt")
           .string();
 
   const std::string dumpCmd =
@@ -1855,18 +1855,18 @@ main() {
   const std::string ast = readFile(outPath);
   const size_t mainPos = ast.find("/main()");
   CHECK(mainPos != std::string::npos);
-  CHECK(ast.find("/std/collections/soa_vector/to_aos_ref__", mainPos) !=
+  CHECK(ast.find("/std/collections/soa/to_aos_ref__", mainPos) !=
         std::string::npos);
   CHECK(ast.find("pickBorrowed(location(values)).to_aos()", mainPos) == std::string::npos);
 }
 
-TEST_CASE("dump ast-semantic rewrites borrowed helper-return experimental soa_vector to_aos_ref via canonical helper") {
+TEST_CASE("dump ast-semantic rewrites borrowed helper-return experimental soa to_aos_ref via canonical helper") {
   const std::string source = R"(
 import /std/collections/*
 import /std/collections/soa/*
-import /std/collections/internal_soa_vector/*
+import /std/collections/internal_soa/*
 import /std/collections/soa/*
-import /std/collections/internal_soa_vector_conversions/*
+import /std/collections/internal_soa_conversions/*
 
 [struct reflect]
 Particle() {
@@ -1888,9 +1888,9 @@ main() {
 }
 )";
   const std::string srcPath =
-      writeTemp("compile_dump_ast_semantic_borrowed_return_experimental_soa_vector_to_aos_ref.prime", source);
+      writeTemp("compile_dump_ast_semantic_borrowed_return_experimental_soa_to_aos_ref.prime", source);
   const std::string outPath =
-      (testScratchPath("") / "primec_dump_ast_semantic_borrowed_return_experimental_soa_vector_to_aos_ref.txt")
+      (testScratchPath("") / "primec_dump_ast_semantic_borrowed_return_experimental_soa_to_aos_ref.txt")
           .string();
 
   const std::string dumpCmd =
@@ -1899,17 +1899,17 @@ main() {
   const std::string ast = readFile(outPath);
   const size_t mainPos = ast.find("/main()");
   CHECK(mainPos != std::string::npos);
-  CHECK(ast.find("/std/collections/soa_vector/to_aos_ref__", mainPos) != std::string::npos);
-  CHECK(ast.find("/std/collections/experimental_soa_vector_conversions/soaVectorToAosRef__", mainPos) ==
+  CHECK(ast.find("/std/collections/soa/to_aos_ref__", mainPos) != std::string::npos);
+  CHECK(ast.find("/std/collections/experimental_soa_conversions/soaVectorToAosRef__", mainPos) ==
         std::string::npos);
   CHECK(ast.find("pickBorrowed(location(values)).to_aos_ref<Particle>()", mainPos) == std::string::npos);
 }
 
-TEST_CASE("dump ast-semantic keeps helper-return experimental soa_vector to_aos with same-path helper") {
+TEST_CASE("dump ast-semantic keeps helper-return experimental soa to_aos with same-path helper") {
   const std::string source = R"(
 import /std/collections/*
 import /std/collections/soa/*
-import /std/collections/internal_soa_vector/*
+import /std/collections/internal_soa/*
 
 [struct reflect]
 Particle() {
@@ -1936,10 +1936,10 @@ main() {
 }
 )";
   const std::string srcPath =
-      writeTemp("compile_dump_ast_semantic_helper_return_experimental_soa_vector_to_aos_shadow.prime", source);
+      writeTemp("compile_dump_ast_semantic_helper_return_experimental_soa_to_aos_shadow.prime", source);
   const std::string outPath =
       (testScratchPath("") /
-       "primec_dump_ast_semantic_helper_return_experimental_soa_vector_to_aos_shadow.txt")
+       "primec_dump_ast_semantic_helper_return_experimental_soa_to_aos_shadow.txt")
           .string();
 
   const std::string dumpCmd =
@@ -1948,13 +1948,13 @@ main() {
   const std::string ast = readFile(outPath);
   const size_t mainPos = ast.find("/main()");
   CHECK(mainPos != std::string::npos);
-  CHECK(ast.find("/std/collections/experimental_soa_vector_conversions/soaVectorToAos__", mainPos) ==
+  CHECK(ast.find("/std/collections/experimental_soa_conversions/soaVectorToAos__", mainPos) ==
         std::string::npos);
   CHECK(ast.find("/to_aos(/Holder/cloneValues(holder))", mainPos) != std::string::npos);
   CHECK(ast.find("holder.cloneValues().to_aos()", mainPos) == std::string::npos);
 }
 
-TEST_CASE("dump ast-semantic keeps helper-return builtin soa_vector to_aos with same-path helper") {
+TEST_CASE("dump ast-semantic keeps helper-return builtin soa to_aos with same-path helper") {
   const std::string source = R"(
 Particle() {
   [i32] x{1i32}
@@ -1962,13 +1962,13 @@ Particle() {
 
 Holder() {}
 
-[return<soa_vector<Particle>>]
+[return<soa<Particle>>]
 /Holder/cloneValues([Holder] self) {
-  return(soa_vector<Particle>())
+  return(soa<Particle>())
 }
 
 [return<int>]
-/to_aos([soa_vector<Particle>] values) {
+/to_aos([soa<Particle>] values) {
   return(9i32)
 }
 
@@ -1983,10 +1983,10 @@ main() {
 }
 )";
   const std::string srcPath =
-      writeTemp("compile_dump_ast_semantic_helper_return_builtin_soa_vector_to_aos_shadow.prime", source);
+      writeTemp("compile_dump_ast_semantic_helper_return_builtin_soa_to_aos_shadow.prime", source);
   const std::string outPath =
       (testScratchPath("") /
-       "primec_dump_ast_semantic_helper_return_builtin_soa_vector_to_aos_shadow.txt")
+       "primec_dump_ast_semantic_helper_return_builtin_soa_to_aos_shadow.txt")
           .string();
 
   const std::string dumpCmd =
@@ -1995,7 +1995,7 @@ main() {
   const std::string ast = readFile(outPath);
   const size_t mainPos = ast.find("/main()");
   CHECK(mainPos != std::string::npos);
-  CHECK(ast.find("/std/collections/soa_vector/to_aos", mainPos) == std::string::npos);
+  CHECK(ast.find("/std/collections/soa/to_aos", mainPos) == std::string::npos);
   CHECK(ast.find("/to_aos(holder.cloneValues())", mainPos) != std::string::npos);
   CHECK(ast.find("[auto] itemA{/to_aos(holder.cloneValues())}", mainPos) != std::string::npos);
   CHECK(ast.find("[auto] itemB{/to_aos(holder.cloneValues())}", mainPos) != std::string::npos);
@@ -2003,15 +2003,15 @@ main() {
   CHECK(ast.find("[auto] itemD{/to_aos(holder.cloneValues())}", mainPos) != std::string::npos);
 }
 
-TEST_CASE("dump ast-semantic rewrites global helper-return builtin soa_vector reads to canonical helpers") {
+TEST_CASE("dump ast-semantic rewrites global helper-return builtin soa reads to canonical helpers") {
   const std::string source = R"(
 Particle() {
   [i32] x{1i32}
 }
 
-[effects(heap_alloc), return<soa_vector<Particle>>]
+[effects(heap_alloc), return<soa<Particle>>]
 cloneValues() {
-  [soa_vector<Particle>, mut] values{soa_vector<Particle>()}
+  [soa<Particle>, mut] values{soa<Particle>()}
   values.push(Particle(7i32))
   return(values)
 }
@@ -2027,10 +2027,10 @@ main() {
 }
 )";
   const std::string srcPath =
-      writeTemp("compile_dump_ast_semantic_builtin_soa_vector_global_helper_return_reads.prime", source);
+      writeTemp("compile_dump_ast_semantic_builtin_soa_global_helper_return_reads.prime", source);
   const std::string outPath =
       (testScratchPath("") /
-       "primec_dump_ast_semantic_builtin_soa_vector_global_helper_return_reads.txt")
+       "primec_dump_ast_semantic_builtin_soa_global_helper_return_reads.txt")
           .string();
 
   const std::string dumpCmd =
@@ -2039,9 +2039,9 @@ main() {
   const std::string ast = readFile(outPath);
   const size_t mainPos = ast.find("/main()");
   CHECK(mainPos != std::string::npos);
-  CHECK(ast.find("/std/collections/soa_vector/count", mainPos) != std::string::npos);
-  CHECK(ast.find("/std/collections/soa_vector/get", mainPos) != std::string::npos);
-  CHECK(ast.find("/std/collections/soa_vector/ref", mainPos) != std::string::npos);
+  CHECK(ast.find("/std/collections/soa/count", mainPos) != std::string::npos);
+  CHECK(ast.find("/std/collections/soa/get", mainPos) != std::string::npos);
+  CHECK(ast.find("/std/collections/soa/ref", mainPos) != std::string::npos);
   CHECK(ast.find("count(cloneValues())", mainPos) == std::string::npos);
   CHECK(ast.find("cloneValues().count()", mainPos) == std::string::npos);
   CHECK(ast.find("get(cloneValues(), 0)", mainPos) == std::string::npos);
@@ -2050,7 +2050,7 @@ main() {
   CHECK(ast.find("cloneValues().ref(0)", mainPos) == std::string::npos);
 }
 
-TEST_CASE("dump ast-semantic rewrites method-like helper-return builtin soa_vector reads to canonical helpers") {
+TEST_CASE("dump ast-semantic rewrites method-like helper-return builtin soa reads to canonical helpers") {
   const std::string source = R"(
 Particle() {
   [i32] x{1i32}
@@ -2058,9 +2058,9 @@ Particle() {
 
 Holder() {}
 
-[effects(heap_alloc), return<soa_vector<Particle>>]
+[effects(heap_alloc), return<soa<Particle>>]
 /Holder/cloneValues([Holder] self) {
-  [soa_vector<Particle>, mut] values{soa_vector<Particle>()}
+  [soa<Particle>, mut] values{soa<Particle>()}
   values.push(Particle(7i32))
   return(values)
 }
@@ -2077,10 +2077,10 @@ main() {
 }
 )";
   const std::string srcPath =
-      writeTemp("compile_dump_ast_semantic_builtin_soa_vector_method_like_helper_return_reads.prime", source);
+      writeTemp("compile_dump_ast_semantic_builtin_soa_method_like_helper_return_reads.prime", source);
   const std::string outPath =
       (testScratchPath("") /
-       "primec_dump_ast_semantic_builtin_soa_vector_method_like_helper_return_reads.txt")
+       "primec_dump_ast_semantic_builtin_soa_method_like_helper_return_reads.txt")
           .string();
 
   const std::string dumpCmd =
@@ -2089,11 +2089,11 @@ main() {
   const std::string ast = readFile(outPath);
   const size_t mainPos = ast.find("/main()");
   CHECK(mainPos != std::string::npos);
-  CHECK(ast.find("/std/collections/soa_vector/count<Particle>(holder.cloneValues())", mainPos) !=
+  CHECK(ast.find("/std/collections/soa/count<Particle>(holder.cloneValues())", mainPos) !=
         std::string::npos);
-  CHECK(ast.find("/std/collections/soa_vector/get<Particle>(holder.cloneValues(), 0).x", mainPos) !=
+  CHECK(ast.find("/std/collections/soa/get<Particle>(holder.cloneValues(), 0).x", mainPos) !=
         std::string::npos);
-  CHECK(ast.find("/std/collections/soa_vector/ref<Particle>(holder.cloneValues(), 0).x", mainPos) !=
+  CHECK(ast.find("/std/collections/soa/ref<Particle>(holder.cloneValues(), 0).x", mainPos) !=
         std::string::npos);
   CHECK(ast.find("count(holder.cloneValues())", mainPos) == std::string::npos);
   CHECK(ast.find("holder.cloneValues().count()", mainPos) == std::string::npos);
@@ -2103,11 +2103,11 @@ main() {
   CHECK(ast.find("holder.cloneValues().ref(0)", mainPos) == std::string::npos);
 }
 
-TEST_CASE("dump ast-semantic keeps borrowed soa_vector ref_ref same-path helper shadows compatibility") {
+TEST_CASE("dump ast-semantic keeps borrowed soa ref_ref same-path helper shadows compatibility") {
   const std::string source = R"(
 import /std/collections/*
 import /std/collections/soa/*
-import /std/collections/internal_soa_vector/*
+import /std/collections/internal_soa/*
 
 [struct reflect]
 Particle() {
@@ -2120,7 +2120,7 @@ pickBorrowed([Reference<SoaVector<Particle>>] values) {
 }
 
 [return<int>]
-/soa_vector/ref_ref([Reference<SoaVector<Particle>>] values, [int] index) {
+/soa/ref_ref([Reference<SoaVector<Particle>>] values, [int] index) {
   return(41i32)
 }
 
@@ -2132,11 +2132,11 @@ main() {
 }
 )";
   const std::string srcPath =
-      writeTemp("compile_dump_ast_semantic_borrowed_soa_vector_ref_ref_same_path.prime",
+      writeTemp("compile_dump_ast_semantic_borrowed_soa_ref_ref_same_path.prime",
                 source);
   const std::string outPath =
       (testScratchPath("") /
-       "primec_dump_ast_semantic_borrowed_soa_vector_ref_ref_same_path.txt")
+       "primec_dump_ast_semantic_borrowed_soa_ref_ref_same_path.txt")
           .string();
 
   const std::string dumpCmd =
@@ -2145,14 +2145,14 @@ main() {
   const std::string ast = readFile(outPath);
   const size_t mainPos = ast.find("/main()");
   CHECK(mainPos != std::string::npos);
-  CHECK(ast.find("/soa_vector/ref_ref(pickBorrowed(location(values)), 0)", mainPos) !=
+  CHECK(ast.find("/soa/ref_ref(pickBorrowed(location(values)), 0)", mainPos) !=
         std::string::npos);
   CHECK(ast.find("pickBorrowed(location(values)).ref(0)", mainPos) == std::string::npos);
   CHECK(ast.find("return plus(ref_ref(", mainPos) == std::string::npos);
-  CHECK(ast.find("/std/collections/soa_vector/ref_ref", mainPos) == std::string::npos);
+  CHECK(ast.find("/std/collections/soa/ref_ref", mainPos) == std::string::npos);
 }
 
-TEST_CASE("dump ast-semantic keeps builtin soa_vector ref_ref same-path helper shadows") {
+TEST_CASE("dump ast-semantic keeps builtin soa ref_ref same-path helper shadows") {
   const std::string source = R"(
 import /std/collections/*
 
@@ -2161,20 +2161,20 @@ Particle() {
   [i32] x{1i32}
 }
 
-[effects(heap_alloc), return<soa_vector<Particle>>]
+[effects(heap_alloc), return<soa<Particle>>]
 cloneValues() {
-  return(soa_vector<Particle>())
+  return(soa<Particle>())
 }
 
 [effects(heap_alloc), return<int>]
-/soa_vector/ref_ref([soa_vector<Particle>] values, [vector<i32>] index) {
+/soa/ref_ref([soa<Particle>] values, [vector<i32>] index) {
   return(17i32)
 }
 
 [effects(heap_alloc), return<int>]
 main() {
   [vector<i32>] idx{vector<i32>(0i32)}
-  [soa_vector<Particle>] values{cloneValues()}
+  [soa<Particle>] values{cloneValues()}
   [auto] direct{ref_ref(values, idx)}
   [auto] method{values.ref_ref(idx)}
   [auto] helperReturn{ref_ref(cloneValues(), idx)}
@@ -2182,11 +2182,11 @@ main() {
 }
 )";
   const std::string srcPath =
-      writeTemp("compile_dump_ast_semantic_builtin_soa_vector_ref_ref_same_path.prime",
+      writeTemp("compile_dump_ast_semantic_builtin_soa_ref_ref_same_path.prime",
                 source);
   const std::string outPath =
       (testScratchPath("") /
-       "primec_dump_ast_semantic_builtin_soa_vector_ref_ref_same_path.txt")
+       "primec_dump_ast_semantic_builtin_soa_ref_ref_same_path.txt")
           .string();
 
   const std::string dumpCmd =
@@ -2195,26 +2195,26 @@ main() {
   const std::string ast = readFile(outPath);
   const size_t mainPos = ast.find("/main()");
   CHECK(mainPos != std::string::npos);
-  CHECK(ast.find("[auto] direct{/soa_vector/ref_ref(values, idx)}", mainPos) !=
+  CHECK(ast.find("[auto] direct{/soa/ref_ref(values, idx)}", mainPos) !=
         std::string::npos);
-  CHECK(ast.find("[auto] method{/soa_vector/ref_ref(values, idx)}", mainPos) !=
+  CHECK(ast.find("[auto] method{/soa/ref_ref(values, idx)}", mainPos) !=
         std::string::npos);
-  CHECK(ast.find("[auto] helperReturn{/soa_vector/ref_ref(cloneValues(), idx)}",
+  CHECK(ast.find("[auto] helperReturn{/soa/ref_ref(cloneValues(), idx)}",
                  mainPos) != std::string::npos);
   CHECK(ast.find("values.ref_ref(idx)", mainPos) == std::string::npos);
   CHECK(ast.find("[auto] direct{ref_ref(values, idx)}", mainPos) == std::string::npos);
   CHECK(ast.find("[auto] helperReturn{ref_ref(cloneValues(), idx)}", mainPos) ==
         std::string::npos);
-  CHECK(ast.find("/std/collections/soa_vector/ref_ref", mainPos) == std::string::npos);
+  CHECK(ast.find("/std/collections/soa/ref_ref", mainPos) == std::string::npos);
 }
 
-TEST_CASE("dump ast-semantic rewrites inline location experimental soa_vector read-only methods") {
+TEST_CASE("dump ast-semantic rewrites inline location experimental soa read-only methods") {
   const std::string source = R"(
 import /std/collections/*
 import /std/collections/soa/*
-import /std/collections/internal_soa_vector/*
+import /std/collections/internal_soa/*
 import /std/collections/soa/*
-import /std/collections/internal_soa_vector_conversions/*
+import /std/collections/internal_soa_conversions/*
 
 [struct reflect]
 Particle() {
@@ -2242,10 +2242,10 @@ main() {
 }
 )";
   const std::string srcPath =
-      writeTemp("compile_dump_ast_semantic_inline_location_experimental_soa_vector_methods.prime", source);
+      writeTemp("compile_dump_ast_semantic_inline_location_experimental_soa_methods.prime", source);
   const std::string outPath =
       (testScratchPath("") /
-       "primec_dump_ast_semantic_inline_location_experimental_soa_vector_methods.txt")
+       "primec_dump_ast_semantic_inline_location_experimental_soa_methods.txt")
           .string();
 
   const std::string dumpCmd =
@@ -2265,17 +2265,17 @@ main() {
   CHECK(ast.find("values.get(0)", mainPos) != std::string::npos);
   CHECK(ast.find("values.ref(1)", mainPos) != std::string::npos);
   CHECK(ast.find("values.count()", mainPos) != std::string::npos);
-  CHECK(ast.find("/std/collections/experimental_soa_vector_conversions/soaVectorToAos__", mainPos) !=
+  CHECK(ast.find("/std/collections/experimental_soa_conversions/soaVectorToAos__", mainPos) !=
         std::string::npos);
 }
 
-TEST_CASE("dump ast-semantic rewrites inline location borrowed helper-return experimental soa_vector helpers") {
+TEST_CASE("dump ast-semantic rewrites inline location borrowed helper-return experimental soa helpers") {
   const std::string source = R"(
 import /std/collections/*
 import /std/collections/soa/*
-import /std/collections/internal_soa_vector/*
+import /std/collections/internal_soa/*
 import /std/collections/soa/*
-import /std/collections/internal_soa_vector_conversions/*
+import /std/collections/internal_soa_conversions/*
 
 [struct reflect]
 Particle() {
@@ -2317,11 +2317,11 @@ main() {
 }
 )";
   const std::string srcPath =
-      writeTemp("compile_dump_ast_semantic_inline_location_borrowed_return_experimental_soa_vector_helpers.prime",
+      writeTemp("compile_dump_ast_semantic_inline_location_borrowed_return_experimental_soa_helpers.prime",
                 source);
   const std::string outPath =
       (testScratchPath("") /
-       "primec_dump_ast_semantic_inline_location_borrowed_return_experimental_soa_vector_helpers.txt")
+       "primec_dump_ast_semantic_inline_location_borrowed_return_experimental_soa_helpers.txt")
           .string();
 
   const std::string dumpCmd =
@@ -2349,13 +2349,13 @@ main() {
   CHECK(ast.find("y(dereference(location(pickBorrowed(location(values)))))[", mainPos) ==
         std::string::npos);
   CHECK(ast.find("/pickBorrowed(location(values))", mainPos) != std::string::npos);
-  CHECK(ast.find("/std/collections/soa_vector/count_ref__", mainPos) !=
+  CHECK(ast.find("/std/collections/soa/count_ref__", mainPos) !=
         std::string::npos);
-  CHECK(ast.find("/std/collections/soa_vector/to_aos_ref__", mainPos) !=
+  CHECK(ast.find("/std/collections/soa/to_aos_ref__", mainPos) !=
         std::string::npos);
-  CHECK(ast.find("/std/collections/soa_vector/get_ref__", mainPos) !=
+  CHECK(ast.find("/std/collections/soa/get_ref__", mainPos) !=
         std::string::npos);
-  CHECK(ast.find("/std/collections/soa_vector/ref_ref__", mainPos) !=
+  CHECK(ast.find("/std/collections/soa/ref_ref__", mainPos) !=
         std::string::npos);
   CHECK(ast.find(".y", mainPos) != std::string::npos);
 }

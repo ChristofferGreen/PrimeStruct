@@ -514,7 +514,7 @@ TEST_CASE(
   primec::ir_lowerer::LocalInfo sourceInfo;
   sourceInfo.index = 17;
   sourceInfo.kind = primec::ir_lowerer::LocalInfo::Kind::Value;
-  sourceInfo.structTypeName = "/soa_vector";
+  sourceInfo.structTypeName = "/soa";
   callerLocals.emplace("source", sourceInfo);
 
   {
@@ -561,7 +561,7 @@ TEST_CASE(
   }
 
   for (const char *calleePath :
-       {"/std/collections/soa_vector/to_aos", "/std/collections/soa_vector/to_aos_ref"}) {
+       {"/std/collections/soa/to_aos", "/std/collections/soa/to_aos_ref"}) {
     int32_t nextLocal = 3;
     primec::ir_lowerer::LocalMap calleeLocals;
     std::vector<primec::IrInstruction> instructions;
@@ -605,8 +605,8 @@ TEST_CASE(
     CHECK_FALSE(instructions.empty());
   }
 
-  for (const char *calleePath : {"/std/collections/experimental_soa_vector_conversions/soaVectorToAos",
-                                 "/std/collections/experimental_soa_vector_conversions/soaVectorToAosRef"}) {
+  for (const char *calleePath : {"/std/collections/experimental_soa_conversions/soaVectorToAos",
+                                 "/std/collections/experimental_soa_conversions/soaVectorToAosRef"}) {
     int32_t nextLocal = 3;
     primec::ir_lowerer::LocalMap calleeLocals;
     std::vector<primec::IrInstruction> instructions;
@@ -699,11 +699,11 @@ TEST_CASE("ir lowerer inline param helper bridges builtin soa for canonical coun
   primec::ir_lowerer::LocalInfo sourceInfo;
   sourceInfo.index = 17;
   sourceInfo.kind = primec::ir_lowerer::LocalInfo::Kind::Value;
-  sourceInfo.structTypeName = "/soa_vector";
+  sourceInfo.structTypeName = "/soa";
   callerLocals.emplace("source", sourceInfo);
 
   for (const char *calleePath :
-       {"/std/collections/soa_vector/count", "/std/collections/soa_vector/get"}) {
+       {"/std/collections/soa/count", "/std/collections/soa/get"}) {
     int32_t nextLocal = 3;
     primec::ir_lowerer::LocalMap calleeLocals;
     std::vector<primec::IrInstruction> instructions;

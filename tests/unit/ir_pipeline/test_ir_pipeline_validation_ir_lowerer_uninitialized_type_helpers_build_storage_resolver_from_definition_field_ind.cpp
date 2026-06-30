@@ -332,30 +332,30 @@ TEST_CASE("ir lowerer binding type helpers classify binding kind and string/file
   CHECK(primec::ir_lowerer::bindingKindFromTransforms(defaultExpr) == primec::ir_lowerer::LocalInfo::Kind::Value);
   CHECK(primec::ir_lowerer::normalizeCollectionBindingTypeName(
             "std/collections/soa/SoaVector__Particle") ==
-        "soa_vector");
+        "soa");
   CHECK(primec::ir_lowerer::normalizeCollectionBindingTypeName(
             "/std/collections/soa/SoaVector__Particle") ==
-        "soa_vector");
+        "soa");
   CHECK(primec::ir_lowerer::normalizeCollectionBindingTypeName("SoaVector__Particle") ==
-        "soa_vector");
+        "soa");
   CHECK(primec::ir_lowerer::normalizeCollectionBindingTypeName(
             "std/collections/soa/SoaVector") ==
-        "soa_vector");
+        "soa");
   CHECK(primec::ir_lowerer::normalizeCollectionBindingTypeName(
             "/std/collections/soa/SoaVector") ==
-        "soa_vector");
+        "soa");
   CHECK(primec::ir_lowerer::normalizeCollectionBindingTypeName("SoaVector") ==
-        "soa_vector");
+        "soa");
   CHECK(primec::ir_lowerer::normalizeCollectionBindingTypeName("/SoaVector") ==
-        "soa_vector");
+        "soa");
   CHECK(primec::ir_lowerer::normalizeCollectionBindingTypeName(
             "std/collections/soa/SoaVector<Particle>") ==
-        "soa_vector");
+        "soa");
   CHECK(primec::ir_lowerer::normalizeCollectionBindingTypeName(
             "/std/collections/soa/SoaVector<Particle>") ==
-        "soa_vector");
+        "soa");
   CHECK(primec::ir_lowerer::normalizeCollectionBindingTypeName("SoaVector<Particle>") ==
-        "soa_vector");
+        "soa");
   CHECK(primec::ir_lowerer::normalizeCollectionBindingTypeName("std/file/File") ==
         "File");
   CHECK(primec::ir_lowerer::normalizeCollectionBindingTypeName("/std/file/File") ==
@@ -806,7 +806,7 @@ TEST_CASE("ir lowerer binding type helpers prefer semantic collection specializa
           .siteKind = "temporary",
           .name = "borrowParticles",
           .collectionFamily = "map",
-          .bindingTypeText = "Reference<soa_vector<i32>>",
+          .bindingTypeText = "Reference<soa<i32>>",
           .elementTypeText = "i32",
           .keyTypeText = "i32",
           .valueTypeText = "i32",
@@ -823,10 +823,10 @@ TEST_CASE("ir lowerer binding type helpers prefer semantic collection specializa
           .nameId =
               primec::semanticProgramInternCallTargetString(semanticProgram, "borrowParticles"),
           .collectionFamilyId =
-              primec::semanticProgramInternCallTargetString(semanticProgram, "soa_vector"),
+              primec::semanticProgramInternCallTargetString(semanticProgram, "soa"),
           .bindingTypeTextId =
               primec::semanticProgramInternCallTargetString(
-                  semanticProgram, "Reference<soa_vector<Particle>>"),
+                  semanticProgram, "Reference<soa<Particle>>"),
           .elementTypeTextId =
               primec::semanticProgramInternCallTargetString(semanticProgram, "Particle"),
           .keyTypeTextId = primec::InvalidSymbolId,
