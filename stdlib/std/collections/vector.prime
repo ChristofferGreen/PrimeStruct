@@ -9,12 +9,13 @@ namespace std {
   namespace vector {
   [effects(heap_alloc), return<Pointer<T>>]
   vectorAllocStorage<T>([i32] count) {
+    // Both checked and unchecked buffer modules export bufferAlloc.
     return(/std/collections/buffer_checked/bufferAlloc<T>(count))
   }
 
   [effects(heap_alloc), return<void>]
   vectorFreeStorage<T>([Pointer<uninitialized<T>>] ptr) {
-    /std/collections/buffer_checked/bufferFreeUninitialized<T>(ptr)
+    bufferFreeUninitialized<T>(ptr)
   }
 
   [public struct collection_type]
@@ -80,10 +81,10 @@ namespace std {
     Destroy() {
       if(this.ownsData,
         then() {
-           [Pointer<uninitialized<T>>] dataPtr{/std/collections/vector/vectorDataPtr<T>(this)}
-           /std/collections/vector/vectorCheckShape<T>(this)
-           /std/collections/vector/vectorDropRange<T>(this, this.fieldCount)
-           /std/collections/vector/vectorFreeStorage<T>(dataPtr)
+           [Pointer<uninitialized<T>>] dataPtr{vectorDataPtr<T>(this)}
+           vectorCheckShape<T>(this)
+           vectorDropRange<T>(this, this.fieldCount)
+           vectorFreeStorage<T>(dataPtr)
            assign(this.ownsData, false)
            assign(this.fieldCount, 0i32)
            assign(this.fieldCapacity, 0i32)
