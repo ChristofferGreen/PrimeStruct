@@ -7,11 +7,21 @@ import /std/collections/buffer_unchecked/*
 namespace std {
   namespace collections {
   namespace vector {
+  [effects(heap_alloc), return<Pointer<T>>]
+  vectorAllocStorage<T>([i32] count) {
+    return(/std/collections/buffer_checked/bufferAlloc<T>(count))
+  }
+
+  [effects(heap_alloc), return<void>]
+  vectorFreeStorage<T>([Pointer<uninitialized<T>>] ptr) {
+    /std/collections/buffer_checked/bufferFreeUninitialized<T>(ptr)
+  }
+
   [public struct collection_type]
   Vector<T>() {
     [public i32] fieldCount
     [public i32] fieldCapacity
-    [public Pointer<uninitialized<T>>] data{/std/collections/buffer_checked/bufferAlloc<uninitialized<T>>(1i32)}
+    [public Pointer<uninitialized<T>>] data{vectorAllocStorage<uninitialized<T>>(1i32)}
     [bool mut] ownsData{true}
 
     [return<i32>]
@@ -73,7 +83,7 @@ namespace std {
            [Pointer<uninitialized<T>>] dataPtr{/std/collections/vector/vectorDataPtr<T>(this)}
            /std/collections/vector/vectorCheckShape<T>(this)
            /std/collections/vector/vectorDropRange<T>(this, this.fieldCount)
-           /std/collections/buffer_checked/bufferFreeUninitialized<T>(dataPtr)
+           /std/collections/vector/vectorFreeStorage<T>(dataPtr)
            assign(this.ownsData, false)
            assign(this.fieldCount, 0i32)
            assign(this.fieldCapacity, 0i32)
@@ -93,7 +103,7 @@ namespace std {
          /at(empty, index)
        },
        else() { })
-    return(/std/collections/buffer_unchecked/bufferOffsetUnsafe<uninitialized<T>>(values.data, index))
+    return(bufferOffsetUnsafe<uninitialized<T>>(values.data, index))
   }
 
   [return<Pointer<uninitialized<T>>>]
@@ -147,7 +157,7 @@ namespace std {
     [i32 mut] index{0i32}
     while(less_than(index, limit), do() {
       [Pointer<uninitialized<T>> mut] nextSlot{
-          /std/collections/buffer_unchecked/bufferOffsetUnsafe<uninitialized<T>>(dst, index)}
+          bufferOffsetUnsafe<uninitialized<T>>(dst, index)}
       init(dereference(nextSlot), vectorTakeSlot<T>(values, index))
       increment(index)
     })
@@ -162,7 +172,7 @@ namespace std {
     return(/std/collections/vector/Vector<T>{
         [fieldCount] count,
         [fieldCapacity] capacity,
-        [data] /std/collections/buffer_checked/bufferAlloc<uninitialized<T>>(allocCount),
+        [data] vectorAllocStorage<uninitialized<T>>(allocCount),
         [ownsData] true})
   }
 
@@ -216,9 +226,9 @@ namespace std {
                  then() { assign(allocCount, 1i32) },
                  else() { })
               [Pointer<uninitialized<T>> mut] grown{
-                  /std/collections/buffer_checked/bufferAlloc<uninitialized<T>>(allocCount)}
+                  vectorAllocStorage<uninitialized<T>>(allocCount)}
               vectorMovePrefixToBuffer<T>(grown, values, values.field_count())
-              /std/collections/buffer_checked/bufferFreeUninitialized<T>(values.data)
+              vectorFreeStorage<T>(values.data)
               assign(values.data, grown)
               assign(values.fieldCapacity, capacity)
             },
