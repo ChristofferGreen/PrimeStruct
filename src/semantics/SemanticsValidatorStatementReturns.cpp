@@ -1245,6 +1245,16 @@ bool SemanticsValidator::statementAlwaysReturns(const Expr &stmt) {
   if (isBuiltinBlockCall(stmt) && stmt.hasBodyArguments) {
     return blockAlwaysReturns(stmt.bodyArguments);
   }
+  if (stmt.kind == Expr::Kind::Call && !stmt.isBinding && !stmt.isMethodCall &&
+      !stmt.isBraceConstructor && !stmt.isLambda && !stmt.name.empty()) {
+    // A call to a never-returning definition terminates this control path.
+    const std::string resolved = resolveCalleePath(stmt);
+    const auto defIt = defMap_.find(resolved.empty() ? stmt.name : resolved);
+    if (defIt != defMap_.end() && defIt->second != nullptr &&
+        definitionHasNeverReturn(*defIt->second)) {
+      return true;
+    }
+  }
   return false;
 }
 

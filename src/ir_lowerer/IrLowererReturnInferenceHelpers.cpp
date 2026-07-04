@@ -104,7 +104,9 @@ bool analyzeEntryReturnTransforms(const Definition &entryDef,
       continue;
     }
     out.hasReturnTransform = true;
-    if (transform.templateArgs.size() == 1 && transform.templateArgs.front() == "void") {
+    if (transform.templateArgs.size() == 1 &&
+        (transform.templateArgs.front() == "void" ||
+         transform.templateArgs.front() == "never")) {
       out.returnsVoid = true;
     }
     if (transform.templateArgs.size() != 1) {
@@ -294,7 +296,7 @@ void analyzeDeclaredReturnTransforms(const Definition &def,
       info.kind = resultHasValue ? LocalInfo::ValueKind::Int64 : LocalInfo::ValueKind::Int32;
       break;
     }
-    if (typeName == "void") {
+    if (typeName == "void" || typeName == "never") {
       info.returnsVoid = true;
       break;
     }

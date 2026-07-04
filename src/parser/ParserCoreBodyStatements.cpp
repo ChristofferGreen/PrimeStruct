@@ -86,7 +86,8 @@ bool Parser::parseDefinitionBody(Definition &def, bool allowNoReturn, std::vecto
   bool allowNoReturnAuto = false;
   for (const auto &transform : def.transforms) {
     if (transform.name == "return" && transform.templateArgs.size() == 1 &&
-        transform.templateArgs.front() == "void") {
+        (transform.templateArgs.front() == "void" ||
+         transform.templateArgs.front() == "never")) {
       returnsVoid = true;
     }
     if (transform.name == "return") {

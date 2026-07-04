@@ -111,6 +111,7 @@ ReturnKind getReturnKind(const Definition &def,
                          const std::unordered_set<std::string> &structNames,
                          const std::unordered_map<std::string, std::string> &importAliases,
                          std::string &error);
+bool definitionHasNeverReturn(const Definition &def);
 
 bool getBuiltinOperatorName(const Expr &expr, std::string &out);
 bool getBuiltinComparisonName(const Expr &expr, std::string &out);

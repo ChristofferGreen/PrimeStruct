@@ -68,7 +68,9 @@ bool GlslEmitter::emitSource(const Program &program,
       continue;
     }
     hasReturnTransform = true;
-    returnsVoid = transform.templateArgs.size() == 1 && transform.templateArgs.front() == "void";
+    returnsVoid = transform.templateArgs.size() == 1 &&
+                  (transform.templateArgs.front() == "void" ||
+                   transform.templateArgs.front() == "never");
   }
   if (hasReturnTransform && !returnsVoid) {
     error = "glsl backend requires entry definition to return void";

@@ -1,0 +1,12 @@
+// Canonical panic module: diverging trap helper.
+// panic(code) never returns; it aborts execution via the runtime
+// bounds-check trap. The code argument surfaces in the trap diagnostics.
+namespace std {
+  namespace panic {
+  [public return<never>]
+  panic([i32] code) {
+    [array<i32>] empty{array<i32>()}
+    /at(empty, code)
+  }
+  }
+}

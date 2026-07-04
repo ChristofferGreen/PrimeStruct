@@ -1025,6 +1025,8 @@ if(PRIMESTRUCT_BUILD_TESTS)
     tests/unit/semantics/test_semantics_enum.cpp
     tests/unit/semantics/test_semantics_lambdas.cpp
     tests/unit/semantics/test_semantics_move.cpp
+    tests/unit/semantics/test_semantics_never_return.cpp
+    tests/unit/semantics/test_semantics_transitive_collection_imports.cpp
     tests/unit/semantics/test_semantics_numeric_software.cpp
     tests/unit/semantics/test_semantics_strongly_connected_components.cpp
     tests/unit/semantics/test_semantics_struct_helpers.cpp
@@ -1190,6 +1192,8 @@ if(PRIMESTRUCT_BUILD_TESTS)
     primestruct.semantics.maybe
     primestruct.semantics.traits
     primestruct.semantics.move
+    primestruct.semantics.never_return
+    primestruct.semantics.transitive_collection_imports
     primestruct.semantics.software_numeric
     primestruct.semantics.condensation_dag
     primestruct.semantics.scc

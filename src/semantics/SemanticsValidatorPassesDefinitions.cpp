@@ -332,6 +332,11 @@ bool SemanticsValidator::validateDefinitionsFromStableIndexResolver(
       }
       definitionContext.sawReturn = true;
     }
+    if (definitionContext.sawReturn && definitionHasNeverReturn(def)) {
+      return failPassesDefinitionsDiagnostic(
+          nullptr,
+          "never-returning definition cannot contain return on " + def.fullPath);
+    }
     if (definitionContext.returnKind != ReturnKind::Void &&
         !isStructDefinition(def)) {
       bool allPathsReturn = def.returnExpr.has_value() || blockAlwaysReturns(def.statements);

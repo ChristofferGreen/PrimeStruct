@@ -314,7 +314,7 @@ ReturnKind getReturnKind(const Definition &def) {
       continue;
     }
     const std::string &typeName = transform.templateArgs.front();
-    if (typeName == "void") {
+    if (typeName == "void" || typeName == "never") {
       return ReturnKind::Void;
     }
     if (typeName == "int") {
@@ -422,7 +422,7 @@ ReturnKind returnKindForTypeName(const std::string &name) {
   if (name == "f64") {
     return ReturnKind::Float64;
   }
-  if (name == "void") {
+  if (name == "void" || name == "never") {
     return ReturnKind::Void;
   }
   std::string base;

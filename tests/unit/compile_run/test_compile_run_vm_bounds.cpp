@@ -677,4 +677,50 @@ main([array<string>] args) {
   checkEntryArgumentStringRestriction(readFile(errPath));
 }
 
+TEST_CASE("vm never-returning call terminates control path") {
+  const std::string source = R"(
+import /std/panic/*
+
+[return<i32>]
+pick([i32] value) {
+  if(value > 0) {
+    return(value)
+  }
+  panic(value)
+}
+
+[return<int>]
+main() {
+  return(pick(9i32))
+}
+)";
+  const std::string srcPath = writeTemp("vm_never_diverge.prime", source);
+  const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main";
+  CHECK(runCommand(runCmd) == 9);
+}
+
+TEST_CASE("vm stdlib panic traps with bounds diagnostic") {
+  const std::string source = R"(
+import /std/panic/*
+
+[return<i32>]
+pick([i32] value) {
+  if(value > 0) {
+    return(value)
+  }
+  panic(value)
+}
+
+[return<int>]
+main() {
+  return(pick(-3i32))
+}
+)";
+  const std::string srcPath = writeTemp("vm_never_trap.prime", source);
+  const std::string errPath = (testScratchPath("") / "primec_vm_never_trap_err.txt").string();
+  const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main 2> " + errPath;
+  CHECK(runCommand(runCmd) != 0);
+  CHECK(readFile(errPath) == "array index out of bounds\n");
+}
+
 TEST_SUITE_END();

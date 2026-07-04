@@ -150,6 +150,11 @@ ReturnKind getReturnKind(const Definition &def,
     std::function<ReturnKind(const std::string &)> resolveReturnTypeKind =
         [&](const std::string &candidateType) -> ReturnKind {
       const std::string normalizedType = normalizeBindingTypeName(candidateType);
+      if (normalizedType == "never") {
+        // Diverging functions produce no value; validated like void returns.
+        // Divergence itself is tracked via definitionHasNeverReturn(...).
+        return ReturnKind::Void;
+      }
       ReturnKind resolvedKind = returnKindForTypeName(normalizedType);
       if (resolvedKind != ReturnKind::Unknown) {
         return resolvedKind;
@@ -274,6 +279,16 @@ ReturnKind getReturnKind(const Definition &def,
     kind = nextKind;
   }
   return kind;
+}
+
+bool definitionHasNeverReturn(const Definition &def) {
+  for (const auto &transform : def.transforms) {
+    if (transform.name == "return" && transform.templateArgs.size() == 1 &&
+        normalizeBindingTypeName(transform.templateArgs.front()) == "never") {
+      return true;
+    }
+  }
+  return false;
 }
 
 } // namespace primec::semantics

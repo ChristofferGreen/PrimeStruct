@@ -2694,6 +2694,28 @@ module {
   }
 }
 ```
+- **Diverging definitions (`return<never>`):** a definition annotated `[return<never>]` promises it never returns to
+  its caller (it aborts execution or loops forever). `never` is valid only as a `return<...>` argument — never in
+  bindings, parameters, or template arguments. A `never` definition must not contain any `return` statement (including
+  bare `return()`), and calling one as a statement terminates that control path for all-paths-return analysis: a
+  non-void definition may end a branch (or its body, after at least one `return` elsewhere) with a call to a diverging
+  helper instead of a `return`. The stdlib entry point is `/std/panic/panic([i32] code)`, which traps through the
+  runtime bounds check and surfaces `code` in the trap diagnostics:
+  ```
+  import /std/panic/*
+
+  [return<i32>]
+  pick([i32] value) {
+    if(value > 0) {
+      return(value)
+    }
+    panic(value)
+  }
+  ```
+  Backends lower `never` like `void` (no value is ever produced). v1 limitations: the compiler does not verify that a
+  `never` body actually diverges (like C `_Noreturn`/C++ `[[noreturn]]`, that is the author's contract), divergence is
+  not tracked through expression position (`[i32] x{panic(0)}` is invalid), and a non-void definition whose body
+  contains no `return` statement at all is still rejected at parse time even if it ends in a diverging call.
 - **Effects:** by default, definitions/executions start with `io_out` enabled so logging works without explicit
   annotations. Authors can override with `[effects(...)]` (e.g., `[effects(global_write, io_out)]`) or tighten to pure
   behavior by passing `primec --default-effects=none`. Standard library routines permit stdout/stderr logging via
