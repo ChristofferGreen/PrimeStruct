@@ -214,11 +214,11 @@ namespace std {
       [mut] materialBs{self.materialBs}
       [mut] materialOpacities{self.materialOpacities}
       [mut] materialShadeStrengths{self.materialShadeStrengths}
-      /std/collections/vector/push(materialRs, material.r)
-      /std/collections/vector/push(materialGs, material.g)
-      /std/collections/vector/push(materialBs, material.b)
-      /std/collections/vector/push(materialOpacities, material.opacity)
-      /std/collections/vector/push(materialShadeStrengths, material.shadeStrength)
+      push(materialRs, material.r)
+      push(materialGs, material.g)
+      push(materialBs, material.b)
+      push(materialOpacities, material.opacity)
+      push(materialShadeStrengths, material.shadeStrength)
       self.materialRs = materialRs
       self.materialGs = materialGs
       self.materialBs = materialBs
@@ -235,11 +235,11 @@ namespace std {
       [mut] lightDirectionXs{self.lightDirectionXs}
       [mut] lightDirectionYs{self.lightDirectionYs}
       [mut] lightDirectionZs{self.lightDirectionZs}
-      /std/collections/vector/push(lightKinds, light.kind)
-      /std/collections/vector/push(lightWeights, light.weight)
-      /std/collections/vector/push(lightDirectionXs, light.directionX)
-      /std/collections/vector/push(lightDirectionYs, light.directionY)
-      /std/collections/vector/push(lightDirectionZs, light.directionZ)
+      push(lightKinds, light.kind)
+      push(lightWeights, light.weight)
+      push(lightDirectionXs, light.directionX)
+      push(lightDirectionYs, light.directionY)
+      push(lightDirectionZs, light.directionZ)
       self.lightKinds = lightKinds
       self.lightWeights = lightWeights
       self.lightDirectionXs = lightDirectionXs
@@ -275,11 +275,11 @@ namespace std {
       [mut] primitiveHeights{self.primitiveHeights}
       [mut] primitiveRadii{self.primitiveRadii}
       [mut] primitiveMaterialIds{self.primitiveMaterialIds}
-      /std/collections/vector/push(primitiveKinds, primitive.kind)
-      /std/collections/vector/push(primitiveWidths, primitive.width)
-      /std/collections/vector/push(primitiveHeights, primitive.height)
-      /std/collections/vector/push(primitiveRadii, primitive.radius)
-      /std/collections/vector/push(primitiveMaterialIds, primitive.materialId)
+      push(primitiveKinds, primitive.kind)
+      push(primitiveWidths, primitive.width)
+      push(primitiveHeights, primitive.height)
+      push(primitiveRadii, primitive.radius)
+      push(primitiveMaterialIds, primitive.materialId)
       self.primitiveKinds = primitiveKinds
       self.primitiveWidths = primitiveWidths
       self.primitiveHeights = primitiveHeights
@@ -290,7 +290,7 @@ namespace std {
 
     [public effects(heap_alloc), return<i32>]
     appendCamera([Scene mut] self, [Camera] camera) {
-      if(not(camera.isOrthographic())) {
+      if(!camera.isOrthographic()) {
         return(unsupported_id())
       }
       id{self.cameraCount()}
@@ -302,14 +302,14 @@ namespace std {
       [mut] cameraOriginYs{self.cameraOriginYs}
       [mut] cameraNearZs{self.cameraNearZs}
       [mut] cameraFarZs{self.cameraFarZs}
-      /std/collections/vector/push(cameraModes, camera.projectionMode)
-      /std/collections/vector/push(cameraViewportWidths, camera.viewportWidth)
-      /std/collections/vector/push(cameraViewportHeights, camera.viewportHeight)
-      /std/collections/vector/push(cameraUnitsPerPixels, camera.unitsPerPixel)
-      /std/collections/vector/push(cameraOriginXs, camera.originX)
-      /std/collections/vector/push(cameraOriginYs, camera.originY)
-      /std/collections/vector/push(cameraNearZs, camera.nearZ)
-      /std/collections/vector/push(cameraFarZs, camera.farZ)
+      push(cameraModes, camera.projectionMode)
+      push(cameraViewportWidths, camera.viewportWidth)
+      push(cameraViewportHeights, camera.viewportHeight)
+      push(cameraUnitsPerPixels, camera.unitsPerPixel)
+      push(cameraOriginXs, camera.originX)
+      push(cameraOriginYs, camera.originY)
+      push(cameraNearZs, camera.nearZ)
+      push(cameraFarZs, camera.farZ)
       self.cameraModes = cameraModes
       self.cameraViewportWidths = cameraViewportWidths
       self.cameraViewportHeights = cameraViewportHeights
@@ -327,14 +327,14 @@ namespace std {
     [public return<Camera>]
     cameraAt([Scene] self, [i32] cameraId) {
       return(Camera{
-        [projectionMode] /std/collections/vector/at(self.cameraModes, cameraId),
-        [viewportWidth] /std/collections/vector/at(self.cameraViewportWidths, cameraId),
-        [viewportHeight] /std/collections/vector/at(self.cameraViewportHeights, cameraId),
-        [unitsPerPixel] /std/collections/vector/at(self.cameraUnitsPerPixels, cameraId),
-        [originX] /std/collections/vector/at(self.cameraOriginXs, cameraId),
-        [originY] /std/collections/vector/at(self.cameraOriginYs, cameraId),
-        [nearZ] /std/collections/vector/at(self.cameraNearZs, cameraId),
-        [farZ] /std/collections/vector/at(self.cameraFarZs, cameraId)
+        [projectionMode] at(self.cameraModes, cameraId),
+        [viewportWidth] at(self.cameraViewportWidths, cameraId),
+        [viewportHeight] at(self.cameraViewportHeights, cameraId),
+        [unitsPerPixel] at(self.cameraUnitsPerPixels, cameraId),
+        [originX] at(self.cameraOriginXs, cameraId),
+        [originY] at(self.cameraOriginYs, cameraId),
+        [nearZ] at(self.cameraNearZs, cameraId),
+        [farZ] at(self.cameraFarZs, cameraId)
       })
     }
 
@@ -342,20 +342,20 @@ namespace std {
     nodeAt([Scene] self, [i32] nodeId) {
       return(Node{
         [id] nodeId,
-        [parentId] /std/collections/vector/at(self.nodeParentIds, nodeId),
+        [parentId] at(self.nodeParentIds, nodeId),
         [transform] Transform{
-          [translationX] /std/collections/vector/at(self.nodeTranslationXs, nodeId),
-          [translationY] /std/collections/vector/at(self.nodeTranslationYs, nodeId),
-          [translationZ] /std/collections/vector/at(self.nodeTranslationZs, nodeId),
-          [scaleX] /std/collections/vector/at(self.nodeScaleXs, nodeId),
-          [scaleY] /std/collections/vector/at(self.nodeScaleYs, nodeId),
-          [scaleZ] /std/collections/vector/at(self.nodeScaleZs, nodeId),
-          [rotationZDegrees] /std/collections/vector/at(self.nodeRotationZDegrees, nodeId)
+          [translationX] at(self.nodeTranslationXs, nodeId),
+          [translationY] at(self.nodeTranslationYs, nodeId),
+          [translationZ] at(self.nodeTranslationZs, nodeId),
+          [scaleX] at(self.nodeScaleXs, nodeId),
+          [scaleY] at(self.nodeScaleYs, nodeId),
+          [scaleZ] at(self.nodeScaleZs, nodeId),
+          [rotationZDegrees] at(self.nodeRotationZDegrees, nodeId)
         },
-        [painterOrder] /std/collections/vector/at(self.nodePainterOrders, nodeId),
-        [localZ] /std/collections/vector/at(self.nodeLocalZs, nodeId),
-        [primitiveId] /std/collections/vector/at(self.nodePrimitiveIds, nodeId),
-        [materialId] /std/collections/vector/at(self.nodeMaterialIds, nodeId)
+        [painterOrder] at(self.nodePainterOrders, nodeId),
+        [localZ] at(self.nodeLocalZs, nodeId),
+        [primitiveId] at(self.nodePrimitiveIds, nodeId),
+        [materialId] at(self.nodeMaterialIds, nodeId)
       })
     }
 
@@ -375,18 +375,18 @@ namespace std {
       [mut] nodeScaleZs{self.nodeScaleZs}
       [mut] nodeRotationZDegrees{self.nodeRotationZDegrees}
       [mut] nodeLocalZs{self.nodeLocalZs}
-      /std/collections/vector/push(nodeParentIds, parentId)
-      /std/collections/vector/push(nodePainterOrders, painterOrder)
-      /std/collections/vector/push(nodePrimitiveIds, primitiveId)
-      /std/collections/vector/push(nodeMaterialIds, materialId)
-      /std/collections/vector/push(nodeTranslationXs, transform.translationX)
-      /std/collections/vector/push(nodeTranslationYs, transform.translationY)
-      /std/collections/vector/push(nodeTranslationZs, transform.translationZ)
-      /std/collections/vector/push(nodeScaleXs, transform.scaleX)
-      /std/collections/vector/push(nodeScaleYs, transform.scaleY)
-      /std/collections/vector/push(nodeScaleZs, transform.scaleZ)
-      /std/collections/vector/push(nodeRotationZDegrees, transform.rotationZDegrees)
-      /std/collections/vector/push(nodeLocalZs, localZ)
+      push(nodeParentIds, parentId)
+      push(nodePainterOrders, painterOrder)
+      push(nodePrimitiveIds, primitiveId)
+      push(nodeMaterialIds, materialId)
+      push(nodeTranslationXs, transform.translationX)
+      push(nodeTranslationYs, transform.translationY)
+      push(nodeTranslationZs, transform.translationZ)
+      push(nodeScaleXs, transform.scaleX)
+      push(nodeScaleYs, transform.scaleY)
+      push(nodeScaleZs, transform.scaleZ)
+      push(nodeRotationZDegrees, transform.rotationZDegrees)
+      push(nodeLocalZs, localZ)
       self.nodeParentIds = nodeParentIds
       self.nodePainterOrders = nodePainterOrders
       self.nodePrimitiveIds = nodePrimitiveIds
@@ -405,67 +405,67 @@ namespace std {
     [public effects(heap_alloc), return<vector<i32>>]
     serialize([Scene] self) {
       [mut] words{vector<i32>()}
-      /std/collections/vector/push(words, 1i32)
-      /std/collections/vector/push(words, self.activeCameraId)
+      push(words, 1i32)
+      push(words, self.activeCameraId)
       nodeCount{self.nodeCount()}
-      /std/collections/vector/push(words, nodeCount)
+      push(words, nodeCount)
       for([i32 mut] nodeId{0i32}, nodeId < nodeCount, ++nodeId) {
-        /std/collections/vector/push(words, nodeId)
-        /std/collections/vector/push(words, /std/collections/vector/at(self.nodeParentIds, nodeId))
-        /std/collections/vector/push(words, /std/collections/vector/at(self.nodePainterOrders, nodeId))
-        /std/collections/vector/push(words, scene_to_milli(/std/collections/vector/at(self.nodeLocalZs, nodeId)))
-        /std/collections/vector/push(words, /std/collections/vector/at(self.nodePrimitiveIds, nodeId))
-        /std/collections/vector/push(words, /std/collections/vector/at(self.nodeMaterialIds, nodeId))
-        /std/collections/vector/push(words, scene_to_milli(/std/collections/vector/at(self.nodeTranslationXs, nodeId)))
-        /std/collections/vector/push(words, scene_to_milli(/std/collections/vector/at(self.nodeTranslationYs, nodeId)))
-        /std/collections/vector/push(words, scene_to_milli(/std/collections/vector/at(self.nodeTranslationZs, nodeId)))
-        /std/collections/vector/push(words, scene_to_milli(/std/collections/vector/at(self.nodeScaleXs, nodeId)))
-        /std/collections/vector/push(words, scene_to_milli(/std/collections/vector/at(self.nodeScaleYs, nodeId)))
-        /std/collections/vector/push(words, scene_to_milli(/std/collections/vector/at(self.nodeScaleZs, nodeId)))
-        /std/collections/vector/push(words, scene_to_milli(/std/collections/vector/at(self.nodeRotationZDegrees, nodeId)))
+        push(words, nodeId)
+        push(words, at(self.nodeParentIds, nodeId))
+        push(words, at(self.nodePainterOrders, nodeId))
+        push(words, scene_to_milli(at(self.nodeLocalZs, nodeId)))
+        push(words, at(self.nodePrimitiveIds, nodeId))
+        push(words, at(self.nodeMaterialIds, nodeId))
+        push(words, scene_to_milli(at(self.nodeTranslationXs, nodeId)))
+        push(words, scene_to_milli(at(self.nodeTranslationYs, nodeId)))
+        push(words, scene_to_milli(at(self.nodeTranslationZs, nodeId)))
+        push(words, scene_to_milli(at(self.nodeScaleXs, nodeId)))
+        push(words, scene_to_milli(at(self.nodeScaleYs, nodeId)))
+        push(words, scene_to_milli(at(self.nodeScaleZs, nodeId)))
+        push(words, scene_to_milli(at(self.nodeRotationZDegrees, nodeId)))
       }
       primitiveCount{self.primitiveCount()}
-      /std/collections/vector/push(words, primitiveCount)
+      push(words, primitiveCount)
       for([i32 mut] primitiveId{0i32}, primitiveId < primitiveCount, ++primitiveId) {
-        /std/collections/vector/push(words, primitiveId)
-        /std/collections/vector/push(words, /std/collections/vector/at(self.primitiveKinds, primitiveId))
-        /std/collections/vector/push(words, scene_to_milli(/std/collections/vector/at(self.primitiveWidths, primitiveId)))
-        /std/collections/vector/push(words, scene_to_milli(/std/collections/vector/at(self.primitiveHeights, primitiveId)))
-        /std/collections/vector/push(words, scene_to_milli(/std/collections/vector/at(self.primitiveRadii, primitiveId)))
-        /std/collections/vector/push(words, /std/collections/vector/at(self.primitiveMaterialIds, primitiveId))
+        push(words, primitiveId)
+        push(words, at(self.primitiveKinds, primitiveId))
+        push(words, scene_to_milli(at(self.primitiveWidths, primitiveId)))
+        push(words, scene_to_milli(at(self.primitiveHeights, primitiveId)))
+        push(words, scene_to_milli(at(self.primitiveRadii, primitiveId)))
+        push(words, at(self.primitiveMaterialIds, primitiveId))
       }
       materialCount{self.materialCount()}
-      /std/collections/vector/push(words, materialCount)
+      push(words, materialCount)
       for([i32 mut] materialId{0i32}, materialId < materialCount, ++materialId) {
-        /std/collections/vector/push(words, materialId)
-        /std/collections/vector/push(words, scene_to_milli(/std/collections/vector/at(self.materialRs, materialId)))
-        /std/collections/vector/push(words, scene_to_milli(/std/collections/vector/at(self.materialGs, materialId)))
-        /std/collections/vector/push(words, scene_to_milli(/std/collections/vector/at(self.materialBs, materialId)))
-        /std/collections/vector/push(words, scene_to_milli(/std/collections/vector/at(self.materialOpacities, materialId)))
-        /std/collections/vector/push(words, scene_to_milli(/std/collections/vector/at(self.materialShadeStrengths, materialId)))
+        push(words, materialId)
+        push(words, scene_to_milli(at(self.materialRs, materialId)))
+        push(words, scene_to_milli(at(self.materialGs, materialId)))
+        push(words, scene_to_milli(at(self.materialBs, materialId)))
+        push(words, scene_to_milli(at(self.materialOpacities, materialId)))
+        push(words, scene_to_milli(at(self.materialShadeStrengths, materialId)))
       }
       lightCount{self.lightCount()}
-      /std/collections/vector/push(words, lightCount)
+      push(words, lightCount)
       for([i32 mut] lightId{0i32}, lightId < lightCount, ++lightId) {
-        /std/collections/vector/push(words, lightId)
-        /std/collections/vector/push(words, /std/collections/vector/at(self.lightKinds, lightId))
-        /std/collections/vector/push(words, scene_to_milli(/std/collections/vector/at(self.lightWeights, lightId)))
-        /std/collections/vector/push(words, scene_to_milli(/std/collections/vector/at(self.lightDirectionXs, lightId)))
-        /std/collections/vector/push(words, scene_to_milli(/std/collections/vector/at(self.lightDirectionYs, lightId)))
-        /std/collections/vector/push(words, scene_to_milli(/std/collections/vector/at(self.lightDirectionZs, lightId)))
+        push(words, lightId)
+        push(words, at(self.lightKinds, lightId))
+        push(words, scene_to_milli(at(self.lightWeights, lightId)))
+        push(words, scene_to_milli(at(self.lightDirectionXs, lightId)))
+        push(words, scene_to_milli(at(self.lightDirectionYs, lightId)))
+        push(words, scene_to_milli(at(self.lightDirectionZs, lightId)))
       }
       cameraCount{self.cameraCount()}
-      /std/collections/vector/push(words, cameraCount)
+      push(words, cameraCount)
       for([i32 mut] cameraId{0i32}, cameraId < cameraCount, ++cameraId) {
-        /std/collections/vector/push(words, cameraId)
-        /std/collections/vector/push(words, /std/collections/vector/at(self.cameraModes, cameraId))
-        /std/collections/vector/push(words, scene_to_milli(/std/collections/vector/at(self.cameraViewportWidths, cameraId)))
-        /std/collections/vector/push(words, scene_to_milli(/std/collections/vector/at(self.cameraViewportHeights, cameraId)))
-        /std/collections/vector/push(words, scene_to_milli(/std/collections/vector/at(self.cameraUnitsPerPixels, cameraId)))
-        /std/collections/vector/push(words, scene_to_milli(/std/collections/vector/at(self.cameraOriginXs, cameraId)))
-        /std/collections/vector/push(words, scene_to_milli(/std/collections/vector/at(self.cameraOriginYs, cameraId)))
-        /std/collections/vector/push(words, scene_to_milli(/std/collections/vector/at(self.cameraNearZs, cameraId)))
-        /std/collections/vector/push(words, scene_to_milli(/std/collections/vector/at(self.cameraFarZs, cameraId)))
+        push(words, cameraId)
+        push(words, at(self.cameraModes, cameraId))
+        push(words, scene_to_milli(at(self.cameraViewportWidths, cameraId)))
+        push(words, scene_to_milli(at(self.cameraViewportHeights, cameraId)))
+        push(words, scene_to_milli(at(self.cameraUnitsPerPixels, cameraId)))
+        push(words, scene_to_milli(at(self.cameraOriginXs, cameraId)))
+        push(words, scene_to_milli(at(self.cameraOriginYs, cameraId)))
+        push(words, scene_to_milli(at(self.cameraNearZs, cameraId)))
+        push(words, scene_to_milli(at(self.cameraFarZs, cameraId)))
       }
       return(words)
     }

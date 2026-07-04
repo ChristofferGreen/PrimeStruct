@@ -3771,7 +3771,7 @@ TEST_CASE("image api docs and stdlib stay source locked") {
   CHECK(imageStdlib.find("The codec and deflate helpers below intentionally keep explicit") != std::string::npos);
   CHECK(imageStdlib.find("public-facing image wrapper layer\n  // above, which should prefer the readable surface syntax when possible.") !=
         std::string::npos);
-  CHECK(resetReadOutputsBody.find("/std/collections/vector/clear(pixels)") != std::string::npos);
+  CHECK(resetReadOutputsBody.find("clear(pixels)") != std::string::npos);
   CHECK(resetReadOutputsBody.find("pixels.clear()") == std::string::npos);
   CHECK(imageStdlib.find("pngScanlineChannelByte") != std::string::npos);
   CHECK(imageStdlib.find("pngAdam7PassStartX") != std::string::npos);
@@ -3806,14 +3806,14 @@ TEST_CASE("image api docs and stdlib stay source locked") {
   CHECK(imageStdlib.find("if(!imageRgbWritePixelCount(width, height, expectedPixelCount))") !=
         std::string::npos);
   CHECK(imageStdlib.find("if(pixelCount != expectedPixelCount)") != std::string::npos);
-  CHECK(imageStdlib.find("while(index < pixelCount, do()") != std::string::npos);
+  CHECK(imageStdlib.find("while(index < pixelCount) {") != std::string::npos);
   CHECK(imageStdlib.find("if(component < 0i32 || component > 255i32)") != std::string::npos);
   CHECK(imageStdlib.find("++index") != std::string::npos);
   CHECK(ppmBody.find("return(invalidOperation())") != std::string::npos);
   CHECK(ppmBody.find("return(Result.ok())") != std::string::npos);
   CHECK(imageStdlib.find("return(value - 48i32)") != std::string::npos);
   CHECK(imageStdlib.find("value = pendingByte") != std::string::npos);
-  CHECK(imageStdlib.find("value = multiply(value, 10i32) + ppmDigitValue(byte)") != std::string::npos);
+  CHECK(imageStdlib.find("value = value * 10i32 + ppmDigitValue(byte)") != std::string::npos);
   CHECK(imageStdlib.find("pixelCount = convert<i32>(pixelCountWide)") != std::string::npos);
   CHECK(ppmBody.find("status = ppmReadAsciiInt(file, hasPending, pendingByte, parsedWidth)") != std::string::npos);
   CHECK(ppmBody.find("status = ppmWriteComponent(file, pixels[index])") != std::string::npos);
@@ -3860,12 +3860,12 @@ TEST_CASE("image api docs and stdlib stay source locked") {
   CHECK(pngPreludeBody.find("pngWriteSizingValid") != std::string::npos);
   CHECK(pngPreludeBody.find("pngWriteIdatChunk") != std::string::npos);
   CHECK(pngPreludeBody.find("pngWriteIendChunk") != std::string::npos);
-  CHECK(pngPreludeBody.find("value = multiply(value, 256i32) + byte") != std::string::npos);
+  CHECK(pngPreludeBody.find("value = value * 256i32 + byte") != std::string::npos);
   CHECK(pngPreludeBody.find("remaining = remaining - 1i32") != std::string::npos);
   CHECK(pngPreludeBody.find("width = parsedWidth") != std::string::npos);
-  CHECK(pngPreludeBody.find("return(value - multiply(divide(value, divisor), divisor))") != std::string::npos);
+  CHECK(pngPreludeBody.find("return(value - value / divisor * divisor)") != std::string::npos);
   CHECK(pngPreludeBody.find("crc = pngCrc32UpdateByte(crc, typeA)") != std::string::npos);
-  CHECK(pngPreludeBody.find("return(divide(rawByteCount + 65534i32, 65535i32))") != std::string::npos);
+  CHECK(pngPreludeBody.find("return((rawByteCount + 65534i32) / 65535i32)") != std::string::npos);
   CHECK(pngPreludeBody.find("rawByteCount = convert<i32>(rawByteCountWide)") != std::string::npos);
   CHECK(pngPreludeBody.find("a = pngMod(a + byte, 65521i32)") != std::string::npos);
   CHECK(pngPreludeBody.find("pixelOffset = pixelOffset + 3i32") != std::string::npos);
@@ -3879,7 +3879,7 @@ TEST_CASE("image api docs and stdlib stay source locked") {
   CHECK(pngScanlineBody.find("pngPaethPredictor") != std::string::npos);
   CHECK(pngScanlineBody.find("pngDecodeRows") != std::string::npos);
   CHECK(pngScanlineBody.find("predictor{left + up - upLeft}") != std::string::npos);
-  CHECK(pngScanlineBody.find("return(divide(multiply(pngColorTypeSamplesPerPixel(colorType), bitDepth) + 7i32, 8i32))") != std::string::npos);
+  CHECK(pngScanlineBody.find("return((pngColorTypeSamplesPerPixel(colorType) * bitDepth + 7i32) / 8i32)") != std::string::npos);
   CHECK(pngScanlineBody.find("scanlineBytes = 0i32") != std::string::npos);
   CHECK(pngScanlineBody.find("reconstructed = pngMod(reconstructed + leftByte, 256i32)") != std::string::npos);
   CHECK(pngScanlineBody.find("paletteBytes[paletteOffset + 1i32]") != std::string::npos);
@@ -3895,13 +3895,13 @@ TEST_CASE("image api docs and stdlib stay source locked") {
   CHECK(pngBitstreamBody.find("pngReadBits") != std::string::npos);
   CHECK(pngBitstreamBody.find("pngReadDynamicHuffmanLengths") != std::string::npos);
   CHECK(pngBitstreamBody.find("pngLengthInfo") != std::string::npos);
-  CHECK(pngBitstreamBody.find("return(equal(pngMod(multiply(cmf, 256i32) + flg, 31i32), 0i32))") != std::string::npos);
-  CHECK(pngBitstreamBody.find("value = value + multiply(pngMod(shifted, 2i32), factor)") != std::string::npos);
+  CHECK(pngBitstreamBody.find("return(pngMod(cmf * 256i32 + flg, 31i32) == 0i32)") != std::string::npos);
+  CHECK(pngBitstreamBody.find("value = value + pngMod(shifted, 2i32) * factor") != std::string::npos);
   CHECK(pngBitstreamBody.find("codeLengthLengths[codeLengthSymbol] = lengthValue") != std::string::npos);
   CHECK(pngBitstreamBody.find("totalCodeCount{literalCount + distanceCount}") != std::string::npos);
   CHECK(pngBitstreamBody.find("repeatCount{11i32 + repeatExtra}") != std::string::npos);
   CHECK(pngBitstreamBody.find("baseOut = 3i32 + (symbol - 257i32)") != std::string::npos);
-  CHECK(pngBitstreamBody.find("if(equal(symbol - currentSymbol, 1i32),") != std::string::npos);
+  CHECK(pngBitstreamBody.find("if(symbol - currentSymbol == 1i32) {") != std::string::npos);
   CHECK(pngBitstreamBody.find("assign(") == std::string::npos);
   CHECK(pngBitstreamBody.find("plus(") == std::string::npos);
   CHECK(pngBitstreamBody.find("minus(") == std::string::npos);
@@ -3916,11 +3916,11 @@ TEST_CASE("image api docs and stdlib stay source locked") {
   CHECK(pngInflateExecBody.find("trailerStart{count(compressed) - 4i32}") != std::string::npos);
   CHECK(pngInflateExecBody.find("byteIndex = byteIndex + 4i32") != std::string::npos);
   CHECK(pngInflateExecBody.find("matchLength{lengthBase + lengthExtraValue}") != std::string::npos);
-  CHECK(pngInflateExecBody.find("code = code + multiply(bit, factor)") != std::string::npos);
+  CHECK(pngInflateExecBody.find("code = code + bit * factor") != std::string::npos);
   CHECK(pngInflateExecBody.find("symbol = 280i32") != std::string::npos);
   CHECK(pngInflateExecBody.find("hclenBits + 4i32") != std::string::npos);
   CHECK(pngInflateExecBody.find("inflateStatus = pngInflateStoredBlock(compressed, byteIndex, bitIndex, output)") != std::string::npos);
-  CHECK(pngInflateExecBody.find("if(not_equal(compressedCount - byteIndex, 4i32),") != std::string::npos);
+  CHECK(pngInflateExecBody.find("if(compressedCount - byteIndex != 4i32) {") != std::string::npos);
   CHECK(pngInflateExecBody.find("assign(") == std::string::npos);
   CHECK(pngInflateExecBody.find("plus(") == std::string::npos);
   CHECK(pngInflateExecBody.find("minus(") == std::string::npos);
@@ -4368,12 +4368,9 @@ TEST_CASE("small stdlib wrappers stay source locked to inferred locals") {
   CHECK(vectorStdlib.find("vectorAlloc<T>(valueCount, valueCount)") != std::string::npos);
   CHECK(vectorStdlib.find("vectorInitSlot<T>(out, index, /at(values, index))") != std::string::npos);
   // Internal helpers defined directly; short-named push/count/at wrappers removed in merge (TODO-4632)
-  CHECK(vectorStdlib.find("vectorCount<T>([/std/collections/vector/Vector<T>] values)") !=
-        std::string::npos);
-  CHECK(vectorStdlib.find("vectorPush<T>([/std/collections/vector/Vector<T> mut] values, [T] value)") !=
-        std::string::npos);
-  CHECK(vectorStdlib.find("vectorAt<T>([/std/collections/vector/Vector<T>] values, [i32] index)") !=
-        std::string::npos);
+  CHECK(vectorStdlib.find("vectorCount<T>([Vector<T>] values)") != std::string::npos);
+  CHECK(vectorStdlib.find("vectorPush<T>([Vector<T> mut] values, [T] value)") != std::string::npos);
+  CHECK(vectorStdlib.find("vectorAt<T>([Vector<T>] values, [i32] index)") != std::string::npos);
   // Old short-named wrapper call expressions gone (compiler manifest handles dispatch)
   CHECK(vectorStdlib.find("/std/collections/vector/push<T>(result, /at(values, index))") ==
         std::string::npos);
@@ -4403,15 +4400,13 @@ TEST_CASE("small stdlib wrappers stay source locked to inferred locals") {
   CHECK(mapStdlib.find("/std/collections/map2/") == std::string::npos);
   CHECK(mapStdlib.find("[MapValue<K, V> mut] out{mapNew<K, V>()}") !=
         std::string::npos);
-  CHECK(mapStdlib.find("[args<Entry<K, V>>] entries") == std::string::npos);
+  CHECK(mapStdlib.find("[args<Entry<K, V>>] entries") != std::string::npos);
   CHECK(mapStdlib.find("[Entry<K, V>] current{entries[index]}") ==
         std::string::npos);
-  CHECK(mapStdlib.find("[K] eighthKey, [V] eighthValue") !=
-        std::string::npos);
+  CHECK(mapStdlib.find("[K] eighthKey, [V] eighthValue") != std::string::npos);
   CHECK(mapStdlib.find("/std/collections/mapSingle") == std::string::npos);
   CHECK(mapStdlib.find("/std/collections/mapPair") == std::string::npos);
-  CHECK(mapStdlib.find("/std/collections/map/mapCount<K, V>") !=
-        std::string::npos);
+  CHECK(mapStdlib.find("mapCount<K, V>") != std::string::npos);
   CHECK(mapStdlib.find("[MapValue<K, V> mut] values") == std::string::npos);
   CHECK(mapStdlib.find("[map<K, V> mut] out{/std/collections/map/mapNew<K, V>()}") ==
         std::string::npos);
@@ -4419,13 +4414,10 @@ TEST_CASE("small stdlib wrappers stay source locked to inferred locals") {
         std::string::npos);
 
   // internal_vector.prime merged into vector.prime (TODO-4631): verify merged content
-  CHECK(vectorStdlib.find("// Internal vector backing implementation behind canonical /std/collections/vector/*.") !=
-        std::string::npos);
   CHECK(vectorStdlib.find("[public struct collection_type]\n  Vector<T>()") != std::string::npos);
   // internal_map.prime merged into map.prime (TODO-4632): verify merged content
   CHECK(mapStdlib.find("[Vector<K>] keys{this.keys}") != std::string::npos);
-  CHECK(mapStdlib.find("return(/std/collections/vector/vectorCount<K>(keys))") !=
-        std::string::npos);
+  CHECK(mapStdlib.find("return(vectorCount<K>(keys))") != std::string::npos);
 
   // soa.prime merged from internal_soa*, experimental_soa* (TODO-4633)
   CHECK(soaPublic.find("// Canonical standalone SoA module with merged implementation.") !=
@@ -4559,7 +4551,7 @@ TEST_CASE("png prelude image workflows keep explicit read locals") {
   CHECK(pngPreludeBody.find("[mut] currentLeft{left}") != std::string::npos);
   CHECK(pngPreludeBody.find("leftBit{pngModU64(currentLeft, 2u64)}") != std::string::npos);
   CHECK(pngPreludeBody.find("[mut] crc{4294967295u64}") != std::string::npos);
-  CHECK(pngPreludeBody.find("byteA{divide(value, 16777216i32)}") != std::string::npos);
+  CHECK(pngPreludeBody.find("byteA{value / 16777216i32}") != std::string::npos);
   CHECK(pngPreludeBody.find("lengthStatus{pngWriteU32Be(file, length)}") != std::string::npos);
   CHECK(pngPreludeBody.find("[mut] pixelCount{0i32}") != std::string::npos);
   CHECK(pngPreludeBody.find("rawByteCountWide{convert<i64>(pixelCount) + convert<i64>(height)}") != std::string::npos);
@@ -4568,7 +4560,7 @@ TEST_CASE("png prelude image workflows keep explicit read locals") {
         std::string::npos);
   CHECK(pngPreludeBody.find("lenLow{pngMod(blockByteCount, 256i32)}") != std::string::npos);
   CHECK(pngPreludeBody.find("[mut] nextBlockCount{65535i32}") != std::string::npos);
-  CHECK(pngPreludeBody.find("isFinalBlock{if(equal(nextBlockCount, rawRemaining), then() { 1i32 }, else() { 0i32 })}") !=
+  CHECK(pngPreludeBody.find("isFinalBlock{if(nextBlockCount == rawRemaining, then() { 1i32 }, else() { 0i32 })}") !=
         std::string::npos);
   CHECK(pngPreludeBody.find(
             "filterStatus{pngWriteStoredDataByte(file, 0i32, rawRemaining, blockRemaining, crc, adlerA, adlerB)}") !=
@@ -4576,7 +4568,7 @@ TEST_CASE("png prelude image workflows keep explicit read locals") {
   CHECK(pngPreludeBody.find(
             "redStatus{pngWriteStoredDataByte(file, pixels[pixelOffset], rawRemaining, blockRemaining, crc, adlerA, "
             "adlerB)}") != std::string::npos);
-  CHECK(pngPreludeBody.find("adlerStatus0{pngWriteChunkPayloadByte(file, divide(adlerB, 256i32), crc)}") !=
+  CHECK(pngPreludeBody.find("adlerStatus0{pngWriteChunkPayloadByte(file, adlerB / 256i32, crc)}") !=
         std::string::npos);
   CHECK(pngPreludeBody.find("openStatus{pngWriteChunkOpen(file, 0i32, 73i32, 69i32, 78i32, 68i32, crc)}") !=
         std::string::npos);
@@ -4590,7 +4582,7 @@ TEST_CASE("png prelude image workflows keep explicit read locals") {
   CHECK(pngPreludeBody.find("[u64 mut] currentLeft{left}") == std::string::npos);
   CHECK(pngPreludeBody.find("[u64] leftBit{pngModU64(currentLeft, 2u64)}") == std::string::npos);
   CHECK(pngPreludeBody.find("[u64 mut] crc{4294967295u64}") == std::string::npos);
-  CHECK(pngPreludeBody.find("[i32] byteA{divide(value, 16777216i32)}") == std::string::npos);
+  CHECK(pngPreludeBody.find("[i32] byteA{value / 16777216i32}") == std::string::npos);
   CHECK(pngPreludeBody.find("[i32] lengthStatus{pngWriteU32Be(file, length)}") == std::string::npos);
   CHECK(pngPreludeBody.find("[i32 mut] pixelCount{0i32}") == std::string::npos);
   CHECK(pngPreludeBody.find("[i64] rawByteCountWide{convert<i64>(pixelCount) + convert<i64>(height)}") ==
@@ -4608,7 +4600,7 @@ TEST_CASE("png prelude image workflows keep explicit read locals") {
   CHECK(pngPreludeBody.find(
             "[i32] redStatus{pngWriteStoredDataByte(file, pixels[pixelOffset], rawRemaining, blockRemaining, crc, "
             "adlerA, adlerB)}") == std::string::npos);
-  CHECK(pngPreludeBody.find("[i32] adlerStatus0{pngWriteChunkPayloadByte(file, divide(adlerB, 256i32), crc)}") ==
+  CHECK(pngPreludeBody.find("[i32] adlerStatus0{pngWriteChunkPayloadByte(file, adlerB / 256i32, crc)}") ==
         std::string::npos);
   CHECK(pngPreludeBody.find("[i32] openStatus{pngWriteChunkOpen(file, 0i32, 73i32, 69i32, 78i32, 68i32, crc)}") ==
         std::string::npos);
@@ -4642,7 +4634,7 @@ TEST_CASE("png scanline bitstream and inflate helpers stay source locked to infe
   CHECK(pngScanlineBody.find("[mut] valueCount{1i32}") != std::string::npos);
   CHECK(pngScanlineBody.find("[mut] rowBytes{vector<i32>()}") != std::string::npos);
   CHECK(pngScanlineBody.find("sample{pngPackedSampleAt(rowBytes, pixelIndex, bitDepth)}") != std::string::npos);
-  CHECK(pngScanlineBody.find("paletteOffset{multiply(sample, 3i32)}") != std::string::npos);
+  CHECK(pngScanlineBody.find("paletteOffset{sample * 3i32}") != std::string::npos);
   CHECK(pngScanlineBody.find("[mut] pixelByteIndex{0i32}") != std::string::npos);
 
   CHECK(pngScanlineBody.find("[i32] predictor{left + up - upLeft}") == std::string::npos);
@@ -4650,7 +4642,7 @@ TEST_CASE("png scanline bitstream and inflate helpers stay source locked to infe
   CHECK(pngScanlineBody.find("[vector<i32> mut] rowBytes{vector<i32>()}") == std::string::npos);
   CHECK(pngScanlineBody.find("[i32] sample{pngPackedSampleAt(rowBytes, pixelIndex, bitDepth)}") ==
         std::string::npos);
-  CHECK(pngScanlineBody.find("[i32] paletteOffset{multiply(sample, 3i32)}") == std::string::npos);
+  CHECK(pngScanlineBody.find("[i32] paletteOffset{sample * 3i32}") == std::string::npos);
   CHECK(pngScanlineBody.find("[i32 mut] pixelByteIndex{0i32}") == std::string::npos);
 
   CHECK(pngBitstreamBody.find("[mut] remaining{count}") != std::string::npos);
@@ -4683,7 +4675,7 @@ TEST_CASE("png scanline bitstream and inflate helpers stay source locked to infe
 
   CHECK(pngInflateExecBody.find("[mut] copyIndex{0i32}") != std::string::npos);
   CHECK(pngInflateExecBody.find("trailerStart{count(compressed) - 4i32}") != std::string::npos);
-  CHECK(pngInflateExecBody.find("blockLen{compressed[byteIndex] + multiply(compressed[byteIndex + 1i32], 256i32)}") !=
+  CHECK(pngInflateExecBody.find("blockLen{compressed[byteIndex] + (compressed[byteIndex + 1i32]) * 256i32}") !=
         std::string::npos);
   CHECK(pngInflateExecBody.find("[mut] symbol{0i32}") != std::string::npos);
   CHECK(pngInflateExecBody.find("status{pngHuffmanDecodeSymbol(compressed, byteIndex, bitIndex, literalLengths, literalMaxBits, symbol)}") !=
@@ -4702,7 +4694,7 @@ TEST_CASE("png scanline bitstream and inflate helpers stay source locked to infe
 
   CHECK(pngInflateExecBody.find("[i32 mut] copyIndex{0i32}") == std::string::npos);
   CHECK(pngInflateExecBody.find("[i32] trailerStart{count(compressed) - 4i32}") == std::string::npos);
-  CHECK(pngInflateExecBody.find("[i32] blockLen{compressed[byteIndex] + multiply(compressed[byteIndex + 1i32], 256i32)}") ==
+  CHECK(pngInflateExecBody.find("[i32] blockLen{compressed[byteIndex] + (compressed[byteIndex + 1i32]) * 256i32}") ==
         std::string::npos);
   CHECK(pngInflateExecBody.find("[i32 mut] symbol{0i32}") == std::string::npos);
   CHECK(pngInflateExecBody.find("[i32] status{pngHuffmanDecodeSymbol(compressed, byteIndex, bitIndex, literalLengths, literalMaxBits, symbol)}") ==
@@ -4749,8 +4741,8 @@ TEST_CASE("png top-level read write workflows stay source locked to inferred loc
         std::string::npos);
   CHECK(pngReadBody.find("[mut] passRow{0i32}") != std::string::npos);
   CHECK(pngReadBody.find("[mut] passColumn{0i32}") != std::string::npos);
-  CHECK(pngReadBody.find("imageX{passStartX + multiply(passColumn, passStepX)}") != std::string::npos);
-  CHECK(pngReadBody.find("targetOffset{multiply(multiply(imageY, width) + imageX, 3i32)}") != std::string::npos);
+  CHECK(pngReadBody.find("imageX{passStartX + passColumn * passStepX}") != std::string::npos);
+  CHECK(pngReadBody.find("targetOffset{(imageY * width + imageX) * 3i32}") != std::string::npos);
   CHECK(pngReadBody.find("[File<Read>] file{File<Read>(path)?}") != std::string::npos);
   CHECK(pngReadBody.find("signatureStatus{pngValidateSignature(file)}") != std::string::npos);
   CHECK(pngReadBody.find("[mut] sawIhdr{0i32}") != std::string::npos);
@@ -4778,8 +4770,8 @@ TEST_CASE("png top-level read write workflows stay source locked to inferred loc
         std::string::npos);
   CHECK(pngReadBody.find("[i32 mut] passRow{0i32}") == std::string::npos);
   CHECK(pngReadBody.find("[i32 mut] passColumn{0i32}") == std::string::npos);
-  CHECK(pngReadBody.find("[i32] imageX{passStartX + multiply(passColumn, passStepX)}") == std::string::npos);
-  CHECK(pngReadBody.find("[i32] targetOffset{multiply(multiply(imageY, width) + imageX, 3i32)}") == std::string::npos);
+  CHECK(pngReadBody.find("[i32] imageX{passStartX + passColumn * passStepX}") == std::string::npos);
+  CHECK(pngReadBody.find("[i32] targetOffset{(imageY * width + imageX) * 3i32}") == std::string::npos);
   CHECK(pngReadBody.find("      file{File<Read>(path)?}") == std::string::npos);
   CHECK(pngReadBody.find("[i32] signatureStatus{pngValidateSignature(file)}") == std::string::npos);
   CHECK(pngReadBody.find("[i32 mut] sawIhdr{0i32}") == std::string::npos);

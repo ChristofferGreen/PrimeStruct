@@ -33,7 +33,7 @@ namespace std {
 
   [public return<Pointer<i32>>]
   bufferOffsetBytesUnsafe([Pointer<i32>] ptr, [i32] byteOffset) {
-    return(plus(ptr, byteOffset))
+    return(ptr + byteOffset)
   }
 
   [public return<Pointer<T>>]
@@ -44,12 +44,12 @@ namespace std {
   [public return<void>]
   bufferWriteUnsafe<T>([Pointer<T> mut] ptr, [i32] index, [T] value) {
     [Pointer<T> mut] slot{/std/intrinsics/memory/at_unsafe(ptr, index)}
-    assign(dereference(slot), value)
+    *slot = value
   }
 
   [public return<T>]
   bufferReadUnsafe<T>([Pointer<T>] ptr, [i32] index) {
-    return(dereference(/std/intrinsics/memory/at_unsafe(ptr, index)))
+    return(*(/std/intrinsics/memory/at_unsafe(ptr, index)))
   }
   }
   }

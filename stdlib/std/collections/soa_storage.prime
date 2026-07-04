@@ -1,5 +1,6 @@
 import /std/collections/buffer_checked/*
 import /std/collections/buffer_unchecked/*
+import /std/panic/*
 
 namespace std {
   namespace collections {
@@ -8,7 +9,7 @@ namespace std {
   SoaColumn<T>() {
     [public i32] count
     [public i32] capacity
-    [public Pointer<uninitialized<T>>] data{/std/collections/buffer_checked/bufferAlloc<uninitialized<T>>(1i32)}
+    [public Pointer<uninitialized<T>>] data{bufferAlloc<uninitialized<T>>(1i32)}
     [bool mut] ownsData{true}
 
     [return<i32>]
@@ -23,58 +24,47 @@ namespace std {
 
     [mut return<void>]
     set_field_count([i32] value) {
-      if(or(less_than(value, 0i32),
-            greater_than(value, this.capacity)),
-         then() {
-           [array<i32>] empty{array<i32>()}
-           empty[value]
-         },
-         else() { })
-      assign(this.count, value)
+      if(value < 0i32 || value > this.capacity) {
+        panic(value)
+      }
+      this.count = value
     }
 
     [mut return<void>]
     set_field_capacity([i32] value) {
-      if(or(or(less_than(value, 0i32),
-               greater_than(this.count, value)),
-            greater_than(value, 1073741823i32)),
-         then() {
-           [array<i32>] empty{array<i32>()}
-           empty[value]
-         },
-         else() { })
-      assign(this.capacity, value)
+      if(value < 0i32 || this.count > value || value > 1073741823i32) {
+        panic(value)
+      }
+      this.capacity = value
     }
 
     [mut]
     Copy([Reference<Self>] other) {
-      assign(this.count, other.count)
-      assign(this.capacity, other.capacity)
-      assign(this.data, other.data)
-      assign(this.ownsData, false)
+      this.count = other.count
+      this.capacity = other.capacity
+      this.data = other.data
+      this.ownsData = false
     }
 
     [mut]
     Move([Reference<Self>] other) {
-      assign(this.count, other.count)
-      assign(this.capacity, other.capacity)
-      assign(this.data, other.data)
-      assign(this.ownsData, other.ownsData)
-      assign(other.ownsData, false)
+      this.count = other.count
+      this.capacity = other.capacity
+      this.data = other.data
+      this.ownsData = other.ownsData
+      other.ownsData = false
     }
 
     [mut effects(heap_alloc)]
     Destroy() {
-      if(this.ownsData,
-         then() {
-           soaColumnCheckShape<T>(this)
-           soaColumnDropRange<T>(this, this.count)
-           /std/collections/buffer_checked/bufferFreeUninitialized<T>(this.data)
-           assign(this.ownsData, false)
-           assign(this.count, 0i32)
-           assign(this.capacity, 0i32)
-         },
-         else() { })
+      if(this.ownsData) {
+        soaColumnCheckShape<T>(this)
+        soaColumnDropRange<T>(this, this.count)
+        bufferFreeUninitialized<T>(this.data)
+        this.ownsData = false
+        this.count = 0i32
+        this.capacity = 0i32
+      }
     }
   }
 
@@ -82,7 +72,7 @@ namespace std {
   SoaFieldView<T>() {
     [public i32] count
     [public i32] capacity
-    [public Pointer<uninitialized<T>>] data{/std/collections/buffer_checked/bufferAlloc<uninitialized<T>>(1i32)}
+    [public Pointer<uninitialized<T>>] data{bufferAlloc<uninitialized<T>>(1i32)}
     [public i32] stride
 
     [return<i32>]
@@ -96,21 +86,17 @@ namespace std {
     }
   }
 
-  [public return<void>]
+  [public return<never>]
   soaArbitraryWidthPending<T>([i32] fieldCount) {
-    [array<i32>] trap{array<i32>()}
-    trap[fieldCount]
+    panic(fieldCount)
   }
 
   [public return<i32>]
   soaSupportedFieldCount<T>() {
     [i32] fieldCount{meta.field_count<T>()}
-    if(or(less_than(fieldCount, 1i32),
-          greater_than(fieldCount, 16i32)),
-       then() {
-         soaArbitraryWidthPending<T>(fieldCount)
-       },
-       else() { })
+    if(fieldCount < 1i32 || fieldCount > 16i32) {
+      soaArbitraryWidthPending<T>(fieldCount)
+    }
     return(fieldCount)
   }
 
@@ -121,8 +107,8 @@ namespace std {
 
     [mut]
     Copy([Reference<Self>] other) {
-      assign(this.first, other.first)
-      assign(this.second, other.second)
+      this.first = other.first
+      this.second = other.second
     }
   }
 
@@ -134,9 +120,9 @@ namespace std {
 
     [mut]
     Copy([Reference<Self>] other) {
-      assign(this.first, other.first)
-      assign(this.second, other.second)
-      assign(this.third, other.third)
+      this.first = other.first
+      this.second = other.second
+      this.third = other.third
     }
   }
 
@@ -149,10 +135,10 @@ namespace std {
 
     [mut]
     Copy([Reference<Self>] other) {
-      assign(this.first, other.first)
-      assign(this.second, other.second)
-      assign(this.third, other.third)
-      assign(this.fourth, other.fourth)
+      this.first = other.first
+      this.second = other.second
+      this.third = other.third
+      this.fourth = other.fourth
     }
   }
 
@@ -166,11 +152,11 @@ namespace std {
 
     [mut]
     Copy([Reference<Self>] other) {
-      assign(this.first, other.first)
-      assign(this.second, other.second)
-      assign(this.third, other.third)
-      assign(this.fourth, other.fourth)
-      assign(this.fifth, other.fifth)
+      this.first = other.first
+      this.second = other.second
+      this.third = other.third
+      this.fourth = other.fourth
+      this.fifth = other.fifth
     }
   }
 
@@ -185,12 +171,12 @@ namespace std {
 
     [mut]
     Copy([Reference<Self>] other) {
-      assign(this.first, other.first)
-      assign(this.second, other.second)
-      assign(this.third, other.third)
-      assign(this.fourth, other.fourth)
-      assign(this.fifth, other.fifth)
-      assign(this.sixth, other.sixth)
+      this.first = other.first
+      this.second = other.second
+      this.third = other.third
+      this.fourth = other.fourth
+      this.fifth = other.fifth
+      this.sixth = other.sixth
     }
   }
 
@@ -206,13 +192,13 @@ namespace std {
 
     [mut]
     Copy([Reference<Self>] other) {
-      assign(this.first, other.first)
-      assign(this.second, other.second)
-      assign(this.third, other.third)
-      assign(this.fourth, other.fourth)
-      assign(this.fifth, other.fifth)
-      assign(this.sixth, other.sixth)
-      assign(this.seventh, other.seventh)
+      this.first = other.first
+      this.second = other.second
+      this.third = other.third
+      this.fourth = other.fourth
+      this.fifth = other.fifth
+      this.sixth = other.sixth
+      this.seventh = other.seventh
     }
   }
 
@@ -229,14 +215,14 @@ namespace std {
 
     [mut]
     Copy([Reference<Self>] other) {
-      assign(this.first, other.first)
-      assign(this.second, other.second)
-      assign(this.third, other.third)
-      assign(this.fourth, other.fourth)
-      assign(this.fifth, other.fifth)
-      assign(this.sixth, other.sixth)
-      assign(this.seventh, other.seventh)
-      assign(this.eighth, other.eighth)
+      this.first = other.first
+      this.second = other.second
+      this.third = other.third
+      this.fourth = other.fourth
+      this.fifth = other.fifth
+      this.sixth = other.sixth
+      this.seventh = other.seventh
+      this.eighth = other.eighth
     }
   }
 
@@ -254,15 +240,15 @@ namespace std {
 
     [mut]
     Copy([Reference<Self>] other) {
-      assign(this.first, other.first)
-      assign(this.second, other.second)
-      assign(this.third, other.third)
-      assign(this.fourth, other.fourth)
-      assign(this.fifth, other.fifth)
-      assign(this.sixth, other.sixth)
-      assign(this.seventh, other.seventh)
-      assign(this.eighth, other.eighth)
-      assign(this.ninth, other.ninth)
+      this.first = other.first
+      this.second = other.second
+      this.third = other.third
+      this.fourth = other.fourth
+      this.fifth = other.fifth
+      this.sixth = other.sixth
+      this.seventh = other.seventh
+      this.eighth = other.eighth
+      this.ninth = other.ninth
     }
   }
 
@@ -281,16 +267,16 @@ namespace std {
 
     [mut]
     Copy([Reference<Self>] other) {
-      assign(this.first, other.first)
-      assign(this.second, other.second)
-      assign(this.third, other.third)
-      assign(this.fourth, other.fourth)
-      assign(this.fifth, other.fifth)
-      assign(this.sixth, other.sixth)
-      assign(this.seventh, other.seventh)
-      assign(this.eighth, other.eighth)
-      assign(this.ninth, other.ninth)
-      assign(this.tenth, other.tenth)
+      this.first = other.first
+      this.second = other.second
+      this.third = other.third
+      this.fourth = other.fourth
+      this.fifth = other.fifth
+      this.sixth = other.sixth
+      this.seventh = other.seventh
+      this.eighth = other.eighth
+      this.ninth = other.ninth
+      this.tenth = other.tenth
     }
   }
 
@@ -310,17 +296,17 @@ namespace std {
 
     [mut]
     Copy([Reference<Self>] other) {
-      assign(this.first, other.first)
-      assign(this.second, other.second)
-      assign(this.third, other.third)
-      assign(this.fourth, other.fourth)
-      assign(this.fifth, other.fifth)
-      assign(this.sixth, other.sixth)
-      assign(this.seventh, other.seventh)
-      assign(this.eighth, other.eighth)
-      assign(this.ninth, other.ninth)
-      assign(this.tenth, other.tenth)
-      assign(this.eleventh, other.eleventh)
+      this.first = other.first
+      this.second = other.second
+      this.third = other.third
+      this.fourth = other.fourth
+      this.fifth = other.fifth
+      this.sixth = other.sixth
+      this.seventh = other.seventh
+      this.eighth = other.eighth
+      this.ninth = other.ninth
+      this.tenth = other.tenth
+      this.eleventh = other.eleventh
     }
   }
 
@@ -341,18 +327,18 @@ namespace std {
 
     [mut]
     Copy([Reference<Self>] other) {
-      assign(this.first, other.first)
-      assign(this.second, other.second)
-      assign(this.third, other.third)
-      assign(this.fourth, other.fourth)
-      assign(this.fifth, other.fifth)
-      assign(this.sixth, other.sixth)
-      assign(this.seventh, other.seventh)
-      assign(this.eighth, other.eighth)
-      assign(this.ninth, other.ninth)
-      assign(this.tenth, other.tenth)
-      assign(this.eleventh, other.eleventh)
-      assign(this.twelfth, other.twelfth)
+      this.first = other.first
+      this.second = other.second
+      this.third = other.third
+      this.fourth = other.fourth
+      this.fifth = other.fifth
+      this.sixth = other.sixth
+      this.seventh = other.seventh
+      this.eighth = other.eighth
+      this.ninth = other.ninth
+      this.tenth = other.tenth
+      this.eleventh = other.eleventh
+      this.twelfth = other.twelfth
     }
   }
 
@@ -374,19 +360,19 @@ namespace std {
 
     [mut]
     Copy([Reference<Self>] other) {
-      assign(this.first, other.first)
-      assign(this.second, other.second)
-      assign(this.third, other.third)
-      assign(this.fourth, other.fourth)
-      assign(this.fifth, other.fifth)
-      assign(this.sixth, other.sixth)
-      assign(this.seventh, other.seventh)
-      assign(this.eighth, other.eighth)
-      assign(this.ninth, other.ninth)
-      assign(this.tenth, other.tenth)
-      assign(this.eleventh, other.eleventh)
-      assign(this.twelfth, other.twelfth)
-      assign(this.thirteenth, other.thirteenth)
+      this.first = other.first
+      this.second = other.second
+      this.third = other.third
+      this.fourth = other.fourth
+      this.fifth = other.fifth
+      this.sixth = other.sixth
+      this.seventh = other.seventh
+      this.eighth = other.eighth
+      this.ninth = other.ninth
+      this.tenth = other.tenth
+      this.eleventh = other.eleventh
+      this.twelfth = other.twelfth
+      this.thirteenth = other.thirteenth
     }
   }
 
@@ -409,20 +395,20 @@ namespace std {
 
     [mut]
     Copy([Reference<Self>] other) {
-      assign(this.first, other.first)
-      assign(this.second, other.second)
-      assign(this.third, other.third)
-      assign(this.fourth, other.fourth)
-      assign(this.fifth, other.fifth)
-      assign(this.sixth, other.sixth)
-      assign(this.seventh, other.seventh)
-      assign(this.eighth, other.eighth)
-      assign(this.ninth, other.ninth)
-      assign(this.tenth, other.tenth)
-      assign(this.eleventh, other.eleventh)
-      assign(this.twelfth, other.twelfth)
-      assign(this.thirteenth, other.thirteenth)
-      assign(this.fourteenth, other.fourteenth)
+      this.first = other.first
+      this.second = other.second
+      this.third = other.third
+      this.fourth = other.fourth
+      this.fifth = other.fifth
+      this.sixth = other.sixth
+      this.seventh = other.seventh
+      this.eighth = other.eighth
+      this.ninth = other.ninth
+      this.tenth = other.tenth
+      this.eleventh = other.eleventh
+      this.twelfth = other.twelfth
+      this.thirteenth = other.thirteenth
+      this.fourteenth = other.fourteenth
     }
   }
 
@@ -446,21 +432,21 @@ namespace std {
 
     [mut]
     Copy([Reference<Self>] other) {
-      assign(this.first, other.first)
-      assign(this.second, other.second)
-      assign(this.third, other.third)
-      assign(this.fourth, other.fourth)
-      assign(this.fifth, other.fifth)
-      assign(this.sixth, other.sixth)
-      assign(this.seventh, other.seventh)
-      assign(this.eighth, other.eighth)
-      assign(this.ninth, other.ninth)
-      assign(this.tenth, other.tenth)
-      assign(this.eleventh, other.eleventh)
-      assign(this.twelfth, other.twelfth)
-      assign(this.thirteenth, other.thirteenth)
-      assign(this.fourteenth, other.fourteenth)
-      assign(this.fifteenth, other.fifteenth)
+      this.first = other.first
+      this.second = other.second
+      this.third = other.third
+      this.fourth = other.fourth
+      this.fifth = other.fifth
+      this.sixth = other.sixth
+      this.seventh = other.seventh
+      this.eighth = other.eighth
+      this.ninth = other.ninth
+      this.tenth = other.tenth
+      this.eleventh = other.eleventh
+      this.twelfth = other.twelfth
+      this.thirteenth = other.thirteenth
+      this.fourteenth = other.fourteenth
+      this.fifteenth = other.fifteenth
     }
   }
 
@@ -485,85 +471,69 @@ namespace std {
 
     [mut]
     Copy([Reference<Self>] other) {
-      assign(this.first, other.first)
-      assign(this.second, other.second)
-      assign(this.third, other.third)
-      assign(this.fourth, other.fourth)
-      assign(this.fifth, other.fifth)
-      assign(this.sixth, other.sixth)
-      assign(this.seventh, other.seventh)
-      assign(this.eighth, other.eighth)
-      assign(this.ninth, other.ninth)
-      assign(this.tenth, other.tenth)
-      assign(this.eleventh, other.eleventh)
-      assign(this.twelfth, other.twelfth)
-      assign(this.thirteenth, other.thirteenth)
-      assign(this.fourteenth, other.fourteenth)
-      assign(this.fifteenth, other.fifteenth)
-      assign(this.sixteenth, other.sixteenth)
+      this.first = other.first
+      this.second = other.second
+      this.third = other.third
+      this.fourth = other.fourth
+      this.fifth = other.fifth
+      this.sixth = other.sixth
+      this.seventh = other.seventh
+      this.eighth = other.eighth
+      this.ninth = other.ninth
+      this.tenth = other.tenth
+      this.eleventh = other.eleventh
+      this.twelfth = other.twelfth
+      this.thirteenth = other.thirteenth
+      this.fourteenth = other.fourteenth
+      this.fifteenth = other.fifteenth
+      this.sixteenth = other.sixteenth
     }
   }
 
   [return<Pointer<uninitialized<T>>>]
   soaColumnSlotUnsafe<T>([SoaColumn<T>] values, [i32] index) {
     soaColumnCheckShape<T>(values)
-    if(or(less_than(index, 0i32),
-          not(less_than(index, values.field_capacity()))),
-       then() {
-         [array<i32>] empty{array<i32>()}
-         empty[index]
-       },
-       else() { })
-    return(/std/collections/buffer_unchecked/bufferOffsetUnsafe<uninitialized<T>>(values.data, index))
+    if(index < 0i32 || !(index < values.field_capacity())) {
+      panic(index)
+    }
+    return(bufferOffsetUnsafe<uninitialized<T>>(values.data, index))
   }
 
   [public return<Pointer<uninitialized<Field>>>]
   soaColumnFieldSlotUnsafe<Struct, Field>([SoaColumn<Struct>] values, [i32] index, [i32] fieldIndex) {
     soaColumnCheckShape<Struct>(values)
-    if(or(less_than(index, 0i32),
-          not(less_than(index, values.field_capacity()))),
-       then() {
-         [array<i32>] empty{array<i32>()}
-         empty[index]
-       },
-       else() { })
+    if(index < 0i32 || !(index < values.field_capacity())) {
+      panic(index)
+    }
     [i32] fieldCount{/Struct/SoaSchemaFieldCount()}
-    if(or(less_than(fieldIndex, 0i32),
-          not(less_than(fieldIndex, fieldCount))),
-       then() {
-         [array<i32>] empty{array<i32>()}
-         empty[fieldIndex]
-       },
-       else() { })
+    if(fieldIndex < 0i32 || fieldIndex >= fieldCount) {
+      panic(fieldIndex)
+    }
     [i32] stride{/Struct/SoaSchemaElementStride()}
     [i32] fieldOffset{/Struct/SoaSchemaFieldOffset(fieldIndex)}
-    [i32] elementOffset{plus(multiply(index, stride), fieldOffset)}
+    [i32] elementOffset{index * stride + fieldOffset}
     [Pointer<i32>] baseBytes{
-        /std/collections/buffer_unchecked/bufferReinterpretBytes<uninitialized<Struct>>(values.data)}
+        bufferReinterpretBytes<uninitialized<Struct>>(values.data)}
     [Pointer<i32>] fieldBytes{
-        /std/collections/buffer_unchecked/bufferOffsetBytesUnsafe(baseBytes, elementOffset)}
-    return(/std/collections/buffer_unchecked/bufferReinterpretFromBytes<uninitialized<Field>>(fieldBytes))
+        bufferOffsetBytesUnsafe(baseBytes, elementOffset)}
+    return(bufferReinterpretFromBytes<uninitialized<Field>>(fieldBytes))
   }
 
   [public return<SoaFieldView<Field>>]
   soaColumnFieldViewUnsafe<Struct, Field>([SoaColumn<Struct>] values, [i32] fieldIndex) {
     soaColumnCheckShape<Struct>(values)
     [i32] fieldCount{/Struct/SoaSchemaFieldCount()}
-    if(or(less_than(fieldIndex, 0i32),
-          not(less_than(fieldIndex, fieldCount))),
-       then() {
-         [array<i32>] empty{array<i32>()}
-         empty[fieldIndex]
-       },
-       else() { })
+    if(fieldIndex < 0i32 || fieldIndex >= fieldCount) {
+      panic(fieldIndex)
+    }
     [i32] stride{/Struct/SoaSchemaElementStride()}
     [i32] fieldOffset{/Struct/SoaSchemaFieldOffset(fieldIndex)}
     [Pointer<i32>] baseBytes{
-        /std/collections/buffer_unchecked/bufferReinterpretBytes<uninitialized<Struct>>(values.data)}
+        bufferReinterpretBytes<uninitialized<Struct>>(values.data)}
     [Pointer<i32>] fieldBytes{
-        /std/collections/buffer_unchecked/bufferOffsetBytesUnsafe(baseBytes, fieldOffset)}
+        bufferOffsetBytesUnsafe(baseBytes, fieldOffset)}
     [Pointer<uninitialized<Field>>] fieldBase{
-        /std/collections/buffer_unchecked/bufferReinterpretFromBytes<uninitialized<Field>>(fieldBytes)}
+        bufferReinterpretFromBytes<uninitialized<Field>>(fieldBytes)}
     return(SoaFieldView<Field>{
         values.field_count(),
         values.field_capacity(),
@@ -573,74 +543,62 @@ namespace std {
 
   [return<void>]
   soaFieldViewCheckShape<T>([SoaFieldView<T>] values) {
-    if(or(or(less_than(values.field_count(), 0i32),
-             less_than(values.field_capacity(), 0i32)),
-          or(greater_than(values.field_count(), values.field_capacity()),
-             or(greater_than(values.field_capacity(), 1073741823i32),
-                less_than(values.stride, 1i32)))),
-       then() {
-         [array<i32>] empty{array<i32>()}
-         empty[0i32]
-       },
-       else() { })
+    if(values.field_count() < 0i32 || values.field_capacity() < 0i32 || values.field_count() > values.field_capacity() || values.field_capacity() > 1073741823i32 || values.stride < 1i32) {
+      panic(0i32)
+    }
   }
 
   [return<void>]
   soaFieldViewCheckIndex<T>([SoaFieldView<T>] values, [i32] index) {
     soaFieldViewCheckShape<T>(values)
-    if(or(or(less_than(index, 0i32),
-             not(less_than(index, values.field_count()))),
-          not(less_than(index, values.field_capacity()))),
-       then() {
-         [array<i32>] empty{array<i32>()}
-         empty[index]
-       },
-       else() { })
+    if(index < 0i32 || !(index < values.field_count()) || !(index < values.field_capacity())) {
+      panic(index)
+    }
   }
 
   [return<Pointer<uninitialized<T>>>]
   soaFieldViewSlotUnsafe<T>([SoaFieldView<T>] values, [i32] index) {
     soaFieldViewCheckIndex<T>(values, index)
-    [i32] byteOffset{multiply(index, values.stride)}
+    [i32] byteOffset{index * values.stride}
     [Pointer<i32>] baseBytes{
-        /std/collections/buffer_unchecked/bufferReinterpretBytes<uninitialized<T>>(values.data)}
+        bufferReinterpretBytes<uninitialized<T>>(values.data)}
     [Pointer<i32>] slotBytes{
-        /std/collections/buffer_unchecked/bufferOffsetBytesUnsafe(baseBytes, byteOffset)}
-    return(/std/collections/buffer_unchecked/bufferReinterpretFromBytes<uninitialized<T>>(slotBytes))
+        bufferOffsetBytesUnsafe(baseBytes, byteOffset)}
+    return(bufferReinterpretFromBytes<uninitialized<T>>(slotBytes))
   }
 
   [public return<T>]
   soaFieldViewRead<T>([SoaFieldView<T>] values, [i32] index) {
-    return(dereference(soaFieldViewSlotUnsafe<T>(values, index)))
+    return(*(soaFieldViewSlotUnsafe<T>(values, index)))
   }
 
   [public return<Reference<T>>]
   soaFieldViewRef<T>([SoaFieldView<T>] values, [i32] index) {
-    return(borrow(dereference(soaFieldViewSlotUnsafe<T>(values, index))))
+    return(borrow(*(soaFieldViewSlotUnsafe<T>(values, index))))
   }
 
   [return<void>]
   soaColumnInitSlot<T>([SoaColumn<T> mut] values, [i32] index, [T] value) {
     [Pointer<uninitialized<T>> mut] slot{soaColumnSlotUnsafe<T>(values, index)}
-    init(dereference(slot), value)
+    init(*slot, value)
   }
 
   [return<void>]
   soaColumnDropSlot<T>([SoaColumn<T> mut] values, [i32] index) {
     [Pointer<uninitialized<T>> mut] slot{soaColumnSlotUnsafe<T>(values, index)}
-    drop(dereference(slot))
+    drop(*slot)
   }
 
   [return<T>]
   soaColumnTakeSlot<T>([SoaColumn<T> mut] values, [i32] index) {
     [Pointer<uninitialized<T>> mut] slot{soaColumnSlotUnsafe<T>(values, index)}
-    return(take(dereference(slot)))
+    return(take(*slot))
   }
 
   [return<Reference<T>>]
   soaColumnBorrowSlot<T>([SoaColumn<T>] values, [i32] index) {
     [Pointer<uninitialized<T>>] slot{soaColumnSlotUnsafe<T>(values, index)}
-    return(borrow(dereference(slot)))
+    return(borrow(*slot))
   }
 
   [public return<Reference<T>>]
@@ -662,68 +620,53 @@ namespace std {
   [return<void>]
   soaColumnDropRange<T>([SoaColumn<T> mut] values, [i32] limit) {
     soaColumnCheckShape<T>(values)
-    if(or(less_than(limit, 0i32),
-          greater_than(limit, values.field_capacity())),
-       then() {
-         [array<i32>] empty{array<i32>()}
-         empty[limit]
-       },
-       else() { })
+    if(limit < 0i32 || limit > values.field_capacity()) {
+      panic(limit)
+    }
     [i32 mut] index{0i32}
-    while(less_than(index, limit), do() {
+    while(index < limit) {
       soaColumnDropSlot<T>(values, index)
-      increment(index)
-    })
+      index++
+    }
   }
 
   [effects(heap_alloc), return<void>]
   soaColumnMovePrefixToBuffer<T>([Pointer<uninitialized<T>> mut] dst, [SoaColumn<T> mut] values, [i32] limit) {
     [i32 mut] index{0i32}
-    while(less_than(index, limit), do() {
+    while(index < limit) {
       [Pointer<uninitialized<T>> mut] nextSlot{
-          /std/collections/buffer_unchecked/bufferOffsetUnsafe<uninitialized<T>>(dst, index)}
-      init(dereference(nextSlot), soaColumnTakeSlot<T>(values, index))
-      increment(index)
-    })
+          bufferOffsetUnsafe<uninitialized<T>>(dst, index)}
+      init(*nextSlot, soaColumnTakeSlot<T>(values, index))
+      index++
+    }
   }
 
   [effects(heap_alloc), return<SoaColumn<T>>]
   soaColumnAlloc<T>([i32] count, [i32] capacity) {
     [i32 mut] allocCount{capacity}
-    if(equal(allocCount, 0i32),
-       then() { assign(allocCount, 1i32) },
-       else() { })
+    if(allocCount == 0i32) {
+      allocCount = 1i32
+    }
     return(SoaColumn<T>{
         count,
         capacity,
-        /std/collections/buffer_checked/bufferAlloc<uninitialized<T>>(allocCount),
+        bufferAlloc<uninitialized<T>>(allocCount),
         true})
   }
 
   [return<void>]
   soaColumnCheckShape<T>([SoaColumn<T>] values) {
-    if(or(or(less_than(values.field_count(), 0i32),
-             less_than(values.field_capacity(), 0i32)),
-          or(greater_than(values.field_count(), values.field_capacity()),
-             greater_than(values.field_capacity(), 1073741823i32))),
-       then() {
-         [array<i32>] empty{array<i32>()}
-         empty[0i32]
-       },
-       else() { })
+    if(values.field_count() < 0i32 || values.field_capacity() < 0i32 || values.field_count() > values.field_capacity() || values.field_capacity() > 1073741823i32) {
+      panic(0i32)
+    }
   }
 
   [return<void>]
   soaColumnCheckIndex<T>([SoaColumn<T>] values, [i32] index) {
     soaColumnCheckShape<T>(values)
-    if(or(or(less_than(index, 0i32),
-             not(less_than(index, values.field_count()))),
-          not(less_than(index, values.field_capacity()))),
-       then() {
-         [array<i32>] empty{array<i32>()}
-         empty[index]
-       },
-       else() { })
+    if(index < 0i32 || !(index < values.field_count()) || !(index < values.field_capacity())) {
+      panic(index)
+    }
   }
 
   [return<void>]
@@ -732,13 +675,9 @@ namespace std {
     [Reference<SoaColumn<T1>>] second{values.second}
     soaColumnCheckShape<T0>(first)
     soaColumnCheckShape<T1>(second)
-    if(or(not(equal(soaColumnCount<T0>(first), soaColumnCount<T1>(second))),
-          not(equal(soaColumnCapacity<T0>(first), soaColumnCapacity<T1>(second)))),
-       then() {
-         [array<i32>] empty{array<i32>()}
-         empty[0i32]
-       },
-       else() { })
+    if(!(soaColumnCount<T0>(first) == soaColumnCount<T1>(second)) || !(soaColumnCapacity<T0>(first) == soaColumnCapacity<T1>(second))) {
+      panic(0i32)
+    }
   }
 
   [return<void>]
@@ -749,15 +688,9 @@ namespace std {
     soaColumnCheckShape<T0>(first)
     soaColumnCheckShape<T1>(second)
     soaColumnCheckShape<T2>(third)
-    if(or(or(not(equal(soaColumnCount<T0>(first), soaColumnCount<T1>(second))),
-             not(equal(soaColumnCount<T0>(first), soaColumnCount<T2>(third)))),
-          or(not(equal(soaColumnCapacity<T0>(first), soaColumnCapacity<T1>(second))),
-             not(equal(soaColumnCapacity<T0>(first), soaColumnCapacity<T2>(third))))),
-       then() {
-         [array<i32>] empty{array<i32>()}
-         empty[0i32]
-       },
-       else() { })
+    if(!(soaColumnCount<T0>(first) == soaColumnCount<T1>(second)) || !(soaColumnCount<T0>(first) == soaColumnCount<T2>(third)) || !(soaColumnCapacity<T0>(first) == soaColumnCapacity<T1>(second)) || !(soaColumnCapacity<T0>(first) == soaColumnCapacity<T2>(third))) {
+      panic(0i32)
+    }
   }
 
   [return<void>]
@@ -770,17 +703,9 @@ namespace std {
     soaColumnCheckShape<T1>(second)
     soaColumnCheckShape<T2>(third)
     soaColumnCheckShape<T3>(fourth)
-    if(or(or(or(not(equal(soaColumnCount<T0>(first), soaColumnCount<T1>(second))),
-                not(equal(soaColumnCount<T0>(first), soaColumnCount<T2>(third)))),
-             not(equal(soaColumnCount<T0>(first), soaColumnCount<T3>(fourth)))),
-          or(or(not(equal(soaColumnCapacity<T0>(first), soaColumnCapacity<T1>(second))),
-                not(equal(soaColumnCapacity<T0>(first), soaColumnCapacity<T2>(third)))),
-             not(equal(soaColumnCapacity<T0>(first), soaColumnCapacity<T3>(fourth))))),
-       then() {
-         [array<i32>] empty{array<i32>()}
-         empty[0i32]
-       },
-       else() { })
+    if(!(soaColumnCount<T0>(first) == soaColumnCount<T1>(second)) || !(soaColumnCount<T0>(first) == soaColumnCount<T2>(third)) || !(soaColumnCount<T0>(first) == soaColumnCount<T3>(fourth)) || !(soaColumnCapacity<T0>(first) == soaColumnCapacity<T1>(second)) || !(soaColumnCapacity<T0>(first) == soaColumnCapacity<T2>(third)) || !(soaColumnCapacity<T0>(first) == soaColumnCapacity<T3>(fourth))) {
+      panic(0i32)
+    }
   }
 
   [return<void>]
@@ -795,19 +720,9 @@ namespace std {
     soaColumnCheckShape<T2>(third)
     soaColumnCheckShape<T3>(fourth)
     soaColumnCheckShape<T4>(fifth)
-    if(or(or(or(not(equal(soaColumnCount<T0>(first), soaColumnCount<T1>(second))),
-                not(equal(soaColumnCount<T0>(first), soaColumnCount<T2>(third)))),
-             or(not(equal(soaColumnCount<T0>(first), soaColumnCount<T3>(fourth))),
-                not(equal(soaColumnCount<T0>(first), soaColumnCount<T4>(fifth))))),
-          or(or(not(equal(soaColumnCapacity<T0>(first), soaColumnCapacity<T1>(second))),
-                not(equal(soaColumnCapacity<T0>(first), soaColumnCapacity<T2>(third)))),
-             or(not(equal(soaColumnCapacity<T0>(first), soaColumnCapacity<T3>(fourth))),
-                not(equal(soaColumnCapacity<T0>(first), soaColumnCapacity<T4>(fifth)))))),
-       then() {
-         [array<i32>] empty{array<i32>()}
-         empty[0i32]
-       },
-       else() { })
+    if(!(soaColumnCount<T0>(first) == soaColumnCount<T1>(second)) || !(soaColumnCount<T0>(first) == soaColumnCount<T2>(third)) || !(soaColumnCount<T0>(first) == soaColumnCount<T3>(fourth)) || !(soaColumnCount<T0>(first) == soaColumnCount<T4>(fifth)) || !(soaColumnCapacity<T0>(first) == soaColumnCapacity<T1>(second)) || !(soaColumnCapacity<T0>(first) == soaColumnCapacity<T2>(third)) || !(soaColumnCapacity<T0>(first) == soaColumnCapacity<T3>(fourth)) || !(soaColumnCapacity<T0>(first) == soaColumnCapacity<T4>(fifth))) {
+      panic(0i32)
+    }
   }
 
   [return<void>]
@@ -824,21 +739,9 @@ namespace std {
     soaColumnCheckShape<T3>(fourth)
     soaColumnCheckShape<T4>(fifth)
     soaColumnCheckShape<T5>(sixth)
-    if(or(or(or(not(equal(soaColumnCount<T0>(first), soaColumnCount<T1>(second))),
-                not(equal(soaColumnCount<T0>(first), soaColumnCount<T2>(third)))),
-             or(not(equal(soaColumnCount<T0>(first), soaColumnCount<T3>(fourth))),
-                not(equal(soaColumnCount<T0>(first), soaColumnCount<T4>(fifth))))),
-          or(or(not(equal(soaColumnCount<T0>(first), soaColumnCount<T5>(sixth))),
-                or(not(equal(soaColumnCapacity<T0>(first), soaColumnCapacity<T1>(second))),
-                   not(equal(soaColumnCapacity<T0>(first), soaColumnCapacity<T2>(third))))),
-             or(or(not(equal(soaColumnCapacity<T0>(first), soaColumnCapacity<T3>(fourth))),
-                   not(equal(soaColumnCapacity<T0>(first), soaColumnCapacity<T4>(fifth)))),
-                not(equal(soaColumnCapacity<T0>(first), soaColumnCapacity<T5>(sixth)))))),
-       then() {
-         [array<i32>] empty{array<i32>()}
-         empty[0i32]
-       },
-       else() { })
+    if(!(soaColumnCount<T0>(first) == soaColumnCount<T1>(second)) || !(soaColumnCount<T0>(first) == soaColumnCount<T2>(third)) || !(soaColumnCount<T0>(first) == soaColumnCount<T3>(fourth)) || !(soaColumnCount<T0>(first) == soaColumnCount<T4>(fifth)) || !(soaColumnCount<T0>(first) == soaColumnCount<T5>(sixth)) || !(soaColumnCapacity<T0>(first) == soaColumnCapacity<T1>(second)) || !(soaColumnCapacity<T0>(first) == soaColumnCapacity<T2>(third)) || !(soaColumnCapacity<T0>(first) == soaColumnCapacity<T3>(fourth)) || !(soaColumnCapacity<T0>(first) == soaColumnCapacity<T4>(fifth)) || !(soaColumnCapacity<T0>(first) == soaColumnCapacity<T5>(sixth))) {
+      panic(0i32)
+    }
   }
 
   [return<void>]
@@ -857,23 +760,9 @@ namespace std {
     soaColumnCheckShape<T4>(fifth)
     soaColumnCheckShape<T5>(sixth)
     soaColumnCheckShape<T6>(seventh)
-    if(or(or(or(not(equal(soaColumnCount<T0>(first), soaColumnCount<T1>(second))),
-                not(equal(soaColumnCount<T0>(first), soaColumnCount<T2>(third)))),
-             or(not(equal(soaColumnCount<T0>(first), soaColumnCount<T3>(fourth))),
-                not(equal(soaColumnCount<T0>(first), soaColumnCount<T4>(fifth))))),
-          or(or(not(equal(soaColumnCount<T0>(first), soaColumnCount<T5>(sixth))),
-                not(equal(soaColumnCount<T0>(first), soaColumnCount<T6>(seventh)))),
-             or(or(not(equal(soaColumnCapacity<T0>(first), soaColumnCapacity<T1>(second))),
-                   not(equal(soaColumnCapacity<T0>(first), soaColumnCapacity<T2>(third)))),
-                or(or(not(equal(soaColumnCapacity<T0>(first), soaColumnCapacity<T3>(fourth))),
-                      not(equal(soaColumnCapacity<T0>(first), soaColumnCapacity<T4>(fifth)))),
-                   or(not(equal(soaColumnCapacity<T0>(first), soaColumnCapacity<T5>(sixth))),
-                      not(equal(soaColumnCapacity<T0>(first), soaColumnCapacity<T6>(seventh)))))))),
-       then() {
-         [array<i32>] empty{array<i32>()}
-         empty[0i32]
-       },
-       else() { })
+    if(!(soaColumnCount<T0>(first) == soaColumnCount<T1>(second)) || !(soaColumnCount<T0>(first) == soaColumnCount<T2>(third)) || !(soaColumnCount<T0>(first) == soaColumnCount<T3>(fourth)) || !(soaColumnCount<T0>(first) == soaColumnCount<T4>(fifth)) || !(soaColumnCount<T0>(first) == soaColumnCount<T5>(sixth)) || !(soaColumnCount<T0>(first) == soaColumnCount<T6>(seventh)) || !(soaColumnCapacity<T0>(first) == soaColumnCapacity<T1>(second)) || !(soaColumnCapacity<T0>(first) == soaColumnCapacity<T2>(third)) || !(soaColumnCapacity<T0>(first) == soaColumnCapacity<T3>(fourth)) || !(soaColumnCapacity<T0>(first) == soaColumnCapacity<T4>(fifth)) || !(soaColumnCapacity<T0>(first) == soaColumnCapacity<T5>(sixth)) || !(soaColumnCapacity<T0>(first) == soaColumnCapacity<T6>(seventh))) {
+      panic(0i32)
+    }
   }
 
   [return<void>]
@@ -895,29 +784,14 @@ namespace std {
     soaColumnCheckShape<T6>(seventh)
     soaColumnCheckShape<T7>(eighth)
     [bool] countMismatch{
-      or(or(or(not(equal(soaColumnCount<T0>(first), soaColumnCount<T1>(second))),
-               not(equal(soaColumnCount<T0>(first), soaColumnCount<T2>(third)))),
-            or(not(equal(soaColumnCount<T0>(first), soaColumnCount<T3>(fourth))),
-               not(equal(soaColumnCount<T0>(first), soaColumnCount<T4>(fifth))))),
-         or(or(not(equal(soaColumnCount<T0>(first), soaColumnCount<T5>(sixth))),
-               not(equal(soaColumnCount<T0>(first), soaColumnCount<T6>(seventh)))),
-            not(equal(soaColumnCount<T0>(first), soaColumnCount<T7>(eighth)))))
+      !(soaColumnCount<T0>(first) == soaColumnCount<T1>(second)) || !(soaColumnCount<T0>(first) == soaColumnCount<T2>(third)) || !(soaColumnCount<T0>(first) == soaColumnCount<T3>(fourth)) || !(soaColumnCount<T0>(first) == soaColumnCount<T4>(fifth)) || !(soaColumnCount<T0>(first) == soaColumnCount<T5>(sixth)) || !(soaColumnCount<T0>(first) == soaColumnCount<T6>(seventh)) || !(soaColumnCount<T0>(first) == soaColumnCount<T7>(eighth))
     }
     [bool] capacityMismatch{
-      or(or(or(not(equal(soaColumnCapacity<T0>(first), soaColumnCapacity<T1>(second))),
-               not(equal(soaColumnCapacity<T0>(first), soaColumnCapacity<T2>(third)))),
-            or(not(equal(soaColumnCapacity<T0>(first), soaColumnCapacity<T3>(fourth))),
-               not(equal(soaColumnCapacity<T0>(first), soaColumnCapacity<T4>(fifth))))),
-         or(or(not(equal(soaColumnCapacity<T0>(first), soaColumnCapacity<T5>(sixth))),
-               not(equal(soaColumnCapacity<T0>(first), soaColumnCapacity<T6>(seventh)))),
-            not(equal(soaColumnCapacity<T0>(first), soaColumnCapacity<T7>(eighth)))))
+      !(soaColumnCapacity<T0>(first) == soaColumnCapacity<T1>(second)) || !(soaColumnCapacity<T0>(first) == soaColumnCapacity<T2>(third)) || !(soaColumnCapacity<T0>(first) == soaColumnCapacity<T3>(fourth)) || !(soaColumnCapacity<T0>(first) == soaColumnCapacity<T4>(fifth)) || !(soaColumnCapacity<T0>(first) == soaColumnCapacity<T5>(sixth)) || !(soaColumnCapacity<T0>(first) == soaColumnCapacity<T6>(seventh)) || !(soaColumnCapacity<T0>(first) == soaColumnCapacity<T7>(eighth))
     }
-    if(or(countMismatch, capacityMismatch),
-       then() {
-         [array<i32>] empty{array<i32>()}
-         empty[0i32]
-       },
-       else() { })
+    if(countMismatch || capacityMismatch) {
+      panic(0i32)
+    }
   }
 
   [return<void>]
@@ -941,31 +815,14 @@ namespace std {
     soaColumnCheckShape<T7>(eighth)
     soaColumnCheckShape<T8>(ninth)
     [bool] countMismatch{
-      or(or(or(not(equal(soaColumnCount<T0>(first), soaColumnCount<T1>(second))),
-               not(equal(soaColumnCount<T0>(first), soaColumnCount<T2>(third)))),
-            or(not(equal(soaColumnCount<T0>(first), soaColumnCount<T3>(fourth))),
-               not(equal(soaColumnCount<T0>(first), soaColumnCount<T4>(fifth))))),
-         or(or(or(not(equal(soaColumnCount<T0>(first), soaColumnCount<T5>(sixth))),
-                  not(equal(soaColumnCount<T0>(first), soaColumnCount<T6>(seventh)))),
-               not(equal(soaColumnCount<T0>(first), soaColumnCount<T7>(eighth)))),
-            not(equal(soaColumnCount<T0>(first), soaColumnCount<T8>(ninth)))))
+      !(soaColumnCount<T0>(first) == soaColumnCount<T1>(second)) || !(soaColumnCount<T0>(first) == soaColumnCount<T2>(third)) || !(soaColumnCount<T0>(first) == soaColumnCount<T3>(fourth)) || !(soaColumnCount<T0>(first) == soaColumnCount<T4>(fifth)) || !(soaColumnCount<T0>(first) == soaColumnCount<T5>(sixth)) || !(soaColumnCount<T0>(first) == soaColumnCount<T6>(seventh)) || !(soaColumnCount<T0>(first) == soaColumnCount<T7>(eighth)) || !(soaColumnCount<T0>(first) == soaColumnCount<T8>(ninth))
     }
     [bool] capacityMismatch{
-      or(or(or(not(equal(soaColumnCapacity<T0>(first), soaColumnCapacity<T1>(second))),
-               not(equal(soaColumnCapacity<T0>(first), soaColumnCapacity<T2>(third)))),
-            or(not(equal(soaColumnCapacity<T0>(first), soaColumnCapacity<T3>(fourth))),
-               not(equal(soaColumnCapacity<T0>(first), soaColumnCapacity<T4>(fifth))))),
-         or(or(or(not(equal(soaColumnCapacity<T0>(first), soaColumnCapacity<T5>(sixth))),
-                  not(equal(soaColumnCapacity<T0>(first), soaColumnCapacity<T6>(seventh)))),
-               not(equal(soaColumnCapacity<T0>(first), soaColumnCapacity<T7>(eighth)))),
-            not(equal(soaColumnCapacity<T0>(first), soaColumnCapacity<T8>(ninth)))))
+      !(soaColumnCapacity<T0>(first) == soaColumnCapacity<T1>(second)) || !(soaColumnCapacity<T0>(first) == soaColumnCapacity<T2>(third)) || !(soaColumnCapacity<T0>(first) == soaColumnCapacity<T3>(fourth)) || !(soaColumnCapacity<T0>(first) == soaColumnCapacity<T4>(fifth)) || !(soaColumnCapacity<T0>(first) == soaColumnCapacity<T5>(sixth)) || !(soaColumnCapacity<T0>(first) == soaColumnCapacity<T6>(seventh)) || !(soaColumnCapacity<T0>(first) == soaColumnCapacity<T7>(eighth)) || !(soaColumnCapacity<T0>(first) == soaColumnCapacity<T8>(ninth))
     }
-    if(or(countMismatch, capacityMismatch),
-       then() {
-         [array<i32>] empty{array<i32>()}
-         empty[0i32]
-       },
-       else() { })
+    if(countMismatch || capacityMismatch) {
+      panic(0i32)
+    }
   }
 
   [return<void>]
@@ -991,33 +848,14 @@ namespace std {
     soaColumnCheckShape<T8>(ninth)
     soaColumnCheckShape<T9>(tenth)
     [bool] countMismatch{
-      or(or(or(or(not(equal(soaColumnCount<T0>(first), soaColumnCount<T1>(second))),
-                  not(equal(soaColumnCount<T0>(first), soaColumnCount<T2>(third)))),
-               or(not(equal(soaColumnCount<T0>(first), soaColumnCount<T3>(fourth))),
-                  not(equal(soaColumnCount<T0>(first), soaColumnCount<T4>(fifth))))),
-            or(or(not(equal(soaColumnCount<T0>(first), soaColumnCount<T5>(sixth))),
-                  not(equal(soaColumnCount<T0>(first), soaColumnCount<T6>(seventh)))),
-               or(not(equal(soaColumnCount<T0>(first), soaColumnCount<T7>(eighth))),
-                  not(equal(soaColumnCount<T0>(first), soaColumnCount<T8>(ninth)))))),
-         not(equal(soaColumnCount<T0>(first), soaColumnCount<T9>(tenth))))
+      !(soaColumnCount<T0>(first) == soaColumnCount<T1>(second)) || !(soaColumnCount<T0>(first) == soaColumnCount<T2>(third)) || !(soaColumnCount<T0>(first) == soaColumnCount<T3>(fourth)) || !(soaColumnCount<T0>(first) == soaColumnCount<T4>(fifth)) || !(soaColumnCount<T0>(first) == soaColumnCount<T5>(sixth)) || !(soaColumnCount<T0>(first) == soaColumnCount<T6>(seventh)) || !(soaColumnCount<T0>(first) == soaColumnCount<T7>(eighth)) || !(soaColumnCount<T0>(first) == soaColumnCount<T8>(ninth)) || !(soaColumnCount<T0>(first) == soaColumnCount<T9>(tenth))
     }
     [bool] capacityMismatch{
-      or(or(or(or(not(equal(soaColumnCapacity<T0>(first), soaColumnCapacity<T1>(second))),
-                  not(equal(soaColumnCapacity<T0>(first), soaColumnCapacity<T2>(third)))),
-               or(not(equal(soaColumnCapacity<T0>(first), soaColumnCapacity<T3>(fourth))),
-                  not(equal(soaColumnCapacity<T0>(first), soaColumnCapacity<T4>(fifth))))),
-            or(or(not(equal(soaColumnCapacity<T0>(first), soaColumnCapacity<T5>(sixth))),
-                  not(equal(soaColumnCapacity<T0>(first), soaColumnCapacity<T6>(seventh)))),
-               or(not(equal(soaColumnCapacity<T0>(first), soaColumnCapacity<T7>(eighth))),
-                  not(equal(soaColumnCapacity<T0>(first), soaColumnCapacity<T8>(ninth)))))),
-         not(equal(soaColumnCapacity<T0>(first), soaColumnCapacity<T9>(tenth))))
+      !(soaColumnCapacity<T0>(first) == soaColumnCapacity<T1>(second)) || !(soaColumnCapacity<T0>(first) == soaColumnCapacity<T2>(third)) || !(soaColumnCapacity<T0>(first) == soaColumnCapacity<T3>(fourth)) || !(soaColumnCapacity<T0>(first) == soaColumnCapacity<T4>(fifth)) || !(soaColumnCapacity<T0>(first) == soaColumnCapacity<T5>(sixth)) || !(soaColumnCapacity<T0>(first) == soaColumnCapacity<T6>(seventh)) || !(soaColumnCapacity<T0>(first) == soaColumnCapacity<T7>(eighth)) || !(soaColumnCapacity<T0>(first) == soaColumnCapacity<T8>(ninth)) || !(soaColumnCapacity<T0>(first) == soaColumnCapacity<T9>(tenth))
     }
-    if(or(countMismatch, capacityMismatch),
-       then() {
-         [array<i32>] empty{array<i32>()}
-         empty[0i32]
-       },
-       else() { })
+    if(countMismatch || capacityMismatch) {
+      panic(0i32)
+    }
   }
 
   [return<void>]
@@ -1045,35 +883,14 @@ namespace std {
     soaColumnCheckShape<T9>(tenth)
     soaColumnCheckShape<T10>(eleventh)
     [bool] countMismatch{
-      or(or(or(or(not(equal(soaColumnCount<T0>(first), soaColumnCount<T1>(second))),
-                  not(equal(soaColumnCount<T0>(first), soaColumnCount<T2>(third)))),
-               or(not(equal(soaColumnCount<T0>(first), soaColumnCount<T3>(fourth))),
-                  not(equal(soaColumnCount<T0>(first), soaColumnCount<T4>(fifth))))),
-            or(or(not(equal(soaColumnCount<T0>(first), soaColumnCount<T5>(sixth))),
-                  not(equal(soaColumnCount<T0>(first), soaColumnCount<T6>(seventh)))),
-               or(not(equal(soaColumnCount<T0>(first), soaColumnCount<T7>(eighth))),
-                  not(equal(soaColumnCount<T0>(first), soaColumnCount<T8>(ninth)))))),
-         or(not(equal(soaColumnCount<T0>(first), soaColumnCount<T9>(tenth))),
-            not(equal(soaColumnCount<T0>(first), soaColumnCount<T10>(eleventh)))))
+      !(soaColumnCount<T0>(first) == soaColumnCount<T1>(second)) || !(soaColumnCount<T0>(first) == soaColumnCount<T2>(third)) || !(soaColumnCount<T0>(first) == soaColumnCount<T3>(fourth)) || !(soaColumnCount<T0>(first) == soaColumnCount<T4>(fifth)) || !(soaColumnCount<T0>(first) == soaColumnCount<T5>(sixth)) || !(soaColumnCount<T0>(first) == soaColumnCount<T6>(seventh)) || !(soaColumnCount<T0>(first) == soaColumnCount<T7>(eighth)) || !(soaColumnCount<T0>(first) == soaColumnCount<T8>(ninth)) || !(soaColumnCount<T0>(first) == soaColumnCount<T9>(tenth)) || !(soaColumnCount<T0>(first) == soaColumnCount<T10>(eleventh))
     }
     [bool] capacityMismatch{
-      or(or(or(or(not(equal(soaColumnCapacity<T0>(first), soaColumnCapacity<T1>(second))),
-                  not(equal(soaColumnCapacity<T0>(first), soaColumnCapacity<T2>(third)))),
-               or(not(equal(soaColumnCapacity<T0>(first), soaColumnCapacity<T3>(fourth))),
-                  not(equal(soaColumnCapacity<T0>(first), soaColumnCapacity<T4>(fifth))))),
-            or(or(not(equal(soaColumnCapacity<T0>(first), soaColumnCapacity<T5>(sixth))),
-                  not(equal(soaColumnCapacity<T0>(first), soaColumnCapacity<T6>(seventh)))),
-               or(not(equal(soaColumnCapacity<T0>(first), soaColumnCapacity<T7>(eighth))),
-                  not(equal(soaColumnCapacity<T0>(first), soaColumnCapacity<T8>(ninth)))))),
-         or(not(equal(soaColumnCapacity<T0>(first), soaColumnCapacity<T9>(tenth))),
-            not(equal(soaColumnCapacity<T0>(first), soaColumnCapacity<T10>(eleventh)))))
+      !(soaColumnCapacity<T0>(first) == soaColumnCapacity<T1>(second)) || !(soaColumnCapacity<T0>(first) == soaColumnCapacity<T2>(third)) || !(soaColumnCapacity<T0>(first) == soaColumnCapacity<T3>(fourth)) || !(soaColumnCapacity<T0>(first) == soaColumnCapacity<T4>(fifth)) || !(soaColumnCapacity<T0>(first) == soaColumnCapacity<T5>(sixth)) || !(soaColumnCapacity<T0>(first) == soaColumnCapacity<T6>(seventh)) || !(soaColumnCapacity<T0>(first) == soaColumnCapacity<T7>(eighth)) || !(soaColumnCapacity<T0>(first) == soaColumnCapacity<T8>(ninth)) || !(soaColumnCapacity<T0>(first) == soaColumnCapacity<T9>(tenth)) || !(soaColumnCapacity<T0>(first) == soaColumnCapacity<T10>(eleventh))
     }
-    if(or(countMismatch, capacityMismatch),
-       then() {
-         [array<i32>] empty{array<i32>()}
-         empty[0i32]
-       },
-       else() { })
+    if(countMismatch || capacityMismatch) {
+      panic(0i32)
+    }
   }
 
   [return<void>]
@@ -1103,37 +920,14 @@ namespace std {
     soaColumnCheckShape<T10>(eleventh)
     soaColumnCheckShape<T11>(twelfth)
     [bool] countMismatch{
-      or(or(or(or(not(equal(soaColumnCount<T0>(first), soaColumnCount<T1>(second))),
-                  not(equal(soaColumnCount<T0>(first), soaColumnCount<T2>(third)))),
-               or(not(equal(soaColumnCount<T0>(first), soaColumnCount<T3>(fourth))),
-                  not(equal(soaColumnCount<T0>(first), soaColumnCount<T4>(fifth))))),
-            or(or(not(equal(soaColumnCount<T0>(first), soaColumnCount<T5>(sixth))),
-                  not(equal(soaColumnCount<T0>(first), soaColumnCount<T6>(seventh)))),
-               or(not(equal(soaColumnCount<T0>(first), soaColumnCount<T7>(eighth))),
-                  not(equal(soaColumnCount<T0>(first), soaColumnCount<T8>(ninth)))))),
-         or(or(not(equal(soaColumnCount<T0>(first), soaColumnCount<T9>(tenth))),
-               not(equal(soaColumnCount<T0>(first), soaColumnCount<T10>(eleventh)))),
-            not(equal(soaColumnCount<T0>(first), soaColumnCount<T11>(twelfth)))))
+      !(soaColumnCount<T0>(first) == soaColumnCount<T1>(second)) || !(soaColumnCount<T0>(first) == soaColumnCount<T2>(third)) || !(soaColumnCount<T0>(first) == soaColumnCount<T3>(fourth)) || !(soaColumnCount<T0>(first) == soaColumnCount<T4>(fifth)) || !(soaColumnCount<T0>(first) == soaColumnCount<T5>(sixth)) || !(soaColumnCount<T0>(first) == soaColumnCount<T6>(seventh)) || !(soaColumnCount<T0>(first) == soaColumnCount<T7>(eighth)) || !(soaColumnCount<T0>(first) == soaColumnCount<T8>(ninth)) || !(soaColumnCount<T0>(first) == soaColumnCount<T9>(tenth)) || !(soaColumnCount<T0>(first) == soaColumnCount<T10>(eleventh)) || !(soaColumnCount<T0>(first) == soaColumnCount<T11>(twelfth))
     }
     [bool] capacityMismatch{
-      or(or(or(or(not(equal(soaColumnCapacity<T0>(first), soaColumnCapacity<T1>(second))),
-                  not(equal(soaColumnCapacity<T0>(first), soaColumnCapacity<T2>(third)))),
-               or(not(equal(soaColumnCapacity<T0>(first), soaColumnCapacity<T3>(fourth))),
-                  not(equal(soaColumnCapacity<T0>(first), soaColumnCapacity<T4>(fifth))))),
-            or(or(not(equal(soaColumnCapacity<T0>(first), soaColumnCapacity<T5>(sixth))),
-                  not(equal(soaColumnCapacity<T0>(first), soaColumnCapacity<T6>(seventh)))),
-               or(not(equal(soaColumnCapacity<T0>(first), soaColumnCapacity<T7>(eighth))),
-                  not(equal(soaColumnCapacity<T0>(first), soaColumnCapacity<T8>(ninth)))))),
-         or(or(not(equal(soaColumnCapacity<T0>(first), soaColumnCapacity<T9>(tenth))),
-               not(equal(soaColumnCapacity<T0>(first), soaColumnCapacity<T10>(eleventh)))),
-            not(equal(soaColumnCapacity<T0>(first), soaColumnCapacity<T11>(twelfth)))))
+      !(soaColumnCapacity<T0>(first) == soaColumnCapacity<T1>(second)) || !(soaColumnCapacity<T0>(first) == soaColumnCapacity<T2>(third)) || !(soaColumnCapacity<T0>(first) == soaColumnCapacity<T3>(fourth)) || !(soaColumnCapacity<T0>(first) == soaColumnCapacity<T4>(fifth)) || !(soaColumnCapacity<T0>(first) == soaColumnCapacity<T5>(sixth)) || !(soaColumnCapacity<T0>(first) == soaColumnCapacity<T6>(seventh)) || !(soaColumnCapacity<T0>(first) == soaColumnCapacity<T7>(eighth)) || !(soaColumnCapacity<T0>(first) == soaColumnCapacity<T8>(ninth)) || !(soaColumnCapacity<T0>(first) == soaColumnCapacity<T9>(tenth)) || !(soaColumnCapacity<T0>(first) == soaColumnCapacity<T10>(eleventh)) || !(soaColumnCapacity<T0>(first) == soaColumnCapacity<T11>(twelfth))
     }
-    if(or(countMismatch, capacityMismatch),
-       then() {
-         [array<i32>] empty{array<i32>()}
-         empty[0i32]
-       },
-       else() { })
+    if(countMismatch || capacityMismatch) {
+      panic(0i32)
+    }
   }
 
   [return<void>]
@@ -1165,39 +959,14 @@ namespace std {
     soaColumnCheckShape<T11>(twelfth)
     soaColumnCheckShape<T12>(thirteenth)
     [bool] countMismatch{
-      or(or(or(or(not(equal(soaColumnCount<T0>(first), soaColumnCount<T1>(second))),
-                  not(equal(soaColumnCount<T0>(first), soaColumnCount<T2>(third)))),
-               or(not(equal(soaColumnCount<T0>(first), soaColumnCount<T3>(fourth))),
-                  not(equal(soaColumnCount<T0>(first), soaColumnCount<T4>(fifth))))),
-            or(or(not(equal(soaColumnCount<T0>(first), soaColumnCount<T5>(sixth))),
-                  not(equal(soaColumnCount<T0>(first), soaColumnCount<T6>(seventh)))),
-               or(not(equal(soaColumnCount<T0>(first), soaColumnCount<T7>(eighth))),
-                  not(equal(soaColumnCount<T0>(first), soaColumnCount<T8>(ninth)))))),
-         or(or(not(equal(soaColumnCount<T0>(first), soaColumnCount<T9>(tenth))),
-               not(equal(soaColumnCount<T0>(first), soaColumnCount<T10>(eleventh)))),
-            or(not(equal(soaColumnCount<T0>(first), soaColumnCount<T11>(twelfth))),
-               not(equal(soaColumnCount<T0>(first), soaColumnCount<T12>(thirteenth))))))
+      !(soaColumnCount<T0>(first) == soaColumnCount<T1>(second)) || !(soaColumnCount<T0>(first) == soaColumnCount<T2>(third)) || !(soaColumnCount<T0>(first) == soaColumnCount<T3>(fourth)) || !(soaColumnCount<T0>(first) == soaColumnCount<T4>(fifth)) || !(soaColumnCount<T0>(first) == soaColumnCount<T5>(sixth)) || !(soaColumnCount<T0>(first) == soaColumnCount<T6>(seventh)) || !(soaColumnCount<T0>(first) == soaColumnCount<T7>(eighth)) || !(soaColumnCount<T0>(first) == soaColumnCount<T8>(ninth)) || !(soaColumnCount<T0>(first) == soaColumnCount<T9>(tenth)) || !(soaColumnCount<T0>(first) == soaColumnCount<T10>(eleventh)) || !(soaColumnCount<T0>(first) == soaColumnCount<T11>(twelfth)) || !(soaColumnCount<T0>(first) == soaColumnCount<T12>(thirteenth))
     }
     [bool] capacityMismatch{
-      or(or(or(or(not(equal(soaColumnCapacity<T0>(first), soaColumnCapacity<T1>(second))),
-                  not(equal(soaColumnCapacity<T0>(first), soaColumnCapacity<T2>(third)))),
-               or(not(equal(soaColumnCapacity<T0>(first), soaColumnCapacity<T3>(fourth))),
-                  not(equal(soaColumnCapacity<T0>(first), soaColumnCapacity<T4>(fifth))))),
-            or(or(not(equal(soaColumnCapacity<T0>(first), soaColumnCapacity<T5>(sixth))),
-                  not(equal(soaColumnCapacity<T0>(first), soaColumnCapacity<T6>(seventh)))),
-               or(not(equal(soaColumnCapacity<T0>(first), soaColumnCapacity<T7>(eighth))),
-                  not(equal(soaColumnCapacity<T0>(first), soaColumnCapacity<T8>(ninth)))))),
-         or(or(not(equal(soaColumnCapacity<T0>(first), soaColumnCapacity<T9>(tenth))),
-               not(equal(soaColumnCapacity<T0>(first), soaColumnCapacity<T10>(eleventh)))),
-            or(not(equal(soaColumnCapacity<T0>(first), soaColumnCapacity<T11>(twelfth))),
-               not(equal(soaColumnCapacity<T0>(first), soaColumnCapacity<T12>(thirteenth))))))
+      !(soaColumnCapacity<T0>(first) == soaColumnCapacity<T1>(second)) || !(soaColumnCapacity<T0>(first) == soaColumnCapacity<T2>(third)) || !(soaColumnCapacity<T0>(first) == soaColumnCapacity<T3>(fourth)) || !(soaColumnCapacity<T0>(first) == soaColumnCapacity<T4>(fifth)) || !(soaColumnCapacity<T0>(first) == soaColumnCapacity<T5>(sixth)) || !(soaColumnCapacity<T0>(first) == soaColumnCapacity<T6>(seventh)) || !(soaColumnCapacity<T0>(first) == soaColumnCapacity<T7>(eighth)) || !(soaColumnCapacity<T0>(first) == soaColumnCapacity<T8>(ninth)) || !(soaColumnCapacity<T0>(first) == soaColumnCapacity<T9>(tenth)) || !(soaColumnCapacity<T0>(first) == soaColumnCapacity<T10>(eleventh)) || !(soaColumnCapacity<T0>(first) == soaColumnCapacity<T11>(twelfth)) || !(soaColumnCapacity<T0>(first) == soaColumnCapacity<T12>(thirteenth))
     }
-    if(or(countMismatch, capacityMismatch),
-       then() {
-         [array<i32>] empty{array<i32>()}
-         empty[0i32]
-       },
-       else() { })
+    if(countMismatch || capacityMismatch) {
+      panic(0i32)
+    }
   }
 
   [return<void>]
@@ -1231,41 +1000,14 @@ namespace std {
     soaColumnCheckShape<T12>(thirteenth)
     soaColumnCheckShape<T13>(fourteenth)
     [bool] countMismatch{
-      or(or(or(or(not(equal(soaColumnCount<T0>(first), soaColumnCount<T1>(second))),
-                  not(equal(soaColumnCount<T0>(first), soaColumnCount<T2>(third)))),
-               or(not(equal(soaColumnCount<T0>(first), soaColumnCount<T3>(fourth))),
-                  not(equal(soaColumnCount<T0>(first), soaColumnCount<T4>(fifth))))),
-            or(or(not(equal(soaColumnCount<T0>(first), soaColumnCount<T5>(sixth))),
-                  not(equal(soaColumnCount<T0>(first), soaColumnCount<T6>(seventh)))),
-               or(not(equal(soaColumnCount<T0>(first), soaColumnCount<T7>(eighth))),
-                  not(equal(soaColumnCount<T0>(first), soaColumnCount<T8>(ninth)))))),
-         or(or(not(equal(soaColumnCount<T0>(first), soaColumnCount<T9>(tenth))),
-               not(equal(soaColumnCount<T0>(first), soaColumnCount<T10>(eleventh)))),
-            or(not(equal(soaColumnCount<T0>(first), soaColumnCount<T11>(twelfth))),
-               or(not(equal(soaColumnCount<T0>(first), soaColumnCount<T12>(thirteenth))),
-                  not(equal(soaColumnCount<T0>(first), soaColumnCount<T13>(fourteenth)))))))
+      !(soaColumnCount<T0>(first) == soaColumnCount<T1>(second)) || !(soaColumnCount<T0>(first) == soaColumnCount<T2>(third)) || !(soaColumnCount<T0>(first) == soaColumnCount<T3>(fourth)) || !(soaColumnCount<T0>(first) == soaColumnCount<T4>(fifth)) || !(soaColumnCount<T0>(first) == soaColumnCount<T5>(sixth)) || !(soaColumnCount<T0>(first) == soaColumnCount<T6>(seventh)) || !(soaColumnCount<T0>(first) == soaColumnCount<T7>(eighth)) || !(soaColumnCount<T0>(first) == soaColumnCount<T8>(ninth)) || !(soaColumnCount<T0>(first) == soaColumnCount<T9>(tenth)) || !(soaColumnCount<T0>(first) == soaColumnCount<T10>(eleventh)) || !(soaColumnCount<T0>(first) == soaColumnCount<T11>(twelfth)) || !(soaColumnCount<T0>(first) == soaColumnCount<T12>(thirteenth)) || !(soaColumnCount<T0>(first) == soaColumnCount<T13>(fourteenth))
     }
     [bool] capacityMismatch{
-      or(or(or(or(not(equal(soaColumnCapacity<T0>(first), soaColumnCapacity<T1>(second))),
-                  not(equal(soaColumnCapacity<T0>(first), soaColumnCapacity<T2>(third)))),
-               or(not(equal(soaColumnCapacity<T0>(first), soaColumnCapacity<T3>(fourth))),
-                  not(equal(soaColumnCapacity<T0>(first), soaColumnCapacity<T4>(fifth))))),
-            or(or(not(equal(soaColumnCapacity<T0>(first), soaColumnCapacity<T5>(sixth))),
-                  not(equal(soaColumnCapacity<T0>(first), soaColumnCapacity<T6>(seventh)))),
-               or(not(equal(soaColumnCapacity<T0>(first), soaColumnCapacity<T7>(eighth))),
-                  not(equal(soaColumnCapacity<T0>(first), soaColumnCapacity<T8>(ninth)))))),
-         or(or(not(equal(soaColumnCapacity<T0>(first), soaColumnCapacity<T9>(tenth))),
-               not(equal(soaColumnCapacity<T0>(first), soaColumnCapacity<T10>(eleventh)))),
-            or(not(equal(soaColumnCapacity<T0>(first), soaColumnCapacity<T11>(twelfth))),
-               or(not(equal(soaColumnCapacity<T0>(first), soaColumnCapacity<T12>(thirteenth))),
-                  not(equal(soaColumnCapacity<T0>(first), soaColumnCapacity<T13>(fourteenth)))))))
+      !(soaColumnCapacity<T0>(first) == soaColumnCapacity<T1>(second)) || !(soaColumnCapacity<T0>(first) == soaColumnCapacity<T2>(third)) || !(soaColumnCapacity<T0>(first) == soaColumnCapacity<T3>(fourth)) || !(soaColumnCapacity<T0>(first) == soaColumnCapacity<T4>(fifth)) || !(soaColumnCapacity<T0>(first) == soaColumnCapacity<T5>(sixth)) || !(soaColumnCapacity<T0>(first) == soaColumnCapacity<T6>(seventh)) || !(soaColumnCapacity<T0>(first) == soaColumnCapacity<T7>(eighth)) || !(soaColumnCapacity<T0>(first) == soaColumnCapacity<T8>(ninth)) || !(soaColumnCapacity<T0>(first) == soaColumnCapacity<T9>(tenth)) || !(soaColumnCapacity<T0>(first) == soaColumnCapacity<T10>(eleventh)) || !(soaColumnCapacity<T0>(first) == soaColumnCapacity<T11>(twelfth)) || !(soaColumnCapacity<T0>(first) == soaColumnCapacity<T12>(thirteenth)) || !(soaColumnCapacity<T0>(first) == soaColumnCapacity<T13>(fourteenth))
     }
-    if(or(countMismatch, capacityMismatch),
-       then() {
-         [array<i32>] empty{array<i32>()}
-         empty[0i32]
-       },
-       else() { })
+    if(countMismatch || capacityMismatch) {
+      panic(0i32)
+    }
   }
 
   [return<void>]
@@ -1301,43 +1043,14 @@ namespace std {
     soaColumnCheckShape<T13>(fourteenth)
     soaColumnCheckShape<T14>(fifteenth)
     [bool] countMismatch{
-      or(or(or(or(not(equal(soaColumnCount<T0>(first), soaColumnCount<T1>(second))),
-                  not(equal(soaColumnCount<T0>(first), soaColumnCount<T2>(third)))),
-               or(not(equal(soaColumnCount<T0>(first), soaColumnCount<T3>(fourth))),
-                  not(equal(soaColumnCount<T0>(first), soaColumnCount<T4>(fifth))))),
-            or(or(not(equal(soaColumnCount<T0>(first), soaColumnCount<T5>(sixth))),
-                  not(equal(soaColumnCount<T0>(first), soaColumnCount<T6>(seventh)))),
-               or(not(equal(soaColumnCount<T0>(first), soaColumnCount<T7>(eighth))),
-                  not(equal(soaColumnCount<T0>(first), soaColumnCount<T8>(ninth)))))),
-         or(or(not(equal(soaColumnCount<T0>(first), soaColumnCount<T9>(tenth))),
-               not(equal(soaColumnCount<T0>(first), soaColumnCount<T10>(eleventh)))),
-            or(not(equal(soaColumnCount<T0>(first), soaColumnCount<T11>(twelfth))),
-               or(not(equal(soaColumnCount<T0>(first), soaColumnCount<T12>(thirteenth))),
-                  or(not(equal(soaColumnCount<T0>(first), soaColumnCount<T13>(fourteenth))),
-                     not(equal(soaColumnCount<T0>(first), soaColumnCount<T14>(fifteenth))))))))
+      !(soaColumnCount<T0>(first) == soaColumnCount<T1>(second)) || !(soaColumnCount<T0>(first) == soaColumnCount<T2>(third)) || !(soaColumnCount<T0>(first) == soaColumnCount<T3>(fourth)) || !(soaColumnCount<T0>(first) == soaColumnCount<T4>(fifth)) || !(soaColumnCount<T0>(first) == soaColumnCount<T5>(sixth)) || !(soaColumnCount<T0>(first) == soaColumnCount<T6>(seventh)) || !(soaColumnCount<T0>(first) == soaColumnCount<T7>(eighth)) || !(soaColumnCount<T0>(first) == soaColumnCount<T8>(ninth)) || !(soaColumnCount<T0>(first) == soaColumnCount<T9>(tenth)) || !(soaColumnCount<T0>(first) == soaColumnCount<T10>(eleventh)) || !(soaColumnCount<T0>(first) == soaColumnCount<T11>(twelfth)) || !(soaColumnCount<T0>(first) == soaColumnCount<T12>(thirteenth)) || !(soaColumnCount<T0>(first) == soaColumnCount<T13>(fourteenth)) || !(soaColumnCount<T0>(first) == soaColumnCount<T14>(fifteenth))
     }
     [bool] capacityMismatch{
-      or(or(or(or(not(equal(soaColumnCapacity<T0>(first), soaColumnCapacity<T1>(second))),
-                  not(equal(soaColumnCapacity<T0>(first), soaColumnCapacity<T2>(third)))),
-               or(not(equal(soaColumnCapacity<T0>(first), soaColumnCapacity<T3>(fourth))),
-                  not(equal(soaColumnCapacity<T0>(first), soaColumnCapacity<T4>(fifth))))),
-            or(or(not(equal(soaColumnCapacity<T0>(first), soaColumnCapacity<T5>(sixth))),
-                  not(equal(soaColumnCapacity<T0>(first), soaColumnCapacity<T6>(seventh)))),
-               or(not(equal(soaColumnCapacity<T0>(first), soaColumnCapacity<T7>(eighth))),
-                  not(equal(soaColumnCapacity<T0>(first), soaColumnCapacity<T8>(ninth)))))),
-         or(or(not(equal(soaColumnCapacity<T0>(first), soaColumnCapacity<T9>(tenth))),
-               not(equal(soaColumnCapacity<T0>(first), soaColumnCapacity<T10>(eleventh)))),
-            or(not(equal(soaColumnCapacity<T0>(first), soaColumnCapacity<T11>(twelfth))),
-               or(not(equal(soaColumnCapacity<T0>(first), soaColumnCapacity<T12>(thirteenth))),
-                  or(not(equal(soaColumnCapacity<T0>(first), soaColumnCapacity<T13>(fourteenth))),
-                     not(equal(soaColumnCapacity<T0>(first), soaColumnCapacity<T14>(fifteenth))))))))
+      !(soaColumnCapacity<T0>(first) == soaColumnCapacity<T1>(second)) || !(soaColumnCapacity<T0>(first) == soaColumnCapacity<T2>(third)) || !(soaColumnCapacity<T0>(first) == soaColumnCapacity<T3>(fourth)) || !(soaColumnCapacity<T0>(first) == soaColumnCapacity<T4>(fifth)) || !(soaColumnCapacity<T0>(first) == soaColumnCapacity<T5>(sixth)) || !(soaColumnCapacity<T0>(first) == soaColumnCapacity<T6>(seventh)) || !(soaColumnCapacity<T0>(first) == soaColumnCapacity<T7>(eighth)) || !(soaColumnCapacity<T0>(first) == soaColumnCapacity<T8>(ninth)) || !(soaColumnCapacity<T0>(first) == soaColumnCapacity<T9>(tenth)) || !(soaColumnCapacity<T0>(first) == soaColumnCapacity<T10>(eleventh)) || !(soaColumnCapacity<T0>(first) == soaColumnCapacity<T11>(twelfth)) || !(soaColumnCapacity<T0>(first) == soaColumnCapacity<T12>(thirteenth)) || !(soaColumnCapacity<T0>(first) == soaColumnCapacity<T13>(fourteenth)) || !(soaColumnCapacity<T0>(first) == soaColumnCapacity<T14>(fifteenth))
     }
-    if(or(countMismatch, capacityMismatch),
-       then() {
-         [array<i32>] empty{array<i32>()}
-         empty[0i32]
-       },
-       else() { })
+    if(countMismatch || capacityMismatch) {
+      panic(0i32)
+    }
   }
 
   [return<void>]
@@ -1375,45 +1088,14 @@ namespace std {
     soaColumnCheckShape<T14>(fifteenth)
     soaColumnCheckShape<T15>(sixteenth)
     [bool] countMismatch{
-      or(not(equal(soaColumnCount<T0>(first), soaColumnCount<T1>(second))),
-         or(not(equal(soaColumnCount<T0>(first), soaColumnCount<T2>(third))),
-            or(not(equal(soaColumnCount<T0>(first), soaColumnCount<T3>(fourth))),
-               or(not(equal(soaColumnCount<T0>(first), soaColumnCount<T4>(fifth))),
-                  or(not(equal(soaColumnCount<T0>(first), soaColumnCount<T5>(sixth))),
-                     or(not(equal(soaColumnCount<T0>(first), soaColumnCount<T6>(seventh))),
-                        or(not(equal(soaColumnCount<T0>(first), soaColumnCount<T7>(eighth))),
-                           or(not(equal(soaColumnCount<T0>(first), soaColumnCount<T8>(ninth))),
-                              or(not(equal(soaColumnCount<T0>(first), soaColumnCount<T9>(tenth))),
-                                 or(not(equal(soaColumnCount<T0>(first), soaColumnCount<T10>(eleventh))),
-                                    or(not(equal(soaColumnCount<T0>(first), soaColumnCount<T11>(twelfth))),
-                                       or(not(equal(soaColumnCount<T0>(first), soaColumnCount<T12>(thirteenth))),
-                                          or(not(equal(soaColumnCount<T0>(first), soaColumnCount<T13>(fourteenth))),
-                                             or(not(equal(soaColumnCount<T0>(first), soaColumnCount<T14>(fifteenth))),
-                                                not(equal(soaColumnCount<T0>(first), soaColumnCount<T15>(sixteenth)))))))))))))))))
+      !(soaColumnCount<T0>(first) == soaColumnCount<T1>(second)) || !(soaColumnCount<T0>(first) == soaColumnCount<T2>(third)) || !(soaColumnCount<T0>(first) == soaColumnCount<T3>(fourth)) || !(soaColumnCount<T0>(first) == soaColumnCount<T4>(fifth)) || !(soaColumnCount<T0>(first) == soaColumnCount<T5>(sixth)) || !(soaColumnCount<T0>(first) == soaColumnCount<T6>(seventh)) || !(soaColumnCount<T0>(first) == soaColumnCount<T7>(eighth)) || !(soaColumnCount<T0>(first) == soaColumnCount<T8>(ninth)) || !(soaColumnCount<T0>(first) == soaColumnCount<T9>(tenth)) || !(soaColumnCount<T0>(first) == soaColumnCount<T10>(eleventh)) || !(soaColumnCount<T0>(first) == soaColumnCount<T11>(twelfth)) || !(soaColumnCount<T0>(first) == soaColumnCount<T12>(thirteenth)) || !(soaColumnCount<T0>(first) == soaColumnCount<T13>(fourteenth)) || !(soaColumnCount<T0>(first) == soaColumnCount<T14>(fifteenth)) || !(soaColumnCount<T0>(first) == soaColumnCount<T15>(sixteenth))
     }
     [bool] capacityMismatch{
-      or(not(equal(soaColumnCapacity<T0>(first), soaColumnCapacity<T1>(second))),
-         or(not(equal(soaColumnCapacity<T0>(first), soaColumnCapacity<T2>(third))),
-            or(not(equal(soaColumnCapacity<T0>(first), soaColumnCapacity<T3>(fourth))),
-               or(not(equal(soaColumnCapacity<T0>(first), soaColumnCapacity<T4>(fifth))),
-                  or(not(equal(soaColumnCapacity<T0>(first), soaColumnCapacity<T5>(sixth))),
-                     or(not(equal(soaColumnCapacity<T0>(first), soaColumnCapacity<T6>(seventh))),
-                        or(not(equal(soaColumnCapacity<T0>(first), soaColumnCapacity<T7>(eighth))),
-                           or(not(equal(soaColumnCapacity<T0>(first), soaColumnCapacity<T8>(ninth))),
-                              or(not(equal(soaColumnCapacity<T0>(first), soaColumnCapacity<T9>(tenth))),
-                                 or(not(equal(soaColumnCapacity<T0>(first), soaColumnCapacity<T10>(eleventh))),
-                                    or(not(equal(soaColumnCapacity<T0>(first), soaColumnCapacity<T11>(twelfth))),
-                                       or(not(equal(soaColumnCapacity<T0>(first), soaColumnCapacity<T12>(thirteenth))),
-                                          or(not(equal(soaColumnCapacity<T0>(first), soaColumnCapacity<T13>(fourteenth))),
-                                             or(not(equal(soaColumnCapacity<T0>(first), soaColumnCapacity<T14>(fifteenth))),
-                                                not(equal(soaColumnCapacity<T0>(first), soaColumnCapacity<T15>(sixteenth)))))))))))))))))
+      !(soaColumnCapacity<T0>(first) == soaColumnCapacity<T1>(second)) || !(soaColumnCapacity<T0>(first) == soaColumnCapacity<T2>(third)) || !(soaColumnCapacity<T0>(first) == soaColumnCapacity<T3>(fourth)) || !(soaColumnCapacity<T0>(first) == soaColumnCapacity<T4>(fifth)) || !(soaColumnCapacity<T0>(first) == soaColumnCapacity<T5>(sixth)) || !(soaColumnCapacity<T0>(first) == soaColumnCapacity<T6>(seventh)) || !(soaColumnCapacity<T0>(first) == soaColumnCapacity<T7>(eighth)) || !(soaColumnCapacity<T0>(first) == soaColumnCapacity<T8>(ninth)) || !(soaColumnCapacity<T0>(first) == soaColumnCapacity<T9>(tenth)) || !(soaColumnCapacity<T0>(first) == soaColumnCapacity<T10>(eleventh)) || !(soaColumnCapacity<T0>(first) == soaColumnCapacity<T11>(twelfth)) || !(soaColumnCapacity<T0>(first) == soaColumnCapacity<T12>(thirteenth)) || !(soaColumnCapacity<T0>(first) == soaColumnCapacity<T13>(fourteenth)) || !(soaColumnCapacity<T0>(first) == soaColumnCapacity<T14>(fifteenth)) || !(soaColumnCapacity<T0>(first) == soaColumnCapacity<T15>(sixteenth))
     }
-    if(or(countMismatch, capacityMismatch),
-       then() {
-         [array<i32>] empty{array<i32>()}
-         empty[0i32]
-       },
-       else() { })
+    if(countMismatch || capacityMismatch) {
+      panic(0i32)
+    }
   }
 
   [public effects(heap_alloc), return<SoaColumn<T>>]
@@ -1759,30 +1441,24 @@ namespace std {
   [public effects(heap_alloc), return<void>]
   soaColumnReserve<T>([SoaColumn<T> mut] values, [i32] capacity) {
     soaColumnCheckShape<T>(values)
-    if(less_than(capacity, 0i32),
-       then() {
-         [array<i32>] empty{array<i32>()}
-         empty[capacity]
-       },
-       else() { })
-    if(greater_than(capacity, 1073741823i32),
-       then() {
-         [array<i32>] empty{array<i32>()}
-         empty[capacity]
-       },
-       else() { })
-    if(not(greater_than(capacity, values.field_capacity())),
-       then() { return() },
-       else() { })
+    if(capacity < 0i32) {
+      panic(capacity)
+    }
+    if(capacity > 1073741823i32) {
+      panic(capacity)
+    }
+    if(!(capacity > values.field_capacity())) {
+      return()
+    }
     [i32 mut] allocCount{capacity}
-    if(equal(allocCount, 0i32),
-       then() { assign(allocCount, 1i32) },
-       else() { })
+    if(allocCount == 0i32) {
+      allocCount = 1i32
+    }
     [Pointer<uninitialized<T>> mut] grown{
-        /std/collections/buffer_checked/bufferAlloc<uninitialized<T>>(allocCount)}
+        bufferAlloc<uninitialized<T>>(allocCount)}
     soaColumnMovePrefixToBuffer<T>(grown, values, values.field_count())
-    /std/collections/buffer_checked/bufferFreeUninitialized<T>(values.data)
-    assign(values.data, grown)
+    bufferFreeUninitialized<T>(values.data)
+    values.data = grown
     values.set_field_capacity(capacity)
   }
 
@@ -2140,34 +1816,34 @@ namespace std {
     [Reference<SoaColumn<T13>>] fourteenth{location(values.fourteenth)}
     [Reference<SoaColumn<T14>>] fifteenth{location(values.fifteenth)}
     [Reference<SoaColumn<T15>>] sixteenth{location(values.sixteenth)}
-    if(equal(soaColumnCount<T0>(first), soaColumnCapacity<T0>(first)),
-       then() {
-         [i32 mut] nextCapacity{soaColumnCapacity<T0>(first)}
-         if(equal(nextCapacity, 0i32),
-            then() { assign(nextCapacity, 1i32) },
-            else() {
-              if(greater_than(nextCapacity, 536870911i32),
-                 then() { assign(nextCapacity, 1073741824i32) },
-                 else() { assign(nextCapacity, plus(nextCapacity, nextCapacity)) })
-            })
-         soaColumnReserve<T0>(first, nextCapacity)
-         soaColumnReserve<T1>(second, nextCapacity)
-         soaColumnReserve<T2>(third, nextCapacity)
-         soaColumnReserve<T3>(fourth, nextCapacity)
-         soaColumnReserve<T4>(fifth, nextCapacity)
-         soaColumnReserve<T5>(sixth, nextCapacity)
-         soaColumnReserve<T6>(seventh, nextCapacity)
-         soaColumnReserve<T7>(eighth, nextCapacity)
-         soaColumnReserve<T8>(ninth, nextCapacity)
-         soaColumnReserve<T9>(tenth, nextCapacity)
-         soaColumnReserve<T10>(eleventh, nextCapacity)
-         soaColumnReserve<T11>(twelfth, nextCapacity)
-         soaColumnReserve<T12>(thirteenth, nextCapacity)
-         soaColumnReserve<T13>(fourteenth, nextCapacity)
-         soaColumnReserve<T14>(fifteenth, nextCapacity)
-         soaColumnReserve<T15>(sixteenth, nextCapacity)
-       },
-       else() { })
+    if(soaColumnCount<T0>(first) == soaColumnCapacity<T0>(first)) {
+      [i32 mut] nextCapacity{soaColumnCapacity<T0>(first)}
+      if(nextCapacity == 0i32) {
+        nextCapacity = 1i32
+      } else {
+        if(nextCapacity > 536870911i32) {
+          nextCapacity = 1073741824i32
+        } else {
+          nextCapacity = nextCapacity + nextCapacity
+        }
+      }
+      soaColumnReserve<T0>(first, nextCapacity)
+      soaColumnReserve<T1>(second, nextCapacity)
+      soaColumnReserve<T2>(third, nextCapacity)
+      soaColumnReserve<T3>(fourth, nextCapacity)
+      soaColumnReserve<T4>(fifth, nextCapacity)
+      soaColumnReserve<T5>(sixth, nextCapacity)
+      soaColumnReserve<T6>(seventh, nextCapacity)
+      soaColumnReserve<T7>(eighth, nextCapacity)
+      soaColumnReserve<T8>(ninth, nextCapacity)
+      soaColumnReserve<T9>(tenth, nextCapacity)
+      soaColumnReserve<T10>(eleventh, nextCapacity)
+      soaColumnReserve<T11>(twelfth, nextCapacity)
+      soaColumnReserve<T12>(thirteenth, nextCapacity)
+      soaColumnReserve<T13>(fourteenth, nextCapacity)
+      soaColumnReserve<T14>(fifteenth, nextCapacity)
+      soaColumnReserve<T15>(sixteenth, nextCapacity)
+    }
     soaColumnPush<T0>(first, firstValue)
     soaColumnPush<T1>(second, secondValue)
     soaColumnPush<T2>(third, thirdValue)
@@ -2189,21 +1865,21 @@ namespace std {
   [public effects(heap_alloc), return<void>]
   soaColumnPush<T>([SoaColumn<T> mut] values, [T] value) {
     soaColumnCheckShape<T>(values)
-    if(equal(values.field_count(), values.field_capacity()),
-       then() {
-         [i32 mut] nextCapacity{values.field_capacity()}
-         if(equal(nextCapacity, 0i32),
-            then() { assign(nextCapacity, 1i32) },
-            else() {
-              if(greater_than(nextCapacity, 536870911i32),
-                 then() { assign(nextCapacity, 1073741824i32) },
-                 else() { assign(nextCapacity, plus(nextCapacity, nextCapacity)) })
-            })
-         soaColumnReserve<T>(values, nextCapacity)
-       },
-       else() { })
+    if(values.field_count() == values.field_capacity()) {
+      [i32 mut] nextCapacity{values.field_capacity()}
+      if(nextCapacity == 0i32) {
+        nextCapacity = 1i32
+      } else {
+        if(nextCapacity > 536870911i32) {
+          nextCapacity = 1073741824i32
+        } else {
+          nextCapacity = nextCapacity + nextCapacity
+        }
+      }
+      soaColumnReserve<T>(values, nextCapacity)
+    }
     soaColumnInitSlot<T>(values, values.field_count(), value)
-    values.set_field_count(plus(values.field_count(), 1i32))
+    values.set_field_count(values.field_count() + 1i32)
   }
 
   [public effects(heap_alloc), return<void>]
@@ -2211,20 +1887,20 @@ namespace std {
     soaColumns2CheckShape<T0, T1>(values)
     [Reference<SoaColumn<T0>>] first{location(values.first)}
     [Reference<SoaColumn<T1>>] second{location(values.second)}
-    if(equal(soaColumnCount<T0>(first), soaColumnCapacity<T0>(first)),
-       then() {
-         [i32 mut] nextCapacity{soaColumnCapacity<T0>(first)}
-         if(equal(nextCapacity, 0i32),
-            then() { assign(nextCapacity, 1i32) },
-            else() {
-              if(greater_than(nextCapacity, 536870911i32),
-                 then() { assign(nextCapacity, 1073741824i32) },
-                 else() { assign(nextCapacity, plus(nextCapacity, nextCapacity)) })
-            })
-         soaColumnReserve<T0>(first, nextCapacity)
-         soaColumnReserve<T1>(second, nextCapacity)
-       },
-       else() { })
+    if(soaColumnCount<T0>(first) == soaColumnCapacity<T0>(first)) {
+      [i32 mut] nextCapacity{soaColumnCapacity<T0>(first)}
+      if(nextCapacity == 0i32) {
+        nextCapacity = 1i32
+      } else {
+        if(nextCapacity > 536870911i32) {
+          nextCapacity = 1073741824i32
+        } else {
+          nextCapacity = nextCapacity + nextCapacity
+        }
+      }
+      soaColumnReserve<T0>(first, nextCapacity)
+      soaColumnReserve<T1>(second, nextCapacity)
+    }
     soaColumnPush<T0>(first, firstValue)
     soaColumnPush<T1>(second, secondValue)
   }
@@ -2238,21 +1914,21 @@ namespace std {
     [Reference<SoaColumn<T0>>] first{location(values.first)}
     [Reference<SoaColumn<T1>>] second{location(values.second)}
     [Reference<SoaColumn<T2>>] third{location(values.third)}
-    if(equal(soaColumnCount<T0>(first), soaColumnCapacity<T0>(first)),
-       then() {
-         [i32 mut] nextCapacity{soaColumnCapacity<T0>(first)}
-         if(equal(nextCapacity, 0i32),
-            then() { assign(nextCapacity, 1i32) },
-            else() {
-              if(greater_than(nextCapacity, 536870911i32),
-                 then() { assign(nextCapacity, 1073741824i32) },
-                 else() { assign(nextCapacity, plus(nextCapacity, nextCapacity)) })
-            })
-         soaColumnReserve<T0>(first, nextCapacity)
-         soaColumnReserve<T1>(second, nextCapacity)
-         soaColumnReserve<T2>(third, nextCapacity)
-       },
-       else() { })
+    if(soaColumnCount<T0>(first) == soaColumnCapacity<T0>(first)) {
+      [i32 mut] nextCapacity{soaColumnCapacity<T0>(first)}
+      if(nextCapacity == 0i32) {
+        nextCapacity = 1i32
+      } else {
+        if(nextCapacity > 536870911i32) {
+          nextCapacity = 1073741824i32
+        } else {
+          nextCapacity = nextCapacity + nextCapacity
+        }
+      }
+      soaColumnReserve<T0>(first, nextCapacity)
+      soaColumnReserve<T1>(second, nextCapacity)
+      soaColumnReserve<T2>(third, nextCapacity)
+    }
     soaColumnPush<T0>(first, firstValue)
     soaColumnPush<T1>(second, secondValue)
     soaColumnPush<T2>(third, thirdValue)
@@ -2269,22 +1945,22 @@ namespace std {
     [Reference<SoaColumn<T1>>] second{location(values.second)}
     [Reference<SoaColumn<T2>>] third{location(values.third)}
     [Reference<SoaColumn<T3>>] fourth{location(values.fourth)}
-    if(equal(soaColumnCount<T0>(first), soaColumnCapacity<T0>(first)),
-       then() {
-         [i32 mut] nextCapacity{soaColumnCapacity<T0>(first)}
-         if(equal(nextCapacity, 0i32),
-            then() { assign(nextCapacity, 1i32) },
-            else() {
-              if(greater_than(nextCapacity, 536870911i32),
-                 then() { assign(nextCapacity, 1073741824i32) },
-                 else() { assign(nextCapacity, plus(nextCapacity, nextCapacity)) })
-            })
-         soaColumnReserve<T0>(first, nextCapacity)
-         soaColumnReserve<T1>(second, nextCapacity)
-         soaColumnReserve<T2>(third, nextCapacity)
-         soaColumnReserve<T3>(fourth, nextCapacity)
-       },
-       else() { })
+    if(soaColumnCount<T0>(first) == soaColumnCapacity<T0>(first)) {
+      [i32 mut] nextCapacity{soaColumnCapacity<T0>(first)}
+      if(nextCapacity == 0i32) {
+        nextCapacity = 1i32
+      } else {
+        if(nextCapacity > 536870911i32) {
+          nextCapacity = 1073741824i32
+        } else {
+          nextCapacity = nextCapacity + nextCapacity
+        }
+      }
+      soaColumnReserve<T0>(first, nextCapacity)
+      soaColumnReserve<T1>(second, nextCapacity)
+      soaColumnReserve<T2>(third, nextCapacity)
+      soaColumnReserve<T3>(fourth, nextCapacity)
+    }
     soaColumnPush<T0>(first, firstValue)
     soaColumnPush<T1>(second, secondValue)
     soaColumnPush<T2>(third, thirdValue)
@@ -2304,23 +1980,23 @@ namespace std {
     [Reference<SoaColumn<T2>>] third{location(values.third)}
     [Reference<SoaColumn<T3>>] fourth{location(values.fourth)}
     [Reference<SoaColumn<T4>>] fifth{location(values.fifth)}
-    if(equal(soaColumnCount<T0>(first), soaColumnCapacity<T0>(first)),
-       then() {
-         [i32 mut] nextCapacity{soaColumnCapacity<T0>(first)}
-         if(equal(nextCapacity, 0i32),
-            then() { assign(nextCapacity, 1i32) },
-            else() {
-              if(greater_than(nextCapacity, 536870911i32),
-                 then() { assign(nextCapacity, 1073741824i32) },
-                 else() { assign(nextCapacity, plus(nextCapacity, nextCapacity)) })
-            })
-         soaColumnReserve<T0>(first, nextCapacity)
-         soaColumnReserve<T1>(second, nextCapacity)
-         soaColumnReserve<T2>(third, nextCapacity)
-         soaColumnReserve<T3>(fourth, nextCapacity)
-         soaColumnReserve<T4>(fifth, nextCapacity)
-       },
-       else() { })
+    if(soaColumnCount<T0>(first) == soaColumnCapacity<T0>(first)) {
+      [i32 mut] nextCapacity{soaColumnCapacity<T0>(first)}
+      if(nextCapacity == 0i32) {
+        nextCapacity = 1i32
+      } else {
+        if(nextCapacity > 536870911i32) {
+          nextCapacity = 1073741824i32
+        } else {
+          nextCapacity = nextCapacity + nextCapacity
+        }
+      }
+      soaColumnReserve<T0>(first, nextCapacity)
+      soaColumnReserve<T1>(second, nextCapacity)
+      soaColumnReserve<T2>(third, nextCapacity)
+      soaColumnReserve<T3>(fourth, nextCapacity)
+      soaColumnReserve<T4>(fifth, nextCapacity)
+    }
     soaColumnPush<T0>(first, firstValue)
     soaColumnPush<T1>(second, secondValue)
     soaColumnPush<T2>(third, thirdValue)
@@ -2343,24 +2019,24 @@ namespace std {
     [Reference<SoaColumn<T3>>] fourth{location(values.fourth)}
     [Reference<SoaColumn<T4>>] fifth{location(values.fifth)}
     [Reference<SoaColumn<T5>>] sixth{location(values.sixth)}
-    if(equal(soaColumnCount<T0>(first), soaColumnCapacity<T0>(first)),
-       then() {
-         [i32 mut] nextCapacity{soaColumnCapacity<T0>(first)}
-         if(equal(nextCapacity, 0i32),
-            then() { assign(nextCapacity, 1i32) },
-            else() {
-              if(greater_than(nextCapacity, 536870911i32),
-                 then() { assign(nextCapacity, 1073741824i32) },
-                 else() { assign(nextCapacity, plus(nextCapacity, nextCapacity)) })
-            })
-         soaColumnReserve<T0>(first, nextCapacity)
-         soaColumnReserve<T1>(second, nextCapacity)
-         soaColumnReserve<T2>(third, nextCapacity)
-         soaColumnReserve<T3>(fourth, nextCapacity)
-         soaColumnReserve<T4>(fifth, nextCapacity)
-         soaColumnReserve<T5>(sixth, nextCapacity)
-       },
-       else() { })
+    if(soaColumnCount<T0>(first) == soaColumnCapacity<T0>(first)) {
+      [i32 mut] nextCapacity{soaColumnCapacity<T0>(first)}
+      if(nextCapacity == 0i32) {
+        nextCapacity = 1i32
+      } else {
+        if(nextCapacity > 536870911i32) {
+          nextCapacity = 1073741824i32
+        } else {
+          nextCapacity = nextCapacity + nextCapacity
+        }
+      }
+      soaColumnReserve<T0>(first, nextCapacity)
+      soaColumnReserve<T1>(second, nextCapacity)
+      soaColumnReserve<T2>(third, nextCapacity)
+      soaColumnReserve<T3>(fourth, nextCapacity)
+      soaColumnReserve<T4>(fifth, nextCapacity)
+      soaColumnReserve<T5>(sixth, nextCapacity)
+    }
     soaColumnPush<T0>(first, firstValue)
     soaColumnPush<T1>(second, secondValue)
     soaColumnPush<T2>(third, thirdValue)
@@ -2386,25 +2062,25 @@ namespace std {
     [Reference<SoaColumn<T4>>] fifth{location(values.fifth)}
     [Reference<SoaColumn<T5>>] sixth{location(values.sixth)}
     [Reference<SoaColumn<T6>>] seventh{location(values.seventh)}
-    if(equal(soaColumnCount<T0>(first), soaColumnCapacity<T0>(first)),
-       then() {
-         [i32 mut] nextCapacity{soaColumnCapacity<T0>(first)}
-         if(equal(nextCapacity, 0i32),
-            then() { assign(nextCapacity, 1i32) },
-            else() {
-              if(greater_than(nextCapacity, 536870911i32),
-                 then() { assign(nextCapacity, 1073741824i32) },
-                 else() { assign(nextCapacity, plus(nextCapacity, nextCapacity)) })
-            })
-         soaColumnReserve<T0>(first, nextCapacity)
-         soaColumnReserve<T1>(second, nextCapacity)
-         soaColumnReserve<T2>(third, nextCapacity)
-         soaColumnReserve<T3>(fourth, nextCapacity)
-         soaColumnReserve<T4>(fifth, nextCapacity)
-         soaColumnReserve<T5>(sixth, nextCapacity)
-         soaColumnReserve<T6>(seventh, nextCapacity)
-       },
-       else() { })
+    if(soaColumnCount<T0>(first) == soaColumnCapacity<T0>(first)) {
+      [i32 mut] nextCapacity{soaColumnCapacity<T0>(first)}
+      if(nextCapacity == 0i32) {
+        nextCapacity = 1i32
+      } else {
+        if(nextCapacity > 536870911i32) {
+          nextCapacity = 1073741824i32
+        } else {
+          nextCapacity = nextCapacity + nextCapacity
+        }
+      }
+      soaColumnReserve<T0>(first, nextCapacity)
+      soaColumnReserve<T1>(second, nextCapacity)
+      soaColumnReserve<T2>(third, nextCapacity)
+      soaColumnReserve<T3>(fourth, nextCapacity)
+      soaColumnReserve<T4>(fifth, nextCapacity)
+      soaColumnReserve<T5>(sixth, nextCapacity)
+      soaColumnReserve<T6>(seventh, nextCapacity)
+    }
     soaColumnPush<T0>(first, firstValue)
     soaColumnPush<T1>(second, secondValue)
     soaColumnPush<T2>(third, thirdValue)
@@ -2433,26 +2109,26 @@ namespace std {
     [Reference<SoaColumn<T5>>] sixth{location(values.sixth)}
     [Reference<SoaColumn<T6>>] seventh{location(values.seventh)}
     [Reference<SoaColumn<T7>>] eighth{location(values.eighth)}
-    if(equal(soaColumnCount<T0>(first), soaColumnCapacity<T0>(first)),
-       then() {
-         [i32 mut] nextCapacity{soaColumnCapacity<T0>(first)}
-         if(equal(nextCapacity, 0i32),
-            then() { assign(nextCapacity, 1i32) },
-            else() {
-              if(greater_than(nextCapacity, 536870911i32),
-                 then() { assign(nextCapacity, 1073741824i32) },
-                 else() { assign(nextCapacity, plus(nextCapacity, nextCapacity)) })
-            })
-         soaColumnReserve<T0>(first, nextCapacity)
-         soaColumnReserve<T1>(second, nextCapacity)
-         soaColumnReserve<T2>(third, nextCapacity)
-         soaColumnReserve<T3>(fourth, nextCapacity)
-         soaColumnReserve<T4>(fifth, nextCapacity)
-         soaColumnReserve<T5>(sixth, nextCapacity)
-         soaColumnReserve<T6>(seventh, nextCapacity)
-         soaColumnReserve<T7>(eighth, nextCapacity)
-       },
-       else() { })
+    if(soaColumnCount<T0>(first) == soaColumnCapacity<T0>(first)) {
+      [i32 mut] nextCapacity{soaColumnCapacity<T0>(first)}
+      if(nextCapacity == 0i32) {
+        nextCapacity = 1i32
+      } else {
+        if(nextCapacity > 536870911i32) {
+          nextCapacity = 1073741824i32
+        } else {
+          nextCapacity = nextCapacity + nextCapacity
+        }
+      }
+      soaColumnReserve<T0>(first, nextCapacity)
+      soaColumnReserve<T1>(second, nextCapacity)
+      soaColumnReserve<T2>(third, nextCapacity)
+      soaColumnReserve<T3>(fourth, nextCapacity)
+      soaColumnReserve<T4>(fifth, nextCapacity)
+      soaColumnReserve<T5>(sixth, nextCapacity)
+      soaColumnReserve<T6>(seventh, nextCapacity)
+      soaColumnReserve<T7>(eighth, nextCapacity)
+    }
     soaColumnPush<T0>(first, firstValue)
     soaColumnPush<T1>(second, secondValue)
     soaColumnPush<T2>(third, thirdValue)
@@ -2484,27 +2160,27 @@ namespace std {
     [Reference<SoaColumn<T6>>] seventh{location(values.seventh)}
     [Reference<SoaColumn<T7>>] eighth{location(values.eighth)}
     [Reference<SoaColumn<T8>>] ninth{location(values.ninth)}
-    if(equal(soaColumnCount<T0>(first), soaColumnCapacity<T0>(first)),
-       then() {
-         [i32 mut] nextCapacity{soaColumnCapacity<T0>(first)}
-         if(equal(nextCapacity, 0i32),
-            then() { assign(nextCapacity, 1i32) },
-            else() {
-              if(greater_than(nextCapacity, 536870911i32),
-                 then() { assign(nextCapacity, 1073741824i32) },
-                 else() { assign(nextCapacity, plus(nextCapacity, nextCapacity)) })
-            })
-         soaColumnReserve<T0>(first, nextCapacity)
-         soaColumnReserve<T1>(second, nextCapacity)
-         soaColumnReserve<T2>(third, nextCapacity)
-         soaColumnReserve<T3>(fourth, nextCapacity)
-         soaColumnReserve<T4>(fifth, nextCapacity)
-         soaColumnReserve<T5>(sixth, nextCapacity)
-         soaColumnReserve<T6>(seventh, nextCapacity)
-         soaColumnReserve<T7>(eighth, nextCapacity)
-         soaColumnReserve<T8>(ninth, nextCapacity)
-       },
-       else() { })
+    if(soaColumnCount<T0>(first) == soaColumnCapacity<T0>(first)) {
+      [i32 mut] nextCapacity{soaColumnCapacity<T0>(first)}
+      if(nextCapacity == 0i32) {
+        nextCapacity = 1i32
+      } else {
+        if(nextCapacity > 536870911i32) {
+          nextCapacity = 1073741824i32
+        } else {
+          nextCapacity = nextCapacity + nextCapacity
+        }
+      }
+      soaColumnReserve<T0>(first, nextCapacity)
+      soaColumnReserve<T1>(second, nextCapacity)
+      soaColumnReserve<T2>(third, nextCapacity)
+      soaColumnReserve<T3>(fourth, nextCapacity)
+      soaColumnReserve<T4>(fifth, nextCapacity)
+      soaColumnReserve<T5>(sixth, nextCapacity)
+      soaColumnReserve<T6>(seventh, nextCapacity)
+      soaColumnReserve<T7>(eighth, nextCapacity)
+      soaColumnReserve<T8>(ninth, nextCapacity)
+    }
     soaColumnPush<T0>(first, firstValue)
     soaColumnPush<T1>(second, secondValue)
     soaColumnPush<T2>(third, thirdValue)
@@ -2539,28 +2215,28 @@ namespace std {
     [Reference<SoaColumn<T7>>] eighth{location(values.eighth)}
     [Reference<SoaColumn<T8>>] ninth{location(values.ninth)}
     [Reference<SoaColumn<T9>>] tenth{location(values.tenth)}
-    if(equal(soaColumnCount<T0>(first), soaColumnCapacity<T0>(first)),
-       then() {
-         [i32 mut] nextCapacity{soaColumnCapacity<T0>(first)}
-         if(equal(nextCapacity, 0i32),
-            then() { assign(nextCapacity, 1i32) },
-            else() {
-              if(greater_than(nextCapacity, 536870911i32),
-                 then() { assign(nextCapacity, 1073741824i32) },
-                 else() { assign(nextCapacity, plus(nextCapacity, nextCapacity)) })
-            })
-         soaColumnReserve<T0>(first, nextCapacity)
-         soaColumnReserve<T1>(second, nextCapacity)
-         soaColumnReserve<T2>(third, nextCapacity)
-         soaColumnReserve<T3>(fourth, nextCapacity)
-         soaColumnReserve<T4>(fifth, nextCapacity)
-         soaColumnReserve<T5>(sixth, nextCapacity)
-         soaColumnReserve<T6>(seventh, nextCapacity)
-         soaColumnReserve<T7>(eighth, nextCapacity)
-         soaColumnReserve<T8>(ninth, nextCapacity)
-         soaColumnReserve<T9>(tenth, nextCapacity)
-       },
-       else() { })
+    if(soaColumnCount<T0>(first) == soaColumnCapacity<T0>(first)) {
+      [i32 mut] nextCapacity{soaColumnCapacity<T0>(first)}
+      if(nextCapacity == 0i32) {
+        nextCapacity = 1i32
+      } else {
+        if(nextCapacity > 536870911i32) {
+          nextCapacity = 1073741824i32
+        } else {
+          nextCapacity = nextCapacity + nextCapacity
+        }
+      }
+      soaColumnReserve<T0>(first, nextCapacity)
+      soaColumnReserve<T1>(second, nextCapacity)
+      soaColumnReserve<T2>(third, nextCapacity)
+      soaColumnReserve<T3>(fourth, nextCapacity)
+      soaColumnReserve<T4>(fifth, nextCapacity)
+      soaColumnReserve<T5>(sixth, nextCapacity)
+      soaColumnReserve<T6>(seventh, nextCapacity)
+      soaColumnReserve<T7>(eighth, nextCapacity)
+      soaColumnReserve<T8>(ninth, nextCapacity)
+      soaColumnReserve<T9>(tenth, nextCapacity)
+    }
     soaColumnPush<T0>(first, firstValue)
     soaColumnPush<T1>(second, secondValue)
     soaColumnPush<T2>(third, thirdValue)
@@ -2598,29 +2274,29 @@ namespace std {
     [Reference<SoaColumn<T8>>] ninth{location(values.ninth)}
     [Reference<SoaColumn<T9>>] tenth{location(values.tenth)}
     [Reference<SoaColumn<T10>>] eleventh{location(values.eleventh)}
-    if(equal(soaColumnCount<T0>(first), soaColumnCapacity<T0>(first)),
-       then() {
-         [i32 mut] nextCapacity{soaColumnCapacity<T0>(first)}
-         if(equal(nextCapacity, 0i32),
-            then() { assign(nextCapacity, 1i32) },
-            else() {
-              if(greater_than(nextCapacity, 536870911i32),
-                 then() { assign(nextCapacity, 1073741824i32) },
-                 else() { assign(nextCapacity, plus(nextCapacity, nextCapacity)) })
-            })
-         soaColumnReserve<T0>(first, nextCapacity)
-         soaColumnReserve<T1>(second, nextCapacity)
-         soaColumnReserve<T2>(third, nextCapacity)
-         soaColumnReserve<T3>(fourth, nextCapacity)
-         soaColumnReserve<T4>(fifth, nextCapacity)
-         soaColumnReserve<T5>(sixth, nextCapacity)
-         soaColumnReserve<T6>(seventh, nextCapacity)
-         soaColumnReserve<T7>(eighth, nextCapacity)
-         soaColumnReserve<T8>(ninth, nextCapacity)
-         soaColumnReserve<T9>(tenth, nextCapacity)
-         soaColumnReserve<T10>(eleventh, nextCapacity)
-       },
-       else() { })
+    if(soaColumnCount<T0>(first) == soaColumnCapacity<T0>(first)) {
+      [i32 mut] nextCapacity{soaColumnCapacity<T0>(first)}
+      if(nextCapacity == 0i32) {
+        nextCapacity = 1i32
+      } else {
+        if(nextCapacity > 536870911i32) {
+          nextCapacity = 1073741824i32
+        } else {
+          nextCapacity = nextCapacity + nextCapacity
+        }
+      }
+      soaColumnReserve<T0>(first, nextCapacity)
+      soaColumnReserve<T1>(second, nextCapacity)
+      soaColumnReserve<T2>(third, nextCapacity)
+      soaColumnReserve<T3>(fourth, nextCapacity)
+      soaColumnReserve<T4>(fifth, nextCapacity)
+      soaColumnReserve<T5>(sixth, nextCapacity)
+      soaColumnReserve<T6>(seventh, nextCapacity)
+      soaColumnReserve<T7>(eighth, nextCapacity)
+      soaColumnReserve<T8>(ninth, nextCapacity)
+      soaColumnReserve<T9>(tenth, nextCapacity)
+      soaColumnReserve<T10>(eleventh, nextCapacity)
+    }
     soaColumnPush<T0>(first, firstValue)
     soaColumnPush<T1>(second, secondValue)
     soaColumnPush<T2>(third, thirdValue)
@@ -2661,30 +2337,30 @@ namespace std {
     [Reference<SoaColumn<T9>>] tenth{location(values.tenth)}
     [Reference<SoaColumn<T10>>] eleventh{location(values.eleventh)}
     [Reference<SoaColumn<T11>>] twelfth{location(values.twelfth)}
-    if(equal(soaColumnCount<T0>(first), soaColumnCapacity<T0>(first)),
-       then() {
-         [i32 mut] nextCapacity{soaColumnCapacity<T0>(first)}
-         if(equal(nextCapacity, 0i32),
-            then() { assign(nextCapacity, 1i32) },
-            else() {
-              if(greater_than(nextCapacity, 536870911i32),
-                 then() { assign(nextCapacity, 1073741824i32) },
-                 else() { assign(nextCapacity, plus(nextCapacity, nextCapacity)) })
-            })
-         soaColumnReserve<T0>(first, nextCapacity)
-         soaColumnReserve<T1>(second, nextCapacity)
-         soaColumnReserve<T2>(third, nextCapacity)
-         soaColumnReserve<T3>(fourth, nextCapacity)
-         soaColumnReserve<T4>(fifth, nextCapacity)
-         soaColumnReserve<T5>(sixth, nextCapacity)
-         soaColumnReserve<T6>(seventh, nextCapacity)
-         soaColumnReserve<T7>(eighth, nextCapacity)
-         soaColumnReserve<T8>(ninth, nextCapacity)
-         soaColumnReserve<T9>(tenth, nextCapacity)
-         soaColumnReserve<T10>(eleventh, nextCapacity)
-         soaColumnReserve<T11>(twelfth, nextCapacity)
-       },
-       else() { })
+    if(soaColumnCount<T0>(first) == soaColumnCapacity<T0>(first)) {
+      [i32 mut] nextCapacity{soaColumnCapacity<T0>(first)}
+      if(nextCapacity == 0i32) {
+        nextCapacity = 1i32
+      } else {
+        if(nextCapacity > 536870911i32) {
+          nextCapacity = 1073741824i32
+        } else {
+          nextCapacity = nextCapacity + nextCapacity
+        }
+      }
+      soaColumnReserve<T0>(first, nextCapacity)
+      soaColumnReserve<T1>(second, nextCapacity)
+      soaColumnReserve<T2>(third, nextCapacity)
+      soaColumnReserve<T3>(fourth, nextCapacity)
+      soaColumnReserve<T4>(fifth, nextCapacity)
+      soaColumnReserve<T5>(sixth, nextCapacity)
+      soaColumnReserve<T6>(seventh, nextCapacity)
+      soaColumnReserve<T7>(eighth, nextCapacity)
+      soaColumnReserve<T8>(ninth, nextCapacity)
+      soaColumnReserve<T9>(tenth, nextCapacity)
+      soaColumnReserve<T10>(eleventh, nextCapacity)
+      soaColumnReserve<T11>(twelfth, nextCapacity)
+    }
     soaColumnPush<T0>(first, firstValue)
     soaColumnPush<T1>(second, secondValue)
     soaColumnPush<T2>(third, thirdValue)
@@ -2728,31 +2404,31 @@ namespace std {
     [Reference<SoaColumn<T10>>] eleventh{location(values.eleventh)}
     [Reference<SoaColumn<T11>>] twelfth{location(values.twelfth)}
     [Reference<SoaColumn<T12>>] thirteenth{location(values.thirteenth)}
-    if(equal(soaColumnCount<T0>(first), soaColumnCapacity<T0>(first)),
-       then() {
-         [i32 mut] nextCapacity{soaColumnCapacity<T0>(first)}
-         if(equal(nextCapacity, 0i32),
-            then() { assign(nextCapacity, 1i32) },
-            else() {
-              if(greater_than(nextCapacity, 536870911i32),
-                 then() { assign(nextCapacity, 1073741824i32) },
-                 else() { assign(nextCapacity, plus(nextCapacity, nextCapacity)) })
-            })
-         soaColumnReserve<T0>(first, nextCapacity)
-         soaColumnReserve<T1>(second, nextCapacity)
-         soaColumnReserve<T2>(third, nextCapacity)
-         soaColumnReserve<T3>(fourth, nextCapacity)
-         soaColumnReserve<T4>(fifth, nextCapacity)
-         soaColumnReserve<T5>(sixth, nextCapacity)
-         soaColumnReserve<T6>(seventh, nextCapacity)
-         soaColumnReserve<T7>(eighth, nextCapacity)
-         soaColumnReserve<T8>(ninth, nextCapacity)
-         soaColumnReserve<T9>(tenth, nextCapacity)
-         soaColumnReserve<T10>(eleventh, nextCapacity)
-         soaColumnReserve<T11>(twelfth, nextCapacity)
-         soaColumnReserve<T12>(thirteenth, nextCapacity)
-       },
-       else() { })
+    if(soaColumnCount<T0>(first) == soaColumnCapacity<T0>(first)) {
+      [i32 mut] nextCapacity{soaColumnCapacity<T0>(first)}
+      if(nextCapacity == 0i32) {
+        nextCapacity = 1i32
+      } else {
+        if(nextCapacity > 536870911i32) {
+          nextCapacity = 1073741824i32
+        } else {
+          nextCapacity = nextCapacity + nextCapacity
+        }
+      }
+      soaColumnReserve<T0>(first, nextCapacity)
+      soaColumnReserve<T1>(second, nextCapacity)
+      soaColumnReserve<T2>(third, nextCapacity)
+      soaColumnReserve<T3>(fourth, nextCapacity)
+      soaColumnReserve<T4>(fifth, nextCapacity)
+      soaColumnReserve<T5>(sixth, nextCapacity)
+      soaColumnReserve<T6>(seventh, nextCapacity)
+      soaColumnReserve<T7>(eighth, nextCapacity)
+      soaColumnReserve<T8>(ninth, nextCapacity)
+      soaColumnReserve<T9>(tenth, nextCapacity)
+      soaColumnReserve<T10>(eleventh, nextCapacity)
+      soaColumnReserve<T11>(twelfth, nextCapacity)
+      soaColumnReserve<T12>(thirteenth, nextCapacity)
+    }
     soaColumnPush<T0>(first, firstValue)
     soaColumnPush<T1>(second, secondValue)
     soaColumnPush<T2>(third, thirdValue)
@@ -2799,32 +2475,32 @@ namespace std {
     [Reference<SoaColumn<T11>>] twelfth{location(values.twelfth)}
     [Reference<SoaColumn<T12>>] thirteenth{location(values.thirteenth)}
     [Reference<SoaColumn<T13>>] fourteenth{location(values.fourteenth)}
-    if(equal(soaColumnCount<T0>(first), soaColumnCapacity<T0>(first)),
-       then() {
-         [i32 mut] nextCapacity{soaColumnCapacity<T0>(first)}
-         if(equal(nextCapacity, 0i32),
-            then() { assign(nextCapacity, 1i32) },
-            else() {
-              if(greater_than(nextCapacity, 536870911i32),
-                 then() { assign(nextCapacity, 1073741824i32) },
-                 else() { assign(nextCapacity, plus(nextCapacity, nextCapacity)) })
-            })
-         soaColumnReserve<T0>(first, nextCapacity)
-         soaColumnReserve<T1>(second, nextCapacity)
-         soaColumnReserve<T2>(third, nextCapacity)
-         soaColumnReserve<T3>(fourth, nextCapacity)
-         soaColumnReserve<T4>(fifth, nextCapacity)
-         soaColumnReserve<T5>(sixth, nextCapacity)
-         soaColumnReserve<T6>(seventh, nextCapacity)
-         soaColumnReserve<T7>(eighth, nextCapacity)
-         soaColumnReserve<T8>(ninth, nextCapacity)
-         soaColumnReserve<T9>(tenth, nextCapacity)
-         soaColumnReserve<T10>(eleventh, nextCapacity)
-         soaColumnReserve<T11>(twelfth, nextCapacity)
-         soaColumnReserve<T12>(thirteenth, nextCapacity)
-         soaColumnReserve<T13>(fourteenth, nextCapacity)
-       },
-       else() { })
+    if(soaColumnCount<T0>(first) == soaColumnCapacity<T0>(first)) {
+      [i32 mut] nextCapacity{soaColumnCapacity<T0>(first)}
+      if(nextCapacity == 0i32) {
+        nextCapacity = 1i32
+      } else {
+        if(nextCapacity > 536870911i32) {
+          nextCapacity = 1073741824i32
+        } else {
+          nextCapacity = nextCapacity + nextCapacity
+        }
+      }
+      soaColumnReserve<T0>(first, nextCapacity)
+      soaColumnReserve<T1>(second, nextCapacity)
+      soaColumnReserve<T2>(third, nextCapacity)
+      soaColumnReserve<T3>(fourth, nextCapacity)
+      soaColumnReserve<T4>(fifth, nextCapacity)
+      soaColumnReserve<T5>(sixth, nextCapacity)
+      soaColumnReserve<T6>(seventh, nextCapacity)
+      soaColumnReserve<T7>(eighth, nextCapacity)
+      soaColumnReserve<T8>(ninth, nextCapacity)
+      soaColumnReserve<T9>(tenth, nextCapacity)
+      soaColumnReserve<T10>(eleventh, nextCapacity)
+      soaColumnReserve<T11>(twelfth, nextCapacity)
+      soaColumnReserve<T12>(thirteenth, nextCapacity)
+      soaColumnReserve<T13>(fourteenth, nextCapacity)
+    }
     soaColumnPush<T0>(first, firstValue)
     soaColumnPush<T1>(second, secondValue)
     soaColumnPush<T2>(third, thirdValue)
@@ -2874,33 +2550,33 @@ namespace std {
     [Reference<SoaColumn<T12>>] thirteenth{location(values.thirteenth)}
     [Reference<SoaColumn<T13>>] fourteenth{location(values.fourteenth)}
     [Reference<SoaColumn<T14>>] fifteenth{location(values.fifteenth)}
-    if(equal(soaColumnCount<T0>(first), soaColumnCapacity<T0>(first)),
-       then() {
-         [i32 mut] nextCapacity{soaColumnCapacity<T0>(first)}
-         if(equal(nextCapacity, 0i32),
-            then() { assign(nextCapacity, 1i32) },
-            else() {
-              if(greater_than(nextCapacity, 536870911i32),
-                 then() { assign(nextCapacity, 1073741824i32) },
-                 else() { assign(nextCapacity, plus(nextCapacity, nextCapacity)) })
-            })
-         soaColumnReserve<T0>(first, nextCapacity)
-         soaColumnReserve<T1>(second, nextCapacity)
-         soaColumnReserve<T2>(third, nextCapacity)
-         soaColumnReserve<T3>(fourth, nextCapacity)
-         soaColumnReserve<T4>(fifth, nextCapacity)
-         soaColumnReserve<T5>(sixth, nextCapacity)
-         soaColumnReserve<T6>(seventh, nextCapacity)
-         soaColumnReserve<T7>(eighth, nextCapacity)
-         soaColumnReserve<T8>(ninth, nextCapacity)
-         soaColumnReserve<T9>(tenth, nextCapacity)
-         soaColumnReserve<T10>(eleventh, nextCapacity)
-         soaColumnReserve<T11>(twelfth, nextCapacity)
-         soaColumnReserve<T12>(thirteenth, nextCapacity)
-         soaColumnReserve<T13>(fourteenth, nextCapacity)
-         soaColumnReserve<T14>(fifteenth, nextCapacity)
-       },
-       else() { })
+    if(soaColumnCount<T0>(first) == soaColumnCapacity<T0>(first)) {
+      [i32 mut] nextCapacity{soaColumnCapacity<T0>(first)}
+      if(nextCapacity == 0i32) {
+        nextCapacity = 1i32
+      } else {
+        if(nextCapacity > 536870911i32) {
+          nextCapacity = 1073741824i32
+        } else {
+          nextCapacity = nextCapacity + nextCapacity
+        }
+      }
+      soaColumnReserve<T0>(first, nextCapacity)
+      soaColumnReserve<T1>(second, nextCapacity)
+      soaColumnReserve<T2>(third, nextCapacity)
+      soaColumnReserve<T3>(fourth, nextCapacity)
+      soaColumnReserve<T4>(fifth, nextCapacity)
+      soaColumnReserve<T5>(sixth, nextCapacity)
+      soaColumnReserve<T6>(seventh, nextCapacity)
+      soaColumnReserve<T7>(eighth, nextCapacity)
+      soaColumnReserve<T8>(ninth, nextCapacity)
+      soaColumnReserve<T9>(tenth, nextCapacity)
+      soaColumnReserve<T10>(eleventh, nextCapacity)
+      soaColumnReserve<T11>(twelfth, nextCapacity)
+      soaColumnReserve<T12>(thirteenth, nextCapacity)
+      soaColumnReserve<T13>(fourteenth, nextCapacity)
+      soaColumnReserve<T14>(fifteenth, nextCapacity)
+    }
     soaColumnPush<T0>(first, firstValue)
     soaColumnPush<T1>(second, secondValue)
     soaColumnPush<T2>(third, thirdValue)
@@ -3273,7 +2949,7 @@ namespace std {
   [public return<T>]
   soaColumnRead<T>([SoaColumn<T>] values, [i32] index) {
     soaColumnCheckIndex<T>(values, index)
-    return(dereference(soaColumnBorrowSlot<T>(values, index)))
+    return(*(soaColumnBorrowSlot<T>(values, index)))
   }
 
   [public return<T0>]

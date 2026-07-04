@@ -3,32 +3,32 @@ import /std/file/*
 import /std/collections/vector
 
 [public return<string>]
-/ImageError/why([/std/image/ImageError] err) {
+/ImageError/why([ImageError] err) {
   return(/std/image/ImageError/why(err))
 }
 
-[public return<Result</std/image/ImageError>>]
-/ImageError/status([/std/image/ImageError] err) {
+[public return<Result<ImageError>>]
+/ImageError/status([ImageError] err) {
   return(/std/image/ImageError/status(err))
 }
 
-[public return</std/image/ImageError>]
+[public return<ImageError>]
 /ImageError/read_unsupported() {
   return(/std/image/ImageError/read_unsupported())
 }
 
-[public return</std/image/ImageError>]
+[public return<ImageError>]
 /ImageError/write_unsupported() {
   return(/std/image/ImageError/write_unsupported())
 }
 
-[public return</std/image/ImageError>]
+[public return<ImageError>]
 /ImageError/invalid_operation() {
   return(/std/image/ImageError/invalid_operation())
 }
 
-[public return<Result<T, /std/image/ImageError>>]
-/ImageError/result<T>([/std/image/ImageError] err) {
+[public return<Result<T, ImageError>>]
+/ImageError/result<T>([ImageError] err) {
   return(/std/image/ImageError/result<T>(err))
 }
 
@@ -73,7 +73,7 @@ namespace std {
 
     [public return<Result<T, ImageError>>]
     result<T>([ImageError] err) {
-      return(multiply(convert<i64>(err.code), 4294967296i64))
+      return(convert<i64>(err.code) * 4294967296i64)
     }
   }
 
@@ -122,18 +122,18 @@ namespace std {
   }
 
   // The codec and deflate helpers below intentionally keep explicit
-  // /std/collections/vector/* calls because they are byte-oriented
+  // * calls because they are byte-oriented
   // substrate plumbing rather than the public-facing image wrapper layer
   // above, which should prefer the readable surface syntax when possible.
 
   [return<bool>]
   ppmIsWhitespace([i32] value) {
-    return(or(or(equal(value, 32i32), equal(value, 9i32)), or(equal(value, 10i32), equal(value, 13i32))))
+    return(value == 32i32 || value == 9i32 || value == 10i32 || value == 13i32)
   }
 
   [return<bool>]
   ppmIsDigit([i32] value) {
-    return(and(greater_equal(value, 48i32), less_equal(value, 57i32)))
+    return(value >= 48i32 && value <= 57i32)
   }
 
   [return<i32>]
@@ -141,7 +141,7 @@ namespace std {
     return(value - 48i32)
   }
 
-  [effects(file_read), return<int> on_error<FileError, /std/image/ignoreFileError>]
+  [effects(file_read), return<int> on_error<FileError, ignoreFileError>]
   ppmReadByteStatus([File<Read>] file, [i32 mut] value) {
     file.readByte(value)?
     return(0i32)
@@ -150,31 +150,29 @@ namespace std {
   [effects(file_read), return<int>]
   ppmSkipComment([File<Read>] file) {
     [mut] byte{0i32}
-    while(true, do() {
+    while(true) {
       status{ppmReadByteStatus(file, byte)}
-      if(not_equal(status, 0i32),
-         then() {
-           if(fileErrorIsEof(status),
-              then() { return(0i32) },
-              else() { return(status) })
-         },
-         else() { })
-      if(or(equal(byte, 10i32), equal(byte, 13i32)),
-         then() { return(0i32) },
-         else() { })
-    })
+      if(status != 0i32) {
+        if(fileErrorIsEof(status)) {
+          return(0i32)
+        } else {
+          return(status)
+        }
+      }
+      if(byte == 10i32 || byte == 13i32) {
+        return(0i32)
+      }
+    }
     return(0i32)
   }
 
   [effects(file_read), return<int>]
   ppmNextByte([File<Read>] file, [i32 mut] hasPending, [i32 mut] pendingByte, [i32 mut] value) {
-    if(equal(hasPending, 1i32),
-       then() {
-         value = pendingByte
-         hasPending = 0i32
-         return(0i32)
-       },
-       else() { })
+    if(hasPending == 1i32) {
+      value = pendingByte
+      hasPending = 0i32
+      return(0i32)
+    }
     return(ppmReadByteStatus(file, value))
   }
 
@@ -183,70 +181,67 @@ namespace std {
     value = 0i32
     [mut] started{0i32}
     [mut] byte{0i32}
-    while(true, do() {
+    while(true) {
       status{ppmNextByte(file, hasPending, pendingByte, byte)}
-      if(not_equal(status, 0i32),
-         then() {
-           if(equal(started, 1i32),
-              then() {
-                if(fileErrorIsEof(status),
-                   then() { return(0i32) },
-                   else() { return(status) })
-              },
-              else() { return(status) })
-         },
-         else() { })
-      if(equal(started, 0i32),
-         then() {
-           if(ppmIsWhitespace(byte),
-              then() { },
-              else() {
-                if(equal(byte, 35i32),
-                   then() {
-                     commentStatus{ppmSkipComment(file)}
-                     if(not_equal(commentStatus, 0i32),
-                        then() { return(commentStatus) },
-                        else() { })
-                   },
-                   else() {
-                     if(ppmIsDigit(byte),
-                        then() {
-                          started = 1i32
-                          value = ppmDigitValue(byte)
-                        },
-                        else() { return(1i32) })
-                   })
-              })
-         },
-         else() {
-           if(ppmIsDigit(byte),
-              then() { value = multiply(value, 10i32) + ppmDigitValue(byte) },
-              else() {
-                hasPending = 1i32
-                pendingByte = byte
-                return(0i32)
-              })
-         })
-    })
+      if(status != 0i32) {
+        if(started == 1i32) {
+          if(fileErrorIsEof(status)) {
+            return(0i32)
+          } else {
+            return(status)
+          }
+        } else {
+          return(status)
+        }
+      }
+      if(started == 0i32) {
+        if(ppmIsWhitespace(byte)) {
+        } else {
+          if(byte == 35i32) {
+            commentStatus{ppmSkipComment(file)}
+            if(commentStatus != 0i32) {
+              return(commentStatus)
+            }
+          } else {
+            if(ppmIsDigit(byte)) {
+              started = 1i32
+              value = ppmDigitValue(byte)
+            } else {
+              return(1i32)
+            }
+          }
+        }
+      } else {
+        if(ppmIsDigit(byte)) {
+          value = value * 10i32 + ppmDigitValue(byte)
+        } else {
+          hasPending = 1i32
+          pendingByte = byte
+          return(0i32)
+        }
+      }
+    }
     return(0i32)
   }
 
   [effects(file_read), return<int>]
   ppmReadBinaryRasterLead([File<Read>] file, [i32 mut] hasPending, [i32 mut] pendingByte, [i32 mut] value) {
     [mut] sawWhitespace{0i32}
-    while(true, do() {
+    while(true) {
       status{ppmNextByte(file, hasPending, pendingByte, value)}
-      if(not_equal(status, 0i32),
-         then() { return(status) },
-         else() { })
-      if(ppmIsWhitespace(value),
-         then() { sawWhitespace = 1i32 },
-         else() {
-           if(equal(sawWhitespace, 1i32),
-              then() { return(0i32) },
-              else() { return(1i32) })
-         })
-    })
+      if(status != 0i32) {
+        return(status)
+      }
+      if(ppmIsWhitespace(value)) {
+        sawWhitespace = 1i32
+      } else {
+        if(sawWhitespace == 1i32) {
+          return(0i32)
+        } else {
+          return(1i32)
+        }
+      }
+    }
     return(0i32)
   }
 
@@ -254,7 +249,7 @@ namespace std {
   resetReadOutputs([i32 mut] width, [i32 mut] height, [vector<i32> mut] pixels) {
     width = 0i32
     height = 0i32
-    /std/collections/vector/clear(pixels)
+    clear(pixels)
   }
 
   [return<bool>]
@@ -284,23 +279,23 @@ namespace std {
     }
 
     [mut] index{0i32}
-    while(index < pixelCount, do() {
+    while(index < pixelCount) {
       component{pixels[index]}
       if(component < 0i32 || component > 255i32) {
         return(false)
       }
       ++index
-    })
+    }
     return(true)
   }
 
-  [effects(file_write), return<int> on_error<FileError, /std/image/ignoreFileError>]
+  [effects(file_write), return<int> on_error<FileError, ignoreFileError>]
   ppmWriteHeader([File<Write>] file, [i32] width, [i32] height) {
     file.write("P3\n"utf8, width, " "utf8, height, "\n255\n"utf8)?
     return(0i32)
   }
 
-  [effects(file_write), return<int> on_error<FileError, /std/image/ignoreFileError>]
+  [effects(file_write), return<int> on_error<FileError, ignoreFileError>]
   ppmWriteComponent([File<Write>] file, [i32] value) {
     file.write(value, "\n"utf8)?
     return(0i32)
@@ -311,104 +306,104 @@ namespace std {
     value = 0i32
     [mut] index{0i32}
     [mut] byte{0i32}
-    while(less_than(index, 4i32), do() {
+    while(index < 4i32) {
       status{ppmReadByteStatus(file, byte)}
-      if(not_equal(status, 0i32),
-         then() { return(status) },
-         else() { })
-      if(or(less_than(byte, 0i32), greater_than(byte, 255i32)),
-         then() { return(1i32) },
-         else() { })
-      value = multiply(value, 256i32) + byte
-      increment(index)
-    })
+      if(status != 0i32) {
+        return(status)
+      }
+      if(byte < 0i32 || byte > 255i32) {
+        return(1i32)
+      }
+      value = value * 256i32 + byte
+      index++
+    }
     return(0i32)
   }
 
   [effects(file_read), return<int>]
   pngSkipBytes([File<Read>] file, [i32] count) {
-    if(less_than(count, 0i32),
-       then() { return(1i32) },
-       else() { })
+    if(count < 0i32) {
+      return(1i32)
+    }
     [mut] remaining{count}
     [mut] byte{0i32}
-    while(greater_than(remaining, 0i32), do() {
+    while(remaining > 0i32) {
       status{ppmReadByteStatus(file, byte)}
-      if(not_equal(status, 0i32),
-         then() { return(status) },
-         else() { })
+      if(status != 0i32) {
+        return(status)
+      }
       remaining = remaining - 1i32
-    })
+    }
     return(0i32)
   }
 
   [effects(file_read), return<int>]
   pngReadChunkType([File<Read>] file, [i32 mut] a, [i32 mut] b, [i32 mut] c, [i32 mut] d) {
     statusA{ppmReadByteStatus(file, a)}
-    if(not_equal(statusA, 0i32),
-       then() { return(statusA) },
-       else() { })
+    if(statusA != 0i32) {
+      return(statusA)
+    }
     statusB{ppmReadByteStatus(file, b)}
-    if(not_equal(statusB, 0i32),
-       then() { return(statusB) },
-       else() { })
+    if(statusB != 0i32) {
+      return(statusB)
+    }
     statusC{ppmReadByteStatus(file, c)}
-    if(not_equal(statusC, 0i32),
-       then() { return(statusC) },
-       else() { })
+    if(statusC != 0i32) {
+      return(statusC)
+    }
     return(ppmReadByteStatus(file, d))
   }
 
   [return<bool>]
   pngChunkIsIhdr([i32] a, [i32] b, [i32] c, [i32] d) {
-    return(and(and(equal(a, 73i32), equal(b, 72i32)), and(equal(c, 68i32), equal(d, 82i32))))
+    return(a == 73i32 && b == 72i32 && c == 68i32 && d == 82i32)
   }
 
   [return<bool>]
   pngChunkIsIdat([i32] a, [i32] b, [i32] c, [i32] d) {
-    return(and(and(equal(a, 73i32), equal(b, 68i32)), and(equal(c, 65i32), equal(d, 84i32))))
+    return(a == 73i32 && b == 68i32 && c == 65i32 && d == 84i32)
   }
 
   [return<bool>]
   pngChunkIsIend([i32] a, [i32] b, [i32] c, [i32] d) {
-    return(and(and(equal(a, 73i32), equal(b, 69i32)), and(equal(c, 78i32), equal(d, 68i32))))
+    return(a == 73i32 && b == 69i32 && c == 78i32 && d == 68i32)
   }
 
   [return<bool>]
   pngChunkIsPlte([i32] a, [i32] b, [i32] c, [i32] d) {
-    return(and(and(equal(a, 80i32), equal(b, 76i32)), and(equal(c, 84i32), equal(d, 69i32))))
+    return(a == 80i32 && b == 76i32 && c == 84i32 && d == 69i32)
   }
 
   [return<bool>]
   pngChunkIsAncillary([i32] a) {
-    return(and(greater_equal(a, 97i32), less_equal(a, 122i32)))
+    return(a >= 97i32 && a <= 122i32)
   }
 
   [return<bool>]
   pngBitDepthAllowed([i32] bitDepth, [i32] a, [i32] b, [i32] c, [i32] d, [i32] valueE) {
-    return(or(or(equal(bitDepth, a), equal(bitDepth, b)), or(or(equal(bitDepth, c), equal(bitDepth, d)), equal(bitDepth, valueE))))
+    return(bitDepth == a || bitDepth == b || bitDepth == c || bitDepth == d || bitDepth == valueE)
   }
 
   [return<bool>]
   pngIhdrFieldsValid([i32] bitDepth, [i32] colorType, [i32] compression, [i32] filter, [i32] interlace) {
-    if(or(not_equal(compression, 0i32), or(not_equal(filter, 0i32), and(not_equal(interlace, 0i32), not_equal(interlace, 1i32)))),
-       then() { return(false) },
-       else() { })
-    if(equal(colorType, 0i32),
-       then() { return(pngBitDepthAllowed(bitDepth, 1i32, 2i32, 4i32, 8i32, 16i32)) },
-       else() { })
-    if(equal(colorType, 2i32),
-       then() { return(or(equal(bitDepth, 8i32), equal(bitDepth, 16i32))) },
-       else() { })
-    if(equal(colorType, 3i32),
-       then() { return(pngBitDepthAllowed(bitDepth, 1i32, 2i32, 4i32, 8i32, -1i32)) },
-       else() { })
-    if(equal(colorType, 4i32),
-       then() { return(or(equal(bitDepth, 8i32), equal(bitDepth, 16i32))) },
-       else() { })
-    if(equal(colorType, 6i32),
-       then() { return(or(equal(bitDepth, 8i32), equal(bitDepth, 16i32))) },
-       else() { })
+    if(compression != 0i32 || filter != 0i32 || interlace != 0i32 && interlace != 1i32) {
+      return(false)
+    }
+    if(colorType == 0i32) {
+      return(pngBitDepthAllowed(bitDepth, 1i32, 2i32, 4i32, 8i32, 16i32))
+    }
+    if(colorType == 2i32) {
+      return(bitDepth == 8i32 || bitDepth == 16i32)
+    }
+    if(colorType == 3i32) {
+      return(pngBitDepthAllowed(bitDepth, 1i32, 2i32, 4i32, 8i32, -1i32))
+    }
+    if(colorType == 4i32) {
+      return(bitDepth == 8i32 || bitDepth == 16i32)
+    }
+    if(colorType == 6i32) {
+      return(bitDepth == 8i32 || bitDepth == 16i32)
+    }
     return(false)
   }
 
@@ -416,61 +411,61 @@ namespace std {
   pngValidateSignature([File<Read>] file) {
     [mut] byte{0i32}
     status0{ppmReadByteStatus(file, byte)}
-    if(not_equal(status0, 0i32),
-       then() { return(status0) },
-       else() { })
-    if(not_equal(byte, 137i32),
-       then() { return(1i32) },
-       else() { })
+    if(status0 != 0i32) {
+      return(status0)
+    }
+    if(byte != 137i32) {
+      return(1i32)
+    }
     status1{ppmReadByteStatus(file, byte)}
-    if(not_equal(status1, 0i32),
-       then() { return(status1) },
-       else() { })
-    if(not_equal(byte, 80i32),
-       then() { return(1i32) },
-       else() { })
+    if(status1 != 0i32) {
+      return(status1)
+    }
+    if(byte != 80i32) {
+      return(1i32)
+    }
     status2{ppmReadByteStatus(file, byte)}
-    if(not_equal(status2, 0i32),
-       then() { return(status2) },
-       else() { })
-    if(not_equal(byte, 78i32),
-       then() { return(1i32) },
-       else() { })
+    if(status2 != 0i32) {
+      return(status2)
+    }
+    if(byte != 78i32) {
+      return(1i32)
+    }
     status3{ppmReadByteStatus(file, byte)}
-    if(not_equal(status3, 0i32),
-       then() { return(status3) },
-       else() { })
-    if(not_equal(byte, 71i32),
-       then() { return(1i32) },
-       else() { })
+    if(status3 != 0i32) {
+      return(status3)
+    }
+    if(byte != 71i32) {
+      return(1i32)
+    }
     status4{ppmReadByteStatus(file, byte)}
-    if(not_equal(status4, 0i32),
-       then() { return(status4) },
-       else() { })
-    if(not_equal(byte, 13i32),
-       then() { return(1i32) },
-       else() { })
+    if(status4 != 0i32) {
+      return(status4)
+    }
+    if(byte != 13i32) {
+      return(1i32)
+    }
     status5{ppmReadByteStatus(file, byte)}
-    if(not_equal(status5, 0i32),
-       then() { return(status5) },
-       else() { })
-    if(not_equal(byte, 10i32),
-       then() { return(1i32) },
-       else() { })
+    if(status5 != 0i32) {
+      return(status5)
+    }
+    if(byte != 10i32) {
+      return(1i32)
+    }
     status6{ppmReadByteStatus(file, byte)}
-    if(not_equal(status6, 0i32),
-       then() { return(status6) },
-       else() { })
-    if(not_equal(byte, 26i32),
-       then() { return(1i32) },
-       else() { })
+    if(status6 != 0i32) {
+      return(status6)
+    }
+    if(byte != 26i32) {
+      return(1i32)
+    }
     status7{ppmReadByteStatus(file, byte)}
-    if(not_equal(status7, 0i32),
-       then() { return(status7) },
-       else() { })
-    if(not_equal(byte, 10i32),
-       then() { return(1i32) },
-       else() { })
+    if(status7 != 0i32) {
+      return(status7)
+    }
+    if(byte != 10i32) {
+      return(1i32)
+    }
     return(0i32)
   }
 
@@ -480,42 +475,41 @@ namespace std {
     [mut] parsedWidth{0i32}
     [mut] parsedHeight{0i32}
     widthStatus{pngReadU32Be(file, parsedWidth)}
-    if(not_equal(widthStatus, 0i32),
-       then() { return(widthStatus) },
-       else() { })
+    if(widthStatus != 0i32) {
+      return(widthStatus)
+    }
     heightStatus{pngReadU32Be(file, parsedHeight)}
-    if(not_equal(heightStatus, 0i32),
-       then() { return(heightStatus) },
-       else() { })
+    if(heightStatus != 0i32) {
+      return(heightStatus)
+    }
     [mut] bitDepth{0i32}
     bitDepthStatus{ppmReadByteStatus(file, bitDepth)}
-    if(not_equal(bitDepthStatus, 0i32),
-       then() { return(bitDepthStatus) },
-       else() { })
+    if(bitDepthStatus != 0i32) {
+      return(bitDepthStatus)
+    }
     [mut] colorType{0i32}
     colorTypeStatus{ppmReadByteStatus(file, colorType)}
-    if(not_equal(colorTypeStatus, 0i32),
-       then() { return(colorTypeStatus) },
-       else() { })
+    if(colorTypeStatus != 0i32) {
+      return(colorTypeStatus)
+    }
     [mut] compression{0i32}
     compressionStatus{ppmReadByteStatus(file, compression)}
-    if(not_equal(compressionStatus, 0i32),
-       then() { return(compressionStatus) },
-       else() { })
+    if(compressionStatus != 0i32) {
+      return(compressionStatus)
+    }
     [mut] filter{0i32}
     filterStatus{ppmReadByteStatus(file, filter)}
-    if(not_equal(filterStatus, 0i32),
-       then() { return(filterStatus) },
-       else() { })
+    if(filterStatus != 0i32) {
+      return(filterStatus)
+    }
     [mut] interlace{0i32}
     interlaceStatus{ppmReadByteStatus(file, interlace)}
-    if(not_equal(interlaceStatus, 0i32),
-       then() { return(interlaceStatus) },
-       else() { })
-    if(or(or(less_equal(parsedWidth, 0i32), less_equal(parsedHeight, 0i32)),
-          not(pngIhdrFieldsValid(bitDepth, colorType, compression, filter, interlace))),
-       then() { return(1i32) },
-       else() { })
+    if(interlaceStatus != 0i32) {
+      return(interlaceStatus)
+    }
+    if(parsedWidth <= 0i32 || parsedHeight <= 0i32 || !(pngIhdrFieldsValid(bitDepth, colorType, compression, filter, interlace))) {
+      return(1i32)
+    }
     width = parsedWidth
     height = parsedHeight
     bitDepthOut = bitDepth
@@ -526,12 +520,12 @@ namespace std {
 
   [return<i32>]
   pngMod([i32] value, [i32] divisor) {
-    return(value - multiply(divide(value, divisor), divisor))
+    return(value - value / divisor * divisor)
   }
 
   [return<u64>]
   pngModU64([u64] value, [u64] divisor) {
-    return(value - multiply(divide(value, divisor), divisor))
+    return(value - value / divisor * divisor)
   }
 
   [return<u64>]
@@ -540,50 +534,48 @@ namespace std {
     [mut] currentRight{right}
     [mut] factor{1u64}
     [mut] value{0u64}
-    while(or(greater_than(currentLeft, 0u64), greater_than(currentRight, 0u64)), do() {
+    while(currentLeft > 0u64 || currentRight > 0u64) {
       leftBit{pngModU64(currentLeft, 2u64)}
       rightBit{pngModU64(currentRight, 2u64)}
-      if(not_equal(leftBit, rightBit),
-         then() { value = value + factor },
-         else() { })
-      currentLeft = divide(currentLeft, 2u64)
-      currentRight = divide(currentRight, 2u64)
-      factor = multiply(factor, 2u64)
-    })
+      if(leftBit != rightBit) {
+        value = value + factor
+      }
+      currentLeft = currentLeft / 2u64
+      currentRight = currentRight / 2u64
+      factor = factor * 2u64
+    }
     return(value)
   }
 
   [effects(heap_alloc), return<void>]
   pngAppendVectorBytes([vector<i32>] bytes, [vector<i32> mut] out) {
     [mut] index{0i32}
-    while(less_than(index, count(bytes)), do() {
-      /std/collections/vector/push(out, bytes[index])
-      increment(index)
-    })
+    while(index < count(bytes)) {
+      push(out, bytes[index])
+      index++
+    }
   }
 
   [effects(heap_alloc), return<void>]
   pngAppendU32Be([i32] value, [vector<i32> mut] out) {
-    /std/collections/vector/push(out, divide(value, 16777216i32))
-    /std/collections/vector/push(out, pngMod(divide(value, 65536i32), 256i32))
-    /std/collections/vector/push(out, pngMod(divide(value, 256i32), 256i32))
-    /std/collections/vector/push(out, pngMod(value, 256i32))
+    push(out, value / 16777216i32)
+    push(out, pngMod(value / 65536i32, 256i32))
+    push(out, pngMod(value / 256i32, 256i32))
+    push(out, pngMod(value, 256i32))
   }
 
   [return<u64>]
   pngCrc32UpdateByte([u64] crc, [i32] byte) {
     [mut] current{pngXorU64(crc, convert<u64>(byte))}
     [mut] bit{0i32}
-    while(less_than(bit, 8i32), do() {
-      if(equal(pngModU64(current, 2u64), 1u64),
-         then() {
-           current = pngXorU64(divide(current, 2u64), 3988292384u64)
-         },
-         else() {
-           current = divide(current, 2u64)
-         })
-      increment(bit)
-    })
+    while(bit < 8i32) {
+      if(pngModU64(current, 2u64) == 1u64) {
+        current = pngXorU64(current / 2u64, 3988292384u64)
+      } else {
+        current = current / 2u64
+      }
+      bit++
+    }
     return(current)
   }
 
@@ -595,10 +587,10 @@ namespace std {
     crc = pngCrc32UpdateByte(crc, typeC)
     crc = pngCrc32UpdateByte(crc, typeD)
     [mut] index{0i32}
-    while(less_than(index, count(payload)), do() {
+    while(index < count(payload)) {
       crc = pngCrc32UpdateByte(crc, payload[index])
-      increment(index)
-    })
+      index++
+    }
     return(pngXorU64(crc, 4294967295u64))
   }
 
@@ -606,13 +598,10 @@ namespace std {
   pngChunkCrcMatches([i32] typeA, [i32] typeB, [i32] typeC, [i32] typeD, [vector<i32>] payload,
                      [i32] crcA, [i32] crcB, [i32] crcC, [i32] crcD) {
     crc{pngChunkCrc(typeA, typeB, typeC, typeD, payload)}
-    return(and(and(equal(divide(crc, 16777216u64), convert<u64>(crcA)),
-                   equal(pngModU64(divide(crc, 65536u64), 256u64), convert<u64>(crcB))),
-               and(equal(pngModU64(divide(crc, 256u64), 256u64), convert<u64>(crcC)),
-                   equal(pngModU64(crc, 256u64), convert<u64>(crcD)))))
+    return(crc / 16777216u64 == convert<u64>(crcA) && pngModU64(crc / 65536u64, 256u64) == convert<u64>(crcB) && pngModU64(crc / 256u64, 256u64) == convert<u64>(crcC) && pngModU64(crc, 256u64) == convert<u64>(crcD))
   }
 
-  [effects(file_write), return<int> on_error<FileError, /std/image/ignoreFileError>]
+  [effects(file_write), return<int> on_error<FileError, ignoreFileError>]
   pngWriteByte([File<Write>] file, [i32] value) {
     if(value < 0i32 || value > 255i32) {
       return(1i32)
@@ -623,46 +612,46 @@ namespace std {
 
   [effects(file_write), return<int>]
   pngWriteU32Be([File<Write>] file, [i32] value) {
-    if(less_than(value, 0i32),
-       then() { return(1i32) },
-       else() { })
-    byteA{divide(value, 16777216i32)}
-    byteB{pngMod(divide(value, 65536i32), 256i32)}
-    byteC{pngMod(divide(value, 256i32), 256i32)}
+    if(value < 0i32) {
+      return(1i32)
+    }
+    byteA{value / 16777216i32}
+    byteB{pngMod(value / 65536i32, 256i32)}
+    byteC{pngMod(value / 256i32, 256i32)}
     byteD{pngMod(value, 256i32)}
     statusA{pngWriteByte(file, byteA)}
-    if(not_equal(statusA, 0i32),
-       then() { return(statusA) },
-       else() { })
+    if(statusA != 0i32) {
+      return(statusA)
+    }
     statusB{pngWriteByte(file, byteB)}
-    if(not_equal(statusB, 0i32),
-       then() { return(statusB) },
-       else() { })
+    if(statusB != 0i32) {
+      return(statusB)
+    }
     statusC{pngWriteByte(file, byteC)}
-    if(not_equal(statusC, 0i32),
-       then() { return(statusC) },
-       else() { })
+    if(statusC != 0i32) {
+      return(statusC)
+    }
     return(pngWriteByte(file, byteD))
   }
 
   [effects(file_write), return<int>]
   pngWriteU32BeU64([File<Write>] file, [u64] value) {
-    byteA{convert<i32>(divide(value, 16777216u64))}
-    byteB{convert<i32>(pngModU64(divide(value, 65536u64), 256u64))}
-    byteC{convert<i32>(pngModU64(divide(value, 256u64), 256u64))}
+    byteA{convert<i32>(value / 16777216u64)}
+    byteB{convert<i32>(pngModU64(value / 65536u64, 256u64))}
+    byteC{convert<i32>(pngModU64(value / 256u64, 256u64))}
     byteD{convert<i32>(pngModU64(value, 256u64))}
     statusA{pngWriteByte(file, byteA)}
-    if(not_equal(statusA, 0i32),
-       then() { return(statusA) },
-       else() { })
+    if(statusA != 0i32) {
+      return(statusA)
+    }
     statusB{pngWriteByte(file, byteB)}
-    if(not_equal(statusB, 0i32),
-       then() { return(statusB) },
-       else() { })
+    if(statusB != 0i32) {
+      return(statusB)
+    }
     statusC{pngWriteByte(file, byteC)}
-    if(not_equal(statusC, 0i32),
-       then() { return(statusC) },
-       else() { })
+    if(statusC != 0i32) {
+      return(statusC)
+    }
     return(pngWriteByte(file, byteD))
   }
 
@@ -671,28 +660,28 @@ namespace std {
                     [u64 mut] crc) {
     crc = 4294967295u64
     lengthStatus{pngWriteU32Be(file, length)}
-    if(not_equal(lengthStatus, 0i32),
-       then() { return(lengthStatus) },
-       else() { })
+    if(lengthStatus != 0i32) {
+      return(lengthStatus)
+    }
     statusA{pngWriteByte(file, typeA)}
-    if(not_equal(statusA, 0i32),
-       then() { return(statusA) },
-       else() { })
+    if(statusA != 0i32) {
+      return(statusA)
+    }
     crc = pngCrc32UpdateByte(crc, typeA)
     statusB{pngWriteByte(file, typeB)}
-    if(not_equal(statusB, 0i32),
-       then() { return(statusB) },
-       else() { })
+    if(statusB != 0i32) {
+      return(statusB)
+    }
     crc = pngCrc32UpdateByte(crc, typeB)
     statusC{pngWriteByte(file, typeC)}
-    if(not_equal(statusC, 0i32),
-       then() { return(statusC) },
-       else() { })
+    if(statusC != 0i32) {
+      return(statusC)
+    }
     crc = pngCrc32UpdateByte(crc, typeC)
     statusD{pngWriteByte(file, typeD)}
-    if(not_equal(statusD, 0i32),
-       then() { return(statusD) },
-       else() { })
+    if(statusD != 0i32) {
+      return(statusD)
+    }
     crc = pngCrc32UpdateByte(crc, typeD)
     return(0i32)
   }
@@ -700,9 +689,9 @@ namespace std {
   [effects(file_write), return<int>]
   pngWriteChunkPayloadByte([File<Write>] file, [i32] byte, [u64 mut] crc) {
     status{pngWriteByte(file, byte)}
-    if(not_equal(status, 0i32),
-       then() { return(status) },
-       else() { })
+    if(status != 0i32) {
+      return(status)
+    }
     crc = pngCrc32UpdateByte(crc, byte)
     return(0i32)
   }
@@ -714,15 +703,15 @@ namespace std {
 
   [return<i32>]
   pngStoredBlockCount([i32] rawByteCount) {
-    if(less_equal(rawByteCount, 0i32),
-       then() { return(0i32) },
-       else() { })
-    return(divide(rawByteCount + 65534i32, 65535i32))
+    if(rawByteCount <= 0i32) {
+      return(0i32)
+    }
+    return((rawByteCount + 65534i32) / 65535i32)
   }
 
   [return<i32>]
   pngZlibStoredPayloadLength([i32] rawByteCount) {
-    return(rawByteCount + multiply(pngStoredBlockCount(rawByteCount), 5i32) + 6i32)
+    return(rawByteCount + pngStoredBlockCount(rawByteCount) * 5i32 + 6i32)
   }
 
   [return<bool>]
@@ -730,20 +719,20 @@ namespace std {
     rawByteCount = 0i32
     payloadLength = 0i32
     [mut] pixelCount{0i32}
-    if(not(imageRgbWritePixelCount(width, height, pixelCount)),
-       then() { return(false) },
-       else() { })
+    if(!(imageRgbWritePixelCount(width, height, pixelCount))) {
+      return(false)
+    }
 
     rawByteCountWide{convert<i64>(pixelCount) + convert<i64>(height)}
-    if(or(less_equal(rawByteCountWide, 0i64), greater_than(rawByteCountWide, 2147483647i64)),
-       then() { return(false) },
-       else() { })
+    if(rawByteCountWide <= 0i64 || rawByteCountWide > 2147483647i64) {
+      return(false)
+    }
 
-    storedBlockCountWide{divide(rawByteCountWide + 65534i64, 65535i64)}
-    payloadLengthWide{rawByteCountWide + multiply(storedBlockCountWide, 5i64) + 6i64}
-    if(greater_than(payloadLengthWide, 2147483647i64),
-       then() { return(false) },
-       else() { })
+    storedBlockCountWide{(rawByteCountWide + 65534i64) / 65535i64}
+    payloadLengthWide{rawByteCountWide + storedBlockCountWide * 5i64 + 6i64}
+    if(payloadLengthWide > 2147483647i64) {
+      return(false)
+    }
 
     rawByteCount = convert<i32>(rawByteCountWide)
     payloadLength = convert<i32>(payloadLengthWide)
@@ -759,33 +748,33 @@ namespace std {
   [effects(file_write), return<int>]
   pngWriteSignature([File<Write>] file) {
     status0{pngWriteByte(file, 137i32)}
-    if(not_equal(status0, 0i32),
-       then() { return(status0) },
-       else() { })
+    if(status0 != 0i32) {
+      return(status0)
+    }
     status1{pngWriteByte(file, 80i32)}
-    if(not_equal(status1, 0i32),
-       then() { return(status1) },
-       else() { })
+    if(status1 != 0i32) {
+      return(status1)
+    }
     status2{pngWriteByte(file, 78i32)}
-    if(not_equal(status2, 0i32),
-       then() { return(status2) },
-       else() { })
+    if(status2 != 0i32) {
+      return(status2)
+    }
     status3{pngWriteByte(file, 71i32)}
-    if(not_equal(status3, 0i32),
-       then() { return(status3) },
-       else() { })
+    if(status3 != 0i32) {
+      return(status3)
+    }
     status4{pngWriteByte(file, 13i32)}
-    if(not_equal(status4, 0i32),
-       then() { return(status4) },
-       else() { })
+    if(status4 != 0i32) {
+      return(status4)
+    }
     status5{pngWriteByte(file, 10i32)}
-    if(not_equal(status5, 0i32),
-       then() { return(status5) },
-       else() { })
+    if(status5 != 0i32) {
+      return(status5)
+    }
     status6{pngWriteByte(file, 26i32)}
-    if(not_equal(status6, 0i32),
-       then() { return(status6) },
-       else() { })
+    if(status6 != 0i32) {
+      return(status6)
+    }
     return(pngWriteByte(file, 10i32))
   }
 
@@ -793,129 +782,127 @@ namespace std {
   pngWriteIhdrChunk([File<Write>] file, [i32] width, [i32] height) {
     [mut] crc{0u64}
     openStatus{pngWriteChunkOpen(file, 13i32, 73i32, 72i32, 68i32, 82i32, crc)}
-    if(not_equal(openStatus, 0i32),
-       then() { return(openStatus) },
-       else() { })
-    widthA{divide(width, 16777216i32)}
-    widthB{pngMod(divide(width, 65536i32), 256i32)}
-    widthC{pngMod(divide(width, 256i32), 256i32)}
+    if(openStatus != 0i32) {
+      return(openStatus)
+    }
+    widthA{width / 16777216i32}
+    widthB{pngMod(width / 65536i32, 256i32)}
+    widthC{pngMod(width / 256i32, 256i32)}
     widthD{pngMod(width, 256i32)}
-    heightA{divide(height, 16777216i32)}
-    heightB{pngMod(divide(height, 65536i32), 256i32)}
-    heightC{pngMod(divide(height, 256i32), 256i32)}
+    heightA{height / 16777216i32}
+    heightB{pngMod(height / 65536i32, 256i32)}
+    heightC{pngMod(height / 256i32, 256i32)}
     heightD{pngMod(height, 256i32)}
     status0{pngWriteChunkPayloadByte(file, widthA, crc)}
-    if(not_equal(status0, 0i32),
-       then() { return(status0) },
-       else() { })
+    if(status0 != 0i32) {
+      return(status0)
+    }
     status1{pngWriteChunkPayloadByte(file, widthB, crc)}
-    if(not_equal(status1, 0i32),
-       then() { return(status1) },
-       else() { })
+    if(status1 != 0i32) {
+      return(status1)
+    }
     status2{pngWriteChunkPayloadByte(file, widthC, crc)}
-    if(not_equal(status2, 0i32),
-       then() { return(status2) },
-       else() { })
+    if(status2 != 0i32) {
+      return(status2)
+    }
     status3{pngWriteChunkPayloadByte(file, widthD, crc)}
-    if(not_equal(status3, 0i32),
-       then() { return(status3) },
-       else() { })
+    if(status3 != 0i32) {
+      return(status3)
+    }
     status4{pngWriteChunkPayloadByte(file, heightA, crc)}
-    if(not_equal(status4, 0i32),
-       then() { return(status4) },
-       else() { })
+    if(status4 != 0i32) {
+      return(status4)
+    }
     status5{pngWriteChunkPayloadByte(file, heightB, crc)}
-    if(not_equal(status5, 0i32),
-       then() { return(status5) },
-       else() { })
+    if(status5 != 0i32) {
+      return(status5)
+    }
     status6{pngWriteChunkPayloadByte(file, heightC, crc)}
-    if(not_equal(status6, 0i32),
-       then() { return(status6) },
-       else() { })
+    if(status6 != 0i32) {
+      return(status6)
+    }
     status7{pngWriteChunkPayloadByte(file, heightD, crc)}
-    if(not_equal(status7, 0i32),
-       then() { return(status7) },
-       else() { })
+    if(status7 != 0i32) {
+      return(status7)
+    }
     status8{pngWriteChunkPayloadByte(file, 8i32, crc)}
-    if(not_equal(status8, 0i32),
-       then() { return(status8) },
-       else() { })
+    if(status8 != 0i32) {
+      return(status8)
+    }
     status9{pngWriteChunkPayloadByte(file, 2i32, crc)}
-    if(not_equal(status9, 0i32),
-       then() { return(status9) },
-       else() { })
+    if(status9 != 0i32) {
+      return(status9)
+    }
     status10{pngWriteChunkPayloadByte(file, 0i32, crc)}
-    if(not_equal(status10, 0i32),
-       then() { return(status10) },
-       else() { })
+    if(status10 != 0i32) {
+      return(status10)
+    }
     status11{pngWriteChunkPayloadByte(file, 0i32, crc)}
-    if(not_equal(status11, 0i32),
-       then() { return(status11) },
-       else() { })
+    if(status11 != 0i32) {
+      return(status11)
+    }
     status12{pngWriteChunkPayloadByte(file, 0i32, crc)}
-    if(not_equal(status12, 0i32),
-       then() { return(status12) },
-       else() { })
+    if(status12 != 0i32) {
+      return(status12)
+    }
     return(pngWriteChunkClose(file, crc))
   }
 
   [effects(file_write), return<int>]
   pngWriteStoredBlockHeader([File<Write>] file, [i32] blockByteCount, [i32] isFinal, [u64 mut] crc) {
-    if(or(less_equal(blockByteCount, 0i32), greater_than(blockByteCount, 65535i32)),
-       then() { return(1i32) },
-       else() { })
+    if(blockByteCount <= 0i32 || blockByteCount > 65535i32) {
+      return(1i32)
+    }
     lenLow{pngMod(blockByteCount, 256i32)}
-    lenHigh{divide(blockByteCount, 256i32)}
+    lenHigh{blockByteCount / 256i32}
     nlen{65535i32 - blockByteCount}
     nlenLow{pngMod(nlen, 256i32)}
-    nlenHigh{divide(nlen, 256i32)}
+    nlenHigh{nlen / 256i32}
     status0{pngWriteChunkPayloadByte(file, isFinal, crc)}
-    if(not_equal(status0, 0i32),
-       then() { return(status0) },
-       else() { })
+    if(status0 != 0i32) {
+      return(status0)
+    }
     status1{pngWriteChunkPayloadByte(file, lenLow, crc)}
-    if(not_equal(status1, 0i32),
-       then() { return(status1) },
-       else() { })
+    if(status1 != 0i32) {
+      return(status1)
+    }
     status2{pngWriteChunkPayloadByte(file, lenHigh, crc)}
-    if(not_equal(status2, 0i32),
-       then() { return(status2) },
-       else() { })
+    if(status2 != 0i32) {
+      return(status2)
+    }
     status3{pngWriteChunkPayloadByte(file, nlenLow, crc)}
-    if(not_equal(status3, 0i32),
-       then() { return(status3) },
-       else() { })
+    if(status3 != 0i32) {
+      return(status3)
+    }
     return(pngWriteChunkPayloadByte(file, nlenHigh, crc))
   }
 
   [effects(file_write), return<int>]
   pngWriteStoredDataByte([File<Write>] file, [i32] byte, [i32 mut] rawRemaining, [i32 mut] blockRemaining,
                          [u64 mut] crc, [i32 mut] adlerA, [i32 mut] adlerB) {
-    if(less_equal(rawRemaining, 0i32),
-       then() { return(1i32) },
-       else() { })
-    if(equal(blockRemaining, 0i32),
-       then() {
-         [mut] nextBlockCount{65535i32}
-         if(less_equal(rawRemaining, 65535i32),
-            then() { nextBlockCount = rawRemaining },
-            else() { })
-         isFinalBlock{if(equal(nextBlockCount, rawRemaining), then() { 1i32 }, else() { 0i32 })}
-         headerStatus{
-             pngWriteStoredBlockHeader(file,
-                                       nextBlockCount,
-                                       isFinalBlock,
-                                       crc)}
-         if(not_equal(headerStatus, 0i32),
-            then() { return(headerStatus) },
-            else() { })
-         blockRemaining = nextBlockCount
-       },
-       else() { })
+    if(rawRemaining <= 0i32) {
+      return(1i32)
+    }
+    if(blockRemaining == 0i32) {
+      [mut] nextBlockCount{65535i32}
+      if(rawRemaining <= 65535i32) {
+        nextBlockCount = rawRemaining
+      }
+      isFinalBlock{if(nextBlockCount == rawRemaining, then() { 1i32 }, else() { 0i32 })}
+      headerStatus{
+          pngWriteStoredBlockHeader(file,
+                                    nextBlockCount,
+                                    isFinalBlock,
+                                    crc)}
+      if(headerStatus != 0i32) {
+        return(headerStatus)
+      }
+      blockRemaining = nextBlockCount
+    }
     byteStatus{pngWriteChunkPayloadByte(file, byte, crc)}
-    if(not_equal(byteStatus, 0i32),
-       then() { return(byteStatus) },
-       else() { })
+    if(byteStatus != 0i32) {
+      return(byteStatus)
+    }
     pngAdlerUpdateByte(byte, adlerA, adlerB)
     rawRemaining = rawRemaining - 1i32
     blockRemaining = blockRemaining - 1i32
@@ -927,68 +914,68 @@ namespace std {
                     [i32] rawByteCount, [i32] payloadLength) {
     [mut] crc{0u64}
     openStatus{pngWriteChunkOpen(file, payloadLength, 73i32, 68i32, 65i32, 84i32, crc)}
-    if(not_equal(openStatus, 0i32),
-       then() { return(openStatus) },
-       else() { })
+    if(openStatus != 0i32) {
+      return(openStatus)
+    }
     zlibStatus0{pngWriteChunkPayloadByte(file, 120i32, crc)}
-    if(not_equal(zlibStatus0, 0i32),
-       then() { return(zlibStatus0) },
-       else() { })
+    if(zlibStatus0 != 0i32) {
+      return(zlibStatus0)
+    }
     zlibStatus1{pngWriteChunkPayloadByte(file, 1i32, crc)}
-    if(not_equal(zlibStatus1, 0i32),
-       then() { return(zlibStatus1) },
-       else() { })
+    if(zlibStatus1 != 0i32) {
+      return(zlibStatus1)
+    }
     [mut] rawRemaining{rawByteCount}
     [mut] blockRemaining{0i32}
     [mut] adlerA{1i32}
     [mut] adlerB{0i32}
     [mut] row{0i32}
-    while(less_than(row, height), do() {
+    while(row < height) {
       filterStatus{pngWriteStoredDataByte(file, 0i32, rawRemaining, blockRemaining, crc, adlerA, adlerB)}
-      if(not_equal(filterStatus, 0i32),
-         then() { return(filterStatus) },
-         else() { })
-      [mut] pixelOffset{multiply(multiply(row, width), 3i32)}
+      if(filterStatus != 0i32) {
+        return(filterStatus)
+      }
+      [mut] pixelOffset{row * width * 3i32}
       [mut] column{0i32}
-      while(less_than(column, width), do() {
+      while(column < width) {
         redStatus{pngWriteStoredDataByte(file, pixels[pixelOffset], rawRemaining, blockRemaining, crc, adlerA, adlerB)}
-        if(not_equal(redStatus, 0i32),
-           then() { return(redStatus) },
-           else() { })
+        if(redStatus != 0i32) {
+          return(redStatus)
+        }
         greenStatus{
             pngWriteStoredDataByte(file, pixels[pixelOffset + 1i32], rawRemaining, blockRemaining, crc, adlerA, adlerB)}
-        if(not_equal(greenStatus, 0i32),
-           then() { return(greenStatus) },
-           else() { })
+        if(greenStatus != 0i32) {
+          return(greenStatus)
+        }
         blueStatus{
             pngWriteStoredDataByte(file, pixels[pixelOffset + 2i32], rawRemaining, blockRemaining, crc, adlerA, adlerB)}
-        if(not_equal(blueStatus, 0i32),
-           then() { return(blueStatus) },
-           else() { })
+        if(blueStatus != 0i32) {
+          return(blueStatus)
+        }
         pixelOffset = pixelOffset + 3i32
-        increment(column)
-      })
-      increment(row)
-    })
-    if(or(not_equal(rawRemaining, 0i32), not_equal(blockRemaining, 0i32)),
-       then() { return(1i32) },
-       else() { })
-    adlerStatus0{pngWriteChunkPayloadByte(file, divide(adlerB, 256i32), crc)}
-    if(not_equal(adlerStatus0, 0i32),
-       then() { return(adlerStatus0) },
-       else() { })
+        column++
+      }
+      row++
+    }
+    if(rawRemaining != 0i32 || blockRemaining != 0i32) {
+      return(1i32)
+    }
+    adlerStatus0{pngWriteChunkPayloadByte(file, adlerB / 256i32, crc)}
+    if(adlerStatus0 != 0i32) {
+      return(adlerStatus0)
+    }
     adlerStatus1{pngWriteChunkPayloadByte(file, pngMod(adlerB, 256i32), crc)}
-    if(not_equal(adlerStatus1, 0i32),
-       then() { return(adlerStatus1) },
-       else() { })
-    adlerStatus2{pngWriteChunkPayloadByte(file, divide(adlerA, 256i32), crc)}
-    if(not_equal(adlerStatus2, 0i32),
-       then() { return(adlerStatus2) },
-       else() { })
+    if(adlerStatus1 != 0i32) {
+      return(adlerStatus1)
+    }
+    adlerStatus2{pngWriteChunkPayloadByte(file, adlerA / 256i32, crc)}
+    if(adlerStatus2 != 0i32) {
+      return(adlerStatus2)
+    }
     adlerStatus3{pngWriteChunkPayloadByte(file, pngMod(adlerA, 256i32), crc)}
-    if(not_equal(adlerStatus3, 0i32),
-       then() { return(adlerStatus3) },
-       else() { })
+    if(adlerStatus3 != 0i32) {
+      return(adlerStatus3)
+    }
     return(pngWriteChunkClose(file, crc))
   }
 
@@ -996,9 +983,9 @@ namespace std {
   pngWriteIendChunk([File<Write>] file) {
     [mut] crc{0u64}
     openStatus{pngWriteChunkOpen(file, 0i32, 73i32, 69i32, 78i32, 68i32, crc)}
-    if(not_equal(openStatus, 0i32),
-       then() { return(openStatus) },
-       else() { })
+    if(openStatus != 0i32) {
+      return(openStatus)
+    }
     return(pngWriteChunkClose(file, crc))
   }
 
@@ -1008,71 +995,71 @@ namespace std {
     leftDistance{/std/math/abs(predictor - left)}
     upDistance{/std/math/abs(predictor - up)}
     upLeftDistance{/std/math/abs(predictor - upLeft)}
-    if(and(less_equal(leftDistance, upDistance), less_equal(leftDistance, upLeftDistance)),
-       then() { return(left) },
-       else() { })
-    if(less_equal(upDistance, upLeftDistance),
-       then() { return(up) },
-       else() { })
+    if(leftDistance <= upDistance && leftDistance <= upLeftDistance) {
+      return(left)
+    }
+    if(upDistance <= upLeftDistance) {
+      return(up)
+    }
     return(upLeft)
   }
 
   [return<i32>]
   pngColorTypeSamplesPerPixel([i32] colorType) {
-    if(or(equal(colorType, 0i32), equal(colorType, 3i32)),
-       then() { return(1i32) },
-       else() { })
-    if(equal(colorType, 2i32),
-       then() { return(3i32) },
-       else() { })
-    if(equal(colorType, 4i32),
-       then() { return(2i32) },
-       else() { })
+    if(colorType == 0i32 || colorType == 3i32) {
+      return(1i32)
+    }
+    if(colorType == 2i32) {
+      return(3i32)
+    }
+    if(colorType == 4i32) {
+      return(2i32)
+    }
     return(4i32)
   }
 
   [return<bool>]
   pngDecodeBitDepthSupported([i32] bitDepth, [i32] colorType) {
-    if(equal(colorType, 0i32),
-       then() { return(pngBitDepthAllowed(bitDepth, 1i32, 2i32, 4i32, 8i32, 16i32)) },
-       else() { })
-    if(or(equal(colorType, 2i32), equal(colorType, 6i32)),
-       then() { return(or(equal(bitDepth, 8i32), equal(bitDepth, 16i32))) },
-       else() { })
-    if(equal(colorType, 4i32),
-       then() { return(or(equal(bitDepth, 8i32), equal(bitDepth, 16i32))) },
-       else() { })
-    if(equal(colorType, 3i32),
-       then() { return(pngBitDepthAllowed(bitDepth, 1i32, 2i32, 4i32, 8i32, -1i32)) },
-       else() { })
+    if(colorType == 0i32) {
+      return(pngBitDepthAllowed(bitDepth, 1i32, 2i32, 4i32, 8i32, 16i32))
+    }
+    if(colorType == 2i32 || colorType == 6i32) {
+      return(bitDepth == 8i32 || bitDepth == 16i32)
+    }
+    if(colorType == 4i32) {
+      return(bitDepth == 8i32 || bitDepth == 16i32)
+    }
+    if(colorType == 3i32) {
+      return(pngBitDepthAllowed(bitDepth, 1i32, 2i32, 4i32, 8i32, -1i32))
+    }
     return(false)
   }
 
   [return<i32>]
   pngFilterBytesPerPixel([i32] bitDepth, [i32] colorType) {
-    return(divide(multiply(pngColorTypeSamplesPerPixel(colorType), bitDepth) + 7i32, 8i32))
+    return((pngColorTypeSamplesPerPixel(colorType) * bitDepth + 7i32) / 8i32)
   }
 
   [return<i32>]
   pngScanlineBytes([i32] width, [i32] bitDepth, [i32] colorType) {
-    return(divide(multiply(multiply(width, pngColorTypeSamplesPerPixel(colorType)), bitDepth) + 7i32, 8i32))
+    return((width * pngColorTypeSamplesPerPixel(colorType) * bitDepth + 7i32) / 8i32)
   }
 
   [return<bool>]
   pngScanlineBytesValid([i32] width, [i32] bitDepth, [i32] colorType, [i32 mut] scanlineBytes) {
     scanlineBytes = 0i32
-    if(less_equal(width, 0i32),
-       then() { return(false) },
-       else() { })
+    if(width <= 0i32) {
+      return(false)
+    }
     scanlineBitsWide{
-        multiply(multiply(convert<i64>(width), convert<i64>(pngColorTypeSamplesPerPixel(colorType))), convert<i64>(bitDepth))}
-    if(or(less_equal(scanlineBitsWide, 0i64), greater_than(scanlineBitsWide, 17179869176i64)),
-       then() { return(false) },
-       else() { })
-    scanlineBytesWide{divide(scanlineBitsWide + 7i64, 8i64)}
-    if(greater_than(scanlineBytesWide, 2147483647i64),
-       then() { return(false) },
-       else() { })
+        convert<i64>(width) * convert<i64>(pngColorTypeSamplesPerPixel(colorType)) * convert<i64>(bitDepth)}
+    if(scanlineBitsWide <= 0i64 || scanlineBitsWide > 17179869176i64) {
+      return(false)
+    }
+    scanlineBytesWide{(scanlineBitsWide + 7i64) / 8i64}
+    if(scanlineBytesWide > 2147483647i64) {
+      return(false)
+    }
     scanlineBytes = convert<i32>(scanlineBytesWide)
     return(true)
   }
@@ -1081,329 +1068,293 @@ namespace std {
   pngSampleValueCount([i32] bitDepth) {
     [mut] valueCount{1i32}
     [mut] shift{0i32}
-    while(less_than(shift, bitDepth), do() {
-      valueCount = multiply(valueCount, 2i32)
-      increment(shift)
-    })
+    while(shift < bitDepth) {
+      valueCount = valueCount * 2i32
+      shift++
+    }
     return(valueCount)
   }
 
   [return<i32>]
   pngPackedSampleAt([vector<i32>] rowBytes, [i32] pixelIndex, [i32] bitDepth) {
-    samplesPerByte{divide(8i32, bitDepth)}
-    byteIndex{divide(pixelIndex, samplesPerByte)}
+    samplesPerByte{8i32 / bitDepth}
+    byteIndex{pixelIndex / samplesPerByte}
     sampleIndex{pngMod(pixelIndex, samplesPerByte)}
-    shiftAmount{multiply(samplesPerByte - 1i32 - sampleIndex, bitDepth)}
+    shiftAmount{(samplesPerByte - 1i32 - sampleIndex) * bitDepth}
     [mut] shifted{rowBytes[byteIndex]}
     [mut] shiftCount{0i32}
-    while(less_than(shiftCount, shiftAmount), do() {
-      shifted = divide(shifted, 2i32)
-      increment(shiftCount)
-    })
+    while(shiftCount < shiftAmount) {
+      shifted = shifted / 2i32
+      shiftCount++
+    }
     return(pngMod(shifted, pngSampleValueCount(bitDepth)))
   }
 
   [return<i32>]
   pngScalePackedSampleToByte([i32] sample, [i32] bitDepth) {
     maxSample{pngSampleValueCount(bitDepth) - 1i32}
-    if(less_equal(maxSample, 0i32),
-       then() { return(0i32) },
-       else() { })
-    return(divide(multiply(sample, 255i32), maxSample))
+    if(maxSample <= 0i32) {
+      return(0i32)
+    }
+    return(sample * 255i32 / maxSample)
   }
 
   [return<i32>]
   pngScaleU16SampleToByte([i32] highByte, [i32] lowByte) {
-    return(divide(multiply(highByte, 256i32) + lowByte, 257i32))
+    return((highByte * 256i32 + lowByte) / 257i32)
   }
 
   [return<i32>]
   pngScanlineChannelByte([vector<i32>] rowBytes, [i32] byteIndex, [i32] bitDepth) {
-    if(equal(bitDepth, 16i32),
-       then() { return(pngScaleU16SampleToByte(rowBytes[byteIndex], rowBytes[byteIndex + 1i32])) },
-       else() { })
+    if(bitDepth == 16i32) {
+      return(pngScaleU16SampleToByte(rowBytes[byteIndex], rowBytes[byteIndex + 1i32]))
+    }
     return(rowBytes[byteIndex])
   }
 
   [return<i32>]
   pngAdam7PassStartX([i32] passIndex) {
-    if(or(or(equal(passIndex, 0i32), equal(passIndex, 2i32)), or(equal(passIndex, 4i32), equal(passIndex, 6i32))),
-       then() { return(0i32) },
-       else() { })
-    if(equal(passIndex, 1i32),
-       then() { return(4i32) },
-       else() { })
-    if(equal(passIndex, 3i32),
-       then() { return(2i32) },
-       else() { })
+    if(passIndex == 0i32 || passIndex == 2i32 || passIndex == 4i32 || passIndex == 6i32) {
+      return(0i32)
+    }
+    if(passIndex == 1i32) {
+      return(4i32)
+    }
+    if(passIndex == 3i32) {
+      return(2i32)
+    }
     return(1i32)
   }
 
   [return<i32>]
   pngAdam7PassStartY([i32] passIndex) {
-    if(or(or(equal(passIndex, 0i32), equal(passIndex, 1i32)), or(equal(passIndex, 3i32), equal(passIndex, 5i32))),
-       then() { return(0i32) },
-       else() { })
-    if(equal(passIndex, 2i32),
-       then() { return(4i32) },
-       else() { })
-    if(equal(passIndex, 4i32),
-       then() { return(2i32) },
-       else() { })
+    if(passIndex == 0i32 || passIndex == 1i32 || passIndex == 3i32 || passIndex == 5i32) {
+      return(0i32)
+    }
+    if(passIndex == 2i32) {
+      return(4i32)
+    }
+    if(passIndex == 4i32) {
+      return(2i32)
+    }
     return(1i32)
   }
 
   [return<i32>]
   pngAdam7PassStepX([i32] passIndex) {
-    if(or(equal(passIndex, 0i32), equal(passIndex, 1i32)),
-       then() { return(8i32) },
-       else() { })
-    if(or(equal(passIndex, 2i32), equal(passIndex, 3i32)),
-       then() { return(4i32) },
-       else() { })
-    if(or(equal(passIndex, 4i32), equal(passIndex, 5i32)),
-       then() { return(2i32) },
-       else() { })
+    if(passIndex == 0i32 || passIndex == 1i32) {
+      return(8i32)
+    }
+    if(passIndex == 2i32 || passIndex == 3i32) {
+      return(4i32)
+    }
+    if(passIndex == 4i32 || passIndex == 5i32) {
+      return(2i32)
+    }
     return(1i32)
   }
 
   [return<i32>]
   pngAdam7PassStepY([i32] passIndex) {
-    if(or(or(equal(passIndex, 0i32), equal(passIndex, 1i32)), equal(passIndex, 2i32)),
-       then() { return(8i32) },
-       else() { })
-    if(or(equal(passIndex, 3i32), equal(passIndex, 4i32)),
-       then() { return(4i32) },
-       else() { })
+    if(passIndex == 0i32 || passIndex == 1i32 || passIndex == 2i32) {
+      return(8i32)
+    }
+    if(passIndex == 3i32 || passIndex == 4i32) {
+      return(4i32)
+    }
     return(2i32)
   }
 
   [return<i32>]
   pngAdam7PassSpan([i32] size, [i32] start, [i32] step) {
-    if(less_equal(size, start),
-       then() { return(0i32) },
-       else() { })
-    return(divide(size - (start + 1i32) + step, step))
+    if(size <= start) {
+      return(0i32)
+    }
+    return((size - (start + 1i32) + step) / step)
   }
 
   [effects(heap_alloc), return<int>]
   pngInitRgbPixels([i32] width, [i32] height, [vector<i32> mut] pixels) {
     [mut] pixelCount{0i32}
-    if(not(imageRgbWritePixelCount(width, height, pixelCount)),
-       then() {
-         /std/collections/vector/clear(pixels)
-         return(1i32)
-       },
-       else() { })
-    /std/collections/vector/clear(pixels)
-    /std/collections/vector/reserve(pixels, pixelCount)
+    if(!(imageRgbWritePixelCount(width, height, pixelCount))) {
+      clear(pixels)
+      return(1i32)
+    }
+    clear(pixels)
+    reserve(pixels, pixelCount)
     [mut] pixelIndex{0i32}
-    while(less_than(pixelIndex, pixelCount), do() {
-      /std/collections/vector/push(pixels, 0i32)
-      increment(pixelIndex)
-    })
+    while(pixelIndex < pixelCount) {
+      push(pixels, 0i32)
+      pixelIndex++
+    }
     return(0i32)
   }
 
   [effects(heap_alloc), return<int>]
   pngDecodeRows([vector<i32>] rawBytes, [i32 mut] offset, [i32] width, [i32] height, [i32] bitDepth, [i32] colorType,
                 [vector<i32>] paletteBytes, [vector<i32> mut] pixels) {
-    /std/collections/vector/clear(pixels)
-    if(or(less_than(offset, 0i32), greater_than(offset, count(rawBytes))),
-       then() { return(1i32) },
-       else() { })
+    clear(pixels)
+    if(offset < 0i32 || offset > count(rawBytes)) {
+      return(1i32)
+    }
 
     [mut] pixelCount{0i32}
-    if(not(imageRgbWritePixelCount(width, height, pixelCount)),
-       then() {
-         /std/collections/vector/clear(pixels)
-         return(1i32)
-       },
-       else() { })
-    /std/collections/vector/reserve(pixels, pixelCount)
+    if(!(imageRgbWritePixelCount(width, height, pixelCount))) {
+      clear(pixels)
+      return(1i32)
+    }
+    reserve(pixels, pixelCount)
 
     bytesPerPixel{pngFilterBytesPerPixel(bitDepth, colorType)}
     [mut] scanlineBytes{0i32}
-    if(not(pngScanlineBytesValid(width, bitDepth, colorType, scanlineBytes)),
-       then() {
-         /std/collections/vector/clear(pixels)
-         return(1i32)
-       },
-       else() { })
-    requiredRowBytesWide{multiply(convert<i64>(height), convert<i64>(scanlineBytes) + 1i64)}
-    if(or(less_equal(requiredRowBytesWide, 0i64), greater_than(requiredRowBytesWide, 2147483647i64)),
-       then() {
-         /std/collections/vector/clear(pixels)
-         return(1i32)
-       },
-       else() { })
-    if(less_than(count(rawBytes) - offset, convert<i32>(requiredRowBytesWide)),
-       then() { return(1i32) },
-       else() { })
+    if(!(pngScanlineBytesValid(width, bitDepth, colorType, scanlineBytes))) {
+      clear(pixels)
+      return(1i32)
+    }
+    requiredRowBytesWide{convert<i64>(height) * (convert<i64>(scanlineBytes) + 1i64)}
+    if(requiredRowBytesWide <= 0i64 || requiredRowBytesWide > 2147483647i64) {
+      clear(pixels)
+      return(1i32)
+    }
+    if(count(rawBytes) - offset < convert<i32>(requiredRowBytesWide)) {
+      return(1i32)
+    }
 
     [mut] row{0i32}
     [mut] rowBytes{vector<i32>()}
     [mut] previousRowBytes{vector<i32>()}
-    while(less_than(row, height), do() {
+    while(row < height) {
       filterType{rawBytes[offset]}
-      if(and(and(and(and(not_equal(filterType, 0i32), not_equal(filterType, 1i32)), not_equal(filterType, 2i32)),
-                 not_equal(filterType, 3i32)),
-             not_equal(filterType, 4i32)),
-         then() {
-           /std/collections/vector/clear(pixels)
-           return(1i32)
-         },
-         else() { })
+      if(filterType != 0i32 && filterType != 1i32 && filterType != 2i32 && filterType != 3i32 && filterType != 4i32) {
+        clear(pixels)
+        return(1i32)
+      }
       offset = offset + 1i32
-      /std/collections/vector/clear(rowBytes)
-
+      clear(rowBytes)
       [mut] byteIndex{0i32}
-      while(less_than(byteIndex, scanlineBytes), do() {
+      while(byteIndex < scanlineBytes) {
         [mut] reconstructed{rawBytes[offset + byteIndex]}
         [mut] leftByte{0i32}
         [mut] upByte{0i32}
         [mut] upLeftByte{0i32}
-        if(greater_equal(byteIndex, bytesPerPixel),
-           then() { leftByte = rowBytes[byteIndex - bytesPerPixel] },
-           else() { })
-        if(less_than(byteIndex, count(previousRowBytes)),
-           then() { upByte = previousRowBytes[byteIndex] },
-           else() { })
-        if(and(greater_equal(byteIndex, bytesPerPixel), less_than(byteIndex - bytesPerPixel, count(previousRowBytes))),
-           then() { upLeftByte = previousRowBytes[byteIndex - bytesPerPixel] },
-           else() { })
-        if(and(equal(filterType, 1i32), greater_equal(byteIndex, bytesPerPixel)),
-           then() {
-             reconstructed = pngMod(reconstructed + leftByte, 256i32)
-           },
-           else() { })
-        if(and(equal(filterType, 2i32), less_than(byteIndex, count(previousRowBytes))),
-           then() {
-             reconstructed = pngMod(reconstructed + upByte, 256i32)
-           },
-           else() { })
-        if(equal(filterType, 3i32),
-           then() {
-             reconstructed = pngMod(reconstructed + divide(leftByte + upByte, 2i32), 256i32)
-           },
-           else() { })
-        if(equal(filterType, 4i32),
-           then() {
-             reconstructed = pngMod(reconstructed + pngPaethPredictor(leftByte, upByte, upLeftByte), 256i32)
-           },
-           else() { })
-        /std/collections/vector/push(rowBytes, reconstructed)
-        increment(byteIndex)
-      })
-
-      if(less_than(bitDepth, 8i32),
-         then() {
-           [mut] pixelIndex{0i32}
-           while(less_than(pixelIndex, width), do() {
-             sample{pngPackedSampleAt(rowBytes, pixelIndex, bitDepth)}
-             if(equal(colorType, 0i32),
-                then() {
-                  grayByte{pngScalePackedSampleToByte(sample, bitDepth)}
-                  /std/collections/vector/push(pixels, grayByte)
-                  /std/collections/vector/push(pixels, grayByte)
-                  /std/collections/vector/push(pixels, grayByte)
-                },
-                else() {
-                  paletteOffset{multiply(sample, 3i32)}
-                  if(greater_equal(paletteOffset + 2i32, count(paletteBytes)),
-                     then() {
-                       /std/collections/vector/clear(pixels)
-                       return(1i32)
-                     },
-                     else() { })
-                  /std/collections/vector/push(pixels, paletteBytes[paletteOffset])
-                  /std/collections/vector/push(pixels, paletteBytes[paletteOffset + 1i32])
-                  /std/collections/vector/push(pixels, paletteBytes[paletteOffset + 2i32])
-                })
-             increment(pixelIndex)
-           })
-         },
-         else() {
-           [mut] pixelByteIndex{0i32}
-           channelByteStride{divide(bitDepth, 8i32)}
-           while(less_than(pixelByteIndex, scanlineBytes), do() {
-             if(equal(colorType, 0i32),
-                then() {
-                  grayByte{pngScanlineChannelByte(rowBytes, pixelByteIndex, bitDepth)}
-                  /std/collections/vector/push(pixels, grayByte)
-                  /std/collections/vector/push(pixels, grayByte)
-                  /std/collections/vector/push(pixels, grayByte)
-                },
-                else() {
-                  if(equal(colorType, 4i32),
-                     then() {
-                       grayByte{pngScanlineChannelByte(rowBytes, pixelByteIndex, bitDepth)}
-                       /std/collections/vector/push(pixels, grayByte)
-                       /std/collections/vector/push(pixels, grayByte)
-                       /std/collections/vector/push(pixels, grayByte)
-                     },
-                     else() {
-                       if(equal(colorType, 3i32),
-                          then() {
-                            paletteOffset{multiply(rowBytes[pixelByteIndex], 3i32)}
-                            if(greater_equal(paletteOffset + 2i32, count(paletteBytes)),
-                               then() {
-                                 /std/collections/vector/clear(pixels)
-                                 return(1i32)
-                               },
-                               else() { })
-                            /std/collections/vector/push(pixels, paletteBytes[paletteOffset])
-                            /std/collections/vector/push(pixels, paletteBytes[paletteOffset + 1i32])
-                            /std/collections/vector/push(pixels, paletteBytes[paletteOffset + 2i32])
-                          },
-                          else() {
-                            /std/collections/vector/push(pixels, pngScanlineChannelByte(rowBytes, pixelByteIndex, bitDepth))
-                            /std/collections/vector/push(pixels, pngScanlineChannelByte(rowBytes, pixelByteIndex + channelByteStride, bitDepth))
-                            /std/collections/vector/push(pixels, pngScanlineChannelByte(rowBytes, pixelByteIndex + multiply(channelByteStride, 2i32), bitDepth))
-                          })
-                     })
-                })
-             pixelByteIndex = pixelByteIndex + bytesPerPixel
-           })
-         })
-      /std/collections/vector/clear(previousRowBytes)
+        if(byteIndex >= bytesPerPixel) {
+          leftByte = rowBytes[byteIndex - bytesPerPixel]
+        }
+        if(byteIndex < count(previousRowBytes)) {
+          upByte = previousRowBytes[byteIndex]
+        }
+        if(byteIndex >= bytesPerPixel && byteIndex - bytesPerPixel < count(previousRowBytes)) {
+          upLeftByte = previousRowBytes[byteIndex - bytesPerPixel]
+        }
+        if(filterType == 1i32 && byteIndex >= bytesPerPixel) {
+          reconstructed = pngMod(reconstructed + leftByte, 256i32)
+        }
+        if(filterType == 2i32 && byteIndex < count(previousRowBytes)) {
+          reconstructed = pngMod(reconstructed + upByte, 256i32)
+        }
+        if(filterType == 3i32) {
+          reconstructed = pngMod(reconstructed + (leftByte + upByte) / 2i32, 256i32)
+        }
+        if(filterType == 4i32) {
+          reconstructed = pngMod(reconstructed + pngPaethPredictor(leftByte, upByte, upLeftByte), 256i32)
+        }
+        push(rowBytes, reconstructed)
+        byteIndex++
+      }
+      if(bitDepth < 8i32) {
+        [mut] pixelIndex{0i32}
+        while(pixelIndex < width) {
+          sample{pngPackedSampleAt(rowBytes, pixelIndex, bitDepth)}
+          if(colorType == 0i32) {
+            grayByte{pngScalePackedSampleToByte(sample, bitDepth)}
+            push(pixels, grayByte)
+            push(pixels, grayByte)
+            push(pixels, grayByte)
+          } else {
+            paletteOffset{sample * 3i32}
+            if(paletteOffset + 2i32 >= count(paletteBytes)) {
+              clear(pixels)
+              return(1i32)
+            }
+            push(pixels, paletteBytes[paletteOffset])
+            push(pixels, paletteBytes[paletteOffset + 1i32])
+            push(pixels, paletteBytes[paletteOffset + 2i32])
+          }
+          pixelIndex++
+        }
+      } else {
+        [mut] pixelByteIndex{0i32}
+        channelByteStride{bitDepth / 8i32}
+        while(pixelByteIndex < scanlineBytes) {
+          if(colorType == 0i32) {
+            grayByte{pngScanlineChannelByte(rowBytes, pixelByteIndex, bitDepth)}
+            push(pixels, grayByte)
+            push(pixels, grayByte)
+            push(pixels, grayByte)
+          } else {
+            if(colorType == 4i32) {
+              grayByte{pngScanlineChannelByte(rowBytes, pixelByteIndex, bitDepth)}
+              push(pixels, grayByte)
+              push(pixels, grayByte)
+              push(pixels, grayByte)
+            } else {
+              if(colorType == 3i32) {
+                paletteOffset{rowBytes[pixelByteIndex] * 3i32}
+                if(paletteOffset + 2i32 >= count(paletteBytes)) {
+                  clear(pixels)
+                  return(1i32)
+                }
+                push(pixels, paletteBytes[paletteOffset])
+                push(pixels, paletteBytes[paletteOffset + 1i32])
+                push(pixels, paletteBytes[paletteOffset + 2i32])
+              } else {
+                push(pixels, pngScanlineChannelByte(rowBytes, pixelByteIndex, bitDepth))
+                push(pixels, pngScanlineChannelByte(rowBytes, pixelByteIndex + channelByteStride, bitDepth))
+                push(pixels, pngScanlineChannelByte(rowBytes, pixelByteIndex + channelByteStride * 2i32, bitDepth))
+              }
+            }
+          }
+          pixelByteIndex = pixelByteIndex + bytesPerPixel
+        }
+      }
+      clear(previousRowBytes)
       [mut] previousRowIndex{0i32}
-      while(less_than(previousRowIndex, scanlineBytes), do() {
-        /std/collections/vector/push(previousRowBytes, rowBytes[previousRowIndex])
-        increment(previousRowIndex)
-      })
+      while(previousRowIndex < scanlineBytes) {
+        push(previousRowBytes, rowBytes[previousRowIndex])
+        previousRowIndex++
+      }
       offset = offset + scanlineBytes
-      increment(row)
-    })
+      row++
+    }
     return(0i32)
   }
 
   [return<bool>]
   pngZlibHeaderValid([i32] cmf, [i32] flg) {
-    if(or(not_equal(pngMod(cmf, 16i32), 8i32), greater_than(divide(cmf, 16i32), 7i32)),
-       then() { return(false) },
-       else() { })
-    if(not_equal(pngMod(divide(flg, 32i32), 2i32), 0i32),
-       then() { return(false) },
-       else() { })
-    return(equal(pngMod(multiply(cmf, 256i32) + flg, 31i32), 0i32))
+    if(pngMod(cmf, 16i32) != 8i32 || cmf / 16i32 > 7i32) {
+      return(false)
+    }
+    if(pngMod(flg / 32i32, 2i32) != 0i32) {
+      return(false)
+    }
+    return(pngMod(cmf * 256i32 + flg, 31i32) == 0i32)
   }
 
   [effects(file_read, heap_alloc), return<int>]
   pngAppendBytes([File<Read>] file, [i32] count, [vector<i32> mut] bytes) {
-    if(less_than(count, 0i32),
-       then() { return(1i32) },
-       else() { })
+    if(count < 0i32) {
+      return(1i32)
+    }
     [mut] remaining{count}
     [mut] byte{0i32}
-    while(greater_than(remaining, 0i32), do() {
+    while(remaining > 0i32) {
       status{ppmReadByteStatus(file, byte)}
-      if(not_equal(status, 0i32),
-         then() { return(status) },
-         else() { })
-      /std/collections/vector/push(bytes, byte)
+      if(status != 0i32) {
+        return(status)
+      }
+      push(bytes, byte)
       remaining = remaining - 1i32
-    })
+    }
     return(0i32)
   }
 
@@ -1413,13 +1364,12 @@ namespace std {
     [mut] b{0i32}
     len{count(bytes)}
     [mut] index{0i32}
-    while(less_than(index, len), do() {
+    while(index < len) {
       a = pngMod(a + bytes[index], 65521i32)
       b = pngMod(b + a, 65521i32)
-      increment(index)
-    })
-    return(and(and(equal(divide(b, 256i32), bHigh), equal(pngMod(b, 256i32), bLow)),
-               and(equal(divide(a, 256i32), aHigh), equal(pngMod(a, 256i32), aLow))))
+      index++
+    }
+    return(b / 256i32 == bHigh && pngMod(b, 256i32) == bLow && a / 256i32 == aHigh && pngMod(a, 256i32) == aLow)
   }
 
   [return<i32>]
@@ -1428,27 +1378,25 @@ namespace std {
     len{count(bytes)}
     [mut] factor{1i32}
     [mut] readCount{0i32}
-    while(less_than(readCount, countBits), do() {
-      if(greater_equal(byteIndex, len),
-         then() { return(1i32) },
-         else() { })
+    while(readCount < countBits) {
+      if(byteIndex >= len) {
+        return(1i32)
+      }
       [mut] shifted{bytes[byteIndex]}
       [mut] shiftCount{0i32}
-      while(less_than(shiftCount, bitIndex), do() {
-        shifted = divide(shifted, 2i32)
-        increment(shiftCount)
-      })
-      value = value + multiply(pngMod(shifted, 2i32), factor)
-      factor = multiply(factor, 2i32)
+      while(shiftCount < bitIndex) {
+        shifted = shifted / 2i32
+        shiftCount++
+      }
+      value = value + pngMod(shifted, 2i32) * factor
+      factor = factor * 2i32
       bitIndex = bitIndex + 1i32
-      if(equal(bitIndex, 8i32),
-         then() {
-           bitIndex = 0i32
-           byteIndex = byteIndex + 1i32
-         },
-         else() { })
-      increment(readCount)
-    })
+      if(bitIndex == 8i32) {
+        bitIndex = 0i32
+        byteIndex = byteIndex + 1i32
+      }
+      readCount++
+    }
     return(0i32)
   }
 
@@ -1457,11 +1405,11 @@ namespace std {
     [mut] reversed{0i32}
     [mut] remaining{bitCount}
     [mut] current{value}
-    while(greater_than(remaining, 0i32), do() {
-      reversed = multiply(reversed, 2i32) + pngMod(current, 2i32)
-      current = divide(current, 2i32)
+    while(remaining > 0i32) {
+      reversed = reversed * 2i32 + pngMod(current, 2i32)
+      current = current / 2i32
       remaining = remaining - 1i32
-    })
+    }
     return(reversed)
   }
 
@@ -1470,37 +1418,37 @@ namespace std {
     lengthCount{count(lengths)}
     [mut] matches{0i32}
     [mut] index{0i32}
-    while(less_than(index, lengthCount), do() {
-      if(equal(lengths[index], targetLength),
-         then() { increment(matches) },
-         else() { })
-      increment(index)
-    })
+    while(index < lengthCount) {
+      if(lengths[index] == targetLength) {
+        matches++
+      }
+      index++
+    }
     return(matches)
   }
 
   [return<i32>]
   pngCanonicalCodeForSymbol([vector<i32>] lengths, [i32] targetSymbol) {
     targetLength{lengths[targetSymbol]}
-    if(equal(targetLength, 0i32),
-       then() { return(-1i32) },
-       else() { })
+    if(targetLength == 0i32) {
+      return(-1i32)
+    }
 
     [mut] code{0i32}
     [mut] length{1i32}
-    while(less_than(length, targetLength), do() {
-      code = multiply(code + pngCountCodeLength(lengths, length), 2i32)
-      increment(length)
-    })
+    while(length < targetLength) {
+      code = (code + pngCountCodeLength(lengths, length)) * 2i32
+      length++
+    }
 
     [mut] offset{0i32}
     [mut] index{0i32}
-    while(less_than(index, targetSymbol), do() {
-      if(equal(lengths[index], targetLength),
-         then() { increment(offset) },
-         else() { })
-      increment(index)
-    })
+    while(index < targetSymbol) {
+      if(lengths[index] == targetLength) {
+        offset++
+      }
+      index++
+    }
     return(code + offset)
   }
 
@@ -1512,139 +1460,136 @@ namespace std {
     [mut] code{0i32}
     [mut] factor{1i32}
     [mut] bitsRead{0i32}
-    while(less_than(bitsRead, maxBits), do() {
+    while(bitsRead < maxBits) {
       [mut] bit{0i32}
       bitStatus{pngReadBits(bytes, byteIndex, bitIndex, 1i32, bit)}
-      if(not_equal(bitStatus, 0i32),
-         then() { return(1i32) },
-         else() { })
-      code = code + multiply(bit, factor)
-      factor = multiply(factor, 2i32)
-      increment(bitsRead)
-
+      if(bitStatus != 0i32) {
+        return(1i32)
+      }
+      code = code + bit * factor
+      factor = factor * 2i32
+      bitsRead++
       [mut] symbolIndex{0i32}
-      while(less_than(symbolIndex, symbolCount), do() {
-        if(equal(lengths[symbolIndex], bitsRead),
-           then() {
-             canonicalCode{pngCanonicalCodeForSymbol(lengths, symbolIndex)}
-             if(equal(pngReverseBits(canonicalCode, bitsRead), code),
-                then() {
-                  symbolOut = symbolIndex
-                  return(0i32)
-                },
-                else() { })
-           },
-           else() { })
-        increment(symbolIndex)
-      })
-    })
+      while(symbolIndex < symbolCount) {
+        if(lengths[symbolIndex] == bitsRead) {
+          canonicalCode{pngCanonicalCodeForSymbol(lengths, symbolIndex)}
+          if(pngReverseBits(canonicalCode, bitsRead) == code) {
+            symbolOut = symbolIndex
+            return(0i32)
+          }
+        }
+        symbolIndex++
+      }
+    }
     return(1i32)
   }
 
   [effects(heap_alloc)]
   pngBuildFixedLiteralLengths([vector<i32> mut] lengths) {
-    /std/collections/vector/clear(lengths)
+    clear(lengths)
     [mut] symbol{0i32}
-    while(less_than(symbol, 288i32), do() {
+    while(symbol < 288i32) {
       [mut] codeLength{8i32}
-      if(less_than(symbol, 144i32),
-         then() { codeLength = 8i32 },
-         else() {
-           if(less_than(symbol, 256i32),
-              then() { codeLength = 9i32 },
-              else() {
-                if(less_than(symbol, 280i32),
-                   then() { codeLength = 7i32 },
-                   else() { codeLength = 8i32 })
-              })
-         })
-      /std/collections/vector/push(lengths, codeLength)
-      increment(symbol)
-    })
+      if(symbol < 144i32) {
+        codeLength = 8i32
+      } else {
+        if(symbol < 256i32) {
+          codeLength = 9i32
+        } else {
+          if(symbol < 280i32) {
+            codeLength = 7i32
+          } else {
+            codeLength = 8i32
+          }
+        }
+      }
+      push(lengths, codeLength)
+      symbol++
+    }
   }
 
   [effects(heap_alloc)]
   pngBuildFixedDistanceLengths([vector<i32> mut] lengths) {
-    /std/collections/vector/clear(lengths)
+    clear(lengths)
     [mut] symbol{0i32}
-    while(less_than(symbol, 32i32), do() {
-      /std/collections/vector/push(lengths, 5i32)
-      increment(symbol)
-    })
+    while(symbol < 32i32) {
+      push(lengths, 5i32)
+      symbol++
+    }
   }
 
   [return<i32>]
   pngHuffmanMaxBits([vector<i32>] lengths) {
     [mut] maxBits{0i32}
     [mut] index{0i32}
-    while(less_than(index, count(lengths)), do() {
-      if(greater_than(lengths[index], maxBits),
-         then() { maxBits = lengths[index] },
-         else() { })
-      increment(index)
-    })
+    while(index < count(lengths)) {
+      if(lengths[index] > maxBits) {
+        maxBits = lengths[index]
+      }
+      index++
+    }
     return(maxBits)
   }
 
   [return<i32>]
   pngCodeLengthCodeOrder([i32] index) {
-    if(equal(index, 0i32),
-       then() { return(16i32) },
-       else() { })
-    if(equal(index, 1i32),
-       then() { return(17i32) },
-       else() { })
-    if(equal(index, 2i32),
-       then() { return(18i32) },
-       else() { })
-    if(equal(index, 3i32),
-       then() { return(0i32) },
-       else() { })
-    if(equal(index, 4i32),
-       then() { return(8i32) },
-       else() { })
-    if(equal(index, 5i32),
-       then() { return(7i32) },
-       else() { })
-    if(equal(index, 6i32),
-       then() { return(9i32) },
-       else() { })
-    if(equal(index, 7i32),
-       then() { return(6i32) },
-       else() { })
-    if(equal(index, 8i32),
-       then() { return(10i32) },
-       else() { })
-    if(equal(index, 9i32),
-       then() { return(5i32) },
-       else() { })
-    if(equal(index, 10i32),
-       then() { return(11i32) },
-       else() { })
-    if(equal(index, 11i32),
-       then() { return(4i32) },
-       else() { })
-    if(equal(index, 12i32),
-       then() { return(12i32) },
-       else() { })
-    if(equal(index, 13i32),
-       then() { return(3i32) },
-       else() { })
-    if(equal(index, 14i32),
-       then() { return(13i32) },
-       else() { })
-    if(equal(index, 15i32),
-       then() { return(2i32) },
-       else() { })
-    if(equal(index, 16i32),
-       then() { return(14i32) },
-       else() { })
-    if(equal(index, 17i32),
-       then() { return(1i32) },
-       else() { })
-    if(equal(index, 18i32),
-       then() { return(15i32) },
-       else() { })
+    if(index == 0i32) {
+      return(16i32)
+    }
+    if(index == 1i32) {
+      return(17i32)
+    }
+    if(index == 2i32) {
+      return(18i32)
+    }
+    if(index == 3i32) {
+      return(0i32)
+    }
+    if(index == 4i32) {
+      return(8i32)
+    }
+    if(index == 5i32) {
+      return(7i32)
+    }
+    if(index == 6i32) {
+      return(9i32)
+    }
+    if(index == 7i32) {
+      return(6i32)
+    }
+    if(index == 8i32) {
+      return(10i32)
+    }
+    if(index == 9i32) {
+      return(5i32)
+    }
+    if(index == 10i32) {
+      return(11i32)
+    }
+    if(index == 11i32) {
+      return(4i32)
+    }
+    if(index == 12i32) {
+      return(12i32)
+    }
+    if(index == 13i32) {
+      return(3i32)
+    }
+    if(index == 14i32) {
+      return(13i32)
+    }
+    if(index == 15i32) {
+      return(2i32)
+    }
+    if(index == 16i32) {
+      return(14i32)
+    }
+    if(index == 17i32) {
+      return(1i32)
+    }
+    if(index == 18i32) {
+      return(15i32)
+    }
     return(-1i32)
   }
 
@@ -1653,167 +1598,170 @@ namespace std {
                                [i32] codeLengthCodeCount, [i32] literalCount, [i32] distanceCount,
                                [vector<i32> mut] literalLengthsLow, [vector<i32> mut] literalLengthsHigh,
                                [vector<i32> mut] distanceLengths) {
-    /std/collections/vector/clear(literalLengthsLow)
-    /std/collections/vector/clear(literalLengthsHigh)
-    /std/collections/vector/clear(distanceLengths)
+    clear(literalLengthsLow)
+    clear(literalLengthsHigh)
+    clear(distanceLengths)
 
     [mut] codeLengthLengths{vector<i32>()}
     [mut] codeLengthIndex{0i32}
-    while(less_than(codeLengthIndex, 19i32), do() {
-      /std/collections/vector/push(codeLengthLengths, 0i32)
-      increment(codeLengthIndex)
-    })
+    while(codeLengthIndex < 19i32) {
+      push(codeLengthLengths, 0i32)
+      codeLengthIndex++
+    }
 
     [mut] orderIndex{0i32}
-    while(less_than(orderIndex, codeLengthCodeCount), do() {
+    while(orderIndex < codeLengthCodeCount) {
       codeLengthSymbol{pngCodeLengthCodeOrder(orderIndex)}
-      if(less_than(codeLengthSymbol, 0i32),
-         then() { return(1i32) },
-         else() { })
+      if(codeLengthSymbol < 0i32) {
+        return(1i32)
+      }
       [mut] lengthValue{0i32}
       lengthStatus{pngReadBits(compressed, byteIndex, bitIndex, 3i32, lengthValue)}
-      if(not_equal(lengthStatus, 0i32),
-         then() { return(1i32) },
-         else() { })
+      if(lengthStatus != 0i32) {
+        return(1i32)
+      }
       codeLengthLengths[codeLengthSymbol] = lengthValue
-      increment(orderIndex)
-    })
+      orderIndex++
+    }
 
     codeLengthMaxBits{pngHuffmanMaxBits(codeLengthLengths)}
-    if(less_equal(codeLengthMaxBits, 0i32),
-       then() { return(1i32) },
-       else() { })
+    if(codeLengthMaxBits <= 0i32) {
+      return(1i32)
+    }
 
     totalCodeCount{literalCount + distanceCount}
     [mut] position{0i32}
     [mut] previousLength{0i32}
-    while(less_than(position, totalCodeCount), do() {
+    while(position < totalCodeCount) {
       [mut] symbol{0i32}
       symbolStatus{pngHuffmanDecodeSymbol(compressed, byteIndex, bitIndex, codeLengthLengths, codeLengthMaxBits,
                                           symbol)}
-      if(not_equal(symbolStatus, 0i32),
-         then() { return(1i32) },
-         else() { })
-      if(less_equal(symbol, 15i32),
-         then() {
-           if(less_than(position, literalCount),
-              then() {
-                if(less_than(position, 256i32),
-                   then() { /std/collections/vector/push(literalLengthsLow, symbol) },
-                   else() { /std/collections/vector/push(literalLengthsHigh, symbol) })
-              },
-              else() { /std/collections/vector/push(distanceLengths, symbol) })
-           previousLength = symbol
-           increment(position)
-         },
-         else() {
-           if(equal(symbol, 16i32),
-              then() {
-                if(equal(position, 0i32),
-                   then() { return(1i32) },
-                   else() { })
-                [mut] repeatExtra{0i32}
-                repeatStatus{pngReadBits(compressed, byteIndex, bitIndex, 2i32, repeatExtra)}
-                if(not_equal(repeatStatus, 0i32),
-                   then() { return(1i32) },
-                   else() { })
-                repeatCount{3i32 + repeatExtra}
-                if(greater_than(position + repeatCount, totalCodeCount),
-                   then() { return(1i32) },
-                   else() { })
-                [mut] repeatIndex{0i32}
-                while(less_than(repeatIndex, repeatCount), do() {
-                  if(less_than(position, literalCount),
-                     then() {
-                       if(less_than(position, 256i32),
-                          then() { /std/collections/vector/push(literalLengthsLow, previousLength) },
-                          else() { /std/collections/vector/push(literalLengthsHigh, previousLength) })
-                     },
-                     else() { /std/collections/vector/push(distanceLengths, previousLength) })
-                  increment(position)
-                  increment(repeatIndex)
-                })
-              },
-              else() {
-                if(equal(symbol, 17i32),
-                   then() {
-                     [mut] repeatExtra{0i32}
-                     repeatStatus{pngReadBits(compressed, byteIndex, bitIndex, 3i32, repeatExtra)}
-                     if(not_equal(repeatStatus, 0i32),
-                        then() { return(1i32) },
-                        else() { })
-                     repeatCount{3i32 + repeatExtra}
-                     if(greater_than(position + repeatCount, totalCodeCount),
-                        then() { return(1i32) },
-                        else() { })
-                     [mut] repeatIndex{0i32}
-                     while(less_than(repeatIndex, repeatCount), do() {
-                       if(less_than(position, literalCount),
-                          then() {
-                            if(less_than(position, 256i32),
-                               then() { /std/collections/vector/push(literalLengthsLow, 0i32) },
-                               else() { /std/collections/vector/push(literalLengthsHigh, 0i32) })
-                          },
-                          else() { /std/collections/vector/push(distanceLengths, 0i32) })
-                       previousLength = 0i32
-                       increment(position)
-                       increment(repeatIndex)
-                     })
-                   },
-                   else() {
-                     if(equal(symbol, 18i32),
-                        then() {
-                          [mut] repeatExtra{0i32}
-                          repeatStatus{pngReadBits(compressed, byteIndex, bitIndex, 7i32, repeatExtra)}
-                          if(not_equal(repeatStatus, 0i32),
-                             then() { return(1i32) },
-                             else() { })
-                          repeatCount{11i32 + repeatExtra}
-                          if(greater_than(position + repeatCount, totalCodeCount),
-                             then() { return(1i32) },
-                             else() { })
-                          [mut] repeatIndex{0i32}
-                          while(less_than(repeatIndex, repeatCount), do() {
-                            if(less_than(position, literalCount),
-                               then() {
-                                 if(less_than(position, 256i32),
-                                    then() { /std/collections/vector/push(literalLengthsLow, 0i32) },
-                                    else() { /std/collections/vector/push(literalLengthsHigh, 0i32) })
-                               },
-                               else() { /std/collections/vector/push(distanceLengths, 0i32) })
-                            previousLength = 0i32
-                            increment(position)
-                            increment(repeatIndex)
-                          })
-                        },
-                        else() { return(1i32) })
-                   })
-              })
-         })
-    })
+      if(symbolStatus != 0i32) {
+        return(1i32)
+      }
+      if(symbol <= 15i32) {
+        if(position < literalCount) {
+          if(position < 256i32) {
+            push(literalLengthsLow, symbol)
+          } else {
+            push(literalLengthsHigh, symbol)
+          }
+        } else {
+          push(distanceLengths, symbol)
+        }
+        previousLength = symbol
+        position++
+      } else {
+        if(symbol == 16i32) {
+          if(position == 0i32) {
+            return(1i32)
+          }
+          [mut] repeatExtra{0i32}
+          repeatStatus{pngReadBits(compressed, byteIndex, bitIndex, 2i32, repeatExtra)}
+          if(repeatStatus != 0i32) {
+            return(1i32)
+          }
+          repeatCount{3i32 + repeatExtra}
+          if(position + repeatCount > totalCodeCount) {
+            return(1i32)
+          }
+          [mut] repeatIndex{0i32}
+          while(repeatIndex < repeatCount) {
+            if(position < literalCount) {
+              if(position < 256i32) {
+                push(literalLengthsLow, previousLength)
+              } else {
+                push(literalLengthsHigh, previousLength)
+              }
+            } else {
+              push(distanceLengths, previousLength)
+            }
+            position++
+            repeatIndex++
+          }
+        } else {
+          if(symbol == 17i32) {
+            [mut] repeatExtra{0i32}
+            repeatStatus{pngReadBits(compressed, byteIndex, bitIndex, 3i32, repeatExtra)}
+            if(repeatStatus != 0i32) {
+              return(1i32)
+            }
+            repeatCount{3i32 + repeatExtra}
+            if(position + repeatCount > totalCodeCount) {
+              return(1i32)
+            }
+            [mut] repeatIndex{0i32}
+            while(repeatIndex < repeatCount) {
+              if(position < literalCount) {
+                if(position < 256i32) {
+                  push(literalLengthsLow, 0i32)
+                } else {
+                  push(literalLengthsHigh, 0i32)
+                }
+              } else {
+                push(distanceLengths, 0i32)
+              }
+              previousLength = 0i32
+              position++
+              repeatIndex++
+            }
+          } else {
+            if(symbol == 18i32) {
+              [mut] repeatExtra{0i32}
+              repeatStatus{pngReadBits(compressed, byteIndex, bitIndex, 7i32, repeatExtra)}
+              if(repeatStatus != 0i32) {
+                return(1i32)
+              }
+              repeatCount{11i32 + repeatExtra}
+              if(position + repeatCount > totalCodeCount) {
+                return(1i32)
+              }
+              [mut] repeatIndex{0i32}
+              while(repeatIndex < repeatCount) {
+                if(position < literalCount) {
+                  if(position < 256i32) {
+                    push(literalLengthsLow, 0i32)
+                  } else {
+                    push(literalLengthsHigh, 0i32)
+                  }
+                } else {
+                  push(distanceLengths, 0i32)
+                }
+                previousLength = 0i32
+                position++
+                repeatIndex++
+              }
+            } else {
+              return(1i32)
+            }
+          }
+        }
+      }
+    }
 
-    if(not_equal(count(literalLengthsLow) + count(literalLengthsHigh), literalCount),
-       then() { return(1i32) },
-       else() { })
-    if(not_equal(count(distanceLengths), distanceCount),
-       then() { return(1i32) },
-       else() { })
-    if(or(or(less_equal(pngHuffmanMaxBits(literalLengthsLow), 0i32), less_equal(pngHuffmanMaxBits(literalLengthsHigh), 0i32)),
-          equal(literalLengthsHigh[0i32], 0i32)),
-       then() { return(1i32) },
-       else() { })
+    if(count(literalLengthsLow) + count(literalLengthsHigh) != literalCount) {
+
+      return(1i32)
+
+    }
+    if(count(distanceLengths) != distanceCount) {
+      return(1i32)
+    }
+    if(pngHuffmanMaxBits(literalLengthsLow) <= 0i32 || pngHuffmanMaxBits(literalLengthsHigh) <= 0i32 || literalLengthsHigh[0i32] == 0i32) {
+      return(1i32)
+    }
     return(0i32)
   }
 
   [return<i32>]
   pngSplitLiteralLengthAt([vector<i32>] literalLengthsLow, [vector<i32>] literalLengthsHigh, [i32] symbol) {
-    if(less_than(symbol, count(literalLengthsLow)),
-       then() { return(literalLengthsLow[symbol]) },
-       else() { })
+    if(symbol < count(literalLengthsLow)) {
+      return(literalLengthsLow[symbol])
+    }
     highIndex{symbol - count(literalLengthsLow)}
-    if(or(less_than(highIndex, 0i32), not(less_than(highIndex, count(literalLengthsHigh)))),
-       then() { return(-1i32) },
-       else() { })
+    if(highIndex < 0i32 || !(highIndex < count(literalLengthsHigh))) {
+      return(-1i32)
+    }
     return(literalLengthsHigh[highIndex])
   }
 
@@ -1822,46 +1770,46 @@ namespace std {
     [mut] matches{0i32}
     [mut] index{0i32}
     lowCount{count(literalLengthsLow)}
-    while(less_than(index, lowCount), do() {
-      if(equal(literalLengthsLow[index], targetLength),
-         then() { increment(matches) },
-         else() { })
-      increment(index)
-    })
+    while(index < lowCount) {
+      if(literalLengthsLow[index] == targetLength) {
+        matches++
+      }
+      index++
+    }
     index = 0i32
     highCount{count(literalLengthsHigh)}
-    while(less_than(index, highCount), do() {
-      if(equal(literalLengthsHigh[index], targetLength),
-         then() { increment(matches) },
-         else() { })
-      increment(index)
-    })
+    while(index < highCount) {
+      if(literalLengthsHigh[index] == targetLength) {
+        matches++
+      }
+      index++
+    }
     return(matches)
   }
 
   [return<i32>]
   pngCanonicalCodeForSplitLiteralSymbol([vector<i32>] literalLengthsLow, [vector<i32>] literalLengthsHigh, [i32] targetSymbol) {
     targetLength{pngSplitLiteralLengthAt(literalLengthsLow, literalLengthsHigh, targetSymbol)}
-    if(less_equal(targetLength, 0i32),
-       then() { return(-1i32) },
-       else() { })
+    if(targetLength <= 0i32) {
+      return(-1i32)
+    }
 
     [mut] code{0i32}
     [mut] length{1i32}
-    while(less_than(length, targetLength), do() {
-      code = multiply(code + pngCountSplitLiteralLength(literalLengthsLow, literalLengthsHigh, length), 2i32)
-      increment(length)
-    })
+    while(length < targetLength) {
+      code = (code + pngCountSplitLiteralLength(literalLengthsLow, literalLengthsHigh, length)) * 2i32
+      length++
+    }
 
     [mut] offset{0i32}
     [mut] index{0i32}
     symbolCount{count(literalLengthsLow) + count(literalLengthsHigh)}
-    while(less_than(index, targetSymbol), do() {
-      if(equal(pngSplitLiteralLengthAt(literalLengthsLow, literalLengthsHigh, index), targetLength),
-         then() { increment(offset) },
-         else() { })
-      increment(index)
-    })
+    while(index < targetSymbol) {
+      if(pngSplitLiteralLengthAt(literalLengthsLow, literalLengthsHigh, index) == targetLength) {
+        offset++
+      }
+      index++
+    }
     return(code + offset)
   }
 
@@ -1869,9 +1817,11 @@ namespace std {
   pngHuffmanMaxBitsSplitLiteralLengths([vector<i32>] literalLengthsLow, [vector<i32>] literalLengthsHigh) {
     lowMax{pngHuffmanMaxBits(literalLengthsLow)}
     highMax{pngHuffmanMaxBits(literalLengthsHigh)}
-    if(greater_than(lowMax, highMax),
-       then() { return(lowMax) },
-       else() { return(highMax) })
+    if(lowMax > highMax) {
+      return(lowMax)
+    } else {
+      return(highMax)
+    }
   }
 
   [return<int>]
@@ -1883,32 +1833,27 @@ namespace std {
     [mut] code{0i32}
     [mut] factor{1i32}
     [mut] bitsRead{0i32}
-    while(less_than(bitsRead, maxBits), do() {
+    while(bitsRead < maxBits) {
       [mut] bit{0i32}
       bitStatus{pngReadBits(bytes, byteIndex, bitIndex, 1i32, bit)}
-      if(not_equal(bitStatus, 0i32),
-         then() { return(1i32) },
-         else() { })
-      code = code + multiply(bit, factor)
-      factor = multiply(factor, 2i32)
-      increment(bitsRead)
-
+      if(bitStatus != 0i32) {
+        return(1i32)
+      }
+      code = code + bit * factor
+      factor = factor * 2i32
+      bitsRead++
       [mut] symbolIndex{0i32}
-      while(less_than(symbolIndex, symbolCount), do() {
-        if(equal(pngSplitLiteralLengthAt(literalLengthsLow, literalLengthsHigh, symbolIndex), bitsRead),
-           then() {
-             canonicalCode{pngCanonicalCodeForSplitLiteralSymbol(literalLengthsLow, literalLengthsHigh, symbolIndex)}
-             if(equal(pngReverseBits(canonicalCode, bitsRead), code),
-                then() {
-                  symbolOut = symbolIndex
-                  return(0i32)
-                },
-                else() { })
-           },
-           else() { })
-        increment(symbolIndex)
-      })
-    })
+      while(symbolIndex < symbolCount) {
+        if(pngSplitLiteralLengthAt(literalLengthsLow, literalLengthsHigh, symbolIndex) == bitsRead) {
+          canonicalCode{pngCanonicalCodeForSplitLiteralSymbol(literalLengthsLow, literalLengthsHigh, symbolIndex)}
+          if(pngReverseBits(canonicalCode, bitsRead) == code) {
+            symbolOut = symbolIndex
+            return(0i32)
+          }
+        }
+        symbolIndex++
+      }
+    }
     return(1i32)
   }
 
@@ -1916,36 +1861,32 @@ namespace std {
   pngLengthInfo([i32] symbol, [i32 mut] baseOut, [i32 mut] extraBitsOut) {
     baseOut = 0i32
     extraBitsOut = 0i32
-    if(less_than(symbol, 257i32),
-       then() { return(1i32) },
-       else() { })
-    if(less_equal(symbol, 264i32),
-       then() {
-         baseOut = 3i32 + (symbol - 257i32)
-         return(0i32)
-       },
-       else() { })
-    if(equal(symbol, 285i32),
-       then() {
-         baseOut = 258i32
-         return(0i32)
-       },
-       else() { })
-    if(greater_than(symbol, 284i32),
-       then() { return(1i32) },
-       else() { })
+    if(symbol < 257i32) {
+      return(1i32)
+    }
+    if(symbol <= 264i32) {
+      baseOut = 3i32 + (symbol - 257i32)
+      return(0i32)
+    }
+    if(symbol == 285i32) {
+      baseOut = 258i32
+      return(0i32)
+    }
+    if(symbol > 284i32) {
+      return(1i32)
+    }
 
     [mut] base{11i32}
     [mut] currentSymbol{265i32}
     [mut] step{2i32}
     [mut] extraBits{1i32}
-    while(greater_than(symbol, currentSymbol + 3i32), do() {
-      base = base + multiply(step, 4i32)
+    while(symbol > currentSymbol + 3i32) {
+      base = base + step * 4i32
       currentSymbol = currentSymbol + 4i32
-      step = multiply(step, 2i32)
-      increment(extraBits)
-    })
-    baseOut = base + multiply(symbol - currentSymbol, step)
+      step = step * 2i32
+      extraBits++
+    }
+    baseOut = base + (symbol - currentSymbol) * step
     extraBitsOut = extraBits
     return(0i32)
   }
@@ -1954,29 +1895,27 @@ namespace std {
   pngDistanceInfo([i32] symbol, [i32 mut] baseOut, [i32 mut] extraBitsOut) {
     baseOut = 0i32
     extraBitsOut = 0i32
-    if(or(less_than(symbol, 0i32), greater_than(symbol, 29i32)),
-       then() { return(1i32) },
-       else() { })
-    if(less_equal(symbol, 3i32),
-       then() {
-         baseOut = symbol + 1i32
-         return(0i32)
-       },
-       else() { })
+    if(symbol < 0i32 || symbol > 29i32) {
+      return(1i32)
+    }
+    if(symbol <= 3i32) {
+      baseOut = symbol + 1i32
+      return(0i32)
+    }
 
     [mut] base{5i32}
     [mut] currentSymbol{4i32}
     [mut] span{4i32}
     [mut] extraBits{1i32}
-    while(greater_than(symbol, currentSymbol + 1i32), do() {
+    while(symbol > currentSymbol + 1i32) {
       base = base + span
       currentSymbol = currentSymbol + 2i32
-      span = multiply(span, 2i32)
-      increment(extraBits)
-    })
-    if(equal(symbol - currentSymbol, 1i32),
-       then() { base = base + divide(span, 2i32) },
-       else() { })
+      span = span * 2i32
+      extraBits++
+    }
+    if(symbol - currentSymbol == 1i32) {
+      base = base + span / 2i32
+    }
     baseOut = base
     extraBitsOut = extraBits
     return(0i32)
@@ -1984,46 +1923,46 @@ namespace std {
 
   [effects(heap_alloc), return<int>]
   pngInflateCopyFromOutput([vector<i32> mut] output, [i32] distance, [i32] length) {
-    if(or(or(less_equal(distance, 0i32), less_than(length, 0i32)), greater_than(distance, count(output))),
-       then() { return(1i32) },
-       else() { })
+    if(distance <= 0i32 || length < 0i32 || distance > count(output)) {
+      return(1i32)
+    }
     [mut] copyIndex{0i32}
-    while(less_than(copyIndex, length), do() {
-      /std/collections/vector/push(output, output[count(output) - distance])
-      increment(copyIndex)
-    })
+    while(copyIndex < length) {
+      push(output, output[count(output) - distance])
+      copyIndex++
+    }
     return(0i32)
   }
 
   [effects(heap_alloc), return<int>]
   pngInflateStoredBlock([vector<i32>] compressed, [i32 mut] byteIndex, [i32 mut] bitIndex, [vector<i32> mut] output) {
-    if(not_equal(bitIndex, 0i32),
-       then() {
-         bitIndex = 0i32
-         byteIndex = byteIndex + 1i32
-       },
-       else() { })
+    if(bitIndex != 0i32) {
+      bitIndex = 0i32
+      byteIndex = byteIndex + 1i32
+    }
 
     trailerStart{count(compressed) - 4i32}
-    if(greater_than(byteIndex + 4i32, trailerStart),
-       then() { return(1i32) },
-       else() { })
+    if(byteIndex + 4i32 > trailerStart) {
+      return(1i32)
+    }
 
-    blockLen{compressed[byteIndex] + multiply(compressed[byteIndex + 1i32], 256i32)}
-    blockNlen{compressed[byteIndex + 2i32] + multiply(compressed[byteIndex + 3i32], 256i32)}
-    if(not_equal(blockLen + blockNlen, 65535i32),
-       then() { return(1i32) },
-       else() { })
+    blockLen{compressed[byteIndex] + (compressed[byteIndex + 1i32]) * 256i32}
+    blockNlen{compressed[byteIndex + 2i32] + (compressed[byteIndex + 3i32]) * 256i32}
+    if(blockLen + blockNlen != 65535i32) {
+      return(1i32)
+    }
     byteIndex = byteIndex + 4i32
 
-    if(greater_than(byteIndex + blockLen, trailerStart),
-       then() { return(1i32) },
-       else() { })
+    if(byteIndex + blockLen > trailerStart) {
+
+      return(1i32)
+
+    }
     [mut] blockIndex{0i32}
-    while(less_than(blockIndex, blockLen), do() {
-      /std/collections/vector/push(output, compressed[byteIndex + blockIndex])
-      increment(blockIndex)
-    })
+    while(blockIndex < blockLen) {
+      push(output, compressed[byteIndex + blockIndex])
+      blockIndex++
+    }
     byteIndex = byteIndex + blockLen
     return(0i32)
   }
@@ -2032,76 +1971,67 @@ namespace std {
   pngInflateHuffmanBlock([vector<i32>] compressed, [i32 mut] byteIndex, [i32 mut] bitIndex,
                          [vector<i32>] literalLengths, [i32] literalMaxBits, [vector<i32>] distanceLengths,
                          [i32] distanceMaxBits, [i32] allowBackreferences, [vector<i32> mut] output) {
-    if(less_equal(literalMaxBits, 0i32),
-       then() { return(1i32) },
-       else() { })
-    while(true, do() {
+    if(literalMaxBits <= 0i32) {
+      return(1i32)
+    }
+    while(true) {
       [mut] symbol{0i32}
       status{pngHuffmanDecodeSymbol(compressed, byteIndex, bitIndex, literalLengths, literalMaxBits, symbol)}
-      if(not_equal(status, 0i32),
-         then() { return(1i32) },
-         else() { })
-      if(less_than(symbol, 256i32),
-         then() { /std/collections/vector/push(output, symbol) },
-         else() {
-           if(equal(symbol, 256i32),
-              then() { return(0i32) },
-              else() {
-                if(equal(allowBackreferences, 0i32),
-                   then() { return(2i32) },
-                   else() { })
-                if(less_equal(distanceMaxBits, 0i32),
-                   then() { return(1i32) },
-                   else() { })
-                [mut] lengthBase{0i32}
-                [mut] lengthExtraBits{0i32}
-                lengthInfoStatus{pngLengthInfo(symbol, lengthBase, lengthExtraBits)}
-                if(not_equal(lengthInfoStatus, 0i32),
-                   then() { return(1i32) },
-                   else() { })
-
-                [mut] lengthExtraValue{0i32}
-                if(greater_than(lengthExtraBits, 0i32),
-                   then() {
-                     lengthExtraStatus{pngReadBits(compressed, byteIndex, bitIndex, lengthExtraBits, lengthExtraValue)}
-                     if(not_equal(lengthExtraStatus, 0i32),
-                        then() { return(1i32) },
-                        else() { })
-                   },
-                   else() { })
-                matchLength{lengthBase + lengthExtraValue}
-
-                [mut] distanceSymbol{0i32}
-                distanceStatus{pngHuffmanDecodeSymbol(compressed, byteIndex, bitIndex, distanceLengths,
-                                                      distanceMaxBits, distanceSymbol)}
-                if(not_equal(distanceStatus, 0i32),
-                   then() { return(1i32) },
-                   else() { })
-
-                [mut] distanceBase{0i32}
-                [mut] distanceExtraBits{0i32}
-                distanceInfoStatus{pngDistanceInfo(distanceSymbol, distanceBase, distanceExtraBits)}
-                if(not_equal(distanceInfoStatus, 0i32),
-                   then() { return(1i32) },
-                   else() { })
-
-                [mut] distanceExtraValue{0i32}
-                if(greater_than(distanceExtraBits, 0i32),
-                   then() {
-                     distanceExtraStatus{pngReadBits(compressed, byteIndex, bitIndex, distanceExtraBits, distanceExtraValue)}
-                     if(not_equal(distanceExtraStatus, 0i32),
-                        then() { return(1i32) },
-                        else() { })
-                   },
-                   else() { })
-
-                copyStatus{pngInflateCopyFromOutput(output, distanceBase + distanceExtraValue, matchLength)}
-                if(not_equal(copyStatus, 0i32),
-                   then() { return(1i32) },
-                   else() { })
-              })
-         })
-    })
+      if(status != 0i32) {
+        return(1i32)
+      }
+      if(symbol < 256i32) {
+        push(output, symbol)
+      } else {
+        if(symbol == 256i32) {
+          return(0i32)
+        } else {
+          if(allowBackreferences == 0i32) {
+            return(2i32)
+          }
+          if(distanceMaxBits <= 0i32) {
+            return(1i32)
+          }
+          [mut] lengthBase{0i32}
+          [mut] lengthExtraBits{0i32}
+          lengthInfoStatus{pngLengthInfo(symbol, lengthBase, lengthExtraBits)}
+          if(lengthInfoStatus != 0i32) {
+            return(1i32)
+          }
+          [mut] lengthExtraValue{0i32}
+          if(lengthExtraBits > 0i32) {
+            lengthExtraStatus{pngReadBits(compressed, byteIndex, bitIndex, lengthExtraBits, lengthExtraValue)}
+            if(lengthExtraStatus != 0i32) {
+              return(1i32)
+            }
+          }
+          matchLength{lengthBase + lengthExtraValue}
+          [mut] distanceSymbol{0i32}
+          distanceStatus{pngHuffmanDecodeSymbol(compressed, byteIndex, bitIndex, distanceLengths,
+                                                distanceMaxBits, distanceSymbol)}
+          if(distanceStatus != 0i32) {
+            return(1i32)
+          }
+          [mut] distanceBase{0i32}
+          [mut] distanceExtraBits{0i32}
+          distanceInfoStatus{pngDistanceInfo(distanceSymbol, distanceBase, distanceExtraBits)}
+          if(distanceInfoStatus != 0i32) {
+            return(1i32)
+          }
+          [mut] distanceExtraValue{0i32}
+          if(distanceExtraBits > 0i32) {
+            distanceExtraStatus{pngReadBits(compressed, byteIndex, bitIndex, distanceExtraBits, distanceExtraValue)}
+            if(distanceExtraStatus != 0i32) {
+              return(1i32)
+            }
+          }
+          copyStatus{pngInflateCopyFromOutput(output, distanceBase + distanceExtraValue, matchLength)}
+          if(copyStatus != 0i32) {
+            return(1i32)
+          }
+        }
+      }
+    }
     return(1i32)
   }
 
@@ -2111,71 +2041,54 @@ namespace std {
     [mut] code{0i32}
     [mut] factor{1i32}
     [mut] bitsRead{0i32}
-    while(less_than(bitsRead, 9i32), do() {
+    while(bitsRead < 9i32) {
       [mut] bit{0i32}
       bitStatus{pngReadBits(bytes, byteIndex, bitIndex, 1i32, bit)}
-      if(not_equal(bitStatus, 0i32),
-         then() { return(1i32) },
-         else() { })
-      code = code + multiply(bit, factor)
-      factor = multiply(factor, 2i32)
-      increment(bitsRead)
-
-      if(equal(bitsRead, 7i32),
-        then() {
-           [mut] symbol{256i32}
-           while(less_than(symbol, 280i32), do() {
-             if(equal(pngReverseBits(symbol - 256i32, 7i32), code),
-                then() {
-                  symbolOut = symbol
-                  return(0i32)
-                },
-                else() { })
-             increment(symbol)
-           })
-         },
-         else() { })
-
-      if(equal(bitsRead, 8i32),
-        then() {
-           [mut] symbol{0i32}
-           while(less_than(symbol, 144i32), do() {
-             if(equal(pngReverseBits(48i32 + symbol, 8i32), code),
-                then() {
-                  symbolOut = symbol
-                  return(0i32)
-                },
-                else() { })
-             increment(symbol)
-           })
-           symbol = 280i32
-           while(less_than(symbol, 288i32), do() {
-             if(equal(pngReverseBits(192i32 + (symbol - 280i32), 8i32), code),
-                then() {
-                  symbolOut = symbol
-                  return(0i32)
-                },
-                else() { })
-             increment(symbol)
-           })
-         },
-         else() { })
-
-      if(equal(bitsRead, 9i32),
-        then() {
-           [mut] symbol{144i32}
-           while(less_than(symbol, 256i32), do() {
-             if(equal(pngReverseBits(400i32 + (symbol - 144i32), 9i32), code),
-                then() {
-                  symbolOut = symbol
-                  return(0i32)
-                },
-                else() { })
-             increment(symbol)
-           })
-         },
-         else() { })
-    })
+      if(bitStatus != 0i32) {
+        return(1i32)
+      }
+      code = code + bit * factor
+      factor = factor * 2i32
+      bitsRead++
+      if(bitsRead == 7i32) {
+        [mut] symbol{256i32}
+        while(symbol < 280i32) {
+          if(pngReverseBits(symbol - 256i32, 7i32) == code) {
+            symbolOut = symbol
+            return(0i32)
+          }
+          symbol++
+        }
+      }
+      if(bitsRead == 8i32) {
+        [mut] symbol{0i32}
+        while(symbol < 144i32) {
+          if(pngReverseBits(48i32 + symbol, 8i32) == code) {
+            symbolOut = symbol
+            return(0i32)
+          }
+          symbol++
+        }
+        symbol = 280i32
+        while(symbol < 288i32) {
+          if(pngReverseBits(192i32 + (symbol - 280i32), 8i32) == code) {
+            symbolOut = symbol
+            return(0i32)
+          }
+          symbol++
+        }
+      }
+      if(bitsRead == 9i32) {
+        [mut] symbol{144i32}
+        while(symbol < 256i32) {
+          if(pngReverseBits(400i32 + (symbol - 144i32), 9i32) == code) {
+            symbolOut = symbol
+            return(0i32)
+          }
+          symbol++
+        }
+      }
+    }
     return(1i32)
   }
 
@@ -2185,97 +2098,83 @@ namespace std {
     [mut] code{0i32}
     [mut] factor{1i32}
     [mut] bitsRead{0i32}
-    while(less_than(bitsRead, 5i32), do() {
+    while(bitsRead < 5i32) {
       [mut] bit{0i32}
       bitStatus{pngReadBits(bytes, byteIndex, bitIndex, 1i32, bit)}
-      if(not_equal(bitStatus, 0i32),
-         then() { return(1i32) },
-         else() { })
-      code = code + multiply(bit, factor)
-      factor = multiply(factor, 2i32)
-      increment(bitsRead)
-
-      if(equal(bitsRead, 5i32),
-        then() {
-           [mut] symbol{0i32}
-           while(less_than(symbol, 32i32), do() {
-             if(equal(pngReverseBits(symbol, 5i32), code),
-                then() {
-                  symbolOut = symbol
-                  return(0i32)
-                },
-                else() { })
-             increment(symbol)
-           })
-         },
-         else() { })
-    })
+      if(bitStatus != 0i32) {
+        return(1i32)
+      }
+      code = code + bit * factor
+      factor = factor * 2i32
+      bitsRead++
+      if(bitsRead == 5i32) {
+        [mut] symbol{0i32}
+        while(symbol < 32i32) {
+          if(pngReverseBits(symbol, 5i32) == code) {
+            symbolOut = symbol
+            return(0i32)
+          }
+          symbol++
+        }
+      }
+    }
     return(1i32)
   }
 
   [effects(heap_alloc), return<int>]
   pngInflateFixedHuffmanBlock([vector<i32>] compressed, [i32 mut] byteIndex, [i32 mut] bitIndex,
                               [vector<i32> mut] output) {
-    while(true, do() {
+    while(true) {
       [mut] symbol{0i32}
       status{pngDecodeFixedLiteralSymbol(compressed, byteIndex, bitIndex, symbol)}
-      if(not_equal(status, 0i32),
-         then() { return(1i32) },
-         else() { })
-      if(less_than(symbol, 256i32),
-         then() { /std/collections/vector/push(output, symbol) },
-         else() {
-           if(equal(symbol, 256i32),
-              then() { return(0i32) },
-              else() {
-                [mut] lengthBase{0i32}
-                [mut] lengthExtraBits{0i32}
-                lengthInfoStatus{pngLengthInfo(symbol, lengthBase, lengthExtraBits)}
-                if(not_equal(lengthInfoStatus, 0i32),
-                   then() { return(1i32) },
-                   else() { })
-
-                [mut] lengthExtraValue{0i32}
-                if(greater_than(lengthExtraBits, 0i32),
-                   then() {
-                     lengthExtraStatus{pngReadBits(compressed, byteIndex, bitIndex, lengthExtraBits, lengthExtraValue)}
-                     if(not_equal(lengthExtraStatus, 0i32),
-                        then() { return(1i32) },
-                        else() { })
-                   },
-                   else() { })
-                matchLength{lengthBase + lengthExtraValue}
-
-                [mut] distanceSymbol{0i32}
-                distanceStatus{pngDecodeFixedDistanceSymbol(compressed, byteIndex, bitIndex, distanceSymbol)}
-                if(not_equal(distanceStatus, 0i32),
-                   then() { return(1i32) },
-                   else() { })
-
-                [mut] distanceBase{0i32}
-                [mut] distanceExtraBits{0i32}
-                distanceInfoStatus{pngDistanceInfo(distanceSymbol, distanceBase, distanceExtraBits)}
-                if(not_equal(distanceInfoStatus, 0i32),
-                   then() { return(1i32) },
-                   else() { })
-
-                [mut] distanceExtraValue{0i32}
-                if(greater_than(distanceExtraBits, 0i32),
-                   then() {
-                     distanceExtraStatus{pngReadBits(compressed, byteIndex, bitIndex, distanceExtraBits, distanceExtraValue)}
-                     if(not_equal(distanceExtraStatus, 0i32),
-                        then() { return(1i32) },
-                        else() { })
-                   },
-                   else() { })
-
-                copyStatus{pngInflateCopyFromOutput(output, distanceBase + distanceExtraValue, matchLength)}
-                if(not_equal(copyStatus, 0i32),
-                   then() { return(1i32) },
-                   else() { })
-              })
-         })
-    })
+      if(status != 0i32) {
+        return(1i32)
+      }
+      if(symbol < 256i32) {
+        push(output, symbol)
+      } else {
+        if(symbol == 256i32) {
+          return(0i32)
+        } else {
+          [mut] lengthBase{0i32}
+          [mut] lengthExtraBits{0i32}
+          lengthInfoStatus{pngLengthInfo(symbol, lengthBase, lengthExtraBits)}
+          if(lengthInfoStatus != 0i32) {
+            return(1i32)
+          }
+          [mut] lengthExtraValue{0i32}
+          if(lengthExtraBits > 0i32) {
+            lengthExtraStatus{pngReadBits(compressed, byteIndex, bitIndex, lengthExtraBits, lengthExtraValue)}
+            if(lengthExtraStatus != 0i32) {
+              return(1i32)
+            }
+          }
+          matchLength{lengthBase + lengthExtraValue}
+          [mut] distanceSymbol{0i32}
+          distanceStatus{pngDecodeFixedDistanceSymbol(compressed, byteIndex, bitIndex, distanceSymbol)}
+          if(distanceStatus != 0i32) {
+            return(1i32)
+          }
+          [mut] distanceBase{0i32}
+          [mut] distanceExtraBits{0i32}
+          distanceInfoStatus{pngDistanceInfo(distanceSymbol, distanceBase, distanceExtraBits)}
+          if(distanceInfoStatus != 0i32) {
+            return(1i32)
+          }
+          [mut] distanceExtraValue{0i32}
+          if(distanceExtraBits > 0i32) {
+            distanceExtraStatus{pngReadBits(compressed, byteIndex, bitIndex, distanceExtraBits, distanceExtraValue)}
+            if(distanceExtraStatus != 0i32) {
+              return(1i32)
+            }
+          }
+          copyStatus{pngInflateCopyFromOutput(output, distanceBase + distanceExtraValue, matchLength)}
+          if(copyStatus != 0i32) {
+            return(1i32)
+          }
+        }
+      }
+    }
     return(1i32)
   }
 
@@ -2284,19 +2183,19 @@ namespace std {
                                 [vector<i32> mut] output) {
     [mut] hlitBits{0i32}
     hlitStatus{pngReadBits(compressed, byteIndex, bitIndex, 5i32, hlitBits)}
-    if(not_equal(hlitStatus, 0i32),
-       then() { return(1i32) },
-       else() { })
+    if(hlitStatus != 0i32) {
+      return(1i32)
+    }
     [mut] hdistBits{0i32}
     hdistStatus{pngReadBits(compressed, byteIndex, bitIndex, 5i32, hdistBits)}
-    if(not_equal(hdistStatus, 0i32),
-       then() { return(1i32) },
-       else() { })
+    if(hdistStatus != 0i32) {
+      return(1i32)
+    }
     [mut] hclenBits{0i32}
     hclenStatus{pngReadBits(compressed, byteIndex, bitIndex, 4i32, hclenBits)}
-    if(not_equal(hclenStatus, 0i32),
-       then() { return(1i32) },
-       else() { })
+    if(hclenStatus != 0i32) {
+      return(1i32)
+    }
 
     [mut] literalLengthsLow{vector<i32>()}
     [mut] literalLengthsHigh{vector<i32>()}
@@ -2304,243 +2203,214 @@ namespace std {
     lengthStatus{pngReadDynamicHuffmanLengths(compressed, byteIndex, bitIndex, hclenBits + 4i32,
                                               hlitBits + 257i32, hdistBits + 1i32, literalLengthsLow,
                                               literalLengthsHigh, distanceLengths)}
-    if(not_equal(lengthStatus, 0i32),
-       then() { return(lengthStatus) },
-       else() { })
+    if(lengthStatus != 0i32) {
+      return(lengthStatus)
+    }
 
     literalMaxBits{pngHuffmanMaxBitsSplitLiteralLengths(literalLengthsLow, literalLengthsHigh)}
-    if(less_equal(literalMaxBits, 0i32),
-       then() { return(1i32) },
-       else() { })
+    if(literalMaxBits <= 0i32) {
+      return(1i32)
+    }
     distanceMaxBits{pngHuffmanMaxBits(distanceLengths)}
-    while(true, do() {
+    while(true) {
       [mut] symbol{0i32}
       status{pngHuffmanDecodeSplitLiteralSymbol(compressed, byteIndex, bitIndex, literalLengthsLow,
                                                 literalLengthsHigh, literalMaxBits, symbol)}
-      if(not_equal(status, 0i32),
-         then() { return(1i32) },
-         else() { })
-      if(less_than(symbol, 256i32),
-         then() { /std/collections/vector/push(output, symbol) },
-         else() {
-           if(equal(symbol, 256i32),
-              then() { return(0i32) },
-              else() {
-                if(less_equal(distanceMaxBits, 0i32),
-                   then() { return(1i32) },
-                   else() { })
-                [mut] lengthBase{0i32}
-                [mut] lengthExtraBits{0i32}
-                lengthInfoStatus{pngLengthInfo(symbol, lengthBase, lengthExtraBits)}
-                if(not_equal(lengthInfoStatus, 0i32),
-                   then() { return(1i32) },
-                   else() { })
-
-                [mut] lengthExtraValue{0i32}
-                if(greater_than(lengthExtraBits, 0i32),
-                   then() {
-                     lengthExtraStatus{pngReadBits(compressed, byteIndex, bitIndex, lengthExtraBits, lengthExtraValue)}
-                     if(not_equal(lengthExtraStatus, 0i32),
-                        then() { return(1i32) },
-                        else() { })
-                   },
-                   else() { })
-                matchLength{lengthBase + lengthExtraValue}
-
-                [mut] distanceSymbol{0i32}
-                distanceStatus{pngHuffmanDecodeSymbol(compressed, byteIndex, bitIndex, distanceLengths,
-                                                      distanceMaxBits, distanceSymbol)}
-                if(not_equal(distanceStatus, 0i32),
-                   then() { return(1i32) },
-                   else() { })
-
-                [mut] distanceBase{0i32}
-                [mut] distanceExtraBits{0i32}
-                distanceInfoStatus{pngDistanceInfo(distanceSymbol, distanceBase, distanceExtraBits)}
-                if(not_equal(distanceInfoStatus, 0i32),
-                   then() { return(1i32) },
-                   else() { })
-
-                [mut] distanceExtraValue{0i32}
-                if(greater_than(distanceExtraBits, 0i32),
-                   then() {
-                     distanceExtraStatus{pngReadBits(compressed, byteIndex, bitIndex, distanceExtraBits, distanceExtraValue)}
-                     if(not_equal(distanceExtraStatus, 0i32),
-                        then() { return(1i32) },
-                        else() { })
-                   },
-                   else() { })
-
-                copyStatus{pngInflateCopyFromOutput(output, distanceBase + distanceExtraValue, matchLength)}
-                if(not_equal(copyStatus, 0i32),
-                   then() { return(1i32) },
-                   else() { })
-              })
-         })
-    })
+      if(status != 0i32) {
+        return(1i32)
+      }
+      if(symbol < 256i32) {
+        push(output, symbol)
+      } else {
+        if(symbol == 256i32) {
+          return(0i32)
+        } else {
+          if(distanceMaxBits <= 0i32) {
+            return(1i32)
+          }
+          [mut] lengthBase{0i32}
+          [mut] lengthExtraBits{0i32}
+          lengthInfoStatus{pngLengthInfo(symbol, lengthBase, lengthExtraBits)}
+          if(lengthInfoStatus != 0i32) {
+            return(1i32)
+          }
+          [mut] lengthExtraValue{0i32}
+          if(lengthExtraBits > 0i32) {
+            lengthExtraStatus{pngReadBits(compressed, byteIndex, bitIndex, lengthExtraBits, lengthExtraValue)}
+            if(lengthExtraStatus != 0i32) {
+              return(1i32)
+            }
+          }
+          matchLength{lengthBase + lengthExtraValue}
+          [mut] distanceSymbol{0i32}
+          distanceStatus{pngHuffmanDecodeSymbol(compressed, byteIndex, bitIndex, distanceLengths,
+                                                distanceMaxBits, distanceSymbol)}
+          if(distanceStatus != 0i32) {
+            return(1i32)
+          }
+          [mut] distanceBase{0i32}
+          [mut] distanceExtraBits{0i32}
+          distanceInfoStatus{pngDistanceInfo(distanceSymbol, distanceBase, distanceExtraBits)}
+          if(distanceInfoStatus != 0i32) {
+            return(1i32)
+          }
+          [mut] distanceExtraValue{0i32}
+          if(distanceExtraBits > 0i32) {
+            distanceExtraStatus{pngReadBits(compressed, byteIndex, bitIndex, distanceExtraBits, distanceExtraValue)}
+            if(distanceExtraStatus != 0i32) {
+              return(1i32)
+            }
+          }
+          copyStatus{pngInflateCopyFromOutput(output, distanceBase + distanceExtraValue, matchLength)}
+          if(copyStatus != 0i32) {
+            return(1i32)
+          }
+        }
+      }
+    }
     return(1i32)
   }
 
   [effects(heap_alloc), return<int>]
   pngInflateDeflateBlocks([vector<i32>] compressed, [vector<i32> mut] output) {
-    /std/collections/vector/clear(output)
+    clear(output)
     compressedCount{count(compressed)}
-    if(less_than(compressedCount, 7i32),
-       then() { return(1i32) },
-       else() { })
+    if(compressedCount < 7i32) {
+      return(1i32)
+    }
 
-    if(not(pngZlibHeaderValid(compressed[0i32], compressed[1i32])),
-       then() { return(1i32) },
-       else() { })
+    if(!(pngZlibHeaderValid(compressed[0i32], compressed[1i32]))) {
+
+      return(1i32)
+
+    }
 
     [mut] byteIndex{2i32}
     [mut] bitIndex{0i32}
-    while(true, do() {
+    while(true) {
       [mut] isFinal{0i32}
       finalStatus{pngReadBits(compressed, byteIndex, bitIndex, 1i32, isFinal)}
-      if(not_equal(finalStatus, 0i32),
-         then() { return(1i32) },
-         else() { })
-
+      if(finalStatus != 0i32) {
+        return(1i32)
+      }
       [mut] blockType{0i32}
       blockStatus{pngReadBits(compressed, byteIndex, bitIndex, 2i32, blockType)}
-      if(not_equal(blockStatus, 0i32),
-         then() { return(1i32) },
-         else() { })
-
+      if(blockStatus != 0i32) {
+        return(1i32)
+      }
       [mut] inflateStatus{0i32}
-      if(equal(blockType, 0i32),
-         then() { inflateStatus = pngInflateStoredBlock(compressed, byteIndex, bitIndex, output) },
-         else() {
-           if(equal(blockType, 1i32),
-              then() { inflateStatus = pngInflateFixedHuffmanBlock(compressed, byteIndex, bitIndex, output) },
-              else() {
-                if(equal(blockType, 2i32),
-                   then() { inflateStatus = pngInflateDynamicHuffmanBlock(compressed, byteIndex, bitIndex, output) },
-                   else() { return(1i32) })
-              })
-         })
-      if(not_equal(inflateStatus, 0i32),
-         then() { return(inflateStatus) },
-         else() { })
-
-      if(equal(isFinal, 1i32),
-         then() {
-           if(not_equal(bitIndex, 0i32),
-              then() {
-                bitIndex = 0i32
-                byteIndex = byteIndex + 1i32
-              },
-              else() { })
-	          if(not_equal(compressedCount - byteIndex, 4i32),
-	             then() { return(1i32) },
-	             else() { })
-	          adlerBHigh{compressed[byteIndex]}
-	          adlerBLow{compressed[byteIndex + 1i32]}
-	          adlerAHigh{compressed[byteIndex + 2i32]}
-	          adlerALow{compressed[byteIndex + 3i32]}
-	          if(not(pngAdlerValid(output, adlerBHigh, adlerBLow, adlerAHigh, adlerALow)),
-	             then() { return(1i32) },
-	             else() { })
-	          return(0i32)
-         },
-         else() { })
-    })
+      if(blockType == 0i32) {
+        inflateStatus = pngInflateStoredBlock(compressed, byteIndex, bitIndex, output)
+      } else {
+        if(blockType == 1i32) {
+          inflateStatus = pngInflateFixedHuffmanBlock(compressed, byteIndex, bitIndex, output)
+        } else {
+          if(blockType == 2i32) {
+            inflateStatus = pngInflateDynamicHuffmanBlock(compressed, byteIndex, bitIndex, output)
+          } else {
+            return(1i32)
+          }
+        }
+      }
+      if(inflateStatus != 0i32) {
+        return(inflateStatus)
+      }
+      if(isFinal == 1i32) {
+        if(bitIndex != 0i32) {
+          bitIndex = 0i32
+          byteIndex = byteIndex + 1i32
+        }
+        if(compressedCount - byteIndex != 4i32) {
+          return(1i32)
+        }
+        adlerBHigh{compressed[byteIndex]}
+        adlerBLow{compressed[byteIndex + 1i32]}
+        adlerAHigh{compressed[byteIndex + 2i32]}
+        adlerALow{compressed[byteIndex + 3i32]}
+        if(!(pngAdlerValid(output, adlerBHigh, adlerBLow, adlerAHigh, adlerALow))) {
+          return(1i32)
+        }
+        return(0i32)
+      }
+    }
     return(1i32)
   }
 
   [effects(heap_alloc), return<int>]
   pngDecodeScanlines([vector<i32>] rawBytes, [i32] width, [i32] height, [i32] bitDepth, [i32] colorType,
                      [i32] interlace, [vector<i32>] paletteBytes, [vector<i32> mut] pixels) {
-    /std/collections/vector/clear(pixels)
-    if(and(not_equal(colorType, 0i32),
-           and(not_equal(colorType, 2i32),
-               and(not_equal(colorType, 3i32), and(not_equal(colorType, 4i32), not_equal(colorType, 6i32))))),
-       then() { return(2i32) },
-       else() { })
-    if(not(pngDecodeBitDepthSupported(bitDepth, colorType)),
-       then() { return(2i32) },
-       else() { })
-    if(equal(colorType, 3i32),
-       then() {
-         if(or(or(equal(count(paletteBytes), 0i32), not_equal(pngMod(count(paletteBytes), 3i32), 0i32)),
-               greater_than(count(paletteBytes), 768i32)),
-            then() { return(1i32) },
-            else() { })
-       },
-       else() { })
+    clear(pixels)
+    if(colorType != 0i32 && colorType != 2i32 && colorType != 3i32 && colorType != 4i32 && colorType != 6i32) {
+      return(2i32)
+    }
+    if(!(pngDecodeBitDepthSupported(bitDepth, colorType))) {
+      return(2i32)
+    }
+    if(colorType == 3i32) {
+      if(count(paletteBytes) == 0i32 || pngMod(count(paletteBytes), 3i32) != 0i32 || count(paletteBytes) > 768i32) {
+        return(1i32)
+      }
+    }
 
     [mut] offset{0i32}
-    if(equal(interlace, 0i32),
-       then() {
-         rowStatus{pngDecodeRows(rawBytes, offset, width, height, bitDepth, colorType, paletteBytes, pixels)}
-         if(not_equal(rowStatus, 0i32),
-            then() {
-              /std/collections/vector/clear(pixels)
-              return(rowStatus)
-            },
-            else() { })
-       },
-	       else() {
-	         if(not_equal(interlace, 1i32),
-	            then() { return(2i32) },
-	            else() { })
-	         initStatus{pngInitRgbPixels(width, height, pixels)}
-	         if(not_equal(initStatus, 0i32),
-	            then() {
-	              /std/collections/vector/clear(pixels)
-	              return(1i32)
-	            },
-	            else() { })
-	         [mut] passPixels{vector<i32>()}
-         [mut] passIndex{0i32}
-         while(less_than(passIndex, 7i32), do() {
-           passStartX{pngAdam7PassStartX(passIndex)}
-           passStartY{pngAdam7PassStartY(passIndex)}
-           passStepX{pngAdam7PassStepX(passIndex)}
-           passStepY{pngAdam7PassStepY(passIndex)}
-           passWidth{pngAdam7PassSpan(width, passStartX, passStepX)}
-           passHeight{pngAdam7PassSpan(height, passStartY, passStepY)}
-           if(and(greater_than(passWidth, 0i32), greater_than(passHeight, 0i32)),
-              then() {
-                passStatus{pngDecodeRows(rawBytes, offset, passWidth, passHeight, bitDepth, colorType, paletteBytes, passPixels)}
-                if(not_equal(passStatus, 0i32),
-                   then() {
-                     /std/collections/vector/clear(pixels)
-                     return(passStatus)
-                   },
-                   else() { })
-                [mut] passRow{0i32}
-                while(less_than(passRow, passHeight), do() {
-                  [mut] passColumn{0i32}
-                  while(less_than(passColumn, passWidth), do() {
-                    imageX{passStartX + multiply(passColumn, passStepX)}
-                    imageY{passStartY + multiply(passRow, passStepY)}
-                    sourceOffset{multiply(multiply(passRow, passWidth) + passColumn, 3i32)}
-                    targetOffset{multiply(multiply(imageY, width) + imageX, 3i32)}
-                    pixels[targetOffset] = passPixels[sourceOffset]
-                    pixels[targetOffset + 1i32] = passPixels[sourceOffset + 1i32]
-                    pixels[targetOffset + 2i32] = passPixels[sourceOffset + 2i32]
-                    increment(passColumn)
-                  })
-                  increment(passRow)
-                })
-              },
-              else() { })
-           increment(passIndex)
-         })
-       })
-    if(not_equal(offset, count(rawBytes)),
-       then() {
-         /std/collections/vector/clear(pixels)
+    if(interlace == 0i32) {
+      rowStatus{pngDecodeRows(rawBytes, offset, width, height, bitDepth, colorType, paletteBytes, pixels)}
+      if(rowStatus != 0i32) {
+        clear(pixels)
+        return(rowStatus)
+      }
+    } else {
+       if(interlace != 1i32) {
+         return(2i32)
+       }
+       initStatus{pngInitRgbPixels(width, height, pixels)}
+       if(initStatus != 0i32) {
+         clear(pixels)
          return(1i32)
-       },
-       else() { })
+       }
+       [mut] passPixels{vector<i32>()}
+      [mut] passIndex{0i32}
+      while(passIndex < 7i32) {
+        passStartX{pngAdam7PassStartX(passIndex)}
+        passStartY{pngAdam7PassStartY(passIndex)}
+        passStepX{pngAdam7PassStepX(passIndex)}
+        passStepY{pngAdam7PassStepY(passIndex)}
+        passWidth{pngAdam7PassSpan(width, passStartX, passStepX)}
+        passHeight{pngAdam7PassSpan(height, passStartY, passStepY)}
+        if(passWidth > 0i32 && passHeight > 0i32) {
+          passStatus{pngDecodeRows(rawBytes, offset, passWidth, passHeight, bitDepth, colorType, paletteBytes, passPixels)}
+          if(passStatus != 0i32) {
+            clear(pixels)
+            return(passStatus)
+          }
+          [mut] passRow{0i32}
+          while(passRow < passHeight) {
+            [mut] passColumn{0i32}
+            while(passColumn < passWidth) {
+              imageX{passStartX + passColumn * passStepX}
+              imageY{passStartY + passRow * passStepY}
+              sourceOffset{(passRow * passWidth + passColumn) * 3i32}
+              targetOffset{(imageY * width + imageX) * 3i32}
+              pixels[targetOffset] = passPixels[sourceOffset]
+              pixels[targetOffset + 1i32] = passPixels[sourceOffset + 1i32]
+              pixels[targetOffset + 2i32] = passPixels[sourceOffset + 2i32]
+              passColumn++
+            }
+            passRow++
+          }
+        }
+        passIndex++
+      }
+    }
+    if(offset != count(rawBytes)) {
+      clear(pixels)
+      return(1i32)
+    }
     return(0i32)
   }
 
   namespace ppm {
-    [effects(file_read, heap_alloc), return<int> on_error<FileError, /std/image/ignoreFileError>]
+    [effects(file_read, heap_alloc), return<int> on_error<FileError, ignoreFileError>]
     readImpl([i32 mut] width, [i32 mut] height, [vector<i32> mut] pixels, [string] path) {
       [File<Read>] file{File<Read>(path)?}
       [mut] hasPending{0i32}
@@ -2548,81 +2418,76 @@ namespace std {
       [mut] byte{0i32}
       [mut] formatByte{0i32}
       [mut] status{ppmNextByte(file, hasPending, pendingByte, byte)}
-      if(or(not_equal(status, 0i32), not_equal(byte, 80i32)),
-         then() { return(1i32) },
-         else() { })
+      if(status != 0i32 || byte != 80i32) {
+        return(1i32)
+      }
 
       status = ppmNextByte(file, hasPending, pendingByte, byte)
-      if(or(not_equal(status, 0i32), and(not_equal(byte, 51i32), not_equal(byte, 54i32))),
-         then() { return(1i32) },
-         else() { formatByte = byte })
+      if(status != 0i32 || byte != 51i32 && byte != 54i32) {
+        return(1i32)
+      } else {
+        formatByte = byte
+      }
       status = ppmNextByte(file, hasPending, pendingByte, byte)
-      if(not_equal(status, 0i32),
-         then() { return(1i32) },
-         else() { })
-      if(or(ppmIsWhitespace(byte), equal(byte, 35i32)),
-         then() {
-           hasPending = 1i32
-           pendingByte = byte
-         },
-         else() { return(1i32) })
+      if(status != 0i32) {
+        return(1i32)
+      }
+      if(ppmIsWhitespace(byte) || byte == 35i32) {
+        hasPending = 1i32
+        pendingByte = byte
+      } else {
+        return(1i32)
+      }
 
       [mut] parsedWidth{0i32}
       [mut] parsedHeight{0i32}
       [mut] maxValue{0i32}
       status = ppmReadAsciiInt(file, hasPending, pendingByte, parsedWidth)
-      if(not_equal(status, 0i32),
-         then() { return(1i32) },
-         else() { })
+      if(status != 0i32) {
+        return(1i32)
+      }
       status = ppmReadAsciiInt(file, hasPending, pendingByte, parsedHeight)
-      if(not_equal(status, 0i32),
-         then() { return(1i32) },
-         else() { })
+      if(status != 0i32) {
+        return(1i32)
+      }
       status = ppmReadAsciiInt(file, hasPending, pendingByte, maxValue)
-      if(or(or(not_equal(status, 0i32), not_equal(maxValue, 255i32)),
-            or(less_equal(parsedWidth, 0i32), less_equal(parsedHeight, 0i32))),
-         then() { return(1i32) },
-         else() { })
+      if(status != 0i32 || maxValue != 255i32 || parsedWidth <= 0i32 || parsedHeight <= 0i32) {
+        return(1i32)
+      }
 
       [mut] pixelCount{0i32}
-      if(not(imageRgbWritePixelCount(parsedWidth, parsedHeight, pixelCount)),
-         then() { return(1i32) },
-         else() { })
+      if(!(imageRgbWritePixelCount(parsedWidth, parsedHeight, pixelCount))) {
+        return(1i32)
+      }
       [mut] index{0i32}
       [mut] component{0i32}
-      if(equal(formatByte, 51i32),
-         then() {
-           while(less_than(index, pixelCount), do() {
-             status = ppmReadAsciiInt(file, hasPending, pendingByte, component)
-             if(or(not_equal(status, 0i32), or(less_than(component, 0i32), greater_than(component, 255i32))),
-                then() {
-                  resetReadOutputs(width, height, pixels)
-                  return(1i32)
-                },
-                else() { })
-             /std/collections/vector/push(pixels, component)
-             increment(index)
-           })
-         },
-         else() {
-           status = ppmReadBinaryRasterLead(file, hasPending, pendingByte, component)
-           if(not_equal(status, 0i32),
-              then() { return(1i32) },
-              else() { })
-           /std/collections/vector/push(pixels, component)
-           index = 1i32
-           while(less_than(index, pixelCount), do() {
-             status = ppmReadByteStatus(file, component)
-             if(not_equal(status, 0i32),
-                then() {
-                  resetReadOutputs(width, height, pixels)
-                  return(1i32)
-                },
-                else() { })
-             /std/collections/vector/push(pixels, component)
-             increment(index)
-           })
-         })
+      if(formatByte == 51i32) {
+        while(index < pixelCount) {
+          status = ppmReadAsciiInt(file, hasPending, pendingByte, component)
+          if(status != 0i32 || component < 0i32 || component > 255i32) {
+            resetReadOutputs(width, height, pixels)
+            return(1i32)
+          }
+          push(pixels, component)
+          index++
+        }
+      } else {
+        status = ppmReadBinaryRasterLead(file, hasPending, pendingByte, component)
+        if(status != 0i32) {
+          return(1i32)
+        }
+        push(pixels, component)
+        index = 1i32
+        while(index < pixelCount) {
+          status = ppmReadByteStatus(file, component)
+          if(status != 0i32) {
+            resetReadOutputs(width, height, pixels)
+            return(1i32)
+          }
+          push(pixels, component)
+          index++
+        }
+      }
 
       width = parsedWidth
       height = parsedHeight
@@ -2640,11 +2505,11 @@ namespace std {
       return(Result.ok())
     }
 
-    [effects(file_write), return<int> on_error<FileError, /std/image/ignoreFileError>]
+    [effects(file_write), return<int> on_error<FileError, ignoreFileError>]
     writeImpl([string] path, [i32] width, [i32] height, [vector<i32>] pixels) {
-      if(not(ppmWriteInputValid(width, height, pixels)),
-         then() { return(1i32) },
-         else() { })
+      if(!(ppmWriteInputValid(width, height, pixels))) {
+        return(1i32)
+      }
 
       [File<Write>] file{File<Write>(path)?}
       [mut] status{ppmWriteHeader(file, width, height)}
@@ -2654,13 +2519,13 @@ namespace std {
 
       pixelCount{pixels.count()}
       [mut] index{0i32}
-      while(index < pixelCount, do() {
+      while(index < pixelCount) {
         status = ppmWriteComponent(file, pixels[index])
         if(status != 0i32) {
           return(1i32)
         }
         ++index
-      })
+      }
       return(0i32)
     }
 
@@ -2675,13 +2540,13 @@ namespace std {
   }
 
   namespace png {
-    [effects(file_read, heap_alloc), return<int> on_error<FileError, /std/image/ignoreFileError>]
+    [effects(file_read, heap_alloc), return<int> on_error<FileError, ignoreFileError>]
     readImpl([i32 mut] width, [i32 mut] height, [vector<i32> mut] pixels, [string] path) {
       [File<Read>] file{File<Read>(path)?}
       signatureStatus{pngValidateSignature(file)}
-      if(not_equal(signatureStatus, 0i32),
-         then() { return(1i32) },
-         else() { })
+      if(signatureStatus != 0i32) {
+        return(1i32)
+      }
 
       [mut] sawIhdr{0i32}
       [mut] sawIdat{0i32}
@@ -2695,148 +2560,124 @@ namespace std {
       [mut] idatBytes{vector<i32>()}
       [mut] plteBytes{vector<i32>()}
       [mut] rawBytes{vector<i32>()}
-      while(true, do() {
+      while(true) {
         [mut] chunkLength{0i32}
         lengthStatus{pngReadU32Be(file, chunkLength)}
-        if(or(not_equal(lengthStatus, 0i32), less_than(chunkLength, 0i32)),
-           then() { return(1i32) },
-           else() { })
-
+        if(lengthStatus != 0i32 || chunkLength < 0i32) {
+          return(1i32)
+        }
         [mut] typeA{0i32}
         [mut] typeB{0i32}
         [mut] typeC{0i32}
         [mut] typeD{0i32}
         typeStatus{pngReadChunkType(file, typeA, typeB, typeC, typeD)}
-        if(not_equal(typeStatus, 0i32),
-           then() { return(1i32) },
-           else() { })
-
-        if(equal(sawIhdr, 0i32),
-           then() {
-             if(or(not(pngChunkIsIhdr(typeA, typeB, typeC, typeD)), not_equal(chunkLength, 13i32)),
-                then() { return(1i32) },
-                else() { })
-             sawIhdr = 1i32
-             ihdrStatus{pngReadIhdr(file, parsedWidth, parsedHeight, bitDepth, colorType, interlace)}
-             if(not_equal(ihdrStatus, 0i32),
-                then() { return(1i32) },
-                else() { })
-             [mut] ihdrCrcA{0i32}
-             [mut] ihdrCrcB{0i32}
-             [mut] ihdrCrcC{0i32}
-             [mut] ihdrCrcD{0i32}
-             ihdrCrcStatus{pngReadChunkType(file, ihdrCrcA, ihdrCrcB, ihdrCrcC, ihdrCrcD)}
-             if(not_equal(ihdrCrcStatus, 0i32),
-                then() { return(1i32) },
-                else() { })
-             [mut] ihdrBytes{vector<i32>()}
-             pngAppendU32Be(parsedWidth, ihdrBytes)
-             pngAppendU32Be(parsedHeight, ihdrBytes)
-             /std/collections/vector/push(ihdrBytes, bitDepth)
-             /std/collections/vector/push(ihdrBytes, colorType)
-             /std/collections/vector/push(ihdrBytes, 0i32)
-             /std/collections/vector/push(ihdrBytes, 0i32)
-             /std/collections/vector/push(ihdrBytes, interlace)
-             if(not(pngChunkCrcMatches(typeA, typeB, typeC, typeD, ihdrBytes, ihdrCrcA, ihdrCrcB, ihdrCrcC, ihdrCrcD)),
-                then() { return(1i32) },
-                else() { })
-           },
-           else() {
-             if(pngChunkIsIhdr(typeA, typeB, typeC, typeD),
-                then() { return(1i32) },
-                else() { })
-             if(pngChunkIsPlte(typeA, typeB, typeC, typeD),
-                then() {
-                  if(or(not_equal(sawPlte, 0i32), not_equal(sawIdat, 0i32)),
-                     then() { return(1i32) },
-                     else() { })
-                  sawPlte = 1i32
-                },
-                else() { })
-             if(and(not_equal(sawPostIdatChunk, 0i32), pngChunkIsIdat(typeA, typeB, typeC, typeD)),
-                then() { return(1i32) },
-                else() { })
-             if(and(not_equal(sawIdat, 0i32),
-                    and(not(pngChunkIsIdat(typeA, typeB, typeC, typeD)),
-                        and(not(pngChunkIsIend(typeA, typeB, typeC, typeD)),
-                            not(pngChunkIsAncillary(typeA))))),
-                then() { return(1i32) },
-                else() { })
-             [mut] chunkBytes{vector<i32>()}
-             payloadStatus{pngAppendBytes(file, chunkLength, chunkBytes)}
-             if(not_equal(payloadStatus, 0i32),
-                then() { return(1i32) },
-                else() { })
-             [mut] crcA{0i32}
-             [mut] crcB{0i32}
-             [mut] crcC{0i32}
-             [mut] crcD{0i32}
-             crcStatus{pngReadChunkType(file, crcA, crcB, crcC, crcD)}
-             if(not_equal(crcStatus, 0i32),
-                then() { return(1i32) },
-                else() { })
-             if(and(not(pngChunkIsAncillary(typeA)),
-                    not(pngChunkCrcMatches(typeA, typeB, typeC, typeD, chunkBytes, crcA, crcB, crcC, crcD))),
-                then() { return(1i32) },
-                else() { })
-             if(pngChunkIsPlte(typeA, typeB, typeC, typeD),
-                then() {
-                  if(or(or(equal(count(chunkBytes), 0i32), not_equal(pngMod(count(chunkBytes), 3i32), 0i32)),
-                        greater_than(count(chunkBytes), 768i32)),
-                     then() { return(1i32) },
-                     else() { })
-                  /std/collections/vector/clear(plteBytes)
-                  pngAppendVectorBytes(chunkBytes, plteBytes)
-                },
-                else() { })
-             if(and(not_equal(sawIdat, 0i32), not(pngChunkIsIdat(typeA, typeB, typeC, typeD))),
-                then() { sawPostIdatChunk = 1i32 },
-                else() { })
-             if(pngChunkIsIdat(typeA, typeB, typeC, typeD),
-                then() {
-                  sawIdat = 1i32
-                  pngAppendVectorBytes(chunkBytes, idatBytes)
-                },
-                else() { })
-             if(pngChunkIsIend(typeA, typeB, typeC, typeD),
-                then() {
-                  if(or(not_equal(chunkLength, 0i32), equal(sawIdat, 0i32)),
-                     then() { return(1i32) },
-                     else() {
-                       inflateStatus{pngInflateDeflateBlocks(idatBytes, rawBytes)}
-                       if(equal(inflateStatus, 1i32),
-                          then() { return(1i32) },
-                          else() { })
-                       if(equal(inflateStatus, 2i32),
-                          then() { return(2i32) },
-                          else() { })
-
-                       if(and(equal(colorType, 3i32), equal(count(plteBytes), 0i32)),
-                          then() { return(1i32) },
-                          else() { })
-
-                       decodeStatus{pngDecodeScanlines(rawBytes, parsedWidth, parsedHeight, bitDepth, colorType, interlace, plteBytes, pixels)}
-                       if(equal(decodeStatus, 1i32),
-                          then() {
-                            resetReadOutputs(width, height, pixels)
-                            return(1i32)
-                          },
-                          else() { })
-                       if(equal(decodeStatus, 2i32),
-                          then() {
-                            resetReadOutputs(width, height, pixels)
-                            return(2i32)
-                          },
-                          else() { })
-
-                       width = parsedWidth
-                       height = parsedHeight
-                       return(0i32)
-                     })
-                },
-                else() { })
-           })
-      })
+        if(typeStatus != 0i32) {
+          return(1i32)
+        }
+        if(sawIhdr == 0i32) {
+          if(!(pngChunkIsIhdr(typeA, typeB, typeC, typeD)) || chunkLength != 13i32) {
+            return(1i32)
+          }
+          sawIhdr = 1i32
+          ihdrStatus{pngReadIhdr(file, parsedWidth, parsedHeight, bitDepth, colorType, interlace)}
+          if(ihdrStatus != 0i32) {
+            return(1i32)
+          }
+          [mut] ihdrCrcA{0i32}
+          [mut] ihdrCrcB{0i32}
+          [mut] ihdrCrcC{0i32}
+          [mut] ihdrCrcD{0i32}
+          ihdrCrcStatus{pngReadChunkType(file, ihdrCrcA, ihdrCrcB, ihdrCrcC, ihdrCrcD)}
+          if(ihdrCrcStatus != 0i32) {
+            return(1i32)
+          }
+          [mut] ihdrBytes{vector<i32>()}
+          pngAppendU32Be(parsedWidth, ihdrBytes)
+          pngAppendU32Be(parsedHeight, ihdrBytes)
+          push(ihdrBytes, bitDepth)
+          push(ihdrBytes, colorType)
+          push(ihdrBytes, 0i32)
+          push(ihdrBytes, 0i32)
+          push(ihdrBytes, interlace)
+          if(!(pngChunkCrcMatches(typeA, typeB, typeC, typeD, ihdrBytes, ihdrCrcA, ihdrCrcB, ihdrCrcC, ihdrCrcD))) {
+            return(1i32)
+          }
+        } else {
+          if(pngChunkIsIhdr(typeA, typeB, typeC, typeD)) {
+            return(1i32)
+          }
+          if(pngChunkIsPlte(typeA, typeB, typeC, typeD)) {
+            if(sawPlte != 0i32 || sawIdat != 0i32) {
+              return(1i32)
+            }
+            sawPlte = 1i32
+          }
+          if(sawPostIdatChunk != 0i32 && pngChunkIsIdat(typeA, typeB, typeC, typeD)) {
+            return(1i32)
+          }
+          if(sawIdat != 0i32 && !(pngChunkIsIdat(typeA, typeB, typeC, typeD)) && !(pngChunkIsIend(typeA, typeB, typeC, typeD)) && !(pngChunkIsAncillary(typeA))) {
+            return(1i32)
+          }
+          [mut] chunkBytes{vector<i32>()}
+          payloadStatus{pngAppendBytes(file, chunkLength, chunkBytes)}
+          if(payloadStatus != 0i32) {
+            return(1i32)
+          }
+          [mut] crcA{0i32}
+          [mut] crcB{0i32}
+          [mut] crcC{0i32}
+          [mut] crcD{0i32}
+          crcStatus{pngReadChunkType(file, crcA, crcB, crcC, crcD)}
+          if(crcStatus != 0i32) {
+            return(1i32)
+          }
+          if(!(pngChunkIsAncillary(typeA)) && !(pngChunkCrcMatches(typeA, typeB, typeC, typeD, chunkBytes, crcA, crcB, crcC, crcD))) {
+            return(1i32)
+          }
+          if(pngChunkIsPlte(typeA, typeB, typeC, typeD)) {
+            if(count(chunkBytes) == 0i32 || pngMod(count(chunkBytes), 3i32) != 0i32 || count(chunkBytes) > 768i32) {
+              return(1i32)
+            }
+            clear(plteBytes)
+            pngAppendVectorBytes(chunkBytes, plteBytes)
+          }
+          if(sawIdat != 0i32 && !(pngChunkIsIdat(typeA, typeB, typeC, typeD))) {
+            sawPostIdatChunk = 1i32
+          }
+          if(pngChunkIsIdat(typeA, typeB, typeC, typeD)) {
+            sawIdat = 1i32
+            pngAppendVectorBytes(chunkBytes, idatBytes)
+          }
+          if(pngChunkIsIend(typeA, typeB, typeC, typeD)) {
+            if(chunkLength != 0i32 || sawIdat == 0i32) {
+              return(1i32)
+            } else {
+              inflateStatus{pngInflateDeflateBlocks(idatBytes, rawBytes)}
+              if(inflateStatus == 1i32) {
+                return(1i32)
+              }
+              if(inflateStatus == 2i32) {
+                return(2i32)
+              }
+              if(colorType == 3i32 && count(plteBytes) == 0i32) {
+                return(1i32)
+              }
+              decodeStatus{pngDecodeScanlines(rawBytes, parsedWidth, parsedHeight, bitDepth, colorType, interlace, plteBytes, pixels)}
+              if(decodeStatus == 1i32) {
+                resetReadOutputs(width, height, pixels)
+                return(1i32)
+              }
+              if(decodeStatus == 2i32) {
+                resetReadOutputs(width, height, pixels)
+                return(2i32)
+              }
+              width = parsedWidth
+              height = parsedHeight
+              return(0i32)
+            }
+          }
+        }
+      }
       return(1i32)
     }
 
@@ -2855,30 +2696,30 @@ namespace std {
       return(Result.ok())
     }
 
-    [effects(file_write), return<int> on_error<FileError, /std/image/ignoreFileError>]
+    [effects(file_write), return<int> on_error<FileError, ignoreFileError>]
     writeImpl([string] path, [i32] width, [i32] height, [vector<i32>] pixels) {
-      if(not(ppmWriteInputValid(width, height, pixels)),
-         then() { return(1i32) },
-         else() { })
+      if(!(ppmWriteInputValid(width, height, pixels))) {
+        return(1i32)
+      }
       [mut] rawByteCount{0i32}
       [mut] payloadLength{0i32}
-      if(not(pngWriteSizingValid(width, height, rawByteCount, payloadLength)),
-         then() { return(1i32) },
-         else() { })
+      if(!(pngWriteSizingValid(width, height, rawByteCount, payloadLength))) {
+        return(1i32)
+      }
 
       [File<Write>] file{File<Write>(path)?}
       signatureStatus{pngWriteSignature(file)}
-      if(not_equal(signatureStatus, 0i32),
-         then() { return(signatureStatus) },
-         else() { })
+      if(signatureStatus != 0i32) {
+        return(signatureStatus)
+      }
       ihdrStatus{pngWriteIhdrChunk(file, width, height)}
-      if(not_equal(ihdrStatus, 0i32),
-         then() { return(ihdrStatus) },
-         else() { })
+      if(ihdrStatus != 0i32) {
+        return(ihdrStatus)
+      }
       idatStatus{pngWriteIdatChunk(file, width, height, pixels, rawByteCount, payloadLength)}
-      if(not_equal(idatStatus, 0i32),
-         then() { return(idatStatus) },
-         else() { })
+      if(idatStatus != 0i32) {
+        return(idatStatus)
+      }
       return(pngWriteIendChunk(file))
     }
 

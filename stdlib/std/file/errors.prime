@@ -18,7 +18,7 @@ namespace std {
 
     [public return<bool>]
     isEof([FileError] err) {
-      return(equal(err, eof()))
+      return(err == eof())
     }
 
     [public return<bool>]
@@ -28,7 +28,7 @@ namespace std {
 
     [public return<Result<T, FileError>>]
     result<T>([FileError] err) {
-      return(multiply(convert<i64>(err), 4294967296i64))
+      return(convert<i64>(err) * 4294967296i64)
     }
   }
 

@@ -58,16 +58,16 @@ namespace std {
   namespace ContainerError {
     [public return<string>]
     why([ContainerError] err) {
-      if(equal(err.code, 1i32)) {
+      if(err.code == 1i32) {
         return("container missing key"utf8)
       }
-      if(equal(err.code, 2i32)) {
+      if(err.code == 2i32) {
         return("container index out of bounds"utf8)
       }
-      if(equal(err.code, 3i32)) {
+      if(err.code == 3i32) {
         return("container empty"utf8)
       }
-      if(equal(err.code, 4i32)) {
+      if(err.code == 4i32) {
         return("container capacity exceeded"utf8)
       }
       return("container error"utf8)
@@ -115,7 +115,7 @@ namespace std {
 
     [public return<Result<T, ContainerError>>]
     result<T>([ContainerError] err) {
-      return(multiply(convert<i64>(err.code), 4294967296i64))
+      return(convert<i64>(err.code) * 4294967296i64)
     }
   }
 
