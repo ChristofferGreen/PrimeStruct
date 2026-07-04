@@ -5,6 +5,181 @@ Legend:
 
 Finished items are periodically archived here from `docs/todo.md`; section headers record the archive date.
 
+**Todo Completion (July 3, 2026) — TODO-4682**
+
+Root cause was semantics-side, not the lowerer: the "even-count map
+constructor args are key/value pairs" inference in
+`SemanticsValidatorInferCollectionReturnInference.cpp` derived K/V from the
+argument TYPES of entry-pack calls whose specialized overload carries no
+template args, publishing a fabricated `MapValue<Entry__t..., Entry__t...>`
+specialization path (monomorph-format FNV over "type:<argtype>,type:<argtype>";
+confirmed by hash replication) that exists nowhere in the program; the
+lowerer then correctly rejected the binding as a struct type mismatch.
+Fix: the pairwise inference bails when every argument is an entry
+constructor call (resolved via key-value surface metadata, specialization
+suffixes stripped), letting the declared binding type drive the
+specialization. Direct bindings with even entry counts now lower and run in
+VM and exe; odd counts and pair constructors unchanged.
+
+- [x] TODO-4682: Fix lowerer fabricated-specialization inference for even-count entry constructor bindings
+  - owner: ai
+  - created_at: 2026-07-02
+  - phase: Collection dispatch retirement
+  - parallel_track: collection-decoupling
+  - scope: Direct user bindings of key-value constructor calls with an even
+    number of entry-constructor arguments fail VM/exe lowering with
+    "struct binding initializer type mismatch": inferStructExprPath
+    fabricates a MapValue specialization path that appears nowhere in the
+    semantic AST (repro documented; semantic AST and resolved callee are
+    correct). Locate the synthesis site (candidates inventoried in the
+    map-pair-ladder-deletion goal notes), gate it on
+    all-args-are-entry-constructors, and add VM/exe regression tests for
+    even entry counts.
+  - acceptance:
+    - Direct bindings with 2/4/8 entry-constructor arguments lower and run
+      correctly in VM and exe backends
+    - Odd-count and pair-constructor behavior unchanged; release map suites
+      green
+  - stop_rule: even-entry bindings pass and suites green
+
+
+**Todo Completion (July 2, 2026) — Collection dispatch retirement (TODO-4677..4680)**
+
+Root cause was NOT the count/capacity dispatch: transitive wildcard-import
+alias construction special-cased the vector module. In
+`TemplateMonomorphFinalOrchestration.h buildImportAliases`, the transitive
+branch registered only the `Vector` type alias for `/std/collections/vector/*`
+and `continue`d past the member scans, so helper names (vectorCount,
+vectorPush, ...) had no aliases whenever the user's import made the vector
+module transitive (e.g. `import /std/collections/*`) — monomorph could not
+instantiate the callees and failed with "unknown call target". The direct
+import branch had no such skip, which is why direct `/std/collections/vector/*`
+imports always worked. A second copy of the gate in
+`SemanticsValidatorBuildImports.cpp` (registerInternalVectorWildcardAliases
+early-return) was removed for consistency (that pass runs post-monomorph).
+Fix: fall through to the member scans, plus an `isRootBuiltinName(remainder)`
+guard on the monomorph transitive scans (mirroring the validator pass) so the
+vector module's short-named entry points (count/at/push) do not leak into
+merged aliases and hijack builtin collection dispatch (caught live: count(map)
+returned a payload value instead of the size).
+Migration: map.prime's 41 rooted `/std/collections/vector/...` call paths and
+soa.prime's last 3 now use bare helper spellings; only import lines reference
+the vector module. Source lock updated to the bare
+`return(vectorCount<K>(keys))` spelling. New regression suite
+`primestruct.semantics.transitive_collection_imports` (3 cases, including a
+builtin-count-keeps-map-dispatch guard). Vector surface trace audit passes (0
+production traces). Full semantics run: 321 failed assertions vs 325 baseline
+(no regressions, 4 pre-existing failures cleared). Broad
+conformance/vector/map/soa/docs-locks/bounds/imports batch green except
+pre-existing 1302. TODO-4681 (evidence-based deletion of now-redundant
+dispatch branches) remains open.
+
+- [x] TODO-4677: Pin collection dispatch interception with failing fixture tests
+  - owner: ai
+  - created_at: 2026-07-02
+  - phase: Collection dispatch retirement
+  - parallel_track: collection-decoupling
+  - scope: Add fixture modules (outside stdlib) where a wildcard-importing
+    templated module calls a registered collection-surface spelling
+    (e.g. `vectorCount`) bare. Add semantics + compile-run VM/exe cases
+    capturing today's "unknown call target" failure, plus a passing control
+    with an unregistered name. Trace and document the exact divergence
+    point between the two (candidates: SemanticsValidatorExprCollectionCountCapacity.cpp
+    dispatch entry, TemplateMonomorphCollectionCompatibilityPaths.h
+    isRemoved*CompatibilityHelper gates, SemanticsValidatorExpr.cpp
+    resolvedDefinition==nullptr rejection).
+  - acceptance:
+    - Fixture tests exist and the failing ones are pinned (expected-fail or
+      inverted assertions ready to flip)
+    - The divergence point is documented in the TODO evidence
+  - stop_rule: divergence documented and fixtures committed
+
+- [x] TODO-4678: Ordinary resolution wins over collection dispatch (calls)
+  - owner: ai
+  - created_at: 2026-07-02
+  - phase: Collection dispatch retirement
+  - parallel_track: collection-decoupling
+  - depends_on: TODO-4677
+  - scope: In direct-call resolution, when a bare callee name resolves via
+    import aliases to a declared definition path, take the plain-call route
+    and skip collection compatibility dispatch. Gate strictly to cases whose
+    current outcome is "unknown call target" (error-to-success only) so no
+    existing user-code behavior or pinned diagnostics change.
+  - acceptance:
+    - TODO-4677 failing fixtures flip to passing
+    - Release semantics + conformance suites show no new failures
+  - stop_rule: fixtures pass and suites green
+
+- [x] TODO-4679: Monomorph callee instantiation for resolved surface spellings
+  - owner: ai
+  - created_at: 2026-07-02
+  - phase: Collection dispatch retirement
+  - parallel_track: collection-decoupling
+  - depends_on: TODO-4678
+  - scope: Narrow TemplateMonomorphCollectionCompatibilityPaths.h
+    isRemoved*CompatibilityHelper early-outs to apply only when ordinary
+    resolution failed; ensure callee template instantiation
+    (vectorCount<K> -> vectorCount__t...) for resolved plain calls,
+    including _ref variants and the soa spelling family.
+  - acceptance:
+    - Bare registered spellings instantiate and validate inside
+      monomorphized stdlib module definitions
+    - Release suites green
+  - stop_rule: instantiation works and suites green
+
+- [x] TODO-4680: Un-root stdlib collection cross-module calls and update locks
+  - owner: ai
+  - created_at: 2026-07-02
+  - phase: Collection dispatch retirement
+  - parallel_track: collection-decoupling
+  - depends_on: TODO-4679
+  - scope: Replace map.prime's rooted /std/collections/vector/* call paths
+    (~42) and soa.prime's remaining rooted vector count/at calls with bare
+    imported spellings. Update source locks in
+    test_compile_run_examples_docs_locks.cpp; add inverse guardrail locks
+    asserting no rooted vector call spellings remain in stdlib collection
+    modules.
+  - acceptance:
+    - map.prime and soa.prime carry no rooted /std/collections/vector/ call
+      spellings
+    - Locks updated; conformance/vector/map/soa suites green
+  - stop_rule: stdlib migrated and suites green
+
+
+**Todo Completion (July 1, 2026)**
+- [x] TODO-4676: Add `return<never>` diverging return type and stdlib `panic`
+  - owner: ai
+  - created_at: 2026-07-01
+  - finished_at: 2026-07-01
+  - phase: Language features
+  - scope: Add a `never` return-type annotation for diverging definitions, a
+    stdlib `/std/panic/panic([i32] code)` trap helper built on the existing
+    bounds-check trap, divergence-aware all-paths-return analysis, and
+    migrate the stdlib `[array<i32>] empty{array<i32>()}` + `/at(empty, x)`
+    panic idiom onto `panic(x)`.
+  - acceptance:
+    - `[return<never>]` accepted by parser/semantics/backends; `never` is
+      rejected in binding/parameter position.
+    - A `never` definition must not contain `return`; calling one terminates
+      a control path in all-paths-return analysis.
+    - vector.prime (9 sites) and soa_storage.prime (29 sites) use `panic`.
+    - Release conformance/vector/map/soa suites pass.
+  - evidence: `never` maps to the void return kind in
+    `SemanticsReturnKindHelpers.cpp` (return position only),
+    `IrPrinterHelpers.cpp`, `EmitterHelpersTypes.cpp`,
+    `IrLowererReturnInferenceHelpers.cpp`, `GlslEmitter.cpp`, and the
+    parser's missing-return gate (`ParserCoreBodyStatements.cpp`).
+    `definitionHasNeverReturn()` (SemanticsReturnKindHelpers.cpp) drives the
+    no-return-inside-never diagnostic in
+    `SemanticsValidatorPassesDefinitions.cpp` and call-statement divergence
+    in `SemanticsValidatorStatementReturns.cpp::statementAlwaysReturns`.
+    New `stdlib/std/panic/panic.prime`; `soaArbitraryWidthPending` now
+    declares `return<never>`. Spec section added to `docs/PrimeStruct.md`
+    (Diverging definitions). v1 limitations documented there: body
+    divergence is not verified, expression-position divergence untracked,
+    parse-time missing-return still requires one `return` statement in
+    non-void bodies.
+
 **Todo Completion (June 18, 2026)**
 - [x] TODO-4636: Delete surfaces.psmeta and its parity scaffolding
   - owner: ai

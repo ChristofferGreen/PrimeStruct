@@ -809,3 +809,74 @@ This file is the live open-work queue for PrimeStruct.
     - No unused collection helper functions remain
     - Full test suite passes
   - stop_rule: dead code removed and tests pass
+
+- [ ] TODO-4681: Delete unreachable collection dispatch branches
+  - owner: ai
+  - created_at: 2026-07-02
+  - phase: Collection dispatch retirement
+  - parallel_track: collection-decoupling
+  - depends_on: TODO-4680
+  - scope: With ordinary resolution primary, measure which
+    count/capacity and compatibility interceptor branches no longer fire
+    (coverage or trace evidence, not pattern matching) and delete them.
+    Revisit blocked TODO-4670/TODO-4671 cleanup in the same pass.
+  - acceptance:
+    - Dead interceptor branches removed with evidence they were unreachable
+    - Full release test suite passes
+  - stop_rule: evidenced dead code removed and tests pass
+
+- [ ] TODO-4683: Rewrite pair constructor calls to entries at monomorph time and delete the pair ladder
+  - owner: ai
+  - created_at: 2026-07-02
+  - phase: Collection dispatch retirement
+  - parallel_track: collection-decoupling
+  - depends_on: TODO-4682
+  - scope: ATTEMPTED 2026-07-03 AND REVERTED. The monomorph rewrite +
+    signature deletion worked for direct compile-run programs but broke 121
+    positive semantics programs plus ~90 pinned diagnostics: the pair-shape
+    assumption is load-bearing across implicit template inference
+    ("implicit template arguments conflict"), key/value target resolution
+    (resolveMapTarget pairwise arg peeking in
+    SemanticsValidatorExprArgumentValidation.cpp), user-defined same-path
+    map helpers without stdlib imports, and several unknown-call-target
+    diagnostic families. Current landed state: the 8 pair signatures remain
+    as one-line forwards through the variadic entries constructor (single
+    insertion implementation). A real deletion needs a phased sub-project:
+    first teach resolveMapTarget/implicit-inference to understand
+    entry-pack calls, then gate the rewrite on resolution outcomes (not
+    path shape), then delete signatures and flip the eighthKey locks.
+    ROUND 2 (2026-07-03): with existence-gating + env-gate A/B measurement
+    the true regression delta is only 8 test cases (argument/field/
+    assignment/receiver shapes), all rooted in pairwise K/V type-text
+    inference fabricating map<EntryPath, EntryPath> specializations for
+    rewritten entries-shaped calls. A first producer-fix attempt
+    (deriveKeyValueTypesFromEntryPackCall, helper retained unwired in
+    SemanticsValidatorCollectionHelperRewrites.cpp) surfaced additional
+    unidentified producers; next attempt should instrument ALL key/value
+    type-text producers at once (playbook in the
+    map-pair-ladder-deletion-goal memory) before wiring fixes.
+    ROUND 3 (2026-07-04): LANDED the monomorph pair-to-entry rewrite
+    (TemplateMonomorphExpressionRewrite.h) gated on
+    no-matching-pair-arity-overload (fires only if the pair signatures are
+    absent, so it is provably inert today), plus entry-pack gates in the
+    four pairwise K/V producers (BuildInitializerInference,
+    InferCollectionCallResolution, ExprMutationBorrows,
+    TemplateMonomorphExperimentalCollectionReceiverResolution) and named-arg
+    ordering for rewritten pair calls. With the ladder DELETED all
+    direct/receiver/assign/argument shapes passed, but 37 additional
+    inference-layer cases regressed (auto returns, struct storage,
+    helper-wrapped Result.ok payloads) because pre-rewrite inference needs
+    the pair overloads; the ladder therefore stays as 8 one-line forwards.
+    Discriminator evidence: suite at exact 115-case baseline with ladder
+    present (all landed C++ inert), 152 with ladder deleted. Remaining
+    deletion work = teach TemplateMonomorphFallbackTypeInference and the
+    auto/storage return-type layers to type pair-shaped constructor calls
+    without pair overloads (failing-case list preserved in the goal memory
+    notes).
+  - acceptance:
+    - map.prime exposes exactly two map constructors: zero-arg and the
+      variadic entries form
+    - map(k, v, ...) surface calls still work in VM and exe for 1..8 pairs
+    - Invalid pair calls keep their current diagnostics
+    - Release map/conformance/lock suites green
+  - stop_rule: pair signatures deleted and suites green
