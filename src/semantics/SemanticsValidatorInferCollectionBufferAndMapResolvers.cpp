@@ -1,6 +1,7 @@
 // soa-surface-audit: exempt
 #include "SemanticsValidator.h"
 
+#include <algorithm>
 #include <memory>
 #include <string>
 #include <unordered_map>
@@ -48,6 +49,22 @@ void SemanticsValidator::populateBuiltinCollectionDispatchBufferAndMapResolvers(
     if (target.kind != Expr::Kind::Call || target.args.empty() ||
         target.args.size() % 2 != 0) {
       return false;
+    }
+    {
+      // Entry-pack constructor arguments carry no key/value pairs to peek
+      // at pairwise; bail so callers use the declared/derived map type.
+      const StdlibSurfaceMetadata *entryMetadata =
+          keyValueHelperSurfaceMetadataLocal();
+      const auto isEntryConstructorArg = [&](const Expr &argExpr) {
+        return entryMetadata != nullptr && argExpr.kind == Expr::Kind::Call &&
+               !argExpr.isMethodCall && !argExpr.name.empty() &&
+               resolveStdlibSurfaceMemberName(*entryMetadata, argExpr.name) ==
+                   "entry";
+      };
+      if (std::all_of(target.args.begin(), target.args.end(),
+                      isEntryConstructorArg)) {
+        return false;
+      }
     }
     auto inferTypeText = [&](const Expr &arg, std::string &typeTextOut) {
       BindingInfo inferred;

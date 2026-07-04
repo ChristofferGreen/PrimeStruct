@@ -967,6 +967,36 @@ bool SemanticsValidator::canonicalizeInferredCollectionBinding(
     if (candidate.args.size() < 2 || candidate.args.size() % 2 != 0) {
       return false;
     }
+    {
+      // Entry-pack constructor arguments are not key/value pairs; bail so
+      // the declared binding type or callee return type drives inference.
+      const StdlibSurfaceMetadata *entryMetadata =
+          keyValueHelperSurfaceMetadataLocal();
+      const auto isEntryConstructorArg = [&](const Expr &argExpr) {
+        return entryMetadata != nullptr && argExpr.kind == Expr::Kind::Call &&
+               !argExpr.isMethodCall && !argExpr.name.empty() &&
+               resolveStdlibSurfaceMemberName(*entryMetadata, argExpr.name) ==
+                   "entry";
+      };
+      if (std::all_of(candidate.args.begin(), candidate.args.end(),
+                      isEntryConstructorArg)) {
+        const Expr &firstEntry = candidate.args.front();
+        if (firstEntry.templateArgs.size() == 2) {
+          bindingOut.typeName = "Map";
+          bindingOut.typeTemplateArg = joinTemplateArgs(firstEntry.templateArgs);
+          return true;
+        }
+        std::string entryKeyType;
+        std::string entryValueType;
+        if (deriveKeyValueTypesFromEntryPackCall(candidate, entryKeyType,
+                                                 entryValueType)) {
+          bindingOut.typeName = "Map";
+          bindingOut.typeTemplateArg = entryKeyType + ", " + entryValueType;
+          return true;
+        }
+        return false;
+      }
+    }
     auto inferArgumentTypeText = [&](const Expr &argument, std::string &typeTextOut) -> bool {
       typeTextOut.clear();
       if (inferQueryExprTypeText(argument, params, locals, typeTextOut) && !typeTextOut.empty()) {

@@ -12,6 +12,8 @@
 #include <utility>
 
 #include "StdlibCollectionSurfaceHelpers.h"
+#include <algorithm>
+
 #include "SemanticsValidatorInferCollectionCompatibilityInternal.h"
 
 namespace primec::semantics {
@@ -426,6 +428,28 @@ bool SemanticsValidator::resolveCallCollectionTemplateArgs(const Expr &target,
        isDirectMapConstructorPath(explicitTarget)) &&
       target.templateArgs.empty() && !target.args.empty() &&
       target.args.size() % 2 == 0) {
+    // Entry-pack constructor arguments are not key/value pairs: derive the
+    // map template args from the first entry argument instead of peeking at
+    // argument types pairwise.
+    {
+      const StdlibSurfaceMetadata *entryMetadata =
+          keyValueHelperSurfaceMetadataLocal();
+      const auto isEntryConstructorArg = [&](const Expr &argExpr) {
+        return entryMetadata != nullptr && argExpr.kind == Expr::Kind::Call &&
+               !argExpr.isMethodCall && !argExpr.name.empty() &&
+               resolveStdlibSurfaceMemberName(*entryMetadata, argExpr.name) ==
+                   "entry";
+      };
+      if (std::all_of(target.args.begin(), target.args.end(),
+                      isEntryConstructorArg)) {
+        const Expr &firstEntry = target.args.front();
+        if (firstEntry.templateArgs.size() == 2) {
+          argsOut = firstEntry.templateArgs;
+          return true;
+        }
+        return false;
+      }
+    }
     auto inferArgTypeText = [&](const Expr &arg, std::string &typeTextOut) {
       BindingInfo inferredBinding;
       if (!inferBindingTypeFromInitializer(arg, params, locals, inferredBinding) &&

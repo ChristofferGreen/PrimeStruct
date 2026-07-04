@@ -117,6 +117,34 @@ bool inferPublishedMapConstructorReceiverTemplateArgs(
       receiverExpr->args.size() % 2 != 0) {
     return false;
   }
+  {
+    // Entry-pack constructor receivers: derive K/V from the first entry's
+    // template args instead of peeking at argument types pairwise.
+    const auto isEntryConstructorArg = [&](const Expr &argExpr) {
+      if (argExpr.kind != Expr::Kind::Call || argExpr.isMethodCall ||
+          argExpr.name.empty()) {
+        return false;
+      }
+      std::string path = argExpr.name;
+      if (path.front() != '/') {
+        std::string prefix = argExpr.namespacePrefix;
+        if (!prefix.empty() && prefix.front() != '/') {
+          prefix.insert(prefix.begin(), '/');
+        }
+        path = prefix.empty() ? "/" + path : prefix + "/" + path;
+      }
+      return isTemplateMonomorphMapEntryConstructorPath(path);
+    };
+    if (std::all_of(receiverExpr->args.begin(), receiverExpr->args.end(),
+                    isEntryConstructorArg)) {
+      const Expr &firstEntry = receiverExpr->args.front();
+      if (firstEntry.templateArgs.size() == 2) {
+        templateArgsOut = firstEntry.templateArgs;
+        return true;
+      }
+      return false;
+    }
+  }
   auto inferArgType = [&](const Expr &arg, std::string &typeTextOut) {
     BindingInfo binding;
     if (!inferBindingTypeForMonomorph(arg, params, locals, allowMathBare, ctx, binding)) {

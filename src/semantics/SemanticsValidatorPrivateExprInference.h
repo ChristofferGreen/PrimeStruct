@@ -181,6 +181,9 @@
   bool resolveKeyValueValueType(const Expr &target,
                                 const BuiltinCollectionDispatchResolvers &dispatchResolvers,
                                 std::string &valueTypeOut) const;
+  bool deriveKeyValueTypesFromEntryPackCall(const Expr &target,
+                                            std::string &keyTypeOut,
+                                            std::string &valueTypeOut) const;
   const Expr *resolveBuiltinAccessReceiverExpr(const Expr &accessExpr) const;
   bool isNamedArgsPackMethodAccessCall(
       const Expr &target,

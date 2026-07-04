@@ -579,7 +579,7 @@ TEST_CASE("canonical map surface owns standalone stdlib implementation") {
   CHECK(mapSource.find("MapValue<K, V>") != std::string::npos);
   CHECK(mapSource.find("mapInsert<K, V>([MapValue<K, V> mut] entries") !=
         std::string::npos);
-  CHECK(mapSource.find("[args<Entry<K, V>>] entries") == std::string::npos);
+  CHECK(mapSource.find("[args<Entry<K, V>>] entries") != std::string::npos);
   CHECK(mapSource.find("entries[index]") == std::string::npos);
   CHECK(mapSource.find("[K] eighthKey, [V] eighthValue") != std::string::npos);
 

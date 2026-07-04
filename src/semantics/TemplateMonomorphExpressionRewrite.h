@@ -2105,13 +2105,96 @@ bool rewriteExpr(Expr &expr,
       ctx.requirementOverloadSelectionError.clear();
       return false;
     }
+    const auto isKeyValueEntryConstructorArg = [](const Expr &argExpr) {
+      if (argExpr.kind != Expr::Kind::Call || argExpr.isMethodCall ||
+          argExpr.name.empty()) {
+        return false;
+      }
+      std::string path = argExpr.name;
+      if (path.front() != '/') {
+        std::string prefix = argExpr.namespacePrefix;
+        if (!prefix.empty() && prefix.front() != '/') {
+          prefix.insert(prefix.begin(), '/');
+        }
+        path = prefix.empty() ? "/" + path : prefix + "/" + path;
+      }
+      return isTemplateMonomorphMapEntryConstructorPath(path);
+    };
+    const bool usesKeyValueEntryConstructorArgs =
+        !expr.isMethodCall && !expr.args.empty() &&
+        isTemplateMonomorphMapConstructorCallPath(resolvedPath) &&
+        std::all_of(expr.args.begin(), expr.args.end(),
+                    isKeyValueEntryConstructorArg);
     if (!expr.isMethodCall &&
         expr.templateArgs.size() == 2 &&
         !expr.args.empty() &&
+        !usesKeyValueEntryConstructorArgs &&
         isTemplateMonomorphMapConstructorCallPath(resolvedPath)) {
       if (expr.args.size() % 2 != 0) {
         error = "argument count mismatch for " + resolvedPath;
         return false;
+      }
+      const bool hasNamedPairArguments =
+          std::any_of(expr.argNames.begin(), expr.argNames.end(),
+                      [](const std::optional<std::string> &name) {
+                        return name.has_value();
+                      });
+      if (hasNamedPairArguments) {
+        static constexpr std::array<std::string_view, 8> PairOrdinals = {
+            "first", "second", "third", "fourth",
+            "fifth", "sixth", "seventh", "eighth"};
+        auto pairSlotForName = [&](std::string_view name) -> size_t {
+          for (size_t ordinal = 0; ordinal < PairOrdinals.size(); ++ordinal) {
+            const std::string keyName = std::string(PairOrdinals[ordinal]) + "Key";
+            const std::string valueName =
+                std::string(PairOrdinals[ordinal]) + "Value";
+            if (name == keyName) {
+              return ordinal * 2;
+            }
+            if (name == valueName) {
+              return ordinal * 2 + 1;
+            }
+          }
+          return expr.args.size();
+        };
+        std::vector<const Expr *> slots(expr.args.size(), nullptr);
+        std::vector<size_t> unnamedArgIndexes;
+        for (size_t i = 0; i < expr.args.size(); ++i) {
+          const bool hasName =
+              i < expr.argNames.size() && expr.argNames[i].has_value();
+          if (!hasName) {
+            unnamedArgIndexes.push_back(i);
+            continue;
+          }
+          const size_t slot = pairSlotForName(*expr.argNames[i]);
+          if (slot >= slots.size()) {
+            error = "unknown named argument: " + *expr.argNames[i];
+            return false;
+          }
+          if (slots[slot] != nullptr) {
+            error = "named argument duplicates parameter: " + *expr.argNames[i];
+            return false;
+          }
+          slots[slot] = &expr.args[i];
+        }
+        size_t nextUnnamed = 0;
+        for (size_t slot = 0; slot < slots.size(); ++slot) {
+          if (slots[slot] != nullptr) {
+            continue;
+          }
+          if (nextUnnamed >= unnamedArgIndexes.size()) {
+            error = "argument count mismatch for " + resolvedPath;
+            return false;
+          }
+          slots[slot] = &expr.args[unnamedArgIndexes[nextUnnamed++]];
+        }
+        std::vector<Expr> orderedArgs;
+        orderedArgs.reserve(slots.size());
+        for (const Expr *argExpr : slots) {
+          orderedArgs.push_back(*argExpr);
+        }
+        expr.args = std::move(orderedArgs);
+        expr.argNames.assign(expr.args.size(), std::nullopt);
       }
       const std::string diagnosticPath =
           keyValueConstructorSurfaceMetadataLocal() == nullptr
@@ -2149,6 +2232,75 @@ bool rewriteExpr(Expr &expr,
                 " parameter " + mapConstructorParameterName(argIndex) +
                 ": expected " + expectedType + " got " + normalizedActualType;
         return false;
+      }
+      const StdlibSurfaceMetadata *keyValueMetadata =
+          keyValueHelperSurfaceMetadataLocal();
+      const auto hasVariadicEntriesOverload = [&]() {
+        if (keyValueMetadata == nullptr || keyValueMetadata->canonicalPath.empty()) {
+          return false;
+        }
+        const std::string constructorFamilyPath =
+            std::string(keyValueMetadata->canonicalPath) + "/map";
+        const auto familyIt = ctx.helperOverloads.find(constructorFamilyPath);
+        if (familyIt == ctx.helperOverloads.end()) {
+          return false;
+        }
+        return std::any_of(familyIt->second.begin(), familyIt->second.end(),
+                           [](const auto &entry) {
+                             return entry.isVariadic &&
+                                    entry.parameterCount == 1;
+                           });
+      }();
+      const bool hasEntryConstructorDefinition =
+          keyValueMetadata != nullptr && !keyValueMetadata->canonicalPath.empty() &&
+          (ctx.sourceDefs.count(std::string(keyValueMetadata->canonicalPath) +
+                                "/entry") > 0 ||
+           ctx.templateDefs.count(std::string(keyValueMetadata->canonicalPath) +
+                                  "/entry") > 0);
+      const bool hasMatchingPairArityOverload = [&]() {
+        if (keyValueMetadata == nullptr || keyValueMetadata->canonicalPath.empty()) {
+          return false;
+        }
+        const std::string constructorFamilyPath =
+            std::string(keyValueMetadata->canonicalPath) + "/map";
+        const auto familyIt = ctx.helperOverloads.find(constructorFamilyPath);
+        if (familyIt == ctx.helperOverloads.end()) {
+          return false;
+        }
+        return std::any_of(familyIt->second.begin(), familyIt->second.end(),
+                           [&](const auto &entry) {
+                             return !entry.isVariadic &&
+                                    entry.parameterCount == expr.args.size();
+                           });
+      }();
+      if (keyValueMetadata != nullptr && !keyValueMetadata->canonicalPath.empty() &&
+          hasVariadicEntriesOverload && hasEntryConstructorDefinition &&
+          !hasMatchingPairArityOverload) {
+        const std::string entryConstructorPath =
+            std::string(keyValueMetadata->canonicalPath) + "/entry";
+        std::vector<Expr> entryPack;
+        entryPack.reserve(expr.args.size() / 2);
+        for (size_t argIndex = 0; argIndex + 1 < expr.args.size(); argIndex += 2) {
+          Expr entryCall;
+          entryCall.kind = Expr::Kind::Call;
+          entryCall.name = entryConstructorPath;
+          entryCall.templateArgs = expr.templateArgs;
+          entryCall.templateArgDetails = expr.templateArgDetails;
+          entryCall.sourceLine = expr.args[argIndex].sourceLine;
+          entryCall.sourceColumn = expr.args[argIndex].sourceColumn;
+          entryCall.args.push_back(std::move(expr.args[argIndex]));
+          entryCall.args.push_back(std::move(expr.args[argIndex + 1]));
+          entryCall.argNames.assign(2, std::nullopt);
+          entryPack.push_back(std::move(entryCall));
+        }
+        expr.args = std::move(entryPack);
+        expr.argNames.assign(expr.args.size(), std::nullopt);
+        resolvedPath = resolveCalleePath(expr, namespacePrefix, ctx, &locals, &params);
+        if (!ctx.requirementOverloadSelectionError.empty()) {
+          error = ctx.requirementOverloadSelectionError;
+          ctx.requirementOverloadSelectionError.clear();
+          return false;
+        }
       }
     }
     const std::string preferredCollectionHelperPath =

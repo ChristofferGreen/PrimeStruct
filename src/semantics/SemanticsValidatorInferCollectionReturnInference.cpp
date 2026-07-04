@@ -1098,6 +1098,20 @@ bool SemanticsValidator::inferQueryExprTypeText(const Expr &expr,
       if (candidate.args.empty() || candidate.args.size() % 2 != 0) {
         return false;
       }
+      const StdlibSurfaceMetadata *entryMetadata =
+          keyValueHelperSurfaceMetadataLocal();
+      const auto isEntryConstructorArg = [&](const Expr &argExpr) {
+        return entryMetadata != nullptr && argExpr.kind == Expr::Kind::Call &&
+               !argExpr.isMethodCall && !argExpr.name.empty() &&
+               resolveStdlibSurfaceMemberName(*entryMetadata, argExpr.name) ==
+                   "entry";
+      };
+      if (std::all_of(candidate.args.begin(), candidate.args.end(),
+                      isEntryConstructorArg)) {
+        // Entry-pack constructor calls carry no key/value pairs to infer
+        // from; let the declared binding type drive the specialization.
+        return false;
+      }
       std::string keyTypeText;
       std::string valueTypeText;
       for (size_t i = 0; i < candidate.args.size(); i += 2) {

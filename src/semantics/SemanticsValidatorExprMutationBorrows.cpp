@@ -1,4 +1,6 @@
 #include "SemanticsValidator.h"
+#include "SemanticsValidatorInferCollectionCompatibilityInternal.h"
+#include <algorithm>
 #include "StdlibCollectionSurfaceHelpers.h"
 
 #include <array>
@@ -992,6 +994,23 @@ bool SemanticsValidator::validateExprMutationBorrowBuiltins(
       if (constructorPath.empty() ||
           !isResolvedKeyValueConstructorPath(constructorPath)) {
         return true;
+      }
+      {
+        // Entry-pack constructor arguments are whole entries, not
+        // alternating key/value scalars; skip the pairwise check.
+        const StdlibSurfaceMetadata *entryMetadata =
+            keyValueHelperSurfaceMetadataLocal();
+        const auto isEntryConstructorArg = [&](const Expr &argExpr) {
+          return entryMetadata != nullptr &&
+                 argExpr.kind == Expr::Kind::Call && !argExpr.isMethodCall &&
+                 !argExpr.name.empty() &&
+                 resolveStdlibSurfaceMemberName(*entryMetadata, argExpr.name) ==
+                     "entry";
+        };
+        if (std::all_of(expr.args[1].args.begin(), expr.args[1].args.end(),
+                        isEntryConstructorArg)) {
+          return true;
+        }
       }
       const BindingInfo *targetBinding = findNamedBinding(target.name);
       if (targetBinding == nullptr) {

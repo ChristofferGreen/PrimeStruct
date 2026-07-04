@@ -893,4 +893,75 @@ bool SemanticsValidator::resolveKeyValueValueType(
   return dispatchResolvers.resolveMapTarget(target, keyType, valueTypeOut);
 }
 
+bool SemanticsValidator::deriveKeyValueTypesFromEntryPackCall(
+    const Expr &target,
+    std::string &keyTypeOut,
+    std::string &valueTypeOut) const {
+  keyTypeOut.clear();
+  valueTypeOut.clear();
+  if (target.kind != Expr::Kind::Call || target.isMethodCall ||
+      target.args.empty()) {
+    return false;
+  }
+  const StdlibSurfaceMetadata *helperMetadata =
+      keyValueHelperSurfaceMetadataLocal();
+  if (helperMetadata == nullptr) {
+    return false;
+  }
+  auto rootedArgPath = [](const Expr &argExpr) -> std::string {
+    if (argExpr.kind != Expr::Kind::Call || argExpr.isMethodCall ||
+        argExpr.name.empty()) {
+      return {};
+    }
+    if (argExpr.name.front() == '/') {
+      return argExpr.name;
+    }
+    std::string prefix = argExpr.namespacePrefix;
+    if (!prefix.empty() && prefix.front() != '/') {
+      prefix.insert(prefix.begin(), '/');
+    }
+    return prefix.empty() ? "/" + argExpr.name : prefix + "/" + argExpr.name;
+  };
+  std::string firstEntryPath;
+  for (const Expr &argExpr : target.args) {
+    const std::string argPath = rootedArgPath(argExpr);
+    if (argPath.empty() ||
+        resolveStdlibSurfaceMemberName(*helperMetadata, argPath) != "entry") {
+      return false;
+    }
+    if (firstEntryPath.empty()) {
+      firstEntryPath = argPath;
+    }
+  }
+  auto bindingTypeText = [](const BindingInfo &binding) -> std::string {
+    if (binding.typeTemplateArg.empty()) {
+      return binding.typeName;
+    }
+    return binding.typeName + "<" + binding.typeTemplateArg + ">";
+  };
+  // The specialized entry definition's parameter types are authoritative;
+  // call-site template args can be rewritten to specialized struct paths
+  // during monomorphization.
+  const auto entryParamsIt = paramsByDef_.find(firstEntryPath);
+  if (entryParamsIt != paramsByDef_.end() &&
+      entryParamsIt->second.size() == 2) {
+    keyTypeOut = bindingTypeText(entryParamsIt->second[0].binding);
+    valueTypeOut = bindingTypeText(entryParamsIt->second[1].binding);
+    if (!keyTypeOut.empty() && !valueTypeOut.empty()) {
+      return true;
+    }
+    keyTypeOut.clear();
+    valueTypeOut.clear();
+  }
+  const Expr &firstEntry = target.args.front();
+  if (firstEntry.templateArgs.size() == 2 &&
+      firstEntry.templateArgs[0].find('/') == std::string::npos &&
+      firstEntry.templateArgs[1].find('/') == std::string::npos) {
+    keyTypeOut = firstEntry.templateArgs[0];
+    valueTypeOut = firstEntry.templateArgs[1];
+    return true;
+  }
+  return false;
+}
+
 } // namespace primec::semantics
