@@ -283,7 +283,9 @@ void buildImportAliases(Context &ctx) {
           registerDefinitionAlias(
               ctx.transitiveImportAliases, "Vector", InternalVectorTypePath);
         }
-        continue;
+        // Fall through to the member scans so transitive collection
+        // module imports expose their helper names to stdlib-scoped
+        // resolution exactly like every other module.
       }
       const std::string scopedPrefix = prefix + "/";
       for (const auto &[publicPath, overloads] : ctx.helperOverloads) {
@@ -295,7 +297,8 @@ void buildImportAliases(Context &ctx) {
         if (remainder.empty() || remainder.find('/') != std::string::npos) {
           continue;
         }
-        if (shouldSkipWildcardAlias(prefix, remainder)) {
+        if (shouldSkipWildcardAlias(prefix, remainder) ||
+            isRootBuiltinName(remainder)) {
           continue;
         }
         registerAlias(ctx.transitiveImportAliases, remainder, publicPath);
@@ -309,7 +312,8 @@ void buildImportAliases(Context &ctx) {
         if (remainder.empty() || remainder.find('/') != std::string::npos) {
           continue;
         }
-        if (shouldSkipWildcardAlias(prefix, remainder)) {
+        if (shouldSkipWildcardAlias(prefix, remainder) ||
+            isRootBuiltinName(remainder)) {
           continue;
         }
         registerAlias(ctx.transitiveImportAliases, remainder, publicPath);
@@ -329,7 +333,8 @@ void buildImportAliases(Context &ctx) {
         if (remainder.empty() || remainder.find('/') != std::string::npos) {
           continue;
         }
-        if (shouldSkipWildcardAlias(prefix, remainder)) {
+        if (shouldSkipWildcardAlias(prefix, remainder) ||
+            isRootBuiltinName(remainder)) {
           continue;
         }
         registerDefinitionAlias(ctx.transitiveImportAliases, remainder, path);

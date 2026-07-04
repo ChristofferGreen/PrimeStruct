@@ -535,9 +535,10 @@ bool SemanticsValidator::buildImportAliases() {
       if (isWildcard) {
         registerStdlibSurfaceWildcardAliases(prefix, transitiveImportAliases_);
         registerCanonicalSoaVectorWildcardAliases(prefix, transitiveImportAliases_);
-        if (registerInternalVectorWildcardAliases(prefix, transitiveImportAliases_)) {
-          return;
-        }
+        // Register the collection type alias, then fall through to the
+        // member scan so transitive collection module imports expose their
+        // helper names exactly like every other module.
+        registerInternalVectorWildcardAliases(prefix, transitiveImportAliases_);
         const std::string scopedPrefix = prefix + "/";
         std::vector<std::string> matchingPaths;
         matchingPaths.reserve(defMap_.size());
