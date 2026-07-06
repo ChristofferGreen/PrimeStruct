@@ -294,14 +294,17 @@ struct ScannedFunctionRecord {
   bool takesCollectionParam;  // first param type contains the collection type name
 };
 
-std::optional<std::filesystem::path> findStdlibCollectionFilePath(std::string_view filename) {
-  const std::filesystem::path relativePath =
-      std::filesystem::path("stdlib") / "std" / "collections" / filename;
+// Walks up from a starting directory looking for stdlib/std/collections.
+// Shared so file discovery has exactly one "where is the collections
+// directory" implementation (TODO-4685).
+std::optional<std::filesystem::path> findStdlibCollectionsDirectory() {
+  const std::filesystem::path relativeDir =
+      std::filesystem::path("stdlib") / "std" / "collections";
   auto findFromRoot = [&](std::filesystem::path root) -> std::optional<std::filesystem::path> {
     std::error_code ec;
     for (std::size_t depth = 0; depth < 8 && !root.empty(); ++depth) {
-      const std::filesystem::path candidate = root / relativePath;
-      if (std::filesystem::exists(candidate, ec) && !ec) {
+      const std::filesystem::path candidate = root / relativeDir;
+      if (std::filesystem::is_directory(candidate, ec) && !ec) {
         return candidate;
       }
       root = root.parent_path();
@@ -318,6 +321,30 @@ std::optional<std::filesystem::path> findStdlibCollectionFilePath(std::string_vi
     return findFromRoot(cwd);
   }
   return std::nullopt;
+}
+
+// Enumerates every *.prime file directly under stdlib/std/collections/
+// (non-recursive: subdirectories like soa_storage-adjacent internals are
+// not collection-surface candidates). Sorted for deterministic output
+// (AGENTS.md: no unordered iteration affecting output).
+std::vector<std::filesystem::path> listStdlibCollectionFiles() {
+  std::vector<std::filesystem::path> files;
+  const auto directory = findStdlibCollectionsDirectory();
+  if (!directory.has_value()) {
+    return files;
+  }
+  std::error_code ec;
+  for (const auto &entry : std::filesystem::directory_iterator(*directory, ec)) {
+    if (ec) {
+      break;
+    }
+    if (!entry.is_regular_file() || entry.path().extension() != ".prime") {
+      continue;
+    }
+    files.push_back(entry.path());
+  }
+  std::sort(files.begin(), files.end());
+  return files;
 }
 
 // Returns the leaf name from a rooted path (e.g. "/std/collections/soa/count" → "count").
@@ -542,12 +569,27 @@ static ManifestSurfaceData buildSurfaceData(
   return d;
 }
 
+// Finds a specific filename within an already-discovered directory listing
+// (TODO-4685: the 3 known collection files are looked up against the same
+// generic directory scan used for discovery, rather than each doing its own
+// independent filesystem lookup).
+std::optional<std::filesystem::path> findInStdlibCollectionFileList(
+    const std::vector<std::filesystem::path> &files, std::string_view filename) {
+  for (const auto &file : files) {
+    if (file.filename() == filename) {
+      return file;
+    }
+  }
+  return std::nullopt;
+}
+
 static CollectionsManifestSurfaces deriveCollectionsSurfaces() {
   CollectionsManifestSurfaces derived;
+  const std::vector<std::filesystem::path> collectionFiles = listStdlibCollectionFiles();
 
   // --- Vector ---
   {
-    const auto path = findStdlibCollectionFilePath("vector.prime");
+    const auto path = findInStdlibCollectionFileList(collectionFiles, "vector.prime");
     const auto records = path.has_value()
         ? scanStdlibPublicFunctions(*path, "vector", "Vector<", /*detectStatement=*/true)
         : std::vector<ScannedFunctionRecord>{};
@@ -597,7 +639,7 @@ static CollectionsManifestSurfaces deriveCollectionsSurfaces() {
 
   // --- Map ---
   {
-    const auto path = findStdlibCollectionFilePath("map.prime");
+    const auto path = findInStdlibCollectionFileList(collectionFiles, "map.prime");
     const auto records = path.has_value()
         ? scanStdlibPublicFunctions(*path, "map", "MapValue<", /*detectStatement=*/false)
         : std::vector<ScannedFunctionRecord>{};
@@ -644,7 +686,7 @@ static CollectionsManifestSurfaces deriveCollectionsSurfaces() {
 
   // --- Soa ---
   {
-    const auto path = findStdlibCollectionFilePath("soa.prime");
+    const auto path = findInStdlibCollectionFileList(collectionFiles, "soa.prime");
     const auto records = path.has_value()
         ? scanStdlibPublicFunctions(*path, "soaVector", "SoaVector<", /*detectStatement=*/false)
         : std::vector<ScannedFunctionRecord>{};

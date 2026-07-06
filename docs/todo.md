@@ -72,6 +72,9 @@ This file is the live open-work queue for PrimeStruct.
 
 - TODO-4609: Reject escaping local array slices | track: array-slice-escape-diagnostics | surface: slice view lifetime diagnostics
 - TODO-4610: Add forward cursor traversal API | track: cursor-forward-traversal | surface: forward cursor traversal
+- TODO-4685: Directory-scan discovery of collection .prime files | track: collection-decoupling-registry | surface: StdlibSurfaceRegistry file discovery
+- TODO-4690: Wire borrowedVariants/findBorrowedVariant, migrate first site | track: collection-decoupling-borrowed-variants | surface: StdlibSurfaceRegistry + method target resolution
+- TODO-4694: Introduce shared collection/key-value trait wrapper helpers | track: collection-decoupling-trait-wrappers | surface: semantics type-classification helpers
 
 ### Immediate Next 10
 
@@ -210,6 +213,28 @@ This file is the live open-work queue for PrimeStruct.
 23. TODO-4655: Add compile-run tests for language level examples
 24. TODO-4670: Remove collection-specific slot layout helpers (old alias branches)
 25. TODO-4671: Remove isVectorTypeName and isMapTypeName after migration
+26. TODO-4684: Spike a minimal zero-C++ collection type (done, see docs/todo_finished.md)
+27. TODO-4685: Directory-scan discovery of collection .prime files
+28. TODO-4686: Generic `[collection_type]`/`[key_value_type]` struct detection
+29. TODO-4687: Generic canonicalPath/bridgeKey/prefix derivation + override syntax
+30. TODO-4688: Fold `deriveCollectionsSurfaces()`'s 3 blocks into one loop
+31. TODO-4689: Dynamically-sized registry storage, enum resolution by path
+32. TODO-4690: Wire borrowedVariants/findBorrowedVariant, migrate first site
+33. TODO-4691: Migrate remaining borrowed-variant chains in MethodTargetResolution
+34. TODO-4692: Migrate soaVector* literal families to registry lookup
+35. TODO-4693: Clean up residual ContainerError string comparisons
+36. TODO-4694: Introduce shared trait wrapper helpers, behavior-preserving
+37. TODO-4695: Migrate semantics/ call sites to wrappers
+38. TODO-4696: Migrate ir_lowerer/ call sites to wrappers
+39. TODO-4697: Migrate emitter/ call sites to wrappers
+40. TODO-4698: Swap wrapper internals to generic registry/trait queries, delete old helpers
+41. TODO-4699: Add legacy-collection-branch reachability instrumentation
+42. TODO-4700: Delete 3-slot branches + duplicate definition, evidence-based
+43. TODO-4701: Evidence-based resolution of isCollectionVectorOwnerPath branches
+44. TODO-4702: Add second toy collection type, zero C++
+45. TODO-4703: Add diff-based zero-C++ gate script
+46. TODO-4704: Add audit-exemption-count ratchet script
+47. TODO-4705: Correct stale Collection decoupling documentation
 
 ### Task Blocks
 
@@ -880,3 +905,408 @@ This file is the live open-work queue for PrimeStruct.
     - Invalid pair calls keep their current diagnostics
     - Release map/conformance/lock suites green
   - stop_rule: pair signatures deleted and suites green
+
+- [ ] TODO-4685: Generalize collection .prime file discovery to a directory scan
+  - owner: ai
+  - created_at: 2026-07-06
+  - phase: Collection decoupling — Phase 1
+  - parallel_track: collection-decoupling-registry
+  - depends_on: TODO-4684 (done, see docs/todo_finished.md)
+  - scope: Replace the 3 hardcoded findStdlibCollectionFilePath("vector.prime"
+    | "map.prime" | "soa.prime") call sites in src/StdlibSurfaceRegistry.cpp
+    with a directory scan over the resolved stdlib/std/collections/
+    directory, returning the list of *.prime files to consider. Keep
+    deriveCollectionsSurfaces()'s 3 blocks temporarily filtering that list
+    down to today's 3 names (no behavior change yet).
+  - acceptance:
+    - No hardcoded filename string literals remain for locating collection
+      .prime files; the file list is produced by directory enumeration.
+    - Registry contents are byte-identical to before the change.
+    - Release tests pass.
+  - stop_rule: Stop once directory-scan discovery lands with identical
+    output; do not yet change struct-declaration detection or derivation.
+
+- [ ] TODO-4686: Detect [collection_type]/[key_value_type] struct declarations generically
+  - owner: ai
+  - created_at: 2026-07-06
+  - phase: Collection decoupling — Phase 1
+  - parallel_track: collection-decoupling-registry
+  - depends_on: TODO-4685
+  - scope: For each file found by TODO-4685, text-scan for a
+    [collection_type] or [key_value_type] struct annotation (same scanning
+    style as the existing [public] function scan in
+    scanStdlibPublicFunctions) and extract the annotated struct's declared
+    type name from the following line. Do not yet derive canonicalPath/
+    bridgeKey/prefix from this — just prove detection matches today's 3
+    known types (Vector, MapValue, SoaVector) plus discovers SoaColumn's
+    [collection_type] in soa_storage.prime (currently unused by the
+    registry) without misclassifying it.
+  - acceptance:
+    - Detection correctly identifies all 4 currently-annotated structs
+      across vector.prime/map.prime/soa.prime/soa_storage.prime.
+    - Unit test covers detection against a fixture .prime file.
+  - stop_rule: Stop once detection is proven correct; derivation of
+    canonicalPath/bridgeKey/prefix is TODO-4687.
+
+- [ ] TODO-4687: Derive canonical path, bridge key, and member prefix generically, with annotation override
+  - owner: ai
+  - created_at: 2026-07-06
+  - phase: Collection decoupling — Phase 1
+  - parallel_track: collection-decoupling-registry
+  - depends_on: TODO-4686
+  - scope: Derive memberPrefix (default: lowercase-first-letter of type name
+    minus known suffixes Value/Vector/Column), canonicalPath, and bridgeKey
+    from the detected type name and file location. Extend the
+    [collection_type]/[key_value_type] annotation grammar with an optional
+    named parameter (e.g. member_prefix="map") for cases the convention
+    gets wrong, consumed by the same annotation-parsing code already used
+    for [public] scanning. Verify the convention reproduces today's
+    vector->"vector", MapValue->"map" (via explicit override), SoaVector->
+    "soaVector" mappings exactly.
+  - acceptance:
+    - Derived values for vector/map/soa match today's hardcoded values
+      exactly (parity-asserted in a unit test).
+    - map.prime uses the new override parameter to get "map" instead of the
+      convention-derived "mapValue".
+  - stop_rule: Stop once derivation is proven equivalent for existing types;
+    folding deriveCollectionsSurfaces() into one loop is TODO-4688.
+
+- [ ] TODO-4688: Fold deriveCollectionsSurfaces()'s 3 hand-written blocks into one generic loop
+  - owner: ai
+  - created_at: 2026-07-06
+  - phase: Collection decoupling — Phase 1
+  - parallel_track: collection-decoupling-registry
+  - depends_on: TODO-4687
+  - scope: Replace the 3 near-identical --- Vector --- / --- Map --- /
+    --- Soa --- blocks in deriveCollectionsSurfaces() (StdlibSurfaceRegistry.cpp
+    ~545-686) with one loop over TODO-4685/4686/4687's generic discovery,
+    keeping the vectorHelpers/vectorConstructors/... named fields as
+    lookups into the loop's output for now (no consumer-visible change).
+  - acceptance:
+    - deriveCollectionsSurfaces() output is byte-identical to before
+      (parity check).
+    - The 3 hand-written blocks are deleted; one generic loop remains.
+    - Release tests pass.
+  - stop_rule: Stop once the loop replaces the 3 blocks with identical
+    output; changing storage shape/enum resolution is TODO-4689.
+
+- [ ] TODO-4689: Make collection registry storage dynamically sized; resolve enum members by canonical path
+  - owner: ai
+  - created_at: 2026-07-06
+  - phase: Collection decoupling — Phase 1
+  - parallel_track: collection-decoupling-registry
+  - depends_on: TODO-4688
+  - scope: Change Registry from a fixed std::array<StdlibSurfaceMetadata, 11>
+    to a container built once at startup from (a) the fixed non-collection
+    entries (File, Gfx, ContainerError) and (b) the dynamically-discovered
+    collection entries from TODO-4688. Keep StdlibSurfaceId's 6 collection
+    enum members, resolved once at startup by looking up "the discovered
+    entry whose canonicalPath matches today's known path" (fail loudly if
+    not found). No existing call site of StdlibSurfaceId::CollectionsManifestSurface0
+    etc. changes.
+  - acceptance:
+    - A newly-added [collection_type]-annotated .prime file (e.g. a
+      TODO-4684-style spike type, re-added temporarily for this test)
+      appears in stdlibSurfaceRegistry() with domain==Collections and no
+      enum member, with zero further edits to StdlibSurfaceRegistry.cpp/.h.
+    - All existing StdlibSurfaceId-based call sites compile and behave
+      unchanged; full suite passes.
+  - stop_rule: Stop once new-type discovery requires zero C++ edits beyond
+    the .prime file; do not migrate any of the ~40 existing enum call sites.
+
+- [ ] TODO-4690: Wire borrowedVariants/findBorrowedVariant and migrate first call site
+  - owner: ai
+  - created_at: 2026-07-06
+  - phase: Collection decoupling — Phase 2
+  - parallel_track: collection-decoupling-borrowed-variants
+  - depends_on: (none — independent of Phase 1)
+  - scope: Populate borrowedVariants for vector/map/soa registry entries
+    (count->count_ref, at->at_ref, to_aos->to_aos_ref, etc.) from the pairs
+    currently hardcoded across SemanticsValidatorExprMethodTargetResolution.cpp
+    (lines 497-508, 986-993, 2038-2056) and TemplateMonomorphExpressionRewrite.h
+    (1371-1439). Migrate exactly the `count`->`count_ref` call site to use
+    findBorrowedVariant instead of its hardcoded branch.
+  - acceptance:
+    - borrowedVariants is non-empty for vector/map/soa surfaces.
+    - findBorrowedVariant has at least one production caller.
+    - The count/count_ref hardcoded branch at the migrated call site is
+      removed; behavior unchanged; semantics tests pass.
+  - stop_rule: Stop once one call site is migrated and passing; migrating
+    the rest is TODO-4691/4692.
+
+- [ ] TODO-4691: Migrate remaining borrowed-variant chains in MethodTargetResolution
+  - owner: ai
+  - created_at: 2026-07-06
+  - phase: Collection decoupling — Phase 2
+  - parallel_track: collection-decoupling-borrowed-variants
+  - depends_on: TODO-4690
+  - scope: Migrate the remaining hardcoded helperName chains at
+    SemanticsValidatorExprMethodTargetResolution.cpp:908-913, 2421-2424,
+    2707-2803, 2865-2996, 3360-3555 to findBorrowedVariant/
+    isStdlibSurfaceMemberName queries. Split into 2-3 batches by logical
+    chain group rather than one commit.
+  - acceptance:
+    - Hardcoded helperName=="..." chains for borrowed-variant routing at
+      the listed line ranges are removed in favor of registry queries.
+    - Semantics tests pass after each batch.
+  - stop_rule: Stop once all listed chains are migrated; do not touch
+    unrelated helperName checks in the same file that aren't borrowed-
+    variant routing.
+
+- [ ] TODO-4692: Migrate soaVector* literal families to registry-driven lookup
+  - owner: ai
+  - created_at: 2026-07-06
+  - phase: Collection decoupling — Phase 2
+  - parallel_track: collection-decoupling-borrowed-variants
+  - depends_on: TODO-4691
+  - scope: Replace the hardcoded soaVectorCount/soaVectorCountRef/
+    soaVectorGetRef/soaVectorRefRef/soaVectorPush/soaVectorReserve/
+    soaVectorNew/soaVectorSingle/soaVectorFromAos string literals in
+    SemanticsBuiltinPathHelpers.cpp:927-1068 and SemanticsValidate.cpp:
+    1386-1391 with borrowedVariants/isStdlibSurfaceMemberName queries
+    against the soa registry entry.
+  - acceptance:
+    - Listed literal families are removed from the two files.
+    - SOA-specific tests (tests/unit/semantics, tests/unit/compile_run soa
+      shards) pass.
+  - stop_rule: Stop once the listed literal families are migrated; do not
+    touch soa literals outside these two files in this leaf.
+
+- [ ] TODO-4693: Clean up residual bare ContainerError string comparisons
+  - owner: ai
+  - created_at: 2026-07-06
+  - phase: Collection decoupling — Phase 2
+  - parallel_track: collection-decoupling-borrowed-variants
+  - depends_on: (none)
+  - scope: Remove the 2 remaining bare "ContainerError" string comparisons
+    left over from TODO-4675, replacing with findStdlibSurfaceMetadata
+    queries consistent with the rest of that migration.
+  - acceptance:
+    - Zero bare "ContainerError" string literal comparisons remain outside
+      StdlibSurfaceRegistry.cpp itself.
+    - Tests pass.
+  - stop_rule: Stop once both comparisons are migrated.
+
+- [ ] TODO-4694: Introduce shared collection/key-value trait wrapper helpers (behavior-preserving)
+  - owner: ai
+  - created_at: 2026-07-06
+  - phase: Collection decoupling — Phase 3
+  - parallel_track: collection-decoupling-trait-wrappers
+  - depends_on: (none — independent of Phase 1/2)
+  - scope: Introduce 2-4 new, generically-named helper functions (e.g.
+    isCollectionSurfaceTypeName, isKeyValueSurfaceTypeName) implemented as a
+    behavior-preserving union of today's isKeyValueCollectionTypeName,
+    isExperimentalCollectionBackingTypeName (literal-arg cases),
+    isCollectionVectorValue, isKeyValueStorageValue, isArrayValue. Do not
+    migrate any call sites yet.
+  - acceptance:
+    - New wrapper helpers exist with unit tests proving equivalence to the
+      union of the old helpers' current behavior for all currently-known
+      inputs.
+    - No existing call site changed.
+  - stop_rule: Stop once wrappers exist and are proven equivalent; call
+    site migration is TODO-4695/4696/4697.
+
+- [ ] TODO-4695: Migrate semantics/ call sites to the shared trait wrapper helpers
+  - owner: ai
+  - created_at: 2026-07-06
+  - phase: Collection decoupling — Phase 3
+  - parallel_track: collection-decoupling-trait-wrappers
+  - depends_on: TODO-4694
+  - scope: Migrate the ~45 isKeyValueCollectionTypeName call sites and the
+    isExperimentalCollectionBackingTypeName call sites under src/semantics/
+    to call the TODO-4694 wrappers instead.
+  - acceptance:
+    - Old helpers' call-site count in src/semantics/ drops to 0.
+    - Full semantics test suite passes.
+  - stop_rule: Stop once src/semantics/ call sites are migrated; ir_lowerer/
+    and emitter/ are separate leaves.
+
+- [ ] TODO-4696: Migrate ir_lowerer/ call sites to the shared trait wrapper helpers
+  - owner: ai
+  - created_at: 2026-07-06
+  - phase: Collection decoupling — Phase 3
+  - parallel_track: collection-decoupling-trait-wrappers
+  - depends_on: TODO-4695
+  - scope: Migrate the remaining isKeyValueCollectionTypeName/
+    isExperimentalCollectionBackingTypeName call sites under
+    src/ir_lowerer/ to the TODO-4694 wrappers.
+  - acceptance:
+    - Old helpers' call-site count in src/ir_lowerer/ drops to 0.
+    - Full ir_pipeline test suite passes.
+  - stop_rule: Stop once src/ir_lowerer/ call sites are migrated.
+
+- [ ] TODO-4697: Migrate emitter/ call sites (isCollectionVectorValue/isKeyValueStorageValue/isArrayValue) to the shared wrapper helpers
+  - owner: ai
+  - created_at: 2026-07-06
+  - phase: Collection decoupling — Phase 3
+  - parallel_track: collection-decoupling-trait-wrappers
+  - depends_on: TODO-4696
+  - scope: Migrate the 7 emitter files' isCollectionVectorValue/
+    isKeyValueStorageValue/isArrayValue call sites to the TODO-4694
+    wrappers.
+  - acceptance:
+    - Old helpers' call-site count in src/emitter/ drops to 0.
+    - Compile-run tests pass.
+  - stop_rule: Stop once emitter call sites are migrated.
+
+- [ ] TODO-4698: Swap wrapper internals to query the generic registry/has_trait; delete old type-specific helpers
+  - owner: ai
+  - created_at: 2026-07-06
+  - phase: Collection decoupling — Phase 3
+  - parallel_track: collection-decoupling-trait-wrappers
+  - depends_on: TODO-4697, TODO-4689
+  - scope: Now that all call sites go through the TODO-4694 wrappers and the
+    Phase 1 registry genericization has landed, swap the wrappers' internal
+    implementation to genuinely query stdlibSurfaceRegistry()'s domain/shape
+    iteration (or has_trait where a resolved type is available), and delete
+    isKeyValueCollectionTypeName, isExperimentalCollectionBackingTypeName,
+    isCollectionVectorValue, isKeyValueStorageValue, isArrayValue entirely.
+  - acceptance:
+    - The 5 named old helpers no longer exist anywhere in the codebase.
+    - A TODO-4684-style spike type (re-verified) is recognized correctly
+      by the wrappers with zero code changes beyond its .prime declaration.
+    - Full suite passes.
+  - stop_rule: Stop once old helpers are deleted and wrappers are generic;
+    do not begin new trait categories in this leaf.
+
+- [ ] TODO-4699: Add legacy-collection-branch reachability instrumentation
+  - owner: ai
+  - created_at: 2026-07-06
+  - phase: Collection decoupling — Phase 4 (evidence gathering)
+  - parallel_track: collection-decoupling-evidence
+  - depends_on: (none)
+  - scope: Add a benchmark-flag-gated counter family (following the
+    --benchmark-semantic-* convention in src/OptionsParser.cpp), e.g.
+    --benchmark-ir-lowerer-legacy-collection-branch-counters, that counts
+    each time isBuiltinVectorTypeName/isBuiltinSoaVectorTypeName's 3-slot
+    branches fire (IrLowererStructSlotLayoutHelpers.cpp:258,268), each time
+    the duplicate in IrLowererUninitializedStructInference.cpp:178 fires,
+    and each time isCollectionVectorOwnerPath/
+    isCollectionVectorMetadataMethodPath (IrLowererSetupTypeMethodCallResolution.cpp)
+    cause the caller to take the legacy path. Add a dual-computation
+    equivalence check (log-only, non-fatal) comparing the 3-slot hardcoded
+    layout against the generic field-based layout for TODO-4670's targets.
+  - acceptance:
+    - Full unit + compile_run suite runs with the new flag enabled and
+      produces counter output plus zero divergence log lines from the
+      dual-computation check, or a clear list of divergences if any exist.
+  - stop_rule: Stop once counters and the equivalence check are landed and
+    one full suite run's results are recorded; deletions are separate leaves.
+
+- [ ] TODO-4700: Delete isBuiltinVectorTypeName/isBuiltinSoaVectorTypeName 3-slot branches and duplicate definition
+  - owner: ai
+  - created_at: 2026-07-06
+  - phase: Collection decoupling — Phase 4
+  - parallel_track: collection-decoupling-evidence
+  - depends_on: TODO-4699
+  - scope: Given zero divergence from TODO-4699's equivalence check across
+    the full suite, delete the 3-slot early-exit branches in
+    IrLowererStructSlotLayoutHelpers.cpp (:258-267, :268-277) and their
+    isBuiltinVectorTypeName/isBuiltinSoaVectorTypeName helper definitions
+    (:21-28), and the independent duplicate definition of
+    isBuiltinVectorTypeName in IrLowererUninitializedStructInference.cpp
+    (:53-55, call site :178), replacing both with the generic field-based
+    slot layout path. This supersedes TODO-4670's original narrower scope
+    (which never mentioned the duplicate definition).
+  - acceptance:
+    - Both hardcoded 3-slot branches and the duplicate definition are gone.
+    - Full suite passes with identical slot layouts for vector/soa as
+      before (verified by the surviving generic path).
+  - stop_rule: Stop once both deletions land and tests pass; do not touch
+    isExperimentalSoaVectorTypeName/isInternalSoaColumnTypeName in this leaf.
+
+- [ ] TODO-4701: Evidence-based resolution of isCollectionVectorOwnerPath/isCollectionVectorMetadataMethodPath branches
+  - owner: ai
+  - created_at: 2026-07-06
+  - phase: Collection decoupling — Phase 4
+  - parallel_track: collection-decoupling-evidence
+  - depends_on: TODO-4699
+  - scope: Using TODO-4699's counters plus manual reachability review of
+    every remaining caller of isCollectionVectorOwnerPath and
+    isCollectionVectorMetadataMethodPath (IrLowererSetupTypeMethodCallResolution.cpp
+    :411,547-597,636-676,721,740-771,1220), delete only the sub-parts shown
+    both counter-zero and manually unreachable. Explicitly preserve the
+    tryResolvedPath(targetPath) fallback added ahead of the owner-path
+    branch's `return nullptr` (landed 2026-07-04/05 to fix a real method-
+    call-resolution bug) if that branch shows nonzero reachability; do not
+    delete it in this leaf if so. This is the evidence-based deletion TODO-
+    4681 called for.
+  - acceptance:
+    - Every deleted branch has a recorded zero-counter result across the
+      full suite AND a written manual-reachability justification.
+    - Any branch not deleted has its continued necessity documented in
+      this TODO's follow-up notes rather than silently left unaddressed.
+  - stop_rule: Stop once evidence-supported deletions land; file a follow-up
+    TODO for any branch whose evidence is inconclusive rather than forcing
+    a decision.
+
+- [ ] TODO-4702: Add a second toy collection type (Deque or RingBuffer) purely in stdlib, zero C++
+  - owner: ai
+  - created_at: 2026-07-06
+  - phase: Collection decoupling — Phase 5 (proof)
+  - parallel_track: collection-decoupling-proof
+  - depends_on: TODO-4689
+  - scope: Add stdlib/std/collections/deque.prime (or ring_buffer.prime)
+    implementing a minimal Deque<T>/RingBuffer<T> using [collection_type]
+    and ordinary [public] methods (construct, push, count, at-or-iterate),
+    with zero changes to any file under src/ or include/. Add compile_run
+    tests exercising it end to end.
+  - acceptance:
+    - The new type compiles and its compile_run tests pass.
+    - git diff for this change touches no path under src/** or include/**.
+  - stop_rule: Stop once the type works end to end with a zero-C++ diff;
+    do not add advanced operations beyond the minimal proof set.
+
+- [ ] TODO-4703: Add a diff-based zero-C++ gate script for new collection types
+  - owner: ai
+  - created_at: 2026-07-06
+  - phase: Collection decoupling — Phase 5 (proof)
+  - parallel_track: collection-decoupling-proof
+  - depends_on: TODO-4702
+  - scope: Add scripts/check_new_collection_zero_cpp.py, taking a before/
+    after git ref pair, asserting the diff between them touches only
+    stdlib/**, tests/**, docs/**. Wire it into CI/test workflow using the
+    TODO-4702 commit range as its first proof case.
+  - acceptance:
+    - The script exists, is documented, and passes against the TODO-4702
+      commit range.
+  - stop_rule: Stop once the script exists and passes for one proof case;
+    do not attempt to make it a general-purpose ongoing CI gate beyond
+    this one recorded case yet.
+
+- [ ] TODO-4704: Add an exemption-count ratchet for check_vector_surface_traces.py
+  - owner: ai
+  - created_at: 2026-07-06
+  - phase: Collection decoupling — Phase 5 (proof)
+  - parallel_track: collection-decoupling-proof
+  - depends_on: (none)
+  - scope: Add scripts/check_collection_audit_exemption_count.py that counts
+    files under src/ and include/ carrying a "*-surface-audit: exempt"
+    marker and fails if the count exceeds the current baseline recorded at
+    introduction time (115 files as of 2026-07-06). Wire into ctest/CI
+    alongside check_vector_surface_traces.py.
+  - acceptance:
+    - Script exists, records today's baseline count, and fails on an
+      artificially increased count in a test fixture.
+  - stop_rule: Stop once the ratchet exists; shrinking the baseline is
+    handled per-leaf in Phases 2-4 by removing markers as files are
+    migrated, not in this leaf.
+
+- [ ] TODO-4705: Correct stale Collection decoupling documentation
+  - owner: ai
+  - created_at: 2026-07-06
+  - phase: Collection decoupling — Phase 6 (doc hygiene)
+  - parallel_track: collection-decoupling-docs
+  - depends_on: TODO-4693
+  - scope: Fix docs/todo.md's summary line (currently claims TODO-4656
+    through TODO-4661 are all done; only 4656/4658 are). Check off
+    TODO-4658, TODO-4672, TODO-4675 in docs/CollectionDecoupling.md. Add the
+    duplicate-definition note to TODO-4670's scope (superseded in practice
+    by TODO-4700 above). Record the TODO-4703/TODO-4704 acceptance criteria
+    as the effort's top-level completion definition.
+  - acceptance:
+    - docs/todo.md and docs/CollectionDecoupling.md accurately reflect
+      source-verified completion status for TODO-4656 through TODO-4675.
+  - stop_rule: Stop once both docs are corrected; do not re-scope any
+    open TODO's acceptance criteria in this leaf.

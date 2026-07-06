@@ -1,6 +1,107 @@
 # Collection Decoupling: Moving Collection Knowledge from C++ to .prime
 
-Status: Proposed
+Status: In progress. Phase 2 (type-category declarations) and most of Phase 3
+(generic slot layout) are genuinely done, source-verified 2026-07-06 (not all
+per-item checkboxes below had been updated to reflect this — corrected in
+this pass). A `Phase 0` spike (2026-07-06) found something important enough
+to change how the rest of this effort is framed: see "Current state" below
+before reading the original Phase 1-3 sections, which are kept for history
+but are stale in places (their own per-item checkboxes were also wrong in
+places — corrected below, not rewritten, so the historical record stays
+intact).
+
+## Current state (verified 2026-07-06)
+
+A fresh, source-verified audit (grep + direct reading, not trusting this
+doc's or `docs/todo.md`'s claims) found:
+
+- **A brand-new collection type already works with zero C++ involvement
+  today.** Spiked (TODO-4684, evidence in `docs/todo_finished.md`): a
+  throwaway `[public struct collection_type] Bag<T>` in a new file under
+  `stdlib/std/collections/`, registered nowhere in
+  `StdlibSurfaceRegistry.cpp`. Construction, method-call sugar (mutating and
+  value-returning), both the VM and native backends, and
+  `meta.has_trait<Bag<i32>>(Collection)` all worked correctly out of the box.
+  **Why**: the vector/map/soa-specific hardcoded checks
+  (`isCollectionVectorOwnerPath` and friends) all gate on the vector-specific
+  *path pattern itself* — a differently-named/pathed type never matches
+  them, so it falls straight through to the generic resolution path (plain
+  definition lookup, generic field-based slot layout), which already handles
+  it correctly. **The hardcoded vector/map/soa code is not a gate blocking
+  new types — it exists purely to preserve those 3 types' own legacy
+  spelling/compatibility surface**, baggage a brand-new type never has by
+  definition.
+- This reframes the goal: proving "the language can create something like
+  Vector with zero C++ mentions" is really about retiring **Vector's own**
+  hardcoded bootstrapping in `StdlibSurfaceRegistry.cpp`'s
+  `deriveCollectionsSurfaces()` (three hand-written, near-identical blocks —
+  one each for vector/map/soa — each hardcoding the filename to scan, the
+  type-name prefix, canonical paths, and bridge keys), not about unblocking
+  new types generally (already unblocked).
+- `docs/todo.md`'s old summary line claiming "Phase 1 (TODO-4656 through
+  TODO-4661) complete" was wrong: only TODO-4656 and TODO-4658 are actually
+  done. TODO-4657 (borrowed-variant manifest metadata) is claimed done but is
+  dead code — the `borrowedVariants` schema exists and is populated with `{}`
+  everywhere, `findBorrowedVariant()` has zero callers, and every
+  `count`→`count_ref`-style mapping in the codebase is still hand-written.
+  TODO-4672 and TODO-4675 (marked open, no evidence note) are actually done.
+- The `check_vector_surface_traces.py` audit script (added separately, not
+  part of this doc's original TODOs) only tracks a narrow set of literal
+  string/symbol patterns, and **115 files** under `src/`/`include/` carry a
+  `*-surface-audit: exempt` marker exempting them from the scan entirely — it
+  cannot be trusted as evidence collection knowledge is gone; it currently
+  passes even though real hardcoding remains throughout those exempted files.
+
+### Revised phase sequence (supersedes/extends the original Phase 1-3 below)
+
+- **Phase 0 (done)** — spike a zero-C++ collection type to calibrate scope.
+  TODO-4684.
+- **Phase 1** — generalize `StdlibSurfaceRegistry`'s discovery so Vector/Map/
+  Soa's own entries are produced by the same generic path a new type would
+  use (directory scan → detect `[collection_type]`/`[key_value_type]` →
+  derive canonicalPath/bridgeKey/prefix → fold the 3 hand-written blocks into
+  one loop → dynamically-sized storage). TODO-4685 through TODO-4689. Keeps
+  `StdlibSurfaceId`'s ~11 enum members and all ~40 existing call sites that
+  reference them unchanged (those are legitimately about specific types' own
+  legacy surfaces, not a genericness gap).
+- **Phase 2** — mechanical migrations: wire up the dead
+  `borrowedVariants`/`findBorrowedVariant` schema and use it to collapse the
+  hand-written `count`/`get`/`ref`/`to_aos`→`_ref` chains still scattered
+  across `SemanticsValidatorExprMethodTargetResolution.cpp` and the
+  `soaVector*` literal families in `SemanticsBuiltinPathHelpers.cpp`/
+  `SemanticsValidate.cpp`. TODO-4690 through TODO-4693.
+- **Phase 3** — trait-based migration at scale for
+  `isKeyValueCollectionTypeName`/`isExperimentalCollectionBackingTypeName`/
+  `isCollectionVectorValue`/`isKeyValueStorageValue`/`isArrayValue` (~80 call
+  sites/~30 files): introduce shared generically-named wrapper helpers first
+  (behavior-preserving), migrate call sites in batches by directory, only
+  then swap the wrappers' internals to genuinely generic queries and delete
+  the old helpers. TODO-4694 through TODO-4698.
+- **Phase 4** — evidence-based deletion of the remaining legacy branches
+  (`isBuiltinVectorTypeName`/`isBuiltinSoaVectorTypeName`'s 3-slot layout
+  branches plus a previously-missed duplicate definition, and
+  `isCollectionVectorOwnerPath`/`isCollectionVectorMetadataMethodPath`'s
+  interceptor branches) — add reachability instrumentation first, delete
+  only what's proven dead. This is the same code family where a real
+  method-call-resolution bug was fixed 2026-07-04/05
+  (`tryResolvedPath(targetPath)` added ahead of the owner-path branch's
+  fallback `return nullptr` in
+  `IrLowererSetupTypeMethodCallResolution.cpp`) — that fix must survive this
+  phase; do not delete a branch shown reachable. TODO-4699 through
+  TODO-4701.
+- **Phase 5** — the proof: a second toy collection type (Deque/RingBuffer)
+  implemented purely in `.prime`, zero C++, plus a diff-based gate script
+  asserting a given commit range touches only `stdlib/**`/`tests/**`/
+  `docs/**`, plus a ratchet script capping the audit-exemption file count so
+  it can't silently grow. TODO-4702 through TODO-4704.
+- **Phase 6** — documentation hygiene: correct this doc's and
+  `docs/todo.md`'s stale claims (partially done in this pass), fold in the
+  duplicate-definition note for the old TODO-4670, record the Phase 5
+  scripts as the effort's top-level definition of done. TODO-4705.
+
+Full TODO items with owner/scope/acceptance/stop_rule are in `docs/todo.md`
+(TODO-4684 through TODO-4705; TODO-4684 already moved to
+`docs/todo_finished.md` as done).
 
 ## Problem
 
@@ -202,9 +303,10 @@ branching on known type names.
       replaced with manifest lookup
   - stop_rule: manifest extended and one call site migrated
 
-- [ ] TODO-4658: Migrate method target resolution helper name sets to manifest
+- [x] TODO-4658: Migrate method target resolution helper name sets to manifest
   - owner: ai
   - created_at: 2026-06-13
+  - finished_at: unknown (found already done during 2026-07-06 verification pass)
   - phase: Phase 1 - Surface Manifest Extension
   - depends_on: TODO-4657
   - scope: Replace the hardcoded method name set at
@@ -217,6 +319,13 @@ branching on known type names.
     - Vector compatibility helper check uses registry query
     - Semantics tests pass
   - stop_rule: method name sets removed and tests pass
+  - evidence: verified 2026-07-06 —
+    `SemanticsValidatorExprMethodTargetResolution.cpp:17-18` now reads
+    `isRemovedVectorCompatibilityHelper(helperName) { return
+    isStdlibSurfaceMemberName(StdlibSurfaceId::CollectionsManifestSurface0,
+    helperName); }`, a real registry query, not a hardcoded string set.
+    `isRemovedKeyValueCompatibilityHelper` (TODO-4672, same file, lines
+    20-23) is likewise already migrated.
 
 - [ ] TODO-4659: Migrate IR lowerer builtin name helpers to manifest
   - owner: ai
@@ -492,9 +601,10 @@ branching on known type names.
     - Full test suite passes
   - stop_rule: dead code removed and tests pass
 
-- [ ] TODO-4672: Migrate isRemovedKeyValueCompatibilityHelper to manifest
+- [x] TODO-4672: Migrate isRemovedKeyValueCompatibilityHelper to manifest
   - owner: ai
   - created_at: 2026-06-13
+  - finished_at: unknown (found already done during 2026-07-06 verification pass)
   - phase: Phase 1 - Surface Manifest Extension
   - depends_on: TODO-4657
   - scope: Replace the hardcoded method name set at
@@ -508,6 +618,10 @@ branching on known type names.
     - Key-value compatibility helper check uses registry query
     - Semantics tests pass
   - stop_rule: set removed and tests pass
+  - evidence: verified 2026-07-06 — now reads
+    `isStdlibSurfaceMemberName(StdlibSurfaceId::CollectionsManifestSurface2,
+    helperName) || helperName == "size"`, a registry query plus one residual
+    literal comparison, not the original 13-string hardcoded set.
 
 - [ ] TODO-4673: Migrate method dispatch chains in MethodTargetResolution
   - owner: ai
@@ -544,9 +658,10 @@ branching on known type names.
     - SOA tests pass
   - stop_rule: two files migrated and tests pass
 
-- [ ] TODO-4675: Migrate ContainerError hardcoded paths to manifest
+- [x] TODO-4675: Migrate ContainerError hardcoded paths to manifest
   - owner: ai
   - created_at: 2026-06-13
+  - finished_at: unknown (found already done during 2026-07-06 verification pass)
   - phase: Phase 1 - Surface Manifest Extension
   - depends_on: TODO-4657
   - scope: Replace hardcoded `/std/collections/ContainerError/why`
@@ -561,3 +676,8 @@ branching on known type names.
       lookup
     - Backend IR tests pass
   - stop_rule: two files migrated and tests pass
+  - evidence: verified 2026-07-06 — both files now call
+    `findStdlibSurfaceMetadata(StdlibSurfaceId::CollectionsContainerErrorHelpers)`
+    instead of literal path lookups. Minor residue not part of the original
+    acceptance criteria: 2 bare `"ContainerError"` string comparisons remain
+    (tracked as TODO-4693 in `docs/todo.md`).

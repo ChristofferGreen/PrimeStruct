@@ -878,11 +878,7 @@ bool isSoaFieldViewTypePath(std::string_view typeText) {
 }
 
 std::string canonicalizeLegacySoaToAosHelperPath(std::string_view path) {
-  std::string canonicalPath(path);
-  const size_t templateSuffix = canonicalPath.find("__t");
-  if (templateSuffix != std::string::npos) {
-    canonicalPath.erase(templateSuffix);
-  }
+  std::string canonicalPath = soa_paths::stripTemplateSpecializationSuffix(path);
   if (canonicalPath == "/to_aos") {
     return compatibilitySoaHelperTargetPath("to_aos");
   }

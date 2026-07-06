@@ -24727,3 +24727,61 @@ Moved from `docs/todo.md` during unfinished-only cleanup:
     IrLowererStructSlotLayoutHelpers.cpp. Definition-based path now runs first for canonical
     SoaColumn and SoaVector types; fallback fires only when stdlib is not imported.
     All 10 struct slot layout tests pass; 23 pre-existing SOA failures unchanged.
+- [x] TODO-4684: Spike a minimal zero-C++ collection type
+  - owner: ai
+  - created_at: 2026-07-06
+  - finished_at: 2026-07-06
+  - phase: Collection decoupling — Phase 0 (spike)
+  - parallel_track: collection-decoupling-registry
+  - depends_on: (none)
+  - scope: Add a throwaway struct under stdlib/std/collections/ annotated
+    [public struct collection_type] with one field and one [public] method,
+    with zero changes to StdlibSurfaceRegistry.cpp/.h or any enum, plus a
+    minimal compile_run test exercising it. Record exactly which operations
+    work vs fail today and why. Revert the throwaway stdlib addition after
+    recording findings (or keep only the test as a regression fixture if it
+    already fully works).
+  - acceptance:
+    - A written record (in this task block's notes, or TODO-4685's scope)
+      states which specific compiler behaviors already work for an
+      unregistered collection type and which specifically require
+      StdlibSurfaceRegistry involvement.
+  - stop_rule: Stop once the reachability findings are recorded; do not fix
+    any discovered gap in this leaf.
+  - evidence: Added a throwaway `namespace std { namespace collections {
+    namespace spike_bag { [public struct collection_type] Bag<T>() {...} } } }`
+    with a `size()` accessor and a mutating `put()` method, imported via
+    plain `import /std/collections/*`, zero StdlibSurfaceRegistry.cpp/.h
+    changes. Result: EVERYTHING already works with zero C++ involvement —
+    wildcard import discovery (CompilePipeline.cpp:801 already does a real
+    `recursive_directory_iterator` scan of `stdlib/std/collections/`, not a
+    hardcoded file list), struct construction with named-field
+    initializers, method-call sugar for both value-returning and mutating
+    methods, both VM (`--emit=vm`, exit 42) and native (`--emit=exe`, exit
+    42) backends, and `meta.has_trait<Bag<i32>>(Collection)` correctly
+    returning true (exit 7) — the `[collection_type]` trait system already
+    works fully generically with no registry involvement at all.
+    Root cause of why this "just works": the vector/map/soa-specific
+    hardcoded checks found in the earlier audit (isCollectionVectorOwnerPath
+    etc.) all *gate on the vector-specific path pattern itself* — a new,
+    differently-named/pathed type never matches those checks, so it falls
+    straight through to the *generic* resolution path (plain definition
+    lookup, generic field-based slot layout) which already handles it
+    correctly. The hardcoded vector/map/soa code is therefore not a gate
+    that blocks new types; it exists purely to preserve *those 3 types'
+    own* legacy/compatibility surface (old removed helper spellings,
+    `_ref` borrowed-variant routing, etc.) — baggage a brand-new type never
+    has to support in the first place.
+    Practical implication for scoping: StdlibSurfaceRegistry involvement is
+    NOT required for a new collection type to construct/run/be recognized
+    by the trait system. It IS required only for: (a) appearing in
+    `stdlibSurfaceRegistry()`'s domain-iteration (relevant to whatever
+    downstream tooling enumerates "known collection surfaces"), and (b) if
+    a new type ever needed compatibility-spelling/borrowed-variant support
+    of its own (not needed for a brand-new type by definition). This means
+    Phase 1's registry genericization is primarily about closing the gap
+    for *Vector's own* entry (proving its construction is no longer
+    special C++), not about unblocking new types generally — that part
+    was already unblocked. Spike file removed after recording findings
+    (TODO-4702 will add the permanent zero-C++ proof type instead).
+

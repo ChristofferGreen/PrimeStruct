@@ -545,6 +545,14 @@ const Definition *resolveMethodCallDefinitionFromExpr(
           }
         }
         if (isCollectionVectorOwnerPath(targetPath)) {
+          // targetPath already names the exact method (buildReceiverMethodTargetPath
+          // was a no-op above), so try the direct lookup before giving up: a
+          // stdlib-owned struct can have its own real field_count/field_capacity
+          // definitions directly at this path.
+          if (const Definition *resolvedDef = tryResolvedPath(targetPath);
+              resolvedDef != nullptr) {
+            return resolvedDef;
+          }
           return nullptr;
         }
       }

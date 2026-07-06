@@ -45,8 +45,12 @@ inline std::string stripGeneratedSpecializationSuffix(std::string_view path) {
 
 inline std::string stripTemplateSpecializationSuffix(std::string_view path) {
   std::string canonicalPath(path);
-  const size_t templateSuffix = canonicalPath.find("__t");
-  if (templateSuffix != std::string::npos) {
+  // Only strip a specialization suffix in the leaf segment; a "__t" in an
+  // earlier segment belongs to a specialized owner type (e.g. a monomorphized
+  // struct whose methods live at /Type__tHASH/method) and must be preserved.
+  const size_t templateSuffix = canonicalPath.rfind("__t");
+  if (templateSuffix != std::string::npos &&
+      canonicalPath.find('/', templateSuffix) == std::string::npos) {
     canonicalPath.erase(templateSuffix);
   }
   return canonicalPath;
