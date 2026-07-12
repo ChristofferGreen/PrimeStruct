@@ -89,6 +89,26 @@ bool isStdUiStructAliasMatch(const std::string &expectedStruct,
          matchesBareToQualified(argStruct, expectedStruct);
 }
 
+bool isKnownStdGfxStructAlias(std::string_view bareName) {
+  return bareName == "GraphicsSubstrate" || bareName == "SubstrateWindowConfig" ||
+         bareName == "SubstrateDeviceConfig" || bareName == "SubstrateSwapchainConfig" ||
+         bareName == "SubstrateMeshConfig" || bareName == "SubstratePipelineConfig" ||
+         bareName == "SubstrateFrameConfig" || bareName == "SubstrateRenderPassConfig" ||
+         bareName == "SubstrateDrawMeshConfig" || bareName == "SubstrateRenderPassEndConfig";
+}
+
+bool isStdGfxStructAliasMatch(const std::string &expectedStruct,
+                              const std::string &argStruct) {
+  auto matchesBareToQualified = [](const std::string &bare,
+                                   const std::string &qualified) {
+    return bare.find('/') == std::string::npos &&
+           isKnownStdGfxStructAlias(bare) &&
+           qualified == std::string("/std/gfx/") + bare;
+  };
+  return matchesBareToQualified(expectedStruct, argStruct) ||
+         matchesBareToQualified(argStruct, expectedStruct);
+}
+
 bool isStructParamMatch(const std::string &calleePath,
                         const std::string &expectedStruct,
                         const std::string &argStruct) {
@@ -104,7 +124,8 @@ bool isStructParamMatch(const std::string &calleePath,
   return matchesOptionalRootSlash(expectedStruct, argStruct) ||
          isBuiltinVectorStructMatch(expectedStruct, argStruct) ||
          isBuiltinSoaToAosStructMatch(calleePath, expectedStruct, argStruct) ||
-         isStdUiStructAliasMatch(expectedStruct, argStruct);
+         isStdUiStructAliasMatch(expectedStruct, argStruct) ||
+         isStdGfxStructAliasMatch(expectedStruct, argStruct);
 }
 
 bool resolveBuiltinSoaToAosStorageField(const StructSlotLayoutInfo &layout,
