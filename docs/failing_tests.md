@@ -204,34 +204,18 @@ All other test assertion failures have been fixed in this session:
   of hardcoded 11, reducing CPU contention during parallel test execution
 
 <!-- compile.sh:failing-tests:start -->
-- Last updated: `2026-07-12T09:45:10Z`
+- Last updated: `2026-07-12T13:22:30Z`
 - Build type: `Release`
 - Build dir: `build-release`
 - Command: `ctest --test-dir build-release --output-on-failure --parallel 4`
 - Result: `ctest` failed with status `8`.
 - Failing CTest cases:
-  - `266`: `PrimeStruct_primestruct_semantics_result_helpers_result_helpers_33_34`
-  - `267`: `PrimeStruct_primestruct_semantics_result_helpers_result_helpers_35_36`
-  - `330`: `PrimeStruct_primestruct_semantics_calls_flow_collections_calls_flow_collections_311_320`
   - `391`: `PrimeStruct_primestruct_semantics_calls_flow_comparisons_literals_calls_flow_comparisons_literals_1_10`
   - `409`: `PrimeStruct_primestruct_semantics_imports_imports_3_3`
-  - `474`: `PrimeStruct_primestruct_imports_resolver_cases_1_10`
-  - `578`: `PrimeStruct_primestruct_compile_run_smoke_core_paths_foundation_15_15`
   - `619`: `PrimeStruct_primestruct_compile_run_smoke_core_paths_wasm_and_debug_56_56`
   - `625`: `PrimeStruct_primestruct_compile_run_smoke_core_paths_wasm_and_debug_62_62`
-  - `925`: `PrimeStruct_primestruct_compile_run_emitters_cpp_collection_access_and_alias_forwarding_92_93`
-  - `926`: `PrimeStruct_primestruct_compile_run_emitters_cpp_collection_access_and_alias_forwarding_94_95`
-  - `930`: `PrimeStruct_primestruct_compile_run_emitters_cpp_map_wrapper_and_fallback_inference_101_110`
   - `1301`: `PrimeStruct_primestruct_compile_run_imports_operations_and_collections_49_50`
   - `1302`: `PrimeStruct_primestruct_compile_run_imports_operations_and_collections_51_52`
-  - `1450`: `PrimeStruct_primestruct_compile_run_examples_native_window_launcher_and_preflight_56_56`
-  - `1454`: `PrimeStruct_primestruct_compile_run_examples_native_window_launcher_and_preflight_60_60`
-  - `1458`: `PrimeStruct_primestruct_compile_run_examples_native_window_launcher_and_preflight_64_64`
-  - `1462`: `PrimeStruct_primestruct_compile_run_examples_native_window_launcher_and_preflight_68_68`
-  - `1464`: `PrimeStruct_primestruct_compile_run_examples_native_window_launcher_and_preflight_70_70`
-  - `1466`: `PrimeStruct_primestruct_compile_run_examples_metal_pipeline_and_borrow_checker_72_72`
-  - `1467`: `PrimeStruct_primestruct_compile_run_examples_metal_pipeline_and_borrow_checker_73_73`
-  - `1468`: `PrimeStruct_primestruct_compile_run_examples_metal_pipeline_and_borrow_checker_74_74`
 <!-- compile.sh:failing-tests:end -->
 
 ## Notes
