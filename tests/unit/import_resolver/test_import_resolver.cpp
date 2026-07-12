@@ -382,7 +382,7 @@ TEST_CASE("compile pipeline uses module manifest for direct gfx import") {
   REQUIRE(gfxUnit != nullptr);
   CHECK(gfxUnit->displayPath.find("stdlib/std/gfx/gfx.prime") != std::string::npos);
   CHECK(output.expandedSource.text.find("namespace experimental") == std::string::npos);
-  CHECK(output.expandedSource.text.find("/std/gfx/ignoreGfxError") != std::string::npos);
+  CHECK(output.expandedSource.text.find("ignoreGfxError") != std::string::npos);
 }
 
 TEST_CASE("compile pipeline uses module manifest for gfx wildcard import") {
@@ -407,7 +407,7 @@ TEST_CASE("compile pipeline uses module manifest for gfx wildcard import") {
   REQUIRE(gfxUnit != nullptr);
   CHECK(gfxUnit->displayPath.find("stdlib/std/gfx/gfx.prime") != std::string::npos);
   CHECK(output.expandedSource.text.find("namespace experimental") == std::string::npos);
-  CHECK(output.expandedSource.text.find("/std/gfx/ignoreGfxError") != std::string::npos);
+  CHECK(output.expandedSource.text.find("ignoreGfxError") != std::string::npos);
 }
 
 TEST_CASE("compile pipeline rejects malformed stdlib module manifest metadata") {

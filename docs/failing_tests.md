@@ -24,7 +24,98 @@ The following tests were already failing before the soa_vector → soa migration
 - `imports_operations_and_collections_*` — Multiple import operation tests (pre-existing)
 - Various other compile_run tests with runtime VM errors (pre-existing)
 
-### Fixed in this session
+### Known pre-existing bugs, not fixed this session (2026-07-12)
+
+Investigated in depth but left unfixed because a safe, narrowly-scoped fix
+was not found without risking regressions elsewhere in call/type resolution.
+Root cause recorded here so a future session doesn't have to re-derive it.
+
+- **`semantics.calls_flow.comparisons_literals` case 391 ("builtin map at
+  comparisons allow root at fallback")** — `map<i32, string>(1i32, "one"utf8)`
+  fails to compile with a spurious `argument type mismatch ... expected
+  /std/collections/map/Entry__tHASH got i32` sourced at `map.prime:119`, but
+  *only* when the same file also declares a root-level `/at` function that
+  shadows the builtin map `at`. Without that extra declaration the same
+  map construction compiles fine (see the adjacent, passing, "builtin at map
+  string comparisons validate" test). This smells like call-resolution
+  memoization/caching cross-contamination between the unrelated `/at` shadow
+  and the generic `mapInsertEntry<K, V>` instantiation — needs a proper
+  repro + backtrace session of its own rather than a speculative patch.
+- **`semantics.imports` case 409 ("collection wildcard import does not
+  publish legacy vector wrapper helpers")** — `import /std/collections/*`
+  followed by a bare `vectorCount<i32>(values)` call resolves successfully
+  (via generic/templated call-name resolution matching any definition by
+  leaf name) even though `StdlibSurfaceRegistry.cpp`'s
+  `scanStdlibPublicFunctions` explicitly filters `vectorCount`-style
+  "long name" helpers out of the wildcard-import public surface. The
+  filtering is enforced for the plain wildcard-import-alias tables
+  (`directImportAliases_`/`transitiveImportAliases_`) but bare generic/
+  templated calls resolve through a separate, more permissive path that
+  doesn't consult that filter. A blanket fix in the permissive path would
+  break other currently-passing tests that rely on `vectorCount`/
+  `soaVectorCount` being callable after `import /std/collections/vector/*`
+  or `import /std/collections/soa/*` (narrower, intentionally-permissive
+  imports) — the fix needs to be scoped to only the broad `/std/collections/*`
+  wildcard, which requires deeper changes to the generic call-resolution
+  path than were safe to make here.
+- **`compile.run.smoke` cases 619, 625 ("canonical gfx end-to-end
+  conformance runs across backends", "canonical gfx resource wrapper slice
+  runs across backends")** — `--emit=exe`/`--emit=native` IR lowering now
+  fails with `struct parameter type mismatch: expected SubstrateDeviceConfig,
+  got /std/gfx/SubstrateDeviceConfig` for ordinary `import /std/gfx/*`
+  programs (no experimental import involved). This is the same family of
+  bug as the two fixes above it in spirit (bare vs. fully-qualified struct
+  path identity not being normalized consistently) but lives in IR-lowering
+  struct-parameter matching rather than semantics argument validation, and
+  needs its own investigation.
+- **`compile.run.imports` cases 1301, 1302 ("runs experimental soa
+  single-field index syntax in C++ emitter")** — already tracked above under
+  "Pre-existing failures"; confirmed still reproducing (`values.x()[1i32]`
+  returns `1` instead of `9`), a runtime behavior bug in SoA single-field
+  view indexing, unrelated to the doc-lock/path-resolution issues above.
+
+### Flaky, not a real failure
+
+- **`compile.run.emitters.cpp` cases 925, 926, 930** — fail intermittently
+  under `ctest --parallel 4` with `sh: ...: Permission denied` executing a
+  freshly-linked fixture binary under `.primec_test_cache/`, i.e. a race
+  between the fixture-cache writer and a concurrent reader/execer. Reran
+  each in isolation (no parallel contention) and they pass cleanly every
+  time. No code change made; consider serializing fixture-cache writes if
+  this becomes a recurring CI nuisance.
+
+### Fixed in this session (2026-07-12)
+
+- **`semantics.result_helpers` cases 266, 267 (real bug)** — Argument-type
+  validation silently skipped the struct-type check whenever the parameter's
+  declared type was a bare wildcard-imported name whose real definition
+  lives under a stdlib submodule (e.g. `ImageError` from `/std/image/*`,
+  actually defined at `/std/image/ImageError`), because
+  `resolveStructTypePath` had no fallback to the file's import-alias tables.
+  Fixed by adding an import-alias fallback (`directImportAliases_` →
+  `transitiveImportAliases_` → `importAliases_`) in
+  `SemanticsValidatorExprArgumentValidation.cpp::validateArgumentTypeAgainstParam`
+  used only when both existing namespace-based resolution attempts fail.
+  Verified this doesn't change behavior for any call where the previous
+  resolution already succeeded (fallback only activates on prior empty
+  result), and re-ran the semantics suite in full.
+- **`semantics.calls_flow.collections` case 330,
+  `imports.resolver` case 474,
+  `compile.run.smoke` case 578 (gfx substrate boundary),
+  `compile.run.examples` cases 1450, 1454, 1458, 1462, 1464
+  (todo.md "Ready Now" lock, image/PNG docs lock, soa docs lock, ui docs
+  lock), and `compile.run.examples` cases 1466, 1467, 1468 (gfx compat
+  shim, ui arithmetic, ui scene producer docs locks)** — all stale
+  "stays source locked" / literal-content tests that predate the stdlib's
+  move to bare/"surface syntax" call spellings (commit `a91db28`, "Refactor
+  stdlib to surface syntax and panic()") and the map.prime helper renames.
+  Updated the expected literal strings in each test to match current,
+  intentional stdlib content (e.g. `/std/collections/vector/at(...)` →
+  `at(...)`, `/ImageError/why` wrapper param resolution, `mapCount<K, V>`
+  qualified → bare internal calls, `docs/todo.md` "Ready Now" block content).
+  No product-code behavior changed for these; only test expectations.
+
+### Fixed in this session (2026-06-24)
 
 #### Test expectation updates (2026-06-24)
 
@@ -113,14 +204,34 @@ All other test assertion failures have been fixed in this session:
   of hardcoded 11, reducing CPU contention during parallel test execution
 
 <!-- compile.sh:failing-tests:start -->
-- Last updated: `2026-07-01T20:22:28Z`
+- Last updated: `2026-07-12T09:45:10Z`
 - Build type: `Release`
 - Build dir: `build-release`
 - Command: `ctest --test-dir build-release --output-on-failure --parallel 4`
 - Result: `ctest` failed with status `8`.
 - Failing CTest cases:
+  - `266`: `PrimeStruct_primestruct_semantics_result_helpers_result_helpers_33_34`
+  - `267`: `PrimeStruct_primestruct_semantics_result_helpers_result_helpers_35_36`
+  - `330`: `PrimeStruct_primestruct_semantics_calls_flow_collections_calls_flow_collections_311_320`
+  - `391`: `PrimeStruct_primestruct_semantics_calls_flow_comparisons_literals_calls_flow_comparisons_literals_1_10`
+  - `409`: `PrimeStruct_primestruct_semantics_imports_imports_3_3`
+  - `474`: `PrimeStruct_primestruct_imports_resolver_cases_1_10`
+  - `578`: `PrimeStruct_primestruct_compile_run_smoke_core_paths_foundation_15_15`
+  - `619`: `PrimeStruct_primestruct_compile_run_smoke_core_paths_wasm_and_debug_56_56`
+  - `625`: `PrimeStruct_primestruct_compile_run_smoke_core_paths_wasm_and_debug_62_62`
+  - `925`: `PrimeStruct_primestruct_compile_run_emitters_cpp_collection_access_and_alias_forwarding_92_93`
+  - `926`: `PrimeStruct_primestruct_compile_run_emitters_cpp_collection_access_and_alias_forwarding_94_95`
+  - `930`: `PrimeStruct_primestruct_compile_run_emitters_cpp_map_wrapper_and_fallback_inference_101_110`
   - `1301`: `PrimeStruct_primestruct_compile_run_imports_operations_and_collections_49_50`
   - `1302`: `PrimeStruct_primestruct_compile_run_imports_operations_and_collections_51_52`
+  - `1450`: `PrimeStruct_primestruct_compile_run_examples_native_window_launcher_and_preflight_56_56`
+  - `1454`: `PrimeStruct_primestruct_compile_run_examples_native_window_launcher_and_preflight_60_60`
+  - `1458`: `PrimeStruct_primestruct_compile_run_examples_native_window_launcher_and_preflight_64_64`
+  - `1462`: `PrimeStruct_primestruct_compile_run_examples_native_window_launcher_and_preflight_68_68`
+  - `1464`: `PrimeStruct_primestruct_compile_run_examples_native_window_launcher_and_preflight_70_70`
+  - `1466`: `PrimeStruct_primestruct_compile_run_examples_metal_pipeline_and_borrow_checker_72_72`
+  - `1467`: `PrimeStruct_primestruct_compile_run_examples_metal_pipeline_and_borrow_checker_73_73`
+  - `1468`: `PrimeStruct_primestruct_compile_run_examples_metal_pipeline_and_borrow_checker_74_74`
 <!-- compile.sh:failing-tests:end -->
 
 ## Notes

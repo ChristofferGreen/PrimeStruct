@@ -789,15 +789,15 @@ TEST_CASE("canonical stdlib map helpers use standalone stdlib implementation") {
         std::string::npos);
   CHECK(source.find("count<K, V>([MapValue<K, V>] entries)") !=
         std::string::npos);
-  CHECK(source.find("return(/std/collections/map/mapCount<K, V>(entries))") !=
+  CHECK(source.find("return(mapCount<K, V>(entries))") !=
         std::string::npos);
   CHECK(source.find("contains<K, V>([MapValue<K, V>] entries, [K] key)") !=
         std::string::npos);
-  CHECK(source.find("return(/std/collections/map/mapContains<K, V>(entries, key))") !=
+  CHECK(source.find("return(mapContains<K, V>(entries, key))") !=
         std::string::npos);
   CHECK(source.find("tryAt<K, V>([MapValue<K, V>] entries, [K] key)") !=
         std::string::npos);
-  CHECK(source.find("return(/std/collections/map/mapTryAt<K, V>(entries, key))") !=
+  CHECK(source.find("return(mapTryAt<K, V>(entries, key))") !=
         std::string::npos);
   CHECK(source.find("insert_ref<K, V>([Reference<MapValue<K, V>> mut] entries") !=
         std::string::npos);

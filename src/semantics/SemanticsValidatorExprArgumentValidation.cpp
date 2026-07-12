@@ -686,6 +686,27 @@ bool SemanticsValidator::validateArgumentTypeAgainstParam(
     }
   }
   if (expectedStructPath.empty()) {
+    // Neither the call site's nor the callee's namespace resolved the
+    // parameter's bare type name to a struct path directly (e.g. a
+    // wildcard-imported type like ImageError whose real definition lives
+    // under /std/image, not at the root). Fall back to the file's import
+    // alias tables, which map every wildcard-imported name to its actual
+    // definition path.
+    auto resolveViaImportAlias =
+        [&](const std::unordered_map<std::string, std::string> &aliases) -> bool {
+      const auto aliasIt = aliases.find(expectedTypeName);
+      if (aliasIt != aliases.end() && structNames_.count(aliasIt->second) > 0) {
+        expectedStructPath = aliasIt->second;
+        return true;
+      }
+      return false;
+    };
+    if (!resolveViaImportAlias(directImportAliases_) &&
+        !resolveViaImportAlias(transitiveImportAliases_)) {
+      resolveViaImportAlias(importAliases_);
+    }
+  }
+  if (expectedStructPath.empty()) {
     return true;
   }
 

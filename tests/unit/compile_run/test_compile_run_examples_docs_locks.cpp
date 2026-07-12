@@ -2044,6 +2044,9 @@ TEST_CASE("todo queue and skipped doctest debt stay source locked") {
   CHECK(todo.find("### Ready Now\n\n"
                   "- TODO-4609: Reject escaping local array slices | track: array-slice-escape-diagnostics | surface: slice view lifetime diagnostics\n"
                   "- TODO-4610: Add forward cursor traversal API | track: cursor-forward-traversal | surface: forward cursor traversal\n"
+                  "- TODO-4685: Directory-scan discovery of collection .prime files | track: collection-decoupling-registry | surface: StdlibSurfaceRegistry file discovery\n"
+                  "- TODO-4690: Wire borrowedVariants/findBorrowedVariant, migrate first site | track: collection-decoupling-borrowed-variants | surface: StdlibSurfaceRegistry + method target resolution\n"
+                  "- TODO-4694: Introduce shared collection/key-value trait wrapper helpers | track: collection-decoupling-trait-wrappers | surface: semantics type-classification helpers\n"
                   "\n"
                   "### Immediate Next 10") !=
         std::string::npos);
@@ -3925,7 +3928,7 @@ TEST_CASE("image api docs and stdlib stay source locked") {
   CHECK(pngInflateExecBody.find("plus(") == std::string::npos);
   CHECK(pngInflateExecBody.find("minus(") == std::string::npos);
   const size_t pngWriteStart = imageStdlib.rfind(
-      "[effects(file_write), return<int> on_error<FileError, /std/image/ignoreFileError>]\n    writeImpl");
+      "[effects(file_write), return<int> on_error<FileError, ignoreFileError>]\n    writeImpl");
   REQUIRE(pngWriteStart != std::string::npos);
   REQUIRE(pngWriteStart > pngReadStart);
   const std::string pngReadBody = imageStdlib.substr(pngReadStart, pngWriteStart - pngReadStart);
@@ -4460,7 +4463,7 @@ TEST_CASE("small stdlib wrappers stay source locked to inferred locals") {
   // verify AoS conversion helpers are now directly in soa.prime
   CHECK(soaPublic.find("soaVectorToAos<T>([SoaVector<T>] values)") != std::string::npos);
   CHECK(soaPublic.find("soaVectorToAosRef<T>([Reference<SoaVector<T>>] values)") != std::string::npos);
-  CHECK(soaPublic.find("valueCount{/std/collections/vector/count<T>(values)}") != std::string::npos);
+  CHECK(soaPublic.find("valueCount{vectorCount<T>(values)}") != std::string::npos);
   CHECK(soaPublic.find("return(/std/collections/soa/soaVectorGet<T>(values, index))") != std::string::npos);
   CHECK(soaPublic.find("return(/std/collections/soa/soaVectorCountRef<T>(values))") != std::string::npos);
   CHECK(soaPublic.find("return(/std/collections/soa/soaVectorGetRef<T>(values, index))") != std::string::npos);
@@ -4722,7 +4725,7 @@ TEST_CASE("png top-level read write workflows stay source locked to inferred loc
   const std::string imageStdlib = readFile(imageStdlibPath.string());
   const size_t pngReadStart = imageStdlib.find("pngDecodeScanlines");
   const size_t pngWriteStart = imageStdlib.rfind(
-      "[effects(file_write), return<int> on_error<FileError, /std/image/ignoreFileError>]\n    writeImpl");
+      "[effects(file_write), return<int> on_error<FileError, ignoreFileError>]\n    writeImpl");
   REQUIRE(pngReadStart != std::string::npos);
   REQUIRE(pngWriteStart != std::string::npos);
   REQUIRE(pngWriteStart > pngReadStart);
@@ -4885,18 +4888,18 @@ TEST_CASE("ui stdlib workflows stay source locked to inferred locals") {
   CHECK(source.find("for([i32 mut] index{0i32}, index < len, ++index)") != std::string::npos);
   CHECK(source.find("[mut] words{vector<i32>()}") != std::string::npos);
   CHECK(source.find("[mut] kinds{self.kinds}") != std::string::npos);
-  CHECK(source.find("/std/collections/vector/push(records, value)") != std::string::npos);
-  CHECK(source.find("/std/collections/vector/push(words, 1i32)") != std::string::npos);
-  CHECK(source.find("/std/collections/vector/at(records, index)") != std::string::npos);
-  CHECK(source.find("/std/collections/vector/push(kinds, kind)") != std::string::npos);
-  CHECK(source.find("/std/collections/vector/push(rectHeights, 0i32)") != std::string::npos);
+  CHECK(source.find("push(records, value)") != std::string::npos);
+  CHECK(source.find("push(words, 1i32)") != std::string::npos);
+  CHECK(source.find("at(records, index)") != std::string::npos);
+  CHECK(source.find("push(kinds, kind)") != std::string::npos);
+  CHECK(source.find("push(rectHeights, 0i32)") != std::string::npos);
   CHECK(source.find("panel{self.append_panel(parentIndex, panelPaddingPx, panelGapPx, 0i32, 0i32)}") !=
         std::string::npos);
   CHECK(source.find("contentWidth{widget_text_width(textSizePx, text) + paddingPx * 2i32}") !=
         std::string::npos);
   CHECK(source.find("[i32 mut] nodeId{self.kinds.count() - 1i32}") != std::string::npos);
   CHECK(source.find("totalNodes{self.kinds.count()}") != std::string::npos);
-  CHECK(source.find("paddingPx{/std/collections/vector/at(self.paddingPxs, nodeId)}") != std::string::npos);
+  CHECK(source.find("paddingPx{at(self.paddingPxs, nodeId)}") != std::string::npos);
   CHECK(source.find("[i32 mut] childY{innerY}") != std::string::npos);
 
   CHECK(source.find("[vector<i32> mut] records{self.records}") == std::string::npos);
@@ -4987,7 +4990,7 @@ TEST_CASE("gfx stdlib compatibility shim stays source locked") {
   CHECK(gfxStdlib.find("[meshToken] this.token + vertexCount + indexCount") != std::string::npos);
   CHECK(gfxStdlib.find("[pipelineToken] shader.value + this.token + 5i32") != std::string::npos);
   CHECK(gfxStdlib.find("[drawToken] this.token + mesh.token + material.token") != std::string::npos);
-  CHECK(gfxStdlib.find("if(not_equal(queueToken, deviceToken + 1i32))") != std::string::npos);
+  CHECK(gfxStdlib.find("if(queueToken != deviceToken + 1i32) {") != std::string::npos);
   CHECK(gfxStdlib.find("return(less_than(0i32, this.token))") == std::string::npos);
   CHECK(gfxStdlib.find("if(less_than(this.height, 1i32))") == std::string::npos);
   CHECK(gfxStdlib.find("if(or(less_than(this.token, 1i32), less_than(window.token, 1i32)))") ==
@@ -5055,7 +5058,7 @@ TEST_CASE("ui stdlib arithmetic and assignment stay source locked to surface ope
   CHECK(source.find("while(nodeId >= 0i32)") != std::string::npos);
   CHECK(source.find("if(self.kinds.count() == 0i32)") != std::string::npos);
   CHECK(source.find("[i32 mut] nodeId{self.kinds.count() - 1i32}") != std::string::npos);
-  CHECK(source.find("childY = childY + /std/collections/vector/at(self.measuredHeights, childId) +") !=
+  CHECK(source.find("childY = childY + at(self.measuredHeights, childId) +") !=
         std::string::npos);
   CHECK(source.find("return(max(1i32, (textSizePx + 1i32) / 2i32))") != std::string::npos);
   CHECK(source.find("return(widget_text_advance(textSizePx) * text.count())") != std::string::npos);
@@ -5104,13 +5107,13 @@ TEST_CASE("ui scene producer composite widgets stay locked to basic widgets") {
   CHECK(source.find("[public struct]\n  UiScene()") != std::string::npos);
   CHECK(source.find("[public struct]\n  UiSceneTextOverlays()") != std::string::npos);
   CHECK(source.find("append_overlay(\n"
-                    "        [/std/ui/UiSceneTextOverlays mut] self,") !=
+                    "        [UiSceneTextOverlays mut] self,") !=
         std::string::npos);
   CHECK(source.find("        [i32] textLength,\n"
                     "        [string] text) {\n"
                     "      len{textLength}") != std::string::npos);
   CHECK(source.find("appendNode(\n"
-                    "        [/std/ui/UiScene mut] self,") !=
+                    "        [UiScene mut] self,") !=
         std::string::npos);
 
   const size_t emitSceneStart = source.find("emit_scene_panel_button(");
