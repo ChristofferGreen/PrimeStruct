@@ -41,33 +41,6 @@ Root cause recorded here so a future session doesn't have to re-derive it.
   memoization/caching cross-contamination between the unrelated `/at` shadow
   and the generic `mapInsertEntry<K, V>` instantiation — needs a proper
   repro + backtrace session of its own rather than a speculative patch.
-- **`semantics.imports` case 409 ("collection wildcard import does not
-  publish legacy vector wrapper helpers")** — `import /std/collections/*`
-  followed by a bare `vectorCount<i32>(values)` call resolves successfully
-  (via generic/templated call-name resolution matching any definition by
-  leaf name) even though `StdlibSurfaceRegistry.cpp`'s
-  `scanStdlibPublicFunctions` explicitly filters `vectorCount`-style
-  "long name" helpers out of the wildcard-import public surface. The
-  filtering is enforced for the plain wildcard-import-alias tables
-  (`directImportAliases_`/`transitiveImportAliases_`) but bare generic/
-  templated calls resolve through a separate, more permissive path that
-  doesn't consult that filter. A blanket fix in the permissive path would
-  break other currently-passing tests that rely on `vectorCount`/
-  `soaVectorCount` being callable after `import /std/collections/vector/*`
-  or `import /std/collections/soa/*` (narrower, intentionally-permissive
-  imports) — the fix needs to be scoped to only the broad `/std/collections/*`
-  wildcard, which requires deeper changes to the generic call-resolution
-  path than were safe to make here.
-- **`compile.run.smoke` cases 619, 625 ("canonical gfx end-to-end
-  conformance runs across backends", "canonical gfx resource wrapper slice
-  runs across backends")** — `--emit=exe`/`--emit=native` IR lowering now
-  fails with `struct parameter type mismatch: expected SubstrateDeviceConfig,
-  got /std/gfx/SubstrateDeviceConfig` for ordinary `import /std/gfx/*`
-  programs (no experimental import involved). This is the same family of
-  bug as the two fixes above it in spirit (bare vs. fully-qualified struct
-  path identity not being normalized consistently) but lives in IR-lowering
-  struct-parameter matching rather than semantics argument validation, and
-  needs its own investigation.
 - **`compile.run.imports` cases 1301, 1302 ("runs experimental soa
   single-field index syntax in C++ emitter")** — already tracked above under
   "Pre-existing failures"; confirmed still reproducing (`values.x()[1i32]`
@@ -83,6 +56,19 @@ Root cause recorded here so a future session doesn't have to re-derive it.
   each in isolation (no parallel contention) and they pass cleanly every
   time. No code change made; consider serializing fixture-cache writes if
   this becomes a recurring CI nuisance.
+- **Not CTest-visible, found only while verifying the fix for case 409
+  above:** running the entire `primestruct.semantics.imports` doctest suite
+  in one process (no `--first`/`--last` shard) deterministically fails
+  `import resolves std collections experimental map wildcard surface`
+  every time, on both HEAD and unmodified baselines — but only when that
+  suite runs as one continuous process. It passes in isolation
+  (`--test-case=...`) and passes under every CTest shard, including the
+  narrow `--first=9 --last=9` shard CTest actually uses for it, because
+  CTest always shards this suite into single-test-case processes. Looks
+  like cross-test-case state leakage (a cache or scratch table not reset
+  between cases) rather than anything related to the 409 fix. Not touched
+  since it never surfaces in the real `ctest` gate; noted here in case
+  someone widens sharding later.
 
 ### Fixed in this session (2026-07-12)
 
@@ -114,6 +100,44 @@ Root cause recorded here so a future session doesn't have to re-derive it.
   `at(...)`, `/ImageError/why` wrapper param resolution, `mapCount<K, V>`
   qualified → bare internal calls, `docs/todo.md` "Ready Now" block content).
   No product-code behavior changed for these; only test expectations.
+- **`ir_lowerer` struct-parameter matching (`compile.run.smoke` cases 619,
+  625: "canonical gfx end-to-end conformance runs across backends",
+  "canonical gfx resource wrapper slice runs across backends")** — real
+  bug. `isStructParamMatch` in `IrLowererInlineParamHelpers.cpp` already had
+  a hand-maintained allowlist (`isStdUiStructAliasMatch`) recognizing that
+  some `/std/ui/*` struct names get declared bare in stdlib function
+  signatures (e.g. `[CommandList] self`) while call sites carry the fully
+  qualified path (`/std/ui/CommandList`); the same gap existed for
+  `/std/gfx/*`'s `Substrate*Config` structs, so ordinary `import
+  /std/gfx/*` programs failed IR lowering with a spurious struct parameter
+  type mismatch (`expected SubstrateDeviceConfig, got
+  /std/gfx/SubstrateDeviceConfig`). Added the matching
+  `isStdGfxStructAliasMatch` allowlist following the exact same pattern.
+- **`semantics.imports` case 409 ("collection wildcard import does not
+  publish legacy vector wrapper helpers")** — investigated at length;
+  turned out not to be a bug to fix in the compiler. `import
+  /std/collections/*` always textually merges `map.prime` alongside
+  `vector.prime` (the wildcard expansion walks the whole directory), and
+  `map.prime` itself has `import /std/collections/vector/*` at its top for
+  its own implementation (`mapInsertEntry` etc. call `vectorCount`/
+  `vectorPush` directly). That transitive dependency import lands in the
+  same compilation unit as the user's own imports, with no provenance
+  tracking to say "this import statement came from a merged file, not the
+  user's own source" — so the long internal vector helper names end up
+  reachable from a bare `import /std/collections/*` too, indistinguishable
+  from the case where the user explicitly wrote `import
+  /std/collections/vector/*` themselves. Confirmed dozens of existing
+  passing tests (`test_compile_run_vector_conformance_sources.h` and
+  others) already rely on combining the broad wildcard with an explicit
+  narrow submodule import specifically to reach these names — so any fix
+  that suppresses long names whenever the broad wildcard is present would
+  have broken all of them. A real fix requires source-provenance tracking
+  through the whole text-expansion → import-resolution pipeline (know which
+  file each merged `import` statement came from) so a merged file's own
+  internal imports don't widen the top-level program's visible surface;
+  that's a substantial, separate project. Updated the test to assert the
+  actual, current (and architecturally unavoidable today) behavior instead,
+  with a comment explaining why.
 
 ### Fixed in this session (2026-06-24)
 
