@@ -72,11 +72,43 @@ Root cause recorded here so a future session doesn't have to re-derive it.
   `inferExprReturnKindImpl` well enough to not disturb it — a focused
   session of its own.
 - **`compile.run.imports` cases 1301, 1302 ("runs experimental soa
-  single-field index syntax in C++ emitter")** — already tracked above under
-  "Pre-existing failures"; confirmed still reproducing (`values.x()[1i32]`
-  returns `1` instead of `9`), a runtime behavior bug in SoA single-field
-  view indexing, unrelated to the doc-lock/path-resolution issues above.
-  Investigation in progress.
+  single-field index syntax in C++ emitter", "...reflected multi-field
+  index syntax...")** — root cause narrowed a long way, not yet fixed;
+  reproduces for both the single-field (`ScalarBox{x}`) and multi-field
+  (`Particle{x,y}`) cases, so it isn't specific to field count despite the
+  test names.
+  - `values.y()[1i32]` correctly *semantically rewrites* (confirmed via
+    `--dump-stage ast-semantic`) to `/std/collections/soa/get<Particle>(values, 1).y`
+    — the field-view-index rewrite in
+    `SemanticsValidate.cpp::rewriteExperimentalSoaFieldViewIndexes` is not
+    the bug.
+  - Calling the *internal* `soaVectorGet<Particle>(values, 1i32)` directly
+    (bypassing the public wrapper) and reading `.y` correctly returns `12`
+    (the pushed value at index 1).
+  - Calling the *public* one-line delegating wrapper
+    `/std/collections/soa/get<Particle>(values, 1i32)` — whose entire body
+    is `return(/std/collections/soa/soaVectorGet<T>(values, index))` — and
+    reading `.y` incorrectly returns `2`, which is `Particle`'s *default*
+    field initializer value (`[i32] y{2i32}` in the struct declaration),
+    not data read from the vector at all. This reproduces identically
+    whether `.y` is read directly off the call or the call result is first
+    stored in a named local, so it isn't a "field access on a temporary"
+    issue either.
+  - A synthetic, minimal repro of the *same shape* (a generic function
+    `wrap<T>(value)` whose body is `return(identity<T>(value))`, called
+    with an explicit template arg, reading a field off the result) works
+    correctly and returns the right value — so this isn't a general
+    "wrapper delegating to another generic call" bug; it's specific to
+    something about `/std/collections/soa/get<T>` itself, or to how a
+    trivial pass-through wrapper over a *stdlib-internal* generic function
+    interacts with IR-lowering's inline-call machinery
+    (`IrLowererLowerInlineCall*Step.cpp`, `IrLowererInlineParamHelpers.cpp`)
+    when the receiver is a `SoaVector<T>` collection type specifically.
+  - Not pursued further this session: the inline-call subsystem is large
+    (8+ files) and, given two near-miss regressions already hit today while
+    fixing narrower-looking bugs elsewhere in this codebase, tracing it
+    correctly needs a dedicated backtrace/debugger session
+    (`scripts/collect_backtrace.sh`) rather than more source-reading.
 
 ### Flaky, not a real failure
 
