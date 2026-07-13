@@ -291,16 +291,14 @@ All other test assertion failures have been fixed in this session:
   of hardcoded 11, reducing CPU contention during parallel test execution
 
 <!-- compile.sh:failing-tests:start -->
-- Last updated: `2026-07-12T13:22:30Z`
+- Last updated: `2026-07-13T05:10:49Z`
 - Build type: `Release`
 - Build dir: `build-release`
 - Command: `ctest --test-dir build-release --output-on-failure --parallel 4`
 - Result: `ctest` failed with status `8`.
 - Failing CTest cases:
   - `391`: `PrimeStruct_primestruct_semantics_calls_flow_comparisons_literals_calls_flow_comparisons_literals_1_10`
-  - `409`: `PrimeStruct_primestruct_semantics_imports_imports_3_3`
-  - `619`: `PrimeStruct_primestruct_compile_run_smoke_core_paths_wasm_and_debug_56_56`
-  - `625`: `PrimeStruct_primestruct_compile_run_smoke_core_paths_wasm_and_debug_62_62`
+  - `926`: `PrimeStruct_primestruct_compile_run_emitters_cpp_collection_access_and_alias_forwarding_94_95`
   - `1301`: `PrimeStruct_primestruct_compile_run_imports_operations_and_collections_49_50`
   - `1302`: `PrimeStruct_primestruct_compile_run_imports_operations_and_collections_51_52`
 <!-- compile.sh:failing-tests:end -->
