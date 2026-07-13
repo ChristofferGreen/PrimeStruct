@@ -41,11 +41,13 @@ Root cause recorded here so a future session doesn't have to re-derive it.
   memoization/caching cross-contamination between the unrelated `/at` shadow
   and the generic `mapInsertEntry<K, V>` instantiation — needs a proper
   repro + backtrace session of its own rather than a speculative patch.
+  Investigation in progress.
 - **`compile.run.imports` cases 1301, 1302 ("runs experimental soa
   single-field index syntax in C++ emitter")** — already tracked above under
   "Pre-existing failures"; confirmed still reproducing (`values.x()[1i32]`
   returns `1` instead of `9`), a runtime behavior bug in SoA single-field
   view indexing, unrelated to the doc-lock/path-resolution issues above.
+  Investigation in progress.
 
 ### Flaky, not a real failure
 
