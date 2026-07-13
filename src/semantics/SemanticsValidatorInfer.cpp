@@ -347,6 +347,43 @@ ReturnKind SemanticsValidator::inferExprReturnKindImpl(const Expr &expr,
     const BuiltinCollectionDispatchResolverAdapters builtinCollectionDispatchResolverAdapters;
     const BuiltinCollectionDispatchResolvers builtinCollectionDispatchResolvers =
         makeBuiltinCollectionDispatchResolvers(params, locals, builtinCollectionDispatchResolverAdapters);
+    if (expr.kind == Expr::Kind::Call && !expr.isMethodCall && !expr.args.empty()) {
+      std::string builtinArgsPackAccessHelperName;
+      if (getBuiltinArrayAccessName(expr, builtinArgsPackAccessHelperName)) {
+        const Expr &argsPackReceiverExpr = expr.args.front();
+        bool receiverIsDeclaredArgsPackParam = false;
+        if (argsPackReceiverExpr.kind == Expr::Kind::Name) {
+          if (const BindingInfo *receiverBinding = findParamBinding(params, argsPackReceiverExpr.name)) {
+            receiverIsDeclaredArgsPackParam =
+                normalizeBindingTypeName(receiverBinding->typeName) == "args";
+          } else if (auto localIt = locals.find(argsPackReceiverExpr.name);
+                     localIt != locals.end()) {
+            receiverIsDeclaredArgsPackParam =
+                normalizeBindingTypeName(localIt->second.typeName) == "args";
+          }
+        }
+        if (receiverIsDeclaredArgsPackParam) {
+          // The receiver is genuinely declared as `[args<T>] name` in this
+          // function's own parameter/local list, so this call is the
+          // builtin pack-index operator. Only trust `resolvedCalleePath`'s
+          // definition-based return kind below if that definition's own
+          // first parameter is itself an args-pack; otherwise it is an
+          // unrelated definition that merely happens to share this bare
+          // path (e.g. a user-declared root `at(...)` fallback with a
+          // completely different signature), and its declared return kind
+          // must not be used for this access.
+          const auto argsPackCandidateParamsIt = paramsByDef_.find(resolvedCalleePath);
+          const bool candidateAcceptsArgsPack =
+              argsPackCandidateParamsIt != paramsByDef_.end() &&
+              !argsPackCandidateParamsIt->second.empty() &&
+              normalizeBindingTypeName(
+                  argsPackCandidateParamsIt->second.front().binding.typeName) == "args";
+          if (!candidateAcceptsArgsPack) {
+            return ReturnKind::Unknown;
+          }
+        }
+      }
+    }
     auto resolveMethodCallPath = [&](const std::string &methodName, std::string &resolvedOut) -> bool {
       return resolveInferMethodCallPath(expr, params, locals, methodName, resolvedOut);
     };
