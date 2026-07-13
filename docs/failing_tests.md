@@ -63,14 +63,26 @@ Root cause recorded here so a future session doesn't have to re-derive it.
     interacts with IR-lowering's inline-call machinery
     (`IrLowererLowerInlineCall*Step.cpp`, `IrLowererInlineParamHelpers.cpp`)
     when the receiver is a `SoaVector<T>` collection type specifically.
+  - The identical wrong value (`2`, `Particle`'s default `y`) reproduces
+    on `--emit=vm` too, not just `--emit=exe`/`--emit=cpp` — so the bug is
+    in shared IR lowering (`src/ir_lowerer/`), not a C++-emitter- or
+    native-backend-specific bug. The main suspect is
+    `emitInlineDefinitionCall` in `IrLowererLowerInlineCalls.h` (~1025
+    lines; the central "inline this call to a Definition" function used by
+    every backend), which already has SoA-metadata-specific special-casing
+    for unrelated `SoaColumn`/`SoaFieldView` field_count/field_capacity
+    helpers (lines ~282-354) but nothing found (via source search) for
+    single-statement `return(otherGenericCall<T>(...))` wrapper bodies
+    specifically.
   - Not pursued further this session: the inline-call subsystem is large
-    (8+ files) and tracing it correctly needs a dedicated backtrace/debugger
-    session (`scripts/collect_backtrace.sh`) rather than more source-reading.
-    (Unlike case 391 below, this one's targeted repros — direct vs. wrapper
-    call, isolated single-file `primec` invocations — are real, not an
-    artifact of the whole-suite-run pitfall noted under "Methodology
-    note" below, so the "not pursued further" here is a genuine scope call,
-    not a false alarm.)
+    (8+ files, ~1000+ lines in the core function alone) and tracing it
+    correctly needs a dedicated backtrace/debugger session
+    (`scripts/collect_backtrace.sh`) rather than more source-reading.
+    (Unlike case 391 above, this one's targeted repros — direct vs. wrapper
+    call, isolated single-file `primec` invocations across two backends —
+    are real, not an artifact of the whole-suite-run pitfall noted under
+    "Methodology note" below, so the "not pursued further" here is a
+    genuine scope call, not a false alarm.)
 
 ### Methodology note: don't trust whole-suite-run failure *counts* as a
 regression signal
