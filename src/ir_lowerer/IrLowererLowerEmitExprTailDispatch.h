@@ -722,6 +722,93 @@
           }
           function.instructions.push_back(
               {IrOpcode::StoreLocal, static_cast<uint64_t>(indexLocal)});
+          // targetInfo.elemSlotCount reflects the SoaVector<T> local's own
+          // slot metadata, not the element type T's slot count, so it is
+          // almost always 0/1 here even when T is a multi-slot struct.
+          // Resolve T's real slot count via the "storage" field's template
+          // argument (SoaVector<T>.storage : SoaColumn<T>) so indexing into
+          // the backing buffer uses T's actual per-element stride.
+          int32_t elementSlotCount =
+              targetInfo.elemSlotCount > 0 ? targetInfo.elemSlotCount : 1;
+          std::string soaContainerStructTypeName = targetInfo.structTypeName;
+          if (soaContainerStructTypeName.empty() &&
+              inlineDispatchExpr.args.front().kind == Expr::Kind::Name) {
+            auto receiverLocalIt =
+                localsIn.find(inlineDispatchExpr.args.front().name);
+            if (receiverLocalIt != localsIn.end()) {
+              soaContainerStructTypeName = receiverLocalIt->second.structTypeName;
+            }
+          }
+          // Walk SoaVector<T>.storage (: SoaColumn<T>) -> SoaColumn<T>.data
+          // (: Pointer<uninitialized<T>>) to recover T's own struct path, since
+          // after monomorphization these field bindings carry already-specialized
+          // type names rather than template-argument text.
+          auto resolveFieldStructPath = [&](const std::string &ownerStructPath,
+                                            const std::string &fieldName,
+                                            std::string &fieldStructPathOut) {
+            auto ownerDefIt = defMap.find(ownerStructPath);
+            if (ownerDefIt == defMap.end() || ownerDefIt->second == nullptr) {
+              return false;
+            }
+            for (const auto &fieldExpr : ownerDefIt->second->statements) {
+              if (!fieldExpr.isBinding || fieldExpr.name != fieldName) {
+                continue;
+              }
+              std::string fieldTypeName;
+              std::vector<std::string> fieldTemplateArgs;
+              if (!ir_lowerer::extractFirstBindingTypeTransform(
+                      fieldExpr, fieldTypeName, fieldTemplateArgs)) {
+                return false;
+              }
+              if (fieldTemplateArgs.empty()) {
+                // Already-specialized field type (e.g. SoaColumn__tHASH).
+                fieldStructPathOut = fieldTypeName;
+                if (!fieldStructPathOut.empty() && fieldStructPathOut.front() != '/') {
+                  fieldStructPathOut.insert(fieldStructPathOut.begin(), '/');
+                }
+                return !fieldStructPathOut.empty();
+              }
+              return resolveStructTypeName(
+                  ir_lowerer::trimTemplateTypeText(fieldTemplateArgs.front()),
+                  "",
+                  fieldStructPathOut);
+            }
+            return false;
+          };
+          if (targetInfo.elemKind == LocalInfo::ValueKind::Unknown &&
+              !soaContainerStructTypeName.empty()) {
+            std::string columnStructPath;
+            if (resolveFieldStructPath(soaContainerStructTypeName, "storage", columnStructPath)) {
+              auto columnDefIt = defMap.find(columnStructPath);
+              if (columnDefIt != defMap.end() && columnDefIt->second != nullptr) {
+                for (const auto &fieldExpr : columnDefIt->second->statements) {
+                  if (!fieldExpr.isBinding || fieldExpr.name != "data") {
+                    continue;
+                  }
+                  std::string dataTypeName;
+                  std::vector<std::string> dataTemplateArgs;
+                  if (ir_lowerer::extractFirstBindingTypeTransform(
+                          fieldExpr, dataTypeName, dataTemplateArgs) &&
+                      dataTemplateArgs.size() == 1) {
+                    std::string elementTypeText = dataTemplateArgs.front();
+                    ir_lowerer::extractTopLevelUninitializedTypeText(elementTypeText, elementTypeText);
+                    std::string elementStructPath;
+                    if (resolveStructTypeName(
+                            ir_lowerer::trimTemplateTypeText(elementTypeText),
+                            "",
+                            elementStructPath)) {
+                      ir_lowerer::StructSlotLayoutInfo elementLayout;
+                      if (resolveStructSlotLayout(elementStructPath, elementLayout) &&
+                          elementLayout.totalSlots > 0) {
+                        elementSlotCount = elementLayout.totalSlots;
+                      }
+                    }
+                  }
+                  break;
+                }
+              }
+            }
+          }
           ir_lowerer::emitArrayVectorAccessLoad(
               "at",
               storagePtrLocal,
@@ -729,7 +816,7 @@
               inferExprKind(inlineDispatchExpr.args[1], localsIn),
               true,
               1,
-              targetInfo.elemSlotCount > 0 ? targetInfo.elemSlotCount : 1,
+              elementSlotCount,
               !returnsReference &&
                   targetInfo.elemKind != LocalInfo::ValueKind::Unknown,
               [&]() { return allocTempLocal(); },

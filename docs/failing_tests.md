@@ -15,92 +15,14 @@ recorded here manually before starting new implementation work.
 
 ## Current Failures
 
-### Pre-existing failures (not caused by this session's changes)
+As of 2026-07-13, the full `./scripts/compile.sh --release` gate is green:
+1548/1548 CTest cases passing, 0 failures. See the managed block at the
+bottom of this file for the live status from the most recent run.
 
-The following tests were already failing before the soa_vector → soa migration:
-
-- `calls_flow_collections_441_450` — Map compatibility test (pre-existing)
-- `vm_collections_alias_and_basics_21_30` — VM string count shadow (pre-existing)
-- `imports_operations_and_collections_*` — Multiple import operation tests (pre-existing)
-- Various other compile_run tests with runtime VM errors (pre-existing)
-
-### Known pre-existing bugs, not fixed this session (2026-07-12)
-
-Investigated in depth but left unfixed because a safe, narrowly-scoped fix
-was not found without risking regressions elsewhere in call/type resolution.
-Root cause recorded here so a future session doesn't have to re-derive it.
-
-- **`compile.run.imports` cases 1301, 1302 ("runs experimental soa
-  single-field index syntax in C++ emitter", "...reflected multi-field
-  index syntax...")** — root cause narrowed a long way, not yet fixed;
-  reproduces for both the single-field (`ScalarBox{x}`) and multi-field
-  (`Particle{x,y}`) cases, so it isn't specific to field count despite the
-  test names.
-  - `values.y()[1i32]` correctly *semantically rewrites* (confirmed via
-    `--dump-stage ast-semantic`) to `/std/collections/soa/get<Particle>(values, 1).y`
-    — the field-view-index rewrite in
-    `SemanticsValidate.cpp::rewriteExperimentalSoaFieldViewIndexes` is not
-    the bug.
-  - Calling the *internal* `soaVectorGet<Particle>(values, 1i32)` directly
-    (bypassing the public wrapper) and reading `.y` correctly returns `12`
-    (the pushed value at index 1).
-  - Calling the *public* one-line delegating wrapper
-    `/std/collections/soa/get<Particle>(values, 1i32)` — whose entire body
-    is `return(/std/collections/soa/soaVectorGet<T>(values, index))` — and
-    reading `.y` incorrectly returns `2`, which is `Particle`'s *default*
-    field initializer value (`[i32] y{2i32}` in the struct declaration),
-    not data read from the vector at all. This reproduces identically
-    whether `.y` is read directly off the call or the call result is first
-    stored in a named local, so it isn't a "field access on a temporary"
-    issue either.
-  - A synthetic, minimal repro of the *same shape* (a generic function
-    `wrap<T>(value)` whose body is `return(identity<T>(value))`, called
-    with an explicit template arg, reading a field off the result) works
-    correctly and returns the right value — so this isn't a general
-    "wrapper delegating to another generic call" bug; it's specific to
-    something about `/std/collections/soa/get<T>` itself, or to how a
-    trivial pass-through wrapper over a *stdlib-internal* generic function
-    interacts with IR-lowering's inline-call machinery
-    (`IrLowererLowerInlineCall*Step.cpp`, `IrLowererInlineParamHelpers.cpp`)
-    when the receiver is a `SoaVector<T>` collection type specifically.
-  - The identical wrong value (`2`, `Particle`'s default `y`) reproduces
-    on `--emit=vm` too, not just `--emit=exe`/`--emit=cpp` — so the bug is
-    in shared IR lowering (`src/ir_lowerer/`), not a C++-emitter- or
-    native-backend-specific bug.
-  - Ruled out `emitInlineDefinitionCall` in `IrLowererLowerInlineCalls.h`
-    (the central "inline this call to a Definition" function, ~1025 lines,
-    used by every backend) as the site of the bug: instrumented its entry
-    with a debug print filtered to any callee path containing `/soa/` or
-    any call name containing `get`, rebuilt, and ran the repro under
-    `--emit=vm`. It fires for `soaVectorNew`, `soaVectorValidateType`,
-    `SoaVector()`, and `soaVectorPush` — **but never once for
-    `get<Particle>` or `soaVectorGet<Particle>`**. So the `get<T>` wrapper
-    (and the `soaVectorGet<T>` call inside its body) is not being inlined
-    through this path at all; each is compiled as its own separate IR
-    function (consistent with the hundreds of standalone `ps_fn_N`
-    functions visible in the emitted C++). The bug is therefore in normal
-    (non-inlined) generic-function call/return-value wiring between two
-    *separately compiled* generic functions where the outer one's entire
-    body is a tail call to the inner one — a different, likely larger
-    subsystem than inlining (`IrLowererStatementCallEmission.cpp`,
-    `IrLowererLowerStatementsCallsStep.cpp`,
-    `IrLowererLowerReturnEmitStage.cpp`, and whatever assigns/returns each
-    `ps_fn_N`'s result, are the next places to instrument). Debug
-    instrumentation was removed after this finding; `git diff` confirmed
-    clean before moving on.
-  - Not pursued further this session: the call/return subsystem for
-    separately-compiled generic functions is large and, per the finding
-    above, the bug is specifically in cross-function value propagation —
-    tracing it needs either a native debugger session
-    (`scripts/collect_backtrace.sh`) attached to the failing VM/native
-    execution, or resuming the same "instrument the entry of the next
-    candidate function, rebuild, check if the specific `get<Particle>`
-    call fires" technique used above. (Unlike case 391 above, this one's
-    targeted repros — direct vs. wrapper call, isolated single-file
-    `primec` invocations across two backends — are real, not an artifact
-    of the whole-suite-run pitfall noted under "Methodology note" below,
-    so the "not pursued further" here is a genuine scope call, not a
-    false alarm.)
+The "Pre-existing failures" and "Known pre-existing bugs" entries that used
+to live in this section (dating back to the soa_vector → soa migration) have
+all since been fixed — see "Fixed in this session" below for the most recent
+batch, including root-cause writeups.
 
 ### Methodology note: don't trust whole-suite-run failure *counts* as a
 regression signal
@@ -153,6 +75,36 @@ cross-test-case pollution at all.
 
 ### Fixed in this session (2026-07-12)
 
+- **`compile.run.imports` cases 1301, 1302 ("runs experimental soa
+  single-field index syntax in C++ emitter", "...reflected multi-field
+  index syntax...") (real bug)** — root cause: the shared IR-lowering
+  codegen for `/std/collections/soa/get<T>` and `.../ref<T>` (the direct-call
+  fast path in `IrLowererLowerEmitExprTailDispatch.h`, not the general
+  `emitInlineDefinitionCall` inlining machinery, which never fires for these
+  two stdlib helpers) computes the per-element byte stride into the backing
+  `SoaColumn<T>` buffer from `ArrayVectorAccessTargetInfo::elemSlotCount`.
+  That field reflects the *container* local's own slot metadata (the
+  `SoaVector<T>` local), not element type `T`'s real slot count, and is left
+  at its `0` default for ordinary (non-args-pack) SoA locals — so the
+  fallback `elemSlotCount > 0 ? elemSlotCount : 1` silently used a stride of
+  `1` slot for every struct element type, regardless of `T`'s real size.
+  Reading `.y` off `get<Particle>(values, 1)` therefore computed the wrong
+  address and returned `Particle`'s default field-initializer value instead
+  of the pushed data. (A second contributing factor: `resolveSemanticArrayVectorAccessTargetInfo`'s
+  classifier only recognizes `array`/`vector` binding-type text, not `soa`,
+  so for SoA receivers `resolveArrayVectorAccessTargetInfo` hits its
+  semantic-fact early-return-empty path and never reaches the correct
+  local-based branch that *does* know the container's struct path.) Fixed
+  by resolving `T`'s real struct layout directly at the `get`/`ref` call
+  site: walk `SoaVector<T>.storage` (`: SoaColumn<T>`) →
+  `SoaColumn<T>.data` (`: Pointer<uninitialized<T>>`) through the
+  definition map — using already-specialized (monomorphized) field type
+  paths rather than template-argument text, since that's what's actually
+  present post-monomorphization — to recover `T`'s struct path, then uses
+  `resolveStructSlotLayout(T).totalSlots` as the element stride. Verified
+  against both tests' exact fixture sources (`values.x()[1i32]` → `9`,
+  `values.y()[1i32]` → `12`) on both `--emit=vm` and `--emit=exe`, plus the
+  full `./scripts/compile.sh --release` gate (1548/1548 passing, 0 failed).
 - **`semantics.calls_flow.comparisons_literals` case 391 (real bug)** —
   `map<K, V>`'s variadic constructor internally calls the builtin
   args-pack index operator `/at(entries, index)` where `entries` is
@@ -325,14 +277,11 @@ All other test assertion failures have been fixed in this session:
   of hardcoded 11, reducing CPU contention during parallel test execution
 
 <!-- compile.sh:failing-tests:start -->
-- Last updated: `2026-07-13T06:50:57Z`
+- Last updated: `2026-07-13T21:36:11Z`
 - Build type: `Release`
 - Build dir: `build-release`
 - Command: `ctest --test-dir build-release --output-on-failure --parallel 4`
-- Result: `ctest` failed with status `8`.
-- Failing CTest cases:
-  - `1301`: `PrimeStruct_primestruct_compile_run_imports_operations_and_collections_49_50`
-  - `1302`: `PrimeStruct_primestruct_compile_run_imports_operations_and_collections_51_52`
+- Result: no failing CTest cases.
 <!-- compile.sh:failing-tests:end -->
 
 ## Notes
