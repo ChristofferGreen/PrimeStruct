@@ -31,17 +31,46 @@ was not found without risking regressions elsewhere in call/type resolution.
 Root cause recorded here so a future session doesn't have to re-derive it.
 
 - **`semantics.calls_flow.comparisons_literals` case 391 ("builtin map at
-  comparisons allow root at fallback")** — `map<i32, string>(1i32, "one"utf8)`
-  fails to compile with a spurious `argument type mismatch ... expected
-  /std/collections/map/Entry__tHASH got i32` sourced at `map.prime:119`, but
-  *only* when the same file also declares a root-level `/at` function that
-  shadows the builtin map `at`. Without that extra declaration the same
-  map construction compiles fine (see the adjacent, passing, "builtin at map
-  string comparisons validate" test). This smells like call-resolution
-  memoization/caching cross-contamination between the unrelated `/at` shadow
-  and the generic `mapInsertEntry<K, V>` instantiation — needs a proper
-  repro + backtrace session of its own rather than a speculative patch.
-  Investigation in progress.
+  comparisons allow root at fallback")** — root cause fully identified, but
+  the fix attempted so far is unsafe. `map<K, V>`'s variadic constructor
+  (`map.prime`) internally does `mapInsertEntry<K, V>(out, /at(entries, index))`
+  where `entries` is `[args<Entry<K, V>>] entries` — a normal args-pack
+  element access. `getBuiltinArrayAccessName` correctly recognizes `/at`
+  here as the builtin pack-index operator in every code path checked
+  (`inferStructReturnPath`, `resolveExprConcreteCallPath`,
+  `getBuiltinArrayAccessName` itself). The break is specifically in
+  `SemanticsValidator::inferExprReturnKindImpl` (`SemanticsValidatorInfer.cpp`):
+  when a user program *also* declares a root-level `at(...)` function (as
+  this test does, to test the "root at fallback" path), `defMap_["/at"]`
+  now resolves to that unrelated user definition, and
+  `inferResolvedPathReturnKind`'s definition-based fallback uses *its*
+  declared return kind (`int`) for the internal `/at(entries, index)` call
+  too — even though that call has nothing to do with the user's `/at`. That
+  wrong `int` kind then gets used as the `entry` argument to
+  `mapInsertEntry<K, V>`, producing the "expected Entry got i32" mismatch
+  reported (with a wrong source-location snippet from an unrelated file) at
+  `map.prime:119`.
+  Tried: short-circuiting `inferExprReturnKindImpl` to return
+  `ReturnKind::Unknown` immediately whenever `getBuiltinArrayAccessName`
+  matches and `resolveArgsPackAccessTarget` succeeds on the receiver, before
+  ever consulting `defMap_`. This fixed case 391 but **broke 114 other
+  test cases** in `primestruct.semantics.calls_flow.collections` alone —
+  it turns out plenty of *legitimately* concrete-typed args-pack accesses
+  (e.g. `args<i32>`) rely on this same code path currently computing a real
+  scalar `ReturnKind` further down in the function (past where the
+  short-circuit was inserted), not `Unknown`; blanket-returning `Unknown`
+  destroyed that. Reverted in full and verified clean
+  (`git diff` empty, case 391 reproduces exactly as before).
+  **What a correct fix needs:** don't blanket-return `Unknown` for every
+  args-pack access — only skip the `defMap_`-based fallback when the
+  *specific* resolved definition's own declared parameter type is
+  incompatible with the receiver actually being an args-pack (i.e. verify
+  the found `/at` really accepts this receiver shape before trusting its
+  return kind, otherwise fall through to whatever already computes the
+  correct concrete kind for genuine array/pack element accesses). That
+  requires understanding the "correct concrete kind" logic living later in
+  `inferExprReturnKindImpl` well enough to not disturb it — a focused
+  session of its own.
 - **`compile.run.imports` cases 1301, 1302 ("runs experimental soa
   single-field index syntax in C++ emitter")** — already tracked above under
   "Pre-existing failures"; confirmed still reproducing (`values.x()[1i32]`
