@@ -30,47 +30,6 @@ Investigated in depth but left unfixed because a safe, narrowly-scoped fix
 was not found without risking regressions elsewhere in call/type resolution.
 Root cause recorded here so a future session doesn't have to re-derive it.
 
-- **`semantics.calls_flow.comparisons_literals` case 391 ("builtin map at
-  comparisons allow root at fallback")** — root cause fully identified, but
-  the fix attempted so far is unsafe. `map<K, V>`'s variadic constructor
-  (`map.prime`) internally does `mapInsertEntry<K, V>(out, /at(entries, index))`
-  where `entries` is `[args<Entry<K, V>>] entries` — a normal args-pack
-  element access. `getBuiltinArrayAccessName` correctly recognizes `/at`
-  here as the builtin pack-index operator in every code path checked
-  (`inferStructReturnPath`, `resolveExprConcreteCallPath`,
-  `getBuiltinArrayAccessName` itself). The break is specifically in
-  `SemanticsValidator::inferExprReturnKindImpl` (`SemanticsValidatorInfer.cpp`):
-  when a user program *also* declares a root-level `at(...)` function (as
-  this test does, to test the "root at fallback" path), `defMap_["/at"]`
-  now resolves to that unrelated user definition, and
-  `inferResolvedPathReturnKind`'s definition-based fallback uses *its*
-  declared return kind (`int`) for the internal `/at(entries, index)` call
-  too — even though that call has nothing to do with the user's `/at`. That
-  wrong `int` kind then gets used as the `entry` argument to
-  `mapInsertEntry<K, V>`, producing the "expected Entry got i32" mismatch
-  reported (with a wrong source-location snippet from an unrelated file) at
-  `map.prime:119`.
-  Tried: short-circuiting `inferExprReturnKindImpl` to return
-  `ReturnKind::Unknown` immediately whenever `getBuiltinArrayAccessName`
-  matches and `resolveArgsPackAccessTarget` succeeds on the receiver, before
-  ever consulting `defMap_`. This fixed case 391 but **broke 114 other
-  test cases** in `primestruct.semantics.calls_flow.collections` alone —
-  it turns out plenty of *legitimately* concrete-typed args-pack accesses
-  (e.g. `args<i32>`) rely on this same code path currently computing a real
-  scalar `ReturnKind` further down in the function (past where the
-  short-circuit was inserted), not `Unknown`; blanket-returning `Unknown`
-  destroyed that. Reverted in full and verified clean
-  (`git diff` empty, case 391 reproduces exactly as before).
-  **What a correct fix needs:** don't blanket-return `Unknown` for every
-  args-pack access — only skip the `defMap_`-based fallback when the
-  *specific* resolved definition's own declared parameter type is
-  incompatible with the receiver actually being an args-pack (i.e. verify
-  the found `/at` really accepts this receiver shape before trusting its
-  return kind, otherwise fall through to whatever already computes the
-  correct concrete kind for genuine array/pack element accesses). That
-  requires understanding the "correct concrete kind" logic living later in
-  `inferExprReturnKindImpl` well enough to not disturb it — a focused
-  session of its own.
 - **`compile.run.imports` cases 1301, 1302 ("runs experimental soa
   single-field index syntax in C++ emitter", "...reflected multi-field
   index syntax...")** — root cause narrowed a long way, not yet fixed;
@@ -105,10 +64,39 @@ Root cause recorded here so a future session doesn't have to re-derive it.
     (`IrLowererLowerInlineCall*Step.cpp`, `IrLowererInlineParamHelpers.cpp`)
     when the receiver is a `SoaVector<T>` collection type specifically.
   - Not pursued further this session: the inline-call subsystem is large
-    (8+ files) and, given two near-miss regressions already hit today while
-    fixing narrower-looking bugs elsewhere in this codebase, tracing it
-    correctly needs a dedicated backtrace/debugger session
-    (`scripts/collect_backtrace.sh`) rather than more source-reading.
+    (8+ files) and tracing it correctly needs a dedicated backtrace/debugger
+    session (`scripts/collect_backtrace.sh`) rather than more source-reading.
+    (Unlike case 391 below, this one's targeted repros — direct vs. wrapper
+    call, isolated single-file `primec` invocations — are real, not an
+    artifact of the whole-suite-run pitfall noted under "Methodology
+    note" below, so the "not pursued further" here is a genuine scope call,
+    not a false alarm.)
+
+### Methodology note: don't trust whole-suite-run failure *counts* as a
+regression signal
+
+While fixing case 391 above, three separate attempts each appeared to
+"break 114 other tests" in `primestruct.semantics.calls_flow.collections`
+when verified by running that suite's binary with only `--test-suite=...`
+(no `--first`/`--last` sharding) — i.e. the whole suite in one process.
+Two attempts were reverted because of this. On the third attempt, running
+the *exact same unsharded command* against a completely unmodified
+baseline reproduced the identical 114 failures, byte-for-byte identical
+test names (`diff` of the two "TEST CASE:" line sets was empty) — proving
+those 114 were a pre-existing whole-process artifact (this suite has
+1305 cases; something isn't reset across all of them when run
+back-to-back in one process — same class of issue already documented
+above under "Flaky, not a real failure" for `primestruct.semantics.imports`)
+and had nothing to do with any of the three fix attempts. The first two
+reverts were unnecessary.
+**Lesson**: when a whole-suite (unsharded) run shows failures after a
+change, always diff the exact failing test names against a same-command
+run on the unmodified baseline before concluding a fix caused a
+regression. Prefer CTest's own sharded invocation
+(`ctest -I <first-id>,<last-id>` or the specific
+`--first=N --last=N` shard from `CTestTestfile.cmake`) as the authoritative
+check — it matches what the real gate runs and doesn't hit this
+cross-test-case pollution at all.
 
 ### Flaky, not a real failure
 
@@ -135,6 +123,22 @@ Root cause recorded here so a future session doesn't have to re-derive it.
 
 ### Fixed in this session (2026-07-12)
 
+- **`semantics.calls_flow.comparisons_literals` case 391 (real bug)** —
+  `map<K, V>`'s variadic constructor internally calls the builtin
+  args-pack index operator `/at(entries, index)` where `entries` is
+  `[args<Entry<K, V>>]`. When a user program also declares its own
+  root-level `at(...)` function (an unrelated definition that merely
+  shares the bare `/at` path), `inferExprReturnKindImpl`'s
+  definition-based fallback was using *that* unrelated definition's
+  declared return kind for the args-pack access too, producing a
+  spurious "expected Entry got i32" downstream in `mapInsertEntry`.
+  Fixed narrowly in `SemanticsValidatorInfer.cpp`: only skip the
+  definition-based return kind when the call's receiver is genuinely
+  declared as an `args<T>` parameter/local in the *current* function
+  and the resolved same-path definition's own first parameter is *not*
+  itself an args-pack. Verified via exact failing-test-name diff against
+  a clean baseline (see "Methodology note" below) and the full
+  CTest-sharded range around case 391 (41/41 passing).
 - **`semantics.result_helpers` cases 266, 267 (real bug)** — Argument-type
   validation silently skipped the struct-type check whenever the parameter's
   declared type was a bare wildcard-imported name whose real definition
