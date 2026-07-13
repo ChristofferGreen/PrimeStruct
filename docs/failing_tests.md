@@ -66,23 +66,41 @@ Root cause recorded here so a future session doesn't have to re-derive it.
   - The identical wrong value (`2`, `Particle`'s default `y`) reproduces
     on `--emit=vm` too, not just `--emit=exe`/`--emit=cpp` — so the bug is
     in shared IR lowering (`src/ir_lowerer/`), not a C++-emitter- or
-    native-backend-specific bug. The main suspect is
-    `emitInlineDefinitionCall` in `IrLowererLowerInlineCalls.h` (~1025
-    lines; the central "inline this call to a Definition" function used by
-    every backend), which already has SoA-metadata-specific special-casing
-    for unrelated `SoaColumn`/`SoaFieldView` field_count/field_capacity
-    helpers (lines ~282-354) but nothing found (via source search) for
-    single-statement `return(otherGenericCall<T>(...))` wrapper bodies
-    specifically.
-  - Not pursued further this session: the inline-call subsystem is large
-    (8+ files, ~1000+ lines in the core function alone) and tracing it
-    correctly needs a dedicated backtrace/debugger session
-    (`scripts/collect_backtrace.sh`) rather than more source-reading.
-    (Unlike case 391 above, this one's targeted repros — direct vs. wrapper
-    call, isolated single-file `primec` invocations across two backends —
-    are real, not an artifact of the whole-suite-run pitfall noted under
-    "Methodology note" below, so the "not pursued further" here is a
-    genuine scope call, not a false alarm.)
+    native-backend-specific bug.
+  - Ruled out `emitInlineDefinitionCall` in `IrLowererLowerInlineCalls.h`
+    (the central "inline this call to a Definition" function, ~1025 lines,
+    used by every backend) as the site of the bug: instrumented its entry
+    with a debug print filtered to any callee path containing `/soa/` or
+    any call name containing `get`, rebuilt, and ran the repro under
+    `--emit=vm`. It fires for `soaVectorNew`, `soaVectorValidateType`,
+    `SoaVector()`, and `soaVectorPush` — **but never once for
+    `get<Particle>` or `soaVectorGet<Particle>`**. So the `get<T>` wrapper
+    (and the `soaVectorGet<T>` call inside its body) is not being inlined
+    through this path at all; each is compiled as its own separate IR
+    function (consistent with the hundreds of standalone `ps_fn_N`
+    functions visible in the emitted C++). The bug is therefore in normal
+    (non-inlined) generic-function call/return-value wiring between two
+    *separately compiled* generic functions where the outer one's entire
+    body is a tail call to the inner one — a different, likely larger
+    subsystem than inlining (`IrLowererStatementCallEmission.cpp`,
+    `IrLowererLowerStatementsCallsStep.cpp`,
+    `IrLowererLowerReturnEmitStage.cpp`, and whatever assigns/returns each
+    `ps_fn_N`'s result, are the next places to instrument). Debug
+    instrumentation was removed after this finding; `git diff` confirmed
+    clean before moving on.
+  - Not pursued further this session: the call/return subsystem for
+    separately-compiled generic functions is large and, per the finding
+    above, the bug is specifically in cross-function value propagation —
+    tracing it needs either a native debugger session
+    (`scripts/collect_backtrace.sh`) attached to the failing VM/native
+    execution, or resuming the same "instrument the entry of the next
+    candidate function, rebuild, check if the specific `get<Particle>`
+    call fires" technique used above. (Unlike case 391 above, this one's
+    targeted repros — direct vs. wrapper call, isolated single-file
+    `primec` invocations across two backends — are real, not an artifact
+    of the whole-suite-run pitfall noted under "Methodology note" below,
+    so the "not pursued further" here is a genuine scope call, not a
+    false alarm.)
 
 ### Methodology note: don't trust whole-suite-run failure *counts* as a
 regression signal
