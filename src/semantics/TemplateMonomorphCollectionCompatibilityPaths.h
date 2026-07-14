@@ -94,25 +94,11 @@ bool isExplicitRemovedCollectionMethodAlias(const std::string &receiverTypeName,
 
 std::string preferVectorStdlibHelperPath(const std::string &path,
                                          const std::unordered_map<std::string, Definition> &defs) {
+  // The soa_vector aliasing branches that used to live here were dead
+  // code: the /std/collections/soa_vector family has no definitions, so
+  // neither direction of the rewrite could ever fire (see
+  // docs/CompatPathResolutionConsolidation.md, Step 0 findings).
   std::string preferred = path;
-  const std::string samePathSoaPrefix =
-      templateMonomorphSamePathSoaHelperPrefix();
-  const std::string compatibilitySoaPrefix =
-      templateMonomorphCompatibilitySoaHelperPrefix();
-  if (preferred.rfind(samePathSoaPrefix, 0) == 0 && defs.count(preferred) == 0) {
-    const std::string suffix = preferred.substr(samePathSoaPrefix.size());
-    const std::string stdlibAlias = compatibilitySoaPrefix + suffix;
-    if (defs.count(stdlibAlias) > 0) {
-      preferred = stdlibAlias;
-    }
-  }
-  if (preferred.rfind(compatibilitySoaPrefix, 0) == 0 && defs.count(preferred) == 0) {
-    const std::string suffix = preferred.substr(compatibilitySoaPrefix.size());
-    const std::string samePathAlias = samePathSoaPrefix + suffix;
-    if (defs.count(samePathAlias) > 0) {
-      preferred = samePathAlias;
-    }
-  }
   if (preferred.rfind("/array/", 0) == 0 && defs.count(preferred) == 0) {
     const std::string suffix = preferred.substr(std::string("/array/").size());
     if (!isRemovedVectorCompatibilityHelper(suffix)) {
@@ -127,26 +113,8 @@ std::string preferVectorStdlibHelperPath(const std::string &path,
 }
 
 std::string preferVectorStdlibTemplatePath(const std::string &path, const Context &ctx) {
-  const std::string samePathSoaPrefix =
-      templateMonomorphSamePathSoaHelperPrefix();
-  const std::string compatibilitySoaPrefix =
-      templateMonomorphCompatibilitySoaHelperPrefix();
-  if (path.rfind(samePathSoaPrefix, 0) == 0) {
-    const std::string suffix = path.substr(samePathSoaPrefix.size());
-    const std::string stdlibPath = compatibilitySoaPrefix + suffix;
-    if (ctx.sourceDefs.count(stdlibPath) > 0 && ctx.templateDefs.count(stdlibPath) > 0) {
-      return stdlibPath;
-    }
-    return path;
-  }
-  if (path.rfind(compatibilitySoaPrefix, 0) == 0) {
-    const std::string suffix = path.substr(compatibilitySoaPrefix.size());
-    const std::string aliasPath = samePathSoaPrefix + suffix;
-    if (ctx.sourceDefs.count(aliasPath) > 0 && ctx.templateDefs.count(aliasPath) > 0) {
-      return aliasPath;
-    }
-    return path;
-  }
+  // The soa_vector aliasing branches that used to live here were dead
+  // code for the same reason as in preferVectorStdlibHelperPath above.
   if (path.rfind("/array/", 0) == 0) {
     const std::string suffix = path.substr(std::string("/array/").size());
     if (!isRemovedVectorCompatibilityHelper(suffix)) {

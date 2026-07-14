@@ -2799,7 +2799,7 @@ TEST_CASE("template monomorph source delegation stays stable") {
             "isExperimentalSoaVectorTypePath(value)") !=
         std::string::npos);
   CHECK(templateMonomorphCollectionCompatibilityPathsSource.find(
-            "if (preferred.rfind(samePathSoaPrefix, 0) == 0 && defs.count(preferred) == 0)") !=
+            "if (preferred.rfind(samePathSoaPrefix, 0) == 0 && defs.count(preferred) == 0)") ==
         std::string::npos);
   CHECK(templateMonomorphCollectionCompatibilityPathsSource.find(
             "if (stripTemplateMonomorphSoaHelperPrefix(\n"
@@ -2830,16 +2830,16 @@ TEST_CASE("template monomorph source delegation stays stable") {
   CHECK(templateMonomorphCollectionCompatibilityPathsSource.find(
             "shouldPreserveCanonicalMapTemplatePath") == std::string::npos);
   CHECK(templateMonomorphCollectionCompatibilityPathsSource.find(
-            "const std::string stdlibPath = compatibilitySoaPrefix + suffix;") !=
+            "const std::string stdlibPath = compatibilitySoaPrefix + suffix;") ==
         std::string::npos);
   CHECK(templateMonomorphCollectionCompatibilityPathsSource.find(
-            "if (path.rfind(samePathSoaPrefix, 0) == 0)") !=
+            "if (path.rfind(samePathSoaPrefix, 0) == 0)") ==
         std::string::npos);
   CHECK(templateMonomorphCollectionCompatibilityPathsSource.find(
-            "if (path.rfind(compatibilitySoaPrefix, 0) == 0)") !=
+            "if (path.rfind(compatibilitySoaPrefix, 0) == 0)") ==
         std::string::npos);
   CHECK(templateMonomorphCollectionCompatibilityPathsSource.find(
-            "const std::string aliasPath = samePathSoaPrefix + suffix;") !=
+            "const std::string aliasPath = samePathSoaPrefix + suffix;") ==
         std::string::npos);
   CHECK(templateMonomorphCollectionCompatibilityPathsSource.find(
             "if (path.rfind(\"/vector/\", 0) == 0)") ==
