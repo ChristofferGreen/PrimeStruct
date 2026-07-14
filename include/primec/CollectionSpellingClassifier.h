@@ -62,6 +62,16 @@ CompatSpellingDecision classifyCollectionHelperSpelling(
     CollectionReceiverFamily receiverFamily,
     const CollectionDefinitionExistsFn &definitionExists);
 
+// Prefix pre-filter for resolution-stage (monomorphization) consultation:
+// true when the rooted path belongs to a spelling family whose rows apply
+// at resolution time (/array, /vector, /map, /std/collections). Bare
+// /soa/* is deliberately excluded - its canonicalization is
+// publication-stage behavior (see the plan doc's Step 2a findings), and
+// the same-path helper family is consumed by the rewrite pipeline itself.
+// Callers use this to keep the (family-aware, hence potentially
+// linear-scan) definition callback off the hot path for ordinary calls.
+bool isResolutionStageCollectionSpellingPrefix(std::string_view rootedPath);
+
 // Decision D2: the single authoritative retired/removed name sets. The
 // scattered hardcoded copies and registry-membership variants elsewhere
 // migrate onto these; a unit test asserts these agree with the registry

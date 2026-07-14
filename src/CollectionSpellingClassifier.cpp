@@ -42,6 +42,13 @@ std::string canonicalSoaHelperPath(std::string_view helperName) {
 
 } // namespace
 
+bool isResolutionStageCollectionSpellingPrefix(std::string_view rootedPath) {
+  return startsWith(rootedPath, kArrayCompatPrefix) ||
+         startsWith(rootedPath, kRootedVectorPrefix) ||
+         startsWith(rootedPath, kRootedMapPrefix) ||
+         startsWith(rootedPath, "/std/collections/");
+}
+
 bool classifierRemovedVectorCompatibilityHelper(std::string_view helperName) {
   return helperName == "count" || helperName == "capacity" ||
          helperName == "at" || helperName == "at_unsafe" ||

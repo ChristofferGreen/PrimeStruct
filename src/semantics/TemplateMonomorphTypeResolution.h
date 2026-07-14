@@ -788,12 +788,7 @@ std::string resolveCalleePath(const Expr &expr,
     if (expr.isMethodCall) {
       return {};
     }
-    const bool collectionShaped =
-        rootedPath.rfind("/array/", 0) == 0 ||
-        rootedPath.rfind("/vector/", 0) == 0 ||
-        rootedPath.rfind("/map/", 0) == 0 ||
-        rootedPath.rfind("/std/collections/", 0) == 0;
-    if (!collectionShaped) {
+    if (!isResolutionStageCollectionSpellingPrefix(rootedPath)) {
       return {};
     }
     const CompatSpellingDecision decision = classifyCollectionHelperSpelling(
