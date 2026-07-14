@@ -395,6 +395,29 @@ observe-only) drove the classifier to convergence:
    These become the called-out intended divergences when Step 2b migrates
    the validator; each needs its pinning test at that point.
 
+## Step 2a Findings: Resolution vs Publication
+
+Migrating monomorphization's `resolveCalleePath` onto the classifier
+surfaced a distinction the Step 0 rule table had conflated. Rule-table
+row 1 (bare `/soa/*` canonicalization) is **publication-stage behavior**
+— it answers "what fact does the validator report" — not
+**resolution-stage behavior** ("which definition executes"). The bare
+`/soa/<h>` spellings are the same-path helper family that the rewrite
+pipeline itself synthesizes and consumes mid-monomorphization
+(`samePathSoaHelperTargetPath`); redirecting them during monomorphization
+breaks the stdlib SOA template machinery (observed as
+`meta.field_count requires struct type argument` errors erupting from
+inside `soa.prime` in the row-2/3/4 pinning tests).
+
+Consequence: monomorphization's classifier consultation covers the
+`/array/`, `/vector/`, `/map/`, and `/std/collections/` spelling families
+only, in direct-call shape only. The bare-SOA rows stay owned by the
+validator/publication stage, where the legacy resolver already applies
+them. This is not a violation of "one rule, one implementation": the
+classifier remains the single implementation, but which rows a stage
+consults is part of the rule, and the rule table's "call shape" column
+gains an implicit companion — consulting stage.
+
 ## Non-Goals
 
 - No behavior changes to which spellings are accepted, rejected, or

@@ -771,6 +771,59 @@ std::string resolveCalleePath(const Expr &expr,
            isRemovedKeyValueCompatibilityHelper(
                keyValueCompatibilityHelperBase(helperName));
   };
+  // Shared collection-spelling classifier consultation
+  // (docs/CompatPathResolutionConsolidation.md Step 2a). Direct-call
+  // shapes only: method-call retirement/rejection (Mechanism B) is
+  // validator-owned, and the classifier deliberately never canonicalizes
+  // method shapes. Bare /soa/* spellings are deliberately NOT consulted
+  // here: they are the same-path helper family the rewrite pipeline
+  // itself synthesizes and consumes mid-monomorphization, and their
+  // canonicalization is publication-stage behavior (what fact the
+  // validator reports), not resolution-stage behavior (which definition
+  // executes) - redirecting them here breaks the stdlib SOA template
+  // machinery. The prefix pre-filter also keeps the (family-aware, hence
+  // linear-scan) definition callback off the hot path for ordinary calls.
+  auto classifierCanonicalCollectionPath =
+      [&](const std::string &rootedPath) -> std::string {
+    if (expr.isMethodCall) {
+      return {};
+    }
+    const bool collectionShaped =
+        rootedPath.rfind("/array/", 0) == 0 ||
+        rootedPath.rfind("/vector/", 0) == 0 ||
+        rootedPath.rfind("/map/", 0) == 0 ||
+        rootedPath.rfind("/std/collections/", 0) == 0;
+    if (!collectionShaped) {
+      return {};
+    }
+    const CompatSpellingDecision decision = classifyCollectionHelperSpelling(
+        rootedPath,
+        CollectionCallShape::DirectCall,
+        CollectionReceiverFamily::None,
+        [&](std::string_view path) {
+          const std::string key(path);
+          if (ctx.sourceDefs.count(key) > 0 ||
+              ctx.templateDefs.count(key) > 0 ||
+              ctx.helperOverloads.count(key) > 0) {
+            return true;
+          }
+          const std::string templatedPrefix = key + "<";
+          const std::string specializedPrefix = key + "__t";
+          const std::string overloadPrefix = key + "__ov";
+          for (const auto &[definedPath, def] : ctx.sourceDefs) {
+            (void)def;
+            if (definedPath.rfind(templatedPrefix, 0) == 0 ||
+                definedPath.rfind(specializedPrefix, 0) == 0 ||
+                definedPath.rfind(overloadPrefix, 0) == 0) {
+              return true;
+            }
+          }
+          return false;
+        });
+    return decision.disposition == CompatSpellingDisposition::Canonicalize
+               ? decision.canonicalPath
+               : std::string{};
+  };
   std::string builtinCollection;
   if (!expr.isMethodCall &&
       getBuiltinCollectionName(expr, builtinCollection) &&
@@ -796,6 +849,11 @@ std::string resolveCalleePath(const Expr &expr,
         !stdlibSurfacePath.empty()) {
       return finalizeResolvedPath(stdlibSurfacePath);
     }
+    if (std::string classifierPath =
+            classifierCanonicalCollectionPath(expr.name);
+        !classifierPath.empty()) {
+      return finalizeResolvedPath(classifierPath);
+    }
     return finalizeResolvedPath(expr.name);
   }
   if (expr.name.find('/') != std::string::npos) {
@@ -808,6 +866,11 @@ std::string resolveCalleePath(const Expr &expr,
             resolveRootedStdlibSurfaceCompatibilityPath(rootedPath);
         !stdlibSurfacePath.empty()) {
       return finalizeResolvedPath(stdlibSurfacePath);
+    }
+    if (std::string classifierPath =
+            classifierCanonicalCollectionPath(rootedPath);
+        !classifierPath.empty()) {
+      return finalizeResolvedPath(classifierPath);
     }
     return finalizeResolvedPath(rootedPath);
   }

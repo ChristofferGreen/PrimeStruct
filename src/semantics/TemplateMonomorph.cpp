@@ -1,5 +1,6 @@
 #include <cstdio>
 #include "SemanticsHelpers.h"
+#include "primec/CollectionSpellingClassifier.h"
 #include "RequirementPredicateFacts.h"
 #include "StdlibCollectionSurfaceHelpers.h"
 #include "SemanticsValidatorInferCollectionCompatibilityInternal.h"
