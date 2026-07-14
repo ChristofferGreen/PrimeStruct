@@ -185,16 +185,20 @@ produced convincing phantom failures in this repo before.
 ## Execution Checklist
 
 Step 0 — characterize (no production edits):
-- [ ] Re-derive the landmark anchors against the executing branch head
-- [ ] Build the phase table: one row per block, in execution order, with
+- [x] Re-derive the landmark anchors against the executing branch head
+      (verified at `78407d5`: function `:35`, ct_if `:48-72`, direct-call
+      `:2080-3047`, method-call `:3048-3396`, resolvedCallPath settling
+      `:2981` / `:3364-3372`)
+- [x] Build the phase table: one row per block, in execution order, with
       trigger condition, state read, state written, early-exit behavior,
       recursion sites, downstream mid-rewrite consumers, and pinning
-      tests; append it to this document
-- [ ] Flag every row whose dependencies cannot be stated confidently and
-      attach a targeted experiment (not a guess) per flagged row
-- [ ] Exit criterion: every line of `rewriteExpr` is owned by exactly one
+      tests; append it to this document (see "Phase Table" below)
+- [x] Flag every row whose dependencies cannot be stated confidently and
+      attach a targeted experiment (not a guess) per flagged row (rows
+      R9, R19, R21 flagged in the table's "Flagged rows" subsection)
+- [x] Exit criterion: every line of `rewriteExpr` is owned by exactly one
       row; the mid-rewrite spelling-consumer rows (bare `/soa/*`
-      same-path machinery) are explicitly marked
+      same-path machinery) are explicitly marked (R16c, R19f)
 
 Step 1 — mechanical extraction (one commit per block or small coupled
 group, leaf-first):
@@ -236,6 +240,115 @@ Step 3 — explicit pipeline:
 Definition of done: `rewriteExpr` is a short driver over named phases;
 no test-visible behavior change across both corpora; the phase table in
 this document matches the code; golden pins guard the new structure.
+
+## Phase Table (Step 0 deliverable)
+
+Derived at branch head `78407d5` from
+`src/semantics/TemplateMonomorphExpressionRewrite.h` (3,440 lines;
+`rewriteExpr` spans `:35-3440`). Line anchors drift with edits — re-derive
+before each extraction commit; row identity is by trigger + behavior, not
+line number. "Terminal" means the row returns without falling through to
+the tail recursion (R21).
+
+Every line of `rewriteExpr` is owned by exactly one row below. Rows
+marked **[spelling-consumer]** read intermediate (pre-canonicalization)
+spellings mid-rewrite and must not be reordered relative to the rows
+that produce those spellings.
+
+| Row | Lines | What it does | Trigger | Terminal? |
+|---|---|---|---|---|
+| R1 | :44 | Stamp `expr.namespacePrefix` | always | no |
+| R2 | :45-47 | `rewriteTransforms` on `expr.transforms` | always | error only |
+| R3 | :48-72 | `ct_if`: rewrite predicate via `rewriteCompileTimePredicateExpr`, then each branch's `bodyArguments` recursively with copied `branchLocals` | Call named `ct_if`, 3 args | **yes** |
+| R4 | :73-175 | Bare-name → zero-arg call promotion; ambiguity diagnostics (`"ambiguous bare name"`); reads `ctx.sourceDefs`, `ctx.helperOverloads`, scoped import aliases, `locals`, `params`; on unique target replaces `expr` with a Call and falls into the call pipeline | `kind == Name` | no |
+| R5 | :176-178 | Early `return true` for non-calls | `kind != Call` | **yes** |
+| R6 | :179-229 | Lambda: recurse args + bodyArguments with lambda-scoped mapping/allowed/locals | `expr.isLambda` | **yes** |
+| R7 | :231-243 | Split inline `base<args>` spelling into `name` + `templateArgs` (`"invalid template arguments"`) | `templateArgs` empty and name parses as templated | error only |
+| R8 | :245-330 | Lambda definitions for R13: `resolvePickSumDefinition`, `appendPickPayloadLocal`, `recordBodyBindingLocal` | — (definitions) | — |
+| R9 | :332-503 | Tuple-index early rewrite: deep self-traversal finds builtin array access with tuple-typed receiver + literal index, rewrites to `/std/tuple/get(_ref)` and re-enters `rewriteExpr`; `"tuple index must be a compile-time integer"` | scoped block, always entered | yes if handled |
+| R10 | :505-594 | Type-pack spread expansion over `expr.args` and `expr.bodyArguments` (generated pack field names; reads `findBinding(params, locals, ...)`) | `ctx.currentRewriteDefinition` has `templatePackBindings` | no |
+| R11 | :596-678 | Multi-`wait` → tuple: recurse args, require Task-typed handles, `instantiateTemplate("/std/tuple/tuple")`, rewrite to brace ctor | direct call `wait`, >1 args, no body/template args | **yes** |
+| R12 | :680-766 | `make_tuple`: recurse args, infer/resolve template args, `instantiateTemplate`, rewrite to brace ctor | `resolveCalleePath == /std/tuple/make_tuple` | **yes** |
+| R13 | :768-831 | `pick`: recurse args; sum-variant payload locals via R8; rewrite arm transforms and arm bodies with `armLocals` | `isPickCall(expr)` | **yes** |
+| R14 | :833-1866 | Collection-helper lambda battery (~25 lambdas + 5 `std::function` forward decls): receiver family inference, `preferCanonicalStdlibCollectionHelperPath` (:1444), `shouldDeferStdlibCollectionHelperTemplateRewrite` (:1699), nested experimental ctor rewriters | — (definitions; consumed by R15, R16, R19, R20) | — |
+| R15 | :1868-1875 | Binding-initializer ctor canonicalization (vector then key-value) via R14 `std::function`s | `expr.isBinding` | error only |
+| R16 | :1876-2000 | Non-binding pre-dispatch normalization: (a) primitive-receiver method-style sugar rewrites `expr.name` to math method path; (b) string `at`/`at_unsafe` method → direct-call flip; (c) **[spelling-consumer]** helper-return SOA `get`/`ref` surface rejection (Mechanism B: `soaUnavailableMethodDiagnostic`, `"argument count mismatch for builtin"`, `"requires integer index"`) — reads bare `soa/…` and compat SOA spellings before canonicalization | `!expr.isBinding` | error only |
+| R17 | :2001-2015 | `resolveTemplateArgumentList` over `expr.templateArgs`; computes `allConcrete` (threaded into R19/R20) | not `pack_at`/`typeof` intrinsic | error only |
+| R18 | :2016-2079 | `pack_at` intrinsic rewrite to generated pack field access; pinned diagnostics (`"pack_at requires …"`, `"index out of range"`) | `pack_at` intrinsic | **yes** |
+| R19 | :2080-3047 | Direct-call resolution cascade (sub-phases a-i below) | `!isMethodCall && !isBinding` | no (falls through) |
+| R20 | :3048-3396 | Method-call resolution cascade (twin of R19; see below) | `expr.isMethodCall` | no (falls through) |
+| R21 | :3398-3421 | Tail recursion: `expr.args` with `locals`; `expr.bodyArguments` with accumulating `bodyLocals` | always (surviving calls) | no |
+| R22 | :3422-3438 | Builtin array-access namespace scrub (named-arg-aware receiver lookup) | direct call with builtin access name | no |
+| R23 | :3439 | `return true` | always | — |
+
+R19 sub-phases (direct-call cascade), in order:
+
+- **R19a** :2081-2100 — nested experimental ctor rewrites on the receiver
+  argument (via R14 `std::function`s).
+- **R19b** :2101-2122 — `resolveCalleePath` into `resolvedPath`;
+  `ctx.requirementOverloadSelectionError` check (Phase 1 diagnostics
+  surface here).
+- **R19c** :2123-2315 — classifier-backed canonicalization
+  (`preferredCollectionHelperPath`); mismatch writes `expr.name`.
+- **R19d** :2316-2582 — borrowed-SOA wrapper preference, removed
+  key-value compat rejections (Mechanism C), experimental KV/vector
+  temporary rewrites.
+- **R19e** :2583-2666 — receiver template-arg inference for canonical
+  KV/vector/SOA paths.
+- **R19f** :2667-2767 — template-arg validity checks; **[spelling-consumer]**
+  same-path SOA helper preference (`preferredConcreteSamePathSoaHelperPath`,
+  reads bare `/soa/*` same-path spellings); helper-overload
+  public→internal selection via `selectRequirementAwareHelperOverloadPath`
+  (`ctx.helperOverloads`; Phase 1 type-based selection lives behind this).
+- **R19g** :2768-2853 — public SOA mutator/value helper base-path
+  rewrites.
+- **R19h** :2854-2980 — template instantiation (`instantiateTemplate` →
+  `expr.name = specializedPath`, `templateArgs.clear()`) or non-template
+  finalization; implicit template-tail inference.
+- **R19i** :2981-3046 — `expr.resolvedCallPath` settling, then inline
+  experimental ctor argument rewrites against the resolved definition.
+
+R20 mirrors R19's shape with method-specific entry
+(`resolveMethodCallTemplateTarget` :3059), its own canonicalization
+(`preferredCollectionHelperMethodPath` :3073), experimental
+vector/SOA method rewrites, template instantiation (:3288), a
+`resolvedCallPath` fallback chain (:3364-3372), and the twin
+`rewriteExperimentalConstructorArgsForTarget` calls (:3373-3395). The
+Step 2 twin-diff classifies each R19/R20 sub-phase pair.
+
+Behavioral notes the extraction must preserve:
+
+- R3 returns before the branch argument expressions themselves are
+  rewritten — only their `bodyArguments` are; the
+  compile-time-specialized branch-pruning pass consumes the un-rewritten
+  branch spellings downstream.
+- R4 mutates `expr.kind` from Name to Call mid-function; every later row
+  assumes Call.
+- R19 and R20 do NOT return true on success — their mutations feed the
+  shared tail (R21/R22). Early `return false` sites are pervasive
+  (49 across both cascades).
+- The 5-test SOA gauntlet and the two pin-holder goldens (see Gate
+  Policy) pin R16c, R19c, R19f, and R20's canonicalization ordering.
+
+Flagged rows (dependencies not statable with confidence; targeted
+experiment attached — run these during Step 1, before moving the row):
+
+- **R9 vs R10**: does tuple-index detection depend on spread arguments
+  already being expanded (R10 runs after R9)? Experiment: fixture with a
+  type-pack spread argument used as a tuple-index receiver; if it
+  resolves today, order is load-bearing as-is; if it errors, the order
+  R9→R10 is safe to keep but not to swap.
+- **R19c vs R19f ordering**: classifier canonicalization runs before
+  same-path SOA preference; the consolidation doc says bare `/soa/*`
+  must survive R19c untouched (resolution-stage prefix list excludes
+  `/soa`). Experiment already exists as the SOA gauntlet — re-run it on
+  any commit that touches either sub-phase.
+- **R21 after R19/R20**: nested experimental ctor args are rewritten
+  twice (R19i/R20 tail against the resolved def, then generic R21
+  recursion). Experiment: fixture with an experimental KV ctor as an
+  argument to a plain user helper (bypasses R19i) to confirm R21 alone
+  handles it; determines whether R19i's arg rewrites are moveable into
+  R21 or must stay pre-tail.
 
 ## Non-Goals
 
