@@ -51,6 +51,40 @@ not speculation:
 5. **Verification cost.** Full-corpus gates take hours in the current
    environment, so slices must be small, independently shippable, and
    individually gated.
+6. **Recursion.** `rewriteExpr` calls itself (lines 58, 191, 210, and
+   more) to descend into `bodyArguments`, lambda parameters/bodies, and
+   argument subtrees. The phases are per-node stages inside a recursive
+   descent, not a flat pass over a list — the extracted state must be
+   per-invocation, and any phase that recurses must keep doing so through
+   the public entry point.
+7. **Textual-include architecture.** This header (like all
+   `TemplateMonomorph*.h` siblings) is textually included into
+   `TemplateMonomorph.cpp` in a fixed order, with free functions that
+   must be defined (or forward-declared in `TemplateMonomorph.cpp`'s
+   declaration block) before use. Extracted phase functions must live in
+   this header above `rewriteExpr`, or in a new header slotted earlier in
+   the include chain, or gain forward declarations — position is a build
+   constraint, not a style choice.
+
+Known facts an executor needs (verified):
+
+- Entry signature to wrap in the state struct (9 parameters):
+  `rewriteExpr(Expr &expr, const SubstMap &mapping, const
+  std::unordered_set<std::string> &allowedParams, const std::string
+  &namespacePrefix, Context &ctx, std::string &error, const LocalTypeMap
+  &locals, const std::vector<ParameterInfo> &params, bool allowMathBare)`,
+  plus the function-local `resolvedPath` and `allConcrete` threads.
+- Source-shape pin holders for this header:
+  `tests/unit/test_stdlib_map_ownership.cpp` and
+  `tests/unit/ir_pipeline/test_ir_pipeline_validation_emitter_expr_source_delegation_stays_stable.cpp`
+  (both read the file from disk and assert literal code text; budget a
+  lockstep update in every extraction commit that moves pinned text).
+- Landmark line anchors (as of the Phase 1 branch head; re-derive before
+  executing): function begins at :35; `ct_if` special case ~:48-72;
+  bare-name/local resolution ~:110-230; tuple/pack rewrites ~:660-2079;
+  direct-call block ~:2080-3046; method-call block ~:3048-3400;
+  `expr.resolvedCallPath` settling points at ~:2984 (direct) and
+  ~:3366-3372 (method).
 
 ## Why Now Is Cheaper Than Before
 
@@ -122,6 +156,77 @@ rules get a declared insertion point and the phase order is reviewable
 in one screen. If Step 0 reveals genuinely dynamic ordering (phases that
 re-enter or loop), that constraint gets documented in the pipeline
 rather than flattened away.
+
+## Gate Policy
+
+Per-commit (minutes): build the semantics + ir_pipeline test binaries in
+a fresh-or-known-clean tree and run the quick set — the overload family
+tests (`--test-case="*overload*,same-arity*"`), the classifier suite
+(`primestruct.semantics.collection_spelling_classifier`), the five-test
+SOA gauntlet, and the two pin-holder golden tests named above.
+
+Per-milestone (hours; end of Step 1, end of Step 2, end of Step 3): full
+semantics + ir_pipeline corpora with name-level failing-set diffs against
+the branch baseline, expecting identity.
+
+Any surprising failure gets the clean-rebuild triage (fresh build tree)
+before code-level debugging — stale-object artifacts have produced
+convincing phantom failures in this repo before.
+
+## Execution Checklist
+
+Step 0 — characterize (no production edits):
+- [ ] Re-derive the landmark anchors against the executing branch head
+- [ ] Build the phase table: one row per block, in execution order, with
+      trigger condition, state read, state written, early-exit behavior,
+      recursion sites, downstream mid-rewrite consumers, and pinning
+      tests; append it to this document
+- [ ] Flag every row whose dependencies cannot be stated confidently and
+      attach a targeted experiment (not a guess) per flagged row
+- [ ] Exit criterion: every line of `rewriteExpr` is owned by exactly one
+      row; the mid-rewrite spelling-consumer rows (bare `/soa/*`
+      same-path machinery) are explicitly marked
+
+Step 1 — mechanical extraction (one commit per block or small coupled
+group, leaf-first):
+- [ ] Define the per-invocation state struct wrapping the 9-parameter
+      signature plus `resolvedPath`/`allConcrete`
+- [ ] Extract trailing constructor-argument rewrite calls (no downstream
+      dependents) as the pilot slice
+- [ ] Extract the method-call cascade blocks, bottom-up
+- [ ] Extract the direct-call cascade blocks, bottom-up
+- [ ] Extract the pre-cascade blocks (tuple/pack, bare-name, `ct_if`)
+- [ ] Each commit: zero logic change, pin updates in the same commit,
+      per-commit gates green
+- [ ] Milestone gate: full corpora name-identical
+- [ ] Exit criterion: `rewriteExpr` body is a readable sequence of named
+      phase calls (target: under ~150 lines), all behavior identical
+
+Step 2 — de-duplicate the twins:
+- [ ] Textually diff the extracted direct-call vs method-call phase
+      functions; classify each pair identical / drifted
+- [ ] Merge identical pairs (first candidates: synthetic same-path SOA
+      template-carry clearing; canonical collection-helper preference)
+- [ ] For each drifted pair: either document the divergence as intended
+      (comment + keep separate) or fix it as a separately-gated behavior
+      commit with its own pinning test — never merge-and-hope
+- [ ] Milestone gate: full corpora name-identical (plus any deliberate,
+      pinned fixes called out per-commit)
+
+Step 3 — explicit pipeline:
+- [ ] Order the phase calls as a single visible sequence over the state
+      struct; document any genuinely dynamic ordering instead of
+      flattening it
+- [ ] Update the pin-holder tests to pin the pipeline shape (the phase
+      sequence) rather than incidental block internals, keeping them as
+      structure guards
+- [ ] Milestone gate: full corpora name-identical
+- [ ] Update this document's status header and note completion in
+      `docs/todo.md` conventions if applicable
+
+Definition of done: `rewriteExpr` is a short driver over named phases;
+no test-visible behavior change across both corpora; the phase table in
+this document matches the code; golden pins guard the new structure.
 
 ## Non-Goals
 
