@@ -1318,8 +1318,11 @@ TEST_CASE("soa pending diagnostics route through shared semantics helpers") {
             "candidate.kind != Expr::Kind::Call || !isResolvedMapConstructorPath(resolveCalleePath(candidate))") ==
         std::string::npos);
   CHECK(buildInitializerInferenceSource.find(
+            "const CompatSpellingDecision decision = classifyCollectionHelperSpelling(") !=
+        std::string::npos);
+  CHECK(buildInitializerInferenceSource.find(
             "return preferredSoaHelperTargetForCollectionType(\n"
-            "        helperName, internalSoaCollectionTypePath(true));") !=
+            "        helperName, internalSoaCollectionTypePath(true));") ==
         std::string::npos);
   CHECK(buildInitializerInferenceSource.find(
             "const bool wantsInternalSoaCollection =\n"
@@ -2249,7 +2252,7 @@ TEST_CASE("soa pending diagnostics route through shared semantics helpers") {
             "const bool isSoaCountOrAccessSurfaceSpelling =") !=
         std::string::npos);
   CHECK(buildInitializerInferenceSource.find(
-            "auto explicitStdSoaHelperName = [&]() -> std::string {") !=
+            "auto explicitStdSoaHelperName = [&]() -> std::string {") ==
         std::string::npos);
   CHECK((buildInitializerInferenceSource.find(
             "normalizedPrefix == \"soa\"") !=

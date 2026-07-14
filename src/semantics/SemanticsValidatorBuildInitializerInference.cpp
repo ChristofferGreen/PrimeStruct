@@ -5,8 +5,6 @@
 #include "primec/CollectionSpellingClassifier.h"
 
 #include <algorithm>
-#include <cstdlib>
-#include <iostream>
 #include <limits>
 
 namespace primec::semantics {
@@ -106,14 +104,13 @@ bool SemanticsValidator::shouldBypassGraphBindingLookup(const Expr &candidate) c
 
 std::string SemanticsValidator::preferredCollectionHelperResolvedPath(
     const Expr &initializerCall) const {
-  // Step 2b (docs/CompatPathResolutionConsolidation.md): the shared
-  // spelling classifier is now the primary answer. The legacy composed
-  // resolver is retained only for the PRIMESTRUCT_RESOLUTION_DIFF_AUDIT
-  // comparison until Step 2c retires it. The one intended behavior change
-  // is decision D5: explicit /std/collections/soa_vector/* spellings no
-  // longer canonicalize to the dead family (the classifier passes them
-  // through, and callers' resolveCalleePath fallback preserves the
-  // spelled path for emergent unknown-target handling).
+  // Steps 2b/2c (docs/CompatPathResolutionConsolidation.md): the shared
+  // spelling classifier is the single answer; the legacy composed
+  // resolver is retired. The one intended behavior change from the
+  // legacy era is decision D5: explicit /std/collections/soa_vector/*
+  // spellings no longer canonicalize to the dead family (the classifier
+  // passes them through, and callers' resolveCalleePath fallback
+  // preserves the spelled path for emergent unknown-target handling).
   if (initializerCall.kind != Expr::Kind::Call ||
       initializerCall.isMethodCall || initializerCall.name.empty()) {
     return {};
@@ -137,137 +134,9 @@ std::string SemanticsValidator::preferredCollectionHelperResolvedPath(
         return defMap_.count(std::string(path)) > 0 ||
                hasDefinitionFamilyPath(path);
       });
-  const std::string classifierPath =
-      decision.disposition == CompatSpellingDisposition::Canonicalize
-          ? decision.canonicalPath
-          : std::string{};
-  static const bool auditEnabled =
-      std::getenv("PRIMESTRUCT_RESOLUTION_DIFF_AUDIT") != nullptr;
-  if (auditEnabled) {
-    const std::string legacy =
-        preferredCollectionHelperResolvedPathLegacy(initializerCall);
-    if (classifierPath != legacy) {
-      std::cerr << "RESOLUTION_DIFF_AUDIT preferredCollectionHelperResolvedPath"
-                << " legacy='" << legacy << "' classifier='" << classifierPath
-                << "' name='" << initializerCall.name << "' prefix='"
-                << initializerCall.namespacePrefix << "'\n";
-    }
-  }
-  return classifierPath;
-}
-
-std::string SemanticsValidator::preferredCollectionHelperResolvedPathLegacy(
-    const Expr &initializerCall) const {
-  if (initializerCall.kind != Expr::Kind::Call || initializerCall.isMethodCall) {
-    return {};
-  }
-
-  std::string normalizedName = initializerCall.name;
-  if (!normalizedName.empty() && normalizedName.front() == '/') {
-    normalizedName.erase(normalizedName.begin());
-  }
-  std::string normalizedPrefix = initializerCall.namespacePrefix;
-  if (!normalizedPrefix.empty() && normalizedPrefix.front() == '/') {
-    normalizedPrefix.erase(normalizedPrefix.begin());
-  }
-
-  auto explicitStdKeyValueHelperName = [&]() -> std::string {
-    const StdlibSurfaceMetadata *metadata = keyValueHelperSurfaceMetadataLocal();
-    if (metadata == nullptr) {
-      return {};
-    }
-    auto canonicalMemberName = [&](std::string_view path) -> std::string {
-      std::string helperName;
-      if (!stripStdlibSurfaceRootedMemberName(path, metadata->canonicalPath,
-                                              helperName)) {
-        return {};
-      }
-      const std::string_view memberName =
-          resolveStdlibSurfaceMemberName(*metadata, helperName);
-      return memberName.empty() ? std::string{} : std::string(memberName);
-    };
-    if (!normalizedPrefix.empty()) {
-      const std::string helperName =
-          canonicalMemberName(normalizedPrefix + "/" + normalizedName);
-      if (!helperName.empty()) {
-        return helperName;
-      }
-    }
-    return canonicalMemberName(normalizedName);
-  };
-  auto explicitStdVectorHelperName = [&]() -> std::string {
-    if (isCanonicalVectorCompatibilityNamespace(normalizedPrefix) &&
-        normalizedName != "vector" &&
-        isVectorCompatibilityHelperName(normalizedName)) {
-      return normalizedName;
-    }
-    if (isUnrootedCanonicalVectorCompatibilityPath(normalizedName)) {
-      const std::string helperName(
-          stripUnrootedCanonicalVectorCompatibilityPrefix(normalizedName));
-      if (helperName != "vector" && isVectorCompatibilityHelperName(helperName)) {
-        return helperName;
-      }
-    }
-    return {};
-  };
-  auto explicitStdSoaHelperName = [&]() -> std::string {
-    if (usesExplicitPublicSoaHelperPath(normalizedPrefix, {}) &&
-        isExplicitPublicSoaSurfaceHelperName(normalizedName)) {
-      return normalizedName;
-    }
-    if (isCompatibilitySoaSurfaceNamespace(normalizedPrefix) &&
-        isSupportedCompatibilitySoaHelperName(normalizedName)) {
-      return normalizedName;
-    }
-    std::string helperName;
-    bool usesPublicSurface = false;
-    if (splitSoaSurfaceHelperPath(normalizedName,
-                                  &helperName,
-                                  &usesPublicSurface)) {
-      const bool supported = usesPublicSurface
-                                 ? isExplicitPublicSoaSurfaceHelperName(helperName)
-                                 : isSupportedCompatibilitySoaHelperName(helperName);
-      if (supported) {
-        return helperName;
-      }
-    }
-    return {};
-  };
-
-  if (const std::string helperName = explicitStdKeyValueHelperName();
-      !helperName.empty()) {
-    const std::string canonical =
-        metadataBackedCanonicalKeyValueHelperPath(helperName);
-    if (defMap_.count(canonical) > 0) {
-      return canonical;
-    }
-    return {};
-  }
-
-  if (const std::string helperName = explicitStdVectorHelperName();
-      !helperName.empty()) {
-    const std::string canonical =
-        canonicalVectorCompatibilityHelperPathOrFallback(helperName);
-    if (defMap_.count(canonical) > 0) {
-      return canonical;
-    }
-    return {};
-  }
-
-  if (const std::string helperName = explicitStdSoaHelperName();
-      !helperName.empty()) {
-    const bool usesExplicitPublicSoaHelperPath =
-        semantics::usesExplicitPublicSoaHelperPath(normalizedPrefix, normalizedName);
-    const std::string publicPath = publicSoaHelperTargetPath(helperName);
-    if (isExplicitPublicSoaSurfaceHelperName(helperName) &&
-        usesExplicitPublicSoaHelperPath) {
-      return publicPath;
-    }
-    return preferredSoaHelperTargetForCollectionType(
-        helperName, internalSoaCollectionTypePath(true));
-  }
-
-  return {};
+  return decision.disposition == CompatSpellingDisposition::Canonicalize
+             ? decision.canonicalPath
+             : std::string{};
 }
 
 std::optional<std::string> SemanticsValidator::builtinSoaAccessHelperName(
