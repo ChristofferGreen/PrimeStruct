@@ -197,7 +197,9 @@ removed-helper rejection and possibly other rules not yet enumerated.
 Replicating it correctly in monomorphization needs the same rule set
 mapped out deliberately (what counts as removed, in which call shapes,
 interacting with which other checks) before another attempt, not another
-incremental patch. Until then, Phase 0 stays at the state verified safe by
+incremental patch. That mapping-and-consolidation work is now planned
+separately in `docs/CompatPathResolutionConsolidation.md`; the remainder
+of Phase 0 resumes once it lands. Until then, Phase 0 stays at the state verified safe by
 exact test-name diff: the `resolvedCallPath` field, the `convert<T>` fix,
 and the 5 plain-`resolveCalleePath` validator sites from earlier in this
 document. The remaining validator sites, the publication step, and all 10
