@@ -586,7 +586,9 @@ bool SemanticsValidator::validateReturnStatement(const std::vector<ParameterInfo
             ExprSubstitutions &extendedSubstitutions,
             const Expr *&returnedValueExprOut) -> bool {
           returnedValueExprOut = nullptr;
-          std::string resolvedCallPath = resolveCalleePath(callExpr);
+          std::string resolvedCallPath = !callExpr.resolvedCallPath.empty()
+                                              ? callExpr.resolvedCallPath
+                                              : resolveCalleePath(callExpr);
           if (callExpr.isMethodCall) {
             if (callExpr.args.empty()) {
               return false;
@@ -848,7 +850,9 @@ bool SemanticsValidator::validateReturnStatement(const std::vector<ParameterInfo
         if (callExpr.kind != Expr::Kind::Call) {
           return false;
         }
-        std::string resolvedCallPath = resolveCalleePath(callExpr);
+        std::string resolvedCallPath = !callExpr.resolvedCallPath.empty()
+                                            ? callExpr.resolvedCallPath
+                                            : resolveCalleePath(callExpr);
         if (!resolveConcreteCallPath(callExpr, resolvedCallPath)) {
           return false;
         }

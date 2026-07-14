@@ -401,7 +401,9 @@ bool SemanticsValidator::validateExprMutationBorrowBuiltins(
         isSimpleCallName(refExpr, "ref_ref");
     const bool isCanonicalRefCall =
         isExperimentalSoaRefLikeHelperPath(refExpr.name);
-    const std::string resolvedCallPath = resolveCalleePath(refExpr);
+    const std::string resolvedCallPath = !refExpr.resolvedCallPath.empty()
+                                              ? refExpr.resolvedCallPath
+                                              : resolveCalleePath(refExpr);
     if ((!isBareRefCall && !isCanonicalRefCall &&
          !isBuiltinSoaRefPath(resolvedCallPath, false)) ||
         refExpr.args.size() != 2) {

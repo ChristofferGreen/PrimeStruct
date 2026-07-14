@@ -40,7 +40,10 @@ bool SemanticsValidator::resolveCallCollectionTypePath(const Expr &target,
     }
     return rawPrefix + "/" + rawName;
   };
-  auto resolvedCallPath = [&](const Expr &callExpr) { return resolveCalleePath(callExpr); };
+  auto resolvedCallPath = [&](const Expr &callExpr) {
+    return !callExpr.resolvedCallPath.empty() ? callExpr.resolvedCallPath
+                                               : resolveCalleePath(callExpr);
+  };
   auto inferCollectionTypePathFromType =
       [&](const std::string &typeName, auto &&inferCollectionTypePathFromTypeRef) -> std::string {
     const std::string normalizedType = normalizeBindingTypeName(typeName);
@@ -260,7 +263,10 @@ bool SemanticsValidator::resolveCallCollectionTemplateArgs(const Expr &target,
     }
     return rawPrefix + "/" + rawName;
   };
-  auto resolvedCallPath = [&](const Expr &callExpr) { return resolveCalleePath(callExpr); };
+  auto resolvedCallPath = [&](const Expr &callExpr) {
+    return !callExpr.resolvedCallPath.empty() ? callExpr.resolvedCallPath
+                                               : resolveCalleePath(callExpr);
+  };
   auto extractCollectionArgsFromType =
       [&](const std::string &typeName, auto &&extractCollectionArgsFromTypeRef) -> bool {
     std::string base;

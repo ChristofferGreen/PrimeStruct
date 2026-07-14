@@ -253,6 +253,10 @@ bool rewriteConvertConstructors(Program &program, std::string &error) {
     }
     expr.name = helpers.front();
     expr.templateArgs.clear();
+    // Keep resolvedCallPath (set once by TemplateMonomorphization, before
+    // this pass runs) in sync: it was computed against the pre-rewrite
+    // "convert" callee and is now stale for this node.
+    expr.resolvedCallPath = helpers.front();
     return true;
   };
 
