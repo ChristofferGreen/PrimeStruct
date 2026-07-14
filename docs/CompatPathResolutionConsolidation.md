@@ -359,6 +359,42 @@ simplest consistent rule, called out per-commit.
 - Unit tests must pin: the six-way predicate agreement (D2), rows 1-5's
   full matrix, D5's corrected behavior, and D6's newly-decided rows.
 
+## Step 1 Status: Complete
+
+Implemented (commits `c2e6cf0`, `e3bbc67`, `2adc871`):
+
+- `classifyCollectionHelperSpelling` in
+  `include/primec/CollectionSpellingClassifier.h` /
+  `src/CollectionSpellingClassifier.cpp`, with the removed/retired name
+  sets as the single authoritative source (D2) and 13 unit test cases
+  pinning the rule-table rows
+  (`tests/unit/semantics/test_semantics_collection_spelling_classifier.cpp`).
+- The permanent differential harness: `PRIMESTRUCT_RESOLUTION_DIFF_AUDIT=1`
+  makes `preferredCollectionHelperResolvedPath` compare its legacy answer
+  against the classifier on every call and report divergence to stderr.
+
+Three audit rounds over the ir_pipeline corpus (1713 cases; outcomes
+unchanged from baseline each round, confirming the harness is
+observe-only) drove the classifier to convergence:
+
+1. Round 1: 4500 divergence lines, 5 classes. Fixed two classifier
+   defects — the registry fallback matched error-family surfaces the
+   legacy collections-only resolver never handled (now restricted to
+   collection-domain helper surfaces), and the definition-exists callback
+   was exact-key while stdlib collection helpers are templates (callback
+   contract now family-aware).
+2. Round 2: 32 lines, 5 classes. The persisting bare `/soa/get`/`/soa/ref`
+   class traced to wrapper-return routing tests where legacy's
+   unconditional canonicalization is load-bearing → **D1 refined**: bare
+   public-surface SOA spellings canonicalize unconditionally (the target
+   is a real stdlib surface; map visibility is a downstream import
+   concern). D5 stays scoped to families that exist nowhere.
+3. Round 3 (final ledger): 18 lines, 3 classes, **all intended-D5** —
+   explicit `/std/collections/soa_vector/{get,ref,to_aos}` spellings where
+   legacy returns the dead-family path and the classifier declines.
+   These become the called-out intended divergences when Step 2b migrates
+   the validator; each needs its pinning test at that point.
+
 ## Non-Goals
 
 - No behavior changes to which spellings are accepted, rejected, or
